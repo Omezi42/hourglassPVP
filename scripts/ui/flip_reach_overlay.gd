@@ -13,13 +13,21 @@ const REACH_DURATION := 0.2
 ## 伸びきった後、筋自体がフェードアウトするまでの時間。
 const BEAM_FADE_DURATION := 0.25
 ## 着弾点で一瞬だけ膨らむ光の輪がフェードアウトするまでの時間。
-const IMPACT_FADE_DURATION := 0.3
+const IMPACT_FADE_DURATION := 0.36
 
 const BEAM_WIDTH := 4.0
 const BEAM_GLOW_WIDTH := 12.0
 const BEAM_GLOW_ALPHA_SCALE := 0.3
 const IMPACT_RADIUS := 16.0
 const IMPACT_GROWTH := 10.0
+## 着弾の衝撃(フェーズ17 V-4)。光が届いた瞬間に、広がる輪と放射状の火花を重ねる。
+## 「反転はゲームの中心となる行動であるため、演出は他より作り込む」(GameDesign.md 9章)。
+const IMPACT_RING_GROWTH := 46.0
+const IMPACT_RING_WIDTH := 3.0
+const IMPACT_RING_SEGMENTS := 28
+const IMPACT_SPARK_COUNT := 8
+const IMPACT_SPARK_LENGTH := 18.0
+const IMPACT_SPARK_WIDTH := 2.0
 
 var _source := Vector2.ZERO
 var _target := Vector2.ZERO
@@ -93,11 +101,39 @@ func _draw() -> void:
 		draw_line(_source, tip, glow, BEAM_GLOW_WIDTH, true)
 		draw_line(_source, tip, color, BEAM_WIDTH, true)
 	if _impact_alpha > 0.0:
-		var impact_color := Color(
-			UiPalette.GLOW_AMBER.r,
-			UiPalette.GLOW_AMBER.g,
-			UiPalette.GLOW_AMBER.b,
-			_impact_alpha * 0.85
-		)
-		var radius := IMPACT_RADIUS + (1.0 - _impact_alpha) * IMPACT_GROWTH
-		UiPaint.fill_circle(ci, _target, radius, impact_color, 20)
+		_draw_impact(ci)
+
+
+## 着弾点の表現。中心の閃光・外へ広がる二重の輪・放射状の火花の3層を重ねる。
+func _draw_impact(ci: RID) -> void:
+	var amber := UiPalette.GLOW_AMBER
+	var core_color := Color(amber.r, amber.g, amber.b, _impact_alpha * 0.85)
+	var core_radius := IMPACT_RADIUS + (1.0 - _impact_alpha) * IMPACT_GROWTH
+	UiPaint.fill_circle(ci, _target, core_radius, core_color, 20)
+
+	var progress := 1.0 - _impact_alpha
+	var ring_radius := IMPACT_RADIUS + progress * IMPACT_RING_GROWTH
+	UiPaint.draw_ring(
+		ci,
+		_target,
+		ring_radius,
+		Color(amber.r, amber.g, amber.b, _impact_alpha * 0.9),
+		IMPACT_RING_WIDTH,
+		IMPACT_RING_SEGMENTS
+	)
+	UiPaint.draw_ring(
+		ci,
+		_target,
+		ring_radius * 0.62,
+		Color(amber.r, amber.g, amber.b, _impact_alpha * 0.5),
+		IMPACT_RING_WIDTH * 0.6,
+		IMPACT_RING_SEGMENTS
+	)
+
+	var spark_color := Color(amber.r, amber.g, amber.b, _impact_alpha)
+	for i in range(IMPACT_SPARK_COUNT):
+		var angle: float = TAU * float(i) / float(IMPACT_SPARK_COUNT)
+		var direction := Vector2(cos(angle), sin(angle))
+		var inner: Vector2 = _target + direction * ring_radius * 0.8
+		var outer: Vector2 = inner + direction * IMPACT_SPARK_LENGTH * _impact_alpha
+		draw_line(inner, outer, spark_color, IMPACT_SPARK_WIDTH, true)

@@ -56,6 +56,10 @@ func format_action(state: GameState, action: Dictionary) -> String:
 			var target_side: int = action["side"]
 			var position: int = action["position"]
 			var name: String = state.board[target_side][position].data.display_name
+			# 自陣の駒を反転した場合は「先手が先手の…」と同じ側を2度呼ぶ形になり読みにくい。
+			# 相手の駒を反転した場合だけ、誰の駒なのかを明示する(移動・交代の文言と揃える)。
+			if actor == target_side:
+				return "%sが「%s」を反転" % [_side_label(actor), name]
 			return "%sが%sの「%s」を反転" % [_side_label(actor), _side_label(target_side), name]
 		"move":
 			var side: int = action["side"]

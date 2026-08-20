@@ -1,5 +1,6 @@
 [gd_scene format=3]
 
+[ext_resource type="Script" path="res://scripts/ui/match_screen.gd" id="1_mtscr"]
 [ext_resource type="Texture2D" path="res://assets/backgrounds/processed/match/background.png" id="2_g1l8f"]
 [ext_resource type="PackedScene" path="res://scenes/hourglass_slot_strip.tscn" id="3_5ky34"]
 [ext_resource type="Script" path="res://scripts/ui/bar_panel.gd" id="3_qd0bl"]
@@ -47,6 +48,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+script = ExtResource("1_mtscr")
 
 [node name="Background" type="TextureRect" parent="." unique_id=1035896674]
 layout_mode = 0
@@ -99,8 +101,8 @@ vertical_alignment = 1
 [node name="SpectateLabel" type="Label" parent="Layout/TopBar/TopBarMargin/TopBarRow" unique_id=1434174511]
 visible = false
 layout_mode = 2
-theme_override_colors/font_color = Color(0.85, 0.62, 0.22, 1)
 theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(0.85, 0.62, 0.22, 1)
 text = "観戦中"
 vertical_alignment = 1
 
@@ -125,9 +127,12 @@ mouse_filter = 2
 
 [node name="GameBoard" type="Control" parent="Layout/BoardArea/BoardCamera" unique_id=669115776 instance=ExtResource("5_8qp1b")]
 custom_minimum_size = Vector2(860, 480)
-anchors_preset = 0
+layout_mode = 1
+anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_right = 860.0
+offset_bottom = 480.0
 script = ExtResource("6_xov1p")
 
 [node name="BottomBar" type="PanelContainer" parent="Layout" unique_id=986838497]
@@ -169,66 +174,66 @@ alignment = 1
 [node name="ReplayToStartButton" type="Button" parent="Layout/BottomBar/BottomBarMargin/BottomRow/BottomMiddle/ReplayControls" unique_id=192651640]
 custom_minimum_size = Vector2(104, 104)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_font_sizes/font_size = 18
 theme_override_styles/normal = ExtResource("9_yhy27")
 theme_override_styles/pressed = ExtResource("10_3ofx3")
 theme_override_styles/hover = ExtResource("11_2ktm8")
 theme_override_styles/disabled = ExtResource("11_daavg")
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_font_sizes/font_size = 18
 text = "先頭"
 
 [node name="ReplayStepBackButton" type="Button" parent="Layout/BottomBar/BottomBarMargin/BottomRow/BottomMiddle/ReplayControls" unique_id=819622042]
 custom_minimum_size = Vector2(104, 104)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_font_sizes/font_size = 18
 theme_override_styles/normal = ExtResource("9_yhy27")
 theme_override_styles/pressed = ExtResource("10_3ofx3")
 theme_override_styles/hover = ExtResource("11_2ktm8")
 theme_override_styles/disabled = ExtResource("11_daavg")
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_font_sizes/font_size = 18
 text = "戻る"
 
 [node name="ReplayPlayButton" type="Button" parent="Layout/BottomBar/BottomBarMargin/BottomRow/BottomMiddle/ReplayControls" unique_id=1093417359]
 custom_minimum_size = Vector2(104, 104)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_font_sizes/font_size = 18
 theme_override_styles/normal = ExtResource("9_yhy27")
 theme_override_styles/pressed = ExtResource("10_3ofx3")
 theme_override_styles/hover = ExtResource("11_2ktm8")
 theme_override_styles/disabled = ExtResource("11_daavg")
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_font_sizes/font_size = 18
 text = "再生"
 
 [node name="ReplayStepForwardButton" type="Button" parent="Layout/BottomBar/BottomBarMargin/BottomRow/BottomMiddle/ReplayControls" unique_id=1561146952]
 custom_minimum_size = Vector2(104, 104)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_font_sizes/font_size = 18
 theme_override_styles/normal = ExtResource("9_yhy27")
 theme_override_styles/pressed = ExtResource("10_3ofx3")
 theme_override_styles/hover = ExtResource("11_2ktm8")
 theme_override_styles/disabled = ExtResource("11_daavg")
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_font_sizes/font_size = 18
 text = "進む"
 
 [node name="ReplayToEndButton" type="Button" parent="Layout/BottomBar/BottomBarMargin/BottomRow/BottomMiddle/ReplayControls" unique_id=1318540887]
 custom_minimum_size = Vector2(104, 104)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_font_sizes/font_size = 18
 theme_override_styles/normal = ExtResource("9_yhy27")
 theme_override_styles/pressed = ExtResource("10_3ofx3")
 theme_override_styles/hover = ExtResource("11_2ktm8")
 theme_override_styles/disabled = ExtResource("11_daavg")
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_font_sizes/font_size = 18
 text = "最後"
 
 [node name="ReplayStepLabel" type="Label" parent="Layout/BottomBar/BottomBarMargin/BottomRow/BottomMiddle/ReplayControls" unique_id=1669053340]
@@ -245,14 +250,14 @@ theme_override_constants/separation = 12
 [node name="PlacementStartButton" type="Button" parent="Layout/BottomBar/BottomBarMargin/BottomRow/BottomMiddle/PlacementControls" unique_id=1873466065]
 custom_minimum_size = Vector2(200, 72)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_font_sizes/font_size = 24
 theme_override_styles/normal = ExtResource("14_701eo")
 theme_override_styles/pressed = ExtResource("15_brc66")
 theme_override_styles/hover = ExtResource("16_k6cqh")
 theme_override_styles/disabled = ExtResource("17_y3w4w")
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_font_sizes/font_size = 24
 disabled = true
 text = "対局開始"
 
@@ -264,39 +269,39 @@ theme_override_constants/separation = 12
 visible = false
 custom_minimum_size = Vector2(190, 56)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.98, 0.85, 0.55, 1)
-theme_override_colors/font_pressed_color = Color(0.98, 0.85, 0.55, 1)
-theme_override_colors/font_hover_color = Color(0.98, 0.85, 0.55, 1)
 theme_override_styles/normal = ExtResource("14_701eo")
 theme_override_styles/pressed = ExtResource("15_brc66")
 theme_override_styles/hover = ExtResource("16_k6cqh")
 theme_override_styles/disabled = ExtResource("17_y3w4w")
+theme_override_colors/font_color = Color(0.98, 0.85, 0.55, 1)
+theme_override_colors/font_pressed_color = Color(0.98, 0.85, 0.55, 1)
+theme_override_colors/font_hover_color = Color(0.98, 0.85, 0.55, 1)
 text = "ターン終了"
 
 [node name="LogButton" type="Button" parent="Layout/BottomBar/BottomBarMargin/BottomRow/BottomMiddle/MatchMenuControls" unique_id=1352184893]
 visible = false
 custom_minimum_size = Vector2(150, 56)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
 theme_override_styles/normal = ExtResource("14_701eo")
 theme_override_styles/pressed = ExtResource("15_brc66")
 theme_override_styles/hover = ExtResource("16_k6cqh")
 theme_override_styles/disabled = ExtResource("17_y3w4w")
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
 text = "ログ"
 
 [node name="SurrenderButton" type="Button" parent="Layout/BottomBar/BottomBarMargin/BottomRow/BottomMiddle/MatchMenuControls" unique_id=1188220829]
 visible = false
 custom_minimum_size = Vector2(150, 56)
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.45, 0.4, 1)
-theme_override_colors/font_pressed_color = Color(1, 0.45, 0.4, 1)
-theme_override_colors/font_hover_color = Color(1, 0.45, 0.4, 1)
 theme_override_styles/normal = ExtResource("14_701eo")
 theme_override_styles/pressed = ExtResource("15_brc66")
 theme_override_styles/hover = ExtResource("16_k6cqh")
 theme_override_styles/disabled = ExtResource("17_y3w4w")
+theme_override_colors/font_color = Color(1, 0.45, 0.4, 1)
+theme_override_colors/font_pressed_color = Color(1, 0.45, 0.4, 1)
+theme_override_colors/font_hover_color = Color(1, 0.45, 0.4, 1)
 text = "投了"
 
 [node name="OwnSlotStrip" type="HBoxContainer" parent="Layout/BottomBar/BottomBarMargin/BottomRow" unique_id=1335696004 instance=ExtResource("3_5ky34")]
@@ -315,13 +320,13 @@ offset_left = 16.0
 offset_top = 16.0
 offset_right = 16.0
 offset_bottom = 16.0
-theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
 theme_override_styles/normal = ExtResource("12_rnvng")
 theme_override_styles/pressed = ExtResource("13_yiw3g")
 theme_override_styles/hover = ExtResource("14_7dwna")
 theme_override_styles/disabled = ExtResource("15_5ky34")
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
 text = "< 戻る"
 
 [node name="MatchDetailPanel" type="PanelContainer" parent="." unique_id=1899211694 instance=ExtResource("21_k6cqh")]
@@ -343,14 +348,14 @@ offset_left = 971.0
 offset_top = 440.0
 offset_right = 1171.0
 offset_bottom = 512.0
-theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_font_sizes/font_size = 22
 theme_override_styles/normal = ExtResource("14_701eo")
 theme_override_styles/pressed = ExtResource("15_brc66")
 theme_override_styles/hover = ExtResource("16_k6cqh")
 theme_override_styles/disabled = ExtResource("17_y3w4w")
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_font_sizes/font_size = 22
 text = "閉じる"
 
 [node name="ActionMenu" type="HBoxContainer" parent="." unique_id=2035810273 instance=ExtResource("7_yhy27")]
@@ -396,15 +401,15 @@ theme_override_constants/separation = 18
 
 [node name="TitleLabel" type="Label" parent="SurrenderConfirm/CenterBox/Panel/Margin/VBox" unique_id=1015632633]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.85, 0.62, 0.22, 1)
 theme_override_font_sizes/font_size = 32
+theme_override_colors/font_color = Color(0.85, 0.62, 0.22, 1)
 text = "投了しますか?"
 horizontal_alignment = 1
 
 [node name="DetailLabel" type="Label" parent="SurrenderConfirm/CenterBox/Panel/Margin/VBox" unique_id=858408486]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
 theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
 text = "投了すると、この対局はあなたの敗北として即座に終了します。"
 horizontal_alignment = 1
 autowrap_mode = 3
@@ -417,27 +422,27 @@ alignment = 1
 [node name="CancelButton" type="Button" parent="SurrenderConfirm/CenterBox/Panel/Margin/VBox/ButtonRow" unique_id=2004777382]
 custom_minimum_size = Vector2(220, 79)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_font_sizes/font_size = 22
 theme_override_styles/normal = ExtResource("14_701eo")
 theme_override_styles/pressed = ExtResource("15_brc66")
 theme_override_styles/hover = ExtResource("16_k6cqh")
 theme_override_styles/disabled = ExtResource("17_y3w4w")
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_font_sizes/font_size = 22
 text = "キャンセル"
 
 [node name="ConfirmButton" type="Button" parent="SurrenderConfirm/CenterBox/Panel/Margin/VBox/ButtonRow" unique_id=1915411367]
 custom_minimum_size = Vector2(220, 79)
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.45, 0.4, 1)
-theme_override_colors/font_pressed_color = Color(1, 0.45, 0.4, 1)
-theme_override_colors/font_hover_color = Color(1, 0.45, 0.4, 1)
-theme_override_font_sizes/font_size = 22
 theme_override_styles/normal = ExtResource("14_701eo")
 theme_override_styles/pressed = ExtResource("15_brc66")
 theme_override_styles/hover = ExtResource("16_k6cqh")
 theme_override_styles/disabled = ExtResource("17_y3w4w")
+theme_override_colors/font_color = Color(1, 0.45, 0.4, 1)
+theme_override_colors/font_pressed_color = Color(1, 0.45, 0.4, 1)
+theme_override_colors/font_hover_color = Color(1, 0.45, 0.4, 1)
+theme_override_font_sizes/font_size = 22
 text = "投了する"
 
 [node name="DamageFlash" type="ColorRect" parent="." unique_id=1183305509]
@@ -466,7 +471,7 @@ anchor_bottom = 1.0
 mouse_filter = 2
 
 [node name="Panel" type="PanelContainer" parent="ResultOverlay/CenterBox" unique_id=1605267543]
-custom_minimum_size = Vector2(420, 0)
+custom_minimum_size = Vector2(480, 0)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_daavg")
 
@@ -483,28 +488,46 @@ theme_override_constants/separation = 18
 
 [node name="TitleLabel" type="Label" parent="ResultOverlay/CenterBox/Panel/Margin/VBox" unique_id=1072742879]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.85, 0.62, 0.22, 1)
 theme_override_font_sizes/font_size = 44
+theme_override_colors/font_color = Color(0.85, 0.62, 0.22, 1)
 horizontal_alignment = 1
 
 [node name="DetailLabel" type="Label" parent="ResultOverlay/CenterBox/Panel/Margin/VBox" unique_id=294358890]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
 theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
 horizontal_alignment = 1
 
-[node name="HomeButton" type="Button" parent="ResultOverlay/CenterBox/Panel/Margin/VBox" unique_id=1833375033]
-custom_minimum_size = Vector2(260, 93)
+[node name="ButtonRow" type="HBoxContainer" parent="ResultOverlay/CenterBox/Panel/Margin/VBox" unique_id=652187327]
 layout_mode = 2
-size_flags_horizontal = 4
-theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_font_sizes/font_size = 26
+theme_override_constants/separation = 16
+alignment = 1
+
+[node name="LogButton" type="Button" parent="ResultOverlay/CenterBox/Panel/Margin/VBox/ButtonRow" unique_id=1437656304]
+custom_minimum_size = Vector2(200, 72)
+layout_mode = 2
 theme_override_styles/normal = ExtResource("14_701eo")
 theme_override_styles/pressed = ExtResource("15_brc66")
 theme_override_styles/hover = ExtResource("16_k6cqh")
 theme_override_styles/disabled = ExtResource("17_y3w4w")
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_font_sizes/font_size = 24
+text = "ログ"
+
+[node name="HomeButton" type="Button" parent="ResultOverlay/CenterBox/Panel/Margin/VBox/ButtonRow" unique_id=1833375033]
+custom_minimum_size = Vector2(200, 72)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_styles/normal = ExtResource("14_701eo")
+theme_override_styles/pressed = ExtResource("15_brc66")
+theme_override_styles/hover = ExtResource("16_k6cqh")
+theme_override_styles/disabled = ExtResource("17_y3w4w")
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_font_sizes/font_size = 24
 text = "ホームへ"
 
 [node name="WaitDotsTimer" type="Timer" parent="." unique_id=1085876744]
@@ -550,21 +573,21 @@ theme_override_constants/separation = 12
 [node name="LogTitleLabel" type="Label" parent="LogPanel/CenterBox/LogContent/LogMargin/LogVBox/LogHeaderRow" unique_id=259698803]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.85, 0.62, 0.22, 1)
 theme_override_font_sizes/font_size = 22
+theme_override_colors/font_color = Color(0.85, 0.62, 0.22, 1)
 text = "対局ログ"
 
 [node name="LogCloseButton" type="Button" parent="LogPanel/CenterBox/LogContent/LogMargin/LogVBox/LogHeaderRow" unique_id=1575234302]
 custom_minimum_size = Vector2(131, 47)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_font_sizes/font_size = 18
 theme_override_styles/normal = ExtResource("14_701eo")
 theme_override_styles/pressed = ExtResource("15_brc66")
 theme_override_styles/hover = ExtResource("16_k6cqh")
 theme_override_styles/disabled = ExtResource("17_y3w4w")
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_font_sizes/font_size = 18
 text = "閉じる"
 
 [node name="LogScroll" type="ScrollContainer" parent="LogPanel/CenterBox/LogContent/LogMargin/LogVBox" unique_id=759339901]

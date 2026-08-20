@@ -1,5 +1,6 @@
 [gd_scene format=3]
 
+[ext_resource type="Script" path="res://scripts/ui/settings_panel.gd" id="1_is6do"]
 [ext_resource type="StyleBox" path="res://resources/theme/content_panel.tres" id="2_77s4b"]
 [ext_resource type="StyleBox" path="res://resources/theme/buttons/img_wide_text_normal.tres" id="3_emta1"]
 [ext_resource type="StyleBox" path="res://resources/theme/buttons/img_wide_text_pressed.tres" id="4_luo6l"]
@@ -13,6 +14,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+script = ExtResource("1_is6do")
 
 [node name="Dim" type="ColorRect" parent="." unique_id=1561119605]
 layout_mode = 0

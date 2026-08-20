@@ -219,6 +219,19 @@ static func draw_ring(
 	_draw_polyline_solid(ci, closed, color, width)
 
 
+## 縦横比を独立指定できる楕円の輪郭線。台座光と同じ扁平な円で衝撃波を広げるため、
+## 真円のdraw_ring()とは別に用意する(HourglassSlotの反転演出で使う)。
+static func draw_ellipse_ring(
+	ci: RID, center: Vector2, radius: Vector2, color: Color, width: float, segments: int
+) -> void:
+	var points := PackedVector2Array()
+	for i in range(segments):
+		var angle: float = TAU * float(i) / float(segments)
+		points.append(center + Vector2(cos(angle) * radius.x, sin(angle) * radius.y))
+	points.append(points[0])
+	_draw_polyline_solid(ci, points, color, width)
+
+
 ## 縦横比を独立指定できる楕円を単色で塗りつぶす。BoardTableの隅飾り・HourglassSlotの
 ## 台座光のように、扁平な円(奥行き表現)を描く箇所で共通に使う。
 static func fill_ellipse(

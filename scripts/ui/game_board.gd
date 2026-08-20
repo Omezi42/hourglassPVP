@@ -65,6 +65,13 @@ func show_reservations(self_side: GameState.PlayerSide, action: Dictionary) -> v
 	opponent_row.set_reservations(opponent)
 
 
+## 解決済みの行動の予約マークを消す。解決演出の中でその行動を実際に見せた時点で呼ぶ
+## (1手番に設定できる行動は1つのため、まとめて消して問題ない)。
+func clear_reservations() -> void:
+	own_row.set_reservations({})
+	opponent_row.set_reservations({})
+
+
 ## 配置フェーズ用。相手の場は配置内容が非公開のため常に空表示にする。
 func show_own_placement(placed: Array) -> void:
 	own_row.show_placement(placed)

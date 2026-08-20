@@ -27,10 +27,10 @@ class SoundManager {
   preloadSounds() {
     const soundFiles = {
       button: '../assets/sfx/button.wav',
-      damage: '../assets/sfx/damage.wav',
+      damage: '../assets/sfx/damage.ogg',
       flip: '../assets/sfx/flip.wav',
       move: '../assets/sfx/move.wav',
-      result: '../assets/sfx/result.wav',
+      result: '../assets/sfx/result_win.ogg',
       swap: '../assets/sfx/swap.wav'
     };
 

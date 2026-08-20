@@ -8,7 +8,16 @@
 
 ---
 
-## 今やること(フェーズ6: 演出・UI/UX強化・リプレイ機能)
+## 今やること(ゲームバランス調整の反映と実機検証)
+
+- [ ] `docs/BalanceReport.md` の調整案(Plan B)の承認後、`docs/Hourglasses.md` および `data/hourglasses/*.tres` の数値更新
+- [ ] 交代(swap_in)アクションの改善・強化仕様の検討
+- [ ] 後手補正ルールの検討
+
+
+---
+
+## バックログ(フェーズ6: 演出・UI/UX強化・リプレイ機能)
 
 ### UI/UX改善(画面ごと)
 
@@ -1428,25 +1437,75 @@ T-3は完了済みのため、残りはT-1・T-2。
 
 **V-1 → V-2 → V-3 → V-4 の順**に進める(V-1はロジックの土台、V-2は画面構造の土台)。
 
-- [ ] **V-1 ロジック層をターン終了時解決へ変更する**。`GameState`に`pending_action`と
-  `set_pending_action()`を追加し、`advance_and_end_turn()`を「設定された行動に応じて
-  自分の場を左→中央→右の順に1マスずつ解決→相手の駒への反転→ターンチック→手番交代」へ
-  作り替える。区切りは`resolution_step_started(side, positions, kind)`シグナルで通知する。
-  `OnlineMatch.apply()`は`flip`/`move`/`swap_in`/新規`pass`について`set_pending_action()`を
-  呼ぶだけにする(`surrender`のみ従来どおり即時)。`tools/tests/run_tests.gd`の
-  ターン進行系テストを新ルール(行動を設定したマスは進行しない)へ書き換え、
-  移動2マス・交代・相手への反転・パスの各ケースを追加する
-- [ ] **V-2 行動の予約と「ターン終了」ボタンを実装する**。行動を選んでも手番は終わらず、
-  対象の駒へ予約マーク(`HourglassSlot.set_reservation()`)が付くだけにする。画面下部中央の
-  `MatchMenuControls`へ「ターン終了」ボタンを追加し、押した時に初めて行動(未設定なら
-  `pass`)を送信・解決する。オンライン/CPU/ローカル/観戦/リプレイの5経路が
-  「apply()→advance_and_end_turn()」の対を保つことを確認する
-- [ ] **V-3 盤面だけをズームさせる**。`BoardArea`を`CenterContainer`から`clip_contents`付きの
-  `Control`へ変更し、`BoardCamera`(`Control`)を挟んで`GameBoard`を入れる。新規
-  `MatchBoardCamera`が`scale`/`position`をTweenし、`MatchTurnResolver`が解決ステップごとに
-  対象マスへ寄せる。上下バーはズーム対象外。`GameBoard.get_board_slot_rect()`を
-  `get_global_transform()`基準へ直し、実況テキスト・浮遊ダメージ・光の筋がズームへ追従するようにする
-- [ ] **V-4 反転アニメーションを作り込む**。光の筋の着弾の衝撃・回転中の反射・着地の余韻を加える
+- [x] **V-1 ロジック層をターン終了時解決へ変更する**。`GameState`に`pending_action`と
+  `set_pending_action()`/`clear_pending_action()`を追加し、`advance_and_end_turn()`を
+  「設定された行動に応じて自分の場を左→中央→右の順に1マスずつ解決→相手の駒への反転→
+  ターンチック→手番交代」へ作り替えた。区切りは新しい
+  `resolution_step_started(side, positions, kind)`シグナルで通知する
+  (`kind`は`advance`/`idle`/`flip`/`move`/`swap_in`)。移動は番号の若い方のマスの解決時に
+  1度だけ実行し、もう一方は解決済みとして読み飛ばす。`OnlineMatch.apply()`は
+  `flip`/`move`/`swap_in`/新規`pass`について`set_pending_action()`を呼ぶだけになり、
+  `surrender`のみ従来どおり即時。これにより「apply()→advance_and_end_turn()」という
+  既存の呼び出しの対(自分の手・オンライン相手の手・CPUの手・リプレイの巻き戻し・観戦の
+  追いつき)を変えずに済んでいる。`tools/tests/run_tests.gd`へ新ルールの検証を6本追加した
+  (反転/移動2マス/交代がそのマスを進行させないこと、相手への反転は自分の3マスを守らないこと、
+  パスで3マスとも進行すること、解決ステップが左→中央→右→相手の順に報告され落ちきり済みの
+  マスは`idle`として報告されること)
+- [x] **V-2 行動の予約と「ターン終了」ボタンを実装した**。行動を選んでも手番は終わらず、
+  対象マスに予約マーク(`HourglassSlot.set_reservation()`、`VisualRoot/ReservationBadge`を
+  一時ビルドスクリプト経由で追加)が付くだけになる。`MatchScreen._perform_action()`は
+  「設定するだけ」の`_set_action()`へ変わり、送信・棋譜記録・解決は新しい
+  `_on_end_turn_pressed()`(`MatchMenuControls`へ追加した「ターン終了」ボタン)に集約した。
+  未設定で押した場合は`{"type": "pass"}`を送る。相手・CPUの手は受け取った時点では盤面を
+  動かさないため、予約マークを`RESERVATION_HOLD_SECONDS`(0.7秒)だけ見せてから解決へ進み、
+  「何を設定されたか」→「その結果どうなったか」の順で追えるようにした。行動の演出
+  (`MatchActionPresenter`)の呼び出し元は「指した直後」から「解決ステップの再生時」へ移し、
+  スポットライトと間の確保は`MatchTurnResolver`側の責務にした
+- [x] **V-3 盤面だけをズームさせた**。`BoardArea`を`CenterContainer`から`clip_contents`付きの
+  `Control`へ置き換え、間に`BoardCamera`(`Control`)を挟んで`GameBoard`を入れた
+  (一時ビルドスクリプト経由)。新規`MatchBoardCamera`が`scale`/`position`だけをTweenし、
+  `MatchTurnResolver`が解決ステップごとに対象マス(移動は2マス)へ寄せる。`pivot_offset`は
+  使わず「position + 局所座標 × scale」の一次変換をそのままTweenするため、途中フレームでも
+  破綻しない。上下バーは`BoardArea`の外にあるためズームの影響を受けない。
+  `GameBoard.get_slot_rect()`を`get_global_transform() * Rect2(...)`基準へ直し、実況テキスト・
+  浮遊ダメージ・光の筋がズームへ追従するようにした(呼び出し側は無変更)。何も起きないマスも
+  ズームの対象とし、`MatchEventCaption.show_idle_step()`で「『キング』は落ちきったまま」と
+  実況する(ログには残さない)
+- [x] **V-4 反転アニメーションを作り込んだ**。着弾点に中心の閃光・二重の輪・放射状の火花を
+  重ね、駒側は「沈み込み→持ち上げ→頂点で留まる→着地→潰れて弾む」の流れに、台座と同じ
+  扁平な楕円の衝撃波(`UiPaint.draw_ellipse_ring()`を新設)を着弾時と着地時の2回、
+  回転中の明るさの振れ(ガラスと砂の反射)を加えた。あわせて`_animate_flip()`の折り返し点で
+  `scale:x`を0まで潰していたため持ち上がった駒が一瞬まるごと消えていた問題を修正し、
+  真横から見た厚み(`FLIP_EDGE_SCALE`)を残すようにした
+
+### 検証
+
+- gdformat・gdlint(52ファイル)、`tools/tests/run_tests.gd`、`main.tscn`の起動スモークは
+  いずれも問題なし
+- 非ヘッドレスでCPU戦を直接起動し、`Engine.time_scale`を0.2まで落としてスクリーンショットで
+  確認した(いずれも`user://`へ触れない一時スクリプト、確認後に削除済み)
+  - 反転を設定しても盤面が動かず予約マークだけが出ること、移動は2マスに予約マークが付くこと
+  - ターン終了で左→中央→右の順に1マスずつズームして解決されること、落ちきり済みのマスも
+    ズームして「落ちきったまま」と実況されること、上下のHPバー・砂時計スロットがズームの
+    影響を受けないこと、解決後にカメラが等倍・中央へ戻ること
+  - 反転の一連の流れ(光の筋→着弾→持ち上げ→回転→着地)が途切れず見えること
+- ロジックは実際の駒(sand/sword/king)で状態遷移を突き合わせて確認した
+  - パス: 初期`[上向き, 落下中, 落ちきり]`→`[落下中, 落ちきり, 落ちきり]`
+  - 移動(左↔右): 駒が入れ替わり、関与2マスは進行せず、中央だけが進行する
+  - 相手の駒への反転: 解決ステップが`自分[0]→自分[1]→自分[2]→相手[1]:flip`の順に報告される
+
+### 判断に迷った点
+
+- **行動を設定しただけでは手番を終えない**方式にした。「予約マークを出す」と「パスを用意する」の
+  2つを両立させると、行動を設定した瞬間に手番が終わる従来の流れでは予約マークが一瞬しか
+  見えず意味を持たないため。結果として、行動を設定した後に「ターン終了」を押すまでは
+  何度でも設定し直せる(GameDesign.md 4.2の操作フローもこの形で更新済み)
+- 行動の実況テキスト(`MatchBattleLog.format_action()`)が「先手が先手の『ソード』を反転」と
+  自陣の駒でも所属を繰り返す文言だった点は、ユーザーの指示により修正した。**自陣の駒は
+  所属を書かず**「先手が『ソード』を反転」、相手の駒を反転した場合だけ「先手が後手の
+  『ソード』を反転」と明示する。移動・交代の文言(「先手が『キング』を左→右へ移動」)と
+  書式が揃う。対局ログ・リプレイと共有している文言だが、GameDesign.md 9章の例は相手の駒を
+  反転した場合(そちらは変更なし)のため仕様との齟齬はない
 
 ### 進め方の注意
 
@@ -1474,54 +1533,53 @@ GameDesign.md 3章・9章への追記は承認済み。
 4. 終局後は `ResultOverlay` の暗幕が全画面のクリックを受け止めるため、画面下部中央の
    ログボタンが押せず、ログを見返せない
 
-> **中断中の理由**: 着手中に、フェーズ17 V-1(行動予約方式)のUI側実装が別セッションで
-> 並行して進行していることが判明した(`scripts/logic/game_state.gd`・`scripts/net/online_match.gd`は
-> V-1対応済みに差し替わり、`scripts/ui/match_screen.gd`はコンパイルエラーを含む編集途中の状態)。
-> W-2/W-3は`match_screen.gd`・`match_turn_resolver.gd`・`match_screen.tscn`を触るため、
-> **V-1のUI実装が完了してから着手する**。それまでに衝突しない部分(W-1・W-4・演出部品)だけを
-> 先行して入れてある。
-
 - [x] **W-1 決着の要因を `GameState` が保持する**。`EndReason`(`HP_DEPLETED`/`TIMEOUT`/
   `SURRENDER`)と`end_reason`を追加し、`force_match_end(winner, reason)`の既定引数(既定=`TIMEOUT`)
   として記録する。`surrender()`は`SURRENDER`を明示的に渡し、`deal_damage()`でHPが0になった経路は
   `HP_DEPLETED`を記録する。`start_match()`でリセットする。`match_ended(winner)`のシグネチャは
   変えていない(UI層が終局後に`state.end_reason`を読む)
-- [x] **W-4 対局ログに決着行を記録する**。`MatchBattleLog.record_match_end(state, winner)`と、
-  同じ文言を組み立てるだけの`format_match_end()`(既存の`format_action()`/`format_state_event()`と
-  同じ扱いで公開)を追加した。文言は「先手の勝利(後手のHPが0)」「先手の勝利(後手の投了)」
-  「先手の勝利(後手の持ち時間切れ)」。**呼び出し(`MatchScreen._on_match_ended()`からの配線)は
-  W-2で行うため未接続**
-- [x] **W-2の演出部品**。`MatchResultPresenter`に`play_finishing_blow()`(盤面中央へ「決着」を
-  ポップ表示し`FINISH_LEAD`だけ待つ。スポットライトは解除しない)と、W-3用の
-  `format_finishing_blow(state, blow, loser_label)`(「決め手: 「ソード」の落下ダメージ 4」等)を
-  追加した。**いずれも呼び出しは未接続**
-- [ ] **W-2 決着した手番の演出を最後まで見せる**(V-1のUI実装完了後に着手)。残りの手順:
-  1. `match_screen.gd`に`_pending_result_winner: Variant`と`_finishing_blow: Dictionary`を追加し、
-     `_start_common()`でリセットする
-  2. `_on_hp_changed()`で`new_hp <= 0 and new_hp < previous_hp`のとき
-     `_finishing_blow = {"amount": previous_hp - new_hp, "source": source}`を記録する
-     (`_turn_resolver.is_capturing()`の経路・そうでない経路の両方)
-  3. `_advance_turn_and_refresh()`の`if state.is_match_over() or not _turn_resolver.has_events():`を
-     `if not _turn_resolver.has_events():`へ変え、決着していても演出を再生する
-  4. `_on_match_ended()`で`_battle_log.record_match_end(state, winner)`を呼び、
-     `_turn_resolver.is_capturing() or _turn_resolver.resolving`なら`_pending_result_winner`へ
-     保留してreturnする
-  5. `on_turn_resolution_finished()`と、演出を再生しなかった経路の両方から
-     `_flush_pending_result()`(保留があれば`_show_result()`を呼ぶ)を呼ぶ
-  6. `match_turn_resolver.gd`の`play()`で、`event["kind"] == "hp" and event["new_hp"] <= 0`を
-     検出したら残りのイベントを捨て、`await _screen._result_presenter.play_finishing_blow()`の後に
-     `resolving = false` → `_screen.on_turn_resolution_finished()`(`clear_spotlight_all()`は呼ばない)
-- [ ] **W-3 結果パネルに決着の要因を出し、ログを開けるようにする**(同上)。残りの手順:
-  1. `match_screen.tscn`の`ResultOverlay/CenterBox/Panel/Margin/VBox`へ`ButtonRow`(HBoxContainer)を
-     追加し、既存の`HomeButton`をその子へ移設、同じ`img_wide_text_*`スタイルの`LogButton`を並べる
-     (`tools/`配下の一時ビルドスクリプト経由。`godot_apply_patch.gd`は新規ノード追加・再親付けに
-     対応していないため)
-  2. `match_screen.gd`に`result_log_button`を`@onready`で足し、`pressed`→`_battle_log.set_open(true)`を
-     配線する(`LogPanel`は`.tscn`上で`ResultOverlay`より後ろの子=手前に描画されるため、
-     z順の指定は不要)
-  3. `MatchResultPresenter.show_result()`のフェード対象を`home_button`から`ButtonRow`へ変える
-  4. `_show_result()`の`detail`へ、`_result_presenter.format_finishing_blow(state, _finishing_blow,
-     敗者の呼び方)`が返す1行を追加する(空文字なら足さない)
+- [x] **W-2 決着した手番の演出を最後まで見せる**。`_advance_turn_and_refresh()`の
+  「決着したら`_turn_resolver.clear()`で演出を捨てる」分岐を廃止し、イベントが1件でもあれば
+  決着していても再生するようにした。`MatchTurnResolver.play()`はHPを0にしたダメージイベントを
+  再生した時点で残りを破棄して打ち切り(決着した瞬間より後のマスの解決は勝敗に影響しないため)、
+  スポットライトとカメラのズームを戻さないまま`MatchResultPresenter.play_finishing_blow()`で
+  「決着」を重ねて`FINISH_LEAD`だけ待つ。`_on_match_ended()`は演出のキャプチャ中
+  (`is_capturing()`)または再生中(`resolving`)なら`hold_result(winner)`で保留し、
+  `on_turn_resolution_finished()`と「イベントが無かった経路」の両方から`flush_pending()`が
+  結果パネルを出す。投了・持ち時間切れは演出キューを伴わないため従来どおり即座に表示される。
+  「決着」の表示位置は画面中央ではなく`FINISH_Y_RATIO`(画面高さの74%)へ置いた。中央に出すと
+  決め手の駒そのものを覆い隠してしまい、原因を見せるという目的と矛盾するため
+- [x] **W-3 結果パネルに決着の要因を出し、ログを開けるようにする**。`match_screen.tscn`の
+  `ResultOverlay`のVBoxへ`ButtonRow`(HBoxContainer)を追加し、既存の`HomeButton`を移設して
+  同じ`img_wide_text_*`スタイルの`LogButton`を並べた(いずれも200x72・フォント24。ボタン2つと
+  決め手の1行が収まるようパネルの`custom_minimum_size`を420→480へ広げた。`.tscn`の変更は
+  `tools/`配下の一時ビルドスクリプト経由で、適用後に削除済み)。`LogPanel`は`.tscn`上で
+  `ResultOverlay`より後ろの子=手前に描画されるため、z順の指定は不要だった。詳細テキストへは
+  `MatchResultPresenter.format_finishing_blow()`が返す「決め手: 「エコー」の落下ダメージ 2」
+  「決め手: 自分の投了」等の1行を追加した。**勝敗テキストの組み立て自体を`MatchScreen`から
+  `MatchResultPresenter.show_for()`へ移した**(決め手が視点の書き分けと一体であることと、
+  `match_screen.gd`が1000行の上限に迫っていたため。Architecture.md 4章に反映済み)
+- [x] **W-4 対局ログに決着行を記録する**。`MatchBattleLog.record_match_end()`/`format_match_end()`を
+  追加し、「先手の勝利(後手のHPが0)」「先手の勝利(後手の投了)」「先手の勝利(後手の持ち時間
+  切れ)」を残す。積むタイミングは`match_ended`の発火時点ではなく`show_for()`の冒頭とした
+  (発火時点で積むと、その後に解決演出が積む行の下へ埋もれ、ログの最下部=最も古い位置に
+  決着行が出てしまう。実際に一度その状態になったのを実機で確認して直した)
+- [x] **W-5(付随)終局後の手番表示**。上部バーに「相手の手を待っています」が残り、結果パネルの
+  外側で対局がまだ続いているように見えたため、`_refresh_turn_label()`の冒頭で
+  `state.is_match_over()`を見て「対局終了」を出すようにした
+
+### 検証
+
+- gdformat・gdlint(変更した5ファイル)、`tools/tests/run_tests.gd`はいずれも問題なし
+- 非ヘッドレスで、CPU戦を直接起動する一時スクリプト(`user://`へ触れず、デッキは
+  `MatchSetup.all_hourglasses()`から直接組む。確認後に削除済み)により以下を確認した
+  - 落下ダメージでの決着:中央の駒が落ちきる→ダメージ→「決着」→結果パネル、の順に途切れず
+    再生されること。決め手の駒(スポットライト+ズーム)が「決着」表示に隠れないこと
+  - 結果パネルの詳細が「自分 20 / 相手 0」「1手で決着」「決め手: 「エコー」の落下ダメージ 2」に
+    なること
+  - 結果パネルの「ログ」ボタンでログが結果パネルの手前に開き、最上部(最新)が
+    「先手の勝利(後手のHPが0)」になること
+  - 投了での決着で「決め手: 自分の投了」が出ること、終局後の上部バーが「対局終了」になること
 
 ### 進め方の注意
 
@@ -1562,9 +1620,24 @@ GameDesign.md 2章・5章・9章、Architecture.md 3.1節・配置フェーズ�
   継続効果は `resolve_turn_tick()` 経由でしか回らないため開始直後には発動せず、最初の手番終了時
   から通常どおり評価されることをコード上で確認済み。あわせて `advance_and_end_turn()` の
   docstring にあった「全ての砂時計は自然に『上向き』のままとなる」を実態に合わせて修正した
-- [ ] **X-2 配置フェーズで各マスの初期状態を表示する**(未着手。着手時の注意は下記「進め方の注意」参照)(GameDesign.md 9章)。`BoardRow.show_placement()`
-  が空きマス・配置済みマスとも、そのマスの初期状態のイラストと状態名で表示するようにする。
-  どこに置くかが初期状態の選択そのものであるため、対局が始まってから気づくことのないようにする
+- [x] **X-2 配置フェーズで各マスの初期状態を表示する**(GameDesign.md 9章)。
+  `hourglass_slot.tscn` へ `VisualRoot/PlacementStateLabel`(Label、スロット下端の外側へ
+  4〜26pxはみ出す位置)を追加し、`HourglassSlot.show_placement_card(data, start_state)` /
+  `show_placement_empty(start_state)` が「上向きで開始」「落下中で開始」「落ちきりで開始」を
+  表示する。配置済みマスのイラストも `_update_icon()` でそのマスの初期状態のものへ切り替える。
+  `start_state` は既定 -1 で、負のときは状態名を出さず上向きイラストを使うため、
+  **まだ置き場所が決まっていない `HourglassSlotStrip` の手札5枠は呼び出し側を変更せずに
+  従来どおり**の表示になる。`BoardRow.show_placement()` が `GameState.START_STATES[i]` を
+  渡す。配置フェーズ以外の表示経路(`show_instance`/`show_deployed`/`show_state_step`/`clear`)は
+  必ず `_show_placement_state(-1)` を呼び、対局が始まったらラベルが残らないようにしている。
+  ラベルの位置は当初スロット下端の内側(-24〜0)にしていたが、右下の落下ダメージバッジ
+  (`DamageBadge`、-30〜-2)と重なってバッジが読めなくなることがスクリーンショットで判明した
+  ため、スロットの下へはみ出す位置へ変更した。
+  検証は非ヘッドレスで実際に配置フェーズを起動して行い、(a)空きマス3つに状態名が出ること、
+  (b)手札5枠には出ないこと、(c)配置するとそのマスの初期状態のイラスト(`state_full`/
+  `state_falling`/`state_empty`)になること、(d)対局開始でラベルが消え `GameState` の場が
+  0/1/2(上向き/落下中/落ちきり)で始まり両者のHPが20のままであること、をスクリーンショットと
+  ログの両方で確認済み
 - [x] **X-3 テストを更新する**。新規テスト2本を追加した。
   `_test_start_states_differ_by_position()` は場3マスが `UPRIGHT`/`FALLING`/`FALLEN` で
   始まること・控えは全て `UPRIGHT` であること・**右マスが `FALLEN` で始まっても落下ダメージが
@@ -1578,7 +1651,7 @@ GameDesign.md 2章・5章・9章、Architecture.md 3.1節・配置フェーズ�
 
 ### 進め方の注意
 
-- X-1 → X-3 は完了済み。残るは X-2(配置フェーズの表示)のみ
+- X-1 → X-3 はすべて完了済み
 - **X-2 着手前に、`scripts/ui/` 配下が別の作業と競合していないか確認すること**。X-1/X-3 の作業中、
   `hourglass_slot.gd`(予約マーク `reservation_badge` の追加途中)と `match_screen.gd`
   (`MatchTurnResolver.begin_capture()` の引数変更途中)が書きかけでコンパイルできない状態にあり、
@@ -1587,6 +1660,15 @@ GameDesign.md 2章・5章・9章、Architecture.md 3.1節・配置フェーズ�
   互いの変更を潰し合う。`hourglass_slot.gd:518` の型推論エラー
   (`var label := RESERVATION_LABELS.get(...)`)だけは、プロジェクト全体がコンパイルできず
   検証不能だったため `var label: String = ...` へ修正済み
+- **X-2 の作業中、`scenes/match_screen.tscn` のルートノードから `script` の参照が失われている
+  破損を発見し復旧した**(対局画面が一切起動しない状態だった。ルート以外の全シーンは無事)。
+  復旧は `load()`→`set_script()`→`pack()`→`ResourceSaver.save()` で試みたが、**この方法だと
+  `GameBoard`(`BoardCamera` の子)の `anchors_preset` が 0→15 に変わり `offset_right`/
+  `offset_bottom` が焼き込まれるなど、131行もの意図しない差分が出た**(instantiate 時に
+  計算されたレイアウト値が保存されるため)。ズームの挙動を壊しかねないため取り消し、
+  失われていた2行(`ext_resource` の宣言とルートの `script = ExtResource(...)`)だけを
+  復元して差分が2行のみであることを確認した。**ルートにスクリプトを持つシーンを
+  一時ビルドスクリプトで再生成する際は、`root.set_script()` を忘れないこと**
 - フェーズ18(W群)も `GameState` を触るが、あちらは終局まわり(`force_match_end`/演出)で
   こちらは `start_match()` のため衝突しない
 - 過去のセッションで `user://` 配下の実データ(`deck_save.json`)を誤って削除する事故が
@@ -1595,7 +1677,7 @@ GameDesign.md 2章・5章・9章、Architecture.md 3.1節・配置フェーズ�
 
 ---
 
-## 今やること(フェーズ17: 効果音・BGMのCC0素材化)
+## 今やること(フェーズ20: 効果音・BGMのCC0素材化)
 
 ユーザー指示:「効果音やBGMについて、無料のアセットを探して使ってみてほしい」。
 これまでの「音源は外部アセットを使わず手続き生成したWAVを用いる」「BGMは当面扱わない」という
@@ -1603,40 +1685,65 @@ GameDesign.md 2章・5章・9章、Architecture.md 3.1節・配置フェーズ�
 
 採用条件はライセンス**CC0のみ**(クレジット表記の管理コストを負わないため)。BGMは
 **パブリックドメインのクラシック音楽(ピアノソロ)**を使う(ユーザーの発案)。
+取り込んだ素材の出所・作者・ライセンスは `assets/CREDITS.md`(新規)に記録した。
 
-取得済みの素材(いずれも録音自体がPD/CC0であることを個別に確認済み):
+- [x] **Y-1 効果音6種をCC0素材へ差し替えた**。すべてKenney(CC0、各パック同梱のLicense.txtで確認)。
+  ボタン押下=`click_005`、反転=`switch_003`、移動=`drop_002`、交代=`maximize_008`
+  (以上Interface Sounds)、被弾=`impactGlass_medium_000`(Impact Sounds)、決着=`jingles_PIZZI02`/
+  `jingles_PIZZI01`(Music Jingles)。**被弾にガラスへの打撃音を充てたのは砂時計がガラス製のため**、
+  **決着に弦楽器のピチカートを選んだのはBGMのピアノと音色が調和するため**。
+  Interface Soundsの候補は長さ・ピーク・RMS・ゼロ交差率を計測し、低めで柔らかい音
+  (真鍮・木のUIに合う)を選んだ。手続き生成の旧WAV(`damage.wav`/`result.wav`)は削除した
+- [x] **Y-2 BGM再生基盤 `MusicPlayer` を実装した**(`scripts/logic/music_player.gd`)。
+  `AudioStreamPlayer` 2本でホーム系/対局をクロスフェード(1.4秒)し、曲が終わったら
+  `LOOP_GAP`(3秒)置いて頭から鳴らす「アルバム再生」方式で繰り返す。切り替えは
+  `Main._show_only()` の1箇所のみ。ブラウザの自動再生制限には、`play()` が最初のユーザー操作まで
+  トラックを `_pending` に保留し、`Main._input()` が拾った最初のクリック/タップで
+  `notify_user_gesture()` を呼んで鳴らし始める形で対応した(検知は1度きりで、以降は
+  `set_process_input(false)` で入力を見ない)
+- [x] **Y-3 音量設定を「効果音」「BGM」の2系統へ拡張した**。`SoundBank` が
+  `_sfx_volume`/`_bgm_volume` を持ち、`user://sound_settings.json` を
+  `{"sfx_volume":..., "bgm_volume":...}` の新形式で保存する。旧形式の単一キー `volume` は
+  両系統の初期値として読み、次回保存時に自動移行する。**音量の単一情報源はSoundBank側に置き、
+  `MusicPlayer` へは一方向にプッシュする**(同じJSONを2クラスで奪い合わないため)。
+  `SettingsPanel` はスライダー2本へ組み替えた(`.tscn`は一時ビルドスクリプト経由で更新、適用後削除)。
+  BGMの既定音量は0.6(クラシックを最大で流すと操作音がかき消されるため)
+- [x] **Y-4 結果画面の演出を勝敗で鳴り分けるようにした**。`Sfx.RESULT` を
+  `RESULT_WIN`/`RESULT_LOSE` へ分け、`MatchScreen._result_jingle()` が判定する。
+  自視点が固定される対局(オンライン/CPU戦)のみ `_my_side` と比較し、「自分」が定まらない
+  ローカル対戦・観戦は決着そのものを示す勝利側を鳴らす。あわせて終局時に `MusicPlayer.stop()` を
+  呼んでBGMを止める(リプレイ再生中は結果パネルを出さない既存仕様に合わせ、停止もしない)
 
-| 用途 | 素材 | 出所 | ライセンス |
-|---|---|---|---|
-| 効果音(UI・操作系) | Kenney Interface Sounds(100音) / UI Audio | kenney.nl(GodotのWAV変換ミラー: Calinou/kenney-*) | CC0 |
-| 効果音(被弾) | Kenney Impact Sounds(130音、`impactGlass_*` を使う) | kenney.nl | CC0 |
-| 決着ジングル | Kenney Music Jingles(85音、弦楽ピチカートの `PIZZI` 系を使う) | kenney.nl | CC0 |
-| BGM(ホーム系) | サティ「ジムノペディ第1番」 | Wikimedia Commons(演奏: Robin Alciatore) | パブリックドメイン |
-| BGM(対局) | バッハ「ゴルトベルク変奏曲」アリア | Open Goldberg Variations(演奏: Kimiko Ishizaka) | CC0 |
+### 検証
 
-- [ ] **V-1 効果音6種をCC0素材へ差し替える**。反転/移動/交代/被弾/決着/ボタン押下。手続き生成の
-  旧WAV(`assets/sfx/*.wav`)を置き換える。砂時計=ガラスであることを踏まえ、被弾は
-  `impactGlass_*`(ガラスへの打撃音)を充てる。取り込んだ素材の出所・作者・ライセンスは
-  `assets/CREDITS.md` へ記録する
-- [ ] **V-2 BGM再生基盤 `MusicPlayer` を実装する**。ホーム系/対局の2曲をクロスフェードで切り替え、
-  クラシックがシームレスループしないことを踏まえた「アルバム再生」方式(終わりでフェードアウト→
-  短い間→頭から)で繰り返す。ブラウザの自動再生制限に対応し、最初のユーザー操作を検知してから
-  再生を始める。切り替えは `Main._show_only()` の1箇所から行う
-- [ ] **V-3 音量設定を「効果音」「BGM」の2系統へ拡張する**。`SoundBank` に `_sfx_volume`/`_bgm_volume`
-  を持たせ、`user://sound_settings.json` を新形式へ移行する(旧形式の単一キー `volume` は
-  両系統の初期値として読む)。`SettingsPanel` のスライダーを2本にする
-- [ ] **V-4 結果画面の演出を勝敗で鳴り分ける**。BGMを止め、`Sfx.RESULT` を `RESULT_WIN`/`RESULT_LOSE`
-  へ分けて短いジングルを鳴らす
+- gdformat・gdlint(全対象ファイル)、`tools/tests/run_tests.gd` はいずれも問題なし
+- ヘッドレスで、効果音7種・BGM2曲が全て読めること、自動再生制限の保留→解除、クロスフェード
+  (2本同時再生)、同じ曲の再要求で鳴り直さないこと、音量のdB換算、`stop()` を確認
+- ヘッドレスで `main.tscn` を起動し、ホーム画面=HOMEトラック、対局画面へ遷移=MATCHトラック、
+  自分の投了=`RESULT_LOSE`、相手の投了=`RESULT_WIN`、終局でBGM停止となることを確認
+- 非ヘッドレスで設定パネルを開き、2スライダー(効果音/BGM)が崩れず表示されることを確認
+- `user://sound_settings.json` の実データ(旧形式 `{"volume":1.0}`)は、テストのバックアップ→
+  復元の往復により変更されていないことを実ファイルで確認済み
 
-### 進め方の注意
+### 判断に迷った点・残った課題
 
-- V-3は `SoundBank` の公開APIを変える(`get_volume()`/`set_volume()` → `*_sfx_volume()`)ため、
-  呼び出し元(`settings_panel.gd`)と同時に直す。V-2はその音量APIに依存するのでV-3を先に済ませる
-- 過去のセッションで `user://` 配下の実データ(`deck_save.json`)を誤って削除する事故が発生している。
-  `sound_settings.json` も `user://` にあるため、旧形式からの移行を検証する際は実ファイルを
-  直接書き換えず、テスト内でバックアップ→復元する既存の安全な往復パターンに従うこと
-- BGMのファイルサイズは実行時に読むリソースへそのまま加算される。現在のインポート済みデータは
-  約17MBで、unityroomのロード時間に直結するため、**書き出し品質を落として1曲2MB前後に抑える**
+- **BGMのファイルサイズを圧縮できなかった**。当初「1曲2MB前後に抑える」と計画したが、
+  環境に ffmpeg/oggenc が無く再エンコードできなかった。取得元のOGGをそのまま使っており、
+  `assets/bgm/` は6.4MB(ホーム3.7MB=3分4秒、対局2.9MB=5分)。インポート済みデータは
+  約17MB→約24MBに増えた。unityroomのロード時間に効くため、**エンコーダを用意できた時点で
+  ビットレートを落とすか、曲を1〜2分へトリミングする**余地がある
+- 決着ジングルの勝敗の割り当ては、17個の候補を実際に再生して
+  `AudioEffectSpectrumAnalyzer` でスペクトル重心の時間変化を測り、**音程が上がって終わるもの
+  (PIZZI02)を勝利、下がって終わるもの(PIZZI01)を敗北**として機械的に選んだ。
+  聴感での最終判断はしていないため、実際に遊んで違和感があれば
+  `assets/CREDITS.md` の記録を頼りに同じパック内の別候補へ差し替えればよい
+- **`tools/tests/run_tests.gd` が1000行の上限(gdlintの`max-file-lines`)に達した**。
+  今回追加した音量設定のテストは `tools/tests/sound_settings_tests.gd` へ切り出し、
+  判定用の `_assert_true` を `Callable` で渡して共有する形にした。次にテストを足す人も
+  同様に別ファイルへ切り出すこと
+- `web/`(初期コミットにある別実装のHTMLプロトタイプ「CPU戦テスト環境」)の
+  `js/sound.js` が削除した `damage.wav`/`result.wav` を参照していたため、
+  `damage.ogg`/`result_win.ogg` へパスだけ直した。プロトタイプ自体の要否は判断していない
 
 ---
 

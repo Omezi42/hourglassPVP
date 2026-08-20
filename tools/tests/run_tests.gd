@@ -1,5 +1,10 @@
 extends SceneTree
 
+## 音量設定まわりのテストは、このファイルが1000行の上限(gdlintのmax-file-lines)に
+## 達したため別ファイルへ切り出している。判定は_assert_trueをCallableで渡して共有する。
+const SoundSettingsTests = preload("res://tools/tests/sound_settings_tests.gd")
+const CpuStrategyTests = preload("res://tools/tests/cpu_strategy_tests.gd")
+
 var _failures := 0
 var _hourglass_cache: Dictionary = {}
 
@@ -45,6 +50,8 @@ func _run() -> void:
 
 	_test_deck_save_round_trips_multiple_decks()
 	_test_deck_save_migrates_legacy_single_deck_format()
+	SoundSettingsTests.new().run(_assert_true)
+	CpuStrategyTests.new().run(_assert_true)
 
 	_test_local_replay_service_round_trips_and_enforces_retention()
 	_test_match_cpu_replay_recorder_saves_via_local_replay_service()

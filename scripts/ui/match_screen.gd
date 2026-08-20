@@ -79,7 +79,9 @@ var _replay: MatchReplayController
 @onready var result_panel: PanelContainer = $ResultOverlay/CenterBox/Panel
 @onready var result_title: Label = $ResultOverlay/CenterBox/Panel/Margin/VBox/TitleLabel
 @onready var result_detail: Label = $ResultOverlay/CenterBox/Panel/Margin/VBox/DetailLabel
-@onready var result_home_button: Button = $ResultOverlay/CenterBox/Panel/Margin/VBox/HomeButton
+@onready var result_button_row: HBoxContainer = $ResultOverlay/CenterBox/Panel/Margin/VBox/ButtonRow
+@onready var result_home_button: Button = result_button_row.get_node("HomeButton")
+@onready var result_log_button: Button = result_button_row.get_node("LogButton")
 @onready var back_button: Button = $BackButton
 @onready
 var match_menu_controls: HBoxContainer = bottom_bar_row.get_node("BottomMiddle/MatchMenuControls")
@@ -135,6 +137,8 @@ func _ready() -> void:
 	detail_close_button.visible = false
 	back_button.pressed.connect(func() -> void: back_pressed.emit())
 	result_home_button.pressed.connect(func() -> void: back_pressed.emit())
+	# 終局後は結果パネルの暗幕が下部のログボタンを塞ぐため、パネル側からログを開く(W-3)
+	result_log_button.pressed.connect(func() -> void: _battle_log.set_open(true))
 	surrender_button.pressed.connect(_on_surrender_button_pressed)
 	end_turn_button.pressed.connect(_on_end_turn_pressed)
 	surrender_cancel_button.pressed.connect(func() -> void: surrender_confirm.visible = false)
@@ -213,7 +217,7 @@ func start_online_match(
 
 
 ## CPU戦の開始。プレイヤーは常に先手(PlayerSide.A)、CPUは後手を担当する。
-## strategyを省略した場合はRandomCpuStrategy(合法手からランダムに1手を選ぶ)を使う。
+## strategyを省略した場合はSmartCpuStrategy(盤面評価と探索を行う賢いCPU)を使う。
 func start_cpu_match(
 	board_a: Array[HourglassData],
 	bench_a: Array[HourglassData],
@@ -228,7 +232,7 @@ func start_cpu_match(
 	_is_cpu_match = true
 	_online_match = null
 	_my_side = GameState.PlayerSide.A
-	_cpu_strategy = strategy if strategy != null else RandomCpuStrategy.new()
+	_cpu_strategy = strategy if strategy != null else SmartCpuStrategy.new()
 	_cpu_replay_recorder.begin(board_a, bench_a, board_b, bench_b)
 	back_button.visible = false
 	surrender_button.visible = true
@@ -398,6 +402,7 @@ func _start_common(
 	_action_presenter.reset()
 	board_camera_controller.reset(true)
 	_battle_log.reset()
+	_result_presenter.reset()
 	_turn_banner.reset()
 	state.start_match(board_a, bench_a, board_b, bench_b)
 	_last_hp = state.hp.duplicate()
@@ -659,11 +664,12 @@ func _advance_turn_and_refresh() -> void:
 	_turn_resolver.end_capture()
 	_refresh_turn_label()
 
-	if state.is_match_over() or not _turn_resolver.has_events():
+	if not _turn_resolver.has_events():
 		_turn_resolver.clear()
 		if not state.is_match_over():
 			_clock.finish_turn(state.current_turn)
 		refresh_view()
+		_result_presenter.flush_pending()
 		_maybe_trigger_cpu_turn()
 		return
 
@@ -677,6 +683,7 @@ func on_turn_resolution_finished() -> void:
 	if not state.is_match_over():
 		_clock.finish_turn(state.current_turn)
 	refresh_view()
+	_result_presenter.flush_pending()
 	_maybe_trigger_cpu_turn()
 
 
@@ -762,10 +769,12 @@ func _on_hp_changed(side: GameState.PlayerSide, new_hp: int) -> void:
 		var source: Variant = null
 		if new_hp < previous_hp:
 			source = _pop_fall_source(side)
+		_result_presenter.note_hp_change(side, previous_hp, new_hp, source)
 		_turn_resolver.push_hp_event(side, new_hp, previous_hp, source)
 		return
 	if new_hp < previous_hp and not _replay.catching_up:
 		var source: Variant = _pop_fall_source(side)
+		_result_presenter.note_hp_change(side, previous_hp, new_hp, source)
 		_damage_presenter.spawn_floating_damage(side, previous_hp - new_hp, source)
 		_damage_presenter.play_damage_feedback(side)
 		if source != null:
@@ -801,7 +810,7 @@ func _on_clock_time_out(side: GameState.PlayerSide) -> void:
 
 func _on_match_ended(winner: GameState.PlayerSide) -> void:
 	_clock.stop()
-	_set_wait_dots_active(false)
+	_refresh_turn_label()
 	surrender_button.visible = false
 	end_turn_button.visible = false
 	surrender_confirm.visible = false
@@ -819,47 +828,48 @@ func _on_match_ended(winner: GameState.PlayerSide) -> void:
 	# 結果画面ではBGMを止める。数分あるクラシックの曲は冒頭しか聞かれず、
 	# 短いジングルへ譲ったほうが決着が伝わるため(GameDesign.md 9章)。
 	MusicPlayer.stop()
+	# 決着した手番の解決演出がまだ残っている場合は、最後まで見せ切ってから結果を出す(W-2)。
+	# 表示はMatchResultPresenter.flush_pending()が演出の完了後に行う。
+	if _turn_resolver.is_capturing() or _turn_resolver.resolving:
+		_result_presenter.hold_result(winner)
+		return
 	_show_result(winner)
 
 
 ## 決着ジングルを勝敗で鳴り分ける。同一端末で交互に操作するローカル対戦と観戦は
 ## 「自分」が定まらないため、決着そのものを示す勝利側のジングルを鳴らす。
 func _result_jingle(winner: GameState.PlayerSide) -> SoundBank.Sfx:
-	if _is_online or _is_cpu_match:
+	if is_self_view_fixed():
 		return SoundBank.Sfx.RESULT_WIN if winner == _my_side else SoundBank.Sfx.RESULT_LOSE
 	return SoundBank.Sfx.RESULT_WIN
 
 
-## 勝敗テキストを組み立て、演出(MatchResultPresenter)へ渡して結果パネルを表示する(O-7)。
+## 勝敗テキストの組み立てと結果パネルの表示はMatchResultPresenterが持つ。決め手の1行(W-3)が
+## 加わり、視点の書き分けと合わせて結果表示の判断がそちらへ寄ったため。
 func _show_result(winner: GameState.PlayerSide) -> void:
-	# 自視点が固定される対局(オンライン/CPU戦)だけ勝敗で書く。
-	# 同一端末で交互に操作するローカル対戦と観戦は「自分」が定まらないため先手/後手で書く。
-	var title: String
-	var detail: String
-	if _is_online or _is_cpu_match:
-		var self_side := _my_side
-		title = "勝利!" if winner == self_side else "敗北..."
-		detail = (
-			"自分 %d  /  相手 %d\n%d手で決着"
-			% [state.hp[self_side], state.hp[state.other_side(self_side)], _move_count]
-		)
-	else:
-		title = "先手の勝利!" if winner == GameState.PlayerSide.A else "後手の勝利!"
-		detail = (
-			"先手 %d  /  後手 %d\n%d手で決着"
-			% [
-				state.hp[GameState.PlayerSide.A],
-				state.hp[GameState.PlayerSide.B],
-				_move_count,
-			]
-		)
-	_result_presenter.show_result(title, detail)
+	_result_presenter.show_for(winner)
 
 
 ## リプレイの巻き戻し・観戦の追いつきで手を一気に再現している最中かどうか。この間は
 ## 1手ごとの演出を出さない(MatchActionPresenterが参照する)。
 func is_catching_up() -> bool:
 	return _replay.catching_up
+
+
+## 自視点が固定される対局(オンライン/CPU戦)かどうか。同一端末で交互に操作するローカル対戦と
+## 観戦は「自分」が定まらないため、勝敗・決め手・決着ジングルを先手/後手の視点で扱う。
+func is_self_view_fixed() -> bool:
+	return _is_online or _is_cpu_match
+
+
+## 自視点が固定される対局における「自分」の側。
+func self_side() -> GameState.PlayerSide:
+	return _my_side
+
+
+## その対局の総手数(結果パネルの表示用)。
+func move_count() -> int:
+	return _move_count
 
 
 func perspective_side() -> GameState.PlayerSide:
@@ -906,6 +916,12 @@ func _refresh_clock() -> void:
 ## 「自分」が定まらないローカル対戦・観戦・リプレイ再生は先手/後手で表す。
 ## _show_result()の視点判定(_is_online or _is_cpu_match)と同じ書き分けに揃えている。
 func _refresh_turn_label() -> void:
+	# 終局後は手番が存在しない。「相手の手を待っています」が残ると、結果パネルの外側で
+	# 対局が続いているように見えてしまう。
+	if state.is_match_over():
+		_set_wait_dots_active(false)
+		turn_label.text = "対局終了"
+		return
 	var is_self_locked_view := _is_online or _is_cpu_match
 	var is_waiting_for_opponent := is_self_locked_view and state.current_turn != _my_side
 	_set_wait_dots_active(is_waiting_for_opponent)

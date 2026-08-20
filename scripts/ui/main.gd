@@ -69,7 +69,9 @@ func _ready() -> void:
 ## ブラウザは最初のユーザー操作より前の音声再生を許さないため、最初の入力をここで拾って
 ## BGMの再生開始を許可する。1度きりでよいので、通知したら以降は入力を見ない。
 func _input(event: InputEvent) -> void:
-	if not (event is InputEventMouseButton or event is InputEventScreenTouch or event is InputEventKey):
+	if not (
+		event is InputEventMouseButton or event is InputEventScreenTouch or event is InputEventKey
+	):
 		return
 	MusicPlayer.notify_user_gesture()
 	set_process_input(false)
@@ -96,14 +98,18 @@ func _on_spectate_requested(match_id: String) -> void:
 	_show_only(match_screen)
 
 
-## CPUのデッキ5種類をランダムに選出し、場3個・控え2個への振り分けもランダムに決定する。
+## CPUのデッキ5種類をランダムに選出し、場3個・控え2個への振り分けはSmartCpuStrategyの配置ロジックで決定する。
 ## 先手/後手は常にプレイヤーが先手のため、配置フェーズはMatchScreen側のCPU戦専用入り口を使う。
 func _start_cpu_match() -> void:
 	var cpu_deck := MatchSetup.all_hourglasses()
 	cpu_deck.shuffle()
 	cpu_deck = cpu_deck.slice(0, 5)
-	_cpu_board = cpu_deck.slice(0, 3)
-	_cpu_bench = cpu_deck.slice(3, 5)
+	var smart := SmartCpuStrategy.new()
+	var placement := smart.choose_placement(cpu_deck)
+	_cpu_board = []
+	_cpu_board.assign(placement["board"])
+	_cpu_bench = []
+	_cpu_bench.assign(placement["bench"])
 	match_screen.start_placement_then_cpu(MatchSetup.player_deck, _cpu_board, _cpu_bench)
 	_match_return_screen = home_screen
 	_show_only(match_screen)

@@ -62,9 +62,34 @@ const SLIDE_Z_INDEX := 1
 ## MatchActionPresenter._spotlight()が同じ瞬間にvisual_root.scaleをスポットライト用に
 ## 動かしているため、ここではposition:yのみを動かして競合を避ける
 ## (「VisualRootのposition/scaleだけを動かす」制約のうち、positionのみを使う判断)。
-const FLIP_LIFT_HEIGHT := 16.0
+## 反転の演出(GameDesign.md 9章、フェーズ17 V-4)。反転はゲームの中心となる行動のため、
+## 「着弾の衝撃 → 沈み込み → 持ち上げ → 回転中の反射 → 着地の余韻」という一連の流れとして
+## 見せる。位置はVisualRootのposition:y、潰れはicon.scale:y、反射はicon.modulateだけを
+## 使い、アイコンの回転そのものは既存の_animate_flip()に任せる(同じプロパティを2つの
+## Tweenで取り合わないようにするため。scale:xは_animate_flip()側が使う)。
+## 回転の折り返し点で駒を完全に消さないための最小の横幅。0にすると持ち上がった駒が
+## 一瞬まるごと見えなくなり、何が起きたのか分からなくなるため、真横から見た厚みを残す。
+const FLIP_EDGE_SCALE := 0.12
+const FLIP_LIFT_HEIGHT := 26.0
+const FLIP_ANTICIPATE_DROP := 5.0
+const FLIP_ANTICIPATE_DURATION := 0.06
 const FLIP_LIFT_UP_DURATION := 0.14
-const FLIP_LIFT_DOWN_DURATION := 0.18
+const FLIP_HANG_DURATION := 0.1
+const FLIP_LIFT_DOWN_DURATION := 0.14
+const FLIP_LAND_SQUASH := 0.84
+const FLIP_LAND_SETTLE_DURATION := 0.12
+## 回転中、ガラスと砂が光を返しているように見せる明るさのピーク(1.0超で加算的に明るくなる)。
+const FLIP_SHEEN_COLOR := Color(1.75, 1.6, 1.25, 1.0)
+const FLIP_SHEEN_IN_DURATION := 0.16
+const FLIP_SHEEN_OUT_DURATION := 0.34
+## 着弾時と着地時に足元へ広がる衝撃波の輪。台座光と同じ扁平な楕円で描き、奥行きを揃える。
+const FLIP_SHOCKWAVE_DURATION := 0.4
+const FLIP_SHOCKWAVE_START_SCALE := 0.5
+const FLIP_SHOCKWAVE_END_SCALE := 2.6
+const FLIP_SHOCKWAVE_WIDTH := 3.0
+const FLIP_SHOCKWAVE_SEGMENTS := 28
+## 非負のときだけ衝撃波を描く。0.0は「広がり始めた瞬間」を表すため、無効値は-1.0とする。
+const FLIP_SHOCKWAVE_INACTIVE := -1.0
 
 ## 予約マーク(GameDesign.md 4.3・9章)。行動を設定した瞬間に、そのマスへ何を設定したかを出す。
 const RESERVATION_LABELS := {"flip": "反転", "move": "移動", "swap_in": "交代"}
@@ -102,6 +127,9 @@ var _operable_pulse_tween: Tween
 var _spotlight_tween: Tween
 var _slide_tween: Tween
 var _flip_lift_tween: Tween
+var _flip_sheen_tween: Tween
+var _flip_shockwave_tween: Tween
+var _flip_shockwave := FLIP_SHOCKWAVE_INACTIVE
 var _reservation_tween: Tween
 
 ## ホバー/押下のTween先。コンテナ(BoardRow/HourglassSlotStrip等)の直接の子である自分自身の
@@ -307,16 +335,69 @@ func play_flip_lift() -> void:
 		_flip_lift_tween.kill()
 	visual_root.position = _rest_position
 	visual_root.z_index = SLIDE_Z_INDEX
+	icon.pivot_offset = icon.size / 2
+	icon.scale.y = 1.0
+	_play_flip_shockwave()
+	_play_flip_sheen()
+
 	_flip_lift_tween = create_tween()
+	# 光が届いた衝撃で一度沈み込む(持ち上がる前のためを作る)
 	_flip_lift_tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	_flip_lift_tween.tween_property(
+		visual_root, "position:y", _rest_position.y + FLIP_ANTICIPATE_DROP, FLIP_ANTICIPATE_DURATION
+	)
+	_flip_lift_tween.parallel().tween_property(
+		icon, "scale:y", FLIP_LAND_SQUASH, FLIP_ANTICIPATE_DURATION
+	)
+	# 持ち上がる
 	_flip_lift_tween.tween_property(
 		visual_root, "position:y", _rest_position.y - FLIP_LIFT_HEIGHT, FLIP_LIFT_UP_DURATION
 	)
+	_flip_lift_tween.parallel().tween_property(icon, "scale:y", 1.0, FLIP_LIFT_UP_DURATION)
+	# 頂点で少し留まり、回転を見せる間を作る
+	_flip_lift_tween.tween_interval(FLIP_HANG_DURATION)
+	# 落ちて着地する
 	_flip_lift_tween.set_ease(Tween.EASE_IN)
 	_flip_lift_tween.tween_property(
 		visual_root, "position:y", _rest_position.y, FLIP_LIFT_DOWN_DURATION
 	)
+	# 着地の余韻。足元にもう一度衝撃波を出し、潰れてから弾んで戻る
+	_flip_lift_tween.tween_callback(_play_flip_shockwave)
+	_flip_lift_tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	_flip_lift_tween.tween_property(
+		icon, "scale:y", FLIP_LAND_SQUASH, FLIP_LAND_SETTLE_DURATION * 0.4
+	)
+	_flip_lift_tween.set_trans(Tween.TRANS_BACK)
+	_flip_lift_tween.tween_property(icon, "scale:y", 1.0, FLIP_LAND_SETTLE_DURATION)
 	_flip_lift_tween.tween_callback(func() -> void: visual_root.z_index = 0)
+
+
+## 回転中のガラスと砂の反射。icon.modulateを一度1.0より明るい値へ振ってから元の色味へ戻す
+## (元の色味は場/控えで異なるため、その時点の基準色へ確実に戻す)。
+func _play_flip_sheen() -> void:
+	if _flip_sheen_tween != null and _flip_sheen_tween.is_valid():
+		_flip_sheen_tween.kill()
+	var base := BENCH_ICON_TINT if _is_bench else BOARD_ICON_TINT
+	icon.modulate = base
+	_flip_sheen_tween = create_tween()
+	_flip_sheen_tween.set_trans(Tween.TRANS_SINE)
+	_flip_sheen_tween.tween_property(icon, "modulate", FLIP_SHEEN_COLOR, FLIP_SHEEN_IN_DURATION)
+	_flip_sheen_tween.tween_property(icon, "modulate", base, FLIP_SHEEN_OUT_DURATION)
+
+
+func _play_flip_shockwave() -> void:
+	if _flip_shockwave_tween != null and _flip_shockwave_tween.is_valid():
+		_flip_shockwave_tween.kill()
+	_flip_shockwave_tween = create_tween()
+	_flip_shockwave_tween.tween_method(_set_flip_shockwave, 0.0, 1.0, FLIP_SHOCKWAVE_DURATION)
+	_flip_shockwave_tween.tween_callback(
+		func() -> void: _set_flip_shockwave(FLIP_SHOCKWAVE_INACTIVE)
+	)
+
+
+func _set_flip_shockwave(value: float) -> void:
+	_flip_shockwave = value
+	queue_redraw()
 
 
 ## 「落下中」の駒に、次の進行で必ず落ちきりダメージが発生することを予告する(P-1)。
@@ -393,17 +474,45 @@ func _on_mouse_exited() -> void:
 ## (フェーズ12 Q-6)。_accentは駒ごとにイラストからサンプリングした色(UiPalette定数では
 ## ないため、ここではそのまま使う。既定値のみUiPalette.PEDESTAL_DEFAULT_ACCENTを参照)。
 func _draw() -> void:
-	if not _has_piece or not _show_pedestal:
+	if not _has_piece:
 		return
 	var ci := get_canvas_item()
 	var center := Vector2(size.x * 0.5, size.y * 0.9)
 	var pedestal_scale := BENCH_PEDESTAL_SCALE if _is_bench else 1.0
 	var radius := Vector2(size.x * 0.36, size.x * 0.1) * pedestal_scale
-	for ring in range(PEDESTAL_RING_COUNT, 0, -1):
-		var scale_factor := 1.0 + ring * 0.35
-		var alpha := 0.1 / ring
-		UiPaint.fill_ellipse(ci, center, radius * scale_factor, Color(_accent, alpha), 24)
-	UiPaint.fill_ellipse(ci, center, radius, Color(_accent, 0.55), 24)
+	if _show_pedestal:
+		for ring in range(PEDESTAL_RING_COUNT, 0, -1):
+			var scale_factor := 1.0 + ring * 0.35
+			var alpha := 0.1 / ring
+			UiPaint.fill_ellipse(ci, center, radius * scale_factor, Color(_accent, alpha), 24)
+		UiPaint.fill_ellipse(ci, center, radius, Color(_accent, 0.55), 24)
+	_draw_flip_shockwave(ci, center, radius)
+
+
+## 反転の着弾・着地に合わせて足元から広がる衝撃波(フェーズ17 V-4)。台座光と同じ楕円比で
+## 描くため、真上から見た円ではなく盤面のパースに沿った輪に見える。
+func _draw_flip_shockwave(ci: RID, center: Vector2, radius: Vector2) -> void:
+	if _flip_shockwave < 0.0:
+		return
+	var progress := _flip_shockwave
+	var scale_factor := lerpf(FLIP_SHOCKWAVE_START_SCALE, FLIP_SHOCKWAVE_END_SCALE, progress)
+	var fade := 1.0 - progress
+	UiPaint.draw_ellipse_ring(
+		ci,
+		center,
+		radius * scale_factor,
+		Color(_accent, fade * 0.8),
+		FLIP_SHOCKWAVE_WIDTH,
+		FLIP_SHOCKWAVE_SEGMENTS
+	)
+	UiPaint.draw_ellipse_ring(
+		ci,
+		center,
+		radius * scale_factor * 0.6,
+		Color(UiPalette.GLOW_AMBER, fade * 0.5),
+		FLIP_SHOCKWAVE_WIDTH * 0.6,
+		FLIP_SHOCKWAVE_SEGMENTS
+	)
 
 
 func show_instance(instance: HourglassInstance) -> void:
@@ -448,6 +557,7 @@ func show_deployed(data: HourglassData) -> void:
 func show_state_step(data: HourglassData, new_state: int) -> void:
 	visible = true
 	_has_piece = true
+	_show_placement_state(-1)
 	_accent = _accent_for(data)
 	damage_badge.visible = true
 	damage_badge.text = str(data.fall_damage)
@@ -584,7 +694,7 @@ func _animate_flip(data: HourglassData, state: int) -> void:
 	tween.set_trans(Tween.TRANS_CUBIC)
 	tween.set_ease(Tween.EASE_OUT)
 	tween.tween_property(icon, "rotation_degrees", 360.0, SPIN_DURATION)
-	tween.parallel().tween_property(icon, "scale:x", 0.0, SPIN_DURATION * 0.5)
+	tween.parallel().tween_property(icon, "scale:x", FLIP_EDGE_SCALE, SPIN_DURATION * 0.5)
 	tween.tween_callback(_update_icon.bind(data, state))
 	tween.tween_property(icon, "scale:x", 1.0, SPIN_DURATION * 0.5)
 	tween.tween_callback(func() -> void: icon.rotation_degrees = 0.0)

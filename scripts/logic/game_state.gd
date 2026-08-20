@@ -251,3 +251,73 @@ func deal_damage(target_side: PlayerSide, amount: int) -> void:
 		_match_over = true
 		end_reason = EndReason.HP_DEPLETED
 		match_ended.emit(other_side(target_side))
+
+
+## 探索・シミュレーション用の軽量スナップショットを取得する。
+func save_snapshot() -> Dictionary:
+	var board_snap := {
+		PlayerSide.A: [],
+		PlayerSide.B: [],
+	}
+	for side in [PlayerSide.A, PlayerSide.B]:
+		for instance: HourglassInstance in board[side]:
+			board_snap[side].append({"data": instance.data, "state": instance.state})
+
+	var bench_snap := {
+		PlayerSide.A: [],
+		PlayerSide.B: [],
+	}
+	for side in [PlayerSide.A, PlayerSide.B]:
+		for instance: HourglassInstance in bench[side]:
+			bench_snap[side].append({"data": instance.data, "state": instance.state})
+
+	return {
+		"hp": hp.duplicate(),
+		"current_turn": current_turn,
+		"pending_action": pending_action.duplicate(true),
+		"match_over": _match_over,
+		"end_reason": end_reason,
+		"board": board_snap,
+		"bench": bench_snap,
+	}
+
+
+## スナップショットから盤面・HP・状態を復元する。
+func restore_snapshot(snapshot: Dictionary) -> void:
+	hp = snapshot["hp"].duplicate()
+	current_turn = snapshot["current_turn"]
+	pending_action = snapshot["pending_action"].duplicate(true)
+	_match_over = snapshot["match_over"]
+	end_reason = snapshot["end_reason"]
+
+	for side in [PlayerSide.A, PlayerSide.B]:
+		var snap_board: Array = snapshot["board"][side]
+		for i in range(snap_board.size()):
+			var item: Dictionary = snap_board[i]
+			var inst: HourglassInstance = board[side][i]
+			inst.data = item["data"]
+			inst.state = item["state"]
+
+		var snap_bench: Array = snapshot["bench"][side]
+		for i in range(snap_bench.size()):
+			var item: Dictionary = snap_bench[i]
+			var inst: HourglassInstance = bench[side][i]
+			inst.data = item["data"]
+			inst.state = item["state"]
+
+
+## UI等へのシグナル購読を持たない、探索・シミュレーション専用の複製GameStateを生成する。
+func clone_state() -> GameState:
+	var cloned := GameState.new()
+	cloned.effect_resolver = EffectResolver.new()
+	var empty_cards: Array[HourglassData] = []
+	cloned.start_match(empty_cards, empty_cards, empty_cards, empty_cards)
+	for side in [PlayerSide.A, PlayerSide.B]:
+		cloned.board[side] = []
+		for inst in board[side]:
+			cloned.board[side].append(HourglassInstance.new(inst.data))
+		cloned.bench[side] = []
+		for inst in bench[side]:
+			cloned.bench[side].append(HourglassInstance.new(inst.data))
+	cloned.restore_snapshot(save_snapshot())
+	return cloned

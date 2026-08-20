@@ -24,6 +24,10 @@ var _queue: Array[Dictionary] = []
 ## 解決対象の行動(GameState.pending_action)。ステップ再生時に反転/移動/交代の見た目を
 ## 組み立てるため、キャプチャ開始時にMatchScreenから受け取っておく。
 var _action: Dictionary = {}
+## 反転のステップは行動の実況(「…を反転」)と状態変化の実況(「…が上向きへ進行」)が
+## 同時に出て重なって読めなくなるため、直後の状態変化1件分だけ実況を抑制する。
+## 反転させたこと自体は行動の実況が伝えており、ログには両方とも従来どおり残る。
+var _suppress_state_caption := false
 
 
 func _init(screen: MatchScreen) -> void:
@@ -35,6 +39,7 @@ func reset() -> void:
 	resolving = false
 	_queue.clear()
 	_action = {}
+	_suppress_state_caption = false
 
 
 func begin_capture(action: Dictionary = {}) -> void:
@@ -96,6 +101,15 @@ func play() -> void:
 			await _play_step(event)
 			continue
 		_apply(event)
+		# HPを0にしたダメージが出た時点で打ち切る。決着した瞬間より後のマスの解決は勝敗に
+		# 影響しないため演出せず、原因の駒を照らしたまま「決着」を見せてから結果パネルへ
+		# 移る(GameDesign.md 3章、フェーズ18 W-2)。
+		if event["kind"] == "hp" and event["new_hp"] <= 0:
+			await _screen._result_presenter.play_finishing_blow()
+			resolving = false
+			_action = {}
+			_screen.on_turn_resolution_finished()
+			return
 		await _screen.get_tree().create_timer(STEP_DELAY).timeout
 	_screen.board_camera_controller.reset()
 	await _screen.get_tree().create_timer(MatchBoardCamera.RESET_DURATION).timeout
@@ -115,8 +129,16 @@ func _play_step(event: Dictionary) -> void:
 	_screen.board_camera_controller.focus(_slot_rects(side, positions))
 	await _screen.get_tree().create_timer(ZOOM_SETTLE).timeout
 	match event["step_kind"]:
-		"flip", "move", "swap_in":
+		"flip":
+			# 反転だけは間を置かずに次のイベント(状態変化=アイコンの回転)へ進む。
+			# 駒が持ち上がっている最中に回転が始まり、着地までが一続きの動きになる。
 			_screen.play_action_sound(_action)
+			_suppress_state_caption = true
+			_screen.game_board.clear_reservations()
+			await _screen._action_presenter.play_step(_action)
+		"move", "swap_in":
+			_screen.play_action_sound(_action)
+			_screen.game_board.clear_reservations()
 			await _screen._action_presenter.play_step(_action)
 			await _screen.get_tree().create_timer(ACTION_HOLD).timeout
 		"idle":
@@ -142,7 +164,10 @@ func _apply(event: Dictionary) -> void:
 				_screen.perspective_side(), event["side"], event["position"], event["new_state"]
 			)
 			_screen._battle_log.record_state_event(_screen.state, event)
-			_screen._event_caption.show_state_event(_screen.state, event)
+			if _suppress_state_caption:
+				_suppress_state_caption = false
+			else:
+				_screen._event_caption.show_state_event(_screen.state, event)
 		"hp":
 			var amount: int = event["previous_hp"] - event["new_hp"]
 			if amount > 0:
