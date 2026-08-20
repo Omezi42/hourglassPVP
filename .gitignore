@@ -22,3 +22,6 @@
 /assets/ui/incoming/
 /assets/buttons/incoming/
 /assets/backgrounds/incoming/
+
+# バランス調整シミュレーションの出力(再生成可能)
+/tools/balance/out/
