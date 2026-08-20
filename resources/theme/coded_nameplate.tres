@@ -1,0 +1,6 @@
+[gd_resource type="StyleBox" script_class="CodedNameplateStyle" format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/styles/coded_nameplate_style.gd" id="1_coded"]
+
+[resource]
+script = ExtResource("1_coded")

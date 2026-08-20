@@ -1,0 +1,70 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/player_status_bar.gd" id="1_u8aee"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8y7x6"]
+bg_color = Color(0.09, 0.07, 0.09, 0.95)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.85, 0.62, 0.22, 0.55)
+corner_radius_top_left = 9
+corner_radius_top_right = 9
+corner_radius_bottom_right = 9
+corner_radius_bottom_left = 9
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_3iouq"]
+bg_color = Color(0.9, 0.68, 0.26, 1)
+corner_radius_top_left = 9
+corner_radius_top_right = 9
+corner_radius_bottom_right = 9
+corner_radius_bottom_left = 9
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ph7f8"]
+content_margin_left = 10.0
+content_margin_top = 3.0
+content_margin_right = 10.0
+content_margin_bottom = 3.0
+bg_color = Color(0.13, 0.11, 0.15, 0.9)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.85, 0.62, 0.22, 0.55)
+corner_radius_top_left = 9
+corner_radius_top_right = 9
+corner_radius_bottom_right = 9
+corner_radius_bottom_left = 9
+
+[node name="PlayerStatusBar" type="HBoxContainer" unique_id=756335769]
+theme_override_constants/separation = 10
+script = ExtResource("1_u8aee")
+
+[node name="NameLabel" type="Label" parent="." unique_id=874347408]
+custom_minimum_size = Vector2(52, 0)
+layout_mode = 2
+text = "相手"
+vertical_alignment = 1
+
+[node name="HPBar" type="ProgressBar" parent="." unique_id=474609284]
+custom_minimum_size = Vector2(300, 34)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_styles/background = SubResource("StyleBoxFlat_8y7x6")
+theme_override_styles/fill = SubResource("StyleBoxFlat_3iouq")
+show_percentage = false
+
+[node name="HPValue" type="Label" parent="." unique_id=599487476]
+custom_minimum_size = Vector2(78, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 19
+vertical_alignment = 1
+
+[node name="ClockLabel" type="Label" parent="." unique_id=1388157334]
+custom_minimum_size = Vector2(90, 0)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_ph7f8")
+theme_override_font_sizes/font_size = 17
+horizontal_alignment = 1
+vertical_alignment = 1

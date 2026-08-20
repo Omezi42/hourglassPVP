@@ -1,0 +1,25 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/board_row.gd" id="1_eyw3t"]
+[ext_resource type="PackedScene" path="res://scenes/hourglass_slot.tscn" id="2_o5tvl"]
+[ext_resource type="Script" path="res://scripts/ui/hourglass_slot.gd" id="3_gapey"]
+
+[node name="BoardRow" type="Control" unique_id=509953718]
+layout_mode = 3
+anchors_preset = 0
+script = ExtResource("1_eyw3t")
+
+[node name="Left" type="Control" parent="." unique_id=151101560 instance=ExtResource("2_o5tvl")]
+custom_minimum_size = Vector2(90, 112)
+anchors_preset = 0
+script = ExtResource("3_gapey")
+
+[node name="Center" type="Control" parent="." unique_id=900815123 instance=ExtResource("2_o5tvl")]
+custom_minimum_size = Vector2(90, 112)
+anchors_preset = 0
+script = ExtResource("3_gapey")
+
+[node name="Right" type="Control" parent="." unique_id=1427085190 instance=ExtResource("2_o5tvl")]
+custom_minimum_size = Vector2(90, 112)
+anchors_preset = 0
+script = ExtResource("3_gapey")

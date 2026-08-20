@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="FirebaseConfig" format=3]
+
+[ext_resource type="Script" path="res://scripts/net/firebase_config.gd" id="1_fbcfg"]
+
+[resource]
+script = ExtResource("1_fbcfg")
+api_key = "AIzaSyCuNMrpvAs58MAN6tzxK6eohhN3Qab4vdQ"
+project_id = "hourglasspvp"
+auth_domain = "hourglasspvp.firebaseapp.com"

@@ -1,0 +1,163 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/deck_list_card.gd" id="1_p2ng0"]
+[ext_resource type="StyleBox" path="res://resources/theme/coded_nameplate.tres" id="2_p2ng0"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_icon_square_normal.tres" id="3_hjnd6"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_icon_square_pressed.tres" id="4_fop8d"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_icon_square_hover.tres" id="5_ye8kd"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_icon_square_disabled.tres" id="6_vymum"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_0mgfl"]
+content_margin_left = 10.0
+content_margin_top = 8.0
+content_margin_right = 10.0
+content_margin_bottom = 8.0
+bg_color = Color(0.22, 0.14, 0.08, 0.96)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0.62, 0.45, 0.22, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+shadow_color = Color(0, 0, 0, 0.35)
+shadow_size = 6
+shadow_offset = Vector2(0, 3)
+
+[node name="DeckListCard" type="Control" unique_id=2025280015]
+custom_minimum_size = Vector2(0, 160)
+layout_mode = 3
+anchors_preset = 0
+script = ExtResource("1_p2ng0")
+metadata/_edit_use_anchors_ = false
+
+[node name="VisualRoot" type="Control" parent="." unique_id=1228512869]
+anchors_preset = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="BackgroundPanel" type="Panel" parent="VisualRoot" unique_id=1827660735]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_0mgfl")
+
+[node name="Margin" type="MarginContainer" parent="VisualRoot" unique_id=426163177]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 14.0
+offset_top = 10.0
+offset_right = -14.0
+offset_bottom = -10.0
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="VBox" type="VBoxContainer" parent="VisualRoot/Margin" unique_id=947981617]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="TopRow" type="HBoxContainer" parent="VisualRoot/Margin/VBox" unique_id=1805476873]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="NamePlate" type="Control" parent="VisualRoot/Margin/VBox/TopRow" unique_id=1656080155]
+custom_minimum_size = Vector2(200, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+
+[node name="PlateTexture" type="Panel" parent="VisualRoot/Margin/VBox/TopRow/NamePlate" unique_id=1236849249]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+theme_override_styles/panel = ExtResource("2_p2ng0")
+
+[node name="NameLabel" type="Label" parent="VisualRoot/Margin/VBox/TopRow/NamePlate" unique_id=2058620173]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 0)
+theme_override_constants/outline_size = 0
+text = "デッキ名"
+horizontal_alignment = 1
+vertical_alignment = 1
+clip_text = true
+
+[node name="ButtonRow" type="HBoxContainer" parent="VisualRoot/Margin/VBox/TopRow" unique_id=205161023]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 8
+
+[node name="EditButton" type="Button" parent="VisualRoot/Margin/VBox/TopRow/ButtonRow" unique_id=1013838030]
+custom_minimum_size = Vector2(88, 44)
+layout_mode = 2
+theme_override_styles/normal = ExtResource("3_hjnd6")
+theme_override_styles/pressed = ExtResource("4_fop8d")
+theme_override_styles/hover = ExtResource("5_ye8kd")
+theme_override_styles/disabled = ExtResource("6_vymum")
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_font_sizes/font_size = 19
+text = "編集"
+
+[node name="DeleteButton" type="Button" parent="VisualRoot/Margin/VBox/TopRow/ButtonRow" unique_id=646491532]
+custom_minimum_size = Vector2(88, 44)
+layout_mode = 2
+theme_override_styles/normal = ExtResource("3_hjnd6")
+theme_override_styles/pressed = ExtResource("4_fop8d")
+theme_override_styles/hover = ExtResource("5_ye8kd")
+theme_override_styles/disabled = ExtResource("6_vymum")
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_font_sizes/font_size = 19
+text = "削除"
+
+[node name="ReorderRow" type="HBoxContainer" parent="VisualRoot/Margin/VBox/TopRow" unique_id=1565969583]
+visible = false
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 8
+
+[node name="MoveUpButton" type="Button" parent="VisualRoot/Margin/VBox/TopRow/ReorderRow" unique_id=1538436514]
+custom_minimum_size = Vector2(88, 44)
+layout_mode = 2
+theme_override_styles/normal = ExtResource("3_hjnd6")
+theme_override_styles/pressed = ExtResource("4_fop8d")
+theme_override_styles/hover = ExtResource("5_ye8kd")
+theme_override_styles/disabled = ExtResource("6_vymum")
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_font_sizes/font_size = 19
+text = "上へ"
+
+[node name="MoveDownButton" type="Button" parent="VisualRoot/Margin/VBox/TopRow/ReorderRow" unique_id=982922904]
+custom_minimum_size = Vector2(88, 44)
+layout_mode = 2
+theme_override_styles/normal = ExtResource("3_hjnd6")
+theme_override_styles/pressed = ExtResource("4_fop8d")
+theme_override_styles/hover = ExtResource("5_ye8kd")
+theme_override_styles/disabled = ExtResource("6_vymum")
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_font_sizes/font_size = 19
+text = "下へ"
+
+[node name="IconRow" type="HBoxContainer" parent="VisualRoot/Margin/VBox" unique_id=1862462982]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 8
+alignment = 1

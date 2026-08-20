@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="HourglassData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/effect_data.gd" id="1_nbxr3"]
+[ext_resource type="Script" path="res://scripts/data/hourglass_data.gd" id="2_t3kce"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/processed/mirror/state_full.png" id="3_full"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/processed/mirror/state_falling.png" id="4_falling"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/processed/mirror/state_empty.png" id="5_empty"]
+
+[sub_resource type="Resource" id="Resource_hypd5"]
+script = ExtResource("1_nbxr3")
+target = 2
+effect_type = 6
+
+[resource]
+script = ExtResource("2_t3kce")
+id = "mirror"
+display_name = "ミラー"
+fall_damage = 2
+icon_upright = ExtResource("3_full")
+icon_falling = ExtResource("4_falling")
+icon_fallen = ExtResource("5_empty")
+effects = Array[ExtResource("1_nbxr3")]([SubResource("Resource_hypd5")])

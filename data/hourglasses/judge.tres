@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="HourglassData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/effect_data.gd" id="1_s2rd1"]
+[ext_resource type="Script" path="res://scripts/data/hourglass_data.gd" id="2_v3wfo"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/processed/judge/state_full.png" id="3_full"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/processed/judge/state_falling.png" id="4_falling"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/processed/judge/state_empty.png" id="5_empty"]
+
+[sub_resource type="Resource" id="Resource_myt53"]
+script = ExtResource("1_s2rd1")
+trigger = 3
+target = 3
+value = 1
+
+[resource]
+script = ExtResource("2_v3wfo")
+id = "judge"
+display_name = "ジャッジ"
+fall_damage = 1
+icon_upright = ExtResource("3_full")
+icon_falling = ExtResource("4_falling")
+icon_fallen = ExtResource("5_empty")
+effects = Array[ExtResource("1_s2rd1")]([SubResource("Resource_myt53")])

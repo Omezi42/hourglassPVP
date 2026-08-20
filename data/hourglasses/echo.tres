@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="HourglassData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/effect_data.gd" id="1_xymsl"]
+[ext_resource type="Script" path="res://scripts/data/hourglass_data.gd" id="2_um5wg"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/processed/echo/state_full.png" id="3_full"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/processed/echo/state_falling.png" id="4_falling"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/processed/echo/state_empty.png" id="5_empty"]
+
+[sub_resource type="Resource" id="Resource_xuupy"]
+script = ExtResource("1_xymsl")
+trigger = 2
+target = 5
+effect_type = 4
+
+[resource]
+script = ExtResource("2_um5wg")
+id = "echo"
+display_name = "エコー"
+fall_damage = 2
+icon_upright = ExtResource("3_full")
+icon_falling = ExtResource("4_falling")
+icon_fallen = ExtResource("5_empty")
+effects = Array[ExtResource("1_xymsl")]([SubResource("Resource_xuupy")])

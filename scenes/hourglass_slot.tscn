@@ -1,0 +1,180 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/hourglass_slot.gd" id="1_dm2bu"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dm2bu"]
+bg_color = Color(0.85, 0.62, 0.22, 0.12)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.85, 0.62, 0.22, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_eg55f"]
+bg_color = Color(0.25, 0.78, 0.95, 0.14)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.25, 0.78, 0.95, 0.9)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5cc0h"]
+bg_color = Color(0.16, 0.12, 0.09, 0.95)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.85, 0.62, 0.22, 1)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_jnbwl"]
+bg_color = Color(1, 0.82, 0.42, 0.85)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_juvy1"]
+content_margin_left = 4.0
+content_margin_top = 1.0
+content_margin_right = 4.0
+content_margin_bottom = 1.0
+bg_color = Color(0.85, 0.62, 0.22, 0.95)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.16, 0.12, 0.08, 0.9)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_w3xb5"]
+bg_color = Color(0.14, 0.09, 0.05, 0.92)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.85, 0.62, 0.22, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[node name="HourglassSlot" type="Control" unique_id=151101560]
+custom_minimum_size = Vector2(90, 112)
+layout_mode = 3
+anchors_preset = 0
+script = ExtResource("1_dm2bu")
+
+[node name="VisualRoot" type="Control" parent="." unique_id=1299335132]
+anchors_preset = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="Frame" type="Panel" parent="VisualRoot" unique_id=708822396]
+visible = false
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_dm2bu")
+
+[node name="MoveTargetFrame" type="Panel" parent="VisualRoot" unique_id=765211541]
+visible = false
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_eg55f")
+
+[node name="Icon" type="TextureRect" parent="VisualRoot" unique_id=2027739792]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+expand_mode = 1
+stretch_mode = 5
+
+[node name="LockIcon" type="Label" parent="VisualRoot" unique_id=584090689]
+visible = false
+layout_mode = 0
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -24.0
+offset_top = 2.0
+offset_right = -24.0
+offset_bottom = 2.0
+theme_override_font_sizes/font_size = 18
+text = "🔒"
+
+[node name="DamageBadge" type="Label" parent="VisualRoot" unique_id=2131896361]
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 0
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -30.0
+offset_top = -30.0
+offset_right = -2.0
+offset_bottom = -2.0
+theme_override_styles/normal = SubResource("StyleBoxFlat_5cc0h")
+theme_override_font_sizes/font_size = 15
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="FallFlash" type="Panel" parent="VisualRoot" unique_id=1104321345]
+modulate = Color(1, 1, 1, 0)
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_jnbwl")
+
+[node name="FallWarningRing" type="Panel" parent="VisualRoot" unique_id=55292334]
+visible = false
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="ReservationBadge" type="Label" parent="VisualRoot" unique_id=2070841090]
+visible = false
+custom_minimum_size = Vector2(46, 22)
+layout_mode = 0
+offset_left = 2.0
+offset_top = 2.0
+offset_right = 48.0
+offset_bottom = 24.0
+theme_override_styles/normal = SubResource("StyleBoxFlat_juvy1")
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.12, 0.09, 0.05, 1)
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="PlacementStateLabel" type="Label" parent="VisualRoot" unique_id=1230438968]
+visible = false
+layout_mode = 0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -24.0
+theme_override_styles/normal = SubResource("StyleBoxFlat_w3xb5")
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+horizontal_alignment = 1
+vertical_alignment = 1

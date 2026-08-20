@@ -1,0 +1,90 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/confirm_modal.gd" id="1_1elqp"]
+[ext_resource type="StyleBox" path="res://resources/theme/content_panel.tres" id="2_v6vr2"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_wide_text_normal.tres" id="3_nuo7b"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_wide_text_pressed.tres" id="4_x1min"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_wide_text_hover.tres" id="5_abmd0"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_wide_text_disabled.tres" id="6_xyh5j"]
+
+[node name="ConfirmModal" type="Control" unique_id=522766675]
+visible = false
+layout_mode = 3
+anchors_preset = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_1elqp")
+
+[node name="Dim" type="ColorRect" parent="." unique_id=2050516392]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0, 0.6)
+
+[node name="CenterBox" type="CenterContainer" parent="." unique_id=1232008757]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="Panel" type="PanelContainer" parent="CenterBox" unique_id=1196731905]
+custom_minimum_size = Vector2(460, 0)
+layout_mode = 2
+theme_override_styles/panel = ExtResource("2_v6vr2")
+
+[node name="Margin" type="MarginContainer" parent="CenterBox/Panel" unique_id=235368153]
+layout_mode = 2
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 28
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 28
+
+[node name="VBox" type="VBoxContainer" parent="CenterBox/Panel/Margin" unique_id=180526352]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="TitleLabel" type="Label" parent="CenterBox/Panel/Margin/VBox" unique_id=808797713]
+layout_mode = 2
+theme_override_font_sizes/font_size = 30
+theme_override_colors/font_color = Color(0.85, 0.62, 0.22, 1)
+text = "タイトル"
+horizontal_alignment = 1
+
+[node name="DetailLabel" type="Label" parent="CenterBox/Panel/Margin/VBox" unique_id=2046135398]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+text = "本文"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="ButtonRow" type="HBoxContainer" parent="CenterBox/Panel/Margin/VBox" unique_id=1009226170]
+layout_mode = 2
+theme_override_constants/separation = 16
+alignment = 1
+
+[node name="CancelButton" type="Button" parent="CenterBox/Panel/Margin/VBox/ButtonRow" unique_id=467000167]
+custom_minimum_size = Vector2(220, 79)
+layout_mode = 2
+theme_override_styles/normal = ExtResource("3_nuo7b")
+theme_override_styles/pressed = ExtResource("4_x1min")
+theme_override_styles/hover = ExtResource("5_abmd0")
+theme_override_styles/disabled = ExtResource("6_xyh5j")
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_font_sizes/font_size = 22
+text = "キャンセル"
+
+[node name="ConfirmButton" type="Button" parent="CenterBox/Panel/Margin/VBox/ButtonRow" unique_id=1252270164]
+custom_minimum_size = Vector2(220, 79)
+layout_mode = 2
+theme_override_styles/normal = ExtResource("3_nuo7b")
+theme_override_styles/pressed = ExtResource("4_x1min")
+theme_override_styles/hover = ExtResource("5_abmd0")
+theme_override_styles/disabled = ExtResource("6_xyh5j")
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_font_sizes/font_size = 22
+text = "OK"

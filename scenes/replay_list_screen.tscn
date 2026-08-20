@@ -1,0 +1,81 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/replay_list_screen.gd" id="1_m1e67"]
+[ext_resource type="Texture2D" path="res://assets/backgrounds/processed/battle/background.png" id="2_tq4if"]
+[ext_resource type="PackedScene" path="res://scenes/screen_header.tscn" id="3_s57ep"]
+[ext_resource type="Script" path="res://scripts/ui/screen_header.gd" id="4_84jy8"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_84jy8"]
+content_margin_left = 20.0
+content_margin_top = 14.0
+content_margin_right = 20.0
+content_margin_bottom = 14.0
+bg_color = Color(0.1, 0.09, 0.12, 0.88)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.85, 0.62, 0.22, 0.55)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[node name="ReplayListScreen" type="Control" unique_id=1599306711]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_m1e67")
+
+[node name="Background" type="TextureRect" parent="." unique_id=1035062113]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+texture = ExtResource("2_tq4if")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="ScrollContainer" type="ScrollContainer" parent="." unique_id=1630360292]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = 136.0
+offset_right = -24.0
+offset_bottom = -24.0
+horizontal_scroll_mode = 0
+
+[node name="ListContainer" type="GridContainer" parent="ScrollContainer" unique_id=250526136]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/h_separation = 16
+theme_override_constants/v_separation = 12
+columns = 2
+
+[node name="EmptyLabel" type="Label" parent="." unique_id=1532486275]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = 136.0
+offset_right = -24.0
+offset_bottom = -24.0
+theme_override_styles/normal = SubResource("StyleBoxFlat_84jy8")
+theme_override_font_sizes/font_size = 20
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ScreenHeader" type="Control" parent="." unique_id=786986529 instance=ExtResource("3_s57ep")]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 24.0
+offset_top = 24.0
+offset_right = -24.0
+offset_bottom = 112.0
+mouse_filter = 2
+script = ExtResource("4_84jy8")

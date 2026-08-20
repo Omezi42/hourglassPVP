@@ -1,0 +1,10 @@
+[gd_resource type="StyleBox" script_class="CodedButtonStyle" format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/styles/coded_button_style.gd" id="1_coded"]
+
+[resource]
+script = ExtResource("1_coded")
+variant = 3
+emblem = 4
+emblem_placement = 2
+content_margin_right = 56.0

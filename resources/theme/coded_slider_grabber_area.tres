@@ -1,0 +1,19 @@
+[gd_resource type="StyleBoxFlat" format=3]
+
+; HSliderの到達済み(値が入っている)部分。UiPalette.BRASS_MID/BRASS_HIGHLIGHTを流用し、
+; 「金属=真鍮」の色分けに揃える(フェーズ12 Q-5)。
+[resource]
+content_margin_left = 0.0
+content_margin_top = 6.0
+content_margin_right = 0.0
+content_margin_bottom = 6.0
+bg_color = Color(0.44, 0.31, 0.24, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.82, 0.7, 0.45, 0.9)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8

@@ -1,0 +1,137 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/deck_list_screen.gd" id="1_mtece"]
+[ext_resource type="Texture2D" path="res://assets/backgrounds/processed/deck/background.png" id="2_tmivc"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_wide_text_normal.tres" id="7_ugpm5"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_wide_text_pressed.tres" id="8_0x41p"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_wide_text_hover.tres" id="9_8yhwf"]
+[ext_resource type="PackedScene" path="res://scenes/screen_header.tscn" id="9_mtece"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_wide_text_disabled.tres" id="10_71tp1"]
+[ext_resource type="Script" path="res://scripts/ui/screen_header.gd" id="10_tmivc"]
+[ext_resource type="PackedScene" path="res://scenes/confirm_modal.tscn" id="11_bq3qk"]
+[ext_resource type="Script" path="res://scripts/ui/confirm_modal.gd" id="12_1s6rp"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_x454c"]
+content_margin_left = 20.0
+content_margin_top = 14.0
+content_margin_right = 20.0
+content_margin_bottom = 14.0
+bg_color = Color(0.1, 0.09, 0.12, 0.88)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.85, 0.62, 0.22, 0.55)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[node name="DeckListScreen" type="Control" unique_id=304043639]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_mtece")
+
+[node name="Background" type="TextureRect" parent="." unique_id=1100712418]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+texture = ExtResource("2_tmivc")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="NewDeckButton" type="Button" parent="." unique_id=946125643]
+custom_minimum_size = Vector2(230, 83)
+layout_mode = 0
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -246.0
+offset_top = 16.0
+offset_right = -16.0
+offset_bottom = 16.0
+theme_override_styles/normal = ExtResource("7_ugpm5")
+theme_override_styles/pressed = ExtResource("8_0x41p")
+theme_override_styles/hover = ExtResource("9_8yhwf")
+theme_override_styles/disabled = ExtResource("10_71tp1")
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_font_sizes/font_size = 22
+text = "新規デッキ"
+
+[node name="ReorderButton" type="Button" parent="." unique_id=964293418]
+custom_minimum_size = Vector2(260, 83)
+layout_mode = 0
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -522.0
+offset_top = 16.0
+offset_right = -262.0
+offset_bottom = 16.0
+theme_override_styles/normal = ExtResource("7_ugpm5")
+theme_override_styles/pressed = ExtResource("8_0x41p")
+theme_override_styles/hover = ExtResource("9_8yhwf")
+theme_override_styles/disabled = ExtResource("10_71tp1")
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_font_sizes/font_size = 22
+text = "デッキ入れ替え"
+
+[node name="ScrollContainer" type="ScrollContainer" parent="." unique_id=1396965410]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = 136.0
+offset_right = -24.0
+offset_bottom = -24.0
+horizontal_scroll_mode = 0
+
+[node name="ListContainer" type="GridContainer" parent="ScrollContainer" unique_id=1303609519]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/h_separation = 20
+theme_override_constants/v_separation = 16
+columns = 2
+
+[node name="EmptyLabel" type="Label" parent="." unique_id=212865877]
+visible = false
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = 136.0
+offset_right = -24.0
+offset_bottom = -24.0
+theme_override_styles/normal = SubResource("StyleBoxFlat_x454c")
+theme_override_font_sizes/font_size = 20
+text = "まだデッキがありません。「新規デッキ」から作成してください"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="DeleteConfirm" type="Control" parent="." unique_id=522766675 instance=ExtResource("11_bq3qk")]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("12_1s6rp")
+
+[node name="ScreenHeader" type="Control" parent="." unique_id=890074281 instance=ExtResource("9_mtece")]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 24.0
+offset_top = 24.0
+offset_right = -24.0
+offset_bottom = 112.0
+mouse_filter = 2
+script = ExtResource("10_tmivc")

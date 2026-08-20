@@ -1,0 +1,58 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/action_menu.gd" id="1_m2v2x"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_action_flip_normal.tres" id="2_n0or0"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_action_flip_pressed.tres" id="3_esk2b"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_action_flip_hover.tres" id="4_4estv"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_action_flip_disabled.tres" id="5_gabcv"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_action_move_normal.tres" id="5_sj65q"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_action_move_pressed.tres" id="6_gabcv"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_action_move_hover.tres" id="7_mb602"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_action_swap_normal.tres" id="8_clm48"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_action_swap_pressed.tres" id="9_8i2ww"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_action_move_disabled.tres" id="9_mb602"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_action_swap_hover.tres" id="10_fx3li"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_action_swap_disabled.tres" id="13_clm48"]
+
+[node name="ActionMenu" type="HBoxContainer" unique_id=2035810273]
+theme_override_constants/separation = 16
+script = ExtResource("1_m2v2x")
+
+[node name="FlipButton" type="Button" parent="." unique_id=28953601]
+custom_minimum_size = Vector2(116, 116)
+layout_mode = 2
+theme_override_styles/normal = ExtResource("2_n0or0")
+theme_override_styles/pressed = ExtResource("3_esk2b")
+theme_override_styles/hover = ExtResource("4_4estv")
+theme_override_styles/disabled = ExtResource("5_gabcv")
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_font_sizes/font_size = 18
+text = "反転"
+
+[node name="MoveButton" type="Button" parent="." unique_id=473280050]
+custom_minimum_size = Vector2(116, 116)
+layout_mode = 2
+theme_override_styles/normal = ExtResource("5_sj65q")
+theme_override_styles/pressed = ExtResource("6_gabcv")
+theme_override_styles/hover = ExtResource("7_mb602")
+theme_override_styles/disabled = ExtResource("9_mb602")
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_font_sizes/font_size = 18
+text = "移動"
+
+[node name="SwapButton" type="Button" parent="." unique_id=1842615972]
+custom_minimum_size = Vector2(116, 116)
+layout_mode = 2
+theme_override_styles/normal = ExtResource("8_clm48")
+theme_override_styles/pressed = ExtResource("9_8i2ww")
+theme_override_styles/hover = ExtResource("10_fx3li")
+theme_override_styles/disabled = ExtResource("13_clm48")
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_font_sizes/font_size = 18
+text = "交代"

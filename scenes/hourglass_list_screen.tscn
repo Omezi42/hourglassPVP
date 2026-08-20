@@ -1,0 +1,66 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/hourglass_list_screen.gd" id="1_rtbhc"]
+[ext_resource type="Texture2D" path="res://assets/backgrounds/processed/deck/background.png" id="2_rtbhc"]
+[ext_resource type="PackedScene" path="res://scenes/hourglass_detail_panel.tscn" id="3_1hako"]
+[ext_resource type="Script" path="res://scripts/ui/hourglass_detail_panel.gd" id="4_lmk5c"]
+[ext_resource type="PackedScene" path="res://scenes/screen_header.tscn" id="6_lmk5c"]
+[ext_resource type="Script" path="res://scripts/ui/screen_header.gd" id="7_llaux"]
+[ext_resource type="StyleBox" path="res://resources/theme/detail_panel_bg.tres" id="8_0cfkh"]
+
+[node name="HourglassListScreen" type="Control" unique_id=568118258]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_rtbhc")
+
+[node name="Background" type="TextureRect" parent="." unique_id=216105055]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+texture = ExtResource("2_rtbhc")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="ScrollContainer" type="ScrollContainer" parent="." unique_id=1414591622]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = 136.0
+offset_right = -380.0
+offset_bottom = -24.0
+horizontal_scroll_mode = 0
+
+[node name="ShelfList" type="VBoxContainer" parent="ScrollContainer" unique_id=1478092788]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_constants/separation = 8
+
+[node name="DetailPanel" type="PanelContainer" parent="." unique_id=1759305538 instance=ExtResource("3_1hako")]
+custom_minimum_size = Vector2(302, 400)
+layout_mode = 0
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -360.0
+offset_top = 160.0
+offset_right = -360.0
+offset_bottom = 160.0
+theme_override_styles/panel = ExtResource("8_0cfkh")
+script = ExtResource("4_lmk5c")
+
+[node name="ScreenHeader" type="Control" parent="." unique_id=786986529 instance=ExtResource("6_lmk5c")]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 24.0
+offset_top = 24.0
+offset_right = -24.0
+offset_bottom = 112.0
+mouse_filter = 2
+script = ExtResource("7_llaux")

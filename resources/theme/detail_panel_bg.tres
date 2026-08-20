@@ -1,0 +1,13 @@
+[gd_resource type="StyleBox" script_class="CodedPanelStyle" format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/styles/coded_panel_style.gd" id="1_coded"]
+
+[resource]
+script = ExtResource("1_coded")
+content_margin_left = 34.0
+content_margin_top = 60.0
+content_margin_right = 34.0
+content_margin_bottom = 24.0
+corner_radius = 22.0
+frame_thickness = 12.0
+has_header_emblem = true

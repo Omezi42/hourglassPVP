@@ -1,0 +1,83 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/deck_tab.gd" id="1_h7aqf"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_wide_text_normal.tres" id="2_650y8"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_wide_text_pressed.tres" id="3_1ve4q"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_wide_text_hover.tres" id="4_7xjew"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_wide_text_disabled.tres" id="5_fy5be"]
+[ext_resource type="PackedScene" path="res://scenes/confirm_modal.tscn" id="6_7xjew"]
+[ext_resource type="Script" path="res://scripts/ui/confirm_modal.gd" id="7_fy5be"]
+
+[node name="DeckTab" type="Control" unique_id=1248523771]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_h7aqf")
+
+[node name="Center" type="CenterContainer" parent="." unique_id=453342135]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="VBox" type="VBoxContainer" parent="Center" unique_id=1107280683]
+layout_mode = 2
+theme_override_constants/separation = 28
+alignment = 1
+
+[node name="DeckEditButton" type="Button" parent="Center/VBox" unique_id=4317203]
+custom_minimum_size = Vector2(520, 180)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_styles/normal = ExtResource("2_650y8")
+theme_override_styles/pressed = ExtResource("3_1ve4q")
+theme_override_styles/hover = ExtResource("4_7xjew")
+theme_override_styles/disabled = ExtResource("5_fy5be")
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_font_sizes/font_size = 30
+text = "デッキ編集"
+
+[node name="Row" type="HBoxContainer" parent="Center/VBox" unique_id=623810102]
+layout_mode = 2
+theme_override_constants/separation = 24
+alignment = 1
+
+[node name="HourglassListButton" type="Button" parent="Center/VBox/Row" unique_id=1340680563]
+custom_minimum_size = Vector2(248, 88)
+layout_mode = 2
+theme_override_styles/normal = ExtResource("2_650y8")
+theme_override_styles/pressed = ExtResource("3_1ve4q")
+theme_override_styles/hover = ExtResource("4_7xjew")
+theme_override_styles/disabled = ExtResource("5_fy5be")
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_font_sizes/font_size = 22
+text = "砂時計一覧"
+
+[node name="ShopButton" type="Button" parent="Center/VBox/Row" unique_id=1112775922]
+custom_minimum_size = Vector2(248, 88)
+layout_mode = 2
+theme_override_styles/normal = ExtResource("2_650y8")
+theme_override_styles/pressed = ExtResource("3_1ve4q")
+theme_override_styles/hover = ExtResource("4_7xjew")
+theme_override_styles/disabled = ExtResource("5_fy5be")
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_font_sizes/font_size = 22
+text = "ショップ"
+
+[node name="ShopNotice" type="Control" parent="." unique_id=522766675 instance=ExtResource("6_7xjew")]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("7_fy5be")

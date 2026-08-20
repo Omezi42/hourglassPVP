@@ -1,0 +1,127 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/home_screen.gd" id="1_ked1l"]
+[ext_resource type="Texture2D" path="res://assets/backgrounds/processed/home/background.png" id="2_ked1l"]
+[ext_resource type="PackedScene" path="res://scenes/deck_tab.tscn" id="3_15ihl"]
+[ext_resource type="Script" path="res://scripts/ui/deck_tab.gd" id="4_airqx"]
+[ext_resource type="PackedScene" path="res://scenes/battle_tab.tscn" id="5_ii2s2"]
+[ext_resource type="Script" path="res://scripts/ui/battle_tab.gd" id="6_f8xo1"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_nav_tab_normal.tres" id="7_airqx"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_nav_tab_pressed.tres" id="8_ii2s2"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_nav_tab_hover.tres" id="9_f8xo1"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_nav_tab_disabled.tres" id="10_ii2s2"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_icon_square_normal.tres" id="11_gxchb"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_icon_square_pressed.tres" id="12_mnq0v"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_icon_square_hover.tres" id="13_dyhnm"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_icon_square_disabled.tres" id="14_r26cg"]
+[ext_resource type="PackedScene" path="res://scenes/settings_panel.tscn" id="15_6ooop"]
+[ext_resource type="Script" path="res://scripts/ui/settings_panel.gd" id="16_siet5"]
+
+[node name="HomeScreen" type="Control" unique_id=1867867751]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_ked1l")
+
+[node name="Background" type="TextureRect" parent="." unique_id=1650428682]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+texture = ExtResource("2_ked1l")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="Layout" type="VBoxContainer" parent="." unique_id=384682034]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_constants/separation = 0
+
+[node name="ContentArea" type="Control" parent="Layout" unique_id=819886651]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="DeckTab" type="Control" parent="Layout/ContentArea" unique_id=1248523771 instance=ExtResource("3_15ihl")]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("4_airqx")
+
+[node name="BattleTab" type="Control" parent="Layout/ContentArea" unique_id=725798585 instance=ExtResource("5_ii2s2")]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("6_f8xo1")
+
+[node name="BottomNav" type="HBoxContainer" parent="Layout" unique_id=1687139938]
+custom_minimum_size = Vector2(0, 160)
+layout_mode = 2
+theme_override_constants/separation = 32
+alignment = 1
+
+[node name="DeckNavButton" type="Button" parent="Layout/BottomNav" unique_id=106557106]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme_override_styles/normal = ExtResource("7_airqx")
+theme_override_styles/pressed = ExtResource("8_ii2s2")
+theme_override_styles/hover = ExtResource("9_f8xo1")
+theme_override_styles/disabled = ExtResource("10_ii2s2")
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
+text = "デッキ"
+
+[node name="BattleNavButton" type="Button" parent="Layout/BottomNav" unique_id=63213975]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme_override_styles/normal = ExtResource("7_airqx")
+theme_override_styles/pressed = ExtResource("8_ii2s2")
+theme_override_styles/hover = ExtResource("9_f8xo1")
+theme_override_styles/disabled = ExtResource("10_ii2s2")
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
+text = "バトル"
+
+[node name="SettingsButton" type="Button" parent="." unique_id=1202723650]
+custom_minimum_size = Vector2(88, 88)
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -112.0
+offset_top = 24.0
+offset_right = -24.0
+offset_bottom = 112.0
+grow_horizontal = 0
+theme_override_styles/normal = ExtResource("11_gxchb")
+theme_override_styles/pressed = ExtResource("12_mnq0v")
+theme_override_styles/hover = ExtResource("13_dyhnm")
+theme_override_styles/disabled = ExtResource("14_r26cg")
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_font_sizes/font_size = 20
+text = "設定"
+
+[node name="SettingsPanel" type="Control" parent="." unique_id=1827621603 instance=ExtResource("15_6ooop")]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("16_siet5")

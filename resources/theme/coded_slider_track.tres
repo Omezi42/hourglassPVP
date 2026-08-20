@@ -1,0 +1,20 @@
+[gd_resource type="StyleBoxFlat" format=3]
+
+; HSlider(音量スライダー)の溝(未到達部分)。UiPalette.PANEL_SLATE_TOP(コード描画UIの
+; 「凹んだ面」に共通して使うトーン)を流用し、CodedButtonStyle/CodedPanelStyleの
+; 「へこみ=スレート、金属=真鍮」という色分けと揃える(フェーズ12 Q-5)。
+[resource]
+content_margin_left = 0.0
+content_margin_top = 6.0
+content_margin_right = 0.0
+content_margin_bottom = 6.0
+bg_color = Color(0.1, 0.11, 0.14, 0.9)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.44, 0.31, 0.24, 0.8)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8

@@ -1,0 +1,51 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/deck_slot.gd" id="1_jjqs3"]
+[ext_resource type="StyleBox" path="res://resources/theme/content_panel.tres" id="2_seea4"]
+
+[node name="DeckSlot" type="Control" unique_id=915827277]
+custom_minimum_size = Vector2(162, 200)
+layout_mode = 3
+anchors_preset = 0
+script = ExtResource("1_jjqs3")
+
+[node name="VisualRoot" type="Control" parent="." unique_id=410870250]
+anchors_preset = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="BackgroundPanel" type="Panel" parent="VisualRoot" unique_id=1603534808]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+theme_override_styles/panel = ExtResource("2_seea4")
+
+[node name="Icon" type="TextureRect" parent="VisualRoot" unique_id=305884869]
+visible = false
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = 18.0
+offset_right = -24.0
+offset_bottom = -18.0
+expand_mode = 1
+stretch_mode = 5
+
+[node name="EmptyLabel" type="Label" parent="VisualRoot" unique_id=1197445626]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = 18.0
+offset_right = -24.0
+offset_bottom = -18.0
+theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(0.75, 0.68, 0.55, 0.75)
+text = "ここに
+ドラッグ"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3

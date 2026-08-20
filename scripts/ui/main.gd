@@ -1,0 +1,221 @@
+class_name Main
+extends Control
+
+## デッキ選択(BattleDeckPickerScreen)を確定した後に、どのバトル導線を
+## 再開するかを表す。ランダムマッチ/ルーム作成/CPU戦の3つのみが対象。
+enum BattlePurpose { RANDOM_MATCH, CREATE_ROOM, CPU_MATCH }
+
+## 画面切り替え時のクロスフェード時間。
+const SCREEN_FADE_DURATION := 0.18
+
+var _match_return_screen: Control
+var _cpu_board: Array[HourglassData] = []
+var _cpu_bench: Array[HourglassData] = []
+var _pending_battle_purpose: BattlePurpose = BattlePurpose.RANDOM_MATCH
+
+var _screens: Array[Control] = []
+var _active_screen: Control = null
+var _fade_tween: Tween
+## 遷移中は全画面の入力を塞ぐ透明ブロッカー。連打による二重遷移や、
+## フェード中に背後の画面がクリックされることを防ぐ。
+var _transition_blocker: ColorRect
+
+@onready var home_screen: HomeScreen = $HomeScreen
+@onready var deck_list_screen: DeckListScreen = $DeckListScreen
+@onready var deck_editor_screen: DeckEditorScreen = $DeckEditorScreen
+@onready var hourglass_list_screen: HourglassListScreen = $HourglassListScreen
+@onready var replay_list_screen: ReplayListScreen = $ReplayListScreen
+@onready var match_screen: MatchScreen = $MatchScreen
+@onready var battle_deck_picker_screen: BattleDeckPickerScreen = $BattleDeckPickerScreen
+
+
+func _ready() -> void:
+	_screens = [
+		home_screen,
+		deck_list_screen,
+		deck_editor_screen,
+		hourglass_list_screen,
+		replay_list_screen,
+		match_screen,
+		battle_deck_picker_screen,
+	]
+	_transition_blocker = _make_transition_blocker()
+	add_child(_transition_blocker)
+	home_screen.online_match_found.connect(_on_online_match_found)
+	home_screen.deck_list_requested.connect(_on_deck_list_requested)
+	home_screen.hourglass_list_requested.connect(_on_hourglass_list_requested)
+	home_screen.replay_list_requested.connect(_on_replay_list_requested)
+	home_screen.spectate_requested.connect(_on_spectate_requested)
+	home_screen.cpu_match_requested.connect(_on_cpu_match_deck_requested)
+	home_screen.random_match_deck_requested.connect(_on_random_match_deck_requested)
+	home_screen.create_room_deck_requested.connect(_on_create_room_deck_requested)
+	battle_deck_picker_screen.back_pressed.connect(func() -> void: _show_only(home_screen))
+	battle_deck_picker_screen.deck_confirmed.connect(_on_battle_deck_confirmed)
+	deck_list_screen.back_pressed.connect(func() -> void: _show_only(home_screen))
+	deck_list_screen.edit_requested.connect(_on_deck_edit_requested)
+	deck_editor_screen.back_pressed.connect(_on_deck_editor_back)
+	hourglass_list_screen.back_pressed.connect(func() -> void: _show_only(home_screen))
+	replay_list_screen.back_pressed.connect(func() -> void: _show_only(home_screen))
+	replay_list_screen.replay_selected.connect(_on_replay_selected)
+	match_screen.back_pressed.connect(func() -> void: _show_only(_match_return_screen))
+	NetSession.ensure_ready(self)
+	SoundBank.ensure_ready(self)
+	SoundBank.wire_buttons(self)
+	MusicPlayer.ensure_ready(self)
+	MusicPlayer.set_volume(SoundBank.get_bgm_volume())
+	_show_only(home_screen)
+
+
+## ブラウザは最初のユーザー操作より前の音声再生を許さないため、最初の入力をここで拾って
+## BGMの再生開始を許可する。1度きりでよいので、通知したら以降は入力を見ない。
+func _input(event: InputEvent) -> void:
+	if not (event is InputEventMouseButton or event is InputEventScreenTouch or event is InputEventKey):
+		return
+	MusicPlayer.notify_user_gesture()
+	set_process_input(false)
+
+
+func _on_replay_list_requested() -> void:
+	replay_list_screen.refresh()
+	_show_only(replay_list_screen)
+
+
+## CPU戦のローカルリプレイは"cpu_"始まりのidで区別する(LocalReplayService.mark_finished()参照)。
+func _on_replay_selected(match_id: String) -> void:
+	if match_id.begins_with("cpu_"):
+		match_screen.start_local_replay(LocalReplayService.get_replay(match_id))
+	else:
+		match_screen.start_replay(match_id, NetSession.client)
+	_match_return_screen = replay_list_screen
+	_show_only(match_screen)
+
+
+func _on_spectate_requested(match_id: String) -> void:
+	match_screen.start_spectate(match_id, NetSession.client)
+	_match_return_screen = home_screen
+	_show_only(match_screen)
+
+
+## CPUのデッキ5種類をランダムに選出し、場3個・控え2個への振り分けもランダムに決定する。
+## 先手/後手は常にプレイヤーが先手のため、配置フェーズはMatchScreen側のCPU戦専用入り口を使う。
+func _start_cpu_match() -> void:
+	var cpu_deck := MatchSetup.all_hourglasses()
+	cpu_deck.shuffle()
+	cpu_deck = cpu_deck.slice(0, 5)
+	_cpu_board = cpu_deck.slice(0, 3)
+	_cpu_bench = cpu_deck.slice(3, 5)
+	match_screen.start_placement_then_cpu(MatchSetup.player_deck, _cpu_board, _cpu_bench)
+	_match_return_screen = home_screen
+	_show_only(match_screen)
+
+
+## ランダムマッチ/ルーム作成/CPU戦は、開始前に必ずデッキ選択画面(BattleDeckPickerScreen)を
+## 挟む。ここではその画面を開き、確定後に再開する導線をpurposeとして覚えておく。
+func _on_random_match_deck_requested() -> void:
+	_open_battle_deck_picker(BattlePurpose.RANDOM_MATCH)
+
+
+func _on_create_room_deck_requested() -> void:
+	_open_battle_deck_picker(BattlePurpose.CREATE_ROOM)
+
+
+func _on_cpu_match_deck_requested() -> void:
+	_open_battle_deck_picker(BattlePurpose.CPU_MATCH)
+
+
+func _open_battle_deck_picker(purpose: BattlePurpose) -> void:
+	_pending_battle_purpose = purpose
+	battle_deck_picker_screen.open()
+	_show_only(battle_deck_picker_screen)
+
+
+func _on_battle_deck_confirmed() -> void:
+	match _pending_battle_purpose:
+		BattlePurpose.RANDOM_MATCH:
+			_show_only(home_screen)
+			home_screen.battle_tab.begin_random_match()
+		BattlePurpose.CREATE_ROOM:
+			_show_only(home_screen)
+			home_screen.battle_tab.begin_create_room()
+		BattlePurpose.CPU_MATCH:
+			_start_cpu_match()
+
+
+func _on_deck_list_requested() -> void:
+	deck_list_screen.refresh()
+	_show_only(deck_list_screen)
+
+
+func _on_hourglass_list_requested() -> void:
+	_show_only(hourglass_list_screen)
+
+
+func _on_deck_edit_requested(index: int) -> void:
+	deck_editor_screen.open_deck(index)
+	_show_only(deck_editor_screen)
+
+
+func _on_deck_editor_back() -> void:
+	deck_list_screen.refresh()
+	_show_only(deck_list_screen)
+
+
+func _on_online_match_found(
+	match_id: String, my_side: GameState.PlayerSide, _opponent_uid: String
+) -> void:
+	match_screen.start_placement_then_online(MatchSetup.player_deck, match_id, my_side)
+	_match_return_screen = home_screen
+	_show_only(match_screen)
+
+
+func _make_transition_blocker() -> ColorRect:
+	var blocker := ColorRect.new()
+	blocker.color = Color(0, 0, 0, 0)
+	blocker.anchor_right = 1.0
+	blocker.anchor_bottom = 1.0
+	blocker.mouse_filter = Control.MOUSE_FILTER_STOP
+	blocker.visible = false
+	return blocker
+
+
+## 表示中の画面を screen へクロスフェードで切り替える。連打などで遷移中に
+## 別の遷移が始まっても破綻しないよう、進行中のTweenをkillしてから作り直す。
+func _show_only(screen: Control) -> void:
+	if screen == _active_screen:
+		return
+	if _fade_tween != null and _fade_tween.is_valid():
+		_fade_tween.kill()
+
+	var previous := _active_screen
+	_active_screen = screen
+
+	for s in _screens:
+		if s != previous and s != screen:
+			s.visible = false
+			s.modulate.a = 1.0
+
+	if not screen.visible:
+		screen.modulate.a = 0.0
+	screen.visible = true
+	_transition_blocker.visible = true
+
+	_fade_tween = create_tween()
+	_fade_tween.set_parallel(true)
+	_fade_tween.tween_property(screen, "modulate:a", 1.0, SCREEN_FADE_DURATION)
+	if previous != null:
+		_fade_tween.tween_property(previous, "modulate:a", 0.0, SCREEN_FADE_DURATION)
+	_fade_tween.finished.connect(_on_transition_finished.bind(screen, previous))
+
+	# BGMの切り替えは画面遷移のハブであるここ1箇所で行い、画面ごとに書き散らさない
+	# (Architecture.md 9章)。対局が終わって結果パネルが出ている間はMatchScreenが止める。
+	var track := MusicPlayer.Track.MATCH if screen == match_screen else MusicPlayer.Track.HOME
+	MusicPlayer.play(track)
+
+
+func _on_transition_finished(screen: Control, previous: Control) -> void:
+	screen.modulate.a = 1.0
+	if previous != null and previous != screen:
+		previous.visible = false
+		previous.modulate.a = 1.0
+	_transition_blocker.visible = false
+	_fade_tween = null

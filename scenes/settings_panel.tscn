@@ -1,0 +1,114 @@
+[gd_scene format=3]
+
+[ext_resource type="StyleBox" path="res://resources/theme/content_panel.tres" id="2_77s4b"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_wide_text_normal.tres" id="3_emta1"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_wide_text_pressed.tres" id="4_luo6l"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_wide_text_hover.tres" id="5_5nai8"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_wide_text_disabled.tres" id="6_kwkan"]
+
+[node name="SettingsPanel" type="Control" unique_id=1827621603]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Dim" type="ColorRect" parent="." unique_id=1561119605]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0, 0.6)
+
+[node name="CenterBox" type="CenterContainer" parent="." unique_id=1548922717]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="Panel" type="PanelContainer" parent="CenterBox" unique_id=1411924909]
+custom_minimum_size = Vector2(440, 0)
+layout_mode = 2
+theme_override_styles/panel = ExtResource("2_77s4b")
+
+[node name="Margin" type="MarginContainer" parent="CenterBox/Panel" unique_id=170948950]
+layout_mode = 2
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 28
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 28
+
+[node name="VBox" type="VBoxContainer" parent="CenterBox/Panel/Margin" unique_id=1333084193]
+layout_mode = 2
+theme_override_constants/separation = 22
+
+[node name="TitleLabel" type="Label" parent="CenterBox/Panel/Margin/VBox" unique_id=1792051830]
+layout_mode = 2
+theme_override_font_sizes/font_size = 30
+theme_override_colors/font_color = Color(0.85, 0.62, 0.22, 1)
+text = "設定"
+horizontal_alignment = 1
+
+[node name="SfxRow" type="HBoxContainer" parent="CenterBox/Panel/Margin/VBox" unique_id=1168559725]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Caption" type="Label" parent="CenterBox/Panel/Margin/VBox/SfxRow" unique_id=575423589]
+custom_minimum_size = Vector2(96, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+text = "効果音"
+
+[node name="Slider" type="HSlider" parent="CenterBox/Panel/Margin/VBox/SfxRow" unique_id=1137184619]
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+value = 100.0
+
+[node name="ValueLabel" type="Label" parent="CenterBox/Panel/Margin/VBox/SfxRow" unique_id=606398934]
+custom_minimum_size = Vector2(64, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+text = "100%"
+horizontal_alignment = 2
+
+[node name="BgmRow" type="HBoxContainer" parent="CenterBox/Panel/Margin/VBox" unique_id=675096607]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Caption" type="Label" parent="CenterBox/Panel/Margin/VBox/BgmRow" unique_id=1291815034]
+custom_minimum_size = Vector2(96, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+text = "BGM"
+
+[node name="Slider" type="HSlider" parent="CenterBox/Panel/Margin/VBox/BgmRow" unique_id=1972524397]
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+value = 100.0
+
+[node name="ValueLabel" type="Label" parent="CenterBox/Panel/Margin/VBox/BgmRow" unique_id=1770968941]
+custom_minimum_size = Vector2(64, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+text = "100%"
+horizontal_alignment = 2
+
+[node name="CloseButton" type="Button" parent="CenterBox/Panel/Margin/VBox" unique_id=83272056]
+custom_minimum_size = Vector2(220, 79)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_styles/normal = ExtResource("3_emta1")
+theme_override_styles/pressed = ExtResource("4_luo6l")
+theme_override_styles/hover = ExtResource("5_5nai8")
+theme_override_styles/disabled = ExtResource("6_kwkan")
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_font_sizes/font_size = 22
+text = "閉じる"

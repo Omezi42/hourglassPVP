@@ -1,0 +1,1646 @@
+# 開発タスク・進捗(TODO)
+
+## 運用ルール
+
+- このファイルには**今やっている/次にやるタスクのみ**を残す
+- 完了したタスクはこまめに削除する(チェックを付けて残さない)
+- フェーズ全体の内訳・将来計画は `docs/Architecture.md` を参照する。ここには次に着手する範囲だけを展開する
+
+---
+
+## 今やること(フェーズ6: 演出・UI/UX強化・リプレイ機能)
+
+### UI/UX改善(画面ごと)
+
+大手ソシャゲ/DCGを参考に、開発初期の仮配置(絶対座標・簡易Label/Button)から作り込んだ見た目へ強化する。
+画面ごとに1タスクとして進める(CLAUDE.mdの実装単位ルールに従う)。
+
+これまでに完了した内容(ボタン画像シートの全画面適用、フォント刷新、砂時計の色違い生成、
+落下パーティクルと反転回転の演出、対局画面の目標ビジュアル化、カード枠の追加)は
+`docs/Architecture.md` の方針に反映済みのため、ここでは省略する。
+
+#### 次にやること
+
+- [x] バッジ型ボタン(デッキ編集/ランダムマッチ/ルームを作成)の文字が中央の砂時計と重なって読めなかったため、ボタン自身のテキストをやめて下端に帯付きラベルを重ねる方式へ変更
+- [x] DeckListScreenのカードを改善。「使用中」を文字連結から琥珀色バッジへ、砂時計アイコンを48→64pxへ拡大、カード高さを96→124へ
+- [x] DeckSelectScreenの効果一覧を、1つの長文Labelから駒ごとに区切ったカード(左端に琥珀のライン)のリストへ変更。テキストの切れも解消
+- [x] 対局終了後の導線を整備。`ResultOverlay`(暗幕+結果パネル)を追加し、勝敗・両者の最終HP・総手数と「ホームへ」ボタンを表示。暗幕で終局後の盤面操作も塞ぐ。オンライン/CPU戦は「勝利!/敗北...」、ローカル対戦・観戦は「先手/後手の勝利!」と視点に応じて出し分ける。リプレイ再生中は出さない(GameDesign.md 3章・9章に追記済み)
+- [x] オンライン対局後に戻り先画面(`_match_return_screen`)が未設定で、戻ると全画面が消える不具合を修正
+- [x] ダメージ演出を強化。HPバーを瞬時に減らさずTweenで滑らかに減少させ、被弾したバーを一瞬光らせる。自分が被弾した時のみ画面全体を赤く明滅させる。リプレイの手戻し中はバーのアニメーションを止める
+- [x] 対局画面で自分のHPバー(BottomBar)が画面外へはみ出す不具合を修正。盤面パネル内の駒スロット・控えスロットの高さや控えラベルの余白、手番強調枠(OpponentRowFrame/OwnRowFrame)の内側マージンを詰めて、盤面全体の縦サイズを縮小した
+- [x] ボタンのdisabled状態がmain_theme.tresの素のStyleBoxFlatにフォールバックし、平坦な四角形になってしまう不具合を修正。12グループ全てにdisabled.png(彩度25%・明度60%)とimg_{グループ名}_disabled.tresを追加し、theme_override_styles/normalを持つ全Button(14シーン中11シーン、計43箇所)にtheme_override_styles/disabledを追加
+- [x] クリックできる要素にホバー反応(わずかな拡大明化+浮き上がり、指カーソル)と押下フィードバック(押し込みで縮小→離した位置で確定/キャンセル)を追加。相手の手番待ち等の操作不可時は`HourglassSlot.set_interactive()`でホバーを止める
+- [x] 盤面で「場」と「控え」が同じ見た目で区別できなかったため、控えのスロットを一回り小さく(90x112→72x90)・アイコンの彩度と台座の光量を落として控えめにし、「控え」ラベルと余白で場と区切った(`HourglassSlot.set_bench_mode()`、`GameBoard`にOpponentBenchGroup/OwnBenchGroupを追加)
+- [x] 上部バーの「先手のターン」表示が画面右端で見切れる不具合を修正。TopBar/BottomBarにMarginContainerを追加して物理端との間に余白を確保し、HPバーの拡張(size_flags_horizontal)を止めて固定幅にした
+- [x] HPバーの色を相手/自分の固定色から、HP残量ベース(50%超=琥珀、25%〜50%=橙、25%以下=赤)へ変更。色の変化もTweenで補間する
+- [x] 対局中の情報の出し方を見直す。手番側の盤面の列を光の帯(PanelContainerの背景)で強調し、手番表示テキストを上部バー中央寄りへ移動。オンライン対戦・CPU戦は「あなたの番です/相手の手を待っています(待機中は...アニメーション)」、ローカル対戦・観戦・リプレイは従来通り「先手/後手のターン」で出し分け
+- [x] 「移動」選択直後に入れ替え先候補のマス(自分の場・選択中以外の2マス)を専用の`MoveTargetFrame`で点滅ハイライト。ロック中で反転できない相手の駒は`GameBoard`側で個別に非活性化し、アクションメニューの「反転」ボタンも非表示にする(`GameState.flip()`がロック中は何もしないことをコードで確認済み)。対局中に自分の手番でない時に駒を押すと、`Icon`の`position:x`だけを揺らして拒否を示す(観戦・リプレイは対象外)
+- [x] 画面遷移(`Main._show_only()`)がハードカットで唐突だったため、短いクロスフェード(0.18秒)へ変更。連打などで遷移中に別の遷移が割り込んでも、進行中のTweenをkillして現在の透明度から継続することで破綻しないようにし、遷移中は透明な`ColorRect`ブロッカーで盤面全体の入力を塞ぐ
+- [x] `BattleTab`のマッチング/ルーム作成/観戦確認中、画面に何も動きがなく不安を与えていたため、`MatchScreen`の待機ドット(「.」→「..」→「...」)と同じ書き方でステータス文言に巡回ドットを追加。`_set_busy(false)`だけでなく、成功時に`_busy`を直接falseにする経路でも確実にタイマーを止まるようにした
+- [x] 対局開始直後、まだ1手も指していないのに盤上が落下中表示になっていた不具合を修正。`GameState`に`_has_advanced`フラグを追加し、`begin_turn()`の最初の1回(`start_match()`直後)は進行させないようにした(GameDesign.md 2章に仕様追記済み)。`_has_advanced`は`start_match()`でリセットする
+- [x] 効果音を実装。`SoundBank`(staticクラス)が反転/移動/交代/被弾/決着/ボタン押下の6種のWAV(プロジェクト内で手続き的に生成、外部アセットなし)を再生する。`wire_buttons()`でシーンツリー内の全Buttonへボタン音を一括接続(ActionMenuは専用音と二重に鳴らさないため除外)。ホーム画面右上に`MuteButton`(`img_icon_square`のボタン画像を流用)を配置し、`user://sound_settings.json`へミュート設定を永続化して次回起動時も引き継ぐ
+- [x] 並べられた要素(デッキ編集の砂時計カード一覧、対局盤面の駒列、デッキ一覧・リプレイ一覧・デッキ編成枠)をホバーすると複数個が一つの位置に重なって崩れる不具合を修正。原因はホバー/押下アニメーション(`ClickArea.animate_hover`/`animate_press`)がHBoxContainer/GridContainer/VBoxContainerの直接の子であるコンポーネント自身のposition/scaleを直接Tweenしていたこと(コンテナ管理下のノードを外部から動かすのは非対応)。`HourglassCard`/`HourglassSlot`/`DeckListCard`/`DeckSlot`/`ReplayListCard`/`ClickArea`(配置マス)の各シーンへ見た目専用の`VisualRoot`子ノードを追加し、Tween対象をそちらへ移すことで解消(`shake_rejected()`が子のIconだけを揺らす既存パターンと同じ回避策)。`PanelContainer`がルートだった3コンポーネントはルートを`Control`化し、背景パネル描画用の`BackgroundPanel`を`VisualRoot`配下に追加
+- [x] デッキ編集画面で下部のカードをどう5枠へ入れるか分からない(D&Dのみだが誘導が無い)不具合を修正。`DeckSlot`の空き枠ラベルを「空き」→「ここに/ドラッグ」の2行に変更、`HourglassCard.set_draggable()`を追加してホバーカーソルを`CURSOR_DRAG`にできるようにし、`DeckEditorScreen`の`CardRow`生成箇所でのみ呼び出す(砂時計一覧・デッキ選択の手札は従来通り`CURSOR_POINTING_HAND`のまま)
+- [x] 自分の場の駒を選択した時、`ActionMenu`が選択駒の真下(自分の控え2枠)に重なって隠してしまう不具合を修正。`MatchScreen._place_action_menu()`で自分の場を選んだ場合だけメニューを選択駒の上に出すよう分岐し、控えを隠さないようにした
+- [x] 対局画面の盤面パネルを、9-slice伸縮の石テクスチャ(`board_panel.tres`)から、斜め上3/4パース視点で6箇所の台座を描いた新イラスト(`assets/ui/processed/board_panel_perspective.png`)へ刷新。`GameBoard`/`BoardRow`を`VBoxContainer`/`HBoxContainer`の自動整列から絶対座標配置の`Control`へ作り替え、画像解析で特定した6箇所の台座中心座標を基準に奥列(相手・小さめ)/手前列(自分・大きめ)の`HourglassSlot`をパースに合わせて配置した。台座に光の輪が描かれているため`HourglassSlot.set_pedestal_visible(false)`で自前描画の台座光を場の駒のみ消し、位置ラベル(左/中央/右)は画像中央の紋章と重ねず専用の帯として画像の直上に独立させた(詳細は`docs/Architecture.md`の「`GameBoard` の座標系」節を参照)
+- [x] 「盤面が縦長で、横長画面の横幅を活かせていない」というユーザー指摘を受け、対局画面の盤面パネルを縦長(299x628)から横長(1040x480)へ作り替えた。AI生成イラスト(`board_panel_perspective.png`)への依存をやめ、テーブル面を新規`BoardTable`(`Control`、`_draw()`のみのコード描画、無地の台形+区切り線+紋章+四隅の装飾)へ置き換え、`OpponentRow`/`OwnRow`(奥列/手前列)を上下ではなく横一列3個ずつに展開した。控え(`OpponentBenchGroup`/`OwnBenchGroup`)はテーブル外側の左列(上/下)へ再配置。台座の光表現は駒側の`HourglassSlot._draw()`の自前描画へ統一(テーブル画像側の台座イラストが無くなったため、`set_pedestal_visible(false)`の呼び出しを`game_board.gd`から削除し既定表示に戻した)。非ヘッドレスで実際に`start_match()`を起動し、盤面全体・自分の場を選択したActionMenu表示・移動先ハイライト・相手の場を選択した状態の計4パターンをスクリーンショットで目視確認済み(詳細は`docs/Architecture.md`の「`GameBoard` の座標系」節を参照)
+- [x] ~~必要に応じて、nanobanana経由のAI生成画像を局所的に活用(アイコン・背景装飾など)~~
+  → **取り消し**。フェーズ12でUIクロームをコード描画化する方針へ転換したため
+  (GameDesign.md 9章・Architecture.md 4章)。UI部品に新しくAI生成画像を足す運用は行わない。
+  画像を使い続けるのは砂時計のイラストと背景イラストのみ
+
+---
+
+## 次にやること(フェーズ7: 対局画面以外の作り込み)
+
+対局画面(`MatchScreen`)は初見プレイヤー監査を経て一通り作り込んだが、**それ以外の画面が相対的に取り残されている**。
+実際に5画面をレンダリングして確認した結果、以下の共通課題が判明した。
+
+**共通の根本原因**: 対局画面だけが石のボードパネル(`board_panel.tres`)でコンテンツを背景から切り離しているが、
+他の画面はコンテンツが賑やかな背景イラストの上に直接浮いており、情報のまとまりが読み取れない。
+また、どの画面も画面右半分〜下半分が使われず背景が見えたままで、1280x720の空間を活かせていない。
+
+個別に直すより**共通基盤(E-1/E-2)を先に整えると、複数画面に同時に効く**(`HourglassCard`に枠を付けた時に
+3画面が同時に改善したのと同じ構図)。E-1 → E-2 → 各画面、の順で進める。
+
+### 共通基盤(先にやる)
+
+- [x] **E-1 コンテンツパネルの共通スタイルを整備する**。`resources/theme/content_panel.tres`(`StyleBoxFlat`)を新規追加。半透明の暗い下地(`bg_color = Color(0.09, 0.08, 0.1, 0.82)`)+琥珀の枠(`border_color = Color(0.85, 0.62, 0.22, 0.95)`, 幅3px)+角丸16pxで、`board_panel.tres`と同系統の質感に揃えた。新規画像アセットは追加していない。300x200〜860x500の複数サイズの`PanelContainer`へ適用し、非ヘッドレスのスクリーンショットで角丸・枠線が崩れないことを確認済み
+- [x] **E-2 `HourglassDetailPanel`に枠と背景を付ける**。ルートの`PanelContainer`に`content_panel.tres`を`theme_override_styles/panel`として適用し、内側の`MarginContainer`の余白は`content_panel.tres`側の`content_margin`(24/20)と二重にならないよう0へ縮小した。プレースホルダ文言はEffectsLabelの`autowrap_mode`(既存の`WORD_SMART`)がそのまま効くようになり、パネルの実幅(260px)内でバランス良く2行に折り返されるようになった。共通コンポーネントのため`HourglassListScreen`・`DeckEditorScreen`の両方に反映され、両画面とも非ヘッドレスのスクリーンショットで未選択(プレースホルダ)・選択済み(詳細表示)の両状態を確認済み
+
+### 画面ごと
+
+- [ ] **E-3 `DeckListScreen`**: デッキカードの背景パネルがほぼ透明で、カードの境界が見えない。「編集/入れ替え/削除」ボタンが画面右端にあり、どのデッキに対する操作なのか視覚的に結びついていない。カードを実体のある見た目にし、操作ボタンをカード内に取り込む。デッキが1件だけだと画面下半分が空くため、余白の扱いも整理する。デッキ0件時の空状態の案内も確認する
+- [ ] **E-4 `DeckEditorScreen`**: 左上の編成中5枠が、駒が入っていると枠線が見えず「スロット」だと分からない(空き枠は「ここにドラッグ」で分かるようになったが、埋まった枠との対比がない)。枠を常に見える形にする。デッキ名入力(`DeckNameInput`)が素のテキストにしか見えず**編集できると気づけない**ため、入力欄らしい見た目にする(機能自体は実装済み)。「5枚中n枚」の進捗表示も検討する
+- [ ] **E-5 `HourglassListScreen`**: カード自体は良好だが、グリッドが左に寄って画面右側が大きく空いている。詳細パネル(E-2)を右側に常設し、レイアウトを左右で配分し直す。**毎日アプデで砂時計が増える前提**のため、増えた時に破綻しないスクロール・並び順も併せて確認する
+- [ ] **E-6 `DeckSelectScreen`**: 配置マスが無地の空矩形で、**どこが左/中央/右なのか、位置ボーナス(中央=落下ダメージ+1、右=落ちきり中の被ダメージ-1)が何なのかが表示されていない**。配置を決める場面こそこの情報が最も必要なため、対局画面と同じ位置ラベル+ボーナス表示をここにも出す。→ **GameDesign.md 9章への追記提案が必要**(対局中の常時表示は既に仕様化済みだが、配置フェーズへの表示は未記載)
+- [ ] **E-7 `ReplayListScreen`**: `DeckListScreen`と同じ横長カード一覧の構造のため、E-3の成果をそのまま適用する。**通信を伴う画面のため、実際の対局履歴がある状態・0件の状態・通信失敗時の3パターンを実環境で確認する**(今回の調査では`NetSession`未初期化でエラーになり、正常な表示を確認できていない)
+
+### 進め方の注意
+
+- E-1/E-2は共通コンポーネントを触るため、**E-3〜E-7と並行させない**(競合するため順番に進める)
+- E-3〜E-7は互いに独立しているため並行可能だが、E-1/E-2の完了を待ってから着手する
+- 各画面の作業後は、対局画面と並べて見比べ、**画面間で見た目の統一感が取れているか**を確認する
+
+> **注意(フェーズ8による差し替え)**: 下記フェーズ8のユーザー指示により、E-3/E-4/E-5 は
+> より具体的な方針(棚UI・2列化・枠拡大など)へ置き換わったため、**フェーズ8の F 群として実施する**。
+> E-6(配置画面への位置ボーナス表示)は、位置ボーナス自体の廃止(A-1)と配置フェーズの
+> 対局画面統合(B-1)により**不要となったため取り消し**。E-7(リプレイ一覧)のみ従来通り残る。
+- [x] ホバー演出の`VisualRoot`追加に伴い、`DeckSelectScreen._card_holder()`が配置マス直下の`CardHolder`を旧パスのまま参照していたため配置画面が起動できなくなっていた不具合を修正(`slot.get_node("CardHolder")` → `slot.get_node("VisualRoot/CardHolder")`)
+- [x] 1手の中で複数の砂時計がほぼ同時に落ちきり、ダメージの原因が追えなかった不具合を改善。`MatchScreen`が`hourglass_state_changed`(FALLEN)を`hp_changed`と対応付けるキューを持ち、浮遊ダメージ数字を発生源の駒からHPバーへ飛ばし、`HourglassSlot`に追加した`FallFlash`オーバーレイで駒自体も一瞬光らせる。対応付けできない場合は従来通りHPバー付近からのフォールバック。あわせて、ローカル対戦でターン交代直後(`GameState.begin_turn()`の同期発火中)は`GameBoard`の視点キャッシュ(`_self_side`)が1手古いままだった実装不具合も発見・修正(呼び出し側の`_perspective_side()`を毎回明示的に渡す形に変更)
+- [x] 反転させた駒が次の自分の手番には既に落ちきってしまい進行が早すぎた仕様を修正。`GameState.begin_turn()`を、両陣営ではなく`current_turn`(これから手番を迎える陣営)の盤面だけを1段階進行させる方式に変更(GameDesign.md 2章に仕様変更を反映済み)。`_has_advanced`フラグは単一のグローバルフラグのままで、対局開始直後の1回だけ進行をスキップする役割を維持
+- [x] 持ち時間をフィッシャールール(基礎時間+1手ごとの加算)から1人3分固定・加算なしへ変更(GameDesign.md 4.1章は更新済み)。`MatchClock`から`increment_seconds`と加算処理を削除し`finish_turn()`は手番切替のみに簡略化、`PlayerStatusBar.show_clock()`を残り時間のみ表示する1引数版へ変更、`match_screen.gd`の呼び出し箇所を追随。`player_status_bar.tscn`のClockLabel幅を150→90へ縮小(tools/配下の一時スクリプト経由)
+- [x] ランダムマッチ/ルーム作成/CPU戦の開始前に使用デッキを選ぶ`BattleDeckPickerScreen`を追加(GameDesign.md 9章に追記済み、Architecture.md 4章に反映済み)。保存済みデッキの一覧・タップ選択・確定ボタン・デッキ0件時の案内/確定ボタン無効化・「使用中」デッキの初期選択・戻るボタンでのキャンセルを、非ヘッドレスでの実動作(スクリーンショット確認込み)で検証済み
+
+---
+
+## 次にやること(フェーズ8: ルール簡素化・対局画面の再設計・UI全面見直し)
+
+ユーザーからの大規模なフィードバックに基づく。**A → B → C → D/E/F/G の順**で進める
+(A はルールの土台、B は画面構造の土台であり、後続の作業の前提になるため)。
+
+### A. ルール変更(要承認・最優先)
+
+- [x] **A-1 位置ボーナスを廃止する**。`GameState._apply_fall_damage()` の CENTER 加算(`damage += 1`)と
+  `deal_damage()` の RIGHT 軽減(`final_amount -= 1`)を削除。盤面の`PositionRow`は、廃止した
+  ボーナス説明の`BonusLabel`を「中央」「右」のプレートから削除し(名前ラベルのみ、
+  `PanelContainer`の`custom_minimum_size`も110x40→80x26へ縮小)、「左」のプレートのみ機能説明として
+  「交代の入口」を残した。`tools/tests/run_tests.gd`の`_test_center_position_boosts_fall_damage`/
+  `_test_right_position_reduces_damage`を、位置ボーナスが発生しないことを検証する
+  `_test_positions_have_no_damage_bonus`へ統合(GameDesign.md 5章・9章は承認済みの内容で更新済み)
+
+### B. 対局画面の構造刷新(A の後)
+
+- [x] **B-1 配置フェーズを専用画面から対局画面へ統合する**。`DeckSelectScreen`/`deck_select_screen.tscn`を
+  削除し、`MatchScreen`に配置フェーズを追加した。配置フェーズの状態・操作は責務分離のため新規
+  `MatchPlacementController`(`scripts/ui/match_placement_controller.gd`、`MatchScreen`の子ノード)へ
+  切り出し、自分の手札5枚は`OwnSlotStrip`(`HourglassSlotStrip.show_placement_hand()`を新設)、
+  配置先は`GameBoard`の自分の場3マス(`GameBoard.show_own_placement()`/`BoardRow.show_placement()`を新設)を
+  そのまま流用した。`MatchScreen`に`start_placement_then_match()`/`start_placement_then_cpu()`/
+  `start_placement_then_online()`の3つの入り口を追加し、既存の`start_match()`/`start_cpu_match()`/
+  `start_online_match()`は変更せず内部で呼び出す。オンライン対戦の配置同期
+  (`OnlineSetup.push_deck()`/`wait_for_opponent_deck()`/`push_placement()`/`wait_for_opponent_placement()`と
+  `OnlineMatch`生成手順)は、旧`DeckSelectScreen`/`Main`から一字一句そのまま`MatchPlacementController`へ
+  移植した。`Main`は配置フェーズを経由せず`match_screen.start_placement_then_*()`を直接呼ぶ構成に変更。
+  非ヘッドレスでCPU戦・ローカル対戦(pass&play)それぞれの配置フェーズ→対局フェーズ遷移を
+  スクリーンショットで確認済み(オンライン対戦は実通信を伴わないため、旧実装との手順一致を
+  コードレベルで確認)(GameDesign.md 9章は承認済みの内容で更新済み)
+- [x] **B-2 HPバーの横に5スロットを設ける**。新規`HourglassSlotStrip`(`scenes/hourglass_slot_strip.tscn`
+  /`scripts/ui/hourglass_slot_strip.gd`、`HourglassSlot`×5の`HBoxContainer`)を追加。先頭
+  `GameState.BOARD_SIZE`枠は場に出ている駒の参照専用「ゴースト」表示(`HourglassSlot.show_deployed()`。
+  常に上向きイラスト・低彩度・バッジ非表示・`set_interactive(false)`で恒久的に非操作)、続く
+  `GameState.BENCH_SIZE`枠が実際の控え(既存の`set_bench_mode(true)`表示を流用し、押すと
+  `bench_pressed(bench_index)`を発火。`bench_index`は0/1で`GameState.swap_in()`にそのまま渡せる)。
+  盤面に出ているか控えかは、この「ゴースト(暗い・バッジ無し)/控え(明るい・バッジ有り・操作可)」の
+  対比で一目で分かる。`MatchScreen`が`OpponentSlotStrip`/`OwnSlotStrip`を直接保持し
+  控え関連の状態(`own_bench_pressed`受信・選択ハイライト・ActionMenuの矩形取得)をすべて
+  `GameBoard`から移設。控えはGameBoardから撤去し、`GameBoard`は場の3+3マスのみを扱う構造にした
+  (詳細はArchitecture.md 4章`HourglassSlotStrip`節を参照)
+- [x] **B-3 レイアウトを点対称にする**。**上段(相手)= 左に砂時計スロット5個 / 右にHPバー**、
+  **下段(自分)= 左にHPバー / 右に砂時計スロット5個**で確定。`TopBarRow`/`BottomBarRow`の子順を
+  組み替え、`BottomBarRow`には`ReplayControls`を常時expandする`BottomMiddle`(`CenterContainer`)で
+  包んで挟むことで、リプレイ非表示時でも`OwnSlotStrip`が右端に固定される構成にした。控え撤去に伴い
+  `GameBoard`の`custom_minimum_size`を`1040x480`→`860x480`へ縮小し、`BoardArea`(`CenterContainer`)が
+  左右均等に再センタリングされるようにした(非ヘッドレスで実測: `GameBoard`の左右マージンが
+  210pxずつで一致、`Layout`全体の高さも720pxちょうどに収まることを確認済み)
+- [x] **B-4 不要な演出を削除する**。(a) 砂が落ちるパーティクル演出(クオリティが低いため削除)。
+  `hourglass_slot.tscn`の`VisualRoot/SandParticles`(`CPUParticles2D`)ノードを削除し、
+  `hourglass_slot.gd`から`sand_particles`の参照・`_update_icon()`での`emitting`/`color`設定を除去した
+  (`_accent_for()`は台座光の`_draw()`で引き続き使用するため残した)。
+  (b) 自分の場3つを覆う琥珀色の手番強調枠(`OwnRowFrame`/`OpponentRowFrame`)。`game_board.tscn`から
+  両`Panel`を削除し、中の`OpponentRow`/`OwnRow`(`BoardRow`)は旧フレームの位置を反映した絶対offsetで
+  `GameBoard`直下へ再親付け(見た目の位置は変えていない)。`game_board.gd`から手番強調用の
+  `TURN_HIGHLIGHT_*`定数・`_set_turn_highlight()`/`_animate_turn_highlight()`/`_make_turn_highlight_style()`と
+  関連する`@onready`参照を削除した。手番の表示は既存の上部バーのテキスト表示のみになる
+
+### C. 対局の可読性(要議論・要承認)
+
+- [x] **C-1 「何が起きたか」を段階的に見せる**(GameDesign.md 9章は承認済みの内容で更新済み)。
+  `GameState`側のロジック・処理順序は無変更のまま、新規`MatchTurnResolver`(`_screen`参照を持つ
+  RefCounted、`MatchPlacementController`と同じ切り出し方)がUI層でイベントをキューへ積んで
+  再生する方式にした。`MatchScreen._advance_turn_and_refresh()`が`state.begin_turn()`の呼び出しを
+  `_turn_resolver.begin_capture()`/`end_capture()`で挟み、その間に発火する`hourglass_state_changed`/
+  `hp_changed`は即座に反映せず`_turn_resolver`へ積む(GameStateは元々左マス→中央→右→
+  `WHILE_FALLEN`のターンチックの順に同期発火するため、キューへ積む順序がそのまま「見せるべき順序」
+  になる)。`_turn_resolver.play()`が1件ずつ`TURN_EVENT_STEP_DELAY`(0.6秒、CPU思考間合いと同じ値)を
+  空けて再生し、駒の状態アイコンは新規`HourglassSlot.show_state_step()`/`GameBoard.play_state_step()`
+  (該当マスだけを明示的なnew_stateへ個別アニメーションさせる、既存の一括`show_state()`とは別経路)、
+  ダメージ演出は既存の`MatchDamagePresenter`(被弾演出を`_on_hp_changed`の直接反映経路と共用するため
+  切り出した)を呼ぶ。再生中は`MatchTurnResolver.resolving`を`_can_act()`/`_process()`が参照し、
+  盤面操作(`game_board`/`own_slot_strip`の`set_interactive(false)`)と持ち時間の消費(`_clock.tick()`)
+  を止める。再生完了後は`MatchScreen.on_turn_resolution_finished()`が持ち時間の再開・盤面の最終同期・
+  CPU着手を行う。対局が演出の途中で終了した場合(HPが0になった等)は、演出を再生せず従来通り
+  即座に結果パネルを表示する(GameDesign.md 3章「勝敗が決まった時点で対局は即座に終了する」を優先)。
+- [x] **C-2 対局ログを見られるようにする**(GameDesign.md 9章は承認済みの内容で更新済み)。
+  新規`MatchBattleLog`(`_screen`参照を持つRefCounted)が、反転/移動/交代の直接操作(`_perform_action`/
+  `_on_action_received`/CPU着手の3経路)と、C-1の`MatchTurnResolver`が再生した状態変化・ダメージを
+  新しい順(先頭が最新)のテキストとして保持する。UIは`tools/`配下の一時ビルドスクリプト経由で
+  `match_screen.tscn`に追加した`LogButton`(左上、`SurrenderButton`の直下)と`LogPanel`
+  (`content_panel.tres`共通スタイル、`LogList`を`ScrollContainer`で縦スクロール)で、押すたびに
+  開閉する。ログボタンはローカル/オンライン/CPU戦でのみ表示し、観戦・リプレイ再生では非表示にした
+  (対応できなかった範囲。既存の`_replay_catching_up`ループ・観戦の追いつきループはログへ記録しない)。
+- [x] **C-3 対局中に砂時計の効果詳細を見られるようにする**(GameDesign.md 9章は承認済みの内容で
+  更新済み)。既存の「駒選択→ActionMenu」フローとは独立した新シグナル経路を追加した。
+  `HourglassSlot`に`info_requested`シグナルを追加し、`_gui_input()`で
+  `_interactive`(操作可否)に関わらず、駒が置かれたマスの確定クリックで発火するようにした
+  (`slot_pressed`は従来通り操作可能時のみ)。`BoardRow.info_requested(position)`→
+  `GameBoard.own_info_requested/opponent_info_requested(position)`と積み上げ、`MatchScreen`が
+  受けて`HourglassDetailPanel`(共通コンポーネント)を新規`MatchDetailPanel`として画面右側に
+  ポップアップ表示する。ActionMenuより手前(z順で下)に配置し、選択操作(反転/移動/交代)の
+  クリック導線を一切妨げないことを実機検証で確認した(自分の場・相手の場それぞれで選択と
+  詳細表示が同時に機能する)。配置フェーズ中は`MatchPlacementController.data_at(position)`から
+  データを取得するため、専用画面が無かった頃と同じく配置中も参照できる。観戦・リプレイ再生中も
+  `GameBoard`が`_interactive=false`のまま`info_requested`だけは発火するため機能する。
+  「閉じる」ボタン(`MatchDetailCloseButton`)で明示的に閉じるまで表示が残る常設寄りの設計とした。
+  シーン変更は`tools/`配下の一時ビルドスクリプト(load→ノード組み立て→pack→save、適用後削除)
+  経由で行った。実装時、`HourglassDetailPanel`インスタンスの子ノードにまで`owner`を再設定すると
+  Godotが「editable children」として扱い内部構造が二重化して中身が描画されない不具合を発見・
+  修正した(トップのインスタンスノード自身にのみownerを設定するのが正しい)。非ヘッドレスで
+  実際に`start_cpu_match()`を起動し、自分の場・相手の場それぞれのクリックで詳細が更新されること、
+  閉じるボタンで消えること、ActionMenuと共存できることをスクリーンショットで確認済み
+- [x] **C-4 サレンダー(投了)を用意する**(GameDesign.md 3章は承認済みの内容で更新済み)。
+  `GameState.surrender(side)`を追加し、既存の`force_match_end()`(持ち時間切れと同じ即時終了経路)
+  を再利用して`side`の即敗北として扱う。UIは対局中(ローカル/CPU/オンライン、配置・観戦・
+  リプレイは対象外)のみ左上に表示する`SurrenderButton`(`BackButton`と排他表示・同じ位置)を追加し、
+  押すと`ResultOverlay`と同系統の暗幕+パネルパターンの`SurrenderConfirm`(確認ダイアログ)を挟む。
+  確定すると`state.surrender(_perspective_side())`を呼ぶ(オンライン/CPU戦は自分の側`_my_side`固定、
+  ローカル対戦は現在手番側)。投了の勝敗判定は既存の`match_ended`シグナル経由でそのまま
+  `ResultOverlay`に反映されるため、`_show_result()`側の変更は不要だった。オンライン対戦での
+  投了を相手へ同期する仕組みは今回未実装(判断に迷った点として下記に明記)。非ヘッドレスで
+  投了ボタン→確認ダイアログ→投了する→「敗北...」の結果パネル表示までスクリーンショットで確認済み
+
+#### 判断に迷った点(完了報告)
+
+- オンライン対戦の投了同期は実装していない。現状`state.surrender()`はローカルの`GameState`のみを
+  変更し、`OnlineMatch.send_and_apply`のような相手への送信は行わない。投了を`action`の一種として
+  `matches/{match_id}.actions`へ書き込み、`OnlineMatch.apply()`側で`"surrender"`typeを扱えるように
+  拡張する案が考えられるが、既存の`action`は「反転/移動/交代」という盤面操作の語彙で統一されており、
+  投了はその語彷とは性質が異なる(盤面状態を変えずに即終了させる)ため、`OnlineMatch`/`ReplayService`
+  側の設計判断(要承認)が必要と考え、ローカル対戦・CPU戦を正しく動く状態にすることを優先し
+  今回は見送った
+
+### D. ボタンとフォント
+
+- [x] **D-1 ボタン画像を原寸運用にする**。14シーン全ての`custom_minimum_size`を、使用している
+  画像グループの原寸に近づけて拡大した(いずれも原寸の半分以下にはしていない)。
+  `action_menu.tscn`の反転/移動/交代ボタン(action_flip/move/swap、原寸280x279前後)は
+  76x76→190x190へ拡大。`back_nav`/`confirm_save`系の「戻る」「保存」等は150x81前後→
+  180〜210x98〜114へ拡大し、周辺の`ScrollContainer`/`ButtonRow`等のoffsetも重なりが出ないよう
+  再計算した。`transport_round`(リプレイ再生コントロール、原寸227x227)は`MatchScreen`の
+  `BottomBar`が縦方向に余裕のない既存レイアウト(過去に「HPバーが画面外へはみ出す」不具合を
+  修正した経緯がある)のため、原寸の半分は超えつつ90x90→104x104の控えめな拡大に留めた
+  (この1箇所のみ拡大幅が小さい)。加えて、テキストが長く既存の正方形/丸型ボタンに収まらなかった
+  箇所(`MuteButton`、`DeckTab`の砂時計一覧/ショップ、`BattleTab`のコードで参加/観戦する/
+  リプレイ/CPU戦/キャンセル、`DeckListScreen`の新規デッキ、`BattleDeckPickerScreen`の
+  このデッキで開始、`MatchScreen`結果パネルのホームへ)は`standard_medium`/`icon_square`/
+  `sub_small`から新規`compact_text`(原寸366x157)へ差し替え、引き伸ばしではなく原寸に近い
+  比率のサイズ(220〜266幅)を明示的に設定した。`DeckListCard`の編集/入れ替え/削除ボタン
+  (icon_square)は2列グリッドのカード幅制約から64x72→92x100の範囲に留めている。
+  変更はいずれも`tools/`配下の一時生成スクリプト(`load()`→ノード書き換え→`pack()`→
+  `ResourceSaver.save()`、適用後に削除)経由で行い、`.tscn`をテキストとして直接編集していない。
+  14画面すべてを非ヘッドレスでスクリーンショットし、枠線の不自然な太さ・テキストのはみ出し・
+  他要素との重なりがないことを確認済み
+- [x] **D-2 テキスト用の横長ボタンシートを新規生成する**。ユーザーが生成した
+  `assets/ui/incoming/ui_kit_sheet_prompt.png`(4グループ構成)から、alpha>0領域の連結成分検出で
+  各アセットを機械的に切り出し(境界1pxにマゼンタの縁取り(フリンジ)が残っていたため、
+  全アセットで外周1pxをinsetして除去)、以下を取り込んだ。
+  - `assets/buttons/processed/wide_text/{normal,hover,pressed,disabled}.png`(496x178前後、横長ワイドボタン)
+  - `assets/buttons/processed/compact_text/{normal,hover,pressed,disabled}.png`(366x157前後、コンパクトボタン)
+  - `resources/theme/buttons/img_wide_text_{normal,hover,pressed,disabled}.tres`
+    (`texture_margin_*` = 76(左右)/48(上下)、角の装飾(リベット渦巻き)が9-slice伸縮で
+    破綻しない境界を実測して設定)
+  - `resources/theme/buttons/img_compact_text_{normal,hover,pressed,disabled}.tres`
+    (`texture_margin_*` = 64(左右)/44(上下)、同様の実測)
+  - disabled.pngは既存12グループと同じ変換(彩度×0.25・明度×0.6、色相は不変)で生成
+  - 幅140〜1000(wide)・100〜700(compact)で9-slice伸縮テストを実施し、角の装飾が破綻しないことを
+    非ヘッドレスのスクリーンショットで確認済み(2×マージンより狭い最小テスト幅でも破綻なし)
+  - 同じシートの残り2グループも切り出し・取り込み済み(シーン適用は未実施、E-2/F-1着手時に活用):
+    `assets/ui/processed/detail_panel_bg.png`(894x1185、詳細パネル背景)、
+    `assets/ui/processed/shelf_plank.png`(1020x158、棚板)、
+    `assets/ui/processed/shelf_nameplate.png`(490x148、金属プレート名札)
+  - シーン(.tscn)への適用は本タスクの範囲外のため未実施(既存Buttonへの`theme_override_styles`割り当ては次フェーズで行う)
+- [x] **D-3 フォントサイズを全体的に上げる**。ボタンサイズの拡大(D-1)に合わせてフォントサイズも
+  引き上げた。`ActionMenu`の「反転」「移動」「交代」は16→28。`MatchScreen`のリプレイ再生
+  コントロール(先頭/戻る/再生/進む/最後)は14→18、対局開始ボタンは20→24、結果パネルの
+  ホームへボタンは22→26。`DeckListCard`の編集/入れ替え/削除は13→15。`compact_text`へ
+  差し替えたボタン群(MuteButton・砂時計一覧・ショップ・コードで参加・観戦する・リプレイ・
+  CPU戦・キャンセル・新規デッキ・このデッキで開始)は16〜20(未指定=デフォルト20)から
+  一律22〜24へ引き上げた。`RandomMatchButton`/`CreateRoomButton`本体は28→30、その
+  キャプションラベルは22→24。既存の`main_theme.tres`側デフォルト(Button既定20)のまま
+  読みやすさに問題のないボタン(戻る・保存・確定系の`back_nav`/`confirm_save`グループなど)は
+  フォントサイズを変更していない
+
+### E. 詳細パネル
+
+- [x] **E-1 詳細パネルのサイズを固定する**。`HourglassDetailPanel`ルートの`custom_minimum_size`を
+  可変(`Vector2(260, 0)`)から固定`Vector2(340, 400)`へ変更。効果テキスト(`EffectsLabel`)を
+  新規`ScrollContainer`(`EffectsScroll`、`horizontal_scroll_mode`は無効化しautowrapで折り返し、
+  縦は`size_flags_vertical = SIZE_EXPAND_FILL`で残り高さを埋めつつ`clip_contents`で溢れをクリップ)で
+  包み、長い効果内容でもパネル自体の外寸は変わらずスクロールで見せるようにした。呼び出し元の
+  `hourglass_list_screen.tscn`/`deck_editor_screen.tscn`側の`DetailPanel`インスタンスも同じ
+  固定サイズへ揃え、右マージン20pxを保つよう`offset_left`等を再計算した
+  (`hourglass_list_screen.tscn`の`ScrollContainer`右端オフセットも連動して調整)。
+  未選択(プレースホルダ)・効果1件(短)・効果2件(長・要スクロール)の3状態を非ヘッドレスの
+  スクリーンショットで比較し、パネルの外寸が3状態とも同一(`Vector2(340, 400)`)であることを確認済み
+- [x] **E-2 詳細パネルの背景を作り込む**。ユーザーがnanobanana経由で生成・透過処理した
+  `assets/ui/processed/detail_panel_bg.png`(894x1185、石+真鍮枠に上部中央の砂時計紋章と
+  四隅の砂時計意匠を配した縦長パネル背景)を取り込み、新規`resources/theme/detail_panel_bg.tres`
+  (`StyleBoxTexture`)として`HourglassDetailPanel`の`theme_override_styles/panel`に適用した
+  (`content_panel.tres`の`StyleBoxFlat`から差し替え)。`texture_margin_*`
+  (left/right=70, top=130, bottom=110)は四隅の砂時計意匠・上部紋章が9-slice伸縮で
+  潰れない範囲を画像のアルファ値をサンプリングして実測し設定。`content_margin_*`
+  (left/right=80, top=130, bottom=20)は装飾に文字が重ならない範囲で内側へ広げ、
+  アイコンサイズも120→84pxへ調整して効果テキストのスクロール可視領域を確保した。
+  共通コンポーネントのため`HourglassListScreen`・`DeckEditorScreen`の両方に反映され、
+  両画面とも非ヘッドレスのスクリーンショットで背景の伸縮破綻がないこと・周囲の要素
+  (一覧リスト・編成枠・カード一覧)と重ならないことを確認済み
+
+### F. 一覧・デッキ画面(フェーズ7の E-3/E-4/E-5 を差し替え)
+
+- [x] **F-1 砂時計一覧を「棚」UIにする**。共有コンポーネント`HourglassCard`(`scripts/ui/hourglass_card.gd`)に
+  `set_shelf_mode(true)`を追加し、丸角の`Frame`背景と`NameLabel`を非表示にしてダメージバッジのみ残す
+  構成にした。デフォルト(未呼び出し)は従来の丸角カード表示のままのため、並行編集中の
+  `DeckEditorScreen`側には影響しない(棚モードは`HourglassListScreen`のみで呼び出す)。
+  選択ハイライトは、非表示になった`Frame`の枠線の代わりに、アイコン下へ新規追加した
+  `ShelfShadow`(Panel、丸みの強いStyleBoxFlatで台座の影を表現)の色を通常時/選択時で
+  差し替える方式に変更し、棚モードでも選択状態が視覚的に分かるようにした。ホバー/押下演出
+  (`ClickArea`経由の`VisualRoot`Tween)は無変更のため両モードとも従来通り機能する。
+  `HourglassListScreen`(`scripts/ui/hourglass_list_screen.gd`)は`ScrollContainer`直下を
+  `CardGrid`(GridContainer)から`ShelfList`(VBoxContainer)へ差し替え、砂時計5個ごとに
+  `assets/ui/processed/shelf_plank.png`を敷いた1行(1棚板)をスクリプト側で動的生成する
+  構成にした(毎日アプデでの追加に対応できるよう、行数は駒の総数から自動算出)。各駒の下には
+  `assets/ui/processed/shelf_nameplate.png`を敷いた小さな名札(`Label`重ね)を個別に配置し、
+  一覧上でも駒ごとの名前が常時読める状態を維持した。動的生成ノードは`HourglassCard`が
+  `@onready`で子ノードを参照するため、`show_data()`/`set_shelf_mode()`を呼ぶ前に
+  シーンツリーへ接続しておく必要がある実装上の注意点が判明(生成順序を「親へadd_child→
+  子を組み立てる」の順に統一して対応)。既存の`ScrollContainer`をそのまま活用しているため
+  スクロールでの破綻はない。非ヘッドレスで一覧画面(未選択/選択済み)・`DeckEditorScreen`
+  (棚モードの影響が漏れていないこと)をスクリーンショットで確認済み
+- [x] **F-2 デッキ編集画面を作り直す**。`DeckSlot`(編成中5枠)を110x130→162x200へ拡大
+  (面積約2.3倍。`HourglassDetailPanel`をE-1/E-2で340x400に固定した既存の制約と、右側に
+  同パネルを置いたまま収める左列の横幅から逆算したサイズで、他画面との統一感を保つため
+  詳細パネル側は縮めなかった)。空き枠は既存の「ここに/ドラッグ」表示のまま、**埋まっている枠にも
+  `content_panel.tres`(琥珀枠+半透明背景。他画面のコンテンツパネルと共通の見た目)を
+  `BackgroundPanel`へ明示的に適用**し、空き/埋まりどちらも常に「スロットである」ことが
+  分かるようにした(以前は暗黙にグローバルPanelスタイルへフォールバックしていたのを、
+  他画面と共有のスタイル資産へ明示的に切り替え)。デッキ名入力欄(`DeckNameInput`)は
+  専用の`resources/theme/deck_name_input_{normal,focus}.tres`(新規`StyleBoxFlat`)を追加し、
+  通常時は控えめな琥珀枠、フォーカス時は明るい琥珀の太枠+カーソル表示で「編集できる場所」だと
+  分かるようにした。5枠の隣に`ProgressLabel`(新規)を追加し「n/5枚」を表示、
+  `DeckEditorScreen._refresh_used_visual()`から更新するようにした(枠を埋める/`open_deck()`の
+  どちらのタイミングでも呼ばれる既存経路にそのまま乗せた)。画面下部の横並び砂時計リスト
+  (`HourglassCard`)は今回のタスク範囲外(棚UI化は別作業者が検討中)のため丸角カード表示のまま
+  変更していない。非ヘッドレスで0/3/5枚それぞれの充填状態・入力欄の通常時/フォーカス時を
+  スクリーンショットで確認済み
+- [x] **F-3 デッキ一覧を作り直す**。`DeckListCard`の背景を、共通テーマの琥珀枠+半透明Panel
+  (`main_theme.tres`のグローバルPanelスタイル)への依存からこのカード専用のローカル
+  `StyleBoxFlat`(濃い木材の`bg_color`+真鍮色`border_color`+ドロップシャドウ)へ切り替え、
+  デッキ名は`assets/ui/processed/shelf_nameplate.png`(砂時計一覧・詳細パネルと共通の素材を
+  読むだけで、他画面のシーン/リソースファイルは一切変更していない)を`NinePatchRect`で
+  背景に敷いた金属プレート風の`NamePlate`として表示するようにした(F-1の棚UIと素材を
+  共有する形で世界観を揃えた)。選択中/入れ替え待ちの枠色ハイライトは`border_color`の
+  上書きのまま維持され、木目カードの上でも機能することを確認済み。
+  `scenes/deck_list_screen.tscn`の一覧コンテナを`VBoxContainer`(縦1列)から
+  `GridContainer`(`columns=2`)へ差し替え、カード数が奇数/1件/0件でも破綻しないことを
+  確認した上で、0件時の案内`EmptyLabel`(「まだデッキがありません。」)を新規追加した。
+  カード内のアイコンサイズ(64→48px)・ボタン幅(72→64px)を2列レイアウトの列幅に収まるよう
+  調整。編集/入れ替え/削除ボタン・使用中バッジの動作は変更していない。
+  非ヘッドレスで3件・1件・0件・入れ替え待ち状態の計4パターンをスクリーンショットで確認済み
+
+### G. その他
+
+- [x] **G-1 ホーム画面のタイトルヘッダー「砂時計PvP」を削除する**(常時表示されているのが好みでない)。
+  `TitleLabel`単体ではなく、それを内包する`TitleBar`(`PanelContainer`)ごと削除した。ミュートボタンは
+  `TitleBar`の子ではなくルート直下の独立ノード(絶対座標配置)のため無関係で、削除後もそのまま残っている。
+  `TitleBar`削除でVBoxContainer内の72px分の予約領域が消え、下の`ContentArea`(`size_flags_vertical = 3`)が
+  自動的にその分広がるため、追加のレイアウト調整は不要だった
+- [x] **G-2 テキスト入力欄の見た目を調整する**。`resources/theme/main_theme.tres`の`LineEdit`へ
+  `styles/focus`(明るい琥珀の縁取り+淡いシャドウで浮き出て見えるStyleBoxFlat)を追加し、プロジェクト全体の
+  `LineEdit`(`BattleTab`の`JoinCodeInput`含む)へ自動適用されるようにした。個別シーンでの
+  `theme_override_styles`は追加していない。新規画像は使わずStyleBoxFlatの色・角丸・枠線のみで表現
+- [x] **G-3 マッチングのキャンセルを可能にする**。`scripts/net/matchmaking_queue.gd`/`scripts/net/room_match.gd`
+  に実装済みだった`cancel()`をUIから呼べるようにした。`battle_tab.tscn`に`CancelButton`(既存の
+  `img_standard_medium_*`画像を流用、新規画像なし)を追加し、`BattleTab._set_busy(busy, cancellable)`の
+  `cancellable`引数がtrueの間だけ表示する。ランダムマッチのキュー参加中(`begin_random_match()`)と
+  ルーム作成後の相手待ち(`begin_create_room()`)の両方を対象にした(`RoomMatch`にも`cancel()`が
+  実装済みだったため)。参加(`_on_join_room_pressed`)・観戦(`_on_spectate_pressed`)は一度きりの
+  短い通信で終わる処理のため対象外とした
+
+### 進め方の注意
+
+- **A-1 は最優先**。位置ボーナスの有無は盤面表示・配置フェーズ・駒バランスすべてに影響するため、
+  これを確定してから B 以降に着手する
+- **B-1 と B-2/B-3 は同じ `MatchScreen` を大きく触るため、必ず順番に進める**(並行させない)
+- C-1 は実装方針をユーザーと合意してから着手する
+- D-2 と E-2 と F-1 は画像生成待ちが発生しうるため、プロンプト提示を早めに行い、
+  生成待ちの間に他のコード側タスクを進める
+
+---
+
+## 今やること(フェーズ9: 9-slice廃止・アスペクト比維持スケーリングへの統一)
+
+ユーザー指摘: 「UIに使用している画像、9sliceを使用していると枠線などが大きくなってしまい不自然なので
+基本的にすべて使わないようにして」。9-slice(`StyleBoxTexture`の`texture_margin_*`)は角部分が元ピクセル
+のまま残るため、ボタンサイズが原寸から離れるほど縁が不自然に太くなる(D-1で発覚した問題の根本原因)。
+
+対応方針(ユーザー承認済み、`docs/Architecture.md`4章に追記済み): **9-sliceは使わず、`texture_margin_*`は
+常に0にする。その代わり、表示サイズは常に元画像のアスペクト比を保った倍率(縦横同じ倍率)でのみ決定し、
+縦横を別々に指定して歪めることはしない**。置き場所に対してアスペクト比が合わない場合は、(a)その要素の
+固定サイズ自体をアスペクト比に合わせて再計算する、(b)固定サイズを崩せない場合は余白(レターボックス/
+ピラーボックス)を許容する、のいずれかで個別に判断する。
+
+### 対象
+
+- [x] **H-1 `texture_margin_*`を設定している7ボタングループの9-sliceを廃止する**:
+  `back_nav`/`compact_text`/`confirm_save`/`icon_square`/`standard_medium`/`sub_small`/`wide_text`の
+  各`.tres`(`resources/theme/buttons/img_{group}_{state}.tres`、計28ファイル)から`texture_margin_*`を
+  削除し、該当ボタンを使っている全シーンのノードサイズを、画像の原寸アスペクト比を保った倍率へ調整する
+  (`texture_margin_*`を持たない`action_flip`/`action_move`/`action_swap`/`nav_tab`/`primary_large`/
+  `secondary_large`/`transport_round`の7グループは既に単一画像の等倍/非9-slice伸縮のため対象外。
+  ただしこれらも縦横別倍率で歪んでいる箇所がないか、この機会に確認する)。
+  28ファイルから`texture_margin_*`(4行ずつ)を削除。全14グループ・38箇所のButtonノードサイズを
+  画像原寸(`assets/buttons/processed/{group}/normal.png`)の実測アスペクト比と突き合わせ、
+  差が1.5%を超える12箇所(`RandomMatchButton`/`CreateRoomButton`/`SaveButton`/`EditButton`・
+  `SwapButton`・`DeleteButton`(deck_list_card)/`HourglassListButton`・`ShopButton`(deck_tab)/
+  `MuteButton`(mute_button.tscn本体・home_screen.tscnの上書き両方)/`CancelButton`・`ConfirmButton`・
+  `PlacementStartButton`・`SurrenderButton`・`LogButton`・`LogCloseButton`(match_screen))の
+  `custom_minimum_size`をアスペクト比一致するよう再計算して修正(`SurrenderButton`/`LogButton`は
+  併せて`offset_right`も追随)。残る26箇所は既に原寸比±1.5%以内で実質問題なしと判断し変更していない。
+  変更は`tools/godot_apply_patch.gd`経由(set_property、適用後`.bak`は削除)で
+  `battle_tab.tscn`/`deck_editor_screen.tscn`/`deck_list_card.tscn`/`deck_tab.tscn`/
+  `mute_button.tscn`/`home_screen.tscn`/`match_screen.tscn`の7シーンに適用。gdlint・
+  headlessテスト(`tools/tests/run_tests.gd`)は問題なし。非headlessで対象7シーン単体を
+  スクリーンショット確認し、縁の不自然な太さ・画像の歪みがないことを確認済み(`match_screen`は
+  対局開始前で該当ボタンが非表示のため、同じStyleBoxTextureを使う一時検証シーンで
+  `SurrenderButton`/`LogButton`/`PlacementStartButton`/`LogCloseButton`/`CancelButton`/
+  `ConfirmButton`相当のサイズを再現して個別確認、確認後に一時ファイルは削除済み)
+- [x] **H-2 `detail_panel_bg.tres`(詳細パネル背景)の9-sliceを廃止する**。`texture_margin_*`
+  (4行)を削除。`HourglassDetailPanel`の固定サイズは、E-1の「常に固定サイズ」という要件(内容量で
+  ちらつかない)を維持しつつ、高さ400を基準にして幅を背景画像(`894x1185`、アスペクト比0.754)に
+  合わせて再計算する方式(340x400→302x400)を選んだ。理由: 逆に幅340を基準に高さを再計算すると
+  451になり、`DeckEditorScreen`側で下部の`CardScroll`(top=428)と約43px重なってしまうため
+  (高さ400のままなら重ならない、非headlessで実測済み)。`HourglassListScreen`/`DeckEditorScreen`
+  両方の`DetailPanel`インスタンスの`custom_minimum_size`も302x400へ揃えた。右側の余白が
+  340幅の頃よりやや広がるが、他要素との重なりは発生しない。`tools/godot_apply_patch.gd`経由
+  (set_property、適用後`.bak`は削除)で3シーンに適用。非headlessスクリーンショットで
+  `HourglassListScreen`・`DeckEditorScreen`双方の背景画像に歪み・重なりがないことを確認済み
+- [x] **H-3 棚UI(`shelf_plank.png`/`shelf_nameplate.png`)の非等倍伸縮を見直す**。
+  `hourglass_list_screen.gd`の棚板(`Plank`)は`TextureRect.STRETCH_SCALE`(幅876/高さ56の枠に
+  対し画像`1020x158`を縦横別倍率で伸縮)を、`STRETCH_KEEP_ASPECT_COVERED`(縦横同倍率で拡大し
+  はみ出た部分を上下端でクロップ)へ変更。棚板は複数の砂時計を横に並べて乗せる土台のため
+  横幅が可変である必要があり、アスペクト比を保ったまま高さを合わせる(a)方式は
+  ROW_HEIGHT等の再設計が必要になり過大なため、(a)/(b)いずれとも異なる「COVERED方式」で
+  非等倍伸縮を排除しつつ横幅可変の要件を両立させた。同ファイルの砂時計名札(`Nameplate`内の
+  `plate`)は`NAMEPLATE_SIZE(112, 34)`が画像`490x148`のアスペクト比とほぼ一致(差0.5%)していた
+  ため実害はなかったが、将来のサイズ変更に備え`STRETCH_KEEP_ASPECT_CENTERED`へ統一。
+  `deck_list_card.tscn`の`NamePlate/PlateTexture`は`NinePatchRect`の`patch_margin_*`
+  (left/right=90, top/bottom=30)がコンテナ`170x36`より大きく実質的に9-sliceが破綻していたため、
+  `patch_margin_*`を0へ削除しつつ、`NamePlate`の`custom_minimum_size`を画像アスペクト比に
+  合わせて170x51へ変更(幅170はデッキ名ラベルの表示幅を維持するため固定し、高さを
+  170*148/490≒51として再計算する(a)方式)。カード全体の固定高さ156に対し十分な余裕があることを
+  非headless実測(InfoArea高さ107、Margin込みでも131)で確認済み。gdlint・gdformat・
+  headlessテスト(`tools/tests/run_tests.gd`)は問題なし。非headlessで
+  `HourglassListScreen`(棚板・名札・詳細パネル)・`DeckEditorScreen`(詳細パネル)・
+  `DeckListCard`(3件並び、名札)をスクリーンショット確認し、歪み・重なりがないことを確認済み
+- [x] 未使用の`board_panel.tres`(9-slice、`BoardTable`のコード描画に置き換え済みで参照なし)を削除する
+  → フェーズ12 Q-7で、元画像`assets/ui/board_panel.png`ともども削除済み
+
+### 進め方の注意
+
+- 変更範囲が全画面のボタン・パネルに及ぶため、まずH-1(ボタン、影響範囲最大)を実施し、
+  非headless確認で崩れがないことを確認してからH-2/H-3へ進める
+- 過去のセッションで`user://`配下の実データ(`deck_save.json`)を誤って削除する事故が発生している。
+  検証はheadlessテスト・非headlessでのスクリーンショット確認のみで行い、実データファイルには
+  一切触れないこと
+
+---
+
+## 今やること(フェーズ10: ユーザーフィードバック一括対応・UI細部調整)
+
+ユーザーから画面ごとの詳細なフィードバックを受けた。競合を避けるため画面クラスタ単位でウェーブに分けて進める。
+
+### Wave 0(単独・最優先: 全画面共通のボタン)
+
+- [x] **J-0 戻る/保存ボタンを大幅縮小する**。`back_nav`/`confirm_save`グループの元画像(装飾フレーム付き
+  StyleBoxTexture)は、極小サイズ(高さ40px前後)まで縮小すると枠の意匠が潰れて汚く見えることを
+  実際に画像を縮小してレンダリング確認した上で判断し、**画像を使わないシンプルな`StyleBoxFlat`方式へ
+  作り直した**(9-slice廃止の流れとの一貫性、および盤面パネルを`BoardTable`のコード描画へ置き換えた
+  既存実績と同じ方向性)。既存の`resources/theme/buttons/img_back_nav_{normal,hover,pressed,disabled}.tres`
+  /`img_confirm_save_{normal,hover,pressed,disabled}.tres`(計8ファイル)の中身をStyleBoxTextureから
+  StyleBoxFlat(content_margin 18/8、border_width 2、corner_radius 10、暗い下地+琥珀枠で
+  `content_panel.tres`/`deck_name_input_*.tres`と同系統の色)へ差し替え、**パスとExtResource参照は
+  そのまま**にすることで.tscn側のリソース参照を一切変更せずに済ませた。既存の`theme_override_colors`
+  (オフホワイトの文字色)は暗い下地との相性が良いためそのまま維持した。サイズは`custom_minimum_size`を
+  `Vector2(0, 0)`にして、StyleBoxFlatのcontent_marginとフォントサイズ(既定20)から自動算出される
+  最小サイズ(≒文字サイズ+上下左右の余白程度)に委ねる方式にし、テキスト長(「戻る」「保存」
+  「< 戻る」等)が画面ごとに異なっても個別に幅を計算する必要がないようにした。対象は
+  `back_nav`を使う6シーン(`battle_deck_picker_screen`/`deck_editor_screen`/`deck_list_screen`/
+  `hourglass_list_screen`/`match_screen`/`replay_list_screen`)と`confirm_save`を使う
+  `deck_editor_screen`のSaveButtonの計7ボタン。`.tscn`の変更は`tools/godot_apply_patch.gd`
+  (`set_property`、適用後`.bak`削除)経由で行い、`custom_minimum_size`がデフォルト値
+  `Vector2(0,0)`と一致したためシリアライズ時にプロパティ自体が消えることを確認した。
+  gdlint・headlessテスト(`tools/tests/run_tests.gd`)は問題なし。非headlessで一時スクリーンショット
+  スクリプト(オフスクリーンでシーンを1個ロードしviewportを`save_png`する使い捨てスクリプト、
+  確認後削除済み)を使い、`deck_list_screen`(戻る単独)・`deck_editor_screen`(戻る+保存が
+  並ぶボタン行)・`hourglass_list_screen`・`battle_deck_picker_screen`・`replay_list_screen`の
+  5画面で、ボタンが文字サイズ相応の小ささになり周辺要素と重なっていないことを確認済み
+  (`match_screen`のBackButtonはリプレイ再生時のみ表示のため個別確認は未実施だが、同じ
+  StyleBox・同じプロパティ変更のため他画面と同様に機能する見込み)
+
+### Wave 1(並行: ホーム画面系 / 砂時計一覧+詳細パネル)
+
+- [x] **J-1 音ON/OFFボタンを設定ボタンに変更し、内部で音量調節できるようにする**。`SoundBank`の
+  `_muted`(bool)を`_volume`(float、0.0〜1.0)へ拡張し、`get_volume()`/`set_volume()`を追加(`is_muted()`は
+  `_volume <= 0.0`の派生として残した)。`user://sound_settings.json`の保存内容も`{"muted": bool}`から
+  `{"volume": float}`へ変更(後方互換は不要のため新形式のみ)。`AudioStreamPlayer`への反映は
+  `linear_to_db()`で行い、0%は-80dBとして扱う(`linear_to_db(0)`が`-inf`になるのを避けるため)。
+  ホーム画面右上の`MuteButton`(`scenes/mute_button.tscn`/`scripts/ui/mute_button.gd`)を削除し、
+  新規`SettingsButton`(`img_icon_square`のボタン画像を流用、テキスト「設定」)を同位置に配置。
+  押すと新規`scenes/settings_panel.tscn`/`scripts/ui/settings_panel.gd`(`ResultOverlay`/
+  `SurrenderConfirm`と同じ「暗幕(`Dim`)+`content_panel.tres`の中央パネル」パターン)が開き、
+  `HSlider`(0〜100、1刻み)で音量を調整すると同時に`SoundBank.set_volume()`へ反映、「n%」表示と
+  「閉じる」ボタンを持つ。シーンは`tools/`配下の一時ビルドスクリプト(ノード組み立て→pack→save、
+  適用後削除)経由で新規生成した(GameDesign.md 9章のミュートボタン→設定ボタン+音量調整の
+  記述はユーザー指示の時点で既に更新済みのため追加更新は不要だった)
+- [x] **J-2 ホーム画面のバッジ型ボタンを通常ボタンスタイルへ変更する**。`DeckTab`の`DeckEditButton`
+  (`img_primary_large`+下端`Caption`ラベル)、`BattleTab`の`RandomMatchButton`/`CreateRoomButton`
+  (`img_primary_large`/`img_secondary_large`+`Caption`)を廃止し、いずれも`img_wide_text`
+  (プレーンな横長パネル画像)へ差し替えてButtonのtextへ直接テキストを持たせる形にした
+  (`Caption`の子Labelは削除)。新規画像生成は行わず既存の`wide_text`シートを再利用
+- [x] **J-3 下部タブボタン(デッキ/バトル)を調整する**。`img_nav_tab_{normal,hover,pressed,disabled}.tres`
+  (StyleBoxTexture)へ`content_margin_top = 20.0`を追加し、上部の砂時計アイコンとテキストが
+  重ならないよう文字位置を下へ押し出した(9-slice化はせず`content_margin`のみで対応、
+  `texture_margin_*`は引き続き未設定)。`home_screen.gd`の`NAV_HEIGHT_ACTIVE`/`NAV_HEIGHT_INACTIVE`を
+  110/78→150/108へ、`NAV_FONT_ACTIVE`/`NAV_FONT_INACTIVE`を24/18→26/20へ拡大(`NAV_ASPECT`は
+  既存の1.787を維持しアスペクト比は崩していない)。`home_screen.tscn`の`BottomNav`の
+  `custom_minimum_size`も(0,130)→(0,160)へ追随。タブ切り替え時のクロスフェードは
+  `home_screen.gd`の`_select_tab()`に追加し、`Main._show_only()`と同じ考え方(0.18秒、
+  `modulate:a`をTweenで補間、切り替え中のTweenは新しい切り替え開始時にkillしてから作り直す)を
+  `DeckTab`/`BattleTab`の表示切り替えに適用した(既に選択済みのタブへの再選択時はアニメーション
+  なしでスキップする)
+- [x] **J-4 ホーム画面全体のレイアウトを見直す**。`DeckTab`/`BattleTab`とも、絶対座標(`offset_*`)による
+  配置から`CenterContainer`/`VBoxContainer`/`HBoxContainer`を使った中央寄せのレイアウトへ組み替え、
+  画面の余白バランスを整理した。`DeckTab`は「デッキ編集」(大)を上段、「砂時計一覧」「ショップ」
+  (中)を下段の横並びで中央配置。`BattleTab`は「ランダムマッチ」「ルームを作成」を上段横並び、
+  ルームコード入力+「コードで参加」「観戦する」を中段、「リプレイ」「CPU戦」を下段に配置し
+  全体を`MarginContainer`+`VBoxContainer`で中央寄せにした(`CancelButton`のみ待機中断の導線として
+  引き続き右上absolute配置)。いずれも`tools/`配下の一時ビルドスクリプト経由でシーンを再構築した
+  (ノードをコードで組み立て→owner設定→pack→save、適用後削除)
+- [x] **J-5 短いボタン(`compact_text`)を使っている箇所を全て長いボタン(`wide_text`)へ統一する**
+  (ホーム画面系: 砂時計一覧・ショップ・コードで参加・観戦する・リプレイ・CPU戦・キャンセル)。
+  J-2/J-4のシーン再構築と同時に、対象7ボタンすべてのスタイルを`img_compact_text_*`から
+  `img_wide_text_*`へ差し替えた
+- [x] **J-6 詳細パネル(`HourglassDetailPanel`)を調整する**。`resources/theme/detail_panel_bg.tres`の
+  `content_margin_left/right`を80→34、`content_margin_top`を130→60、`content_margin_bottom`を20→24へ
+  詰め、説明文(`EffectsScroll`/`EffectsLabel`)の横幅を広げつつ、コンテンツ全体を上に寄せた
+  (背景画像の四隅の砂時計意匠・上部中央の紋章と重ならない範囲を、画像のピクセル色をサンプリングして
+  実測した上で決定)。`hourglass_detail_panel.tscn`の`Margin/VBox/Icon`の`custom_minimum_size`を
+  84x84→140x140へ拡大。パネル自体の外寸(302x400)は変更していないため、`HourglassListScreen`・
+  `DeckEditorScreen`両方の`DetailPanel`インスタンスサイズの追随は不要だった
+- [x] **J-7 砂時計一覧(`HourglassListScreen`)の棚UIを修正する**。根本原因は2つ:
+  (1) `ScrollContainer`直下の`ShelfList`(`VBoxContainer`)に`size_flags_horizontal`が設定されておらず、
+  `horizontal_scroll_mode`を無効化したScrollContainer配下では子の幅がその子自身の最小幅(0)に
+  留まってしまい、`ShelfList`とその子`ShelfRow`群の実際の幅が0になっていた(`EXPAND_FILL`を
+  付けたRow側だけでは伝播せず、`ShelfList`自身に必要だった)。`hourglass_list_screen.tscn`の
+  `ShelfList`へ`size_flags_horizontal = 3`(EXPAND_FILL)を追加して解消(`tools/godot_apply_patch.gd`
+  経由、適用後`.bak`は削除)。
+  (2) `hourglass_list_screen.gd`で動的生成していた棚板(`Plank`)とネームプレート(`plate`)の
+  `TextureRect`が`expand_mode`の既定値`EXPAND_KEEP_SIZE`のままだったため、割り当てた矩形が
+  小さくても最小サイズが元画像の解像度(棚板1020x158、ネームプレート490x148)に固定されてしまい、
+  棚板は行の外へ大きくはみ出し、ネームプレートは実寸のまま巨大化していた。両方に
+  `expand_mode = TextureRect.EXPAND_IGNORE_SIZE`を追加して解消。(1)により`ShelfRow`の幅が
+  正しく計算されるようになった結果、砂時計が棚の左端からはみ出す症状も同時に解消した
+- [x] **J-8 詳細パネルの配置を見直す**。`hourglass_list_screen.tscn`の`DetailPanel`の
+  `offset_top`/`offset_bottom`を20.0→160.0へ変更し、画面高さ720・パネル高さ400から
+  縦方向中央((720-400)/2=160)へ据えた(`DeckEditorScreen`側は指示通り変更していない)。
+  検索機能等の追加はスコープ外のため見送り
+
+### Wave 2(Wave 1完了後: デッキ関連画面クラスタ)
+
+- [x] **J-9 デッキ一覧(`DeckListScreen`)の入れ替えUIを変更する**。`DeckListCard`のカード個別
+  「入れ替え」ボタン(`SwapButton`)を廃止。画面右上「新規デッキ作成」ボタンの隣に新規
+  「デッキ入れ替え」ボタン(`ReorderButton`)を配置し、押すと専用の並び替えモードへ入る方式にした。
+  `DeckListCard`に表示モード`enum Mode { MANAGE, REORDER, PICKER }`を追加し、`set_mode()`で
+  編集/削除ボタン(MANAGE)⇔上へ/下へボタン(REORDER)を切り替える。並び替えモード中は
+  `NewDeckButton`を無効化し、先頭/末尾のカードの上へ/下へボタンは`set_reorder_bounds()`で
+  個別に無効化する。並び替え自体は既存の隣接swapロジック(`_swap_decks()`、`DeckSave.save_decks()`
+  で永続化)を流用した
+- [x] **J-10 デッキ一覧から「使用中」バッジ表示を削除する**。`DeckListCard`の`SelectedBadge`
+  (「使用中」Label)ノードを削除し、代わりに選択中デッキの枠線色(琥珀)だけで示す控えめな表現に
+  変更した。`DeckListScreen._on_deck_selected()`が`DeckSave.save_decks()`で選択インデックスを
+  永続化し`MatchSetup.player_deck`を更新するロジック自体は変更していない
+  (`BattleDeckPickerScreen`が開いた際の初期選択値として引き続き使われる)
+- [x] **J-11 デッキ一覧カードのレイアウトを変更する**。`DeckListCard`を全面的に作り直し、左列を
+  `VBoxContainer`化して名札(`NamePlate`)の直下に操作ボタン行(`ButtonRow`/`ReorderRow`)を配置、
+  右側に砂時計アイコン列(`IconRow`)を独立配置した。アイコンサイズは48→52pxへ拡大。
+  変更は`tools/`配下の一時ビルドスクリプト(`Control.new()`等でノードを組み立て→owner設定→
+  `PackedScene.pack()`→`ResourceSaver.save()`、適用後に削除)経由で行った
+- [x] **J-12 デッキ名の文字数を制限する**。`DeckEditorScreen._ready()`で
+  `deck_name_input.max_length = 10`を設定した。`DeckListCard`のネームプレート
+  (`shelf_nameplate.png`ベース)は、`NamePlate`の`custom_minimum_size`を170x51→200x48へ拡大した上で、
+  `PlateTexture`(`NinePatchRect`)に`patch_margin_left`/`patch_margin_right`のみ32を設定し、
+  横幅方向のみ9-sliceで伸縮する構成にした(`patch_margin_top`/`patch_margin_bottom`は0のまま)。
+  `LeftColumn`が`size_flags_horizontal = EXPAND_FILL`のため、カード幅に応じてネームプレートが
+  さらに横へ伸びても中央の帯だけが伸縮し、両端の金属意匠が破綻しないことを非headless
+  スクリーンショットで確認済み
+- [x] **J-13 バトル開始前のデッキ選択画面(`BattleDeckPickerScreen`)を`DeckListScreen`と同じ
+  カードUIに統一する**。もともと`DeckListCard`を共用していたため見た目自体は自動的に統一されるが、
+  一覧コンテナを`VBoxContainer`(縦1列)から`DeckListScreen`と同じ`GridContainer`(`columns=2`)へ
+  差し替え、`DeckListCard.set_mode(DeckListCard.Mode.PICKER)`(編集/削除ボタン非表示、タップで
+  選択のみ)を使うようにした。旧`set_management_visible(false)`は`Mode`列挙による`set_mode()`へ
+  統合し廃止した
+- [x] **J-14 ドラッグ時のプレビュー画像サイズを修正する**。原因は`HourglassCard._get_drag_data()`の
+  プレビュー`TextureRect`が`expand_mode`を指定していなかったため、既定の`EXPAND_KEEP_SIZE`により
+  `custom_minimum_size`が無視されテクスチャの原寸(カード表示よりかなり大きい)で描画されていたこと。
+  `expand_mode = TextureRect.EXPAND_IGNORE_SIZE`を設定し、`custom_minimum_size`を固定値ではなく
+  ドラッグ元アイコンの実際の表示サイズ(`icon.size`)に合わせることで、下部の砂時計カード一覧と
+  同じサイズでドラッグされるように修正した
+- [x] 短いボタン→長いボタンへの統一(デッキ関連画面): `DeckListScreen`の`NewDeckButton`、
+  `BattleDeckPickerScreen`の`ConfirmButton`を`compact_text`→`wide_text`グループへ差し替えた
+  (アスペクト比に合わせて`custom_minimum_size`も再計算)
+
+### Wave 3(Wave 0完了後、他と独立: 対局画面)
+
+- [x] **J-15 盤面中央の位置ラベルを簡略化する**。`GameBoard`の`PositionRow`にある3枚の
+  `Plaque_左/中央/右`(`PanelContainer`)の`theme_override_styles/panel`をStyleBoxEmptyへ
+  差し替え、枠+背景を除去(枠なしのLabelのみに軽量化)。「左」のみ引き続き「交代の入口」の
+  `BonusLabel`を残す(NameLabelはalpha 1→0.8、BonusLabelはalpha 1→0.75へ落として控えめにした)。
+  加えて配置フェーズ中の空きマスのハイライトを追加した。調査の結果、`HourglassSlot.clear()`は
+  `visible = false`で完全非表示にしており、Godotは非表示のControlへ入力を渡さないため、
+  配置フェーズの空きマス(`BoardRow.show_placement()`がdata==nullの位置で従来`clear()`を
+  呼んでいた)は**そもそもクリックできていなかった**(表示上も見えず、実質的な不具合だった)。
+  新規`HourglassSlot.show_placement_empty()`(visible=trueのまま、既存の`MoveTargetFrame`と
+  同じ明滅ハイライトを`set_move_target(true)`で流用)を追加し、`BoardRow.show_placement()`から
+  空きマスに対してこちらを呼ぶよう変更。これにより「配置候補であることが視覚的に分かる」ことと
+  「実際にクリックできる」ことの両方を同時に達成した(`show_placement_card()`側は
+  `set_move_target(false)`を追加し、駒が置かれたら明滅を確実に消す)
+- [x] **J-16 配置フェーズの効果一覧テキストパネルを廃止し、クリックでの詳細表示に統一する**。
+  `match_screen.tscn`の`PlacementControls`から`PlacementEffectScroll`(効果一覧の横スクロール
+  テキスト)ノードを削除(「対局開始」ボタンは残置)。`MatchPlacementController`から
+  `_rebuild_effect_list()`/`_effect_entry_style()`/`EFFECT_ENTRY_WIDTH`を削除した。
+  既存の`GameBoard.own_info_requested`/`opponent_info_requested`(C-3実装済み、
+  `_placement.data_at(position)`経由)は配置フェーズの自分の場3マスに対して既に機能していたが、
+  **手札(`HourglassSlotStrip`)側は`HourglassSlot.info_requested`シグナルがストリップまで
+  一切転送されておらず、手札クリックでの詳細表示は未接続だった**。`HourglassSlotStrip`に
+  `info_requested(index)`シグナルを追加して各スロットの`info_requested`を転送し、
+  `MatchScreen`で`own_slot_strip.info_requested`/`opponent_slot_strip.info_requested`を
+  購読、`MatchPlacementController`に`hand_data_at()`/`opponent_hand_data_at()`(いずれも
+  配置フェーズ中のみ有効)を追加して接続した。自分の未配置手札・相手の公開手札5枚の両方で
+  クリックすると`MatchDetailPanel`が開くことを非ヘッドレスで確認済み(GameDesign.md 9章は
+  既に承認済みの内容で更新済みのため追加変更なし)
+- [x] **J-17 対局画面上下バーのパネル質感を改善する**。琥珀色の枠線+半透明黒背景
+  (グローバルテーマのPanelContainerスタイル)がチープという指摘を受け、新規
+  `BarPanel`(`scripts/ui/bar_panel.gd`、`Control`の`_draw()`のみのコード描画)を追加し、
+  `TopBar`/`BottomBar`(`PanelContainer`)へ組み込んだ。`board_panel_perspective.png`
+  (未使用のAI生成イラスト、盤面全体の6台座パース構図)は横長の薄いバー形状とアスペクト比が
+  大きく異なり、9-slice廃止方針(縦横同倍率のみ・非等倍伸縮禁止)のもとでは一部を切り出して
+  使っても意匠が崩れるため不採用と判断。新規画像生成も見送り、`BoardTable`(盤面テーブル)が
+  確立した「無地でもコード描画で質感を出す」方針をそのまま踏襲した。`BarPanel`は上端が明るく
+  下端が暗い縦グラデーション塗り(`draw_polygon`の頂点カラー)+琥珀の枠線+四隅のリベット風の
+  small circleを描画する。`TopBar`/`BottomBar`の`theme_override_styles/panel`を
+  StyleBoxEmptyへ上書きしグローバルスタイルの重複描画を止め、`BarPanel`をそれぞれの
+  最初の子ノード(`mouse_filter = IGNORE`)として追加し、既存の`TopBarMargin`/
+  `BottomBarMargin`(実コンテンツ)より背面に描画されるようにした。非ヘッドレスで
+  配置フェーズ・対局フェーズ双方の見た目を確認済み
+
+### 進め方の注意
+
+- Wave 0(J-0)は全画面に影響するため必ず最初に単独で実施する
+- Wave 1は「ホーム画面系」「砂時計一覧+詳細パネル」で並行可能(`HourglassDetailPanel`は共有
+  コンポーネントのため、`DeckEditorScreen`側のインスタンスサイズ同期のみ両担当が調整する)
+- Wave 2はWave 1(特にJ-6の詳細パネルサイズ確定)を待ってから着手する
+  (`DeckEditorScreen`が両方に関係するため)
+- Wave 3はWave 0完了後、他のWaveと独立して並行可能
+- 過去のセッションで`user://`配下の実データ(`deck_save.json`)を誤って削除する事故が発生している。
+  検証はheadlessテスト・非headlessでのスクリーンショット確認のみで行い、実データファイルには
+  一切触れないこと
+
+---
+
+## 今やること(フェーズ11: フィードバック第2弾・視覚的フィードバック強化)
+
+ユーザーからの2回目の大規模フィードバック。**K群(仕様変更)は承認済み**(GameDesign.md/Architecture.mdへ
+反映済み)。K → L(全画面共通) → M/N/O(画面ごと、並行可) → P(視覚的フィードバック強化) の順で進める。
+L-3のフォントは「Zen Kaku Gothic New」を採用する(ユーザー承認済み、Google Fontsから取得する)。
+
+### K. 仕様変更(承認済み・実装待ち)
+
+- [x] **K-1 砂の進行を「自分のターン開始時」から「自分のターン終了時」へ変更する**(GameDesign.md 2章は
+  承認済みの内容で更新済み)。`GameState.begin_turn()`/`end_turn()`の2関数を廃止し、新設した
+  `GameState.advance_and_end_turn()`1関数へ統合した。処理順序は「`current_turn`(ここまで指していた側)の
+  盤面3マスを`advance_slot()`で1段階進行→`effect_resolver.resolve_turn_tick()`→`current_turn`を交代→
+  `turn_started`発行」。対局開始直後はこの関数が一度も呼ばれないため、開始時特例のための
+  `_has_advanced`フラグは不要になり削除した。呼び出し元(`scripts/ui/match_screen.gd`の
+  `_advance_turn_and_refresh()`・`start_spectate()`の観戦追いつきループ・`_replay_goto()`の
+  リプレイ巻き戻しループ、計3箇所)の`state.end_turn(); state.begin_turn();`のペア呼び出しを
+  `state.advance_and_end_turn()`単独呼び出しへ置き換え、`_start_common()`/`_replay_goto()`にあった
+  対局開始直後専用の`state.begin_turn()`呼び出しは削除した(不要になったため)。
+  `tools/tests/run_tests.gd`の`_test_begin_turn_*`系3テストを、新しい関数名・処理順序を検証する
+  `_test_no_advance_before_first_turn_ends`/`_test_advance_and_end_turn_advances_ending_side_then_switches`/
+  `_test_advance_and_end_turn_only_advances_ending_side_across_multiple_turns`へ書き換えた
+  (期待値の意味は同じ「進行中の陣営だけが1段階ずつ進み、手番が来ていない陣営は変化しない」ことの検証だが、
+  「手番が来た時に進行」から「手番を終えた時に進行」への視点変更に合わせて呼び出し順序を書き換えている)。
+  非ヘッドレスで実際にローカル対戦を起動し、Aの1手目終了でAの盤面だけがFALLINGへ進行しBはUPRIGHTのまま、
+  続くBの1手目終了でBだけがFALLINGへ進行することを確認済み
+- [x] **O-6 反転時に砂時計の画像がすぐ切り替わらない不具合を修正する**。`scripts/ui/match_screen.gd`の
+  `_advance_turn_and_refresh()`冒頭、`_turn_resolver.begin_capture()`より前に`_refresh_view()`の
+  呼び出しを1つ追加した。これにより、反転/移動/交代など直前の直接操作による見た目の変化が、
+  ターン進行の自動演出(0.6秒×イベント数の遅延)が始まる前に即座に反映されるようになる。
+  非ヘッドレスでの検証時、`_advance_turn_and_refresh()`内部に一時的なデバッグ出力を仕込んで
+  確認したところ、この追加した`_refresh_view()`が同期的に実行され、ターン進行の演出キューが
+  再生され始める前の時点で、直前に反転した駒の表示(`HourglassSlot._last_state`)が既に
+  正しい値へ更新されていることを確認できた(検証後、デバッグ出力は削除済み)。K-1と同じ箇所を
+  触るため合わせて実施した
+- [x] **K-2 CPU戦の対局記録もリプレイに残す**(GameDesign.md 12章・13章は承認済みの内容で
+  更新済み、Architecture.md 7.1節に実装内容を反映済み)。新規`LocalReplayService`
+  (`scripts/net/local_replay_service.gd`、`DeckSave`と同じ「Autoloadを使わずstaticで持つ」
+  流儀)が、CPU戦の棋譜(`deck_a`/`deck_b`・`placement_a`/`placement_b`・`actions`・
+  `finished_at`・`winner`)を`user://cpu_replays.json`へ配列として保存する。保存件数の上限
+  (直近30件)はオンライン対戦(Firestore)とは独立に管理する。棋譜の蓄積は新規
+  `MatchCpuReplayRecorder`(`scripts/ui/match_cpu_replay_recorder.gd`)へ切り出し、
+  `MatchScreen.start_cpu_match()`(開始時にdeck/placementのidを算出)・`_perform_action()`/
+  `_maybe_trigger_cpu_turn()`(手ごとにactionsへ蓄積)・`_on_match_ended()`
+  (`LocalReplayService.mark_finished()`を呼ぶ)から利用する。リプレイ再生は、
+  `start_replay(match_id, client)`(Firestore版)と新規`start_local_replay(record)`
+  (`LocalReplayService`版)が共通の`_start_replay_from_doc()`を呼ぶ形に統合し、
+  再生ロジック自体は完全に共有した。`ReplayListScreen`はFirestoreからの一覧取得と
+  `LocalReplayService.list_replays()`をマージして`finished_at`降順に表示し、
+  `ReplayListCard`は`InfoLabel`の末尾へ`[CPU戦]`/`[オンライン]`のテキストを追加して区別する
+  (専用のバッジ用ノードは追加せず、既存ラベルへのテキスト追加に留めた)。
+  `Main._on_replay_selected()`は`match_id`が`"cpu_"`始まりかどうかで再生経路を振り分ける。
+  観戦機能はCPU戦の対象外のまま変更していない。
+  gdlint/gdformat・headlessテスト(`tools/tests/run_tests.gd`)は問題なし。
+  非headlessでのGUI操作によるCPU戦実プレイは行わず(`user://`の実データへ触れる懸念を
+  避けるため)、代わりに`tools/tests/run_tests.gd`へ実データを汚さない形
+  (テスト専用に`cpu_replays.json`をバックアップ→上書き→検証→復元する、既存の
+  `DeckSave`テストと同じ安全な往復パターン)の統合テストを2本追加し、
+  `MatchCpuReplayRecorder`→`LocalReplayService`という実際のコード経路を、実際の
+  `HourglassData`(`sand`/`sword`/`king`等)を使って検証した(保存→一覧取得→個別取得の
+  往復、保存件数上限超過時の古い順削除、`begin()`/`record_action()`/`save_finished()`の
+  一連の呼び出しでdeck/placement/actions/winnerが正しく組み立てられることを確認済み)
+- [x] **K-3 盤面の位置ラベル(左/中央/右・交代の入口)を完全に削除する**(GameDesign.md 9章は
+  承認済みの内容で更新済み)。`scenes/game_board.tscn`から`PositionRow`(「左」「中央」「右」の
+  3枚の`PanelContainer`、「左」の「交代の入口」ラベルを含む)を丸ごと削除した
+  (`tools/godot_apply_patch.gd`の`delete_node`op、適用後`.bak`は削除)。代わりに、
+  `HourglassSlotStrip`の控えを選択した瞬間に「交代の入口」を伝えるため、既存の移動先候補
+  ハイライト(`GameBoard.show_move_targets()`/`clear_move_targets()`、内部は
+  `HourglassSlot.set_move_target()`の点滅枠)をそのまま再利用し、`MatchScreen._select()`が
+  `selection_type == BENCH`のとき`game_board.show_move_targets([GameState.BoardPosition.LEFT])`
+  を呼び、それ以外(他の駒を選ぶ等)では`game_board.clear_move_targets()`を呼ぶよう変更した。
+  選択解除(`_clear_selection()`)は既存の`clear_move_targets()`呼び出しがそのまま効くため
+  追加の考慮は不要だった。gdlint/gdformat・headlessテスト(`tools/tests/run_tests.gd`)は
+  問題なし。非headless(`start_cpu_match()`を直接起動する一時検証スクリプト、確認後削除済み)で、
+  (a)盤面に位置ラベルが一切表示されないこと、(b)控えの駒を選択すると場の左マスが青い枠で
+  点滅ハイライトされること、(c)選択解除でハイライトが消えることをスクリーンショットで確認済み。
+  `PositionRow`削除後もOpponentRow/OwnRowの間隔に不自然な空白は生じなかった(BoardTableの
+  中央区切り線・紋章は元々`PositionRow`とは独立した`BoardTable._draw()`側の描画のため、
+  周辺オフセットの調整は不要だった)
+
+### L. 全画面共通(最優先・単独実施)
+
+- [x] **L-1 全ボタンを細長い方(`wide_text`)へ統一する**。`compact_text`グループの使用箇所は
+  `match_screen.tscn`のみ(`PlacementStartButton`「対局開始」・`SurrenderButton`「投了」・
+  `LogButton`「ログ」は`standard_medium`、`MatchDetailCloseButton`「閉じる」・
+  `CancelButton`「キャンセル」・`ConfirmButton`「投了する」・`HomeButton`「ホームへ」・
+  `LogCloseButton`「閉じる」は`compact_text`だった)と判明したため、この8ボタン全てを
+  `wide_text`へ差し替えた。`.tscn`の直接テキスト編集を避けるため、一時ビルドスクリプト
+  (`load()`→各Buttonへ`add_theme_stylebox_override()`で新StyleBoxを設定・`custom_minimum_size`/
+  `offset_right`/`offset_bottom`を再計算→`pack()`→`ResourceSaver.save()`、適用後削除)経由で
+  実施。サイズは`wide_text`原寸(496x178、比率2.7865)を保ちつつ元の footprint に近い値へ
+  再計算(例: `PlacementStartButton`200x72、`SurrenderButton`/`LogButton`140x50、
+  `MatchDetailCloseButton`200x72、`CancelButton`/`ConfirmButton`220x79、`HomeButton`260x93、
+  `LogCloseButton`131x47)。保存時にGodotが未参照になった`standard_medium`/`compact_text`の
+  `ext_resource`宣言を自動的に落とし、同じ`wide_text`参照へ統合したことを確認した。
+  `img_compact_text_{normal,hover,pressed,disabled}.tres`(4ファイル)と対応画像
+  (`assets/buttons/processed/compact_text/`)はプロジェクト内のどこからも参照されなくなった
+  ため削除した。`img_standard_medium_*`は本タスクでmatch_screen以外に使用箇所が見つからず
+  結果的に未使用資産になったが、削除は明示的な指示があった`compact_text`のみに留めた
+  (次回の棚卸しタスクで検討)。`deck_list_card.tscn`の編集/削除/上へ/下へボタン(`icon_square`、
+  95x100の正方形に近い2列グリッドカード内の短い2文字ラベル)と`home_screen.tscn`の
+  `SettingsButton`(`icon_square`、アイコン+短い「設定」ラベル)は、`wide_text`(2.79:1の横長)へ
+  差し替えるとカード幅制約・アイコンボタンとしてのレイアウトが崩れるため対象外とした
+  (前者はM-2で別途フォントサイズ調整が予定されている領域のため、後者はアイコンボタン扱いのため)
+- [x] **L-2 戻る/保存ボタンを画像アセットへ戻す**。`img_back_nav_{normal,hover,pressed,disabled}.tres`
+  /`img_confirm_save_{normal,hover,pressed,disabled}.tres`(計8ファイル)の中身をJ-0の
+  `StyleBoxFlat`から`StyleBoxTexture`(元画像`assets/buttons/processed/{back_nav,confirm_save}/*.png`、
+  336x182・338x181)へ戻した。`.tres`は`.tscn`と異なりテキスト編集が許容される資源ファイルのため
+  直接書き換えた。`texture_margin_*`は設定せず(9-slice化しない)、原寸アスペクト比を保った
+  縮小サイズ`custom_minimum_size = Vector2(130, 70.42)`(back_nav、比率1.846→1.857、差0.6%)/
+  `Vector2(132, 70.68)`(confirm_save、比率1.867→1.868、差0.05%)を明示的に設定した(未設定だと
+  `StyleBoxTexture`の最小サイズが原寸336x182に戻ってしまうため)。対象は`back_nav`を使う6シーン
+  (`battle_deck_picker_screen`/`deck_editor_screen`/`deck_list_screen`/`hourglass_list_screen`/
+  `match_screen`/`replay_list_screen`のBackButton)と`confirm_save`を使う`deck_editor_screen`の
+  SaveButton。BackButtonはいずれも`offset_left=offset_right`/`offset_top=offset_bottom`(J-0で
+  作った「最小サイズに委ねる」ゼロ矩形)のままのため、`custom_minimum_size`を設定するだけで
+  左上を起点に自然に広がり、他のoffset調整は不要だった。`.tscn`側の変更は
+  `tools/godot_apply_patch.gd`(`set_property`、`value_variant`でVector2を指定、適用後`.bak`削除)
+  経由で行った
+- [x] **L-3 フォントを差し替える**。`main_theme.tres`の全フォント参照(`default_font`・
+  `Button`/`Label`/`LineEdit`/`TabBar`等の`fonts/font`)を`MPLUSRounded1c-Bold.ttf`から
+  `assets/fonts/ZenKakuGothicNew-Bold.ttf`(Google Fonts公式、OFLライセンス、事前取得済み)へ
+  差し替えた。旧フォント・旧ライセンスファイルはどこからも参照されなくなったため削除した
+  (`ext_resource`の参照先を確認し、`resources/theme/main_theme.tres`が
+  `ZenKakuGothicNew-Bold.ttf`を指していることを確認済み)
+- [x] **L-4 テキスト入力欄(`LineEdit`)の見た目を改善する**。`main_theme.tres`に
+  `LineEdit/styles/normal`(新規、控えめな背景+枠線)・`LineEdit/styles/focus`(既存、明るい琥珀の
+  縁取り)・`LineEdit/styles/read_only`(新規)の3種のStyleBoxFlatを揃えた
+- [x] **L-5 Alert/確認ダイアログを自前モーダルへ置き換える**。`SurrenderConfirm`/`SettingsPanel`と
+  同じ「暗幕(`ColorRect`)+`content_panel.tres`パネル+`wide_text`ボタン」のパターンを踏襲した、
+  新規`ConfirmModal`(`scenes/confirm_modal.tscn`/`scripts/ui/confirm_modal.gd`)を追加した。
+  `open_notice(title, message, ok_text)`(OKのみ)と`open_confirm(title, message, confirm_text,
+  cancel_text, danger)`(はい/いいえ、`danger=true`で確定ボタンの文字色を警告色`Color(1, 0.45,
+  0.4, 1)`にする)の2メソッドで両パターンをカバーし、`confirmed`/`cancelled`シグナルを発行する。
+  シーンは`tools/`配下の一時ビルドスクリプト(ノードをコードで組み立て→owner設定→
+  `PackedScene.pack()`→`ResourceSaver.save()`、適用後に削除)経由で新規生成した。
+  置き換え対象2箇所は`tools/godot_apply_patch.gd`(`delete_node`→`add_child_scene`、
+  同じノード名で差し替えることで参照を維持)で適用した。
+  (1) `scenes/deck_tab.tscn`の`ShopNotice`(`AcceptDialog`)→`ConfirmModal`。
+  `deck_tab.gd`は`shop_button.pressed`から`open_notice("お知らせ", "ショップは近日公開予定です")`
+  を呼ぶだけに変更。
+  (2) `scenes/deck_list_screen.tscn`の`DeleteConfirm`(`ConfirmationDialog`)→`ConfirmModal`。
+  `deck_list_screen.gd`は`_on_delete_pressed()`から`open_confirm()`を`danger=true`で呼び、
+  既存の`confirmed`→`_on_delete_confirmed()`(`DeckSave.save_decks()`で永続化、変更なし)配線を
+  維持しつつ、`cancelled`→`_delete_pending_index`をリセットする新規`_on_delete_cancelled()`を
+  追加した。`SurrenderConfirm`はシーン埋め込み型で既に同系統のデザインのため、今回のスコープ外
+  として据え置いた。gdlint・gdformat・headlessテスト(`tools/tests/run_tests.gd`)は問題なし。
+  非headlessで、`DeckTab`の「ショップ」ボタン押下→通知モーダル、`DeckListScreen`(`user://`を
+  経由せず`_decks`/`_selected_index`へ直接偽データを注入)の「削除」ボタン押下→確認モーダル
+  (キャンセル/削除するボタンの色分け含む)を確認し、加えて`ConfirmModal`単体インスタンスで
+  ボタン押下→`confirmed`/`cancelled`シグナル発火→`close()`が正しく動作することもスクリプトで
+  検証済み(実データファイルには一切アクセスしていない)
+
+### M. デッキ関連画面
+
+- [x] **M-1 デッキ名プレートの伸縮方法を直す**。元画像(`shelf_nameplate.png`、490x148)を
+  Pythonでピクセル解析・クロップ確認したところ、左端の切り欠き(ノッチ)形状は概ねx=0〜38、
+  リベット(ねじ)装飾はx=15〜53の範囲に収まっており、J-12の`patch_margin_left/right = 32`は
+  リベットの一部を伸縮領域に含めてしまう幅だった。ノッチ+リベットを安全マージン込みで完全に
+  保護できる`patch_margin_left/right = 65`へ変更(縦方向は引き続き0のまま)。非headless
+  スクリーンショットで、伸縮後もノッチ・リベットが歪まないことを確認済み
+- [x] **M-2 編集/削除ボタンの文字を大きくする**。`DeckListCard`の編集/削除・並び替えモードの
+  上へ/下への計4ボタンのフォントサイズを15→19へ拡大した
+- [x] **M-3 デッキカード右側の砂時計アイコンを縦横2倍にする**。`DeckListCard.ICON_SIZE`を
+  `Vector2(52, 52)`→`Vector2(104, 104)`へ拡大。5アイコン分の`IconRow`最小幅が約284pxから
+  544pxへ増え、`scenes/deck_list_screen.tscn`の`ListContainer`(`GridContainer`)を2列のままだと
+  1列あたりの幅(約606px)に収まらず破綻するため、`columns`を2→1へ変更してレイアウトを
+  再計算した(カード自体は`size_flags_horizontal = EXPAND_FILL`のため画面幅いっぱいの
+  横長カードとして表示される)。カード高さ(`custom_minimum_size.y = 214`)は、拡大後の
+  `IconRow`(104px)より`LeftColumn`(ネームプレート48+セパレータ10+ボタン行100=158px)の方が
+  高いため変更不要だった
+- [x] **M-4 「デッキ入れ替え」ボタンを「新規デッキ」と同じ種類のボタンに揃える**。確認したところ
+  `scenes/deck_list_screen.tscn`の`ReorderButton`/`NewDeckButton`は両方とも既に
+  `img_wide_text_{normal,hover,pressed,disabled}`を使用しており、対応済みだった(おそらく
+  L-1のボタン統一作業で同時に揃えられていた)。サイズのアスペクト比も両方とも元画像比
+  (496x178≒2.787)の±1%以内に収まっていることを確認し、追加の変更は行っていない
+- [x] **M-5 デッキカード自体のホバー反応を削除する**。`DeckListCard._on_mouse_entered`/
+  `_on_mouse_exited`から`ClickArea.animate_hover()`の呼び出しを削除(`_hovering`の追跡自体は
+  `_on_resized()`の`_rest_position`更新判定に使うため残した)。カード内の編集/削除等の各ボタンは
+  Button標準のtheme_override_styles(hover)がそのまま機能するため、ホバー反応は残っている
+- [x] **M-6 デッキ名の文字色を白にする**。`DeckListCard`の`NameLabel`の
+  `theme_override_colors/font_color`を`Color(0.16, 0.1, 0.04, 1)`(ほぼ黒)から
+  `Color(0.96, 0.94, 0.89, 1)`(オフホワイト)へ変更し、金属プレート背景の上で読みやすくなった
+
+  M-1〜M-6の`.tscn`変更は`tools/godot_apply_patch.gd`(`set_property`)経由で
+  `scenes/deck_list_card.tscn`/`scenes/deck_list_screen.tscn`へ適用し、適用後`.bak`は削除した。
+  検証は`user://`(`DeckSave`)を一切経由せず、`tools/`配下に一時生成した検証専用シーン
+  (`DeckListScreen`の`_decks`/`_selected_index`へ直接ダミーデータを注入して`_rebuild_list()`を
+  呼ぶだけの構成)を非headlessで実行しスクリーンショットを確認、確認後に一時ファイルは削除した。
+  gdlint・gdformat・headlessテスト(`tools/tests/run_tests.gd`)は問題なし
+
+### N. 詳細パネル
+
+- [x] **N-1 詳細パネルの内部レイアウトを横並びへ変更する**。ユーザー指摘:「砂時計イラストを
+  少し左に寄せてその右に砂時計の名前と落下ダメージを記載することで詳細効果を書く欄をもう少し
+  広げてあげて」。`scenes/hourglass_detail_panel.tscn`を`Icon`→`NameLabel`→`DamageLabel`→
+  `EffectsScroll`の縦一列から、`VBox[HBox[Icon(110x110) | InfoVBox[NameLabel, DamageLabel]], EffectsScroll]`
+  へ作り直した(`tools/`配下の一時ビルドスクリプト経由。load→ノード付け替え→pack→save、
+  適用後削除)。名前・ダメージ表示は右列に収まる形が自然なため、中央揃え(`horizontal_alignment=1`)
+  から既定の左揃えへ変更した。パネルの外寸(既定302x400)は変更していない。共通コンポーネントのため
+  `HourglassListScreen`・`DeckEditorScreen`・`MatchScreen`の3画面すべてに反映され、`show_data()`/
+  `clear()`は外部からノードパスへ直接依存されていなかったため呼び出し元の変更は不要だった
+- [x] **N-2 対局中の詳細パネルの出し方を再設計する**。ユーザー指摘:「クリックしたときに出て
+  くる詳細表示パネル、かなり邪魔。いい感じに工夫して見やすく扱いやすくしてほしい」。以下の3つを
+  組み合わせて実施した(TODO記載の(a)ツールチップ化は、既存の「クリックで詳細」という導線自体は
+  維持する方針のC-3と矛盾するため見送った)。
+  (b) パネルサイズを`MatchDetailPanel`インスタンスのみ340x400→302x260へ縮小し、
+  N-1で縦一列から横並びへ変えたことで縦方向の必要量が減った分を活かした。位置も
+  offset_left/top を900,96→920,170へ調整し、画面右端寄り・盤面上半分寄りに収めて
+  自分の場(画面下寄り)への重なりを減らした(`HourglassDetailPanel`の既定302x400は
+  `HourglassListScreen`/`DeckEditorScreen`用のまま変更していない、インスタンス単位の
+  上書きのみ)。
+  (c) `MatchScreen._unhandled_input()`を新設し、詳細パネル表示中に左クリックが発生したら
+  閉じるようにした。駒や閉じるボタン自体のクリックは各Controlの`_gui_input`で消費され
+  `_unhandled_input`まで届かないため、「盤面の駒以外の場所を押した」場合のみ閉じる形になり、
+  既存の「別の駒をクリックして詳細を切り替える」動作とは競合しない。
+  (d) `MatchDetailPanel`の`theme_override_styles/panel`を、不透明なテクスチャの
+  `detail_panel_bg.tres`から、半透明の`content_panel.tres`(他の暗幕パネルと共通の質感、
+  `bg_color`のアルファ0.82)へ差し替え、下の盤面がうっすら透けて見えるようにした。
+  シーン変更はいずれも`tools/`配下の一時ビルドスクリプト経由で行った。非headlessで、
+  配置フェーズの相手手札クリック・対局フェーズの自分の場/相手の場クリックによる詳細切り替え・
+  盤面の空きスペースクリックによる自動クローズ(`detail_panel.visible`が`true`→`false`に
+  なることをログ出力で確認)をスクリーンショット付きで確認済み(手順・スクリプトは
+  `user://`に一切アクセスしない合成データ注入方式で、確認後に一時ファイルは削除済み)
+
+### O. 対局画面のレイアウトと操作性
+
+- [x] **O-1 盤面の位置ラベルを削除する**。K-3の実施内容と同一のため、K-3側の実装で完了済み
+  (`GameBoard`の`PositionRow`は削除済み)
+- [x] **O-2 HPバーの位置を下げる**。`TopBarRow`/`BottomRow`内で`PlayerStatusBar`
+  (`OpponentStatus`/`OwnStatus`)が行の先頭(上端)に貼り付いていたのが原因(行の高さは
+  隣の`HourglassSlotStrip`(84px)が基準になるため、`PlayerStatusBar`自体は30〜40px程度しかなく
+  上寄りに見えていた)。`size_flags_vertical = 4`(SIZE_SHRINK_CENTER)を両ノードへ追加し、
+  行内で縦方向に中央揃えされるようにした(`tools/godot_apply_patch.gd`のset_property経由)
+- [x] **O-3 投了ボタン・ログUIのレイアウトを再設計する**。`SurrenderButton`/`LogButton`は
+  TopBarの高さ(実測96px)より下、盤面(y=120〜)より上の隙間が無かったため、左上の余白
+  (盤面左端x=210より内側)でy=104〜212の範囲に130x50で縦に並べ直した
+  (`tools/godot_apply_patch.gd`のset_property経由)。`LogPanel`は「画面左上に固定表示され
+  盤面を隠す」構造をやめ、`SurrenderConfirm`/`ResultOverlay`と同じ「暗幕+`content_panel.tres`の
+  中央モーダル」パターンへ作り替えた(`tools/`配下の一時ビルドスクリプトでDim/CenterBox/
+  LogContentのノード構造を組み立て→pack→save、適用後削除)。暗幕クリックでも閉じられるよう
+  `match_battle_log.gd`に`log_dim.gui_input`の購読を追加した。`match_screen.gd`の
+  `log_panel`/`log_close_button`/`log_list`の参照パスをLogPanel/CenterBox/LogContent配下へ
+  更新。作業中、旧`LogPanel`ノードが元々`visible = false`を持っていたため、リネーム後の
+  `LogContent`にその値が残ったままだと二度と表示されない不具合を発見・修正した
+  (`visible = true`へ戻し、表示制御は外側の新規`LogPanel`Controlのみが担うようにした)
+- [x] **O-4 反転/移動/交代ボタンを縮小する**。`action_menu.tscn`の`FlipButton`/`MoveButton`/
+  `SwapButton`の`custom_minimum_size`を`Vector2(190, 190)`から`Vector2(80, 80)`へ縮小
+  (アスペクト比1:1のまま、フォントサイズ28は変更していない)。`tools/godot_apply_patch.gd`の
+  set_property経由で適用
+- [x] **O-5 「移動」の選択をキャンセルできるようにする**。`match_screen.gd`に
+  `_cancel_pending_move()`を追加し、(a)選択中の駒自身を再度押す、(b)Escキー
+  (`ui_cancel`アクション)、(c)盤面上の何も無い場所をクリックする、の3通りでキャンセルできる
+  ようにした。キャンセルすると`_pending_move`をfalseに戻し移動先ハイライトを消し、
+  駒を選択した直後の状態(ActionMenu再表示)に戻る
+- [x] **O-7 勝利時の演出をリッチにする**。`_show_result()`のテキスト組み立てはそのまま残し、
+  演出部分を新規`MatchResultPresenter`(`scripts/ui/match_result_presenter.gd`、
+  `MatchBattleLog`等と同様の切り出し方)へ移した(`match_screen.gd`が1000行制限に達したため)。
+  パネルのスケール+フェードインは既存のTweenを踏襲しつつ、暗幕の目標透明度を勝利時0.6/
+  敗北時0.75で分け、タイトル→詳細→ボタンの順に`tween.chain()`で段階的にフェードインさせる
+  ようにした。勝利時のみ、新規画像を使わずCPUParticles2Dで琥珀色の光の粒を結果パネル中央
+  から弾けさせる`_spawn_victory_burst()`を追加した。「ホームへ」ボタンは既存の`wide_text`の
+  ままで変更していない
+
+### P. 視覚的フィードバックの強化(最重要)
+
+ユーザー指摘:「ゲーム中、操作をしても何が起こっているのか全然把握できない。もっと視覚的な
+フィードバックを強化して初めてプレイするユーザーでもすぐに何が起こっているのかが把握できる
+ようにしたい。ここに時間を使ってどうすればいいかよく考えてみてほしい」。
+
+**現状の分析**: 初見プレイヤーが対局中に知りたい情報を、現在どこまで示せているかを整理した。
+
+| 知りたいこと | 現状 | 評価 |
+|---|---|---|
+| 今誰の番か | 上部バーのテキストのみ | 弱い |
+| 自分は何ができるか | 駒を押すとメニューが出る | 押せること自体が分からない |
+| 駒の状態の意味 | 3種類のイラスト差し替えのみ | 「落ちきり」が済んだ事なのかこれから起きる事なのか不明 |
+| **次のターンで何が起きるか** | **何も示していない** | **最大の欠落。砂時計ゲームの戦略の核心** |
+| 今何が起きたか | 逐次演出で駒が変化・数字が飛ぶ | 何のイベントか言葉での説明がない |
+| なぜダメージが出たか | 発生源の駒が光り数字が飛ぶ | 実装済みだが速く見落としやすい |
+
+**方針**: 「次に何が起きるかの予告」と「今何が起きたかの実況」の2つが最も効く。特に後者は、
+既に`MatchBattleLog`が「先手の『ソード』が落ちきりへ進行」「後手に3ダメージ(残りHP17)」と
+いう日本語文を生成しているので、**その文言をそのまま画面上へ大きく出す**ことで、実装コストを
+抑えつつログ表示とも一貫した説明ができる。
+
+- [x] **P-1 次に落ちる駒を予告する**。`HourglassSlot`に専用の`FallWarningRing`(枠のみの
+  `StyleBoxFlat`パネル)を追加し、`set_falling_warning(active, hostile)`で常時脈動する
+  警告リングを出す。hostile=true(相手の駒、自分がダメージを受ける)は赤、false(自分の駒、
+  相手にダメージを与える)はシアンで敵味方を描き分ける。`BoardRow.refresh_falling_warnings()`
+  (新規)が`GameBoard.show_state()`から呼ばれて全体を同期し、ターン進行の逐次演出中は
+  `GameBoard.play_state_step()`が1マスずつ即座に更新する。**着手前に判明した引き継ぎ問題**:
+  `HourglassSlot`の`_ready()`は既に`$VisualRoot/FallWarningRing`を`@onready`参照していたが、
+  `scenes/hourglass_slot.tscn`側に肝心のノードが存在せず、駒を表示するたびにnullアクセスで
+  クラッシュする状態だった(前回セッションが中断した際の未完成分)。`tools/`配下の一時ビルド
+  スクリプト(`Panel.new()`→`owner`設定→`pack()`→`save()`、適用後削除)でノードを追加して
+  解消した
+- [x] **P-2 ターン進行の解決中に、対象マスへフォーカスを当てる**。`HourglassSlot.set_spotlight()`/
+  `clear_spotlight()`は既存実装済みだったが呼び出し元が無かったため、`BoardRow.apply_spotlight()`/
+  `clear_spotlight()`(新規)と`GameBoard.focus_slot()`/`clear_spotlight_all()`(新規)で配線した。
+  `MatchTurnResolver.play()`が各イベント再生の直前に`focus_slot()`(stateイベントはそのマス、
+  hpイベントは発生源の駒。発生源不明の場合は直前のフォーカスを維持)を呼び、再生完了後に
+  `clear_spotlight_all()`で解除する
+- [x] **P-3 起きたことを言葉で実況表示する**。`MatchBattleLog`に`format_state_event()`/
+  `format_damage_event()`(新規、既存の`record_*`から文言生成部分を切り出した公開関数)を追加し、
+  新規`MatchEventCaption`(`MatchTurnResolver`等と同じ`_screen`参照を持つ`RefCounted`)がこれを
+  再利用して該当駒の近く(発生源不明のダメージは盤面中央)へフロート表示する。`MatchTurnResolver`
+  から呼び出す1〜2行のフックのみ追加し、ログと実況表示が同じ文言になることを保証した
+- [ ] **P-4 反転/移動/交代のアクション自体に演出を付ける**(見送り)。反転の即座画像切り替えは
+  O-6で対応済み。移動の入れ替えアニメーション・交代のスライドインは、位置が入れ替わる間
+  `_refresh_view()`の即時同期(O-6で入れた「演出前に必ず1度反映する」ルール)と競合しない形に
+  するための設計検討が追加で必要と判断し、優先度指示(P-3→P-1→P-5→P-2→P-7→P-4)の通り
+  最後に回した上で時間の都合上見送った。他のP項目は全て動作確認済みの完成状態のため、
+  中途半端な実装を残すよりこちらを優先した
+- [x] **P-5 手番の切り替わりを明示する**。新規`MatchTurnBanner`(`RefCounted`)が、自視点が
+  固定される対局(オンライン/CPU戦)に限り、「相手の手番待ち」から「自分の手番」へ切り替わった
+  瞬間だけ「あなたの番です」の大きなバナーを一瞬フェードイン/アウトさせる。ローカル対戦・観戦・
+  リプレイは「自分」が定まらないため対象外(`_refresh_turn_label()`の既存の視点判定と揃えた)
+- [x] **P-6 交代の導線を可視化する**(K-3で削除した「交代の入口」ラベルの代替)。K-3の実施内容
+  (`MatchScreen._select()`が控え選択時に`game_board.show_move_targets([GameState.BoardPosition.LEFT])`
+  を呼ぶ)そのものが本タスクの実装のため、K-3側で完了済み
+- [x] **P-7 操作できる駒が分かるようにする**。`HourglassSlot._apply_operable_pulse()`は既に
+  実装済みで、`set_interactive()`(操作可否が切り替わるたびに毎回呼ばれる既存経路)から
+  自動的に呼ばれる構造になっていたため、追加の配線は不要だった(前回セッションの実装が
+  そのまま機能する状態だったことを確認した)
+
+### 進め方の注意
+
+- K-1・O-6は完了済み(`GameState`のターン進行という土台を触るK-1と、反転の即時反映を扱うO-6は
+  セットで実施した)。残るK-2・K-3も承認済みのため、L群より先に着手してよい
+- L群は全画面に影響するため、M/N/O/P群より先に完了させる
+- L-3(フォント差し替え)は外部フォントファイルの入手が必要なため、方法をユーザーへ確認してから着手する
+- N群(`HourglassDetailPanel`)は3画面で共有するコンポーネントのため、M群・O群と並行させない
+- P群はO群(特にO-6)の完了後に着手する。P-2/P-3はC-1で作った`MatchTurnResolver`を拡張する形になる
+- 過去のセッションで`user://`配下の実データ(`deck_save.json`)を誤って削除する事故が発生している。
+  検証はheadlessテスト・非headlessでのスクリーンショット確認のみで行い、実データファイルには
+  一切触れないこと
+
+---
+
+## 今やること(フェーズ12: UIクロームのコード描画化)
+
+ユーザー指示:「ボタンとかを含むUI系、画像生成で作ってきたけどコードでこれらって作れたりしないの?
+もし作れたらそっちのほうが品質管理がしやすくってよさそう」→ 試作提示後「ボタンのクオリティを
+もっと上げて。また、ボタン以外の今まで画像生成したものを使っていたUI部分、そうじゃないUI部分に
+ついても世界観に沿った高いクオリティでコードで作ることを目指した」。
+
+方針はGameDesign.md 9章・Architecture.md 4章へ反映済み。**Q-1で品質の基準を作り、
+ユーザーの承認を得てからQ-2以降の全体展開に進む**(気に入らない状態で52ファイルを
+置換すると手戻りが大きいため)。
+
+- [x] **Q-1 共通描画ライブラリと高品質ボタンStyleBoxを作る**。`ui_palette.gd`(色の単一情報源)・
+  `ui_paint.gd`(static描画ユーティリティ、第1引数は`ci: RID`)・`coded_button_style.gd`
+  (`State`×`Shape`の2軸で全ボタンを賄う)の3ファイルを作成した。質感はArchitecture.md 4章の通り
+  (5ストップの反射カーブ+下端の照り返し、グレイン、枠と中央パネルで逆向きのグラデーション)。
+  色は目分量ではなく**元画像から実際にピクセルをサンプリングして**合わせている
+  (真鍮枠 `(151,122,90)→(84,56,42)`、上端の細い帯のみ `(208,178,114)`)。
+  初回実装は「明るすぎ・黄色すぎ」「渦巻きが枠外へはみ出しフックに見える」「disabledが通常より
+  明るくなる不具合」「pressedが黒つぶれ」「角丸半径32px固定で小さいボタンが極端に丸くなる」の
+  5点で不合格とし、2巡目で修正した。**四隅のネジと角の渦巻き装飾は、ユーザー判断により完全撤去**
+  (Architecture.md 4章に記載)。比較スクリーンショットは`tools/button_style_comparison.png`
+- [x] **Q-2 全13ボタングループへ適用する**。`img_{グループ名}_{state}.tres`(13グループ×4状態=52ファイル)の
+  中身をコードStyleBoxへ差し替えた。**パスとExtResource参照を維持**したため、23個ある`.tscn`は
+  1つも変更せずに全画面へ反映できた。Shape割り当ては`transport_round`→CIRCLE、`nav_tab`→TAB、
+  残る11グループ→ROUNDED_RECT(既定値のため`.tres`に`shape`行を持たない)。
+  あわせて**四隅のネジと角の渦巻き装飾を完全撤去**し、`UiPaint`/`UiPalette`側の対応する関数・定数も
+  参照0件を確認して削除した(`BarPanel`は独自のリベット描画を持つ別物のため無変更)。
+  非ヘッドレスで主要11画面を目視確認し、破綻は無し。ボタンの`custom_minimum_size`は
+  レイアウト崩れの切り分けを容易にするため今回は据え置いた(下記Q-8へ分離)
+- [x] **Q-8 ボタンサイズを見直す**。コード描画には原寸/アスペクト比の制約が無くなったため、
+  H-1・L-1・L-2で「画像の原寸比に合わせる」ために妥協していた`custom_minimum_size`を点検した。
+  Godotの`Font.get_string_size()`によるテキスト幅の実測とスクリーンショット目視の両方で
+  全ボタンを検証した結果、**実際に直す必要があったのは2箇所のみ**だった。
+  (1)`deck_list_screen.tscn`の`ReorderButton`を`Vector2(260, 93)`→`Vector2(260, 83)`
+  (同じ行の`NewDeckButton`と高さが10pxずれて下端が不揃いだったため)、
+  (2)`battle_deck_picker_screen.tscn`の`ConfirmButton`を`Vector2(260, 93)`→`Vector2(300, 93)`
+  +`offset_left`を`-276.0`→`-316.0`(「このデッキで開始」の8文字が枠にほぼ接して窮屈だったため。
+  左右パディングが34px→54pxへ改善)。
+  `back_nav`/`confirm_save`の`Vector2(130, 70.42)`のような小数値は旧アスペクト制約の名残だが、
+  実レンダリングでは余白が妥当だったため据え置いた。対局画面は配置フェーズ・対局中・
+  ActionMenu・投了確認・ログ・詳細パネル・結果パネルの7状態を再現して確認済み
+- [x] **Q-9 グループごとの個性(形と紋章)を復元する**。Q-2で全ボタンを同一の見た目へ統一した結果、
+  元デザインが持っていた「形と紋章で機能を示す」設計が失われたとユーザーから指摘があった
+  (「もともとのデザインとかなり変わっているボタンも多い。元のデザインにかなり近づけつつ、
+  多く使われているデザインと良い感じに調和するように」)。`Shape`に PILL / CHEVRON_LEFT を追加
+  (`TAB`は廃止)、`Emblem`(HOURGLASS/SWAP_ARROWS/BENCH/CHECK)と`EmblemPlacement`を新設し、
+  Architecture.md 4章の割り当て表の通りに適用する。**材質は全グループ共通のまま維持する**
+  (これが「個性を出しつつ調和する」ための条件)。アクションボタンは
+  **紋章を上・文字を下**の構成とする(ユーザーが選択。初見プレイヤーの可読性を維持するため
+  紋章のみ・文字のみのどちらも採らなかった)。これに伴い`action_menu.tscn`のボタンを
+  正円のまま80x80→116x116へ拡大しフォントを28→18へ縮小した。
+  初回実装では紋章がメダリオン上端の真鍮枠へ食い込んではみ出す不具合と、ベンチ紋章が
+  「Π」や鳥居に見える問題があり、2巡目で修正した。紋章のサイズ・位置は固定比率をやめ、
+  **内側の凹んだパネル領域を基準に、円弧の内側と`content_margin_top`(テキスト境界)の
+  両方に触れない最大サイズを幾何学的に逆算する**方式にし、収まらないほど小さいボタンでは
+  描画をスキップするガードも入れた。ベンチ紋章は「座面板+内側2本脚+下段の桟+接地側2本脚」の
+  4パーツ構成へ作り直した。
+  **残る課題**: 下半分をテキストへ譲る制約上、紋章は元画像(メダリオン直径の50〜55%)より
+  小さめ(35〜40%程度)に収まっており、メダリオン内の余白がやや目立つ。さらに大きくするには
+  ボタンをもう一段拡大するか文字を小さくする必要があり、要望が出た時点で判断する
+- [x] **Q-3 パネル系をコード描画化する**。`content_panel.tres`と`detail_panel_bg.tres`の中身を、
+  新規`CodedPanelStyle`(`scripts/ui/styles/coded_panel_style.gd`)へ差し替えた。パスと
+  `ExtResource`参照を維持したため`.tscn`は無変更。`corner_radius`/`frame_thickness`/
+  `has_header_emblem`の3つの`@export`で2用途の差を吸収し、材質は`UiPaint`/`UiPalette`経由で
+  ボタンと完全に共通。`content_margin`は既存値(汎用24/20、詳細34/60/34/24)を変えずレイアウトを維持した。
+  **元画像の四隅の砂時計意匠は意図的に再現していない**(Architecture.md 4章の「機能を伝えない
+  純粋な飾りは置かない」方針。ボタンのネジ・渦巻き撤去と同じ基準)。上部中央の紋章は
+  「砂時計の情報を表示するパネル」であることを示すため残した。162x200〜460x270の
+  サイズ範囲で破綻しないことを非ヘッドレスの9枚のスクリーンショットで確認済み
+- [x] **Q-4 棚UIをコード描画化する**。棚板は新規`ShelfPlank`(`scripts/ui/shelf_plank.gd`、
+  `Control._draw()`。幅可変の土台のためStyleBoxではなくリサイズで再描画する方式を選択。
+  上面の木目+真鍮トリム+前面の木口の3層)、名札は新規`CodedNameplateStyle`
+  (`scripts/ui/styles/coded_nameplate_style.gd`+`resources/theme/coded_nameplate.tres`。
+  左右を欠き込んだ六角形のタグ札。`DeckListCard`で横幅が伸びる使われ方をするためStyleBoxを選択)。
+  **色は元画像の明るいオレンジ〜黄色をやめ`UiPalette`の琥珀・木材系へ統一**した
+  (これが本タスクの主目的。棚板だけが浮いて見える問題を解消)。`UiPalette`に`WOOD_*`/
+  `NAMEPLATE_PANEL_*`、`UiPaint`に`banner_points()`/`fill_circle()`を追加。
+  `scenes/deck_list_card.tscn`の`PlateTexture`は`NinePatchRect`→`Panel`へ型変更が必要だったため、
+  一時ビルドスクリプト経由で差し替えた(適用後削除)。
+  実装中に3件のバグを発見・修正: (1)`fill_circle`が角丸矩形の頂点生成を流用していたため
+  リベット程度の極小半径で4隅の弧の中心が縮退し`Invalid polygon data`になる、
+  (2)名札の欠き込み幅を矩形幅の比率で決めていたため`DeckListCard`で横幅が伸びると
+  尖端が不自然に伸びる(高さ基準の絶対pxへ変更)、(3)安全のため付けた`z_index = -1`が
+  `BackgroundPanel`より背面へ回り込み名札が完全に隠れる
+- [x] **Q-5 入力欄とグローバルテーマを揃える**。`main_theme.tres`の`LineEdit/styles/{normal,focus,read_only}`を
+  新規`resources/theme/coded_line_edit_*.tres`(`CodedPanelStyle`ベース)へ、
+  `deck_name_input_{normal,focus}.tres`も中身のみ`CodedPanelStyle`へ差し替えた(パス維持のため`.tscn`は無変更)。
+  `CodedPanelStyle`に`highlighted`/`dimmed`の`@export`を追加。**入力欄は文字を読む場所のため、
+  ボタンのhoverのような中央パネルの琥珀化はせず枠のグラデーションのみ明るくする**設計にした(可読性優先)。
+  音量スライダー(`HSlider`)は`styles/slider`・`grabber_area`系をUiPalette準拠のStyleBoxFlatで、
+  つまみを画像なしの`GradientTexture2D`(放射状グラデーション)で追加した。
+  副産物として`CodedButtonStyle`の`_disabled_tone`/`_desaturate_stops`を
+  `UiPaint.disabled_tone`/`dim_gradient_stops`へ切り出し`CodedPanelStyle`と共通化した
+- [x] **Q-6 既存のコード描画を共通ライブラリへ寄せる**。`BoardTable`・`BarPanel`・`HourglassSlot._draw()`の
+  色を`UiPalette`参照へ、描画を`UiPaint`(`draw_ring`/`fill_ellipse`/`fill_gradient_polygon`を新設)へ寄せた。
+  数値はそのまま移植したため見た目は変えていない。**`BarPanel`の四隅のリベットは撤去した**
+  (Architecture.md 4章の「機能を伝えない純粋な飾りは置かない」基準に該当するため。
+  一方`CodedNameplateStyle`のリベットは「プレートが留められている」という名札の構造を
+  伝えるものとして残している)
+- [x] **Q-7 不要になった画像資産を削除する**。実コードからの参照が0件であることを
+  `load`/`preload`と`.tscn`/`.tres`の両面で確認したうえで、`assets/buttons/processed/`(104ファイル)・
+  `assets/ui/processed/`(4画像)・`assets/ui/board_panel.png`・`resources/theme/board_panel.tres`・
+  未使用4グループの`.tres`(16ファイル)を削除した(計約27MB)。
+  スクリプトに残っていた同名の記述は、色をサンプリングした出所を示すコメントのみだった。
+  **`assets/buttons/incoming/`と`assets/ui/incoming/`のAI生成元シート(計約15MB)は残している**
+  (派生物ではなく差し替えの効かない元データのため。画像運用へ戻す予定が無ければ削除してよい)。
+  削除後に`run_tests.gd`・起動スモーク・主要画面のレンダリングで異常が無いことを確認済み
+
+### 進め方の注意
+
+- Q-1完了時点で必ずユーザーに品質を確認してもらい、承認後にQ-2へ進む
+- Q-2はほぼ全シーンに影響するため単独で実施する。Q-3〜Q-6はQ-2完了後なら互いに独立して並行可能
+- Q-7は最後。削除前に`grep`で参照が0件であることを確認する
+- 過去のセッションで`user://`配下の実データ(`deck_save.json`)を誤って削除する事故が発生している。
+  検証はヘッドレステスト・非ヘッドレスでのスクリーンショット確認のみで行い、実データファイルには
+  一切触れないこと
+
+---
+
+## 今やること(フェーズ13: 全画面レイアウトの共通規約化と再配置)
+
+ユーザー指示:「デッキ編集画面(=編集するデッキを選ぶ一覧画面)の並びを横2列のレイアウトにしてみて。
+そのほか、すべての画面のレイアウトについて、よりよくしていきたい」。方針は
+**共通レイアウト規約を作って全画面へ適用する**でユーザー承認済み。
+
+全9状態(ホーム2タブ・デッキ一覧・デッキ編集・砂時計一覧・デッキ選択・リプレイ一覧・
+対局画面の配置/対局)を実際にレンダリングして確認した結果が下記。共通の根本原因は、
+各画面がヘッダー(戻る/タイトル/主アクション)と余白をそれぞれ絶対座標で個別に組んでおり、
+コンテンツ開始位置すら画面ごとに132/146/160とばらついていたこと。
+
+**R-1(共通規約)→ R-2(カード)→ R-3〜R-9(画面ごと)** の順で進める。R-1/R-2は複数画面へ
+同時に効くため先に単独で仕上げる。R-3〜R-9は互いに独立。
+
+### 共通基盤(先にやる)
+
+- [x] **R-1 共通`ScreenHeader`を新設する**。`scenes/screen_header.tscn`/`scripts/ui/screen_header.gd`を
+  新規作成した。外周余白24px・ヘッダー高88px・コンテンツ開始y=136を`OUTER_MARGIN`/`HEADER_HEIGHT`/
+  `CONTENT_GAP`/`CONTENT_TOP`の定数としてこの1箇所に持たせている。**タイトルは`Row`(HBox)の子ではなく、
+  ヘッダー全体に広がる独立した`TitleLabel`として背面に置いた**(Rowの子にすると右側の主アクション
+  ボタンの個数・幅でタイトルの中心が左右にずれるため)。主アクションのボタンは`ScreenHeader`の
+  `.tscn`側には持たせず、**各画面が`_ready()`で`screen_header.add_action(自分のButton)`を呼んで
+  `ActionSlot`へ移す**方式にした(インスタンス化したシーンの内部ノードへ他シーンのノードを
+  差し込む形を避け、各画面の`.tscn`変更を「ヘッダーのインスタンスを1個足して旧BackButtonを消す」
+  だけに留めるため)。適用先は`DeckListScreen`/`DeckEditorScreen`/`HourglassListScreen`/
+  `BattleDeckPickerScreen`/`ReplayListScreen`の5画面
+- [x] **R-2 `DeckListCard`を2列に収まる形へ作り直す**。内部を
+  `VBox[ TopRow[NamePlate, ButtonRow/ReorderRow], IconRow ]`の縦2段構成へ組み替え、`ICON_SIZE`を
+  104→80、編集/削除・上へ/下への各ボタンを95x100→88x44、カード高さを214→160へ縮めた。
+  カード1枚の必要幅が796px→約520pxになり、2列グリッドの1列(約610px)へ収まるようになった
+
+### 画面ごと
+
+- [x] **R-3 `DeckListScreen`(ユーザー指示の本体)**。`ListContainer`の`columns`を1→2へ戻し、
+  1画面に6デッキ(2列×3行)が入るようにした。戻る/デッキ入れ替え/新規デッキをヘッダーへ集約し、
+  `ScrollContainer`の`offset_top`を132→136(規約値)、0件時の`EmptyLabel`をコンテンツ領域の
+  中央へ置き直した
+- [x] **R-4 `BattleDeckPickerScreen`のはみ出しを解消する**。R-2の完了により`columns = 2`のままで
+  アイコンが隣のカードへはみ出す症状が解消することを非ヘッドレスのスクリーンショットで確認した。
+  あわせてヘッダーを適用し(旧`TitleLabel`・`BackButton`は削除)、`ConfirmButton`を
+  300x93→260x76へ縮めてヘッダー高88に収めた
+- [x] **R-5 `DeckEditorScreen`を再構成する**。当初は「左カラム=デッキ名/進捗/編成5枠(3+2)、
+  右カラム=砂時計グリッド+詳細パネル」の左右2カラムにしたが、ユーザーから「戻る/保存の配置は
+  良いが、それ以外は以前の配置のほうがよかった」「今後どうせ追加して収まらなくなるから1列の
+  UIレイアウトのほうがよさそう」との指摘を受け、**旧レイアウトの構造(上段=編成5枠が横一列+
+  右に縦長の詳細パネル / 下段=全幅の砂時計一覧)へ戻した上で、ヘッダー統一と空白の解消だけを
+  残す**形に落ち着いた。最終形は上段`Body`(HBox、`offset_bottom = -230`)に
+  `MainColumn`(`NameRow` + `SlotGrid`(columns=5の横一列、スロット162x200))と
+  `DetailPanel`(302x360)を並べ、画面下部へ全幅の`CardScroll`→`CardRow`(HBox、カード132x168)を置く。
+  一覧を5列×2行のグリッドにした時期もあったが、駒が11種になった時点で3行目が中途半端に切れるため
+  1行の横スクロールへ戻した(20枚を並べた状態でもレイアウトが変わらないことを確認済み)。
+  2カラム案を採らなかった理由は、(a)編成5枠を3+2の2段にすると「デッキ5枚の並び」として
+  読めない、(b)詳細パネルを横長へ潰すと背景の紋章まわりが窮屈になり砂時計一覧画面と
+  見え方が揃わない、の2点
+- [x] **R-5の前提: `HourglassCard`をサイズ可変にした**。`Icon`の`offset_bottom`が132px固定
+  だったため、カードの`custom_minimum_size`を変えてもアイコンの表示サイズが変わらなかった
+  (F-1で棚UIのカードを152pxにしてもアイコンが132pxのままだったのはこのため)。`Icon`を
+  下端アンカー基準(`anchor_bottom = 1.0`, `offset_bottom = -ICON_BOTTOM_GAP`)へ、`ShelfShadow`も
+  下端アンカー基準へ変更し、`set_shelf_mode(true)`のときは名前ラベルを隠す分だけ
+  `icon.offset_bottom = 0`にしてアイコンをカード下端まで広げる。通常モードで従来と同じ
+  132x168を指定した場合の見た目は変わらない
+- [x] **R-6 `HourglassListScreen`の空白を解消する**。`ScrollContainer`は子の
+  `size_flags_vertical`を尊重しないため縦中央寄せは実現できず、代わりに**棚1行を拡大して
+  縦の空白を埋める**方式にした(`ROW_HEIGHT` 192→270、`CARD_SIZE` 132→152、`PLANK_HEIGHT` 56→64、
+  `PLANK_TOP` 112→132、名札 112x34→128x38)。5個並べても棚板幅を超えないよう、駒の間隔は
+  `ITEM_SEPARATION * 4`(32)から新定数`ITEM_ROW_SEPARATION`(24)へ分離した。あわせて
+  **開いた直後に先頭の駒を選択状態にし**、詳細パネルが空のまま置かれないようにした
+  (`_cards`配列と`_select_card()`を追加。選択ハイライトが複数の駒に同時に付かないよう、
+  押された駒以外の`selected`をfalseにする処理もここで入れた)。ヘッダーも適用済み
+- [x] **R-7 `ReplayListScreen`にヘッダーを適用する**。壊れた`offset`指定の`TitleLabel`と
+  `BackButton`を削除してヘッダーへ移行し、`ListContainer`を`VBoxContainer`から
+  `GridContainer`(columns=2)へ差し替えた(カードは`size_flags_horizontal = EXPAND_FILL`で
+  列幅いっぱいに広がる)。空状態・通信失敗時の案内をコンテンツ領域の中央へ置き直した
+- [x] **R-8 `HomeScreen`の余白バランスを整える**。`SettingsButton`を外周24pxの規約位置へ
+  (104x110 → 88x88、右上offset -112/24/-24/112)。`DeckTab`のボタンを拡大して下方向の空きを詰めた
+  (デッキ編集 460x165→520x180、砂時計一覧/ショップ 218x78→248x88)。`BattleTab`の`StatusLabel`は
+  フォントを22へ拡大した(位置は既に`VBox`の中央寄せでボタン群の直上にあり、画面上端に
+  貼り付いているという当初の見立ては実測で誤りと分かったため移動していない)
+- [x] **R-9 `MatchScreen`の投了/ログの重なりを解消する**。画面左上に絶対配置していた
+  `SurrenderButton`/`LogButton`を、`BottomBar/BottomMiddle`配下の新規`MatchMenuControls`(HBox)へ
+  移設した(いずれも150x56)。これで相手の`HourglassSlotStrip`の先頭スロットが隠れなくなり、
+  左上はリプレイ再生時の`BackButton`専用に戻った。既存の`surrender_button.visible`/
+  `log_button.visible`による表示制御はそのまま機能する(`BottomMiddle`は`CenterContainer`で、
+  配置フェーズ`PlacementControls`・リプレイ`ReplayControls`・対局中`MatchMenuControls`が
+  排他表示のため衝突しない)。あわせて上部・下部バーの情報配置を整理した:
+  `PlayerStatusBar`の子(名前・HPバー・HP数値・持ち時間)が縦位置バラバラだった
+  (実測でHPバーがy=6、名前がy=36と30pxずれていた)ため、全ての子を`SIZE_SHRINK_CENTER`+
+  `vertical_alignment = CENTER`で縦中央へ揃え、HPバーの高さを30→34へ上げた
+
+### 進め方の注意
+
+- R-1・R-2は複数画面が同時に参照するため、**R-3以降と並行させない**(順番に進める)
+- `.tscn`はテキストとして直接編集せず、`tools/godot_apply_patch.gd`または`tools/`配下の
+  一時ビルドスクリプト(適用後に削除)経由で更新する
+- 過去のセッションで`user://`配下の実データ(`deck_save.json`)を誤って削除する事故が発生している。
+  検証はヘッドレステスト・非ヘッドレスでのスクリーンショット確認のみで行い、デッキ一覧・
+  デッキ選択の確認は`_decks`へダミーを直接注入する方式とし、実データファイルには一切触れないこと
+- **新しい`class_name`を持つスクリプトを追加した直後は、`godot --headless --path . --import`を
+  1度実行する**。これをしないと`.godot/global_script_class_cache.cfg`へ登録されず、
+  `--script`での起動時に「Could not find type "..." in the current scope」で失敗する
+  (R-1で`ScreenHeader`を追加した際に遭遇した)
+
+---
+
+## 今やること(フェーズ14: プレイヤーの行動の可視化)
+
+ユーザー指摘:「『プレイヤーがお互いどの行動をとったか』をもうちょっとわかりやすくしてほしい。
+現状ターン終了時の砂の遷移などはある程度分かりやすくなってきているのに、プレイヤーがどの行動を
+とったかがわかりづらいと感じた」。
+
+**現状分析**: ターン終了時の砂の進行にはスポットライト(P-2)・逐次0.6秒の間(C-1)・実況テキスト(P-3)・
+ダメージ数字と一通り揃っているのに対し、行動(反転/移動/交代)側は効果音とログ記録しかなく、画面上の
+演出が一切ない。特に相手・CPUの手は盤面が一瞬書き換わるだけで、そのまま砂の進行演出へ流れ込むため、
+「何をされたのか」を認識する隙がない。フェーズ11のP-4(行動そのものの演出)が見送られたまま残っていた
+範囲にあたる。GameDesign.md 9章への追記3点はユーザー承認済み。
+
+- [x] **S-1 `MatchActionPresenter`を新設し、行動の実況表示・スポットライト・間を実装する**。
+  反転/移動/交代が適用された直後、対象マスへスポットライトを当て(移動は入れ替わる2マスが対象に
+  なるため、`BoardRow.apply_spotlight_positions()`/`GameBoard.focus_slots()`を既存の単数版
+  `apply_spotlight()`/`focus_slot()`と別に追加した)、対局ログと同一の文言を`MatchEventCaption`で
+  駒の近くへフロート表示し、`HOLD_DURATION`(0.55秒)の間を置いてからターン進行の解決演出へ移る。
+  文言の共有のため`MatchBattleLog.record_action()`から`format_action()`を切り出して公開した
+  (既存の`format_state_event()`/`format_damage_event()`と同じ形)。自分の手・オンライン相手の手・
+  CPUの手の3経路が個別に持っていた「効果音→ログ記録→選択解除→ターン交代」の並びを、
+  `MatchScreen._present_action()`1箇所へ統合した(`_on_action_received`だけ`_clear_selection()`を
+  呼んでいなかったが、相手の手番中は選択が存在しないため実害のない統一)。演出中は
+  `presenting`フラグを`MatchTurnResolver.resolving`と同じ扱いで`_can_act()`/`_process()`が参照し、
+  盤面操作と持ち時間の消費を止める
+- [x] **S-2 移動・交代の滑り込み演出を実装する**。`HourglassSlot.play_slide_in(offset, arc_height)`
+  (見た目専用の`VisualRoot.position`のみを動かすTween)を追加し、移動は入れ替わる2駒が互いの元の
+  位置から、交代は控えスロットの位置から場の左マスへ滑り込ませる。実装当初は直線移動にしていたが、
+  移動の2駒は同じ直線上をすれ違うため中央で完全に重なり、どちらも見えなくなることが
+  スクリーンショットで判明した。`tween_property`から`tween_method`へ変え、入ってくる駒は上へ46px、
+  出ていく駒は下へ20px膨らむ弧を通るようにして解消した(下を浅くしているのは、深くすると駒が
+  盤面の下端からはみ出すため)。あわせて滑り込み中だけ`VisualRoot.z_index`を上げ、通り道の駒に
+  隠れないようにしている。交代の滑り込みは控えが盤面外にあり実距離が離れすぎるため、方向を保った
+  まま`SWAP_IN_MAX_DISTANCE`(220px)へ丸めている
+
+#### 検証時の注意(次に同種の演出を触る人向け)
+
+`get_viewport().get_texture().get_image()`+`save_png`は演出そのものより実時間のコストが大きく、
+そのまま撮ると0.3秒程度の動きは撮り逃して「実装が効いていない」ように見える(実際、値としては
+スライドのオフセット±524.8px・スポットライトのdim 0.42が正しく入っているのに、スクリーンショット上は
+駒が定位置に見えた)。`Engine.time_scale`を0.2程度へ落として撮ること。
+
+### 進め方の注意
+
+- S-1・S-2は同じ`MatchActionPresenter`を触るため順番に進める(S-1→S-2)
+- 過去のセッションで`user://`配下の実データ(`deck_save.json`)を誤って削除する事故が発生している。
+  検証はヘッドレステスト・非ヘッドレスでのスクリーンショット確認のみで行い、実データファイルには
+  一切触れないこと
+
+---
+
+## 今やること(フェーズ15: 反転演出・リプレイ一覧・投了の同期)
+
+ユーザーからの3件の指摘に対応する。T-1(反転演出)とT-3(投了同期)は仕様追記済み(承認済み)。
+**T-3 → T-1 の順に進める**(両者とも`MatchScreen`の行動適用経路を触るため)。T-2は独立して並行可。
+T-3は完了済みのため、残りはT-1・T-2。
+
+- [x] **T-1 反転の演出を強化する**(GameDesign.md 9章・Architecture.md 4章は承認済みの内容で更新済み)。
+  新規`FlipReachOverlay`(`scripts/ui/flip_reach_overlay.gd`、`Control._draw()`のみのコード描画。
+  色は`UiPalette.GLOW_AMBER`、着弾点の円は`UiPaint.fill_circle`を使い新しい色は増やしていない)を
+  `GameBoard`の最後の子として追加し(`tools/`配下の一時ビルドスクリプト経由、適用後削除)、
+  盤面全体に重ねてmouse_filter=IGNOREで操作を一切妨げないようにした。始点・終点は既存の
+  `GameBoard.get_board_slot_rect()`をそのまま使う(`_slide()`と同じ考え方)。始点は「行動した側の
+  陣地」の代表点として、actorの場の**中央マス**の矩形を使う(`GameBoard.play_flip_reach()`新規)。
+  これにより自分の駒を反転させた時は同じ行内の短い筋に、相手の駒を反転させた時は自分の場中央から
+  相手の場の対象マスへ盤面を斜めに横切る筋になり、非ヘッドレスのスクリーンショットで両パターンとも
+  意図通りの向きになることを確認した。光が届く時間(`FlipReachOverlay.REACH_DURATION`、0.2秒)
+  だけ`MatchActionPresenter`側で待ってから`GameBoard.play_flip_lift()`→`HourglassSlot.play_flip_lift()`
+  (新規)を呼び、駒を持ち上げて着地させる。当初`VisualRoot`の`position`と`scale`の両方を
+  動かす設計を検討したが、同じ`VisualRoot.scale`を`MatchActionPresenter._spotlight()`
+  (`set_spotlight()`、対象マスを`SPOTLIGHT_FOCUS_SCALE`まで拡大する演出、C-1/P-2で実装済み)が
+  同じタイミングで既に動かしており、2つの`Tween`が同一プロパティを取り合って点滅する競合が
+  判明したため、`play_flip_lift()`は`position:y`のみを動かす設計に変更した(`Control._draw()`
+  のみの新規オーバーレイと違い、この判断は「VisualRootのposition/scaleだけを動かす」という
+  制約のうち`position`のみを使うという事前検討で回避した競合であり、実装後に不具合として
+  発覚したものではない)。アイコン自体の回転は既存の`_animate_flip()`(`_present_action()`の
+  `_refresh_view()`経由でこの演出より前に開始済み)にそのまま任せ、変更していない。呼び出しは
+  `MatchActionPresenter`の新規`_flip()`関数(`"flip"`分岐)に閉じており、`match_screen.gd`
+  (既に1000行の上限に達していた)は無変更で済んだ。非ヘッドレスで
+  (a)自分の駒を反転・(b)相手の駒を反転の2パターンを`Engine.time_scale = 0.2`に落として
+  スクリーンショット確認し、(a)は自分の場の中央マスから対象マスへの短い横方向の筋、
+  (b)は自分の場中央から盤面を斜めに横切って相手の場の対象マスへ届く筋になることを確認済み
+- [x] **T-2 リプレイ一覧(`ReplayListScreen`)を作り込む**(フェーズ7のE-7)。フェーズ13のR-7で
+  共通ヘッダーの適用と2列グリッド化は済んでいたため、残っていた`ReplayListCard`の見た目と
+  勝敗表示のみを対応した。背景は、Q-4でコード描画化した`DeckListCard`(`scenes/deck_list_card.tscn`)
+  の`BackgroundPanel`と**全く同じ値**(濃い木材`bg_color`+真鍮`border_color`+角丸8+ドロップシャドウ、
+  新規のCodedスタイルクラスは作らずローカルの`StyleBoxFlat`のまま)を適用し、素の`Panel`フォール
+  バックで浮いて見えていた問題を解消した。勝敗は、`info_label`の文中に埋もれていた「勝ち」
+  「負け」の文字をやめ、新規`HeaderRow`(`ResultBadge`+`InfoLabel`の横並び)を追加して
+  **バッジ表示とカード枠色の両方**で示すようにした(色は新規に増やさず`UiPalette.GLOW_AMBER`
+  (勝利、HPバーの「安全」と同じ琥珀)/`UiPalette.WARNING_RED`(敗北、HPバーの「危険」と同じ赤)を
+  流用)。`scripts/ui/replay_list_card.gd`に`_apply_result(won)`を追加し、`background_panel`/
+  `result_badge`それぞれの`StyleBoxFlat`をテンプレートとして`duplicate()`し`border_color`/
+  `bg_color`だけを差し替える(`DeckListCard.show_deck()`の選択枠と同じ手法)。`.tscn`の変更は
+  `tools/`配下の一時ビルドスクリプト(load→`BackgroundPanel`へStyleBoxFlat適用・`HeaderRow`
+  (`ResultBadge`+移設した`InfoLabel`)を組み立て→owner設定→pack→save、適用後削除)経由で行った。
+  履歴あり/0件/通信失敗の3パターンは、`ReplayListScreen.refresh()`(Firestore実通信を伴う)を
+  経由せず、`list_container`への合成`ReplayListCard`の直接注入(勝敗・CPU戦/オンラインを混在させた
+  4件)と`_show_empty()`への文言直接呼び出しの2通りで、非headlessスクリーンショットにより
+  確認した(`user://`の実データには一切アクセスしていない)。**判断に迷った点**: 検証中、
+  `tools/tests/run_tests.gd`の`_test_online_match_apply_surrender_ends_match`
+  (フェーズ15 T-3関連、GDScriptのラムダクロージャが外側スコープへ再代入を伝播しない仕様に
+  起因する検証方法のバグ)が本タスクとは無関係に落ちているのを発見し、修正はT-2の範囲外と
+  判断してspawn_taskで別タスクとして切り出した(ユーザーが即座に着手し、`winner_box`(Array)
+  でラップする形で解決済みであることを確認し、以後3回連続でテスト全体がpassすることを
+  確認した)。加えて、過去のセッションが削除し忘れていたと思われる無関係な残留ファイル
+  `tools/tmp_verify_surrender.gd`(T-3の非headless検証用の一時スクリプト)を、
+  ファイル自身のコメントに「確認後にこのファイル自体を削除すること」とあったため
+  クリーンアップの一環で削除した
+- [x] **T-3 オンライン対戦の投了を相手へ同期する**(C-4で見送られていた範囲。GameDesign.md 3章・
+  Architecture.md 6章/7章は承認済みの内容で更新済み)。投了を`actions`配列の1件
+  (`{"type": "surrender", "side": ...}`)として送受信する形にした。実装は次の5箇所。
+  (1) `GameState.surrender(side)`が既存の`force_match_end(other_side(side))`(持ち時間切れと
+  同じ即時終了経路)を再利用して相手側の勝利で終局させる。
+  (2) `OnlineMatch.apply()`のmatch文へ`"surrender"`分岐を1つ追加(反転/移動/交代と同じ
+  静的関数を通るため、送信・ポーリング・リプレイ再生の仕組みは新設不要だった)。
+  (3) `MatchScreen._on_surrender_confirmed()`が`{"type": "surrender", "side": perspective_side()}`を
+  組み立て、オンラインは`OnlineMatch.send_and_apply()`、ローカル/CPU戦は`OnlineMatch.apply()`で
+  適用する。`apply()`が同期的に`match_ended`を発火させるため、手数のカウント・CPUリプレイへの
+  記録・対局ログへの記録は`apply()`より**前**に済ませている。
+  (4) `MatchScreen._on_action_received()`に`"surrender"`の早期リターン分岐を置き、盤面を変えずに
+  即終局する性質に合わせて行動の演出(`MatchActionPresenter`)とターン交代
+  (`_advance_turn_and_refresh()`)を行わない。
+  (5) `MatchBattleLog.format_action()`へ`"surrender"`分岐(「先手が投了」)を追加。
+  検証は`tools/tests/run_tests.gd`の`_test_online_match_apply_surrender_ends_match`(投了actionを
+  `OnlineMatch.apply()`へ流し、終局すること・投了していない側が勝者として`match_ended`へ渡ること・
+  HPが両者とも初期値のままであること・既に終了した対局へ再度届いても結果が変わらないことを検証)で行う
+
+### 進め方の注意
+
+- T-3とT-1は`MatchScreen`の行動適用経路(`_perform_action`/`_on_action_received`)を共に触るため
+  並行させない(T-3は完了済みのため、T-1へ着手してよい)
+- **`run_tests.gd`でシグナルの引数を検証する際、ラムダから外側のローカル変数へ代入してはいけない**。
+  GDScriptのラムダは外側のローカル変数を値でキャプチャするため、ラムダ内で再代入してもラムダ側の
+  コピーが書き換わるだけで、外側の変数には反映されない(テストが恒常的に失敗する)。`Array`や
+  `Dictionary`のような参照型でラップし、`winner_box[0] = w`のように要素へ代入して観測する
+- 過去のセッションで`user://`配下の実データ(`deck_save.json`)を誤って削除する事故が発生している。
+  検証はヘッドレステスト・非ヘッドレスでのスクリーンショット確認のみで行い、実データファイルには
+  一切触れないこと
+
+---
+
+## 今やること(フェーズ16: match_screen.gd の責務分割)
+
+`scripts/ui/match_screen.gd` が1000行の上限に達し、これ以上の追記ができなくなったため、
+`MatchResultPresenter` と同じ要領(`_screen` 参照を持つ `RefCounted` へ切り出し、
+`MatchScreen._ready()` が1個生成する)で責務を分割する。
+
+- [x] **U-1 リプレイ再生まわりを `MatchReplayController` へ切り出す**。新規
+  `scripts/ui/match_replay_controller.gd`(138行)へ、棋譜(`actions`)・現在の手数・再生中
+  フラグ・初期配置の場/控え4本・`catching_up`(手を一気に再現している最中かどうか)と、
+  `start_from_firestore()`/`start_from_doc()`/`_goto()`/`_on_play_pressed()`/
+  `_on_timer_timeout()`/`_refresh_controls()` を移した。再生コントロール5ボタンと
+  `ReplayTimer` のシグナル購読も `MatchScreen._ready()` から `MatchReplayController.setup()` へ
+  移動した。id配列から初期配置を復元する `_ids_to_data()`/`_ids_minus()` は、同じ形の
+  ドキュメントを読む観戦(`start_spectate()`)も使うため static 関数
+  `MatchReplayController.ids_to_data()`/`ids_minus()` として持たせ、両者で共用している。
+  **モードフラグ(`_is_replay`)・HUDの出し分け・`GameState` の生成は `MatchScreen` の責務として
+  残し**、新設した公開メソッド `begin_replay_mode()`(モード開始。他の `start_*()` と同じ並びで
+  フラグと表示を切り替えて `_start_common()` を呼ぶ)と `reset_state_for_replay()`(巻き戻しの
+  たびに `GameState` を初期配置から作り直す)経由で呼び出す形にした。あわせて、切り出した
+  クラスから呼ぶ必要が生じた `_refresh_view()` を `refresh_view()` へ改名した(他の切り出し
+  クラスが `_screen` の**メソッド**は公開のものだけを呼ぶ既存の流儀に合わせるため。private
+  メンバ変数の参照だけは既存どおり許容している)。`MatchScreen` に残る `start_replay()`/
+  `start_local_replay()` は `Main` 向けの薄いラッパー。結果として
+  `match_screen.gd` は 1000行 → 927行になった。
+  gdformat/gdlint・`tools/tests/run_tests.gd`・起動スモークはいずれも問題なし。加えて、
+  `user://` へ一切触れない合成棋譜(反転/移動/交代/投了の4手)を `start_local_replay()` へ
+  直接流し込む一時検証スクリプトをヘッドレスで実行し、0手→1手→最後へ→1手戻る→先頭へ の
+  手数表示・各ボタンの活性/非活性・投了で終局すること・巻き戻すと終局前へ戻ること・
+  再生モードでは結果パネルを出さないこと・再生ボタンでタイマーが開始/停止することを確認した
+  (確認後、一時スクリプトは削除済み)
+
+### 次にやる候補
+
+- [ ] **U-2 観戦モード(`start_spectate()`)の切り出しを検討する**。リプレイと同様に
+  「保存済みドキュメントから初期配置を復元し、手順を追いつかせる」構造を持つため、
+  `MatchSpectateController` として同じ要領で切り出せる余地がある。ただし現状の
+  `start_spectate()` は50行程度で、切り出すと `MatchScreen` 側へ `begin_spectate_mode()` 相当の
+  ラッパーが増えるため、行数の削減効果は限定的。`match_screen.gd` が再び上限へ近づいた
+  時点で判断する
+- [ ] **U-3 選択・アクションメニューまわり(`_select()`/`_place_action_menu()`/
+  `_is_flip_locked()`/`_cancel_pending_move()`/`_move_target_positions()`)の切り出しを
+  検討する**。`_selected_type`/`_selected_position`/`_pending_move` という凝集した状態を
+  持つため分離しやすいが、`_can_act()` と密に絡むため設計判断が必要
+
+### 進め方の注意
+
+- 過去のセッションで `user://` 配下の実データ(`deck_save.json`)を誤って削除する事故が
+  発生している。検証はヘッドレステスト・非ヘッドレスでのスクリーンショット確認のみで行い、
+  実データファイルには一切触れないこと
+- **新しい `class_name` を持つスクリプトを追加した直後は、`godot --headless --path . --import` を
+  1度実行する**。これをしないと `.godot/global_script_class_cache.cfg` へ登録されず、
+  `--script` での起動時に「Could not find type "..." in the current scope」で失敗する
+
+---
+
+## 今やること(フェーズ17: ターン終了時の行動解決・盤面ズーム演出)
+
+ユーザー指示:「砂時計を移動もしくは反転させたときは砂が落ちないようにしてほしい。ターン終了時の
+行動を設定する、みたいな感じ」「ターン終了時に自分の砂時計についてすべてにちょっとカメラが
+ズームしてアクションが出てくる」「上下のHPとか書いてあるパネルはそのままに。中の盤面だけズーム」
+「砂時計の反転とかのアニメーション、もうちょっとリッチに」。
+
+仕様(GameDesign.md 2章・4.2〜4.4・9章・12章)はユーザー承認済みで更新済み。
+確定した細部は次の4点(いずれもユーザーが選択):移動は関与2マスとも進行しない/交代も
+進行しない/行動は予約マークのみ表示し盤面が動くのは解決時/パス(ターン終了)を用意する。
+
+**V-1 → V-2 → V-3 → V-4 の順**に進める(V-1はロジックの土台、V-2は画面構造の土台)。
+
+- [ ] **V-1 ロジック層をターン終了時解決へ変更する**。`GameState`に`pending_action`と
+  `set_pending_action()`を追加し、`advance_and_end_turn()`を「設定された行動に応じて
+  自分の場を左→中央→右の順に1マスずつ解決→相手の駒への反転→ターンチック→手番交代」へ
+  作り替える。区切りは`resolution_step_started(side, positions, kind)`シグナルで通知する。
+  `OnlineMatch.apply()`は`flip`/`move`/`swap_in`/新規`pass`について`set_pending_action()`を
+  呼ぶだけにする(`surrender`のみ従来どおり即時)。`tools/tests/run_tests.gd`の
+  ターン進行系テストを新ルール(行動を設定したマスは進行しない)へ書き換え、
+  移動2マス・交代・相手への反転・パスの各ケースを追加する
+- [ ] **V-2 行動の予約と「ターン終了」ボタンを実装する**。行動を選んでも手番は終わらず、
+  対象の駒へ予約マーク(`HourglassSlot.set_reservation()`)が付くだけにする。画面下部中央の
+  `MatchMenuControls`へ「ターン終了」ボタンを追加し、押した時に初めて行動(未設定なら
+  `pass`)を送信・解決する。オンライン/CPU/ローカル/観戦/リプレイの5経路が
+  「apply()→advance_and_end_turn()」の対を保つことを確認する
+- [ ] **V-3 盤面だけをズームさせる**。`BoardArea`を`CenterContainer`から`clip_contents`付きの
+  `Control`へ変更し、`BoardCamera`(`Control`)を挟んで`GameBoard`を入れる。新規
+  `MatchBoardCamera`が`scale`/`position`をTweenし、`MatchTurnResolver`が解決ステップごとに
+  対象マスへ寄せる。上下バーはズーム対象外。`GameBoard.get_board_slot_rect()`を
+  `get_global_transform()`基準へ直し、実況テキスト・浮遊ダメージ・光の筋がズームへ追従するようにする
+- [ ] **V-4 反転アニメーションを作り込む**。光の筋の着弾の衝撃・回転中の反射・着地の余韻を加える
+
+### 進め方の注意
+
+- V-1は`GameState`の土台、V-2は`MatchScreen`の操作フローを触るため並行させない
+- 過去のセッションで`user://`配下の実データ(`deck_save.json`)を誤って削除する事故が発生している。
+  検証はヘッドレステスト・非ヘッドレスでのスクリーンショット確認のみで行い、実データファイルには
+  一切触れないこと
+
+---
+
+## 今やること(フェーズ18: 決着のフィードバック強化・終局後のログ閲覧)
+
+ユーザー指摘:「対戦終了時、何が起きて勝負が決したのかわかりづらかったからこのフィードバックを
+強化してほしい。また、試合終了後にもログが確認できると便利そうだと思った」。
+GameDesign.md 3章・9章への追記は承認済み。
+
+**現状の問題**:
+1. `MatchScreen._advance_turn_and_refresh()` が `state.is_match_over()` のとき
+   `_turn_resolver.clear()` で演出キューを丸ごと破棄するため、**決着した手番の砂の解決と
+   ダメージだけが一切見えない**(C-1で「決着時は演出を再生せず即座に結果を出す」と決めた
+   当時の判断。今回はこれを覆す)
+2. `GameState.deal_damage()` はHPが0になった瞬間に同期で `match_ended` を発火するため、
+   結果パネルは盤面の再描画すら終わらないうちに出る
+3. 結果パネルの本文が「最終HP/総手数」だけで、ダメージ負け・時間切れ・投了の区別がつかない
+4. 終局後は `ResultOverlay` の暗幕が全画面のクリックを受け止めるため、画面下部中央の
+   ログボタンが押せず、ログを見返せない
+
+> **中断中の理由**: 着手中に、フェーズ17 V-1(行動予約方式)のUI側実装が別セッションで
+> 並行して進行していることが判明した(`scripts/logic/game_state.gd`・`scripts/net/online_match.gd`は
+> V-1対応済みに差し替わり、`scripts/ui/match_screen.gd`はコンパイルエラーを含む編集途中の状態)。
+> W-2/W-3は`match_screen.gd`・`match_turn_resolver.gd`・`match_screen.tscn`を触るため、
+> **V-1のUI実装が完了してから着手する**。それまでに衝突しない部分(W-1・W-4・演出部品)だけを
+> 先行して入れてある。
+
+- [x] **W-1 決着の要因を `GameState` が保持する**。`EndReason`(`HP_DEPLETED`/`TIMEOUT`/
+  `SURRENDER`)と`end_reason`を追加し、`force_match_end(winner, reason)`の既定引数(既定=`TIMEOUT`)
+  として記録する。`surrender()`は`SURRENDER`を明示的に渡し、`deal_damage()`でHPが0になった経路は
+  `HP_DEPLETED`を記録する。`start_match()`でリセットする。`match_ended(winner)`のシグネチャは
+  変えていない(UI層が終局後に`state.end_reason`を読む)
+- [x] **W-4 対局ログに決着行を記録する**。`MatchBattleLog.record_match_end(state, winner)`と、
+  同じ文言を組み立てるだけの`format_match_end()`(既存の`format_action()`/`format_state_event()`と
+  同じ扱いで公開)を追加した。文言は「先手の勝利(後手のHPが0)」「先手の勝利(後手の投了)」
+  「先手の勝利(後手の持ち時間切れ)」。**呼び出し(`MatchScreen._on_match_ended()`からの配線)は
+  W-2で行うため未接続**
+- [x] **W-2の演出部品**。`MatchResultPresenter`に`play_finishing_blow()`(盤面中央へ「決着」を
+  ポップ表示し`FINISH_LEAD`だけ待つ。スポットライトは解除しない)と、W-3用の
+  `format_finishing_blow(state, blow, loser_label)`(「決め手: 「ソード」の落下ダメージ 4」等)を
+  追加した。**いずれも呼び出しは未接続**
+- [ ] **W-2 決着した手番の演出を最後まで見せる**(V-1のUI実装完了後に着手)。残りの手順:
+  1. `match_screen.gd`に`_pending_result_winner: Variant`と`_finishing_blow: Dictionary`を追加し、
+     `_start_common()`でリセットする
+  2. `_on_hp_changed()`で`new_hp <= 0 and new_hp < previous_hp`のとき
+     `_finishing_blow = {"amount": previous_hp - new_hp, "source": source}`を記録する
+     (`_turn_resolver.is_capturing()`の経路・そうでない経路の両方)
+  3. `_advance_turn_and_refresh()`の`if state.is_match_over() or not _turn_resolver.has_events():`を
+     `if not _turn_resolver.has_events():`へ変え、決着していても演出を再生する
+  4. `_on_match_ended()`で`_battle_log.record_match_end(state, winner)`を呼び、
+     `_turn_resolver.is_capturing() or _turn_resolver.resolving`なら`_pending_result_winner`へ
+     保留してreturnする
+  5. `on_turn_resolution_finished()`と、演出を再生しなかった経路の両方から
+     `_flush_pending_result()`(保留があれば`_show_result()`を呼ぶ)を呼ぶ
+  6. `match_turn_resolver.gd`の`play()`で、`event["kind"] == "hp" and event["new_hp"] <= 0`を
+     検出したら残りのイベントを捨て、`await _screen._result_presenter.play_finishing_blow()`の後に
+     `resolving = false` → `_screen.on_turn_resolution_finished()`(`clear_spotlight_all()`は呼ばない)
+- [ ] **W-3 結果パネルに決着の要因を出し、ログを開けるようにする**(同上)。残りの手順:
+  1. `match_screen.tscn`の`ResultOverlay/CenterBox/Panel/Margin/VBox`へ`ButtonRow`(HBoxContainer)を
+     追加し、既存の`HomeButton`をその子へ移設、同じ`img_wide_text_*`スタイルの`LogButton`を並べる
+     (`tools/`配下の一時ビルドスクリプト経由。`godot_apply_patch.gd`は新規ノード追加・再親付けに
+     対応していないため)
+  2. `match_screen.gd`に`result_log_button`を`@onready`で足し、`pressed`→`_battle_log.set_open(true)`を
+     配線する(`LogPanel`は`.tscn`上で`ResultOverlay`より後ろの子=手前に描画されるため、
+     z順の指定は不要)
+  3. `MatchResultPresenter.show_result()`のフェード対象を`home_button`から`ButtonRow`へ変える
+  4. `_show_result()`の`detail`へ、`_result_presenter.format_finishing_blow(state, _finishing_blow,
+     敗者の呼び方)`が返す1行を追加する(空文字なら足さない)
+
+### 進め方の注意
+
+- W-1 → W-2 → W-3/W-4 の順に進める(W-2 が W-1 の `end_reason` を前提にする)
+- 過去のセッションで `user://` 配下の実データ(`deck_save.json`)を誤って削除する事故が
+  発生している。検証はヘッドレステスト・非ヘッドレスでのスクリーンショット確認のみで行い、
+  実データファイルには一切触れないこと
+
+---
+
+## 今やること(フェーズ19: 対局開始時の初期状態を位置ごとにずらす)
+
+ユーザー提案:「ゲーム開始時点で砂時計が現在はすべて上にあるが、これを下に変えるのはどうだろうか」。
+検討の結果、**全て落ちきり**にすると (a) すべてのダメージが反転経由になり決着が倍近く遅くなる、
+(b) 開始時は相手も全て落ちきりで妨害対象が存在せず序盤が「自分の駒を順に反転するだけ」の作業になる、
+(c) ジャッジ(落ちきり中に毎ターン1ダメージ)が開始から働き、キング・シールド・アイ(落下中に発動)は
+効果が切れた状態から始まるという非対称が生じる、の3点が重いと判断した。
+
+代わりに**位置ごとに階段状へずらす**案(左=上向き / 中央=落下中 / 右=落ちきり)をユーザーが承認済み。
+GameDesign.md 2章・5章・9章、Architecture.md 3.1節・配置フェーズ節は更新済み。
+
+**狙い(ユーザーが挙げた4点すべてに対応する)**:
+
+| 狙い | どう解決されるか |
+|---|---|
+| 序盤の手に意味がない | 右マスは最初から落ちきりで、反転して起こさない限り働かない。1手目から判断が発生する |
+| 3駒同時落下が読めない | 1手目終了=中央、2手目終了=左、と1手1駒になる。序盤の山が9ダメージ→2駒分へ緩和 |
+| 配置フェーズが無意味 | 新ルールを足さずに解決する。「3駒をどの位置に置くか選べる」は1章で仕様化済みで、そこに初期状態が紐づくだけ |
+| 見た目・演出 | 開始画面に3状態が並ぶため、初見プレイヤーが対局開始の瞬間に3種のイラストの違いを理解できる |
+
+- [x] **X-1 `GameState` の初期状態を位置ごとに設定する**。`START_STATES`(`Array[int]`、
+  `BoardPosition`順に `UPRIGHT`/`FALLING`/`FALLEN`)を const として追加し、新設した
+  `_build_board_instances()` が `_build_instances()` の結果へマスごとの初期状態を代入する。
+  `start_match()` は場の2陣営にのみこれを使い、控えは従来どおり `_build_instances()`(全て
+  `UPRIGHT`)のまま。`swap_in()` が交代時に `UPRIGHT` へ戻す既存仕様も変更していない。
+  初期状態は生成時の代入のみで `advance_slot()` を通らないため、**右マスが `FALLEN` で
+  始まっても落下ダメージは発生しない**(落下ダメージは `FALLEN` へ「到達した瞬間」に入るもの)。
+  継続効果は `resolve_turn_tick()` 経由でしか回らないため開始直後には発動せず、最初の手番終了時
+  から通常どおり評価されることをコード上で確認済み。あわせて `advance_and_end_turn()` の
+  docstring にあった「全ての砂時計は自然に『上向き』のままとなる」を実態に合わせて修正した
+- [ ] **X-2 配置フェーズで各マスの初期状態を表示する**(未着手。着手時の注意は下記「進め方の注意」参照)(GameDesign.md 9章)。`BoardRow.show_placement()`
+  が空きマス・配置済みマスとも、そのマスの初期状態のイラストと状態名で表示するようにする。
+  どこに置くかが初期状態の選択そのものであるため、対局が始まってから気づくことのないようにする
+- [x] **X-3 テストを更新する**。新規テスト2本を追加した。
+  `_test_start_states_differ_by_position()` は場3マスが `UPRIGHT`/`FALLING`/`FALLEN` で
+  始まること・控えは全て `UPRIGHT` であること・**右マスが `FALLEN` で始まっても落下ダメージが
+  発生せず両者のHPが初期値のままであること**を検証する。
+  `_test_first_turn_end_drops_only_the_center_slot()` は最初の手番終了で中央のみが落ちきり
+  (左は落下中へ進むだけ、右は変化なし)、ちょうど1駒分のダメージだけが入ることを検証する。
+  既存の進行・行動・効果テスト(7本が初期状態の変更で落ちた)は、**テストヘルパー
+  `_make_state()` が `start_match()` の後に場を全て `UPRIGHT` へ揃える**ようにして解決した。
+  これらのテストの目的は進行ロジックの検証であって初期状態ではないため、初期状態のばらつきを
+  持ち込まず意図を保つ形にし、初期状態そのものは上記の専用テスト2本で押さえている
+
+### 進め方の注意
+
+- X-1 → X-3 は完了済み。残るは X-2(配置フェーズの表示)のみ
+- **X-2 着手前に、`scripts/ui/` 配下が別の作業と競合していないか確認すること**。X-1/X-3 の作業中、
+  `hourglass_slot.gd`(予約マーク `reservation_badge` の追加途中)と `match_screen.gd`
+  (`MatchTurnResolver.begin_capture()` の引数変更途中)が書きかけでコンパイルできない状態にあり、
+  実行のたびにエラー箇所が変わっていた(フェーズ17/18の実装が並行して進んでいたと思われる)。
+  X-2 は `hourglass_slot.gd`/`board_row.gd` とその `.tscn` を触るため、同じ場所を編集していると
+  互いの変更を潰し合う。`hourglass_slot.gd:518` の型推論エラー
+  (`var label := RESERVATION_LABELS.get(...)`)だけは、プロジェクト全体がコンパイルできず
+  検証不能だったため `var label: String = ...` へ修正済み
+- フェーズ18(W群)も `GameState` を触るが、あちらは終局まわり(`force_match_end`/演出)で
+  こちらは `start_match()` のため衝突しない
+- 過去のセッションで `user://` 配下の実データ(`deck_save.json`)を誤って削除する事故が
+  発生している。検証はヘッドレステスト・非ヘッドレスでのスクリーンショット確認のみで行い、
+  実データファイルには一切触れないこと
+
+---
+
+## 今やること(フェーズ17: 効果音・BGMのCC0素材化)
+
+ユーザー指示:「効果音やBGMについて、無料のアセットを探して使ってみてほしい」。
+これまでの「音源は外部アセットを使わず手続き生成したWAVを用いる」「BGMは当面扱わない」という
+方針からの転換にあたるため、GameDesign.md 9章・Architecture.md 9章は**承認済みの内容で更新済み**。
+
+採用条件はライセンス**CC0のみ**(クレジット表記の管理コストを負わないため)。BGMは
+**パブリックドメインのクラシック音楽(ピアノソロ)**を使う(ユーザーの発案)。
+
+取得済みの素材(いずれも録音自体がPD/CC0であることを個別に確認済み):
+
+| 用途 | 素材 | 出所 | ライセンス |
+|---|---|---|---|
+| 効果音(UI・操作系) | Kenney Interface Sounds(100音) / UI Audio | kenney.nl(GodotのWAV変換ミラー: Calinou/kenney-*) | CC0 |
+| 効果音(被弾) | Kenney Impact Sounds(130音、`impactGlass_*` を使う) | kenney.nl | CC0 |
+| 決着ジングル | Kenney Music Jingles(85音、弦楽ピチカートの `PIZZI` 系を使う) | kenney.nl | CC0 |
+| BGM(ホーム系) | サティ「ジムノペディ第1番」 | Wikimedia Commons(演奏: Robin Alciatore) | パブリックドメイン |
+| BGM(対局) | バッハ「ゴルトベルク変奏曲」アリア | Open Goldberg Variations(演奏: Kimiko Ishizaka) | CC0 |
+
+- [ ] **V-1 効果音6種をCC0素材へ差し替える**。反転/移動/交代/被弾/決着/ボタン押下。手続き生成の
+  旧WAV(`assets/sfx/*.wav`)を置き換える。砂時計=ガラスであることを踏まえ、被弾は
+  `impactGlass_*`(ガラスへの打撃音)を充てる。取り込んだ素材の出所・作者・ライセンスは
+  `assets/CREDITS.md` へ記録する
+- [ ] **V-2 BGM再生基盤 `MusicPlayer` を実装する**。ホーム系/対局の2曲をクロスフェードで切り替え、
+  クラシックがシームレスループしないことを踏まえた「アルバム再生」方式(終わりでフェードアウト→
+  短い間→頭から)で繰り返す。ブラウザの自動再生制限に対応し、最初のユーザー操作を検知してから
+  再生を始める。切り替えは `Main._show_only()` の1箇所から行う
+- [ ] **V-3 音量設定を「効果音」「BGM」の2系統へ拡張する**。`SoundBank` に `_sfx_volume`/`_bgm_volume`
+  を持たせ、`user://sound_settings.json` を新形式へ移行する(旧形式の単一キー `volume` は
+  両系統の初期値として読む)。`SettingsPanel` のスライダーを2本にする
+- [ ] **V-4 結果画面の演出を勝敗で鳴り分ける**。BGMを止め、`Sfx.RESULT` を `RESULT_WIN`/`RESULT_LOSE`
+  へ分けて短いジングルを鳴らす
+
+### 進め方の注意
+
+- V-3は `SoundBank` の公開APIを変える(`get_volume()`/`set_volume()` → `*_sfx_volume()`)ため、
+  呼び出し元(`settings_panel.gd`)と同時に直す。V-2はその音量APIに依存するのでV-3を先に済ませる
+- 過去のセッションで `user://` 配下の実データ(`deck_save.json`)を誤って削除する事故が発生している。
+  `sound_settings.json` も `user://` にあるため、旧形式からの移行を検証する際は実ファイルを
+  直接書き換えず、テスト内でバックアップ→復元する既存の安全な往復パターンに従うこと
+- BGMのファイルサイズは実行時に読むリソースへそのまま加算される。現在のインポート済みデータは
+  約17MBで、unityroomのロード時間に直結するため、**書き出し品質を落として1曲2MB前後に抑える**
+
+---
+
+## 次のフェーズ(概要のみ)
+
+現時点でフェーズ1〜5(基礎ロジック・最小プレイ可能UI・デッキ選択/進行・拡張性/運用整備・オンライン対戦)は完了。
+フェーズ6以降の計画は本セクション着手時の状況に応じて `docs/Architecture.md` に方針を追記してから展開する。

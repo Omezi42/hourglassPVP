@@ -1,0 +1,24 @@
+# Godot 4+ specific ignores
+.godot/
+/android/
+
+# ビルド成果物(エクスポートで再生成できるため管理しない)
+/build/
+
+# 作業ログ・一時ファイル
+/logs/
+/scratchpad/
+*.bak
+
+# Claude Code のローカル状態(共有しない)
+.claude/scheduled_tasks.lock
+.claude/settings.local.json
+
+# アセットの元データ(.gdignore済み・実行時に読まないためリポジトリには含めない)
+# ローカルには残るが、リポジトリを軽く保つため管理対象外とする
+/assets/hourglasses/sources/
+/assets/hourglasses/processed_backup/
+/assets/hourglasses/incoming/
+/assets/ui/incoming/
+/assets/buttons/incoming/
+/assets/backgrounds/incoming/

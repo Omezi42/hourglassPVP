@@ -1,0 +1,162 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/battle_tab.gd" id="1_ioagu"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_wide_text_normal.tres" id="2_6rapo"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_wide_text_pressed.tres" id="3_8tkbr"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_wide_text_hover.tres" id="4_qrc34"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_wide_text_disabled.tres" id="5_bv2qh"]
+
+[node name="BattleTab" type="Control" unique_id=1748995877]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_ioagu")
+
+[node name="CancelButton" type="Button" parent="." unique_id=264837227]
+visible = false
+custom_minimum_size = Vector2(220, 79)
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -244.0
+offset_top = 16.0
+offset_right = -24.0
+offset_bottom = 95.0
+grow_horizontal = 0
+theme_override_styles/normal = ExtResource("2_6rapo")
+theme_override_styles/pressed = ExtResource("3_8tkbr")
+theme_override_styles/hover = ExtResource("4_qrc34")
+theme_override_styles/disabled = ExtResource("5_bv2qh")
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_font_sizes/font_size = 22
+text = "キャンセル"
+
+[node name="Margin" type="MarginContainer" parent="." unique_id=1939880482]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 56
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 40
+
+[node name="VBox" type="VBoxContainer" parent="Margin" unique_id=1031725951]
+layout_mode = 2
+theme_override_constants/separation = 26
+alignment = 1
+
+[node name="StatusLabel" type="Label" parent="Margin/VBox" unique_id=2146442433]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+horizontal_alignment = 1
+
+[node name="MainRow" type="HBoxContainer" parent="Margin/VBox" unique_id=1108250235]
+layout_mode = 2
+theme_override_constants/separation = 24
+alignment = 1
+
+[node name="RandomMatchButton" type="Button" parent="Margin/VBox/MainRow" unique_id=133318171]
+custom_minimum_size = Vector2(380, 136)
+layout_mode = 2
+theme_override_styles/normal = ExtResource("2_6rapo")
+theme_override_styles/pressed = ExtResource("3_8tkbr")
+theme_override_styles/hover = ExtResource("4_qrc34")
+theme_override_styles/disabled = ExtResource("5_bv2qh")
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_font_sizes/font_size = 26
+text = "ランダムマッチ"
+
+[node name="CreateRoomButton" type="Button" parent="Margin/VBox/MainRow" unique_id=1997506293]
+custom_minimum_size = Vector2(380, 136)
+layout_mode = 2
+theme_override_styles/normal = ExtResource("2_6rapo")
+theme_override_styles/pressed = ExtResource("3_8tkbr")
+theme_override_styles/hover = ExtResource("4_qrc34")
+theme_override_styles/disabled = ExtResource("5_bv2qh")
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_font_sizes/font_size = 26
+text = "ルームを作成"
+
+[node name="RoomCodeLabel" type="Label" parent="Margin/VBox" unique_id=1472126448]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+horizontal_alignment = 1
+
+[node name="JoinRow" type="HBoxContainer" parent="Margin/VBox" unique_id=1145910552]
+layout_mode = 2
+theme_override_constants/separation = 16
+alignment = 1
+
+[node name="JoinCodeInput" type="LineEdit" parent="Margin/VBox/JoinRow" unique_id=1146633493]
+custom_minimum_size = Vector2(300, 56)
+layout_mode = 2
+placeholder_text = "ルームコードを入力"
+
+[node name="JoinRoomButton" type="Button" parent="Margin/VBox/JoinRow" unique_id=1368815917]
+custom_minimum_size = Vector2(220, 79)
+layout_mode = 2
+theme_override_styles/normal = ExtResource("2_6rapo")
+theme_override_styles/pressed = ExtResource("3_8tkbr")
+theme_override_styles/hover = ExtResource("4_qrc34")
+theme_override_styles/disabled = ExtResource("5_bv2qh")
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_font_sizes/font_size = 22
+text = "コードで参加"
+
+[node name="SpectateButton" type="Button" parent="Margin/VBox/JoinRow" unique_id=1577222140]
+custom_minimum_size = Vector2(220, 79)
+layout_mode = 2
+theme_override_styles/normal = ExtResource("2_6rapo")
+theme_override_styles/pressed = ExtResource("3_8tkbr")
+theme_override_styles/hover = ExtResource("4_qrc34")
+theme_override_styles/disabled = ExtResource("5_bv2qh")
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_font_sizes/font_size = 22
+text = "観戦する"
+
+[node name="SecondaryRow" type="HBoxContainer" parent="Margin/VBox" unique_id=28862231]
+layout_mode = 2
+theme_override_constants/separation = 24
+alignment = 1
+
+[node name="ReplayButton" type="Button" parent="Margin/VBox/SecondaryRow" unique_id=56388521]
+custom_minimum_size = Vector2(220, 79)
+layout_mode = 2
+theme_override_styles/normal = ExtResource("2_6rapo")
+theme_override_styles/pressed = ExtResource("3_8tkbr")
+theme_override_styles/hover = ExtResource("4_qrc34")
+theme_override_styles/disabled = ExtResource("5_bv2qh")
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_font_sizes/font_size = 22
+text = "リプレイ"
+
+[node name="CpuMatchButton" type="Button" parent="Margin/VBox/SecondaryRow" unique_id=188429079]
+custom_minimum_size = Vector2(220, 79)
+layout_mode = 2
+theme_override_styles/normal = ExtResource("2_6rapo")
+theme_override_styles/pressed = ExtResource("3_8tkbr")
+theme_override_styles/hover = ExtResource("4_qrc34")
+theme_override_styles/disabled = ExtResource("5_bv2qh")
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_font_sizes/font_size = 22
+text = "CPU戦"

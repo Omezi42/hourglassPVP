@@ -1,0 +1,55 @@
+[gd_scene format=3]
+
+[ext_resource type="StyleBox" path="res://resources/theme/detail_panel_bg.tres" id="1_ugr3y"]
+[ext_resource type="Script" path="res://scripts/ui/hourglass_detail_panel.gd" id="2_5xy22"]
+
+[node name="HourglassDetailPanel" type="PanelContainer" unique_id=1899211694]
+custom_minimum_size = Vector2(302, 400)
+theme_override_styles/panel = ExtResource("1_ugr3y")
+script = ExtResource("2_5xy22")
+
+[node name="Margin" type="MarginContainer" parent="." unique_id=1545918497]
+layout_mode = 2
+theme_override_constants/margin_left = 0
+theme_override_constants/margin_top = 0
+theme_override_constants/margin_right = 0
+theme_override_constants/margin_bottom = 0
+
+[node name="VBox" type="VBoxContainer" parent="Margin" unique_id=280491056]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="TopRow" type="HBoxContainer" parent="Margin/VBox" unique_id=911543627]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Icon" type="TextureRect" parent="Margin/VBox/TopRow" unique_id=1625055289]
+custom_minimum_size = Vector2(110, 110)
+layout_mode = 2
+size_flags_horizontal = 0
+expand_mode = 1
+stretch_mode = 5
+
+[node name="InfoVBox" type="VBoxContainer" parent="Margin/VBox/TopRow" unique_id=1420407496]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_constants/separation = 4
+
+[node name="NameLabel" type="Label" parent="Margin/VBox/TopRow/InfoVBox" unique_id=14379569]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+autowrap_mode = 3
+
+[node name="DamageLabel" type="Label" parent="Margin/VBox/TopRow/InfoVBox" unique_id=1891164302]
+layout_mode = 2
+
+[node name="EffectsScroll" type="ScrollContainer" parent="Margin/VBox" unique_id=2059833331]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="EffectsLabel" type="Label" parent="Margin/VBox/EffectsScroll" unique_id=1532505434]
+layout_mode = 2
+size_flags_horizontal = 3
+autowrap_mode = 3

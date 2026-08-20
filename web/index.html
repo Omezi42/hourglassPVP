@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>砂時計PvP - CPU戦テストプレイ環境</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app-container">
+    <!-- ヘッダー -->
+    <header class="app-header">
+      <div class="app-title-group">
+        <h1 class="game-title">砂時計PvP</h1>
+        <span class="game-badge">CPU戦 テスト環境</span>
+        <span id="turn-number-badge" class="game-badge" style="background:#334155;">Turn 1</span>
+      </div>
+      <div id="turn-status-text" class="turn-status"></div>
+      <div class="header-controls">
+        <button id="mute-btn" class="hdr-btn">🔊 音声ON</button>
+        <button id="log-toggle-btn" class="hdr-btn">📜 対局ログ</button>
+        <button id="surrender-btn" class="hdr-btn surrender">🏳️ 投了</button>
+      </div>
+    </header>
+
+    <!-- =========================================================================
+         画面1: 配置フェーズ (Placement Screen)
+         ========================================================================= -->
+    <section id="screen-placement" class="screen">
+      <div class="placement-content">
+        <div class="placement-left-col">
+          <!-- プリセットデッキ選択 -->
+          <div class="panel-box">
+            <div class="section-label">
+              <span>デッキ選択</span>
+              <span class="section-sub">プリセットまたは右側でカスタム編集</span>
+            </div>
+            <div class="preset-group">
+              <button class="preset-btn active" data-preset="standard">スタンダード</button>
+              <button class="preset-btn" data-preset="aggressive">アグレッシブ</button>
+              <button class="preset-btn" data-preset="control">コントロール</button>
+              <button class="preset-btn" data-preset="trick">トリック</button>
+            </div>
+          </div>
+
+          <!-- 相手デッキ（公開情報） -->
+          <div class="panel-box">
+            <div class="section-label">
+              <span>CPUのデッキ (公開情報)</span>
+              <span class="section-sub">※配置位置は対局開始まで非公開</span>
+            </div>
+            <div id="placement-cpu-deck" class="cpu-preview-deck"></div>
+          </div>
+
+          <!-- 場の3マス配置エリア -->
+          <div class="panel-box">
+            <div class="section-label">
+              <span>場の配置 (左・中央・右)</span>
+              <span class="section-sub">手札をクリックして場に3個配置してください</span>
+            </div>
+            <div class="placement-board-slots">
+              <div id="placement-slot-0" class="placement-board-slot empty"></div>
+              <div id="placement-slot-1" class="placement-board-slot empty"></div>
+              <div id="placement-slot-2" class="placement-board-slot empty"></div>
+            </div>
+          </div>
+
+          <!-- 手札5枚（場に出す駒 / 控えの駒） -->
+          <div class="panel-box">
+            <div class="section-label">
+              <span>手札 (5枚)</span>
+              <span class="section-sub">3枚を場に配置、残り2枚が控えになります</span>
+            </div>
+            <div id="placement-hand-cards" class="placement-hand-cards"></div>
+          </div>
+        </div>
+
+        <!-- 右列: デッキ構築プール -->
+        <div class="placement-right-col">
+          <div class="section-label">
+            <span>全10種の砂時計一覧</span>
+            <span class="section-sub">クリックでデッキに追加/解除</span>
+          </div>
+          <div id="deck-builder-pool" class="deck-pool-grid"></div>
+        </div>
+      </div>
+
+      <!-- 配置フッター -->
+      <footer class="placement-footer">
+        <button id="random-placement-btn" class="btn-secondary">🎲 おまかせ配置</button>
+        <button id="start-match-btn" class="btn-primary">⚔️ 対局開始</button>
+      </footer>
+    </section>
+
+    <!-- =========================================================================
+         画面2: 対局画面 (Match Screen)
+         ========================================================================= -->
+    <section id="screen-match" class="screen hidden">
+      <div class="match-layout">
+        <!-- 上段: 相手 (CPU) -->
+        <div class="player-bar top-bar">
+          <!-- 相手の控えスロット -->
+          <div class="bench-strip">
+            <span class="bench-label">控え:</span>
+            <div id="cpu-bench-0" class="bench-slot cpu-bench"></div>
+            <div id="cpu-bench-1" class="bench-slot cpu-bench"></div>
+          </div>
+
+          <!-- 相手 HPバー -->
+          <div id="cpu-hp-box" class="hp-container">
+            <div class="hp-meta">
+              <span class="player-name">CPU (後手)</span>
+              <span id="cpu-hp-val" class="hp-val">20 / 20</span>
+            </div>
+            <div class="hp-bar-outer">
+              <div id="cpu-hp-bar" class="hp-bar-inner"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 中段: 盤面 (GameBoard) -->
+        <div id="game-board" class="game-board">
+          <!-- 相手の場 3マス -->
+          <div class="board-row opponent-row">
+            <div id="cpu-slot-0" class="hourglass-slot cpu-slot"></div>
+            <div id="cpu-slot-1" class="hourglass-slot cpu-slot"></div>
+            <div id="cpu-slot-2" class="hourglass-slot cpu-slot"></div>
+          </div>
+
+          <!-- 位置ラベル帯 -->
+          <div class="position-labels-row">
+            <div class="pos-label-plate entry">左 (交代入口)</div>
+            <div class="pos-label-plate">中央</div>
+            <div class="pos-label-plate">右</div>
+          </div>
+
+          <!-- 自分の場 3マス -->
+          <div class="board-row own-row">
+            <div id="player-slot-0" class="hourglass-slot player-slot"></div>
+            <div id="player-slot-1" class="hourglass-slot player-slot"></div>
+            <div id="player-slot-2" class="hourglass-slot player-slot"></div>
+          </div>
+        </div>
+
+        <!-- 下段: 自分 (Player) -->
+        <div class="player-bar bottom-bar">
+          <!-- 自分 HPバー -->
+          <div id="player-hp-box" class="hp-container">
+            <div class="hp-meta">
+              <span class="player-name">あなた (先手)</span>
+              <span id="player-hp-val" class="hp-val">20 / 20</span>
+            </div>
+            <div class="hp-bar-outer">
+              <div id="player-hp-bar" class="hp-bar-inner"></div>
+            </div>
+          </div>
+
+          <!-- 自分の控えスロット -->
+          <div class="bench-strip">
+            <span class="bench-label">控え:</span>
+            <div id="player-bench-0" class="bench-slot player-bench"></div>
+            <div id="player-bench-1" class="bench-slot player-bench"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================================
+         ポップアップ & オーバーレイ群
+         ========================================================================= -->
+    <!-- 駒アクションメニュー -->
+    <div id="action-menu" class="action-menu hidden"></div>
+
+    <!-- 対局ログドロワー -->
+    <div id="log-drawer" class="log-drawer">
+      <div class="log-header">
+        <span>📜 対局ログ</span>
+        <button id="log-close-btn" class="log-close-btn">✕</button>
+      </div>
+      <ul id="log-list" class="log-list"></ul>
+    </div>
+
+    <!-- トースト通知 -->
+    <div id="toast" class="toast-msg hidden"></div>
+
+    <!-- 駒詳細モーダル -->
+    <div id="detail-modal" class="modal-overlay hidden">
+      <div class="modal-content">
+        <button id="modal-close" class="modal-close-btn">✕</button>
+        <div class="modal-header">
+          <h2 id="modal-card-name" class="modal-name"></h2>
+          <span id="modal-card-damage" class="modal-damage"></span>
+        </div>
+        <div class="modal-images-row">
+          <div class="modal-img-box">
+            <img id="modal-img-full" src="" alt="上向き" />
+            <span>上向き</span>
+          </div>
+          <div class="modal-img-box">
+            <img id="modal-img-falling" src="" alt="落下中" />
+            <span>落下中</span>
+          </div>
+          <div class="modal-img-box">
+            <img id="modal-img-empty" src="" alt="落ちきり" />
+            <span>落ちきり</span>
+          </div>
+        </div>
+        <div id="modal-card-desc" class="modal-body"></div>
+      </div>
+    </div>
+
+    <!-- 終局結果オーバーレイ -->
+    <div id="result-overlay" class="result-overlay hidden">
+      <div class="result-panel">
+        <h2 id="result-title" class="result-title">VICTORY</h2>
+        <p id="result-sub" class="result-sub"></p>
+        <div id="result-stats" class="result-stats"></div>
+        <div class="result-buttons">
+          <button id="rematch-btn" class="btn-primary">もう一度対戦</button>
+          <button id="back-to-placement-btn" class="btn-secondary">デッキ変更 / 配置へ</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- スクリプト読み込み -->
+  <script src="js/data.js"></script>
+  <script src="js/sound.js"></script>
+  <script src="js/engine.js"></script>
+  <script src="js/cpu.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
