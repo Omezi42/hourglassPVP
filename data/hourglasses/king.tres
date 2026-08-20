@@ -8,7 +8,7 @@
 
 [sub_resource type="Resource" id="Resource_kx8mu"]
 script = ExtResource("1_rsfqy")
-trigger = 1
+trigger = 3
 effect_type = 1
 value = 1
 
@@ -22,7 +22,7 @@ value = 2
 script = ExtResource("2_1fm3a")
 id = "king"
 display_name = "キング"
-fall_damage = 1
+fall_damage = 2
 icon_upright = ExtResource("3_full")
 icon_falling = ExtResource("4_falling")
 icon_fallen = ExtResource("5_empty")

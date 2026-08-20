@@ -19,7 +19,7 @@ enum EndReason { HP_DEPLETED, TIMEOUT, SURRENDER }
 
 const BOARD_SIZE := 3
 const BENCH_SIZE := 2
-const INITIAL_HP := 20
+const INITIAL_HP := 30
 
 ## 対局開始時、場の各マスが取る初期状態(GameDesign.md 2章・5章)。BoardPosition順。
 const START_STATES: Array[int] = [
@@ -96,7 +96,9 @@ func clear_pending_action() -> void:
 ## 自分の手番を終える。ここまで指していた側(current_turn)の場3マスを左→中央→右の順に
 ## 1マスずつ解決し、相手の駒への反転が設定されていればそれを最後に解決してから、
 ## ターンチック効果を解決して手番を交代する(GameDesign.md 4.4)。
-## 行動が設定されたマスは砂が進行しない。対局開始直後はこの関数が一度も呼ばれないため、
+## 1マスの解決は「そのマスに設定された行動を適用する→続けて必ず1段階進行する」の2段で、
+## 行動を設定したかどうかで進行の有無は変わらない(GameDesign.md 2章)。
+## 対局開始直後はこの関数が一度も呼ばれないため、
 ## 全ての砂時計はSTART_STATESで与えた初期状態のまま保たれる。
 func advance_and_end_turn() -> void:
 	if _match_over:
@@ -104,11 +106,8 @@ func advance_and_end_turn() -> void:
 	var action := pending_action
 	pending_action = {}
 	var own_kinds := _own_slot_kinds(action)
-	var resolved: Dictionary = {}
 
 	for position in range(BOARD_SIZE):
-		if resolved.has(position):
-			continue
 		match own_kinds.get(position, ""):
 			"flip":
 				resolution_step_started.emit(current_turn, [position], "flip")
@@ -118,8 +117,6 @@ func advance_and_end_turn() -> void:
 				var to_position: int = action["to"]
 				resolution_step_started.emit(current_turn, [from_position, to_position], "move")
 				move(current_turn, from_position, to_position)
-				resolved[from_position] = true
-				resolved[to_position] = true
 			"swap_in":
 				resolution_step_started.emit(current_turn, [position], "swap_in")
 				swap_in(current_turn, action["bench_index"])
@@ -129,7 +126,7 @@ func advance_and_end_turn() -> void:
 				resolution_step_started.emit(
 					current_turn, [position], "idle" if idle else "advance"
 				)
-				advance_slot(current_turn, position)
+		advance_slot(current_turn, position)
 
 	if _is_opponent_flip(action):
 		var opponent: PlayerSide = other_side(current_turn)
@@ -143,7 +140,9 @@ func advance_and_end_turn() -> void:
 
 
 ## 設定された行動から「自分の場のどのマスがどの行動で解決されるか」を求める。
-## 相手の駒への反転・パスの場合は空になり、3マスとも進行する。
+## 相手の駒への反転・パスの場合は空になり、3マスとも進行するだけになる。
+## 移動は関与する2マスのうち番号の若い方にだけ登録する。入れ替え自体をそこで1度だけ行い、
+## もう一方のマスは自分の解決順が来たときに通常どおり進行させるため(GameDesign.md 4.4)。
 func _own_slot_kinds(action: Dictionary) -> Dictionary:
 	var kinds: Dictionary = {}
 	match action.get("type", ""):
@@ -151,8 +150,7 @@ func _own_slot_kinds(action: Dictionary) -> Dictionary:
 			if action["side"] == current_turn:
 				kinds[action["position"]] = "flip"
 		"move":
-			kinds[action["from"]] = "move"
-			kinds[action["to"]] = "move"
+			kinds[mini(action["from"], action["to"])] = "move"
 		"swap_in":
 			kinds[BoardPosition.LEFT] = "swap_in"
 	return kinds

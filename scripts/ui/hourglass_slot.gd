@@ -196,8 +196,9 @@ func set_bench_mode(bench: bool) -> void:
 	queue_redraw()
 
 
-## 台座イラストが既にある場所(盤面パネル上)に置く駒はfalseにして、自前描画の光る台座を消す。
-func set_pedestal_visible(pedestal_visible: bool) -> void:
+## 自前描画の光る台座を出すかどうか。控えのゴースト表示だけが消す内部用の切り替えで、
+## 外部からは呼ばれない(テーブル面をコード描画にした時点で台座イラストが無くなったため)。
+func _set_pedestal_visible(pedestal_visible: bool) -> void:
 	_show_pedestal = pedestal_visible
 	queue_redraw()
 
@@ -545,16 +546,24 @@ func show_deployed(data: HourglassData) -> void:
 	damage_badge.visible = false
 	icon.texture = data.icon_upright
 	icon.modulate = GHOST_ICON_TINT
-	set_pedestal_visible(false)
+	_set_pedestal_visible(false)
 	_stop_falling_warning()
 	queue_redraw()
+
+
+## 現在この枠が表示している状態(上向き/落下中/落ちきり)。解決演出の途中では
+## GameStateの状態より古いことがあるため、移動の見た目を組み立てる側が参照する。
+func displayed_state() -> int:
+	return _last_state
 
 
 ## ターン進行の逐次演出(GameDesign.md 9章)用。GameStateは一括で処理を終えるため、
 ## instance.stateは呼び出し時点で既に最終値へ進んでいることがある。そのため
 ## show_instance()のようにinstanceから読むのではなく、イベントごとに記録した
 ## new_stateを明示的な引数で受け取り、1マスずつ正しい遷移を再現できるようにする。
-func show_state_step(data: HourglassData, new_state: int) -> void:
+## animatedをfalseにすると状態遷移のアニメーションを挟まずに差し替える。移動・交代で
+## マスの中身が入れ替わる場合、状態が変わったわけではないのに回転して見えてしまうため。
+func show_state_step(data: HourglassData, new_state: int, animated: bool = true) -> void:
 	visible = true
 	_has_piece = true
 	_show_placement_state(-1)
@@ -563,7 +572,8 @@ func show_state_step(data: HourglassData, new_state: int) -> void:
 	damage_badge.text = str(data.fall_damage)
 	queue_redraw()
 
-	if _last_state == new_state:
+	if _last_state == new_state or not animated:
+		_last_state = new_state
 		_update_icon(data, new_state)
 		return
 	_last_state = new_state
@@ -584,7 +594,7 @@ func show_placement_card(data: HourglassData, start_state: int = -1) -> void:
 	damage_badge.text = str(data.fall_damage)
 	_update_icon(data, icon_state)
 	icon.modulate = BOARD_ICON_TINT
-	set_pedestal_visible(true)
+	_set_pedestal_visible(true)
 	set_move_target(false)
 	_stop_falling_warning()
 	_show_placement_state(start_state)

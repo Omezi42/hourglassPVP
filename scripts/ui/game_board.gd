@@ -36,9 +36,25 @@ func show_state(state: GameState, self_side: GameState.PlayerSide) -> void:
 	var opponent_side: GameState.PlayerSide = state.other_side(self_side)
 	opponent_row.show_board(state.board[opponent_side])
 	own_row.show_board(state.board[self_side])
-	opponent_row.refresh_falling_warnings(state.board[opponent_side], true)
-	own_row.refresh_falling_warnings(state.board[self_side], false)
+	opponent_row.refresh_falling_warnings(
+		state.board[opponent_side], true, _flip_reserved_position(state, opponent_side)
+	)
+	own_row.refresh_falling_warnings(
+		state.board[self_side], false, _flip_reserved_position(state, self_side)
+	)
 	_apply_interactive()
+
+
+## その手番にsideの駒への反転が予約されているマスを返す(無ければ-1)。落下予告は反転を
+## 織り込んで判定する必要があるため(GameDesign.md 9章)。移動・交代は駒の状態を変えないため
+## 予告に影響しない。
+func _flip_reserved_position(state: GameState, side: GameState.PlayerSide) -> int:
+	var action: Dictionary = state.pending_action
+	if action.get("type", "") != "flip":
+		return -1
+	if action["side"] != side:
+		return -1
+	return action["position"]
 
 
 ## この手番に設定された行動(GameState.pending_action)を、対象マスの予約マークとして表示する
@@ -115,6 +131,37 @@ func flash_fall_damage(
 	var slot := _slot_at(_selection_type_for_side(self_side, side), position)
 	if slot != null:
 		slot.flash_fall_damage()
+
+
+## 解決演出で移動・交代を見せる直前に、駒が入れ替わったマスの「中身」だけを差し替える。
+## 位置の入れ替えは状態を変えないため、移動は互いの表示状態をそのまま持ち替え、交代は
+## 出てきた駒が必ず上向きから始まる(GameDesign.md 2章)ためUPRIGHT固定でよい。
+## GameStateの状態は解決の最後まで進み切っており参照できず、かつrefresh_view()で一括同期
+## すると1マスずつ見せている途中の盤面が最終状態へ飛んでしまうため、ここで個別に扱う。
+func play_piece_step(
+	self_side: GameState.PlayerSide, side: GameState.PlayerSide, action: Dictionary
+) -> void:
+	if _state == null:
+		return
+	var selection := _selection_type_for_side(self_side, side)
+	match action.get("type", ""):
+		"move":
+			var from_slot := _slot_at(selection, action["from"])
+			var to_slot := _slot_at(selection, action["to"])
+			if from_slot == null or to_slot == null:
+				return
+			var from_state := from_slot.displayed_state()
+			var to_state := to_slot.displayed_state()
+			from_slot.show_state_step(_state.board[side][action["from"]].data, to_state, false)
+			to_slot.show_state_step(_state.board[side][action["to"]].data, from_state, false)
+		"swap_in":
+			var left := GameState.BoardPosition.LEFT
+			var slot := _slot_at(selection, left)
+			if slot == null:
+				return
+			slot.show_state_step(
+				_state.board[side][left].data, GameEnums.HourglassState.UPRIGHT, false
+			)
 
 
 ## ターン進行の逐次演出(C-1)用。指定したマスの駒だけを、記録済みのnew_stateへ

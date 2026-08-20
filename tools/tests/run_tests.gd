@@ -26,9 +26,9 @@ func _run() -> void:
 	_test_no_advance_before_first_turn_ends()
 	_test_advance_and_end_turn_advances_ending_side_then_switches()
 	_test_advance_and_end_turn_only_advances_ending_side_across_multiple_turns()
-	_test_pending_flip_skips_advance_on_that_slot()
-	_test_pending_move_skips_advance_on_both_slots()
-	_test_pending_swap_in_skips_advance_on_left_slot()
+	_test_pending_flip_then_advances_that_slot()
+	_test_pending_move_advances_both_slots_once()
+	_test_pending_swap_in_then_advances_the_new_piece()
 	_test_opponent_flip_resolves_after_own_slots_and_does_not_stop_them()
 	_test_pass_advances_all_own_slots()
 	_test_resolution_steps_reported_in_order()
@@ -330,10 +330,12 @@ func _test_advance_and_end_turn_only_advances_ending_side_across_multiple_turns(
 
 ## 以下6件はフェーズ17の新ルール(GameDesign.md 2章・4.4)の検証。行動を設定したマスは
 ## その手番の砂が進行しない。設定は OnlineMatch.apply() 経由(実際の呼び出し経路と同じ)で行う。
-func _test_pending_flip_skips_advance_on_that_slot() -> void:
+func _test_pending_flip_then_advances_that_slot() -> void:
 	var gs := _make_state(["sand", "sand", "sand"], ["sand", "sand", "sand"], false)
 	gs.advance_and_end_turn()  # A: 全マス FALLING
-	gs.advance_and_end_turn()  # B: 全マス FALLING(手番はAへ戻る)
+	gs.advance_and_end_turn()  # B
+	gs.advance_and_end_turn()  # A: 全マス FALLEN
+	gs.advance_and_end_turn()  # B(手番はAへ戻る)
 	OnlineMatch.apply(
 		{
 			"type": "flip",
@@ -346,7 +348,7 @@ func _test_pending_flip_skips_advance_on_that_slot() -> void:
 	_assert_true(
 		(
 			gs.board[GameState.PlayerSide.A][GameState.BoardPosition.CENTER].state
-			== GameEnums.HourglassState.FALLING
+			== GameEnums.HourglassState.FALLEN
 		),
 		"setting a flip should not change the board until the turn is resolved"
 	)
@@ -354,21 +356,21 @@ func _test_pending_flip_skips_advance_on_that_slot() -> void:
 	_assert_true(
 		(
 			gs.board[GameState.PlayerSide.A][GameState.BoardPosition.CENTER].state
-			== GameEnums.HourglassState.UPRIGHT
+			== GameEnums.HourglassState.FALLING
 		),
-		"the flipped slot should be UPRIGHT and must not advance in the same turn"
+		"the flipped slot should return to UPRIGHT and then advance to FALLING in the same turn"
 	)
 	for position in [GameState.BoardPosition.LEFT, GameState.BoardPosition.RIGHT]:
 		_assert_true(
 			gs.board[GameState.PlayerSide.A][position].state == GameEnums.HourglassState.FALLEN,
-			"slots without a set action should advance as usual"
+			"slots that are already FALLEN should stay FALLEN"
 		)
 
 
-func _test_pending_move_skips_advance_on_both_slots() -> void:
-	var gs := _make_state(["sand", "sword", "king"], ["sand", "sand", "sand"], false)
+func _test_pending_move_advances_both_slots_once() -> void:
+	var gs := _make_state(["sand", "sword", "shield"], ["sand", "sand", "sand"], false)
 	gs.advance_and_end_turn()  # A: 全マス FALLING
-	gs.advance_and_end_turn()  # B
+	gs.advance_and_end_turn()  # B(手番はAへ戻る)
 	OnlineMatch.apply(
 		{
 			"type": "move",
@@ -381,24 +383,20 @@ func _test_pending_move_skips_advance_on_both_slots() -> void:
 	gs.advance_and_end_turn()
 	var board: Array = gs.board[GameState.PlayerSide.A]
 	_assert_true(
-		board[GameState.BoardPosition.LEFT].data.id == "king",
+		board[GameState.BoardPosition.LEFT].data.id == "shield",
 		"move should swap the two slots at resolution time"
 	)
 	_assert_true(
 		board[GameState.BoardPosition.RIGHT].data.id == "sand", "move should swap the two slots"
 	)
-	for position in [GameState.BoardPosition.LEFT, GameState.BoardPosition.RIGHT]:
+	for position in range(GameState.BOARD_SIZE):
 		_assert_true(
-			board[position].state == GameEnums.HourglassState.FALLING,
-			"both slots involved in a move must not advance"
+			board[position].state == GameEnums.HourglassState.FALLEN,
+			"every slot advances exactly once, including the two involved in the move"
 		)
-	_assert_true(
-		board[GameState.BoardPosition.CENTER].state == GameEnums.HourglassState.FALLEN,
-		"the slot not involved in the move should advance as usual"
-	)
 
 
-func _test_pending_swap_in_skips_advance_on_left_slot() -> void:
+func _test_pending_swap_in_then_advances_the_new_piece() -> void:
 	var gs := GameState.new()
 	var board_a: Array[HourglassData] = [
 		_load_hourglass("sand"), _load_hourglass("sand"), _load_hourglass("sand")
@@ -409,15 +407,18 @@ func _test_pending_swap_in_skips_advance_on_left_slot() -> void:
 	]
 	var empty_bench: Array[HourglassData] = []
 	gs.start_match(board_a, bench_a, board_b, empty_bench)
+	for position in range(GameState.BOARD_SIZE):
+		gs.board[GameState.PlayerSide.A][position].state = GameEnums.HourglassState.UPRIGHT
+		gs.board[GameState.PlayerSide.B][position].state = GameEnums.HourglassState.UPRIGHT
 	gs.advance_and_end_turn()  # A: 全マス FALLING
-	gs.advance_and_end_turn()  # B
+	gs.advance_and_end_turn()  # B(手番はAへ戻る)
 	OnlineMatch.apply({"type": "swap_in", "side": GameState.PlayerSide.A, "bench_index": 0}, gs)
 	gs.advance_and_end_turn()
 	var left: HourglassInstance = gs.board[GameState.PlayerSide.A][GameState.BoardPosition.LEFT]
 	_assert_true(left.data.id == "sword", "swap_in should bring the bench piece to the left slot")
 	_assert_true(
-		left.state == GameEnums.HourglassState.UPRIGHT,
-		"the swapped-in piece should stay UPRIGHT and must not advance in the same turn"
+		left.state == GameEnums.HourglassState.FALLING,
+		"the swapped-in piece starts UPRIGHT and then advances to FALLING in the same turn"
 	)
 	_assert_true(
 		(
@@ -531,7 +532,7 @@ func _test_resolution_steps_reported_in_order() -> void:
 
 func _test_hp_clamps_and_ends_match() -> void:
 	var gs := _make_state(["sand", "sand", "sand"], ["sand", "sand", "sand"], false)
-	gs.deal_damage(GameState.PlayerSide.B, 25)
+	gs.deal_damage(GameState.PlayerSide.B, GameState.INITIAL_HP + 5)
 	_assert_true(gs.hp[GameState.PlayerSide.B] == 0, "hp should clamp at 0")
 	_assert_true(gs.is_match_over(), "match should end when hp reaches 0")
 
@@ -608,19 +609,25 @@ func _test_king_damage_reduction_and_self_damage() -> void:
 	var gs := _make_state(["king", "sand", "sand"], ["sand", "sand", "sand"], true)
 	gs.advance_slot(GameState.PlayerSide.A, GameState.BoardPosition.LEFT)
 	_assert_true(
-		gs.effect_resolver.get_damage_reduction(gs, GameState.PlayerSide.A) == 1,
-		"king while falling should grant 1 damage reduction"
+		gs.effect_resolver.get_damage_reduction(gs, GameState.PlayerSide.A) == 0,
+		"king should not grant damage reduction while merely falling"
 	)
 
 	var hp_a_before: int = gs.hp[GameState.PlayerSide.A]
 	var hp_b_before: int = gs.hp[GameState.PlayerSide.B]
 	gs.advance_slot(GameState.PlayerSide.A, GameState.BoardPosition.LEFT)
 	_assert_true(
-		gs.hp[GameState.PlayerSide.B] == hp_b_before - 1,
-		"king fall damage should deal 1 to opponent"
+		gs.hp[GameState.PlayerSide.B] == hp_b_before - 2,
+		"king fall damage should deal 2 to opponent"
+	)
+	# 自傷は、落ちきったキング自身の軽減(-1)を受けるため実質1になる(docs/Hourglasses.md参照)。
+	_assert_true(
+		gs.hp[GameState.PlayerSide.A] == hp_a_before - 1,
+		"king self damage of 2 should be reduced to 1 by its own damage reduction once fallen"
 	)
 	_assert_true(
-		gs.hp[GameState.PlayerSide.A] == hp_a_before - 2, "king on_fallen should deal 2 self damage"
+		gs.effect_resolver.get_damage_reduction(gs, GameState.PlayerSide.A) == 1,
+		"king should grant 1 damage reduction once it has fallen"
 	)
 
 

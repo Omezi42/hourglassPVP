@@ -69,11 +69,15 @@ func set_move_targets(positions: Array[int]) -> void:
 
 ## 「落下中」の駒に、次の進行で落ちきりダメージが発生することを予告する(P-1)。
 ## hostileはこの行の駒がダメージを与える側(false=自分の場)か受ける側(true=相手の場)かを表す。
-func refresh_falling_warnings(board_instances: Array, hostile: bool) -> void:
+## suppressed_positionは反転が予約されているマス(GameDesign.md 9章)。反転すると上向きへ
+## 戻ってから進行するため落下中で止まり、落ちきらないので予告を出さない。-1は予約なし。
+func refresh_falling_warnings(
+	board_instances: Array, hostile: bool, suppressed_position: int = -1
+) -> void:
 	for i in range(slots.size()):
 		var instance: HourglassInstance = board_instances[i] if i < board_instances.size() else null
 		var falling := instance != null and instance.state == GameEnums.HourglassState.FALLING
-		slots[i].set_falling_warning(falling, hostile)
+		slots[i].set_falling_warning(falling and i != suppressed_position, hostile)
 
 
 ## ターン進行の逐次演出中、この行の中でfocused_positionだけを拡大・発光させ、

@@ -13,8 +13,9 @@ const ZOOM_SETTLE := 0.3
 ## 何も起きないマス(既に落ちきり)をズームしたまま見せる時間。「何も起きなかったこと」自体を
 ## 見せるため、進行するマスと同様に必ず区切りを取る(GameDesign.md 9章)。
 const IDLE_HOLD := 0.4
-## 反転/移動/交代を見せてから次のマスへ移るまでの間。
-const ACTION_HOLD := 0.6
+## 移動/交代を見せてから、続けて同じマスの進行を見せるまでの間。行動が進行を止めなくなった
+## (GameDesign.md 2章)ため、これはマスをまたぐ区切りではなく1マスの中の区切りになる。
+const ACTION_HOLD := 0.3
 
 var resolving := false
 
@@ -24,10 +25,11 @@ var _queue: Array[Dictionary] = []
 ## 解決対象の行動(GameState.pending_action)。ステップ再生時に反転/移動/交代の見た目を
 ## 組み立てるため、キャプチャ開始時にMatchScreenから受け取っておく。
 var _action: Dictionary = {}
-## 反転のステップは行動の実況(「…を反転」)と状態変化の実況(「…が上向きへ進行」)が
-## 同時に出て重なって読めなくなるため、直後の状態変化1件分だけ実況を抑制する。
-## 反転させたこと自体は行動の実況が伝えており、ログには両方とも従来どおり残る。
-var _suppress_state_caption := false
+## 反転のステップが積む状態変化のうち、最初の1件(=上向きへ戻ったこと)は実況にもログにも
+## 残さない。行動側が既に「…を反転」と伝えており、「上向きへ進行」という語も実態に合わない
+## ため。反転したマスは続けて進行する(GameDesign.md 2章)ので、その後の「落下中へ進行」は
+## 通常どおり実況・記録される。
+var _suppress_state_event := false
 
 
 func _init(screen: MatchScreen) -> void:
@@ -39,7 +41,7 @@ func reset() -> void:
 	resolving = false
 	_queue.clear()
 	_action = {}
-	_suppress_state_caption = false
+	_suppress_state_event = false
 
 
 func begin_capture(action: Dictionary = {}) -> void:
@@ -133,12 +135,16 @@ func _play_step(event: Dictionary) -> void:
 			# 反転だけは間を置かずに次のイベント(状態変化=アイコンの回転)へ進む。
 			# 駒が持ち上がっている最中に回転が始まり、着地までが一続きの動きになる。
 			_screen.play_action_sound(_action)
-			_suppress_state_caption = true
+			_suppress_state_event = true
 			_screen.game_board.clear_reservations()
 			await _screen._action_presenter.play_step(_action)
 		"move", "swap_in":
 			_screen.play_action_sound(_action)
 			_screen.game_board.clear_reservations()
+			# 駒が入れ替わったマスの中身を先に差し替えてから滑り込みを見せる。滑り込みは
+			# HourglassSlotのVisualRootを動かすだけで中身を持たないため、ここで同期しないと
+			# 入れ替わる前の駒がそのまま滑って見える。
+			_screen.game_board.play_piece_step(_screen.perspective_side(), side, _action)
 			await _screen._action_presenter.play_step(_action)
 			await _screen.get_tree().create_timer(ACTION_HOLD).timeout
 		"idle":
@@ -163,10 +169,10 @@ func _apply(event: Dictionary) -> void:
 			_screen.game_board.play_state_step(
 				_screen.perspective_side(), event["side"], event["position"], event["new_state"]
 			)
-			_screen._battle_log.record_state_event(_screen.state, event)
-			if _suppress_state_caption:
-				_suppress_state_caption = false
+			if _suppress_state_event:
+				_suppress_state_event = false
 			else:
+				_screen._battle_log.record_state_event(_screen.state, event)
 				_screen._event_caption.show_state_event(_screen.state, event)
 		"hp":
 			var amount: int = event["previous_hp"] - event["new_hp"]

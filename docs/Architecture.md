@@ -76,19 +76,28 @@ UIに依存しない、対局ルールそのものを扱う層。
   性質のため予約の対象にならない)。これにより「apply()→advance_and_end_turn()」という
   既存の呼び出しの対(自分の手・オンライン相手の手・CPUの手・リプレイの巻き戻し・観戦の
   追いつき、の5経路すべて)を変えずに、解決タイミングだけをターン終了時へ移せている
-- **【フェーズ17 V-1 実装済み】** `advance_and_end_turn()`の処理順序は、
+- **【フェーズ21 Z-1 実装済み】** `advance_and_end_turn()`の処理順序は、
   `pending_action`を取り出す→自分の場を左→中央→右の順に1マスずつ解決→相手の駒への反転が
   設定されていればそれを解決→`effect_resolver.resolve_turn_tick()`→`current_turn`を交代→
-  `turn_started`を発行。1マスの解決内容は、そのマスに設定された行動によって決まる
-  (未設定=`advance_slot()`で1段階進行、反転=`flip()`、移動=`move()`、交代=`swap_in()`。
-  行動が設定されたマスは進行しない)。移動は2マスに関わるため、番号の若い方のマスの解決時に
-  1度だけ`move()`を呼び、もう一方のマスは解決済みとして読み飛ばす
+  `turn_started`を発行。1マスの解決は「そのマスに設定された行動を適用する→**続けて必ず
+  `advance_slot()`で1段階進行させる**」の2段で、行動の有無で進行の有無は変わらない
+  (GameDesign.md 2章)。移動は2マスに関わるが、`move()`による入れ替え自体は**番号の若い方の
+  マスの解決時に1度だけ**行い、その後そのマスを進行させる。もう一方のマスは自分の解決順が
+  来たときに通常どおり進行するため、結果として関与2マスの駒がそれぞれ1回ずつ進行する
+  (`_own_slot_kinds()`が`move`を若い方のマスにだけ登録することでこれを表現しており、
+  以前あった「解決済みとして読み飛ばす」処理は不要になった)。
+  フェーズ17 V-1では「行動を設定したマスは進行しない」方式だったが、自己対戦による
+  バランス検証で、自陣への反転だけがコストを負い相手への反転が無償という非対称を生み、
+  対局の12.8%が膠着することが判明したため、この条項ごと削除した(GameDesign.md 2章の経緯を参照)
 - **【フェーズ17 V-1 実装済み】** 解決の区切りを`resolution_step_started(side, positions, kind)`
   シグナルで通知する。`kind`は`"advance"`(進行する)/`"idle"`(既に落ちきりで何も起きない)/
   `"flip"`/`"move"`/`"swap_in"`のいずれかで、`positions`は対象マス(移動のみ2個)。
   1マス分の解決を始める直前に発行されるため、UI層(`MatchTurnResolver`)はこれを区切りとして
   「どのマスへズームし、続くどの状態変化・ダメージがそのマスの結果なのか」を対応付けられる。
   GameStateはこのシグナルを発行するだけで、演出の存在を一切知らない
+- 初期HP(`INITIAL_HP`)は30(GameDesign.md 3章)。UI層は`PlayerStatusBar`がこの定数を
+  `hp_bar.max_value`・HP数値・残量による色分けの基準として参照するため、値を変えても
+  シーン側の調整は要らない
 - **【フェーズ19 X-1 実装済み】** 対局開始時の初期状態は場の位置ごとに異なる(GameDesign.md 2章・
   5章)。`START_STATES`(`BoardPosition`順に`UPRIGHT`/`FALLING`/`FALLEN`)を`GameState`が
   constとして持ち、`start_match()`が`_build_instances()`へ渡して場の3マスにのみ適用する
@@ -172,8 +181,9 @@ Main
 - `MatchTurnResolver`は`resolution_step_started`を`{"kind": "step", ...}`としてキューへ積み、`play()`が(1)`MatchBoardCamera.focus()`で対象マスへ寄せる、(2)`kind`に応じて`MatchActionPresenter.play_flip()`/`play_move()`/`play_swap_in()`を呼ぶ、(3)続く状態変化・ダメージのイベントを従来どおり再生する、という順で1マスずつ処理する。**何も起きないマス(`kind == "idle"`)もズームの対象とし、間を置いてから次へ進む**(GameDesign.md 9章。「何も起きなかったこと」自体を見せるため)。全ステップの再生後に`MatchBoardCamera.reset()`で引きの画へ戻す
 - 行動の実況・ログの文言(`MatchBattleLog.format_action()`)は、**自陣の駒を反転した場合は所属を書かない**(「先手が「ソード」を反転」)。相手の駒を反転した場合だけ「先手が後手の「ソード」を反転」と誰の駒かを明示する。同じ側を2度呼ぶ形が読みにくく、解決演出で大きく表示されるようになって目立つため。移動・交代の文言(「先手が「キング」を左→右へ移動」)と書式が揃う
 - 予約マーク:`HourglassSlot.set_reservation(kind)`が、そのマスに設定された行動(反転/移動/交代)を示すバッジを駒の上に重ねる。`MatchScreen.refresh_view()`が`state.pending_action`から各マスの`kind`を求めて毎回同期するため、設定・設定し直し・解決後のクリアがすべて同じ経路で反映される
+- 落下予告リング:`HourglassSlot.set_falling_warning(active, hostile)`が、次の解決で落ちきる駒へ脈動するリングを重ねる(GameDesign.md 9章)。判定は`BoardRow.refresh_falling_warnings(board_instances, hostile, suppressed_position)`が行い、状態が`FALLING`であることに加えて、**そのマスに反転が予約されていないこと**を条件とする(反転すると上向きへ戻ってから進行するため落下中で止まり、落ちきらない)。`suppressed_position`は`GameBoard.show_state()`が`state.pending_action`から陣営ごとに求めて渡す。移動・交代は駒の状態を変えないため予告に影響しない。行動が進行を止めなくなった(フェーズ21 Z-1)ことで、`FALLING`かつ反転の予約が無いマスは必ず落ちきるようになり、予告と実際に起きることが常に一致する
 - 反転の演出(GameDesign.md 9章「反転はゲームの中心となる行動であるため、演出は他より作り込む」):`FlipReachOverlay`の着弾点に、中心の閃光・外へ広がる二重の輪・放射状の火花の3層を重ねる。駒側は`HourglassSlot.play_flip_lift()`が「沈み込み→持ち上げ→頂点で留まる→着地→潰れて弾む」の一連をつなぎ、あわせて足元へ台座と同じ扁平な楕円の衝撃波(`UiPaint.draw_ellipse_ring()`を新設)を着弾時と着地時の2回広げ、回転中は`icon.modulate`を1.0より明るい値へ振ってガラスと砂の反射を表す。**動かすプロパティは`VisualRoot.position:y`・`icon.scale:y`・`icon.modulate`に限る**(`icon.scale:x`と`rotation_degrees`は既存の`_animate_flip()`が、`VisualRoot.scale`はスポットライトが使っており、同じプロパティを複数のTweenで取り合うと点滅するため)。`_animate_flip()`の折り返し点の`scale:x`は0ではなく`FLIP_EDGE_SCALE`まで潰すに留め、持ち上がった駒が一瞬まるごと消えないようにする
-- `MatchTurnResolver`は反転のステップだけ、行動を見せた後の間(`ACTION_HOLD`)を置かずに次のイベント(状態変化=アイコンの回転)へ進む。駒が持ち上がっている最中に回転が始まり、着地までが一続きの動きになる。同時に出ると重なって読めなくなる実況テキストは、直後の状態変化1件分だけ抑制する(反転したこと自体は行動側の実況が伝えており、ログには両方とも残る)
+- `MatchTurnResolver`は反転のステップだけ、行動を見せた後の間(`ACTION_HOLD`)を置かずに次のイベント(状態変化=アイコンの回転)へ進む。駒が持ち上がっている最中に回転が始まり、着地までが一続きの動きになる。反転が積む状態変化のうち最初の1件(=上向きへ戻ったこと)は`_suppress_state_event`によって実況にもログにも残さない(行動側が「…を反転」と伝えており、`format_state_event()`の「上向きへ進行」という語も実態に合わないため)。反転したマスは続けて進行する(フェーズ21 Z-1)ので、その後の「落下中へ進行」は通常どおり実況・記録される。`ACTION_HOLD`は移動/交代のときだけ使い、マスをまたぐ区切りではなく「行動を見せてから同じマスの進行を見せるまで」の間になったため0.6秒から0.3秒へ縮めた
 
 - `GameBoard`:`OpponentRow`/`OwnRow` は `GameBoard` 直下の子として絶対座標配置する。手番の表示は `MatchScreen` 上部バーのテキストのみで行う。操作可否は `set_interactive()` で切り替え、`MatchScreen` が `GameBoard.set_interactive(_can_act())` を毎回の表示更新時に呼んで伝播させる。**控えはGameBoardから撤去済み**で、`GameBoard`は場の3+3マスのみを扱う
 - `GameBoard` の座標系(横長レイアウトへの刷新):テーブル面を `BoardTable`(`Control`、`_draw()`のみのコード描画)へ置き換え。ユーザー指示を受け、`GameBoard` の `custom_minimum_size` を横長の`Vector2(860, 480)`へ変更。`BoardTable._draw()` は、上端(奥)をやや狭くした軽い台形をポリゴンで塗り、琥珀色の枠線、中央の横区切り線、二重リングの紋章、4隅の薄い装飾楕円を描く。`OpponentRow`(`760x195`)/`OwnRow`(`820x210`)は`GameBoard`の直接の子として配置し、それぞれ3個の`HourglassSlot`を、行に対する比率で求めた中心座標を基準に絶対配置する。
