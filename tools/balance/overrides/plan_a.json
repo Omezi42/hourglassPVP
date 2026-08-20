@@ -1,0 +1,30 @@
+{
+	"wall": {
+		"fall_damage": 3,
+		"effects": [
+			{
+				"value": 2
+			}
+		]
+	},
+	"mirror": {
+		"fall_damage": 3
+	},
+	"dash": {
+		"fall_damage": 3
+	},
+	"king": {
+		"fall_damage": 2,
+		"effects": [
+			{
+				"value": 1
+			},
+			{
+				"value": 1
+			}
+		]
+	},
+	"sword": {
+		"fall_damage": 2
+	}
+}

@@ -1,0 +1,27 @@
+{
+	"sand": {
+		"fall_damage": 5
+	},
+	"wall": {
+		"fall_damage": 3,
+		"effects": [
+			{
+				"value": 2
+			}
+		]
+	},
+	"dash": {
+		"fall_damage": 3
+	},
+	"king": {
+		"fall_damage": 2,
+		"effects": [
+			{
+				"value": 1
+			},
+			{
+				"value": 1
+			}
+		]
+	}
+}

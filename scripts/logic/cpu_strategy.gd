@@ -21,6 +21,8 @@ static func legal_actions(state: GameState, side: GameState.PlayerSide) -> Array
 	for bench_index in range(GameState.BENCH_SIZE):
 		actions.append({"type": "swap_in", "side": side, "bench_index": bench_index})
 
+	actions.append({"type": "pass", "side": side})
+
 	return actions
 
 
@@ -28,6 +30,17 @@ static func legal_actions(state: GameState, side: GameState.PlayerSide) -> Array
 func choose_action(_state: GameState, _side: GameState.PlayerSide) -> Dictionary:
 	push_error("CpuStrategy.choose_action() must be overridden by a subclass")
 	return {}
+
+
+## 初期配置(場3個・控え2個)を選択する。サブクラスでオーバーライド可能。
+## 戻り値: {"board": Array[HourglassData], "bench": Array[HourglassData]}
+func choose_placement(deck: Array[HourglassData]) -> Dictionary:
+	var shuffled := deck.duplicate()
+	shuffled.shuffle()
+	return {
+		"board": shuffled.slice(0, GameState.BOARD_SIZE),
+		"bench": shuffled.slice(GameState.BOARD_SIZE, deck.size()),
+	}
 
 
 static func _is_locked(state: GameState, side: GameState.PlayerSide, position: int) -> bool:
