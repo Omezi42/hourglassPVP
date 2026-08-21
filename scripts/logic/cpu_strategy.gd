@@ -17,7 +17,7 @@ static func legal_actions(state: GameState, side: GameState.PlayerSide) -> Array
 
 	for position in range(GameState.BOARD_SIZE):
 		var data: HourglassData = state.board[side][position].data
-		if not data.has_skill():
+		if not data.has_skill() or not EffectResolver.can_activate_skill(state, side, position):
 			continue
 		var skill_action := {"type": "skill", "side": side, "position": position}
 		if not data.skill.needs_bench_target():

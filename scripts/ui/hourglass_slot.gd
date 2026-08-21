@@ -99,6 +99,15 @@ const PLACEMENT_STATE_LABELS := {
 	GameEnums.HourglassState.FALLING: "落下中で開始",
 	GameEnums.HourglassState.FALLEN: "落ちきりで開始",
 }
+## スキル発動の動き(play_skill_cast)。反転より短く鋭い。
+const SKILL_CAST_CROUCH := 12.0
+const SKILL_CAST_CROUCH_SQUASH := 0.74
+const SKILL_CAST_CROUCH_DURATION := 0.14
+const SKILL_CAST_RISE := 30.0
+const SKILL_CAST_STRETCH := 1.14
+const SKILL_CAST_RISE_DURATION := 0.16
+const SKILL_CAST_HANG_DURATION := 0.1
+const SKILL_CAST_FALL_DURATION := 0.18
 const RESERVATION_POP_SCALE := 1.6
 const RESERVATION_POP_DURATION := 0.25
 
@@ -329,7 +338,58 @@ func _apply_slide_progress(offset: Vector2, arc_height: float, progress: float) 
 ## 瞬間に呼ばれ、駒を持ち上げて着地させる。VisualRootのposition:yのみを動かし、GameStateの
 ## 状態にも既存の_animate_flip()(アイコン自体の回転、show_instance()経由で別途進行中)にも
 ## 触れない。play_slide_in()と同じVisualRoot.positionを使うため、互いのTweenを止め合う。
-func play_flip_lift() -> void:
+## 行動の見た目(GameDesign.md 9章)。反転は「持ち上がって回る」、スキルは「沈み込んでから
+## 真上へ弾ける」で、見ただけで別の行動だと分かるようにする。動かすプロパティはどちらも
+## VisualRoot.position:y / icon.scale:y / icon.modulate に限る(1マスが1手番に反転とスキルを
+## 同時に行うことはないため競合しない)。
+func play_action_motion(is_skill: bool) -> void:
+	if is_skill:
+		_play_skill_cast()
+	else:
+		_play_flip_lift()
+
+
+func _play_skill_cast() -> void:
+	if _slide_tween != null and _slide_tween.is_valid():
+		_slide_tween.kill()
+	if _flip_lift_tween != null and _flip_lift_tween.is_valid():
+		_flip_lift_tween.kill()
+	visual_root.position = _rest_position
+	visual_root.z_index = SLIDE_Z_INDEX
+	icon.pivot_offset = icon.size / 2
+	icon.scale.y = 1.0
+	_play_flip_sheen()
+
+	_flip_lift_tween = create_tween()
+	# ためを作るように深く沈み込む
+	_flip_lift_tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	_flip_lift_tween.tween_property(
+		visual_root, "position:y", _rest_position.y + SKILL_CAST_CROUCH, SKILL_CAST_CROUCH_DURATION
+	)
+	_flip_lift_tween.parallel().tween_property(
+		icon, "scale:y", SKILL_CAST_CROUCH_SQUASH, SKILL_CAST_CROUCH_DURATION
+	)
+	# 効果を放ちながら真上へ弾ける。足元へ衝撃波を出す
+	_flip_lift_tween.tween_callback(_play_flip_shockwave)
+	_flip_lift_tween.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_flip_lift_tween.tween_property(
+		visual_root, "position:y", _rest_position.y - SKILL_CAST_RISE, SKILL_CAST_RISE_DURATION
+	)
+	_flip_lift_tween.parallel().tween_property(
+		icon, "scale:y", SKILL_CAST_STRETCH, SKILL_CAST_RISE_DURATION
+	)
+	# 余韻を残してから着地する
+	_flip_lift_tween.tween_interval(SKILL_CAST_HANG_DURATION)
+	_flip_lift_tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	_flip_lift_tween.tween_property(
+		visual_root, "position:y", _rest_position.y, SKILL_CAST_FALL_DURATION
+	)
+	_flip_lift_tween.parallel().tween_property(icon, "scale:y", 1.0, SKILL_CAST_FALL_DURATION)
+	_flip_lift_tween.tween_callback(_play_flip_shockwave)
+	_flip_lift_tween.tween_callback(func() -> void: visual_root.z_index = 0)
+
+
+func _play_flip_lift() -> void:
 	if _slide_tween != null and _slide_tween.is_valid():
 		_slide_tween.kill()
 	if _flip_lift_tween != null and _flip_lift_tween.is_valid():
@@ -659,7 +719,9 @@ func set_locked(locked: bool) -> void:
 ## 何も設定されていない状態として非表示にする。行動は指した瞬間には適用されず、
 ## ターン終了時の解決で初めて盤面が動くため、それまでの間これが唯一の手がかりになる。
 func set_reservation(kind: String) -> void:
-	var label: String = RESERVATION_LABELS.get(kind, "")
+	# 既知の行動(反転)は日本語ラベルへ。スキルは呼び出し側がスキル名を直接渡すため、
+	# 対応表に無い値はそのまま表示する(GameDesign.md 9章)。
+	var label: String = RESERVATION_LABELS.get(kind, kind)
 	reservation_badge.visible = label != ""
 	if label == "":
 		return

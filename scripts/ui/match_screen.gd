@@ -509,8 +509,9 @@ func _cancel_pending_skill() -> void:
 func _selected_skill() -> SkillData:
 	if _selected_type != ActionMenu.SelectionType.OWN_BOARD or state == null:
 		return null
-	var instance: HourglassInstance = state.board[state.current_turn][_selected_position]
-	return instance.data.skill
+	if not EffectResolver.can_activate_skill(state, state.current_turn, _selected_position):
+		return null
+	return state.skill_at(state.current_turn, _selected_position)
 
 
 func _can_act() -> bool:

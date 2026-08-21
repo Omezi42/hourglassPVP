@@ -8,6 +8,8 @@ extends RefCounted
 
 ## 交代は控え(盤面外のHourglassSlotStrip)から場の左マスへ入るため実距離が離れすぎる。
 ## 方向だけを保ったままこの距離までに丸め、滑り込みが視界の外から飛んでくるのを避ける。
+## 盤面の別のマスへ届かないスキル(加速・交代)を見せてから次へ進むまでの間。
+const SKILL_CAST_HOLD := 0.35
 const SWAP_IN_MAX_DISTANCE := 220.0
 ## 移動で入れ替わる2駒は同じ直線上をすれ違うため、そのままだと中央で完全に重なって
 ## どちらも見えなくなる。互いに逆向きの弧を描かせて上下によける。入ってくる駒を大きく上へ、
@@ -41,6 +43,7 @@ func play_step(action: Dictionary) -> void:
 	_slide(action)
 	_caption(action)
 	await _flip(action)
+	await _skill(action)
 	presenting = false
 
 
@@ -137,10 +140,48 @@ func _flip(action: Dictionary) -> void:
 	var actor: GameState.PlayerSide = action["actor"]
 	var side: GameState.PlayerSide = action["side"]
 	var position: int = action["position"]
-	if not _screen.game_board.play_flip_reach(self_side, actor, side, position):
+	var origin := GameState.BoardPosition.CENTER
+	if not _screen.game_board.play_reach(self_side, actor, origin, side, position):
 		return
 	await _screen.get_tree().create_timer(FlipReachOverlay.REACH_DURATION).timeout
 	_screen.game_board.play_flip_lift(self_side, side, position)
+
+
+## スキル発動(GameDesign.md 9章)。反転が「相手へ手を伸ばす」演出なのに対し、スキルは
+## 「その駒自身が沈み込んでから真上へ弾け、効果が盤面へ広がる」形で見せる。
+## 盤面の別のマスへ届くスキル(位置交換・目覚め・同期)は、発動元から対象へ光の筋を伸ばす。
+func _skill(action: Dictionary) -> void:
+	if action.get("type", "") != "skill":
+		return
+	var self_side := _screen.perspective_side()
+	var side: GameState.PlayerSide = action["side"]
+	var position: int = action["position"]
+	var skill := _screen.state.skill_at(side, position)
+	_screen.game_board.play_flip_lift(self_side, side, position, true)
+	if not SkillVisuals.reaches_other_slot(skill):
+		await _screen.get_tree().create_timer(SKILL_CAST_HOLD).timeout
+		return
+	for target in _skill_reach_targets(side, position, skill):
+		_screen.game_board.play_reach(self_side, side, position, side, target)
+	await _screen.get_tree().create_timer(FlipReachOverlay.REACH_DURATION).timeout
+
+
+## 光の筋を伸ばす先のマス。位置交換は入れ替わる相手、味方を起こすスキルは自分以外の味方全体。
+func _skill_reach_targets(
+	side: GameState.PlayerSide, position: int, skill: SkillData
+) -> Array[int]:
+	var targets: Array[int] = []
+	if skill == null:
+		return targets
+	if skill.effect_type == GameEnums.EffectType.RECOVER:
+		for i in range(GameState.BOARD_SIZE):
+			if i != position:
+				targets.append(i)
+		return targets
+	for i in _screen.state.skill_positions(side, {"position": position}):
+		if i != position:
+			targets.append(i)
+	return targets
 
 
 func _bench_rect(side: GameState.PlayerSide, bench_index: int) -> Rect2:

@@ -5,7 +5,7 @@ extends RefCounted
 ## Control._draw()側からもRID(get_canvas_item())を渡せば同じ関数を共用できる。
 
 ## ボタン種別を示す紋章(エンブレム)の絵柄。CodedButtonStyle.emblemから参照される。
-enum Emblem { NONE, HOURGLASS, SWAP_ARROWS, BENCH, CHECK }
+enum Emblem { NONE, HOURGLASS, SWAP_ARROWS, BENCH, CHECK, ADVANCE, AWAKEN }
 
 const GRAIN_SIZE := 64
 const GRAIN_SEED := 20240818
@@ -48,6 +48,47 @@ static var _swap_arrow_top_points := PackedVector2Array(
 )
 static var _swap_arrow_top_highlight := PackedVector2Array(
 	[Vector2(-0.7, -0.42), Vector2(0.05, -0.42)]
+)
+## 加速(スキル):砂を一気に落とすことを示す下向きの二重シェブロン。
+static var _advance_upper_points := PackedVector2Array(
+	[
+		Vector2(-0.72, -0.72),
+		Vector2(0.0, -0.16),
+		Vector2(0.72, -0.72),
+		Vector2(0.72, -0.42),
+		Vector2(0.0, 0.14),
+		Vector2(-0.72, -0.42),
+	]
+)
+static var _advance_upper_highlight := PackedVector2Array(
+	[Vector2(-0.6, -0.6), Vector2(0.0, -0.14)]
+)
+static var _advance_lower_points := PackedVector2Array(
+	[
+		Vector2(-0.72, -0.08),
+		Vector2(0.0, 0.48),
+		Vector2(0.72, -0.08),
+		Vector2(0.72, 0.22),
+		Vector2(0.0, 0.78),
+		Vector2(-0.72, 0.22),
+	]
+)
+static var _advance_lower_highlight := PackedVector2Array([Vector2(-0.6, 0.04), Vector2(0.0, 0.5)])
+## 目覚め(スキル):砂時計が起き上がることを示す、上向きの光の閃光(四芒星)。
+static var _awaken_points := PackedVector2Array(
+	[
+		Vector2(0.0, -0.85),
+		Vector2(0.19, -0.22),
+		Vector2(0.8, -0.02),
+		Vector2(0.19, 0.18),
+		Vector2(0.0, 0.85),
+		Vector2(-0.19, 0.18),
+		Vector2(-0.8, -0.02),
+		Vector2(-0.19, -0.22),
+	]
+)
+static var _awaken_highlight := PackedVector2Array(
+	[Vector2(-0.12, -0.32), Vector2(0.0, -0.7), Vector2(0.12, -0.32)]
 )
 static var _swap_arrow_bottom_points := PackedVector2Array(
 	[
@@ -369,6 +410,11 @@ static func draw_emblem(ci: RID, emblem: Emblem, center: Vector2, size: float) -
 			_emblem_fill(ci, center, size, _bench_floor_leg_right_points, PackedVector2Array())
 		Emblem.CHECK:
 			_emblem_check(ci, center, size)
+		Emblem.ADVANCE:
+			_emblem_fill(ci, center, size, _advance_upper_points, _advance_upper_highlight)
+			_emblem_fill(ci, center, size, _advance_lower_points, _advance_lower_highlight)
+		Emblem.AWAKEN:
+			_emblem_fill(ci, center, size, _awaken_points, _awaken_highlight)
 		_:
 			pass
 

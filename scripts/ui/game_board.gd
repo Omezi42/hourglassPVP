@@ -80,8 +80,10 @@ func show_reservations(self_side: GameState.PlayerSide, action: Dictionary) -> v
 		"skill":
 			var side: GameState.PlayerSide = action["side"]
 			var bucket_skill := own if side == self_side else opponent
+			var skill := _state.skill_at(side, action["position"])
+			var label: String = skill.display_name if skill != null else "スキル"
 			for position in _state.skill_positions(side, action):
-				bucket_skill[position] = "skill"
+				bucket_skill[position] = label
 	own_row.set_reservations(own)
 	opponent_row.set_reservations(opponent)
 
@@ -257,14 +259,15 @@ func clear_spotlight_all() -> void:
 ## 駒へ光の筋を伸ばす。始点は行動した側の陣地の代表点として、その側の場の中央マスの矩形を
 ## 使う(get_board_slot_rect()をplay_slide_in()と同じ考え方で流用する)。矩形が取得できない
 ## 場合は何もせずfalseを返す。self_sideの扱いはget_board_slot_rect()と同じ。
-func play_flip_reach(
+func play_reach(
 	self_side: GameState.PlayerSide,
-	actor: GameState.PlayerSide,
-	side: GameState.PlayerSide,
-	position: int
+	from_side: GameState.PlayerSide,
+	from_position: int,
+	to_side: GameState.PlayerSide,
+	to_position: int
 ) -> bool:
-	var source_rect := get_board_slot_rect(self_side, actor, GameState.BoardPosition.CENTER)
-	var target_rect := get_board_slot_rect(self_side, side, position)
+	var source_rect := get_board_slot_rect(self_side, from_side, from_position)
+	var target_rect := get_board_slot_rect(self_side, to_side, to_position)
 	if source_rect.size == Vector2.ZERO or target_rect.size == Vector2.ZERO:
 		return false
 	flip_reach_overlay.play_reach(source_rect.get_center(), target_rect.get_center())
@@ -274,11 +277,11 @@ func play_flip_reach(
 ## 光の筋が届いた瞬間、対象の駒を持ち上げて着地させる(T-1)。self_sideの扱いは
 ## get_board_slot_rect()と同じ。
 func play_flip_lift(
-	self_side: GameState.PlayerSide, side: GameState.PlayerSide, position: int
+	self_side: GameState.PlayerSide, side: GameState.PlayerSide, position: int, is_skill := false
 ) -> void:
 	var slot := _slot_at(_selection_type_for_side(self_side, side), position)
 	if slot != null:
-		slot.play_flip_lift()
+		slot.play_action_motion(is_skill)
 
 
 func _selection_type_for_side(

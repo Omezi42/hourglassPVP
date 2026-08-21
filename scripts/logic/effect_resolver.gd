@@ -91,6 +91,17 @@ func is_locked(game_state: GameState, side: int, position: int) -> bool:
 	return false
 
 
+## そのマスでスキルを発動しても意味があるかどうか。位置交換は隣が無いマス(右向きなら右端)
+## では対象が存在せず、選んでも手番を無駄にするだけなので合法手にもUIにも出さない。
+static func can_activate_skill(game_state: GameState, side: int, position: int) -> bool:
+	var skill := game_state.skill_at(side, position)
+	if skill == null:
+		return false
+	if skill.effect_type != GameEnums.EffectType.SWAP_POSITION:
+		return true
+	return game_state.skill_positions(side, {"position": position}).size() >= 2
+
+
 ## スキル(GameDesign.md 4.3・7章)を解決する。受動効果と同じEffectType/Targetの語彙を使うため、
 ## SWAP_BENCH/SWAP_POSITION以外は受動側と同じ処理をそのまま呼ぶ。
 func resolve_skill(game_state: GameState, side: int, position: int, bench_index: int) -> void:
