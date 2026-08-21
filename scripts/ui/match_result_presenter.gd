@@ -96,7 +96,34 @@ func show_for(winner: GameState.PlayerSide) -> void:
 	var blow := format_finishing_blow(state, _finishing_blow, _loser_label(state, winner))
 	if not blow.is_empty():
 		detail += "\n" + blow
+	var reward := _award_currency(winner)
+	if not reward.is_empty():
+		detail += "\n" + reward
 	show_result(title, detail)
+
+
+## その対局で獲得した砂金を判定し、結果パネルへ出す1行を返す(GameDesign.md 15章)。
+##
+## 判定はキャッシュ済みのプロフィールから即座に行い、実際の加算(通信)は待たない。
+## 結果パネルの表示を通信の完了まで止めると、オフラインのCPU戦で数秒間なにも出ない
+## ことになるため。通信に失敗した場合はAccountServiceが獲得分を手元へ退避し、
+## 次に成功した時点でまとめて加算する。
+func _award_currency(winner: GameState.PlayerSide) -> String:
+	var kind: CurrencyRules.MatchKind = _screen._match_kind
+	if kind == CurrencyRules.MatchKind.NONE:
+		return ""
+	# 「勝った側」は自視点が固定される対局でしか定まらない。ローカル対戦・観戦は
+	# そもそも報酬の対象外(kindがNONE)のため、ここへは来ない
+	var won: bool = winner == _screen.self_side()
+	var result := CurrencyRules.evaluate(
+		kind, won, _screen.move_count(), AccountService.cpu_reward_count_today()
+	)
+	var amount: int = int(result["amount"])
+	if amount > 0 and NetSession.client != null and NetSession.auth != null:
+		AccountService.grant(
+			NetSession.client, NetSession.auth.uid, amount, kind == CurrencyRules.MatchKind.CPU
+		)
+	return CurrencyRules.format_reward(result)
 
 
 ## 敗者の呼び方。視点が固定される対局は「自分」「相手」、ローカル対戦・観戦は「先手」「後手」。

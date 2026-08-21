@@ -1,7 +1,11 @@
 class_name BattleTab
 extends Control
 
-signal online_match_found(match_id: String, my_side: GameState.PlayerSide, opponent_uid: String)
+## is_roomは成立した経路の区別(ルームマッチかランダムマッチか)。
+## 砂金の獲得量が経路ごとに異なるため伝える必要がある(GameDesign.md 15章)。
+signal online_match_found(
+	match_id: String, my_side: GameState.PlayerSide, opponent_uid: String, is_room: bool
+)
 signal replay_list_requested
 signal spectate_requested(match_id: String)
 signal cpu_match_requested
@@ -246,4 +250,5 @@ func _on_matched(match_id: String, opponent_uid: String) -> void:
 		_fail("対戦相手との同期に失敗しました。もう一度お試しください")
 		return
 	status_label.text = "対戦相手が見つかりました!"
-	online_match_found.emit(match_id, my_side, opponent_uid)
+	# ランダムマッチは_queue、ルームコード対戦は_roomが成立させる
+	online_match_found.emit(match_id, my_side, opponent_uid, _room != null)

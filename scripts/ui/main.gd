@@ -78,7 +78,8 @@ func _ready() -> void:
 	hourglass_list_screen.back_pressed.connect(func() -> void: _show_only(home_screen))
 	replay_list_screen.back_pressed.connect(func() -> void: _show_only(home_screen))
 	replay_list_screen.replay_selected.connect(_on_replay_selected)
-	match_screen.back_pressed.connect(func() -> void: _show_only(_match_return_screen))
+	# 対局から戻ったら砂金の残高を描き直す(対局中に増えているため)
+	match_screen.back_pressed.connect(_on_match_back)
 	NetSession.ensure_ready(self)
 	SoundBank.ensure_ready(self)
 	SoundBank.wire_buttons(self)
@@ -106,6 +107,11 @@ func _on_title_start_requested() -> void:
 	await _sand_transition.cover()
 	_show_only(home_screen)
 	await _sand_transition.reveal()
+
+
+func _on_match_back() -> void:
+	_show_only(_match_return_screen)
+	home_screen.refresh_account()
 
 
 func _on_account_requested(from_title: bool) -> void:
@@ -209,9 +215,9 @@ func _on_deck_editor_back() -> void:
 
 
 func _on_online_match_found(
-	match_id: String, my_side: GameState.PlayerSide, _opponent_uid: String
+	match_id: String, my_side: GameState.PlayerSide, _opponent_uid: String, is_room: bool
 ) -> void:
-	match_screen.start_placement_then_online(MatchSetup.player_deck, match_id, my_side)
+	match_screen.start_placement_then_online(MatchSetup.player_deck, match_id, my_side, is_room)
 	_match_return_screen = home_screen
 	_show_only(match_screen)
 

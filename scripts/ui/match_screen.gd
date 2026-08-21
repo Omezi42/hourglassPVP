@@ -33,6 +33,8 @@ var _pending_fall_source: Dictionary = {}
 var _move_count := 0
 
 var _is_cpu_match := false
+## 砂金の獲得量を決める対局の種別(GameDesign.md 15章)。NONEは報酬の対象外。
+var _match_kind: CurrencyRules.MatchKind = CurrencyRules.MatchKind.NONE
 var _cpu_strategy: CpuStrategy = null
 ## CPU戦のローカルリプレイ保存(K-2)はMatchCpuReplayRecorderへ切り出している。
 var _cpu_replay_recorder: MatchCpuReplayRecorder
@@ -172,12 +174,7 @@ func start_match(
 	board_b: Array[HourglassData],
 	bench_b: Array[HourglassData]
 ) -> void:
-	_stop_online_match()
-	_is_online = false
-	_is_replay = false
-	_is_spectate = false
-	_is_cpu_match = false
-	_online_match = null
+	_reset_mode(CurrencyRules.MatchKind.NONE)
 	_my_side = GameState.PlayerSide.A
 	back_button.visible = false
 	surrender_button.visible = true
@@ -198,11 +195,9 @@ func start_online_match(
 	online_match: OnlineMatch,
 	my_side: GameState.PlayerSide
 ) -> void:
-	_stop_online_match()
+	# 種別は配置フェーズへ入る時点で決まっているため、ここでは引き継ぐ
+	_reset_mode(_match_kind)
 	_is_online = true
-	_is_replay = false
-	_is_spectate = false
-	_is_cpu_match = false
 	_online_match = online_match
 	_my_side = my_side
 	back_button.visible = false
@@ -226,12 +221,8 @@ func start_cpu_match(
 	bench_b: Array[HourglassData],
 	strategy: CpuStrategy = null
 ) -> void:
-	_stop_online_match()
-	_is_online = false
-	_is_replay = false
-	_is_spectate = false
+	_reset_mode(CurrencyRules.MatchKind.CPU)
 	_is_cpu_match = true
-	_online_match = null
 	_my_side = GameState.PlayerSide.A
 	_cpu_strategy = strategy if strategy != null else SmartCpuStrategy.new()
 	_cpu_replay_recorder.begin(board_a, bench_a, board_b, bench_b)
@@ -254,12 +245,7 @@ func start_placement_then_match(
 	opponent_bench: Array[HourglassData],
 	is_first: bool
 ) -> void:
-	_stop_online_match()
-	_is_online = false
-	_is_replay = false
-	_is_spectate = false
-	_is_cpu_match = false
-	_online_match = null
+	_reset_mode(CurrencyRules.MatchKind.NONE)
 	_placement.begin_match(own_deck, opponent_board, opponent_bench, is_first)
 
 
@@ -268,26 +254,20 @@ func start_placement_then_match(
 func start_placement_then_cpu(
 	own_deck: Array[HourglassData], cpu_board: Array[HourglassData], cpu_bench: Array[HourglassData]
 ) -> void:
-	_stop_online_match()
-	_is_online = false
-	_is_replay = false
-	_is_spectate = false
-	_is_cpu_match = false
-	_online_match = null
+	_reset_mode(CurrencyRules.MatchKind.CPU)
 	_placement.begin_cpu(own_deck, cpu_board, cpu_bench)
 
 
 ## オンライン対戦の入り口。相手のデッキ取得・自分の配置送信・相手の配置待ちの手順は、
 ## MatchPlacementController側で旧DeckSelectScreenの手順をそのまま踏襲している。
+## is_roomは成立した経路。ルームマッチは自分たちで繰り返せるため報酬が少ない(15章)。
 func start_placement_then_online(
-	own_deck: Array[HourglassData], match_id: String, my_side: GameState.PlayerSide
+	own_deck: Array[HourglassData],
+	match_id: String,
+	my_side: GameState.PlayerSide,
+	is_room: bool = false
 ) -> void:
-	_stop_online_match()
-	_is_online = false
-	_is_replay = false
-	_is_spectate = false
-	_is_cpu_match = false
-	_online_match = null
+	_reset_mode(CurrencyRules.MatchKind.ROOM if is_room else CurrencyRules.MatchKind.RANDOM)
 	_placement.begin_online(own_deck, match_id, my_side)
 
 
@@ -311,8 +291,7 @@ func begin_replay_mode(
 	board_b: Array[HourglassData],
 	bench_b: Array[HourglassData]
 ) -> void:
-	_stop_online_match()
-	_is_online = false
+	_reset_mode(CurrencyRules.MatchKind.NONE)
 	_is_replay = true
 	_is_spectate = false
 	_is_cpu_match = false
@@ -345,11 +324,8 @@ func start_spectate(match_id: String, client: FirestoreClient) -> void:
 		MatchReplayController.ids_minus(deck_b_ids, placement_b_ids)
 	)
 
-	_stop_online_match()
-	_is_online = false
-	_is_replay = false
+	_reset_mode(CurrencyRules.MatchKind.NONE)
 	_is_spectate = true
-	_is_cpu_match = false
 	_my_side = GameState.PlayerSide.A
 	back_button.visible = true
 	surrender_button.visible = false
@@ -373,6 +349,18 @@ func start_spectate(match_id: String, client: FirestoreClient) -> void:
 	add_child(_online_match)
 	_online_match.action_received.connect(_on_action_received)
 	_online_match.start(match_id, existing_actions.size())
+
+
+## 各start_*の冒頭で、モードのフラグをまとめて既定(ローカル対戦)へ戻す。
+## 呼び出し側は自分のモードにあたる1行だけを上書きする。
+func _reset_mode(kind: CurrencyRules.MatchKind) -> void:
+	_stop_online_match()
+	_is_online = false
+	_is_replay = false
+	_is_spectate = false
+	_is_cpu_match = false
+	_match_kind = kind
+	_online_match = null
 
 
 func _stop_online_match() -> void:
