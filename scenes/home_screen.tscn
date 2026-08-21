@@ -16,6 +16,10 @@
 [ext_resource type="StyleBox" path="res://resources/theme/buttons/img_icon_square_disabled.tres" id="14_r26cg"]
 [ext_resource type="PackedScene" path="res://scenes/settings_panel.tscn" id="15_6ooop"]
 [ext_resource type="Script" path="res://scripts/ui/settings_panel.gd" id="16_siet5"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_wide_text_normal.tres" id="17_6ooop"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_wide_text_pressed.tres" id="18_siet5"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_wide_text_hover.tres" id="19_p8i1v"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_wide_text_disabled.tres" id="20_y6vhh"]
 
 [node name="HomeScreen" type="Control" unique_id=1867867751]
 layout_mode = 3
@@ -125,3 +129,28 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("16_siet5")
+
+[node name="AccountBar" type="HBoxContainer" parent="." unique_id=309199470]
+layout_mode = 0
+offset_left = 24.0
+offset_top = 24.0
+offset_right = 484.0
+offset_bottom = 88.0
+theme_override_constants/separation = 14
+
+[node name="AccountButton" type="Button" parent="AccountBar" unique_id=405806702]
+custom_minimum_size = Vector2(220, 64)
+layout_mode = 2
+theme_override_styles/normal = ExtResource("17_6ooop")
+theme_override_styles/pressed = ExtResource("18_siet5")
+theme_override_styles/hover = ExtResource("19_p8i1v")
+theme_override_styles/disabled = ExtResource("20_y6vhh")
+theme_override_font_sizes/font_size = 20
+text = "ゲスト"
+
+[node name="CurrencyLabel" type="Label" parent="AccountBar" unique_id=1505426772]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+theme_override_colors/font_color = Color(0.96, 0.82, 0.45, 1)
+text = "砂金:0"
+vertical_alignment = 1

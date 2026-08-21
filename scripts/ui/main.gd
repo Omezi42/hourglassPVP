@@ -12,14 +12,20 @@ var _match_return_screen: Control
 var _cpu_board: Array[HourglassData] = []
 var _cpu_bench: Array[HourglassData] = []
 var _pending_battle_purpose: BattlePurpose = BattlePurpose.RANDOM_MATCH
+## アカウント画面を閉じたときの戻り先。タイトルから開いた場合だけタイトルへ戻す。
+var _account_return_to_title := false
 
 var _screens: Array[Control] = []
+## タイトルからホームへ移るときだけ使う砂のトランジション(GameDesign.md 9章)。
+## 他の画面遷移はクロスフェード(_show_only)のまま変えていない。
+var _sand_transition: SandTransition
 var _active_screen: Control = null
 var _fade_tween: Tween
 ## 遷移中は全画面の入力を塞ぐ透明ブロッカー。連打による二重遷移や、
 ## フェード中に背後の画面がクリックされることを防ぐ。
 var _transition_blocker: ColorRect
 
+@onready var title_screen: TitleScreen = $TitleScreen
 @onready var home_screen: HomeScreen = $HomeScreen
 @onready var deck_list_screen: DeckListScreen = $DeckListScreen
 @onready var deck_editor_screen: DeckEditorScreen = $DeckEditorScreen
@@ -27,10 +33,12 @@ var _transition_blocker: ColorRect
 @onready var replay_list_screen: ReplayListScreen = $ReplayListScreen
 @onready var match_screen: MatchScreen = $MatchScreen
 @onready var battle_deck_picker_screen: BattleDeckPickerScreen = $BattleDeckPickerScreen
+@onready var account_screen: AccountScreen = $AccountScreen
 
 
 func _ready() -> void:
 	_screens = [
+		title_screen,
 		home_screen,
 		deck_list_screen,
 		deck_editor_screen,
@@ -38,9 +46,19 @@ func _ready() -> void:
 		replay_list_screen,
 		match_screen,
 		battle_deck_picker_screen,
+		account_screen,
 	]
 	_transition_blocker = _make_transition_blocker()
 	add_child(_transition_blocker)
+	_sand_transition = SandTransition.new()
+	add_child(_sand_transition)
+	title_screen.start_requested.connect(_on_title_start_requested)
+	# アカウント画面はタイトルとホームの両方から開く(GameDesign.md 14章)。
+	# 戻り先が異なるため、どちらから来たかを_account_return_screenに覚えておく
+	title_screen.account_requested.connect(_on_account_requested.bind(true))
+	home_screen.account_requested.connect(_on_account_requested.bind(false))
+	account_screen.back_pressed.connect(_on_account_back)
+	account_screen.profile_changed.connect(func() -> void: home_screen.refresh_account())
 	# 対局画面から戻る先は各導線が設定するが、設定される前に戻る操作が起きても
 	# 落ちないよう既定をホームにしておく
 	_match_return_screen = home_screen
@@ -66,7 +84,7 @@ func _ready() -> void:
 	SoundBank.wire_buttons(self)
 	MusicPlayer.ensure_ready(self)
 	MusicPlayer.set_volume(SoundBank.get_bgm_volume())
-	_show_only(home_screen)
+	_show_only(title_screen)
 
 
 ## ブラウザは最初のユーザー操作より前の音声再生を許さないため、最初の入力をここで拾って
@@ -78,6 +96,27 @@ func _input(event: InputEvent) -> void:
 		return
 	MusicPlayer.notify_user_gesture()
 	set_process_input(false)
+
+
+## タイトル画面を押されたときの遷移。ロゴの演出 → 砂が画面を覆う → 画面を差し替える →
+## 砂が下へ抜ける、の順で進める。砂が覆いきっている間に差し替えるため、
+## 通常のクロスフェード(_show_only)は砂の下で起きて見えない。
+func _on_title_start_requested() -> void:
+	await title_screen.play_launch()
+	await _sand_transition.cover()
+	_show_only(home_screen)
+	await _sand_transition.reveal()
+
+
+func _on_account_requested(from_title: bool) -> void:
+	_account_return_to_title = from_title
+	_show_only(account_screen)
+	account_screen.refresh()
+
+
+func _on_account_back() -> void:
+	_show_only(title_screen if _account_return_to_title else home_screen)
+	home_screen.refresh_account()
 
 
 func _on_replay_list_requested() -> void:
@@ -217,8 +256,16 @@ func _show_only(screen: Control) -> void:
 
 	# BGMの切り替えは画面遷移のハブであるここ1箇所で行い、画面ごとに書き散らさない
 	# (Architecture.md 9章)。対局が終わって結果パネルが出ている間はMatchScreenが止める。
-	var track := MusicPlayer.Track.MATCH if screen == match_screen else MusicPlayer.Track.HOME
-	MusicPlayer.play(track)
+	MusicPlayer.play(_track_for(screen))
+
+
+## 画面ごとのBGM。対局だけ専用曲、タイトルだけ専用曲、それ以外はホーム曲。
+func _track_for(screen: Control) -> MusicPlayer.Track:
+	if screen == match_screen:
+		return MusicPlayer.Track.MATCH
+	if screen == title_screen:
+		return MusicPlayer.Track.TITLE
+	return MusicPlayer.Track.HOME
 
 
 func _on_transition_finished(screen: Control, previous: Control) -> void:

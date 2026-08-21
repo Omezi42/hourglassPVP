@@ -1,0 +1,86 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/title_screen.gd" id="1_fgkus"]
+[ext_resource type="Script" path="res://scripts/ui/title_logo.gd" id="2_sa3yf"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_wide_text_normal.tres" id="3_e54dn"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_wide_text_pressed.tres" id="4_3yumr"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_wide_text_hover.tres" id="5_cs5ya"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_wide_text_disabled.tres" id="6_mykxm"]
+
+[node name="TitleScreen" type="Control" unique_id=180514372]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_fgkus")
+
+[node name="Background" type="TextureRect" parent="." unique_id=1910426793]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 6
+
+[node name="Vignette" type="ColorRect" parent="." unique_id=368637337]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0.02, 0.03, 0.07, 0.42)
+
+[node name="LogoHolder" type="Control" parent="." unique_id=1779200640]
+anchors_preset = 0
+offset_left = 190.0
+offset_top = 132.0
+offset_right = 1090.0
+offset_bottom = 452.0
+mouse_filter = 2
+
+[node name="LogoImage" type="TextureRect" parent="LogoHolder" unique_id=1568707388]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="LogoDrawn" type="Control" parent="LogoHolder" unique_id=1211659425]
+anchors_preset = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+script = ExtResource("2_sa3yf")
+
+[node name="StartLabel" type="Label" parent="." unique_id=1143110863]
+layout_mode = 0
+offset_top = 556.0
+offset_right = 1280.0
+offset_bottom = 600.0
+theme_override_font_sizes/font_size = 26
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_outline_color = Color(0.06, 0.09, 0.19, 1)
+theme_override_constants/outline_size = 8
+text = "クリックしてはじめる"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="AccountButton" type="Button" parent="." unique_id=596736282]
+custom_minimum_size = Vector2(200, 58)
+layout_mode = 0
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -224.0
+offset_top = -82.0
+offset_right = -24.0
+offset_bottom = -24.0
+theme_override_styles/normal = ExtResource("3_e54dn")
+theme_override_styles/pressed = ExtResource("4_3yumr")
+theme_override_styles/hover = ExtResource("5_cs5ya")
+theme_override_styles/disabled = ExtResource("6_mykxm")
+theme_override_font_sizes/font_size = 20
+text = "アカウント"

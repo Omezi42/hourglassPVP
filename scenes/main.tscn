@@ -14,8 +14,12 @@
 [ext_resource type="Script" path="res://scripts/ui/hourglass_list_screen.gd" id="14_0ld40"]
 [ext_resource type="PackedScene" path="res://scenes/replay_list_screen.tscn" id="15_jbj1t"]
 [ext_resource type="Script" path="res://scripts/ui/replay_list_screen.gd" id="16_muem4"]
+[ext_resource type="PackedScene" path="res://scenes/title_screen.tscn" id="17_0ld40"]
 [ext_resource type="PackedScene" path="res://scenes/battle_deck_picker_screen.tscn" id="17_dp3eg"]
 [ext_resource type="Script" path="res://scripts/ui/battle_deck_picker_screen.gd" id="18_0ld40"]
+[ext_resource type="Script" path="res://scripts/ui/title_screen.gd" id="18_gqmmt"]
+[ext_resource type="PackedScene" path="res://scenes/account_screen.tscn" id="19_gqmmt"]
+[ext_resource type="Script" path="res://scripts/ui/account_screen.gd" id="20_yc10j"]
 
 [node name="Main" type="Control" unique_id=1327331580]
 layout_mode = 3
@@ -89,3 +93,19 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("18_0ld40")
+
+[node name="TitleScreen" type="Control" parent="." unique_id=180514372 instance=ExtResource("17_0ld40")]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("18_gqmmt")
+
+[node name="AccountScreen" type="Control" parent="." unique_id=1856125998 instance=ExtResource("19_gqmmt")]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("20_yc10j")

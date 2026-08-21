@@ -1,0 +1,187 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/account_screen.gd" id="1_twfmf"]
+[ext_resource type="Texture2D" path="res://assets/backgrounds/processed/home/background.png" id="2_7bbrd"]
+[ext_resource type="StyleBox" path="res://resources/theme/content_panel.tres" id="3_2wqgq"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_confirm_save_normal.tres" id="4_q4cdb"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_confirm_save_pressed.tres" id="5_csg1e"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_confirm_save_hover.tres" id="6_ay4qh"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_confirm_save_disabled.tres" id="7_xvj7t"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_wide_text_normal.tres" id="8_20d1o"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_wide_text_pressed.tres" id="9_rttac"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_wide_text_hover.tres" id="10_cpo8f"]
+[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_wide_text_disabled.tres" id="11_e3nrf"]
+[ext_resource type="PackedScene" path="res://scenes/screen_header.tscn" id="12_pvjow"]
+[ext_resource type="Script" path="res://scripts/ui/screen_header.gd" id="13_2owa0"]
+
+[node name="AccountScreen" type="Control" unique_id=1856125998]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_twfmf")
+
+[node name="Background" type="TextureRect" parent="." unique_id=1069436025]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+texture = ExtResource("2_7bbrd")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="Panel" type="PanelContainer" parent="." unique_id=34712611]
+custom_minimum_size = Vector2(720, 0)
+layout_mode = 0
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -360.0
+offset_top = 136.0
+offset_right = 360.0
+offset_bottom = 136.0
+theme_override_styles/panel = ExtResource("3_2wqgq")
+
+[node name="Margin" type="MarginContainer" parent="Panel" unique_id=178790356]
+layout_mode = 2
+
+[node name="VBox" type="VBoxContainer" parent="Panel/Margin" unique_id=513282779]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="StatusLabel" type="Label" parent="Panel/Margin/VBox" unique_id=904004671]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+
+[node name="CurrencyLabel" type="Label" parent="Panel/Margin/VBox" unique_id=1236502710]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+
+[node name="StatusSeparator" type="HSeparator" parent="Panel/Margin/VBox" unique_id=790820275]
+layout_mode = 2
+
+[node name="NameRow" type="HBoxContainer" parent="Panel/Margin/VBox" unique_id=1991210002]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="NameCaption" type="Label" parent="Panel/Margin/VBox/NameRow" unique_id=2070150574]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "表示名"
+
+[node name="NameInput" type="LineEdit" parent="Panel/Margin/VBox/NameRow" unique_id=1435019758]
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "対局中に表示される名前(10文字まで)"
+
+[node name="NameSaveButton" type="Button" parent="Panel/Margin/VBox/NameRow" unique_id=1032310040]
+custom_minimum_size = Vector2(170, 56)
+layout_mode = 2
+theme_override_styles/normal = ExtResource("4_q4cdb")
+theme_override_styles/pressed = ExtResource("5_csg1e")
+theme_override_styles/hover = ExtResource("6_ay4qh")
+theme_override_styles/disabled = ExtResource("7_xvj7t")
+theme_override_font_sizes/font_size = 20
+text = "保存"
+
+[node name="NameSeparator" type="HSeparator" parent="Panel/Margin/VBox" unique_id=429085660]
+layout_mode = 2
+
+[node name="CredentialBox" type="VBoxContainer" parent="Panel/Margin/VBox" unique_id=1581280252]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="HintLabel" type="Label" parent="Panel/Margin/VBox/CredentialBox" unique_id=427075995]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "IDとパスワードを登録すると、別の端末やブラウザからでも同じ記録を続けられます。いま遊んでいる記録と砂金はそのまま引き継がれます。"
+autowrap_mode = 3
+
+[node name="WarningLabel" type="Label" parent="Panel/Margin/VBox/CredentialBox" unique_id=1981752458]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(1, 0.72, 0.45, 1)
+text = "※ メールアドレスを登録しないため、パスワードを忘れると復旧できません。"
+autowrap_mode = 3
+
+[node name="IdRow" type="HBoxContainer" parent="Panel/Margin/VBox/CredentialBox" unique_id=1541567067]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="IdCaption" type="Label" parent="Panel/Margin/VBox/CredentialBox/IdRow" unique_id=823843711]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "ID"
+
+[node name="IdInput" type="LineEdit" parent="Panel/Margin/VBox/CredentialBox/IdRow" unique_id=1154166043]
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "英数字・ハイフン・アンダースコア(3〜20文字)"
+
+[node name="PasswordRow" type="HBoxContainer" parent="Panel/Margin/VBox/CredentialBox" unique_id=1676235880]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="PasswordCaption" type="Label" parent="Panel/Margin/VBox/CredentialBox/PasswordRow" unique_id=880323286]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "パスワード"
+
+[node name="PasswordInput" type="LineEdit" parent="Panel/Margin/VBox/CredentialBox/PasswordRow" unique_id=1284919516]
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "6文字以上"
+secret = true
+
+[node name="ButtonRow" type="HBoxContainer" parent="Panel/Margin/VBox/CredentialBox" unique_id=785267249]
+layout_mode = 2
+theme_override_constants/separation = 16
+alignment = 1
+
+[node name="RegisterButton" type="Button" parent="Panel/Margin/VBox/CredentialBox/ButtonRow" unique_id=579259421]
+custom_minimum_size = Vector2(240, 68)
+layout_mode = 2
+theme_override_styles/normal = ExtResource("8_20d1o")
+theme_override_styles/pressed = ExtResource("9_rttac")
+theme_override_styles/hover = ExtResource("10_cpo8f")
+theme_override_styles/disabled = ExtResource("11_e3nrf")
+theme_override_font_sizes/font_size = 22
+text = "登録する"
+
+[node name="LoginButton" type="Button" parent="Panel/Margin/VBox/CredentialBox/ButtonRow" unique_id=1346927382]
+custom_minimum_size = Vector2(240, 68)
+layout_mode = 2
+theme_override_styles/normal = ExtResource("8_20d1o")
+theme_override_styles/pressed = ExtResource("9_rttac")
+theme_override_styles/hover = ExtResource("10_cpo8f")
+theme_override_styles/disabled = ExtResource("11_e3nrf")
+theme_override_font_sizes/font_size = 22
+text = "ログイン"
+
+[node name="LogoutButton" type="Button" parent="Panel/Margin/VBox" unique_id=403253543]
+custom_minimum_size = Vector2(240, 68)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_styles/normal = ExtResource("8_20d1o")
+theme_override_styles/pressed = ExtResource("9_rttac")
+theme_override_styles/hover = ExtResource("10_cpo8f")
+theme_override_styles/disabled = ExtResource("11_e3nrf")
+theme_override_font_sizes/font_size = 22
+text = "ログアウト"
+
+[node name="MessageLabel" type="Label" parent="Panel/Margin/VBox" unique_id=1976786139]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="ScreenHeader" type="Control" parent="." unique_id=786986529 instance=ExtResource("12_pvjow")]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 24.0
+offset_top = 24.0
+offset_right = -24.0
+offset_bottom = 112.0
+grow_horizontal = 2
+mouse_filter = 2
+script = ExtResource("13_2owa0")

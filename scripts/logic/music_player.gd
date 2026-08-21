@@ -7,9 +7,10 @@ extends RefCounted
 ## 自動再生制限の解除といった継続的な状態を持つため、クラスを分けている。
 ## 音量の単一情報源はSoundBank側にあり、こちらへは一方向にプッシュされる。
 
-enum Track { HOME, MATCH }
+enum Track { TITLE, HOME, MATCH }
 
 const TRACK_PATHS := {
+	Track.TITLE: "res://assets/bgm/title.ogg",
 	Track.HOME: "res://assets/bgm/home.ogg",
 	Track.MATCH: "res://assets/bgm/match.ogg",
 }
@@ -20,6 +21,9 @@ const FADE_DURATION := 1.4
 ## クラシックは楽曲として完結しておりシームレスにループしないため、
 ## 終わりまで再生したら一度間を置いてから頭へ戻す(GameDesign.md 9章)。
 const LOOP_GAP := 3.0
+## 曲の終わりを鳴りっぱなしで断ち切らず、末尾をこの秒数かけて絞る。
+## タイトル曲のように途中で切り出した音源でも、切れ目が唐突に聞こえないようにするため。
+const TAIL_FADE := 3.0
 ## クロスフェード用に2本持つ。1本だけだと切り替え時に無音が挟まる。
 const PLAYER_COUNT := 2
 const SILENT_DB := -80.0
@@ -29,6 +33,9 @@ const NO_TRACK := -1
 
 static var _players: Array[AudioStreamPlayer] = []
 static var _fades: Array[Tween] = []
+## 末尾フェード中かどうか。この間の音量は曲の終わりへ向けて絞っている途中であり、
+## 設定変更(set_volume)で元の音量へ戻してはいけない。
+static var _tail_fading: Array[bool] = []
 static var _active_index := 0
 static var _volume := 0.0
 static var _current := NO_TRACK
@@ -50,6 +57,7 @@ static func ensure_ready(parent: Node) -> void:
 		player.finished.connect(_on_finished.bind(i))
 		_players.append(player)
 		_fades.append(null)
+		_tail_fading.append(false)
 
 
 ## 指定トラックへ切り替える。既に同じ曲が鳴っていれば何もしない
@@ -90,6 +98,8 @@ static func set_volume(value: float) -> void:
 		return
 	if not _players[_active_index].playing:
 		return
+	if _tail_fading[_active_index]:
+		return
 	_kill_fade(_active_index)
 	_players[_active_index].volume_db = _target_db()
 
@@ -109,20 +119,39 @@ static func _start(track: int) -> void:
 	next.stream = stream
 	next.volume_db = SILENT_DB
 	next.play()
+	_tail_fading[_active_index] = false
 	_fade_to(_active_index, _target_db())
+	_schedule_tail_fade(_active_index, track, stream.get_length())
 	if previous_index != _active_index and _players[previous_index].playing:
 		_fade_out_and_stop(previous_index)
 
 
-static func _fade_to(index: int, to_db: float) -> void:
+static func _fade_to(index: int, to_db: float, duration := FADE_DURATION) -> void:
 	var player := _players[index]
 	_kill_fade(index)
 	if _host == null:
 		player.volume_db = to_db
 		return
 	var tween := _host.create_tween()
-	tween.tween_property(player, "volume_db", to_db, FADE_DURATION)
+	tween.tween_property(player, "volume_db", to_db, duration)
 	_fades[index] = tween
+
+
+## 曲の終わりのTAIL_FADE秒前から音量を絞り始めるよう予約する。
+static func _schedule_tail_fade(index: int, track: int, length: float) -> void:
+	if _host == null or length <= TAIL_FADE * 2.0:
+		return
+	var timer := _host.get_tree().create_timer(length - TAIL_FADE)
+	timer.timeout.connect(_begin_tail_fade.bind(index, track))
+
+
+static func _begin_tail_fade(index: int, track: int) -> void:
+	if _current != track or index != _active_index:
+		return
+	if not _players[index].playing:
+		return
+	_tail_fading[index] = true
+	_fade_to(index, SILENT_DB, TAIL_FADE)
 
 
 static func _fade_out_and_stop(index: int) -> void:
@@ -162,8 +191,10 @@ static func _replay_if_unchanged(track: int, index: int) -> void:
 	var player := _players[index]
 	if player.playing:
 		return
+	_tail_fading[index] = false
 	player.volume_db = _target_db()
 	player.play()
+	_schedule_tail_fade(index, track, player.stream.get_length())
 
 
 static func _target_db() -> float:

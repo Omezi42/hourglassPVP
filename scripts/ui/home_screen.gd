@@ -9,6 +9,7 @@ signal spectate_requested(match_id: String)
 signal cpu_match_requested
 signal random_match_deck_requested
 signal create_room_deck_requested
+signal account_requested
 
 const NAV_HEIGHT_ACTIVE := 150
 const NAV_HEIGHT_INACTIVE := 108
@@ -29,6 +30,8 @@ var _tab_fade_tween: Tween
 @onready var battle_nav_button: Button = $Layout/BottomNav/BattleNavButton
 @onready var settings_button: Button = $SettingsButton
 @onready var settings_panel: SettingsPanel = $SettingsPanel
+@onready var account_button: Button = $AccountBar/AccountButton
+@onready var currency_label: Label = $AccountBar/CurrencyLabel
 
 
 func _ready() -> void:
@@ -50,11 +53,20 @@ func _ready() -> void:
 	deck_nav_button.pressed.connect(_select_tab.bind(0))
 	battle_nav_button.pressed.connect(_select_tab.bind(1))
 	settings_button.pressed.connect(func() -> void: settings_panel.open())
+	account_button.pressed.connect(func() -> void: account_requested.emit())
 	_select_tab(0)
+	refresh_account()
 
 
 func refresh_battle_tab() -> void:
 	battle_tab.refresh()
+
+
+## 左上のアカウント表示を、キャッシュ済みのプロフィールから描き直す
+## (GameDesign.md 9章)。ここでは通信しない。
+func refresh_account() -> void:
+	account_button.text = AccountService.display_name_or_default()
+	currency_label.text = "%s:%d" % [CurrencyRules.CURRENCY_NAME, AccountService.currency()]
 
 
 func _select_tab(index: int) -> void:
