@@ -117,6 +117,9 @@ func _edge_points(edge: float, wave: float) -> PackedVector2Array:
 ## 頂点カラーで乗せる(段で塗り分けると境目が縞に見えるため)。
 func _draw_body(edge_points: PackedVector2Array, height: float) -> void:
 	var far_y := height if _revealing else 0.0
+	# 砂がまだ厚みを持たない最初のフレームは、潰れた四辺形になり三角形分割に失敗する。
+	if absf(edge_points[0].y - far_y) < 1.0:
+		return
 	_draw_band(edge_points, far_y, 0.0, MID_STOP, SAND_DEEP, SAND_MID)
 	_draw_band(edge_points, far_y, MID_STOP, 1.0, SAND_MID, SAND_SURFACE)
 

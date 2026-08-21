@@ -162,7 +162,8 @@ UIは `GameState` のシグナルを購読して表示を更新するだけと�
 
 ```
 Main
-├── HomeScreen             # 起点となるホーム画面。下部2ボタンで機能を切り替える
+├── TitleScreen            # 起動して最初に出るタイトル画面。押すとホームへ移る
+├── HomeScreen             # ホーム画面。下部2ボタンで機能を切り替える
 │   ├── BottomNav           # 「デッキ」「バトル」の2ボタン(選択中は拡大表示)
 │   ├── DeckTab              # デッキ編集ボタン + 砂時計一覧/ショップボタン
 │   └── BattleTab            # ランダムマッチ/ルームマッチの大型ボタン
@@ -189,7 +190,10 @@ Main
     └── MatchPlacementController # 配置フェーズの状態・操作(子ノード、UIシーンは持たない)
 ```
 
-- `Main`:画面切り替え(`_show_only()`)はハードカットではなくクロスフェードで行う。表示中の画面と次の画面の`modulate:a`をTweenで補間し、実行中のTweenは新しい遷移の開始時に必ずkillしてから作り直すことで連打・割り込みに耐える。遷移中は透明な`ColorRect`ブロッカーを最前面に重ねて全画面の入力を塞ぐ
+- `TitleScreen`(`scenes/title_screen.tscn`/`scripts/ui/title_screen.gd`):起動時に出る入口の画面(GameDesign.md 9章)。背景・ロゴ・「クリックしてはじめる」の3要素だけを持ち、押されたら`start_requested`を出すところまでが責務で、遷移の演出は`Main`が持つ。ロゴは`assets/title/logo.png`があればそれを、無ければ`TitleLogo`のコード描画を表示する(`ResourceLoader.exists()`で分岐する。`preload`だとファイルが無い時点でコンパイルが通らないため)。背景も同様に`assets/backgrounds/processed/title/background.png`があればそれを、無ければホーム画面のものを流用する
+- `TitleLogo`(`scripts/ui/title_logo.gd`、`Control._draw()`のみのコード描画):ロゴ画像が未配置のときの代替表示。金の面と影を1pxずらして重ね、濃紺の`draw_string_outline()`で縁取る。上の砂時計の紋章は`UiPaint.draw_emblem()`で、ActionMenuのボタンと同じ絵柄を使う。色は`UiPalette`経由
+- `SandTransition`(`scripts/ui/sand_transition.gd`、`Control._draw()`のみのコード描画):タイトルからホームへ移るときだけ使う専用トランジション(GameDesign.md 9章)。`Main`が`_ready()`で1個生成して最前面へ置き、`cover()`(砂が上から降りて画面を覆う)と`reveal()`(砂が下へ抜ける)をawaitして使う。砂の層は、砂面を`EDGE_SEGMENTS`分割した折れ線と奥側の辺で作る四辺形へ**頂点カラーのグラデーション**を乗せて塗る(段ごとの単色塗りだと境目が縞に見えるため)。**アンカーは`set_anchors_preset()`ではなく`anchor_right`/`anchor_bottom`への直接代入で設定する**。`set_anchors_preset()`は「今の矩形を保つように」offsetを計算し直すため、コードで生成した直後(サイズ0)のノードへ使うと0サイズのまま固定され、何も描かれない。砂が出ている間は`mouse_filter = STOP`で下の画面の操作も塞ぐ
+- `Main`:画面切り替え(`_show_only()`)はハードカットではなくクロスフェードで行う。**ただしタイトル→ホームだけは`_on_title_start_requested()`が「ロゴの演出→`SandTransition.cover()`→`_show_only()`→`SandTransition.reveal()`」の順に進める**(クロスフェード自体は砂の下で起きるため見えない)。表示中の画面と次の画面の`modulate:a`をTweenで補間し、実行中のTweenは新しい遷移の開始時に必ずkillしてから作り直すことで連打・割り込みに耐える。遷移中は透明な`ColorRect`ブロッカーを最前面に重ねて全画面の入力を塞ぐ
 - `HourglassSlot`:1マス分の表示。`HourglassInstance` の状態を受け取ってイラスト差し替え・ロック等のアイコンオーバーレイを行う
 - `GameBoard`:`OpponentRow`/`OwnRow` は `GameBoard` 直下の子として絶対座標配置する(手番側の列を琥珀色の帯で光らせる `OpponentRowFrame`/`OwnRowFrame`(`Panel`)は、盤面が見づらいというユーザー指摘を受けて廃止した。旧構成では両`BoardRow`がこれらの`Panel`の子だったため、廃止時は行を`GameBoard`直下へ再親付けし、offsetを「旧フレームの位置+行のローカルoffset」から`GameBoard`ローカルのoffsetへ変換して見た目の位置を変えずに移設した)。手番の表示は `MatchScreen` 上部バーのテキスト(「先手/後手のターン」「あなたの番です」等)のみで行う。操作可否は `set_interactive()` で切り替え、`MatchScreen` が `GameBoard.set_interactive(_can_act())` を毎回の表示更新時に呼んで伝播させる。**控え(`OpponentBenchGroup`/`OwnBenchGroup`)はGameBoardから撤去済み**(GameDesign.md 9章「HPバーの横に5個分のスロット」)で、`GameBoard`は場の3+3マス(`opponent_row`/`own_row`)のみを扱う。`get_slot_rect()`/`_slot_at()`は`OPPONENT_BOARD`/`OWN_BOARD`のみに対応し、`ActionMenu.SelectionType.BENCH`は扱わない(控えの矩形取得は`HourglassSlotStrip.get_bench_slot_rect()`が担う)
 - `HourglassSlotStrip`(`scenes/hourglass_slot_strip.tscn`/`scripts/ui/hourglass_slot_strip.gd`):片方のプレイヤーの砂時計5個をHPバー横にまとめて表示するコンポーネント(GameDesign.md 9章)。内部は`HourglassSlot`×5の`HBoxContainer`で、先頭`GameState.BOARD_SIZE`枠は場に出ている駒の参照専用「ゴースト」表示(`HourglassSlot.show_deployed()`。常に上向きイラストを固定表示し、バッジ・台座光は出さず`set_interactive(false)`で常時非操作にする)、続く`GameState.BENCH_SIZE`枠が実際の控え(既存の`set_bench_mode(true)`表示を流用し、押すと`bench_pressed(bench_index)`を発火する。`bench_index`はスロット配列上の`GameState.BOARD_SIZE`分のオフセットを差し引いた0/1で、そのまま`GameState.swap_in()`の`bench_index`引数と一致する)。`MatchScreen`は`OpponentSlotStrip`/`OwnSlotStrip`の2個を直接保持し、`refresh_view()`で`state.board[side]`/`state.bench[side]`を渡して`show_state()`を呼ぶ。相手側は交代アクションの導線が存在しないため、`_ready()`で`opponent_slot_strip.set_interactive(false)`を1度呼ぶだけで恒久的に非操作(ホバー無し)にしている
@@ -512,8 +516,10 @@ Web配信ではpckのサイズがそのままロード時間に直結するた�
 - 音源は**CC0(パブリックドメイン)ライセンスの外部フリー素材**を使う(GameDesign.md 9章)。効果音は `assets/sfx/`、BGMは `assets/bgm/` に置く。**取り込んだ素材の出所・作者・ライセンスは `assets/CREDITS.md` に必ず記録する**。CC0なので表示義務はないが、後から「この音はどこから来たのか」を追えないと、ライセンスの再確認も差し替えもできなくなるため
 - **BGMは `MusicPlayer`(`scripts/logic/music_player.gd`、`RefCounted` 継承のstaticクラス)が担当し、`SoundBank` とは別クラスに分ける**。効果音が「1発鳴らして終わり」なのに対し、BGMはクロスフェード・ループ・自動再生制限の解除といった継続的な状態を持つため、同じクラスへ同居させると `SoundBank` が肥大化する。`ensure_ready(parent)` で `AudioStreamPlayer` を2本(クロスフェードで鳴り替えるため)生成する流儀は `SoundBank` と揃える
 - **音量の単一情報源は `SoundBank` 側に置き続ける**。`_sfx_volume` と `_bgm_volume` の2つを持ち、`user://sound_settings.json` へ両方を保存する(旧形式の単一キー `volume` を見つけた場合は両系統の初期値として読み、次回保存時に新形式へ移行する)。`MusicPlayer` は自前で音量を永続化せず、`SoundBank.get_bgm_volume()` を参照し、`SoundBank.set_bgm_volume()` が `MusicPlayer.apply_volume()` を呼んで反映する。設定の読み書きを2クラスに分散させると、同じJSONファイルを互いに上書きし合うため
-- **BGMの切り替えは `Main._show_only()`(画面切り替えのハブ)から1箇所で行う**。遷移先が `MatchScreen` なら対局曲、それ以外はホーム曲を指定する。画面ごとに個別へ `MusicPlayer.play()` を書き散らさない
+- **BGMの切り替えは `Main._show_only()`(画面切り替えのハブ)から1箇所で行う**。遷移先に応じた曲は `Main._track_for()` が決める(`MatchScreen`なら対局曲、`TitleScreen`ならタイトル曲、それ以外はホーム曲)。画面ごとに個別へ `MusicPlayer.play()` を書き散らさない
 - **クラシック曲はシームレスにループしない**ため、`AudioStreamPlayer.finished` を購読し、数秒の間を置いてから頭へ戻す「アルバム再生」方式で繰り返す。インポート設定でループを有効にすると `finished` が発火しなくなるため、**実行時に `stream.loop = false` を明示する**
+- **曲の終端の `TAIL_FADE` 秒前から音量を絞る**(GameDesign.md 9章)。再生開始時に `stream.get_length()` から逆算したタイマーを張り、発火時にまだ同じ曲が同じプレイヤーで鳴っていればフェードアウトを始める。タイトル曲のように**曲の途中を切り出した音源**でも切れ目が唐突に聞こえないようにするため。フェード中は `set_volume()` が音量を戻さないよう `_tail_fading` で守る
+- **タイトル曲は元の録音を再エンコードせず、Oggのページ境界でそのまま切り出して使う**。この環境には ffmpeg/oggenc が無く、また再エンコードは音質を落とすため。切り出しは「granule_position が目標サンプル数を超えたページまでを残し、最後のページへ EOS フラグを立ててCRCを再計算する」だけで、ページの中身には触れない
 - **ブラウザの自動再生制限に対応する**。`MusicPlayer.play()` は、最初のユーザー操作を検知するまで実際には鳴らさず、要求されたトラックを `_pending_track` として覚えておくだけにする。`Main` が最初のクリック/タップで `MusicPlayer.notify_user_gesture()` を呼び、そこで保留していたトラックの再生を始める
 - **結果画面ではBGMを止め、勝敗別の短いジングルを鳴らす**(GameDesign.md 9章)。`SoundBank.Sfx` の `RESULT` を `RESULT_WIN`/`RESULT_LOSE` の2つへ分け、`MatchResultPresenter` が勝敗に応じて鳴らし分ける
 

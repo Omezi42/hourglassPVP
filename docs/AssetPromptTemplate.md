@@ -164,6 +164,54 @@ cell size across the entire sheet.
 
 ---
 
+## タイトルロゴ生成用テンプレート
+
+タイトル画面(GameDesign.md 9章)のロゴ。ゲーム名は「砂時計アリーナ」で固定であり、
+毎日アプデで増えるものではないため1枚だけ生成すればよい。背景を透過させたい点は砂時計と
+同じなので、マゼンタ(#FF00FF)ベタ塗り+クロマキーの方式を踏襲する。
+
+**生成AIは日本語の字形を崩しやすい**ため、出力された「砂時計アリーナ」の7文字が正しく
+読めるかを必ず目視で確認する。崩れた場合は文字だけを別途組み、装飾のみを生成画像から
+使う運用でもよい。
+
+### 共通テンプレート
+
+```
+A single game title logo artwork for a Japanese fantasy game, centered on a wide canvas.
+
+The logo reads "砂時計アリーナ" in large, bold, perfectly legible Japanese characters,
+with a smaller English subtitle "HOURGLASS ARENA" beneath it, separated by a thin
+decorative horizontal rule with small diamond finials at both ends.
+
+Style: classic, regal, high-fantasy game title logo. Thick polished gold letterforms
+with beveled edges, warm amber highlights along the top of each stroke, a deep navy-blue
+outline around every character, and a soft drop shadow. Golden laurel branches curve
+upward along the left and right sides of the text. An ornate glowing hourglass stands
+behind the center of the title, its golden sand swirling upward and around the letters.
+Symmetrical ornamental filigree, grand and solemn, no clutter.
+
+IMPORTANT: the area OUTSIDE the logo artwork (the entire background) must be a single
+flat solid color: pure magenta (#FF00FF), completely uniform, no gradient, no texture,
+no pattern, no shadow. This magenta will be removed later via chroma key. Do not use
+magenta or pink anywhere inside the logo artwork itself.
+
+wide canvas, roughly 16:6 aspect ratio, no watermark, no border frame, crisp clean edges,
+high resolution, game asset style.
+```
+
+### 取り込み後の運用
+
+1. ユーザーがマゼンタを透過処理したPNGを `assets/title/logo.png` として配置する
+   (中間ディレクトリを作らないのは、この画像が1枚きりで状態違いや加工前後を持たないため)
+2. 配置した時点で `TitleScreen` が自動的にコード描画のロゴから画像へ切り替える。
+   コード変更は不要
+
+タイトル画面の背景は、別に用意する場合は「UI背景テンプレート」で生成し
+`assets/backgrounds/processed/title/background.png` へ置く。無い場合はホーム画面の背景を
+そのまま使うため、必須ではない。
+
+---
+
 ## 既知の注意点
 
 - 生成される画像はスプライトシート1枚(横3コマ、上向き/落下中/落ちきりの順)を想定

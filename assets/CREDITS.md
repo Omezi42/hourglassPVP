@@ -39,10 +39,16 @@ CC0 1.0 Universal であることを確認済み。
 
 | ファイル | 曲 | 演奏 | 出所 | ライセンス |
 |---|---|---|---|---|
+| `title.ogg` | ムソルグスキー「展覧会の絵」より「キエフの大門」 | 演奏者不明(musopen.org 提供) | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Modest_Mussorgsky_-_pictures_at_an_exhibition_-_x._la_grande_porte_de_kiev_-_allegro_alla_breve._maestoso._con_grandezza.ogg)(出所は musopen.org) | パブリックドメイン |
 | `home.ogg` | エリック・サティ「ジムノペディ第1番」 | Robin Alciatore | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Erik_Satie_-_gymnopedies_-_la_1_ere._lent_et_douloureux.ogg)(出所は musopen.org) | パブリックドメイン(録音者による放棄) |
 | `match.ogg` | J.S.バッハ「ゴルトベルク変奏曲 BWV988」アリア | Kimiko Ishizaka | [Open Goldberg Variations](https://opengoldbergvariations.org/) / [Internet Archive](https://archive.org/details/The_Open_Goldberg_Variations-11823) | CC0 |
 
 Open Goldberg Variations は、Kickstarterで資金を集めて録音と楽譜をまるごとCC0で公開した企画。
+
+`title.ogg` は元の録音(5分28秒・7.0MB)の**冒頭100秒をOggのページ境界でそのまま切り出したもの**
+(2.1MB)。タイトル画面はすぐに抜ける画面であり、曲の全長をpckへ入れるとWeb配信のロード時間に
+見合わないため。再エンコードはしていないので音質は元のまま。切り口は`MusicPlayer`側の
+末尾フェードアウトで滑らかにしている。
 
 ## 砂時計イラスト・背景イラスト
 
