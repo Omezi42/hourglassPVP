@@ -21,13 +21,15 @@ func show_data(data: HourglassData) -> void:
 	icon.texture = data.icon_upright
 	name_label.text = data.display_name
 	damage_label.text = "落下ダメージ: %d" % data.fall_damage
-	if data.effects.is_empty():
-		effects_label.text = "追加効果なし"
+	if data.effects.is_empty() and not data.has_skill():
+		effects_label.text = "スキル・追加効果なし"
 	else:
 		var lines: Array[String] = []
+		if data.has_skill():
+			lines.append(EffectText.describe_skill(data.skill))
 		for effect in data.effects:
 			lines.append(EffectText.describe(effect))
-		effects_label.text = "\n".join(lines)
+		effects_label.text = "\n\n".join(lines)
 
 
 ## 未選択状態の見た目に戻す。枠だけ空で残ると何の領域か分からないため、
