@@ -241,6 +241,13 @@ Main
 - `MatchResultPresenter`:結果パネルの登場演出に加えて、勝敗テキストの組み立てそのもの(`show_for(winner)`)を持つ。
 - `MatchActionPresenter`:反転/移動/交代が適用された直後の演出を担う。処理順序は(1)盤面を新しい状態へ同期、(2)対象マスへスポットライト、(3)対局ログの文言表示、(4)移動/交代は駒を滑り込ませる、(5)短い間を置いてスポットライトを解除。
 - `MatchBoardCamera`:ターン終了時の解決演出で盤面だけをズーム/パンさせる。
+- `MatchScreen._reset_mode(kind)`:5つの `start_*` が繰り返していたモードのフラグ初期化
+  (`_is_online`/`_is_replay`/`_is_spectate`/`_is_cpu_match`/`_match_kind`/`_online_match`)を
+  1箇所へまとめたもの。呼び出し側は自分のモードにあたる1行だけを上書きする。
+  `_match_kind` は砂金の獲得量を決める対局の種別(GameDesign.md 15章)で、
+  ローカル対戦・観戦・リプレイ再生は `NONE`(報酬の対象外)。オンライン対戦は配置
+  フェーズへ入る時点で ROOM / RANDOM が決まるため、`start_online_match()` は
+  `_reset_mode(_match_kind)` として引き継ぐ
 - `MatchReplayController`:リプレイ再生モードの棋譜保持と再生制御を`MatchScreen`から切り出したもの。
 - `PlayerStatusBar`:1プレイヤー分のHPバー・HP数値・持ち時間をまとめた行。相手用・自分用の2つを `MatchScreen` の上部・下部にそれぞれ配置する。どちらの視点かは `MatchScreen` 側が決め、このシーン自体は「渡された値を表示するだけ」に留める
 - `resources/theme/content_panel.tres`(`StyleBoxFlat`):対局画面の石のボードパネル(`board_panel.tres`)と同系統の質感を持つ、一覧・詳細・操作エリア向けの汎用コンテンツパネル。背景イラストの上に情報を置く各画面(デッキ一覧・デッキ編集・砂時計一覧・配置画面・リプレイ一覧等)の主要ブロックに共通適用する
@@ -586,10 +593,18 @@ GameDesign.md 14章(アカウント)・15章(通貨)の実装方針。認証は 
   持たずに「アカウントの記録」として成立する
 - **保持件数の上限(30件)をアカウント単位に変える**。`ReplayService._enforce_retention()` は
   終了済みマッチをアプリ全体で古い順に消しており、プレイヤーが増えると他人の記録を
-  消してしまう。自分が対局したマッチだけを対象に数え直す
+  消してしまう。`list_replays()` が返す「自分の対局だけ・新しい順」の並びをそのまま使い、
+  上限より後ろを消す。これに伴い `FirestoreClient.query_finished_matches_oldest_first()` は
+  参照0件になったため削除した
 - CPU戦のリプレイ(`LocalReplayService`、`user://cpu_replays.json`)は保存先をローカルの
   まま維持し、レコードへ `owner_uid` を足して一覧で自分のものだけを出す。アカウントを
-  切り替えたときに他のアカウントの記録が混ざらないようにするため
+  切り替えたときに他のアカウントの記録が混ざらないようにするため。**保持上限も所有者ごとに
+  数え**、別のアカウントの記録を巻き添えで消さない。`owner_uid` を持たないレコード
+  (アカウント機能の導入前に保存されたもの)は、いま遊んでいるアカウントのものとして扱う。
+  サインインできておらず `owner_uid` が空のときは、絞り込む基準が無いため全件返す
+- 相手の表示名は `AccountService.fetch_display_name()` が `players/{uid}` から引き、
+  uidごとにキャッシュする。対局画面のHPバー(`PlayerStatusBar.setup()`)と
+  リプレイ一覧のカードが使う。未設定・取得失敗なら従来どおり「自分」「相手」に落とす
 
 ### 10.5 UI
 

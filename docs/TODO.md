@@ -319,36 +319,57 @@ GameDesign.md 9章に演出の仕様を追記済み。
 
 ### AH群: アカウント
 
-- [ ] **AH-1 `AccountStore` を追加する**(`user://account.json`)。`refresh_token`・`uid`・
-  最後に使ったID・未反映の砂金を保持する。**パスワードは保存しない**。`DeckSave` と同じ
-  static のみの流儀に揃える
-- [ ] **AH-2 `FirebaseAuth` を拡張する**。起動時の `refresh_token` による復帰、
-  ID/パスワードでの登録(`accounts:signUp`)・ログイン(`accounts:signInWithPassword`)・
-  匿名からのリンク(`accounts:update`、uid を保ったまま昇格)を追加する。IDは
-  `<id>@hourglass-arena.local` へ変換して渡し、重複は `EMAIL_EXISTS` で判定する
-- [ ] **AH-3 `AccountService` を追加する**(`players/{uid}`)。表示名・砂金の残高・
-  CPU戦の日次カウントの読み書き。残高の加算は `updateTime` を前提条件にした
-  `commit()` + 再試行で行う
-- [ ] **AH-4 `AccountScreen` を追加する**。状態表示・表示名変更・登録・ログイン・
-  ログアウト。共通 `ScreenHeader` に従う。入口はタイトル画面とホーム画面の2つ
+- [x] **AH-1 `AccountStore` を追加した**(`user://account.json`)。`refresh_token`・`uid`・
+  最後に使ったID・未反映の砂金を保持する。**パスワードは保存しない**
+- [x] **AH-2 `FirebaseAuth` を拡張した**。起動時の `refresh_token` による復帰
+  (`restore_session()`)、ID/パスワードでの登録・ログイン、匿名からのリンク。IDは
+  `<id>@hourglass-arena.local` へ変換して渡すため、重複チェックはFirebase側の
+  アドレスの一意性がそのまま効く(`EMAIL_EXISTS`で判定)
+- [x] **AH-3 `AccountService` を追加した**(`players/{uid}`)。残高の加算は
+  `updateTime` を前提条件にした `commit()` + 再試行。失敗分は `AccountStore` へ退避する
+- [x] **AH-4 `AccountScreen` を追加した**。タイトル画面の右下とホーム画面の左上から開く。
+  パネルは内容に合わせて縮むため、登録済みで入力欄が消えても余白が空かない
 
 ### AI群: 通貨
 
-- [ ] **AI-1 `CurrencyRules` を追加する**。報酬表と、手数10手未満・CPU戦の日次上限10戦の判定
-- [ ] **AI-2 対局種別を `MatchScreen` まで伝える**。ランダムマッチとルームマッチを
-  区別していないため、`HomeScreen.online_match_found` と
-  `MatchScreen.start_placement_then_online()` に種別を足す
-- [ ] **AI-3 終局時に付与し、結果パネルへ表示する**。対象外だった場合はその理由を1行で示す
-- [ ] **AI-4 ホーム画面のヘッダーに残高と表示名を出す**
+- [x] **AI-1 `CurrencyRules` を追加した**。報酬表と、手数10手未満・CPU戦の日次上限10戦の判定
+- [x] **AI-2 対局種別を `MatchScreen` まで伝えた**。`online_match_found` に `is_room` を足し、
+  `BattleTab._on_matched()` が `_room != null` で経路を判別する
+- [x] **AI-3 終局時に付与し、結果パネルへ表示した**。判定はキャッシュから即座に行い、
+  実際の加算(通信)は待たない。オフラインのCPU戦で結果表示が止まらないようにするため
+- [x] **AI-4 ホーム画面の左上に表示名と残高を出した**。対局から戻るたびに描き直す
 
 ### AJ群: リプレイの紐づけと後始末
 
-- [ ] **AJ-1 保持件数の上限をアカウント単位にする**(`ReplayService._enforce_retention()`)
-- [ ] **AJ-2 CPU戦のリプレイに `owner_uid` を持たせ、一覧では自分のものだけを出す**
-- [ ] **AJ-3 リプレイ一覧・対局画面で相手の表示名を出す**(未設定なら従来どおり先手/後手)
-- [ ] **AJ-4 `firestore.rules` に `players/{uid}` を追加する**(本人のみ書き込み可、
-  表示名の参照のため読み取りはサインイン済みなら許可)
-- [ ] **AJ-5 テスト**(`tools/tests/account_tests.gd`。`run_tests.gd` は1000行の上限のため別ファイル)
+- [x] **AJ-1 保持件数の上限をアカウント単位にした**。`list_replays()` が返す
+  「自分の対局だけ・新しい順」をそのまま使い、上限より後ろを消す。これに伴い
+  `FirestoreClient.query_finished_matches_oldest_first()` は参照0件になったため削除した
+- [x] **AJ-2 CPU戦のリプレイに `owner_uid` を持たせた**。保持上限も所有者ごとに数える。
+  `owner_uid` を持たない既存レコードは、いま遊んでいるアカウントのものとして扱う
+  (アカウント機能の導入前に保存された16件が一覧から消えないようにするため)
+- [x] **AJ-3 相手の表示名を出した**。対局画面のHPバーとリプレイ一覧の対戦相手。
+  `AccountService.fetch_display_name()` がuidごとにキャッシュする
+- [x] **AJ-4 `firestore.rules` に `players/{uid}` を追加した**(読み取りはサインイン済みの
+  全員、書き込みは本人のみ)
+- [x] **AJ-5 テスト**(`tools/tests/account_tests.gd`)。入力検証・合成アドレスの正規化・
+  報酬の判定・`AccountStore` の往復・CPU戦リプレイの所有者分離を検証する
+
+### 残っている作業(ユーザー側の操作が必要)
+
+- [ ] **Firebase コンソールで「メール/パスワード」プロバイダを有効化する**。
+  Authentication → Sign-in method から有効にしないと、登録・ログインが
+  `OPERATION_NOT_ALLOWED` で失敗する。コードからは行えない
+- [ ] **`firestore.rules` をFirebaseコンソールへ貼り付けて公開する**。
+  `players/{uid}` を追加したため、更新しないと残高・表示名の書き込みが拒否される
+
+### 検証できていないこと
+
+- **登録・ログイン・残高の加算の実通信**。2つのアカウントを同時に動かす必要があり、
+  かつ上記のコンソール操作が済んでいないため未実施。ロジック部分(入力検証・
+  合成アドレスの正規化・報酬の判定・退避の積み上げ・所有者の分離)はヘッドレス
+  テストで押さえてあるが、**Firebase側のエンドポイントを実際に叩いた確認はしていない**
+- リプレイ一覧に対戦相手の表示名が並んだ状態の見た目。文言の組み立てのみの変更のため
+  レンダリングでの確認は行っていない
 
 ### 進め方の注意
 
