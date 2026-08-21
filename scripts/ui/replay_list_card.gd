@@ -58,7 +58,7 @@ func _on_mouse_exited() -> void:
 
 ## CPU戦(source == "cpu")は自分が常に先手(側A)のローカル対局のため、player_a/player_bの
 ## uid比較は行わず常にis_a=trueとして扱う(GameDesign.md 13章)。
-func show_replay(doc: Dictionary, my_uid: String) -> void:
+func show_replay(doc: Dictionary, my_uid: String, opponent_name: String = "") -> void:
 	match_id = str(doc["id"])
 	var fields: Dictionary = doc["fields"]
 	var is_cpu: bool = str(fields.get("source", "")) == "cpu"
@@ -71,7 +71,12 @@ func show_replay(doc: Dictionary, my_uid: String) -> void:
 	var date_text := (
 		"%04d/%02d/%02d %02d:%02d" % [dt["year"], dt["month"], dt["day"], dt["hour"], dt["minute"]]
 	)
-	info_label.text = "%s　%s　[%s]" % [date_text, side_text, type_text]
+	# 相手の表示名が分かるならそれを出す。CPU戦は相手が固定のため「CPU」とする
+	var versus := "CPU" if is_cpu else opponent_name
+	if versus == "":
+		info_label.text = "%s　%s　[%s]" % [date_text, side_text, type_text]
+	else:
+		info_label.text = ("%s　%s　vs %s　[%s]" % [date_text, side_text, versus, type_text])
 	_apply_result(won)
 
 	_fill_row(own_deck_row, fields.get("deck_a" if is_a else "deck_b", []))

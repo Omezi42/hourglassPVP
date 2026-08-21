@@ -52,8 +52,24 @@ func refresh() -> void:
 		var card: ReplayListCard = REPLAY_CARD_SCENE.instantiate()
 		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		list_container.add_child(card)
-		card.show_replay(doc, NetSession.auth.uid)
+		var opponent_name := ""
+		if ok:
+			opponent_name = await AccountService.fetch_display_name(
+				NetSession.client, _opponent_uid_of(doc, uid)
+			)
+		card.show_replay(doc, uid, opponent_name)
 		card.card_pressed.connect(func(match_id: String) -> void: replay_selected.emit(match_id))
+
+
+## そのリプレイでの対戦相手のuid。CPU戦は相手が存在しないため空文字を返す。
+## 同じ相手が何度も出てもAccountService側がキャッシュするため、通信は1人につき1回で済む。
+static func _opponent_uid_of(doc: Dictionary, my_uid: String) -> String:
+	var fields: Dictionary = doc["fields"]
+	if str(fields.get("source", "")) == "cpu":
+		return ""
+	var player_a := str(fields.get("player_a", ""))
+	var player_b := str(fields.get("player_b", ""))
+	return player_b if player_a == my_uid else player_a
 
 
 func _show_empty(text: String) -> void:

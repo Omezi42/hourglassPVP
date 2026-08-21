@@ -128,8 +128,7 @@ func _ready() -> void:
 	# 相手のスロットは参照専用(操作を受け付ける導線が存在しない)ため、ホバー表現も出さない
 	opponent_slot_strip.set_interactive(false)
 	action_menu.show_for_selection(ActionMenu.SelectionType.NONE)
-	opponent_status.setup("相手")
-	own_status.setup("自分")
+	_apply_player_names("")
 	result_overlay.visible = false
 	surrender_button.visible = false
 	surrender_confirm.visible = false
@@ -265,10 +264,12 @@ func start_placement_then_online(
 	own_deck: Array[HourglassData],
 	match_id: String,
 	my_side: GameState.PlayerSide,
-	is_room: bool = false
+	is_room: bool = false,
+	opponent_uid: String = ""
 ) -> void:
 	_reset_mode(CurrencyRules.MatchKind.ROOM if is_room else CurrencyRules.MatchKind.RANDOM)
 	_placement.begin_online(own_deck, match_id, my_side)
+	_apply_player_names(opponent_uid)
 
 
 ## 保存済みのmatches/{match_id}を読み込み、再生モードで開始する。
@@ -353,6 +354,20 @@ func start_spectate(match_id: String, client: FirestoreClient) -> void:
 
 ## 各start_*の冒頭で、モードのフラグをまとめて既定(ローカル対戦)へ戻す。
 ## 呼び出し側は自分のモードにあたる1行だけを上書きする。
+## HPバーの名前を、アカウントの表示名(GameDesign.md 14章)で置き換える。
+## 未設定・取得できない場合は従来どおり「自分」「相手」のままにする。
+## 相手の表示名は通信を伴うため、待っている間も既定の呼び方で成立させる。
+func _apply_player_names(opponent_uid: String) -> void:
+	var own_name := AccountService.display_name()
+	own_status.setup(own_name if own_name != "" else "自分")
+	opponent_status.setup("相手")
+	if opponent_uid == "" or NetSession.client == null:
+		return
+	var name: String = await AccountService.fetch_display_name(NetSession.client, opponent_uid)
+	if name != "":
+		opponent_status.setup(name)
+
+
 func _reset_mode(kind: CurrencyRules.MatchKind) -> void:
 	_stop_online_match()
 	_is_online = false

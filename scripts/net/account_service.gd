@@ -13,11 +13,14 @@ const DISPLAY_NAME_MAX_LENGTH := 10
 
 ## 直近に読み込んだプロフィール。キーは `players/{uid}` のフィールドと同じ。
 static var _profile: Dictionary = _empty_profile()
+## 他プレイヤーの表示名(uid -> 表示名)。同じ相手を何度も引かないために持つ。
+static var _name_cache: Dictionary = {}
 
 
 ## ログアウト・ログインでアカウントが変わったときに呼ぶ。
 static func reset() -> void:
 	_profile = _empty_profile()
+	_name_cache.clear()
 
 
 static func display_name() -> String:
@@ -115,6 +118,25 @@ static func grant(client: FirestoreClient, uid: String, amount: int, is_cpu: boo
 	# 競合が続いた・通信に失敗した。獲得分は手元に残して次回へ回す
 	AccountStore.add_pending_currency(amount)
 	return currency()
+
+
+## 他プレイヤーの表示名を引く(GameDesign.md 14章)。未設定・取得失敗なら空文字を返し、
+## 呼び出し側が「相手」などの既定の呼び方へ落とす。同じuidは2度読まない。
+static func fetch_display_name(client: FirestoreClient, uid: String) -> String:
+	if uid == "":
+		return ""
+	if uid == _current_uid():
+		return display_name()
+	if _name_cache.has(uid):
+		return str(_name_cache[uid])
+	var fields: Dictionary = await client.get_document(_path(uid))
+	var name := str(fields.get("display_name", ""))
+	_name_cache[uid] = name
+	return name
+
+
+static func _current_uid() -> String:
+	return NetSession.auth.uid if NetSession.auth != null else ""
 
 
 static func _path(uid: String) -> String:

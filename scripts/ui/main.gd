@@ -215,9 +215,11 @@ func _on_deck_editor_back() -> void:
 
 
 func _on_online_match_found(
-	match_id: String, my_side: GameState.PlayerSide, _opponent_uid: String, is_room: bool
+	match_id: String, my_side: GameState.PlayerSide, opponent_uid: String, is_room: bool
 ) -> void:
-	match_screen.start_placement_then_online(MatchSetup.player_deck, match_id, my_side, is_room)
+	match_screen.start_placement_then_online(
+		MatchSetup.player_deck, match_id, my_side, is_room, opponent_uid
+	)
 	_match_return_screen = home_screen
 	_show_only(match_screen)
 
