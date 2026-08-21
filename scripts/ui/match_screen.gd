@@ -83,7 +83,7 @@ var _replay: MatchReplayController
 @onready var result_button_row: HBoxContainer = $ResultOverlay/CenterBox/Panel/Margin/VBox/ButtonRow
 @onready var result_home_button: Button = result_button_row.get_node("HomeButton")
 @onready var result_log_button: Button = result_button_row.get_node("LogButton")
-@onready var back_button: Button = $BackButton
+@onready var back_button: Button = top_bar_row.get_node("BackButton")
 @onready
 var match_menu_controls: HBoxContainer = bottom_bar_row.get_node("BottomMiddle/MatchMenuControls")
 @onready var surrender_button: Button = match_menu_controls.get_node("SurrenderButton")
@@ -410,8 +410,8 @@ func _start_common(
 	_clock = MatchClock.new()
 	_clock.time_out.connect(_on_clock_time_out)
 	_clock.start_turn(state.current_turn)
-	opponent_status.set_clock_visible(not _is_cpu_match)
-	own_status.set_clock_visible(not _is_cpu_match)
+	opponent_status.set_clock_visible(not _is_cpu_match and not _is_replay)
+	own_status.set_clock_visible(not _is_cpu_match and not _is_replay)
 
 	refresh_view()
 

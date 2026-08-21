@@ -17,6 +17,7 @@ signal placement_slot_pressed(index: int)
 signal info_requested(index: int)
 
 var _placement_mode := false
+var _bench_divider: BenchDivider
 
 @onready var slots: Array[HourglassSlot] = [$Deployed0, $Deployed1, $Deployed2, $Bench0, $Bench1]
 
@@ -25,11 +26,23 @@ func _ready() -> void:
 	for i in range(slots.size()):
 		slots[i].slot_pressed.connect(_on_slot_pressed.bind(i))
 		slots[i].info_requested.connect(_on_slot_info_requested.bind(i))
+	_build_bench_divider()
 	_apply_match_mode()
+
+
+## 場と控えの境目の仕切りは、5枠の並びに1本挟むだけで意味が決まるためシーンには持たせず、
+## ここでBOARD_SIZE番目の位置へ差し込む(枠数はGameStateの定数から決まるため)。
+func _build_bench_divider() -> void:
+	_bench_divider = BenchDivider.new()
+	_bench_divider.name = "BenchDivider"
+	add_child(_bench_divider)
+	move_child(_bench_divider, GameState.BOARD_SIZE)
 
 
 ## 対局フェーズの既定の見た目(場3枠=参照専用ゴースト、控え2枠=交代の起点)に戻す。
 func _apply_match_mode() -> void:
+	if _bench_divider != null:
+		_bench_divider.visible = true
 	for i in range(GameState.BOARD_SIZE):
 		slots[i].set_interactive(false)
 	for i in range(GameState.BENCH_SIZE):
@@ -96,6 +109,9 @@ func show_placement_hand(
 	deck: Array[HourglassData], placed_ids: Array[String], selected_id: String = ""
 ) -> void:
 	_placement_mode = true
+	# 配置フェーズの5枠はすべて対等な手札で、まだ場と控えに分かれていない
+	if _bench_divider != null:
+		_bench_divider.visible = false
 	for i in range(slots.size()):
 		if i >= deck.size() or placed_ids.has(deck[i].id):
 			slots[i].clear()
