@@ -41,6 +41,9 @@ func _ready() -> void:
 	]
 	_transition_blocker = _make_transition_blocker()
 	add_child(_transition_blocker)
+	# 対局画面から戻る先は各導線が設定するが、設定される前に戻る操作が起きても
+	# 落ちないよう既定をホームにしておく
+	_match_return_screen = home_screen
 	home_screen.online_match_found.connect(_on_online_match_found)
 	home_screen.deck_list_requested.connect(_on_deck_list_requested)
 	home_screen.hourglass_list_requested.connect(_on_hourglass_list_requested)

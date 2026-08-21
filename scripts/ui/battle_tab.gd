@@ -107,9 +107,15 @@ func _stop_busy_dots() -> void:
 func _sign_in_or_fail() -> bool:
 	var ok: bool = await NetSession.sign_in()
 	if not ok:
-		status_label.text = "通信に失敗しました(%s)。もう一度お試しください" % NetSession.last_error
-		_set_busy(false)
+		_fail("通信に失敗しました。もう一度お試しください")
 	return ok
+
+
+## 失敗の理由を表示して待機状態を解く。_set_busy(false)は最後にrefresh()を呼んで
+## 定型文でstatus_labelを上書きするため、文言はその後に入れないと表示されない。
+func _fail(message: String) -> void:
+	_set_busy(false)
+	status_label.text = message
 
 
 ## デッキ選択画面での確定後にMainから呼ばれる。ランダムマッチのキューへ参加する。
@@ -198,8 +204,7 @@ func _on_spectate_ready(match_id: String) -> void:
 
 func _on_spectate_failed(reason: String) -> void:
 	var message := "コードが見つかりません" if reason == "not_found" else "対局がまだ始まっていません"
-	status_label.text = "観戦できませんでした(%s)" % message
-	_set_busy(false)
+	_fail("観戦できませんでした(%s)" % message)
 
 
 func _on_room_created(code: String) -> void:
@@ -207,8 +212,21 @@ func _on_room_created(code: String) -> void:
 
 
 func _on_join_failed(reason: String) -> void:
-	status_label.text = "参加に失敗しました(%s)" % reason
-	_set_busy(false)
+	_fail("参加に失敗しました(%s)" % _join_failure_message(reason))
+
+
+func _join_failure_message(reason: String) -> String:
+	match reason:
+		"not_found":
+			return "コードが見つかりません"
+		"full":
+			return "その部屋は既に埋まっています"
+		"race_lost":
+			return "ほぼ同時に別の人が参加しました"
+		"room_create_failed":
+			return "部屋を作成できませんでした"
+		_:
+			return reason
 
 
 func _on_matched(match_id: String, opponent_uid: String) -> void:
@@ -216,10 +234,16 @@ func _on_matched(match_id: String, opponent_uid: String) -> void:
 	cancel_button.visible = false
 	_stop_busy_dots()
 	var match_doc: Dictionary = await NetSession.client.get_document("matches/%s" % match_id)
-	var my_side: GameState.PlayerSide = (
-		GameState.PlayerSide.A
-		if match_doc.get("player_a", "") == NetSession.auth.uid
-		else GameState.PlayerSide.B
-	)
+	# 自分のuidがplayer_a/player_bのどちらとも一致しない場合、以前は黙って後手として
+	# 扱っていた。双方が後手になると互いのデッキを待ち続けて対局が始まらないため、
+	# ここで止めてやり直させる(マッチ成立の書き込みは原子的になったので通常は起きない)。
+	var my_side: GameState.PlayerSide
+	if match_doc.get("player_a", "") == NetSession.auth.uid:
+		my_side = GameState.PlayerSide.A
+	elif match_doc.get("player_b", "") == NetSession.auth.uid:
+		my_side = GameState.PlayerSide.B
+	else:
+		_fail("対戦相手との同期に失敗しました。もう一度お試しください")
+		return
 	status_label.text = "対戦相手が見つかりました!"
 	online_match_found.emit(match_id, my_side, opponent_uid)

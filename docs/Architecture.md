@@ -358,6 +358,71 @@ Web配信ではpckのサイズがそのままロード時間に直結するた�
 - 対局中の実際の手の送受信は `OnlineMatch` が担当し(導入済み)、`MatchScreen` は自分の操作を `OnlineMatch.send_and_apply` 経由で送信しつつ即座にローカル反映する
 - **投了は指し手と同じ`actions`配列の1件として送受信する**(`{"type": "surrender", "side": <投了した側>}`)。`OnlineMatch.apply()`のmatch文へ`"surrender"`分岐を1つ足し、`GameState.surrender(side)`を呼ぶだけで済むため、ポーリング・送信の仕組みを新設せずに相手へ伝わる。ただし投了は盤面を変えずに即終局する点で反転/移動/交代と性質が異なるため、**`MatchScreen`側では行動の演出(`MatchActionPresenter`)とターン交代(`_advance_turn_and_refresh()`)を行わない**(適用した時点で`match_ended`が発火し、以降の処理は結果パネルの表示に引き継がれる)。`actions`と`finished_at`/`winner`は同じドキュメントの別フィールドだが、`FirestoreClient.set_document()`が`updateMask`付きのPATCHでフィールド単位に書くため、投了側が両方をほぼ同時に書いても互いを打ち消さない
 
+### 6.1 通信の堅牢化(フェーズ26)
+
+自己検証で、オンライン対戦が「通信が理想的に成功し続ける場合しか成立しない」実装に
+なっていることが分かった。以下はいずれもその修正であり、ルール(GameDesign.md)は変えていない。
+
+- **HTTP通信は必ずタイムアウトを設定する**。`HTTPRequest.timeout`の既定値は0(無制限)で、
+  応答が返らないと`await request_completed`が永久に解決せず、その導線(サインイン・
+  マッチング・手の送信)が固まったまま復帰しない。生成・タイムアウト・一時的失敗の
+  リトライ・JSONのパースは`HttpJson`(`scripts/net/http_json.gd`、staticのみ)へ集約し、
+  `FirebaseAuth`と`FirestoreClient`の両方がこれを経由する。リトライの対象は
+  「応答が得られなかった/429/5xx」だけで、400番台は呼び出し側の判断が要るため再試行しない
+- **IDトークンを自動更新する**。Firebaseの匿名サインインで得るIDトークンは1時間で失効する。
+  更新の仕組みが無いと、長く遊んだセッションで以降のFirestore通信がすべて401で黙って失敗し、
+  画面上は「相手が指してこない」ようにしか見えない。`FirebaseAuth`が`refreshToken`と
+  有効期限を保持し、`ensure_fresh_token()`が期限の5分前から`securetoken.googleapis.com`で
+  更新する。`FirestoreClient`は全リクエストの前にこれを呼び、それでも401が返った場合は
+  1度だけ強制更新して再送する(クライアント時刻がずれている場合に備える)
+- **マッチ成立は1回のcommitで原子的に行う**。以前はキュー/ルームのclaimと
+  `matches/{id}`の`player_a`/`player_b`の書き込みが別々だったため、掴まれた側が
+  `match_id`を見て`matches/{id}`を読んだときにまだ空という窓があった。この窓に入ると
+  `BattleTab._on_matched()`の判定(`player_a == 自分のuid`なら先手)が両者ともfalseになり、
+  **双方が後手(side B)として`deck_b`を書き、互いに`deck_a`を待ち続けて対局が始まらない**。
+  `MatchmakingQueue`は「相手のキュー更新 + 自分のキュー更新 + `matches/{id}`の作成
+  (`exists:false`)」の3write、`RoomMatch`は「ルーム更新 + `matches/{id}`の作成」の2writeを
+  1つの`commit()`にまとめ、この窓自体を無くした
+- **キューに残った切断済みプレイヤーを掴まない**。ブラウザを閉じたプレイヤーのキュー
+  ドキュメントは残り続けるため、後から来た人がそれを掴んで永久に相手のデッキを待つ状態に
+  なっていた。`joined_at`が`STALE_SECONDS`より古い候補は掴まずに削除し、待機中の自分は
+  `HEARTBEAT_SECONDS`ごとに`joined_at`を更新して自分が生きていることを示す
+  (更新が頻繁だと相手のclaimの前提条件(`updateTime`)を無効化してしまうため、
+  ポーリング間隔より十分長い間隔にしている)
+- **手の送信を確実にする**。`OnlineMatch`は`actions`配列をread-modify-writeで書くが、
+  以前は`set_document()`の成否を見ておらず、失敗しても盤面だけ進んで相手と食い違っていた。
+  現在は`updateTime`を前提条件にした`commit()`へ変え、競合・失敗時はドキュメントを
+  読み直して再試行する。送信は`_send_queue`へ積んで1件ずつ処理し、順序と重複を保証する
+- **自分の手をポーリングが拾って二重適用する競合を無くす**。送信した手にはFirestoreへ
+  書く時点で`by`(自分のuid)を付け、ポーリング側は`by`が自分のものである手を配らない。
+  以前は「書き込み完了 → `_known_action_count`の更新」の間にポーリングの読み取りが
+  挟まると、自分の手が`action_received`として自分に返り、同じ手が2度適用されていた。
+  `by`は`OnlineMatch.apply()`もリプレイ再生も参照しない追加キーのため、既存の棋譜と互換性がある
+- **受け取った手は1ポーリングにつき1件だけ配る**。`MatchScreen._on_action_received()`は
+  予約マークの表示・解決演出で数秒awaitするため、同時に2件流し込むとターン進行が
+  二重に走る。残りは`_inbox`に留めて次のポーリングで配る
+- **終局・画面離脱でポーリングを止める**。以前は`stop()`が次の対局開始時にしか呼ばれず、
+  ホームへ戻った後もFirestoreを読み続けていた。`_on_match_ended()`(リプレイ保存の
+  書き込みの後)と、戻る/ホームへボタンの両方から止める。**停止したノードは解放しない**。
+  ポーリング・送信のコルーチンがawaitの途中で残っている可能性があり、解放すると
+  「Resumed function on a freed object」になるため。`_polling`をfalseにした時点で
+  以降は何もしない不活性なノードとして残す
+- **持ち時間の同期**(GameDesign.md 11章):送信する手に`clock`(送信側の残り時間)を添え、
+  受け取った側は`MatchClock.remaining[相手側]`をその値で上書きする。時間切れは
+  `{"type": "timeout", "side": ...}`を投了と同じ`actions`の1件として送る。相手の
+  申告が来ない(切断した)場合は、相手の残り時間が0になってから`OPPONENT_TIMEOUT_GRACE`
+  の猶予を置いて、待っている側の勝利として終局させる。この判定と通信状態の表示は
+  `MatchNetController`(`scripts/ui/match_net_controller.gd`、`_screen`参照を持つRefCounted)へ
+  切り出している(`match_screen.gd`が1000行の上限に近いため)
+- **対局開始前の中断**(GameDesign.md 11章):`OnlineSetup`に`cancel()`を持たせ、
+  ポーリングを即座に打ち切ったうえで`matches/{id}`へ`abandoned`を書く。待っている側は
+  `_poll_for_ids()`がこのフィールドを見つけた時点で待機をやめ、「対戦相手が対局を
+  取りやめました」を表示する。配置フェーズがオンラインのときだけ、対局画面の戻るボタンを
+  表示してこの導線を出す
+- **Firestoreのセキュリティルール**は`firestore.rules`にリポジトリ同梱で置く。
+  適用はFirebaseコンソール側の操作であり、このファイルは「何を許可する前提で
+  実装しているか」の記録として持つ
+
 ---
 
 ## 7. リプレイ・観戦の実装方針

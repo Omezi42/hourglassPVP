@@ -31,7 +31,13 @@ func create_room() -> void:
 	for _attempt in range(CREATE_RETRY_COUNT):
 		var code := _generate_code()
 		var created: bool = await client.create_document(
-			_doc_path(code), {"creator_uid": auth.uid, "joiner_uid": "", "match_id": ""}
+			_doc_path(code),
+			{
+				"creator_uid": auth.uid,
+				"joiner_uid": "",
+				"match_id": "",
+				"created_at": Time.get_unix_time_from_system()
+			}
 		)
 		if created:
 			_code = code
@@ -54,12 +60,25 @@ func join_room(code: String) -> void:
 
 	var creator_uid: String = room["fields"].get("creator_uid", "")
 	var new_match_id := MatchIdGenerator.generate()
+	# ルームの更新とmatches/{id}の作成を1回のcommitで原子的に行う。別書き込みにすると、
+	# 作成側がmatch_idを見てmatches/{id}を読んだときにplayer_a/player_bがまだ空という窓が
+	# でき、その窓に入ると双方が後手(side B)と判定されて対局が始まらない
+	# (Architecture.md 6.1節)。
 	var claimed: bool = await client.commit(
 		[
 			client.update_write(
 				_doc_path(code),
 				{"joiner_uid": auth.uid, "match_id": new_match_id},
 				{"updateTime": room["update_time"]}
+			),
+			client.update_write(
+				"matches/%s" % new_match_id,
+				{
+					"player_a": creator_uid,
+					"player_b": auth.uid,
+					"created_at": Time.get_unix_time_from_system()
+				},
+				{"exists": false}
 			)
 		]
 	)
@@ -67,9 +86,6 @@ func join_room(code: String) -> void:
 		join_failed.emit("race_lost")
 		return
 
-	await client.set_document(
-		"matches/%s" % new_match_id, {"player_a": creator_uid, "player_b": auth.uid}
-	)
 	_my_match_id = new_match_id
 	matched.emit(new_match_id, creator_uid)
 

@@ -3,6 +3,8 @@ extends Node
 
 var config: FirebaseConfig
 var auth: FirebaseAuth
+## 直近のリクエストが失敗したときの応答本文(UIへ理由を出すために保持する)。
+var last_error: String = ""
 
 
 func _init(p_config: FirebaseConfig, p_auth: FirebaseAuth) -> void:
@@ -61,9 +63,17 @@ func full_name(path: String) -> String:
 ## 各writeにcurrentDocumentの条件(exists/updateTime)を付けることで、
 ## 他クライアントによる競合更新があった場合は全体が失敗する(楽観ロック)。
 func commit(writes: Array) -> bool:
+	var result: Dictionary = await commit_detailed(writes)
+	return result["ok"]
+
+
+## commit()と同じだが、失敗の内訳(HTTPステータス)まで返す。呼び出し側が
+## 「前提条件が競合しただけ(読み直して再試行する)」と「通信そのものが失敗した
+## (時間を置く/諦める)」を区別する必要がある場合に使う。
+func commit_detailed(writes: Array) -> Dictionary:
 	var result: Array = await _post_raw(_base_url() + ":commit", {"writes": writes})
 	var response_code: int = result[0]
-	return response_code == 200
+	return {"ok": response_code == 200, "code": response_code}
 
 
 ## data内のフィールドのみを更新するWriteを組み立てる(他の既存フィールドは保持される)。
@@ -190,16 +200,22 @@ func _post_raw(url: String, body: Dictionary) -> Array:
 	return await _send(url, HTTPClient.METHOD_POST, JSON.stringify(body))
 
 
+## 送信はHttpJson経由で行い、タイムアウトと一時的失敗のリトライをそちらへ任せる
+## (Architecture.md 6.1節)。認証切れ(401)だけはここで1度トークンを更新して再送する。
 func _send(url: String, method: HTTPClient.Method, body_string: String) -> Array:
-	var headers := ["Content-Type: application/json", "Authorization: Bearer %s" % auth.id_token]
+	await auth.ensure_fresh_token()
+	var result: Array = await HttpJson.request_with_retry(
+		self, url, method, _headers(), body_string
+	)
+	if result[0] == 401:
+		await auth.force_refresh()
+		result = await HttpJson.request_with_retry(self, url, method, _headers(), body_string)
 
-	var request := HTTPRequest.new()
-	add_child(request)
-	request.request(url, headers, method, body_string)
-	var result: Array = await request.request_completed
-	request.queue_free()
+	last_error = "" if result[0] == 200 else str(result[2])
+	return [result[0], result[1]]
 
-	var response_code: int = result[1]
-	var response_body: PackedByteArray = result[3]
-	var parsed: Variant = JSON.parse_string(response_body.get_string_from_utf8())
-	return [response_code, parsed]
+
+func _headers() -> PackedStringArray:
+	return PackedStringArray(
+		["Content-Type: application/json", "Authorization: Bearer %s" % auth.id_token]
+	)

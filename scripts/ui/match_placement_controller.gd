@@ -19,6 +19,8 @@ var _busy := false
 
 var _online_setup: OnlineSetup = null
 var _online_match_id := ""
+## 対局が始まる前の待機を中断したかどうか(GameDesign.md 11章)。awaitを挟むたびに見る。
+var _cancelled := false
 var _my_side: GameState.PlayerSide = GameState.PlayerSide.A
 var _opponent_deck: Array[HourglassData] = []
 
@@ -77,7 +79,10 @@ func begin_online(
 	_kind = Kind.ONLINE
 	_my_side = my_side
 	_online_match_id = match_id
+	_cancelled = false
 	_enter(own_deck, [], "対戦相手のデッキを待っています...")
+	# 相手を待っている間はいつでも中断してホームへ戻れるようにする(GameDesign.md 11章)
+	_screen.back_button.visible = true
 
 	_online_setup = OnlineSetup.new(NetSession.client, match_id, my_side)
 	add_child(_online_setup)
@@ -86,17 +91,19 @@ func begin_online(
 	for hourglass_data in own_deck:
 		own_ids.append(hourglass_data.id)
 	await _online_setup.push_deck(own_ids)
+	if _cancelled:
+		return
 
 	var opponent_ids: Array[String] = await _online_setup.wait_for_opponent_deck()
+	if _cancelled:
+		return
 	if opponent_ids.is_empty():
-		_screen.turn_label.text = "対戦相手のデッキ取得がタイムアウトしました。通信状態を確認してください"
+		_screen.turn_label.text = _online_setup.abort_message()
 		return
 
 	var opponent_deck: Array[HourglassData] = []
 	for id in opponent_ids:
 		opponent_deck.append(MatchSetup.find_by_id(id))
-	_opponent_deck = opponent_deck
-
 	_opponent_deck = opponent_deck
 	_screen.turn_label.text = ("あなたは先手です" if my_side == GameState.PlayerSide.A else "あなたは後手です")
 	_screen.opponent_slot_strip.show_placement_hand(opponent_deck, [])
@@ -136,8 +143,21 @@ func _enter(
 	_refresh_view()
 
 
+## 対局が始まる前の待機を中断する(GameDesign.md 11章)。オンラインの配置フェーズ以外では
+## 何もしない。中断したことはOnlineSetup.cancel()がmatches/{id}へ書き残すため、待っている
+## 相手も「対戦相手が対局を取りやめました」として待機を抜けられる。
+func cancel_wait() -> void:
+	if not active or _kind != Kind.ONLINE or _cancelled:
+		return
+	_cancelled = true
+	if _online_setup != null:
+		_online_setup.cancel()
+	exit()
+
+
 func exit() -> void:
 	active = false
+	_screen.back_button.visible = false
 	_screen.placement_controls.visible = false
 	# 空きマスの配置候補ハイライトは対局中の移動先候補と同じ表現を流用しているため、
 	# 抜けるときに必ず消す(GameDesign.md 9章)
@@ -264,10 +284,14 @@ func _start_online(board_order: Array[HourglassData], bench: Array[HourglassData
 	for hourglass_data in board_order:
 		board_ids.append(hourglass_data.id)
 	await _online_setup.push_placement(board_ids)
+	if _cancelled:
+		return
 
 	var opponent_board_ids: Array[String] = await _online_setup.wait_for_opponent_placement()
+	if _cancelled:
+		return
 	if opponent_board_ids.is_empty():
-		_screen.turn_label.text = "対戦相手の配置取得がタイムアウトしました。通信状態を確認してください"
+		_screen.turn_label.text = _online_setup.abort_message()
 		_busy = false
 		_refresh_view()
 		return

@@ -6,6 +6,12 @@ signal matched(match_id: String, opponent_uid: String)
 const COLLECTION := "matchmaking_queue"
 const POLL_INTERVAL_SECONDS := 2.0
 const QUERY_LIMIT := 5
+## joined_atがこれより古い待機者は、ブラウザを閉じた等で既に居ないものとして扱う。
+## 掴んでしまうと、相手のデッキを永久に待つ状態になるため。
+const STALE_SECONDS := 60.0
+## 待機中に自分のjoined_atを更新する間隔。更新はupdateTimeを変えるため、相手のclaimの
+## 前提条件を無効化してしまう。ポーリング間隔より十分長くして衝突を避ける。
+const HEARTBEAT_SECONDS := 20.0
 
 var client: FirestoreClient
 var auth: FirebaseAuth
@@ -27,12 +33,14 @@ func join() -> void:
 	if not joined:
 		return
 
+	var last_heartbeat := Time.get_unix_time_from_system()
 	while not _cancelled and _my_match_id == "":
 		var found: bool = await _try_claim_or_check()
-		if found:
+		if found or _cancelled:
 			return
-		if _cancelled:
-			return
+		if Time.get_unix_time_from_system() - last_heartbeat >= HEARTBEAT_SECONDS:
+			last_heartbeat = Time.get_unix_time_from_system()
+			await client.set_document(_doc_path(), {"joined_at": last_heartbeat})
 		await get_tree().create_timer(POLL_INTERVAL_SECONDS).timeout
 
 
@@ -54,28 +62,53 @@ func _try_claim_or_check() -> bool:
 	for candidate in candidates:
 		if candidate["id"] == auth.uid:
 			continue
-		var new_match_id := MatchIdGenerator.generate()
-		var claimed: bool = await client.commit(
-			[
-				client.update_write(
-					_doc_path(candidate["id"]),
-					{"match_id": new_match_id},
-					{"updateTime": candidate["update_time"]}
-				),
-				client.update_write(
-					_doc_path(), {"match_id": new_match_id}, {"updateTime": mine["update_time"]}
-				)
-			]
-		)
+		if _is_stale(candidate):
+			await client.delete_document(_doc_path(candidate["id"]))
+			continue
+		var claimed: bool = await _claim(mine, candidate)
 		if claimed:
-			await client.set_document(
-				"matches/%s" % new_match_id, {"player_a": candidate["id"], "player_b": auth.uid}
-			)
-			return await _finalize_match(new_match_id, candidate["id"])
+			return await _finalize_match(_my_match_id, candidate["id"])
 		# 失敗時(相手または自分のドキュメントが競合更新された)は、次のポーリングで
 		# 最新状態から再試行する(古いmineのまま他候補を試さない)
 		return false
 	return false
+
+
+## 相手のキュー更新・自分のキュー更新・matches/{id}の作成を1回のcommitで原子的に行う。
+## 以前はmatches/{id}への書き込みだけ別だったため、掴まれた側がmatch_idを見て
+## matches/{id}を読んだときにplayer_a/player_bがまだ空という窓があり、その窓に入ると
+## 双方が後手(side B)と判定されて対局が始まらなかった(Architecture.md 6.1節)。
+func _claim(mine: Dictionary, candidate: Dictionary) -> bool:
+	var new_match_id := MatchIdGenerator.generate()
+	var claimed: bool = await client.commit(
+		[
+			client.update_write(
+				_doc_path(candidate["id"]),
+				{"match_id": new_match_id},
+				{"updateTime": candidate["update_time"]}
+			),
+			client.update_write(
+				_doc_path(), {"match_id": new_match_id}, {"updateTime": mine["update_time"]}
+			),
+			client.update_write(
+				"matches/%s" % new_match_id,
+				{
+					"player_a": candidate["id"],
+					"player_b": auth.uid,
+					"created_at": Time.get_unix_time_from_system()
+				},
+				{"exists": false}
+			)
+		]
+	)
+	if claimed:
+		_my_match_id = new_match_id
+	return claimed
+
+
+func _is_stale(candidate: Dictionary) -> bool:
+	var joined_at := float(candidate["fields"].get("joined_at", 0.0))
+	return Time.get_unix_time_from_system() - joined_at > STALE_SECONDS
 
 
 func _finalize_match(match_id: String, known_opponent_uid: String) -> bool:

@@ -5,6 +5,8 @@ extends SceneTree
 const SkillTests = preload("res://tools/tests/skill_tests.gd")
 const SoundSettingsTests = preload("res://tools/tests/sound_settings_tests.gd")
 const CpuStrategyTests = preload("res://tools/tests/cpu_strategy_tests.gd")
+const OnlineTests = preload("res://tools/tests/online_tests.gd")
+const OnlineMatchFlowTests = preload("res://tools/tests/online_match_flow_tests.gd")
 
 var _failures := 0
 var _hourglass_cache: Dictionary = {}
@@ -50,6 +52,10 @@ func _run() -> void:
 	SkillTests.new().run(_assert_true)
 	SoundSettingsTests.new().run(_assert_true)
 	CpuStrategyTests.new().run(_assert_true)
+	OnlineTests.new().run(_assert_true)
+	# 送受信の流れだけはawaitを挟むため、コルーチンの実行中に解放されないよう参照を持つ
+	var flow_tests := OnlineMatchFlowTests.new()
+	await flow_tests.run(_assert_true)
 
 	_test_local_replay_service_round_trips_and_enforces_retention()
 	_test_match_cpu_replay_recorder_saves_via_local_replay_service()

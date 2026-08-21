@@ -2,13 +2,32 @@ class_name OnlineMatch
 extends Node
 
 signal action_received(action: Dictionary)
+## 送受信が続けて失敗している/回復したことをUIへ伝える(GameDesign.md 11章)。
+signal connection_changed(online: bool)
 
-const POLL_INTERVAL_SECONDS := 2.0
+const POLL_INTERVAL_SECONDS := 1.5
+const POLL_BACKOFF_MAX := 8.0
+const POLL_BACKOFF_FACTOR := 1.6
+const SEND_RETRY_COUNT := 4
+const SEND_RETRY_DELAY := 0.5
+## これだけ連続で失敗したら「接続できていない」とみなす。1回の失敗で警告を出すと、
+## 一時的な遅延のたびに表示が点滅するため。
+const FAILURE_THRESHOLD := 2
 
 var client: FirestoreClient
 var match_id: String = ""
+var connected := true
 var _known_action_count: int = 0
 var _polling := false
+var _sending := false
+var _failures := 0
+var _my_uid := ""
+var _send_queue: Array = []
+## 受け取った手の待ち行列。MatchScreenは1手の受信につき予約マークの表示と解決演出で
+## 数秒awaitするため、同時に2件流し込むとターン進行が二重に走る。1ポーリングにつき
+## 1件だけ配る(Architecture.md 6.1節)。
+var _inbox: Array = []
+var _poll_delay := POLL_INTERVAL_SECONDS
 
 
 func _init(p_client: FirestoreClient) -> void:
@@ -20,24 +39,47 @@ func _init(p_client: FirestoreClient) -> void:
 func start(p_match_id: String, p_known_action_count: int = 0) -> void:
 	match_id = p_match_id
 	_known_action_count = p_known_action_count
+	_my_uid = client.auth.uid if client != null and client.auth != null else ""
 	_polling = true
 	_poll_loop()
 
 
+## ポーリングと送信を止める。**ノードの解放は行わない**。ポーリング・送信のコルーチンが
+## awaitの途中で残っている可能性があり、解放すると「Resumed function on a freed object」に
+## なるため。_pollingをfalseにした時点で以降は何もしない不活性なノードとして残す。
 func stop() -> void:
 	_polling = false
+	_send_queue.clear()
+	_inbox.clear()
 
 
-## 1手をGameStateへ反映し、同時に対戦相手へ送信する。
+func is_busy() -> bool:
+	return _sending or not _send_queue.is_empty()
+
+
+## 1手をGameStateへ反映し、同時に対戦相手へ送信する。送信の完了は待たない
+## (数秒の通信を待って盤面を止めると、指した手応えが失われるため)。届かなかった場合は
+## connection_changedで知らせる。
 func send_and_apply(action: Dictionary, state: GameState) -> void:
 	apply(action, state)
-	await _send(action)
+	send(action)
 
 
-## 1手をGameStateへ反映する。flip/move/swap_in/passは「その手番の行動」として設定するだけで
+## 1手を送信キューへ積む。順序と重複を保証するため、実際の書き込みは1件ずつ直列に行う。
+func send(action: Dictionary) -> void:
+	var payload := action.duplicate(true)
+	# 自分が書いた手をポーリングが拾って二重に適用しないための印(Architecture.md 6.1節)。
+	# OnlineMatch.apply()もリプレイ再生も参照しない追加キーのため、棋譜の互換性は保たれる。
+	payload["by"] = _my_uid
+	_send_queue.append(payload)
+	if not _sending:
+		_send_worker()
+
+
+## 1手をGameStateへ反映する。flip/skill/passは「その手番の行動」として設定するだけで
 ## 盤面は動かさず、実際の適用は続く state.advance_and_end_turn() の解決で行われる
-## (GameDesign.md 4.3・4.4)。surrenderのみ、盤面を変えずに即座に終局させる性質のため
-## 予約の対象にせず従来どおり即時に適用する。
+## (GameDesign.md 4.3・4.4)。surrender/timeoutのみ、盤面を変えずに即座に終局させる性質の
+## ため予約の対象にせず従来どおり即時に適用する。
 static func apply(action: Dictionary, state: GameState) -> void:
 	match action.get("type", ""):
 		"flip", "skill", "pass":
@@ -47,24 +89,99 @@ static func apply(action: Dictionary, state: GameState) -> void:
 			state.set_pending_action(action)
 		"surrender":
 			state.surrender(action["side"])
+		"timeout":
+			# 持ち時間切れは切れた本人が申告する(GameDesign.md 11章)。
+			state.force_match_end(state.other_side(action["side"]), GameState.EndReason.TIMEOUT)
 
 
-func _send(action: Dictionary) -> void:
-	var doc: Dictionary = await client.get_document("matches/%s" % match_id)
-	var actions: Array = doc.get("actions", [])
-	actions.append(action)
-	await client.set_document("matches/%s" % match_id, {"actions": actions})
-	_known_action_count = actions.size()
+func _path() -> String:
+	return "matches/%s" % match_id
+
+
+func _send_worker() -> void:
+	_sending = true
+	while not _send_queue.is_empty():
+		var payload: Dictionary = _send_queue.pop_front()
+		var ok: bool = await _write_action(payload)
+		_note_result(ok)
+	_sending = false
+
+
+## actionsへの追記を、updateTimeを前提条件にしたcommitで行う。競合(相手が同時に投了した等)
+## や一時的な失敗の場合はドキュメントを読み直して再試行する。
+func _write_action(payload: Dictionary) -> bool:
+	for attempt in range(SEND_RETRY_COUNT):
+		var meta: Dictionary = await client.get_document_meta(_path())
+		if not meta["exists"]:
+			return false
+		var actions: Array = meta["fields"].get("actions", [])
+		actions.append(payload)
+		var result: Dictionary = await client.commit_detailed(
+			[
+				client.update_write(
+					_path(), {"actions": actions}, {"updateTime": meta["update_time"]}
+				)
+			]
+		)
+		if result["ok"]:
+			return true
+		if attempt < SEND_RETRY_COUNT - 1:
+			await get_tree().create_timer(SEND_RETRY_DELAY * (attempt + 1)).timeout
+	return false
 
 
 func _poll_loop() -> void:
 	while _polling:
-		await get_tree().create_timer(POLL_INTERVAL_SECONDS).timeout
+		await get_tree().create_timer(_poll_delay).timeout
 		if not _polling:
 			return
-		var doc: Dictionary = await client.get_document("matches/%s" % match_id)
-		var actions: Array = doc.get("actions", [])
-		if actions.size() > _known_action_count:
-			for i in range(_known_action_count, actions.size()):
-				action_received.emit(actions[i])
-			_known_action_count = actions.size()
+		# 送信中は同じドキュメントを読み書きしているため、読み取りを重ねない
+		if not _sending:
+			await _fetch()
+		if not _polling:
+			return
+		_deliver_one()
+
+
+func _fetch() -> void:
+	var meta: Dictionary = await client.get_document_meta(_path())
+	if not meta["exists"]:
+		_note_result(false)
+		return
+	_note_result(true)
+	var actions: Array = meta["fields"].get("actions", [])
+	if actions.size() <= _known_action_count:
+		return
+	for i in range(_known_action_count, actions.size()):
+		var action: Variant = actions[i]
+		if typeof(action) != TYPE_DICTIONARY:
+			continue
+		if _my_uid != "" and str((action as Dictionary).get("by", "")) == _my_uid:
+			continue
+		_inbox.append(action)
+	_known_action_count = actions.size()
+
+
+func _deliver_one() -> void:
+	if _inbox.is_empty():
+		return
+	action_received.emit(_inbox.pop_front())
+
+
+func _note_result(ok: bool) -> void:
+	if ok:
+		_failures = 0
+		_poll_delay = POLL_INTERVAL_SECONDS
+		_set_connected(true)
+		return
+	_failures += 1
+	_poll_delay = minf(_poll_delay * POLL_BACKOFF_FACTOR, POLL_BACKOFF_MAX)
+	if _failures >= FAILURE_THRESHOLD:
+		_set_connected(false)
+
+
+func _set_connected(value: bool) -> void:
+	if connected == value:
+		return
+	connected = value
+	connection_changed.emit(value)

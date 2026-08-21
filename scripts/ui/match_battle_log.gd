@@ -73,9 +73,11 @@ func format_action(state: GameState, action: Dictionary) -> String:
 			return "%sが控えの「%s」に交代" % [_side_label(side), name]
 		"skill":
 			return _format_skill(state, action)
-		"surrender":
+		"surrender", "timeout":
+			# どちらも盤面を変えずに即終局する手。分岐を分けるとreturnが増えるためまとめる
 			var side: int = action["side"]
-			return "%sが投了" % _side_label(side)
+			var reason := "が投了" if action["type"] == "surrender" else "の持ち時間切れ"
+			return "%s%s" % [_side_label(side), reason]
 	return ""
 
 

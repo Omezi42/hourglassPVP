@@ -1,0 +1,48 @@
+rules_version = '2';
+
+// 砂時計PvP のFirestoreセキュリティルール。
+//
+// このファイルはリポジトリ内の記録であり、実際の適用はFirebaseコンソール
+// (Firestore Database → ルール)へ貼り付けて公開する操作で行う。
+// 「クライアントの操作をそのまま信頼し、サーバー側での正当性検証は行わない」という
+// 方針(GameDesign.md 11章)のため、ここで守るのは次の2点だけとする。
+//
+//   1. 匿名サインイン済みでなければ一切読み書きできないこと
+//   2. 対局・マッチングに使うコレクション以外へは書けないこと
+//
+// 意図的に検証していないこと(将来の不正対策で見直す範囲):
+//   - 手(actions)の正当性。合法手かどうか、手番かどうかは見ない
+//   - 対局者以外がmatches/{id}を読み書きできること。ルームコード対戦の観戦
+//     (GameDesign.md 12章)が第三者による読み取りを前提としているため、
+//     読み取りを対局者に限定していない
+//   - キューやルームのドキュメントを他人が削除できること。切断して残ったキューを
+//     他のプレイヤーが掃除する実装(MatchmakingQueue)がこれに依存している
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // ランダムマッチの待合室。ドキュメントIDはプレイヤーのuid。
+    match /matchmaking_queue/{uid} {
+      allow read, write: if signedIn();
+    }
+
+    // ルームコード対戦の部屋。ドキュメントIDは6文字のルームコード。
+    match /rooms/{code} {
+      allow read, write: if signedIn();
+    }
+
+    // 対局そのもの(デッキ・配置・手順・結果)。リプレイと観戦もこれを読む。
+    match /matches/{matchId} {
+      allow read, write: if signedIn();
+    }
+
+    // 上記以外は一切許可しない。
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

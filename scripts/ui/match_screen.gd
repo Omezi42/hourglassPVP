@@ -46,6 +46,8 @@ var _result_presenter: MatchResultPresenter
 ## 実況フロート(P-3)・自分の手番バナー(P-5)も同様に切り出している。
 var _event_caption: MatchEventCaption
 var _turn_banner: MatchTurnBanner
+## オンライン対戦の通信状態の表示・持ち時間の同期・時間切れの申告(GameDesign.md 11章)。
+var _net: MatchNetController
 ## 行動(反転/移動/交代)そのものの演出(フェーズ14)。ターン進行の演出(_turn_resolver)と
 ## 対になる位置づけで、「指した手」と「その結果」を見た目の上で切り分ける。
 var _action_presenter: MatchActionPresenter
@@ -131,8 +133,8 @@ func _ready() -> void:
 	surrender_confirm.visible = false
 	detail_panel.visible = false
 	detail_close_button.visible = false
-	back_button.pressed.connect(func() -> void: back_pressed.emit())
-	result_home_button.pressed.connect(func() -> void: back_pressed.emit())
+	back_button.pressed.connect(_on_leave_pressed)
+	result_home_button.pressed.connect(_on_leave_pressed)
 	# 終局後は結果パネルの暗幕が下部のログボタンを塞ぐため、パネル側からログを開く(W-3)
 	result_log_button.pressed.connect(func() -> void: _battle_log.set_open(true))
 	surrender_button.pressed.connect(_on_surrender_button_pressed)
@@ -153,6 +155,8 @@ func _ready() -> void:
 	_event_caption = MatchEventCaption.new(self)
 	_turn_banner = MatchTurnBanner.new(self)
 	_turn_banner.setup()
+	_net = MatchNetController.new(self)
+	_net.setup()
 	_action_presenter = MatchActionPresenter.new(self)
 	_detail_presenter = MatchDetailPresenter.new(self)
 	_detail_presenter.setup()
@@ -209,6 +213,7 @@ func start_online_match(
 	replay_controls.visible = false
 	spectate_label.visible = false
 	_online_match.action_received.connect(_on_action_received)
+	_net.attach(_online_match)
 	_start_common(board_a, bench_a, board_b, bench_b)
 
 
@@ -375,6 +380,15 @@ func _stop_online_match() -> void:
 		_online_match.stop()
 
 
+## 戻る/ホームへ。画面を離れるときは通信を必ず止め、対局開始前の相手待ちであれば
+## 中断したことを相手へ伝える(GameDesign.md 11章)。
+func _on_leave_pressed() -> void:
+	_stop_online_match()
+	_net.reset()
+	_placement.cancel_wait()
+	back_pressed.emit()
+
+
 func _start_common(
 	board_a: Array[HourglassData],
 	bench_a: Array[HourglassData],
@@ -402,6 +416,8 @@ func _start_common(
 	_battle_log.reset()
 	_result_presenter.reset()
 	_turn_banner.reset()
+	if not _is_online:
+		_net.reset()
 	state.start_match(board_a, bench_a, board_b, bench_b)
 	_last_hp = state.hp.duplicate()
 
@@ -415,6 +431,8 @@ func _start_common(
 
 
 func _process(delta: float) -> void:
+	# 通信状態の表示と、相手の時間切れの猶予は解決演出中も進める必要があるため先に呼ぶ
+	_net.process(delta)
 	if (
 		_is_replay
 		or _is_spectate
@@ -605,7 +623,9 @@ func _on_end_turn_pressed() -> void:
 		action = {"type": "pass", "side": state.current_turn}
 	_clear_selection()
 	if _is_online:
-		await _online_match.send_and_apply(action, state)
+		# 送信の完了は待たない。数秒の通信で盤面を止めると指した手応えが失われるため、
+		# 届かなかった場合はMatchNetControllerが「接続できません」を出す(GameDesign.md 11章)。
+		_online_match.send_and_apply(_net.stamp(action), state)
 	else:
 		OnlineMatch.apply(action, state)
 	if _is_cpu_match:
@@ -619,8 +639,10 @@ func _on_end_turn_pressed() -> void:
 ## まず予約マークだけを見せて短い間を置き、それからターン終了の解決演出へ進む。これにより
 ## 待っている側でも「相手が何を設定したか」→「その結果どうなったか」の順で追える。
 func _on_action_received(action: Dictionary) -> void:
-	# 投了は盤面を変えずに即終局するため、予約・演出・ターン交代のいずれも行わない(T-3)。
-	if action.get("type", "") == "surrender":
+	_net.apply_incoming(action)
+	# 投了・持ち時間切れは盤面を変えずに即終局するため、予約・演出・ターン交代のいずれも
+	# 行わない(T-3、およびフェーズ26の時間切れの申告)。
+	if action.get("type", "") in ["surrender", "timeout"]:
 		_move_count += 1
 		_battle_log.record_action(state, action)
 		OnlineMatch.apply(action, state)
@@ -805,7 +827,11 @@ func reset_state_for_replay(
 	_last_hp = state.hp.duplicate()
 
 
+## 持ち時間が0になったとき。オンライン対戦は「切れた本人が申告する/相手の申告が来ない
+## 場合は猶予を置いてから終局させる」という扱いのため、MatchNetControllerが引き受ける。
 func _on_clock_time_out(side: GameState.PlayerSide) -> void:
+	if _net.handle_timeout(side):
+		return
 	state.force_match_end(state.other_side(side))
 
 
@@ -820,6 +846,9 @@ func _on_match_ended(winner: GameState.PlayerSide) -> void:
 		ReplayService.mark_finished(_online_match.client, _online_match.match_id, winner_str)
 	if _is_cpu_match and not _is_replay:
 		_cpu_replay_recorder.save_finished(winner)
+	# 終局したらポーリングを止める(以前は次の対局を始めるまでFirestoreを読み続けていた)
+	_stop_online_match()
+	_net.reset()
 	# リプレイの巻き戻し・観戦の追いつき中は一気に手が再現されるため、決着音は鳴らさない
 	if not _replay.catching_up:
 		SoundBank.play(_result_jingle(winner))
