@@ -532,6 +532,13 @@ GameDesign.md 14章(アカウント)・15章(通貨)の実装方針。認証は 
 
 ### 10.1 認証(`FirebaseAuth` の拡張)
 
+- **HTTP通信では `HTTPRequest.accept_gzip` を必ず false にする**(`HttpJson`)。Web書き出しでは
+  ブラウザが `Content-Encoding` を透過的に展開してからGodotへ渡すにも関わらず、`HTTPRequest` は
+  応答ヘッダを見て自前でもう一度展開しようとし、`stream_peer_gzip.cpp` で失敗して
+  `RESULT_SUCCESS` にならない。**エディタ実行では再現せず、書き出した版でのみ全ての通信が
+  失敗する**(画面上は「接続できませんでした」としか見えない)。やり取りするJSONはいずれも
+  小さく、圧縮しない実害がないため常に無効にする
+
 - **ID/パスワードは、Firebase の「メール/パスワード」プロバイダへ合成アドレスとして渡す**。
   ユーザーが入力したIDを `<id>@hourglass-arena.local`(`SYNTHETIC_EMAIL_DOMAIN`)という形の
   アドレスへ変換して `accounts:signUp` / `accounts:signInWithPassword` を呼ぶ。この方式には
@@ -545,11 +552,18 @@ GameDesign.md 14章(アカウント)・15章(通貨)の実装方針。認証は 
 - IDは小文字へ正規化し、英数字とアンダースコア・ハイフンのみに制限する(アドレスとして
   成立しない文字を弾くため)。この検証は送信前にクライアント側で行い、エラー文言を
   自前で出す(Firebase のエラーコードをそのまま見せない)
-- **匿名 → 登録済みへの昇格は `accounts:update` によるリンクで行う**(新規作成ではない)。
-  現在のIDトークンを付けて `email`/`password` を設定すると、**uid が変わらないまま**
+- **匿名 → 登録済みへの昇格は `accounts:signUp` へ現在のIDトークンを添えて行う**
+  (新規作成ではない)。`idToken` を付けると「新しいアカウントを作る」ではなく
+  「そのトークンのユーザーへ認証情報を結びつける」意味になり、**uid が変わらないまま**
   永続アカウントになる。これにより匿名時代のリプレイ(`player_a`/`player_b` は uid で
   引く)と `players/{uid}` の残高がそのまま引き継がれる。新しくサインアップして
   データを移し替える方式は採らない
+- **`accounts:update`(setAccountInfo)は使ってはいけない**。2023年9月15日以降に作られた
+  プロジェクトでは**メール列挙保護が既定で有効**で、その状態ではメールアドレスの追加・変更が
+  `Please verify the new email before changing email` として拒否される。ここで使うのは
+  実在しない合成ドメインのアドレスのため検証メールが永久に届かず、登録が一切できなくなる。
+  当初 `accounts:update` で実装して実際にこの状態になったため、記録として残す。
+  `accounts:signUp` によるリンクは列挙保護が有効なままでも通る(実測で確認済み)
 - **認証トークンを `user://` へ永続化する**(`AccountStore`)。保存するのは `refresh_token`・
   `uid`・最後に使ったIDのみで、**パスワードは保存しない**。起動時は保存済みの
   `refresh_token` で `securetoken` を叩いて復帰し、失敗した場合のみ新しい匿名サインインを

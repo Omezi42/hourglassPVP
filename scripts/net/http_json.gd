@@ -24,6 +24,12 @@ static func request(
 ) -> Array:
 	var http := HTTPRequest.new()
 	http.timeout = timeout
+	# Web書き出しでは、ブラウザが Content-Encoding を透過的に展開してから
+	# Godotへ渡す。それにも関わらずHTTPRequestは応答ヘッダを見て自前でもう一度
+	# 展開しようとするため、stream_peer_gzip.cppで失敗し RESULT_SUCCESS にならない。
+	# 画面上は「接続できませんでした」としか見えないため原因を追いにくい。
+	# やり取りするJSONはいずれも小さく、圧縮しなくても実害がないので常に無効にする。
+	http.accept_gzip = false
 	host.add_child(http)
 	var send_error := http.request(url, headers, method, body)
 	if send_error != OK:

@@ -49,7 +49,8 @@ func refresh() -> void:
 	var ok: bool = await NetSession.sign_in()
 	_set_busy(false)
 	if not ok:
-		_set_message("接続できませんでした。オフラインのままでも遊べます。", ERROR_COLOR)
+		# 原因を添えないと「接続できませんでした」だけが出て切り分けようがない
+		_set_message("接続できませんでした(%s)。オフラインのままでも遊べます。" % NetSession.last_error, ERROR_COLOR)
 	else:
 		_set_message("", HINT_COLOR)
 	_refresh_view()

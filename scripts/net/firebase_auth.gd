@@ -6,7 +6,6 @@ signal sign_in_failed(error: String)
 
 const SIGN_UP_URL := "https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=%s"
 const SIGN_IN_URL := "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=%s"
-const UPDATE_URL := "https://identitytoolkit.googleapis.com/v1/accounts:update?key=%s"
 const REFRESH_URL := "https://securetoken.googleapis.com/v1/token?key=%s"
 ## 有効期限のこれだけ手前になったら更新する(トークンの寿命は通常3600秒)。
 const REFRESH_MARGIN_SECONDS := 300.0
@@ -72,8 +71,16 @@ func restore_session() -> bool:
 
 
 ## 匿名で遊んでいたアカウントへIDとパスワードを結びつける(GameDesign.md 14章)。
-## 新しいアカウントを作るのではなく accounts:update でリンクするため、**uidが変わらず**
-## それまでのリプレイと砂金の残高がそのまま引き継がれる。
+##
+## リンクは `accounts:signUp` へ現在のIDトークンを添えて行う。idTokenを付けると
+## 「新しいアカウントを作る」ではなく「そのトークンのユーザーへ認証情報を結びつける」
+## 意味になり、**uidが変わらない**ためリプレイと砂金の残高がそのまま引き継がれる。
+##
+## `accounts:update`(setAccountInfo)は使えない。2023年9月15日以降に作られた
+## プロジェクトではメール列挙保護が既定で有効で、その状態ではメールアドレスの
+## 追加・変更が「先に新しいアドレスを検証せよ」と拒否される。ここで使うのは
+## 実在しない合成ドメインのアドレスのため検証メールは永久に届かず、詰んでしまう。
+##
 ## 戻り値は空文字なら成功、そうでなければ表示用のエラー文言。
 func register(p_login_id: String, password: String) -> String:
 	var invalid := validate_credentials(p_login_id, password)
@@ -88,7 +95,7 @@ func register(p_login_id: String, password: String) -> String:
 		"password": password,
 		"returnSecureToken": true,
 	}
-	var result: Array = await _post(UPDATE_URL, JSON.stringify(payload))
+	var result: Array = await _post(SIGN_UP_URL, JSON.stringify(payload))
 	var parsed: Variant = result[1]
 	if result[0] == 200 and parsed is Dictionary:
 		login_id = _normalize_id(p_login_id)
@@ -182,6 +189,10 @@ static func _error_message(parsed: Variant, fallback: Variant) -> String:
 		return "試行が多すぎます。しばらく待ってからやり直してください。"
 	if code.begins_with("CREDENTIAL_TOO_OLD_LOGIN_AGAIN") or code.begins_with("TOKEN_EXPIRED"):
 		return "セッションの有効期限が切れました。もう一度お試しください。"
+	if code.begins_with("OPERATION_NOT_ALLOWED"):
+		# Firebaseコンソールで「メール/パスワード」プロバイダが無効のまま、
+		# または列挙保護がリンクを拒んでいる場合にここへ来る
+		return "サーバー側の設定でアカウント登録が許可されていません。"
 	if code == "":
 		return "通信に失敗しました。接続を確認してください。(%s)" % str(fallback)
 	return "登録・ログインに失敗しました。(%s)" % code
