@@ -74,32 +74,55 @@ func _caption_position(action: Dictionary) -> int:
 			return action["position"]
 
 
+## スキルの滑り込み。位置交換は移動と、交代は旧「交代」と同じ見せ方を、その駒のマスに対して行う。
+func _slide_skill(action: Dictionary) -> void:
+	var side: GameState.PlayerSide = action["side"]
+	var positions := _screen.state.skill_positions(side, action)
+	if positions.size() == 2:
+		_slide_position_swap(side, positions[0], positions[1])
+		return
+	var skill := _screen.state.skill_at(side, positions[0])
+	if skill != null and skill.effect_type == GameEnums.EffectType.SWAP_BENCH:
+		_slide_from_bench(side, positions[0], action.get("bench_index", 0))
+
+
 ## 移動は入れ替わった2駒を互いの元の位置から、交代は控えのスロットから場の左マスへ
 ## 滑り込ませる。反転は既存の回転演出(HourglassSlot._animate_flip())があるため何もしない。
 func _slide(action: Dictionary) -> void:
 	var self_side := _screen.perspective_side()
 	var side: GameState.PlayerSide = action["side"]
 	match action.get("type", ""):
+		"skill":
+			_slide_skill(action)
 		"move":
-			var from_position: int = action["from"]
-			var to_position: int = action["to"]
-			var from_rect := _screen.game_board.get_board_slot_rect(self_side, side, from_position)
-			var to_rect := _screen.game_board.get_board_slot_rect(self_side, side, to_position)
-			if from_rect.size == Vector2.ZERO or to_rect.size == Vector2.ZERO:
-				return
-			var delta := to_rect.get_center() - from_rect.get_center()
-			_screen.game_board.play_slide_in(self_side, side, to_position, -delta, MOVE_ARC_IN)
-			_screen.game_board.play_slide_in(self_side, side, from_position, delta, MOVE_ARC_OUT)
+			_slide_position_swap(side, action["from"], action["to"])
 		"swap_in":
-			var left := GameState.BoardPosition.LEFT
-			var bench_rect := _bench_rect(side, action.get("bench_index", 0))
-			var left_rect := _screen.game_board.get_board_slot_rect(self_side, side, left)
-			if bench_rect.size == Vector2.ZERO or left_rect.size == Vector2.ZERO:
-				return
-			var offset := bench_rect.get_center() - left_rect.get_center()
-			if offset.length() > SWAP_IN_MAX_DISTANCE:
-				offset = offset.normalized() * SWAP_IN_MAX_DISTANCE
-			_screen.game_board.play_slide_in(self_side, side, left, offset)
+			_slide_from_bench(side, GameState.BoardPosition.LEFT, action.get("bench_index", 0))
+
+
+## 入れ替わる2駒を互いの元の位置から滑り込ませる。
+func _slide_position_swap(side: GameState.PlayerSide, from_position: int, to_position: int) -> void:
+	var self_side := _screen.perspective_side()
+	var from_rect := _screen.game_board.get_board_slot_rect(self_side, side, from_position)
+	var to_rect := _screen.game_board.get_board_slot_rect(self_side, side, to_position)
+	if from_rect.size == Vector2.ZERO or to_rect.size == Vector2.ZERO:
+		return
+	var delta := to_rect.get_center() - from_rect.get_center()
+	_screen.game_board.play_slide_in(self_side, side, to_position, -delta, MOVE_ARC_IN)
+	_screen.game_board.play_slide_in(self_side, side, from_position, delta, MOVE_ARC_OUT)
+
+
+## 控えのスロットから、指定したマスへ入ってくる動きを見せる。
+func _slide_from_bench(side: GameState.PlayerSide, position: int, bench_index: int) -> void:
+	var self_side := _screen.perspective_side()
+	var bench_rect := _bench_rect(side, bench_index)
+	var slot_rect := _screen.game_board.get_board_slot_rect(self_side, side, position)
+	if bench_rect.size == Vector2.ZERO or slot_rect.size == Vector2.ZERO:
+		return
+	var offset := bench_rect.get_center() - slot_rect.get_center()
+	if offset.length() > SWAP_IN_MAX_DISTANCE:
+		offset = offset.normalized() * SWAP_IN_MAX_DISTANCE
+	_screen.game_board.play_slide_in(self_side, side, position, offset)
 
 
 ## 反転(GameDesign.md 9章、T-1)。移動/交代のような位置の入れ替えが無いため、代わりに

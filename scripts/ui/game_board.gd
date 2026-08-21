@@ -77,6 +77,11 @@ func show_reservations(self_side: GameState.PlayerSide, action: Dictionary) -> v
 		"swap_in":
 			var bucket_swap := own if action["side"] == self_side else opponent
 			bucket_swap[GameState.BoardPosition.LEFT] = "swap_in"
+		"skill":
+			var side: GameState.PlayerSide = action["side"]
+			var bucket_skill := own if side == self_side else opponent
+			for position in _state.skill_positions(side, action):
+				bucket_skill[position] = "skill"
 	own_row.set_reservations(own)
 	opponent_row.set_reservations(opponent)
 
@@ -146,22 +151,44 @@ func play_piece_step(
 	var selection := _selection_type_for_side(self_side, side)
 	match action.get("type", ""):
 		"move":
-			var from_slot := _slot_at(selection, action["from"])
-			var to_slot := _slot_at(selection, action["to"])
-			if from_slot == null or to_slot == null:
-				return
-			var from_state := from_slot.displayed_state()
-			var to_state := to_slot.displayed_state()
-			from_slot.show_state_step(_state.board[side][action["from"]].data, to_state, false)
-			to_slot.show_state_step(_state.board[side][action["to"]].data, from_state, false)
+			_sync_position_swap(selection, side, action["from"], action["to"])
 		"swap_in":
-			var left := GameState.BoardPosition.LEFT
-			var slot := _slot_at(selection, left)
-			if slot == null:
-				return
-			slot.show_state_step(
-				_state.board[side][left].data, GameEnums.HourglassState.UPRIGHT, false
-			)
+			_sync_swapped_slot(selection, side, GameState.BoardPosition.LEFT)
+		"skill":
+			var positions := _state.skill_positions(side, action)
+			if positions.size() == 2:
+				_sync_position_swap(selection, side, positions[0], positions[1])
+			elif _state.skill_at(side, positions[0]) != null:
+				if (
+					_state.skill_at(side, positions[0]).effect_type
+					== GameEnums.EffectType.SWAP_BENCH
+				):
+					_sync_swapped_slot(selection, side, positions[0])
+
+
+## 位置が入れ替わった2マスの中身を持ち替える。表示中の状態は入れ替えでは変わらないため、
+## 互いの表示状態をそのまま交換する。
+func _sync_position_swap(
+	selection: ActionMenu.SelectionType, side: GameState.PlayerSide, a: int, b: int
+) -> void:
+	var slot_a := _slot_at(selection, a)
+	var slot_b := _slot_at(selection, b)
+	if slot_a == null or slot_b == null:
+		return
+	var state_a := slot_a.displayed_state()
+	var state_b := slot_b.displayed_state()
+	slot_a.show_state_step(_state.board[side][a].data, state_b, false)
+	slot_b.show_state_step(_state.board[side][b].data, state_a, false)
+
+
+## 控えと入れ替わったマスの中身を差し替える。出てきた駒は必ず上向きから始まる。
+func _sync_swapped_slot(
+	selection: ActionMenu.SelectionType, side: GameState.PlayerSide, position: int
+) -> void:
+	var slot := _slot_at(selection, position)
+	if slot == null:
+		return
+	slot.show_state_step(_state.board[side][position].data, GameEnums.HourglassState.UPRIGHT, false)
 
 
 ## ターン進行の逐次演出(C-1)用。指定したマスの駒だけを、記録済みのnew_stateへ

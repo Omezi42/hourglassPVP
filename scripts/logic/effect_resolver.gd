@@ -91,6 +91,30 @@ func is_locked(game_state: GameState, side: int, position: int) -> bool:
 	return false
 
 
+## スキル(GameDesign.md 4.3・7章)を解決する。受動効果と同じEffectType/Targetの語彙を使うため、
+## SWAP_BENCH/SWAP_POSITION以外は受動側と同じ処理をそのまま呼ぶ。
+func resolve_skill(game_state: GameState, side: int, position: int, bench_index: int) -> void:
+	var instance: HourglassInstance = game_state.board[side][position]
+	var skill: SkillData = instance.data.skill
+	if skill == null:
+		return
+	match skill.effect_type:
+		GameEnums.EffectType.SWAP_BENCH:
+			game_state.swap_bench(side, position, bench_index)
+		GameEnums.EffectType.SWAP_POSITION:
+			var partner := _adjacent_position(position, skill.target)
+			if partner >= 0:
+				game_state.move(side, position, partner)
+		GameEnums.EffectType.FORCE_ADVANCE:
+			game_state.advance_slot(side, position)
+		GameEnums.EffectType.RECOVER:
+			_recover_random_ally(game_state, side, position)
+		GameEnums.EffectType.SYNC_STATE:
+			_sync_state(game_state, side, position, instance, skill.target)
+		GameEnums.EffectType.DAMAGE:
+			game_state.deal_damage(_resolve_player_target(skill.target, side), skill.value)
+
+
 func _resolve_player_target(target: int, owner_side: int) -> int:
 	if target == GameEnums.Target.OWN_PLAYER:
 		return owner_side

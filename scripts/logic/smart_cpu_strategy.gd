@@ -7,6 +7,9 @@ extends CpuStrategy
 const WIN_SCORE := 100000.0
 const LOSE_SCORE := -100000.0
 
+## スキル持ちを場へ置くことの価値。スキルは場に出ている駒しか使えないため。
+const SKILL_ON_BOARD_BONUS := 25.0
+
 @export var search_depth: int = 2
 var _sim_state: GameState
 
@@ -54,19 +57,32 @@ func choose_placement(deck: Array[HourglassData]) -> Dictionary:
 func _evaluate_placement(board: Array[HourglassData], _bench: Array[HourglassData]) -> float:
 	var score := 0.0
 
-	# 左マス (LEFT): 初期状態 UPRIGHT (2手かけて落ちる / 控えの入口)
+	# 左マス (LEFT): 初期状態 UPRIGHT (2手かけて落ちる)
 	var left := board[GameState.BoardPosition.LEFT]
-	score += _score_left_slot(left)
+	score += _score_left_slot(left) + _score_skill(left, GameState.BoardPosition.LEFT)
 
 	# 中央マス (CENTER): 初期状態 FALLING (1手目に何もしなければ即落ちきる)
 	var center := board[GameState.BoardPosition.CENTER]
-	score += _score_center_slot(center)
+	score += _score_center_slot(center) + _score_skill(center, GameState.BoardPosition.CENTER)
 
 	# 右マス (RIGHT): 初期状態 FALLEN (落ちきりスタート、反転しないと動かない)
 	var right := board[GameState.BoardPosition.RIGHT]
-	score += _score_right_slot(right)
+	score += _score_right_slot(right) + _score_skill(right, GameState.BoardPosition.RIGHT)
 
 	return score
+
+
+## スキルは場に出ていないと使えないため、スキル持ちは場へ置く価値がある(GameDesign.md 4.3)。
+## 位置交換だけは右隣が必要なため、右マスに置くと死に札になる。
+func _score_skill(data: HourglassData, position: int) -> float:
+	if not data.has_skill():
+		return 0.0
+	if (
+		data.skill.effect_type == GameEnums.EffectType.SWAP_POSITION
+		and position == GameState.BoardPosition.RIGHT
+	):
+		return 0.0
+	return SKILL_ON_BOARD_BONUS
 
 
 func _score_left_slot(data: HourglassData) -> float:

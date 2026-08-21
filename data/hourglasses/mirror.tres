@@ -1,15 +1,18 @@
 [gd_resource type="Resource" script_class="HourglassData" format=3]
 
-[ext_resource type="Script" path="res://scripts/data/effect_data.gd" id="1_nbxr3"]
+[ext_resource type="Script" path="res://scripts/data/skill_data.gd" id="skill_mirror"]
 [ext_resource type="Script" path="res://scripts/data/hourglass_data.gd" id="2_t3kce"]
 [ext_resource type="Texture2D" path="res://assets/hourglasses/processed/mirror/state_full.png" id="3_full"]
 [ext_resource type="Texture2D" path="res://assets/hourglasses/processed/mirror/state_falling.png" id="4_falling"]
 [ext_resource type="Texture2D" path="res://assets/hourglasses/processed/mirror/state_empty.png" id="5_empty"]
 
-[sub_resource type="Resource" id="Resource_hypd5"]
-script = ExtResource("1_nbxr3")
+[sub_resource type="Resource" id="Skill_mirror"]
+script = ExtResource("skill_mirror")
+display_name = "位置交換"
+description = "右隣の自分の砂時計と位置を入れ替える。"
+effect_type = 8
 target = 2
-effect_type = 6
+value = 0
 
 [resource]
 script = ExtResource("2_t3kce")
@@ -19,4 +22,4 @@ fall_damage = 2
 icon_upright = ExtResource("3_full")
 icon_falling = ExtResource("4_falling")
 icon_fallen = ExtResource("5_empty")
-effects = Array[ExtResource("1_nbxr3")]([SubResource("Resource_hypd5")])
+skill = SubResource("Skill_mirror")

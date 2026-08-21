@@ -23,4 +23,7 @@ enum EffectType {
 	RECOVER,
 	COUNTER,
 	SYNC_STATE,
+	## 以下2つはスキル専用(GameDesign.md 7章)。受動効果としては使わない。
+	SWAP_BENCH,
+	SWAP_POSITION,
 }

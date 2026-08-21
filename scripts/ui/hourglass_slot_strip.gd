@@ -70,6 +70,13 @@ func set_selected_bench_index(selected_index: int) -> void:
 
 
 ## 場側の3枠は参照専用(押しても何も起きない)のため、操作可否の伝播は控え2枠のみに行う。
+## 交代スキルの対象選択中、控え2枠を点滅ハイライトする(GameDesign.md 9章)。
+## 盤面の移動先候補と同じ表現を流用する。
+func show_swap_targets(active: bool) -> void:
+	for i in range(GameState.BOARD_SIZE, slots.size()):
+		slots[i].set_move_target(active)
+
+
 func set_interactive(interactive: bool, reject_feedback: bool = false) -> void:
 	for i in range(GameState.BENCH_SIZE):
 		slots[GameState.BOARD_SIZE + i].set_interactive(interactive, reject_feedback)

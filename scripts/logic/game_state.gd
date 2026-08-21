@@ -120,6 +120,9 @@ func advance_and_end_turn() -> void:
 			"swap_in":
 				resolution_step_started.emit(current_turn, [position], "swap_in")
 				swap_in(current_turn, action["bench_index"])
+			"skill":
+				resolution_step_started.emit(current_turn, _skill_step_positions(action), "skill")
+				activate_skill(current_turn, action["position"], action.get("bench_index", 0))
 			_:
 				var instance: HourglassInstance = board[current_turn][position]
 				var idle := instance.state == GameEnums.HourglassState.FALLEN
@@ -153,7 +156,61 @@ func _own_slot_kinds(action: Dictionary) -> Dictionary:
 			kinds[mini(action["from"], action["to"])] = "move"
 		"swap_in":
 			kinds[BoardPosition.LEFT] = "swap_in"
+		"skill":
+			kinds[_skill_slot(action)] = "skill"
 	return kinds
+
+
+## スキルを解決するマス。位置交換は2マスに関わるため、移動と同じく番号の若い方で1度だけ
+## 実行する(GameDesign.md 4.4)。そうしないと入れ替わった駒の一方が2回進行してしまう。
+func _skill_slot(action: Dictionary) -> int:
+	var positions := _skill_step_positions(action)
+	return positions.min()
+
+
+func _skill_step_positions(action: Dictionary) -> Array:
+	return skill_positions(current_turn, action)
+
+
+## スキルの解決で注目すべきマス(UI層のズーム・予約マーク・滑り込みの対象)。
+## 位置交換のみ2マスになり、それ以外はその駒のマス1つ。
+func skill_positions(side: PlayerSide, action: Dictionary) -> Array:
+	var position: int = action["position"]
+	var skill := skill_at(side, position)
+	if skill == null or skill.effect_type != GameEnums.EffectType.SWAP_POSITION:
+		return [position]
+	var partner := _adjacent_position(position, skill.target)
+	if partner < 0:
+		return [position]
+	return [position, partner]
+
+
+## 指定したマスの駒が持つスキル(無ければnull)。
+func skill_at(side: PlayerSide, position: int) -> SkillData:
+	var instance: HourglassInstance = board[side][position]
+	return instance.data.skill
+
+
+## スキルを発動する(GameDesign.md 4.3)。実際の効果はEffectResolverが解決する。
+func activate_skill(side: PlayerSide, position: int, bench_index: int = 0) -> void:
+	if _match_over or effect_resolver == null:
+		return
+	effect_resolver.resolve_skill(self, side, position, bench_index)
+
+
+## 隣接マスの位置を返す(隣が無い場合は-1)。
+func _adjacent_position(position: int, target: int) -> int:
+	var offset := 0
+	if target == GameEnums.Target.ADJACENT_LEFT:
+		offset = -1
+	elif target == GameEnums.Target.ADJACENT_RIGHT:
+		offset = 1
+	if offset == 0:
+		return -1
+	var result := position + offset
+	if result < 0 or result >= BOARD_SIZE:
+		return -1
+	return result
 
 
 func _is_opponent_flip(action: Dictionary) -> bool:
@@ -184,17 +241,26 @@ func move(side: PlayerSide, from_position: int, to_position: int) -> void:
 	hourglass_moved.emit(side, from_position, to_position)
 
 
+## 旧「交代」アクション(基本行動としては廃止済み)。過去のリプレイを再生できるよう残している。
 func swap_in(side: PlayerSide, bench_index: int) -> void:
+	swap_bench(side, BoardPosition.LEFT, bench_index)
+
+
+## 交代スキル(GameDesign.md 7章)。指定したマスの駒と控えの1個を入れ替える。
+## 出てきた駒は上向きから始まる。
+func swap_bench(side: PlayerSide, position: int, bench_index: int) -> void:
 	if _match_over:
 		return
 	var bench_slots: Array = bench[side]
 	var board_slots: Array = board[side]
+	if bench_index < 0 or bench_index >= bench_slots.size():
+		return
 	var incoming: HourglassInstance = bench_slots[bench_index]
-	var outgoing: HourglassInstance = board_slots[BoardPosition.LEFT]
+	var outgoing: HourglassInstance = board_slots[position]
 	incoming.state = GameEnums.HourglassState.UPRIGHT
-	board_slots[BoardPosition.LEFT] = incoming
+	board_slots[position] = incoming
 	bench_slots[bench_index] = outgoing
-	hourglass_swapped.emit(side, bench_index, BoardPosition.LEFT)
+	hourglass_swapped.emit(side, bench_index, position)
 
 
 ## 場に出す砂時計を作る。マスごとに異なる初期状態を与えるが、これは生成時の代入であり

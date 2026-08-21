@@ -52,15 +52,7 @@ func record_action(state: GameState, action: Dictionary) -> void:
 func format_action(state: GameState, action: Dictionary) -> String:
 	match action.get("type", ""):
 		"flip":
-			var actor: int = action["actor"]
-			var target_side: int = action["side"]
-			var position: int = action["position"]
-			var name: String = state.board[target_side][position].data.display_name
-			# 自陣の駒を反転した場合は「先手が先手の…」と同じ側を2度呼ぶ形になり読みにくい。
-			# 相手の駒を反転した場合だけ、誰の駒なのかを明示する(移動・交代の文言と揃える)。
-			if actor == target_side:
-				return "%sが「%s」を反転" % [_side_label(actor), name]
-			return "%sが%sの「%s」を反転" % [_side_label(actor), _side_label(target_side), name]
+			return _format_flip(state, action)
 		"move":
 			var side: int = action["side"]
 			var from_position: int = action["from"]
@@ -79,10 +71,32 @@ func format_action(state: GameState, action: Dictionary) -> String:
 			var side: int = action["side"]
 			var name: String = state.board[side][GameState.BoardPosition.LEFT].data.display_name
 			return "%sが控えの「%s」に交代" % [_side_label(side), name]
+		"skill":
+			return _format_skill(state, action)
 		"surrender":
 			var side: int = action["side"]
 			return "%sが投了" % _side_label(side)
 	return ""
+
+
+## 自陣の駒を反転した場合は「先手が先手の…」と同じ側を2度呼ぶ形になり読みにくいため所属を
+## 書かない。相手の駒を反転した場合だけ、誰の駒なのかを明示する。
+func _format_flip(state: GameState, action: Dictionary) -> String:
+	var actor: int = action["actor"]
+	var target_side: int = action["side"]
+	var name: String = state.board[target_side][action["position"]].data.display_name
+	if actor == target_side:
+		return "%sが「%s」を反転" % [_side_label(actor), name]
+	return "%sが%sの「%s」を反転" % [_side_label(actor), _side_label(target_side), name]
+
+
+func _format_skill(state: GameState, action: Dictionary) -> String:
+	var side: int = action["side"]
+	var data: HourglassData = state.board[side][action["position"]].data
+	if data.skill == null:
+		return ""
+	var names := [_side_label(side), data.display_name, data.skill.display_name]
+	return "%sが「%s」のスキル『%s』を使用" % names
 
 
 ## ターン進行の逐次演出(MatchTurnResolver)で発生した状態変化を記録する。

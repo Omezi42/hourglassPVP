@@ -2,6 +2,7 @@ extends SceneTree
 
 ## 音量設定まわりのテストは、このファイルが1000行の上限(gdlintのmax-file-lines)に
 ## 達したため別ファイルへ切り出している。判定は_assert_trueをCallableで渡して共有する。
+const SkillTests = preload("res://tools/tests/skill_tests.gd")
 const SoundSettingsTests = preload("res://tools/tests/sound_settings_tests.gd")
 const CpuStrategyTests = preload("res://tools/tests/cpu_strategy_tests.gd")
 
@@ -40,9 +41,6 @@ func _run() -> void:
 	_test_king_damage_reduction_and_self_damage()
 	_test_judge_continuous_damage()
 	_test_wall_counter_only_on_opponent_flip()
-	_test_dash_force_advance_on_flip()
-	_test_echo_recovers_random_ally()
-	_test_mirror_syncs_adjacent_right()
 	_test_eye_locks_opponent_mirror()
 
 	_test_match_clock_ticks_down_and_times_out()
@@ -50,6 +48,7 @@ func _run() -> void:
 
 	_test_deck_save_round_trips_multiple_decks()
 	_test_deck_save_migrates_legacy_single_deck_format()
+	SkillTests.new().run(_assert_true)
 	SoundSettingsTests.new().run(_assert_true)
 	CpuStrategyTests.new().run(_assert_true)
 
@@ -617,8 +616,8 @@ func _test_king_damage_reduction_and_self_damage() -> void:
 	var hp_b_before: int = gs.hp[GameState.PlayerSide.B]
 	gs.advance_slot(GameState.PlayerSide.A, GameState.BoardPosition.LEFT)
 	_assert_true(
-		gs.hp[GameState.PlayerSide.B] == hp_b_before - 2,
-		"king fall damage should deal 2 to opponent"
+		gs.hp[GameState.PlayerSide.B] == hp_b_before - 1,
+		"king fall damage should deal 1 to opponent"
 	)
 	# 自傷は、落ちきったキング自身の軽減(-1)を受けるため実質1になる(docs/Hourglasses.md参照)。
 	_assert_true(
@@ -657,62 +656,6 @@ func _test_wall_counter_only_on_opponent_flip() -> void:
 	_assert_true(
 		gs.hp[GameState.PlayerSide.B] == GameState.INITIAL_HP - 1,
 		"opponent-flip should trigger wall's counter against the flipper"
-	)
-
-
-func _test_dash_force_advance_on_flip() -> void:
-	var gs := _make_state(["dash", "sand", "sand"], ["sand", "sand", "sand"], true)
-	gs.flip(GameState.PlayerSide.A, GameState.PlayerSide.A, GameState.BoardPosition.LEFT)
-	_assert_true(
-		(
-			gs.board[GameState.PlayerSide.A][GameState.BoardPosition.LEFT].state
-			== GameEnums.HourglassState.FALLING
-		),
-		"dash flip should force-advance to FALLING"
-	)
-
-
-func _test_echo_recovers_random_ally() -> void:
-	var gs := _make_state(["echo", "sand", "sand"], ["sand", "sand", "sand"], true)
-	gs.board[GameState.PlayerSide.A][GameState.BoardPosition.LEFT].state = (
-		GameEnums.HourglassState.FALLING
-	)
-	gs.board[GameState.PlayerSide.A][GameState.BoardPosition.CENTER].state = (
-		GameEnums.HourglassState.FALLING
-	)
-	gs.board[GameState.PlayerSide.A][GameState.BoardPosition.RIGHT].state = (
-		GameEnums.HourglassState.FALLING
-	)
-	gs.advance_slot(GameState.PlayerSide.A, GameState.BoardPosition.LEFT)
-
-	var upright_count := 0
-	if (
-		gs.board[GameState.PlayerSide.A][GameState.BoardPosition.CENTER].state
-		== GameEnums.HourglassState.UPRIGHT
-	):
-		upright_count += 1
-	if (
-		gs.board[GameState.PlayerSide.A][GameState.BoardPosition.RIGHT].state
-		== GameEnums.HourglassState.UPRIGHT
-	):
-		upright_count += 1
-	_assert_true(
-		upright_count == 1, "echo on_fallen should reset exactly one other ally to UPRIGHT"
-	)
-
-
-func _test_mirror_syncs_adjacent_right() -> void:
-	var gs := _make_state(["mirror", "sand", "sand"], ["sand", "sand", "sand"], true)
-	gs.board[GameState.PlayerSide.A][GameState.BoardPosition.CENTER].state = (
-		GameEnums.HourglassState.FALLING
-	)
-	gs.flip(GameState.PlayerSide.A, GameState.PlayerSide.A, GameState.BoardPosition.LEFT)
-	_assert_true(
-		(
-			gs.board[GameState.PlayerSide.A][GameState.BoardPosition.CENTER].state
-			== GameEnums.HourglassState.UPRIGHT
-		),
-		"mirror flip should sync the right-adjacent slot's state"
 	)
 
 

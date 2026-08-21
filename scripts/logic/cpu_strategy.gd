@@ -2,7 +2,7 @@ class_name CpuStrategy
 extends RefCounted
 
 
-## 現在の局面における合法手をすべて列挙する(反転・移動・交代)。
+## 現在の局面における合法手をすべて列挙する(反転・スキル・パス)。
 ## 将来より強い思考ロジック(各合法手を評価してスコアの高い手を選ぶ等)を実装する際も
 ## この列挙をそのまま再利用できるよう、生成ロジックをここに集約する。
 static func legal_actions(state: GameState, side: GameState.PlayerSide) -> Array[Dictionary]:
@@ -15,11 +15,18 @@ static func legal_actions(state: GameState, side: GameState.PlayerSide) -> Array
 		if not _is_locked(state, opponent, position):
 			actions.append({"type": "flip", "actor": side, "side": opponent, "position": position})
 
-	for pair in [[0, 1], [0, 2], [1, 2]]:
-		actions.append({"type": "move", "side": side, "from": pair[0], "to": pair[1]})
-
-	for bench_index in range(GameState.BENCH_SIZE):
-		actions.append({"type": "swap_in", "side": side, "bench_index": bench_index})
+	for position in range(GameState.BOARD_SIZE):
+		var data: HourglassData = state.board[side][position].data
+		if not data.has_skill():
+			continue
+		var skill_action := {"type": "skill", "side": side, "position": position}
+		if not data.skill.needs_bench_target():
+			actions.append(skill_action)
+			continue
+		for bench_index in range(GameState.BENCH_SIZE):
+			var with_target := skill_action.duplicate()
+			with_target["bench_index"] = bench_index
+			actions.append(with_target)
 
 	actions.append({"type": "pass", "side": side})
 

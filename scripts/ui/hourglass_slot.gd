@@ -92,7 +92,7 @@ const FLIP_SHOCKWAVE_SEGMENTS := 28
 const FLIP_SHOCKWAVE_INACTIVE := -1.0
 
 ## 予約マーク(GameDesign.md 4.3・9章)。行動を設定した瞬間に、そのマスへ何を設定したかを出す。
-const RESERVATION_LABELS := {"flip": "反転", "move": "移動", "swap_in": "交代"}
+const RESERVATION_LABELS := {"flip": "反転", "skill": "スキル", "move": "移動", "swap_in": "交代"}
 ## 配置フェーズで、そのマスに置いた駒がどの状態から始まるのか(GameDesign.md 5章)を示す文言。
 const PLACEMENT_STATE_LABELS := {
 	GameEnums.HourglassState.UPRIGHT: "上向きで開始",

@@ -17,7 +17,8 @@ var state: GameState
 var board_camera_controller: MatchBoardCamera
 var _selected_type: ActionMenu.SelectionType = ActionMenu.SelectionType.NONE
 var _selected_position: int = -1
-var _pending_move := false
+## 交代スキルの対象(控え)を選んでいる最中かどうか。
+var _pending_bench_skill := false
 var _is_online := false
 var _online_match: OnlineMatch = null
 var _my_side: GameState.PlayerSide = GameState.PlayerSide.A
@@ -120,8 +121,7 @@ var placement_controls: HBoxContainer = bottom_bar_row.get_node("BottomMiddle/Pl
 
 func _ready() -> void:
 	action_menu.flip_pressed.connect(_on_flip_pressed)
-	action_menu.move_pressed.connect(_on_move_pressed)
-	action_menu.swap_pressed.connect(_on_swap_pressed)
+	action_menu.skill_pressed.connect(_on_skill_pressed)
 	game_board.opponent_position_pressed.connect(_on_opponent_position_pressed)
 	game_board.own_position_pressed.connect(_on_own_position_pressed)
 	own_slot_strip.bench_pressed.connect(_on_own_bench_pressed)
@@ -433,7 +433,7 @@ func _process(delta: float) -> void:
 
 
 func _on_opponent_position_pressed(position: int) -> void:
-	if not _can_act() or _pending_move:
+	if not _can_act() or _pending_bench_skill:
 		return
 	_select(ActionMenu.SelectionType.OPPONENT_BOARD, position)
 
@@ -444,21 +444,20 @@ func _on_own_position_pressed(position: int) -> void:
 		return
 	if not _can_act():
 		return
-	if _pending_move:
+	if _pending_bench_skill:
 		if position == _selected_position:
-			_cancel_pending_move()
-			return
-		_set_action(
-			{"type": "move", "side": state.current_turn, "from": _selected_position, "to": position}
-		)
+			_cancel_pending_skill()
 		return
 	_select(ActionMenu.SelectionType.OWN_BOARD, position)
 
 
+## 控えは直接選んで行動できない(GameDesign.md 9章)。交代スキルの対象選択中だけ押せる。
 func _on_own_bench_pressed(index: int) -> void:
-	if not _can_act() or _pending_move:
+	if not _can_act() or not _pending_bench_skill:
 		return
-	_select(ActionMenu.SelectionType.BENCH, index)
+	var action := {"type": "skill", "side": state.current_turn, "position": _selected_position}
+	action["bench_index"] = index
+	_set_action(action)
 
 
 func _on_flip_pressed() -> void:
@@ -477,40 +476,41 @@ func _on_flip_pressed() -> void:
 	)
 
 
-func _on_move_pressed() -> void:
+## スキルの発動(GameDesign.md 4.3)。対象を選ぶ必要があるのは交代スキルだけで、
+## その場合は控え2枠をハイライトして選ばせる。それ以外はその場で行動を設定する。
+func _on_skill_pressed() -> void:
 	if _selected_type != ActionMenu.SelectionType.OWN_BOARD:
 		return
-	_pending_move = true
-	# 移動先の駒を選ぶ間はメニューを畳み、盤面のハイライトは残しておく
+	var skill := _selected_skill()
+	if skill == null:
+		return
+	if not skill.needs_bench_target():
+		_set_action({"type": "skill", "side": state.current_turn, "position": _selected_position})
+		return
+	_pending_bench_skill = true
+	# 控えを選ぶ間はメニューを畳み、盤面の選択ハイライトは残しておく
 	action_menu.show_for_selection(ActionMenu.SelectionType.NONE)
 	action_menu.visible = false
-	game_board.show_move_targets(_move_target_positions())
+	own_slot_strip.show_swap_targets(true)
 
 
-## 「移動」選択をキャンセルし選択直後の状態(ActionMenu表示)に戻す(O-5)。
-func _cancel_pending_move() -> void:
-	_pending_move = false
-	game_board.clear_move_targets()
+## 交代スキルの対象選択をキャンセルし、選択直後の状態(ActionMenu表示)に戻す(O-5)。
+func _cancel_pending_skill() -> void:
+	_pending_bench_skill = false
+	own_slot_strip.show_swap_targets(false)
 	action_menu.visible = true
 	action_menu.show_for_selection(
-		_selected_type, _is_flip_locked(_selected_type, _selected_position)
+		_selected_type, _is_flip_locked(_selected_type, _selected_position), _selected_skill()
 	)
 	_place_action_menu(_selected_type, _selected_position)
 
 
-## 選択中の駒以外の、自分の場のマスを移動先候補として返す。
-func _move_target_positions() -> Array[int]:
-	var positions: Array[int] = []
-	for position in range(GameState.BOARD_SIZE):
-		if position != _selected_position:
-			positions.append(position)
-	return positions
-
-
-func _on_swap_pressed() -> void:
-	if _selected_type != ActionMenu.SelectionType.BENCH:
-		return
-	_set_action({"type": "swap_in", "side": state.current_turn, "bench_index": _selected_position})
+## 選択中の自分の駒が持つスキル(無ければnull)。
+func _selected_skill() -> SkillData:
+	if _selected_type != ActionMenu.SelectionType.OWN_BOARD or state == null:
+		return null
+	var instance: HourglassInstance = state.board[state.current_turn][_selected_position]
+	return instance.data.skill
 
 
 func _can_act() -> bool:
@@ -531,16 +531,13 @@ func _can_act() -> bool:
 func _select(selection_type: ActionMenu.SelectionType, position: int) -> void:
 	_selected_type = selection_type
 	_selected_position = position
-	action_menu.show_for_selection(selection_type, _is_flip_locked(selection_type, position))
 	game_board.show_selection(selection_type, position)
-	own_slot_strip.set_selected_bench_index(
-		position if selection_type == ActionMenu.SelectionType.BENCH else -1
+	own_slot_strip.set_selected_bench_index(-1)
+	own_slot_strip.show_swap_targets(false)
+	game_board.clear_move_targets()
+	action_menu.show_for_selection(
+		selection_type, _is_flip_locked(selection_type, position), _selected_skill()
 	)
-	# 控えを選ぶと、交代先である場の左マスをハイライトする(K-3: 位置ラベル常時表示の代替)。
-	if selection_type == ActionMenu.SelectionType.BENCH:
-		game_board.show_move_targets([GameState.BoardPosition.LEFT])
-	else:
-		game_board.clear_move_targets()
 	_place_action_menu(selection_type, position)
 
 
@@ -640,10 +637,11 @@ func _on_action_received(action: Dictionary) -> void:
 func _clear_selection() -> void:
 	_selected_type = ActionMenu.SelectionType.NONE
 	_selected_position = -1
-	_pending_move = false
+	_pending_bench_skill = false
 	action_menu.show_for_selection(ActionMenu.SelectionType.NONE)
 	game_board.show_selection(ActionMenu.SelectionType.NONE, -1)
 	own_slot_strip.set_selected_bench_index(-1)
+	own_slot_strip.show_swap_targets(false)
 	game_board.clear_move_targets()
 
 
@@ -736,6 +734,10 @@ func play_action_sound(action: Dictionary) -> void:
 			SoundBank.play(SoundBank.Sfx.MOVE)
 		"swap_in":
 			SoundBank.play(SoundBank.Sfx.SWAP)
+		"skill":
+			var skill := state.skill_at(action["side"], action["position"])
+			var bench := skill != null and skill.needs_bench_target()
+			SoundBank.play(SoundBank.Sfx.SWAP if bench else SoundBank.Sfx.MOVE)
 
 
 ## 駒が落ちきった(FALLENに到達した)瞬間を記録する。GameState.advance_slot()はこの発火の
@@ -955,19 +957,19 @@ func _on_wait_dots_timeout() -> void:
 
 ## 詳細パネルを開いたまま盤面の駒以外(背景・マス間の余白等)をクリックした場合に自動で閉じる(N-2)。
 ## 駒や閉じるボタン自体のクリックは各Controlの_gui_inputで消費されここへは届かないため競合しない。
-## 「移動」選択中はEscキー、または同様に何も無い場所のクリックでキャンセルできる(O-5)。
+## 交代スキルの対象選択中はEscキー、または同様に何も無い場所のクリックでキャンセルできる(O-5)。
 func _unhandled_input(event: InputEvent) -> void:
-	if _pending_move and event.is_action_pressed("ui_cancel"):
-		_cancel_pending_move()
+	if _pending_bench_skill and event.is_action_pressed("ui_cancel"):
+		_cancel_pending_skill()
 		get_viewport().set_input_as_handled()
 		return
-	if not detail_panel.visible and not _pending_move:
+	if not detail_panel.visible and not _pending_bench_skill:
 		return
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		if detail_panel.visible:
 			_detail_presenter.hide()
-		if _pending_move:
-			_cancel_pending_move()
+		if _pending_bench_skill:
+			_cancel_pending_skill()
 
 
 ## 投了ボタン。誤操作防止のため確認ダイアログ(SurrenderConfirm)を挟む(GameDesign.md 3章)。

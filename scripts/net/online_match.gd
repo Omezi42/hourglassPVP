@@ -40,7 +40,10 @@ func send_and_apply(action: Dictionary, state: GameState) -> void:
 ## 予約の対象にせず従来どおり即時に適用する。
 static func apply(action: Dictionary, state: GameState) -> void:
 	match action.get("type", ""):
-		"flip", "move", "swap_in", "pass":
+		"flip", "skill", "pass":
+			state.set_pending_action(action)
+		"move", "swap_in":
+			# 基本行動としては廃止済み(GameDesign.md 4.3)。過去のリプレイの再生用に残している。
 			state.set_pending_action(action)
 		"surrender":
 			state.surrender(action["side"])

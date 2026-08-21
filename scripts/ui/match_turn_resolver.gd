@@ -138,7 +138,7 @@ func _play_step(event: Dictionary) -> void:
 			_suppress_state_event = true
 			_screen.game_board.clear_reservations()
 			await _screen._action_presenter.play_step(_action)
-		"move", "swap_in":
+		"skill", "move", "swap_in":
 			_screen.play_action_sound(_action)
 			_screen.game_board.clear_reservations()
 			# 駒が入れ替わったマスの中身を先に差し替えてから滑り込みを見せる。滑り込みは
