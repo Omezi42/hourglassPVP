@@ -28,7 +28,27 @@
 | `icon_upright` | Texture2D | 上向き時のイラスト |
 | `icon_falling` | Texture2D | 落下中のイラスト |
 | `icon_fallen` | Texture2D | 落ちきり時のイラスト |
-| `effects` | Array[EffectData] | 追加効果のリスト(0件でも可、バニラ駒に対応) |
+| `effects` | Array[EffectData] | 受動の追加効果のリスト(0件でも可、バニラ駒に対応) |
+| `skill` | SkillData | 手番の行動として発動するスキル(null可。1駒につき最大1つ) |
+
+### 2.1.1 `SkillData`(Resource)
+
+スキル1件分のデータ(GameDesign.md 4.3・7章)。受動効果(`EffectData`)とは別のフィールドに
+持つ。トリガーは常に「起動時」で1種類しかないため持たず、代わりに**UIのボタンへ出す短い名前**を
+持つ点が `EffectData` と異なる。
+
+| フィールド | 型 | 内容 |
+|---|---|---|
+| `display_name` | String | ActionMenuのボタンに出す短い名前(「交代」「加速」等) |
+| `description` | String | 詳細パネルに出す説明文 |
+| `effect_type` | EffectType (enum) | `EffectData`と同じenumを共有する |
+| `target` | Target (enum) | 同上 |
+| `value` | int | ダメージ量など汎用パラメータ |
+
+`effects`(受動)と `skill`(能動)で同じ `EffectType`/`Target` を共有することで、
+`EffectResolver` のハンドラを1箇所に保てる。スキル専用に追加した種別は `SWAP_BENCH`
+(自分自身を控えの1個と入れ替える)と `SWAP_POSITION`(隣接する自分の駒と位置を入れ替える)の
+2つのみで、他(`FORCE_ADVANCE`/`RECOVER`/`DAMAGE`)は受動と共用のハンドラをそのまま使う。
 
 ### 2.2 `EffectData`(Resource)
 
@@ -38,7 +58,7 @@
 |---|---|---|
 | `trigger` | Trigger (enum) | `ON_FLIP` / `WHILE_FALLING` / `ON_FALLEN` / `WHILE_FALLEN` |
 | `target` | Target (enum) | `SELF` / `ADJACENT_LEFT` / `ADJACENT_RIGHT` / `OPPONENT_PLAYER` / `OWN_PLAYER` / `RANDOM_ALLY` / `OPPONENT_MIRROR` |
-| `effect_type` | EffectType (enum) | `DAMAGE` / `DAMAGE_REDUCTION` / `LOCK` / `FORCE_ADVANCE` / `RECOVER` / `COUNTER` / `SYNC_STATE` |
+| `effect_type` | EffectType (enum) | `DAMAGE` / `DAMAGE_REDUCTION` / `LOCK` / `FORCE_ADVANCE` / `RECOVER` / `COUNTER` / `SYNC_STATE` / `SWAP_BENCH` / `SWAP_POSITION`(後ろ2つはスキル専用) |
 | `value` | int | ダメージ量・軽減量など汎用パラメータ |
 
 新しい砂時計は既存 enum の組み合わせで `.tres` を1個作るだけで追加でき、コード変更を必要としない。
@@ -76,6 +96,13 @@ UIに依存しない、対局ルールそのものを扱う層。
   性質のため予約の対象にならない)。これにより「apply()→advance_and_end_turn()」という
   既存の呼び出しの対(自分の手・オンライン相手の手・CPUの手・リプレイの巻き戻し・観戦の
   追いつき、の5経路すべて)を変えずに、解決タイミングだけをターン終了時へ移せている
+- **【フェーズ22 実装済み】** 基本行動は「反転」「スキル」「パス」の3つ(GameDesign.md 4.3)。
+  `pending_action` は反転が `{"type": "flip", ...}`、スキルが
+  `{"type": "skill", "side", "position", "bench_index"?}`。`bench_index` は交代スキルのみが使う。
+  `_own_slot_kinds()` はスキルを対象マスへ `"skill"` として登録し、解決時に
+  `activate_skill()` → `EffectResolver.resolve_skill()` を呼んでから通常どおり `advance_slot()` する。
+  **旧「移動」「交代」は基本行動から削除した**が、`OnlineMatch.apply()` の `move`/`swap_in` 分岐は
+  過去のリプレイを再生できるよう残してある(合法手としては生成されない)
 - **【フェーズ21 Z-1 実装済み】** `advance_and_end_turn()`の処理順序は、
   `pending_action`を取り出す→自分の場を左→中央→右の順に1マスずつ解決→相手の駒への反転が
   設定されていればそれを解決→`effect_resolver.resolve_turn_tick()`→`current_turn`を交代→
