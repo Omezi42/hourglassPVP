@@ -512,6 +512,94 @@ Web配信ではpckのサイズがそのままロード時間に直結するた�
 
 ---
 
+## 10. アカウント・通貨の実装方針
+
+GameDesign.md 14章(アカウント)・15章(通貨)の実装方針。認証は Firebase Authentication、
+プレイヤーごとのデータは Firestore の `players/{uid}` ドキュメントで扱う。
+
+### 10.1 認証(`FirebaseAuth` の拡張)
+
+- **ID/パスワードは、Firebase の「メール/パスワード」プロバイダへ合成アドレスとして渡す**。
+  ユーザーが入力したIDを `<id>@hourglass-arena.local`(`SYNTHETIC_EMAIL_DOMAIN`)という形の
+  アドレスへ変換して `accounts:signUp` / `accounts:signInWithPassword` を呼ぶ。この方式には
+  次の利点がある。
+  - **IDの重複チェックが自動的に効く**。Firebase はアドレスの一意性を保証するため、
+    重複時は `EMAIL_EXISTS` が返る。専用のID台帳コレクションを持たずに済む
+  - パスワードのハッシュ化・保管を自前で持たない。クライアントは平文パスワードを
+    Google のエンドポイントへ送るだけで、`user://` にも Firestore にも保存しない
+  - 実在しないドメインのため、メールによる復旧は行えない(GameDesign.md 14章の明記どおり)。
+    将来メールを任意項目にする場合は `accounts:update` で本物のアドレスへ変更すればよい
+- IDは小文字へ正規化し、英数字とアンダースコア・ハイフンのみに制限する(アドレスとして
+  成立しない文字を弾くため)。この検証は送信前にクライアント側で行い、エラー文言を
+  自前で出す(Firebase のエラーコードをそのまま見せない)
+- **匿名 → 登録済みへの昇格は `accounts:update` によるリンクで行う**(新規作成ではない)。
+  現在のIDトークンを付けて `email`/`password` を設定すると、**uid が変わらないまま**
+  永続アカウントになる。これにより匿名時代のリプレイ(`player_a`/`player_b` は uid で
+  引く)と `players/{uid}` の残高がそのまま引き継がれる。新しくサインアップして
+  データを移し替える方式は採らない
+- **認証トークンを `user://` へ永続化する**(`AccountStore`)。保存するのは `refresh_token`・
+  `uid`・最後に使ったIDのみで、**パスワードは保存しない**。起動時は保存済みの
+  `refresh_token` で `securetoken` を叩いて復帰し、失敗した場合のみ新しい匿名サインインを
+  行う。これが無いと起動のたびに別の uid が発行され、オンライン対戦のリプレイが
+  一覧から消える(アカウント機能の導入前に実際にそうなっていた)
+- `NetSession.sign_in()` の「進行中のサインインがあればその完了を待つ」挙動は変えない。
+  復帰・新規匿名サインイン・ID ログインのいずれもこの1本の経路を通す
+
+### 10.2 プレイヤーデータ(`players/{uid}`)
+
+| フィールド | 型 | 内容 |
+|---|---|---|
+| `display_name` | String | 表示名(10文字まで)。未設定は空文字 |
+| `login_id` | String | 登録済みなら入力されたID。匿名なら空文字(表示用) |
+| `currency` | int | 砂金の残高 |
+| `cpu_reward_date` | String | CPU戦の報酬を数えている日付(`YYYY-MM-DD`) |
+| `cpu_reward_count` | int | その日付にCPU戦で報酬を得た回数 |
+| `updated_at` | float | 最終更新時刻(Unix時間) |
+
+- 読み書きは `AccountService`(`scripts/net/account_service.gd`、`ReplayService` と同じ
+  static のみのクラス)に集約する。`MatchScreen` や各画面が `FirestoreClient` を直接
+  叩かないようにするため
+- **残高の加算は read-modify-write を `commit()` の前提条件付きで行う**。`OnlineMatch` の
+  手の送信と同じ流儀で、`updateTime` を前提条件にして競合したら読み直して再試行する。
+  同じアカウントを2つのタブで開いた場合に加算が消えないようにするため
+- **通信に失敗した加算はローカルへ退避する**(`AccountStore` の `pending_currency`)。
+  次に `AccountService.grant()` が成功した時点で退避分を足し込んでから書く。CPU戦は
+  オフラインでも成立するため、この経路が無いと獲得が消える
+
+### 10.3 通貨の付与(`CurrencyRules`)
+
+- 報酬額と条件は `scripts/logic/currency_rules.gd`(static のみ)へ表として持つ。
+  GameDesign.md 15章の数値をコードへ散らさないため
+- `MatchScreen` は対局の種別(ランダムマッチ / ルームマッチ / CPU戦)と勝敗・総手数を
+  渡すだけにする。**オンライン対戦がランダムマッチかルームマッチかは、これまで
+  `MatchScreen` が区別していなかった**ため、`HomeScreen.online_match_found` と
+  `MatchScreen.start_placement_then_online()` に対局種別を1つ足して伝える
+- ローカル対戦(pass&play)・観戦・リプレイ再生は報酬の対象外。いずれも「自分が
+  1人のプレイヤーとして対局した」とは言えないため
+- 判定は終局時に1度だけ行い、結果を `MatchResultPresenter` が結果パネルへ
+  1行として出す(GameDesign.md 9章)
+
+### 10.4 リプレイのアカウント紐づけ
+
+- オンライン対戦のリプレイは `matches/{id}` の `player_a`/`player_b` が uid を持つ既存の
+  構造をそのまま使う。10.1 の永続化により uid が変わらなくなることで、追加の紐づけを
+  持たずに「アカウントの記録」として成立する
+- **保持件数の上限(30件)をアカウント単位に変える**。`ReplayService._enforce_retention()` は
+  終了済みマッチをアプリ全体で古い順に消しており、プレイヤーが増えると他人の記録を
+  消してしまう。自分が対局したマッチだけを対象に数え直す
+- CPU戦のリプレイ(`LocalReplayService`、`user://cpu_replays.json`)は保存先をローカルの
+  まま維持し、レコードへ `owner_uid` を足して一覧で自分のものだけを出す。アカウントを
+  切り替えたときに他のアカウントの記録が混ざらないようにするため
+
+### 10.5 UI
+
+- `AccountScreen`(`scenes/account_screen.tscn`)を追加する。他の画面と同じ共通
+  `ScreenHeader`(4章)に従い、状態表示・表示名の変更・登録・ログイン・ログアウトを持つ
+- 入口は2つ。`TitleScreen` と `HomeScreen` のヘッダー。`Main` は他の画面と同様に
+  `_show_only()` で切り替える
+- ホーム画面のヘッダーには表示名と砂金の残高を出す。残高は `AccountService` が
+  キャッシュしている値を読むだけにし、画面を開くたびに通信しない
+
 ## 未検討事項
 
 - `EffectResolver` の対応表の具体的な実装方式(match文 vs 個別クラス継承)は、実装着手時に決定する
