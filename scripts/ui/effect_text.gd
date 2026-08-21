@@ -26,6 +26,8 @@ const EFFECT_TEXT := {
 	GameEnums.EffectType.RECOVER: "を上向きに戻す",
 	GameEnums.EffectType.COUNTER: "に%dの反撃",
 	GameEnums.EffectType.SYNC_STATE: "と状態を同期",
+	GameEnums.EffectType.SWAP_BENCH: "を控えと入れ替える",
+	GameEnums.EffectType.SWAP_POSITION: "と位置を入れ替える",
 }
 
 
@@ -39,6 +41,19 @@ static func describe(effect: EffectData) -> String:
 static func describe_hourglass(data: HourglassData) -> String:
 	var lines: Array[String] = []
 	lines.append("%s(落下ダメージ%d)" % [data.display_name, data.fall_damage])
+	if data.has_skill():
+		lines.append("・" + describe_skill(data.skill))
 	for effect in data.effects:
 		lines.append("・" + describe(effect))
 	return "\n".join(lines)
+
+
+## スキル(GameDesign.md 4.3)の説明文。駒データが持つ説明文をそのまま使い、無い場合だけ
+## 受動効果と同じ語彙(ターゲット×エフェクト)から機械的に組み立てる。
+static func describe_skill(skill: SkillData) -> String:
+	if not skill.description.is_empty():
+		return "スキル『%s』: %s" % [skill.display_name, skill.description]
+	var effect_phrase: String = EFFECT_TEXT[skill.effect_type]
+	if effect_phrase.contains("%d"):
+		effect_phrase = effect_phrase % skill.value
+	return "スキル『%s』: %s%s" % [skill.display_name, TARGET_TEXT[skill.target], effect_phrase]
