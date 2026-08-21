@@ -7,10 +7,13 @@ extends CpuStrategy
 const WIN_SCORE := 100000.0
 const LOSE_SCORE := -100000.0
 
-## スキル持ちを場へ置くことの価値。スキルは場に出ている駒しか使えないため。
-const SKILL_ON_BOARD_BONUS := 25.0
+## スキル持ちを場へ置くことの価値の既定値。値は自己対戦(CPU同士の総当たり)で決める。
+## 0/10/25/45/70 の総当たりでは0が勝率72.2%と最も強く、「スキル持ちを場へ置く」こと自体が
+## 現状の駒設計では損だと分かったため0にしている。スキルを強くしたら測り直すこと。
+const DEFAULT_SKILL_ON_BOARD_BONUS := 0.0
 
 @export var search_depth: int = 2
+@export var skill_on_board_bonus: float = DEFAULT_SKILL_ON_BOARD_BONUS
 var _sim_state: GameState
 
 
@@ -82,7 +85,7 @@ func _score_skill(data: HourglassData, position: int) -> float:
 		and position == GameState.BoardPosition.RIGHT
 	):
 		return 0.0
-	return SKILL_ON_BOARD_BONUS
+	return skill_on_board_bonus
 
 
 func _score_left_slot(data: HourglassData) -> float:

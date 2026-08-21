@@ -108,7 +108,7 @@ func resolve_skill(game_state: GameState, side: int, position: int, bench_index:
 		GameEnums.EffectType.FORCE_ADVANCE:
 			game_state.advance_slot(side, position)
 		GameEnums.EffectType.RECOVER:
-			_recover_random_ally(game_state, side, position)
+			_recover_random_ally(game_state, side, position, skill.value)
 		GameEnums.EffectType.SYNC_STATE:
 			_sync_state(game_state, side, position, instance, skill.target)
 		GameEnums.EffectType.DAMAGE:
@@ -146,15 +146,24 @@ func _adjacent_position(position: int, target: int) -> int:
 	return -1
 
 
-func _recover_random_ally(game_state: GameState, side: int, exclude_position: int) -> void:
+## countは上向きに戻す味方の個数。1なら従来どおりランダムに1個、2以上なら
+## その個数だけランダムに(重複なく)戻す(GameDesign.md 7章のスキル「目覚め」)。
+func _recover_random_ally(
+	game_state: GameState, side: int, exclude_position: int, count: int = 1
+) -> void:
 	var candidates: Array[int] = []
 	for position in range(GameState.BOARD_SIZE):
 		if position == exclude_position:
 			continue
+		# 落ちきった駒だけを対象にする。落下中の駒を上向きへ戻すと、その駒が落ちきるのを
+		# 自分で遅らせることになり、起こす側の得にならないため(GameDesign.md 7章)。
+		var instance: HourglassInstance = game_state.board[side][position]
+		if instance.state != GameEnums.HourglassState.FALLEN:
+			continue
 		candidates.append(position)
-	if candidates.is_empty():
-		return
-	var chosen_position: int = candidates[randi() % candidates.size()]
-	var instance: HourglassInstance = game_state.board[side][chosen_position]
-	instance.flip()
-	game_state.hourglass_state_changed.emit(side, chosen_position, instance.state)
+	candidates.shuffle()
+	for i in range(mini(maxi(count, 1), candidates.size())):
+		var chosen_position: int = candidates[i]
+		var chosen: HourglassInstance = game_state.board[side][chosen_position]
+		chosen.flip()
+		game_state.hourglass_state_changed.emit(side, chosen_position, chosen.state)

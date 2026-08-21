@@ -16,10 +16,10 @@ effect_type = 2
 [sub_resource type="Resource" id="Skill_eye"]
 script = ExtResource("skill_eye")
 display_name = "目覚め"
-description = "自分以外の味方の砂時計をランダムに1個、上向きに戻す。"
+description = "落ちきっている自分以外の味方の砂時計を、2個まで上向きに戻す。"
 effect_type = 4
 target = 5
-value = 0
+value = 2
 
 [resource]
 script = ExtResource("2_guo3m")
