@@ -14,6 +14,7 @@ func run(assert_true: Callable) -> void:
 	_test_synthetic_email(assert_true)
 	_test_currency_rules(assert_true)
 	_test_account_store(assert_true)
+	_test_local_replay_ownership(assert_true)
 
 
 func _test_credential_validation(assert_true: Callable) -> void:
@@ -170,6 +171,70 @@ func _test_account_store(assert_true: Callable) -> void:
 	)
 
 	_restore(backup)
+
+
+## CPU戦のリプレイがアカウントごとに分かれること(AJ-2)。
+## user://の実データを壊さないよう、ここでもバックアップ→復元の往復を使う。
+func _test_local_replay_ownership(assert_true: Callable) -> void:
+	var backup: Variant = _backup_path(LocalReplayService.SAVE_PATH)
+
+	var file := FileAccess.open(LocalReplayService.SAVE_PATH, FileAccess.WRITE)
+	file.store_string("[]")
+	file = null
+
+	LocalReplayService.mark_finished({"winner": "a"}, "uid-alice")
+	LocalReplayService.mark_finished({"winner": "b"}, "uid-alice")
+	LocalReplayService.mark_finished({"winner": "a"}, "uid-bob")
+
+	assert_true.call(
+		LocalReplayService.list_replays("uid-alice").size() == 2,
+		"a replay list should only contain that account's own cpu matches"
+	)
+	assert_true.call(
+		LocalReplayService.list_replays("uid-bob").size() == 1,
+		"another account should see only its own cpu matches"
+	)
+	assert_true.call(
+		LocalReplayService.list_replays("uid-carol").is_empty(),
+		"an account that never played should see no cpu matches"
+	)
+	# サインインできていないときは絞り込む基準が無いため全件返す
+	assert_true.call(
+		LocalReplayService.list_replays("").size() == 3,
+		"an unknown account should not filter the list at all"
+	)
+
+	# 上限は所有者ごとに数える。別のアカウントの記録を巻き添えで消さないこと
+	for i in range(LocalReplayService.RETENTION_LIMIT + 2):
+		LocalReplayService.mark_finished({"winner": "a", "index": i}, "uid-alice")
+	assert_true.call(
+		LocalReplayService.list_replays("uid-alice").size() == LocalReplayService.RETENTION_LIMIT,
+		"an account's cpu replays should be capped at the retention limit"
+	)
+	assert_true.call(
+		LocalReplayService.list_replays("uid-bob").size() == 1,
+		"overflowing one account should not drop another account's replays"
+	)
+
+	_restore_path(LocalReplayService.SAVE_PATH, backup)
+
+
+func _backup_path(path: String) -> Variant:
+	if not FileAccess.file_exists(path):
+		return null
+	var file := FileAccess.open(path, FileAccess.READ)
+	var content := file.get_as_text()
+	file = null
+	return content
+
+
+func _restore_path(path: String, backup: Variant) -> void:
+	if backup == null:
+		if FileAccess.file_exists(path):
+			DirAccess.remove_absolute(path)
+		return
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	file.store_string(str(backup))
 
 
 func _backup() -> Variant:

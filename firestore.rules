@@ -17,6 +17,9 @@ rules_version = '2';
 //     読み取りを対局者に限定していない
 //   - キューやルームのドキュメントを他人が削除できること。切断して残ったキューを
 //     他のプレイヤーが掃除する実装(MatchmakingQueue)がこれに依存している
+//   - players/{uid}のcurrency(砂金)の増え方。本人しか書けないことだけを守り、
+//     金額が正しいかどうかは検証しない(GameDesign.md 15章の「自分ひとりで
+//     繰り返せる対局ほど報酬を低くする」という設計側の線引きで釣り合わせている)
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -38,6 +41,15 @@ service cloud.firestore {
     // 対局そのもの(デッキ・配置・手順・結果)。リプレイと観戦もこれを読む。
     match /matches/{matchId} {
       allow read, write: if signedIn();
+    }
+
+    // プレイヤーごとのアカウント情報(表示名・砂金の残高)。ドキュメントIDはuid。
+    // 読み取りをサインイン済みの全員へ許すのは、対局中とリプレイ一覧で相手の
+    // 表示名を出すため。書き込みは本人のみに限る(残高を他人に書き換えられると、
+    // クライアントを信頼する方針の中でも被害が本人の記録に留まらないため)。
+    match /players/{uid} {
+      allow read: if signedIn();
+      allow write: if signedIn() && request.auth.uid == uid;
     }
 
     // 上記以外は一切許可しない。

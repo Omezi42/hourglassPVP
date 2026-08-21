@@ -9,36 +9,63 @@ const RETENTION_LIMIT := 30
 
 
 ## 対局終了時に呼び出す。deck_a/deck_b・placement_a/placement_b・actions・winnerを含む
-## recordへid・finished_atを付与して保存し、続けて保存件数の上限(30件)を維持する。
-static func mark_finished(record: Dictionary) -> void:
+## recordへid・finished_at・owner_uidを付与して保存し、続けて保存件数の上限
+## (アカウントごとに30件)を維持する。
+##
+## owner_uidは、アカウントを切り替えたときに他のアカウントの記録が一覧へ混ざらない
+## ようにするためのもの(GameDesign.md 12章・14章)。上限も所有者ごとに数え、
+## 別のアカウントで遊んだ記録を巻き添えで消さない。
+static func mark_finished(record: Dictionary, owner_uid: String = "") -> void:
 	var entry: Dictionary = record.duplicate(true)
 	entry["id"] = "cpu_%d_%d" % [Time.get_unix_time_from_system(), randi() % 1000000]
 	entry["finished_at"] = Time.get_unix_time_from_system()
 	entry["source"] = "cpu"
+	entry["owner_uid"] = owner_uid
 
-	var all: Array = _load_all()
-	all.append(entry)
-	all.sort_custom(
-		func(a: Dictionary, b: Dictionary) -> bool:
-			return int(a.get("finished_at", 0)) > int(b.get("finished_at", 0))
-	)
-	if all.size() > RETENTION_LIMIT:
-		all = all.slice(0, RETENTION_LIMIT)
+	var kept: Array = []
+	var mine: Array = [entry]
+	for existing in _load_all():
+		if _belongs_to(existing, owner_uid):
+			mine.append(existing)
+		else:
+			kept.append(existing)
+	_sort_by_finished_at(mine)
+	if mine.size() > RETENTION_LIMIT:
+		mine = mine.slice(0, RETENTION_LIMIT)
+	var all: Array = kept + mine
+	_sort_by_finished_at(all)
 	_save_all(all)
 
 
-## 保存済みの全CPU戦リプレイを、finished_atの新しい順に返す。ReplayService.list_replays()と
-## 同じ{"id":..., "fields":{...}}の形へ揃え、ReplayListCard側の表示ロジックを共用できるようにする。
-static func list_replays() -> Array[Dictionary]:
+## owner_uidのアカウントが遊んだCPU戦リプレイを、finished_atの新しい順に返す。
+## ReplayService.list_replays()と同じ{"id":..., "fields":{...}}の形へ揃え、
+## ReplayListCard側の表示ロジックを共用できるようにする。
+static func list_replays(owner_uid: String = "") -> Array[Dictionary]:
 	var all: Array = _load_all()
-	all.sort_custom(
+	_sort_by_finished_at(all)
+	var result: Array[Dictionary] = []
+	for entry in all:
+		if not _belongs_to(entry, owner_uid):
+			continue
+		result.append({"id": str(entry.get("id", "")), "fields": entry})
+	return result
+
+
+## owner_uidを持たない古いレコードは、アカウント機能の導入前に保存されたもの。
+## 一覧から消えてしまわないよう、いま遊んでいるアカウントのものとして扱う。
+## owner_uid自体が空(サインインできていない)ときは、絞り込む基準が無いため全件返す。
+static func _belongs_to(entry: Dictionary, owner_uid: String) -> bool:
+	if owner_uid == "":
+		return true
+	var owner := str(entry.get("owner_uid", ""))
+	return owner == "" or owner == owner_uid
+
+
+static func _sort_by_finished_at(entries: Array) -> void:
+	entries.sort_custom(
 		func(a: Dictionary, b: Dictionary) -> bool:
 			return int(a.get("finished_at", 0)) > int(b.get("finished_at", 0))
 	)
-	var result: Array[Dictionary] = []
-	for entry in all:
-		result.append({"id": str(entry.get("id", "")), "fields": entry})
-	return result
 
 
 ## idに一致するレコードをフラットな形(MatchScreen.start_local_replay()がそのまま

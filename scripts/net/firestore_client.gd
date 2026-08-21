@@ -138,27 +138,6 @@ func query_field_equals(collection: String, field: String, value: Variant, limit
 	)
 
 
-## collection直下でfinished_at > 0のドキュメントを、finished_atの古い順にlimit件クエリする。
-## フィルタとorderByが同一フィールドのため、複合インデックスなしで実行できる。
-func query_finished_matches_oldest_first(collection: String, limit: int) -> Array:
-	return await _run_structured_query(
-		{
-			"from": [{"collectionId": collection}],
-			"where":
-			{
-				"fieldFilter":
-				{
-					"field": {"fieldPath": "finished_at"},
-					"op": "GREATER_THAN",
-					"value": {"integerValue": "0"}
-				}
-			},
-			"orderBy": [{"field": {"fieldPath": "finished_at"}, "direction": "ASCENDING"}],
-			"limit": limit
-		}
-	)
-
-
 func _run_structured_query(structured_query: Dictionary) -> Array:
 	var result: Array = await _post_raw(
 		_base_url() + ":runQuery", {"structuredQuery": structured_query}

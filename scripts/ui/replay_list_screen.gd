@@ -25,10 +25,13 @@ func refresh() -> void:
 		child.queue_free()
 	empty_label.visible = false
 
-	var local_replays: Array[Dictionary] = LocalReplayService.list_replays()
+	# CPU戦のリプレイもアカウントに紐づくため、先にサインインしてuidを確定させる。
+	# サインインできなかった場合、LocalReplayServiceは絞り込まずに全件返す
+	var ok: bool = await NetSession.sign_in()
+	var uid: String = NetSession.auth.uid if ok else ""
+	var local_replays: Array[Dictionary] = LocalReplayService.list_replays(uid)
 
 	var online_replays: Array[Dictionary] = []
-	var ok: bool = await NetSession.sign_in()
 	if ok:
 		online_replays = await ReplayService.list_replays(NetSession.client, NetSession.auth.uid)
 	elif local_replays.is_empty():

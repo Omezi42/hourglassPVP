@@ -48,7 +48,8 @@ func save_finished(winner: GameState.PlayerSide) -> void:
 				"placement_b": _placement_b_ids,
 				"actions": _actions,
 				"winner": winner_str,
-			}
+			},
+			NetSession.auth.uid if NetSession.auth != null else ""
 		)
 	)
 

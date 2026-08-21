@@ -831,7 +831,9 @@ func _on_match_ended(winner: GameState.PlayerSide) -> void:
 	surrender_confirm.visible = false
 	if _is_online and not _is_replay:
 		var winner_str := "a" if winner == GameState.PlayerSide.A else "b"
-		ReplayService.mark_finished(_online_match.client, _online_match.match_id, winner_str)
+		ReplayService.mark_finished(
+			_online_match.client, _online_match.match_id, winner_str, NetSession.auth.uid
+		)
 	if _is_cpu_match and not _is_replay:
 		_cpu_replay_recorder.save_finished(winner)
 	# 終局したらポーリングを止める(以前は次の対局を始めるまでFirestoreを読み続けていた)
