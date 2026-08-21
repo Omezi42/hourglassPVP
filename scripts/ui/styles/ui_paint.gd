@@ -5,7 +5,7 @@ extends RefCounted
 ## Control._draw()側からもRID(get_canvas_item())を渡せば同じ関数を共用できる。
 
 ## ボタン種別を示す紋章(エンブレム)の絵柄。CodedButtonStyle.emblemから参照される。
-enum Emblem { NONE, HOURGLASS, SWAP_ARROWS, BENCH, CHECK, ADVANCE, AWAKEN }
+enum Emblem { NONE, HOURGLASS, SWAP_ARROWS, BENCH, CHECK, ADVANCE, AWAKEN, HEAL, STRIKE }
 
 const GRAIN_SIZE := 64
 const GRAIN_SEED := 20240818
@@ -49,6 +49,36 @@ static var _swap_arrow_top_points := PackedVector2Array(
 static var _swap_arrow_top_highlight := PackedVector2Array(
 	[Vector2(-0.7, -0.42), Vector2(0.05, -0.42)]
 )
+## 治癒(スキル):HPの回復を示す太い十字。
+static var _heal_points := PackedVector2Array(
+	[
+		Vector2(-0.26, -0.78),
+		Vector2(0.26, -0.78),
+		Vector2(0.26, -0.26),
+		Vector2(0.78, -0.26),
+		Vector2(0.78, 0.26),
+		Vector2(0.26, 0.26),
+		Vector2(0.26, 0.78),
+		Vector2(-0.26, 0.78),
+		Vector2(-0.26, 0.26),
+		Vector2(-0.78, 0.26),
+		Vector2(-0.78, -0.26),
+		Vector2(-0.26, -0.26),
+	]
+)
+static var _heal_highlight := PackedVector2Array([Vector2(-0.16, -0.68), Vector2(0.16, -0.68)])
+## 一撃(スキル):相手への直接ダメージを示す、斜めに振り抜いた刃。
+static var _strike_points := PackedVector2Array(
+	[
+		Vector2(0.72, -0.78),
+		Vector2(0.86, -0.34),
+		Vector2(-0.40, 0.72),
+		Vector2(-0.86, 0.80),
+		Vector2(-0.72, 0.34),
+		Vector2(0.40, -0.66),
+	]
+)
+static var _strike_highlight := PackedVector2Array([Vector2(0.62, -0.56), Vector2(-0.46, 0.46)])
 ## 加速(スキル):砂を一気に落とすことを示す下向きの二重シェブロン。
 static var _advance_upper_points := PackedVector2Array(
 	[
@@ -415,6 +445,10 @@ static func draw_emblem(ci: RID, emblem: Emblem, center: Vector2, size: float) -
 			_emblem_fill(ci, center, size, _advance_lower_points, _advance_lower_highlight)
 		Emblem.AWAKEN:
 			_emblem_fill(ci, center, size, _awaken_points, _awaken_highlight)
+		Emblem.HEAL:
+			_emblem_fill(ci, center, size, _heal_points, _heal_highlight)
+		Emblem.STRIKE:
+			_emblem_fill(ci, center, size, _strike_points, _strike_highlight)
 		_:
 			pass
 

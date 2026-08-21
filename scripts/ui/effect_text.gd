@@ -28,6 +28,7 @@ const EFFECT_TEXT := {
 	GameEnums.EffectType.SYNC_STATE: "と状態を同期",
 	GameEnums.EffectType.SWAP_BENCH: "を控えと入れ替える",
 	GameEnums.EffectType.SWAP_POSITION: "と位置を入れ替える",
+	GameEnums.EffectType.HEAL: "のHPを%d回復",
 }
 
 

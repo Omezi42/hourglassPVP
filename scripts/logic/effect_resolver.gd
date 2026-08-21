@@ -124,6 +124,8 @@ func resolve_skill(game_state: GameState, side: int, position: int, bench_index:
 			_sync_state(game_state, side, position, instance, skill.target)
 		GameEnums.EffectType.DAMAGE:
 			game_state.deal_damage(_resolve_player_target(skill.target, side), skill.value)
+		GameEnums.EffectType.HEAL:
+			game_state.heal(_resolve_player_target(skill.target, side), skill.value)
 
 
 func _resolve_player_target(target: int, owner_side: int) -> int:

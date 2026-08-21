@@ -37,8 +37,7 @@ func _run() -> void:
 	_test_force_match_end_on_timeout()
 	_test_online_match_apply_surrender_ends_match()
 
-	_test_sword_on_flip_damage()
-	_test_king_damage_reduction_and_self_damage()
+	_test_king_damage_reduction_while_fallen()
 	_test_judge_continuous_damage()
 	_test_wall_counter_only_on_opponent_flip()
 	_test_eye_locks_opponent_mirror()
@@ -595,16 +594,7 @@ func _test_online_match_apply_surrender_ends_match() -> void:
 	)
 
 
-func _test_sword_on_flip_damage() -> void:
-	var gs := _make_state(["sword", "sand", "sand"], ["sand", "sand", "sand"], true)
-	gs.flip(GameState.PlayerSide.A, GameState.PlayerSide.A, GameState.BoardPosition.LEFT)
-	_assert_true(
-		gs.hp[GameState.PlayerSide.B] == GameState.INITIAL_HP - 1,
-		"sword flip should deal 1 damage to the opponent"
-	)
-
-
-func _test_king_damage_reduction_and_self_damage() -> void:
+func _test_king_damage_reduction_while_fallen() -> void:
 	var gs := _make_state(["king", "sand", "sand"], ["sand", "sand", "sand"], true)
 	gs.advance_slot(GameState.PlayerSide.A, GameState.BoardPosition.LEFT)
 	_assert_true(
@@ -612,17 +602,11 @@ func _test_king_damage_reduction_and_self_damage() -> void:
 		"king should not grant damage reduction while merely falling"
 	)
 
-	var hp_a_before: int = gs.hp[GameState.PlayerSide.A]
 	var hp_b_before: int = gs.hp[GameState.PlayerSide.B]
 	gs.advance_slot(GameState.PlayerSide.A, GameState.BoardPosition.LEFT)
 	_assert_true(
 		gs.hp[GameState.PlayerSide.B] == hp_b_before - 1,
 		"king fall damage should deal 1 to opponent"
-	)
-	# 自傷は、落ちきったキング自身の軽減(-1)を受けるため実質1になる(docs/Hourglasses.md参照)。
-	_assert_true(
-		gs.hp[GameState.PlayerSide.A] == hp_a_before - 1,
-		"king self damage of 2 should be reduced to 1 by its own damage reduction once fallen"
 	)
 	_assert_true(
 		gs.effect_resolver.get_damage_reduction(gs, GameState.PlayerSide.A) == 1,

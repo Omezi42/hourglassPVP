@@ -122,7 +122,7 @@ func advance_and_end_turn() -> void:
 				swap_in(current_turn, action["bench_index"])
 			"skill":
 				resolution_step_started.emit(current_turn, _skill_step_positions(action), "skill")
-				activate_skill(current_turn, action["position"], action.get("bench_index", 0))
+				_activate_skill(current_turn, action["position"], action.get("bench_index", 0))
 			_:
 				var instance: HourglassInstance = board[current_turn][position]
 				var idle := instance.state == GameEnums.HourglassState.FALLEN
@@ -192,7 +192,7 @@ func skill_at(side: PlayerSide, position: int) -> SkillData:
 
 
 ## スキルを発動する(GameDesign.md 4.3)。実際の効果はEffectResolverが解決する。
-func activate_skill(side: PlayerSide, position: int, bench_index: int = 0) -> void:
+func _activate_skill(side: PlayerSide, position: int, bench_index: int = 0) -> void:
 	if _match_over or effect_resolver == null:
 		return
 	effect_resolver.resolve_skill(self, side, position, bench_index)
@@ -298,6 +298,17 @@ func _apply_fall_damage(side: PlayerSide, position: int) -> void:
 	if damage <= 0:
 		return
 	deal_damage(other_side(side), damage)
+
+
+## HPを回復する(GameDesign.md 7章のスキル「治癒」)。初期HPを超えては回復しない。
+func heal(target_side: PlayerSide, amount: int) -> void:
+	if _match_over or amount <= 0:
+		return
+	var healed: int = mini(hp[target_side] + amount, INITIAL_HP)
+	if healed == hp[target_side]:
+		return
+	hp[target_side] = healed
+	hp_changed.emit(target_side, hp[target_side])
 
 
 func deal_damage(target_side: PlayerSide, amount: int) -> void:

@@ -5,11 +5,14 @@
 [ext_resource type="Texture2D" path="res://assets/hourglasses/processed/shield/state_full.png" id="3_full"]
 [ext_resource type="Texture2D" path="res://assets/hourglasses/processed/shield/state_falling.png" id="4_falling"]
 [ext_resource type="Texture2D" path="res://assets/hourglasses/processed/shield/state_empty.png" id="5_empty"]
+[ext_resource type="Script" path="res://scripts/data/skill_data.gd" id="6_r0k0a"]
 
-[sub_resource type="Resource" id="Resource_k3j6n"]
-script = ExtResource("1_i8xbt")
-trigger = 1
-effect_type = 1
+[sub_resource type="Resource" id="Resource_awbym"]
+script = ExtResource("6_r0k0a")
+display_name = "治癒"
+description = "自分のHPを1回復する。"
+effect_type = 9
+target = 4
 value = 1
 
 [resource]
@@ -20,4 +23,4 @@ fall_damage = 2
 icon_upright = ExtResource("3_full")
 icon_falling = ExtResource("4_falling")
 icon_fallen = ExtResource("5_empty")
-effects = Array[ExtResource("1_i8xbt")]([SubResource("Resource_k3j6n")])
+skill = SubResource("Resource_awbym")

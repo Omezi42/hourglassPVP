@@ -12,7 +12,8 @@ const EMBLEMS := {
 	GameEnums.EffectType.FORCE_ADVANCE: UiPaint.Emblem.ADVANCE,
 	GameEnums.EffectType.RECOVER: UiPaint.Emblem.AWAKEN,
 	GameEnums.EffectType.SYNC_STATE: UiPaint.Emblem.SWAP_ARROWS,
-	GameEnums.EffectType.DAMAGE: UiPaint.Emblem.CHECK,
+	GameEnums.EffectType.DAMAGE: UiPaint.Emblem.STRIKE,
+	GameEnums.EffectType.HEAL: UiPaint.Emblem.HEAL,
 }
 
 
