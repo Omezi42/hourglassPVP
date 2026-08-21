@@ -2,6 +2,7 @@
 
 [ext_resource type="StyleBox" path="res://resources/theme/detail_panel_bg.tres" id="1_ugr3y"]
 [ext_resource type="Script" path="res://scripts/ui/hourglass_detail_panel.gd" id="2_5xy22"]
+[ext_resource type="Script" path="res://scripts/ui/piece_marks.gd" id="3_5xy22"]
 
 [node name="HourglassDetailPanel" type="PanelContainer" unique_id=1899211694]
 custom_minimum_size = Vector2(302, 400)
@@ -49,7 +50,54 @@ layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 
-[node name="EffectsLabel" type="Label" parent="Margin/VBox/EffectsScroll" unique_id=1532505434]
+[node name="EffectsBox" type="VBoxContainer" parent="Margin/VBox/EffectsScroll" unique_id=193514797]
 layout_mode = 2
 size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="SkillHeader" type="HBoxContainer" parent="Margin/VBox/EffectsScroll/EffectsBox" unique_id=869973810]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="SkillEmblem" type="Control" parent="Margin/VBox/EffectsScroll/EffectsBox/SkillHeader" unique_id=52430304]
+custom_minimum_size = Vector2(30, 30)
+layout_mode = 2
+size_flags_vertical = 4
+script = ExtResource("3_5xy22")
+corner = 2
+
+[node name="SkillTitle" type="Label" parent="Margin/VBox/EffectsScroll/EffectsBox/SkillHeader" unique_id=937386723]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(0.96, 0.82, 0.5, 1)
+autowrap_mode = 3
+
+[node name="SkillBody" type="Label" parent="Margin/VBox/EffectsScroll/EffectsBox" unique_id=2086569877]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.92, 0.9, 0.86, 1)
+autowrap_mode = 3
+
+[node name="PassiveTitle" type="Label" parent="Margin/VBox/EffectsScroll/EffectsBox" unique_id=1954386608]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(0.96, 0.82, 0.5, 1)
+text = "受動効果"
+vertical_alignment = 2
+
+[node name="PassiveBody" type="Label" parent="Margin/VBox/EffectsScroll/EffectsBox" unique_id=1523820921]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.92, 0.9, 0.86, 1)
+autowrap_mode = 3
+
+[node name="NoteLabel" type="Label" parent="Margin/VBox/EffectsScroll/EffectsBox" unique_id=39608745]
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+size_flags_horizontal = 3
+horizontal_alignment = 1
+vertical_alignment = 2
 autowrap_mode = 3

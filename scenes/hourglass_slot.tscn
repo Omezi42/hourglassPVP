@@ -1,6 +1,7 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/hourglass_slot.gd" id="1_dm2bu"]
+[ext_resource type="Script" path="res://scripts/ui/piece_marks.gd" id="2_5cc0h"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dm2bu"]
 bg_color = Color(0.85, 0.62, 0.22, 0.12)
@@ -119,6 +120,14 @@ offset_right = -24.0
 offset_bottom = 2.0
 theme_override_font_sizes/font_size = 18
 text = "🔒"
+
+[node name="PieceMarks" type="Control" parent="VisualRoot" unique_id=69294476]
+visible = false
+anchors_preset = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+script = ExtResource("2_5cc0h")
 
 [node name="DamageBadge" type="Label" parent="VisualRoot" unique_id=2131896361]
 custom_minimum_size = Vector2(28, 28)

@@ -114,6 +114,11 @@ const RESERVATION_POP_DURATION := 0.25
 ## 駒ごとの砂の色を、イラストから1度だけサンプリングして使い回す。
 static var _accent_cache: Dictionary = {}
 
+## スキルの紋章・受動効果の印を出す枠かどうか(GameDesign.md 9章「盤面上の各駒には」)。
+## 盤面の6マスと配置フェーズの配置先だけが対象で、HPバー横のスロット列は枠が小さく
+## 紋章が潰れるため出さない(そちらはクリックで詳細を見る)。
+var marks_enabled := false
+
 var _last_state: int = -1
 var _accent := UiPalette.PEDESTAL_DEFAULT_ACCENT
 var _has_piece := false
@@ -150,6 +155,7 @@ var _reservation_tween: Tween
 @onready var icon: TextureRect = $VisualRoot/Icon
 @onready var lock_icon: Label = $VisualRoot/LockIcon
 @onready var damage_badge: Label = $VisualRoot/DamageBadge
+@onready var piece_marks: PieceMarks = $VisualRoot/PieceMarks
 @onready var fall_flash: Panel = $VisualRoot/FallFlash
 @onready var fall_warning_ring: Panel = $VisualRoot/FallWarningRing
 @onready var reservation_badge: Label = $VisualRoot/ReservationBadge
@@ -576,6 +582,13 @@ func _draw_flip_shockwave(ci: RID, center: Vector2, radius: Vector2) -> void:
 	)
 
 
+func _apply_marks(data: HourglassData) -> void:
+	if marks_enabled:
+		piece_marks.show_for(data)
+	else:
+		piece_marks.clear_marks()
+
+
 func show_instance(instance: HourglassInstance) -> void:
 	visible = true
 	_has_piece = true
@@ -583,6 +596,7 @@ func show_instance(instance: HourglassInstance) -> void:
 	_accent = _accent_for(instance.data)
 	damage_badge.visible = true
 	damage_badge.text = str(instance.data.fall_damage)
+	_apply_marks(instance.data)
 	queue_redraw()
 
 	if _last_state == -1:
@@ -604,6 +618,7 @@ func show_deployed(data: HourglassData) -> void:
 	_has_piece = true
 	_show_placement_state(-1)
 	damage_badge.visible = false
+	piece_marks.clear_marks()
 	icon.texture = data.icon_upright
 	icon.modulate = GHOST_ICON_TINT
 	_set_pedestal_visible(false)
@@ -630,6 +645,7 @@ func show_state_step(data: HourglassData, new_state: int, animated: bool = true)
 	_accent = _accent_for(data)
 	damage_badge.visible = true
 	damage_badge.text = str(data.fall_damage)
+	_apply_marks(data)
 	queue_redraw()
 
 	if _last_state == new_state or not animated:
@@ -652,6 +668,7 @@ func show_placement_card(data: HourglassData, start_state: int = -1) -> void:
 	_last_state = icon_state
 	damage_badge.visible = true
 	damage_badge.text = str(data.fall_damage)
+	_apply_marks(data)
 	_update_icon(data, icon_state)
 	icon.modulate = BOARD_ICON_TINT
 	_set_pedestal_visible(true)
@@ -671,6 +688,7 @@ func show_placement_empty(start_state: int = -1) -> void:
 	_has_piece = false
 	icon.texture = null
 	damage_badge.visible = false
+	piece_marks.clear_marks()
 	set_locked(false)
 	set_selected(false)
 	set_move_target(true)
@@ -695,6 +713,7 @@ func clear() -> void:
 	icon.texture = null
 	_last_state = -1
 	damage_badge.visible = false
+	piece_marks.clear_marks()
 	set_selected(false)
 	set_locked(false)
 	set_move_target(false)

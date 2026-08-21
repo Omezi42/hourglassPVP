@@ -15,6 +15,7 @@ var _rest_position := Vector2.ZERO
 @onready var visual_root: Control = $VisualRoot
 @onready var icon: TextureRect = $VisualRoot/Icon
 @onready var empty_label: Label = $VisualRoot/EmptyLabel
+@onready var piece_marks: PieceMarks = $VisualRoot/PieceMarks
 
 
 func _ready() -> void:
@@ -66,6 +67,8 @@ func show_hourglass(data: HourglassData) -> void:
 	icon.texture = data.icon_upright
 	icon.visible = true
 	empty_label.visible = false
+	# 編成中の5枠でもスキルの内訳が読めるようにする(GameDesign.md 9章)
+	piece_marks.show_for(data)
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 
 
@@ -74,6 +77,7 @@ func clear() -> void:
 	icon.texture = null
 	icon.visible = false
 	empty_label.visible = true
+	piece_marks.clear_marks()
 	mouse_default_cursor_shape = Control.CURSOR_ARROW
 	_hovering = false
 	visual_root.modulate = Color(1.0, 1.0, 1.0, 1.0)

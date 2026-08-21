@@ -14,6 +14,8 @@ func _ready() -> void:
 	for i in range(slots.size()):
 		slots[i].slot_pressed.connect(_on_slot_pressed.bind(i))
 		slots[i].info_requested.connect(_on_slot_info_requested.bind(i))
+		# スキルの紋章・受動効果の印は盤面の駒にだけ出す(GameDesign.md 9章)
+		slots[i].marks_enabled = true
 
 
 func show_board(board_instances: Array) -> void:

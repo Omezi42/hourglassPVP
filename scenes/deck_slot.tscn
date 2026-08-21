@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" path="res://scripts/ui/deck_slot.gd" id="1_jjqs3"]
 [ext_resource type="StyleBox" path="res://resources/theme/content_panel.tres" id="2_seea4"]
+[ext_resource type="Script" path="res://scripts/ui/piece_marks.gd" id="3_snoco"]
 
 [node name="DeckSlot" type="Control" unique_id=915827277]
 custom_minimum_size = Vector2(162, 200)
@@ -49,3 +50,12 @@ text = "ここに
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 3
+
+[node name="PieceMarks" type="Control" parent="VisualRoot" unique_id=285127533]
+visible = false
+anchors_preset = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+script = ExtResource("3_snoco")
+corner = 1

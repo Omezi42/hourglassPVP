@@ -52,9 +52,16 @@ static func describe_hourglass(data: HourglassData) -> String:
 ## スキル(GameDesign.md 4.3)の説明文。駒データが持つ説明文をそのまま使い、無い場合だけ
 ## 受動効果と同じ語彙(ターゲット×エフェクト)から機械的に組み立てる。
 static func describe_skill(skill: SkillData) -> String:
+	return "スキル『%s』: %s" % [skill.display_name, skill_body(skill)]
+
+
+## スキルの説明文のうち、名前を除いた効果の部分だけ。見出し(名前)と本文を分けて出す
+## 詳細パネル(GameDesign.md 9章)が使う。駒データが持つ説明文をそのまま使い、無い場合だけ
+## 受動効果と同じ語彙(ターゲット×エフェクト)から機械的に組み立てる。
+static func skill_body(skill: SkillData) -> String:
 	if not skill.description.is_empty():
-		return "スキル『%s』: %s" % [skill.display_name, skill.description]
+		return skill.description
 	var effect_phrase: String = EFFECT_TEXT[skill.effect_type]
 	if effect_phrase.contains("%d"):
 		effect_phrase = effect_phrase % skill.value
-	return "スキル『%s』: %s%s" % [skill.display_name, TARGET_TEXT[skill.target], effect_phrase]
+	return "%s%s" % [TARGET_TEXT[skill.target], effect_phrase]

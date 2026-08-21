@@ -139,6 +139,9 @@ func _enter(
 func exit() -> void:
 	active = false
 	_screen.placement_controls.visible = false
+	# 空きマスの配置候補ハイライトは対局中の移動先候補と同じ表現を流用しているため、
+	# 抜けるときに必ず消す(GameDesign.md 9章)
+	_screen.game_board.clear_move_targets()
 	_screen.own_status.visible = true
 	_screen.opponent_status.visible = true
 	_screen.own_slot_strip.exit_placement_mode()

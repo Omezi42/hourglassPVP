@@ -37,6 +37,7 @@ var _rest_position := Vector2.ZERO
 @onready var icon: TextureRect = $VisualRoot/Icon
 @onready var name_label: Label = $VisualRoot/NameLabel
 @onready var damage_badge: Label = $VisualRoot/DamageBadge
+@onready var piece_marks: PieceMarks = $VisualRoot/PieceMarks
 
 
 func _ready() -> void:
@@ -112,6 +113,8 @@ func show_data(hourglass_data: HourglassData) -> void:
 	icon.texture = hourglass_data.icon_upright
 	name_label.text = hourglass_data.display_name
 	damage_badge.text = str(hourglass_data.fall_damage)
+	# デッキ編成は「どのスキルを組み合わせるか」の選択のため、一覧の時点で内訳を読めるようにする
+	piece_marks.show_for(hourglass_data)
 
 
 func _refresh_selection() -> void:

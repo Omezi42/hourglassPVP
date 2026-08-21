@@ -207,6 +207,25 @@ Main
 - ズーム中に画面座標を必要とする処理(実況テキストの表示位置・浮遊ダメージの飛び先・光の筋の始点/終点)は、`Control.get_global_rect()`が親の`scale`を反映しないため、`GameBoard.get_board_slot_rect()`側で`get_global_transform()`を掛けた矩形を返すようにしている。これにより既存の呼び出し側(`MatchActionPresenter`/`MatchEventCaption`/`MatchDamagePresenter`/`FlipReachOverlay`)を変更せずにズームへ追従する
 - `MatchTurnResolver`は`resolution_step_started`を`{"kind": "step", ...}`としてキューへ積み、`play()`が(1)`MatchBoardCamera.focus()`で対象マスへ寄せる、(2)`kind`に応じて`MatchActionPresenter.play_flip()`/`play_move()`/`play_swap_in()`を呼ぶ、(3)続く状態変化・ダメージのイベントを従来どおり再生する、という順で1マスずつ処理する。**何も起きないマス(`kind == "idle"`)もズームの対象とし、間を置いてから次へ進む**(GameDesign.md 9章。「何も起きなかったこと」自体を見せるため)。全ステップの再生後に`MatchBoardCamera.reset()`で引きの画へ戻す
 - 行動の実況・ログの文言(`MatchBattleLog.format_action()`)は、**自陣の駒を反転した場合は所属を書かない**(「先手が「ソード」を反転」)。相手の駒を反転した場合だけ「先手が後手の「ソード」を反転」と誰の駒かを明示する。同じ側を2度呼ぶ形が読みにくく、解決演出で大きく表示されるようになって目立つため。移動・交代の文言(「先手が「キング」を左→右へ移動」)と書式が揃う
+- `MatchTurnBanner`(`scripts/ui/match_turn_banner.gd`):上部バーの手番テキスト・相手待ちの
+  巡回ドット・手番が自分へ回った瞬間のバナーの3つをまとめて持つ。いずれも「自視点が固定される
+  対局かどうか」という同じ判定から決まるため1箇所へ集約した(`MatchScreen`側は
+  `_refresh_turn_label()`が`refresh_label()`を呼ぶだけ)。巡回ドットの更新は同じ表示を描き直す
+  だけなので、直近の引数を控えて`MatchScreen`へ問い合わせずに完結する
+- スキルの紋章・受動効果の印:`PieceMarks`(`scripts/ui/piece_marks.gd`、`Control._draw()`のみの
+  コード描画)が、駒が持つスキルの紋章と受動効果の有無を示す小さな印を重ねる(GameDesign.md 9章)。
+  絵柄は`SkillVisuals.emblem_for()`→`UiPaint.draw_emblem()`で、ActionMenuのスキルボタンと同じ
+  ものを使う(駒データ`SkillData`は効果だけを持ち、見た目を持たない構成を維持する)。
+  `corner`(`BOTTOM_LEFT`/`TOP_LEFT`/`CENTER`)で置き場所だけを差し替え、落下ダメージのバッジと
+  対になる隅へ出す。`HourglassSlot`は`marks_enabled`がtrueの枠だけで表示し、`BoardRow`が
+  `_ready()`で自分の3枠へtrueを立てる。**HPバー横の`HourglassSlotStrip`では出さない**
+  (枠が62x80と小さく紋章が潰れるため。そちらはクリックで詳細を見る)。同じ部品を
+  `HourglassCard`(砂時計一覧・デッキ編集の一覧)・`DeckSlot`(編成中の5枠)・
+  `HourglassDetailPanel`の見出し(`CENTER`)でも使う
+- `HourglassDetailPanel`は、効果欄を1つのLabelではなく`EffectsBox`(VBox)の中の
+  「スキル(紋章+名前+説明)」「受動効果(見出し+説明)」「注記(未選択・バニラ)」の3区画で
+  持つ(GameDesign.md 9章)。文言は`EffectText.skill_body()`(名前を除いた効果部分)と
+  既存の`EffectText.describe()`を使う
 - 予約マーク:`HourglassSlot.set_reservation(kind)`が、そのマスに設定された行動(反転/移動/交代)を示すバッジを駒の上に重ねる。`MatchScreen.refresh_view()`が`state.pending_action`から各マスの`kind`を求めて毎回同期するため、設定・設定し直し・解決後のクリアがすべて同じ経路で反映される
 - 落下予告リング:`HourglassSlot.set_falling_warning(active, hostile)`が、次の解決で落ちきる駒へ脈動するリングを重ねる(GameDesign.md 9章)。判定は`BoardRow.refresh_falling_warnings(board_instances, hostile, suppressed_position)`が行い、状態が`FALLING`であることに加えて、**そのマスに反転が予約されていないこと**を条件とする(反転すると上向きへ戻ってから進行するため落下中で止まり、落ちきらない)。`suppressed_position`は`GameBoard.show_state()`が`state.pending_action`から陣営ごとに求めて渡す。移動・交代は駒の状態を変えないため予告に影響しない。行動が進行を止めなくなった(フェーズ21 Z-1)ことで、`FALLING`かつ反転の予約が無いマスは必ず落ちきるようになり、予告と実際に起きることが常に一致する
 - 反転の演出(GameDesign.md 9章「反転はゲームの中心となる行動であるため、演出は他より作り込む」):`FlipReachOverlay`の着弾点に、中心の閃光・外へ広がる二重の輪・放射状の火花の3層を重ねる。駒側は`HourglassSlot.play_flip_lift()`が「沈み込み→持ち上げ→頂点で留まる→着地→潰れて弾む」の一連をつなぎ、あわせて足元へ台座と同じ扁平な楕円の衝撃波(`UiPaint.draw_ellipse_ring()`を新設)を着弾時と着地時の2回広げ、回転中は`icon.modulate`を1.0より明るい値へ振ってガラスと砂の反射を表す。**動かすプロパティは`VisualRoot.position:y`・`icon.scale:y`・`icon.modulate`に限る**(`icon.scale:x`と`rotation_degrees`は既存の`_animate_flip()`が、`VisualRoot.scale`はスポットライトが使っており、同じプロパティを複数のTweenで取り合うと点滅するため)。`_animate_flip()`の折り返し点の`scale:x`は0ではなく`FLIP_EDGE_SCALE`まで潰すに留め、持ち上がった駒が一瞬まるごと消えないようにする

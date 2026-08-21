@@ -10,7 +10,6 @@ const RESERVATION_HOLD_SECONDS := 0.7
 const ACTION_MENU_GAP := 8.0
 const ACTION_MENU_MARGIN := 8.0
 ## 相手を待っている間の「...」演出。3個目まで打ってから空に戻る。
-const WAIT_DOTS_MAX := 3
 
 var state: GameState
 ## 解決演出で盤面だけをズーム/パンさせる(GameDesign.md 9章)。上下バーは対象外。
@@ -51,9 +50,6 @@ var _turn_banner: MatchTurnBanner
 ## 対になる位置づけで、「指した手」と「その結果」を見た目の上で切り分ける。
 var _action_presenter: MatchActionPresenter
 var _detail_presenter: MatchDetailPresenter
-
-var _wait_dots_active := false
-var _wait_dot_count := 0
 
 ## 配置フェーズの状態・操作はMatchPlacementControllerへ切り出している(責務分離)。
 var _placement: MatchPlacementController
@@ -143,7 +139,6 @@ func _ready() -> void:
 	end_turn_button.pressed.connect(_on_end_turn_pressed)
 	surrender_cancel_button.pressed.connect(func() -> void: surrender_confirm.visible = false)
 	surrender_confirm_button.pressed.connect(_on_surrender_confirmed)
-	wait_dots_timer.timeout.connect(_on_wait_dots_timeout)
 
 	_placement = MatchPlacementController.new(self)
 	add_child(_placement)
@@ -157,6 +152,7 @@ func _ready() -> void:
 	_cpu_replay_recorder = MatchCpuReplayRecorder.new(self)
 	_event_caption = MatchEventCaption.new(self)
 	_turn_banner = MatchTurnBanner.new(self)
+	_turn_banner.setup()
 	_action_presenter = MatchActionPresenter.new(self)
 	_detail_presenter = MatchDetailPresenter.new(self)
 	_detail_presenter.setup()
@@ -394,10 +390,12 @@ func _start_common(
 	result_overlay.visible = false
 	_detail_presenter.hide()
 	surrender_confirm.visible = false
+	# 配置フェーズを抜けずに別モードへ入った場合(オンラインの配置待ちからの離脱など)、
+	# 配置用のHUDが残ったまま盤面が始まってしまうため、ここで必ず対局用の表示へ戻す
+	if _placement.active:
+		_placement.exit()
 	_move_count = 0
 	_pending_fall_source.clear()
-	_wait_dots_active = false
-	wait_dots_timer.stop()
 	_turn_resolver.reset()
 	_action_presenter.reset()
 	board_camera_controller.reset(true)
@@ -915,45 +913,12 @@ func _refresh_clock() -> void:
 	own_status.show_clock(_clock.get_remaining(self_side))
 
 
-## 自視点が固定される対局(オンライン/CPU戦)は「あなたの番です/相手の手を待っています」、
-## 「自分」が定まらないローカル対戦・観戦・リプレイ再生は先手/後手で表す。
-## _show_result()の視点判定(_is_online or _is_cpu_match)と同じ書き分けに揃えている。
+## 手番表示(テキスト・巡回ドット・バナー)はMatchTurnBannerがまとめて持つ。
 func _refresh_turn_label() -> void:
-	# 終局後は手番が存在しない。「相手の手を待っています」が残ると、結果パネルの外側で
-	# 対局が続いているように見えてしまう。
-	if state.is_match_over():
-		_set_wait_dots_active(false)
-		turn_label.text = "対局終了"
-		return
-	var is_self_locked_view := _is_online or _is_cpu_match
-	var is_waiting_for_opponent := is_self_locked_view and state.current_turn != _my_side
-	_set_wait_dots_active(is_waiting_for_opponent)
-	_turn_banner.notify_turn(is_self_locked_view, not is_waiting_for_opponent)
-
-	var text: String
-	if is_self_locked_view:
-		text = "相手の手を待っています" if is_waiting_for_opponent else "あなたの番です"
-		if is_waiting_for_opponent:
-			text += ".".repeat(_wait_dot_count)
-	else:
-		text = "先手のターン" if state.current_turn == GameState.PlayerSide.A else "後手のターン"
-	turn_label.text = text
-
-
-func _set_wait_dots_active(active: bool) -> void:
-	if active == _wait_dots_active:
-		return
-	_wait_dots_active = active
-	_wait_dot_count = 0
-	if active:
-		wait_dots_timer.start()
-	else:
-		wait_dots_timer.stop()
-
-
-func _on_wait_dots_timeout() -> void:
-	_wait_dot_count = (_wait_dot_count % WAIT_DOTS_MAX) + 1
-	_refresh_turn_label()
+	var self_locked := is_self_view_fixed()
+	_turn_banner.refresh_label(
+		self_locked, not self_locked or state.current_turn == _my_side, state.is_match_over()
+	)
 
 
 ## 詳細パネルを開いたまま盤面の駒以外(背景・マス間の余白等)をクリックした場合に自動で閉じる(N-2)。
