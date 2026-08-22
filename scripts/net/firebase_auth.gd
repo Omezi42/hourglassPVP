@@ -189,10 +189,15 @@ static func _error_message(parsed: Variant, fallback: Variant) -> String:
 		return "試行が多すぎます。しばらく待ってからやり直してください。"
 	if code.begins_with("CREDENTIAL_TOO_OLD_LOGIN_AGAIN") or code.begins_with("TOKEN_EXPIRED"):
 		return "セッションの有効期限が切れました。もう一度お試しください。"
-	if code.begins_with("OPERATION_NOT_ALLOWED"):
-		# Firebaseコンソールで「メール/パスワード」プロバイダが無効のまま、
-		# または列挙保護がリンクを拒んでいる場合にここへ来る
-		return "サーバー側の設定でアカウント登録が許可されていません。"
+	# 同じOPERATION_NOT_ALLOWEDでも原因が2つあり、対処が異なるため文面を分ける。
+	# 列挙保護の場合はコードの末尾に「verify the new email」が付く。
+	# どちらも設定を直さない限り必ず失敗するため、生のコードも添えて切り分け可能にする
+	# (文言だけに丸めた結果、原因を取り違えて誤った案内をしたことがある)。
+	if code.contains("verify the new email"):
+		return "サーバー側の設定(メール列挙保護)により登録できません。(%s)" % code
+	if code.begins_with("OPERATION_NOT_ALLOWED") or code.begins_with("PASSWORD_LOGIN_DISABLED"):
+		# Firebaseコンソールで「メール/パスワード」プロバイダが有効になっていない
+		return "サーバー側でID登録が有効になっていません。(%s)" % code
 	if code == "":
 		return "通信に失敗しました。接続を確認してください。(%s)" % str(fallback)
 	return "登録・ログインに失敗しました。(%s)" % code
