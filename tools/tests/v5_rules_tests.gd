@@ -26,6 +26,8 @@ func run(assert_true: Callable) -> void:
 	_test_on_play_effects()
 	_test_flip_trigger_adds_total()
 	_test_fatigue_after_deck_runs_out()
+	_test_match_action_round_trip()
+	_test_cpu_finishes_a_full_match()
 
 
 func _card(id: String) -> CardData:
@@ -289,4 +291,33 @@ func _test_fatigue_after_deck_runs_out() -> void:
 	state.end_turn()
 	_assert.call(
 		state.hp[MatchState.Side.A] == before - 1, "an empty deck should cost 1 hp per turn"
+	)
+
+
+func _test_match_action_round_trip() -> void:
+	var state := _new_match()
+	state.hand[MatchState.Side.A] = [_card("sand")]
+	state.mana[MatchState.Side.A] = 5
+	var played := MatchAction.apply(state, MatchAction.play(MatchState.Side.A, 0, 0))
+	_assert.call(played, "MatchAction should route a play action to the board")
+	MatchAction.apply(state, MatchAction.end_turn(MatchState.Side.A))
+	_assert.call(state.current_turn == MatchState.Side.B, "end_turn should pass the turn")
+	MatchAction.apply(state, {"type": "surrender", "side": MatchState.Side.B})
+	_assert.call(
+		state.winner == MatchState.Side.A, "surrender should hand the win to the other side"
+	)
+
+
+## CPU同士が最後まで指し切れること。無限ループ・不正手で止まらないことの回帰テスト。
+func _test_cpu_finishes_a_full_match() -> void:
+	var state := _new_match("sand", "sword")
+	var cpu := CardCpuStrategy.new()
+	var turns := 0
+	while not state.is_match_over() and turns < MatchState.MAX_TURNS + 5:
+		cpu.take_turn(state, state.current_turn)
+		turns += 1
+	_assert.call(state.is_match_over(), "a cpu vs cpu match should reach an end")
+	_assert.call(
+		state.hp[MatchState.Side.A] <= 0 or state.hp[MatchState.Side.B] <= 0 or state.winner < 0,
+		"the match should end because a player ran out of hp (or hit the turn cap)"
 	)

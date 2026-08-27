@@ -48,6 +48,9 @@ var first_side: int = Side.A
 var turn_count: int = 0
 var end_reason: int = EndReason.HP_DEPLETED
 var winner: int = -1
+## 決着が疲労(デッキ切れ)によるものだったか。バランス検証の必須指標
+## 「本体ダメージで決着した割合」(GameDesign.md 7章)を測るために持つ。
+var finished_by_fatigue := false
 
 var _effects: CardEffectResolver
 var _rng := RandomNumberGenerator.new()
@@ -71,6 +74,7 @@ func start_match(
 	winner = -1
 	end_reason = EndReason.HP_DEPLETED
 	turn_count = 0
+	finished_by_fatigue = false
 	first_side = p_first_side
 	current_turn = p_first_side
 	for side in [Side.A, Side.B]:
@@ -151,6 +155,7 @@ func end_turn() -> void:
 	board_changed.emit(side)
 	if _deck_exhausted[side]:
 		damage_player(side, FATIGUE_DAMAGE)
+		finished_by_fatigue = _match_over
 	if _match_over:
 		return
 	if turn_count >= MAX_TURNS:
