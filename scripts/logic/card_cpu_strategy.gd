@@ -19,6 +19,8 @@ func choose_action(state: MatchState, side: int) -> Dictionary:
 	var action := _choose_play(state, side)
 	if not action.is_empty():
 		return action
+	if _should_use_coin(state, side):
+		return {"type": "coin", "side": side}
 	action = _choose_attack(state, side)
 	if not action.is_empty():
 		return action
@@ -41,6 +43,18 @@ func take_turn(state: MatchState, side: int, action_limit: int = 60) -> Array:
 			return performed
 	MatchAction.apply(state, MatchAction.end_turn(side))
 	return performed
+
+
+## コインは「あと1マナあれば出せるカードがある」ときだけ切る。
+## 出せる手が残っているうちは温存し、手詰まりになった時点で使う形にしている。
+func _should_use_coin(state: MatchState, side: int) -> bool:
+	if not state.coin_available.get(side, false):
+		return false
+	var reach: int = state.mana[side] + MatchState.COIN_MANA
+	for card in state.hand[side]:
+		if card.cost <= reach:
+			return true
+	return false
 
 
 # --- 出す ---------------------------------------------------------------

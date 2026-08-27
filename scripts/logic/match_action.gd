@@ -11,6 +11,7 @@ extends RefCounted
 ##   {"type": "end_turn", "side":}
 ##   {"type": "surrender","side":}
 ##   {"type": "timeout",  "side":}
+##   {"type": "coin",     "side":}   後手が1度だけ使える +1マナ
 
 
 static func play(side: int, hand_index: int, slot: int, target: Dictionary = {}) -> Dictionary:
@@ -48,6 +49,8 @@ static func apply(state: MatchState, action: Dictionary) -> bool:
 			state.surrender(side)
 			return true
 		"timeout":
-			state.timeout(side)
+			state.surrender(side, MatchState.EndReason.TIMEOUT)
 			return true
+		"coin":
+			return state.use_coin(side)
 	return false

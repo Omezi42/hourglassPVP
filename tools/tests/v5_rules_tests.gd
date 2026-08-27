@@ -28,6 +28,7 @@ func run(assert_true: Callable) -> void:
 	_test_fatigue_after_deck_runs_out()
 	_test_match_action_round_trip()
 	_test_cpu_finishes_a_full_match()
+	_test_coin_gives_the_second_player_one_extra_mana()
 
 
 func _card(id: String) -> CardData:
@@ -329,3 +330,21 @@ func _test_cpu_finishes_a_full_match() -> void:
 		state.hp[MatchState.Side.A] <= 0 or state.hp[MatchState.Side.B] <= 0 or state.winner < 0,
 		"the match should end because a player ran out of hp (or hit the turn cap)"
 	)
+
+
+## コインは後手だけが1対局に1度使える(GameDesign.md 2章の手番補正)。
+func _test_coin_gives_the_second_player_one_extra_mana() -> void:
+	var state := MatchState.new()
+	state.start_match(_deck_of("sand"), _deck_of("sand"), MatchState.Side.A, 999, true)
+	_assert.call(
+		not state.coin_available[MatchState.Side.A], "the first player should not hold a coin"
+	)
+	_assert.call(state.coin_available[MatchState.Side.B], "the second player should hold a coin")
+	_assert.call(not state.use_coin(MatchState.Side.B), "the coin cannot be used off-turn")
+	state.end_turn()
+	var before: int = state.mana[MatchState.Side.B]
+	_assert.call(state.use_coin(MatchState.Side.B), "the coin should be usable on your own turn")
+	_assert.call(
+		state.mana[MatchState.Side.B] == before + MatchState.COIN_MANA, "the coin should add mana"
+	)
+	_assert.call(not state.use_coin(MatchState.Side.B), "the coin should only work once")

@@ -30,6 +30,10 @@ const MAX_MANA := 10
 const FIRST_PLAYER_HAND := 3
 const SECOND_PLAYER_HAND := 4
 const FATIGUE_DAMAGE := 1
+## コイン(後手が1度だけ使える+1マナ)。GameDesign.md 2章の手番補正。
+const COIN_MANA := 1
+## コインを配るかどうか。仕様が確定するまでは既定で無効にしてある。
+const COIN_ENABLED := false
 ## 引き分けを避けるための保険。両者が延々とパスし続けた場合に打ち切る。
 const MAX_TURNS := 200
 
@@ -48,6 +52,8 @@ var first_side: int = Side.A
 var turn_count: int = 0
 var end_reason: int = EndReason.HP_DEPLETED
 var winner: int = -1
+## まだコインを持っているか(Side をキーにした bool)。対局開始時に後手だけ true になる。
+var coin_available: Dictionary = {}
 ## 決着が疲労(デッキ切れ)によるものだったか。バランス検証の必須指標
 ## 「本体ダメージで決着した割合」(GameDesign.md 7章)を測るために持つ。
 var finished_by_fatigue := false
@@ -64,7 +70,11 @@ func _init() -> void:
 
 ## 対局を開始する。deck_a/deck_b は CardData を DECK_SIZE 枚並べた配列。
 func start_match(
-	deck_a: Array, deck_b: Array, p_first_side: int = Side.A, seed_value: int = 0
+	deck_a: Array,
+	deck_b: Array,
+	p_first_side: int = Side.A,
+	seed_value: int = 0,
+	use_coin_rule: bool = COIN_ENABLED
 ) -> void:
 	if seed_value == 0:
 		_rng.randomize()
@@ -84,12 +94,14 @@ func start_match(
 		hand[side] = []
 		graveyard[side] = []
 		_deck_exhausted[side] = false
+		coin_available[side] = false
 		var slots: Array = []
 		slots.resize(BOARD_SIZE)
 		board[side] = slots
 	deck[Side.A] = _shuffled(deck_a)
 	deck[Side.B] = _shuffled(deck_b)
 	var second_side := other_side(p_first_side)
+	coin_available[second_side] = use_coin_rule
 	for i in FIRST_PLAYER_HAND:
 		_draw_one(p_first_side)
 	for i in SECOND_PLAYER_HAND:
@@ -165,16 +177,21 @@ func end_turn() -> void:
 	_begin_turn()
 
 
-func surrender(side: int) -> void:
+## 投了・持ち時間切れ。どちらも盤面を変えずに相手の勝ちで終局する。
+func surrender(side: int, reason: int = EndReason.SURRENDER) -> void:
 	if _match_over:
 		return
-	_finish(other_side(side), EndReason.SURRENDER)
+	_finish(other_side(side), reason)
 
 
-func timeout(side: int) -> void:
-	if _match_over:
-		return
-	_finish(other_side(side), EndReason.TIMEOUT)
+## コインを使う。使えたときだけ true を返す(1対局に1度・自分の手番のみ)。
+func use_coin(side: int) -> bool:
+	if _match_over or current_turn != side or not coin_available.get(side, false):
+		return false
+	coin_available[side] = false
+	mana[side] += COIN_MANA
+	mana_changed.emit(side, mana[side], max_mana[side])
+	return true
 
 
 # --- ドロー -------------------------------------------------------------

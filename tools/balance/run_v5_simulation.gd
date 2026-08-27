@@ -18,6 +18,7 @@ const MIDGAME_TURN := 12
 
 var _rng := RandomNumberGenerator.new()
 var _cards: Array[CardData] = []
+var _coin := false
 
 
 func _init() -> void:
@@ -27,6 +28,8 @@ func _init() -> void:
 func _run() -> void:
 	var args := _parse_args()
 	var games: int = int(args.get("games", "1000"))
+	# coin=1 で後手のコインを有効にして測る(GameDesign.md 2章の手番補正の検証)。
+	_coin = args.get("coin", "0") == "1"
 	_rng.seed = int(args.get("seed", "42"))
 	_cards = CardLibrary.all_cards()
 	if _cards.is_empty():
@@ -86,7 +89,7 @@ func _play_one(deck_a: Array, deck_b: Array) -> Dictionary:
 			else:
 				stats["unit_attacks"] += 1
 	)
-	state.start_match(deck_a, deck_b, MatchState.Side.A, _rng.randi_range(1, 1 << 30))
+	state.start_match(deck_a, deck_b, MatchState.Side.A, _rng.randi_range(1, 1 << 30), _coin)
 	while not state.is_match_over():
 		if state.turn_count == MIDGAME_TURN and stats["behind_at_midgame"] < 0:
 			stats["behind_at_midgame"] = _behind_side(state)
