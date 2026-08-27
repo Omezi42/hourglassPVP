@@ -14,9 +14,11 @@ C:\Users\omezi\Documents\砂時計pvp
 
 このプロジェクトの仕様は以下のファイルを唯一の情報源(Single Source of Truth)とする。
 
-- ゲーム仕様・ルール・UI・カード・数値・演出 → @docs/GameDesign.md
+- ゲーム仕様・ルール・UI・数値・演出 → @docs/GameDesign.md
+- カード個別のデータ(コスト/総量/キーワード/効果/勝率) → @docs/Hourglasses.md
 - 実装設計・アーキテクチャ方針 → @docs/Architecture.md
 - 開発タスク・進捗 → @docs/TODO.md
+- バランス検証の測り方と生データ → @docs/BalanceReport_v5.md
 - 砂時計アセット生成プロンプトの雛形 → @docs/AssetPromptTemplate.md
 
 コードを書く前に必ず @docs/GameDesign.md を確認し、仕様に沿って実装すること。
@@ -148,13 +150,30 @@ SOLID原則を意識する。ただし過剰設計は禁止。
 
 # アセット生成の運用方針(画像生成)
 
-砂時計のイラストはnanobanana(Gemini画像生成)で生成する。ただし完全無料運用とするため、
-API経由の自動生成は行わない。以下の分担を守ること。
+## 砂時計のイラスト
 
-- **ユーザーが行う**: プロンプトをnanobananaへ手動で貼り付けて画像生成、ダウンロード、
-  背景(マゼンタ #FF00FF)の透過処理
-- **Claude Codeが行う**: docs/AssetPromptTemplate.mdを元にしたプロンプト文の組み立てと提示、
-  透過済み画像の取り込み、Resourceファイルの生成、GameDesign.mdへの反映
+**新しいカードのイラストは、既にある砂時計の絵の色違いを当てるのが既定。**
+1枚ずつ描き起こす前提で作業を組まないこと。
+
+- 生成は `tools/tint_hourglass_icons.gd` が行う。元にするid・色相の回転量・彩度を
+  表で持ち、`assets/hourglasses/processed/{id}/` へ3状態ぶんを書き出す。
+  カードを増やしたらこの表へ1行足す
+- **元の絵が鋼や石のようにほぼ無彩色だと、色相をいくら回しても色が付かない。**
+  その場合は対象にする彩度の下限を下げ、彩度の下駄を履かせる
+  (同スクリプトの `threshold` / `floor_saturation`)
+
+## 固有のイラストを用意する場合
+
+色違いでは足りず、その駒だけの絵が要るときはnanobanana(Gemini画像生成)で生成する。
+ただし完全無料運用とするため、API経由の自動生成は行わない。分担は次のとおり。
+
+- **ユーザーが行う**: `docs/AssetPromptTemplate.md` のテンプレートからプロンプトを作り、
+  nanobananaで画像生成、ダウンロード、背景(マゼンタ #FF00FF)の透過処理。
+  テンプレートは `{{MOTIF}}` と `{{ACCENT_COLOR}}` を埋めるだけなので、
+  **Claude Codeがプロンプト文を1枚ずつ組み立てて提示する必要はない**
+- **Claude Codeが行う**: `assets/hourglasses/incoming/{id}.png` へ置かれた透過済み画像の
+  取り込み(3分割・正規化・`processed/` への配置)、Resourceファイルへの反映、
+  仕様書への反映
 
 新しい砂時計の追加作業は `.claude/skills/add-hourglass/SKILL.md` の手順に従う。
 このSkillは「新しい砂時計を追加して」という指示で起動する。
