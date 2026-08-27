@@ -107,14 +107,14 @@ func _test_damage_removes_sand_from_total() -> void:
 
 func _test_opening_hands_and_first_turn_draw() -> void:
 	var state := _new_match()
-	# 先手は3枚で始まり1ターン目はドローしないため3枚のまま。
-	_assert.call(state.hand[MatchState.Side.A].size() == 3, "first player should hold 3 cards")
+	# 先手3枚・後手4枚で配り、先手は自分の1ターン目からドローする(GameDesign.md 2章)。
+	_assert.call(state.hand[MatchState.Side.A].size() == 4, "first player draws on turn 1")
 	_assert.call(state.hand[MatchState.Side.B].size() == 4, "second player should hold 4 cards")
 	state.end_turn()
 	_assert.call(state.current_turn == MatchState.Side.B, "turn should pass to the second player")
 	_assert.call(state.hand[MatchState.Side.B].size() == 5, "second player draws on their turn")
 	state.end_turn()
-	_assert.call(state.hand[MatchState.Side.A].size() == 4, "first player draws from turn 3 on")
+	_assert.call(state.hand[MatchState.Side.A].size() == 5, "first player draws every turn")
 
 
 func _test_play_card_spends_mana_and_fills_slot() -> void:

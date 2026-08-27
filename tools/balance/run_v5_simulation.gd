@@ -18,7 +18,7 @@ const MIDGAME_TURN := 12
 
 var _rng := RandomNumberGenerator.new()
 var _cards: Array[CardData] = []
-var _coin := false
+var _coin := true
 
 
 func _init() -> void:
@@ -28,8 +28,8 @@ func _init() -> void:
 func _run() -> void:
 	var args := _parse_args()
 	var games: int = int(args.get("games", "1000"))
-	# coin=1 で後手のコインを有効にして測る(GameDesign.md 2章の手番補正の検証)。
-	_coin = args.get("coin", "0") == "1"
+	# 既定は仕様どおりコインあり。coin=0 で外した場合と比べられる。
+	_coin = args.get("coin", "1") == "1"
 	_rng.seed = int(args.get("seed", "42"))
 	_cards = CardLibrary.all_cards()
 	if _cards.is_empty():

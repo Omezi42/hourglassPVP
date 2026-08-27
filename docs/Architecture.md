@@ -118,17 +118,21 @@ UIに依存しない、対局ルールそのものを扱う層。
 
 定数は GameDesign.md 2章の数値をそのまま持つ:`INITIAL_HP = 30` / `BOARD_SIZE = 6` /
 `DECK_SIZE = 20` / `MAX_MANA = 10` / `FIRST_PLAYER_HAND = 3` / `SECOND_PLAYER_HAND = 4` /
-`FATIGUE_DAMAGE = 1`。加えて、両者が延々とパスし続けた場合の保険として `MAX_TURNS = 200`
+`FATIGUE_DAMAGE = 1` / `COIN_MANA = 1`。加えて、両者が延々とパスし続けた場合の保険として `MAX_TURNS = 200`
 (到達したら `EndReason.DRAW` で打ち切る。シミュレーションが止まらなくなるのを防ぐためで、
 実対局では持ち時間(GameDesign.md 5章)が先に尽きる)。
 
 **手番の流れ**(GameDesign.md 3章)は `_begin_turn()` と `end_turn()` の2つだけで表す。
 
 - `_begin_turn()`:`turn_count` を進める → 最大マナ+1・全回復 → 自分の全ユニットの
-  `begin_turn()`(召喚酔い・反転済み・攻撃回数のリセット)→ ドロー1枚
-  (**`turn_count == 1` かつ先手のときだけ引かない**)→ `turn_started` を発行
+  `begin_turn()`(召喚酔い・反転済み・攻撃回数のリセット)→ ドロー1枚 → `turn_started` を発行
 - `end_turn()`:自分の全ユニットを `tick()`(1粒落とす)→ 体力0になったものを破壊 →
   山札が尽きていれば疲労1ダメージ → 手番を交代して `_begin_turn()`
+
+**コイン**(GameDesign.md 2章)は `coin_available`(Side をキーにした bool)と
+`use_coin(side)` の2つだけで表す。対局開始時に後手だけ true にし、使うと false に戻す。
+**カードとしては持たない**。手札に置くと「0コストで場に出す」既存の経路と衝突するうえ、
+盤面の枠を持たないカード(スペル)という概念を1枚のために導入することになるため。
 
 **メインフェイズの操作は3つ**で、いずれも `can_*()` と実行のペアを持つ。UI・CPU・
 オンラインの再生はすべてこの3つだけを呼ぶ。

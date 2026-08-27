@@ -32,8 +32,8 @@ const SECOND_PLAYER_HAND := 4
 const FATIGUE_DAMAGE := 1
 ## コイン(後手が1度だけ使える+1マナ)。GameDesign.md 2章の手番補正。
 const COIN_MANA := 1
-## コインを配るかどうか。仕様が確定するまでは既定で無効にしてある。
-const COIN_ENABLED := false
+## コインを配るかどうか(GameDesign.md 2章)。
+const COIN_ENABLED := true
 ## 引き分けを避けるための保険。両者が延々とパスし続けた場合に打ち切る。
 const MAX_TURNS := 200
 
@@ -47,7 +47,8 @@ var hand: Dictionary = {}
 var board: Dictionary = {}
 var graveyard: Dictionary = {}
 var current_turn: int = Side.A
-## 先手側。先手の1ターン目だけドローしない(GameDesign.md 2章)。
+## 先手側。手番の補正は「後手が1枚多い」と「後手はコインを持つ」の2つだけで、
+## 先手のドローを止める補正は持たない(GameDesign.md 2章)。
 var first_side: int = Side.A
 var turn_count: int = 0
 var end_reason: int = EndReason.HP_DEPLETED
@@ -145,9 +146,7 @@ func _begin_turn() -> void:
 	mana_changed.emit(side, mana[side], max_mana[side])
 	for unit in units(side):
 		unit.begin_turn()
-	var skip_draw: bool = turn_count == 1 and side == first_side
-	if not skip_draw:
-		draw(side, 1)
+	draw(side, 1)
 	board_changed.emit(side)
 	turn_started.emit(side)
 
