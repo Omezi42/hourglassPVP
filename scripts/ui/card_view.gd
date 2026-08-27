@@ -1,7 +1,14 @@
 class_name CardView
 extends Control
-## カード1枚の表示(GameDesign.md 9章「対局画面」)。盤面の砂時計と手札の両方に使う。
-## 数値の配置は既存のDCGの慣習に合わせる:コスト=左上 / 攻撃力=左下 / 体力=右下。
+## 砂時計1体の表示(GameDesign.md 9章「対局画面」)。
+##
+## **手札と場で見た目が違う**。手札はまだ手に持っている札なのでカードの枠を持つが、
+## 場に出た瞬間に枠を捨て、台座の上に立つ砂時計そのものになる。砂時計はそれ自体が
+## 状態を表示する器(上の砂=体力 / 下の砂=攻撃力)であり、枠へ閉じ込めると絵が小さくなって
+## 砂の量という最も重要な情報チャネルが潰れるため。
+##
+## 数値の配置は既存のDCGの慣習に合わせる。手札=コスト左上 / 総量右下、
+## 場=攻撃力左下 / 体力右下(場ではコストを出さない)。
 
 signal pressed(view: CardView)
 
@@ -16,13 +23,13 @@ enum Effect {
 }
 
 enum Mode {
-	## 場に出ている砂時計。攻撃力と体力を出す。
+	## 場に出ている砂時計。枠を持たず、台座の上に立つ物体として描く。
 	BOARD,
-	## 手札。コストと総量(=場に出たときの体力)を出す。
+	## 手札。カードの枠を持ち、コストと総量(=場に出たときの体力)を出す。
 	HAND,
 }
 
-const BOARD_SIZE_PX := Vector2(128, 170)
+const BOARD_SIZE_PX := Vector2(128, 168)
 const HAND_SIZE_PX := Vector2(118, 158)
 const MANA_BLUE := Color(0.35, 0.6, 0.95, 1.0)
 const ATTACK_ORANGE := Color(0.95, 0.62, 0.2, 1.0)
@@ -37,13 +44,26 @@ const STAT_RADIUS := 15.0
 const GUARD_BORDER := 4.0
 const NORMAL_BORDER := 2.0
 
+## 場の砂時計。台座は扁平な楕円として描き、その上に絵を載せる。
+const PEDESTAL_CENTER_Y := 122.0
+const PEDESTAL_RADIUS := Vector2(54.0, 13.0)
+const PEDESTAL_RING_WIDTH := 2.0
+const PEDESTAL_GUARD_RING_WIDTH := 4.5
+const BOARD_ART_SIDE := 112.0
+## 出したターンの砂時計は僅かに沈んで見せる(GameDesign.md 9章)。
+const SUMMONED_SINK := 3.0
+
+## 手札のカード。
+const HAND_CORNER := 10.0
+const HAND_ART_SIDE := 92.0
+
 var mode: int = Mode.BOARD
 ## 表示するカード。手札はこれだけ、盤面は unit も併せて持つ。
 var card: CardData
 var unit: CardInstance
 ## 出せる/選べる状態か。false なら暗く表示する。
 var enabled := true
-## 選択中(枠を強調する)。
+## 選択中(枠・台座の輪を強調する)。
 var selected := false
 ## このターンに行動を終えている(彩度を落とす)。
 var exhausted := false
@@ -152,44 +172,208 @@ func _gui_input(event: InputEvent) -> void:
 
 
 func _draw() -> void:
+	if mode == Mode.BOARD:
+		_draw_board_unit()
+	else:
+		_draw_hand_card()
+	if _effect != Effect.NONE:
+		_draw_effect()
+
+
+func _tint() -> Color:
+	if not enabled or exhausted:
+		return Color(0.55, 0.55, 0.6, 1)
+	return Color(1, 1, 1, 1)
+
+
+# --- 場の砂時計(枠なし) -----------------------------------------------
+
+
+func _draw_board_unit() -> void:
+	_draw_pedestal_base()
+	if card == null:
+		_draw_pedestal_ring()
+		return
+	var tint := _tint()
+	var sink := SUMMONED_SINK if unit != null and unit.summoned_this_turn else 0.0
+	_draw_board_art(tint, sink)
+	# 輪は絵の後に描く。守護(太い真鍮の輪)と選択中(水色の輪)は駒が立っていても
+	# 必ず見えなければならないため、絵の下へ隠してはいけない。
+	_draw_pedestal_ring()
+	if _hovering and enabled:
+		_draw_pedestal_glow(Color(1, 1, 1, 0.1))
+	_draw_board_stats()
+	_draw_board_labels(tint)
+
+
+## 台座。空き枠でも常に描き、そこへ砂時計が立つ場所であることを示す。
+func _draw_pedestal_base() -> void:
+	var ci := get_canvas_item()
+	var center := Vector2(size.x * 0.5, PEDESTAL_CENTER_Y)
+	UiPaint.fill_ellipse(ci, center, PEDESTAL_RADIUS * 1.12, Color(0.04, 0.03, 0.05, 0.3), 32)
+	UiPaint.fill_ellipse(ci, center, PEDESTAL_RADIUS, Color(0.24, 0.19, 0.18, 0.45), 32)
+	UiPaint.fill_ellipse(
+		ci, center, PEDESTAL_RADIUS * 0.66, Color(UiPalette.PEDESTAL_DEFAULT_ACCENT, 0.14), 32
+	)
+
+
+## 台座の輪。守護は太い真鍮にする(手札の「枠を太くする」に対応。GameDesign.md 9章)。
+func _draw_pedestal_ring() -> void:
+	var center := Vector2(size.x * 0.5, PEDESTAL_CENTER_Y)
+	var guard := card != null and card.has_keyword(CardEnums.Keyword.GUARD)
+	var color := UiPalette.BRASS_MID
+	var width := PEDESTAL_RING_WIDTH
+	if selected:
+		color = SELECT_CYAN
+		width = PEDESTAL_GUARD_RING_WIDTH
+	elif guard:
+		color = UiPalette.BRASS_HIGHLIGHT
+		width = PEDESTAL_GUARD_RING_WIDTH
+	elif card == null:
+		color = Color(UiPalette.BRASS_MID, 0.6)
+	UiPaint.draw_ellipse_ring(get_canvas_item(), center, PEDESTAL_RADIUS, color, width, 40)
+
+
+func _draw_pedestal_glow(color: Color) -> void:
+	UiPaint.fill_ellipse(
+		get_canvas_item(),
+		Vector2(size.x * 0.5, PEDESTAL_CENTER_Y),
+		PEDESTAL_RADIUS * 0.9,
+		color,
+		32
+	)
+
+
+func _draw_board_art(tint: Color, sink: float) -> void:
+	var texture := _icon()
+	if texture == null:
+		return
+	var pos := Vector2((size.x - BOARD_ART_SIDE) * 0.5, PEDESTAL_CENTER_Y + 4.0 - BOARD_ART_SIDE)
+	var rect := Rect2(pos + Vector2(0, sink), Vector2(BOARD_ART_SIDE, BOARD_ART_SIDE))
+	draw_texture_rect(texture, rect, false, tint)
+	# 硝子は枠ではなくガラスそのものへ膜を掛ける(GameDesign.md 9章)。
+	if unit != null and unit.glass_intact:
+		UiPaint.fill_ellipse(
+			get_canvas_item(), rect.get_center(), rect.size * 0.42, Color(0.6, 0.85, 1.0, 0.16), 28
+		)
+
+
+## 攻撃力=左下 / 体力=右下。台座の高さに合わせて左右へ振り分ける。
+func _draw_board_stats() -> void:
+	if unit == null:
+		return
+	var y := PEDESTAL_CENTER_Y + 6.0
+	_stat(Vector2(STAT_RADIUS + 2.0, y), unit.attack, ATTACK_ORANGE)
+	_stat(Vector2(size.x - STAT_RADIUS - 2.0, y), unit.health, HEALTH_RED)
+
+
+func _draw_board_labels(tint: Color) -> void:
+	_centered_text(card.display_name, 14, size.y - 18.0, UiPalette.TEXT_OFFWHITE * tint)
+	var note := _keyword_text()
+	if not note.is_empty():
+		_centered_text(note, 12, size.y - 3.0, UiPalette.BRASS_HIGHLIGHT * tint)
+
+
+# --- 手札のカード -------------------------------------------------------
+
+
+func _draw_hand_card() -> void:
 	if card == null:
 		_draw_empty()
 		return
+	var ci := get_canvas_item()
 	var rect := Rect2(Vector2.ZERO, size)
+	var tint := _tint()
+	var points := UiPaint.rounded_rect_points_uniform(rect, HAND_CORNER, 6)
+	UiPaint.fill_gradient_polygon(
+		ci,
+		points,
+		rect,
+		[[0.0, Color(0.23, 0.2, 0.17, 1.0) * tint], [1.0, Color(0.11, 0.1, 0.09, 1.0) * tint]]
+	)
 	var guard := card.has_keyword(CardEnums.Keyword.GUARD)
-	var tint := Color(1, 1, 1, 1)
-	if not enabled or exhausted:
-		tint = Color(0.55, 0.55, 0.6, 1)
-	_fill(rect, Color(0.21, 0.18, 0.15, 1.0) * tint, Color(0.11, 0.1, 0.09, 1.0))
 	var border := UiPalette.BRASS_MID
 	if selected:
 		border = SELECT_CYAN
 	elif guard:
 		border = UiPalette.BRASS_HIGHLIGHT
-	draw_rect(rect, border, false, GUARD_BORDER if guard or selected else NORMAL_BORDER)
-	_draw_art(rect, tint)
-	if unit != null and unit.glass_intact:
-		draw_rect(rect.grow(-4), Color(0.6, 0.85, 1.0, 0.13))
-	_draw_labels(rect, tint)
-	_draw_stats(rect)
-	if _effect != Effect.NONE:
-		_draw_effect(rect)
+	var outline := points.duplicate()
+	outline.append(points[0])
+	draw_polyline(outline, border, GUARD_BORDER if guard or selected else NORMAL_BORDER, true)
+	_draw_hand_art(tint)
+	_draw_hand_labels(tint)
+	_draw_hand_stats()
 	if not badge.is_empty():
 		_draw_badge(rect)
 	if _hovering and enabled:
-		draw_rect(rect, Color(1, 1, 1, 0.06))
+		UiPaint.fill_gradient_polygon(
+			ci, points, rect, [[0.0, Color(1, 1, 1, 0.07)], [1.0, Color(1, 1, 1, 0.03)]]
+		)
 
 
-func _draw_effect(rect: Rect2) -> void:
+func _draw_hand_art(tint: Color) -> void:
+	var texture := _icon()
+	if texture == null:
+		return
+	var pos := Vector2((size.x - HAND_ART_SIDE) * 0.5, 9.0)
+	draw_texture_rect(texture, Rect2(pos, Vector2(HAND_ART_SIDE, HAND_ART_SIDE)), false, tint)
+
+
+func _draw_hand_labels(tint: Color) -> void:
+	_centered_text(card.display_name, 14, 118.0, UiPalette.TEXT_OFFWHITE * tint)
+	var note := _keyword_text()
+	if not note.is_empty():
+		_centered_text(note, 12, 134.0, UiPalette.BRASS_HIGHLIGHT * tint)
+
+
+## コスト=左上 / 総量=右下。
+func _draw_hand_stats() -> void:
+	_stat(Vector2(STAT_RADIUS + 3.0, STAT_RADIUS + 3.0), card.cost, MANA_BLUE)
+	_stat(
+		Vector2(size.x - STAT_RADIUS - 3.0, size.y - STAT_RADIUS - 3.0), card.total_sand, HEALTH_RED
+	)
+
+
+# --- 共通 ---------------------------------------------------------------
+
+
+func _keyword_text() -> String:
+	var words: PackedStringArray = []
+	for keyword in card.keywords:
+		words.append(CardEnums.keyword_name(keyword))
+	var note := " ".join(words)
+	if note.is_empty() and not card.rules_text.is_empty():
+		note = CardEnums.trigger_name(card.effects[0].trigger)
+	return note
+
+
+## 体力と攻撃力の比で3枚を切り替える(GameDesign.md 9章)。手札は常に上向き。
+func _icon() -> Texture2D:
+	if unit == null:
+		return card.icon_upright
+	if unit.attack > unit.health:
+		return card.icon_fallen
+	if unit.attack >= unit.health - 1:
+		return card.icon_falling
+	return card.icon_upright
+
+
+func _draw_effect() -> void:
+	var rect := Rect2(Vector2.ZERO, size)
+	if mode == Mode.BOARD:
+		rect = Rect2(
+			Vector2((size.x - BOARD_ART_SIDE) * 0.5, PEDESTAL_CENTER_Y + 4.0 - BOARD_ART_SIDE),
+			Vector2(BOARD_ART_SIDE, BOARD_ART_SIDE)
+		)
 	if _effect == Effect.SHATTER:
 		_draw_shatter(rect)
 	else:
 		_draw_drop(rect)
 
 
-## 砕けて散る:カードの中心から破片が外へ飛び、赤みを帯びて消える。
+## 砕けて散る:中心から破片が外へ飛び、赤みを帯びて消える。
 func _draw_shatter(rect: Rect2) -> void:
-	var center := rect.size * Vector2(0.5, 0.42)
+	var center := rect.position + rect.size * Vector2(0.5, 0.45)
 	var fade := 1.0 - _effect_progress
 	var reach := rect.size.x * (0.18 + 0.42 * _effect_progress)
 	var shards: int = SHARD_COUNT + mini(_effect_amount, 6)
@@ -201,11 +385,11 @@ func _draw_shatter(rect: Rect2) -> void:
 	draw_rect(rect, Color(1.0, 0.35, 0.3, fade * 0.18))
 
 
-## 下の部屋へ流れる:カードの中央を細い砂の筋が下りていく。総量は変わらない。
+## 下の部屋へ流れる:中央を細い砂の筋が下りていく。総量は変わらない。
 func _draw_drop(rect: Rect2) -> void:
-	var x := rect.size.x * 0.5
-	var top := rect.size.y * 0.18
-	var bottom := rect.size.y * 0.72
+	var x := rect.position.x + rect.size.x * 0.5
+	var top := rect.position.y + rect.size.y * 0.2
+	var bottom := rect.position.y + rect.size.y * 0.78
 	var head: float = lerpf(top, bottom, _effect_progress)
 	draw_line(Vector2(x, top), Vector2(x, head), Color(SAND_AMBER, 0.55), 3.0)
 	for i in 3:
@@ -221,7 +405,7 @@ func _draw_drop(rect: Rect2) -> void:
 
 func _draw_badge(rect: Rect2) -> void:
 	var width := _font.get_string_size(badge, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x + 12.0
-	var chip := Rect2(rect.size.x - width - 4, 4, width, 22)
+	var chip := Rect2(rect.size.x - width - 5, 5, width, 22)
 	draw_rect(chip, Color(0.08, 0.07, 0.06, 0.92))
 	draw_rect(chip, UiPalette.BRASS_HIGHLIGHT, false, 1.0)
 	draw_string(
@@ -241,56 +425,6 @@ func _draw_empty() -> void:
 	_dashed_rect(rect, color)
 
 
-func _draw_art(rect: Rect2, tint: Color) -> void:
-	var texture := _icon()
-	if texture == null:
-		return
-	var side := rect.size.x * 0.62
-	var pos := Vector2((rect.size.x - side) * 0.5, rect.size.y * 0.06)
-	draw_texture_rect(texture, Rect2(pos, Vector2(side, side)), false, tint)
-
-
-## 体力と攻撃力の比で3枚を切り替える(GameDesign.md 9章)。手札は常に上向き。
-func _icon() -> Texture2D:
-	if unit == null:
-		return card.icon_upright
-	if unit.attack > unit.health:
-		return card.icon_fallen
-	if unit.attack >= unit.health - 1:
-		return card.icon_falling
-	return card.icon_upright
-
-
-func _draw_labels(rect: Rect2, tint: Color) -> void:
-	var name_size := 15
-	_centered_text(rect, card.display_name, name_size, rect.size.y - 62.0, tint)
-	var words: PackedStringArray = []
-	for keyword in card.keywords:
-		words.append(CardEnums.keyword_name(keyword))
-	var note := " ".join(words)
-	if note.is_empty() and not card.rules_text.is_empty():
-		note = CardEnums.trigger_name(card.effects[0].trigger)
-	if not note.is_empty():
-		_centered_text(rect, note, 13, rect.size.y - 42.0, UiPalette.BRASS_HIGHLIGHT * tint)
-
-
-func _draw_stats(rect: Rect2) -> void:
-	if mode == Mode.HAND:
-		_stat(Vector2(STAT_RADIUS + 3, STAT_RADIUS + 3), card.cost, MANA_BLUE)
-		_stat(
-			Vector2(rect.size.x - STAT_RADIUS - 3, rect.size.y - STAT_RADIUS - 3),
-			card.total_sand,
-			HEALTH_RED
-		)
-		return
-	_stat(Vector2(STAT_RADIUS + 3, rect.size.y - STAT_RADIUS - 3), unit.attack, ATTACK_ORANGE)
-	_stat(
-		Vector2(rect.size.x - STAT_RADIUS - 3, rect.size.y - STAT_RADIUS - 3),
-		unit.health,
-		HEALTH_RED
-	)
-
-
 func _stat(center: Vector2, value: int, color: Color) -> void:
 	draw_circle(center, STAT_RADIUS, Color(0.08, 0.07, 0.06, 0.95))
 	draw_arc(center, STAT_RADIUS, 0.0, TAU, 24, color, 2.5)
@@ -301,29 +435,17 @@ func _stat(center: Vector2, value: int, color: Color) -> void:
 	)
 
 
-func _centered_text(rect: Rect2, text: String, font_size: int, top: float, color: Color) -> void:
+func _centered_text(text: String, font_size: int, baseline: float, color: Color) -> void:
 	var width := _font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
 	draw_string(
 		_font,
-		Vector2((rect.size.x - width) * 0.5, top),
+		Vector2((size.x - width) * 0.5, baseline),
 		text,
 		HORIZONTAL_ALIGNMENT_LEFT,
 		-1,
 		font_size,
 		color
 	)
-
-
-func _fill(rect: Rect2, top: Color, bottom: Color) -> void:
-	var points := PackedVector2Array(
-		[
-			rect.position,
-			Vector2(rect.end.x, rect.position.y),
-			rect.end,
-			Vector2(rect.position.x, rect.end.y)
-		]
-	)
-	draw_polygon(points, PackedColorArray([top, top, bottom, bottom]))
 
 
 func _dashed_rect(rect: Rect2, color: Color) -> void:

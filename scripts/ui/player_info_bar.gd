@@ -15,6 +15,16 @@ const DANGER_RATIO := 0.4
 ## マナのピップの間隔と半径。上限10まで並べても情報帯の幅に収まる。
 const PIP_STEP := 20.0
 const PIP_RADIUS := 7.0
+## 帯の中の横位置。マナのピップは上限10まで並ぶため、山札の山と重ならない位置から始める。
+const NAME_PLATE_RECT := Rect2(10, 10, 140, 36)
+const HP_BAR_X := 162.0
+const MANA_TEXT_X := 418.0
+const PIP_START_X := 516.0
+const DECK_PILE_X := 730.0
+const GRAVE_PILE_X := 812.0
+const HAND_PILE_X := 894.0
+const CLOCK_X := 990.0
+const BAR_CORNER := 10.0
 
 ## 相手側かどうか。相手側だけ手札の枚数を出す。
 var is_opponent := false
@@ -67,24 +77,47 @@ func _gui_input(event: InputEvent) -> void:
 
 
 func _draw() -> void:
+	var ci := get_canvas_item()
 	var rect := Rect2(Vector2.ZERO, size)
-	_fill(rect, UiPalette.BAR_FILL_TOP, UiPalette.BAR_FILL_BOTTOM)
-	if targetable:
-		draw_rect(rect, UiPalette.WARNING_RED, false, 3.0)
-	var label := display_name
-	if label.is_empty():
-		label = "相手" if is_opponent else "あなた"
-	_text(Vector2(18, 36), label, 20)
+	var points := UiPaint.rounded_rect_points_uniform(rect, BAR_CORNER, 6)
+	UiPaint.fill_gradient_polygon(
+		ci, points, rect, [[0.0, UiPalette.BAR_FILL_TOP], [1.0, UiPalette.BAR_FILL_BOTTOM]]
+	)
+	var outline := points.duplicate()
+	outline.append(points[0])
+	var edge := UiPalette.WARNING_RED if targetable else Color(UiPalette.BRASS_MID, 0.95)
+	draw_polyline(outline, edge, 3.0 if targetable else 2.0, true)
+	_draw_name_plate()
 	_draw_hp()
 	_draw_mana()
-	_pile(Vector2(620, 8), "山札", _deck)
+	_pile(Vector2(DECK_PILE_X, 8), "山札", _deck)
 	_pile(_graveyard_rect().position, "墓地", _graveyard)
 	if is_opponent:
-		_pile(Vector2(804, 8), "手札", _hand)
+		_pile(Vector2(HAND_PILE_X, 8), "手札", _hand)
 	if _has_coin:
 		_draw_coin()
 	if clock_seconds >= 0.0:
 		_draw_clock()
+
+
+## 名前は真鍮の名札に載せる。どちらのHPかは配置と名前で示すため、色は使わない
+## (GameDesign.md 9章)。
+func _draw_name_plate() -> void:
+	var ci := get_canvas_item()
+	var label := display_name
+	if label.is_empty():
+		label = "相手" if is_opponent else "あなた"
+	var points := UiPaint.rounded_rect_points_uniform(NAME_PLATE_RECT, 6.0, 5)
+	UiPaint.fill_gradient_polygon(
+		ci,
+		points,
+		NAME_PLATE_RECT,
+		[[0.0, UiPalette.NAMEPLATE_PANEL_TOP], [1.0, UiPalette.NAMEPLATE_PANEL_BOTTOM]]
+	)
+	var outline := points.duplicate()
+	outline.append(points[0])
+	draw_polyline(outline, UiPalette.BRASS_LIGHT, 1.5, true)
+	_text(NAME_PLATE_RECT.position + Vector2(12, 25), label, 18)
 
 
 ## 残り時間は「相手の手札」の右、情報帯の末尾に置く。
@@ -93,7 +126,7 @@ func _draw_clock() -> void:
 	var seconds := int(clock_seconds) % 60
 	var low := clock_seconds <= 30.0
 	_text(
-		Vector2(900, 36),
+		Vector2(CLOCK_X, 36),
 		"%d:%02d" % [minutes, seconds],
 		20,
 		UiPalette.WARNING_RED if low else UiPalette.TEXT_OFFWHITE
@@ -101,11 +134,11 @@ func _draw_clock() -> void:
 
 
 func _graveyard_rect() -> Rect2:
-	return Rect2(Vector2(712, 8), PILE_SIZE)
+	return Rect2(Vector2(GRAVE_PILE_X, 8), PILE_SIZE)
 
 
 func _draw_hp() -> void:
-	var rect := Rect2(Vector2(96, 16), HP_BAR_SIZE)
+	var rect := Rect2(Vector2(HP_BAR_X, 16), HP_BAR_SIZE)
 	_fill(rect, Color(0.16, 0.12, 0.1, 1.0), Color(0.1, 0.08, 0.07, 1.0))
 	var ratio := clampf(float(_hp) / float(MatchState.INITIAL_HP), 0.0, 1.0)
 	var color := UiPalette.GLOW_AMBER if ratio > DANGER_RATIO else UiPalette.WARNING_RED
@@ -115,16 +148,16 @@ func _draw_hp() -> void:
 
 
 func _draw_mana() -> void:
-	_text(Vector2(356, 36), "マナ %d/%d" % [_mana, _max_mana], 18)
+	_text(Vector2(MANA_TEXT_X, 36), "マナ %d/%d" % [_mana, _max_mana], 18)
 	for i in _max_mana:
-		var center := Vector2(452 + i * PIP_STEP, 28)
+		var center := Vector2(PIP_START_X + i * PIP_STEP, 28)
 		draw_circle(center, PIP_RADIUS, MANA_BLUE if i < _mana else MANA_EMPTY)
 		draw_arc(center, PIP_RADIUS, 0.0, TAU, 16, Color(0.75, 0.85, 1.0, 0.6), 1.5)
 
 
 ## コインを持っている間だけ、マナの並びの右隣に金色の粒を出す。
 func _draw_coin() -> void:
-	var center := Vector2(452 + _max_mana * PIP_STEP + 6, 28)
+	var center := Vector2(PIP_START_X + _max_mana * PIP_STEP + 6, 28)
 	draw_circle(center, PIP_RADIUS + 1.0, UiPalette.GLOW_AMBER)
 	draw_arc(center, PIP_RADIUS + 1.0, 0.0, TAU, 16, UiPalette.BRASS_HIGHLIGHT, 1.5)
 

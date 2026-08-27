@@ -9,21 +9,24 @@ extends Control
 signal back_pressed
 
 const CARD_GAP := 12.0
-const HAND_GAP := 10.0
-const MARGIN := 16.0
-const FOE_BAR_TOP := 10.0
-const FOE_ROW_TOP := 78.0
-const OWN_ROW_TOP := 258.0
-const OWN_BAR_TOP := 440.0
-const HAND_TOP := 512.0
-const HAND_AREA := Rect2(190, 512, 900, 158)
+const HAND_GAP := 8.0
+const MARGIN := 24.0
+const FOE_BAR_TOP := 8.0
+const FOE_ROW_TOP := 92.0
+const OWN_ROW_TOP := 268.0
+const OWN_BAR_TOP := 456.0
+const HAND_TOP := 528.0
+const HAND_AREA := Rect2(30, 528, 830, 158)
+## 12枠を載せる卓上(GameDesign.md 9章)。両陣営の6枠がこの上に並ぶ。
+const TABLE_RECT := Rect2(190, 74, 900, 372)
 const CPU_THINK_SECONDS := 0.5
 ## 相手の持ち時間が0になってから、申告が来なくても勝ちにするまでの猶予
 ## (GameDesign.md 11章)。相手が切断していると申告そのものが届かないため。
 const OPPONENT_TIMEOUT_GRACE := 8.0
 const BACKGROUND := Color(0.07, 0.06, 0.08, 1.0)
 ## 反転・コイン・ターン終了を縦に並べる右の列。
-const ACTION_COLUMN_X := 1096.0
+const ACTION_COLUMN_X := 1108.0
+const ACTION_BUTTON_SIZE := Vector2(148, 48)
 
 var state: MatchState
 ## 自分の側。CPU戦・オンラインでは固定する。
@@ -71,11 +74,7 @@ func _ready() -> void:
 
 
 func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO, size), BACKGROUND)
-	var y := (FOE_ROW_TOP + CardView.BOARD_SIZE_PX.y + OWN_ROW_TOP) * 0.5
-	draw_line(
-		Vector2(120, y), Vector2(size.x - 120, y), UiPalette.GLOW_AMBER * Color(1, 1, 1, 0.25), 2.0
-	)
+	_draw_background()
 	if _selection != null and _selection.is_targeting():
 		_draw_target_prompt()
 	if not _waiting_text.is_empty():
@@ -90,11 +89,33 @@ func _draw() -> void:
 		)
 
 
+## 盤面の外側は暗く落とし、視線が卓上へ集まるようにする(GameDesign.md 9章)。
+## 卓そのものは `BoardTable` が描くため、ここは下地と周囲の落ち込みだけを受け持つ。
+func _draw_background() -> void:
+	var rect := Rect2(Vector2.ZERO, size)
+	var points := PackedVector2Array(
+		[rect.position, Vector2(rect.end.x, 0), rect.end, Vector2(0, rect.end.y)]
+	)
+	(
+		UiPaint
+		. fill_gradient_polygon(
+			get_canvas_item(),
+			points,
+			rect,
+			[
+				[0.0, Color(0.09, 0.08, 0.11, 1.0)],
+				[0.45, BACKGROUND],
+				[1.0, Color(0.05, 0.04, 0.06, 1.0)],
+			]
+		)
+	)
+
+
 ## 対象選択中であることを、行動ボタンの列(盤面と重ならない場所)へ出す。
 ## 盤面の上へ重ねると、選ばせたい相手のカードそのものを隠してしまう。
 func _draw_target_prompt() -> void:
 	var font := get_theme_default_font()
-	var rect := Rect2(ACTION_COLUMN_X, 270, 168, 52)
+	var rect := Rect2(ACTION_COLUMN_X, 240, 148, 52)
 	draw_rect(rect, Color(0.08, 0.12, 0.14, 0.95))
 	draw_rect(rect, CardView.SELECT_CYAN, false, 2.0)
 	draw_string(
@@ -323,6 +344,12 @@ func _begin_state(deck_a: Array, deck_b: Array, seed_value: int) -> void:
 
 
 func _build() -> void:
+	# 卓は最初に足して盤面の駒より背面へ置く。
+	var table := BoardTable.new()
+	table.position = TABLE_RECT.position
+	table.size = TABLE_RECT.size
+	table.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(table)
 	_foe_bar = _make_bar(true, FOE_BAR_TOP)
 	_own_bar = _make_bar(false, OWN_BAR_TOP)
 	_foe_slots = _make_row(FOE_ROW_TOP, true)
@@ -335,21 +362,23 @@ func _build() -> void:
 		add_child(view)
 		_hand_views.append(view)
 	# 行動のボタンは盤面と重ならないよう画面右の列にまとめる。
-	_flip_button = _add_button("反転", Vector2(168, 48))
-	_flip_button.position = Vector2(ACTION_COLUMN_X, 330)
+	_flip_button = _add_button("反転", ACTION_BUTTON_SIZE)
+	_flip_button.position = Vector2(ACTION_COLUMN_X, 306)
 	_flip_button.visible = false
 	_flip_button.pressed.connect(_on_flip_pressed)
-	_coin_button = _add_button("コイン", Vector2(168, 48))
-	_coin_button.position = Vector2(ACTION_COLUMN_X, 386)
+	_coin_button = _add_button("コイン", ACTION_BUTTON_SIZE)
+	_coin_button.position = Vector2(ACTION_COLUMN_X, 362)
 	_coin_button.pressed.connect(_on_coin_pressed)
-	_end_turn_button = _add_button("ターン終了", Vector2(168, 64))
-	_end_turn_button.position = Vector2(ACTION_COLUMN_X, OWN_BAR_TOP)
+	# ターン終了は画面右下の大きなボタンとする(GameDesign.md 9章)。
+	_end_turn_button = _add_button("ターン終了", Vector2(148, 66))
+	_end_turn_button.position = Vector2(ACTION_COLUMN_X, OWN_BAR_TOP - 4)
 	_end_turn_button.pressed.connect(_on_end_turn_pressed)
-	_log_button = _add_button("ログ", Vector2(168, 44))
-	_log_button.position = Vector2(ACTION_COLUMN_X, 512)
+	# 「ログ」「投了」は画面下部にまとめる(同上)。手札の右隣へ置いて重ならないようにする。
+	_log_button = _add_button("ログ", Vector2(140, 44))
+	_log_button.position = Vector2(884, 620)
 	_log_button.pressed.connect(func() -> void: _log.set_open(true))
-	_surrender_button = _add_button("投了", Vector2(168, 44))
-	_surrender_button.position = Vector2(ACTION_COLUMN_X, 564)
+	_surrender_button = _add_button("投了", Vector2(140, 44))
+	_surrender_button.position = Vector2(1036, 620)
 	_surrender_button.pressed.connect(_on_surrender_pressed)
 	_cpu_timer = Timer.new()
 	_cpu_timer.one_shot = true
@@ -372,7 +401,7 @@ func _make_bar(opponent: bool, top: float) -> PlayerInfoBar:
 	var bar := PlayerInfoBar.new()
 	bar.is_opponent = opponent
 	bar.position = Vector2(MARGIN, top)
-	bar.size = Vector2(1060 if not opponent else 1248, PlayerInfoBar.BAR_HEIGHT)
+	bar.size = Vector2(1060 if not opponent else 1232, PlayerInfoBar.BAR_HEIGHT)
 	if opponent:
 		bar.face_pressed.connect(_on_face_pressed)
 	bar.graveyard_pressed.connect(_on_graveyard_pressed.bind(opponent))
@@ -384,7 +413,7 @@ func _make_row(top: float, opponent: bool) -> Array[CardView]:
 	var views: Array[CardView] = []
 	var width := MatchState.BOARD_SIZE * CardView.BOARD_SIZE_PX.x
 	width += (MatchState.BOARD_SIZE - 1) * CARD_GAP
-	var start := (1280.0 - width) * 0.5
+	var start := TABLE_RECT.position.x + (TABLE_RECT.size.x - width) * 0.5
 	for i in MatchState.BOARD_SIZE:
 		var view := CardView.new()
 		view.mode = CardView.Mode.BOARD
@@ -435,7 +464,12 @@ func _refresh_row(views: Array[CardView], side: int) -> void:
 func _refresh_hand() -> void:
 	var hand: Array = state.hand[my_side]
 	var count: int = mini(hand.size(), _hand_views.size())
-	var width := count * CardView.HAND_SIZE_PX.x + maxf(count - 1, 0) * HAND_GAP
+	# 手札は最大10枚を超えうるため、収まらなくなったら重ねてでも領域内に留める
+	# (はみ出すと「ログ」「投了」のボタンへ潜り込んでしまう)。
+	var step := CardView.HAND_SIZE_PX.x + HAND_GAP
+	if count > 1:
+		step = minf(step, (HAND_AREA.size.x - CardView.HAND_SIZE_PX.x) / float(count - 1))
+	var width := CardView.HAND_SIZE_PX.x + maxf(count - 1, 0) * step
 	var start := HAND_AREA.position.x + (HAND_AREA.size.x - width) * 0.5
 	for i in _hand_views.size():
 		var view := _hand_views[i]
@@ -443,7 +477,7 @@ func _refresh_hand() -> void:
 			view.visible = false
 			continue
 		view.visible = true
-		view.position = Vector2(start + i * (CardView.HAND_SIZE_PX.x + HAND_GAP), HAND_TOP)
+		view.position = Vector2(start + i * step, HAND_TOP)
 		view.size = CardView.HAND_SIZE_PX
 		view.show_card(hand[i], _my_turn() and state.can_play(my_side, i))
 		view.selected = _selection.is_hand(i)

@@ -8,18 +8,16 @@ extends Control
 
 const TABLE_BORDER_WIDTH := 3.0
 ## 奥(上端)をわずかに狭くして軽い奥行きを出す比率。
-const TOP_INSET_RATIO := 0.07
+const TOP_INSET_RATIO := 0.04
 const DIVIDER_WIDTH := 2.0
 const DIVIDER_RATIO := 0.5
 const MEDALLION_OUTER_RADIUS := 22.0
 const MEDALLION_INNER_RADIUS := 13.0
-const CORNER_ORNAMENT_RADIUS := 26.0
 
 ## 琥珀アクセント(枠線・区切り線・隅飾り)は他のコード描画UIと共通のGLOW_AMBERを使い、
 ## 用途ごとにアルファのみ変える(CodedButtonStyleのホバーグロー等と同じ考え方)。
 const TABLE_BORDER_ALPHA := 0.9
 const DIVIDER_ALPHA := 0.55
-const CORNER_ORNAMENT_ALPHA := 0.12
 
 
 func _draw() -> void:
@@ -33,10 +31,21 @@ func _draw() -> void:
 			Vector2(0.0, size.y),
 		]
 	)
-	var fill_color := UiPalette.BOARD_TABLE_FILL
-	UiPaint.fill_gradient_polygon(
-		ci, points, Rect2(Vector2.ZERO, size), [[0.0, fill_color], [1.0, fill_color]]
+	# 無地の一色だと輪郭だけの線画に見えるため、奥から手前へ明るくなる石の面として塗る。
+	(
+		UiPaint
+		. fill_gradient_polygon(
+			ci,
+			points,
+			Rect2(Vector2.ZERO, size),
+			[
+				[0.0, Color(0.14, 0.12, 0.15, 0.98)],
+				[0.5, Color(0.2, 0.17, 0.2, 0.98)],
+				[1.0, Color(0.12, 0.1, 0.13, 0.98)],
+			]
+		)
 	)
+	UiPaint.apply_grain(ci, Rect2(Vector2.ZERO, size), 0.06)
 	var outline := points.duplicate()
 	outline.append(points[0])
 	draw_polyline(outline, _amber(TABLE_BORDER_ALPHA), TABLE_BORDER_WIDTH, true)
@@ -51,18 +60,6 @@ func _draw() -> void:
 	UiPaint.draw_ring(ci, center, MEDALLION_OUTER_RADIUS, divider_color, 2.0, 32)
 	UiPaint.draw_ring(ci, center, MEDALLION_INNER_RADIUS, divider_color, 1.5, 32)
 
-	var corner_color := _amber(CORNER_ORNAMENT_ALPHA)
-	_draw_corner_ornament(ci, Vector2(top_inset * 0.6, size.y * 0.12), corner_color)
-	_draw_corner_ornament(ci, Vector2(size.x - top_inset * 0.6, size.y * 0.12), corner_color)
-	_draw_corner_ornament(ci, Vector2(size.x * 0.06, size.y * 0.9), corner_color)
-	_draw_corner_ornament(ci, Vector2(size.x * 0.94, size.y * 0.9), corner_color)
-
 
 func _amber(alpha: float) -> Color:
 	return Color(UiPalette.GLOW_AMBER.r, UiPalette.GLOW_AMBER.g, UiPalette.GLOW_AMBER.b, alpha)
-
-
-func _draw_corner_ornament(ci: RID, center: Vector2, color: Color) -> void:
-	UiPaint.fill_ellipse(
-		ci, center, Vector2(CORNER_ORNAMENT_RADIUS, CORNER_ORNAMENT_RADIUS * 0.5), color, 24
-	)
