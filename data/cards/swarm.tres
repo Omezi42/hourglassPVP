@@ -1,7 +1,10 @@
-[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+[gd_resource type="Resource" script_class="CardData" load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
 [ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/processed/swarm/state_full.png" id="icon_full"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/processed/swarm/state_falling.png" id="icon_falling"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/processed/swarm/state_empty.png" id="icon_empty"]
 
 [sub_resource type="Resource" id="Effect_swarm_0"]
 script = ExtResource("script_effect")
@@ -19,3 +22,6 @@ total_sand = 6
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_swarm_0")])
 rules_text = "設置:相手の砂時計の数 × 1 ダメージを相手プレイヤーへ"
+icon_upright = ExtResource("icon_full")
+icon_falling = ExtResource("icon_falling")
+icon_fallen = ExtResource("icon_empty")
