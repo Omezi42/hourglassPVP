@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+
+[resource]
+script = ExtResource("script_card")
+id = "drill"
+display_name = "ドリル"
+cost = 3
+total_sand = 6
+keywords = Array[int]([2])
+effects = Array[Resource]([])
+rules_text = ""

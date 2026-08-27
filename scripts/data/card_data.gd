@@ -1,0 +1,50 @@
+class_name CardData
+extends Resource
+## 砂時計(カード)1種の静的定義(GameDesign.md 1章)。
+## パラメータは コスト / 総量 / キーワードまたは効果 の3つだけで、
+## 体力・攻撃力は総量から導出されるため持たない。
+
+@export var id: String = ""
+@export var display_name: String = ""
+## 場に出すために支払うマナ。
+@export var cost: int = 0
+## 体力と攻撃力の合計。場に出た時点で 体力=総量 / 攻撃力=0 で始まる。
+@export var total_sand: int = 0
+## 常在キーワード(GameDesign.md 6章)。0個でよい(バニラ)。
+@export var keywords: Array[CardEnums.Keyword] = []
+## キーワードで表せない固有効果。0個でよい。
+@export var effects: Array[CardEffectData] = []
+## 効果欄に出す一文。キーワードだけのカードは空でよい(キーワード名から自動生成する)。
+@export var rules_text: String = ""
+
+@export_group("Icons")
+## 体力が満ちている(=場に出た直後に近い)状態のイラスト。
+@export var icon_upright: Texture2D
+## 砂が落ちている途中の状態のイラスト。
+@export var icon_falling: Texture2D
+## 攻撃力に偏った(=砂が落ちきりに近い)状態のイラスト。
+@export var icon_fallen: Texture2D
+
+
+func has_keyword(keyword: int) -> bool:
+	return keywords.has(keyword)
+
+
+func effects_for(trigger: int) -> Array[CardEffectData]:
+	var found: Array[CardEffectData] = []
+	for effect in effects:
+		if effect != null and effect.trigger == trigger:
+			found.append(effect)
+	return found
+
+
+## 詳細パネル・一覧に出す効果の説明文。
+func describe() -> String:
+	var parts: PackedStringArray = []
+	for keyword in keywords:
+		parts.append(CardEnums.keyword_name(keyword))
+	if not rules_text.is_empty():
+		parts.append(rules_text)
+	if parts.is_empty():
+		return "効果なし"
+	return " / ".join(parts)

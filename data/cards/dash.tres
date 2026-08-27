@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/processed/dash/state_full.png" id="icon_full"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/processed/dash/state_falling.png" id="icon_falling"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/processed/dash/state_empty.png" id="icon_empty"]
+
+[resource]
+script = ExtResource("script_card")
+id = "dash"
+display_name = "ダッシュ"
+cost = 2
+total_sand = 4
+keywords = Array[int]([6])
+effects = Array[Resource]([])
+rules_text = ""
+icon_upright = ExtResource("icon_full")
+icon_falling = ExtResource("icon_falling")
+icon_fallen = ExtResource("icon_empty")

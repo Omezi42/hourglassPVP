@@ -1,77 +1,106 @@
-# 砂時計PvP 実装設計書(Architecture v1.0)
+# 砂時計アリーナ 実装設計書(Architecture v5.0)
 
 本書は `docs/GameDesign.md` の仕様を Godot 4.x / GDScript 2.0 でどう実装するかの方針をまとめる。
 仕様(ルール・数値・UI)は GameDesign.md が唯一の情報源であり、本書はその実装設計のみを扱う。
+
+> **移行中の注意(フェーズ29)。** v5.0(カードゲーム化)への作り直しを進めている。
+> 1〜3章は v5.0 の内容へ書き換え済み。**4章(シーン構成)は依然として v1.0(場3マス・
+> 控え2枚・配置フェーズ)の対局画面を記述している**。共通コンポーネント(`ScreenHeader`・
+> コード描画のボタン/パネル・`HourglassCard` 等)と 6〜10章(オンライン対戦・リプレイ・
+> CPU戦・音・アカウント/通貨)の枠組みはそのまま流用できるが、対局画面まわりの記述は
+> AM-5 の着手時に差し替える。
+>
+> **v1.0 の実装は削除せず残してある。** `GameState` / `HourglassData` / `EffectResolver` /
+> `MatchScreen` 一式は現行アプリを動かすためそのまま置いてあり、v5.0 のクラス
+> (`MatchState` / `CardData` / `CardEffectResolver`)は別名で並走させている。
+> UI の差し替えが済んだ時点で v1.0 側を撤去する。
 
 ---
 
 ## 1. 設計方針
 
-- 砂時計は `Resource` としてデータ駆動で管理し、コード変更なしで新規追加できる形にする
+- カードは `Resource` としてデータ駆動で管理し、コード変更なしで新規追加できる形にする
 - 効果は「トリガー×ターゲット×エフェクト」の組み合わせで表現し、エフェクト種別ごとにハンドラを1箇所に集約する
-- 既存のエフェクト種別の組み合わせだけで新しい砂時計を作れる状態を維持する(「新効果そのものの追加」と「既存効果の組み合わせによる新駒追加」を分けて運用する)
+- 既存のエフェクト種別の組み合わせだけで新しいカードを作れる状態を維持する(「新効果そのものの追加」と「既存効果の組み合わせによる新カード追加」を分けて運用する)
 - UI層・対局ロジック層・データ層を分離する。ロジック層はUIに依存しない
+- **キーワード(GameDesign.md 6章)は `CardEffectData` ではなく `CardData.keywords` として持つ**。
+  キーワードは「トリガーで発火する効果」ではなく戦闘処理そのものの分岐(守護は対象選択、
+  硝子は被ダメージ、貫通・毒砂・吸命は攻撃解決、連撃は攻撃回数、速落は召喚時)であり、
+  効果の語彙へ押し込むと `CardEffectResolver` が戦闘のルールを持つことになるため
 
 ---
 
 ## 2. データ構造(Resource設計)
 
-### 2.1 `HourglassData`(Resource, `.tres`)
+### 2.1 `CardEnums`(`scripts/data/card_enums.gd`)
 
-砂時計の静的定義データ。Inspectorから編集可能。1砂時計 = 1 `.tres` ファイル。
+v5.0のカードが使う語彙を1箇所へ集める。旧ルールの `GameEnums`(位相制の
+`HourglassState` 等)とは別物であり、混ぜて使わない。
+
+| enum | 値 |
+|---|---|
+| `Keyword` | `GUARD`(守護)/ `GLASS`(硝子)/ `PIERCE`(貫通)/ `POISON`(毒砂)/ `LIFESTEAL`(吸命)/ `DOUBLE_STRIKE`(連撃)/ `QUICK`(速落) |
+| `Trigger` | `ON_PLAY`(設置)/ `ON_FLIP`(反転)/ `ON_DEATH`(余砂) |
+| `EffectTarget` | `SELF` / `ENEMY_UNIT` / `ALL_ENEMY_UNITS` / `ALL_ALLY_UNITS` / `OPPONENT_PLAYER` / `OWN_PLAYER` |
+| `EffectType` | `DAMAGE_PLAYER` / `DAMAGE_UNIT` / `DESTROY_UNIT` / `SWAP_STATS` / `ADD_TOTAL` / `DROP_SAND` / `DRAW` / `HEAL_PLAYER` / `DAMAGE_PLAYER_PER_ENEMY_UNIT` |
+
+`keyword_name()` / `trigger_name()` は GameDesign.md 6章の日本語表記を返す。表示名を
+UI側に散らさないため、語と enum の対応はここだけが持つ。
+
+### 2.2 `CardData`(Resource, `.tres`)
+
+カード1種の静的定義。1カード = 1 `.tres`(`data/cards/{id}.tres`)。
+**体力・攻撃力のフィールドは持たない**。総量から導出される(GameDesign.md 1章)。
 
 | フィールド | 型 | 内容 |
 |---|---|---|
 | `id` | String | 一意識別子("sand", "sword" 等) |
 | `display_name` | String | 表示名 |
-| `fall_damage` | int | 落下ダメージ |
-| `icon_upright` | Texture2D | 上向き時のイラスト |
-| `icon_falling` | Texture2D | 落下中のイラスト |
-| `icon_fallen` | Texture2D | 落ちきり時のイラスト |
-| `effects` | Array[EffectData] | 受動の追加効果のリスト(0件でも可、バニラ駒に対応) |
-| `skill` | SkillData | 手番の行動として発動するスキル(null可。1駒につき最大1つ) |
+| `cost` | int | 場に出すために支払うマナ |
+| `total_sand` | int | 総量(体力+攻撃力)。場に出た時点で 体力=総量 / 攻撃力=0 |
+| `keywords` | Array[Keyword] | 常在キーワード。0個でよい(バニラ) |
+| `effects` | Array[CardEffectData] | キーワードで表せない固有効果。0個でよい |
+| `rules_text` | String | 効果欄に出す一文。キーワードだけのカードは空 |
+| `icon_upright` / `icon_falling` / `icon_fallen` | Texture2D | 体力が多い/半々/攻撃力に偏った状態のイラスト |
 
-### 2.1.1 `SkillData`(Resource)
+`describe()` が「キーワード名 / 固有効果の文」を組み立てるため、UI側は表示文字列を
+自分で作らない。
 
-スキル1件分のデータ(GameDesign.md 4.3・7章)。受動効果(`EffectData`)とは別のフィールドに
-持つ。トリガーは常に「起動時」で1種類しかないため持たず、代わりに**UIのボタンへ出す短い名前**を
-持つ点が `EffectData` と異なる。
+### 2.3 `CardEffectData`(Resource)
 
-| フィールド | 型 | 内容 |
-|---|---|---|
-| `display_name` | String | ActionMenuのボタンに出す短い名前(「交代」「加速」等) |
-| `description` | String | 詳細パネルに出す説明文 |
-| `effect_type` | EffectType (enum) | `EffectData`と同じenumを共有する |
-| `target` | Target (enum) | 同上 |
-| `value` | int | ダメージ量など汎用パラメータ |
+効果1件分。`trigger` / `target` / `effect_type` / `value` の4フィールドのみ。
+新しいカードは既存 enum の組み合わせで `.tres` を1個作るだけで追加でき、コード変更を要さない。
 
-`effects`(受動)と `skill`(能動)で同じ `EffectType`/`Target` を共有することで、
-`EffectResolver` のハンドラを1箇所に保てる。スキル専用に追加した種別は `SWAP_BENCH`
-(自分自身を控えの1個と入れ替える)と `SWAP_POSITION`(隣接する自分の駒と位置を入れ替える)の
-2つのみで、他(`FORCE_ADVANCE`/`RECOVER`/`DAMAGE`)は受動と共用のハンドラをそのまま使う。
+### 2.4 `CardInstance`(RefCounted)
 
-### 2.2 `EffectData`(Resource)
+場に出ている砂時計1体分の実行時状態。静的データと可変状態を分離する。
 
-効果1件分のデータ。GameDesign.md 7章の語彙(トリガー/ターゲット/エフェクト)をそのままフィールド化する。
+| フィールド | 内容 |
+|---|---|
+| `data` | 参照する `CardData` |
+| `health` | 上の部屋に残っている砂。0で破壊 |
+| `attack` | 下に落ちた砂。攻撃力そのもの |
+| `summoned_this_turn` | 出したターンかどうか(反転も攻撃もできない) |
+| `flipped_this_turn` | このターンに反転したか(1体1回) |
+| `attacks_this_turn` | このターンに攻撃した回数(連撃なら2回まで) |
+| `glass_intact` | 硝子がまだ残っているか |
 
-| フィールド | 型 | 内容 |
-|---|---|---|
-| `trigger` | Trigger (enum) | `ON_FLIP` / `WHILE_FALLING` / `ON_FALLEN` / `WHILE_FALLEN` |
-| `target` | Target (enum) | `SELF` / `ADJACENT_LEFT` / `ADJACENT_RIGHT` / `OPPONENT_PLAYER` / `OWN_PLAYER` / `RANDOM_ALLY` / `OPPONENT_MIRROR` |
-| `effect_type` | EffectType (enum) | `DAMAGE` / `DAMAGE_REDUCTION` / `LOCK` / `FORCE_ADVANCE` / `RECOVER` / `COUNTER` / `SYNC_STATE` / `SWAP_BENCH` / `SWAP_POSITION`(後ろ2つはスキル専用) |
-| `value` | int | ダメージ量・軽減量など汎用パラメータ |
+**砂の移動を3つのメソッドで区別する。**取り違えるとルールが崩れるため名前で分ける。
 
-新しい砂時計は既存 enum の組み合わせで `.tres` を1個作るだけで追加でき、コード変更を必要としない。
-既存の語彙で表現できない効果が必要になった場合のみ、`EffectType` に新しい値と対応するハンドラを追加する(この場合はGameDesign.mdへの追記提案を先に行う)。
+- `drop_sand(n)` … 体力-n / 攻撃力+n。**総量は変わらない**(ターン終了の1粒・速落)
+- `flip()` … 体力と攻撃力を入れ替える
+- `take_damage(n)` … 体力-n のみ。**総量が減る**(GameDesign.md 4章)。硝子が残っていれば
+  1度だけ0を返して無効化する
 
-### 2.3 `HourglassInstance`
+`lifetime_damage()` は `health * attack + health * (health - 1) / 2`(GameDesign.md 1章)。
+CPUの評価関数の基礎であり、ロジック層に置いてUI・CPUの双方から使う。
 
-対局中のみ存在する実行時インスタンス。静的データ(`HourglassData`)と可変状態(現在の状態)を分離する。
+### 2.5 `CardLibrary`(RefCounted, staticのみ)
 
-| フィールド | 型 | 内容 |
-|---|---|---|
-| `data` | HourglassData | 参照する静的データ |
-| `state` | HourglassState (enum) | `UPRIGHT` / `FALLING` / `FALLEN` |
+`data/cards/` を走査してカードを列挙する(`DeckSave` 等と同じ「Autoloadを使わずstaticで
+持つ」流儀)。エクスポート後は `.tres` が `<name>.tres.remap` として格納されるため、
+**`.remap` を除いた名前で判定し `load()` には元の `.tres` パスを渡す**(5章の既知の不具合。
+これを怠るとWeb版でのみ全カードが0件になる)。
 
 ---
 
@@ -79,80 +108,71 @@
 
 UIに依存しない、対局ルールそのものを扱う層。
 
-### 3.1 `GameState`
+### 3.1 `MatchState`(`scripts/logic/match_state.gd`, Node)
 
-対局中の唯一の真実(single source of truth)を保持する。
+対局中の唯一の真実を保持する。旧 `GameState` とは別クラスとして並走させている。
 
-- 両プレイヤーのHP
-- 手番情報
-- 各スロット(相手左中右・自分左中右・控え×2×2)の `HourglassInstance`
-- 状態変化時にシグナルを発行する(`hp_changed`, `hourglass_state_changed`, `hourglass_moved` 等)
-- 反転・移動・交代・ターン経過の処理を提供する。位置による特性は「左マス=交代の入口」のみで、中央・右に固有のダメージ補正はない(GameDesign.md 5章)
-- **【フェーズ17 V-1 実装済み】** 行動(反転/移動/交代/パス)は指した瞬間に盤面へ適用せず、
-  `pending_action`(Dictionary、空なら未設定=パス)として保持する。実際の適用は
-  `advance_and_end_turn()`の中で行う(GameDesign.md 2章・4.4)。`OnlineMatch.apply()`は
-  `flip`/`move`/`swap_in`/`pass`について`set_pending_action()`を呼ぶだけになり、盤面を直接
-  変更しない(`surrender`のみ従来どおり即座に`surrender()`を呼ぶ。盤面を変えずに終局させる
-  性質のため予約の対象にならない)。これにより「apply()→advance_and_end_turn()」という
-  既存の呼び出しの対(自分の手・オンライン相手の手・CPUの手・リプレイの巻き戻し・観戦の
-  追いつき、の5経路すべて)を変えずに、解決タイミングだけをターン終了時へ移せている
-- **【フェーズ22 実装済み】** 基本行動は「反転」「スキル」「パス」の3つ(GameDesign.md 4.3)。
-  `pending_action` は反転が `{"type": "flip", ...}`、スキルが
-  `{"type": "skill", "side", "position", "bench_index"?}`。`bench_index` は交代スキルのみが使う。
-  `_own_slot_kinds()` はスキルを対象マスへ `"skill"` として登録し、解決時に
-  `activate_skill()` → `EffectResolver.resolve_skill()` を呼んでから通常どおり `advance_slot()` する。
-  **旧「移動」「交代」は基本行動から削除した**が、`OnlineMatch.apply()` の `move`/`swap_in` 分岐は
-  過去のリプレイを再生できるよう残してある(合法手としては生成されない)
-- **【フェーズ21 Z-1 実装済み】** `advance_and_end_turn()`の処理順序は、
-  `pending_action`を取り出す→自分の場を左→中央→右の順に1マスずつ解決→相手の駒への反転が
-  設定されていればそれを解決→`effect_resolver.resolve_turn_tick()`→`current_turn`を交代→
-  `turn_started`を発行。1マスの解決は「そのマスに設定された行動を適用する→**続けて必ず
-  `advance_slot()`で1段階進行させる**」の2段で、行動の有無で進行の有無は変わらない
-  (GameDesign.md 2章)。移動は2マスに関わるが、`move()`による入れ替え自体は**番号の若い方の
-  マスの解決時に1度だけ**行い、その後そのマスを進行させる。もう一方のマスは自分の解決順が
-  来たときに通常どおり進行するため、結果として関与2マスの駒がそれぞれ1回ずつ進行する
-  (`_own_slot_kinds()`が`move`を若い方のマスにだけ登録することでこれを表現しており、
-  以前あった「解決済みとして読み飛ばす」処理は不要になった)。
-  フェーズ17 V-1では「行動を設定したマスは進行しない」方式だったが、自己対戦による
-  バランス検証で、自陣への反転だけがコストを負い相手への反転が無償という非対称を生み、
-  対局の12.8%が膠着することが判明したため、この条項ごと削除した(GameDesign.md 2章の経緯を参照)
-- **【フェーズ17 V-1 実装済み】** 解決の区切りを`resolution_step_started(side, positions, kind)`
-  シグナルで通知する。`kind`は`"advance"`(進行する)/`"idle"`(既に落ちきりで何も起きない)/
-  `"flip"`/`"move"`/`"swap_in"`のいずれかで、`positions`は対象マス(移動のみ2個)。
-  1マス分の解決を始める直前に発行されるため、UI層(`MatchTurnResolver`)はこれを区切りとして
-  「どのマスへズームし、続くどの状態変化・ダメージがそのマスの結果なのか」を対応付けられる。
-  GameStateはこのシグナルを発行するだけで、演出の存在を一切知らない
-- 初期HP(`INITIAL_HP`)は30(GameDesign.md 3章)。UI層は`PlayerStatusBar`がこの定数を
-  `hp_bar.max_value`・HP数値・残量による色分けの基準として参照するため、値を変えても
-  シーン側の調整は要らない
-- **【フェーズ19 X-1 実装済み】** 対局開始時の初期状態は場の位置ごとに異なる(GameDesign.md 2章・
-  5章)。`START_STATES`(`BoardPosition`順に`UPRIGHT`/`FALLING`/`FALLEN`)を`GameState`が
-  constとして持ち、`start_match()`が`_build_instances()`へ渡して場の3マスにのみ適用する
-  (控えは従来どおり全て`UPRIGHT`。交代で場へ出る駒も`swap_in()`が`UPRIGHT`にする既存仕様のまま
-  変更していない)。初期状態は`HourglassInstance`の生成時に代入するだけで、`advance_slot()`を
-  経由しないため**右マスが`FALLEN`で始まっても落下ダメージは発生しない**(落下ダメージは
-  「`FALLEN`へ到達した瞬間」に入るものであり、初期状態としての`FALLEN`は到達ではないため)。
-  `advance_and_end_turn()`は対局開始直後には一度も呼ばれないため、最初の1手が指されるまで
-  この初期状態がそのまま保たれる。継続効果(`WHILE_FALLING`/`WHILE_FALLEN`)は
-  `resolve_turn_tick()`経由でしか回らないため、開始直後に勝手に発動することはなく、
-  最初の手番終了時から通常どおり評価される
-- **【フェーズ18 W-1】** 決着の要因を`end_reason`(`EndReason` enum: `HP_DEPLETED`/`TIMEOUT`/
-  `SURRENDER`)として保持する。`match_ended(winner)`のシグネチャは変えず、UI層が終局後に
-  `state.end_reason`を読んで結果パネル・ログの文言を出し分ける(GameDesign.md 3章「何で決着したか
-  を1行で明示する」)。`force_match_end(winner, reason)`に既定引数を足し、持ち時間切れ=`TIMEOUT`、
-  `surrender()`経由=`SURRENDER`、HPが0になった場合=`HP_DEPLETED`を記録する。決着を生んだ駒
-  (落ちきった砂時計)の特定は`GameState`の責務とせず、既にダメージの発生源を追えているUI層
-  (`MatchScreen._pop_fall_source()`)の情報をそのまま使う
+保持するもの:両プレイヤーの `hp` / `mana` / `max_mana` / `deck`(山札)/ `hand` /
+`board`(6枠の `CardInstance`、空きは null)/ `graveyard`、`current_turn`、`first_side`、
+`turn_count`、`end_reason`、`winner`。いずれも `Side`(A/B)をキーにした Dictionary。
 
-### 3.2 `EffectResolver`
+定数は GameDesign.md 2章の数値をそのまま持つ:`INITIAL_HP = 30` / `BOARD_SIZE = 6` /
+`DECK_SIZE = 20` / `MAX_MANA = 10` / `FIRST_PLAYER_HAND = 3` / `SECOND_PLAYER_HAND = 4` /
+`FATIGUE_DAMAGE = 1`。加えて、両者が延々とパスし続けた場合の保険として `MAX_TURNS = 200`
+(到達したら `EndReason.DRAW` で打ち切る。シミュレーションが止まらなくなるのを防ぐためで、
+実対局では持ち時間(GameDesign.md 5章)が先に尽きる)。
 
-`EffectData` の評価と適用を1箇所に集約するクラス。
+**手番の流れ**(GameDesign.md 3章)は `_begin_turn()` と `end_turn()` の2つだけで表す。
 
-- トリガー発火(反転時/落下中/落ちきり時/落ちきり中)のたびに、対象となる `HourglassInstance` の `effects` を走査する
-- `effect_type` ごとの処理関数を持つ対応表(dictionary的な分岐)を持ち、新しいエフェクト種別を追加する際はここに1エントリ追加するだけで済む構造にする
-- `target` の解決(自分自身/隣接/相手プレイヤー/自分プレイヤー/味方ランダム/正面)もここで行う
+- `_begin_turn()`:`turn_count` を進める → 最大マナ+1・全回復 → 自分の全ユニットの
+  `begin_turn()`(召喚酔い・反転済み・攻撃回数のリセット)→ ドロー1枚
+  (**`turn_count == 1` かつ先手のときだけ引かない**)→ `turn_started` を発行
+- `end_turn()`:自分の全ユニットを `tick()`(1粒落とす)→ 体力0になったものを破壊 →
+  山札が尽きていれば疲労1ダメージ → 手番を交代して `_begin_turn()`
 
-UIは `GameState` のシグナルを購読して表示を更新するだけとし、ロジックを持たない。
+**メインフェイズの操作は3つ**で、いずれも `can_*()` と実行のペアを持つ。UI・CPU・
+オンラインの再生はすべてこの3つだけを呼ぶ。
+
+- `play_card(side, hand_index, slot, target)` … マナを払って空き枠へ置く。枠が埋まって
+  いれば**上書きし、元のカードを墓地へ送る**。速落は `drop_sand(2)` して
+  `summoned_this_turn` を下ろす。最後に `ON_PLAY` の効果を解決する
+- `flip(side, slot)` … 体力と攻撃力を入れ替える。マナ不要・1体1ターン1回・出したターンは不可。
+  `ON_FLIP` の効果を解決する
+- `attack(side, slot, target_slot)` … `target_slot` が -1 なら相手プレイヤー、0以上なら
+  相手の砂時計。**砂時計を攻撃した場合は相打ち**として `_resolve_unit_combat()` へ回す
+
+**戦闘の処理順序**(`_resolve_unit_combat()`)は、キーワードの相互作用を壊さないため固定する。
+
+1. 攻撃力・体力を**両者ぶん先に控える**(同時攻撃であり、片方の減少がもう片方の値に
+   影響してはならない)
+2. 双方が `take_damage()`(硝子はここで1度だけ吸う)
+3. 貫通:実際にダメージが通った側だけ、`攻撃力 - 相手の元の体力` の超過分を本体へ
+4. 吸命:実際に与えたダメージぶん自分のHPを回復
+5. 毒砂:ダメージを与えた相手の体力を0にする
+6. `_cleanup_dead()` で両陣営の死亡を回収し、`ON_DEATH`(余砂)を発火
+
+**守護**は攻撃側ではなく防御側の問い合わせとして持つ。`attackable_slots(defender_side)` は
+守護がいれば守護の枠だけを、いなければ全枠を返し、`can_attack_player()` は守護が1体でも
+いれば false を返す。
+
+### 3.2 `CardEffectResolver`(`scripts/logic/card_effect_resolver.gd`, RefCounted)
+
+`CardEffectData` の評価と適用を1箇所に集約する。`MatchState` が生成して保持し、
+`resolve(side, unit, trigger, hint)` を設置・反転・余砂の3箇所から呼ぶ。
+
+- `effect_type` ごとの分岐を1つの `match` に持ち、新しい種別を足すときはここへ1分岐を
+  加えるだけで済む形を保つ
+- `target` の解決(自分自身/相手1体/相手全体/味方全体/プレイヤー)もここで行う
+- **対象を1体選ぶ効果(`ENEMY_UNIT`)は、`hint`(`{"side":..., "slot":...}`)で受け取る。**
+  指定が無い・その枠が既に空いている場合は「生涯ダメージが最大の1体」を自動で選ぶ。
+  これによりUIは対象選択を実装するまで指定なしで呼べ、CPU・リプレイ再生も同じ経路を通る
+
+### 3.3 検証
+
+`tools/tests/v5_rules_tests.gd`(`run_tests.gd` から呼ぶ)が、生涯ダメージの式・砂の3つの
+移動・初期手札と先手のドロー無し・上書き設置・召喚酔いと速落・相打ち・守護/硝子/貫通/
+吸命/毒砂/連撃・設置効果6種・反転トリガー・疲労を検証する。`run_tests.gd` は1000行の
+上限に達しているため、v5.0 のテストはこの別ファイルへ置く。
 
 ---
 

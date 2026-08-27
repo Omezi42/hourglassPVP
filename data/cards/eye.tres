@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/processed/eye/state_full.png" id="icon_full"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/processed/eye/state_falling.png" id="icon_falling"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/processed/eye/state_empty.png" id="icon_empty"]
+
+[sub_resource type="Resource" id="Effect_eye_0"]
+script = ExtResource("script_effect")
+trigger = 0
+target = 1
+effect_type = 3
+value = 0
+
+[resource]
+script = ExtResource("script_card")
+id = "eye"
+display_name = "アイ"
+cost = 3
+total_sand = 5
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_eye_0")])
+rules_text = "設置:相手の砂時計1体の体力と攻撃力を入れ替える"
+icon_upright = ExtResource("icon_full")
+icon_falling = ExtResource("icon_falling")
+icon_fallen = ExtResource("icon_empty")

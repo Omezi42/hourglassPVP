@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/processed/sword/state_full.png" id="icon_full"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/processed/sword/state_falling.png" id="icon_falling"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/processed/sword/state_empty.png" id="icon_empty"]
+
+[sub_resource type="Resource" id="Effect_sword_0"]
+script = ExtResource("script_effect")
+trigger = 0
+target = 4
+effect_type = 0
+value = 2
+
+[resource]
+script = ExtResource("script_card")
+id = "sword"
+display_name = "ソード"
+cost = 3
+total_sand = 5
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_sword_0")])
+rules_text = "設置:相手プレイヤーに2ダメージ"
+icon_upright = ExtResource("icon_full")
+icon_falling = ExtResource("icon_falling")
+icon_fallen = ExtResource("icon_empty")

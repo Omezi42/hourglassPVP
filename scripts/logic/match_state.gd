@@ -1,0 +1,427 @@
+class_name MatchState
+extends Node
+## v5.0の対局そのもの(GameDesign.md 2〜5章)。UIに依存しない唯一の真実を保持する。
+## 旧ルール(位相制)の GameState とは別物であり、混ぜて使わない。
+
+signal hp_changed(side: int, new_hp: int)
+signal mana_changed(side: int, current: int, maximum: int)
+signal hand_changed(side: int)
+signal board_changed(side: int)
+## 砂時計が場に出たとき。
+signal unit_played(side: int, slot: int)
+## 砂時計がダメージを受けたとき(amount は実際に消えた砂の量)。
+signal unit_damaged(side: int, slot: int, amount: int)
+## 砂時計が破壊されたとき。
+signal unit_destroyed(side: int, slot: int, card: CardData)
+signal unit_flipped(side: int, slot: int)
+## 攻撃が行われたとき。target_slot が -1 なら相手プレイヤーへの攻撃。
+signal attack_performed(side: int, slot: int, target_slot: int)
+signal turn_started(side: int)
+signal match_ended(winner: int)
+
+enum Side { A, B }
+## 決着の要因(GameDesign.md 5章)。
+enum EndReason { HP_DEPLETED, SURRENDER, TIMEOUT, DRAW }
+
+const INITIAL_HP := 30
+const BOARD_SIZE := 6
+const DECK_SIZE := 20
+const MAX_MANA := 10
+const FIRST_PLAYER_HAND := 3
+const SECOND_PLAYER_HAND := 4
+const FATIGUE_DAMAGE := 1
+## 引き分けを避けるための保険。両者が延々とパスし続けた場合に打ち切る。
+const MAX_TURNS := 200
+
+var hp: Dictionary = {}
+var mana: Dictionary = {}
+var max_mana: Dictionary = {}
+## 山札(先頭が次に引くカード)。
+var deck: Dictionary = {}
+var hand: Dictionary = {}
+## 場の6枠。空き枠は null。
+var board: Dictionary = {}
+var graveyard: Dictionary = {}
+var current_turn: int = Side.A
+## 先手側。先手の1ターン目だけドローしない(GameDesign.md 2章)。
+var first_side: int = Side.A
+var turn_count: int = 0
+var end_reason: int = EndReason.HP_DEPLETED
+var winner: int = -1
+
+var _effects: CardEffectResolver
+var _rng := RandomNumberGenerator.new()
+var _match_over := false
+var _deck_exhausted: Dictionary = {}
+
+
+func _init() -> void:
+	_effects = CardEffectResolver.new(self)
+
+
+## 対局を開始する。deck_a/deck_b は CardData を DECK_SIZE 枚並べた配列。
+func start_match(
+	deck_a: Array, deck_b: Array, p_first_side: int = Side.A, seed_value: int = 0
+) -> void:
+	if seed_value == 0:
+		_rng.randomize()
+	else:
+		_rng.seed = seed_value
+	_match_over = false
+	winner = -1
+	end_reason = EndReason.HP_DEPLETED
+	turn_count = 0
+	first_side = p_first_side
+	current_turn = p_first_side
+	for side in [Side.A, Side.B]:
+		hp[side] = INITIAL_HP
+		mana[side] = 0
+		max_mana[side] = 0
+		hand[side] = []
+		graveyard[side] = []
+		_deck_exhausted[side] = false
+		var slots: Array = []
+		slots.resize(BOARD_SIZE)
+		board[side] = slots
+	deck[Side.A] = _shuffled(deck_a)
+	deck[Side.B] = _shuffled(deck_b)
+	var second_side := other_side(p_first_side)
+	for i in FIRST_PLAYER_HAND:
+		_draw_one(p_first_side)
+	for i in SECOND_PLAYER_HAND:
+		_draw_one(second_side)
+	_begin_turn()
+
+
+static func other_side(side: int) -> int:
+	return Side.B if side == Side.A else Side.A
+
+
+func is_match_over() -> bool:
+	return _match_over
+
+
+func units(side: int) -> Array:
+	var found: Array = []
+	for unit in board[side]:
+		if unit != null:
+			found.append(unit)
+	return found
+
+
+func empty_slots(side: int) -> Array:
+	var found: Array = []
+	var slots: Array = board[side]
+	for i in slots.size():
+		if slots[i] == null:
+			found.append(i)
+	return found
+
+
+# --- 手番 ---------------------------------------------------------------
+
+
+func _begin_turn() -> void:
+	turn_count += 1
+	var side := current_turn
+	max_mana[side] = mini(max_mana[side] + 1, MAX_MANA)
+	mana[side] = max_mana[side]
+	mana_changed.emit(side, mana[side], max_mana[side])
+	for unit in units(side):
+		unit.begin_turn()
+	var skip_draw: bool = turn_count == 1 and side == first_side
+	if not skip_draw:
+		draw(side, 1)
+	board_changed.emit(side)
+	turn_started.emit(side)
+
+
+## 自分の手番を終える。自分の砂時計の砂が1粒ずつ落ち、手番が相手へ移る。
+func end_turn() -> void:
+	if _match_over:
+		return
+	var side := current_turn
+	for slot in BOARD_SIZE:
+		var unit: CardInstance = board[side][slot]
+		if unit == null:
+			continue
+		unit.tick()
+		if unit.is_dead():
+			_destroy_unit(side, slot)
+	board_changed.emit(side)
+	if _deck_exhausted[side]:
+		damage_player(side, FATIGUE_DAMAGE)
+	if _match_over:
+		return
+	if turn_count >= MAX_TURNS:
+		_finish(-1, EndReason.DRAW)
+		return
+	current_turn = other_side(side)
+	_begin_turn()
+
+
+func surrender(side: int) -> void:
+	if _match_over:
+		return
+	_finish(other_side(side), EndReason.SURRENDER)
+
+
+func timeout(side: int) -> void:
+	if _match_over:
+		return
+	_finish(other_side(side), EndReason.TIMEOUT)
+
+
+# --- ドロー -------------------------------------------------------------
+
+
+func draw(side: int, amount: int) -> void:
+	for i in amount:
+		_draw_one(side)
+	hand_changed.emit(side)
+
+
+func _draw_one(side: int) -> void:
+	var pile: Array = deck[side]
+	if pile.is_empty():
+		_deck_exhausted[side] = true
+		return
+	hand[side].append(pile.pop_front())
+	if pile.is_empty():
+		_deck_exhausted[side] = true
+
+
+func _shuffled(cards: Array) -> Array:
+	var copy := cards.duplicate()
+	for i in range(copy.size() - 1, 0, -1):
+		var j := _rng.randi_range(0, i)
+		var tmp: Variant = copy[i]
+		copy[i] = copy[j]
+		copy[j] = tmp
+	return copy
+
+
+# --- 場に出す -----------------------------------------------------------
+
+
+func can_play(side: int, hand_index: int) -> bool:
+	if _match_over or current_turn != side:
+		return false
+	if hand_index < 0 or hand_index >= hand[side].size():
+		return false
+	var card: CardData = hand[side][hand_index]
+	return mana[side] >= card.cost
+
+
+## 手札の1枚を場の slot へ出す。枠が埋まっていれば上書きし、元の砂時計は墓地へ送る。
+## target は ENEMY_UNIT を対象に取る設置効果のための指定 {"side":..., "slot":...}。
+func play_card(side: int, hand_index: int, slot: int, target: Dictionary = {}) -> bool:
+	if not can_play(side, hand_index):
+		return false
+	if slot < 0 or slot >= BOARD_SIZE:
+		return false
+	var card: CardData = hand[side][hand_index]
+	mana[side] -= card.cost
+	hand[side].remove_at(hand_index)
+	hand_changed.emit(side)
+	mana_changed.emit(side, mana[side], max_mana[side])
+	var replaced: CardInstance = board[side][slot]
+	if replaced != null:
+		board[side][slot] = null
+		graveyard[side].append(replaced.data)
+		unit_destroyed.emit(side, slot, replaced.data)
+	var unit := CardInstance.new(card)
+	if unit.has_keyword(CardEnums.Keyword.QUICK):
+		unit.drop_sand(2)
+		unit.summoned_this_turn = false
+	board[side][slot] = unit
+	unit_played.emit(side, slot)
+	board_changed.emit(side)
+	_effects.resolve(side, unit, CardEnums.Trigger.ON_PLAY, target)
+	_cleanup_dead()
+	return true
+
+
+# --- 反転 ---------------------------------------------------------------
+
+
+func can_flip(side: int, slot: int) -> bool:
+	if _match_over or current_turn != side:
+		return false
+	var unit: CardInstance = board[side][slot]
+	return unit != null and unit.can_flip()
+
+
+## 反転する。マナは不要。1体につき1ターン1回、出したターンは反転できない。
+func flip(side: int, slot: int) -> bool:
+	if not can_flip(side, slot):
+		return false
+	var unit: CardInstance = board[side][slot]
+	unit.flip()
+	unit.flipped_this_turn = true
+	unit_flipped.emit(side, slot)
+	_effects.resolve(side, unit, CardEnums.Trigger.ON_FLIP, {})
+	if unit.is_dead():
+		_destroy_unit(side, slot)
+	board_changed.emit(side)
+	return true
+
+
+# --- 戦闘 ---------------------------------------------------------------
+
+
+## 守護を持つ砂時計がいる間は、その砂時計しか攻撃できない(GameDesign.md 6章)。
+func attackable_slots(defender_side: int) -> Array:
+	var guards: Array = []
+	var others: Array = []
+	var slots: Array = board[defender_side]
+	for i in slots.size():
+		var unit: CardInstance = slots[i]
+		if unit == null:
+			continue
+		if unit.has_keyword(CardEnums.Keyword.GUARD):
+			guards.append(i)
+		else:
+			others.append(i)
+	return guards if not guards.is_empty() else others
+
+
+func can_attack_player(side: int) -> bool:
+	for unit in units(other_side(side)):
+		if unit.has_keyword(CardEnums.Keyword.GUARD):
+			return false
+	return true
+
+
+func can_attack(side: int, slot: int, target_slot: int) -> bool:
+	if _match_over or current_turn != side:
+		return false
+	var unit: CardInstance = board[side][slot]
+	if unit == null or not unit.can_attack():
+		return false
+	if target_slot < 0:
+		return can_attack_player(side)
+	return attackable_slots(other_side(side)).has(target_slot)
+
+
+## 攻撃する。target_slot が -1 なら相手プレイヤーへの攻撃。
+func attack(side: int, slot: int, target_slot: int) -> bool:
+	if not can_attack(side, slot, target_slot):
+		return false
+	var attacker: CardInstance = board[side][slot]
+	attacker.attacks_this_turn += 1
+	attack_performed.emit(side, slot, target_slot)
+	if target_slot < 0:
+		var power := attacker.attack
+		damage_player(other_side(side), power)
+		_lifesteal(side, attacker, power)
+		return true
+	_resolve_unit_combat(side, slot, target_slot)
+	_cleanup_dead()
+	return true
+
+
+func _resolve_unit_combat(side: int, slot: int, target_slot: int) -> void:
+	var foe_side := other_side(side)
+	var attacker: CardInstance = board[side][slot]
+	var defender: CardInstance = board[foe_side][target_slot]
+	var attacker_power := attacker.attack
+	var defender_power := defender.attack
+	var defender_health := defender.health
+	var attacker_health := attacker.health
+	var dealt_to_defender := defender.take_damage(attacker_power)
+	var dealt_to_attacker := attacker.take_damage(defender_power)
+	if dealt_to_defender > 0:
+		unit_damaged.emit(foe_side, target_slot, dealt_to_defender)
+	if dealt_to_attacker > 0:
+		unit_damaged.emit(side, slot, dealt_to_attacker)
+	_apply_pierce(attacker, foe_side, attacker_power, defender_health, dealt_to_defender)
+	_apply_pierce(defender, side, defender_power, attacker_health, dealt_to_attacker)
+	_lifesteal(side, attacker, dealt_to_defender)
+	_lifesteal(foe_side, defender, dealt_to_attacker)
+	if dealt_to_defender > 0 and attacker.has_keyword(CardEnums.Keyword.POISON):
+		defender.health = 0
+	if dealt_to_attacker > 0 and defender.has_keyword(CardEnums.Keyword.POISON):
+		attacker.health = 0
+
+
+## 貫通:砂時計の体力を超えた分が相手プレイヤーへ抜ける。
+func _apply_pierce(
+	unit: CardInstance, foe_side: int, power: int, target_health: int, dealt: int
+) -> void:
+	if dealt <= 0 or not unit.has_keyword(CardEnums.Keyword.PIERCE):
+		return
+	var excess: int = power - target_health
+	if excess > 0:
+		damage_player(foe_side, excess)
+
+
+func _lifesteal(side: int, unit: CardInstance, amount: int) -> void:
+	if amount <= 0 or not unit.has_keyword(CardEnums.Keyword.LIFESTEAL):
+		return
+	heal_player(side, amount)
+
+
+# --- ダメージ・破壊 -----------------------------------------------------
+
+
+func damage_player(side: int, amount: int) -> void:
+	if amount <= 0 or _match_over:
+		return
+	hp[side] = maxi(hp[side] - amount, 0)
+	hp_changed.emit(side, hp[side])
+	if hp[side] <= 0:
+		_finish(other_side(side), EndReason.HP_DEPLETED)
+
+
+func heal_player(side: int, amount: int) -> void:
+	if amount <= 0:
+		return
+	hp[side] = mini(hp[side] + amount, INITIAL_HP)
+	hp_changed.emit(side, hp[side])
+
+
+## 砂時計へダメージを与える(設置効果などから使う)。
+func damage_unit(side: int, slot: int, amount: int) -> void:
+	var unit: CardInstance = board[side][slot]
+	if unit == null:
+		return
+	var dealt := unit.take_damage(amount)
+	if dealt > 0:
+		unit_damaged.emit(side, slot, dealt)
+
+
+func destroy_unit(side: int, slot: int) -> void:
+	var unit: CardInstance = board[side][slot]
+	if unit == null:
+		return
+	unit.health = 0
+	_destroy_unit(side, slot)
+
+
+func _destroy_unit(side: int, slot: int) -> void:
+	var unit: CardInstance = board[side][slot]
+	if unit == null:
+		return
+	board[side][slot] = null
+	graveyard[side].append(unit.data)
+	_effects.resolve(side, unit, CardEnums.Trigger.ON_DEATH, {})
+	unit_destroyed.emit(side, slot, unit.data)
+
+
+func _cleanup_dead() -> void:
+	for side in [Side.A, Side.B]:
+		for slot in BOARD_SIZE:
+			var unit: CardInstance = board[side][slot]
+			if unit != null and unit.is_dead():
+				_destroy_unit(side, slot)
+		board_changed.emit(side)
+
+
+func _finish(p_winner: int, reason: int) -> void:
+	if _match_over:
+		return
+	_match_over = true
+	winner = p_winner
+	end_reason = reason
+	match_ended.emit(p_winner)

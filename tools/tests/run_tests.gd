@@ -8,6 +8,7 @@ const CpuStrategyTests = preload("res://tools/tests/cpu_strategy_tests.gd")
 const OnlineTests = preload("res://tools/tests/online_tests.gd")
 const OnlineMatchFlowTests = preload("res://tools/tests/online_match_flow_tests.gd")
 const AccountTests = preload("res://tools/tests/account_tests.gd")
+const V5RulesTests = preload("res://tools/tests/v5_rules_tests.gd")
 
 var _failures := 0
 var _hourglass_cache: Dictionary = {}
@@ -50,6 +51,7 @@ func _run() -> void:
 
 	_test_deck_save_round_trips_multiple_decks()
 	_test_deck_save_migrates_legacy_single_deck_format()
+	V5RulesTests.new().run(_assert_true)
 	SkillTests.new().run(_assert_true)
 	SoundSettingsTests.new().run(_assert_true)
 	CpuStrategyTests.new().run(_assert_true)
