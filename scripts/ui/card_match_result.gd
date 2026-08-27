@@ -81,8 +81,6 @@ func _build() -> void:
 
 
 func _make_button(label: String, target: Signal) -> Button:
-	var button := Button.new()
-	button.text = label
-	button.custom_minimum_size = Vector2(180, 56)
+	var button := CodedButton.make(label, Vector2(180, 56))
 	button.pressed.connect(func() -> void: target.emit())
 	return button

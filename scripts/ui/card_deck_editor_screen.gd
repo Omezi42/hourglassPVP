@@ -10,8 +10,6 @@ signal back_pressed
 
 const HEADER_SCENE := "res://scenes/screen_header.tscn"
 const PANEL_STYLE := "res://resources/theme/content_panel.tres"
-const BUTTON_STYLES := "res://resources/theme/buttons/img_wide_text_%s.tres"
-const ICON_BUTTON_STYLES := "res://resources/theme/buttons/img_icon_square_%s.tres"
 const LIST_RECT := Rect2(24, ScreenHeader.CONTENT_TOP, 620, 320)
 const CURVE_RECT := Rect2(668, ScreenHeader.CONTENT_TOP, 588, 320)
 const CARDS_TOP := ScreenHeader.CONTENT_TOP + 344.0
@@ -47,7 +45,7 @@ func _build() -> void:
 	add_child(_header)
 	_header.set_title("デッキ編集")
 	_header.back_pressed.connect(func() -> void: back_pressed.emit())
-	var save_button := _make_button("保存", Vector2(160, 56))
+	var save_button := CodedButton.make("保存", Vector2(160, 56))
 	save_button.pressed.connect(_on_save_pressed)
 	_header.add_action(save_button)
 
@@ -98,31 +96,6 @@ func _build_card_row() -> void:
 		view.pressed.connect(_on_card_pressed)
 		_card_row.add_child(view)
 		_card_views.append(view)
-
-
-## 一覧の行に置く小さなボタン。横長のボタン画像は44x34では潰れるため別グループを使う。
-func _make_icon_button(label: String, button_size: Vector2) -> Button:
-	var button := Button.new()
-	button.text = label
-	button.custom_minimum_size = button_size
-	for name in ["normal", "hover", "pressed", "disabled"]:
-		var style: StyleBox = load(ICON_BUTTON_STYLES % name)
-		if style != null:
-			button.add_theme_stylebox_override(name, style)
-	button.add_theme_color_override("font_color", UiPalette.TEXT_OFFWHITE)
-	return button
-
-
-func _make_button(label: String, button_size: Vector2) -> Button:
-	var button := Button.new()
-	button.text = label
-	button.custom_minimum_size = button_size
-	for name in ["normal", "hover", "pressed", "disabled"]:
-		var style: StyleBox = load(BUTTON_STYLES % name)
-		if style != null:
-			button.add_theme_stylebox_override(name, style)
-	button.add_theme_color_override("font_color", UiPalette.TEXT_OFFWHITE)
-	return button
 
 
 # --- 表示 ---------------------------------------------------------------
@@ -183,7 +156,8 @@ func _make_entry(card: CardData) -> Control:
 	count.text = "×%d" % _count_of(card)
 	count.custom_minimum_size = Vector2(48, 0)
 	row.add_child(count)
-	var remove := _make_icon_button("−", Vector2(44, 34))
+	var remove := CodedButton.make_icon("−", Vector2(44, 34))
+	remove.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	remove.pressed.connect(_on_remove_pressed.bind(card))
 	row.add_child(remove)
 	return row

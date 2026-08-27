@@ -166,9 +166,9 @@ func _build() -> void:
 	_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_scroll.add_child(_list)
 
-	var close := Button.new()
-	close.text = "閉じる"
-	close.custom_minimum_size = Vector2(160, 48)
+	# VBoxContainer は子を横いっぱいに広げるため、明示的に中央へ縮める。
+	var close := CodedButton.make("閉じる", Vector2(160, 48))
+	close.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	close.pressed.connect(func() -> void: set_open(false))
 	column.add_child(close)
 

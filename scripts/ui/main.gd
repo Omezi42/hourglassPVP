@@ -12,6 +12,8 @@ const SCREEN_FADE_DURATION := 0.18
 var card_match_screen: CardMatchScreen
 ## v5.0のデッキ編集画面(同上)。
 var card_deck_editor_screen: CardDeckEditorScreen
+## v5.0のカード一覧画面(同上)。
+var card_list_screen: CardListScreen
 
 var _match_return_screen: Control
 var _pending_battle_purpose: BattlePurpose = BattlePurpose.RANDOM_MATCH
@@ -65,6 +67,12 @@ func _ready() -> void:
 	add_child(card_deck_editor_screen)
 	card_deck_editor_screen.back_pressed.connect(func() -> void: _show_only(home_screen))
 	_screens.append(card_deck_editor_screen)
+	card_list_screen = CardListScreen.new()
+	card_list_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
+	card_list_screen.visible = false
+	add_child(card_list_screen)
+	card_list_screen.back_pressed.connect(func() -> void: _show_only(home_screen))
+	_screens.append(card_list_screen)
 	_transition_blocker = _make_transition_blocker()
 	add_child(_transition_blocker)
 	_sand_transition = SandTransition.new()
@@ -220,8 +228,11 @@ func _on_deck_list_requested_v1() -> void:
 	_show_only(deck_list_screen)
 
 
+## 砂時計一覧は v5.0 のカード一覧(CardListScreen)へ差し替えた。
+## v1.0 の HourglassListScreen は位相制の駒データを表示するもので、
+## コスト/総量/キーワードを持たないため v5.0 では意味を成さない。
 func _on_hourglass_list_requested() -> void:
-	_show_only(hourglass_list_screen)
+	_show_only(card_list_screen)
 
 
 func _on_deck_edit_requested(index: int) -> void:

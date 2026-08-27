@@ -21,7 +21,6 @@ const CPU_THINK_SECONDS := 0.5
 const BACKGROUND := Color(0.07, 0.06, 0.08, 1.0)
 ## 反転・コイン・ターン終了を縦に並べる右の列。
 const ACTION_COLUMN_X := 1096.0
-const BUTTON_STYLES := "res://resources/theme/buttons/img_wide_text_%s.tres"
 
 var state: MatchState
 ## 自分の側。CPU戦・オンラインでは固定する。
@@ -40,6 +39,7 @@ var _cpu: CardCpuStrategy = null
 var _cpu_timer: Timer
 var _log: CardMatchLog
 var _result: CardMatchResult
+var _pile: CardPileViewer
 var _log_button: Button
 var _surrender_button: Button
 
@@ -119,20 +119,20 @@ func _build() -> void:
 		add_child(view)
 		_hand_views.append(view)
 	# 行動のボタンは盤面と重ならないよう画面右の列にまとめる。
-	_flip_button = _make_button("反転", Vector2(168, 48))
+	_flip_button = _add_button("反転", Vector2(168, 48))
 	_flip_button.position = Vector2(ACTION_COLUMN_X, 330)
 	_flip_button.visible = false
 	_flip_button.pressed.connect(_on_flip_pressed)
-	_coin_button = _make_button("コイン", Vector2(168, 48))
+	_coin_button = _add_button("コイン", Vector2(168, 48))
 	_coin_button.position = Vector2(ACTION_COLUMN_X, 386)
 	_coin_button.pressed.connect(_on_coin_pressed)
-	_end_turn_button = _make_button("ターン終了", Vector2(168, 64))
+	_end_turn_button = _add_button("ターン終了", Vector2(168, 64))
 	_end_turn_button.position = Vector2(ACTION_COLUMN_X, OWN_BAR_TOP)
 	_end_turn_button.pressed.connect(_on_end_turn_pressed)
-	_log_button = _make_button("ログ", Vector2(168, 44))
+	_log_button = _add_button("ログ", Vector2(168, 44))
 	_log_button.position = Vector2(ACTION_COLUMN_X, 512)
 	_log_button.pressed.connect(func() -> void: _log.set_open(true))
-	_surrender_button = _make_button("投了", Vector2(168, 44))
+	_surrender_button = _add_button("投了", Vector2(168, 44))
 	_surrender_button.position = Vector2(ACTION_COLUMN_X, 564)
 	_surrender_button.pressed.connect(_on_surrender_pressed)
 	_cpu_timer = Timer.new()
@@ -148,6 +148,8 @@ func _build() -> void:
 	add_child(_result)
 	_log = CardMatchLog.new()
 	add_child(_log)
+	_pile = CardPileViewer.new()
+	add_child(_pile)
 
 
 func _make_bar(opponent: bool, top: float) -> PlayerInfoBar:
@@ -157,6 +159,7 @@ func _make_bar(opponent: bool, top: float) -> PlayerInfoBar:
 	bar.size = Vector2(1060 if not opponent else 1248, PlayerInfoBar.BAR_HEIGHT)
 	if opponent:
 		bar.face_pressed.connect(_on_face_pressed)
+	bar.graveyard_pressed.connect(_on_graveyard_pressed.bind(opponent))
 	add_child(bar)
 	return bar
 
@@ -180,20 +183,8 @@ func _make_row(top: float, opponent: bool) -> Array[CardView]:
 	return views
 
 
-func _make_button(label: String, button_size: Vector2) -> Button:
-	var button := Button.new()
-	button.text = label
-	button.custom_minimum_size = button_size
-	button.size = button_size
-	for name in ["normal", "hover", "pressed", "disabled"]:
-		var style: StyleBox = load(BUTTON_STYLES % name)
-		if style != null:
-			button.add_theme_stylebox_override(name, style)
-	# 文字色はプロジェクト共通テーマに任せず明示する。真鍮のボタン画像の上では
-	# テーマ既定の暗い文字色が沈んで読めなくなる。
-	button.add_theme_color_override("font_color", UiPalette.TEXT_OFFWHITE)
-	button.add_theme_color_override("font_hover_color", Color(1, 1, 1, 1))
-	button.add_theme_color_override("font_pressed_color", UiPalette.BRASS_HIGHLIGHT)
+func _add_button(label: String, button_size: Vector2) -> Button:
+	var button := CodedButton.make(label, button_size)
 	add_child(button)
 	return button
 
@@ -416,6 +407,14 @@ func _on_surrender_pressed() -> void:
 
 
 # --- 手番・CPU ----------------------------------------------------------
+
+
+## 墓地の中身を見る。山札の中身は見られない(GameDesign.md 9章)。
+func _on_graveyard_pressed(opponent: bool) -> void:
+	if state == null:
+		return
+	var side: int = MatchState.other_side(my_side) if opponent else my_side
+	_pile.open_pile("相手の墓地" if opponent else "あなたの墓地", state.graveyard[side])
 
 
 func _view_at(side: int, slot: int) -> CardView:

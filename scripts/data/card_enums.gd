@@ -90,6 +90,26 @@ static func keyword_name(keyword: int) -> String:
 	return ""
 
 
+## キーワードの説明文(GameDesign.md 6章の表)。詳細パネルに出す。
+static func keyword_description(keyword: int) -> String:
+	match keyword:
+		Keyword.GUARD:
+			return "相手はこの砂時計を無視して他を攻撃できない。"
+		Keyword.GLASS:
+			return "最初に受けるダメージを1度だけ無効にする。"
+		Keyword.PIERCE:
+			return "砂時計を攻撃したとき、超過分が相手プレイヤーへ抜ける。"
+		Keyword.POISON:
+			return "この砂時計がダメージを与えた砂時計を破壊する。"
+		Keyword.LIFESTEAL:
+			return "与えたダメージと同じだけ自分のHPを回復する。"
+		Keyword.DOUBLE_STRIKE:
+			return "1ターンに2回攻撃する。"
+		Keyword.QUICK:
+			return "場に出た瞬間に砂が2粒落ちる(すぐ攻撃できる)。"
+	return ""
+
+
 ## トリガーの表示名(GameDesign.md 6章の語)。
 static func trigger_name(trigger: int) -> String:
 	match trigger:
