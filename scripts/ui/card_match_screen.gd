@@ -93,6 +93,10 @@ func start_cpu_match(deck_self: Array, deck_foe: Array) -> void:
 	add_child(state)
 	state.turn_started.connect(_on_turn_started)
 	state.match_ended.connect(_on_match_ended)
+	# 砂の演出。**ダメージ(消える)とターン終了の1粒(落ちる)を別経路で受ける**
+	# (GameDesign.md 9章)。取り違えるとルールを誤解するため。
+	state.unit_damaged.connect(_on_unit_damaged)
+	state.unit_ticked.connect(_on_unit_ticked)
 	_log.set_perspective(my_side)
 	state.start_match(deck_self, deck_foe, MatchState.Side.A)
 	_log.watch(state)
@@ -412,6 +416,18 @@ func _on_surrender_pressed() -> void:
 
 
 # --- 手番・CPU ----------------------------------------------------------
+
+
+func _view_at(side: int, slot: int) -> CardView:
+	return _own_slots[slot] if side == my_side else _foe_slots[slot]
+
+
+func _on_unit_damaged(side: int, slot: int, amount: int) -> void:
+	_view_at(side, slot).play_shatter(amount)
+
+
+func _on_unit_ticked(side: int, slot: int) -> void:
+	_view_at(side, slot).play_drop()
 
 
 func _on_turn_started(side: int) -> void:

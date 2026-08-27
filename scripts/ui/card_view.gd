@@ -5,6 +5,16 @@ extends Control
 
 signal pressed(view: CardView)
 
+## 砂の動きの演出。**消える砂と落ちる砂は必ず描き分ける**(GameDesign.md 9章)。
+## この2つを取り違えるとルールを誤解するため、演出上もっとも重要な区別として扱う。
+enum Effect {
+	NONE,
+	## ダメージ。砂は消える(総量が減る)ので、砕けて外へ散る。
+	SHATTER,
+	## ターン終了の1粒。砂は落ちる(総量は変わらない)ので、下の部屋へ流れる。
+	DROP,
+}
+
 enum Mode {
 	## 場に出ている砂時計。攻撃力と体力を出す。
 	BOARD,
@@ -19,6 +29,10 @@ const ATTACK_ORANGE := Color(0.95, 0.62, 0.2, 1.0)
 const HEALTH_RED := Color(0.9, 0.3, 0.26, 1.0)
 ## 選択中の枠。守護の真鍮色と取り違えないよう、別系統の色にする。
 const SELECT_CYAN := Color(0.55, 0.9, 1.0, 1.0)
+const SAND_AMBER := Color(0.93, 0.78, 0.42, 1.0)
+const SHATTER_DURATION := 0.42
+const DROP_DURATION := 0.45
+const SHARD_COUNT := 9
 const STAT_RADIUS := 15.0
 const GUARD_BORDER := 4.0
 const NORMAL_BORDER := 2.0
@@ -39,6 +53,10 @@ var badge := ""
 var _font: Font
 var _hovering := false
 var _tracker := PressTracker.new()
+var _effect: int = Effect.NONE
+var _effect_progress := 0.0
+var _effect_amount := 0
+var _effect_tween: Tween
 
 
 func _ready() -> void:
@@ -69,6 +87,37 @@ func show_card(p_card: CardData, p_enabled: bool) -> void:
 	card = p_card
 	enabled = p_enabled
 	custom_minimum_size = HAND_SIZE_PX
+	queue_redraw()
+
+
+## ダメージを受けた:砂が砕けて散る。
+func play_shatter(amount: int) -> void:
+	_effect_amount = amount
+	_start_effect(Effect.SHATTER, SHATTER_DURATION)
+
+
+## ターン終了の1粒:砂が下の部屋へ流れる。
+func play_drop() -> void:
+	_start_effect(Effect.DROP, DROP_DURATION)
+
+
+func _start_effect(kind: int, duration: float) -> void:
+	if _effect_tween != null and _effect_tween.is_valid():
+		_effect_tween.kill()
+	_effect = kind
+	_effect_progress = 0.0
+	_effect_tween = create_tween()
+	_effect_tween.tween_method(_set_effect_progress, 0.0, 1.0, duration)
+	_effect_tween.finished.connect(_on_effect_finished)
+
+
+func _set_effect_progress(value: float) -> void:
+	_effect_progress = value
+	queue_redraw()
+
+
+func _on_effect_finished() -> void:
+	_effect = Effect.NONE
 	queue_redraw()
 
 
@@ -123,10 +172,51 @@ func _draw() -> void:
 		draw_rect(rect.grow(-4), Color(0.6, 0.85, 1.0, 0.13))
 	_draw_labels(rect, tint)
 	_draw_stats(rect)
+	if _effect != Effect.NONE:
+		_draw_effect(rect)
 	if not badge.is_empty():
 		_draw_badge(rect)
 	if _hovering and enabled:
 		draw_rect(rect, Color(1, 1, 1, 0.06))
+
+
+func _draw_effect(rect: Rect2) -> void:
+	if _effect == Effect.SHATTER:
+		_draw_shatter(rect)
+	else:
+		_draw_drop(rect)
+
+
+## 砕けて散る:カードの中心から破片が外へ飛び、赤みを帯びて消える。
+func _draw_shatter(rect: Rect2) -> void:
+	var center := rect.size * Vector2(0.5, 0.42)
+	var fade := 1.0 - _effect_progress
+	var reach := rect.size.x * (0.18 + 0.42 * _effect_progress)
+	var shards: int = SHARD_COUNT + mini(_effect_amount, 6)
+	for i in shards:
+		var angle := TAU * float(i) / float(shards)
+		var to := center + Vector2(cos(angle), sin(angle) * 0.8) * reach
+		var shard_size := 4.0 * fade + 1.0
+		draw_circle(to, shard_size, Color(0.95, 0.5, 0.4, fade * 0.9))
+	draw_rect(rect, Color(1.0, 0.35, 0.3, fade * 0.18))
+
+
+## 下の部屋へ流れる:カードの中央を細い砂の筋が下りていく。総量は変わらない。
+func _draw_drop(rect: Rect2) -> void:
+	var x := rect.size.x * 0.5
+	var top := rect.size.y * 0.18
+	var bottom := rect.size.y * 0.72
+	var head: float = lerpf(top, bottom, _effect_progress)
+	draw_line(Vector2(x, top), Vector2(x, head), Color(SAND_AMBER, 0.55), 3.0)
+	for i in 3:
+		var offset := float(i) * 6.0
+		var y: float = head - offset
+		if y < top:
+			continue
+		draw_circle(Vector2(x, y), 3.0 - i * 0.6, Color(SAND_AMBER, 0.9 - i * 0.25))
+	if _effect_progress > 0.85:
+		var glow := (_effect_progress - 0.85) / 0.15
+		draw_circle(Vector2(x, bottom), 8.0 * glow, Color(SAND_AMBER, 0.35 * (1.0 - glow)))
 
 
 func _draw_badge(rect: Rect2) -> void:

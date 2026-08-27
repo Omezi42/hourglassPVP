@@ -14,6 +14,9 @@ signal unit_damaged(side: int, slot: int, amount: int)
 ## 砂時計が破壊されたとき。
 signal unit_destroyed(side: int, slot: int, card: CardData)
 signal unit_flipped(side: int, slot: int)
+## ターン終了時に砂が1粒落ちたとき。**ダメージ(砂が消える)とは別のシグナルにする**。
+## UI側でこの2つを別の演出として描き分けるため(GameDesign.md 9章)。
+signal unit_ticked(side: int, slot: int)
 ## 攻撃が行われたとき。target_slot が -1 なら相手プレイヤーへの攻撃。
 signal attack_performed(side: int, slot: int, target_slot: int)
 signal turn_started(side: int)
@@ -161,6 +164,7 @@ func end_turn() -> void:
 		if unit == null:
 			continue
 		unit.tick()
+		unit_ticked.emit(side, slot)
 		if unit.is_dead():
 			_destroy_unit(side, slot)
 	board_changed.emit(side)
