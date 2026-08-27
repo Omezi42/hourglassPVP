@@ -7,15 +7,15 @@
 script = ExtResource("script_effect")
 trigger = 0
 target = 1
-effect_type = 2
-value = 0
+effect_type = 1
+value = 4
 
 [resource]
 script = ExtResource("script_card")
 id = "hammer"
 display_name = "ハンマー"
-cost = 5
-total_sand = 2
+cost = 4
+total_sand = 3
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_hammer_0")])
-rules_text = "設置:相手の砂時計1体を破壊する"
+rules_text = "設置:相手の砂時計1体に4ダメージ"

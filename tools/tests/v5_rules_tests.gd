@@ -178,10 +178,11 @@ func _test_guard_forces_targeting() -> void:
 
 func _test_glass_negates_first_damage() -> void:
 	var unit := CardInstance.new(_card("glass"))
+	var total: int = unit.data.total_sand
 	var first := unit.take_damage(3)
-	_assert.call(first == 0 and unit.health == 5, "glass should negate the first damage")
+	_assert.call(first == 0 and unit.health == total, "glass should negate the first damage")
 	var second := unit.take_damage(3)
-	_assert.call(second == 3 and unit.health == 2, "glass should only work once")
+	_assert.call(second == 3 and unit.health == total - 3, "glass should only work once")
 
 
 func _test_pierce_leaks_excess_to_player() -> void:
@@ -270,9 +271,10 @@ func _test_on_play_effects() -> void:
 	_force_play(state, MatchState.Side.B, "wall", 1)
 	_force_play(state, MatchState.Side.A, "sweep", 5)
 	var wall_total: int = _card("wall").total_sand
+	var shaved: int = _card("sweep").effects_for(CardEnums.Trigger.ON_PLAY)[0].value
 	for unit in state.units(MatchState.Side.B):
 		_assert.call(
-			unit.health == wall_total - 2, "sweep should shave 2 sand off every enemy unit"
+			unit.health == wall_total - shaved, "sweep should shave sand off every enemy unit"
 		)
 
 
