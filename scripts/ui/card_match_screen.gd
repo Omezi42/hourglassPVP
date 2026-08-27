@@ -37,6 +37,15 @@ var _end_turn_button: Button
 var _selection := CardMatchSelection.new()
 var _cpu: CardCpuStrategy = null
 var _cpu_timer: Timer
+var _online: OnlineMatch = null
+var _setup: OnlineSetup = null
+var _client: FirestoreClient = null
+var _match_id := ""
+var _replay: CardMatchReplay = null
+## 再生モードでは盤面を一切操作できない(GameDesign.md 12章)。
+var _interactive := true
+## 相手を待っている間に出す文言。空なら出さない。
+var _waiting_text := ""
 var _log: CardMatchLog
 var _result: CardMatchResult
 var _pile: CardPileViewer
@@ -56,6 +65,16 @@ func _draw() -> void:
 	)
 	if _selection != null and _selection.is_targeting():
 		_draw_target_prompt()
+	if not _waiting_text.is_empty():
+		draw_string(
+			get_theme_default_font(),
+			Vector2(size.x * 0.5 - 180, size.y * 0.5),
+			_waiting_text,
+			HORIZONTAL_ALIGNMENT_LEFT,
+			-1,
+			26,
+			UiPalette.TEXT_OFFWHITE
+		)
 
 
 ## 対象選択中であることを、行動ボタンの列(盤面と重ならない場所)へ出す。
@@ -88,7 +107,94 @@ func _draw_target_prompt() -> void:
 ## CPU戦を開始する。deck_self / deck_foe は CardData の配列(20枚)。
 func start_cpu_match(deck_self: Array, deck_foe: Array) -> void:
 	_cpu = CardCpuStrategy.new()
+	_interactive = true
 	my_side = MatchState.Side.A
+	_begin_state(deck_self, deck_foe, 0)
+
+
+## オンライン対戦を開始する。配置フェーズは無く、デッキと山札の種を交換したら
+## そのまま対局へ入る(GameDesign.md 2章・11章)。
+func start_online_match(
+	deck_self: Array, client: FirestoreClient, p_match_id: String, p_my_side: int
+) -> void:
+	_cpu = null
+	_interactive = true
+	my_side = p_my_side
+	_waiting_text = "対戦相手を待っています"
+	queue_redraw()
+	var rng := RandomNumberGenerator.new()
+	rng.randomize()
+	var seed_value := rng.randi_range(1, 1 << 30)
+	_client = client
+	_match_id = p_match_id
+	_setup = OnlineSetup.new(client, p_match_id, p_my_side)
+	add_child(_setup)
+	await _setup.push_setup(CardLibrary.ids_from_deck(deck_self), seed_value)
+	var result: Dictionary = await _setup.wait_for_opponent_setup(seed_value)
+	var opponent_ids: Array = result["deck"]
+	if opponent_ids.is_empty():
+		_waiting_text = _setup.abort_message()
+		queue_redraw()
+		return
+	_waiting_text = ""
+	var opponent_deck := CardLibrary.deck_from_ids(opponent_ids)
+	_begin_state(
+		deck_self if p_my_side == MatchState.Side.A else opponent_deck,
+		opponent_deck if p_my_side == MatchState.Side.A else deck_self,
+		int(result["seed"])
+	)
+	_online = OnlineMatch.new(client)
+	add_child(_online)
+	_online.action_received.connect(_on_action_received)
+	_online.start(p_match_id)
+
+
+func _on_action_received(action: Dictionary) -> void:
+	MatchAction.apply(state, action)
+	refresh()
+
+
+## リプレイ再生モードとして開始する(GameDesign.md 12章)。
+## 手番の判定を使わず、`_interactive` で操作をまとめて塞ぐ。
+func start_replay(record: Dictionary) -> bool:
+	_cpu = null
+	_online = null
+	_interactive = false
+	my_side = MatchState.Side.A
+	if _replay == null:
+		_replay = CardMatchReplay.new()
+		_replay.state_rebuilt.connect(_on_replay_state)
+		add_child(_replay)
+	return _replay.load_record(record)
+
+
+## 指定の手数まで進めた局面へ飛ぶ(再生コントロールと検証から使う)。
+func replay_goto(count: int) -> void:
+	if _replay != null:
+		_replay.goto(count)
+
+
+## 巻き戻すたびに `MatchState` が作り直されるため、購読も張り直す。
+func _on_replay_state(new_state: MatchState) -> void:
+	if state != null and is_instance_valid(state):
+		state.queue_free()
+	state = new_state
+	refresh()
+
+
+## 相手の手番中・準備中は操作できない。
+func stop_networking() -> void:
+	if _online != null:
+		_online.stop()
+	if _setup != null:
+		await _setup.cancel()
+
+
+# --- 組み立て -----------------------------------------------------------
+
+
+## 対局を開始する共通処理。CPU戦とオンラインで同じ経路を通す。
+func _begin_state(deck_a: Array, deck_b: Array, seed_value: int) -> void:
 	state = MatchState.new()
 	add_child(state)
 	state.turn_started.connect(_on_turn_started)
@@ -98,12 +204,9 @@ func start_cpu_match(deck_self: Array, deck_foe: Array) -> void:
 	state.unit_damaged.connect(_on_unit_damaged)
 	state.unit_ticked.connect(_on_unit_ticked)
 	_log.set_perspective(my_side)
-	state.start_match(deck_self, deck_foe, MatchState.Side.A)
+	state.start_match(deck_a, deck_b, MatchState.Side.A, seed_value)
 	_log.watch(state)
 	refresh()
-
-
-# --- 組み立て -----------------------------------------------------------
 
 
 func _build() -> void:
@@ -194,6 +297,7 @@ func _add_button(label: String, button_size: Vector2) -> Button:
 
 func refresh() -> void:
 	if state == null:
+		queue_redraw()
 		return
 	var foe := MatchState.other_side(my_side)
 	_foe_bar.show_state(state, foe)
@@ -257,10 +361,11 @@ func _refresh_targets() -> void:
 
 func _refresh_buttons() -> void:
 	var over: bool = state.is_match_over()
+	_end_turn_button.visible = _interactive
 	_end_turn_button.disabled = not _my_turn()
-	_log_button.visible = true
-	_surrender_button.visible = not over
-	_coin_button.visible = state.coin_available.get(my_side, false)
+	_log_button.visible = _interactive
+	_surrender_button.visible = _interactive and not over
+	_coin_button.visible = _interactive and state.coin_available.get(my_side, false)
 	_coin_button.disabled = not _my_turn()
 	var show_flip := (
 		_selection.is_board_selection() and _my_turn() and state.can_flip(my_side, _selection.slot)
@@ -269,7 +374,16 @@ func _refresh_buttons() -> void:
 
 
 func _my_turn() -> bool:
+	if not _interactive:
+		return false
 	return state != null and not state.is_match_over() and state.current_turn == my_side
+
+
+## 対局が終わったらポーリングを止める(Architecture.md 6.1節)。ホームへ戻った後も
+## Firestoreを読み続けないようにするため。
+func _stop_polling() -> void:
+	if _online != null:
+		_online.stop()
 
 
 # --- 操作 ---------------------------------------------------------------
@@ -315,7 +429,7 @@ func _on_foe_slot_pressed(view: CardView) -> void:
 		if state.board[MatchState.other_side(my_side)][slot] == null:
 			return
 		var target := {"side": MatchState.other_side(my_side), "slot": slot}
-		state.play_card(my_side, _selection.hand_index, _selection.slot, target)
+		_perform(MatchAction.play(my_side, _selection.hand_index, _selection.slot, target))
 		_selection.clear()
 		refresh()
 		return
@@ -323,7 +437,7 @@ func _on_foe_slot_pressed(view: CardView) -> void:
 		return
 	if not state.can_attack(my_side, _selection.slot, slot):
 		return
-	state.attack(my_side, _selection.slot, slot)
+	_perform(MatchAction.attack(my_side, _selection.slot, slot))
 	_selection.clear()
 	refresh()
 
@@ -333,7 +447,7 @@ func _on_face_pressed() -> void:
 		return
 	if not state.can_attack(my_side, _selection.slot, -1):
 		return
-	state.attack(my_side, _selection.slot, -1)
+	_perform(MatchAction.attack(my_side, _selection.slot, -1))
 	_selection.clear()
 	refresh()
 
@@ -347,7 +461,7 @@ func _play_selected(slot: int) -> void:
 		_selection.await_target(index, slot)
 		refresh()
 		return
-	state.play_card(my_side, index, slot)
+	_perform(MatchAction.play(my_side, index, slot))
 	_selection.clear()
 	refresh()
 
@@ -362,20 +476,20 @@ static func _needs_target(card: CardData) -> bool:
 func _on_flip_pressed() -> void:
 	if not _my_turn() or not _selection.is_board_selection():
 		return
-	state.flip(my_side, _selection.slot)
+	_perform(MatchAction.flip(my_side, _selection.slot))
 	refresh()
 
 
 func _on_coin_pressed() -> void:
 	if _my_turn():
-		state.use_coin(my_side)
+		_perform({"type": "coin", "side": my_side})
 		refresh()
 
 
 func _on_end_turn_pressed() -> void:
 	if _my_turn():
 		_selection.clear()
-		state.end_turn()
+		_perform(MatchAction.end_turn(my_side))
 
 
 ## 検証用に個々のビューを引く。
@@ -403,7 +517,7 @@ func battle_log() -> CardMatchLog:
 
 func _on_surrender_pressed() -> void:
 	if state != null and not state.is_match_over():
-		state.surrender(my_side)
+		_perform({"type": "surrender", "side": my_side})
 
 
 # --- 手番・CPU ----------------------------------------------------------
@@ -415,6 +529,14 @@ func _on_graveyard_pressed(opponent: bool) -> void:
 		return
 	var side: int = MatchState.other_side(my_side) if opponent else my_side
 	_pile.open_pile("相手の墓地" if opponent else "あなたの墓地", state.graveyard[side])
+
+
+## 自分の1手を適用する。オンラインなら同時に相手へ送る。
+## **すべての操作をこの1箇所へ通す**ことで、送信し忘れる経路が生まれないようにする。
+func _perform(action: Dictionary) -> void:
+	MatchAction.apply(state, action)
+	if _online != null:
+		_online.send(action)
 
 
 func _view_at(side: int, slot: int) -> CardView:
@@ -451,4 +573,20 @@ func _take_cpu_action() -> void:
 func _on_match_ended(_winner: int) -> void:
 	_selection.clear()
 	refresh()
+	_stop_polling()
+	# 再生中は結果パネルを出さない。最後の手まで進めるたびに操作を塞ぐと
+	# 前後に動かせなくなるため(GameDesign.md 9章)。
+	if not _interactive:
+		return
 	_result.show_for(state, my_side, state.turn_count)
+	_save_replay()
+
+
+## 終了済みマッチとして finished_at/winner を書き、リプレイとして残す
+## (GameDesign.md 12章)。書き込むのは対局者だけで、観戦者は行わない。
+func _save_replay() -> void:
+	if _client == null or _match_id.is_empty() or state.winner < 0:
+		return
+	var uid: String = _client.auth.uid if _client.auth != null else ""
+	var winner := "a" if state.winner == MatchState.Side.A else "b"
+	ReplayService.mark_finished(_client, _match_id, winner, uid)

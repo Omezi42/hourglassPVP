@@ -30,6 +30,7 @@ func run(assert_true: Callable) -> void:
 	_test_cpu_finishes_a_full_match()
 	_test_coin_gives_the_second_player_one_extra_mana()
 	_test_card_deck_save_round_trips()
+	_test_same_seed_reproduces_the_same_match()
 
 
 func _card(id: String) -> CardData:
@@ -384,3 +385,48 @@ func _test_card_deck_save_round_trips() -> void:
 		FileAccess.open(CardDeckSave.SAVE_PATH, FileAccess.WRITE).store_string(backup)
 	else:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(CardDeckSave.SAVE_PATH))
+
+
+## 同じデッキと同じ種から始め、同じ手を流せば同じ盤面になること。
+## オンライン対戦は両者がこの再現性の上で同じ対局を進め、リプレイも同じ経路で再生する。
+func _test_same_seed_reproduces_the_same_match() -> void:
+	var deck_a := _deck_of("sand")
+	var deck_b := _deck_of("sword")
+	var seed_value := 20260827
+
+	var live := MatchState.new()
+	live.start_match(deck_a, deck_b, MatchState.Side.A, seed_value)
+	var recorded: Array = []
+	var cpu := CardCpuStrategy.new()
+	var guard := 0
+	while not live.is_match_over() and guard < 400:
+		guard += 1
+		var action := cpu.choose_action(live, live.current_turn)
+		recorded.append(action)
+		MatchAction.apply(live, action)
+	_assert.call(live.is_match_over(), "the recorded match should have reached an end")
+
+	var replay := MatchState.new()
+	replay.start_match(deck_a, deck_b, MatchState.Side.A, seed_value)
+	for action in recorded:
+		MatchAction.apply(replay, action)
+	_assert.call(
+		(
+			replay.hp[MatchState.Side.A] == live.hp[MatchState.Side.A]
+			and replay.hp[MatchState.Side.B] == live.hp[MatchState.Side.B]
+		),
+		"replaying the same actions should reach the same hp"
+	)
+	_assert.call(replay.winner == live.winner, "replaying should reach the same winner")
+	_assert.call(
+		replay.turn_count == live.turn_count, "replaying should take the same number of turns"
+	)
+	for side in [MatchState.Side.A, MatchState.Side.B]:
+		for slot in MatchState.BOARD_SIZE:
+			var a: CardInstance = live.board[side][slot]
+			var b: CardInstance = replay.board[side][slot]
+			var same := (
+				(a == null and b == null)
+				or (a != null and b != null and a.data == b.data and a.health == b.health)
+			)
+			_assert.call(same, "replaying should reach the same board at %d/%d" % [side, slot])

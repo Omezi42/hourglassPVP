@@ -59,7 +59,7 @@ func _ready() -> void:
 	card_match_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
 	card_match_screen.visible = false
 	add_child(card_match_screen)
-	card_match_screen.back_pressed.connect(_on_match_back)
+	card_match_screen.back_pressed.connect(_on_card_match_back)
 	_screens.append(card_match_screen)
 	card_deck_editor_screen = CardDeckEditorScreen.new()
 	card_deck_editor_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -156,12 +156,22 @@ func _on_replay_list_requested() -> void:
 
 
 ## CPU戦のローカルリプレイは"cpu_"始まりのidで区別する(LocalReplayService.mark_finished()参照)。
+## **v5.0の棋譜は `seed` を持つ**ため、それを目印に再生先の画面を振り分ける。
+## v1.0の棋譜(位相制・配置フェーズあり)は従来の MatchScreen でしか再生できない。
 func _on_replay_selected(match_id: String) -> void:
+	var record: Dictionary = (
+		LocalReplayService.get_replay(match_id)
+		if match_id.begins_with("cpu_")
+		else await NetSession.client.get_document("matches/%s" % match_id)
+	)
+	_match_return_screen = replay_list_screen
+	if record.has("seed") and card_match_screen.start_replay(record):
+		_show_only(card_match_screen)
+		return
 	if match_id.begins_with("cpu_"):
-		match_screen.start_local_replay(LocalReplayService.get_replay(match_id))
+		match_screen.start_local_replay(record)
 	else:
 		match_screen.start_replay(match_id, NetSession.client)
-	_match_return_screen = replay_list_screen
 	_show_only(match_screen)
 
 
@@ -245,14 +255,23 @@ func _on_deck_editor_back() -> void:
 	_show_only(deck_list_screen)
 
 
+## オンライン対戦(v5.0)。配置フェーズが無いため、デッキと山札の種を交換したら
+## そのまま対局へ入る。is_room / opponent_uid は砂金の計算と表示名に使っていたもので、
+## v5.0の対局画面へ持ち込むのはこれらの機能を移した後にする。
 func _on_online_match_found(
-	match_id: String, my_side: GameState.PlayerSide, opponent_uid: String, is_room: bool
+	match_id: String, my_side: GameState.PlayerSide, _opponent_uid: String, _is_room: bool
 ) -> void:
-	match_screen.start_placement_then_online(
-		MatchSetup.player_deck, match_id, my_side, is_room, opponent_uid
+	card_match_screen.start_online_match(
+		CardDeckSave.load_deck(), NetSession.client, match_id, int(my_side)
 	)
 	_match_return_screen = home_screen
-	_show_only(match_screen)
+	_show_only(card_match_screen)
+
+
+## 対局画面から戻るときは、必ずポーリングを止めてから離れる(Architecture.md 6.1節)。
+func _on_card_match_back() -> void:
+	await card_match_screen.stop_networking()
+	_on_match_back()
 
 
 func _make_transition_blocker() -> ColorRect:
