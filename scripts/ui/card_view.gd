@@ -17,6 +17,8 @@ const HAND_SIZE_PX := Vector2(118, 158)
 const MANA_BLUE := Color(0.35, 0.6, 0.95, 1.0)
 const ATTACK_ORANGE := Color(0.95, 0.62, 0.2, 1.0)
 const HEALTH_RED := Color(0.9, 0.3, 0.26, 1.0)
+## 選択中の枠。守護の真鍮色と取り違えないよう、別系統の色にする。
+const SELECT_CYAN := Color(0.55, 0.9, 1.0, 1.0)
 const STAT_RADIUS := 15.0
 const GUARD_BORDER := 4.0
 const NORMAL_BORDER := 2.0
@@ -110,7 +112,7 @@ func _draw() -> void:
 	_fill(rect, Color(0.21, 0.18, 0.15, 1.0) * tint, Color(0.11, 0.1, 0.09, 1.0))
 	var border := UiPalette.BRASS_MID
 	if selected:
-		border = UiPalette.GLOW_AMBER
+		border = SELECT_CYAN
 	elif guard:
 		border = UiPalette.BRASS_HIGHLIGHT
 	draw_rect(rect, border, false, GUARD_BORDER if guard or selected else NORMAL_BORDER)
@@ -125,7 +127,7 @@ func _draw() -> void:
 
 func _draw_empty() -> void:
 	var rect := Rect2(Vector2.ZERO, size)
-	var color := UiPalette.GLOW_AMBER if selected else Color(0.3, 0.28, 0.3, 0.5)
+	var color := SELECT_CYAN if selected else Color(0.3, 0.28, 0.3, 0.5)
 	_dashed_rect(rect, color)
 
 
