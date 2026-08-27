@@ -23,7 +23,6 @@ const CPU_THINK_SECONDS := 0.5
 ## 相手の持ち時間が0になってから、申告が来なくても勝ちにするまでの猶予
 ## (GameDesign.md 11章)。相手が切断していると申告そのものが届かないため。
 const OPPONENT_TIMEOUT_GRACE := 8.0
-const BACKGROUND := Color(0.07, 0.06, 0.08, 1.0)
 ## 反転・コイン・ターン終了を縦に並べる右の列。
 const ACTION_COLUMN_X := 1108.0
 const ACTION_BUTTON_SIZE := Vector2(148, 48)
@@ -75,7 +74,6 @@ func _ready() -> void:
 
 
 func _draw() -> void:
-	_draw_background()
 	if _selection != null and _selection.is_targeting():
 		_draw_target_prompt()
 	if not _waiting_text.is_empty():
@@ -88,28 +86,6 @@ func _draw() -> void:
 			26,
 			UiPalette.TEXT_OFFWHITE
 		)
-
-
-## 盤面の外側は暗く落とし、視線が卓上へ集まるようにする(GameDesign.md 9章)。
-## 卓そのものは `BoardTable` が描くため、ここは下地と周囲の落ち込みだけを受け持つ。
-func _draw_background() -> void:
-	var rect := Rect2(Vector2.ZERO, size)
-	var points := PackedVector2Array(
-		[rect.position, Vector2(rect.end.x, 0), rect.end, Vector2(0, rect.end.y)]
-	)
-	(
-		UiPaint
-		. fill_gradient_polygon(
-			get_canvas_item(),
-			points,
-			rect,
-			[
-				[0.0, Color(0.09, 0.08, 0.11, 1.0)],
-				[0.45, BACKGROUND],
-				[1.0, Color(0.05, 0.04, 0.06, 1.0)],
-			]
-		)
-	)
 
 
 ## 対象選択中であることを、行動ボタンの列(盤面と重ならない場所)へ出す。
@@ -346,7 +322,8 @@ func _begin_state(deck_a: Array, deck_b: Array, seed_value: int) -> void:
 
 
 func _build() -> void:
-	# 卓は最初に足して盤面の駒より背面へ置く。
+	# 下地と卓は最初に足して盤面の駒より背面へ置く。
+	add_child(ScreenBackdrop.new())
 	var table := BoardTable.new()
 	table.position = TABLE_RECT.position
 	table.size = TABLE_RECT.size

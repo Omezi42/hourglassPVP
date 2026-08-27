@@ -24,10 +24,7 @@ func _ready() -> void:
 
 
 func _build() -> void:
-	var background := ColorRect.new()
-	background.color = Color(0.07, 0.06, 0.08, 1.0)
-	background.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(background)
+	add_child(ScreenBackdrop.new())
 
 	var header: ScreenHeader = load(HEADER_SCENE).instantiate()
 	add_child(header)

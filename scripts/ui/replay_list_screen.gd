@@ -5,6 +5,7 @@ signal back_pressed
 signal replay_selected(match_id: String)
 
 const REPLAY_CARD_SCENE := preload("res://scenes/replay_list_card.tscn")
+const PANEL_STYLE := "res://resources/theme/content_panel.tres"
 
 @onready var list_container: GridContainer = $ScrollContainer/ListContainer
 @onready var screen_header: ScreenHeader = $ScreenHeader
@@ -12,6 +13,11 @@ const REPLAY_CARD_SCENE := preload("res://scenes/replay_list_card.tscn")
 
 
 func _ready() -> void:
+	# 背景イラストの上に一覧が直接浮いていて、カードも案内文も読みにくかったため、
+	# 他画面と共通のコンテンツパネルを下地として敷く。
+	var style: StyleBox = load(PANEL_STYLE)
+	if style != null:
+		list_container.get_parent().add_theme_stylebox_override("panel", style)
 	screen_header.set_title("リプレイ")
 	screen_header.back_pressed.connect(func() -> void: back_pressed.emit())
 	empty_label.visible = false

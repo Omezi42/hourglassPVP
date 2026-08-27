@@ -25,6 +25,8 @@ const GRAVE_PILE_X := 812.0
 const HAND_PILE_X := 894.0
 const CLOCK_X := 990.0
 const BAR_CORNER := 10.0
+const HP_BAR_RADIUS := 6.0
+const PILE_RADIUS := 6.0
 
 ## 相手側かどうか。相手側だけ手札の枚数を出す。
 var is_opponent := false
@@ -137,13 +139,29 @@ func _graveyard_rect() -> Rect2:
 	return Rect2(Vector2(GRAVE_PILE_X, 8), PILE_SIZE)
 
 
+## HPバーは彫り込まれた溝に見せる(角丸 + 内側の落ち込み影)。残量の色は
+## 十分なうちは琥珀、危険域まで減ったら赤(GameDesign.md 9章)。
 func _draw_hp() -> void:
+	var ci := get_canvas_item()
 	var rect := Rect2(Vector2(HP_BAR_X, 16), HP_BAR_SIZE)
-	_fill(rect, Color(0.16, 0.12, 0.1, 1.0), Color(0.1, 0.08, 0.07, 1.0))
+	var track := UiPaint.rounded_rect_points_uniform(rect, HP_BAR_RADIUS, 5)
+	UiPaint.fill_gradient_polygon(
+		ci, track, rect, [[0.0, Color(0.06, 0.05, 0.05, 1.0)], [1.0, Color(0.14, 0.11, 0.1, 1.0)]]
+	)
 	var ratio := clampf(float(_hp) / float(MatchState.INITIAL_HP), 0.0, 1.0)
-	var color := UiPalette.GLOW_AMBER if ratio > DANGER_RATIO else UiPalette.WARNING_RED
-	draw_rect(Rect2(rect.position, Vector2(rect.size.x * ratio, rect.size.y)), color)
-	draw_rect(rect, UiPalette.BRASS_MID, false, 1.0)
+	if ratio > 0.0:
+		var fill_rect := Rect2(rect.position, Vector2(rect.size.x * ratio, rect.size.y))
+		var color := UiPalette.GLOW_AMBER if ratio > DANGER_RATIO else UiPalette.WARNING_RED
+		var fill := UiPaint.rounded_rect_points_uniform(
+			fill_rect, minf(HP_BAR_RADIUS, fill_rect.size.x * 0.5), 5
+		)
+		UiPaint.fill_gradient_polygon(
+			ci, fill, fill_rect, [[0.0, color.lightened(0.28)], [1.0, color.darkened(0.22)]]
+		)
+	UiPaint.draw_inner_shadow(ci, rect, HP_BAR_RADIUS, 5, 3, Color(0, 0, 0, 1), 0.5)
+	var outline := track.duplicate()
+	outline.append(track[0])
+	draw_polyline(outline, UiPalette.BRASS_MID, 1.5, true)
 	_text(Vector2(rect.position.x + 96, rect.position.y + 19), "%d / 30" % _hp, 17)
 
 
@@ -162,10 +180,17 @@ func _draw_coin() -> void:
 	draw_arc(center, PIP_RADIUS + 1.0, 0.0, TAU, 16, UiPalette.BRASS_HIGHLIGHT, 1.5)
 
 
+## 山札・墓地・手札の枚数。小さな山を模した角丸のプレートに枚数を載せる。
 func _pile(pos: Vector2, label: String, count: int) -> void:
+	var ci := get_canvas_item()
 	var rect := Rect2(pos, PILE_SIZE)
-	_fill(rect, Color(0.2, 0.16, 0.12, 1.0), Color(0.11, 0.09, 0.07, 1.0))
-	draw_rect(rect, UiPalette.BRASS_MID, false, 1.0)
+	var points := UiPaint.rounded_rect_points_uniform(rect, PILE_RADIUS, 5)
+	UiPaint.fill_gradient_polygon(
+		ci, points, rect, [[0.0, Color(0.24, 0.18, 0.13, 1.0)], [1.0, Color(0.1, 0.08, 0.06, 1.0)]]
+	)
+	var outline := points.duplicate()
+	outline.append(points[0])
+	draw_polyline(outline, UiPalette.BRASS_MID, 1.5, true)
 	_text(Vector2(pos.x + 8, pos.y + 26), label, 15)
 	_text(Vector2(pos.x + 46, pos.y + 27), str(count), 19, UiPalette.GLOW_AMBER)
 
