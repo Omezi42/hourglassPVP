@@ -269,8 +269,11 @@ func _test_on_play_effects() -> void:
 	_force_play(state, MatchState.Side.B, "wall", 0)
 	_force_play(state, MatchState.Side.B, "wall", 1)
 	_force_play(state, MatchState.Side.A, "sweep", 5)
+	var wall_total: int = _card("wall").total_sand
 	for unit in state.units(MatchState.Side.B):
-		_assert.call(unit.health == 5, "sweep should shave 2 sand off every enemy unit")
+		_assert.call(
+			unit.health == wall_total - 2, "sweep should shave 2 sand off every enemy unit"
+		)
 
 
 func _test_flip_trigger_adds_total() -> void:
@@ -279,8 +282,11 @@ func _test_flip_trigger_adds_total() -> void:
 	unit.summoned_this_turn = false
 	unit.drop_sand(2)
 	state.flip(MatchState.Side.A, 0)
-	# 体力4・攻撃2 が反転して 体力2・攻撃4、そこへ総量+1。
-	_assert.call(unit.health == 3 and unit.attack == 4, "the flip trigger should add one grain")
+	# 砂を2粒落としてから反転するので、体力=2 / 攻撃力=総量-2。そこへ総量+1。
+	var total: int = _card("glow").total_sand
+	_assert.call(
+		unit.health == 3 and unit.attack == total - 2, "the flip trigger should add one grain"
+	)
 
 
 func _test_fatigue_after_deck_runs_out() -> void:
