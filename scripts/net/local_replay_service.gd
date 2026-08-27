@@ -68,7 +68,7 @@ static func _sort_by_finished_at(entries: Array) -> void:
 	)
 
 
-## idに一致するレコードをフラットな形(MatchScreen.start_local_replay()がそのまま
+## idに一致するレコードをフラットな形(再生側がそのまま
 ## 読める形)で返す。見つからない場合は空Dictionaryを返す。
 static func get_replay(id: String) -> Dictionary:
 	for entry in _load_all():

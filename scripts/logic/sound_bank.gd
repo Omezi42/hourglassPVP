@@ -96,10 +96,7 @@ static func is_muted() -> bool:
 
 ## シーンツリーを走査し、全Buttonのpressedへボタン押下音を接続する。
 ## 個別に繋ぐと数が多く漏れやすいため、Main起動時に一括で呼ぶ想定。
-## 反転/移動/交代の専用音を持つActionMenuのボタンは、二重に鳴らさないため対象外にする。
 static func wire_buttons(root: Node) -> void:
-	if root is ActionMenu:
-		return
 	if root is Button:
 		var callback := play.bind(Sfx.BUTTON)
 		if not root.pressed.is_connected(callback):

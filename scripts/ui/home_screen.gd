@@ -1,9 +1,7 @@
 class_name HomeScreen
 extends Control
 
-signal online_match_found(
-	match_id: String, my_side: GameState.PlayerSide, opponent_uid: String, is_room: bool
-)
+signal online_match_found(match_id: String, my_side: int, opponent_uid: String, is_room: bool)
 signal deck_list_requested
 signal hourglass_list_requested
 signal replay_list_requested
@@ -38,9 +36,7 @@ var _tab_fade_tween: Tween
 
 func _ready() -> void:
 	battle_tab.online_match_found.connect(
-		func(
-			match_id: String, my_side: GameState.PlayerSide, opponent_uid: String, is_room: bool
-		) -> void:
+		func(match_id: String, my_side: int, opponent_uid: String, is_room: bool) -> void:
 			online_match_found.emit(match_id, my_side, opponent_uid, is_room)
 	)
 	deck_tab.deck_edit_pressed.connect(func() -> void: deck_list_requested.emit())

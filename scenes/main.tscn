@@ -4,19 +4,9 @@
 [ext_resource type="Theme" path="res://resources/theme/main_theme.tres" id="1_tipki"]
 [ext_resource type="PackedScene" path="res://scenes/home_screen.tscn" id="2_tipki"]
 [ext_resource type="Script" path="res://scripts/ui/home_screen.gd" id="3_85g3d"]
-[ext_resource type="PackedScene" path="res://scenes/match_screen.tscn" id="6_eb6dy"]
-[ext_resource type="Script" path="res://scripts/ui/match_screen.gd" id="7_trceg"]
-[ext_resource type="PackedScene" path="res://scenes/deck_list_screen.tscn" id="9_a8y0u"]
-[ext_resource type="Script" path="res://scripts/ui/deck_list_screen.gd" id="10_jkv2x"]
-[ext_resource type="PackedScene" path="res://scenes/deck_editor_screen.tscn" id="11_jbj1t"]
-[ext_resource type="Script" path="res://scripts/ui/deck_editor_screen.gd" id="12_muem4"]
-[ext_resource type="PackedScene" path="res://scenes/hourglass_list_screen.tscn" id="13_dp3eg"]
-[ext_resource type="Script" path="res://scripts/ui/hourglass_list_screen.gd" id="14_0ld40"]
 [ext_resource type="PackedScene" path="res://scenes/replay_list_screen.tscn" id="15_jbj1t"]
 [ext_resource type="Script" path="res://scripts/ui/replay_list_screen.gd" id="16_muem4"]
 [ext_resource type="PackedScene" path="res://scenes/title_screen.tscn" id="17_0ld40"]
-[ext_resource type="PackedScene" path="res://scenes/battle_deck_picker_screen.tscn" id="17_dp3eg"]
-[ext_resource type="Script" path="res://scripts/ui/battle_deck_picker_screen.gd" id="18_0ld40"]
 [ext_resource type="Script" path="res://scripts/ui/title_screen.gd" id="18_gqmmt"]
 [ext_resource type="PackedScene" path="res://scenes/account_screen.tscn" id="19_gqmmt"]
 [ext_resource type="Script" path="res://scripts/ui/account_screen.gd" id="20_yc10j"]
@@ -40,42 +30,6 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("3_85g3d")
 
-[node name="MatchScreen" type="Control" parent="." unique_id=96184627 instance=ExtResource("6_eb6dy")]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-script = ExtResource("7_trceg")
-
-[node name="DeckListScreen" type="Control" parent="." unique_id=785894010 instance=ExtResource("9_a8y0u")]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-script = ExtResource("10_jkv2x")
-
-[node name="DeckEditorScreen" type="Control" parent="." unique_id=1992793885 instance=ExtResource("11_jbj1t")]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-script = ExtResource("12_muem4")
-
-[node name="HourglassListScreen" type="Control" parent="." unique_id=744461439 instance=ExtResource("13_dp3eg")]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-script = ExtResource("14_0ld40")
-
 [node name="ReplayListScreen" type="Control" parent="." unique_id=1599306711 instance=ExtResource("15_jbj1t")]
 layout_mode = 1
 anchors_preset = 15
@@ -84,15 +38,6 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("16_muem4")
-
-[node name="BattleDeckPickerScreen" type="Control" parent="." unique_id=720410486 instance=ExtResource("17_dp3eg")]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-script = ExtResource("18_0ld40")
 
 [node name="TitleScreen" type="Control" parent="." unique_id=180514372 instance=ExtResource("17_0ld40")]
 layout_mode = 1
@@ -108,4 +53,6 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 script = ExtResource("20_yc10j")

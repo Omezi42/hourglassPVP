@@ -7,8 +7,6 @@ extends RefCounted
 ## 実通信を伴う経路(マッチ成立・手の送受信)は2クライアントを同時に動かさないと再現できない
 ## ため、ここではロジックとして切り出せる部分だけを押さえている。
 
-const DATA_PATH := "res://data/hourglasses/%s.tres"
-
 
 func run(assert_true: Callable) -> void:
 	_test_timeout_action_ends_match(assert_true)
@@ -22,52 +20,51 @@ func run(assert_true: Callable) -> void:
 ## 持ち時間切れは投了と同じactionsの1件として送受信される(GameDesign.md 11章)。
 ## 申告した側の相手の勝ちで、盤面・HPを変えずに即座に終局すること。
 func _test_timeout_action_ends_match(assert_true: Callable) -> void:
-	var gs := _make_state()
+	var state := _make_state()
 	var winner_box: Array = [null]
-	gs.match_ended.connect(func(w: int) -> void: winner_box[0] = w)
+	state.match_ended.connect(func(w: int) -> void: winner_box[0] = w)
 
-	OnlineMatch.apply({"type": "timeout", "side": GameState.PlayerSide.B}, gs)
+	MatchAction.apply(state, {"type": "timeout", "side": MatchState.Side.B})
 
-	assert_true.call(gs.is_match_over(), "timeout action should end the match")
+	assert_true.call(state.is_match_over(), "timeout action should end the match")
 	assert_true.call(
-		winner_box[0] == GameState.PlayerSide.A,
+		winner_box[0] == MatchState.Side.A,
 		"the side that still had time (A) should be declared the winner"
 	)
 	assert_true.call(
-		gs.end_reason == GameState.EndReason.TIMEOUT,
+		state.end_reason == MatchState.EndReason.TIMEOUT,
 		"the end reason should be recorded as TIMEOUT, not SURRENDER"
 	)
 	assert_true.call(
 		(
-			gs.hp[GameState.PlayerSide.A] == GameState.INITIAL_HP
-			and gs.hp[GameState.PlayerSide.B] == GameState.INITIAL_HP
+			state.hp[MatchState.Side.A] == MatchState.INITIAL_HP
+			and state.hp[MatchState.Side.B] == MatchState.INITIAL_HP
 		),
 		"timeout should end the match without dealing any damage"
 	)
 
 
-## 送信時に付く通信用のキー(by/clock/clock_side)は、盤面の解決に一切影響しないこと。
-## これらは既存の棋譜には無いキーのため、リプレイ再生との互換性の担保でもある。
+## 送信時に付く通信用のキー(by/clock)は、盤面の解決に一切影響しないこと。
+## これらは棋譜には無くてもよいキーのため、リプレイ再生との互換性の担保でもある。
 func _test_apply_ignores_transport_keys(assert_true: Callable) -> void:
-	var gs := _make_state()
+	var state := _make_state()
+	var before: int = state.hand[MatchState.Side.A].size()
 	var action := {
-		"type": "flip",
-		"actor": GameState.PlayerSide.A,
-		"side": GameState.PlayerSide.A,
-		"position": GameState.BoardPosition.LEFT,
+		"type": "end_turn",
+		"side": MatchState.Side.A,
 		"by": "some-firebase-uid",
 		"clock": 123.5,
-		"clock_side": 0,
 	}
-	OnlineMatch.apply(action, gs)
+	MatchAction.apply(state, action)
 
 	assert_true.call(
-		gs.pending_action.get("type", "") == "flip",
-		"an action carrying transport keys should still be registered as the pending action"
+		state.current_turn == MatchState.Side.B,
+		"an action carrying transport keys should still be applied"
 	)
 	assert_true.call(
-		not gs.is_match_over(), "an action carrying transport keys should not end the match"
+		not state.is_match_over(), "an action carrying transport keys should not end the match"
 	)
+	assert_true.call(before > 0, "the opening hand should have been dealt")
 
 
 ## リトライしてよい失敗(応答なし・429・5xx)と、呼び出し側の判断が要る失敗の切り分け。
@@ -112,28 +109,28 @@ func _test_actions_survive_the_firestore_codec(assert_true: Callable) -> void:
 ## 上書き後もその側の時計が正しく減り、時間切れを発火することを確認する。
 func _test_clock_can_be_overwritten_by_the_opponent_value(assert_true: Callable) -> void:
 	var clock := MatchClock.new(180.0)
-	clock.remaining[GameState.PlayerSide.B] = 1.0
+	clock.remaining[MatchState.Side.B] = 1.0
 	assert_true.call(
-		is_equal_approx(clock.get_remaining(GameState.PlayerSide.B), 1.0),
+		is_equal_approx(clock.get_remaining(MatchState.Side.B), 1.0),
 		"the opponent clock should take the value that came with their action"
 	)
 	assert_true.call(
-		is_equal_approx(clock.get_remaining(GameState.PlayerSide.A), 180.0),
+		is_equal_approx(clock.get_remaining(MatchState.Side.A), 180.0),
 		"overwriting one side should not touch the other"
 	)
 
 	var timed_out_box: Array = [null]
 	clock.time_out.connect(func(side: int) -> void: timed_out_box[0] = side)
-	clock.start_turn(GameState.PlayerSide.B)
+	clock.start_turn(MatchState.Side.B)
 	clock.tick(1.5)
 	assert_true.call(
-		timed_out_box[0] == GameState.PlayerSide.B,
+		timed_out_box[0] == MatchState.Side.B,
 		"the overwritten clock should still run out and report the timeout"
 	)
 
 
 func _test_online_setup_abort_messages(assert_true: Callable) -> void:
-	var setup := OnlineSetup.new(null, "m_test", GameState.PlayerSide.A)
+	var setup := OnlineSetup.new(null, "m_test", MatchState.Side.A)
 	assert_true.call(setup.abort_message() == "", "no abort reason should produce no message")
 	setup.abort_reason = "abandoned"
 	assert_true.call(
@@ -145,12 +142,10 @@ func _test_online_setup_abort_messages(assert_true: Callable) -> void:
 	setup.free()
 
 
-func _make_state() -> GameState:
-	var board: Array[HourglassData] = []
-	for _i in range(GameState.BOARD_SIZE):
-		board.append(load(DATA_PATH % "sand"))
-	var bench: Array[HourglassData] = []
-	var gs := GameState.new()
-	gs.effect_resolver = EffectResolver.new()
-	gs.start_match(board, bench, board.duplicate(), bench)
-	return gs
+func _make_state() -> MatchState:
+	var deck: Array = []
+	for _i in range(MatchState.DECK_SIZE):
+		deck.append(CardLibrary.find_by_id("sand"))
+	var state := MatchState.new()
+	state.start_match(deck, deck.duplicate(), MatchState.Side.A, 1234)
+	return state

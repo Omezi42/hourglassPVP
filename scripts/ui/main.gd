@@ -1,10 +1,6 @@
 class_name Main
 extends Control
 
-## デッキ選択(BattleDeckPickerScreen)を確定した後に、どのバトル導線を
-## 再開するかを表す。ランダムマッチ/ルーム作成/CPU戦の3つのみが対象。
-enum BattlePurpose { RANDOM_MATCH, CREATE_ROOM, CPU_MATCH }
-
 ## 画面切り替え時のクロスフェード時間。
 const SCREEN_FADE_DURATION := 0.18
 
@@ -16,7 +12,6 @@ var card_deck_editor_screen: CardDeckEditorScreen
 var card_list_screen: CardListScreen
 
 var _match_return_screen: Control
-var _pending_battle_purpose: BattlePurpose = BattlePurpose.RANDOM_MATCH
 ## アカウント画面を閉じたときの戻り先。タイトルから開いた場合だけタイトルへ戻す。
 var _account_return_to_title := false
 
@@ -32,12 +27,7 @@ var _transition_blocker: ColorRect
 
 @onready var title_screen: TitleScreen = $TitleScreen
 @onready var home_screen: HomeScreen = $HomeScreen
-@onready var deck_list_screen: DeckListScreen = $DeckListScreen
-@onready var deck_editor_screen: DeckEditorScreen = $DeckEditorScreen
-@onready var hourglass_list_screen: HourglassListScreen = $HourglassListScreen
 @onready var replay_list_screen: ReplayListScreen = $ReplayListScreen
-@onready var match_screen: MatchScreen = $MatchScreen
-@onready var battle_deck_picker_screen: BattleDeckPickerScreen = $BattleDeckPickerScreen
 @onready var account_screen: AccountScreen = $AccountScreen
 
 
@@ -45,12 +35,7 @@ func _ready() -> void:
 	_screens = [
 		title_screen,
 		home_screen,
-		deck_list_screen,
-		deck_editor_screen,
-		hourglass_list_screen,
 		replay_list_screen,
-		match_screen,
-		battle_deck_picker_screen,
 		account_screen,
 	]
 	# v5.0の対局画面は子がすべてコード描画のControlで .tscn を持たないため、
@@ -95,16 +80,8 @@ func _ready() -> void:
 	home_screen.cpu_match_requested.connect(_on_cpu_match_deck_requested)
 	home_screen.random_match_deck_requested.connect(_on_random_match_deck_requested)
 	home_screen.create_room_deck_requested.connect(_on_create_room_deck_requested)
-	battle_deck_picker_screen.back_pressed.connect(func() -> void: _show_only(home_screen))
-	battle_deck_picker_screen.deck_confirmed.connect(_on_battle_deck_confirmed)
-	deck_list_screen.back_pressed.connect(func() -> void: _show_only(home_screen))
-	deck_list_screen.edit_requested.connect(_on_deck_edit_requested)
-	deck_editor_screen.back_pressed.connect(_on_deck_editor_back)
-	hourglass_list_screen.back_pressed.connect(func() -> void: _show_only(home_screen))
 	replay_list_screen.back_pressed.connect(func() -> void: _show_only(home_screen))
 	replay_list_screen.replay_selected.connect(_on_replay_selected)
-	# 対局から戻ったら砂金の残高を描き直す(対局中に増えているため)
-	match_screen.back_pressed.connect(_on_match_back)
 	NetSession.ensure_ready(self)
 	SoundBank.ensure_ready(self)
 	SoundBank.wire_buttons(self)
@@ -155,30 +132,25 @@ func _on_replay_list_requested() -> void:
 	_show_only(replay_list_screen)
 
 
+## 棋譜を読み込んで再生画面へ。**v5.0の棋譜は `seed` を持つ**ことで見分けられる。
+## v1.0の棋譜(位相制・配置フェーズあり)は再生できないため、一覧の時点で除いてある。
 ## CPU戦のローカルリプレイは"cpu_"始まりのidで区別する(LocalReplayService.mark_finished()参照)。
-## **v5.0の棋譜は `seed` を持つ**ため、それを目印に再生先の画面を振り分ける。
-## v1.0の棋譜(位相制・配置フェーズあり)は従来の MatchScreen でしか再生できない。
 func _on_replay_selected(match_id: String) -> void:
 	var record: Dictionary = (
 		LocalReplayService.get_replay(match_id)
 		if match_id.begins_with("cpu_")
 		else await NetSession.client.get_document("matches/%s" % match_id)
 	)
-	_match_return_screen = replay_list_screen
-	if record.has("seed") and card_match_screen.start_replay(record):
-		_show_only(card_match_screen)
+	if not card_match_screen.start_replay(record):
 		return
-	if match_id.begins_with("cpu_"):
-		match_screen.start_local_replay(record)
-	else:
-		match_screen.start_replay(match_id, NetSession.client)
-	_show_only(match_screen)
+	_match_return_screen = replay_list_screen
+	_show_only(card_match_screen)
 
 
 func _on_spectate_requested(match_id: String) -> void:
-	match_screen.start_spectate(match_id, NetSession.client)
 	_match_return_screen = home_screen
-	_show_only(match_screen)
+	if await card_match_screen.start_spectate(NetSession.client, match_id):
+		_show_only(card_match_screen)
 
 
 ## CPU戦(v5.0)。先手/後手は常にプレイヤーが先手とし、相手のデッキはランダムに組む
@@ -191,39 +163,18 @@ func _start_cpu_match() -> void:
 	_show_only(card_match_screen)
 
 
-## ランダムマッチ/ルーム作成/CPU戦は、開始前に必ずデッキ選択画面(BattleDeckPickerScreen)を
-## 挟む。ここではその画面を開き、確定後に再開する導線をpurposeとして覚えておく。
+## v5.0はデッキを1つしか持たないため、開始前のデッキ選択画面を挟まない。
+## 複数デッキを持たせるときに、選択画面をv5.0向けに作り直す。
 func _on_random_match_deck_requested() -> void:
-	_open_battle_deck_picker(BattlePurpose.RANDOM_MATCH)
+	home_screen.battle_tab.begin_random_match()
 
 
 func _on_create_room_deck_requested() -> void:
-	_open_battle_deck_picker(BattlePurpose.CREATE_ROOM)
+	home_screen.battle_tab.begin_create_room()
 
 
-## CPU戦は v5.0 の対局画面へ直行する。デッキ選択画面(BattleDeckPickerScreen)は
-## v1.0の5枚デッキ用で、20枚デッキには対応していないため挟まない。
-## v5.0のデッキ編集ができた時点で、選択画面もそちらへ差し替える。
 func _on_cpu_match_deck_requested() -> void:
 	_start_cpu_match()
-
-
-func _open_battle_deck_picker(purpose: BattlePurpose) -> void:
-	_pending_battle_purpose = purpose
-	battle_deck_picker_screen.open()
-	_show_only(battle_deck_picker_screen)
-
-
-func _on_battle_deck_confirmed() -> void:
-	match _pending_battle_purpose:
-		BattlePurpose.RANDOM_MATCH:
-			_show_only(home_screen)
-			home_screen.battle_tab.begin_random_match()
-		BattlePurpose.CREATE_ROOM:
-			_show_only(home_screen)
-			home_screen.battle_tab.begin_create_room()
-		BattlePurpose.CPU_MATCH:
-			_start_cpu_match()
 
 
 ## v5.0はデッキを1つだけ持つため、デッキ一覧(v1.0の複数デッキ管理)を挟まず
@@ -233,36 +184,19 @@ func _on_deck_list_requested() -> void:
 	_show_only(card_deck_editor_screen)
 
 
-func _on_deck_list_requested_v1() -> void:
-	deck_list_screen.refresh()
-	_show_only(deck_list_screen)
-
-
-## 砂時計一覧は v5.0 のカード一覧(CardListScreen)へ差し替えた。
-## v1.0 の HourglassListScreen は位相制の駒データを表示するもので、
-## コスト/総量/キーワードを持たないため v5.0 では意味を成さない。
+## 砂時計一覧はカード一覧(CardListScreen)。
 func _on_hourglass_list_requested() -> void:
 	_show_only(card_list_screen)
 
 
-func _on_deck_edit_requested(index: int) -> void:
-	deck_editor_screen.open_deck(index)
-	_show_only(deck_editor_screen)
-
-
-func _on_deck_editor_back() -> void:
-	deck_list_screen.refresh()
-	_show_only(deck_list_screen)
-
-
 ## オンライン対戦(v5.0)。配置フェーズが無いため、デッキと山札の種を交換したら
-## そのまま対局へ入る。is_room / opponent_uid は砂金の計算と表示名に使っていたもので、
-## v5.0の対局画面へ持ち込むのはこれらの機能を移した後にする。
+## そのまま対局へ入る。is_room は砂金の獲得量(GameDesign.md 15章)、
+## opponent_uid は相手の表示名(14章)に使う。
 func _on_online_match_found(
-	match_id: String, my_side: GameState.PlayerSide, _opponent_uid: String, _is_room: bool
+	match_id: String, my_side: int, opponent_uid: String, is_room: bool
 ) -> void:
 	card_match_screen.start_online_match(
-		CardDeckSave.load_deck(), NetSession.client, match_id, int(my_side)
+		CardDeckSave.load_deck(), NetSession.client, match_id, my_side, is_room, opponent_uid
 	)
 	_match_return_screen = home_screen
 	_show_only(card_match_screen)
@@ -313,13 +247,13 @@ func _show_only(screen: Control) -> void:
 	_fade_tween.finished.connect(_on_transition_finished.bind(screen, previous))
 
 	# BGMの切り替えは画面遷移のハブであるここ1箇所で行い、画面ごとに書き散らさない
-	# (Architecture.md 9章)。対局が終わって結果パネルが出ている間はMatchScreenが止める。
+	# (Architecture.md 9章)。対局が終わって結果パネルが出ている間は対局画面が止める。
 	MusicPlayer.play(_track_for(screen))
 
 
 ## 画面ごとのBGM。対局だけ専用曲、タイトルだけ専用曲、それ以外はホーム曲。
 func _track_for(screen: Control) -> MusicPlayer.Track:
-	if screen == match_screen or screen == card_match_screen:
+	if screen == card_match_screen:
 		return MusicPlayer.Track.MATCH
 	if screen == title_screen:
 		return MusicPlayer.Track.TITLE

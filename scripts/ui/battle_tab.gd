@@ -3,17 +3,14 @@ extends Control
 
 ## is_roomは成立した経路の区別(ルームマッチかランダムマッチか)。
 ## 砂金の獲得量が経路ごとに異なるため伝える必要がある(GameDesign.md 15章)。
-signal online_match_found(
-	match_id: String, my_side: GameState.PlayerSide, opponent_uid: String, is_room: bool
-)
+signal online_match_found(match_id: String, my_side: int, opponent_uid: String, is_room: bool)
 signal replay_list_requested
 signal spectate_requested(match_id: String)
 signal cpu_match_requested
 signal random_match_deck_requested
 signal create_room_deck_requested
 
-const DECK_SIZE := 5
-## 通信待ち中の「...」演出。3個目まで打ってから空に戻る(MatchScreenの待機表現と統一)。
+## 通信待ち中の「...」演出。3個目まで打ってから空に戻る(対局画面の待機表現と統一)。
 const BUSY_DOTS_MAX := 3
 const BUSY_DOTS_INTERVAL := 0.5
 
@@ -54,15 +51,13 @@ func _ready() -> void:
 func refresh() -> void:
 	if _busy:
 		return
-	## ランダムマッチ/ルーム作成/CPU戦は開始前にデッキ選択画面を挟むため、
-	## ここでは「保存済みデッキが1つ以上あるか」だけを見る(使用中デッキの指定は不要)。
-	var has_saved_deck: bool = DeckSave.load_decks().size() > 0
-	var ready_to_battle: bool = MatchSetup.player_deck.size() == DECK_SIZE
-	random_match_button.disabled = not has_saved_deck
-	create_room_button.disabled = not has_saved_deck
-	cpu_match_button.disabled = not has_saved_deck
+	# v5.0はデッキを1つだけ持ち、未保存でも既定のデッキが返るため、常に対戦できる。
+	var ready_to_battle: bool = CardDeckSave.load_deck().size() == MatchState.DECK_SIZE
+	random_match_button.disabled = not ready_to_battle
+	create_room_button.disabled = not ready_to_battle
+	cpu_match_button.disabled = not ready_to_battle
 	join_room_button.disabled = not ready_to_battle
-	status_label.text = ("対戦できます" if has_saved_deck else "先にデッキタブでデッキを作成してください")
+	status_label.text = "対戦できます" if ready_to_battle else "デッキを20枚にしてください"
 
 
 ## cancellable: マッチングキュー参加中・ルーム作成後の相手待ちなど、待機を中断できる操作の間だけtrueにする。
@@ -241,11 +236,11 @@ func _on_matched(match_id: String, opponent_uid: String) -> void:
 	# 自分のuidがplayer_a/player_bのどちらとも一致しない場合、以前は黙って後手として
 	# 扱っていた。双方が後手になると互いのデッキを待ち続けて対局が始まらないため、
 	# ここで止めてやり直させる(マッチ成立の書き込みは原子的になったので通常は起きない)。
-	var my_side: GameState.PlayerSide
+	var my_side: int
 	if match_doc.get("player_a", "") == NetSession.auth.uid:
-		my_side = GameState.PlayerSide.A
+		my_side = MatchState.Side.A
 	elif match_doc.get("player_b", "") == NetSession.auth.uid:
-		my_side = GameState.PlayerSide.B
+		my_side = MatchState.Side.B
 	else:
 		_fail("対戦相手との同期に失敗しました。もう一度お試しください")
 		return

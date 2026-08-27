@@ -20,7 +20,7 @@ func _ready() -> void:
 
 
 ## 勝敗を表示する。my_side が負なら「先手/後手の勝利」と第三者視点で書く。
-func show_for(state: MatchState, my_side: int, moves: int) -> void:
+func show_for(state: MatchState, my_side: int, moves: int, reward: String = "") -> void:
 	var winner: int = state.winner
 	_title.text = _title_text(winner, my_side)
 	var own_hp: int = state.hp[my_side if my_side >= 0 else MatchState.Side.A]
@@ -30,6 +30,8 @@ func show_for(state: MatchState, my_side: int, moves: int) -> void:
 	lines.append("%d手で決着" % moves)
 	if winner >= 0:
 		lines.append("決め手: %s" % CardMatchLog.reason_text(state, winner))
+	if not reward.is_empty():
+		lines.append(reward)
 	_detail.text = "\n".join(lines)
 	visible = true
 

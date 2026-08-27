@@ -19,7 +19,7 @@ const OUTLINE_COLOR := Color(0.06, 0.09, 0.19, 1.0)
 const GOLD_FACE := Color(0.98, 0.89, 0.62, 1.0)
 const GOLD_SHADE := Color(0.72, 0.53, 0.2, 1.0)
 const SUBTITLE_COLOR := Color(0.96, 0.93, 0.86, 1.0)
-## 上部に置く砂時計の紋章。ActionMenuのボタンと同じ絵柄を使う。
+## 上部に置く砂時計の紋章。
 const EMBLEM_SIZE := 58.0
 ## 左右へ伸びる飾り罫の長さ(サブタイトルの幅からの相対)。
 const RULE_EXTENT := 0.34

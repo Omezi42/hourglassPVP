@@ -3,6 +3,9 @@ extends Control
 
 signal card_pressed(match_id: String)
 
+## 一覧のカードへ並べるデッキのアイコンの数(重複を除いた先頭から)。
+const DECK_PREVIEW := 5
+
 var match_id: String = ""
 
 var _press_tracker := PressTracker.new()
@@ -100,11 +103,20 @@ func _apply_result(won: bool) -> void:
 	background_panel.add_theme_stylebox_override("panel", card_style)
 
 
+## デッキは20枚あるため、重複を除いた先頭 DECK_PREVIEW 種だけを並べる。
+## 20個のアイコンを並べるとカードの幅に収まらず、見比べる役にも立たないため。
 func _fill_row(row: HBoxContainer, ids: Array) -> void:
 	for child in row.get_children():
 		child.queue_free()
+	var shown: Array = []
 	for id in ids:
-		var data: HourglassData = MatchSetup.find_by_id(str(id))
+		if shown.size() >= DECK_PREVIEW:
+			break
+		if shown.has(id):
+			continue
+		shown.append(id)
+	for id in shown:
+		var data: CardData = CardLibrary.find_by_id(str(id))
 		if data == null:
 			continue
 		var icon := TextureRect.new()

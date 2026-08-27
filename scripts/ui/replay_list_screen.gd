@@ -38,7 +38,12 @@ func refresh() -> void:
 		_show_empty("通信に失敗しました(%s)" % NetSession.last_error)
 		return
 
-	var combined: Array[Dictionary] = online_replays + local_replays
+	# v5.0の棋譜だけを残す。v1.0の棋譜(位相制・配置フェーズあり)は再生できないため、
+	# 一覧の時点で除く。見分けは `seed` を持つかどうか(Architecture.md 4.0節)。
+	var combined: Array[Dictionary] = []
+	for doc in online_replays + local_replays:
+		if (doc["fields"] as Dictionary).has("seed"):
+			combined.append(doc)
 	if combined.is_empty():
 		_show_empty("まだ対局履歴がありません")
 		return

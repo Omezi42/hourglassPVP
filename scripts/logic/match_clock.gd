@@ -1,22 +1,23 @@
 class_name MatchClock
 extends RefCounted
 
-signal time_out(side: GameState.PlayerSide)
+## 側は 0/1(MatchState.Side)。
+signal time_out(side: int)
 
 const DEFAULT_TIME_SECONDS := 180.0
 
 var total_seconds: float
 var remaining: Dictionary = {}
-var active_side: GameState.PlayerSide = GameState.PlayerSide.A
+var active_side: int = 0
 var running := false
 
 
 func _init(p_total_seconds: float = DEFAULT_TIME_SECONDS) -> void:
 	total_seconds = p_total_seconds
-	remaining = {GameState.PlayerSide.A: total_seconds, GameState.PlayerSide.B: total_seconds}
+	remaining = {0: total_seconds, 1: total_seconds}
 
 
-func start_turn(side: GameState.PlayerSide) -> void:
+func start_turn(side: int) -> void:
 	active_side = side
 	running = true
 
@@ -34,9 +35,9 @@ func tick(delta: float) -> void:
 		time_out.emit(active_side)
 
 
-func finish_turn(next_side: GameState.PlayerSide) -> void:
+func finish_turn(next_side: int) -> void:
 	active_side = next_side
 
 
-func get_remaining(side: GameState.PlayerSide) -> float:
+func get_remaining(side: int) -> float:
 	return remaining[side]

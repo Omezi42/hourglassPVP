@@ -49,7 +49,7 @@ func run(assert_true: Callable) -> void:
 func _test_own_action_is_not_delivered_back(
 	assert_true: Callable, client, online: OnlineMatch, tree: SceneTree
 ) -> void:
-	online.send({"type": "pass", "side": GameState.PlayerSide.A})
+	online.send({"type": "pass", "side": MatchState.Side.A})
 	await _wait_until(tree, func() -> bool: return not online.is_busy(), 3.0)
 
 	var stored: Array = client.actions_at(MATCH_PATH)
@@ -70,10 +70,8 @@ func _test_own_action_is_not_delivered_back(
 func _test_opponent_actions_are_delivered_one_at_a_time(
 	assert_true: Callable, client, online: OnlineMatch, tree: SceneTree
 ) -> void:
-	client.append_action(MATCH_PATH, {"type": "pass", "side": GameState.PlayerSide.B, "by": "them"})
-	client.append_action(
-		MATCH_PATH, {"type": "surrender", "side": GameState.PlayerSide.B, "by": "them"}
-	)
+	client.append_action(MATCH_PATH, {"type": "pass", "side": MatchState.Side.B, "by": "them"})
+	client.append_action(MATCH_PATH, {"type": "surrender", "side": MatchState.Side.B, "by": "them"})
 
 	await online._fetch()
 	online._deliver_one()
@@ -100,7 +98,7 @@ func _test_send_retries_until_the_write_lands(
 	var commits_before: int = client.commit_count
 	client.fail_commits = 1
 
-	online.send({"type": "pass", "side": GameState.PlayerSide.A})
+	online.send({"type": "pass", "side": MatchState.Side.A})
 	await _wait_until(tree, func() -> bool: return not online.is_busy(), 5.0)
 
 	assert_true.call(
@@ -139,7 +137,7 @@ func _test_setup_wait_can_be_aborted(assert_true: Callable, client, tree: SceneT
 	var path := "matches/m_setup"
 	client.store[path] = {"fields": {}, "update_time": "0"}
 
-	var setup := OnlineSetup.new(client, "m_setup", GameState.PlayerSide.A)
+	var setup := OnlineSetup.new(client, "m_setup", MatchState.Side.A)
 	tree.root.add_child(setup)
 	var own_ids: Array[String] = ["sand", "sword", "king", "wall", "eye"]
 	await setup.push_deck(own_ids)

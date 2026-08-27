@@ -104,14 +104,24 @@ GameDesign.md 6章の値段表を差し替え済み)。高コスト帯を大き�
   (`CardPileViewer`)も実装し、ホーム画面の「砂時計一覧」はv5.0のカード一覧へ差し替えた。
   オンライン対戦(デッキと山札の種を交換 → そのまま対局)とリプレイ再生も実装した。
   **AM-5 は一通り完了**。残っているのは下記の細部。
-- [ ] **AM-5b 実通信での確認**。オンライン対戦は2クライアントを同時に動かさないと
-  再現できないため未検証。ロジック(同じ種・同じ手なら同じ盤面になること)は
-  `tools/tests/v5_rules_tests.gd` で押さえてある
-- [ ] **AM-5c v1.0の画面の撤去**。`MatchScreen` 一式・`DeckListScreen`・`DeckEditorScreen`・
-  `HourglassListScreen` は到達不能になったが、リプレイの再生先としてまだ残してある
-  (v1.0の棋譜は `seed` を持たないため、そちらでしか再生できない)
-- [ ] **AM-5d 砂金・表示名・持ち時間の v5 対応**。`_on_online_match_found` の
-  `is_room` / `opponent_uid` を v5.0 の対局画面へまだ渡していない
+- [x] **AM-5b 送受信の検証**。`tools/tests/v5_online_tests.gd` を追加し、差し替え用クライアント
+  (FakeFirestoreClient)の上で**2人のクライアントが同じ盤面を保ち続けること**を確認した
+  (同じ種から始めた初期状態の一致、送った手を受け取った側で適用した後の一致)。
+  **実通信での確認だけは未実施**。2クライアントを同時に動かす必要があるため
+- [x] **AM-5c v1.0の撤去**。`MatchScreen` 一式(match_*・GameBoard/HourglassSlot系)・
+  `DeckListScreen`/`DeckEditorScreen`/`HourglassListScreen`/`BattleDeckPickerScreen`、
+  `GameState`/`EffectResolver`/`HourglassData`/`SkillData`/`EffectData`/`GameEnums`/
+  `MatchSetup`/`DeckSave`/旧CPU戦略、`data/hourglasses/*.tres`、v1のシミュレータ2本、
+  未使用になったボタンスタイル4グループを削除した(46ファイル)。
+  **v1.0の棋譜は再生できなくなったため、`ReplayListScreen` は `seed` を持つ棋譜だけを
+  一覧に出す**(記録そのものは消していない)
+- [x] **AM-5d 砂金・表示名・持ち時間の v5 対応**。対局の種別(ランダム/ルーム/CPU)を
+  対局画面まで渡し、終局時に `CurrencyRules` で判定して結果パネルへ1行出す。相手の表示名は
+  `AccountService.fetch_display_name()`。持ち時間は `MatchClock` をオンライン対戦だけで回し、
+  各手に残り時間を添えて送る。相手の申告が来ない場合は猶予を置いて待っている側の勝ちにする
+- [x] **AM-5e CPU戦のリプレイ保存**。山札の種を決めてから始め、指した手を記録して
+  `LocalReplayService` へ保存する。保存→再生で最終HPが一致することを実動作で確認した
+
 - [ ] **AM-6 イラスト**:未設定の10種(グラス・ドリル・ヴァンプ・ロック・ツイン・ランス・
   スウォーム・ポイズン・ハンマー・スイープ)。既存10種はサンド・シールド・ダッシュ・
   ソード・エコー・アイ・ミラー・ウォールへ割り当て済みで、ガードは king、グロウは judge の

@@ -23,9 +23,9 @@ var _sending := false
 var _failures := 0
 var _my_uid := ""
 var _send_queue: Array = []
-## 受け取った手の待ち行列。MatchScreenは1手の受信につき予約マークの表示と解決演出で
-## 数秒awaitするため、同時に2件流し込むとターン進行が二重に走る。1ポーリングにつき
-## 1件だけ配る(Architecture.md 6.1節)。
+## 受け取った手の待ち行列。受け取る側は1手ごとに演出でawaitすることがあるため、
+## 同時に2件流し込むとターン進行が二重に走る。1ポーリングにつき1件だけ配る
+## (Architecture.md 6.1節)。適用そのものは MatchAction が受け持つ。
 var _inbox: Array = []
 var _poll_delay := POLL_INTERVAL_SECONDS
 
@@ -57,14 +57,6 @@ func is_busy() -> bool:
 	return _sending or not _send_queue.is_empty()
 
 
-## 1手をGameStateへ反映し、同時に対戦相手へ送信する。送信の完了は待たない
-## (数秒の通信を待って盤面を止めると、指した手応えが失われるため)。届かなかった場合は
-## connection_changedで知らせる。
-func send_and_apply(action: Dictionary, state: GameState) -> void:
-	apply(action, state)
-	send(action)
-
-
 ## 1手を送信キューへ積む。順序と重複を保証するため、実際の書き込みは1件ずつ直列に行う。
 func send(action: Dictionary) -> void:
 	var payload := action.duplicate(true)
@@ -74,24 +66,6 @@ func send(action: Dictionary) -> void:
 	_send_queue.append(payload)
 	if not _sending:
 		_send_worker()
-
-
-## 1手をGameStateへ反映する。flip/skill/passは「その手番の行動」として設定するだけで
-## 盤面は動かさず、実際の適用は続く state.advance_and_end_turn() の解決で行われる
-## (GameDesign.md 4.3・4.4)。surrender/timeoutのみ、盤面を変えずに即座に終局させる性質の
-## ため予約の対象にせず従来どおり即時に適用する。
-static func apply(action: Dictionary, state: GameState) -> void:
-	match action.get("type", ""):
-		"flip", "skill", "pass":
-			state.set_pending_action(action)
-		"move", "swap_in":
-			# 基本行動としては廃止済み(GameDesign.md 4.3)。過去のリプレイの再生用に残している。
-			state.set_pending_action(action)
-		"surrender":
-			state.surrender(action["side"])
-		"timeout":
-			# 持ち時間切れは切れた本人が申告する(GameDesign.md 11章)。
-			state.force_match_end(state.other_side(action["side"]), GameState.EndReason.TIMEOUT)
 
 
 func _path() -> String:

@@ -22,6 +22,8 @@ var is_opponent := false
 var display_name := ""
 ## 攻撃の対象として選べる状態か。光らせて示す。
 var targetable := false
+## 残り持ち時間(秒)。負の値なら表示しない(CPU戦は持ち時間を使わない)。
+var clock_seconds := -1.0
 
 var _hp := MatchState.INITIAL_HP
 var _mana := 0
@@ -81,6 +83,21 @@ func _draw() -> void:
 		_pile(Vector2(804, 8), "手札", _hand)
 	if _has_coin:
 		_draw_coin()
+	if clock_seconds >= 0.0:
+		_draw_clock()
+
+
+## 残り時間は「相手の手札」の右、情報帯の末尾に置く。
+func _draw_clock() -> void:
+	var minutes := int(clock_seconds) / 60
+	var seconds := int(clock_seconds) % 60
+	var low := clock_seconds <= 30.0
+	_text(
+		Vector2(900, 36),
+		"%d:%02d" % [minutes, seconds],
+		20,
+		UiPalette.WARNING_RED if low else UiPalette.TEXT_OFFWHITE
+	)
 
 
 func _graveyard_rect() -> Rect2:
