@@ -8,7 +8,7 @@
 
 [node name="ScreenHeader" type="Control" unique_id=786986529]
 layout_mode = 3
-anchors_preset = 0
+anchors_preset = 10
 anchor_right = 1.0
 offset_left = 24.0
 offset_top = 24.0
@@ -34,7 +34,7 @@ mouse_filter = 2
 theme_override_constants/separation = 16
 
 [node name="BackButton" type="Button" parent="Row" unique_id=667336526]
-custom_minimum_size = Vector2(130, 70.42)
+custom_minimum_size = Vector2(132, 70)
 layout_mode = 2
 size_flags_vertical = 4
 theme_override_styles/normal = ExtResource("2_i5g72")

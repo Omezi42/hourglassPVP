@@ -6,4 +6,5 @@
 script = ExtResource("1_coded")
 variant = 3
 shape = 3
-content_margin_left = 52.0
+content_margin_left = 60.0
+content_margin_right = 14.0

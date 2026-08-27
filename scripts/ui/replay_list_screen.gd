@@ -23,7 +23,9 @@ func _ready() -> void:
 func refresh() -> void:
 	for child in list_container.get_children():
 		child.queue_free()
-	empty_label.visible = false
+	# サインインと一覧の取得に数秒かかることがある。何も出さないと「履歴が無い」のか
+	# 「まだ読んでいる」のか区別できないため、待っている間はその旨を出す。
+	_show_empty("読み込み中...")
 
 	# CPU戦のリプレイもアカウントに紐づくため、先にサインインしてuidを確定させる。
 	# サインインできなかった場合、LocalReplayServiceは絞り込まずに全件返す
@@ -53,6 +55,7 @@ func refresh() -> void:
 			return int(a["fields"].get("finished_at", 0)) > int(b["fields"].get("finished_at", 0))
 	)
 
+	empty_label.visible = false
 	for doc in combined:
 		var card: ReplayListCard = REPLAY_CARD_SCENE.instantiate()
 		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL

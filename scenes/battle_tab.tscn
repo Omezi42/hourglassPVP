@@ -22,10 +22,10 @@ layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -244.0
-offset_top = 16.0
-offset_right = -24.0
-offset_bottom = 95.0
+offset_left = -340.0
+offset_top = 24.0
+offset_right = -120.0
+offset_bottom = 103.0
 grow_horizontal = 0
 theme_override_styles/normal = ExtResource("2_6rapo")
 theme_override_styles/pressed = ExtResource("3_8tkbr")
@@ -42,13 +42,13 @@ layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 theme_override_constants/margin_left = 40
-theme_override_constants/margin_top = 56
+theme_override_constants/margin_top = 120
 theme_override_constants/margin_right = 40
-theme_override_constants/margin_bottom = 40
+theme_override_constants/margin_bottom = 24
 
 [node name="VBox" type="VBoxContainer" parent="Margin" unique_id=1031725951]
 layout_mode = 2
-theme_override_constants/separation = 26
+theme_override_constants/separation = 20
 alignment = 1
 
 [node name="StatusLabel" type="Label" parent="Margin/VBox" unique_id=2146442433]

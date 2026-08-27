@@ -135,12 +135,13 @@ layout_mode = 0
 offset_left = 24.0
 offset_top = 24.0
 offset_right = 484.0
-offset_bottom = 88.0
+offset_bottom = 112.0
 theme_override_constants/separation = 14
 
 [node name="AccountButton" type="Button" parent="AccountBar" unique_id=405806702]
 custom_minimum_size = Vector2(220, 64)
 layout_mode = 2
+size_flags_vertical = 4
 theme_override_styles/normal = ExtResource("17_6ooop")
 theme_override_styles/pressed = ExtResource("18_siet5")
 theme_override_styles/hover = ExtResource("19_p8i1v")

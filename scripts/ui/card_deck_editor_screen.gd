@@ -10,9 +10,11 @@ signal back_pressed
 
 const HEADER_SCENE := "res://scenes/screen_header.tscn"
 const PANEL_STYLE := "res://resources/theme/content_panel.tres"
-const LIST_RECT := Rect2(24, ScreenHeader.CONTENT_TOP, 620, 320)
-const CURVE_RECT := Rect2(668, ScreenHeader.CONTENT_TOP, 588, 320)
-const CARDS_TOP := ScreenHeader.CONTENT_TOP + 344.0
+const LIST_RECT := Rect2(24, ScreenHeader.CONTENT_TOP, 620, 356)
+const CURVE_RECT := Rect2(668, ScreenHeader.CONTENT_TOP, 588, 356)
+## 全カードの横スクロールは画面の一番下に置く。外周余白(24px)を割らないよう、
+## 下端から逆算した位置に固定する。
+const CARDS_TOP := 720.0 - ScreenHeader.OUTER_MARGIN - (CardView.HAND_SIZE_PX.y + 16.0)
 
 var _header: ScreenHeader
 var _entries: VBoxContainer
@@ -148,7 +150,11 @@ func _make_entry(card: CardData) -> Control:
 	row.add_child(name_label)
 	var note := Label.new()
 	note.text = card.describe()
-	note.custom_minimum_size = Vector2(280, 0)
+	# 効果文はカードによって長さが大きく違う。伸ばすと右隣の枚数へ食い込むため、
+	# 幅を固定して溢れた分は切る。
+	note.custom_minimum_size = Vector2(260, 0)
+	note.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	note.clip_text = true
 	note.add_theme_color_override("font_color", UiPalette.BRASS_HIGHLIGHT)
 	note.add_theme_font_size_override("font_size", 15)
 	row.add_child(note)

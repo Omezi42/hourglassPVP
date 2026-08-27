@@ -7,7 +7,9 @@ signal back_pressed
 
 const HEADER_SCENE := "res://scenes/screen_header.tscn"
 const COLUMNS := 6
-const GRID_RECT := Rect2(24, ScreenHeader.CONTENT_TOP, 800, 540)
+const GRID_RECT := Rect2(
+	24, ScreenHeader.CONTENT_TOP, 800, 720 - ScreenHeader.CONTENT_TOP - ScreenHeader.OUTER_MARGIN
+)
 const DETAIL_POSITION := Vector2(852, ScreenHeader.CONTENT_TOP)
 
 var _detail: CardDetailPanel
@@ -54,6 +56,10 @@ func _build() -> void:
 	_detail = CardDetailPanel.new()
 	_detail.position = DETAIL_POSITION
 	add_child(_detail)
+	# 効果文が下端で切れないよう、詳細パネルはコンテンツ領域の高さいっぱいまで伸ばす。
+	# `CardDetailPanel._ready()` が既定サイズを入れるため、add_child の後に上書きする。
+	_detail.custom_minimum_size = Vector2(CardDetailPanel.PANEL_SIZE.x, GRID_RECT.size.y)
+	_detail.size = _detail.custom_minimum_size
 
 
 func _select(view: CardView) -> void:

@@ -19,6 +19,8 @@ layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 script = ExtResource("1_twfmf")
 
 [node name="Background" type="TextureRect" parent="." unique_id=1069436025]
@@ -64,6 +66,7 @@ layout_mode = 2
 theme_override_constants/separation = 10
 
 [node name="NameCaption" type="Label" parent="Panel/Margin/VBox/NameRow" unique_id=2070150574]
+custom_minimum_size = Vector2(110, 0)
 layout_mode = 2
 theme_override_font_sizes/font_size = 18
 text = "表示名"
@@ -108,6 +111,7 @@ layout_mode = 2
 theme_override_constants/separation = 10
 
 [node name="IdCaption" type="Label" parent="Panel/Margin/VBox/CredentialBox/IdRow" unique_id=823843711]
+custom_minimum_size = Vector2(110, 0)
 layout_mode = 2
 theme_override_font_sizes/font_size = 18
 text = "ID"
@@ -122,6 +126,7 @@ layout_mode = 2
 theme_override_constants/separation = 10
 
 [node name="PasswordCaption" type="Label" parent="Panel/Margin/VBox/CredentialBox/PasswordRow" unique_id=880323286]
+custom_minimum_size = Vector2(110, 0)
 layout_mode = 2
 theme_override_font_sizes/font_size = 18
 text = "パスワード"
