@@ -219,6 +219,17 @@ v1.0 の `MatchScreen` 一式とは別に、新しい対局画面を並走させ
 相手の場が空のときは選ばせる意味がないためそのまま出す。案内は**行動ボタンの列へ出す**
 (盤面へ重ねると、選ばせたい相手のカードそのものを隠してしまう)。
 
+`Main` は `card_match_screen` を `_ready()` で生成して `_screens` へ加える(`.tscn` を
+持たないため)。**CPU戦は `BattleDeckPickerScreen` を挟まずこの画面へ直行する**。
+あの画面は v1.0 の5枚デッキ用で20枚デッキに対応していないため、v5.0のデッキ編集が
+できた時点で差し替える。デッキは `CardDeckSave`(`user://card_decks.json`、v1.0の
+`DeckSave` とは形式が違うためファイルを分ける)から読み、未保存なら
+`default_deck()`(コストの安い順に10種を2枚ずつ)を使う。
+
+**行動ボタンの文字色はテーマ既定に任せず明示する。**真鍮のボタン画像の上では、
+プロジェクト共通テーマの暗い文字色が沈んで読めなくなる(main.tscn 経由で起動して発覚した。
+画面単体のレンダリングでは再現しない)。
+
 `CardMatchScreen.start_cpu_match()` が `MatchState` を生成し、CPUの手番は `Timer` で
 `CPU_THINK_SECONDS` の間合いを置いてから `CardCpuStrategy.choose_action()` を1手ずつ適用する
 (1手ずつなのは、まとめて指すと何が起きたか追えないため)。

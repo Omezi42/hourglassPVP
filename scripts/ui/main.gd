@@ -8,9 +8,10 @@ enum BattlePurpose { RANDOM_MATCH, CREATE_ROOM, CPU_MATCH }
 ## 画面切り替え時のクロスフェード時間。
 const SCREEN_FADE_DURATION := 0.18
 
+## v5.0の対局画面(子がすべてコード描画のControlで .tscn を持たないため _ready() で生成する)。
+var card_match_screen: CardMatchScreen
+
 var _match_return_screen: Control
-var _cpu_board: Array[HourglassData] = []
-var _cpu_bench: Array[HourglassData] = []
 var _pending_battle_purpose: BattlePurpose = BattlePurpose.RANDOM_MATCH
 ## アカウント画面を閉じたときの戻り先。タイトルから開いた場合だけタイトルへ戻す。
 var _account_return_to_title := false
@@ -48,6 +49,14 @@ func _ready() -> void:
 		battle_deck_picker_screen,
 		account_screen,
 	]
+	# v5.0の対局画面は子がすべてコード描画のControlで .tscn を持たないため、
+	# ここで生成して画面一覧へ加える(Architecture.md 4.0節)。
+	card_match_screen = CardMatchScreen.new()
+	card_match_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
+	card_match_screen.visible = false
+	add_child(card_match_screen)
+	card_match_screen.back_pressed.connect(_on_match_back)
+	_screens.append(card_match_screen)
 	_transition_blocker = _make_transition_blocker()
 	add_child(_transition_blocker)
 	_sand_transition = SandTransition.new()
@@ -146,21 +155,14 @@ func _on_spectate_requested(match_id: String) -> void:
 	_show_only(match_screen)
 
 
-## CPUのデッキ5種類をランダムに選出し、場3個・控え2個への振り分けはSmartCpuStrategyの配置ロジックで決定する。
-## 先手/後手は常にプレイヤーが先手のため、配置フェーズはMatchScreen側のCPU戦専用入り口を使う。
+## CPU戦(v5.0)。先手/後手は常にプレイヤーが先手とし、相手のデッキはランダムに組む
+## (GameDesign.md 13章)。
 func _start_cpu_match() -> void:
-	var cpu_deck := MatchSetup.all_hourglasses()
-	cpu_deck.shuffle()
-	cpu_deck = cpu_deck.slice(0, 5)
-	var smart := SmartCpuStrategy.new()
-	var placement := smart.choose_placement(cpu_deck)
-	_cpu_board = []
-	_cpu_board.assign(placement["board"])
-	_cpu_bench = []
-	_cpu_bench.assign(placement["bench"])
-	match_screen.start_placement_then_cpu(MatchSetup.player_deck, _cpu_board, _cpu_bench)
+	var rng := RandomNumberGenerator.new()
+	rng.randomize()
+	card_match_screen.start_cpu_match(CardDeckSave.load_deck(), CardDeckSave.random_deck(rng))
 	_match_return_screen = home_screen
-	_show_only(match_screen)
+	_show_only(card_match_screen)
 
 
 ## ランダムマッチ/ルーム作成/CPU戦は、開始前に必ずデッキ選択画面(BattleDeckPickerScreen)を
@@ -173,8 +175,11 @@ func _on_create_room_deck_requested() -> void:
 	_open_battle_deck_picker(BattlePurpose.CREATE_ROOM)
 
 
+## CPU戦は v5.0 の対局画面へ直行する。デッキ選択画面(BattleDeckPickerScreen)は
+## v1.0の5枚デッキ用で、20枚デッキには対応していないため挟まない。
+## v5.0のデッキ編集ができた時点で、選択画面もそちらへ差し替える。
 func _on_cpu_match_deck_requested() -> void:
-	_open_battle_deck_picker(BattlePurpose.CPU_MATCH)
+	_start_cpu_match()
 
 
 func _open_battle_deck_picker(purpose: BattlePurpose) -> void:
@@ -269,7 +274,7 @@ func _show_only(screen: Control) -> void:
 
 ## 画面ごとのBGM。対局だけ専用曲、タイトルだけ専用曲、それ以外はホーム曲。
 func _track_for(screen: Control) -> MusicPlayer.Track:
-	if screen == match_screen:
+	if screen == match_screen or screen == card_match_screen:
 		return MusicPlayer.Track.MATCH
 	if screen == title_screen:
 		return MusicPlayer.Track.TITLE

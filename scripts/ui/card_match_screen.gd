@@ -185,6 +185,11 @@ func _make_button(label: String, button_size: Vector2) -> Button:
 		var style: StyleBox = load(BUTTON_STYLES % name)
 		if style != null:
 			button.add_theme_stylebox_override(name, style)
+	# 文字色はプロジェクト共通テーマに任せず明示する。真鍮のボタン画像の上では
+	# テーマ既定の暗い文字色が沈んで読めなくなる。
+	button.add_theme_color_override("font_color", UiPalette.TEXT_OFFWHITE)
+	button.add_theme_color_override("font_hover_color", Color(1, 1, 1, 1))
+	button.add_theme_color_override("font_pressed_color", UiPalette.BRASS_HIGHLIGHT)
 	add_child(button)
 	return button
 
