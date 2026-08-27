@@ -33,6 +33,8 @@ var enabled := true
 var selected := false
 ## このターンに行動を終えている(彩度を落とす)。
 var exhausted := false
+## 右上へ出す小さな添え字(デッキ編集の「2/2」など)。空なら出さない。
+var badge := ""
 
 var _font: Font
 var _hovering := false
@@ -121,8 +123,26 @@ func _draw() -> void:
 		draw_rect(rect.grow(-4), Color(0.6, 0.85, 1.0, 0.13))
 	_draw_labels(rect, tint)
 	_draw_stats(rect)
+	if not badge.is_empty():
+		_draw_badge(rect)
 	if _hovering and enabled:
 		draw_rect(rect, Color(1, 1, 1, 0.06))
+
+
+func _draw_badge(rect: Rect2) -> void:
+	var width := _font.get_string_size(badge, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x + 12.0
+	var chip := Rect2(rect.size.x - width - 4, 4, width, 22)
+	draw_rect(chip, Color(0.08, 0.07, 0.06, 0.92))
+	draw_rect(chip, UiPalette.BRASS_HIGHLIGHT, false, 1.0)
+	draw_string(
+		_font,
+		chip.position + Vector2(6, 17),
+		badge,
+		HORIZONTAL_ALIGNMENT_LEFT,
+		-1,
+		15,
+		UiPalette.BRASS_HIGHLIGHT
+	)
 
 
 func _draw_empty() -> void:

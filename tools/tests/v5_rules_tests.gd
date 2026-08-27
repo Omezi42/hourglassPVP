@@ -29,6 +29,7 @@ func run(assert_true: Callable) -> void:
 	_test_match_action_round_trip()
 	_test_cpu_finishes_a_full_match()
 	_test_coin_gives_the_second_player_one_extra_mana()
+	_test_card_deck_save_round_trips()
 
 
 func _card(id: String) -> CardData:
@@ -348,3 +349,38 @@ func _test_coin_gives_the_second_player_one_extra_mana() -> void:
 		state.mana[MatchState.Side.B] == before + MatchState.COIN_MANA, "the coin should add mana"
 	)
 	_assert.call(not state.use_coin(MatchState.Side.B), "the coin should only work once")
+
+
+## デッキの保存と読み込み。実データを壊さないよう、必ずバックアップ→上書き→復元で往復する。
+func _test_card_deck_save_round_trips() -> void:
+	var backup := ""
+	var had_file := FileAccess.file_exists(CardDeckSave.SAVE_PATH)
+	if had_file:
+		backup = FileAccess.open(CardDeckSave.SAVE_PATH, FileAccess.READ).get_as_text()
+
+	var default_deck := CardDeckSave.default_deck()
+	_assert.call(
+		default_deck.size() == MatchState.DECK_SIZE,
+		"the default deck should hold exactly %d cards" % MatchState.DECK_SIZE
+	)
+	for card in default_deck:
+		var copies := 0
+		for entry in default_deck:
+			if entry == card:
+				copies += 1
+		_assert.call(copies <= CardDeckSave.COPY_LIMIT, "the default deck must obey the copy limit")
+
+	var deck: Array = []
+	for i in MatchState.DECK_SIZE:
+		deck.append(CardLibrary.all_cards()[i % 10])
+	CardDeckSave.save_deck(deck)
+	var loaded := CardDeckSave.load_deck()
+	_assert.call(
+		CardLibrary.ids_from_deck(loaded) == CardLibrary.ids_from_deck(deck),
+		"a saved deck should load back unchanged"
+	)
+
+	if had_file:
+		FileAccess.open(CardDeckSave.SAVE_PATH, FileAccess.WRITE).store_string(backup)
+	else:
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(CardDeckSave.SAVE_PATH))

@@ -10,6 +10,8 @@ const SCREEN_FADE_DURATION := 0.18
 
 ## v5.0の対局画面(子がすべてコード描画のControlで .tscn を持たないため _ready() で生成する)。
 var card_match_screen: CardMatchScreen
+## v5.0のデッキ編集画面(同上)。
+var card_deck_editor_screen: CardDeckEditorScreen
 
 var _match_return_screen: Control
 var _pending_battle_purpose: BattlePurpose = BattlePurpose.RANDOM_MATCH
@@ -57,6 +59,12 @@ func _ready() -> void:
 	add_child(card_match_screen)
 	card_match_screen.back_pressed.connect(_on_match_back)
 	_screens.append(card_match_screen)
+	card_deck_editor_screen = CardDeckEditorScreen.new()
+	card_deck_editor_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
+	card_deck_editor_screen.visible = false
+	add_child(card_deck_editor_screen)
+	card_deck_editor_screen.back_pressed.connect(func() -> void: _show_only(home_screen))
+	_screens.append(card_deck_editor_screen)
 	_transition_blocker = _make_transition_blocker()
 	add_child(_transition_blocker)
 	_sand_transition = SandTransition.new()
@@ -200,7 +208,14 @@ func _on_battle_deck_confirmed() -> void:
 			_start_cpu_match()
 
 
+## v5.0はデッキを1つだけ持つため、デッキ一覧(v1.0の複数デッキ管理)を挟まず
+## 編集画面へ直行する。複数デッキを持たせるときに一覧を作り直す。
 func _on_deck_list_requested() -> void:
+	card_deck_editor_screen.open()
+	_show_only(card_deck_editor_screen)
+
+
+func _on_deck_list_requested_v1() -> void:
 	deck_list_screen.refresh()
 	_show_only(deck_list_screen)
 
