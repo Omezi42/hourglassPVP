@@ -64,6 +64,7 @@ var _log: CardMatchLog
 var _result: CardMatchResult
 var _pile: CardPileViewer
 var _log_button: Button
+var _flip_beam: CardFlipBeam
 var _surrender_button: Button
 
 
@@ -337,6 +338,7 @@ func _begin_state(deck_a: Array, deck_b: Array, seed_value: int) -> void:
 	# (GameDesign.md 9章)。取り違えるとルールを誤解するため。
 	state.unit_damaged.connect(_on_unit_damaged)
 	state.unit_ticked.connect(_on_unit_ticked)
+	state.unit_flipped.connect(_on_unit_flipped)
 	_log.set_perspective(my_side)
 	state.start_match(deck_a, deck_b, MatchState.Side.A, seed_value)
 	_log.watch(state)
@@ -387,6 +389,9 @@ func _build() -> void:
 	# ログと結果パネルは最後に足して盤面より手前へ重ねる。
 	# **ログは結果パネルより後に足す**(GameDesign.md 9章)。終局後は結果パネルが盤面全体を
 	# 塞ぐため、その上からログを開けないと読み返せない。
+	# 光の筋は盤面の駒より手前、ログ・結果パネルより背面に置く。
+	_flip_beam = CardFlipBeam.new()
+	add_child(_flip_beam)
 	_result = CardMatchResult.new()
 	_result.home_pressed.connect(func() -> void: back_pressed.emit())
 	_result.log_pressed.connect(func() -> void: _log.set_open(true))
@@ -711,6 +716,21 @@ func _on_unit_damaged(side: int, slot: int, amount: int) -> void:
 
 func _on_unit_ticked(side: int, slot: int) -> void:
 	_view_at(side, slot).play_drop()
+
+
+## 反転した。行った側の情報帯から対象の駒へ光の筋を伸ばし、届いた瞬間に駒を裏返す。
+## 自分の駒しか反転できないため、筋の向き(上から / 下から)がそのまま
+## 「どちらのプレイヤーが手を出したのか」を示す。
+func _on_unit_flipped(side: int, slot: int) -> void:
+	var view := _view_at(side, slot)
+	var bar_y: float = OWN_BAR_TOP if side == my_side else FOE_BAR_TOP
+	var from := Vector2(size.x * 0.5, bar_y + PlayerInfoBar.BAR_HEIGHT * 0.5)
+	var to := (
+		view.position
+		+ Vector2(view.size.x * 0.5, CardView.PEDESTAL_CENTER_Y - CardView.BOARD_ART_SIDE * 0.5)
+	)
+	await _flip_beam.play(from, to)
+	view.play_flip()
 
 
 func _on_turn_started(side: int) -> void:

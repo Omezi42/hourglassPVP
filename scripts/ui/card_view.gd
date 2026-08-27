@@ -52,6 +52,13 @@ const PEDESTAL_GUARD_RING_WIDTH := 4.5
 const BOARD_ART_SIDE := 112.0
 ## 出したターンの砂時計は僅かに沈んで見せる(GameDesign.md 9章)。
 const SUMMONED_SINK := 3.0
+## 反転の演出(GameDesign.md 9章)。**反転はゲームの中心となる行動であるため、
+## 演出は他より作り込む。**場のカードが枠を持たない物体になったことで、
+## 砂時計そのものを持ち上げて裏返す動きが素直に描ける。
+const FLIP_DURATION := 0.5
+const FLIP_LIFT := 28.0
+## 着地の衝撃波を出し始める進捗。
+const FLIP_LAND_AT := 0.82
 
 ## 手札のカード。
 const HAND_CORNER := 10.0
@@ -77,6 +84,9 @@ var _effect: int = Effect.NONE
 var _effect_progress := 0.0
 var _effect_amount := 0
 var _effect_tween: Tween
+## 反転の進捗(0.0〜1.0)。負のときは反転していない。
+var _flip_progress := -1.0
+var _flip_tween: Tween
 
 
 func _ready() -> void:
@@ -114,6 +124,26 @@ func show_card(p_card: CardData, p_enabled: bool) -> void:
 func play_shatter(amount: int) -> void:
 	_effect_amount = amount
 	_start_effect(Effect.SHATTER, SHATTER_DURATION)
+
+
+## 反転した:持ち上がって裏返り、着地する。
+func play_flip() -> void:
+	if _flip_tween != null and _flip_tween.is_valid():
+		_flip_tween.kill()
+	_flip_progress = 0.0
+	_flip_tween = create_tween()
+	_flip_tween.tween_method(_set_flip_progress, 0.0, 1.0, FLIP_DURATION)
+	_flip_tween.finished.connect(_on_flip_finished)
+
+
+func _set_flip_progress(value: float) -> void:
+	_flip_progress = value
+	queue_redraw()
+
+
+func _on_flip_finished() -> void:
+	_flip_progress = -1.0
+	queue_redraw()
 
 
 ## ターン終了の1粒:砂が下の部屋へ流れる。
@@ -250,12 +280,45 @@ func _draw_board_art(tint: Color, sink: float) -> void:
 		return
 	var pos := Vector2((size.x - BOARD_ART_SIDE) * 0.5, PEDESTAL_CENTER_Y + 4.0 - BOARD_ART_SIDE)
 	var rect := Rect2(pos + Vector2(0, sink), Vector2(BOARD_ART_SIDE, BOARD_ART_SIDE))
-	draw_texture_rect(texture, rect, false, tint)
+	if _flip_progress >= 0.0:
+		_draw_flipping_art(texture, rect, tint)
+	else:
+		draw_texture_rect(texture, rect, false, tint)
 	# 硝子は枠ではなくガラスそのものへ膜を掛ける(GameDesign.md 9章)。
 	if unit != null and unit.glass_intact:
 		UiPaint.fill_ellipse(
 			get_canvas_item(), rect.get_center(), rect.size * 0.42, Color(0.6, 0.85, 1.0, 0.16), 28
 		)
+
+
+## 反転中の絵。持ち上げながら縦に潰していき、真横を向いた瞬間(進捗0.5)に
+## 厚みだけの線になり、そこから裏返って戻る。同時にガラスと砂の反射を重ねる。
+func _draw_flipping_art(texture: Texture2D, rect: Rect2, tint: Color) -> void:
+	var turn := absf(cos(PI * _flip_progress))
+	var lift := sin(PI * _flip_progress) * FLIP_LIFT
+	var center := rect.get_center() - Vector2(0.0, lift)
+	var half := Vector2(rect.size.x * 0.5, rect.size.y * 0.5 * maxf(turn, 0.02))
+	draw_texture_rect(texture, Rect2(center - half, half * 2.0), false, tint)
+	var sheen := sin(PI * _flip_progress)
+	UiPaint.fill_ellipse(
+		get_canvas_item(), center, half * 0.9, Color(1.0, 0.94, 0.78, 0.3 * sheen), 28
+	)
+	if _flip_progress >= FLIP_LAND_AT:
+		_draw_flip_landing()
+
+
+## 着地の衝撃波。台座と同じ扁平な楕円を外へ広げる。
+func _draw_flip_landing() -> void:
+	var ratio := (_flip_progress - FLIP_LAND_AT) / (1.0 - FLIP_LAND_AT)
+	var radius := PEDESTAL_RADIUS * (1.0 + 0.5 * ratio)
+	UiPaint.draw_ellipse_ring(
+		get_canvas_item(),
+		Vector2(size.x * 0.5, PEDESTAL_CENTER_Y),
+		radius,
+		Color(UiPalette.PEDESTAL_DEFAULT_ACCENT, 0.7 * (1.0 - ratio)),
+		3.0,
+		40
+	)
 
 
 ## 攻撃力=左下 / 体力=右下。台座の高さに合わせて左右へ振り分ける。
