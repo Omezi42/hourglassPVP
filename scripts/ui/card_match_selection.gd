@@ -3,7 +3,15 @@ extends RefCounted
 ## 対局画面でいま何を選んでいるか。手札の1枚か、自分の場の1枠のどちらかしか選べない。
 ## 選択の状態を1箇所へまとめ、CardMatchScreen 側の分岐を減らすために切り出している。
 
-enum Kind { NONE, HAND, BOARD }
+enum Kind {
+	NONE,
+	## 手札の1枚を選んでいる。
+	HAND,
+	## 自分の場の1枠を選んでいる。
+	BOARD,
+	## 設置効果の対象を選んでいる途中。出す枠までは決まっている。
+	TARGETING,
+}
 
 var kind: int = Kind.NONE
 var hand_index := -1
@@ -26,6 +34,17 @@ func select_board(p_slot: int) -> void:
 	kind = Kind.BOARD
 	slot = p_slot
 	hand_index = -1
+
+
+## 設置効果の対象選択へ入る。出すカードと置く枠は決まっている。
+func await_target(index: int, p_slot: int) -> void:
+	kind = Kind.TARGETING
+	hand_index = index
+	slot = p_slot
+
+
+func is_targeting() -> bool:
+	return kind == Kind.TARGETING
 
 
 func is_hand_selection() -> bool:

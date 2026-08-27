@@ -38,6 +38,10 @@ var _end_turn_button: Button
 var _selection := CardMatchSelection.new()
 var _cpu: CardCpuStrategy = null
 var _cpu_timer: Timer
+var _log: CardMatchLog
+var _result: CardMatchResult
+var _log_button: Button
+var _surrender_button: Button
 
 
 func _ready() -> void:
@@ -50,6 +54,35 @@ func _draw() -> void:
 	draw_line(
 		Vector2(120, y), Vector2(size.x - 120, y), UiPalette.GLOW_AMBER * Color(1, 1, 1, 0.25), 2.0
 	)
+	if _selection != null and _selection.is_targeting():
+		_draw_target_prompt()
+
+
+## 対象選択中であることを、行動ボタンの列(盤面と重ならない場所)へ出す。
+## 盤面の上へ重ねると、選ばせたい相手のカードそのものを隠してしまう。
+func _draw_target_prompt() -> void:
+	var font := get_theme_default_font()
+	var rect := Rect2(ACTION_COLUMN_X, 270, 168, 52)
+	draw_rect(rect, Color(0.08, 0.12, 0.14, 0.95))
+	draw_rect(rect, CardView.SELECT_CYAN, false, 2.0)
+	draw_string(
+		font,
+		rect.position + Vector2(12, 24),
+		"対象を選ぶ",
+		HORIZONTAL_ALIGNMENT_LEFT,
+		-1,
+		20,
+		CardView.SELECT_CYAN
+	)
+	draw_string(
+		font,
+		rect.position + Vector2(12, 44),
+		"他を押すと取消",
+		HORIZONTAL_ALIGNMENT_LEFT,
+		-1,
+		14,
+		UiPalette.TEXT_OFFWHITE
+	)
 
 
 ## CPU戦を開始する。deck_self / deck_foe は CardData の配列(20枚)。
@@ -60,7 +93,9 @@ func start_cpu_match(deck_self: Array, deck_foe: Array) -> void:
 	add_child(state)
 	state.turn_started.connect(_on_turn_started)
 	state.match_ended.connect(_on_match_ended)
+	_log.set_perspective(my_side)
 	state.start_match(deck_self, deck_foe, MatchState.Side.A)
+	_log.watch(state)
 	refresh()
 
 
@@ -90,10 +125,25 @@ func _build() -> void:
 	_end_turn_button = _make_button("ターン終了", Vector2(168, 64))
 	_end_turn_button.position = Vector2(ACTION_COLUMN_X, OWN_BAR_TOP)
 	_end_turn_button.pressed.connect(_on_end_turn_pressed)
+	_log_button = _make_button("ログ", Vector2(168, 44))
+	_log_button.position = Vector2(ACTION_COLUMN_X, 512)
+	_log_button.pressed.connect(func() -> void: _log.set_open(true))
+	_surrender_button = _make_button("投了", Vector2(168, 44))
+	_surrender_button.position = Vector2(ACTION_COLUMN_X, 564)
+	_surrender_button.pressed.connect(_on_surrender_pressed)
 	_cpu_timer = Timer.new()
 	_cpu_timer.one_shot = true
 	_cpu_timer.timeout.connect(_take_cpu_action)
 	add_child(_cpu_timer)
+	# ログと結果パネルは最後に足して盤面より手前へ重ねる。
+	# **ログは結果パネルより後に足す**(GameDesign.md 9章)。終局後は結果パネルが盤面全体を
+	# 塞ぐため、その上からログを開けないと読み返せない。
+	_result = CardMatchResult.new()
+	_result.home_pressed.connect(func() -> void: back_pressed.emit())
+	_result.log_pressed.connect(func() -> void: _log.set_open(true))
+	add_child(_result)
+	_log = CardMatchLog.new()
+	add_child(_log)
 
 
 func _make_bar(opponent: bool, top: float) -> PlayerInfoBar:
@@ -153,6 +203,7 @@ func refresh() -> void:
 	_refresh_hand()
 	_refresh_targets()
 	_refresh_buttons()
+	queue_redraw()
 
 
 func _refresh_row(views: Array[CardView], side: int) -> void:
@@ -185,6 +236,10 @@ func _refresh_hand() -> void:
 func _refresh_targets() -> void:
 	var foe := MatchState.other_side(my_side)
 	_foe_bar.targetable = false
+	if _selection.is_targeting():
+		for slot in MatchState.BOARD_SIZE:
+			_foe_slots[slot].selected = state.board[foe][slot] != null
+		return
 	if _selection.is_hand_selection():
 		for i in MatchState.BOARD_SIZE:
 			_own_slots[i].selected = true
@@ -201,7 +256,10 @@ func _refresh_targets() -> void:
 
 
 func _refresh_buttons() -> void:
+	var over: bool = state.is_match_over()
 	_end_turn_button.disabled = not _my_turn()
+	_log_button.visible = true
+	_surrender_button.visible = not over
 	_coin_button.visible = state.coin_available.get(my_side, false)
 	_coin_button.disabled = not _my_turn()
 	var show_flip := (
@@ -233,6 +291,10 @@ func _on_own_slot_pressed(view: CardView) -> void:
 	var slot := _own_slots.find(view)
 	if slot < 0:
 		return
+	if _selection.is_targeting():
+		_selection.clear()
+		refresh()
+		return
 	if _selection.is_hand_selection():
 		_play_selected(slot)
 		return
@@ -244,10 +306,22 @@ func _on_own_slot_pressed(view: CardView) -> void:
 
 
 func _on_foe_slot_pressed(view: CardView) -> void:
-	if not _my_turn() or not _selection.is_board_selection():
+	if not _my_turn():
 		return
 	var slot := _foe_slots.find(view)
-	if slot < 0 or not state.can_attack(my_side, _selection.slot, slot):
+	if slot < 0:
+		return
+	if _selection.is_targeting():
+		if state.board[MatchState.other_side(my_side)][slot] == null:
+			return
+		var target := {"side": MatchState.other_side(my_side), "slot": slot}
+		state.play_card(my_side, _selection.hand_index, _selection.slot, target)
+		_selection.clear()
+		refresh()
+		return
+	if not _selection.is_board_selection():
+		return
+	if not state.can_attack(my_side, _selection.slot, slot):
 		return
 	state.attack(my_side, _selection.slot, slot)
 	_selection.clear()
@@ -267,15 +341,22 @@ func _on_face_pressed() -> void:
 func _play_selected(slot: int) -> void:
 	var index := _selection.hand_index
 	var card: CardData = state.hand[my_side][index]
-	state.play_card(my_side, index, slot, _auto_target(card))
+	# 相手1体を対象に取る設置効果は、出す前に対象を選ばせる(GameDesign.md 9章)。
+	# 相手の場が空なら選ばせる意味がないため、そのまま出す。
+	if _needs_target(card) and not state.units(MatchState.other_side(my_side)).is_empty():
+		_selection.await_target(index, slot)
+		refresh()
+		return
+	state.play_card(my_side, index, slot)
 	_selection.clear()
 	refresh()
 
 
-## 相手1体を対象に取る設置効果の対象。まだ対象選択のUIを持たないため、
-## 生涯ダメージが最大の1体を選ぶ CardEffectResolver の既定にそのまま任せる。
-func _auto_target(_card: CardData) -> Dictionary:
-	return {}
+static func _needs_target(card: CardData) -> bool:
+	for effect in card.effects_for(CardEnums.Trigger.ON_PLAY):
+		if effect.target == CardEnums.EffectTarget.ENEMY_UNIT:
+			return true
+	return false
 
 
 func _on_flip_pressed() -> void:
@@ -295,6 +376,34 @@ func _on_end_turn_pressed() -> void:
 	if _my_turn():
 		_selection.clear()
 		state.end_turn()
+
+
+## 検証用に個々のビューを引く。
+func hand_view(index: int) -> CardView:
+	return _hand_views[index]
+
+
+func own_slot_view(slot: int) -> CardView:
+	return _own_slots[slot]
+
+
+func foe_slot_view(slot: int) -> CardView:
+	return _foe_slots[slot]
+
+
+## いま何を選んでいるか(検証用)。
+func selection_kind() -> int:
+	return _selection.kind
+
+
+## 対局ログ(検証・将来のリプレイ用に外から参照できるようにしておく)。
+func battle_log() -> CardMatchLog:
+	return _log
+
+
+func _on_surrender_pressed() -> void:
+	if state != null and not state.is_match_over():
+		state.surrender(my_side)
 
 
 # --- 手番・CPU ----------------------------------------------------------
@@ -322,3 +431,4 @@ func _take_cpu_action() -> void:
 func _on_match_ended(_winner: int) -> void:
 	_selection.clear()
 	refresh()
+	_result.show_for(state, my_side, state.turn_count)

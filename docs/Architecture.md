@@ -196,7 +196,9 @@ v1.0 の `MatchScreen` 一式とは別に、新しい対局画面を並走させ
 | `CardView`(`scripts/ui/card_view.gd`) | カード1枚の表示。盤面と手札の両方に使う。**コスト=左上 / 攻撃力=左下 / 体力=右下**(GameDesign.md 9章)。体力と攻撃力の比で3枚のイラストを切り替え、守護は枠を太く、硝子は薄い膜を重ねる |
 | `PlayerInfoBar`(`scripts/ui/player_info_bar.gd`) | 片方のプレイヤーの情報帯。HP・マナ(数字+ピップ)・山札・墓地・(相手のみ)手札の枚数・コインの有無 |
 | `CardMatchSelection`(`scripts/ui/card_match_selection.gd`) | いま選んでいるもの(手札の1枚 / 自分の場の1枠 / 未選択)。選択の状態を1箇所へ集めて画面側の分岐を減らす |
-| `CardMatchScreen`(`scripts/ui/card_match_screen.gd`) | 上記を並べ、`MatchState` と同期し、操作(出す/反転/攻撃/コイン/ターン終了)を受ける |
+| `CardMatchScreen`(`scripts/ui/card_match_screen.gd`) | 上記を並べ、`MatchState` と同期し、操作(出す/反転/攻撃/コイン/ターン終了/投了)を受ける |
+| `CardMatchLog`(`scripts/ui/card_match_log.gd`) | 対局ログ。`MatchState` のシグナルを購読して日本語の行を積み、中央のモーダルとして開く。**記録と表示を同じクラスに持たせている**のは、実況に出す文と読み返す文を必ず一致させるため |
+| `CardMatchResult`(`scripts/ui/card_match_result.gd`) | 結果パネル。勝敗・最終HP・総手数・決着の要因と「ログ」「ホームへ」 |
 
 **行動のボタン(反転・コイン・ターン終了)は画面右の列にまとめる。**当初は選択した駒の
 すぐ上へ「反転」を出していたが、自分の場の上は相手の場であり、**相手のカードへ重なって
@@ -205,6 +207,17 @@ v1.0 の `MatchScreen` 一式とは別に、新しい対局画面を並走させ
 
 **選択中の枠は水色、守護の枠は真鍮色**と系統を分ける。どちらも「枠を強調する」表現のため、
 同系色にすると取り違える。
+
+**総手数は `MatchState.turn_count` をそのまま使う。**UI側で「ターン終了を押した回数」を
+数えると、CPU同士で進めた場合や将来のリプレイ再生で0手になる(実際に検証中そうなった)。
+
+**ログは結果パネルより後に `add_child()` する。**終局後は結果パネルが盤面全体を塞ぐため、
+その上からログを開けないと読み返せない(GameDesign.md 9章)。
+
+**設置効果の対象選択**は `CardMatchSelection.TARGETING` として持つ。カードを出す枠まで
+決めた時点でいったん止め、相手のカードを押すと `play_card()` の `target` へ渡して確定する。
+相手の場が空のときは選ばせる意味がないためそのまま出す。案内は**行動ボタンの列へ出す**
+(盤面へ重ねると、選ばせたい相手のカードそのものを隠してしまう)。
 
 `CardMatchScreen.start_cpu_match()` が `MatchState` を生成し、CPUの手番は `Timer` で
 `CPU_THINK_SECONDS` の間合いを置いてから `CardCpuStrategy.choose_action()` を1手ずつ適用する
