@@ -172,7 +172,16 @@ func _build() -> void:
 	add_child(panel)
 
 	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 12)
 	panel.add_child(column)
+
+	# 見出しが無いと、暗幕の上に文だけが浮いていて何の一覧か分からない。
+	var title := Label.new()
+	title.text = "対局ログ"
+	title.add_theme_font_size_override("font_size", 24)
+	title.add_theme_color_override("font_color", UiPalette.GLOW_AMBER)
+	column.add_child(title)
+
 	_scroll = ScrollContainer.new()
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	column.add_child(_scroll)

@@ -6,7 +6,8 @@ extends Control
 signal picked(preset_id: String)
 
 const SCREEN_SIZE := Vector2(1280, 720)
-const PANEL_SIZE := Vector2(720, 440)
+## 幅だけ決め、高さは中身に合わせる。固定にすると下半分が空いて見える。
+const PANEL_WIDTH := 720.0
 const PANEL_STYLE := "res://resources/theme/content_panel.tres"
 const ROW_BUTTON_SIZE := Vector2(200, 64)
 const SUMMARY_WIDTH := 420.0
@@ -35,14 +36,18 @@ func _build() -> void:
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(dim)
 
+	var center := CenterContainer.new()
+	center.size = SCREEN_SIZE
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(center)
+
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = PANEL_SIZE
-	panel.size = PANEL_SIZE
-	panel.position = (SCREEN_SIZE - PANEL_SIZE) * 0.5
+	panel.custom_minimum_size = Vector2(PANEL_WIDTH, 0)
+	panel.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var style: StyleBox = load(PANEL_STYLE)
 	if style != null:
 		panel.add_theme_stylebox_override("panel", style)
-	add_child(panel)
+	center.add_child(panel)
 
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 18)

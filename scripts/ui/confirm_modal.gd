@@ -30,6 +30,7 @@ func open_notice(title: String, message: String, ok_text: String = "OK") -> void
 	detail_label.text = message
 	cancel_button.visible = false
 	_set_confirm_style(ok_text, DEFAULT_CONFIRM_COLOR)
+	_cover_viewport()
 	visible = true
 
 
@@ -46,7 +47,19 @@ func open_confirm(
 	cancel_button.visible = true
 	cancel_button.text = cancel_text
 	_set_confirm_style(confirm_text, DANGER_CONFIRM_COLOR if danger else DEFAULT_CONFIRM_COLOR)
+	_cover_viewport()
 	visible = true
+
+
+## 暗幕を**画面全体**へ広げる。このモーダルはホーム画面のタブ(高さ560px)の中に
+## 置かれることがあり、親のまま伸ばすと下部タブだけ暗幕が掛からず、そこだけ
+## 押せるように見える。親の位置を打ち消して画面と同じ矩形にする。
+func _cover_viewport() -> void:
+	var parent := get_parent() as Control
+	anchor_right = 0.0
+	anchor_bottom = 0.0
+	position = Vector2.ZERO if parent == null else -parent.global_position
+	size = get_viewport_rect().size
 
 
 func close() -> void:

@@ -10,9 +10,10 @@ extends Control
 signal finished
 
 const SCREEN_SIZE := Vector2(1280, 720)
-## 置き場所は**手札の右隣の空き**とする。画面上端へ横長に敷くと相手のHP・マナ・山札を
-## 覆ってしまい、攻撃や反転の判断に要る情報が誘導対局の間ずっと読めなくなる。
-const BAND_RECT := Rect2(868, 520, 404, 96)
+## 置き場所は**卓の上端へ横長に渡した帯**とする。相手のHP・マナ・山札を覆う位置
+## (画面の最上段)は避ける。攻撃や反転の判断に要る情報が誘導対局の間ずっと読めなくなるため。
+## 手札の右隣へ置いていた時期もあるが、手札を盤面の真下で中央へ揃えた際に重なった。
+const BAND_RECT := Rect2(250, 78, 780, 56)
 const CLOSE_SIZE := Vector2(88, 36)
 const CLOSE_MARGIN := 10.0
 const DONE_FLASH := 0.9
@@ -21,17 +22,17 @@ const DONE_FLASH := 0.9
 const STEPS: Array[Dictionary] = [
 	{
 		"event": "play",
-		"text": "手札のカードを空き枠へ出してみましょう(押すか、枠へドラッグします)",
+		"text": "手札のカードを空き枠へ出してみましょう(押すか、枠へドラッグ)",
 		"done": "出したターンは攻撃も反転もできません",
 	},
 	{
 		"event": "end_turn",
-		"text": "右下の「ターン終了」を押しましょう",
+		"text": "画面右の「ターン終了」を押しましょう",
 		"done": "ターン終了で砂が1粒落ちます(体力-1 / 攻撃力+1)",
 	},
 	{
 		"event": "attack",
-		"text": "攻撃力が付いたら、自分の駒を選んで相手を攻撃しましょう",
+		"text": "攻撃力が付いたら、自分の駒で相手を攻撃しましょう",
 		"done": "攻撃は相打ちです。自分も相手の攻撃力ぶん削れます",
 	},
 	{
@@ -123,19 +124,21 @@ func _build() -> void:
 	_label = Label.new()
 	_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_label.add_theme_font_size_override("font_size", 17)
+	_label.add_theme_font_size_override("font_size", 16)
 	_label.add_theme_color_override("font_color", UiPalette.TEXT_OFFWHITE)
 	_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_bottom", int(CLOSE_SIZE.y))
+	# 文が「閉じる」の下へ潜らないよう、ボタンぶんの余白を右へ空ける。
+	margin.add_theme_constant_override("margin_right", int(CLOSE_SIZE.x + CLOSE_MARGIN))
 	_panel.add_child(margin)
 	margin.add_child(_label)
 
 	# 途中でやめられる(GameDesign.md 18章)。閉じた後は通常のCPU戦として続く。
 	var close_button := CodedButton.make("閉じる", CLOSE_SIZE)
-	close_button.position = (
-		BAND_RECT.position + BAND_RECT.size - CLOSE_SIZE - Vector2(CLOSE_MARGIN, CLOSE_MARGIN)
+	close_button.position = Vector2(
+		BAND_RECT.position.x + BAND_RECT.size.x - CLOSE_SIZE.x - CLOSE_MARGIN,
+		BAND_RECT.position.y + (BAND_RECT.size.y - CLOSE_SIZE.y) * 0.5
 	)
 	close_button.pressed.connect(close)
 	add_child(close_button)

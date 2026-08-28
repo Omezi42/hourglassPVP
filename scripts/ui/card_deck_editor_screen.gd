@@ -71,23 +71,25 @@ func _build() -> void:
 	_detail.position = DETAIL_RECT.position
 	_detail.custom_minimum_size = DETAIL_RECT.size
 	_detail.size = DETAIL_RECT.size
-	# 語を押すとその意味を引ける(GameDesign.md 17章)。全画面へ暗幕を敷くため、
-	# 詳細パネルではなく画面側が持つ。
-	_keyword_popup = KeywordPopup.new()
-	add_child(_keyword_popup)
 	_detail.keyword_pressed.connect(func(entry: Dictionary) -> void: _keyword_popup.open(entry))
 	_curve = CardManaCurve.new()
 	_curve.compact = true
 	_curve.position = CURVE_RECT.position
 	_curve.size = CURVE_RECT.size
 	add_child(_curve)
+	_build_card_row()
+	# **モーダルは最後に足す。**`Control` は後から足した子ほど手前に描かれるため、
+	# 先に足すと下部のカード一覧が暗幕とパネルの上に出てしまう(実際にそうなっていた)。
+	# 語を押すとその意味を引ける(GameDesign.md 17章)。全画面へ暗幕を敷くため、
+	# 詳細パネルではなく画面側が持つ。
+	_keyword_popup = KeywordPopup.new()
+	add_child(_keyword_popup)
 	_preset_picker = CardPresetPicker.new()
 	_preset_picker.picked.connect(_on_preset_picked)
 	add_child(_preset_picker)
 	_code_panel = CardDeckCodePanel.new()
 	_code_panel.loaded.connect(_on_code_loaded)
 	add_child(_code_panel)
-	_build_card_row()
 	var cards := CardLibrary.all_cards()
 	if not cards.is_empty():
 		_detail.show_card(cards[0])

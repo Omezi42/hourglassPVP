@@ -6,11 +6,17 @@ extends Control
 const SCREEN_SIZE := Vector2(1280, 720)
 
 const PANEL_STYLE := "res://resources/theme/content_panel.tres"
-const PANEL_SIZE := Vector2(880, 520)
+## パネルは幅だけ決め、高さは中身(何行並ぶか)に合わせて伸ばす。固定にすると
+## 数枚しか無いときに中身が上へ寄り、下半分がまるごと空いて見える。
+const PANEL_WIDTH := 880.0
+## 一覧が伸びる上限。これを超えたらスクロールする。
+const MAX_ROWS := 3
 const COLUMNS := 6
+const ROW_GAP := 10.0
 
 var _title: Label
 var _grid: GridContainer
+var _scroll: ScrollContainer
 var _empty: Label
 
 
@@ -47,6 +53,10 @@ func open_pile(title: String, cards: Array) -> void:
 		_grid.add_child(view)
 		view.show_card(card, true)
 	_empty.visible = cards.is_empty()
+	_scroll.visible = not cards.is_empty()
+	var rows: int = ceili(float(order.size()) / float(COLUMNS))
+	var row_height: float = CardView.HAND_SIZE_PX.y + ROW_GAP
+	_scroll.custom_minimum_size = Vector2(0, mini(maxi(rows, 1), MAX_ROWS) * row_height)
 	visible = true
 
 
@@ -58,14 +68,19 @@ func _build() -> void:
 	dim.gui_input.connect(_on_dim_input)
 	add_child(dim)
 
+	# 中身の高さで伸び縮みさせつつ画面の中央に置くため、CenterContainer へ入れる。
+	var center := CenterContainer.new()
+	center.size = SCREEN_SIZE
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(center)
+
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = PANEL_SIZE
-	panel.size = PANEL_SIZE
-	panel.position = (Vector2(1280, 720) - PANEL_SIZE) * 0.5
+	panel.custom_minimum_size = Vector2(PANEL_WIDTH, 0)
+	panel.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var style: StyleBox = load(PANEL_STYLE)
 	if style != null:
 		panel.add_theme_stylebox_override("panel", style)
-	add_child(panel)
+	center.add_child(panel)
 
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 12)
@@ -76,15 +91,14 @@ func _build() -> void:
 	_empty = Label.new()
 	_empty.text = "まだ何も落ちていません。"
 	column.add_child(_empty)
-	var scroll := ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	column.add_child(scroll)
+	_scroll = ScrollContainer.new()
+	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	column.add_child(_scroll)
 	_grid = GridContainer.new()
 	_grid.columns = COLUMNS
-	_grid.add_theme_constant_override("h_separation", 10)
-	_grid.add_theme_constant_override("v_separation", 10)
-	scroll.add_child(_grid)
+	_grid.add_theme_constant_override("h_separation", int(ROW_GAP))
+	_grid.add_theme_constant_override("v_separation", int(ROW_GAP))
+	_scroll.add_child(_grid)
 	# VBoxContainer は子を横いっぱいに広げるため、明示的に中央へ縮める。
 	var close := CodedButton.make("閉じる", Vector2(160, 48))
 	close.size_flags_horizontal = Control.SIZE_SHRINK_CENTER

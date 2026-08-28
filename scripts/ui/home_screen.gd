@@ -68,6 +68,10 @@ func _ready() -> void:
 		func() -> void: random_match_deck_requested.emit()
 	)
 	battle_tab.create_room_deck_requested.connect(func() -> void: create_room_deck_requested.emit())
+	# 通知のモーダルは画面全体を覆う必要があるため、タブ(高さ560px)の中から出して
+	# ホーム画面の最後の子にする。タブの中にあると、アカウント帯と下部タブにだけ
+	# 暗幕が掛からず、その2つだけ押せるように見える。
+	deck_tab.shop_notice.reparent(self)
 	_build_rules_tab()
 	deck_nav_button.pressed.connect(_select_tab.bind(TAB_DECK))
 	battle_nav_button.pressed.connect(_select_tab.bind(TAB_BATTLE))
