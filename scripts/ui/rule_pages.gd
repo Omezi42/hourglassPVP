@@ -24,13 +24,14 @@ const CHAPTERS: Array = [
 				"heading": "上の砂が体力、下の砂が攻撃力",
 				"body":
 				"砂時計の上の部屋に残っている砂が体力、下へ落ちた砂が攻撃力です。合計は総量と呼び、カードごとに決まっています。出したばかりの砂時計は砂がすべて上にあるため、攻撃力0でまだ何もできません。",
-				"stage": {"kind": STAGE_SINGLE, "cards": [{"id": "sand", "health": 5, "attack": 0}]},
+				"stage":
+				{"kind": STAGE_SINGLE, "cards": [{"id": "sand", "health": 5, "attack": 0}]},
 			},
 			{
 				"heading": "数字は左下が攻撃力、右下が体力",
-				"body":
-				"砂が落ちるほど攻撃力が上がり、体力が減ります。イラストも砂の量に合わせて3段階で変わるので、数字を読まなくてもいまの状態が分かります。",
-				"stage": {"kind": STAGE_SINGLE, "cards": [{"id": "sand", "health": 2, "attack": 3}]},
+				"body": "砂が落ちるほど攻撃力が上がり、体力が減ります。イラストも砂の量に合わせて3段階で変わるので、数字を読まなくてもいまの状態が分かります。",
+				"stage":
+				{"kind": STAGE_SINGLE, "cards": [{"id": "sand", "health": 2, "attack": 3}]},
 			},
 		],
 	},
@@ -64,8 +65,7 @@ const CHAPTERS: Array = [
 		[
 			{
 				"heading": "マナを払って、場の6枠へ出す",
-				"body":
-				"マナは自分のターン開始時に最大値+1で全回復します(上限10)。カード左上の数字がコスト、右下が総量です。出したターンは反転も攻撃もできません。",
+				"body": "マナは自分のターン開始時に最大値+1で全回復します(上限10)。カード左上の数字がコスト、右下が総量です。出したターンは反転も攻撃もできません。",
 				"stage": {"kind": STAGE_PLAY, "cards": [{"id": "drill"}]},
 			}
 		],
@@ -84,7 +84,7 @@ const CHAPTERS: Array = [
 					"cards":
 					[
 						{"id": "sand", "health": 3, "attack": 2, "caption": "自分"},
-						{"id": "lock", "health": 5, "attack": 3, "caption": "相手"},
+						{"id": "lock", "health": 6, "attack": 2, "caption": "相手"},
 					],
 				},
 			},
@@ -126,8 +126,7 @@ const CHAPTERS: Array = [
 		[
 			{
 				"heading": "6枠の盤面と、30から始まるHP",
-				"body":
-				"デッキは20枚(同名2枚まで)。場は各プレイヤー6枠で、相手のHPを先に0にすれば勝ちです。情報帯にはHP・マナ・山札・墓地の枚数が並びます。",
+				"body": "デッキは20枚(同名2枚まで)。場は各プレイヤー6枠で、相手のHPを先に0にすれば勝ちです。情報帯にはHP・マナ・山札・墓地の枚数が並びます。",
 				"stage": {"kind": STAGE_BOARD, "cards": []},
 			},
 			{

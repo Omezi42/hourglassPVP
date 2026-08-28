@@ -6,6 +6,7 @@ const SCREEN_FADE_DURATION := 0.18
 
 ## v5.0の対局画面(子がすべてコード描画のControlで .tscn を持たないため _ready() で生成する)。
 var card_match_screen: CardMatchScreen
+var rule_screen: RuleScreen
 ## v5.0のデッキ編集画面(同上)。
 var card_deck_editor_screen: CardDeckEditorScreen
 ## v5.0のカード一覧画面(同上)。
@@ -58,6 +59,12 @@ func _ready() -> void:
 	add_child(card_list_screen)
 	card_list_screen.back_pressed.connect(func() -> void: _show_only(home_screen))
 	_screens.append(card_list_screen)
+	rule_screen = RuleScreen.new()
+	rule_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
+	rule_screen.visible = false
+	add_child(rule_screen)
+	rule_screen.back_pressed.connect(func() -> void: _show_only(home_screen))
+	_screens.append(rule_screen)
 	_transition_blocker = _make_transition_blocker()
 	add_child(_transition_blocker)
 	_sand_transition = SandTransition.new()
@@ -75,6 +82,7 @@ func _ready() -> void:
 	home_screen.online_match_found.connect(_on_online_match_found)
 	home_screen.deck_list_requested.connect(_on_deck_list_requested)
 	home_screen.hourglass_list_requested.connect(_on_hourglass_list_requested)
+	home_screen.rules_requested.connect(_on_rules_requested)
 	home_screen.replay_list_requested.connect(_on_replay_list_requested)
 	home_screen.spectate_requested.connect(_on_spectate_requested)
 	home_screen.cpu_match_requested.connect(_on_cpu_match_deck_requested)
@@ -187,6 +195,12 @@ func _on_deck_list_requested() -> void:
 ## 砂時計一覧はカード一覧(CardListScreen)。
 func _on_hourglass_list_requested() -> void:
 	_show_only(card_list_screen)
+
+
+## ルール(遊び方)。進捗は保存せず、開くたび先頭のページから始める。
+func _on_rules_requested() -> void:
+	rule_screen.restart()
+	_show_only(rule_screen)
 
 
 ## オンライン対戦(v5.0)。配置フェーズが無いため、デッキと山札の種を交換したら
