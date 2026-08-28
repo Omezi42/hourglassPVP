@@ -76,22 +76,14 @@ func _choose_play(state: MatchState, side: int) -> Dictionary:
 	return best
 
 
-## そのカードをどの枠へ置くのが最も得かを返す。空き枠が無い場合は、
-## 最も弱い自分の砂時計を上書きする価値を測る(上書きは元のカードを失う)。
+## そのカードをどの枠へ置くのが最も得かを返す。空き枠が無ければ出せない
+## (上書き設置は廃止したため、value を 0 にして選ばれないようにする)。
 func _best_slot(state: MatchState, side: int, card: CardData) -> Dictionary:
 	var gain := _card_value(state, side, card) + DEVELOP_BONUS
 	var empty: Array = state.empty_slots(side)
-	if not empty.is_empty():
-		return {"slot": empty[0], "value": gain}
-	var worst := -1
-	var worst_value := 0.0
-	for slot in MatchState.BOARD_SIZE:
-		var unit: CardInstance = state.board[side][slot]
-		var value := float(unit.lifetime_damage())
-		if worst < 0 or value < worst_value:
-			worst = slot
-			worst_value = value
-	return {"slot": worst, "value": gain - worst_value}
+	if empty.is_empty():
+		return {"slot": -1, "value": 0.0}
+	return {"slot": empty[0], "value": gain}
 
 
 ## カードを出したときに見込める価値。総量を体力とみなした生涯ダメージに、

@@ -14,7 +14,7 @@ func run(assert_true: Callable) -> void:
 	_test_damage_removes_sand_from_total()
 	_test_opening_hands_and_first_turn_draw()
 	_test_play_card_spends_mana_and_fills_slot()
-	_test_play_card_overwrites_and_sends_to_graveyard()
+	_test_play_card_cannot_overwrite_an_occupied_slot()
 	_test_summoning_sickness_and_quick()
 	_test_combat_is_mutual_and_kills_both()
 	_test_guard_forces_targeting()
@@ -134,15 +134,26 @@ func _test_play_card_spends_mana_and_fills_slot() -> void:
 	)
 
 
-func _test_play_card_overwrites_and_sends_to_graveyard() -> void:
+func _test_play_card_cannot_overwrite_an_occupied_slot() -> void:
 	var state := _new_match()
 	_force_play(state, MatchState.Side.A, "sand", 0)
-	_force_play(state, MatchState.Side.A, "wall", 0)
-	var unit: CardInstance = state.board[MatchState.Side.A][0]
-	_assert.call(unit.data.id == "wall", "the new card should occupy the slot")
+	state.hand[MatchState.Side.A] = [_card("wall")]
+	state.mana[MatchState.Side.A] = MatchState.MAX_MANA
 	_assert.call(
-		state.graveyard[MatchState.Side.A].size() == 1,
-		"the overwritten card should go to the graveyard"
+		not state.play_card(MatchState.Side.A, 0, 0), "playing onto an occupied slot should fail"
+	)
+	var unit: CardInstance = state.board[MatchState.Side.A][0]
+	_assert.call(unit.data.id == "sand", "the existing unit should stay on the slot")
+	_assert.call(
+		state.graveyard[MatchState.Side.A].is_empty(), "nothing should be sent to the graveyard"
+	)
+	_assert.call(state.hand[MatchState.Side.A].size() == 1, "the card should stay in hand")
+	for slot in range(1, MatchState.BOARD_SIZE):
+		_force_play(state, MatchState.Side.A, "sand", slot)
+	state.hand[MatchState.Side.A] = [_card("wall")]
+	state.mana[MatchState.Side.A] = MatchState.MAX_MANA
+	_assert.call(
+		not state.can_play(MatchState.Side.A, 0), "a full board should make every card unplayable"
 	)
 
 

@@ -234,27 +234,26 @@ func can_play(side: int, hand_index: int) -> bool:
 		return false
 	if hand_index < 0 or hand_index >= hand[side].size():
 		return false
+	if empty_slots(side).is_empty():
+		return false
 	var card: CardData = hand[side][hand_index]
 	return mana[side] >= card.cost
 
 
-## 手札の1枚を場の slot へ出す。枠が埋まっていれば上書きし、元の砂時計は墓地へ送る。
+## 手札の1枚を場の空き枠へ出す。埋まっている枠へは出せない(上書き設置は行わない)。
 ## target は ENEMY_UNIT を対象に取る設置効果のための指定 {"side":..., "slot":...}。
 func play_card(side: int, hand_index: int, slot: int, target: Dictionary = {}) -> bool:
 	if not can_play(side, hand_index):
 		return false
 	if slot < 0 or slot >= BOARD_SIZE:
 		return false
+	if board[side][slot] != null:
+		return false
 	var card: CardData = hand[side][hand_index]
 	mana[side] -= card.cost
 	hand[side].remove_at(hand_index)
 	hand_changed.emit(side)
 	mana_changed.emit(side, mana[side], max_mana[side])
-	var replaced: CardInstance = board[side][slot]
-	if replaced != null:
-		board[side][slot] = null
-		graveyard[side].append(replaced.data)
-		unit_destroyed.emit(side, slot, replaced.data)
 	var unit := CardInstance.new(card)
 	if unit.has_keyword(CardEnums.Keyword.QUICK):
 		unit.drop_sand(2)

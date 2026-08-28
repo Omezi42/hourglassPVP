@@ -511,7 +511,7 @@ func _refresh_targets() -> void:
 		return
 	if _selection.is_hand_selection():
 		for i in MatchState.BOARD_SIZE:
-			_own_slots[i].selected = true
+			_own_slots[i].selected = state.board[my_side][i] == null
 		return
 	if not _selection.is_board_selection():
 		return
@@ -575,7 +575,9 @@ func _on_own_slot_pressed(view: CardView) -> void:
 		refresh()
 		return
 	if _selection.is_hand_selection():
-		_play_selected(slot)
+		# 上書き設置は行わないため、埋まっている枠は選べない。
+		if state.board[my_side][slot] == null:
+			_play_selected(slot)
 		return
 	if state.board[my_side][slot] == null:
 		_selection.clear()
