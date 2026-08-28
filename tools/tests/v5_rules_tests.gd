@@ -31,6 +31,9 @@ func run(assert_true: Callable) -> void:
 	_test_coin_gives_the_second_player_one_extra_mana()
 	_test_card_deck_save_round_trips()
 	_test_same_seed_reproduces_the_same_match()
+	_test_mulligan_waits_for_both_sides()
+	_test_mulligan_never_returns_the_same_cards()
+	_test_mulligan_is_order_independent()
 
 
 func _card(id: String) -> CardData:
@@ -441,3 +444,85 @@ func _test_same_seed_reproduces_the_same_match() -> void:
 				or (a != null and b != null and a.data == b.data and a.health == b.health)
 			)
 			_assert.call(same, "replaying should reach the same board at %d/%d" % [side, slot])
+
+
+## 20種すべてを1枚ずつ並べた検証用デッキ(引き直したカードを見分けるため)。
+func _mixed_deck() -> Array:
+	var cards: Array = []
+	for card in CardLibrary.all_cards():
+		cards.append(card)
+		if cards.size() >= MatchState.DECK_SIZE:
+			break
+	return cards
+
+
+func _new_mulligan_match() -> MatchState:
+	var state := MatchState.new()
+	state.start_match(_mixed_deck(), _mixed_deck(), MatchState.Side.A, 777, true, true)
+	return state
+
+
+func _test_mulligan_waits_for_both_sides() -> void:
+	var state := _new_mulligan_match()
+	_assert.call(state.mulligan_pending, "the match should wait for the mulligan")
+	_assert.call(state.turn_count == 0, "no turn should begin before the mulligan is settled")
+	_assert.call(
+		state.hand[MatchState.Side.A].size() == MatchState.FIRST_PLAYER_HAND,
+		"the first player should hold the opening hand during the mulligan"
+	)
+	state.mulligan(MatchState.Side.A, [0])
+	_assert.call(state.mulligan_pending, "one side alone should not settle the mulligan")
+	_assert.call(state.turn_count == 0, "the turn should not begin until both sides choose")
+	state.mulligan(MatchState.Side.B, [])
+	_assert.call(not state.mulligan_pending, "both choices should settle the mulligan")
+	_assert.call(state.turn_count == 1, "the first turn should begin once both sides choose")
+	_assert.call(
+		state.hand[MatchState.Side.A].size() == MatchState.FIRST_PLAYER_HAND + 1,
+		"the first player should draw for the turn after the mulligan"
+	)
+
+
+func _test_mulligan_never_returns_the_same_cards() -> void:
+	var state := _new_mulligan_match()
+	var before: Array = state.hand[MatchState.Side.A].duplicate()
+	var deck_size: int = state.deck[MatchState.Side.A].size()
+	var indices: Array = []
+	for i in before.size():
+		indices.append(i)
+	state.mulligan(MatchState.Side.A, indices)
+	state.mulligan(MatchState.Side.B, [])
+	var after: Array = state.hand[MatchState.Side.A]
+	_assert.call(
+		after.size() == before.size() + 1,
+		"a full mulligan should keep the hand size (plus the turn draw)"
+	)
+	_assert.call(
+		state.deck[MatchState.Side.A].size() == deck_size - 1,
+		"the returned cards should go back into the deck"
+	)
+	for card in before:
+		_assert.call(
+			not after.has(card), "a mulliganed card should not come straight back to the hand"
+		)
+
+
+## 届いた順に適用すると山札の切り直しの順序が変わり、同じ対局が再現できなくなる。
+func _test_mulligan_is_order_independent() -> void:
+	var first := _new_mulligan_match()
+	MatchAction.apply(first, MatchAction.mulligan(MatchState.Side.A, [0, 1]))
+	MatchAction.apply(first, MatchAction.mulligan(MatchState.Side.B, [2]))
+
+	var second := _new_mulligan_match()
+	MatchAction.apply(second, MatchAction.mulligan(MatchState.Side.B, [2]))
+	MatchAction.apply(second, MatchAction.mulligan(MatchState.Side.A, [0, 1]))
+
+	for side in [MatchState.Side.A, MatchState.Side.B]:
+		var a: Array = first.hand[side]
+		var b: Array = second.hand[side]
+		_assert.call(a.size() == b.size(), "both arrival orders should deal the same hand size")
+		for i in a.size():
+			_assert.call(a[i] == b[i], "both arrival orders should deal the same hand")
+		var deck_a: Array = first.deck[side]
+		var deck_b: Array = second.deck[side]
+		for i in deck_a.size():
+			_assert.call(deck_a[i] == deck_b[i], "both arrival orders should leave the same deck")

@@ -19,6 +19,7 @@ signal unit_flipped(side: int, slot: int)
 signal unit_ticked(side: int, slot: int)
 ## 攻撃が行われたとき。target_slot が -1 なら相手プレイヤーへの攻撃。
 signal attack_performed(side: int, slot: int, target_slot: int)
+signal mulligan_finished
 signal turn_started(side: int)
 signal match_ended(winner: int)
 
@@ -58,6 +59,9 @@ var end_reason: int = EndReason.HP_DEPLETED
 var winner: int = -1
 ## まだコインを持っているか(Side をキーにした bool)。対局開始時に後手だけ true になる。
 var coin_available: Dictionary = {}
+
+## マリガン(初手の引き直し)を待っている間だけ true。
+var mulligan_pending := false
 ## 決着が疲労(デッキ切れ)によるものだったか。バランス検証の必須指標
 ## 「本体ダメージで決着した割合」(GameDesign.md 7章)を測るために持つ。
 var finished_by_fatigue := false
@@ -66,6 +70,7 @@ var _effects: CardEffectResolver
 var _rng := RandomNumberGenerator.new()
 var _match_over := false
 var _deck_exhausted: Dictionary = {}
+var _mulligan_choice: Dictionary = {}
 
 
 func _init() -> void:
@@ -78,7 +83,8 @@ func start_match(
 	deck_b: Array,
 	p_first_side: int = Side.A,
 	seed_value: int = 0,
-	use_coin_rule: bool = COIN_ENABLED
+	use_coin_rule: bool = COIN_ENABLED,
+	use_mulligan: bool = false
 ) -> void:
 	if seed_value == 0:
 		_rng.randomize()
@@ -110,7 +116,51 @@ func start_match(
 		_draw_one(p_first_side)
 	for i in SECOND_PLAYER_HAND:
 		_draw_one(second_side)
+	mulligan_pending = use_mulligan
+	_mulligan_choice = {}
+	if mulligan_pending:
+		return
 	_begin_turn()
+
+
+## 初手の引き直しの選択を受け取る(GameDesign.md 2章)。indices は手札の位置。
+## **両者ぶんが揃うまで適用しない**。適用は山札を切り直して乱数を消費するため、
+## 届いた順ではなく A → B の固定順で行わないと、同じ種から始めた対局が食い違う。
+func mulligan(side: int, indices: Array) -> bool:
+	if not mulligan_pending or _mulligan_choice.has(side):
+		return false
+	_mulligan_choice[side] = indices.duplicate()
+	if _mulligan_choice.size() < 2:
+		return true
+	_apply_mulligan(Side.A)
+	_apply_mulligan(Side.B)
+	mulligan_pending = false
+	mulligan_finished.emit()
+	_begin_turn()
+	return true
+
+
+## 手札から外す → 同じ枚数を引く → 外したカードを山札へ混ぜて切り直す、の順。
+## 先に山札へ戻すと、引き直したカードがその場で返ってくる。
+func _apply_mulligan(side: int) -> void:
+	var indices: Array = _mulligan_choice.get(side, [])
+	if indices.is_empty():
+		return
+	var cards: Array = hand[side]
+	var picked: Array = []
+	var sorted_indices := indices.duplicate()
+	sorted_indices.sort()
+	sorted_indices.reverse()
+	for index in sorted_indices:
+		if index < 0 or index >= cards.size():
+			continue
+		picked.append(cards[index])
+		cards.remove_at(index)
+	for i in picked.size():
+		_draw_one(side)
+	deck[side] = _shuffled(deck[side] + picked)
+	_deck_exhausted[side] = deck[side].is_empty()
+	hand_changed.emit(side)
 
 
 static func other_side(side: int) -> int:

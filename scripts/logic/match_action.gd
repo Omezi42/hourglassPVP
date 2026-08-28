@@ -12,6 +12,7 @@ extends RefCounted
 ##   {"type": "surrender","side":}
 ##   {"type": "timeout",  "side":}
 ##   {"type": "coin",     "side":}   後手が1度だけ使える +1マナ
+##   {"type": "mulligan","side":, "indices": [手札の位置]}   初手の引き直し
 
 
 static func play(side: int, hand_index: int, slot: int, target: Dictionary = {}) -> Dictionary:
@@ -28,6 +29,10 @@ static func attack(side: int, slot: int, target_slot: int) -> Dictionary:
 
 static func end_turn(side: int) -> Dictionary:
 	return {"type": "end_turn", "side": side}
+
+
+static func mulligan(side: int, indices: Array) -> Dictionary:
+	return {"type": "mulligan", "side": side, "indices": indices}
 
 
 ## 1手を適用する。適用できた場合のみ true を返す。
@@ -53,4 +58,6 @@ static func apply(state: MatchState, action: Dictionary) -> bool:
 			return true
 		"coin":
 			return state.use_coin(side)
+		"mulligan":
+			return state.mulligan(side, action.get("indices", []))
 	return false

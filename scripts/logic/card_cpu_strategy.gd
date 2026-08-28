@@ -12,6 +12,22 @@ extends RefCounted
 const FACE_WEIGHT := 1.6
 ## 空き枠へ出す価値の底上げ。展開しないと何も始まらないため、僅かに前のめりにする。
 const DEVELOP_BONUS := 2.0
+## マリガンで残すコストの上限。これより重いカードは引き直す。
+## 序盤に何も出せない手札が最も負けに直結するため、単純に軽い手札を作りにいく。
+const MULLIGAN_KEEP_COST := 3
+
+
+## 初手の引き直しで戻すカードの位置を返す(GameDesign.md 2章)。
+## 重いカードだけを戻す。序盤の1〜3ターン目に置けるカードがあるかどうかが
+## 事故の有無をそのまま決めるため、盤面の強さより早さを優先する。
+func choose_mulligan(state: MatchState, side: int) -> Array:
+	var indices: Array = []
+	var cards: Array = state.hand[side]
+	for i in cards.size():
+		var card: CardData = cards[i]
+		if card.cost > MULLIGAN_KEEP_COST:
+			indices.append(i)
+	return indices
 
 
 ## この手番で次に指す1手を返す。指す手が無ければ end_turn を返す。
