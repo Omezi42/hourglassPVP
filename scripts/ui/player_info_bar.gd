@@ -141,9 +141,14 @@ func _graveyard_rect() -> Rect2:
 
 ## HPバーは彫り込まれた溝に見せる(角丸 + 内側の落ち込み影)。残量の色は
 ## 十分なうちは琥珀、危険域まで減ったら赤(GameDesign.md 9章)。
+## HPバーの矩形。攻撃の演出が本体を狙うときの的であり、被弾の演出の出どころでもある。
+func hp_bar_rect() -> Rect2:
+	return Rect2(Vector2(HP_BAR_X, 16), HP_BAR_SIZE)
+
+
 func _draw_hp() -> void:
 	var ci := get_canvas_item()
-	var rect := Rect2(Vector2(HP_BAR_X, 16), HP_BAR_SIZE)
+	var rect := hp_bar_rect()
 	var track := UiPaint.rounded_rect_points_uniform(rect, HP_BAR_RADIUS, 5)
 	UiPaint.fill_gradient_polygon(
 		ci, track, rect, [[0.0, Color(0.06, 0.05, 0.05, 1.0)], [1.0, Color(0.14, 0.11, 0.1, 1.0)]]

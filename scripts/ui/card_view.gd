@@ -14,6 +14,10 @@ signal pressed(view: CardView)
 ## マウスを乗せたとき。デッキ編集は、クリック(=編成へ加える)と切り離して
 ## 詳細の表示だけをホバーで切り替えるためにこれを使う。
 signal hovered(view: CardView)
+## 攻撃の演出が対象へ当たった瞬間。ダメージの見せ方はここへ合わせる。
+signal strike_impact
+## 攻撃の演出が終わって台座へ戻りきった。
+signal strike_finished
 
 ## 砂の動きの演出。**消える砂と落ちる砂は必ず描き分ける**(GameDesign.md 9章)。
 ## この2つを取り違えるとルールを誤解するため、演出上もっとも重要な区別として扱う。
@@ -84,6 +88,26 @@ const HAND_ART_SIDE := 92.0
 ## 手札は紙の札なので、紋章は台座ではなく**封蝋の印**として押す。
 const HAND_SEAL_RADIUS := 13.0
 const HAND_SEAL_SIDE := 16.0
+
+## 攻撃の演出(GameDesign.md 9章)。「寄る → 溜める → 当てる → 戻る」の4段。
+const STRIKE_APPROACH := 0.28
+const STRIKE_WIND_UP := 0.14
+const STRIKE_HIT := 0.1
+const STRIKE_RETURN := 0.3
+## 同じターンの2回目以降は尺を詰める。連撃や6枠が並ぶ中盤で1ターンが冗長になるため。
+const STRIKE_QUICK_SCALE := 0.6
+## 対象から見て斜め上のどこへ立つか。真上だと振り下ろす余地が無く、真横だと横殴りに見える。
+const STRIKE_STANDOFF := Vector2(76.0, 44.0)
+## 当てたところ。めり込ませず、触れる位置で止める。
+const STRIKE_CONTACT := Vector2(44.0, 26.0)
+const STRIKE_WIND_ANGLE := 0.42
+const STRIKE_HIT_ANGLE := 0.3
+## 寄っている間、慣性で下端が遅れて振れる量。
+const STRIKE_LAG_ANGLE := 0.16
+## つまむ位置。絵の上端から少し下げる。
+const STRIKE_PIVOT_Y := 8.0
+## 演出中は他の枠より手前へ出す。台座や隣の駒に潜ると渡っていく様子が見えない。
+const STRIKE_Z_INDEX := 20
 ## 手札のカードは小さく効果の文が読めないため、カーソルを乗せている間だけ拡大する
 ## (GameDesign.md 9章)。位置ではなく scale だけを動かし、下端中央を軸に上へ伸ばす。
 ## 画面側は毎フレーム position を置き直すため、位置を動かすと取り合いになる。
@@ -127,6 +151,12 @@ var _art_reference_card: CardData
 var _flip_progress := -1.0
 var _flip_tween: Tween
 var _zoom_tween: Tween
+## 攻撃の演出。絵だけをこのぶんずらし、上端を支点にこの角度だけ回す。
+var _striking := false
+var _strike_offset := Vector2.ZERO
+var _strike_angle := 0.0
+var _strike_flash := 0.0
+var _strike_tween: Tween
 
 
 func _ready() -> void:
@@ -320,7 +350,14 @@ func _draw_board_unit() -> void:
 		return
 	var tint := _tint()
 	var sink := SUMMONED_SINK if unit != null and unit.summoned_this_turn else 0.0
+	# 攻撃の演出で動かすのは絵だけ。台座は盤面の設備であって駒の一部ではないため、
+	# 一緒に動くと枠ごと飛んでいくように見える。
+	if _striking:
+		draw_set_transform_matrix(_strike_transform())
 	_draw_board_art(tint, sink)
+	if _striking:
+		_draw_strike_flash()
+		draw_set_transform_matrix(Transform2D.IDENTITY)
 	# 輪は絵の後に描く。守護(太い真鍮の輪)と選択中(水色の輪)は駒が立っていても
 	# 必ず見えなければならないため、絵の下へ隠してはいけない。
 	_draw_pedestal_ring()
@@ -631,6 +668,10 @@ func _board_art_box() -> Rect2:
 
 
 func _draw_effect() -> void:
+	# 駒が倒されて枠が空になった後も、砕ける演出だけが残ることがある。
+	# その場合は絵を引けないため何も描かない。
+	if card == null:
+		return
 	var rect := Rect2(Vector2.ZERO, size)
 	if mode == Mode.BOARD:
 		rect = _fit_art(_icon(), _board_art_box())
@@ -736,3 +777,155 @@ func _dashed_rect(rect: Rect2, color: Color) -> void:
 		draw_line(Vector2(rect.position.x, y), Vector2(rect.position.x, to), color, 2.0)
 		draw_line(Vector2(rect.end.x, y), Vector2(rect.end.x, to), color, 2.0)
 		y += 10.0
+
+
+## 攻撃:駒が対象の斜め上まで渡っていき、反動をつけて当てる(GameDesign.md 9章)。
+##
+## **動かすのは絵だけで、台座は置いていく**。台座は盤面の設備であって駒の一部ではなく、
+## 一緒に動くと枠ごと飛んでいくように見えるため。絵は `draw_set_transform_matrix()` で
+## 上端を支点に回し、`Control` 自身の `position` / `rotation` は触らない
+## (触ると台座も動き、盤面の当たり判定もずれる)。
+##
+## `target_center` はこのビューの**親の座標系**で渡す(`position` と同じ空間)。
+## `quick` は同じターンの2回目以降で、尺を6割へ詰める。
+func play_strike(target_center: Vector2, quick := false) -> void:
+	if mode != Mode.BOARD:
+		strike_finished.emit()
+		return
+	if _strike_tween != null and _strike_tween.is_valid():
+		_strike_tween.kill()
+	var anchor := position + _board_art_box().get_center()
+	# 対象から見てこちら側の斜め上へ立つ。振り下ろす向きがこれで決まる。
+	var side_x := signf(anchor.x - target_center.x)
+	if is_zero_approx(side_x):
+		side_x = 1.0
+	var standoff := (
+		_strike_stop(target_center + Vector2(side_x * STRIKE_STANDOFF.x, -STRIKE_STANDOFF.y))
+		- anchor
+	)
+	var contact := (
+		_strike_stop(target_center + Vector2(side_x * STRIKE_CONTACT.x, -STRIKE_CONTACT.y)) - anchor
+	)
+	var scale := STRIKE_QUICK_SCALE if quick else 1.0
+	_striking = true
+	z_index = STRIKE_Z_INDEX
+
+	_strike_tween = create_tween()
+	# 寄る:出だしを速く終わりを緩める。下端は慣性で遅れて振れる。
+	var approach := _strike_tween.tween_method(
+		_set_strike_offset, Vector2.ZERO, standoff, STRIKE_APPROACH * scale
+	)
+	approach.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	(
+		_strike_tween
+		. parallel()
+		. tween_method(_set_strike_angle, 0.0, -side_x * STRIKE_LAG_ANGLE, STRIKE_APPROACH * scale)
+		. set_trans(Tween.TRANS_SINE)
+	)
+	# 溜める:上端を支点に後ろへ傾く。
+	(
+		_strike_tween
+		. tween_method(
+			_set_strike_angle,
+			-side_x * STRIKE_LAG_ANGLE,
+			-side_x * STRIKE_WIND_ANGLE,
+			STRIKE_WIND_UP * scale
+		)
+		. set_trans(Tween.TRANS_SINE)
+		. set_ease(Tween.EASE_OUT)
+	)
+	# 当てる:振り下ろして接触点まで。叩き潰さず、当たったところで止める。
+	(
+		_strike_tween
+		. tween_method(
+			_set_strike_angle,
+			-side_x * STRIKE_WIND_ANGLE,
+			side_x * STRIKE_HIT_ANGLE,
+			STRIKE_HIT * scale
+		)
+		. set_trans(Tween.TRANS_CUBIC)
+		. set_ease(Tween.EASE_IN)
+	)
+	(
+		_strike_tween
+		. parallel()
+		. tween_method(_set_strike_offset, standoff, contact, STRIKE_HIT * scale)
+		. set_trans(Tween.TRANS_CUBIC)
+		. set_ease(Tween.EASE_IN)
+	)
+	_strike_tween.tween_callback(_on_strike_impact)
+	# 当たった瞬間の閃光。戻りに合わせて消す。
+	_strike_tween.parallel().tween_method(_set_strike_flash, 1.0, 0.0, STRIKE_RETURN * scale * 0.6)
+	# 戻る:数回小さく揺れながら台座へ。
+	(
+		_strike_tween
+		. tween_method(_set_strike_offset, contact, Vector2.ZERO, STRIKE_RETURN * scale)
+		. set_trans(Tween.TRANS_CUBIC)
+		. set_ease(Tween.EASE_OUT)
+	)
+	(
+		_strike_tween
+		. parallel()
+		. tween_method(_set_strike_angle, side_x * STRIKE_HIT_ANGLE, 0.0, STRIKE_RETURN * scale)
+		. set_trans(Tween.TRANS_ELASTIC)
+		. set_ease(Tween.EASE_OUT)
+	)
+	_strike_tween.tween_callback(_on_strike_finished)
+
+
+## 立ち止まる場所を画面の中へ収める。**相手プレイヤーを狙うとき、HPバーは画面の上端に
+## あるため「その斜め上」が画面の外になる**。そのまま飛ばすと駒が消えたように見える。
+func _strike_stop(at: Vector2) -> Vector2:
+	var area := get_parent_area_size()
+	if area.x <= 0.0 or area.y <= 0.0:
+		return at
+	var margin := Vector2(BOARD_ART_SIDE, BOARD_ART_SIDE) * 0.5 + Vector2(8.0, 8.0)
+	return at.clamp(margin, area - margin)
+
+
+func _set_strike_offset(value: Vector2) -> void:
+	_strike_offset = value
+	queue_redraw()
+
+
+func _set_strike_angle(value: float) -> void:
+	_strike_angle = value
+	queue_redraw()
+
+
+func _set_strike_flash(value: float) -> void:
+	_strike_flash = value
+	queue_redraw()
+
+
+func _on_strike_impact() -> void:
+	strike_impact.emit()
+
+
+func _on_strike_finished() -> void:
+	_striking = false
+	_strike_offset = Vector2.ZERO
+	_strike_angle = 0.0
+	_strike_flash = 0.0
+	z_index = 0
+	queue_redraw()
+	strike_finished.emit()
+
+
+## 当たった瞬間の閃光。絵の下端(当たった側)へ出す。
+func _draw_strike_flash() -> void:
+	if _strike_flash <= 0.01:
+		return
+	var box := _board_art_box()
+	var at := Vector2(box.get_center().x, box.end.y - 8.0)
+	var radius := 10.0 + 14.0 * (1.0 - _strike_flash)
+	UiPaint.fill_circle(
+		get_canvas_item(), at, radius, Color(1.0, 0.94, 0.72, 0.55 * _strike_flash), 20
+	)
+
+
+## 絵に掛ける変換。上端を支点に回し、そのぶんずらす。
+func _strike_transform() -> Transform2D:
+	var pivot := Vector2(size.x * 0.5, _board_art_box().position.y + STRIKE_PIVOT_Y)
+	var placed := Transform2D(_strike_angle, Vector2.ONE, 0.0, pivot + _strike_offset)
+	return placed * Transform2D(0.0, Vector2.ONE, 0.0, -pivot)

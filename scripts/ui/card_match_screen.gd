@@ -86,6 +86,10 @@ var _result: CardMatchResult
 var _pile: CardPileViewer
 var _log_button: Button
 var _flip_beam: CardFlipBeam
+## 攻撃の演出の進行役。演出中は盤面の操作を止める。
+var _strike: CardMatchStrike
+## 演出が終わったらCPUに続きを指させるか。
+var _cpu_followup := false
 var _surrender_button: Button
 var _back_button: Button
 var _status: CardMatchStatus
@@ -96,6 +100,7 @@ func _ready() -> void:
 	# 持ち時間を持つのはオンライン対戦だけ。それ以外では毎フレーム走らせない。
 	set_process(false)
 	_outcome = CardMatchOutcome.new(self)
+	_strike = CardMatchStrike.new(self)
 
 
 ## 前の対局の名残を落としてから新しい対局へ入る。結果パネル・ログ・選択・
@@ -269,10 +274,11 @@ func _on_action_received(action: Dictionary) -> void:
 	if _clock != null and action.has("clock"):
 		_clock.remaining[MatchState.other_side(my_side)] = float(action["clock"])
 		_clock.finish_turn(state.current_turn)
+	_strike.capture(action)
 	MatchAction.apply(state, action)
 	if _clock != null and state != null and not state.is_match_over():
 		_clock.start_turn(state.current_turn)
-	refresh()
+	_finish_action()
 
 
 ## 切断した対局へ戻る(GameDesign.md 11章)。局面は保存しておらず、
@@ -656,7 +662,7 @@ func _refresh_buttons() -> void:
 
 
 func _my_turn() -> bool:
-	if not _interactive:
+	if not _interactive or _strike.busy():
 		return false
 	return state != null and not state.is_match_over() and state.current_turn == my_side
 
@@ -871,9 +877,10 @@ func _on_mulligan_confirmed(indices: Array) -> void:
 
 func _perform(action: Dictionary) -> void:
 	_record(action)
+	_strike.capture(action)
 	MatchAction.apply(state, action)
 	if _online == null:
-		refresh()
+		_finish_action()
 		return
 	var payload := action.duplicate(true)
 	# 持ち時間は各手に添えて送る(GameDesign.md 11章)。通信の遅延ぶん相手の時計を
@@ -882,26 +889,55 @@ func _perform(action: Dictionary) -> void:
 		payload["clock"] = _clock.get_remaining(my_side)
 		_clock.finish_turn(state.current_turn)
 	_online.send(payload)
+	_finish_action()
+
+
+## 1手を適用し終えたときの締め。攻撃なら演出を挟み、終わってから表示を更新する。
+## **すべての適用経路(自分・オンライン・CPU)をここへ通す**ことで、
+## 演出を挟むかどうかの判断が1箇所に収まる。
+func _finish_action() -> void:
+	if _strike.play():
+		return
+	on_strike_finished()
+
+
+## 攻撃の演出が終わった(攻撃でなければ即座に呼ばれる)。
+func on_strike_finished() -> void:
 	refresh()
+	if _cpu_followup:
+		_cpu_followup = false
+		if _cpu != null and not state.is_match_over():
+			_cpu_timer.start(CPU_THINK_SECONDS * 0.4)
 
 
-func _view_at(side: int, slot: int) -> CardView:
+## 盤面の1枠の表示。切り出した進行役(`CardMatchStrike` 等)からも引く。
+func view_at(side: int, slot: int) -> CardView:
 	return _own_slots[slot] if side == my_side else _foe_slots[slot]
 
 
+## HPバーの中心。攻撃が相手プレイヤーを狙うときの的。
+func hp_bar_center(side: int) -> Vector2:
+	var bar: PlayerInfoBar = _own_bar if side == my_side else _foe_bar
+	return bar.position + bar.hp_bar_rect().get_center()
+
+
+## 被ダメージ:砂が砕けて散る。**攻撃の演出中は当たる瞬間まで持ち越す**
+## (渡っている最中に相手の砂が消えると因果が逆に見えるため)。
 func _on_unit_damaged(side: int, slot: int, amount: int) -> void:
-	_view_at(side, slot).play_shatter(amount)
+	if _strike.absorb(side, slot, amount):
+		return
+	view_at(side, slot).play_shatter(amount)
 
 
 func _on_unit_ticked(side: int, slot: int) -> void:
-	_view_at(side, slot).play_drop()
+	view_at(side, slot).play_drop()
 
 
 ## 反転した。行った側の情報帯から対象の駒へ光の筋を伸ばし、届いた瞬間に駒を裏返す。
 ## 自分の駒しか反転できないため、筋の向き(上から / 下から)がそのまま
 ## 「どちらのプレイヤーが手を出したのか」を示す。
 func _on_unit_flipped(side: int, slot: int) -> void:
-	var view := _view_at(side, slot)
+	var view := view_at(side, slot)
 	var bar_y: float = OWN_BAR_TOP if side == my_side else FOE_BAR_TOP
 	var from := Vector2(size.x * 0.5, bar_y + PlayerInfoBar.BAR_HEIGHT * 0.5)
 	var to := (
@@ -927,10 +963,11 @@ func _take_cpu_action() -> void:
 		return
 	var action := _cpu.choose_action(state, side)
 	_record(action)
+	_strike.capture(action)
 	MatchAction.apply(state, action)
-	refresh()
-	if action["type"] != "end_turn" and not state.is_match_over():
-		_cpu_timer.start(CPU_THINK_SECONDS * 0.4)
+	# 続けて指すのは演出が終わってから。重ねると駒が2体同時に渡ってしまう。
+	_cpu_followup = action["type"] != "end_turn" and not state.is_match_over()
+	_finish_action()
 
 
 ## 同じデッキでもう1局(GameDesign.md 9章)。相手のデッキは13章のとおり毎回ランダムに組む。
