@@ -420,8 +420,8 @@ func _begin_state(
 	state.match_ended.connect(_on_match_ended)
 	# 砂の演出。**ダメージ(消える)とターン終了の1粒(落ちる)を別経路で受ける**
 	# (GameDesign.md 9章)。取り違えるとルールを誤解するため。
-	state.unit_damaged.connect(_on_unit_damaged)
-	state.unit_ticked.connect(_on_unit_ticked)
+	state.unit_damaged.connect(_strike.on_unit_damaged)
+	state.unit_ticked.connect(_strike.on_unit_ticked)
 	state.unit_flipped.connect(
 		func(side: int, slot: int) -> void: _flip_beam.play_flip(self, side, slot)
 	)
@@ -577,8 +577,7 @@ func refresh() -> void:
 	if state == null:
 		return
 	var foe := MatchState.other_side(my_side)
-	_foe_bar.show_state(state, foe)
-	_own_bar.show_state(state, my_side)
+	refresh_bars()
 	var live: bool = _interactive and not state.is_match_over()
 	_own_bar.active = live and state.current_turn == my_side
 	_foe_bar.active = live and state.current_turn == foe
@@ -898,6 +897,15 @@ func view_at(side: int, slot: int) -> CardView:
 	return _own_slots[slot] if side == my_side else _foe_slots[slot]
 
 
+## 情報帯だけを同期する。攻撃が当たった瞬間にHPを合わせるために使う
+## (盤面の駒は演出が終わるまで更新しない)。
+func refresh_bars() -> void:
+	if state == null:
+		return
+	_foe_bar.show_state(state, MatchState.other_side(my_side))
+	_own_bar.show_state(state, my_side)
+
+
 ## 盤面の1枠の中心。実況の吹き出しを出す位置に使う。
 func slot_center(side: int, slot: int) -> Vector2:
 	if slot < 0:
@@ -915,18 +923,6 @@ func is_interactive() -> bool:
 func hp_bar_center(side: int) -> Vector2:
 	var bar: PlayerInfoBar = _own_bar if side == my_side else _foe_bar
 	return bar.position + bar.hp_bar_rect().get_center()
-
-
-## 被ダメージ:砂が砕けて散る。**攻撃の演出中は当たる瞬間まで持ち越す**
-## (渡っている最中に相手の砂が消えると因果が逆に見えるため)。
-func _on_unit_damaged(side: int, slot: int, amount: int) -> void:
-	if _strike.absorb(side, slot, amount):
-		return
-	view_at(side, slot).play_shatter(amount)
-
-
-func _on_unit_ticked(side: int, slot: int) -> void:
-	view_at(side, slot).play_drop()
 
 
 ## 反転した。行った側の情報帯から対象の駒へ光の筋を伸ばし、届いた瞬間に駒を裏返す。

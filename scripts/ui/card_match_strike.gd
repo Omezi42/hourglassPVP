@@ -20,6 +20,8 @@ var _screen: CardMatchScreen
 var _armed := false
 var _attacker: CardView
 var _target_center := Vector2.ZERO
+## 貫通で抜けていく先。抜けないときは無限(`Vector2.INF`)。
+var _follow_center := Vector2.INF
 ## 当たる瞬間まで持ち越す被ダメージ。{"side":..., "slot":..., "amount":...}
 var _damage: Array[Dictionary] = []
 ## このターンに何回攻撃したか。2回目以降は尺を詰める。
@@ -50,19 +52,27 @@ func capture(action: Dictionary) -> void:
 	if attacker == null or _screen.state.board[side][slot] == null:
 		return
 	_attacker = attacker
-	_target_center = _center_of(MatchState.other_side(side), target)
+	var foe := MatchState.other_side(side)
+	_target_center = _center_of(foe, target)
+	_follow_center = _pierce_center(side, slot, target)
 	_armed = true
 	if _turn_marker != _screen.state.turn_count:
 		_turn_marker = _screen.state.turn_count
 		_strikes_this_turn = 0
 
 
-## 被ダメージを当たる瞬間まで預かる。預かったら true を返す。
-func absorb(side: int, slot: int, amount: int) -> bool:
-	if not _armed:
-		return false
-	_damage.append({"side": side, "slot": slot, "amount": amount})
-	return true
+## 被ダメージ:砂が砕けて散る。**攻撃の演出中は当たる瞬間まで持ち越す**
+## (渡っている最中に相手の砂が消えると、因果が逆に見えるため)。
+func on_unit_damaged(side: int, slot: int, amount: int) -> void:
+	if _armed:
+		_damage.append({"side": side, "slot": slot, "amount": amount})
+		return
+	_screen.view_at(side, slot).play_shatter(amount)
+
+
+## ターン終了の1粒:砂が下の部屋へ流れる。総量は変わらないため、砕く演出とは分ける。
+func on_unit_ticked(side: int, slot: int) -> void:
+	_screen.view_at(side, slot).play_drop()
 
 
 ## 演出を始める。始めたら true(続きは当たった瞬間と終わりに進む)。
@@ -74,8 +84,25 @@ func play() -> bool:
 	var quick: bool = _strikes_this_turn > QUICK_AFTER
 	_attacker.strike_impact.connect(_on_impact, CONNECT_ONE_SHOT)
 	_attacker.strike_finished.connect(_on_finished, CONNECT_ONE_SHOT)
-	_attacker.play_strike(_target_center, quick)
+	_attacker.play_strike(_target_center, quick, _follow_center)
 	return true
+
+
+## 貫通が本体まで抜けるなら、その行き先(相手のHPバー)を返す。
+## **超過分が本体へ抜けるという固有の挙動を、動きそのもので示す**(GameDesign.md 9章)。
+func _pierce_center(side: int, slot: int, target: int) -> Vector2:
+	if target < 0:
+		return Vector2.INF
+	var attacker: CardInstance = _screen.state.board[side][slot]
+	var foe := MatchState.other_side(side)
+	var defender: CardInstance = _screen.state.board[foe][target]
+	if attacker == null or defender == null:
+		return Vector2.INF
+	if not attacker.data.has_keyword(CardEnums.Keyword.PIERCE):
+		return Vector2.INF
+	if attacker.attack <= defender.health:
+		return Vector2.INF
+	return _screen.hp_bar_center(foe)
 
 
 ## 相手の情報帯・駒の中心。相手プレイヤーを狙う場合はHPバーそのものを的にする
@@ -93,8 +120,11 @@ func _center_of(side: int, slot: int) -> Vector2:
 
 
 ## 当たった瞬間。預かっていた砂の飛散をここでまとめて出す。
-## **盤面の更新はまだ行わない**。倒された駒をこの時点で消すと、砕ける絵が出ないため。
+## **情報帯だけはここで同期する**。戻りきるまで待つと、当てた瞬間とHPの減りが
+## 対応して見えなくなるため。**盤面の駒はまだ更新しない**。倒された駒をこの時点で
+## 消すと、砕ける絵が出ないため。
 func _on_impact() -> void:
+	_screen.refresh_bars()
 	for hit in _damage:
 		var view: CardView = _screen.view_at(hit["side"], hit["slot"])
 		if view != null:

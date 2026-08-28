@@ -105,6 +105,8 @@ const STRIKE_HIT_ANGLE := 0.3
 ## 寄っている間、慣性で下端が遅れて振れる量。
 const STRIKE_LAG_ANGLE := 0.16
 ## つまむ位置。絵の上端から少し下げる。
+## 貫通で対象を通り抜けて相手プレイヤーまで届く区間。
+const STRIKE_PIERCE := 0.2
 const STRIKE_PIVOT_Y := 8.0
 ## 演出中は他の枠より手前へ出す。台座や隣の駒に潜ると渡っていく様子が見えない。
 const STRIKE_Z_INDEX := 20
@@ -793,7 +795,8 @@ func _dashed_rect(rect: Rect2, color: Color) -> void:
 ##
 ## `target_center` はこのビューの**親の座標系**で渡す(`position` と同じ空間)。
 ## `quick` は同じターンの2回目以降で、尺を6割へ詰める。
-func play_strike(target_center: Vector2, quick := false) -> void:
+## `follow_center` を渡すと、当てた後さらにそこまで抜けていく(貫通。GameDesign.md 9章)。
+func play_strike(target_center: Vector2, quick := false, follow_center := Vector2.INF) -> void:
 	if mode != Mode.BOARD:
 		strike_finished.emit()
 		return
@@ -808,7 +811,7 @@ func play_strike(target_center: Vector2, quick := false) -> void:
 		_strike_stop(target_center + Vector2(side_x * STRIKE_STANDOFF.x, -STRIKE_STANDOFF.y))
 		- anchor
 	)
-	var contact := (
+	var contact: Vector2 = (
 		_strike_stop(target_center + Vector2(side_x * STRIKE_CONTACT.x, -STRIKE_CONTACT.y)) - anchor
 	)
 	var scale := STRIKE_QUICK_SCALE if quick else 1.0
@@ -859,6 +862,18 @@ func play_strike(target_center: Vector2, quick := false) -> void:
 		. set_ease(Tween.EASE_IN)
 	)
 	_strike_tween.tween_callback(_on_strike_impact)
+	# 貫通:砕けた対象を通り抜けて、そのまま相手プレイヤーまで届く。
+	var pierced := follow_center.is_finite()
+	if pierced:
+		var through := _strike_stop(follow_center) - anchor
+		(
+			_strike_tween
+			. tween_method(_set_strike_offset, contact, through, STRIKE_PIERCE * scale)
+			. set_trans(Tween.TRANS_CUBIC)
+			. set_ease(Tween.EASE_IN_OUT)
+		)
+		_strike_tween.tween_callback(_on_strike_impact)
+		contact = through
 	# 当たった瞬間の閃光。戻りに合わせて消す。
 	_strike_tween.parallel().tween_method(_set_strike_flash, 1.0, 0.0, STRIKE_RETURN * scale * 0.6)
 	# 戻る:数回小さく揺れながら台座へ。
