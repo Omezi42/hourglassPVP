@@ -14,6 +14,8 @@ extends RefCounted
 
 ## 同じターンで何回目の攻撃から尺を詰めるか(GameDesign.md 9章)。
 const QUICK_AFTER := 1
+## 本体を狙うとき、HPバーの中心からどれだけ盤面側へ寄せるか。
+const FACE_EDGE := 26.0
 
 var _screen: CardMatchScreen
 ## 演出を組む対象。空なら攻撃ではない手だった。
@@ -102,17 +104,24 @@ func _pierce_center(side: int, slot: int, target: int) -> Vector2:
 		return Vector2.INF
 	if attacker.attack <= defender.health:
 		return Vector2.INF
-	return _screen.hp_bar_center(foe)
+	return _face_target(foe)
+
+
+## 本体を狙うときの的。**HPバーの中心そのものではなく、盤面側の縁を狙う**。
+## 駒は112pxあってバーは24pxしかないため、中心を的にすると当たった瞬間に
+## 残りHPの数字が駒で隠れる。数字が変わるのはまさにその瞬間なので、読めなくなる。
+func _face_target(side: int) -> Vector2:
+	var at := _screen.hp_bar_center(side)
+	var toward_board: float = FACE_EDGE if at.y < _screen.size.y * 0.5 else -FACE_EDGE
+	return at + Vector2(0.0, toward_board)
 
 
 ## 相手の情報帯・駒の中心。相手プレイヤーを狙う場合はHPバーそのものを的にする
 ## (「守護がいなければ本体を殴れる」という選択が、駒を殴るときと同じ動きで見える)。
 func _center_of(side: int, slot: int) -> Vector2:
-	if slot < 0:
-		return _screen.hp_bar_center(side)
-	var view: CardView = _screen.view_at(side, slot)
+	var view: CardView = _screen.view_at(side, slot) if slot >= 0 else null
 	if view == null:
-		return _screen.hp_bar_center(side)
+		return _face_target(side)
 	return (
 		view.position
 		+ Vector2(view.size.x * 0.5, CardView.PEDESTAL_CENTER_Y - CardView.BOARD_ART_SIDE * 0.5)
