@@ -90,6 +90,7 @@ func _ready() -> void:
 	# 落ちないよう既定をホームにしておく
 	_match_return_screen = home_screen
 	home_screen.online_match_found.connect(_on_online_match_found)
+	home_screen.online_resume_requested.connect(_on_online_resume_requested)
 	home_screen.deck_list_requested.connect(_on_deck_list_requested)
 	home_screen.hourglass_list_requested.connect(_on_hourglass_list_requested)
 	home_screen.tutorial_requested.connect(_on_tutorial_requested)
@@ -234,6 +235,15 @@ func _on_online_match_found(
 	)
 	_match_return_screen = home_screen
 	_show_only(card_match_screen)
+
+
+## 切断した対局へ戻る(GameDesign.md 11章)。戻れなかった場合も画面はそのまま出し、
+## 理由を1行で示す(対局画面側が文言を出す)。
+func _on_online_resume_requested(record: Dictionary) -> void:
+	_match_return_screen = home_screen
+	_show_only(card_match_screen)
+	await card_match_screen.resume_online_match(NetSession.client, record)
+	home_screen.battle_tab.refresh()
 
 
 ## 対局画面から戻るときは、必ずポーリングを止めてから離れる(Architecture.md 6.1節)。

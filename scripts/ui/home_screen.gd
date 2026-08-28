@@ -2,6 +2,7 @@ class_name HomeScreen
 extends Control
 
 signal online_match_found(match_id: String, my_side: int, opponent_uid: String, is_room: bool)
+signal online_resume_requested(record: Dictionary)
 signal deck_list_requested
 signal hourglass_list_requested
 signal replay_list_requested
@@ -47,6 +48,9 @@ var _rules_nav_button: Button
 
 
 func _ready() -> void:
+	battle_tab.resume_requested.connect(
+		func(record: Dictionary) -> void: online_resume_requested.emit(record)
+	)
 	battle_tab.online_match_found.connect(
 		func(match_id: String, my_side: int, opponent_uid: String, is_room: bool) -> void:
 			online_match_found.emit(match_id, my_side, opponent_uid, is_room)

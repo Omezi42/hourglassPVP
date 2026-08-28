@@ -4,6 +4,7 @@ extends Control
 ## is_roomは成立した経路の区別(ルームマッチかランダムマッチか)。
 ## 砂金の獲得量が経路ごとに異なるため伝える必要がある(GameDesign.md 15章)。
 signal online_match_found(match_id: String, my_side: int, opponent_uid: String, is_room: bool)
+signal resume_requested(record: Dictionary)
 signal replay_list_requested
 signal spectate_requested(match_id: String)
 signal cpu_match_requested
@@ -20,6 +21,9 @@ var _busy := false
 var _busy_dots_timer: Timer
 var _busy_dot_count := 0
 var _status_base_text := ""
+## 切断した対局へ戻る導線(GameDesign.md 11章)。`.tscn` を書き換えずに済ませるため
+## コードで生成し、戻れる対局があるときだけ出す。
+var _resume_button: Button
 
 @onready var status_label: Label = $Margin/VBox/StatusLabel
 @onready var random_match_button: Button = $Margin/VBox/MainRow/RandomMatchButton
@@ -45,12 +49,14 @@ func _ready() -> void:
 	replay_button.pressed.connect(func() -> void: replay_list_requested.emit())
 	cpu_match_button.pressed.connect(func() -> void: cpu_match_requested.emit())
 	cancel_button.pressed.connect(_on_cancel_pressed)
+	_build_resume_button()
 	refresh()
 
 
 func refresh() -> void:
 	if _busy:
 		return
+	_refresh_resume()
 	# v5.0はデッキを1つだけ持ち、未保存でも既定のデッキが返るため、常に対戦できる。
 	var ready_to_battle: bool = CardDeckSave.load_deck().size() == MatchState.DECK_SIZE
 	random_match_button.disabled = not ready_to_battle
@@ -58,6 +64,38 @@ func refresh() -> void:
 	cpu_match_button.disabled = not ready_to_battle
 	join_room_button.disabled = not ready_to_battle
 	status_label.text = "対戦できます" if ready_to_battle else "デッキを20枚にしてください"
+
+
+func _build_resume_button() -> void:
+	_resume_button = CodedButton.make("前回の対局へ戻る", Vector2(300, 68))
+	_resume_button.visible = false
+	_resume_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_resume_button.pressed.connect(_on_resume_pressed)
+	var column: Control = status_label.get_parent()
+	column.add_child(_resume_button)
+	column.move_child(_resume_button, 0)
+
+
+## 覚えている対局があるときだけ出す。終わっているかどうかは押した時点で確かめる
+## (毎回ホームで通信すると、オフラインでも遊べるという前提を崩すため)。
+func _refresh_resume() -> void:
+	if _resume_button == null:
+		return
+	_resume_button.visible = not OnlineResume.pending().is_empty()
+
+
+func _on_resume_pressed() -> void:
+	var record := OnlineResume.pending()
+	if record.is_empty():
+		_refresh_resume()
+		return
+	_set_busy(true)
+	_set_status("前回の対局を確認しています")
+	if not await _sign_in_or_fail():
+		return
+	_busy = false
+	_stop_busy_dots()
+	resume_requested.emit(record)
 
 
 ## cancellable: マッチングキュー参加中・ルーム作成後の相手待ちなど、待機を中断できる操作の間だけtrueにする。

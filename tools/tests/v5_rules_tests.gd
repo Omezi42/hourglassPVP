@@ -35,6 +35,9 @@ func run(assert_true: Callable) -> void:
 	_test_mulligan_never_returns_the_same_cards()
 	_test_mulligan_is_order_independent()
 	_test_mulligan_match_replays_from_the_record()
+	_test_deck_code_round_trips()
+	_test_preset_decks_are_legal()
+	_test_online_resume_store_round_trips()
 
 
 func _card(id: String) -> CardData:
@@ -575,3 +578,65 @@ func _test_mulligan_match_replays_from_the_record() -> void:
 		"replaying a mulligan game should reach the same hp"
 	)
 	_assert.call(replay.winner == live.winner, "replaying a mulligan game should reach the winner")
+
+
+## デッキコードは往復できること、壊れたコードで例外を出さないこと(GameDesign.md 9章)。
+func _test_deck_code_round_trips() -> void:
+	for preset in CardPresetDecks.PRESETS:
+		var deck := CardPresetDecks.deck_of(preset["id"])
+		var code := CardDeckCode.encode(deck)
+		var back := CardDeckCode.decode(code)
+		_assert.call(
+			back.size() == MatchState.DECK_SIZE, "decoding %s should give 20 cards" % preset["id"]
+		)
+		var before := CardLibrary.ids_from_deck(deck)
+		var after := CardLibrary.ids_from_deck(back)
+		before.sort()
+		after.sort()
+		_assert.call(before == after, "decoding %s should give the same cards" % preset["id"])
+	for broken in ["", "HG1-", "HG1-!!!!", "nope", "HG1-QUJD"]:
+		_assert.call(
+			CardDeckCode.decode(broken).is_empty(), "a broken code should decode to nothing"
+		)
+
+
+## プリセットは3つとも20枚・同名2枚までに収まっていること(GameDesign.md 18章)。
+func _test_preset_decks_are_legal() -> void:
+	for preset in CardPresetDecks.PRESETS:
+		var deck := CardPresetDecks.deck_of(preset["id"])
+		_assert.call(
+			deck.size() == MatchState.DECK_SIZE, "preset %s should hold 20 cards" % preset["id"]
+		)
+		for card: CardData in deck:
+			_assert.call(
+				deck.count(card) <= CardDeckSave.COPY_LIMIT,
+				"preset %s should not hold more than 2 copies of %s" % [preset["id"], card.id]
+			)
+
+
+## 切断からの復帰(GameDesign.md 11章)で覚えておく内容の往復。
+## `user://` の実データを壊さないよう、既存の中身を控えてから書き、最後に戻す。
+func _test_online_resume_store_round_trips() -> void:
+	var backup := ""
+	var had_file := FileAccess.file_exists(OnlineResume.SAVE_PATH)
+	if had_file:
+		var file := FileAccess.open(OnlineResume.SAVE_PATH, FileAccess.READ)
+		if file != null:
+			backup = file.get_as_text()
+			file.close()
+
+	OnlineResume.clear()
+	_assert.call(OnlineResume.pending().is_empty(), "no match should be remembered after clear")
+	OnlineResume.remember("m_test", MatchState.Side.B, true, "uid-foe")
+	var record := OnlineResume.pending()
+	_assert.call(record.get("match_id", "") == "m_test", "the match id should round trip")
+	_assert.call(int(record.get("side", -1)) == MatchState.Side.B, "the side should round trip")
+	_assert.call(bool(record.get("is_room", false)), "the match kind should round trip")
+	OnlineResume.clear()
+	_assert.call(OnlineResume.pending().is_empty(), "clearing should forget the match")
+
+	if had_file:
+		var file := FileAccess.open(OnlineResume.SAVE_PATH, FileAccess.WRITE)
+		if file != null:
+			file.store_string(backup)
+			file.close()

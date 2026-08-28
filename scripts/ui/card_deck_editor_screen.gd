@@ -25,6 +25,7 @@ var _curve: CardManaCurve
 var _detail: CardDetailPanel
 var _keyword_popup: KeywordPopup
 var _preset_picker: CardPresetPicker
+var _code_panel: CardDeckCodePanel
 var _card_row: HBoxContainer
 var _card_views: Array[CardView] = []
 ## 編成中のデッキ。同じ CardData が最大2つ入る。
@@ -57,6 +58,11 @@ func _build() -> void:
 	var preset_button := CodedButton.make("プリセット", Vector2(190, 56))
 	preset_button.pressed.connect(func() -> void: _preset_picker.open())
 	_header.add_action(preset_button)
+	# デッキコード(GameDesign.md 9章)。ルームマッチで友達と遊べるのに構築を
+	# 渡す手段が無いのは片手落ちであるため。
+	var code_button := CodedButton.make("コード", Vector2(150, 56))
+	code_button.pressed.connect(func() -> void: _code_panel.open(_deck))
+	_header.add_action(code_button)
 
 	_build_list()
 	_detail = CardDetailPanel.new()
@@ -78,6 +84,9 @@ func _build() -> void:
 	_preset_picker = CardPresetPicker.new()
 	_preset_picker.picked.connect(_on_preset_picked)
 	add_child(_preset_picker)
+	_code_panel = CardDeckCodePanel.new()
+	_code_panel.loaded.connect(_on_code_loaded)
+	add_child(_code_panel)
 	_build_card_row()
 	var cards := CardLibrary.all_cards()
 	if not cards.is_empty():
@@ -226,6 +235,11 @@ func _on_remove_pressed(card: CardData) -> void:
 
 
 ## 20枚ちょうどのときだけ保存する。枚数が足りないデッキで対局へ入れないようにするため。
+func _on_code_loaded(deck: Array) -> void:
+	_deck = deck
+	_refresh()
+
+
 func _on_preset_picked(preset_id: String) -> void:
 	_deck = CardPresetDecks.deck_of(preset_id)
 	_refresh()

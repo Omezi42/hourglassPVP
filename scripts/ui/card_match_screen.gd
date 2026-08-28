@@ -240,6 +240,8 @@ func start_online_match(
 	add_child(_online)
 	_online.action_received.connect(_on_action_received)
 	_online.start(p_match_id)
+	# 切断しても同じ対局へ戻れるようにする(GameDesign.md 11章)。
+	OnlineResume.remember(p_match_id, p_my_side, is_room, opponent_uid)
 	# マリガンは手と同じ `actions` として送り合う(GameDesign.md 2章)。両者の確定が
 	# 揃うまで対局は始まらないため、持ち時間はここを抜けてから動かし始める。
 	if state.mulligan_pending:
@@ -306,6 +308,56 @@ func _on_action_received(action: Dictionary) -> void:
 	refresh()
 
 
+## 切断した対局へ戻る(GameDesign.md 11章)。局面は保存しておらず、
+## `matches/{id}` に残る「デッキ・山札の種・指した手の並び」から作り直す
+## (リプレイ・観戦と同じ経路)。終わっている対局へは戻さない。
+func resume_online_match(client: FirestoreClient, record: Dictionary) -> bool:
+	var match_id: String = record.get("match_id", "")
+	var p_my_side: int = int(record.get("side", MatchState.Side.A))
+	_reset_for_new_match()
+	_cpu = null
+	_interactive = true
+	_match_kind = (
+		CurrencyRules.MatchKind.ROOM
+		if bool(record.get("is_room", false))
+		else CurrencyRules.MatchKind.RANDOM
+	)
+	my_side = p_my_side
+	_apply_player_names(client, record.get("opponent_uid", ""))
+	var doc: Dictionary = await client.get_document("matches/%s" % match_id)
+	var deck_a := CardLibrary.deck_from_ids(doc.get("deck_a", []))
+	var deck_b := CardLibrary.deck_from_ids(doc.get("deck_b", []))
+	if deck_a.size() != MatchState.DECK_SIZE or deck_b.size() != MatchState.DECK_SIZE:
+		OnlineResume.clear()
+		_waiting_text = "前回の対局は見つかりませんでした"
+		queue_redraw()
+		return false
+	var actions: Array = doc.get("actions", [])
+	_begin_state(deck_a, deck_b, int(doc.get("seed", 0)), MatchAction.contains_mulligan(actions))
+	for action in actions:
+		MatchAction.apply(state, action)
+	if state.is_match_over() or doc.has("finished_at"):
+		OnlineResume.clear()
+		_waiting_text = "前回の対局は既に終わっています"
+		queue_redraw()
+		return false
+	refresh()
+	_client = client
+	_match_id = match_id
+	_online = OnlineMatch.new(client)
+	add_child(_online)
+	_online.action_received.connect(_on_action_received)
+	_online.start(match_id, actions.size())
+	# 持ち時間はこちら側では初期値から数え直すが、**相手はこちらの残り時間を
+	# 自分の手元で減らし続けている**(GameDesign.md 11章)。したがって再読み込みで
+	# 時計を戻す抜け道にはならず、時間切れの判定は相手側が持つ。
+	_clock = MatchClock.new()
+	_clock.time_out.connect(_on_local_timeout)
+	_clock.start_turn(state.current_turn)
+	set_process(true)
+	return true
+
+
 ## 観戦モードとして開始する(GameDesign.md 12章)。進行中の対局を第三者が見る。
 ## 手を送らず、受け取って反映するだけ。観戦者のuidは対局者のどちらとも違うため、
 ## OnlineMatch のポーリングは両者の手をそのまま配ってくる。
@@ -368,6 +420,8 @@ func stop_networking() -> void:
 	if _online != null:
 		_online.stop()
 	if _setup != null:
+		# 対局が始まる前の中断は「取りやめ」なので、復帰の記録も残さない。
+		OnlineResume.clear()
 		await _setup.cancel()
 
 
@@ -910,6 +964,7 @@ func _on_rematch_pressed() -> void:
 
 
 func _on_match_ended(_winner: int) -> void:
+	OnlineResume.clear()
 	_selection.clear()
 	refresh()
 	_stop_polling()
