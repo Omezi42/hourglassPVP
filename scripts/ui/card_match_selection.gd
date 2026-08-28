@@ -43,6 +43,11 @@ func await_target(index: int, p_slot: int) -> void:
 	slot = p_slot
 
 
+## 何も選んでいない。取り消しの操作を受けるかどうかの判定に使う。
+func is_empty() -> bool:
+	return kind == Kind.NONE
+
+
 func is_targeting() -> bool:
 	return kind == Kind.TARGETING
 

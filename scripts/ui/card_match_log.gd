@@ -6,6 +6,11 @@ extends Control
 ## 記録と表示を1クラスに持たせているのは、**表示する文言と記録する文言を必ず同じにする**ため。
 ## 別々に組むと、実況に出る文と後から読み返す文がずれていく。
 
+## 1行を積んだ。**画面上の実況はこれを購読して同じ文言を出す**
+## (実況とログが食い違わないようにするため。GameDesign.md 9章)。
+## `kind` は "turn" / "play" / "flip" / "attack" / "death" / "hp" / "end"。
+signal recorded(line: String, kind: String, side: int, slot: int)
+
 const SCREEN_SIZE := Vector2(1280, 720)
 
 const PANEL_SIZE := Vector2(720, 480)
@@ -72,11 +77,17 @@ func lines() -> PackedStringArray:
 
 
 func record(line: String) -> void:
+	_append(line, "note", -1, -1)
+
+
+## 種別と場所を添えて積む。画面上の実況が「どこで起きたか」を知るために要る。
+func _append(line: String, kind: String, side: int, slot: int) -> void:
 	_lines.append(line)
 	if _lines.size() > MAX_LINES:
 		_lines.remove_at(0)
 	if visible:
 		_rebuild()
+	recorded.emit(line, kind, side, slot)
 
 
 func _name_of(side: int) -> String:
@@ -89,36 +100,47 @@ func _unit_name(side: int, slot: int) -> String:
 
 
 func _on_turn_started(side: int) -> void:
-	record("── %sのターン ──" % _name_of(side))
+	_append("── %sのターン ──" % _name_of(side), "turn", side, -1)
 
 
 func _on_unit_played(side: int, slot: int) -> void:
-	record("%sが%sを出した" % [_name_of(side), _unit_name(side, slot)])
+	_append("%sが%sを出した" % [_name_of(side), _unit_name(side, slot)], "play", side, slot)
 
 
 func _on_unit_flipped(side: int, slot: int) -> void:
 	var unit: CardInstance = _state.board[side][slot]
-	record(
+	_append(
 		(
 			"%sが%sを反転(体力%d / 攻撃力%d)"
 			% [_name_of(side), _unit_name(side, slot), unit.health, unit.attack]
-		)
+		),
+		"flip",
+		side,
+		slot
 	)
 
 
 func _on_attack(side: int, slot: int, target_slot: int) -> void:
 	var attacker := _unit_name(side, slot)
 	if target_slot < 0:
-		record("%sの%sが%sへ攻撃" % [_name_of(side), attacker, _name_of(MatchState.other_side(side))])
+		_append(
+			"%sの%sが%sへ攻撃" % [_name_of(side), attacker, _name_of(MatchState.other_side(side))],
+			"attack",
+			side,
+			slot
+		)
 		return
 	var foe := MatchState.other_side(side)
-	record(
-		"%sの%sが%sの%sを攻撃" % [_name_of(side), attacker, _name_of(foe), _unit_name(foe, target_slot)]
+	_append(
+		"%sの%sが%sの%sを攻撃" % [_name_of(side), attacker, _name_of(foe), _unit_name(foe, target_slot)],
+		"attack",
+		side,
+		slot
 	)
 
 
 func _on_unit_destroyed(side: int, _slot: int, card: CardData) -> void:
-	record("%sの「%s」が砕けた" % [_name_of(side), card.display_name])
+	_append("%sの「%s」が砕けた" % [_name_of(side), card.display_name], "death", side, -1)
 
 
 func _on_hp_changed(side: int, new_hp: int) -> void:

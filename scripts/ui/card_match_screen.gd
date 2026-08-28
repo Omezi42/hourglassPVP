@@ -45,6 +45,13 @@ const BAR_WIDTH := ACTION_COLUMN_X - MARGIN - 24.0
 var state: MatchState
 ## 自分の側。CPU戦・オンラインでは固定する。
 var my_side: int = MatchState.Side.A
+## いま選んでいるものと相手の情報帯。切り出した進行役(`CardMatchTargets` 等)から読む。
+var selection: CardMatchSelection:
+	get:
+		return _selection
+var foe_bar: PlayerInfoBar:
+	get:
+		return _foe_bar
 
 var _foe_bar: PlayerInfoBar
 var _own_bar: PlayerInfoBar
@@ -88,6 +95,9 @@ var _log_button: Button
 var _flip_beam: CardFlipBeam
 ## 攻撃の演出の進行役。演出中は盤面の操作を止める。
 var _strike: CardMatchStrike
+var _targets: CardMatchTargets
+## 手番のバナーと、相手の1手の実況。
+var _feed: CardMatchTurnFeed
 ## 演出が終わったらCPUに続きを指させるか。
 var _cpu_followup := false
 var _surrender_button: Button
@@ -101,6 +111,7 @@ func _ready() -> void:
 	set_process(false)
 	_outcome = CardMatchOutcome.new(self)
 	_strike = CardMatchStrike.new(self)
+	_targets = CardMatchTargets.new(self)
 
 
 ## 前の対局の名残を落としてから新しい対局へ入る。結果パネル・ログ・選択・
@@ -411,12 +422,15 @@ func _begin_state(
 	# (GameDesign.md 9章)。取り違えるとルールを誤解するため。
 	state.unit_damaged.connect(_on_unit_damaged)
 	state.unit_ticked.connect(_on_unit_ticked)
-	state.unit_flipped.connect(_on_unit_flipped)
+	state.unit_flipped.connect(
+		func(side: int, slot: int) -> void: _flip_beam.play_flip(self, side, slot)
+	)
 	_log.set_perspective(my_side)
 	state.start_match(
 		deck_a, deck_b, MatchState.Side.A, seed_value, MatchState.COIN_ENABLED, use_mulligan
 	)
 	_log.watch(state)
+	_feed.watch(self, _log)
 	refresh()
 
 
@@ -490,6 +504,8 @@ func _build() -> void:
 	# 通信待ちの文言と対象選択の案内は、駒より手前へ出すため独立したノードで描く。
 	_status = CardMatchStatus.new()
 	add_child(_status)
+	_feed = CardMatchTurnFeed.new()
+	add_child(_feed)
 	_tutorial = CardMatchTutorial.new()
 	add_child(_tutorial)
 	_mulligan = CardMatchMulligan.new()
@@ -563,10 +579,13 @@ func refresh() -> void:
 	var foe := MatchState.other_side(my_side)
 	_foe_bar.show_state(state, foe)
 	_own_bar.show_state(state, my_side)
+	var live: bool = _interactive and not state.is_match_over()
+	_own_bar.active = live and state.current_turn == my_side
+	_foe_bar.active = live and state.current_turn == foe
 	_refresh_row(_foe_slots, foe)
 	_refresh_row(_own_slots, my_side)
 	_refresh_hand()
-	_refresh_targets()
+	_targets.refresh()
 	_refresh_buttons()
 	_status.set_targeting(_selection != null and _selection.is_targeting())
 
@@ -576,6 +595,7 @@ func _refresh_row(views: Array[CardView], side: int) -> void:
 		var unit: CardInstance = state.board[side][i]
 		views[i].show_unit(unit)
 		views[i].exhausted = unit != null and side == my_side and not unit.can_attack()
+		views[i].ready_mark = unit != null and side == my_side and unit.can_attack()
 		views[i].selected = false
 		views[i].enabled = true
 		views[i].preview_health = -1
@@ -605,51 +625,14 @@ func _refresh_hand() -> void:
 		view.draggable = view.enabled
 
 
-## 選んでいるものに応じて、置ける枠・殴れる相手を光らせる。
-func _refresh_targets() -> void:
-	var foe := MatchState.other_side(my_side)
-	_foe_bar.targetable = false
-	if _selection.is_targeting():
-		for slot in MatchState.BOARD_SIZE:
-			_foe_slots[slot].selected = state.board[foe][slot] != null
-		return
-	if _selection.is_hand_selection():
-		for i in MatchState.BOARD_SIZE:
-			_own_slots[i].selected = state.board[my_side][i] == null
-		return
-	if not _selection.is_board_selection():
-		return
-	_own_slots[_selection.slot].selected = true
-	var attacker: CardInstance = state.board[my_side][_selection.slot]
-	if attacker == null or not attacker.can_attack():
-		return
-	for slot in state.attackable_slots(foe):
-		_foe_slots[slot].selected = true
-		_show_preview(_foe_slots[slot], slot)
-	_foe_bar.targetable = state.can_attack_player(my_side)
-
-
-## 「この攻撃の後どうなるか」を、狙える相手の駒と自分の駒の両方へ出す
-## (GameDesign.md 9章)。相打ちである以上、攻撃側の結果まで見せないと判断できない。
-## 攻撃側の予測は狙える相手が複数いると1つに定まらないため、**最も自分が削られる組**
-## (最悪の場合)を出す。安全に見えて実は死ぬ、という取り違えを避けるため。
-func _show_preview(view: CardView, target_slot: int) -> void:
-	var preview: Dictionary = state.combat_preview(my_side, _selection.slot, target_slot)
-	if preview.is_empty():
-		return
-	view.preview_health = preview["target_health"]
-	view.preview_dead = preview["target_dead"]
-	var own: CardView = _own_slots[_selection.slot]
-	var worse: bool = own.preview_health < 0 or preview["attacker_health"] < own.preview_health
-	if worse:
-		own.preview_health = preview["attacker_health"]
-		own.preview_dead = preview["attacker_dead"]
-
-
 func _refresh_buttons() -> void:
 	var over: bool = state.is_match_over()
 	_end_turn_button.visible = _interactive
 	_end_turn_button.disabled = not _my_turn()
+	# まだ指せる手が残っているうちは色を変えて知らせる(GameDesign.md 9章)。
+	# 押せなくはしない。あえて残す選択もあるため。
+	var remains: bool = _my_turn() and state.has_moves_left(my_side)
+	_end_turn_button.modulate = Color(1.0, 0.84, 0.6) if remains else Color(1, 1, 1)
 	_log_button.visible = _interactive
 	_surrender_button.visible = _interactive and not over
 	_back_button.visible = not _interactive
@@ -915,6 +898,19 @@ func view_at(side: int, slot: int) -> CardView:
 	return _own_slots[slot] if side == my_side else _foe_slots[slot]
 
 
+## 盤面の1枠の中心。実況の吹き出しを出す位置に使う。
+func slot_center(side: int, slot: int) -> Vector2:
+	if slot < 0:
+		return Vector2(size.x * 0.5, FOE_ROW_TOP)
+	var view := view_at(side, slot)
+	return view.position + Vector2(view.size.x * 0.5, CardView.PEDESTAL_CENTER_Y)
+
+
+## いま操作を受け付ける対局か(再生・観戦では実況を出さない)。
+func is_interactive() -> bool:
+	return _interactive
+
+
 ## HPバーの中心。攻撃が相手プレイヤーを狙うときの的。
 func hp_bar_center(side: int) -> Vector2:
 	var bar: PlayerInfoBar = _own_bar if side == my_side else _foe_bar
@@ -936,23 +932,30 @@ func _on_unit_ticked(side: int, slot: int) -> void:
 ## 反転した。行った側の情報帯から対象の駒へ光の筋を伸ばし、届いた瞬間に駒を裏返す。
 ## 自分の駒しか反転できないため、筋の向き(上から / 下から)がそのまま
 ## 「どちらのプレイヤーが手を出したのか」を示す。
-func _on_unit_flipped(side: int, slot: int) -> void:
-	var view := view_at(side, slot)
-	var bar_y: float = OWN_BAR_TOP if side == my_side else FOE_BAR_TOP
-	var from := Vector2(size.x * 0.5, bar_y + PlayerInfoBar.BAR_HEIGHT * 0.5)
-	var to := (
-		view.position
-		+ Vector2(view.size.x * 0.5, CardView.PEDESTAL_CENTER_Y - CardView.BOARD_ART_SIDE * 0.5)
-	)
-	await _flip_beam.play(from, to)
-	view.play_flip()
-
-
 func _on_turn_started(side: int) -> void:
 	_mulligan.close()
 	refresh()
+	# 自分の番が回ってきたことだけ知らせる。相手の番であることは情報帯の縁と実況で分かる。
+	if side == my_side and _interactive and not state.is_match_over():
+		_feed.announce_turn()
 	if _cpu != null and side != my_side and not state.is_match_over():
 		_cpu_timer.start(CPU_THINK_SECONDS)
+
+
+## 選択は右クリックとEscでも取り消せるようにする(GameDesign.md 9章)。
+## 「他を押す」以外に戻る手段が無いと、対象選択に入った後の抜け方が分からない。
+func _unhandled_input(event: InputEvent) -> void:
+	if not _interactive or _selection.is_empty():
+		return
+	var cancelled := event.is_action_pressed("ui_cancel")
+	if not cancelled and event is InputEventMouseButton:
+		var click := event as InputEventMouseButton
+		cancelled = click.pressed and click.button_index == MOUSE_BUTTON_RIGHT
+	if not cancelled:
+		return
+	_selection.clear()
+	refresh()
+	get_viewport().set_input_as_handled()
 
 
 func _take_cpu_action() -> void:

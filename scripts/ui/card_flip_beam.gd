@@ -27,6 +27,23 @@ func _ready() -> void:
 
 
 ## 筋を伸ばし、対象へ届いたら返る。呼び出し側はこの後に駒の反転を始める。
+## 反転を見せる。**行った側の情報帯から対象の駒へ光の筋を伸ばし、届いた瞬間に裏返す**
+## (GameDesign.md 9章)。自分の駒しか反転できないため、筋が上から来るか下から来るかが
+## そのまま「どちらが手を出したか」になる。筋と裏返りの段取りをこの1箇所へ収めている。
+func play_flip(screen: CardMatchScreen, side: int, slot: int) -> void:
+	var view := screen.view_at(side, slot)
+	var bar_y: float = (
+		CardMatchScreen.OWN_BAR_TOP if side == screen.my_side else CardMatchScreen.FOE_BAR_TOP
+	)
+	var from := Vector2(screen.size.x * 0.5, bar_y + PlayerInfoBar.BAR_HEIGHT * 0.5)
+	var to := (
+		view.position
+		+ Vector2(view.size.x * 0.5, CardView.PEDESTAL_CENTER_Y - CardView.BOARD_ART_SIDE * 0.5)
+	)
+	await play(from, to)
+	view.play_flip()
+
+
 func play(from: Vector2, to: Vector2) -> void:
 	_from = from
 	_to = to

@@ -27,6 +27,11 @@ const CLOCK_X := 990.0
 const BAR_CORNER := 10.0
 const HP_BAR_RADIUS := 6.0
 const PILE_RADIUS := 6.0
+## 被弾の演出(GameDesign.md 9章)。バーは補間して減らし、光らせ、増減を数字で浮かせる。
+const HP_SLIDE_DURATION := 0.35
+const FLASH_DURATION := 0.4
+const FLOAT_DURATION := 0.9
+const FLOAT_RISE := 16.0
 
 ## 相手側かどうか。相手側だけ手札の枚数を出す。
 var is_opponent := false
@@ -36,6 +41,9 @@ var display_name := ""
 var targetable := false
 ## 残り持ち時間(秒)。負の値なら表示しない(CPU戦は持ち時間を使わない)。
 var clock_seconds := -1.0
+## いまこの側の手番か。手番の側だけ明るくして、どちらが指す番かを示す
+## (GameDesign.md 9章)。
+var active := false
 
 var _hp := MatchState.INITIAL_HP
 var _mana := 0
@@ -46,6 +54,13 @@ var _hand := 0
 var _has_coin := false
 var _font: Font
 var _tracker := PressTracker.new()
+## 被弾の演出。HPは瞬時に減らさず、この値から実際の値へ補間する。
+var _shown_hp := float(MatchState.INITIAL_HP)
+var _flash := 0.0
+## 浮かせている増減の量と残り時間。
+var _float_amount := 0
+var _float_left := 0.0
+var _hp_tween: Tween
 
 
 func _ready() -> void:
@@ -58,7 +73,10 @@ func _ready() -> void:
 
 ## 対局の状態から自分の側の値をまとめて取り込む。
 func show_state(state: MatchState, side: int) -> void:
+	var previous := _hp
 	_hp = state.hp[side]
+	if previous != _hp:
+		_animate_hp(previous)
 	_mana = state.mana[side]
 	_max_mana = state.max_mana[side]
 	_deck = state.deck[side].size()
@@ -87,8 +105,17 @@ func _draw() -> void:
 	)
 	var outline := points.duplicate()
 	outline.append(points[0])
-	var edge := UiPalette.WARNING_RED if targetable else Color(UiPalette.BRASS_MID, 0.95)
-	draw_polyline(outline, edge, 3.0 if targetable else 2.0, true)
+	var edge := Color(UiPalette.BRASS_MID, 0.95)
+	var width := 2.0
+	if targetable:
+		edge = UiPalette.WARNING_RED
+		width = 3.0
+	elif active:
+		# 手番の側だけ縁を明るくする。どちらが指す番かを常に読めるようにするため
+		# (GameDesign.md 9章)。
+		edge = UiPalette.GLOW_AMBER
+		width = 3.0
+	draw_polyline(outline, edge, width, true)
 	_draw_name_plate()
 	_draw_hp()
 	_draw_mana()
@@ -153,7 +180,7 @@ func _draw_hp() -> void:
 	UiPaint.fill_gradient_polygon(
 		ci, track, rect, [[0.0, Color(0.06, 0.05, 0.05, 1.0)], [1.0, Color(0.14, 0.11, 0.1, 1.0)]]
 	)
-	var ratio := clampf(float(_hp) / float(MatchState.INITIAL_HP), 0.0, 1.0)
+	var ratio := clampf(_shown_hp / float(MatchState.INITIAL_HP), 0.0, 1.0)
 	if ratio > 0.0:
 		var fill_rect := Rect2(rect.position, Vector2(rect.size.x * ratio, rect.size.y))
 		var color := UiPalette.GLOW_AMBER if ratio > DANGER_RATIO else UiPalette.WARNING_RED
@@ -167,7 +194,17 @@ func _draw_hp() -> void:
 	var outline := track.duplicate()
 	outline.append(track[0])
 	draw_polyline(outline, UiPalette.BRASS_MID, 1.5, true)
+	if _flash > 0.0:
+		var glow := UiPaint.rounded_rect_points_uniform(rect, HP_BAR_RADIUS, 5)
+		UiPaint.fill_gradient_polygon(
+			ci,
+			glow,
+			rect,
+			[[0.0, Color(1, 1, 1, 0.5 * _flash)], [1.0, Color(1, 0.9, 0.7, 0.2 * _flash)]]
+		)
 	_text(Vector2(rect.position.x + 96, rect.position.y + 19), "%d / 30" % _hp, 17)
+	if _float_left > 0.0:
+		_draw_float(rect)
 
 
 func _draw_mana() -> void:
@@ -216,3 +253,49 @@ func _text(
 	pos: Vector2, value: String, font_size: int, color: Color = UiPalette.TEXT_OFFWHITE
 ) -> void:
 	draw_string(_font, pos, value, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color)
+
+
+## HPが動いた。**瞬時に差し替えず補間し、バーを光らせ、増減を数字で浮かせる**
+## (GameDesign.md 9章)。数字が入れ替わるだけでは、何点入ったのかが分からない。
+func _animate_hp(previous: int) -> void:
+	_float_amount = _hp - previous
+	_float_left = FLOAT_DURATION
+	_flash = 1.0
+	if _hp_tween != null and _hp_tween.is_valid():
+		_hp_tween.kill()
+	_hp_tween = create_tween()
+	_hp_tween.tween_method(_set_shown_hp, _shown_hp, float(_hp), HP_SLIDE_DURATION)
+	_hp_tween.parallel().tween_method(_set_flash, 1.0, 0.0, FLASH_DURATION)
+	_hp_tween.parallel().tween_method(_set_float_left, FLOAT_DURATION, 0.0, FLOAT_DURATION)
+
+
+func _set_shown_hp(value: float) -> void:
+	_shown_hp = value
+	queue_redraw()
+
+
+func _set_flash(value: float) -> void:
+	_flash = value
+	queue_redraw()
+
+
+func _set_float_left(value: float) -> void:
+	_float_left = value
+	queue_redraw()
+
+
+## 増減のフローティング数字。減ったら赤、回復したら琥珀。
+func _draw_float(rect: Rect2) -> void:
+	var ratio := _float_left / FLOAT_DURATION
+	var rise := (1.0 - ratio) * FLOAT_RISE
+	var color := UiPalette.GLOW_AMBER if _float_amount > 0 else CardView.HEALTH_RED
+	var text := "+%d" % _float_amount if _float_amount > 0 else str(_float_amount)
+	draw_string(
+		_font,
+		Vector2(rect.end.x + 8.0, rect.position.y + 18.0 - rise),
+		text,
+		HORIZONTAL_ALIGNMENT_LEFT,
+		-1,
+		22,
+		Color(color, minf(ratio * 2.0, 1.0))
+	)

@@ -124,6 +124,9 @@ var enabled := true
 var selected := false
 ## このターンに行動を終えている(彩度を落とす)。
 var exhausted := false
+## まだ攻撃できる自分の駒(GameDesign.md 9章)。攻撃済みを彩度で落とすだけでは
+## その逆が示せず、6枠が並ぶと押し忘れるため、控えめな印を出す。
+var ready_mark := false
 ## 右上へ出す小さな添え字(デッキ編集の「2/2」など)。空なら出さない。
 var badge := ""
 ## 手札でホバーしたときに拡大するか。対局画面の手札だけが true。
@@ -362,6 +365,8 @@ func _draw_board_unit() -> void:
 	# 必ず見えなければならないため、絵の下へ隠してはいけない。
 	_draw_pedestal_ring()
 	_draw_pedestal_plaque(tint)
+	if ready_mark and not selected:
+		_draw_pedestal_glow(Color(UiPalette.GLOW_AMBER, 0.18))
 	if _hovering and enabled:
 		_draw_pedestal_glow(Color(1, 1, 1, 0.1))
 	_draw_board_stats()

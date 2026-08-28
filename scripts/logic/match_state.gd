@@ -360,6 +360,19 @@ func attackable_slots(defender_side: int) -> Array:
 	return guards if not guards.is_empty() else others
 
 
+## まだ出せるカードか、攻撃できる駒が残っているか。
+## 対局画面がターン終了ボタンの色を決めるのに使う(GameDesign.md 9章)。
+func has_moves_left(side: int) -> bool:
+	for index in hand[side].size():
+		if can_play(side, index):
+			return true
+	for slot in BOARD_SIZE:
+		var unit: CardInstance = board[side][slot]
+		if unit != null and unit.can_attack():
+			return true
+	return false
+
+
 func can_attack_player(side: int) -> bool:
 	for unit in units(other_side(side)):
 		if unit.has_keyword(CardEnums.Keyword.GUARD):
