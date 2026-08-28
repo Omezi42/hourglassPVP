@@ -198,7 +198,10 @@ func _on_mouse_exited() -> void:
 
 
 func _gui_input(event: InputEvent) -> void:
-	if card == null:
+	# **場の空き枠も押せなければならない。**カードを出す先はまさに空き枠であり、
+	# ここで弾くと対局開始時(場が全て空)に1枚も出せなくなる。手札の空きスロットは
+	# 呼び出し側が visible = false にしているため、そもそも入力が届かない。
+	if card == null and mode == Mode.HAND:
 		return
 	var result := _tracker.feed(event, size)
 	if result == PressTracker.Result.CONFIRMED:
