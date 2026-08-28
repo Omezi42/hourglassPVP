@@ -313,13 +313,14 @@ UIに依存しない、対局ルールそのものを扱う層。
 ```
 Main
 ├── TitleScreen              # 起動して最初に出る画面。押すとホームへ移る
-├── HomeScreen               # 下部2ボタン(デッキ/バトル)で機能を切り替える
+├── HomeScreen               # 下部3ボタン(ルール/デッキ/バトル)で機能を切り替える
 ├── ReplayListScreen         # 保存済みリプレイの一覧
 ├── AccountScreen            # アカウント(14章)
 │   (上記のうち対局画面を除く各画面は、先頭の子として共通の ScreenHeader を持つ)
 ├── CardMatchScreen          # 対局・観戦・リプレイ再生(コードで組み立てる。4.0節)
 ├── CardDeckEditorScreen     # デッキ編集(20枚・同名2枚まで。同上)
-└── CardListScreen           # カード一覧(同上)
+├── CardListScreen           # カード一覧(同上)
+└── RuleScreen               # ルール(遊び方)の紙芝居(同上。4.2節)
 ```
 
 **v1.0(位相制)の画面と、それを支えていたクラスは削除済み。**`MatchScreen` 一式・
@@ -421,6 +422,36 @@ Web配信ではpckのサイズがそのままロード時間に直結するた�
 この整理により、インポート済みデータ(pckに入るリソースの目安)は約124MBから約17MBになった。
 残る大半は画面背景4枚(約10MB)で、これも表示サイズに対して解像度が過大な可能性があるが、
 砂時計と違って全画面に敷くため縮小の判断は別途行う。
+
+---
+
+### 4.2 ルール画面(GameDesign.md 16章)
+
+| クラス | 責務 |
+|---|---|
+| `RulePages`(`scripts/ui/rule_pages.gd`, static) | 紙芝居の中身。章・見出し・本文・盤面の種類を Dictionary の配列として1箇所へ持つ |
+| `RuleStage`(`scripts/ui/rule_stage.gd`, Control) | 1ページ分の盤面。`RulePages` の指定に従って `CardView` 等を並べ、`play()` で演出を再生する |
+| `RuleScreen`(`scripts/ui/rule_screen.gd`, Control) | 目次・本文・`RuleStage`・ページ送りを並べる画面 |
+| `RulesTab`(`scripts/ui/rules_tab.gd`, Control) | ホーム画面の「ルール」タブ。`RuleScreen` への入口だけを持つ |
+
+**盤面は `CardView` / `BoardTable` / `PlayerInfoBar` / `CardInstance` / `MatchState` を
+そのまま使う。**ルール画面専用の描画を1つも書かないことが要件で、教材用の絵を別に持つと
+対局画面と食い違った時点で誤った予習になる(GameDesign.md 16章)。同じ理由で、演出も
+`CardView.play_drop()` / `play_shatter()` / `play_flip()` を直接呼ぶ。
+
+**第7章の盤面は `MatchState` を実際に生成してから、`board` と `hp` を教材用の局面へ
+差し替えて作る。**`PlayerInfoBar.show_state()` が `MatchState` を要求するため、
+情報帯(HP・マナ・山札・墓地)を本物と同じ描画で出すにはこれが要る。ランダムな
+デッキから引いた局面をそのまま見せると、説明したい形が毎回変わってしまう。
+
+**`RulesTab` と「ルール」のタブボタンは `HomeScreen._ready()` がコードで生成する。**
+`scenes/home_screen.tscn` を書き換えずに済ませるためで、タブボタンは既存の
+「デッキ」ボタンを `duplicate()` して文言だけ差し替える(スタイルの指定漏れが起きない)。
+これは v5.0 の画面が `.tscn` を持たないのと同じ流儀。
+
+**初回起動の判定は `UiState`(`scripts/logic/ui_state.gd`、`user://ui_state.json`)が持つ。**
+`CardDeckSave` 等と同じ「Autoloadを使わずstaticで持つ」流儀。ホーム画面を一度でも開いたら
+記録し、以後は「デッキ」タブから始める(GameDesign.md 9章)。
 
 ---
 
