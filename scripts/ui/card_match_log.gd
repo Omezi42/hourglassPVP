@@ -44,6 +44,16 @@ func watch(state: MatchState) -> void:
 	state.match_ended.connect(_on_match_ended)
 
 
+## 前の対局の行を捨てる。対局をまたいでログが積み重なるのを防ぐ。
+## 購読していた `MatchState` は対局のたびに作り直されるため、参照も落とす。
+func clear() -> void:
+	_lines = []
+	_state = null
+	_last_hp = {}
+	if visible:
+		_rebuild()
+
+
 func set_open(open: bool) -> void:
 	visible = open
 	if open:

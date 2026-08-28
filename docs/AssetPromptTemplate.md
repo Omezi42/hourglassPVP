@@ -179,9 +179,9 @@ cell size across the entire sheet.
 ```
 A single game title logo artwork for a Japanese fantasy game, centered on a wide canvas.
 
-The logo reads "砂時計アリーナ" in large, bold, perfectly legible Japanese characters,
-with a smaller English subtitle "HOURGLASS ARENA" beneath it, separated by a thin
-decorative horizontal rule with small diamond finials at both ends.
+The logo reads "砂時計アリーナ" in large, bold, perfectly legible Japanese characters.
+Beneath the title, a thin decorative horizontal rule with small diamond finials at both
+ends and at its center. No subtitle, no romanized or English lettering anywhere.
 
 Style: classic, regal, high-fantasy game title logo. Thick polished gold letterforms
 with beveled edges, warm amber highlights along the top of each stroke, a deep navy-blue

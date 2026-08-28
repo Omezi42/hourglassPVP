@@ -115,12 +115,43 @@ func _draw_target_prompt() -> void:
 	)
 
 
+## 前の対局の名残を落としてから新しい対局へ入る。結果パネル・ログ・選択・
+## タイマー・通信・棋譜はいずれも画面が使い回されるため対局をまたいで残り、
+## 片付けないと2局目が「対戦終了の表示のまま遊べない」状態になる。
+func _reset_for_new_match() -> void:
+	_result.visible = false
+	_log.set_open(false)
+	_log.clear()
+	_pile.visible = false
+	_selection.clear()
+	_cpu_timer.stop()
+	if _online != null:
+		# 停止したノードは解放しない(Architecture.md 6.1節)。参照だけを落とす。
+		_online.stop()
+		_online = null
+	_setup = null
+	_client = null
+	_match_id = ""
+	_clock = null
+	_cpu_record = {}
+	_waiting_text = ""
+	_opponent_timeout_wait = 0.0
+	set_process(false)
+	if state != null and is_instance_valid(state):
+		state.queue_free()
+	state = null
+	queue_redraw()
+
+
 ## CPU戦を開始する。deck_self / deck_foe は CardData の配列(20枚)。
 func start_cpu_match(deck_self: Array, deck_foe: Array) -> void:
+	_reset_for_new_match()
 	_cpu = CardCpuStrategy.new()
 	_interactive = true
 	_match_kind = CurrencyRules.MatchKind.CPU
 	my_side = MatchState.Side.A
+	_own_bar.display_name = AccountService.display_name()
+	_foe_bar.display_name = "CPU"
 	# CPU戦もリプレイとして残すため、山札の種を決めてから始める(GameDesign.md 12章)。
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
@@ -145,6 +176,7 @@ func start_online_match(
 	is_room: bool = false,
 	opponent_uid: String = ""
 ) -> void:
+	_reset_for_new_match()
 	_cpu = null
 	_interactive = true
 	_match_kind = CurrencyRules.MatchKind.ROOM if is_room else CurrencyRules.MatchKind.RANDOM
@@ -242,6 +274,7 @@ func _on_action_received(action: Dictionary) -> void:
 ## 手を送らず、受け取って反映するだけ。観戦者のuidは対局者のどちらとも違うため、
 ## OnlineMatch のポーリングは両者の手をそのまま配ってくる。
 func start_spectate(client: FirestoreClient, p_match_id: String) -> bool:
+	_reset_for_new_match()
 	_cpu = null
 	_interactive = false
 	my_side = MatchState.Side.A
@@ -268,6 +301,7 @@ func start_spectate(client: FirestoreClient, p_match_id: String) -> bool:
 ## リプレイ再生モードとして開始する(GameDesign.md 12章)。
 ## 手番の判定を使わず、`_interactive` で操作をまとめて塞ぐ。
 func start_replay(record: Dictionary) -> bool:
+	_reset_for_new_match()
 	_cpu = null
 	_online = null
 	_interactive = false
