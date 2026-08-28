@@ -225,6 +225,7 @@ UIに依存しない、対局ルールそのものを扱う層。
 | `CardMatchScreen`(`scripts/ui/card_match_screen.gd`) | 上記を並べ、`MatchState` と同期し、操作(出す/反転/攻撃/コイン/ターン終了/投了)を受ける |
 | `CardMatchMulligan`(`scripts/ui/card_match_mulligan.gd`) | 対局開始前のマリガン画面。暗幕の上へ初期手札を並べ、選んだ枚数を `mulligan_confirmed(indices)` として返すところまでが責務で、適用は `MatchState` が行う |
 | `CardMatchLog`(`scripts/ui/card_match_log.gd`) | 対局ログ。`MatchState` のシグナルを購読して日本語の行を積み、中央のモーダルとして開く。**記録と表示を同じクラスに持たせている**のは、実況に出す文と読み返す文を必ず一致させるため |
+| `CardMatchTurnFeed`(`scripts/ui/card_match_turn_feed.gd`) | 手番バナー・相手の1手の実況・スポットライト。**ログと同じ文言**を `CardMatchLog.describe()` から引く |
 | `CardMatchResult`(`scripts/ui/card_match_result.gd`) | 結果パネル。勝敗・最終HP・総手数・決着の要因と「ログ」「ホームへ」 |
 | `CardDeckEditorScreen`(`scripts/ui/card_deck_editor_screen.gd`) | デッキ編集(20枚・同名2枚まで)。共通の `ScreenHeader` を使う |
 | `CardManaCurve`(`scripts/ui/card_mana_curve.gd`) | コスト別の枚数の棒グラフ。デッキ編集では低背版(`compact`)で使う |
@@ -300,6 +301,14 @@ UIに依存しない、対局ルールそのものを扱う層。
 届いたところで駒を持ち上げて裏返す。**光の筋は対局画面の `_draw()` ではなく独立した
 オーバーレイのノードとして持つ**。`Control._draw()` は自分の子より背面に描かれるため、
 画面側で描くと卓と駒に隠れて筋がほとんど見えない(実際にそうなった)。
+
+**攻撃は `CardView.play_strike()` が駒そのものを動かして見せる**(GameDesign.md 9章)。
+「寄る → 溜める → 当てる → 戻る」の4段を1本の `Tween` で組み、**駒は上端を支点に振れる**
+(`_strike_pivot`)。`Control` の `pivot_offset` は回転と拡縮の両方に効いてしまうため、
+描画側で上端を中心にした変換を掛ける。攻撃側だけが渡っていき、**防御側は当たった瞬間に
+`play_shatter()` と小さな揺れで受ける**。攻撃の解決そのもの(`MatchState.attack()`)は
+演出を待たず即座に済ませ、**演出は結果を後から見せるだけにする**。ロジックを演出の完了へ
+依存させると、リプレイ・観戦・CPUの連続着手がすべて演出の尺に縛られるため。
 
 **砂の演出は2種類を別のシグナルで受ける。**`MatchState` は被ダメージを `unit_damaged`、
 ターン終了の1粒を `unit_ticked` として別々に発行し、`CardView` が
