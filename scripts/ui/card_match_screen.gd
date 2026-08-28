@@ -25,6 +25,13 @@ const CPU_THINK_SECONDS := 0.5
 const OPPONENT_TIMEOUT_GRACE := 8.0
 ## 反転・コイン・ターン終了を縦に並べる右の列。
 const ACTION_COLUMN_X := 1108.0
+## 対局中のカード詳細(GameDesign.md 9章)。盤面は左右の余白が190pxしかないため
+## 卓へ重ねて出す。**指しているカードと反対側へ出す**ことで、読みたいものを
+## 自分で隠さないようにする。ホバーを外すと消えるため、盤面を塞ぎ続けはしない。
+const DETAIL_TOP := 40.0
+const DETAIL_MARGIN := 12.0
+## ホバーを外してから消すまでの猶予。カードとパネルの間をカーソルが通るため。
+const DETAIL_HIDE_DELAY := 0.12
 const ACTION_BUTTON_SIZE := Vector2(148, 48)
 
 var state: MatchState
@@ -50,6 +57,11 @@ var _replay: CardMatchReplay = null
 ## 再生モードでは盤面を一切操作できない(GameDesign.md 12章)。
 var _interactive := true
 var _mulligan: CardMatchMulligan
+var _detail: CardDetailPanel
+var _keyword_popup: KeywordPopup
+var _detail_timer: Timer
+## 「もう一度」で組み直すための、自分が持ち込んだデッキ。
+var _own_deck: Array = []
 ## 砂金の獲得量を決める対局の種別(GameDesign.md 15章)。
 var _match_kind: CurrencyRules.MatchKind = CurrencyRules.MatchKind.NONE
 ## 持ち時間。オンライン対戦だけが使う(CPU戦はローカルのため無制限。GameDesign.md 13章)。
@@ -151,6 +163,7 @@ func _reset_for_new_match() -> void:
 ## CPU戦を開始する。deck_self / deck_foe は CardData の配列(20枚)。
 func start_cpu_match(deck_self: Array, deck_foe: Array) -> void:
 	_reset_for_new_match()
+	_own_deck = deck_self
 	_cpu = CardCpuStrategy.new()
 	_interactive = true
 	_match_kind = CurrencyRules.MatchKind.CPU
@@ -387,7 +400,10 @@ func _build() -> void:
 		var view := CardView.new()
 		view.mode = CardView.Mode.HAND
 		view.visible = false
+		view.hover_zoom = true
 		view.pressed.connect(_on_hand_pressed)
+		view.hovered.connect(_on_card_hovered)
+		view.mouse_exited.connect(_hide_detail_soon)
 		add_child(view)
 		_hand_views.append(view)
 	# 行動のボタンは盤面と重ならないよう画面右の列にまとめる。
@@ -419,17 +435,31 @@ func _build() -> void:
 	# 光の筋は盤面の駒より手前、ログ・結果パネルより背面に置く。
 	_flip_beam = CardFlipBeam.new()
 	add_child(_flip_beam)
+	_detail = CardDetailPanel.new()
+	_detail.visible = false
+	_detail.mouse_entered.connect(func() -> void: _detail_timer.stop())
+	_detail.mouse_exited.connect(_hide_detail_soon)
+	add_child(_detail)
+	_detail_timer = Timer.new()
+	_detail_timer.one_shot = true
+	_detail_timer.timeout.connect(func() -> void: _detail.visible = false)
+	add_child(_detail_timer)
 	_mulligan = CardMatchMulligan.new()
 	_mulligan.confirmed.connect(_on_mulligan_confirmed)
 	add_child(_mulligan)
 	_result = CardMatchResult.new()
 	_result.home_pressed.connect(func() -> void: back_pressed.emit())
+	_result.rematch_pressed.connect(_on_rematch_pressed)
 	_result.log_pressed.connect(func() -> void: _log.set_open(true))
 	add_child(_result)
 	_log = CardMatchLog.new()
 	add_child(_log)
 	_pile = CardPileViewer.new()
 	add_child(_pile)
+	# 語の意味はポップで引ける(GameDesign.md 17章)。詳細より手前へ重ねる。
+	_keyword_popup = KeywordPopup.new()
+	add_child(_keyword_popup)
+	_detail.keyword_pressed.connect(func(entry: Dictionary) -> void: _keyword_popup.open(entry))
 
 
 func _make_bar(opponent: bool, top: float) -> PlayerInfoBar:
@@ -458,6 +488,11 @@ func _make_row(top: float, opponent: bool) -> Array[CardView]:
 			view.pressed.connect(_on_foe_slot_pressed)
 		else:
 			view.pressed.connect(_on_own_slot_pressed)
+		view.hovered.connect(_on_card_hovered)
+		view.mouse_exited.connect(_hide_detail_soon)
+		# 手札は空き枠へドラッグしても出せる(GameDesign.md 9章)。
+		if not opponent:
+			view.drop_handler = _on_slot_drop.bind(i)
 		add_child(view)
 		views.append(view)
 	return views
@@ -494,6 +529,8 @@ func _refresh_row(views: Array[CardView], side: int) -> void:
 		views[i].exhausted = unit != null and side == my_side and not unit.can_attack()
 		views[i].selected = false
 		views[i].enabled = true
+		views[i].preview_health = -1
+		views[i].preview_dead = false
 
 
 func _refresh_hand() -> void:
@@ -516,6 +553,7 @@ func _refresh_hand() -> void:
 		view.size = CardView.HAND_SIZE_PX
 		view.show_card(hand[i], _my_turn() and state.can_play(my_side, i))
 		view.selected = _selection.is_hand(i)
+		view.draggable = view.enabled
 
 
 ## 選んでいるものに応じて、置ける枠・殴れる相手を光らせる。
@@ -538,7 +576,25 @@ func _refresh_targets() -> void:
 		return
 	for slot in state.attackable_slots(foe):
 		_foe_slots[slot].selected = true
+		_show_preview(_foe_slots[slot], slot)
 	_foe_bar.targetable = state.can_attack_player(my_side)
+
+
+## 「この攻撃の後どうなるか」を、狙える相手の駒と自分の駒の両方へ出す
+## (GameDesign.md 9章)。相打ちである以上、攻撃側の結果まで見せないと判断できない。
+## 攻撃側の予測は狙える相手が複数いると1つに定まらないため、**最も自分が削られる組**
+## (最悪の場合)を出す。安全に見えて実は死ぬ、という取り違えを避けるため。
+func _show_preview(view: CardView, target_slot: int) -> void:
+	var preview: Dictionary = state.combat_preview(my_side, _selection.slot, target_slot)
+	if preview.is_empty():
+		return
+	view.preview_health = preview["target_health"]
+	view.preview_dead = preview["target_dead"]
+	var own: CardView = _own_slots[_selection.slot]
+	var worse: bool = own.preview_health < 0 or preview["attacker_health"] < own.preview_health
+	if worse:
+		own.preview_health = preview["attacker_health"]
+		own.preview_dead = preview["attacker_dead"]
 
 
 func _refresh_buttons() -> void:
@@ -571,6 +627,25 @@ func _stop_polling() -> void:
 # --- 操作 ---------------------------------------------------------------
 
 
+## カードにカーソルを乗せたら効果の詳細を出す(GameDesign.md 9章)。
+## 効果を覚えていないと戦えない状態を避けるため、手札・自分の駒・相手の駒すべてで引ける。
+func _on_card_hovered(view: CardView) -> void:
+	if view.card == null:
+		return
+	_detail_timer.stop()
+	_detail.show_card(view.card)
+	# 指しているカードと反対の側へ出す。読みたいものを自分で隠さないため。
+	var to_right: bool = view.position.x + view.size.x * 0.5 < size.x * 0.5
+	var left := size.x - CardDetailPanel.PANEL_SIZE.x - DETAIL_MARGIN if to_right else DETAIL_MARGIN
+	_detail.position = Vector2(left, DETAIL_TOP)
+	_detail.visible = true
+
+
+func _hide_detail_soon() -> void:
+	if _detail_timer != null:
+		_detail_timer.start(DETAIL_HIDE_DELAY)
+
+
 func _on_hand_pressed(view: CardView) -> void:
 	if not _my_turn():
 		return
@@ -579,6 +654,18 @@ func _on_hand_pressed(view: CardView) -> void:
 		return
 	_selection.select_hand(index)
 	refresh()
+
+
+## 手札を空き枠へドラッグして出す(GameDesign.md 9章)。押して枠を選ぶ経路と同じ
+## `_play_selected()` へ合流させ、設置効果の対象選択も同じように働くようにする。
+func _on_slot_drop(source: CardView, slot: int) -> void:
+	if not _my_turn() or state.board[my_side][slot] != null:
+		return
+	var index := _hand_views.find(source)
+	if index < 0 or not state.can_play(my_side, index):
+		return
+	_selection.select_hand(index)
+	_play_selected(slot)
 
 
 func _on_own_slot_pressed(view: CardView) -> void:
@@ -802,6 +889,13 @@ func _take_cpu_action() -> void:
 		_cpu_timer.start(CPU_THINK_SECONDS * 0.4)
 
 
+## 同じデッキでもう1局(GameDesign.md 9章)。相手のデッキは13章のとおり毎回ランダムに組む。
+func _on_rematch_pressed() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.randomize()
+	start_cpu_match(_own_deck, CardDeckSave.random_deck(rng))
+
+
 func _on_match_ended(_winner: int) -> void:
 	_selection.clear()
 	refresh()
@@ -810,7 +904,9 @@ func _on_match_ended(_winner: int) -> void:
 	# 前後に動かせなくなるため(GameDesign.md 9章)。
 	if not _interactive:
 		return
-	_result.show_for(state, my_side, state.turn_count)
+	_result.show_for(
+		state, my_side, state.turn_count, "", _match_kind == CurrencyRules.MatchKind.CPU
+	)
 	_save_replay()
 
 

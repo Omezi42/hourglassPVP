@@ -3,6 +3,7 @@ extends Control
 ## 対局終了時に盤面へ重ねる結果パネル(GameDesign.md 9章)。
 ## 暗幕でクリックを受け止め、終局後に盤面が操作されるのを防ぐ。
 
+signal rematch_pressed
 signal home_pressed
 signal log_pressed
 
@@ -11,6 +12,7 @@ const PANEL_SIZE := Vector2(520, 320)
 
 var _title: Label
 var _detail: Label
+var _rematch: Button
 
 
 func _ready() -> void:
@@ -23,7 +25,10 @@ func _ready() -> void:
 
 
 ## 勝敗を表示する。my_side が負なら「先手/後手の勝利」と第三者視点で書く。
-func show_for(state: MatchState, my_side: int, moves: int, reward: String = "") -> void:
+func show_for(
+	state: MatchState, my_side: int, moves: int, reward: String = "", can_rematch: bool = false
+) -> void:
+	_rematch.visible = can_rematch
 	var winner: int = state.winner
 	_title.text = _title_text(winner, my_side)
 	var own_hp: int = state.hp[my_side if my_side >= 0 else MatchState.Side.A]
@@ -81,6 +86,9 @@ func _build() -> void:
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 20)
 	column.add_child(row)
+	# 「もう一度」は連戦の導線(GameDesign.md 9章)。当面はCPU戦にだけ出す。
+	_rematch = _make_button("もう一度", rematch_pressed)
+	row.add_child(_rematch)
 	row.add_child(_make_button("ログ", log_pressed))
 	row.add_child(_make_button("ホームへ", home_pressed))
 

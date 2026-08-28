@@ -48,6 +48,11 @@ const TEXT_MARGIN := 5.0
 const MIN_FONT_SIZE := 9
 
 const STAT_RADIUS := 15.0
+## 攻撃の予測。体力のバッジの真下へ、結果だけを小さく出す。
+const PREVIEW_RADIUS := 14.0
+const PREVIEW_GAP := 15.0
+const PREVIEW_ALIVE := Color(0.55, 0.85, 1.0)
+const PREVIEW_DEAD := Color(1.0, 0.42, 0.36)
 const GUARD_BORDER := 4.0
 const NORMAL_BORDER := 2.0
 
@@ -79,6 +84,11 @@ const HAND_ART_SIDE := 92.0
 ## 手札は紙の札なので、紋章は台座ではなく**封蝋の印**として押す。
 const HAND_SEAL_RADIUS := 13.0
 const HAND_SEAL_SIDE := 16.0
+## 手札のカードは小さく効果の文が読めないため、カーソルを乗せている間だけ拡大する
+## (GameDesign.md 9章)。位置ではなく scale だけを動かし、下端中央を軸に上へ伸ばす。
+## 画面側は毎フレーム position を置き直すため、位置を動かすと取り合いになる。
+const HAND_HOVER_SCALE := 1.14
+const HAND_HOVER_DURATION := 0.12
 
 var mode: int = Mode.BOARD
 ## 表示するカード。手札はこれだけ、盤面は unit も併せて持つ。
@@ -92,6 +102,17 @@ var selected := false
 var exhausted := false
 ## 右上へ出す小さな添え字(デッキ編集の「2/2」など)。空なら出さない。
 var badge := ""
+## 手札でホバーしたときに拡大するか。対局画面の手札だけが true。
+var hover_zoom := false
+## 手札からドラッグで出せるか(GameDesign.md 9章)。攻撃が既にドラッグに対応しているため、
+## 盤面へ物を置く操作だけがクリック限定なのは揃わない。
+var draggable := false
+## ドラッグを受ける枠なら、放されたときに呼ぶ処理を持つ。空なら受けない。
+var drop_handler := Callable()
+## 攻撃の対象を選んでいる間だけ出す予測(GameDesign.md 9章)。
+## 負のときは出さない。`preview_dead` なら破壊されることを示す。
+var preview_health := -1
+var preview_dead := false
 
 var _font: Font
 var _hovering := false
@@ -103,6 +124,7 @@ var _effect_tween: Tween
 ## 反転の進捗(0.0〜1.0)。負のときは反転していない。
 var _flip_progress := -1.0
 var _flip_tween: Tween
+var _zoom_tween: Tween
 
 
 func _ready() -> void:
@@ -197,17 +219,65 @@ func is_empty() -> bool:
 	return card == null
 
 
+func _get_drag_data(_at_position: Vector2) -> Variant:
+	if not draggable or card == null or not enabled:
+		return null
+	set_drag_preview(_make_drag_preview())
+	return {"card_view": self}
+
+
+func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
+	if not drop_handler.is_valid() or not data is Dictionary:
+		return false
+	return (data as Dictionary).get("card_view") is CardView
+
+
+func _drop_data(_at_position: Vector2, data: Variant) -> void:
+	drop_handler.call((data as Dictionary)["card_view"])
+
+
+## 掴んでいる間はカードの絵だけを運ぶ。掴んだ札と同じ大きさにする。
+func _make_drag_preview() -> Control:
+	var preview := TextureRect.new()
+	preview.texture = card.icon_upright
+	preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	preview.custom_minimum_size = HAND_SIZE_PX
+	preview.size = HAND_SIZE_PX
+	preview.position = -HAND_SIZE_PX * 0.5
+	preview.modulate = Color(1, 1, 1, 0.85)
+	var holder := Control.new()
+	holder.add_child(preview)
+	return holder
+
+
 func _on_mouse_entered() -> void:
 	_hovering = true
 	if enabled:
 		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	_zoom(true)
 	hovered.emit(self)
 	queue_redraw()
 
 
 func _on_mouse_exited() -> void:
 	_hovering = false
+	_zoom(false)
 	queue_redraw()
+
+
+## 拡大中は隣の札より手前へ出す。手札は絶対座標で並べているため、
+## そのままだと後から足した右隣の札に上端を隠される。
+func _zoom(active: bool) -> void:
+	if not hover_zoom or mode != Mode.HAND:
+		return
+	pivot_offset = Vector2(size.x * 0.5, size.y)
+	z_index = 1 if active else 0
+	if _zoom_tween != null and _zoom_tween.is_valid():
+		_zoom_tween.kill()
+	_zoom_tween = create_tween()
+	var target := Vector2.ONE * (HAND_HOVER_SCALE if active else 1.0)
+	_zoom_tween.tween_property(self, "scale", target, HAND_HOVER_DURATION)
 
 
 func _gui_input(event: InputEvent) -> void:
@@ -376,6 +446,29 @@ func _draw_board_stats() -> void:
 	var y := PEDESTAL_CENTER_Y + 6.0
 	_stat(Vector2(STAT_RADIUS + 2.0, y), unit.attack, ATTACK_ORANGE)
 	_stat(Vector2(size.x - STAT_RADIUS - 2.0, y), unit.health, HEALTH_RED)
+	_draw_preview(Vector2(size.x - STAT_RADIUS - 2.0, y))
+
+
+## 「この攻撃の後どうなるか」を体力バッジの真下へ出す。相打ちのため攻撃側にも出る。
+func _draw_preview(anchor: Vector2) -> void:
+	if preview_health < 0:
+		return
+	var color := PREVIEW_DEAD if preview_dead else PREVIEW_ALIVE
+	var center := anchor + Vector2(0, STAT_RADIUS + PREVIEW_GAP)
+	draw_circle(center, PREVIEW_RADIUS, Color(0.08, 0.07, 0.06, 0.95))
+	draw_arc(center, PREVIEW_RADIUS, 0.0, TAU, 20, color, 2.0)
+	var text := "破壊" if preview_dead else str(preview_health)
+	var font_size := 12 if preview_dead else 15
+	var text_size := _font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
+	draw_string(
+		_font,
+		center + Vector2(-text_size.x * 0.5, text_size.y * 0.32),
+		text,
+		HORIZONTAL_ALIGNMENT_LEFT,
+		-1,
+		font_size,
+		color
+	)
 
 
 func _draw_board_labels(tint: Color) -> void:
