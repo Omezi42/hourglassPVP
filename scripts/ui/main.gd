@@ -92,6 +92,7 @@ func _ready() -> void:
 	home_screen.online_match_found.connect(_on_online_match_found)
 	home_screen.deck_list_requested.connect(_on_deck_list_requested)
 	home_screen.hourglass_list_requested.connect(_on_hourglass_list_requested)
+	home_screen.tutorial_requested.connect(_on_tutorial_requested)
 	home_screen.rules_requested.connect(_on_rules_requested)
 	home_screen.keyword_dict_requested.connect(func() -> void: _show_only(keyword_dict_screen))
 	home_screen.replay_list_requested.connect(_on_replay_list_requested)
@@ -209,6 +210,14 @@ func _on_hourglass_list_requested() -> void:
 
 
 ## ルール(遊び方)。進捗は保存せず、開くたび先頭のページから始める。
+## 誘導対局(GameDesign.md 18章)。通常のCPU戦と同じ画面へ入り、指示だけが重なる。
+func _on_tutorial_requested() -> void:
+	UiState.mark_tutorial_done()
+	card_match_screen.start_tutorial_match()
+	_match_return_screen = home_screen
+	_show_only(card_match_screen)
+
+
 func _on_rules_requested() -> void:
 	rule_screen.restart()
 	_show_only(rule_screen)

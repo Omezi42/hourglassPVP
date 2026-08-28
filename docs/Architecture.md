@@ -454,6 +454,26 @@ Web配信ではpckのサイズがそのままロード時間に直結するた�
 
 ---
 
+### 4.1.5 はじめてのプレイ(GameDesign.md 18章)
+
+| クラス | 責務 |
+|---|---|
+| `CardPresetDecks`(`scripts/logic/card_preset_decks.gd`, static) | プリセット3つを「idと枚数の表」として持つ。20枚に足りない場合はコストの安い順に埋めるため、**表が古くなっても対局へ入れなくなることはない** |
+| `CardPresetPicker`(`scripts/ui/card_preset_picker.gd`) | プリセットを選ぶモーダル。名前だけでは何のデッキか分からないため、狙いの一文を必ず添える |
+| `CardMatchTutorial`(`scripts/ui/card_match_tutorial.gd`) | 誘導対局の指示。段階ごとに1つだけ操作を求め、`MatchState` のシグナルで達成を判定する |
+
+**誘導対局は専用のモードを作らず、CPU戦へ指示を重ねるだけにする。**`start_tutorial_match()` は
+`start_cpu_match()` をプリセットの「基本」で呼び、その後 `CardMatchTutorial.watch()` を張る。
+専用モードを作ると、対局のルールが2箇所に分かれて食い違う余地が生まれる。
+
+**指示は手を塞がない**(`mouse_filter` は IGNORE)。従わない操作を禁止すると
+「言われた通りにしか動かせない」体験になるため(GameDesign.md 18章)。
+
+**指示の置き場所は手札の右隣の空き**(`BAND_RECT`)。画面上端へ横長に敷くと相手のHP・マナ・
+山札を覆い、攻撃や反転の判断に要る情報が誘導対局の間ずっと読めなくなる(実際に描いて確認した)。
+
+---
+
 ### 4.2 ルール画面(GameDesign.md 16章)
 
 | クラス | 責務 |

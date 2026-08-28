@@ -24,6 +24,7 @@ var _progress: Label
 var _curve: CardManaCurve
 var _detail: CardDetailPanel
 var _keyword_popup: KeywordPopup
+var _preset_picker: CardPresetPicker
 var _card_row: HBoxContainer
 var _card_views: Array[CardView] = []
 ## 編成中のデッキ。同じ CardData が最大2つ入る。
@@ -51,6 +52,11 @@ func _build() -> void:
 	var save_button := CodedButton.make("保存", Vector2(160, 56))
 	save_button.pressed.connect(_on_save_pressed)
 	_header.add_action(save_button)
+	# 20枚を自分で組まずに遊べる状態を用意する(GameDesign.md 18章)。
+	# 読み込んだ後は普通に編集でき、保存すれば自分のデッキになる。
+	var preset_button := CodedButton.make("プリセット", Vector2(190, 56))
+	preset_button.pressed.connect(func() -> void: _preset_picker.open())
+	_header.add_action(preset_button)
 
 	_build_list()
 	_detail = CardDetailPanel.new()
@@ -69,6 +75,9 @@ func _build() -> void:
 	_curve.position = CURVE_RECT.position
 	_curve.size = CURVE_RECT.size
 	add_child(_curve)
+	_preset_picker = CardPresetPicker.new()
+	_preset_picker.picked.connect(_on_preset_picked)
+	add_child(_preset_picker)
 	_build_card_row()
 	var cards := CardLibrary.all_cards()
 	if not cards.is_empty():
@@ -217,6 +226,11 @@ func _on_remove_pressed(card: CardData) -> void:
 
 
 ## 20枚ちょうどのときだけ保存する。枚数が足りないデッキで対局へ入れないようにするため。
+func _on_preset_picked(preset_id: String) -> void:
+	_deck = CardPresetDecks.deck_of(preset_id)
+	_refresh()
+
+
 func _on_save_pressed() -> void:
 	if _deck.size() != MatchState.DECK_SIZE:
 		_progress.text = "%d / %d 枚(20枚ちょうどにしてください)" % [_deck.size(), MatchState.DECK_SIZE]

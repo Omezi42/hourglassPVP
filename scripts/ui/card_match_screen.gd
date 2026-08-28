@@ -62,6 +62,7 @@ var _keyword_popup: KeywordPopup
 var _detail_timer: Timer
 ## 「もう一度」で組み直すための、自分が持ち込んだデッキ。
 var _own_deck: Array = []
+var _tutorial: CardMatchTutorial
 ## 砂金の獲得量を決める対局の種別(GameDesign.md 15章)。
 var _match_kind: CurrencyRules.MatchKind = CurrencyRules.MatchKind.NONE
 ## 持ち時間。オンライン対戦だけが使う(CPU戦はローカルのため無制限。GameDesign.md 13章)。
@@ -153,6 +154,8 @@ func _reset_for_new_match() -> void:
 	_opponent_timeout_wait = 0.0
 	if _mulligan != null:
 		_mulligan.close()
+	if _tutorial != null:
+		_tutorial.visible = false
 	set_process(false)
 	if state != null and is_instance_valid(state):
 		state.queue_free()
@@ -183,6 +186,14 @@ func start_cpu_match(deck_self: Array, deck_foe: Array) -> void:
 	}
 	_begin_state(deck_self, deck_foe, seed_value, true)
 	_start_cpu_mulligan()
+
+
+## 誘導対局を始める(GameDesign.md 18章)。中身は通常のCPU戦で、指示を重ねるだけ。
+## デッキは保存済みのものを使わずプリセットの「基本」で固定する。覚えてほしい動きが
+## 出ないデッキで始まると成立しないため。
+func start_tutorial_match() -> void:
+	start_cpu_match(CardPresetDecks.basic(), CardPresetDecks.basic())
+	_tutorial.watch(state, my_side)
 
 
 ## オンライン対戦を開始する。配置フェーズは無く、デッキと山札の種を交換したら
@@ -444,6 +455,8 @@ func _build() -> void:
 	_detail_timer.one_shot = true
 	_detail_timer.timeout.connect(func() -> void: _detail.visible = false)
 	add_child(_detail_timer)
+	_tutorial = CardMatchTutorial.new()
+	add_child(_tutorial)
 	_mulligan = CardMatchMulligan.new()
 	_mulligan.confirmed.connect(_on_mulligan_confirmed)
 	add_child(_mulligan)

@@ -13,7 +13,10 @@ static func load_deck() -> Array:
 	var deck := CardLibrary.deck_from_ids(ids)
 	if deck.size() == MatchState.DECK_SIZE:
 		return deck
-	return default_deck()
+	# デッキを保存していないプレイヤーはプリセットの「基本」で対局へ入る
+	# (GameDesign.md 18章)。これまでも既定のデッキで入れていたが、中身が画面に
+	# 出ておらず、何を使っているのか分からなかった。
+	return CardPresetDecks.basic()
 
 
 static func save_deck(cards: Array) -> void:

@@ -7,6 +7,7 @@ signal hourglass_list_requested
 signal replay_list_requested
 signal spectate_requested(match_id: String)
 signal cpu_match_requested
+signal tutorial_requested
 signal rules_requested
 signal keyword_dict_requested
 signal random_match_deck_requested
@@ -117,6 +118,7 @@ func _build_rules_tab() -> void:
 	_rules_tab = RulesTab.new()
 	_rules_tab.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_rules_tab.visible = false
+	_rules_tab.tutorial_requested.connect(func() -> void: tutorial_requested.emit())
 	_rules_tab.rules_requested.connect(func() -> void: rules_requested.emit())
 	_rules_tab.keyword_dict_requested.connect(func() -> void: keyword_dict_requested.emit())
 	deck_tab.get_parent().add_child(_rules_tab)
