@@ -125,6 +125,8 @@ func _reset_for_new_match() -> void:
 	_pile.visible = false
 	_selection.clear()
 	_cpu_timer.stop()
+	if _replay != null:
+		_replay.stop()
 	if _online != null:
 		# 停止したノードは解放しない(Architecture.md 6.1節)。参照だけを落とす。
 		_online.stop()
