@@ -11,8 +11,8 @@ extends Control
 ## 保持する状態は経過時間だけにする。駒は `CardView` を流用せずここで簡略化して描く
 ## (実演で見せたいのは体力・攻撃力・砂・矢印の動きだけで、紋章や台座は情報を増やさないため)。
 
-## 台本の種類。キーワード / トリガー / エフェクトの語彙に1対1で対応する。
-enum Script {
+## 台本の種類(`Script` はGodot組み込みのクラス名と衝突するため `Demo` とする)。キーワード / トリガー / エフェクトの語彙に1対1で対応する。
+enum Demo {
 	## 効果を持たないカード。毎ターン砂が1粒落ち、体力0で砕けるという土台を見せる。
 	BASIC,
 	GUARD,
@@ -35,9 +35,9 @@ enum Script {
 	FX_DAMAGE_PLAYER_PER_ENEMY_UNIT,
 }
 
-const MIN_SIZE := Vector2(300, 172)
-const PIECE_SIZE := Vector2(42, 50)
-const SLOT_GAP := 30.0
+const MIN_SIZE := Vector2(320, 200)
+const PIECE_SIZE := Vector2(48, 56)
+const SLOT_GAP := 44.0
 const NOTE_FONT_SIZE := 14
 const STAT_FONT_SIZE := 13
 const HP_BAR_SIZE := Vector2(58, 8)
@@ -50,14 +50,35 @@ const GLASS_TINT := Color(0.62, 0.78, 0.86, 0.35)
 const BEAM_COLOR := Color(0.95, 0.62, 0.2, 1.0)
 const BLOCKED_COLOR := Color(0.7, 0.72, 0.78, 0.9)
 
+## 台本 → それを組み立てるメソッド。いずれも (進捗, 値) を受ける形へ揃えてある。
+const STAGE_METHODS := {
+	Demo.BASIC: "_stage_basic",
+	Demo.GUARD: "_stage_guard",
+	Demo.GLASS: "_stage_glass",
+	Demo.PIERCE: "_stage_pierce",
+	Demo.POISON: "_stage_poison",
+	Demo.LIFESTEAL: "_stage_lifesteal",
+	Demo.DOUBLE_STRIKE: "_stage_double_strike",
+	Demo.QUICK: "_stage_quick",
+	Demo.FLIP: "_stage_flip",
+	Demo.FX_ADD_TOTAL: "_stage_add_total",
+	Demo.FX_DRAW: "_stage_draw",
+	Demo.FX_HEAL_PLAYER: "_stage_heal",
+	Demo.FX_DAMAGE_PLAYER: "_stage_damage_player",
+	Demo.FX_DAMAGE_PLAYER_PER_ENEMY_UNIT: "_stage_damage_per_unit",
+}
+
 var _font: Font
-## 実演の並び。1要素 = {"script": int, "value": int, "all": bool}
+## 実演の並び。1要素 = {"demo": int, "value": int, "all": bool}
 var _entries: Array[Dictionary] = []
 var _time := 0.0
 
 
 func _ready() -> void:
-	custom_minimum_size = MIN_SIZE
+	# 置き場所によって使える高さが違うため、**呼び出し側が指定していれば尊重する**
+	# (ここで上書きすると、詳細パネルが渡した高さが握り潰される)。
+	if custom_minimum_size == Vector2.ZERO:
+		custom_minimum_size = MIN_SIZE
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_font = get_theme_default_font()
 	if _font == null:
@@ -71,9 +92,9 @@ func show_card(card: CardData) -> void:
 	_time = 0.0
 	if card != null:
 		for keyword in card.keywords:
-			var script := _script_for_keyword(keyword)
-			if script >= 0:
-				_entries.append({"script": script, "value": 0, "all": false})
+			var demo := _demo_for_keyword(keyword)
+			if demo >= 0:
+				_entries.append({"demo": demo, "value": 0, "all": false})
 		for effect in card.effects:
 			if effect == null:
 				continue
@@ -81,11 +102,11 @@ func show_card(card: CardData) -> void:
 			# 反転がトリガーの効果は、まず反転そのものを見せてから効果へ移る。
 			# 総量+1(FX_ADD_TOTAL)は台本の中に反転を含むため、重ねて出さない。
 			var flips: bool = effect.trigger == CardEnums.Trigger.ON_FLIP
-			if flips and int(entry["script"]) != Script.FX_ADD_TOTAL:
-				_entries.append({"script": Script.FLIP, "value": 0, "all": false})
+			if flips and int(entry["demo"]) != Demo.FX_ADD_TOTAL:
+				_entries.append({"demo": Demo.FLIP, "value": 0, "all": false})
 			_entries.append(entry)
 	if _entries.is_empty():
-		_entries.append({"script": Script.BASIC, "value": 0, "all": false})
+		_entries.append({"demo": Demo.BASIC, "value": 0, "all": false})
 	set_process(true)
 	queue_redraw()
 
@@ -104,22 +125,22 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 
-static func _script_for_keyword(keyword: int) -> int:
+static func _demo_for_keyword(keyword: int) -> int:
 	match keyword:
 		CardEnums.Keyword.GUARD:
-			return Script.GUARD
+			return Demo.GUARD
 		CardEnums.Keyword.GLASS:
-			return Script.GLASS
+			return Demo.GLASS
 		CardEnums.Keyword.PIERCE:
-			return Script.PIERCE
+			return Demo.PIERCE
 		CardEnums.Keyword.POISON:
-			return Script.POISON
+			return Demo.POISON
 		CardEnums.Keyword.LIFESTEAL:
-			return Script.LIFESTEAL
+			return Demo.LIFESTEAL
 		CardEnums.Keyword.DOUBLE_STRIKE:
-			return Script.DOUBLE_STRIKE
+			return Demo.DOUBLE_STRIKE
 		CardEnums.Keyword.QUICK:
-			return Script.QUICK
+			return Demo.QUICK
 	return -1
 
 
@@ -130,28 +151,28 @@ static func _entry_for_effect(effect: CardEffectData) -> Dictionary:
 		effect.target == CardEnums.EffectTarget.ALL_ENEMY_UNITS
 		or effect.target == CardEnums.EffectTarget.ALL_ALLY_UNITS
 	)
-	var script := Script.FX_DAMAGE_PLAYER
+	var demo := Demo.FX_DAMAGE_PLAYER
 	match effect.effect_type:
 		CardEnums.EffectType.DAMAGE_PLAYER:
-			script = Script.FX_DAMAGE_PLAYER
+			demo = Demo.FX_DAMAGE_PLAYER
 		CardEnums.EffectType.DAMAGE_UNIT:
-			script = Script.FX_DAMAGE_UNIT
+			demo = Demo.FX_DAMAGE_UNIT
 		CardEnums.EffectType.DESTROY_UNIT:
-			script = Script.FX_DESTROY_UNIT
+			demo = Demo.FX_DESTROY_UNIT
 		CardEnums.EffectType.SWAP_STATS:
-			script = Script.FX_SWAP_STATS
+			demo = Demo.FX_SWAP_STATS
 		CardEnums.EffectType.ADD_TOTAL:
-			script = Script.FX_ADD_TOTAL
+			demo = Demo.FX_ADD_TOTAL
 		CardEnums.EffectType.DROP_SAND:
-			script = Script.FX_DROP_SAND
+			demo = Demo.FX_DROP_SAND
 		CardEnums.EffectType.DRAW:
-			script = Script.FX_DRAW
+			demo = Demo.FX_DRAW
 		CardEnums.EffectType.HEAL_PLAYER:
-			script = Script.FX_HEAL_PLAYER
+			demo = Demo.FX_HEAL_PLAYER
 		CardEnums.EffectType.DAMAGE_PLAYER_PER_ENEMY_UNIT:
-			script = Script.FX_DAMAGE_PLAYER_PER_ENEMY_UNIT
+			demo = Demo.FX_DAMAGE_PLAYER_PER_ENEMY_UNIT
 	# 反転がトリガーの効果は、反転そのものの実演を兼ねる(2本並べると同じ動きが続くため)。
-	return {"script": script, "value": maxi(effect.value, 1), "all": all}
+	return {"demo": demo, "value": maxi(effect.value, 1), "all": all}
 
 
 # --- 台本 ---------------------------------------------------------------
@@ -201,42 +222,16 @@ static func _empty_stage() -> Dictionary:
 
 
 ## 台本と進捗(0.0〜1.0)から、その瞬間の盤面を組み立てる。
+## 分岐は対応表に持たせる(台本が増えても分岐の列が伸びないようにするため)。
 func _stage(entry: Dictionary, t: float) -> Dictionary:
+	var demo := int(entry["demo"])
 	var value: int = entry.get("value", 1)
-	var all: bool = entry.get("all", false)
-	match int(entry["script"]):
-		Script.BASIC:
-			return _stage_basic(t)
-		Script.GUARD:
-			return _stage_guard(t)
-		Script.GLASS:
-			return _stage_glass(t)
-		Script.PIERCE:
-			return _stage_pierce(t)
-		Script.POISON:
-			return _stage_poison(t)
-		Script.LIFESTEAL:
-			return _stage_lifesteal(t)
-		Script.DOUBLE_STRIKE:
-			return _stage_double_strike(t)
-		Script.QUICK:
-			return _stage_quick(t)
-		Script.FLIP:
-			return _stage_flip(t)
-		Script.FX_ADD_TOTAL:
-			return _stage_add_total(t, value)
-		Script.FX_DRAW:
-			return _stage_draw(t, value)
-		Script.FX_HEAL_PLAYER:
-			return _stage_heal(t, value)
-		Script.FX_DAMAGE_PLAYER:
-			return _stage_damage_player(t, value)
-		Script.FX_DAMAGE_PLAYER_PER_ENEMY_UNIT:
-			return _stage_damage_per_unit(t, value)
-	return _stage_on_enemy_unit(t, int(entry["script"]), value, all)
+	if STAGE_METHODS.has(demo):
+		return call(STAGE_METHODS[demo], t, value)
+	return _stage_on_enemy_unit(t, demo, value, entry.get("all", false))
 
 
-func _stage_basic(t: float) -> Dictionary:
+func _stage_basic(t: float, _value: int) -> Dictionary:
 	var stage := _empty_stage()
 	var total := 5
 	var steps := total + 1
@@ -252,7 +247,7 @@ func _stage_basic(t: float) -> Dictionary:
 	return stage
 
 
-func _stage_guard(t: float) -> Dictionary:
+func _stage_guard(t: float, _value: int) -> Dictionary:
 	var stage := _empty_stage()
 	var keeper := _piece(4, 1, 5)
 	keeper["guard"] = true
@@ -274,7 +269,7 @@ func _stage_guard(t: float) -> Dictionary:
 	return stage
 
 
-func _stage_glass(t: float) -> Dictionary:
+func _stage_glass(t: float, _value: int) -> Dictionary:
 	var stage := _empty_stage()
 	var own := _piece(4, 0, 4)
 	var foe := _piece(3, 2, 5)
@@ -298,12 +293,13 @@ func _stage_glass(t: float) -> Dictionary:
 	return stage
 
 
-func _stage_pierce(t: float) -> Dictionary:
+func _stage_pierce(t: float, _value: int) -> Dictionary:
 	var stage := _empty_stage()
 	var own := _piece(3, 5, 8)
 	var foe := _piece(2, 1, 3)
 	stage["note"] = "砂時計を攻撃したとき、超過した砂が相手プレイヤーへ抜ける"
-	stage["beams"] = [_beam(["own", 0], ["foe", 0], _seg(t, 0.12, 0.4))]
+	if t < 0.5:
+		stage["beams"] = [_beam(["own", 0], ["foe", 0], _seg(t, 0.12, 0.4))]
 	if t >= 0.4:
 		foe["shatter"] = _seg(t, 0.4, 0.62)
 		own["h"] = 2
@@ -317,12 +313,14 @@ func _stage_pierce(t: float) -> Dictionary:
 	return stage
 
 
-func _stage_poison(t: float) -> Dictionary:
+func _stage_poison(t: float, _value: int) -> Dictionary:
 	var stage := _empty_stage()
 	var own := _piece(3, 1, 4)
 	var foe := _piece(6, 0, 6)
 	stage["note"] = "1ダメージでも、与えれば相手の砂時計を破壊する"
-	stage["beams"] = [_beam(["own", 0], ["foe", 0], _seg(t, 0.15, 0.45))]
+	# 的が砕けた後も矢印が空を指し続けないよう、当たったところで消す。
+	if t < 0.6:
+		stage["beams"] = [_beam(["own", 0], ["foe", 0], _seg(t, 0.15, 0.45))]
 	if t >= 0.45:
 		foe["h"] = 5
 		foe["total"] = 5
@@ -332,7 +330,7 @@ func _stage_poison(t: float) -> Dictionary:
 	return stage
 
 
-func _stage_lifesteal(t: float) -> Dictionary:
+func _stage_lifesteal(t: float, _value: int) -> Dictionary:
 	var stage := _empty_stage()
 	var own := _piece(4, 3, 7)
 	var foe := _piece(5, 1, 6)
@@ -351,7 +349,7 @@ func _stage_lifesteal(t: float) -> Dictionary:
 	return stage
 
 
-func _stage_double_strike(t: float) -> Dictionary:
+func _stage_double_strike(t: float, _value: int) -> Dictionary:
 	var stage := _empty_stage()
 	var own := _piece(4, 2, 6)
 	var foe := _piece(6, 0, 6)
@@ -370,7 +368,7 @@ func _stage_double_strike(t: float) -> Dictionary:
 	return stage
 
 
-func _stage_quick(t: float) -> Dictionary:
+func _stage_quick(t: float, _value: int) -> Dictionary:
 	var stage := _empty_stage()
 	var own := _piece(5, 0, 5)
 	var foe := _piece(5, 0, 5)
@@ -390,7 +388,7 @@ func _stage_quick(t: float) -> Dictionary:
 	return stage
 
 
-func _stage_flip(t: float) -> Dictionary:
+func _stage_flip(t: float, _value: int) -> Dictionary:
 	var stage := _empty_stage()
 	var flip := _seg(t, 0.3, 0.65)
 	var own := _piece(1, 4, 5) if flip < 0.5 else _piece(4, 1, 5)
@@ -477,15 +475,16 @@ func _stage_damage_per_unit(t: float, value: int) -> Dictionary:
 
 ## 相手の砂時計を対象に取る効果(ダメージ / 破壊 / 反転 / 砂を落とす)。
 ## 全体を対象にするものは的を2体にして、同じ動きを並べて見せる。
-func _stage_on_enemy_unit(t: float, script: int, value: int, all: bool) -> Dictionary:
+func _stage_on_enemy_unit(t: float, demo: int, value: int, all: bool) -> Dictionary:
 	var stage := _empty_stage()
 	var own := _piece(6, 0, 6)
 	own["fade"] = _seg(t, 0.0, 0.15)
 	var foes: Array = [_piece(5, 1, 6)]
 	if all:
 		foes.append(_piece(4, 2, 6))
-	stage["note"] = _note_on_enemy_unit(script, value, all)
-	if t >= 0.3:
+	stage["note"] = _note_on_enemy_unit(demo, value, all)
+	# 的が砕けた後も矢印が残らないよう、当たったところで消す。
+	if t >= 0.3 and t < 0.8:
 		var beams: Array = []
 		for i in foes.size():
 			beams.append(_beam(["own", 0], ["foe", i], _seg(t, 0.3 + 0.06 * i, 0.6 + 0.06 * i)))
@@ -493,23 +492,23 @@ func _stage_on_enemy_unit(t: float, script: int, value: int, all: bool) -> Dicti
 	if t >= 0.62:
 		var landed := _seg(t, 0.62, 0.85)
 		for foe in foes:
-			_apply_on_enemy_unit(foe, script, value, landed)
+			_apply_on_enemy_unit(foe, demo, value, landed)
 	stage["own"] = [own]
 	stage["foe"] = foes
 	return stage
 
 
-static func _apply_on_enemy_unit(foe: Dictionary, script: int, value: int, landed: float) -> void:
-	match script:
-		Script.FX_DESTROY_UNIT:
+static func _apply_on_enemy_unit(foe: Dictionary, demo: int, value: int, landed: float) -> void:
+	match demo:
+		Demo.FX_DESTROY_UNIT:
 			foe["shatter"] = landed
-		Script.FX_SWAP_STATS:
+		Demo.FX_SWAP_STATS:
 			foe["flip"] = landed if landed < 1.0 else -1.0
 			if landed >= 0.5:
 				var health: int = foe["h"]
 				foe["h"] = foe["a"]
 				foe["a"] = health
-		Script.FX_DROP_SAND:
+		Demo.FX_DROP_SAND:
 			foe["h"] = maxi(foe["h"] - value, 0)
 			foe["a"] = foe["a"] + value
 		_:
@@ -520,14 +519,14 @@ static func _apply_on_enemy_unit(foe: Dictionary, script: int, value: int, lande
 				foe["shatter"] = landed
 
 
-static func _note_on_enemy_unit(script: int, value: int, all: bool) -> String:
+static func _note_on_enemy_unit(demo: int, value: int, all: bool) -> String:
 	var scope := "相手の砂時計すべて" if all else "相手の砂時計1体"
-	match script:
-		Script.FX_DESTROY_UNIT:
+	match demo:
+		Demo.FX_DESTROY_UNIT:
 			return "場に出したとき、%sを破壊する" % scope
-		Script.FX_SWAP_STATS:
+		Demo.FX_SWAP_STATS:
 			return "場に出したとき、%sの体力と攻撃力を入れ替える" % scope
-		Script.FX_DROP_SAND:
+		Demo.FX_DROP_SAND:
 			return "場に出したとき、%sの砂が%d粒落ちる" % [scope, value]
 	return "場に出したとき、%sへ%dダメージ(砂は消える)" % [scope, value]
 
@@ -545,6 +544,14 @@ func _draw() -> void:
 	var stage := _stage(_entries[index], t)
 	var board := _draw_frame()
 	var layout := _layout(board, stage)
+	# 盤面を挟んで対面していることを読ませる区切り線。
+	var mid_y := board.get_center().y
+	draw_line(
+		Vector2(board.position.x, mid_y),
+		Vector2(board.end.x, mid_y),
+		Color(UiPalette.BRASS_MID, 0.5),
+		1.0
+	)
 	_draw_hp_bar(layout["foe_hp"], stage["foe_hp"], false)
 	_draw_hp_bar(layout["own_hp"], stage["own_hp"], true)
 	for i in stage["foe"].size():
@@ -591,12 +598,10 @@ func _layout(board: Rect2, stage: Dictionary) -> Dictionary:
 	return {
 		"own": _slots(center_x, own_y, stage["own"].size()),
 		"foe": _slots(center_x, foe_y, stage["foe"].size()),
-		"own_hp": Rect2(
-			Vector2(board.end.x - HP_BAR_SIZE.x, own_y - HP_BAR_SIZE.y * 0.5), HP_BAR_SIZE
-		),
-		"foe_hp": Rect2(
-			Vector2(board.end.x - HP_BAR_SIZE.x, foe_y - HP_BAR_SIZE.y * 0.5), HP_BAR_SIZE
-		),
+		"own_hp":
+		Rect2(Vector2(board.end.x - HP_BAR_SIZE.x, own_y - HP_BAR_SIZE.y * 0.5), HP_BAR_SIZE),
+		"foe_hp":
+		Rect2(Vector2(board.end.x - HP_BAR_SIZE.x, foe_y - HP_BAR_SIZE.y * 0.5), HP_BAR_SIZE),
 	}
 
 
@@ -677,8 +682,12 @@ func _draw_piece(center: Vector2, piece: Dictionary) -> void:
 	if piece["guard"]:
 		var ring := Rect2(center - half - Vector2(5, 5), (half + Vector2(5, 5)) * 2.0)
 		draw_rect(ring, Color(UiPalette.BRASS_HIGHLIGHT, alpha), false, 3.0)
-	_draw_stat(Vector2(center.x - half.x, center.y + half.y + 2.0), piece["a"], CardView.ATTACK_ORANGE, alpha)
-	_draw_stat(Vector2(center.x + half.x, center.y + half.y + 2.0), piece["h"], CardView.HEALTH_RED, alpha)
+	# 攻撃力=左 / 体力=右 の慣習は保ちつつ、駒の**脇**へ置く。下へ張り出させると
+	# 相手の駒と自分の駒を上下に並べたときに重なるため。
+	var badge_y := center.y + PIECE_SIZE.y * 0.5 - 8.0
+	var badge_x := PIECE_SIZE.x * 0.5 + 8.0
+	_draw_stat(Vector2(center.x - badge_x, badge_y), piece["a"], CardView.ATTACK_ORANGE, alpha)
+	_draw_stat(Vector2(center.x + badge_x, badge_y), piece["h"], CardView.HEALTH_RED, alpha)
 
 
 ## 砂は上の部屋では首元へ、下の部屋では底へ溜まる。
@@ -733,14 +742,14 @@ func _draw_shards(center: Vector2, progress: float) -> void:
 func _draw_stat(at: Vector2, amount: int, color: Color, alpha: float) -> void:
 	draw_circle(at, 9.0, Color(0.07, 0.06, 0.08, alpha))
 	draw_circle(at, 9.0, Color(color, alpha * 0.9))
+	_centered_text(at + Vector2(0, 5), str(amount), STAT_FONT_SIZE, Color(0.1, 0.08, 0.06, alpha))
+
+
+## 中央揃えは幅を決め打ちすると符号や2桁が切れるため、実測幅から左端を出す。
+func _centered_text(at: Vector2, text: String, font_size: int, color: Color) -> void:
+	var width := _font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
 	draw_string(
-		_font,
-		at + Vector2(-5, 5),
-		str(amount),
-		HORIZONTAL_ALIGNMENT_CENTER,
-		10,
-		STAT_FONT_SIZE,
-		Color(0.1, 0.08, 0.06, alpha)
+		_font, at - Vector2(width * 0.5, 0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color
 	)
 
 
@@ -775,7 +784,9 @@ func _draw_beam(layout: Dictionary, beam: Dictionary) -> void:
 	if blocked and progress >= 1.0:
 		var cross := 7.0
 		draw_line(to - Vector2(cross, cross), to + Vector2(cross, cross), CardView.HEALTH_RED, 3.0)
-		draw_line(to - Vector2(cross, -cross), to + Vector2(cross, -cross), CardView.HEALTH_RED, 3.0)
+		draw_line(
+			to - Vector2(cross, -cross), to + Vector2(cross, -cross), CardView.HEALTH_RED, 3.0
+		)
 
 
 func _draw_pop(layout: Dictionary, pop: Dictionary) -> void:
@@ -784,22 +795,16 @@ func _draw_pop(layout: Dictionary, pop: Dictionary) -> void:
 		return
 	var alpha: float = 1.0 - clampf((progress - 0.6) / 0.4, 0.0, 1.0)
 	var at: Vector2 = _anchor(layout, [pop["at"], pop["index"]]) - Vector2(0, 22 + progress * 12.0)
-	draw_string(
-		_font,
-		at,
-		pop["text"],
-		HORIZONTAL_ALIGNMENT_CENTER,
-		0,
-		16,
-		Color(pop["color"], alpha)
-	)
+	# 枠の外へはみ出さないよう、上端で止める。
+	at.y = maxf(at.y, 26.0)
+	_centered_text(at, pop["text"], 16, Color(pop["color"], alpha))
 
 
 ## 引いたカードが山札から手札へ入る様子。
 func _draw_drawn_card(board: Rect2, progress: float) -> void:
 	var card_size := Vector2(20, 27)
-	var from := Vector2(board.end.x - 14, board.end.y - 20)
-	var to := Vector2(board.position.x + 18, board.end.y - 6)
+	var from := Vector2(board.end.x - 14, board.get_center().y + 10)
+	var to := Vector2(board.position.x + 24, board.end.y - 14)
 	var at: Vector2 = from.lerp(to, progress) - card_size * 0.5
 	var rect := Rect2(at, card_size)
 	draw_rect(rect, Color(0.22, 0.18, 0.14, 1))

@@ -11,7 +11,9 @@ signal back_pressed
 const HEADER_SCENE := "res://scenes/screen_header.tscn"
 const PANEL_STYLE := "res://resources/theme/content_panel.tres"
 const LIST_RECT := Rect2(24, ScreenHeader.CONTENT_TOP, 620, 356)
-const CURVE_RECT := Rect2(668, ScreenHeader.CONTENT_TOP, 588, 356)
+## 右カラムは上が詳細(実演つき)、下が低背のマナカーブ(GameDesign.md 9章)。
+const DETAIL_RECT := Rect2(668, ScreenHeader.CONTENT_TOP, 588, 262)
+const CURVE_RECT := Rect2(668, ScreenHeader.CONTENT_TOP + 274, 588, 92)
 ## 全カードの横スクロールは画面の一番下に置く。外周余白(24px)を割らないよう、
 ## 下端から逆算した位置に固定する。
 const CARDS_TOP := 720.0 - ScreenHeader.OUTER_MARGIN - (CardView.HAND_SIZE_PX.y + 16.0)
@@ -20,6 +22,7 @@ var _header: ScreenHeader
 var _entries: VBoxContainer
 var _progress: Label
 var _curve: CardManaCurve
+var _detail: CardDetailPanel
 var _card_row: HBoxContainer
 var _card_views: Array[CardView] = []
 ## 編成中のデッキ。同じ CardData が最大2つ入る。
@@ -49,11 +52,21 @@ func _build() -> void:
 	_header.add_action(save_button)
 
 	_build_list()
+	_detail = CardDetailPanel.new()
+	_detail.compact = true
+	add_child(_detail)
+	_detail.position = DETAIL_RECT.position
+	_detail.custom_minimum_size = DETAIL_RECT.size
+	_detail.size = DETAIL_RECT.size
 	_curve = CardManaCurve.new()
+	_curve.compact = true
 	_curve.position = CURVE_RECT.position
 	_curve.size = CURVE_RECT.size
 	add_child(_curve)
 	_build_card_row()
+	var cards := CardLibrary.all_cards()
+	if not cards.is_empty():
+		_detail.show_card(cards[0])
 
 
 func _build_list() -> void:
@@ -93,6 +106,8 @@ func _build_card_row() -> void:
 		view.mode = CardView.Mode.HAND
 		view.custom_minimum_size = CardView.HAND_SIZE_PX
 		view.pressed.connect(_on_card_pressed)
+		# 詳細はホバーで切り替える。クリックは編成へ1枚加える操作に残す(GameDesign.md 9章)。
+		view.hovered.connect(func(hovered: CardView) -> void: _detail.show_card(hovered.card))
 		_card_row.add_child(view)
 		_card_views.append(view)
 
@@ -136,6 +151,8 @@ func _distinct_sorted() -> Array:
 func _make_entry(card: CardData) -> Control:
 	var row := HBoxContainer.new()
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.mouse_filter = Control.MOUSE_FILTER_PASS
+	row.mouse_entered.connect(func() -> void: _detail.show_card(card))
 	var cost := Label.new()
 	cost.text = str(card.cost)
 	cost.custom_minimum_size = Vector2(36, 0)

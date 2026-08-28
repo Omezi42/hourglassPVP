@@ -13,6 +13,11 @@ const BAR_RADIUS := 4.0
 const TRACK_COLOR_TOP := Color(0.06, 0.05, 0.06, 0.9)
 const TRACK_COLOR_BOTTOM := Color(0.13, 0.12, 0.14, 0.9)
 
+## 低背版。デッキ編集は右カラムの下半分しか使えないため、見出しを左へ寄せて
+## 棒と目盛りだけの高さへ詰める。**コストの配分は棒の形で読むもの**であり、
+## 高さを削っても役割は保てる(GameDesign.md 9章)。
+var compact := false
+
 var _counts: Array[int] = []
 var _font: Font
 
@@ -39,7 +44,10 @@ func _draw() -> void:
 	draw_rect(rect, Color(0.09, 0.08, 0.1, 0.82))
 	UiPaint.apply_grain(ci, rect, 0.05)
 	draw_rect(rect, UiPalette.GLOW_AMBER, false, 2.0)
-	_label(Vector2(20, 34), "マナカーブ", 22, UiPalette.TEXT_OFFWHITE)
+	if compact:
+		_label(Vector2(14, size.y * 0.5 + 6), "マナカーブ", 16, UiPalette.TEXT_OFFWHITE)
+	else:
+		_label(Vector2(20, 34), "マナカーブ", 22, UiPalette.TEXT_OFFWHITE)
 	if _counts.is_empty():
 		return
 	var peak := BASE_SCALE
@@ -47,6 +55,8 @@ func _draw() -> void:
 		peak = maxi(peak, count)
 	var columns := MAX_COST - MIN_COST + 1
 	var area := Rect2(24, 56, size.x - 48, size.y - 104)
+	if compact:
+		area = Rect2(96, 12, size.x - 116, size.y - 40)
 	var step := area.size.x / float(columns)
 	var bar_width := step * 0.62
 	draw_line(
@@ -70,9 +80,9 @@ func _draw() -> void:
 				UiPalette.TEXT_OFFWHITE
 			)
 		_label(
-			Vector2(x + bar_width * 0.5 - 5, area.end.y + 22),
+			Vector2(x + bar_width * 0.5 - 5, area.end.y + (16 if compact else 22)),
 			str(cost),
-			16,
+			14 if compact else 16,
 			UiPalette.BRASS_HIGHLIGHT
 		)
 

@@ -11,6 +11,9 @@ extends Control
 ## 場=攻撃力左下 / 体力右下(場ではコストを出さない)。
 
 signal pressed(view: CardView)
+## マウスを乗せたとき。デッキ編集は、クリック(=編成へ加える)と切り離して
+## 詳細の表示だけをホバーで切り替えるためにこれを使う。
+signal hovered(view: CardView)
 
 ## 砂の動きの演出。**消える砂と落ちる砂は必ず描き分ける**(GameDesign.md 9章)。
 ## この2つを取り違えるとルールを誤解するため、演出上もっとも重要な区別として扱う。
@@ -198,6 +201,7 @@ func _on_mouse_entered() -> void:
 	_hovering = true
 	if enabled:
 		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	hovered.emit(self)
 	queue_redraw()
 
 

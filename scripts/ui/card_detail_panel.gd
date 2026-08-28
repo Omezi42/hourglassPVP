@@ -1,27 +1,43 @@
 class_name CardDetailPanel
 extends PanelContainer
-## カード1種の詳細(GameDesign.md 9章)。イラスト・名前・コスト・総量・キーワード・効果。
-## 一覧画面と、将来の対局中の参考表示で共用する。
+## カード1種の詳細(GameDesign.md 9章)。イラスト・名前・コスト・総量・キーワード・効果に
+## 加えて、能力が実際にどう働くかの実演(`CardEffectPreview`)を出す。
+## 一覧画面と、デッキ編集・将来の対局中の参考表示で共用する。
+##
+## **デッキ編集では `compact` を立てて使う**。右カラムの上半分しか使えないため、
+## 大きなイラストを捨てて実演と効果文を横に並べる。イラストは同じ画面の下部にある
+## カード一覧で既に見えており、ここで繰り返す価値が低い。
 
 const PANEL_STYLE := "res://resources/theme/content_panel.tres"
 const PANEL_SIZE := Vector2(380, 460)
-const ICON_SIZE := Vector2(150, 150)
+const COMPACT_SIZE := Vector2(588, 262)
+const ICON_SIZE := Vector2(104, 104)
 ## カード固有の紋章(GameDesign.md 9章)。名前の左へ置き、カードの面より大きく見せる。
 const EMBLEM_SIZE := Vector2(44, 44)
+const PREVIEW_HEIGHT := 214.0
+## 横並びのときに効果文へ割く幅。
+const COMPACT_TEXT_WIDTH := 236.0
+
+## 横並びの詰めた表示にするか。`add_child()` より前に設定する。
+var compact := false
 
 var _icon: TextureRect
 var _emblem: TextureRect
 var _name: Label
 var _stats: Label
 var _body: Label
+var _preview: CardEffectPreview
 
 
 func _ready() -> void:
-	custom_minimum_size = PANEL_SIZE
+	custom_minimum_size = COMPACT_SIZE if compact else PANEL_SIZE
 	var style: StyleBox = load(PANEL_STYLE)
 	if style != null:
 		add_theme_stylebox_override("panel", style)
-	_build()
+	if compact:
+		_build_compact()
+	else:
+		_build()
 	clear()
 
 
@@ -29,19 +45,23 @@ func show_card(card: CardData) -> void:
 	if card == null:
 		clear()
 		return
-	_icon.texture = card.icon_upright
+	if _icon != null:
+		_icon.texture = card.icon_upright
 	_emblem.texture = card.emblem
 	_name.text = card.display_name
 	_stats.text = "コスト %d  /  総量 %d" % [card.cost, card.total_sand]
 	_body.text = _describe(card)
+	_preview.show_card(card)
 
 
 func clear() -> void:
-	_icon.texture = null
+	if _icon != null:
+		_icon.texture = null
 	_emblem.texture = null
 	_name.text = ""
 	_stats.text = ""
 	_body.text = "カードを選ぶと内容を表示します。"
+	_preview.clear()
 
 
 ## **語として見せるキーワードは【語】と説明の両方**を出す(語だけでは初見に伝わらない)。
@@ -70,7 +90,7 @@ func _describe(card: CardData) -> String:
 
 func _build() -> void:
 	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 12)
+	column.add_theme_constant_override("separation", 10)
 	add_child(column)
 
 	_icon = TextureRect.new()
@@ -79,10 +99,54 @@ func _build() -> void:
 	_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	column.add_child(_icon)
 
+	column.add_child(_make_title_row(true))
+	_stats = _make_stats()
+	_stats.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	column.add_child(_stats)
+
+	_preview = CardEffectPreview.new()
+	_preview.custom_minimum_size = Vector2(0, PREVIEW_HEIGHT)
+	column.add_child(_preview)
+
+	column.add_child(_make_body_scroll(PANEL_SIZE.x - 80))
+
+
+## 横並び:上に名前とコスト、下に「実演 | 効果文」。
+func _build_compact() -> void:
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 8)
+	add_child(column)
+
+	var header := HBoxContainer.new()
+	header.add_theme_constant_override("separation", 12)
+	column.add_child(header)
+	header.add_child(_make_title_row(false))
+	_stats = _make_stats()
+	_stats.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_stats.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	header.add_child(_stats)
+
+	var row := HBoxContainer.new()
+	row.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	row.add_theme_constant_override("separation", 12)
+	column.add_child(row)
+
+	_preview = CardEffectPreview.new()
+	_preview.custom_minimum_size = Vector2(260, 0)
+	_preview.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_preview.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	row.add_child(_preview)
+
+	var scroll := _make_body_scroll(COMPACT_TEXT_WIDTH - 12.0)
+	scroll.custom_minimum_size = Vector2(COMPACT_TEXT_WIDTH, 0)
+	row.add_child(scroll)
+
+
+func _make_title_row(centered: bool) -> HBoxContainer:
 	var title_row := HBoxContainer.new()
-	title_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	if centered:
+		title_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	title_row.add_theme_constant_override("separation", 10)
-	column.add_child(title_row)
 
 	_emblem = TextureRect.new()
 	_emblem.custom_minimum_size = EMBLEM_SIZE
@@ -92,21 +156,27 @@ func _build() -> void:
 	title_row.add_child(_emblem)
 
 	_name = Label.new()
-	_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_name.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_name.add_theme_font_size_override("font_size", 26)
 	title_row.add_child(_name)
+	return title_row
 
-	_stats = Label.new()
-	_stats.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_stats.add_theme_color_override("font_color", UiPalette.GLOW_AMBER)
-	column.add_child(_stats)
 
+func _make_stats() -> Label:
+	var stats := Label.new()
+	stats.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	stats.add_theme_color_override("font_color", UiPalette.GLOW_AMBER)
+	return stats
+
+
+func _make_body_scroll(text_width: float) -> ScrollContainer:
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	column.add_child(scroll)
 	_body = Label.new()
 	_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_body.custom_minimum_size = Vector2(PANEL_SIZE.x - 80, 0)
+	_body.custom_minimum_size = Vector2(text_width, 0)
+	_body.add_theme_font_size_override("font_size", 15)
 	scroll.add_child(_body)
+	return scroll
