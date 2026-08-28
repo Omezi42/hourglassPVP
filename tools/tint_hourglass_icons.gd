@@ -28,6 +28,7 @@ const VARIANTS: Array = [
 	["poison", "eye", 0.24, 1.15, 0.18, 0.0],
 	["hammer", "king", 0.70, 0.95, 0.18, 0.0],
 	["sweep", "wall", 0.62, 1.1, 0.04, 0.38],
+	["grain", "sand", 0.28, 1.05, 0.18, 0.0],
 ]
 
 

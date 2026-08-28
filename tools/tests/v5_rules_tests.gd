@@ -64,7 +64,7 @@ func _force_play(state: MatchState, side: int, id: String, slot: int) -> CardIns
 
 func _test_all_cards_load() -> void:
 	var cards := CardLibrary.all_cards()
-	_assert.call(cards.size() == 20, "CardLibrary should load 20 cards, got %d" % cards.size())
+	_assert.call(cards.size() == 21, "CardLibrary should load 21 cards, got %d" % cards.size())
 	for card in cards:
 		_assert.call(card.cost > 0, "card %s should have a positive cost" % card.id)
 		_assert.call(card.total_sand > 0, "card %s should have a positive total" % card.id)
