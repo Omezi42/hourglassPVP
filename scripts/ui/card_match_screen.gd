@@ -16,7 +16,9 @@ const FOE_ROW_TOP := 92.0
 const OWN_ROW_TOP := 268.0
 const OWN_BAR_TOP := 456.0
 const HAND_TOP := 528.0
-const HAND_AREA := Rect2(30, 528, 830, 158)
+## 手札は**卓と同じ左右の範囲**へ置き、盤面の真下で中央に揃える。以前は右下の
+## 「ログ」「投了」を避けるため左へ寄せており、駒の列と手札の中心が94pxずれていた。
+const HAND_AREA := Rect2(190, 528, 900, 158)
 ## 12枠を載せる卓上(GameDesign.md 9章)。両陣営の6枠がこの上に並ぶ。
 const TABLE_RECT := Rect2(190, 74, 900, 372)
 const CPU_THINK_SECONDS := 0.5
@@ -33,6 +35,8 @@ const DETAIL_MARGIN := 12.0
 ## ホバーを外してから消すまでの猶予。カードとパネルの間をカーソルが通るため。
 const DETAIL_HIDE_DELAY := 0.12
 const ACTION_BUTTON_SIZE := Vector2(148, 48)
+const LOG_BUTTON_SIZE := Vector2(148, 44)
+const LOG_BUTTON_TOP := 546.0
 
 var state: MatchState
 ## 自分の側。CPU戦・オンラインでは固定する。
@@ -488,11 +492,13 @@ func _build() -> void:
 	_end_turn_button.position = Vector2(ACTION_COLUMN_X, OWN_BAR_TOP - 4)
 	_end_turn_button.pressed.connect(_on_end_turn_pressed)
 	# 「ログ」「投了」は画面下部にまとめる(同上)。手札の右隣へ置いて重ならないようにする。
-	_log_button = _add_button("ログ", Vector2(140, 44))
-	_log_button.position = Vector2(884, 620)
+	# 「ログ」「投了」も右の列へ続けて置く。手札を画面の中央へ戻すため、
+	# 手札の右隣という置き場所はやめた。
+	_log_button = _add_button("ログ", LOG_BUTTON_SIZE)
+	_log_button.position = Vector2(ACTION_COLUMN_X, LOG_BUTTON_TOP)
 	_log_button.pressed.connect(func() -> void: _log.set_open(true))
-	_surrender_button = _add_button("投了", Vector2(140, 44))
-	_surrender_button.position = Vector2(1036, 620)
+	_surrender_button = _add_button("投了", LOG_BUTTON_SIZE)
+	_surrender_button.position = Vector2(ACTION_COLUMN_X, LOG_BUTTON_TOP + 56)
 	_surrender_button.pressed.connect(_on_surrender_pressed)
 	_cpu_timer = Timer.new()
 	_cpu_timer.one_shot = true

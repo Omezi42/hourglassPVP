@@ -1,0 +1,11 @@
+{
+  "scene_path": "res://scenes/account_screen.tscn",
+  "operations": [
+    {"op": "set_property", "node": "Panel/Margin/VBox", "property": "theme_override_constants/separation", "value": 10},
+    {"op": "set_property", "node": "Panel/Margin/VBox/CredentialBox", "property": "theme_override_constants/separation", "value": 8},
+    {"op": "set_property", "node": "Panel/Margin/VBox/NameRow/NameSaveButton", "property": "custom_minimum_size", "value_variant": "Vector2(160, 52)"},
+    {"op": "set_property", "node": "Panel/Margin/VBox/CredentialBox/ButtonRow/RegisterButton", "property": "custom_minimum_size", "value_variant": "Vector2(220, 60)"},
+    {"op": "set_property", "node": "Panel/Margin/VBox/CredentialBox/ButtonRow/LoginButton", "property": "custom_minimum_size", "value_variant": "Vector2(220, 60)"},
+    {"op": "set_property", "node": "Panel/Margin/VBox/LogoutButton", "property": "custom_minimum_size", "value_variant": "Vector2(220, 60)"}
+  ]
+}

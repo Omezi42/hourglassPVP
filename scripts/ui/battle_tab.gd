@@ -80,12 +80,12 @@ func _build_resume_button() -> void:
 	column.move_child(_resume_button, 0)
 
 
+## 「戦績」はリプレイ・CPU戦と同じ「対局そのものではない導線」のため、専用の行を作らず
+## 同じ行へ並べる。行を1つ増やすと、タブの高さ(下部タブに挟まれた領域)を超える。
 func _build_stats_button() -> void:
-	_stats_button = CodedButton.make("戦績", Vector2(220, 60))
-	_stats_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_stats_button = CodedButton.make("戦績", Vector2(200, 64))
 	_stats_button.pressed.connect(func() -> void: stats_requested.emit())
-	var column: Control = status_label.get_parent()
-	column.add_child(_stats_button)
+	replay_button.get_parent().add_child(_stats_button)
 
 
 ## 覚えている対局があるときだけ出す。終わっているかどうかは押した時点で確かめる

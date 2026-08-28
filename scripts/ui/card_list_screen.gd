@@ -7,10 +7,20 @@ signal back_pressed
 
 const HEADER_SCENE := "res://scenes/screen_header.tscn"
 const COLUMNS := 6
-const GRID_RECT := Rect2(
-	24, ScreenHeader.CONTENT_TOP, 800, 720 - ScreenHeader.CONTENT_TOP - ScreenHeader.OUTER_MARGIN
+const SCREEN_SIZE := Vector2(1280, 720)
+## 一覧と詳細の間隔。左右の外周余白と同じ値にして、3つの間隔を揃える。
+const COLUMN_GAP := ScreenHeader.OUTER_MARGIN
+const CONTENT_HEIGHT := 720 - ScreenHeader.CONTENT_TOP - ScreenHeader.OUTER_MARGIN
+const DETAIL_POSITION := Vector2(
+	SCREEN_SIZE.x - ScreenHeader.OUTER_MARGIN - CardDetailPanel.PANEL_SIZE.x,
+	ScreenHeader.CONTENT_TOP
 )
-const DETAIL_POSITION := Vector2(852, ScreenHeader.CONTENT_TOP)
+const GRID_RECT := Rect2(
+	ScreenHeader.OUTER_MARGIN,
+	ScreenHeader.CONTENT_TOP,
+	DETAIL_POSITION.x - COLUMN_GAP - ScreenHeader.OUTER_MARGIN,
+	CONTENT_HEIGHT
+)
 
 var _detail: CardDetailPanel
 var _keyword_popup: KeywordPopup

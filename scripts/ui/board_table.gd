@@ -14,10 +14,11 @@ const DIVIDER_RATIO := 0.5
 const MEDALLION_OUTER_RADIUS := 22.0
 const MEDALLION_INNER_RADIUS := 13.0
 
-## 琥珀アクセント(枠線・区切り線・隅飾り)は他のコード描画UIと共通のGLOW_AMBERを使い、
-## 用途ごとにアルファのみ変える(CodedButtonStyleのホバーグロー等と同じ考え方)。
-const TABLE_BORDER_ALPHA := 0.9
-const DIVIDER_ALPHA := 0.55
+## 卓の縁は**他のパネルと同じ真鍮の縁**として描く。以前は明るい琥珀の線1本だったため、
+## 面が塗られていても輪郭だけのワイヤーフレームに見えていた。
+## 区切り線と中央の紋章だけは琥珀のまま残す(陣地の境目はアクセントで示すため)。
+const DIVIDER_ALPHA := 0.5
+const RIM_OUTER_WIDTH := 4.0
 
 
 func _draw() -> void:
@@ -48,7 +49,8 @@ func _draw() -> void:
 	UiPaint.apply_grain(ci, Rect2(Vector2.ZERO, size), 0.06)
 	var outline := points.duplicate()
 	outline.append(points[0])
-	draw_polyline(outline, _amber(TABLE_BORDER_ALPHA), TABLE_BORDER_WIDTH, true)
+	draw_polyline(outline, UiPalette.OUTLINE_DARK, RIM_OUTER_WIDTH, true)
+	draw_polyline(outline, UiPalette.BRASS_LIGHT, TABLE_BORDER_WIDTH, true)
 
 	var divider_color := _amber(DIVIDER_ALPHA)
 	var divider_y := size.y * DIVIDER_RATIO

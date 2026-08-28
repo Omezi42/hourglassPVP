@@ -30,6 +30,10 @@ const SILENT_DB := -80.0
 const MIN_AUDIBLE_VOLUME := 0.0001
 ## トラック未指定を表す。enumの値と衝突しない負値を使う。
 const NO_TRACK := -1
+## Web版ではBGMをpckへ入れず、index.htmlと同じ階層のこのディレクトリから
+## 実行時に取りに行く(Architecture.md 4.1.6節)。曲は合計9MBあり、
+## pckへ入れると起動待ちがそのぶん延びるため。
+const EXTERNAL_BGM_DIR := "bgm/"
 
 static var _players: Array[AudioStreamPlayer] = []
 static var _fades: Array[Tween] = []
@@ -44,6 +48,12 @@ static var _current := NO_TRACK
 static var _unlocked := false
 static var _pending := NO_TRACK
 static var _host: Node = null
+## 取得済みの音源。res://から読めた場合も、実行時にダウンロードした場合もここへ入れる。
+static var _streams := {}
+## ダウンロード中のトラック。同じ曲を二重に取りに行かないため。
+static var _loading := {}
+## いま鳴らしたい曲。ダウンロードの完了時、まだその曲が求められているかを見るために持つ。
+static var _desired := NO_TRACK
 
 
 static func ensure_ready(parent: Node) -> void:
@@ -86,6 +96,7 @@ static func notify_user_gesture() -> void:
 static func stop() -> void:
 	_current = NO_TRACK
 	_pending = NO_TRACK
+	_desired = NO_TRACK
 	for i in range(_players.size()):
 		if _players[i].playing:
 			_fade_out_and_stop(i)
@@ -105,9 +116,74 @@ static func set_volume(value: float) -> void:
 
 
 static func _start(track: int) -> void:
-	var stream: AudioStream = load(TRACK_PATHS[track])
+	_desired = track
+	var stream := _stream_for(track)
+	if stream == null:
+		_request_stream(track)
+		return
+	_begin(track, stream)
+
+
+## 音源を取り出す。まだ手元に無い場合はnullを返し、呼び出し側が取得を依頼する。
+static func _stream_for(track: int) -> AudioStream:
+	if _streams.has(track):
+		return _streams[track]
+	# Web版はpckへ入れていない(export_presets.cfg の exclude_filter)ため、
+	# res://を試さずそのまま実行時のダウンロードへ回す。
+	if OS.has_feature("web"):
+		return null
+	var loaded: AudioStream = load(TRACK_PATHS[track])
+	if loaded != null:
+		_streams[track] = loaded
+	return loaded
+
+
+## Web版でpckに含まれていない曲を、index.htmlと同じ階層から取りに行く。
+## 取得に失敗しても対局は成立するため、無音のまま進める(エラーで止めない)。
+static func _request_stream(track: int) -> void:
+	if _host == null or _loading.has(track):
+		return
+	var url := _external_base_url() + EXTERNAL_BGM_DIR + String(TRACK_PATHS[track]).get_file()
+	var request := HTTPRequest.new()
+	_host.add_child(request)
+	request.request_completed.connect(_on_stream_downloaded.bind(request, track))
+	if request.request(url) != OK:
+		request.queue_free()
+		return
+	_loading[track] = true
+
+
+static func _on_stream_downloaded(
+	result: int,
+	code: int,
+	_headers: PackedStringArray,
+	body: PackedByteArray,
+	request: HTTPRequest,
+	track: int
+) -> void:
+	_loading.erase(track)
+	request.queue_free()
+	if result != HTTPRequest.RESULT_SUCCESS or code != 200 or body.is_empty():
+		return
+	var stream := AudioStreamOggVorbis.load_from_buffer(body)
 	if stream == null:
 		return
+	_streams[track] = stream
+	if _desired == track and _unlocked:
+		_begin(track, stream)
+
+
+## ページのURLからディレクトリ部分を取り出す。HTTPRequestは相対URLを解決しないため、
+## 絶対URLを自分で組み立てる必要がある。
+static func _external_base_url() -> String:
+	if not OS.has_feature("web"):
+		return ""
+	var href := String(JavaScriptBridge.eval("location.href.split('?')[0].split('#')[0]", true))
+	var cut := href.rfind("/")
+	return href.substr(0, cut + 1) if cut >= 0 else ""
+
+
+static func _begin(track: int, stream: AudioStream) -> void:
 	# インポート設定でループを有効にするとfinishedが発火せず、
 	# 「終わりまで鳴らしてから間を置いて頭へ戻す」制御ができなくなる。
 	stream.loop = false

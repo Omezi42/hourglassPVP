@@ -42,13 +42,13 @@ layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 theme_override_constants/margin_left = 40
-theme_override_constants/margin_top = 120
+theme_override_constants/margin_top = 112
 theme_override_constants/margin_right = 40
-theme_override_constants/margin_bottom = 24
+theme_override_constants/margin_bottom = 16
 
 [node name="VBox" type="VBoxContainer" parent="Margin" unique_id=1031725951]
 layout_mode = 2
-theme_override_constants/separation = 20
+theme_override_constants/separation = 14
 alignment = 1
 
 [node name="StatusLabel" type="Label" parent="Margin/VBox" unique_id=2146442433]
@@ -63,7 +63,7 @@ theme_override_constants/separation = 24
 alignment = 1
 
 [node name="RandomMatchButton" type="Button" parent="Margin/VBox/MainRow" unique_id=133318171]
-custom_minimum_size = Vector2(380, 136)
+custom_minimum_size = Vector2(360, 108)
 layout_mode = 2
 theme_override_styles/normal = ExtResource("2_6rapo")
 theme_override_styles/pressed = ExtResource("3_8tkbr")
@@ -76,7 +76,7 @@ theme_override_font_sizes/font_size = 26
 text = "ランダムマッチ"
 
 [node name="CreateRoomButton" type="Button" parent="Margin/VBox/MainRow" unique_id=1997506293]
-custom_minimum_size = Vector2(380, 136)
+custom_minimum_size = Vector2(360, 108)
 layout_mode = 2
 theme_override_styles/normal = ExtResource("2_6rapo")
 theme_override_styles/pressed = ExtResource("3_8tkbr")
@@ -100,12 +100,12 @@ theme_override_constants/separation = 16
 alignment = 1
 
 [node name="JoinCodeInput" type="LineEdit" parent="Margin/VBox/JoinRow" unique_id=1146633493]
-custom_minimum_size = Vector2(300, 56)
+custom_minimum_size = Vector2(280, 56)
 layout_mode = 2
 placeholder_text = "ルームコードを入力"
 
 [node name="JoinRoomButton" type="Button" parent="Margin/VBox/JoinRow" unique_id=1368815917]
-custom_minimum_size = Vector2(220, 79)
+custom_minimum_size = Vector2(200, 64)
 layout_mode = 2
 theme_override_styles/normal = ExtResource("2_6rapo")
 theme_override_styles/pressed = ExtResource("3_8tkbr")
@@ -118,7 +118,7 @@ theme_override_font_sizes/font_size = 22
 text = "コードで参加"
 
 [node name="SpectateButton" type="Button" parent="Margin/VBox/JoinRow" unique_id=1577222140]
-custom_minimum_size = Vector2(220, 79)
+custom_minimum_size = Vector2(200, 64)
 layout_mode = 2
 theme_override_styles/normal = ExtResource("2_6rapo")
 theme_override_styles/pressed = ExtResource("3_8tkbr")
@@ -136,7 +136,7 @@ theme_override_constants/separation = 24
 alignment = 1
 
 [node name="ReplayButton" type="Button" parent="Margin/VBox/SecondaryRow" unique_id=56388521]
-custom_minimum_size = Vector2(220, 79)
+custom_minimum_size = Vector2(200, 64)
 layout_mode = 2
 theme_override_styles/normal = ExtResource("2_6rapo")
 theme_override_styles/pressed = ExtResource("3_8tkbr")
@@ -149,7 +149,7 @@ theme_override_font_sizes/font_size = 22
 text = "リプレイ"
 
 [node name="CpuMatchButton" type="Button" parent="Margin/VBox/SecondaryRow" unique_id=188429079]
-custom_minimum_size = Vector2(220, 79)
+custom_minimum_size = Vector2(200, 64)
 layout_mode = 2
 theme_override_styles/normal = ExtResource("2_6rapo")
 theme_override_styles/pressed = ExtResource("3_8tkbr")

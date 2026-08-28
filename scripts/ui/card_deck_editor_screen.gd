@@ -175,6 +175,7 @@ func _distinct_sorted() -> Array:
 func _make_entry(card: CardData) -> Control:
 	var row := HBoxContainer.new()
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_theme_constant_override("separation", 10)
 	row.mouse_filter = Control.MOUSE_FILTER_PASS
 	row.mouse_entered.connect(func() -> void: _detail.show_card(card))
 	var cost := Label.new()
@@ -189,10 +190,12 @@ func _make_entry(card: CardData) -> Control:
 	var note := Label.new()
 	note.text = card.describe()
 	# 効果文はカードによって長さが大きく違う。伸ばすと右隣の枚数へ食い込むため、
-	# 幅を固定して溢れた分は切る。
-	note.custom_minimum_size = Vector2(260, 0)
+	# 幅を固定して溢れた分は省略記号で切る。**単に切ると文が枚数へ触れて見え、
+	# 続きがあることも分からない**。
+	note.custom_minimum_size = Vector2(240, 0)
 	note.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	note.clip_text = true
+	note.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	note.add_theme_color_override("font_color", UiPalette.BRASS_HIGHLIGHT)
 	note.add_theme_font_size_override("font_size", 15)
 	row.add_child(note)

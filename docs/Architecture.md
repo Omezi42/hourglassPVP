@@ -473,6 +473,29 @@ unityroomはpckとwasmを**全部読み終えてから**ゲームが始まるた
 **ロスレスのctexはgzipでほとんど縮まない**ため、pckの数字がそのまま転送量になる。
 wasmだけがgzipで1/4になる点と混同しないこと。
 
+#### BGMはpckへ入れず、実行時に取りに行く
+
+BGM3曲は合計8.8MBあり、上の3点を守ってもなおpckの7割を占める。**曲を短く切るのではなく、
+起動を待たせないようにする**ことで解決する。
+
+- Webプリセットの `exclude_filter` に `assets/bgm/*` を入れ、pckから外す
+- 書き出し後、`index.html` と同じ階層の `bgm/` へ素の `.ogg` を置く
+  (`tools/export_web.sh` がこの2つをまとめて行う。**unityroomへ上げるzipには
+  この `bgm/` を必ず含める**)
+- `MusicPlayer` は、Web版では `res://` を試さずに `HTTPRequest` で `bgm/{曲}.ogg` を取得し、
+  `AudioStreamOggVorbis.load_from_buffer()` で鳴らす。取得先の絶対URLは
+  `JavaScriptBridge` で `location.href` から組む(HTTPRequestは相対URLを解決しないため)
+
+**この方式が成立するのは、BGMがもともとすぐには鳴らないから**である。ブラウザの自動再生制限で
+最初のクリックまで再生を保留しており(9章)、その間にダウンロードが終わる。取得に失敗しても
+無音のまま対局は成立するので、エラーで止めない。
+
+**デスクトップ側は `res://` から読む経路をそのまま残す**(`exclude_filter` はWebプリセット
+だけのもの)。判定は `OS.has_feature("web")` で行う。`ResourceLoader.exists()` は
+pckから除外した後も true を返すことがあり、有無の判定には使えない(実測)。
+
+`tools/balance/` のシミュレーション結果(1.1MB)も実行時に読まないため同様に除外する。
+
 ---
 
 ### 4.1.5 はじめてのプレイ(GameDesign.md 18章)
