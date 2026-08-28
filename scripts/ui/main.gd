@@ -43,7 +43,10 @@ func _ready() -> void:
 	# v5.0の対局画面は子がすべてコード描画のControlで .tscn を持たないため、
 	# ここで生成して画面一覧へ加える(Architecture.md 4.0節)。
 	card_match_screen = CardMatchScreen.new()
-	card_match_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
+	# アンカーは直接代入する。`set_anchors_preset()` は今の矩形を保つように offset を
+	# 計算し直すため、生成直後(サイズ0)のノードへ使うと0のまま固定される。
+	card_match_screen.anchor_right = 1.0
+	card_match_screen.anchor_bottom = 1.0
 	card_match_screen.visible = false
 	add_child(card_match_screen)
 	card_match_screen.back_pressed.connect(_on_card_match_back)

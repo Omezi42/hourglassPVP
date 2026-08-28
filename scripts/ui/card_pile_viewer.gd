@@ -3,6 +3,8 @@ extends Control
 ## 墓地の中身を見るモーダル(GameDesign.md 9章)。山札の中身は見られない。
 ## 対局中に「何が落ちたか」を数え直せないと、残っている脅威を読めないため用意する。
 
+const SCREEN_SIZE := Vector2(1280, 720)
+
 const PANEL_STYLE := "res://resources/theme/content_panel.tres"
 const PANEL_SIZE := Vector2(880, 520)
 const COLUMNS := 6
@@ -15,7 +17,9 @@ var _empty: Label
 func _ready() -> void:
 	visible = false
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	# **`set_anchors_preset()` は使わない**(Architecture.md 4章)。コードで生成した直後の
+	# サイズ0のノードへ使うと0のまま固定され、暗幕が盤面を覆わずクリックも止められない。
+	size = SCREEN_SIZE
 	_build()
 
 
@@ -49,7 +53,7 @@ func open_pile(title: String, cards: Array) -> void:
 func _build() -> void:
 	var dim := ColorRect.new()
 	dim.color = Color(0, 0, 0, 0.65)
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.size = SCREEN_SIZE
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	dim.gui_input.connect(_on_dim_input)
 	add_child(dim)

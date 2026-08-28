@@ -49,6 +49,7 @@ var _match_id := ""
 var _replay: CardMatchReplay = null
 ## 再生モードでは盤面を一切操作できない(GameDesign.md 12章)。
 var _interactive := true
+var _mulligan: CardMatchMulligan
 ## 砂金の獲得量を決める対局の種別(GameDesign.md 15章)。
 var _match_kind: CurrencyRules.MatchKind = CurrencyRules.MatchKind.NONE
 ## 持ち時間。オンライン対戦だけが使う(CPU戦はローカルのため無制限。GameDesign.md 13章)。
@@ -138,6 +139,8 @@ func _reset_for_new_match() -> void:
 	_cpu_record = {}
 	_waiting_text = ""
 	_opponent_timeout_wait = 0.0
+	if _mulligan != null:
+		_mulligan.close()
 	set_process(false)
 	if state != null and is_instance_valid(state):
 		state.queue_free()
@@ -165,7 +168,8 @@ func start_cpu_match(deck_self: Array, deck_foe: Array) -> void:
 		"actions": [],
 		"source": "cpu",
 	}
-	_begin_state(deck_self, deck_foe, seed_value)
+	_begin_state(deck_self, deck_foe, seed_value, true)
+	_start_cpu_mulligan()
 
 
 ## オンライン対戦を開始する。配置フェーズは無く、デッキと山札の種を交換したら
@@ -205,12 +209,18 @@ func start_online_match(
 	_begin_state(
 		deck_self if p_my_side == MatchState.Side.A else opponent_deck,
 		opponent_deck if p_my_side == MatchState.Side.A else deck_self,
-		int(result["seed"])
+		int(result["seed"]),
+		true
 	)
 	_online = OnlineMatch.new(client)
 	add_child(_online)
 	_online.action_received.connect(_on_action_received)
 	_online.start(p_match_id)
+	# マリガンは手と同じ `actions` として送り合う(GameDesign.md 2章)。両者の確定が
+	# 揃うまで対局は始まらないため、持ち時間はここを抜けてから動かし始める。
+	if state.mulligan_pending:
+		_mulligan.show_hand(state.hand[my_side])
+		await state.mulligan_finished
 	# 持ち時間はオンライン対戦だけが使う(GameDesign.md 13章)。
 	_clock = MatchClock.new()
 	_clock.time_out.connect(_on_local_timeout)
@@ -287,9 +297,9 @@ func start_spectate(client: FirestoreClient, p_match_id: String) -> bool:
 		_waiting_text = "この対局はまだ始まっていません"
 		queue_redraw()
 		return false
-	_begin_state(deck_a, deck_b, int(record.get("seed", 0)))
-	# 既に進んでいる手をまとめて追いつかせてから、以降をポーリングで受け取る。
 	var actions: Array = record.get("actions", [])
+	_begin_state(deck_a, deck_b, int(record.get("seed", 0)), MatchAction.contains_mulligan(actions))
+	# 既に進んでいる手をまとめて追いつかせてから、以降をポーリングで受け取る。
 	for action in actions:
 		MatchAction.apply(state, action)
 	refresh()
@@ -341,7 +351,9 @@ func stop_networking() -> void:
 
 
 ## 対局を開始する共通処理。CPU戦とオンラインで同じ経路を通す。
-func _begin_state(deck_a: Array, deck_b: Array, seed_value: int) -> void:
+func _begin_state(
+	deck_a: Array, deck_b: Array, seed_value: int, use_mulligan: bool = false
+) -> void:
 	state = MatchState.new()
 	add_child(state)
 	state.turn_started.connect(_on_turn_started)
@@ -352,7 +364,9 @@ func _begin_state(deck_a: Array, deck_b: Array, seed_value: int) -> void:
 	state.unit_ticked.connect(_on_unit_ticked)
 	state.unit_flipped.connect(_on_unit_flipped)
 	_log.set_perspective(my_side)
-	state.start_match(deck_a, deck_b, MatchState.Side.A, seed_value)
+	state.start_match(
+		deck_a, deck_b, MatchState.Side.A, seed_value, MatchState.COIN_ENABLED, use_mulligan
+	)
 	_log.watch(state)
 	refresh()
 
@@ -405,6 +419,9 @@ func _build() -> void:
 	# 光の筋は盤面の駒より手前、ログ・結果パネルより背面に置く。
 	_flip_beam = CardFlipBeam.new()
 	add_child(_flip_beam)
+	_mulligan = CardMatchMulligan.new()
+	_mulligan.confirmed.connect(_on_mulligan_confirmed)
+	add_child(_mulligan)
 	_result = CardMatchResult.new()
 	_result.home_pressed.connect(func() -> void: back_pressed.emit())
 	_result.log_pressed.connect(func() -> void: _log.set_open(true))
@@ -705,6 +722,22 @@ func _record(action: Dictionary) -> void:
 
 ## 自分の1手を適用する。オンラインなら同時に相手へ送る。
 ## **すべての操作をこの1箇所へ通す**ことで、送信し忘れる経路が生まれないようにする。
+## CPUのマリガンは先に決めておく。適用の順序は `MatchState` が A → B に固定するため、
+## どちらが先に確定しても同じ対局になる。
+func _start_cpu_mulligan() -> void:
+	if not state.mulligan_pending:
+		return
+	var foe := MatchState.other_side(my_side)
+	_perform(MatchAction.mulligan(foe, _cpu.choose_mulligan(state, foe)))
+	_mulligan.show_hand(state.hand[my_side])
+
+
+func _on_mulligan_confirmed(indices: Array) -> void:
+	if state == null or not state.mulligan_pending:
+		return
+	_perform(MatchAction.mulligan(my_side, indices))
+
+
 func _perform(action: Dictionary) -> void:
 	_record(action)
 	MatchAction.apply(state, action)
@@ -749,6 +782,7 @@ func _on_unit_flipped(side: int, slot: int) -> void:
 
 
 func _on_turn_started(side: int) -> void:
+	_mulligan.close()
 	refresh()
 	if _cpu != null and side != my_side and not state.is_match_over():
 		_cpu_timer.start(CPU_THINK_SECONDS)

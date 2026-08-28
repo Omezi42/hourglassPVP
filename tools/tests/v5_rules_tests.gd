@@ -34,6 +34,7 @@ func run(assert_true: Callable) -> void:
 	_test_mulligan_waits_for_both_sides()
 	_test_mulligan_never_returns_the_same_cards()
 	_test_mulligan_is_order_independent()
+	_test_mulligan_match_replays_from_the_record()
 
 
 func _card(id: String) -> CardData:
@@ -526,3 +527,51 @@ func _test_mulligan_is_order_independent() -> void:
 		var deck_b: Array = second.deck[side]
 		for i in deck_a.size():
 			_assert.call(deck_a[i] == deck_b[i], "both arrival orders should leave the same deck")
+
+
+## 棋譜にマリガンが含まれていても、初期状態から手を並べ直せば同じ対局になる
+## (リプレイ・観戦はこの経路で局面を作る)。
+func _test_mulligan_match_replays_from_the_record() -> void:
+	var deck_a := _deck_of("sand")
+	var deck_b := _deck_of("sword")
+	var seed_value := 20260828
+	var cpu := CardCpuStrategy.new()
+
+	var live := MatchState.new()
+	live.start_match(deck_a, deck_b, MatchState.Side.A, seed_value, MatchState.COIN_ENABLED, true)
+	var recorded: Array = []
+	for side in [MatchState.Side.B, MatchState.Side.A]:
+		var choice := MatchAction.mulligan(side, cpu.choose_mulligan(live, side))
+		recorded.append(choice)
+		MatchAction.apply(live, choice)
+	_assert.call(not live.mulligan_pending, "both mulligans should settle the opening")
+	var guard := 0
+	while not live.is_match_over() and guard < 400:
+		guard += 1
+		var action := cpu.choose_action(live, live.current_turn)
+		recorded.append(action)
+		MatchAction.apply(live, action)
+	_assert.call(live.is_match_over(), "the recorded match should have reached an end")
+	_assert.call(
+		MatchAction.contains_mulligan(recorded), "the record should be detected as a mulligan game"
+	)
+
+	var replay := MatchState.new()
+	replay.start_match(
+		deck_a,
+		deck_b,
+		MatchState.Side.A,
+		seed_value,
+		MatchState.COIN_ENABLED,
+		MatchAction.contains_mulligan(recorded)
+	)
+	for action in recorded:
+		MatchAction.apply(replay, action)
+	_assert.call(
+		(
+			replay.hp[MatchState.Side.A] == live.hp[MatchState.Side.A]
+			and replay.hp[MatchState.Side.B] == live.hp[MatchState.Side.B]
+		),
+		"replaying a mulligan game should reach the same hp"
+	)
+	_assert.call(replay.winner == live.winner, "replaying a mulligan game should reach the winner")

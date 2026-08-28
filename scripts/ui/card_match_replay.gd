@@ -55,7 +55,14 @@ func goto(count: int) -> void:
 	index = clampi(count, 0, actions.size())
 	var state := MatchState.new()
 	add_child(state)
-	state.start_match(deck_a, deck_b, MatchState.Side.A, seed_value)
+	state.start_match(
+		deck_a,
+		deck_b,
+		MatchState.Side.A,
+		seed_value,
+		MatchState.COIN_ENABLED,
+		MatchAction.contains_mulligan(actions)
+	)
 	for i in index:
 		MatchAction.apply(state, actions[i])
 	state_rebuilt.emit(state)

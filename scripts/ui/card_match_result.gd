@@ -6,6 +6,7 @@ extends Control
 signal home_pressed
 signal log_pressed
 
+const SCREEN_SIZE := Vector2(1280, 720)
 const PANEL_SIZE := Vector2(520, 320)
 
 var _title: Label
@@ -15,7 +16,9 @@ var _detail: Label
 func _ready() -> void:
 	visible = false
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	# **`set_anchors_preset()` は使わない**(Architecture.md 4章)。コードで生成した直後は
+	# サイズ0のため、暗幕が盤面を覆わずクリックも止められない状態になる。
+	size = SCREEN_SIZE
 	_build()
 
 
@@ -47,14 +50,14 @@ func _title_text(winner: int, my_side: int) -> String:
 func _build() -> void:
 	var dim := ColorRect.new()
 	dim.color = Color(0, 0, 0, 0.7)
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.size = SCREEN_SIZE
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(dim)
 
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = PANEL_SIZE
 	panel.size = PANEL_SIZE
-	panel.position = (Vector2(1280, 720) - PANEL_SIZE) * 0.5
+	panel.position = (SCREEN_SIZE - PANEL_SIZE) * 0.5
 	var style: StyleBox = load("res://resources/theme/content_panel.tres")
 	if style != null:
 		panel.add_theme_stylebox_override("panel", style)

@@ -7,6 +7,8 @@ extends Control
 ## 独立したオーバーレイとして持つ(`Control._draw()` は自分の子より背面に描かれるため、
 ## 画面側で描くと卓と駒に隠れて筋がほとんど見えない)。
 
+const SCREEN_SIZE := Vector2(1280, 720)
+
 const DURATION := 0.2
 const COLOR := Color(1.0, 0.86, 0.5, 1.0)
 ## 着弾の閃光を出し始める進捗。
@@ -19,7 +21,9 @@ var _progress := -1.0
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	# **`set_anchors_preset()` は使わない**(Architecture.md 4章)。コードで生成した直後の
+	# サイズ0のノードへ使うと0のまま固定され、暗幕が盤面を覆わずクリックも止められない。
+	size = SCREEN_SIZE
 
 
 ## 筋を伸ばし、対象へ届いたら返る。呼び出し側はこの後に駒の反転を始める。

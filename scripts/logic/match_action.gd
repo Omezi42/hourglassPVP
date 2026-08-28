@@ -35,6 +35,15 @@ static func mulligan(side: int, indices: Array) -> Dictionary:
 	return {"type": "mulligan", "side": side, "indices": indices}
 
 
+## 棋譜がマリガンを含むか(GameDesign.md 2章)。マリガンの導入前に保存された棋譜は
+## 含まないため、再生・観戦はこれを見て待つかどうかを決める。
+static func contains_mulligan(actions: Array) -> bool:
+	for action in actions:
+		if action.get("type", "") == "mulligan":
+			return true
+	return false
+
+
 ## 1手を適用する。適用できた場合のみ true を返す。
 static func apply(state: MatchState, action: Dictionary) -> bool:
 	var side: int = action.get("side", state.current_turn)

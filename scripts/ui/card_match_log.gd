@@ -6,6 +6,8 @@ extends Control
 ## 記録と表示を1クラスに持たせているのは、**表示する文言と記録する文言を必ず同じにする**ため。
 ## 別々に組むと、実況に出る文と後から読み返す文がずれていく。
 
+const SCREEN_SIZE := Vector2(1280, 720)
+
 const PANEL_SIZE := Vector2(720, 480)
 const MAX_LINES := 200
 
@@ -20,7 +22,9 @@ var _last_hp := {}
 func _ready() -> void:
 	visible = false
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	# **`set_anchors_preset()` は使わない**(Architecture.md 4章)。コードで生成した直後の
+	# サイズ0のノードへ使うと0のまま固定され、暗幕が盤面を覆わずクリックも止められない。
+	size = SCREEN_SIZE
 	_build()
 
 
@@ -153,7 +157,7 @@ static func reason_text(state: MatchState, winner: int) -> String:
 func _build() -> void:
 	var dim := ColorRect.new()
 	dim.color = Color(0, 0, 0, 0.6)
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.size = SCREEN_SIZE
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	dim.gui_input.connect(_on_dim_input)
 	add_child(dim)
