@@ -37,6 +37,8 @@ const DETAIL_HIDE_DELAY := 0.12
 const ACTION_BUTTON_SIZE := Vector2(148, 48)
 const LOG_BUTTON_SIZE := Vector2(148, 44)
 const LOG_BUTTON_TOP := 546.0
+## リプレイ・観戦のときだけ出す戻るボタン。行動の列の先頭に置く。
+const BACK_BUTTON_TOP := 24.0
 ## 情報帯の幅。行動の列(ACTION_COLUMN_X)の手前で止める。
 const BAR_WIDTH := ACTION_COLUMN_X - MARGIN - 24.0
 
@@ -79,13 +81,14 @@ var _opponent_timeout_wait := 0.0
 ## CPU戦の棋譜。オンラインは matches/{id} が同じ内容を持つため、こちらはCPU戦だけが使う。
 var _cpu_record: Dictionary = {}
 ## 相手を待っている間に出す文言。空なら出さない。
-var _waiting_text := ""
 var _log: CardMatchLog
 var _result: CardMatchResult
 var _pile: CardPileViewer
 var _log_button: Button
 var _flip_beam: CardFlipBeam
 var _surrender_button: Button
+var _back_button: Button
+var _status: CardMatchStatus
 
 
 func _ready() -> void:
@@ -93,48 +96,6 @@ func _ready() -> void:
 	# 持ち時間を持つのはオンライン対戦だけ。それ以外では毎フレーム走らせない。
 	set_process(false)
 	_outcome = CardMatchOutcome.new(self)
-
-
-func _draw() -> void:
-	if _selection != null and _selection.is_targeting():
-		_draw_target_prompt()
-	if not _waiting_text.is_empty():
-		draw_string(
-			get_theme_default_font(),
-			Vector2(size.x * 0.5 - 180, size.y * 0.5),
-			_waiting_text,
-			HORIZONTAL_ALIGNMENT_LEFT,
-			-1,
-			26,
-			UiPalette.TEXT_OFFWHITE
-		)
-
-
-## 対象選択中であることを、行動ボタンの列(盤面と重ならない場所)へ出す。
-## 盤面の上へ重ねると、選ばせたい相手のカードそのものを隠してしまう。
-func _draw_target_prompt() -> void:
-	var font := get_theme_default_font()
-	var rect := Rect2(ACTION_COLUMN_X, 240, 148, 52)
-	draw_rect(rect, Color(0.08, 0.12, 0.14, 0.95))
-	draw_rect(rect, CardView.SELECT_CYAN, false, 2.0)
-	draw_string(
-		font,
-		rect.position + Vector2(12, 24),
-		"対象を選ぶ",
-		HORIZONTAL_ALIGNMENT_LEFT,
-		-1,
-		20,
-		CardView.SELECT_CYAN
-	)
-	draw_string(
-		font,
-		rect.position + Vector2(12, 44),
-		"他を押すと取消",
-		HORIZONTAL_ALIGNMENT_LEFT,
-		-1,
-		14,
-		UiPalette.TEXT_OFFWHITE
-	)
 
 
 ## 前の対局の名残を落としてから新しい対局へ入る。結果パネル・ログ・選択・
@@ -158,7 +119,7 @@ func _reset_for_new_match() -> void:
 	_match_id = ""
 	_clock = null
 	_cpu_record = {}
-	_waiting_text = ""
+	_status.set_waiting("")
 	_opponent_timeout_wait = 0.0
 	if _mulligan != null:
 		_mulligan.close()
@@ -168,7 +129,6 @@ func _reset_for_new_match() -> void:
 	if state != null and is_instance_valid(state):
 		state.queue_free()
 	state = null
-	queue_redraw()
 
 
 ## CPU戦を開始する。deck_self / deck_foe は CardData の配列(20枚)。
@@ -221,8 +181,7 @@ func start_online_match(
 	my_side = p_my_side
 	_own_deck = deck_self
 	_apply_player_names(client, opponent_uid)
-	_waiting_text = "対戦相手を待っています"
-	queue_redraw()
+	_status.set_waiting("対戦相手を待っています")
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
 	var seed_value := rng.randi_range(1, 1 << 30)
@@ -234,10 +193,9 @@ func start_online_match(
 	var result: Dictionary = await _setup.wait_for_opponent_setup(seed_value)
 	var opponent_ids: Array = result["deck"]
 	if opponent_ids.is_empty():
-		_waiting_text = _setup.abort_message()
-		queue_redraw()
+		_status.set_waiting(_setup.abort_message())
 		return
-	_waiting_text = ""
+	_status.set_waiting("")
 	var opponent_deck := CardLibrary.deck_from_ids(opponent_ids)
 	_begin_state(
 		deck_self if p_my_side == MatchState.Side.A else opponent_deck,
@@ -338,8 +296,7 @@ func resume_online_match(client: FirestoreClient, record: Dictionary) -> bool:
 	var deck_b := CardLibrary.deck_from_ids(doc.get("deck_b", []))
 	if deck_a.size() != MatchState.DECK_SIZE or deck_b.size() != MatchState.DECK_SIZE:
 		OnlineResume.clear()
-		_waiting_text = "前回の対局は見つかりませんでした"
-		queue_redraw()
+		_status.set_waiting("前回の対局は見つかりませんでした")
 		return false
 	_own_deck = deck_a if p_my_side == MatchState.Side.A else deck_b
 	var actions: Array = doc.get("actions", [])
@@ -348,8 +305,7 @@ func resume_online_match(client: FirestoreClient, record: Dictionary) -> bool:
 		MatchAction.apply(state, action)
 	if state.is_match_over() or doc.has("finished_at"):
 		OnlineResume.clear()
-		_waiting_text = "前回の対局は既に終わっています"
-		queue_redraw()
+		_status.set_waiting("前回の対局は既に終わっています")
 		return false
 	refresh()
 	_client = client
@@ -380,8 +336,7 @@ func start_spectate(client: FirestoreClient, p_match_id: String) -> bool:
 	var deck_a := CardLibrary.deck_from_ids(record.get("deck_a", []))
 	var deck_b := CardLibrary.deck_from_ids(record.get("deck_b", []))
 	if deck_a.size() != MatchState.DECK_SIZE or deck_b.size() != MatchState.DECK_SIZE:
-		_waiting_text = "この対局はまだ始まっていません"
-		queue_redraw()
+		_status.set_waiting("この対局はまだ始まっていません")
 		return false
 	var actions: Array = record.get("actions", [])
 	_begin_state(deck_a, deck_b, int(record.get("seed", 0)), MatchAction.contains_mulligan(actions))
@@ -502,6 +457,11 @@ func _build() -> void:
 	_surrender_button = _add_button("投了", LOG_BUTTON_SIZE)
 	_surrender_button.position = Vector2(ACTION_COLUMN_X, LOG_BUTTON_TOP + 56)
 	_surrender_button.pressed.connect(_on_surrender_pressed)
+	# リプレイ再生・観戦には終局の結果パネル(「ホームへ」)が出ないため、
+	# この戻るボタンが唯一の出口になる。対局中は投了が出口のため出さない。
+	_back_button = _add_button("戻る", LOG_BUTTON_SIZE)
+	_back_button.position = Vector2(ACTION_COLUMN_X, BACK_BUTTON_TOP)
+	_back_button.pressed.connect(func() -> void: back_pressed.emit())
 	_cpu_timer = Timer.new()
 	_cpu_timer.one_shot = true
 	_cpu_timer.timeout.connect(_take_cpu_action)
@@ -521,6 +481,9 @@ func _build() -> void:
 	_detail_timer.one_shot = true
 	_detail_timer.timeout.connect(func() -> void: _detail.visible = false)
 	add_child(_detail_timer)
+	# 通信待ちの文言と対象選択の案内は、駒より手前へ出すため独立したノードで描く。
+	_status = CardMatchStatus.new()
+	add_child(_status)
 	_tutorial = CardMatchTutorial.new()
 	add_child(_tutorial)
 	_mulligan = CardMatchMulligan.new()
@@ -590,7 +553,6 @@ func _add_button(label: String, button_size: Vector2) -> Button:
 
 func refresh() -> void:
 	if state == null:
-		queue_redraw()
 		return
 	var foe := MatchState.other_side(my_side)
 	_foe_bar.show_state(state, foe)
@@ -600,7 +562,7 @@ func refresh() -> void:
 	_refresh_hand()
 	_refresh_targets()
 	_refresh_buttons()
-	queue_redraw()
+	_status.set_targeting(_selection != null and _selection.is_targeting())
 
 
 func _refresh_row(views: Array[CardView], side: int) -> void:
@@ -684,6 +646,7 @@ func _refresh_buttons() -> void:
 	_end_turn_button.disabled = not _my_turn()
 	_log_button.visible = _interactive
 	_surrender_button.visible = _interactive and not over
+	_back_button.visible = not _interactive
 	_coin_button.visible = _interactive and state.coin_available.get(my_side, false)
 	_coin_button.disabled = not _my_turn()
 	var show_flip := (

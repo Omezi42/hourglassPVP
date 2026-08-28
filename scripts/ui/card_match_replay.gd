@@ -9,10 +9,10 @@ extends Control
 signal state_rebuilt(state: MatchState)
 
 const PLAY_INTERVAL := 0.8
-const BUTTON_SIZE := Vector2(80, 40)
+const BUTTON_SIZE := Vector2(70, 40)
 ## 再生コントロールの置き場所。手札の上に重ねないよう、対局中の行動ボタンと同じ
-## 画面右の列へ2列で並べる(再生中は行動ボタンを出さないため空いている)。
-const CONTROL_POSITION := Vector2(1092, 372)
+## 画面右の列(x=1108、幅148)へ2列で並べる(再生中は行動ボタンを出さないため空いている)。
+const CONTROL_POSITION := Vector2(1108, 372)
 
 var deck_a: Array = []
 var deck_b: Array = []
@@ -81,12 +81,13 @@ func _build() -> void:
 	_row.add_theme_constant_override("v_separation", 8)
 	_row.position = CONTROL_POSITION
 	add_child(_row)
-	_row.add_child(_make("先頭へ", func() -> void: goto(0)))
-	_row.add_child(_make("戻る", func() -> void: goto(index - 1)))
+	_row.add_child(_make("先頭", func() -> void: goto(0)))
+	# 画面の出口(「戻る」)と紛れないよう、1手ぶんの前後は「1手戻/1手進」と書く。
+	_row.add_child(_make("1手戻", func() -> void: goto(index - 1)))
 	_play_button = _make("再生", _toggle_play)
 	_row.add_child(_play_button)
-	_row.add_child(_make("進む", func() -> void: goto(index + 1)))
-	_row.add_child(_make("最後へ", func() -> void: goto(actions.size())))
+	_row.add_child(_make("1手進", func() -> void: goto(index + 1)))
+	_row.add_child(_make("最後", func() -> void: goto(actions.size())))
 	_counter = Label.new()
 	_counter.custom_minimum_size = Vector2(BUTTON_SIZE.x, 30)
 	_counter.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
