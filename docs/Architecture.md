@@ -226,6 +226,8 @@ UIに依存しない、対局ルールそのものを扱う層。
 | `CardMatchMulligan`(`scripts/ui/card_match_mulligan.gd`) | 対局開始前のマリガン画面。暗幕の上へ初期手札を並べ、選んだ枚数を `mulligan_confirmed(indices)` として返すところまでが責務で、適用は `MatchState` が行う |
 | `CardMatchLog`(`scripts/ui/card_match_log.gd`) | 対局ログ。`MatchState` のシグナルを購読して日本語の行を積み、中央のモーダルとして開く。**記録と表示を同じクラスに持たせている**のは、実況に出す文と読み返す文を必ず一致させるため |
 | `CardMatchTurnFeed`(`scripts/ui/card_match_turn_feed.gd`) | 手番バナー・相手の1手の実況・スポットライト。**ログと同じ文言**を `CardMatchLog.describe()` から引く |
+| `CardMatchStrike`(`scripts/ui/card_match_strike.gd`) | 攻撃の演出の進行役。被ダメージの砂の飛散を**当たる瞬間まで持ち越す**。砂の演出(`unit_damaged`/`unit_ticked`)の受け口も持つ |
+| `CardMatchTargets`(`scripts/ui/card_match_targets.gd`) | 置ける枠・殴れる相手の強調と、相打ちの予測 |
 | `CardMatchResult`(`scripts/ui/card_match_result.gd`) | 結果パネル。勝敗・最終HP・総手数・決着の要因と「ログ」「ホームへ」 |
 | `CardDeckEditorScreen`(`scripts/ui/card_deck_editor_screen.gd`) | デッキ編集(20枚・同名2枚まで)。共通の `ScreenHeader` を使う |
 | `CardManaCurve`(`scripts/ui/card_mana_curve.gd`) | コスト別の枚数の棒グラフ。デッキ編集では低背版(`compact`)で使う |
@@ -296,7 +298,7 @@ UIに依存しない、対局ルールそのものを扱う層。
 再生先を振り分ける。再生中は `_interactive = false` で操作をまとめて塞ぎ、
 結果パネルも出さない(最後の手まで進めるたびに操作を塞ぐと前後に動かせなくなるため)。
 
-**反転の演出は `CardFlipBeam`(光の筋)と `CardView.play_flip()`(駒の裏返り)の2段で作る。**
+**反転の段取りは `CardFlipBeam.play_flip()` が持つ**(光の筋と駒の裏返りが対になっており、対局画面へ置くと1000行の上限を圧迫するため)。**反転の演出は `CardFlipBeam`(光の筋)と `CardView.play_flip()`(駒の裏返り)の2段で作る。**
 `MatchState.unit_flipped` を受けて、まず反転した側の情報帯から対象の駒へ光の筋を伸ばし、
 届いたところで駒を持ち上げて裏返す。**光の筋は対局画面の `_draw()` ではなく独立した
 オーバーレイのノードとして持つ**。`Control._draw()` は自分の子より背面に描かれるため、
