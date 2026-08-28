@@ -19,6 +19,7 @@ const MIDGAME_TURN := 12
 var _rng := RandomNumberGenerator.new()
 var _cards: Array[CardData] = []
 var _coin := true
+var _mulligan := true
 
 
 func _init() -> void:
@@ -30,6 +31,8 @@ func _run() -> void:
 	var games: int = int(args.get("games", "1000"))
 	# 既定は仕様どおりコインあり。coin=0 で外した場合と比べられる。
 	_coin = args.get("coin", "1") == "1"
+	# 既定は仕様どおりマリガンあり。mulligan=0 で外した場合と比べられる。
+	_mulligan = args.get("mulligan", "1") == "1"
 	_rng.seed = int(args.get("seed", "42"))
 	_cards = CardLibrary.all_cards()
 	if _cards.is_empty():
@@ -89,7 +92,12 @@ func _play_one(deck_a: Array, deck_b: Array) -> Dictionary:
 			else:
 				stats["unit_attacks"] += 1
 	)
-	state.start_match(deck_a, deck_b, MatchState.Side.A, _rng.randi_range(1, 1 << 30), _coin)
+	state.start_match(
+		deck_a, deck_b, MatchState.Side.A, _rng.randi_range(1, 1 << 30), _coin, _mulligan
+	)
+	if state.mulligan_pending:
+		state.mulligan(MatchState.Side.A, cpu_a.choose_mulligan(state, MatchState.Side.A))
+		state.mulligan(MatchState.Side.B, cpu_b.choose_mulligan(state, MatchState.Side.B))
 	while not state.is_match_over():
 		if state.turn_count == MIDGAME_TURN and stats["behind_at_midgame"] < 0:
 			stats["behind_at_midgame"] = _behind_side(state)
