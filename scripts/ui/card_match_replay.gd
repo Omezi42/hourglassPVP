@@ -31,6 +31,12 @@ func _ready() -> void:
 	_build()
 
 
+## 再生モードを抜ける。コントロールを隠し、自動再生のタイマーも止める。
+func stop() -> void:
+	visible = false
+	_timer.stop()
+
+
 ## 保存済みの棋譜(matches/{id} と同じ形)を読み込んで先頭から再生できる状態にする。
 func load_record(record: Dictionary) -> bool:
 	deck_a = CardLibrary.deck_from_ids(record.get("deck_a", []))

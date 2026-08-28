@@ -214,9 +214,10 @@ UIに依存しない、対局ルールそのものを扱う層。
 | `CardMatchLog`(`scripts/ui/card_match_log.gd`) | 対局ログ。`MatchState` のシグナルを購読して日本語の行を積み、中央のモーダルとして開く。**記録と表示を同じクラスに持たせている**のは、実況に出す文と読み返す文を必ず一致させるため |
 | `CardMatchResult`(`scripts/ui/card_match_result.gd`) | 結果パネル。勝敗・最終HP・総手数・決着の要因と「ログ」「ホームへ」 |
 | `CardDeckEditorScreen`(`scripts/ui/card_deck_editor_screen.gd`) | デッキ編集(20枚・同名2枚まで)。共通の `ScreenHeader` を使う |
-| `CardManaCurve`(`scripts/ui/card_mana_curve.gd`) | コスト別の枚数の棒グラフ |
+| `CardManaCurve`(`scripts/ui/card_mana_curve.gd`) | コスト別の枚数の棒グラフ。デッキ編集では低背版(`compact`)で使う |
 | `CardListScreen`(`scripts/ui/card_list_screen.gd`) | カード一覧。選ぶと右の詳細パネルへ出す |
-| `CardDetailPanel`(`scripts/ui/card_detail_panel.gd`) | カード1種の詳細。**キーワードは名前と説明の両方**を出す(語だけでは初見に伝わらない) |
+| `CardDetailPanel`(`scripts/ui/card_detail_panel.gd`) | カード1種の詳細。**キーワードは名前と説明の両方**を出す(語だけでは初見に伝わらない)。イラストの下に `CardEffectPreview` を挟む |
+| `CardEffectPreview`(`scripts/ui/card_effect_preview.gd`) | 能力の実演。**カードごとではなくキーワード / 効果の種類ごとに1本**の台本を持つ(下記) |
 | `CardPileViewer`(`scripts/ui/card_pile_viewer.gd`) | 墓地の中身を見るモーダル。同じカードは1枚にまとめて枚数をバッジで出す |
 | `CodedButton`(`scripts/ui/coded_button.gd`) | コードで組むボタンの生成を集約する。画面ごとに `theme_override` を並べると指定漏れのボタンが混ざるため |
 | `CardMatchReplay`(`scripts/ui/card_match_replay.gd`) | リプレイの再生コントロール。**任意の手数の局面は初期状態から手を並べ直して作る** |
@@ -278,8 +279,21 @@ UIに依存しない、対局ルールそのものを扱う層。
 `DeckSave` とは形式が違うためファイルを分ける)から読み、未保存なら
 `default_deck()`(コストの安い順に10種を2枚ずつ)を使う。
 
-**デッキ編集は「カード名 × 枚数」の縦リスト + マナカーブ + 全カードの横スクロール**の
-3ブロックで組む(GameDesign.md 9章)。20枚をカードの絵で並べると画面に入らないため、
+**能力の実演(`CardEffectPreview`)は、カード1枚ずつではなく語彙ごとに台本を持つ**
+(GameDesign.md 9章)。`show_card()` が `CardData` から
+「named/plain キーワード → `Trigger.ON_FLIP` → `effects` の `EffectType`」の順に
+台本(`Script` enum)の並びを組み、能力を持たないカードには基本の砂の動きの台本を当てる。
+**カードが増えても、既存の語彙の組み合わせであれば実演は自動的に付く**ため、
+新しい `.tres` を1個作るだけで済むという運用(1章)を崩さない。
+
+台本は「時刻 → 盤面の状態」を返す純粋な関数として書き、`_process()` で進めた
+経過時間だけを状態として持つ。駒は `CardView` を流用せず**この中で簡略化して描く**
+(実演で見せたいのは体力・攻撃力・砂・矢印の動きだけで、紋章や台座は情報を増やさないため)。
+
+**デッキ編集は「カード名 × 枚数」の縦リスト + 詳細 + マナカーブ + 全カードの横スクロール**の
+4ブロックで組む(GameDesign.md 9章)。右カラムは上が `CardDetailPanel`、下が低背の
+`CardManaCurve` で、**詳細は下部の一覧のカードのホバー(`CardView.hovered`)で切り替える**
+(クリックは従来どおり編成へ加える操作に残す)。20枚をカードの絵で並べると画面に入らないため、
 編成中はテキストのリストにする。一覧のカードには `CardView.badge` で「2/2」を出し、
 入れられないカードは暗くする。**保存は20枚ちょうどのときだけ通す**(枚数が足りない
 デッキで対局へ入れないようにするため)。`Main` の「デッキ編集」は v1.0 のデッキ一覧を
