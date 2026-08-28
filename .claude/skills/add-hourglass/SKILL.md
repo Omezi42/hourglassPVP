@@ -60,6 +60,22 @@ description: |
 (状態ごとにキャンバスサイズが数%異なることがあり、揃えると状態を切り替えたときに
 絵柄の大きさが跳ねるため)。プロンプトの組み立ては行わない(CLAUDE.md参照)。
 
+### 3b. 紋章の割り当て
+
+**イラストは全種で共通の1枚の色違いなので、そのカードを見分けているのは紋章である**
+(GameDesign.md 9章)。色違いを足しただけで終わらせないこと。
+
+- 紋章は**そのカードのモチーフ**(サンド=砂時計 / アイ=目 / ポイズン=髑髏)。
+  能力の分類ではない
+- 素材は**商用可・クレジット表記不要**のアイコンサイトから取る。既存21枚はすべて
+  [icooon-mono](https://icooon-mono.com/)。検索は `https://icooon-mono.com/?s={語}`、
+  SVGは `https://icooon-mono.com/i/icon_{id}/icon_{id}1.svg` で取れる
+- `assets/hourglasses/emblems/sources/{id}.svg` へ置き、
+  `Godot --headless --path . --script tools/build_emblem_icons.gd` を回す
+- `.tres` へ `emblem` の参照を足す。**`[ext_resource]` は既存のext_resourceの直後へ書く**
+  (`[sub_resource]` より後ろへ置くとそのファイルが読み込めなくなる)
+- 出所・元アイコン名を `assets/CREDITS.md` の表へ1行足す
+
 ### 4. 値付けの実測
 
 - `tools/balance/run_v5_card_check.gd` で、そのカードを2枚含むデッキの勝率を測る

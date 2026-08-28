@@ -56,6 +56,12 @@ const PEDESTAL_GUARD_RING_WIDTH := 4.5
 const BOARD_ART_SIDE := 112.0
 ## 出したターンの砂時計は僅かに沈んで見せる(GameDesign.md 9章)。
 const SUMMONED_SINK := 3.0
+## 紋章(GameDesign.md 9章)。砂時計の絵は全種で共通の1枚を色違いにしたものなので、
+## **どのカードかを見分けているのはこの紋章**になる。台座の正面へ真鍮のメダルとして
+## 据える。駒の背後へ大きな透かしを敷く案もあったが、128x168の枠では砂時計の絵が
+## ほぼ全面を占めるため、はみ出した縁だけが見えて散らかった(実際に描いて確認した)。
+const EMBLEM_PLAQUE_RADIUS := 16.0
+const EMBLEM_PLAQUE_SIDE := 21.0
 ## 反転の演出(GameDesign.md 9章)。**反転はゲームの中心となる行動であるため、
 ## 演出は他より作り込む。**場のカードが枠を持たない物体になったことで、
 ## 砂時計そのものを持ち上げて裏返す動きが素直に描ける。
@@ -67,6 +73,9 @@ const FLIP_LAND_AT := 0.82
 ## 手札のカード。
 const HAND_CORNER := 10.0
 const HAND_ART_SIDE := 92.0
+## 手札は紙の札なので、紋章は台座ではなく**封蝋の印**として押す。
+const HAND_SEAL_RADIUS := 13.0
+const HAND_SEAL_SIDE := 16.0
 
 var mode: int = Mode.BOARD
 ## 表示するカード。手札はこれだけ、盤面は unit も併せて持つ。
@@ -237,6 +246,7 @@ func _draw_board_unit() -> void:
 	# 輪は絵の後に描く。守護(太い真鍮の輪)と選択中(水色の輪)は駒が立っていても
 	# 必ず見えなければならないため、絵の下へ隠してはいけない。
 	_draw_pedestal_ring()
+	_draw_pedestal_plaque(tint)
 	if _hovering and enabled:
 		_draw_pedestal_glow(Color(1, 1, 1, 0.1))
 	_draw_board_stats()
@@ -279,6 +289,33 @@ func _draw_pedestal_glow(color: Color) -> void:
 		color,
 		32
 	)
+
+
+## 台座の正面に彫り込んだ銘板。ここだけは濃く出し、近づいたときに
+## 「この駒が何者か」を確定できるようにする。
+func _draw_pedestal_plaque(tint: Color) -> void:
+	if card == null or card.emblem == null:
+		return
+	var ci := get_canvas_item()
+	# 台座の輪より少し上へ据える。下げると名前の行に掛かる。
+	var center := Vector2(size.x * 0.5, PEDESTAL_CENTER_Y - 4.0)
+	UiPaint.fill_circle(ci, center, EMBLEM_PLAQUE_RADIUS, Color(0.08, 0.06, 0.05, 0.85), 24)
+	UiPaint.fill_circle(ci, center, EMBLEM_PLAQUE_RADIUS - 1.5, UiPalette.BRASS_MID * tint, 24)
+	var half := Vector2(EMBLEM_PLAQUE_SIDE, EMBLEM_PLAQUE_SIDE) * 0.5
+	# 影を1pxずらして重ね、真鍮へ彫り込まれたように見せる。
+	draw_texture_rect(
+		card.emblem,
+		Rect2(center - half + Vector2(0.0, 1.0), half * 2.0),
+		false,
+		Color(0.08, 0.06, 0.04, 0.7)
+	)
+	draw_texture_rect(
+		card.emblem,
+		Rect2(center - half, half * 2.0),
+		false,
+		Color(UiPalette.BRASS_HIGHLIGHT, 0.95) * tint
+	)
+	UiPaint.draw_ring(ci, center, EMBLEM_PLAQUE_RADIUS, UiPalette.BRASS_HIGHLIGHT * tint, 1.0, 24)
 
 
 func _draw_board_art(tint: Color, sink: float) -> void:
@@ -371,6 +408,7 @@ func _draw_hand_card() -> void:
 	outline.append(points[0])
 	draw_polyline(outline, border, GUARD_BORDER if guard or selected else NORMAL_BORDER, true)
 	_draw_hand_art(tint)
+	_draw_hand_seal(tint)
 	_draw_hand_labels(tint)
 	_draw_hand_stats()
 	if not badge.is_empty():
@@ -387,6 +425,26 @@ func _draw_hand_art(tint: Color) -> void:
 		return
 	var pos := Vector2((size.x - HAND_ART_SIDE) * 0.5, 9.0)
 	draw_texture_rect(texture, Rect2(pos, Vector2(HAND_ART_SIDE, HAND_ART_SIDE)), false, tint)
+
+
+## 封蝋の印。手札は紙の札であるため、台座の銘板ではなく蝋で押した印として出す。
+func _draw_hand_seal(tint: Color) -> void:
+	if card.emblem == null:
+		return
+	var ci := get_canvas_item()
+	var center := Vector2(HAND_SEAL_RADIUS + 4.0, size.y - HAND_SEAL_RADIUS - 4.0)
+	UiPaint.fill_circle(ci, center, HAND_SEAL_RADIUS + 1.0, Color(0.08, 0.05, 0.04, 0.8), 24)
+	UiPaint.fill_circle(ci, center, HAND_SEAL_RADIUS, UiPalette.BRASS_MID * tint, 24)
+	var half := Vector2(HAND_SEAL_SIDE, HAND_SEAL_SIDE) * 0.5
+	draw_texture_rect(
+		card.emblem,
+		Rect2(center - half + Vector2(0.0, 1.0), half * 2.0),
+		false,
+		Color(0.08, 0.05, 0.03, 0.7)
+	)
+	draw_texture_rect(
+		card.emblem, Rect2(center - half, half * 2.0), false, UiPalette.BRASS_HIGHLIGHT * tint
+	)
 
 
 func _draw_hand_labels(tint: Color) -> void:

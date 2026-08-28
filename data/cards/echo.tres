@@ -1,10 +1,11 @@
-[gd_resource type="Resource" script_class="CardData" load_steps=7 format=3]
+[gd_resource type="Resource" script_class="CardData" load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
 [ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
 [ext_resource type="Texture2D" path="res://assets/hourglasses/processed/echo/state_full.png" id="icon_full"]
 [ext_resource type="Texture2D" path="res://assets/hourglasses/processed/echo/state_falling.png" id="icon_falling"]
 [ext_resource type="Texture2D" path="res://assets/hourglasses/processed/echo/state_empty.png" id="icon_empty"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/emblems/echo.png" id="emblem"]
 
 [sub_resource type="Resource" id="Effect_echo_0"]
 script = ExtResource("script_effect")
@@ -25,3 +26,4 @@ rules_text = "設置:カードを1枚引く"
 icon_upright = ExtResource("icon_full")
 icon_falling = ExtResource("icon_falling")
 icon_fallen = ExtResource("icon_empty")
+emblem = ExtResource("emblem")

@@ -25,3 +25,6 @@
 
 # バランス調整シミュレーションの出力(再生成可能)
 /tools/balance/out/
+
+# アイコンの取り込み元(素材そのものの再配布を避けるため除外する)
+assets/hourglasses/emblems/sources/

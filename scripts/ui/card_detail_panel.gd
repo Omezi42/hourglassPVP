@@ -6,8 +6,11 @@ extends PanelContainer
 const PANEL_STYLE := "res://resources/theme/content_panel.tres"
 const PANEL_SIZE := Vector2(380, 460)
 const ICON_SIZE := Vector2(150, 150)
+## カード固有の紋章(GameDesign.md 9章)。名前の左へ置き、カードの面より大きく見せる。
+const EMBLEM_SIZE := Vector2(44, 44)
 
 var _icon: TextureRect
+var _emblem: TextureRect
 var _name: Label
 var _stats: Label
 var _body: Label
@@ -27,6 +30,7 @@ func show_card(card: CardData) -> void:
 		clear()
 		return
 	_icon.texture = card.icon_upright
+	_emblem.texture = card.emblem
 	_name.text = card.display_name
 	_stats.text = "コスト %d  /  総量 %d" % [card.cost, card.total_sand]
 	_body.text = _describe(card)
@@ -34,6 +38,7 @@ func show_card(card: CardData) -> void:
 
 func clear() -> void:
 	_icon.texture = null
+	_emblem.texture = null
 	_name.text = ""
 	_stats.text = ""
 	_body.text = "カードを選ぶと内容を表示します。"
@@ -74,10 +79,22 @@ func _build() -> void:
 	_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	column.add_child(_icon)
 
+	var title_row := HBoxContainer.new()
+	title_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	title_row.add_theme_constant_override("separation", 10)
+	column.add_child(title_row)
+
+	_emblem = TextureRect.new()
+	_emblem.custom_minimum_size = EMBLEM_SIZE
+	_emblem.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_emblem.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_emblem.modulate = UiPalette.BRASS_HIGHLIGHT
+	title_row.add_child(_emblem)
+
 	_name = Label.new()
 	_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_name.add_theme_font_size_override("font_size", 26)
-	column.add_child(_name)
+	title_row.add_child(_name)
 
 	_stats = Label.new()
 	_stats.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

@@ -24,6 +24,10 @@ extends Resource
 @export var icon_falling: Texture2D
 ## 攻撃力に偏った(=砂が落ちきりに近い)状態のイラスト。
 @export var icon_fallen: Texture2D
+## そのカードだけの紋章(モチーフのアイコン)。砂時計の絵は全種で共通の1枚を
+## 色違いにしたものなので、**どのカードかを見分けているのはこの紋章**になる
+## (GameDesign.md 9章)。白のシルエットで持ち、色は描画側が決める。
+@export var emblem: Texture2D
 
 
 func has_keyword(keyword: int) -> bool:

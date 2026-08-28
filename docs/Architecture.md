@@ -71,6 +71,11 @@ UI側に散らさないため、語と enum の対応はここだけが持つ。
 | `effects` | Array[CardEffectData] | キーワードで表せない固有効果。0個でよい |
 | `rules_text` | String | 効果欄に出す一文。キーワードだけのカードは空 |
 | `icon_upright` / `icon_falling` / `icon_fallen` | Texture2D | 体力が多い/半々/攻撃力に偏った状態のイラスト |
+| `emblem` | Texture2D | そのカードだけの紋章(モチーフのアイコン)。白のシルエットで持ち、色は描画側が決める |
+
+**イラストは全種で共通の1枚の色違いであるため、カードを見分けているのは実際には
+`emblem` である**(GameDesign.md 9章)。紋章は能力の分類ではなくカードのモチーフを表すので、
+`keywords` や `effects` から導出せず、`.tres` が1枚ずつ持つ。
 
 `describe()` が「キーワード名 / 固有効果の文」を組み立てるため、UI側は表示文字列を
 自分で作らない。
@@ -201,7 +206,7 @@ UIに依存しない、対局ルールそのものを扱う層。
 
 | クラス | 責務 |
 |---|---|
-| `CardView`(`scripts/ui/card_view.gd`) | カード1枚の表示。**手札と場で見た目を変える**(GameDesign.md 9章)。`Mode.HAND` はカードの枠を持ち **コスト=左上 / 総量=右下**、`Mode.BOARD` は**枠を持たず、丸い台座の上に立つ砂時計そのもの**として描き **攻撃力=左下 / 体力=右下**(コストは出さない)。体力と攻撃力の比で3枚のイラストを切り替え、守護は手札なら枠・場なら台座の輪を太くし、硝子は手札なら枠の内側・場ならガラスへ薄い膜を重ねる |
+| `CardView`(`scripts/ui/card_view.gd`) | カード1枚の表示。**手札と場で見た目を変える**(GameDesign.md 9章)。`Mode.HAND` はカードの枠を持ち **コスト=左上 / 総量=右下**、`Mode.BOARD` は**枠を持たず、丸い台座の上に立つ砂時計そのもの**として描き **攻撃力=左下 / 体力=右下**(コストは出さない)。体力と攻撃力の比で3枚のイラストを切り替え、守護は手札なら枠・場なら台座の輪を太くし、硝子は手札なら枠の内側・場ならガラスへ薄い膜を重ねる。**カード固有の紋章**は、場は台座の正面のメダル(`_draw_pedestal_plaque()`)、手札は左下の封蝋(`_draw_hand_seal()`)として出す |
 | `BoardTable`(`scripts/ui/board_table.gd`) | 盤面12枠を載せる卓上。奥へ狭まる石と真鍮の台形を描き、中央に区切り線と紋章を置く。v1.0から流用しているが、v5.0では6+6枠を1枚の卓へ載せるために使う |
 | `PlayerInfoBar`(`scripts/ui/player_info_bar.gd`) | 片方のプレイヤーの情報帯。HP・マナ(数字+ピップ)・山札・墓地・(相手のみ)手札の枚数・コインの有無 |
 | `CardMatchSelection`(`scripts/ui/card_match_selection.gd`) | いま選んでいるもの(手札の1枚 / 自分の場の1枠 / 未選択)。選択の状態を1箇所へ集めて画面側の分岐を減らす |
@@ -370,6 +375,11 @@ Web配信ではpckのサイズがそのままロード時間に直結するた�
 | `assets/hourglasses/sources/{id}/` | 生成元(`source.png`)と縮小前の原寸`state_*.png` | `.gdignore` で無視 |
 | `assets/hourglasses/processed_backup/` | 正規化前の旧版(現行とは内容が異なる) | `.gdignore` で無視 |
 | `assets/hourglasses/incoming/` | 取り込み待ちの生成画像 | `.gdignore` で無視 |
+| `assets/hourglasses/emblems/{id}.png` | **カード固有の紋章**。白のシルエット192px | インポートする |
+| `assets/hourglasses/emblems/sources/` | 紋章の取り込み元SVG(icooon-mono) | `.gdignore` + `.gitignore` |
+
+紋章のPNGは `tools/build_emblem_icons.gd` がSVGから焼き直す。カードを追加したら、
+モチーフのSVGを `sources/{id}.svg` へ置いてこれを1度回す。
 
 解像度を幅400pxとしたのは、プロジェクト内で最大の表示サイズが`DeckEditorScreen`の
 カード(132x168)であり、基準解像度1280x720を4K全画面へ拡大した場合でも実効336px程度に
