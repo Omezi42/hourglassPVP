@@ -15,6 +15,8 @@ const ITEM_SIZE := Vector2(212, 46)
 ## 選択中の印。色だけだと真鍮のボタンの上では差が読み取りにくかったため、文字でも示す。
 const SELECTED_PREFIX := "▸ "
 const DETAIL_MARGIN := 22
+## 詳細の中身の幅。実演(520px)と説明文が収まる値で、パネルの中央へ置く。
+const ENTRY_WIDTH := 640.0
 
 var _entry_view: KeywordEntryView
 var _buttons: Array[Button] = []
@@ -67,8 +69,17 @@ func _build() -> void:
 		margin.add_theme_constant_override("margin_" + side, DETAIL_MARGIN)
 	panel.add_child(margin)
 
+	# 詳細の中身(語・説明・実演・砂時計)は実演の幅で決まるため、パネルより狭い。
+	# 左へ寄せると右半分がまるごと空いて見えるので、パネルの中央へ置く。
+	var center := HBoxContainer.new()
+	center.alignment = BoxContainer.ALIGNMENT_CENTER
+	margin.add_child(center)
+
 	_entry_view = KeywordEntryView.new()
-	margin.add_child(_entry_view)
+	_entry_view.custom_minimum_size = Vector2(ENTRY_WIDTH, 0)
+	_entry_view.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_entry_view.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	center.add_child(_entry_view)
 
 
 func _select(index: int) -> void:

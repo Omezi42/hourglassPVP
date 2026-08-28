@@ -7,6 +7,7 @@ signal back_pressed
 
 const HEADER_SCENE := "res://scenes/screen_header.tscn"
 const COLUMNS := 6
+const SCROLLBAR_WIDTH := 16.0
 const SCREEN_SIZE := Vector2(1280, 720)
 ## 一覧と詳細の間隔。左右の外周余白と同じ値にして、3つの間隔を揃える。
 const COLUMN_GAP := ScreenHeader.OUTER_MARGIN
@@ -49,7 +50,9 @@ func _build() -> void:
 	add_child(scroll)
 	var grid := GridContainer.new()
 	grid.columns = COLUMNS
-	grid.add_theme_constant_override("h_separation", 12)
+	# 6列が一覧の幅いっぱいに広がるよう、余りを列の間隔へ配る。固定の間隔だと
+	# 右端に列1つ分に満たない空きが残り、一覧だけが左へ寄って見える。
+	grid.add_theme_constant_override("h_separation", _h_separation())
 	grid.add_theme_constant_override("v_separation", 12)
 	scroll.add_child(grid)
 	for card in CardLibrary.all_cards():
@@ -74,6 +77,12 @@ func _build() -> void:
 	_keyword_popup = KeywordPopup.new()
 	add_child(_keyword_popup)
 	_detail.keyword_pressed.connect(func(entry: Dictionary) -> void: _keyword_popup.open(entry))
+
+
+## 一覧の幅から列の間隔を割り出す。縦のスクロールバーぶんを引いておく。
+static func _h_separation() -> int:
+	var usable := GRID_RECT.size.x - SCROLLBAR_WIDTH - COLUMNS * CardView.HAND_SIZE_PX.x
+	return int(usable / float(COLUMNS - 1))
 
 
 func _select(view: CardView) -> void:

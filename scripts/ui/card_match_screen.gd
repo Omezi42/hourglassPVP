@@ -37,6 +37,8 @@ const DETAIL_HIDE_DELAY := 0.12
 const ACTION_BUTTON_SIZE := Vector2(148, 48)
 const LOG_BUTTON_SIZE := Vector2(148, 44)
 const LOG_BUTTON_TOP := 546.0
+## 情報帯の幅。行動の列(ACTION_COLUMN_X)の手前で止める。
+const BAR_WIDTH := ACTION_COLUMN_X - MARGIN - 24.0
 
 var state: MatchState
 ## 自分の側。CPU戦・オンラインでは固定する。
@@ -543,7 +545,9 @@ func _make_bar(opponent: bool, top: float) -> PlayerInfoBar:
 	var bar := PlayerInfoBar.new()
 	bar.is_opponent = opponent
 	bar.position = Vector2(MARGIN, top)
-	bar.size = Vector2(1060 if not opponent else 1232, PlayerInfoBar.BAR_HEIGHT)
+	# 両者の情報帯は同じ幅にする。右端に行動の列を通すため、どちらもその手前で止める
+	# (相手側だけ画面いっぱいに伸ばすと、対面させた2本の帯が揃わない)。
+	bar.size = Vector2(BAR_WIDTH, PlayerInfoBar.BAR_HEIGHT)
 	if opponent:
 		bar.face_pressed.connect(_on_face_pressed)
 	bar.graveyard_pressed.connect(_on_graveyard_pressed.bind(opponent))

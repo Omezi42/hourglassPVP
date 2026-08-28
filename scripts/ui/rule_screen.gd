@@ -9,6 +9,7 @@ extends Control
 signal back_pressed
 
 const HEADER_SCENE := "res://scenes/screen_header.tscn"
+const PANEL_STYLE := "res://resources/theme/content_panel.tres"
 
 const TOC_RECT := Rect2(
 	24, ScreenHeader.CONTENT_TOP, 224, 720 - ScreenHeader.CONTENT_TOP - ScreenHeader.OUTER_MARGIN
@@ -83,6 +84,18 @@ func _build() -> void:
 	_body = _make_label(BODY_RECT, BODY_FONT_SIZE, UiPalette.TEXT_OFFWHITE)
 	_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_body.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+
+	# 盤面は他の画面と同じコンテンツパネルの上へ載せる。下地に直接置くと、
+	# 説明文と同じ面に浮いていて「実演の枠」として読めない。
+	var stage_panel := PanelContainer.new()
+	stage_panel.position = STAGE_RECT.position
+	stage_panel.size = STAGE_RECT.size
+	stage_panel.custom_minimum_size = STAGE_RECT.size
+	stage_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var style: StyleBox = load(PANEL_STYLE)
+	if style != null:
+		stage_panel.add_theme_stylebox_override("panel", style)
+	add_child(stage_panel)
 
 	_stage = RuleStage.new()
 	_stage.position = STAGE_RECT.position
