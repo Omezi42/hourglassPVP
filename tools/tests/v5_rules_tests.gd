@@ -38,6 +38,7 @@ func run(assert_true: Callable) -> void:
 	_test_deck_code_round_trips()
 	_test_preset_decks_are_legal()
 	_test_online_resume_store_round_trips()
+	_test_match_stats_accumulate()
 
 
 func _card(id: String) -> CardData:
@@ -640,3 +641,31 @@ func _test_online_resume_store_round_trips() -> void:
 		if file != null:
 			file.store_string(backup)
 			file.close()
+
+
+## 戦績(GameDesign.md 19章)。`reset_for_test()` を通すため `user://` へは書かない。
+func _test_match_stats_accumulate() -> void:
+	MatchStats.reset_for_test({})
+	var deck := CardPresetDecks.basic()
+	MatchStats.record("uid-a", CurrencyRules.MatchKind.CPU, true, 20, deck)
+	MatchStats.record("uid-a", CurrencyRules.MatchKind.CPU, false, 30, deck)
+	MatchStats.record("uid-a", CurrencyRules.MatchKind.RANDOM, true, 10, deck)
+	MatchStats.record("uid-b", CurrencyRules.MatchKind.CPU, true, 40, deck)
+
+	var all := MatchStats.totals("uid-a")
+	_assert.call(int(all["games"]) == 3, "the owner should have three games")
+	_assert.call(int(all["wins"]) == 2, "the owner should have two wins")
+	_assert.call(int(all["turns"]) == 60, "turns should add up")
+	var cpu := MatchStats.totals("uid-a", CurrencyRules.MatchKind.CPU)
+	_assert.call(int(cpu["games"]) == 2, "cpu games should be counted apart")
+	var other := MatchStats.totals("uid-b")
+	_assert.call(int(other["games"]) == 1, "accounts should not share their records")
+
+	# 同じカードを2枚積んでも1局は1局(GameDesign.md 19章)。
+	var rows := MatchStats.cards("uid-a")
+	_assert.call(not rows.is_empty(), "cards should be recorded")
+	for row: Dictionary in rows:
+		_assert.call(int(row["games"]) == 3, "a card in every deck should show three games")
+	var decks := MatchStats.decks("uid-a")
+	_assert.call(decks.size() == 1, "the same build should be one deck row")
+	_assert.call(int(decks[0]["games"]) == 3, "the build should show three games")

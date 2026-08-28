@@ -874,6 +874,26 @@ Base64 にする。`HG1-` の接頭辞を付け、先頭2バイトに展開後�
 
 ---
 
+### 10.7 戦績(GameDesign.md 19章)
+
+| クラス | 責務 |
+|---|---|
+| `MatchStats`(`scripts/logic/match_stats.gd`, static) | `user://match_stats.json` へ積み上げる。アカウント(uid)ごとに「種別別の通算 / カード別 / デッキ別」を持つ |
+| `CardStatsScreen`(`scripts/ui/card_stats_screen.gd`) | 左に通算とデッキ別、右にカード別。共通の `ScreenHeader` を使う |
+| `CardMatchOutcome`(`scripts/ui/card_match_outcome.gd`) | 終局後の後始末(リプレイの保存・砂金の付与・戦績の記録)。`card_match_screen.gd` が1000行の上限に達したため切り出した |
+
+**リプレイから集計しない。**リプレイは直近30件しか残らないため(GameDesign.md 12章)、
+古い対局が消えるたびに通算の勝率が変わってしまう。終局のたびに1件足す積み上げ方式にして、
+保持件数と切り離す。
+
+**テストは `MatchStats.reset_for_test()` を通す。**以後の保存が無効になるため、
+`user://` の実データを書き換えずに検証できる。
+
+**カード別は「そのカードを入れたデッキで戦った勝率」**であり、カードの強さではない
+(強さの測り方は `docs/BalanceReport_v5.md` 2章の方式による)。画面の見出しにもそう書く。
+
+---
+
 ## 未検討事項
 
 - `EffectResolver` の対応表の具体的な実装方式(match文 vs 個別クラス継承)は、実装着手時に決定する

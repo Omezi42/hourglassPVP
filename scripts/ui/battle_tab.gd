@@ -5,6 +5,7 @@ extends Control
 ## 砂金の獲得量が経路ごとに異なるため伝える必要がある(GameDesign.md 15章)。
 signal online_match_found(match_id: String, my_side: int, opponent_uid: String, is_room: bool)
 signal resume_requested(record: Dictionary)
+signal stats_requested
 signal replay_list_requested
 signal spectate_requested(match_id: String)
 signal cpu_match_requested
@@ -24,6 +25,8 @@ var _status_base_text := ""
 ## 切断した対局へ戻る導線(GameDesign.md 11章)。`.tscn` を書き換えずに済ませるため
 ## コードで生成し、戻れる対局があるときだけ出す。
 var _resume_button: Button
+## 戦績(GameDesign.md 19章)。`.tscn` を書き換えずに済ませるためコードで生成する。
+var _stats_button: Button
 
 @onready var status_label: Label = $Margin/VBox/StatusLabel
 @onready var random_match_button: Button = $Margin/VBox/MainRow/RandomMatchButton
@@ -50,6 +53,7 @@ func _ready() -> void:
 	cpu_match_button.pressed.connect(func() -> void: cpu_match_requested.emit())
 	cancel_button.pressed.connect(_on_cancel_pressed)
 	_build_resume_button()
+	_build_stats_button()
 	refresh()
 
 
@@ -74,6 +78,14 @@ func _build_resume_button() -> void:
 	var column: Control = status_label.get_parent()
 	column.add_child(_resume_button)
 	column.move_child(_resume_button, 0)
+
+
+func _build_stats_button() -> void:
+	_stats_button = CodedButton.make("戦績", Vector2(220, 60))
+	_stats_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_stats_button.pressed.connect(func() -> void: stats_requested.emit())
+	var column: Control = status_label.get_parent()
+	column.add_child(_stats_button)
 
 
 ## 覚えている対局があるときだけ出す。終わっているかどうかは押した時点で確かめる

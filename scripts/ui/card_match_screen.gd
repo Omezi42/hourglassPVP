@@ -60,9 +60,10 @@ var _mulligan: CardMatchMulligan
 var _detail: CardDetailPanel
 var _keyword_popup: KeywordPopup
 var _detail_timer: Timer
-## 「もう一度」で組み直すための、自分が持ち込んだデッキ。
+## 自分が持ち込んだデッキ。「もう一度」で組み直すときと、戦績の記録(GameDesign.md 19章)に使う。
 var _own_deck: Array = []
 var _tutorial: CardMatchTutorial
+var _outcome: CardMatchOutcome
 ## 砂金の獲得量を決める対局の種別(GameDesign.md 15章)。
 var _match_kind: CurrencyRules.MatchKind = CurrencyRules.MatchKind.NONE
 ## 持ち時間。オンライン対戦だけが使う(CPU戦はローカルのため無制限。GameDesign.md 13章)。
@@ -85,6 +86,7 @@ func _ready() -> void:
 	_build()
 	# 持ち時間を持つのはオンライン対戦だけ。それ以外では毎フレーム走らせない。
 	set_process(false)
+	_outcome = CardMatchOutcome.new(self)
 
 
 func _draw() -> void:
@@ -211,6 +213,7 @@ func start_online_match(
 	_interactive = true
 	_match_kind = CurrencyRules.MatchKind.ROOM if is_room else CurrencyRules.MatchKind.RANDOM
 	my_side = p_my_side
+	_own_deck = deck_self
 	_apply_player_names(client, opponent_uid)
 	_waiting_text = "対戦相手を待っています"
 	queue_redraw()
@@ -332,6 +335,7 @@ func resume_online_match(client: FirestoreClient, record: Dictionary) -> bool:
 		_waiting_text = "前回の対局は見つかりませんでした"
 		queue_redraw()
 		return false
+	_own_deck = deck_a if p_my_side == MatchState.Side.A else deck_b
 	var actions: Array = doc.get("actions", [])
 	_begin_state(deck_a, deck_b, int(doc.get("seed", 0)), MatchAction.contains_mulligan(actions))
 	for action in actions:
@@ -972,26 +976,8 @@ func _on_match_ended(_winner: int) -> void:
 	# 前後に動かせなくなるため(GameDesign.md 9章)。
 	if not _interactive:
 		return
+	# 終局後の後始末(リプレイ・砂金・戦績)は `CardMatchOutcome` が持つ。
+	var reward := _outcome.finish(_match_kind, _own_deck)
 	_result.show_for(
-		state, my_side, state.turn_count, "", _match_kind == CurrencyRules.MatchKind.CPU
+		state, my_side, state.turn_count, reward, _match_kind == CurrencyRules.MatchKind.CPU
 	)
-	_save_replay()
-
-
-## リプレイとして残す(GameDesign.md 12章)。CPU戦はローカルへ1回だけ書き、
-## オンライン対戦は matches/{id} へ finished_at/winner を書く(観戦者は書かない)。
-func _save_replay() -> void:
-	if state.winner < 0:
-		return
-	if not _cpu_record.is_empty():
-		_cpu_record["winner"] = "a" if state.winner == MatchState.Side.A else "b"
-		var owner_uid: String = ""
-		if NetSession.client != null and NetSession.client.auth != null:
-			owner_uid = NetSession.client.auth.uid
-		LocalReplayService.mark_finished(_cpu_record, owner_uid)
-		return
-	if _client == null or _match_id.is_empty():
-		return
-	var uid: String = _client.auth.uid if _client.auth != null else ""
-	var winner := "a" if state.winner == MatchState.Side.A else "b"
-	ReplayService.mark_finished(_client, _match_id, winner, uid)

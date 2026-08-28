@@ -12,6 +12,7 @@ var keyword_dict_screen: KeywordDictScreen
 var card_deck_editor_screen: CardDeckEditorScreen
 ## v5.0のカード一覧画面(同上)。
 var card_list_screen: CardListScreen
+var stats_screen: CardStatsScreen
 
 var _match_return_screen: Control
 ## アカウント画面を閉じたときの戻り先。タイトルから開いた場合だけタイトルへ戻す。
@@ -42,6 +43,13 @@ func _ready() -> void:
 	]
 	# v5.0の対局画面は子がすべてコード描画のControlで .tscn を持たないため、
 	# ここで生成して画面一覧へ加える(Architecture.md 4.0節)。
+	stats_screen = CardStatsScreen.new()
+	stats_screen.anchor_right = 1.0
+	stats_screen.anchor_bottom = 1.0
+	stats_screen.visible = false
+	stats_screen.back_pressed.connect(func() -> void: _show_only(home_screen))
+	add_child(stats_screen)
+	_screens.append(stats_screen)
 	card_match_screen = CardMatchScreen.new()
 	# アンカーは直接代入する。`set_anchors_preset()` は今の矩形を保つように offset を
 	# 計算し直すため、生成直後(サイズ0)のノードへ使うと0のまま固定される。
@@ -91,6 +99,7 @@ func _ready() -> void:
 	_match_return_screen = home_screen
 	home_screen.online_match_found.connect(_on_online_match_found)
 	home_screen.online_resume_requested.connect(_on_online_resume_requested)
+	home_screen.stats_requested.connect(_on_stats_requested)
 	home_screen.deck_list_requested.connect(_on_deck_list_requested)
 	home_screen.hourglass_list_requested.connect(_on_hourglass_list_requested)
 	home_screen.tutorial_requested.connect(_on_tutorial_requested)
@@ -235,6 +244,11 @@ func _on_online_match_found(
 	)
 	_match_return_screen = home_screen
 	_show_only(card_match_screen)
+
+
+func _on_stats_requested() -> void:
+	stats_screen.open()
+	_show_only(stats_screen)
 
 
 ## 切断した対局へ戻る(GameDesign.md 11章)。戻れなかった場合も画面はそのまま出し、
