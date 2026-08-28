@@ -38,7 +38,7 @@ corner_radius_bottom_right = 16
 corner_radius_bottom_left = 16
 
 [node name="ReplayListCard" type="Control" unique_id=1936693154]
-custom_minimum_size = Vector2(0, 108)
+custom_minimum_size = Vector2(0, 132)
 layout_mode = 3
 anchors_preset = 0
 script = ExtResource("1_qw7tw")
