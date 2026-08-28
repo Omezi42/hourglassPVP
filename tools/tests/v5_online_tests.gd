@@ -51,6 +51,8 @@ func run(assert_true: Callable) -> void:
 
 	await _play_a_turn(tree, sender, receiver, state_a, state_b)
 
+	await _test_setup_exchange(tree, client)
+
 	sender.stop()
 	receiver.stop()
 	sender.queue_free()
@@ -58,6 +60,51 @@ func run(assert_true: Callable) -> void:
 	client.queue_free()
 	state_a.queue_free()
 	state_b.queue_free()
+
+
+## 対局開始時のやり取り(GameDesign.md 11章)。**この経路は実機まで一度も実行されておらず、
+## `push_setup()` が `Array[String]` を要求するのに `CardLibrary.ids_from_deck()` が
+## untyped の `Array` を返していたため、関数ごと呼ばれずに両者が待ち続けていた。**
+## デッキが実際に書き込まれ、相手側が読み取れるところまでを押さえる。
+func _test_setup_exchange(tree: SceneTree, client: FirestoreClient) -> void:
+	var path := "matches/setup"
+	client.store[path] = {"fields": {}, "update_time": "0"}
+	var host := OnlineSetup.new(client, "setup", MatchState.Side.A)
+	var guest := OnlineSetup.new(client, "setup", MatchState.Side.B)
+	tree.root.add_child(host)
+	tree.root.add_child(guest)
+
+	var host_deck := CardLibrary.ids_from_deck(CardPresetDecks.basic())
+	var guest_deck := CardLibrary.ids_from_deck(CardPresetDecks.deck_of("rush"))
+	# **型そのものを先に確かめる。**呼び出しが型で弾かれると、以降の検証は
+	# コルーチンごと打ち切られて「素通り」してしまい、失敗として数えられない。
+	_assert.call(
+		host_deck.get_typed_builtin() == TYPE_STRING,
+		"ids_from_deck must return Array[String] for OnlineSetup.push_setup()"
+	)
+	await host.push_setup(host_deck, SEED)
+	await guest.push_setup(guest_deck, 0)
+
+	var stored: Dictionary = client.store[path]["fields"]
+	_assert.call(
+		(stored.get("deck_a", []) as Array).size() == MatchState.DECK_SIZE,
+		"the host deck should reach the document"
+	)
+	_assert.call(int(stored.get("seed", 0)) == SEED, "the host should write the seed")
+
+	var seen_by_guest: Dictionary = await guest.wait_for_opponent_setup(0)
+	_assert.call(
+		(seen_by_guest["deck"] as Array).size() == MatchState.DECK_SIZE,
+		"the guest should read the host deck"
+	)
+	_assert.call(int(seen_by_guest["seed"]) == SEED, "the guest should take the host seed")
+	var seen_by_host: Dictionary = await host.wait_for_opponent_setup(SEED)
+	_assert.call(
+		(seen_by_host["deck"] as Array).size() == MatchState.DECK_SIZE,
+		"the host should read the guest deck"
+	)
+	host.queue_free()
+	guest.queue_free()
 
 
 func _decks() -> Array:

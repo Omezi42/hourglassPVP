@@ -44,8 +44,11 @@ static func deck_from_ids(ids: Array) -> Array:
 	return cards
 
 
-static func ids_from_deck(cards: Array) -> Array:
-	var ids: Array = []
+## **戻り値は `Array[String]` にすること。**`OnlineSetup.push_setup()` が
+## `Array[String]` を受け取るため、untyped の `Array` を返すと実行時に型が合わず
+## 関数ごと呼ばれない(対局のデッキが相手へ届かず、両者が待ち続ける)。
+static func ids_from_deck(cards: Array) -> Array[String]:
+	var ids: Array[String] = []
 	for card in cards:
 		ids.append(card.id)
 	return ids

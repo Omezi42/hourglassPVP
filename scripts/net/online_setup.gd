@@ -21,6 +21,8 @@ func _init(p_client: FirestoreClient, p_match_id: String, p_my_side: int) -> voi
 	my_side = p_my_side
 
 
+## **引数は `Array[String]` であること。**untyped の `Array` を渡すと実行時に型が合わず、
+## 関数が呼ばれないまま次へ進む(書き込みが起きず、相手が永久に待つ)。
 func push_deck(deck_ids: Array[String]) -> void:
 	if _cancelled:
 		return
@@ -30,18 +32,6 @@ func push_deck(deck_ids: Array[String]) -> void:
 
 func wait_for_opponent_deck() -> Array[String]:
 	var field := "deck_b" if my_side == 0 else "deck_a"
-	return await _poll_for_ids(field)
-
-
-func push_placement(board_ids: Array[String]) -> void:
-	if _cancelled:
-		return
-	var field := "placement_a" if my_side == 0 else "placement_b"
-	await client.set_document("matches/%s" % match_id, {field: board_ids})
-
-
-func wait_for_opponent_placement() -> Array[String]:
-	var field := "placement_b" if my_side == 0 else "placement_a"
 	return await _poll_for_ids(field)
 
 

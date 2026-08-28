@@ -178,6 +178,7 @@ func begin_random_match() -> void:
 	_queue = MatchmakingQueue.new(NetSession.client, NetSession.auth)
 	add_child(_queue)
 	_queue.matched.connect(_on_matched)
+	_queue.failed.connect(_fail)
 	_queue.join()
 
 
@@ -234,13 +235,17 @@ func _on_spectate_pressed() -> void:
 
 
 ## マッチングキュー参加中・ルーム作成後の相手待ちを、対戦成立を待たずに取りやめる。
+## **キャンセルは押した瞬間に効かせ、後片付け(通信)の完了は待たない。**
+## 待っていると、応答が遅い・返らない場合に「押しても何も起きない」ように見えるため。
 func _on_cancel_pressed() -> void:
-	if _queue != null:
-		await _queue.cancel()
-	if _room != null:
-		await _room.cancel()
+	var queue := _queue
+	var room := _room
 	_set_busy(false)
 	status_label.text = "キャンセルしました"
+	if queue != null:
+		await queue.cancel()
+	if room != null:
+		await room.cancel()
 
 
 func _on_spectate_ready(match_id: String) -> void:

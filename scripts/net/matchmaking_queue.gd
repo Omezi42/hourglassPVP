@@ -2,6 +2,9 @@ class_name MatchmakingQueue
 extends Node
 
 signal matched(match_id: String, opponent_uid: String)
+## キューへ入れなかった(通信に失敗した・拒否された)。黙って待ち続けると
+## 「押しても何も起きない」ようにしか見えないため、必ず画面へ返す。
+signal failed(reason: String)
 
 const COLLECTION := "matchmaking_queue"
 const POLL_INTERVAL_SECONDS := 2.0
@@ -31,6 +34,7 @@ func join() -> void:
 		_doc_path(), {"joined_at": Time.get_unix_time_from_system(), "match_id": ""}
 	)
 	if not joined:
+		failed.emit("マッチングを開始できませんでした")
 		return
 
 	var last_heartbeat := Time.get_unix_time_from_system()
