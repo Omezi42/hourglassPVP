@@ -30,10 +30,11 @@ const SILENT_DB := -80.0
 const MIN_AUDIBLE_VOLUME := 0.0001
 ## トラック未指定を表す。enumの値と衝突しない負値を使う。
 const NO_TRACK := -1
-## Web版ではBGMをpckへ入れず、index.htmlと同じ階層のこのディレクトリから
-## 実行時に取りに行く(Architecture.md 4.1.6節)。曲は合計9MBあり、
-## pckへ入れると起動待ちがそのぶん延びるため。
-const EXTERNAL_BGM_DIR := "bgm/"
+## Web版ではBGMをpckへ入れず、ここから実行時に取りに行く(Architecture.md 4.1.6節)。
+## 曲は合計8.8MBあり、pckへ入れると起動待ちがそのぶん延びるため。
+## unityroomへはpckだけを上げる運用のため、index.htmlの隣へ素のoggを置く形は使えない。
+## 置き場所はリポジトリそのもので、jsDelivr(CORS対応の無料CDN)経由で読む。
+const EXTERNAL_BGM_BASE := "https://cdn.jsdelivr.net/gh/Omezi42/hourglassPVP@main/assets/bgm/"
 
 static var _players: Array[AudioStreamPlayer] = []
 static var _fades: Array[Tween] = []
@@ -143,7 +144,7 @@ static func _stream_for(track: int) -> AudioStream:
 static func _request_stream(track: int) -> void:
 	if _host == null or _loading.has(track):
 		return
-	var url := _external_base_url() + EXTERNAL_BGM_DIR + String(TRACK_PATHS[track]).get_file()
+	var url := EXTERNAL_BGM_BASE + String(TRACK_PATHS[track]).get_file()
 	var request := HTTPRequest.new()
 	_host.add_child(request)
 	request.request_completed.connect(_on_stream_downloaded.bind(request, track))
@@ -171,16 +172,6 @@ static func _on_stream_downloaded(
 	_streams[track] = stream
 	if _desired == track and _unlocked:
 		_begin(track, stream)
-
-
-## ページのURLからディレクトリ部分を取り出す。HTTPRequestは相対URLを解決しないため、
-## 絶対URLを自分で組み立てる必要がある。
-static func _external_base_url() -> String:
-	if not OS.has_feature("web"):
-		return ""
-	var href := String(JavaScriptBridge.eval("location.href.split('?')[0].split('#')[0]", true))
-	var cut := href.rfind("/")
-	return href.substr(0, cut + 1) if cut >= 0 else ""
 
 
 static func _begin(track: int, stream: AudioStream) -> void:

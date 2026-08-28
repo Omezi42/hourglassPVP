@@ -479,12 +479,17 @@ BGM3曲は合計8.8MBあり、上の3点を守ってもなおpckの7割を占め
 起動を待たせないようにする**ことで解決する。
 
 - Webプリセットの `exclude_filter` に `assets/bgm/*` を入れ、pckから外す
-- 書き出し後、`index.html` と同じ階層の `bgm/` へ素の `.ogg` を置く
-  (`tools/export_web.sh` がこの2つをまとめて行う。**unityroomへ上げるzipには
-  この `bgm/` を必ず含める**)
-- `MusicPlayer` は、Web版では `res://` を試さずに `HTTPRequest` で `bgm/{曲}.ogg` を取得し、
-  `AudioStreamOggVorbis.load_from_buffer()` で鳴らす。取得先の絶対URLは
-  `JavaScriptBridge` で `location.href` から組む(HTTPRequestは相対URLを解決しないため)
+- `MusicPlayer` は、Web版では `res://` を試さずに `HTTPRequest` で
+  `https://cdn.jsdelivr.net/gh/Omezi42/hourglassPVP@main/assets/bgm/{曲}.ogg` を取得し、
+  `AudioStreamOggVorbis.load_from_buffer()` で鳴らす
+
+**置き場所をリポジトリそのもの(jsDelivr経由)にしているのは、unityroomへ上げるのが
+`index.pck` だけだからである。**`index.html` の隣へ素のoggを置く形は、その追加ファイルが
+配信されないため使えない。jsDelivrは `Access-Control-Allow-Origin: *` を返すため、
+unityroomのオリジンからでも読める(実測で確認済み)。
+
+> **この方式は「リポジトリを公開のまま保つ」ことが前提になる。**非公開にすると
+> CDNが404を返し、BGMだけが鳴らなくなる(ゲーム自体は動く)。
 
 **この方式が成立するのは、BGMがもともとすぐには鳴らないから**である。ブラウザの自動再生制限で
 最初のクリックまで再生を保留しており(9章)、その間にダウンロードが終わる。取得に失敗しても

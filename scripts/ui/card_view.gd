@@ -122,6 +122,8 @@ var _effect_progress := 0.0
 var _effect_amount := 0
 var _effect_tween: Tween
 ## 反転の進捗(0.0〜1.0)。負のときは反転していない。
+var _art_reference_cache := 0.0
+var _art_reference_card: CardData
 var _flip_progress := -1.0
 var _flip_tween: Tween
 var _zoom_tween: Tween
@@ -236,15 +238,17 @@ func _drop_data(_at_position: Vector2, data: Variant) -> void:
 	drop_handler.call((data as Dictionary)["card_view"])
 
 
-## 掴んでいる間はカードの絵だけを運ぶ。掴んだ札と同じ大きさにする。
+## 掴んでいる間はカードの絵だけを運ぶ。**札に描かれているのと同じ大きさ・同じ縦横比**に
+## する。カードの枠に合わせると絵が札の中より大きく出て、掴んだ瞬間に絵が膨らんで見える。
 func _make_drag_preview() -> Control:
+	var art := _fit_art(card.icon_upright, _hand_art_box()).size
 	var preview := TextureRect.new()
 	preview.texture = card.icon_upright
 	preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	preview.custom_minimum_size = HAND_SIZE_PX
-	preview.size = HAND_SIZE_PX
-	preview.position = -HAND_SIZE_PX * 0.5
+	preview.stretch_mode = TextureRect.STRETCH_SCALE
+	preview.custom_minimum_size = art
+	preview.size = art
+	preview.position = -art * 0.5
 	preview.modulate = Color(1, 1, 1, 0.85)
 	var holder := Control.new()
 	holder.add_child(preview)
@@ -396,8 +400,7 @@ func _draw_board_art(tint: Color, sink: float) -> void:
 	var texture := _icon()
 	if texture == null:
 		return
-	var pos := Vector2((size.x - BOARD_ART_SIDE) * 0.5, PEDESTAL_CENTER_Y + 4.0 - BOARD_ART_SIDE)
-	var rect := Rect2(pos + Vector2(0, sink), Vector2(BOARD_ART_SIDE, BOARD_ART_SIDE))
+	var rect := _fit_art(texture, _board_art_box().grow_individual(0, sink, 0, sink))
 	if _flip_progress >= 0.0:
 		_draw_flipping_art(texture, rect, tint)
 	else:
@@ -520,8 +523,14 @@ func _draw_hand_art(tint: Color) -> void:
 	var texture := _icon()
 	if texture == null:
 		return
-	var pos := Vector2((size.x - HAND_ART_SIDE) * 0.5, 9.0)
-	draw_texture_rect(texture, Rect2(pos, Vector2(HAND_ART_SIDE, HAND_ART_SIDE)), false, tint)
+	draw_texture_rect(texture, _fit_art(texture, _hand_art_box()), false, tint)
+
+
+## 手札の絵を収める枠。
+func _hand_art_box() -> Rect2:
+	return Rect2(
+		Vector2((size.x - HAND_ART_SIDE) * 0.5, 9.0), Vector2(HAND_ART_SIDE, HAND_ART_SIDE)
+	)
 
 
 ## 封蝋の印。手札は紙の札であるため、台座の銘板ではなく蝋で押した印として出す。
@@ -575,6 +584,33 @@ func _keyword_text() -> String:
 	return " ".join(words)
 
 
+## 砂時計の絵を、**元の縦横比のまま**枠へ収める(枠は正方形だが絵は縦長)。
+## 正方形へ引き伸ばすと砂時計が横に潰れる。倍率は3状態で共通の基準(いちばん背の高い
+## 状態のキャンバス)から求めるため、状態が切り替わっても絵の大きさが跳ねない。
+## 台座に立って見えるよう、枠の下端で揃えて横は中央へ置く。
+func _fit_art(texture: Texture2D, box: Rect2) -> Rect2:
+	var reference := _art_reference()
+	if reference <= 0.0 or texture == null:
+		return box
+	var art := texture.get_size() * (box.size.y / reference)
+	var at := box.position + Vector2((box.size.x - art.x) * 0.5, box.size.y - art.y)
+	return Rect2(at, art)
+
+
+## 3状態のうちいちばん高いキャンバスの高さ。カードが変わるまで変わらないため覚えておく。
+func _art_reference() -> float:
+	if card == null:
+		return 0.0
+	if _art_reference_card == card:
+		return _art_reference_cache
+	_art_reference_card = card
+	_art_reference_cache = 0.0
+	for texture in [card.icon_upright, card.icon_falling, card.icon_fallen]:
+		if texture != null:
+			_art_reference_cache = maxf(_art_reference_cache, texture.get_size().y)
+	return _art_reference_cache
+
+
 ## 体力と攻撃力の比で3枚を切り替える(GameDesign.md 9章)。手札は常に上向き。
 func _icon() -> Texture2D:
 	if unit == null:
@@ -586,13 +622,18 @@ func _icon() -> Texture2D:
 	return card.icon_upright
 
 
+## 場の絵を収める枠。下端が台座の高さに来る正方形。
+func _board_art_box() -> Rect2:
+	return Rect2(
+		Vector2((size.x - BOARD_ART_SIDE) * 0.5, PEDESTAL_CENTER_Y + 4.0 - BOARD_ART_SIDE),
+		Vector2(BOARD_ART_SIDE, BOARD_ART_SIDE)
+	)
+
+
 func _draw_effect() -> void:
 	var rect := Rect2(Vector2.ZERO, size)
 	if mode == Mode.BOARD:
-		rect = Rect2(
-			Vector2((size.x - BOARD_ART_SIDE) * 0.5, PEDESTAL_CENTER_Y + 4.0 - BOARD_ART_SIDE),
-			Vector2(BOARD_ART_SIDE, BOARD_ART_SIDE)
-		)
+		rect = _fit_art(_icon(), _board_art_box())
 	if _effect == Effect.SHATTER:
 		_draw_shatter(rect)
 	else:
