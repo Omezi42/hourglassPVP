@@ -34,12 +34,27 @@ v5.0のカードが使う語彙を1箇所へ集める。旧ルールの `GameEnu
 | enum | 値 |
 |---|---|
 | `Keyword` | `GUARD`(守護)/ `GLASS`(硝子)/ `PIERCE`(貫通)/ `POISON`(毒砂)/ `LIFESTEAL`(吸命)/ `DOUBLE_STRIKE`(連撃)/ `QUICK`(速落) |
+| `NAMED`(const) | **語として見せる**キーワード。`GUARD` / `GLASS` / `PIERCE` / `QUICK` の4つ |
 | `Trigger` | `ON_PLAY`(設置)/ `ON_FLIP`(反転)/ `ON_DEATH`(余砂) |
 | `EffectTarget` | `SELF` / `ENEMY_UNIT` / `ALL_ENEMY_UNITS` / `ALL_ALLY_UNITS` / `OPPONENT_PLAYER` / `OWN_PLAYER` |
 | `EffectType` | `DAMAGE_PLAYER` / `DAMAGE_UNIT` / `DESTROY_UNIT` / `SWAP_STATS` / `ADD_TOTAL` / `DROP_SAND` / `DRAW` / `HEAL_PLAYER` / `DAMAGE_PLAYER_PER_ENEMY_UNIT` |
 
 `keyword_name()` / `trigger_name()` は GameDesign.md 6章の日本語表記を返す。表示名を
 UI側に散らさないため、語と enum の対応はここだけが持つ。
+
+**能力の「語にする/しない」は enum ではなく `NAMED` で分ける。**2枚以上のカードに
+載っている能力だけを語として見せ、1枚しか無いものは効果の文で書く(GameDesign.md 6章)。
+戦闘処理はどちらも同じフラグで動くため、**enum を分けずに表示だけを切り替える**。
+文字列は用途ごとに3つ持つ。
+
+| 関数 | 長さ | 使う場所 |
+|---|---|---|
+| `keyword_name()` | 語(2〜3字) | 語にする能力。カードの面・詳細パネルの【】 |
+| `keyword_short_text()` | 4字程度 | 語にしない能力の**カードの面**。左右の隅を数値バッジが占めるためここしか入らない |
+| `keyword_description()` | 一文 | 詳細パネル・デッキ編集の一覧 |
+
+`CardData.named_keywords()` / `plain_keywords()` が振り分け、`CardView` は面用の短い方、
+`CardDetailPanel` は一文の方を使う。
 
 ### 2.2 `CardData`(Resource, `.tres`)
 

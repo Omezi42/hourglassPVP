@@ -38,13 +38,35 @@ func effects_for(trigger: int) -> Array[CardEffectData]:
 	return found
 
 
-## 詳細パネル・一覧に出す効果の説明文。
+## デッキ編集・墓地の一覧に出す1行。語にする能力は語で、語にしない能力は
+## 説明文で書く(GameDesign.md 6章)。カードの面はもっと狭いため、そちらは
+## CardEnums.keyword_short_text() の短い言い換えを使う。
 func describe() -> String:
 	var parts: PackedStringArray = []
-	for keyword in keywords:
+	for keyword in named_keywords():
 		parts.append(CardEnums.keyword_name(keyword))
+	for keyword in plain_keywords():
+		parts.append(CardEnums.keyword_description(keyword))
 	if not rules_text.is_empty():
 		parts.append(rules_text)
 	if parts.is_empty():
 		return "効果なし"
 	return " / ".join(parts)
+
+
+## 語として見せるキーワードだけ。カードの面に出す。
+func named_keywords() -> Array:
+	var found: Array = []
+	for keyword in keywords:
+		if CardEnums.is_named(keyword):
+			found.append(keyword)
+	return found
+
+
+## 語にしないキーワード。カードの面には短い言い換えで出す。
+func plain_keywords() -> Array:
+	var found: Array = []
+	for keyword in keywords:
+		if not CardEnums.is_named(keyword):
+			found.append(keyword)
+	return found

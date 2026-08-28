@@ -40,6 +40,10 @@ const SAND_AMBER := Color(0.93, 0.78, 0.42, 1.0)
 const SHATTER_DURATION := 0.42
 const DROP_DURATION := 0.45
 const SHARD_COUNT := 9
+## 文字を描くときに空ける左右の余白と、縮められる下限のフォントサイズ。
+const TEXT_MARGIN := 5.0
+const MIN_FONT_SIZE := 9
+
 const STAT_RADIUS := 15.0
 const GUARD_BORDER := 4.0
 const NORMAL_BORDER := 2.0
@@ -400,14 +404,17 @@ func _draw_hand_stats() -> void:
 # --- 共通 ---------------------------------------------------------------
 
 
+## 名前の下の1行。**語として見せるキーワードだけを語で出し**、それ以外は短い言い換えで
+## 書く(GameDesign.md 6章)。1行しか無いので、全文は詳細パネルに任せる。
 func _keyword_text() -> String:
 	var words: PackedStringArray = []
-	for keyword in card.keywords:
+	for keyword in card.named_keywords():
 		words.append(CardEnums.keyword_name(keyword))
-	var note := " ".join(words)
-	if note.is_empty() and not card.rules_text.is_empty():
-		note = CardEnums.trigger_name(card.effects[0].trigger)
-	return note
+	for keyword in card.plain_keywords():
+		words.append(CardEnums.keyword_short_text(keyword))
+	if words.is_empty() and not card.rules_text.is_empty():
+		words.append(CardEnums.trigger_name(card.effects[0].trigger))
+	return " ".join(words)
 
 
 ## 体力と攻撃力の比で3枚を切り替える(GameDesign.md 9章)。手札は常に上向き。
@@ -498,8 +505,14 @@ func _stat(center: Vector2, value: int, color: Color) -> void:
 	)
 
 
+## カードの幅に収まらない文字列は、収まるまでフォントを縮めて描く。
+## 語にしないキーワードは短い言い換えとはいえ語より長く、カードの幅は118pxしかないため。
 func _centered_text(text: String, font_size: int, baseline: float, color: Color) -> void:
+	var limit := size.x - TEXT_MARGIN * 2.0
 	var width := _font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	while width > limit and font_size > MIN_FONT_SIZE:
+		font_size -= 1
+		width = _font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
 	draw_string(
 		_font,
 		Vector2((size.x - width) * 0.5, baseline),

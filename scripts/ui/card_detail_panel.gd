@@ -39,16 +39,21 @@ func clear() -> void:
 	_body.text = "カードを選ぶと内容を表示します。"
 
 
-## キーワードは名前と説明の両方を出す。語だけでは初見のプレイヤーに伝わらないため。
+## **語として見せるキーワードは【語】と説明の両方**を出す(語だけでは初見に伝わらない)。
+## 語にしない能力は、語を出さずに効果の文だけを書く。
 func _describe(card: CardData) -> String:
 	var lines: PackedStringArray = []
 	lines.append("場に出たとき  体力 %d / 攻撃力 0" % card.total_sand)
 	lines.append("毎ターン終了時に砂が1粒落ちて 体力-1 / 攻撃力+1")
-	for keyword in card.keywords:
+	for keyword in card.named_keywords():
 		lines.append("")
 		lines.append(
 			"【%s】%s" % [CardEnums.keyword_name(keyword), CardEnums.keyword_description(keyword)]
 		)
+	# 語にしない能力は、語を出さずに効果の文だけを書く(GameDesign.md 6章)。
+	for keyword in card.plain_keywords():
+		lines.append("")
+		lines.append(CardEnums.keyword_description(keyword))
 	if not card.rules_text.is_empty():
 		lines.append("")
 		lines.append(card.rules_text)

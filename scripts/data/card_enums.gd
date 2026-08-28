@@ -3,7 +3,12 @@ extends RefCounted
 ## v5.0のカード(砂時計)が使う語彙。GameDesign.md 1章・6章に対応する。
 ## 旧ルール(位相制)のGameEnumsとは別物であり、混ぜて使わない。
 
-## 常在キーワード(GameDesign.md 6章)。1枚に複数持たせてよい。
+## 常在の能力(GameDesign.md 6章)。1枚に複数持たせてよい。
+##
+## **このうち「語として見せる」のは、複数のカードに載っているものだけ**(NAMED を参照)。
+## 1枚にしか無い能力を語にすると、その語を覚えても他で使い回せず、
+## カードを読むたびに語の意味を思い出す手間だけが増えるため。
+## 語にしないものは、カードに効果の文をそのまま書く。
 enum Keyword {
 	## 相手はこの砂時計を無視して他を攻撃できない。
 	GUARD,
@@ -69,6 +74,28 @@ enum EffectType {
 	DAMAGE_PLAYER_PER_ENEMY_UNIT,
 }
 
+## 語として見せるキーワード。**複数のカードに載っているものだけ**をここへ入れる。
+## カードを追加してある能力が2枚目に載ったら、ここへ足して語へ昇格させる。
+const NAMED: Array[Keyword] = [Keyword.GUARD, Keyword.GLASS, Keyword.PIERCE, Keyword.QUICK]
+
+
+static func is_named(keyword: int) -> bool:
+	return NAMED.has(keyword)
+
+
+## 語にしない能力を、カードの狭い1行へ収める短い言い換え。
+## **カードの面は左右の隅を数値バッジが占めるため、収まるのは4文字程度**しかない。
+## 何をする能力かは keyword_description() が返す一文で読ませる。
+static func keyword_short_text(keyword: int) -> String:
+	match keyword:
+		Keyword.POISON:
+			return "破壊"
+		Keyword.LIFESTEAL:
+			return "回復"
+		Keyword.DOUBLE_STRIKE:
+			return "2回攻撃"
+	return keyword_name(keyword)
+
 
 ## キーワードの表示名(GameDesign.md 6章の語)。
 static func keyword_name(keyword: int) -> String:
@@ -90,7 +117,8 @@ static func keyword_name(keyword: int) -> String:
 	return ""
 
 
-## キーワードの説明文(GameDesign.md 6章の表)。詳細パネルに出す。
+## 能力の説明文(GameDesign.md 6章の表)。語にするものは【語】に添えて、
+## 語にしないものはこれ単体で出す。デッキ編集の一覧にも収まる長さに保つ。
 static func keyword_description(keyword: int) -> String:
 	match keyword:
 		Keyword.GUARD:
@@ -100,11 +128,11 @@ static func keyword_description(keyword: int) -> String:
 		Keyword.PIERCE:
 			return "砂時計を攻撃したとき、超過分が相手プレイヤーへ抜ける。"
 		Keyword.POISON:
-			return "この砂時計がダメージを与えた砂時計を破壊する。"
+			return "ダメージを与えた砂時計を破壊する"
 		Keyword.LIFESTEAL:
-			return "与えたダメージと同じだけ自分のHPを回復する。"
+			return "与えたダメージぶん自分のHPを回復する"
 		Keyword.DOUBLE_STRIKE:
-			return "1ターンに2回攻撃する。"
+			return "1ターンに2回攻撃できる"
 		Keyword.QUICK:
 			return "場に出た瞬間に砂が2粒落ちる(すぐ攻撃できる)。"
 	return ""
