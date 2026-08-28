@@ -23,6 +23,7 @@ var _entries: VBoxContainer
 var _progress: Label
 var _curve: CardManaCurve
 var _detail: CardDetailPanel
+var _keyword_popup: KeywordPopup
 var _card_row: HBoxContainer
 var _card_views: Array[CardView] = []
 ## 編成中のデッキ。同じ CardData が最大2つ入る。
@@ -58,6 +59,11 @@ func _build() -> void:
 	_detail.position = DETAIL_RECT.position
 	_detail.custom_minimum_size = DETAIL_RECT.size
 	_detail.size = DETAIL_RECT.size
+	# 語を押すとその意味を引ける(GameDesign.md 17章)。全画面へ暗幕を敷くため、
+	# 詳細パネルではなく画面側が持つ。
+	_keyword_popup = KeywordPopup.new()
+	add_child(_keyword_popup)
+	_detail.keyword_pressed.connect(func(entry: Dictionary) -> void: _keyword_popup.open(entry))
 	_curve = CardManaCurve.new()
 	_curve.compact = true
 	_curve.position = CURVE_RECT.position

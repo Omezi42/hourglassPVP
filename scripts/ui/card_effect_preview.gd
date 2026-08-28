@@ -111,6 +111,15 @@ func show_card(card: CardData) -> void:
 	queue_redraw()
 
 
+## 語を1つ指定して実演する(キーワード辞書。GameDesign.md 17章)。
+## `show_card()` は CardData から台本の並びを組む入口で、こちらはその手前へ入る。
+func show_demo(demo: int, value: int = 0, all_units: bool = false) -> void:
+	_entries = [{"demo": demo, "value": value, "all": all_units}]
+	_time = 0.0
+	set_process(true)
+	queue_redraw()
+
+
 func clear() -> void:
 	_entries = []
 	_time = 0.0

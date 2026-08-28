@@ -8,6 +8,7 @@ signal replay_list_requested
 signal spectate_requested(match_id: String)
 signal cpu_match_requested
 signal rules_requested
+signal keyword_dict_requested
 signal random_match_deck_requested
 signal create_room_deck_requested
 signal account_requested
@@ -117,6 +118,7 @@ func _build_rules_tab() -> void:
 	_rules_tab.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_rules_tab.visible = false
 	_rules_tab.rules_requested.connect(func() -> void: rules_requested.emit())
+	_rules_tab.keyword_dict_requested.connect(func() -> void: keyword_dict_requested.emit())
 	deck_tab.get_parent().add_child(_rules_tab)
 	# タブの中身が背面へ回らないよう、既存のタブと同じ並びへ入れる。
 	deck_tab.get_parent().move_child(_rules_tab, 0)

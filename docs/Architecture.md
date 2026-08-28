@@ -460,7 +460,8 @@ Web配信ではpckのサイズがそのままロード時間に直結するた�
 |---|---|
 | `KeywordEntries`(`scripts/ui/keyword_entries.gd`, static) | 辞書の中身。語 → 表示名・説明・実演の `CardEffectPreview.Demo`・分類(常在 / トリガー)の対応表と並び順を1箇所へ持つ |
 | `KeywordDictScreen`(`scripts/ui/keyword_dict_screen.gd`, Control) | 左=語の一覧 / 右=選んだ語の詳細。共通の `ScreenHeader` を使う |
-| `KeywordPopup`(`scripts/ui/keyword_popup.gd`, Control) | 詳細パネルから出す1語ぶんのモーダル。辞書画面の右カラムと同じ組み立てを共有する |
+| `KeywordEntryView`(`scripts/ui/keyword_entry_view.gd`, VBoxContainer) | 1語ぶんの表示(語 / 説明 / 実演 / その語を持つ砂時計)。**辞書画面の右カラムとポップの中身はどちらもこれ**で、同じ語を2箇所で別々に組み立てて片方だけ古くなる状態を防ぐ |
+| `KeywordPopup`(`scripts/ui/keyword_popup.gd`, Control) | 詳細パネルから出す1語ぶんのモーダル。暗幕 + コンテンツパネルの既存パターン |
 
 **`CardEnums` は「語と文を返す」既存の責務のまま変えない。**並び順・分類・実演の割り当ては
 辞書側の関心であり、対局のロジックが読む語彙へ表示の都合を混ぜないため `KeywordEntries` が持つ。
@@ -473,10 +474,14 @@ Web配信ではpckのサイズがそのままロード時間に直結するた�
 `{"kind": ..., "value": ...}` の形で持つ**。両者を1つの整数へ混ぜると、値が衝突していないことを
 呼び出し側が知っている前提のコードになる。
 
-**`CardDetailPanel` の効果欄は語の部分だけを押せるようにする。**現在は `Label` 1つへ全文を
-流し込んでいるため、語ごとの小さな `Button` と説明文の `Label` に分ける。これが辞書の追加に
-伴う唯一の既存コードの変更点で、対局中の詳細(`CardMatchScreen`)もこのパネルを共用しているため
-1箇所の変更で両方へ効く。
+**`CardDetailPanel` の効果欄は語ごとの行にする。**`Label` 1つへ全文を流し込む形をやめ、
+1行を「語のボタン + 説明の `Label`」にした。ボタンは `keyword_pressed(entry)` を出すだけで、
+**ポップ自体は画面側が持つ**(対局中はこのパネルが盤面の上の小さなノードとして置かれ、
+そこへ全画面の暗幕を持たせられないため)。
+
+> **`CardMatchScreen` はまだ `CardDetailPanel` を使っていない**(対局中に駒を押して効果を
+> 見る導線が v5.0 では未実装)。GameDesign.md 17章の「対局中の詳細からも引ける」は、
+> その導線を作るときにこのパネルを使えばそのまま満たされる。
 
 **実演(`CardEffectPreview`)は語を直接指定して再生できるようにする**(`show_demo()`)。
 既存の `show_card()` は `CardData` から台本の並びを組む入口であり、辞書は語がすでに

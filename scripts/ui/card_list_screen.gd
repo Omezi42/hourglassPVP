@@ -13,6 +13,7 @@ const GRID_RECT := Rect2(
 const DETAIL_POSITION := Vector2(852, ScreenHeader.CONTENT_TOP)
 
 var _detail: CardDetailPanel
+var _keyword_popup: KeywordPopup
 var _views: Array[CardView] = []
 
 
@@ -57,6 +58,12 @@ func _build() -> void:
 	# `CardDetailPanel._ready()` が既定サイズを入れるため、add_child の後に上書きする。
 	_detail.custom_minimum_size = Vector2(CardDetailPanel.PANEL_SIZE.x, GRID_RECT.size.y)
 	_detail.size = _detail.custom_minimum_size
+
+	# 語を押すとその意味を引ける(GameDesign.md 17章)。全画面へ暗幕を敷くため、
+	# 詳細パネルではなく画面側が持つ。
+	_keyword_popup = KeywordPopup.new()
+	add_child(_keyword_popup)
+	_detail.keyword_pressed.connect(func(entry: Dictionary) -> void: _keyword_popup.open(entry))
 
 
 func _select(view: CardView) -> void:

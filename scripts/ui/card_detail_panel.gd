@@ -7,16 +7,27 @@ extends PanelContainer
 ## **デッキ編集では `compact` を立てて使う**。右カラムの上半分しか使えないため、
 ## 大きなイラストを捨てて実演と効果文を横に並べる。イラストは同じ画面の下部にある
 ## カード一覧で既に見えており、ここで繰り返す価値が低い。
+##
+## **効果欄の語は押せる。**押すと `keyword_pressed` を出し、画面側が `KeywordPopup` を開く
+## (GameDesign.md 17章)。ポップ自体をここで持たないのは、対局中はこのパネルが盤面の上の
+## 小さなノードとして置かれ、そこへ全画面の暗幕を持たせられないため。
+
+signal keyword_pressed(entry: Dictionary)
 
 const PANEL_STYLE := "res://resources/theme/content_panel.tres"
 const PANEL_SIZE := Vector2(380, 460)
 const COMPACT_SIZE := Vector2(588, 262)
-const ICON_SIZE := Vector2(104, 104)
+const ICON_SIZE := Vector2(84, 84)
 ## カード固有の紋章(GameDesign.md 9章)。名前の左へ置き、カードの面より大きく見せる。
 const EMBLEM_SIZE := Vector2(44, 44)
-const PREVIEW_HEIGHT := 214.0
+## 語のボタンが下端で切れないよう、縦の詰めた実演にしてある。
+## 大きく見たいときは語を押してキーワード辞書のポップで見られる(GameDesign.md 17章)。
+const PREVIEW_HEIGHT := 150.0
 ## 横並びのときに効果文へ割く幅。
 const COMPACT_TEXT_WIDTH := 236.0
+## 効果欄の語のボタン。「2回攻撃」の4文字が収まる幅にしてある。
+const TERM_BUTTON_SIZE := Vector2(98, 34)
+const TERM_FONT_SIZE := 15
 
 ## 横並びの詰めた表示にするか。`add_child()` より前に設定する。
 var compact := false
@@ -25,7 +36,8 @@ var _icon: TextureRect
 var _emblem: TextureRect
 var _name: Label
 var _stats: Label
-var _body: Label
+var _body: VBoxContainer
+var _body_width := 0.0
 var _preview: CardEffectPreview
 
 
@@ -50,7 +62,7 @@ func show_card(card: CardData) -> void:
 	_emblem.texture = card.emblem
 	_name.text = card.display_name
 	_stats.text = "コスト %d  /  総量 %d" % [card.cost, card.total_sand]
-	_body.text = _describe(card)
+	_fill_body(card)
 	_preview.show_card(card)
 
 
@@ -60,32 +72,75 @@ func clear() -> void:
 	_emblem.texture = null
 	_name.text = ""
 	_stats.text = ""
-	_body.text = "カードを選ぶと内容を表示します。"
+	_clear_body()
+	_body.add_child(_make_line("カードを選ぶと内容を表示します。"))
 	_preview.clear()
 
 
-## **語として見せるキーワードは【語】と説明の両方**を出す(語だけでは初見に伝わらない)。
-## 語にしない能力は、語を出さずに効果の文だけを書く。
-func _describe(card: CardData) -> String:
-	var lines: PackedStringArray = []
-	lines.append("場に出たとき  体力 %d / 攻撃力 0" % card.total_sand)
-	lines.append("毎ターン終了時に砂が1粒落ちて 体力-1 / 攻撃力+1")
+## **語として見せるキーワードは語のボタンと説明を並べる**(語だけでは初見に伝わらない)。
+## 語にしない能力は、カードの面と同じ短い言い換え(「破壊」など)をボタンに出す。
+## 盤面に出ていない語をここだけで見せると、呼び名が食い違うため(GameDesign.md 6章)。
+func _fill_body(card: CardData) -> void:
+	_clear_body()
+	_body.add_child(_make_line("場に出たとき  体力 %d / 攻撃力 0" % card.total_sand))
+	_body.add_child(_make_line("毎ターン終了時に砂が1粒落ちて 体力-1 / 攻撃力+1"))
 	for keyword in card.named_keywords():
-		lines.append("")
-		lines.append(
-			"【%s】%s" % [CardEnums.keyword_name(keyword), CardEnums.keyword_description(keyword)]
-		)
-	# 語にしない能力は、語を出さずに効果の文だけを書く(GameDesign.md 6章)。
+		_body.add_child(_make_term_row(KeywordEntries.keyword_entry(keyword)))
 	for keyword in card.plain_keywords():
-		lines.append("")
-		lines.append(CardEnums.keyword_description(keyword))
-	if not card.rules_text.is_empty():
-		lines.append("")
-		lines.append(card.rules_text)
+		_body.add_child(_make_term_row(KeywordEntries.keyword_entry(keyword)))
+	var triggers := _triggers_of(card)
+	for i in triggers.size():
+		var text: String = card.rules_text if i == 0 else ""
+		_body.add_child(_make_term_row(KeywordEntries.trigger_entry(triggers[i]), text))
+	if triggers.is_empty() and not card.rules_text.is_empty():
+		_body.add_child(_make_line(card.rules_text))
 	if card.keywords.is_empty() and card.rules_text.is_empty():
-		lines.append("")
-		lines.append("効果を持たない基準のカード。")
-	return "\n".join(lines)
+		_body.add_child(_make_line("効果を持たない基準のカード。"))
+
+
+static func _triggers_of(card: CardData) -> Array[int]:
+	var found: Array[int] = []
+	for effect in card.effects:
+		if effect != null and not found.has(effect.trigger):
+			found.append(effect.trigger)
+	return found
+
+
+func _clear_body() -> void:
+	for child in _body.get_children():
+		_body.remove_child(child)
+		child.queue_free()
+
+
+func _make_line(text: String) -> Label:
+	var label := Label.new()
+	label.text = text
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.custom_minimum_size = Vector2(_body_width, 0)
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	label.add_theme_font_size_override("font_size", 15)
+	return label
+
+
+## 語のボタンと、その説明を横に並べた1行。`override_text` が空でなければ説明の代わりに使う
+## (トリガーの行では、カード固有の効果文をそのまま読ませたいため)。
+func _make_term_row(entry: Dictionary, override_text: String = "") -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+
+	var button := CodedButton.make(KeywordEntries.title(entry), TERM_BUTTON_SIZE)
+	button.add_theme_font_size_override("font_size", TERM_FONT_SIZE)
+	button.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	button.pressed.connect(func() -> void: keyword_pressed.emit(entry))
+	row.add_child(button)
+
+	var text: String = (
+		override_text if not override_text.is_empty() else (KeywordEntries.description(entry))
+	)
+	var label := _make_line(text)
+	label.custom_minimum_size = Vector2(maxf(_body_width - TERM_BUTTON_SIZE.x - 8.0, 80.0), 0)
+	row.add_child(label)
+	return row
 
 
 func _build() -> void:
@@ -173,10 +228,10 @@ func _make_body_scroll(text_width: float) -> ScrollContainer:
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_body = Label.new()
-	_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_body_width = text_width
+	_body = VBoxContainer.new()
+	_body.add_theme_constant_override("separation", 10)
 	_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_body.custom_minimum_size = Vector2(text_width, 0)
-	_body.add_theme_font_size_override("font_size", 15)
 	scroll.add_child(_body)
 	return scroll
