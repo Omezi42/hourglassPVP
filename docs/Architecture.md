@@ -321,7 +321,8 @@ Main
 ├── CardMatchScreen          # 対局・観戦・リプレイ再生(コードで組み立てる。4.0節)
 ├── CardDeckEditorScreen     # デッキ編集(20枚・同名2枚まで。同上)
 ├── CardListScreen           # カード一覧(同上)
-└── RuleScreen               # ルール(遊び方)の紙芝居(同上。4.2節)
+├── RuleScreen               # ルール(遊び方)の紙芝居(同上。4.2節)
+└── KeywordDictScreen        # キーワード辞書(同上。4.3節)
 ```
 
 **v1.0(位相制)の画面と、それを支えていたクラスは削除済み。**`MatchScreen` 一式・
@@ -453,6 +454,35 @@ Web配信ではpckのサイズがそのままロード時間に直結するた�
 **初回起動の判定は `UiState`(`scripts/logic/ui_state.gd`、`user://ui_state.json`)が持つ。**
 `CardDeckSave` 等と同じ「Autoloadを使わずstaticで持つ」流儀。ホーム画面を一度でも開いたら
 記録し、以後は「デッキ」タブから始める(GameDesign.md 9章)。
+### 4.3 キーワード辞書(GameDesign.md 17章)
+
+| クラス | 責務 |
+|---|---|
+| `KeywordEntries`(`scripts/ui/keyword_entries.gd`, static) | 辞書の中身。語 → 表示名・説明・実演の `CardEffectPreview.Demo`・分類(常在 / トリガー)の対応表と並び順を1箇所へ持つ |
+| `KeywordDictScreen`(`scripts/ui/keyword_dict_screen.gd`, Control) | 左=語の一覧 / 右=選んだ語の詳細。共通の `ScreenHeader` を使う |
+| `KeywordPopup`(`scripts/ui/keyword_popup.gd`, Control) | 詳細パネルから出す1語ぶんのモーダル。辞書画面の右カラムと同じ組み立てを共有する |
+
+**`CardEnums` は「語と文を返す」既存の責務のまま変えない。**並び順・分類・実演の割り当ては
+辞書側の関心であり、対局のロジックが読む語彙へ表示の都合を混ぜないため `KeywordEntries` が持つ。
+
+**その語を持つ砂時計は表へ書かず、`CardLibrary` から実行時に集める**
+(`KeywordEntries.cards_with()`)。カードを1枚追加したときに辞書を書き換える作業が
+発生しないことが、データ駆動で運用する(1章)ための条件になる。
+
+**トリガー(設置 / 反転 / 余砂)は `Keyword` とは別の enum のため、辞書の項目は
+`{"kind": ..., "value": ...}` の形で持つ**。両者を1つの整数へ混ぜると、値が衝突していないことを
+呼び出し側が知っている前提のコードになる。
+
+**`CardDetailPanel` の効果欄は語の部分だけを押せるようにする。**現在は `Label` 1つへ全文を
+流し込んでいるため、語ごとの小さな `Button` と説明文の `Label` に分ける。これが辞書の追加に
+伴う唯一の既存コードの変更点で、対局中の詳細(`CardMatchScreen`)もこのパネルを共用しているため
+1箇所の変更で両方へ効く。
+
+**実演(`CardEffectPreview`)は語を直接指定して再生できるようにする**(`show_demo()`)。
+既存の `show_card()` は `CardData` から台本の並びを組む入口であり、辞書は語がすでに
+決まっているためその手前へ入る。
+
+---
 
 ---
 
