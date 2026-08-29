@@ -76,7 +76,8 @@ static func notify_waiting(host: Node) -> bool:
 ## するとidが変わり、その文字列がそのまま表示される。
 static func build_line() -> String:
 	var line := "%s だれかが対戦相手をさがしてるよ！ [ %s ]" % [SUNAERU_EMOJI, Time.get_time_string_from_system()]
-	var version := str(ProjectSettings.get_setting("application/config/version", ""))
+	# バージョンは GameVersion からだけ読む(参照が2箇所へ散ると片方だけ古くなる)
+	var version := GameVersion.version()
 	if version != "":
 		line += " ・ v%s" % version
 	return line

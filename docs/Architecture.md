@@ -1054,6 +1054,66 @@ Base64 にする。`HG1-` の接頭辞を付け、先頭2バイトに展開後�
 
 ---
 
+## 11. 開発時の落とし穴
+
+検証で繰り返し踏んだもの。**いずれも「エディタ実行やヘッドレステストでは再現せず、
+書き出した版や実機でだけ壊れる」種類**であり、気づく手段を持たないと同じ穴を掘り直す。
+
+### 検証の抜け
+
+- **新しい `class_name` を持つスクリプトを追加した直後は `godot --headless --path . --import` を
+  1度実行する。**`.godot/global_script_class_cache.cfg` へ登録されず、`--script` 起動が
+  「Could not find type "..." in the current scope」で失敗する
+- **`tools/tests/run_tests.gd` は `scripts/ui/` を読まないため、UIのパースエラーを検出できない。**
+  UIを触ったら `--quit-after` での起動スモークまで回す
+- **GUIのクリックはヘッドレスでは一切届かない**(`push_input` しても
+  `gui_get_hovered_control()` は none のまま)。押下の確認は非ヘッドレスで行う
+- **演出のスクリーンショットは `Engine.time_scale` を0.2程度へ落として撮る。**
+  `get_viewport().get_texture().get_image()` + `save_png` は演出より実時間のコストが
+  大きく、0.3秒程度の動きは撮り逃して「実装が効いていない」ように見える
+- **エクスポート済みpckに対しても回す**
+  (`godot --headless --main-pack build/web/index.pck --script res://tools/tests/run_tests.gd`)。
+  `.tres` が `.tres.remap` になることに起因するパス解決の差異は、これでしか出ない
+
+### GDScript
+
+- **型付き配列(`Array[String]`)を要求する関数へ untyped の `Array` を渡すと、
+  実行時に関数ごと呼ばれない。**コンパイルは通り、その経路を通るまで気づけない。
+  渡す値は生成側の戻り値の型まで揃える
+- **ラムダは外側のローカル変数を値でキャプチャする。**シグナルの引数をラムダから
+  外側の変数へ代入しても伝わらない。`Array` / `Dictionary` でラップして要素へ代入する
+- **`var x := ProjectSettings.get_setting(...)` は Variant 推論の警告でコンパイルが落ちる**
+  (警告がエラー扱いのため)。`var x: Variant = ...` と明示する
+
+### Godotの挙動
+
+- **`set_anchors_preset()` は「今の矩形を保つように」offsetを計算し直す。**コードで生成した
+  直後(サイズ0)のノードへ使うと0サイズのまま固定され、何も描かれない。
+  `anchor_right` / `anchor_bottom` への直接代入で設定する
+- **`Control._draw()` は自分の子より背面に描かれる。**画面側で描いた線は子ノードに隠れる。
+  手前に出したいものは独立したオーバーレイのノードにする
+- **後から `add_child()` した子ほど手前に描かれる。**モーダル・暗幕は最後の子へ置く
+- **`MOUSE_FILTER_PASS` はイベントを背面の兄弟ではなく親へ渡す。**全面に敷いた
+  `MarginContainer` より前の子は、ホバーを奪われて押せなくなる
+- **`ResourceLoader.exists()` は pck から除外した後も true を返すことがある**(実測)。
+  ファイルの有無の判定には使えない。Web/デスクトップの分岐は `OS.has_feature("web")` で行う
+- **`.tscn` はテキストとして直接編集しない。**`tools/godot_apply_patch.gd` か
+  一時ビルドスクリプト(適用後に削除)経由で更新する。ルートにスクリプトを持つシーンを
+  再生成する際は `root.set_script()` を忘れない(忘れるとその画面が一切起動しなくなる)
+
+### 触ってはいけないもの
+
+- **`user://` 配下の実データ(`card_decks.json` 等)に触らない。**過去に誤って削除する事故が
+  発生している。テストで扱う場合は必ず「控える → 上書き → 検証 → 戻す」の往復にする
+
+### 行数の上限
+
+- gdlint の `max-file-lines` が1000行。`card_match_screen.gd` と `run_tests.gd` は
+  この上限に張り付いているため、**足す前に切り出す**
+  (`_screen` 参照を持つ `RefCounted` へ分ける既存の流儀に従う)
+
+---
+
 ## 未検討事項
 
 - `EffectResolver` の対応表の具体的な実装方式(match文 vs 個別クラス継承)は、実装着手時に決定する
