@@ -78,7 +78,52 @@ def split_message(body: str) -> list[str]:
     return chunks
 
 
-def post(url: str, content: str, username: str, mention_role: str) -> dict:
+def _multipart(payload: dict, files: list[Path]) -> tuple[bytes, str]:
+    """画像やGIFを添えるときの本文(multipart/form-data)を組み立てる。"""
+    crlf = "\r\n"
+    boundary = "----hourglass" + os.urandom(8).hex()
+    parts: list[bytes] = []
+
+    head = (
+        f"--{boundary}{crlf}"
+        f'Content-Disposition: form-data; name="payload_json"{crlf}'
+        f"Content-Type: application/json{crlf}{crlf}"
+    )
+    parts.append(head.encode() + json.dumps(payload).encode("utf-8") + crlf.encode())
+
+    for index, path in enumerate(files):
+        head = (
+            f"--{boundary}{crlf}"
+            f'Content-Disposition: form-data; name="files[{index}]"; '
+            f'filename="{path.name}"{crlf}'
+            f"Content-Type: application/octet-stream{crlf}{crlf}"
+        )
+        parts.append(head.encode() + path.read_bytes() + crlf.encode())
+
+    parts.append(f"--{boundary}--{crlf}".encode())
+    return b"".join(parts), f"multipart/form-data; boundary={boundary}"
+
+
+def _send(url: str, data: bytes, content_type: str, method: str = "POST") -> dict:
+    request = urllib.request.Request(
+        url,
+        data=data,
+        headers={"Content-Type": content_type, "User-Agent": USER_AGENT},
+        method=method,
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=60) as response:
+            body = response.read().decode("utf-8")
+            return json.loads(body) if body else {}
+    except urllib.error.HTTPError as error:
+        detail = error.read().decode("utf-8", errors="replace")
+        sys.exit(f"失敗しました({error.code}): {detail}")
+    except urllib.error.URLError as error:
+        sys.exit(f"接続できませんでした: {error.reason}")
+
+
+def post(url: str, content: str, username: str, mention_role: str,
+         files: list[Path] | None = None) -> dict:
     allowed = {"parse": []}
     if mention_role:
         allowed = {"parse": [], "roles": [mention_role]}
@@ -86,26 +131,22 @@ def post(url: str, content: str, username: str, mention_role: str) -> dict:
     if username:
         payload["username"] = username
 
-    request = urllib.request.Request(
-        f"{url}?wait=true",
-        data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json", "User-Agent": USER_AGENT},
-        method="POST",
-    )
-    try:
-        with urllib.request.urlopen(request, timeout=30) as response:
-            return json.loads(response.read().decode("utf-8"))
-    except urllib.error.HTTPError as error:
-        detail = error.read().decode("utf-8", errors="replace")
-        sys.exit(f"投稿に失敗しました({error.code}): {detail}")
-    except urllib.error.URLError as error:
-        sys.exit(f"接続できませんでした: {error.reason}")
+    if files:
+        data, content_type = _multipart(payload, files)
+    else:
+        data, content_type = json.dumps(payload).encode("utf-8"), "application/json"
+    return _send(f"{url}?wait=true", data, content_type)
 
 
 def main() -> None:
     sys.stdout.reconfigure(encoding="utf-8")
+    # Windowsのstdinは既定がcp932。明示しないとUTF-8で渡した本文が化ける
+    sys.stdin.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description="Discordへ1件投稿する")
-    parser.add_argument("body", help="本文のファイル。'-' で標準入力から読む")
+    parser.add_argument("body", nargs="?", help="本文のファイル。'-' で標準入力から読む")
+    parser.add_argument("--attach", action="append", default=[], help="添える画像/GIF(複数可)")
+    parser.add_argument("--delete", metavar="MESSAGE_ID", help="投稿済みメッセージを消す")
+    parser.add_argument("--edit", metavar="MESSAGE_ID", help="投稿済みメッセージを差し替える")
     parser.add_argument("--dry-run", action="store_true", help="投稿せず内容だけ表示する")
     parser.add_argument("--username", default="", help="表示名を上書きする")
     parser.add_argument("--mention-role", default="", help="鳴らすロールID(既定は無音)")
@@ -114,6 +155,15 @@ def main() -> None:
     )
     parser.add_argument("--key", default="announce_webhook_url", help="設定内のキー名")
     args = parser.parse_args()
+
+    if args.delete:
+        url = load_webhook_url(Path(args.config), args.key)
+        _send(f"{url}/messages/{args.delete}", b"", "application/json", method="DELETE")
+        print(f"削除しました message_id={args.delete}")
+        return
+
+    if not args.body:
+        sys.exit("本文のファイルを指定してください。")
 
     if args.body == "-":
         body = sys.stdin.read()
@@ -133,8 +183,24 @@ def main() -> None:
         return
 
     url = load_webhook_url(Path(args.config), args.key)
+    files = [Path(a) for a in args.attach]
+    for f in files:
+        if not f.exists():
+            sys.exit(f"添付が見つかりません: {f}")
+
+    if args.edit:
+        if len(chunks) > 1:
+            sys.exit("差し替えは1メッセージに収まる本文のみ対応しています。")
+        payload = json.dumps({"content": chunks[0], "allowed_mentions": {"parse": []}})
+        _send(f"{url}/messages/{args.edit}", payload.encode("utf-8"), "application/json",
+              method="PATCH")
+        print(f"差し替えました message_id={args.edit}")
+        return
+
     for index, chunk in enumerate(chunks, start=1):
-        result = post(url, chunk, args.username, args.mention_role)
+        # 添付は最後のメッセージにだけ付ける(分割時に画像が本文の途中へ挟まらないように)
+        attach = files if index == len(chunks) else None
+        result = post(url, chunk, args.username, args.mention_role, attach)
         print(f"投稿しました {index}/{len(chunks)} message_id={result.get('id', '?')}")
 
 
