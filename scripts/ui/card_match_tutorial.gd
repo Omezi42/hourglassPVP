@@ -12,7 +12,8 @@ extends Control
 ## ここは「次に何をすれば良いか分からない」状態を埋めるためだけに置く。
 ##
 ## **段階を終えたときの説明は時間で消さない。**「つぎへ」を押すまで残す。読む速さは人により、
-## 1秒足らずでは読み切れない(GameDesign.md 18章)。
+## 1秒足らずでは読み切れない(GameDesign.md 18章)。同じ理由で**途中で閉じる導線も置かない**。
+## 一度閉じると、以降の段階の案内が二度と読めなくなるため。
 
 signal finished
 
@@ -26,9 +27,7 @@ const BAND_RECT := Rect2(206, 74, 824, 64)
 ## 使うため、通常の位置(y=74)へ出すと見出しへ重なる。確定ボタンの下が唯一の空きになる。
 const MULLIGAN_BAND_TOP := 470.0
 const PORTRAIT_SIZE := Vector2(54, 64)
-const CLOSE_SIZE := Vector2(88, 36)
 const NEXT_SIZE := Vector2(88, 36)
-const BUTTON_GAP := 8.0
 const BUTTON_MARGIN := 10.0
 
 ## 段階の定義。`event` は完了とみなすシグナルの種類。
@@ -177,28 +176,20 @@ func _build() -> void:
 	_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var margin := MarginContainer.new()
-	# 文が「つぎへ」「閉じる」の下へ潜らないよう、ボタン2つぶんの余白を右へ空ける。
+	# 文が「つぎへ」の下へ潜らないよう、ボタンぶんの余白を右へ空ける。
 	# **「つぎへ」が出ていない間も同じだけ空ける**。出入りのたびに文が折り返し直すため。
-	margin.add_theme_constant_override(
-		"margin_right", int(CLOSE_SIZE.x + NEXT_SIZE.x + BUTTON_GAP + BUTTON_MARGIN)
-	)
+	margin.add_theme_constant_override("margin_right", int(NEXT_SIZE.x + BUTTON_MARGIN))
 	# 左はすなえるの立ち絵ぶん。文と絵を重ねない。
 	margin.add_theme_constant_override("margin_left", int(PORTRAIT_SIZE.x))
 	panel.add_child(margin)
 	margin.add_child(_label)
 
-	# 途中でやめられる(GameDesign.md 18章)。閉じた後は通常のCPU戦として続く。
-	var close_button := CodedButton.make("閉じる", CLOSE_SIZE)
-	close_button.position = Vector2(
-		BAND_RECT.size.x - CLOSE_SIZE.x - BUTTON_MARGIN, (BAND_RECT.size.y - CLOSE_SIZE.y) * 0.5
-	)
-	close_button.pressed.connect(close)
-	_band.add_child(close_button)
-
+	# **「閉じる」は置かない**(GameDesign.md 18章)。一度閉じると以降の案内が
+	# 読めなくなるため。帯は最後の「とじる」まで残る。
 	_next_button = CodedButton.make("つぎへ", NEXT_SIZE)
 	_next_button.visible = false
 	_next_button.position = Vector2(
-		close_button.position.x - NEXT_SIZE.x - BUTTON_GAP, (BAND_RECT.size.y - NEXT_SIZE.y) * 0.5
+		BAND_RECT.size.x - NEXT_SIZE.x - BUTTON_MARGIN, (BAND_RECT.size.y - NEXT_SIZE.y) * 0.5
 	)
 	_next_button.pressed.connect(_on_next_pressed)
 	_band.add_child(_next_button)

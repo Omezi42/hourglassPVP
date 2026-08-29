@@ -549,6 +549,9 @@ pckから除外した後も true を返すことがあり、有無の判定に�
 **指示は手を塞がない**(`mouse_filter` は IGNORE)。従わない操作を禁止すると
 「言われた通りにしか動かせない」体験になるため(GameDesign.md 18章)。
 
+**途中で閉じるボタンは持たない**(GameDesign.md 18章)。`close()` は締めの一文の
+「とじる」からしか呼ばない。一度閉じると以降の段階の案内が二度と読めなくなるため。
+
 **すなえるの絵は `assets/mascot/mascot_avatar.png` 1枚だけを実行時に読む**(GameDesign.md 18章)。
 生成元(`tools/build_mascot.py` の出力する原寸とDiscord用のプレビュー)は
 `assets/mascot/sources/` へ移し `.gdignore` で管理外に置く。表示は96px程度のため、
