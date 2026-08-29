@@ -27,6 +27,9 @@ from pathlib import Path
 
 # Discordの1メッセージあたりの上限。超える分は複数メッセージへ分ける。
 MESSAGE_LIMIT = 2000
+# DiscordのAPIはUser-Agentを検査する。urllibの既定値(Python-urllib/x.y)はCloudflareに
+# 403 (error code: 1010) で弾かれるため、必ずこの形式で名乗る。
+USER_AGENT = "DiscordBot (https://github.com/Omezi42/hourglassPVP, 1.0)"
 DEFAULT_CONFIG = Path.home() / ".hourglass_discord.json"
 
 
@@ -86,7 +89,7 @@ def post(url: str, content: str, username: str, mention_role: str) -> dict:
     request = urllib.request.Request(
         f"{url}?wait=true",
         data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
+        headers={"Content-Type": "application/json", "User-Agent": USER_AGENT},
         method="POST",
     )
     try:
