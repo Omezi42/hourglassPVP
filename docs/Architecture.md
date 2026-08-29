@@ -743,6 +743,38 @@ pckから除外した後も true を返すことがあり、有無の判定に�
 
 ---
 
+### 6.3 対戦相手の募集をDiscordへ通知する(GameDesign.md 11章)
+
+`QueueNotifier`(`scripts/net/queue_notifier.gd`、staticのみ)がDiscordのWebhookへ
+1行を投げる。`MatchmakingQueue.join()` が**最初の `_try_claim_or_check()` で相手を
+掴めなかった時点**で1度だけ呼ぶ。ここが「自分が待機側になった」ことの確定であり、
+即座にマッチした場合は通らないため、条件分岐を足さずに仕様を満たせる。
+
+**WebhookのURLはリポジトリへ置かない。**`data/discord_webhook.txt` に置き `.gitignore`
+で管理外にする。**Godotのエクスポートはgitではなくファイルシステムを見るため、管理外でも
+pckには入る**。リポジトリへ置けない理由は2つ。
+
+- リポジトリは公開のまま保つ必要がある(BGMの配信にjsDelivrを使うため。4.1.6節)
+- **GitHubはpublicリポジトリに含まれるDiscordのWebhook URLを検出し、Discord側が
+  自動的に無効化する**(secret scanningの提携先にDiscordが含まれる)。コミットすれば
+  この機能は黙って壊れる
+
+ファイルが無ければ通知を送らないだけで、対局には影響しない(クローン直後やテストは
+この状態になる)。
+
+**クライアントへ埋めるのはWebhookに限り、Botトークンは絶対に置かない。**Webhookは
+「そのチャンネルへ投稿する」以外に何もできないが、Botトークンはサーバーの操作権限を
+持つため、pckから取り出された時点でサーバーごと失われる。
+
+同じプレイヤーの連投を抑える2分の間隔は `static var` で持つだけにする。**全体を
+抑えるものではなく自分の連投だけを抑えるものなので、サーバー側に状態を持たせない。**
+
+バージョンは `ProjectSettings.get_setting("application/config/version")` から読む
+(`project.godot` の `config/version`)。日付方式(`2026.08.29`)。
+
+---
+
+
 ## 7. リプレイ・観戦の実装方針
 
 - `matches/{match_id}` には既に `deck_a`/`deck_b`(5枚)・`placement_a`/`placement_b`(場3枚)・`actions`(手順)が保存済みで、控え2枚は「デッキ−配置」で導出できる。**初期配置のための新しいフィールドは追加せず、これらを再利用する**

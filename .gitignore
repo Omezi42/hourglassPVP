@@ -33,3 +33,8 @@ assets/hourglasses/emblems/sources/
 /assets/mascot/update_banner.png
 /assets/mascot/card_*.png
 /assets/mascot/effect_*.gif
+
+# Discordの通知先。公開リポジトリへ入れるとGitHubのsecret scanningが検出し、
+# Discord側がWebhookを自動的に無効化するため管理しない。
+# エクスポートはgitではなくファイルシステムを見るため、これでもpckには入る。
+/data/discord_webhook.txt
