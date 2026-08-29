@@ -5,9 +5,6 @@ signal matched(match_id: String, opponent_uid: String)
 ## キューへ入れなかった(通信に失敗した・拒否された)。黙って待ち続けると
 ## 「押しても何も起きない」ようにしか見えないため、必ず画面へ返す。
 signal failed(reason: String)
-## 対戦相手の募集をDiscordへ流した(GameDesign.md 11章)。待っている本人へ、
-## 相手が来るまで数分かかりうることを伝えるために画面へ返す。
-signal community_notified
 
 const COLLECTION := "matchmaking_queue"
 const POLL_INTERVAL_SECONDS := 2.0
@@ -51,7 +48,6 @@ func join() -> void:
 		# 応答は待たない(通信の成否でポーリングを遅らせないため)
 		if not announced and QueueNotifier.can_send():
 			announced = true
-			community_notified.emit()
 			QueueNotifier.notify_waiting(self)
 		if Time.get_unix_time_from_system() - last_heartbeat >= HEARTBEAT_SECONDS:
 			last_heartbeat = Time.get_unix_time_from_system()

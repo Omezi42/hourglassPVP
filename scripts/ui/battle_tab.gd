@@ -25,7 +25,6 @@ var _status_base_text := ""
 ## 切断した対局へ戻る導線(GameDesign.md 11章)。`.tscn` を書き換えずに済ませるため
 ## コードで生成し、戻れる対局があるときだけ出す。
 var _resume_button: Button
-var _community_note: Label
 ## 戦績(GameDesign.md 19章)。`.tscn` を書き換えずに済ませるためコードで生成する。
 var _stats_button: Button
 
@@ -55,7 +54,6 @@ func _ready() -> void:
 	cancel_button.pressed.connect(_on_cancel_pressed)
 	_build_resume_button()
 	_build_stats_button()
-	_build_community_note()
 	refresh()
 
 
@@ -70,25 +68,6 @@ func refresh() -> void:
 	cpu_match_button.disabled = not ready_to_battle
 	join_room_button.disabled = not ready_to_battle
 	status_label.text = "対戦できます" if ready_to_battle else "デッキを20枚にしてください"
-
-
-## 募集をDiscordへ流したことを1行で示す(GameDesign.md 11章)。相手が来るまでには
-## 数分かかりうるため、待つ意味があることを伝えないと数十秒で諦められる。
-func _build_community_note() -> void:
-	_community_note = Label.new()
-	_community_note.visible = false
-	_community_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_community_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_community_note.add_theme_font_size_override("font_size", 16)
-	_community_note.add_theme_color_override("font_color", UiPalette.GLOW_AMBER)
-	var column: Control = status_label.get_parent()
-	column.add_child(_community_note)
-	column.move_child(_community_note, status_label.get_index() + 1)
-
-
-func _on_community_notified() -> void:
-	_community_note.text = ("Discordの #通知 へ募集を出しました。相手が来るまで数分かかることがあります")
-	_community_note.visible = true
 
 
 func _build_resume_button() -> void:
@@ -135,8 +114,6 @@ func _on_resume_pressed() -> void:
 ## 通信の完了を待つだけの短い処理(参加・観戦の問い合わせ等)では出さない。
 func _set_busy(busy: bool, cancellable: bool = false) -> void:
 	_busy = busy
-	if not busy and _community_note != null:
-		_community_note.visible = false
 	random_match_button.disabled = busy
 	create_room_button.disabled = busy
 	join_room_button.disabled = busy
@@ -224,7 +201,6 @@ func begin_random_match() -> void:
 	add_child(_queue)
 	_queue.matched.connect(_on_matched)
 	_queue.failed.connect(_fail)
-	_queue.community_notified.connect(_on_community_notified)
 	_queue.join()
 
 
