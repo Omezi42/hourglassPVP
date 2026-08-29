@@ -30,12 +30,15 @@ VIEW_CHANNEL = 1 << 10
 SEND_MESSAGES = 1 << 11
 CREATE_PUBLIC_THREADS = 1 << 35
 CREATE_PRIVATE_THREADS = 1 << 36
+SEND_MESSAGES_IN_THREADS = 1 << 38
 MANAGE_ROLES = 1 << 28
 
 # 読ませるだけのチャンネル(@everyone の書き込みとスレッド作成を外す)。
 # リアクションは残す。お知らせに反応できるほうが場が動くため。
 READ_ONLY = ["welcome", "はじめに", "お知らせ", "通知"]
-DENY = SEND_MESSAGES | CREATE_PUBLIC_THREADS | CREATE_PRIVATE_THREADS
+DENY = (
+    SEND_MESSAGES | CREATE_PUBLIC_THREADS | CREATE_PRIVATE_THREADS | SEND_MESSAGES_IN_THREADS
+)
 
 # 権限を書き換えるために、Bot自身が持っている必要があるもの
 # (Discordは「自分が持っていない権限」を上書き設定に書き込ませない)
@@ -44,6 +47,7 @@ REQUIRED = {
     "メッセージを送信": SEND_MESSAGES,
     "公開スレッドの作成": CREATE_PUBLIC_THREADS,
     "プライベートスレッドの作成": CREATE_PRIVATE_THREADS,
+    "スレッドでメッセージを送信": SEND_MESSAGES_IN_THREADS,
 }
 
 
@@ -108,14 +112,15 @@ def main() -> None:
 
         now = "書き込み不可" if now_deny & SEND_MESSAGES else "書き込み可"
         want = "書き込み不可" if want_deny & SEND_MESSAGES else "書き込み可"
-        same = (now_deny & DENY) == want_deny
+        # 上書きは置き換えになるため、いま拒否されている項目を取りこぼさない
+        same = (want_deny & ~now_deny) == 0
         print(f"#{name:<11} {now:<12} {want:<12} {'—' if same else '★ 変更'}")
         if same or name not in READ_ONLY:
             continue
         changes += 1
         if args.apply:
             api(token, f"/channels/{channel['id']}/permissions/{guild_id}", "PUT",
-                {"type": 0, "allow": str(VIEW_CHANNEL), "deny": str(DENY)})
+                {"type": 0, "allow": str(VIEW_CHANNEL), "deny": str(now_deny | DENY)})
 
     print("-" * 52)
     if changes == 0:
