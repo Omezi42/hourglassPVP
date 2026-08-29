@@ -506,11 +506,13 @@ func _build() -> void:
 	add_child(_status)
 	_feed = CardMatchTurnFeed.new()
 	add_child(_feed)
-	_tutorial = CardMatchTutorial.new()
-	add_child(_tutorial)
 	_mulligan = CardMatchMulligan.new()
 	_mulligan.confirmed.connect(_on_mulligan_confirmed)
 	add_child(_mulligan)
+	# **誘導対局の帯はマリガンより後に足す**(GameDesign.md 18章)。マリガンの暗幕の下へ
+	# 敷くと、いちばん案内が要る最初の画面ですなえるが読めなくなる。
+	_tutorial = CardMatchTutorial.new()
+	add_child(_tutorial)
 	_result = CardMatchResult.new()
 	_result.home_pressed.connect(func() -> void: back_pressed.emit())
 	_result.rematch_pressed.connect(_on_rematch_pressed)
