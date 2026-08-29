@@ -73,6 +73,7 @@ def main() -> None:
     p.add_argument("--id", help="data/cards/{id}.tres から読む")
     p.add_argument("--name"); p.add_argument("--cost", type=int); p.add_argument("--total", type=int)
     p.add_argument("--text", default=""); p.add_argument("--art", default="sand")
+    p.add_argument("--label", default="砂時計紹介", help="上部の見出し(例 先行公開)")
     p.add_argument("--out", default="assets/mascot/card_reveal.png")
     args = p.parse_args()
 
@@ -99,7 +100,7 @@ def main() -> None:
         box = draw.textbbox((0, 0), text, font=font)
         draw.text(((SIZE[0] - (box[2] - box[0])) / 2 - box[0], top), text, font=font, fill=fill)
 
-    center("先行公開", small, GLOW_AMBER, 40)
+    center(args.label, small, GLOW_AMBER, 40)
     center(card["name"], name_font, TEXT_OFFWHITE, 396)
 
     # 効果は語(守護など)と文(設置:〜)の両方がありうる。文は幅で折り返す
