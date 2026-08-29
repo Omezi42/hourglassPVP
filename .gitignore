@@ -28,3 +28,7 @@
 
 # アイコンの取り込み元(素材そのものの再配布を避けるため除外する)
 assets/hourglasses/emblems/sources/
+
+# お知らせのたびに作り直す画像(生成物のため管理しない)
+/assets/mascot/update_banner.png
+/assets/mascot/card_*.png

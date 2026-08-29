@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""次に追加する砂時計をチラ見せするカード画像を作る。
+"""次に追加する砂時計を先行公開するカード画像を作る。
 
-    python tools/discord/build_teaser_card.py --id poison            … 全部見せる
-    python tools/discord/build_teaser_card.py --id poison --tease    … 絵と名前を伏せる
-    python tools/discord/build_teaser_card.py --name グレイン --cost 1 --total 3 --art sand
+    python tools/discord/build_card_image.py --id poison
+    python tools/discord/build_card_image.py --name グレイン --cost 1 --total 3 --art sand
 
 `data/cards/{id}.tres` を読むので、カードを足せばそのまま使える。まだ .tres が
 無い砂時計は --name / --cost / --total / --text / --art で直接指定する。
@@ -16,7 +15,7 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
-SIZE = (420, 560)
+SIZE = (420, 600)
 FONT = Path("assets/fonts/ZenKakuGothicNew-Bold.ttf")
 CARDS = Path("data/cards")
 ART = Path("assets/hourglasses/processed")
@@ -74,8 +73,7 @@ def main() -> None:
     p.add_argument("--id", help="data/cards/{id}.tres から読む")
     p.add_argument("--name"); p.add_argument("--cost", type=int); p.add_argument("--total", type=int)
     p.add_argument("--text", default=""); p.add_argument("--art", default="sand")
-    p.add_argument("--tease", action="store_true", help="絵をシルエットにし、名前を伏せる")
-    p.add_argument("--out", default="assets/mascot/teaser_card.png")
+    p.add_argument("--out", default="assets/mascot/card_reveal.png")
     args = p.parse_args()
 
     card = read_card(args.id) if args.id else {
@@ -88,30 +86,35 @@ def main() -> None:
 
     image = panel()
     art = Image.open(ART / card["art"] / "state_full.png").convert("RGBA")
-    scale = 300 / art.height
-    art = art.resize((int(art.width * scale), 300), Image.LANCZOS)
-    if args.tease:
-        # 形だけ残して塗り潰す。何が来るかは分からないが「大きさ」は伝わる
-        art = Image.merge("RGBA", (*[Image.new("L", art.size, c) for c in (18, 20, 26)],
-                                   art.split()[3].point(lambda a: int(a * 0.92))))
-    image.alpha_composite(art, ((SIZE[0] - art.width) // 2, 116))
+    scale = 280 / art.height
+    art = art.resize((int(art.width * scale), 280), Image.LANCZOS)
+    image.alpha_composite(art, ((SIZE[0] - art.width) // 2, 104))
 
     draw = ImageDraw.Draw(image)
     name_font = ImageFont.truetype(str(FONT), 40)
     small = ImageFont.truetype(str(FONT), 25)
+    body_font = ImageFont.truetype(str(FONT), 22)
 
-    label = "近日追加" if args.tease else "新しい砂時計"
-    box = draw.textbbox((0, 0), label, font=small)
-    draw.text(((SIZE[0] - (box[2] - box[0])) / 2, 40), label, font=small, fill=GLOW_AMBER)
+    def center(text, font, fill, top):
+        box = draw.textbbox((0, 0), text, font=font)
+        draw.text(((SIZE[0] - (box[2] - box[0])) / 2 - box[0], top), text, font=font, fill=fill)
 
-    name = "？？？" if args.tease else card["name"]
-    box = draw.textbbox((0, 0), name, font=name_font)
-    draw.text(((SIZE[0] - (box[2] - box[0])) / 2, 438), name, font=name_font, fill=TEXT_OFFWHITE)
+    center("先行公開", small, GLOW_AMBER, 40)
+    center(card["name"], name_font, TEXT_OFFWHITE, 396)
 
-    words = [KEYWORDS.get(k, "?") for k in card["keywords"]]
-    caption = "・".join(words) or (card["text"][:16] if card["text"] else "効果なし")
-    box = draw.textbbox((0, 0), caption, font=small)
-    draw.text(((SIZE[0] - (box[2] - box[0])) / 2, 492), caption, font=small, fill=(180, 178, 172))
+    # 効果は語(守護など)と文(設置:〜)の両方がありうる。文は幅で折り返す
+    words = "・".join(KEYWORDS.get(k, "?") for k in card["keywords"])
+    body = "  ".join(x for x in (words, card["text"]) if x) or "効果なし"
+    line, lines = "", []
+    for ch in body:
+        # 左右のバッジ(半径40+余白)を避ける幅に抑える
+        if draw.textlength(line + ch, font=body_font) > SIZE[0] - 200:
+            lines.append(line)
+            line = ""
+        line += ch
+    lines.append(line)
+    for i, text in enumerate(lines[:3]):
+        center(text, body_font, (180, 178, 172), 458 + i * 30)
 
     badge(draw, 62, 76, 40, str(card["cost"]), (238, 196, 96))   # コスト = 左上
     badge(draw, SIZE[0] - 62, SIZE[1] - 76, 40, str(card["total"]), (176, 178, 186))  # 総量 = 右下
