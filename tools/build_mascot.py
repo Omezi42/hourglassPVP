@@ -84,7 +84,11 @@ def draw_halo() -> Image.Image:
 
 
 def draw_face() -> Image.Image:
-    """下のガラス玉に顔を置く。低い位置に目があるほど幼く見える。"""
+    """下のガラス玉に顔を置く。低い位置に目があるほど幼く見える。
+
+    口は描かない。目とほっぺだけのほうが表情が固定されず、砂時計という
+    物体のままでいられる。
+    """
     layer = _layer()
     draw = ImageDraw.Draw(layer)
     cx, cy = CANVAS[0] / 2, 452
@@ -95,16 +99,6 @@ def draw_face() -> Image.Image:
         _ellipse(draw, ex - 5, cy - 7, 5.5, 6.5, fill=(255, 255, 255, 255))
         _ellipse(draw, cx + side * 88, cy + 20, 20, 12, fill=BLUSH)
 
-    # 口は小さく。左右の弧をつなげた「ω」に近い形にする
-    for side in (-1, 1):
-        box = [
-            (cx + side * 1 - 13 if side < 0 else cx + 1) * SS,
-            (cy + 26) * SS,
-            (cx + side * 1 + 13 if side > 0 else cx - 1) * SS,
-            (cy + 44) * SS,
-        ]
-        draw.arc(box, start=200 if side < 0 else 300, end=340 if side < 0 else 80,
-                 fill=INK, width=4 * SS)
     return layer
 
 
