@@ -97,9 +97,9 @@ const STRIKE_RETURN := 0.3
 ## 同じターンの2回目以降は尺を詰める。連撃や6枠が並ぶ中盤で1ターンが冗長になるため。
 const STRIKE_QUICK_SCALE := 0.6
 ## 対象から見て斜め上のどこへ立つか。真上だと振り下ろす余地が無く、真横だと横殴りに見える。
-const STRIKE_STANDOFF := Vector2(76.0, 44.0)
+const STRIKE_STANDOFF := Vector2(64.0, 40.0)
 ## 当てたところ。めり込ませず、触れる位置で止める。
-const STRIKE_CONTACT := Vector2(44.0, 26.0)
+const STRIKE_CONTACT := Vector2(26.0, 12.0)
 const STRIKE_WIND_ANGLE := 0.42
 const STRIKE_HIT_ANGLE := 0.3
 ## 寄っている間、慣性で下端が遅れて振れる量。

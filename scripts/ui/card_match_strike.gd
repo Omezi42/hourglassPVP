@@ -49,7 +49,8 @@ func capture(action: Dictionary) -> void:
 		return
 	var side: int = int(action.get("side", MatchState.Side.A))
 	var slot: int = int(action.get("slot", -1))
-	var target: int = int(action.get("target", -1))
+	# キーは `target_slot`(`MatchAction.attack()`)。-1 なら相手プレイヤーを狙う。
+	var target: int = int(action.get("target_slot", -1))
 	var attacker: CardView = _screen.view_at(side, slot)
 	if attacker == null or _screen.state.board[side][slot] == null:
 		return
