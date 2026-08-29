@@ -540,6 +540,7 @@ pckから除外した後も true を返すことがあり、有無の判定に�
 | `CardPresetDecks`(`scripts/logic/card_preset_decks.gd`, static) | プリセット3つを「idと枚数の表」として持つ。20枚に足りない場合はコストの安い順に埋めるため、**表が古くなっても対局へ入れなくなることはない** |
 | `CardPresetPicker`(`scripts/ui/card_preset_picker.gd`) | プリセットを選ぶモーダル。名前だけでは何のデッキか分からないため、狙いの一文を必ず添える |
 | `CardMatchTutorial`(`scripts/ui/card_match_tutorial.gd`) | 誘導対局の指示。段階ごとに1つだけ操作を求め、`MatchState` のシグナルで達成を判定する |
+| `SunaeruPortrait`(`scripts/ui/sunaeru_portrait.gd`) | 指示の帯の左端に置くすなえるの立ち絵。**絵を持つだけのノード**にし、何を言うかは `CardMatchTutorial` が持つ |
 
 **誘導対局は専用のモードを作らず、CPU戦へ指示を重ねるだけにする。**`start_tutorial_match()` は
 `start_cpu_match()` をプリセットの「基本」で呼び、その後 `CardMatchTutorial.watch()` を張る。
@@ -547,6 +548,14 @@ pckから除外した後も true を返すことがあり、有無の判定に�
 
 **指示は手を塞がない**(`mouse_filter` は IGNORE)。従わない操作を禁止すると
 「言われた通りにしか動かせない」体験になるため(GameDesign.md 18章)。
+
+**すなえるの絵は `assets/mascot/mascot_avatar.png` 1枚だけを実行時に読む**(GameDesign.md 18章)。
+生成元(`tools/build_mascot.py` の出力する原寸とDiscord用のプレビュー)は
+`assets/mascot/sources/` へ移し `.gdignore` で管理外に置く。表示は96px程度のため、
+取り込みは非可逆(WebP)にする(4.1.6節)。
+
+**表情の差分は持たない。**口を描かない設計(GameDesign.md 18章)のため差分を作る余地が薄く、
+1枚で足りる。段階が進んだときの反応は、絵の差し替えではなく**跳ねる動き**で見せる。
 
 **指示の置き場所は手札の右隣の空き**(`BAND_RECT`)。画面上端へ横長に敷くと相手のHP・マナ・
 山札を覆い、攻撃や反転の判断に要る情報が誘導対局の間ずっと読めなくなる(実際に描いて確認した)。

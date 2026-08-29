@@ -3,6 +3,10 @@ extends Control
 ## 誘導対局の指示(GameDesign.md 18章)。実際の対局画面でそのまま手を指させ、
 ## 段階ごとに1つだけ操作を求める。
 ##
+## **話すのはマスコットのすなえる**(GameDesign.md 18章)。指示だけが帯に出ていると
+## 話者がおらず、画面が一方的に命令しているように読めるため。指示の文は短く保つこと。
+## このゲームは覚えることが多く、長い語りはルールの読解を妨げる。
+##
 ## **手は塞がない**(`mouse_filter` は IGNORE)。指示に従わない操作を禁止すると
 ## 「言われた通りにしか動かせない」体験になり、自分で考える余地が消える。
 ## ここは「次に何をすれば良いか分からない」状態を埋めるためだけに置く。
@@ -13,7 +17,9 @@ const SCREEN_SIZE := Vector2(1280, 720)
 ## 置き場所は**卓の上端へ横長に渡した帯**とする。相手のHP・マナ・山札を覆う位置
 ## (画面の最上段)は避ける。攻撃や反転の判断に要る情報が誘導対局の間ずっと読めなくなるため。
 ## 手札の右隣へ置いていた時期もあるが、手札を盤面の真下で中央へ揃えた際に重なった。
-const BAND_RECT := Rect2(250, 78, 780, 56)
+## すなえるの立ち絵を左端へ足したぶん、帯を左へ広げてある(文の幅は変えていない)。
+const BAND_RECT := Rect2(206, 74, 824, 64)
+const PORTRAIT_SIZE := Vector2(54, 64)
 const CLOSE_SIZE := Vector2(88, 36)
 const CLOSE_MARGIN := 10.0
 const DONE_FLASH := 0.9
@@ -22,23 +28,23 @@ const DONE_FLASH := 0.9
 const STEPS: Array[Dictionary] = [
 	{
 		"event": "play",
-		"text": "手札のカードを空き枠へ出してみましょう(押すか、枠へドラッグ)",
-		"done": "出したターンは攻撃も反転もできません",
+		"text": "こんにちは、ぼくすなえる! まずは手札の砂時計を空き枠へ出してみてね",
+		"done": "出したばかりの子はまだ動けないんだ。攻撃も反転も次のターンからだよ",
 	},
 	{
 		"event": "end_turn",
-		"text": "画面右の「ターン終了」を押しましょう",
-		"done": "ターン終了で砂が1粒落ちます(体力-1 / 攻撃力+1)",
+		"text": "つぎは画面右の「ターン終了」を押してみてね",
+		"done": "砂が1粒落ちたよ! 体力が1減って、攻撃力が1増えるんだ",
 	},
 	{
 		"event": "attack",
-		"text": "攻撃力が付いたら、自分の駒で相手を攻撃しましょう",
-		"done": "攻撃は相打ちです。自分も相手の攻撃力ぶん削れます",
+		"text": "攻撃力がついたら、その子で相手を殴ってみてね",
+		"done": "攻撃はおたがいさま。ぼくたちも相手の攻撃力ぶん削れちゃうんだ",
 	},
 	{
 		"event": "flip",
-		"text": "自分の駒を選んで「反転」を押しましょう",
-		"done": "体力と攻撃力が入れ替わります。攻撃力が体力を上回ったら返し時です",
+		"text": "さいごは反転だよ。自分の子を選んで「反転」を押してみてね",
+		"done": "体力と攻撃力が入れ替わったよ。攻撃力が体力を追い越したら返し時なんだ",
 	},
 ]
 
@@ -48,6 +54,7 @@ var _index := 0
 var _flash := 0.0
 var _label: Label
 var _panel: PanelContainer
+var _portrait: SunaeruPortrait
 
 
 func _ready() -> void:
@@ -72,11 +79,23 @@ func watch(state: MatchState, my_side: int) -> void:
 	state.turn_started.connect(
 		func(side: int) -> void: _advance_if("end_turn", MatchState.other_side(side))
 	)
-	visible = true
+	# マリガンの暗幕の下では読めないため、対局が始まってから出す。
+	visible = not state.mulligan_pending
+	if not visible:
+		state.turn_started.connect(_show_after_mulligan)
 	_refresh()
 
 
+func _show_after_mulligan(_side: int) -> void:
+	if _state != null and _state.turn_started.is_connected(_show_after_mulligan):
+		_state.turn_started.disconnect(_show_after_mulligan)
+	if _index < STEPS.size():
+		visible = true
+
+
 func close() -> void:
+	if _state != null and _state.turn_started.is_connected(_show_after_mulligan):
+		_state.turn_started.disconnect(_show_after_mulligan)
 	visible = false
 	finished.emit()
 
@@ -87,6 +106,8 @@ func _advance_if(event: String, side: int) -> void:
 	if STEPS[_index]["event"] != event:
 		return
 	_label.text = STEPS[_index]["done"]
+	if _portrait != null:
+		_portrait.cheer()
 	_flash = DONE_FLASH
 	_index += 1
 	set_process(true)
@@ -131,6 +152,8 @@ func _build() -> void:
 	var margin := MarginContainer.new()
 	# 文が「閉じる」の下へ潜らないよう、ボタンぶんの余白を右へ空ける。
 	margin.add_theme_constant_override("margin_right", int(CLOSE_SIZE.x + CLOSE_MARGIN))
+	# 左はすなえるの立ち絵ぶん。文と絵を重ねない。
+	margin.add_theme_constant_override("margin_left", int(PORTRAIT_SIZE.x))
 	_panel.add_child(margin)
 	margin.add_child(_label)
 
@@ -142,3 +165,10 @@ func _build() -> void:
 	)
 	close_button.pressed.connect(close)
 	add_child(close_button)
+
+	# すなえるは帯の左端へ小さく置くだけにする(GameDesign.md 18章)。
+	# 盤面を新たに隠さないよう、帯の中に収める。
+	_portrait = SunaeruPortrait.new()
+	_portrait.size = PORTRAIT_SIZE
+	_portrait.position = BAND_RECT.position
+	add_child(_portrait)
