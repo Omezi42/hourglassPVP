@@ -18,7 +18,11 @@ MASCOT_NAME = "すなえる"
 USER_AGENT = "DiscordBot (https://github.com/Omezi42/hourglassPVP, 1.0)"
 AVATAR = Path("assets/mascot/mascot_avatar.png")
 CONFIG = Path.home() / ".hourglass_discord.json"
-TARGETS = [("queue_notify_webhook_url", "#通知"), ("announce_webhook_url", "#お知らせ")]
+TARGETS = [
+    ("queue_notify_webhook_url", "#通知"),
+    ("announce_webhook_url", "#お知らせ"),
+    ("intro_webhook_url", "#はじめに"),
+]
 
 
 def main() -> None:
