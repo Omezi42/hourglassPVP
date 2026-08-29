@@ -324,9 +324,7 @@ UIに依存しない、対局ルールそのものを扱う層。
 (盤面へ重ねると、選ばせたい相手のカードそのものを隠してしまう)。
 
 `Main` は `card_match_screen` を `_ready()` で生成して `_screens` へ加える(`.tscn` を
-持たないため)。**CPU戦は `BattleDeckPickerScreen` を挟まずこの画面へ直行する**。
-あの画面は v1.0 の5枚デッキ用で20枚デッキに対応していないため、v5.0のデッキ編集が
-できた時点で差し替える。デッキは `CardDeckSave`(`user://card_decks.json`、v1.0の
+持たないため)。**CPU戦はデッキ選択画面を挟まずこの画面へ直行する**。デッキは `CardDeckSave`(`user://card_decks.json`、v1.0の
 `DeckSave` とは形式が違うためファイルを分ける)から読み、未保存なら
 `default_deck()`(コストの安い順に10種を2枚ずつ)を使う。
 
@@ -607,9 +605,9 @@ pckから除外した後も true を返すことがあり、有無の判定に�
 **ポップ自体は画面側が持つ**(対局中はこのパネルが盤面の上の小さなノードとして置かれ、
 そこへ全画面の暗幕を持たせられないため)。
 
-> **`CardMatchScreen` はまだ `CardDetailPanel` を使っていない**(対局中に駒を押して効果を
-> 見る導線が v5.0 では未実装)。GameDesign.md 17章の「対局中の詳細からも引ける」は、
-> その導線を作るときにこのパネルを使えばそのまま満たされる。
+**対局中もこのパネルから語を引ける。**対局画面はカーソルを乗せている間だけ
+`CardDetailPanel` を出し(4.0節)、そこから `KeywordPopup` を開く。辞書画面と
+同じ `KeywordEntryView` が中身を描くため、2箇所で説明が食い違うことがない。
 
 **実演(`CardEffectPreview`)は語を直接指定して再生できるようにする**(`show_demo()`)。
 既存の `show_card()` は `CardData` から台本の並びを組む入口であり、辞書は語がすでに
@@ -623,7 +621,7 @@ pckから除外した後も true を返すことがあり、有無の判定に�
 
 - 新しい砂時計を追加する場合、原則として `HourglassData` の `.tres` を1個作成するだけで完結させる
 - 既存の `EffectType` で表現できない効果が必要になった場合は、実装前に GameDesign.md への追記案を提示し、承認を得てから `EffectType` とハンドラを追加する
-- オンライン対戦は非同期通信(手番ごとにサーバーへ送信→相手に反映)を前提とし、`GameState` の操作(反転/移動/交代)をそのまま通信メッセージの単位として扱える設計にする
+- オンライン対戦は非同期通信(手番ごとにサーバーへ送信→相手に反映)を前提とし、`MatchState` の操作(出す/反転/攻撃/コイン/ターン終了)をそのまま通信メッセージの単位として扱える設計にする
 - **`data/hourglasses/` をディレクトリ走査して駒を列挙する処理(`MatchSetup.all_hourglasses()`)は、
   エクスポート後のファイル名を考慮する必要がある**。エクスポートすると `.tres` はpck内へ
   `<name>.tres.remap`(実体は `.godot/exported/` 配下の `.res`)として格納されるため、
@@ -646,14 +644,14 @@ pckから除外した後も true を返すことがあり、有無の判定に�
 - 相手の手の反映は、ドキュメントの**ポーリング(数秒間隔での定期取得)**によって行う。リアルタイムリスナー(gRPC-Web双方向ストリーミング)は実装が複雑なため採用しない。ターン制で1手ごとの時間的猶予があるため、数秒の遅延は体験上問題にならない
 - `HomeScreen` の「対戦」タブを、**ランダムマッチ待機**・**ルームコード作成/参加**の2導線に分岐させる
 - ランダムマッチのキューは、複数プレイヤーが同時に参加しても二重マッチや取りこぼしが起きないよう、**Firestoreのトランザクション(read-modify-write)でキューの追加/成立を原子的に処理する**。具体的には「待機中のドキュメントを1件取得→トランザクション内で取得できればマッチ成立とみなし両者のマッチIDを確定、取得できなければ自分が待機ドキュメントとして登録される」という手順を想定する
-- 持ち時間の管理はロジック層の `MatchClock` が担う。1人あたり180秒(3分)固定で、`finish_turn()` は加算なしで手番を切り替えるだけの単純な減算式とする。時間切れは `GameState.match_ended` と同様の決着トリガーとして扱い、オンライン対戦時はこの持ち時間切れが切断・放置時の敗北条件を兼ねるため、別途タイムアウト監視の仕組みを持たない
+- 持ち時間の管理はロジック層の `MatchClock` が担う。1人あたり180秒(3分)固定で、`finish_turn()` は加算なしで手番を切り替えるだけの単純な減算式とする。時間切れは `MatchState.match_ended` と同様の決着トリガーとして扱い、オンライン対戦時はこの持ち時間切れが切断・放置時の敗北条件を兼ねるため、別途タイムアウト監視の仕組みを持たない
 - サーバー側での操作の正当性検証は行わず、クライアントの操作をそのまま信頼する(不正対策は将来検討)
 - Firebaseの接続情報(`apiKey`/`projectId`等)は `FirebaseConfig`(Resource)として `data/firebase_config.tres` に保持する。Web向けAPIキーは元々クライアント埋め込み前提の値であり、Firestoreセキュリティルール側でアクセス制御する運用とする
-- マッチ成立後、両者は `matches/{match_id}` ドキュメントへ自分のデッキ(5種のid配列)を `deck_a`/`deck_b` として書き込む。相手側はポーリングでこれを検知し `MatchScreen` の配置フェーズ(`MatchPlacementController`)に反映する(`OnlineSetup` が担当。手順・呼び出し順序は旧`DeckSelectScreen.setup_online()`から変更していない)
-- 場3個の配置が確定したら、同様に `placement_a`/`placement_b`(3個のid配列、左・中央・右の順)を書き込む。**自分の配置を送信するまでは相手の`placement_*`フィールドを一切参照しない**実装とすることで、事実上の同時公開を実現する(暗号学的な担保はせず、クライアントの実装ルールとして運用する。既存の「クライアントを信頼する」方針と整合)。控え2個は「デッキ5個から場3個を除いたもの」として両者が個別に導出でき、別フィールドは持たない
-- 両者の `placement_a`/`placement_b` が揃った時点で、双方が `MatchScreen` へ遷移し対局を開始する。オンライン時は `MatchScreen` の表示視点(自分/相手)を `state.current_turn` ではなく固定の `my_side` にし、自分の手番でない間は操作を受け付けない
-- 対局中の実際の手の送受信は `OnlineMatch` が担当し(導入済み)、`MatchScreen` は自分の操作を `OnlineMatch.send_and_apply` 経由で送信しつつ即座にローカル反映する
-- **投了は指し手と同じ`actions`配列の1件として送受信する**(`{"type": "surrender", "side": <投了した側>}`)。`OnlineMatch.apply()`のmatch文へ`"surrender"`分岐を1つ足し、`GameState.surrender(side)`を呼ぶだけで済むため、ポーリング・送信の仕組みを新設せずに相手へ伝わる。ただし投了は盤面を変えずに即終局する点で反転/移動/交代と性質が異なるため、**`MatchScreen`側では行動の演出(`MatchActionPresenter`)とターン交代(`_advance_turn_and_refresh()`)を行わない**(適用した時点で`match_ended`が発火し、以降の処理は結果パネルの表示に引き継がれる)。`actions`と`finished_at`/`winner`は同じドキュメントの別フィールドだが、`FirestoreClient.set_document()`が`updateMask`付きのPATCHでフィールド単位に書くため、投了側が両方をほぼ同時に書いても互いを打ち消さない
+- マッチ成立後、両者は `matches/{match_id}` ドキュメントへ自分のデッキ(20枚のid配列)を `deck_a`/`deck_b` として、先手側は山札の `seed` も書き込む(`OnlineSetup` が担当)。相手側はポーリングでこれを検知する。**v5.0は配置フェーズを持たないため、交換するのはデッキと種だけ**で、揃った時点でそのまま `MatchState.start_match()` へ入る(4.0節)
+- オンライン時は対局画面の表示視点(自分/相手)を `state.current_turn` ではなく固定の `my_side` にし、自分の手番でない間は操作を受け付けない
+- マリガン(GameDesign.md 2章)は手と同じ `actions` の1件として送り合う。**両者ぶんが揃ってから A → B の固定順で適用する**(適用が山札を切り直して乱数を消費するため、届いた順に適用すると同じ種から始めた対局が食い違う)
+- 対局中の実際の手の送受信は `OnlineMatch` が担当し、対局画面は自分の操作を `OnlineMatch.send_and_apply` 経由で送信しつつ即座にローカル反映する
+- **投了は指し手と同じ`actions`配列の1件として送受信する**(`{"type": "surrender", "side": <投了した側>}`)。`OnlineMatch.apply()`のmatch文へ`"surrender"`分岐を1つ足し、`MatchState.surrender(side)`を呼ぶだけで済むため、ポーリング・送信の仕組みを新設せずに相手へ伝わる。ただし投了は盤面を変えずに即終局する点で他の手と性質が異なるため、**対局画面側では手の演出とターン交代を行わない**(適用した時点で`match_ended`が発火し、以降の処理は結果パネルの表示に引き継がれる)。`actions`と`finished_at`/`winner`は同じドキュメントの別フィールドだが、`FirestoreClient.set_document()`が`updateMask`付きのPATCHでフィールド単位に書くため、投了側が両方をほぼ同時に書いても互いを打ち消さない
 
 ### 6.2 切断からの復帰(GameDesign.md 11章)
 
@@ -716,7 +714,7 @@ pckから除外した後も true を返すことがあり、有無の判定に�
   以前は「書き込み完了 → `_known_action_count`の更新」の間にポーリングの読み取りが
   挟まると、自分の手が`action_received`として自分に返り、同じ手が2度適用されていた。
   `by`は`OnlineMatch.apply()`もリプレイ再生も参照しない追加キーのため、既存の棋譜と互換性がある
-- **受け取った手は1ポーリングにつき1件だけ配る**。`MatchScreen._on_action_received()`は
+- **受け取った手は1ポーリングにつき1件だけ配る**。対局画面の受け口は
   予約マークの表示・解決演出で数秒awaitするため、同時に2件流し込むとターン進行が
   二重に走る。残りは`_inbox`に留めて次のポーリングで配る
 - **終局・画面離脱でポーリングを止める**。以前は`stop()`が次の対局開始時にしか呼ばれず、
@@ -807,16 +805,16 @@ pckには入る**。リポジトリへ置けない理由は2つ。
 
 ## 7. リプレイ・観戦の実装方針
 
-- `matches/{match_id}` には既に `deck_a`/`deck_b`(5枚)・`placement_a`/`placement_b`(場3枚)・`actions`(手順)が保存済みで、控え2枚は「デッキ−配置」で導出できる。**初期配置のための新しいフィールドは追加せず、これらを再利用する**
-- 対局終了時、`GameState.match_ended` を検知したタイミングで `MatchScreen` が `matches/{match_id}` へ `finished_at`(タイムスタンプ)・`winner`(`"a"`/`"b"`)を書き込む。この書き込みが「終了済みマッチ」の判定基準を兼ねる(未書き込み=対局中または放棄されたマッチ)
+- `matches/{match_id}` には既に `deck_a`/`deck_b`(20枚のid)・`seed`(山札の並び)・`actions`(手順)が保存済みで、**任意の局面は初期状態から手を並べ直して作れる**。局面のスナップショットは持たない(4.0節)
+- 対局終了時、`MatchState.match_ended` を検知したタイミングで対局画面が `matches/{match_id}` へ `finished_at`(タイムスタンプ)・`winner`(`"a"`/`"b"`)を書き込む。この書き込みが「終了済みマッチ」の判定基準を兼ねる(未書き込み=対局中または放棄されたマッチ)
 - リプレイ一覧の取得は、`player_a == 自分のuid` と `player_b == 自分のuid` の**2本の等価フィルタクエリ**をそれぞれ実行し、結果をクライアント側でマージ・`finished_at`降順ソートする(複合インデックスを要求する `OR` 条件や `orderBy` 併用を避ける、既存のクエリ方針を踏襲)
 - リプレイ閲覧は `player_a`/`player_b` のuidが自分のuidと一致する場合のみ許可する(クライアント側での表示制御。Firestoreセキュリティルール側でも同様の制限を検討する)
 - 保存件数の上限(直近30件)は、対局終了時の書き込み後に「終了済みマッチが30件を超えていないか」をチェックし、超過分を `finished_at` の古い順に削除するクリーンアップ処理で維持する。プレイヤー単位ではなくアプリ全体で30件とし、シンプルな実装に留める
-- `ReplayListScreen`:`DeckListScreen` と同様の横長カード縦スクロール一覧。各カードは対局日時・勝敗・先手/後手に加え、`deck_a`/`deck_b` から自分・相手双方の初期デッキ5枚のアイコンを表示する。`BattleTab` に追加する「リプレイ」ボタンから遷移する
+- `ReplayListScreen`:`DeckListScreen` と同様の横長カード縦スクロール一覧。各カードは対局日時・勝敗・先手/後手に加え、`deck_a`/`deck_b` からデッキを代表する数枚のアイコンを表示する(20枚をそのまま並べるとカードに収まらないため)。`BattleTab` に追加する「リプレイ」ボタンから遷移する
 - 投了で終わった対局は、`actions`の末尾に`surrender`が1件入った状態で保存される。リプレイ再生時は他の手と同じく`OnlineMatch.apply()`へ流れて`match_ended`が発火するが、再生モードでは元々結果パネルを出さない仕様のため追加の分岐は要らない。手数表示では投了も1手として数える(将棋の棋譜で投了を1手と数えるのと同じ扱い)
-- `ReplayPlaybackScreen`:新規シーンを作らず、既存の `MatchScreen` に「再生モード」を追加する形で実装する。再生モードでは `GameState` を `placement_a`/`placement_b` 由来の初期配置から開始し、保存済み `actions` を1件ずつ `OnlineMatch.apply()`(既存の静的関数)へ流し込んで進行を再現する。`ActionMenu` の代わりに、先頭へ/1手戻る/再生・一時停止/1手進む/最後へ、の5ボタンと手数表示を持つ再生用コントロールを表示し、駒のクリック操作は無効化する
+- 再生画面は新規シーンを作らず、対局画面に「再生モード」を追加する形で実装する。再生モードでは `MatchState` をデッキと種から作り直し、保存済み `actions` を1件ずつ `MatchAction.apply()` へ流し込んで進行を再現する。行動の列には、先頭へ/1手戻る/再生・一時停止/1手進む/最後へ、の5ボタンと手数表示、および一覧へ戻る導線を置き、盤面のクリック操作は無効化する
 - 観戦は既存の**ルームコード**を再利用する。`rooms/{code}` には対局成立後も `match_id` が残っているため、観戦者が同じコードを入力すると `rooms/{code}` から `match_id` を引き、`matches/{match_id}` の購読(ポーリング)を開始できる。ランダムマッチには共有可能なコードが存在しないため観戦導線を用意しない
-- `MatchScreen` に「観戦モード」を追加する(対局モード・再生モードに続く3つ目のモード)。`OnlineMatch` のポーリング機構をそのまま使い、`send_and_apply` を呼ばずに `action_received` シグナルだけを購読して盤面へ反映する。`ActionMenu` は非表示にし、盤面操作は無効化する。対局終了の検知(`match_ended`)は通常通り行うが、`finished_at`/`winner` の書き込みは対局者側のみが行い、観戦者側では行わない
+- 対局画面に「観戦モード」を追加する(対局モード・再生モードに続く3つ目のモード)。`OnlineMatch` のポーリング機構をそのまま使い、`send_and_apply` を呼ばずに `action_received` シグナルだけを購読して盤面へ反映する。行動のボタンは出さず、盤面操作は無効化する。対局終了の検知(`match_ended`)は通常通り行うが、`finished_at`/`winner` の書き込みは対局者側のみが行い、観戦者側では行わない
 - `BattleTab` のルームコード入力欄に「観戦する」ボタンを追加し、参加導線と並べて配置する
 
 ### 7.1 CPU戦のローカルリプレイ保存(フェーズ11 K-2、実装済み)
@@ -824,30 +822,25 @@ pckには入る**。リポジトリへ置けない理由は2つ。
 - `LocalReplayService`(`scripts/net/local_replay_service.gd`、`RefCounted`のstaticクラス、
   `DeckSave`と同様「Autoloadを使わずstaticで持つ」流儀)が、CPU戦の棋譜を
   `user://cpu_replays.json` へ配列として保存する。1件のレコードは、オンライン版
-  `matches/{id}` ドキュメントと対応する内容(`deck_a`/`deck_b`・`placement_a`/`placement_b`・
+  `matches/{id}` ドキュメントと対応する内容(`deck_a`/`deck_b`・`seed`・
   `actions`・`finished_at`・`winner`)に加えて `id`(`"cpu_<unixtime>_<乱数>"`)・
   `source`(常に`"cpu"`、一覧画面でのオンライン/CPU戦の判別に使う)を持つ。
   `mark_finished(record)` が保存(+保存件数の上限維持)、`list_replays()` が
   `ReplayService.list_replays()`と同じ`{"id":..., "fields":{...}}`形の配列(`finished_at`降順)を
-  返し、`get_replay(id)` がidに一致する1件をフラットな形(`MatchScreen.start_local_replay()`が
+  返し、`get_replay(id)` がidに一致する1件をフラットな形(対局画面の再生モードが
   そのまま読める形)で返す
 - 保存件数の上限(直近30件、`RETENTION_LIMIT`)は、オンライン対戦(Firestore、
   `ReplayService.RETENTION_LIMIT`)とCPU戦(ローカル、`LocalReplayService.RETENTION_LIMIT`)を
   **それぞれ独立に**30件まで保持する(合算で管理すると片方の対局頻度が高い場合にもう片方が
   不当に圧迫されるため)
-- CPU戦中の棋譜の蓄積は、新規`MatchCpuReplayRecorder`(`scripts/ui/match_cpu_replay_recorder.gd`、
-  `MatchBattleLog`等と同様`_screen`参照を持つRefCounted)へ切り出している。
-  `MatchScreen.start_cpu_match()`が`begin(board_a, bench_a, board_b, bench_b)`を呼び
-  `deck_a`/`deck_b`/`placement_a`/`placement_b`のidをそこから算出、`_perform_action()`
-  (自分の手)と`_maybe_trigger_cpu_turn()`(CPUの手)の両方が`record_action(action)`を呼んで
-  `actions`を蓄積し、`_on_match_ended()`が`_is_cpu_match`の場合に`save_finished(winner)`を呼んで
-  `LocalReplayService.mark_finished()`へ渡す。オンライン対戦の`OnlineMatch`がFirestoreへ
-  逐次書き込む構造とは異なり、CPU戦は対局終了時に一括で1回だけローカル保存する
-- `start_replay(match_id, client)`(Firestore版)と`start_local_replay(record)`
-  (`LocalReplayService`版)は、いずれも共通の`MatchReplayController.start_from_doc(doc: Dictionary)`
-  を呼ぶ。Firestoreの`get_document()`も`LocalReplayService.get_replay()`もフラットな
-  `Dictionary`を返すため、この共通化だけで再生ロジック(`MatchReplayController._goto()`等)を
-  完全に共有できる
+- CPU戦の棋譜は `CardMatchScreen._cpu_record`(Dictionary)へ溜める。**`start_cpu_match()` が
+  山札の種を決めてから対局を始める**のがこの記録の前提で、両者のデッキのidと種をここで控え、
+  以後は手を送るのと同じ `_perform()` が `actions` へ1件ずつ足す。終局後の後始末を持つ
+  `CardMatchOutcome` が `LocalReplayService.mark_finished()` へ渡す。オンライン対戦の
+  `OnlineMatch` がFirestoreへ逐次書き込むのとは異なり、CPU戦は終局時に一括で1回だけ保存する
+- **再生の入口は `CardMatchScreen.start_replay(record)` の1つだけ**。Firestoreの
+  `get_document()` も `LocalReplayService.get_replay()` もフラットな `Dictionary` を返すため、
+  オンライン対戦とCPU戦で再生の経路を分ける必要がない
 - `ReplayListScreen.refresh()` は、Firestoreからの一覧取得(既存、サインイン失敗時は
   空扱い)と`LocalReplayService.list_replays()`(新規、ローカルのためサインイン不要)の
   両方を行い、クライアント側で`finished_at`降順にマージして1つの一覧として表示する
@@ -863,14 +856,20 @@ pckには入る**。リポジトリへ置けない理由は2つ。
 
 ## 8. CPU戦の実装方針
 
-- CPUの思考ロジックは `CpuStrategy`(基底クラス、`RefCounted`)として切り出し、`MatchScreen` は具体的な思考の中身を知らずに `choose_action(state, side) -> Dictionary` を呼び出すだけにする。
-- 合法手の列挙(反転可能な6駒・移動の3組み合わせ・交代2枠・パス)は `CpuStrategy` の静的関数としてまとめる。
-- 実装として以下の戦略クラスを提供する:
-  - `RandomCpuStrategy`: 列挙した合法手から一様ランダムに1手を選択する(テスト・検証ベースライン用)。
-  - `SmartCpuStrategy`: 探索用GameState上でスナップショットを用いた局面展開を行い、HP差・落下ダメージ期待値・相手妨害価値・継続効果・テンポ損得を総合評価して最善手を選ぶ。初期配置を決定する `choose_placement(deck) -> Dictionary` も備える。
-- CPUの手番になったら、`MatchScreen` が一定時間(0.6秒程度)待ってから `CpuStrategy.choose_action()` を呼び出し、`OnlineMatch.apply()`(既存の静的関数)で着手を反映する。
-- CPU戦の配置生成は、`Main` がランダムな5枚を選出した後、`SmartCpuStrategy.choose_placement()` を用いて場3個・控え2個の初期配置を決定する。
-- CPU戦はオンライン対戦ではないため、`matches/{match_id}` への書き込み(リプレイ・観戦)は一切行わない
+- CPUの思考は `CardCpuStrategy`(`scripts/logic/card_cpu_strategy.gd`、`RefCounted`)へ切り出し、
+  `CardMatchScreen` は思考の中身を知らずに `choose_action(state, side) -> Dictionary` を呼ぶだけにする
+- 1手番の中の順序は「場に出す → 攻撃する → 反転する → 終える」の貪欲法。**攻撃してから
+  反転する**のが要点で、逆にすると攻撃力の高い状態を捨ててしまう。価値の物差しは
+  `CardInstance.lifetime_damage()`(GameDesign.md 1章)を使う
+- マリガンの選択は `choose_mulligan()` が持つ(コスト4以上を戻す)
+- CPUの手番になったら `CardMatchScreen` が `CPU_THINK_SECONDS` の間合いを置いてから
+  1手だけ適用し、また間合いを置く。**まとめて指すと何が起きたか追えない**ため1手ずつ進める
+- 適用の経路は自分の手・オンラインの手・リプレイ再生と同じ `MatchAction.apply()`。
+  CPUのためだけの経路を作らない
+- CPUのデッキは `CardDeckSave.random_deck()`(全カード×2の山から20枚)。誘導対局のときだけ
+  プリセットの「基本」を使う(GameDesign.md 18章)
+- CPU戦はオンライン対戦ではないため、`matches/{match_id}` への書き込みは行わない。
+  棋譜は `LocalReplayService` がローカルへ保存する(7.1節)
 
 ---
 
@@ -879,13 +878,13 @@ pckには入る**。リポジトリへ置けない理由は2つ。
 - 効果音は `SoundBank`(`RefCounted` 継承のstaticクラス)に集約する。`MatchSetup`/`DeckSave`/`NetSession` と同じ「Autoloadを使わずstaticで持つ」流儀に揃える
 - `ensure_ready(parent)` を `Main._ready()` から1度だけ呼び、`AudioStreamPlayer` のプール(常駐ノード)を生成する。staticクラス自体はNodeではないため、実際の再生には実ノードが要る
 - `wire_buttons(root)` はシーンツリーを再帰的に走査し、全Buttonの `pressed` へ共通のボタン押下音を接続する。個別配線は漏れやすいため、`Main._ready()` で全体に対して1度呼ぶことを基本とするが、実行時に動的生成されるノード(例: `DeckListScreen` のカード一覧)は起動時の走査に含まれないため、生成元の画面スクリプト側で個別に呼び直す。`is_connected()` チェックにより二重接続は起きない
-- 反転/移動/交代/被弾/決着の専用効果音は `MatchScreen` が該当処理箇所で直接 `SoundBank.play()` を呼ぶ。`ActionMenu` 配下のボタンは共通のボタン押下音と二重に鳴らさないため `wire_buttons()` の対象から除外する
+- 出す/反転/攻撃(相打ち)/被弾/決着の専用効果音は対局画面が該当処理箇所で直接 `SoundBank.play()` を呼ぶ。行動の列のボタンは共通のボタン押下音と二重に鳴らさないため `wire_buttons()` の対象から除外する
 - 音量設定は `user://sound_settings.json` へJSONで永続化する。`SoundBank._sfx_volume`/`_bgm_volume`(いずれも0.0〜1.0のfloat)は `static var` の初期化式でクラス初回アクセス時に自動読み込みされるため、`ensure_ready()` を待たずに早期から正しい値を返せる(ホーム画面の設定ボタンは `Main` より先に `_ready()` が走るため、ここで読んでおかないと初期表示に反映されない)。`get_sfx_volume()`/`set_sfx_volume()`・`get_bgm_volume()`/`set_bgm_volume()` で参照・変更し、`play()` 時と設定変更時に `AudioStreamPlayer.volume_db` を `linear_to_db()` で更新する(0%は `-inf` を避けるため `-80.0dB` 固定)。`is_muted()` は `_sfx_volume <= 0.0` の派生として残している
 - ホーム画面右上に `SettingsButton`(`Button` 継承、既存の `img_icon_square` ボタン画像シートを流用)を配置し、押すと `SettingsPanel`(`scenes/settings_panel.tscn`、`ResultOverlay`/`SurrenderConfirm` と同じ「暗幕+`content_panel.tres` の中央パネル」パターン)が開く。パネル内の `HSlider` 2本(いずれも0〜100%。効果音は `SoundBank.set_sfx_volume()`、BGMは `SoundBank.set_bgm_volume()` を随時更新する)で音量を操作し、「閉じる」ボタンでパネルを閉じる
 - 音源は**CC0(パブリックドメイン)ライセンスの外部フリー素材**を使う(GameDesign.md 9章)。効果音は `assets/sfx/`、BGMは `assets/bgm/` に置く。**取り込んだ素材の出所・作者・ライセンスは `assets/CREDITS.md` に必ず記録する**。CC0なので表示義務はないが、後から「この音はどこから来たのか」を追えないと、ライセンスの再確認も差し替えもできなくなるため
 - **BGMは `MusicPlayer`(`scripts/logic/music_player.gd`、`RefCounted` 継承のstaticクラス)が担当し、`SoundBank` とは別クラスに分ける**。効果音が「1発鳴らして終わり」なのに対し、BGMはクロスフェード・ループ・自動再生制限の解除といった継続的な状態を持つため、同じクラスへ同居させると `SoundBank` が肥大化する。`ensure_ready(parent)` で `AudioStreamPlayer` を2本(クロスフェードで鳴り替えるため)生成する流儀は `SoundBank` と揃える
 - **音量の単一情報源は `SoundBank` 側に置き続ける**。`_sfx_volume` と `_bgm_volume` の2つを持ち、`user://sound_settings.json` へ両方を保存する(旧形式の単一キー `volume` を見つけた場合は両系統の初期値として読み、次回保存時に新形式へ移行する)。`MusicPlayer` は自前で音量を永続化せず、`SoundBank.get_bgm_volume()` を参照し、`SoundBank.set_bgm_volume()` が `MusicPlayer.apply_volume()` を呼んで反映する。設定の読み書きを2クラスに分散させると、同じJSONファイルを互いに上書きし合うため
-- **BGMの切り替えは `Main._show_only()`(画面切り替えのハブ)から1箇所で行う**。遷移先に応じた曲は `Main._track_for()` が決める(`MatchScreen`なら対局曲、`TitleScreen`ならタイトル曲、それ以外はホーム曲)。画面ごとに個別へ `MusicPlayer.play()` を書き散らさない
+- **BGMの切り替えは `Main._show_only()`(画面切り替えのハブ)から1箇所で行う**。遷移先に応じた曲は `Main._track_for()` が決める(対局画面なら対局曲、`TitleScreen`ならタイトル曲、それ以外はホーム曲)。画面ごとに個別へ `MusicPlayer.play()` を書き散らさない
 - **クラシック曲はシームレスにループしない**ため、`AudioStreamPlayer.finished` を購読し、数秒の間を置いてから頭へ戻す「アルバム再生」方式で繰り返す。インポート設定でループを有効にすると `finished` が発火しなくなるため、**実行時に `stream.loop = false` を明示する**
 - **曲の終端の `TAIL_FADE` 秒前から音量を絞る**(GameDesign.md 9章)。再生開始時に `stream.get_length()` から逆算したタイマーを張り、発火時にまだ同じ曲が同じプレイヤーで鳴っていればフェードアウトを始める。タイトル曲のように**曲の途中を切り出した音源**でも切れ目が唐突に聞こえないようにするため。フェード中は `set_volume()` が音量を戻さないよう `_tail_fading` で守る
 - **タイトル曲は元の録音を再エンコードせず、Oggのページ境界でそのまま切り出して使う**。この環境には ffmpeg/oggenc が無く、また再エンコードは音質を落とすため。切り出しは「granule_position が目標サンプル数を超えたページまでを残し、最後のページへ EOS フラグを立ててCRCを再計算する」だけで、ページの中身には触れない
@@ -953,7 +952,7 @@ GameDesign.md 14章(アカウント)・15章(通貨)の実装方針。認証は 
 | `updated_at` | float | 最終更新時刻(Unix時間) |
 
 - 読み書きは `AccountService`(`scripts/net/account_service.gd`、`ReplayService` と同じ
-  static のみのクラス)に集約する。`MatchScreen` や各画面が `FirestoreClient` を直接
+  static のみのクラス)に集約する。対局画面や各画面が `FirestoreClient` を直接
   叩かないようにするため
 - **残高の加算は read-modify-write を `commit()` の前提条件付きで行う**。`OnlineMatch` の
   手の送信と同じ流儀で、`updateTime` を前提条件にして競合したら読み直して再試行する。
@@ -966,10 +965,10 @@ GameDesign.md 14章(アカウント)・15章(通貨)の実装方針。認証は 
 
 - 報酬額と条件は `scripts/logic/currency_rules.gd`(static のみ)へ表として持つ。
   GameDesign.md 15章の数値をコードへ散らさないため
-- `MatchScreen` は対局の種別(ランダムマッチ / ルームマッチ / CPU戦)と勝敗・総手数を
+- 対局画面は対局の種別(ランダムマッチ / ルームマッチ / CPU戦)と勝敗・総手数を
   渡すだけにする。**オンライン対戦がランダムマッチかルームマッチかは、これまで
-  `MatchScreen` が区別していなかった**ため、`HomeScreen.online_match_found` と
-  `MatchScreen.start_placement_then_online()` に対局種別を1つ足して伝える
+  対局画面が区別していなかった**ため、`HomeScreen.online_match_found` と
+  オンライン対局の開始経路に対局種別を1つ足して伝える
 - ローカル対戦(pass&play)・観戦・リプレイ再生は報酬の対象外。いずれも「自分が
   1人のプレイヤーとして対局した」とは言えないため
 - 判定は終局時に1度だけ行い、結果を `MatchResultPresenter` が結果パネルへ
