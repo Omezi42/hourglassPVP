@@ -13,7 +13,8 @@ const DETAIL_RECT := Rect2(284, ScreenHeader.CONTENT_TOP, 972, CONTENT_HEIGHT)
 ## 10項目がスクロールなしでコンテンツ領域(560px)へ収まる高さにしてある。
 const ITEM_SIZE := Vector2(212, 46)
 ## 選択中の印。色だけだと真鍮のボタンの上では差が読み取りにくかったため、文字でも示す。
-const SELECTED_PREFIX := "▸ "
+## 記号はフォント(Zen Kaku Gothic New)が持つものだけを使う(▸ は字形が無く豆腐になる)。
+const SELECTED_PREFIX := "◆ "
 const DETAIL_MARGIN := 22
 ## 詳細の中身の幅。実演(520px)と説明文が収まる値で、パネルの中央へ置く。
 const ENTRY_WIDTH := 640.0
