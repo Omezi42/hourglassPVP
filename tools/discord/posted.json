@@ -1,0 +1,14 @@
+{
+  "_comment": "投稿済みメッセージのid。下書きを直したあと、同じ投稿を差し替えるために使う。 python tools/discord/discord_post.py <下書き> --key <webhook> --edit <id>",
+  "intro_webhook_url": {
+    "intro/1.md": "1543196711697125386",
+    "intro/2.md": "1543196729057218600",
+    "intro/3.md": "1543196735357325322"
+  },
+  "announce_webhook_url": {
+    "release/1.md": "1543196741480751125",
+    "release/2.md": "1543196747512287252",
+    "release/3.md": "1543196752868417579",
+    "release/4.md": "1543196758547370014"
+  }
+}
