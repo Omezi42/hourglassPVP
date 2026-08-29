@@ -36,7 +36,8 @@ func create_room() -> void:
 				"creator_uid": auth.uid,
 				"joiner_uid": "",
 				"match_id": "",
-				"created_at": Time.get_unix_time_from_system()
+				"created_at": Time.get_unix_time_from_system(),
+				"build": GameVersion.build_id()
 			}
 		)
 		if created:
@@ -56,6 +57,14 @@ func join_room(code: String) -> void:
 		return
 	if room["fields"].get("match_id", "") != "" or room["fields"].get("joiner_uid", "") != "":
 		join_failed.emit("full")
+		return
+	# バージョンが違う相手とはマッチングしない(GameDesign.md 11章)。参加側で弾くため、
+	# 作成側が版違いの相手を掴むことはない。
+	var their_build: String = room["fields"].get("build", "")
+	if not GameVersion.matches_build(their_build):
+		join_failed.emit(
+			"version_older" if GameVersion.is_newer_than_mine(their_build) else "version_newer"
+		)
 		return
 
 	var creator_uid: String = room["fields"].get("creator_uid", "")
@@ -105,6 +114,13 @@ func spectate(code: String) -> void:
 	var match_id: String = room["fields"].get("match_id", "")
 	if match_id == "":
 		spectate_failed.emit("not_started")
+		return
+	# 観戦も同じ扱い。盤面は手の並びから作り直すため、版が違えば同じように食い違う。
+	var their_build: String = room["fields"].get("build", "")
+	if not GameVersion.matches_build(their_build):
+		spectate_failed.emit(
+			"version_older" if GameVersion.is_newer_than_mine(their_build) else "version_newer"
+		)
 		return
 	spectate_ready.emit(match_id)
 

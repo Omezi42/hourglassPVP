@@ -5,6 +5,10 @@ signal matched(match_id: String, opponent_uid: String)
 ## キューへ入れなかった(通信に失敗した・拒否された)。黙って待ち続けると
 ## 「押しても何も起きない」ようにしか見えないため、必ず画面へ返す。
 signal failed(reason: String)
+## 待機者はいたが、全員バージョンが違って掴めなかった(GameDesign.md 11章)。
+## 黙って待ち続けると「マッチングしない不具合」にしか見えないため画面へ返す。
+## `newer_exists` は、自分より新しい版の相手がいた(=自分が古い)ことを表す。
+signal version_mismatch(newer_exists: bool)
 
 const COLLECTION := "matchmaking_queue"
 const POLL_INTERVAL_SECONDS := 2.0
@@ -31,7 +35,12 @@ func join() -> void:
 	_cancelled = false
 	_my_match_id = ""
 	var joined: bool = await client.set_document(
-		_doc_path(), {"joined_at": Time.get_unix_time_from_system(), "match_id": ""}
+		_doc_path(),
+		{
+			"joined_at": Time.get_unix_time_from_system(),
+			"match_id": "",
+			"build": GameVersion.build_id()
+		}
 	)
 	if not joined:
 		failed.emit("マッチングを開始できませんでした")
@@ -70,11 +79,21 @@ func _try_claim_or_check() -> bool:
 		return await _finalize_match(my_assigned_match_id, "")
 
 	var candidates: Array = await client.query_waiting(COLLECTION, QUERY_LIMIT)
+	var newer_seen := false
+	var mismatch_seen := false
 	for candidate in candidates:
 		if candidate["id"] == auth.uid:
 			continue
 		if _is_stale(candidate):
 			await client.delete_document(_doc_path(candidate["id"]))
+			continue
+		# バージョンが違う相手は掴まない(GameDesign.md 11章)。**掴まないだけで
+		# 削除はしない**。古い版の人が待つ権利まで奪う理由はなく、STALE_SECONDS に
+		# よる掃除とは目的が違う。
+		var their_build: String = candidate["fields"].get("build", "")
+		if not GameVersion.matches_build(their_build):
+			mismatch_seen = true
+			newer_seen = newer_seen or GameVersion.is_newer_than_mine(their_build)
 			continue
 		var claimed: bool = await _claim(mine, candidate)
 		if claimed:
@@ -82,6 +101,8 @@ func _try_claim_or_check() -> bool:
 		# 失敗時(相手または自分のドキュメントが競合更新された)は、次のポーリングで
 		# 最新状態から再試行する(古いmineのまま他候補を試さない)
 		return false
+	if mismatch_seen:
+		version_mismatch.emit(newer_seen)
 	return false
 
 

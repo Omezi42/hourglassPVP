@@ -201,6 +201,7 @@ func begin_random_match() -> void:
 	add_child(_queue)
 	_queue.matched.connect(_on_matched)
 	_queue.failed.connect(_fail)
+	_queue.version_mismatch.connect(_on_version_mismatch)
 	_queue.join()
 
 
@@ -280,8 +281,19 @@ func _on_spectate_ready(match_id: String) -> void:
 	spectate_requested.emit(match_id)
 
 
+## 待機者はいたが全員バージョンが違った(GameDesign.md 11章)。待機自体は続けるので、
+## `_fail()` ではなく待機中の文言だけを差し替える(末尾に巡回ドットが付く)。
+func _on_version_mismatch(newer_exists: bool) -> void:
+	if newer_exists:
+		_set_status("新しい版が公開されています。再読み込みしてください")
+	else:
+		_set_status("古い版の相手が待っています。マッチング中")
+
+
 func _on_spectate_failed(reason: String) -> void:
-	var message := "コードが見つかりません" if reason == "not_found" else "対局がまだ始まっていません"
+	var message := _version_message(reason)
+	if message == "":
+		message = "コードが見つかりません" if reason == "not_found" else "対局がまだ始まっていません"
 	_fail("観戦できませんでした(%s)" % message)
 
 
@@ -293,7 +305,22 @@ func _on_join_failed(reason: String) -> void:
 	_fail("参加に失敗しました(%s)" % _join_failure_message(reason))
 
 
+## バージョン違いで弾いたときの文言。ビルドIDは時刻順に比較できるため、
+## どちらが古いかまで示せる(GameDesign.md 11章)。該当しなければ空文字を返す。
+func _version_message(reason: String) -> String:
+	match reason:
+		"version_older":
+			return "新しい版が公開されています。再読み込みしてください"
+		"version_newer":
+			return "相手が古い版です。相手に再読み込みしてもらってください"
+		_:
+			return ""
+
+
 func _join_failure_message(reason: String) -> String:
+	var version_message := _version_message(reason)
+	if version_message != "":
+		return version_message
 	match reason:
 		"not_found":
 			return "コードが見つかりません"

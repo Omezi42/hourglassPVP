@@ -7,6 +7,7 @@ const OnlineMatchFlowTests = preload("res://tools/tests/online_match_flow_tests.
 const AccountTests = preload("res://tools/tests/account_tests.gd")
 const V5RulesTests = preload("res://tools/tests/v5_rules_tests.gd")
 const V5OnlineTests = preload("res://tools/tests/v5_online_tests.gd")
+const VersionMatchTests = preload("res://tools/tests/version_match_tests.gd")
 
 var _failures := 0
 
@@ -28,6 +29,8 @@ func _run() -> void:
 	await flow_tests.run(_assert_true)
 	var v5_online := V5OnlineTests.new()
 	await v5_online.run(_assert_true)
+	var version_match := VersionMatchTests.new()
+	await version_match.run(_assert_true)
 
 	if _failures == 0:
 		print("tests passed")

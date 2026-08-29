@@ -13,6 +13,10 @@ const SCREEN_SIZE := Vector2(1280, 720)
 const PROMPT_RECT := Rect2(1108, 240, 148, 52)
 const WAITING_FONT_SIZE := 26
 const WAITING_OFFSET := Vector2(-180, 0)
+## 不具合の報告と突き合わせるためのバージョン表示(GameDesign.md 11章)。
+## 行動の列のいちばん下、投了ボタンより下の空きへ小さく出す。
+const VERSION_POS := Vector2(1108, 678)
+const VERSION_FONT_SIZE := 12
 
 var waiting_text := ""
 var targeting := false
@@ -36,6 +40,15 @@ func set_targeting(value: bool) -> void:
 
 
 func _draw() -> void:
+	draw_string(
+		get_theme_default_font(),
+		VERSION_POS,
+		GameVersion.display(),
+		HORIZONTAL_ALIGNMENT_LEFT,
+		-1,
+		VERSION_FONT_SIZE,
+		Color(UiPalette.TEXT_OFFWHITE, 0.45)
+	)
 	if targeting:
 		_draw_target_prompt()
 	if waiting_text.is_empty():

@@ -61,6 +61,36 @@ func set_document(path: String, data: Dictionary) -> bool:
 	return result["ok"]
 
 
+func delete_document(path: String) -> bool:
+	await Engine.get_main_loop().process_frame
+	store.erase(path)
+	return true
+
+
+## 本物と同じく「collection直下で match_id == "" のもの」を返す。バージョンでの
+## 絞り込みはクライアント側で行うため(複合インデックスを避ける)、ここには持たせない。
+func query_waiting(collection: String, limit: int) -> Array:
+	await Engine.get_main_loop().process_frame
+	read_count += 1
+	var results: Array = []
+	for path in store.keys():
+		if not path.begins_with("%s/" % collection):
+			continue
+		var entry: Dictionary = store[path]
+		if (entry["fields"] as Dictionary).get("match_id", "") != "":
+			continue
+		results.append(
+			{
+				"id": path.substr(collection.length() + 1),
+				"fields": (entry["fields"] as Dictionary).duplicate(true),
+				"update_time": entry["update_time"]
+			}
+		)
+		if results.size() >= limit:
+			break
+	return results
+
+
 ## テストから相手の手を差し込むための入り口(相手クライアントの書き込みを模す)。
 func append_action(path: String, action: Dictionary) -> void:
 	var entry: Dictionary = store[path]

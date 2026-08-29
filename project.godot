@@ -12,6 +12,9 @@ config_version=5
 
 config/name="砂時計アリーナ"
 config/version="2026.08.29"
+; マッチングの突き合わせに使うビルドID。tools/export_web.sh が書き出しの直前に
+; UTCの書き出し時刻で上書きする(Architecture.md 6.4節)。手で編集しない。
+config/build_id="dev"
 run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("4.6", "GL Compatibility")
 config/icon="res://icon.svg"
