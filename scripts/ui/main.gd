@@ -144,6 +144,8 @@ func _on_title_start_requested() -> void:
 func _on_match_back() -> void:
 	_show_only(_match_return_screen)
 	home_screen.refresh_account()
+	# 対局はバトルタブの待機状態(ボタンの無効化)を残したまま始まるため、戻った時点で解く。
+	home_screen.reset_battle_tab()
 
 
 func _on_account_requested(from_title: bool) -> void:

@@ -15,28 +15,6 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_ioagu")
 
-[node name="CancelButton" type="Button" parent="." unique_id=264837227]
-visible = false
-custom_minimum_size = Vector2(220, 79)
-layout_mode = 1
-anchors_preset = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -340.0
-offset_top = 24.0
-offset_right = -120.0
-offset_bottom = 103.0
-grow_horizontal = 0
-theme_override_styles/normal = ExtResource("2_6rapo")
-theme_override_styles/pressed = ExtResource("3_8tkbr")
-theme_override_styles/hover = ExtResource("4_qrc34")
-theme_override_styles/disabled = ExtResource("5_bv2qh")
-theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_font_sizes/font_size = 22
-text = "キャンセル"
-
 [node name="Margin" type="MarginContainer" parent="." unique_id=1939880482]
 layout_mode = 0
 anchor_right = 1.0
@@ -160,3 +138,25 @@ theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
 theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
 theme_override_font_sizes/font_size = 22
 text = "CPU戦"
+
+[node name="CancelButton" type="Button" parent="." unique_id=264837227]
+visible = false
+custom_minimum_size = Vector2(220, 79)
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -340.0
+offset_top = 24.0
+offset_right = -120.0
+offset_bottom = 103.0
+grow_horizontal = 0
+theme_override_styles/normal = ExtResource("2_6rapo")
+theme_override_styles/pressed = ExtResource("3_8tkbr")
+theme_override_styles/hover = ExtResource("4_qrc34")
+theme_override_styles/disabled = ExtResource("5_bv2qh")
+theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
+theme_override_font_sizes/font_size = 22
+text = "キャンセル"

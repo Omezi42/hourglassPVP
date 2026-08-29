@@ -88,6 +88,11 @@ func refresh_battle_tab() -> void:
 	battle_tab.refresh()
 
 
+## 対局から戻ってきたときに、バトルタブへ残っているマッチングの待機状態を解く。
+func reset_battle_tab() -> void:
+	battle_tab.reset_after_match()
+
+
 ## 左上のアカウント表示を、キャッシュ済みのプロフィールから描き直す
 ## (GameDesign.md 9章)。ここでは通信しない。
 func refresh_account() -> void:

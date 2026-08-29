@@ -130,6 +130,28 @@ func _set_busy(busy: bool, cancellable: bool = false) -> void:
 		refresh()
 
 
+## 対局から戻ってきたときに、マッチング成立時の状態(ボタンの無効化・成立の文言・
+## キューやルームのノード)を解く。**`_on_matched()` は待機を止めるだけで
+## `_set_busy(false)` を通らない**(成立した経路が `_room` の有無で決まるため、
+## 通知の直前にそれを消せない)。これが無いと、ホームへ戻った後も
+## 「対戦相手が見つかりました!」のままボタンが押せない状態が残る。
+func reset_after_match() -> void:
+	_discard_session()
+	room_code_label.text = ""
+	# ボタンの再有効化・キャンセルボタンを隠す・文言の戻しは _set_busy(false) が全て行う。
+	_set_busy(false)
+
+
+## キュー・ルームのノードを片付ける。`_set_busy(false)` は参照を外すだけで
+## ノードを残していたため、対戦のたびに子が積み上がっていた。
+func _discard_session() -> void:
+	for node: Node in [_queue, _room]:
+		if is_instance_valid(node):
+			node.queue_free()
+	_queue = null
+	_room = null
+
+
 ## 待機中テキストの土台(base)を更新し、末尾のドットと合わせて表示し直す。
 func _set_status(text: String) -> void:
 	_status_base_text = text
@@ -244,8 +266,10 @@ func _on_cancel_pressed() -> void:
 	status_label.text = "キャンセルしました"
 	if queue != null:
 		await queue.cancel()
+		queue.queue_free()
 	if room != null:
 		await room.cancel()
+		room.queue_free()
 
 
 func _on_spectate_ready(match_id: String) -> void:

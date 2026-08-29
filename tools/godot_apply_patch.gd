@@ -1,5 +1,6 @@
 extends SceneTree
 
+
 func _init() -> void:
 	var dry_run := false
 	var allow_delete := false
@@ -13,7 +14,9 @@ func _init() -> void:
 			patch_path = a
 
 	if patch_path == "":
-		_die("usage: godot ... --script godot_apply_patch.gd -- <PATCH_JSON_PATH> [--dry-run] [--allow-delete]")
+		_die(
+			"usage: godot ... --script godot_apply_patch.gd -- <PATCH_JSON_PATH> [--dry-run] [--allow-delete]"
+		)
 		return
 	if not _is_abs_or_res(patch_path):
 		_die("patch path must be absolute or res:// (no relative paths): ", patch_path)
@@ -88,6 +91,7 @@ func _init() -> void:
 	root.free()
 	quit(0)
 
+
 func _die(msg: String, ctx: Variant = null) -> void:
 	if ctx == null:
 		printerr(msg)
@@ -95,8 +99,18 @@ func _die(msg: String, ctx: Variant = null) -> void:
 		printerr(msg, ctx)
 	quit(1)
 
+
 func _is_abs_or_res(p: String) -> bool:
-	return p.begins_with("res://") or p.begins_with("/") or (p.length() >= 3 and p.substr(1, 1) == ":" and (p.substr(2, 1) == "/" or p.substr(2, 1) == "\\"))
+	return (
+		p.begins_with("res://")
+		or p.begins_with("/")
+		or (
+			p.length() >= 3
+			and p.substr(1, 1) == ":"
+			and (p.substr(2, 1) == "/" or p.substr(2, 1) == "\\")
+		)
+	)
+
 
 func _read_json(path: String) -> Variant:
 	var f := FileAccess.open(path, FileAccess.READ)
@@ -108,8 +122,10 @@ func _read_json(path: String) -> Variant:
 		printerr("failed to parse JSON: ", path)
 	return v
 
+
 func _node_from(root: Node, p: String) -> Node:
 	return root if (p == "" or p == ".") else root.get_node_or_null(NodePath(p))
+
 
 func _fail(applied: int, err: int, msg: String, ctx: Variant = null) -> Dictionary:
 	if ctx == null:
@@ -117,6 +133,7 @@ func _fail(applied: int, err: int, msg: String, ctx: Variant = null) -> Dictiona
 	else:
 		printerr(msg, ctx)
 	return {"err": err, "applied": applied}
+
 
 func _apply_ops(root: Node, ops: Array, allow_delete: bool) -> Dictionary:
 	var applied := 0
@@ -154,13 +171,22 @@ func _apply_ops(root: Node, ops: Array, allow_delete: bool) -> Dictionary:
 		if kind == "add_child_scene":
 			var parent := _node_from(root, str(op.get("parent", "")))
 			if parent == null:
-				return _fail(applied, ERR_DOES_NOT_EXIST, "parent not found: ", op.get("parent", ""))
+				return _fail(
+					applied, ERR_DOES_NOT_EXIST, "parent not found: ", op.get("parent", "")
+				)
 			var child_scene := str(op.get("child_scene", ""))
 			if not _is_abs_or_res(child_scene):
-				return _fail(applied, ERR_INVALID_PARAMETER, "child_scene must be absolute or res://: ", child_scene)
+				return _fail(
+					applied,
+					ERR_INVALID_PARAMETER,
+					"child_scene must be absolute or res://: ",
+					child_scene
+				)
 			var child_packed := load(child_scene)
 			if child_packed == null or not (child_packed is PackedScene):
-				return _fail(applied, ERR_CANT_OPEN, "failed to load child PackedScene: ", child_scene)
+				return _fail(
+					applied, ERR_CANT_OPEN, "failed to load child PackedScene: ", child_scene
+				)
 			var child := (child_packed as PackedScene).instantiate()
 			if child == null:
 				return _fail(applied, ERR_CANT_CREATE, "failed to instantiate child: ", child_scene)
@@ -172,13 +198,27 @@ func _apply_ops(root: Node, ops: Array, allow_delete: bool) -> Dictionary:
 					existing.free()
 				child.name = name_override
 			parent.add_child(child)
-			child.owner = root # persist child while preserving nested instance ownership
+			child.owner = root  # persist child while preserving nested instance ownership
+			applied += 1
+			continue
+
+		if kind == "move_child":
+			var mv := _node_from(root, str(op.get("node", "")))
+			if mv == null:
+				return _fail(applied, ERR_DOES_NOT_EXIST, "node not found: ", op.get("node", ""))
+			var mv_parent := mv.get_parent()
+			if mv_parent == null:
+				return _fail(applied, ERR_INVALID_PARAMETER, "cannot move the root node")
+			var to_index := int(op.get("to_index", -1))
+			mv_parent.move_child(mv, to_index)
 			applied += 1
 			continue
 
 		if kind == "delete_node":
 			if not allow_delete:
-				return _fail(applied, ERR_UNAUTHORIZED, "delete_node is disabled (pass --allow-delete)")
+				return _fail(
+					applied, ERR_UNAUTHORIZED, "delete_node is disabled (pass --allow-delete)"
+				)
 			var nd := _node_from(root, str(op.get("node", "")))
 			if nd == null:
 				return _fail(applied, ERR_DOES_NOT_EXIST, "node not found: ", op.get("node", ""))
@@ -194,6 +234,7 @@ func _apply_ops(root: Node, ops: Array, allow_delete: bool) -> Dictionary:
 		return _fail(applied, ERR_INVALID_PARAMETER, "unknown op: ", kind)
 
 	return {"err": OK, "applied": applied}
+
 
 func _copy_file(src: String, dst: String) -> int:
 	if FileAccess.file_exists(dst):
