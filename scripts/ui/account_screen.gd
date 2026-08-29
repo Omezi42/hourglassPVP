@@ -35,6 +35,7 @@ func _ready() -> void:
 	screen_header.set_title("アカウント")
 	screen_header.back_pressed.connect(func() -> void: back_pressed.emit())
 	name_input.max_length = AccountService.DISPLAY_NAME_MAX_LENGTH
+	name_input.text_changed.connect(_on_name_text_changed)
 	id_input.max_length = FirebaseAuth.ID_MAX_LENGTH
 	name_save_button.pressed.connect(_on_name_save_pressed)
 	register_button.pressed.connect(_on_register_pressed)
@@ -68,6 +69,18 @@ func _refresh_view() -> void:
 	credential_box.visible = not registered
 	logout_button.visible = registered
 	profile_changed.emit()
+
+
+## 同梱フォントに字形が無い文字(絵文字など)は受け付けない(GameDesign.md 14章)。
+## 黙って消すと打ち間違いに見えるため、取り除いたことを1行で伝える。
+func _on_name_text_changed(text: String) -> void:
+	var kept := TextGlyphs.sanitize(text)
+	if kept == text:
+		return
+	var caret := maxi(name_input.caret_column - (text.length() - kept.length()), 0)
+	name_input.text = kept
+	name_input.caret_column = caret
+	_set_message("この文字は使えません(絵文字などは表示できません)。", ERROR_COLOR)
 
 
 func _on_name_save_pressed() -> void:

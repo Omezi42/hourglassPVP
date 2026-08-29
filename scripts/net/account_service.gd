@@ -55,7 +55,8 @@ static func load_profile(client: FirestoreClient, uid: String) -> void:
 
 
 static func save_display_name(client: FirestoreClient, uid: String, name: String) -> bool:
-	var trimmed := name.strip_edges()
+	# 画面側でも弾いているが、保存の手前でも通しておく(GameDesign.md 14章)
+	var trimmed := TextGlyphs.sanitize(name.strip_edges())
 	if trimmed.length() > DISPLAY_NAME_MAX_LENGTH:
 		trimmed = trimmed.substr(0, DISPLAY_NAME_MAX_LENGTH)
 	var ok: bool = await client.set_document(
@@ -130,7 +131,9 @@ static func fetch_display_name(client: FirestoreClient, uid: String) -> String:
 	if _name_cache.has(uid):
 		return str(_name_cache[uid])
 	var fields: Dictionary = await client.get_document(_path(uid))
-	var name := str(fields.get("display_name", ""))
+	# 相手のクライアントが何を送ってくるかはこちらで制御できないため、こちらのフォントで
+	# 出せない文字は「?」へ落としてから表示へ回す(GameDesign.md 14章)
+	var name := TextGlyphs.replace_unsupported(str(fields.get("display_name", "")))
 	_name_cache[uid] = name
 	return name
 

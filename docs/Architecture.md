@@ -942,6 +942,23 @@ GameDesign.md 14章(アカウント)・15章(通貨)の実装方針。認証は 
 - ホーム画面のヘッダーには表示名と砂金の残高を出す。残高は `AccountService` が
   キャッシュしている値を読むだけにし、画面を開くたびに通信しない
 
+### 10.5.1 表示名に使える文字(GameDesign.md 14章)
+
+`TextGlyphs`(`scripts/logic/text_glyphs.gd`、staticのみ)が、同梱フォントに字形が
+あるかどうかだけを答える。**対応する文字の一覧をコードへ持たず、`Font.has_char()` で
+フォント自身に問い合わせる。**表を持つと、フォントを差し替えたときに黙って食い違うため。
+判定した結果は文字コードごとにキャッシュする。
+
+- `AccountScreen` は入力のたびに `sanitize()` を通し、使えない文字を取り除いて
+  1行の注意を出す(GameDesign.md 14章の「入力欄では受け付けない」)
+- `AccountService.fetch_display_name()` は、**受け取った他プレイヤーの表示名を
+  `TextGlyphs.replace_unsupported()` へ通してから返す**。相手のクライアントが何を
+  送ってくるかはこちらで制御できないため、入力側の制限だけでは自分の画面が化ける
+
+**フォントを扱うがロジック層へ置く。**参照するのは `FontFile` リソース1つで、UIの
+ノード・レイアウトには一切触れない。ここをUI層に置くと、`AccountService`(net層)が
+UI層へ依存することになる。
+
 ### 10.6 デッキコード(GameDesign.md 9章)
 
 `CardDeckCode`(static のみ)が「id*枚数」を `,` で連ねた文字列を deflate で縮めて

@@ -15,6 +15,7 @@ func run(assert_true: Callable) -> void:
 	_test_currency_rules(assert_true)
 	_test_account_store(assert_true)
 	_test_local_replay_ownership(assert_true)
+	_test_text_glyphs(assert_true)
 
 
 func _test_credential_validation(assert_true: Callable) -> void:
@@ -253,3 +254,26 @@ func _restore(backup: Variant) -> void:
 		return
 	var file := FileAccess.open(AccountStore.SAVE_PATH, FileAccess.WRITE)
 	file.store_string(str(backup))
+
+
+## 表示名に使える文字(GameDesign.md 14章)。同梱フォントに字形が無い文字は
+## 入力で取り除き、相手から届いた名前では「?」へ置き換える。
+func _test_text_glyphs(assert_true: Callable) -> void:
+	assert_true.call(
+		TextGlyphs.supports_text("砂時計アリーナ Omezi 42"),
+		"japanese, latin and digits should all be supported by the bundled font"
+	)
+	# U+1F600(絵文字)と U+D55C(ハングル)はいずれも字形が無い
+	var emoji := String.chr(0x1F600)
+	assert_true.call(not TextGlyphs.supports_text(emoji), "an emoji should not be supported")
+	assert_true.call(
+		not TextGlyphs.supports_text(String.chr(0xD55C)), "hangul should not be supported"
+	)
+	assert_true.call(
+		TextGlyphs.sanitize("砂" + emoji + "時計") == "砂時計",
+		"sanitize should drop unsupported characters and keep the rest"
+	)
+	assert_true.call(
+		TextGlyphs.replace_unsupported("砂" + emoji + "時計") == "砂?時計",
+		"replace_unsupported should keep the position of a dropped character"
+	)
