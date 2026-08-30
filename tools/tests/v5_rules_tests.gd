@@ -72,10 +72,30 @@ func _force_play(state: MatchState, side: int, id: String, slot: int) -> CardIns
 
 func _test_all_cards_load() -> void:
 	var cards := CardLibrary.all_cards()
-	_assert.call(cards.size() == 21, "CardLibrary should load 21 cards, got %d" % cards.size())
+	# 期待値を定数で持つと、カードを1枚足すたびにこのテストも書き換えることになる。
+	# 守りたいのは「pck内で .tres が .tres.remap になっても全件読める」ことなので、
+	# data/cards/ のファイル数と突き合わせる(Web版で0件になる不具合が出るのはここ)。
+	var expected := _count_card_files()
+	_assert.call(
+		cards.size() == expected,
+		"CardLibrary should load %d cards, got %d" % [expected, cards.size()]
+	)
 	for card in cards:
 		_assert.call(card.cost > 0, "card %s should have a positive cost" % card.id)
 		_assert.call(card.total_sand > 0, "card %s should have a positive total" % card.id)
+
+
+## data/cards/ に置かれているカード定義の数。エクスポート後は `.tres.remap` になるため、
+## `.remap` を取り除いた名前で数える(CardLibrary と同じ判定)。
+func _count_card_files() -> int:
+	var dir := DirAccess.open("res://data/cards")
+	if dir == null:
+		return 0
+	var found := 0
+	for file in dir.get_files():
+		if file.trim_suffix(".remap").ends_with(".tres"):
+			found += 1
+	return found
 
 
 func _test_lifetime_damage_formula() -> void:
