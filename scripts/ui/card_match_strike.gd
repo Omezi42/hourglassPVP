@@ -135,8 +135,9 @@ func _center_of(side: int, slot: int) -> Vector2:
 ## 消すと、砕ける絵が出ないため。
 func _on_impact() -> void:
 	_screen.refresh_bars()
-	# 持ち越していた効果音も、砂の飛散と同じこの瞬間に鳴らす。
+	# 持ち越していた効果音と演出も、砂の飛散と同じこの瞬間に出す。
 	_screen.sound.flush()
+	_screen.effects.flush()
 	for hit in _damage:
 		var view: CardView = _screen.view_at(hit["side"], hit["slot"])
 		if view != null:

@@ -32,6 +32,8 @@ const HP_SLIDE_DURATION := 0.35
 const FLASH_DURATION := 0.4
 const FLOAT_DURATION := 0.9
 const FLOAT_RISE := 16.0
+## 山札の脈打ち(GameDesign.md 9章)。ドローと疲労の発生源を山札そのもので示す。
+const DECK_PULSE_DURATION := 0.45
 
 ## 相手側かどうか。相手側だけ手札の枚数を出す。
 var is_opponent := false
@@ -61,6 +63,10 @@ var _flash := 0.0
 var _float_amount := 0
 var _float_left := 0.0
 var _hp_tween: Tween
+## 山札の脈打ちの強さと色。疲労だけ赤にして、ドローと区別する。
+var _deck_pulse := 0.0
+var _deck_pulse_color := UiPalette.GLOW_AMBER
+var _deck_tween: Tween
 
 
 func _ready() -> void:
@@ -119,7 +125,7 @@ func _draw() -> void:
 	_draw_name_plate()
 	_draw_hp()
 	_draw_mana()
-	_pile(Vector2(DECK_PILE_X, 8), "山札", _deck)
+	_pile(deck_pile_rect().position, "山札", _deck)
 	_pile(_graveyard_rect().position, "墓地", _graveyard)
 	if is_opponent:
 		_pile(Vector2(HAND_PILE_X, 8), "手札", _hand)
@@ -160,6 +166,30 @@ func _draw_clock() -> void:
 		20,
 		UiPalette.WARNING_RED if low else UiPalette.TEXT_OFFWHITE
 	)
+
+
+## 山札の山。ドロー・疲労の演出の出どころとして画面側からも引く。
+func deck_pile_rect() -> Rect2:
+	return Rect2(Vector2(DECK_PILE_X, 8), PILE_SIZE)
+
+
+## 相手側だけに出る手札の山。ドローの行き先として使う。
+func hand_pile_rect() -> Rect2:
+	return Rect2(Vector2(HAND_PILE_X, 8), PILE_SIZE)
+
+
+## 山札を脈打たせる。`danger` は疲労(GameDesign.md 9章)。
+func play_deck_pulse(danger: bool) -> void:
+	_deck_pulse_color = UiPalette.WARNING_RED if danger else UiPalette.GLOW_AMBER
+	if _deck_tween != null and _deck_tween.is_valid():
+		_deck_tween.kill()
+	_deck_tween = create_tween()
+	_deck_tween.tween_method(_set_deck_pulse, 1.0, 0.0, DECK_PULSE_DURATION)
+
+
+func _set_deck_pulse(value: float) -> void:
+	_deck_pulse = value
+	queue_redraw()
 
 
 func _graveyard_rect() -> Rect2:
@@ -232,7 +262,12 @@ func _pile(pos: Vector2, label: String, count: int) -> void:
 	)
 	var outline := points.duplicate()
 	outline.append(points[0])
-	draw_polyline(outline, UiPalette.BRASS_MID, 1.5, true)
+	var pulsing: bool = _deck_pulse > 0.0 and is_equal_approx(pos.x, DECK_PILE_X)
+	if pulsing:
+		draw_polyline(outline, Color(_deck_pulse_color, _deck_pulse), 3.0, true)
+		draw_rect(rect.grow(2.0), Color(_deck_pulse_color, 0.18 * _deck_pulse))
+	else:
+		draw_polyline(outline, UiPalette.BRASS_MID, 1.5, true)
 	_text(Vector2(pos.x + 8, pos.y + 26), label, 15)
 	_text(Vector2(pos.x + 46, pos.y + 27), str(count), 19, UiPalette.GLOW_AMBER)
 

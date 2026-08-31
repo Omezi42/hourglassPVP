@@ -11,6 +11,9 @@ signal board_changed(side: int)
 signal unit_played(side: int, slot: int)
 ## 砂時計がダメージを受けたとき(amount は実際に消えた砂の量)。
 signal unit_damaged(side: int, slot: int, amount: int)
+## 硝子が最初のダメージを1度だけ無効にした(GameDesign.md 9章)。膜が割れたことを
+## その場で示さないと、次の攻撃が通るかどうかを判断できない。
+signal unit_shielded(side: int, slot: int)
 ## 砂時計が破壊されたとき。
 signal unit_destroyed(side: int, slot: int, card: CardData)
 signal unit_flipped(side: int, slot: int)
@@ -21,6 +24,14 @@ signal unit_ticked(side: int, slot: int)
 signal attack_performed(side: int, slot: int, target_slot: int)
 signal mulligan_finished
 signal turn_started(side: int)
+## 山札から手札へ引いた枚数。ドローの動きを見せるために持つ。
+signal cards_drawn(side: int, count: int)
+## 山札が尽きた側が受ける疲労ダメージ。**発生源が駒ではなく山札にある**ため、
+## 通常の被ダメージとは別の経路で知らせる(GameDesign.md 9章)。
+signal fatigue_damage(side: int, amount: int)
+## 効果が対象を取った(GameDesign.md 9章)。`target_slot` が -1 なら相手プレイヤー。
+## 出した駒から対象へ光の筋を伸ばすために、適用の直前に発行する。
+signal effect_targeted(source_side: int, source_slot: int, target_side: int, target_slot: int)
 signal match_ended(winner: int)
 
 enum Side { A, B }
@@ -219,6 +230,7 @@ func end_turn() -> void:
 			_destroy_unit(side, slot)
 	board_changed.emit(side)
 	if _deck_exhausted[side]:
+		fatigue_damage.emit(side, FATIGUE_DAMAGE)
 		damage_player(side, FATIGUE_DAMAGE)
 		finished_by_fatigue = _match_over
 	if _match_over:
@@ -251,9 +263,13 @@ func use_coin(side: int) -> bool:
 
 
 func draw(side: int, amount: int) -> void:
+	var before: int = hand[side].size()
 	for i in amount:
 		_draw_one(side)
 	hand_changed.emit(side)
+	var drawn: int = hand[side].size() - before
+	if drawn > 0:
+		cards_drawn.emit(side, drawn)
 
 
 func _draw_one(side: int) -> void:
@@ -462,12 +478,20 @@ func _resolve_unit_combat(side: int, slot: int, target_slot: int) -> void:
 	var defender_power := defender.attack
 	var defender_health := defender.health
 	var attacker_health := attacker.health
+	# 硝子が割れたかどうかは、削られたかどうかでは分からない(どちらも与ダメージ0)。
+	# 受ける前の状態を控えておき、消えていたら膜が吸ったものとして知らせる。
+	var defender_glass := defender.glass_intact
+	var attacker_glass := attacker.glass_intact
 	var dealt_to_defender := defender.take_damage(attacker_power)
 	var dealt_to_attacker := attacker.take_damage(defender_power)
 	if dealt_to_defender > 0:
 		unit_damaged.emit(foe_side, target_slot, dealt_to_defender)
+	elif defender_glass and not defender.glass_intact:
+		unit_shielded.emit(foe_side, target_slot)
 	if dealt_to_attacker > 0:
 		unit_damaged.emit(side, slot, dealt_to_attacker)
+	elif attacker_glass and not attacker.glass_intact:
+		unit_shielded.emit(side, slot)
 	_apply_pierce(attacker, foe_side, attacker_power, defender_health, dealt_to_defender)
 	_apply_pierce(defender, side, defender_power, attacker_health, dealt_to_attacker)
 	_lifesteal(side, attacker, dealt_to_defender)
@@ -519,9 +543,12 @@ func damage_unit(side: int, slot: int, amount: int) -> void:
 	var unit: CardInstance = board[side][slot]
 	if unit == null:
 		return
+	var had_glass := unit.glass_intact
 	var dealt := unit.take_damage(amount)
 	if dealt > 0:
 		unit_damaged.emit(side, slot, dealt)
+	elif had_glass and not unit.glass_intact:
+		unit_shielded.emit(side, slot)
 
 
 func destroy_unit(side: int, slot: int) -> void:

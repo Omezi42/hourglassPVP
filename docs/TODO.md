@@ -27,6 +27,10 @@
 - [x] **`scripts/ui/card_match_screen.gd` の切り出し**。オンラインの開始・復帰・観戦の3経路を
       `CardMatchOnline` へ移し、888行になった。`tools/tests/run_tests.gd` は同じ理由で
       1000行に張り付いたままのため、新しいテストは引き続き別ファイルへ置く
+- [ ] **`scripts/ui/card_view.gd` が984行**で、gdlint の上限(1000行)まで16行しかない。
+      次にここへ足すときは先に切り出す。攻撃の4段(`play_strike()` 以下・約160行)は
+      `_striking` / `_strike_offset` / `_strike_angle` / `_strike_flash` の4つしか状態を
+      持たないため、`CardUnitFx` と同じ形で分けられる
 - [ ] **フォントが1.66MB**で、pck 4.1MBの4割にあたる。デッキ名がユーザーの自由入力である以上、
       サブセット化すると入力できない文字が出るため手を付けていない。
       起動時間をさらに詰める必要が出た時点で判断する

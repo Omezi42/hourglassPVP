@@ -157,6 +157,8 @@ var _flip_progress := -1.0
 var _flip_tween: Tween
 var _zoom_tween: Tween
 ## 攻撃の演出。絵だけをこのぶんずらし、上端を支点にこの角度だけ回す。
+## 設置の着地・破壊の崩落・硝子の割れる閃光。駒の上へ重ねて描く子ノード。
+var _fx: CardUnitFx
 var _striking := false
 var _strike_offset := Vector2.ZERO
 var _strike_angle := 0.0
@@ -174,6 +176,9 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	mouse_entered.connect(_on_mouse_entered)
 	mouse_exited.connect(_on_mouse_exited)
+	_fx = CardUnitFx.new()
+	_fx.size = size
+	add_child(_fx)
 
 
 ## 場の砂時計として表示する。
@@ -219,6 +224,33 @@ func _set_flip_progress(value: float) -> void:
 func _on_flip_finished() -> void:
 	_flip_progress = -1.0
 	queue_redraw()
+
+
+## 場に出した:台座の少し上から落ちて着地する(GameDesign.md 9章)。
+func play_land() -> void:
+	_fx.size = size
+	_fx.play_land()
+
+
+## 破壊された:砕けて台座へ崩れ落ちる。**枠が空になった後も演出だけが残る**ため、
+## 絵はこの時点で渡しておく(`card` は次の同期で null になる)。
+func play_break(broken: CardData) -> void:
+	_fx.size = size
+	var texture: Texture2D = broken.icon_fallen if broken != null else null
+	if texture == null:
+		return
+	_fx.play_break(texture, _fit_art(texture, _board_art_box()))
+
+
+## 硝子が最初のダメージを吸った:膜が割れる閃光を出す。
+func play_glass_break() -> void:
+	if card == null:
+		return
+	var texture := _icon()
+	if texture == null:
+		return
+	_fx.size = size
+	_fx.play_glass_break(_fit_art(texture, _board_art_box()))
 
 
 ## ターン終了の1粒:砂が下の部屋へ流れる。
@@ -444,7 +476,10 @@ func _draw_board_art(tint: Color, sink: float) -> void:
 	var texture := _icon()
 	if texture == null:
 		return
-	var rect := _fit_art(texture, _board_art_box().grow_individual(0, sink, 0, sink))
+	var lift := _fx.land_offset()
+	var box := _board_art_box().grow_individual(0, sink, 0, sink)
+	var rect := _fit_art(texture, box)
+	rect.position.y += lift
 	if _flip_progress >= 0.0:
 		_draw_flipping_art(texture, rect, tint)
 	else:

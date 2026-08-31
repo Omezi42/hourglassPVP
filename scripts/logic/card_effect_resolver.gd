@@ -19,36 +19,55 @@ func resolve(side: int, unit: CardInstance, trigger: int, hint: Dictionary) -> v
 
 func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Dictionary) -> void:
 	var foe_side := MatchState.other_side(side)
+	# 光の筋の出どころ(GameDesign.md 9章)。余砂は既に盤面から降りているため -1 になり、
+	# その場合は筋を出さない(呼び出し側の判断)。
+	var from := _slot_of(side, unit)
 	match effect.effect_type:
 		CardEnums.EffectType.DAMAGE_PLAYER:
-			_state.damage_player(_player_side_for(side, effect.target), effect.value)
+			var to_side := _player_side_for(side, effect.target)
+			_beam(side, from, to_side, -1)
+			_state.damage_player(to_side, effect.value)
 		CardEnums.EffectType.HEAL_PLAYER:
-			_state.heal_player(_player_side_for(side, effect.target), effect.value)
+			var to_side := _player_side_for(side, effect.target)
+			_beam(side, from, to_side, -1)
+			_state.heal_player(to_side, effect.value)
 		CardEnums.EffectType.DRAW:
 			_state.draw(side, effect.value)
 		CardEnums.EffectType.DAMAGE_PLAYER_PER_ENEMY_UNIT:
+			_beam(side, from, foe_side, -1)
 			_state.damage_player(foe_side, _state.units(foe_side).size() * effect.value)
 		CardEnums.EffectType.DAMAGE_UNIT:
 			for entry in _targets(side, unit, effect, hint):
+				_beam(side, from, entry["side"], entry["slot"])
 				_state.damage_unit(entry["side"], entry["slot"], effect.value)
 		CardEnums.EffectType.DESTROY_UNIT:
 			for entry in _targets(side, unit, effect, hint):
+				_beam(side, from, entry["side"], entry["slot"])
 				_state.destroy_unit(entry["side"], entry["slot"])
 		CardEnums.EffectType.SWAP_STATS:
 			for entry in _targets(side, unit, effect, hint):
 				var target := _unit_at(entry)
 				if target != null:
+					_beam(side, from, entry["side"], entry["slot"])
 					target.flip()
 		CardEnums.EffectType.ADD_TOTAL:
 			for entry in _targets(side, unit, effect, hint):
 				var target := _unit_at(entry)
 				if target != null:
+					_beam(side, from, entry["side"], entry["slot"])
 					target.health += effect.value
 		CardEnums.EffectType.DROP_SAND:
 			for entry in _targets(side, unit, effect, hint):
 				var target := _unit_at(entry)
 				if target != null:
+					_beam(side, from, entry["side"], entry["slot"])
 					target.drop_sand(effect.value)
+
+
+## 効果が対象を取ったことを知らせる。**適用の直前に出す**ことで、対象が破壊されて
+## 盤面から消える効果でも、筋の行き先がまだ盤面に残っている状態で受け取れる。
+func _beam(side: int, from: int, target_side: int, target_slot: int) -> void:
+	_state.effect_targeted.emit(side, from, target_side, target_slot)
 
 
 func _player_side_for(side: int, target: int) -> int:

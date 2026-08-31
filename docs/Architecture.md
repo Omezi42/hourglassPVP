@@ -227,6 +227,8 @@ UIに依存しない、対局ルールそのものを扱う層。
 | `CardMatchLog`(`scripts/ui/card_match_log.gd`) | 対局ログ。`MatchState` のシグナルを購読して日本語の行を積み、中央のモーダルとして開く。**記録と表示を同じクラスに持たせている**のは、実況に出す文と読み返す文を必ず一致させるため |
 | `CardMatchTurnFeed`(`scripts/ui/card_match_turn_feed.gd`) | 手番バナー・相手の1手の実況・スポットライト。**ログと同じ文言**を `CardMatchLog.describe()` から引く |
 | `CardMatchStrike`(`scripts/ui/card_match_strike.gd`) | 攻撃の演出の進行役。被ダメージの砂の飛散を**当たる瞬間まで持ち越す**。砂の演出(`unit_damaged`/`unit_ticked`)の受け口も持つ |
+| `CardMatchEffects`(`scripts/ui/card_match_effects.gd`) | 攻撃以外の演出の進行役(設置の着地 / 破壊の崩落 / 設置効果の光の筋 / 硝子の割れる閃光 / ドローと疲労の山札の脈打ち)。`CardMatchSound` と同じく `MatchState` のシグナルだけを見る |
+| `CardUnitFx`(`scripts/ui/card_unit_fx.gd`) | `CardView` の子として駒へ重ねる演出のうち、**盤面の状態を一切参照しないもの**(着地・崩落・硝子の閃光)。いずれも起きた瞬間に渡された引数だけで完結する |
 | `CardMatchSound`(`scripts/ui/card_match_sound.gd`) | 対局中の効果音(GameDesign.md 9章)。**画面側の操作ではなく `MatchState` のシグナルだけを見て鳴らす**。自分の手・CPU・オンラインで届いた手・リプレイの再生はいずれも `MatchAction.apply()` を通って同じシグナルを出すため、経路ごとに鳴らし忘れる余地が消える |
 | `CardMatchTargets`(`scripts/ui/card_match_targets.gd`) | 置ける枠・殴れる相手の強調と、相打ちの予測 |
 | `CardMatchResult`(`scripts/ui/card_match_result.gd`) | 結果パネル。勝敗・最終HP・総手数・決着の要因と「ログ」「ホームへ」 |
@@ -322,6 +324,31 @@ UIに依存しない、対局ルールそのものを扱う層。
 `play_shatter()`(砕けて外へ散る・赤)と `play_drop()`(下の部屋へ流れる・琥珀)で描き分ける。
 **この2つを取り違えるとルールを誤解する**(前者は総量が減り、後者は総量が変わらない)ため、
 演出上もっとも重要な区別として扱う(GameDesign.md 9章)。同じシグナルに相乗りさせない。
+
+**攻撃以外の演出は `CardMatchEffects` が1箇所で受ける**(GameDesign.md 9章)。
+`MatchState` へ足した5つのシグナル(`unit_shielded` / `cards_drawn` / `fatigue_damage` /
+`effect_targeted` と既存の `unit_played` / `unit_destroyed`)だけを見て、
+着地・崩落・光の筋・硝子の閃光・山札の脈打ちを出す。**攻撃の演出中に起きたぶんは
+当たる瞬間まで持ち越す**(`CardMatchStrike._on_impact()` が `flush()` を呼ぶ)。
+解決と同時に見せると、駒がまだ渡っている最中に相手が砕け始めるため。
+
+**破壊の演出は「絵を縦に3つへ割って左右へ落とす」形にする。**割れ目を線で描いて薄くする
+だけでは、絵が消えかけただけに見えて「壊れた」と読めなかった(実際に描画して確認した)。
+**枠が空になった後も描き続ける**ため、`CardView.play_break()` は `CardData` を受け取って
+絵と矩形をその時点で `CardUnitFx` へ渡す(次の同期で `card` は null になる)。
+
+**硝子が割れたことは、与ダメージが0かどうかでは分からない**(膜が吸った場合も、
+攻撃力0の駒に殴られた場合も0)。`MatchState` は受ける前の `glass_intact` を控えておき、
+消えていたときだけ `unit_shielded` を出す。
+
+**光の筋(`CardFlipBeam`)は同時に何本でも出せる**。全体に効く効果(スイープ)が対象の数だけ
+伸ばすため、1本ぶんの状態ではなく `_beams` の配列として持つ。**進捗は Dictionary の要素**に置く
+(ラムダは外側のローカル変数を値でキャプチャするため。11章)。色は反転=金 /
+効果=対象に応じた色(相手なら赤・味方なら緑)で分ける。
+
+**`effect_targeted` は効果を適用する直前に出す。**破壊のように対象が盤面から消える効果でも、
+筋の行き先がまだ残っている状態で受け取れるようにするため。**余砂は既に盤面から降りており
+出どころの枠が無い**(`_slot_of()` が -1 を返す)ので、その場合は筋を出さない。
 
 **設置効果の対象選択**は `CardMatchSelection.TARGETING` として持つ。カードを出す枠まで
 決めた時点でいったん止め、相手のカードを押すと `play_card()` の `target` へ渡して確定する。
