@@ -58,6 +58,14 @@ var selection: CardMatchSelection:
 var foe_bar: PlayerInfoBar:
 	get:
 		return _foe_bar
+## 対局中の効果音。攻撃の演出が当たった瞬間に持ち越した音を出すため、進行役から引く。
+var sound: CardMatchSound:
+	get:
+		return _sound
+## 操作を受け付ける対局かどうか(再生モードでは false)。
+var interactive: bool:
+	get:
+		return _interactive
 
 var _foe_bar: PlayerInfoBar
 var _own_bar: PlayerInfoBar
@@ -101,6 +109,8 @@ var _log_button: Button
 var _flip_beam: CardFlipBeam
 ## 攻撃の演出の進行役。演出中は盤面の操作を止める。
 var _strike: CardMatchStrike
+## 対局中の効果音。盤面の変化だけを見て鳴らす。
+var _sound: CardMatchSound
 var _targets: CardMatchTargets
 ## 手番のバナーと、相手の1手の実況。
 var _feed: CardMatchTurnFeed
@@ -119,6 +129,7 @@ func _ready() -> void:
 	set_process(false)
 	_outcome = CardMatchOutcome.new(self)
 	_strike = CardMatchStrike.new(self)
+	_sound = CardMatchSound.new(self)
 	_online_ctl = CardMatchOnline.new(self)
 	_targets = CardMatchTargets.new(self)
 
@@ -316,6 +327,10 @@ func _begin_state(
 	)
 	_log.watch(state)
 	_feed.watch(self, _log)
+	# 効果音は配り終えてから張る(初期手札のドローまで鳴らさないため)。
+	_sound.watch(state)
+	# 決着で止めた対局のBGMを、「もう一度」で戻す(GameDesign.md 9章)。
+	MusicPlayer.play(MusicPlayer.Track.MATCH)
 	refresh()
 
 
@@ -785,6 +800,11 @@ func on_strike_finished() -> void:
 		_cpu_followup = false
 		if _cpu != null and not state.is_match_over():
 			_cpu_timer.start(CPU_THINK_SECONDS * 0.4)
+
+
+## 攻撃の演出中かどうか。効果音を当たる瞬間まで持ち越すかの判断に使う。
+func strike_busy() -> bool:
+	return _strike.busy()
 
 
 ## 盤面の1枠の表示。切り出した進行役(`CardMatchStrike` 等)からも引く。
