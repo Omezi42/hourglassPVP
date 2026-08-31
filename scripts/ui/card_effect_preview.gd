@@ -181,7 +181,12 @@ static func _entry_for_effect(effect: CardEffectData) -> Dictionary:
 		CardEnums.EffectType.DAMAGE_PLAYER_PER_ENEMY_UNIT:
 			demo = Demo.FX_DAMAGE_PLAYER_PER_ENEMY_UNIT
 	# 反転がトリガーの効果は、反転そのものの実演を兼ねる(2本並べると同じ動きが続くため)。
-	return {"demo": demo, "value": maxi(effect.value, 1), "all": all}
+	return {
+		"demo": demo,
+		"value": maxi(effect.value, 1),
+		"all": all,
+		"trigger": effect.trigger,
+	}
 
 
 # --- 台本 ---------------------------------------------------------------
@@ -226,6 +231,10 @@ static func _empty_stage() -> Dictionary:
 		"beams": [],
 		"pops": [],
 		"note": "",
+		# **トリガーが決まって初めて文になる説明**。台本は「何が起きるか」だけを書き、
+		# 「いつ起きるか」は entry の trigger から _stage() が前へ付ける。同じ効果が
+		# 設置・反転・余砂のどれで載っても、台本を3通り持たずに正しい文が出る。
+		"trigger_note": "",
 		"draw_card": -1.0,
 	}
 
@@ -235,9 +244,27 @@ static func _empty_stage() -> Dictionary:
 func _stage(entry: Dictionary, t: float) -> Dictionary:
 	var demo := int(entry["demo"])
 	var value: int = entry.get("value", 1)
+	var stage: Dictionary
 	if STAGE_METHODS.has(demo):
-		return call(STAGE_METHODS[demo], t, value)
-	return _stage_on_enemy_unit(t, demo, value, entry.get("all", false))
+		stage = call(STAGE_METHODS[demo], t, value)
+	else:
+		stage = _stage_on_enemy_unit(t, demo, value, entry.get("all", false))
+	var trigger_note: String = stage.get("trigger_note", "")
+	if not trigger_note.is_empty():
+		var trigger: int = entry.get("trigger", CardEnums.Trigger.ON_PLAY)
+		stage["note"] = "%s、%s" % [_trigger_phrase(trigger), trigger_note]
+	return stage
+
+
+## トリガーを「いつ」を表す語へ写す。CardEnums.trigger_name() の語(設置 / 反転 / 余砂)は
+## カードの面へ出す短い呼び名で、実演では何が起きたのかを文で読ませるため別に持つ。
+static func _trigger_phrase(trigger: int) -> String:
+	match trigger:
+		CardEnums.Trigger.ON_FLIP:
+			return "反転したとき"
+		CardEnums.Trigger.ON_DEATH:
+			return "壊れたとき"
+	return "場に出したとき"
 
 
 func _stage_basic(t: float, _value: int) -> Dictionary:
@@ -412,7 +439,7 @@ func _stage_add_total(t: float, value: int) -> Dictionary:
 	var flip := _seg(t, 0.25, 0.55)
 	var own := _piece(2, 3, 5) if flip < 0.5 else _piece(3, 2, 5)
 	own["flip"] = flip if t >= 0.25 and t <= 0.6 else -1.0
-	stage["note"] = "反転したとき、この砂時計の総量が%d増える" % value
+	stage["trigger_note"] = "この砂時計の総量が%d増える" % value
 	if t >= 0.68:
 		own["h"] = 3 + value
 		own["total"] = 5 + value
@@ -425,7 +452,7 @@ func _stage_draw(t: float, value: int) -> Dictionary:
 	var stage := _empty_stage()
 	var own := _piece(5, 0, 5)
 	own["fade"] = _seg(t, 0.0, 0.15)
-	stage["note"] = "場に出したとき、カードを%d枚引く" % value
+	stage["trigger_note"] = "カードを%d枚引く" % value
 	stage["draw_card"] = _seg(t, 0.35, 0.85)
 	stage["own"] = [own]
 	return stage
@@ -436,7 +463,7 @@ func _stage_heal(t: float, value: int) -> Dictionary:
 	var own := _piece(5, 0, 5)
 	own["fade"] = _seg(t, 0.0, 0.15)
 	stage["own_hp"] = 0.6
-	stage["note"] = "場に出したとき、自分のHPを%d回復する" % value
+	stage["trigger_note"] = "自分のHPを%d回復する" % value
 	if t >= 0.35:
 		stage["beams"] = [_beam(["own", 0], ["own_hp", 0], _seg(t, 0.35, 0.65))]
 	if t >= 0.65:
@@ -450,7 +477,7 @@ func _stage_damage_player(t: float, value: int) -> Dictionary:
 	var stage := _empty_stage()
 	var own := _piece(6, 0, 6)
 	own["fade"] = _seg(t, 0.0, 0.15)
-	stage["note"] = "場に出したとき、相手プレイヤーへ%dダメージ" % value
+	stage["trigger_note"] = "相手プレイヤーへ%dダメージ" % value
 	if t >= 0.3:
 		stage["beams"] = [_beam(["own", 0], ["foe_hp", 0], _seg(t, 0.3, 0.62))]
 	if t >= 0.62:
@@ -491,7 +518,7 @@ func _stage_on_enemy_unit(t: float, demo: int, value: int, all: bool) -> Diction
 	var foes: Array = [_piece(5, 1, 6)]
 	if all:
 		foes.append(_piece(4, 2, 6))
-	stage["note"] = _note_on_enemy_unit(demo, value, all)
+	stage["trigger_note"] = _note_on_enemy_unit(demo, value, all)
 	# 的が砕けた後も矢印が残らないよう、当たったところで消す。
 	if t >= 0.3 and t < 0.8:
 		var beams: Array = []
@@ -532,12 +559,12 @@ static func _note_on_enemy_unit(demo: int, value: int, all: bool) -> String:
 	var scope := "相手の砂時計すべて" if all else "相手の砂時計1体"
 	match demo:
 		Demo.FX_DESTROY_UNIT:
-			return "場に出したとき、%sを破壊する" % scope
+			return "%sを破壊する" % scope
 		Demo.FX_SWAP_STATS:
-			return "場に出したとき、%sの体力と攻撃力を入れ替える" % scope
+			return "%sの体力と攻撃力を入れ替える" % scope
 		Demo.FX_DROP_SAND:
-			return "場に出したとき、%sの砂が%d粒落ちる" % [scope, value]
-	return "場に出したとき、%sへ%dダメージ(砂は消える)" % [scope, value]
+			return "%sの砂が%d粒落ちる" % [scope, value]
+	return "%sへ%dダメージ(砂は消える)" % [scope, value]
 
 
 # --- 描画 ---------------------------------------------------------------
