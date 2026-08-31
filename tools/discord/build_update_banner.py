@@ -17,7 +17,8 @@ from PIL import Image, ImageDraw, ImageFont
 
 SIZE = (960, 320)
 FONT = Path("assets/fonts/ZenKakuGothicNew-Bold.ttf")
-MASCOT = Path("assets/mascot/mascot.png")
+# 原寸のすなえるは実行時に読まないため sources/ 側にある(Architecture.md 4.1.5節)
+MASCOT = Path("assets/mascot/sources/mascot.png")
 OUT = Path("assets/mascot/update_banner.png")
 
 # ui_palette.gd の値をそのまま持ってくる
