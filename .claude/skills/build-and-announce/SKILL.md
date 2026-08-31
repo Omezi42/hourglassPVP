@@ -103,5 +103,13 @@ bash tools/discord/since_last_announce.sh --mark
 - **unityroomへ上げるのは `build/web/index.pck` だけ**。index.htmlの隣へ置く
   追加ファイルは配信されない(BGMをCDNから取りに行くのはこのため)
 - アップロード自体はユーザーの手作業。こちらはpckを用意してお知らせを出すところまで
+- **アップロードは、unityroomの編集ページを開き直してから行う。**unityroomはブラウザから
+  ConoHaのオブジェクトストレージへ署名付きURLでPUTする方式で、**この署名はページを
+  開いた時点から数時間で切れる**。切れた署名にPUTすると403が返るが、その応答には
+  `Access-Control-Allow-Origin` が付かないため、**ブラウザのコンソールには
+  「CORS policyでブロックされました」「upload failed: pck」としか出ない**。
+  実際にこれで「pckが壊れているのでは」と疑ったことがある。URLの `expires=` を
+  Unix時刻として読めば、署名切れかどうかはその場で判定できる。リトライしても
+  同じ古い署名を使い続けるため通らない
 - お知らせにバージョン番号を書く場合は `project.godot` の `config/version`
   (日付方式)を使う。マッチングに使うビルドIDとは別物
