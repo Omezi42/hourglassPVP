@@ -74,7 +74,7 @@ def main() -> None:
     p.add_argument("--name"); p.add_argument("--cost", type=int); p.add_argument("--total", type=int)
     p.add_argument("--text", default=""); p.add_argument("--art", default="sand")
     p.add_argument("--label", default="砂時計紹介", help="上部の見出し(例 先行公開)")
-    p.add_argument("--out", default="assets/mascot/card_reveal.png")
+    p.add_argument("--out", default="tools/discord/out/card_reveal.png")
     args = p.parse_args()
 
     card = read_card(args.id) if args.id else {

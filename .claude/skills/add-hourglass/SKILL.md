@@ -117,14 +117,14 @@ description: |
    `tools/discord/drafts/cards/` を見本にする
 4. `--dry-run` で確認してから投稿する
    ```
-   python tools/discord/discord_post.py tools/discord/drafts/cards/{id}-1.md --attach assets/mascot/card_reveal.png
-   python tools/discord/discord_post.py tools/discord/drafts/cards/{id}-2.md --attach assets/mascot/effect_{id}.gif
+   python tools/discord/discord_post.py tools/discord/drafts/cards/{id}-1.md --attach tools/discord/out/card_reveal.png
+   python tools/discord/discord_post.py tools/discord/drafts/cards/{id}-2.md --attach tools/discord/out/effect_{id}.gif
    ```
 5. 返ってきた message_id を `tools/discord/posted.json` の
    `announce_webhook_url` へ記録する(あとで文面を直して差し替えられるようにするため)
 
 **GIFを作る前に、実演の文が正しいか1コマ抜いて確かめる**
-(`magick assets/mascot/effect_{id}.gif -coalesce out_%02d.png`)。実演の文は
+(`magick tools/discord/out/effect_{id}.gif -coalesce out_%02d.png`)。実演の文は
 トリガー(設置 / 反転 / 余砂)から組み立てているため、新しい組み合わせで
 おかしな文になっていないかはここでしか気づけない。
 

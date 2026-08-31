@@ -29,10 +29,11 @@
 # アイコンの取り込み元(素材そのものの再配布を避けるため除外する)
 assets/hourglasses/emblems/sources/
 
-# お知らせのたびに作り直す画像(生成物のため管理しない)
-/assets/mascot/update_banner.png
-/assets/mascot/card_*.png
-/assets/mascot/effect_*.gif
+# お知らせのたびに作り直す画像(生成物のため管理しない)。
+# assets/ の下に置くとGodotがインポートしてpckへ入ってしまうため、
+# .gdignore を置いた tools/discord/out/ へ出す(実際に一度混入した)。
+/tools/discord/out/*
+!/tools/discord/out/.gdignore
 
 # Discordの通知先。公開リポジトリへ入れるとGitHubのsecret scanningが検出し、
 # Discord側がWebhookを自動的に無効化するため管理しない。

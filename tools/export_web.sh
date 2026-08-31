@@ -12,12 +12,16 @@ OUT="$ROOT/build/web"
 # (GameDesign.md 11章・Architecture.md 6.4節)。書き出しのたびに切り替わる値を
 # ここで1度だけ書き込むことで、手で更新する値を増やさずに済ませている。
 # 書き込んだ値はそのままコミットする(直近のビルドがどれかを追えるようにするため)。
+# エディタで書き出すとフィルタが空へ戻る。毎回ここで揃え直してから書き出す。
+python "$ROOT/tools/ensure_export_filters.py" "$ROOT/export_presets.cfg"
+
 BUILD_ID="$(date -u +%Y%m%d-%H%M%S)"
 python "$ROOT/tools/stamp_build_id.py" "$ROOT/project.godot" "$BUILD_ID"
 echo "build_id = $BUILD_ID"
 
 "$GODOT" --headless --path "$ROOT" --export-release "Web" "$OUT/index.html" > "$ROOT/logs/export_web.log" 2>&1
 "$GODOT" --headless --main-pack "$OUT/index.pck" --script res://tools/tests/run_tests.gd 2>&1 | grep -E "tests passed|FAILED" || true
+"$GODOT" --headless --main-pack "$OUT/index.pck" --script res://tools/verify_web_pck.gd 2>&1 | grep -E "pck check" || true
 
 echo "--- unityroomへ上げるのはこれ ---"
 ls -la "$OUT/index.pck" | awk '{print $5, $9}'

@@ -15,7 +15,7 @@ config/version="2026.08.29"
 run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("4.6", "GL Compatibility")
 config/icon="res://icon.svg"
-config/build_id="20260831-130101"
+config/build_id="20260831-130953"
 
 [display]
 

@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # カードの能力の実演(詳細パネルと同じもの)をGIFにする。
 #   tools/discord/build_effect_gif.sh drill
-# 出力: assets/mascot/effect_<id>.gif
+# 出力: tools/discord/out/effect_<id>.gif
 set -euo pipefail
 CARD="${1:?カードのidを指定してください (例: drill)}"
 GODOT="${GODOT:-C:/Users/omezi/Documents/Godot_v4.6.2-stable_win64_console.exe}"
 FRAMES="scratchpad/fx"
-OUT="assets/mascot/effect_${CARD}.gif"
+OUT="tools/discord/out/effect_${CARD}.gif"
 
 mkdir -p "$FRAMES"
 rm -f "$FRAMES"/*.png "$FRAMES"/*.wav

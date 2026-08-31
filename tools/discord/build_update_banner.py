@@ -19,7 +19,7 @@ SIZE = (960, 320)
 FONT = Path("assets/fonts/ZenKakuGothicNew-Bold.ttf")
 # 原寸のすなえるは実行時に読まないため sources/ 側にある(Architecture.md 4.1.5節)
 MASCOT = Path("assets/mascot/sources/mascot.png")
-OUT = Path("assets/mascot/update_banner.png")
+OUT = Path("tools/discord/out/update_banner.png")
 
 # ui_palette.gd の値をそのまま持ってくる
 SLATE_TOP = (26, 28, 36)

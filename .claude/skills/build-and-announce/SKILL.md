@@ -32,14 +32,15 @@ bash tools/export_web.sh
   **この変更はそのままコミットする**(GameDesign.md 11章・Architecture.md 6.4節)
 - 末尾に `tests passed` が出ること、`build/web/index.pck` のサイズが
   直前のビルドから跳ねていないことを確認する
-- **`export_presets.cfg` の `include_filter` / `exclude_filter` が空へ戻っていないか
-  確認する**(エディタが書き戻すことがある)。空だとpckが数倍に膨らみ、
-  Discordの募集通知も飛ばなくなる
-
-```
-grep -n "include_filter\|exclude_filter" export_presets.cfg
-python -c "d=open('build/web/index.pck','rb').read(); print('webhook:', b'discord_webhook' in d)"
-```
+- **フィルタの確認は自動化してある。**`export_presets.cfg` はエディタで書き出すたびに
+  `include_filter` / `exclude_filter` が空へ戻る(実際に2度起きた)。空のまま書き出すと
+  BGMとシミュレーションの生データが混ざってpckが3倍に膨らみ、逆に
+  `data/discord_webhook.txt` が落ちて募集通知が飛ばなくなる。
+  `tools/export_web.sh` が書き出し前に `tools/ensure_export_filters.py` で揃え直し、
+  書き出し後に `tools/verify_web_pck.gd` でpckの中身を検査する。
+  **`pck check passed` が出ないビルドは上げない**
+- **エディタのメニューから書き出さない。**必ずこのスクリプトを通す
+  (エディタから出すとビルドIDが刻まれず、検査も走らない)
 
 ### 2. お知らせの下書きを起こす
 
@@ -69,15 +70,17 @@ python tools/discord/build_update_banner.py {バージョン} --subtitle "..."
 ```
 
 - 添え書きは**20文字程度まで**。長いと右端で切れる(実際に切れた)
-- 出力は `assets/mascot/update_banner.png`。**生成したら必ず目で確かめる**
+- 出力先は `tools/discord/out/`。**`assets/` の下へ出さない**
+  (Godotがインポートして、告知用の画像がゲームのpckへ入ってしまう)
+- 出力は `tools/discord/out/update_banner.png`。**生成したら必ず目で確かめる**
 
 ### 5. 投稿する
 
 ```
 python tools/discord/discord_post.py tools/discord/drafts/update-{バージョン}.md \
-    --attach assets/mascot/update_banner.png --dry-run
+    --attach tools/discord/out/update_banner.png --dry-run
 python tools/discord/discord_post.py tools/discord/drafts/update-{バージョン}.md \
-    --attach assets/mascot/update_banner.png
+    --attach tools/discord/out/update_banner.png
 ```
 
 既定の宛先が #お知らせ。**必ず `--dry-run` で1度確認してから投稿する。**

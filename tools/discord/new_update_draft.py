@@ -96,7 +96,7 @@ def main() -> None:
     print(f"\n仕上げたら:\n"
           f"  python tools/discord/build_update_banner.py {version} --subtitle \"...\"\n"
           f"  python tools/discord/discord_post.py {path} "
-          f"--attach assets/mascot/update_banner.png\n"
+          f"--attach tools/discord/out/update_banner.png\n"
           f"  tools/discord/since_last_announce.sh --mark")
 
 

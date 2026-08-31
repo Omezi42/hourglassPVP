@@ -548,9 +548,19 @@ BGM3曲は合計8.8MBあり、上の3点を守ってもなおpckの7割を占め
 起動を待たせないようにする**ことで解決する。
 
 - Webプリセットの `exclude_filter` に `assets/bgm/*` を入れ、pckから外す
-  (**`export_presets.cfg` はエディタが書き戻すため、`include_filter` /
-  `exclude_filter` が空へ戻っていないかを書き出し前に確認する**。実際に一度
-  空へ戻り、pckが4.1MBから15MBへ膨らんでいた)
+  (**`export_presets.cfg` はエディタが書き出すたびにフィルタを空へ書き戻す**。
+  実際に2度これが起きて、pckが4.1MBから15MBへ膨らみ、同時に
+  `data/discord_webhook.txt` が落ちて募集通知が飛ばなくなった。
+  **人が確認する運用では防げないため、`tools/export_web.sh` が書き出しの直前に
+  `tools/ensure_export_filters.py` でフィルタと `export_path` を揃え直し、
+  書き出した後に `tools/verify_web_pck.gd` でpckの中身を名指しで検査する**)
+- **エディタの書き出し先も `build/web/index.html` へ揃えてある。**以前は
+  `build/砂時計pvp.html` を指しており、エディタから書き出すと別名のpckが並んで
+  できあがった。unityroomへ上げるのは `index.pck` 1つだけなので、どちらを上げるのか
+  迷う状態そのものを無くしている
+- **Discordのお知らせ用に作る画像・GIFは `assets/` の下へ出さない**
+  (`tools/discord/out/`。`.gdignore` 済み)。`assets/mascot/` へ置いていた頃は
+  Godotがそれらをインポートし、告知用のバナーやカード画像がpckへ入っていた
 - `MusicPlayer` は、Web版では `res://` を試さずに `HTTPRequest` で
   `https://cdn.jsdelivr.net/gh/Omezi42/hourglassPVP@main/assets/bgm/{曲}.ogg` を取得し、
   `AudioStreamOggVorbis.load_from_buffer()` で鳴らす
