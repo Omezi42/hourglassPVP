@@ -109,6 +109,8 @@ var _cpu_followup := false
 var _surrender_button: Button
 var _back_button: Button
 var _status: CardMatchStatus
+## オンライン対戦の3つの入口(開始・復帰・観戦)。
+var _online_ctl: CardMatchOnline
 
 
 func _ready() -> void:
@@ -117,6 +119,7 @@ func _ready() -> void:
 	set_process(false)
 	_outcome = CardMatchOutcome.new(self)
 	_strike = CardMatchStrike.new(self)
+	_online_ctl = CardMatchOnline.new(self)
 	_targets = CardMatchTargets.new(self)
 
 
@@ -184,6 +187,26 @@ func start_cpu_match(deck_self: Array, deck_foe: Array) -> void:
 func start_tutorial_match() -> void:
 	start_cpu_match(CardPresetDecks.basic(), CardPresetDecks.basic())
 	_tutorial.watch(state, my_side)
+
+
+## オンライン対戦の3つの入口は `CardMatchOnline` が持つ(Architecture.md 4.0節)。
+func start_online_match(
+	deck_self: Array,
+	client: FirestoreClient,
+	p_match_id: String,
+	p_my_side: int,
+	is_room: bool = false,
+	opponent_uid: String = ""
+) -> void:
+	await _online_ctl.start(deck_self, client, p_match_id, p_my_side, is_room, opponent_uid)
+
+
+func resume_online_match(client: FirestoreClient, record: Dictionary) -> bool:
+	return await _online_ctl.resume(client, record)
+
+
+func start_spectate(client: FirestoreClient, p_match_id: String) -> bool:
+	return await _online_ctl.spectate(client, p_match_id)
 
 
 ## 自分の持ち時間が尽きた。切れた本人が申告する(GameDesign.md 11章)。
