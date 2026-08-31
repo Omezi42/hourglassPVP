@@ -97,7 +97,38 @@ description: |
   (枚数を数えているテストがあるため、期待値の更新が要る場合がある)
 - 一覧画面とデッキ編集画面をレンダリングし、表示が崩れていないか目で確かめる
 
-### 6. 仕様書への反映と完了報告
+### 6. お知らせの投稿(省略しない)
+
+**カードを1枚足したら、必ず #お知らせ へ紹介を投稿する**(ユーザーの指示)。
+実装だけして黙って終わらせない。手順は次のとおりで、**2通に分ける**。
+
+1. カード画像を作る
+   ```
+   python tools/discord/build_card_image.py --id {id} --label 砂時計紹介
+   ```
+2. 能力の実演をGIFにする(効果を持つカードのみ)
+   ```
+   bash tools/discord/build_effect_gif.sh {id}
+   ```
+3. 下書きを `tools/discord/drafts/cards/{id}-1.md` `-2.md` へ書く。
+   **文面はすなえるの口調**(一人称「ぼく」・語尾「〜だよ」)で、1通目は
+   `## ⌛ 砂時計紹介 ── {名前}` の見出しとコスト・総量・持っている語、
+   2通目はその語が実際に何をするかを短く。既存の
+   `tools/discord/drafts/cards/` を見本にする
+4. `--dry-run` で確認してから投稿する
+   ```
+   python tools/discord/discord_post.py tools/discord/drafts/cards/{id}-1.md --attach assets/mascot/card_reveal.png
+   python tools/discord/discord_post.py tools/discord/drafts/cards/{id}-2.md --attach assets/mascot/effect_{id}.gif
+   ```
+5. 返ってきた message_id を `tools/discord/posted.json` の
+   `announce_webhook_url` へ記録する(あとで文面を直して差し替えられるようにするため)
+
+**GIFを作る前に、実演の文が正しいか1コマ抜いて確かめる**
+(`magick assets/mascot/effect_{id}.gif -coalesce out_%02d.png`)。実演の文は
+トリガー(設置 / 反転 / 余砂)から組み立てているため、新しい組み合わせで
+おかしな文になっていないかはここでしか気づけない。
+
+### 7. 仕様書への反映と完了報告
 
 - `docs/Hourglasses.md` のカード表へ、実測した勝率とともに1行足す
 - 報告する内容
