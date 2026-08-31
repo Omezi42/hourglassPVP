@@ -231,8 +231,12 @@ func start_spectate(client: FirestoreClient, p_match_id: String) -> bool:
 	return await _online_ctl.spectate(client, p_match_id)
 
 
-## 自分の持ち時間が尽きた。切れた本人が申告する(GameDesign.md 11章)。
-func _on_local_timeout(_side: int) -> void:
+## 持ち時間が尽きた。**減っているのは手番側の時計であり、相手の手番でも発火する**ため、
+## 自分の側でなければ何もしない。申告できるのは自分の時間切れだけで(GameDesign.md 11章)、
+## 相手の時間切れは `_watch_opponent_timeout()` が猶予を置いて拾う。
+func _on_local_timeout(side: int) -> void:
+	if side != my_side:
+		return
 	if state != null and not state.is_match_over():
 		_perform({"type": "timeout", "side": my_side})
 
@@ -265,13 +269,14 @@ func _refresh_clocks() -> void:
 
 
 func _on_action_received(action: Dictionary) -> void:
-	if _clock != null and action.has("clock"):
-		_clock.remaining[MatchState.other_side(my_side)] = float(action["clock"])
-		_clock.finish_turn(state.current_turn)
 	_strike.capture(action)
 	MatchAction.apply(state, action)
 	if _clock != null and state != null and not state.is_match_over():
 		_clock.start_turn(state.current_turn)
+		# 添えられた残り時間で上書きするのは、相手の手番がまだ続いている間だけ。
+		# 手番が移ったなら、その側の時計は60秒へ戻ったところから数え直す。
+		if action.has("clock") and state.current_turn != my_side:
+			_clock.remaining[MatchState.other_side(my_side)] = float(action["clock"])
 	_finish_action()
 
 
@@ -791,7 +796,7 @@ func _perform(action: Dictionary) -> void:
 	# 手元で減らし続けると、実際より早く時間切れと判定してしまうため。
 	if _clock != null:
 		payload["clock"] = _clock.get_remaining(my_side)
-		_clock.finish_turn(state.current_turn)
+		_clock.start_turn(state.current_turn)
 	_online.send(payload)
 	_finish_action()
 

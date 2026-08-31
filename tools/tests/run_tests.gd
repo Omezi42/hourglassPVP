@@ -18,7 +18,7 @@ func _init() -> void:
 
 func _run() -> void:
 	_test_match_clock_ticks_down_and_times_out()
-	_test_match_clock_finish_turn_switches_side_without_adding_time()
+	_test_match_clock_resets_only_when_the_turn_changes_sides()
 	_test_local_replay_service_round_trips_and_enforces_retention()
 	V5RulesTests.new().run(_assert_true)
 	SoundSettingsTests.new().run(_assert_true)
@@ -58,16 +58,28 @@ func _test_match_clock_ticks_down_and_times_out() -> void:
 	_assert_true(not clock.running, "clock should stop running after timing out")
 
 
-func _test_match_clock_finish_turn_switches_side_without_adding_time() -> void:
+## 持ち時間は1手番ぶん(GameDesign.md 5章)。手番が移ったときだけ戻し、
+## 同じ手番のうちに何度も指しても戻さない(戻すと指し続ける限り尽きなくなる)。
+func _test_match_clock_resets_only_when_the_turn_changes_sides() -> void:
 	var clock := MatchClock.new(10.0)
 	clock.start_turn(MatchState.Side.A)
 	clock.tick(3.0)
-	clock.finish_turn(MatchState.Side.B)
+	clock.start_turn(MatchState.Side.A)
 	_assert_true(
 		clock.get_remaining(MatchState.Side.A) == 7.0,
-		"finish_turn should not add any time back to the side that just moved"
+		"playing again in the same turn should not refill the clock"
 	)
-	_assert_true(clock.active_side == MatchState.Side.B, "finish_turn should switch active_side")
+	clock.start_turn(MatchState.Side.B)
+	_assert_true(clock.active_side == MatchState.Side.B, "the clock should follow the new turn")
+	_assert_true(
+		clock.get_remaining(MatchState.Side.B) == 10.0, "a new turn should refill that side"
+	)
+	_assert_true(
+		clock.get_remaining(MatchState.Side.A) == 7.0, "the side that just moved keeps its value"
+	)
+	clock.tick(10.0)
+	clock.start_turn(MatchState.Side.A)
+	_assert_true(clock.get_remaining(MatchState.Side.A) == 10.0, "coming back around refills again")
 
 
 func _test_local_replay_service_round_trips_and_enforces_retention() -> void:

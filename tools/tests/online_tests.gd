@@ -14,6 +14,7 @@ func run(assert_true: Callable) -> void:
 	_test_transient_status_classification(assert_true)
 	_test_actions_survive_the_firestore_codec(assert_true)
 	_test_clock_can_be_overwritten_by_the_opponent_value(assert_true)
+	_test_timeout_reports_the_side_that_actually_ran_out(assert_true)
 	_test_online_setup_abort_messages(assert_true)
 
 
@@ -106,26 +107,50 @@ func _test_actions_survive_the_firestore_codec(assert_true: Callable) -> void:
 
 
 ## 相手の残り時間は、届いた手に添えられた値で上書きする(GameDesign.md 11章)。
-## 上書き後もその側の時計が正しく減り、時間切れを発火することを確認する。
+## **上書きは手番を始めた後に行う**。持ち時間は1手番ぶんで、手番の開始が60秒へ
+## 戻すため、順序を逆にすると届いた値がその場で消える。
 func _test_clock_can_be_overwritten_by_the_opponent_value(assert_true: Callable) -> void:
-	var clock := MatchClock.new(180.0)
+	var clock := MatchClock.new(60.0)
+	clock.start_turn(MatchState.Side.B)
 	clock.remaining[MatchState.Side.B] = 1.0
 	assert_true.call(
 		is_equal_approx(clock.get_remaining(MatchState.Side.B), 1.0),
 		"the opponent clock should take the value that came with their action"
 	)
 	assert_true.call(
-		is_equal_approx(clock.get_remaining(MatchState.Side.A), 180.0),
+		is_equal_approx(clock.get_remaining(MatchState.Side.A), 60.0),
 		"overwriting one side should not touch the other"
 	)
 
 	var timed_out_box: Array = [null]
 	clock.time_out.connect(func(side: int) -> void: timed_out_box[0] = side)
-	clock.start_turn(MatchState.Side.B)
 	clock.tick(1.5)
 	assert_true.call(
 		timed_out_box[0] == MatchState.Side.B,
 		"the overwritten clock should still run out and report the timeout"
+	)
+	assert_true.call(not clock.running, "the clock should stop once it has reported the timeout")
+
+
+## **時間切れの通知は「手番側の時計が尽きた」という意味であり、自分の時間切れとは
+## 限らない。**相手の手番でも発火するため、受け口は引数の側を見て自分のときだけ
+## 申告する(見ないと、相手が切れた瞬間に自分が負けを送る)。
+func _test_timeout_reports_the_side_that_actually_ran_out(assert_true: Callable) -> void:
+	var clock := MatchClock.new(60.0)
+	var timed_out_box: Array = [null]
+	clock.time_out.connect(func(side: int) -> void: timed_out_box[0] = side)
+
+	clock.start_turn(MatchState.Side.A)
+	clock.tick(10.0)
+	clock.start_turn(MatchState.Side.B)
+	clock.tick(60.0)
+	assert_true.call(
+		timed_out_box[0] == MatchState.Side.B,
+		"the timeout should name the side whose turn it was, not the local player"
+	)
+	assert_true.call(
+		is_equal_approx(clock.get_remaining(MatchState.Side.A), 50.0),
+		"the waiting side should keep the time it had left"
 	)
 
 
