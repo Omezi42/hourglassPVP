@@ -208,7 +208,7 @@ func start_cpu_match(deck_self: Array, deck_foe: Array) -> void:
 ## 出ないデッキで始まると成立しないため。
 func start_tutorial_match() -> void:
 	start_cpu_match(CardPresetDecks.basic(), CardPresetDecks.basic())
-	_tutorial.watch(state, my_side)
+	_tutorial.watch(self, state, my_side)
 
 
 ## オンライン対戦の3つの入口は `CardMatchOnline` が持つ(Architecture.md 4.0節)。
@@ -849,6 +849,20 @@ func slot_center(side: int, slot: int) -> Vector2:
 ## いま操作を受け付ける対局か(再生・観戦では実況を出さない)。
 func is_interactive() -> bool:
 	return _interactive
+
+
+## いま出せる手札の矩形。誘導対局が「これを押す」と光らせるのに使う。
+func playable_hand_rects() -> Array[Rect2]:
+	var found: Array[Rect2] = []
+	for view in _hand_views:
+		if view.visible and view.enabled:
+			found.append(Rect2(view.position, view.size))
+	return found
+
+
+## ターン終了ボタンの矩形。誘導対局が「ここを押す」と光らせるのに使う。
+func end_turn_button_rect() -> Rect2:
+	return Rect2(_end_turn_button.position, _end_turn_button.size)
 
 
 ## HPバーの中心。攻撃が相手プレイヤーを狙うときの的。
