@@ -509,6 +509,9 @@ BGM3曲は合計8.8MBあり、上の3点を守ってもなおpckの7割を占め
 起動を待たせないようにする**ことで解決する。
 
 - Webプリセットの `exclude_filter` に `assets/bgm/*` を入れ、pckから外す
+  (**`export_presets.cfg` はエディタが書き戻すため、`include_filter` /
+  `exclude_filter` が空へ戻っていないかを書き出し前に確認する**。実際に一度
+  空へ戻り、pckが4.1MBから15MBへ膨らんでいた)
 - `MusicPlayer` は、Web版では `res://` を試さずに `HTTPRequest` で
   `https://cdn.jsdelivr.net/gh/Omezi42/hourglassPVP@main/assets/bgm/{曲}.ogg` を取得し、
   `AudioStreamOggVorbis.load_from_buffer()` で鳴らす
@@ -780,7 +783,15 @@ pckには入る**。リポジトリへ置けない理由は2つ。
   この機能は黙って壊れる
 
 ファイルが無ければ通知を送らないだけで、対局には影響しない(クローン直後やテストは
-この状態になる)。
+この状態になる)。**逆に言うと、pckへ入っていない状態と設定していない状態は
+画面上まったく同じに見える**(黙って通知だけが飛ばなくなる)。
+
+> **`.txt` は「リソース」ではないため、`export_filter="all_resources"` だけでは
+> pckへ入らない。**`export_presets.cfg` の `include_filter` へ
+> `data/discord_webhook.txt` を明示しない限り、エディタ実行では通知が飛ぶのに
+> **書き出した版でだけ飛ばない**。実際にこれで unityroom 版の通知が一度も
+> 届いていなかった。確認は
+> `python -c "print(b'discord_webhook' in open('build/web/index.pck','rb').read())"` で足りる。
 
 **クライアントへ埋めるのはWebhookに限り、Botトークンは絶対に置かない。**Webhookは
 「そのチャンネルへ投稿する」以外に何もできないが、Botトークンはサーバーの操作権限を

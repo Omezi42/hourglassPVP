@@ -30,6 +30,7 @@ const VARIANTS: Array = [
 	["sweep", "wall", 0.62, 1.1, 0.04, 0.38],
 	["grain", "sand", 0.28, 1.05, 0.18, 0.0],
 	["dust", "sand", 0.80, 0.28, 0.18, 0.0],
+	["sprout", "grain", 0.94, 1.0, 0.18, 0.0],
 ]
 
 

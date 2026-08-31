@@ -35,6 +35,12 @@ const DETAIL_MARGIN := 12.0
 ## ホバーを外してから消すまでの猶予。カードとパネルの間をカーソルが通るため。
 const DETAIL_HIDE_DELAY := 0.12
 const ACTION_BUTTON_SIZE := Vector2(148, 48)
+## 反転は行動の列ではなく、選んだ駒のすぐ下へ出す(GameDesign.md 9章)。
+## **上ではなく下へ出す**のは、自分の場の上が相手の場であり、上へ出すと
+## 相手の駒へ重なるため。駒の下端と自分の情報帯のあいだへちょうど収まる
+## 高さにして、HP・マナ・山札を隠さない。
+const FLIP_BUTTON_SIZE := Vector2(104, 30)
+const FLIP_BUTTON_OVERLAP := 2.0
 const LOG_BUTTON_SIZE := Vector2(148, 44)
 const LOG_BUTTON_TOP := 546.0
 ## リプレイ・観戦のときだけ出す戻るボタン。行動の列の先頭に置く。
@@ -180,74 +186,6 @@ func start_tutorial_match() -> void:
 	_tutorial.watch(state, my_side)
 
 
-## オンライン対戦を開始する。配置フェーズは無く、デッキと山札の種を交換したら
-## そのまま対局へ入る(GameDesign.md 2章・11章)。
-func start_online_match(
-	deck_self: Array,
-	client: FirestoreClient,
-	p_match_id: String,
-	p_my_side: int,
-	is_room: bool = false,
-	opponent_uid: String = ""
-) -> void:
-	_reset_for_new_match()
-	_cpu = null
-	_interactive = true
-	_match_kind = CurrencyRules.MatchKind.ROOM if is_room else CurrencyRules.MatchKind.RANDOM
-	my_side = p_my_side
-	_own_deck = deck_self
-	_apply_player_names(client, opponent_uid)
-	_status.set_waiting("対戦相手を待っています")
-	var rng := RandomNumberGenerator.new()
-	rng.randomize()
-	var seed_value := rng.randi_range(1, 1 << 30)
-	_client = client
-	_match_id = p_match_id
-	_setup = OnlineSetup.new(client, p_match_id, p_my_side)
-	add_child(_setup)
-	await _setup.push_setup(CardLibrary.ids_from_deck(deck_self), seed_value)
-	var result: Dictionary = await _setup.wait_for_opponent_setup(seed_value)
-	var opponent_ids: Array = result["deck"]
-	if opponent_ids.is_empty():
-		_status.set_waiting(_setup.abort_message())
-		return
-	_status.set_waiting("")
-	var opponent_deck := CardLibrary.deck_from_ids(opponent_ids)
-	_begin_state(
-		deck_self if p_my_side == MatchState.Side.A else opponent_deck,
-		opponent_deck if p_my_side == MatchState.Side.A else deck_self,
-		int(result["seed"]),
-		true
-	)
-	_online = OnlineMatch.new(client)
-	add_child(_online)
-	_online.action_received.connect(_on_action_received)
-	_online.start(p_match_id)
-	# 切断しても同じ対局へ戻れるようにする(GameDesign.md 11章)。
-	OnlineResume.remember(p_match_id, p_my_side, is_room, opponent_uid)
-	# マリガンは手と同じ `actions` として送り合う(GameDesign.md 2章)。両者の確定が
-	# 揃うまで対局は始まらないため、持ち時間はここを抜けてから動かし始める。
-	if state.mulligan_pending:
-		_mulligan.show_hand(state.hand[my_side])
-		await state.mulligan_finished
-	# 持ち時間はオンライン対戦だけが使う(GameDesign.md 13章)。
-	_clock = MatchClock.new()
-	_clock.time_out.connect(_on_local_timeout)
-	_clock.start_turn(state.current_turn)
-	set_process(true)
-
-
-## 対戦相手の表示名を出す(GameDesign.md 14章)。取得できなければ既定の「相手」のまま。
-func _apply_player_names(client: FirestoreClient, opponent_uid: String) -> void:
-	_own_bar.display_name = AccountService.display_name()
-	if opponent_uid.is_empty():
-		return
-	var name: String = await AccountService.fetch_display_name(client, opponent_uid)
-	if not name.is_empty():
-		_foe_bar.display_name = name
-	refresh()
-
-
 ## 自分の持ち時間が尽きた。切れた本人が申告する(GameDesign.md 11章)。
 func _on_local_timeout(_side: int) -> void:
 	if state != null and not state.is_match_over():
@@ -290,82 +228,6 @@ func _on_action_received(action: Dictionary) -> void:
 	if _clock != null and state != null and not state.is_match_over():
 		_clock.start_turn(state.current_turn)
 	_finish_action()
-
-
-## 切断した対局へ戻る(GameDesign.md 11章)。局面は保存しておらず、
-## `matches/{id}` に残る「デッキ・山札の種・指した手の並び」から作り直す
-## (リプレイ・観戦と同じ経路)。終わっている対局へは戻さない。
-func resume_online_match(client: FirestoreClient, record: Dictionary) -> bool:
-	var match_id: String = record.get("match_id", "")
-	var p_my_side: int = int(record.get("side", MatchState.Side.A))
-	_reset_for_new_match()
-	_cpu = null
-	_interactive = true
-	_match_kind = (
-		CurrencyRules.MatchKind.ROOM
-		if bool(record.get("is_room", false))
-		else CurrencyRules.MatchKind.RANDOM
-	)
-	my_side = p_my_side
-	_apply_player_names(client, record.get("opponent_uid", ""))
-	var doc: Dictionary = await client.get_document("matches/%s" % match_id)
-	var deck_a := CardLibrary.deck_from_ids(doc.get("deck_a", []))
-	var deck_b := CardLibrary.deck_from_ids(doc.get("deck_b", []))
-	if deck_a.size() != MatchState.DECK_SIZE or deck_b.size() != MatchState.DECK_SIZE:
-		OnlineResume.clear()
-		_status.set_waiting("前回の対局は見つかりませんでした")
-		return false
-	_own_deck = deck_a if p_my_side == MatchState.Side.A else deck_b
-	var actions: Array = doc.get("actions", [])
-	_begin_state(deck_a, deck_b, int(doc.get("seed", 0)), MatchAction.contains_mulligan(actions))
-	for action in actions:
-		MatchAction.apply(state, action)
-	if state.is_match_over() or doc.has("finished_at"):
-		OnlineResume.clear()
-		_status.set_waiting("前回の対局は既に終わっています")
-		return false
-	refresh()
-	_client = client
-	_match_id = match_id
-	_online = OnlineMatch.new(client)
-	add_child(_online)
-	_online.action_received.connect(_on_action_received)
-	_online.start(match_id, actions.size())
-	# 持ち時間はこちら側では初期値から数え直すが、**相手はこちらの残り時間を
-	# 自分の手元で減らし続けている**(GameDesign.md 11章)。したがって再読み込みで
-	# 時計を戻す抜け道にはならず、時間切れの判定は相手側が持つ。
-	_clock = MatchClock.new()
-	_clock.time_out.connect(_on_local_timeout)
-	_clock.start_turn(state.current_turn)
-	set_process(true)
-	return true
-
-
-## 観戦モードとして開始する(GameDesign.md 12章)。進行中の対局を第三者が見る。
-## 手を送らず、受け取って反映するだけ。観戦者のuidは対局者のどちらとも違うため、
-## OnlineMatch のポーリングは両者の手をそのまま配ってくる。
-func start_spectate(client: FirestoreClient, p_match_id: String) -> bool:
-	_reset_for_new_match()
-	_cpu = null
-	_interactive = false
-	my_side = MatchState.Side.A
-	var record: Dictionary = await client.get_document("matches/%s" % p_match_id)
-	var deck_a := CardLibrary.deck_from_ids(record.get("deck_a", []))
-	var deck_b := CardLibrary.deck_from_ids(record.get("deck_b", []))
-	if deck_a.size() != MatchState.DECK_SIZE or deck_b.size() != MatchState.DECK_SIZE:
-		_status.set_waiting("この対局はまだ始まっていません")
-		return false
-	var actions: Array = record.get("actions", [])
-	_begin_state(deck_a, deck_b, int(record.get("seed", 0)), MatchAction.contains_mulligan(actions))
-	# 既に進んでいる手をまとめて追いつかせてから、以降をポーリングで受け取る。
-	for action in actions:
-		MatchAction.apply(state, action)
-	refresh()
-	_online = OnlineMatch.new(client)
-	add_child(_online)
-	_online.action_received.connect(_on_action_received)
-	_online.start(p_match_id, actions.size())
-	return true
 
 
 ## リプレイ再生モードとして開始する(GameDesign.md 12章)。
@@ -456,9 +318,8 @@ func _build() -> void:
 		view.mouse_exited.connect(_hide_detail_soon)
 		add_child(view)
 		_hand_views.append(view)
-	# 行動のボタンは盤面と重ならないよう画面右の列にまとめる。
-	_flip_button = _add_button("反転", ACTION_BUTTON_SIZE)
-	_flip_button.position = Vector2(ACTION_COLUMN_X, 306)
+	# 反転だけは選んだ駒のすぐ下へ出す。位置は `_refresh_buttons()` が毎回決める。
+	_flip_button = _add_button("反転", FLIP_BUTTON_SIZE)
 	_flip_button.visible = false
 	_flip_button.pressed.connect(_on_flip_pressed)
 	_coin_button = _add_button("コイン", ACTION_BUTTON_SIZE)
@@ -643,6 +504,15 @@ func _refresh_buttons() -> void:
 		_selection.is_board_selection() and _my_turn() and state.can_flip(my_side, _selection.slot)
 	)
 	_flip_button.visible = show_flip
+	if show_flip:
+		_flip_button.position = _flip_button_position(_selection.slot)
+
+
+## 選んだ駒の真下。駒の中心へ横を揃え、下端へわずかに重ねて置く。
+func _flip_button_position(slot: int) -> Vector2:
+	var view: CardView = _own_slots[slot]
+	var x: float = view.position.x + (view.size.x - FLIP_BUTTON_SIZE.x) * 0.5
+	return Vector2(x, view.position.y + view.size.y - FLIP_BUTTON_OVERLAP)
 
 
 func _my_turn() -> bool:
