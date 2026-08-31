@@ -11,6 +11,7 @@ signal spectate_requested(match_id: String)
 signal cpu_match_requested
 signal tutorial_requested
 signal rules_requested
+signal screen_guide_requested
 signal keyword_dict_requested
 signal random_match_deck_requested
 signal create_room_deck_requested
@@ -135,6 +136,7 @@ func _build_rules_tab() -> void:
 	_rules_tab.visible = false
 	_rules_tab.tutorial_requested.connect(func() -> void: tutorial_requested.emit())
 	_rules_tab.rules_requested.connect(func() -> void: rules_requested.emit())
+	_rules_tab.screen_guide_requested.connect(func() -> void: screen_guide_requested.emit())
 	_rules_tab.keyword_dict_requested.connect(func() -> void: keyword_dict_requested.emit())
 	deck_tab.get_parent().add_child(_rules_tab)
 	# タブの中身が背面へ回らないよう、既存のタブと同じ並びへ入れる。

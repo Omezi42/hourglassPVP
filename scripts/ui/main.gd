@@ -7,6 +7,7 @@ const SCREEN_FADE_DURATION := 0.18
 ## v5.0の対局画面(子がすべてコード描画のControlで .tscn を持たないため _ready() で生成する)。
 var card_match_screen: CardMatchScreen
 var rule_screen: RuleScreen
+var screen_guide_screen: ScreenGuideScreen
 var keyword_dict_screen: KeywordDictScreen
 ## v5.0のデッキ編集画面(同上)。
 var card_deck_editor_screen: CardDeckEditorScreen
@@ -77,6 +78,12 @@ func _ready() -> void:
 	add_child(rule_screen)
 	rule_screen.back_pressed.connect(func() -> void: _show_only(home_screen))
 	_screens.append(rule_screen)
+	screen_guide_screen = ScreenGuideScreen.new()
+	screen_guide_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
+	screen_guide_screen.visible = false
+	add_child(screen_guide_screen)
+	screen_guide_screen.back_pressed.connect(func() -> void: _show_only(home_screen))
+	_screens.append(screen_guide_screen)
 	keyword_dict_screen = KeywordDictScreen.new()
 	keyword_dict_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
 	keyword_dict_screen.visible = false
@@ -104,6 +111,7 @@ func _ready() -> void:
 	home_screen.hourglass_list_requested.connect(_on_hourglass_list_requested)
 	home_screen.tutorial_requested.connect(_on_tutorial_requested)
 	home_screen.rules_requested.connect(_on_rules_requested)
+	home_screen.screen_guide_requested.connect(_on_screen_guide_requested)
 	home_screen.keyword_dict_requested.connect(func() -> void: _show_only(keyword_dict_screen))
 	home_screen.replay_list_requested.connect(_on_replay_list_requested)
 	home_screen.spectate_requested.connect(_on_spectate_requested)
@@ -233,6 +241,12 @@ func _on_tutorial_requested() -> void:
 func _on_rules_requested() -> void:
 	rule_screen.restart()
 	_show_only(rule_screen)
+
+
+## 画面の見かた(GameDesign.md 20章)。進捗は保存しないため、開くたび先頭へ戻す。
+func _on_screen_guide_requested() -> void:
+	screen_guide_screen.restart()
+	_show_only(screen_guide_screen)
 
 
 ## オンライン対戦(v5.0)。配置フェーズが無いため、デッキと山札の種を交換したら

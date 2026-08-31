@@ -211,7 +211,21 @@ func _build_summon(cards: Array) -> Vector2:
 ## 6枠ずつの盤面と情報帯。`MatchState` を実際に作ってから、盤面とHPだけ教材用の局面へ
 ## 差し替える(`PlayerInfoBar.show_state()` が `MatchState` を要るため)。
 func _build_board() -> Vector2:
+	return _compose_board(DEMO_UNITS_SELF, DEMO_UNITS_FOE)["size"]
+
+
+## 情報帯・卓・12枠を組む。**「画面の見かた」(GameDesign.md 20章)も同じ盤面を使う**ため、
+## 駒の中身を引数で受け取り、組み上がった部品を返す(`ScreenGuideStage` が装飾を足す)。
+func _compose_board(self_specs: Array, foe_specs: Array) -> Dictionary:
 	var state := _demo_state()
+	for entry in [[MatchState.Side.A, self_specs], [MatchState.Side.B, foe_specs]]:
+		var side: int = entry[0]
+		var slots: Array = state.board[side]
+		for i in MatchState.BOARD_SIZE:
+			slots[i] = null
+		var specs: Array = entry[1]
+		for i in specs.size():
+			slots[i] = _make_unit(specs[i])
 	var slot_pitch: float = CardView.BOARD_SIZE_PX.x + BOARD_SLOT_GAP
 	var row_width: float = slot_pitch * MatchState.BOARD_SIZE - BOARD_SLOT_GAP
 	var width: float = maxf(row_width + BOARD_ROW_INSET * 2.0, BOARD_TABLE_SIZE.x)
@@ -226,11 +240,13 @@ func _build_board() -> Vector2:
 	table.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_content.add_child(table)
 
+	var rows := {}
 	var row_gap: float = (BOARD_TABLE_SIZE.y - CardView.BOARD_SIZE_PX.y * 2.0) / 3.0
 	for side in [MatchState.Side.B, MatchState.Side.A]:
 		var row: float = 0.0 if side == MatchState.Side.B else 1.0
 		var y: float = foe_bar.size.y + row_gap + (CardView.BOARD_SIZE_PX.y + row_gap) * row
 		var slots: Array = state.board[side]
+		var placed: Array[CardView] = []
 		for i in MatchState.BOARD_SIZE:
 			var view := CardView.new()
 			view.position = Vector2(row_x + slot_pitch * float(i), y)
@@ -241,10 +257,18 @@ func _build_board() -> Vector2:
 				view.clear()
 			else:
 				view.show_unit(slots[i])
+			placed.append(view)
+		rows[side] = placed
 
 	var bottom: float = foe_bar.size.y + BOARD_TABLE_SIZE.y
 	var own_bar := _make_info_bar(state, MatchState.Side.A, false, bar_width, bottom)
-	return Vector2(bar_width, bottom + own_bar.size.y)
+	return {
+		"size": Vector2(bar_width, bottom + own_bar.size.y),
+		"state": state,
+		"rows": rows,
+		"bars": {MatchState.Side.A: own_bar, MatchState.Side.B: foe_bar},
+		"table": Rect2(table.position, table.size),
+	}
 
 
 func _make_info_bar(

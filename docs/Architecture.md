@@ -624,7 +624,7 @@ pckから除外した後も true を返すことがあり、有無の判定に�
 | `RulePages`(`scripts/ui/rule_pages.gd`, static) | 紙芝居の中身。章・見出し・本文・盤面の種類を Dictionary の配列として1箇所へ持つ |
 | `RuleStage`(`scripts/ui/rule_stage.gd`, Control) | 1ページ分の盤面。`RulePages` の指定に従って `CardView` 等を並べ、`play()` で演出を再生する |
 | `RuleScreen`(`scripts/ui/rule_screen.gd`, Control) | 目次・本文・`RuleStage`・ページ送りを並べる画面 |
-| `RulesTab`(`scripts/ui/rules_tab.gd`, Control) | ホーム画面の「ルール」タブ。`RuleScreen` への入口だけを持つ |
+| `RulesTab`(`scripts/ui/rules_tab.gd`, Control) | ホーム画面の「ルール」タブ。**「遊んで覚える」と「読んで覚える」の2つの枠**に分け、入口だけを持つ(GameDesign.md 9章) |
 
 **盤面は `CardView` / `BoardTable` / `PlayerInfoBar` / `CardInstance` / `MatchState` を
 そのまま使う。**ルール画面専用の描画を1つも書かないことが要件で、教材用の絵を別に持つと
@@ -678,6 +678,35 @@ pckから除外した後も true を返すことがあり、有無の判定に�
 決まっているためその手前へ入る。
 
 ---
+
+---
+
+### 4.4 画面の見かた(GameDesign.md 20章)
+
+| クラス | 責務 |
+|---|---|
+| `ScreenGuideEntries`(`scripts/ui/screen_guide_entries.gd`, static) | 項目の表(光らせる場所の名前・見出し・説明)。**9章で決めた表示の約束を引き写す**だけの場所で、新しい取り決めを作らない |
+| `ScreenGuideStage`(`scripts/ui/screen_guide_stage.gd`, `extends RuleStage`) | 見せる盤面。`RuleStage._compose_board()` に手札・行動の列・駒の状態を足し、**光らせる場所を組み立てながら控える** |
+| `ScreenGuideScreen`(`scripts/ui/screen_guide_screen.gd`) | 左=項目の一覧 / 中央=盤面 / 下=説明。共通の `ScreenHeader` を使う |
+
+**`RuleStage` を継承して盤面を共有する。**ルール画面(4.2節)と同じく
+「専用の説明図を作らない」ことが要件のため、情報帯・卓・12枠の組み立ては
+`_compose_board()` として切り出して両者で使う(以前は `_build_board()` が
+第7章の局面を直に組んでいた)。
+
+**光らせる場所は表に持たず、組み立てながら `_mark()` で控える。**座標を別の表に
+書くと、配置を変えたときに黙ってずれる。`region()` が `_content` の座標を
+拡縮後の位置へ移して返す。
+
+**光る枠は盤面より手前の独立したオーバーレイに描く**(`Control._draw()` は自分の子より
+背面に描かれるため。11章)。**周りを暗幕で落とす案は採らない**。光らせる場所は
+「上下2本の情報帯」のように離れて複数あることがあり、その外側だけを塗るには盤面を
+格子状に走査することになる(毎フレーム数千の矩形を描くことになり割に合わない)。
+代わりに外へ広がる輪を3重に重ねる。
+
+**教材の盤面では、最初の `PlayerInfoBar.show_state()` を被弾として演出しない。**
+初期値30から教材用のHPへ差し替えるため、そのままだと開いた瞬間に「-6」が浮く
+(ルール画面の第7章でも同じことが起きていた)。
 
 ---
 
@@ -1174,6 +1203,9 @@ Base64 にする。`HG1-` の接頭辞を付け、先頭2バイトに展開後�
 - **`Control._draw()` は自分の子より背面に描かれる。**画面側で描いた線は子ノードに隠れる。
   手前に出したいものは独立したオーバーレイのノードにする
 - **後から `add_child()` した子ほど手前に描かれる。**モーダル・暗幕は最後の子へ置く
+- **`Label.autowrap_mode` は `size` より先に立てる。**折り返しが無効なあいだ Label の
+  最小幅は文章そのものの幅であり、`Control` はそれより小さくならない。後から折り返しを
+  有効にしても既に広がった `size` は戻らず、狭い欄に置いた説明文どうしが重なる
 - **`MOUSE_FILTER_PASS` はイベントを背面の兄弟ではなく親へ渡す。**全面に敷いた
   `MarginContainer` より前の子は、ホバーを奪われて押せなくなる
 - **`ResourceLoader.exists()` は pck から除外した後も true を返すことがある**(実測)。

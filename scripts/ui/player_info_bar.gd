@@ -63,6 +63,8 @@ var _flash := 0.0
 var _float_amount := 0
 var _float_left := 0.0
 var _hp_tween: Tween
+## 一度でも状態を受け取ったか。初回の差し替えを被弾として見せないために持つ。
+var _initialized := false
 ## 山札の脈打ちの強さと色。疲労だけ赤にして、ドローと区別する。
 var _deck_pulse := 0.0
 var _deck_pulse_color := UiPalette.GLOW_AMBER
@@ -81,7 +83,12 @@ func _ready() -> void:
 func show_state(state: MatchState, side: int) -> void:
 	var previous := _hp
 	_hp = state.hp[side]
-	if previous != _hp:
+	# **最初の1回は演出しない。**教材の盤面(ルール画面・画面の見かた)は初期値30から
+	# 教材用のHPへ差し替えるため、そのままだと開いた瞬間に「-6」が浮いてしまう。
+	if not _initialized:
+		_initialized = true
+		_shown_hp = float(_hp)
+	elif previous != _hp:
 		_animate_hp(previous)
 	_mana = state.mana[side]
 	_max_mana = state.max_mana[side]
