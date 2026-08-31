@@ -9,6 +9,9 @@ signal failed(reason: String)
 ## 黙って待ち続けると「マッチングしない不具合」にしか見えないため画面へ返す。
 ## `newer_exists` は、自分より新しい版の相手がいた(=自分が古い)ことを表す。
 signal version_mismatch(newer_exists: bool)
+## 募集をDiscordへ知らせられたかどうか(GameDesign.md 11章)。届かなかったことを
+## 黙って落とすと、待っている側には「誰も来ない」としか見えない。
+signal announce_result(ok: bool)
 
 const COLLECTION := "matchmaking_queue"
 const POLL_INTERVAL_SECONDS := 2.0
@@ -19,10 +22,16 @@ const STALE_SECONDS := 60.0
 ## 待機中に自分のjoined_atを更新する間隔。更新はupdateTimeを変えるため、相手のclaimの
 ## 前提条件を無効化してしまう。ポーリング間隔より十分長くして衝突を避ける。
 const HEARTBEAT_SECONDS := 20.0
+## 募集の知らせが届かなかったときに、次を試すまでの間隔。ポーリングのたびに
+## 試すと失敗が続く場面で送信が積み上がるため、少し置いてから試し直す。
+const ANNOUNCE_RETRY_SECONDS := 30.0
 
 var client: FirestoreClient
 var auth: FirebaseAuth
 var _my_match_id: String = ""
+## 募集の知らせが届いたか。届くまでは間を置いて試し直す(GameDesign.md 11章)。
+var _announced := false
+var _announce_next_at := 0.0
 var _cancelled := false
 
 
@@ -34,6 +43,8 @@ func _init(p_client: FirestoreClient, p_auth: FirebaseAuth) -> void:
 func join() -> void:
 	_cancelled = false
 	_my_match_id = ""
+	_announced = false
+	_announce_next_at = 0.0
 	var joined: bool = await client.set_document(
 		_doc_path(),
 		{
@@ -47,7 +58,6 @@ func join() -> void:
 		return
 
 	var last_heartbeat := Time.get_unix_time_from_system()
-	var announced := false
 	while not _cancelled and _my_match_id == "":
 		var found: bool = await _try_claim_or_check()
 		if found or _cancelled:
@@ -55,13 +65,26 @@ func join() -> void:
 		# ここへ来た時点で「待機側になった」ことが確定する。即座にマッチが成立した
 		# 場合は上で return しているため、条件分岐を足さずに仕様を満たせる。
 		# 応答は待たない(通信の成否でポーリングを遅らせないため)
-		if not announced and QueueNotifier.can_send():
-			announced = true
-			QueueNotifier.notify_waiting(self)
+		if not _announced and _now() >= _announce_next_at and QueueNotifier.can_send():
+			# **届くまで諦めない。**以前は1回試して終わりで、失敗しても画面には
+			# 何も出ず、待っている側には「誰も来ない」としか見えなかった。
+			_announce_next_at = _now() + ANNOUNCE_RETRY_SECONDS
+			QueueNotifier.notify_waiting(self, _on_announced)
 		if Time.get_unix_time_from_system() - last_heartbeat >= HEARTBEAT_SECONDS:
 			last_heartbeat = Time.get_unix_time_from_system()
 			await client.set_document(_doc_path(), {"joined_at": last_heartbeat})
 		await get_tree().create_timer(POLL_INTERVAL_SECONDS).timeout
+
+
+## 送信の結果を画面へ返す。届いたらそれ以上は送らない(待っている間ずっと
+## 2分おきに知らせ続けると、通知そのものを切られてしまう)。
+func _on_announced(ok: bool) -> void:
+	_announced = _announced or ok
+	announce_result.emit(ok)
+
+
+func _now() -> float:
+	return Time.get_unix_time_from_system()
 
 
 func cancel() -> void:

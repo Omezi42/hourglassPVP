@@ -202,6 +202,7 @@ func begin_random_match() -> void:
 	_queue.matched.connect(_on_matched)
 	_queue.failed.connect(_fail)
 	_queue.version_mismatch.connect(_on_version_mismatch)
+	_queue.announce_result.connect(_on_announce_result)
 	_queue.join()
 
 
@@ -279,6 +280,16 @@ func _on_spectate_ready(match_id: String) -> void:
 	_stop_busy_dots()
 	status_label.text = "観戦を開始します"
 	spectate_requested.emit(match_id)
+
+
+## 募集をDiscordへ知らせられたかどうか(GameDesign.md 11章)。**届かなかったことを
+## 黙って落とさない。**通知は「いま遊べる人を呼ぶ」ための唯一の手段であり、飛んで
+## いないことに気づけないと、待っている側には「誰も来ない」としか見えない。
+func _on_announce_result(ok: bool) -> void:
+	if ok:
+		_set_status("コミュニティへ募集を知らせました。マッチング中")
+	else:
+		_set_status("募集の知らせを送れませんでした。マッチング中")
 
 
 ## 待機者はいたが全員バージョンが違った(GameDesign.md 11章)。待機自体は続けるので、

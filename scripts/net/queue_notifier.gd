@@ -20,6 +20,8 @@ const WEBHOOK_FILE := "res://data/discord_webhook.txt"
 ## 再読み込みした場合を想定したもので、全体の頻度を抑えるものではない
 const REPEAT_GUARD_SECONDS := 120.0
 const TIMEOUT_SECONDS := 8.0
+## 一度きりの知らせのため、通常の通信より粘る(HttpJson の既定は3回)。
+const RETRY_COUNT := 5
 ## サーバーのカスタム絵文字(すなえる)。Webhookからは `<:名前:id>` の形でしか出せない
 const SUNAERU_EMOJI := "<:sunaeru:1543231545706291312>"
 
@@ -35,11 +37,20 @@ static func can_send() -> bool:
 
 
 ## 応答は待たなくてよい。失敗しても対局は通常どおり続ける(Discordが落ちていても
-## ゲームは成立させる)。
-static func notify_waiting(host: Node) -> bool:
+## ゲームは成立させる)。ただし**黙って落とさない**。届いたかどうかを `on_done` へ
+## 返し、呼び出し側が画面へ出せるようにする(GameDesign.md 11章)。
+##
+## **送信の土台は `host` ではなくシーンツリーのルートにする。**`MatchmakingQueue` は
+## 対局が成立した時点でもキャンセルした時点でも `queue_free()` されるため、そこへ
+## HTTPRequest をぶら下げると送信の途中で巻き添えに消える。画面には何も出ないため、
+## 「通知だけが飛ばない」という形でしか気づけない。
+static func notify_waiting(host: Node, on_done: Callable = Callable()) -> bool:
 	var url := _webhook_url()
 	if url == "" or not can_send():
+		if on_done.is_valid():
+			on_done.call(false)
 		return false
+	# 送る前に印を付けるのは、同時に2回走らせないため。失敗したときは下で戻す。
 	_last_sent_at = _now()
 
 	var body := (
@@ -53,16 +64,25 @@ static func notify_waiting(host: Node) -> bool:
 			}
 		)
 	)
-	var result: Array = await HttpJson.request(
-		host,
+	var result: Array = await HttpJson.request_with_retry(
+		host.get_tree().root,
 		url,
 		HTTPClient.METHOD_POST,
 		PackedStringArray(["Content-Type: application/json"]),
 		body,
-		TIMEOUT_SECONDS
+		TIMEOUT_SECONDS,
+		RETRY_COUNT
 	)
 	var code := int(result[0])
-	return code >= 200 and code < 300
+	var ok := code >= 200 and code < 300
+	if not ok:
+		# **失敗したまま2分の間隔だけが残ると、入り直しても二度と飛ばなくなる。**
+		# 連投を抑える仕組みが、届かなかったときにそのまま封じる仕組みとして
+		# 働いていた。届かなかったのなら次の機会は空けておく。
+		_last_sent_at = -REPEAT_GUARD_SECONDS * 2.0
+	if on_done.is_valid():
+		on_done.call(ok)
+	return ok
 
 
 ## 1行だけの知らせ。すなえるが話しているように書く。
