@@ -287,7 +287,8 @@ func _on_spectate_ready(match_id: String) -> void:
 ## いないことに気づけないと、待っている側には「誰も来ない」としか見えない。
 func _on_announce_result(ok: bool) -> void:
 	if ok:
-		_set_status("コミュニティへ募集を知らせました。マッチング中")
+		# 届いたときは何も足さない。待っていることだけを出す
+		_set_status("マッチング中")
 	else:
 		_set_status("募集の知らせを送れませんでした。マッチング中")
 

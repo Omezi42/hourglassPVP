@@ -16,24 +16,21 @@ extends RefCounted
 ## サーバーの操作権限を持つため、pckから取り出された時点でサーバーごと失われる)。
 
 const WEBHOOK_FILE := "res://data/discord_webhook.txt"
-## 同じプレイヤーの連投だけをまとめる間隔。キャンセルして入り直した場合や
-## 再読み込みした場合を想定したもので、全体の頻度を抑えるものではない
-const REPEAT_GUARD_SECONDS := 120.0
 const TIMEOUT_SECONDS := 8.0
 ## 一度きりの知らせのため、通常の通信より粘る(HttpJson の既定は3回)。
 const RETRY_COUNT := 5
 ## サーバーのカスタム絵文字(すなえる)。Webhookからは `<:名前:id>` の形でしか出せない
 const SUNAERU_EMOJI := "<:sunaeru:1543231545706291312>"
 
-static var _last_sent_at := -REPEAT_GUARD_SECONDS * 2.0
 
-
-## 送れる状態かどうか(Webhookが設定済みで、連投の間隔も空いている)。
-## 実際に送る前に画面へ知らせるため、消費せずに判定できる形で分けている。
+## 送れる状態かどうか(Webhookが設定済みかどうか)。実際に送る前に画面へ
+## 知らせるため、消費せずに判定できる形で分けている。
+##
+## **短い間に何度キューへ入り直しても、そのつど送る**(GameDesign.md 11章)。
+## 以前は同じプレイヤーの連投を2分まとめていたが、1行で済む知らせであり、
+## 間引いて「いま人がいる」という情報の鮮度を落とすほうが損になる。
 static func can_send() -> bool:
-	if _webhook_url() == "":
-		return false
-	return _now() - _last_sent_at >= REPEAT_GUARD_SECONDS
+	return _webhook_url() != ""
 
 
 ## 応答は待たなくてよい。失敗しても対局は通常どおり続ける(Discordが落ちていても
@@ -46,12 +43,10 @@ static func can_send() -> bool:
 ## 「通知だけが飛ばない」という形でしか気づけない。
 static func notify_waiting(host: Node, on_done: Callable = Callable()) -> bool:
 	var url := _webhook_url()
-	if url == "" or not can_send():
+	if url == "":
 		if on_done.is_valid():
 			on_done.call(false)
 		return false
-	# 送る前に印を付けるのは、同時に2回走らせないため。失敗したときは下で戻す。
-	_last_sent_at = _now()
 
 	var body := (
 		JSON
@@ -75,11 +70,6 @@ static func notify_waiting(host: Node, on_done: Callable = Callable()) -> bool:
 	)
 	var code := int(result[0])
 	var ok := code >= 200 and code < 300
-	if not ok:
-		# **失敗したまま2分の間隔だけが残ると、入り直しても二度と飛ばなくなる。**
-		# 連投を抑える仕組みが、届かなかったときにそのまま封じる仕組みとして
-		# 働いていた。届かなかったのなら次の機会は空けておく。
-		_last_sent_at = -REPEAT_GUARD_SECONDS * 2.0
 	if on_done.is_valid():
 		on_done.call(ok)
 	return ok
@@ -101,10 +91,6 @@ static func build_line() -> String:
 	if version != "":
 		line += " ・ v%s" % version
 	return line
-
-
-static func _now() -> float:
-	return Time.get_ticks_msec() / 1000.0
 
 
 static func _webhook_url() -> String:
