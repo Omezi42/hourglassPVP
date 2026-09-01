@@ -36,8 +36,10 @@ v5.0のカードが使う語彙を1箇所へ集める。旧ルールの `GameEnu
 | `Keyword` | `GUARD`(守護)/ `GLASS`(硝子)/ `PIERCE`(貫通)/ `POISON`(毒砂)/ `LIFESTEAL`(吸命)/ `DOUBLE_STRIKE`(連撃)/ `QUICK`(速落) |
 | `NAMED`(const) | **語として見せる**キーワード。`GUARD` / `GLASS` / `PIERCE` / `QUICK` の4つ |
 | `Trigger` | `ON_PLAY`(設置)/ `ON_FLIP`(反転)/ `ON_DEATH`(余砂)/ `ON_TURN_END`(落砂)/ `ON_DAMAGED`(被弾) |
-| `EffectTarget` | `SELF` / `ENEMY_UNIT` / **`ALLY_UNIT`** / `ALL_ENEMY_UNITS` / `ALL_ALLY_UNITS` / `OPPONENT_PLAYER` / `OWN_PLAYER` |
-| `EffectType` | `DAMAGE_PLAYER` / `DAMAGE_UNIT` / `DESTROY_UNIT` / `SWAP_STATS` / `ADD_TOTAL` / **`ADD_ATTACK`** / `DROP_SAND` / `DRAW` / `HEAL_PLAYER` / `DAMAGE_PLAYER_PER_ENEMY_UNIT` / **`SUMMON`** / **`GRANT_KEYWORD`** / **`SILENCE`** |
+| `EffectTarget` | `SELF` / `ENEMY_UNIT` / `ALL_ENEMY_UNITS` / `ALL_ALLY_UNITS` / `OPPONENT_PLAYER` / `OWN_PLAYER` / **`ALLY_UNIT`** |
+| `EffectType` | `DAMAGE_PLAYER` / `DAMAGE_UNIT` / `DESTROY_UNIT` / `SWAP_STATS` / `ADD_TOTAL` / `DROP_SAND` / `DRAW` / `HEAL_PLAYER` / `DAMAGE_PLAYER_PER_ENEMY_UNIT` / **`ADD_ATTACK`** / **`SUMMON`** / **`GRANT_KEYWORD`** / **`SILENCE`** |
+
+**`CardEnums` の enum へ新しい値を足すときは、必ず末尾へ置く**(下記11章)。
 
 `keyword_name()` / `trigger_name()` は GameDesign.md 6章の日本語表記を返す。表示名を
 UI側に散らさないため、語と enum の対応はここだけが持つ。
@@ -1417,6 +1419,17 @@ UI層へ依存することになる。
 - **エクスポート済みpckに対しても回す**
   (`godot --headless --main-pack build/web/index.pck --script res://tools/tests/run_tests.gd`)。
   `.tres` が `.tres.remap` になることに起因するパス解決の差異は、これでしか出ない
+
+### データとコードの境目
+
+- **`CardEnums` の enum の並びは保存データである。**`.tres` は enum を整数で保存するため、
+  途中へ値を挿入すると**既存のカードの効果・対象・トリガーが丸ごとずれる**。
+  実際に `ADD_ATTACK` を `ADD_TOTAL` の隣へ入れたところ、エコーのドローが砂落としになり、
+  スイープの全体除去が別の対象になった。**新しい値は必ず末尾へ足す。**
+  並びの読みやすさより、保存済みの `.tres` との整合を優先する
+- **`.tres` から読んだ `CardData` を書き換えない。**`load()` は同じインスタンスを返すため、
+  対局中に書き換えるとその版の全対局(リプレイ・シミュレーションを含む)へ残る。
+  キーワードの付与・消去は `CardInstance` 側の `granted_keywords` / `silenced` で持つ
 
 ### GDScript
 

@@ -27,6 +27,8 @@ enum Keyword {
 }
 
 ## トリガーキーワード(GameDesign.md 6章)。
+##
+## **新しい値は必ず末尾へ足す**(EffectTarget と同じ理由)。
 enum Trigger {
 	## 設置:場に出したとき。
 	ON_PLAY,
@@ -34,9 +36,17 @@ enum Trigger {
 	ON_FLIP,
 	## 余砂:破壊されたとき。
 	ON_DEATH,
+	## 落砂:自分のターン終了時(砂が1粒落ちる瞬間)。
+	ON_TURN_END,
+	## 被弾:ダメージを受けたとき。硝子で無効化された場合は発動しない。
+	ON_DAMAGED,
 }
 
 ## エフェクトの対象。
+##
+## **新しい値は必ず末尾へ足す。**`.tres` は enum を整数で保存しているため、
+## 途中へ挿入すると既存のカードの対象が丸ごとずれる(実際に一度やって、
+## 全体除去が単体ドローになった)。並びの美しさより保存済みデータとの整合を取る。
 enum EffectTarget {
 	## この効果を持つ砂時計自身。
 	SELF,
@@ -50,9 +60,13 @@ enum EffectTarget {
 	OPPONENT_PLAYER,
 	## 自分プレイヤー。
 	OWN_PLAYER,
+	## 自分の砂時計1体(選択)。
+	ALLY_UNIT,
 }
 
-## エフェクトの種類。新しいカードは原則この組み合わせだけで作る。
+## エフェクトの種類。
+##
+## **新しい値は必ず末尾へ足す**(EffectTarget と同じ理由)。
 enum EffectType {
 	## プレイヤーへ value ダメージ。
 	DAMAGE_PLAYER,
@@ -72,6 +86,14 @@ enum EffectType {
 	HEAL_PLAYER,
 	## 相手の砂時計の数 × value ダメージを相手プレイヤーへ。
 	DAMAGE_PLAYER_PER_ENEMY_UNIT,
+	## 攻撃力を value 増やす(下の部屋へ砂を足す。体力は変わらない)。
+	ADD_ATTACK,
+	## 空き枠へ card_id の砂時計を1体出す。空きが無ければ何もしない。
+	SUMMON,
+	## 対象へ keyword のキーワードを与える。
+	GRANT_KEYWORD,
+	## 対象のキーワードと効果をすべて消す。
+	SILENCE,
 }
 
 ## 語として見せるキーワード。**複数のカードに載っているものだけ**をここへ入れる。
@@ -147,4 +169,8 @@ static func trigger_name(trigger: int) -> String:
 			return "反転"
 		Trigger.ON_DEATH:
 			return "余砂"
+		Trigger.ON_TURN_END:
+			return "落砂"
+		Trigger.ON_DAMAGED:
+			return "被弾"
 	return ""

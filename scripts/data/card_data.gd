@@ -19,6 +19,12 @@ extends Resource
 @export var effects: Array[CardEffectData] = []
 ## 効果欄に出す一文。キーワードだけのカードは空でよい(キーワード名から自動生成する)。
 @export var rules_text: String = ""
+## 攻撃できない代わりに総量が大きい駒(GameDesign.md 6章)。反転はできる。
+## 守護と違い**語にしない**ため keywords ではなくフラグで持つ。
+@export var cannot_attack: bool = false
+## 効果で場に出る砂時計(トークン)。CardLibrary.all_cards() が返さないため、
+## デッキ編集にも砂時計一覧にも現れない。
+@export var is_token: bool = false
 
 @export_group("Icons")
 ## 体力が満ちている(=場に出た直後に近い)状態のイラスト。

@@ -7,8 +7,19 @@ const CARDS_DIR := "res://data/cards"
 static var _cache: Array[CardData] = []
 
 
-## 定義済みの全カード。id順に並ぶ。
+## 集められるカード。id順に並ぶ。**トークンは含まない**(GameDesign.md 6章)。
+## デッキ編集・砂時計一覧・CPUのデッキ生成は、いずれもこちらを使う。
 static func all_cards() -> Array[CardData]:
+	var found: Array[CardData] = []
+	for card in _load_all():
+		if not card.is_token:
+			found.append(card)
+	return found
+
+
+## トークンを含む定義のすべて。**効果から id で引くときだけ使う**
+## (SUMMON の出す先はトークンであり、all_cards() には出てこない)。
+static func _load_all() -> Array[CardData]:
 	if not _cache.is_empty():
 		return _cache
 	var dir := DirAccess.open(CARDS_DIR)
@@ -53,8 +64,9 @@ static func sorted_by_pool_index() -> Array[CardData]:
 	return cards
 
 
+## **トークンも引ける**。効果が id で参照するため、集められるカードだけに絞らない。
 static func find_by_id(id: String) -> CardData:
-	for card in all_cards():
+	for card in _load_all():
 		if card.id == id:
 			return card
 	return null

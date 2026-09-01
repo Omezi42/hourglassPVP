@@ -16,6 +16,12 @@ var flipped_this_turn: bool = false
 var attacks_this_turn: int = 0
 ## 硝子がまだ残っているか(最初の1回のダメージを無効にする)。
 var glass_intact: bool = false
+## 効果で後から与えられたキーワード。**CardData.keywords は書き換えない**。
+## .tres は load() が同じインスタンスを返すため、書き換えるとその版の全対局
+## (リプレイ・シミュレーションを含む)へ残ってしまう。
+var granted_keywords: Array[int] = []
+## 効果を消されたか。true の間はキーワードも効果も持たないものとして扱う。
+var silenced: bool = false
 
 
 func _init(p_data: CardData) -> void:
@@ -30,8 +36,49 @@ func total_sand() -> int:
 	return health + attack
 
 
+## **キーワードの問い合わせは必ずここを通す。**CardData を直接見ると、
+## 後から与えられたキーワードと、消された状態を取りこぼす。
 func has_keyword(keyword: int) -> bool:
-	return data.has_keyword(keyword)
+	if silenced:
+		return false
+	return data.has_keyword(keyword) or granted_keywords.has(keyword)
+
+
+## この砂時計が持っているキーワードすべて(表示用)。
+func keywords() -> Array:
+	if silenced:
+		return []
+	var found: Array = []
+	for keyword in data.keywords:
+		found.append(keyword)
+	for keyword in granted_keywords:
+		if not found.has(keyword):
+			found.append(keyword)
+	return found
+
+
+## trigger で発動する効果。消されている砂時計は何も返さない。
+func effects_for(trigger: int) -> Array[CardEffectData]:
+	var none: Array[CardEffectData] = []
+	if silenced:
+		return none
+	return data.effects_for(trigger)
+
+
+## キーワードを1つ与える。既に持っているものは重ねない。
+func grant_keyword(keyword: int) -> void:
+	if silenced or has_keyword(keyword):
+		return
+	granted_keywords.append(keyword)
+	if keyword == CardEnums.Keyword.GLASS:
+		glass_intact = true
+
+
+## キーワードと効果をすべて消す。硝子の膜も剥がれる。
+func silence() -> void:
+	silenced = true
+	granted_keywords.clear()
+	glass_intact = false
 
 
 ## 反転せずに寿命を全うするまでに与える総ダメージ(GameDesign.md 1章)。
@@ -46,6 +93,8 @@ func max_attacks() -> int:
 
 
 func can_attack() -> bool:
+	if data.cannot_attack:
+		return false
 	return not summoned_this_turn and attack > 0 and attacks_this_turn < max_attacks()
 
 

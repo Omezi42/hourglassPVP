@@ -232,6 +232,9 @@ func end_turn() -> void:
 	# 自分でターンを終えたなら席にいる。連続の時間切れは数え直す(GameDesign.md 5章)。
 	# **`time_up()` はこの後でカウントを書き戻す**ため、ここで消えても矛盾しない。
 	turn_forfeits[side] = 0
+	_resolve_turn_end_effects(side)
+	if _match_over:
+		return
 	for slot in BOARD_SIZE:
 		var unit: CardInstance = board[side][slot]
 		if unit == null:
@@ -530,6 +533,9 @@ func _resolve_unit_combat(side: int, slot: int, target_slot: int) -> void:
 		defender.health = 0
 	if dealt_to_attacker > 0 and defender.has_keyword(CardEnums.Keyword.POISON):
 		attacker.health = 0
+	# 被弾は毒砂まで解決してから。ここで生きている駒だけが発動できる。
+	_resolve_damaged(foe_side, defender, dealt_to_defender)
+	_resolve_damaged(side, attacker, dealt_to_attacker)
 
 
 ## 貫通:砂時計の体力を超えた分が相手プレイヤーへ抜ける。
@@ -568,6 +574,26 @@ func heal_player(side: int, amount: int) -> void:
 	hp_changed.emit(side, hp[side])
 
 
+## 落砂(GameDesign.md 6章):砂を1粒落とす**直前**に発動する。
+## 落とす前なのは、その1粒で壊れる駒にも最後の1回を働かせるため
+## (壊れたあとは余砂が受け持つ)。
+func _resolve_turn_end_effects(side: int) -> void:
+	for slot in BOARD_SIZE:
+		var unit: CardInstance = board[side][slot]
+		if unit == null:
+			continue
+		_effects.resolve(side, unit, CardEnums.Trigger.ON_TURN_END, {})
+	_cleanup_dead()
+
+
+## 被弾(GameDesign.md 6章):実際に砂を削れたときだけ発動する。
+## 硝子が吸った場合(dealt == 0)は発動せず、砕けた駒は余砂が受け持つ。
+func _resolve_damaged(side: int, unit: CardInstance, dealt: int) -> void:
+	if dealt <= 0 or unit.is_dead():
+		return
+	_effects.resolve(side, unit, CardEnums.Trigger.ON_DAMAGED, {})
+
+
 ## 砂時計へダメージを与える(設置効果などから使う)。
 func damage_unit(side: int, slot: int, amount: int) -> void:
 	var unit: CardInstance = board[side][slot]
@@ -579,6 +605,7 @@ func damage_unit(side: int, slot: int, amount: int) -> void:
 		unit_damaged.emit(side, slot, dealt)
 	elif had_glass and not unit.glass_intact:
 		unit_shielded.emit(side, slot)
+	_resolve_damaged(side, unit, dealt)
 
 
 func destroy_unit(side: int, slot: int) -> void:

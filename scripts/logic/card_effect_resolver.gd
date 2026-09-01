@@ -13,7 +13,7 @@ func _init(p_state: MatchState) -> void:
 ## unit が持つ trigger の効果をすべて適用する。
 ## hint は対象を選ばせる効果のための指定 {"side":..., "slot":...}。
 func resolve(side: int, unit: CardInstance, trigger: int, hint: Dictionary) -> void:
-	for effect in unit.data.effects_for(trigger):
+	for effect in unit.effects_for(trigger):
 		_apply(side, unit, effect, hint)
 
 
@@ -56,12 +56,47 @@ func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Diction
 				if target != null:
 					_beam(side, from, entry["side"], entry["slot"])
 					target.health += effect.value
+		CardEnums.EffectType.ADD_ATTACK:
+			for entry in _targets(side, unit, effect, hint):
+				var target := _unit_at(entry)
+				if target != null:
+					_beam(side, from, entry["side"], entry["slot"])
+					target.attack += effect.value
 		CardEnums.EffectType.DROP_SAND:
 			for entry in _targets(side, unit, effect, hint):
 				var target := _unit_at(entry)
 				if target != null:
 					_beam(side, from, entry["side"], entry["slot"])
 					target.drop_sand(effect.value)
+		CardEnums.EffectType.SUMMON:
+			_summon(side, effect.card_id)
+		CardEnums.EffectType.GRANT_KEYWORD:
+			for entry in _targets(side, unit, effect, hint):
+				var target := _unit_at(entry)
+				if target != null and effect.keyword >= 0:
+					_beam(side, from, entry["side"], entry["slot"])
+					target.grant_keyword(effect.keyword)
+		CardEnums.EffectType.SILENCE:
+			for entry in _targets(side, unit, effect, hint):
+				var target := _unit_at(entry)
+				if target != null:
+					_beam(side, from, entry["side"], entry["slot"])
+					target.silence()
+
+
+## 空き枠へ砂時計を1体出す。**空きが無ければ何もしない**(GameDesign.md 6章)。
+## 出した駒の設置効果は解決しない。連鎖すると1枚のカードが何をするか読めなくなるため。
+func _summon(side: int, card_id: String) -> void:
+	if card_id.is_empty():
+		return
+	var card := CardLibrary.find_by_id(card_id)
+	if card == null:
+		return
+	for slot in MatchState.BOARD_SIZE:
+		if _state.board[side][slot] == null:
+			_state.board[side][slot] = CardInstance.new(card)
+			_state.board_changed.emit(side)
+			return
 
 
 ## 効果が対象を取ったことを知らせる。**適用の直前に出す**ことで、対象が破壊されて
@@ -92,27 +127,30 @@ func _targets(side: int, unit: CardInstance, effect: CardEffectData, hint: Dicti
 		CardEnums.EffectTarget.ALL_ALLY_UNITS:
 			return _all_slots(side)
 		CardEnums.EffectTarget.ENEMY_UNIT:
-			return _single_enemy(foe_side, hint)
+			return _single_unit(foe_side, hint)
+		CardEnums.EffectTarget.ALLY_UNIT:
+			return _single_unit(side, hint)
 	return []
 
 
-func _single_enemy(foe_side: int, hint: Dictionary) -> Array:
-	if hint.has("slot") and hint.get("side", foe_side) == foe_side:
+## 対象を1体だけ選ぶ効果の解決。相手側(ENEMY_UNIT)も自分側(ALLY_UNIT)もここを通る。
+func _single_unit(target_side: int, hint: Dictionary) -> Array:
+	if hint.has("slot") and hint.get("side", target_side) == target_side:
 		var slot: int = hint["slot"]
-		if _state.board[foe_side][slot] != null:
-			return [{"side": foe_side, "slot": slot}]
+		if _state.board[target_side][slot] != null:
+			return [{"side": target_side, "slot": slot}]
 	# 指定が無い・すでに居なくなっている場合は、最も生涯ダメージの大きい1体を選ぶ。
 	var best := -1
 	var best_value := -1
 	for slot in MatchState.BOARD_SIZE:
-		var candidate: CardInstance = _state.board[foe_side][slot]
+		var candidate: CardInstance = _state.board[target_side][slot]
 		if candidate == null:
 			continue
 		var value := candidate.lifetime_damage()
 		if value > best_value:
 			best_value = value
 			best = slot
-	return [] if best < 0 else [{"side": foe_side, "slot": best}]
+	return [] if best < 0 else [{"side": target_side, "slot": best}]
 
 
 func _all_slots(side: int) -> Array:
