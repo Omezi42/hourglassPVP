@@ -9,6 +9,9 @@ extends RefCounted
 
 
 func run(assert_true: Callable) -> void:
+	_test_time_up_forfeits_the_turn_until_the_limit(assert_true)
+	_test_time_up_ends_the_match_at_the_limit(assert_true)
+	_test_turn_seconds_halve_after_each_forfeit(assert_true)
 	_test_timeout_action_ends_match(assert_true)
 	_test_apply_ignores_transport_keys(assert_true)
 	_test_transient_status_classification(assert_true)
@@ -18,8 +21,86 @@ func run(assert_true: Callable) -> void:
 	_test_online_setup_abort_messages(assert_true)
 
 
-## 持ち時間切れは投了と同じactionsの1件として送受信される(GameDesign.md 11章)。
-## 申告した側の相手の勝ちで、盤面・HPを変えずに即座に終局すること。
+## 持ち時間切れは、敗北ではなく**手番の強制終了**として送受信される(GameDesign.md 5章)。
+## 連続の上限に達したときだけ敗北になり、1手でも指せば数え直すこと。
+func _test_time_up_forfeits_the_turn_until_the_limit(assert_true: Callable) -> void:
+	var state := _make_state()
+	var first := state.current_turn
+	var forfeits: Array = []
+	state.turn_forfeited.connect(func(side: int, n: int) -> void: forfeits.append([side, n]))
+
+	assert_true.call(
+		MatchAction.apply(state, {"type": "time_up", "side": first}), "time_up applies"
+	)
+	assert_true.call(not state.is_match_over(), "one time-up should not end the match")
+	assert_true.call(
+		state.current_turn == MatchState.other_side(first), "time_up should pass the turn over"
+	)
+	assert_true.call(forfeits == [[first, 1]], "the forfeit should be reported with its count")
+
+	# 相手が普通にターンを終え、こちらが2回目の時間切れ。
+	MatchAction.apply(state, {"type": "end_turn", "side": MatchState.other_side(first)})
+	MatchAction.apply(state, {"type": "time_up", "side": first})
+	assert_true.call(
+		int(state.turn_forfeits[first]) == 2, "consecutive time-ups should keep counting up"
+	)
+	assert_true.call(not state.is_match_over(), "the second time-up should still not end it")
+
+	# 1手でも指せば数え直す。ここでは自分でターンを終える。
+	MatchAction.apply(state, {"type": "end_turn", "side": MatchState.other_side(first)})
+	MatchAction.apply(state, {"type": "end_turn", "side": first})
+	assert_true.call(
+		int(state.turn_forfeits[first]) == 0, "ending your own turn should reset the count"
+	)
+
+
+## 連続して上限に達したら敗北になること(GameDesign.md 5章)。
+func _test_time_up_ends_the_match_at_the_limit(assert_true: Callable) -> void:
+	var state := _make_state()
+	var first := state.current_turn
+	var foe := MatchState.other_side(first)
+	for i in MatchState.TURN_FORFEIT_LIMIT:
+		if state.is_match_over():
+			break
+		MatchAction.apply(state, {"type": "time_up", "side": first})
+		if not state.is_match_over():
+			MatchAction.apply(state, {"type": "end_turn", "side": foe})
+	assert_true.call(
+		state.is_match_over(),
+		"forfeiting the turn %d times in a row should end the match" % MatchState.TURN_FORFEIT_LIMIT
+	)
+	assert_true.call(state.winner == foe, "the side that kept running out of time should lose")
+	assert_true.call(
+		state.end_reason == MatchState.EndReason.TIMEOUT, "the end reason should be TIMEOUT"
+	)
+	assert_true.call(
+		(
+			state.hp[MatchState.Side.A] == MatchState.INITIAL_HP
+			and state.hp[MatchState.Side.B] == MatchState.INITIAL_HP
+		),
+		"running out of time should never deal damage"
+	)
+
+
+## 時間切れを重ねた側の次の手番は半分ずつ短くなる(GameDesign.md 5章)。
+func _test_turn_seconds_halve_after_each_forfeit(assert_true: Callable) -> void:
+	assert_true.call(
+		is_equal_approx(MatchClock.seconds_after_forfeits(0), 60.0), "the first turn gets 60s"
+	)
+	assert_true.call(
+		is_equal_approx(MatchClock.seconds_after_forfeits(1), 30.0), "one forfeit halves it"
+	)
+	assert_true.call(
+		is_equal_approx(MatchClock.seconds_after_forfeits(2), 15.0), "two forfeits halve it again"
+	)
+	assert_true.call(
+		MatchClock.seconds_after_forfeits(9) >= MatchClock.MIN_TURN_SECONDS,
+		"the shortened turn should never fall below the floor"
+	)
+
+
+## 切断とみなした時間切れ(`timeout`)だけは、従来どおりその場で敗北になること。
+## 申告そのものが届かない相手を終わらせるための保険(GameDesign.md 11章)。
 func _test_timeout_action_ends_match(assert_true: Callable) -> void:
 	var state := _make_state()
 	var winner_box: Array = [null]

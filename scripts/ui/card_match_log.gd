@@ -50,6 +50,7 @@ func watch(state: MatchState) -> void:
 	state.attack_performed.connect(_on_attack)
 	state.unit_destroyed.connect(_on_unit_destroyed)
 	state.hp_changed.connect(_on_hp_changed)
+	state.turn_forfeited.connect(_on_turn_forfeited)
 	state.match_ended.connect(_on_match_ended)
 
 
@@ -151,6 +152,19 @@ func _on_hp_changed(side: int, new_hp: int) -> void:
 		record("%sに%dダメージ(残りHP%d)" % [_name_of(side), delta, new_hp])
 	elif delta < 0:
 		record("%sがHPを%d回復(残りHP%d)" % [_name_of(side), -delta, new_hp])
+
+
+## 持ち時間切れは敗北ではなく手番の強制終了(GameDesign.md 5章)。何回目かを併せて出す。
+## 次の手番が短くなること・連続で負けになることが、ログだけを追っても分かるようにする。
+func _on_turn_forfeited(side: int, count: int) -> void:
+	# 盤面には何も起きないため、**相手の時間切れは実況に出さないと読み取れない**
+	# (何もせず手番が戻ってきたようにしか見えない)。種別を添えて積む。
+	_append(
+		"%sが持ち時間切れでターンを終了(%d回目 / %d回で敗北)" % [_name_of(side), count, MatchState.TURN_FORFEIT_LIMIT],
+		"time_up",
+		side,
+		-1
+	)
 
 
 func _on_match_ended(winner: int) -> void:

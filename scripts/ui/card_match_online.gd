@@ -140,7 +140,7 @@ func resume(client: FirestoreClient, record: Dictionary) -> bool:
 func _start_clock() -> void:
 	_screen._clock = MatchClock.new()
 	_screen._clock.time_out.connect(_screen._on_local_timeout)
-	_screen._clock.start_turn(_screen.state.current_turn)
+	_screen._start_clock_turn()
 
 
 ## 観戦モードとして開始する(GameDesign.md 12章)。進行中の対局を第三者が見る。

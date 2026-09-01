@@ -22,9 +22,14 @@ const HAND_AREA := Rect2(190, 528, 900, 158)
 ## 12枠を載せる卓上(GameDesign.md 9章)。両陣営の6枠がこの上に並ぶ。
 const TABLE_RECT := Rect2(190, 74, 900, 372)
 const CPU_THINK_SECONDS := 0.5
-## 相手の持ち時間が0になってから、申告が来なくても勝ちにするまでの猶予
+## 相手の持ち時間が0になってから、申告が来なくても勝ちにするまでの猶予。
+## **時間切れ自体は敗北ではない**(GameDesign.md 5章)ため、ここに掛かるのは
+## 「申告そのものが届かない=切断」の判定だけになった。生きている相手は必ず
+## `time_up` を送ってくるので、ポーリングの間隔(1.5秒・失敗時は最大8秒まで
+## 伸びる)と送信の再試行に対して十分長く取る。短いと、通信が一時的に詰まった
+## だけの相手を切断とみなして勝ってしまう。
 ## (GameDesign.md 11章)。相手が切断していると申告そのものが届かないため。
-const OPPONENT_TIMEOUT_GRACE := 8.0
+const OPPONENT_TIMEOUT_GRACE := 20.0
 ## 反転・コイン・ターン終了を縦に並べる右の列。
 const ACTION_COLUMN_X := 1108.0
 ## 対局中のカード詳細(GameDesign.md 9章)。盤面は左右の余白が190pxしかないため
@@ -241,11 +246,13 @@ func start_spectate(client: FirestoreClient, p_match_id: String) -> bool:
 ## 持ち時間が尽きた。**減っているのは手番側の時計であり、相手の手番でも発火する**ため、
 ## 自分の側でなければ何もしない。申告できるのは自分の時間切れだけで(GameDesign.md 11章)、
 ## 相手の時間切れは `_watch_opponent_timeout()` が猶予を置いて拾う。
+## **これは敗北ではなく手番の強制終了**(GameDesign.md 5章)。連続の上限に達したときだけ、
+## 適用した `MatchState` の側が終局させる。
 func _on_local_timeout(side: int) -> void:
 	if side != my_side:
 		return
 	if state != null and not state.is_match_over():
-		_perform({"type": "timeout", "side": my_side})
+		_perform({"type": "time_up", "side": my_side})
 
 
 func _process(delta: float) -> void:
@@ -268,9 +275,27 @@ func _watch_opponent_timeout(delta: float) -> void:
 		state.surrender(foe, MatchState.EndReason.TIMEOUT)
 
 
+## 手番の始まりに与える持ち時間。時間切れを重ねた側は半分ずつ短くなる
+## (GameDesign.md 5章)。回数は `MatchState` が持つため、オンラインでも両者で一致する。
+func _start_clock_turn() -> void:
+	if _clock == null or state == null or state.is_match_over():
+		return
+	_clock.start_turn(state.current_turn, _turn_seconds_for(state.current_turn))
+
+
+## その側の手番に与える持ち時間。時間切れを重ねているほど短い(GameDesign.md 5章)。
+func _turn_seconds_for(side: int) -> float:
+	if state == null:
+		return MatchClock.DEFAULT_TURN_SECONDS
+	return MatchClock.seconds_after_forfeits(int(state.turn_forfeits.get(side, 0)))
+
+
 func _refresh_clocks() -> void:
+	var foe := MatchState.other_side(my_side)
 	_own_bar.clock_seconds = _clock.get_remaining(my_side)
-	_foe_bar.clock_seconds = _clock.get_remaining(MatchState.other_side(my_side))
+	_foe_bar.clock_seconds = _clock.get_remaining(foe)
+	_own_bar.clock_total = _turn_seconds_for(my_side)
+	_foe_bar.clock_total = _turn_seconds_for(foe)
 	_own_bar.queue_redraw()
 	_foe_bar.queue_redraw()
 
@@ -279,9 +304,9 @@ func _on_action_received(action: Dictionary) -> void:
 	_strike.capture(action)
 	MatchAction.apply(state, action)
 	if _clock != null and state != null and not state.is_match_over():
-		_clock.start_turn(state.current_turn)
+		_start_clock_turn()
 		# 添えられた残り時間で上書きするのは、相手の手番がまだ続いている間だけ。
-		# 手番が移ったなら、その側の時計は60秒へ戻ったところから数え直す。
+		# 手番が移ったなら、その側の時計は手番ぶんの持ち時間から数え直す。
 		if action.has("clock") and state.current_turn != my_side:
 			_clock.remaining[MatchState.other_side(my_side)] = float(action["clock"])
 	_finish_action()
@@ -796,6 +821,7 @@ func _perform(action: Dictionary) -> void:
 	_strike.capture(action)
 	MatchAction.apply(state, action)
 	if _online == null:
+		_start_clock_turn()
 		_finish_action()
 		return
 	var payload := action.duplicate(true)
@@ -803,7 +829,7 @@ func _perform(action: Dictionary) -> void:
 	# 手元で減らし続けると、実際より早く時間切れと判定してしまうため。
 	if _clock != null:
 		payload["clock"] = _clock.get_remaining(my_side)
-		_clock.start_turn(state.current_turn)
+		_start_clock_turn()
 	_online.send(payload)
 	_finish_action()
 

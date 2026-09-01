@@ -43,6 +43,9 @@ var display_name := ""
 var targetable := false
 ## 残り持ち時間(秒)。負の値なら表示しない(CPU戦は持ち時間を使わない)。
 var clock_seconds := -1.0
+## その手番に与えられた持ち時間。**時間切れを重ねた側は短くなる**(GameDesign.md 5章)ため、
+## 危険域を固定の秒数で決めると、半減した手番が最初から赤いままになる。割合で判定する。
+var clock_total := MatchClock.DEFAULT_TURN_SECONDS
 ## いまこの側の手番か。手番の側だけ明るくして、どちらが指す番かを示す
 ## (GameDesign.md 9章)。
 var active := false
@@ -166,7 +169,7 @@ func _draw_name_plate() -> void:
 func _draw_clock() -> void:
 	var minutes := int(clock_seconds) / 60
 	var seconds := int(clock_seconds) % 60
-	var low := clock_seconds <= 30.0
+	var low := clock_seconds <= maxf(clock_total, 1.0) * 0.5
 	_text(
 		Vector2(CLOCK_X, 36),
 		"%d:%02d" % [minutes, seconds],

@@ -10,7 +10,8 @@ extends RefCounted
 ##   {"type": "attack",   "side":, "slot":, "target_slot":}   target_slot が -1 なら本体
 ##   {"type": "end_turn", "side":}
 ##   {"type": "surrender","side":}
-##   {"type": "timeout",  "side":}
+##   {"type": "time_up",  "side":}   持ち時間切れ。手番を強制的に終える
+##   {"type": "timeout",  "side":}   切断とみなした時間切れ(その場で敗北)
 ##   {"type": "coin",     "side":}   後手が1度だけ使える +1マナ
 ##   {"type": "mulligan","side":, "indices": [手札の位置]}   初手の引き直し
 
@@ -62,6 +63,8 @@ static func apply(state: MatchState, action: Dictionary) -> bool:
 		"surrender":
 			state.surrender(side)
 			return true
+		"time_up":
+			return state.time_up(side)
 		"timeout":
 			state.surrender(side, MatchState.EndReason.TIMEOUT)
 			return true

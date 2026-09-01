@@ -33,6 +33,8 @@ signal fatigue_damage(side: int, amount: int)
 ## 出した駒から対象へ光の筋を伸ばすために、適用の直前に発行する。
 signal effect_targeted(source_side: int, source_slot: int, target_side: int, target_slot: int)
 signal match_ended(winner: int)
+## 持ち時間が尽きて手番を強制的に終えた(GameDesign.md 5章)。`count` は連続回数。
+signal turn_forfeited(side: int, count: int)
 
 enum Side { A, B }
 ## 決着の要因(GameDesign.md 5章)。
@@ -51,6 +53,9 @@ const COIN_MANA := 1
 const COIN_ENABLED := true
 ## 引き分けを避けるための保険。両者が延々とパスし続けた場合に打ち切る。
 const MAX_TURNS := 200
+## 連続してこの回数だけ手番を時間切れで渡したら敗北(GameDesign.md 5章)。
+## 何もしない相手を待ち続ける状態を終わらせるための線で、1手でも指せば数え直す。
+const TURN_FORFEIT_LIMIT := 3
 
 var hp: Dictionary = {}
 var mana: Dictionary = {}
@@ -70,6 +75,9 @@ var end_reason: int = EndReason.HP_DEPLETED
 var winner: int = -1
 ## まだコインを持っているか(Side をキーにした bool)。対局開始時に後手だけ true になる。
 var coin_available: Dictionary = {}
+## 側ごとの、連続した時間切れの回数。持ち時間を短くする段(GameDesign.md 5章)と
+## 敗北の判定の両方がこれを見る。**手として送り合うため両者で同じ値になる。**
+var turn_forfeits: Dictionary = {}
 
 ## マリガン(初手の引き直し)を待っている間だけ true。
 var mulligan_pending := false
@@ -116,6 +124,7 @@ func start_match(
 		graveyard[side] = []
 		_deck_exhausted[side] = false
 		coin_available[side] = false
+		turn_forfeits[side] = 0
 		var slots: Array = []
 		slots.resize(BOARD_SIZE)
 		board[side] = slots
@@ -220,6 +229,9 @@ func end_turn() -> void:
 	if _match_over:
 		return
 	var side := current_turn
+	# 自分でターンを終えたなら席にいる。連続の時間切れは数え直す(GameDesign.md 5章)。
+	# **`time_up()` はこの後でカウントを書き戻す**ため、ここで消えても矛盾しない。
+	turn_forfeits[side] = 0
 	for slot in BOARD_SIZE:
 		var unit: CardInstance = board[side][slot]
 		if unit == null:
@@ -242,7 +254,25 @@ func end_turn() -> void:
 	_begin_turn()
 
 
-## 投了・持ち時間切れ。どちらも盤面を変えずに相手の勝ちで終局する。
+## 持ち時間が尽きた。**敗北ではなく、その手番を強制的に終えて相手へ渡す**
+## (GameDesign.md 5章)。ただし連続 `TURN_FORFEIT_LIMIT` 回で敗北とする。
+## 何か1手でも指していれば `end_turn()` がカウントを0へ戻しているため、
+## ここへ来るのは「その手番に何もできなかった」場合に限られる。
+func time_up(side: int) -> bool:
+	if _match_over or current_turn != side:
+		return false
+	var count: int = int(turn_forfeits.get(side, 0)) + 1
+	turn_forfeited.emit(side, count)
+	if count >= TURN_FORFEIT_LIMIT:
+		_finish(other_side(side), EndReason.TIMEOUT)
+		return true
+	end_turn()
+	# `end_turn()` が0へ戻した後に書き戻す。順序を逆にすると連続を数えられない。
+	turn_forfeits[side] = count
+	return true
+
+
+## 投了・切断による時間切れ。どちらも盤面を変えずに相手の勝ちで終局する。
 func surrender(side: int, reason: int = EndReason.SURRENDER) -> void:
 	if _match_over:
 		return

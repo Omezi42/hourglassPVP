@@ -22,7 +22,7 @@ const CAPTION_PAD := Vector2(16.0, 9.0)
 ## 実況を出す高さ。駒に重ねると、何が起きた駒なのかが隠れる。
 const CAPTION_GAP := 44.0
 ## 実況に出す種別。ダメージ(hp)はHPバーの演出が示すため重ねない。
-const NARRATED := ["play", "flip", "attack"]
+const NARRATED := ["play", "flip", "attack", "time_up"]
 
 var _screen: CardMatchScreen
 var _font: Font
