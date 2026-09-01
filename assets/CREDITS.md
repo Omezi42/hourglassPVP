@@ -63,6 +63,16 @@ Open Goldberg Variations は、Kickstarterで資金を集めて録音と楽譜�
 
 ---
 
+## 外部サービスのマーク(`assets/ui/brands/`)
+
+`discord_mark.svg` は Discord のシンボル。SVGそのものは
+[simple-icons](https://github.com/simple-icons/simple-icons)(リポジトリはCC0)から取り込み、
+**塗りを白へ変えただけ**で形は触っていない。マーク自体は Discord Inc. の商標であり、
+公式サーバーへの導線を示す目的でのみ使う(Discordのブランドガイドが認める blurple / 白 / 黒
+のうち白を使っている)。**形を作り替えたり、真鍮の紋章として塗り替えたりしない。**
+
+---
+
 ## カードの紋章(`assets/hourglasses/emblems/`)
 
 すべて [icooon-mono](https://icooon-mono.com/)(商用利用可・クレジット表記不要)の

@@ -4,7 +4,6 @@
 
 [resource]
 script = ExtResource("1_coded")
-variant = 3
+variant = 2
 emblem = 10
-emblem_placement = 2
-content_margin_right = 56.0
+emblem_placement = 0

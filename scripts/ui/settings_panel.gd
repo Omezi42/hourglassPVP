@@ -10,8 +10,8 @@ extends Control
 
 ## 公式Discordサーバー(GameDesign.md 11章の募集通知と同じサーバー)。
 const DISCORD_INVITE_URL := "https://discord.gg/5dprcdtyQS"
-const DISCORD_BUTTON_GROUP := "discord_link"
-const DISCORD_BUTTON_SIZE := Vector2(300, 68)
+const DISCORD_BUTTON_GROUP := "icon_discord"
+const DISCORD_BUTTON_SIZE := Vector2(88, 88)
 
 var _discord_button: Button
 
@@ -35,15 +35,15 @@ func _ready() -> void:
 
 ## Discordへの導線はコードで組み立てて音量の下へ挿す(.tscn のパッチは値がJSONのため
 ## StyleBoxの差し替えができず、紋章つきのボタンをシーン側に持てない)。
+## **文言を持たない正方形のアイコンボタン**にする。開く相手を説明する言葉より
+## マークそのもののほうが速く読めるうえ、ここへ項目が増えても同じ形で並べられる。
 func _build_discord_button() -> void:
 	var vbox := close_button.get_parent() as VBoxContainer
 	if vbox == null:
 		return
-	_discord_button = CodedButton.make_in_group(
-		"公式Discordサーバー", DISCORD_BUTTON_SIZE, DISCORD_BUTTON_GROUP
-	)
+	_discord_button = CodedButton.make_in_group("", DISCORD_BUTTON_SIZE, DISCORD_BUTTON_GROUP)
 	_discord_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	_discord_button.tooltip_text = DISCORD_INVITE_URL
+	_discord_button.tooltip_text = "公式Discordサーバー"
 	_discord_button.pressed.connect(_on_discord_pressed)
 	vbox.add_child(_discord_button)
 	vbox.move_child(_discord_button, close_button.get_index())

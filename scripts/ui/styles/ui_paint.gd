@@ -17,9 +17,9 @@ const EMBLEM_OUTLINE_WIDTH := 3.0
 const EMBLEM_HIGHLIGHT_WIDTH := 1.6
 const EMBLEM_CHECK_WIDTH_RATIO := 0.22
 const EMBLEM_CHECK_MIN_WIDTH := 3.0
-## Discordの紋章の目(暗色で抜く楕円)の半径。単位座標系。
-const DISCORD_EYE_RADIUS := Vector2(0.15, 0.21)
-const DISCORD_EYE_SEGMENTS := 16
+## Discordのマークを描く大きさ(draw_emblemのsizeに対する比率)。他の紋章が使う
+## 単位座標の広がりと揃え、額縁の内側へ収まる値にしてある。
+const DISCORD_ICON_RATIO := 0.55
 
 static var _grain_texture: ImageTexture
 static var _grain_rid: RID
@@ -171,49 +171,32 @@ static var _bench_floor_leg_right_points := PackedVector2Array(
 
 ## メニュー(ハンバーガー):横3本のバー。ホーム画面の右上に置くメニューボタン用。
 ## 3本とも同じ長さ・同じ太さにする(1本だけ短くする崩し方はこの盤面の意匠に合わない)。
+## **枠(額縁)の内側の凹んだパネルへ収まる大きさに留める**。単位座標の上限(±0.85)まで
+## 使うと、CENTER配置では紋章が額縁へ載り上がる(実際にそう描画されていた)。
 static var _menu_bar_top_points := PackedVector2Array(
-	[Vector2(-0.82, -0.74), Vector2(0.82, -0.74), Vector2(0.82, -0.46), Vector2(-0.82, -0.46)]
+	[Vector2(-0.55, -0.53), Vector2(0.55, -0.53), Vector2(0.55, -0.31), Vector2(-0.55, -0.31)]
 )
 static var _menu_bar_top_highlight := PackedVector2Array(
-	[Vector2(-0.7, -0.66), Vector2(0.7, -0.66)]
+	[Vector2(-0.45, -0.47), Vector2(0.45, -0.47)]
 )
 static var _menu_bar_mid_points := PackedVector2Array(
-	[Vector2(-0.82, -0.14), Vector2(0.82, -0.14), Vector2(0.82, 0.14), Vector2(-0.82, 0.14)]
+	[Vector2(-0.55, -0.11), Vector2(0.55, -0.11), Vector2(0.55, 0.11), Vector2(-0.55, 0.11)]
 )
 static var _menu_bar_mid_highlight := PackedVector2Array(
-	[Vector2(-0.7, -0.06), Vector2(0.7, -0.06)]
+	[Vector2(-0.45, -0.05), Vector2(0.45, -0.05)]
 )
 static var _menu_bar_bottom_points := PackedVector2Array(
-	[Vector2(-0.82, 0.46), Vector2(0.82, 0.46), Vector2(0.82, 0.74), Vector2(-0.82, 0.74)]
+	[Vector2(-0.55, 0.31), Vector2(0.55, 0.31), Vector2(0.55, 0.53), Vector2(-0.55, 0.53)]
 )
 static var _menu_bar_bottom_highlight := PackedVector2Array(
-	[Vector2(-0.7, 0.54), Vector2(0.7, 0.54)]
+	[Vector2(-0.45, 0.37), Vector2(0.45, 0.37)]
 )
 
-## Discord:公式サーバーへの導線に添えるマーク。輪郭はDiscordのシンボル(丸みのある顔と
-## 左右へ跳ねた裾)を多角形で近似し、目だけを暗色の楕円で抜く。他の紋章と同じ真鍮の
-## 浮き彫りで描くことで、外部サービスのロゴだけが浮かないようにする。
-static var _discord_points := PackedVector2Array(
-	[
-		Vector2(-0.40, -0.62),
-		Vector2(0.40, -0.62),
-		Vector2(0.62, -0.46),
-		Vector2(0.80, -0.06),
-		Vector2(0.95, 0.44),
-		Vector2(0.70, 0.62),
-		Vector2(0.50, 0.36),
-		Vector2(0.20, 0.50),
-		Vector2(-0.20, 0.50),
-		Vector2(-0.50, 0.36),
-		Vector2(-0.70, 0.62),
-		Vector2(-0.95, 0.44),
-		Vector2(-0.80, -0.06),
-		Vector2(-0.62, -0.46),
-	]
-)
-static var _discord_highlight := PackedVector2Array([Vector2(-0.34, -0.52), Vector2(0.34, -0.52)])
-## 目(暗色で抜く)の中心。単位座標系。
-static var _discord_eye_offsets := PackedVector2Array([Vector2(-0.3, -0.05), Vector2(0.3, -0.05)])
+## Discord:公式サーバーへの導線に添えるマーク。**多角形で似せず、Discord公式の
+## シンボルをそのまま使う**(assets/ui/brands/discord_mark.svg、出所は assets/CREDITS.md)。
+## 他の紋章と違って真鍮の浮き彫りにしないのは、ブランドのマークを勝手に塗り替えないため
+## (Discordの規定は blurple / 白 / 黒 のいずれかで使うことを求めている)。
+static var _discord_texture: Texture2D = preload("res://assets/ui/brands/discord_mark.svg")
 
 
 ## 4隅の半径を個別指定できる角丸矩形の外周点列を返す(TAB形状などの非対称角丸に対応)。
@@ -563,18 +546,13 @@ static func _emblem_check(ci: RID, center: Vector2, size: float) -> void:
 	_draw_polyline_solid(ci, highlight, UiPalette.BRASS_HIGHLIGHT, EMBLEM_HIGHLIGHT_WIDTH)
 
 
-## Discordのマーク。輪郭は他の紋章と同じ浮き彫りで塗り、目だけを暗色で抜く
-## (目が無いと、ただの丸い盾にしか見えない)。
+## Discordのマーク。公式のシンボルを白で敷くだけにする(塗り替えない)。
 static func _emblem_discord(ci: RID, center: Vector2, size: float) -> void:
-	_emblem_fill(ci, center, size, _discord_points, _discord_highlight)
-	for offset in _discord_eye_offsets:
-		fill_ellipse(
-			ci,
-			center + offset * size,
-			DISCORD_EYE_RADIUS * size,
-			UiPalette.OUTLINE_DARK,
-			DISCORD_EYE_SEGMENTS
-		)
+	var half: float = size * DISCORD_ICON_RATIO
+	var rect := Rect2(center - Vector2(half, half), Vector2(half, half) * 2.0)
+	RenderingServer.canvas_item_add_texture_rect(
+		ci, rect, _discord_texture.get_rid(), false, Color.WHITE
+	)
 
 
 ## 無効/後退(disabled・読み取り専用等)状態の色変換。色自身の輝度へ寄せて彩度を落とした
