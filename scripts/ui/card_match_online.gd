@@ -66,7 +66,7 @@ func start(
 		_screen._mulligan.show_hand(_screen.state.hand[_screen.my_side])
 		await _screen.state.mulligan_finished
 	# 持ち時間はオンライン対戦だけが使う(GameDesign.md 13章)。ルームマッチでは切れるため
-	# (5章)、切ってあるときは時計そのものを作らない。**`_clock == null` は既にCPU戦が
+	# (5章)、切ってあるときは時計そのものを作らない。**時計を持たない状態は既にCPU戦が
 	# 通っている経路**で、送信の `clock` 付与・相手の時間切れ監視のいずれも null を見て降りる。
 	if time_limit:
 		_start_clock()
@@ -143,9 +143,7 @@ func resume(client: FirestoreClient, record: Dictionary) -> bool:
 
 ## 持ち時間の時計を作って動かし始める。開始と復帰で同じ手順を踏むため1箇所へ寄せる。
 func _start_clock() -> void:
-	_screen._clock = MatchClock.new()
-	_screen._clock.time_out.connect(_screen._on_local_timeout)
-	_screen._start_clock_turn()
+	_screen.clocks.start()
 
 
 ## 観戦モードとして開始する(GameDesign.md 12章)。進行中の対局を第三者が見る。

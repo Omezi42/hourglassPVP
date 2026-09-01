@@ -11,9 +11,7 @@ signal back_pressed
 const HEADER_SCENE := "res://scenes/screen_header.tscn"
 const PANEL_STYLE := "res://resources/theme/content_panel.tres"
 
-const TOC_RECT := Rect2(
-	24, ScreenHeader.CONTENT_TOP, 224, 720 - ScreenHeader.CONTENT_TOP - ScreenHeader.OUTER_MARGIN
-)
+const TOC_RECT := Rect2(24, ScreenHeader.CONTENT_TOP, 224, ScreenHeader.CONTENT_HEIGHT)
 const TOC_BUTTON_HEIGHT := 60.0
 const TOC_GAP := 12.0
 

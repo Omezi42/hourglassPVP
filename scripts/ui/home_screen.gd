@@ -188,7 +188,8 @@ func _apply_nav_style(button: Button, active: bool) -> void:
 
 
 ## ホーム画面左上の名札ボタン(真鍮テクスチャ・アイコン・称号・名前)
-class AccountNameplateButton extends Button:
+class AccountNameplateButton:
+	extends Button
 	var _icon_rect: TextureRect
 	var _icon_frame: PanelContainer
 	var _title_label: Label

@@ -10,8 +10,8 @@ signal back_pressed
 
 const HEADER_SCENE := "res://scenes/screen_header.tscn"
 const PANEL_STYLE := "res://resources/theme/content_panel.tres"
-const GRID_RECT := Rect2(24, ScreenHeader.CONTENT_TOP, 816, 584)
-const SIDE_RECT := Rect2(856, ScreenHeader.CONTENT_TOP, 400, 584)
+const GRID_RECT := Rect2(24, ScreenHeader.CONTENT_TOP, 816, ScreenHeader.CONTENT_HEIGHT)
+const SIDE_RECT := Rect2(856, ScreenHeader.CONTENT_TOP, 400, ScreenHeader.CONTENT_HEIGHT)
 const SIDE_INNER_WIDTH := 372.0
 const GRID_COLUMNS := 6
 const GRID_GAP := 12
@@ -326,10 +326,12 @@ func _on_detail_gui_input(event: InputEvent) -> void:
 func _input(event: InputEvent) -> void:
 	if _detail == null or not _detail.visible:
 		return
-	if (_keyword_popup != null and _keyword_popup.visible) \
-			or (_filter != null and _filter.visible) \
-			or (_preset_picker != null and _preset_picker.visible) \
-			or (_code_panel != null and _code_panel.visible):
+	if (
+		(_keyword_popup != null and _keyword_popup.visible)
+		or (_filter != null and _filter.visible)
+		or (_preset_picker != null and _preset_picker.visible)
+		or (_code_panel != null and _code_panel.visible)
+	):
 		return
 	if event.is_action_pressed("ui_cancel"):
 		_hide_detail()

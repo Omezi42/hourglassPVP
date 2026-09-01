@@ -21,8 +21,6 @@ const HAND_AREA := Rect2(190, 528, 900, 158)
 ## 12枠を載せる卓上(GameDesign.md 9章)。両陣営の6枠がこの上に並ぶ。
 const TABLE_RECT := Rect2(190, 74, 900, 372)
 const CPU_THINK_SECONDS := 0.5
-## 相手の持ち時間が0になってから切断とみなすまでの猶予(GameDesign.md 5章・11章)。
-const OPPONENT_TIMEOUT_GRACE := 20.0
 ## 反転・コイン・ターン終了を縦に並べる右の列。
 const ACTION_COLUMN_X := 1108.0
 const DETAIL_TOP := 40.0
@@ -46,21 +44,30 @@ var state: MatchState
 var my_side: int = MatchState.Side.A
 ## いま選んでいるものと相手の情報帯。切り出した進行役(`CardMatchTargets` 等)から読む。
 var selection: CardMatchSelection:
-	get: return _selection
+	get:
+		return _selection
 var foe_bar: PlayerInfoBar:
-	get: return _foe_bar
+	get:
+		return _foe_bar
 ## 対局中の効果音。攻撃の演出が当たった瞬間に持ち越した音を出すため、進行役から引く。
 var sound: CardMatchSound:
-	get: return _sound
+	get:
+		return _sound
 ## 操作を受け付ける対局かどうか(再生モードでは false)。
 var interactive: bool:
-	get: return _interactive
+	get:
+		return _interactive
 ## 攻撃以外の演出。攻撃が当たった瞬間に持ち越したぶんを出すため、進行役から引く。
+var clocks: CardMatchClock:
+	get:
+		return _clocks
 var effects: CardMatchEffects:
-	get: return _effects
+	get:
+		return _effects
 ## 盤面へ伸びる光の筋。反転と設置効果が共有する。
 var beam: CardFlipBeam:
-	get: return _flip_beam
+	get:
+		return _flip_beam
 
 var _foe_bar: PlayerInfoBar
 var _own_bar: PlayerInfoBar
@@ -86,8 +93,7 @@ var _own_deck: Array = []
 var _tutorial: CardMatchTutorial
 var _outcome: CardMatchOutcome
 var _match_kind: CurrencyRules.MatchKind = CurrencyRules.MatchKind.NONE
-var _clock: MatchClock = null
-var _opponent_timeout_wait := 0.0
+var _clocks: CardMatchClock
 var _cpu_record: Dictionary = {}
 var _log: CardMatchLog
 var _result: CardMatchResult
@@ -116,6 +122,7 @@ func _ready() -> void:
 	_effects = CardMatchEffects.new(self)
 	_online_ctl = CardMatchOnline.new(self)
 	_targets = CardMatchTargets.new(self)
+	_clocks = CardMatchClock.new(self)
 	_emote = CardMatchEmote.new(self)
 	_emote.set_position(Vector2(ACTION_COLUMN_X, EMOTE_BUTTON_TOP))
 
@@ -140,14 +147,13 @@ func _reset_for_new_match() -> void:
 	_setup = null
 	_client = null
 	_match_id = ""
-	_clock = null
+	_clocks.clear()
 	# 持ち時間を持たない対局(CPU戦・持ち時間を切ったルームマッチ)へ入ったときに、
 	# 前の対局の残り時間が情報帯に残らないようにする(負の値は表示しない)。
 	_own_bar.clock_seconds = -1.0
 	_foe_bar.clock_seconds = -1.0
 	_cpu_record = {}
 	_status.set_waiting("")
-	_opponent_timeout_wait = 0.0
 	if _mulligan != null:
 		_mulligan.close()
 	if _tutorial != null:
@@ -233,48 +239,7 @@ func _on_local_timeout(side: int) -> void:
 func _process(delta: float) -> void:
 	if _emote != null:
 		_emote.tick(delta)
-	if _clock == null or state == null or state.is_match_over():
-		return
-	_clock.tick(delta)
-	_watch_opponent_timeout(delta)
-	_refresh_clocks()
-
-
-## 相手の持ち時間が0になっても申告が来ない場合、猶予を置いて待っている側の勝ちにする。
-func _watch_opponent_timeout(delta: float) -> void:
-	var foe := MatchState.other_side(my_side)
-	if _clock.get_remaining(foe) > 0.0:
-		_opponent_timeout_wait = 0.0
-		return
-	_opponent_timeout_wait += delta
-	if _opponent_timeout_wait >= OPPONENT_TIMEOUT_GRACE:
-		_opponent_timeout_wait = 0.0
-		state.surrender(foe, MatchState.EndReason.TIMEOUT)
-
-
-## 手番の始まりに与える持ち時間。時間切れを重ねた側は半分ずつ短くなる
-## (GameDesign.md 5章)。回数は `MatchState` が持つため、オンラインでも両者で一致する。
-func _start_clock_turn() -> void:
-	if _clock == null or state == null or state.is_match_over():
-		return
-	_clock.start_turn(state.current_turn, _turn_seconds_for(state.current_turn))
-
-
-## その側の手番に与える持ち時間。時間切れを重ねているほど短い(GameDesign.md 5章)。
-func _turn_seconds_for(side: int) -> float:
-	if state == null:
-		return MatchClock.DEFAULT_TURN_SECONDS
-	return MatchClock.seconds_after_forfeits(int(state.turn_forfeits.get(side, 0)))
-
-
-func _refresh_clocks() -> void:
-	var foe := MatchState.other_side(my_side)
-	_own_bar.clock_seconds = _clock.get_remaining(my_side)
-	_foe_bar.clock_seconds = _clock.get_remaining(foe)
-	_own_bar.clock_total = _turn_seconds_for(my_side)
-	_foe_bar.clock_total = _turn_seconds_for(foe)
-	_own_bar.queue_redraw()
-	_foe_bar.queue_redraw()
+	_clocks.tick(delta)
 
 
 func _on_action_received(action: Dictionary) -> void:
@@ -284,12 +249,12 @@ func _on_action_received(action: Dictionary) -> void:
 		return
 	_strike.capture(action)
 	MatchAction.apply(state, action)
-	if _clock != null and state != null and not state.is_match_over():
-		_start_clock_turn()
+	if _clocks.active() and state != null and not state.is_match_over():
+		_clocks.start_turn()
 		# 添えられた残り時間で上書きするのは、相手の手番がまだ続いている間だけ。
 		# 手番が移ったなら、その側の時計は手番ぶんの持ち時間から数え直す。
 		if action.has("clock") and state.current_turn != my_side:
-			_clock.remaining[MatchState.other_side(my_side)] = float(action["clock"])
+			_clocks.overwrite_foe(float(action["clock"]))
 	_finish_action()
 
 
@@ -775,6 +740,10 @@ func _on_graveyard_pressed(opponent: bool) -> void:
 
 
 func _record(action: Dictionary) -> void:
+	# エモートは盤面を動かさないため棋譜へ残さない。残すとリプレイの手数だけが増え、
+	# コマ送りで何も起きない手を挟むことになる(オンラインは通信の経路として送る)。
+	if action.get("type", "") == "emote":
+		return
 	if not _cpu_record.is_empty():
 		(_cpu_record["actions"] as Array).append(action)
 
@@ -804,15 +773,15 @@ func _perform(action: Dictionary) -> void:
 	_strike.capture(action)
 	MatchAction.apply(state, action)
 	if _online == null:
-		_start_clock_turn()
+		_clocks.start_turn()
 		_finish_action()
 		return
 	var payload := action.duplicate(true)
 	# 持ち時間は各手に添えて送る(GameDesign.md 11章)。通信の遅延ぶん相手の時計を
 	# 手元で減らし続けると、実際より早く時間切れと判定してしまうため。
-	if _clock != null:
-		payload["clock"] = _clock.get_remaining(my_side)
-		_start_clock_turn()
+	if _clocks.active():
+		payload["clock"] = _clocks.remaining(my_side)
+		_clocks.start_turn()
 	_online.send(payload)
 	_finish_action()
 
@@ -910,8 +879,10 @@ func _input(event: InputEvent) -> void:
 	if not _interactive:
 		return
 	if _detail != null and _detail.visible:
-		if (_keyword_popup != null and _keyword_popup.visible) \
-				or (_mulligan != null and _mulligan.visible):
+		if (
+			(_keyword_popup != null and _keyword_popup.visible)
+			or (_mulligan != null and _mulligan.visible)
+		):
 			return
 		if event.is_action_pressed("ui_cancel"):
 			_hide_detail()
@@ -937,13 +908,20 @@ func _input(event: InputEvent) -> void:
 ## 選択は右クリックとEscでも取り消せるようにする(GameDesign.md 9章)。
 ## 「他を押す」以外に戻る手段が無いと、対象選択に入った後の抜け方が分からない。
 func _unhandled_input(event: InputEvent) -> void:
-	if not _interactive or _selection.is_empty():
+	if not _interactive:
 		return
 	var cancelled := event.is_action_pressed("ui_cancel")
 	if not cancelled and event is InputEventMouseButton:
 		var click := event as InputEventMouseButton
 		cancelled = click.pressed and click.button_index == MOUSE_BUTTON_RIGHT
 	if not cancelled:
+		return
+	# エモートの選択も同じ操作で閉じる。開いたまま盤面を隠し続ける状態を作らない。
+	if _emote != null and _emote.popup_open():
+		_emote.close_popup()
+		get_viewport().set_input_as_handled()
+		return
+	if _selection.is_empty():
 		return
 	_selection.clear()
 	refresh()

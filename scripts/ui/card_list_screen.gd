@@ -15,7 +15,7 @@ const SCROLLBAR_WIDTH := 16.0
 const SCREEN_SIZE := Vector2(1280, 720)
 ## 一覧と詳細の間隔。左右の外周余白と同じ値にして、3つの間隔を揃える。
 const COLUMN_GAP := ScreenHeader.OUTER_MARGIN
-const CONTENT_HEIGHT := 720 - ScreenHeader.CONTENT_TOP - ScreenHeader.OUTER_MARGIN
+const CONTENT_HEIGHT := ScreenHeader.CONTENT_HEIGHT
 const DETAIL_POSITION := Vector2(
 	SCREEN_SIZE.x - ScreenHeader.OUTER_MARGIN - CardDetailPanel.PANEL_SIZE.x,
 	ScreenHeader.CONTENT_TOP

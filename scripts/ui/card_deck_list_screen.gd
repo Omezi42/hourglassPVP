@@ -16,7 +16,7 @@ enum Mode { MANAGE, PICK }
 const HEADER_SCENE := "res://scenes/screen_header.tscn"
 const CONFIRM_SCENE := "res://scenes/confirm_modal.tscn"
 const PANEL_STYLE := "res://resources/theme/content_panel.tres"
-const LIST_RECT := Rect2(24, ScreenHeader.CONTENT_TOP, 1232, 720 - ScreenHeader.CONTENT_TOP - 24)
+const LIST_RECT := Rect2(24, ScreenHeader.CONTENT_TOP, 1232, ScreenHeader.CONTENT_HEIGHT)
 const CARD_SIZE := Vector2(596, 112)
 ## 代表として並べる紋章の数。30枚をそのまま並べるとカードに収まらない(GameDesign.md 9章)。
 const EMBLEM_COUNT := 5
@@ -118,10 +118,7 @@ func _guide_text(count: int, picking: bool) -> String:
 	if count == 0:
 		if picking:
 			return "保存したデッキがありません。プリセットの「基本」で対局へ入れます"
-		return (
-			"保存したデッキがありません。「新規デッキ作成」から%d枚のデッキを作ってください"
-			% MatchState.DECK_SIZE
-		)
+		return "保存したデッキがありません。「新規デッキ作成」から%d枚のデッキを作ってください" % MatchState.DECK_SIZE
 	if picking:
 		return "対局で使うデッキを選んでください"
 	if _reordering:

@@ -83,13 +83,7 @@ func _draw() -> void:
 				UiPalette.TEXT_OFFWHITE,
 				bar_width
 			)
-		_label(
-			Vector2(x, area.end.y + 18),
-			str(cost),
-			14,
-			UiPalette.BRASS_HIGHLIGHT,
-			bar_width
-		)
+		_label(Vector2(x, area.end.y + 18), str(cost), 14, UiPalette.BRASS_HIGHLIGHT, bar_width)
 
 
 ## 目盛りの溝。棒が立っていない列でも、そこに枠があることを示す。

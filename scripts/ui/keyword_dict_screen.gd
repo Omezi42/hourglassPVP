@@ -7,7 +7,7 @@ signal back_pressed
 
 const HEADER_SCENE := "res://scenes/screen_header.tscn"
 const PANEL_STYLE := "res://resources/theme/content_panel.tres"
-const CONTENT_HEIGHT := 720.0 - ScreenHeader.CONTENT_TOP - ScreenHeader.OUTER_MARGIN
+const CONTENT_HEIGHT := ScreenHeader.CONTENT_HEIGHT
 const LIST_RECT := Rect2(24, ScreenHeader.CONTENT_TOP, 236, CONTENT_HEIGHT)
 const DETAIL_RECT := Rect2(284, ScreenHeader.CONTENT_TOP, 972, CONTENT_HEIGHT)
 ## 10項目がスクロールなしでコンテンツ領域(560px)へ収まる高さにしてある。

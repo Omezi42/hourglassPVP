@@ -26,9 +26,8 @@ var _login_button: Button
 var _logout_button: Button
 
 @onready var screen_header: ScreenHeader = $ScreenHeader
-@onready var preview_container: Control = (
-	$Panel/Margin/Columns/LeftColumn/PreviewRow/PreviewContainer
-)
+@onready
+var preview_container: Control = $Panel/Margin/Columns/LeftColumn/PreviewRow/PreviewContainer
 @onready var name_input: LineEdit = $Panel/Margin/Columns/LeftColumn/NameRow/NameInput
 @onready var icon_grid: GridContainer = $Panel/Margin/Columns/LeftColumn/IconGrid
 @onready var title_list: VBoxContainer = $Panel/Margin/Columns/LeftColumn/TitleScroll/TitleList
@@ -38,12 +37,9 @@ var _logout_button: Button
 @onready var currency_label: Label = $Panel/Margin/Columns/RightColumn/CurrencyLabel
 @onready var credential_box: VBoxContainer = $Panel/Margin/Columns/RightColumn/CredentialBox
 @onready var id_input: LineEdit = $Panel/Margin/Columns/RightColumn/CredentialBox/IdRow/IdInput
-@onready var password_input: LineEdit = (
-	$Panel/Margin/Columns/RightColumn/CredentialBox/PasswordRow/PasswordInput
-)
-@onready var button_row: HBoxContainer = (
-	$Panel/Margin/Columns/RightColumn/CredentialBox/ButtonRow
-)
+# ノードのパスが1行に収まらないため、1つ上の欄から辿る。
+@onready var password_input: LineEdit = credential_box.get_node("PasswordRow/PasswordInput")
+@onready var button_row: HBoxContainer = $Panel/Margin/Columns/RightColumn/CredentialBox/ButtonRow
 @onready var logout_row: CenterContainer = $Panel/Margin/Columns/RightColumn/LogoutRow
 @onready var message_label: Label = $Panel/Margin/Columns/RightColumn/MessageLabel
 
@@ -103,10 +99,7 @@ func refresh() -> void:
 	var ok: bool = await NetSession.sign_in()
 	_set_busy(false)
 	if not ok:
-		_set_message(
-			"接続できませんでした(%s)。オフラインのままでも遊べます。" % NetSession.last_error,
-			ERROR_COLOR
-		)
+		_set_message("接続できませんでした(%s)。オフラインのままでも遊べます。" % NetSession.last_error, ERROR_COLOR)
 	else:
 		_set_message("", HINT_COLOR)
 	_selected_icon_id = AccountService.icon_id()
@@ -255,7 +248,8 @@ func _set_message(text: String, color: Color) -> void:
 
 
 ## アイコン選択用ボタン(真鍮枠・丸型)
-class IconButton extends Button:
+class IconButton:
+	extends Button
 	var icon_id: String
 	var is_selected := false
 
@@ -281,7 +275,8 @@ class IconButton extends Button:
 
 
 ## 称号選択用リスト項目(真鍮スタイル・選択ハイライト)
-class TitleListItem extends Button:
+class TitleListItem:
+	extends Button
 	var title_id: String
 	var is_selected := false
 	var _font: Font
@@ -319,18 +314,13 @@ class TitleListItem extends Button:
 		var text := mark + UserProfileLibrary.get_title_name(title_id)
 		var text_color := UiPalette.GLOW_AMBER if is_selected else UiPalette.TEXT_OFFWHITE
 		draw_string(
-			_font,
-			Vector2(12, size.y - 10),
-			text,
-			HORIZONTAL_ALIGNMENT_LEFT,
-			-1,
-			14,
-			text_color
+			_font, Vector2(12, size.y - 10), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, text_color
 		)
 
 
 ## 名札見本プレビュー
-class ProfilePreviewPlate extends Control:
+class ProfilePreviewPlate:
+	extends Control
 	var display_name := ""
 	var icon_id := ""
 	var title_id := ""

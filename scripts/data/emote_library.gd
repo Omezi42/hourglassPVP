@@ -4,22 +4,26 @@ extends RefCounted
 ## static のみで持つ。
 
 const EMOTES: Dictionary = {
-	"hello": {
+	"hello":
+	{
 		"id": "hello",
 		"name": "挨拶",
 		"text": "よろしくお願いします",
 	},
-	"praise": {
+	"praise":
+	{
 		"id": "praise",
 		"name": "賞賛",
 		"text": "見事な一手です",
 	},
-	"shock": {
+	"shock":
+	{
 		"id": "shock",
 		"name": "驚き",
 		"text": "なんだと…",
 	},
-	"advantage": {
+	"advantage":
+	{
 		"id": "advantage",
 		"name": "優勢",
 		"text": "こちらに傾いているようですね",

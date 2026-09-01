@@ -40,6 +40,8 @@ const GLOW_AMBER := Color(0.85, 0.62, 0.22, 1.0)
 
 ## 文字色
 const TEXT_OFFWHITE := Color(0.96, 0.94, 0.89, 1.0)
+## 主役ではない補足の文字(状態の「いまはこちら」を強調しないために使う)。
+const TEXT_MUTED := Color(0.68, 0.65, 0.60, 1.0)
 const WARNING_RED := Color(0.85, 0.2, 0.18, 1.0)
 
 ## 棚板(ShelfPlank)用の木材色。旧shelf_plank.pngは彩度の高い明るいオレンジだったが、

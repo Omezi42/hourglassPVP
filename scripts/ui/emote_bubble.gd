@@ -8,6 +8,7 @@ const FADE_IN_DURATION := 0.3
 const DISPLAY_DURATION := 6.0
 const FADE_OUT_DURATION := 0.5
 const FLOAT_OFFSET := 8.0
+const FONT_SIZE := 15
 
 var text := ""
 var is_opponent := false
@@ -21,7 +22,19 @@ func _ready() -> void:
 	_font = get_theme_default_font()
 	if _font == null:
 		_font = ThemeDB.fallback_font
+	_measure()
 	_start_animation()
+
+
+## 吹き出しの大きさは文字が決める。**`_draw()` の中で `size` を書き換えない**
+## (レイアウトが変わって再描画が呼ばれ、毎フレーム描き直し続けるため)。
+func _measure() -> void:
+	if _font == null or text.is_empty():
+		return
+	var text_size := _font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE)
+	var bubble_size := text_size + BUBBLE_PADDING * 2.0
+	custom_minimum_size = bubble_size
+	size = bubble_size
 
 
 func _start_animation() -> void:
@@ -51,12 +64,7 @@ func _start_animation() -> void:
 func _draw() -> void:
 	if text.is_empty() or _font == null:
 		return
-	var font_size := 15
-	var text_size := _font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
-	var bubble_size := text_size + BUBBLE_PADDING * 2.0
-	custom_minimum_size = bubble_size
-	size = bubble_size
-
+	var bubble_size := size
 	var rect := Rect2(Vector2.ZERO, bubble_size)
 	var points := UiPaint.rounded_rect_points_uniform(rect, 8.0, 5)
 	var ci := get_canvas_item()
@@ -76,6 +84,6 @@ func _draw() -> void:
 		text,
 		HORIZONTAL_ALIGNMENT_LEFT,
 		-1,
-		font_size,
+		FONT_SIZE,
 		UiPalette.TEXT_OFFWHITE
 	)

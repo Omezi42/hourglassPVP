@@ -68,9 +68,7 @@ func refresh() -> void:
 	random_match_button.disabled = not ready_to_battle
 	room_match_button.disabled = not ready_to_battle
 	cpu_match_button.disabled = not ready_to_battle
-	_set_status(
-		"対戦できます" if ready_to_battle else "デッキを%d枚にしてください" % MatchState.DECK_SIZE
-	)
+	_set_status("対戦できます" if ready_to_battle else "デッキを%d枚にしてください" % MatchState.DECK_SIZE)
 
 
 func _build_resume_button() -> void:

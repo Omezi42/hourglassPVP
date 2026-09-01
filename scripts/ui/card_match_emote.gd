@@ -7,6 +7,8 @@ const COOLDOWN_SECONDS := 9.0
 const EMOTE_BUTTON_SIZE := Vector2(148, 44)
 const POPUP_WIDTH := 240.0
 const POPUP_PADDING := 10.0
+## ポップアップとエモートボタンの間隔。
+const POPUP_GAP := 8.0
 
 var mute_opponent := false
 
@@ -14,8 +16,8 @@ var _screen: CardMatchScreen
 var _button: Button
 var _popup: PanelContainer
 var _mute_btn: Button
+var _popup_anchor := Vector2.ZERO
 var _cooldown := 0.0
-var _timer: Timer
 
 
 func _init(screen: CardMatchScreen) -> void:
@@ -64,9 +66,13 @@ func _setup_ui() -> void:
 	var hsep2 := HSeparator.new()
 	vbox.add_child(hsep2)
 
+	# 既定のボタンは真鍮の面で塗られるため、ミュートしていない状態のほうが強調されて
+	# 見えてしまう。選択肢と同じ平坦な見た目にして、状態は文言と色だけで示す。
 	_mute_btn = Button.new()
+	_mute_btn.flat = true
 	_mute_btn.custom_minimum_size = Vector2(POPUP_WIDTH - POPUP_PADDING * 2.0, 28.0)
 	_mute_btn.add_theme_font_size_override("font_size", 12)
+	_mute_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	_mute_btn.pressed.connect(_toggle_mute)
 	_update_mute_button_text()
 	vbox.add_child(_mute_btn)
@@ -74,31 +80,39 @@ func _setup_ui() -> void:
 	_popup.add_child(vbox)
 	_screen.add_child(_popup)
 
-	# クールダウン用タイマー
-	_timer = Timer.new()
-	_timer.wait_time = 0.2
-	_timer.timeout.connect(_on_timer_tick)
-	_screen.add_child(_timer)
 
-
+## エモートのボタンと、その上へ開くポップアップの位置。**ポップアップは下端をボタンの
+## 上へ合わせる**(上端を固定すると、選択肢を足したときに情報帯・手札まで伸びる)。
 func set_position(btn_pos: Vector2) -> void:
 	if _button != null:
 		_button.position = btn_pos
-	if _popup != null:
-		_popup.position = Vector2(btn_pos.x - POPUP_WIDTH - 12.0, btn_pos.y - 170.0)
+	_popup_anchor = btn_pos
+	_place_popup()
+
+
+func _place_popup() -> void:
+	if _popup == null:
+		return
+	var height: float = maxf(_popup.get_combined_minimum_size().y, _popup.size.y)
+	_popup.position = Vector2(
+		_popup_anchor.x - POPUP_WIDTH - 12.0, _popup_anchor.y - height - POPUP_GAP
+	)
+
+
+func popup_open() -> bool:
+	return _popup != null and _popup.visible
 
 
 func refresh() -> void:
-	var pending_mulligan: bool = (
-		_screen.state != null and _screen.state.mulligan_pending
-	)
-	var can_use: bool = (
-		_screen.interactive
-		and _screen.state != null
-		and not _screen.state.is_match_over()
-		and not pending_mulligan
-	)
-	_button.visible = _screen.interactive
+	var pending_mulligan: bool = _screen.state != null and _screen.state.mulligan_pending
+	var over: bool = _screen.state == null or _screen.state.is_match_over()
+	var can_use: bool = _screen.interactive and not over and not pending_mulligan
+	# エモートのUIは対局画面より後に足されるため、結果パネル・ログより手前に描かれる。
+	# 終局後と読み返しの間は隠して、そちらの操作を塞がないようにする。
+	_button.visible = _screen.interactive and not over
+	if not _button.visible:
+		_popup.visible = false
+		return
 	if pending_mulligan:
 		_button.text = "エモート"
 		_button.disabled = true
@@ -120,24 +134,19 @@ func tick(delta: float) -> void:
 	if _cooldown > 0.0:
 		_cooldown = maxf(_cooldown - delta, 0.0)
 		if _cooldown <= 0.0:
-			_timer.stop()
 			refresh()
 		else:
 			_button.text = "%d秒" % int(ceilf(_cooldown))
 
 
-func _on_timer_tick() -> void:
-	tick(0.2)
-
-
 func _toggle_popup() -> void:
-	var pending_mulligan: bool = (
-		_screen.state != null and _screen.state.mulligan_pending
-	)
+	var pending_mulligan: bool = _screen.state != null and _screen.state.mulligan_pending
 	if _cooldown > 0.0 or not _screen.interactive or pending_mulligan:
 		_popup.visible = false
 		return
 	_popup.visible = not _popup.visible
+	if _popup.visible:
+		_place_popup()
 
 
 func _toggle_mute() -> void:
@@ -152,7 +161,7 @@ func _update_mute_button_text() -> void:
 			_mute_btn.add_theme_color_override("font_color", UiPalette.GLOW_AMBER)
 		else:
 			_mute_btn.text = "相手エモート: 受信中"
-			_mute_btn.remove_theme_color_override("font_color")
+			_mute_btn.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
 
 
 func close_popup() -> void:
@@ -162,13 +171,10 @@ func close_popup() -> void:
 
 func _on_emote_selected(emote_id: String) -> void:
 	close_popup()
-	var pending_mulligan: bool = (
-		_screen.state != null and _screen.state.mulligan_pending
-	)
+	var pending_mulligan: bool = _screen.state != null and _screen.state.mulligan_pending
 	if _cooldown > 0.0 or not _screen.interactive or pending_mulligan:
 		return
 	_cooldown = COOLDOWN_SECONDS
-	_timer.start()
 	refresh()
 	var action := MatchAction.emote(_screen.my_side, emote_id)
 	_screen._perform(action)
@@ -178,7 +184,7 @@ func _on_emote_selected(emote_id: String) -> void:
 
 func handle_emote(action: Dictionary) -> void:
 	var side: int = int(action.get("side", -1))
-	var is_foe := (side != _screen.my_side)
+	var is_foe := side != _screen.my_side
 	if is_foe and mute_opponent:
 		return
 
@@ -214,7 +220,8 @@ func _maybe_cpu_reply() -> void:
 
 
 ## エモート選択用カスタムボタン
-class EmoteItemButton extends Button:
+class EmoteItemButton:
+	extends Button
 	var emote_id: String
 	var _font: Font
 
@@ -249,11 +256,5 @@ class EmoteItemButton extends Button:
 		var text := EmoteLibrary.get_emote_text(emote_id)
 		var text_color := UiPalette.BRASS_HIGHLIGHT if hovered else UiPalette.TEXT_OFFWHITE
 		draw_string(
-			_font,
-			Vector2(10, size.y - 12),
-			text,
-			HORIZONTAL_ALIGNMENT_LEFT,
-			-1,
-			13,
-			text_color
+			_font, Vector2(10, size.y - 12), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, text_color
 		)

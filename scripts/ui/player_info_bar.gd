@@ -197,19 +197,9 @@ func _draw_name_plate() -> void:
 			11,
 			UiPalette.BRASS_HIGHLIGHT
 		)
-		_text(
-			Vector2(text_x, NAME_PLATE_RECT.position.y + 32),
-			label,
-			15,
-			UiPalette.TEXT_OFFWHITE
-		)
+		_text(Vector2(text_x, NAME_PLATE_RECT.position.y + 32), label, 15, UiPalette.TEXT_OFFWHITE)
 	else:
-		_text(
-			Vector2(text_x, NAME_PLATE_RECT.position.y + 26),
-			label,
-			17,
-			UiPalette.TEXT_OFFWHITE
-		)
+		_text(Vector2(text_x, NAME_PLATE_RECT.position.y + 26), label, 17, UiPalette.TEXT_OFFWHITE)
 
 
 ## 残り時間は「相手の手札」の右、情報帯の末尾に置く。

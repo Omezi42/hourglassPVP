@@ -15,6 +15,9 @@ const HEADER_HEIGHT := 88.0
 const CONTENT_GAP := 24.0
 ## 各画面のコンテンツ領域の開始y座標(OUTER_MARGIN + HEADER_HEIGHT + CONTENT_GAP)。
 const CONTENT_TOP := OUTER_MARGIN + HEADER_HEIGHT + CONTENT_GAP
+## 各画面のコンテンツ領域の高さ。下端にも外周余白を残す。**画面ごとに数えない**
+## (数え直すと、ヘッダーの高さを変えたときに追随しない画面が残る)。
+const CONTENT_HEIGHT := 720.0 - CONTENT_TOP - OUTER_MARGIN
 
 ## タイトルの後ろへ敷く暗幕。背景イラストが賑やかな画面でも画面名が読めるようにする。
 ## 中央は濃く、左右へ向かって消える(端まで一様に敷くと帯が1本乗ったように見えるため)。

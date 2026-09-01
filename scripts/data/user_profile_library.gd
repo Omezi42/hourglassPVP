@@ -10,50 +10,61 @@ const CPU_ICON_ID := "hour"
 const CPU_TITLE_ID := "cpu_basic"
 
 const ICONS: Dictionary = {
-	"sand": {
+	"sand":
+	{
 		"name": "流砂",
 		"path": "res://assets/hourglasses/emblems/sand.png",
 	},
-	"hour": {
+	"hour":
+	{
 		"name": "時計",
 		"path": "res://assets/hourglasses/emblems/hour.png",
 	},
-	"crown": {
+	"crown":
+	{
 		"name": "王冠",
 		"path": "res://assets/hourglasses/emblems/crown.png",
 	},
-	"shield": {
+	"shield":
+	{
 		"name": "大盾",
 		"path": "res://assets/hourglasses/emblems/shield.png",
 	},
-	"sword": {
+	"sword":
+	{
 		"name": "宝剣",
 		"path": "res://assets/hourglasses/emblems/sword.png",
 	},
-	"eye": {
+	"eye":
+	{
 		"name": "真眼",
 		"path": "res://assets/hourglasses/emblems/eye.png",
 	},
-	"halo": {
+	"halo":
+	{
 		"name": "光輪",
 		"path": "res://assets/hourglasses/emblems/halo.png",
 	},
-	"burst": {
+	"burst":
+	{
 		"name": "閃光",
 		"path": "res://assets/hourglasses/emblems/burst.png",
 	},
 }
 
 const TITLES: Dictionary = {
-	"none": {
+	"none":
+	{
 		"name": "称号なし",
 		"display": "",
 	},
-	"novice": {
+	"novice":
+	{
 		"name": "駆け出し決闘者",
 		"display": "駆け出し決闘者",
 	},
-	"cpu_basic": {
+	"cpu_basic":
+	{
 		"name": "AI思考体",
 		"display": "AI思考体",
 	},
