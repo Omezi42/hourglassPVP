@@ -15,9 +15,9 @@ dest_files=["res://.godot/imported/crown.png-ce9fa0c47ce22608e00c59991b208431.ct
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
-compress/lossy_quality=0.7
+compress/lossy_quality=0.85
 compress/uastc_level=0
 compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
