@@ -10,19 +10,25 @@ signal back_pressed
 
 const HEADER_SCENE := "res://scenes/screen_header.tscn"
 const PANEL_STYLE := "res://resources/theme/content_panel.tres"
-const FILTER_RECT := Rect2(24, ScreenHeader.CONTENT_TOP, 816, 34)
+## **絞り込みの列は詳細パネルの左端まで広げる**。一覧の幅(816px)だけに収めていたときは
+## コスト7種とキーワード4種のチップで埋まり、右端の「名前で探す」がはみ出して押せなかった。
+## 右上の詳細(`DETAIL_POSITION`)の下へ潜らせないため、ここより右へは伸ばさない。
+const FILTER_RECT := Rect2(24, ScreenHeader.CONTENT_TOP, 832, 34)
 const GRID_RECT := Rect2(24, ScreenHeader.CONTENT_TOP + 46, 816, 514)
-const SIDE_RECT := Rect2(856, ScreenHeader.CONTENT_TOP, 400, 560)
+const SIDE_RECT := Rect2(856, ScreenHeader.CONTENT_TOP + 46, 400, 514)
 const SIDE_INNER_WIDTH := 372.0
 const GRID_COLUMNS := 6
 const GRID_GAP := 12
-const CURVE_HEIGHT := 92.0
+const CURVE_HEIGHT := 76.0
 ## `CardDetailPanel` の低背版の大きさ。ここを小さくしても最小サイズで押し返されるため揃える。
 const DETAIL_SIZE := CardDetailPanel.COMPACT_SIZE
 ## 詳細はホバー中だけ浮かせる。カードとパネルの間をカーソルが通るため、
 ## 外れてから消すまでに短い猶予を置く(対局画面の詳細と同じ流儀)。
-const DETAIL_GAP := 12.0
 const DETAIL_HIDE_DELAY := 0.12
+## **詳細は指しているカードの隣ではなく、画面の右上へ固定して出す**(GameDesign.md 9章)。
+## カーソルの近くへ出すと、次に見たいカードの上にパネルが被って選びづらい。
+## ヘッダーの主アクションや編成中の欄の上端に重なるのは許容する。
+const DETAIL_POSITION := Vector2(SIDE_RECT.position.x, ScreenHeader.OUTER_MARGIN)
 
 var _header: ScreenHeader
 var _filter: CardDeckFilter
@@ -95,16 +101,18 @@ func _build_header() -> void:
 	add_child(_header)
 	_header.set_title("デッキ編集")
 	_header.back_pressed.connect(func() -> void: back_pressed.emit())
-	var save_button := CodedButton.make("保存", Vector2(160, 56))
+	# **3つのボタンは画面タイトルへ寄りすぎないよう詰めてある。**以前は合計524pxあり、
+	# 中央のタイトル(「新しいデッキ」)と数pxしか離れていなかった。
+	var save_button := CodedButton.make("保存", Vector2(132, 56))
 	save_button.pressed.connect(_on_save_pressed)
 	_header.add_action(save_button)
 	# 20枚を自分で組まずに遊べる状態を用意する(GameDesign.md 18章)。
-	var preset_button := CodedButton.make("プリセット", Vector2(190, 56))
+	var preset_button := CodedButton.make("プリセット", Vector2(152, 56))
 	preset_button.pressed.connect(func() -> void: _preset_picker.open())
 	_header.add_action(preset_button)
 	# デッキコード(GameDesign.md 9章)。ルームマッチで友達と遊べるのに構築を
 	# 渡す手段が無いのは片手落ちであるため。
-	var code_button := CodedButton.make("コード", Vector2(150, 56))
+	var code_button := CodedButton.make("コード", Vector2(120, 56))
 	code_button.pressed.connect(func() -> void: _code_panel.open(_deck))
 	_header.add_action(code_button)
 
@@ -124,6 +132,8 @@ func _build_grid() -> void:
 		var view := CardView.new()
 		view.mode = CardView.Mode.HAND
 		view.custom_minimum_size = CardView.HAND_SIZE_PX
+		# 並べて見比べる画面では守護だけ枠を太くしない(GameDesign.md 9章)。
+		view.guard_frame = false
 		view.pressed.connect(_on_card_pressed)
 		view.hovered.connect(_on_card_hovered)
 		view.mouse_exited.connect(_hide_detail_soon)
@@ -179,6 +189,7 @@ func _build_detail() -> void:
 	_detail = CardDetailPanel.new()
 	_detail.compact = true
 	_detail.size = DETAIL_SIZE
+	_detail.position = DETAIL_POSITION
 	_detail.visible = false
 	_detail.keyword_pressed.connect(func(entry: Dictionary) -> void: _keyword_popup.open(entry))
 	_detail.mouse_entered.connect(func() -> void: _detail_timer.stop())
@@ -261,23 +272,14 @@ func _count_of(card: CardData) -> int:
 # --- 詳細(ホバー中だけ浮かせる) -----------------------------------------
 
 
-func _show_detail(card: CardData, source: Control) -> void:
+## 出す場所は常に画面の右上で、指しているカードの位置では動かさない
+## (カーソルの近くへ出すと隣のカードが隠れて選びづらいため)。
+func _show_detail(card: CardData) -> void:
 	if card == null:
 		return
 	_detail_timer.stop()
 	_detail.show_card(card)
-	var anchor := source.global_position - global_position
-	var to_right: bool = anchor.x + source.size.x * 0.5 < size.x * 0.5
-	var x: float = (
-		anchor.x + source.size.x + DETAIL_GAP if to_right else anchor.x - DETAIL_SIZE.x - DETAIL_GAP
-	)
-	var y := anchor.y + source.size.y * 0.5 - DETAIL_SIZE.y * 0.5
-	# **グリッドの領域内へ押し込む。**右カラムはデッキの表示に使い切っているため、
-	# そこへ重ねると編成中の枚数が読めなくなる。
-	_detail.position = Vector2(
-		clampf(x, GRID_RECT.position.x, GRID_RECT.end.x - DETAIL_SIZE.x),
-		clampf(y, ScreenHeader.CONTENT_TOP, size.y - ScreenHeader.OUTER_MARGIN - DETAIL_SIZE.y)
-	)
+	_detail.position = DETAIL_POSITION
 	_detail.visible = true
 
 
@@ -293,14 +295,11 @@ func _hide_detail() -> void:
 
 
 func _on_card_hovered(view: CardView) -> void:
-	_show_detail(view.card, view)
+	_show_detail(view.card)
 
 
 func _on_band_hovered(card: CardData) -> void:
-	for band in _band_pool:
-		if band.visible and band.card == card:
-			_show_detail(card, band)
-			return
+	_show_detail(card)
 
 
 func _on_card_pressed(view: CardView) -> void:

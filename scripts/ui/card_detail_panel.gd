@@ -4,9 +4,9 @@ extends PanelContainer
 ## 加えて、能力が実際にどう働くかの実演(`CardEffectPreview`)を出す。
 ## 一覧画面と、デッキ編集・将来の対局中の参考表示で共用する。
 ##
-## **デッキ編集では `compact` を立てて使う**。右カラムの上半分しか使えないため、
-## 大きなイラストを捨てて実演と効果文を横に並べる。イラストは同じ画面の下部にある
-## カード一覧で既に見えており、ここで繰り返す価値が低い。
+## **デッキ編集では `compact` を立てて使う**。カードの一覧に重ならない場所へ浮かせるため
+## 幅を右カラムぶんに絞り、大きなイラストを捨てて実演と効果文を縦に積む。イラストは
+## 同じ画面の一覧で既に見えており、ここで繰り返す価値が低い。
 ##
 ## **効果欄の語は押せる。**押すと `keyword_pressed` を出し、画面側が `KeywordPopup` を開く
 ## (GameDesign.md 17章)。ポップ自体をここで持たないのは、対局中はこのパネルが盤面の上の
@@ -16,15 +16,15 @@ signal keyword_pressed(entry: Dictionary)
 
 const PANEL_STYLE := "res://resources/theme/content_panel.tres"
 const PANEL_SIZE := Vector2(380, 460)
-const COMPACT_SIZE := Vector2(588, 262)
+const COMPACT_SIZE := Vector2(400, 392)
 const ICON_SIZE := Vector2(84, 84)
 ## カード固有の紋章(GameDesign.md 9章)。名前の左へ置き、カードの面より大きく見せる。
 const EMBLEM_SIZE := Vector2(44, 44)
 ## 語のボタンが下端で切れないよう、縦の詰めた実演にしてある。
 ## 大きく見たいときは語を押してキーワード辞書のポップで見られる(GameDesign.md 17章)。
 const PREVIEW_HEIGHT := 150.0
-## 横並びのときに効果文へ割く幅。
-const COMPACT_TEXT_WIDTH := 236.0
+## 縦積みのときに効果文へ割く幅。
+const COMPACT_TEXT_WIDTH := 344.0
 ## 効果欄の語のボタン。「2回攻撃」の4文字が収まる幅にしてある。
 const TERM_BUTTON_SIZE := Vector2(98, 34)
 const TERM_FONT_SIZE := 15
@@ -96,6 +96,32 @@ func _fill_body(card: CardData) -> void:
 		_body.add_child(_make_line(card.rules_text))
 	if card.keywords.is_empty() and card.rules_text.is_empty():
 		_body.add_child(_make_line("効果を持たない基準のカード。"))
+	for line in _token_lines(card):
+		_body.add_child(_make_line(line))
+
+
+## 効果で出る砂時計(トークン)の中身を1行で添える(GameDesign.md 6章)。
+## トークンはデッキにも一覧にも出ないため、**それを出すカードの側で説明しないと
+## 何が場に出るのかを調べる手段が無い**。
+static func _token_lines(card: CardData) -> Array[String]:
+	var lines: Array[String] = []
+	var seen: Array[String] = []
+	for effect in card.effects:
+		if effect == null or effect.effect_type != CardEnums.EffectType.SUMMON:
+			continue
+		if seen.has(effect.card_id):
+			continue
+		seen.append(effect.card_id)
+		var token := CardLibrary.find_by_id(effect.card_id)
+		if token == null:
+			continue
+		lines.append(
+			(
+				"※ %s … 総量 %d の砂時計(%s)。効果で場に出るトークンで、デッキには入れられない。"
+				% [token.display_name, token.total_sand, token.describe()]
+			)
+		)
+	return lines
 
 
 static func _triggers_of(card: CardData) -> Array[int]:
@@ -166,7 +192,7 @@ func _build() -> void:
 	column.add_child(_make_body_scroll(PANEL_SIZE.x - 80))
 
 
-## 横並び:上に名前とコスト、下に「実演 | 効果文」。
+## 縦積み:上に名前とコスト、その下に実演、いちばん下に効果文。
 func _build_compact() -> void:
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 8)
@@ -181,20 +207,12 @@ func _build_compact() -> void:
 	_stats.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	header.add_child(_stats)
 
-	var row := HBoxContainer.new()
-	row.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	row.add_theme_constant_override("separation", 12)
-	column.add_child(row)
-
 	_preview = CardEffectPreview.new()
-	_preview.custom_minimum_size = Vector2(260, 0)
+	_preview.custom_minimum_size = Vector2(COMPACT_TEXT_WIDTH, PREVIEW_HEIGHT)
 	_preview.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_preview.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	row.add_child(_preview)
+	column.add_child(_preview)
 
-	var scroll := _make_body_scroll(COMPACT_TEXT_WIDTH - 12.0)
-	scroll.custom_minimum_size = Vector2(COMPACT_TEXT_WIDTH, 0)
-	row.add_child(scroll)
+	column.add_child(_make_body_scroll(COMPACT_TEXT_WIDTH))
 
 
 func _make_title_row(centered: bool) -> HBoxContainer:

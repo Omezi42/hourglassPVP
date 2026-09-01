@@ -109,6 +109,8 @@ func _fill_grid() -> void:
 		var view := CardView.new()
 		view.mode = CardView.Mode.HAND
 		view.custom_minimum_size = CardView.HAND_SIZE_PX
+		# 並べて見比べる画面では守護だけ枠を太くしない(GameDesign.md 9章)。
+		view.guard_frame = false
 		view.show_card(card, true)
 		view.selected = card == _selected
 		view.pressed.connect(_select)

@@ -133,6 +133,10 @@ var ready_mark := false
 var badge := ""
 ## 手札でホバーしたときに拡大するか。対局画面の手札だけが true。
 var hover_zoom := false
+## 守護を枠の太さでも示すか(GameDesign.md 9章)。**対局画面だけ true にする。**
+## 攻撃の対象選択に直接効くのは盤面だけであり、砂時計一覧やデッキ編集の並びでは
+## 一部のカードだけ枠が太いことが意味の無い強調に見える。
+var guard_frame := true
 ## 手札からドラッグで出せるか(GameDesign.md 9章)。攻撃が既にドラッグに対応しているため、
 ## 盤面へ物を置く操作だけがクリック限定なのは揃わない。
 var draggable := false
@@ -579,7 +583,7 @@ func _draw_hand_card() -> void:
 		rect,
 		[[0.0, Color(0.23, 0.2, 0.17, 1.0) * tint], [1.0, Color(0.11, 0.1, 0.09, 1.0) * tint]]
 	)
-	var guard := _has_live_keyword(CardEnums.Keyword.GUARD)
+	var guard := guard_frame and _has_live_keyword(CardEnums.Keyword.GUARD)
 	var border := UiPalette.BRASS_MID
 	if selected:
 		border = SELECT_CYAN

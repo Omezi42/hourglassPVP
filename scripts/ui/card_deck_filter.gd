@@ -8,12 +8,14 @@ extends HBoxContainer
 
 signal changed
 
+## チップは**1行に「すべて + コスト7種 + キーワード4種 + 名前の検索」が収まる**幅にする。
+## 以前は合計886pxあり、画面に取れる幅(832px)を超えて右端の検索欄がはみ出していた。
 const CHIP_HEIGHT := 34.0
-const COST_CHIP_WIDTH := 44.0
-const ALL_CHIP_WIDTH := 68.0
-const KEYWORD_CHIP_WIDTH := 66.0
-const SEARCH_WIDTH := 148.0
-const SEPARATION := 6
+const COST_CHIP_WIDTH := 40.0
+const ALL_CHIP_WIDTH := 62.0
+const KEYWORD_CHIP_WIDTH := 62.0
+const SEARCH_WIDTH := 140.0
+const SEPARATION := 5
 
 ## 0 は「すべて」。それ以外はそのコストだけを通す。
 var _cost := 0
@@ -43,7 +45,7 @@ func _build() -> void:
 	_add_cost_chip("すべて", 0, ALL_CHIP_WIDTH)
 	for cost in _pool_costs():
 		_add_cost_chip(str(cost), cost, COST_CHIP_WIDTH)
-	add_child(_spacer(10.0))
+	add_child(_spacer(8.0))
 	for keyword in CardEnums.NAMED:
 		var button := CodedButton.make(
 			CardEnums.keyword_name(keyword), Vector2(KEYWORD_CHIP_WIDTH, CHIP_HEIGHT)
@@ -52,7 +54,7 @@ func _build() -> void:
 		button.pressed.connect(_on_keyword_pressed.bind(keyword))
 		add_child(button)
 		_keyword_buttons[keyword] = button
-	add_child(_spacer(10.0))
+	add_child(_spacer(8.0))
 	var search := LineEdit.new()
 	search.placeholder_text = "名前で探す"
 	search.custom_minimum_size = Vector2(SEARCH_WIDTH, CHIP_HEIGHT)
