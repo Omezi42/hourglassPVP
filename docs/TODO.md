@@ -62,6 +62,17 @@
 
 ---
 
+## 砂時計の絵を1組にする(pckの7割を占めているため)
+
+仕様は GameDesign.md 9章、実装設計は Architecture.md 4.1節。**全58種がサンドの絵1枚の
+色違い**であることを実測で確かめたうえで、色違いを焼いた画像を配るのをやめる。
+
+- [x] 58種の輪郭が完全に一致することと、元絵とされていた9種もサンドの色違いであることを実測した
+- [x] 現行の絵から色変換の数値を逆算する道具(`tools/fit_hourglass_tints.py`)を用意した
+- [ ] `HourglassTintTable` / `HourglassArt` を実装し、`CardData` から絵への参照を外す
+- [ ] `assets/hourglasses/processed/` を `.gdignore` へ移し、`master/` の3枚だけを配る
+- [ ] pckが9.65MB → 約3.1MBになることと、盤面・一覧・デッキ編集の見た目が変わらないことを確認する
+
 ## 手を入れる前に片付けるもの(技術的負債)
 
 - [x] **`scripts/ui/card_match_screen.gd` の切り出し**。オンラインの開始・復帰・観戦の3経路を
