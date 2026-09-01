@@ -16,7 +16,7 @@ const DANGER_RATIO := 0.4
 const PIP_STEP := 20.0
 const PIP_RADIUS := 7.0
 ## 帯の中の横位置。マナのピップは上限10まで並ぶため、山札の山と重ならない位置から始める。
-const NAME_PLATE_RECT := Rect2(10, 10, 140, 36)
+const NAME_PLATE_RECT := Rect2(8, 8, 146, 40)
 const HP_BAR_X := 162.0
 const MANA_TEXT_X := 418.0
 const PIP_START_X := 516.0
@@ -39,6 +39,10 @@ const DECK_PULSE_DURATION := 0.45
 var is_opponent := false
 ## 表示名(未設定なら「あなた」「相手」)。
 var display_name := ""
+## アイコンID(GameDesign.md 14章)。
+var icon_id := UserProfileLibrary.DEFAULT_ICON_ID
+## 称号ID(GameDesign.md 14章)。
+var title_id := UserProfileLibrary.DEFAULT_TITLE_ID
 ## 攻撃の対象として選べる状態か。光らせて示す。
 var targetable := false
 ## 残り持ち時間(秒)。負の値なら表示しない(CPU戦は持ち時間を使わない)。
@@ -145,8 +149,7 @@ func _draw() -> void:
 		_draw_clock()
 
 
-## 名前は真鍮の名札に載せる。どちらのHPかは配置と名前で示すため、色は使わない
-## (GameDesign.md 9章)。
+## 名前・アイコン・称号は真鍮の名札に載せる(GameDesign.md 9章・14章)。
 func _draw_name_plate() -> void:
 	var ci := get_canvas_item()
 	var label := display_name
@@ -162,7 +165,38 @@ func _draw_name_plate() -> void:
 	var outline := points.duplicate()
 	outline.append(points[0])
 	draw_polyline(outline, UiPalette.BRASS_LIGHT, 1.5, true)
-	_text(NAME_PLATE_RECT.position + Vector2(12, 25), label, 18)
+
+	# アイコン描画(左端・円形枠)
+	var icon_rect := Rect2(14, 14, 28, 28)
+	var icon_center := icon_rect.position + icon_rect.size * 0.5
+	var icon_tex := UserProfileLibrary.get_icon_texture(icon_id)
+	if icon_tex != null:
+		draw_texture_rect(icon_tex, icon_rect, false)
+	draw_arc(icon_center, 14.5, 0.0, TAU, 20, UiPalette.BRASS_LIGHT, 1.5)
+
+	# 称号と表示名の描画
+	var title_text := UserProfileLibrary.get_title_display(title_id)
+	var text_x := 48.0
+	if not title_text.is_empty():
+		_text(
+			Vector2(text_x, NAME_PLATE_RECT.position.y + 16),
+			title_text,
+			11,
+			UiPalette.BRASS_HIGHLIGHT
+		)
+		_text(
+			Vector2(text_x, NAME_PLATE_RECT.position.y + 32),
+			label,
+			15,
+			UiPalette.TEXT_OFFWHITE
+		)
+	else:
+		_text(
+			Vector2(text_x, NAME_PLATE_RECT.position.y + 26),
+			label,
+			17,
+			UiPalette.TEXT_OFFWHITE
+		)
 
 
 ## 残り時間は「相手の手札」の右、情報帯の末尾に置く。

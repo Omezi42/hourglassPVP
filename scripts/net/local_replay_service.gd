@@ -83,7 +83,11 @@ static func _load_all() -> Array:
 	var file := FileAccess.open(SAVE_PATH, FileAccess.READ)
 	if file == null:
 		return []
-	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	var text := file.get_as_text().strip_edges()
+	file = null
+	if text.is_empty():
+		return []
+	var parsed: Variant = JSON.parse_string(text)
 	if typeof(parsed) != TYPE_ARRAY:
 		return []
 	var result: Array = []
@@ -98,3 +102,4 @@ static func _save_all(records: Array) -> void:
 	if file == null:
 		return
 	file.store_string(JSON.stringify(records))
+	file = null

@@ -59,6 +59,22 @@ static func clear_pending_currency() -> void:
 	_store(data)
 
 
+## ローカルにアイコンと称号を保存する(オフライン復帰用)。
+static func save_local_customization(icon_id: String, title_id: String) -> void:
+	var data := _load()
+	data["icon_id"] = icon_id
+	data["title_id"] = title_id
+	_store(data)
+
+
+static func load_local_customization() -> Dictionary:
+	var data := _load()
+	return {
+		"icon_id": str(data.get("icon_id", "")),
+		"title_id": str(data.get("title_id", "")),
+	}
+
+
 static func _load() -> Dictionary:
 	if not FileAccess.file_exists(SAVE_PATH):
 		return {}

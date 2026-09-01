@@ -13,14 +13,14 @@ const DISPLAY_NAME_MAX_LENGTH := 10
 
 ## 直近に読み込んだプロフィール。キーは `players/{uid}` のフィールドと同じ。
 static var _profile: Dictionary = _empty_profile()
-## 他プレイヤーの表示名(uid -> 表示名)。同じ相手を何度も引かないために持つ。
-static var _name_cache: Dictionary = {}
+## 他プレイヤーのプロフィールキャッシュ(uid -> {display_name, icon_id, title_id})。
+static var _profile_cache: Dictionary = {}
 
 
 ## ログアウト・ログインでアカウントが変わったときに呼ぶ。
 static func reset() -> void:
 	_profile = _empty_profile()
-	_name_cache.clear()
+	_profile_cache.clear()
 
 
 static func display_name() -> String:
@@ -31,6 +31,20 @@ static func display_name() -> String:
 static func display_name_or_default() -> String:
 	var name := display_name()
 	return name if name != "" else "ゲスト"
+
+
+static func icon_id() -> String:
+	var id := str(_profile.get("icon_id", ""))
+	if id.is_empty():
+		id = str(AccountStore.load_local_customization().get("icon_id", ""))
+	return id if not id.is_empty() else UserProfileLibrary.DEFAULT_ICON_ID
+
+
+static func title_id() -> String:
+	var id := str(_profile.get("title_id", ""))
+	if id.is_empty():
+		id = str(AccountStore.load_local_customization().get("title_id", ""))
+	return id if not id.is_empty() else UserProfileLibrary.DEFAULT_TITLE_ID
 
 
 static func currency() -> int:
@@ -52,15 +66,34 @@ static func load_profile(client: FirestoreClient, uid: String) -> void:
 	_profile = _empty_profile()
 	for key in fields:
 		_profile[key] = fields[key]
+	if _profile.get("icon_id", "") != "" or _profile.get("title_id", "") != "":
+		AccountStore.save_local_customization(icon_id(), title_id())
 
 
 static func save_display_name(client: FirestoreClient, uid: String, name: String) -> bool:
-	# 画面側でも弾いているが、保存の手前でも通しておく(GameDesign.md 14章)
+	return await save_profile(client, uid, name, icon_id(), title_id())
+
+
+static func save_profile(
+	client: FirestoreClient, uid: String, name: String, p_icon_id: String, p_title_id: String
+) -> bool:
 	var trimmed := TextGlyphs.sanitize(name.strip_edges())
 	if trimmed.length() > DISPLAY_NAME_MAX_LENGTH:
 		trimmed = trimmed.substr(0, DISPLAY_NAME_MAX_LENGTH)
+	AccountStore.save_local_customization(p_icon_id, p_title_id)
+	_profile["icon_id"] = p_icon_id
+	_profile["title_id"] = p_title_id
+	if uid == "":
+		_profile["display_name"] = trimmed
+		return true
 	var ok: bool = await client.set_document(
-		_path(uid), {"display_name": trimmed, "updated_at": Time.get_unix_time_from_system()}
+		_path(uid),
+		{
+			"display_name": trimmed,
+			"icon_id": p_icon_id,
+			"title_id": p_title_id,
+			"updated_at": Time.get_unix_time_from_system()
+		}
 	)
 	if ok:
 		_profile["display_name"] = trimmed
@@ -121,21 +154,44 @@ static func grant(client: FirestoreClient, uid: String, amount: int, is_cpu: boo
 	return currency()
 
 
-## 他プレイヤーの表示名を引く(GameDesign.md 14章)。未設定・取得失敗なら空文字を返し、
-## 呼び出し側が「相手」などの既定の呼び方へ落とす。同じuidは2度読まない。
-static func fetch_display_name(client: FirestoreClient, uid: String) -> String:
+## 他プレイヤーのプロフィールを引く(GameDesign.md 14章)。未設定・取得失敗なら既定値を返す。
+## 同じuidは2度読まない。
+static func fetch_profile(client: FirestoreClient, uid: String) -> Dictionary:
 	if uid == "":
-		return ""
+		return {
+			"display_name": "",
+			"icon_id": UserProfileLibrary.DEFAULT_ICON_ID,
+			"title_id": UserProfileLibrary.DEFAULT_TITLE_ID,
+		}
 	if uid == _current_uid():
-		return display_name()
-	if _name_cache.has(uid):
-		return str(_name_cache[uid])
+		return {
+			"display_name": display_name(),
+			"icon_id": icon_id(),
+			"title_id": title_id(),
+		}
+	if _profile_cache.has(uid):
+		return _profile_cache[uid]
 	var fields: Dictionary = await client.get_document(_path(uid))
-	# 相手のクライアントが何を送ってくるかはこちらで制御できないため、こちらのフォントで
-	# 出せない文字は「?」へ落としてから表示へ回す(GameDesign.md 14章)
 	var name := TextGlyphs.replace_unsupported(str(fields.get("display_name", "")))
-	_name_cache[uid] = name
-	return name
+	var p_icon := str(fields.get("icon_id", ""))
+	if p_icon.is_empty():
+		p_icon = UserProfileLibrary.DEFAULT_ICON_ID
+	var p_title := str(fields.get("title_id", ""))
+	if p_title.is_empty():
+		p_title = UserProfileLibrary.DEFAULT_TITLE_ID
+	var profile := {
+		"display_name": name,
+		"icon_id": p_icon,
+		"title_id": p_title,
+	}
+	_profile_cache[uid] = profile
+	return profile
+
+
+## 他プレイヤーの表示名を引く(GameDesign.md 14章)。後方互換用。
+static func fetch_display_name(client: FirestoreClient, uid: String) -> String:
+	var profile := await fetch_profile(client, uid)
+	return str(profile.get("display_name", ""))
 
 
 static func _current_uid() -> String:
@@ -154,6 +210,8 @@ static func _empty_profile() -> Dictionary:
 	return {
 		"display_name": "",
 		"login_id": "",
+		"icon_id": "",
+		"title_id": "",
 		"currency": 0,
 		"cpu_reward_date": "",
 		"cpu_reward_count": 0,

@@ -73,14 +73,19 @@ func start(
 	_screen.set_process(true)
 
 
-## 対戦相手の表示名を出す(GameDesign.md 14章)。取得できなければ既定の「相手」のまま。
+## 対戦相手のプロフィール(名前・アイコン・称号)を出す(GameDesign.md 14章)。
 func _apply_player_names(client: FirestoreClient, opponent_uid: String) -> void:
 	_screen._own_bar.display_name = AccountService.display_name()
+	_screen._own_bar.icon_id = AccountService.icon_id()
+	_screen._own_bar.title_id = AccountService.title_id()
 	if opponent_uid.is_empty():
 		return
-	var name: String = await AccountService.fetch_display_name(client, opponent_uid)
+	var profile: Dictionary = await AccountService.fetch_profile(client, opponent_uid)
+	var name: String = str(profile.get("display_name", ""))
 	if not name.is_empty():
 		_screen._foe_bar.display_name = name
+	_screen._foe_bar.icon_id = str(profile.get("icon_id", UserProfileLibrary.DEFAULT_ICON_ID))
+	_screen._foe_bar.title_id = str(profile.get("title_id", UserProfileLibrary.DEFAULT_TITLE_ID))
 	_screen.refresh()
 
 

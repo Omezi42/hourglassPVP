@@ -16,6 +16,7 @@ func run(assert_true: Callable) -> void:
 	_test_account_store(assert_true)
 	_test_local_replay_ownership(assert_true)
 	_test_text_glyphs(assert_true)
+	_test_profile_customization(assert_true)
 
 
 func _test_credential_validation(assert_true: Callable) -> void:
@@ -277,3 +278,45 @@ func _test_text_glyphs(assert_true: Callable) -> void:
 		TextGlyphs.replace_unsupported("砂" + emoji + "時計") == "砂?時計",
 		"replace_unsupported should keep the position of a dropped character"
 	)
+
+
+func _test_profile_customization(assert_true: Callable) -> void:
+	# UserProfileLibraryの検証
+	var icons := UserProfileLibrary.get_available_icon_ids()
+	assert_true.call(icons.has("mascot"), "available icons should include mascot")
+	assert_true.call(icons.has("sand"), "available icons should include sand")
+	assert_true.call(UserProfileLibrary.get_icon_name("mascot") == "すなえる", "mascot icon name")
+	assert_true.call(UserProfileLibrary.get_icon_texture("mascot") != null, "mascot icon texture exists")
+	assert_true.call(UserProfileLibrary.get_icon_texture("unknown_id") != null, "fallback icon texture exists")
+
+	var titles := UserProfileLibrary.get_available_title_ids()
+	assert_true.call(titles.has("novice"), "available titles should include novice")
+	assert_true.call(titles.has("none"), "available titles should include none")
+	assert_true.call(not titles.has("cpu_basic"), "cpu title should not be in available titles")
+	assert_true.call(UserProfileLibrary.get_title_display("novice") == "駆け出し決闘者", "novice title display")
+	assert_true.call(UserProfileLibrary.get_title_display("none") == "", "none title display should be empty")
+
+	# AccountStoreのローカル保存と復元の検証
+	var backup: Variant = _backup()
+	AccountStore.save_local_customization("crown", "none")
+	var loaded := AccountStore.load_local_customization()
+	assert_true.call(loaded["icon_id"] == "crown", "custom icon_id should survive roundtrip")
+	assert_true.call(loaded["title_id"] == "none", "custom title_id should survive roundtrip")
+
+	# AccountServiceのフォールバック検証
+	AccountService.reset()
+	assert_true.call(AccountService.icon_id() == "crown", "AccountService should read local icon_id")
+	assert_true.call(AccountService.title_id() == "none", "AccountService should read local title_id")
+
+	AccountStore.save_local_customization("", "")
+	AccountService.reset()
+	assert_true.call(
+		AccountService.icon_id() == UserProfileLibrary.DEFAULT_ICON_ID,
+		"empty icon_id should fallback to default"
+	)
+	assert_true.call(
+		AccountService.title_id() == UserProfileLibrary.DEFAULT_TITLE_ID,
+		"empty title_id should fallback to default"
+	)
+
+	_restore(backup)

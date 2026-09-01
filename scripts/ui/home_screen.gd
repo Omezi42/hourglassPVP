@@ -32,6 +32,9 @@ const TAB_RULES := 0
 const TAB_DECK := 1
 const TAB_BATTLE := 2
 
+## 右上のメニュー(ハンバーガー)ボタンのスタイル。
+const MENU_BUTTON_GROUP := "icon_menu"
+
 var _tab_fade_tween: Tween
 ## いま表示しているタブ。3つに増えたため、隠す相手を index の対から求めない。
 var _active_tab: Control
@@ -73,6 +76,7 @@ func _ready() -> void:
 	_build_rules_tab()
 	deck_nav_button.pressed.connect(_select_tab.bind(TAB_DECK))
 	battle_nav_button.pressed.connect(_select_tab.bind(TAB_BATTLE))
+	_style_menu_button()
 	settings_button.pressed.connect(func() -> void: settings_panel.open())
 	account_button.pressed.connect(func() -> void: account_requested.emit())
 	# 初回起動時だけ「ルール」から始める(GameDesign.md 9章)。読了は測らない。
@@ -80,6 +84,14 @@ func _ready() -> void:
 	UiState.mark_home_seen()
 	_select_tab(TAB_RULES if first_visit else TAB_DECK)
 	refresh_account()
+
+
+## 右上のボタンをハンバーガー(横3本のバー)の紋章にする。文言を持たない代わりに
+## 中身が音量だけに限られなくなるため、名前は「メニュー」で通す。StyleBoxはリソース
+## 参照のため .tscn のパッチでは差し替えられず、ここで指定する。
+func _style_menu_button() -> void:
+	CodedButton.apply_styles(settings_button, MENU_BUTTON_GROUP)
+	settings_button.tooltip_text = "メニュー"
 
 
 func refresh_battle_tab() -> void:
@@ -92,9 +104,11 @@ func reset_battle_tab() -> void:
 
 
 ## 左上のアカウント表示を、キャッシュ済みのプロフィールから描き直す
-## (GameDesign.md 9章)。ここでは通信しない。
+## (GameDesign.md 9章・14章)。ここでは通信しない。
 func refresh_account() -> void:
-	account_button.text = AccountService.display_name_or_default()
+	account_button.text = " " + AccountService.display_name_or_default()
+	account_button.icon = UserProfileLibrary.get_icon_texture(AccountService.icon_id())
+	account_button.expand_icon = true
 	currency_label.text = "%s:%d" % [CurrencyRules.CURRENCY_NAME, AccountService.currency()]
 
 
