@@ -69,9 +69,11 @@
 
 - [x] 58種の輪郭が完全に一致することと、元絵とされていた9種もサンドの色違いであることを実測した
 - [x] 現行の絵から色変換の数値を逆算する道具(`tools/fit_hourglass_tints.py`)を用意した
-- [ ] `HourglassTintTable` / `HourglassArt` を実装し、`CardData` から絵への参照を外す
-- [ ] `assets/hourglasses/processed/` を `.gdignore` へ移し、`master/` の3枚だけを配る
-- [ ] pckが9.65MB → 約3.1MBになることと、盤面・一覧・デッキ編集の見た目が変わらないことを確認する
+- [x] `HourglassTintTable` / `HourglassArt` を実装し、`CardData` から絵への参照を外した
+- [x] `assets/hourglasses/processed/` を `.gdignore` にして、`master/` の3枚だけを配るようにした
+- [x] **pckが9.65MB → 3.13MB(68%減)**になった。焼いた絵と従来の絵の差は、非可逆取り込みの
+      誤差を差し引いて平均3.07/255。砂時計一覧を実描画・書き出したpckの両方で確認した
+- [ ] **unityroomへ上げて、実機で読み込みが速くなっていることを確かめる**
 
 ## 手を入れる前に片付けるもの(技術的負債)
 

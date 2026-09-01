@@ -1,10 +1,7 @@
-[gd_resource type="Resource" script_class="CardData" load_steps=8 format=3]
+[gd_resource type="Resource" script_class="CardData" load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
 [ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
-[ext_resource type="Texture2D" path="res://assets/hourglasses/processed/temper/state_full.png" id="icon_full"]
-[ext_resource type="Texture2D" path="res://assets/hourglasses/processed/temper/state_falling.png" id="icon_falling"]
-[ext_resource type="Texture2D" path="res://assets/hourglasses/processed/temper/state_empty.png" id="icon_empty"]
 [ext_resource type="Texture2D" path="res://assets/hourglasses/emblems/temper.png" id="emblem"]
 
 [sub_resource type="Resource" id="Effect_temper_0"]
@@ -28,7 +25,4 @@ effects = Array[Resource]([SubResource("Effect_temper_0")])
 rules_text = "被弾:この砂時計の攻撃力+2"
 cannot_attack = false
 is_token = false
-icon_upright = ExtResource("icon_full")
-icon_falling = ExtResource("icon_falling")
-icon_fallen = ExtResource("icon_empty")
 emblem = ExtResource("emblem")

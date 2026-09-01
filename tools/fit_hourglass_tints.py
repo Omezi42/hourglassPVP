@@ -14,10 +14,9 @@ sand から直接作られた40種は tint_hourglass_icons.gd が持つ数値が
 
 使い方:
     python tools/fit_hourglass_tints.py            … 当てはめと誤差の報告
-    python tools/fit_hourglass_tints.py --write    … tools/hourglass_tints.json へ書き出す
+    python tools/fit_hourglass_tints.py --write    … data/hourglass_tints.tres へ書き出す
 """
 
-import json
 import os
 import re
 import sys
@@ -199,13 +198,38 @@ def main():
     print("\n最悪の平均誤差 %.2f / 255   最悪の最大誤差 %.2f / 255" % (max(r[3] for r in rows), max(r[4] for r in rows)))
 
     if "--write" in sys.argv:
-        flat = {}
-        for card_id, chain in chains.items():
-            src = load_rgba(MASTER, "state_full")
-            flat[card_id] = chain
-        with open("tools/hourglass_tints.json", "w", encoding="utf-8") as f:
-            json.dump(flat, f, ensure_ascii=False, indent=2, sort_keys=True)
-        print("書き出しました: tools/hourglass_tints.json")
+        table = {MASTER: {"source": "", **IDENTITY}}
+        for base in bases:
+            table[base] = {"source": MASTER, **chains[base][0]}
+        for card_id, (src, step) in variants.items():
+            table[card_id] = {"source": src, **step}
+        write_table(table)
+
+
+def write_table(table):
+    """data/hourglass_tints.tres を書き出す。実行時はこれだけを読む。"""
+    fields = ["source", "hue", "sat", "sat_bias", "floor", "value", "value_bias", "threshold"]
+    lines = []
+    for art_id in sorted(table):
+        entry = table[art_id]
+        parts = []
+        for field in fields:
+            value = entry[field]
+            parts.append('"%s": "%s"' % (field, value) if field == "source" else '"%s": %.6f' % (field, float(value)))
+        lines.append('"%s": {%s}' % (art_id, ", ".join(parts)))
+    header = [
+        '[gd_resource type="Resource" script_class="HourglassTintTable" load_steps=2 format=3]',
+        "",
+        '[ext_resource type="Script" path="res://scripts/data/hourglass_tint_table.gd" id="script_table"]',
+        "",
+        "[resource]",
+        'script = ExtResource("script_table")',
+        "entries = {",
+    ]
+    text = "\n".join(header + [",\n".join(lines), "}", ""])
+    with open("data/hourglass_tints.tres", "w", encoding="utf-8", newline="\n") as f:
+        f.write(text)
+    print("書き出しました: data/hourglass_tints.tres (%d件)" % len(table))
 
 
 if __name__ == "__main__":

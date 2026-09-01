@@ -27,16 +27,36 @@ extends Resource
 @export var is_token: bool = false
 
 @export_group("Icons")
-## 体力が満ちている(=場に出た直後に近い)状態のイラスト。
-@export var icon_upright: Texture2D
-## 砂が落ちている途中の状態のイラスト。
-@export var icon_falling: Texture2D
-## 攻撃力に偏った(=砂が落ちきりに近い)状態のイラスト。
-@export var icon_fallen: Texture2D
+## どの絵を使うか(Architecture.md 4.1節)。空ならこのカードの id をそのまま使う。
+## ガード=`king` / グロウ=`judge` のように、別のカードの絵を借りる場合だけ書く。
+## **絵そのものへの参照は持たない**。全種が原本1枚の色違いであり、実際の絵は
+## HourglassArt が起動時に作るため(GameDesign.md 9章)。
+@export var art_id: String = ""
+
 ## そのカードだけの紋章(モチーフのアイコン)。砂時計の絵は全種で共通の1枚を
 ## 色違いにしたものなので、**どのカードかを見分けているのはこの紋章**になる
 ## (GameDesign.md 9章)。白のシルエットで持ち、色は描画側が決める。
 @export var emblem: Texture2D
+
+## 体力が満ちている(=場に出た直後に近い)状態のイラスト。
+var icon_upright: Texture2D:
+	get:
+		return HourglassArt.texture(art_key(), HourglassArt.State.UPRIGHT)
+
+## 砂が落ちている途中の状態のイラスト。
+var icon_falling: Texture2D:
+	get:
+		return HourglassArt.texture(art_key(), HourglassArt.State.FALLING)
+
+## 攻撃力に偏った(=砂が落ちきりに近い)状態のイラスト。
+var icon_fallen: Texture2D:
+	get:
+		return HourglassArt.texture(art_key(), HourglassArt.State.FALLEN)
+
+
+## 実際に使う絵の id。
+func art_key() -> String:
+	return art_id if not art_id.is_empty() else id
 
 
 func has_keyword(keyword: int) -> bool:

@@ -1,10 +1,7 @@
-[gd_resource type="Resource" script_class="CardData" load_steps=8 format=3]
+[gd_resource type="Resource" script_class="CardData" load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
 [ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
-[ext_resource type="Texture2D" path="res://assets/hourglasses/processed/halo/state_full.png" id="icon_full"]
-[ext_resource type="Texture2D" path="res://assets/hourglasses/processed/halo/state_falling.png" id="icon_falling"]
-[ext_resource type="Texture2D" path="res://assets/hourglasses/processed/halo/state_empty.png" id="icon_empty"]
 [ext_resource type="Texture2D" path="res://assets/hourglasses/emblems/halo.png" id="emblem"]
 
 [sub_resource type="Resource" id="Effect_halo_0"]
@@ -28,7 +25,4 @@ effects = Array[Resource]([SubResource("Effect_halo_0")])
 rules_text = "設置:自分の他の砂時計1体に硝子を与える"
 cannot_attack = false
 is_token = false
-icon_upright = ExtResource("icon_full")
-icon_falling = ExtResource("icon_falling")
-icon_fallen = ExtResource("icon_empty")
 emblem = ExtResource("emblem")

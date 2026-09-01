@@ -9,6 +9,7 @@ const V5RulesTests = preload("res://tools/tests/v5_rules_tests.gd")
 const V5VocabularyTests = preload("res://tools/tests/v5_vocabulary_tests.gd")
 const V5OnlineTests = preload("res://tools/tests/v5_online_tests.gd")
 const VersionMatchTests = preload("res://tools/tests/version_match_tests.gd")
+const HourglassArtTests = preload("res://tools/tests/hourglass_art_tests.gd")
 
 var _failures := 0
 
@@ -23,6 +24,7 @@ func _run() -> void:
 	_test_local_replay_service_round_trips_and_enforces_retention()
 	V5RulesTests.new().run(_assert_true)
 	V5VocabularyTests.new().run(_assert_true)
+	HourglassArtTests.new().run(_assert_true)
 	SoundSettingsTests.new().run(_assert_true)
 	OnlineTests.new().run(_assert_true)
 	AccountTests.new().run(_assert_true)

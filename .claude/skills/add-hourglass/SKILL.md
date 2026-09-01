@@ -49,16 +49,23 @@ description: |
 - **既定は既存の絵の色違い。**`tools/tint_hourglass_icons.gd` の `VARIANTS` へ
   `[新しいid, 元にするid, 色相の回転量, 彩度の倍率, 対象にする彩度の下限, 彩度の下駄]`
   を1行足して実行する
-- 出力先は `assets/hourglasses/processed/{id}/state_{full,falling,empty}.png`
+- 出力先は `assets/hourglasses/processed/{id}/state_{full,falling,empty}.png`。
+  **これは参考用であり、配布物には入らない**(`.gdignore` 済み)
 - **元の絵が鋼や石のようにほぼ無彩色だと、色相をいくら回しても色が付かない。**
   その場合は下限を下げ(0.04程度)、下駄を履かせる(0.35〜0.45程度)
-- `.tres` へ `icon_upright` / `icon_falling` / `icon_fallen` の参照を足す
-- **一覧画面をレンダリングして、既存カードと見分けが付くことを必ず目で確かめる**
+- **色の数値を `data/hourglass_tints.tres` へ入れる**(Architecture.md 4.1節)。
+  `python tools/fit_hourglass_tints.py --write` を回せば、参考用の絵から逆算して
+  表ごと書き直される。**実行時に絵を作っているのはこの表であり、画像ではない**
+- `.tres` に絵への参照は書かない。**別のカードの絵を借りる場合だけ `art_id` を書く**
+- **一覧画面をレンダリングして、既存カードと見分けが付くことを必ず目で確かめる**。
+  あわせて `Godot --path . --script res://tools/tests/verify_hourglass_art.gd`
+  (画面ありで回すこと)で、焼いた絵が参考用の絵と一致することを確かめる
 
 固有のイラストを用意する場合(色違いでは足りないとき)は、
 `assets/hourglasses/incoming/{id}.png` へユーザーが透過済み画像を置く。
 こちらはそれを横3等分し、原寸を `assets/hourglasses/sources/{id}/` へ、
-幅400px基準へ縮小したものを `processed/{id}/` へ保存する。
+幅400px基準へ縮小したものを **`assets/hourglasses/overrides/{id}/`** へ保存する
+(ここに置いた絵は色変換より優先され、そのまま配布物へ入る)。
 **縮小は一律のピクセルサイズへ揃えるのではなく、全状態へ同じ倍率を掛ける**
 (状態ごとにキャンバスサイズが数%異なることがあり、揃えると状態を切り替えたときに
 絵柄の大きさが跳ねるため)。プロンプトの組み立ては行わない(CLAUDE.md参照)。

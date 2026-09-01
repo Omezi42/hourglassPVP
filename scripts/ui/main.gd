@@ -147,6 +147,7 @@ func _ready() -> void:
 	replay_list_screen.back_pressed.connect(func() -> void: _show_only(home_screen))
 	replay_list_screen.replay_selected.connect(_on_replay_selected)
 	NetSession.ensure_ready(self)
+	HourglassArt.ensure_ready(self)
 	SoundBank.ensure_ready(self)
 	SoundBank.wire_buttons(self)
 	MusicPlayer.ensure_ready(self)
