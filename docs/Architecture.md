@@ -35,9 +35,9 @@ v5.0のカードが使う語彙を1箇所へ集める。旧ルールの `GameEnu
 |---|---|
 | `Keyword` | `GUARD`(守護)/ `GLASS`(硝子)/ `PIERCE`(貫通)/ `POISON`(毒砂)/ `LIFESTEAL`(吸命)/ `DOUBLE_STRIKE`(連撃)/ `QUICK`(速落) |
 | `NAMED`(const) | **語として見せる**キーワード。`GUARD` / `GLASS` / `PIERCE` / `QUICK` の4つ |
-| `Trigger` | `ON_PLAY`(設置)/ `ON_FLIP`(反転)/ `ON_DEATH`(余砂) |
-| `EffectTarget` | `SELF` / `ENEMY_UNIT` / `ALL_ENEMY_UNITS` / `ALL_ALLY_UNITS` / `OPPONENT_PLAYER` / `OWN_PLAYER` |
-| `EffectType` | `DAMAGE_PLAYER` / `DAMAGE_UNIT` / `DESTROY_UNIT` / `SWAP_STATS` / `ADD_TOTAL` / `DROP_SAND` / `DRAW` / `HEAL_PLAYER` / `DAMAGE_PLAYER_PER_ENEMY_UNIT` |
+| `Trigger` | `ON_PLAY`(設置)/ `ON_FLIP`(反転)/ `ON_DEATH`(余砂)/ `ON_TURN_END`(落砂)/ `ON_DAMAGED`(被弾) |
+| `EffectTarget` | `SELF` / `ENEMY_UNIT` / **`ALLY_UNIT`** / `ALL_ENEMY_UNITS` / `ALL_ALLY_UNITS` / `OPPONENT_PLAYER` / `OWN_PLAYER` |
+| `EffectType` | `DAMAGE_PLAYER` / `DAMAGE_UNIT` / `DESTROY_UNIT` / `SWAP_STATS` / `ADD_TOTAL` / **`ADD_ATTACK`** / `DROP_SAND` / `DRAW` / `HEAL_PLAYER` / `DAMAGE_PLAYER_PER_ENEMY_UNIT` / **`SUMMON`** / **`GRANT_KEYWORD`** / **`SILENCE`** |
 
 `keyword_name()` / `trigger_name()` は GameDesign.md 6章の日本語表記を返す。表示名を
 UI側に散らさないため、語と enum の対応はここだけが持つ。
@@ -71,6 +71,8 @@ UI側に散らさないため、語と enum の対応はここだけが持つ。
 | `keywords` | Array[Keyword] | 常在キーワード。0個でよい(バニラ) |
 | `effects` | Array[CardEffectData] | キーワードで表せない固有効果。0個でよい |
 | `rules_text` | String | 効果欄に出す一文。キーワードだけのカードは空 |
+| `cannot_attack` | bool | 攻撃できない代わりに総量が大きい駒(GameDesign.md 6章)。守護と違い**語にしない**ため `keywords` ではなくフラグで持つ |
+| `is_token` | bool | 効果で場に出る砂時計。**`CardLibrary.all_cards()` が返さない**ため、デッキ編集にも一覧にも現れない |
 | `icon_upright` / `icon_falling` / `icon_fallen` | Texture2D | 体力が多い/半々/攻撃力に偏った状態のイラスト |
 | `emblem` | Texture2D | そのカードだけの紋章(モチーフのアイコン)。白のシルエットで持ち、色は描画側が決める |
 
@@ -87,7 +89,17 @@ UI側に散らさないため、語と enum の対応はここだけが持つ。
 
 ### 2.3 `CardEffectData`(Resource)
 
-効果1件分。`trigger` / `target` / `effect_type` / `value` の4フィールドのみ。
+効果1件分。`trigger` / `target` / `effect_type` / `value` に加えて、
+**値が整数1つでは足りない2つの効果のためのフィールド**を持つ。
+
+| フィールド | 使う効果 | 内容 |
+|---|---|---|
+| `card_id` | `SUMMON` | 出す砂時計の id(`CardLibrary.find_by_id()` で引く) |
+| `keyword` | `GRANT_KEYWORD` | 与えるキーワード。既定は -1(なし) |
+
+**`value` を流用して「守護は0番」のように持たせない。**どの整数が何を指すかを
+呼び出し側が覚えている前提のコードになり、`.tres` を読んでも意味が取れなくなるため。
+
 新しいカードは既存 enum の組み合わせで `.tres` を1個作るだけで追加でき、コード変更を要さない。
 
 ### 2.4 `CardInstance`(RefCounted)
@@ -103,6 +115,8 @@ UI側に散らさないため、語と enum の対応はここだけが持つ。
 | `flipped_this_turn` | このターンに反転したか(1体1回) |
 | `attacks_this_turn` | このターンに攻撃した回数(連撃なら2回まで) |
 | `glass_intact` | 硝子がまだ残っているか |
+| `granted_keywords` | 効果で後から与えられたキーワード。`data.keywords` は書き換えない(Resourceは全対局で共有されるため) |
+| `silenced` | 効果を消されたか。true の間は `has_keyword()` が常に false を返し、`effects_for()` が空を返す |
 
 **砂の移動を3つのメソッドで区別する。**取り違えるとルールが崩れるため名前で分ける。
 
@@ -110,6 +124,12 @@ UI側に散らさないため、語と enum の対応はここだけが持つ。
 - `flip()` … 体力と攻撃力を入れ替える
 - `take_damage(n)` … 体力-n のみ。**総量が減る**(GameDesign.md 4章)。硝子が残っていれば
   1度だけ0を返して無効化する
+
+**キーワードの問い合わせは必ず `CardInstance.has_keyword()` を通す。**`CardData` を
+直接見ると、後から与えられたキーワード(`GRANT_KEYWORD`)と、消された状態(`SILENCE`)を
+取りこぼす。**`CardData.keywords` を書き換えて済ませてはいけない**。`.tres` は
+`load()` が同じインスタンスを返すため、1回の対局で書き換えると以後その版の全対局
+(リプレイ・シミュレーションを含む)へ残る。
 
 `lifetime_damage()` は `health * attack + health * (health - 1) / 2`(GameDesign.md 1章)。
 CPUの評価関数の基礎であり、ロジック層に置いてUI・CPUの双方から使う。
@@ -147,6 +167,16 @@ UIに依存しない、対局ルールそのものを扱う層。
 
 **手番の流れ**(GameDesign.md 3章)は `_begin_turn()` と `end_turn()` の2つだけで表す。
 
+**繰り返し働くトリガー**(GameDesign.md 6章)の発火点は2つだけで、どちらも
+既にある処理へ乗せる。**新しいループを増やさない。**
+
+- **落砂(`ON_TURN_END`)**:`end_turn()` が砂を1粒落とす直前。**落とす前に発動する**のは、
+  この1粒で壊れる駒にも最後の1回を働かせるため(壊れたあとに `ON_DEATH` が続く)
+- **被弾(`ON_DAMAGED`)**:`damage_unit()` と `_resolve_unit_combat()` が
+  `take_damage()` で実際に砂を削れたときだけ。**硝子で無効化されたときは発動しない**
+  (受けたのはダメージではなく、防がれた攻撃であるため)。**発動は生き残った駒に限る**
+  (死んだ駒は `ON_DEATH` が受け持つ)
+
 - `_begin_turn()`:`turn_count` を進める → 最大マナ+1・全回復 → 自分の全ユニットの
   `begin_turn()`(召喚酔い・反転済み・攻撃回数のリセット)→ ドロー1枚 → `turn_started` を発行
 - `end_turn()`:自分の全ユニットを `tick()`(1粒落とす)→ 体力0になったものを破壊 →
@@ -177,6 +207,7 @@ UIに依存しない、対局ルールそのものを扱う層。
   `summoned_this_turn` を下ろす。最後に `ON_PLAY` の効果を解決する
 - `flip(side, slot)` … 体力と攻撃力を入れ替える。マナ不要・1体1ターン1回・出したターンは不可。
   `ON_FLIP` の効果を解決する
+  `cannot_attack` を持つ駒は `can_attack()` が常に false を返す(反転はできる)
 - `attack(side, slot, target_slot)` … `target_slot` が -1 なら相手プレイヤー、0以上なら
   相手の砂時計。**砂時計を攻撃した場合は相打ち**として `_resolve_unit_combat()` へ回す
 
@@ -202,7 +233,10 @@ UIに依存しない、対局ルールそのものを扱う層。
 - `effect_type` ごとの分岐を1つの `match` に持ち、新しい種別を足すときはここへ1分岐を
   加えるだけで済む形を保つ
 - `target` の解決(自分自身/相手1体/相手全体/味方全体/プレイヤー)もここで行う
-- **対象を1体選ぶ効果(`ENEMY_UNIT`)は、`hint`(`{"side":..., "slot":...}`)で受け取る。**
+- **`SUMMON` は空き枠が無ければ何もしない**(GameDesign.md 6章)。出した駒は
+  `summoned_this_turn` を立てた状態で置き、その `ON_PLAY` は解決しない
+  (効果で出た駒の設置効果まで連鎖すると、1枚のカードが何をするか読めなくなるため)
+- **対象を1体選ぶ効果(`ENEMY_UNIT` / `ALLY_UNIT`)は、`hint`(`{"side":..., "slot":...}`)で受け取る。**
   指定が無い・その枠が既に空いている場合は「生涯ダメージが最大の1体」を自動で選ぶ。
   これによりUIは対象選択を実装するまで指定なしで呼べ、CPU・リプレイ再生も同じ経路を通る
 
