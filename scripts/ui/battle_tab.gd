@@ -61,8 +61,8 @@ func refresh() -> void:
 	if _busy:
 		return
 	_refresh_resume()
-	# v5.0はデッキを1つだけ持ち、未保存でも既定のデッキが返るため、常に対戦できる。
-	var ready_to_battle: bool = CardDeckSave.load_deck().size() == MatchState.DECK_SIZE
+	# 未保存でもプリセットの「基本」が返るため、常に対戦できる(GameDesign.md 18章)。
+	var ready_to_battle: bool = CardDeckSave.selected_deck().size() == MatchState.DECK_SIZE
 	random_match_button.disabled = not ready_to_battle
 	create_room_button.disabled = not ready_to_battle
 	cpu_match_button.disabled = not ready_to_battle

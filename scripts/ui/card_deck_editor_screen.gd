@@ -28,8 +28,11 @@ var _preset_picker: CardPresetPicker
 var _code_panel: CardDeckCodePanel
 var _card_row: HBoxContainer
 var _card_views: Array[CardView] = []
+var _name_input: LineEdit
 ## 編成中のデッキ。同じ CardData が最大2つ入る。
 var _deck: Array = []
+## 編集中のデッキが一覧の何番目か。-1 は新規作成(保存すると末尾へ追加する)。
+var _index := -1
 
 
 func _ready() -> void:
@@ -37,9 +40,18 @@ func _ready() -> void:
 	open()
 
 
-## 保存済みのデッキを読み込んで開く。
-func open() -> void:
-	_deck = CardDeckSave.load_deck()
+## 保存済みのデッキを1つ読み込んで開く。index が範囲外なら新規作成として開く。
+func open(index: int = -1) -> void:
+	var decks := CardDeckSave.list_decks()
+	if index >= 0 and index < decks.size():
+		_index = index
+		_deck = (decks[index]["cards"] as Array).duplicate()
+		_name_input.text = str(decks[index]["name"])
+	else:
+		_index = -1
+		_deck = []
+		_name_input.text = CardDeckSave.next_default_name()
+	_header.set_title("デッキ編集" if _index >= 0 else "新しいデッキ")
 	_refresh()
 
 
@@ -107,9 +119,20 @@ func _build_list() -> void:
 
 	var column := VBoxContainer.new()
 	panel.add_child(column)
+	# デッキは何個でも保存できるため、どれなのかを見分ける名前が要る(GameDesign.md 9章)。
+	var top_row := HBoxContainer.new()
+	top_row.add_theme_constant_override("separation", 12)
+	column.add_child(top_row)
+	_name_input = LineEdit.new()
+	_name_input.placeholder_text = "デッキ名"
+	_name_input.max_length = CardDeckSave.NAME_LIMIT
+	_name_input.custom_minimum_size = Vector2(260, 40)
+	top_row.add_child(_name_input)
 	_progress = Label.new()
 	_progress.add_theme_font_size_override("font_size", 22)
-	column.add_child(_progress)
+	_progress.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_progress.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	top_row.add_child(_progress)
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	column.add_child(scroll)
@@ -254,5 +277,9 @@ func _on_save_pressed() -> void:
 	if _deck.size() != MatchState.DECK_SIZE:
 		_progress.text = "%d / %d 枚(20枚ちょうどにしてください)" % [_deck.size(), MatchState.DECK_SIZE]
 		return
-	CardDeckSave.save_deck(_deck)
+	if _index >= 0:
+		CardDeckSave.update_deck(_index, _name_input.text, _deck)
+	else:
+		# 作ったばかりのデッキは、そのまま対局へ持って行けるよう選択の初期値にする。
+		CardDeckSave.set_selected_index(CardDeckSave.add_deck(_name_input.text, _deck))
 	back_pressed.emit()

@@ -11,11 +11,15 @@ var screen_guide_screen: ScreenGuideScreen
 var keyword_dict_screen: KeywordDictScreen
 ## v5.0のデッキ編集画面(同上)。
 var card_deck_editor_screen: CardDeckEditorScreen
+## デッキ一覧(同上)。管理と、対局前のデッキ選択の両方をこの1画面が兼ねる。
+var card_deck_list_screen: CardDeckListScreen
 ## v5.0のカード一覧画面(同上)。
 var card_list_screen: CardListScreen
 var stats_screen: CardStatsScreen
 
 var _match_return_screen: Control
+## デッキ選択画面で確定するまで待たせている対局の導線(ランダム/ルーム/CPU)。
+var _pending_battle := Callable()
 ## アカウント画面を閉じたときの戻り先。タイトルから開いた場合だけタイトルへ戻す。
 var _account_return_to_title := false
 
@@ -64,8 +68,17 @@ func _ready() -> void:
 	card_deck_editor_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
 	card_deck_editor_screen.visible = false
 	add_child(card_deck_editor_screen)
-	card_deck_editor_screen.back_pressed.connect(func() -> void: _show_only(home_screen))
+	card_deck_editor_screen.back_pressed.connect(_on_deck_editor_closed)
 	_screens.append(card_deck_editor_screen)
+	card_deck_list_screen = CardDeckListScreen.new()
+	card_deck_list_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
+	card_deck_list_screen.visible = false
+	add_child(card_deck_list_screen)
+	card_deck_list_screen.back_pressed.connect(_on_deck_list_back)
+	card_deck_list_screen.create_requested.connect(_on_deck_create_requested)
+	card_deck_list_screen.edit_requested.connect(_on_deck_edit_requested)
+	card_deck_list_screen.deck_picked.connect(_on_deck_picked)
+	_screens.append(card_deck_list_screen)
 	card_list_screen = CardListScreen.new()
 	card_list_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
 	card_list_screen.visible = false
@@ -198,30 +211,72 @@ func _on_spectate_requested(match_id: String) -> void:
 func _start_cpu_match() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
-	card_match_screen.start_cpu_match(CardDeckSave.load_deck(), CardDeckSave.random_deck(rng))
+	card_match_screen.start_cpu_match(CardDeckSave.selected_deck(), CardDeckSave.random_deck(rng))
 	_match_return_screen = home_screen
 	_show_only(card_match_screen)
 
 
-## v5.0はデッキを1つしか持たないため、開始前のデッキ選択画面を挟まない。
-## 複数デッキを持たせるときに、選択画面をv5.0向けに作り直す。
+## 対局を始める前に、保存済みデッキから使うものを選ばせる(GameDesign.md 9章)。
+## **デッキを1つも保存していない場合は選択画面を挟まない**。その場合はプリセットの
+## 「基本」で入る(GameDesign.md 18章)ため、選ぶ対象が存在しない。
+func _request_battle(start: Callable) -> void:
+	if CardDeckSave.list_decks().is_empty():
+		start.call()
+		return
+	_pending_battle = start
+	card_deck_list_screen.open_pick()
+	_show_only(card_deck_list_screen)
+
+
 func _on_random_match_deck_requested() -> void:
-	home_screen.battle_tab.begin_random_match()
+	_request_battle(func() -> void: home_screen.battle_tab.begin_random_match())
 
 
 func _on_create_room_deck_requested() -> void:
-	home_screen.battle_tab.begin_create_room()
+	_request_battle(func() -> void: home_screen.battle_tab.begin_create_room())
 
 
 func _on_cpu_match_deck_requested() -> void:
-	_start_cpu_match()
+	_request_battle(_start_cpu_match)
 
 
-## v5.0はデッキを1つだけ持つため、デッキ一覧(v1.0の複数デッキ管理)を挟まず
-## 編集画面へ直行する。複数デッキを持たせるときに一覧を作り直す。
-func _on_deck_list_requested() -> void:
-	card_deck_editor_screen.open()
+## デッキ選択画面で1つ選んだ。以後の初期値として覚えてから、待たせていた導線へ進む。
+func _on_deck_picked(index: int) -> void:
+	CardDeckSave.set_selected_index(index)
+	var start := _pending_battle
+	_pending_battle = Callable()
+	# オンラインは待機の文言をバトルタブへ出すため、先にホームへ戻してから始める。
+	_show_only(home_screen)
+	if start.is_valid():
+		start.call()
+
+
+## デッキ一覧の戻る。選ぶ途中で戻った場合は待たせていた導線を捨てる。
+func _on_deck_list_back() -> void:
+	_pending_battle = Callable()
+	_show_only(home_screen)
+
+
+func _on_deck_create_requested() -> void:
+	card_deck_editor_screen.open(-1)
 	_show_only(card_deck_editor_screen)
+
+
+func _on_deck_edit_requested(index: int) -> void:
+	card_deck_editor_screen.open(index)
+	_show_only(card_deck_editor_screen)
+
+
+## 編集画面は一覧からしか開かないため、閉じたら一覧へ戻す。
+func _on_deck_editor_closed() -> void:
+	card_deck_list_screen.open_manage()
+	_show_only(card_deck_list_screen)
+
+
+## デッキタブの「デッキ編集」。保存済みのデッキを並べた一覧から入る。
+func _on_deck_list_requested() -> void:
+	card_deck_list_screen.open_manage()
+	_show_only(card_deck_list_screen)
 
 
 ## 砂時計一覧はカード一覧(CardListScreen)。
@@ -256,7 +311,7 @@ func _on_online_match_found(
 	match_id: String, my_side: int, opponent_uid: String, is_room: bool
 ) -> void:
 	card_match_screen.start_online_match(
-		CardDeckSave.load_deck(), NetSession.client, match_id, my_side, is_room, opponent_uid
+		CardDeckSave.selected_deck(), NetSession.client, match_id, my_side, is_room, opponent_uid
 	)
 	_match_return_screen = home_screen
 	_show_only(card_match_screen)

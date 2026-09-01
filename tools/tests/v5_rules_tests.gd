@@ -436,11 +436,33 @@ func _test_card_deck_save_round_trips() -> void:
 	var deck: Array = []
 	for i in MatchState.DECK_SIZE:
 		deck.append(CardLibrary.all_cards()[i % 10])
-	CardDeckSave.save_deck(deck)
-	var loaded := CardDeckSave.load_deck()
+	# デッキは何個でも保存でき、対局で使うものは選択の初期値として覚える(GameDesign.md 9章)。
+	CardDeckSave.save_decks([])
+	CardDeckSave.add_deck("いち", deck)
+	CardDeckSave.add_deck("に", CardDeckSave.default_deck())
+	var decks := CardDeckSave.list_decks()
+	_assert.call(decks.size() == 2, "both saved decks should load back")
 	_assert.call(
-		CardLibrary.ids_from_deck(loaded) == CardLibrary.ids_from_deck(deck),
+		CardLibrary.ids_from_deck(decks[0]["cards"]) == CardLibrary.ids_from_deck(deck),
 		"a saved deck should load back unchanged"
+	)
+	CardDeckSave.set_selected_index(1)
+	_assert.call(
+		(
+			CardLibrary.ids_from_deck(CardDeckSave.selected_deck())
+			== CardLibrary.ids_from_deck(CardDeckSave.default_deck())
+		),
+		"the selected deck should be the one the picker confirmed"
+	)
+	CardDeckSave.move_deck(0, 1)
+	_assert.call(
+		CardDeckSave.list_decks()[1]["name"] == "いち", "reordering should swap the two decks"
+	)
+	CardDeckSave.remove_deck(0)
+	_assert.call(CardDeckSave.list_decks().size() == 1, "deleting should drop exactly one deck")
+	_assert.call(
+		CardDeckSave.selected_index() == 0,
+		"the selection should fall back into range after a delete"
 	)
 
 	if had_file:
