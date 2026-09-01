@@ -109,6 +109,7 @@ func refresh_account() -> void:
 	account_button.text = " " + AccountService.display_name_or_default()
 	account_button.icon = UserProfileLibrary.get_icon_texture(AccountService.icon_id())
 	account_button.expand_icon = true
+	account_button.add_theme_constant_override("icon_max_width", 32)
 	currency_label.text = "%s:%d" % [CurrencyRules.CURRENCY_NAME, AccountService.currency()]
 
 
