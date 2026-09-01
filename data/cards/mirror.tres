@@ -12,6 +12,7 @@ id = "mirror"
 display_name = "ミラー"
 cost = 5
 total_sand = 7
+pool_index = 15
 keywords = Array[int]([1])
 effects = Array[Resource]([])
 rules_text = ""

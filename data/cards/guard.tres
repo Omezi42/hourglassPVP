@@ -12,6 +12,7 @@ id = "guard"
 display_name = "ガード"
 cost = 5
 total_sand = 7
+pool_index = 16
 keywords = Array[int]([0])
 effects = Array[Resource]([])
 rules_text = ""

@@ -12,6 +12,7 @@ id = "glass"
 display_name = "グラス"
 cost = 3
 total_sand = 6
+pool_index = 4
 keywords = Array[int]([1])
 effects = Array[Resource]([])
 rules_text = ""

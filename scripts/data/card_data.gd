@@ -10,6 +10,9 @@ extends Resource
 @export var cost: int = 0
 ## 体力と攻撃力の合計。場に出た時点で 体力=総量 / 攻撃力=0 で始まる。
 @export var total_sand: int = 0
+## プールへ加えられた順の通し番号(GameDesign.md 9章の「追加順」)。
+## **ファイル名や一覧の並びから導出しない**。id のアルファベット順は追加順ではないため。
+@export var pool_index: int = 0
 ## 常在キーワード(GameDesign.md 6章)。0個でよい(バニラ)。
 @export var keywords: Array[CardEnums.Keyword] = []
 ## キーワードで表せない固有効果。0個でよい。

@@ -20,6 +20,7 @@ id = "dust"
 display_name = "ダスト"
 cost = 2
 total_sand = 4
+pool_index = 22
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_dust_0")])
 rules_text = "余砂:相手プレイヤーに2ダメージ"

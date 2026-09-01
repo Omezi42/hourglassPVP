@@ -12,6 +12,7 @@ id = "poison"
 display_name = "ポイズン"
 cost = 5
 total_sand = 6
+pool_index = 17
 keywords = Array[int]([3])
 effects = Array[Resource]([])
 rules_text = ""

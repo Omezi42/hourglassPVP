@@ -20,6 +20,7 @@ id = "sweep"
 display_name = "スイープ"
 cost = 6
 total_sand = 4
+pool_index = 19
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_sweep_0")])
 rules_text = "設置:相手の砂時計すべての砂を1粒削る"

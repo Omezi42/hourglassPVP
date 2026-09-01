@@ -20,6 +20,7 @@ id = "echo"
 display_name = "エコー"
 cost = 3
 total_sand = 5
+pool_index = 8
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_echo_0")])
 rules_text = "設置:カードを1枚引く"

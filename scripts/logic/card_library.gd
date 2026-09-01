@@ -27,6 +27,32 @@ static func all_cards() -> Array[CardData]:
 	return _cache
 
 
+## コスト順(同コストは総量の小さい順 → id順)。一覧の既定の並び(GameDesign.md 9章)。
+static func sorted_by_cost() -> Array[CardData]:
+	var cards := all_cards().duplicate()
+	cards.sort_custom(
+		func(a: CardData, b: CardData) -> bool:
+			if a.cost != b.cost:
+				return a.cost < b.cost
+			if a.total_sand != b.total_sand:
+				return a.total_sand < b.total_sand
+			return a.id < b.id
+	)
+	return cards
+
+
+## プールへ加えられた順。番号は CardData.pool_index が持つ。
+static func sorted_by_pool_index() -> Array[CardData]:
+	var cards := all_cards().duplicate()
+	cards.sort_custom(
+		func(a: CardData, b: CardData) -> bool:
+			if a.pool_index != b.pool_index:
+				return a.pool_index < b.pool_index
+			return a.id < b.id
+	)
+	return cards
+
+
 static func find_by_id(id: String) -> CardData:
 	for card in all_cards():
 		if card.id == id:

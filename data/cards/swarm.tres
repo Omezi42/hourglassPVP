@@ -20,6 +20,7 @@ id = "swarm"
 display_name = "スウォーム"
 cost = 4
 total_sand = 6
+pool_index = 14
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_swarm_0")])
 rules_text = "設置:相手の砂時計の数 × 1 ダメージを相手プレイヤーへ"

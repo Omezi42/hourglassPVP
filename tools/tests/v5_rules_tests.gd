@@ -8,6 +8,7 @@ var _assert: Callable
 func run(assert_true: Callable) -> void:
 	_assert = assert_true
 	_test_all_cards_load()
+	_test_card_orders()
 	_test_lifetime_damage_formula()
 	_test_unit_starts_full_health_and_ticks()
 	_test_flip_swaps_health_and_attack()
@@ -83,6 +84,28 @@ func _test_all_cards_load() -> void:
 	for card in cards:
 		_assert.call(card.cost > 0, "card %s should have a positive cost" % card.id)
 		_assert.call(card.total_sand > 0, "card %s should have a positive total" % card.id)
+
+
+## 一覧の並び替え(GameDesign.md 9章)。コスト順・追加順のどちらも全件を返し、
+## 追加順の番号が重複しないことを見る(重複するとどちらが先か決まらない)。
+func _test_card_orders() -> void:
+	var total := CardLibrary.all_cards().size()
+	var by_cost := CardLibrary.sorted_by_cost()
+	var by_pool := CardLibrary.sorted_by_pool_index()
+	_assert.call(by_cost.size() == total, "sorted_by_cost should return every card")
+	_assert.call(by_pool.size() == total, "sorted_by_pool_index should return every card")
+	for i in range(1, by_cost.size()):
+		_assert.call(
+			by_cost[i - 1].cost <= by_cost[i].cost, "sorted_by_cost should be ascending at %d" % i
+		)
+	var seen: Dictionary = {}
+	for card in by_pool:
+		_assert.call(card.pool_index > 0, "card %s should have a pool_index" % card.id)
+		_assert.call(
+			not seen.has(card.pool_index),
+			"pool_index %d is used twice (%s)" % [card.pool_index, card.id]
+		)
+		seen[card.pool_index] = true
 
 
 ## data/cards/ に置かれているカード定義の数。エクスポート後は `.tres.remap` になるため、

@@ -20,6 +20,7 @@ id = "sprout"
 display_name = "スプラウト"
 cost = 3
 total_sand = 6
+pool_index = 23
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_sprout_0")])
 rules_text = "余砂:カードを1枚引く"

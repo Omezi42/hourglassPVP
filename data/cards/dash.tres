@@ -12,6 +12,7 @@ id = "dash"
 display_name = "ダッシュ"
 cost = 2
 total_sand = 4
+pool_index = 3
 keywords = Array[int]([6])
 effects = Array[Resource]([])
 rules_text = ""

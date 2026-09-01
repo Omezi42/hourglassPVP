@@ -12,6 +12,7 @@ id = "grain"
 display_name = "グレイン"
 cost = 1
 total_sand = 3
+pool_index = 21
 keywords = Array[int]([])
 effects = Array[Resource]([])
 rules_text = ""

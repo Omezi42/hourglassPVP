@@ -67,6 +67,7 @@ UI側に散らさないため、語と enum の対応はここだけが持つ。
 | `display_name` | String | 表示名 |
 | `cost` | int | 場に出すために支払うマナ |
 | `total_sand` | int | 総量(体力+攻撃力)。場に出た時点で 体力=総量 / 攻撃力=0 |
+| `pool_index` | int | プールへ加えられた順の通し番号。砂時計一覧の「追加順」がこれを読む |
 | `keywords` | Array[Keyword] | 常在キーワード。0個でよい(バニラ) |
 | `effects` | Array[CardEffectData] | キーワードで表せない固有効果。0個でよい |
 | `rules_text` | String | 効果欄に出す一文。キーワードだけのカードは空 |
@@ -79,6 +80,10 @@ UI側に散らさないため、語と enum の対応はここだけが持つ。
 
 `describe()` が「キーワード名 / 固有効果の文」を組み立てるため、UI側は表示文字列を
 自分で作らない。
+
+**`pool_index` はファイル名や一覧の並びから導出しない**(GameDesign.md 9章)。`CardLibrary` は
+`data/cards/` を名前順に走査するため、既定の並びは id のアルファベット順であり追加順ではない。
+番号は `.tres` を作るときに1つずつ入れる(`.claude/skills/add-hourglass/SKILL.md` の手順)。
 
 ### 2.3 `CardEffectData`(Resource)
 
@@ -115,6 +120,10 @@ CPUの評価関数の基礎であり、ロジック層に置いてUI・CPUの双
 持つ」流儀)。エクスポート後は `.tres` が `<name>.tres.remap` として格納されるため、
 **`.remap` を除いた名前で判定し `load()` には元の `.tres` パスを渡す**(5章の既知の不具合。
 これを怠るとWeb版でのみ全カードが0件になる)。
+
+一覧の並び替え(GameDesign.md 9章)は `sorted_by_cost()` / `sorted_by_pool_index()` として
+ここが持つ。**画面側が比較関数を書かない**(同じ並びを別の画面でも使うときに食い違うため)。
+並べ替えは `all_cards()` の複製に対して行い、キャッシュそのものは並べ替えない。
 
 ---
 
@@ -234,7 +243,7 @@ UIに依存しない、対局ルールそのものを扱う層。
 | `CardMatchResult`(`scripts/ui/card_match_result.gd`) | 結果パネル。勝敗・最終HP・総手数・決着の要因と「ログ」「ホームへ」 |
 | `CardDeckEditorScreen`(`scripts/ui/card_deck_editor_screen.gd`) | デッキ編集(20枚・同名2枚まで)。共通の `ScreenHeader` を使う |
 | `CardManaCurve`(`scripts/ui/card_mana_curve.gd`) | コスト別の枚数の棒グラフ。デッキ編集では低背版(`compact`)で使う |
-| `CardListScreen`(`scripts/ui/card_list_screen.gd`) | カード一覧。選ぶと右の詳細パネルへ出す |
+| `CardListScreen`(`scripts/ui/card_list_screen.gd`) | カード一覧。選ぶと右の詳細パネルへ出す。ヘッダーの主アクションのボタンで並び順(コスト順 / 追加順)を往復する |
 | `CardDetailPanel`(`scripts/ui/card_detail_panel.gd`) | カード1種の詳細。**キーワードは名前と説明の両方**を出す(語だけでは初見に伝わらない)。イラストの下に `CardEffectPreview` を挟む |
 | `CardEffectPreview`(`scripts/ui/card_effect_preview.gd`) | 能力の実演。**カードごとではなくキーワード / 効果の種類ごとに1本**の台本を持つ(下記) |
 | `CardPileViewer`(`scripts/ui/card_pile_viewer.gd`) | 墓地の中身を見るモーダル。同じカードは1枚にまとめて枚数をバッジで出す |

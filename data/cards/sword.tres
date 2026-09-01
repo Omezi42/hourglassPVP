@@ -20,6 +20,7 @@ id = "sword"
 display_name = "ソード"
 cost = 3
 total_sand = 6
+pool_index = 7
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_sword_0")])
 rules_text = "設置:相手プレイヤーに2ダメージ"

@@ -34,6 +34,9 @@ description: |
 
 - `data/cards/{id}.tres`(`CardData`)を新規作成し、以下を埋める
   - `id` / `display_name` / `cost` / `total_sand`
+  - `pool_index`(追加順の通し番号)。**いま一番大きい番号+1を入れる**。
+    砂時計一覧の「追加順」の並び(GameDesign.md 9章)がこれを読む。
+    確認は `grep -h pool_index data/cards/*.tres | sort -t= -k2 -n | tail -1`
   - `keywords`(`CardEnums.Keyword`。0個でよい)
   - `effects`(`CardEffectData` = トリガー × ターゲット × エフェクト。0個でよい)
   - `rules_text`(キーワードだけのカードは空でよい)

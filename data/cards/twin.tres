@@ -12,6 +12,7 @@ id = "twin"
 display_name = "ツイン"
 cost = 4
 total_sand = 7
+pool_index = 12
 keywords = Array[int]([5])
 effects = Array[Resource]([])
 rules_text = ""

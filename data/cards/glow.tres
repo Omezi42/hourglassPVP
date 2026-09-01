@@ -20,6 +20,7 @@ id = "glow"
 display_name = "グロウ"
 cost = 5
 total_sand = 8
+pool_index = 18
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_glow_0")])
 rules_text = "反転:この砂時計の総量+1"

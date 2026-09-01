@@ -12,6 +12,7 @@ id = "shield"
 display_name = "シールド"
 cost = 2
 total_sand = 4
+pool_index = 2
 keywords = Array[int]([0])
 effects = Array[Resource]([])
 rules_text = ""

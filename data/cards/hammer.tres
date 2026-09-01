@@ -20,6 +20,7 @@ id = "hammer"
 display_name = "ハンマー"
 cost = 4
 total_sand = 3
+pool_index = 10
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_hammer_0")])
 rules_text = "設置:相手の砂時計1体に4ダメージ"
