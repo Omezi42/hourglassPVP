@@ -1,16 +1,19 @@
 class_name CardMatchEmote
 extends RefCounted
 ## 対局中のエモート機能(GameDesign.md 9章、Architecture.md 6.6)。
-## ボタン・ポップアップUI・クールダウン・CPU返答を受け持つ。
+## ボタン・ポップアップUI・クールダウン・相手ミュート・CPU返答を受け持つ。
 
-const COOLDOWN_SECONDS := 3.0
+const COOLDOWN_SECONDS := 9.0
 const EMOTE_BUTTON_SIZE := Vector2(148, 44)
 const POPUP_WIDTH := 240.0
 const POPUP_PADDING := 10.0
 
+var mute_opponent := false
+
 var _screen: CardMatchScreen
 var _button: Button
 var _popup: PanelContainer
+var _mute_btn: Button
 var _cooldown := 0.0
 var _timer: Timer
 
@@ -58,6 +61,16 @@ func _setup_ui() -> void:
 		item.pressed.connect(func() -> void: _on_emote_selected(emote_id))
 		vbox.add_child(item)
 
+	var hsep2 := HSeparator.new()
+	vbox.add_child(hsep2)
+
+	_mute_btn = Button.new()
+	_mute_btn.custom_minimum_size = Vector2(POPUP_WIDTH - POPUP_PADDING * 2.0, 28.0)
+	_mute_btn.add_theme_font_size_override("font_size", 12)
+	_mute_btn.pressed.connect(_toggle_mute)
+	_update_mute_button_text()
+	vbox.add_child(_mute_btn)
+
 	_popup.add_child(vbox)
 	_screen.add_child(_popup)
 
@@ -72,14 +85,27 @@ func set_position(btn_pos: Vector2) -> void:
 	if _button != null:
 		_button.position = btn_pos
 	if _popup != null:
-		_popup.position = Vector2(btn_pos.x - POPUP_WIDTH - 12.0, btn_pos.y - 140.0)
+		_popup.position = Vector2(btn_pos.x - POPUP_WIDTH - 12.0, btn_pos.y - 170.0)
 
 
 func refresh() -> void:
+	var pending_mulligan: bool = (
+		_screen.state != null and _screen.state.mulligan_pending
+	)
 	var can_use: bool = (
-		_screen.interactive and _screen.state != null and not _screen.state.is_match_over()
+		_screen.interactive
+		and _screen.state != null
+		and not _screen.state.is_match_over()
+		and not pending_mulligan
 	)
 	_button.visible = _screen.interactive
+	if pending_mulligan:
+		_button.text = "エモート"
+		_button.disabled = true
+		if _popup.visible:
+			_popup.visible = false
+		return
+
 	if _cooldown > 0.0:
 		_button.text = "%d秒" % int(ceilf(_cooldown))
 		_button.disabled = true
@@ -105,10 +131,28 @@ func _on_timer_tick() -> void:
 
 
 func _toggle_popup() -> void:
-	if _cooldown > 0.0 or not _screen.interactive:
+	var pending_mulligan: bool = (
+		_screen.state != null and _screen.state.mulligan_pending
+	)
+	if _cooldown > 0.0 or not _screen.interactive or pending_mulligan:
 		_popup.visible = false
 		return
 	_popup.visible = not _popup.visible
+
+
+func _toggle_mute() -> void:
+	mute_opponent = not mute_opponent
+	_update_mute_button_text()
+
+
+func _update_mute_button_text() -> void:
+	if _mute_btn != null:
+		if mute_opponent:
+			_mute_btn.text = "相手エモート: ミュート中"
+			_mute_btn.add_theme_color_override("font_color", UiPalette.GLOW_AMBER)
+		else:
+			_mute_btn.text = "相手エモート: 受信中"
+			_mute_btn.remove_theme_color_override("font_color")
 
 
 func close_popup() -> void:
@@ -118,7 +162,10 @@ func close_popup() -> void:
 
 func _on_emote_selected(emote_id: String) -> void:
 	close_popup()
-	if _cooldown > 0.0 or not _screen.interactive:
+	var pending_mulligan: bool = (
+		_screen.state != null and _screen.state.mulligan_pending
+	)
+	if _cooldown > 0.0 or not _screen.interactive or pending_mulligan:
 		return
 	_cooldown = COOLDOWN_SECONDS
 	_timer.start()
@@ -131,11 +178,15 @@ func _on_emote_selected(emote_id: String) -> void:
 
 func handle_emote(action: Dictionary) -> void:
 	var side: int = int(action.get("side", -1))
+	var is_foe := (side != _screen.my_side)
+	if is_foe and mute_opponent:
+		return
+
 	var emote_id: String = str(action.get("emote_id", ""))
 	var text := EmoteLibrary.get_emote_text(emote_id)
 	if text.is_empty():
 		return
-	var bar: PlayerInfoBar = _screen._own_bar if side == _screen.my_side else _screen._foe_bar
+	var bar: PlayerInfoBar = _screen._foe_bar if is_foe else _screen._own_bar
 	if bar != null:
 		bar.show_emote(text)
 
@@ -143,17 +194,20 @@ func handle_emote(action: Dictionary) -> void:
 func _maybe_cpu_reply() -> void:
 	if _screen._cpu == null or _screen.state == null or _screen.state.is_match_over():
 		return
+	if mute_opponent:
+		return
 	if randf() < 0.35:
 		var ids := EmoteLibrary.get_emote_ids()
 		var reply_id: String = ids[randi() % ids.size()]
 		var reply_text := EmoteLibrary.get_emote_text(reply_id)
-		var timer := _screen.get_tree().create_timer(1.4)
+		var timer := _screen.get_tree().create_timer(1.6)
 		timer.timeout.connect(
 			func() -> void:
 				if (
 					_screen.state != null
 					and not _screen.state.is_match_over()
 					and _screen._foe_bar != null
+					and not mute_opponent
 				):
 					_screen._foe_bar.show_emote(reply_text)
 		)

@@ -1138,8 +1138,10 @@ HTTPRequest をぶら下げると送信の途中で巻き添えに消える。�
 - 定型文の定義は `EmoteLibrary`(`scripts/data/emote_library.gd`、staticのみ)で管理する。
 - エモートは `{"type": "emote", "side": side, "emote_id": emote_id}` として `MatchAction.emote()` で生成され、他の手と同様に `OnlineMatch.send()` 経由で Firestore の `matches/{id}.actions` に追記される。
 - `MatchAction.apply()` では盤面状態の変更を行わず、`return true` で安全に通過する。
-- UI演出は `EmoteBubble`(`scripts/ui/emote_bubble.gd`)が担当し、発言側の `PlayerInfoBar.show_emote()` を通じて名札付近にフェードイン・自動フェードアウト表示する。
-- 画面側（`CardMatchScreen`）では送信後3秒間のクールダウンタイマーを持ち、連続送信を抑制する。
+- UI演出は `EmoteBubble`(`scripts/ui/emote_bubble.gd`)が担当し、発言側の `PlayerInfoBar.show_emote()` を通じて名札付近に約6.8秒間(表示6.0秒)フェードイン・自動フェードアウト表示する。
+- 画面側（`CardMatchEmote`）では送信後9秒間のクールダウンタイマーを持ち、吹き出しが完全に消えて余韻を待ってから再利用できるようにする。
+- マリガン中(`state.mulligan_pending` / `_mulligan.visible`)はエモート送信を無効化する。
+- 相手のエモートミュートフラグ(`mute_opponent_emotes`)をサポートし、ミュート中は相手からのエモート吹き出し表示をスキップする。
 
 ## 7. リプレイ・観戦の実装方針
 

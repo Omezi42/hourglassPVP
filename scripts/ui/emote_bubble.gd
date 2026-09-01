@@ -4,9 +4,9 @@ extends Control
 ## 表示後に自動でフェードアウトして消滅する。
 
 const BUBBLE_PADDING := Vector2(16, 8)
-const FADE_IN_DURATION := 0.25
-const DISPLAY_DURATION := 4.8
-const FADE_OUT_DURATION := 0.4
+const FADE_IN_DURATION := 0.3
+const DISPLAY_DURATION := 6.0
+const FADE_OUT_DURATION := 0.5
 const FLOAT_OFFSET := 8.0
 
 var text := ""

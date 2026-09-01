@@ -41,6 +41,8 @@ var _active_tab: Control
 var _rules_tab: RulesTab
 var _rules_nav_button: Button
 
+var _nameplate_button: AccountNameplateButton
+
 @onready var background: TextureRect = $Background
 @onready var deck_tab: DeckTab = $Layout/ContentArea/DeckTab
 @onready var battle_tab: BattleTab = $Layout/ContentArea/BattleTab
@@ -78,7 +80,13 @@ func _ready() -> void:
 	battle_nav_button.pressed.connect(_select_tab.bind(TAB_BATTLE))
 	_style_menu_button()
 	settings_button.pressed.connect(func() -> void: settings_panel.open())
-	account_button.pressed.connect(func() -> void: account_requested.emit())
+
+	account_button.visible = false
+	_nameplate_button = AccountNameplateButton.new()
+	_nameplate_button.pressed.connect(func() -> void: account_requested.emit())
+	$AccountBar.add_child(_nameplate_button)
+	$AccountBar.move_child(_nameplate_button, 0)
+
 	# 初回起動時だけ「ルール」から始める(GameDesign.md 9章)。読了は測らない。
 	var first_visit := not UiState.has_seen_home()
 	UiState.mark_home_seen()
@@ -106,10 +114,12 @@ func reset_battle_tab() -> void:
 ## 左上のアカウント表示を、キャッシュ済みのプロフィールから描き直す
 ## (GameDesign.md 9章・14章)。ここでは通信しない。
 func refresh_account() -> void:
-	account_button.text = " " + AccountService.display_name_or_default()
-	account_button.icon = UserProfileLibrary.get_icon_texture(AccountService.icon_id())
-	account_button.expand_icon = true
-	account_button.add_theme_constant_override("icon_max_width", 32)
+	if _nameplate_button != null:
+		_nameplate_button.update_profile(
+			AccountService.display_name_or_default(),
+			AccountService.icon_id(),
+			AccountService.title_id()
+		)
 	currency_label.text = "%s:%d" % [CurrencyRules.CURRENCY_NAME, AccountService.currency()]
 
 
@@ -175,3 +185,79 @@ func _apply_nav_style(button: Button, active: bool) -> void:
 	button.add_theme_font_size_override(
 		"font_size", NAV_FONT_ACTIVE if active else NAV_FONT_INACTIVE
 	)
+
+
+## ホーム画面左上の名札ボタン(真鍮テクスチャ・アイコン・称号・名前)
+class AccountNameplateButton extends Button:
+	var _icon_rect: TextureRect
+	var _icon_frame: PanelContainer
+	var _title_label: Label
+	var _name_label: Label
+
+	func _init() -> void:
+		custom_minimum_size = Vector2(210, 56)
+		size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		CodedButton.apply_styles(self, "wide_text")
+		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+
+		var hbox := HBoxContainer.new()
+		hbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+		hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		hbox.add_theme_constant_override("separation", 10)
+		hbox.offset_left = 12
+		hbox.offset_right = -12
+		hbox.alignment = BoxContainer.ALIGNMENT_BEGIN
+
+		# アイコン枠
+		_icon_frame = PanelContainer.new()
+		_icon_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_icon_frame.custom_minimum_size = Vector2(34, 34)
+		_icon_frame.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		var frame_style := StyleBoxFlat.new()
+		frame_style.bg_color = Color(0.1, 0.08, 0.06, 0.9)
+		frame_style.border_color = UiPalette.BRASS_MID
+		frame_style.set_border_width_all(1)
+		frame_style.set_corner_radius_all(17)
+		_icon_frame.add_theme_stylebox_override("panel", frame_style)
+
+		_icon_rect = TextureRect.new()
+		_icon_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		_icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		_icon_rect.custom_minimum_size = Vector2(24, 24)
+		_icon_rect.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		_icon_rect.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		_icon_frame.add_child(_icon_rect)
+		hbox.add_child(_icon_frame)
+
+		# 称号と名前の縦並び
+		var vbox := VBoxContainer.new()
+		vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		vbox.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		vbox.add_theme_constant_override("separation", 1)
+
+		_title_label = Label.new()
+		_title_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_title_label.add_theme_font_size_override("font_size", 11)
+		_title_label.add_theme_color_override("font_color", UiPalette.BRASS_HIGHLIGHT)
+		_title_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		vbox.add_child(_title_label)
+
+		_name_label = Label.new()
+		_name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_name_label.add_theme_font_size_override("font_size", 15)
+		_name_label.add_theme_color_override("font_color", UiPalette.TEXT_OFFWHITE)
+		_name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		vbox.add_child(_name_label)
+
+		hbox.add_child(vbox)
+		add_child(hbox)
+
+	func update_profile(display_name: String, icon_id: String, title_id: String) -> void:
+		_icon_rect.texture = UserProfileLibrary.get_icon_texture(icon_id)
+		var title_text := UserProfileLibrary.get_title_display(title_id)
+		_title_label.text = title_text
+		_title_label.visible = not title_text.is_empty()
+		var label := display_name.strip_edges()
+		_name_label.text = label if not label.is_empty() else "ゲスト"
