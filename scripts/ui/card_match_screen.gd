@@ -165,6 +165,10 @@ func _reset_for_new_match() -> void:
 	_client = null
 	_match_id = ""
 	_clock = null
+	# 持ち時間を持たない対局(CPU戦・持ち時間を切ったルームマッチ)へ入ったときに、
+	# 前の対局の残り時間が情報帯に残らないようにする(負の値は表示しない)。
+	_own_bar.clock_seconds = -1.0
+	_foe_bar.clock_seconds = -1.0
 	_cpu_record = {}
 	_status.set_waiting("")
 	_opponent_timeout_wait = 0.0
@@ -218,9 +222,12 @@ func start_online_match(
 	p_match_id: String,
 	p_my_side: int,
 	is_room: bool = false,
-	opponent_uid: String = ""
+	opponent_uid: String = "",
+	time_limit: bool = true
 ) -> void:
-	await _online_ctl.start(deck_self, client, p_match_id, p_my_side, is_room, opponent_uid)
+	await _online_ctl.start(
+		deck_self, client, p_match_id, p_my_side, is_room, opponent_uid, time_limit
+	)
 
 
 func resume_online_match(client: FirestoreClient, record: Dictionary) -> bool:

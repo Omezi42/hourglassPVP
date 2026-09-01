@@ -1,20 +1,20 @@
 class_name HomeScreen
 extends Control
 
-signal online_match_found(match_id: String, my_side: int, opponent_uid: String, is_room: bool)
+## バトルタブで成立するのはランダムマッチだけ(ルームマッチは専用画面。11章)。
+signal online_match_found(match_id: String, my_side: int, opponent_uid: String)
 signal online_resume_requested(record: Dictionary)
 signal stats_requested
 signal deck_list_requested
 signal hourglass_list_requested
 signal replay_list_requested
-signal spectate_requested(match_id: String)
 signal cpu_match_requested
 signal tutorial_requested
 signal rules_requested
 signal screen_guide_requested
 signal keyword_dict_requested
 signal random_match_deck_requested
-signal create_room_deck_requested
+signal room_match_requested
 signal account_requested
 
 const NAV_HEIGHT_ACTIVE := 150
@@ -55,20 +55,17 @@ func _ready() -> void:
 		func(record: Dictionary) -> void: online_resume_requested.emit(record)
 	)
 	battle_tab.online_match_found.connect(
-		func(match_id: String, my_side: int, opponent_uid: String, is_room: bool) -> void:
-			online_match_found.emit(match_id, my_side, opponent_uid, is_room)
+		func(match_id: String, my_side: int, opponent_uid: String) -> void:
+			online_match_found.emit(match_id, my_side, opponent_uid)
 	)
 	deck_tab.deck_edit_pressed.connect(func() -> void: deck_list_requested.emit())
 	deck_tab.hourglass_list_pressed.connect(func() -> void: hourglass_list_requested.emit())
 	battle_tab.replay_list_requested.connect(func() -> void: replay_list_requested.emit())
-	battle_tab.spectate_requested.connect(
-		func(match_id: String) -> void: spectate_requested.emit(match_id)
-	)
 	battle_tab.cpu_match_requested.connect(func() -> void: cpu_match_requested.emit())
 	battle_tab.random_match_deck_requested.connect(
 		func() -> void: random_match_deck_requested.emit()
 	)
-	battle_tab.create_room_deck_requested.connect(func() -> void: create_room_deck_requested.emit())
+	battle_tab.room_match_requested.connect(func() -> void: room_match_requested.emit())
 	# 通知のモーダルは画面全体を覆う必要があるため、タブ(高さ560px)の中から出して
 	# ホーム画面の最後の子にする。タブの中にあると、アカウント帯と下部タブにだけ
 	# 暗幕が掛からず、その2つだけ押せるように見える。

@@ -10,7 +10,11 @@ extends RefCounted
 const SAVE_PATH := "user://online_match.json"
 
 
-static func remember(match_id: String, my_side: int, is_room: bool, opponent_uid: String) -> void:
+## time_limit はルームマッチで切れる持ち時間の設定(GameDesign.md 5章)。復帰した対局が
+## 途中から持ち時間ありに戻らないよう、側や種別と同じく覚えておく。
+static func remember(
+	match_id: String, my_side: int, is_room: bool, opponent_uid: String, time_limit: bool = true
+) -> void:
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file == null:
 		return
@@ -25,6 +29,7 @@ static func remember(match_id: String, my_side: int, is_room: bool, opponent_uid
 						"side": my_side,
 						"is_room": is_room,
 						"opponent_uid": opponent_uid,
+						"time_limit": time_limit,
 					}
 				)
 			)

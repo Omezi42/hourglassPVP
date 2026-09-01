@@ -16,10 +16,15 @@ var card_deck_list_screen: CardDeckListScreen
 ## v5.0のカード一覧画面(同上)。
 var card_list_screen: CardListScreen
 var stats_screen: CardStatsScreen
+## ルームマッチの専用画面(GameDesign.md 11章)。
+var card_room_screen: CardRoomScreen
 
 var _match_return_screen: Control
-## デッキ選択画面で確定するまで待たせている対局の導線(ランダム/ルーム/CPU)。
+## デッキ選択画面で確定するまで待たせている対局の導線(ランダム/CPU)。
 var _pending_battle := Callable()
+## デッキ選択を終えた(または取りやめた)ときの戻り先。ルームマッチの専用画面は
+## デッキを選び直した後もそこへ戻るため、ホーム固定にできない。
+var _deck_pick_return: Control
 ## アカウント画面を閉じたときの戻り先。タイトルから開いた場合だけタイトルへ戻す。
 var _account_return_to_title := false
 
@@ -103,6 +108,15 @@ func _ready() -> void:
 	add_child(keyword_dict_screen)
 	keyword_dict_screen.back_pressed.connect(func() -> void: _show_only(home_screen))
 	_screens.append(keyword_dict_screen)
+	card_room_screen = CardRoomScreen.new()
+	card_room_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
+	card_room_screen.visible = false
+	add_child(card_room_screen)
+	card_room_screen.back_pressed.connect(func() -> void: _show_only(home_screen))
+	card_room_screen.deck_change_requested.connect(_on_room_deck_change_requested)
+	card_room_screen.matched.connect(_on_room_match_found)
+	card_room_screen.spectate_requested.connect(_on_spectate_requested)
+	_screens.append(card_room_screen)
 	_transition_blocker = _make_transition_blocker()
 	add_child(_transition_blocker)
 	_sand_transition = SandTransition.new()
@@ -127,10 +141,9 @@ func _ready() -> void:
 	home_screen.screen_guide_requested.connect(_on_screen_guide_requested)
 	home_screen.keyword_dict_requested.connect(func() -> void: _show_only(keyword_dict_screen))
 	home_screen.replay_list_requested.connect(_on_replay_list_requested)
-	home_screen.spectate_requested.connect(_on_spectate_requested)
 	home_screen.cpu_match_requested.connect(_on_cpu_match_deck_requested)
 	home_screen.random_match_deck_requested.connect(_on_random_match_deck_requested)
-	home_screen.create_room_deck_requested.connect(_on_create_room_deck_requested)
+	home_screen.room_match_requested.connect(_on_room_match_requested)
 	replay_list_screen.back_pressed.connect(func() -> void: _show_only(home_screen))
 	replay_list_screen.replay_selected.connect(_on_replay_selected)
 	NetSession.ensure_ready(self)
@@ -165,8 +178,9 @@ func _on_title_start_requested() -> void:
 func _on_match_back() -> void:
 	_show_only(_match_return_screen)
 	home_screen.refresh_account()
-	# 対局はバトルタブの待機状態(ボタンの無効化)を残したまま始まるため、戻った時点で解く。
+	# 対局は待機状態(ボタンの無効化)を残したまま始まるため、戻った時点で両方とも解く。
 	home_screen.reset_battle_tab()
+	card_room_screen.reset_after_match()
 
 
 func _on_account_requested(from_title: bool) -> void:
@@ -224,6 +238,7 @@ func _request_battle(start: Callable) -> void:
 		start.call()
 		return
 	_pending_battle = start
+	_deck_pick_return = home_screen
 	card_deck_list_screen.open_pick()
 	_show_only(card_deck_list_screen)
 
@@ -232,8 +247,21 @@ func _on_random_match_deck_requested() -> void:
 	_request_battle(func() -> void: home_screen.battle_tab.begin_random_match())
 
 
-func _on_create_room_deck_requested() -> void:
-	_request_battle(func() -> void: home_screen.battle_tab.begin_create_room())
+## ルームマッチは専用画面へ直行する。**共通のデッキ選択画面を先に挟まない**
+## (GameDesign.md 9章)。デッキはその画面の中で選び直せる。
+func _on_room_match_requested() -> void:
+	card_room_screen.open()
+	_show_only(card_room_screen)
+
+
+## ルームマッチ画面の「変更」。選び終わったらその画面へ戻す。
+func _on_room_deck_change_requested() -> void:
+	if CardDeckSave.list_decks().is_empty():
+		return
+	_pending_battle = func() -> void: card_room_screen.open()
+	_deck_pick_return = card_room_screen
+	card_deck_list_screen.open_pick()
+	_show_only(card_deck_list_screen)
 
 
 func _on_cpu_match_deck_requested() -> void:
@@ -245,8 +273,10 @@ func _on_deck_picked(index: int) -> void:
 	CardDeckSave.set_selected_index(index)
 	var start := _pending_battle
 	_pending_battle = Callable()
-	# オンラインは待機の文言をバトルタブへ出すため、先にホームへ戻してから始める。
-	_show_only(home_screen)
+	var back_to: Control = _deck_pick_return if _deck_pick_return != null else home_screen
+	_deck_pick_return = home_screen
+	# オンラインは待機の文言をバトルタブへ出すため、先に戻り先の画面へ戻してから始める。
+	_show_only(back_to)
 	if start.is_valid():
 		start.call()
 
@@ -254,7 +284,8 @@ func _on_deck_picked(index: int) -> void:
 ## デッキ一覧の戻る。選ぶ途中で戻った場合は待たせていた導線を捨てる。
 func _on_deck_list_back() -> void:
 	_pending_battle = Callable()
-	_show_only(home_screen)
+	_show_only(_deck_pick_return if _deck_pick_return != null else home_screen)
+	_deck_pick_return = home_screen
 
 
 func _on_deck_create_requested() -> void:
@@ -307,11 +338,28 @@ func _on_screen_guide_requested() -> void:
 ## オンライン対戦(v5.0)。配置フェーズが無いため、デッキと山札の種を交換したら
 ## そのまま対局へ入る。is_room は砂金の獲得量(GameDesign.md 15章)、
 ## opponent_uid は相手の表示名(14章)に使う。
-func _on_online_match_found(
-	match_id: String, my_side: int, opponent_uid: String, is_room: bool
+func _on_online_match_found(match_id: String, my_side: int, opponent_uid: String) -> void:
+	card_match_screen.start_online_match(
+		CardDeckSave.selected_deck(), NetSession.client, match_id, my_side, false, opponent_uid
+	)
+	_match_return_screen = home_screen
+	_show_only(card_match_screen)
+
+
+## ルームマッチ。持ち時間の入/切は部屋の設定であり、ここで対局画面まで運ぶ
+## (GameDesign.md 5章)。戻り先はルームマッチ画面ではなくホームとする
+## (対局が終わった時点でその部屋はもう無い)。
+func _on_room_match_found(
+	match_id: String, my_side: int, opponent_uid: String, time_limit: bool
 ) -> void:
 	card_match_screen.start_online_match(
-		CardDeckSave.selected_deck(), NetSession.client, match_id, my_side, is_room, opponent_uid
+		CardDeckSave.selected_deck(),
+		NetSession.client,
+		match_id,
+		my_side,
+		true,
+		opponent_uid,
+		time_limit
 	)
 	_match_return_screen = home_screen
 	_show_only(card_match_screen)

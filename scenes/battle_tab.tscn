@@ -53,7 +53,7 @@ theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
 theme_override_font_sizes/font_size = 26
 text = "ランダムマッチ"
 
-[node name="CreateRoomButton" type="Button" parent="Margin/VBox/MainRow" unique_id=1997506293]
+[node name="RoomMatchButton" type="Button" parent="Margin/VBox/MainRow" unique_id=1997506293]
 custom_minimum_size = Vector2(360, 108)
 layout_mode = 2
 theme_override_styles/normal = ExtResource("2_6rapo")
@@ -64,49 +64,7 @@ theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
 theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
 theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
 theme_override_font_sizes/font_size = 26
-text = "ルームを作成"
-
-[node name="RoomCodeLabel" type="Label" parent="Margin/VBox" unique_id=1472126448]
-layout_mode = 2
-theme_override_font_sizes/font_size = 18
-theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
-horizontal_alignment = 1
-
-[node name="JoinRow" type="HBoxContainer" parent="Margin/VBox" unique_id=1145910552]
-layout_mode = 2
-theme_override_constants/separation = 16
-alignment = 1
-
-[node name="JoinCodeInput" type="LineEdit" parent="Margin/VBox/JoinRow" unique_id=1146633493]
-custom_minimum_size = Vector2(280, 56)
-layout_mode = 2
-placeholder_text = "ルームコードを入力"
-
-[node name="JoinRoomButton" type="Button" parent="Margin/VBox/JoinRow" unique_id=1368815917]
-custom_minimum_size = Vector2(200, 64)
-layout_mode = 2
-theme_override_styles/normal = ExtResource("2_6rapo")
-theme_override_styles/pressed = ExtResource("3_8tkbr")
-theme_override_styles/hover = ExtResource("4_qrc34")
-theme_override_styles/disabled = ExtResource("5_bv2qh")
-theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_font_sizes/font_size = 22
-text = "コードで参加"
-
-[node name="SpectateButton" type="Button" parent="Margin/VBox/JoinRow" unique_id=1577222140]
-custom_minimum_size = Vector2(200, 64)
-layout_mode = 2
-theme_override_styles/normal = ExtResource("2_6rapo")
-theme_override_styles/pressed = ExtResource("3_8tkbr")
-theme_override_styles/hover = ExtResource("4_qrc34")
-theme_override_styles/disabled = ExtResource("5_bv2qh")
-theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_font_sizes/font_size = 22
-text = "観戦する"
+text = "ルームマッチ"
 
 [node name="SecondaryRow" type="HBoxContainer" parent="Margin/VBox" unique_id=28862231]
 layout_mode = 2

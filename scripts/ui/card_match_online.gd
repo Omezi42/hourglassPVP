@@ -20,7 +20,8 @@ func start(
 	p_match_id: String,
 	p_my_side: int,
 	is_room: bool = false,
-	opponent_uid: String = ""
+	opponent_uid: String = "",
+	time_limit: bool = true
 ) -> void:
 	_screen._reset_for_new_match()
 	_screen._cpu = null
@@ -58,16 +59,17 @@ func start(
 	_screen._online.action_received.connect(_screen._on_action_received)
 	_screen._online.start(p_match_id)
 	# 切断しても同じ対局へ戻れるようにする(GameDesign.md 11章)。
-	OnlineResume.remember(p_match_id, p_my_side, is_room, opponent_uid)
+	OnlineResume.remember(p_match_id, p_my_side, is_room, opponent_uid, time_limit)
 	# マリガンは手と同じ `actions` として送り合う(GameDesign.md 2章)。両者の確定が
 	# 揃うまで対局は始まらないため、持ち時間はここを抜けてから動かし始める。
 	if _screen.state.mulligan_pending:
 		_screen._mulligan.show_hand(_screen.state.hand[_screen.my_side])
 		await _screen.state.mulligan_finished
-	# 持ち時間はオンライン対戦だけが使う(GameDesign.md 13章)。
-	_screen._clock = MatchClock.new()
-	_screen._clock.time_out.connect(_screen._on_local_timeout)
-	_screen._clock.start_turn(_screen.state.current_turn)
+	# 持ち時間はオンライン対戦だけが使う(GameDesign.md 13章)。ルームマッチでは切れるため
+	# (5章)、切ってあるときは時計そのものを作らない。**`_clock == null` は既にCPU戦が
+	# 通っている経路**で、送信の `clock` 付与・相手の時間切れ監視のいずれも null を見て降りる。
+	if time_limit:
+		_start_clock()
 	_screen.set_process(true)
 
 
@@ -126,11 +128,19 @@ func resume(client: FirestoreClient, record: Dictionary) -> bool:
 	# 持ち時間はこちら側では初期値から数え直すが、**相手はこちらの残り時間を
 	# 自分の手元で減らし続けている**(GameDesign.md 11章)。したがって再読み込みで
 	# 時計を戻す抜け道にはならず、時間切れの判定は相手側が持つ。
+	# 持ち時間を切ったルームマッチ(5章)へは、時計を持たないまま戻る。
+	# 古い記録は値を持たないため、これまでどおり持ち時間ありとして扱う。
+	if bool(record.get("time_limit", true)):
+		_start_clock()
+	_screen.set_process(true)
+	return true
+
+
+## 持ち時間の時計を作って動かし始める。開始と復帰で同じ手順を踏むため1箇所へ寄せる。
+func _start_clock() -> void:
 	_screen._clock = MatchClock.new()
 	_screen._clock.time_out.connect(_screen._on_local_timeout)
 	_screen._clock.start_turn(_screen.state.current_turn)
-	_screen.set_process(true)
-	return true
 
 
 ## 観戦モードとして開始する(GameDesign.md 12章)。進行中の対局を第三者が見る。
