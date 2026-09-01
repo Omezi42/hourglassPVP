@@ -426,7 +426,8 @@ Main
 ├── CardDeckEditorScreen     # デッキ編集(20枚・同名2枚まで。同上)
 ├── CardListScreen           # カード一覧(同上)
 ├── RuleScreen               # ルール(遊び方)の紙芝居(同上。4.2節)
-└── KeywordDictScreen        # キーワード辞書(同上。4.3節)
+├── KeywordDictScreen        # キーワード辞書(同上。4.3節)
+└── CardRoomScreen           # ルームマッチ(同上。6.5節)
 ```
 
 **v1.0(位相制)の画面と、それを支えていたクラスは削除済み。**`MatchScreen` 一式・
@@ -998,6 +999,41 @@ HTTPRequest をぶら下げると送信の途中で巻き添えに消える。�
 可能性があるのはまさにその組み合わせであり、未設定を「何でも通す」側へ倒すと
 守りたいケースを素通りさせる。
 
+
+### 6.5 ルームマッチ画面(GameDesign.md 11章)
+
+| クラス | 責務 |
+|---|---|
+| `CardRoomScreen`(`scripts/ui/card_room_screen.gd`) | ルームマッチの3つの入口(部屋を作る / コードで参加 / 観戦)と、その待機。使用デッキと持ち時間の設定もここに置く |
+
+**`RoomMatch` を持つのはこの画面**であり、`BattleTab` からは参加・観戦・部屋作成の
+コードをすべて外した(バトルタブに残るのはランダムマッチ・CPU戦・リプレイ・戦績・復帰)。
+待機中の巡回ドット・キャンセル・失敗の文言は、バトルタブと同じ組み立てをこの画面が
+自前で持つ。**共通化しない**のは、バトルタブ側は「マッチング中」の1状態しか持たないのに対し、
+こちらは部屋の作成・相手待ち・参加・観戦待ちと状態が4つあり、片方に合わせると
+もう片方が使わない分岐を抱えるため。
+
+**持ち時間の入/切は `rooms/{code}` の `time_limit` として持つ**(GameDesign.md 5章)。
+部屋を作る側が書き、参加する側は `join_room()` が読んで `RoomMatch.time_limit` へ控える。
+**画面はマッチ成立時にこの値を対局画面まで運ぶ**(`matched` → `Main` →
+`CardMatchScreen.start_online_match()` → `CardMatchOnline.start()`)。
+`CardMatchOnline` は `time_limit` が偽のとき `MatchClock` を生成しない。
+**`_clock == null` は既にCPU戦が通っている経路**(`_process()` の先頭・手の送信の
+`clock` 付与・相手の時間切れ監視がいずれも null を見て降りる)ため、
+持ち時間なしのために新しい分岐を足す必要はない。
+
+**切断からの復帰でも持ち時間の設定を引き継ぐ**。`OnlineResume` のレコードへ
+`time_limit` を足し、`resume()` はその値を見て時計を作るかどうかを決める。
+`time_limit` を持たない古い記録は、これまでどおり持ち時間ありとして扱う。
+
+**観戦は、対局が始まっていなければ同じ画面で待つ**(GameDesign.md 11章)。
+`RoomMatch.spectate()` は `match_id` が空でも失敗させず、`spectate_waiting` を1度出してから
+`POLL_INTERVAL_SECONDS` ごとに読み直す。**バージョンの突き合わせは待ち始める前に行う**
+(版が違う部屋を待ち続けても、始まった瞬間に弾かれるだけのため)。
+
+**参加コードのコピーは `DisplayServer.clipboard_set()`**。Web版ではブラウザに拒否される
+ことがあるが、**失敗しても画面には何も出さない**。コード自体が大きく出ており、
+手入力で足りるため(GameDesign.md 11章)。
 
 ## 7. リプレイ・観戦の実装方針
 
