@@ -1,7 +1,7 @@
 class_name CardManaCurve
 extends Control
 ## デッキのコスト別の枚数を棒グラフで示す(GameDesign.md 9章)。
-## 20枚のデッキではコストの配分が構築の中心であり、数えなくても分かる状態にする。
+## 30枚のデッキではコストの配分が構築の中心であり、数えなくても分かる状態にする。
 
 const MIN_COST := 1
 const MAX_COST := 10

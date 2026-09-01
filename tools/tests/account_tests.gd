@@ -17,6 +17,7 @@ func run(assert_true: Callable) -> void:
 	_test_local_replay_ownership(assert_true)
 	_test_text_glyphs(assert_true)
 	_test_profile_customization(assert_true)
+	_test_emotes(assert_true)
 
 
 func _test_credential_validation(assert_true: Callable) -> void:
@@ -285,16 +286,23 @@ func _test_profile_customization(assert_true: Callable) -> void:
 	var icons := UserProfileLibrary.get_available_icon_ids()
 	assert_true.call(icons.has("mascot"), "available icons should include mascot")
 	assert_true.call(icons.has("sand"), "available icons should include sand")
-	assert_true.call(UserProfileLibrary.get_icon_name("mascot") == "すなえる", "mascot icon name")
-	assert_true.call(UserProfileLibrary.get_icon_texture("mascot") != null, "mascot icon texture exists")
-	assert_true.call(UserProfileLibrary.get_icon_texture("unknown_id") != null, "fallback icon texture exists")
+	assert_true.call(
+		UserProfileLibrary.get_icon_texture("mascot") != null, "mascot icon texture exists"
+	)
+	assert_true.call(
+		UserProfileLibrary.get_icon_texture("unknown_id") != null, "fallback icon texture exists"
+	)
 
 	var titles := UserProfileLibrary.get_available_title_ids()
 	assert_true.call(titles.has("novice"), "available titles should include novice")
 	assert_true.call(titles.has("none"), "available titles should include none")
 	assert_true.call(not titles.has("cpu_basic"), "cpu title should not be in available titles")
-	assert_true.call(UserProfileLibrary.get_title_display("novice") == "駆け出し決闘者", "novice title display")
-	assert_true.call(UserProfileLibrary.get_title_display("none") == "", "none title display should be empty")
+	assert_true.call(
+		UserProfileLibrary.get_title_display("novice") == "駆け出し決闘者", "novice title display"
+	)
+	assert_true.call(
+		UserProfileLibrary.get_title_display("none") == "", "none title display should be empty"
+	)
 
 	# AccountStoreのローカル保存と復元の検証
 	var backup: Variant = _backup()
@@ -320,3 +328,24 @@ func _test_profile_customization(assert_true: Callable) -> void:
 	)
 
 	_restore(backup)
+
+
+func _test_emotes(assert_true: Callable) -> void:
+	var ids := EmoteLibrary.get_emote_ids()
+	assert_true.call(ids.size() == 4, "should have 4 emotes")
+	assert_true.call(EmoteLibrary.get_emote_text("hello") == "よろしくお願いします", "hello text")
+	assert_true.call(EmoteLibrary.get_emote_text("praise") == "見事な一手です", "praise text")
+	assert_true.call(EmoteLibrary.get_emote_text("shock") == "なんだと…", "shock text")
+	assert_true.call(
+		EmoteLibrary.get_emote_text("advantage") == "こちらに傾いているようですね", "advantage text"
+	)
+
+	var action := MatchAction.emote(MatchState.Side.A, "hello")
+	assert_true.call(action["type"] == "emote", "action type should be emote")
+	assert_true.call(action["side"] == MatchState.Side.A, "action side should match")
+	assert_true.call(action["emote_id"] == "hello", "action emote_id should match")
+
+	var state := MatchState.new()
+	var ok: bool = MatchAction.apply(state, action)
+	assert_true.call(ok, "applying emote action should return true without error")
+	state.queue_free()

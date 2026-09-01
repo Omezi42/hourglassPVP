@@ -16,32 +16,19 @@ const FOE_ROW_TOP := 92.0
 const OWN_ROW_TOP := 268.0
 const OWN_BAR_TOP := 456.0
 const HAND_TOP := 528.0
-## 手札は**卓と同じ左右の範囲**へ置き、盤面の真下で中央に揃える。以前は右下の
-## 「ログ」「投了」を避けるため左へ寄せており、駒の列と手札の中心が94pxずれていた。
+## 手札は卓と同じ左右の範囲へ置き、盤面の真下で中央に揃える。
 const HAND_AREA := Rect2(190, 528, 900, 158)
 ## 12枠を載せる卓上(GameDesign.md 9章)。両陣営の6枠がこの上に並ぶ。
 const TABLE_RECT := Rect2(190, 74, 900, 372)
 const CPU_THINK_SECONDS := 0.5
-## 相手の持ち時間が0になってから、申告が来なくても勝ちにするまでの猶予。
-## **時間切れ自体は敗北ではない**(GameDesign.md 5章)ため、ここに掛かるのは
-## 「申告そのものが届かない=切断」の判定だけになった。生きている相手は必ず
-## `time_up` を送ってくるので、ポーリングの間隔(1.5秒・失敗時は最大8秒まで
-## 伸びる)と送信の再試行に対して十分長く取る。短いと、通信が一時的に詰まった
-## だけの相手を切断とみなして勝ってしまう。
-## (GameDesign.md 11章)。相手が切断していると申告そのものが届かないため。
+## 相手の持ち時間が0になってから切断とみなすまでの猶予(GameDesign.md 5章・11章)。
 const OPPONENT_TIMEOUT_GRACE := 20.0
 ## 反転・コイン・ターン終了を縦に並べる右の列。
 const ACTION_COLUMN_X := 1108.0
-## 対局中のカード詳細(GameDesign.md 9章)。盤面は左右の余白が190pxしかないため
-## 卓へ重ねて出す。**指しているカードと反対側へ出す**ことで、読みたいものを
-## 自分で隠さないようにする。ホバーを外すと消えるため、盤面を塞ぎ続けはしない。
 const DETAIL_TOP := 40.0
 const DETAIL_MARGIN := 12.0
 const ACTION_BUTTON_SIZE := Vector2(148, 48)
-## 反転は行動の列ではなく、選んだ駒のすぐ下へ出す(GameDesign.md 9章)。
-## **上ではなく下へ出す**のは、自分の場の上が相手の場であり、上へ出すと
-## 相手の駒へ重なるため。駒の下端と自分の情報帯のあいだへちょうど収まる
-## 高さにして、HP・マナ・山札を隠さない。
+## 反転ボタンは選んだ駒のすぐ下へ出す(GameDesign.md 9章)。
 const FLIP_BUTTON_SIZE := Vector2(104, 30)
 const FLIP_BUTTON_OVERLAP := 2.0
 const LOG_BUTTON_SIZE := Vector2(148, 44)
@@ -114,17 +101,19 @@ var _surrender_button: Button
 var _back_button: Button
 var _status: CardMatchStatus
 var _online_ctl: CardMatchOnline
+var _emote: CardMatchEmote
 
 
 func _ready() -> void:
 	_build()
-	set_process(false)
+	set_process(true)
 	_outcome = CardMatchOutcome.new(self)
 	_strike = CardMatchStrike.new(self)
 	_sound = CardMatchSound.new(self)
 	_effects = CardMatchEffects.new(self)
 	_online_ctl = CardMatchOnline.new(self)
 	_targets = CardMatchTargets.new(self)
+	_emote = CardMatchEmote.new(self)
 
 
 ## 前の対局の名残を落としてから新しい対局へ入る。結果パネル・ログ・選択・
@@ -137,6 +126,8 @@ func _reset_for_new_match() -> void:
 	_pile.visible = false
 	_selection.clear()
 	_cpu_timer.stop()
+	if _emote != null:
+		_emote.close_popup()
 	if _replay != null:
 		_replay.stop()
 	if _online != null:
@@ -236,6 +227,8 @@ func _on_local_timeout(side: int) -> void:
 
 
 func _process(delta: float) -> void:
+	if _emote != null:
+		_emote.tick(delta)
 	if _clock == null or state == null or state.is_match_over():
 		return
 	_clock.tick(delta)
@@ -281,6 +274,10 @@ func _refresh_clocks() -> void:
 
 
 func _on_action_received(action: Dictionary) -> void:
+	if action.get("type", "") == "emote":
+		if _emote != null:
+			_emote.handle_emote(action)
+		return
 	_strike.capture(action)
 	MatchAction.apply(state, action)
 	if _clock != null and state != null and not state.is_match_over():
@@ -560,6 +557,8 @@ func _refresh_buttons() -> void:
 	_flip_button.visible = show_flip
 	if show_flip:
 		_flip_button.position = _flip_button_position(_selection.slot)
+	if _emote != null:
+		_emote.refresh()
 
 
 ## 選んだ駒の真下。駒の中心へ横を揃え、下端へわずかに重ねて置く。
@@ -800,6 +799,8 @@ func _on_mulligan_confirmed(indices: Array) -> void:
 
 
 func _perform(action: Dictionary) -> void:
+	if _emote != null and action.get("type", "") != "emote":
+		_emote.close_popup()
 	_record(action)
 	_strike.capture(action)
 	MatchAction.apply(state, action)

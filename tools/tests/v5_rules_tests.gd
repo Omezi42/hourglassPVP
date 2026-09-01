@@ -46,7 +46,7 @@ func _card(id: String) -> CardData:
 	return CardLibrary.find_by_id(id)
 
 
-## 同じカードを20枚並べた検証用デッキ。
+## 同じカードを30枚並べた検証用デッキ。
 func _deck_of(id: String) -> Array:
 	var cards: Array = []
 	for i in MatchState.DECK_SIZE:
@@ -521,7 +521,7 @@ func _test_same_seed_reproduces_the_same_match() -> void:
 			_assert.call(same, "replaying should reach the same board at %d/%d" % [side, slot])
 
 
-## 20種すべてを1枚ずつ並べた検証用デッキ(引き直したカードを見分けるため)。
+## 30種すべてを1枚ずつ並べた検証用デッキ(引き直したカードを見分けるため)。
 func _mixed_deck() -> Array:
 	var cards: Array = []
 	for card in CardLibrary.all_cards():
@@ -665,7 +665,7 @@ func _test_deck_code_round_trips() -> void:
 		]:
 			_assert.call(
 				back.size() == MatchState.DECK_SIZE,
-				"decoding %s should give 20 cards" % preset["id"]
+				"decoding %s should give %d cards" % [preset["id"], MatchState.DECK_SIZE]
 			)
 			var after := CardLibrary.ids_from_deck(back)
 			after.sort()
@@ -692,12 +692,13 @@ func _test_deck_code_round_trips() -> void:
 	)
 
 
-## プリセットは3つとも20枚・同名2枚までに収まっていること(GameDesign.md 18章)。
+## プリセットは3つとも30枚・同名2枚までに収まっていること(GameDesign.md 18章)。
 func _test_preset_decks_are_legal() -> void:
 	for preset in CardPresetDecks.PRESETS:
 		var deck := CardPresetDecks.deck_of(preset["id"])
 		_assert.call(
-			deck.size() == MatchState.DECK_SIZE, "preset %s should hold 20 cards" % preset["id"]
+			deck.size() == MatchState.DECK_SIZE,
+			"preset %s should hold %d cards" % [preset["id"], MatchState.DECK_SIZE]
 		)
 		for card: CardData in deck:
 			_assert.call(

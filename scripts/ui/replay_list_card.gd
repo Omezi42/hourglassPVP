@@ -103,8 +103,8 @@ func _apply_result(won: bool) -> void:
 	background_panel.add_theme_stylebox_override("panel", card_style)
 
 
-## デッキは20枚あるため、重複を除いた先頭 DECK_PREVIEW 種だけを並べる。
-## 20個のアイコンを並べるとカードの幅に収まらず、見比べる役にも立たないため。
+## デッキは30枚あるため、重複を除いた先頭 DECK_PREVIEW 種だけを並べる。
+## 30個のアイコンを並べるとカードの幅に収まらず、見比べる役にも立たないため。
 func _fill_row(row: HBoxContainer, ids: Array) -> void:
 	for child in row.get_children():
 		child.queue_free()

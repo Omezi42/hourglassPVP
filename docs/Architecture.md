@@ -162,7 +162,7 @@ UIに依存しない、対局ルールそのものを扱う層。
 `turn_count`、`end_reason`、`winner`。いずれも `Side`(A/B)をキーにした Dictionary。
 
 定数は GameDesign.md 2章の数値をそのまま持つ:`INITIAL_HP = 30` / `BOARD_SIZE = 6` /
-`DECK_SIZE = 20` / `MAX_MANA = 10` / `FIRST_PLAYER_HAND = 3` / `SECOND_PLAYER_HAND = 4` /
+`DECK_SIZE = 30` / `MAX_MANA = 10` / `FIRST_PLAYER_HAND = 3` / `SECOND_PLAYER_HAND = 4` /
 `FATIGUE_DAMAGE = 1` / `COIN_MANA = 1`。加えて、両者が延々とパスし続けた場合の保険として `MAX_TURNS = 200`
 (到達したら `EndReason.DRAW` で打ち切る。シミュレーションが止まらなくなるのを防ぐためで、
 実対局では持ち時間(GameDesign.md 5章)が先に尽きる)。
@@ -280,7 +280,7 @@ UIに依存しない、対局ルールそのものを扱う層。
 | `CardMatchTargets`(`scripts/ui/card_match_targets.gd`) | 置ける枠・殴れる相手の強調と、相打ちの予測 |
 | `CardMatchResult`(`scripts/ui/card_match_result.gd`) | 結果パネル。勝敗・最終HP・総手数・決着の要因と「ログ」「ホームへ」 |
 | `CardDeckListScreen`(`scripts/ui/card_deck_list_screen.gd`) | 保存済みデッキの一覧。**管理と対局前の選択を1つの画面が兼ねる**(4.5節) |
-| `CardDeckEditorScreen`(`scripts/ui/card_deck_editor_screen.gd`) | デッキ編集(20枚・同名2枚まで)。共通の `ScreenHeader` を使う |
+| `CardDeckEditorScreen`(`scripts/ui/card_deck_editor_screen.gd`) | デッキ編集(30枚・同名2枚まで)。共通の `ScreenHeader` を使う |
 | `CardManaCurve`(`scripts/ui/card_mana_curve.gd`) | コスト別の枚数の棒グラフ。デッキ編集では低背版(`compact`)で使う。**目盛りはプールに実在するコストの範囲だけ**を出す(`CardLibrary` の最大コストから決める)。数字は棒の幅に対して中央揃えで描き、2桁でもずれない |
 | `CardDeckBand`(`scripts/ui/card_deck_band.gd`) | 編成中の1枚。絵を右端へ薄く敷いた横長の帯。「−」「+」を持ち、**一覧まで戻らずに枚数を調整できる** |
 | `CardDeckFilter`(`scripts/ui/card_deck_filter.gd`) | 一覧の絞り込み(コスト・キーワード・名前)。条件の合成を1箇所へ集める |
@@ -339,7 +339,7 @@ UIに依存しない、対局ルールそのものを扱う層。
 
 **v5.0のオンライン対戦は、山札の並びを「種」で共有して両者が同じ対局を再現する。**
 配置フェーズが無いため、`OnlineSetup.push_setup()` / `wait_for_opponent_setup()` で
-デッキ(20枚のid)と `seed` だけを交換し、そのまま `MatchState.start_match()` へ入る。
+デッキ(30枚のid)と `seed` だけを交換し、そのまま `MatchState.start_match()` へ入る。
 1手の送受信は v1.0 と同じ `matches/{id}.actions` をそのまま使い、適用は
 `MatchAction.apply()` が受け持つ(`OnlineMatch.send()` は型に依存しないためそのまま流用できる)。
 
@@ -458,7 +458,7 @@ UIに依存しない、対局ルールそのものを扱う層。
   マナカーブを最下部に置き、高さを140pxへ拡大して棒グラフの山や推移をダイナミックに読めるようにした(GameDesign.md 9章)
 
 一覧のカードには `CardView.badge` で「2/2」を出し、入れられないカードは暗くする。
-**保存は20枚ちょうどのときだけ通す**(枚数が足りないデッキで対局へ入れないようにするため)。
+**保存は30枚ちょうどのときだけ通す**(枚数が足りないデッキで対局へ入れないようにするため)。
 編集画面は**必ずデッキ一覧から開く**ため、`open(index)` で何番目のデッキを編集するのかを
 受け取り(-1 は新規作成)、閉じたら一覧へ戻る。デッキ名の入力欄は編成中の欄の上端へ置く
 (共通ヘッダーの右側は保存・プリセット・コードで埋まっており、入力欄を足すと画面タイトルへ
@@ -483,7 +483,7 @@ Main
 │   (上記のうち対局画面を除く各画面は、先頭の子として共通の ScreenHeader を持つ)
 ├── CardMatchScreen          # 対局・観戦・リプレイ再生(コードで組み立てる。4.0節)
 ├── CardDeckListScreen       # デッキ一覧 / 対局前のデッキ選択(同上。4.5節)
-├── CardDeckEditorScreen     # デッキ編集(20枚・同名2枚まで。同上)
+├── CardDeckEditorScreen     # デッキ編集(30枚・同名2枚まで。同上)
 ├── CardListScreen           # カード一覧(同上)
 ├── RuleScreen               # ルール(遊び方)の紙芝居(同上。4.2節)
 ├── KeywordDictScreen        # キーワード辞書(同上。4.3節)
@@ -673,7 +673,7 @@ pckから除外した後も true を返すことがあり、有無の判定に�
 
 | クラス | 責務 |
 |---|---|
-| `CardPresetDecks`(`scripts/logic/card_preset_decks.gd`, static) | プリセット3つを「idと枚数の表」として持つ。20枚に足りない場合はコストの安い順に埋めるため、**表が古くなっても対局へ入れなくなることはない** |
+| `CardPresetDecks`(`scripts/logic/card_preset_decks.gd`, static) | プリセット3つを「idと枚数の表」として持つ。30枚に足りない場合はコストの安い順に埋めるため、**表が古くなっても対局へ入れなくなることはない** |
 | `CardPresetPicker`(`scripts/ui/card_preset_picker.gd`) | プリセットを選ぶモーダル。名前だけでは何のデッキか分からないため、狙いの一文を必ず添える |
 | `CardMatchTutorial`(`scripts/ui/card_match_tutorial.gd`) | 誘導対局の指示。段階ごとに1つだけ操作を求め、`MatchState` のシグナルで達成を判定する。**帯の中身(すなえる・文・「つぎへ」「閉じる」)は `_band` という1つの `Control` の子として相対座標で持つ**。マリガン中だけ帯を下げるため、動かすのが `_band.position` の1箇所で済む |
 | `SunaeruPortrait`(`scripts/ui/sunaeru_portrait.gd`) | 指示の帯の左端に置くすなえるの立ち絵。**絵を持つだけのノード**にし、何を言うかは `CardMatchTutorial` が持つ |
@@ -826,7 +826,7 @@ pckから除外した後も true を返すことがあり、有無の判定に�
 `CardDeckSave` は `user://card_decks.json` へ
 `{"decks": [{"name": ..., "ids": [...]}], "selected": n}` の形で**何個でも**保存する。
 **旧形式(デッキ1つだけの `{"deck": [...]}`)も読める**ようにしてあり、複数デッキを
-持つ前に保存したデッキが更新の時点で消えることはない。20枚に満たない件・カードが
+持つ前に保存したデッキが更新の時点で消えることはない。30枚に満たない件・カードが
 揃わない件は読み込みの時点で落とす(枚数の足りないデッキで対局へ入れないため)。
 
 `selected` は**対局前の選択画面の初期値でしかない**。使うデッキは対局のたびに選び直す
@@ -914,7 +914,7 @@ pckから除外した後も true を返すことがあり、有無の判定に�
   最初から赤いままになり、危険を示す色として働かなくなる
 - サーバー側での操作の正当性検証は行わず、クライアントの操作をそのまま信頼する(不正対策は将来検討)
 - Firebaseの接続情報(`apiKey`/`projectId`等)は `FirebaseConfig`(Resource)として `data/firebase_config.tres` に保持する。Web向けAPIキーは元々クライアント埋め込み前提の値であり、Firestoreセキュリティルール側でアクセス制御する運用とする
-- マッチ成立後、両者は `matches/{match_id}` ドキュメントへ自分のデッキ(20枚のid配列)を `deck_a`/`deck_b` として、先手側は山札の `seed` も書き込む(`OnlineSetup` が担当)。相手側はポーリングでこれを検知する。**v5.0は配置フェーズを持たないため、交換するのはデッキと種だけ**で、揃った時点でそのまま `MatchState.start_match()` へ入る(4.0節)
+- マッチ成立後、両者は `matches/{match_id}` ドキュメントへ自分のデッキ(30枚のid配列)を `deck_a`/`deck_b` として、先手側は山札の `seed` も書き込む(`OnlineSetup` が担当)。相手側はポーリングでこれを検知する。**v5.0は配置フェーズを持たないため、交換するのはデッキと種だけ**で、揃った時点でそのまま `MatchState.start_match()` へ入る(4.0節)
 - オンライン時は対局画面の表示視点(自分/相手)を `state.current_turn` ではなく固定の `my_side` にし、自分の手番でない間は操作を受け付けない
 - マリガン(GameDesign.md 2章)は手と同じ `actions` の1件として送り合う。**両者ぶんが揃ってから A → B の固定順で適用する**(適用が山札を切り直して乱数を消費するため、届いた順に適用すると同じ種から始めた対局が食い違う)
 - 対局中の実際の手の送受信は `OnlineMatch` が担当し、対局画面は自分の操作を `OnlineMatch.send_and_apply` 経由で送信しつつ即座にローカル反映する
@@ -1133,14 +1133,22 @@ HTTPRequest をぶら下げると送信の途中で巻き添えに消える。�
 ことがあるが、**失敗しても画面には何も出さない**。コード自体が大きく出ており、
 手入力で足りるため(GameDesign.md 11章)。
 
+### 6.6 対局中エモートの送受信と表示(GameDesign.md 9章)
+
+- 定型文の定義は `EmoteLibrary`(`scripts/data/emote_library.gd`、staticのみ)で管理する。
+- エモートは `{"type": "emote", "side": side, "emote_id": emote_id}` として `MatchAction.emote()` で生成され、他の手と同様に `OnlineMatch.send()` 経由で Firestore の `matches/{id}.actions` に追記される。
+- `MatchAction.apply()` では盤面状態の変更を行わず、`return true` で安全に通過する。
+- UI演出は `EmoteBubble`(`scripts/ui/emote_bubble.gd`)が担当し、発言側の `PlayerInfoBar.show_emote()` を通じて名札付近にフェードイン・自動フェードアウト表示する。
+- 画面側（`CardMatchScreen`）では送信後3秒間のクールダウンタイマーを持ち、連続送信を抑制する。
+
 ## 7. リプレイ・観戦の実装方針
 
-- `matches/{match_id}` には既に `deck_a`/`deck_b`(20枚のid)・`seed`(山札の並び)・`actions`(手順)が保存済みで、**任意の局面は初期状態から手を並べ直して作れる**。局面のスナップショットは持たない(4.0節)
+- `matches/{match_id}` には既に `deck_a`/`deck_b`(30枚のid)・`seed`(山札の並び)・`actions`(手順)が保存済みで、**任意の局面は初期状態から手を並べ直して作れる**。局面のスナップショットは持たない(4.0節)
 - 対局終了時、`MatchState.match_ended` を検知したタイミングで対局画面が `matches/{match_id}` へ `finished_at`(タイムスタンプ)・`winner`(`"a"`/`"b"`)を書き込む。この書き込みが「終了済みマッチ」の判定基準を兼ねる(未書き込み=対局中または放棄されたマッチ)
 - リプレイ一覧の取得は、`player_a == 自分のuid` と `player_b == 自分のuid` の**2本の等価フィルタクエリ**をそれぞれ実行し、結果をクライアント側でマージ・`finished_at`降順ソートする(複合インデックスを要求する `OR` 条件や `orderBy` 併用を避ける、既存のクエリ方針を踏襲)
 - リプレイ閲覧は `player_a`/`player_b` のuidが自分のuidと一致する場合のみ許可する(クライアント側での表示制御。Firestoreセキュリティルール側でも同様の制限を検討する)
 - 保存件数の上限(直近30件)は、対局終了時の書き込み後に「終了済みマッチが30件を超えていないか」をチェックし、超過分を `finished_at` の古い順に削除するクリーンアップ処理で維持する。プレイヤー単位ではなくアプリ全体で30件とし、シンプルな実装に留める
-- `ReplayListScreen`:`DeckListScreen` と同様の横長カード縦スクロール一覧。各カードは対局日時・勝敗・先手/後手に加え、`deck_a`/`deck_b` からデッキを代表する数枚のアイコンを表示する(20枚をそのまま並べるとカードに収まらないため)。`BattleTab` に追加する「リプレイ」ボタンから遷移する
+- `ReplayListScreen`:`DeckListScreen` と同様の横長カード縦スクロール一覧。各カードは対局日時・勝敗・先手/後手に加え、`deck_a`/`deck_b` からデッキを代表する数枚のアイコンを表示する(30枚をそのまま並べるとカードに収まらないため)。`BattleTab` に追加する「リプレイ」ボタンから遷移する
 - 投了で終わった対局は、`actions`の末尾に`surrender`が1件入った状態で保存される。リプレイ再生時は他の手と同じく`OnlineMatch.apply()`へ流れて`match_ended`が発火するが、再生モードでは元々結果パネルを出さない仕様のため追加の分岐は要らない。手数表示では投了も1手として数える(将棋の棋譜で投了を1手と数えるのと同じ扱い)
 - 再生画面は新規シーンを作らず、対局画面に「再生モード」を追加する形で実装する。再生モードでは `MatchState` をデッキと種から作り直し、保存済み `actions` を1件ずつ `MatchAction.apply()` へ流し込んで進行を再現する。行動の列には、先頭へ/1手戻る/再生・一時停止/1手進む/最後へ、の5ボタンと手数表示、および一覧へ戻る導線を置き、盤面のクリック操作は無効化する
 - 観戦は既存の**ルームコード**を再利用する。`rooms/{code}` には対局成立後も `match_id` が残っているため、観戦者が同じコードを入力すると `rooms/{code}` から `match_id` を引き、`matches/{match_id}` の購読(ポーリング)を開始できる。ランダムマッチには共有可能なコードが存在しないため観戦導線を用意しない
@@ -1196,7 +1204,7 @@ HTTPRequest をぶら下げると送信の途中で巻き添えに消える。�
   1手だけ適用し、また間合いを置く。**まとめて指すと何が起きたか追えない**ため1手ずつ進める
 - 適用の経路は自分の手・オンラインの手・リプレイ再生と同じ `MatchAction.apply()`。
   CPUのためだけの経路を作らない
-- CPUのデッキは `CardDeckSave.random_deck()`(全カード×2の山から20枚)。誘導対局のときだけ
+- CPUのデッキは `CardDeckSave.random_deck()`(全カード×2の山から30枚)。誘導対局のときだけ
   プリセットの「基本」を使う(GameDesign.md 18章)
 - CPU戦はオンライン対戦ではないため、`matches/{match_id}` への書き込みは行わない。
   棋譜は `LocalReplayService` がローカルへ保存する(7.1節)
@@ -1367,7 +1375,7 @@ UI層へ依存することになる。
 
 **画面へ出すコードは8桁の数字であり、中身は持たない。**`deckcodes/{コード}` へ
 「id*枚数」を `,` で連ねた文字列(`CardDeckCode.to_text()`)を預け、番号だけを渡す。
-20枚の組み合わせは1億通りをはるかに超えるため、**中身を持ったまま8桁へ収めることは
+30枚の組み合わせは1億通りをはるかに超えるため、**中身を持ったまま8桁へ収めることは
 原理的にできない**。
 
 | クラス | 責務 |

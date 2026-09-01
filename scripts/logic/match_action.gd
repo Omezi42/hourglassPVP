@@ -36,6 +36,10 @@ static func mulligan(side: int, indices: Array) -> Dictionary:
 	return {"type": "mulligan", "side": side, "indices": indices}
 
 
+static func emote(side: int, emote_id: String) -> Dictionary:
+	return {"type": "emote", "side": side, "emote_id": emote_id}
+
+
 ## 棋譜がマリガンを含むか(GameDesign.md 2章)。マリガンの導入前に保存された棋譜は
 ## 含まないため、再生・観戦はこれを見て待つかどうかを決める。
 static func contains_mulligan(actions: Array) -> bool:
@@ -72,4 +76,6 @@ static func apply(state: MatchState, action: Dictionary) -> bool:
 			return state.use_coin(side)
 		"mulligan":
 			return state.mulligan(side, action.get("indices", []))
+		"emote":
+			return true
 	return false

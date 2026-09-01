@@ -106,6 +106,19 @@ func show_state(state: MatchState, side: int) -> void:
 	queue_redraw()
 
 
+## エモートの吹き出しを名札付近へ出す(GameDesign.md 9章)。
+func show_emote(text: String) -> void:
+	for child in get_children():
+		if child is EmoteBubble:
+			child.queue_free()
+	var bubble := EmoteBubble.new()
+	bubble.text = text
+	bubble.is_opponent = is_opponent
+	# 相手側(画面上部)なら下へ、自分側(画面下部)なら上へ出す
+	bubble.position = Vector2(10.0, 48.0 if is_opponent else -36.0)
+	add_child(bubble)
+
+
 func _gui_input(event: InputEvent) -> void:
 	if _tracker.feed(event, size) != PressTracker.Result.CONFIRMED:
 		return

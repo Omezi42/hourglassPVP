@@ -1,6 +1,6 @@
 class_name CardDeckSave
 extends RefCounted
-## v5.0のデッキ(20枚・同名2枚まで)の保存(Autoloadを使わずstaticで持つ流儀)。
+## v5.0のデッキ(30枚・同名2枚まで)の保存(Autoloadを使わずstaticで持つ流儀)。
 ##
 ## **デッキは何個でも保存できる**(GameDesign.md 9章)。対局で使うデッキは開始直前の
 ## 選択画面で毎回選ぶため、ここが持つ `selected` は**その選択画面の初期値**でしかない。
@@ -13,7 +13,7 @@ const DEFAULT_NAME := "デッキ"
 
 
 ## 保存済みのデッキ一覧。1件は {"name": String, "cards": Array[CardData]}。
-## 壊れている・カードが揃わない件は落とす(20枚に満たないデッキで対局へ入れないため)。
+## 壊れている・カードが揃わない件は落とす(30枚に満たないデッキで対局へ入れないため)。
 static func list_decks() -> Array:
 	var decks: Array = []
 	for entry in _load_raw().get("decks", []):
@@ -111,7 +111,7 @@ static func next_default_name() -> String:
 
 
 ## デッキがまだ無いときに使う既定のデッキ。マナカーブが偏らないよう、
-## コストの安い順に10種を選んで2枚ずつ入れる。
+## コストの安い順に15種を選んで2枚ずつ入れる。
 static func default_deck() -> Array:
 	var pool := CardLibrary.all_cards().duplicate()
 	pool.sort_custom(func(a: CardData, b: CardData) -> bool: return a.cost < b.cost)

@@ -4,7 +4,7 @@ extends RefCounted
 ## `CardDeckSave` と同じ「Autoloadを使わずstaticで持つ」流儀。
 ##
 ## **カードのidと枚数だけを表として持つ**。カードを増やしたときにここを書き換える必要は
-## 無いが、書き換えれば新しいカードをプリセットへ入れられる。20枚に足りない場合は
+## 無いが、書き換えれば新しいカードをプリセットへ入れられる。30枚に足りない場合は
 ## コストの安い順に埋めるため、**表が古くなっても対局に入れなくなることはない**。
 
 const PRESETS: Array[Dictionary] = [
@@ -15,14 +15,19 @@ const PRESETS: Array[Dictionary] = [
 		"cards":
 		{
 			"grain": 2,
+			"wand": 2,
 			"sand": 2,
 			"shield": 2,
 			"dash": 2,
+			"dust": 2,
 			"glass": 2,
 			"drill": 2,
 			"sword": 2,
+			"echo": 2,
 			"lock": 2,
 			"twin": 2,
+			"hammer": 2,
+			"guard": 2,
 			"wall": 2,
 		},
 	},
@@ -33,15 +38,20 @@ const PRESETS: Array[Dictionary] = [
 		"cards":
 		{
 			"grain": 2,
-			"dash": 2,
+			"wand": 2,
+			"glim": 2,
 			"sand": 2,
+			"dash": 2,
+			"tick": 2,
 			"drill": 2,
 			"sword": 2,
 			"vamp": 2,
+			"echo": 2,
 			"lance": 2,
 			"twin": 2,
 			"swarm": 2,
-			"echo": 2,
+			"pike": 2,
+			"wheel": 2,
 		},
 	},
 	{
@@ -50,16 +60,21 @@ const PRESETS: Array[Dictionary] = [
 		"summary": "守護と大型で受け止め、盤面を残して勝つ",
 		"cards":
 		{
+			"husk": 2,
 			"shield": 2,
+			"watcher": 2,
 			"glass": 2,
+			"crown": 2,
 			"lock": 2,
 			"hammer": 2,
+			"gate": 2,
 			"guard": 2,
 			"mirror": 2,
 			"poison": 2,
 			"glow": 2,
 			"sweep": 2,
 			"wall": 2,
+			"tower": 2,
 		},
 	},
 ]
@@ -70,7 +85,7 @@ static func basic() -> Array:
 	return deck_of("basic")
 
 
-## id からデッキ(CardData を20枚)を組む。足りない分はコストの安い順に補う。
+## id からデッキ(CardData を30枚)を組む。足りない分はコストの安い順に補う。
 static func deck_of(preset_id: String) -> Array:
 	for preset in PRESETS:
 		if preset["id"] == preset_id:

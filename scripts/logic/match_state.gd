@@ -42,7 +42,7 @@ enum EndReason { HP_DEPLETED, SURRENDER, TIMEOUT, DRAW }
 
 const INITIAL_HP := 30
 const BOARD_SIZE := 6
-const DECK_SIZE := 20
+const DECK_SIZE := 30
 const MAX_MANA := 10
 const FIRST_PLAYER_HAND := 3
 const SECOND_PLAYER_HAND := 4

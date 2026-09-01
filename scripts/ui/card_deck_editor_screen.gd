@@ -1,6 +1,6 @@
 class_name CardDeckEditorScreen
 extends Control
-## v5.0のデッキ編集(GameDesign.md 9章)。デッキは20枚・同名2枚まで。
+## v5.0のデッキ編集(GameDesign.md 9章)。デッキは30枚・同名2枚まで。
 ##
 ## **左=全カードのグリッド / 右=編成中のデッキ**の2カラム。カードは毎日のアプデで
 ## 増え続けるため、一覧の探しやすさを最優先し、絞り込みと名前の検索を添える。
@@ -388,10 +388,12 @@ func _on_preset_picked(preset_id: String) -> void:
 	_refresh()
 
 
-## 20枚ちょうどのときだけ保存する。枚数が足りないデッキで対局へ入れないようにするため。
+## 30枚ちょうどのときだけ保存する。枚数が足りないデッキで対局へ入れないようにするため。
 func _on_save_pressed() -> void:
 	if _deck.size() != MatchState.DECK_SIZE:
-		_progress.text = "%d / %d 枚(20枚ちょうどに)" % [_deck.size(), MatchState.DECK_SIZE]
+		_progress.text = (
+			"%d / %d 枚(%d枚ちょうどに)" % [_deck.size(), MatchState.DECK_SIZE, MatchState.DECK_SIZE]
+		)
 		return
 	if _index >= 0:
 		CardDeckSave.update_deck(_index, _name_input.text, _deck)

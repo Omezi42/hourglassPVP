@@ -29,7 +29,7 @@ func _ready() -> void:
 	_build()
 
 
-## 同じカードは1枚にまとめ、枚数をバッジで出す。20枚が並ぶと読み取れないため。
+## 同じカードは1枚にまとめ、枚数をバッジで出す。30枚が並ぶと読み取れないため。
 func open_pile(title: String, cards: Array) -> void:
 	_title.text = "%s(%d枚)" % [title, cards.size()]
 	for child in _grid.get_children():
