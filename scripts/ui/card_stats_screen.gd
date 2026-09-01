@@ -86,7 +86,7 @@ func _rate(row: Dictionary) -> String:
 	return "勝率%.1f%%" % [100.0 * float(int(row["wins"])) / float(maxi(games, 1))]
 
 
-## デッキコードは長いため、見分けが付く長さだけを出す。
+## デッキの指紋は長いため、見分けが付く長さだけを出す。
 func _short_code(code: String) -> String:
 	return code.substr(0, 14) + "…" if code.length() > 14 else code
 

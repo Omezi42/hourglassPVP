@@ -646,24 +646,45 @@ func _test_mulligan_match_replays_from_the_record() -> void:
 	_assert.call(replay.winner == live.winner, "replaying a mulligan game should reach the winner")
 
 
-## デッキコードは往復できること、壊れたコードで例外を出さないこと(GameDesign.md 9章)。
+## デッキの中身は指紋・テキストのどちらでも往復できること、壊れた入力で例外を
+## 出さないこと(GameDesign.md 9章)。画面へ出す8桁のコードは中身を持たないため、
+## ここで測るのは預ける中身そのものになる。
 func _test_deck_code_round_trips() -> void:
 	for preset in CardPresetDecks.PRESETS:
 		var deck := CardPresetDecks.deck_of(preset["id"])
-		var code := CardDeckCode.encode(deck)
-		var back := CardDeckCode.decode(code)
-		_assert.call(
-			back.size() == MatchState.DECK_SIZE, "decoding %s should give 20 cards" % preset["id"]
-		)
 		var before := CardLibrary.ids_from_deck(deck)
-		var after := CardLibrary.ids_from_deck(back)
 		before.sort()
-		after.sort()
-		_assert.call(before == after, "decoding %s should give the same cards" % preset["id"])
+		for back: Array in [
+			CardDeckCode.deck_from_fingerprint(CardDeckCode.fingerprint(deck)),
+			CardDeckCode.from_text(CardDeckCode.to_text(deck))
+		]:
+			_assert.call(
+				back.size() == MatchState.DECK_SIZE,
+				"decoding %s should give 20 cards" % preset["id"]
+			)
+			var after := CardLibrary.ids_from_deck(back)
+			after.sort()
+			_assert.call(before == after, "decoding %s should give the same cards" % preset["id"])
 	for broken in ["", "HG1-", "HG1-!!!!", "nope", "HG1-QUJD"]:
 		_assert.call(
-			CardDeckCode.decode(broken).is_empty(), "a broken code should decode to nothing"
+			CardDeckCode.deck_from_fingerprint(broken).is_empty(),
+			"a broken fingerprint should decode to nothing"
 		)
+	for broken_text in ["", "sand", "sand*99", "nosuchcard*2", "sand*2"]:
+		_assert.call(
+			CardDeckCode.from_text(broken_text).is_empty(),
+			"a broken deck text should decode to nothing"
+		)
+	# 8桁の数字であること(DeckCodeService が発行する形)。
+	var issued := DeckCodeService.random_code()
+	_assert.call(
+		issued.length() == DeckCodeService.CODE_LENGTH and issued.is_valid_int(),
+		"a deck code should be %d digits" % DeckCodeService.CODE_LENGTH
+	)
+	_assert.call(
+		RoomMatch.random_code().length() == RoomMatch.CODE_LENGTH,
+		"a room code should be %d digits" % RoomMatch.CODE_LENGTH
+	)
 
 
 ## プリセットは3つとも20枚・同名2枚までに収まっていること(GameDesign.md 18章)。

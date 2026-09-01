@@ -33,13 +33,20 @@ service cloud.firestore {
       allow read, write: if signedIn();
     }
 
-    // ルームコード対戦の部屋。ドキュメントIDは6文字のルームコード。
+    // ルームコード対戦の部屋。ドキュメントIDは4桁の数字のルームコード。
     match /rooms/{code} {
       allow read, write: if signedIn();
     }
 
     // 対局そのもの(デッキ・配置・手順・結果)。リプレイと観戦もこれを読む。
     match /matches/{matchId} {
+      allow read, write: if signedIn();
+    }
+
+    // デッキコードの預かり先(GameDesign.md 9章)。ドキュメントIDは8桁の数字。
+    // 中身は「カードのidと枚数」だけで、誰のものかは持たない。受け取った相手が
+    // 読めなければ機能しないため、読み取りはサインイン済みの全員へ許す。
+    match /deckcodes/{code} {
       allow read, write: if signedIn();
     }
 

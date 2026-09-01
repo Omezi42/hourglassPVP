@@ -91,7 +91,7 @@ static func _record_cards(source: Dictionary, deck: Array, won: bool) -> void:
 static func _record_deck(source: Dictionary, deck: Array, won: bool) -> void:
 	if deck.is_empty():
 		return
-	var code := CardDeckCode.encode(deck)
+	var code := CardDeckCode.fingerprint(deck)
 	var entry: Dictionary = source.get(code, {"games": 0, "wins": 0})
 	entry["games"] = int(entry["games"]) + 1
 	entry["wins"] = int(entry["wins"]) + (1 if won else 0)

@@ -1,21 +1,23 @@
 class_name CardDeckCode
 extends RefCounted
-## デッキを短い文字列にして受け渡す(GameDesign.md 9章)。
+## デッキと「id*枚数」のテキストを行き来する(GameDesign.md 9章)。
 ## `CardDeckSave` と同じ「Autoloadを使わずstaticで持つ」流儀。
 ##
-## **中身はカードのidと枚数**であり、カード一覧の並び順の番号ではない。
-## 番号で表すと、カードを1枚足した時点で過去のコードがすべて別のデッキになる。
-## 毎日カードが増える運用(GameDesign.md 1章)とは両立しない。
+## **画面へ出すデッキコードは8桁の数字**であり、その中身はここで作ったテキストを
+## サーバーへ預けたものになる(`DeckCodeService`)。20枚の組み合わせは1億通りを
+## はるかに超えるため、**中身を持ったまま8桁へ収めることは原理的にできない**。
 ##
-## 形式: `HG1-` + 「id*枚数」を`,`で連ねた文字列をdeflateで縮めてBase64にしたもの。
+## `fingerprint()` は画面へ出さない内部の識別子で、戦績がデッキ別の勝率を数えるのに
+## 使う(記録のたびに通信させるわけにいかないため、こちらはローカルで完結する)。
 
-const PREFIX := "HG1-"
 const SEPARATOR := ","
 const COUNT_MARK := "*"
+## 指紋の形式。`HG1-` + 上記テキストを deflate で縮めて Base64 にしたもの。
+const FINGERPRINT_PREFIX := "HG1-"
 
 
-## デッキ(CardData の配列)をコードにする。
-static func encode(deck: Array) -> String:
+## デッキ(CardData の配列)を「id*枚数」のテキストにする。
+static func to_text(deck: Array) -> String:
 	var counts: Dictionary = {}
 	var order: Array[String] = []
 	for card: CardData in deck:
@@ -27,19 +29,45 @@ static func encode(deck: Array) -> String:
 	var parts: PackedStringArray = []
 	for id in order:
 		parts.append("%s%s%d" % [id, COUNT_MARK, int(counts[id])])
-	var raw := SEPARATOR.join(parts).to_utf8_buffer()
+	return SEPARATOR.join(parts)
+
+
+## テキストからデッキを組む。読めない場合は空の配列を返す
+## (プールから消えたカードを含む場合もここで空になる)。
+static func from_text(text: String) -> Array:
+	var deck: Array = []
+	for part in text.split(SEPARATOR, false):
+		var pair := part.split(COUNT_MARK, true, 1)
+		if pair.size() != 2 or not pair[1].is_valid_int():
+			return []
+		var card := CardLibrary.find_by_id(pair[0])
+		if card == null:
+			return []
+		var count := int(pair[1])
+		if count < 1 or count > CardDeckSave.COPY_LIMIT:
+			return []
+		for i in count:
+			deck.append(card)
+	if deck.size() != MatchState.DECK_SIZE:
+		return []
+	return deck
+
+
+## 構築を突き合わせるための内部の識別子(戦績・発行済みコードのキャッシュに使う)。
+static func fingerprint(deck: Array) -> String:
+	var raw := to_text(deck).to_utf8_buffer()
 	var packed := raw.compress(FileAccess.COMPRESSION_DEFLATE)
 	# 展開に元の長さが要るため、先頭2バイトへ入れておく(デッキ1つぶんなので65535で足りる)。
 	var head := PackedByteArray([raw.size() & 0xFF, (raw.size() >> 8) & 0xFF])
-	return PREFIX + Marshalls.raw_to_base64(head + packed)
+	return FINGERPRINT_PREFIX + Marshalls.raw_to_base64(head + packed)
 
 
-## コードからデッキを組む。読めない場合は空の配列を返す。
-static func decode(code: String) -> Array:
+## 指紋からデッキを戻す。読めない場合は空の配列を返す。
+static func deck_from_fingerprint(code: String) -> Array:
 	var body := code.strip_edges()
-	if not body.begins_with(PREFIX):
+	if not body.begins_with(FINGERPRINT_PREFIX):
 		return []
-	var payload := body.substr(PREFIX.length())
+	var payload := body.substr(FINGERPRINT_PREFIX.length())
 	# Base64 として成立しない文字列を渡すとエンジン側がエラーを出すため、先に弾く。
 	if not _is_base64(payload):
 		return []
@@ -50,7 +78,7 @@ static func decode(code: String) -> Array:
 	var raw := blob.slice(2).decompress(length, FileAccess.COMPRESSION_DEFLATE)
 	if raw.is_empty():
 		return []
-	return _build(raw.get_string_from_utf8())
+	return from_text(raw.get_string_from_utf8())
 
 
 static func _is_base64(text: String) -> bool:
@@ -69,22 +97,3 @@ static func _is_base64(text: String) -> bool:
 		if not ok:
 			return false
 	return true
-
-
-static func _build(text: String) -> Array:
-	var deck: Array = []
-	for part in text.split(SEPARATOR, false):
-		var pair := part.split(COUNT_MARK, true, 1)
-		if pair.size() != 2 or not pair[1].is_valid_int():
-			return []
-		var card := CardLibrary.find_by_id(pair[0])
-		if card == null:
-			return []
-		var count := int(pair[1])
-		if count < 1 or count > CardDeckSave.COPY_LIMIT:
-			return []
-		for i in count:
-			deck.append(card)
-	if deck.size() != MatchState.DECK_SIZE:
-		return []
-	return deck

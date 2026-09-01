@@ -121,7 +121,8 @@ func _build_join() -> void:
 	column.add_child(_make_label("コードで参加する", 26))
 	column.add_child(_make_label("友達から受け取ったコードを入力してください", 17))
 	_join_input = LineEdit.new()
-	_join_input.placeholder_text = "ルームコードを入力"
+	_join_input.placeholder_text = "%d桁の数字" % RoomMatch.CODE_LENGTH
+	_join_input.max_length = RoomMatch.CODE_LENGTH
 	_join_input.custom_minimum_size = Vector2(300, 56)
 	column.add_child(_join_input)
 	var buttons := HBoxContainer.new()
@@ -266,6 +267,18 @@ func _fail(message: String) -> void:
 	_set_status(message)
 
 
+## 入力欄のコードを取り出す。桁数の合わない入力は空文字にして呼び出し側で弾く
+## (4桁しかないため、打ち間違いをそのまま通信させる意味がない)。
+func _room_code_input() -> String:
+	var code := _join_input.text.strip_edges()
+	if code.length() != RoomMatch.CODE_LENGTH:
+		return ""
+	for i in code.length():
+		if code[i] < "0" or code[i] > "9":
+			return ""
+	return code
+
+
 func _on_back_pressed() -> void:
 	if _busy:
 		_on_cancel_pressed()
@@ -290,9 +303,9 @@ func _on_create_pressed() -> void:
 func _on_join_pressed() -> void:
 	if _busy:
 		return
-	var code := _join_input.text.strip_edges().to_upper()
+	var code := _room_code_input()
 	if code == "":
-		_set_status("ルームコードを入力してください")
+		_set_status("ルームコードは%d桁の数字です" % RoomMatch.CODE_LENGTH)
 		return
 	_set_busy(true)
 	_set_status("参加中")
@@ -310,9 +323,9 @@ func _on_join_pressed() -> void:
 func _on_spectate_pressed() -> void:
 	if _busy:
 		return
-	var code := _join_input.text.strip_edges().to_upper()
+	var code := _room_code_input()
 	if code == "":
-		_set_status("ルームコードを入力してください")
+		_set_status("ルームコードは%d桁の数字です" % RoomMatch.CODE_LENGTH)
 		return
 	_set_busy(true, true)
 	_set_status("観戦先を確認中")

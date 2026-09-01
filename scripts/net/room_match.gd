@@ -11,10 +11,14 @@ signal spectate_failed(reason: String)
 signal spectate_waiting
 
 const COLLECTION := "rooms"
-const CODE_CHARS := "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
-const CODE_LENGTH := 6
+## コードは4桁の数字(GameDesign.md 11章)。口頭で伝えられる短さを優先する。
+const CODE_LENGTH := 4
 const POLL_INTERVAL_SECONDS := 2.0
-const CREATE_RETRY_COUNT := 5
+const CREATE_RETRY_COUNT := 8
+## これより古く、まだ対局が始まっていない部屋は番号ごと引き取ってよい。
+## 取りうる番号が1万通りしか無いため、**引き取らないと放置された部屋が番号を
+## 占め続けて作れなくなる**。対局は20分ほどで終わるため、それより十分に長く取る。
+const STALE_SECONDS := 3600.0
 
 var client: FirestoreClient
 var auth: FirebaseAuth
@@ -36,18 +40,8 @@ func create_room(p_time_limit: bool = true) -> void:
 	_my_match_id = ""
 	time_limit = p_time_limit
 	for _attempt in range(CREATE_RETRY_COUNT):
-		var code := _generate_code()
-		var created: bool = await client.create_document(
-			_doc_path(code),
-			{
-				"creator_uid": auth.uid,
-				"joiner_uid": "",
-				"match_id": "",
-				"created_at": Time.get_unix_time_from_system(),
-				"build": GameVersion.build_id(),
-				"time_limit": p_time_limit
-			}
-		)
+		var code := random_code()
+		var created: bool = await _claim_code(code, p_time_limit)
 		if created:
 			_code = code
 			room_created.emit(code)
@@ -164,8 +158,38 @@ func _doc_path(code: String) -> String:
 	return "%s/%s" % [COLLECTION, code]
 
 
-func _generate_code() -> String:
+## その番号で部屋を作る。空いていれば作り、埋まっていても**古くて対局が始まって
+## いない部屋なら番号ごと引き取る**(GameDesign.md 11章)。引き取りは `updateTime` を
+## 前提条件にした1回の commit で行い、同時に掴もうとした相手がいれば失敗させる。
+func _claim_code(code: String, p_time_limit: bool) -> bool:
+	var fields := {
+		"creator_uid": auth.uid,
+		"joiner_uid": "",
+		"match_id": "",
+		"created_at": Time.get_unix_time_from_system(),
+		"build": GameVersion.build_id(),
+		"time_limit": p_time_limit
+	}
+	if await client.create_document(_doc_path(code), fields):
+		return true
+	var room: Dictionary = await client.get_document_meta(_doc_path(code))
+	if not room["exists"] or not _is_stale(room["fields"]):
+		return false
+	return await client.commit(
+		[client.update_write(_doc_path(code), fields, {"updateTime": room["update_time"]})]
+	)
+
+
+func _is_stale(fields: Dictionary) -> bool:
+	if fields.get("match_id", "") != "":
+		return false
+	var created_at := float(fields.get("created_at", 0.0))
+	return Time.get_unix_time_from_system() - created_at > STALE_SECONDS
+
+
+## 番号を1つ引く。テストから形を確かめられるよう static にしてある。
+static func random_code() -> String:
 	var code := ""
 	for _i in range(CODE_LENGTH):
-		code += CODE_CHARS[randi() % CODE_CHARS.length()]
+		code += str(randi() % 10)
 	return code
