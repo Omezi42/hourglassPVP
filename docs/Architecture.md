@@ -1294,14 +1294,14 @@ GameDesign.md 14章(アカウント)・15章(通貨)の実装方針。認証は 
 |---|---|---|
 | `display_name` | String | 表示名(10文字まで)。未設定は空文字 |
 | `login_id` | String | 登録済みなら入力されたID。匿名なら空文字(表示用) |
-| `icon_id` | String | アイコンID(未設定時は `"mascot"`) |
+| `icon_id` | String | アイコンID(未設定時は `"sand"`) |
 | `title_id` | String | 称号ID(未設定時は `"novice"`) |
 | `currency` | int | 砂金の残高 |
 | `cpu_reward_date` | String | CPU戦の報酬を数えている日付(`YYYY-MM-DD`) |
 | `cpu_reward_count` | int | その日付にCPU戦で報酬を得た回数 |
 | `updated_at` | float | 最終更新時刻(Unix時間) |
 
-- 利用可能なアイコンと称号の定義は `UserProfileLibrary`(`scripts/data/user_profile_library.gd`)に集約する。
+- 利用可能なアイコンと称号の定義は `UserProfileLibrary`(`scripts/data/user_profile_library.gd`)に集約する。初期解放アイコンは紋章8種(`sand`, `hour`, `crown`, `shield`, `sword`, `eye`, `halo`, `burst`)とし、マスコット(`mascot`)は将来のショップ要素として初期配布から除外する。
 - 読み書きは `AccountService`(`scripts/net/account_service.gd`、`ReplayService` と同じ
   static のみのクラス)に集約する。対局画面や各画面が `FirestoreClient` を直接
   叩かないようにするため
@@ -1348,10 +1348,13 @@ GameDesign.md 14章(アカウント)・15章(通貨)の実装方針。認証は 
 ### 10.5 UI
 
 - `AccountScreen`(`scenes/account_screen.tscn`)を追加する。他の画面と同じ共通
-  `ScreenHeader`(4章)に従い、状態表示・表示名の変更・登録・ログイン・ログアウトを持つ
+  `ScreenHeader`(4章)に従い、画面中央に幅1060pxの2カラムパネルを配置する。
+  - **左カラム**: 名札プレビュー、表示名編集、アイコン選択(4x2グリッド)、称号選択(ScrollContainer対応リスト)、プロフィール保存ボタン。
+  - **右カラム**: アカウント状態、登録・ログインフォーム、ログアウトボタン、注意文。
+  - **ボタンスタイル**: 全ボタンに `CodedButton`(真鍮スタイル)を適用し、画面全体の質感を統一する。
 - 入口は2つ。`TitleScreen` と `HomeScreen` のヘッダー。`Main` は他の画面と同様に
   `_show_only()` で切り替える
-- ホーム画面のヘッダーには表示名と砂金の残高を出す。残高は `AccountService` が
+- ホーム画面のヘッダーには設定中のアイコン、表示名と砂金の残高を出す。残高は `AccountService` が
   キャッシュしている値を読むだけにし、画面を開くたびに通信しない
 
 ### 10.5.1 表示名に使える文字(GameDesign.md 14章)

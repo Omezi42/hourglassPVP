@@ -2,7 +2,7 @@ class_name AccountScreen
 extends Control
 ## アカウントの状態確認・表示名の変更・アイコン/称号設定・登録・ログイン・ログアウトを行う画面
 ## (GameDesign.md 14章、Architecture.md 10.5)。
-## タイトル画面とホーム画面の両方から開く。
+## 2カラム構成(左: プロフィール設定 / 右: アカウント管理)。
 
 signal back_pressed
 ## 表示名・残高・アイコン・称号が変わったことを通知する。ホーム画面のヘッダーが購読する。
@@ -20,20 +20,32 @@ var _icon_buttons: Dictionary = {}
 var _title_buttons: Dictionary = {}
 var _preview: ProfilePreviewPlate
 
+var _profile_save_button: Button
+var _register_button: Button
+var _login_button: Button
+var _logout_button: Button
+
 @onready var screen_header: ScreenHeader = $ScreenHeader
-@onready var vbox: VBoxContainer = $Panel/Margin/VBox
-@onready var status_label: Label = $Panel/Margin/VBox/StatusLabel
-@onready var currency_label: Label = $Panel/Margin/VBox/CurrencyLabel
-@onready var name_row: HBoxContainer = $Panel/Margin/VBox/NameRow
-@onready var name_input: LineEdit = $Panel/Margin/VBox/NameRow/NameInput
-@onready var name_save_button: Button = $Panel/Margin/VBox/NameRow/NameSaveButton
-@onready var credential_box: VBoxContainer = $Panel/Margin/VBox/CredentialBox
-@onready var id_input: LineEdit = $Panel/Margin/VBox/CredentialBox/IdRow/IdInput
-@onready var password_input: LineEdit = $Panel/Margin/VBox/CredentialBox/PasswordRow/PasswordInput
-@onready var register_button: Button = $Panel/Margin/VBox/CredentialBox/ButtonRow/RegisterButton
-@onready var login_button: Button = $Panel/Margin/VBox/CredentialBox/ButtonRow/LoginButton
-@onready var logout_button: Button = $Panel/Margin/VBox/LogoutButton
-@onready var message_label: Label = $Panel/Margin/VBox/MessageLabel
+@onready var preview_container: Control = (
+	$Panel/Margin/Columns/LeftColumn/PreviewRow/PreviewContainer
+)
+@onready var name_input: LineEdit = $Panel/Margin/Columns/LeftColumn/NameRow/NameInput
+@onready var icon_grid: GridContainer = $Panel/Margin/Columns/LeftColumn/IconGrid
+@onready var title_list: VBoxContainer = $Panel/Margin/Columns/LeftColumn/TitleScroll/TitleList
+@onready var save_row: CenterContainer = $Panel/Margin/Columns/LeftColumn/SaveRow
+
+@onready var status_label: Label = $Panel/Margin/Columns/RightColumn/StatusLabel
+@onready var currency_label: Label = $Panel/Margin/Columns/RightColumn/CurrencyLabel
+@onready var credential_box: VBoxContainer = $Panel/Margin/Columns/RightColumn/CredentialBox
+@onready var id_input: LineEdit = $Panel/Margin/Columns/RightColumn/CredentialBox/IdRow/IdInput
+@onready var password_input: LineEdit = (
+	$Panel/Margin/Columns/RightColumn/CredentialBox/PasswordRow/PasswordInput
+)
+@onready var button_row: HBoxContainer = (
+	$Panel/Margin/Columns/RightColumn/CredentialBox/ButtonRow
+)
+@onready var logout_row: CenterContainer = $Panel/Margin/Columns/RightColumn/LogoutRow
+@onready var message_label: Label = $Panel/Margin/Columns/RightColumn/MessageLabel
 
 
 func _ready() -> void:
@@ -42,76 +54,46 @@ func _ready() -> void:
 	name_input.max_length = AccountService.DISPLAY_NAME_MAX_LENGTH
 	name_input.text_changed.connect(_on_name_text_changed)
 	id_input.max_length = FirebaseAuth.ID_MAX_LENGTH
-	name_save_button.pressed.connect(_on_profile_save_pressed)
-	name_save_button.text = "保存"
-	register_button.pressed.connect(_on_register_pressed)
-	login_button.pressed.connect(_on_login_pressed)
-	logout_button.pressed.connect(_on_logout_pressed)
 
-	_setup_customization_ui()
+	_setup_buttons()
+	_setup_profile_ui()
 
 
-func _setup_customization_ui() -> void:
-	# NameRowの手前にアイコン選択・称号選択・プレビューを挿入する
-	var name_index := name_row.get_index()
+func _setup_buttons() -> void:
+	_profile_save_button = CodedButton.make("プロフィールを保存", Vector2(240, 46))
+	_profile_save_button.pressed.connect(_on_profile_save_pressed)
+	save_row.add_child(_profile_save_button)
 
-	# 1. プレビュー行
-	var preview_row := HBoxContainer.new()
-	preview_row.add_theme_constant_override("separation", 10)
-	var preview_caption := Label.new()
-	preview_caption.custom_minimum_size = Vector2(110, 0)
-	preview_caption.add_theme_font_size_override("font_size", 18)
-	preview_caption.text = "名札見本"
-	preview_row.add_child(preview_caption)
+	_register_button = CodedButton.make("登録する", Vector2(170, 48))
+	_register_button.pressed.connect(_on_register_pressed)
+	button_row.add_child(_register_button)
+
+	_login_button = CodedButton.make("ログイン", Vector2(170, 48))
+	_login_button.pressed.connect(_on_login_pressed)
+	button_row.add_child(_login_button)
+
+	_logout_button = CodedButton.make("ログアウト", Vector2(200, 48))
+	_logout_button.pressed.connect(_on_logout_pressed)
+	logout_row.add_child(_logout_button)
+
+
+func _setup_profile_ui() -> void:
 	_preview = ProfilePreviewPlate.new()
-	preview_row.add_child(_preview)
-	vbox.add_child(preview_row)
-	vbox.move_child(preview_row, name_index)
-	name_index += 1
+	preview_container.add_child(_preview)
 
-	# 2. アイコン選択行
-	var icon_row := HBoxContainer.new()
-	icon_row.add_theme_constant_override("separation", 10)
-	var icon_caption := Label.new()
-	icon_caption.custom_minimum_size = Vector2(110, 0)
-	icon_caption.add_theme_font_size_override("font_size", 18)
-	icon_caption.text = "アイコン"
-	icon_row.add_child(icon_caption)
-
-	var icon_container := HBoxContainer.new()
-	icon_container.add_theme_constant_override("separation", 6)
+	# アイコン一覧 (4x2 グリッド)
 	for icon_id in UserProfileLibrary.get_available_icon_ids():
 		var btn := IconButton.new(icon_id)
 		btn.pressed.connect(func() -> void: _on_icon_selected(icon_id))
-		icon_container.add_child(btn)
+		icon_grid.add_child(btn)
 		_icon_buttons[icon_id] = btn
-	icon_row.add_child(icon_container)
-	vbox.add_child(icon_row)
-	vbox.move_child(icon_row, name_index)
-	name_index += 1
 
-	# 3. 称号選択行
-	var title_row := HBoxContainer.new()
-	title_row.add_theme_constant_override("separation", 10)
-	var title_caption := Label.new()
-	title_caption.custom_minimum_size = Vector2(110, 0)
-	title_caption.add_theme_font_size_override("font_size", 18)
-	title_caption.text = "称号"
-	title_row.add_child(title_caption)
-
-	var title_container := HBoxContainer.new()
-	title_container.add_theme_constant_override("separation", 8)
+	# 称号一覧 (スクロールリスト)
 	for title_id in UserProfileLibrary.get_available_title_ids():
-		var btn := Button.new()
-		btn.text = UserProfileLibrary.get_title_name(title_id)
-		btn.add_theme_font_size_override("font_size", 16)
-		btn.custom_minimum_size = Vector2(140, 36)
-		btn.pressed.connect(func() -> void: _on_title_selected(title_id))
-		title_container.add_child(btn)
-		_title_buttons[title_id] = btn
-	title_row.add_child(title_container)
-	vbox.add_child(title_row)
-	vbox.move_child(title_row, name_index)
+		var item := TitleListItem.new(title_id)
+		item.pressed.connect(func() -> void: _on_title_selected(title_id))
+		title_list.add_child(item)
+		_title_buttons[title_id] = item
 
 
 ## 画面を開くたびにMainが呼ぶ。サインインが済んでいなければここで済ませる。
@@ -135,10 +117,10 @@ func refresh() -> void:
 func _refresh_view() -> void:
 	var registered: bool = NetSession.auth != null and NetSession.auth.is_registered()
 	if registered:
-		status_label.text = "ログイン中:%s" % NetSession.auth.login_id
+		status_label.text = "ログイン中: %s" % NetSession.auth.login_id
 	else:
-		status_label.text = "未登録(この端末のゲストとして遊んでいます)"
-	currency_label.text = "%s:%d" % [CurrencyRules.CURRENCY_NAME, AccountService.currency()]
+		status_label.text = "ゲスト (この端末のゲストとして遊んでいます)"
+	currency_label.text = "%s: %d" % [CurrencyRules.CURRENCY_NAME, AccountService.currency()]
 	name_input.text = AccountService.display_name()
 
 	# アイコン選択ボタンのハイライト更新
@@ -149,18 +131,16 @@ func _refresh_view() -> void:
 
 	# 称号ボタンのハイライト更新
 	for id in _title_buttons:
-		var btn: Button = _title_buttons[id]
-		if id == _selected_title_id:
-			btn.add_theme_color_override("font_color", UiPalette.GLOW_AMBER)
-		else:
-			btn.remove_theme_color_override("font_color")
+		var item: TitleListItem = _title_buttons[id]
+		item.is_selected = (id == _selected_title_id)
+		item.queue_redraw()
 
 	# プレビュー更新
 	_update_preview()
 
 	# 登録済みならIDとパスワードの入力欄は不要。代わりにログアウトを出す
 	credential_box.visible = not registered
-	logout_button.visible = registered
+	logout_row.visible = registered
 	profile_changed.emit()
 
 
@@ -175,11 +155,8 @@ func _on_icon_selected(icon_id: String) -> void:
 func _on_title_selected(title_id: String) -> void:
 	_selected_title_id = title_id
 	for id in _title_buttons:
-		var btn: Button = _title_buttons[id]
-		if id == _selected_title_id:
-			btn.add_theme_color_override("font_color", UiPalette.GLOW_AMBER)
-		else:
-			btn.remove_theme_color_override("font_color")
+		_title_buttons[id].is_selected = (id == _selected_title_id)
+		_title_buttons[id].queue_redraw()
 	_update_preview()
 
 
@@ -262,10 +239,14 @@ func _on_logout_pressed() -> void:
 
 func _set_busy(value: bool) -> void:
 	_busy = value
-	name_save_button.disabled = value
-	register_button.disabled = value
-	login_button.disabled = value
-	logout_button.disabled = value
+	if _profile_save_button != null:
+		_profile_save_button.disabled = value
+	if _register_button != null:
+		_register_button.disabled = value
+	if _login_button != null:
+		_login_button.disabled = value
+	if _logout_button != null:
+		_logout_button.disabled = value
 
 
 func _set_message(text: String, color: Color) -> void:
@@ -273,28 +254,79 @@ func _set_message(text: String, color: Color) -> void:
 	message_label.add_theme_color_override("font_color", color)
 
 
-## アイコン選択用ボタン
+## アイコン選択用ボタン(真鍮枠・丸型)
 class IconButton extends Button:
 	var icon_id: String
 	var is_selected := false
 
 	func _init(p_icon_id: String) -> void:
 		icon_id = p_icon_id
-		custom_minimum_size = Vector2(40, 40)
+		custom_minimum_size = Vector2(44, 44)
 		flat = true
 
 	func _draw() -> void:
 		var rect := Rect2(Vector2.ZERO, size)
 		var center := rect.position + rect.size * 0.5
 		var bg_color := Color(0.12, 0.1, 0.08, 0.9)
-		draw_circle(center, 18.0, bg_color)
+		draw_circle(center, 20.0, bg_color)
 		var tex := UserProfileLibrary.get_icon_texture(icon_id)
 		if tex != null:
-			draw_texture_rect(tex, Rect2(center - Vector2(14, 14), Vector2(28, 28)), false)
+			draw_texture_rect(tex, Rect2(center - Vector2(16, 16), Vector2(32, 32)), false)
 		if is_selected:
-			draw_arc(center, 18.0, 0.0, TAU, 24, UiPalette.GLOW_AMBER, 2.5)
+			draw_arc(center, 20.0, 0.0, TAU, 28, UiPalette.GLOW_AMBER, 2.5)
+			# 外側の微かなハロー
+			draw_arc(center, 22.0, 0.0, TAU, 28, Color(1.0, 0.84, 0.4, 0.4), 1.0)
 		else:
-			draw_arc(center, 18.0, 0.0, TAU, 24, UiPalette.BRASS_MID, 1.0)
+			draw_arc(center, 20.0, 0.0, TAU, 28, UiPalette.BRASS_MID, 1.2)
+
+
+## 称号選択用リスト項目(真鍮スタイル・選択ハイライト)
+class TitleListItem extends Button:
+	var title_id: String
+	var is_selected := false
+	var _font: Font
+
+	func _init(p_title_id: String) -> void:
+		title_id = p_title_id
+		custom_minimum_size = Vector2(0, 34)
+		flat = true
+
+	func _ready() -> void:
+		_font = get_theme_default_font()
+		if _font == null:
+			_font = ThemeDB.fallback_font
+
+	func _draw() -> void:
+		var rect := Rect2(Vector2.ZERO, size)
+		var points := UiPaint.rounded_rect_points_uniform(rect, 4.0, 4)
+		var bg_top := Color(0.18, 0.15, 0.12, 0.9) if is_selected else Color(0.1, 0.08, 0.07, 0.8)
+		var bg_bottom := (
+			Color(0.12, 0.1, 0.08, 0.9) if is_selected else Color(0.06, 0.05, 0.04, 0.8)
+		)
+		UiPaint.fill_gradient_polygon(
+			get_canvas_item(), points, rect, [[0.0, bg_top], [1.0, bg_bottom]]
+		)
+
+		var outline := points.duplicate()
+		outline.append(points[0])
+		var border_color := UiPalette.GLOW_AMBER if is_selected else UiPalette.BRASS_DARK
+		var border_width := 1.5 if is_selected else 1.0
+		draw_polyline(outline, border_color, border_width, true)
+
+		if _font == null:
+			return
+		var mark := "◆ " if is_selected else "   "
+		var text := mark + UserProfileLibrary.get_title_name(title_id)
+		var text_color := UiPalette.GLOW_AMBER if is_selected else UiPalette.TEXT_OFFWHITE
+		draw_string(
+			_font,
+			Vector2(12, size.y - 10),
+			text,
+			HORIZONTAL_ALIGNMENT_LEFT,
+			-1,
+			14,
+			text_color
+		)
 
 
 ## 名札見本プレビュー
@@ -305,13 +337,13 @@ class ProfilePreviewPlate extends Control:
 	var font: Font
 
 	func _ready() -> void:
-		custom_minimum_size = Vector2(160, 42)
+		custom_minimum_size = Vector2(170, 42)
 		font = get_theme_default_font()
 		if font == null:
 			font = ThemeDB.fallback_font
 
 	func _draw() -> void:
-		var rect := Rect2(0, 0, 160, 40)
+		var rect := Rect2(0, 0, 170, 40)
 		var points := UiPaint.rounded_rect_points_uniform(rect, 6.0, 5)
 		UiPaint.fill_gradient_polygon(
 			get_canvas_item(),
@@ -341,7 +373,7 @@ class ProfilePreviewPlate extends Control:
 				Vector2(text_x, 16),
 				title_text,
 				HORIZONTAL_ALIGNMENT_LEFT,
-				110,
+				120,
 				11,
 				UiPalette.BRASS_HIGHLIGHT
 			)
@@ -350,7 +382,7 @@ class ProfilePreviewPlate extends Control:
 				Vector2(text_x, 32),
 				label,
 				HORIZONTAL_ALIGNMENT_LEFT,
-				110,
+				120,
 				15,
 				UiPalette.TEXT_OFFWHITE
 			)
@@ -360,7 +392,7 @@ class ProfilePreviewPlate extends Control:
 				Vector2(text_x, 26),
 				label,
 				HORIZONTAL_ALIGNMENT_LEFT,
-				110,
+				120,
 				17,
 				UiPalette.TEXT_OFFWHITE
 			)

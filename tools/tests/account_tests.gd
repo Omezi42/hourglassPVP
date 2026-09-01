@@ -283,11 +283,15 @@ func _test_text_glyphs(assert_true: Callable) -> void:
 
 func _test_profile_customization(assert_true: Callable) -> void:
 	# UserProfileLibraryの検証
-	var icons := UserProfileLibrary.get_available_icon_ids()
-	assert_true.call(icons.has("mascot"), "available icons should include mascot")
-	assert_true.call(icons.has("sand"), "available icons should include sand")
 	assert_true.call(
-		UserProfileLibrary.get_icon_texture("mascot") != null, "mascot icon texture exists"
+		UserProfileLibrary.DEFAULT_ICON_ID == "sand", "default icon id should be sand"
+	)
+	var icons := UserProfileLibrary.get_available_icon_ids()
+	assert_true.call(not icons.has("mascot"), "available icons should not include mascot")
+	assert_true.call(icons.has("sand"), "available icons should include sand")
+	assert_true.call(icons.has("hour"), "available icons should include hour")
+	assert_true.call(
+		UserProfileLibrary.get_icon_texture("sand") != null, "sand icon texture exists"
 	)
 	assert_true.call(
 		UserProfileLibrary.get_icon_texture("unknown_id") != null, "fallback icon texture exists"

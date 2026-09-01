@@ -3,17 +3,13 @@ extends RefCounted
 ## ユーザーのアイコン・称号の定義と取得(GameDesign.md 14章、Architecture.md 10.2)。
 ## `CardLibrary` と同じく、Autoloadを使わず static のみで持つ。
 
-const DEFAULT_ICON_ID := "mascot"
+const DEFAULT_ICON_ID := "sand"
 const DEFAULT_TITLE_ID := "novice"
 
 const CPU_ICON_ID := "hour"
 const CPU_TITLE_ID := "cpu_basic"
 
 const ICONS: Dictionary = {
-	"mascot": {
-		"name": "すなえる",
-		"path": "res://assets/mascot/mascot_avatar.png",
-	},
 	"sand": {
 		"name": "流砂",
 		"path": "res://assets/hourglasses/emblems/sand.png",
@@ -80,7 +76,7 @@ static func get_available_title_ids() -> Array:
 
 static func get_icon_name(icon_id: String) -> String:
 	var entry: Dictionary = ICONS.get(icon_id, ICONS.get(DEFAULT_ICON_ID, {}))
-	return str(entry.get("name", "すなえる"))
+	return str(entry.get("name", "流砂"))
 
 
 static func get_icon_texture(icon_id: String) -> Texture2D:
