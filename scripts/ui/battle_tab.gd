@@ -16,6 +16,10 @@ signal room_match_requested
 ## 通信待ち中の「...」演出。3個目まで打ってから空に戻る(対局画面の待機表現と統一)。
 const BUSY_DOTS_MAX := 3
 const BUSY_DOTS_INTERVAL := 0.5
+## 待機中の文言と、募集を知らせたことを示す丸い印との間隔。
+const ANNOUNCE_BADGE_GAP := 8.0
+## 印にカーソルを乗せたときだけ出す説明(GameDesign.md 11章)。
+const ANNOUNCE_NOTE := "公式Discordサーバーへ「対戦相手をさがしている人がいる」と通知を送りました"
 
 var _queue: MatchmakingQueue
 var _busy := false
@@ -27,6 +31,9 @@ var _status_base_text := ""
 var _resume_button: Button
 ## 戦績(GameDesign.md 19章)。`.tscn` を書き換えずに済ませるためコードで生成する。
 var _stats_button: Button
+## 募集をDiscordへ知らせられたときに、待機中の文言の横へ出す丸い印
+## (GameDesign.md 11章)。`.tscn` を書き換えずに済ませるためコードで生成する。
+var _announce_badge: StatusBadge
 
 @onready var status_label: Label = $Margin/VBox/StatusLabel
 @onready var random_match_button: Button = $Margin/VBox/MainRow/RandomMatchButton
@@ -48,6 +55,7 @@ func _ready() -> void:
 	cancel_button.pressed.connect(_on_cancel_pressed)
 	_build_resume_button()
 	_build_stats_button()
+	_build_announce_badge()
 	refresh()
 
 
@@ -60,7 +68,7 @@ func refresh() -> void:
 	random_match_button.disabled = not ready_to_battle
 	room_match_button.disabled = not ready_to_battle
 	cpu_match_button.disabled = not ready_to_battle
-	status_label.text = "対戦できます" if ready_to_battle else "デッキを20枚にしてください"
+	_set_status("対戦できます" if ready_to_battle else "デッキを20枚にしてください")
 
 
 func _build_resume_button() -> void:
@@ -71,6 +79,11 @@ func _build_resume_button() -> void:
 	var column: Control = status_label.get_parent()
 	column.add_child(_resume_button)
 	column.move_child(_resume_button, 0)
+
+
+func _build_announce_badge() -> void:
+	_announce_badge = StatusBadge.new()
+	status_label.add_child(_announce_badge)
 
 
 ## 「戦績」はリプレイ・CPU戦と同じ「対局そのものではない導線」のため、専用の行を作らず
@@ -138,8 +151,12 @@ func _discard_session() -> void:
 
 
 ## 待機中テキストの土台(base)を更新し、末尾のドットと合わせて表示し直す。
+## 文言を差し替えたら印は消す。印は「いま出ている文言に添えるもの」であり、
+## 別の知らせへ変わった後も残っていると、何に付いた印なのか読めなくなる。
 func _set_status(text: String) -> void:
 	_status_base_text = text
+	if _announce_badge != null:
+		_announce_badge.clear_note()
 	_refresh_status_display()
 
 
@@ -148,6 +165,24 @@ func _refresh_status_display() -> void:
 	if _busy:
 		text += ".".repeat(_busy_dot_count)
 	status_label.text = text
+	_place_announce_badge()
+
+
+## 印は文言のすぐ右へ置く。**位置は巡回ドットを含まない幅から決める**
+## (ドットに合わせて動かすと0.5秒ごとに印が跳ねる)。
+func _place_announce_badge() -> void:
+	if _announce_badge == null:
+		return
+	var font := status_label.get_theme_font("font")
+	var font_size := status_label.get_theme_font_size("font_size")
+	if font == null:
+		return
+	var text := _status_base_text + ".".repeat(BUSY_DOTS_MAX)
+	var text_width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	_announce_badge.position = Vector2(
+		(status_label.size.x + text_width) * 0.5 + ANNOUNCE_BADGE_GAP,
+		(status_label.size.y - StatusBadge.DIAMETER) * 0.5
+	)
 
 
 func _on_busy_dots_timeout() -> void:
@@ -187,6 +222,7 @@ func begin_random_match() -> void:
 	_queue.matched.connect(_on_matched)
 	_queue.failed.connect(_fail)
 	_queue.version_mismatch.connect(_on_version_mismatch)
+	_queue.announce_result.connect(_on_announce_result)
 	_queue.join()
 
 
@@ -200,6 +236,14 @@ func _on_cancel_pressed() -> void:
 	if queue != null:
 		await queue.cancel()
 		queue.queue_free()
+
+
+## 募集をDiscordへ知らせられた(GameDesign.md 11章)。**文言としては出さない。**
+## 待っている人にできることは無いため、丸い印だけを添え、知りたい人がカーソルを
+## 乗せたときにその説明を出す。届かなかった場合は何も出さない。
+func _on_announce_result(ok: bool) -> void:
+	if ok and _announce_badge != null:
+		_announce_badge.show_note(ANNOUNCE_NOTE)
 
 
 ## 待機者はいたが全員バージョンが違った(GameDesign.md 11章)。待機自体は続けるので、

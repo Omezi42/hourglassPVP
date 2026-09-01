@@ -9,6 +9,9 @@ signal failed(reason: String)
 ## 黙って待ち続けると「マッチングしない不具合」にしか見えないため画面へ返す。
 ## `newer_exists` は、自分より新しい版の相手がいた(=自分が古い)ことを表す。
 signal version_mismatch(newer_exists: bool)
+## 募集をDiscordへ知らせられたかどうか(GameDesign.md 11章)。**文言としては出さず**、
+## 届いたときだけ待機中の文言の横へ丸い印を添えるために使う。
+signal announce_result(ok: bool)
 
 const COLLECTION := "matchmaking_queue"
 const POLL_INTERVAL_SECONDS := 2.0
@@ -74,11 +77,12 @@ func join() -> void:
 
 
 ## 届いたらそれ以上は送らない(待っている間ずっと知らせ続けると、通知そのものを
-## 切られてしまう)。**結果は画面へ出さない**(GameDesign.md 11章)。募集の通知は
-## プレイヤーの操作ではなく裏方の処理であり、その成否を待機中の文言へ混ぜても
-## 待っている人にできることは無い。
+## 切られてしまう)。**結果を文言として出さない**のは、募集の通知がプレイヤーの
+## 操作ではなく裏方の処理であり、待っている人にできることが無いため
+## (GameDesign.md 11章)。届いたことは画面側が丸い印で示す。
 func _on_announced(ok: bool) -> void:
 	_announced = _announced or ok
+	announce_result.emit(ok)
 
 
 func _now() -> float:

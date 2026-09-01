@@ -956,9 +956,10 @@ pckには入る**。リポジトリへ置けない理由は2つ。
 HTTPRequest をぶら下げると送信の途中で巻き添えに消える。画面には何も出ないため、
 「通知だけが飛ばない」という形でしか気づけなかった。
 
-結果は `notify_waiting()` の `on_done`(Callable)で返す。**画面へは流さない**
-(GameDesign.md 11章)。使うのは「届いたらそれ以上送らない」という判断だけで、
-成否を待機中の文言へ混ぜても待っている人にできることは無い。**受け口を Callable
+結果は `notify_waiting()` の `on_done`(Callable)で返し、`MatchmakingQueue` が
+`announce_result` として画面へ流す。**文言としては出さない**(GameDesign.md 11章)。
+`BattleTab` は届いたときだけ待機中の文言の右へ `StatusBadge`(丸い印)を出し、
+説明はカーソルを乗せたときのツールチップに預ける。**受け口を Callable
 にしているのは、待っている
 うちにキューが解放されることがあるため**で、`Callable.is_valid()` が偽になった時点で
 呼ばない(解放済みのオブジェクトで再開すると "Resumed function on a freed object" になる)。
@@ -981,7 +982,10 @@ HTTPRequest をぶら下げると送信の途中で巻き添えに消える。�
 `application/config/version`(人が読む日付方式)と `application/config/build_id`
 (マッチングの突き合わせに使うビルドID)を読む唯一の場所になる。
 
-**ビルドIDは `tools/export_web.sh` が書き出しの直前に `project.godot` へ書き込む。**
+**ビルドIDと日付方式のバージョンは、`tools/export_web.sh` が書き出しの直前に
+`tools/stamp_build_id.py` を通して `project.godot` へ書き込む。**バージョンだけを手で
+更新する値として残していたところ、書き出しを重ねても古い日付のままで、募集の通知に
+何日も同じ数字が出ていた。同じ日に2回以上書き出した場合は `-2` `-3` と後ろへ足す。
 値はUTCの書き出し時刻(`20260829-143052`)で、**時刻順に文字列比較できる**ため
 「どちらが古いか」を判定でき、画面へ出す文言を書き分けられる。手で更新する値を
 増やさないために自動化しており、**書き込んだ値はそのままコミットする**
