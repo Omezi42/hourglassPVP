@@ -42,7 +42,15 @@ def read_card(card_id: str) -> dict:
         "name": field("display_name"),
         "cost": int(field("cost", "0")),
         "total": int(field("total_sand", "0")),
-        "text": field("rules_text"),
+        # 「攻撃できない」は rules_text ではなくフラグで持つ(ゲーム内の describe() と同じ)。
+        "text": " / ".join(
+            x
+            for x in (
+                "攻撃できない" if field("cannot_attack", "false") == "true" else "",
+                field("rules_text"),
+            )
+            if x
+        ),
         "keywords": [int(v) for v in kw.group(1).split(",") if v.strip()] if kw else [],
         "art": card_id,
     }
