@@ -56,6 +56,8 @@ func effects_for(trigger: int) -> Array[CardEffectData]:
 ## CardEnums.keyword_short_text() の短い言い換えを使う。
 func describe() -> String:
 	var parts: PackedStringArray = []
+	if cannot_attack:
+		parts.append("攻撃できない")
 	for keyword in named_keywords():
 		parts.append(CardEnums.keyword_name(keyword))
 	for keyword in plain_keywords():

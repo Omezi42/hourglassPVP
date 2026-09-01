@@ -656,6 +656,8 @@ func _draw_hand_stats() -> void:
 ## 書く(GameDesign.md 6章)。1行しか無いので、全文は詳細パネルに任せる。
 func _keyword_text() -> String:
 	var words: PackedStringArray = []
+	if card != null and card.cannot_attack:
+		words.append("攻撃不可")
 	# 場に出ている駒は**その駒がいま持っている**キーワードを出す。CardData を直接見ると、
 	# 効果で与えられたキーワードと、消された状態が面に出ない。
 	for keyword in _live_keywords():
