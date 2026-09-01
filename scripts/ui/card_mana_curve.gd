@@ -5,6 +5,9 @@ extends Control
 
 const MIN_COST := 1
 const MAX_COST := 10
+## 目盛りを出すコストの下限。プールの最大コストがこれより小さくても、ここまでは並べる
+## (棒が2〜3本しか無いと、グラフではなく数字の列に見えるため)。
+const MIN_COLUMNS := 6
 ## 目盛りの上限。これを超える本数が出たら、その本数まで伸ばす。
 const BASE_SCALE := 6
 ## 棒の角丸と質感。無地の矩形を並べるだけだと平坦に見えるため、他のコード描画UIと
@@ -19,6 +22,9 @@ const TRACK_COLOR_BOTTOM := Color(0.13, 0.12, 0.14, 0.9)
 var compact := false
 
 var _counts: Array[int] = []
+## 目盛りの右端。**プールに実在するコストの範囲だけ**を出す(GameDesign.md 9章)。
+## 常に1〜10を並べると、最大コストが6の現状では半分が空欄になる。
+var _display_max := MIN_COLUMNS
 var _font: Font
 
 
@@ -32,6 +38,7 @@ func _ready() -> void:
 func show_deck(deck: Array) -> void:
 	_counts = []
 	_counts.resize(MAX_COST + 1)
+	_display_max = _pool_max_cost()
 	for card in deck:
 		var cost: int = clampi(card.cost, MIN_COST, MAX_COST)
 		_counts[cost] += 1
@@ -53,10 +60,12 @@ func _draw() -> void:
 	var peak := BASE_SCALE
 	for count in _counts:
 		peak = maxi(peak, count)
-	var columns := MAX_COST - MIN_COST + 1
+	var columns := _display_max - MIN_COST + 1
 	var area := Rect2(24, 56, size.x - 48, size.y - 104)
 	if compact:
-		area = Rect2(96, 12, size.x - 116, size.y - 40)
+		# 上端に余白を取る。棒が目盛りいっぱいまで伸びたとき、その本数の数字を
+		# 棒の上へ置くため(詰めると数字が枠の外へ出る)。
+		area = Rect2(96, 26, size.x - 116, size.y - 56)
 	var step := area.size.x / float(columns)
 	var bar_width := step * 0.62
 	draw_line(
@@ -65,7 +74,7 @@ func _draw() -> void:
 		Color(UiPalette.BRASS_MID, 0.8),
 		1.5
 	)
-	for cost in range(MIN_COST, MAX_COST + 1):
+	for cost in range(MIN_COST, _display_max + 1):
 		var index := cost - MIN_COST
 		var count: int = _counts[cost]
 		var x := area.position.x + index * step + (step - bar_width) * 0.5
@@ -74,16 +83,18 @@ func _draw() -> void:
 			var height := area.size.y * float(count) / float(peak)
 			_draw_bar(ci, Rect2(x, area.end.y - height, bar_width, height))
 			_label(
-				Vector2(x + bar_width * 0.5 - 5, area.end.y - height - 6),
+				Vector2(x, area.end.y - height - 6),
 				str(count),
 				16,
-				UiPalette.TEXT_OFFWHITE
+				UiPalette.TEXT_OFFWHITE,
+				bar_width
 			)
 		_label(
-			Vector2(x + bar_width * 0.5 - 5, area.end.y + (16 if compact else 22)),
+			Vector2(x, area.end.y + (16 if compact else 22)),
 			str(cost),
 			14 if compact else 16,
-			UiPalette.BRASS_HIGHLIGHT
+			UiPalette.BRASS_HIGHLIGHT,
+			bar_width
 		)
 
 
@@ -116,5 +127,15 @@ func _draw_bar(ci: RID, rect: Rect2) -> void:
 	)
 
 
-func _label(pos: Vector2, text: String, font_size: int, color: Color) -> void:
-	draw_string(_font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color)
+## 数字は棒の幅に対して中央揃えで描く(半角の幅を決め打ちで引くと2桁でずれる)。
+func _label(pos: Vector2, text: String, font_size: int, color: Color, width: float = -1.0) -> void:
+	var align := HORIZONTAL_ALIGNMENT_CENTER if width > 0.0 else HORIZONTAL_ALIGNMENT_LEFT
+	draw_string(_font, pos, text, align, width, font_size, color)
+
+
+## プールに実在する最大のコスト。
+func _pool_max_cost() -> int:
+	var top := MIN_COLUMNS
+	for card in CardLibrary.all_cards():
+		top = maxi(top, mini(card.cost, MAX_COST))
+	return top

@@ -2,37 +2,46 @@ class_name CardDeckEditorScreen
 extends Control
 ## v5.0のデッキ編集(GameDesign.md 9章)。デッキは20枚・同名2枚まで。
 ##
-## 編成中の欄は**カードの絵ではなく「カード名 × 枚数」の縦リスト**にする(20枚を絵で
-## 並べると画面に入らないため)。**コスト別の枚数はグラフとして常時表示する**。
-## 20枚のデッキではコストの配分が構築の中心であり、数えなくても分かる状態にする。
+## **左=全カードのグリッド / 右=編成中のデッキ**の2カラム。カードは毎日のアプデで
+## 増え続けるため、一覧の探しやすさを最優先し、絞り込みと名前の検索を添える。
+## 編成中は「カードの絵を右端へ薄く敷いた帯」(`CardDeckBand`)を縦に並べる。
 
 signal back_pressed
 
 const HEADER_SCENE := "res://scenes/screen_header.tscn"
 const PANEL_STYLE := "res://resources/theme/content_panel.tres"
-const LIST_RECT := Rect2(24, ScreenHeader.CONTENT_TOP, 620, 356)
-## 右カラムは上が詳細(実演つき)、下が低背のマナカーブ(GameDesign.md 9章)。
-const DETAIL_RECT := Rect2(668, ScreenHeader.CONTENT_TOP, 588, 262)
-const CURVE_RECT := Rect2(668, ScreenHeader.CONTENT_TOP + 274, 588, 92)
-## 全カードの横スクロールは画面の一番下に置く。外周余白(24px)を割らないよう、
-## 下端から逆算した位置に固定する。
-const CARDS_TOP := 720.0 - ScreenHeader.OUTER_MARGIN - (CardView.HAND_SIZE_PX.y + 16.0)
+const FILTER_RECT := Rect2(24, ScreenHeader.CONTENT_TOP, 816, 34)
+const GRID_RECT := Rect2(24, ScreenHeader.CONTENT_TOP + 46, 816, 514)
+const SIDE_RECT := Rect2(856, ScreenHeader.CONTENT_TOP, 400, 560)
+const SIDE_INNER_WIDTH := 372.0
+const GRID_COLUMNS := 6
+const GRID_GAP := 12
+const CURVE_HEIGHT := 92.0
+## `CardDetailPanel` の低背版の大きさ。ここを小さくしても最小サイズで押し返されるため揃える。
+const DETAIL_SIZE := CardDetailPanel.COMPACT_SIZE
+## 詳細はホバー中だけ浮かせる。カードとパネルの間をカーソルが通るため、
+## 外れてから消すまでに短い猶予を置く(対局画面の詳細と同じ流儀)。
+const DETAIL_GAP := 12.0
+const DETAIL_HIDE_DELAY := 0.12
 
 var _header: ScreenHeader
-var _entries: VBoxContainer
+var _filter: CardDeckFilter
+var _grid: GridContainer
+var _bands: VBoxContainer
 var _progress: Label
 var _curve: CardManaCurve
 var _detail: CardDetailPanel
+var _detail_timer: Timer
 var _keyword_popup: KeywordPopup
 var _preset_picker: CardPresetPicker
 var _code_panel: CardDeckCodePanel
-var _card_row: HBoxContainer
 var _card_views: Array[CardView] = []
-var _name_input: LineEdit
+var _band_pool: Array[CardDeckBand] = []
 ## 編成中のデッキ。同じ CardData が最大2つ入る。
 var _deck: Array = []
 ## 編集中のデッキが一覧の何番目か。-1 は新規作成(保存すると末尾へ追加する)。
 var _index := -1
+var _name_input: LineEdit
 
 
 func _ready() -> void:
@@ -52,12 +61,36 @@ func open(index: int = -1) -> void:
 		_deck = []
 		_name_input.text = CardDeckSave.next_default_name()
 	_header.set_title("デッキ編集" if _index >= 0 else "新しいデッキ")
+	_hide_detail()
 	_refresh()
+
+
+# --- 組み立て -----------------------------------------------------------
 
 
 func _build() -> void:
 	add_child(ScreenBackdrop.new())
+	_build_header()
+	_filter = CardDeckFilter.new()
+	_filter.position = FILTER_RECT.position
+	_filter.size = FILTER_RECT.size
+	_filter.changed.connect(_apply_filter)
+	add_child(_filter)
+	_build_grid()
+	_build_side()
+	_build_detail()
+	# **モーダルは最後に足す。**`Control` は後から足した子ほど手前に描かれる。
+	_keyword_popup = KeywordPopup.new()
+	add_child(_keyword_popup)
+	_preset_picker = CardPresetPicker.new()
+	_preset_picker.picked.connect(_on_preset_picked)
+	add_child(_preset_picker)
+	_code_panel = CardDeckCodePanel.new()
+	_code_panel.loaded.connect(_on_code_loaded)
+	add_child(_code_panel)
 
+
+func _build_header() -> void:
 	_header = load(HEADER_SCENE).instantiate()
 	add_child(_header)
 	_header.set_title("デッキ編集")
@@ -66,7 +99,6 @@ func _build() -> void:
 	save_button.pressed.connect(_on_save_pressed)
 	_header.add_action(save_button)
 	# 20枚を自分で組まずに遊べる状態を用意する(GameDesign.md 18章)。
-	# 読み込んだ後は普通に編集でき、保存すれば自分のデッキになる。
 	var preset_button := CodedButton.make("プリセット", Vector2(190, 56))
 	preset_button.pressed.connect(func() -> void: _preset_picker.open())
 	_header.add_action(preset_button)
@@ -76,89 +108,87 @@ func _build() -> void:
 	code_button.pressed.connect(func() -> void: _code_panel.open(_deck))
 	_header.add_action(code_button)
 
-	_build_list()
-	_detail = CardDetailPanel.new()
-	_detail.compact = true
-	add_child(_detail)
-	_detail.position = DETAIL_RECT.position
-	_detail.custom_minimum_size = DETAIL_RECT.size
-	_detail.size = DETAIL_RECT.size
-	_detail.keyword_pressed.connect(func(entry: Dictionary) -> void: _keyword_popup.open(entry))
-	_curve = CardManaCurve.new()
-	_curve.compact = true
-	_curve.position = CURVE_RECT.position
-	_curve.size = CURVE_RECT.size
-	add_child(_curve)
-	_build_card_row()
-	# **モーダルは最後に足す。**`Control` は後から足した子ほど手前に描かれるため、
-	# 先に足すと下部のカード一覧が暗幕とパネルの上に出てしまう(実際にそうなっていた)。
-	# 語を押すとその意味を引ける(GameDesign.md 17章)。全画面へ暗幕を敷くため、
-	# 詳細パネルではなく画面側が持つ。
-	_keyword_popup = KeywordPopup.new()
-	add_child(_keyword_popup)
-	_preset_picker = CardPresetPicker.new()
-	_preset_picker.picked.connect(_on_preset_picked)
-	add_child(_preset_picker)
-	_code_panel = CardDeckCodePanel.new()
-	_code_panel.loaded.connect(_on_code_loaded)
-	add_child(_code_panel)
-	var cards := CardLibrary.all_cards()
-	if not cards.is_empty():
-		_detail.show_card(cards[0])
+
+func _build_grid() -> void:
+	var scroll := ScrollContainer.new()
+	scroll.position = GRID_RECT.position
+	scroll.size = GRID_RECT.size
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	add_child(scroll)
+	_grid = GridContainer.new()
+	_grid.columns = GRID_COLUMNS
+	_grid.add_theme_constant_override("h_separation", GRID_GAP)
+	_grid.add_theme_constant_override("v_separation", GRID_GAP)
+	scroll.add_child(_grid)
+	for card in CardLibrary.all_cards():
+		var view := CardView.new()
+		view.mode = CardView.Mode.HAND
+		view.custom_minimum_size = CardView.HAND_SIZE_PX
+		view.pressed.connect(_on_card_pressed)
+		view.hovered.connect(_on_card_hovered)
+		view.mouse_exited.connect(_hide_detail_soon)
+		_grid.add_child(view)
+		_card_views.append(view)
 
 
-func _build_list() -> void:
+func _build_side() -> void:
 	var panel := PanelContainer.new()
-	panel.position = LIST_RECT.position
-	panel.size = LIST_RECT.size
-	panel.custom_minimum_size = LIST_RECT.size
+	panel.position = SIDE_RECT.position
+	panel.size = SIDE_RECT.size
+	panel.custom_minimum_size = SIDE_RECT.size
 	var style: StyleBox = load(PANEL_STYLE)
 	if style != null:
 		panel.add_theme_stylebox_override("panel", style)
 	add_child(panel)
 
 	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 8)
 	panel.add_child(column)
 	# デッキは何個でも保存できるため、どれなのかを見分ける名前が要る(GameDesign.md 9章)。
 	var top_row := HBoxContainer.new()
-	top_row.add_theme_constant_override("separation", 12)
+	top_row.add_theme_constant_override("separation", 10)
 	column.add_child(top_row)
 	_name_input = LineEdit.new()
 	_name_input.placeholder_text = "デッキ名"
 	_name_input.max_length = CardDeckSave.NAME_LIMIT
-	_name_input.custom_minimum_size = Vector2(260, 40)
+	_name_input.custom_minimum_size = Vector2(228, 36)
 	top_row.add_child(_name_input)
 	_progress = Label.new()
-	_progress.add_theme_font_size_override("font_size", 22)
+	_progress.add_theme_font_size_override("font_size", 20)
 	_progress.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_progress.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_progress.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	top_row.add_child(_progress)
+
+	_curve = CardManaCurve.new()
+	_curve.compact = true
+	_curve.custom_minimum_size = Vector2(SIDE_INNER_WIDTH, CURVE_HEIGHT)
+	column.add_child(_curve)
+
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	column.add_child(scroll)
-	_entries = VBoxContainer.new()
-	_entries.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.add_child(_entries)
+	_bands = VBoxContainer.new()
+	_bands.add_theme_constant_override("separation", 3)
+	_bands.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(_bands)
 
 
-func _build_card_row() -> void:
-	var scroll := ScrollContainer.new()
-	scroll.position = Vector2(24, CARDS_TOP)
-	scroll.size = Vector2(1232, CardView.HAND_SIZE_PX.y + 16)
-	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	add_child(scroll)
-	_card_row = HBoxContainer.new()
-	_card_row.add_theme_constant_override("separation", 10)
-	scroll.add_child(_card_row)
-	for card in CardLibrary.all_cards():
-		var view := CardView.new()
-		view.mode = CardView.Mode.HAND
-		view.custom_minimum_size = CardView.HAND_SIZE_PX
-		view.pressed.connect(_on_card_pressed)
-		# 詳細はホバーで切り替える。クリックは編成へ1枚加える操作に残す(GameDesign.md 9章)。
-		view.hovered.connect(func(hovered: CardView) -> void: _detail.show_card(hovered.card))
-		_card_row.add_child(view)
-		_card_views.append(view)
+func _build_detail() -> void:
+	_detail = CardDetailPanel.new()
+	_detail.compact = true
+	_detail.size = DETAIL_SIZE
+	_detail.visible = false
+	_detail.keyword_pressed.connect(func(entry: Dictionary) -> void: _keyword_popup.open(entry))
+	_detail.mouse_entered.connect(func() -> void: _detail_timer.stop())
+	_detail.mouse_exited.connect(_hide_detail_soon)
+	add_child(_detail)
+	_detail_timer = Timer.new()
+	_detail_timer.one_shot = true
+	_detail_timer.wait_time = DETAIL_HIDE_DELAY
+	_detail_timer.timeout.connect(_hide_detail)
+	add_child(_detail_timer)
 
 
 # --- 表示 ---------------------------------------------------------------
@@ -166,22 +196,45 @@ func _build_card_row() -> void:
 
 func _refresh() -> void:
 	_progress.text = "%d / %d 枚" % [_deck.size(), MatchState.DECK_SIZE]
-	_refresh_entries()
+	_refresh_bands()
 	_curve.show_deck(_deck)
 	var full: bool = _deck.size() >= MatchState.DECK_SIZE
+	var cards := CardLibrary.all_cards()
 	for i in _card_views.size():
-		var card: CardData = CardLibrary.all_cards()[i]
+		var card: CardData = cards[i]
 		var copies := _count_of(card)
 		var view := _card_views[i]
 		view.badge = "%d/%d" % [copies, CardDeckSave.COPY_LIMIT]
 		view.show_card(card, not full and copies < CardDeckSave.COPY_LIMIT)
 
 
-func _refresh_entries() -> void:
-	for child in _entries.get_children():
-		child.queue_free()
-	for card in _distinct_sorted():
-		_entries.add_child(_make_entry(card))
+func _apply_filter() -> void:
+	var cards := CardLibrary.all_cards()
+	for i in _card_views.size():
+		_card_views[i].visible = _filter.matches(cards[i])
+
+
+## 帯は使い回す。1枚足すたびに全て作り直すと、押した瞬間にカーソルの下のノードが
+## 消えてホバーが途切れるため。
+func _refresh_bands() -> void:
+	var distinct := _distinct_sorted()
+	while _band_pool.size() < distinct.size():
+		var band := CardDeckBand.new()
+		band.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		band.add_pressed.connect(_on_band_add)
+		band.remove_pressed.connect(_on_band_remove)
+		band.hovered.connect(_on_band_hovered)
+		_bands.add_child(band)
+		_band_pool.append(band)
+	for i in _band_pool.size():
+		var band := _band_pool[i]
+		band.visible = i < distinct.size()
+		if band.visible:
+			var card: CardData = distinct[i]
+			var can_add: bool = (
+				_deck.size() < MatchState.DECK_SIZE and _count_of(card) < CardDeckSave.COPY_LIMIT
+			)
+			band.show_card(card, _count_of(card), can_add)
 
 
 ## 編成中のカードをコスト順に並べた重複なしの一覧。
@@ -197,44 +250,6 @@ func _distinct_sorted() -> Array:
 	return seen
 
 
-func _make_entry(card: CardData) -> Control:
-	var row := HBoxContainer.new()
-	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_theme_constant_override("separation", 10)
-	row.mouse_filter = Control.MOUSE_FILTER_PASS
-	row.mouse_entered.connect(func() -> void: _detail.show_card(card))
-	var cost := Label.new()
-	cost.text = str(card.cost)
-	cost.custom_minimum_size = Vector2(36, 0)
-	cost.add_theme_color_override("font_color", CardView.MANA_BLUE)
-	row.add_child(cost)
-	var name_label := Label.new()
-	name_label.text = card.display_name
-	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(name_label)
-	var note := Label.new()
-	note.text = card.describe()
-	# 効果文はカードによって長さが大きく違う。伸ばすと右隣の枚数へ食い込むため、
-	# 幅を固定して溢れた分は省略記号で切る。**単に切ると文が枚数へ触れて見え、
-	# 続きがあることも分からない**。
-	note.custom_minimum_size = Vector2(240, 0)
-	note.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	note.clip_text = true
-	note.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	note.add_theme_color_override("font_color", UiPalette.BRASS_HIGHLIGHT)
-	note.add_theme_font_size_override("font_size", 15)
-	row.add_child(note)
-	var count := Label.new()
-	count.text = "×%d" % _count_of(card)
-	count.custom_minimum_size = Vector2(48, 0)
-	row.add_child(count)
-	var remove := CodedButton.make_icon("−", Vector2(44, 34))
-	remove.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	remove.pressed.connect(_on_remove_pressed.bind(card))
-	row.add_child(remove)
-	return row
-
-
 func _count_of(card: CardData) -> int:
 	var found := 0
 	for entry in _deck:
@@ -243,26 +258,75 @@ func _count_of(card: CardData) -> int:
 	return found
 
 
+# --- 詳細(ホバー中だけ浮かせる) -----------------------------------------
+
+
+func _show_detail(card: CardData, source: Control) -> void:
+	if card == null:
+		return
+	_detail_timer.stop()
+	_detail.show_card(card)
+	var anchor := source.global_position - global_position
+	var to_right: bool = anchor.x + source.size.x * 0.5 < size.x * 0.5
+	var x: float = (
+		anchor.x + source.size.x + DETAIL_GAP if to_right else anchor.x - DETAIL_SIZE.x - DETAIL_GAP
+	)
+	var y := anchor.y + source.size.y * 0.5 - DETAIL_SIZE.y * 0.5
+	# **グリッドの領域内へ押し込む。**右カラムはデッキの表示に使い切っているため、
+	# そこへ重ねると編成中の枚数が読めなくなる。
+	_detail.position = Vector2(
+		clampf(x, GRID_RECT.position.x, GRID_RECT.end.x - DETAIL_SIZE.x),
+		clampf(y, ScreenHeader.CONTENT_TOP, size.y - ScreenHeader.OUTER_MARGIN - DETAIL_SIZE.y)
+	)
+	_detail.visible = true
+
+
+func _hide_detail_soon() -> void:
+	_detail_timer.start()
+
+
+func _hide_detail() -> void:
+	_detail.visible = false
+
+
 # --- 操作 ---------------------------------------------------------------
 
 
+func _on_card_hovered(view: CardView) -> void:
+	_show_detail(view.card, view)
+
+
+func _on_band_hovered(card: CardData) -> void:
+	for band in _band_pool:
+		if band.visible and band.card == card:
+			_show_detail(card, band)
+			return
+
+
 func _on_card_pressed(view: CardView) -> void:
+	_add_card(view.card)
+
+
+func _on_band_add(card: CardData) -> void:
+	_add_card(card)
+
+
+func _add_card(card: CardData) -> void:
 	if _deck.size() >= MatchState.DECK_SIZE:
 		return
-	if _count_of(view.card) >= CardDeckSave.COPY_LIMIT:
+	if _count_of(card) >= CardDeckSave.COPY_LIMIT:
 		return
-	_deck.append(view.card)
+	_deck.append(card)
 	_refresh()
 
 
-func _on_remove_pressed(card: CardData) -> void:
+func _on_band_remove(card: CardData) -> void:
 	var index := _deck.find(card)
 	if index >= 0:
 		_deck.remove_at(index)
 		_refresh()
 
 
-## 20枚ちょうどのときだけ保存する。枚数が足りないデッキで対局へ入れないようにするため。
 func _on_code_loaded(deck: Array) -> void:
 	_deck = deck
 	_refresh()
@@ -273,9 +337,10 @@ func _on_preset_picked(preset_id: String) -> void:
 	_refresh()
 
 
+## 20枚ちょうどのときだけ保存する。枚数が足りないデッキで対局へ入れないようにするため。
 func _on_save_pressed() -> void:
 	if _deck.size() != MatchState.DECK_SIZE:
-		_progress.text = "%d / %d 枚(20枚ちょうどにしてください)" % [_deck.size(), MatchState.DECK_SIZE]
+		_progress.text = "%d / %d 枚(20枚ちょうどに)" % [_deck.size(), MatchState.DECK_SIZE]
 		return
 	if _index >= 0:
 		CardDeckSave.update_deck(_index, _name_input.text, _deck)
