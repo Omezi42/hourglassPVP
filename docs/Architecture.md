@@ -238,6 +238,8 @@ UIに依存しない、対局ルールそのものを扱う層。
 - **`SUMMON` は空き枠が無ければ何もしない**(GameDesign.md 6章)。出した駒は
   `summoned_this_turn` を立てた状態で置き、その `ON_PLAY` は解決しない
   (効果で出た駒の設置効果まで連鎖すると、1枚のカードが何をするか読めなくなるため)
+- **`ALLY_UNIT` は効果を持つ駒自身を除く**(GameDesign.md 6章)。`_targets()` が
+  自分の枠を `exclude_slot` として渡す
 - **対象を1体選ぶ効果(`ENEMY_UNIT` / `ALLY_UNIT`)は、`hint`(`{"side":..., "slot":...}`)で受け取る。**
   指定が無い・その枠が既に空いている場合は「生涯ダメージが最大の1体」を自動で選ぶ。
   これによりUIは対象選択を実装するまで指定なしで呼べ、CPU・リプレイ再生も同じ経路を通る
@@ -287,6 +289,7 @@ UIに依存しない、対局ルールそのものを扱う層。
 | `CardEffectPreview`(`scripts/ui/card_effect_preview.gd`) | 能力の実演。**カードごとではなくキーワード / 効果の種類ごとに1本**の台本を持つ(下記) |
 | `CardPileViewer`(`scripts/ui/card_pile_viewer.gd`) | 墓地の中身を見るモーダル。同じカードは1枚にまとめて枚数をバッジで出す |
 | `CodedButton`(`scripts/ui/coded_button.gd`) | コードで組むボタンの生成を集約する。画面ごとに `theme_override` を並べると指定漏れのボタンが混ざるため |
+| `CardViewStrike`(`scripts/ui/card_view_strike.gd`) | 攻撃の演出の段取り(寄る→溜める→当てる→戻る)。**`CardView` が1000行の上限に達したため切り出した**。分ける線は「駒の見た目」と「殴りに行く段取り」に引き、状態(offset / angle / flash)と描画は `CardView` 側に残す(絵に掛ける変換は描画のたびに要るため) |
 | `CardMatchReplay`(`scripts/ui/card_match_replay.gd`) | リプレイの再生コントロール。**任意の手数の局面は初期状態から手を並べ直して作る** |
 | `CardMatchOnline`(`scripts/ui/card_match_online.gd`) | オンライン対戦の3つの入口(開始・切断からの復帰・観戦)。`card_match_screen.gd` が1000行の上限に達したため切り出した。画面側には `main.gd` から呼ぶ薄い委譲だけが残る |
 

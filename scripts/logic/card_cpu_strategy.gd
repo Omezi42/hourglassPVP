@@ -15,6 +15,11 @@ const DEVELOP_BONUS := 2.0
 ## マリガンで残すコストの上限。これより重いカードは引き直す。
 ## 序盤に何も出せない手札が最も負けに直結するため、単純に軽い手札を作りにいく。
 const MULLIGAN_KEEP_COST := 3
+## 落砂が何回起こせるかの見込みの上限。総量ぶん場に残るが、殴り合いで先に砕けるため
+## 頭打ちにする。被弾は1体につき殴り合う回数の見込み。どちらも測って決めた値ではなく、
+## **CPUが繰り返しトリガーを無視しないための下駄**である。
+const TURN_END_TURNS := 3
+const DAMAGED_TIMES := 2.0
 
 
 ## 初手の引き直しで戻すカードの位置を返す(GameDesign.md 2章)。
@@ -121,8 +126,25 @@ func _card_value(state: MatchState, side: int, card: CardData) -> float:
 		value += 4.0
 	if card.has_keyword(CardEnums.Keyword.PIERCE):
 		value += 1.0
+	if card.cannot_attack:
+		# 攻撃できないぶん、生涯ダメージの見積もりは成り立たない。壁としての厚みだけを見る。
+		value = float(total)
 	for effect in card.effects_for(CardEnums.Trigger.ON_PLAY):
 		value += _on_play_value(state, side, effect)
+	# 繰り返し働くトリガーは、場に残る見込みのターン数ぶん価値が積み上がる
+	# (GameDesign.md 6章)。落砂は毎ターン1回、被弾は殴り合うたびに起きる。
+	value += _repeating_value(state, side, card)
+	return value
+
+
+## 落砂・被弾の効果を、起こせる回数の見込みで割り引いて足す。
+## 総量が大きいほど長く場に残るため、落砂は総量に比例させる。
+func _repeating_value(state: MatchState, side: int, card: CardData) -> float:
+	var value := 0.0
+	for effect in card.effects_for(CardEnums.Trigger.ON_TURN_END):
+		value += _on_play_value(state, side, effect) * mini(card.total_sand, TURN_END_TURNS)
+	for effect in card.effects_for(CardEnums.Trigger.ON_DAMAGED):
+		value += _on_play_value(state, side, effect) * DAMAGED_TIMES
 	return value
 
 
@@ -148,6 +170,18 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 			if slot >= 0:
 				var unit: CardInstance = state.board[foe_side][slot]
 				value = maxf(0.0, unit.lifetime_damage() - _lifetime_of(unit.attack, unit.health))
+		CardEnums.EffectType.ADD_ATTACK:
+			value = effect.value * 2.0
+		CardEnums.EffectType.SUMMON:
+			var token := CardLibrary.find_by_id(effect.card_id)
+			if token != null and state.units(side).size() < MatchState.BOARD_SIZE:
+				value = float(token.total_sand * (token.total_sand - 1)) / 2.0
+		CardEnums.EffectType.GRANT_KEYWORD:
+			value = 2.0
+		CardEnums.EffectType.SILENCE:
+			var slot := _strongest_enemy(state, foe_side)
+			if slot >= 0 and not state.board[foe_side][slot].keywords().is_empty():
+				value = 3.0
 	return value
 
 
@@ -155,12 +189,30 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 func _effect_target(state: MatchState, side: int, card: CardData) -> Dictionary:
 	var foe_side := MatchState.other_side(side)
 	for effect in card.effects_for(CardEnums.Trigger.ON_PLAY):
-		if effect.target != CardEnums.EffectTarget.ENEMY_UNIT:
-			continue
-		var slot := _strongest_enemy(state, foe_side)
-		if slot >= 0:
-			return {"side": foe_side, "slot": slot}
+		if effect.target == CardEnums.EffectTarget.ENEMY_UNIT:
+			var slot := _strongest_enemy(state, foe_side)
+			if slot >= 0:
+				return {"side": foe_side, "slot": slot}
+		elif effect.target == CardEnums.EffectTarget.ALLY_UNIT:
+			var slot := _strongest_ally(state, side)
+			if slot >= 0:
+				return {"side": side, "slot": slot}
 	return {}
+
+
+## 味方のうち、いちばん生涯ダメージの大きい1体。強化はここへ乗せるのが効く。
+func _strongest_ally(state: MatchState, side: int) -> int:
+	var best := -1
+	var best_value := -1.0
+	for slot in MatchState.BOARD_SIZE:
+		var unit: CardInstance = state.board[side][slot]
+		if unit == null:
+			continue
+		var value := float(unit.lifetime_damage())
+		if value > best_value:
+			best_value = value
+			best = slot
+	return best
 
 
 # --- 攻撃する -----------------------------------------------------------

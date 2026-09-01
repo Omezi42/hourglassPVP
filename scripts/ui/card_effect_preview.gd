@@ -33,6 +33,10 @@ enum Demo {
 	FX_DRAW,
 	FX_HEAL_PLAYER,
 	FX_DAMAGE_PLAYER_PER_ENEMY_UNIT,
+	FX_ADD_ATTACK,
+	FX_SUMMON,
+	FX_GRANT_KEYWORD,
+	FX_SILENCE,
 }
 
 const MIN_SIZE := Vector2(320, 200)
@@ -66,6 +70,10 @@ const STAGE_METHODS := {
 	Demo.FX_HEAL_PLAYER: "_stage_heal",
 	Demo.FX_DAMAGE_PLAYER: "_stage_damage_player",
 	Demo.FX_DAMAGE_PLAYER_PER_ENEMY_UNIT: "_stage_damage_per_unit",
+	Demo.FX_ADD_ATTACK: "_stage_add_attack",
+	Demo.FX_SUMMON: "_stage_summon",
+	Demo.FX_GRANT_KEYWORD: "_stage_grant_keyword",
+	Demo.FX_SILENCE: "_stage_silence",
 }
 
 var _font: Font
@@ -180,10 +188,22 @@ static func _entry_for_effect(effect: CardEffectData) -> Dictionary:
 			demo = Demo.FX_HEAL_PLAYER
 		CardEnums.EffectType.DAMAGE_PLAYER_PER_ENEMY_UNIT:
 			demo = Demo.FX_DAMAGE_PLAYER_PER_ENEMY_UNIT
+		CardEnums.EffectType.ADD_ATTACK:
+			demo = Demo.FX_ADD_ATTACK
+		CardEnums.EffectType.SUMMON:
+			demo = Demo.FX_SUMMON
+		CardEnums.EffectType.GRANT_KEYWORD:
+			demo = Demo.FX_GRANT_KEYWORD
+		CardEnums.EffectType.SILENCE:
+			demo = Demo.FX_SILENCE
 	# 反転がトリガーの効果は、反転そのものの実演を兼ねる(2本並べると同じ動きが続くため)。
+	# キーワードを与える効果だけは、値が「いくつ」ではなく「どの語か」を指す。
+	var value := maxi(effect.value, 1)
+	if demo == Demo.FX_GRANT_KEYWORD:
+		value = effect.keyword
 	return {
 		"demo": demo,
-		"value": maxi(effect.value, 1),
+		"value": value,
 		"all": all,
 		"trigger": effect.trigger,
 	}
@@ -264,6 +284,10 @@ static func _trigger_phrase(trigger: int) -> String:
 			return "反転したとき"
 		CardEnums.Trigger.ON_DEATH:
 			return "壊れたとき"
+		CardEnums.Trigger.ON_TURN_END:
+			return "自分のターンの終わりに"
+		CardEnums.Trigger.ON_DAMAGED:
+			return "ダメージを受けたとき"
 	return "場に出したとき"
 
 
@@ -445,6 +469,77 @@ func _stage_add_total(t: float, value: int) -> Dictionary:
 		own["total"] = 5 + value
 		stage["pops"] = [_pop("own", 0, "+%d" % value, UiPalette.GLOW_AMBER, _seg(t, 0.68, 1.0))]
 	stage["own"] = [own]
+	return stage
+
+
+## 攻撃力だけが増える。**体力が変わらないことが要点**なので、上の部屋は動かさない。
+func _stage_add_attack(t: float, value: int) -> Dictionary:
+	var stage := _empty_stage()
+	var own := _piece(3, 2, 5)
+	own["fade"] = _seg(t, 0.0, 0.15)
+	stage["trigger_note"] = "攻撃力が%d増える" % value
+	if t >= 0.45:
+		own["a"] = 2 + value
+		own["total"] = 5 + value
+		stage["pops"] = [_pop("own", 0, "+%d" % value, UiPalette.GLOW_AMBER, _seg(t, 0.45, 0.9))]
+	stage["own"] = [own]
+	return stage
+
+
+## 空き枠へ砂時計が1体現れる。**空きが無ければ何も起きない**ことは文で補う。
+func _stage_summon(_t: float, _value: int) -> Dictionary:
+	var stage := _empty_stage()
+	var own := _piece(5, 0, 5)
+	own["fade"] = _seg(_t, 0.0, 0.15)
+	stage["trigger_note"] = "空いた枠に砂時計が1体現れる"
+	var pieces: Array = [own]
+	if _t >= 0.4:
+		var token := _piece(2, 0, 2)
+		token["fade"] = _seg(_t, 0.4, 0.7)
+		pieces.append(token)
+	stage["own"] = pieces
+	return stage
+
+
+## 味方1体へキーワードを与える。守護なら台座の輪、硝子なら膜として現れる。
+func _stage_grant_keyword(t: float, keyword: int) -> Dictionary:
+	var stage := _empty_stage()
+	var own := _piece(5, 0, 5)
+	own["fade"] = _seg(t, 0.0, 0.15)
+	var ally := _piece(4, 1, 5)
+	ally["fade"] = _seg(t, 0.0, 0.15)
+	var word := CardEnums.keyword_name(keyword)
+	if word.is_empty():
+		word = CardEnums.keyword_short_text(keyword)
+	stage["trigger_note"] = "自分の砂時計1体が【%s】を持つ" % word
+	if t >= 0.3:
+		stage["beams"] = [_beam(["own", 0], ["own", 1], _seg(t, 0.3, 0.6))]
+	if t >= 0.6:
+		ally["guard"] = keyword == CardEnums.Keyword.GUARD
+		ally["glass"] = keyword == CardEnums.Keyword.GLASS
+		stage["pops"] = [_pop("own", 1, word, UiPalette.GLOW_AMBER, _seg(t, 0.6, 1.0))]
+	stage["own"] = [own, ally]
+	return stage
+
+
+## 相手1体の効果とキーワードを消す。守護の輪と硝子の膜が剥がれることで示す。
+func _stage_silence(t: float, _value: int) -> Dictionary:
+	var stage := _empty_stage()
+	var own := _piece(5, 0, 5)
+	own["fade"] = _seg(t, 0.0, 0.15)
+	var foe := _piece(4, 1, 5)
+	foe["fade"] = _seg(t, 0.0, 0.15)
+	foe["guard"] = true
+	foe["glass"] = true
+	stage["trigger_note"] = "相手の砂時計1体のキーワードと効果が消える"
+	if t >= 0.3:
+		stage["beams"] = [_beam(["own", 0], ["foe", 0], _seg(t, 0.3, 0.6))]
+	if t >= 0.6:
+		foe["guard"] = false
+		foe["glass"] = false
+		stage["pops"] = [_pop("foe", 0, "効果なし", BLOCKED_COLOR, _seg(t, 0.6, 1.0))]
+	stage["own"] = [own]
+	stage["foe"] = [foe]
 	return stage
 
 

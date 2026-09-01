@@ -142,6 +142,13 @@ var drop_handler := Callable()
 ## 負のときは出さない。`preview_dead` なら破壊されることを示す。
 var preview_health := -1
 var preview_dead := false
+## 攻撃の演出の状態(GameDesign.md 9章)。**段取りは CardViewStrike が書き換える**ため
+## 公開している。絵だけをこのぶんずらし、上端を支点にこの角度だけ回す。
+var striking := false
+var strike_offset := Vector2.ZERO
+var strike_angle := 0.0
+var strike_flash := 0.0
+var strike_tween: Tween
 
 var _font: Font
 var _hovering := false
@@ -156,14 +163,9 @@ var _art_reference_card: CardData
 var _flip_progress := -1.0
 var _flip_tween: Tween
 var _zoom_tween: Tween
-## 攻撃の演出。絵だけをこのぶんずらし、上端を支点にこの角度だけ回す。
 ## 設置の着地・破壊の崩落・硝子の割れる閃光。駒の上へ重ねて描く子ノード。
 var _fx: CardUnitFx
-var _striking := false
-var _strike_offset := Vector2.ZERO
-var _strike_angle := 0.0
-var _strike_flash := 0.0
-var _strike_tween: Tween
+var _strike: CardViewStrike
 
 
 func _ready() -> void:
@@ -239,7 +241,7 @@ func play_break(broken: CardData) -> void:
 	var texture: Texture2D = broken.icon_fallen if broken != null else null
 	if texture == null:
 		return
-	_fx.play_break(texture, _fit_art(texture, _board_art_box()))
+	_fx.play_break(texture, _fit_art(texture, board_art_box()))
 
 
 ## 硝子が最初のダメージを吸った:膜が割れる閃光を出す。
@@ -250,7 +252,7 @@ func play_glass_break() -> void:
 	if texture == null:
 		return
 	_fx.size = size
-	_fx.play_glass_break(_fit_art(texture, _board_art_box()))
+	_fx.play_glass_break(_fit_art(texture, board_art_box()))
 
 
 ## ターン終了の1粒:砂が下の部屋へ流れる。
@@ -389,11 +391,11 @@ func _draw_board_unit() -> void:
 	var sink := SUMMONED_SINK if unit != null and unit.summoned_this_turn else 0.0
 	# 攻撃の演出で動かすのは絵だけ。台座は盤面の設備であって駒の一部ではないため、
 	# 一緒に動くと枠ごと飛んでいくように見える。
-	if _striking:
+	if striking:
 		draw_set_transform_matrix(_strike_transform())
 	_draw_board_art(tint, sink)
-	if _striking:
-		_draw_strike_flash()
+	if striking:
+		_drawstrike_flash()
 		draw_set_transform_matrix(Transform2D.IDENTITY)
 	# 輪は絵の後に描く。守護(太い真鍮の輪)と選択中(水色の輪)は駒が立っていても
 	# 必ず見えなければならないため、絵の下へ隠してはいけない。
@@ -421,7 +423,7 @@ func _draw_pedestal_base() -> void:
 ## 台座の輪。守護は太い真鍮にする(手札の「枠を太くする」に対応。GameDesign.md 9章)。
 func _draw_pedestal_ring() -> void:
 	var center := Vector2(size.x * 0.5, PEDESTAL_CENTER_Y)
-	var guard := card != null and card.has_keyword(CardEnums.Keyword.GUARD)
+	var guard := _has_live_keyword(CardEnums.Keyword.GUARD)
 	var color := UiPalette.BRASS_MID
 	var width := PEDESTAL_RING_WIDTH
 	if selected:
@@ -477,7 +479,7 @@ func _draw_board_art(tint: Color, sink: float) -> void:
 	if texture == null:
 		return
 	var lift := _fx.land_offset()
-	var box := _board_art_box().grow_individual(0, sink, 0, sink)
+	var box := board_art_box().grow_individual(0, sink, 0, sink)
 	var rect := _fit_art(texture, box)
 	rect.position.y += lift
 	if _flip_progress >= 0.0:
@@ -577,7 +579,7 @@ func _draw_hand_card() -> void:
 		rect,
 		[[0.0, Color(0.23, 0.2, 0.17, 1.0) * tint], [1.0, Color(0.11, 0.1, 0.09, 1.0) * tint]]
 	)
-	var guard := card.has_keyword(CardEnums.Keyword.GUARD)
+	var guard := _has_live_keyword(CardEnums.Keyword.GUARD)
 	var border := UiPalette.BRASS_MID
 	if selected:
 		border = SELECT_CYAN
@@ -654,13 +656,38 @@ func _draw_hand_stats() -> void:
 ## 書く(GameDesign.md 6章)。1行しか無いので、全文は詳細パネルに任せる。
 func _keyword_text() -> String:
 	var words: PackedStringArray = []
-	for keyword in card.named_keywords():
-		words.append(CardEnums.keyword_name(keyword))
-	for keyword in card.plain_keywords():
-		words.append(CardEnums.keyword_short_text(keyword))
+	# 場に出ている駒は**その駒がいま持っている**キーワードを出す。CardData を直接見ると、
+	# 効果で与えられたキーワードと、消された状態が面に出ない。
+	for keyword in _live_keywords():
+		if CardEnums.is_named(keyword):
+			words.append(CardEnums.keyword_name(keyword))
+		else:
+			words.append(CardEnums.keyword_short_text(keyword))
+	if unit != null and unit.silenced:
+		return "効果なし" if words.is_empty() else " ".join(words)
 	if words.is_empty() and not card.rules_text.is_empty():
 		words.append(CardEnums.trigger_name(card.effects[0].trigger))
 	return " ".join(words)
+
+
+## 守護のように**形でも示すキーワード**(GameDesign.md 9章)の問い合わせ。
+## 場の駒は付与・消去を反映する。
+func _has_live_keyword(keyword: int) -> bool:
+	if unit != null:
+		return unit.has_keyword(keyword)
+	return card != null and card.has_keyword(keyword)
+
+
+## いま持っているキーワード。手札のカードは定義そのまま、場の駒は付与・消去を反映する。
+func _live_keywords() -> Array:
+	if unit != null:
+		return unit.keywords()
+	var found: Array = []
+	for keyword in card.named_keywords():
+		found.append(keyword)
+	for keyword in card.plain_keywords():
+		found.append(keyword)
+	return found
 
 
 ## 砂時計の絵を、**元の縦横比のまま**枠へ収める(枠は正方形だが絵は縦長)。
@@ -702,7 +729,7 @@ func _icon() -> Texture2D:
 
 
 ## 場の絵を収める枠。下端が台座の高さに来る正方形。
-func _board_art_box() -> Rect2:
+func board_art_box() -> Rect2:
 	return Rect2(
 		Vector2((size.x - BOARD_ART_SIDE) * 0.5, PEDESTAL_CENTER_Y + 4.0 - BOARD_ART_SIDE),
 		Vector2(BOARD_ART_SIDE, BOARD_ART_SIDE)
@@ -716,7 +743,7 @@ func _draw_effect() -> void:
 		return
 	var rect := Rect2(Vector2.ZERO, size)
 	if mode == Mode.BOARD:
-		rect = _fit_art(_icon(), _board_art_box())
+		rect = _fit_art(_icon(), board_art_box())
 	if _effect == Effect.SHATTER:
 		_draw_shatter(rect)
 	else:
@@ -821,166 +848,28 @@ func _dashed_rect(rect: Rect2, color: Color) -> void:
 		y += 10.0
 
 
-## 攻撃:駒が対象の斜め上まで渡っていき、反動をつけて当てる(GameDesign.md 9章)。
-##
-## **動かすのは絵だけで、台座は置いていく**。台座は盤面の設備であって駒の一部ではなく、
-## 一緒に動くと枠ごと飛んでいくように見えるため。絵は `draw_set_transform_matrix()` で
-## 上端を支点に回し、`Control` 自身の `position` / `rotation` は触らない
-## (触ると台座も動き、盤面の当たり判定もずれる)。
-##
-## `target_center` はこのビューの**親の座標系**で渡す(`position` と同じ空間)。
-## `quick` は同じターンの2回目以降で、尺を6割へ詰める。
-## `follow_center` を渡すと、当てた後さらにそこまで抜けていく(貫通。GameDesign.md 9章)。
+## 攻撃の演出。**段取りは CardViewStrike が持つ**(1ファイル1000行の上限に達したため、
+## 「駒の見た目」と「殴りに行く段取り」で分けた)。状態はここに残し、描画も引き続き行う。
 func play_strike(target_center: Vector2, quick := false, follow_center := Vector2.INF) -> void:
-	if mode != Mode.BOARD:
-		strike_finished.emit()
-		return
-	if _strike_tween != null and _strike_tween.is_valid():
-		_strike_tween.kill()
-	var anchor := position + _board_art_box().get_center()
-	# 対象から見てこちら側の斜め上へ立つ。振り下ろす向きがこれで決まる。
-	var side_x := signf(anchor.x - target_center.x)
-	if is_zero_approx(side_x):
-		side_x = 1.0
-	var standoff := (
-		_strike_stop(target_center + Vector2(side_x * STRIKE_STANDOFF.x, -STRIKE_STANDOFF.y))
-		- anchor
-	)
-	var contact: Vector2 = (
-		_strike_stop(target_center + Vector2(side_x * STRIKE_CONTACT.x, -STRIKE_CONTACT.y)) - anchor
-	)
-	var scale := STRIKE_QUICK_SCALE if quick else 1.0
-	_striking = true
-	z_index = STRIKE_Z_INDEX
-
-	_strike_tween = create_tween()
-	# 寄る:出だしを速く終わりを緩める。下端は慣性で遅れて振れる。
-	var approach := _strike_tween.tween_method(
-		_set_strike_offset, Vector2.ZERO, standoff, STRIKE_APPROACH * scale
-	)
-	approach.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	(
-		_strike_tween
-		. parallel()
-		. tween_method(_set_strike_angle, 0.0, -side_x * STRIKE_LAG_ANGLE, STRIKE_APPROACH * scale)
-		. set_trans(Tween.TRANS_SINE)
-	)
-	# 溜める:上端を支点に後ろへ傾く。
-	(
-		_strike_tween
-		. tween_method(
-			_set_strike_angle,
-			-side_x * STRIKE_LAG_ANGLE,
-			-side_x * STRIKE_WIND_ANGLE,
-			STRIKE_WIND_UP * scale
-		)
-		. set_trans(Tween.TRANS_SINE)
-		. set_ease(Tween.EASE_OUT)
-	)
-	# 当てる:振り下ろして接触点まで。叩き潰さず、当たったところで止める。
-	(
-		_strike_tween
-		. tween_method(
-			_set_strike_angle,
-			-side_x * STRIKE_WIND_ANGLE,
-			side_x * STRIKE_HIT_ANGLE,
-			STRIKE_HIT * scale
-		)
-		. set_trans(Tween.TRANS_CUBIC)
-		. set_ease(Tween.EASE_IN)
-	)
-	(
-		_strike_tween
-		. parallel()
-		. tween_method(_set_strike_offset, standoff, contact, STRIKE_HIT * scale)
-		. set_trans(Tween.TRANS_CUBIC)
-		. set_ease(Tween.EASE_IN)
-	)
-	_strike_tween.tween_callback(_on_strike_impact)
-	# 貫通:砕けた対象を通り抜けて、そのまま相手プレイヤーまで届く。
-	var pierced := follow_center.is_finite()
-	if pierced:
-		var through := _strike_stop(follow_center) - anchor
-		(
-			_strike_tween
-			. tween_method(_set_strike_offset, contact, through, STRIKE_PIERCE * scale)
-			. set_trans(Tween.TRANS_CUBIC)
-			. set_ease(Tween.EASE_IN_OUT)
-		)
-		_strike_tween.tween_callback(_on_strike_impact)
-		contact = through
-	# 当たった瞬間の閃光。戻りに合わせて消す。
-	_strike_tween.parallel().tween_method(_set_strike_flash, 1.0, 0.0, STRIKE_RETURN * scale * 0.6)
-	# 戻る:数回小さく揺れながら台座へ。
-	(
-		_strike_tween
-		. tween_method(_set_strike_offset, contact, Vector2.ZERO, STRIKE_RETURN * scale)
-		. set_trans(Tween.TRANS_CUBIC)
-		. set_ease(Tween.EASE_OUT)
-	)
-	(
-		_strike_tween
-		. parallel()
-		. tween_method(_set_strike_angle, side_x * STRIKE_HIT_ANGLE, 0.0, STRIKE_RETURN * scale)
-		. set_trans(Tween.TRANS_ELASTIC)
-		. set_ease(Tween.EASE_OUT)
-	)
-	_strike_tween.tween_callback(_on_strike_finished)
-
-
-## 立ち止まる場所を画面の中へ収める。**相手プレイヤーを狙うとき、HPバーは画面の上端に
-## あるため「その斜め上」が画面の外になる**。そのまま飛ばすと駒が消えたように見える。
-func _strike_stop(at: Vector2) -> Vector2:
-	var area := get_parent_area_size()
-	if area.x <= 0.0 or area.y <= 0.0:
-		return at
-	var margin := Vector2(BOARD_ART_SIDE, BOARD_ART_SIDE) * 0.5 + Vector2(8.0, 8.0)
-	return at.clamp(margin, area - margin)
-
-
-func _set_strike_offset(value: Vector2) -> void:
-	_strike_offset = value
-	queue_redraw()
-
-
-func _set_strike_angle(value: float) -> void:
-	_strike_angle = value
-	queue_redraw()
-
-
-func _set_strike_flash(value: float) -> void:
-	_strike_flash = value
-	queue_redraw()
-
-
-func _on_strike_impact() -> void:
-	strike_impact.emit()
-
-
-func _on_strike_finished() -> void:
-	_striking = false
-	_strike_offset = Vector2.ZERO
-	_strike_angle = 0.0
-	_strike_flash = 0.0
-	z_index = 0
-	queue_redraw()
-	strike_finished.emit()
+	if _strike == null:
+		_strike = CardViewStrike.new(self)
+	_strike.play(target_center, quick, follow_center)
 
 
 ## 当たった瞬間の閃光。絵の下端(当たった側)へ出す。
-func _draw_strike_flash() -> void:
-	if _strike_flash <= 0.01:
+func _drawstrike_flash() -> void:
+	if strike_flash <= 0.01:
 		return
-	var box := _board_art_box()
+	var box := board_art_box()
 	var at := Vector2(box.get_center().x, box.end.y - 8.0)
-	var radius := 10.0 + 14.0 * (1.0 - _strike_flash)
+	var radius := 10.0 + 14.0 * (1.0 - strike_flash)
 	UiPaint.fill_circle(
-		get_canvas_item(), at, radius, Color(1.0, 0.94, 0.72, 0.55 * _strike_flash), 20
+		get_canvas_item(), at, radius, Color(1.0, 0.94, 0.72, 0.55 * strike_flash), 20
 	)
 
 
 ## 絵に掛ける変換。上端を支点に回し、そのぶんずらす。
 func _strike_transform() -> Transform2D:
-	var pivot := Vector2(size.x * 0.5, _board_art_box().position.y + STRIKE_PIVOT_Y)
-	var placed := Transform2D(_strike_angle, Vector2.ONE, 0.0, pivot + _strike_offset)
+	var pivot := Vector2(size.x * 0.5, board_art_box().position.y + STRIKE_PIVOT_Y)
+	var placed := Transform2D(strike_angle, Vector2.ONE, 0.0, pivot + strike_offset)
 	return placed * Transform2D(0.0, Vector2.ONE, 0.0, -pivot)

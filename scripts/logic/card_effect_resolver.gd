@@ -129,22 +129,24 @@ func _targets(side: int, unit: CardInstance, effect: CardEffectData, hint: Dicti
 		CardEnums.EffectTarget.ENEMY_UNIT:
 			return _single_unit(foe_side, hint)
 		CardEnums.EffectTarget.ALLY_UNIT:
-			return _single_unit(side, hint)
+			# **自分自身は選べない**(GameDesign.md 6章)。効果を持つ駒が自分を強化すると
+			# 「他の駒を助ける」というカードの読みが崩れ、対象を選ぶ意味も無くなるため。
+			return _single_unit(side, hint, _slot_of(side, unit))
 	return []
 
 
 ## 対象を1体だけ選ぶ効果の解決。相手側(ENEMY_UNIT)も自分側(ALLY_UNIT)もここを通る。
-func _single_unit(target_side: int, hint: Dictionary) -> Array:
+func _single_unit(target_side: int, hint: Dictionary, exclude_slot := -1) -> Array:
 	if hint.has("slot") and hint.get("side", target_side) == target_side:
 		var slot: int = hint["slot"]
-		if _state.board[target_side][slot] != null:
+		if slot != exclude_slot and _state.board[target_side][slot] != null:
 			return [{"side": target_side, "slot": slot}]
 	# 指定が無い・すでに居なくなっている場合は、最も生涯ダメージの大きい1体を選ぶ。
 	var best := -1
 	var best_value := -1
 	for slot in MatchState.BOARD_SIZE:
 		var candidate: CardInstance = _state.board[target_side][slot]
-		if candidate == null:
+		if candidate == null or slot == exclude_slot:
 			continue
 		var value := candidate.lifetime_damage()
 		if value > best_value:

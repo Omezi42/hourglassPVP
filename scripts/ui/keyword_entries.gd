@@ -14,11 +14,17 @@ enum Kind { KEYWORD, TRIGGER }
 
 const CATEGORY_NAMES := {Kind.KEYWORD: "常在", Kind.TRIGGER: "トリガー"}
 
+## 繰り返し発動するトリガーの説明。1行に収まらないため定数へ出している。
+const TURN_END_TEXT := "自分のターンの終わりに、砂が1粒落ちる直前へ発動する。場に残っているかぎり毎ターン発動する。"
+const DAMAGED_TEXT := "ダメージを受けたときに発動する。硝子で無効にした場合と、砕けた場合は発動しない。"
+
 ## トリガーの説明。`CardEnums` はトリガーの表示名しか持たないため、ここで文を添える。
 const TRIGGER_DESCRIPTIONS := {
 	CardEnums.Trigger.ON_PLAY: "手札から場に出したときに効果が発動する。",
 	CardEnums.Trigger.ON_FLIP: "反転したときに効果が発動する。反転は毎ターン行えるため、何度でも発動する。",
 	CardEnums.Trigger.ON_DEATH: "破壊されたときに効果が発動する。",
+	CardEnums.Trigger.ON_TURN_END: TURN_END_TEXT,
+	CardEnums.Trigger.ON_DAMAGED: DAMAGED_TEXT,
 }
 
 ## 実演の台本。持たない語は -1 とし、実演の枠自体を出さない。
@@ -33,7 +39,7 @@ const DEMOS := {
 	CardEnums.Keyword.DOUBLE_STRIKE: CardEffectPreview.Demo.DOUBLE_STRIKE,
 }
 
-## 語にする4種 → 語にしない3種 → トリガー3種の順に並べる。
+## 語にする4種 → 語にしない3種 → トリガー5種の順に並べる。
 ## 語にするものを先に置くのは、カードの面へ出ているぶん引かれる回数が多いため。
 const ORDER: Array[Array] = [
 	[Kind.KEYWORD, CardEnums.Keyword.GUARD],
@@ -46,6 +52,8 @@ const ORDER: Array[Array] = [
 	[Kind.TRIGGER, CardEnums.Trigger.ON_PLAY],
 	[Kind.TRIGGER, CardEnums.Trigger.ON_FLIP],
 	[Kind.TRIGGER, CardEnums.Trigger.ON_DEATH],
+	[Kind.TRIGGER, CardEnums.Trigger.ON_TURN_END],
+	[Kind.TRIGGER, CardEnums.Trigger.ON_DAMAGED],
 ]
 
 

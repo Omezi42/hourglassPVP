@@ -108,15 +108,20 @@ func _test_card_orders() -> void:
 		seen[card.pool_index] = true
 
 
-## data/cards/ に置かれているカード定義の数。エクスポート後は `.tres.remap` になるため、
-## `.remap` を取り除いた名前で数える(CardLibrary と同じ判定)。
+## data/cards/ に置かれている**集められる**カードの数。エクスポート後は `.tres.remap` に
+## なるため、`.remap` を取り除いた名前で数える(CardLibrary と同じ判定)。
+## トークンは all_cards() が返さないので、ここでも数えない。
 func _count_card_files() -> int:
 	var dir := DirAccess.open("res://data/cards")
 	if dir == null:
 		return 0
 	var found := 0
 	for file in dir.get_files():
-		if file.trim_suffix(".remap").ends_with(".tres"):
+		var base := file.trim_suffix(".remap")
+		if not base.ends_with(".tres"):
+			continue
+		var card: CardData = load("res://data/cards/" + base)
+		if card != null and not card.is_token:
 			found += 1
 	return found
 
