@@ -41,6 +41,9 @@ var _detail_timer: Timer
 var _keyword_popup: KeywordPopup
 var _preset_picker: CardPresetPicker
 var _code_panel: CardDeckCodePanel
+## 一覧に並べるカード。**コスト順**で固定する(GameDesign.md 9章の既定と揃える)。
+## `_card_views` の並びと1対1で対応するため、参照する側は必ずこちらを見る。
+var _pool: Array[CardData] = []
 var _card_views: Array[CardView] = []
 var _band_pool: Array[CardDeckBand] = []
 ## 編成中のデッキ。同じ CardData が最大2つ入る。
@@ -123,12 +126,13 @@ func _build_grid() -> void:
 	scroll.size = GRID_RECT.size
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	add_child(scroll)
+	_pool = CardLibrary.sorted_by_cost()
 	_grid = GridContainer.new()
 	_grid.columns = GRID_COLUMNS
 	_grid.add_theme_constant_override("h_separation", GRID_GAP)
 	_grid.add_theme_constant_override("v_separation", GRID_GAP)
 	scroll.add_child(_grid)
-	for card in CardLibrary.all_cards():
+	for card in _pool:
 		var view := CardView.new()
 		view.mode = CardView.Mode.HAND
 		view.custom_minimum_size = CardView.HAND_SIZE_PX
@@ -210,9 +214,8 @@ func _refresh() -> void:
 	_refresh_bands()
 	_curve.show_deck(_deck)
 	var full: bool = _deck.size() >= MatchState.DECK_SIZE
-	var cards := CardLibrary.all_cards()
 	for i in _card_views.size():
-		var card: CardData = cards[i]
+		var card: CardData = _pool[i]
 		var copies := _count_of(card)
 		var view := _card_views[i]
 		view.badge = "%d/%d" % [copies, CardDeckSave.COPY_LIMIT]
@@ -220,9 +223,8 @@ func _refresh() -> void:
 
 
 func _apply_filter() -> void:
-	var cards := CardLibrary.all_cards()
 	for i in _card_views.size():
-		_card_views[i].visible = _filter.matches(cards[i])
+		_card_views[i].visible = _filter.matches(_pool[i])
 
 
 ## 帯は使い回す。1枚足すたびに全て作り直すと、押した瞬間にカーソルの下のノードが
