@@ -404,7 +404,7 @@ func _build() -> void:
 	_surrender_button.pressed.connect(_on_surrender_pressed)
 	# リプレイ再生・観戦には終局の結果パネル(「ホームへ」)が出ないため、
 	# この戻るボタンが唯一の出口になる。対局中は投了が出口のため出さない。
-	_back_button = _add_button("戻る", LOG_BUTTON_SIZE)
+	_back_button = _add_button("戻る", ACTION_BUTTON_SIZE)
 	_back_button.position = Vector2(ACTION_COLUMN_X, BACK_BUTTON_TOP)
 	_back_button.pressed.connect(func() -> void: back_pressed.emit())
 	_cpu_timer = Timer.new()
