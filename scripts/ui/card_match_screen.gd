@@ -27,12 +27,15 @@ const OPPONENT_TIMEOUT_GRACE := 20.0
 const ACTION_COLUMN_X := 1108.0
 const DETAIL_TOP := 40.0
 const DETAIL_MARGIN := 12.0
-const ACTION_BUTTON_SIZE := Vector2(148, 48)
+const TURN_END_BUTTON_SIZE := Vector2(148, 76)
+const TURN_END_BUTTON_TOP := 290.0
+const ACTION_BUTTON_SIZE := Vector2(148, 42)
 ## 反転ボタンは選んだ駒のすぐ下へ出す(GameDesign.md 9章)。
 const FLIP_BUTTON_SIZE := Vector2(104, 30)
 const FLIP_BUTTON_OVERLAP := 2.0
-const LOG_BUTTON_SIZE := Vector2(148, 44)
-const LOG_BUTTON_TOP := 546.0
+const LOG_BUTTON_TOP := 384.0
+const SURRENDER_BUTTON_TOP := 434.0
+const EMOTE_BUTTON_TOP := 484.0
 ## リプレイ・観戦のときだけ出す戻るボタン。行動の列の先頭に置く。
 const BACK_BUTTON_TOP := 24.0
 ## 情報帯の幅。行動の列(ACTION_COLUMN_X)の手前で止める。
@@ -114,6 +117,7 @@ func _ready() -> void:
 	_online_ctl = CardMatchOnline.new(self)
 	_targets = CardMatchTargets.new(self)
 	_emote = CardMatchEmote.new(self)
+	_emote.set_position(Vector2(ACTION_COLUMN_X, EMOTE_BUTTON_TOP))
 
 
 ## 前の対局の名残を落としてから新しい対局へ入る。結果パネル・ログ・選択・
@@ -148,7 +152,7 @@ func _reset_for_new_match() -> void:
 		_mulligan.close()
 	if _tutorial != null:
 		_tutorial.visible = false
-	set_process(false)
+	set_process(true)
 	if state != null and is_instance_valid(state):
 		state.queue_free()
 	state = null
@@ -385,20 +389,18 @@ func _build() -> void:
 	_flip_button.visible = false
 	_flip_button.pressed.connect(_on_flip_pressed)
 	_coin_button = _add_button("コイン", ACTION_BUTTON_SIZE)
-	_coin_button.position = Vector2(ACTION_COLUMN_X, 362)
+	_coin_button.position = Vector2(ACTION_COLUMN_X, 230)
 	_coin_button.pressed.connect(_on_coin_pressed)
-	# ターン終了は画面右下の大きなボタンとする(GameDesign.md 9章)。
-	_end_turn_button = _add_button("ターン終了", Vector2(148, 66))
-	_end_turn_button.position = Vector2(ACTION_COLUMN_X, OWN_BAR_TOP - 4)
+	# ターン終了は画面中央付近の大きなボタンとする。
+	_end_turn_button = _add_button("ターン終了", TURN_END_BUTTON_SIZE)
+	_end_turn_button.position = Vector2(ACTION_COLUMN_X, TURN_END_BUTTON_TOP)
 	_end_turn_button.pressed.connect(_on_end_turn_pressed)
-	# 「ログ」「投了」は画面下部にまとめる(同上)。手札の右隣へ置いて重ならないようにする。
-	# 「ログ」「投了」も右の列へ続けて置く。手札を画面の中央へ戻すため、
-	# 手札の右隣という置き場所はやめた。
-	_log_button = _add_button("ログ", LOG_BUTTON_SIZE)
+	# 「ログ」「投了」「エモート」はターン終了ボタンの下へ順に並べる。
+	_log_button = _add_button("ログ", ACTION_BUTTON_SIZE)
 	_log_button.position = Vector2(ACTION_COLUMN_X, LOG_BUTTON_TOP)
 	_log_button.pressed.connect(func() -> void: _log.set_open(true))
-	_surrender_button = _add_button("投了", LOG_BUTTON_SIZE)
-	_surrender_button.position = Vector2(ACTION_COLUMN_X, LOG_BUTTON_TOP + 56)
+	_surrender_button = _add_button("投了", ACTION_BUTTON_SIZE)
+	_surrender_button.position = Vector2(ACTION_COLUMN_X, SURRENDER_BUTTON_TOP)
 	_surrender_button.pressed.connect(_on_surrender_pressed)
 	# リプレイ再生・観戦には終局の結果パネル(「ホームへ」)が出ないため、
 	# この戻るボタンが唯一の出口になる。対局中は投了が出口のため出さない。
@@ -542,10 +544,7 @@ func _refresh_buttons() -> void:
 	var over: bool = state.is_match_over()
 	_end_turn_button.visible = _interactive
 	_end_turn_button.disabled = not _my_turn()
-	# まだ指せる手が残っているうちは色を変えて知らせる(GameDesign.md 9章)。
-	# 押せなくはしない。あえて残す選択もあるため。
-	var remains: bool = _my_turn() and state.has_moves_left(my_side)
-	_end_turn_button.modulate = Color(1.0, 0.84, 0.6) if remains else Color(1, 1, 1)
+	_end_turn_button.modulate = Color(1, 1, 1)
 	_log_button.visible = _interactive
 	_surrender_button.visible = _interactive and not over
 	_back_button.visible = not _interactive
