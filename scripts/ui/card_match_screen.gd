@@ -37,8 +37,6 @@ const ACTION_COLUMN_X := 1108.0
 ## 自分で隠さないようにする。ホバーを外すと消えるため、盤面を塞ぎ続けはしない。
 const DETAIL_TOP := 40.0
 const DETAIL_MARGIN := 12.0
-## ホバーを外してから消すまでの猶予。カードとパネルの間をカーソルが通るため。
-const DETAIL_HIDE_DELAY := 0.12
 const ACTION_BUTTON_SIZE := Vector2(148, 48)
 ## 反転は行動の列ではなく、選んだ駒のすぐ下へ出す(GameDesign.md 9章)。
 ## **上ではなく下へ出す**のは、自分の場の上が相手の場であり、上へ出すと
@@ -58,27 +56,21 @@ var state: MatchState
 var my_side: int = MatchState.Side.A
 ## いま選んでいるものと相手の情報帯。切り出した進行役(`CardMatchTargets` 等)から読む。
 var selection: CardMatchSelection:
-	get:
-		return _selection
+	get: return _selection
 var foe_bar: PlayerInfoBar:
-	get:
-		return _foe_bar
+	get: return _foe_bar
 ## 対局中の効果音。攻撃の演出が当たった瞬間に持ち越した音を出すため、進行役から引く。
 var sound: CardMatchSound:
-	get:
-		return _sound
+	get: return _sound
 ## 操作を受け付ける対局かどうか(再生モードでは false)。
 var interactive: bool:
-	get:
-		return _interactive
+	get: return _interactive
 ## 攻撃以外の演出。攻撃が当たった瞬間に持ち越したぶんを出すため、進行役から引く。
 var effects: CardMatchEffects:
-	get:
-		return _effects
+	get: return _effects
 ## 盤面へ伸びる光の筋。反転と設置効果が共有する。
 var beam: CardFlipBeam:
-	get:
-		return _flip_beam
+	get: return _flip_beam
 
 var _foe_bar: PlayerInfoBar
 var _own_bar: PlayerInfoBar
@@ -96,51 +88,36 @@ var _setup: OnlineSetup = null
 var _client: FirestoreClient = null
 var _match_id := ""
 var _replay: CardMatchReplay = null
-## 再生モードでは盤面を一切操作できない(GameDesign.md 12章)。
 var _interactive := true
 var _mulligan: CardMatchMulligan
 var _detail: CardDetailPanel
 var _keyword_popup: KeywordPopup
-var _detail_timer: Timer
-## 自分が持ち込んだデッキ。「もう一度」で組み直すときと、戦績の記録(GameDesign.md 19章)に使う。
 var _own_deck: Array = []
 var _tutorial: CardMatchTutorial
 var _outcome: CardMatchOutcome
-## 砂金の獲得量を決める対局の種別(GameDesign.md 15章)。
 var _match_kind: CurrencyRules.MatchKind = CurrencyRules.MatchKind.NONE
-## 持ち時間。オンライン対戦だけが使う(CPU戦はローカルのため無制限。GameDesign.md 13章)。
 var _clock: MatchClock = null
-## 相手の持ち時間が0になってからの経過。申告が来ない(切断した)場合の保険。
 var _opponent_timeout_wait := 0.0
-## CPU戦の棋譜。オンラインは matches/{id} が同じ内容を持つため、こちらはCPU戦だけが使う。
 var _cpu_record: Dictionary = {}
-## 相手を待っている間に出す文言。空なら出さない。
 var _log: CardMatchLog
 var _result: CardMatchResult
 var _pile: CardPileViewer
 var _log_button: Button
 var _flip_beam: CardFlipBeam
-## 攻撃の演出の進行役。演出中は盤面の操作を止める。
 var _strike: CardMatchStrike
-## 対局中の効果音。盤面の変化だけを見て鳴らす。
 var _sound: CardMatchSound
-## 攻撃以外の演出(設置・破壊・効果の筋・硝子・ドロー/疲労)。
 var _effects: CardMatchEffects
 var _targets: CardMatchTargets
-## 手番のバナーと、相手の1手の実況。
 var _feed: CardMatchTurnFeed
-## 演出が終わったらCPUに続きを指させるか。
 var _cpu_followup := false
 var _surrender_button: Button
 var _back_button: Button
 var _status: CardMatchStatus
-## オンライン対戦の3つの入口(開始・復帰・観戦)。
 var _online_ctl: CardMatchOnline
 
 
 func _ready() -> void:
 	_build()
-	# 持ち時間を持つのはオンライン対戦だけ。それ以外では毎フレーム走らせない。
 	set_process(false)
 	_outcome = CardMatchOutcome.new(self)
 	_strike = CardMatchStrike.new(self)
@@ -165,7 +142,6 @@ func _reset_for_new_match() -> void:
 	if _online != null:
 		# 停止したノードは解放しない(Architecture.md 6.1節)。参照だけを落とす。
 		_online.stop()
-		_online = null
 	_setup = null
 	_client = null
 	_match_id = ""
@@ -196,7 +172,11 @@ func start_cpu_match(deck_self: Array, deck_foe: Array) -> void:
 	_match_kind = CurrencyRules.MatchKind.CPU
 	my_side = MatchState.Side.A
 	_own_bar.display_name = AccountService.display_name()
+	_own_bar.icon_id = AccountService.icon_id()
+	_own_bar.title_id = AccountService.title_id()
 	_foe_bar.display_name = "CPU"
+	_foe_bar.icon_id = UserProfileLibrary.CPU_ICON_ID
+	_foe_bar.title_id = UserProfileLibrary.CPU_TITLE_ID
 	# CPU戦もリプレイとして残すため、山札の種を決めてから始める(GameDesign.md 12章)。
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
@@ -401,8 +381,6 @@ func _build() -> void:
 		view.visible = false
 		view.hover_zoom = true
 		view.pressed.connect(_on_hand_pressed)
-		view.hovered.connect(_on_card_hovered)
-		view.mouse_exited.connect(_hide_detail_soon)
 		add_child(view)
 		_hand_views.append(view)
 	# 反転だけは選んだ駒のすぐ下へ出す。位置は `_refresh_buttons()` が毎回決める。
@@ -442,13 +420,8 @@ func _build() -> void:
 	add_child(_flip_beam)
 	_detail = CardDetailPanel.new()
 	_detail.visible = false
-	_detail.mouse_entered.connect(func() -> void: _detail_timer.stop())
-	_detail.mouse_exited.connect(_hide_detail_soon)
+	_detail.gui_input.connect(_on_detail_gui_input)
 	add_child(_detail)
-	_detail_timer = Timer.new()
-	_detail_timer.one_shot = true
-	_detail_timer.timeout.connect(func() -> void: _detail.visible = false)
-	add_child(_detail_timer)
 	# 通信待ちの文言と対象選択の案内は、駒より手前へ出すため独立したノードで描く。
 	_status = CardMatchStatus.new()
 	add_child(_status)
@@ -500,13 +473,7 @@ func _make_row(top: float, opponent: bool) -> Array[CardView]:
 		view.mode = CardView.Mode.BOARD
 		view.position = Vector2(start + i * (CardView.BOARD_SIZE_PX.x + CARD_GAP), top)
 		view.size = CardView.BOARD_SIZE_PX
-		if opponent:
-			view.pressed.connect(_on_foe_slot_pressed)
-		else:
-			view.pressed.connect(_on_own_slot_pressed)
-		view.hovered.connect(_on_card_hovered)
-		view.mouse_exited.connect(_hide_detail_soon)
-		# 手札は空き枠へドラッグしても出せる(GameDesign.md 9章)。
+		view.pressed.connect(_on_foe_slot_pressed if opponent else _on_own_slot_pressed)
 		if not opponent:
 			view.drop_handler = _on_slot_drop.bind(i)
 		add_child(view)
@@ -615,15 +582,14 @@ func _stop_polling() -> void:
 		_online.stop()
 
 
-# --- 操作 ---------------------------------------------------------------
+# --- 詳細(クリック時のみ表示) ------------------------------------------
 
 
-## カードにカーソルを乗せたら効果の詳細を出す(GameDesign.md 9章)。
+## カード・駒をクリックしたら効果の詳細を出す(GameDesign.md 9章)。
 ## 効果を覚えていないと戦えない状態を避けるため、手札・自分の駒・相手の駒すべてで引ける。
-func _on_card_hovered(view: CardView) -> void:
-	if view.card == null:
+func _show_detail_for(view: CardView) -> void:
+	if view == null or view.card == null:
 		return
-	_detail_timer.stop()
 	_detail.show_card(view.card)
 	# 指しているカードと反対の側へ出す。読みたいものを自分で隠さないため。
 	var to_right: bool = view.position.x + view.size.x * 0.5 < size.x * 0.5
@@ -632,12 +598,24 @@ func _on_card_hovered(view: CardView) -> void:
 	_detail.visible = true
 
 
-func _hide_detail_soon() -> void:
-	if _detail_timer != null:
-		_detail_timer.start(DETAIL_HIDE_DELAY)
+func _hide_detail() -> void:
+	if _detail != null:
+		_detail.visible = false
+
+
+func _on_detail_gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton:
+		var click := event as InputEventMouseButton
+		if click.pressed and click.button_index == MOUSE_BUTTON_RIGHT:
+			_hide_detail()
+			get_viewport().set_input_as_handled()
+
+
+# --- 操作 ---------------------------------------------------------------
 
 
 func _on_hand_pressed(view: CardView) -> void:
+	_show_detail_for(view)
 	if not _my_turn():
 		return
 	var index := _hand_views.find(view)
@@ -660,10 +638,14 @@ func _on_slot_drop(source: CardView, slot: int) -> void:
 
 
 func _on_own_slot_pressed(view: CardView) -> void:
-	if not _my_turn():
-		return
 	var slot := _own_slots.find(view)
 	if slot < 0:
+		return
+	if view.card != null:
+		_show_detail_for(view)
+	else:
+		_hide_detail()
+	if not _my_turn():
 		return
 	if _selection.is_targeting():
 		_selection.clear()
@@ -682,26 +664,29 @@ func _on_own_slot_pressed(view: CardView) -> void:
 
 
 func _on_foe_slot_pressed(view: CardView) -> void:
-	if not _my_turn():
-		return
 	var slot := _foe_slots.find(view)
 	if slot < 0:
 		return
-	if _selection.is_targeting():
+	if _my_turn() and _selection.is_targeting():
 		if state.board[MatchState.other_side(my_side)][slot] == null:
 			return
 		var target := {"side": MatchState.other_side(my_side), "slot": slot}
 		_perform(MatchAction.play(my_side, _selection.hand_index, _selection.slot, target))
 		_selection.clear()
+		_hide_detail()
 		refresh()
 		return
-	if not _selection.is_board_selection():
-		return
-	if not state.can_attack(my_side, _selection.slot, slot):
-		return
-	_perform(MatchAction.attack(my_side, _selection.slot, slot))
-	_selection.clear()
-	refresh()
+	if _my_turn() and _selection.is_board_selection():
+		if state.can_attack(my_side, _selection.slot, slot):
+			_perform(MatchAction.attack(my_side, _selection.slot, slot))
+			_selection.clear()
+			_hide_detail()
+			refresh()
+			return
+	if view.card != null:
+		_show_detail_for(view)
+	else:
+		_hide_detail()
 
 
 func _on_face_pressed() -> void:
@@ -751,10 +736,10 @@ func _on_coin_pressed() -> void:
 func _on_end_turn_pressed() -> void:
 	if _my_turn():
 		_selection.clear()
+		_hide_detail()
 		_perform(MatchAction.end_turn(my_side))
 
 
-## 検証用に個々のビューを引く。
 func hand_view(index: int) -> CardView:
 	return _hand_views[index]
 
@@ -767,12 +752,10 @@ func foe_slot_view(slot: int) -> CardView:
 	return _foe_slots[slot]
 
 
-## いま何を選んでいるか(検証用)。
 func selection_kind() -> int:
 	return _selection.kind
 
 
-## 対局ログ(検証・将来のリプレイ用に外から参照できるようにしておく)。
 func battle_log() -> CardMatchLog:
 	return _log
 
@@ -914,12 +897,41 @@ func hp_bar_center(side: int) -> Vector2:
 ## 「どちらのプレイヤーが手を出したのか」を示す。
 func _on_turn_started(side: int) -> void:
 	_mulligan.close()
+	_hide_detail()
 	refresh()
 	# 自分の番が回ってきたことだけ知らせる。相手の番であることは情報帯の縁と実況で分かる。
 	if side == my_side and _interactive and not state.is_match_over():
 		_feed.announce_turn()
 	if _cpu != null and side != my_side and not state.is_match_over():
 		_cpu_timer.start(CPU_THINK_SECONDS)
+
+
+func _input(event: InputEvent) -> void:
+	if not _interactive:
+		return
+	if _detail != null and _detail.visible:
+		if (_keyword_popup != null and _keyword_popup.visible) \
+				or (_mulligan != null and _mulligan.visible):
+			return
+		if event.is_action_pressed("ui_cancel"):
+			_hide_detail()
+			if not _selection.is_empty():
+				_selection.clear()
+				refresh()
+			get_viewport().set_input_as_handled()
+			return
+		if event is InputEventMouseButton:
+			var click := event as InputEventMouseButton
+			if click.pressed:
+				if click.button_index == MOUSE_BUTTON_RIGHT:
+					_hide_detail()
+					if not _selection.is_empty():
+						_selection.clear()
+						refresh()
+					get_viewport().set_input_as_handled()
+				elif click.button_index == MOUSE_BUTTON_LEFT:
+					if not _detail.get_global_rect().has_point(click.position):
+						_hide_detail()
 
 
 ## 選択は右クリックとEscでも取り消せるようにする(GameDesign.md 9章)。
@@ -963,6 +975,7 @@ func _on_rematch_pressed() -> void:
 func _on_match_ended(_winner: int) -> void:
 	OnlineResume.clear()
 	_selection.clear()
+	_hide_detail()
 	refresh()
 	_stop_polling()
 	# 再生中は結果パネルを出さない。最後の手まで進めるたびに操作を塞ぐと

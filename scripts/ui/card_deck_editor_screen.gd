@@ -10,21 +10,14 @@ signal back_pressed
 
 const HEADER_SCENE := "res://scenes/screen_header.tscn"
 const PANEL_STYLE := "res://resources/theme/content_panel.tres"
-## **絞り込みの列は詳細パネルの左端まで広げる**。一覧の幅(816px)だけに収めていたときは
-## コスト7種とキーワード4種のチップで埋まり、右端の「名前で探す」がはみ出して押せなかった。
-## 右上の詳細(`DETAIL_POSITION`)の下へ潜らせないため、ここより右へは伸ばさない。
-const FILTER_RECT := Rect2(24, ScreenHeader.CONTENT_TOP, 832, 34)
-const GRID_RECT := Rect2(24, ScreenHeader.CONTENT_TOP + 46, 816, 514)
-const SIDE_RECT := Rect2(856, ScreenHeader.CONTENT_TOP + 46, 400, 514)
+const GRID_RECT := Rect2(24, ScreenHeader.CONTENT_TOP, 816, 584)
+const SIDE_RECT := Rect2(856, ScreenHeader.CONTENT_TOP, 400, 584)
 const SIDE_INNER_WIDTH := 372.0
 const GRID_COLUMNS := 6
 const GRID_GAP := 12
-const CURVE_HEIGHT := 76.0
+const CURVE_HEIGHT := 140.0
 ## `CardDetailPanel` の低背版の大きさ。ここを小さくしても最小サイズで押し返されるため揃える。
 const DETAIL_SIZE := CardDetailPanel.COMPACT_SIZE
-## 詳細はホバー中だけ浮かせる。カードとパネルの間をカーソルが通るため、
-## 外れてから消すまでに短い猶予を置く(対局画面の詳細と同じ流儀)。
-const DETAIL_HIDE_DELAY := 0.12
 ## **詳細は指しているカードの隣ではなく、画面の右上へ固定して出す**(GameDesign.md 9章)。
 ## カーソルの近くへ出すと、次に見たいカードの上にパネルが被って選びづらい。
 ## ヘッダーの主アクションや編成中の欄の上端に重なるのは許容する。
@@ -32,12 +25,13 @@ const DETAIL_POSITION := Vector2(SIDE_RECT.position.x, ScreenHeader.OUTER_MARGIN
 
 var _header: ScreenHeader
 var _filter: CardDeckFilter
+var _filter_button: Button
+var _count_label: Label
 var _grid: GridContainer
 var _bands: VBoxContainer
 var _progress: Label
 var _curve: CardManaCurve
 var _detail: CardDetailPanel
-var _detail_timer: Timer
 var _keyword_popup: KeywordPopup
 var _preset_picker: CardPresetPicker
 var _code_panel: CardDeckCodePanel
@@ -72,6 +66,7 @@ func open(index: int = -1) -> void:
 	_header.set_title("デッキ編集" if _index >= 0 else "新しいデッキ")
 	_hide_detail()
 	_refresh()
+	_apply_filter()
 
 
 # --- 組み立て -----------------------------------------------------------
@@ -80,15 +75,13 @@ func open(index: int = -1) -> void:
 func _build() -> void:
 	add_child(ScreenBackdrop.new())
 	_build_header()
-	_filter = CardDeckFilter.new()
-	_filter.position = FILTER_RECT.position
-	_filter.size = FILTER_RECT.size
-	_filter.changed.connect(_apply_filter)
-	add_child(_filter)
 	_build_grid()
 	_build_side()
 	_build_detail()
 	# **モーダルは最後に足す。**`Control` は後から足した子ほど手前に描かれる。
+	_filter = CardDeckFilter.new()
+	_filter.changed.connect(_apply_filter)
+	add_child(_filter)
 	_keyword_popup = KeywordPopup.new()
 	add_child(_keyword_popup)
 	_preset_picker = CardPresetPicker.new()
@@ -121,17 +114,42 @@ func _build_header() -> void:
 
 
 func _build_grid() -> void:
+	var container := VBoxContainer.new()
+	container.position = GRID_RECT.position
+	container.size = GRID_RECT.size
+	container.custom_minimum_size = GRID_RECT.size
+	container.add_theme_constant_override("separation", 8)
+	add_child(container)
+
+	# 上部ツールバー(件数表示 + 絞り込みボタン)
+	var toolbar := HBoxContainer.new()
+	toolbar.add_theme_constant_override("separation", 8)
+	container.add_child(toolbar)
+
+	_count_label = Label.new()
+	_count_label.text = "カード一覧"
+	_count_label.add_theme_font_size_override("font_size", 16)
+	_count_label.add_theme_color_override("font_color", UiPalette.BRASS_HIGHLIGHT)
+	_count_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_count_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	toolbar.add_child(_count_label)
+
+	_filter_button = CodedButton.make("絞り込み", Vector2(130, 36))
+	_filter_button.pressed.connect(func() -> void: _filter.open())
+	toolbar.add_child(_filter_button)
+
 	var scroll := ScrollContainer.new()
-	scroll.position = GRID_RECT.position
-	scroll.size = GRID_RECT.size
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	add_child(scroll)
+	container.add_child(scroll)
+
 	_pool = CardLibrary.sorted_by_cost()
 	_grid = GridContainer.new()
 	_grid.columns = GRID_COLUMNS
 	_grid.add_theme_constant_override("h_separation", GRID_GAP)
 	_grid.add_theme_constant_override("v_separation", GRID_GAP)
 	scroll.add_child(_grid)
+
 	for card in _pool:
 		var view := CardView.new()
 		view.mode = CardView.Mode.HAND
@@ -139,8 +157,6 @@ func _build_grid() -> void:
 		# 並べて見比べる画面では守護だけ枠を太くしない(GameDesign.md 9章)。
 		view.guard_frame = false
 		view.pressed.connect(_on_card_pressed)
-		view.hovered.connect(_on_card_hovered)
-		view.mouse_exited.connect(_hide_detail_soon)
 		_grid.add_child(view)
 		_card_views.append(view)
 
@@ -158,7 +174,8 @@ func _build_side() -> void:
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 8)
 	panel.add_child(column)
-	# デッキは何個でも保存できるため、どれなのかを見分ける名前が要る(GameDesign.md 9章)。
+
+	# 1. デッキ名と枚数
 	var top_row := HBoxContainer.new()
 	top_row.add_theme_constant_override("separation", 10)
 	column.add_child(top_row)
@@ -174,19 +191,20 @@ func _build_side() -> void:
 	_progress.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	top_row.add_child(_progress)
 
-	_curve = CardManaCurve.new()
-	_curve.compact = true
-	_curve.custom_minimum_size = Vector2(SIDE_INNER_WIDTH, CURVE_HEIGHT)
-	column.add_child(_curve)
-
+	# 2. 編成中カード一覧
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	column.add_child(scroll)
 	_bands = VBoxContainer.new()
-	_bands.add_theme_constant_override("separation", 3)
+	_bands.add_theme_constant_override("separation", 4)
 	_bands.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(_bands)
+
+	# 3. マナカーブ(下部配置・高さ140px)
+	_curve = CardManaCurve.new()
+	_curve.custom_minimum_size = Vector2(SIDE_INNER_WIDTH, CURVE_HEIGHT)
+	column.add_child(_curve)
 
 
 func _build_detail() -> void:
@@ -196,14 +214,8 @@ func _build_detail() -> void:
 	_detail.position = DETAIL_POSITION
 	_detail.visible = false
 	_detail.keyword_pressed.connect(func(entry: Dictionary) -> void: _keyword_popup.open(entry))
-	_detail.mouse_entered.connect(func() -> void: _detail_timer.stop())
-	_detail.mouse_exited.connect(_hide_detail_soon)
+	_detail.gui_input.connect(_on_detail_gui_input)
 	add_child(_detail)
-	_detail_timer = Timer.new()
-	_detail_timer.one_shot = true
-	_detail_timer.wait_time = DETAIL_HIDE_DELAY
-	_detail_timer.timeout.connect(_hide_detail)
-	add_child(_detail_timer)
 
 
 # --- 表示 ---------------------------------------------------------------
@@ -223,8 +235,23 @@ func _refresh() -> void:
 
 
 func _apply_filter() -> void:
+	var visible_count := 0
 	for i in _card_views.size():
-		_card_views[i].visible = _filter.matches(_pool[i])
+		var matched := _filter.matches(_pool[i])
+		_card_views[i].visible = matched
+		if matched:
+			visible_count += 1
+	var active := _filter.active_filter_count()
+	if active > 0:
+		_filter_button.text = "絞り込み (%d)" % active
+		_filter_button.add_theme_color_override("font_color", UiPalette.GLOW_AMBER)
+		_filter_button.add_theme_color_override("font_hover_color", UiPalette.GLOW_AMBER)
+		_count_label.text = "カード一覧 (%d / %d 種)" % [visible_count, _pool.size()]
+	else:
+		_filter_button.text = "絞り込み"
+		_filter_button.remove_theme_color_override("font_color")
+		_filter_button.remove_theme_color_override("font_hover_color")
+		_count_label.text = "カード一覧 (%d 種)" % _pool.size()
 
 
 ## 帯は使い回す。1枚足すたびに全て作り直すと、押した瞬間にカーソルの下のノードが
@@ -236,7 +263,7 @@ func _refresh_bands() -> void:
 		band.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		band.add_pressed.connect(_on_band_add)
 		band.remove_pressed.connect(_on_band_remove)
-		band.hovered.connect(_on_band_hovered)
+		band.pressed.connect(_on_band_pressed)
 		_bands.add_child(band)
 		_band_pool.append(band)
 	for i in _band_pool.size():
@@ -271,7 +298,7 @@ func _count_of(card: CardData) -> int:
 	return found
 
 
-# --- 詳細(ホバー中だけ浮かせる) -----------------------------------------
+# --- 詳細(クリック時のみ表示) ------------------------------------------
 
 
 ## 出す場所は常に画面の右上で、指しているカードの位置では動かさない
@@ -279,33 +306,56 @@ func _count_of(card: CardData) -> int:
 func _show_detail(card: CardData) -> void:
 	if card == null:
 		return
-	_detail_timer.stop()
 	_detail.show_card(card)
 	_detail.position = DETAIL_POSITION
 	_detail.visible = true
-
-
-func _hide_detail_soon() -> void:
-	_detail_timer.start()
 
 
 func _hide_detail() -> void:
 	_detail.visible = false
 
 
+func _on_detail_gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton:
+		var click := event as InputEventMouseButton
+		if click.pressed and click.button_index == MOUSE_BUTTON_RIGHT:
+			_hide_detail()
+			get_viewport().set_input_as_handled()
+
+
+func _input(event: InputEvent) -> void:
+	if _detail == null or not _detail.visible:
+		return
+	if (_keyword_popup != null and _keyword_popup.visible) \
+			or (_filter != null and _filter.visible) \
+			or (_preset_picker != null and _preset_picker.visible) \
+			or (_code_panel != null and _code_panel.visible):
+		return
+	if event.is_action_pressed("ui_cancel"):
+		_hide_detail()
+		get_viewport().set_input_as_handled()
+		return
+	if event is InputEventMouseButton:
+		var click := event as InputEventMouseButton
+		if click.pressed:
+			if click.button_index == MOUSE_BUTTON_RIGHT:
+				_hide_detail()
+				get_viewport().set_input_as_handled()
+			elif click.button_index == MOUSE_BUTTON_LEFT:
+				if not _detail.get_global_rect().has_point(click.position):
+					_hide_detail()
+
+
 # --- 操作 ---------------------------------------------------------------
 
 
-func _on_card_hovered(view: CardView) -> void:
-	_show_detail(view.card)
-
-
-func _on_band_hovered(card: CardData) -> void:
-	_show_detail(card)
-
-
 func _on_card_pressed(view: CardView) -> void:
+	_show_detail(view.card)
 	_add_card(view.card)
+
+
+func _on_band_pressed(card: CardData) -> void:
+	_show_detail(card)
 
 
 func _on_band_add(card: CardData) -> void:

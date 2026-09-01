@@ -9,23 +9,23 @@ extends Control
 
 signal add_pressed(card: CardData)
 signal remove_pressed(card: CardData)
-signal hovered(card: CardData)
+signal pressed(card: CardData)
 
-const BAND_HEIGHT := 32.0
-const CORNER := 5.0
-const COST_CENTER_X := 19.0
-const COST_RADIUS := 12.5
-const NAME_LEFT := 39.0
-const NAME_FONT_SIZE := 17
-const BUTTON_SIZE := Vector2(28.0, 26.0)
-const BUTTON_GAP := 4.0
-const BADGE_SIZE := Vector2(30.0, 22.0)
+const BAND_HEIGHT := 46.0
+const CORNER := 6.0
+const COST_CENTER_X := 24.0
+const COST_RADIUS := 14.0
+const NAME_LEFT := 46.0
+const NAME_FONT_SIZE := 18
+const BUTTON_SIZE := Vector2(32.0, 32.0)
+const BUTTON_GAP := 6.0
+const BADGE_SIZE := Vector2(36.0, 26.0)
 const BADGE_GAP := 8.0
 ## 絵は元画像の縦中央あたりだけを切り出す。全体を帯の高さへ縮めると幅が25px程度になり、
 ## 何の絵なのか読めなくなるため。
-const ART_SRC_TOP := 0.1
-const ART_SRC_HEIGHT := 0.36
-const ART_ALPHA := 0.55
+const ART_SRC_TOP := 0.05
+const ART_SRC_HEIGHT := 0.50
+const ART_ALPHA := 0.60
 
 var card: CardData
 var count := 1
@@ -33,6 +33,7 @@ var count := 1
 var _remove: Button
 var _add: Button
 var _font: Font
+var _tracker := PressTracker.new()
 
 
 func _ready() -> void:
@@ -41,7 +42,7 @@ func _ready() -> void:
 		_font = ThemeDB.fallback_font
 	custom_minimum_size.y = BAND_HEIGHT
 	mouse_filter = Control.MOUSE_FILTER_PASS
-	mouse_entered.connect(func() -> void: hovered.emit(card))
+	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	_remove = CodedButton.make_icon("−", BUTTON_SIZE)
 	_remove.pressed.connect(func() -> void: remove_pressed.emit(card))
 	add_child(_remove)
@@ -51,6 +52,13 @@ func _ready() -> void:
 	resized.connect(_layout_buttons)
 	_layout_buttons()
 	queue_redraw()
+
+
+func _gui_input(event: InputEvent) -> void:
+	if card == null:
+		return
+	if _tracker.feed(event, size) == PressTracker.Result.CONFIRMED:
+		pressed.emit(card)
 
 
 func show_card(new_card: CardData, new_count: int, can_add: bool) -> void:
@@ -147,7 +155,7 @@ func _draw_cost() -> void:
 		str(card.cost),
 		HORIZONTAL_ALIGNMENT_CENTER,
 		d * 2.0,
-		16,
+		17,
 		Color(0.87, 0.93, 1.0)
 	)
 
@@ -169,10 +177,10 @@ func _draw_badge() -> void:
 	)
 	draw_string(
 		_font,
-		Vector2(badge.position.x, badge.position.y + BADGE_SIZE.y - 6.0),
+		Vector2(badge.position.x, badge.position.y + BADGE_SIZE.y - 7.0),
 		"×2",
 		HORIZONTAL_ALIGNMENT_CENTER,
 		BADGE_SIZE.x,
-		15,
+		16,
 		UiPalette.TEXT_OFFWHITE
 	)

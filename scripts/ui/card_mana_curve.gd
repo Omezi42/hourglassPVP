@@ -50,24 +50,18 @@ func _draw() -> void:
 	var rect := Rect2(Vector2.ZERO, size)
 	draw_rect(rect, Color(0.09, 0.08, 0.1, 0.82))
 	UiPaint.apply_grain(ci, rect, 0.05)
-	draw_rect(rect, UiPalette.GLOW_AMBER, false, 2.0)
-	if compact:
-		_label(Vector2(14, size.y * 0.5 + 6), "マナカーブ", 16, UiPalette.TEXT_OFFWHITE)
-	else:
-		_label(Vector2(20, 34), "マナカーブ", 22, UiPalette.TEXT_OFFWHITE)
+	draw_rect(rect, UiPalette.GLOW_AMBER, false, 1.5)
+	_label(Vector2(14, 20), "マナカーブ", 15, UiPalette.TEXT_OFFWHITE)
 	if _counts.is_empty():
 		return
 	var peak := BASE_SCALE
 	for count in _counts:
 		peak = maxi(peak, count)
 	var columns := _display_max - MIN_COST + 1
-	var area := Rect2(24, 56, size.x - 48, size.y - 104)
-	if compact:
-		# 上端に余白を取る。棒が目盛りいっぱいまで伸びたとき、その本数の数字を
-		# 棒の上へ置くため(詰めると数字が枠の外へ出る)。
-		area = Rect2(96, 26, size.x - 116, size.y - 56)
+	# 棒グラフの描画領域。上下に余白を取り、棒の上の枚数と下のコスト値が収まる高さにする。
+	var area := Rect2(16, 28, size.x - 32, size.y - 56)
 	var step := area.size.x / float(columns)
-	var bar_width := step * 0.62
+	var bar_width := step * 0.65
 	draw_line(
 		Vector2(area.position.x, area.end.y),
 		Vector2(area.end.x, area.end.y),
@@ -83,16 +77,16 @@ func _draw() -> void:
 			var height := area.size.y * float(count) / float(peak)
 			_draw_bar(ci, Rect2(x, area.end.y - height, bar_width, height))
 			_label(
-				Vector2(x, area.end.y - height - 6),
+				Vector2(x, area.end.y - height - 5),
 				str(count),
-				16,
+				14,
 				UiPalette.TEXT_OFFWHITE,
 				bar_width
 			)
 		_label(
-			Vector2(x, area.end.y + (16 if compact else 22)),
+			Vector2(x, area.end.y + 18),
 			str(cost),
-			14 if compact else 16,
+			14,
 			UiPalette.BRASS_HIGHLIGHT,
 			bar_width
 		)
