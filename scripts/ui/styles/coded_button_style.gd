@@ -22,7 +22,21 @@ const CORNER_RADIUS := 32.0
 ## 角丸だけが元画像より不自然に大きくならないようにする)
 const CORNER_RADIUS_HEIGHT_RATIO := 0.25
 const CORNER_SEGMENTS := 8
+## 真鍮の額縁の太さ。**固定値ではなくボタンの短辺に比例させる**。小さなボタン
+## (帯の「−」「+」など高さ26px)へ大きなボタンと同じ12pxを掛けると、枠だけで
+## 面積の半分近くを占めて線が太すぎる印象になるため(`CodedNameplateStyle` と同じ流儀)。
 const FRAME_THICKNESS := 12.0
+## 短辺に対して単純な比例にすると、小さなボタンでもまだ太い(高さ34pxで7px)。
+## 「大きなボタン(高さ56px)で12px / 小さなボタン(高さ34px)で5px」の2点を通る直線として
+## 求め、下限で止める。**小さくなるほど急に細くする**のが狙いで、比例では届かない。
+const FRAME_REFERENCE_SIZE := 56.0
+const FRAME_SMALL_SIZE := 34.0
+const FRAME_SMALL_THICKNESS := 5.0
+const FRAME_THICKNESS_MIN := 3.0
+## 額縁の外側に置く暗い輪郭と面取りも、額縁の太さに合わせて細くする
+## (額縁だけ細くすると、今度は輪郭線が目立って同じ印象になる)。
+const OUTLINE_WIDTH := 2.0
+const OUTLINE_WIDTH_MIN := 1.0
 
 ## 真鍮グラデーションのストップ位置。ハイライトは元画像実測で上端のごく細い帯にしか
 ## 出ていないため、0.0→FRAME_HIGHLIGHT_STOPの区間を狭く取る
@@ -35,6 +49,7 @@ const GRAIN_ALPHA_PANEL := 0.045
 
 const BEVEL_WIDTH_FRAME := 1.5
 const BEVEL_WIDTH_PANEL := 1.0
+const BEVEL_WIDTH_MIN := 0.75
 const INNER_SHADOW_LAYERS := 5
 const INNER_SHADOW_ALPHA := 0.4
 const INNER_SHADOW_PRESSED_SCALE := 1.6
@@ -134,22 +149,24 @@ func _draw_rounded_layers(ci: RID, rect: Rect2, disabled: bool, hover: bool, pre
 		ci, outline_points, rect, [[0.0, outline_color], [1.0, outline_color]]
 	)
 
-	var frame_rect := rect.grow(-2.0)
-	var frame_radii := _shrink_radii(radii, 2.0)
+	var thickness := _frame_thickness(rect)
+	var outline := _outline_width(thickness)
+	var frame_rect := rect.grow(-outline)
+	var frame_radii := _shrink_radii(radii, outline)
 	var frame_points := UiPaint.rounded_rect_points(
 		frame_rect, frame_radii[0], frame_radii[1], frame_radii[2], frame_radii[3], CORNER_SEGMENTS
 	)
-	_draw_frame(ci, frame_points, frame_rect, disabled, pressed)
+	_draw_frame(ci, frame_points, frame_rect, disabled, pressed, thickness)
 
-	var panel_rect := rect.grow(-FRAME_THICKNESS)
+	var panel_rect := rect.grow(-thickness)
 	if pressed:
 		panel_rect.position.y += PANEL_PRESSED_SINK
 		panel_rect.size.y -= PANEL_PRESSED_SINK
-	var panel_radii := _shrink_radii(radii, FRAME_THICKNESS)
+	var panel_radii := _shrink_radii(radii, thickness)
 	var panel_points := UiPaint.rounded_rect_points(
 		panel_rect, panel_radii[0], panel_radii[1], panel_radii[2], panel_radii[3], CORNER_SEGMENTS
 	)
-	_draw_panel(ci, panel_points, panel_rect, disabled, hover, pressed, panel_radii[0])
+	_draw_panel(ci, panel_points, panel_rect, disabled, hover, pressed, panel_radii[0], thickness)
 
 
 ## CHEVRON_LEFT(back_nav、左向き矢印型)専用の描画。角丸ポリゴンではなく
@@ -171,22 +188,24 @@ func _draw_chevron_layers(ci: RID, rect: Rect2, disabled: bool, hover: bool, pre
 		ci, outline_points, rect, [[0.0, outline_color], [1.0, outline_color]]
 	)
 
-	var frame_rect := rect.grow(-2.0)
-	var frame_radius: float = maxf(base_radius - 2.0, 0.0)
+	var thickness := _frame_thickness(rect)
+	var outline := _outline_width(thickness)
+	var frame_rect := rect.grow(-outline)
+	var frame_radius: float = maxf(base_radius - outline, 0.0)
 	var frame_points := UiPaint.chevron_left_points(
 		frame_rect, frame_radius, CORNER_SEGMENTS, CHEVRON_SHOULDER_RATIO
 	)
-	_draw_frame(ci, frame_points, frame_rect, disabled, pressed)
+	_draw_frame(ci, frame_points, frame_rect, disabled, pressed, thickness)
 
-	var panel_rect := rect.grow(-FRAME_THICKNESS)
+	var panel_rect := rect.grow(-thickness)
 	if pressed:
 		panel_rect.position.y += PANEL_PRESSED_SINK
 		panel_rect.size.y -= PANEL_PRESSED_SINK
-	var panel_radius: float = maxf(base_radius - FRAME_THICKNESS, 0.0)
+	var panel_radius: float = maxf(base_radius - thickness, 0.0)
 	var panel_points := UiPaint.chevron_left_points(
 		panel_rect, panel_radius, CORNER_SEGMENTS, CHEVRON_SHOULDER_RATIO
 	)
-	_draw_panel(ci, panel_points, panel_rect, disabled, hover, pressed, NO_INNER_SHADOW)
+	_draw_panel(ci, panel_points, panel_rect, disabled, hover, pressed, NO_INNER_SHADOW, thickness)
 
 
 ## 形状(角丸/円/ピル)に応じた4隅[左上, 右上, 右下, 左下]の半径を返す。
@@ -207,6 +226,25 @@ func _effective_corner_radius(rect: Rect2) -> float:
 	return min(CORNER_RADIUS, rect.size.y * CORNER_RADIUS_HEIGHT_RATIO)
 
 
+## 額縁の太さ。短辺に比例させ、既定の大きさ(高さ56px前後)ではこれまでどおり
+## FRAME_THICKNESS になるよう比率を選んである。
+func _frame_thickness(rect: Rect2) -> float:
+	var short_side: float = min(rect.size.x, rect.size.y)
+	var thickness := remap(
+		short_side, FRAME_SMALL_SIZE, FRAME_REFERENCE_SIZE, FRAME_SMALL_THICKNESS, FRAME_THICKNESS
+	)
+	return clampf(thickness, FRAME_THICKNESS_MIN, FRAME_THICKNESS)
+
+
+## 暗い輪郭の太さ。額縁と同じ比率で細くする。
+func _outline_width(frame: float) -> float:
+	return maxf(OUTLINE_WIDTH * frame / FRAME_THICKNESS, OUTLINE_WIDTH_MIN)
+
+
+func _bevel_width(base: float, frame: float) -> float:
+	return maxf(base * frame / FRAME_THICKNESS, BEVEL_WIDTH_MIN)
+
+
 static func _shrink_radii(radii: PackedFloat32Array, amount: float) -> PackedFloat32Array:
 	var result := PackedFloat32Array()
 	for r in radii:
@@ -218,7 +256,12 @@ static func _shrink_radii(radii: PackedFloat32Array, amount: float) -> PackedFlo
 ## 「褪せた真鍮」グラデーションで金属らしさを出し、面取り・グレインを重ねる。
 ## pointsは呼び出し側(角丸/CHEVRON)で生成済みの外周点列を渡す。
 func _draw_frame(
-	ci: RID, points: PackedVector2Array, rect: Rect2, disabled: bool, pressed: bool
+	ci: RID,
+	points: PackedVector2Array,
+	rect: Rect2,
+	disabled: bool,
+	pressed: bool,
+	thickness: float = FRAME_THICKNESS
 ) -> void:
 	var stops := [
 		[0.0, UiPalette.BRASS_HIGHLIGHT],
@@ -244,7 +287,7 @@ func _draw_frame(
 	if disabled:
 		light = UiPaint.disabled_tone(light)
 		dark = UiPaint.disabled_tone(dark)
-	UiPaint.draw_bevel(ci, points, light, dark, BEVEL_WIDTH_FRAME, pressed)
+	UiPaint.draw_bevel(ci, points, light, dark, _bevel_width(BEVEL_WIDTH_FRAME, thickness), pressed)
 
 	if not disabled:
 		UiPaint.apply_grain(ci, rect, GRAIN_ALPHA_FRAME)
@@ -261,7 +304,8 @@ func _draw_panel(
 	disabled: bool,
 	hover: bool,
 	pressed: bool,
-	shadow_radius: float
+	shadow_radius: float,
+	thickness: float = FRAME_THICKNESS
 ) -> void:
 	var top_color := UiPalette.PANEL_SLATE_TOP
 	var bottom_color := UiPalette.PANEL_SLATE_BOTTOM
@@ -295,7 +339,9 @@ func _draw_panel(
 
 	var bevel_light := top_color.lightened(PANEL_LIGHTEN)
 	var bevel_dark := bottom_color.darkened(PANEL_DARKEN)
-	UiPaint.draw_bevel(ci, points, bevel_light, bevel_dark, BEVEL_WIDTH_PANEL, pressed)
+	UiPaint.draw_bevel(
+		ci, points, bevel_light, bevel_dark, _bevel_width(BEVEL_WIDTH_PANEL, thickness), pressed
+	)
 
 
 ## ホバー時、外周へ広がる淡い琥珀のグロー(複数リング、外側ほど薄い)を描く(角丸/円/ピル用)。
@@ -360,7 +406,8 @@ func _draw_emblem_layer(ci: RID, outer_rect: Rect2, body_rect: Rect2, disabled: 
 ## 円弧の制約を使わず、矩形の余白だけで単純に収める(現状UPPERはCIRCLEでのみ使うため
 ## 保守的なフォールバックで十分)。
 func _draw_emblem_upper(ci: RID, outer_rect: Rect2, body_rect: Rect2) -> void:
-	var panel_rect := body_rect.grow(-FRAME_THICKNESS)
+	var thickness := _frame_thickness(body_rect)
+	var panel_rect := body_rect.grow(-thickness)
 	if panel_rect.size.x <= 0.0 or panel_rect.size.y <= 0.0:
 		return
 
@@ -374,7 +421,7 @@ func _draw_emblem_upper(ci: RID, outer_rect: Rect2, body_rect: Rect2) -> void:
 
 	var panel_radius := 0.0
 	if shape == Shape.CIRCLE:
-		panel_radius = maxf(_corner_radii(body_rect)[0] - FRAME_THICKNESS, 0.0)
+		panel_radius = maxf(_corner_radii(body_rect)[0] - thickness, 0.0)
 
 	if panel_radius > margin:
 		# 紋章の外接正方形(半径he)の角が、パネル中心から見て常に一番遠い点になる。

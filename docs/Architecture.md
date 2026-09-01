@@ -493,6 +493,12 @@ Main
   - `Shape`: ROUNDED_RECT / CIRCLE / PILL(両端が半円) / CHEVRON_LEFT(左辺が尖った五角形)
   - `Emblem`: NONE / HOURGLASS / SWAP_ARROWS / BENCH / CHECK。描画実体は`UiPaint`側のstatic関数に置き、太い暗色の輪郭+真鍮の塗り+上側のハイライトによる浮き彫り表現とする(細い線画にしない)
   - `EmblemPlacement`: CENTER / UPPER(下半分にテキストが入る) / RIGHT_INSET / TOP_BADGE(上端から少し飛び出す円形の徽章)
+- **枠・輪郭・面取りの太さは、要素の大きさに合わせて細くする**。`FRAME_THICKNESS`(12px)は
+  高さ56px前後のボタンに合わせた値で、これを高さ26pxの小さなボタン(帯の「−」「+」)へ
+  そのまま掛けると枠だけで面積の半分近くを占め、線が太すぎる印象になる。
+  `_frame_thickness()` が「高さ56pxで12px / 高さ34pxで5px」の2点を通る直線として求め、
+  輪郭(`_outline_width()`)と面取り(`_bevel_width()`)もその比で連動させる。
+  **単純な短辺比例では小さい側が細くならない**ため、2点を通る直線にしている
 - 紋章とテキストの重なりは、`.tres`側で個別に余白を指定するのではなく **`_get_content_margin()`をオーバーライドし、`shape`と`emblem_placement`から自動的に決まるようにする**。これにより`.tres`は「どのグループが何であるか」だけを持つ単純な状態に保てる
 - グループごとの割り当ては次の通り。v5.0で使うのは`back_nav`/`confirm_save`/`nav_tab`/`icon_square`/`wide_text`の5つで、対局画面の丸いアクションボタン(`action_*`)と再生コントロール(`transport_round`)は画面ごと撤去したため削除済み
 
