@@ -37,7 +37,7 @@ v5.0のカードが使う語彙を1箇所へ集める。旧ルールの `GameEnu
 | `NAMED`(const) | **語として見せる**キーワード。`GUARD` / `GLASS` / `PIERCE` / `QUICK` の4つ |
 | `Trigger` | `ON_PLAY`(設置)/ `ON_FLIP`(反転)/ `ON_DEATH`(余砂)/ `ON_TURN_END`(落砂)/ `ON_DAMAGED`(被弾) |
 | `EffectTarget` | `SELF` / `ENEMY_UNIT` / `ALL_ENEMY_UNITS` / `ALL_ALLY_UNITS` / `OPPONENT_PLAYER` / `OWN_PLAYER` / **`ALLY_UNIT`** |
-| `EffectType` | `DAMAGE_PLAYER` / `DAMAGE_UNIT` / `DESTROY_UNIT` / `SWAP_STATS` / `ADD_TOTAL` / `DROP_SAND` / `DRAW` / `HEAL_PLAYER` / `DAMAGE_PLAYER_PER_ENEMY_UNIT` / **`ADD_ATTACK`** / **`SUMMON`** / **`GRANT_KEYWORD`** / **`SILENCE`** |
+| `EffectType` | `DAMAGE_PLAYER` / `DAMAGE_UNIT` / `DESTROY_UNIT` / `SWAP_STATS` / `ADD_TOTAL` / `DROP_SAND` / `DRAW` / `HEAL_PLAYER` / `DAMAGE_PLAYER_PER_ENEMY_UNIT` / `ADD_ATTACK` / `SUMMON` / `GRANT_KEYWORD` / `SILENCE` / **`RETURN_TO_HAND`** |
 
 **`CardEnums` の enum へ新しい値を足すときは、必ず末尾へ置く**(下記11章)。
 
@@ -75,6 +75,7 @@ UI側に散らさないため、語と enum の対応はここだけが持つ。
 | `rules_text` | String | 効果欄に出す一文。キーワードだけのカードは空 |
 | `cannot_attack` | bool | 攻撃できない代わりに総量が大きい駒(GameDesign.md 6章)。守護と違い**語にしない**ため `keywords` ではなくフラグで持つ |
 | `is_token` | bool | 効果で場に出る砂時計。**`CardLibrary.all_cards()` が返さない**ため、デッキ編集にも一覧にも現れない |
+| `is_spell` | bool | 砂術(GameDesign.md 6章)。**盤面へ出ず、効果だけを起こして墓地へ行く**。true のとき `total_sand` / `keywords` / `cannot_attack` は使わない |
 | `icon_upright` / `icon_falling` / `icon_fallen` | Texture2D | 体力が多い/半々/攻撃力に偏った状態のイラスト |
 | `emblem` | Texture2D | そのカードだけの紋章(モチーフのアイコン)。白のシルエットで持ち、色は描画側が決める |
 
@@ -227,6 +228,39 @@ UIに依存しない、対局ルールそのものを扱う層。
 守護がいれば守護の枠だけを、いなければ全枠を返し、`can_attack_player()` は守護が1体でも
 いれば false を返す。
 
+### 3.1.1 砂術(GameDesign.md 6章)
+
+**砂術のために新しいクラスを作らない。**盤面へ出ないだけで、効果の解決も棋譜への
+記録もオンラインでの搬送も既存の経路をそのまま通せる。足すのは次の3点だけ。
+
+| 足すもの | 内容 |
+|---|---|
+| `CardData.is_spell` | 砂術かどうか。`total_sand` は 0 のまま使わない |
+| `MatchState.can_cast()` / `cast_spell()` | 手札の1枚を撃つ。**空き枠を要求しない** |
+| `MatchAction.cast()` | `{"type": "cast", "side":, "hand_index":, "target": {...}}` |
+
+- **`play_card()` へ相乗りさせない。**`can_play()` は空き枠が無いと必ず false を返し
+  (GameDesign.md 3章)、`play_card()` は枠へ `CardInstance` を置くことが前提になっている。
+  ここへ「砂術なら枠を見ない」という分岐を足すと、**砂時計を出す経路の条件が砂術のために
+  緩む**。逆に `can_play()` は「砂術は出せない」を1行足して弾く
+- **効果の解決は `CardEffectResolver` をそのまま使う。**盤面に置かない `CardInstance` を
+  その場で作って `resolve(side, unit, Trigger.ON_PLAY, hint)` へ渡す。`_slot_of()` が
+  -1 を返すため、**光の筋の出どころが陣地側になる**——これは余砂で既に通っている経路であり、
+  砂術のために `_beam()` を変える必要がない
+- **トリガーは `ON_PLAY` を流用し、新しい値を足さない。**砂術は1つしかトリガーを持たず、
+  `ON_PLAY` は既に「カードを使ったとき」を意味している。表示だけは前置き(「場に出したとき」)を
+  省く(`CardEffectPreview` / `CardDetailPanel`)
+- **`EffectTarget.SELF` は砂術では使わない。**`_targets()` が `_slot_of()` の -1 を見て
+  空を返すため何も起こらない。`.tres` を作るときに指定しないこと
+- 撃った砂術は `graveyard` へ積む。**盤面を経由しないため `unit_played` は出さず**、
+  新しいシグナル `spell_cast(side, card)` を出す(音と演出の受け口)
+
+**`RETURN_TO_HAND` は砂術のためだけに足す唯一の `EffectType`。**盤面から駒を取り除いて
+持ち主の手札へ戻す。**破壊ではないため `ON_DEATH`(余砂)は発火しない**。
+手札が上限に達している場合の扱いは持たない(このゲームは手札の上限を定義していない)。
+**戻すのは `CardData` であり、`CardInstance` の状態(受けたダメージ・与えられたキーワード)は
+すべて失われる**——手札へ戻ったカードは新品の1枚として扱う。
+
 ### 3.2 `CardEffectResolver`(`scripts/logic/card_effect_resolver.gd`, RefCounted)
 
 `CardEffectData` の評価と適用を1箇所に集約する。`MatchState` が生成して保持し、
@@ -292,6 +326,21 @@ UIに依存しない、対局ルールそのものを扱う層。
 | `CardViewStrike`(`scripts/ui/card_view_strike.gd`) | 攻撃の演出の段取り(寄る→溜める→当てる→戻る)。**`CardView` が1000行の上限に達したため切り出した**。分ける線は「駒の見た目」と「殴りに行く段取り」に引き、状態(offset / angle / flash)と描画は `CardView` 側に残す(絵に掛ける変換は描画のたびに要るため) |
 | `CardMatchReplay`(`scripts/ui/card_match_replay.gd`) | リプレイの再生コントロール。**任意の手数の局面は初期状態から手を並べ直して作る** |
 | `CardMatchOnline`(`scripts/ui/card_match_online.gd`) | オンライン対戦の3つの入口(開始・切断からの復帰・観戦)。`card_match_screen.gd` が1000行の上限に達したため切り出した。画面側には `main.gd` から呼ぶ薄い委譲だけが残る |
+
+**砂術は `CardView.Mode.HAND` の中の分岐として描く**(GameDesign.md 9章)。
+`Mode.SPELL` を足さないのは、**砂術に「場での見た目」が存在しない**ため。
+モードは「手札か場か」を表す軸であり、そこへカードの種類を混ぜると、
+`Mode.SPELL` と `Mode.BOARD` の組み合わせという有り得ない状態が表現できてしまう。
+違いは3つだけで、いずれも `card.is_spell` を見て切り替える。
+
+- 砂時計の絵を描かず、**紋章を中央へ大きく**置く
+- **総量のバッジを出さない**(コストの左上だけ)
+- 枠の色を変える(`UiPalette` へ砂術用の1色を足す)
+
+**砂術は空き枠が無くても暗くしない**(GameDesign.md 6章の例外)。
+`CardMatchScreen` が手札の暗転を決めるときに `is_spell` を見て枠の判定を飛ばす。
+押したときは枠の強調ではなく、対象を取る砂術なら対象選択(`CardMatchSelection.TARGETING`)へ、
+取らないならその場で `cast_spell()` を呼ぶ。
 
 **砂時計の絵は、枠へ引き伸ばさず縦横比のまま収める**(`CardView._fit_art()`)。絵のキャンバスは
 400x513(`state_falling` だけ 415x532)で、正方形の枠へ `draw_texture_rect()` すると横に潰れる。
@@ -1255,6 +1304,11 @@ HTTPRequest をぶら下げると送信の途中で巻き添えに消える。�
 - 1手番の中の順序は「場に出す → 攻撃する → 反転する → 終える」の貪欲法。**攻撃してから
   反転する**のが要点で、逆にすると攻撃力の高い状態を捨ててしまう。価値の物差しは
   `CardInstance.lifetime_damage()`(GameDesign.md 1章)を使う
+- **砂術は「出す」の中で一緒に選ぶ。**1手番の順序へ新しい段を足さず、`_choose_play()` が
+  手札の砂時計と砂術を同じ物差しで比べる。物差しは**その1枚で動く生涯ダメージの差**とし、
+  砂時計は `lifetime_damage()`、砂術は「効果を適用したら盤面の評価がいくつ変わるか」を
+  仮の適用で見積もる。**対象を取る砂術は、対象が1体もいなければ撃たない**
+  (自動選択に任せると、対象のいない除去を無駄撃ちする)
 - マリガンの選択は `choose_mulligan()` が持つ(コスト4以上を戻す)
 - CPUの手番になったら `CardMatchScreen` が `CPU_THINK_SECONDS` の間合いを置いてから
   1手だけ適用し、また間合いを置く。**まとめて指すと何が起きたか追えない**ため1手ずつ進める
