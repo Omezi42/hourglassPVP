@@ -17,6 +17,11 @@ const COST_CENTER_X := 24.0
 const COST_RADIUS := 14.0
 const NAME_LEFT := 46.0
 const NAME_FONT_SIZE := 18
+## 総量は名前の右へ添える(GameDesign.md 9章)。30枚を上から見たときに、コストだけでなく
+## 規模も読めるようにするため。**砂術は総量を持たないため「砂術」と出す**
+## (空欄にすると総量0のカードと見分けが付かない)。
+const TOTAL_FONT_SIZE := 15
+const TOTAL_GAP := 10.0
 const BUTTON_SIZE := Vector2(32.0, 32.0)
 const BUTTON_GAP := 6.0
 const BADGE_SIZE := Vector2(36.0, 26.0)
@@ -101,15 +106,17 @@ func _draw() -> void:
 	)
 	_draw_art()
 	_draw_cost()
+	var name_text: String = card.display_name if card != null else ""
 	draw_string(
 		_font,
 		Vector2(NAME_LEFT, size.y * 0.5 + 6.0),
-		card.display_name if card != null else "",
+		name_text,
 		HORIZONTAL_ALIGNMENT_LEFT,
 		_art_rect().size.x,
 		NAME_FONT_SIZE,
 		UiPalette.TEXT_OFFWHITE
 	)
+	_draw_total(name_text)
 	if count >= 2:
 		_draw_badge()
 	draw_polyline(
@@ -150,6 +157,28 @@ func _draw_emblem_art() -> void:
 		return
 	var dest := Rect2(area.end.x - side, area.position.y + (area.size.y - side) * 0.5, side, side)
 	draw_texture_rect(card.emblem, dest, false, Color(1, 1, 1, ART_ALPHA))
+
+
+## 総量を名前のすぐ右へ置く。名前の実寸を測ってから並べるため、長さの違うカードでも
+## 間隔が揃う。
+func _draw_total(name_text: String) -> void:
+	if card == null:
+		return
+	var text: String = "砂術" if card.is_spell else "総量 %d" % card.total_sand
+	var name_width: float = (
+		_font.get_string_size(name_text, HORIZONTAL_ALIGNMENT_LEFT, -1, NAME_FONT_SIZE).x
+	)
+	var left := NAME_LEFT + name_width + TOTAL_GAP
+	var area := _art_rect()
+	draw_string(
+		_font,
+		Vector2(left, size.y * 0.5 + 5.0),
+		text,
+		HORIZONTAL_ALIGNMENT_LEFT,
+		maxf(area.end.x - left, 0.0),
+		TOTAL_FONT_SIZE,
+		UiPalette.GLOW_AMBER
+	)
 
 
 func _draw_cost() -> void:

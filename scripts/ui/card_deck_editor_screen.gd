@@ -18,10 +18,13 @@ const GRID_GAP := 12
 const CURVE_HEIGHT := 140.0
 ## `CardDetailPanel` の低背版の大きさ。ここを小さくしても最小サイズで押し返されるため揃える。
 const DETAIL_SIZE := CardDetailPanel.COMPACT_SIZE
-## **詳細は指しているカードの隣ではなく、画面の右上へ固定して出す**(GameDesign.md 9章)。
-## カーソルの近くへ出すと、次に見たいカードの上にパネルが被って選びづらい。
-## ヘッダーの主アクションや編成中の欄の上端に重なるのは許容する。
-const DETAIL_POSITION := Vector2(SIDE_RECT.position.x, ScreenHeader.OUTER_MARGIN)
+## **詳細は指しているものと反対のカラムへ出す**(GameDesign.md 9章)。
+## 同じ側へ出すと、パネルがカーソルの下の帯を覆った瞬間にホバーが外れ、
+## 出したり消したりを繰り返す。ヘッダーの主アクションや反対側の欄に重なるのは許容する。
+const DETAIL_POSITION_RIGHT := Vector2(SIDE_RECT.position.x, ScreenHeader.OUTER_MARGIN)
+const DETAIL_POSITION_LEFT := Vector2(GRID_RECT.position.x, ScreenHeader.CONTENT_TOP)
+## カードから外れてから詳細を消すまでの猶予。隣のカードへ移る途中で点滅させないため。
+const DETAIL_HIDE_DELAY := 0.15
 
 var _header: ScreenHeader
 var _filter: CardDeckFilter
@@ -32,7 +35,7 @@ var _bands: VBoxContainer
 var _progress: Label
 var _curve: CardManaCurve
 var _detail: CardDetailPanel
-var _keyword_popup: KeywordPopup
+var _detail_hide_timer: Timer
 var _preset_picker: CardPresetPicker
 var _code_panel: CardDeckCodePanel
 ## 一覧に並べるカード。**コスト順**で固定する(GameDesign.md 9章の既定と揃える)。
@@ -82,8 +85,6 @@ func _build() -> void:
 	_filter = CardDeckFilter.new()
 	_filter.changed.connect(_apply_filter)
 	add_child(_filter)
-	_keyword_popup = KeywordPopup.new()
-	add_child(_keyword_popup)
 	_preset_picker = CardPresetPicker.new()
 	_preset_picker.picked.connect(_on_preset_picked)
 	add_child(_preset_picker)
@@ -157,6 +158,8 @@ func _build_grid() -> void:
 		# 並べて見比べる画面では守護だけ枠を太くしない(GameDesign.md 9章)。
 		view.guard_frame = false
 		view.pressed.connect(_on_card_pressed)
+		view.hovered.connect(_on_card_hovered)
+		view.mouse_exited.connect(_on_hover_left)
 		_grid.add_child(view)
 		_card_views.append(view)
 
@@ -210,12 +213,22 @@ func _build_side() -> void:
 func _build_detail() -> void:
 	_detail = CardDetailPanel.new()
 	_detail.compact = true
+	# 語のボタンと実演を持たせない(GameDesign.md 17章)。ホバーで出して外れたら消える
+	# パネルの中に押しに行く先を置くと、そこへカーソルを動かした時点で消えてしまう。
+	_detail.interactive = false
 	_detail.size = DETAIL_SIZE
-	_detail.position = DETAIL_POSITION
+	_detail.position = DETAIL_POSITION_RIGHT
 	_detail.visible = false
-	_detail.keyword_pressed.connect(func(entry: Dictionary) -> void: _keyword_popup.open(entry))
-	_detail.gui_input.connect(_on_detail_gui_input)
+	# **パネルはホバーを奪わない。**反対のカラムへ出す以上、下のカードや帯の上へ乗るため、
+	# 塞ぐと「パネルに隠れたカードを指すと消える」ことになる。
+	_detail.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_detail)
+
+	_detail_hide_timer = Timer.new()
+	_detail_hide_timer.one_shot = true
+	_detail_hide_timer.wait_time = DETAIL_HIDE_DELAY
+	_detail_hide_timer.timeout.connect(_hide_detail)
+	add_child(_detail_hide_timer)
 
 
 # --- 表示 ---------------------------------------------------------------
@@ -263,7 +276,8 @@ func _refresh_bands() -> void:
 		band.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		band.add_pressed.connect(_on_band_add)
 		band.remove_pressed.connect(_on_band_remove)
-		band.pressed.connect(_on_band_pressed)
+		band.mouse_entered.connect(_on_band_hovered.bind(band))
+		band.mouse_exited.connect(_on_hover_left)
 		_bands.add_child(band)
 		_band_pool.append(band)
 	for i in _band_pool.size():
@@ -295,66 +309,46 @@ func _count_of(card: CardData) -> int:
 	return found
 
 
-# --- 詳細(クリック時のみ表示) ------------------------------------------
+# --- 詳細(ホバー中だけ表示) --------------------------------------------
 
 
-## 出す場所は常に画面の右上で、指しているカードの位置では動かさない
-## (カーソルの近くへ出すと隣のカードが隠れて選びづらいため)。
-func _show_detail(card: CardData) -> void:
+## 指しているものと反対のカラムへ出す(GameDesign.md 9章)。
+func _show_detail(card: CardData, to_right: bool) -> void:
 	if card == null:
 		return
+	if _detail_hide_timer != null:
+		_detail_hide_timer.stop()
 	_detail.show_card(card)
-	_detail.position = DETAIL_POSITION
+	_detail.position = DETAIL_POSITION_RIGHT if to_right else DETAIL_POSITION_LEFT
 	_detail.visible = true
 
 
 func _hide_detail() -> void:
+	if _detail_hide_timer != null:
+		_detail_hide_timer.stop()
 	_detail.visible = false
 
 
-func _on_detail_gui_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton:
-		var click := event as InputEventMouseButton
-		if click.pressed and click.button_index == MOUSE_BUTTON_RIGHT:
-			_hide_detail()
-			get_viewport().set_input_as_handled()
+## カードから外れた。隣へ移る途中の点滅を避けるため、すぐには消さず猶予を置く。
+func _on_hover_left() -> void:
+	if _detail_hide_timer != null and _detail.visible:
+		_detail_hide_timer.start()
 
 
-func _input(event: InputEvent) -> void:
-	if _detail == null or not _detail.visible:
-		return
-	if (
-		(_keyword_popup != null and _keyword_popup.visible)
-		or (_filter != null and _filter.visible)
-		or (_preset_picker != null and _preset_picker.visible)
-		or (_code_panel != null and _code_panel.visible)
-	):
-		return
-	if event.is_action_pressed("ui_cancel"):
-		_hide_detail()
-		get_viewport().set_input_as_handled()
-		return
-	if event is InputEventMouseButton:
-		var click := event as InputEventMouseButton
-		if click.pressed:
-			if click.button_index == MOUSE_BUTTON_RIGHT:
-				_hide_detail()
-				get_viewport().set_input_as_handled()
-			elif click.button_index == MOUSE_BUTTON_LEFT:
-				if not _detail.get_global_rect().has_point(click.position):
-					_hide_detail()
+func _on_card_hovered(view: CardView) -> void:
+	_show_detail(view.card, true)
+
+
+## 帯は使い回すため、ホバーの時点で `card` を読む(接続時に束ねると、まだ空の帯を掴む)。
+func _on_band_hovered(band: CardDeckBand) -> void:
+	_show_detail(band.card, false)
 
 
 # --- 操作 ---------------------------------------------------------------
 
 
 func _on_card_pressed(view: CardView) -> void:
-	_show_detail(view.card)
 	_add_card(view.card)
-
-
-func _on_band_pressed(card: CardData) -> void:
-	_show_detail(card)
 
 
 func _on_band_add(card: CardData) -> void:

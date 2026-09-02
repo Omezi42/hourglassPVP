@@ -8,9 +8,14 @@ extends PanelContainer
 ## 幅を右カラムぶんに絞り、大きなイラストを捨てて実演と効果文を縦に積む。イラストは
 ## 同じ画面の一覧で既に見えており、ここで繰り返す価値が低い。
 ##
-## **効果欄の語は押せる。**押すと `keyword_pressed` を出し、画面側が `KeywordPopup` を開く
-## (GameDesign.md 17章)。ポップ自体をここで持たないのは、対局中はこのパネルが盤面の上の
-## 小さなノードとして置かれ、そこへ全画面の暗幕を持たせられないため。
+## **効果欄の語が押せるのは `interactive` のときだけ**で、これを立てるのは砂時計一覧だけ
+## (GameDesign.md 17章)。押すと `keyword_pressed` を出し、画面側が `KeywordPopup` を開く。
+## ポップ自体をここで持たないのは、パネルが画面の上の小さなノードとして置かれ、
+## そこへ全画面の暗幕を持たせられないため。
+##
+## **デッキ編集と対局画面は `interactive = false` で使う。**どちらもホバーで出して外れたら
+## 消えるため、**パネルの中に押しに行く先があると、そこへカーソルを動かした時点で消える**
+## (GameDesign.md 9章)。語のボタンを文へ落とし、実演(`CardEffectPreview`)も作らない。
 
 signal keyword_pressed(entry: Dictionary)
 
@@ -31,6 +36,9 @@ const TERM_FONT_SIZE := 15
 
 ## 横並びの詰めた表示にするか。`add_child()` より前に設定する。
 var compact := false
+## 語のボタンと実演を出すか。**砂時計一覧だけが true**(GameDesign.md 17章)。
+## `add_child()` より前に設定する。
+var interactive := true
 
 var _icon: TextureRect
 var _emblem: TextureRect
@@ -68,7 +76,8 @@ func show_card(card: CardData) -> void:
 	else:
 		_stats.text = "コスト %d  /  総量 %d" % [card.cost, card.total_sand]
 	_fill_body(card)
-	_preview.show_card(card)
+	if _preview != null:
+		_preview.show_card(card)
 
 
 func clear() -> void:
@@ -79,7 +88,8 @@ func clear() -> void:
 	_stats.text = ""
 	_clear_body()
 	_body.add_child(_make_line("カードを選ぶと内容を表示します。"))
-	_preview.clear()
+	if _preview != null:
+		_preview.clear()
 
 
 ## **語として見せるキーワードは語のボタンと説明を並べる**(語だけでは初見に伝わらない)。
@@ -165,7 +175,14 @@ func _make_line(text: String) -> Label:
 
 ## 語のボタンと、その説明を横に並べた1行。`override_text` が空でなければ説明の代わりに使う
 ## (トリガーの行では、カード固有の効果文をそのまま読ませたいため)。
-func _make_term_row(entry: Dictionary, override_text: String = "") -> HBoxContainer:
+## `interactive` でないときはボタンを持たず、「【語】 説明」の1行の文にする。
+func _make_term_row(entry: Dictionary, override_text: String = "") -> Control:
+	var body: String = (
+		override_text if not override_text.is_empty() else (KeywordEntries.description(entry))
+	)
+	if not interactive:
+		return _make_line("【%s】 %s" % [KeywordEntries.title(entry), _strip_term(body, entry)])
+
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 
@@ -175,13 +192,22 @@ func _make_term_row(entry: Dictionary, override_text: String = "") -> HBoxContai
 	button.pressed.connect(func() -> void: keyword_pressed.emit(entry))
 	row.add_child(button)
 
-	var text: String = (
-		override_text if not override_text.is_empty() else (KeywordEntries.description(entry))
-	)
-	var label := _make_line(text)
+	var label := _make_line(body)
 	label.custom_minimum_size = Vector2(maxf(_body_width - TERM_BUTTON_SIZE.x - 8.0, 80.0), 0)
 	row.add_child(label)
 	return row
+
+
+## 効果の文は「余砂:モートを1体出す」のように語を頭に持つ。【】で括って前へ出す以上、
+## 文の側の語は取り除く(そのままだと「【余砂】 余砂:…」と2度読ませることになる)。
+static func _strip_term(text: String, entry: Dictionary) -> String:
+	var title: String = KeywordEntries.title(entry)
+	if not text.begins_with(title):
+		return text
+	var rest := text.substr(title.length())
+	while not rest.is_empty() and (rest[0] == ":" or rest[0] == "：" or rest[0] == " "):
+		rest = rest.substr(1)
+	return text if rest.is_empty() else rest
 
 
 func _build() -> void:
@@ -200,9 +226,10 @@ func _build() -> void:
 	_stats.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(_stats)
 
-	_preview = CardEffectPreview.new()
-	_preview.custom_minimum_size = Vector2(0, PREVIEW_HEIGHT)
-	column.add_child(_preview)
+	if interactive:
+		_preview = CardEffectPreview.new()
+		_preview.custom_minimum_size = Vector2(0, PREVIEW_HEIGHT)
+		column.add_child(_preview)
 
 	column.add_child(_make_body_scroll(PANEL_SIZE.x - 80))
 
@@ -222,10 +249,11 @@ func _build_compact() -> void:
 	_stats.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	header.add_child(_stats)
 
-	_preview = CardEffectPreview.new()
-	_preview.custom_minimum_size = Vector2(COMPACT_TEXT_WIDTH, PREVIEW_HEIGHT)
-	_preview.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	column.add_child(_preview)
+	if interactive:
+		_preview = CardEffectPreview.new()
+		_preview.custom_minimum_size = Vector2(COMPACT_TEXT_WIDTH, PREVIEW_HEIGHT)
+		_preview.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		column.add_child(_preview)
 
 	column.add_child(_make_body_scroll(COMPACT_TEXT_WIDTH))
 

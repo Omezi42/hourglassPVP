@@ -23,8 +23,6 @@ const TABLE_RECT := Rect2(190, 74, 900, 372)
 const CPU_THINK_SECONDS := 0.5
 ## 反転・コイン・ターン終了を縦に並べる右の列。
 const ACTION_COLUMN_X := 1108.0
-const DETAIL_TOP := 40.0
-const DETAIL_MARGIN := 12.0
 const TURN_END_BUTTON_SIZE := Vector2(148, 76)
 const TURN_END_BUTTON_TOP := 290.0
 const ACTION_BUTTON_SIZE := Vector2(148, 42)
@@ -87,8 +85,7 @@ var _match_id := ""
 var _replay: CardMatchReplay = null
 var _interactive := true
 var _mulligan: CardMatchMulligan
-var _detail: CardDetailPanel
-var _keyword_popup: KeywordPopup
+var _detail: CardMatchDetail
 var _own_deck: Array = []
 var _tutorial: CardMatchTutorial
 var _outcome: CardMatchOutcome
@@ -350,6 +347,8 @@ func _build() -> void:
 		view.visible = false
 		view.hover_zoom = true
 		view.pressed.connect(_on_hand_pressed)
+		view.hovered.connect(_on_view_hovered)
+		view.mouse_exited.connect(_on_view_left)
 		add_child(view)
 		_hand_views.append(view)
 	# 反転だけは選んだ駒のすぐ下へ出す。位置は `_refresh_buttons()` が毎回決める。
@@ -385,10 +384,7 @@ func _build() -> void:
 	# 光の筋は盤面の駒より手前、ログ・結果パネルより背面に置く。
 	_flip_beam = CardFlipBeam.new()
 	add_child(_flip_beam)
-	_detail = CardDetailPanel.new()
-	_detail.visible = false
-	_detail.gui_input.connect(_on_detail_gui_input)
-	add_child(_detail)
+	_detail = CardMatchDetail.new(self)
 	# 通信待ちの文言と対象選択の案内は、駒より手前へ出すため独立したノードで描く。
 	_status = CardMatchStatus.new()
 	add_child(_status)
@@ -410,10 +406,6 @@ func _build() -> void:
 	add_child(_log)
 	_pile = CardPileViewer.new()
 	add_child(_pile)
-	# 語の意味はポップで引ける(GameDesign.md 17章)。詳細より手前へ重ねる。
-	_keyword_popup = KeywordPopup.new()
-	add_child(_keyword_popup)
-	_detail.keyword_pressed.connect(func(entry: Dictionary) -> void: _keyword_popup.open(entry))
 
 
 func _make_bar(opponent: bool, top: float) -> PlayerInfoBar:
@@ -441,6 +433,8 @@ func _make_row(top: float, opponent: bool) -> Array[CardView]:
 		view.position = Vector2(start + i * (CardView.BOARD_SIZE_PX.x + CARD_GAP), top)
 		view.size = CardView.BOARD_SIZE_PX
 		view.pressed.connect(_on_foe_slot_pressed if opponent else _on_own_slot_pressed)
+		view.hovered.connect(_on_view_hovered)
+		view.mouse_exited.connect(_on_view_left)
 		if not opponent:
 			view.drop_handler = _on_slot_drop.bind(i)
 		add_child(view)
@@ -471,6 +465,9 @@ func refresh() -> void:
 	_targets.refresh()
 	_refresh_buttons()
 	_status.set_targeting(_selection != null and _selection.is_targeting())
+	# 対象選択に入った・演出が始まったぶんは、ホバーが動かなくてもここで引っ込める。
+	if _detail != null:
+		_detail.sync()
 
 
 func _refresh_row(views: Array[CardView], side: int) -> void:
@@ -549,40 +546,32 @@ func _stop_polling() -> void:
 		_online.stop()
 
 
-# --- 詳細(クリック時のみ表示) ------------------------------------------
+# --- 詳細(ホバー中だけ表示) --------------------------------------------
 
 
-## カード・駒をクリックしたら効果の詳細を出す(GameDesign.md 9章)。
-## 効果を覚えていないと戦えない状態を避けるため、手札・自分の駒・相手の駒すべてで引ける。
-func _show_detail_for(view: CardView) -> void:
-	if view == null or view.card == null:
-		return
-	_detail.show_card(view.card)
-	# 指しているカードと反対の側へ出す。読みたいものを自分で隠さないため。
-	var to_right: bool = view.position.x + view.size.x * 0.5 < size.x * 0.5
-	var left := size.x - CardDetailPanel.PANEL_SIZE.x - DETAIL_MARGIN if to_right else DETAIL_MARGIN
-	_detail.position = Vector2(left, DETAIL_TOP)
-	_detail.visible = true
-
-
+## 出し消しは `CardMatchDetail` が持つ(GameDesign.md 9章)。ここに残すのは、
+## 手を指した直後など「盤面が変わったから消す」側の呼び出しだけ。
 func _hide_detail() -> void:
 	if _detail != null:
-		_detail.visible = false
+		_detail.hide_now()
 
 
-func _on_detail_gui_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton:
-		var click := event as InputEventMouseButton
-		if click.pressed and click.button_index == MOUSE_BUTTON_RIGHT:
-			_hide_detail()
-			get_viewport().set_input_as_handled()
+## 詳細は `_build()` の途中で作るため、駒より後に用意される。受け口を関数にして
+## その時点の `_detail` を読む(生成時に束ねると、まだ空の参照を掴む)。
+func _on_view_hovered(view: CardView) -> void:
+	if _detail != null:
+		_detail.hover(view)
+
+
+func _on_view_left() -> void:
+	if _detail != null:
+		_detail.leave()
 
 
 # --- 操作 ---------------------------------------------------------------
 
 
 func _on_hand_pressed(view: CardView) -> void:
-	_show_detail_for(view)
 	if not _my_turn():
 		return
 	var index := _hand_views.find(view)
@@ -618,10 +607,6 @@ func _on_own_slot_pressed(view: CardView) -> void:
 	var slot := _own_slots.find(view)
 	if slot < 0:
 		return
-	if view.card != null:
-		_show_detail_for(view)
-	else:
-		_hide_detail()
 	if not _my_turn():
 		return
 	if _selection.is_targeting():
@@ -669,10 +654,6 @@ func _on_foe_slot_pressed(view: CardView) -> void:
 			_hide_detail()
 			refresh()
 			return
-	if view.card != null:
-		_show_detail_for(view)
-	else:
-		_hide_detail()
 
 
 func _on_face_pressed() -> void:
@@ -864,6 +845,11 @@ func is_interactive() -> bool:
 	return _interactive
 
 
+## マリガン画面が開いているか。詳細をホバーで出してよいかの判断に使う。
+func mulligan_open() -> bool:
+	return _mulligan != null and _mulligan.visible
+
+
 ## いま出せる手札の矩形。誘導対局が「これを押す」と光らせるのに使う。
 func playable_hand_rects() -> Array[Rect2]:
 	var found: Array[Rect2] = []
@@ -896,36 +882,6 @@ func _on_turn_started(side: int) -> void:
 		_feed.announce_turn()
 	if _cpu != null and side != my_side and not state.is_match_over():
 		_cpu_timer.start(CPU_THINK_SECONDS)
-
-
-func _input(event: InputEvent) -> void:
-	if not _interactive:
-		return
-	if _detail != null and _detail.visible:
-		if (
-			(_keyword_popup != null and _keyword_popup.visible)
-			or (_mulligan != null and _mulligan.visible)
-		):
-			return
-		if event.is_action_pressed("ui_cancel"):
-			_hide_detail()
-			if not _selection.is_empty():
-				_selection.clear()
-				refresh()
-			get_viewport().set_input_as_handled()
-			return
-		if event is InputEventMouseButton:
-			var click := event as InputEventMouseButton
-			if click.pressed:
-				if click.button_index == MOUSE_BUTTON_RIGHT:
-					_hide_detail()
-					if not _selection.is_empty():
-						_selection.clear()
-						refresh()
-					get_viewport().set_input_as_handled()
-				elif click.button_index == MOUSE_BUTTON_LEFT:
-					if not _detail.get_global_rect().has_point(click.position):
-						_hide_detail()
 
 
 ## 選択は右クリックとEscでも取り消せるようにする(GameDesign.md 9章)。
