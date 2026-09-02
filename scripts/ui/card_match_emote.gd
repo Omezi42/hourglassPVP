@@ -109,15 +109,11 @@ func refresh() -> void:
 	var can_use: bool = _screen.interactive and not over and not pending_mulligan
 	# エモートのUIは対局画面より後に足されるため、結果パネル・ログより手前に描かれる。
 	# 終局後と読み返しの間は隠して、そちらの操作を塞がないようにする。
-	_button.visible = _screen.interactive and not over
+	# **マリガンの間も出さない。**送れない以上ボタンは無効の見た目になり、真鍮のまま並ぶ
+	# 「ログ」「投了」の隣でそこだけ色が違って見える(押せないボタンを置く価値もない)。
+	_button.visible = _screen.interactive and not over and not pending_mulligan
 	if not _button.visible:
 		_popup.visible = false
-		return
-	if pending_mulligan:
-		_button.text = "エモート"
-		_button.disabled = true
-		if _popup.visible:
-			_popup.visible = false
 		return
 
 	if _cooldown > 0.0:
