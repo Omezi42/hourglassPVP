@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="PuzzleStageData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/puzzle_stage_data.gd" id="script_puzzle"]
+
+[resource]
+script = ExtResource("script_puzzle")
+id = "stage_4"
+title = "第4問 出したその場で"
+hint = "速落は場に出た瞬間に砂が2粒落ちる"
+order = 4
+foe_hp = 4
+own_hp = 30
+mana = 4
+hand_ids = PackedStringArray("dash", "dash")
+own_units = PackedStringArray()
+foe_units = PackedStringArray()

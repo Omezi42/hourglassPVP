@@ -51,6 +51,10 @@ var foe_bar: PlayerInfoBar:
 var alert: CardMatchAlert:
 	get:
 		return _alert
+## リーサルパズルの進行(GameDesign.md 24章)。1問を始めるのはこれを通す。
+var puzzle: CardMatchPuzzle:
+	get:
+		return _puzzle
 ## 対局中の効果音。攻撃の演出が当たった瞬間に持ち越した音を出すため、進行役から引く。
 var sound: CardMatchSound:
 	get:
@@ -117,6 +121,7 @@ var _emote: CardMatchEmote
 var _alert: CardMatchAlert
 var _damage_assist: CardMatchDamageAssist
 var _history: CardMatchActionHistory
+var _puzzle: CardMatchPuzzle
 
 
 func _ready() -> void:
@@ -165,6 +170,8 @@ func _reset_for_new_match() -> void:
 		_alert.remaining_seconds = -1.0
 		_alert.is_my_turn = false
 	_cpu_record = {}
+	if _puzzle != null:
+		_puzzle.close()
 	_status.set_waiting("")
 	if _mulligan != null:
 		_mulligan.close()
@@ -260,8 +267,7 @@ func _on_action_received(action: Dictionary) -> void:
 			_emote.handle_emote(action)
 		return
 	if _history != null:
-		var side: int = action.get("side", MatchState.other_side(my_side))
-		_history.push_action(side, _action_summary(action))
+		_history.push_action(action.get("side", MatchState.other_side(my_side)), action)
 	_strike.capture(action)
 	MatchAction.apply(state, action)
 	if _clocks.active() and state != null and not state.is_match_over():
@@ -335,6 +341,10 @@ func _begin_state(
 		deck_a, deck_b, MatchState.Side.A, seed_value, MatchState.COIN_ENABLED, use_mulligan
 	)
 	_log.watch(state)
+	# デイリーミッションの進捗(GameDesign.md 23章)。数えるだけで、
+	# 書き込むのは終局のとき(`CardMatchOutcome`)。観戦・再生では数えない。
+	if _interactive:
+		DailyMissionService.watch(state, my_side)
 	_feed.watch(self, _log)
 	# 効果音と演出は配り終えてから張る(初期手札のドローまで鳴らさないため)。
 	_sound.watch(state)
@@ -426,6 +436,12 @@ func _build() -> void:
 	add_child(_damage_assist)
 	_history = CardMatchActionHistory.new(self)
 	add_child(_history)
+	_puzzle = CardMatchPuzzle.new(self)
+	_puzzle.finished.connect(
+		func(_cleared: bool) -> void:
+			_puzzle.close()
+			back_pressed.emit()
+	)
 
 
 func _make_bar(opponent: bool, top: float) -> PlayerInfoBar:
@@ -795,13 +811,13 @@ func _on_mulligan_confirmed(indices: Array) -> void:
 func _perform(action: Dictionary) -> void:
 	if _emote != null and action.get("type", "") != "emote":
 		_emote.close_popup()
-	if _history != null:
-		var atype: String = action.get("type", "")
-		if atype != "emote" and atype != "mulligan":
-			_history.push_action(my_side, _action_summary(action))
+	if _history != null and action.get("type", "") != "emote":
+		_history.push_action(my_side, action)
 	_record(action)
 	_strike.capture(action)
 	MatchAction.apply(state, action)
+	if _puzzle != null and _puzzle.active():
+		_puzzle.after_action(action)
 	if _online == null:
 		_clocks.start_turn()
 		_finish_action()
@@ -814,30 +830,6 @@ func _perform(action: Dictionary) -> void:
 		_clocks.start_turn()
 	_online.send(payload)
 	_finish_action()
-
-
-## アクション辞書を短い日本語1行にまとめる。履歴プレビューに使う。
-static func _action_summary(action: Dictionary) -> String:
-	match action.get("type", ""):
-		"play":
-			return "ユニット設置"
-		"attack":
-			return "攻撃"
-		"flip":
-			return "反転"
-		"cast":
-			return "砂術使用"
-		"end_turn":
-			return "ターン終了"
-		"time_up":
-			return "時間切れ"
-		"coin":
-			return "コイン使用"
-		"surrender":
-			return "投了"
-		"mulligan":
-			return "マリガン"
-	return action.get("type", "?")
 
 
 ## 1手を適用し終えたときの締め。攻撃なら演出を挟み、終わってから表示を更新する。
@@ -988,6 +980,10 @@ func _on_match_ended(_winner: int) -> void:
 	# 再生中は結果パネルを出さない。最後の手まで進めるたびに操作を塞ぐと
 	# 前後に動かせなくなるため(GameDesign.md 9章)。
 	if not _interactive:
+		return
+	# パズルは勝敗ではなく正誤で締める(GameDesign.md 24章)。リプレイも砂金も戦績も出さない。
+	if _puzzle != null and _puzzle.active():
+		_puzzle.on_match_ended()
 		return
 	# 終局後の後始末(リプレイ・砂金・戦績)は `CardMatchOutcome` が持つ。
 	var reward := _outcome.finish(_match_kind, _own_deck)

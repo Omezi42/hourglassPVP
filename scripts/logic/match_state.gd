@@ -39,6 +39,9 @@ signal effect_targeted(source_side: int, source_slot: int, target_side: int, tar
 signal match_ended(winner: int)
 ## 持ち時間が尽きて手番を強制的に終えた(GameDesign.md 5章)。`count` は連続回数。
 signal turn_forfeited(side: int, count: int)
+## トリガー(設置・反転・余砂・落砂・被弾)が実際に発火した。**効果を持つ駒だけ**が出す。
+## デイリーミッションの進捗(GameDesign.md 23章)のように「何回働いたか」を数える側の受け口。
+signal trigger_fired(side: int, trigger: int)
 
 enum Side { A, B }
 ## 決着の要因(GameDesign.md 5章)。
@@ -367,7 +370,7 @@ func play_card(side: int, hand_index: int, slot: int, target: Dictionary = {}) -
 	board[side][slot] = unit
 	unit_played.emit(side, slot)
 	board_changed.emit(side)
-	_effects.resolve(side, unit, CardEnums.Trigger.ON_PLAY, target)
+	_fire(side, unit, CardEnums.Trigger.ON_PLAY, target)
 	_cleanup_dead()
 	return true
 
@@ -401,7 +404,7 @@ func cast_spell(side: int, hand_index: int, target: Dictionary = {}) -> bool:
 	spell_cast.emit(side, card)
 	# 盤面に置かない CardInstance をその場で作って既存の解決経路へ流す。
 	# _slot_of() が -1 を返すため、光の筋の出どころは陣地側になる(余砂と同じ)。
-	_effects.resolve(side, CardInstance.new(card), CardEnums.Trigger.ON_PLAY, target)
+	_fire(side, CardInstance.new(card), CardEnums.Trigger.ON_PLAY, target)
 	_cleanup_dead()
 	return true
 
@@ -424,7 +427,7 @@ func flip(side: int, slot: int) -> bool:
 	unit.flip()
 	unit.flipped_this_turn = true
 	unit_flipped.emit(side, slot)
-	_effects.resolve(side, unit, CardEnums.Trigger.ON_FLIP, {})
+	_fire(side, unit, CardEnums.Trigger.ON_FLIP, {})
 	if unit.is_dead():
 		_destroy_unit(side, slot)
 	board_changed.emit(side)
@@ -618,12 +621,20 @@ func heal_player(side: int, amount: int) -> void:
 ## 落砂(GameDesign.md 6章):砂を1粒落とす**直前**に発動する。
 ## 落とす前なのは、その1粒で壊れる駒にも最後の1回を働かせるため
 ## (壊れたあとは余砂が受け持つ)。
+## 効果の解決はすべてここを通す。**発火したことを1箇所で数えられる**ようにするため
+## (呼び出し側へ数える処理を配ると、トリガーを足すたびに書き漏らす)。
+func _fire(side: int, unit: CardInstance, trigger: int, hint: Dictionary) -> void:
+	if not unit.effects_for(trigger).is_empty():
+		trigger_fired.emit(side, trigger)
+	_effects.resolve(side, unit, trigger, hint)
+
+
 func _resolve_turn_end_effects(side: int) -> void:
 	for slot in BOARD_SIZE:
 		var unit: CardInstance = board[side][slot]
 		if unit == null:
 			continue
-		_effects.resolve(side, unit, CardEnums.Trigger.ON_TURN_END, {})
+		_fire(side, unit, CardEnums.Trigger.ON_TURN_END, {})
 	_cleanup_dead()
 
 
@@ -632,7 +643,7 @@ func _resolve_turn_end_effects(side: int) -> void:
 func _resolve_damaged(side: int, unit: CardInstance, dealt: int) -> void:
 	if dealt <= 0 or unit.is_dead():
 		return
-	_effects.resolve(side, unit, CardEnums.Trigger.ON_DAMAGED, {})
+	_fire(side, unit, CardEnums.Trigger.ON_DAMAGED, {})
 
 
 ## 砂時計へダメージを与える(設置効果などから使う)。
@@ -663,7 +674,7 @@ func _destroy_unit(side: int, slot: int) -> void:
 		return
 	board[side][slot] = null
 	graveyard[side].append(unit.data)
-	_effects.resolve(side, unit, CardEnums.Trigger.ON_DEATH, {})
+	_fire(side, unit, CardEnums.Trigger.ON_DEATH, {})
 	unit_destroyed.emit(side, slot, unit.data)
 
 

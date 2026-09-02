@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="PuzzleStageData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/puzzle_stage_data.gd" id="script_puzzle"]
+
+[resource]
+script = ExtResource("script_puzzle")
+id = "stage_2"
+title = "第2問 守護をどける"
+hint = "守護がいる間は本体を殴れない。先にどける"
+order = 2
+foe_hp = 3
+own_hp = 30
+mana = 0
+hand_ids = PackedStringArray()
+own_units = PackedStringArray("sand:2:3", "sand:2:3")
+foe_units = PackedStringArray("shield:2:1")

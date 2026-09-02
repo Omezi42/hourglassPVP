@@ -26,17 +26,42 @@ func _ready() -> void:
 	position = Vector2(24.0, 180.0)
 
 
-func push_action(side: int, text: String, kind: String = "action") -> void:
+## 1手を積む。**文言の組み立てもここが持つ**——押し込む側(対局画面)が持つと、
+## 自分の手と相手の手で別々に書くことになり、片方だけ古くなる。
+func push_action(side: int, action: Dictionary) -> void:
 	var item := {
 		"side": side,
-		"text": text,
-		"kind": kind,
+		"text": summarize(action),
 		"time": Time.get_ticks_msec(),
 	}
 	_items.push_front(item)
 	if _items.size() > MAX_TILES:
 		_items.pop_back()
 	queue_redraw()
+
+
+## アクション辞書を短い1行にまとめる。
+static func summarize(action: Dictionary) -> String:
+	match String(action.get("type", "")):
+		"play":
+			return "設置"
+		"attack":
+			return "攻撃"
+		"flip":
+			return "反転"
+		"cast":
+			return "砂術"
+		"end_turn":
+			return "ターン終了"
+		"time_up":
+			return "時間切れ"
+		"coin":
+			return "コイン"
+		"surrender":
+			return "投了"
+		"mulligan":
+			return "マリガン"
+	return String(action.get("type", "?"))
 
 
 func clear() -> void:

@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="PuzzleStageData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/puzzle_stage_data.gd" id="script_puzzle"]
+
+[resource]
+script = ExtResource("script_puzzle")
+id = "stage_1"
+title = "第1問 返して殴る"
+hint = "攻撃力より体力が多いなら、返したほうが打点が伸びる"
+order = 1
+foe_hp = 4
+own_hp = 30
+mana = 0
+hand_ids = PackedStringArray()
+own_units = PackedStringArray("sand:4:1")
+foe_units = PackedStringArray()

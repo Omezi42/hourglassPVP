@@ -5,6 +5,7 @@ extends Control
 signal online_match_found(match_id: String, my_side: int, opponent_uid: String)
 signal online_resume_requested(record: Dictionary)
 signal stats_requested
+signal puzzle_requested
 signal deck_list_requested
 signal hourglass_list_requested
 signal shop_requested
@@ -43,6 +44,8 @@ var _rules_tab: RulesTab
 var _rules_nav_button: Button
 
 var _nameplate_button: AccountNameplateButton
+## デイリーミッション(GameDesign.md 23章)のモーダル。最初に開いたときだけ作る。
+var _mission_panel: DailyMissionPanel
 
 @onready var background: TextureRect = $Background
 @onready var deck_tab: DeckTab = $Layout/ContentArea/DeckTab
@@ -57,6 +60,8 @@ var _nameplate_button: AccountNameplateButton
 
 func _ready() -> void:
 	battle_tab.stats_requested.connect(func() -> void: stats_requested.emit())
+	battle_tab.puzzle_requested.connect(func() -> void: puzzle_requested.emit())
+	battle_tab.mission_requested.connect(_on_mission_requested)
 	battle_tab.resume_requested.connect(
 		func(record: Dictionary) -> void: online_resume_requested.emit(record)
 	)
@@ -260,3 +265,13 @@ class AccountNameplateButton:
 		_title_label.visible = not title_text.is_empty()
 		var label := display_name.strip_edges()
 		_name_label.text = label if not label.is_empty() else "ゲスト"
+
+
+## デイリーミッション(GameDesign.md 23章)。画面を増やさずホームへ重ねるモーダルにする。
+## **受け取ると残高が動く**ため、閉じたらヘッダーの砂金を読み直す。
+func _on_mission_requested() -> void:
+	if _mission_panel == null:
+		_mission_panel = DailyMissionPanel.new()
+		_mission_panel.closed.connect(func() -> void: refresh_account())
+		add_child(_mission_panel)
+	_mission_panel.open()

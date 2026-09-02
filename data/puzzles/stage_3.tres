@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="PuzzleStageData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/puzzle_stage_data.gd" id="script_puzzle"]
+
+[resource]
+script = ExtResource("script_puzzle")
+id = "stage_3"
+title = "第3問 貫いて届かせる"
+hint = "貫通は、砕いた相手の向こうへ超過分が抜ける"
+order = 3
+foe_hp = 4
+own_hp = 30
+mana = 0
+hand_ids = PackedStringArray()
+own_units = PackedStringArray("drill:1:6")
+foe_units = PackedStringArray("shield:2:0")

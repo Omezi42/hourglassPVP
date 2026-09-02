@@ -23,6 +23,7 @@ func finish(kind: int, deck: Array) -> String:
 	var won: bool = state.winner == _screen.my_side
 	var uid := _uid()
 	MatchStats.record(uid, kind, won, state.turn_count, deck)
+	DailyMissionService.commit(uid, won, state.turn_count)
 	save_replay()
 	_submit_record(kind)
 	return _grant(kind, won, state.turn_count, uid)

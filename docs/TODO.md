@@ -27,9 +27,17 @@
 
 仕様は GameDesign.md 24章、実装設計は Architecture.md 10.12節。
 
-- [ ] パズルステージデータ定義(`PuzzleStageData`) & 初期ステージ3〜5問作成
-- [ ] パズル選択画面(`CardPuzzlePickerScreen`)
-- [ ] パズル対局画面(`CardPuzzleScreen`) & クリア/失敗判定・報酬付与
+- [x] `PuzzleStageData` / `PuzzleLibrary` / `PuzzleProgress` と初期5問(`data/puzzles/`)
+- [x] `CardPuzzlePickerScreen`(横2列・クリア済みは★)
+- [x] `CardMatchPuzzle` + `CardPuzzleResult`。**専用の対局画面は作らず**対局画面へ重ねた
+- [x] 5問すべてが用意した手順で解けることをテストで確認(`tools/tests/puzzle_mission_tests.gd`)
+
+### 残り
+
+- [ ] **問題を増やす**。いまの5問は守護・貫通・速落・砂術と反転をひととおり触るだけで、
+      「相打ちで自分が先に砕ける」「毒砂」「連撃」を扱う問題がまだ無い
+- [ ] **実機での操作の確認**。ヘッドレスではGUIのクリックが届かないため、検証は
+      描画とロジックの直接呼び出しに留まる
 
 ---
 
@@ -37,9 +45,15 @@
 
 仕様は GameDesign.md 23章、実装設計は Architecture.md 10.11節。
 
-- [ ] ミッション定義(`DailyMissionData`) & 追跡管理サービス(`DailyMissionService`)
-- [ ] 対局終了時の進捗集計フック
-- [ ] ミッション確認・受取モーダル(`DailyMissionPanel`)
+- [x] `DailyMissionData`(候補7つ)/ `DailyMissionService`(日付で3つを選ぶ・進捗・受取)
+- [x] 落砂を数えるため `MatchState.trigger_fired` を足し、効果の解決を `_fire()` の1箇所へ通した
+- [x] 進捗の集計は `_begin_state()` で張り、書き込みは `CardMatchOutcome.finish()` の1箇所
+- [x] `DailyMissionPanel`(バトルタブの「ミッション」から開くモーダル)
+
+### 残り
+
+- [ ] **実機での受取の確認**(残高が動く操作のため、公開前に1度は通す)
+- [ ] 日をまたいだときに課題が入れ替わることの確認。テストは同じ日での安定だけを見ている
 
 ---
 

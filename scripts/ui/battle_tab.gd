@@ -6,6 +6,8 @@ extends Control
 signal online_match_found(match_id: String, my_side: int, opponent_uid: String)
 signal resume_requested(record: Dictionary)
 signal stats_requested
+signal puzzle_requested
+signal mission_requested
 signal replay_list_requested
 signal cpu_match_requested
 signal random_match_deck_requested
@@ -31,6 +33,8 @@ var _status_base_text := ""
 var _resume_button: Button
 ## 戦績(GameDesign.md 19章)。`.tscn` を書き換えずに済ませるためコードで生成する。
 var _stats_button: Button
+var _puzzle_button: Button
+var _mission_button: Button
 ## 募集をDiscordへ知らせられたときに、待機中の文言の横へ出す丸い印
 ## (GameDesign.md 11章)。`.tscn` を書き換えずに済ませるためコードで生成する。
 var _announce_badge: StatusBadge
@@ -55,6 +59,7 @@ func _ready() -> void:
 	cancel_button.pressed.connect(_on_cancel_pressed)
 	_build_resume_button()
 	_build_stats_button()
+	_build_side_buttons()
 	_build_announce_badge()
 	refresh()
 
@@ -92,6 +97,17 @@ func _build_stats_button() -> void:
 	_stats_button = CodedButton.make("戦績", Vector2(200, 64))
 	_stats_button.pressed.connect(func() -> void: stats_requested.emit())
 	replay_button.get_parent().add_child(_stats_button)
+
+
+## リーサルパズル(GameDesign.md 24章)とデイリーミッション(同23章)も、
+## 対局そのものではない導線として「戦績」と同じ行に並べる。
+func _build_side_buttons() -> void:
+	_puzzle_button = CodedButton.make("パズル", Vector2(200, 64))
+	_puzzle_button.pressed.connect(func() -> void: puzzle_requested.emit())
+	replay_button.get_parent().add_child(_puzzle_button)
+	_mission_button = CodedButton.make("ミッション", Vector2(200, 64))
+	_mission_button.pressed.connect(func() -> void: mission_requested.emit())
+	replay_button.get_parent().add_child(_mission_button)
 
 
 ## 覚えている対局があるときだけ出す。終わっているかどうかは押した時点で確かめる

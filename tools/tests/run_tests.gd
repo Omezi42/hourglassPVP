@@ -11,6 +11,7 @@ const V5OnlineTests = preload("res://tools/tests/v5_online_tests.gd")
 const VersionMatchTests = preload("res://tools/tests/version_match_tests.gd")
 const HourglassArtTests = preload("res://tools/tests/hourglass_art_tests.gd")
 const MatchRecordTests = preload("res://tools/tests/match_record_tests.gd")
+const PuzzleMissionTests = preload("res://tools/tests/puzzle_mission_tests.gd")
 
 var _failures := 0
 
@@ -27,6 +28,7 @@ func _run() -> void:
 	V5VocabularyTests.new().run(_assert_true)
 	V5SpellTests.new().run(_assert_true)
 	HourglassArtTests.new().run(_assert_true)
+	PuzzleMissionTests.new().run(_assert_true)
 	SoundSettingsTests.new().run(_assert_true)
 	OnlineTests.new().run(_assert_true)
 	AccountTests.new().run(_assert_true)

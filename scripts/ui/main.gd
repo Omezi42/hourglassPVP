@@ -16,6 +16,7 @@ var card_deck_list_screen: CardDeckListScreen
 ## v5.0のカード一覧画面(同上)。
 var card_list_screen: CardListScreen
 var stats_screen: CardStatsScreen
+var puzzle_picker_screen: CardPuzzlePickerScreen
 ## ショップ(GameDesign.md 21章)。同上。
 var shop_screen: CardShopScreen
 ## ルームマッチの専用画面(GameDesign.md 11章)。
@@ -128,6 +129,13 @@ func _ready() -> void:
 	card_room_screen.matched.connect(_on_room_match_found)
 	card_room_screen.spectate_requested.connect(_on_spectate_requested)
 	_screens.append(card_room_screen)
+	puzzle_picker_screen = CardPuzzlePickerScreen.new()
+	puzzle_picker_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
+	puzzle_picker_screen.visible = false
+	puzzle_picker_screen.back_pressed.connect(func() -> void: _show_only(home_screen))
+	puzzle_picker_screen.stage_selected.connect(_on_puzzle_stage_selected)
+	add_child(puzzle_picker_screen)
+	_screens.append(puzzle_picker_screen)
 	_transition_blocker = _make_transition_blocker()
 	add_child(_transition_blocker)
 	_sand_transition = SandTransition.new()
@@ -145,6 +153,7 @@ func _ready() -> void:
 	home_screen.online_match_found.connect(_on_online_match_found)
 	home_screen.online_resume_requested.connect(_on_online_resume_requested)
 	home_screen.stats_requested.connect(_on_stats_requested)
+	home_screen.puzzle_requested.connect(_on_puzzle_requested)
 	home_screen.deck_list_requested.connect(_on_deck_list_requested)
 	home_screen.hourglass_list_requested.connect(_on_hourglass_list_requested)
 	home_screen.shop_requested.connect(_on_shop_requested)
@@ -189,6 +198,9 @@ func _on_title_start_requested() -> void:
 
 
 func _on_match_back() -> void:
+	# パズルから戻ったときは、クリアの印を付け直すために一覧を組み直す。
+	if _match_return_screen == puzzle_picker_screen:
+		puzzle_picker_screen.open()
 	_show_only(_match_return_screen)
 	home_screen.refresh_account()
 	# 対局は待機状態(ボタンの無効化)を残したまま始まるため、戻った時点で両方とも解く。
@@ -386,6 +398,18 @@ func _on_room_match_found(
 		time_limit
 	)
 	_match_return_screen = home_screen
+	_show_only(card_match_screen)
+
+
+## リーサルパズル(GameDesign.md 24章)。一覧で選んだ1問を対局画面で解く。
+func _on_puzzle_requested() -> void:
+	puzzle_picker_screen.open()
+	_show_only(puzzle_picker_screen)
+
+
+func _on_puzzle_stage_selected(stage: PuzzleStageData) -> void:
+	card_match_screen.puzzle.start(stage)
+	_match_return_screen = puzzle_picker_screen
 	_show_only(card_match_screen)
 
 

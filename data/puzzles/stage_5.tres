@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="PuzzleStageData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/puzzle_stage_data.gd" id="script_puzzle"]
+
+[resource]
+script = ExtResource("script_puzzle")
+id = "stage_5"
+title = "第5問 砂術で足りない分を"
+hint = "砂術は行動の制限を越える。順番を考える"
+order = 5
+foe_hp = 8
+own_hp = 30
+mana = 3
+hand_ids = PackedStringArray("turn", "shot", "shot")
+own_units = PackedStringArray("sand:4:1")
+foe_units = PackedStringArray()
