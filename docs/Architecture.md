@@ -237,6 +237,7 @@ UIに依存しない、対局ルールそのものを扱う層。
 |---|---|
 | `CardData.is_spell` | 砂術かどうか。`total_sand` は 0 のまま使わない |
 | `MatchState.can_cast()` / `cast_spell()` | 手札の1枚を撃つ。**空き枠を要求しない** |
+| `CardEffectResolver._return_to_hand()` | `RETURN_TO_HAND` の適用。**`_summon()` と対になる位置**へ置き、盤面への出し入れを1クラスにまとめる |
 | `MatchAction.cast()` | `{"type": "cast", "side":, "hand_index":, "target": {...}}` |
 
 - **`play_card()` へ相乗りさせない。**`can_play()` は空き枠が無いと必ず false を返し
@@ -256,7 +257,10 @@ UIに依存しない、対局ルールそのものを扱う層。
   新しいシグナル `spell_cast(side, card)` を出す(音と演出の受け口)
 
 **`RETURN_TO_HAND` は砂術のためだけに足す唯一の `EffectType`。**盤面から駒を取り除いて
-持ち主の手札へ戻す。**破壊ではないため `ON_DEATH`(余砂)は発火しない**。
+持ち主の手札へ戻す。**適用は `MatchState` ではなく `CardEffectResolver._return_to_hand()`
+が持つ**——`_summon()`(空き枠へ置く)と対になり、盤面への出し入れが1箇所へ揃う。
+`MatchState` の公開メソッドが gdlint の上限へ張り付いていることへの答えでもある
+(`gdlintrc` を緩める前に、減らせる場所を先に探すこと)。**破壊ではないため `ON_DEATH`(余砂)は発火しない**。
 手札が上限に達している場合の扱いは持たない(このゲームは手札の上限を定義していない)。
 **戻すのは `CardData` であり、`CardInstance` の状態(受けたダメージ・与えられたキーワード)は
 すべて失われる**——手札へ戻ったカードは新品の1枚として扱う。

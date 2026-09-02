@@ -24,6 +24,7 @@ func _run() -> void:
 	_test_local_replay_service_round_trips_and_enforces_retention()
 	V5RulesTests.new().run(_assert_true)
 	V5VocabularyTests.new().run(_assert_true)
+	V5SpellTests.new().run(_assert_true)
 	HourglassArtTests.new().run(_assert_true)
 	SoundSettingsTests.new().run(_assert_true)
 	OnlineTests.new().run(_assert_true)

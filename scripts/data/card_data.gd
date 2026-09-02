@@ -26,6 +26,10 @@ extends Resource
 ## デッキ編集にも砂時計一覧にも現れない。
 @export var is_token: bool = false
 
+## 砂術(GameDesign.md 6章)。**盤面へ出ず、効果だけを起こして墓地へ行く。**
+## true のとき total_sand / keywords / cannot_attack は使わない。
+@export var is_spell: bool = false
+
 @export_group("Icons")
 ## どの絵を使うか(Architecture.md 4.1節)。空ならこのカードの id をそのまま使う。
 ## ガード=`king` / グロウ=`judge` のように、別のカードの絵を借りる場合だけ書く。
@@ -76,6 +80,8 @@ func effects_for(trigger: int) -> Array[CardEffectData]:
 ## CardEnums.keyword_short_text() の短い言い換えを使う。
 func describe() -> String:
 	var parts: PackedStringArray = []
+	if is_spell:
+		return rules_text if not rules_text.is_empty() else "効果なし"
 	if cannot_attack:
 		parts.append("攻撃できない")
 	for keyword in named_keywords():

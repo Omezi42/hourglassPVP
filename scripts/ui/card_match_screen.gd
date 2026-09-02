@@ -104,6 +104,8 @@ var _strike: CardMatchStrike
 var _sound: CardMatchSound
 var _effects: CardMatchEffects
 var _targets: CardMatchTargets
+## 砂術を撃つ段取り。CardMatchTargets が対象の側を引くためにも読む。
+var _spell: CardMatchSpell
 var _feed: CardMatchTurnFeed
 var _cpu_followup := false
 var _surrender_button: Button
@@ -122,6 +124,7 @@ func _ready() -> void:
 	_effects = CardMatchEffects.new(self)
 	_online_ctl = CardMatchOnline.new(self)
 	_targets = CardMatchTargets.new(self)
+	_spell = CardMatchSpell.new(self)
 	_clocks = CardMatchClock.new(self)
 	_emote = CardMatchEmote.new(self)
 	_emote.set_position(Vector2(ACTION_COLUMN_X, EMOTE_BUTTON_TOP))
@@ -500,7 +503,8 @@ func _refresh_hand() -> void:
 		view.visible = true
 		view.position = Vector2(start + i * step, HAND_TOP)
 		view.size = CardView.HAND_SIZE_PX
-		view.show_card(hand[i], _my_turn() and state.can_play(my_side, i))
+		var usable: bool = state.can_play(my_side, i) or state.can_cast(my_side, i)
+		view.show_card(hand[i], _my_turn() and usable)
 		view.selected = _selection.is_hand(i)
 		view.draggable = view.enabled
 
@@ -582,7 +586,12 @@ func _on_hand_pressed(view: CardView) -> void:
 	if not _my_turn():
 		return
 	var index := _hand_views.find(view)
-	if index < 0 or not state.can_play(my_side, index):
+	if index < 0:
+		return
+	if state.can_cast(my_side, index):
+		_spell.begin(index)
+		return
+	if not state.can_play(my_side, index):
 		return
 	_selection.select_hand(index)
 	refresh()
@@ -594,7 +603,12 @@ func _on_slot_drop(source: CardView, slot: int) -> void:
 	if not _my_turn() or state.board[my_side][slot] != null:
 		return
 	var index := _hand_views.find(source)
-	if index < 0 or not state.can_play(my_side, index):
+	if index < 0:
+		return
+	if state.can_cast(my_side, index):
+		_spell.begin(index)
+		return
+	if not state.can_play(my_side, index):
 		return
 	_selection.select_hand(index)
 	_play_selected(slot)
@@ -611,6 +625,10 @@ func _on_own_slot_pressed(view: CardView) -> void:
 	if not _my_turn():
 		return
 	if _selection.is_targeting():
+		# 味方1体を対象に取る砂術は、自分の駒を押して確定する。
+		if _selection.slot < 0 and state.board[my_side][slot] != null:
+			_spell.cast_at(my_side, slot)
+			return
 		_selection.clear()
 		refresh()
 		return
@@ -633,7 +651,12 @@ func _on_foe_slot_pressed(view: CardView) -> void:
 	if _my_turn() and _selection.is_targeting():
 		if state.board[MatchState.other_side(my_side)][slot] == null:
 			return
-		var target := {"side": MatchState.other_side(my_side), "slot": slot}
+		var foe := MatchState.other_side(my_side)
+		# slot が -1 のままなら砂術(置く枠を持たない)。
+		if _selection.slot < 0:
+			_spell.cast_at(foe, slot)
+			return
+		var target := {"side": foe, "slot": slot}
 		_perform(MatchAction.play(my_side, _selection.hand_index, _selection.slot, target))
 		_selection.clear()
 		_hide_detail()

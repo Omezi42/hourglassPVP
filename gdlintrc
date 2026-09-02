@@ -2,6 +2,11 @@
 # MatchState は対局の唯一の真実であり、盤面・手札・山札・戦闘の問い合わせが
 # 1クラスへ集まる構造上、公開メソッドが既定の20を超える。分割すると
 # 「対局の状態はここだけが持つ」という前提が崩れるため、閾値の側を上げている。
+#
+# 24 → 26 は砂術(GameDesign.md 6章)の can_cast() / cast_spell() を足したぶん。
+# **緩める前に減らせないかを見ること。**このときは RETURN_TO_HAND の適用を
+# CardEffectResolver._return_to_hand() へ移して(SUMMON と対になる位置)1つ減らし、
+# 残る2つだけを閾値で受けている。
 class-definitions-order:
 - tools
 - classnames
@@ -38,7 +43,7 @@ load-constant-name: (([A-Z][a-z0-9]*)+|_?[A-Z][A-Z0-9]*(_[A-Z0-9]+)*)
 loop-variable-name: _?[a-z][a-z0-9]*(_[a-z0-9]+)*
 max-file-lines: 1000
 max-line-length: 100
-max-public-methods: 24
+max-public-methods: 26
 max-returns: 6
 mixed-tabs-and-spaces: null
 no-elif-return: null

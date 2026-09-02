@@ -6,6 +6,7 @@ extends RefCounted
 ##
 ## 形:
 ##   {"type": "play",     "side":, "hand_index":, "slot":, "target": {"side":, "slot":}}
+##   {"type": "cast",     "side":, "hand_index":, "target": {"side":, "slot":}}
 ##   {"type": "flip",     "side":, "slot":}
 ##   {"type": "attack",   "side":, "slot":, "target_slot":}   target_slot が -1 なら本体
 ##   {"type": "end_turn", "side":}
@@ -18,6 +19,10 @@ extends RefCounted
 
 static func play(side: int, hand_index: int, slot: int, target: Dictionary = {}) -> Dictionary:
 	return {"type": "play", "side": side, "hand_index": hand_index, "slot": slot, "target": target}
+
+
+static func cast(side: int, hand_index: int, target: Dictionary = {}) -> Dictionary:
+	return {"type": "cast", "side": side, "hand_index": hand_index, "target": target}
 
 
 static func flip(side: int, slot: int) -> Dictionary:
@@ -57,6 +62,8 @@ static func apply(state: MatchState, action: Dictionary) -> bool:
 			return state.play_card(
 				side, action["hand_index"], action["slot"], action.get("target", {})
 			)
+		"cast":
+			return state.cast_spell(side, action["hand_index"], action.get("target", {}))
 		"flip":
 			return state.flip(side, action["slot"])
 		"attack":

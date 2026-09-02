@@ -76,6 +76,10 @@ func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Diction
 				if target != null and effect.keyword >= 0:
 					_beam(side, from, entry["side"], entry["slot"])
 					target.grant_keyword(effect.keyword)
+		CardEnums.EffectType.RETURN_TO_HAND:
+			for entry in _targets(side, unit, effect, hint):
+				_beam(side, from, entry["side"], entry["slot"])
+				_return_to_hand(entry["side"], entry["slot"])
 		CardEnums.EffectType.SILENCE:
 			for entry in _targets(side, unit, effect, hint):
 				var target := _unit_at(entry)
@@ -97,6 +101,20 @@ func _summon(side: int, card_id: String) -> void:
 			_state.board[side][slot] = CardInstance.new(card)
 			_state.board_changed.emit(side)
 			return
+
+
+## 砂時計を持ち主の手札へ戻す(砂術。GameDesign.md 6章)。**破壊ではないため余砂は
+## 発火しない。**戻るのは CardData であり、受けたダメージも与えられたキーワードも失われる。
+## **`_summon()` と対になる**ため、盤面への出し入れは両方ともここが持つ。
+func _return_to_hand(side: int, slot: int) -> void:
+	var unit: CardInstance = _state.board[side][slot]
+	if unit == null:
+		return
+	_state.board[side][slot] = null
+	_state.hand[side].append(unit.data)
+	_state.unit_returned.emit(side, slot, unit.data)
+	_state.hand_changed.emit(side)
+	_state.board_changed.emit(side)
 
 
 ## 効果が対象を取ったことを知らせる。**適用の直前に出す**ことで、対象が破壊されて

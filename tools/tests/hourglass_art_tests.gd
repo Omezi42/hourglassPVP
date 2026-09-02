@@ -24,6 +24,9 @@ func run(assert_true: Callable) -> void:
 	var cards := CardLibrary.all_cards()
 	assert_true.call(cards.size() > 0, "カードが読める")
 	for card in cards:
+		# 砂術は砂時計の絵を持たない(GameDesign.md 6章)。色の表にも載らない。
+		if card.is_spell:
+			continue
 		var key := card.art_key()
 		assert_true.call(not key.is_empty(), "%s に絵のidがある" % card.id)
 		assert_true.call(table.has(key), "%s の色が表にある(%s)" % [card.id, key])

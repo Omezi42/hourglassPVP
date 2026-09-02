@@ -86,15 +86,47 @@ func _choose_play(state: MatchState, side: int) -> Dictionary:
 	var best_value := 0.0
 	var hand: Array = state.hand[side]
 	for index in hand.size():
+		var card: CardData = hand[index]
+		# 砂術は「出す」の中で一緒に選ぶ(Architecture.md 8章)。段を増やさず、
+		# 盤面へ置くカードと同じ物差しで比べる。
+		if card.is_spell:
+			if not state.can_cast(side, index):
+				continue
+			var gain := _spell_value(state, side, card)
+			if gain <= best_value:
+				continue
+			best_value = gain
+			best = MatchAction.cast(side, index, _effect_target(state, side, card))
+			continue
 		if not state.can_play(side, index):
 			continue
-		var card: CardData = hand[index]
 		var placement := _best_slot(state, side, card)
 		if placement["value"] <= best_value:
 			continue
 		best_value = placement["value"]
 		best = MatchAction.play(side, index, placement["slot"], _effect_target(state, side, card))
 	return best
+
+
+## 砂術の価値。盤面へ駒を残さないため展開の下駄(DEVELOP_BONUS)は付けない。
+## **対象を1体取る砂術は、対象がいなければ撃たない**(自動選択に任せると、
+## 対象のいない除去を無駄撃ちする)。
+func _spell_value(state: MatchState, side: int, card: CardData) -> float:
+	var value := 0.0
+	for effect in card.effects_for(CardEnums.Trigger.ON_PLAY):
+		if effect.target == CardEnums.EffectTarget.ENEMY_UNIT:
+			if _strongest_enemy(state, MatchState.other_side(side)) < 0:
+				return 0.0
+		elif effect.target == CardEnums.EffectTarget.ALLY_UNIT:
+			if _strongest_ally(state, side) < 0:
+				return 0.0
+			if (
+				effect.effect_type == CardEnums.EffectType.SWAP_STATS
+				and _best_ally_flip(state, side)["slot"] < 0
+			):
+				return 0.0
+		value += _on_play_value(state, side, effect)
+	return value
 
 
 ## そのカードをどの枠へ置くのが最も得かを返す。空き枠が無ければ出せない
@@ -163,13 +195,42 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 			if target >= 0:
 				value = float(state.board[foe_side][target].lifetime_damage())
 		CardEnums.EffectType.DAMAGE_UNIT:
-			for unit in state.units(foe_side):
-				value += _damage_value(unit, effect.value)
+			# **対象の広さを見る。**全体(ALL_ENEMY_UNITS)は並んでいるぶんだけ積み上がるが、
+			# 単体(ENEMY_UNIT)は1体ぶんしかない。区別しないと単体除去を過大評価する。
+			if effect.target == CardEnums.EffectTarget.ENEMY_UNIT:
+				var slot := _strongest_enemy(state, foe_side)
+				if slot >= 0:
+					value = _damage_value(state.board[foe_side][slot], effect.value)
+			else:
+				for unit in state.units(foe_side):
+					value += _damage_value(unit, effect.value)
 		CardEnums.EffectType.SWAP_STATS:
+			# **味方を反転させる効果は、相手を反転させるのと価値の向きが逆**。
+			# 攻撃力が体力を上回った駒を戻すと寿命が伸びる(GameDesign.md 1章)。
+			if effect.target == CardEnums.EffectTarget.ALLY_UNIT:
+				value = float(_best_ally_flip(state, side)["gain"])
+			elif effect.target == CardEnums.EffectTarget.ALL_ENEMY_UNITS:
+				for unit in state.units(foe_side):
+					value += _swap_value(unit)
+			else:
+				var slot := _strongest_enemy(state, foe_side)
+				if slot >= 0:
+					value = _swap_value(state.board[foe_side][slot])
+		CardEnums.EffectType.RETURN_TO_HAND:
+			# 相手の駒を1体、盤面から丸ごと消す。破壊と違い撃ち直されるため、
+			# 生涯ダメージそのままではなく控えめに見る。
 			var slot := _strongest_enemy(state, foe_side)
 			if slot >= 0:
-				var unit: CardInstance = state.board[foe_side][slot]
-				value = maxf(0.0, unit.lifetime_damage() - _lifetime_of(unit.attack, unit.health))
+				value = float(state.board[foe_side][slot].lifetime_damage()) * 0.7
+		CardEnums.EffectType.HEAL_PLAYER:
+			value = effect.value * FACE_WEIGHT
+		CardEnums.EffectType.ADD_TOTAL:
+			value = effect.value * 2.0
+		CardEnums.EffectType.DROP_SAND:
+			# 相手全体の砂を落とすのは諸刃(体力が減るが攻撃力が上がる)。
+			# 寿命を縮めるぶんだけを見る。
+			if effect.target == CardEnums.EffectTarget.ALL_ENEMY_UNITS:
+				value = state.units(foe_side).size() * effect.value * 0.8
 		CardEnums.EffectType.ADD_ATTACK:
 			value = effect.value * 2.0
 		CardEnums.EffectType.SUMMON:
@@ -185,6 +246,24 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 	return value
 
 
+## 反転させて最も得をする味方と、その得の大きさ。得をする駒がいなければ slot は -1。
+func _best_ally_flip(state: MatchState, side: int) -> Dictionary:
+	var best := {"slot": -1, "gain": 0.0}
+	for slot in MatchState.BOARD_SIZE:
+		var unit: CardInstance = state.board[side][slot]
+		if unit == null:
+			continue
+		var gain := _lifetime_of(unit.attack, unit.health) - float(unit.lifetime_damage())
+		if gain > best["gain"]:
+			best = {"slot": slot, "gain": gain}
+	return best
+
+
+## 反転させたときに相手の生涯ダメージがどれだけ下がるか。攻撃力の高い駒ほど大きい。
+func _swap_value(unit: CardInstance) -> float:
+	return maxf(0.0, unit.lifetime_damage() - _lifetime_of(unit.attack, unit.health))
+
+
 ## 対象を1体選ぶ設置効果のための指定。選ばない効果なら空を返す。
 func _effect_target(state: MatchState, side: int, card: CardData) -> Dictionary:
 	var foe_side := MatchState.other_side(side)
@@ -194,7 +273,10 @@ func _effect_target(state: MatchState, side: int, card: CardData) -> Dictionary:
 			if slot >= 0:
 				return {"side": foe_side, "slot": slot}
 		elif effect.target == CardEnums.EffectTarget.ALLY_UNIT:
-			var slot := _strongest_ally(state, side)
+			# 反転だけは「最も強い味方」ではなく「反転して最も得をする味方」を選ぶ。
+			var slot: int = _strongest_ally(state, side)
+			if effect.effect_type == CardEnums.EffectType.SWAP_STATS:
+				slot = _best_ally_flip(state, side)["slot"]
 			if slot >= 0:
 				return {"side": side, "slot": slot}
 	return {}

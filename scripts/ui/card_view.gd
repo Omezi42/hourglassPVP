@@ -86,6 +86,11 @@ const FLIP_LAND_AT := 0.82
 const HAND_CORNER := 10.0
 const HAND_ART_SIDE := 92.0
 ## 手札は紙の札なので、紋章は台座ではなく**封蝋の印**として押す。
+## 砂術(GameDesign.md 6章)。砂時計の絵を持たないため、紋章を中央へ大きく置く。
+const SPELL_EMBLEM_SIDE := 62.0
+## 枠の色を砂時計と変え、手札を見た時点で「置くカードではない」と分かるようにする。
+const SPELL_BORDER := Color(0.58, 0.72, 0.95, 1.0)
+
 const HAND_SEAL_RADIUS := 13.0
 const HAND_SEAL_SIDE := 16.0
 
@@ -584,7 +589,7 @@ func _draw_hand_card() -> void:
 		[[0.0, Color(0.23, 0.2, 0.17, 1.0) * tint], [1.0, Color(0.11, 0.1, 0.09, 1.0) * tint]]
 	)
 	var guard := guard_frame and _has_live_keyword(CardEnums.Keyword.GUARD)
-	var border := UiPalette.BRASS_MID
+	var border := SPELL_BORDER if card.is_spell else UiPalette.BRASS_MID
 	if selected:
 		border = SELECT_CYAN
 	elif guard:
@@ -605,10 +610,29 @@ func _draw_hand_card() -> void:
 
 
 func _draw_hand_art(tint: Color) -> void:
+	if card.is_spell:
+		_draw_spell_emblem(tint)
+		return
 	var texture := _icon()
 	if texture == null:
 		return
 	draw_texture_rect(texture, _fit_art(texture, _hand_art_box()), false, tint)
+
+
+## 砂術は砂時計の絵を持たないため、紋章を絵の枠いっぱいに置く(GameDesign.md 9章)。
+func _draw_spell_emblem(tint: Color) -> void:
+	if card.emblem == null:
+		return
+	var box := _hand_art_box()
+	var half := Vector2(SPELL_EMBLEM_SIDE, SPELL_EMBLEM_SIDE) * 0.5
+	var center := box.get_center()
+	draw_texture_rect(
+		card.emblem,
+		Rect2(center - half + Vector2(0.0, 2.0), half * 2.0),
+		false,
+		Color(0.06, 0.05, 0.09, 0.6)
+	)
+	draw_texture_rect(card.emblem, Rect2(center - half, half * 2.0), false, SPELL_BORDER * tint)
 
 
 ## 手札の絵を収める枠。
@@ -620,7 +644,8 @@ func _hand_art_box() -> Rect2:
 
 ## 封蝋の印。手札は紙の札であるため、台座の銘板ではなく蝋で押した印として出す。
 func _draw_hand_seal(tint: Color) -> void:
-	if card.emblem == null:
+	# 砂術は紋章を中央へ大きく出しているため、封蝋を重ねると同じ絵が2つ並ぶ。
+	if card.emblem == null or card.is_spell:
 		return
 	var ci := get_canvas_item()
 	var center := Vector2(HAND_SEAL_RADIUS + 4.0, size.y - HAND_SEAL_RADIUS - 4.0)
@@ -645,9 +670,11 @@ func _draw_hand_labels(tint: Color) -> void:
 		_centered_text(note, 12, 134.0, UiPalette.BRASS_HIGHLIGHT * tint)
 
 
-## コスト=左上 / 総量=右下。
+## コスト=左上 / 総量=右下。**砂術は総量を持たないため右下を出さない**(GameDesign.md 9章)。
 func _draw_hand_stats() -> void:
 	_stat(Vector2(STAT_RADIUS + 3.0, STAT_RADIUS + 3.0), card.cost, MANA_BLUE)
+	if card.is_spell:
+		return
 	_stat(
 		Vector2(size.x - STAT_RADIUS - 3.0, size.y - STAT_RADIUS - 3.0), card.total_sand, HEALTH_RED
 	)

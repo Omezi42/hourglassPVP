@@ -83,6 +83,11 @@ func _test_all_cards_load() -> void:
 	)
 	for card in cards:
 		_assert.call(card.cost > 0, "card %s should have a positive cost" % card.id)
+		# 砂術は総量を持たない(GameDesign.md 6章)。持つのはコストと効果だけ。
+		if card.is_spell:
+			_assert.call(card.total_sand == 0, "spell %s should have no total" % card.id)
+			_assert.call(not card.effects.is_empty(), "spell %s should have an effect" % card.id)
+			continue
 		_assert.call(card.total_sand > 0, "card %s should have a positive total" % card.id)
 
 

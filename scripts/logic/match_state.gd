@@ -9,6 +9,10 @@ signal hand_changed(side: int)
 signal board_changed(side: int)
 ## 砂時計が場に出たとき。
 signal unit_played(side: int, slot: int)
+## 砂術を撃ったとき(GameDesign.md 6章)。盤面を経由しないため unit_played は出ない。
+signal spell_cast(side: int, card: CardData)
+## 砂時計が持ち主の手札へ戻ったとき(砂術。破壊ではないため余砂は発火しない)。
+signal unit_returned(side: int, slot: int, card: CardData)
 ## 砂時計がダメージを受けたとき(amount は実際に消えた砂の量)。
 signal unit_damaged(side: int, slot: int, amount: int)
 ## 硝子が最初のダメージを1度だけ無効にした(GameDesign.md 9章)。膜が割れたことを
@@ -333,9 +337,12 @@ func can_play(side: int, hand_index: int) -> bool:
 		return false
 	if hand_index < 0 or hand_index >= hand[side].size():
 		return false
+	var card: CardData = hand[side][hand_index]
+	# 砂術は盤面へ出ない(GameDesign.md 6章)。撃つのは cast_spell() の役目。
+	if card.is_spell:
+		return false
 	if empty_slots(side).is_empty():
 		return false
-	var card: CardData = hand[side][hand_index]
 	return mana[side] >= card.cost
 
 
@@ -361,6 +368,40 @@ func play_card(side: int, hand_index: int, slot: int, target: Dictionary = {}) -
 	unit_played.emit(side, slot)
 	board_changed.emit(side)
 	_effects.resolve(side, unit, CardEnums.Trigger.ON_PLAY, target)
+	_cleanup_dead()
+	return true
+
+
+# --- 砂術 ---------------------------------------------------------------
+
+
+## 砂術を撃てるか(GameDesign.md 6章)。**空き枠を要求しない**のが砂時計との違い。
+func can_cast(side: int, hand_index: int) -> bool:
+	if _match_over or current_turn != side:
+		return false
+	if hand_index < 0 or hand_index >= hand[side].size():
+		return false
+	var card: CardData = hand[side][hand_index]
+	if not card.is_spell:
+		return false
+	return mana[side] >= card.cost
+
+
+## 手札の砂術を1枚撃つ。盤面へは置かず、効果を解決して墓地へ積む。
+## target は対象を1体取る効果のための指定 {"side":..., "slot":...}。
+func cast_spell(side: int, hand_index: int, target: Dictionary = {}) -> bool:
+	if not can_cast(side, hand_index):
+		return false
+	var card: CardData = hand[side][hand_index]
+	mana[side] -= card.cost
+	hand[side].remove_at(hand_index)
+	hand_changed.emit(side)
+	mana_changed.emit(side, mana[side], max_mana[side])
+	graveyard[side].append(card)
+	spell_cast.emit(side, card)
+	# 盤面に置かない CardInstance をその場で作って既存の解決経路へ流す。
+	# _slot_of() が -1 を返すため、光の筋の出どころは陣地側になる(余砂と同じ)。
+	_effects.resolve(side, CardInstance.new(card), CardEnums.Trigger.ON_PLAY, target)
 	_cleanup_dead()
 	return true
 

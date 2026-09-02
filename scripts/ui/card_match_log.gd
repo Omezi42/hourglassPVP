@@ -8,7 +8,7 @@ extends Control
 
 ## 1行を積んだ。**画面上の実況はこれを購読して同じ文言を出す**
 ## (実況とログが食い違わないようにするため。GameDesign.md 9章)。
-## `kind` は "turn" / "play" / "flip" / "attack" / "death" / "hp" / "end"。
+## `kind` は "turn" / "play" / "cast" / "flip" / "attack" / "death" / "hp" / "end"。
 signal recorded(line: String, kind: String, side: int, slot: int)
 
 const SCREEN_SIZE := Vector2(1280, 720)
@@ -46,6 +46,7 @@ func watch(state: MatchState) -> void:
 	}
 	state.turn_started.connect(_on_turn_started)
 	state.unit_played.connect(_on_unit_played)
+	state.spell_cast.connect(_on_spell_cast)
 	state.unit_flipped.connect(_on_unit_flipped)
 	state.attack_performed.connect(_on_attack)
 	state.unit_destroyed.connect(_on_unit_destroyed)
@@ -106,6 +107,12 @@ func _on_turn_started(side: int) -> void:
 
 func _on_unit_played(side: int, slot: int) -> void:
 	_append("%sが%sを出した" % [_name_of(side), _unit_name(side, slot)], "play", side, slot)
+
+
+## 砂術は盤面へ出ないため枠を持たない(GameDesign.md 6章)。スポットライトを当てる
+## 先が無いので slot は -1 にする。
+func _on_spell_cast(side: int, card: CardData) -> void:
+	_append("%sが「%s」を使った" % [_name_of(side), card.display_name], "cast", side, -1)
 
 
 func _on_unit_flipped(side: int, slot: int) -> void:

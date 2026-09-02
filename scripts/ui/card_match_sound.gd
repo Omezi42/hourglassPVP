@@ -29,6 +29,7 @@ func watch(state: MatchState) -> void:
 		MatchState.Side.B: int(state.hp[MatchState.Side.B]),
 	}
 	state.unit_played.connect(_on_unit_played)
+	state.spell_cast.connect(_on_spell_cast)
 	state.unit_flipped.connect(_on_unit_flipped)
 	state.attack_performed.connect(_on_attack_performed)
 	state.hp_changed.connect(_on_hp_changed)
@@ -51,6 +52,12 @@ func _play(sfx: SoundBank.Sfx) -> void:
 
 
 func _on_unit_played(_side: int, _slot: int) -> void:
+	_play(SoundBank.Sfx.MOVE)
+
+
+## 砂術も「カードを使った」音を鳴らす。盤面へ置く音と分けるほどの違いが無く、
+## 効果そのものの音(被弾・破壊)は効果の側から鳴るため。
+func _on_spell_cast(_side: int, _card: CardData) -> void:
 	_play(SoundBank.Sfx.MOVE)
 
 
