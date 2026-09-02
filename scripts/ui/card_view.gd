@@ -699,7 +699,12 @@ func _keyword_text() -> String:
 	if unit != null and unit.silenced:
 		return "効果なし" if words.is_empty() else " ".join(words)
 	if words.is_empty() and not card.rules_text.is_empty():
-		words.append(CardEnums.trigger_name(card.effects[0].trigger))
+		# 砂術はトリガーを持たない(効果は撃った瞬間に1度だけ起きる。GameDesign.md 6章)。
+		# ここへ「設置」を出すと、盤面へ置くカードのように読める。
+		if card.is_spell:
+			words.append("砂術")
+		else:
+			words.append(CardEnums.trigger_name(card.effects[0].trigger))
 	return " ".join(words)
 
 
