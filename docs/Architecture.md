@@ -37,7 +37,7 @@ v5.0のカードが使う語彙を1箇所へ集める。旧ルールの `GameEnu
 | `NAMED`(const) | **語として見せる**キーワード。`GUARD` / `GLASS` / `PIERCE` / `QUICK` の4つ |
 | `Trigger` | `ON_PLAY`(設置)/ `ON_FLIP`(反転)/ `ON_DEATH`(余砂)/ `ON_TURN_END`(落砂)/ `ON_DAMAGED`(被弾) |
 | `EffectTarget` | `SELF` / `ENEMY_UNIT` / `ALL_ENEMY_UNITS` / `ALL_ALLY_UNITS` / `OPPONENT_PLAYER` / `OWN_PLAYER` / **`ALLY_UNIT`** |
-| `EffectType` | `DAMAGE_PLAYER` / `DAMAGE_UNIT` / `DESTROY_UNIT` / `SWAP_STATS` / `ADD_TOTAL` / `DROP_SAND` / `DRAW` / `HEAL_PLAYER` / `DAMAGE_PLAYER_PER_ENEMY_UNIT` / `ADD_ATTACK` / `SUMMON` / `GRANT_KEYWORD` / `SILENCE` / **`RETURN_TO_HAND`** |
+| `EffectType` | `DAMAGE_PLAYER` / `DAMAGE_UNIT` / `DESTROY_UNIT` / `SWAP_STATS` / `ADD_TOTAL` / `DROP_SAND` / `DRAW` / `HEAL_PLAYER` / `DAMAGE_PLAYER_PER_ENEMY_UNIT` / `ADD_ATTACK` / `SUMMON` / `GRANT_KEYWORD` / `SILENCE` / **`RETURN_TO_HAND`** / **`INVERT_PLAYER_HP`** |
 
 **`CardEnums` の enum へ新しい値を足すときは、必ず末尾へ置く**(下記11章)。
 
@@ -256,11 +256,16 @@ UIに依存しない、対局ルールそのものを扱う層。
 - 撃った砂術は `graveyard` へ積む。**盤面を経由しないため `unit_played` は出さず**、
   新しいシグナル `spell_cast(side, card)` を出す(音と演出の受け口)
 
-**`RETURN_TO_HAND` は砂術のためだけに足す唯一の `EffectType`。**盤面から駒を取り除いて
-持ち主の手札へ戻す。**適用は `MatchState` ではなく `CardEffectResolver._return_to_hand()`
-が持つ**——`_summon()`(空き枠へ置く)と対になり、盤面への出し入れが1箇所へ揃う。
-`MatchState` の公開メソッドが gdlint の上限へ張り付いていることへの答えでもある
-(`gdlintrc` を緩める前に、減らせる場所を先に探すこと)。**破壊ではないため `ON_DEATH`(余砂)は発火しない**。
+**砂術のために足す `EffectType` は2つだけ。**どちらも適用は `MatchState` ではなく
+`CardEffectResolver` の private が持つ——`_summon()`(空き枠へ置く)と対になり、
+盤面とプレイヤーへの操作が1箇所へ揃う。`MatchState` の公開メソッドが gdlint の上限へ
+張り付いていることへの答えでもある(`gdlintrc` を緩める前に、減らせる場所を先に探すこと)。
+
+- **`RETURN_TO_HAND`**(`_return_to_hand()`):盤面から駒を取り除いて持ち主の手札へ戻す
+- **`INVERT_PLAYER_HP`**(`_invert_hp()`):プレイヤーのHPを `INITIAL_HP - 現在HP` にする。
+  **増減は既存の `heal_player()` / `damage_player()` へ渡すこと。**HPの上限・0での決着・
+  シグナルの発行がすべてそこにあり、`hp` を直接書き換えると3つとも取りこぼす
+  (**満タンで撃つと自分が負ける**という、このカードの肝心の挙動が働かなくなる)**破壊ではないため `ON_DEATH`(余砂)は発火しない**。
 手札が上限に達している場合の扱いは持たない(このゲームは手札の上限を定義していない)。
 **戻すのは `CardData` であり、`CardInstance` の状態(受けたダメージ・与えられたキーワード)は
 すべて失われる**——手札へ戻ったカードは新品の1枚として扱う。

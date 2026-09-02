@@ -125,6 +125,11 @@ func _spell_value(state: MatchState, side: int, card: CardData) -> float:
 				and _best_ally_flip(state, side)["slot"] < 0
 			):
 				return 0.0
+			if (
+				effect.effect_type == CardEnums.EffectType.DROP_SAND
+				and _best_ally_drop(state, side, effect.value)["slot"] < 0
+			):
+				return 0.0
 		value += _on_play_value(state, side, effect)
 	return value
 
@@ -236,6 +241,14 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 			# 寿命を縮めるぶんだけを見る。
 			if effect.target == CardEnums.EffectTarget.ALL_ENEMY_UNITS:
 				value = state.units(foe_side).size() * effect.value * 0.8
+			elif effect.target == CardEnums.EffectTarget.ALLY_UNIT:
+				# 味方の砂を落とすのは「体力を攻撃力へ換える」取引であり、
+				# 得な駒とそうでない駒がある。いちばん得をする駒の増分を見る。
+				value = float(_best_ally_drop(state, side, effect.value)["gain"])
+		CardEnums.EffectType.INVERT_PLAYER_HP:
+			# 残りHPと失ったHPを入れ替える。**劣勢のときだけ得になる**(満タンで撃つと負ける)。
+			var own: int = state.hp[side]
+			value = float(MatchState.INITIAL_HP - own * 2) * FACE_WEIGHT
 		CardEnums.EffectType.ADD_ATTACK:
 			value = effect.value * 2.0
 		CardEnums.EffectType.SUMMON:
@@ -249,6 +262,23 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 			if slot >= 0 and not state.board[foe_side][slot].keywords().is_empty():
 				value = 3.0
 	return value
+
+
+## 砂を落として最も得をする味方と、その得の大きさ。得をする駒がいなければ slot は -1。
+func _best_ally_drop(state: MatchState, side: int, amount: int) -> Dictionary:
+	var best := {"slot": -1, "gain": 0.0}
+	for slot in MatchState.BOARD_SIZE:
+		var unit: CardInstance = state.board[side][slot]
+		if unit == null:
+			continue
+		var health := unit.health - amount
+		# 落としきると砕けるため、得どころか駒を1体失う。
+		if health <= 0:
+			continue
+		var gain := _lifetime_of(health, unit.attack + amount) - float(unit.lifetime_damage())
+		if gain > best["gain"]:
+			best = {"slot": slot, "gain": gain}
+	return best
 
 
 ## 反転させて最も得をする味方と、その得の大きさ。得をする駒がいなければ slot は -1。
@@ -278,10 +308,12 @@ func _effect_target(state: MatchState, side: int, card: CardData) -> Dictionary:
 			if slot >= 0:
 				return {"side": foe_side, "slot": slot}
 		elif effect.target == CardEnums.EffectTarget.ALLY_UNIT:
-			# 反転だけは「最も強い味方」ではなく「反転して最も得をする味方」を選ぶ。
+			# 反転と砂落としは「最も強い味方」ではなく「効かせて最も得をする味方」を選ぶ。
 			var slot: int = _strongest_ally(state, side)
 			if effect.effect_type == CardEnums.EffectType.SWAP_STATS:
 				slot = _best_ally_flip(state, side)["slot"]
+			elif effect.effect_type == CardEnums.EffectType.DROP_SAND:
+				slot = _best_ally_drop(state, side, effect.value)["slot"]
 			if slot >= 0:
 				return {"side": side, "slot": slot}
 	return {}

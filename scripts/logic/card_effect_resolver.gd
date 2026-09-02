@@ -76,6 +76,10 @@ func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Diction
 				if target != null and effect.keyword >= 0:
 					_beam(side, from, entry["side"], entry["slot"])
 					target.grant_keyword(effect.keyword)
+		CardEnums.EffectType.INVERT_PLAYER_HP:
+			var to_side := _player_side_for(side, effect.target)
+			_beam(side, from, to_side, -1)
+			_invert_hp(to_side)
 		CardEnums.EffectType.RETURN_TO_HAND:
 			for entry in _targets(side, unit, effect, hint):
 				_beam(side, from, entry["side"], entry["slot"])
@@ -101,6 +105,21 @@ func _summon(side: int, card_id: String) -> void:
 			_state.board[side][slot] = CardInstance.new(card)
 			_state.board_changed.emit(side)
 			return
+
+
+## プレイヤーのHPを反転する(砂術。GameDesign.md 6章)。**残りHPと失ったHPを入れ替える**もので、
+## 砂時計の反転(上の部屋と下の部屋の入れ替え)をプレイヤー自身へ持ち込んだもの。
+##
+## 増減は既存の `heal_player()` / `damage_player()` へ渡す。HPの上限・0での決着・
+## シグナルの発行がすべてそこにあり、ここで直接書き換えると3つとも取りこぼす
+## (満タンで撃つと自分が負ける、という肝心の挙動が働かなくなる)。
+func _invert_hp(side: int) -> void:
+	var target := MatchState.INITIAL_HP - int(_state.hp[side])
+	var current := int(_state.hp[side])
+	if target > current:
+		_state.heal_player(side, target - current)
+	elif target < current:
+		_state.damage_player(side, current - target)
 
 
 ## 砂時計を持ち主の手札へ戻す(砂術。GameDesign.md 6章)。**破壊ではないため余砂は

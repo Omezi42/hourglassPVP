@@ -8,7 +8,7 @@
 script = ExtResource("script_effect")
 trigger = 0
 target = 6
-effect_type = 9
+effect_type = 5
 value = 2
 
 [resource]
@@ -20,7 +20,7 @@ total_sand = 0
 pool_index = 60
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_pinch_0")])
-rules_text = "自分の砂時計1体の攻撃力+2"
+rules_text = "自分の砂時計1体の砂が2粒落ちる"
 cannot_attack = false
 is_token = false
 is_spell = true

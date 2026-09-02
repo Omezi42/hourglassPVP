@@ -14,6 +14,7 @@ func run(assert_true: Callable) -> void:
 	_test_a_spell_goes_to_the_graveyard()
 	_test_return_to_hand_does_not_trigger_on_death()
 	_test_cast_travels_through_match_action()
+	_test_inverting_hp_swaps_remaining_and_lost()
 
 
 ## 基本セットは砂時計58種+砂術12種=70枚(GameDesign.md 8章)。
@@ -48,7 +49,7 @@ func _test_a_spell_needs_no_empty_slot() -> void:
 	_assert.call(state.can_cast(side, 0), "枠が埋まっていても撃てる")
 	var before: int = state.hp[MatchState.Side.B]
 	_assert.call(state.cast_spell(side, 0), "砂術を撃てた")
-	_assert.call(state.hp[MatchState.Side.B] == before - 4, "本体へ4ダメージ")
+	_assert.call(state.hp[MatchState.Side.B] == before - 2, "本体へ2ダメージ")
 	state.free()
 
 
@@ -87,8 +88,27 @@ func _test_cast_travels_through_match_action() -> void:
 	var before: int = state.hp[MatchState.Side.B]
 	var action := MatchAction.cast(MatchState.Side.A, 0)
 	_assert.call(MatchAction.apply(state, action), "cast を適用できた")
-	_assert.call(state.hp[MatchState.Side.B] == before - 4, "効果が起きた")
+	_assert.call(state.hp[MatchState.Side.B] == before - 2, "効果が起きた")
 	state.free()
+
+
+## HPの反転(時の逆流)。残りHPと失ったHPが入れ替わる。
+## **満タンで撃つと0になって負ける**ところまでが効果であり、そこを検証する。
+func _test_inverting_hp_swaps_remaining_and_lost() -> void:
+	var state := _state_with_spell("reverse")
+	var side := MatchState.Side.A
+	state.hp[side] = 6
+	_assert.call(state.cast_spell(side, 0), "時の逆流を撃てた")
+	_assert.call(state.hp[side] == MatchState.INITIAL_HP - 6, "6 が 24 になる")
+	state.free()
+
+	# 満タンで撃つと0になり、その場で負ける。
+	var full := _state_with_spell("reverse")
+	_assert.call(full.cast_spell(MatchState.Side.A, 0), "満タンでも撃てる")
+	_assert.call(full.hp[MatchState.Side.A] == 0, "満タンで撃つとHPが0になる")
+	_assert.call(full.is_match_over(), "その場で決着する")
+	_assert.call(full.winner == MatchState.Side.B, "撃った側の負け")
+	full.free()
 
 
 ## 手札の先頭がその砂術になっている対局を作る。

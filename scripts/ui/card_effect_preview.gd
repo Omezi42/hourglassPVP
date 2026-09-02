@@ -37,6 +37,10 @@ enum Demo {
 	FX_SUMMON,
 	FX_GRANT_KEYWORD,
 	FX_SILENCE,
+	## 相手の砂時計1体を持ち主の手札へ戻す(砂術)。
+	FX_RETURN_TO_HAND,
+	## 自分のHPを反転する(砂術)。残りHPと失ったHPが入れ替わる。
+	FX_INVERT_HP,
 }
 
 const MIN_SIZE := Vector2(320, 200)
@@ -74,6 +78,7 @@ const STAGE_METHODS := {
 	Demo.FX_SUMMON: "_stage_summon",
 	Demo.FX_GRANT_KEYWORD: "_stage_grant_keyword",
 	Demo.FX_SILENCE: "_stage_silence",
+	Demo.FX_INVERT_HP: "_stage_invert_hp",
 }
 
 var _font: Font
@@ -197,6 +202,10 @@ static func _entry_for_effect(effect: CardEffectData) -> Dictionary:
 			demo = Demo.FX_GRANT_KEYWORD
 		CardEnums.EffectType.SILENCE:
 			demo = Demo.FX_SILENCE
+		CardEnums.EffectType.RETURN_TO_HAND:
+			demo = Demo.FX_RETURN_TO_HAND
+		CardEnums.EffectType.INVERT_PLAYER_HP:
+			demo = Demo.FX_INVERT_HP
 	# 反転がトリガーの効果は、反転そのものの実演を兼ねる(2本並べると同じ動きが続くため)。
 	# キーワードを与える効果だけは、値が「いくつ」ではなく「どの語か」を指す。
 	var value := maxi(effect.value, 1)
@@ -574,6 +583,23 @@ func _stage_heal(t: float, value: int) -> Dictionary:
 	return stage
 
 
+## 残りHPと失ったHPを入れ替える。**深く削られているほど大きく戻る**ことを見せたいので、
+## 少ない側から多い側へ動かす形にしている。
+func _stage_invert_hp(t: float, _value: int) -> Dictionary:
+	var stage := _empty_stage()
+	var own := _piece(5, 0, 5)
+	own["fade"] = _seg(t, 0.0, 0.15)
+	stage["own_hp"] = 0.2
+	stage["trigger_note"] = "自分の残りHPと失ったHPが入れ替わる"
+	if t >= 0.3:
+		stage["beams"] = [_beam(["own", 0], ["own_hp", 0], _seg(t, 0.3, 0.6))]
+	if t >= 0.6:
+		stage["own_hp"] = 0.2 + 0.6 * _seg(t, 0.6, 0.9)
+		stage["pops"] = [_pop("own_hp", 0, "反転", UiPalette.GLOW_AMBER, _seg(t, 0.6, 1.0))]
+	stage["own"] = [own]
+	return stage
+
+
 func _stage_damage_player(t: float, value: int) -> Dictionary:
 	var stage := _empty_stage()
 	var own := _piece(6, 0, 6)
@@ -619,7 +645,7 @@ func _stage_on_enemy_unit(t: float, demo: int, value: int, all: bool) -> Diction
 	var foes: Array = [_piece(5, 1, 6)]
 	if all:
 		foes.append(_piece(4, 2, 6))
-	stage["trigger_note"] = _note_on_enemy_unit(demo, value, all)
+	stage["trigger_note"] = CardEffectDemoEnemy.note(demo, value, all)
 	# 的が砕けた後も矢印が残らないよう、当たったところで消す。
 	if t >= 0.3 and t < 0.8:
 		var beams: Array = []
@@ -629,43 +655,10 @@ func _stage_on_enemy_unit(t: float, demo: int, value: int, all: bool) -> Diction
 	if t >= 0.62:
 		var landed := _seg(t, 0.62, 0.85)
 		for foe in foes:
-			_apply_on_enemy_unit(foe, demo, value, landed)
+			CardEffectDemoEnemy.apply(foe, demo, value, landed)
 	stage["own"] = [own]
 	stage["foe"] = foes
 	return stage
-
-
-static func _apply_on_enemy_unit(foe: Dictionary, demo: int, value: int, landed: float) -> void:
-	match demo:
-		Demo.FX_DESTROY_UNIT:
-			foe["shatter"] = landed
-		Demo.FX_SWAP_STATS:
-			foe["flip"] = landed if landed < 1.0 else -1.0
-			if landed >= 0.5:
-				var health: int = foe["h"]
-				foe["h"] = foe["a"]
-				foe["a"] = health
-		Demo.FX_DROP_SAND:
-			foe["h"] = maxi(foe["h"] - value, 0)
-			foe["a"] = foe["a"] + value
-		_:
-			var left: int = foe["h"] - value
-			foe["total"] = maxi(foe["total"] - value, foe["a"])
-			foe["h"] = maxi(left, 0)
-			if left <= 0:
-				foe["shatter"] = landed
-
-
-static func _note_on_enemy_unit(demo: int, value: int, all: bool) -> String:
-	var scope := "相手の砂時計すべて" if all else "相手の砂時計1体"
-	match demo:
-		Demo.FX_DESTROY_UNIT:
-			return "%sを破壊する" % scope
-		Demo.FX_SWAP_STATS:
-			return "%sの体力と攻撃力を入れ替える" % scope
-		Demo.FX_DROP_SAND:
-			return "%sの砂が%d粒落ちる" % [scope, value]
-	return "%sへ%dダメージ(砂は消える)" % [scope, value]
 
 
 # --- 描画 ---------------------------------------------------------------

@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="CardData" load_steps=6 format=3]
+[gd_resource type="Resource" script_class="CardData" load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
 [ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
@@ -20,24 +20,16 @@ effect_type = 10
 value = 0
 card_id = "mote"
 
-[sub_resource type="Resource" id="Effect_call_2"]
-script = ExtResource("script_effect")
-trigger = 0
-target = 0
-effect_type = 10
-value = 0
-card_id = "mote"
-
 [resource]
 script = ExtResource("script_card")
 id = "call"
 display_name = "砂王の呼び声"
-cost = 1
+cost = 3
 total_sand = 0
 pool_index = 68
 keywords = Array[int]([])
-effects = Array[Resource]([SubResource("Effect_call_0"), SubResource("Effect_call_1"), SubResource("Effect_call_2")])
-rules_text = "モートを3体出す"
+effects = Array[Resource]([SubResource("Effect_call_0"), SubResource("Effect_call_1")])
+rules_text = "モートを2体出す"
 cannot_attack = false
 is_token = false
 is_spell = true
