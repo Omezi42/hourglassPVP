@@ -23,6 +23,7 @@ const TITLE_FONT_SIZE := 38
 const SUB_FONT_SIZE := 22
 const FOOTER_FONT_SIZE := 18
 const TITLE_NAME := "砂時計アリーナ"
+const THEME_PATH := "res://resources/theme/main_theme.tres"
 
 var _bands: Array[CardDeckBand] = []
 var _curve: CardManaCurve
@@ -35,9 +36,14 @@ var _rows := 1
 
 
 func _ready() -> void:
+	if theme == null and ResourceLoader.exists(THEME_PATH):
+		theme = load(THEME_PATH)
 	_font = get_theme_default_font()
-	if _font == null:
-		_font = ThemeDB.fallback_font
+	if _font == null or _font == ThemeDB.fallback_font:
+		if theme != null and theme.default_font != null:
+			_font = theme.default_font
+		else:
+			_font = TextGlyphs.ui_font()
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_curve = CardManaCurve.new()
 	_curve.compact = true

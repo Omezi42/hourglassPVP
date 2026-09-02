@@ -30,8 +30,8 @@ var _font: Font
 
 func _ready() -> void:
 	_font = get_theme_default_font()
-	if _font == null:
-		_font = ThemeDB.fallback_font
+	if _font == null or _font == ThemeDB.fallback_font:
+		_font = TextGlyphs.ui_font()
 	queue_redraw()
 
 

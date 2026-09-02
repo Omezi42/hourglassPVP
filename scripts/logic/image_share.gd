@@ -40,17 +40,120 @@ const _JS_TEMPLATE := """
 			report("failed");
 		}
 	}
+	function showOverlay() {
+		try {
+			var old = document.getElementById("godot-deck-image-modal");
+			if (old && old.parentNode) { old.parentNode.removeChild(old); }
+
+			var url = URL.createObjectURL(blob);
+			var modal = document.createElement("div");
+			modal.id = "godot-deck-image-modal";
+			modal.style.position = "fixed";
+			modal.style.top = "0";
+			modal.style.left = "0";
+			modal.style.width = "100vw";
+			modal.style.height = "100vh";
+			modal.style.backgroundColor = "rgba(0, 0, 0, 0.78)";
+			modal.style.zIndex = "999999";
+			modal.style.display = "flex";
+			modal.style.flexDirection = "column";
+			modal.style.alignItems = "center";
+			modal.style.justifyContent = "center";
+			modal.style.fontFamily = "sans-serif";
+			modal.style.boxSizing = "border-box";
+			modal.style.padding = "16px";
+
+			var box = document.createElement("div");
+			box.style.display = "flex";
+			box.style.flexDirection = "column";
+			box.style.alignItems = "center";
+			box.style.maxWidth = "92vw";
+			box.style.maxHeight = "92vh";
+			box.style.backgroundColor = "#1a1816";
+			box.style.border = "2px solid #b89758";
+			box.style.borderRadius = "8px";
+			box.style.padding = "16px";
+			box.style.boxShadow = "0 8px 32px rgba(0,0,0,0.8)";
+
+			var msg = document.createElement("div");
+			msg.innerText = "画像を右クリック(スマホは長押し)して「画像をコピー」できます";
+			msg.style.color = "#f5f0e6";
+			msg.style.fontSize = "16px";
+			msg.style.fontWeight = "bold";
+			msg.style.marginBottom = "12px";
+			msg.style.textAlign = "center";
+			box.appendChild(msg);
+
+			var img = document.createElement("img");
+			img.src = url;
+			img.style.maxWidth = "86vw";
+			img.style.maxHeight = "68vh";
+			img.style.objectFit = "contain";
+			img.style.borderRadius = "4px";
+			img.style.border = "1px solid #443c32";
+			box.appendChild(img);
+
+			var btnRow = document.createElement("div");
+			btnRow.style.display = "flex";
+			btnRow.style.gap = "12px";
+			btnRow.style.marginTop = "14px";
+
+			var dlBtn = document.createElement("button");
+			dlBtn.innerText = "保存(ダウンロード)";
+			dlBtn.style.padding = "8px 18px";
+			dlBtn.style.backgroundColor = "#2a241e";
+			dlBtn.style.color = "#f5f0e6";
+			dlBtn.style.border = "1px solid #b89758";
+			dlBtn.style.borderRadius = "4px";
+			dlBtn.style.cursor = "pointer";
+			dlBtn.style.fontSize = "14px";
+			dlBtn.onclick = function (e) {
+				e.stopPropagation();
+				download("downloaded");
+			};
+			btnRow.appendChild(dlBtn);
+
+			var closeBtn = document.createElement("button");
+			closeBtn.innerText = "閉じる";
+			closeBtn.style.padding = "8px 24px";
+			closeBtn.style.backgroundColor = "#b89758";
+			closeBtn.style.color = "#110e0a";
+			closeBtn.style.border = "none";
+			closeBtn.style.borderRadius = "4px";
+			closeBtn.style.cursor = "pointer";
+			closeBtn.style.fontWeight = "bold";
+			closeBtn.style.fontSize = "14px";
+			function closeModal() {
+				if (modal.parentNode) { modal.parentNode.removeChild(modal); }
+				setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+			}
+			closeBtn.onclick = function (e) {
+				e.stopPropagation();
+				closeModal();
+			};
+			btnRow.appendChild(closeBtn);
+			box.appendChild(btnRow);
+
+			modal.onclick = function (e) {
+				if (e.target === modal) { closeModal(); }
+			};
+			document.body.appendChild(modal);
+			report("overlay");
+		} catch (e) {
+			download("saved");
+		}
+	}
 	if (!wantCopy) { download("downloaded"); return; }
 	try {
 		if (navigator.clipboard && window.ClipboardItem) {
 			navigator.clipboard.write([new ClipboardItem({ "image/png": blob })])
 				.then(function () { report("copied"); })
-				.catch(function () { download("saved"); });
+				.catch(function () { showOverlay(); });
 		} else {
-			download("saved");
+			showOverlay();
 		}
 	} catch (e) {
-		download("saved");
+		showOverlay();
 	}
 })();
 """
@@ -130,6 +233,8 @@ static func _on_js_done(args: Array) -> void:
 	match result:
 		"copied":
 			done.call(true, "画像をコピーしました。そのまま貼り付けられます")
+		"overlay":
+			done.call(true, "画像を表示しました。右クリックからコピーできます")
 		"saved":
 			done.call(true, "画像を保存しました(コピーはブラウザに断られました)")
 		"downloaded":

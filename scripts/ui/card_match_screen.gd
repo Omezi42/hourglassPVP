@@ -27,8 +27,8 @@ const TURN_END_BUTTON_SIZE := Vector2(148, 76)
 const TURN_END_BUTTON_TOP := 290.0
 const ACTION_BUTTON_SIZE := Vector2(148, 42)
 ## 反転ボタンは選んだ駒のすぐ下へ出す(GameDesign.md 9章)。
-const FLIP_BUTTON_SIZE := Vector2(104, 30)
-const FLIP_BUTTON_OVERLAP := 2.0
+const FLIP_BUTTON_SIZE := Vector2(104, 34)
+const FLIP_BUTTON_OVERLAP := 3.0
 const LOG_BUTTON_TOP := 384.0
 const SURRENDER_BUTTON_TOP := 434.0
 const EMOTE_BUTTON_TOP := 484.0
@@ -47,6 +47,10 @@ var selection: CardMatchSelection:
 var foe_bar: PlayerInfoBar:
 	get:
 		return _foe_bar
+## 持ち時間の焦燥演出。残り時間は時計の進行役(`CardMatchClock`)が書き込む。
+var alert: CardMatchAlert:
+	get:
+		return _alert
 ## 対局中の効果音。攻撃の演出が当たった瞬間に持ち越した音を出すため、進行役から引く。
 var sound: CardMatchSound:
 	get:
@@ -110,6 +114,9 @@ var _back_button: Button
 var _status: CardMatchStatus
 var _online_ctl: CardMatchOnline
 var _emote: CardMatchEmote
+var _alert: CardMatchAlert
+var _damage_assist: CardMatchDamageAssist
+var _history: CardMatchActionHistory
 
 
 func _ready() -> void:
@@ -134,6 +141,8 @@ func _reset_for_new_match() -> void:
 	_result.visible = false
 	_log.set_open(false)
 	_log.clear()
+	if _history != null:
+		_history.clear()
 	_pile.visible = false
 	_selection.clear()
 	_cpu_timer.stop()
@@ -152,6 +161,9 @@ func _reset_for_new_match() -> void:
 	# 前の対局の残り時間が情報帯に残らないようにする(負の値は表示しない)。
 	_own_bar.clock_seconds = -1.0
 	_foe_bar.clock_seconds = -1.0
+	if _alert != null:
+		_alert.remaining_seconds = -1.0
+		_alert.is_my_turn = false
 	_cpu_record = {}
 	_status.set_waiting("")
 	if _mulligan != null:
@@ -247,6 +259,9 @@ func _on_action_received(action: Dictionary) -> void:
 		if _emote != null:
 			_emote.handle_emote(action)
 		return
+	if _history != null:
+		var side: int = action.get("side", MatchState.other_side(my_side))
+		_history.push_action(side, _action_summary(action))
 	_strike.capture(action)
 	MatchAction.apply(state, action)
 	if _clocks.active() and state != null and not state.is_match_over():
@@ -335,7 +350,6 @@ func _build() -> void:
 	var table := BoardTable.new()
 	table.position = TABLE_RECT.position
 	table.size = TABLE_RECT.size
-	table.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(table)
 	_foe_bar = _make_bar(true, FOE_BAR_TOP)
 	_own_bar = _make_bar(false, OWN_BAR_TOP)
@@ -406,6 +420,12 @@ func _build() -> void:
 	add_child(_log)
 	_pile = CardPileViewer.new()
 	add_child(_pile)
+	_alert = CardMatchAlert.new()
+	add_child(_alert)
+	_damage_assist = CardMatchDamageAssist.new(self)
+	add_child(_damage_assist)
+	_history = CardMatchActionHistory.new(self)
+	add_child(_history)
 
 
 func _make_bar(opponent: bool, top: float) -> PlayerInfoBar:
@@ -464,6 +484,8 @@ func refresh() -> void:
 	_refresh_hand()
 	_targets.refresh()
 	_refresh_buttons()
+	if _damage_assist != null:
+		_damage_assist.sync()
 	_status.set_targeting(_selection != null and _selection.is_targeting())
 	# 対象選択に入った・演出が始まったぶんは、ホバーが動かなくてもここで引っ込める。
 	if _detail != null:
@@ -773,6 +795,10 @@ func _on_mulligan_confirmed(indices: Array) -> void:
 func _perform(action: Dictionary) -> void:
 	if _emote != null and action.get("type", "") != "emote":
 		_emote.close_popup()
+	if _history != null:
+		var atype: String = action.get("type", "")
+		if atype != "emote" and atype != "mulligan":
+			_history.push_action(my_side, _action_summary(action))
 	_record(action)
 	_strike.capture(action)
 	MatchAction.apply(state, action)
@@ -788,6 +814,30 @@ func _perform(action: Dictionary) -> void:
 		_clocks.start_turn()
 	_online.send(payload)
 	_finish_action()
+
+
+## アクション辞書を短い日本語1行にまとめる。履歴プレビューに使う。
+static func _action_summary(action: Dictionary) -> String:
+	match action.get("type", ""):
+		"play":
+			return "ユニット設置"
+		"attack":
+			return "攻撃"
+		"flip":
+			return "反転"
+		"cast":
+			return "砂術使用"
+		"end_turn":
+			return "ターン終了"
+		"time_up":
+			return "時間切れ"
+		"coin":
+			return "コイン使用"
+		"surrender":
+			return "投了"
+		"mulligan":
+			return "マリガン"
+	return action.get("type", "?")
 
 
 ## 1手を適用し終えたときの締め。攻撃なら演出を挟み、終わってから表示を更新する。

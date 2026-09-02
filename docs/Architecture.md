@@ -399,6 +399,9 @@ UIに依存しない、対局ルールそのものを扱う層。
 - ドラッグは `CardView` が `_get_drag_data()` / `_drop_data()` を持ち、枠側は
   `drop_handler`(Callable)で受ける。放されたら押して枠を選ぶ経路と同じ `_play_selected()`
   へ合流するため、設置効果の対象選択もそのまま働く
+- **タッチ操作のゆらぎ吸収(`PressTracker`)**: スマホ等でのタップ時に指先がわずかに動いても
+  キャンセル扱いにならないよう、8pxの許容マージン(`SLOP_MARGIN`)を持って判定する。また
+  `InputEventScreenTouch` も直接受け取れるようにする
 
 **「反転」だけは選んだ駒のすぐ下へ出し、他の行動(コイン・ターン終了・ログ・投了)を
 画面右の列にまとめる**(GameDesign.md 9章)。反転は盤面の1体を指した操作であり、
@@ -1584,10 +1587,16 @@ UI層へ依存することになる。
 - **画像をクリップボードへ置けるのは Web だけ。**Godot 4.6 の `DisplayServer` は
   `clipboard_get_image()` しか持たない(`clipboard_set_image()` は存在しない)ため、
   `ImageShare` は Web では `JavaScriptBridge` から `navigator.clipboard.write()` を呼び、
-  **断られたらダウンロードへ落とす**。それ以外の環境では `user://` へ保存して
-  保存先を1行で示す。判定は `OS.has_feature("web")` で行う
+  **断られたらDOMオーバーレイで画像を表示して右クリックコピーできるようにする**(併せて保存リンクも用意)。
+  それ以外の環境では `user://` へ保存して保存先を1行で示す。判定は `OS.has_feature("web")` で行う
 - **`JavaScriptBridge.create_callback()` の戻り値は変数へ持ち続ける。**その場で捨てると
   JS 側から呼び戻される前に解放され、結果が返らない
+- **`SubViewport` 内のフォント解決と文字化け対策。** `SubViewport` は親 Control の `theme` を
+  自動継承しないため、`project.godot` の `[gui] theme/custom` に `main_theme.tres` を設定し、
+  さらに `CardDeckSheet` 自体も `THEME_PATH` を `_ready()` で読み込む。
+  `CardDeckBand` や `CardManaCurve` のフォールバック先もエンジン組み込みフォントではなく
+  同梱の日本語フォント(`ZenKakuGothicNew-Bold.ttf`)を参照させ、Web書き出し環境等で
+  画像内の日本語文字が豆腐(□)に化けるのを防ぐ
 
 ---
 
@@ -1687,6 +1696,44 @@ UI層へ依存することになる。
 往復する**(`CardListScreen` の並び替えと同じ流儀)。みんなの側は開いた時点で1度だけ
 `stats/global` を読み、結果をセッション内に控える。**読めなかったときはその旨を1行で出す**
 (自分の戦績はローカルにあるため、通信できなくても従来どおり読める)。
+
+---
+
+### 10.10 対局中演出・QOL(GameDesign.md 9章)
+
+対局の緊張感・操作性・状況把握を支援する演出・UI群。既存のコード描画(UiPalette/真鍮・琥珀スタイル)に完全準拠する。
+
+| クラス | 責務 |
+|---|---|
+| `CardMatchAlert`(`scripts/ui/card_match_alert.gd`) | タイムリミット演出(焦燥演出)。残り15秒以下で脈動・警告表示 |
+| `CardMatchDamageAssist`(`scripts/ui/card_match_damage_assist.gd`) | 盤面総攻撃力(直接攻撃打点)の算出とアシスト表示 |
+| `CardMatchActionHistory`(`scripts/ui/card_match_action_history.gd`) | 直近のアクション履歴ミニプレビュー |
+| `BoardTable`(`scripts/ui/board_table.gd`) | 卓上装飾のインタラクティブトイ(クリック時の歯車・砂埃アニメーション) |
+
+- **タイムリミット演出**: `CardMatchClock` の残り時間を監視し、残り15秒を切ると警告パルス(アンバー〜赤)と微細な揺れを付与する。
+- **打点アシスト**: 自陣の攻撃可能ユニットの攻撃力合計、および相手の守護を考慮した直接打点を算出して控えめに表示。
+
+---
+
+### 10.11 デイリーミッション(GameDesign.md 23章)
+
+| クラス | 責務 |
+|---|---|
+| `DailyMissionData`(`scripts/data/daily_mission_data.gd`) | ミッションの定義(ID・説明・達成条件・報酬) |
+| `DailyMissionService`(`scripts/net/daily_mission_service.gd`, static) | 日付判定・進捗管理・保存(`user://daily_missions.json` および `players/{uid}`) |
+| `DailyMissionPanel`(`scripts/ui/daily_mission_panel.gd`) | ミッション確認・報酬受取モーダル |
+
+---
+
+### 10.12 リーサルパズル(GameDesign.md 24章)
+
+| クラス | 責務 |
+|---|---|
+| `PuzzleStageData`(`scripts/data/puzzle_stage_data.gd`, Resource) | パズル1問の初期配置(マナ・手札・自陣敵陣・相手HP) |
+| `CardPuzzleScreen`(`scripts/ui/card_puzzle_screen.gd`) | パズル専用対局画面(`CardMatchScreen` の軽量版または流用) |
+| `CardPuzzlePickerScreen`(`scripts/ui/card_puzzle_picker_screen.gd`) | ステージ選択画面 |
+
+---
 
 ## 11. 開発時の落とし穴
 

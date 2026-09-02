@@ -53,6 +53,8 @@ func hover(view: CardView) -> void:
 	_panel.show_card(view.card)
 	_panel.position = _place(view)
 	_panel.visible = true
+	# 履歴タイル(あとから add_child した子)より手前へ出す。
+	_panel.move_to_front()
 
 
 ## **指しているカードから対角に置く**(GameDesign.md 9章)。左右は反対の端、上下は

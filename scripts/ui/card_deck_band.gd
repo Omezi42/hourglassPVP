@@ -22,8 +22,8 @@ const NAME_FONT_SIZE := 18
 ## (空欄にすると総量0のカードと見分けが付かない)。
 const TOTAL_FONT_SIZE := 15
 const TOTAL_GAP := 10.0
-const BUTTON_SIZE := Vector2(32.0, 32.0)
-const BUTTON_GAP := 6.0
+const BUTTON_SIZE := Vector2(36.0, 36.0)
+const BUTTON_GAP := 5.0
 const BADGE_SIZE := Vector2(36.0, 26.0)
 const BADGE_GAP := 8.0
 ## 絵は元画像の縦中央あたりだけを切り出す。全体を帯の高さへ縮めると幅が25px程度になり、
@@ -46,8 +46,8 @@ var _tracker := PressTracker.new()
 
 func _ready() -> void:
 	_font = get_theme_default_font()
-	if _font == null:
-		_font = ThemeDB.fallback_font
+	if _font == null or _font == ThemeDB.fallback_font:
+		_font = TextGlyphs.ui_font()
 	custom_minimum_size.y = BAND_HEIGHT
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND

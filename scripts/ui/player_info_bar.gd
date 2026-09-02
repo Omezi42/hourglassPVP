@@ -24,6 +24,8 @@ const DECK_PILE_X := 730.0
 const GRAVE_PILE_X := 812.0
 const HAND_PILE_X := 894.0
 const CLOCK_X := 990.0
+const CLOCK_SIZE := Vector2(80, 40)
+const CLOCK_RADIUS := 6.0
 const BAR_CORNER := 10.0
 const HP_BAR_RADIUS := 6.0
 const PILE_RADIUS := 6.0
@@ -203,15 +205,55 @@ func _draw_name_plate() -> void:
 
 
 ## 残り時間は「相手の手札」の右、情報帯の末尾に置く。
+## 真鍮枠のプレート内に秒数と砂時計アイコンを描画する。
 func _draw_clock() -> void:
+	var ci := get_canvas_item()
+	var rect := Rect2(Vector2(CLOCK_X - 10, 8), CLOCK_SIZE)
+	var is_critical := clock_seconds <= 15.0 and active
+	var is_low := clock_seconds <= maxf(clock_total, 1.0) * 0.5
+
+	# プレート背景
+	var points := UiPaint.rounded_rect_points_uniform(rect, CLOCK_RADIUS, 5)
+	UiPaint.fill_gradient_polygon(
+		ci, points, rect, [[0.0, Color(0.18, 0.14, 0.12, 1.0)], [1.0, Color(0.08, 0.06, 0.06, 1.0)]]
+	)
+
+	# 枠線 (残り15秒以下かつ手番中なら脈動パルス)
+	var outline := points.duplicate()
+	outline.append(points[0])
+	if is_critical:
+		var pulse := (sin(Time.get_ticks_msec() * 0.008) + 1.0) * 0.5
+		var pulse_color := UiPalette.WARNING_RED.lerp(UiPalette.GLOW_AMBER, pulse * 0.4)
+		draw_polyline(outline, pulse_color, 2.5, true)
+		draw_rect(rect.grow(1.5), Color(pulse_color, 0.15 * pulse))
+	elif is_low:
+		draw_polyline(outline, Color(UiPalette.WARNING_RED, 0.8), 1.5, true)
+	else:
+		draw_polyline(outline, UiPalette.BRASS_MID, 1.5, true)
+
 	var minutes := int(clock_seconds) / 60
 	var seconds := int(clock_seconds) % 60
-	var low := clock_seconds <= maxf(clock_total, 1.0) * 0.5
+	var text_color := UiPalette.TEXT_OFFWHITE
+	if is_critical:
+		var pulse := (sin(Time.get_ticks_msec() * 0.008) + 1.0) * 0.5
+		text_color = Color(1.0, 0.35 + 0.35 * pulse, 0.35 + 0.35 * pulse, 1.0)
+	elif is_low:
+		text_color = UiPalette.WARNING_RED
+
+	# ミニ砂時計アイコン (枠内左側)
+	var icon_x := rect.position.x + 10.0
+	var icon_y := rect.position.y + 14.0
+	var icon_color := UiPalette.WARNING_RED if is_critical or is_low else UiPalette.BRASS_LIGHT
+	draw_line(Vector2(icon_x, icon_y), Vector2(icon_x + 10, icon_y), icon_color, 1.5)
+	draw_line(Vector2(icon_x, icon_y + 14), Vector2(icon_x + 10, icon_y + 14), icon_color, 1.5)
+	draw_line(Vector2(icon_x, icon_y), Vector2(icon_x + 10, icon_y + 14), icon_color, 1.2)
+	draw_line(Vector2(icon_x + 10, icon_y), Vector2(icon_x, icon_y + 14), icon_color, 1.2)
+
 	_text(
-		Vector2(CLOCK_X, 36),
+		Vector2(rect.position.x + 26, rect.position.y + 26),
 		"%d:%02d" % [minutes, seconds],
-		20,
-		UiPalette.WARNING_RED if low else UiPalette.TEXT_OFFWHITE
+		16,
+		text_color
 	)
 
 

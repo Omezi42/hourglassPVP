@@ -61,17 +61,19 @@ func _on_mouse_exited() -> void:
 
 
 static func is_primary_click(event: InputEvent) -> bool:
-	return (
-		event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT
-	)
+	if event is InputEventMouseButton:
+		return event.pressed and event.button_index == MOUSE_BUTTON_LEFT
+	if event is InputEventScreenTouch:
+		return event.pressed
+	return false
 
 
 static func is_primary_release(event: InputEvent) -> bool:
-	return (
-		event is InputEventMouseButton
-		and not event.pressed
-		and event.button_index == MOUSE_BUTTON_LEFT
-	)
+	if event is InputEventMouseButton:
+		return not event.pressed and event.button_index == MOUSE_BUTTON_LEFT
+	if event is InputEventScreenTouch:
+		return not event.pressed
+	return false
 
 
 ## ホバーで軽く明るくしつつ、わずかに浮き上がらせる。選択ハイライト(StyleBox側)とは

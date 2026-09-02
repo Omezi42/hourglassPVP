@@ -12,6 +12,49 @@
 
 ---
 
+## 対局中演出・QOL機能(フェーズ1)
+
+仕様は GameDesign.md 9章、実装設計は Architecture.md 10.10節。**真鍮・琥珀・石のコード描画デザインを踏襲し、実機スクショで確認しながら進める**。
+
+- [x] **1-1. タイムリミット砂時計演出(焦燥演出)**: 残り15秒以下で真鍮フレームの脈動・警告パルス (`PlayerInfoBar._draw_clock()`, `CardMatchAlert`)
+- [x] **1-2. 盤面総攻撃力(打点アシスト)表示**: 自陣の攻撃可能ユニットの総打点を控えめに表示 (`CardMatchDamageAssist`)
+- [x] **1-3. 直前のアクション履歴プレビュー**: 画面脇に直近の行動ミニタイル表示 (`CardMatchActionHistory`)
+- [x] **1-4. 卓上インタラクティブトイ**: 卓上中央の紋章クリックで歯車回転+グローアニメーション (`BoardTable`)
+
+---
+
+## リーサルパズル(詰将棋モード)(フェーズ2)
+
+仕様は GameDesign.md 24章、実装設計は Architecture.md 10.12節。
+
+- [ ] パズルステージデータ定義(`PuzzleStageData`) & 初期ステージ3〜5問作成
+- [ ] パズル選択画面(`CardPuzzlePickerScreen`)
+- [ ] パズル対局画面(`CardPuzzleScreen`) & クリア/失敗判定・報酬付与
+
+---
+
+## デイリーミッション(フェーズ3)
+
+仕様は GameDesign.md 23章、実装設計は Architecture.md 10.11節。
+
+- [ ] ミッション定義(`DailyMissionData`) & 追跡管理サービス(`DailyMissionService`)
+- [ ] 対局終了時の進捗集計フック
+- [ ] ミッション確認・受取モーダル(`DailyMissionPanel`)
+
+---
+
+## スマホ・タッチ操作の改善(PC操作最優先)
+
+仕様は GameDesign.md 9章「スマホ・タッチ操作への配慮」、実装設計は Architecture.md 4.0節。
+
+- [x] `project.godot` のアスペクト比維持(`aspect="keep"`)とタッチエミュレーション設定
+- [x] `PressTracker` / `ClickArea` のタッチスロープ許容マージン(8px)と `InputEventScreenTouch` 対応
+- [x] `CardDeckBand` の「+」「−」ボタン寸法最適化(36x36px)によるタッチ・クリックしやすさ向上
+- [x] 対局画面・詳細表示はPC本来の操作感(ホバーでのみ表示)を維持
+- [x] ヘッドレス・Lintテストでの検証
+
+---
+
 ## 対局の記録と分析
 
 仕様は GameDesign.md 22章、実装設計は Architecture.md 10.9節。**人が指した対局を残し、
@@ -22,8 +65,7 @@
 - [x] 戦績画面のヘッダーに「みんなの戦績」を足し、自分の戦績と往復できるようにした
 - [x] `tools/analyze_matches.py`(ビルドID・期間・種別で絞って集計し、Discordへ投稿できる)
 - [x] `firestore.rules` へ `match_records` と `stats` を足した
-- [ ] **`firestore.rules` を Firebase コンソールへ貼り付けて公開する**(手作業)。
-      これを行うまで記録は書き込みに失敗する(対局そのものは通常どおり成立する)
+- [x] **`firestore.rules` を Firebase MCP 経由でプロジェクトへデプロイ・公開完了**
 - [ ] **実機で1局通して、記録が1件だけ残ることと集計が1増えることを確認する**(2クライアントが要る)
 - [ ] 記録が貯まったら `tools/analyze_matches.py` を回し、`docs/BalanceReport_v5.md` の
       シミュレーション値と突き合わせる。**とくに砂術**はCPUが持て余しており(同10.6節)、
@@ -107,7 +149,9 @@
 - [x] `CardDeckSheet`(`SubViewport` の中だけで生きる表)。帯は `CardDeckBand` を
       `readonly` で使い回し、並びは `CardLibrary.compare_by_cost` を通す。
       **高さは種類数で変わる**(常に30種ぶんの高さで書き出すと右下が大きく空く)
-- [x] `ImageShare`。Web はクリップボード → 断られたらダウンロード、それ以外は `user://` へ保存
+- [x] `ImageShare`。Web はクリップボード → 断られたら右クリック用画像オーバーレイ表示＋ダウンロード、それ以外は `user://` へ保存
+- [x] 共有画像内の日本語文字化け修正(`project.godot` のカスタムテーマ指定と `CardDeckSheet` / 各帯のフォールバック先を日本語フォントへ統一)
+- [x] Webでの画像右クリックコピー用HTMLオーバーレイ表示の実装
 - [ ] **実機(unityroom)でのコピーの確認**。`navigator.clipboard.write()` は
       ブラウザ・設定によって断られる。断られた場合にダウンロードへ落ちることと、
       X の投稿欄へそのまま貼れることを1度は通す

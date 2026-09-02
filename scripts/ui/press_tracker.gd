@@ -7,6 +7,9 @@ extends RefCounted
 
 enum Result { NONE, PRESSED, CONFIRMED, CANCELED }
 
+## 指のブレ(タッチスロープ)の許容マージン(px)。
+const SLOP_MARGIN := 8.0
+
 var _is_pressed := false
 
 
@@ -17,8 +20,14 @@ func feed(event: InputEvent, local_size: Vector2) -> Result:
 
 	if _is_pressed and ClickArea.is_primary_release(event):
 		_is_pressed = false
-		var release_position: Vector2 = (event as InputEventMouseButton).position
-		var inside := Rect2(Vector2.ZERO, local_size).has_point(release_position)
+		var release_position := Vector2.ZERO
+		if event is InputEventMouseButton or event is InputEventScreenTouch:
+			release_position = event.position
+		var hit_rect := Rect2(
+			-Vector2(SLOP_MARGIN, SLOP_MARGIN),
+			local_size + Vector2(SLOP_MARGIN * 2.0, SLOP_MARGIN * 2.0)
+		)
+		var inside := hit_rect.has_point(release_position)
 		return Result.CONFIRMED if inside else Result.CANCELED
 
 	return Result.NONE

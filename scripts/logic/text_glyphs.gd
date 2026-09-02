@@ -57,6 +57,15 @@ static func replace_unsupported(text: String) -> String:
 	return out
 
 
+## コード描画のUIが直に使うフォント。`get_theme_default_font()` が拾えない場面
+## (`SubViewport` の中、テーマを持たないまま `_draw()` するノード)で使う。
+## **`ThemeDB.fallback_font` をそのまま使ってはいけない**——日本語の字形を持たないため、
+## エディタ実行では化けずに書き出した版でだけ豆腐(□)になる。
+static func ui_font() -> Font:
+	var font := _load_font()
+	return ThemeDB.fallback_font if font == null else font
+
+
 static func _load_font() -> Font:
 	if _font == null and ResourceLoader.exists(FONT_PATH):
 		_font = load(FONT_PATH) as Font

@@ -20,6 +20,44 @@ const MEDALLION_INNER_RADIUS := 13.0
 const DIVIDER_ALPHA := 0.5
 const RIM_OUTER_WIDTH := 4.0
 
+var _medallion_angle := 0.0
+var _medallion_glow := 0.0
+var _tween: Tween
+
+
+func _ready() -> void:
+	mouse_filter = Control.MOUSE_FILTER_PASS
+
+
+func _gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton:
+		var mb := event as InputEventMouseButton
+		if mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT:
+			var divider_y := size.y * DIVIDER_RATIO
+			var center := Vector2(size.x * 0.5, divider_y)
+			if mb.position.distance_to(center) <= MEDALLION_OUTER_RADIUS + 10.0:
+				_interact_medallion()
+
+
+func _interact_medallion() -> void:
+	if _tween != null and _tween.is_valid():
+		_tween.kill()
+	_tween = create_tween()
+	(
+		_tween
+		. parallel()
+		. tween_property(self, "_medallion_angle", _medallion_angle + PI * 0.5, 0.35)
+		. set_trans(Tween.TRANS_BACK)
+		. set_ease(Tween.EASE_OUT)
+	)
+	_tween.parallel().tween_property(self, "_medallion_glow", 1.0, 0.1)
+	_tween.chain().tween_property(self, "_medallion_glow", 0.0, 0.25)
+
+
+func _process(_delta: float) -> void:
+	if _medallion_glow > 0.0 or (_tween != null and _tween.is_valid()):
+		queue_redraw()
+
 
 func _draw() -> void:
 	var ci := get_canvas_item()
@@ -32,7 +70,6 @@ func _draw() -> void:
 			Vector2(0.0, size.y),
 		]
 	)
-	# 無地の一色だと輪郭だけの線画に見えるため、奥から手前へ明るくなる石の面として塗る。
 	(
 		UiPaint
 		. fill_gradient_polygon(
@@ -59,8 +96,18 @@ func _draw() -> void:
 	draw_line(Vector2(left_x, divider_y), Vector2(right_x, divider_y), divider_color, DIVIDER_WIDTH)
 
 	var center := Vector2(size.x * 0.5, divider_y)
-	UiPaint.draw_ring(ci, center, MEDALLION_OUTER_RADIUS, divider_color, 2.0, 32)
-	UiPaint.draw_ring(ci, center, MEDALLION_INNER_RADIUS, divider_color, 1.5, 32)
+	var glow_color := divider_color.lerp(UiPalette.BRASS_HIGHLIGHT, _medallion_glow)
+	UiPaint.draw_ring(
+		ci, center, MEDALLION_OUTER_RADIUS, glow_color, 2.0 + _medallion_glow * 1.5, 32
+	)
+	UiPaint.draw_ring(ci, center, MEDALLION_INNER_RADIUS, glow_color, 1.5 + _medallion_glow, 32)
+
+	# 歯車・クロスラインの装飾(回転)
+	for i in 4:
+		var rad := _medallion_angle + i * (PI * 0.5)
+		var p1 := center + Vector2(cos(rad), sin(rad)) * MEDALLION_INNER_RADIUS
+		var p2 := center + Vector2(cos(rad), sin(rad)) * MEDALLION_OUTER_RADIUS
+		draw_line(p1, p2, glow_color, 1.5)
 
 
 func _amber(alpha: float) -> Color:

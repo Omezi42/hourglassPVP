@@ -40,6 +40,7 @@ func run(assert_true: Callable) -> void:
 	_test_preset_decks_are_legal()
 	_test_online_resume_store_round_trips()
 	_test_match_stats_accumulate()
+	_test_deck_sheet_font_resolution()
 
 
 func _card(id: String) -> CardData:
@@ -766,3 +767,30 @@ func _test_match_stats_accumulate() -> void:
 	var decks := MatchStats.decks("uid-a")
 	_assert.call(decks.size() == 1, "the same build should be one deck row")
 	_assert.call(int(decks[0]["games"]) == 3, "the build should show three games")
+
+
+## 共有用のデッキ表がSubViewport内でも日本語フォント(ZenKakuGothicNew)を正しく参照できるか検証する。
+func _test_deck_sheet_font_resolution() -> void:
+	var viewport := SubViewport.new()
+	var sheet := CardDeckSheet.new()
+	viewport.add_child(sheet)
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree != null and tree.root != null:
+		tree.root.add_child(viewport)
+	var font: Font = sheet.get_theme_default_font()
+	_assert.call(font != null, "deck sheet should resolve a default font")
+	_assert.call(
+		font != ThemeDB.fallback_font,
+		"deck sheet font must not fall back to empty engine fallback font"
+	)
+	_assert.call(
+		font.has_char("砂".unicode_at(0)),
+		"resolved font must contain Japanese kanji glyphs (e.g. 砂)"
+	)
+	_assert.call(
+		font.has_char("ア".unicode_at(0)),
+		"resolved font must contain Japanese katakana glyphs (e.g. ア)"
+	)
+	if viewport.get_parent() != null:
+		viewport.get_parent().remove_child(viewport)
+	viewport.free()

@@ -73,12 +73,18 @@ func refresh_bars() -> void:
 	var foe := MatchState.other_side(_screen.my_side)
 	var own_bar := _screen.bar_for(_screen.my_side)
 	var foe_bar := _screen.bar_for(foe)
-	own_bar.clock_seconds = clock.get_remaining(_screen.my_side)
-	foe_bar.clock_seconds = clock.get_remaining(foe)
+	var own_rem := clock.get_remaining(_screen.my_side)
+	var foe_rem := clock.get_remaining(foe)
+	own_bar.clock_seconds = own_rem
+	foe_bar.clock_seconds = foe_rem
 	own_bar.clock_total = turn_seconds()
 	foe_bar.clock_total = turn_seconds()
 	own_bar.queue_redraw()
 	foe_bar.queue_redraw()
+	var alert := _screen.alert
+	if alert != null:
+		alert.remaining_seconds = own_rem
+		alert.is_my_turn = _screen.state != null and _screen.state.current_turn == _screen.my_side
 
 
 ## 相手の持ち時間が0になっても申告が来ない場合、猶予を置いて待っている側の勝ちにする。
