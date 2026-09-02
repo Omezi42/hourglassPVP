@@ -9,7 +9,7 @@ script = ExtResource("script_effect")
 trigger = 0
 target = 4
 effect_type = 0
-value = 2
+value = 4
 
 [resource]
 script = ExtResource("script_card")
@@ -20,7 +20,7 @@ total_sand = 0
 pool_index = 59
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_shot_0")])
-rules_text = "相手プレイヤーに2ダメージ"
+rules_text = "相手プレイヤーに4ダメージ"
 cannot_attack = false
 is_token = false
 is_spell = true

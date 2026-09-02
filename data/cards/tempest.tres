@@ -9,18 +9,18 @@ script = ExtResource("script_effect")
 trigger = 0
 target = 2
 effect_type = 1
-value = 2
+value = 1
 
 [resource]
 script = ExtResource("script_card")
 id = "tempest"
 display_name = "砂塵嵐"
-cost = 4
+cost = 3
 total_sand = 0
 pool_index = 69
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_tempest_0")])
-rules_text = "相手の砂時計すべてに2ダメージ"
+rules_text = "相手の砂時計すべてに1ダメージ"
 cannot_attack = false
 is_token = false
 is_spell = true

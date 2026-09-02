@@ -209,6 +209,11 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 			# 攻撃力が体力を上回った駒を戻すと寿命が伸びる(GameDesign.md 1章)。
 			if effect.target == CardEnums.EffectTarget.ALLY_UNIT:
 				value = float(_best_ally_flip(state, side)["gain"])
+			elif effect.target == CardEnums.EffectTarget.ALL_ALLY_UNITS:
+				# 自分の盤面をまとめて反転するのは**得とは限らない**。損になる駒も
+				# あるため、増減をそのまま足し合わせる(負の値になりうる)。
+				for unit in state.units(side):
+					value += _lifetime_of(unit.attack, unit.health) - float(unit.lifetime_damage())
 			elif effect.target == CardEnums.EffectTarget.ALL_ENEMY_UNITS:
 				for unit in state.units(foe_side):
 					value += _swap_value(unit)

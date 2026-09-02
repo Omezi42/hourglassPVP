@@ -48,7 +48,7 @@ func _test_a_spell_needs_no_empty_slot() -> void:
 	_assert.call(state.can_cast(side, 0), "枠が埋まっていても撃てる")
 	var before: int = state.hp[MatchState.Side.B]
 	_assert.call(state.cast_spell(side, 0), "砂術を撃てた")
-	_assert.call(state.hp[MatchState.Side.B] == before - 2, "本体へ2ダメージ")
+	_assert.call(state.hp[MatchState.Side.B] == before - 4, "本体へ4ダメージ")
 	state.free()
 
 
@@ -87,7 +87,7 @@ func _test_cast_travels_through_match_action() -> void:
 	var before: int = state.hp[MatchState.Side.B]
 	var action := MatchAction.cast(MatchState.Side.A, 0)
 	_assert.call(MatchAction.apply(state, action), "cast を適用できた")
-	_assert.call(state.hp[MatchState.Side.B] == before - 2, "効果が起きた")
+	_assert.call(state.hp[MatchState.Side.B] == before - 4, "効果が起きた")
 	state.free()
 
 
