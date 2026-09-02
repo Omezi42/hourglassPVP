@@ -50,7 +50,66 @@ const ICONS: Dictionary = {
 		"name": "閃光",
 		"path": "res://assets/hourglasses/emblems/burst.png",
 	},
+	"poison":
+	{
+		"name": "髑髏",
+		"path": "res://assets/hourglasses/emblems/poison.png",
+	},
+	"wheel":
+	{
+		"name": "歯車",
+		"path": "res://assets/hourglasses/emblems/wheel.png",
+	},
+	"gate":
+	{
+		"name": "鳥居",
+		"path": "res://assets/hourglasses/emblems/gate.png",
+	},
+	"vamp":
+	{
+		"name": "蝙蝠",
+		"path": "res://assets/hourglasses/emblems/vamp.png",
+	},
+	"glow":
+	{
+		"name": "陽光",
+		"path": "res://assets/hourglasses/emblems/glow.png",
+	},
+	"anchor":
+	{
+		"name": "錨",
+		"path": "res://assets/hourglasses/emblems/anchor.png",
+	},
+	"bloom":
+	{
+		"name": "大輪",
+		"path": "res://assets/hourglasses/emblems/bloom.png",
+	},
+	"tower":
+	{
+		"name": "尖塔",
+		"path": "res://assets/hourglasses/emblems/tower.png",
+	},
+	"mascot":
+	{
+		"name": "すなえる",
+		"path": "res://assets/mascot/mascot_avatar.png",
+	},
 }
+
+## 最初から持っているアイコン(GameDesign.md 14章)。ここに無いものはショップ(21章)で
+## 解放する。**この並びから外したidが自動的に売り物になる**ため、アイコンを足すときに
+## ショップ側へ書き足す作業は発生しない。
+const INITIAL_ICON_IDS: Array[String] = [
+	"sand",
+	"hour",
+	"crown",
+	"shield",
+	"sword",
+	"eye",
+	"halo",
+	"burst",
+]
 
 const TITLES: Dictionary = {
 	"none":
@@ -73,6 +132,8 @@ const TITLES: Dictionary = {
 static var _textures: Dictionary = {}
 
 
+## 定義されているアイコンすべて。所有しているものだけを出したい画面は
+## `AccountService.owned_icon_ids()` を使う(所有はアカウント側の関心のため)。
 static func get_available_icon_ids() -> Array:
 	return ICONS.keys()
 

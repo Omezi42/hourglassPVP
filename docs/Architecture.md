@@ -1427,6 +1427,9 @@ GameDesign.md 14章(アカウント)・15章(通貨)の実装方針。認証は 
 | `currency` | int | 砂金の残高 |
 | `cpu_reward_date` | String | CPU戦の報酬を数えている日付(`YYYY-MM-DD`) |
 | `cpu_reward_count` | int | その日付にCPU戦で報酬を得た回数 |
+| `owned_icons` | Array[String] | ショップで買ったアイコンのid。初期解放の8種は含めない |
+| `owned_emotes` | Array[String] | ショップで買ったエモートのid。初期解放の4種は含めない |
+| `emote_slots` | Array[String] | 対局中に出す4つ。空なら初期の4種を使う |
 | `updated_at` | float | 最終更新時刻(Unix時間) |
 
 - 利用可能なアイコンと称号の定義は `UserProfileLibrary`(`scripts/data/user_profile_library.gd`)に集約する。初期解放アイコンは紋章8種(`sand`, `hour`, `crown`, `shield`, `sword`, `eye`, `halo`, `burst`)とし、マスコット(`mascot`)は将来のショップ要素として初期配布から除外する。
@@ -1547,6 +1550,45 @@ UI層へ依存することになる。
 
 **カード別は「そのカードを入れたデッキで戦った勝率」**であり、カードの強さではない
 (強さの測り方は `docs/BalanceReport_v5.md` 2章の方式による)。画面の見出しにもそう書く。
+
+---
+
+### 10.8 ショップと所有(GameDesign.md 21章)
+
+| クラス | 責務 |
+|---|---|
+| `ShopCatalog`(`scripts/data/shop_catalog.gd`, static) | 品揃えと価格。**中身そのものは持たない**——アイコンは `UserProfileLibrary`、エモートは `EmoteLibrary` が持ち、ここは「初期解放に含まれないものが並ぶ」という規則と値段だけを持つ |
+| `CardShopScreen`(`scripts/ui/card_shop_screen.gd`) | ショップ画面。共通の `ScreenHeader` を使い、右の主アクションへ残高を出す |
+| `EmoteSlotPanel`(`scripts/ui/emote_slot_panel.gd`) | 所有しているエモートから4つを選ぶモーダル。アカウント画面のヘッダーの主アクションから開く |
+
+**品揃えを表として別に持たない。**`ShopCatalog.items()` は
+「全アイコン − 初期解放のアイコン」と「全エモート − 初期解放のエモート」を並べるだけにする。
+表を別に持つと、アイコンを1つ足したときに**ショップへ並べ忘れた品**と
+**初期解放でも購入品でもない、どこにも出ないid**が生まれる。
+
+**所有と枠は `AccountService` が持つ**(`players/{uid}` の3フィールド)。
+- `owned_icon_ids()` / `owned_emote_ids()` は**初期解放を必ず先頭に含めて返す**。
+  呼ぶ側が「初期の8種 + 買った分」を自分で足す形にすると、足し忘れた画面で
+  既定のアイコンすら選べなくなる
+- `emote_slots()` は保存済みが空なら `EmoteLibrary.DEFAULT_EMOTE_IDS` を返す。
+  **所有しなくなったidは起こり得ない**(買ったものは消えないため)が、
+  プールから消えた場合に備えて所有していないidは落とす
+- `purchase()` は `grant()` と同じ流儀で、`updateTime` を前提条件にした `commit()` で
+  **残高の確認と減算と所有への追加を1回の書き込みで行う**。残高を読んでから別に書くと、
+  2つのタブで同時に押したときに2つとも買えてしまう
+- **未サインインでは買えない**。`AccountStore` へ退避して後から反映する形(`grant()` の
+  経路)は使わない。**砂金の獲得は取りこぼすと失われるが、購入は取りこぼしても
+  何も失われない**ため、退避する理由がない
+
+**対局中に出すエモートは `AccountService.emote_slots()` から引く**
+(`CardMatchEmote` が `EmoteLibrary.get_emote_ids()` を直に読まないようにする)。
+**CPUの返答も同じ4つから選ぶ**——プレイヤーが持っていないエモートをCPUだけが喋ると、
+どこで手に入るのか分からない品が対局中に現れることになる。
+
+**アカウント画面のアイコン一覧はスクロールできるようにする**(GameDesign.md 14章)。
+左カラムは高さが決まっており、9種買うと17個で5行になって下端のボタンを押し出す。
+`ScrollContainer` は `.tscn` を変えず `account_screen.gd` が実行時に挟む
+(既に `CodedButton` を実行時に足しているのと同じ流儀)。
 
 ---
 

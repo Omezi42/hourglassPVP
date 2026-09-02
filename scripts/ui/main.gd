@@ -16,6 +16,8 @@ var card_deck_list_screen: CardDeckListScreen
 ## v5.0のカード一覧画面(同上)。
 var card_list_screen: CardListScreen
 var stats_screen: CardStatsScreen
+## ショップ(GameDesign.md 21章)。同上。
+var shop_screen: CardShopScreen
 ## ルームマッチの専用画面(GameDesign.md 11章)。
 var card_room_screen: CardRoomScreen
 
@@ -108,6 +110,15 @@ func _ready() -> void:
 	add_child(keyword_dict_screen)
 	keyword_dict_screen.back_pressed.connect(func() -> void: _show_only(home_screen))
 	_screens.append(keyword_dict_screen)
+	shop_screen = CardShopScreen.new()
+	shop_screen.anchor_right = 1.0
+	shop_screen.anchor_bottom = 1.0
+	shop_screen.visible = false
+	shop_screen.back_pressed.connect(_on_shop_back)
+	# 買ったものはホームのヘッダー(残高・アイコン)へすぐ効かせる。
+	shop_screen.purchased.connect(func() -> void: home_screen.refresh_account())
+	add_child(shop_screen)
+	_screens.append(shop_screen)
 	card_room_screen = CardRoomScreen.new()
 	card_room_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
 	card_room_screen.visible = false
@@ -136,6 +147,7 @@ func _ready() -> void:
 	home_screen.stats_requested.connect(_on_stats_requested)
 	home_screen.deck_list_requested.connect(_on_deck_list_requested)
 	home_screen.hourglass_list_requested.connect(_on_hourglass_list_requested)
+	home_screen.shop_requested.connect(_on_shop_requested)
 	home_screen.tutorial_requested.connect(_on_tutorial_requested)
 	home_screen.rules_requested.connect(_on_rules_requested)
 	home_screen.screen_guide_requested.connect(_on_screen_guide_requested)
@@ -309,6 +321,17 @@ func _on_deck_editor_closed() -> void:
 func _on_deck_list_requested() -> void:
 	card_deck_list_screen.open_manage()
 	_show_only(card_deck_list_screen)
+
+
+## ショップ(GameDesign.md 21章)。残高は購入で動くため、開くたびに読み直す。
+func _on_shop_requested() -> void:
+	shop_screen.open()
+	_show_only(shop_screen)
+
+
+func _on_shop_back() -> void:
+	_show_only(home_screen)
+	home_screen.refresh_account()
 
 
 ## 砂時計一覧はカード一覧(CardListScreen)。

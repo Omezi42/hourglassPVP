@@ -67,6 +67,26 @@ static func save_local_customization(icon_id: String, title_id: String) -> void:
 	_store(data)
 
 
+## ショップで解放したものと、エモートの枠をローカルにも控える(オフライン復帰用)。
+## 買う操作そのものは通信を要する(GameDesign.md 21章)が、買った結果は
+## 次に開いたときへ持ち越せないと、オフラインの間だけアイコンが選べなくなる。
+static func save_local_unlocks(owned_icons: Array, owned_emotes: Array, emote_slots: Array) -> void:
+	var data := _load()
+	data["owned_icons"] = owned_icons
+	data["owned_emotes"] = owned_emotes
+	data["emote_slots"] = emote_slots
+	_store(data)
+
+
+static func load_local_unlocks() -> Dictionary:
+	var data := _load()
+	return {
+		"owned_icons": data.get("owned_icons", []),
+		"owned_emotes": data.get("owned_emotes", []),
+		"emote_slots": data.get("emote_slots", []),
+	}
+
+
 static func load_local_customization() -> Dictionary:
 	var data := _load()
 	return {

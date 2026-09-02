@@ -20,6 +20,8 @@ var _screen: CardMatchScreen
 var _button: Button
 var _popup: EmotePopupPanel
 var _mute_btn: Button
+## 選択肢を入れる欄。中身は開くたびに組み直す(枠の設定は対局の外で変えられるため)。
+var _items_box: VBoxContainer
 var _popup_anchor := Vector2.ZERO
 var _cooldown := 0.0
 
@@ -52,10 +54,10 @@ func _setup_ui() -> void:
 	vbox.add_child(header)
 	vbox.add_child(_hairline())
 
-	for emote_id in EmoteLibrary.get_emote_ids():
-		var item := EmoteItemButton.new(emote_id)
-		item.pressed.connect(func() -> void: _on_emote_selected(emote_id))
-		vbox.add_child(item)
+	_items_box = VBoxContainer.new()
+	_items_box.add_theme_constant_override("separation", POPUP_ITEM_GAP)
+	_items_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vbox.add_child(_items_box)
 
 	vbox.add_child(_hairline())
 
@@ -88,6 +90,19 @@ func set_position(btn_pos: Vector2) -> void:
 		_button.position = btn_pos
 	_popup_anchor = btn_pos
 	_place_popup()
+
+
+## 出すのはセットしている4つだけ(GameDesign.md 9章)。所有していても枠に入って
+## いないものは出さない。**開くたびに組み直す**のは、このクラスが対局画面と一緒に
+## 1度だけ作られるためで、アカウント画面で枠を変えても作り直されない。
+func _rebuild_items() -> void:
+	for child in _items_box.get_children():
+		_items_box.remove_child(child)
+		child.queue_free()
+	for emote_id in AccountService.emote_slots():
+		var item := EmoteItemButton.new(emote_id)
+		item.pressed.connect(func() -> void: _on_emote_selected(emote_id))
+		_items_box.add_child(item)
 
 
 func _place_popup() -> void:
@@ -148,6 +163,7 @@ func _toggle_popup() -> void:
 		return
 	_popup.visible = not _popup.visible
 	if _popup.visible:
+		_rebuild_items()
 		_place_popup()
 
 
@@ -205,7 +221,7 @@ func _maybe_cpu_reply() -> void:
 	if mute_opponent:
 		return
 	if randf() < 0.35:
-		var ids := EmoteLibrary.get_emote_ids()
+		var ids := AccountService.emote_slots()
 		var reply_id: String = ids[randi() % ids.size()]
 		var reply_text := EmoteLibrary.get_emote_text(reply_id)
 		var timer := _screen.get_tree().create_timer(1.6)

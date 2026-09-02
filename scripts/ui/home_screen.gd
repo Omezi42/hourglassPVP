@@ -7,6 +7,7 @@ signal online_resume_requested(record: Dictionary)
 signal stats_requested
 signal deck_list_requested
 signal hourglass_list_requested
+signal shop_requested
 signal replay_list_requested
 signal cpu_match_requested
 signal tutorial_requested
@@ -65,16 +66,13 @@ func _ready() -> void:
 	)
 	deck_tab.deck_edit_pressed.connect(func() -> void: deck_list_requested.emit())
 	deck_tab.hourglass_list_pressed.connect(func() -> void: hourglass_list_requested.emit())
+	deck_tab.shop_pressed.connect(func() -> void: shop_requested.emit())
 	battle_tab.replay_list_requested.connect(func() -> void: replay_list_requested.emit())
 	battle_tab.cpu_match_requested.connect(func() -> void: cpu_match_requested.emit())
 	battle_tab.random_match_deck_requested.connect(
 		func() -> void: random_match_deck_requested.emit()
 	)
 	battle_tab.room_match_requested.connect(func() -> void: room_match_requested.emit())
-	# 通知のモーダルは画面全体を覆う必要があるため、タブ(高さ560px)の中から出して
-	# ホーム画面の最後の子にする。タブの中にあると、アカウント帯と下部タブにだけ
-	# 暗幕が掛からず、その2つだけ押せるように見える。
-	deck_tab.shop_notice.reparent(self)
 	_build_rules_tab()
 	deck_nav_button.pressed.connect(_select_tab.bind(TAB_DECK))
 	battle_nav_button.pressed.connect(_select_tab.bind(TAB_BATTLE))

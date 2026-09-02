@@ -5,8 +5,6 @@
 [ext_resource type="StyleBox" path="res://resources/theme/buttons/img_wide_text_pressed.tres" id="3_1ve4q"]
 [ext_resource type="StyleBox" path="res://resources/theme/buttons/img_wide_text_hover.tres" id="4_7xjew"]
 [ext_resource type="StyleBox" path="res://resources/theme/buttons/img_wide_text_disabled.tres" id="5_fy5be"]
-[ext_resource type="PackedScene" path="res://scenes/confirm_modal.tscn" id="6_7xjew"]
-[ext_resource type="Script" path="res://scripts/ui/confirm_modal.gd" id="7_fy5be"]
 
 [node name="DeckTab" type="Control" unique_id=1248523771]
 layout_mode = 3
@@ -72,13 +70,3 @@ theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
 theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
 theme_override_font_sizes/font_size = 22
 text = "ショップ"
-
-[node name="ShopNotice" type="Control" parent="." unique_id=522766675 instance=ExtResource("6_7xjew")]
-visible = false
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-script = ExtResource("7_fy5be")

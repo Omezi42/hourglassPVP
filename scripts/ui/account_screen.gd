@@ -11,6 +11,9 @@ signal profile_changed
 const OK_COLOR := Color(0.62, 0.86, 0.6, 1)
 const ERROR_COLOR := Color(1, 0.55, 0.5, 1)
 const HINT_COLOR := Color(0.86, 0.82, 0.74, 1)
+## アイコン一覧の高さ。初期の8種(2行)がちょうど収まり、買って増えたぶんは
+## スクロールで受ける。
+const ICON_SCROLL_HEIGHT := 108
 
 var _busy := false
 var _selected_icon_id := UserProfileLibrary.DEFAULT_ICON_ID
@@ -21,6 +24,8 @@ var _title_buttons: Dictionary = {}
 var _preview: ProfilePreviewPlate
 
 var _profile_save_button: Button
+var _emote_button: Button
+var _emote_panel: EmoteSlotPanel
 var _register_button: Button
 var _login_button: Button
 var _logout_button: Button
@@ -72,17 +77,24 @@ func _setup_buttons() -> void:
 	_logout_button.pressed.connect(_on_logout_pressed)
 	logout_row.add_child(_logout_button)
 
+	# エモートの枠(GameDesign.md 9章)はヘッダーの主アクションから開く。左カラムは
+	# 既に埋まっており、ここへ4つの枠を足すと下端の保存ボタンを押し出すため。
+	_emote_button = CodedButton.make("エモート", Vector2(160, 46))
+	_emote_button.pressed.connect(func() -> void: _emote_panel.open())
+	screen_header.add_action(_emote_button)
+
 
 func _setup_profile_ui() -> void:
 	_preview = ProfilePreviewPlate.new()
 	preview_container.add_child(_preview)
+	_wrap_icon_grid()
+	_rebuild_icon_grid()
 
-	# アイコン一覧 (4x2 グリッド)
-	for icon_id in UserProfileLibrary.get_available_icon_ids():
-		var btn := IconButton.new(icon_id)
-		btn.pressed.connect(func() -> void: _on_icon_selected(icon_id))
-		icon_grid.add_child(btn)
-		_icon_buttons[icon_id] = btn
+	_emote_panel = EmoteSlotPanel.new()
+	# アンカーは直接代入する(`set_anchors_preset()` は生成直後のサイズ0を保つため)。
+	_emote_panel.anchor_right = 1.0
+	_emote_panel.anchor_bottom = 1.0
+	add_child(_emote_panel)
 
 	# 称号一覧 (スクロールリスト)
 	for title_id in UserProfileLibrary.get_available_title_ids():
@@ -90,6 +102,34 @@ func _setup_profile_ui() -> void:
 		item.pressed.connect(func() -> void: _on_title_selected(title_id))
 		title_list.add_child(item)
 		_title_buttons[title_id] = item
+
+
+## アイコンはショップ(GameDesign.md 21章)で増えるため、一覧をスクロールできるように
+## `ScrollContainer` を実行時に挟む(`.tscn` は変えない)。9種買うと17個で5行になり、
+## そのままでは左カラム下端の保存ボタンを押し出す。
+func _wrap_icon_grid() -> void:
+	var parent := icon_grid.get_parent()
+	var index := icon_grid.get_index()
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(0, ICON_SCROLL_HEIGHT)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	parent.remove_child(icon_grid)
+	scroll.add_child(icon_grid)
+	icon_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	parent.add_child(scroll)
+	parent.move_child(scroll, index)
+
+
+## 所有しているものだけを並べる(GameDesign.md 14章)。買った直後にも呼ぶ。
+func _rebuild_icon_grid() -> void:
+	for child in icon_grid.get_children():
+		child.queue_free()
+	_icon_buttons.clear()
+	for icon_id in AccountService.owned_icon_ids():
+		var btn := IconButton.new(icon_id)
+		btn.pressed.connect(func() -> void: _on_icon_selected(icon_id))
+		icon_grid.add_child(btn)
+		_icon_buttons[icon_id] = btn
 
 
 ## 画面を開くたびにMainが呼ぶ。サインインが済んでいなければここで済ませる。
@@ -104,6 +144,7 @@ func refresh() -> void:
 		_set_message("", HINT_COLOR)
 	_selected_icon_id = AccountService.icon_id()
 	_selected_title_id = AccountService.title_id()
+	_rebuild_icon_grid()
 	_refresh_view()
 
 

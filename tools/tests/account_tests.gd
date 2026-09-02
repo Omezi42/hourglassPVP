@@ -18,6 +18,7 @@ func run(assert_true: Callable) -> void:
 	_test_text_glyphs(assert_true)
 	_test_profile_customization(assert_true)
 	_test_emotes(assert_true)
+	_test_shop(assert_true)
 
 
 func _test_credential_validation(assert_true: Callable) -> void:
@@ -283,11 +284,9 @@ func _test_text_glyphs(assert_true: Callable) -> void:
 
 func _test_profile_customization(assert_true: Callable) -> void:
 	# UserProfileLibraryの検証
-	assert_true.call(
-		UserProfileLibrary.DEFAULT_ICON_ID == "sand", "default icon id should be sand"
-	)
+	assert_true.call(UserProfileLibrary.DEFAULT_ICON_ID == "sand", "default icon id should be sand")
 	var icons := UserProfileLibrary.get_available_icon_ids()
-	assert_true.call(not icons.has("mascot"), "available icons should not include mascot")
+	assert_true.call(icons.has("mascot"), "mascot is defined and sold in the shop")
 	assert_true.call(icons.has("sand"), "available icons should include sand")
 	assert_true.call(icons.has("hour"), "available icons should include hour")
 	assert_true.call(
@@ -317,8 +316,12 @@ func _test_profile_customization(assert_true: Callable) -> void:
 
 	# AccountServiceのフォールバック検証
 	AccountService.reset()
-	assert_true.call(AccountService.icon_id() == "crown", "AccountService should read local icon_id")
-	assert_true.call(AccountService.title_id() == "none", "AccountService should read local title_id")
+	assert_true.call(
+		AccountService.icon_id() == "crown", "AccountService should read local icon_id"
+	)
+	assert_true.call(
+		AccountService.title_id() == "none", "AccountService should read local title_id"
+	)
 
 	AccountStore.save_local_customization("", "")
 	AccountService.reset()
@@ -336,13 +339,15 @@ func _test_profile_customization(assert_true: Callable) -> void:
 
 func _test_emotes(assert_true: Callable) -> void:
 	var ids := EmoteLibrary.get_emote_ids()
-	assert_true.call(ids.size() == 4, "should have 4 emotes")
+	assert_true.call(ids.size() == 8, "should have 8 emotes")
+	assert_true.call(
+		EmoteLibrary.DEFAULT_EMOTE_IDS.size() == EmoteLibrary.SLOT_COUNT,
+		"the default emotes should fill every slot"
+	)
 	assert_true.call(EmoteLibrary.get_emote_text("hello") == "よろしくお願いします", "hello text")
 	assert_true.call(EmoteLibrary.get_emote_text("praise") == "見事な一手です", "praise text")
 	assert_true.call(EmoteLibrary.get_emote_text("shock") == "なんだと…", "shock text")
-	assert_true.call(
-		EmoteLibrary.get_emote_text("advantage") == "こちらに傾いているようですね", "advantage text"
-	)
+	assert_true.call(EmoteLibrary.get_emote_text("advantage") == "こちらに傾いているようですね", "advantage text")
 
 	var action := MatchAction.emote(MatchState.Side.A, "hello")
 	assert_true.call(action["type"] == "emote", "action type should be emote")
@@ -353,3 +358,62 @@ func _test_emotes(assert_true: Callable) -> void:
 	var ok: bool = MatchAction.apply(state, action)
 	assert_true.call(ok, "applying emote action should return true without error")
 	state.queue_free()
+
+
+## ショップの品揃えと所有(GameDesign.md 21章)。通信を伴わない部分だけを見る。
+func _test_shop(assert_true: Callable) -> void:
+	var items := ShopCatalog.items()
+	var ids: Array[String] = []
+	for item in items:
+		ids.append(str(item["id"]))
+	assert_true.call(ids.has("mascot"), "the shop should sell the mascot icon")
+	assert_true.call(not ids.has("sand"), "the shop should not sell an initially owned icon")
+	assert_true.call(not ids.has("hello"), "the shop should not sell an initially owned emote")
+	assert_true.call(ids.has("thanks"), "the shop should sell the added emotes")
+	assert_true.call(ShopCatalog.price(ShopCatalog.Kind.ICON) == 100, "an icon should cost 100")
+	assert_true.call(ShopCatalog.price(ShopCatalog.Kind.EMOTE) == 200, "an emote should cost 200")
+	assert_true.call(
+		ShopCatalog.sells(ShopCatalog.Kind.ICON, "mascot"), "sells() should find a listed item"
+	)
+	assert_true.call(
+		not ShopCatalog.sells(ShopCatalog.Kind.ICON, "sand"),
+		"sells() should reject an initial item"
+	)
+	assert_true.call(
+		not ShopCatalog.sells(ShopCatalog.Kind.EMOTE, "mascot"),
+		"sells() should not mix up the two kinds"
+	)
+
+	var backup: Variant = _backup()
+	AccountStore.save_local_unlocks([], [], [])
+	AccountService.reset()
+	var owned := AccountService.owned_icon_ids()
+	assert_true.call(
+		owned.size() == UserProfileLibrary.INITIAL_ICON_IDS.size(),
+		"only the initial icons should be owned at first"
+	)
+	assert_true.call(
+		AccountService.emote_slots() == EmoteLibrary.DEFAULT_EMOTE_IDS,
+		"the slots should start as the default emotes"
+	)
+	assert_true.call(
+		not AccountService.owns(ShopCatalog.Kind.ICON, "mascot"), "an unbought icon is not owned"
+	)
+
+	# 買ったものは所有へ加わり、枠へ入れられる。所有していないidは枠から落ちる。
+	AccountStore.save_local_unlocks(["mascot"], ["thanks"], ["thanks", "pinch", "hello"])
+	AccountService.reset()
+	assert_true.call(
+		AccountService.owns(ShopCatalog.Kind.ICON, "mascot"), "a bought icon should be owned"
+	)
+	assert_true.call(
+		AccountService.owned_icon_ids()[0] == UserProfileLibrary.DEFAULT_ICON_ID,
+		"the initial icons should stay in front of the bought ones"
+	)
+	var slots := AccountService.emote_slots()
+	assert_true.call(slots.size() == EmoteLibrary.SLOT_COUNT, "the slots should always be filled")
+	assert_true.call(slots[0] == "thanks", "a bought emote should keep its slot")
+	assert_true.call(not slots.has("pinch"), "an unowned emote should be dropped from the slots")
+	assert_true.call(slots.has("hello"), "an initially owned emote should stay in its slot")
+
+	_restore(backup)

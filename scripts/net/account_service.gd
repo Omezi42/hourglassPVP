@@ -57,6 +57,148 @@ static func cpu_reward_count_today() -> int:
 	return int(_profile.get("cpu_reward_count", 0))
 
 
+## 所有しているアイコン(GameDesign.md 14章)。**初期解放を必ず先頭に含めて返す**。
+## 呼ぶ側が「初期の8種 + 買った分」を自分で足す形にすると、足し忘れた画面で
+## 既定のアイコンすら選べなくなる。
+static func owned_icon_ids() -> Array[String]:
+	return _owned(UserProfileLibrary.INITIAL_ICON_IDS, "owned_icons")
+
+
+static func owned_emote_ids() -> Array[String]:
+	return _owned(EmoteLibrary.DEFAULT_EMOTE_IDS, "owned_emotes")
+
+
+static func owns(kind: ShopCatalog.Kind, id: String) -> bool:
+	if kind == ShopCatalog.Kind.EMOTE:
+		return owned_emote_ids().has(id)
+	return owned_icon_ids().has(id)
+
+
+## 対局中に出す4つ(GameDesign.md 9章)。保存済みが足りない・所有していないidが
+## 混じっている場合は、既定 → 所有分の順で埋めて必ず4つ返す。
+static func emote_slots() -> Array[String]:
+	var owned := owned_emote_ids()
+	var slots: Array[String] = []
+	for entry in _unlock_field("emote_slots"):
+		var id := str(entry)
+		if owned.has(id) and not slots.has(id):
+			slots.append(id)
+	for id in EmoteLibrary.DEFAULT_EMOTE_IDS:
+		if slots.size() >= EmoteLibrary.SLOT_COUNT:
+			break
+		if not slots.has(id):
+			slots.append(id)
+	for id in owned:
+		if slots.size() >= EmoteLibrary.SLOT_COUNT:
+			break
+		if not slots.has(id):
+			slots.append(id)
+	return slots.slice(0, EmoteLibrary.SLOT_COUNT)
+
+
+## エモートの枠を保存する。所有していないidは落とす。
+static func save_emote_slots(client: FirestoreClient, uid: String, slots: Array[String]) -> bool:
+	var owned := owned_emote_ids()
+	var kept: Array = []
+	for id in slots:
+		if owned.has(id) and not kept.has(id):
+			kept.append(id)
+	_profile["emote_slots"] = kept
+	_save_unlocks_locally()
+	if uid == "" or client == null:
+		return true
+	return await client.set_document(
+		_path(uid), {"emote_slots": kept, "updated_at": Time.get_unix_time_from_system()}
+	)
+
+
+## ショップの品を買う(GameDesign.md 21章)。{"ok": bool, "message": String} を返す。
+##
+## **残高の確認と減算と所有への追加を1回の書き込みで行う**。残高を読んでから別に
+## 書くと、2つのタブで同時に押したときに2つとも買えてしまう。競合したら読み直して
+## 再試行する(`grant()` と同じ流儀)。
+##
+## **未サインインでは買えない**。獲得と違い、取りこぼしても何も失われないため、
+## `AccountStore` へ退避する経路は持たない。
+static func purchase(
+	client: FirestoreClient, uid: String, kind: ShopCatalog.Kind, id: String
+) -> Dictionary:
+	if not ShopCatalog.sells(kind, id):
+		return {"ok": false, "message": "この品は取り扱っていません。"}
+	if uid == "" or client == null:
+		return {"ok": false, "message": "接続できないため購入できません。"}
+	var key := "owned_emotes" if kind == ShopCatalog.Kind.EMOTE else "owned_icons"
+	var cost := ShopCatalog.price(kind)
+
+	for _attempt in range(GRANT_RETRY):
+		var doc: Dictionary = await client.get_document_meta(_path(uid))
+		var fields: Dictionary = doc.get("fields", {})
+		var owned: Array = fields.get(key, [])
+		if owned.has(id):
+			_profile[key] = owned
+			_save_unlocks_locally()
+			return {"ok": false, "message": "すでに所有しています。"}
+		var balance := int(fields.get("currency", 0))
+		if balance < cost:
+			_profile["currency"] = balance
+			return {
+				"ok": false,
+				"message": "%sが足りません(あと%d)。" % [CurrencyRules.CURRENCY_NAME, cost - balance]
+			}
+		var next_owned := owned.duplicate()
+		next_owned.append(id)
+		var data := {
+			"currency": balance - cost,
+			key: next_owned,
+			"updated_at": Time.get_unix_time_from_system(),
+		}
+		var precondition := {}
+		if bool(doc.get("exists", false)) and str(doc.get("update_time", "")) != "":
+			precondition = {"updateTime": doc["update_time"]}
+		var ok: bool = await client.commit([client.update_write(_path(uid), data, precondition)])
+		if ok:
+			for field in data:
+				_profile[field] = data[field]
+			_save_unlocks_locally()
+			return {
+				"ok": true,
+				"message":
+				(
+					"%sを手に入れました(-%d %s)。"
+					% [ShopCatalog.item_name(kind, id), cost, CurrencyRules.CURRENCY_NAME]
+				)
+			}
+
+	return {"ok": false, "message": "購入できませんでした。接続を確認してください。"}
+
+
+## 所有・枠のフィールドを読む。プロフィールが空(オフライン)ならローカルの控えを見る。
+static func _unlock_field(key: String) -> Array:
+	var value: Array = _profile.get(key, [])
+	if not value.is_empty():
+		return value
+	return AccountStore.load_local_unlocks().get(key, [])
+
+
+static func _owned(initial: Array[String], key: String) -> Array[String]:
+	var list: Array[String] = []
+	for id in initial:
+		list.append(id)
+	for entry in _unlock_field(key):
+		var id := str(entry)
+		if not list.has(id):
+			list.append(id)
+	return list
+
+
+static func _save_unlocks_locally() -> void:
+	AccountStore.save_local_unlocks(
+		_profile.get("owned_icons", []),
+		_profile.get("owned_emotes", []),
+		_profile.get("emote_slots", [])
+	)
+
+
 ## サインイン直後に1度呼ぶ。ドキュメントが無ければ空のプロフィールのまま扱い、
 ## 最初の書き込み(表示名の設定・砂金の獲得)で作られる。
 static func load_profile(client: FirestoreClient, uid: String) -> void:
@@ -68,6 +210,8 @@ static func load_profile(client: FirestoreClient, uid: String) -> void:
 		_profile[key] = fields[key]
 	if _profile.get("icon_id", "") != "" or _profile.get("title_id", "") != "":
 		AccountStore.save_local_customization(icon_id(), title_id())
+	if fields.has("owned_icons") or fields.has("owned_emotes") or fields.has("emote_slots"):
+		_save_unlocks_locally()
 
 
 static func save_display_name(client: FirestoreClient, uid: String, name: String) -> bool:
@@ -215,4 +359,7 @@ static func _empty_profile() -> Dictionary:
 		"currency": 0,
 		"cpu_reward_date": "",
 		"cpu_reward_count": 0,
+		"owned_icons": [],
+		"owned_emotes": [],
+		"emote_slots": [],
 	}
