@@ -54,21 +54,17 @@ func tick(delta: float) -> void:
 	refresh_bars()
 
 
-## 手番の始まりに与える持ち時間。時間切れを重ねた側は半分ずつ短くなる
-## (GameDesign.md 5章)。回数は `MatchState` が持つため、オンラインでも両者で一致する。
+## 手番の始まりに与える持ち時間。**時間切れを重ねても短くならない**(GameDesign.md 5章)。
 func start_turn() -> void:
 	var state := _screen.state
 	if clock == null or state == null or state.is_match_over():
 		return
-	clock.start_turn(state.current_turn, seconds_for(state.current_turn))
+	clock.start_turn(state.current_turn)
 
 
-## その側の手番に与える持ち時間。時間切れを重ねているほど短い(GameDesign.md 5章)。
-func seconds_for(side: int) -> float:
-	var state := _screen.state
-	if state == null:
-		return MatchClock.DEFAULT_TURN_SECONDS
-	return MatchClock.seconds_after_forfeits(int(state.turn_forfeits.get(side, 0)))
+## 1手番ぶんの持ち時間。残り時間が赤くなる境目(その半分)に使う。
+func turn_seconds() -> float:
+	return clock.turn_seconds if clock != null else MatchClock.DEFAULT_TURN_SECONDS
 
 
 func refresh_bars() -> void:
@@ -79,8 +75,8 @@ func refresh_bars() -> void:
 	var foe_bar := _screen.bar_for(foe)
 	own_bar.clock_seconds = clock.get_remaining(_screen.my_side)
 	foe_bar.clock_seconds = clock.get_remaining(foe)
-	own_bar.clock_total = seconds_for(_screen.my_side)
-	foe_bar.clock_total = seconds_for(foe)
+	own_bar.clock_total = turn_seconds()
+	foe_bar.clock_total = turn_seconds()
 	own_bar.queue_redraw()
 	foe_bar.queue_redraw()
 

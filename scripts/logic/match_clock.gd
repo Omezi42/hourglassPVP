@@ -7,9 +7,8 @@ extends RefCounted
 signal time_out(side: int)
 
 ## 1手番ぶんの持ち時間。手番が移るたびにここへ戻る(GameDesign.md 5章)。
+## **時間切れを重ねても短くしない**(長考と放置を見分けられないため)。
 const DEFAULT_TURN_SECONDS := 60.0
-## 時間切れを重ねても、これより短くはしない。
-const MIN_TURN_SECONDS := 10.0
 
 var turn_seconds: float
 var remaining: Dictionary = {}
@@ -25,19 +24,11 @@ func _init(p_turn_seconds: float = DEFAULT_TURN_SECONDS) -> void:
 
 ## 手番の始まり。**側が変わったときだけ持ち時間を戻す**。1手番のうちに
 ## 何度も指す(出す→攻撃→反転)たびに戻すと、指し続けている限り尽きなくなる。
-## `seconds` を渡すとその値から始める(時間切れを重ねた側は短くなる。下記)。
-func start_turn(side: int, seconds: float = -1.0) -> void:
+func start_turn(side: int) -> void:
 	if side != active_side:
-		remaining[side] = seconds if seconds > 0.0 else turn_seconds
+		remaining[side] = turn_seconds
 		active_side = side
 	running = true
-
-
-## 時間切れを重ねた側の、次の手番の持ち時間(GameDesign.md 5章)。1回ごとに半分にする。
-## **回数そのものは `MatchState` が持つ**(手として送り合うため、両者で同じ値になる)。
-## ここは「回数 → 秒数」の対応だけを持ち、状態を持たない。
-static func seconds_after_forfeits(count: int, base: float = DEFAULT_TURN_SECONDS) -> float:
-	return maxf(base / pow(2.0, count), MIN_TURN_SECONDS)
 
 
 func stop() -> void:

@@ -11,7 +11,7 @@ extends RefCounted
 func run(assert_true: Callable) -> void:
 	_test_time_up_forfeits_the_turn_until_the_limit(assert_true)
 	_test_time_up_ends_the_match_at_the_limit(assert_true)
-	_test_turn_seconds_halve_after_each_forfeit(assert_true)
+	_test_turn_seconds_stay_full_after_forfeits(assert_true)
 	_test_timeout_action_ends_match(assert_true)
 	_test_apply_ignores_transport_keys(assert_true)
 	_test_transient_status_classification(assert_true)
@@ -82,20 +82,19 @@ func _test_time_up_ends_the_match_at_the_limit(assert_true: Callable) -> void:
 	)
 
 
-## 時間切れを重ねた側の次の手番は半分ずつ短くなる(GameDesign.md 5章)。
-func _test_turn_seconds_halve_after_each_forfeit(assert_true: Callable) -> void:
+## 時間切れを何度重ねても、次の手番は60秒のままであること(GameDesign.md 5章)。
+func _test_turn_seconds_stay_full_after_forfeits(assert_true: Callable) -> void:
+	var clock := MatchClock.new()
+	clock.start_turn(MatchState.Side.A)
+	clock.tick(MatchClock.DEFAULT_TURN_SECONDS)
 	assert_true.call(
-		is_equal_approx(MatchClock.seconds_after_forfeits(0), 60.0), "the first turn gets 60s"
+		is_equal_approx(clock.get_remaining(MatchState.Side.A), 0.0), "the clock runs out"
 	)
+	clock.start_turn(MatchState.Side.B)
+	clock.start_turn(MatchState.Side.A)
 	assert_true.call(
-		is_equal_approx(MatchClock.seconds_after_forfeits(1), 30.0), "one forfeit halves it"
-	)
-	assert_true.call(
-		is_equal_approx(MatchClock.seconds_after_forfeits(2), 15.0), "two forfeits halve it again"
-	)
-	assert_true.call(
-		MatchClock.seconds_after_forfeits(9) >= MatchClock.MIN_TURN_SECONDS,
-		"the shortened turn should never fall below the floor"
+		is_equal_approx(clock.get_remaining(MatchState.Side.A), MatchClock.DEFAULT_TURN_SECONDS),
+		"the next turn still gets the full 60s"
 	)
 
 
