@@ -42,23 +42,21 @@ func _start_animation() -> void:
 	var original_y := position.y
 	position.y = original_y + (FLOAT_OFFSET if is_opponent else -FLOAT_OFFSET)
 
+	# **`set_parallel(true)` は「直前のtweenerと並行に走らせる」指定**であり、
+	# 段を区切る手段にはならない。以前は待機のあとに `set_parallel(true)` を置いていたため、
+	# **フェードアウトが待機と同時に始まり、実際には0.3秒しか見えていなかった**。
+	# 段の区切りは `chain()`、並行は `parallel()` で1つずつ明示する。
+	var target_y := original_y - (FLOAT_OFFSET if is_opponent else -FLOAT_OFFSET)
 	_tween = create_tween()
 	# フェードイン & スライド
-	_tween.set_parallel(true)
 	_tween.tween_property(self, "modulate:a", 1.0, FADE_IN_DURATION)
-	_tween.tween_property(self, "position:y", original_y, FADE_IN_DURATION)
-	_tween.set_parallel(false)
-
-	# 待機
-	_tween.tween_interval(DISPLAY_DURATION)
-
+	_tween.parallel().tween_property(self, "position:y", original_y, FADE_IN_DURATION)
+	# 待機(この間はっきり見えている)
+	_tween.chain().tween_interval(DISPLAY_DURATION)
 	# フェードアウト
-	_tween.set_parallel(true)
-	_tween.tween_property(self, "modulate:a", 0.0, FADE_OUT_DURATION)
-	var target_y := original_y - (FLOAT_OFFSET if is_opponent else -FLOAT_OFFSET)
-	_tween.tween_property(self, "position:y", target_y, FADE_OUT_DURATION)
-	_tween.set_parallel(false)
-	_tween.tween_callback(queue_free)
+	_tween.chain().tween_property(self, "modulate:a", 0.0, FADE_OUT_DURATION)
+	_tween.parallel().tween_property(self, "position:y", target_y, FADE_OUT_DURATION)
+	_tween.chain().tween_callback(queue_free)
 
 
 func _draw() -> void:
