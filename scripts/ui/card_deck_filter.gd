@@ -16,15 +16,22 @@ const COST_CHIP_WIDTH := 44.0
 const ALL_CHIP_WIDTH := 68.0
 const KEYWORD_CHIP_WIDTH := 68.0
 const BUTTON_SIZE := Vector2(120, 44)
+const KIND_CHIP_WIDTH := 88.0
+const KIND_ALL := 0
+const KIND_UNIT := 1
+const KIND_SPELL := 2
 
 ## 0 は「すべて」。それ以外はそのコストだけを通す。
 var _cost := 0
 ## -1 は指定なし。それ以外は `CardEnums.Keyword` の値。
 var _keyword := -1
+## カードの種類。0=すべて / 1=砂時計だけ / 2=砂術だけ(GameDesign.md 6章)。
+var _kind := 0
 var _query := ""
 var _search_input: LineEdit
 var _cost_buttons: Dictionary = {}
 var _keyword_buttons: Dictionary = {}
+var _kind_buttons: Dictionary = {}
 
 
 func _ready() -> void:
@@ -45,6 +52,10 @@ func close() -> void:
 func matches(card: CardData) -> bool:
 	if _cost > 0 and card.cost != _cost:
 		return false
+	if _kind == KIND_UNIT and card.is_spell:
+		return false
+	if _kind == KIND_SPELL and not card.is_spell:
+		return false
 	if _keyword >= 0 and not card.keywords.has(_keyword):
 		return false
 	if not _query.is_empty() and not card.display_name.containsn(_query):
@@ -59,6 +70,8 @@ func active_filter_count() -> int:
 		count += 1
 	if _keyword >= 0:
 		count += 1
+	if _kind > 0:
+		count += 1
 	if not _query.is_empty():
 		count += 1
 	return count
@@ -67,11 +80,13 @@ func active_filter_count() -> int:
 func reset_filters() -> void:
 	_cost = 0
 	_keyword = -1
+	_kind = 0
 	_query = ""
 	if _search_input != null:
 		_search_input.text = ""
 	_mark_selected(_cost_buttons, _cost)
 	_mark_selected(_keyword_buttons, _keyword)
+	_mark_selected(_kind_buttons, _kind)
 	changed.emit()
 
 
@@ -104,13 +119,27 @@ func _build() -> void:
 	var header_row := HBoxContainer.new()
 	column.add_child(header_row)
 	var title := Label.new()
-	title.text = "砂時計の絞り込みと検索"
+	title.text = "カードの絞り込みと検索"
 	title.add_theme_font_size_override("font_size", 22)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header_row.add_child(title)
 	var close_icon := CodedButton.make_icon("✕", Vector2(36, 36))
 	close_icon.pressed.connect(close)
 	header_row.add_child(close_icon)
+
+	# 種類選択(砂時計 / 砂術。GameDesign.md 6章)
+	var kind_label := Label.new()
+	kind_label.text = "種類"
+	kind_label.add_theme_font_size_override("font_size", 16)
+	kind_label.add_theme_color_override("font_color", UiPalette.BRASS_HIGHLIGHT)
+	column.add_child(kind_label)
+
+	var kind_row := HBoxContainer.new()
+	kind_row.add_theme_constant_override("separation", 6)
+	column.add_child(kind_row)
+	_add_kind_chip(kind_row, "すべて", KIND_ALL)
+	_add_kind_chip(kind_row, "砂時計", KIND_UNIT)
+	_add_kind_chip(kind_row, "砂術", KIND_SPELL)
 
 	# コスト選択
 	var cost_label := Label.new()
@@ -190,6 +219,21 @@ func _add_cost_chip(parent: Control, label: String, cost: int, width: float) -> 
 	button.pressed.connect(_on_cost_pressed.bind(cost))
 	parent.add_child(button)
 	_cost_buttons[cost] = button
+
+
+func _add_kind_chip(parent: Control, label: String, kind: int) -> void:
+	var button := CodedButton.make(label, Vector2(KIND_CHIP_WIDTH, CHIP_HEIGHT))
+	button.toggle_mode = true
+	button.button_pressed = kind == _kind
+	button.pressed.connect(_on_kind_pressed.bind(kind))
+	parent.add_child(button)
+	_kind_buttons[kind] = button
+
+
+func _on_kind_pressed(kind: int) -> void:
+	_kind = KIND_ALL if kind == _kind else kind
+	_mark_selected(_kind_buttons, _kind)
+	changed.emit()
 
 
 func _on_cost_pressed(cost: int) -> void:

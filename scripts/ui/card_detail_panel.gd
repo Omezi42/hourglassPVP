@@ -58,10 +58,15 @@ func show_card(card: CardData) -> void:
 		clear()
 		return
 	if _icon != null:
-		_icon.texture = card.icon_upright
+		# 砂術は砂時計の絵を持たない。紋章だけで見せる(GameDesign.md 9章)。
+		_icon.texture = null if card.is_spell else card.icon_upright
 	_emblem.texture = card.emblem
 	_name.text = card.display_name
-	_stats.text = "コスト %d  /  総量 %d" % [card.cost, card.total_sand]
+	# 砂術は総量を持たない(GameDesign.md 6章)。
+	if card.is_spell:
+		_stats.text = "コスト %d  /  砂術" % card.cost
+	else:
+		_stats.text = "コスト %d  /  総量 %d" % [card.cost, card.total_sand]
 	_fill_body(card)
 	_preview.show_card(card)
 
@@ -82,6 +87,16 @@ func clear() -> void:
 ## 盤面に出ていない語をここだけで見せると、呼び名が食い違うため(GameDesign.md 6章)。
 func _fill_body(card: CardData) -> void:
 	_clear_body()
+	# 砂術は盤面へ出ないため、砂の進み方の説明を出さない(GameDesign.md 6章)。
+	# 代わりに、盤面の枠を使わないことをその場で読めるようにする。
+	if card.is_spell:
+		_body.add_child(_make_line("砂術。盤面へ出ず、使うとすぐ効果が起きる"))
+		_body.add_child(_make_line("盤面の枠を使わないため、6枠が埋まっていても使える"))
+		if not card.rules_text.is_empty():
+			_body.add_child(_make_line(card.rules_text))
+		for line in _token_lines(card):
+			_body.add_child(_make_line(line))
+		return
 	_body.add_child(_make_line("場に出たとき  体力 %d / 攻撃力 0" % card.total_sand))
 	_body.add_child(_make_line("毎ターン終了時に砂が1粒落ちて 体力-1 / 攻撃力+1"))
 	for keyword in card.named_keywords():

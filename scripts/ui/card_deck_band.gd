@@ -120,7 +120,13 @@ func _draw() -> void:
 
 
 func _draw_art() -> void:
-	if card == null or card.icon_upright == null:
+	if card == null:
+		return
+	# 砂術は砂時計の絵を持たない(GameDesign.md 9章)。紋章を同じ場所へ敷く。
+	if card.is_spell:
+		_draw_emblem_art()
+		return
+	if card.icon_upright == null:
 		return
 	var tex: Texture2D = card.icon_upright
 	var src := Rect2(
@@ -132,6 +138,18 @@ func _draw_art() -> void:
 		return
 	var dest := Rect2(area.end.x - width, area.position.y, width, area.size.y)
 	draw_texture_rect_region(tex, dest, src, Color(1, 1, 1, ART_ALPHA))
+
+
+## 砂術の帯へ敷く紋章。絵と同じく右端で、帯からはみ出さない大きさに収める。
+func _draw_emblem_art() -> void:
+	if card.emblem == null:
+		return
+	var area := _art_rect()
+	var side: float = area.size.y * 0.82
+	if side > area.size.x:
+		return
+	var dest := Rect2(area.end.x - side, area.position.y + (area.size.y - side) * 0.5, side, side)
+	draw_texture_rect(card.emblem, dest, false, Color(1, 1, 1, ART_ALPHA))
 
 
 func _draw_cost() -> void:

@@ -107,6 +107,7 @@ func show_card(card: CardData) -> void:
 			if effect == null:
 				continue
 			var entry := _entry_for_effect(effect)
+			entry["spell"] = card.is_spell
 			# 反転がトリガーの効果は、まず反転そのものを見せてから効果へ移る。
 			# 総量+1(FX_ADD_TOTAL)は台本の中に反転を含むため、重ねて出さない。
 			var flips: bool = effect.trigger == CardEnums.Trigger.ON_FLIP
@@ -271,8 +272,13 @@ func _stage(entry: Dictionary, t: float) -> Dictionary:
 		stage = _stage_on_enemy_unit(t, demo, value, entry.get("all", false))
 	var trigger_note: String = stage.get("trigger_note", "")
 	if not trigger_note.is_empty():
-		var trigger: int = entry.get("trigger", CardEnums.Trigger.ON_PLAY)
-		stage["note"] = "%s、%s" % [_trigger_phrase(trigger), trigger_note]
+		# 砂術は「いつ」を持たない(効果は撃った瞬間に1度だけ起きる。GameDesign.md 6章)。
+		# 前置きを付けると「場に出したとき」と嘘を言うことになる。
+		if entry.get("spell", false):
+			stage["note"] = trigger_note
+		else:
+			var trigger: int = entry.get("trigger", CardEnums.Trigger.ON_PLAY)
+			stage["note"] = "%s、%s" % [_trigger_phrase(trigger), trigger_note]
 	return stage
 
 
