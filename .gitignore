@@ -39,3 +39,6 @@ assets/hourglasses/emblems/sources/
 # Discord側がWebhookを自動的に無効化するため管理しない。
 # エクスポートはgitではなくファイルシステムを見るため、これでもpckには入る。
 /data/discord_webhook.txt
+
+__pycache__/
+tools/tmp_*
