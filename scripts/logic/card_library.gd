@@ -38,17 +38,27 @@ static func _load_all() -> Array[CardData]:
 	return _cache
 
 
-## コスト順(同コストは総量の小さい順 → id順)。一覧の既定の並び(GameDesign.md 9章)。
+## コスト順の比較(GameDesign.md 9章)。**カードを並べる画面はすべてこれを使う。**
+## 画面ごとに比較関数を書くと、同じ「コスト順」が場所によって食い違う
+## (実際にデッキ編集と墓地の一覧は総量を見ておらず、砂術が先へ出ていた)。
+##
+## 同コストのときは **砂時計が先・砂術が後**。砂術は総量を持たないため、
+## 総量の小さい順で並べると必ず先頭へ来てしまうが、
+## **このゲームの中心は砂時計**であり、砂術はそれを助けるものとして後ろへ置く。
+static func compare_by_cost(a: CardData, b: CardData) -> bool:
+	if a.cost != b.cost:
+		return a.cost < b.cost
+	if a.is_spell != b.is_spell:
+		return b.is_spell
+	if a.total_sand != b.total_sand:
+		return a.total_sand < b.total_sand
+	return a.id < b.id
+
+
+## コスト順(同コストは砂時計が先 → 総量の小さい順 → id順)。一覧の既定の並び。
 static func sorted_by_cost() -> Array[CardData]:
 	var cards := all_cards().duplicate()
-	cards.sort_custom(
-		func(a: CardData, b: CardData) -> bool:
-			if a.cost != b.cost:
-				return a.cost < b.cost
-			if a.total_sand != b.total_sand:
-				return a.total_sand < b.total_sand
-			return a.id < b.id
-	)
+	cards.sort_custom(compare_by_cost)
 	return cards
 
 

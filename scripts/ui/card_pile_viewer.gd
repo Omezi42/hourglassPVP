@@ -41,10 +41,7 @@ func open_pile(title: String, cards: Array) -> void:
 			counts[card] = 0
 			order.append(card)
 		counts[card] += 1
-	order.sort_custom(
-		func(a: CardData, b: CardData) -> bool:
-			return a.cost < b.cost if a.cost != b.cost else a.id < b.id
-	)
+	order.sort_custom(CardLibrary.compare_by_cost)
 	for card in order:
 		var view := CardView.new()
 		view.mode = CardView.Mode.HAND

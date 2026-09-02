@@ -283,10 +283,7 @@ func _distinct_sorted() -> Array:
 	for card in _deck:
 		if not seen.has(card):
 			seen.append(card)
-	seen.sort_custom(
-		func(a: CardData, b: CardData) -> bool:
-			return a.cost < b.cost if a.cost != b.cost else a.id < b.id
-	)
+	seen.sort_custom(CardLibrary.compare_by_cost)
 	return seen
 
 
