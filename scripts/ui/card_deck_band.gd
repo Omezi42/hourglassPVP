@@ -34,6 +34,9 @@ const ART_ALPHA := 0.60
 
 var card: CardData
 var count := 1
+## 共有用のデッキ表(GameDesign.md 9章)では「−」「+」を出さない。押せる先が無いためで、
+## 空いたぶんは絵の幅へ回す。
+var readonly := false
 
 var _remove: Button
 var _add: Button
@@ -48,12 +51,16 @@ func _ready() -> void:
 	custom_minimum_size.y = BAND_HEIGHT
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	_remove = CodedButton.make_icon("−", BUTTON_SIZE)
-	_remove.pressed.connect(func() -> void: remove_pressed.emit(card))
-	add_child(_remove)
-	_add = CodedButton.make_icon("+", BUTTON_SIZE)
-	_add.pressed.connect(func() -> void: add_pressed.emit(card))
-	add_child(_add)
+	if not readonly:
+		_remove = CodedButton.make_icon("−", BUTTON_SIZE)
+		_remove.pressed.connect(func() -> void: remove_pressed.emit(card))
+		add_child(_remove)
+		_add = CodedButton.make_icon("+", BUTTON_SIZE)
+		_add.pressed.connect(func() -> void: add_pressed.emit(card))
+		add_child(_add)
+	else:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		mouse_default_cursor_shape = Control.CURSOR_ARROW
 	resized.connect(_layout_buttons)
 	_layout_buttons()
 	queue_redraw()
@@ -74,6 +81,13 @@ func show_card(new_card: CardData, new_count: int, can_add: bool) -> void:
 	queue_redraw()
 
 
+## 右端でボタンが占める幅。`readonly` のときは余白だけを残す。
+func _buttons_width() -> float:
+	if readonly:
+		return BUTTON_GAP * 2.0
+	return BUTTON_SIZE.x * 2.0 + BUTTON_GAP * 3.0
+
+
 func _layout_buttons() -> void:
 	if _add == null:
 		return
@@ -84,7 +98,7 @@ func _layout_buttons() -> void:
 
 ## 絵を置ける範囲。ボタンとバッジの手前で切り、帯からはみ出させない。
 func _art_rect() -> Rect2:
-	var right := size.x - BUTTON_SIZE.x * 2.0 - BUTTON_GAP * 3.0
+	var right := size.x - _buttons_width()
 	if count >= 2:
 		right -= BADGE_SIZE.x + BADGE_GAP
 	return Rect2(NAME_LEFT, 0.0, maxf(right - NAME_LEFT, 0.0), size.y)
@@ -211,7 +225,7 @@ func _draw_cost() -> void:
 func _draw_badge() -> void:
 	var badge := Rect2(
 		Vector2(
-			size.x - BUTTON_SIZE.x * 2.0 - BUTTON_GAP * 3.0 - BADGE_SIZE.x - BADGE_GAP * 0.5,
+			size.x - _buttons_width() - BADGE_SIZE.x - BADGE_GAP * 0.5,
 			(size.y - BADGE_SIZE.y) * 0.5
 		),
 		BADGE_SIZE

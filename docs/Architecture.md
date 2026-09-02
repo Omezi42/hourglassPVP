@@ -330,6 +330,8 @@ UIに依存しない、対局ルールそのものを扱う層。
 | `CardDeckEditorScreen`(`scripts/ui/card_deck_editor_screen.gd`) | デッキ編集(30枚・同名2枚まで)。共通の `ScreenHeader` を使う |
 | `CardManaCurve`(`scripts/ui/card_mana_curve.gd`) | コスト別の枚数の棒グラフ。デッキ編集では低背版(`compact`)で使う。**目盛りはプールに実在するコストの範囲だけ**を出す(`CardLibrary` の最大コストから決める)。数字は棒の幅に対して中央揃えで描き、2桁でもずれない |
 | `CardDeckBand`(`scripts/ui/card_deck_band.gd`) | 編成中の1枚。絵を右端へ薄く敷いた横長の帯。「−」「+」を持ち、**一覧まで戻らずに枚数を調整できる** |
+| `CardDeckSheet`(`scripts/ui/card_deck_sheet.gd`) | 共有用のデッキ表(GameDesign.md 9章)。**画面に置かず `SubViewport` の中だけで生きる**。`CardDeckBand` を `readonly` で3列に並べ、マナカーブと作品名・バージョンを添える |
+| `CardDeckSharePanel`(`scripts/ui/card_deck_share_panel.gd`) | デッキの受け渡し。**デッキ表の画像とデッキコードを1つのパネルにまとめる**(旧 `CardDeckCodePanel`) |
 | `CardDeckFilter`(`scripts/ui/card_deck_filter.gd`) | 一覧の絞り込み(コスト・キーワード・名前)。条件の合成を1箇所へ集める |
 | `CardListScreen`(`scripts/ui/card_list_screen.gd`) | カード一覧。選ぶと右の詳細パネルへ出す。ヘッダーの主アクションのボタンで並び順(コスト順 / 追加順)を往復する |
 | `CardDetailPanel`(`scripts/ui/card_detail_panel.gd`) | カード1種の詳細。**キーワードは名前と説明の両方**を出す(語だけでは初見に伝わらない)。イラストの下に `CardEffectPreview` を挟む。**`SUMMON` を持つカードには、出るトークンの名前・総量・効果を1行で添える**(トークンは一覧に出ないため、ここで説明しないと調べる手段が無い。GameDesign.md 6章) |
@@ -1543,6 +1545,34 @@ UI層へ依存することになる。
 **プールから消えたカードを含むコードは読めない。**`from_text()` が `CardLibrary` に
 無い id を見つけた時点で空の配列を返す。カードが増えるぶんには既存のコードは読める。
 
+### 10.6.1 デッキ表の画像(GameDesign.md 9章)
+
+**共有の入口は `CardDeckSharePanel` の1つだけ**とし、デッキ表とデッキコードを同じ
+パネルへ並べる(旧 `CardDeckCodePanel` を改名した)。ヘッダーの主アクションは3つまでで
+既に保存・プリセットが埋まっており、**分けると4つ目が必要になる**という事情もある。
+
+| クラス | 責務 |
+|---|---|
+| `CardDeckSheet`(`scripts/ui/card_deck_sheet.gd`) | 表そのものの組み立てと描画。大きさは `SHEET_SIZE` の固定値 |
+| `ImageShare`(`scripts/logic/image_share.gd`, static) | PNGをクリップボードへ置く / ファイルへ保存する。Web と それ以外の分岐を1箇所へ集める |
+
+- **表は `SubViewport` の中で組み、その `ViewportTexture` をそのままパネルへ映す**。
+  書き出す画像と画面に見えているものが同じ実体になるため、**見本と書き出しが食い違う
+  経路そのものが無い**。`HourglassArt` が焼き付けに使っているのと同じ流儀
+- **帯は `CardDeckBand` を使い回す**(`readonly = true` で「−」「+」を隠し、そのぶんを
+  絵の幅へ回す)。共有のためだけに似た帯をもう1つ書くと、片方だけが古くなる
+- **並びは `CardLibrary.compare_by_cost` を通す。**画面ごとに並べ方を決めない
+  (GameDesign.md 9章)
+- **コードは既に発行済みのときだけ載せる。**画像を出すためだけに `publish()` を
+  呼ぶと、見せるだけのつもりで通信し、使われない番号を預けることになる
+- **画像をクリップボードへ置けるのは Web だけ。**Godot 4.6 の `DisplayServer` は
+  `clipboard_get_image()` しか持たない(`clipboard_set_image()` は存在しない)ため、
+  `ImageShare` は Web では `JavaScriptBridge` から `navigator.clipboard.write()` を呼び、
+  **断られたらダウンロードへ落とす**。それ以外の環境では `user://` へ保存して
+  保存先を1行で示す。判定は `OS.has_feature("web")` で行う
+- **`JavaScriptBridge.create_callback()` の戻り値は変数へ持ち続ける。**その場で捨てると
+  JS 側から呼び戻される前に解放され、結果が返らない
+
 ---
 
 ### 10.7 戦績(GameDesign.md 19章)
@@ -1603,6 +1633,44 @@ UI層へ依存することになる。
 (既に `CodedButton` を実行時に足しているのと同じ流儀)。
 
 ---
+
+### 10.9 対局の記録と分析(GameDesign.md 22章)
+
+| クラス | 責務 |
+|---|---|
+| `MatchRecordService`(`scripts/net/match_record_service.gd`, static) | 分析用の記録を `match_records/{match_id}` へ1件書き、続けて集計 `stats/global` を増分で更新する。`ReplayService` と同じく `FirestoreClient` を受け取る形にし、対局画面が Firestore を直接叩かない |
+| `tools/analyze_matches.py` | 記録を読んで集計し、Discordへ投稿する道具。求めたときだけ動かす |
+
+**記録は `matches/{id}` を読み直して作る。**必要なもの(デッキ30枚・種・手順・両者のuid)は
+すべてそこに揃っており、**終局の直前に `ReplayService.mark_finished()` が書き終えている**。
+対局画面へ棋譜の写しを持たせる案は採らない——オンライン対戦は自分の手しか手元に残しておらず、
+相手の手を含めた並びを正しく持つのは Firestore の側だけであるため。
+
+**先着1件だけを通すのは `create_document()`(`exists:false`)。**両者が書きにいくため、
+2件目は必ず失敗する。**この失敗は正常な結果であり、再試行しない。**
+
+**集計を更新するのは、記録を書けた側だけ。**`create_document()` が true を返した側だけが
+`stats/global` を触ることで、1局を2回数える経路が構造的に無くなる。更新は
+`AccountService.grant()` と同じ流儀で、**`updateTime` を前提条件にした `commit()` で
+競合したら読み直して再試行する**(初回だけは `exists:false`)。
+
+**呼ぶのは `CardMatchOutcome.finish()` の中、リプレイの保存の後。**終局後の後始末を1箇所へ
+集める既存の役割に乗せる。**`await` しない**——結果パネルの表示を通信で待たせないためで、
+これは砂金の付与が既に通っている扱いと同じ。失敗しても画面には何も出さない
+(GameDesign.md 22章)。
+
+**CPU戦・観戦・リプレイ再生では呼ばれない。**`finish()` 自体が `_interactive` のときにしか
+呼ばれず(観戦・再生を除外)、その中で `_cpu_record` が空でありオンラインの `_match_id` を
+持つ場合だけ記録する。
+
+**集計は版で分けず `stats/global` の1件へ通算で貯める**(GameDesign.md 22章)。
+カードごとの成績は `cards` の下の map(`{id: {"g": 採用局数, "w": 勝った局数}}`)として持つ。
+**1局につき両者のデッキを1回ずつ数える**ため、`games` の2倍が `cards` の分母になる。
+
+**戦績画面(`CardStatsScreen`)は、ヘッダーの主アクションのボタン1つで「自分」と「みんな」を
+往復する**(`CardListScreen` の並び替えと同じ流儀)。みんなの側は開いた時点で1度だけ
+`stats/global` を読み、結果をセッション内に控える。**読めなかったときはその旨を1行で出す**
+(自分の戦績はローカルにあるため、通信できなくても従来どおり読める)。
 
 ## 11. 開発時の落とし穴
 

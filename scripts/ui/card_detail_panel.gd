@@ -28,14 +28,16 @@ const EMBLEM_SIZE := Vector2(44, 44)
 ## 語のボタンが下端で切れないよう、縦の詰めた実演にしてある。
 ## 大きく見たいときは語を押してキーワード辞書のポップで見られる(GameDesign.md 17章)。
 const PREVIEW_HEIGHT := 150.0
-## 縦積みのときに効果文へ割く幅。
-const COMPACT_TEXT_WIDTH := 344.0
+## 縦積みのとき、効果文の幅を出すためにパネルの幅から引く左右の余白。
+const COMPACT_PADDING := 56.0
 ## 効果欄の語のボタン。「2回攻撃」の4文字が収まる幅にしてある。
 const TERM_BUTTON_SIZE := Vector2(98, 34)
 const TERM_FONT_SIZE := 15
 
 ## 横並びの詰めた表示にするか。`add_child()` より前に設定する。
 var compact := false
+## 詰めた表示の幅。0 なら `COMPACT_SIZE.x`。`add_child()` より前に設定する。
+var compact_width := 0.0
 ## 語のボタンと実演を出すか。**砂時計一覧だけが true**(GameDesign.md 17章)。
 ## `add_child()` より前に設定する。
 var interactive := true
@@ -50,7 +52,7 @@ var _preview: CardEffectPreview
 
 
 func _ready() -> void:
-	custom_minimum_size = COMPACT_SIZE if compact else PANEL_SIZE
+	custom_minimum_size = Vector2(_compact_width(), 0) if compact else PANEL_SIZE
 	var style: StyleBox = load(PANEL_STYLE)
 	if style != null:
 		add_theme_stylebox_override("panel", style)
@@ -78,6 +80,22 @@ func show_card(card: CardData) -> void:
 	_fill_body(card)
 	if _preview != null:
 		_preview.show_card(card)
+	_fit()
+
+
+func _compact_width() -> float:
+	return compact_width if compact_width > 0.0 else COMPACT_SIZE.x
+
+
+## **中身の高さぴったりまで縮める**(GameDesign.md 9章)。ホバーで出すパネルは
+## 盤面や一覧の上へ重なるため、中身の無い余白まで覆うと隠す面積が無駄に増える。
+## スクロールを持たない `interactive = false` のときだけできる。
+func _fit() -> void:
+	if interactive or not compact:
+		return
+	custom_minimum_size = Vector2(_compact_width(), 0)
+	size = Vector2(_compact_width(), 0)
+	reset_size()
 
 
 func clear() -> void:
@@ -251,11 +269,11 @@ func _build_compact() -> void:
 
 	if interactive:
 		_preview = CardEffectPreview.new()
-		_preview.custom_minimum_size = Vector2(COMPACT_TEXT_WIDTH, PREVIEW_HEIGHT)
+		_preview.custom_minimum_size = Vector2(_compact_width() - COMPACT_PADDING, PREVIEW_HEIGHT)
 		_preview.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		column.add_child(_preview)
 
-	column.add_child(_make_body_scroll(COMPACT_TEXT_WIDTH))
+	column.add_child(_make_body_scroll(_compact_width() - COMPACT_PADDING))
 
 
 func _make_title_row(centered: bool) -> HBoxContainer:
@@ -285,14 +303,18 @@ func _make_stats() -> Label:
 	return stats
 
 
-func _make_body_scroll(text_width: float) -> ScrollContainer:
-	var scroll := ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+## 効果の欄。**`interactive` でないときはスクロールで包まない。**包むと高さが
+## 中身から決まらなくなり、パネルを中身ぴったりまで縮められない(`_fit()`)。
+func _make_body_scroll(text_width: float) -> Control:
 	_body_width = text_width
 	_body = VBoxContainer.new()
 	_body.add_theme_constant_override("separation", 10)
 	_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_body.custom_minimum_size = Vector2(text_width, 0)
+	if not interactive:
+		return _body
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.add_child(_body)
 	return scroll

@@ -37,7 +37,7 @@ var _curve: CardManaCurve
 var _detail: CardDetailPanel
 var _detail_hide_timer: Timer
 var _preset_picker: CardPresetPicker
-var _code_panel: CardDeckCodePanel
+var _share_panel: CardDeckSharePanel
 ## 一覧に並べるカード。**コスト順**で固定する(GameDesign.md 9章の既定と揃える)。
 ## `_card_views` の並びと1対1で対応するため、参照する側は必ずこちらを見る。
 var _pool: Array[CardData] = []
@@ -88,9 +88,9 @@ func _build() -> void:
 	_preset_picker = CardPresetPicker.new()
 	_preset_picker.picked.connect(_on_preset_picked)
 	add_child(_preset_picker)
-	_code_panel = CardDeckCodePanel.new()
-	_code_panel.loaded.connect(_on_code_loaded)
-	add_child(_code_panel)
+	_share_panel = CardDeckSharePanel.new()
+	_share_panel.loaded.connect(_on_code_loaded)
+	add_child(_share_panel)
 
 
 func _build_header() -> void:
@@ -107,11 +107,11 @@ func _build_header() -> void:
 	var preset_button := CodedButton.make("プリセット", Vector2(152, 56))
 	preset_button.pressed.connect(func() -> void: _preset_picker.open())
 	_header.add_action(preset_button)
-	# デッキコード(GameDesign.md 9章)。ルームマッチで友達と遊べるのに構築を
-	# 渡す手段が無いのは片手落ちであるため。
-	var code_button := CodedButton.make("コード", Vector2(120, 56))
-	code_button.pressed.connect(func() -> void: _code_panel.open(_deck))
-	_header.add_action(code_button)
+	# デッキの受け渡し(GameDesign.md 9章)。デッキ表の画像とデッキコードを1つの
+	# パネルへまとめている。別々に置くと、渡す方法が2つあること自体に気づけない。
+	var share_button := CodedButton.make("共有", Vector2(120, 56))
+	share_button.pressed.connect(func() -> void: _share_panel.open(_deck, _name_input.text))
+	_header.add_action(share_button)
 
 
 func _build_grid() -> void:

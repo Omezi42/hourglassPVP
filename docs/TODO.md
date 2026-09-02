@@ -12,6 +12,25 @@
 
 ---
 
+## 対局の記録と分析
+
+仕様は GameDesign.md 22章、実装設計は Architecture.md 10.9節。**人が指した対局を残し、
+シミュレーションでしか測れていない値と突き合わせられるようにする。**
+
+- [x] `MatchRecordService`(`match_records/{match_id}` へ1件・先着だけが通る・消さない)
+- [x] 集計 `stats/global` を、記録を書けた側だけが増分で更新する
+- [x] 戦績画面のヘッダーに「みんなの戦績」を足し、自分の戦績と往復できるようにした
+- [x] `tools/analyze_matches.py`(ビルドID・期間・種別で絞って集計し、Discordへ投稿できる)
+- [x] `firestore.rules` へ `match_records` と `stats` を足した
+- [ ] **`firestore.rules` を Firebase コンソールへ貼り付けて公開する**(手作業)。
+      これを行うまで記録は書き込みに失敗する(対局そのものは通常どおり成立する)
+- [ ] **実機で1局通して、記録が1件だけ残ることと集計が1増えることを確認する**(2クライアントが要る)
+- [ ] 記録が貯まったら `tools/analyze_matches.py` を回し、`docs/BalanceReport_v5.md` の
+      シミュレーション値と突き合わせる。**とくに砂術**はCPUが持て余しており(同10.6節)、
+      実測が過小評価になっている可能性が高い
+
+---
+
 ## ショップ(アイコン・エモートの解放)
 
 仕様は GameDesign.md 21章・15章・14章・9章、実装設計は Architecture.md 10.8節。

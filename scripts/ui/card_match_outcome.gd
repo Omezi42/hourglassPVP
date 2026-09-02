@@ -5,6 +5,9 @@ extends RefCounted
 ## `card_match_screen.gd` が1000行の上限に達したため分けている。
 ## 画面の private メンバを読むのは、既存の切り出しクラスと同じ流儀(Architecture.md 4.0節)。
 
+## 最後の手が送り終わるのを待つ上限。届かないまま待ち続けないための保険。
+const SEND_WAIT_FRAMES := 600
+
 var _screen: CardMatchScreen
 
 
@@ -21,7 +24,25 @@ func finish(kind: int, deck: Array) -> String:
 	var uid := _uid()
 	MatchStats.record(uid, kind, won, state.turn_count, deck)
 	save_replay()
+	_submit_record(kind)
 	return _grant(kind, won, state.turn_count, uid)
+
+
+## 分析用の記録(GameDesign.md 22章)。**オンライン対戦だけ**が対象で、CPU戦・観戦・
+## リプレイ再生では呼ばれない。**完了を待たない**(結果パネルの表示を通信で止めないため。
+## 砂金の付与が既に通っている扱いと同じ)。失敗しても画面には何も出さない。
+func _submit_record(kind: int) -> void:
+	if kind != CurrencyRules.MatchKind.RANDOM and kind != CurrencyRules.MatchKind.ROOM:
+		return
+	if _screen._client == null or _screen._match_id.is_empty():
+		return
+	# 最後の手が届いてから読む。自分の投了・時間切れは終局と同時に送られるため、
+	# 待たずに読むと棋譜の末尾が欠ける。届かないまま止まらないよう上限を置く。
+	var waited := 0
+	while _screen._online != null and _screen._online.is_busy() and waited < SEND_WAIT_FRAMES:
+		waited += 1
+		await _screen.get_tree().process_frame
+	await MatchRecordService.submit(_screen._client, _screen._match_id, kind, _screen.state)
 
 
 ## 砂金の付与(GameDesign.md 15章)。**判定はキャッシュから即座に行い、実際の加算

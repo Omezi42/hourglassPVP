@@ -59,6 +59,21 @@ service cloud.firestore {
       allow write: if signedIn() && request.auth.uid == uid;
     }
 
+    // 分析用の対局記録(GameDesign.md 22章)。ドキュメントIDは match_id。
+    // 対局した2人が同じIDへ書きにいき、先着1件だけが通る(exists:false)。
+    // 消さないため delete は許さない。読み取りをサインイン済みの全員へ許すのは、
+    // 記録を読んで集計する道具(tools/analyze_matches.py)も同じ経路を使うため。
+    match /match_records/{matchId} {
+      allow read, create, update: if signedIn();
+      allow delete: if false;
+    }
+
+    // みんなの戦績の集計(同22章)。記録を書けた側だけが増分で更新する。
+    // 正しく増えているかは検証しない(クライアントを信頼する方針。11章)。
+    match /stats/{docId} {
+      allow read, write: if signedIn();
+    }
+
     // 上記以外は一切許可しない。
     match /{document=**} {
       allow read, write: if false;

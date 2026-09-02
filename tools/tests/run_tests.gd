@@ -10,6 +10,7 @@ const V5VocabularyTests = preload("res://tools/tests/v5_vocabulary_tests.gd")
 const V5OnlineTests = preload("res://tools/tests/v5_online_tests.gd")
 const VersionMatchTests = preload("res://tools/tests/version_match_tests.gd")
 const HourglassArtTests = preload("res://tools/tests/hourglass_art_tests.gd")
+const MatchRecordTests = preload("res://tools/tests/match_record_tests.gd")
 
 var _failures := 0
 
@@ -36,6 +37,8 @@ func _run() -> void:
 	await v5_online.run(_assert_true)
 	var version_match := VersionMatchTests.new()
 	await version_match.run(_assert_true)
+	var match_records := MatchRecordTests.new()
+	await match_records.run(_assert_true)
 
 	if _failures == 0:
 		print("tests passed")

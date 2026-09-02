@@ -12,8 +12,13 @@ extends RefCounted
 
 ## 外れてから消すまでの猶予。隣の駒へ移る途中で点滅させないため。
 const HIDE_DELAY := 0.15
-const TOP := 40.0
+## 盤面へ重ねる以上、幅は狭いほどよい。効果の文が読める下限として340pxを採った。
+const WIDTH := 340.0
 const MARGIN := 12.0
+## **上下の情報帯には掛けない。**HP・マナ・山札は読みながら判断するものであり、
+## カードの説明を読む間だけ消えてよいものではない。パネルは卓の範囲へ収める。
+## **`CardMatchScreen` の const をここの const から参照しない。**互いを参照する
+## 定数になり、読み込みが循環して固まる(実際にそうなった)。値は実行時に読む。
 
 var _screen: CardMatchScreen
 var _panel: CardDetailPanel
@@ -24,6 +29,9 @@ func _init(screen: CardMatchScreen) -> void:
 	_screen = screen
 	_panel = CardDetailPanel.new()
 	_panel.interactive = false
+	# 大きなイラストを捨てた縦積み。盤面の上へ置くため、隠す面積を最小にする。
+	_panel.compact = true
+	_panel.compact_width = WIDTH
 	_panel.visible = false
 	# **パネルはホバーを奪わない。**盤面へ重ねる以上、塞ぐと下の駒を指せなくなる。
 	_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -43,11 +51,21 @@ func hover(view: CardView) -> void:
 		return
 	_timer.stop()
 	_panel.show_card(view.card)
-	# 指しているカードと反対の端へ出す。読みたいものを自分で隠さないため。
-	var to_right: bool = view.position.x + view.size.x * 0.5 < _screen.size.x * 0.5
-	var left := _screen.size.x - CardDetailPanel.PANEL_SIZE.x - MARGIN if to_right else MARGIN
-	_panel.position = Vector2(left, TOP)
+	_panel.position = _place(view)
 	_panel.visible = true
+
+
+## **指しているカードから対角に置く**(GameDesign.md 9章)。左右は反対の端、上下は
+## 反対の段。読みたいカードとその並びを自分で隠さないための、いちばん遠い置き場になる。
+func _place(view: CardView) -> Vector2:
+	var center := view.position + view.size * 0.5
+	var height: float = _panel.size.y
+	var band := CardMatchScreen.TABLE_RECT
+	# 右へ出すときは行動の列(ターン終了・ログ・投了)の手前で止める。
+	var right_edge: float = CardMatchScreen.ACTION_COLUMN_X - MARGIN
+	var left := MARGIN if center.x >= _screen.size.x * 0.5 else right_edge - WIDTH
+	var top := band.end.y - height if center.y < _screen.size.y * 0.5 else band.position.y
+	return Vector2(left, clampf(top, MARGIN, _screen.size.y - MARGIN - height))
 
 
 func leave() -> void:

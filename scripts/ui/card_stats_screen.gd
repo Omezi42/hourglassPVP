@@ -12,9 +12,17 @@ const CARDS_RECT := Rect2(608, ScreenHeader.CONTENT_TOP, 648, 540)
 ## カード別は上位だけを出す。全21種を並べると、対局数の少ないカードの
 ## 見かけ上の高勝率が上に来て読み違えるため、採用数の多い順に絞る。
 const CARD_ROWS := 12
+const TOGGLE_SIZE := Vector2(168, 48)
+
+## 「自分」と「みんな」を往復する(GameDesign.md 22章)。並び替えの往復と同じ流儀。
+var _global := false
+## 集計は開いた回に1度だけ読む。空なら未取得。
+var _global_stats: Dictionary = {}
+var _fetching := false
 
 var _summary: VBoxContainer
 var _cards: VBoxContainer
+var _toggle: Button
 
 
 func _ready() -> void:
@@ -25,6 +33,27 @@ func open() -> void:
 	_refresh()
 
 
+func _on_toggle_pressed() -> void:
+	_global = not _global
+	_toggle.text = "自分の戦績" if _global else "みんなの戦績"
+	_refresh()
+	if _global and _global_stats.is_empty():
+		_fetch_global()
+
+
+## 集計を1度だけ読む。**自分の戦績はローカルにあるため、通信できなくても従来どおり読める。**
+func _fetch_global() -> void:
+	if _fetching or NetSession.client == null:
+		_refresh()
+		return
+	_fetching = true
+	var stats: Dictionary = await MatchRecordService.fetch_stats(NetSession.client)
+	_fetching = false
+	_global_stats = stats
+	if _global:
+		_refresh()
+
+
 func _uid() -> String:
 	if NetSession.client == null or NetSession.client.auth == null:
 		return ""
@@ -32,12 +61,77 @@ func _uid() -> String:
 
 
 func _refresh() -> void:
-	var uid := _uid()
 	for child in _summary.get_children():
 		child.queue_free()
 	for child in _cards.get_children():
 		child.queue_free()
+	if _global:
+		_refresh_global()
+		return
+	_refresh_own()
 
+
+## みんなの戦績(GameDesign.md 22章)。オンライン対戦だけを集めた通算であり、
+## CPU戦は含まない。
+func _refresh_global() -> void:
+	if _global_stats.is_empty():
+		_summary.add_child(_make_line("集計を読み込んでいます…" if _fetching else "集計を取得できませんでした", 22))
+		return
+	var counts: Dictionary = _global_stats.get("counts", {})
+	var games: int = int(counts.get("games", 0))
+	if games == 0:
+		_summary.add_child(_make_line("まだオンライン対戦の記録がありません", 22))
+		return
+	_summary.add_child(_make_line("みんなの戦績(オンライン対戦の通算)", 26))
+	_summary.add_child(_make_line("%d戦" % games, 20))
+	_summary.add_child(
+		_make_line("先手勝率 %.1f%%" % _percent(int(counts.get("first_wins", 0)), games), 20)
+	)
+	_summary.add_child(
+		_make_line("平均 %.1f手" % [float(int(counts.get("turns", 0))) / float(games)], 20)
+	)
+	_summary.add_child(_make_line("", 12))
+	_summary.add_child(_make_line("内訳", 26))
+	_summary.add_child(
+		_make_line(
+			(
+				"ランダム %d戦 / ルーム %d戦"
+				% [int(counts.get("kind_random", 0)), int(counts.get("kind_room", 0))]
+			),
+			18
+		)
+	)
+	for reason: Array in [["hp", "HPが0"], ["surrender", "投了"], ["timeout", "時間切れ"]]:
+		var value: int = int(counts.get("end_%s" % reason[0], 0))
+		if value > 0:
+			_summary.add_child(
+				_make_line("%s %d戦(%.1f%%)" % [reason[1], value, _percent(value, games)], 18)
+			)
+
+	_cards.add_child(_make_line("カード別(そのカードを入れて戦った勝率)", 22))
+	for row: Dictionary in _global_card_rows():
+		var card := CardLibrary.find_by_id(row["id"])
+		var display: String = card.display_name if card != null else row["id"]
+		_cards.add_child(_make_line("%s  %d戦 %s" % [display, row["games"], _rate(row)], 19))
+
+
+## 集計のカード別を、採用数の多い順に並べて返す。
+func _global_card_rows() -> Array:
+	var source: Dictionary = _global_stats.get("cards", {})
+	var rows: Array = []
+	for id: String in source:
+		var entry: Dictionary = source[id]
+		rows.append({"id": id, "games": int(entry.get("g", 0)), "wins": int(entry.get("w", 0))})
+	rows.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a["games"] > b["games"])
+	return rows.slice(0, CARD_ROWS)
+
+
+func _percent(value: int, total: int) -> float:
+	return 100.0 * float(value) / float(maxi(total, 1))
+
+
+func _refresh_own() -> void:
+	var uid := _uid()
 	var all := MatchStats.totals(uid)
 	if int(all["games"]) == 0:
 		_summary.add_child(_make_line("まだ対局の記録がありません", 22))
@@ -116,6 +210,9 @@ func _build() -> void:
 	add_child(header)
 	header.set_title("戦績")
 	header.back_pressed.connect(func() -> void: back_pressed.emit())
+	_toggle = CodedButton.make("みんなの戦績", TOGGLE_SIZE)
+	_toggle.pressed.connect(_on_toggle_pressed)
+	header.add_action(_toggle)
 	_summary = _make_panel(SUMMARY_RECT)
 	_cards = _make_panel(CARDS_RECT)
 
