@@ -380,7 +380,17 @@ UIに依存しない、対局ルールそのものを扱う層。
 - **出し消しは `CardMatchDetail`(`scripts/ui/card_match_detail.gd`、`_screen` 参照を持つ
   `RefCounted`)が持つ。**`card_match_screen.gd` が1000行の上限に近いための切り出しで、
   「いま出してよい状態か」(対象選択中・マリガン中・演出中でないか)の判定と、
-  外れてから消すまでの猶予(`HIDE_DELAY`)をここへ集める
+  外れてから消すまでの猶予(`HIDE_DELAY`)、置き場の計算をここへ集める
+- **置き場は指しているカードから対角**(`_place()`)。左右は反対の端(右へ出すときは
+  行動の列の手前で止める)、上下は反対の段。**縦は卓(`TABLE_RECT`)の範囲へ収め、
+  上下の情報帯には掛けない**(GameDesign.md 9章)。幅は340pxで、
+  `CardDetailPanel.compact_width` として渡す
+- **`CardMatchScreen` の const を `CardMatchDetail` の const から参照しない。**
+  互いを参照する定数になり、**読み込みが循環して起動が固まる**(実際にそうなった)。
+  卓の矩形と行動の列の位置は `_place()` の中で実行時に読む
+- **`_detail` は `_build()` の途中で作るため、駒より後に用意される。**ホバーの受け口は
+  `_on_view_hovered()` / `_on_view_left()` という関数にして、その時点の `_detail` を読む
+  (生成時に `_detail.hover` を束ねると、まだ空の参照を掴んで駒が1つも作れなくなる)
 - 予測は `MatchState.combat_preview()`(盤面を変えずに戦闘の結果だけを計算する)が返し、
   `CardView.preview_health` として体力のバッジの真下へ出す。**判定の順序は
   `_resolve_unit_combat()` と同じにすること**(硝子→毒砂)。攻撃側の予測は狙える相手が
@@ -908,6 +918,12 @@ pckから除外した後も true を返すことがあり、有無の判定に�
 使い、同じ行を「【語】 説明」の1つの `Label` として描き、`CardEffectPreview` を作らない。
 **ホバーで出して外れたら消えるパネルの中に、押しに行く先を置いてはいけない。**
 `show_card()` / `clear()` は `_preview` が null でも通るようにしてある。
+効果の文は「余砂:カードを1枚引く」のように語を頭に持つため、【】で括って前へ出すときは
+文の側の語を取り除く(`_strip_term()`。そのままだと語を2度読ませることになる)。
+
+**`interactive = false` のパネルは、中身の高さぴったりまで縮める**(`_fit()`)。
+そのために**効果の欄をスクロールで包まない**——包むと高さが中身から決まらなくなる。
+幅は `compact_width` で渡す(既定は `COMPACT_SIZE.x`、対局画面は340px)。
 
 **実演(`CardEffectPreview`)は語を直接指定して再生できるようにする**(`show_demo()`)。
 既存の `show_card()` は `CardData` から台本の並びを組む入口であり、辞書は語がすでに
@@ -1729,6 +1745,9 @@ UI層へ依存することになる。
   `MarginContainer` より前の子は、ホバーを奪われて押せなくなる
 - **`ResourceLoader.exists()` は pck から除外した後も true を返すことがある**(実測)。
   ファイルの有無の判定には使えない。Web/デスクトップの分岐は `OS.has_feature("web")` で行う
+- **`class_name` を持つ2つのスクリプトが、互いの const を const から参照してはいけない。**
+  読み込みが循環して**起動したまま固まる**(エラーも出ない)。実際に `CardMatchDetail` の
+  const から `CardMatchScreen.TABLE_RECT` を読んで踏んだ。参照は関数の中(実行時)へ移す
 - **`.tscn` はテキストとして直接編集しない。**`tools/godot_apply_patch.gd` か
   一時ビルドスクリプト(適用後に削除)経由で更新する。ルートにスクリプトを持つシーンを
   再生成する際は `root.set_script()` を忘れない(忘れるとその画面が一切起動しなくなる)

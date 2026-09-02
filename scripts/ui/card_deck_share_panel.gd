@@ -14,14 +14,14 @@ extends Control
 signal loaded(deck: Array)
 
 const SCREEN_SIZE := Vector2(1280, 720)
-const PANEL_WIDTH := 1060.0
+const PANEL_WIDTH := 1140.0
 const PANEL_STYLE := "res://resources/theme/content_panel.tres"
 ## コードは8桁の数字しか入らないため、欄は短くてよい。
 const FIELD_SIZE := Vector2(196, 44)
 const BUTTON_SIZE := Vector2(160, 48)
 const ROW_BUTTON_SIZE := Vector2(132, 44)
 ## 見本の幅。デッキ表(1280x900)を等倍で縮めて置く。
-const PREVIEW_WIDTH := 560.0
+const PREVIEW_WIDTH := 640.0
 
 var _own_field: LineEdit
 var _input_field: LineEdit
@@ -67,6 +67,10 @@ func close() -> void:
 ## 表を組み直し、1フレームだけ描かせる。見本も書き出しもこの結果を使う。
 func _refresh_sheet() -> void:
 	_sheet.show_deck(_deck, _deck_name, _code)
+	# 高さは種類数で変わる(`CardDeckSheet`)。映す側もそのつど合わせる。
+	var sheet: Vector2 = _sheet.sheet_size()
+	_viewport.size = Vector2i(sheet)
+	_preview.custom_minimum_size = Vector2(PREVIEW_WIDTH, PREVIEW_WIDTH * sheet.y / sheet.x)
 	_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 
 
@@ -222,7 +226,6 @@ func _build_preview() -> Control:
 	var holder := VBoxContainer.new()
 	holder.add_theme_constant_override("separation", 8)
 	_viewport = SubViewport.new()
-	_viewport.size = Vector2i(CardDeckSheet.SHEET_SIZE)
 	_viewport.transparent_bg = false
 	_viewport.disable_3d = true
 	_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
@@ -234,8 +237,7 @@ func _build_preview() -> Control:
 	_preview.texture = _viewport.get_texture()
 	_preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	var height := PREVIEW_WIDTH * CardDeckSheet.SHEET_SIZE.y / CardDeckSheet.SHEET_SIZE.x
-	_preview.custom_minimum_size = Vector2(PREVIEW_WIDTH, height)
+	_preview.custom_minimum_size = Vector2(PREVIEW_WIDTH, PREVIEW_WIDTH * 0.7)
 	holder.add_child(_preview)
 	return holder
 
