@@ -1187,7 +1187,9 @@ HTTPRequest をぶら下げると送信の途中で巻き添えに消える。�
 - 定型文の定義は `EmoteLibrary`(`scripts/data/emote_library.gd`、staticのみ)で管理する。
 - エモートは `{"type": "emote", "side": side, "emote_id": emote_id}` として `MatchAction.emote()` で生成され、他の手と同様に `OnlineMatch.send()` 経由で Firestore の `matches/{id}.actions` に追記される。
 - `MatchAction.apply()` では盤面状態の変更を行わず、`return true` で安全に通過する。
-- UI演出は `EmoteBubble`(`scripts/ui/emote_bubble.gd`)が担当し、発言側の `PlayerInfoBar.show_emote()` を通じて名札付近に約4.8秒間(完全不透明で4.0秒)フェードイン・自動フェードアウト表示する。
+- UI演出は `EmoteBubble`(`scripts/ui/emote_bubble.gd`)が担当し、発言側の `PlayerInfoBar.show_emote()` を通じて名札付近に約3.8秒間(完全不透明で3.0秒)フェードイン・自動フェードアウト表示する。**`Tween.set_parallel(true)` は「直前のtweenerと並行に走らせる」指定であり、段を区切る手段ではない**(待機のあとに置くとフェードアウトが待機と同時に始まり、実際には0.3秒しか見えていなかった)。段の区切りは `chain()`、並行は `parallel()` で1つずつ明示する。
+- **エモートのボタンは `CardMatchScreen.ACTION_BUTTON_SIZE` を使い、「ログ」「投了」と同じ `CodedButton.make()` で作る。**寸法を別に持つと、同じ列に並んだときに1つだけ別のボタンに見える。
+- **選択肢のポップアップ(`EmotePopupPanel`)は `PanelContainer` を継承し、余白だけを持つ空のスタイルを当てて面は `_draw()` で描く**(多段グラデーション + グレイン + 落ち込み影 + 真鍮の枠)。テーマ既定の平坦なパネルのままだと、盤面の上でここだけ別のUIから来たように見える。行の区切りも `HSeparator`(テーマ既定の白い線)ではなく真鍮の細線にする。**面を描くのに `Control` を直に使わない**。子より背面に描かれる性質は望ましいが、コンテナでないと中身の大きさに合わせて自分の大きさが決まらず、パネルが0サイズのまま何も描かれない(実際にそうなった)。
 - 画面側(`CardMatchEmote`)では送信後9秒間のクールダウンを持ち、吹き出しが完全に消えて余韻を待ってから再利用できるようにする。**残り時間は `CardMatchScreen._process()` から渡される `delta` だけで減らす**(専用の `Timer` を併せて持たせると二重に減り、クールダウンが半分の速さで明けてしまう)。
 - **エモートは棋譜へ記録しない**(`CardMatchScreen._record()` が弾く)。盤面を動かさないため、残すとリプレイの手数だけが増え、コマ送りで何も起きない手を挟むことになる。オンラインでは通信の経路として `actions` に載せるが、これは受信のための搬送であって記録ではない。
 - **エモートのUIは対局画面より後に `add_child()` されるため、結果パネル・ログより手前に描かれる**(Godotは後の子ほど手前)。終局後はボタンとポップアップを隠して、結果パネルの操作を塞がないようにする。

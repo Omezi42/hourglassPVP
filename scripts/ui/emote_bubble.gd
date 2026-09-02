@@ -5,7 +5,7 @@ extends Control
 
 const BUBBLE_PADDING := Vector2(16, 8)
 const FADE_IN_DURATION := 0.3
-const DISPLAY_DURATION := 4.0
+const DISPLAY_DURATION := 3.0
 const FADE_OUT_DURATION := 0.5
 const FLOAT_OFFSET := 8.0
 const FONT_SIZE := 15

@@ -4,9 +4,13 @@ extends RefCounted
 ## ボタン・ポップアップUI・クールダウン・相手ミュート・CPU返答を受け持つ。
 
 const COOLDOWN_SECONDS := 9.0
-const EMOTE_BUTTON_SIZE := Vector2(148, 44)
-const POPUP_WIDTH := 240.0
-const POPUP_PADDING := 10.0
+## ボタンは「ログ」「投了」と同じ寸法・同じ作り方(`CodedButton.make`)で作る。
+## 数pxでも違えると、同じ列に並んだときに1つだけ別物のボタンに見える。
+const EMOTE_BUTTON_SIZE := CardMatchScreen.ACTION_BUTTON_SIZE
+const POPUP_WIDTH := 244.0
+const POPUP_PADDING := 12.0
+const POPUP_ITEM_HEIGHT := 34.0
+const POPUP_ITEM_GAP := 5.0
 ## ポップアップとエモートボタンの間隔。
 const POPUP_GAP := 8.0
 
@@ -14,7 +18,7 @@ var mute_opponent := false
 
 var _screen: CardMatchScreen
 var _button: Button
-var _popup: PanelContainer
+var _popup: EmotePopupPanel
 var _mute_btn: Button
 var _popup_anchor := Vector2.ZERO
 var _cooldown := 0.0
@@ -30,55 +34,51 @@ func _setup_ui() -> void:
 	_button.pressed.connect(_toggle_popup)
 	_screen.add_child(_button)
 
-	_popup = PanelContainer.new()
+	_popup = EmotePopupPanel.new()
 	_popup.visible = false
 	_popup.custom_minimum_size = Vector2(POPUP_WIDTH, 0)
-
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.1, 0.08, 0.07, 0.96)
-	style.border_color = UiPalette.BRASS_LIGHT
-	style.set_border_width_all(1)
-	style.set_corner_radius_all(6)
-	style.content_margin_left = POPUP_PADDING
-	style.content_margin_top = POPUP_PADDING
-	style.content_margin_right = POPUP_PADDING
-	style.content_margin_bottom = POPUP_PADDING
-	_popup.add_theme_stylebox_override("panel", style)
+	_screen.add_child(_popup)
 
 	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 6)
+	vbox.add_theme_constant_override("separation", POPUP_ITEM_GAP)
+	vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_popup.add_child(vbox)
 
 	var header := Label.new()
-	header.text = "◆ メッセージ選択 ◆"
+	header.text = "エモート"
 	header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	header.add_theme_font_size_override("font_size", 13)
+	header.add_theme_font_size_override("font_size", 12)
 	header.add_theme_color_override("font_color", UiPalette.BRASS_HIGHLIGHT)
 	vbox.add_child(header)
-
-	var hsep := HSeparator.new()
-	vbox.add_child(hsep)
+	vbox.add_child(_hairline())
 
 	for emote_id in EmoteLibrary.get_emote_ids():
 		var item := EmoteItemButton.new(emote_id)
 		item.pressed.connect(func() -> void: _on_emote_selected(emote_id))
 		vbox.add_child(item)
 
-	var hsep2 := HSeparator.new()
-	vbox.add_child(hsep2)
+	vbox.add_child(_hairline())
 
 	# 既定のボタンは真鍮の面で塗られるため、ミュートしていない状態のほうが強調されて
-	# 見えてしまう。選択肢と同じ平坦な見た目にして、状態は文言と色だけで示す。
+	# 見えてしまう。選択肢と同じ平坦な見た目にして、状態は印(●/○)と色だけで示す。
 	_mute_btn = Button.new()
 	_mute_btn.flat = true
-	_mute_btn.custom_minimum_size = Vector2(POPUP_WIDTH - POPUP_PADDING * 2.0, 28.0)
+	_mute_btn.custom_minimum_size = Vector2(0.0, 26.0)
 	_mute_btn.add_theme_font_size_override("font_size", 12)
 	_mute_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	_mute_btn.pressed.connect(_toggle_mute)
 	_update_mute_button_text()
 	vbox.add_child(_mute_btn)
 
-	_popup.add_child(vbox)
-	_screen.add_child(_popup)
+
+## 区切りは `HSeparator`(テーマ既定の白い線)ではなく真鍮の細線にする。
+## 対局画面の他の区切りと同じ色でないと、ここだけ別のUIから来たように見える。
+func _hairline() -> Control:
+	var line := ColorRect.new()
+	line.color = Color(UiPalette.BRASS_MID, 0.7)
+	line.custom_minimum_size = Vector2(0.0, 1.0)
+	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return line
 
 
 ## エモートのボタンと、その上へ開くポップアップの位置。**ポップアップは下端をボタンの
@@ -121,7 +121,7 @@ func refresh() -> void:
 		return
 
 	if _cooldown > 0.0:
-		_button.text = "%d秒" % int(ceilf(_cooldown))
+		_button.text = _cooldown_label()
 		_button.disabled = true
 	else:
 		_button.text = "エモート"
@@ -136,7 +136,13 @@ func tick(delta: float) -> void:
 		if _cooldown <= 0.0:
 			refresh()
 		else:
-			_button.text = "%d秒" % int(ceilf(_cooldown))
+			_button.text = _cooldown_label()
+
+
+## クールダウン中も文言の頭は「エモート」のままにする。「9秒」とだけ出すと、
+## 同じ列に並んだ「ログ」「投了」の中でそこだけ別のボタンへ変わったように見える。
+func _cooldown_label() -> String:
+	return "エモート %d" % int(ceilf(_cooldown))
 
 
 func _toggle_popup() -> void:
@@ -157,10 +163,10 @@ func _toggle_mute() -> void:
 func _update_mute_button_text() -> void:
 	if _mute_btn != null:
 		if mute_opponent:
-			_mute_btn.text = "相手エモート: ミュート中"
+			_mute_btn.text = "○ 相手のエモート:切"
 			_mute_btn.add_theme_color_override("font_color", UiPalette.GLOW_AMBER)
 		else:
-			_mute_btn.text = "相手エモート: 受信中"
+			_mute_btn.text = "● 相手のエモート:入"
 			_mute_btn.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
 
 
@@ -219,6 +225,44 @@ func _maybe_cpu_reply() -> void:
 		)
 
 
+## ポップアップの下地。対局画面の他のパネルと同じ質感(多段グラデーション + グレイン +
+## 落ち込み影 + 真鍮の枠)で描く。テーマ既定の `PanelContainer` のままだと、
+## 盤面の上でここだけ平坦なダイアログに見える。
+class EmotePopupPanel:
+	extends PanelContainer
+
+	## 中身の余白だけを持つ空のスタイルにして、面そのものは `_draw()` で描く
+	## (`Control._draw()` は自分の子より背面に描かれるため、選択肢の下敷きになる)。
+	func _init() -> void:
+		var empty := StyleBoxEmpty.new()
+		empty.content_margin_left = POPUP_PADDING
+		empty.content_margin_top = POPUP_PADDING
+		empty.content_margin_right = POPUP_PADDING
+		empty.content_margin_bottom = POPUP_PADDING
+		add_theme_stylebox_override("panel", empty)
+
+	func _draw() -> void:
+		var ci := get_canvas_item()
+		var rect := Rect2(Vector2.ZERO, size)
+		var points := UiPaint.rounded_rect_points_uniform(rect, 8.0, 6)
+		UiPaint.fill_gradient_polygon(
+			ci,
+			points,
+			rect,
+			[
+				[0.0, Color(0.17, 0.14, 0.11, 0.98)],
+				[0.5, Color(0.10, 0.08, 0.07, 0.98)],
+				[1.0, Color(0.07, 0.055, 0.05, 0.98)]
+			]
+		)
+		UiPaint.apply_grain(ci, rect, 0.07)
+		UiPaint.draw_inner_shadow(ci, rect, 8.0, 6, 4, UiPalette.OUTLINE_DARK, 0.5)
+		var outline := points.duplicate()
+		outline.append(points[0])
+		draw_polyline(outline, UiPalette.OUTLINE_DARK, 3.0, true)
+		draw_polyline(outline, UiPalette.BRASS_LIGHT, 1.4, true)
+
+
 ## エモート選択用カスタムボタン
 class EmoteItemButton:
 	extends Button
@@ -227,7 +271,7 @@ class EmoteItemButton:
 
 	func _init(p_emote_id: String) -> void:
 		emote_id = p_emote_id
-		custom_minimum_size = Vector2(POPUP_WIDTH - POPUP_PADDING * 2.0, 36.0)
+		custom_minimum_size = Vector2(0.0, POPUP_ITEM_HEIGHT)
 		flat = true
 		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 
@@ -238,23 +282,42 @@ class EmoteItemButton:
 
 	func _draw() -> void:
 		var rect := Rect2(Vector2.ZERO, size)
-		var points := UiPaint.rounded_rect_points_uniform(rect, 4.0, 4)
+		var points := UiPaint.rounded_rect_points_uniform(rect, 5.0, 4)
 		var hovered := is_hovered()
-		var bg_top := Color(0.2, 0.17, 0.14, 0.95) if hovered else Color(0.12, 0.1, 0.08, 0.9)
-		var bg_bottom := Color(0.12, 0.1, 0.08, 0.95) if hovered else Color(0.06, 0.05, 0.04, 0.9)
-		UiPaint.fill_gradient_polygon(
-			get_canvas_item(), points, rect, [[0.0, bg_top], [1.0, bg_bottom]]
-		)
+		var ci := get_canvas_item()
+		var top := Color(0.26, 0.20, 0.14, 0.98) if hovered else Color(0.14, 0.115, 0.095, 0.9)
+		var bottom := Color(0.16, 0.12, 0.09, 0.98) if hovered else Color(0.08, 0.065, 0.055, 0.9)
+		UiPaint.fill_gradient_polygon(ci, points, rect, [[0.0, top], [1.0, bottom]])
 
 		var outline := points.duplicate()
 		outline.append(points[0])
-		var border_color := UiPalette.GLOW_AMBER if hovered else UiPalette.BRASS_MID
-		draw_polyline(outline, border_color, 1.2, true)
+		draw_polyline(outline, UiPalette.GLOW_AMBER if hovered else UiPalette.BRASS_MID, 1.2, true)
+
+		# 行頭の菱形。選べる行であることを、文字ではなく形で示す。
+		var mark := Vector2(13.0, size.y * 0.5)
+		var r := 3.4
+		var diamond := PackedVector2Array(
+			[
+				mark + Vector2(0.0, -r),
+				mark + Vector2(r, 0.0),
+				mark + Vector2(0.0, r),
+				mark + Vector2(-r, 0.0)
+			]
+		)
+		var mark_color := UiPalette.GLOW_AMBER if hovered else UiPalette.BRASS_MID
+		draw_colored_polygon(diamond, mark_color)
 
 		if _font == null:
 			return
 		var text := EmoteLibrary.get_emote_text(emote_id)
 		var text_color := UiPalette.BRASS_HIGHLIGHT if hovered else UiPalette.TEXT_OFFWHITE
+		var baseline := (size.y + float(_font.get_ascent(13)) - float(_font.get_descent(13))) * 0.5
 		draw_string(
-			_font, Vector2(10, size.y - 12), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, text_color
+			_font,
+			Vector2(24.0, baseline),
+			text,
+			HORIZONTAL_ALIGNMENT_LEFT,
+			size.x - 32.0,
+			13,
+			text_color
 		)
