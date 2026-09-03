@@ -21,8 +21,14 @@ const EFFECT_HOSTILE := Color(1.0, 0.52, 0.42, 1.0)
 const EFFECT_FRIENDLY := Color(0.6, 1.0, 0.72, 1.0)
 ## 着弾の閃光を出し始める進捗。
 const BURST_AT := 0.85
+## 反転の筋だけが引く砂粒の数と、1粒ぶんの間隔(進捗)。
+const GRAIN_COUNT := 11
+const GRAIN_SPACING := 0.035
+## 着弾で四方へ伸びる光条の本数と長さ。
+const RAY_COUNT := 7
+const RAY_REACH := 46.0
 
-## 出ている筋。{"from":..., "to":..., "color":..., "progress":...}
+## 出ている筋。{"from":..., "to":..., "color":..., "progress":..., "grand":...}
 var _beams: Array[Dictionary] = []
 
 
@@ -42,7 +48,9 @@ func play_flip(screen: CardMatchScreen, side: int, slot: int) -> void:
 		CardMatchScreen.OWN_BAR_TOP if side == screen.my_side else CardMatchScreen.FOE_BAR_TOP
 	)
 	var from := Vector2(screen.size.x * 0.5, bar_y + PlayerInfoBar.BAR_HEIGHT * 0.5)
-	await play(from, unit_center(view))
+	# 反転だけは砂粒と光条を伴う(GameDesign.md 9章)。設置効果と同じ筋を使う以上、
+	# 色を変えるだけでは「ゲームの中心となる行動」に見えないため。
+	await play(from, unit_center(view), COLOR, true)
 	view.play_flip()
 
 
@@ -54,10 +62,11 @@ static func unit_center(view: CardView) -> Vector2:
 	)
 
 
-func play(from: Vector2, to: Vector2, color: Color = COLOR) -> void:
+## `grand` は反転のときだけ true。砂粒の尾と着弾の光条が付く。
+func play(from: Vector2, to: Vector2, color: Color = COLOR, grand := false) -> void:
 	# **ラムダは外側のローカル変数を値でキャプチャする**(Architecture.md 11章)ため、
 	# 進捗は Dictionary(参照)の要素として持つ。
-	var beam := {"from": from, "to": to, "color": color, "progress": 0.0}
+	var beam := {"from": from, "to": to, "color": color, "progress": 0.0, "grand": grand}
 	_beams.append(beam)
 	var tween := create_tween()
 	tween.tween_method(
@@ -87,7 +96,42 @@ func _draw_beam(beam: Dictionary) -> void:
 	draw_line(from, head, Color(color, 0.3), 7.0)
 	draw_line(from, head, Color(color, 0.95), 2.0)
 	draw_circle(head, 7.0, Color(color, 0.9))
+	if beam["grand"]:
+		_draw_grains(from, to, color, progress)
 	if progress <= BURST_AT:
 		return
 	var burst := (progress - BURST_AT) / (1.0 - BURST_AT)
 	draw_circle(to, 10.0 + 28.0 * burst, Color(color, 0.5 * (1.0 - burst)))
+	if beam["grand"]:
+		_draw_rays(to, color, burst)
+
+
+## 筋の後ろを追う砂粒。**筋に沿ってではなく、左右へ散らしながら遅れて付いてくる**。
+## 一直線に並べると線が太くなっただけに見え、砂が舞っているように読めない。
+func _draw_grains(from: Vector2, to: Vector2, color: Color, progress: float) -> void:
+	var along := (to - from).normalized()
+	var across := Vector2(-along.y, along.x)
+	for i in GRAIN_COUNT:
+		var back := progress - GRAIN_SPACING * float(i + 1)
+		if back <= 0.0:
+			continue
+		var fade := 1.0 - float(i) / float(GRAIN_COUNT)
+		# 位相をずらした正弦で散らす。毎フレーム乱数を引くと粒がちらつく。
+		var spread := sin(float(i) * 2.4 + progress * 16.0) * (2.5 + float(i) * 0.9)
+		var at := from.lerp(to, back) + across * spread
+		draw_circle(at, 1.0 + 2.0 * fade, Color(color, 0.75 * fade))
+
+
+## 着弾の光条。**閃光の円だけでは「届いた」ことしか伝わらない**ため、
+## 四方へ伸びる線を重ねて衝撃そのものを見せる。
+func _draw_rays(at: Vector2, color: Color, burst: float) -> void:
+	var fade := 1.0 - burst
+	for i in RAY_COUNT:
+		var angle := TAU * float(i) / float(RAY_COUNT) + burst * 0.5
+		var direction := Vector2(cos(angle), sin(angle))
+		draw_line(
+			at + direction * (8.0 + 10.0 * burst),
+			at + direction * (8.0 + RAY_REACH * burst),
+			Color(color, 0.85 * fade),
+			1.0 + 2.6 * fade
+		)

@@ -321,6 +321,7 @@ UIに依存しない、対局ルールそのものを扱う層。
 | `CardMatchLog`(`scripts/ui/card_match_log.gd`) | 対局ログ。`MatchState` のシグナルを購読して日本語の行を積み、中央のモーダルとして開く。**記録と表示を同じクラスに持たせている**のは、実況に出す文と読み返す文を必ず一致させるため |
 | `CardMatchTurnFeed`(`scripts/ui/card_match_turn_feed.gd`) | 手番バナー・相手の1手の実況・スポットライト。**ログと同じ文言**を `CardMatchLog.describe()` から引く |
 | `CardMatchStrike`(`scripts/ui/card_match_strike.gd`) | 攻撃の演出の進行役。被ダメージの砂の飛散を**当たる瞬間まで持ち越す**。砂の演出(`unit_damaged`/`unit_ticked`)の受け口も持つ |
+| `CardMatchShake`(`scripts/ui/card_match_shake.gd`) | 当たった瞬間の盤面の揺れ(GameDesign.md 9章)。**卓と場の駒だけ**を動かす |
 | `CardMatchEffects`(`scripts/ui/card_match_effects.gd`) | 攻撃以外の演出の進行役(設置の着地 / 破壊の崩落 / 設置効果の光の筋 / 硝子の割れる閃光 / ドローと疲労の山札の脈打ち)。`CardMatchSound` と同じく `MatchState` のシグナルだけを見る |
 | `CardUnitFx`(`scripts/ui/card_unit_fx.gd`) | `CardView` の子として駒へ重ねる演出のうち、**盤面の状態を一切参照しないもの**(着地・崩落・硝子の閃光)。いずれも起きた瞬間に渡された引数だけで完結する |
 | `CardMatchSound`(`scripts/ui/card_match_sound.gd`) | 対局中の効果音(GameDesign.md 9章)。**画面側の操作ではなく `MatchState` のシグナルだけを見て鳴らす**。自分の手・CPU・オンラインで届いた手・リプレイの再生はいずれも `MatchAction.apply()` を通って同じシグナルを出すため、経路ごとに鳴らし忘れる余地が消える |
@@ -452,6 +453,19 @@ UIに依存しない、対局ルールそのものを扱う層。
 `play_shatter()` と小さな揺れで受ける**。攻撃の解決そのもの(`MatchState.attack()`)は
 演出を待たず即座に済ませ、**演出は結果を後から見せるだけにする**。ロジックを演出の完了へ
 依存させると、リプレイ・観戦・CPUの連続着手がすべて演出の尺に縛られるため。
+
+**当たった瞬間の盤面の揺れは `CardMatchShake` が持つ**(GameDesign.md 9章)。
+`CardMatchStrike._on_impact()` が、砂の飛散・持ち越した音と同じこの1点から呼ぶ。
+
+- **揺らす対象は `bind()` で登録した卓と場の駒だけ**とし、情報帯・手札・行動の列は入れない。
+  HP・マナ・山札は判断のために読み続けるものであり、攻撃のたびに揺れると読めなくなる
+- **基準位置を控えてから `base + offset` を書く。**毎フレーム `position` へ足す形にすると
+  揺れが累積して元の位置へ戻らない。**登録できるのは位置が後から変わらないものだけ**で、
+  毎ターン並べ替わる手札は構造的に対象にできない
+- 強さは当てた駒の攻撃力から決める。値は `CardMatchStrike.capture()` の時点で控える
+  (適用後は倒された駒が盤面から消えており、攻撃力を引けない)
+- **揺れている最中に次の攻撃が当たったら、振れ幅は足さずに大きいほうで上書きする。**
+  連撃や6枠が並ぶ中盤で累積し、盤面がぶれ続けるのを防ぐ
 
 **砂の演出は2種類を別のシグナルで受ける。**`MatchState` は被ダメージを `unit_damaged`、
 ターン終了の1粒を `unit_ticked` として別々に発行し、`CardView` が
@@ -1393,6 +1407,15 @@ HTTPRequest をぶら下げると送信の途中で巻き添えに消える。�
   被弾=`DAMAGE` / 決着=`RESULT_WIN`・`RESULT_LOSE`。**攻撃(相打ち)は「砂時計どうしの攻撃」
   のときだけ鳴らし**、本体を殴った場合は被弾(HPの減り)の側で鳴る。HPの増減は
   `hp_changed` が新しい値しか渡さないため、直前の値をこのクラスが控えて減少だけを拾う
+- **砂時計の破壊(`UNIT_BREAK`)と硝子の膜割れ(`GLASS_BREAK`)は、音源を増やさず
+  高さで鳴き分ける**(GameDesign.md 9章)。`SoundBank.SFX_PATHS` は被弾と同じ
+  `damage.ogg` を指し、`SFX_PITCH` が破壊を低く・膜割れを高くする。素材を1つ足すたびに
+  CC0の音源を探して `assets/CREDITS.md` へ出所を記録する手間が生まれるため、
+  **区別を付けたいだけの場面では音源を増やさない**
+  - **`pitch_scale` は再生のたびに入れ直す。**`AudioStreamPlayer` はプールで使い回すため、
+    前に鳴らした音の高さが残る(入れ忘れると、破壊の直後の被弾まで低く鳴る)
+  - 受け口は `unit_destroyed` と `unit_shielded` で、いずれも `MatchState` のシグナル。
+    画面側の分岐を増やさずに、リプレイ・観戦・CPUのすべてで同じように鳴る
 - **攻撃の演出中は、効果音を当たる瞬間まで持ち越す**(`CardMatchStrike._on_impact()` が
   `CardMatchSound.flush()` を呼ぶ)。砂の飛散を持ち越すのと同じ理由で、解決と同時に鳴らすと
   駒がまだ渡っている最中に衝突音だけが先に鳴り、因果が逆に聞こえる

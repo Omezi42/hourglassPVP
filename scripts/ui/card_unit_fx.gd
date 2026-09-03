@@ -22,6 +22,13 @@ const BREAK_SAND_GRAINS := 16
 const BREAK_SLICES := 3
 const BREAK_SPREAD := 13.0
 const BREAK_FALL := 26.0
+## 割れたガラスの破片(GameDesign.md 9章)。**砂より速く外へ飛んで先に消える**。
+## 同じ瞬間に出しても速さが違えば2つは混ざらず、「器が割れて中身がこぼれた」と読める。
+const BREAK_SHARDS := 10
+const BREAK_SHARD_REACH := 74.0
+const BREAK_SHARD_FADE := 0.62
+## こぼれる砂が横へ流れる量。真下へ落とすと器ではなく穴から漏れたように見える。
+const BREAK_SAND_DRIFT := 26.0
 ## 硝子:膜が割れる閃光。
 const GLASS_DURATION := 0.3
 const GLASS_SHARDS := 8
@@ -159,7 +166,31 @@ func _draw_break() -> void:
 		UiPaint.fill_ellipse(
 			get_canvas_item(), center, _break_rect.size * 0.36, Color(BREAK_WHITE, 0.5 * flash), 28
 		)
+	_draw_break_shards(center)
 	_draw_break_sand(center, fade)
+
+
+## 割れたガラスの破片。**砂より速く飛び、砂が落ちきる前に消える**。
+## 細い三角形として描く(円にすると砂粒と見分けが付かない)。
+func _draw_break_shards(center: Vector2) -> void:
+	if _break >= BREAK_SHARD_FADE:
+		return
+	var ratio := _break / BREAK_SHARD_FADE
+	var fade: float = 1.0 - ratio
+	for i in BREAK_SHARDS:
+		# 上半分へ多く飛ばす。器が割れた破片は横と上へ散り、下は砂が占める。
+		var angle := (
+			PI * (1.15 + 0.7 * float(i) / float(BREAK_SHARDS - 1)) + sin(float(i) * 3.1) * 0.2
+		)
+		var direction := Vector2(cos(angle), sin(angle))
+		var reach: float = BREAK_SHARD_REACH * ratio * (0.6 + 0.4 * absf(sin(float(i) * 2.2)))
+		var at := center + direction * reach
+		var along := direction * (5.0 + 4.0 * fade)
+		var across := Vector2(-direction.y, direction.x) * (1.6 + 1.4 * fade)
+		draw_colored_polygon(
+			PackedVector2Array([at + along, at - along + across, at - along - across]),
+			Color(GLASS_BLUE, 0.9 * fade)
+		)
 
 
 ## こぼれた砂。粒が台座まで落ち、そこへ低い山として溜まってから消える。
@@ -171,8 +202,11 @@ func _draw_break_sand(center: Vector2, fade: float) -> void:
 		var t: float = clampf((_break - delay) / maxf(1.0 - delay, 0.01), 0.0, 1.0)
 		if t <= 0.0:
 			continue
-		var spread: float = (float(i % 5) - 2.0) * 11.0 + (float(i) - 8.0) * 0.9
-		var x: float = center.x + spread * (0.4 + 0.6 * t)
+		# **放物線を描いて落とす**(GameDesign.md 9章)。横へは一定の速さで流れ、
+		# 縦は t の二乗で加速する。真下へ降ろすと器ではなく穴から漏れたように見える。
+		var lane: float = float(i % 5) - 2.0
+		var spread: float = lane * 11.0 + (float(i) - 8.0) * 0.9
+		var x: float = center.x + spread * 0.4 + signf(lane) * BREAK_SAND_DRIFT * t
 		var y: float = lerpf(center.y, floor_y, t * t)
 		draw_circle(Vector2(x, y), 2.8 * (1.0 - t * 0.5), Color(SAND_AMBER, 0.95 - 0.35 * t))
 	var pile: float = clampf((_break - 0.45) / 0.55, 0.0, 1.0)

@@ -33,6 +33,8 @@ func watch(state: MatchState) -> void:
 	state.unit_flipped.connect(_on_unit_flipped)
 	state.attack_performed.connect(_on_attack_performed)
 	state.hp_changed.connect(_on_hp_changed)
+	state.unit_destroyed.connect(_on_unit_destroyed)
+	state.unit_shielded.connect(_on_unit_shielded)
 	state.match_ended.connect(_on_match_ended)
 
 
@@ -77,6 +79,18 @@ func _on_hp_changed(side: int, new_hp: int) -> void:
 	_hp[side] = new_hp
 	if new_hp < previous:
 		_play(SoundBank.Sfx.DAMAGE)
+
+
+## **壊れた音は被弾とは別に鳴らす**(GameDesign.md 9章)。壊れることは盤面から1体
+## 減ることであり、削られただけの被弾とは意味が違う。音源は同じで高さだけを下げる。
+func _on_unit_destroyed(_side: int, _slot: int, _card: CardData) -> void:
+	_play(SoundBank.Sfx.UNIT_BREAK)
+
+
+## 硝子の膜が割れた。壊れた音とは逆に高く鳴らし、
+## 「防がれた」と「壊れた」を音だけで取り違えないようにする。
+func _on_unit_shielded(_side: int, _slot: int) -> void:
+	_play(SoundBank.Sfx.GLASS_BREAK)
 
 
 ## 決着では**BGMを止めて短いジングルへ切り替える**(GameDesign.md 9章)。

@@ -34,6 +34,18 @@ const HP_SLIDE_DURATION := 0.35
 const FLASH_DURATION := 0.4
 const FLOAT_DURATION := 0.9
 const FLOAT_RISE := 16.0
+## ダメージの大きさで数字を強める(GameDesign.md 9章)。ここに達したところで最大。
+## 総量の大きい駒でも8前後で殴ってくるため、そのあたりを頭打ちにする。
+const FLOAT_HEAVY_DAMAGE := 8.0
+const FLOAT_FONT_SIZE := 22
+const FLOAT_HEAVY_FONT_SIZE := 40
+const FLOAT_HEAVY_RISE := 26.0
+## 小さい数字はバーの右隣へ、大きい数字はバーの真上へ右揃えで出す。
+const FLOAT_BASELINE := 18.0
+const FLOAT_HEAVY_WIDTH := 120.0
+const FLOAT_HEAVY_LIFT := 6.0
+## 大ダメージほど赤から橙へ寄せる。赤のまま大きくするより、危険の度合いが読みやすい。
+const FLOAT_HEAVY_COLOR := Color(1.0, 0.45, 0.15)
 ## 山札の脈打ち(GameDesign.md 9章)。ドローと疲労の発生源を山札そのもので示す。
 const DECK_PULSE_DURATION := 0.45
 
@@ -409,17 +421,27 @@ func _set_float_left(value: float) -> void:
 
 
 ## 増減のフローティング数字。減ったら赤、回復したら琥珀。
+##
+## **ダメージは大きさと色でも示す**(GameDesign.md 9章)。1と7が同じ見た目だと、
+## 盤面へ目を戻す前に「どれだけ削られたのか」が分からない。**回復は大きさを変えない**
+## ——受け身の出来事であり、強調する理由がないため。
 func _draw_float(rect: Rect2) -> void:
 	var ratio := _float_left / FLOAT_DURATION
-	var rise := (1.0 - ratio) * FLOAT_RISE
 	var color := UiPalette.GLOW_AMBER if _float_amount > 0 else CardView.HEALTH_RED
 	var text := "+%d" % _float_amount if _float_amount > 0 else str(_float_amount)
-	draw_string(
-		_font,
-		Vector2(rect.end.x + 8.0, rect.position.y + 18.0 - rise),
-		text,
-		HORIZONTAL_ALIGNMENT_LEFT,
-		-1,
-		22,
-		Color(color, minf(ratio * 2.0, 1.0))
-	)
+	var weight := 0.0
+	if _float_amount < 0:
+		weight = clampf(float(-_float_amount) / FLOAT_HEAVY_DAMAGE, 0.0, 1.0)
+		color = color.lerp(FLOAT_HEAVY_COLOR, weight)
+	var size := int(round(lerpf(FLOAT_FONT_SIZE, FLOAT_HEAVY_FONT_SIZE, weight)))
+	var rise := (1.0 - ratio) * lerpf(FLOAT_RISE, FLOAT_HEAVY_RISE, weight)
+	# **大きい数字はバーの真上へ逃がす。**バーの右隣にはマナの数字とピップが並んでおり、
+	# 文字を大きくしたぶんだけそこへ食い込む(実際に描画して重なりを確認した)。
+	var at := Vector2(rect.end.x + 8.0, rect.position.y + FLOAT_BASELINE - rise)
+	var align := HORIZONTAL_ALIGNMENT_LEFT
+	var width := -1.0
+	if weight > 0.0:
+		at = Vector2(rect.end.x - FLOAT_HEAVY_WIDTH, rect.position.y - FLOAT_HEAVY_LIFT - rise)
+		align = HORIZONTAL_ALIGNMENT_RIGHT
+		width = FLOAT_HEAVY_WIDTH
+	draw_string(_font, at, text, align, width, size, Color(color, minf(ratio * 2.0, 1.0)))

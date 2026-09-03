@@ -77,10 +77,15 @@ const EMBLEM_PLAQUE_SIDE := 21.0
 ## 反転の演出(GameDesign.md 9章)。**反転はゲームの中心となる行動であるため、
 ## 演出は他より作り込む。**場のカードが枠を持たない物体になったことで、
 ## 砂時計そのものを持ち上げて裏返す動きが素直に描ける。
-const FLIP_DURATION := 0.5
+const FLIP_DURATION := 0.44
 const FLIP_LIFT := 28.0
 ## 着地の衝撃波を出し始める進捗。
 const FLIP_LAND_AT := 0.82
+## **半回転をわずかに行き過ぎてから戻す**(GameDesign.md 9章)。ちょうど半分で止めると
+## 機械が回したように見え、手でひっくり返した手応えが出ない。1.0 を超えると
+## 持ち上げ量(`sin`)が負になるため、行き過ぎと同時に着地の沈み込みも出る。
+const FLIP_OVERSHOOT := 1.07
+const FLIP_SETTLE := 0.12
 
 ## 手札のカード。
 const HAND_CORNER := 10.0
@@ -223,7 +228,13 @@ func play_flip() -> void:
 		_flip_tween.kill()
 	_flip_progress = 0.0
 	_flip_tween = create_tween()
-	_flip_tween.tween_method(_set_flip_progress, 0.0, 1.0, FLIP_DURATION)
+	_flip_tween.tween_method(_set_flip_progress, 0.0, FLIP_OVERSHOOT, FLIP_DURATION)
+	(
+		_flip_tween
+		. tween_method(_set_flip_progress, FLIP_OVERSHOOT, 1.0, FLIP_SETTLE)
+		. set_trans(Tween.TRANS_SINE)
+		. set_ease(Tween.EASE_OUT)
+	)
 	_flip_tween.finished.connect(_on_flip_finished)
 
 
@@ -520,7 +531,8 @@ func _draw_flipping_art(texture: Texture2D, rect: Rect2, tint: Color) -> void:
 
 ## 着地の衝撃波。台座と同じ扁平な楕円を外へ広げる。
 func _draw_flip_landing() -> void:
-	var ratio := (_flip_progress - FLIP_LAND_AT) / (1.0 - FLIP_LAND_AT)
+	# 行き過ぎ(1.0超)のぶんで衝撃波が広がり続けないよう、進捗は1.0で頭打ちにする。
+	var ratio := clampf((_flip_progress - FLIP_LAND_AT) / (1.0 - FLIP_LAND_AT), 0.0, 1.0)
 	var radius := PEDESTAL_RADIUS * (1.0 + 0.5 * ratio)
 	UiPaint.draw_ellipse_ring(
 		get_canvas_item(),

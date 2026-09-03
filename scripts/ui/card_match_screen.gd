@@ -74,6 +74,10 @@ var effects: CardMatchEffects:
 var beam: CardFlipBeam:
 	get:
 		return _flip_beam
+## 当たった瞬間の盤面の揺れ。攻撃の進行役から呼ぶ。
+var shake: CardMatchShake:
+	get:
+		return _shake
 
 var _foe_bar: PlayerInfoBar
 var _own_bar: PlayerInfoBar
@@ -106,6 +110,7 @@ var _pile: CardPileViewer
 var _log_button: Button
 var _flip_beam: CardFlipBeam
 var _strike: CardMatchStrike
+var _shake := CardMatchShake.new()
 var _sound: CardMatchSound
 var _effects: CardMatchEffects
 var _targets: CardMatchTargets
@@ -258,6 +263,7 @@ func _on_local_timeout(side: int) -> void:
 func _process(delta: float) -> void:
 	if _emote != null:
 		_emote.tick(delta)
+	_shake.tick(delta)
 	_clocks.tick(delta)
 
 
@@ -361,10 +367,10 @@ func _build() -> void:
 	table.position = TABLE_RECT.position
 	table.size = TABLE_RECT.size
 	add_child(table)
-	_foe_bar = _make_bar(true, FOE_BAR_TOP)
-	_own_bar = _make_bar(false, OWN_BAR_TOP)
-	_foe_slots = _make_row(FOE_ROW_TOP, true)
-	_own_slots = _make_row(OWN_ROW_TOP, false)
+	_foe_bar = CardMatchBuild.make_bar(self, true, FOE_BAR_TOP)
+	_own_bar = CardMatchBuild.make_bar(self, false, OWN_BAR_TOP)
+	_foe_slots = CardMatchBuild.make_row(self, FOE_ROW_TOP, true)
+	_own_slots = CardMatchBuild.make_row(self, OWN_ROW_TOP, false)
 	for i in MatchState.DECK_SIZE:
 		var view := CardView.new()
 		view.mode = CardView.Mode.HAND
@@ -376,112 +382,40 @@ func _build() -> void:
 		add_child(view)
 		_hand_views.append(view)
 	# 反転だけは選んだ駒のすぐ下へ出す。位置は `_refresh_buttons()` が毎回決める。
-	_flip_button = _add_button("反転", FLIP_BUTTON_SIZE)
+	_flip_button = CardMatchBuild.add_button(self, "反転", FLIP_BUTTON_SIZE)
 	_flip_button.visible = false
 	_flip_button.pressed.connect(_on_flip_pressed)
-	_coin_button = _add_button("コイン", ACTION_BUTTON_SIZE)
+	_coin_button = CardMatchBuild.add_button(self, "コイン", ACTION_BUTTON_SIZE)
 	_coin_button.position = Vector2(ACTION_COLUMN_X, 230)
 	_coin_button.pressed.connect(_on_coin_pressed)
 	# ターン終了は画面中央付近の大きなボタンとする。
-	_end_turn_button = _add_button("ターン終了", TURN_END_BUTTON_SIZE)
+	_end_turn_button = CardMatchBuild.add_button(self, "ターン終了", TURN_END_BUTTON_SIZE)
 	_end_turn_button.position = Vector2(ACTION_COLUMN_X, TURN_END_BUTTON_TOP)
 	_end_turn_button.pressed.connect(_on_end_turn_pressed)
 	# 「ログ」「投了」「エモート」はターン終了ボタンの下へ順に並べる。
-	_log_button = _add_button("ログ", ACTION_BUTTON_SIZE)
+	_log_button = CardMatchBuild.add_button(self, "ログ", ACTION_BUTTON_SIZE)
 	_log_button.position = Vector2(ACTION_COLUMN_X, LOG_BUTTON_TOP)
 	_log_button.pressed.connect(func() -> void: _log.set_open(true))
-	_surrender_button = _add_button("投了", ACTION_BUTTON_SIZE)
+	_surrender_button = CardMatchBuild.add_button(self, "投了", ACTION_BUTTON_SIZE)
 	_surrender_button.position = Vector2(ACTION_COLUMN_X, SURRENDER_BUTTON_TOP)
 	_surrender_button.pressed.connect(_on_surrender_pressed)
 	# リプレイ再生・観戦には終局の結果パネル(「ホームへ」)が出ないため、
 	# この戻るボタンが唯一の出口になる。対局中は投了が出口のため出さない。
-	_back_button = _add_button("戻る", ACTION_BUTTON_SIZE)
+	_back_button = CardMatchBuild.add_button(self, "戻る", ACTION_BUTTON_SIZE)
 	_back_button.position = Vector2(ACTION_COLUMN_X, BACK_BUTTON_TOP)
 	_back_button.pressed.connect(func() -> void: back_pressed.emit())
 	_cpu_timer = Timer.new()
 	_cpu_timer.one_shot = true
 	_cpu_timer.timeout.connect(_take_cpu_action)
 	add_child(_cpu_timer)
-	# ログと結果パネルは最後に足して盤面より手前へ重ねる。
-	# **ログは結果パネルより後に足す**(GameDesign.md 9章)。終局後は結果パネルが盤面全体を
-	# 塞ぐため、その上からログを開けないと読み返せない。
-	# 光の筋は盤面の駒より手前、ログ・結果パネルより背面に置く。
-	_flip_beam = CardFlipBeam.new()
-	add_child(_flip_beam)
-	_detail = CardMatchDetail.new(self)
-	# 通信待ちの文言と対象選択の案内は、駒より手前へ出すため独立したノードで描く。
-	_status = CardMatchStatus.new()
-	add_child(_status)
-	_feed = CardMatchTurnFeed.new()
-	add_child(_feed)
-	_mulligan = CardMatchMulligan.new()
-	_mulligan.confirmed.connect(_on_mulligan_confirmed)
-	add_child(_mulligan)
-	# **誘導対局の帯はマリガンより後に足す**(GameDesign.md 18章)。マリガンの暗幕の下へ
-	# 敷くと、いちばん案内が要る最初の画面ですなえるが読めなくなる。
-	_tutorial = CardMatchTutorial.new()
-	add_child(_tutorial)
-	_result = CardMatchResult.new()
-	_result.home_pressed.connect(func() -> void: back_pressed.emit())
-	_result.rematch_pressed.connect(_on_rematch_pressed)
-	_result.log_pressed.connect(func() -> void: _log.set_open(true))
-	add_child(_result)
-	_log = CardMatchLog.new()
-	add_child(_log)
-	_pile = CardPileViewer.new()
-	add_child(_pile)
-	_alert = CardMatchAlert.new()
-	add_child(_alert)
-	_damage_assist = CardMatchDamageAssist.new(self)
-	add_child(_damage_assist)
-	_history = CardMatchActionHistory.new(self)
-	add_child(_history)
-	_puzzle = CardMatchPuzzle.new(self)
-	_puzzle.finished.connect(
-		func(_cleared: bool) -> void:
-			_puzzle.close()
-			back_pressed.emit()
-	)
-
-
-func _make_bar(opponent: bool, top: float) -> PlayerInfoBar:
-	var bar := PlayerInfoBar.new()
-	bar.is_opponent = opponent
-	bar.position = Vector2(MARGIN, top)
-	# 両者の情報帯は同じ幅にする。右端に行動の列を通すため、どちらもその手前で止める
-	# (相手側だけ画面いっぱいに伸ばすと、対面させた2本の帯が揃わない)。
-	bar.size = Vector2(BAR_WIDTH, PlayerInfoBar.BAR_HEIGHT)
-	if opponent:
-		bar.face_pressed.connect(_on_face_pressed)
-	bar.graveyard_pressed.connect(_on_graveyard_pressed.bind(opponent))
-	add_child(bar)
-	return bar
-
-
-func _make_row(top: float, opponent: bool) -> Array[CardView]:
-	var views: Array[CardView] = []
-	var width := MatchState.BOARD_SIZE * CardView.BOARD_SIZE_PX.x
-	width += (MatchState.BOARD_SIZE - 1) * CARD_GAP
-	var start := TABLE_RECT.position.x + (TABLE_RECT.size.x - width) * 0.5
-	for i in MatchState.BOARD_SIZE:
-		var view := CardView.new()
-		view.mode = CardView.Mode.BOARD
-		view.position = Vector2(start + i * (CardView.BOARD_SIZE_PX.x + CARD_GAP), top)
-		view.size = CardView.BOARD_SIZE_PX
-		view.pressed.connect(_on_foe_slot_pressed if opponent else _on_own_slot_pressed)
-		view.hovered.connect(_on_view_hovered)
-		view.mouse_exited.connect(_on_view_left)
-		if not opponent:
-			view.drop_handler = _on_slot_drop.bind(i)
-		add_child(view)
-		views.append(view)
-	return views
-
-
-func _add_button(label: String, button_size: Vector2) -> Button:
-	var button := CodedButton.make(label, button_size)
-	add_child(button)
-	return button
+	# 盤面へ重ねるもの(光の筋・実況・マリガン・ログ・結果パネル等)は最後に足す。
+	CardMatchBuild.overlays(self)
+	# 攻撃の揺れは**卓と場の駒だけ**を動かす(GameDesign.md 9章)。情報帯・手札・
+	# 行動の列は読み続けるものなので入れない。位置が後から変わらないものだけを渡す。
+	var shaken: Array[Control] = [table]
+	shaken.append_array(_foe_slots)
+	shaken.append_array(_own_slots)
+	_shake.bind(shaken)
 
 
 # --- 表示の同期 ---------------------------------------------------------

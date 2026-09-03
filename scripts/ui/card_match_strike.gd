@@ -29,6 +29,10 @@ var _damage: Array[Dictionary] = []
 ## このターンに何回攻撃したか。2回目以降は尺を詰める。
 var _strikes_this_turn := 0
 var _turn_marker := -1
+## 当てた駒の攻撃力。**当たった瞬間の揺れの強さに使う**(GameDesign.md 9章)。
+## 相打ちで双方が削れるが、揺らすのは「打撃の強さ」なので当てた側の値を採る。
+## 適用後は駒が盤面から消えていることがあるため、控えるのは capture() の時点。
+var _impact_power := 0
 
 
 func _init(screen: CardMatchScreen) -> void:
@@ -55,6 +59,7 @@ func capture(action: Dictionary) -> void:
 	if attacker == null or _screen.state.board[side][slot] == null:
 		return
 	_attacker = attacker
+	_impact_power = _screen.state.board[side][slot].attack
 	var foe := MatchState.other_side(side)
 	_target_center = _center_of(foe, target)
 	_follow_center = _pierce_center(side, slot, target)
@@ -138,6 +143,8 @@ func _on_impact() -> void:
 	# 持ち越していた効果音と演出も、砂の飛散と同じこの瞬間に出す。
 	_screen.sound.flush()
 	_screen.effects.flush()
+	# 打撃の重さは駒の動きだけでは伝わらないため、盤面そのものを短く揺らす。
+	_screen.shake.hit(_impact_power)
 	for hit in _damage:
 		var view: CardView = _screen.view_at(hit["side"], hit["slot"])
 		if view != null:

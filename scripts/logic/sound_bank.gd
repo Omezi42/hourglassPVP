@@ -8,7 +8,10 @@ extends RefCounted
 ## BGMの再生自体はMusicPlayerが担当し、こちらは音量の単一情報源としてのみ関わる
 ## (設定の読み書きを2クラスへ分散させると、同じJSONファイルを互いに上書きし合うため)。
 
-enum Sfx { FLIP, MOVE, SWAP, DAMAGE, RESULT_WIN, RESULT_LOSE, BUTTON }
+## **UNIT_BREAK / GLASS_BREAK は音源を増やさず、既存の音を高さで鳴き分ける**
+## (GameDesign.md 9章)。素材を1つ足すたびにCC0の音源を探して出所を記録する手間が
+## 生まれるため、区別を付けたいだけの場面では `SFX_PITCH` で分ける。
+enum Sfx { FLIP, MOVE, SWAP, DAMAGE, RESULT_WIN, RESULT_LOSE, BUTTON, UNIT_BREAK, GLASS_BREAK }
 
 const SETTINGS_PATH := "user://sound_settings.json"
 ## 被弾直後に決着音が続く等、複数の効果音がほぼ同時に鳴っても途切れないための同時再生数。
@@ -26,6 +29,16 @@ const SFX_PATHS := {
 	Sfx.RESULT_WIN: "res://assets/sfx/result_win.ogg",
 	Sfx.RESULT_LOSE: "res://assets/sfx/result_lose.ogg",
 	Sfx.BUTTON: "res://assets/sfx/button.wav",
+	Sfx.UNIT_BREAK: "res://assets/sfx/damage.ogg",
+	Sfx.GLASS_BREAK: "res://assets/sfx/damage.ogg",
+}
+
+## 音の高さ。**同じ出来事は必ず同じ高さで鳴らす**(その場の値で散らすと、
+## 何が起きたのかを音から判断できなくなる)。指定の無いものは等倍。
+## 砂時計が壊れた音は被弾より低く、硝子の膜が割れた音は高くする。
+const SFX_PITCH := {
+	Sfx.UNIT_BREAK: 0.68,
+	Sfx.GLASS_BREAK: 1.62,
 }
 
 static var _players: Array[AudioStreamPlayer] = []
@@ -64,6 +77,8 @@ static func play(sfx: Sfx) -> void:
 	_next_player_index = (_next_player_index + 1) % _players.size()
 	player.stream = stream
 	player.volume_db = _volume_to_db(_sfx_volume)
+	# **毎回入れ直す**。プールは使い回すため、前に鳴らした音の高さが残る。
+	player.pitch_scale = float(SFX_PITCH.get(sfx, 1.0))
 	player.play()
 
 
