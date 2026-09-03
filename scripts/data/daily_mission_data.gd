@@ -24,13 +24,13 @@ const DAILY_COUNT := 3
 ## 定義の全体。**この並びは日替わりの選び方に使う**ため、途中へ挿入せず末尾へ足す。
 static func all() -> Array[Dictionary]:
 	return [
-		_m("fall_10", Metric.TRIGGER_TURN_END, 10, "落砂を10回発動する", 100),
-		_m("flip_8", Metric.FLIP, 8, "反転を8回行う", 100),
-		_m("spell_3", Metric.CAST_SPELL, 3, "砂術を3回撃つ", 100),
-		_m("play_20", Metric.UNIT_PLAYED, 20, "砂時計を20体場に出す", 100),
-		_m("attack_15", Metric.ATTACK, 15, "15回攻撃する", 100),
-		_m("win_1", Metric.WIN, 1, "1勝する", 150),
-		_m("match_3", Metric.MATCH, 3, "3回対局する", 100),
+		_m("fall_10", Metric.TRIGGER_TURN_END, 10, "落砂を10回発動する", 50),
+		_m("flip_8", Metric.FLIP, 8, "反転を8回行う", 50),
+		_m("spell_3", Metric.CAST_SPELL, 3, "砂術を3回撃つ", 50),
+		_m("play_20", Metric.UNIT_PLAYED, 20, "砂時計を20体場に出す", 50),
+		_m("attack_15", Metric.ATTACK, 15, "15回攻撃する", 50),
+		_m("win_1", Metric.WIN, 1, "1勝する", 100),
+		_m("match_3", Metric.MATCH, 3, "3回対局する", 50),
 	]
 
 
