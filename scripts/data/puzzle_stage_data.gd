@@ -21,11 +21,11 @@ extends Resource
 ## そのターンに使えるマナ。
 @export var mana: int = 0
 ## 手札のカードid。並べた順に手札へ入る。
-@export var hand_ids: PackedStringArray = []
+@export var hand_ids: Array[String] = []
 ## 自陣の駒。`"sand:4:1"` = サンドが体力4・攻撃力1。空きは飛ばして詰めて置く。
-@export var own_units: PackedStringArray = []
+@export var own_units: Array[String] = []
 ## 敵陣の駒。書き方は自陣と同じ。
-@export var foe_units: PackedStringArray = []
+@export var foe_units: Array[String] = []
 
 
 ## `"id:体力:攻撃力"` を分解する。読めない行は空の Dictionary を返す。

@@ -84,7 +84,7 @@ func _build(stage: PuzzleStageData) -> MatchState:
 	return state
 
 
-func _place(state: MatchState, side: int, rows: PackedStringArray) -> void:
+func _place(state: MatchState, side: int, rows: Array[String]) -> void:
 	var slots: Array = []
 	slots.resize(MatchState.BOARD_SIZE)
 	for i in rows.size():

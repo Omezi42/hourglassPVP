@@ -149,7 +149,7 @@ func _apply(target: PuzzleStageData) -> void:
 	state.board_changed.emit(foe)
 
 
-func _hand(ids: PackedStringArray) -> Array:
+func _hand(ids: Array[String]) -> Array:
 	var cards: Array = []
 	for id in ids:
 		var card := CardLibrary.find_by_id(id)
@@ -158,7 +158,7 @@ func _hand(ids: PackedStringArray) -> Array:
 	return cards
 
 
-func _place(state: MatchState, side: int, rows: PackedStringArray) -> void:
+func _place(state: MatchState, side: int, rows: Array[String]) -> void:
 	var slots: Array = []
 	slots.resize(MatchState.BOARD_SIZE)
 	for i in rows.size():
