@@ -628,6 +628,16 @@ Main
 - `TitleLogo`(`scripts/ui/title_logo.gd`、`Control._draw()`のみのコード描画):ロゴ画像が未配置のときの代替表示。金の面と影を1pxずらして重ね、濃紺の`draw_string_outline()`で縁取る。色は`UiPalette`経由
 - `SandTransition`(`scripts/ui/sand_transition.gd`、`Control._draw()`のみのコード描画):タイトルからホームへ移るときだけ使う専用トランジション(GameDesign.md 9章)。`Main`が`_ready()`で1個生成して最前面へ置き、`cover()`(砂が上から降りて画面を覆う)と`reveal()`(砂が下へ抜ける)をawaitして使う。砂の層は、砂面を`EDGE_SEGMENTS`分割した折れ線と奥側の辺で作る四辺形へ**頂点カラーのグラデーション**を乗せて塗る(段ごとの単色塗りだと境目が縞に見えるため)。**アンカーは`set_anchors_preset()`ではなく`anchor_right`/`anchor_bottom`への直接代入で設定する**。`set_anchors_preset()`は「今の矩形を保つように」offsetを計算し直すため、コードで生成した直後(サイズ0)のノードへ使うと0サイズのまま固定され、何も描かれない。砂が出ている間は`mouse_filter = STOP`で下の画面の操作も塞ぐ
 - `Main`:画面切り替え(`_show_only()`)はハードカットではなくクロスフェードで行う。**ただしタイトル→ホームだけは`_on_title_start_requested()`が「ロゴの演出→`SandTransition.cover()`→`_show_only()`→`SandTransition.reveal()`」の順に進める**(クロスフェード自体は砂の下で起きるため見えない)。表示中の画面と次の画面の`modulate:a`をTweenで補間し、実行中のTweenは新しい遷移の開始時に必ずkillしてから作り直すことで連打・割り込みに耐える。遷移中は透明な`ColorRect`ブロッカーを最前面に重ねて全画面の入力を塞ぐ。**v5.0の3画面は`.tscn`を持たないため`_ready()`で生成して`_screens`へ加える**
+- **ホーム画面の入口は `HomeTile`(`scripts/ui/home_tile.gd`)が持つ**(GameDesign.md 9章)。
+  見出し・副題・紋章の透かし・中身の砂時計を1枚の札として描く。
+  - **`Button` を継承する。**既存のタブが `Button` として参照している枠をそのまま
+    置き換えられ、押下・無効・ホバーの扱いも native のまま使える
+  - **文言は `text` へ入れず自前で描く**。見出しと副題を上下に置くため、
+    native の中央揃え1行では収まらない
+  - **`.tscn` は書き換えず、`_ready()` で同じ場所・同じ大きさの札へ差し替える**
+    (`_to_tile()`)。並び順(`get_index()`)も引き継ぐ
+  - 副題は画面の外で変わる(デッキ・砂金)ため、**タブを開くたびに読み直す**
+    (`HomeScreen._select_tab()` / `refresh_account()` から `DeckTab.refresh()`)
 - **ホーム画面のタブ(`DeckTab` / `BattleTab` / `RulesTab`)は、上端112pxをアカウント帯のために
   空け、残りの領域の中央へ内容を置く**。ContentArea の高さは下部タブを除いた560pxしかないため、
   ここを守らないと内容が画面の外(上はアカウント帯の裏、下は下部タブの裏)へ出る。実際に

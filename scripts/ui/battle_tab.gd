@@ -52,6 +52,12 @@ func _ready() -> void:
 	_busy_dots_timer.wait_time = BUSY_DOTS_INTERVAL
 	_busy_dots_timer.timeout.connect(_on_busy_dots_timeout)
 	add_child(_busy_dots_timer)
+	# **入口は `HomeTile` にする**(GameDesign.md 9章)。`.tscn` を書き換えずに済ませるため、
+	# 置いてある `Button` を同じ場所・同じ大きさの札へ差し替える。
+	random_match_button = _to_tile(random_match_button, "ランダムマッチ", "誰かと当たるまで待ちます", "burst", 27)
+	room_match_button = _to_tile(room_match_button, "ルームマッチ", "合言葉で友達と対戦します", "shield", 27)
+	replay_button = _to_tile(replay_button, "リプレイ", "", "eye", 20)
+	cpu_match_button = _to_tile(cpu_match_button, "CPU戦", "", "hour", 20)
 	random_match_button.pressed.connect(func() -> void: random_match_deck_requested.emit())
 	room_match_button.pressed.connect(func() -> void: room_match_requested.emit())
 	replay_button.pressed.connect(func() -> void: replay_list_requested.emit())
@@ -77,7 +83,7 @@ func refresh() -> void:
 
 
 func _build_resume_button() -> void:
-	_resume_button = CodedButton.make("前回の対局へ戻る", Vector2(300, 68))
+	_resume_button = HomeTile.make("前回の対局へ戻る", "途中の対局が残っています", "hour", Vector2(320, 68), 21)
 	_resume_button.visible = false
 	_resume_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_resume_button.pressed.connect(_on_resume_pressed)
@@ -94,18 +100,33 @@ func _build_announce_badge() -> void:
 ## 「戦績」はリプレイ・CPU戦と同じ「対局そのものではない導線」のため、専用の行を作らず
 ## 同じ行へ並べる。行を1つ増やすと、タブの高さ(下部タブに挟まれた領域)を超える。
 func _build_stats_button() -> void:
-	_stats_button = CodedButton.make("戦績", Vector2(200, 64))
+	_stats_button = HomeTile.make("戦績", "", "crown", Vector2(200, 64), 20)
 	_stats_button.pressed.connect(func() -> void: stats_requested.emit())
 	replay_button.get_parent().add_child(_stats_button)
+
+
+## `.tscn` に置いてある `Button` を、同じ場所・同じ大きさの `HomeTile` へ置き換える。
+func _to_tile(
+	button: Button, title: String, subtitle: String, emblem_id: String, font_size: int
+) -> HomeTile:
+	var parent := button.get_parent()
+	var tile := HomeTile.make(title, subtitle, emblem_id, button.custom_minimum_size, font_size)
+	tile.size_flags_horizontal = button.size_flags_horizontal
+	tile.size_flags_vertical = button.size_flags_vertical
+	parent.add_child(tile)
+	parent.move_child(tile, button.get_index())
+	parent.remove_child(button)
+	button.queue_free()
+	return tile
 
 
 ## リーサルパズル(GameDesign.md 24章)とデイリーミッション(同23章)も、
 ## 対局そのものではない導線として「戦績」と同じ行に並べる。
 func _build_side_buttons() -> void:
-	_puzzle_button = CodedButton.make("パズル", Vector2(200, 64))
+	_puzzle_button = HomeTile.make("パズル", "", "sword", Vector2(200, 64), 20)
 	_puzzle_button.pressed.connect(func() -> void: puzzle_requested.emit())
 	replay_button.get_parent().add_child(_puzzle_button)
-	_mission_button = CodedButton.make("ミッション", Vector2(200, 64))
+	_mission_button = HomeTile.make("ミッション", "", "halo", Vector2(200, 64), 20)
 	_mission_button.pressed.connect(func() -> void: mission_requested.emit())
 	replay_button.get_parent().add_child(_mission_button)
 

@@ -124,6 +124,8 @@ func refresh_account() -> void:
 			AccountService.title_id()
 		)
 	currency_label.text = "%s:%d" % [CurrencyRules.CURRENCY_NAME, AccountService.currency()]
+	if deck_tab != null:
+		deck_tab.refresh()
 
 
 func _select_tab(index: int) -> void:
@@ -134,6 +136,9 @@ func _select_tab(index: int) -> void:
 	background.texture = BATTLE_BACKGROUND if index == TAB_BATTLE else DECK_BACKGROUND
 	if index == TAB_BATTLE:
 		battle_tab.refresh()
+	# デッキも砂金も画面の外で変わる。開くたびに札の副題を読み直す。
+	elif index == TAB_DECK:
+		deck_tab.refresh()
 	var to_show: Control = tabs[index]
 	if to_show == _active_tab and to_show.visible and to_show.modulate.a >= 1.0:
 		return
