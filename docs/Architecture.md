@@ -329,9 +329,7 @@ UIに依存しない、対局ルールそのものを扱う層。
 | `CardMatchResult`(`scripts/ui/card_match_result.gd`) | 結果パネル。勝敗・最終HP・総手数・決着の要因と「ログ」「ホームへ」 |
 | `CardDeckListScreen`(`scripts/ui/card_deck_list_screen.gd`) | 保存済みデッキの一覧。**管理と対局前の選択を1つの画面が兼ねる**(4.5節) |
 | `CardDeckEditorScreen`(`scripts/ui/card_deck_editor_screen.gd`) | デッキ編集(30枚・同名2枚まで)。共通の `ScreenHeader` を使う |
-| `CardManaCurve`(`scripts/ui/card_mana_curve.gd`) | コスト別の枚数の棒グラフ。デッキ編集では低背版(`compact`)で使う。**目盛りはプールに実在するコストの範囲だけ**を出す(`CardLibrary` の最大コストから決める)。数字は棒の幅に対して中央揃えで描き、2桁でもずれない |
-| `CardDeckBand`(`scripts/ui/card_deck_band.gd`) | 編成中の1枚。絵を右端へ薄く敷いた横長の帯。「−」「+」を持ち、**一覧まで戻らずに枚数を調整できる** |
-| `CardDeckSheet`(`scripts/ui/card_deck_sheet.gd`) | 共有用のデッキ表(GameDesign.md 9章)。**画面に置かず `SubViewport` の中だけで生きる**。`CardDeckBand` を `readonly` で3列に並べ、マナカーブと作品名・バージョンを添える |
+| `CardDeckSheet`(`scripts/ui/card_deck_sheet.gd`) | 共有用のデッキ表(GameDesign.md 9章)。**画面に置かず `SubViewport` の中だけで生きる**。`CardDeckShelf` を `readonly` の横10列にして敷き、作品名・バージョンを添える |
 | `CardDeckSharePanel`(`scripts/ui/card_deck_share_panel.gd`) | デッキの受け渡し。**デッキ表の画像とデッキコードを1つのパネルにまとめる**(旧 `CardDeckCodePanel`) |
 | `CardDeckFilter`(`scripts/ui/card_deck_filter.gd`) | 一覧の絞り込み(コスト・キーワード・名前)。条件の合成を1箇所へ集める |
 | `CardListScreen`(`scripts/ui/card_list_screen.gd`) | カード一覧。選ぶと右の詳細パネルへ出す。ヘッダーの主アクションのボタンで並び順(コスト順 / 追加順)を往復する |
@@ -547,7 +545,7 @@ UIに依存しない、対局ルールそのものを扱う層。
 
 **デッキ編集は「左=全カードのグリッド / 右=編成中のデッキ」の2カラムで組む**
 (GameDesign.md 9章)。左は絞り込みの列(`CardDeckFilter`)+ 名前の検索欄 + `GridContainer`、
-右は `PanelContainer` の中にデッキ名・枚数・`CardManaCurve`(低背版)・`CardDeckBand` の並び。
+右は `PanelContainer` の中にデッキ名・枚数・`CardDeckShelf`(30枠の棚)の並び。
 **以前は一覧を画面下部の横1行の横スクロールに置いていた**が、カードが増えるほど
 目的の1枚へ届くまでの横送りが伸びるため、グリッド + 絞り込みへ変えた。
 
@@ -567,7 +565,8 @@ UIに依存しない、対局ルールそのものを扱う層。
   - **空き枠も1つの枠として描き、当たり判定にも積む**(押しても何も起きない)。
     描く位置と押せる位置を同じループで決めないと、必ずどこかで食い違う
   - **バッジの半径は駒に比例させる**(`clampf(art_w * 0.20, 8, 13)`)
-  - **旧 `CardDeckBand` は共有のデッキ表(`CardDeckSheet`)が使い続ける**ため残す
+  - **共有のデッキ表(`CardDeckSheet`)も同じ棚を使う。**変えるのは `columns`(10)と
+    `readonly`(ホバーも押下も受けない)の2つだけで、**共有のためだけの並べ方を作らない**
 - **詳細(`CardDetailPanel`)は `interactive = false` で持ち、一覧のカードや編成中の駒へ
   カーソルを乗せている間だけ出す**(GameDesign.md 9章)。幅は右カラムぶん(400px)で、
   `compact` の中身は縦積み。**出す位置は `CardDetailPanel.place_near()` が決める**
@@ -580,8 +579,8 @@ UIに依存しない、対局ルールそのものを扱う層。
   以前は絞り込み列のぶん左側だけ下がり、右側上部に46pxの余白ができていたが、モーダル化により
   左右の高さが揃い、一覧グリッドも縦幅が広がってカードを探しやすくなった
 - **編成中の欄は上から「デッキ名・枚数 / 30枠の棚」とする**。
-  **`CardManaCurve` はデッキ編集では使わない**(GameDesign.md 9章)。
-  クラスは他の用途(共有のデッキ表)が使うので残す
+  **マナカーブの棒グラフは持たない**(GameDesign.md 9章)。並びがコスト順に固定されている
+  ため、`CardManaCurve` と `CardDeckBand` は参照0件になり削除した
 - **「あと何枚」の帯も持たない**(GameDesign.md 9章)。空いている枠の数がそのまま残りであり、
   帯を出すと**そのぶん棚の高さが減って、足りているときと足りないときで駒の大きさが変わる**
 
@@ -739,7 +738,7 @@ v' = clamp(v * value + value_bias, 0, 1)
 
 - **焼くのは `SubViewport` + シェーダで、結果を `ImageTexture` として持つ。**描画側は
   今までどおり `Texture2D` を受け取るだけで、`CardView` / `CardDetailPanel` /
-  `CardDeckBand` / `CardDeckListScreen` / `ReplayListCard` のいずれも変更しない。
+  `CardDeckShelf` / `CardDeckListScreen` / `ReplayListCard` のいずれも変更しない。
   **描画のたびにシェーダを掛ける方式は採らない**。カードの絵は5つの画面がそれぞれ別の
   描き方(`draw_texture_rect` と `TextureRect`)で出しており、5箇所へシェーダを配ると
   1箇所書き漏らしただけで色が違うカードが出る
@@ -1636,8 +1635,9 @@ UI層へ依存することになる。
 - **表は `SubViewport` の中で組み、その `ViewportTexture` をそのままパネルへ映す**。
   書き出す画像と画面に見えているものが同じ実体になるため、**見本と書き出しが食い違う
   経路そのものが無い**。`HourglassArt` が焼き付けに使っているのと同じ流儀
-- **帯は `CardDeckBand` を使い回す**(`readonly = true` で「−」「+」を隠し、そのぶんを
-  絵の幅へ回す)。共有のためだけに似た帯をもう1つ書くと、片方だけが古くなる
+- **棚は `CardDeckShelf` を使い回す**(`columns = 10` / `readonly = true`)。
+  共有のためだけに似た並べ方をもう1つ書くと、片方だけが古くなる。
+  **大きさは 1280x720 の固定**(枠の数が固定になったため高さも決まる)
 - **並びは `CardLibrary.compare_by_cost` を通す。**画面ごとに並べ方を決めない
   (GameDesign.md 9章)
 - **コードは既に発行済みのときだけ載せる。**画像を出すためだけに `publish()` を
@@ -1652,7 +1652,7 @@ UI層へ依存することになる。
 - **`SubViewport` 内のフォント解決と文字化け対策。** `SubViewport` は親 Control の `theme` を
   自動継承しないため、`project.godot` の `[gui] theme/custom` に `main_theme.tres` を設定し、
   さらに `CardDeckSheet` 自体も `THEME_PATH` を `_ready()` で読み込む。
-  `CardDeckBand` や `CardManaCurve` のフォールバック先もエンジン組み込みフォントではなく
+  `CardDeckShelf` のフォールバック先もエンジン組み込みフォントではなく
   同梱の日本語フォント(`ZenKakuGothicNew-Bold.ttf`)を参照させ、Web書き出し環境等で
   画像内の日本語文字が豆腐(□)に化けるのを防ぐ
 

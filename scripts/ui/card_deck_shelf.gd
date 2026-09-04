@@ -12,14 +12,18 @@ extends Control
 ##
 ## **1つの `Control` が全枠を `_draw()` で描き、当たり判定を矩形の表として持つ。**
 ## 30個のノードを並べると、枚数を1枚動かすたびに生成と破棄が走る。
+##
+## **共有用のデッキ表(`CardDeckSheet`)も、横の枠数だけ変えてこれを使う。**
+## 画面で見た形と貼られた画像が一致していることを優先する(GameDesign.md 9章)ため、
+## 共有のためだけに似た並べ方をもう1つ書かない。
 
 ## カーソルが乗っている1枠。詳細パネルを出すために画面側が拾う。
 signal card_hovered(card: CardData)
 signal hover_left
 signal card_removed(card: CardData)
 
-## 横の枠数。縦は「デッキの枚数 ÷ これ」で決まる(30枚なら5段)。
-const COLUMNS := 6
+## 既定の横の枠数(工房)。縦は「デッキの枚数 ÷ これ」で決まる(30枚なら5段)。
+const DEFAULT_COLUMNS := 6
 ## 棚板の厚みと、その下へ置く名前の取り分。
 const LEDGE_HEIGHT := 7.0
 const NAME_BAND := 17.0
@@ -43,6 +47,17 @@ var deck: Array = []:
 		deck = value
 		_rebuild()
 
+## 横の枠数。共有用のデッキ表は横長にしたいため10を渡す。
+var columns := DEFAULT_COLUMNS:
+	set(value):
+		columns = maxi(value, 1)
+		queue_redraw()
+## 読むだけの棚(共有用のデッキ表)。ホバーも押下も受けない。
+var readonly := false:
+	set(value):
+		readonly = value
+		mouse_filter = Control.MOUSE_FILTER_IGNORE if value else Control.MOUSE_FILTER_STOP
+
 var _font: Font
 ## 枠に収まった順。**1枠=1枚**なので、2枚積みは隣り合う2枠を占める。
 var _slots: Array = []
@@ -52,7 +67,7 @@ var _hover_index := -1
 
 
 func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_STOP
+	mouse_filter = Control.MOUSE_FILTER_IGNORE if readonly else Control.MOUSE_FILTER_STOP
 	_font = get_theme_default_font()
 	if _font == null:
 		_font = ThemeDB.fallback_font
@@ -83,8 +98,8 @@ static func _slot_count() -> int:
 	return MatchState.DECK_SIZE
 
 
-static func _rows() -> int:
-	return int(ceil(float(_slot_count()) / float(COLUMNS)))
+func _rows() -> int:
+	return int(ceil(float(_slot_count()) / float(columns)))
 
 
 func _draw() -> void:
@@ -99,9 +114,11 @@ func _draw() -> void:
 	UiPaint.draw_inner_shadow(get_canvas_item(), rect, 8.0, 8, 7, Color(0, 0, 0), 0.7)
 
 	var rows := _rows()
-	var cell := Vector2(size.x / float(COLUMNS), size.y / float(rows))
-	var art_h: float = cell.y - LEDGE_HEIGHT - NAME_BAND - 4.0
-	var art_w: float = minf(art_h / ART_RATIO, cell.x - 12.0)
+	var cell := Vector2(size.x / float(columns), size.y / float(rows))
+	# **横で頭打ちになったら高さも一緒に詰める。**幅だけを切り詰めると絵が縦へ伸びる
+	# (共有用の横長の表で実際にそうなった)。縦横比は必ず保つ。
+	var art_w: float = minf((cell.y - LEDGE_HEIGHT - NAME_BAND - 4.0) / ART_RATIO, cell.x - 12.0)
+	var art_h: float = art_w * ART_RATIO
 	for row in rows:
 		_draw_ledge(row, cell)
 	for index in _slot_count():
@@ -138,8 +155,8 @@ func _draw_ledge(row: int, cell: Vector2) -> void:
 
 
 func _draw_slot(index: int, cell: Vector2, art: Vector2) -> void:
-	var col: int = index % COLUMNS
-	var row: int = index / COLUMNS
+	var col: int = index % columns
+	var row: int = index / columns
 	var base := Vector2((col + 0.5) * cell.x, (row + 1) * cell.y - NAME_BAND - LEDGE_HEIGHT)
 	var hit := Rect2(Vector2(col * cell.x, row * cell.y), cell)
 	_hits.append({"rect": hit, "index": index})
@@ -317,6 +334,8 @@ func _draw_hover_glow(base: Vector2, art_w: float) -> void:
 
 
 func _gui_input(event: InputEvent) -> void:
+	if readonly:
+		return
 	if event is InputEventMouseMotion:
 		_update_hover((event as InputEventMouseMotion).position)
 		return
