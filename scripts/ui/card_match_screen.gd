@@ -379,6 +379,12 @@ func _begin_state(
 func _build() -> void:
 	# 下地と卓は最初に足して盤面の駒より背面へ置く。
 	add_child(ScreenBackdrop.new())
+	# 卓の後ろにだけ淡い光を置いて浮かせる(GameDesign.md 9章)。BoardTableより先に
+	# 足すことで、卓の額の外周からわずかににじむだけの光として見える。
+	var table_glow := BoardGlow.new()
+	table_glow.position = TABLE_RECT.position
+	table_glow.size = TABLE_RECT.size
+	add_child(table_glow)
 	_table = BoardTable.new()
 	_table.position = TABLE_RECT.position
 	_table.size = TABLE_RECT.size
@@ -387,6 +393,12 @@ func _build() -> void:
 	_own_bar = CardMatchBuild.make_bar(self, false, OWN_BAR_TOP)
 	_foe_slots = CardMatchBuild.make_row(self, FOE_ROW_TOP, true)
 	_own_slots = CardMatchBuild.make_row(self, OWN_ROW_TOP, false)
+	# 手札は「手元の面」の上に置く(GameDesign.md 9章)。革の面を、乗る手札のCardViewより
+	# 先に足して背面へ回す(札が宙に浮いて見えないようにするための下敷き)。
+	var hand_panel := HandLeatherPanel.new()
+	hand_panel.position = HAND_AREA.position
+	hand_panel.size = HAND_AREA.size
+	add_child(hand_panel)
 	for i in MatchState.DECK_SIZE:
 		var view := CardView.new()
 		view.mode = CardView.Mode.HAND
