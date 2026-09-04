@@ -4,7 +4,7 @@ extends Control
 ##
 ## **左=全カードのグリッド / 右=編成中のデッキ**の2カラム。カードは毎日のアプデで
 ## 増え続けるため、一覧の探しやすさを最優先し、絞り込みと名前の検索を添える。
-## 編成中は「カードの絵を右端へ薄く敷いた帯」(`CardDeckBand`)を縦に並べる。
+## 編成中のデッキは**コスト帯ごとの段**(`CardDeckShelf`)として見せる。
 
 signal back_pressed
 
@@ -15,7 +15,6 @@ const SIDE_RECT := Rect2(856, ScreenHeader.CONTENT_TOP, 400, ScreenHeader.CONTEN
 const SIDE_INNER_WIDTH := 372.0
 const GRID_COLUMNS := 6
 const GRID_GAP := 12
-const CURVE_HEIGHT := 140.0
 ## `CardDetailPanel` の低背版の大きさ。ここを小さくしても最小サイズで押し返されるため揃える。
 const DETAIL_SIZE := CardDetailPanel.COMPACT_SIZE
 ## **詳細は指しているものと反対のカラムへ出す**(GameDesign.md 9章)。
@@ -31,9 +30,9 @@ var _filter: CardDeckFilter
 var _filter_button: Button
 var _count_label: Label
 var _grid: GridContainer
-var _bands: VBoxContainer
+var _shelf: CardDeckShelf
 var _progress: Label
-var _curve: CardManaCurve
+var _shortfall: Label
 var _detail: CardDetailPanel
 var _detail_hide_timer: Timer
 var _preset_picker: CardPresetPicker
@@ -42,7 +41,6 @@ var _share_panel: CardDeckSharePanel
 ## `_card_views` の並びと1対1で対応するため、参照する側は必ずこちらを見る。
 var _pool: Array[CardData] = []
 var _card_views: Array[CardView] = []
-var _band_pool: Array[CardDeckBand] = []
 ## 編成中のデッキ。同じ CardData が最大2つ入る。
 var _deck: Array = []
 ## 編集中のデッキが一覧の何番目か。-1 は新規作成(保存すると末尾へ追加する)。
@@ -194,20 +192,29 @@ func _build_side() -> void:
 	_progress.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	top_row.add_child(_progress)
 
-	# 2. 編成中カード一覧
-	var scroll := ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	column.add_child(scroll)
-	_bands = VBoxContainer.new()
-	_bands.add_theme_constant_override("separation", 4)
-	_bands.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.add_child(_bands)
+	# 2. 編成中のデッキ(コスト帯ごとの棚)。
+	# **マナカーブの棒グラフは置かない**——段の長さがそのままマナカーブになるため
+	# (GameDesign.md 9章)。
+	# **`ScrollContainer` へは入れない。**あの中では棚が「1画面に何段入るか」を
+	# 知れず、段の高さを決められない(実際、高さ0のまま下限で並んで画面の半分が
+	# 空いた)。棚が自前でスクロールを持つ。
+	_shelf = CardDeckShelf.new()
+	_shelf.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_shelf.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_shelf.custom_minimum_size.x = SIDE_INNER_WIDTH
+	_shelf.card_hovered.connect(_on_shelf_hovered)
+	_shelf.hover_left.connect(_on_hover_left)
+	_shelf.card_added.connect(_on_band_add)
+	_shelf.card_removed.connect(_on_band_remove)
+	column.add_child(_shelf)
 
-	# 3. マナカーブ(下部配置・高さ140px)
-	_curve = CardManaCurve.new()
-	_curve.custom_minimum_size = Vector2(SIDE_INNER_WIDTH, CURVE_HEIGHT)
-	column.add_child(_curve)
+	# 3. 30枚に満たない間だけ出す帯(GameDesign.md 9章)。
+	_shortfall = Label.new()
+	_shortfall.add_theme_font_size_override("font_size", 15)
+	_shortfall.add_theme_color_override("font_color", Color(1.0, 0.82, 0.46))
+	_shortfall.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_shortfall.custom_minimum_size.y = 24
+	column.add_child(_shortfall)
 
 
 func _build_detail() -> void:
@@ -236,8 +243,11 @@ func _build_detail() -> void:
 
 func _refresh() -> void:
 	_progress.text = "%d / %d 枚" % [_deck.size(), MatchState.DECK_SIZE]
-	_refresh_bands()
-	_curve.show_deck(_deck)
+	_shelf.deck = _deck.duplicate()
+	# **足りているときは帯ごと畳む。**空の行を残すと、そのぶん棚の段が低くなる。
+	var missing: int = MatchState.DECK_SIZE - _deck.size()
+	_shortfall.visible = missing > 0
+	_shortfall.text = "あと %d 枚" % missing
 	var full: bool = _deck.size() >= MatchState.DECK_SIZE
 	for i in _card_views.size():
 		var card: CardData = _pool[i]
@@ -265,40 +275,6 @@ func _apply_filter() -> void:
 		_filter_button.remove_theme_color_override("font_color")
 		_filter_button.remove_theme_color_override("font_hover_color")
 		_count_label.text = "カード一覧 (%d 種)" % _pool.size()
-
-
-## 帯は使い回す。1枚足すたびに全て作り直すと、押した瞬間にカーソルの下のノードが
-## 消えてホバーが途切れるため。
-func _refresh_bands() -> void:
-	var distinct := _distinct_sorted()
-	while _band_pool.size() < distinct.size():
-		var band := CardDeckBand.new()
-		band.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		band.add_pressed.connect(_on_band_add)
-		band.remove_pressed.connect(_on_band_remove)
-		band.mouse_entered.connect(_on_band_hovered.bind(band))
-		band.mouse_exited.connect(_on_hover_left)
-		_bands.add_child(band)
-		_band_pool.append(band)
-	for i in _band_pool.size():
-		var band := _band_pool[i]
-		band.visible = i < distinct.size()
-		if band.visible:
-			var card: CardData = distinct[i]
-			var can_add: bool = (
-				_deck.size() < MatchState.DECK_SIZE and _count_of(card) < CardDeckSave.COPY_LIMIT
-			)
-			band.show_card(card, _count_of(card), can_add)
-
-
-## 編成中のカードをコスト順に並べた重複なしの一覧。
-func _distinct_sorted() -> Array:
-	var seen: Array = []
-	for card in _deck:
-		if not seen.has(card):
-			seen.append(card)
-	seen.sort_custom(CardLibrary.compare_by_cost)
-	return seen
 
 
 func _count_of(card: CardData) -> int:
@@ -339,9 +315,9 @@ func _on_card_hovered(view: CardView) -> void:
 	_show_detail(view.card, true)
 
 
-## 帯は使い回すため、ホバーの時点で `card` を読む(接続時に束ねると、まだ空の帯を掴む)。
-func _on_band_hovered(band: CardDeckBand) -> void:
-	_show_detail(band.card, false)
+## 棚の1本を指した。詳細は**反対のカラム**(左=一覧の上)へ出す(GameDesign.md 9章)。
+func _on_shelf_hovered(card: CardData) -> void:
+	_show_detail(card, false)
 
 
 # --- 操作 ---------------------------------------------------------------
