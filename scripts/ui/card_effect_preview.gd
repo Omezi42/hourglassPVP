@@ -44,7 +44,10 @@ enum Demo {
 }
 
 const MIN_SIZE := Vector2(320, 200)
-const PIECE_SIZE := Vector2(48, 56)
+## 駒1体ぶんの寸法。**縦は枠の高さから逆算して決めてある**——自分と相手を上下へ
+## 対面させるため、`枠の高さ - 駒の高さ×2 - 余白` が正になっていないと上下が重なる
+## (56pxのときは実際に接していた)。`CardDetailPanel.PREVIEW_HEIGHT` と対で見ること。
+const PIECE_SIZE := Vector2(48, 48)
 const SLOT_GAP := 44.0
 const NOTE_FONT_SIZE := 14
 const STAT_FONT_SIZE := 13
@@ -53,10 +56,8 @@ const HP_MAX := 30.0
 ## 1本の実演の長さ。短いと読み取る前に終わり、長いと待たされる。
 const DEFAULT_DURATION := 4.4
 
-const SAND_TOP := Color(0.98, 0.86, 0.5, 1.0)
-const GLASS_TINT := Color(0.62, 0.78, 0.86, 0.35)
-const BEAM_COLOR := Color(0.95, 0.62, 0.2, 1.0)
-const BLOCKED_COLOR := Color(0.7, 0.72, 0.78, 0.9)
+## 阻まれた攻撃(守護)。効いた攻撃の朱と区別するため、くすんだ色で引く。
+const BLOCKED_COLOR := Color(0.52, 0.47, 0.38, 0.9)
 
 ## 台本 → それを組み立てるメソッド。いずれも (進捗, 値) を受ける形へ揃えてある。
 const STAGE_METHODS := {
@@ -362,7 +363,7 @@ func _stage_glass(t: float, _value: int) -> Dictionary:
 		if t >= 0.8:
 			own["h"] = 2
 			own["total"] = 2
-			stage["pops"] = [_pop("own", 0, "-2", CardView.HEALTH_RED, _seg(t, 0.8, 1.0))]
+			stage["pops"] = [_pop("own", 0, "-2", InkFigure.RED, _seg(t, 0.8, 1.0))]
 	stage["own"] = [own]
 	stage["foe"] = [foe]
 	return stage
@@ -382,7 +383,7 @@ func _stage_pierce(t: float, _value: int) -> Dictionary:
 		stage["beams"].append(_beam(["own", 0], ["foe_hp", 0], _seg(t, 0.5, 0.78)))
 	if t >= 0.78:
 		stage["foe_hp"] = 1.0 - 3.0 / HP_MAX
-		stage["pops"] = [_pop("foe_hp", 0, "-3", CardView.HEALTH_RED, _seg(t, 0.78, 1.0))]
+		stage["pops"] = [_pop("foe_hp", 0, "-3", InkFigure.RED, _seg(t, 0.78, 1.0))]
 	stage["own"] = [own]
 	stage["foe"] = [foe]
 	return stage
@@ -609,7 +610,7 @@ func _stage_damage_player(t: float, value: int) -> Dictionary:
 		stage["beams"] = [_beam(["own", 0], ["foe_hp", 0], _seg(t, 0.3, 0.62))]
 	if t >= 0.62:
 		stage["foe_hp"] = 1.0 - float(value) / HP_MAX
-		stage["pops"] = [_pop("foe_hp", 0, "-%d" % value, CardView.HEALTH_RED, _seg(t, 0.62, 1.0))]
+		stage["pops"] = [_pop("foe_hp", 0, "-%d" % value, InkFigure.RED, _seg(t, 0.62, 1.0))]
 	stage["own"] = [own]
 	stage["foe"] = [_piece(4, 1, 5)]
 	return stage
@@ -630,7 +631,7 @@ func _stage_damage_per_unit(t: float, value: int) -> Dictionary:
 	if t >= 0.68:
 		stage["foe_hp"] = 1.0 - float(total) / HP_MAX
 		var text := "-%d" % total
-		stage["pops"] = [_pop("foe_hp", 0, text, CardView.HEALTH_RED, _seg(t, 0.68, 1.0))]
+		stage["pops"] = [_pop("foe_hp", 0, text, InkFigure.RED, _seg(t, 0.68, 1.0))]
 	stage["own"] = [own]
 	stage["foe"] = foes
 	return stage
@@ -700,19 +701,38 @@ func _draw() -> void:
 
 
 ## 枠を描き、駒を並べる領域を返す。
+## **紙に刷られた図版として描く**(GameDesign.md 9章)。実演を出すのは砂時計図鑑と
+## キーワード辞書だけであり、どちらも盤面の再現ではなく理屈を読ませる場所のため。
 func _draw_frame() -> Rect2:
 	var ci := get_canvas_item()
 	var rect := Rect2(Vector2.ZERO, size)
-	var points := UiPaint.rounded_rect_points_uniform(rect, 8.0, 5)
 	UiPaint.fill_gradient_polygon(
 		ci,
-		points,
+		UiPaint.rounded_rect_points_uniform(rect, 6.0, 5),
 		rect,
-		[[0.0, Color(0.05, 0.05, 0.07, 0.92)], [1.0, Color(0.12, 0.11, 0.13, 0.92)]]
+		[[0.0, Color(0.90, 0.845, 0.70)], [1.0, Color(0.80, 0.72, 0.56)]]
 	)
-	UiPaint.apply_grain(ci, rect, 0.05)
-	UiPaint.draw_inner_shadow(ci, rect, 8.0, 5, 3, Color(0, 0, 0, 1), 0.4)
-	draw_rect(rect, Color(UiPalette.BRASS_MID, 0.85), false, 1.5)
+	UiPaint.apply_grain(ci, rect, 0.07)
+	# 二重の細い罫で囲み、四隅へ小さな菱形を打つ(図版の枠)。
+	draw_rect(rect, Color(0.45, 0.33, 0.18, 0.55), false, 1.4)
+	draw_rect(rect.grow(-4), Color(0.45, 0.33, 0.18, 0.30), false, 1.0)
+	for corner in [
+		rect.position,
+		Vector2(rect.end.x, rect.position.y),
+		Vector2(rect.position.x, rect.end.y),
+		rect.end,
+	]:
+		draw_colored_polygon(
+			PackedVector2Array(
+				[
+					corner + Vector2(0, -4),
+					corner + Vector2(4, 0),
+					corner + Vector2(0, 4),
+					corner + Vector2(-4, 0),
+				]
+			),
+			Color(0.45, 0.33, 0.18, 0.85)
+		)
 	var note_height := NOTE_FONT_SIZE * 2 + 12
 	return Rect2(
 		rect.position + Vector2(10, 8), Vector2(rect.size.x - 20, rect.size.y - 18 - note_height)
@@ -745,134 +765,51 @@ static func _slots(center_x: float, y: float, count: int) -> Array:
 
 
 func _draw_hp_bar(rect: Rect2, ratio: float, own: bool) -> void:
-	var ci := get_canvas_item()
-	var track := UiPaint.rounded_rect_points_uniform(rect, 3.0, 3)
-	UiPaint.fill_gradient_polygon(
-		ci, track, rect, [[0.0, Color(0.05, 0.05, 0.06, 1)], [1.0, Color(0.14, 0.13, 0.15, 1)]]
-	)
-	var filled := clampf(ratio, 0.0, 1.0)
-	if filled > 0.0:
-		var inner := Rect2(rect.position, Vector2(rect.size.x * filled, rect.size.y))
-		var color := UiPalette.GLOW_AMBER if filled > 0.35 else CardView.HEALTH_RED
-		draw_rect(inner, color)
-	draw_rect(rect, Color(UiPalette.BRASS_MID, 0.9), false, 1.0)
-	var label := "自分" if own else "相手"
+	InkFigure.hp_bar(self, rect, ratio)
 	draw_string(
 		_font,
 		Vector2(rect.position.x, rect.position.y - 3),
-		label,
+		"自分" if own else "相手",
 		HORIZONTAL_ALIGNMENT_LEFT,
 		-1,
 		11,
-		Color(UiPalette.BRASS_HIGHLIGHT, 0.9)
+		InkFigure.INK_SOFT
 	)
 
 
 ## 砂時計1体。上の部屋の砂=体力 / 下の部屋の砂=攻撃力(GameDesign.md 1章)。
+## 描くのは `InkFigure` の部品だけで、ここは**台本の値を図版の引数へ写すだけ**にする。
 func _draw_piece(center: Vector2, piece: Dictionary) -> void:
 	var shatter: float = piece["shatter"]
 	var alpha: float = piece["fade"] * (1.0 - clampf(shatter, 0.0, 1.0))
 	if shatter > 0.0:
-		_draw_shards(center, shatter)
+		InkFigure.broken(self, center, 10.0 + shatter * 8.0, 1.0 - clampf(shatter, 0.0, 1.0))
 	if alpha <= 0.01:
 		return
+	# 反転中は持ち上げながら縦を潰す。ちょうど半回転で厚みだけの線になる。
 	var flip: float = piece["flip"]
-	var squash := 1.0
-	var lift := 0.0
+	var height := PIECE_SIZE.y
+	var mid := center
 	if flip >= 0.0:
-		squash = maxf(absf(cos(flip * PI)), 0.14)
-		lift = sin(flip * PI) * 8.0
-	var half := Vector2(PIECE_SIZE.x, PIECE_SIZE.y * squash) * 0.5
-	var mid := center - Vector2(0.0, lift)
-	var neck := PIECE_SIZE.x * 0.1
-	var top_body: PackedVector2Array = [
-		Vector2(mid.x - half.x, mid.y - half.y),
-		Vector2(mid.x + half.x, mid.y - half.y),
-		Vector2(mid.x + neck, mid.y),
-		Vector2(mid.x - neck, mid.y),
-	]
-	var bottom_body: PackedVector2Array = [
-		Vector2(mid.x - neck, mid.y),
-		Vector2(mid.x + neck, mid.y),
-		Vector2(mid.x + half.x, mid.y + half.y),
-		Vector2(mid.x - half.x, mid.y + half.y),
-	]
-	var glass := Color(0.16, 0.18, 0.22, 0.9 * alpha)
-	draw_colored_polygon(top_body, glass)
-	draw_colored_polygon(bottom_body, glass)
+		height *= maxf(absf(cos(flip * PI)), 0.14)
+		mid -= Vector2(0.0, sin(flip * PI) * 8.0)
 	var total: int = maxi(piece["total"], 1)
-	_draw_sand(mid, half, neck, float(piece["h"]) / float(total), true, alpha)
-	_draw_sand(mid, half, neck, float(piece["a"]) / float(total), false, alpha)
-	var frame := Color(UiPalette.BRASS_HIGHLIGHT, alpha)
-	draw_polyline(top_body + PackedVector2Array([top_body[0]]), frame, 1.5)
-	draw_polyline(bottom_body + PackedVector2Array([bottom_body[0]]), frame, 1.5)
+	InkFigure.hourglass(self, mid, height, float(piece["a"]) / float(total), alpha)
 	if piece["glass"]:
-		draw_colored_polygon(top_body, Color(GLASS_TINT, GLASS_TINT.a * alpha))
-		draw_colored_polygon(bottom_body, Color(GLASS_TINT, GLASS_TINT.a * alpha))
+		InkFigure.glass_film(self, mid, PIECE_SIZE.x * 0.46, false)
 	if piece["guard"]:
-		var ring := Rect2(center - half - Vector2(5, 5), (half + Vector2(5, 5)) * 2.0)
-		draw_rect(ring, Color(UiPalette.BRASS_HIGHLIGHT, alpha), false, 3.0)
+		InkFigure.guard_ring(self, mid, PIECE_SIZE.x * 0.5, height * 0.5 + 6.0)
 	# 攻撃力=左 / 体力=右 の慣習は保ちつつ、駒の**脇**へ置く。下へ張り出させると
 	# 相手の駒と自分の駒を上下に並べたときに重なるため。
 	var badge_y := center.y + PIECE_SIZE.y * 0.5 - 8.0
 	var badge_x := PIECE_SIZE.x * 0.5 + 8.0
-	_draw_stat(Vector2(center.x - badge_x, badge_y), piece["a"], CardView.ATTACK_ORANGE, alpha)
-	_draw_stat(Vector2(center.x + badge_x, badge_y), piece["h"], CardView.HEALTH_RED, alpha)
+	_draw_stat(Vector2(center.x - badge_x, badge_y), piece["a"], InkFigure.RED, alpha)
+	_draw_stat(Vector2(center.x + badge_x, badge_y), piece["h"], InkFigure.INK, alpha)
 
 
-## 砂は上の部屋では首元へ、下の部屋では底へ溜まる。
-func _draw_sand(
-	mid: Vector2, half: Vector2, neck: float, ratio: float, upper: bool, alpha: float
-) -> void:
-	var amount := clampf(ratio, 0.0, 1.0)
-	if amount <= 0.01:
-		return
-	var span := half.y
-	var edge := mid.y - span if upper else mid.y + span
-	var level: float = lerp(mid.y, edge, amount)
-	var reach: float = absf(level - mid.y) / maxf(span, 0.01)
-	var width: float = lerp(neck, half.x, reach)
-	var color := Color(SAND_TOP, alpha)
-	if upper:
-		draw_colored_polygon(
-			PackedVector2Array(
-				[
-					Vector2(mid.x - neck, mid.y),
-					Vector2(mid.x + neck, mid.y),
-					Vector2(mid.x + width, level),
-					Vector2(mid.x - width, level),
-				]
-			),
-			color
-		)
-	else:
-		draw_colored_polygon(
-			PackedVector2Array(
-				[
-					Vector2(mid.x - width, level),
-					Vector2(mid.x + width, level),
-					Vector2(mid.x + half.x, mid.y + span),
-					Vector2(mid.x - half.x, mid.y + span),
-				]
-			),
-			color
-		)
-
-
-## 被ダメージで消える砂。**砕けて外へ散らす**(落ちる砂とは描き分ける。GameDesign.md 9章)。
-func _draw_shards(center: Vector2, progress: float) -> void:
-	var alpha := 1.0 - clampf(progress, 0.0, 1.0)
-	for i in 8:
-		var angle := TAU * float(i) / 8.0
-		var reach := 6.0 + progress * 26.0
-		var at := center + Vector2(cos(angle), sin(angle)) * reach
-		draw_circle(at, maxf(3.0 * (1.0 - progress), 0.6), Color(SAND_TOP, alpha))
-
-
+## 数値。図版なので枠を持たせず、インクの文字として置く。
 func _draw_stat(at: Vector2, amount: int, color: Color, alpha: float) -> void:
-	draw_circle(at, 9.0, Color(0.07, 0.06, 0.08, alpha))
-	draw_circle(at, 9.0, Color(color, alpha * 0.9))
-	_centered_text(at + Vector2(0, 5), str(amount), STAT_FONT_SIZE, Color(0.1, 0.08, 0.06, alpha))
+	_centered_text(at + Vector2(0, 5), str(amount), STAT_FONT_SIZE, Color(color, alpha))
 
 
 ## 中央揃えは幅を決め打ちすると符号や2桁が切れるため、実測幅から左端を出す。
@@ -903,7 +840,7 @@ func _draw_beam(layout: Dictionary, beam: Dictionary) -> void:
 	var from: Vector2 = _anchor(layout, beam["from"])
 	var to: Vector2 = _anchor(layout, beam["to"])
 	var blocked: bool = beam["blocked"]
-	var color := BLOCKED_COLOR if blocked else BEAM_COLOR
+	var color := BLOCKED_COLOR if blocked else InkFigure.RED
 	var head: Vector2 = from.lerp(to, progress)
 	draw_line(from, head, Color(color, 0.9), 3.0)
 	var dir := (to - from).normalized()
@@ -912,11 +849,7 @@ func _draw_beam(layout: Dictionary, beam: Dictionary) -> void:
 		PackedVector2Array([head + dir * 8.0, head - side, head + side]), Color(color, 0.95)
 	)
 	if blocked and progress >= 1.0:
-		var cross := 7.0
-		draw_line(to - Vector2(cross, cross), to + Vector2(cross, cross), CardView.HEALTH_RED, 3.0)
-		draw_line(
-			to - Vector2(cross, -cross), to + Vector2(cross, -cross), CardView.HEALTH_RED, 3.0
-		)
+		InkFigure.broken(self, to, 7.0)
 
 
 func _draw_pop(layout: Dictionary, pop: Dictionary) -> void:
@@ -937,8 +870,8 @@ func _draw_drawn_card(board: Rect2, progress: float) -> void:
 	var to := Vector2(board.position.x + 24, board.end.y - 14)
 	var at: Vector2 = from.lerp(to, progress) - card_size * 0.5
 	var rect := Rect2(at, card_size)
-	draw_rect(rect, Color(0.22, 0.18, 0.14, 1))
-	draw_rect(rect, UiPalette.BRASS_HIGHLIGHT, false, 1.5)
+	draw_rect(rect, InkFigure.PAPER)
+	draw_rect(rect, InkFigure.INK, false, 1.5)
 
 
 func _draw_note(text: String) -> void:
@@ -953,7 +886,7 @@ func _draw_note(text: String) -> void:
 		size.x - 24,
 		NOTE_FONT_SIZE,
 		2,
-		UiPalette.TEXT_OFFWHITE
+		InkFigure.INK
 	)
 
 
@@ -963,5 +896,4 @@ func _draw_dots(index: int) -> void:
 	var start := size.x - 10.0 - float(count) * 10.0
 	for i in count:
 		var at := Vector2(start + float(i) * 10.0, 12.0)
-		var color := UiPalette.GLOW_AMBER if i == index else Color(UiPalette.BRASS_MID, 0.8)
-		draw_circle(at, 3.0, color)
+		draw_circle(at, 3.0, InkFigure.INK if i == index else Color(InkFigure.INK_SOFT, 0.5))
