@@ -10,9 +10,6 @@ signal deck_edit_pressed
 signal hourglass_list_pressed
 signal shop_pressed
 
-## 大きい札の中へちらりと見せる枚数。入口であって一覧ではないため、数を絞る。
-const PREVIEW_COUNT := 6
-
 @onready var deck_edit_button: Button = $Center/VBox/DeckEditButton
 @onready var hourglass_list_button: Button = $Center/VBox/Row/HourglassListButton
 @onready var shop_button: Button = $Center/VBox/Row/ShopButton
@@ -40,29 +37,12 @@ func refresh() -> void:
 		tile.set_subtitle(
 			"%s ・ %d 枚 ・ 全%dデッキ" % [String(decks[index]["name"]), selected.size(), decks.size()]
 		)
-	tile.set_preview(_preview_of(selected))
 	(hourglass_list_button as HomeTile).set_subtitle(
 		"収集 %d / %d 種" % [_card_count(), _card_count()]
 	)
 	(shop_button as HomeTile).set_subtitle(
 		"%s %d" % [CurrencyRules.CURRENCY_NAME, AccountService.currency()]
 	)
-
-
-## 札へ並べる数枚。**同じカードは1枚にまとめ、コストの安い順に先頭から採る**
-## (デッキの顔として読めるのは軽いカードの並びのほう)。
-static func _preview_of(deck: Array) -> Array[Texture2D]:
-	var seen: Array = []
-	for card in deck:
-		if card != null and not seen.has(card):
-			seen.append(card)
-	seen.sort_custom(CardLibrary.compare_by_cost)
-	var art: Array[Texture2D] = []
-	for card in seen:
-		if art.size() >= PREVIEW_COUNT:
-			break
-		art.append(card.icon_upright)
-	return art
 
 
 static func _card_count() -> int:

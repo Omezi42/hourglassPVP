@@ -228,12 +228,23 @@ func _effective_corner_radius(rect: Rect2) -> float:
 
 ## 額縁の太さ。短辺に比例させ、既定の大きさ(高さ56px前後)ではこれまでどおり
 ## FRAME_THICKNESS になるよう比率を選んである。
-func _frame_thickness(rect: Rect2) -> float:
+static func frame_thickness(rect: Rect2) -> float:
 	var short_side: float = min(rect.size.x, rect.size.y)
 	var thickness := remap(
 		short_side, FRAME_SMALL_SIZE, FRAME_REFERENCE_SIZE, FRAME_SMALL_THICKNESS, FRAME_THICKNESS
 	)
 	return clampf(thickness, FRAME_THICKNESS_MIN, FRAME_THICKNESS)
+
+
+## **ボタンの中身を描いてよい範囲**(額縁の内側の、暗く凹んだパネル)。
+## 紋章や透かしをボタンの矩形いっぱいに描くと**額縁へ載り上がってはみ出す**。
+## 内側の矩形を各所で計算し直すと必ずどこかがずれるため、ここが唯一の出どころになる。
+static func inner_rect(rect: Rect2) -> Rect2:
+	return rect.grow(-frame_thickness(rect))
+
+
+func _frame_thickness(rect: Rect2) -> float:
+	return frame_thickness(rect)
 
 
 ## 暗い輪郭の太さ。額縁と同じ比率で細くする。
