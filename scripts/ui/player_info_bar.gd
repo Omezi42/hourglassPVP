@@ -29,6 +29,21 @@ const CLOCK_RADIUS := 6.0
 const BAR_CORNER := 10.0
 const HP_BAR_RADIUS := 6.0
 const PILE_RADIUS := 6.0
+## 山札・墓地・手札の山(_pile)の質感。グレインは小さい面のため控えめに、
+## 面取りは`board_table._draw_frame()`と同じ「グラデーション+グレイン+ベベル」の
+## 3段構成に揃える。
+const PILE_GRAIN_ALPHA := 0.06
+const PILE_BEVEL_WIDTH := 1.5
+## 持ち時間プレート(_draw_clock)の質感。脈動パルス・危険域の縁取りは動的な色を
+## そのまま残し、平常時だけベベルへ差し替える。
+const CLOCK_GRAIN_ALPHA := 0.05
+const CLOCK_BEVEL_WIDTH := 1.5
+## マナのピップ(_draw_mana)の質感。小さい円のため、面取りではなく
+## 「縁を暗く・内側に小さなハイライト」の2色使いで浮き彫りに見せる。
+const PIP_RIM_DARKEN := 0.25
+const PIP_CORE_RATIO := 0.88
+const PIP_HIGHLIGHT_RATIO := 0.32
+const PIP_HIGHLIGHT_OFFSET := 0.34
 ## 被弾の演出(GameDesign.md 9章)。バーは補間して減らし、光らせ、増減を数字で浮かせる。
 const HP_SLIDE_DURATION := 0.35
 const FLASH_DURATION := 0.4
@@ -229,6 +244,7 @@ func _draw_clock() -> void:
 	UiPaint.fill_gradient_polygon(
 		ci, points, rect, [[0.0, Color(0.18, 0.14, 0.12, 1.0)], [1.0, Color(0.08, 0.06, 0.06, 1.0)]]
 	)
+	UiPaint.apply_grain(ci, rect, CLOCK_GRAIN_ALPHA)
 
 	# 枠線 (残り15秒以下かつ手番中なら脈動パルス)
 	var outline := points.duplicate()
@@ -241,7 +257,9 @@ func _draw_clock() -> void:
 	elif is_low:
 		draw_polyline(outline, Color(UiPalette.WARNING_RED, 0.8), 1.5, true)
 	else:
-		draw_polyline(outline, UiPalette.BRASS_MID, 1.5, true)
+		UiPaint.draw_bevel(
+			ci, points, UiPalette.BRASS_LIGHT, UiPalette.OUTLINE_DARK, CLOCK_BEVEL_WIDTH, false
+		)
 
 	var minutes := int(clock_seconds) / 60
 	var seconds := int(clock_seconds) % 60
@@ -342,8 +360,18 @@ func _draw_mana() -> void:
 	_text(Vector2(MANA_TEXT_X, 36), "マナ %d/%d" % [_mana, _max_mana], 18)
 	for i in _max_mana:
 		var center := Vector2(PIP_START_X + i * PIP_STEP, 28)
-		draw_circle(center, PIP_RADIUS, MANA_BLUE if i < _mana else MANA_EMPTY)
-		draw_arc(center, PIP_RADIUS, 0.0, TAU, 16, Color(0.75, 0.85, 1.0, 0.6), 1.5)
+		var filled: bool = i < _mana
+		var base_color := MANA_BLUE if filled else MANA_EMPTY
+		# 縁を暗く落としてから内側をひとまわり小さく塗り、面取り相当の立体感を出す。
+		draw_circle(center, PIP_RADIUS, base_color.darkened(PIP_RIM_DARKEN))
+		draw_circle(center, PIP_RADIUS * PIP_CORE_RATIO, base_color)
+		var highlight_center := center + Vector2(-1, -1) * PIP_RADIUS * PIP_HIGHLIGHT_OFFSET
+		var highlight_alpha := 0.4 if filled else 0.14
+		draw_circle(
+			highlight_center, PIP_RADIUS * PIP_HIGHLIGHT_RATIO, Color(1, 1, 1, highlight_alpha)
+		)
+		var arc_color := Color(0.75, 0.85, 1.0, 0.6) if filled else Color(0.4, 0.42, 0.48, 0.5)
+		draw_arc(center, PIP_RADIUS, 0.0, TAU, 16, arc_color, 1.5)
 
 
 ## コインを持っている間だけ、マナの並びの右隣に金色の粒を出す。
@@ -361,6 +389,7 @@ func _pile(pos: Vector2, label: String, count: int) -> void:
 	UiPaint.fill_gradient_polygon(
 		ci, points, rect, [[0.0, Color(0.24, 0.18, 0.13, 1.0)], [1.0, Color(0.1, 0.08, 0.06, 1.0)]]
 	)
+	UiPaint.apply_grain(ci, rect, PILE_GRAIN_ALPHA)
 	var outline := points.duplicate()
 	outline.append(points[0])
 	var pulsing: bool = _deck_pulse > 0.0 and is_equal_approx(pos.x, DECK_PILE_X)
@@ -368,7 +397,9 @@ func _pile(pos: Vector2, label: String, count: int) -> void:
 		draw_polyline(outline, Color(_deck_pulse_color, _deck_pulse), 3.0, true)
 		draw_rect(rect.grow(2.0), Color(_deck_pulse_color, 0.18 * _deck_pulse))
 	else:
-		draw_polyline(outline, UiPalette.BRASS_MID, 1.5, true)
+		UiPaint.draw_bevel(
+			ci, points, UiPalette.BRASS_LIGHT, UiPalette.OUTLINE_DARK, PILE_BEVEL_WIDTH, false
+		)
 	_text(Vector2(pos.x + 8, pos.y + 26), label, 15)
 	_text(Vector2(pos.x + 46, pos.y + 27), str(count), 19, UiPalette.GLOW_AMBER)
 
