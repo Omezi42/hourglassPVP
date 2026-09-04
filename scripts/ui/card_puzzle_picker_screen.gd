@@ -25,7 +25,9 @@ func open() -> void:
 
 
 func _build() -> void:
-	add_child(ScreenBackdrop.new())
+	var backdrop := ScreenBackdrop.new()
+	backdrop.room = ScreenBackdrop.Room.HALL
+	add_child(backdrop)
 	var header: ScreenHeader = load(HEADER_SCENE).instantiate()
 	add_child(header)
 	header.set_title("リーサルパズル")

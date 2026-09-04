@@ -641,10 +641,20 @@ Main
   - `scripts/ui/styles/ui_palette.gd`(`UiPalette`, `RefCounted`):プロジェクト全体のUI色の単一情報源。真鍮の明/中/暗、暗い下地、琥珀アクセント、無効時のグレー等をconstで持つ
   - `scripts/ui/styles/ui_paint.gd`(`UiPaint`, `RefCounted`):static関数だけの描画ユーティリティ。**第1引数は必ず `ci: RID`** とし `RenderingServer.canvas_item_add_*` 系で描く(`StyleBox._draw(to_canvas_item, rect)` からは `CanvasItem.draw_*` を呼べないため)。角丸矩形の頂点生成、多段階の縦グラデーション塗り、面取り(ベベル)、内側の落ち込み影、グレイン(ノイズ)重ねを提供する
   - 各`StyleBox`派生クラス(`CodedButtonStyle` 等)と、`Control._draw()`側(`BoardTable`/`BarPanel`/`HourglassSlot`)が、いずれも上記2つを呼んで描く
-- **背景イラストを持たない画面(対局・カード一覧・デッキ編集)の下地は `ScreenBackdrop`
+- **背景イラストを持たない画面の下地は `ScreenBackdrop`
   (`scripts/ui/screen_backdrop.gd`、`Control._draw()` のみ)に集約する**。無地の `ColorRect` 1枚だと
   フラットベクターに見えるため、多段グラデーション + グレイン + 左右の落ち込みを掛ける。
   画面ごとに下地の色と描き方を持たせない
+- **下地は「場所」として描く**(GameDesign.md 9章)。`ScreenBackdrop.Room` が
+  無地 / 書庫 / 記録室 / 控えの間 / 帳場 の5つを持ち、画面は `room` を1行入れるだけにする。
+  **部品(板壁・歯車・作業灯・吊り看板・木箱・本棚・引き出し)は
+  `RoomPaint`(`scripts/ui/styles/room_paint.gd`, staticのみ)が持つ。**
+  `UiPaint` と違い第1引数に `CanvasItem` を取る(`InkFigure` と同じ流儀)——
+  `draw_line()` などのインスタンス側の描画と、`UiPaint` の RID 側の描画の両方を使うため
+  - **`WorkshopBackdrop` も同じ部品から組む。**工房だけが独自に壁を持っていると、
+    壁の描き方を変えたときにそこだけ取り残される
+  - **場所ごとの違いは「壁の色味」と「据え付ける造作」の2つだけ**にする。
+    部品まで場所ごとに分けると、増やすたびに全種を描き足すことになる
 - **共通ヘッダー(`ScreenHeader`)はタイトルの後ろへ暗幕を敷き、下端に真鍮の細線を通す**。
   背景イラストが賑やかな画面(アカウント・リプレイ一覧)で画面名が読めなくなるため。暗幕は
   中央が濃く左右へ消える形にする(端まで一様に敷くと帯が1本乗ったように見える)。
