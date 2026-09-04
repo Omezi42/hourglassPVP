@@ -417,7 +417,9 @@ func _build() -> void:
 	_coin_button.position = Vector2(ACTION_COLUMN_X, 230)
 	_coin_button.pressed.connect(_on_coin_pressed)
 	# ターン終了は画面中央付近の大きなボタンとする。
-	_end_turn_button = CardMatchBuild.add_button(self, "ターン終了", TURN_END_BUTTON_SIZE)
+	_end_turn_button = CardMatchBuild.add_button(
+		self, "ターン終了", TURN_END_BUTTON_SIZE, CodedButton.PRIMARY_ACTION_GROUP
+	)
 	_end_turn_button.position = Vector2(ACTION_COLUMN_X, TURN_END_BUTTON_TOP)
 	_end_turn_button.pressed.connect(_on_end_turn_pressed)
 	# 「ログ」「投了」「エモート」はターン終了ボタンの下へ順に並べる。

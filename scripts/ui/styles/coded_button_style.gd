@@ -94,6 +94,19 @@ const EMBLEM_UPPER_BOUND_RATIO := 0.92
 ## 何も描かない方がまし、という安全弁)
 const EMBLEM_UPPER_MIN_HALF_EXTENT := 6.0
 
+## 塗りつぶし面のホバー時、通常時よりわずかに明るくして「押せる」ことを示す
+## (凹んだパネルのようにアンバーへ丸ごと変色させると、額縁と地続きの金属という
+## 前提が崩れるため、同じ真鍮のまま明るさだけを動かす)。押下時は_draw_frameと
+## 同じBRASS_PRESSED_*ストップへ差し替えるため専用の暗化量は持たない。
+## 塗りつぶし面では「凹んでいる」ことを示す内側の落ち込み影も使わない
+## (額縁と地続きに盛り上がった金属として見せるため、凹み表現と両立しない)。
+const FILLED_HOVER_LIGHTEN := 0.12
+
+## 中央パネルを「暗く凹んだスレート」ではなく、額縁と同じ真鍮で塗りつぶす。
+## 主要な操作(ターン終了・保存/確定)を、副次的な操作(凹んだパネル)と
+## 見た目で区別するための第2の面。質感(グラデーション・面取り・グレイン)の
+## 出し方そのものは _draw_frame と揃え、額縁と地続きの1枚の金属に見せる。
+@export var filled: bool = false
 @export var variant: State = State.NORMAL
 @export var shape: Shape = Shape.ROUNDED_RECT
 @export var emblem: UiPaint.Emblem = UiPaint.Emblem.NONE
@@ -166,7 +179,12 @@ func _draw_rounded_layers(ci: RID, rect: Rect2, disabled: bool, hover: bool, pre
 	var panel_points := UiPaint.rounded_rect_points(
 		panel_rect, panel_radii[0], panel_radii[1], panel_radii[2], panel_radii[3], CORNER_SEGMENTS
 	)
-	_draw_panel(ci, panel_points, panel_rect, disabled, hover, pressed, panel_radii[0], thickness)
+	if filled:
+		_draw_filled_panel(ci, panel_points, panel_rect, disabled, hover, pressed, thickness)
+	else:
+		_draw_panel(
+			ci, panel_points, panel_rect, disabled, hover, pressed, panel_radii[0], thickness
+		)
 
 
 ## CHEVRON_LEFT(back_nav、左向き矢印型)専用の描画。角丸ポリゴンではなく
@@ -205,7 +223,12 @@ func _draw_chevron_layers(ci: RID, rect: Rect2, disabled: bool, hover: bool, pre
 	var panel_points := UiPaint.chevron_left_points(
 		panel_rect, panel_radius, CORNER_SEGMENTS, CHEVRON_SHOULDER_RATIO
 	)
-	_draw_panel(ci, panel_points, panel_rect, disabled, hover, pressed, NO_INNER_SHADOW, thickness)
+	if filled:
+		_draw_filled_panel(ci, panel_points, panel_rect, disabled, hover, pressed, thickness)
+	else:
+		_draw_panel(
+			ci, panel_points, panel_rect, disabled, hover, pressed, NO_INNER_SHADOW, thickness
+		)
 
 
 ## 形状(角丸/円/ピル)に応じた4隅[左上, 右上, 右下, 左下]の半径を返す。
@@ -353,6 +376,61 @@ func _draw_panel(
 	UiPaint.draw_bevel(
 		ci, points, bevel_light, bevel_dark, _bevel_width(BEVEL_WIDTH_PANEL, thickness), pressed
 	)
+
+
+## 中央パネルを額縁と同じ真鍮グラデーションで塗りつぶす版(GameDesign.md 9章「主要な
+## 操作は塗りつぶした真鍮、副次的な操作は凹んだパネル」)。_draw_frameと同じストップ・
+## 面取り・グレインを使い、額縁と地続きの1枚の金属に見えるようにする。hover/pressedは
+## 色相そのものは変えず明るさだけを動かし(_draw_panelのようにアンバーへ変色させない)、
+## 落ち込み影は描かない(凹み表現と両立しないため)。
+func _draw_filled_panel(
+	ci: RID,
+	points: PackedVector2Array,
+	rect: Rect2,
+	disabled: bool,
+	hover: bool,
+	pressed: bool,
+	thickness: float
+) -> void:
+	var stops := [
+		[0.0, UiPalette.BRASS_HIGHLIGHT],
+		[FRAME_HIGHLIGHT_STOP, UiPalette.BRASS_LIGHT],
+		[FRAME_MID_STOP, UiPalette.BRASS_MID],
+		[FRAME_DARK_STOP, UiPalette.BRASS_DARK],
+		[1.0, UiPalette.BRASS_BOUNCE],
+	]
+	if pressed:
+		stops = [
+			[0.0, UiPalette.BRASS_DARK],
+			[FRAME_MID_STOP, UiPalette.BRASS_PRESSED_MID],
+			[FRAME_DARK_STOP, UiPalette.BRASS_PRESSED_DARK],
+			[1.0, UiPalette.BRASS_PRESSED_MID],
+		]
+	elif hover:
+		stops = _lightened_stops(stops, FILLED_HOVER_LIGHTEN)
+	if disabled:
+		stops = UiPaint.dim_gradient_stops(stops)
+
+	UiPaint.fill_gradient_polygon(ci, points, rect, stops)
+
+	var light := UiPalette.BRASS_HIGHLIGHT
+	var dark := UiPalette.BRASS_DARK
+	if disabled:
+		light = UiPaint.disabled_tone(light)
+		dark = UiPaint.disabled_tone(dark)
+	UiPaint.draw_bevel(ci, points, light, dark, _bevel_width(BEVEL_WIDTH_PANEL, thickness), pressed)
+
+	if not disabled:
+		UiPaint.apply_grain(ci, rect, GRAIN_ALPHA_PANEL)
+
+
+## 真鍮のグラデーションストップを一律に明るくする(ホバー時に色相を保ったまま
+## 明るさだけを上げるため)。
+static func _lightened_stops(stops: Array, amount: float) -> Array:
+	var result := []
+	for stop in stops:
+		result.append([stop[0], stop[1].lightened(amount)])
+	return result
 
 
 ## ホバー時、外周へ広がる淡い琥珀のグロー(複数リング、外側ほど薄い)を描く(角丸/円/ピル用)。

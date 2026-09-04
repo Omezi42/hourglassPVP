@@ -50,8 +50,15 @@ static func make_row(screen: CardMatchScreen, top: float, opponent: bool) -> Arr
 	return views
 
 
-static func add_button(screen: CardMatchScreen, label: String, button_size: Vector2) -> Button:
-	var button := CodedButton.make(label, button_size)
+## groupを省略すると従来どおり凹んだパネル(wide_text)。ターン終了のように
+## 「対局中もっとも頻繁に押す主要な操作」は塗りつぶした真鍮(primary_action)を渡す。
+static func add_button(
+	screen: CardMatchScreen,
+	label: String,
+	button_size: Vector2,
+	group: String = CodedButton.WIDE_GROUP
+) -> Button:
+	var button := CodedButton.make_in_group(label, button_size, group)
 	screen.add_child(button)
 	return button
 

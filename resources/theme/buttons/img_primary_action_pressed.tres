@@ -6,6 +6,3 @@
 script = ExtResource("1_coded")
 variant = 2
 filled = true
-emblem = 4
-emblem_placement = 2
-content_margin_right = 56.0

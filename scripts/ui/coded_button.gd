@@ -7,6 +7,9 @@ extends RefCounted
 const STYLE_PATH := "res://resources/theme/buttons/img_%s_%s.tres"
 const WIDE_GROUP := "wide_text"
 const ICON_GROUP := "icon_square"
+## 塗りつぶした真鍮の面(額縁と地続き)。凹んだパネル(WIDE_GROUP)と並べて使う
+## 「もっとも頻繁に押す主要な操作」向けの第2の面。
+const PRIMARY_ACTION_GROUP := "primary_action"
 const STATES: Array[String] = ["normal", "hover", "pressed", "disabled"]
 
 
