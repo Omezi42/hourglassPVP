@@ -8,11 +8,13 @@ extends RefCounted
 ## 規則と値段だけを持つ。品揃えを別の表にすると、アイコンを1つ足したときに
 ## 並べ忘れた品と、初期解放でも購入品でもないどこにも出ないidが生まれる。
 
-enum Kind { ICON, EMOTE }
+enum Kind { ICON, EMOTE, PLAYMAT }
 
 ## ランダムマッチの勝利(30)を1勝として、アイコンは3勝ぶん・エモートは5勝ぶん。
 ## エモートのほうが高いのは、4つの枠へセットする(GameDesign.md 9章)ぶん、
 ## 1つ買うと対局中の選択そのものが変わるため。
+## **プレイマットだけは1件ごとに値が違う**(標準1500 / 豪華3000。GameDesign.md 21章)。
+## 対局中ずっと目に入り画面で最も面積が大きいため、桁を上げてある。
 const ICON_PRICE := 100
 const EMOTE_PRICE := 200
 
@@ -27,30 +29,53 @@ static func items() -> Array[Dictionary]:
 	for emote_id in EmoteLibrary.get_emote_ids():
 		if not EmoteLibrary.DEFAULT_EMOTE_IDS.has(emote_id):
 			list.append({"kind": Kind.EMOTE, "id": emote_id})
+	for mat_id in PlaymatLibrary.purchasable_ids():
+		list.append({"kind": Kind.PLAYMAT, "id": mat_id})
 	return list
 
 
-static func price(kind: Kind) -> int:
-	return EMOTE_PRICE if kind == Kind.EMOTE else ICON_PRICE
+## **プレイマットは品ごとに値が違う**ため、id を渡せる形にしてある。
+static func price(kind: Kind, id := "") -> int:
+	match kind:
+		Kind.EMOTE:
+			return EMOTE_PRICE
+		Kind.PLAYMAT:
+			return PlaymatLibrary.price(id)
+		_:
+			return ICON_PRICE
 
 
 ## 品の名前。アイコンは紋章のモチーフ名、エモートは種類の名前。
 static func item_name(kind: Kind, id: String) -> String:
-	if kind == Kind.EMOTE:
-		return EmoteLibrary.get_emote_name(id)
-	return UserProfileLibrary.get_icon_name(id)
+	match kind:
+		Kind.EMOTE:
+			return EmoteLibrary.get_emote_name(id)
+		Kind.PLAYMAT:
+			return PlaymatLibrary.display_name(id)
+		_:
+			return UserProfileLibrary.get_icon_name(id)
 
 
 ## 名前だけでは何を買うのか分からないものに添える1行(GameDesign.md 21章)。
 ## エモートは文言そのものが品にあたるため、実際に出る文をそのまま出す。
 static func item_detail(kind: Kind, id: String) -> String:
-	if kind == Kind.EMOTE:
-		return "「%s」" % EmoteLibrary.get_emote_text(id)
-	return "アイコン"
+	match kind:
+		Kind.EMOTE:
+			return "「%s」" % EmoteLibrary.get_emote_text(id)
+		Kind.PLAYMAT:
+			return "対局の卓に敷く"
+		_:
+			return "アイコン"
 
 
 static func kind_name(kind: Kind) -> String:
-	return "エモート" if kind == Kind.EMOTE else "アイコン"
+	match kind:
+		Kind.EMOTE:
+			return "エモート"
+		Kind.PLAYMAT:
+			return "プレイマット"
+		_:
+			return "アイコン"
 
 
 ## 売り物として定義されているかどうか。購入の入口で必ず通す。

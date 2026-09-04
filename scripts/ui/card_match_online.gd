@@ -78,6 +78,8 @@ func _apply_player_names(client: FirestoreClient, opponent_uid: String) -> void:
 	_screen._own_bar.display_name = AccountService.display_name()
 	_screen._own_bar.icon_id = AccountService.icon_id()
 	_screen._own_bar.title_id = AccountService.title_id()
+	# 相手が分からなくても、自分のマットだけは先に敷く。
+	_screen._set_playmats(AccountService.playmat_id(), PlaymatLibrary.DEFAULT_ID)
 	if opponent_uid.is_empty():
 		return
 	var profile: Dictionary = await AccountService.fetch_profile(client, opponent_uid)
@@ -86,6 +88,10 @@ func _apply_player_names(client: FirestoreClient, opponent_uid: String) -> void:
 		_screen._foe_bar.display_name = name
 	_screen._foe_bar.icon_id = str(profile.get("icon_id", UserProfileLibrary.DEFAULT_ICON_ID))
 	_screen._foe_bar.title_id = str(profile.get("title_id", UserProfileLibrary.DEFAULT_TITLE_ID))
+	# **相手のマットは相手の設定を使う**(GameDesign.md 9章)。名前・アイコン・称号と同じ経路。
+	_screen._set_playmats(
+		AccountService.playmat_id(), str(profile.get("playmat_id", PlaymatLibrary.DEFAULT_ID))
+	)
 	_screen.refresh()
 
 

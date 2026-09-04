@@ -313,7 +313,9 @@ UIに依存しない、対局ルールそのものを扱う層。
 | クラス | 責務 |
 |---|---|
 | `CardView`(`scripts/ui/card_view.gd`) | カード1枚の表示。**守護の枠の強調は `guard_frame` で切る**(砂時計一覧・デッキ編集は false。GameDesign.md 9章)。**手札と場で見た目を変える**(GameDesign.md 9章)。`Mode.HAND` はカードの枠を持ち **コスト=左上 / 総量=右下**、`Mode.BOARD` は**枠を持たず、丸い台座の上に立つ砂時計そのもの**として描き **攻撃力=左下 / 体力=右下**(コストは出さない)。体力と攻撃力の比で3枚のイラストを切り替え、守護は手札なら枠・場なら台座の輪を太くし、硝子は手札なら枠の内側・場ならガラスへ薄い膜を重ねる。**カード固有の紋章**は、場は台座の正面のメダル(`_draw_pedestal_plaque()`)、手札は左下の封蝋(`_draw_hand_seal()`)として出す |
-| `BoardTable`(`scripts/ui/board_table.gd`) | 盤面12枠を載せる卓上。奥へ狭まる石と真鍮の台形を描き、中央に区切り線と紋章を置く。v1.0から流用しているが、v5.0では6+6枠を1枚の卓へ載せるために使う |
+| `BoardTable`(`scripts/ui/board_table.gd`) | 盤面12枠を載せる卓(GameDesign.md 9章)。**木の額 / プレイマット2枚 / 中央の真鍮のレール**の3層で描く |
+| `PlaymatLibrary`(`scripts/data/playmat_library.gd`, staticのみ) | プレイマットの定義(地の色・模様の種類・縁・箔・値段)。`UserProfileLibrary` と同じ流儀 |
+| `PlaymatPaint`(`scripts/ui/styles/playmat_paint.gd`, staticのみ) | マットの描画。**卓とショップの見本で同じ関数を通す**(別々に描くと、買う前に見た絵と実際に敷かれる絵が食い違う) |
 | `PlayerInfoBar`(`scripts/ui/player_info_bar.gd`) | 片方のプレイヤーの情報帯。HP・マナ(数字+ピップ)・山札・墓地・(相手のみ)手札の枚数・コインの有無 |
 | `CardMatchSelection`(`scripts/ui/card_match_selection.gd`) | いま選んでいるもの(手札の1枚 / 自分の場の1枠 / 未選択)。選択の状態を1箇所へ集めて画面側の分岐を減らす |
 | `CardMatchScreen`(`scripts/ui/card_match_screen.gd`) | 上記を並べ、`MatchState` と同期し、操作(出す/反転/攻撃/コイン/ターン終了/投了)を受ける |
@@ -1701,6 +1703,27 @@ UI層へ依存することになる。
 (強さの測り方は `docs/BalanceReport_v5.md` 2章の方式による)。画面の見出しにもそう書く。
 
 ---
+
+### 10.7.1 プレイマット(GameDesign.md 9章・21章)
+
+対局の卓へ敷く見た目の品。**画像ではなくコード描画**で作り、1件が持つのは
+地の色・模様の種類・縁の色・箔の色だけにする(種類を足しても配布物が増えない)。
+
+- **マットは切り抜きの効く層(`BoardTable.MatLayer`)として敷く。**模様(砂紋の弧・
+  唐草の蔓)は矩形の外まで伸びるため、`_draw()` で直に描くと**卓の外——情報帯や手札の
+  上——へ漏れる**(実際に漏れた)。`clip_contents` を立てた `Control` を1枚ずつ置く。
+  **ショップとアカウント画面の見本も同じ理由で切り抜く**
+- **層は子ノードにする。**`Control._draw()` は自分の子より背面に描かれるため、
+  木の額をクラス側が描き、その上へマット、さらにその上へレールの層を重ねる
+- **敷き替えは `CardMatchScreen._set_playmats()`**(私設)。このクラスは gdlint の
+  公開メソッドの上限へ張り付いており、切り出した進行役は他の私設メンバも直に触っている
+  - CPU戦 = 自分の設定 + `PlaymatLibrary.CPU_ID`
+  - オンライン = 自分の設定 + `AccountService.fetch_profile()` の `playmat_id`
+    (表示名・アイコン・称号と同じ経路)
+  - **リプレイ・観戦は既定**。`_reset_for_new_match()` が毎回既定へ戻し、
+    対局へ入る側だけが敷き替える(棋譜はマットを記録しない)
+- **値段は品ごとに違う**ため、`ShopCatalog.price()` は `id` を受け取る形にしてある
+  (アイコン・エモートは品種で一律)
 
 ### 10.8 ショップと所有(GameDesign.md 21章)
 

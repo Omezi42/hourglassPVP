@@ -80,6 +80,8 @@ var shake: CardMatchShake:
 		return _shake
 
 var _foe_bar: PlayerInfoBar
+## 卓。プレイマットを敷き替えるために持つ(GameDesign.md 9章)。
+var _table: BoardTable
 var _own_bar: PlayerInfoBar
 var _foe_slots: Array[CardView] = []
 var _own_slots: Array[CardView] = []
@@ -147,7 +149,20 @@ func _ready() -> void:
 ## 前の対局の名残を落としてから新しい対局へ入る。結果パネル・ログ・選択・
 ## タイマー・通信・棋譜はいずれも画面が使い回されるため対局をまたいで残り、
 ## 片付けないと2局目が「対戦終了の表示のまま遊べない」状態になる。
+## 卓へ敷くマットを決める(GameDesign.md 9章)。自分の設定と相手の設定を別々に受ける。
+## **公開メソッドにしない**——このクラスは既に gdlint の上限へ張り付いており、
+## 切り出した進行役(`CardMatchOnline` 等)は他の私設メンバも直に触っている。
+func _set_playmats(own_id: String, foe_id: String) -> void:
+	if _table == null:
+		return
+	_table.own_mat = own_id if PlaymatLibrary.has(own_id) else PlaymatLibrary.DEFAULT_ID
+	_table.foe_mat = foe_id if PlaymatLibrary.has(foe_id) else PlaymatLibrary.DEFAULT_ID
+
+
 func _reset_for_new_match() -> void:
+	# **リプレイと観戦は既定のマット**(棋譜はマットを記録しない。GameDesign.md 9章)。
+	# 対局へ入る側がこの後で敷き替える。
+	_set_playmats(PlaymatLibrary.DEFAULT_ID, PlaymatLibrary.DEFAULT_ID)
 	_result.visible = false
 	_log.set_open(false)
 	_log.clear()
@@ -202,6 +217,7 @@ func start_cpu_match(deck_self: Array, deck_foe: Array) -> void:
 	_foe_bar.display_name = "CPU"
 	_foe_bar.icon_id = UserProfileLibrary.CPU_ICON_ID
 	_foe_bar.title_id = UserProfileLibrary.CPU_TITLE_ID
+	_set_playmats(AccountService.playmat_id(), PlaymatLibrary.CPU_ID)
 	# CPU戦もリプレイとして残すため、山札の種を決めてから始める(GameDesign.md 12章)。
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
@@ -363,10 +379,10 @@ func _begin_state(
 func _build() -> void:
 	# 下地と卓は最初に足して盤面の駒より背面へ置く。
 	add_child(ScreenBackdrop.new())
-	var table := BoardTable.new()
-	table.position = TABLE_RECT.position
-	table.size = TABLE_RECT.size
-	add_child(table)
+	_table = BoardTable.new()
+	_table.position = TABLE_RECT.position
+	_table.size = TABLE_RECT.size
+	add_child(_table)
 	_foe_bar = CardMatchBuild.make_bar(self, true, FOE_BAR_TOP)
 	_own_bar = CardMatchBuild.make_bar(self, false, OWN_BAR_TOP)
 	_foe_slots = CardMatchBuild.make_row(self, FOE_ROW_TOP, true)
@@ -412,7 +428,7 @@ func _build() -> void:
 	CardMatchBuild.overlays(self)
 	# 攻撃の揺れは**卓と場の駒だけ**を動かす(GameDesign.md 9章)。情報帯・手札・
 	# 行動の列は読み続けるものなので入れない。位置が後から変わらないものだけを渡す。
-	var shaken: Array[Control] = [table]
+	var shaken: Array[Control] = [_table]
 	shaken.append_array(_foe_slots)
 	shaken.append_array(_own_slots)
 	_shake.bind(shaken)

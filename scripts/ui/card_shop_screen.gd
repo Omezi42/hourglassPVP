@@ -45,7 +45,7 @@ func _refresh() -> void:
 		var id: String = str(item["id"])
 		var card := ShopItemCard.new(kind, id)
 		card.owned = AccountService.owns(kind, id)
-		card.affordable = AccountService.currency() >= ShopCatalog.price(kind)
+		card.affordable = AccountService.currency() >= ShopCatalog.price(kind, id)
 		card.pressed.connect(func() -> void: _on_item_pressed(kind, id))
 		_grid.add_child(card)
 
@@ -53,7 +53,7 @@ func _refresh() -> void:
 func _on_item_pressed(kind: ShopCatalog.Kind, id: String) -> void:
 	if _busy or AccountService.owns(kind, id):
 		return
-	var cost := ShopCatalog.price(kind)
+	var cost := ShopCatalog.price(kind, id)
 	if AccountService.currency() < cost:
 		_set_message(
 			"%sが足りません(あと%d)。" % [CurrencyRules.CURRENCY_NAME, cost - AccountService.currency()]
@@ -160,6 +160,14 @@ class ShopItemCard:
 	var affordable := true
 	var _font: Font
 
+	## プレイマットの見本を敷く層。切り抜きの効く子として持つ。
+	func _build_swatch() -> void:
+		var layer := BoardTable.MatLayer.new()
+		layer.mat_id = id
+		layer.position = Vector2(14, 14)
+		layer.size = Vector2(76, 60)
+		add_child(layer)
+
 	func _init(p_kind: ShopCatalog.Kind, p_id: String) -> void:
 		kind = p_kind
 		id = p_id
@@ -170,6 +178,8 @@ class ShopItemCard:
 		_font = get_theme_default_font()
 		if _font == null:
 			_font = ThemeDB.fallback_font
+		if kind == ShopCatalog.Kind.PLAYMAT:
+			_build_swatch()
 		mouse_default_cursor_shape = (
 			Control.CURSOR_ARROW if _dimmed() else Control.CURSOR_POINTING_HAND
 		)
@@ -215,8 +225,14 @@ class ShopItemCard:
 		)
 		_draw_price()
 
-	## アイコンは紋章そのもの、エモートは吹き出しに見立てた枠を出す。
+	## アイコンは紋章そのもの、エモートは吹き出しに見立てた枠、
+	## **プレイマットは実際に敷いた縮小見本**を出す(GameDesign.md 21章)。
+	## 色の名前だけでは何を買うのか分からないため、盤面と同じ `PlaymatPaint` を通す。
 	func _draw_thumb() -> void:
+		if kind == ShopCatalog.Kind.PLAYMAT:
+			# 見本は子の層へ描く。**模様は矩形の外まで伸びる**ため切り抜きが要る
+			# (`BoardTable` と同じ理由)。
+			return
 		var center := Vector2(52, 44)
 		draw_circle(center, 26.0, Color(0.12, 0.1, 0.08, 0.9))
 		draw_arc(center, 26.0, 0.0, TAU, 28, UiPalette.BRASS_MID, 1.2)
@@ -237,7 +253,9 @@ class ShopItemCard:
 
 	func _draw_price() -> void:
 		var label := (
-			"所有済み" if owned else "%d %s" % [ShopCatalog.price(kind), CurrencyRules.CURRENCY_NAME]
+			"所有済み"
+			if owned
+			else "%d %s" % [ShopCatalog.price(kind, id), CurrencyRules.CURRENCY_NAME]
 		)
 		var color := UiPalette.TEXT_MUTED
 		if not owned:

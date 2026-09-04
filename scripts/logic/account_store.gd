@@ -60,21 +60,26 @@ static func clear_pending_currency() -> void:
 
 
 ## ローカルにアイコンと称号を保存する(オフライン復帰用)。
-static func save_local_customization(icon_id: String, title_id: String) -> void:
+static func save_local_customization(icon_id: String, title_id: String, playmat_id := "") -> void:
 	var data := _load()
 	data["icon_id"] = icon_id
 	data["title_id"] = title_id
+	if not playmat_id.is_empty():
+		data["playmat_id"] = playmat_id
 	_store(data)
 
 
 ## ショップで解放したものと、エモートの枠をローカルにも控える(オフライン復帰用)。
 ## 買う操作そのものは通信を要する(GameDesign.md 21章)が、買った結果は
 ## 次に開いたときへ持ち越せないと、オフラインの間だけアイコンが選べなくなる。
-static func save_local_unlocks(owned_icons: Array, owned_emotes: Array, emote_slots: Array) -> void:
+static func save_local_unlocks(
+	owned_icons: Array, owned_emotes: Array, emote_slots: Array, owned_playmats := []
+) -> void:
 	var data := _load()
 	data["owned_icons"] = owned_icons
 	data["owned_emotes"] = owned_emotes
 	data["emote_slots"] = emote_slots
+	data["owned_playmats"] = owned_playmats
 	_store(data)
 
 
@@ -84,6 +89,7 @@ static func load_local_unlocks() -> Dictionary:
 		"owned_icons": data.get("owned_icons", []),
 		"owned_emotes": data.get("owned_emotes", []),
 		"emote_slots": data.get("emote_slots", []),
+		"owned_playmats": data.get("owned_playmats", []),
 	}
 
 
@@ -92,6 +98,7 @@ static func load_local_customization() -> Dictionary:
 	return {
 		"icon_id": str(data.get("icon_id", "")),
 		"title_id": str(data.get("title_id", "")),
+		"playmat_id": str(data.get("playmat_id", "")),
 	}
 
 

@@ -64,14 +64,32 @@ static func owned_icon_ids() -> Array[String]:
 	return _owned(UserProfileLibrary.INITIAL_ICON_IDS, "owned_icons")
 
 
+## いま敷いているプレイマット(GameDesign.md 9章)。未設定なら既定の「砂の海」。
+static func playmat_id() -> String:
+	var id := str(_profile.get("playmat_id", ""))
+	if id.is_empty():
+		id = str(AccountStore.load_local_customization().get("playmat_id", ""))
+	if id.is_empty() or not PlaymatLibrary.has(id):
+		return PlaymatLibrary.DEFAULT_ID
+	return id
+
+
+static func owned_playmat_ids() -> Array[String]:
+	return _owned([PlaymatLibrary.DEFAULT_ID] as Array[String], "owned_playmats")
+
+
 static func owned_emote_ids() -> Array[String]:
 	return _owned(EmoteLibrary.DEFAULT_EMOTE_IDS, "owned_emotes")
 
 
 static func owns(kind: ShopCatalog.Kind, id: String) -> bool:
-	if kind == ShopCatalog.Kind.EMOTE:
-		return owned_emote_ids().has(id)
-	return owned_icon_ids().has(id)
+	match kind:
+		ShopCatalog.Kind.EMOTE:
+			return owned_emote_ids().has(id)
+		ShopCatalog.Kind.PLAYMAT:
+			return owned_playmat_ids().has(id)
+		_:
+			return owned_icon_ids().has(id)
 
 
 ## 対局中に出す4つ(GameDesign.md 9章)。保存済みが足りない・所有していないidが
@@ -127,8 +145,8 @@ static func purchase(
 		return {"ok": false, "message": "この品は取り扱っていません。"}
 	if uid == "" or client == null:
 		return {"ok": false, "message": "接続できないため購入できません。"}
-	var key := "owned_emotes" if kind == ShopCatalog.Kind.EMOTE else "owned_icons"
-	var cost := ShopCatalog.price(kind)
+	var key := _unlock_key(kind)
+	var cost := ShopCatalog.price(kind, id)
 
 	for _attempt in range(GRANT_RETRY):
 		var doc: Dictionary = await client.get_document_meta(_path(uid))
@@ -173,6 +191,17 @@ static func purchase(
 
 
 ## 所有・枠のフィールドを読む。プロフィールが空(オフライン)ならローカルの控えを見る。
+## 品種ごとの所有リストのキー。**購入と所有の判定で同じものを使う**。
+static func _unlock_key(kind: ShopCatalog.Kind) -> String:
+	match kind:
+		ShopCatalog.Kind.EMOTE:
+			return "owned_emotes"
+		ShopCatalog.Kind.PLAYMAT:
+			return "owned_playmats"
+		_:
+			return "owned_icons"
+
+
 static func _unlock_field(key: String) -> Array:
 	var value: Array = _profile.get(key, [])
 	if not value.is_empty():
@@ -195,7 +224,8 @@ static func _save_unlocks_locally() -> void:
 	AccountStore.save_local_unlocks(
 		_profile.get("owned_icons", []),
 		_profile.get("owned_emotes", []),
-		_profile.get("emote_slots", [])
+		_profile.get("emote_slots", []),
+		_profile.get("owned_playmats", [])
 	)
 
 
@@ -210,7 +240,7 @@ static func load_profile(client: FirestoreClient, uid: String) -> void:
 		_profile[key] = fields[key]
 	if _profile.get("icon_id", "") != "" or _profile.get("title_id", "") != "":
 		AccountStore.save_local_customization(icon_id(), title_id())
-	if fields.has("owned_icons") or fields.has("owned_emotes") or fields.has("emote_slots"):
+	if fields.has("owned_icons") or fields.has("owned_emotes") or fields.has("owned_playmats"):
 		_save_unlocks_locally()
 
 
@@ -219,14 +249,21 @@ static func save_display_name(client: FirestoreClient, uid: String, name: String
 
 
 static func save_profile(
-	client: FirestoreClient, uid: String, name: String, p_icon_id: String, p_title_id: String
+	client: FirestoreClient,
+	uid: String,
+	name: String,
+	p_icon_id: String,
+	p_title_id: String,
+	p_playmat_id := ""
 ) -> bool:
+	var mat := p_playmat_id if PlaymatLibrary.has(p_playmat_id) else playmat_id()
 	var trimmed := TextGlyphs.sanitize(name.strip_edges())
 	if trimmed.length() > DISPLAY_NAME_MAX_LENGTH:
 		trimmed = trimmed.substr(0, DISPLAY_NAME_MAX_LENGTH)
-	AccountStore.save_local_customization(p_icon_id, p_title_id)
+	AccountStore.save_local_customization(p_icon_id, p_title_id, mat)
 	_profile["icon_id"] = p_icon_id
 	_profile["title_id"] = p_title_id
+	_profile["playmat_id"] = mat
 	if uid == "":
 		_profile["display_name"] = trimmed
 		return true
@@ -236,6 +273,7 @@ static func save_profile(
 			"display_name": trimmed,
 			"icon_id": p_icon_id,
 			"title_id": p_title_id,
+			"playmat_id": mat,
 			"updated_at": Time.get_unix_time_from_system()
 		}
 	)
@@ -306,12 +344,14 @@ static func fetch_profile(client: FirestoreClient, uid: String) -> Dictionary:
 			"display_name": "",
 			"icon_id": UserProfileLibrary.DEFAULT_ICON_ID,
 			"title_id": UserProfileLibrary.DEFAULT_TITLE_ID,
+			"playmat_id": PlaymatLibrary.DEFAULT_ID,
 		}
 	if uid == _current_uid():
 		return {
 			"display_name": display_name(),
 			"icon_id": icon_id(),
 			"title_id": title_id(),
+			"playmat_id": playmat_id(),
 		}
 	if _profile_cache.has(uid):
 		return _profile_cache[uid]
@@ -323,10 +363,14 @@ static func fetch_profile(client: FirestoreClient, uid: String) -> Dictionary:
 	var p_title := str(fields.get("title_id", ""))
 	if p_title.is_empty():
 		p_title = UserProfileLibrary.DEFAULT_TITLE_ID
+	var p_mat := str(fields.get("playmat_id", ""))
+	if not PlaymatLibrary.has(p_mat):
+		p_mat = PlaymatLibrary.DEFAULT_ID
 	var profile := {
 		"display_name": name,
 		"icon_id": p_icon,
 		"title_id": p_title,
+		"playmat_id": p_mat,
 	}
 	_profile_cache[uid] = profile
 	return profile
@@ -361,5 +405,7 @@ static func _empty_profile() -> Dictionary:
 		"cpu_reward_count": 0,
 		"owned_icons": [],
 		"owned_emotes": [],
+		"owned_playmats": [],
 		"emote_slots": [],
+		"playmat_id": "",
 	}

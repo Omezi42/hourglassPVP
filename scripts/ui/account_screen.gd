@@ -18,8 +18,12 @@ const ICON_SCROLL_HEIGHT := 108
 var _busy := false
 var _selected_icon_id := UserProfileLibrary.DEFAULT_ICON_ID
 var _selected_title_id := UserProfileLibrary.DEFAULT_TITLE_ID
+## いま敷くプレイマット(GameDesign.md 9章・14章)。ショップは買う場所であって
+## 設定する場所を兼ねないため、選ぶのはここ。
+var _selected_playmat_id := PlaymatLibrary.DEFAULT_ID
 
 var _icon_buttons: Dictionary = {}
+var _playmat_row: HBoxContainer
 var _title_buttons: Dictionary = {}
 var _preview: ProfilePreviewPlate
 
@@ -88,6 +92,7 @@ func _setup_profile_ui() -> void:
 	_preview = ProfilePreviewPlate.new()
 	preview_container.add_child(_preview)
 	_wrap_icon_grid()
+	_build_playmat_row()
 	_rebuild_icon_grid()
 
 	_emote_panel = EmoteSlotPanel.new()
@@ -120,6 +125,42 @@ func _wrap_icon_grid() -> void:
 	parent.move_child(scroll, index)
 
 
+## プレイマットの帯。アイコンの一覧のすぐ下へ、所有しているマットを横に並べる。
+## **見本は盤面と同じ `PlaymatPaint` を通す**(選ぶ絵と敷かれる絵を食い違わせない)。
+func _build_playmat_row() -> void:
+	var column := icon_grid.get_parent().get_parent()
+	var label := Label.new()
+	label.text = "プレイマット"
+	label.add_theme_font_size_override("font_size", 14)
+	label.add_theme_color_override("font_color", UiPalette.BRASS_HIGHLIGHT)
+	column.add_child(label)
+	column.move_child(label, icon_grid.get_parent().get_index() + 1)
+	_playmat_row = HBoxContainer.new()
+	_playmat_row.add_theme_constant_override("separation", 8)
+	column.add_child(_playmat_row)
+	column.move_child(_playmat_row, label.get_index() + 1)
+
+
+func _rebuild_playmat_row() -> void:
+	if _playmat_row == null:
+		return
+	for child in _playmat_row.get_children():
+		child.queue_free()
+	for mat_id in AccountService.owned_playmat_ids():
+		var swatch := PlaymatSwatch.new(mat_id)
+		swatch.pressed.connect(func() -> void: _on_playmat_selected(mat_id))
+		_playmat_row.add_child(swatch)
+
+
+func _on_playmat_selected(mat_id: String) -> void:
+	_selected_playmat_id = mat_id
+	for child in _playmat_row.get_children():
+		var swatch := child as PlaymatSwatch
+		if swatch != null:
+			swatch.is_selected = swatch.mat_id == mat_id
+			swatch.queue_redraw()
+
+
 ## 所有しているものだけを並べる(GameDesign.md 14章)。買った直後にも呼ぶ。
 func _rebuild_icon_grid() -> void:
 	for child in icon_grid.get_children():
@@ -144,7 +185,10 @@ func refresh() -> void:
 		_set_message("", HINT_COLOR)
 	_selected_icon_id = AccountService.icon_id()
 	_selected_title_id = AccountService.title_id()
+	_selected_playmat_id = AccountService.playmat_id()
 	_rebuild_icon_grid()
+	_rebuild_playmat_row()
+	_on_playmat_selected(_selected_playmat_id)
 	_refresh_view()
 
 
@@ -218,7 +262,12 @@ func _on_profile_save_pressed() -> void:
 	_set_busy(true)
 	var uid := NetSession.auth.uid if NetSession.auth != null else ""
 	var ok: bool = await AccountService.save_profile(
-		NetSession.client, uid, name_input.text, _selected_icon_id, _selected_title_id
+		NetSession.client,
+		uid,
+		name_input.text,
+		_selected_icon_id,
+		_selected_title_id,
+		_selected_playmat_id
 	)
 	_set_busy(false)
 	if ok:
@@ -289,6 +338,35 @@ func _set_message(text: String, color: Color) -> void:
 
 
 ## アイコン選択用ボタン(真鍮枠・丸型)
+## プレイマットの見本1枚。押すとそれを敷く。
+class PlaymatSwatch:
+	extends Button
+
+	const SWATCH_SIZE := Vector2(84, 54)
+
+	var mat_id: String
+	var is_selected := false
+
+	func _init(p_mat_id: String) -> void:
+		mat_id = p_mat_id
+		custom_minimum_size = SWATCH_SIZE
+		flat = true
+		# 模様は矩形の外まで伸びる。見本でも必ず切り抜く(BoardTable と同じ理由)。
+		clip_contents = true
+		tooltip_text = PlaymatLibrary.display_name(p_mat_id)
+		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+
+	func _draw() -> void:
+		var rect := Rect2(Vector2.ZERO, size)
+		PlaymatPaint.draw_mat(self, rect, mat_id)
+		draw_rect(
+			rect,
+			UiPalette.GLOW_AMBER if is_selected else UiPalette.BRASS_DARK,
+			false,
+			3.0 if is_selected else 1.4
+		)
+
+
 class IconButton:
 	extends Button
 	var icon_id: String
