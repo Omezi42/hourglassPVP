@@ -17,17 +17,21 @@ func get_document(path: String) -> Dictionary:
 	return doc.get("fields", {})
 
 
-## 存在有無・updateTime(楽観ロック用)まで含めて取得する
+## 存在有無・updateTime(楽観ロック用)まで含めて取得する。
+## `code` は生のHTTPステータス。404(ドキュメントが無いだけ)と、それ以外の
+## 通信失敗(0・5xx等)を呼び出し側が区別できるようにするため残す
+## (`exists` だけだと両者とも false になってしまう)。
 func get_document_meta(path: String) -> Dictionary:
 	var result: Array = await _request(HTTPClient.METHOD_GET, path, {})
 	var response_code: int = result[0]
 	var parsed: Variant = result[1]
 	if response_code != 200 or not (parsed is Dictionary):
-		return {"exists": false, "fields": {}, "update_time": ""}
+		return {"exists": false, "fields": {}, "update_time": "", "code": response_code}
 	return {
 		"exists": true,
 		"fields": FirestoreCodec.decode_fields(parsed),
-		"update_time": parsed.get("updateTime", "")
+		"update_time": parsed.get("updateTime", ""),
+		"code": response_code
 	}
 
 

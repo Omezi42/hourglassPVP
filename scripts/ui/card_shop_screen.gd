@@ -154,6 +154,13 @@ func _build() -> void:
 ## (GameDesign.md 21章)。買えない品は暗くして押しても何も起こさない。
 class ShopItemCard:
 	extends Button
+	## エモートのサムネイルを収める矩形。プレイマットの見本(位置14,14 / 76x60)と
+	## 同じ帯へ収める。
+	const EMOTE_THUMB_RECT := Rect2(14, 12, 76, 64)
+	const EMOTE_THUMB_TEXT_MARGIN := Vector2(8, 18)
+	const EMOTE_THUMB_FONT_SIZE := 11
+	const EMOTE_THUMB_MAX_LINES := 3
+
 	var kind: ShopCatalog.Kind
 	var id: String
 	var owned := false
@@ -225,13 +232,17 @@ class ShopItemCard:
 		)
 		_draw_price()
 
-	## アイコンは紋章そのもの、エモートは吹き出しに見立てた枠、
-	## **プレイマットは実際に敷いた縮小見本**を出す(GameDesign.md 21章)。
+	## アイコンは紋章そのもの、**エモートは実際に出る文言そのもの**、
+	## プレイマットは実際に敷いた縮小見本を出す(GameDesign.md 21章)。
+	## 「エモートは文言が品そのもの」であり、名前だけでは何を買うのか分からない。
 	## 色の名前だけでは何を買うのか分からないため、盤面と同じ `PlaymatPaint` を通す。
 	func _draw_thumb() -> void:
 		if kind == ShopCatalog.Kind.PLAYMAT:
 			# 見本は子の層へ描く。**模様は矩形の外まで伸びる**ため切り抜きが要る
 			# (`BoardTable` と同じ理由)。
+			return
+		if kind == ShopCatalog.Kind.EMOTE:
+			_draw_emote_thumb()
 			return
 		var center := Vector2(52, 44)
 		draw_circle(center, 26.0, Color(0.12, 0.1, 0.08, 0.9))
@@ -240,15 +251,32 @@ class ShopItemCard:
 			var tex := UserProfileLibrary.get_icon_texture(id)
 			if tex != null:
 				draw_texture_rect(tex, Rect2(center - Vector2(18, 18), Vector2(36, 36)), false)
-			return
-		draw_string(
+
+	## 対局中の吹き出し(`EmoteBubble`)と同じ質感の真鍮枠パネルに文言を収める。
+	func _draw_emote_thumb() -> void:
+		var rect := EMOTE_THUMB_RECT
+		var ci := get_canvas_item()
+		var points := UiPaint.rounded_rect_points_uniform(rect, 8.0, 5)
+		UiPaint.fill_gradient_polygon(
+			ci,
+			points,
+			rect,
+			[[0.0, Color(0.16, 0.13, 0.1, 0.95)], [1.0, Color(0.08, 0.06, 0.05, 0.95)]]
+		)
+		var outline := points.duplicate()
+		outline.append(points[0])
+		draw_polyline(
+			outline, UiPalette.BRASS_DARK if _dimmed() else UiPalette.BRASS_LIGHT, 1.2, true
+		)
+		draw_multiline_string(
 			_font,
-			center + Vector2(-9, 7),
-			"◆",
+			rect.position + EMOTE_THUMB_TEXT_MARGIN,
+			EmoteLibrary.get_emote_text(id),
 			HORIZONTAL_ALIGNMENT_LEFT,
-			-1,
-			20,
-			UiPalette.BRASS_HIGHLIGHT
+			rect.size.x - EMOTE_THUMB_TEXT_MARGIN.x * 2.0,
+			EMOTE_THUMB_FONT_SIZE,
+			EMOTE_THUMB_MAX_LINES,
+			UiPalette.TEXT_MUTED if _dimmed() else UiPalette.TEXT_OFFWHITE
 		)
 
 	func _draw_price() -> void:

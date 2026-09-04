@@ -16,8 +16,12 @@ const TOGGLE_SIZE := Vector2(168, 48)
 
 ## 「自分」と「みんな」を往復する(GameDesign.md 22章)。並び替えの往復と同じ流儀。
 var _global := false
-## 集計は開いた回に1度だけ読む。空なら未取得。
+## 集計は開いた回に1度だけ読む。
 var _global_stats: Dictionary = {}
+## 一度でも読もうとしたか。読めなかった(通信失敗)と、まだ読んでいないを区別するため。
+var _global_fetched := false
+## 直近の取得が通信そのものに失敗したか。「まだ誰も対局していない」(0件)とは別の状態。
+var _global_failed := false
 var _fetching := false
 
 var _summary: VBoxContainer
@@ -36,20 +40,31 @@ func open() -> void:
 func _on_toggle_pressed() -> void:
 	_global = not _global
 	_toggle.text = "自分の戦績" if _global else "みんなの戦績"
-	_refresh()
-	if _global and _global_stats.is_empty():
+	if _global and not _global_fetched and not _fetching:
 		_fetch_global()
+	else:
+		_refresh()
 
 
 ## 集計を1度だけ読む。**自分の戦績はローカルにあるため、通信できなくても従来どおり読める。**
+## `MatchRecordService.fetch_stats()` の `ok` で「まだ誰も対局していない」(0件)と
+## 「通信そのものに失敗した」を区別する(GameDesign.md 22章「読めなかったときは
+## その旨を1行で示す」)。
 func _fetch_global() -> void:
-	if _fetching or NetSession.client == null:
+	if _fetching:
+		return
+	if NetSession.client == null:
+		_global_fetched = true
+		_global_failed = true
 		_refresh()
 		return
 	_fetching = true
-	var stats: Dictionary = await MatchRecordService.fetch_stats(NetSession.client)
+	_refresh()
+	var result: Dictionary = await MatchRecordService.fetch_stats(NetSession.client)
 	_fetching = false
-	_global_stats = stats
+	_global_fetched = true
+	_global_failed = not bool(result.get("ok", false))
+	_global_stats = {} if _global_failed else result.get("fields", {})
 	if _global:
 		_refresh()
 
@@ -72,17 +87,25 @@ func _refresh() -> void:
 
 
 ## みんなの戦績(GameDesign.md 22章)。オンライン対戦だけを集めた通算であり、
-## CPU戦は含まない。
+## CPU戦は含まない。**枠(見出し)は状態に関わらず常に描き、数値だけが状態で変わる**
+## (読み込み中・通信失敗・0件・通常の4状態を同じ体裁で表す)。
 func _refresh_global() -> void:
-	if _global_stats.is_empty():
-		_summary.add_child(_make_line("集計を読み込んでいます…" if _fetching else "集計を取得できませんでした", 22))
+	_summary.add_child(_make_line("みんなの戦績(オンライン対戦の通算)", 26))
+	_cards.add_child(_make_line("カード別(そのカードを入れて戦った勝率)", 22))
+	if _fetching or not _global_fetched:
+		_summary.add_child(_make_line("集計を読み込んでいます…", 20))
+		_cards.add_child(_make_line("―", 18))
+		return
+	if _global_failed:
+		_summary.add_child(_make_line("集計を取得できませんでした。通信状況を確認してください。", 18))
+		_cards.add_child(_make_line("―", 18))
 		return
 	var counts: Dictionary = _global_stats.get("counts", {})
 	var games: int = int(counts.get("games", 0))
 	if games == 0:
-		_summary.add_child(_make_line("まだオンライン対戦の記録がありません", 22))
+		_summary.add_child(_make_line("まだオンライン対戦の記録がありません", 20))
+		_cards.add_child(_make_line("―", 18))
 		return
-	_summary.add_child(_make_line("みんなの戦績(オンライン対戦の通算)", 26))
 	_summary.add_child(_make_line("%d戦" % games, 20))
 	_summary.add_child(
 		_make_line("先手勝率 %.1f%%" % _percent(int(counts.get("first_wins", 0)), games), 20)
@@ -108,7 +131,6 @@ func _refresh_global() -> void:
 				_make_line("%s %d戦(%.1f%%)" % [reason[1], value, _percent(value, games)], 18)
 			)
 
-	_cards.add_child(_make_line("カード別(そのカードを入れて戦った勝率)", 22))
 	for row: Dictionary in _global_card_rows():
 		var card := CardLibrary.find_by_id(row["id"])
 		var display: String = card.display_name if card != null else row["id"]

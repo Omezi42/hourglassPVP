@@ -33,11 +33,15 @@ static func submit(client: FirestoreClient, match_id: String, kind: int, state: 
 	return true
 
 
-## 「みんなの戦績」が読む集計。取得できなければ空を返す。
+## 「みんなの戦績」が読む集計。`ok` は通信そのものが成立したかどうかで、
+## ドキュメントが無いだけ(=まだ誰も対局していない)の場合も true になる
+## (404はFirestoreと話せた証拠であり、通信失敗とは区別する)。
 static func fetch_stats(client: FirestoreClient) -> Dictionary:
 	if client == null:
-		return {}
-	return await client.get_document(STATS_PATH)
+		return {"ok": false, "fields": {}}
+	var meta: Dictionary = await client.get_document_meta(STATS_PATH)
+	var code: int = int(meta.get("code", 0))
+	return {"ok": code == 200 or code == 404, "fields": meta.get("fields", {})}
 
 
 ## 決着の要因。集計のキーと分析の道具の両方が読むため、文字列で持つ
