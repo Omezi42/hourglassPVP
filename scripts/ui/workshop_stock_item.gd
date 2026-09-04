@@ -72,6 +72,9 @@ func _draw() -> void:
 		var icon := card.icon_upright
 		if icon != null:
 			draw_texture_rect(icon, art, false, tint)
+		# **紋章は絵の左下へ印として押す**(GameDesign.md 9章)。色相だけでは
+		# 見分けられないため、カードを並べる画面には必ず添える。
+		EmblemSeal.brass(self, Vector2(art.position.x + 12.0, art.end.y - 12.0), card.emblem, 14.0)
 	draw_string(
 		_font,
 		Vector2(0, size.y - 8.0),
@@ -84,15 +87,32 @@ func _draw() -> void:
 	_draw_diamond(Vector2(16, 18), card.cost, 14.0)
 	_draw_total(Vector2(size.x - 16, 18), 13.0)
 	if maxed:
-		draw_string(
-			_font,
-			Vector2(0, size.y - NAME_BAND + 4.0),
-			"%d / %d" % [count, limit],
-			HORIZONTAL_ALIGNMENT_CENTER,
-			size.x,
-			15,
-			Color(1.0, 0.86, 0.5)
-		)
+		_draw_maxed()
+
+
+## 2枚入れ終えた印。**上端の中央へ置く**——コストとの総量のあいだが唯一空いている
+## 場所で、絵の下端は紋章の印と名前が使っている(以前ここへ出して重なった)。
+func _draw_maxed() -> void:
+	var rect := Rect2(size.x * 0.5 - 25.0, 5.0, 50.0, 24.0)
+	var points := UiPaint.rounded_rect_points_uniform(rect, 6.0, 5)
+	UiPaint.fill_gradient_polygon(
+		get_canvas_item(),
+		points,
+		rect,
+		[[0.0, Color(0.30, 0.22, 0.15)], [1.0, Color(0.13, 0.09, 0.06)]]
+	)
+	var closed := points.duplicate()
+	closed.append(points[0])
+	draw_polyline(closed, Color(0.72, 0.58, 0.36), 1.6)
+	draw_string(
+		_font,
+		Vector2(rect.position.x, rect.get_center().y + 6.0),
+		"%d / %d" % [count, limit],
+		HORIZONTAL_ALIGNMENT_CENTER,
+		rect.size.x,
+		15,
+		Color(1.0, 0.86, 0.5)
+	)
 
 
 ## 絵を置く矩形。棚板の上へ立てるため、下端を名前の帯の手前で止める。

@@ -123,7 +123,10 @@ func _build() -> void:
 	title.add_theme_font_size_override("font_size", 22)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header_row.add_child(title)
-	var close_icon := CodedButton.make_icon("✕", Vector2(36, 36))
+	# **記号は同梱フォントが字形を持つものだけを使う**(Architecture.md 11章)。
+	# ✕(U+2715)には字形が無く、書き出した版でだけ豆腐になる。
+	# 検出は `python tools/check_font_glyphs.py`。
+	var close_icon := CodedButton.make_icon("×", Vector2(36, 36))
 	close_icon.pressed.connect(close)
 	header_row.add_child(close_icon)
 

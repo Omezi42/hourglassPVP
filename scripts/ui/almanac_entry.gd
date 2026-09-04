@@ -9,7 +9,11 @@ signal pressed(card: CardData)
 
 const CELL_SIZE := Vector2(168, 122)
 ## 絵と名前を重ねないため、標本の欄は上・名札は下と決めて高さを配る。
-const NAME_BAND := 34.0
+## **絵は矩形いっぱいに描かれる**(周りの余白は絵の中に含まれない)ため、
+## 名札のぶんはここで確実に空ける。34pxでは名前が砂時計の台へ乗っていた。
+const NAME_BAND := 42.0
+## 標本の欄の上端。丁付け(No.)の下から始める。
+const ART_TOP := 15.0
 const INK := Color(0.20, 0.135, 0.075)
 const INK_SOFT := Color(0.40, 0.30, 0.19)
 const LOCKED_INK := Color(0.46, 0.37, 0.25)
@@ -57,7 +61,7 @@ func _draw() -> void:
 	if selected:
 		_draw_selection()
 	draw_string(
-		_font, Vector2(6, 15), "No.%03d" % number, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, INK_SOFT
+		_font, Vector2(6, 16), "No.%03d" % number, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, INK_SOFT
 	)
 	var art := _art_rect()
 	if locked:
@@ -68,13 +72,17 @@ func _draw() -> void:
 		var icon := card.icon_upright
 		if icon != null:
 			draw_texture_rect(icon, art, false)
+		# **紋章は絵の左下へ印として押す**(GameDesign.md 9章)。全種が同じ絵の色違いで
+		# ある以上、一覧で見分けているのは実際にはこの紋章のほう。
+		# ここではコスト・総量と同じく**絵の外の隅**へ置く(絵の中へ入れると台に重なる)。
+		EmblemSeal.brass(self, Vector2(art.position.x - 2.0, art.end.y - 10.0), card.emblem, 12.0)
 	draw_string(
 		_font,
 		Vector2(0, size.y - 6),
 		"— 未 発 見 —" if locked else card.display_name,
 		HORIZONTAL_ALIGNMENT_CENTER,
 		size.x,
-		14,
+		15,
 		LOCKED_INK if locked else INK
 	)
 	if locked:
@@ -88,9 +96,9 @@ func _draw() -> void:
 
 ## 絵を置く矩形。標本の欄(上)と名札(下)を分けて、重ならないようにする。
 func _art_rect() -> Rect2:
-	var h: float = size.y - NAME_BAND
+	var h: float = size.y - NAME_BAND - ART_TOP
 	var w: float = h / 1.30
-	return Rect2(Vector2((size.x - w) * 0.5, 18.0), Vector2(w, h))
+	return Rect2(Vector2((size.x - w) * 0.5, ART_TOP), Vector2(w, h))
 
 
 ## いま開いている項目。紙へ引いた朱の下線と薄い当たりで示す。

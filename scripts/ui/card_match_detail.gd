@@ -51,23 +51,24 @@ func hover(view: CardView) -> void:
 		return
 	_timer.stop()
 	_panel.show_card(view.card)
-	_panel.position = _place(view)
+	_panel.position = _place()
 	_panel.visible = true
 	# 履歴タイル(あとから add_child した子)より手前へ出す。
 	_panel.move_to_front()
 
 
-## **指しているカードから対角に置く**(GameDesign.md 9章)。左右は反対の端、上下は
-## 反対の段。読みたいカードとその並びを自分で隠さないための、いちばん遠い置き場になる。
-func _place(view: CardView) -> Vector2:
-	var center := view.position + view.size * 0.5
-	var height: float = _panel.size.y
+## **カーソルの近くへ置く**(GameDesign.md 9章)。置き場の規則そのものは
+## `CardDetailPanel.place_near()` が持ち、ここは収める範囲だけを決める。
+##
+## 対角へ出していたのは**パネルの中の語を押しに行く**前提があった頃の名残で、
+## 読むだけになったいまは視線を画面の端まで往復させる理由が無い。
+func _place() -> Vector2:
 	var band := CardMatchScreen.TABLE_RECT
-	# 右へ出すときは行動の列(ターン終了・ログ・投了)の手前で止める。
-	var right_edge: float = CardMatchScreen.ACTION_COLUMN_X - MARGIN
-	var left := MARGIN if center.x >= _screen.size.x * 0.5 else right_edge - WIDTH
-	var top := band.end.y - height if center.y < _screen.size.y * 0.5 else band.position.y
-	return Vector2(left, clampf(top, MARGIN, _screen.size.y - MARGIN - height))
+	var bounds := Rect2(
+		Vector2(MARGIN, band.position.y),
+		Vector2(CardMatchScreen.ACTION_COLUMN_X - MARGIN * 2.0, band.size.y)
+	)
+	return CardDetailPanel.place_near(_screen.get_local_mouse_position(), _panel.size, bounds)
 
 
 func leave() -> void:

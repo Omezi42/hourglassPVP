@@ -32,11 +32,9 @@ const ACTION_SIZE := Vector2(126, 42)
 const ACTION_GAP := 10.0
 ## `CardDetailPanel` の低背版の大きさ。ここを小さくしても最小サイズで押し返されるため揃える。
 const DETAIL_SIZE := CardDetailPanel.COMPACT_SIZE
-## **詳細は指しているものと反対のカラムへ出す**(GameDesign.md 9章)。
-## 同じ側へ出すと、パネルがカーソルの下の帯を覆った瞬間にホバーが外れ、
-## 出したり消したりを繰り返す。ヘッダーの主アクションや反対側の欄に重なるのは許容する。
-const DETAIL_POSITION_RIGHT := Vector2(SIDE_RECT.position.x, ScreenHeader.OUTER_MARGIN)
-const DETAIL_POSITION_LEFT := Vector2(GRID_RECT.position.x, ScreenHeader.CONTENT_TOP)
+## **詳細はカーソルの近くへ出す**(GameDesign.md 9章)。置き場の規則は
+## `CardDetailPanel.place_near()` が持ち、ここは収める範囲だけを決める。
+const DETAIL_BOUNDS := Rect2(16, 16, SCREEN_WIDTH - 32, 688)
 ## カードから外れてから詳細を消すまでの猶予。隣のカードへ移る途中で点滅させないため。
 const DETAIL_HIDE_DELAY := 0.15
 
@@ -47,7 +45,6 @@ var _count_label: Label
 var _grid: GridContainer
 var _shelf: CardDeckShelf
 var _progress: Label
-var _shortfall: Label
 var _detail: CardDetailPanel
 var _detail_hide_timer: Timer
 var _preset_picker: CardPresetPicker
@@ -203,29 +200,19 @@ func _build_side() -> void:
 	_progress.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	top_row.add_child(_progress)
 
-	# 2. 編成中のデッキ(コスト帯ごとの棚)。
-	# **マナカーブの棒グラフは置かない**——段の長さがそのままマナカーブになるため
-	# (GameDesign.md 9章)。
-	# **`ScrollContainer` へは入れない。**あの中では棚が「1画面に何段入るか」を
-	# 知れず、段の高さを決められない(実際、高さ0のまま下限で並んで画面の半分が
-	# 空いた)。棚が自前でスクロールを持つ。
+	# 2. 編成中のデッキ(30枠の決まった棚)。
+	# **マナカーブの棒グラフは置かない**(GameDesign.md 9章)。
+	# **「あと何枚」の帯も置かない**——空いている枠の数がそのまま残りを示すため。
+	# **`ScrollContainer` へは入れない。**あの中では棚が「何段入るか」を知れず、
+	# 枠の大きさを決められない(実際、高さ0のまま並んで画面の半分が空いた)。
 	_shelf = CardDeckShelf.new()
 	_shelf.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_shelf.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_shelf.custom_minimum_size.x = SIDE_INNER_WIDTH
 	_shelf.card_hovered.connect(_on_shelf_hovered)
 	_shelf.hover_left.connect(_on_hover_left)
-	_shelf.card_added.connect(_on_band_add)
 	_shelf.card_removed.connect(_on_band_remove)
 	column.add_child(_shelf)
-
-	# 3. 30枚に満たない間だけ出す帯(GameDesign.md 9章)。
-	_shortfall = Label.new()
-	_shortfall.add_theme_font_size_override("font_size", 15)
-	_shortfall.add_theme_color_override("font_color", Color(1.0, 0.82, 0.46))
-	_shortfall.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_shortfall.custom_minimum_size.y = 24
-	column.add_child(_shortfall)
 
 
 func _build_detail() -> void:
@@ -235,9 +222,8 @@ func _build_detail() -> void:
 	# パネルの中に押しに行く先を置くと、そこへカーソルを動かした時点で消えてしまう。
 	_detail.interactive = false
 	_detail.size = DETAIL_SIZE
-	_detail.position = DETAIL_POSITION_RIGHT
 	_detail.visible = false
-	# **パネルはホバーを奪わない。**反対のカラムへ出す以上、下のカードや帯の上へ乗るため、
+	# **パネルはホバーを奪わない。**カーソルの近くへ出す以上、下のカードや棚の上へ乗るため、
 	# 塞ぐと「パネルに隠れたカードを指すと消える」ことになる。
 	_detail.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_detail)
@@ -255,10 +241,6 @@ func _build_detail() -> void:
 func _refresh() -> void:
 	_progress.text = "%d / %d 枚" % [_deck.size(), MatchState.DECK_SIZE]
 	_shelf.deck = _deck.duplicate()
-	# **足りているときは帯ごと畳む。**空の行を残すと、そのぶん棚の段が低くなる。
-	var missing: int = MatchState.DECK_SIZE - _deck.size()
-	_shortfall.visible = missing > 0
-	_shortfall.text = "あと %d 枚" % missing
 	var full: bool = _deck.size() >= MatchState.DECK_SIZE
 	for i in _card_views.size():
 		var card: CardData = _pool[i]
@@ -301,14 +283,17 @@ func _count_of(card: CardData) -> int:
 # --- 詳細(ホバー中だけ表示) --------------------------------------------
 
 
-## 指しているものと反対のカラムへ出す(GameDesign.md 9章)。
-func _show_detail(card: CardData, to_right: bool) -> void:
+## **カーソルの近くへ出す**(GameDesign.md 9章)。押す先を持たないパネルになった以上、
+## 画面の反対の端まで視線を往復させる理由が無い。
+func _show_detail(card: CardData) -> void:
 	if card == null:
 		return
 	if _detail_hide_timer != null:
 		_detail_hide_timer.stop()
 	_detail.show_card(card)
-	_detail.position = DETAIL_POSITION_RIGHT if to_right else DETAIL_POSITION_LEFT
+	_detail.position = CardDetailPanel.place_near(
+		get_local_mouse_position(), _detail.size, DETAIL_BOUNDS
+	)
 	_detail.visible = true
 
 
@@ -325,22 +310,17 @@ func _on_hover_left() -> void:
 
 
 func _on_stock_hovered(view: WorkshopStockItem) -> void:
-	_show_detail(view.card, true)
+	_show_detail(view.card)
 
 
-## 棚の1本を指した。詳細は**反対のカラム**(左=一覧の上)へ出す(GameDesign.md 9章)。
 func _on_shelf_hovered(card: CardData) -> void:
-	_show_detail(card, false)
+	_show_detail(card)
 
 
 # --- 操作 ---------------------------------------------------------------
 
 
 func _on_card_pressed(card: CardData) -> void:
-	_add_card(card)
-
-
-func _on_band_add(card: CardData) -> void:
 	_add_card(card)
 
 

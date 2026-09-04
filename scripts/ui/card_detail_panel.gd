@@ -35,6 +35,9 @@ const COMPACT_PADDING := 56.0
 ## 効果欄の語のボタン。「2回攻撃」の4文字が収まる幅にしてある。
 const TERM_BUTTON_SIZE := Vector2(98, 34)
 const TERM_FONT_SIZE := 15
+## ホバーで出すときに、カーソルからどれだけずらすか。指しているものを自分で
+## 隠さない程度に離し、視線を動かさずに済む程度に近づける。
+const CURSOR_OFFSET := Vector2(22, 18)
 
 ## 横並びの詰めた表示にするか。`add_child()` より前に設定する。
 var compact := false
@@ -63,6 +66,24 @@ func _ready() -> void:
 	else:
 		_build()
 	clear()
+
+
+## ホバーで出す詳細の置き場(GameDesign.md 9章)。**指しているものの近くへ出す。**
+##
+## 以前は画面の反対の端(対角)へ置いていたが、それは**パネルの中の語を押しに行く**
+## 前提があった頃の名残であり、読むだけになったいまは視線とカーソルを画面の端まで
+## 往復させる理由が無い。カーソルの右下を既定とし、`bounds` からはみ出すときだけ
+## 反対側へ折り返す。**置き場の規則はここ1箇所が持つ**(画面ごとに決めない)。
+static func place_near(cursor: Vector2, panel: Vector2, bounds: Rect2) -> Vector2:
+	var at := cursor + CURSOR_OFFSET
+	if at.x + panel.x > bounds.end.x:
+		at.x = cursor.x - CURSOR_OFFSET.x - panel.x
+	if at.y + panel.y > bounds.end.y:
+		at.y = cursor.y - CURSOR_OFFSET.y - panel.y
+	return Vector2(
+		clampf(at.x, bounds.position.x, maxf(bounds.end.x - panel.x, bounds.position.x)),
+		clampf(at.y, bounds.position.y, maxf(bounds.end.y - panel.y, bounds.position.y))
+	)
 
 
 func show_card(card: CardData) -> void:
