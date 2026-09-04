@@ -8,13 +8,28 @@ extends Control
 
 signal back_pressed
 
-const HEADER_SCENE := "res://scenes/screen_header.tscn"
+const SCREEN_WIDTH := 1280.0
 const PANEL_STYLE := "res://resources/theme/content_panel.tres"
-const GRID_RECT := Rect2(24, ScreenHeader.CONTENT_TOP, 816, ScreenHeader.CONTENT_HEIGHT)
-const SIDE_RECT := Rect2(856, ScreenHeader.CONTENT_TOP, 400, ScreenHeader.CONTENT_HEIGHT)
-const SIDE_INNER_WIDTH := 372.0
-const GRID_COLUMNS := 6
-const GRID_GAP := 12
+## 在庫棚・組立台の内側(木箱の枠と上端の帯を除いた範囲)。**外形は下地が描く**。
+const GRID_RECT := Rect2(
+	WorkshopBackdrop.SHELF_RECT.position.x + 24,
+	WorkshopBackdrop.SHELF_RECT.position.y + WorkshopBackdrop.BAND_HEIGHT + 10,
+	WorkshopBackdrop.SHELF_RECT.size.x - 48,
+	WorkshopBackdrop.SHELF_RECT.size.y - WorkshopBackdrop.BAND_HEIGHT - 26
+)
+const SIDE_RECT := Rect2(
+	WorkshopBackdrop.BENCH_RECT.position.x + 18,
+	WorkshopBackdrop.BENCH_RECT.position.y + 12,
+	WorkshopBackdrop.BENCH_RECT.size.x - 36,
+	WorkshopBackdrop.BENCH_RECT.size.y - 26
+)
+const SIDE_INNER_WIDTH := SIDE_RECT.size.x
+const GRID_COLUMNS := 4
+const GRID_GAP := 6
+## 本の外(木箱の上)へ置く操作。共通ヘッダーと同じ並び(左=戻る / 右=主アクション)。
+const BACK_RECT := Rect2(24, 30, 92, 42)
+const ACTION_SIZE := Vector2(126, 42)
+const ACTION_GAP := 10.0
 ## `CardDetailPanel` の低背版の大きさ。ここを小さくしても最小サイズで押し返されるため揃える。
 const DETAIL_SIZE := CardDetailPanel.COMPACT_SIZE
 ## **詳細は指しているものと反対のカラムへ出す**(GameDesign.md 9章)。
@@ -25,7 +40,7 @@ const DETAIL_POSITION_LEFT := Vector2(GRID_RECT.position.x, ScreenHeader.CONTENT
 ## カードから外れてから詳細を消すまでの猶予。隣のカードへ移る途中で点滅させないため。
 const DETAIL_HIDE_DELAY := 0.15
 
-var _header: ScreenHeader
+var _save_button: Button
 var _filter: CardDeckFilter
 var _filter_button: Button
 var _count_label: Label
@@ -40,7 +55,7 @@ var _share_panel: CardDeckSharePanel
 ## 一覧に並べるカード。**コスト順**で固定する(GameDesign.md 9章の既定と揃える)。
 ## `_card_views` の並びと1対1で対応するため、参照する側は必ずこちらを見る。
 var _pool: Array[CardData] = []
-var _card_views: Array[CardView] = []
+var _card_views: Array[WorkshopStockItem] = []
 ## 編成中のデッキ。同じ CardData が最大2つ入る。
 var _deck: Array = []
 ## 編集中のデッキが一覧の何番目か。-1 は新規作成(保存すると末尾へ追加する)。
@@ -64,7 +79,6 @@ func open(index: int = -1) -> void:
 		_index = -1
 		_deck = []
 		_name_input.text = CardDeckSave.next_default_name()
-	_header.set_title("デッキ編集" if _index >= 0 else "新しいデッキ")
 	_hide_detail()
 	_refresh()
 	_apply_filter()
@@ -74,7 +88,7 @@ func open(index: int = -1) -> void:
 
 
 func _build() -> void:
-	add_child(ScreenBackdrop.new())
+	add_child(WorkshopBackdrop.new())
 	_build_header()
 	_build_grid()
 	_build_side()
@@ -91,25 +105,31 @@ func _build() -> void:
 	add_child(_share_panel)
 
 
+## 画面名は吊り看板が示す(下地が描く)ため、ここは操作だけを置く。
+## 並びは共通の規約どおり**左=戻る / 右=主アクション**(GameDesign.md 9章)。
 func _build_header() -> void:
-	_header = load(HEADER_SCENE).instantiate()
-	add_child(_header)
-	_header.set_title("デッキ編集")
-	_header.back_pressed.connect(func() -> void: back_pressed.emit())
-	# **3つのボタンは画面タイトルへ寄りすぎないよう詰めてある。**以前は合計524pxあり、
-	# 中央のタイトル(「新しいデッキ」)と数pxしか離れていなかった。
-	var save_button := CodedButton.make("保存", Vector2(132, 56))
-	save_button.pressed.connect(_on_save_pressed)
-	_header.add_action(save_button)
-	# 20枚を自分で組まずに遊べる状態を用意する(GameDesign.md 18章)。
-	var preset_button := CodedButton.make("プリセット", Vector2(152, 56))
-	preset_button.pressed.connect(func() -> void: _preset_picker.open())
-	_header.add_action(preset_button)
-	# デッキの受け渡し(GameDesign.md 9章)。デッキ表の画像とデッキコードを1つの
-	# パネルへまとめている。別々に置くと、渡す方法が2つあること自体に気づけない。
-	var share_button := CodedButton.make("共有", Vector2(120, 56))
-	share_button.pressed.connect(func() -> void: _share_panel.open(_deck, _name_input.text))
-	_header.add_action(share_button)
+	var back := CodedButton.make("← 戻る", BACK_RECT.size)
+	back.position = BACK_RECT.position
+	back.pressed.connect(func() -> void: back_pressed.emit())
+	add_child(back)
+	# 右から「共有 / プリセット / 保存」の順に積む(左へ行くほど主要な操作)。
+	var labels := ["保存", "プリセット", "共有"]
+	var handlers: Array[Callable] = [
+		_on_save_pressed,
+		func() -> void: _preset_picker.open(),
+		func() -> void: _share_panel.open(_deck, _name_input.text),
+	]
+	for i in labels.size():
+		var button := CodedButton.make(labels[i], ACTION_SIZE)
+		var from_right := labels.size() - i
+		button.position = Vector2(
+			SCREEN_WIDTH - 24.0 - from_right * (ACTION_SIZE.x + ACTION_GAP) + ACTION_GAP,
+			BACK_RECT.position.y
+		)
+		button.pressed.connect(handlers[i])
+		add_child(button)
+		if i == 0:
+			_save_button = button
 
 
 func _build_grid() -> void:
@@ -126,7 +146,7 @@ func _build_grid() -> void:
 	container.add_child(toolbar)
 
 	_count_label = Label.new()
-	_count_label.text = "カード一覧"
+	_count_label.text = ""
 	_count_label.add_theme_font_size_override("font_size", 16)
 	_count_label.add_theme_color_override("font_color", UiPalette.BRASS_HIGHLIGHT)
 	_count_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -150,31 +170,22 @@ func _build_grid() -> void:
 	scroll.add_child(_grid)
 
 	for card in _pool:
-		var view := CardView.new()
-		view.mode = CardView.Mode.HAND
-		view.custom_minimum_size = CardView.HAND_SIZE_PX
-		# 並べて見比べる画面では守護だけ枠を太くしない(GameDesign.md 9章)。
-		view.guard_frame = false
+		var view := WorkshopStockItem.new()
 		view.pressed.connect(_on_card_pressed)
-		view.hovered.connect(_on_card_hovered)
+		view.mouse_entered.connect(_on_stock_hovered.bind(view))
 		view.mouse_exited.connect(_on_hover_left)
 		_grid.add_child(view)
 		_card_views.append(view)
 
 
+## 組立台の木の面は下地(`WorkshopBackdrop`)が描く。ここは中身だけを積む。
 func _build_side() -> void:
-	var panel := PanelContainer.new()
-	panel.position = SIDE_RECT.position
-	panel.size = SIDE_RECT.size
-	panel.custom_minimum_size = SIDE_RECT.size
-	var style: StyleBox = load(PANEL_STYLE)
-	if style != null:
-		panel.add_theme_stylebox_override("panel", style)
-	add_child(panel)
-
 	var column := VBoxContainer.new()
+	column.position = SIDE_RECT.position
+	column.size = SIDE_RECT.size
+	column.custom_minimum_size = SIDE_RECT.size
 	column.add_theme_constant_override("separation", 8)
-	panel.add_child(column)
+	add_child(column)
 
 	# 1. デッキ名と枚数
 	var top_row := HBoxContainer.new()
@@ -251,10 +262,12 @@ func _refresh() -> void:
 	var full: bool = _deck.size() >= MatchState.DECK_SIZE
 	for i in _card_views.size():
 		var card: CardData = _pool[i]
+		# **枚数は実数を出し、暗転だけを「入れられるか」で決める。**30枚に達した
+		# だけで全部が「2/2」になると、どれを2枚積んだのか読めなくなる。
 		var copies := _count_of(card)
-		var view := _card_views[i]
-		view.badge = "%d/%d" % [copies, CardDeckSave.COPY_LIMIT]
-		view.show_card(card, not full and copies < CardDeckSave.COPY_LIMIT)
+		var can_add: bool = not full and copies < CardDeckSave.COPY_LIMIT
+		_card_views[i].show_card(card, copies, CardDeckSave.COPY_LIMIT, can_add)
+	_save_button.disabled = not full
 
 
 func _apply_filter() -> void:
@@ -269,12 +282,12 @@ func _apply_filter() -> void:
 		_filter_button.text = "絞り込み (%d)" % active
 		_filter_button.add_theme_color_override("font_color", UiPalette.GLOW_AMBER)
 		_filter_button.add_theme_color_override("font_hover_color", UiPalette.GLOW_AMBER)
-		_count_label.text = "カード一覧 (%d / %d 種)" % [visible_count, _pool.size()]
+		_count_label.text = "%d / %d 種" % [visible_count, _pool.size()]
 	else:
 		_filter_button.text = "絞り込み"
 		_filter_button.remove_theme_color_override("font_color")
 		_filter_button.remove_theme_color_override("font_hover_color")
-		_count_label.text = "カード一覧 (%d 種)" % _pool.size()
+		_count_label.text = "%d 種" % _pool.size()
 
 
 func _count_of(card: CardData) -> int:
@@ -311,7 +324,7 @@ func _on_hover_left() -> void:
 		_detail_hide_timer.start()
 
 
-func _on_card_hovered(view: CardView) -> void:
+func _on_stock_hovered(view: WorkshopStockItem) -> void:
 	_show_detail(view.card, true)
 
 
@@ -323,8 +336,8 @@ func _on_shelf_hovered(card: CardData) -> void:
 # --- 操作 ---------------------------------------------------------------
 
 
-func _on_card_pressed(view: CardView) -> void:
-	_add_card(view.card)
+func _on_card_pressed(card: CardData) -> void:
+	_add_card(card)
 
 
 func _on_band_add(card: CardData) -> void:
