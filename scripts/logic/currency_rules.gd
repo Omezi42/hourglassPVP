@@ -26,11 +26,14 @@ const MIN_MOVES := 10
 const CPU_DAILY_LIMIT := 10
 
 
-## 判定結果を返す。
-## {"amount": int, "reason": String}
+## 判定結果を返す。`at_unix_time` は日曜イベント判定の基準時刻(テスト用。負値なら現在時刻)。
+## {"amount": int, "reason": String, "sunday": bool}
 ##   amount … 実際に加算する額(0なら対象外)
 ##   reason … 対象外だった理由。結果パネルに1行として出す(対象なら空文字)
-static func evaluate(kind: MatchKind, won: bool, move_count: int, cpu_today: int) -> Dictionary:
+##   sunday … 日曜イベントの倍率が掛かったかどうか
+static func evaluate(
+	kind: MatchKind, won: bool, move_count: int, cpu_today: int, at_unix_time: float = -1.0
+) -> Dictionary:
 	if not REWARDS.has(kind):
 		return {"amount": 0, "reason": ""}
 	if move_count < MIN_MOVES:
@@ -40,12 +43,17 @@ static func evaluate(kind: MatchKind, won: bool, move_count: int, cpu_today: int
 			"amount": 0, "reason": "CPU戦で%sを獲得できるのは1日%d戦までです" % [CURRENCY_NAME, CPU_DAILY_LIMIT]
 		}
 	var pair: Array = REWARDS[kind]
-	return {"amount": int(pair[0] if won else pair[1]), "reason": ""}
+	var amount: int = int(pair[0] if won else pair[1])
+	var sunday := kind == MatchKind.RANDOM and SundayEventRules.is_active(at_unix_time)
+	if sunday:
+		amount *= SundayEventRules.REWARD_MULTIPLIER
+	return {"amount": amount, "reason": "", "sunday": sunday}
 
 
 ## 結果パネルへ出す1行を組み立てる。
 static func format_reward(result: Dictionary) -> String:
 	var amount: int = int(result.get("amount", 0))
 	if amount > 0:
-		return "+%d %s" % [amount, CURRENCY_NAME]
+		var suffix := "(日曜イベント)" if bool(result.get("sunday", false)) else ""
+		return "+%d %s%s" % [amount, CURRENCY_NAME, suffix]
 	return str(result.get("reason", ""))

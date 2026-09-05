@@ -13,6 +13,7 @@ func run(assert_true: Callable) -> void:
 	_test_credential_validation(assert_true)
 	_test_synthetic_email(assert_true)
 	_test_currency_rules(assert_true)
+	_test_sunday_event_rules(assert_true)
 	_test_account_store(assert_true)
 	_test_local_replay_ownership(assert_true)
 	_test_text_glyphs(assert_true)
@@ -70,15 +71,24 @@ func _test_synthetic_email(assert_true: Callable) -> void:
 
 func _test_currency_rules(assert_true: Callable) -> void:
 	var enough := CurrencyRules.MIN_MOVES
+	# 日曜イベント(15章・25章)の倍率に左右されないよう、平日(月曜)の時刻で固定する。
+	var weekday := Time.get_unix_time_from_datetime_string("2026-09-07T12:00:00")
 
-	var random_win := CurrencyRules.evaluate(CurrencyRules.MatchKind.RANDOM, true, enough, 0)
+	var random_win := CurrencyRules.evaluate(
+		CurrencyRules.MatchKind.RANDOM, true, enough, 0, weekday
+	)
 	assert_true.call(int(random_win["amount"]) == 30, "a random match win should award 30")
-	var random_loss := CurrencyRules.evaluate(CurrencyRules.MatchKind.RANDOM, false, enough, 0)
+	assert_true.call(
+		not bool(random_win.get("sunday", false)), "a weekday match should not be a sunday reward"
+	)
+	var random_loss := CurrencyRules.evaluate(
+		CurrencyRules.MatchKind.RANDOM, false, enough, 0, weekday
+	)
 	assert_true.call(int(random_loss["amount"]) == 10, "a random match loss should still award 10")
 
-	var room_win := CurrencyRules.evaluate(CurrencyRules.MatchKind.ROOM, true, enough, 0)
+	var room_win := CurrencyRules.evaluate(CurrencyRules.MatchKind.ROOM, true, enough, 0, weekday)
 	assert_true.call(int(room_win["amount"]) == 10, "a room match win should award 10")
-	var cpu_win := CurrencyRules.evaluate(CurrencyRules.MatchKind.CPU, true, enough, 0)
+	var cpu_win := CurrencyRules.evaluate(CurrencyRules.MatchKind.CPU, true, enough, 0, weekday)
 	assert_true.call(int(cpu_win["amount"]) == 5, "a cpu match win should award 5")
 
 	# 自分ひとりで繰り返せる対局ほど報酬が低いこと(GameDesign.md 15章の線引き)
@@ -90,7 +100,9 @@ func _test_currency_rules(assert_true: Callable) -> void:
 		"rewards should decrease as a match gets easier to repeat alone"
 	)
 
-	var short_match := CurrencyRules.evaluate(CurrencyRules.MatchKind.RANDOM, true, enough - 1, 0)
+	var short_match := CurrencyRules.evaluate(
+		CurrencyRules.MatchKind.RANDOM, true, enough - 1, 0, weekday
+	)
 	assert_true.call(
 		int(short_match["amount"]) == 0, "a match shorter than the minimum awards none"
 	)
@@ -99,18 +111,18 @@ func _test_currency_rules(assert_true: Callable) -> void:
 	)
 
 	var capped := CurrencyRules.evaluate(
-		CurrencyRules.MatchKind.CPU, true, enough, CurrencyRules.CPU_DAILY_LIMIT
+		CurrencyRules.MatchKind.CPU, true, enough, CurrencyRules.CPU_DAILY_LIMIT, weekday
 	)
 	assert_true.call(int(capped["amount"]) == 0, "cpu matches past the daily cap award none")
 	assert_true.call(str(capped["reason"]) != "", "reaching the daily cap should explain why")
 	var under_cap := CurrencyRules.evaluate(
-		CurrencyRules.MatchKind.CPU, true, enough, CurrencyRules.CPU_DAILY_LIMIT - 1
+		CurrencyRules.MatchKind.CPU, true, enough, CurrencyRules.CPU_DAILY_LIMIT - 1, weekday
 	)
 	assert_true.call(int(under_cap["amount"]) == 5, "the last cpu match under the cap still awards")
 
 	# ローカル対戦・観戦・リプレイ再生は「自分が1人のプレイヤーとして対局した」とは
 	# 言えないため対象外。理由の表示も出さない(獲得できて当然の場面ではないため)
-	var none := CurrencyRules.evaluate(CurrencyRules.MatchKind.NONE, true, enough, 0)
+	var none := CurrencyRules.evaluate(CurrencyRules.MatchKind.NONE, true, enough, 0, weekday)
 	assert_true.call(int(none["amount"]) == 0, "an unrewarded match kind awards none")
 	assert_true.call(str(none["reason"]) == "", "an unrewarded match kind should not explain")
 
@@ -120,6 +132,64 @@ func _test_currency_rules(assert_true: Callable) -> void:
 	)
 	assert_true.call(
 		CurrencyRules.format_reward(none) == "", "a silent non-reward should format to nothing"
+	)
+
+	# 日曜イベント(GameDesign.md 15章・25章): ランダムマッチだけ2倍、他は据え置き。
+	var sunday_ts := Time.get_unix_time_from_datetime_string("2026-09-06T12:00:00")
+	var sunday_random := CurrencyRules.evaluate(
+		CurrencyRules.MatchKind.RANDOM, true, enough, 0, sunday_ts
+	)
+	assert_true.call(
+		int(sunday_random["amount"]) == 60, "a sunday random match win should award double"
+	)
+	assert_true.call(
+		bool(sunday_random.get("sunday", false)), "a sunday random match should flag the event"
+	)
+	var sunday_room := CurrencyRules.evaluate(
+		CurrencyRules.MatchKind.ROOM, true, enough, 0, sunday_ts
+	)
+	assert_true.call(
+		int(sunday_room["amount"]) == 10, "room matches should not be affected by the sunday event"
+	)
+	var sunday_cpu := CurrencyRules.evaluate(
+		CurrencyRules.MatchKind.CPU, true, enough, 0, sunday_ts
+	)
+	assert_true.call(
+		int(sunday_cpu["amount"]) == 5, "cpu matches should not be affected by the sunday event"
+	)
+	assert_true.call(
+		CurrencyRules.format_reward(sunday_random).ends_with("(日曜イベント)"),
+		"a sunday reward should note the event in its label"
+	)
+
+
+## 日曜イベント(GameDesign.md 15章・25章)の境界。UTC時刻へ+9時間してJSTへ換算するため、
+## 土曜23:59 JST(=UTC 14:59)と日曜0:00 JST(=UTC 15:00)の境目を跨いで確かめる。
+func _test_sunday_event_rules(assert_true: Callable) -> void:
+	var saturday_night := Time.get_unix_time_from_datetime_string("2026-09-05T14:59:00")
+	assert_true.call(
+		not SundayEventRules.is_active(saturday_night),
+		"23:59 JST on saturday should still be saturday"
+	)
+	var sunday_midnight := Time.get_unix_time_from_datetime_string("2026-09-05T15:00:00")
+	assert_true.call(
+		SundayEventRules.is_active(sunday_midnight), "00:00 JST should already be sunday"
+	)
+	var sunday_night := Time.get_unix_time_from_datetime_string("2026-09-06T14:59:00")
+	assert_true.call(
+		SundayEventRules.is_active(sunday_night), "23:59 JST on sunday should still be sunday"
+	)
+	var monday_midnight := Time.get_unix_time_from_datetime_string("2026-09-06T15:00:00")
+	assert_true.call(
+		not SundayEventRules.is_active(monday_midnight), "00:00 JST on monday should end the event"
+	)
+	assert_true.call(
+		SundayEventRules.banner_text(saturday_night).is_empty(),
+		"the banner should be empty outside the event"
+	)
+	assert_true.call(
+		not SundayEventRules.banner_text(sunday_midnight).is_empty(),
+		"the banner should show during the event"
 	)
 
 

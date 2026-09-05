@@ -1,0 +1,13 @@
+{
+  "name": "hourglass-arena-functions",
+  "description": "砂時計アリーナ - Discordへの定期告知・将来のスラッシュコマンド受け口(GameDesign.md 25章)",
+  "private": true,
+  "engines": {
+    "node": "20"
+  },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-functions": "^5.1.1",
+    "discord-interactions": "^3.4.0"
+  }
+}

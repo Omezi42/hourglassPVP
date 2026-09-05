@@ -1166,7 +1166,7 @@ pckから除外した後も true を返すことがあり、有無の判定に�
   切った対局など「1手番の枠」が変わりうる経路が残っているため、割合で持つ形は変えない
 - サーバー側での操作の正当性検証は行わず、クライアントの操作をそのまま信頼する(不正対策は将来検討)
 - Firebaseの接続情報(`apiKey`/`projectId`等)は `FirebaseConfig`(Resource)として `data/firebase_config.tres` に保持する。Web向けAPIキーは元々クライアント埋め込み前提の値であり、Firestoreセキュリティルール側でアクセス制御する運用とする
-- マッチ成立後、両者は `matches/{match_id}` ドキュメントへ自分のデッキ(30枚のid配列)を `deck_a`/`deck_b` として、先手側は山札の `seed` も書き込む(`OnlineSetup` が担当)。相手側はポーリングでこれを検知する。**v5.0は配置フェーズを持たないため、交換するのはデッキと種だけ**で、揃った時点でそのまま `MatchState.start_match()` へ入る(4.0節)
+- ルームマッチは両者の入室後、`rooms/{code}.started` が `true` になるまでロビーで待つ。デッキと持ち時間を確認でき、開始操作はホストだけが行う。開始後、両者は `matches/{match_id}` ドキュメントへ自分のデッキ(30枚のid配列)を `deck_a`/`deck_b` として、先手側は山札の `seed` も書き込む(`OnlineSetup` が担当)。相手側はポーリングでこれを検知する。**v5.0は配置フェーズを持たないため、交換するのはデッキと種だけ**で、揃った時点で `MatchState.start_match()` へ入る(4.0節)
 - オンライン時は対局画面の表示視点(自分/相手)を `state.current_turn` ではなく固定の `my_side` にし、自分の手番でない間は操作を受け付けない
 - マリガン(GameDesign.md 2章)は手と同じ `actions` の1件として送り合う。**両者ぶんが揃ってから A → B の固定順で適用する**(適用が山札を切り直して乱数を消費するため、届いた順に適用すると同じ種から始めた対局が食い違う)
 - 対局中の実際の手の送受信は `OnlineMatch` が担当し、対局画面は自分の操作を `OnlineMatch.send_and_apply` 経由で送信しつつ即座にローカル反映する
@@ -1365,6 +1365,7 @@ HTTPRequest をぶら下げると送信の途中で巻き添えに消える。�
 
 **持ち時間の入/切は `rooms/{code}` の `time_limit` として持つ**(GameDesign.md 5章)。
 部屋を作る側が書き、参加する側は `join_room()` が読んで `RoomMatch.time_limit` へ控える。
+両者が入室するとロビーへ入り、ホストが `started` を立てるまで対局へ遷移しない。
 **画面はマッチ成立時にこの値を対局画面まで運ぶ**(`matched` → `Main` →
 `CardMatchScreen.start_online_match()` → `CardMatchOnline.start()`)。
 `CardMatchOnline` は `time_limit` が偽のとき `MatchClock` を生成しない。
@@ -1921,6 +1922,50 @@ UI層へ依存することになる。
 **問題が解けることはテストで確かめる**(`tools/tests/puzzle_mission_tests.gd`)。
 問題ごとの解答手順を持ち、`MatchState` へ直接流して相手のHPが0になることを見る。
 **データが読めることだけを見て終えると、届かない問題を出荷してしまう。**
+
+---
+
+### 10.13 日曜イベントとその告知(GameDesign.md 15章・25章)
+
+| クラス | 責務 |
+|---|---|
+| `SundayEventRules`(`scripts/logic/sunday_event_rules.gd`, static) | いま日曜イベント中かどうかの判定と、報酬の倍率適用 |
+| `functions/`(Firebaseプロジェクト直下、Node.js) | `announceSundayEvent`(定期告知)・`discordInteractions`(将来のスラッシュコマンドの受け口) |
+
+**`SundayEventRules.is_active()` は `Time.get_datetime_dict_from_system(true)` の
+UTC時刻を +9時間して日本時間へ換算し、曜日を見る。**サーバー側で正当性検証を行わない
+既存方針(GameDesign.md 11章)に揃え、**クライアントのローカル時刻をそのまま信頼する**。
+
+- **`CurrencyRules` はこの判定を呼ぶだけで、曜日の計算そのものを持たない。**
+  `grant_amount(kind, won)` が `SundayEventRules.is_active()` を見て、
+  ランダムマッチ(`MatchKind.RANDOM`)かつ true のときだけ倍率(2倍)を掛ける。
+  ルームマッチ・CPU戦は `is_active()` を見ない
+- **表示は `HomeScreen` と `CardMatchOutcome`(結果パネル)の2箇所だけに足す。**
+  いずれも `SundayEventRules.is_active()` を読むだけの1行で、通常時は何も出さない
+- **Firebase Cloud Functions を1つ追加する。**この作品が初めて持つ「常駐しないが
+  サーバー側で動くコード」であり、GameDesign.md 10章冒頭の「バックエンドは自前サーバーを
+  立てず、サーバーレスDBを使う」という方針の範囲内(Cloud Functions自体もサーバーレスの
+  実行環境である)
+
+| 関数 | トリガー | 役割 |
+|---|---|---|
+| `announceSundayEvent` | Cloud Scheduler(`0 0 * * 0`, Asia/Tokyo) | Discordの#お知らせへ日曜イベント開始のメッセージを投稿する |
+| `discordInteractions` | HTTPS(Discordの Interactions Endpoint URL) | 将来のスラッシュコマンドを受け付ける入口。現時点ではコマンドを1つも持たず、`PING`(type 1)への`PONG`(type 1)応答だけを返す |
+
+- **常駐プロセスは持たない。**いずれの関数も呼ばれたときだけ実行され、
+  リクエストの外で状態を保持しない
+- **DiscordのBotトークン・Interactionsの公開鍵は Firebase Functions のシークレット管理
+  (`firebase functions:secrets:set`)へ置き、リポジトリへは一切コミットしない。**
+  6.3節のWebhook URL(`data/discord_webhook.txt`)と同じ扱いで、`functions/` 側は
+  環境変数からのみ読む
+- **`discordInteractions` の署名検証は `discord-interactions`(公式ライブラリ)の
+  `verifyKey()` を必ず通す。**検証を怠ると、Discord以外の第三者からのリクエストを
+  受け付けてしまう
+- **クライアント(Godot)側の変更は「判定・倍率・バナー表示」だけに留める。**
+  告知そのものはクライアントを経由しない(6.3節の募集通知はクライアント発火だが、
+  こちらはサーバー側の定期実行が発火する点が異なる)
+- **将来スラッシュコマンドを足すときは `discordInteractions` へ分岐を1つ足すだけにする。**
+  Botのプロセスを新設せず、この1関数へ集約する
 
 ---
 

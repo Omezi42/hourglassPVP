@@ -42,3 +42,6 @@ assets/hourglasses/emblems/sources/
 
 __pycache__/
 tools/tmp_*
+
+# Cloud Functions(GameDesign.md 25章)の依存パッケージ。npm installで再生成できる。
+/functions/node_modules/

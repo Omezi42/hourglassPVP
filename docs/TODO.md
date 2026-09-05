@@ -1,5 +1,28 @@
 # 開発タスク・進捗(TODO)
 
+## 日曜イベント(砂金2倍)とDiscord自動告知
+
+仕様は GameDesign.md 15章・25章、実装設計は Architecture.md 10.13節。
+
+- [x] `SundayEventRules`(JST換算で日曜判定)を実装
+- [x] `CurrencyRules` に日曜イベントの倍率(ランダムマッチのみ2倍)を反映
+- [x] ホーム画面・対局結果パネルに「日曜イベント中」の1行表示を追加
+- [x] ヘッドレステスト(`SundayEventRules` の曜日判定・`CurrencyRules` の倍率)
+- [x] `functions/` (Firebase Cloud Functions)を新設
+  - [x] `announceSundayEvent`(Cloud Scheduler、毎週日曜0:00 JST、Discordへ告知)
+  - [x] `discordInteractions`(HTTPS、署名検証込み。現時点ではPING応答のみ)
+  - [ ] **Botトークン・Interactions公開鍵をFirebase Functionsのシークレットへ設定**
+        (ユーザー側の操作が必要:
+        `firebase functions:secrets:set DISCORD_WEBHOOK_URL` /
+        `firebase functions:secrets:set DISCORD_PUBLIC_KEY`)
+  - [ ] `firebase deploy --only functions` でデプロイ(要 `npm install -g firebase-tools` と
+        ログイン)
+  - [ ] Discord Developer PortalでBotの「Interactions Endpoint URL」に、デプロイ後の
+        `discordInteractions` のURLを設定する(スラッシュコマンドを実装する回に着手)
+- [ ] 実機での確認(日曜以外の日にコードの日付判定だけ差し替えて動作確認)
+
+---
+
 ## 運用ルール
 
 - このファイルには**今やっている/次にやるタスクのみ**を残す
