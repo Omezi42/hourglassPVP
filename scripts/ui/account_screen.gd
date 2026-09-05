@@ -346,6 +346,7 @@ class PlaymatSwatch:
 
 	var mat_id: String
 	var is_selected := false
+	var _font: Font
 
 	func _init(p_mat_id: String) -> void:
 		mat_id = p_mat_id
@@ -356,6 +357,11 @@ class PlaymatSwatch:
 		tooltip_text = PlaymatLibrary.display_name(p_mat_id)
 		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 
+	func _ready() -> void:
+		_font = get_theme_default_font()
+		if _font == null:
+			_font = ThemeDB.fallback_font
+
 	func _draw() -> void:
 		var rect := Rect2(Vector2.ZERO, size)
 		PlaymatPaint.draw_mat(self, rect, mat_id)
@@ -365,6 +371,19 @@ class PlaymatSwatch:
 			false,
 			3.0 if is_selected else 1.4
 		)
+		# 「なし」は何も描かれない空の枠になるため、見本だけは文字を添える
+		# (GameDesign.md 9章「所有しているものだけをアカウント画面の一覧に出す」の
+		# 一覧が、押しても何も起きないように見えないようにするため)。
+		if mat_id == PlaymatLibrary.NONE_ID and _font != null:
+			draw_string(
+				_font,
+				Vector2(0, rect.size.y * 0.5 + 5),
+				PlaymatLibrary.display_name(mat_id),
+				HORIZONTAL_ALIGNMENT_CENTER,
+				rect.size.x,
+				14,
+				UiPalette.TEXT_OFFWHITE
+			)
 
 
 class IconButton:
