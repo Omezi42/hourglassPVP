@@ -30,6 +30,9 @@ func run(assert_true: Callable) -> void:
 	_test_match_action_round_trip()
 	_test_cpu_finishes_a_full_match()
 	_test_coin_gives_the_second_player_one_extra_mana()
+	_test_flip_right_ignores_the_normal_flip_limit()
+	_test_flip_right_has_a_limited_total_and_carries_over_turns()
+	_test_flip_right_cannot_be_used_off_turn_or_on_an_empty_slot()
 	_test_card_deck_save_round_trips()
 	_test_same_seed_reproduces_the_same_match()
 	_test_mulligan_waits_for_both_sides()
@@ -423,6 +426,83 @@ func _test_coin_gives_the_second_player_one_extra_mana() -> void:
 		state.mana[MatchState.Side.B] == before + MatchState.COIN_MANA, "the coin should add mana"
 	)
 	_assert.call(not state.use_coin(MatchState.Side.B), "the coin should only work once")
+
+
+## 反転権(GameDesign.md 2章)は通常の反転の制限(1体1ターン1回・出したターンは不可)を
+## 無視し、敵味方どちらの駒も対象に取れる。
+func _test_flip_right_ignores_the_normal_flip_limit() -> void:
+	var state := _new_match()
+	var mine: CardInstance = _force_play(state, MatchState.Side.A, "sand", 0)
+	mine.drop_sand(1)
+	var foe: CardInstance = _force_play(state, MatchState.Side.B, "sand", 0)
+	foe.drop_sand(1)
+	_assert.call(not mine.can_flip(), "a unit played this turn cannot use the normal flip")
+	_assert.call(
+		state.use_flip_right(MatchState.Side.A, MatchState.Side.A, 0),
+		"flip right should ignore summoning sickness"
+	)
+	_assert.call(mine.health == 1 and mine.attack == 4, "flip right should swap health and attack")
+	_assert.call(
+		state.use_flip_right(MatchState.Side.A, MatchState.Side.B, 0),
+		"flip right should be usable on an enemy unit even outside the normal target rules"
+	)
+	_assert.call(foe.health == 1 and foe.attack == 4, "flip right should flip an enemy unit too")
+
+
+## 反転権の総回数は先手・後手で異なり、使い切ったら止まり、ターンをまたいでも回復しない。
+func _test_flip_right_has_a_limited_total_and_carries_over_turns() -> void:
+	var state := _new_match()
+	_assert.call(
+		int(state.flip_right_remaining[MatchState.Side.A]) == MatchState.FLIP_RIGHT_FIRST,
+		"the first player should start with the first-player total"
+	)
+	_assert.call(
+		int(state.flip_right_remaining[MatchState.Side.B]) == MatchState.FLIP_RIGHT_SECOND,
+		"the second player should start with the second-player total"
+	)
+	var mine: CardInstance = _force_play(state, MatchState.Side.A, "sand", 0)
+	mine.drop_sand(1)
+	var used := 0
+	while (
+		int(state.flip_right_remaining[MatchState.Side.A]) > 0
+		and used <= MatchState.FLIP_RIGHT_FIRST
+	):
+		_assert.call(
+			state.use_flip_right(MatchState.Side.A, MatchState.Side.A, 0),
+			"flip right should be usable while a charge remains"
+		)
+		used += 1
+	_assert.call(
+		used == MatchState.FLIP_RIGHT_FIRST,
+		"the total number of charges used should match the starting total"
+	)
+	_assert.call(
+		not state.use_flip_right(MatchState.Side.A, MatchState.Side.A, 0),
+		"flip right should not work once all charges are spent"
+	)
+	state.end_turn()
+	_assert.call(
+		int(state.flip_right_remaining[MatchState.Side.A]) == 0,
+		"charges should not refill when the turn changes"
+	)
+
+
+## 反転権は自分の手番でしか使えず、空き枠を対象に取れない。
+func _test_flip_right_cannot_be_used_off_turn_or_on_an_empty_slot() -> void:
+	var state := _new_match()
+	_force_play(state, MatchState.Side.A, "sand", 0)
+	_assert.call(
+		not state.use_flip_right(MatchState.Side.B, MatchState.Side.A, 0),
+		"flip right should require it to be your own turn"
+	)
+	_assert.call(
+		not state.use_flip_right(MatchState.Side.A, MatchState.Side.A, 1),
+		"flip right should not work on an empty slot"
+	)
+	_assert.call(
+		MatchAction.apply(state, MatchAction.flip_right(MatchState.Side.A, MatchState.Side.A, 0)),
+		"MatchAction should route flip_right to the board"
+	)
 
 
 ## デッキの保存と読み込み。実データを壊さないよう、必ずバックアップ→上書き→復元で往復する。

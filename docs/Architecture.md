@@ -274,6 +274,30 @@ UIに依存しない、対局ルールそのものを扱う層。
 **戻すのは `CardData` であり、`CardInstance` の状態(受けたダメージ・与えられたキーワード)は
 すべて失われる**——手札へ戻ったカードは新品の1枚として扱う。
 
+### 3.1.2 反転権(GameDesign.md 2章)
+
+**新しいクラスを作らず、`MatchState` へ `flip()` と対になるメソッドを1組足すだけにする。**
+先手・後手で総回数(`FLIP_RIGHT_FIRST` / `FLIP_RIGHT_SECOND`。**値は要検証の仮置き**)が
+違う点以外は、通常の反転と同じ「体力と攻撃力を入れ替え、`ON_FLIP` を解決する」処理を再利用する。
+
+- `flip_right_remaining: Dictionary`(Side → 残り回数)を `start_match()` で先手・後手それぞれ
+  の総量に初期化する。使うたびに1減り、**ターンをまたいでも0に戻さない**(`_begin_turn()` は
+  一切触らない)
+- `_can_use_flip_right(side, target_side, slot)` は `can_flip()` を呼ばない。**通常の反転の
+  制限(1体1ターン1回・出したターンは不可)を無視する**という仕様(2章)をそのまま表しており、
+  見るのは「自分の手番か」「残り回数があるか」「対象の枠に砂時計がいるか」の3つだけ。
+  **公開しない**——`MatchState` は既にgdlintの公開メソッド上限(11章)へ張り付いているため、
+  コイン(`use_coin()` のみで `can_use_coin()` を持たない)と同じく、UIは戻り値だけで
+  成否を判断する。対象を選ぶ前の「押した枠に駒がいるか」は盤面を直接読めば足りる
+- `use_flip_right(side, target_side, slot)` は `flip()` とほぼ同じ手順(`unit.flip()` →
+  シグナル → `_fire(ON_FLIP)` → 死亡なら `_destroy_unit()`)を踏むが、**`unit_flipped` ではなく
+  専用の `flip_right_used(actor_side, target_side, slot)` を出す**。反転権は敵味方どちらの駒も
+  対象に取れるため、「誰が手を出したか(actor_side)」と「駒の持ち主(target_side)」が
+  別々の値になりうる。既存の `unit_flipped(side, slot)` は「持ち主=手を出した側」を前提に
+  UI側(光の筋の向き)が組まれているため、同じ信号へ相乗りさせず分ける
+- `MatchAction.flip_right(side, target_side, slot)` / `apply()` の `"flip_right"` 分岐を足す。
+  棋譜・オンライン送信・リプレイはすべて既存の `MatchAction` の経路をそのまま通る
+
 ### 3.2 `CardEffectResolver`(`scripts/logic/card_effect_resolver.gd`, RefCounted)
 
 `CardEffectData` の評価と適用を1箇所に集約する。`MatchState` が生成して保持し、
@@ -345,6 +369,8 @@ UIに依存しない、対局ルールそのものを扱う層。
 | `CardViewStrike`(`scripts/ui/card_view_strike.gd`) | 攻撃の演出の段取り(寄る→溜める→当てる→戻る)。**`CardView` が1000行の上限に達したため切り出した**。分ける線は「駒の見た目」と「殴りに行く段取り」に引き、状態(offset / angle / flash)と描画は `CardView` 側に残す(絵に掛ける変換は描画のたびに要るため) |
 | `CardMatchReplay`(`scripts/ui/card_match_replay.gd`) | リプレイの再生コントロール。**任意の手数の局面は初期状態から手を並べ直して作る** |
 | `CardMatchOnline`(`scripts/ui/card_match_online.gd`) | オンライン対戦の3つの入口(開始・切断からの復帰・観戦)。`card_match_screen.gd` が1000行の上限に達したため切り出した。画面側には `main.gd` から呼ぶ薄い委譲だけが残る |
+| `CardMatchSpell`(`scripts/ui/card_match_spell.gd`) | 砂術を撃つ操作の段取り(GameDesign.md 6章)。`card_match_screen.gd` が1000行の上限に達したため切り出した |
+| `CardMatchFlipRight`(`scripts/ui/card_match_flip_right.gd`) | 反転権(GameDesign.md 2章)の段取り。ボタンの生成・対象選択(`CardMatchSelection.Kind.FLIP_RIGHT`)・`MatchAction.flip_right()` の適用を1箇所へ集める。**「戻る」ボタンと同じ位置に置く**——戻るボタンは再生・観戦(`_interactive == false`)だけ、反転権は対局中(`_interactive == true`)だけに出るため両者は同時に見えず、行動の列を再配置せずに済む |
 
 **砂術は `CardView.Mode.HAND` の中の分岐として描く**(GameDesign.md 9章)。
 `Mode.SPELL` を足さないのは、**砂術に「場での見た目」が存在しない**ため。
@@ -448,6 +474,13 @@ UIに依存しない、対局ルールそのものを扱う層。
 届いたところで駒を持ち上げて裏返す。**光の筋は対局画面の `_draw()` ではなく独立した
 オーバーレイのノードとして持つ**。`Control._draw()` は自分の子より背面に描かれるため、
 画面側で描くと卓と駒に隠れて筋がほとんど見えない(実際にそうなった)。
+
+**反転権(GameDesign.md 2章)は `play_flip()` の第4引数 `actor_side` で向きを渡す。**
+通常の反転は「駒の持ち主 = 手を出した側」が常に成り立つため、光の筋は駒の持ち主の
+情報帯から伸びる。反転権は敵味方どちらの駒も対象に取れ、この前提が崩れるため、
+`MatchState.flip_right_used(actor_side, target_side, slot)` を別のシグナルとして受け、
+`play_flip(self, target_side, slot, actor_side)` のように駒の持ち主(`target_side`)と
+手を出した側(`actor_side`)を分けて渡す。
 
 **攻撃は `CardView.play_strike()` が駒そのものを動かして見せる**(GameDesign.md 9章)。
 「寄る → 溜める → 当てる → 戻る」の4段を1本の `Tween` で組み、**駒は上端を支点に振れる**

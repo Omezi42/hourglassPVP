@@ -11,6 +11,8 @@ enum Kind {
 	BOARD,
 	## 設置効果の対象を選んでいる途中。出す枠までは決まっている。
 	TARGETING,
+	## 反転権の対象を選んでいる途中(GameDesign.md 2章)。敵味方どちらの枠でも選べる。
+	FLIP_RIGHT,
 }
 
 var kind: int = Kind.NONE
@@ -43,6 +45,13 @@ func await_target(index: int, p_slot: int) -> void:
 	slot = p_slot
 
 
+## 反転権の対象選択へ入る。手札もどの枠を出すかも持たない、単独の行動。
+func begin_flip_right() -> void:
+	kind = Kind.FLIP_RIGHT
+	hand_index = -1
+	slot = -1
+
+
 ## 何も選んでいない。取り消しの操作を受けるかどうかの判定に使う。
 func is_empty() -> bool:
 	return kind == Kind.NONE
@@ -50,6 +59,10 @@ func is_empty() -> bool:
 
 func is_targeting() -> bool:
 	return kind == Kind.TARGETING
+
+
+func is_flip_right() -> bool:
+	return kind == Kind.FLIP_RIGHT
 
 
 func is_hand_selection() -> bool:

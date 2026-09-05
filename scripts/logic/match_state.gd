@@ -21,6 +21,10 @@ signal unit_shielded(side: int, slot: int)
 ## 砂時計が破壊されたとき。
 signal unit_destroyed(side: int, slot: int, card: CardData)
 signal unit_flipped(side: int, slot: int)
+## 反転権を使った(GameDesign.md 2章)。`actor_side` が使った側、`target_side`/`slot` が
+## 反転させた駒。敵味方どちらの駒も対象に取れるため、`unit_flipped` とは別の信号にする
+## (演出の光の筋が「誰が手を出したか」を示すには actor_side が要る)。
+signal flip_right_used(actor_side: int, target_side: int, slot: int)
 ## ターン終了時に砂が1粒落ちたとき。**ダメージ(砂が消える)とは別のシグナルにする**。
 ## UI側でこの2つを別の演出として描き分けるため(GameDesign.md 9章)。
 signal unit_ticked(side: int, slot: int)
@@ -58,6 +62,12 @@ const FATIGUE_DAMAGE := 1
 const COIN_MANA := 1
 ## コインを配るかどうか(GameDesign.md 2章)。
 const COIN_ENABLED := true
+## 反転権(GameDesign.md 2章):場の砂時計を敵味方問わず反転できる特殊な行動回数。
+## 通常の反転(1体1ターン1回・出したターンは不可)を無視し、マナも不要。
+## 後手を多くすることで手番差を補正する。**値は要検証の仮置きで、
+## 7章の5指標を見て確定させる**(docs/BalanceReport_v5.md に測定結果を追記する)。
+const FLIP_RIGHT_FIRST := 2
+const FLIP_RIGHT_SECOND := 3
 ## 引き分けを避けるための保険。両者が延々とパスし続けた場合に打ち切る。
 const MAX_TURNS := 200
 ## 連続してこの回数だけ手番を時間切れで渡したら敗北(GameDesign.md 5章)。
@@ -82,6 +92,9 @@ var end_reason: int = EndReason.HP_DEPLETED
 var winner: int = -1
 ## まだコインを持っているか(Side をキーにした bool)。対局開始時に後手だけ true になる。
 var coin_available: Dictionary = {}
+## 反転権の残り回数(Side をキーにした int)。対局開始時に先手・後手それぞれの
+## 総量が入り、使うたびに減る。ターンをまたいで持ち越せる。
+var flip_right_remaining: Dictionary = {}
 ## 側ごとの、連続した時間切れの回数。持ち時間を短くする段(GameDesign.md 5章)と
 ## 敗北の判定の両方がこれを見る。**手として送り合うため両者で同じ値になる。**
 var turn_forfeits: Dictionary = {}
@@ -139,6 +152,8 @@ func start_match(
 	deck[Side.B] = _shuffled(deck_b)
 	var second_side := other_side(p_first_side)
 	coin_available[second_side] = use_coin_rule
+	flip_right_remaining[p_first_side] = FLIP_RIGHT_FIRST
+	flip_right_remaining[second_side] = FLIP_RIGHT_SECOND
 	for i in FIRST_PLAYER_HAND:
 		_draw_one(p_first_side)
 	for i in SECOND_PLAYER_HAND:
@@ -434,6 +449,40 @@ func flip(side: int, slot: int) -> bool:
 	return true
 
 
+# --- 反転権 ---------------------------------------------------------------
+
+
+## 反転権が使えるか。**通常の反転(1体1ターン1回・出したターンは不可)を無視する**
+## ため、`can_flip()` は見ない。自分の手番であること・残り回数があること・
+## 対象の枠に砂時計がいることだけを見る。**公開しない**——MatchState は既に
+## gdlint の公開メソッド上限へ張り付いているため(11章)、コインと同じく
+## `use_flip_right()` の戻り値だけで「使えたか」を判断させる。UI側で対象を
+## 選ぶ前の判定(押した枠に駒がいるか)は盤面を直接読めば足りる。
+func _can_use_flip_right(side: int, target_side: int, slot: int) -> bool:
+	if _match_over or current_turn != side:
+		return false
+	if int(flip_right_remaining.get(side, 0)) <= 0:
+		return false
+	if slot < 0 or slot >= BOARD_SIZE:
+		return false
+	return board[target_side][slot] != null
+
+
+## 反転権を使う。敵味方問わず1体を反転させる。マナは不要。
+func use_flip_right(side: int, target_side: int, slot: int) -> bool:
+	if not _can_use_flip_right(side, target_side, slot):
+		return false
+	flip_right_remaining[side] = int(flip_right_remaining[side]) - 1
+	var unit: CardInstance = board[target_side][slot]
+	unit.flip()
+	flip_right_used.emit(side, target_side, slot)
+	_fire(target_side, unit, CardEnums.Trigger.ON_FLIP, {})
+	if unit.is_dead():
+		_destroy_unit(target_side, slot)
+	board_changed.emit(target_side)
+	return true
+
+
 # --- 戦闘 ---------------------------------------------------------------
 
 
@@ -451,19 +500,6 @@ func attackable_slots(defender_side: int) -> Array:
 		else:
 			others.append(i)
 	return guards if not guards.is_empty() else others
-
-
-## まだ出せるカードか、攻撃できる駒が残っているか。
-## 対局画面がターン終了ボタンの色を決めるのに使う(GameDesign.md 9章)。
-func has_moves_left(side: int) -> bool:
-	for index in hand[side].size():
-		if can_play(side, index):
-			return true
-	for slot in BOARD_SIZE:
-		var unit: CardInstance = board[side][slot]
-		if unit != null and unit.can_attack():
-			return true
-	return false
 
 
 func can_attack_player(side: int) -> bool:

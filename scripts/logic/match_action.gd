@@ -8,6 +8,7 @@ extends RefCounted
 ##   {"type": "play",     "side":, "hand_index":, "slot":, "target": {"side":, "slot":}}
 ##   {"type": "cast",     "side":, "hand_index":, "target": {"side":, "slot":}}
 ##   {"type": "flip",     "side":, "slot":}
+##   {"type": "flip_right","side":, "target_side":, "slot":}   反転権(GameDesign.md 2章)
 ##   {"type": "attack",   "side":, "slot":, "target_slot":}   target_slot が -1 なら本体
 ##   {"type": "end_turn", "side":}
 ##   {"type": "surrender","side":}
@@ -27,6 +28,10 @@ static func cast(side: int, hand_index: int, target: Dictionary = {}) -> Diction
 
 static func flip(side: int, slot: int) -> Dictionary:
 	return {"type": "flip", "side": side, "slot": slot}
+
+
+static func flip_right(side: int, target_side: int, slot: int) -> Dictionary:
+	return {"type": "flip_right", "side": side, "target_side": target_side, "slot": slot}
 
 
 static func attack(side: int, slot: int, target_slot: int) -> Dictionary:
@@ -64,6 +69,8 @@ static func apply(state: MatchState, action: Dictionary) -> bool:
 			)
 		"cast":
 			return state.cast_spell(side, action["hand_index"], action.get("target", {}))
+		"flip_right":
+			return state.use_flip_right(side, action["target_side"], action["slot"])
 		"flip":
 			return state.flip(side, action["slot"])
 		"attack":

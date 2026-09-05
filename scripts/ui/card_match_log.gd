@@ -48,6 +48,7 @@ func watch(state: MatchState) -> void:
 	state.unit_played.connect(_on_unit_played)
 	state.spell_cast.connect(_on_spell_cast)
 	state.unit_flipped.connect(_on_unit_flipped)
+	state.flip_right_used.connect(_on_flip_right_used)
 	state.attack_performed.connect(_on_attack)
 	state.unit_destroyed.connect(_on_unit_destroyed)
 	state.hp_changed.connect(_on_hp_changed)
@@ -124,6 +125,20 @@ func _on_unit_flipped(side: int, slot: int) -> void:
 		),
 		"flip",
 		side,
+		slot
+	)
+
+
+## 反転権(GameDesign.md 2章)。誰が使ったかと、誰の駒を反転させたかを分けて書く
+## (自分の駒に使った場合は持ち主を重ねて言わない)。
+func _on_flip_right_used(actor_side: int, target_side: int, slot: int) -> void:
+	var unit: CardInstance = _state.board[target_side][slot]
+	var name := _unit_name(target_side, slot)
+	var described := name if actor_side == target_side else "%sの%s" % [_name_of(target_side), name]
+	_append(
+		"%sが反転権で%sを反転(体力%d / 攻撃力%d)" % [_name_of(actor_side), described, unit.health, unit.attack],
+		"flip_right",
+		target_side,
 		slot
 	)
 

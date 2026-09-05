@@ -118,6 +118,8 @@ var _effects: CardMatchEffects
 var _targets: CardMatchTargets
 ## 砂術を撃つ段取り。CardMatchTargets が対象の側を引くためにも読む。
 var _spell: CardMatchSpell
+## 反転権(GameDesign.md 2章)の段取り。
+var _flip_right: CardMatchFlipRight
 var _feed: CardMatchTurnFeed
 var _cpu_followup := false
 var _surrender_button: Button
@@ -141,6 +143,7 @@ func _ready() -> void:
 	_online_ctl = CardMatchOnline.new(self)
 	_targets = CardMatchTargets.new(self)
 	_spell = CardMatchSpell.new(self)
+	_flip_right = CardMatchFlipRight.new(self)
 	_clocks = CardMatchClock.new(self)
 	_emote = CardMatchEmote.new(self)
 	_emote.set_position(Vector2(ACTION_COLUMN_X, EMOTE_BUTTON_TOP))
@@ -358,6 +361,12 @@ func _begin_state(
 	state.unit_flipped.connect(
 		func(side: int, slot: int) -> void: _flip_beam.play_flip(self, side, slot)
 	)
+	# 反転権(GameDesign.md 2章)は敵味方どちらの駒も対象に取れるため、
+	# 誰が手を出したのかを別に運ぶ専用の信号で受ける(`unit_flipped` とは別経路)。
+	state.flip_right_used.connect(
+		func(actor_side: int, target_side: int, slot: int) -> void:
+			_flip_beam.play_flip(self, target_side, slot, actor_side)
+	)
 	_log.set_perspective(my_side)
 	state.start_match(
 		deck_a, deck_b, MatchState.Side.A, seed_value, MatchState.COIN_ENABLED, use_mulligan
@@ -472,7 +481,9 @@ func refresh() -> void:
 	_refresh_buttons()
 	if _damage_assist != null:
 		_damage_assist.sync()
-	_status.set_targeting(_selection != null and _selection.is_targeting())
+	_status.set_targeting(
+		_selection != null and (_selection.is_targeting() or _selection.is_flip_right())
+	)
 	# 対象選択に入った・演出が始まったぶんは、ホバーが動かなくてもここで引っ込める。
 	if _detail != null:
 		_detail.sync()
@@ -532,6 +543,8 @@ func _refresh_buttons() -> void:
 		_flip_button.position = _flip_button_position(_selection.slot)
 	if _emote != null:
 		_emote.refresh()
+	if _flip_right != null:
+		_flip_right.refresh()
 
 
 ## 選んだ駒の真下。駒の中心へ横を揃え、下端へわずかに重ねて置く。
@@ -617,6 +630,9 @@ func _on_own_slot_pressed(view: CardView) -> void:
 		return
 	if not _my_turn():
 		return
+	if _selection.is_flip_right():
+		_flip_right.use_at(my_side, slot)
+		return
 	if _selection.is_targeting():
 		# 味方1体を対象に取る砂術は、自分の駒を押して確定する。
 		if _selection.slot < 0 and state.board[my_side][slot] != null:
@@ -640,6 +656,9 @@ func _on_own_slot_pressed(view: CardView) -> void:
 func _on_foe_slot_pressed(view: CardView) -> void:
 	var slot := _foe_slots.find(view)
 	if slot < 0:
+		return
+	if _my_turn() and _selection.is_flip_right():
+		_flip_right.use_at(MatchState.other_side(my_side), slot)
 		return
 	if _my_turn() and _selection.is_targeting():
 		if state.board[MatchState.other_side(my_side)][slot] == null:

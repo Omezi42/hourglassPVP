@@ -40,12 +40,14 @@ func _ready() -> void:
 
 
 ## 反転を見せる。**行った側の情報帯から対象の駒へ光の筋を伸ばし、届いた瞬間に裏返す**
-## (GameDesign.md 9章)。自分の駒しか反転できないため、筋が上から来るか下から来るかが
-## そのまま「どちらが手を出したか」になる。筋と裏返りの段取りをこの1箇所へ収めている。
-func play_flip(screen: CardMatchScreen, side: int, slot: int) -> void:
+## (GameDesign.md 9章)。通常の反転は自分の駒しか対象に取れないため、
+## 筋の出どころ(`actor_side`)は駒の持ち主(`side`)と一致する。
+## **反転権(GameDesign.md 2章)は敵味方どちらの駒も対象に取れる**ため、
+## 手を出した側(`actor_side`)と駒の持ち主(`side`)を別々に受け取れるようにしている。
+func play_flip(screen: CardMatchScreen, side: int, slot: int, actor_side: int = side) -> void:
 	var view := screen.view_at(side, slot)
 	var bar_y: float = (
-		CardMatchScreen.OWN_BAR_TOP if side == screen.my_side else CardMatchScreen.FOE_BAR_TOP
+		CardMatchScreen.OWN_BAR_TOP if actor_side == screen.my_side else CardMatchScreen.FOE_BAR_TOP
 	)
 	var from := Vector2(screen.size.x * 0.5, bar_y + PlayerInfoBar.BAR_HEIGHT * 0.5)
 	# 反転だけは砂粒と光条を伴う(GameDesign.md 9章)。設置効果と同じ筋を使う以上、

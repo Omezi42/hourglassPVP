@@ -12,6 +12,33 @@
 
 ---
 
+## 反転権(手番補正・実装済み、数値は要検証)
+
+仕様は GameDesign.md 2章「反転権」・3章、実装設計は Architecture.md 3.1.2節・4.0節。
+
+- [x] `MatchState.flip_right_remaining` / `can_use_flip_right()` / `use_flip_right()` /
+      `flip_right_used` シグナルを実装(先手2回・後手3回は仮の初期値)
+- [x] `MatchAction.flip_right()` / `apply()` の分岐、`CardMatchSelection.Kind.FLIP_RIGHT`
+- [x] 対局画面に「反転権(残りN)」ボタンを追加(`CardMatchFlipRight`)。対象選択は
+      敵味方どちらの場も光る(`CardMatchTargets`)
+- [x] 光の筋(`CardFlipBeam.play_flip()` の `actor_side`)・効果音・ログを反転権に対応させた
+- [ ] **回数の内訳(先手2回・後手3回)を `tools/balance/run_v5_simulation.gd` 相当の
+      シミュレーションで検証する。**7章の5指標(先手勝率45〜55%・決着手数20〜30手・
+      本体決着90%以上・ユニット攻撃30〜60%・逆転率25〜35%)に収まる組み合わせを探す
+- [ ] **コインとの併用可否を検証する**(GameDesign.md 7章「手番補正は複数重ねてはいけない」)。
+      ①コインを廃止して反転権に一本化 ②コイン+反転権を両方残す、の両方を測り、
+      目標圏に収まる方を採る。ユーザーは「コインはあったほうがよさそう」という所感を
+      持っているため、②から先に測ることが望ましい
+- [ ] 数値が決まったら、GameDesign.md の仮の初期値(先手2回・後手3回)の記述を確定値へ
+      更新し、`docs/BalanceReport_v5.md` へ測定結果を追記する
+- [ ] デイリーミッション「反転を8回行う」(23章)へ反転権の使用を数えるかどうかは
+      未決定のため、いまは数えていない(`DailyMissionService` は `unit_flipped` だけを見る)。
+      2つの反転手段を同じ指標で数えるべきかはユーザーへ確認してから決める
+- [ ] ヘッドレステスト(`tools/tests/v5_rules_tests.gd` へ追加した反転権のテスト)・
+      gdlint / gdformat・実機での操作確認(ボタン押下・対象選択・演出)がまだ
+
+---
+
 ## 初期HP 30→24化(仕様・コード反映中)
 
 仕様は GameDesign.md 2章・7章「初期HPを30から24へ」、実測は同章に記載済み。

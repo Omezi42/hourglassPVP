@@ -19,6 +19,12 @@ func refresh() -> void:
 	var my_side := _screen.my_side
 	var foe := MatchState.other_side(my_side)
 	_screen.foe_bar.targetable = false
+	if selection.is_flip_right():
+		# 反転権は敵味方どちらの砂時計も対象に取れる(GameDesign.md 2章)。
+		for side in [my_side, foe]:
+			for slot in MatchState.BOARD_SIZE:
+				_screen.view_at(side, slot).selected = state.board[side][slot] != null
+		return
 	if selection.is_targeting():
 		# 砂術は置く枠を持たないため slot が -1 のまま。対象がどちら側かはカードが決める
 		# (GameDesign.md 6章)。砂時計の設置効果は従来どおり相手側だけを光らせる。

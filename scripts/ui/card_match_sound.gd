@@ -31,6 +31,7 @@ func watch(state: MatchState) -> void:
 	state.unit_played.connect(_on_unit_played)
 	state.spell_cast.connect(_on_spell_cast)
 	state.unit_flipped.connect(_on_unit_flipped)
+	state.flip_right_used.connect(_on_flip_right_used)
 	state.attack_performed.connect(_on_attack_performed)
 	state.hp_changed.connect(_on_hp_changed)
 	state.unit_destroyed.connect(_on_unit_destroyed)
@@ -64,6 +65,11 @@ func _on_spell_cast(_side: int, _card: CardData) -> void:
 
 
 func _on_unit_flipped(_side: int, _slot: int) -> void:
+	_play(SoundBank.Sfx.FLIP)
+
+
+## 反転権(GameDesign.md 2章)も同じ反転の音を鳴らす。
+func _on_flip_right_used(_actor_side: int, _target_side: int, _slot: int) -> void:
 	_play(SoundBank.Sfx.FLIP)
 
 
