@@ -63,6 +63,13 @@ const FLOAT_HEAVY_LIFT := 6.0
 const FLOAT_HEAVY_COLOR := Color(1.0, 0.45, 0.15)
 ## 山札の脈打ち(GameDesign.md 9章)。ドローと疲労の発生源を山札そのもので示す。
 const DECK_PULSE_DURATION := 0.45
+## HPの砂に光る粒を散らす(GameDesign.md 9章「器に入った砂」の作り込み)。塗りの帯だけでは
+## 平坦に見えるため、砂粒に光が当たっている点をいくつか置き、ゆっくり明滅させる。
+## 位置はHPバーの幅に対する割合で固定し(=常に同じ粒が光る)、**残っている砂の範囲だけ**
+## 描く(ratioで隠れた位置は描かない)ことで、減った砂の中にきらめきが浮かないようにする。
+const SAND_GLINT_FRACTIONS := [0.10, 0.28, 0.47, 0.66, 0.85]
+const SAND_GLINT_SPEED := 0.9
+const SAND_GLINT_RADIUS := 1.6
 
 ## 相手側かどうか。相手側だけ手札の枚数を出す。
 var is_opponent := false
@@ -105,6 +112,8 @@ var _initialized := false
 var _deck_pulse := 0.0
 var _deck_pulse_color := UiPalette.GLOW_AMBER
 var _deck_tween: Tween
+## HPの砂粒のきらめきを進める経過時間。
+var _glint_time := 0.0
 
 
 func _ready() -> void:
@@ -113,6 +122,14 @@ func _ready() -> void:
 		_font = ThemeDB.fallback_font
 	custom_minimum_size = Vector2(0, BAR_HEIGHT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
+	set_process(true)
+
+
+## HPの砂粒のきらめきだけを進める(GameDesign.md 9章)。他の変化は従来どおり
+## `queue_redraw()` を都度呼ぶ側が持つため、ここでは経過時間を進めるだけでよい。
+func _process(delta: float) -> void:
+	_glint_time += delta
+	queue_redraw()
 
 
 ## 対局の状態から自分の側の値をまとめて取り込む。
@@ -322,6 +339,31 @@ func hp_bar_rect() -> Rect2:
 	return Rect2(Vector2(HP_BAR_X, 16), HP_BAR_SIZE)
 
 
+## HPの砂に光が当たっている粒をいくつか置き、ゆっくり明滅させる。**残っている砂の
+## 範囲だけ**描く(割合を超えた位置は隠れているので描かない)。
+func _draw_sand_glints(ci: RID, fill_rect: Rect2, ratio: float) -> void:
+	for i in SAND_GLINT_FRACTIONS.size():
+		var frac: float = SAND_GLINT_FRACTIONS[i]
+		if frac > ratio:
+			continue
+		var phase := float(i) * 1.7
+		var pulse := (sin(_glint_time * SAND_GLINT_SPEED + phase) + 1.0) * 0.5
+		var alpha := 0.15 + pulse * 0.45
+		var center := Vector2(
+			fill_rect.position.x + fill_rect.size.x * frac,
+			fill_rect.position.y + fill_rect.size.y * (0.35 + 0.3 * sin(phase))
+		)
+		UiPaint.fill_gradient_polygon(
+			ci,
+			UiPaint.circle_points(center, SAND_GLINT_RADIUS, 8),
+			Rect2(
+				center - Vector2(SAND_GLINT_RADIUS, SAND_GLINT_RADIUS),
+				Vector2(SAND_GLINT_RADIUS, SAND_GLINT_RADIUS) * 2.0
+			),
+			[[0.0, Color(1.0, 0.96, 0.82, alpha)], [1.0, Color(1.0, 0.96, 0.82, 0.0)]]
+		)
+
+
 func _draw_hp() -> void:
 	var ci := get_canvas_item()
 	var rect := hp_bar_rect()
@@ -339,6 +381,7 @@ func _draw_hp() -> void:
 		UiPaint.fill_gradient_polygon(
 			ci, fill, fill_rect, [[0.0, color.lightened(0.28)], [1.0, color.darkened(0.22)]]
 		)
+		_draw_sand_glints(ci, fill_rect, ratio)
 	UiPaint.draw_inner_shadow(ci, rect, HP_BAR_RADIUS, 5, 3, Color(0, 0, 0, 1), 0.5)
 	var outline := track.duplicate()
 	outline.append(track[0])

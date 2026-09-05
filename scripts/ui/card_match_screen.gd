@@ -389,6 +389,12 @@ func _build() -> void:
 	_table.position = TABLE_RECT.position
 	_table.size = TABLE_RECT.size
 	add_child(_table)
+	# 卓の上に薄く漂う砂埃(GameDesign.md 9章「空気感」)。カードより先に足し、
+	# 駒の絵の手前へは出ないようにする。
+	var table_dust := BoardDust.new()
+	table_dust.position = TABLE_RECT.position
+	table_dust.size = TABLE_RECT.size
+	add_child(table_dust)
 	_foe_bar = CardMatchBuild.make_bar(self, true, FOE_BAR_TOP)
 	_own_bar = CardMatchBuild.make_bar(self, false, OWN_BAR_TOP)
 	_foe_slots = CardMatchBuild.make_row(self, FOE_ROW_TOP, true)
