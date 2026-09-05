@@ -11,11 +11,11 @@ config_version=5
 [application]
 
 config/name="砂時計アリーナ"
-config/version="2026.09.04"
+config/version="2026.09.05"
 run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("4.6", "GL Compatibility")
 config/icon="res://icon.svg"
-config/build_id="20260904-083524"
+config/build_id="20260905-053058"
 
 [display]
 
