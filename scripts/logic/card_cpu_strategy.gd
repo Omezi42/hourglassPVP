@@ -39,21 +39,21 @@ func choose_mulligan(state: MatchState, side: int) -> Array:
 
 
 ## この手番で次に指す1手を返す。指す手が無ければ end_turn を返す。
+## **「反転権で仕留めやすくしてから攻撃する」の連携のため、`_choose_flip_right_setup()`
+## だけは攻撃より前に見る**(GameDesign.md 2章。docs/BalanceReport_v5.md 12章)。
 func choose_action(state: MatchState, side: int) -> Dictionary:
 	var action := _choose_play(state, side)
 	if not action.is_empty():
 		return action
 	if _should_use_coin(state, side):
 		return {"type": "coin", "side": side}
-	action = _choose_attack(state, side)
-	if not action.is_empty():
-		return action
-	action = _choose_flip(state, side)
-	if not action.is_empty():
-		return action
-	action = _choose_flip_right(state, side)
-	if not action.is_empty():
-		return action
+	var steps: Array[Callable] = [
+		_choose_flip_right_setup, _choose_attack, _choose_flip, _choose_flip_right
+	]
+	for step in steps:
+		action = step.call(state, side)
+		if not action.is_empty():
+			return action
 	return MatchAction.end_turn(side)
 
 
@@ -440,6 +440,43 @@ func _choose_flip(state: MatchState, side: int) -> Dictionary:
 
 
 # --- 反転権 ---------------------------------------------------------------
+
+
+## 反転権で相手の駒を弱めてから、同じ手番の攻撃で仕留める(GameDesign.md 2章)。
+## **`_choose_flip_right()` は攻撃の後にしか検討しないため、それだけでは
+## 「弱めた直後に攻撃力を渡すだけ」になってしまう(`docs/BalanceReport_v5.md` 12章)。
+## この関数だけは攻撃の前に呼び、反転権と攻撃を1つの連携として組み立てる。**
+## いま手持ちの攻撃力では仕留められない相手が、反転させれば
+## (新しい体力 = いまの攻撃力)仕留められるようになる場合だけ使う。
+func _choose_flip_right_setup(state: MatchState, side: int) -> Dictionary:
+	if int(state.flip_right_remaining.get(side, 0)) <= 0:
+		return {}
+	var foe_side := MatchState.other_side(side)
+	var best_attack := 0
+	for slot in MatchState.BOARD_SIZE:
+		var unit: CardInstance = state.board[side][slot]
+		if unit != null and unit.can_attack():
+			best_attack = maxi(best_attack, unit.attack)
+	if best_attack <= 0:
+		return {}
+	for slot in state.attackable_slots(foe_side):
+		var foe: CardInstance = state.board[foe_side][slot]
+		if foe == null:
+			continue
+		# いまの攻撃力ですでに仕留められるなら、反転権を使わずそのまま攻撃で足りる。
+		if foe.health <= best_attack:
+			continue
+		# 反転させると新しい体力は「いまの攻撃力」になる。それを自分の最大攻撃力で
+		# 仕留められて、かつ反転させないと仕留められない場合だけ価値がある。
+		if foe.attack <= 0 or foe.attack > best_attack:
+			continue
+		# **殺すのは反転そのものではなく、直後の攻撃**なので余砂の発火は他の除去と
+		# 同じ扱いになる(既存の `_choose_attack` も攻撃の一撃で殺す際に余砂を
+		# 避けていない)。ここで避けるのは反転そのもので発火する反転トリガーだけ。
+		if not foe.data.effects_for(CardEnums.Trigger.ON_FLIP).is_empty():
+			continue
+		return MatchAction.flip_right(side, foe_side, slot)
+	return {}
 
 
 ## 反転権(GameDesign.md 2章)。敵味方どちらの砂時計も対象に取れるため、
