@@ -47,7 +47,7 @@ enum Side { A, B }
 ## 決着の要因(GameDesign.md 5章)。
 enum EndReason { HP_DEPLETED, SURRENDER, TIMEOUT, DRAW }
 
-const INITIAL_HP := 30
+const INITIAL_HP := 24
 const BOARD_SIZE := 6
 const DECK_SIZE := 30
 const MAX_MANA := 10

@@ -99,7 +99,7 @@ func _test_inverting_hp_swaps_remaining_and_lost() -> void:
 	var side := MatchState.Side.A
 	state.hp[side] = 6
 	_assert.call(state.cast_spell(side, 0), "時の逆流を撃てた")
-	_assert.call(state.hp[side] == MatchState.INITIAL_HP - 6, "6 が 24 になる")
+	_assert.call(state.hp[side] == MatchState.INITIAL_HP - 6, "6 が INITIAL_HP-6 になる")
 	state.free()
 
 	# 満タンで撃つと0になり、その場で負ける。

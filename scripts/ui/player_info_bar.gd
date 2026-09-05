@@ -351,7 +351,11 @@ func _draw_hp() -> void:
 			rect,
 			[[0.0, Color(1, 1, 1, 0.5 * _flash)], [1.0, Color(1, 0.9, 0.7, 0.2 * _flash)]]
 		)
-	_text(Vector2(rect.position.x + 96, rect.position.y + 19), "%d / 30" % _hp, 17)
+	_text(
+		Vector2(rect.position.x + 96, rect.position.y + 19),
+		"%d / %d" % [_hp, MatchState.INITIAL_HP],
+		17
+	)
 	if _float_left > 0.0:
 		_draw_float(rect)
 

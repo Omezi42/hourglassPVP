@@ -12,6 +12,29 @@
 
 ---
 
+## 初期HP 30→24化(仕様・コード反映中)
+
+仕様は GameDesign.md 2章・7章「初期HPを30から24へ」、実測は同章に記載済み。
+
+- [x] GameDesign.md(2章の数値・7章の実測メモ)/ Architecture.md(`INITIAL_HP`)/
+      Hourglasses.md(時の逆流の損益分岐点 15→12)を更新
+- [ ] `scripts/logic/match_state.gd` の `INITIAL_HP` を24へ変更
+- [ ] `scripts/ui/player_info_bar.gd` のハードコード `"%d / 30"` を
+      `MatchState.INITIAL_HP` を使った動的な文字列へ直す(HP上限を書き換えたときに
+      表示だけ古い値のまま残らないように)
+- [ ] `tools/tests/v5_spell_tests.gd` の「時の逆流」テストの説明文("6 が 24 になる")を
+      新しいHPに合わせて直す(アサーション自体は `MatchState.INITIAL_HP` を参照済みで
+      値としては正しい)
+- [ ] ヘッドレステスト(`run_tests.gd` / `v5_rules_tests.gd` / `v5_spell_tests.gd`)を
+      通してから完了報告する
+- [ ] **先手勝率が57〜60%まで上振れすることは承知のうえで採用した**(GameDesign.md 7章)。
+      次に手番の補正(コイン導入・ヒーローパワー案)を検討する回に、この上振れも
+      あわせて調整する。単独でこれ以上HPを動かさない
+- [ ] カード1枚ごとの勝率(`docs/Hourglasses.md`)・全体指標(`BalanceReport_v5.md`)は
+      いずれもHP30時代の測定のまま。次にプールを触る回にHP24で測り直す
+
+---
+
 ## 対局中演出・QOL機能(フェーズ1)
 
 仕様は GameDesign.md 9章、実装設計は Architecture.md 10.10節。**真鍮・琥珀・石のコード描画デザインを踏襲し、実機スクショで確認しながら進める**。

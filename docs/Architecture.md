@@ -166,7 +166,7 @@ UIに依存しない、対局ルールそのものを扱う層。
 `board`(6枠の `CardInstance`、空きは null)/ `graveyard`、`current_turn`、`first_side`、
 `turn_count`、`end_reason`、`winner`。いずれも `Side`(A/B)をキーにした Dictionary。
 
-定数は GameDesign.md 2章の数値をそのまま持つ:`INITIAL_HP = 30` / `BOARD_SIZE = 6` /
+定数は GameDesign.md 2章の数値をそのまま持つ:`INITIAL_HP = 24` / `BOARD_SIZE = 6` /
 `DECK_SIZE = 30` / `MAX_MANA = 10` / `FIRST_PLAYER_HAND = 3` / `SECOND_PLAYER_HAND = 4` /
 `FATIGUE_DAMAGE = 1` / `COIN_MANA = 1`。加えて、両者が延々とパスし続けた場合の保険として `MAX_TURNS = 200`
 (到達したら `EndReason.DRAW` で打ち切る。シミュレーションが止まらなくなるのを防ぐためで、
