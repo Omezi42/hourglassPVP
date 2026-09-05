@@ -20,6 +20,9 @@ const MULLIGAN_KEEP_COST := 3
 ## **CPUが繰り返しトリガーを無視しないための下駄**である。
 const TURN_END_TURNS := 3
 const DAMAGED_TIMES := 2.0
+## 反転権(GameDesign.md 2章)は対局に2〜3回しか無い希少な資源のため、
+## 通常の反転よりゲインの下限を高く取り、僅かな得のために使い切らせない。
+const FLIP_RIGHT_MIN_GAIN := 3.0
 
 
 ## 初手の引き直しで戻すカードの位置を返す(GameDesign.md 2章)。
@@ -46,6 +49,9 @@ func choose_action(state: MatchState, side: int) -> Dictionary:
 	if not action.is_empty():
 		return action
 	action = _choose_flip(state, side)
+	if not action.is_empty():
+		return action
+	action = _choose_flip_right(state, side)
 	if not action.is_empty():
 		return action
 	return MatchAction.end_turn(side)
@@ -430,4 +436,54 @@ func _choose_flip(state: MatchState, side: int) -> Dictionary:
 		if gain > best_gain:
 			best_gain = gain
 			best = MatchAction.flip(side, slot)
+	return best
+
+
+# --- 反転権 ---------------------------------------------------------------
+
+
+## 反転権(GameDesign.md 2章)。敵味方どちらの砂時計も対象に取れるため、
+## 自分の駒を得な状態へ戻す案(通常の反転と同じ物差し)と、相手の駒を損な状態へ
+## 追い込む案(`_swap_value()`、既存のSWAP_STATSの評価をそのまま流用)を両方見て
+## いちばん得な1手を選ぶ。**希少な資源のため `FLIP_RIGHT_MIN_GAIN` 未満なら温存する**。
+func _choose_flip_right(state: MatchState, side: int) -> Dictionary:
+	if int(state.flip_right_remaining.get(side, 0)) <= 0:
+		return {}
+	var foe_side := MatchState.other_side(side)
+	var best: Dictionary = {}
+	var best_gain := FLIP_RIGHT_MIN_GAIN
+	for slot in MatchState.BOARD_SIZE:
+		var unit: CardInstance = state.board[side][slot]
+		if unit == null:
+			continue
+		var gain := _lifetime_of(unit.attack, unit.health) - float(unit.lifetime_damage())
+		if unit.data.effects_for(CardEnums.Trigger.ON_FLIP).size() > 0:
+			gain += 2.0
+		if gain > best_gain:
+			best_gain = gain
+			best = MatchAction.flip_right(side, side, slot)
+	for slot in MatchState.BOARD_SIZE:
+		var foe: CardInstance = state.board[foe_side][slot]
+		if foe == null:
+			continue
+		# **反転権は攻撃した後にしか検討しない**(出す→攻撃する→反転する→終える)ため、
+		# 敵を生かしたまま反転させると、体力の少ない側へ攻撃力の高い側を渡すだけになり、
+		# こちらは追撃できないまま相手の次の手番でその攻撃力をそのまま浴びる。
+		# **確実に破壊できる(反転後の体力が0になる)場合に限って触る。**
+		if foe.attack > 0:
+			continue
+		# **反転トリガーは持ち主を利する形で発火する**(グロウ=所有者の総量+1、
+		# ホイール/ティック=所有者の相手=自分にダメージ、ページ=所有者が1枚引く)。
+		# 誰が反転させても発動する(GameDesign.md 6章)ため、敵の反転持ちを反転権で
+		# 触ると自分を助けるどころか敵を利するか自分が被弾する。対象から外す。
+		if not foe.data.effects_for(CardEnums.Trigger.ON_FLIP).is_empty():
+			continue
+		# **破壊すると余砂(ON_DEATH)も持ち主を利する形で発火する**(ドロー・本体への
+		# ダメージ等)。無償の除去に見えて、持ち主へ無償の起動効果を与えてしまう。
+		if not foe.data.effects_for(CardEnums.Trigger.ON_DEATH).is_empty():
+			continue
+		var gain := _swap_value(foe)
+		if gain > best_gain:
+			best_gain = gain
+			best = MatchAction.flip_right(side, foe_side, slot)
 	return best

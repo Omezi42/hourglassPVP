@@ -20,6 +20,10 @@ var _rng := RandomNumberGenerator.new()
 var _cards: Array[CardData] = []
 var _coin := true
 var _mulligan := true
+## 反転権(GameDesign.md 2章)の総回数の検証用オーバーライド。既定は仕様どおりの値で、
+## flip_right_first=0 flip_right_second=0 とすれば「反転権が無い場合」と比較できる。
+var _flip_right_first := MatchState.FLIP_RIGHT_FIRST
+var _flip_right_second := MatchState.FLIP_RIGHT_SECOND
 
 
 func _init() -> void:
@@ -33,6 +37,8 @@ func _run() -> void:
 	_coin = args.get("coin", "1") == "1"
 	# 既定は仕様どおりマリガンあり。mulligan=0 で外した場合と比べられる。
 	_mulligan = args.get("mulligan", "1") == "1"
+	_flip_right_first = int(args.get("flip_right_first", str(MatchState.FLIP_RIGHT_FIRST)))
+	_flip_right_second = int(args.get("flip_right_second", str(MatchState.FLIP_RIGHT_SECOND)))
 	_rng.seed = int(args.get("seed", "42"))
 	_cards = CardLibrary.all_cards()
 	if _cards.is_empty():
@@ -95,6 +101,9 @@ func _play_one(deck_a: Array, deck_b: Array) -> Dictionary:
 	state.start_match(
 		deck_a, deck_b, MatchState.Side.A, _rng.randi_range(1, 1 << 30), _coin, _mulligan
 	)
+	# 反転権の総回数を検証用に上書きする(既定は仕様どおりの値のまま何もしない)。
+	state.flip_right_remaining[MatchState.Side.A] = _flip_right_first
+	state.flip_right_remaining[MatchState.Side.B] = _flip_right_second
 	if state.mulligan_pending:
 		state.mulligan(MatchState.Side.A, cpu_a.choose_mulligan(state, MatchState.Side.A))
 		state.mulligan(MatchState.Side.B, cpu_b.choose_mulligan(state, MatchState.Side.B))

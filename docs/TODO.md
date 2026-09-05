@@ -35,30 +35,39 @@
 
 ---
 
-## 反転権(手番補正・実装済み、数値は要検証)
+## 反転権(手番補正・実装済み、CPU自己対戦での検証は完了・実機確認が残り)
 
-仕様は GameDesign.md 2章「反転権」・3章、実装設計は Architecture.md 3.1.2節・4.0節。
+仕様は GameDesign.md 2章「反転権」・3章、実装設計は Architecture.md 3.1.2節・4.0節、
+検証結果は `docs/BalanceReport_v5.md` 12章。
 
-- [x] `MatchState.flip_right_remaining` / `can_use_flip_right()` / `use_flip_right()` /
-      `flip_right_used` シグナルを実装(先手2回・後手3回は仮の初期値)
+- [x] `MatchState.flip_right_remaining` / `use_flip_right()`(`_can_use_flip_right()` は
+      非公開。コインと同じく戻り値だけで成否を判断させる) / `flip_right_used` シグナルを
+      実装(先手2回・後手3回は仮の初期値)
 - [x] `MatchAction.flip_right()` / `apply()` の分岐、`CardMatchSelection.Kind.FLIP_RIGHT`
 - [x] 対局画面に「反転権(残りN)」ボタンを追加(`CardMatchFlipRight`)。対象選択は
       敵味方どちらの場も光る(`CardMatchTargets`)
 - [x] 光の筋(`CardFlipBeam.play_flip()` の `actor_side`)・効果音・ログを反転権に対応させた
-- [ ] **回数の内訳(先手2回・後手3回)を `tools/balance/run_v5_simulation.gd` 相当の
-      シミュレーションで検証する。**7章の5指標(先手勝率45〜55%・決着手数20〜30手・
-      本体決着90%以上・ユニット攻撃30〜60%・逆転率25〜35%)に収まる組み合わせを探す
-- [ ] **コインとの併用可否を検証する**(GameDesign.md 7章「手番補正は複数重ねてはいけない」)。
-      ①コインを廃止して反転権に一本化 ②コイン+反転権を両方残す、の両方を測り、
-      目標圏に収まる方を採る。ユーザーは「コインはあったほうがよさそう」という所感を
-      持っているため、②から先に測ることが望ましい
-- [ ] 数値が決まったら、GameDesign.md の仮の初期値(先手2回・後手3回)の記述を確定値へ
-      更新し、`docs/BalanceReport_v5.md` へ測定結果を追記する
+- [x] `CardCpuStrategy._choose_flip_right()` を実装し、`tools/balance/run_v5_simulation.gd` に
+      `flip_right_first` / `flip_right_second` の検証用オーバーライドを足して測定した
+      (`docs/BalanceReport_v5.md` 12章)。**確認できたこと**:コインを外すと先手勝率が
+      64〜69%まで跳ね上がるため、コインは維持する(反転権はコインの代わりにならない)。
+      **確認できなかったこと**:反転権の回数そのものの効き目。単純な貪欲法のCPUは
+      「反転させてから同じ手番で仕留める」手順を組み立てられず、反転権をほとんど
+      使わないため回数を動かしても勝率が変わらない(砂術と同種のCPUの限界)
+- [x] 検証の過程でCPUの評価漏れを2件修正した(いずれも実際の対局にも効く修正):
+      敵の反転トリガー持ち(グロウ/ホイール/ティック/ページ)を反転権で触らないように
+      した(誰が反転させても持ち主を利するため)/ 敵の駒への反転権は確実に破壊できる
+      場合に限定した(体力が残ったまま弱めると、攻撃力を渡すだけで次の相手の手番で
+      そのまま浴びる)
+- [x] GameDesign.md 2章の記述を上記の検証結果に合わせて更新(コインは維持・回数は
+      人間のプレイテストで確認する旨)
+- [x] ヘッドレステスト(`tools/tests/v5_rules_tests.gd` の反転権のテスト)・gdlint / gdformat
+- [ ] **回数(先手2回・後手3回)そのものの効き目は人間のプレイテストで確認する**
+      (CPU自己対戦では確認できないため)
 - [ ] デイリーミッション「反転を8回行う」(23章)へ反転権の使用を数えるかどうかは
       未決定のため、いまは数えていない(`DailyMissionService` は `unit_flipped` だけを見る)。
       2つの反転手段を同じ指標で数えるべきかはユーザーへ確認してから決める
-- [ ] ヘッドレステスト(`tools/tests/v5_rules_tests.gd` へ追加した反転権のテスト)・
-      gdlint / gdformat・実機での操作確認(ボタン押下・対象選択・演出)がまだ
+- [ ] 実機での操作確認(ボタン押下・対象選択・演出)がまだ
 
 ---
 
