@@ -64,7 +64,7 @@ static func owned_icon_ids() -> Array[String]:
 	return _owned(UserProfileLibrary.INITIAL_ICON_IDS, "owned_icons")
 
 
-## いま敷いているプレイマット(GameDesign.md 9章)。未設定なら既定の「砂の海」。
+## いま敷いているプレイマット(GameDesign.md 9章)。未設定なら既定の「なし」。
 static func playmat_id() -> String:
 	var id := str(_profile.get("playmat_id", ""))
 	if id.is_empty():

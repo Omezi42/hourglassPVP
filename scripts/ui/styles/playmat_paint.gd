@@ -16,6 +16,8 @@ const WEAVE_ALPHA_SOFT := 0.08
 
 
 static func draw_mat(ci: CanvasItem, rect: Rect2, mat_id: String) -> void:
+	if mat_id == PlaymatLibrary.NONE_ID:
+		return
 	var mat := PlaymatLibrary.get_mat(mat_id)
 	var base: Color = mat["base"]
 	UiPaint.fill_gradient_polygon(

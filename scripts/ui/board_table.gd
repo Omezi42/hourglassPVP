@@ -20,7 +20,7 @@ const RAIL_HEIGHT := 10.0
 const MEDALLION_OUTER_RADIUS := 26.0
 const MEDALLION_INNER_RADIUS := 15.0
 
-## 上半分(相手)と下半分(自分)へ敷くマット。既定は「砂の海」。
+## 上半分(相手)と下半分(自分)へ敷くマット。既定は「なし」(何も敷かない)。
 var foe_mat := PlaymatLibrary.DEFAULT_ID:
 	set(value):
 		foe_mat = value

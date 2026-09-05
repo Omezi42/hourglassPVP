@@ -23,7 +23,12 @@ enum Weave {
 	SCROLL,
 }
 
-const DEFAULT_ID := "sand_sea"
+## 既定は「なし」。卓に何も敷かず、木の額とレールだけがそのまま見える状態にする
+## (GameDesign.md 9章)。**新しい模様は増やさない**——「無地の布」ではなく
+## 「布そのものが無い」ことを表すため、`PlaymatPaint.draw_mat()` の側でこの id を
+## 弾いて何も描かない。
+const NONE_ID := "none"
+const DEFAULT_ID := NONE_ID
 ## CPU戦で相手側へ敷くマット。プレイヤーが買えるものとは別に持つ。
 const CPU_ID := "workshop"
 
@@ -34,6 +39,16 @@ const PRICE_DELUXE := 3000
 ## 1件 = 地 / 模様 / 縁 / 箔 / 隅飾りの有無。
 ## `price` が 0 のものは売り物ではない(既定のマットとCPU用)。
 const MATS: Dictionary = {
+	"none":
+	{
+		"name": "なし",
+		"base": Color(0, 0, 0),
+		"edge": Color(0, 0, 0),
+		"weave": Weave.RIPPLE,
+		"foil": Color(0, 0, 0),
+		"corners": false,
+		"price": 0,
+	},
 	"sand_sea":
 	{
 		"name": "砂の海",
@@ -42,7 +57,7 @@ const MATS: Dictionary = {
 		"weave": Weave.RIPPLE,
 		"foil": Color(0.86, 0.68, 0.34),
 		"corners": false,
-		"price": 0,
+		"price": PRICE_STANDARD,
 	},
 	"workshop":
 	{
