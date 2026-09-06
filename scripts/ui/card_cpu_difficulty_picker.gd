@@ -88,7 +88,8 @@ func _make_row(row: Dictionary, current: CardCpuStrategy.Difficulty) -> HBoxCont
 
 	var value: CardCpuStrategy.Difficulty = row["value"]
 	var button := CodedButton.make(row["name"], ROW_BUTTON_SIZE)
-	button.disabled = value == current
+	# **いまの設定でも必ず押せる**。無効化すると「対局のたびに選び直せる」(GameDesign.md
+	# 13章)はずのボタンが、既定値と同じ回だけ押せなくなる(実際にこれで報告を受けた)。
 	button.pressed.connect(
 		func() -> void:
 			CardCpuDifficultySave.set_difficulty(value)

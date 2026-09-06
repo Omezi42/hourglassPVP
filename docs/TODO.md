@@ -4,20 +4,34 @@
 
 仕様は GameDesign.md 13章「CPU戦の思考レベル」、実装設計は Architecture.md 8.1〜8.2節。
 
-- [ ] `CardCpuStrategy.Difficulty` enum と `difficulty` プロパティを追加(既定 NORMAL)。
+- [x] `CardCpuStrategy.Difficulty` enum と `difficulty` プロパティを追加(既定 NORMAL)。
       既存のロジックは一切変更せず NORMAL としてそのまま残す
-- [ ] 初級:`_choose_action_beginner()` を新設(出せる最初の1枚を出す・攻撃対象はランダム・
+- [x] 初級:`_choose_action_beginner()` を新設(出せる最初の1枚を出す・攻撃対象はランダム・
       反転/反転権は使わない・対象選択はランダム)
-- [ ] 上級:`_choose_attack()` に本体特攻の割引(`_expert_face_caution()`)、
+- [x] 上級(第1弾):`_choose_attack()` に本体特攻の割引(`_expert_face_caution()`)、
       `_choose_flip()` に危険な反転の回避(`_expert_flip_is_risky()`)、
       `_best_slot()` にマナの使い残しペナルティ(`_mana_leftover_penalty()`)を追加
-- [ ] `CardCpuDifficultySave`(`user://cpu_difficulty.json`)で選択値を永続化
-- [ ] `CardCpuDifficultyPicker`(選択モーダル)。CPU戦のデッキ選択の直後にだけ挟む
-- [ ] `Main._start_cpu_match()` 系の経路をモーダル経由に更新
-- [ ] 誘導対局(`CardMatchTutorial` 経由のCPU戦)は `difficulty` を明示的に NORMAL 固定で渡す
-- [ ] ヘッドレステスト:初級が反転・反転権を一切使わないこと、上級が危険な反転を避けること
-- [ ] gdlint / gdformat、ヘッドレススモークテスト
+- [x] `CardCpuDifficultySave`(`user://cpu_difficulty.json`)で選択値を永続化
+- [x] `CardCpuDifficultyPicker`(選択モーダル)。CPU戦のデッキ選択の直後にだけ挟む
+- [x] `Main._start_cpu_match()` 系の経路をモーダル経由に更新
+- [x] 誘導対局(`CardMatchTutorial` 経由のCPU戦)は `difficulty` を明示的に NORMAL 固定で渡す
+- [x] ヘッドレステスト:初級が反転・反転権を一切使わないこと、上級が危険な反転を避けること
+- [x] gdlint / gdformat、ヘッドレススモークテスト
 - [ ] 実機での確認(モーダルの表示・選択・対局への反映)
+- [x] **モーダルのボタンが押せない不具合を修正**。「いまの設定」のボタンを `disabled` に
+      していたため、既定値(中級)が常に押せなかった(ユーザー報告により発覚)
+- [x] 上級(第2弾):Architecture.md 8.1節の残り4項目
+  - [x] `_trade_value()`:相打ちで自分の守護持ちを失う損を割り引く
+        (`_expert_guard_retention_penalty()`)
+  - [x] `choose_mulligan()`:残す手札の軽いカードが少ないほど重いカードを積極的に戻す
+        (`_expert_mulligan_keep_cost()`)
+  - [x] `_effect_target()`:ダメージ効果は硝子が残っている駒を避ける
+        (`_expert_damageable_enemy()`)。確定破壊は硝子を無視するため対象外
+  - [x] `_should_use_coin()`:コインを使った場合と温存した場合の最善の1枚を比較してから
+        切る(`_expert_should_use_coin()`)
+  - [x] ヘッドレステストを追加(それぞれの補正が効く場面を作って確認。5件)
+  - [x] gdlint / gdformat、ヘッドレステスト
+- [ ] 実機確認(モーダルの表示・選択・対局への反映。上級の3+4=7項目すべて)
 
 ---
 

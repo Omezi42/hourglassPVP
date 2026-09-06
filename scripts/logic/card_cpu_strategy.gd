@@ -9,7 +9,7 @@ extends RefCounted
 ##
 ## **思考レベル(GameDesign.md 13章「CPU戦の思考レベル」)**は `difficulty` で切り替える。
 ## `NORMAL` が既存のロジックそのもの(バランス検証はすべてこの段で行っている)。
-## `BEGINNER` は貪欲法を通らない別経路、`EXPERT` は `NORMAL` へ軽い分岐を3つ足すだけに
+## `BEGINNER` は貪欲法を通らない別経路、`EXPERT` は `NORMAL` へ軽い分岐を足すだけに
 ## 留め、複数手先の探索は行わない(Architecture.md 8.1節)。
 
 enum Difficulty { BEGINNER, NORMAL, EXPERT }
@@ -37,6 +37,13 @@ const EXPERT_FACE_DISCOUNT := 0.5
 ## 上級:カードを出した後に残るマナが、手札の中でいちばん軽いカードのコストにも
 ## 届かない(=そのターンもう何も出せない)場合に掛けるペナルティ。
 const EXPERT_MANA_LEFTOVER_PENALTY := 0.8
+## 上級:相打ちで自分の守護持ちを失うことに掛けるペナルティ。場に残ることで防いでいた
+## 被弾を、後続のターンぶんまとめて近似した値。
+const EXPERT_GUARD_LOSS_PENALTY := 3.0
+## 上級:マリガンで「軽いカードが少ない」とみなす、残る手札のコスト1〜2の枚数の下限。
+## これを下回るほど、重いカードをより積極的に戻す。
+const EXPERT_MULLIGAN_LIGHT_TARGET := 2
+const EXPERT_MULLIGAN_KEEP_COST := 2
 
 ## 選ばれている思考レベル。CPU戦の入口(`CardMatchScreen.start_cpu_match()`)が
 ## デッキ選択の後に選ばれた値をここへ渡す。
@@ -58,13 +65,31 @@ static func resolve_difficulty(raw: int) -> Difficulty:
 ## 重いカードだけを戻す。序盤の1〜3ターン目に置けるカードがあるかどうかが
 ## 事故の有無をそのまま決めるため、盤面の強さより早さを優先する。
 func choose_mulligan(state: MatchState, side: int) -> Array:
+	var keep_cost := (
+		_expert_mulligan_keep_cost(state, side)
+		if difficulty == Difficulty.EXPERT
+		else MULLIGAN_KEEP_COST
+	)
 	var indices: Array = []
 	var cards: Array = state.hand[side]
 	for i in cards.size():
 		var card: CardData = cards[i]
-		if card.cost > MULLIGAN_KEEP_COST:
+		if card.cost > keep_cost:
 			indices.append(i)
 	return indices
+
+
+## 上級:残す手札のうちコスト1〜2の枚数(`EXPERT_MULLIGAN_LIGHT_TARGET`)に届かない
+## ときだけ、戻すコストの上限を下げてより積極的に重いカードを戻す
+## (GameDesign.md 2章「マリガン」/13章)。
+func _expert_mulligan_keep_cost(state: MatchState, side: int) -> int:
+	var light_count := 0
+	for card in state.hand[side]:
+		if card.cost <= EXPERT_MULLIGAN_LIGHT_TARGET:
+			light_count += 1
+	if light_count < EXPERT_MULLIGAN_LIGHT_TARGET:
+		return EXPERT_MULLIGAN_KEEP_COST
+	return MULLIGAN_KEEP_COST
 
 
 ## この手番で次に指す1手を返す。指す手が無ければ end_turn を返す。
@@ -201,14 +226,45 @@ func take_turn(state: MatchState, side: int, action_limit: int = 60) -> Array:
 
 ## コインは「あと1マナあれば出せるカードがある」ときだけ切る。
 ## 出せる手が残っているうちは温存し、手詰まりになった時点で使う形にしている。
+## 上級は「使った場合と温存した場合、どちらが高い1枚を出せるか」まで比較する。
 func _should_use_coin(state: MatchState, side: int) -> bool:
 	if not state.coin_available.get(side, false):
 		return false
+	if difficulty == Difficulty.EXPERT:
+		return _expert_should_use_coin(state, side)
 	var reach: int = state.mana[side] + MatchState.COIN_MANA
 	for card in state.hand[side]:
 		if card.cost <= reach:
 			return true
 	return false
+
+
+## 上級:コインを使った場合に出せる中でいちばん高い1枚の価値と、使わずに温存した
+## 場合にいま出せる中でいちばん高い1枚の価値を比べ、前者が上回るときだけ切る
+## (GameDesign.md 13章)。
+func _expert_should_use_coin(state: MatchState, side: int) -> bool:
+	var mana: int = int(state.mana[side])
+	var without := _best_playable_value(state, side, mana)
+	var with_coin := _best_playable_value(state, side, mana + MatchState.COIN_MANA)
+	return with_coin > without
+
+
+## 手札のうち、指定したマナで出せる中でいちばん高い価値。出す場所や設置効果の
+## 対象までは見ない軽い近似(コインの得失を比べるためだけの用途)。
+func _best_playable_value(state: MatchState, side: int, mana: int) -> float:
+	var best := 0.0
+	var has_empty_slot: bool = not state.empty_slots(side).is_empty()
+	for card in state.hand[side]:
+		if card.cost > mana:
+			continue
+		if not card.is_spell and not has_empty_slot:
+			continue
+		var value := (
+			_spell_value(state, side, card) if card.is_spell else _card_value(state, side, card)
+		)
+		if value > best:
+			best = value
+	return best
 
 
 # --- 出す ---------------------------------------------------------------
@@ -461,7 +517,7 @@ func _effect_target(state: MatchState, side: int, card: CardData) -> Dictionary:
 	var foe_side := MatchState.other_side(side)
 	for effect in card.effects_for(CardEnums.Trigger.ON_PLAY):
 		if effect.target == CardEnums.EffectTarget.ENEMY_UNIT:
-			var slot := _strongest_enemy(state, foe_side)
+			var slot := _enemy_target_slot(state, foe_side, effect)
 			if slot >= 0:
 				return {"side": foe_side, "slot": slot}
 		elif effect.target == CardEnums.EffectTarget.ALLY_UNIT:
@@ -474,6 +530,34 @@ func _effect_target(state: MatchState, side: int, card: CardData) -> Dictionary:
 			if slot >= 0:
 				return {"side": side, "slot": slot}
 	return {}
+
+
+## ENEMY_UNIT を狙う効果の対象を選ぶ。上級はダメージ効果(DAMAGE_UNIT)のときだけ
+## 硝子が残っている相手を避ける(`_expert_damageable_enemy()`)。確定破壊(DESTROY_UNIT)は
+## `destroy_unit()` がダメージ処理を経由せず硝子を無視して通るため、対象を絞らない。
+func _enemy_target_slot(state: MatchState, foe_side: int, effect: CardEffectData) -> int:
+	if difficulty == Difficulty.EXPERT and effect.effect_type == CardEnums.EffectType.DAMAGE_UNIT:
+		var picked := _expert_damageable_enemy(state, foe_side)
+		if picked >= 0:
+			return picked
+	return _strongest_enemy(state, foe_side)
+
+
+## 上級:硝子が残っている駒を除いた中で、いちばん生涯ダメージの大きい1体。
+## 候補が1体も無ければ(全員硝子持ちなら)-1を返し、呼び出し側は素の`_strongest_enemy()`へ
+## フォールバックする(無駄撃ちにはなるが、対象自体を選ばないより実害が無い)。
+func _expert_damageable_enemy(state: MatchState, foe_side: int) -> int:
+	var best := -1
+	var best_value := -1
+	for slot in MatchState.BOARD_SIZE:
+		var unit: CardInstance = state.board[foe_side][slot]
+		if unit == null or unit.glass_intact:
+			continue
+		var value := unit.lifetime_damage()
+		if value > best_value:
+			best_value = value
+			best = slot
+	return best
 
 
 ## 味方のうち、いちばん生涯ダメージの大きい1体。強化はここへ乗せるのが効く。
@@ -555,7 +639,22 @@ func _trade_value(
 		gained += 3.0
 	if state.hp[side] <= 10:
 		lost *= 0.6
+	lost += _expert_guard_retention_penalty(attacker, defender)
 	return gained - lost
+
+
+## 上級:相打ちで自分の守護持ちを失う場合、場に残ることで防いでいた被弾を
+## 後続のターンぶんまとめて割り引く(GameDesign.md 13章)。
+func _expert_guard_retention_penalty(attacker: CardInstance, defender: CardInstance) -> float:
+	if difficulty != Difficulty.EXPERT:
+		return 0.0
+	if not attacker.has_keyword(CardEnums.Keyword.GUARD):
+		return 0.0
+	if attacker.glass_intact:
+		return 0.0
+	if defender.attack < attacker.health:
+		return 0.0
+	return EXPERT_GUARD_LOSS_PENALTY
 
 
 ## その砂時計へ amount のダメージを与えたときに失われる生涯ダメージ。
