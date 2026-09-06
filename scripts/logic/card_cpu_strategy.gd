@@ -6,6 +6,13 @@ extends RefCounted
 ## 1手番の中では「出す → 攻撃する → 反転する → 終える」の順に選ぶ。
 ## **攻撃してから反転する**のが重要で、逆にすると攻撃力の高い状態を捨ててしまう。
 ## 反転の最適解は「攻撃力が体力を上回ったとき」(GameDesign.md 1章)。
+##
+## **思考レベル(GameDesign.md 13章「CPU戦の思考レベル」)**は `difficulty` で切り替える。
+## `NORMAL` が既存のロジックそのもの(バランス検証はすべてこの段で行っている)。
+## `BEGINNER` は貪欲法を通らない別経路、`EXPERT` は `NORMAL` へ軽い分岐を3つ足すだけに
+## 留め、複数手先の探索は行わない(Architecture.md 8.1節)。
+
+enum Difficulty { BEGINNER, NORMAL, EXPERT }
 
 ## 本体を殴る価値の重み。1点の本体ダメージを、この倍率で生涯ダメージと比較する。
 ## 盤面の取り合いと本体レースの配分がここで決まる(GameDesign.md 7章の目標値30〜60%)。
@@ -23,6 +30,28 @@ const DAMAGED_TIMES := 2.0
 ## 反転権(GameDesign.md 2章)は対局に2〜3回しか無い希少な資源のため、
 ## 通常の反転よりゲインの下限を高く取り、僅かな得のために使い切らせない。
 const FLIP_RIGHT_MIN_GAIN := 3.0
+## 上級:本体を殴る前に、相手の場に残る攻撃可能な駒の合計攻撃力が
+## 自分の残りHPの何割を超えたら特攻を割り引くか。
+const EXPERT_FACE_RISK_RATIO := 0.7
+const EXPERT_FACE_DISCOUNT := 0.5
+## 上級:カードを出した後に残るマナが、手札の中でいちばん軽いカードのコストにも
+## 届かない(=そのターンもう何も出せない)場合に掛けるペナルティ。
+const EXPERT_MANA_LEFTOVER_PENALTY := 0.8
+
+## 選ばれている思考レベル。CPU戦の入口(`CardMatchScreen.start_cpu_match()`)が
+## デッキ選択の後に選ばれた値をここへ渡す。
+var difficulty: Difficulty = Difficulty.NORMAL
+
+var _rng := RandomNumberGenerator.new()
+
+
+## `raw` が負なら前回選んだ思考レベル(`CardCpuDifficultySave`)を返す。GDScriptの
+## デフォルト引数は定数式に限られ static 関数を呼べないため、`CardMatchScreen.start_cpu_match()`
+## がここへ委譲する。
+static func resolve_difficulty(raw: int) -> Difficulty:
+	if raw >= 0:
+		return raw as Difficulty
+	return CardCpuDifficultySave.get_difficulty()
 
 
 ## 初手の引き直しで戻すカードの位置を返す(GameDesign.md 2章)。
@@ -42,6 +71,8 @@ func choose_mulligan(state: MatchState, side: int) -> Array:
 ## **「反転権で仕留めやすくしてから攻撃する」の連携のため、`_choose_flip_right_setup()`
 ## だけは攻撃より前に見る**(GameDesign.md 2章。docs/BalanceReport_v5.md 12章)。
 func choose_action(state: MatchState, side: int) -> Dictionary:
+	if difficulty == Difficulty.BEGINNER:
+		return _choose_action_beginner(state, side)
 	var action := _choose_play(state, side)
 	if not action.is_empty():
 		return action
@@ -55,6 +86,102 @@ func choose_action(state: MatchState, side: int) -> Dictionary:
 		if not action.is_empty():
 			return action
 	return MatchAction.end_turn(side)
+
+
+# --- 初級 -----------------------------------------------------------------
+
+
+## 初級は貪欲法(生涯ダメージの比較)を一切通らない。出せる最初の1枚を出し、
+## 攻撃はランダムに選び、反転・反転権は使わない(GameDesign.md 13章)。
+func _choose_action_beginner(state: MatchState, side: int) -> Dictionary:
+	var play := _choose_play_beginner(state, side)
+	if not play.is_empty():
+		return play
+	if _should_use_coin(state, side):
+		return {"type": "coin", "side": side}
+	var attack := _choose_attack_random(state, side)
+	if not attack.is_empty():
+		return attack
+	return MatchAction.end_turn(side)
+
+
+## 手札を先頭から見て、出せる最初の1枚をそのまま出す。組み合わせやコスト効率を見ない。
+func _choose_play_beginner(state: MatchState, side: int) -> Dictionary:
+	var hand: Array = state.hand[side]
+	for index in hand.size():
+		var card: CardData = hand[index]
+		if card.is_spell:
+			if not state.can_cast(side, index):
+				continue
+			if card.effects_for(CardEnums.Trigger.ON_PLAY).any(
+				func(e: CardEffectData) -> bool: return _needs_target(state, side, e)
+			):
+				continue
+			return MatchAction.cast(side, index, _random_target(state, side, card))
+		if not state.can_play(side, index):
+			continue
+		var empty: Array = state.empty_slots(side)
+		if empty.is_empty():
+			continue
+		return MatchAction.play(side, index, empty[0], _random_target(state, side, card))
+	return {}
+
+
+## その効果が対象を要求するのに、対象がいなければ true(無駄撃ちを避けるための最低限の判定)。
+func _needs_target(state: MatchState, side: int, effect: CardEffectData) -> bool:
+	var foe_side := MatchState.other_side(side)
+	if effect.target == CardEnums.EffectTarget.ENEMY_UNIT:
+		return state.units(foe_side).is_empty()
+	if effect.target == CardEnums.EffectTarget.ALLY_UNIT:
+		return state.units(side).is_empty()
+	return false
+
+
+## 対象を1体取る効果をランダムに選ぶ(中級以上の`_effect_target()`は最も効く1体を選ぶが、
+## 初級はそこも狙わない)。
+func _random_target(state: MatchState, side: int, card: CardData) -> Dictionary:
+	var foe_side := MatchState.other_side(side)
+	for effect in card.effects_for(CardEnums.Trigger.ON_PLAY):
+		if effect.target == CardEnums.EffectTarget.ENEMY_UNIT:
+			var slots := state.units(foe_side)
+			if not slots.is_empty():
+				return {"side": foe_side, "slot": _random_slot_of(state, foe_side)}
+		elif effect.target == CardEnums.EffectTarget.ALLY_UNIT:
+			var slots := state.units(side)
+			if not slots.is_empty():
+				return {"side": side, "slot": _random_slot_of(state, side)}
+	return {}
+
+
+func _random_slot_of(state: MatchState, side: int) -> int:
+	var occupied: Array = []
+	for slot in MatchState.BOARD_SIZE:
+		if state.board[side][slot] != null:
+			occupied.append(slot)
+	if occupied.is_empty():
+		return -1
+	return occupied[_rng.randi_range(0, occupied.size() - 1)]
+
+
+## 攻撃できる駒と、狙える相手(本体を含む)をそれぞれランダムに選ぶ。
+## 守護がいれば無視できないのは `attackable_slots()` が返す集合そのものが保証する。
+func _choose_attack_random(state: MatchState, side: int) -> Dictionary:
+	var foe_side := MatchState.other_side(side)
+	var attackers: Array = []
+	for slot in MatchState.BOARD_SIZE:
+		var attacker: CardInstance = state.board[side][slot]
+		if attacker != null and attacker.can_attack():
+			attackers.append(slot)
+	if attackers.is_empty():
+		return {}
+	var slot: int = attackers[_rng.randi_range(0, attackers.size() - 1)]
+	var options: Array = state.attackable_slots(foe_side).duplicate()
+	if state.can_attack_player(side):
+		options.append(-1)
+	if options.is_empty():
+		return {}
+	var target: int = options[_rng.randi_range(0, options.size() - 1)]
+	return MatchAction.attack(side, slot, target)
 
 
 ## 手番が自分に回ってから終えるまでを一気に進める(シミュレーション・CPU戦で使う)。
@@ -143,11 +270,35 @@ func _spell_value(state: MatchState, side: int, card: CardData) -> float:
 ## そのカードをどの枠へ置くのが最も得かを返す。空き枠が無ければ出せない
 ## (上書き設置は廃止したため、value を 0 にして選ばれないようにする)。
 func _best_slot(state: MatchState, side: int, card: CardData) -> Dictionary:
-	var gain := _card_value(state, side, card) + DEVELOP_BONUS
+	var gain := (
+		_card_value(state, side, card) + DEVELOP_BONUS - _mana_leftover_penalty(state, side, card)
+	)
 	var empty: Array = state.empty_slots(side)
 	if empty.is_empty():
 		return {"slot": -1, "value": 0.0}
 	return {"slot": empty[0], "value": gain}
+
+
+## 上級:このカードを出した残りマナが、手札の中でいちばん軽い他のカードの
+## コストにも届かない(=そのターンもう何も出せなくなる)出し方にペナルティを掛ける。
+## 端数のマナを残さない出し方をわずかに優先する程度に留める(GameDesign.md 13章)。
+func _mana_leftover_penalty(state: MatchState, side: int, card: CardData) -> float:
+	if difficulty != Difficulty.EXPERT:
+		return 0.0
+	var leftover: int = int(state.mana[side]) - card.cost
+	if leftover <= 0:
+		return 0.0
+	var cheapest := -1
+	var skipped_self := false
+	for other in state.hand[side]:
+		if other == card and not skipped_self:
+			skipped_self = true
+			continue
+		if cheapest < 0 or other.cost < cheapest:
+			cheapest = other.cost
+	if cheapest >= 0 and leftover < cheapest:
+		return EXPERT_MANA_LEFTOVER_PENALTY
+	return 0.0
 
 
 ## カードを出したときに見込める価値。総量を体力とみなした生涯ダメージに、
@@ -343,6 +494,24 @@ func _strongest_ally(state: MatchState, side: int) -> int:
 # --- 攻撃する -----------------------------------------------------------
 
 
+## 上級:相手の場に残る合計攻撃力が自分の残りHPに対して大きいときは、
+## 本体特攻の価値を割り引く。次の相手の手番で受け返す被害を、探索せずに
+## 「いまの盤面の合計」で近似する(GameDesign.md 13章)。トドメの一撃(上の早期returnの経路)
+## には掛からない。
+func _expert_face_caution(state: MatchState, side: int) -> float:
+	if difficulty != Difficulty.EXPERT:
+		return 1.0
+	if state.hp[side] <= 0:
+		return 1.0
+	var foe_side := MatchState.other_side(side)
+	var foe_total_attack := 0
+	for unit in state.units(foe_side):
+		foe_total_attack += unit.attack
+	if float(foe_total_attack) > float(state.hp[side]) * EXPERT_FACE_RISK_RATIO:
+		return EXPERT_FACE_DISCOUNT
+	return 1.0
+
+
 func _choose_attack(state: MatchState, side: int) -> Dictionary:
 	var foe_side := MatchState.other_side(side)
 	var best: Dictionary = {}
@@ -355,7 +524,7 @@ func _choose_attack(state: MatchState, side: int) -> Dictionary:
 		if state.can_attack_player(side) and attacker.attack >= state.hp[foe_side]:
 			return MatchAction.attack(side, slot, -1)
 		if state.can_attack_player(side):
-			var face_value := attacker.attack * FACE_WEIGHT
+			var face_value := attacker.attack * FACE_WEIGHT * _expert_face_caution(state, side)
 			if face_value > best_value:
 				best_value = face_value
 				best = MatchAction.attack(side, slot, -1)
@@ -430,6 +599,8 @@ func _choose_flip(state: MatchState, side: int) -> Dictionary:
 		var unit: CardInstance = state.board[side][slot]
 		if unit == null or not unit.can_flip():
 			continue
+		if _expert_flip_is_risky(state, side, unit):
+			continue
 		var gain := _lifetime_of(unit.attack, unit.health) - float(unit.lifetime_damage())
 		if unit.data.effects_for(CardEnums.Trigger.ON_FLIP).size() > 0:
 			gain += 2.0
@@ -437,6 +608,22 @@ func _choose_flip(state: MatchState, side: int) -> Dictionary:
 			best_gain = gain
 			best = MatchAction.flip(side, slot)
 	return best
+
+
+## 上級:反転で体力が下がった結果(新しい体力=いまの攻撃力)、相手がいま持っている
+## 攻撃力でその場で仕留められるようになる反転は避ける。「攻撃力が体力を上回ったら
+## 返す」という最適解自体(GameDesign.md 1章)は変えず、危険な1手だけを弾く。
+func _expert_flip_is_risky(state: MatchState, side: int, unit: CardInstance) -> bool:
+	if difficulty != Difficulty.EXPERT:
+		return false
+	var new_health := unit.attack
+	if new_health <= 0:
+		return false
+	var foe_side := MatchState.other_side(side)
+	for foe in state.units(foe_side):
+		if foe.attack >= new_health:
+			return true
+	return false
 
 
 # --- 反転権 ---------------------------------------------------------------

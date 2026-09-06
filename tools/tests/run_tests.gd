@@ -13,6 +13,7 @@ const HourglassArtTests = preload("res://tools/tests/hourglass_art_tests.gd")
 const MatchRecordTests = preload("res://tools/tests/match_record_tests.gd")
 const PuzzleMissionTests = preload("res://tools/tests/puzzle_mission_tests.gd")
 const MatchFxTests = preload("res://tools/tests/match_fx_tests.gd")
+const CpuDifficultyTests = preload("res://tools/tests/cpu_difficulty_tests.gd")
 
 var _failures := 0
 
@@ -31,6 +32,7 @@ func _run() -> void:
 	HourglassArtTests.new().run(_assert_true)
 	PuzzleMissionTests.new().run(_assert_true)
 	MatchFxTests.new().run(_assert_true)
+	CpuDifficultyTests.new().run(_assert_true)
 	SoundSettingsTests.new().run(_assert_true)
 	OnlineTests.new().run(_assert_true)
 	AccountTests.new().run(_assert_true)

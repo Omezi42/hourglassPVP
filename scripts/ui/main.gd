@@ -21,6 +21,8 @@ var puzzle_picker_screen: CardPuzzlePickerScreen
 var shop_screen: CardShopScreen
 ## ルームマッチの専用画面(GameDesign.md 11章)。
 var card_room_screen: CardRoomScreen
+## CPU戦の思考レベル選択モーダル(GameDesign.md 13章)。
+var card_cpu_difficulty_picker: CardCpuDifficultyPicker
 
 var _match_return_screen: Control
 ## デッキ選択画面で確定するまで待たせている対局の導線(ランダム/CPU)。
@@ -136,6 +138,10 @@ func _ready() -> void:
 	puzzle_picker_screen.stage_selected.connect(_on_puzzle_stage_selected)
 	add_child(puzzle_picker_screen)
 	_screens.append(puzzle_picker_screen)
+	# 難易度モーダルは対局へ入る前の確認なので、対局画面より手前(後の子)に置く。
+	card_cpu_difficulty_picker = CardCpuDifficultyPicker.new()
+	add_child(card_cpu_difficulty_picker)
+	card_cpu_difficulty_picker.picked.connect(_start_cpu_match)
 	_transition_blocker = _make_transition_blocker()
 	add_child(_transition_blocker)
 	_sand_transition = SandTransition.new()
@@ -289,8 +295,9 @@ func _on_room_deck_change_requested() -> void:
 	_show_only(card_deck_list_screen)
 
 
+## デッキ選択の直後に思考レベルの選択(GameDesign.md 13章)を挟んでからCPU戦を始める。
 func _on_cpu_match_deck_requested() -> void:
-	_request_battle(_start_cpu_match)
+	_request_battle(func() -> void: card_cpu_difficulty_picker.open())
 
 
 ## デッキ選択画面で1つ選んだ。以後の初期値として覚えてから、待たせていた導線へ進む。

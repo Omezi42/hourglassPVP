@@ -209,11 +209,12 @@ func _reset_for_new_match() -> void:
 	state = null
 
 
-## CPU戦を開始する。deck_self / deck_foe は CardData の配列(20枚)。
-func start_cpu_match(deck_self: Array, deck_foe: Array) -> void:
+## CPU戦を開始する。`difficulty` 省略時は前回選んだ思考レベルを使う(GameDesign.md 13章)。
+func start_cpu_match(deck_self: Array, deck_foe: Array, difficulty: int = -1) -> void:
 	_reset_for_new_match()
 	_own_deck = deck_self
 	_cpu = CardCpuStrategy.new()
+	_cpu.difficulty = CardCpuStrategy.resolve_difficulty(difficulty)
 	_interactive = true
 	_match_kind = CurrencyRules.MatchKind.CPU
 	my_side = MatchState.Side.A
@@ -243,7 +244,9 @@ func start_cpu_match(deck_self: Array, deck_foe: Array) -> void:
 ## デッキは保存済みのものを使わずプリセットの「基本」で固定する。覚えてほしい動きが
 ## 出ないデッキで始まると成立しないため。
 func start_tutorial_match() -> void:
-	start_cpu_match(CardPresetDecks.basic(), CardPresetDecks.basic())
+	start_cpu_match(
+		CardPresetDecks.basic(), CardPresetDecks.basic(), CardCpuStrategy.Difficulty.NORMAL
+	)
 	_tutorial.watch(self, state, my_side)
 
 

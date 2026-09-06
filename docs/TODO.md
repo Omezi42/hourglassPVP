@@ -1,5 +1,26 @@
 # 開発タスク・進捗(TODO)
 
+## CPU戦の思考レベル(初級/中級/上級)
+
+仕様は GameDesign.md 13章「CPU戦の思考レベル」、実装設計は Architecture.md 8.1〜8.2節。
+
+- [ ] `CardCpuStrategy.Difficulty` enum と `difficulty` プロパティを追加(既定 NORMAL)。
+      既存のロジックは一切変更せず NORMAL としてそのまま残す
+- [ ] 初級:`_choose_action_beginner()` を新設(出せる最初の1枚を出す・攻撃対象はランダム・
+      反転/反転権は使わない・対象選択はランダム)
+- [ ] 上級:`_choose_attack()` に本体特攻の割引(`_expert_face_caution()`)、
+      `_choose_flip()` に危険な反転の回避(`_expert_flip_is_risky()`)、
+      `_best_slot()` にマナの使い残しペナルティ(`_mana_leftover_penalty()`)を追加
+- [ ] `CardCpuDifficultySave`(`user://cpu_difficulty.json`)で選択値を永続化
+- [ ] `CardCpuDifficultyPicker`(選択モーダル)。CPU戦のデッキ選択の直後にだけ挟む
+- [ ] `Main._start_cpu_match()` 系の経路をモーダル経由に更新
+- [ ] 誘導対局(`CardMatchTutorial` 経由のCPU戦)は `difficulty` を明示的に NORMAL 固定で渡す
+- [ ] ヘッドレステスト:初級が反転・反転権を一切使わないこと、上級が危険な反転を避けること
+- [ ] gdlint / gdformat、ヘッドレススモークテスト
+- [ ] 実機での確認(モーダルの表示・選択・対局への反映)
+
+---
+
 ## 日曜イベント(砂金2倍)とDiscord自動告知
 
 仕様は GameDesign.md 15章・25章、実装設計は Architecture.md 10.13節。

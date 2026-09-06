@@ -1497,6 +1497,53 @@ HTTPRequest をぶら下げると送信の途中で巻き添えに消える。�
 - CPU戦はオンライン対戦ではないため、`matches/{match_id}` への書き込みは行わない。
   棋譜は `LocalReplayService` がローカルへ保存する(7.1節)
 
+### 8.1 CPU戦の思考レベル(GameDesign.md 13章)
+
+- `CardCpuStrategy.Difficulty`(`BEGINNER` / `NORMAL` / `EXPERT`)を持ち、`difficulty` プロパティ
+  (既定 `NORMAL`)で切り替える。**既存の全ロジックは `NORMAL` としてそのまま残す**——
+  反転権の検証(`docs/BalanceReport_v5.md` 12章)が `NORMAL` 相当で行われているため、
+  この段を動かすとバランス指標が総崩れになる
+- **`BEGINNER` は別経路 `_choose_action_beginner()` を持つ**。既存の `choose_action()` の
+  貪欲法(価値計算)を一切通さず、
+  - 出す:手札を先頭から見て、出せる最初の1枚をそのまま出す(価値比較をしない)。
+    対象を1体取る効果は `_random_target()` でランダムに選ぶ
+  - 攻撃:攻撃できる駒と、選べる対象(本体を含む)をそれぞれランダムに選ぶ
+    (`_choose_attack_random()`)。守護がいれば無視できないのは `attackable_slots()` が
+    通常どおり返す集合のままなので、ここでの分岐は要らない
+  - 反転・反転権:呼ばない。使わせないことがそのまま弱さになるため、判定自体を削る
+- **`EXPERT` は `NORMAL` の関数へ軽い分岐を足すだけに留め、新しい探索を書かない**
+  (GameDesign.md 13章「複数手先の探索は行わない」)。追加する評価軸は3つ:
+  - `_choose_attack()`:本体を殴る前に、相手の場に残る攻撃可能な駒の合計攻撃力が
+    自分の残りHPを上回るなら、本体を殴る手の価値を割り引く(`_expert_face_caution()`)。
+    次の相手の手番で受け返す被害を、探索せずに「いまの盤面の合計」で近似する
+  - `_choose_flip()`:反転で体力が下がった結果、**相手がいま持っている最大攻撃力で
+    その場で仕留められる**ようになる反転は避ける(`_expert_flip_is_risky()`)。
+    2章の「攻撃力が体力を上回ったら返す」という最適解自体は変えず、危険な1手だけを弾く
+  - `_best_slot()`:このカードを出した残りマナで、他に何も出せなくなる出し方に
+    わずかなペナルティを掛ける(`_mana_leftover_penalty()`)。端数のマナを1〜2残す
+    ような出し方をわずかに優先する程度に留め、コストの分布次第で逆転しない範囲の値にする
+- **難易度はCPU自己対戦のバランス検証(全体指標・カード別勝率)の対象にしない**。
+  検証は常に `NORMAL` で行う(GameDesign.md 7章の指標は `NORMAL` の値のまま)
+- 誘導対局(4.1.5節)は `CardMatchTutorial` 経由のCPU戦であり、**`difficulty` を
+  明示的に `NORMAL` へ固定して**渡す(選択画面を挟まないため既定のままでも実質同じだが、
+  将来既定値を変えたときに誘導対局の難易度が黙って変わらないようにするため)
+
+### 8.2 CPU戦の思考レベル選択画面
+
+| クラス | 責務 |
+|---|---|
+| `CardCpuDifficultyPicker`(`scripts/ui/card_cpu_difficulty_picker.gd`) | 初級/中級/上級を選ぶモーダル。暗幕+`content_panel.tres`の中央パネルという既存パターン(`SettingsPanel`等)を踏襲する |
+
+- **CPU戦のときだけ**、デッキ選択(`CardDeckListScreen.open_pick()`)の直後にこのモーダルを挟む。
+  `Main._on_deck_picked()` の後続として `_pending_cpu_difficulty` のようなフラグを持たせず、
+  `Main._start_cpu_match()` の直前に一度だけ開く(デッキ選択とモーダルの2段を
+  `_pending_battle` の1つのCallableへ畳み込むと分岐が読みにくくなるため、
+  CPU戦の入口関数側で明示的に1段追加する)
+- **選んだ値は `CardDeckSave` と同じ「Autoloadを使わずstaticで持つ」流儀**で
+  `user://cpu_difficulty.json` へ永続化する(`CardCpuDifficultySave`)。前回選んだ値を
+  次回の初期選択にするため(GameDesign.md 13章「対局のたびに選び直せる」)
+- 誘導対局・リプレイ再生・観戦はこの画面を通らない
+
 ---
 
 ## 9. 効果音・BGMの実装方針
