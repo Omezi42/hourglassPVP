@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="PuzzleStageData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/puzzle_stage_data.gd" id="script_puzzle"]
+
+[resource]
+script = ExtResource("script_puzzle")
+id = "stage_8"
+title = "第8問 突破するより黙らせる"
+hint = "殴っても崩せない守護は、封砂で効果を消せば道が開く"
+order = 8
+foe_hp = 6
+own_hp = 30
+mana = 2
+hand_ids = Array[String](["seal"])
+own_units = Array[String](["sand:3:6"])
+foe_units = Array[String](["gate:9:9"])

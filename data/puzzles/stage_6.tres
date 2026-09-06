@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="PuzzleStageData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/puzzle_stage_data.gd" id="script_puzzle"]
+
+[resource]
+script = ExtResource("script_puzzle")
+id = "stage_6"
+title = "第6問 貫通は仕上げに使う"
+hint = "貫通の超過分は、守護の体力を先に削ってから当てると伸びる"
+order = 6
+foe_hp = 4
+own_hp = 30
+mana = 0
+hand_ids = Array[String]([])
+own_units = Array[String](["sand:3:5", "drill:1:6"])
+foe_units = Array[String](["shield:7:1"])

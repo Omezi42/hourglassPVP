@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="PuzzleStageData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/puzzle_stage_data.gd" id="script_puzzle"]
+
+[resource]
+script = ExtResource("script_puzzle")
+id = "stage_7"
+title = "第7問 反転しないほうがいい駒"
+hint = "攻撃力がもう体力より多いなら、反転すると連撃の合計が減ってしまう"
+order = 7
+foe_hp = 10
+own_hp = 30
+mana = 0
+hand_ids = Array[String]([])
+own_units = Array[String](["twin:2:5"])
+foe_units = Array[String]([])

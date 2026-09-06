@@ -39,6 +39,20 @@ func _test_every_stage_is_solvable() -> void:
 		"stage_3": [["attack", 0, 0]],
 		"stage_4": [["play", 0, 0], ["play", 0, 1], ["attack", 0, -1], ["attack", 1, -1]],
 		"stage_5": [["cast", 0], ["attack", 0, -1], ["cast", 0], ["cast", 0]],
+		# 貫通の超過分は「割った後の残り体力」から引かれるため、非貫通の駒で守護を
+		# 先に弱めてから貫通の駒で仕上げないと超過分がほとんど出ない(第6問)。
+		"stage_6": [["attack", 0, 0], ["attack", 1, 0]],
+		# 連撃は攻撃力が体力を上回っているぶんだけ得をする。反転すると
+		# 攻撃力と体力が入れ替わり、2回攻撃の合計がかえって減る(第7問)。
+		"stage_7": [["attack", 0, -1], ["attack", 0, -1]],
+		# 殴っても崩せない守護は、封砂で守護そのものを消してしまえば道が開く(第8問)。
+		"stage_8": [["cast", 0], ["attack", 0, -1]],
+		# 砕砂(即ダメージ)を先に使うと、守護を消す封砂ぶんのマナが残らない。
+		# 封砂→サンドショットの順でちょうどマナを使い切る(第9問)。
+		"stage_9": [["cast", 1], ["cast", 1], ["attack", 0, -1]],
+		# 硝子持ちの駒は道をふさいでいない。封砂を無効化にしか効かないミラーへ
+		# 撃つと、本当の壁であるゲートの守護が残って詰む(第10問)。
+		"stage_10": [["cast", 0, 1, 1], ["attack", 0, -1]],
 	}
 	for stage in PuzzleLibrary.all_stages():
 		if not answers.has(stage.id):
@@ -59,7 +73,10 @@ func _solve(stage: PuzzleStageData, moves: Array) -> bool:
 			"play":
 				state.play_card(mine, int(move[1]), int(move[2]))
 			"cast":
-				state.cast_spell(mine, int(move[1]))
+				var target := {}
+				if move.size() >= 4:
+					target = {"side": int(move[2]), "slot": int(move[3])}
+				state.cast_spell(mine, int(move[1]), target)
 	var cleared: bool = int(state.hp[MatchState.other_side(mine)]) <= 0
 	state.free()
 	return cleared

@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="PuzzleStageData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/puzzle_stage_data.gd" id="script_puzzle"]
+
+[resource]
+script = ExtResource("script_puzzle")
+id = "stage_9"
+title = "第9問 マナの使いどころ"
+hint = "硬い守護には直接ダメージより効果消し。使う順番でマナが足りなくなる"
+order = 9
+foe_hp = 6
+own_hp = 30
+mana = 3
+hand_ids = Array[String](["shatter", "seal", "shot"])
+own_units = Array[String](["sand:3:4"])
+foe_units = Array[String](["gate:8:1"])

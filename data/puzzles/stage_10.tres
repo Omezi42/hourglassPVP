@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="PuzzleStageData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/puzzle_stage_data.gd" id="script_puzzle"]
+
+[resource]
+script = ExtResource("script_puzzle")
+id = "stage_10"
+title = "第10問 消すべきは硝子じゃない"
+hint = "硝子はただ無効にするだけ。本当に道をふさいでいる守護を見極める"
+order = 10
+foe_hp = 6
+own_hp = 30
+mana = 2
+hand_ids = Array[String](["seal"])
+own_units = Array[String](["sand:3:6"])
+foe_units = Array[String](["mirror:5:0", "gate:7:7"])
