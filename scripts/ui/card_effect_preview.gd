@@ -70,7 +70,6 @@ const STAGE_METHODS := {
 	Demo.DOUBLE_STRIKE: "_stage_double_strike",
 	Demo.QUICK: "_stage_quick",
 	Demo.FLIP: "_stage_flip",
-	Demo.FX_ADD_TOTAL: "_stage_add_total",
 	Demo.FX_DRAW: "_stage_draw",
 	Demo.FX_HEAL_PLAYER: "_stage_heal",
 	Demo.FX_DAMAGE_PLAYER: "_stage_damage_player",
@@ -175,6 +174,13 @@ static func _entry_for_effect(effect: CardEffectData) -> Dictionary:
 		effect.target == CardEnums.EffectTarget.ALL_ENEMY_UNITS
 		or effect.target == CardEnums.EffectTarget.ALL_ALLY_UNITS
 	)
+	# **対象が味方か敵かで、実演の描き方そのものが変わる**(下記 `_stage()`)。
+	# ここを見落とすと、味方を対象にする効果(反転・砂落とし)が「相手を攻撃した」
+	# 演出になってしまう(実際にピボット・逆さ砂・ラトル・ドリップ・ひとつまみで起きていた)。
+	var is_ally := (
+		effect.target == CardEnums.EffectTarget.ALLY_UNIT
+		or effect.target == CardEnums.EffectTarget.ALL_ALLY_UNITS
+	)
 	var demo := Demo.FX_DAMAGE_PLAYER
 	match effect.effect_type:
 		CardEnums.EffectType.DAMAGE_PLAYER:
@@ -216,6 +222,7 @@ static func _entry_for_effect(effect: CardEffectData) -> Dictionary:
 		"demo": demo,
 		"value": value,
 		"all": all,
+		"ally": is_ally,
 		"trigger": effect.trigger,
 	}
 
@@ -245,8 +252,13 @@ static func _piece(health: int, attack: int, total: int) -> Dictionary:
 	}
 
 
-static func _beam(from: Array, to: Array, progress: float, blocked := false) -> Dictionary:
-	return {"from": from, "to": to, "p": progress, "blocked": blocked}
+## `color` を指定しない場合は既定どおり(遮られた=くすんだ色 / それ以外=朱)。
+## 味方への効果(反転を与える・砂を落とす等)は攻撃ではないため、朱ではなく
+## `InkFigure.GREEN` を明示して「敵を攻撃した」ように読めるのを避ける。
+static func _beam(
+	from: Array, to: Array, progress: float, blocked := false, color: Variant = null
+) -> Dictionary:
+	return {"from": from, "to": to, "p": progress, "blocked": blocked, "color": color}
 
 
 static func _pop(at: String, index: int, text: String, color: Color, p: float) -> Dictionary:
@@ -275,8 +287,23 @@ static func _empty_stage() -> Dictionary:
 func _stage(entry: Dictionary, t: float) -> Dictionary:
 	var demo := int(entry["demo"])
 	var value: int = entry.get("value", 1)
+	var trigger: int = entry.get("trigger", CardEnums.Trigger.ON_PLAY)
 	var stage: Dictionary
-	if STAGE_METHODS.has(demo):
+	if demo == Demo.FX_ADD_TOTAL:
+		# 「反転:総量+1」(グロウ)だけが実際に反転を伴う。設置/落砂/余砂の総量+効果は
+		# 反転しないため、台本の中で勝手に駒を裏返さない(トリガーで判定する)。
+		stage = _stage_add_total(
+			t, value, trigger == CardEnums.Trigger.ON_FLIP, entry.get("all", false)
+		)
+	elif entry.get("ally", false) and (demo == Demo.FX_SWAP_STATS or demo == Demo.FX_DROP_SAND):
+		# 味方を対象にする反転・砂落としは、相手への攻撃を挟まない
+		# (下の `_stage_on_enemy_unit` は「攻撃して当てる」演出であり、味方には使えない)。
+		# 砂術は盤面に自分自身を持たないため「他の」を付けない(GameDesign.md 6章の
+		# 自己除外は、効果を持つ砂時計自身を選べないという駒の制約であり砂術には無い)。
+		stage = _stage_on_ally_unit(
+			t, demo, value, entry.get("all", false), not entry.get("spell", false)
+		)
+	elif STAGE_METHODS.has(demo):
 		stage = call(STAGE_METHODS[demo], t, value)
 	else:
 		stage = _stage_on_enemy_unit(t, demo, value, entry.get("all", false))
@@ -287,7 +314,6 @@ func _stage(entry: Dictionary, t: float) -> Dictionary:
 		if entry.get("spell", false):
 			stage["note"] = trigger_note
 		else:
-			var trigger: int = entry.get("trigger", CardEnums.Trigger.ON_PLAY)
 			stage["note"] = "%s、%s" % [_trigger_phrase(trigger), trigger_note]
 	return stage
 
@@ -474,18 +500,37 @@ func _stage_flip(t: float, _value: int) -> Dictionary:
 	return stage
 
 
-func _stage_add_total(t: float, value: int) -> Dictionary:
+## 総量が増える。**「反転:総量+1」(グロウ)のときだけ駒が実際に裏返る**
+## (`show_flip`)。設置・落砂・余砂で載る同じ効果(フォージ・アンカー・ウェル・ハスク等)は
+## 反転を伴わないため、そこで駒を裏返すと起きていないことを起きたと見せることになる。
+func _stage_add_total(t: float, value: int, show_flip: bool, all: bool) -> Dictionary:
 	var stage := _empty_stage()
-	var flip := _seg(t, 0.25, 0.55)
-	var own := _piece(2, 3, 5) if flip < 0.5 else _piece(3, 2, 5)
-	own["flip"] = flip if t >= 0.25 and t <= 0.6 else -1.0
-	stage["trigger_note"] = "この砂時計の総量が%d増える" % value
+	var pieces: Array = [_add_total_piece(t, value, show_flip)]
+	if all:
+		pieces.append(_add_total_piece(t, value, show_flip))
+	var scope := "自分の砂時計すべて" if all else "この砂時計"
+	stage["trigger_note"] = "%sの総量が%d増える" % [scope, value]
 	if t >= 0.68:
-		own["h"] = 3 + value
-		own["total"] = 5 + value
-		stage["pops"] = [_pop("own", 0, "+%d" % value, UiPalette.GLOW_AMBER, _seg(t, 0.68, 1.0))]
-	stage["own"] = [own]
+		var pops: Array = []
+		for i in pieces.size():
+			pops.append(_pop("own", i, "+%d" % value, UiPalette.GLOW_AMBER, _seg(t, 0.68, 1.0)))
+		stage["pops"] = pops
+	stage["own"] = pieces
 	return stage
+
+
+static func _add_total_piece(t: float, value: int, show_flip: bool) -> Dictionary:
+	var piece: Dictionary
+	if show_flip:
+		var flip := _seg(t, 0.25, 0.55)
+		piece = _piece(2, 3, 5) if flip < 0.5 else _piece(3, 2, 5)
+		piece["flip"] = flip if t >= 0.25 and t <= 0.6 else -1.0
+	else:
+		piece = _piece(3, 2, 5)
+	if t >= 0.68:
+		piece["h"] = 3 + value
+		piece["total"] = 5 + value
+	return piece
 
 
 ## 攻撃力だけが増える。**体力が変わらないことが要点**なので、上の部屋は動かさない。
@@ -529,7 +574,7 @@ func _stage_grant_keyword(t: float, keyword: int) -> Dictionary:
 		word = CardEnums.keyword_short_text(keyword)
 	stage["trigger_note"] = "自分の砂時計1体が【%s】を持つ" % word
 	if t >= 0.3:
-		stage["beams"] = [_beam(["own", 0], ["own", 1], _seg(t, 0.3, 0.6))]
+		stage["beams"] = [_beam(["own", 0], ["own", 1], _seg(t, 0.3, 0.6), false, InkFigure.GREEN)]
 	if t >= 0.6:
 		ally["guard"] = keyword == CardEnums.Keyword.GUARD
 		ally["glass"] = keyword == CardEnums.Keyword.GLASS
@@ -576,7 +621,9 @@ func _stage_heal(t: float, value: int) -> Dictionary:
 	stage["own_hp"] = 0.6
 	stage["trigger_note"] = "自分のHPを%d回復する" % value
 	if t >= 0.35:
-		stage["beams"] = [_beam(["own", 0], ["own_hp", 0], _seg(t, 0.35, 0.65))]
+		stage["beams"] = [
+			_beam(["own", 0], ["own_hp", 0], _seg(t, 0.35, 0.65), false, UiPalette.GLOW_AMBER)
+		]
 	if t >= 0.65:
 		stage["own_hp"] = 0.6 + (float(value) / HP_MAX) * _seg(t, 0.65, 0.9)
 		stage["pops"] = [_pop("own_hp", 0, "+%d" % value, UiPalette.GLOW_AMBER, _seg(t, 0.65, 1.0))]
@@ -593,7 +640,9 @@ func _stage_invert_hp(t: float, _value: int) -> Dictionary:
 	stage["own_hp"] = 0.2
 	stage["trigger_note"] = "自分の残りHPと失ったHPが入れ替わる"
 	if t >= 0.3:
-		stage["beams"] = [_beam(["own", 0], ["own_hp", 0], _seg(t, 0.3, 0.6))]
+		stage["beams"] = [
+			_beam(["own", 0], ["own_hp", 0], _seg(t, 0.3, 0.6), false, UiPalette.GLOW_AMBER)
+		]
 	if t >= 0.6:
 		stage["own_hp"] = 0.2 + 0.6 * _seg(t, 0.6, 0.9)
 		stage["pops"] = [_pop("own_hp", 0, "反転", UiPalette.GLOW_AMBER, _seg(t, 0.6, 1.0))]
@@ -659,6 +708,50 @@ func _stage_on_enemy_unit(t: float, demo: int, value: int, all: bool) -> Diction
 			CardEffectDemoEnemy.apply(foe, demo, value, landed)
 	stage["own"] = [own]
 	stage["foe"] = foes
+	return stage
+
+
+## 味方の砂時計を対象に取る効果(反転 / 砂を落とす)。**攻撃ではないため相手の場は
+## 一切出さず**、自分の場の中で「持ち主 → 対象の1体」へ光の筋を送るだけにする
+## (`_stage_grant_keyword` と同じ語彙)。以前はここも `_stage_on_enemy_unit` を
+## 通していたため、味方を対象にするピボット・逆さ砂・ラトル・ドリップ・ひとつまみが
+## 「相手を攻撃してその駒を操作する」という誤った演出になっていた。
+func _stage_on_ally_unit(
+	t: float, demo: int, value: int, all: bool, exclude_self: bool
+) -> Dictionary:
+	var stage := _empty_stage()
+	var caster := _piece(6, 0, 6)
+	caster["fade"] = _seg(t, 0.0, 0.15)
+	var allies: Array = [_piece(3, 2, 5)]
+	if all:
+		allies.append(_piece(2, 3, 5))
+	var scope := "自分の砂時計すべて"
+	if not all:
+		scope = "自分の他の砂時計1体" if exclude_self else "自分の砂時計1体"
+	if demo == Demo.FX_SWAP_STATS:
+		stage["trigger_note"] = "%sの体力と攻撃力を入れ替える" % scope
+	else:
+		stage["trigger_note"] = "%sの砂が%d粒落ちる" % [scope, value]
+	if t >= 0.3 and t < 0.8:
+		var beams: Array = []
+		for i in allies.size():
+			beams.append(
+				_beam(
+					["own", 0],
+					["own", i + 1],
+					_seg(t, 0.3 + 0.06 * i, 0.6 + 0.06 * i),
+					false,
+					InkFigure.GREEN
+				)
+			)
+		stage["beams"] = beams
+	if t >= 0.62:
+		var landed := _seg(t, 0.62, 0.85)
+		for ally in allies:
+			CardEffectDemoEnemy.apply(ally, demo, value, landed)
+	var pieces: Array = [caster]
+	pieces.append_array(allies)
+	stage["own"] = pieces
 	return stage
 
 
@@ -840,7 +933,10 @@ func _draw_beam(layout: Dictionary, beam: Dictionary) -> void:
 	var from: Vector2 = _anchor(layout, beam["from"])
 	var to: Vector2 = _anchor(layout, beam["to"])
 	var blocked: bool = beam["blocked"]
-	var color := BLOCKED_COLOR if blocked else InkFigure.RED
+	var custom_color: Variant = beam.get("color")
+	var color: Color = (
+		custom_color if custom_color != null else (BLOCKED_COLOR if blocked else InkFigure.RED)
+	)
 	var head: Vector2 = from.lerp(to, progress)
 	draw_line(from, head, Color(color, 0.9), 3.0)
 	var dir := (to - from).normalized()
