@@ -134,6 +134,7 @@ const _JS_TEMPLATE := """
 			btnRow.appendChild(closeBtn);
 			box.appendChild(btnRow);
 
+			modal.appendChild(box);
 			modal.onclick = function (e) {
 				if (e.target === modal) { closeModal(); }
 			};
