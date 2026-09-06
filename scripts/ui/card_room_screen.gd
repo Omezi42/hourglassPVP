@@ -24,6 +24,8 @@ const BUSY_DOTS_INTERVAL := 0.5
 
 var _room: RoomMatch
 var _busy := false
+var _in_lobby := false
+var _is_host := false
 var _code := ""
 var _time_limit := true
 var _status_base_text := ""
@@ -41,6 +43,7 @@ var _join_button: Button
 var _spectate_button: Button
 var _status_label: Label
 var _cancel_button: Button
+var _start_button: Button
 
 
 func _ready() -> void:
@@ -56,7 +59,7 @@ func _ready() -> void:
 ## 進行中の待機を壊さないよう設定の表示だけを描き直す。
 func open() -> void:
 	_refresh_settings()
-	if not _busy:
+	if not _busy and not _in_lobby:
 		_set_status("部屋を作るか、コードで参加してください")
 
 
@@ -64,6 +67,8 @@ func open() -> void:
 func reset_after_match() -> void:
 	_code = ""
 	_set_busy(false)
+	_in_lobby = false
+	_is_host = false
 
 
 func _build() -> void:
@@ -150,6 +155,10 @@ func _build_status() -> void:
 	_cancel_button.visible = false
 	_cancel_button.pressed.connect(_on_cancel_pressed)
 	line.add_child(_cancel_button)
+	_start_button = CodedButton.make("対局を開始", Vector2(200, 56))
+	_start_button.visible = false
+	_start_button.pressed.connect(_on_start_pressed)
+	line.add_child(_start_button)
 
 
 func _make_panel(rect: Rect2) -> VBoxContainer:
@@ -189,7 +198,7 @@ func _refresh_settings() -> void:
 		_deck_label.text = "使用デッキ: %s" % decks[index]["name"]
 		_deck_button.disabled = _busy
 	_time_button.text = "持ち時間: あり" if _time_limit else "持ち時間: なし"
-	_time_button.disabled = _busy
+	_time_button.disabled = _busy or _in_lobby
 	_time_note.text = ("1手番につき60秒。手番が移るたびに戻ります" if _time_limit else "持ち時間なし。放置した相手を時間切れで倒せなくなります")
 
 
@@ -210,15 +219,20 @@ func _on_copy_pressed() -> void:
 ## cancellable: 相手の参加待ち・観戦の開始待ちなど、待機を中断できる間だけtrueにする。
 func _set_busy(busy: bool, cancellable: bool = false) -> void:
 	_busy = busy
+	if busy:
+		_in_lobby = false
 	_create_button.disabled = busy
 	_join_button.disabled = busy
 	_spectate_button.disabled = busy
 	_join_input.editable = not busy
 	_cancel_button.visible = busy and cancellable
+	_start_button.visible = false
 	if busy:
 		_busy_dot_count = 0
 		_busy_dots_timer.start()
 	else:
+		_in_lobby = false
+		_is_host = false
 		_discard_session()
 		_stop_busy_dots()
 		_code_label.visible = false
@@ -266,6 +280,8 @@ func _sign_in_or_fail() -> bool:
 func _fail(message: String) -> void:
 	_set_busy(false)
 	_code = ""
+	_in_lobby = false
+	_start_button.visible = false
 	_set_status(message)
 
 
@@ -298,6 +314,8 @@ func _on_create_pressed() -> void:
 	add_child(_room)
 	_room.room_created.connect(_on_room_created)
 	_room.matched.connect(_on_matched)
+	_room.room_ready.connect(_on_room_ready)
+	_room.room_closed.connect(_on_room_closed)
 	_room.join_failed.connect(_on_join_failed)
 	_room.create_room(_time_limit)
 
@@ -316,6 +334,8 @@ func _on_join_pressed() -> void:
 	_room = RoomMatch.new(NetSession.client, NetSession.auth)
 	add_child(_room)
 	_room.matched.connect(_on_matched)
+	_room.room_ready.connect(_on_room_ready)
+	_room.room_closed.connect(_on_room_closed)
 	_room.join_failed.connect(_on_join_failed)
 	_room.join_room(code)
 
@@ -349,6 +369,8 @@ func _on_cancel_pressed() -> void:
 	_code = ""
 	_set_busy(false)
 	_set_status("キャンセルしました")
+	_in_lobby = false
+	_start_button.visible = false
 	if room != null:
 		await room.cancel()
 		room.queue_free()
@@ -363,6 +385,39 @@ func _on_room_created(code: String) -> void:
 	_copy_button.visible = true
 	_create_button.visible = false
 	_set_status("相手の参加を待っています")
+
+
+## 両者が入室した後のロビー。ここではまだ対局画面へ遷移しない。
+func _on_room_ready(_match_id: String, _opponent_uid: String, is_host: bool) -> void:
+	_in_lobby = true
+	_is_host = is_host
+	_busy = false
+	_stop_busy_dots()
+	_create_button.disabled = true
+	_join_button.disabled = true
+	_spectate_button.disabled = true
+	_join_input.editable = false
+	_cancel_button.visible = true
+	_start_button.visible = is_host
+	_start_button.disabled = false
+	_refresh_settings()
+	_set_status("相手が入室しました。デッキと持ち時間を確認してください" if is_host else "入室しました。ホストの開始を待っています")
+
+
+func _on_start_pressed() -> void:
+	if not _in_lobby or not _is_host or _room == null:
+		return
+	_start_button.disabled = true
+	_cancel_button.disabled = true
+	_set_status("対局を開始しています")
+	if not await _room.start_room():
+		_start_button.disabled = false
+		_cancel_button.disabled = false
+		_set_status("開始できませんでした。もう一度お試しください")
+
+
+func _on_room_closed() -> void:
+	_fail("ルームが閉じられました")
 
 
 func _on_spectate_waiting() -> void:
@@ -433,5 +488,7 @@ func _on_matched(match_id: String, opponent_uid: String) -> void:
 	else:
 		_fail("対戦相手との同期に失敗しました。もう一度お試しください")
 		return
+	_in_lobby = false
+	_start_button.visible = false
 	_set_status("対戦相手が見つかりました!")
 	matched.emit(match_id, my_side, opponent_uid, time_limit)

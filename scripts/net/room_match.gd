@@ -2,6 +2,8 @@ class_name RoomMatch
 extends Node
 
 signal room_created(code: String)
+signal room_ready(match_id: String, opponent_uid: String, is_host: bool)
+signal room_closed
 signal matched(match_id: String, opponent_uid: String)
 signal join_failed(reason: String)
 signal spectate_ready(match_id: String)
@@ -28,6 +30,7 @@ var time_limit := true
 var _code: String = ""
 var _my_match_id: String = ""
 var _cancelled := false
+var _is_host := false
 
 
 func _init(p_client: FirestoreClient, p_auth: FirebaseAuth) -> void:
@@ -44,6 +47,7 @@ func create_room(p_time_limit: bool = true) -> void:
 		var created: bool = await _claim_code(code, p_time_limit)
 		if created:
 			_code = code
+			_is_host = true
 			room_created.emit(code)
 			await _wait_for_joiner()
 			return
@@ -53,6 +57,7 @@ func create_room(p_time_limit: bool = true) -> void:
 func join_room(code: String) -> void:
 	_cancelled = false
 	_my_match_id = ""
+	_code = code
 	var room: Dictionary = await client.get_document_meta(_doc_path(code))
 	if not room["exists"]:
 		join_failed.emit("not_found")
@@ -102,13 +107,31 @@ func join_room(code: String) -> void:
 		return
 
 	_my_match_id = new_match_id
-	matched.emit(new_match_id, creator_uid)
+	_is_host = false
+	room_ready.emit(new_match_id, creator_uid, false)
+	await _wait_for_start()
 
 
 func cancel() -> void:
 	_cancelled = true
 	if _code != "":
 		await client.delete_document(_doc_path(_code))
+
+
+## ホストが対局開始のタイミングを決める。参加者が入っただけでは開始しない。
+func start_room() -> bool:
+	if not _is_host or _code.is_empty() or _my_match_id.is_empty() or _cancelled:
+		return false
+	var room := await client.get_document_meta(_doc_path(_code))
+	if not room.get("exists", false) or room["fields"].get("match_id", "") != _my_match_id:
+		return false
+	return await client.commit(
+		[
+			client.update_write(
+				_doc_path(_code), {"started": true}, {"updateTime": room["update_time"]}
+			)
+		]
+	)
 
 
 ## 観戦用にコードからmatch_idを取得する。**対局がまだ始まっていなければ弾かずに待つ**
@@ -131,7 +154,9 @@ func spectate(code: String) -> void:
 			return
 		time_limit = bool(room["fields"].get("time_limit", true))
 		var match_id: String = room["fields"].get("match_id", "")
-		if match_id != "":
+		# started が無いのは旧版で既に成立した部屋。match_id がある旧部屋は
+		# 既に対局中として扱い、更新後の待機部屋(false)とは区別する。
+		if match_id != "" and bool(room["fields"].get("started", true)):
 			spectate_ready.emit(match_id)
 			return
 		if not waiting_announced:
@@ -150,8 +175,21 @@ func _wait_for_joiner() -> void:
 		if match_id != "":
 			_my_match_id = match_id
 			var joiner_uid: String = doc.get("joiner_uid", "")
-			matched.emit(match_id, joiner_uid)
+			room_ready.emit(match_id, joiner_uid, true)
+			await _wait_for_start()
 			return
+
+
+func _wait_for_start() -> void:
+	while not _cancelled:
+		var room := await client.get_document(_doc_path(_code))
+		if room.is_empty():
+			room_closed.emit()
+			return
+		if bool(room.get("started", true)):
+			matched.emit(_my_match_id, room.get("joiner_uid", ""))
+			return
+		await get_tree().create_timer(POLL_INTERVAL_SECONDS).timeout
 
 
 func _doc_path(code: String) -> String:
@@ -166,6 +204,7 @@ func _claim_code(code: String, p_time_limit: bool) -> bool:
 		"creator_uid": auth.uid,
 		"joiner_uid": "",
 		"match_id": "",
+		"started": false,
 		"created_at": Time.get_unix_time_from_system(),
 		"build": GameVersion.build_id(),
 		"time_limit": p_time_limit
