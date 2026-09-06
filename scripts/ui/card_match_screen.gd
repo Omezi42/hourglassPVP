@@ -120,6 +120,8 @@ var _effects: CardMatchEffects
 var _targets: CardMatchTargets
 ## 砂術を撃つ段取り。CardMatchTargets が対象の側を引くためにも読む。
 var _spell: CardMatchSpell
+## 設置効果の対象選択の段取り(GameDesign.md 9章)。
+var _effect_target: CardMatchEffectTarget
 ## 反転権(GameDesign.md 2章)の段取り。
 var _flip_right: CardMatchFlipRight
 var _feed: CardMatchTurnFeed
@@ -145,6 +147,7 @@ func _ready() -> void:
 	_online_ctl = CardMatchOnline.new(self)
 	_targets = CardMatchTargets.new(self)
 	_spell = CardMatchSpell.new(self)
+	_effect_target = CardMatchEffectTarget.new(self)
 	_flip_right = CardMatchFlipRight.new(self)
 	_clocks = CardMatchClock.new(self)
 	_emote = CardMatchEmote.new(self)
@@ -599,10 +602,8 @@ func _on_view_left() -> void:
 
 
 func _on_hand_pressed(view: CardView) -> void:
-	if not _my_turn():
-		return
 	var index := _hand_views.find(view)
-	if index < 0:
+	if index < 0 or not _my_turn():
 		return
 	if state.can_cast(my_side, index):
 		_spell.begin(index)
@@ -616,10 +617,8 @@ func _on_hand_pressed(view: CardView) -> void:
 ## 手札を空き枠へドラッグして出す(GameDesign.md 9章)。押して枠を選ぶ経路と同じ
 ## `_play_selected()` へ合流させ、設置効果の対象選択も同じように働くようにする。
 func _on_slot_drop(source: CardView, slot: int) -> void:
-	if not _my_turn() or state.board[my_side][slot] != null:
-		return
 	var index := _hand_views.find(source)
-	if index < 0:
+	if index < 0 or not _my_turn() or state.board[my_side][slot] != null:
 		return
 	if state.can_cast(my_side, index):
 		_spell.begin(index)
@@ -632,20 +631,13 @@ func _on_slot_drop(source: CardView, slot: int) -> void:
 
 func _on_own_slot_pressed(view: CardView) -> void:
 	var slot := _own_slots.find(view)
-	if slot < 0:
-		return
-	if not _my_turn():
+	if slot < 0 or not _my_turn():
 		return
 	if _selection.is_flip_right():
 		_flip_right.use_at(my_side, slot)
 		return
 	if _selection.is_targeting():
-		# 味方1体を対象に取る砂術は、自分の駒を押して確定する。
-		if _selection.slot < 0 and state.board[my_side][slot] != null:
-			_spell.cast_at(my_side, slot)
-			return
-		_selection.clear()
-		refresh()
+		_handle_own_targeting(slot)
 		return
 	if _selection.is_hand_selection():
 		# 上書き設置は行わないため、埋まっている枠は選べない。
@@ -659,34 +651,57 @@ func _on_own_slot_pressed(view: CardView) -> void:
 	refresh()
 
 
+## 対象選択中に自分の場を押したとき(砂術の味方対象 / 設置効果の味方対象)。
+func _handle_own_targeting(slot: int) -> void:
+	if state.board[my_side][slot] == null:
+		_selection.clear()
+		refresh()
+		return
+	# 味方1体を対象に取る砂術は、自分の駒を押して確定する。
+	if _selection.slot < 0:
+		_spell.cast_at(my_side, slot)
+		return
+	# 味方1体を対象に取る設置効果(ハロー/ピボット等)。
+	var card: CardData = state.hand[my_side][_selection.hand_index]
+	if _effect_target.target_side(card) == my_side:
+		_effect_target.confirm(my_side, slot)
+		return
+	_selection.clear()
+	refresh()
+
+
 func _on_foe_slot_pressed(view: CardView) -> void:
 	var slot := _foe_slots.find(view)
-	if slot < 0:
+	if slot < 0 or not _my_turn():
 		return
-	if _my_turn() and _selection.is_flip_right():
+	if _selection.is_flip_right():
 		_flip_right.use_at(MatchState.other_side(my_side), slot)
 		return
-	if _my_turn() and _selection.is_targeting():
-		if state.board[MatchState.other_side(my_side)][slot] == null:
-			return
-		var foe := MatchState.other_side(my_side)
-		# slot が -1 のままなら砂術(置く枠を持たない)。
-		if _selection.slot < 0:
-			_spell.cast_at(foe, slot)
-			return
-		var target := {"side": foe, "slot": slot}
-		_perform(MatchAction.play(my_side, _selection.hand_index, _selection.slot, target))
+	if _selection.is_targeting():
+		_handle_foe_targeting(slot)
+		return
+	if _selection.is_board_selection() and state.can_attack(my_side, _selection.slot, slot):
+		_perform(MatchAction.attack(my_side, _selection.slot, slot))
 		_selection.clear()
 		_hide_detail()
 		refresh()
+
+
+## 対象選択中に相手の場を押したとき(砂術の相手対象 / 設置効果の相手対象)。
+func _handle_foe_targeting(slot: int) -> void:
+	var foe := MatchState.other_side(my_side)
+	if state.board[foe][slot] == null:
 		return
-	if _my_turn() and _selection.is_board_selection():
-		if state.can_attack(my_side, _selection.slot, slot):
-			_perform(MatchAction.attack(my_side, _selection.slot, slot))
-			_selection.clear()
-			_hide_detail()
-			refresh()
-			return
+	# slot が -1 のままなら砂術(置く枠を持たない)。
+	if _selection.slot < 0:
+		_spell.cast_at(foe, slot)
+		return
+	# 味方1体を対象に取る設置効果は相手の場を押しても確定しない
+	# (自分の場を押させる。`_handle_own_targeting()` 側で処理する)。
+	var card: CardData = state.hand[my_side][_selection.hand_index]
+	if _effect_target.target_side(card) != foe:
+		return
+	_effect_target.confirm(foe, slot)
 
 
 func _on_face_pressed() -> void:
@@ -699,25 +714,10 @@ func _on_face_pressed() -> void:
 	refresh()
 
 
+## 相手1体・味方1体を対象に取る設置効果は、出す前に対象を選ばせる(GameDesign.md 9章)。
+## 対象がいなければ選ばせる意味がないため、そのまま出す(`CardMatchEffectTarget` が判断する)。
 func _play_selected(slot: int) -> void:
-	var index := _selection.hand_index
-	var card: CardData = state.hand[my_side][index]
-	# 相手1体を対象に取る設置効果は、出す前に対象を選ばせる(GameDesign.md 9章)。
-	# 相手の場が空なら選ばせる意味がないため、そのまま出す。
-	if _needs_target(card) and not state.units(MatchState.other_side(my_side)).is_empty():
-		_selection.await_target(index, slot)
-		refresh()
-		return
-	_perform(MatchAction.play(my_side, index, slot))
-	_selection.clear()
-	refresh()
-
-
-static func _needs_target(card: CardData) -> bool:
-	for effect in card.effects_for(CardEnums.Trigger.ON_PLAY):
-		if effect.target == CardEnums.EffectTarget.ENEMY_UNIT:
-			return true
-	return false
+	_effect_target.begin(_selection.hand_index, slot)
 
 
 func _on_flip_pressed() -> void:

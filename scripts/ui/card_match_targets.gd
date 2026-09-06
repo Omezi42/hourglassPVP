@@ -27,11 +27,14 @@ func refresh() -> void:
 		return
 	if selection.is_targeting():
 		# 砂術は置く枠を持たないため slot が -1 のまま。対象がどちら側かはカードが決める
-		# (GameDesign.md 6章)。砂時計の設置効果は従来どおり相手側だけを光らせる。
-		var side := foe
-		if selection.slot < 0:
-			var card: CardData = state.hand[my_side][selection.hand_index]
-			side = _screen._spell.target_side(card)
+		# (GameDesign.md 6章)。砂時計の設置効果(ハロー/ピボット等の味方対象を含む)も
+		# 同じくカードが決めた側を光らせる。
+		var card: CardData = state.hand[my_side][selection.hand_index]
+		var side: int = (
+			_screen._spell.target_side(card)
+			if selection.slot < 0
+			else _screen._effect_target.target_side(card)
+		)
 		for slot in MatchState.BOARD_SIZE:
 			_screen.view_at(side, slot).selected = state.board[side][slot] != null
 		return
