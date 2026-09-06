@@ -15,6 +15,10 @@ extends Control
 const SCREEN_SIZE := Vector2(1280, 720)
 const BANNER_DURATION := 1.1
 const BANNER_FONT_SIZE := 44
+## 対局そのものが始まった瞬間だけ出す大きな幕(GameDesign.md 9章)。手番のバナーより
+## 長く・大きく見せ、「これから対局が始まる」という一度きりの節目だと分かるようにする。
+const MATCH_START_DURATION := 1.7
+const MATCH_START_FONT_SIZE := 58
 const CAPTION_DURATION := 1.5
 const CAPTION_FONT_SIZE := 19
 const CAPTION_RISE := 22.0
@@ -28,6 +32,10 @@ var _screen: CardMatchScreen
 var _font: Font
 var _banner_text := ""
 var _banner_left := 0.0
+var _banner_duration := BANNER_DURATION
+var _banner_big := false
+## 対局開始の幕の直後に「あなたの番」を続けて出すかどうか(先手が自分のとき)。
+var _chain_turn_banner := false
 var _caption_text := ""
 var _caption_at := Vector2.ZERO
 var _caption_left := 0.0
@@ -46,7 +54,21 @@ func _ready() -> void:
 ## 情報帯の明暗と実況で分かるため、二重に知らせない)。
 func announce_turn() -> void:
 	_banner_text = "あなたの番"
+	_banner_duration = BANNER_DURATION
+	_banner_big = false
 	_banner_left = BANNER_DURATION
+	set_process(true)
+	queue_redraw()
+
+
+## 対局そのものが始まった瞬間に1度だけ出す幕。`chain_my_turn` が true なら、
+## 幕が消えたところへ続けて「あなたの番」を出す(先手が自分のとき)。
+func announce_match_start(chain_my_turn: bool) -> void:
+	_banner_text = "対局開始"
+	_banner_duration = MATCH_START_DURATION
+	_banner_big = true
+	_banner_left = MATCH_START_DURATION
+	_chain_turn_banner = chain_my_turn
 	set_process(true)
 	queue_redraw()
 
@@ -68,8 +90,13 @@ func clear() -> void:
 
 
 func _process(delta: float) -> void:
+	var was_showing := _banner_left > 0.0
 	_banner_left = maxf(_banner_left - delta, 0.0)
 	_caption_left = maxf(_caption_left - delta, 0.0)
+	if was_showing and _banner_left <= 0.0 and _chain_turn_banner:
+		_chain_turn_banner = false
+		announce_turn()
+		return
 	if _banner_left <= 0.0 and _caption_left <= 0.0:
 		set_process(false)
 	queue_redraw()
@@ -83,18 +110,19 @@ func _draw() -> void:
 
 
 ## 手番のバナー。出てすぐ消えるため、盤面を塞いでいる時間はごく短い。
+## 「対局開始」の幕(`_banner_big`)だけは大きく、光条を添えて特別な節目だと分かるようにする。
 func _draw_banner() -> void:
-	var ratio := _banner_left / BANNER_DURATION
+	var ratio := _banner_left / _banner_duration
 	# 出るときは速く、消えるときは緩く。
 	var alpha: float = minf(ratio * 3.0, 1.0) * minf((1.0 - ratio) * 6.0 + 0.2, 1.0)
-	var width := (
-		_font.get_string_size(_banner_text, HORIZONTAL_ALIGNMENT_LEFT, -1, BANNER_FONT_SIZE).x
-	)
+	var font_size := MATCH_START_FONT_SIZE if _banner_big else BANNER_FONT_SIZE
+	var width := _font.get_string_size(_banner_text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
 	var at := Vector2((SCREEN_SIZE.x - width) * 0.5, SCREEN_SIZE.y * 0.5)
 	var plate := Rect2(
-		Vector2(at.x - 34.0, at.y - BANNER_FONT_SIZE - 6.0),
-		Vector2(width + 68.0, BANNER_FONT_SIZE + 26.0)
+		Vector2(at.x - 34.0, at.y - font_size - 6.0), Vector2(width + 68.0, font_size + 26.0)
 	)
+	if _banner_big:
+		_draw_burst(plate.get_center(), alpha)
 	_draw_plate(plate, alpha * 0.72)
 	draw_string(
 		_font,
@@ -102,9 +130,23 @@ func _draw_banner() -> void:
 		_banner_text,
 		HORIZONTAL_ALIGNMENT_LEFT,
 		-1,
-		BANNER_FONT_SIZE,
+		font_size,
 		Color(UiPalette.GLOW_AMBER, alpha)
 	)
+
+
+## 「対局開始」の幕の背後へ放射する光条(反転演出と同じ語彙、GameDesign.md 9章)。
+func _draw_burst(center: Vector2, alpha: float) -> void:
+	var count := 16
+	for i in count:
+		var angle: float = TAU * float(i) / float(count)
+		var dir := Vector2(cos(angle), sin(angle))
+		draw_line(
+			center + dir * 40.0,
+			center + dir * 150.0,
+			Color(UiPalette.GLOW_AMBER, alpha * 0.35),
+			2.0
+		)
 
 
 ## 相手の1手の実況。起きた場所の上へ、少し浮かせながら出す。

@@ -98,6 +98,8 @@ var _client: FirestoreClient = null
 var _match_id := ""
 var _replay: CardMatchReplay = null
 var _interactive := true
+## 「対局開始」の幕(GameDesign.md 9章)をまだ出していないか。対局ごとに立て直す。
+var _match_start_pending := false
 var _mulligan: CardMatchMulligan
 var _detail: CardMatchDetail
 var _own_deck: Array = []
@@ -196,6 +198,7 @@ func _reset_for_new_match() -> void:
 	if _puzzle != null:
 		_puzzle.close()
 	_status.set_waiting("")
+	_match_start_pending = true
 	if _mulligan != null:
 		_mulligan.close()
 	if _tutorial != null:
@@ -908,6 +911,18 @@ func _on_turn_started(side: int) -> void:
 	_mulligan.close()
 	_hide_detail()
 	refresh()
+	# **対局そのものが始まった瞬間だけ、専用の幕を出す**(GameDesign.md 9章)。
+	# パズル(1手番だけの局面)と誘導対局は、すなえるの案内と重なるため対象にしない。
+	var is_puzzle := _puzzle != null and _puzzle.active()
+	var is_tutorial := _tutorial != null and _tutorial.visible
+	if _match_start_pending and _interactive and not is_puzzle and not is_tutorial:
+		_match_start_pending = false
+		if not state.is_match_over():
+			_feed.announce_match_start(side == my_side)
+			if _cpu != null and side != my_side:
+				_cpu_timer.start(CPU_THINK_SECONDS)
+			return
+	_match_start_pending = false
 	# 自分の番が回ってきたことだけ知らせる。相手の番であることは情報帯の縁と実況で分かる。
 	if side == my_side and _interactive and not state.is_match_over():
 		_feed.announce_turn()

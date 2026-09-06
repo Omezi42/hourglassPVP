@@ -11,6 +11,11 @@ const CARD_GAP := 24.0
 const CARD_ROW_Y := 172.0
 ## 引き直すカードは沈めて、押したことが手札の並びの中で分かるようにする。
 const PICKED_SINK := 14.0
+## 開いた瞬間、手札が配られるように下から浮き上がってくる距離と間隔。
+const DEAL_RISE := 46.0
+const DEAL_DURATION := 0.32
+const DEAL_STAGGER := 0.05
+const DIM_FADE_DURATION := 0.3
 
 var _views: Array[CardView] = []
 var _picked: Array[bool] = []
@@ -18,6 +23,8 @@ var _title: Label
 var _hint: Label
 var _button: Button
 var _waiting := false
+var _dim: ColorRect
+var _tween: Tween
 
 
 func _ready() -> void:
@@ -50,6 +57,37 @@ func show_hand(cards: Array) -> void:
 		_picked.append(false)
 	_refresh()
 	visible = true
+	_start_entrance()
+
+
+## **手札が配られるように**下から浮き上がらせる(GameDesign.md 9章の
+## 「場に出した砂時計は台座の少し上から落ちて着地する」と同じ思想を、
+## 対局の入口であるマリガンにも及ぼす)。暗幕もあわせてフェードインさせ、
+## 唐突に画面が切り替わったように見せない。
+func _start_entrance() -> void:
+	if _tween != null and _tween.is_valid():
+		_tween.kill()
+	_tween = create_tween()
+	_tween.set_parallel(true)
+	_dim.modulate.a = 0.0
+	_tween.tween_property(_dim, "modulate:a", 1.0, DIM_FADE_DURATION)
+	_title.modulate.a = 0.0
+	_hint.modulate.a = 0.0
+	_tween.tween_property(_title, "modulate:a", 1.0, DIM_FADE_DURATION)
+	_tween.tween_property(_hint, "modulate:a", 1.0, DIM_FADE_DURATION)
+	for i in _views.size():
+		var view: CardView = _views[i]
+		var target_y := view.position.y
+		view.position.y = target_y + DEAL_RISE
+		view.modulate.a = 0.0
+		(
+			_tween
+			. tween_property(view, "position:y", target_y, DEAL_DURATION)
+			. set_trans(Tween.TRANS_SINE)
+			. set_ease(Tween.EASE_OUT)
+			. set_delay(i * DEAL_STAGGER)
+		)
+		_tween.tween_property(view, "modulate:a", 1.0, DEAL_DURATION).set_delay(i * DEAL_STAGGER)
 
 
 func close() -> void:
@@ -103,11 +141,11 @@ func _refresh() -> void:
 
 
 func _build() -> void:
-	var dim := ColorRect.new()
-	dim.color = Color(0, 0, 0, 0.78)
-	dim.size = SCREEN_SIZE
-	dim.mouse_filter = Control.MOUSE_FILTER_STOP
-	add_child(dim)
+	_dim = ColorRect.new()
+	_dim.color = Color(0, 0, 0, 0.78)
+	_dim.size = SCREEN_SIZE
+	_dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(_dim)
 
 	_title = _make_label(40, 66.0)
 	_hint = _make_label(20, 124.0)
