@@ -13,7 +13,7 @@ const ERROR_COLOR := Color(1, 0.55, 0.5, 1)
 const HINT_COLOR := Color(0.86, 0.82, 0.74, 1)
 ## アイコン一覧の高さ。初期の8種(2行)がちょうど収まり、買って増えたぶんは
 ## スクロールで受ける。
-const ICON_SCROLL_HEIGHT := 108
+const ICON_SCROLL_HEIGHT := 96
 
 var _busy := false
 var _selected_icon_id := UserProfileLibrary.DEFAULT_ICON_ID
@@ -23,7 +23,6 @@ var _selected_title_id := UserProfileLibrary.DEFAULT_TITLE_ID
 var _selected_playmat_id := PlaymatLibrary.DEFAULT_ID
 
 var _icon_buttons: Dictionary = {}
-var _playmat_row: HBoxContainer
 var _title_buttons: Dictionary = {}
 var _preview: ProfilePreviewPlate
 
@@ -39,6 +38,7 @@ var _logout_button: Button
 var preview_container: Control = $Panel/Margin/Columns/LeftColumn/PreviewRow/PreviewContainer
 @onready var name_input: LineEdit = $Panel/Margin/Columns/LeftColumn/NameRow/NameInput
 @onready var icon_grid: GridContainer = $Panel/Margin/Columns/LeftColumn/IconGrid
+@onready var playmat_row: HBoxContainer = $Panel/Margin/Columns/LeftColumn/PlaymatRow
 @onready var title_list: VBoxContainer = $Panel/Margin/Columns/LeftColumn/TitleScroll/TitleList
 @onready var save_row: CenterContainer = $Panel/Margin/Columns/LeftColumn/SaveRow
 
@@ -92,7 +92,6 @@ func _setup_profile_ui() -> void:
 	_preview = ProfilePreviewPlate.new()
 	preview_container.add_child(_preview)
 	_wrap_icon_grid()
-	_build_playmat_row()
 	_rebuild_icon_grid()
 
 	_emote_panel = EmoteSlotPanel.new()
@@ -125,36 +124,21 @@ func _wrap_icon_grid() -> void:
 	parent.move_child(scroll, index)
 
 
-## プレイマットの帯。アイコンの一覧のすぐ下へ、所有しているマットを横に並べる。
-## **見本は盤面と同じ `PlaymatPaint` を通す**(選ぶ絵と敷かれる絵を食い違わせない)。
-func _build_playmat_row() -> void:
-	var column := icon_grid.get_parent().get_parent()
-	var label := Label.new()
-	label.text = "プレイマット"
-	label.add_theme_font_size_override("font_size", 14)
-	label.add_theme_color_override("font_color", UiPalette.BRASS_HIGHLIGHT)
-	column.add_child(label)
-	column.move_child(label, icon_grid.get_parent().get_index() + 1)
-	_playmat_row = HBoxContainer.new()
-	_playmat_row.add_theme_constant_override("separation", 8)
-	column.add_child(_playmat_row)
-	column.move_child(_playmat_row, label.get_index() + 1)
-
-
+## プレイマットの帯。所有しているマットを横に並べる(アイコン・称号と同じ、
+## 所有しているものだけを出す流儀)。**見本は盤面と同じ `PlaymatPaint` を通す**
+## (選ぶ絵と敷かれる絵を食い違わせない)。
 func _rebuild_playmat_row() -> void:
-	if _playmat_row == null:
-		return
-	for child in _playmat_row.get_children():
+	for child in playmat_row.get_children():
 		child.queue_free()
 	for mat_id in AccountService.owned_playmat_ids():
 		var swatch := PlaymatSwatch.new(mat_id)
 		swatch.pressed.connect(func() -> void: _on_playmat_selected(mat_id))
-		_playmat_row.add_child(swatch)
+		playmat_row.add_child(swatch)
 
 
 func _on_playmat_selected(mat_id: String) -> void:
 	_selected_playmat_id = mat_id
-	for child in _playmat_row.get_children():
+	for child in playmat_row.get_children():
 		var swatch := child as PlaymatSwatch
 		if swatch != null:
 			swatch.is_selected = swatch.mat_id == mat_id
