@@ -4,11 +4,13 @@
 
 仕様は GameDesign.md 26章、実装設計は Architecture.md 10.14節。
 
-- [ ] `tools/export_card_data_json.gd` を新設し、`tools/export_web.sh` の書き出し工程へ
+- [x] `tools/export_card_data_json.gd` を新設し、`tools/export_web.sh` の書き出し工程へ
       組み込む(`functions/data/cards.json` を書き出す)
-- [ ] `tools/export_discord_card_art.gd`:カード1枚ごとの詳細画像と、効果の実演の
-      PNG連番を書き出す(11章の `Engine.time_scale` を落として撮る手法を使う)
-- [ ] `tools/encode_discord_gifs.py`:PNG連番を語彙ごとに1本のGIFへエンコードする
+- [ ] `tools/export_discord_card_art.gd`:カード1枚ごとの詳細画像を書き出す
+- [ ] 既存の `tools/record_effect_gif.gd`(+`.tscn`)を全カード分ループで回す仕組みを
+      用意し、`tools/encode_discord_gifs.sh`(ImageMagick)でカードごとに1本のGIFへ
+      エンコードする(語彙ごとではなくカードごとに1本。11章の `Engine.time_scale` を
+      落として撮る手法は既にこのツールが使っている)
 - [ ] Firestore へ `discord_links` / `discord_link_codes` / `bot_spotlight_history` を
       新設し、`firestore.rules` を更新する(`discord_links` への書き込みはFunctions側限定)
 - [ ] `DiscordLinkService`(連携コードの発行)と、アカウント画面への

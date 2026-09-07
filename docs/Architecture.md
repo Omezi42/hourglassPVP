@@ -2062,8 +2062,9 @@ UTC時刻を +9時間して日本時間へ換算し、曜日を見る。**サー
 | クラス/ファイル | 責務 |
 |---|---|
 | `tools/export_card_data_json.gd` | ヘッドレスで `CardLibrary` を読み、`functions/data/cards.json` へ書き出す |
-| `tools/export_discord_card_art.gd` | ヘッドレスで、カード1枚ごとの「図鑑を元にした詳細画像」1枚と、そのカードが持つ効果の実演のPNG連番を `build/discord_assets/{id}/` へ書き出す |
-| `tools/encode_discord_gifs.py` | 上記のPNG連番を1本のGIFへエンコードする(Pillow使用)。実演は**キーワード/効果の種類ごとに1本**しか無いため(9章)、生成本数はカード種の数ではなく語彙の数で決まる |
+| `tools/record_effect_gif.gd` / `.tscn`(既存) | カード1枚ぶんの実演(`CardEffectPreview`)を、詳細パネルと同じ地の上で1周分だけPNG連番として書き出す。**新規に作らず、既にある紹介動画用の撮影ツールをそのまま使う** |
+| `tools/export_discord_card_art.gd` | ヘッドレスで、カード1枚ごとの「図鑑を元にした詳細画像」1枚を書き出す。実演のPNG連番は上記の既存ツールへ委ねる |
+| `tools/encode_discord_gifs.sh` | PNG連番をGIFへエンコードする。`record_effect_gif.gd` の冒頭コメントに既にある `magick`(ImageMagick)のコマンド列をそのまま使い、**全カードぶんループで回すラッパーにする**(Pillowでの再実装はしない) |
 | `DiscordLinkService`(`scripts/net/discord_link_service.gd`, static) | アカウント画面の「Discord連携コード」発行。`DeckCodeService` と同じ「8桁の数字を発行してFirestoreへ預ける」方式 |
 | `functions/discord_commands.js`(Node.js) | `/card` `/deck` `/link` `/profile` のハンドラ。`discordInteractions` から呼ばれる |
 | `functions/deck_sheet_canvas.js`(Node.js) | `/deck` 用の簡易デッキ表画像を `node-canvas` で描画する。ゲーム内の `CardDeckSheet` とは別実装であり、見た目の一致は求めない |
@@ -2071,16 +2072,18 @@ UTC時刻を +9時間して日本時間へ換算し、曜日を見る。**サー
 
 **カードデータ・画像・実演GIFは、いずれもビルド(`tools/export_web.sh`)のたびに
 まとめて生成する。**`.tres` はGodot専用形式でFunctions側から読めないため、
-書き出し工程へ3つのツールを足し、`functions/data/cards.json` と
-`functions/data/card_art/{id}.png`・`functions/data/effect_gifs/{語彙}.gif` を
+書き出し工程へ上記のツールを足し、`functions/data/cards.json` と
+`functions/data/card_art/{id}.png`・`functions/data/effect_gifs/{id}.gif` を
 書き出す。**これらもリポジトリへコミットする**(6.3節のWebhook URLのような
 秘匿情報ではないため、`data/discord_webhook.txt` とは扱いが異なる)。
 
-**実演GIFの生成手順**は、11章「演出のスクリーンショットは `Engine.time_scale` を
-0.2程度へ落として撮る」と同じ考え方を使う。`CardEffectPreview` を `SubViewport` へ
-乗せて `time_scale` を落として1ループぶんをPNG連番で撮り、`encode_discord_gifs.py`
-がGIFへまとめる。**カードごとではなく語彙ごとに1本**なので、カードが増えても
-生成本数は増えない(新しい語彙を足したときだけ増える)。
+**実演GIFは語彙ごとではなく、カードごとに1本にする。**既存の `record_effect_gif.gd` は
+そのカードが持つ能力すべて(複数のキーワード・トリガーがあれば台本を繋げて)を
+通しで1周ぶん録る設計に既になっており、これをそのまま使うほうが「1枚のカードが
+何をするか」を1本で見せられて `/card` の目的に合う。**カードが増えるたびに
+生成本数も増える**が、Godotのheadless実行は1回1カードで数秒程度のため、
+70種規模であれば書き出しの手間として許容できる。生成はカードのidをそのまま
+GIFのファイル名にする(`effect_gifs/{id}.gif`)。
 
 **`/deck` の画像はGodotを使わず、Functions側(Node.js)で完結させる。**
 組み合わせが無数にあるデッキ表は事前生成できず、都度Godotを起動して描画するのは

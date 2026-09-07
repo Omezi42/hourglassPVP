@@ -19,6 +19,10 @@ BUILD_ID="$(date -u +%Y%m%d-%H%M%S)"
 python "$ROOT/tools/stamp_build_id.py" "$ROOT/project.godot" "$BUILD_ID"
 echo "build_id = $BUILD_ID"
 
+# Discord Bot(Cloud Functions)がカードを検索できるよう、最新のカード一覧を
+# functions/data/cards.json へ書き出す(GameDesign.md 26章・Architecture.md 10.14節)。
+"$GODOT" --headless --path "$ROOT" --script "$ROOT/tools/export_card_data_json.gd"
+
 "$GODOT" --headless --path "$ROOT" --export-release "Web" "$OUT/index.html" > "$ROOT/logs/export_web.log" 2>&1
 "$GODOT" --headless --main-pack "$OUT/index.pck" --script res://tools/tests/run_tests.gd 2>&1 | grep -E "tests passed|FAILED" || true
 "$GODOT" --headless --main-pack "$OUT/index.pck" --script res://tools/verify_web_pck.gd 2>&1 | grep -E "pck check" || true

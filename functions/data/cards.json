@@ -1,0 +1,704 @@
+{
+	"cards": [
+		{
+			"cannot_attack": false,
+			"cost": 2,
+			"describe": "効果なし",
+			"display_name": "サンド",
+			"id": "sand",
+			"is_spell": false,
+			"pool_index": 1,
+			"total_sand": 5
+		},
+		{
+			"cannot_attack": false,
+			"cost": 2,
+			"describe": "守護",
+			"display_name": "シールド",
+			"id": "shield",
+			"is_spell": false,
+			"pool_index": 2,
+			"total_sand": 4
+		},
+		{
+			"cannot_attack": false,
+			"cost": 2,
+			"describe": "速落",
+			"display_name": "ダッシュ",
+			"id": "dash",
+			"is_spell": false,
+			"pool_index": 3,
+			"total_sand": 4
+		},
+		{
+			"cannot_attack": false,
+			"cost": 3,
+			"describe": "硝子",
+			"display_name": "グラス",
+			"id": "glass",
+			"is_spell": false,
+			"pool_index": 4,
+			"total_sand": 6
+		},
+		{
+			"cannot_attack": false,
+			"cost": 3,
+			"describe": "貫通",
+			"display_name": "ドリル",
+			"id": "drill",
+			"is_spell": false,
+			"pool_index": 5,
+			"total_sand": 7
+		},
+		{
+			"cannot_attack": false,
+			"cost": 3,
+			"describe": "与えたダメージぶん自分のHPを回復する",
+			"display_name": "ヴァンプ",
+			"id": "vamp",
+			"is_spell": false,
+			"pool_index": 6,
+			"total_sand": 6
+		},
+		{
+			"cannot_attack": false,
+			"cost": 3,
+			"describe": "設置:相手プレイヤーに2ダメージ",
+			"display_name": "ソード",
+			"id": "sword",
+			"is_spell": false,
+			"pool_index": 7,
+			"total_sand": 6
+		},
+		{
+			"cannot_attack": false,
+			"cost": 3,
+			"describe": "設置:カードを1枚引く",
+			"display_name": "エコー",
+			"id": "echo",
+			"is_spell": false,
+			"pool_index": 8,
+			"total_sand": 5
+		},
+		{
+			"cannot_attack": false,
+			"cost": 3,
+			"describe": "設置:相手の砂時計1体の体力と攻撃力を入れ替える",
+			"display_name": "アイ",
+			"id": "eye",
+			"is_spell": false,
+			"pool_index": 9,
+			"total_sand": 6
+		},
+		{
+			"cannot_attack": false,
+			"cost": 4,
+			"describe": "設置:相手の砂時計1体に4ダメージ",
+			"display_name": "ハンマー",
+			"id": "hammer",
+			"is_spell": false,
+			"pool_index": 10,
+			"total_sand": 3
+		},
+		{
+			"cannot_attack": false,
+			"cost": 4,
+			"describe": "効果なし",
+			"display_name": "ロック",
+			"id": "lock",
+			"is_spell": false,
+			"pool_index": 11,
+			"total_sand": 8
+		},
+		{
+			"cannot_attack": false,
+			"cost": 4,
+			"describe": "1ターンに2回攻撃できる",
+			"display_name": "ツイン",
+			"id": "twin",
+			"is_spell": false,
+			"pool_index": 12,
+			"total_sand": 7
+		},
+		{
+			"cannot_attack": false,
+			"cost": 4,
+			"describe": "速落 / 貫通",
+			"display_name": "ランス",
+			"id": "lance",
+			"is_spell": false,
+			"pool_index": 13,
+			"total_sand": 6
+		},
+		{
+			"cannot_attack": false,
+			"cost": 4,
+			"describe": "設置:相手の砂時計の数 × 1 ダメージを相手プレイヤーへ",
+			"display_name": "スウォーム",
+			"id": "swarm",
+			"is_spell": false,
+			"pool_index": 14,
+			"total_sand": 6
+		},
+		{
+			"cannot_attack": false,
+			"cost": 5,
+			"describe": "硝子",
+			"display_name": "ミラー",
+			"id": "mirror",
+			"is_spell": false,
+			"pool_index": 15,
+			"total_sand": 7
+		},
+		{
+			"cannot_attack": false,
+			"cost": 5,
+			"describe": "守護",
+			"display_name": "ガード",
+			"id": "guard",
+			"is_spell": false,
+			"pool_index": 16,
+			"total_sand": 7
+		},
+		{
+			"cannot_attack": false,
+			"cost": 5,
+			"describe": "ダメージを与えた砂時計を破壊する",
+			"display_name": "ポイズン",
+			"id": "poison",
+			"is_spell": false,
+			"pool_index": 17,
+			"total_sand": 6
+		},
+		{
+			"cannot_attack": false,
+			"cost": 5,
+			"describe": "反転:この砂時計の総量+1",
+			"display_name": "グロウ",
+			"id": "glow",
+			"is_spell": false,
+			"pool_index": 18,
+			"total_sand": 8
+		},
+		{
+			"cannot_attack": false,
+			"cost": 6,
+			"describe": "設置:相手の砂時計すべての砂を1粒削る",
+			"display_name": "スイープ",
+			"id": "sweep",
+			"is_spell": false,
+			"pool_index": 19,
+			"total_sand": 4
+		},
+		{
+			"cannot_attack": false,
+			"cost": 6,
+			"describe": "効果なし",
+			"display_name": "ウォール",
+			"id": "wall",
+			"is_spell": false,
+			"pool_index": 20,
+			"total_sand": 9
+		},
+		{
+			"cannot_attack": false,
+			"cost": 1,
+			"describe": "効果なし",
+			"display_name": "グレイン",
+			"id": "grain",
+			"is_spell": false,
+			"pool_index": 21,
+			"total_sand": 3
+		},
+		{
+			"cannot_attack": false,
+			"cost": 2,
+			"describe": "余砂:相手プレイヤーに2ダメージ",
+			"display_name": "ダスト",
+			"id": "dust",
+			"is_spell": false,
+			"pool_index": 22,
+			"total_sand": 4
+		},
+		{
+			"cannot_attack": false,
+			"cost": 3,
+			"describe": "余砂:カードを1枚引く",
+			"display_name": "スプラウト",
+			"id": "sprout",
+			"is_spell": false,
+			"pool_index": 23,
+			"total_sand": 6
+		},
+		{
+			"cannot_attack": false,
+			"cost": 3,
+			"describe": "被弾:カードを1枚引く",
+			"display_name": "クラック",
+			"id": "crack",
+			"is_spell": false,
+			"pool_index": 24,
+			"total_sand": 6
+		},
+		{
+			"cannot_attack": false,
+			"cost": 3,
+			"describe": "被弾:この砂時計の攻撃力+2",
+			"display_name": "テンパー",
+			"id": "temper",
+			"is_spell": false,
+			"pool_index": 25,
+			"total_sand": 4
+		},
+		{
+			"cannot_attack": false,
+			"cost": 3,
+			"describe": "被弾:相手プレイヤーに2ダメージ",
+			"display_name": "スパイク",
+			"id": "spike",
+			"is_spell": false,
+			"pool_index": 26,
+			"total_sand": 5
+		},
+		{
+			"cannot_attack": false,
+			"cost": 3,
+			"describe": "被弾:自分のHPを2回復する",
+			"display_name": "バーム",
+			"id": "balm",
+			"is_spell": false,
+			"pool_index": 27,
+			"total_sand": 5
+		},
+		{
+			"cannot_attack": false,
+			"cost": 4,
+			"describe": "被弾:相手の砂時計1体に1ダメージ",
+			"display_name": "バーブ",
+			"id": "barb",
+			"is_spell": false,
+			"pool_index": 28,
+			"total_sand": 7
+		},
+		{
+			"cannot_attack": false,
+			"cost": 3,
+			"describe": "落砂:相手プレイヤーに1ダメージ",
+			"display_name": "アワー",
+			"id": "hour",
+			"is_spell": false,
+			"pool_index": 29,
+			"total_sand": 5
+		},
+		{
+			"cannot_attack": false,
+			"cost": 5,
+			"describe": "落砂:カードを1枚引く",
+			"display_name": "メモリー",
+			"id": "memory",
+			"is_spell": false,
+			"pool_index": 30,
+			"total_sand": 7
+		},
+		{
+			"cannot_attack": false,
+			"cost": 4,
+			"describe": "落砂:自分の砂時計すべての砂が1粒落ちる",
+			"display_name": "ドリップ",
+			"id": "drip",
+			"is_spell": false,
+			"pool_index": 31,
+			"total_sand": 8
+		},
+		{
+			"cannot_attack": false,
+			"cost": 4,
+			"describe": "落砂:自分の他の砂時計1体の総量+1",
+			"display_name": "ウェル",
+			"id": "well",
+			"is_spell": false,
+			"pool_index": 32,
+			"total_sand": 5
+		},
+		{
+			"cannot_attack": true,
+			"cost": 7,
+			"describe": "攻撃できない / 落砂:相手プレイヤーに2ダメージ",
+			"display_name": "タワー",
+			"id": "tower",
+			"is_spell": false,
+			"pool_index": 33,
+			"total_sand": 8
+		},
+		{
+			"cannot_attack": true,
+			"cost": 4,
+			"describe": "攻撃できない / 守護",
+			"display_name": "ゲート",
+			"id": "gate",
+			"is_spell": false,
+			"pool_index": 34,
+			"total_sand": 9
+		},
+		{
+			"cannot_attack": true,
+			"cost": 2,
+			"describe": "攻撃できない",
+			"display_name": "ワッチャー",
+			"id": "watcher",
+			"is_spell": false,
+			"pool_index": 35,
+			"total_sand": 7
+		},
+		{
+			"cannot_attack": false,
+			"cost": 2,
+			"describe": "設置:モートを1体出す",
+			"display_name": "ペブル",
+			"id": "pebble",
+			"is_spell": false,
+			"pool_index": 36,
+			"total_sand": 3
+		},
+		{
+			"cannot_attack": false,
+			"cost": 4,
+			"describe": "余砂:モートを1体出す",
+			"display_name": "シェル",
+			"id": "shell",
+			"is_spell": false,
+			"pool_index": 37,
+			"total_sand": 6
+		},
+		{
+			"cannot_attack": false,
+			"cost": 5,
+			"describe": "余砂:モートを2体出す",
+			"display_name": "ブルーム",
+			"id": "bloom",
+			"is_spell": false,
+			"pool_index": 38,
+			"total_sand": 9
+		},
+		{
+			"cannot_attack": false,
+			"cost": 3,
+			"describe": "設置:自分の他の砂時計1体の総量+2",
+			"display_name": "フォージ",
+			"id": "forge",
+			"is_spell": false,
+			"pool_index": 39,
+			"total_sand": 4
+		},
+		{
+			"cannot_attack": false,
+			"cost": 3,
+			"describe": "設置:自分の他の砂時計1体に守護を与える",
+			"display_name": "クラウン",
+			"id": "crown",
+			"is_spell": false,
+			"pool_index": 40,
+			"total_sand": 6
+		},
+		{
+			"cannot_attack": false,
+			"cost": 4,
+			"describe": "設置:自分の他の砂時計1体に貫通を与える",
+			"display_name": "パイク",
+			"id": "pike",
+			"is_spell": false,
+			"pool_index": 41,
+			"total_sand": 7
+		},
+		{
+			"cannot_attack": false,
+			"cost": 4,
+			"describe": "設置:自分の他の砂時計1体に硝子を与える",
+			"display_name": "ハロー",
+			"id": "halo",
+			"is_spell": false,
+			"pool_index": 42,
+			"total_sand": 6
+		},
+		{
+			"cannot_attack": false,
+			"cost": 3,
+			"describe": "設置:相手の砂時計1体の効果とキーワードを消す",
+			"display_name": "ブランク",
+			"id": "blank",
+			"is_spell": false,
+			"pool_index": 43,
+			"total_sand": 6
+		},
+		{
+			"cannot_attack": false,
+			"cost": 4,
+			"describe": "反転:相手プレイヤーに2ダメージ",
+			"display_name": "ホイール",
+			"id": "wheel",
+			"is_spell": false,
+			"pool_index": 44,
+			"total_sand": 6
+		},
+		{
+			"cannot_attack": false,
+			"cost": 5,
+			"describe": "反転:カードを1枚引く",
+			"display_name": "ページ",
+			"id": "page",
+			"is_spell": false,
+			"pool_index": 45,
+			"total_sand": 8
+		},
+		{
+			"cannot_attack": false,
+			"cost": 4,
+			"describe": "余砂:相手の砂時計すべてに1ダメージ",
+			"display_name": "バースト",
+			"id": "burst",
+			"is_spell": false,
+			"pool_index": 46,
+			"total_sand": 6
+		},
+		{
+			"cannot_attack": false,
+			"cost": 4,
+			"describe": "余砂:自分の砂時計すべての総量+1",
+			"display_name": "レガシー",
+			"id": "legacy",
+			"is_spell": false,
+			"pool_index": 47,
+			"total_sand": 6
+		},
+		{
+			"cannot_attack": false,
+			"cost": 3,
+			"describe": "設置:自分の他の砂時計1体の体力と攻撃力を入れ替える",
+			"display_name": "ピボット",
+			"id": "pivot",
+			"is_spell": false,
+			"pool_index": 48,
+			"total_sand": 6
+		},
+		{
+			"cannot_attack": true,
+			"cost": 7,
+			"describe": "攻撃できない / 落砂:自分の砂時計すべての総量+1",
+			"display_name": "アンカー",
+			"id": "anchor",
+			"is_spell": false,
+			"pool_index": 49,
+			"total_sand": 9
+		},
+		{
+			"cannot_attack": false,
+			"cost": 2,
+			"describe": "余砂:自分のHPを3回復する",
+			"display_name": "フラスコ",
+			"id": "flask",
+			"is_spell": false,
+			"pool_index": 50,
+			"total_sand": 4
+		},
+		{
+			"cannot_attack": true,
+			"cost": 1,
+			"describe": "攻撃できない / 余砂:自分の他の砂時計1体の総量+2",
+			"display_name": "ハスク",
+			"id": "husk",
+			"is_spell": false,
+			"pool_index": 51,
+			"total_sand": 6
+		},
+		{
+			"cannot_attack": false,
+			"cost": 1,
+			"describe": "余砂:モートを1体出す",
+			"display_name": "シード",
+			"id": "seed",
+			"is_spell": false,
+			"pool_index": 52,
+			"total_sand": 3
+		},
+		{
+			"cannot_attack": false,
+			"cost": 1,
+			"describe": "設置:自分の他の砂時計1体の攻撃力+1",
+			"display_name": "ワンド",
+			"id": "wand",
+			"is_spell": false,
+			"pool_index": 53,
+			"total_sand": 2
+		},
+		{
+			"cannot_attack": false,
+			"cost": 1,
+			"describe": "被弾:相手プレイヤーに1ダメージ",
+			"display_name": "グリム",
+			"id": "glim",
+			"is_spell": false,
+			"pool_index": 54,
+			"total_sand": 3
+		},
+		{
+			"cannot_attack": false,
+			"cost": 2,
+			"describe": "反転:相手プレイヤーに1ダメージ",
+			"display_name": "ティック",
+			"id": "tick",
+			"is_spell": false,
+			"pool_index": 55,
+			"total_sand": 4
+		},
+		{
+			"cannot_attack": false,
+			"cost": 2,
+			"describe": "落砂:自分の他の砂時計1体の攻撃力+1",
+			"display_name": "ソルト",
+			"id": "salt",
+			"is_spell": false,
+			"pool_index": 56,
+			"total_sand": 3
+		},
+		{
+			"cannot_attack": false,
+			"cost": 2,
+			"describe": "設置:自分の砂時計すべての砂が1粒落ちる",
+			"display_name": "ラトル",
+			"id": "rattle",
+			"is_spell": false,
+			"pool_index": 57,
+			"total_sand": 5
+		},
+		{
+			"cannot_attack": false,
+			"cost": 6,
+			"describe": "落砂:相手の砂時計すべてに1ダメージ",
+			"display_name": "オベリスク",
+			"id": "obelisk",
+			"is_spell": false,
+			"pool_index": 58,
+			"total_sand": 3
+		},
+		{
+			"cannot_attack": false,
+			"cost": 1,
+			"describe": "相手プレイヤーに2ダメージ",
+			"display_name": "サンドショット",
+			"id": "shot",
+			"is_spell": true,
+			"pool_index": 59,
+			"total_sand": 0
+		},
+		{
+			"cannot_attack": false,
+			"cost": 1,
+			"describe": "自分の砂時計1体の砂が2粒落ちる",
+			"display_name": "ひとつまみ",
+			"id": "pinch",
+			"is_spell": true,
+			"pool_index": 60,
+			"total_sand": 0
+		},
+		{
+			"cannot_attack": false,
+			"cost": 1,
+			"describe": "自分の砂時計1体を反転する",
+			"display_name": "逆さ砂",
+			"id": "turn",
+			"is_spell": true,
+			"pool_index": 61,
+			"total_sand": 0
+		},
+		{
+			"cannot_attack": false,
+			"cost": 2,
+			"describe": "相手の砂時計すべての砂が1粒落ちる",
+			"display_name": "砂嵐",
+			"id": "gust",
+			"is_spell": true,
+			"pool_index": 62,
+			"total_sand": 0
+		},
+		{
+			"cannot_attack": false,
+			"cost": 2,
+			"describe": "相手の砂時計1体の効果とキーワードを消す",
+			"display_name": "封砂",
+			"id": "seal",
+			"is_spell": true,
+			"pool_index": 63,
+			"total_sand": 0
+		},
+		{
+			"cannot_attack": false,
+			"cost": 2,
+			"describe": "自分の砂時計1体に守護を与え、総量+2",
+			"display_name": "砂の壁",
+			"id": "bulwark",
+			"is_spell": true,
+			"pool_index": 64,
+			"total_sand": 0
+		},
+		{
+			"cannot_attack": false,
+			"cost": 2,
+			"describe": "相手の砂時計1体を持ち主の手札へ戻す",
+			"display_name": "砂へ還す",
+			"id": "recall",
+			"is_spell": true,
+			"pool_index": 65,
+			"total_sand": 0
+		},
+		{
+			"cannot_attack": false,
+			"cost": 3,
+			"describe": "相手の砂時計1体に4ダメージ",
+			"display_name": "砕砂",
+			"id": "shatter",
+			"is_spell": true,
+			"pool_index": 66,
+			"total_sand": 0
+		},
+		{
+			"cannot_attack": false,
+			"cost": 3,
+			"describe": "カードを2枚引く",
+			"display_name": "砂の補給",
+			"id": "refill",
+			"is_spell": true,
+			"pool_index": 67,
+			"total_sand": 0
+		},
+		{
+			"cannot_attack": false,
+			"cost": 3,
+			"describe": "モートを2体出す",
+			"display_name": "砂王の呼び声",
+			"id": "call",
+			"is_spell": true,
+			"pool_index": 68,
+			"total_sand": 0
+		},
+		{
+			"cannot_attack": false,
+			"cost": 4,
+			"describe": "相手の砂時計すべてに2ダメージ",
+			"display_name": "砂塵嵐",
+			"id": "tempest",
+			"is_spell": true,
+			"pool_index": 69,
+			"total_sand": 0
+		},
+		{
+			"cannot_attack": false,
+			"cost": 5,
+			"describe": "自分のHPを反転する(残りHPと失ったHPが入れ替わる)",
+			"display_name": "時の逆流",
+			"id": "reverse",
+			"is_spell": true,
+			"pool_index": 70,
+			"total_sand": 0
+		}
+	]
+}
