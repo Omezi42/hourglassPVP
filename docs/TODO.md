@@ -6,15 +6,19 @@
 
 - [ ] `tools/export_card_data_json.gd` を新設し、`tools/export_web.sh` の書き出し工程へ
       組み込む(`functions/data/cards.json` を書き出す)
-- [ ] Firestore へ `discord_links` / `discord_link_codes` / `bot_spotlight` を新設し、
-      `firestore.rules` を更新する(`discord_links` への書き込みはFunctions側限定)
+- [ ] `tools/export_discord_card_art.gd`:カード1枚ごとの詳細画像と、効果の実演の
+      PNG連番を書き出す(11章の `Engine.time_scale` を落として撮る手法を使う)
+- [ ] `tools/encode_discord_gifs.py`:PNG連番を語彙ごとに1本のGIFへエンコードする
+- [ ] Firestore へ `discord_links` / `discord_link_codes` / `bot_spotlight_history` を
+      新設し、`firestore.rules` を更新する(`discord_links` への書き込みはFunctions側限定)
 - [ ] `DiscordLinkService`(連携コードの発行)と、アカウント画面への
       「Discord連携コード」発行ボタンの追加
-- [ ] `functions/discord_commands.js`:`/card` `/deck` `/link` `/profile` を実装
+- [ ] `functions/discord_commands.js`:`/card`(画像+実演GIF)・`/link`・`/profile` を実装
       (いずれも応答は ephemeral)
-- [ ] `announceCardSpotlight`(Cloud Scheduler、毎日1回。直前に紹介したカードとだけ
-      重複しないランダム選出)
-- [ ] ヘッドレステスト(カードJSON書き出しの内容確認)
+- [ ] `functions/deck_sheet_canvas.js`:`node-canvas` で `/deck` 用の簡易デッキ表画像を描画
+- [ ] `announceCardSpotlight`(Cloud Scheduler、毎日1回。直近30日以内に紹介した
+      カードを除外したランダム選出)
+- [ ] ヘッドレステスト(カードJSON書き出しの内容確認・GIF生成の成否確認)
 - [ ] 実機・実際のDiscordサーバーでの動作確認(4コマンド・自動投稿とも)
 
 ---

@@ -2062,15 +2062,31 @@ UTC時刻を +9時間して日本時間へ換算し、曜日を見る。**サー
 | クラス/ファイル | 責務 |
 |---|---|
 | `tools/export_card_data_json.gd` | ヘッドレスで `CardLibrary` を読み、`functions/data/cards.json` へ書き出す |
+| `tools/export_discord_card_art.gd` | ヘッドレスで、カード1枚ごとの「図鑑を元にした詳細画像」1枚と、そのカードが持つ効果の実演のPNG連番を `build/discord_assets/{id}/` へ書き出す |
+| `tools/encode_discord_gifs.py` | 上記のPNG連番を1本のGIFへエンコードする(Pillow使用)。実演は**キーワード/効果の種類ごとに1本**しか無いため(9章)、生成本数はカード種の数ではなく語彙の数で決まる |
 | `DiscordLinkService`(`scripts/net/discord_link_service.gd`, static) | アカウント画面の「Discord連携コード」発行。`DeckCodeService` と同じ「8桁の数字を発行してFirestoreへ預ける」方式 |
 | `functions/discord_commands.js`(Node.js) | `/card` `/deck` `/link` `/profile` のハンドラ。`discordInteractions` から呼ばれる |
+| `functions/deck_sheet_canvas.js`(Node.js) | `/deck` 用の簡易デッキ表画像を `node-canvas` で描画する。ゲーム内の `CardDeckSheet` とは別実装であり、見た目の一致は求めない |
 | `announceCardSpotlight` | Cloud Scheduler(毎日1回)。カードスポットライトの自動投稿 |
 
-**カードデータはビルドのたびにJSON化する。**`.tres` はGodot専用形式でFunctions側から
-読めないため、`tools/export_web.sh` の書き出し工程へ `tools/export_card_data_json.gd`
-を足し、`functions/data/cards.json` へ書き出す。**このJSONもリポジトリへコミットする**
-(6.3節のWebhook URLのような秘匿情報ではないため、`data/discord_webhook.txt` とは
-扱いが異なる)。
+**カードデータ・画像・実演GIFは、いずれもビルド(`tools/export_web.sh`)のたびに
+まとめて生成する。**`.tres` はGodot専用形式でFunctions側から読めないため、
+書き出し工程へ3つのツールを足し、`functions/data/cards.json` と
+`functions/data/card_art/{id}.png`・`functions/data/effect_gifs/{語彙}.gif` を
+書き出す。**これらもリポジトリへコミットする**(6.3節のWebhook URLのような
+秘匿情報ではないため、`data/discord_webhook.txt` とは扱いが異なる)。
+
+**実演GIFの生成手順**は、11章「演出のスクリーンショットは `Engine.time_scale` を
+0.2程度へ落として撮る」と同じ考え方を使う。`CardEffectPreview` を `SubViewport` へ
+乗せて `time_scale` を落として1ループぶんをPNG連番で撮り、`encode_discord_gifs.py`
+がGIFへまとめる。**カードごとではなく語彙ごとに1本**なので、カードが増えても
+生成本数は増えない(新しい語彙を足したときだけ増える)。
+
+**`/deck` の画像はGodotを使わず、Functions側(Node.js)で完結させる。**
+組み合わせが無数にあるデッキ表は事前生成できず、都度Godotを起動して描画するのは
+常駐サーバーを持たない方針(10章)と相性が悪いため、`node-canvas` で
+「コスト順に30枚のカード名・コスト・総量を並べただけの簡易画像」を独自に描く。
+ゲーム内の `CardDeckSheet` と見た目を合わせる必要はない。
 
 **Firestoreへ新設するもの**
 
@@ -2078,7 +2094,11 @@ UTC時刻を +9時間して日本時間へ換算し、曜日を見る。**サー
 |---|---|
 | `discord_links/{discord_user_id}` | `{uid: string}`。`/link` が1件を上書きする |
 | `discord_link_codes/{コード}` | `{uid: string}`。9章のデッキコードと同じ「8桁の数字を引換券として預ける」方式。`/link` が読んだら `discord_links` へ書き写し、**引換券自体は消さない**(9章の「預けたデッキは消さない」と同じ方針) |
-| `bot_spotlight/state` | `{last_card_id: string}`。カードスポットライトが直前に紹介したカードを覚えておくためだけの1ドキュメント(GameDesign.md 26章「直前と同じカードだけを除外する」の実体) |
+| `bot_spotlight_history/{card_id}` | `{last_shown: timestamp}`。そのカードを最後に紹介した日時。**カードごとに1件**であり、抽選のたびに全件(プールの枚数ぶん)を読んで、`last_shown` が30日以内でないものを候補にする |
+
+**`bot_spotlight_history` は範囲クエリを組まない。**プールの枚数は今のところ70枚
+(今後も日単位でしか増えない)であり、全件読んでFunctions側でフィルタするほうが、
+複合インデックスを要する範囲クエリを組むより単純になる(6章のクエリ方針と同じ考え方)。
 
 **`/link` のコード発行はGodot側(`DiscordLinkService.publish_code()`)が行う。**
 `AccountService` 経由で自分のuidを `discord_link_codes/{発行したコード}` へ書く、
@@ -2092,6 +2112,7 @@ Functions側もクライアントと同じFirestoreを直接読むため、専�
 `/profile` には出せない。**
 
 **すべてのコマンド応答は Discord の `flags: 64`(ephemeral)を付けて返す。**
+画像・GIFの添付があっても、ephemeralのまま返せる(Discord APIの制約ではない)。
 カードスポットライト(`announceCardSpotlight`)だけは通常のメッセージとして投稿する
 (コマンドへの応答ではなく、コミュニティ全体へ向けた自発的な投稿であるため)。
 
