@@ -6,11 +6,17 @@
 
 - [x] `tools/export_card_data_json.gd` を新設し、`tools/export_web.sh` の書き出し工程へ
       組み込む(`functions/data/cards.json` を書き出す)
-- [ ] `tools/export_discord_card_art.gd`:カード1枚ごとの詳細画像を書き出す
-- [ ] 既存の `tools/record_effect_gif.gd`(+`.tscn`)を全カード分ループで回す仕組みを
-      用意し、`tools/encode_discord_gifs.sh`(ImageMagick)でカードごとに1本のGIFへ
-      エンコードする(語彙ごとではなくカードごとに1本。11章の `Engine.time_scale` を
-      落として撮る手法は既にこのツールが使っている)
+- [x] `DiscordCardArt`(`scripts/ui/discord_card_art.gd`)と
+      `tools/export_discord_card_art.gd`:カード1枚ごとの詳細画像を
+      `functions/data/card_art/{id}.png` へ書き出す(非ヘッドレス実行が必要)
+- [x] `tools/export_discord_effect_gifs.sh` で既存の `tools/record_effect_gif.gd`
+      (+`.tscn`)を全70カード分ループで回し、`tools/encode_discord_gifs.sh`
+      (ImageMagick)でカードごとに1本のGIFへエンコードして
+      `functions/data/effect_gifs/{id}.gif` へ書き出した(語彙ごとではなくカードごとに
+      1本)。**画像・GIFとも非ヘッドレス実行が必須と判明したため、`export_web.sh`には
+      組み込まず独立したツールにした**(Architecture.md 10.14節に反映済み)
+- [ ] **生成物の総容量が63MB(画像7.6MB・GIF55MB)と大きい。**次にカードを増やす回に
+      容量を見直す(GIFの色数・尺を削る、または撮影する能力の種類を絞るなど)
 - [ ] Firestore へ `discord_links` / `discord_link_codes` / `bot_spotlight_history` を
       新設し、`firestore.rules` を更新する(`discord_links` への書き込みはFunctions側限定)
 - [ ] `DiscordLinkService`(連携コードの発行)と、アカウント画面への
