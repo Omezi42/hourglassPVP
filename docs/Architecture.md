@@ -2057,6 +2057,54 @@ UTC時刻を +9時間して日本時間へ換算し、曜日を見る。**サー
 
 ---
 
+### 10.14 Discordスラッシュコマンド(GameDesign.md 26章)
+
+| クラス/ファイル | 責務 |
+|---|---|
+| `tools/export_card_data_json.gd` | ヘッドレスで `CardLibrary` を読み、`functions/data/cards.json` へ書き出す |
+| `DiscordLinkService`(`scripts/net/discord_link_service.gd`, static) | アカウント画面の「Discord連携コード」発行。`DeckCodeService` と同じ「8桁の数字を発行してFirestoreへ預ける」方式 |
+| `functions/discord_commands.js`(Node.js) | `/card` `/deck` `/link` `/profile` のハンドラ。`discordInteractions` から呼ばれる |
+| `announceCardSpotlight` | Cloud Scheduler(毎日1回)。カードスポットライトの自動投稿 |
+
+**カードデータはビルドのたびにJSON化する。**`.tres` はGodot専用形式でFunctions側から
+読めないため、`tools/export_web.sh` の書き出し工程へ `tools/export_card_data_json.gd`
+を足し、`functions/data/cards.json` へ書き出す。**このJSONもリポジトリへコミットする**
+(6.3節のWebhook URLのような秘匿情報ではないため、`data/discord_webhook.txt` とは
+扱いが異なる)。
+
+**Firestoreへ新設するもの**
+
+| コレクション/ドキュメント | 内容 |
+|---|---|
+| `discord_links/{discord_user_id}` | `{uid: string}`。`/link` が1件を上書きする |
+| `discord_link_codes/{コード}` | `{uid: string}`。9章のデッキコードと同じ「8桁の数字を引換券として預ける」方式。`/link` が読んだら `discord_links` へ書き写し、**引換券自体は消さない**(9章の「預けたデッキは消さない」と同じ方針) |
+| `bot_spotlight/state` | `{last_card_id: string}`。カードスポットライトが直前に紹介したカードを覚えておくためだけの1ドキュメント(GameDesign.md 26章「直前と同じカードだけを除外する」の実体) |
+
+**`/link` のコード発行はGodot側(`DiscordLinkService.publish_code()`)が行う。**
+`AccountService` 経由で自分のuidを `discord_link_codes/{発行したコード}` へ書く、
+9章の `DeckCodeService.publish()` とほぼ同じ実装で、**衝突したら引き直す**点も同じ。
+
+**`/profile` が返す砂金・戦績は `players/{uid}` と `match_records` からそのまま読む。**
+Functions側もクライアントと同じFirestoreを直接読むため、専用のAPIは作らない。
+オンライン対戦の通算成績は `match_records` を `player_a`/`player_b` で検索して集計する
+(10.9節のクエリ方針=単一フィールドの等価フィルタという制約にそのまま従う)。
+**19章の戦績(CPU戦込みの通算)は `user://` のローカル保存のためサーバー側から読めず、
+`/profile` には出せない。**
+
+**すべてのコマンド応答は Discord の `flags: 64`(ephemeral)を付けて返す。**
+カードスポットライト(`announceCardSpotlight`)だけは通常のメッセージとして投稿する
+(コマンドへの応答ではなく、コミュニティ全体へ向けた自発的な投稿であるため)。
+
+**`discordInteractions` の分岐が増える。**現状はPING応答だけを持つ1つの関数だが、
+`data.name`(コマンド名)で `/card` `/deck` `/link` `/profile` の4つへ分岐を足す。
+署名検証(`verifyKey()`)は既存のまま全コマンド共通で通す。
+
+**新設したコレクションは `firestore.rules` へも追記する。**クライアントからの直接書き込みは
+`discord_link_codes` の発行(自分のuidを書く)だけを許可し、`discord_links` の書き込みは
+Cloud Functions側(`/link` の処理)からしか行わない形にする。
+
+---
+
 ## 11. 開発時の落とし穴
 
 検証で繰り返し踏んだもの。**いずれも「エディタ実行やヘッドレステストでは再現せず、
