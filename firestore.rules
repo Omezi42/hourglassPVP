@@ -74,6 +74,29 @@ service cloud.firestore {
       allow read, write: if signedIn();
     }
 
+    // Discordアカウントとの連携コード(GameDesign.md 26章)。ドキュメントIDは8桁の数字。
+    // deckcodesと同じ「預けたら消さない」引換券方式。読み取りはDiscord Bot(Admin SDK、
+    // ルールの制約を受けない)が行うため本来クライアントには不要だが、9章のデッキコードと
+    // 同様サインイン済みなら読めるようにしておく。
+    match /discord_link_codes/{code} {
+      allow read, write: if signedIn();
+    }
+
+    // Discordアカウント⇔ゲーム内uidの紐付け(同26章)。ドキュメントIDはDiscordの
+    // ユーザーID。書き込みは `/link` を処理するCloud Functions(Admin SDK)からのみ行い、
+    // クライアントには一切書かせない。
+    match /discord_links/{discordUserId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    // カードスポットライトが直近30日の重複を避けるための最終紹介日時(同26章)。
+    // ドキュメントIDはカードid。Cloud Scheduler経由のCloud Functions(Admin SDK)だけが
+    // 触るため、クライアントには読み書きさせない。
+    match /bot_spotlight_history/{cardId} {
+      allow read, write: if false;
+    }
+
     // 上記以外は一切許可しない。
     match /{document=**} {
       allow read, write: if false;

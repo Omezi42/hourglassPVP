@@ -17,16 +17,27 @@
       組み込まず独立したツールにした**(Architecture.md 10.14節に反映済み)
 - [ ] **生成物の総容量が63MB(画像7.6MB・GIF55MB)と大きい。**次にカードを増やす回に
       容量を見直す(GIFの色数・尺を削る、または撮影する能力の種類を絞るなど)
-- [ ] Firestore へ `discord_links` / `discord_link_codes` / `bot_spotlight_history` を
-      新設し、`firestore.rules` を更新する(`discord_links` への書き込みはFunctions側限定)
-- [ ] `DiscordLinkService`(連携コードの発行)と、アカウント画面への
+- [x] Firestore へ `discord_links` / `discord_link_codes` / `bot_spotlight_history` を
+      新設し、`firestore.rules` を更新した(`discord_links` への書き込みはFunctions側限定)
+- [x] `DiscordLinkService`(連携コードの発行)と、アカウント画面への
       「Discord連携コード」発行ボタンの追加
-- [ ] `functions/discord_commands.js`:`/card`(画像+実演GIF)・`/link`・`/profile` を実装
-      (いずれも応答は ephemeral)
-- [ ] `functions/deck_sheet_canvas.js`:`node-canvas` で `/deck` 用の簡易デッキ表画像を描画
-- [ ] `announceCardSpotlight`(Cloud Scheduler、毎日1回。直近30日以内に紹介した
-      カードを除外したランダム選出)
-- [ ] ヘッドレステスト(カードJSON書き出しの内容確認・GIF生成の成否確認)
+- [x] `functions/discord_commands.js`:`/card`(画像+実演GIF)・`/link`・`/profile` を実装
+      (いずれも応答は ephemeral)。ロジックはモックFirestoreで検証済み
+- [x] `functions/deck_sheet_canvas.js`:`@napi-rs/canvas` で `/deck` 用の簡易デッキ表画像を
+      描画。同梱の日本語フォント(`functions/fonts/`)を登録し、文字化けを解消した
+- [x] `announceCardSpotlight`(Cloud Scheduler、毎日正午12:00 JST。直近30日以内に
+      紹介したカードを除外したランダム選出)
+- [x] `tools/discord/register_commands.py`:4つのスラッシュコマンドをDiscordへ登録する
+      道具(既存の `apply_permissions.py` と同じ設定ファイルを読む)
+- [x] ロジックのユニットテスト(Node.js側はモックFirestoreで、Godot側は既存の
+      `run_tests.gd` で)は通過。gdlint / gdformat も通過
+- [ ] **`firebase functions:secrets:set` でシークレットを設定していない。**
+      `DISCORD_WEBHOOK_URL` は設定済みのはずだが、`DISCORD_PUBLIC_KEY` の設定状況を
+      確認し、未設定なら設定する
+- [ ] **`npm install` してデプロイをまだ試していない。**`@napi-rs/canvas` を新たに
+      依存へ足したため、`firebase deploy --only functions` が通ることを一度確認する
+- [ ] `python tools/discord/register_commands.py` を実行し、Discord側にコマンドを
+      登録する(実機のBotトークンが要るため未実施)
 - [ ] 実機・実際のDiscordサーバーでの動作確認(4コマンド・自動投稿とも)
 
 ---

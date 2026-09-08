@@ -2069,8 +2069,10 @@ UTC時刻を +9時間して日本時間へ換算し、曜日を見る。**サー
 | `tools/encode_discord_gifs.sh` | PNG連番をGIFへエンコードする。`record_effect_gif.gd` の冒頭コメントに既にある `magick`(ImageMagick)のコマンド列をそのまま使い、**全カードぶんループで回すラッパーにする**(Pillowでの再実装はしない) |
 | `DiscordLinkService`(`scripts/net/discord_link_service.gd`, static) | アカウント画面の「Discord連携コード」発行。`DeckCodeService` と同じ「8桁の数字を発行してFirestoreへ預ける」方式 |
 | `functions/discord_commands.js`(Node.js) | `/card` `/deck` `/link` `/profile` のハンドラ。`discordInteractions` から呼ばれる |
-| `functions/deck_sheet_canvas.js`(Node.js) | `/deck` 用の簡易デッキ表画像を `node-canvas` で描画する。ゲーム内の `CardDeckSheet` とは別実装であり、見た目の一致は求めない |
-| `announceCardSpotlight` | Cloud Scheduler(毎日1回)。カードスポットライトの自動投稿 |
+| `functions/deck_sheet_canvas.js`(Node.js) | `/deck` 用の簡易デッキ表画像を `@napi-rs/canvas` で描画する。ゲーム内の `CardDeckSheet` とは別実装であり、見た目の一致は求めない |
+| `functions/fonts/ZenKakuGothicNew-Bold.ttf` | `assets/fonts/` からコピーした同梱フォント。`firebase.json` の `functions.source` が `functions` ディレクトリだけを見るため、`functions/` の外にあるファイルはデプロイされない |
+| `announceCardSpotlight` | Cloud Scheduler(毎日正午12:00 JST)。カードスポットライトの自動投稿 |
+| `tools/discord/register_commands.py` | 4つのスラッシュコマンドをDiscordへ登録する(既存の `tools/discord/apply_permissions.py` と同じ、`~/.hourglass_discord.json` からBotトークンを読む流儀)。コマンドの追加・変更のたびに実行し直す。ギルドコマンドとして登録するため反映は即時 |
 
 **カードデータのJSON化は `tools/export_web.sh` のビルド工程に組み込むが、画像・実演GIFは
 別扱いにする。**`export_discord_card_art.gd`(静止画のキャプチャ)も `record_effect_gif.gd`
@@ -2094,9 +2096,31 @@ UTC時刻を +9時間して日本時間へ換算し、曜日を見る。**サー
 
 **`/deck` の画像はGodotを使わず、Functions側(Node.js)で完結させる。**
 組み合わせが無数にあるデッキ表は事前生成できず、都度Godotを起動して描画するのは
-常駐サーバーを持たない方針(10章)と相性が悪いため、`node-canvas` で
+常駐サーバーを持たない方針(10章)と相性が悪いため、`@napi-rs/canvas` で
 「コスト順に30枚のカード名・コスト・総量を並べただけの簡易画像」を独自に描く。
-ゲーム内の `CardDeckSheet` と見た目を合わせる必要はない。
+ゲーム内の `CardDeckSheet` と見た目を合わせる必要はない。**`node-canvas` ではなく
+`@napi-rs/canvas` を選んだ**のは、前者がネイティブのCairoライブラリに依存し
+Cloud Functionsのビルド環境でのインストールが不安定になりやすいため。後者は
+プリビルドバイナリを持ち、APIもnode-canvasに近い。
+
+**`/card` `/deck` はいずれもコマンド応答の中で画像を返すが、届け方が異なる。**
+`/card` の画像・GIFはビルドのたびにリポジトリへコミット済み(上記)であり、
+**BGMの配信(Architecture.md 4.1.6節)と同じくjsDelivr経由でリポジトリから直接読む**
+(`https://cdn.jsdelivr.net/gh/Omezi42/hourglassPVP@main/functions/data/...`)。
+コマンド応答のEmbedへこのURLをそのまま埋め込むだけで済み、Bot側は1バイトも
+アップロードしない。**jsDelivrはキャッシュするため、pushしてから数分〜数時間は
+古い版が返ることがある**(BGMと同じ制約)。一方 `/deck` は都度その場で生成した
+バイト列であり、リポジトリに存在しないため、ファイルとして直接添付する
+(`multipart/form-data` で `files[0]` として送る)必要がある。
+
+**`/deck` は3秒の応答期限を超えうるため、deferred responseを使う。**
+`discordInteractions` はまず `DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE`(type 5、
+`flags: 64` でephemeralを維持したまま)を即座に返し、画像の生成が終わってから
+`PATCH /webhooks/{application_id}/{token}/messages/@original` を叩いて本文と
+画像を追送する。**`res.json()` で最初の応答を返した後も、`await` で追送処理を
+終えてから関数を返す。**Cloud Functionsはレスポンス送信後にCPUがスロットルされる
+ことがあり、`res.json()` の直後に `return` すると追送処理が保証されないため、
+`sendDeckFollowup()` の完了を待ってからハンドラを終える。
 
 **Firestoreへ新設するもの**
 
@@ -2227,6 +2251,19 @@ Discord用のカード画像・実演GIF(10.14節)を作る過程で踏んだも
   前に本番の一括実行を始めると、まったく同じ症状(大半のカードが0バイトで、
   最後に処理したものだけ正常)が起きる。バッチ処理の前に `tasklist` で
   Godotプロセスが残っていないことを確認する
+
+### Node.js(Cloud Functions)側
+
+- **`@napi-rs/canvas` はシステムに日本語フォントが1つも登録されていない前提で動く。**
+  Cloud Functions(Linux)には日本語フォントが入っておらず、フォントを指定せずに
+  `fillText()` すると**文字がすべて豆腐(□)になる**(実測で確認済み。10.6.1節の
+  `SubViewport` のフォント解決と同種の問題がNode.js側にもある)。`GlobalFonts
+  .registerFromPath()` で同梱フォントを明示的に登録してから使う
+- **`functions/` の外にあるファイルはデプロイされない。**`firebase.json` の
+  `functions.source` が `functions` ディレクトリだけを指すため、
+  `assets/fonts/` のようなプロジェクトルート直下のファイルを参照しようとしても
+  本番環境には存在しない。フォントのように実行時に要るファイルは `functions/` の
+  中へコピーして持たせる
 
 ### 触ってはいけないもの
 

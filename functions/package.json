@@ -8,6 +8,8 @@
   "main": "index.js",
   "dependencies": {
     "firebase-functions": "^5.1.1",
-    "discord-interactions": "^3.4.0"
+    "firebase-admin": "^12.1.0",
+    "discord-interactions": "^3.4.0",
+    "@napi-rs/canvas": "^0.1.53"
   }
 }

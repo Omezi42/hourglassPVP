@@ -32,6 +32,8 @@ var _emote_panel: EmoteSlotPanel
 var _register_button: Button
 var _login_button: Button
 var _logout_button: Button
+var _discord_link_button: Button
+var _discord_link_label: Label
 
 @onready var screen_header: ScreenHeader = $ScreenHeader
 @onready
@@ -81,11 +83,47 @@ func _setup_buttons() -> void:
 	_logout_button.pressed.connect(_on_logout_pressed)
 	logout_row.add_child(_logout_button)
 
+	_setup_discord_link_ui()
+
 	# エモートの枠(GameDesign.md 9章)はヘッダーの主アクションから開く。左カラムは
 	# 既に埋まっており、ここへ4つの枠を足すと下端の保存ボタンを押し出すため。
 	_emote_button = CodedButton.make("エモート", Vector2(160, 46))
 	_emote_button.pressed.connect(func() -> void: _emote_panel.open())
 	screen_header.add_action(_emote_button)
+
+
+## Discordアカウントとの連携コード発行(GameDesign.md 26章)。`.tscn` は変えず、
+## 右カラムへ実行時にボタンとラベルを差し込む(`_emote_button` などと同じ流儀)。
+func _setup_discord_link_ui() -> void:
+	var right_column := message_label.get_parent()
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	_discord_link_button = CodedButton.make("Discord連携コード", Vector2(190, 42))
+	_discord_link_button.pressed.connect(_on_discord_link_pressed)
+	row.add_child(_discord_link_button)
+	_discord_link_label = Label.new()
+	_discord_link_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_discord_link_label.custom_minimum_size = Vector2(200, 0)
+	_discord_link_label.add_theme_color_override("font_color", HINT_COLOR)
+	row.add_child(_discord_link_label)
+	right_column.add_child(row)
+	right_column.move_child(row, message_label.get_index())
+
+
+func _on_discord_link_pressed() -> void:
+	if _busy:
+		return
+	_set_busy(true)
+	_discord_link_label.text = "発行しています…"
+	var uid := NetSession.auth.uid if NetSession.auth != null else ""
+	var code: String = await DiscordLinkService.publish_code(NetSession.client, uid)
+	_set_busy(false)
+	if code.is_empty():
+		_discord_link_label.text = ""
+		_set_message("連携コードの発行に失敗しました。接続を確認してください。", ERROR_COLOR)
+	else:
+		_discord_link_label.text = "コード: %s" % code
+		_set_message("Discordで「/link %s」と入力してください。" % code, OK_COLOR)
 
 
 func _setup_profile_ui() -> void:
@@ -314,6 +352,8 @@ func _set_busy(value: bool) -> void:
 		_login_button.disabled = value
 	if _logout_button != null:
 		_logout_button.disabled = value
+	if _discord_link_button != null:
+		_discord_link_button.disabled = value
 
 
 func _set_message(text: String, color: Color) -> void:
