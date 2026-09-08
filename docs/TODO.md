@@ -31,14 +31,15 @@
       道具(既存の `apply_permissions.py` と同じ設定ファイルを読む)
 - [x] ロジックのユニットテスト(Node.js側はモックFirestoreで、Godot側は既存の
       `run_tests.gd` で)は通過。gdlint / gdformat も通過
-- [ ] **`firebase functions:secrets:set` でシークレットを設定していない。**
-      `DISCORD_WEBHOOK_URL` は設定済みのはずだが、`DISCORD_PUBLIC_KEY` の設定状況を
-      確認し、未設定なら設定する
-- [ ] **`npm install` してデプロイをまだ試していない。**`@napi-rs/canvas` を新たに
-      依存へ足したため、`firebase deploy --only functions` が通ることを一度確認する
-- [ ] `python tools/discord/register_commands.py` を実行し、Discord側にコマンドを
-      登録する(実機のBotトークンが要るため未実施)
-- [ ] 実機・実際のDiscordサーバーでの動作確認(4コマンド・自動投稿とも)
+- [x] `DISCORD_WEBHOOK_URL` / `DISCORD_PUBLIC_KEY` とも設定済みであることを確認した
+- [x] `firebase deploy --only functions --project hourglasspvp` でデプロイ成功
+      (`discordInteractions` 更新・`announceCardSpotlight` 新規作成・
+      `announceSundayEvent` 更新。Compute Engine API関連の警告は出るが
+      デプロイ自体には影響しない)
+- [x] `python tools/discord/register_commands.py` を実行し、4コマンドを登録した
+- [ ] **実際のDiscordサーバーで4コマンド・カードスポットライトの自動投稿を確認する。**
+      デプロイ・コマンド登録までは完了しているが、Discord上で実際に打って確認する
+      作業だけはこちらから実行できないため残っている
 
 ---
 
