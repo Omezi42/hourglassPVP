@@ -15,6 +15,14 @@ const CARDS_RECT := Rect2(608, ScreenHeader.CONTENT_TOP, 648, 540)
 ## 見かけ上の高勝率が上に来て読み違えるため、採用数の多い順に絞る。
 const CARD_ROWS := 12
 const TOGGLE_SIZE := Vector2(168, 48)
+## 数値の列。**戦績は数字を見比べる画面**であり、1本の文へ流し込むと桁の位置が
+## 行ごとにずれて読み比べられない。列の幅をここで決め、行はこの表に従って組む。
+## 幅は、左の欄(内寸512px)で「ランダムマッチ」まで省略されずに収まる値にしてある。
+const COL_COUNT := 68.0
+const COL_WINS := 68.0
+const COL_RATE := 94.0
+const COL_TURNS := 92.0
+const ROW_FONT_SIZE := 18
 
 ## 「自分」と「みんな」を往復する(GameDesign.md 22章)。並び替えの往復と同じ流儀。
 var _global := false
@@ -108,35 +116,45 @@ func _refresh_global() -> void:
 	if games == 0:
 		_empty.show_message("まだみんなの記録がありません", "オンライン対戦が行われると、ここへ積まれます")
 		return
-	_summary.add_child(_make_line("%d戦" % games, 20))
+	# 1つの値しか持たない行は、**すべて同じ列へ収める**。行ごとに違う幅の列へ置くと
+	# 数字の右端がそろわず、縦に読み比べられない。
+	_summary.add_child(_make_line("通算", 26))
+	_summary.add_child(_make_row("対局数", [_cell("%d戦" % games, COL_RATE)]))
 	_summary.add_child(
-		_make_line("先手勝率 %.1f%%" % _percent(int(counts.get("first_wins", 0)), games), 20)
+		_make_row(
+			"先手勝率", [_cell("%.1f%%" % _percent(int(counts.get("first_wins", 0)), games), COL_RATE)]
+		)
 	)
 	_summary.add_child(
-		_make_line("平均 %.1f手" % [float(int(counts.get("turns", 0))) / float(games)], 20)
+		_make_row(
+			"平均手数", [_cell("%.1f手" % [float(int(counts.get("turns", 0))) / float(games)], COL_RATE)]
+		)
 	)
 	_summary.add_child(_make_line("", 12))
 	_summary.add_child(_make_line("内訳", 26))
-	_summary.add_child(
-		_make_line(
-			(
-				"ランダム %d戦 / ルーム %d戦"
-				% [int(counts.get("kind_random", 0)), int(counts.get("kind_room", 0))]
-			),
-			18
+	for kind: Array in [["kind_random", "ランダムマッチ"], ["kind_room", "ルームマッチ"]]:
+		_summary.add_child(
+			_make_row(str(kind[1]), [_cell("%d戦" % int(counts.get(kind[0], 0)), COL_COUNT)])
 		)
-	)
 	for reason: Array in [["hp", "HPが0"], ["surrender", "投了"], ["timeout", "時間切れ"]]:
 		var value: int = int(counts.get("end_%s" % reason[0], 0))
 		if value > 0:
 			_summary.add_child(
-				_make_line("%s %d戦(%.1f%%)" % [reason[1], value, _percent(value, games)], 18)
+				_make_row(
+					str(reason[1]),
+					[
+						_cell("%d戦" % value, COL_COUNT),
+						_cell("%.1f%%" % _percent(value, games), COL_RATE)
+					]
+				)
 			)
 
 	for row: Dictionary in _global_card_rows():
 		var card := CardLibrary.find_by_id(row["id"])
 		var display: String = card.display_name if card != null else row["id"]
-		_cards.add_child(_make_line("%s  %d戦 %s" % [display, row["games"], _rate(row)], 19))
+		_cards.add_child(
+			_make_row(display, [_cell("%d戦" % row["games"], COL_COUNT), _rate_cell(row)])
+		)
 
 
 ## 集計のカード別を、採用数の多い順に並べて返す。
@@ -161,14 +179,14 @@ func _refresh_own() -> void:
 		_empty.show_message("まだ対局の記録がありません", "対局を1局終えると、ここへ通算が積まれます")
 		return
 	_summary.add_child(_make_line("通算", 26))
-	_summary.add_child(_make_line(_summary_text("すべて", all), 20))
+	_summary.add_child(_make_row("すべて", _summary_cells(all)))
 	for kind in [
 		CurrencyRules.MatchKind.RANDOM, CurrencyRules.MatchKind.ROOM, CurrencyRules.MatchKind.CPU
 	]:
 		var totals := MatchStats.totals(uid, kind)
 		if int(totals["games"]) == 0:
 			continue
-		_summary.add_child(_make_line(_summary_text(_kind_name(kind), totals), 20))
+		_summary.add_child(_make_row(_kind_name(kind), _summary_cells(totals)))
 
 	var decks := MatchStats.decks(uid)
 	if not decks.is_empty():
@@ -178,7 +196,9 @@ func _refresh_own() -> void:
 		for i in mini(decks.size(), 3):
 			var row: Dictionary = decks[i]
 			var label: String = names.get(row["code"], UNKNOWN_DECK_NAME)
-			_summary.add_child(_make_line("%s  %d戦 %s" % [label, row["games"], _rate(row)], 18))
+			_summary.add_child(
+				_make_row(label, [_cell("%d戦" % row["games"], COL_COUNT), _rate_cell(row)])
+			)
 
 	_cards.add_child(_make_line("カード別(そのカードを入れて戦った勝率)", 22))
 	var rows := MatchStats.cards(uid)
@@ -186,22 +206,23 @@ func _refresh_own() -> void:
 		var row: Dictionary = rows[i]
 		var card := CardLibrary.find_by_id(row["id"])
 		var name: String = card.display_name if card != null else row["id"]
-		_cards.add_child(_make_line("%s  %d戦 %s" % [name, row["games"], _rate(row)], 19))
+		_cards.add_child(_make_row(name, [_cell("%d戦" % row["games"], COL_COUNT), _rate_cell(row)]))
 
 
-func _summary_text(label: String, totals: Dictionary) -> String:
+func _summary_cells(totals: Dictionary) -> Array:
 	var games: int = int(totals["games"])
 	var wins: int = int(totals["wins"])
-	var average := float(totals["turns"]) / float(maxi(games, 1))
-	return (
-		"%s  %d戦 %d勝 勝率%.1f%%  平均%.1f手"
-		% [label, games, wins, 100.0 * float(wins) / float(maxi(games, 1)), average]
-	)
+	return [
+		_cell("%d戦" % games, COL_COUNT),
+		_cell("%d勝" % wins, COL_WINS),
+		_cell("%.1f%%" % [100.0 * float(wins) / float(maxi(games, 1))], COL_RATE),
+		_cell("%.1f手" % [float(totals["turns"]) / float(maxi(games, 1))], COL_TURNS),
+	]
 
 
-func _rate(row: Dictionary) -> String:
+func _rate_cell(row: Dictionary) -> Dictionary:
 	var games: int = int(row["games"])
-	return "勝率%.1f%%" % [100.0 * float(int(row["wins"])) / float(maxi(games, 1))]
+	return _cell("%.1f%%" % [100.0 * float(int(row["wins"])) / float(maxi(games, 1))], COL_RATE)
 
 
 ## 指紋 → デッキ名の対応。**指紋は構築を見分けるための内部の識別子であり、
@@ -229,6 +250,28 @@ func _kind_name(kind: int) -> String:
 		CurrencyRules.MatchKind.CPU:
 			return "CPU戦"
 	return ""
+
+
+## 1行を「見出し(伸びる) + 右揃えの数値の列」として組む。
+## `values` は [{"text":, "width":}] の並び。
+func _make_row(label: String, values: Array, font_size := ROW_FONT_SIZE) -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	var name_label := _make_line(label, font_size)
+	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	row.add_child(name_label)
+	for cell: Dictionary in values:
+		var value := _make_line(str(cell["text"]), font_size)
+		value.custom_minimum_size.x = float(cell["width"])
+		value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		row.add_child(value)
+	return row
+
+
+## 「n戦」「勝率n%」のように、単位まで含めて1つの列へ収める。
+static func _cell(text: String, width: float) -> Dictionary:
+	return {"text": text, "width": width}
 
 
 func _make_line(text: String, font_size: int) -> Label:

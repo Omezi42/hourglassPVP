@@ -10,7 +10,12 @@ const HEADER_SCENE := "res://scenes/screen_header.tscn"
 const PANEL_STYLE := "res://resources/theme/content_panel.tres"
 const GRID_RECT := Rect2(24, ScreenHeader.CONTENT_TOP, 1232, ScreenHeader.CONTENT_HEIGHT)
 const COLUMNS := 2
-const CARD_SIZE := Vector2(596, 108)
+## 1問ぶんの札。**高さは全問そろえる**——ヒントが2行になる問題だけ背が高いと、
+## 2列のグリッドで行ごとに段差が出て、並びが落ち着かない。
+## 2行のヒントが収まる高さを最初から取り、1行の問題は下が空くに任せる。
+const CARD_SIZE := Vector2(596, 132)
+## ヒントの折り返し幅を決めるため、「挑戦」と余白を引いた値を見出しへ渡す。
+const ACTION_SIZE := Vector2(132, 52)
 
 var _grid: GridContainer
 var _empty: EmptyState
@@ -79,8 +84,11 @@ func _make_card(stage: PuzzleStageData, cleared: bool) -> Control:
 	row.add_theme_constant_override("separation", 12)
 	panel.add_child(row)
 
+	# 見出しとヒントは上へ寄せる。中央揃えのままだと、1行の問題と2行の問題で
+	# 見出しの高さがそろわない。
 	var column := VBoxContainer.new()
 	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	row.add_child(column)
 	var title := Label.new()
 	title.text = "%s%s" % [stage.title, "  ★" if cleared else ""]
@@ -93,7 +101,7 @@ func _make_card(stage: PuzzleStageData, cleared: bool) -> Control:
 	hint.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
 	column.add_child(hint)
 
-	var button := CodedButton.make("挑戦", Vector2(132, 52))
+	var button := CodedButton.make("挑戦", ACTION_SIZE)
 	button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	button.pressed.connect(func() -> void: stage_selected.emit(stage))
 	row.add_child(button)

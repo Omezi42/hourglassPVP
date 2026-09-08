@@ -10,15 +10,19 @@ signal deck_edit_pressed
 signal hourglass_list_pressed
 signal shop_pressed
 
+## 札の大きさ。バトルタブと同じ理由で、余っていた縦の領域を札の背丈へ回す。
+const MAIN_TILE_SIZE := Vector2(520, 196)
+const SIDE_TILE_SIZE := Vector2(272, 112)
+
 @onready var deck_edit_button: Button = $Center/VBox/DeckEditButton
 @onready var hourglass_list_button: Button = $Center/VBox/Row/HourglassListButton
 @onready var shop_button: Button = $Center/VBox/Row/ShopButton
 
 
 func _ready() -> void:
-	deck_edit_button = _to_tile(deck_edit_button, "デッキ編集", "sand", 30)
-	hourglass_list_button = _to_tile(hourglass_list_button, "砂時計図鑑", "eye", 22)
-	shop_button = _to_tile(shop_button, "ショップ", "crown", 22)
+	deck_edit_button = _to_tile(deck_edit_button, "デッキ編集", "sand", 30, MAIN_TILE_SIZE)
+	hourglass_list_button = _to_tile(hourglass_list_button, "砂時計図鑑", "eye", 22, SIDE_TILE_SIZE)
+	shop_button = _to_tile(shop_button, "ショップ", "crown", 22, SIDE_TILE_SIZE)
 	deck_edit_button.pressed.connect(func() -> void: deck_edit_pressed.emit())
 	hourglass_list_button.pressed.connect(func() -> void: hourglass_list_pressed.emit())
 	shop_button.pressed.connect(func() -> void: shop_pressed.emit())
@@ -49,9 +53,11 @@ static func _card_count() -> int:
 
 ## `.tscn` に置いてある `Button` を、同じ場所・同じ大きさの `HomeTile` へ置き換える。
 ## **`.tscn` を書き換えずに済ませるため**の手当てで、並び順(`get_index()`)も引き継ぐ。
-func _to_tile(button: Button, title: String, emblem_id: String, font_size: int) -> HomeTile:
+func _to_tile(
+	button: Button, title: String, emblem_id: String, font_size: int, tile_size: Vector2
+) -> HomeTile:
 	var parent := button.get_parent()
-	var tile := HomeTile.make(title, "", emblem_id, button.custom_minimum_size, font_size)
+	var tile := HomeTile.make(title, "", emblem_id, tile_size, font_size)
 	tile.size_flags_horizontal = button.size_flags_horizontal
 	tile.size_flags_vertical = button.size_flags_vertical
 	parent.add_child(tile)

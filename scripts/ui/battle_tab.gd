@@ -22,6 +22,15 @@ const BUSY_DOTS_INTERVAL := 0.5
 const ANNOUNCE_BADGE_GAP := 8.0
 ## 印にカーソルを乗せたときだけ出す説明(GameDesign.md 11章)。
 const ANNOUNCE_NOTE := "公式Discordサーバーへ「対戦相手をさがしている人がいる」と通知を送りました"
+## 札の大きさ。**タブに与えられた領域(上端112px〜下部タブ)に対して中身が小さく、
+## 上下へ大きく余っていた**ため、指で押せる寸法(GameDesign.md 9章)へ寄せて背を高くした。
+## 行を増やすと収まらないので、増やすのは高さだけにする。
+const MAIN_TILE_SIZE := Vector2(360, 128)
+## 5枚並ぶため幅を広げる余地がほとんど無い。**背を高くすると紋章の透かしが太り、
+## 文字に使える幅がそのぶん減る**(「ミッション」が「ミッショ」で切れた)ので、
+## 高さの伸びは控えめにして見出しを1段小さくする。
+const SIDE_TILE_SIZE := Vector2(202, 84)
+const SIDE_FONT_SIZE := 18
 
 var _queue: MatchmakingQueue
 var _busy := false
@@ -54,10 +63,16 @@ func _ready() -> void:
 	add_child(_busy_dots_timer)
 	# **入口は `HomeTile` にする**(GameDesign.md 9章)。`.tscn` を書き換えずに済ませるため、
 	# 置いてある `Button` を同じ場所・同じ大きさの札へ差し替える。
-	random_match_button = _to_tile(random_match_button, "ランダムマッチ", "誰かと当たるまで待ちます", "burst", 27)
-	room_match_button = _to_tile(room_match_button, "ルームマッチ", "合言葉で友達と対戦します", "shield", 27)
-	replay_button = _to_tile(replay_button, "リプレイ", "", "eye", 20)
-	cpu_match_button = _to_tile(cpu_match_button, "CPU戦", "", "hour", 20)
+	random_match_button = _to_tile(
+		random_match_button, "ランダムマッチ", "誰かと当たるまで待ちます", "burst", 27, MAIN_TILE_SIZE
+	)
+	room_match_button = _to_tile(
+		room_match_button, "ルームマッチ", "合言葉で友達と対戦します", "shield", 27, MAIN_TILE_SIZE
+	)
+	replay_button = _to_tile(replay_button, "リプレイ", "", "eye", SIDE_FONT_SIZE, SIDE_TILE_SIZE)
+	cpu_match_button = _to_tile(
+		cpu_match_button, "CPU戦", "", "hour", SIDE_FONT_SIZE, SIDE_TILE_SIZE
+	)
 	random_match_button.pressed.connect(func() -> void: random_match_deck_requested.emit())
 	room_match_button.pressed.connect(func() -> void: room_match_requested.emit())
 	replay_button.pressed.connect(func() -> void: replay_list_requested.emit())
@@ -83,7 +98,7 @@ func refresh() -> void:
 
 
 func _build_resume_button() -> void:
-	_resume_button = HomeTile.make("前回の対局へ戻る", "途中の対局が残っています", "hour", Vector2(320, 68), 21)
+	_resume_button = HomeTile.make("前回の対局へ戻る", "途中の対局が残っています", "hour", Vector2(360, 76), 21)
 	_resume_button.visible = false
 	_resume_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_resume_button.pressed.connect(_on_resume_pressed)
@@ -100,17 +115,23 @@ func _build_announce_badge() -> void:
 ## 「戦績」はリプレイ・CPU戦と同じ「対局そのものではない導線」のため、専用の行を作らず
 ## 同じ行へ並べる。行を1つ増やすと、タブの高さ(下部タブに挟まれた領域)を超える。
 func _build_stats_button() -> void:
-	_stats_button = HomeTile.make("戦績", "", "crown", Vector2(200, 64), 20)
+	_stats_button = HomeTile.make("戦績", "", "crown", SIDE_TILE_SIZE, SIDE_FONT_SIZE)
 	_stats_button.pressed.connect(func() -> void: stats_requested.emit())
 	replay_button.get_parent().add_child(_stats_button)
 
 
 ## `.tscn` に置いてある `Button` を、同じ場所・同じ大きさの `HomeTile` へ置き換える。
 func _to_tile(
-	button: Button, title: String, subtitle: String, emblem_id: String, font_size: int
+	button: Button,
+	title: String,
+	subtitle: String,
+	emblem_id: String,
+	font_size: int,
+	tile_size := Vector2.ZERO
 ) -> HomeTile:
 	var parent := button.get_parent()
-	var tile := HomeTile.make(title, subtitle, emblem_id, button.custom_minimum_size, font_size)
+	var wanted: Vector2 = tile_size if tile_size != Vector2.ZERO else button.custom_minimum_size
+	var tile := HomeTile.make(title, subtitle, emblem_id, wanted, font_size)
 	tile.size_flags_horizontal = button.size_flags_horizontal
 	tile.size_flags_vertical = button.size_flags_vertical
 	parent.add_child(tile)
@@ -123,10 +144,10 @@ func _to_tile(
 ## リーサルパズル(GameDesign.md 24章)とデイリーミッション(同23章)も、
 ## 対局そのものではない導線として「戦績」と同じ行に並べる。
 func _build_side_buttons() -> void:
-	_puzzle_button = HomeTile.make("パズル", "", "sword", Vector2(200, 64), 20)
+	_puzzle_button = HomeTile.make("パズル", "", "sword", SIDE_TILE_SIZE, SIDE_FONT_SIZE)
 	_puzzle_button.pressed.connect(func() -> void: puzzle_requested.emit())
 	replay_button.get_parent().add_child(_puzzle_button)
-	_mission_button = HomeTile.make("ミッション", "", "halo", Vector2(200, 64), 20)
+	_mission_button = HomeTile.make("ミッション", "", "halo", SIDE_TILE_SIZE, SIDE_FONT_SIZE)
 	_mission_button.pressed.connect(func() -> void: mission_requested.emit())
 	replay_button.get_parent().add_child(_mission_button)
 

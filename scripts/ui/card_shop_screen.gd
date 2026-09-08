@@ -285,15 +285,14 @@ class ShopItemCard:
 			UiPalette.TEXT_MUTED if _dimmed() else UiPalette.TEXT_OFFWHITE
 		)
 
+	## 買えないことは**行を暗くすることで示す**(GameDesign.md 21章)。以前は価格を
+	## 赤で出していたが、残高が0のうちは品書きが一面の赤字になり、
+	## 品が並んでいるというより不具合が並んでいるように見えていた。
 	func _draw_price() -> void:
-		var label := (
-			"所有済み"
-			if owned
-			else "%d %s" % [ShopCatalog.price(kind, id), CurrencyRules.CURRENCY_NAME]
-		)
+		var label := "所有済み" if owned else CurrencyRules.label_text(ShopCatalog.price(kind, id))
 		var color := UiPalette.TEXT_MUTED
-		if not owned:
-			color = UiPalette.BRASS_HIGHLIGHT if affordable else Color(1, 0.55, 0.5, 1)
+		if not owned and affordable:
+			color = UiPalette.BRASS_HIGHLIGHT
 		draw_string(
 			_font, Vector2(size.x - 176, 52), label, HORIZONTAL_ALIGNMENT_RIGHT, 160, 18, color
 		)
