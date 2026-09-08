@@ -80,6 +80,14 @@ function buildCardEmbeds(card) {
 
 function handleCardCommand(interaction) {
   const query = optionValue(interaction, "name");
+  // 表示名が完全一致するカードは、部分一致の絞り込みより先に見る。「サンド」で調べたのに
+  // 「サンドショット」との複数候補にされ、正確に打ち込んだのに詳細を見られない、
+  // という実際に踏んだ不具合の修正(GameDesign.md 26章)。
+  const needle = query.trim().toLowerCase();
+  const exact = cardsData.cards.find((c) => c.display_name.toLowerCase() === needle);
+  if (exact) {
+    return ephemeralMessage(null, buildCardEmbeds(exact));
+  }
   const matches = searchCards(query);
   if (matches.length === 0) {
     return ephemeralMessage(`「${query}」に一致するカードが見つかりませんでした。`);
