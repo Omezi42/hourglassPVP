@@ -15,12 +15,16 @@ var _screen: CardMatchScreen
 var _stage: PuzzleStageData = null
 var _panel: CardPuzzleResult
 var _settled := false
+## エンドレス(GameDesign.md 24章)かどうか。true の間は初回クリア報酬・進捗記録を
+## 行わず、「次の問題へ」で新しい問題を生成し続けられる。
+var _endless := false
 
 
 func _init(screen: CardMatchScreen) -> void:
 	_screen = screen
 	_panel = CardPuzzleResult.new()
-	_panel.retry_pressed.connect(func() -> void: start(_stage))
+	_panel.retry_pressed.connect(func() -> void: start(_stage, _endless))
+	_panel.next_pressed.connect(func() -> void: start(PuzzleGenerator.generate(), true))
 	_panel.quit_pressed.connect(func() -> void: finished.emit(_settled and _cleared()))
 	screen.add_child(_panel)
 
@@ -36,13 +40,14 @@ func stage() -> PuzzleStageData:
 
 ## 1問を始める。局面は `MatchState` を普通に作ってから、盤面・手札・マナを差し替える
 ## (ルール画面の教材の盤面と同じ作り方。Architecture.md 4.2節)。
-func start(target: PuzzleStageData) -> void:
+func start(target: PuzzleStageData, endless: bool = false) -> void:
 	if target == null:
 		return
 	# **局面を作ってから問題を覚える。**`_begin_state()` は画面の後始末を通り、
 	# そこで `close()` が呼ばれる。先に覚えると、その場で消される。
 	_begin_state()
 	_stage = target
+	_endless = endless
 	_settled = false
 	_panel.visible = false
 	_apply(target)
@@ -88,6 +93,7 @@ func on_match_ended() -> void:
 func close() -> void:
 	_stage = null
 	_settled = false
+	_endless = false
 	_panel.visible = false
 
 
@@ -101,12 +107,14 @@ func _cleared() -> bool:
 func _settle(cleared: bool) -> void:
 	_settled = true
 	var reward := ""
-	if cleared:
+	# エンドレスは初回クリアという区切りが成立しないため、砂金を出さない
+	# (GameDesign.md 24章「エンドレスモード」)。
+	if cleared and not _endless:
 		reward = _grant()
 	var state: MatchState = _screen.state
 	if state != null:
 		_panel.set_remaining(int(state.hp[MatchState.other_side(_screen.my_side)]))
-	_panel.show_for(cleared, _stage, reward)
+	_panel.show_for(cleared, _stage, reward, _endless)
 
 
 ## 初回クリアだけ砂金を出す(GameDesign.md 24章)。**通信は待たない**——

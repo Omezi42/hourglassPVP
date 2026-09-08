@@ -5,6 +5,10 @@ extends Control
 
 signal back_pressed
 signal stage_selected(stage: PuzzleStageData)
+## エンドレス(GameDesign.md 24章)の入口が押された。生成そのものは呼び出し側
+## (`Main`)が `PuzzleGenerator.generate()` を呼んで行う——この画面は
+## Stage1〜10の一覧と入口を並べる責務だけを持つ。
+signal endless_selected
 
 const HEADER_SCENE := "res://scenes/screen_header.tscn"
 const PANEL_STYLE := "res://resources/theme/content_panel.tres"
@@ -18,7 +22,6 @@ const CARD_SIZE := Vector2(596, 132)
 const ACTION_SIZE := Vector2(132, 52)
 
 var _grid: GridContainer
-var _empty: EmptyState
 
 
 func _ready() -> void:
@@ -51,29 +54,38 @@ func _build() -> void:
 	_grid.add_theme_constant_override("v_separation", 16)
 	scroll.add_child(_grid)
 
-	_empty = EmptyState.new()
-	_empty.position = GRID_RECT.position
-	_empty.size = GRID_RECT.size
-	_empty.visible = false
-	add_child(_empty)
-
 
 func _refresh() -> void:
 	for child in _grid.get_children():
 		child.queue_free()
+	# **エンドレス(GameDesign.md 24章)は一覧の先頭に固定で置く。**Stage1〜10とは
+	# 別枠であり、一覧が空でも常に遊べる入口として出す。
+	_grid.add_child(_make_endless_card())
 	var stages := PuzzleLibrary.all_stages()
-	if stages.is_empty():
-		_empty.show_message("まだ問題がありません")
-	else:
-		_empty.hide_message()
 	var uid := _uid()
 	for stage in stages:
 		_grid.add_child(_make_card(stage, PuzzleProgress.is_cleared(uid, stage.id)))
 
 
+## エンドレスの入口。Stage1〜10と同じ札の形を使い、狙いを1行添える
+## (GameDesign.md 9章「いまの状態を1行添えた札」と同じ考え方)。
+func _make_endless_card() -> Control:
+	return _make_entry_card(
+		"エンドレス", "解くたびに新しい問題が出る。腕試し専用(報酬なし)", func() -> void: endless_selected.emit()
+	)
+
+
 ## 1問ぶんの横長カード。**クリア済みは印だけで示す**——解けた問題を暗くして
 ## 選びにくくすると、解き直して確かめることができなくなる。
 func _make_card(stage: PuzzleStageData, cleared: bool) -> Control:
+	return _make_entry_card(
+		"%s%s" % [stage.title, "  ★" if cleared else ""],
+		stage.hint,
+		func() -> void: stage_selected.emit(stage)
+	)
+
+
+func _make_entry_card(title_text: String, hint_text: String, on_pressed: Callable) -> Control:
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = CARD_SIZE
 	var style: StyleBox = load(PANEL_STYLE)
@@ -91,11 +103,11 @@ func _make_card(stage: PuzzleStageData, cleared: bool) -> Control:
 	column.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	row.add_child(column)
 	var title := Label.new()
-	title.text = "%s%s" % [stage.title, "  ★" if cleared else ""]
+	title.text = title_text
 	title.add_theme_font_size_override("font_size", 22)
 	column.add_child(title)
 	var hint := Label.new()
-	hint.text = stage.hint
+	hint.text = hint_text
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	hint.add_theme_font_size_override("font_size", 15)
 	hint.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
@@ -103,7 +115,7 @@ func _make_card(stage: PuzzleStageData, cleared: bool) -> Control:
 
 	var button := CodedButton.make("挑戦", ACTION_SIZE)
 	button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	button.pressed.connect(func() -> void: stage_selected.emit(stage))
+	button.pressed.connect(on_pressed)
 	row.add_child(button)
 	return panel
 

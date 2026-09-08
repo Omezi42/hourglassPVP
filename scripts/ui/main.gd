@@ -136,6 +136,7 @@ func _ready() -> void:
 	puzzle_picker_screen.visible = false
 	puzzle_picker_screen.back_pressed.connect(func() -> void: _show_only(home_screen))
 	puzzle_picker_screen.stage_selected.connect(_on_puzzle_stage_selected)
+	puzzle_picker_screen.endless_selected.connect(_on_puzzle_endless_selected)
 	add_child(puzzle_picker_screen)
 	_screens.append(puzzle_picker_screen)
 	# 難易度モーダルは対局へ入る前の確認なので、対局画面より手前(後の子)に置く。
@@ -416,6 +417,12 @@ func _on_puzzle_requested() -> void:
 
 func _on_puzzle_stage_selected(stage: PuzzleStageData) -> void:
 	card_match_screen.puzzle.start(stage)
+	_match_return_screen = puzzle_picker_screen
+
+
+## エンドレス(GameDesign.md 24章)。押すたびにその場で新しい問題を1つ生成する。
+func _on_puzzle_endless_selected() -> void:
+	card_match_screen.puzzle.start(PuzzleGenerator.generate(), true)
 	_match_return_screen = puzzle_picker_screen
 	_show_only(card_match_screen)
 
