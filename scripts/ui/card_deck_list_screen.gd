@@ -16,6 +16,8 @@ enum Mode { MANAGE, PICK }
 const HEADER_SCENE := "res://scenes/screen_header.tscn"
 const CONFIRM_SCENE := "res://scenes/confirm_modal.tscn"
 const PANEL_STYLE := "res://resources/theme/content_panel.tres"
+## 空の案内を出す矩形を、パネルの縁と上の1行から内側へ寄せる幅。
+const EMPTY_INSET := Vector2(40.0, 56.0)
 const LIST_RECT := Rect2(24, ScreenHeader.CONTENT_TOP, 1232, ScreenHeader.CONTENT_HEIGHT)
 const CARD_SIZE := Vector2(596, 112)
 ## 代表として並べる紋章の数。30枚をそのまま並べるとカードに収まらない(GameDesign.md 9章)。
@@ -24,7 +26,10 @@ const EMBLEM_SIZE := Vector2(34, 34)
 
 var _header: ScreenHeader
 var _grid: GridContainer
+## 棚の上に常時出す1行(件数・並び替え中の案内)。
 var _empty_label: Label
+## 1つも無いときだけ、棚の中央へ出す印と案内。
+var _empty_state: EmptyState
 var _create_button: Button
 var _reorder_button: Button
 var _confirm: ConfirmModal
@@ -92,6 +97,14 @@ func _build() -> void:
 	_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(_grid)
 
+	# 1つも保存していないときは、案内の1行だけだと広いパネルが空のまま残り、
+	# 画面が壊れているようにも見える。棚の位置へ印と1行を中央で出す。
+	_empty_state = EmptyState.new()
+	_empty_state.position = LIST_RECT.position + EMPTY_INSET
+	_empty_state.size = LIST_RECT.size - EMPTY_INSET * 2.0
+	_empty_state.visible = false
+	add_child(_empty_state)
+
 	# モーダルは最後に足す(後から足した子ほど手前に描かれるため)。
 	_confirm = load(CONFIRM_SCENE).instantiate()
 	add_child(_confirm)
@@ -110,17 +123,26 @@ func _refresh() -> void:
 	_reorder_button.visible = not picking and decks.size() > 1
 	_reorder_button.text = "並び替えを終える" if _reordering else "デッキ入れ替え"
 	_empty_label.text = _guide_text(decks.size(), picking)
+	if decks.is_empty():
+		_empty_state.show_message("まだデッキがありません", _empty_hint(picking))
+	else:
+		_empty_state.hide_message()
 	for child in _grid.get_children():
 		child.queue_free()
 	for i in decks.size():
 		_grid.add_child(_make_card(i, decks[i], decks.size()))
 
 
+## 中央へ出す1行。**次にすることだけを書く**(何が無いかは見出しが言っている)。
+func _empty_hint(picking: bool) -> String:
+	if picking:
+		return "このままでもプリセットの「基本」で対局へ入れます"
+	return "右上の「新規デッキ作成」から%d枚のデッキを作れます" % MatchState.DECK_SIZE
+
+
 func _guide_text(count: int, picking: bool) -> String:
 	if count == 0:
-		if picking:
-			return "保存したデッキがありません。プリセットの「基本」で対局へ入れます"
-		return "保存したデッキがありません。「新規デッキ作成」から%d枚のデッキを作ってください" % MatchState.DECK_SIZE
+		return ""
 	if picking:
 		return "対局で使うデッキを選んでください"
 	if _reordering:

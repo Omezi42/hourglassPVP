@@ -28,6 +28,8 @@ const PAGE_RECT := Rect2(
 	AlmanacBook.RIGHT_PAGE.size.y - 56
 )
 ## 本の外に置く操作。**紙面へ操作を載せない**(GameDesign.md 9章)。
+## 戻るボタンの見た目。共通ヘッダー(`ScreenHeader`)と同じ左向きの五角形にする。
+const BACK_GROUP := "back_nav"
 const BACK_RECT := Rect2(24, 28, 96, 42)
 const ORDER_RECT := Rect2(SCREEN_SIZE.x - 24 - 168, 28, 168, 42)
 
@@ -55,7 +57,10 @@ func _ready() -> void:
 func _build() -> void:
 	add_child(AlmanacBook.new())
 
-	var back := CodedButton.make("← 戻る", BACK_RECT.size)
+	# 戻るの見た目は共通ヘッダーと揃える(GameDesign.md 9章)。この画面は本・工房の
+	# 紙面へ操作を載せないためヘッダーを持たないが、**ボタンの形まで別にすると
+	# 画面ごとに戻り方が違って見える**。
+	var back := CodedButton.make_in_group("戻る", BACK_RECT.size, BACK_GROUP)
 	back.position = BACK_RECT.position
 	back.pressed.connect(func() -> void: back_pressed.emit())
 	add_child(back)

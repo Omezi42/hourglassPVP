@@ -48,6 +48,10 @@ var _nameplate_button: AccountNameplateButton
 var _mission_panel: DailyMissionPanel
 ## 日曜イベント(GameDesign.md 15章・25章)の表示。通常時は空文字で隠れる。
 var _sunday_banner: Label
+## 残高のチップ(GameDesign.md 9章)。**最初の1回だけは脈を出さない**——
+## 起動して開いた時点の残高は「増えた」わけではない。
+var _currency_chip: CurrencyChip
+var _currency_seen := false
 
 @onready var background: TextureRect = $Background
 @onready var deck_tab: DeckTab = $Layout/ContentArea/DeckTab
@@ -92,13 +96,20 @@ func _ready() -> void:
 	$AccountBar.add_child(_nameplate_button)
 	$AccountBar.move_child(_nameplate_button, 0)
 
+	# 残高は枠を持たない Label だったため、真鍮で組まれたヘッダーの中でそこだけ浮いていた。
+	# .tscn は書き換えず、同じ場所へチップを挿して元のラベルを隠す。
+	currency_label.visible = false
+	_currency_chip = CurrencyChip.new()
+	$AccountBar.add_child(_currency_chip)
+	$AccountBar.move_child(_currency_chip, $AccountBar.get_children().find(currency_label) + 1)
+
 	_sunday_banner = Label.new()
 	_sunday_banner.add_theme_font_size_override("font_size", 14)
 	_sunday_banner.add_theme_color_override("font_color", UiPalette.GLOW_AMBER)
 	_sunday_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_sunday_banner.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	$AccountBar.add_child(_sunday_banner)
-	$AccountBar.move_child(_sunday_banner, $AccountBar.get_children().find(currency_label) + 1)
+	$AccountBar.move_child(_sunday_banner, $AccountBar.get_children().find(_currency_chip) + 1)
 
 	# 初回起動時だけ「ルール」から始める(GameDesign.md 9章)。読了は測らない。
 	var first_visit := not UiState.has_seen_home()
@@ -133,7 +144,9 @@ func refresh_account() -> void:
 			AccountService.icon_id(),
 			AccountService.title_id()
 		)
-	currency_label.text = "%s:%d" % [CurrencyRules.CURRENCY_NAME, AccountService.currency()]
+	if _currency_chip != null:
+		_currency_chip.set_amount(AccountService.currency(), _currency_seen)
+		_currency_seen = true
 	if _sunday_banner != null:
 		var banner_text := SundayEventRules.banner_text()
 		_sunday_banner.text = banner_text

@@ -52,6 +52,10 @@ const TEXT_MARGIN := 5.0
 const MIN_FONT_SIZE := 9
 
 const STAT_RADIUS := 15.0
+## 手札の名前・キーワードの行を、下の隅のバッジの帯からどれだけ上へ逃がすか。
+const LABEL_BADGE_GAP := 4.0
+## その2行の間隔。
+const LABEL_LINE_GAP := 16.0
 ## 攻撃の予測。体力のバッジの真下へ、結果だけを小さく出す。
 const PREVIEW_RADIUS := 14.0
 const PREVIEW_GAP := 15.0
@@ -593,7 +597,7 @@ func _draw_hand_card() -> void:
 	var ci := get_canvas_item()
 	var rect := Rect2(Vector2.ZERO, size)
 	var tint := _tint()
-	var points := UiPaint.rounded_rect_points_uniform(rect, HAND_CORNER, 6)
+	var points := UiPaint.rounded_rect_points_uniform(rect, HAND_CORNER * _hand_scale(), 6)
 	UiPaint.fill_gradient_polygon(
 		ci,
 		points,
@@ -636,7 +640,7 @@ func _draw_spell_emblem(tint: Color) -> void:
 	if card.emblem == null:
 		return
 	var box := _hand_art_box()
-	var half := Vector2(SPELL_EMBLEM_SIDE, SPELL_EMBLEM_SIDE) * 0.5
+	var half := Vector2(SPELL_EMBLEM_SIDE, SPELL_EMBLEM_SIDE) * 0.5 * _hand_scale()
 	var center := box.get_center()
 	draw_texture_rect(
 		card.emblem,
@@ -647,11 +651,19 @@ func _draw_spell_emblem(tint: Color) -> void:
 	draw_texture_rect(card.emblem, Rect2(center - half, half * 2.0), false, SPELL_BORDER * tint)
 
 
+## 手札の見た目は `HAND_SIZE_PX`(118x158)を基準に組んである。**キーワード辞書のように
+## 小さく置く場所があるため、各部の寸法はそこからの比で決める**。固定値のままだと、
+## 名前とキーワードの行が札の外へ出たり、総量のバッジの上へ乗ったりする
+## (枠・輪郭の太さを大きさに合わせる `CodedButtonStyle` と同じ考え方)。
+func _hand_scale() -> float:
+	return minf(size.x / HAND_SIZE_PX.x, size.y / HAND_SIZE_PX.y)
+
+
 ## 手札の絵を収める枠。
 func _hand_art_box() -> Rect2:
-	return Rect2(
-		Vector2((size.x - HAND_ART_SIDE) * 0.5, 9.0), Vector2(HAND_ART_SIDE, HAND_ART_SIDE)
-	)
+	var scale := _hand_scale()
+	var side := HAND_ART_SIDE * scale
+	return Rect2(Vector2((size.x - side) * 0.5, 9.0 * scale), Vector2(side, side))
 
 
 ## 封蝋の印。手札は紙の札であるため、台座の銘板ではなく蝋で押した印として出す。
@@ -660,10 +672,12 @@ func _draw_hand_seal(tint: Color) -> void:
 	if card.emblem == null or card.is_spell:
 		return
 	var ci := get_canvas_item()
-	var center := Vector2(HAND_SEAL_RADIUS + 4.0, size.y - HAND_SEAL_RADIUS - 4.0)
-	UiPaint.fill_circle(ci, center, HAND_SEAL_RADIUS + 1.0, Color(0.08, 0.05, 0.04, 0.8), 24)
-	UiPaint.fill_circle(ci, center, HAND_SEAL_RADIUS, UiPalette.BRASS_MID * tint, 24)
-	var half := Vector2(HAND_SEAL_SIDE, HAND_SEAL_SIDE) * 0.5
+	var scale := _hand_scale()
+	var radius := HAND_SEAL_RADIUS * scale
+	var center := Vector2(radius + 4.0 * scale, size.y - radius - 4.0 * scale)
+	UiPaint.fill_circle(ci, center, radius + 1.0, Color(0.08, 0.05, 0.04, 0.8), 24)
+	UiPaint.fill_circle(ci, center, radius, UiPalette.BRASS_MID * tint, 24)
+	var half := Vector2(HAND_SEAL_SIDE, HAND_SEAL_SIDE) * 0.5 * scale
 	draw_texture_rect(
 		card.emblem,
 		Rect2(center - half + Vector2(0.0, 1.0), half * 2.0),
@@ -675,21 +689,32 @@ func _draw_hand_seal(tint: Color) -> void:
 	)
 
 
+## 名前とキーワードは、**総量のバッジと封蝋が占める帯より上へ積む**。以前は下端から
+## 24pxの位置へキーワードを置いており、「攻撃不可 守護」のように長い行が総量の数値へ
+## 潜っていた(キーワード辞書で実際に読めなくなっていた)。上へ逃がすことで札の幅を
+## まるごと使えるようになり、文字を縮めずに済む。
 func _draw_hand_labels(tint: Color) -> void:
-	_centered_text(card.display_name, 14, 118.0, UiPalette.TEXT_OFFWHITE * tint)
+	var scale := _hand_scale()
+	var keyword_baseline := size.y - (2.0 * STAT_RADIUS + LABEL_BADGE_GAP) * scale
+	# 名前の高さは、キーワードの有無にかかわらず揃える。持たない札だけ下がると、
+	# 手札に並べたときに名前の行が凸凹になる。
 	var note := _keyword_text()
+	var name_baseline := keyword_baseline - LABEL_LINE_GAP * scale
+	_centered_text(
+		card.display_name, roundi(14 * scale), name_baseline, UiPalette.TEXT_OFFWHITE * tint
+	)
 	if not note.is_empty():
-		_centered_text(note, 12, 134.0, UiPalette.BRASS_HIGHLIGHT * tint)
+		_centered_text(note, roundi(12 * scale), keyword_baseline, UiPalette.BRASS_HIGHLIGHT * tint)
 
 
 ## コスト=左上 / 総量=右下。**砂術は総量を持たないため右下を出さない**(GameDesign.md 9章)。
 func _draw_hand_stats() -> void:
-	_stat(Vector2(STAT_RADIUS + 3.0, STAT_RADIUS + 3.0), card.cost, MANA_BLUE)
+	var radius := STAT_RADIUS * _hand_scale()
+	var inset := radius + 3.0 * _hand_scale()
+	_stat(Vector2(inset, inset), card.cost, MANA_BLUE, radius)
 	if card.is_spell:
 		return
-	_stat(
-		Vector2(size.x - STAT_RADIUS - 3.0, size.y - STAT_RADIUS - 3.0), card.total_sand, HEALTH_RED
-	)
+	_stat(Vector2(size.x - inset, size.y - inset), card.total_sand, HEALTH_RED, radius)
 
 
 # --- 共通 ---------------------------------------------------------------
@@ -854,20 +879,29 @@ func _draw_empty() -> void:
 	_dashed_rect(rect, color)
 
 
-func _stat(center: Vector2, value: int, color: Color) -> void:
-	draw_circle(center, STAT_RADIUS, Color(0.08, 0.07, 0.06, 0.95))
-	draw_arc(center, STAT_RADIUS, 0.0, TAU, 24, color, 2.5)
+func _stat(center: Vector2, value: int, color: Color, radius := STAT_RADIUS) -> void:
+	draw_circle(center, radius, Color(0.08, 0.07, 0.06, 0.95))
+	draw_arc(center, radius, 0.0, TAU, 24, color, 2.5 * radius / STAT_RADIUS)
 	var text := str(value)
-	var width := _font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x
+	var font_size := maxi(MIN_FONT_SIZE, roundi(20.0 * radius / STAT_RADIUS))
+	var width := _font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
 	draw_string(
-		_font, center + Vector2(-width * 0.5, 7), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, color
+		_font,
+		center + Vector2(-width * 0.5, font_size * 0.35),
+		text,
+		HORIZONTAL_ALIGNMENT_LEFT,
+		-1,
+		font_size,
+		color
 	)
 
 
 ## カードの幅に収まらない文字列は、収まるまでフォントを縮めて描く。
 ## 語にしないキーワードは短い言い換えとはいえ語より長く、カードの幅は118pxしかないため。
-func _centered_text(text: String, font_size: int, baseline: float, color: Color) -> void:
-	var limit := size.x - TEXT_MARGIN * 2.0
+func _centered_text(
+	text: String, font_size: int, baseline: float, color: Color, limit_override := -1.0
+) -> void:
+	var limit := limit_override if limit_override > 0.0 else size.x - TEXT_MARGIN * 2.0
 	var width := _font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
 	while width > limit and font_size > MIN_FONT_SIZE:
 		font_size -= 1

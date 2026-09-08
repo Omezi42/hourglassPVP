@@ -40,9 +40,7 @@ func refresh() -> void:
 	(hourglass_list_button as HomeTile).set_subtitle(
 		"収集 %d / %d 種" % [_card_count(), _card_count()]
 	)
-	(shop_button as HomeTile).set_subtitle(
-		"%s %d" % [CurrencyRules.CURRENCY_NAME, AccountService.currency()]
-	)
+	(shop_button as HomeTile).set_subtitle(CurrencyRules.label_text(AccountService.currency()))
 
 
 static func _card_count() -> int:

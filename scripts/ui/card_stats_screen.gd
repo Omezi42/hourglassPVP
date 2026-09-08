@@ -5,6 +5,8 @@ extends Control
 
 signal back_pressed
 
+## いま保存していない構築(消したデッキ・受け取ったデッキなど)の見出し。
+const UNKNOWN_DECK_NAME := "いま保存していない構築"
 const HEADER_SCENE := "res://scenes/screen_header.tscn"
 const PANEL_STYLE := "res://resources/theme/content_panel.tres"
 const SUMMARY_RECT := Rect2(24, ScreenHeader.CONTENT_TOP, 560, 540)
@@ -16,6 +18,8 @@ const TOGGLE_SIZE := Vector2(168, 48)
 
 ## 「自分」と「みんな」を往復する(GameDesign.md 22章)。並び替えの往復と同じ流儀。
 var _global := false
+## 記録が無いとき・読み込み中に、2つの欄へ重ねて中央へ出す案内。
+var _empty: EmptyState
 ## 集計は開いた回に1度だけ読む。
 var _global_stats: Dictionary = {}
 ## 一度でも読もうとしたか。読めなかった(通信失敗)と、まだ読んでいないを区別するため。
@@ -80,6 +84,7 @@ func _refresh() -> void:
 		child.queue_free()
 	for child in _cards.get_children():
 		child.queue_free()
+	_empty.hide_message()
 	if _global:
 		_refresh_global()
 		return
@@ -93,18 +98,15 @@ func _refresh_global() -> void:
 	_summary.add_child(_make_line("みんなの戦績(オンライン対戦の通算)", 26))
 	_cards.add_child(_make_line("カード別(そのカードを入れて戦った勝率)", 22))
 	if _fetching or not _global_fetched:
-		_summary.add_child(_make_line("集計を読み込んでいます…", 20))
-		_cards.add_child(_make_line("―", 18))
+		_empty.show_message("集計を読み込んでいます", "", true)
 		return
 	if _global_failed:
-		_summary.add_child(_make_line("集計を取得できませんでした。通信状況を確認してください。", 18))
-		_cards.add_child(_make_line("―", 18))
+		_empty.show_message("集計を取得できませんでした", "通信状況を確認してください")
 		return
 	var counts: Dictionary = _global_stats.get("counts", {})
 	var games: int = int(counts.get("games", 0))
 	if games == 0:
-		_summary.add_child(_make_line("まだオンライン対戦の記録がありません", 20))
-		_cards.add_child(_make_line("―", 18))
+		_empty.show_message("まだみんなの記録がありません", "オンライン対戦が行われると、ここへ積まれます")
 		return
 	_summary.add_child(_make_line("%d戦" % games, 20))
 	_summary.add_child(
@@ -156,7 +158,7 @@ func _refresh_own() -> void:
 	var uid := _uid()
 	var all := MatchStats.totals(uid)
 	if int(all["games"]) == 0:
-		_summary.add_child(_make_line("まだ対局の記録がありません", 22))
+		_empty.show_message("まだ対局の記録がありません", "対局を1局終えると、ここへ通算が積まれます")
 		return
 	_summary.add_child(_make_line("通算", 26))
 	_summary.add_child(_make_line(_summary_text("すべて", all), 20))
@@ -172,11 +174,11 @@ func _refresh_own() -> void:
 	if not decks.is_empty():
 		_summary.add_child(_make_line("", 12))
 		_summary.add_child(_make_line("デッキ別", 26))
+		var names := _deck_names()
 		for i in mini(decks.size(), 3):
 			var row: Dictionary = decks[i]
-			_summary.add_child(
-				_make_line("%d戦 %s(%s)" % [row["games"], _rate(row), _short_code(row["code"])], 18)
-			)
+			var label: String = names.get(row["code"], UNKNOWN_DECK_NAME)
+			_summary.add_child(_make_line("%s  %d戦 %s" % [label, row["games"], _rate(row)], 18))
 
 	_cards.add_child(_make_line("カード別(そのカードを入れて戦った勝率)", 22))
 	var rows := MatchStats.cards(uid)
@@ -202,9 +204,20 @@ func _rate(row: Dictionary) -> String:
 	return "勝率%.1f%%" % [100.0 * float(int(row["wins"])) / float(maxi(games, 1))]
 
 
-## デッキの指紋は長いため、見分けが付く長さだけを出す。
-func _short_code(code: String) -> String:
-	return code.substr(0, 14) + "…" if code.length() > 14 else code
+## 指紋 → デッキ名の対応。**指紋は構築を見分けるための内部の識別子であり、
+## そのまま画面へ出すとプレイヤーには読めない文字列が並ぶ**(以前は
+## 「HG1-SwB4nEtJLM…」と出ていた)。いま保存しているデッキとプリセットから引き直す。
+func _deck_names() -> Dictionary:
+	var names := {}
+	for preset: Dictionary in CardPresetDecks.PRESETS:
+		var cards := CardPresetDecks.deck_of(str(preset["id"]))
+		if not cards.is_empty():
+			names[CardDeckCode.fingerprint(cards)] = "%s(プリセット)" % preset["name"]
+	# 保存したデッキを後から入れる。プリセットをそのまま保存した場合は、
+	# プレイヤーが付けた名前のほうを出す。
+	for entry: Dictionary in CardDeckSave.list_decks():
+		names[CardDeckCode.fingerprint(entry["cards"])] = str(entry["name"])
+	return names
 
 
 func _kind_name(kind: int) -> String:
@@ -239,6 +252,13 @@ func _build() -> void:
 	header.add_action(_toggle)
 	_summary = _make_panel(SUMMARY_RECT)
 	_cards = _make_panel(CARDS_RECT)
+	# 記録が無い/読み込み中は、2つのパネルにまたがる中央へ1つだけ出す。
+	# 左の欄の左上へ1行だけ置くと、右の欄が空のまま残って画面が壊れて見える。
+	_empty = EmptyState.new()
+	_empty.position = SUMMARY_RECT.position
+	_empty.size = Vector2(CARDS_RECT.end.x - SUMMARY_RECT.position.x, SUMMARY_RECT.size.y)
+	_empty.visible = false
+	add_child(_empty)
 
 
 func _make_panel(rect: Rect2) -> VBoxContainer:

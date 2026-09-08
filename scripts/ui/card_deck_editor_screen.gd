@@ -27,6 +27,8 @@ const SIDE_INNER_WIDTH := SIDE_RECT.size.x
 const GRID_COLUMNS := 4
 const GRID_GAP := 6
 ## 本の外(木箱の上)へ置く操作。共通ヘッダーと同じ並び(左=戻る / 右=主アクション)。
+## 戻るボタンの見た目。共通ヘッダー(`ScreenHeader`)と同じ左向きの五角形にする。
+const BACK_GROUP := "back_nav"
 const BACK_RECT := Rect2(24, 30, 92, 42)
 const ACTION_SIZE := Vector2(126, 42)
 const ACTION_GAP := 10.0
@@ -105,7 +107,10 @@ func _build() -> void:
 ## 画面名は吊り看板が示す(下地が描く)ため、ここは操作だけを置く。
 ## 並びは共通の規約どおり**左=戻る / 右=主アクション**(GameDesign.md 9章)。
 func _build_header() -> void:
-	var back := CodedButton.make("← 戻る", BACK_RECT.size)
+	# 戻るの見た目は共通ヘッダーと揃える(GameDesign.md 9章)。この画面は本・工房の
+	# 紙面へ操作を載せないためヘッダーを持たないが、**ボタンの形まで別にすると
+	# 画面ごとに戻り方が違って見える**。
+	var back := CodedButton.make_in_group("戻る", BACK_RECT.size, BACK_GROUP)
 	back.position = BACK_RECT.position
 	back.pressed.connect(func() -> void: back_pressed.emit())
 	add_child(back)

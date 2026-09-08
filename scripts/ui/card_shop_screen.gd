@@ -18,7 +18,9 @@ const CARD_SIZE := Vector2(580, 88)
 const MESSAGE_TOP := ScreenHeader.CONTENT_TOP + ScreenHeader.CONTENT_HEIGHT - 34
 
 var _grid: GridContainer
-var _balance: Label
+var _balance: CurrencyChip
+## 開いた直後は脈を出さない。買って減ったときも同じで、脈は増えたときだけ出る。
+var _balance_seen := false
 var _message: Label
 var _confirm: ConfirmModal
 var _busy := false
@@ -37,7 +39,8 @@ func open() -> void:
 
 
 func _refresh() -> void:
-	_balance.text = "%s %d" % [CurrencyRules.CURRENCY_NAME, AccountService.currency()]
+	_balance.set_amount(AccountService.currency(), _balance_seen)
+	_balance_seen = true
 	for child in _grid.get_children():
 		child.queue_free()
 	for item in ShopCatalog.items():
@@ -56,19 +59,24 @@ func _on_item_pressed(kind: ShopCatalog.Kind, id: String) -> void:
 	var cost := ShopCatalog.price(kind, id)
 	if AccountService.currency() < cost:
 		_set_message(
-			"%sが足りません(あと%d)。" % [CurrencyRules.CURRENCY_NAME, cost - AccountService.currency()]
+			(
+				"%sが足りません(あと%s)。"
+				% [
+					CurrencyRules.CURRENCY_NAME,
+					CurrencyRules.amount_text(cost - AccountService.currency())
+				]
+			)
 		)
 		return
 	_pending = {"kind": kind, "id": id}
 	_confirm.open_confirm(
 		"購入の確認",
 		(
-			"%s「%s」を %d %s で購入します。"
+			"%s「%s」を %s で購入します。"
 			% [
 				ShopCatalog.kind_name(kind),
 				ShopCatalog.item_name(kind, id),
-				cost,
-				CurrencyRules.CURRENCY_NAME
+				CurrencyRules.label_text(cost)
 			]
 		),
 		"購入する"
@@ -111,10 +119,8 @@ func _build() -> void:
 	header.back_pressed.connect(func() -> void: back_pressed.emit())
 	# 残高はここでの購入で必ず動くため、ヘッダーの主アクションの位置へ常時出す
 	# (GameDesign.md 21章)。押すものではないのでボタンにはしない。
-	_balance = Label.new()
-	_balance.add_theme_font_size_override("font_size", 22)
-	_balance.add_theme_color_override("font_color", UiPalette.BRASS_HIGHLIGHT)
-	_balance.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_balance = CurrencyChip.new()
+	_balance.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	header.add_action(_balance)
 
 	var panel := PanelContainer.new()

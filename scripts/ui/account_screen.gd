@@ -220,7 +220,7 @@ func _refresh_view() -> void:
 		status_label.text = "ログイン中: %s" % NetSession.auth.login_id
 	else:
 		status_label.text = "ゲスト (この端末のゲストとして遊んでいます)"
-	currency_label.text = "%s: %d" % [CurrencyRules.CURRENCY_NAME, AccountService.currency()]
+	currency_label.text = CurrencyRules.label_text(AccountService.currency())
 	name_input.text = AccountService.display_name()
 
 	# アイコン選択ボタンのハイライト更新

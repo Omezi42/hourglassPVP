@@ -13,7 +13,10 @@ const CAPTION_FONT_SIZE := 15
 const PREVIEW_HEIGHT := 186.0
 ## 実演の幅。横いっぱいに伸ばすと駒が広い枠の中央へ小さく浮いて読みにくい。
 const PREVIEW_WIDTH := 520.0
-const CARD_SIZE := Vector2(96, 128)
+## 手札のカードは**基準の大きさのまま並べる**。小さくすると名前とキーワードの行が
+## コストと総量のバッジへ寄って読めなくなる(実際に「攻撃不可 守護」が総量へ潜っていた)。
+## 幅が足りないぶんは、この列がもともと持っている横スクロールで受ける。
+const CARD_SIZE := CardView.HAND_SIZE_PX
 const EMPTY_TEXT := "まだこの能力を持つ砂時計はありません。"
 
 var _title: Label

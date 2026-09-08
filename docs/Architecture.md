@@ -365,6 +365,8 @@ UIに依存しない、対局ルールそのものを扱う層。
 | `CardDeckShelf`(`scripts/ui/card_deck_shelf.gd`) | 編成中のデッキを**30枠の決まった棚**として描く(GameDesign.md 9章)。1つの `Control` が全枠を描き、当たり判定を矩形の表として持つ |
 | `EmblemSeal`(`scripts/ui/emblem_seal.gd`, staticのみ) | カード固有の紋章を「押した印」として描く。**カードを並べる3画面(図鑑の一覧・工房の在庫棚・編成中の棚)で共有する**——別々に描くと必ず片方だけ古くなる。`InkFigure` と同じく第1引数に `CanvasItem` を取る(紋章はテクスチャのため `draw_texture_rect()` を使う) |
 | `CardPileViewer`(`scripts/ui/card_pile_viewer.gd`) | 墓地の中身を見るモーダル。同じカードは1枚にまとめて枚数をバッジで出す |
+| `EmptyState`(`scripts/ui/empty_state.gd`) | 一覧に並べるものが無いとき/待っているときの見せ方(GameDesign.md 9章)。**印・見出し・1行の置き場を1箇所へ集める**——以前は画面ごとに `Label` を1つ置いており、広いパネルの左上に文が1行だけ残っていた。デッキ一覧・リプレイ一覧・戦績・パズル選択が使う |
+| `CurrencyChip`(`scripts/ui/currency_chip.gd`) | 砂金の残高(GameDesign.md 9章・15章)。文字列は `CurrencyRules.label_text()` だけが決め、画面ごとに組み立てない。増えたときだけ脈打たせて数え上げる |
 | `CodedButton`(`scripts/ui/coded_button.gd`) | コードで組むボタンの生成を集約する。画面ごとに `theme_override` を並べると指定漏れのボタンが混ざるため |
 | `CardViewStrike`(`scripts/ui/card_view_strike.gd`) | 攻撃の演出の段取り(寄る→溜める→当てる→戻る)。**`CardView` が1000行の上限に達したため切り出した**。分ける線は「駒の見た目」と「殴りに行く段取り」に引き、状態(offset / angle / flash)と描画は `CardView` 側に残す(絵に掛ける変換は描画のたびに要るため) |
 | `CardMatchReplay`(`scripts/ui/card_match_replay.gd`) | リプレイの再生コントロール。**任意の手数の局面は初期状態から手を並べ直して作る** |
@@ -386,6 +388,12 @@ UIに依存しない、対局ルールそのものを扱う層。
 `CardMatchScreen` が手札の暗転を決めるときに `is_spell` を見て枠の判定を飛ばす。
 押したときは枠の強調ではなく、対象を取る砂術なら対象選択(`CardMatchSelection.TARGETING`)へ、
 取らないならその場で `cast_spell()` を呼ぶ。
+
+**手札の見た目は `CardView.HAND_SIZE_PX`(118x158)を基準に組み、各部の寸法はそこからの
+比(`_hand_scale()`)で決める**。固定値のままだと、キーワード辞書のように小さく置いた
+ときに名前とキーワードの行が札の外や総量のバッジの上へ出る(枠・輪郭の太さを大きさに
+合わせる `CodedButtonStyle` と同じ考え方。11章)。**名前とキーワードは下の隅のバッジの帯
+より上へ置く**(GameDesign.md 9章)。
 
 **砂時計の絵は、枠へ引き伸ばさず縦横比のまま収める**(`CardView._fit_art()`)。絵のキャンバスは
 400x513(`state_falling` だけ 415x532)で、正方形の枠へ `draw_texture_rect()` すると横に潰れる。

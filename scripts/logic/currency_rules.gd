@@ -26,6 +26,25 @@ const MIN_MOVES := 10
 const CPU_DAILY_LIMIT := 10
 
 
+## 残高を画面へ出すときの文字列。**表記はここ1箇所で決める**——以前はホーム・ショップ・
+## アカウントがそれぞれ「砂金:0」「砂金 0」「砂金: 0」と3通りに書いており、
+## 同じ値が画面ごとに違う顔で出ていた。3桁ごとの区切りは、プレイマット(3000)のように
+## 桁が伸びる品が並ぶため入れる。
+static func label_text(amount: int) -> String:
+	return "%s %s" % [CURRENCY_NAME, amount_text(amount)]
+
+
+## 数値だけを3桁区切りで返す。「+30 砂金」のように語順が違う場所が使う。
+static func amount_text(amount: int) -> String:
+	var digits := str(absi(amount))
+	var grouped := ""
+	for i in digits.length():
+		if i > 0 and (digits.length() - i) % 3 == 0:
+			grouped += ","
+		grouped += digits[i]
+	return ("-" if amount < 0 else "") + grouped
+
+
 ## 判定結果を返す。`at_unix_time` は日曜イベント判定の基準時刻(テスト用。負値なら現在時刻)。
 ## {"amount": int, "reason": String, "sunday": bool}
 ##   amount … 実際に加算する額(0なら対象外)

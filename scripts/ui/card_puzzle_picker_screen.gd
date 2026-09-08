@@ -13,7 +13,7 @@ const COLUMNS := 2
 const CARD_SIZE := Vector2(596, 108)
 
 var _grid: GridContainer
-var _empty: Label
+var _empty: EmptyState
 
 
 func _ready() -> void:
@@ -46,9 +46,9 @@ func _build() -> void:
 	_grid.add_theme_constant_override("v_separation", 16)
 	scroll.add_child(_grid)
 
-	_empty = Label.new()
-	_empty.text = "まだ問題がありません"
-	_empty.position = GRID_RECT.position + Vector2(0, 40)
+	_empty = EmptyState.new()
+	_empty.position = GRID_RECT.position
+	_empty.size = GRID_RECT.size
 	_empty.visible = false
 	add_child(_empty)
 
@@ -57,7 +57,10 @@ func _refresh() -> void:
 	for child in _grid.get_children():
 		child.queue_free()
 	var stages := PuzzleLibrary.all_stages()
-	_empty.visible = stages.is_empty()
+	if stages.is_empty():
+		_empty.show_message("まだ問題がありません")
+	else:
+		_empty.hide_message()
 	var uid := _uid()
 	for stage in stages:
 		_grid.add_child(_make_card(stage, PuzzleProgress.is_cleared(uid, stage.id)))
