@@ -361,7 +361,10 @@ UIに依存しない、対局ルールそのものを扱う層。
 | `CardDeckFilter`(`scripts/ui/card_deck_filter.gd`) | 一覧の絞り込み(コスト・キーワード・名前)。条件の合成を1箇所へ集める |
 | `CardListScreen`(`scripts/ui/card_list_screen.gd`) | カード一覧。選ぶと右の詳細パネルへ出す。ヘッダーの主アクションのボタンで並び順(コスト順 / 追加順)を往復する |
 | `CardDetailPanel`(`scripts/ui/card_detail_panel.gd`) | カード1種の詳細。**キーワードは名前と説明の両方**を出す(語だけでは初見に伝わらない)。イラストの下に `CardEffectPreview` を挟む。**`SUMMON` を持つカードには、出るトークンの名前・総量・効果を1行で添える**(トークンは一覧に出ないため、ここで説明しないと調べる手段が無い。GameDesign.md 6章) |
-| `CardEffectPreview`(`scripts/ui/card_effect_preview.gd`) | 能力の実演。**カードごとではなくキーワード / 効果の種類ごとに1本**の台本を持つ(下記) |
+| `CardEffectPreview`(`scripts/ui/card_effect_preview.gd`) | 能力の実演。**カードごとではなくキーワード / 効果の種類ごとに1本**の台本を持つ(下記)。台本の並びの組み立てと図版の描画がここに残る |
+| `CardEffectStage`(`scripts/ui/card_effect_stage.gd`, staticのみ) | 台本が組み立てる「その瞬間の盤面」の部品(空の盤面・駒・光の筋・ポップ・イージング)。**台本はこれを組み合わせるだけで書ける**状態を保つ |
+| `CardEffectDemoKeyword`(`scripts/ui/card_effect_demo_keyword.gd`, staticのみ) | 常在キーワード7種と基本の砂の台本。**扱わない語には空の Dictionary を返させる**——既定の盤面を返させると、台本が無いことに気づけないまま何かが動いて見える |
+| `CardEffectDemoEnemy`(`scripts/ui/card_effect_demo_enemy.gd`, staticのみ) | 「相手の砂時計へ効く効果」の実演の中身 |
 | `InkFigure`(`scripts/ui/ink_figure.gd`, staticのみ) | 実演の図版を紙のインクで描く部品(砂時計・HPバー・矢印・守護の輪・硝子の膜・砕けた印)。`UiPaint` と同じ流儀で、**第1引数に描画先の `CanvasItem`** を取る |
 | `CardDeckShelf`(`scripts/ui/card_deck_shelf.gd`) | 編成中のデッキを**30枠の決まった棚**として描く(GameDesign.md 9章)。1つの `Control` が全枠を描き、当たり判定を矩形の表として持つ |
 | `EmblemSeal`(`scripts/ui/emblem_seal.gd`, staticのみ) | カード固有の紋章を「押した印」として描く。**カードを並べる3画面(図鑑の一覧・工房の在庫棚・編成中の棚)で共有する**——別々に描くと必ず片方だけ古くなる。`InkFigure` と同じく第1引数に `CanvasItem` を取る(紋章はテクスチャのため `draw_texture_rect()` を使う) |
