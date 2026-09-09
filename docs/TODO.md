@@ -59,8 +59,21 @@
       `_begin_turn()`の最大マナ増加を対応させた。反転権(`use_flip_right()`)は
       `flip_disabled`の影響を受けない(27章の明記どおり)。
       `tools/tests/solo_mode_tests.gd`で既定値が全モード無変更であることを含めて検証
-- [ ] `CardMatchSolo`(対局設定の適用・特殊勝利条件の監視・連戦型のHP持ち越し・報酬付与)
-- [ ] `CardSoloMapScreen` / `CardSoloStageDetail`(ステージツリーの表示・挑戦の確認パネル)
+- [x] `CardMatchSolo`(対局設定の適用・特殊勝利条件の監視・連戦型のHP持ち越し・報酬付与)。
+      `card_match_screen.gd`が1000行の上限に迫ったため、`hp_bar_center()`等4つの
+      座標系の問い合わせを`CardMatchGeometry`へ切り出して行数を確保した
+- [x] `CardSoloMapScreen`(ステージ一覧・「挑戦」)。**専用の確認パネル
+      (`CardSoloStageDetail`)は作らず**、`CardPuzzlePickerScreen`と同じ横長カードへ
+      名前・種別・説明・初回クリア報酬をまとめて出す形にした(v1は1本道のため
+      一覧のカード自体が確認パネルを兼ねられる)。`CardSoloResult`(結果パネル)も追加
+- [x] `Main`への配線(ソロタブ→`CardSoloMapScreen`→種別に応じて`puzzle.start()`/
+      `solo.start()`を呼び分け→対局画面)
+- [ ] `reward_icon_id`の付与経路が未実装(`AccountService`に汎用の無料付与が無いため)。
+      v1の10ステージはアイコン報酬を使わない予定のため、使うステージを作る回に着手する
+- [ ] **`CardMatchSolo`の勝利条件監視(SURVIVE_TURNS・DESTROY_ALL_ENEMY_UNITS)は
+      自動テストが無い。**`CardMatchScreen`(Control)を経由するクラスのため、
+      既存の`puzzle_mission_tests.gd`もこの種のクラスは自動テストせず`MatchState`単体で
+      検証する方針を採っている。実機で該当する特殊ルール型ステージを作ったときに確認する
 - [x] ソロモード限定カード3種の追加(`add-hourglass` Skillの流れで、色違い運用のまま
       3枚とも生成した。イラストは新規に起こしていない。`set_id = "solo"`を持たせた)
   - [x] 刻限の砂(id: chime。砂時計・コスト2・総量4・反転:カードを1枚引く。48.3%)

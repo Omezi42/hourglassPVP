@@ -17,6 +17,8 @@ var card_deck_list_screen: CardDeckListScreen
 var card_list_screen: CardListScreen
 var stats_screen: CardStatsScreen
 var puzzle_picker_screen: CardPuzzlePickerScreen
+## ソロモードのステージ一覧(GameDesign.md 27章)。
+var solo_map_screen: CardSoloMapScreen
 ## ショップ(GameDesign.md 21章)。同上。
 var shop_screen: CardShopScreen
 ## ルームマッチの専用画面(GameDesign.md 11章)。
@@ -139,6 +141,13 @@ func _ready() -> void:
 	puzzle_picker_screen.endless_selected.connect(_on_puzzle_endless_selected)
 	add_child(puzzle_picker_screen)
 	_screens.append(puzzle_picker_screen)
+	solo_map_screen = CardSoloMapScreen.new()
+	solo_map_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
+	solo_map_screen.visible = false
+	solo_map_screen.back_pressed.connect(func() -> void: _show_only(home_screen))
+	solo_map_screen.stage_selected.connect(_on_solo_stage_selected)
+	add_child(solo_map_screen)
+	_screens.append(solo_map_screen)
 	# 難易度モーダルは対局へ入る前の確認なので、対局画面より手前(後の子)に置く。
 	card_cpu_difficulty_picker = CardCpuDifficultyPicker.new()
 	add_child(card_cpu_difficulty_picker)
@@ -161,6 +170,7 @@ func _ready() -> void:
 	home_screen.online_resume_requested.connect(_on_online_resume_requested)
 	home_screen.stats_requested.connect(_on_stats_requested)
 	home_screen.puzzle_requested.connect(_on_puzzle_requested)
+	home_screen.solo_requested.connect(_on_solo_requested)
 	home_screen.deck_list_requested.connect(_on_deck_list_requested)
 	home_screen.hourglass_list_requested.connect(_on_hourglass_list_requested)
 	home_screen.shop_requested.connect(_on_shop_requested)
@@ -205,9 +215,11 @@ func _on_title_start_requested() -> void:
 
 
 func _on_match_back() -> void:
-	# パズルから戻ったときは、クリアの印を付け直すために一覧を組み直す。
+	# パズル・ソロモードから戻ったときは、クリアの印を付け直すために一覧を組み直す。
 	if _match_return_screen == puzzle_picker_screen:
 		puzzle_picker_screen.open()
+	elif _match_return_screen == solo_map_screen:
+		solo_map_screen.open()
 	_show_only(_match_return_screen)
 	home_screen.refresh_account()
 	# 対局は待機状態(ボタンの無効化)を残したまま始まるため、戻った時点で両方とも解く。
@@ -424,6 +436,21 @@ func _on_puzzle_stage_selected(stage: PuzzleStageData) -> void:
 func _on_puzzle_endless_selected() -> void:
 	card_match_screen.puzzle.start(PuzzleGenerator.generate(), true)
 	_match_return_screen = puzzle_picker_screen
+	_show_only(card_match_screen)
+
+
+## ソロモード(GameDesign.md 27章)。一覧で選んだステージを種類ごとに振り分ける。
+func _on_solo_requested() -> void:
+	solo_map_screen.open()
+	_show_only(solo_map_screen)
+
+
+func _on_solo_stage_selected(stage: SoloStageData) -> void:
+	if stage.stage_type == SoloStageData.Kind.PUZZLE:
+		card_match_screen.puzzle.start(stage.puzzle)
+	else:
+		card_match_screen.solo.start(stage)
+	_match_return_screen = solo_map_screen
 	_show_only(card_match_screen)
 
 

@@ -2287,9 +2287,10 @@ GameDesign.md 27章の実装方針。**チュートリアルではなく、既�
 | `SoloMatchConfig`(Resource、`SoloStageData` に埋め込む) | パズル型以外の4種が使う対局設定(下記) |
 | `SoloLibrary`(`scripts/logic/solo_library.gd`, static) | `data/solo_stages/` を `order` 順に返す。`PuzzleLibrary`と同じ流儀(`.remap`の扱いを含む) |
 | `SoloProgress`(`scripts/logic/solo_progress.gd`, static) | クリア記録。`user://solo_progress.json` へアカウントごとに持つ。`PuzzleProgress`と同じ流儀 |
-| `CardSoloMapScreen`(`scripts/ui/card_solo_map_screen.gd`) | ステージのツリー(v1は1本道)。ノードを線でつなぎ、クリア済み/挑戦可能/未解放を描き分ける |
-| `CardSoloStageDetail`(`scripts/ui/card_solo_stage_detail.gd`) | ノードを押したときに出す確認パネル(名前・説明・報酬・「挑戦」ボタン) |
-| `CardMatchSolo`(`scripts/ui/card_match_solo.gd`, RefCounted) | `_screen` 参照を持つ切り出し(`CardMatchPuzzle`/`CardMatchOnline`と同じ流儀)。対局設定の適用・特殊勝利条件の監視・クリア時の報酬付与を行う |
+| `CardSoloMapScreen`(`scripts/ui/card_solo_map_screen.gd`) | ステージの一覧。v1は分岐しない1本道のため、`CardPuzzlePickerScreen`と同じ「縦に並ぶ横長カード」の形をそのまま使う。**専用の確認パネル(`CardSoloStageDetail`)は作らない**——カード自体が名前・種別・説明・初回クリア報酬を出しており、「挑戦」を押すとそのまま始まる |
+| `CardMatchSolo`(`scripts/ui/card_match_solo.gd`, RefCounted) | `_screen` 参照を持つ切り出し(`CardMatchPuzzle`/`CardMatchOnline`と同じ流儀)。対局設定の適用・特殊勝利条件の監視・連戦型のHP持ち越し・クリア時の報酬付与を行う |
+| `CardSoloResult`(`scripts/ui/card_solo_result.gd`) | ステージの結果パネル。`CardPuzzleResult`と同じ理由で、対局の結果パネル(`CardMatchResult`)を流用しない |
+| `CardMatchGeometry`(`scripts/ui/card_match_geometry.gd`, RefCounted) | `card_match_screen.gd`が1000行の上限に迫ったため、`hp_bar_center()`/`slot_center()`/`playable_hand_rects()`/`end_turn_button_rect()`の4つの座標系の問い合わせをここへ切り出した。ソロモード固有の役目は持たないが、この節の実装で足りなくなった行数を確保するために行った |
 
 **`SoloStageData` のフィールド**
 
@@ -2359,6 +2360,19 @@ GameDesign.md 27章の実装方針。**チュートリアルではなく、既�
 プレイヤーのHPだけを次の対局へ持ち越す**。持ち越すのは`hp`のみで、山札・手札・盤面は
 対局ごとに引き直す(「合間の回復は無い」というルールの本体はHPの持ち越しだけで表現でき、
 デッキやマナまで持ち越すと1戦目の事故がそのまま2戦目の難度を歪めるため)。
+
+**`CardMatchScreen`は`puzzle`と同じ形で`solo: CardMatchSolo`の公開getterを持つ**
+(`_solo`は`CardMatchBuild`が`_puzzle`と並べて生成する)。`Main._on_solo_stage_selected()`が
+`stage.stage_type`を見て、`PUZZLE`なら`card_match_screen.puzzle.start(stage.puzzle)`、
+それ以外は`card_match_screen.solo.start(stage)`を呼び分ける。`_on_match_ended()`も
+`_puzzle.active()`の直後に`_solo.active()`を同じ形で見て、該当すれば`CardMatchOutcome`
+(通常の砂金・戦績・リプレイ)を素通りする——ソロモードの報酬は`CardMatchSolo._grant()`が
+別に持つため、`MatchStats`(戦績)へ固定デッキの結果を混ぜない。
+
+**`reward_icon_id`は、この回ではまだ付与経路を実装していない。**アイコンの無料付与には
+`AccountService.unlock_card_set()`と同じ形の`unlock_icon()`相当が要るが、`v1`の10ステージは
+アイコン報酬を1つも使わない予定のため後回しにした。使うステージを作る回に、
+`AccountService`へ`ShopCatalog.Kind`を受け取る汎用の無料付与へまとめて実装し直す。
 
 ### ソロモード限定カードの所有(GameDesign.md 27章)
 

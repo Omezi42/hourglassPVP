@@ -103,3 +103,9 @@ static func overlays(screen: CardMatchScreen) -> void:
 			screen._puzzle.close()
 			screen.back_pressed.emit()
 	)
+	screen._solo = CardMatchSolo.new(screen)
+	screen._solo.finished.connect(
+		func(_cleared: bool) -> void:
+			screen._solo.close()
+			screen.back_pressed.emit()
+	)

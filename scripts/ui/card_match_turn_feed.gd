@@ -209,4 +209,4 @@ func _on_recorded(line: String, kind: String, side: int, slot: int) -> void:
 		return
 	if not _screen.is_interactive() or not NARRATED.has(kind):
 		return
-	say(line, _screen.slot_center(side, slot))
+	say(line, _screen._geometry.slot_center(side, slot))

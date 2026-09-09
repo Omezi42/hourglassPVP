@@ -83,7 +83,7 @@ func _on_effect_targeted(
 		return
 	var source := _screen.view_at(source_side, source_slot)
 	var to: Vector2 = (
-		_screen.hp_bar_center(target_side)
+		_screen._geometry.hp_bar_center(target_side)
 		if target_slot < 0
 		else CardFlipBeam.unit_center(_screen.view_at(target_side, target_slot))
 	)

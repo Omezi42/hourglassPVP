@@ -117,7 +117,7 @@ func _pierce_center(side: int, slot: int, target: int) -> Vector2:
 ## 駒は112pxあってバーは24pxしかないため、中心を的にすると当たった瞬間に
 ## 残りHPの数字が駒で隠れる。数字が変わるのはまさにその瞬間なので、読めなくなる。
 func _face_target(side: int) -> Vector2:
-	var at := _screen.hp_bar_center(side)
+	var at := _screen._geometry.hp_bar_center(side)
 	var toward_board: float = FACE_EDGE if at.y < _screen.size.y * 0.5 else -FACE_EDGE
 	return at + Vector2(0.0, toward_board)
 

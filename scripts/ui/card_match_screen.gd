@@ -55,6 +55,10 @@ var alert: CardMatchAlert:
 var puzzle: CardMatchPuzzle:
 	get:
 		return _puzzle
+## ソロモードの進行(GameDesign.md 27章)。ステージを1つ始めるのはこれを通す。
+var solo: CardMatchSolo:
+	get:
+		return _solo
 ## 対局中の効果音。攻撃の演出が当たった瞬間に持ち越した音を出すため、進行役から引く。
 var sound: CardMatchSound:
 	get:
@@ -135,12 +139,15 @@ var _alert: CardMatchAlert
 var _damage_assist: CardMatchDamageAssist
 var _history: CardMatchActionHistory
 var _puzzle: CardMatchPuzzle
+var _solo: CardMatchSolo
+var _geometry: CardMatchGeometry
 
 
 func _ready() -> void:
 	_build()
 	set_process(true)
 	_outcome = CardMatchOutcome.new(self)
+	_geometry = CardMatchGeometry.new(self)
 	_strike = CardMatchStrike.new(self)
 	_sound = CardMatchSound.new(self)
 	_effects = CardMatchEffects.new(self)
@@ -200,6 +207,8 @@ func _reset_for_new_match() -> void:
 	_cpu_record = {}
 	if _puzzle != null:
 		_puzzle.close()
+	if _solo != null:
+		_solo.close()
 	_status.set_waiting("")
 	_match_start_pending = true
 	if _mulligan != null:
@@ -869,14 +878,6 @@ func refresh_bars() -> void:
 	_own_bar.show_state(state, my_side)
 
 
-## 盤面の1枠の中心。実況の吹き出しを出す位置に使う。
-func slot_center(side: int, slot: int) -> Vector2:
-	if slot < 0:
-		return Vector2(size.x * 0.5, FOE_ROW_TOP)
-	var view := view_at(side, slot)
-	return view.position + Vector2(view.size.x * 0.5, CardView.PEDESTAL_CENTER_Y)
-
-
 ## いま操作を受け付ける対局か(再生・観戦では実況を出さない)。
 func is_interactive() -> bool:
 	return _interactive
@@ -885,26 +886,6 @@ func is_interactive() -> bool:
 ## マリガン画面が開いているか。詳細をホバーで出してよいかの判断に使う。
 func mulligan_open() -> bool:
 	return _mulligan != null and _mulligan.visible
-
-
-## いま出せる手札の矩形。誘導対局が「これを押す」と光らせるのに使う。
-func playable_hand_rects() -> Array[Rect2]:
-	var found: Array[Rect2] = []
-	for view in _hand_views:
-		if view.visible and view.enabled:
-			found.append(Rect2(view.position, view.size))
-	return found
-
-
-## ターン終了ボタンの矩形。誘導対局が「ここを押す」と光らせるのに使う。
-func end_turn_button_rect() -> Rect2:
-	return Rect2(_end_turn_button.position, _end_turn_button.size)
-
-
-## HPバーの中心。攻撃が相手プレイヤーを狙うときの的。
-func hp_bar_center(side: int) -> Vector2:
-	var bar: PlayerInfoBar = _own_bar if side == my_side else _foe_bar
-	return bar.position + bar.hp_bar_rect().get_center()
 
 
 ## 反転した。行った側の情報帯から対象の駒へ光の筋を伸ばし、届いた瞬間に駒を裏返す。
@@ -991,6 +972,10 @@ func _on_match_ended(_winner: int) -> void:
 	# パズルは勝敗ではなく正誤で締める(GameDesign.md 24章)。リプレイも砂金も戦績も出さない。
 	if _puzzle != null and _puzzle.active():
 		_puzzle.on_match_ended()
+		return
+	# ソロモードのステージ報酬は`CardMatchSolo`が持つ(GameDesign.md 27章)。同上。
+	if _solo != null and _solo.active():
+		_solo.on_match_ended()
 		return
 	# 終局後の後始末(リプレイ・砂金・戦績)は `CardMatchOutcome` が持つ。
 	var reward := _outcome.finish(_match_kind, _own_deck)

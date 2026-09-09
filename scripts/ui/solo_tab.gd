@@ -4,11 +4,12 @@ extends Control
 ##
 ## CPU戦・リーサルパズルの入口は、以前バトルタブにあったものをここへ移した
 ## (**中身は変更しない**。押した先の画面・遷移はそのまま)。「ソロモード」は
-## ステージのツリー(27章)へのボタンだが、その画面はまだ無いため当面は無効表示にする。
+## ステージのツリー(27章)を開くボタン。
 ## `RulesTab` と同じく `.tscn` を持たず、`HomeScreen` がコードで生成する。
 
 signal cpu_match_requested
 signal puzzle_requested
+signal solo_requested
 
 ## アカウント帯を避ける上端と、下部タブに接する下端。`RulesTab`と同じ値。
 const TOP_BAND := 112.0
@@ -39,10 +40,9 @@ func _ready() -> void:
 	puzzle_tile.pressed.connect(func() -> void: puzzle_requested.emit())
 	add_child(puzzle_tile)
 
-	# ステージのツリー(27章)はまだ実装されていないため、当面は無効のまま置く。
-	var solo_tile := HomeTile.make("ソロモード", "近日公開", "crown", TILE_SIZE, TILE_FONT_SIZE)
+	var solo_tile := HomeTile.make("ソロモード", "ツリー状のステージに挑みます", "crown", TILE_SIZE, TILE_FONT_SIZE)
 	solo_tile.position = Vector2(left, start_y + (TILE_SIZE.y + TILE_GAP) * 2)
-	solo_tile.disabled = true
+	solo_tile.pressed.connect(func() -> void: solo_requested.emit())
 	add_child(solo_tile)
 
 	refresh()

@@ -11,6 +11,7 @@ signal hourglass_list_requested
 signal shop_requested
 signal replay_list_requested
 signal cpu_match_requested
+signal solo_requested
 signal tutorial_requested
 signal rules_requested
 signal screen_guide_requested
@@ -224,6 +225,7 @@ func _build_solo_tab() -> void:
 	_solo_tab.visible = false
 	_solo_tab.cpu_match_requested.connect(func() -> void: cpu_match_requested.emit())
 	_solo_tab.puzzle_requested.connect(func() -> void: puzzle_requested.emit())
+	_solo_tab.solo_requested.connect(func() -> void: solo_requested.emit())
 	deck_tab.get_parent().add_child(_solo_tab)
 	# 並び順を「ルール/デッキ/ソロ/バトル」に揃える(9章)。
 	deck_tab.get_parent().move_child(_solo_tab, 2)

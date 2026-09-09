@@ -359,7 +359,7 @@ func _is_stuck() -> bool:
 		return false
 	if _state.current_turn != _my_side or _state.is_match_over():
 		return false
-	return _screen.playable_hand_rects().is_empty()
+	return _screen._geometry.playable_hand_rects().is_empty()
 
 
 ## 何段階のうちどこにいるかを点で示す(GameDesign.md 18章)。
@@ -403,13 +403,13 @@ func _focus_rects() -> Array[Rect2]:
 		"hand":
 			# 出せる札が無いときは、代わりにターン終了を示す(GameDesign.md 18章)。
 			if _stuck:
-				return [_screen.end_turn_button_rect()] as Array[Rect2]
+				return [_screen._geometry.end_turn_button_rect()] as Array[Rect2]
 			# **いま出せる手札だけを囲む。**空き枠まで一緒に光らせると盤面の大半が
 			# 枠だらけになり、どれを押せばよいのか却って分からない(実際に描いて確認した)。
 			# 押した後に空き枠が光るのは通常の操作のとおり(GameDesign.md 9章)。
-			found.append_array(_screen.playable_hand_rects())
+			found.append_array(_screen._geometry.playable_hand_rects())
 		"end_turn":
-			found.append(_screen.end_turn_button_rect())
+			found.append(_screen._geometry.end_turn_button_rect())
 		"attack":
 			for slot in MatchState.BOARD_SIZE:
 				var unit: CardInstance = _state.board[_my_side][slot]
