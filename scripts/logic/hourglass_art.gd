@@ -30,8 +30,26 @@ static var _baking := false
 ## 起動時に1度だけ呼ぶ(Main._ready())。焼き付けはフレームをまたぐため、
 ## 呼んだ側は待たなくてよい。タイトル画面には砂時計の絵が1枚も無い。
 static func ensure_ready(parent: Node) -> void:
-	if _viewport != null:
+	if not _prepare(parent):
 		return
+	_bake_all()
+
+
+## `ensure_ready()` と同じ準備を行うが、**全カードの色変換が終わるまで待つ**。
+## 対局画面のように非同期のままでよい場面では使わない。撮影ツール
+## (`tools/export_discord_card_art.gd`)のように、焼き上がる前の絵(=サンドの
+## プレースホルダー)を読んでしまうと全カードが同じ色になる場面でだけ使う
+## (実際にDiscordの`/card`用画像がこれで全部サンド色になった)。
+static func ensure_ready_and_wait(parent: Node) -> void:
+	if not _prepare(parent):
+		return
+	await _bake_all()
+
+
+## `_viewport` の初期化。既に済んでいれば false を返す。
+static func _prepare(parent: Node) -> bool:
+	if _viewport != null:
+		return false
 	_load_table()
 	_viewport = SubViewport.new()
 	_viewport.transparent_bg = true
@@ -45,7 +63,7 @@ static func ensure_ready(parent: Node) -> void:
 	_rect.material = material
 	_viewport.add_child(_rect)
 	parent.add_child(_viewport)
-	_bake_all()
+	return true
 
 
 ## その絵の1状態を返す。焼き上がっていなければ原本の中身が入った器を返し、

@@ -25,6 +25,10 @@ func _init() -> void:
 
 
 func _run() -> void:
+	# 色変換(Architecture.md 4.1節)が焼き上がる前に絵を読むと、全カードが
+	# 未変換のサンド色のまま撮れてしまう(実際にDiscordの/card用画像がこれで壊れた)。
+	# 通常のゲーム起動が使う非ブロッキング版ではなく、焼き上がりを待つ版を使う。
+	await HourglassArt.ensure_ready_and_wait(root)
 	for card in _cards:
 		_art.show_card(card)
 		for i in WAIT_FRAMES:
