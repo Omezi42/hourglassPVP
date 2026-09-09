@@ -2321,7 +2321,7 @@ GameDesign.md 27章の実装方針。**チュートリアルではなく、既�
 | `flip_disabled` | bool | true なら`MatchState.flip_disabled`へ渡す(3章の通常の反転を止める。反転権は対象外) |
 | `clash_damage_multiplier` | int | 既定1。`MatchState.clash_damage_multiplier`へ渡す |
 
-**`MatchState` へ足す3つの上書き用プロパティ**(GameDesign.md 27章「特殊ルールのバリエーション」)。
+**`MatchState` へ足す4つの上書き用プロパティ**(GameDesign.md 27章「特殊ルールのバリエーション」)。
 いずれも**既定値のままなら今までの全モード(PvP・通常のCPU戦・リーサルパズル・誘導対局)を
 一切変えない**。ソロモードの `CardMatchSolo` が `start_match()` の直後、`_begin_turn()`が
 最初に走る前に設定する。
@@ -2330,8 +2330,11 @@ GameDesign.md 27章の実装方針。**チュートリアルではなく、既�
   (既存の `drop_sand(1)` 呼び出し箇所を `drop_sand(sand_drop_count)` へ変える)
 - `flip_disabled: bool = false` — `can_flip()` の先頭で true なら常に false を返す。
   **反転権(`use_flip_right()`)はこのフラグを見ない**(GameDesign.md 27章の明記どおり)
-- `clash_damage_multiplier: int = 1` — `_resolve_unit_combat()` が双方の`take_damage()`へ
-  渡す量にこの倍率を掛ける。**双方に同じ倍率がかかるため、相打ちの対称性は崩れない**
+- `clash_damage_multiplier: int = 1` — `_resolve_unit_combat()` と `combat_preview()`
+  (UIの予測)が双方の`take_damage()`へ渡す量にこの倍率を掛ける。**双方に同じ倍率が
+  かかるため、相打ちの対称性は崩れない**
+- `mana_frozen: bool = false` — `_begin_turn()` の「最大マナ+1」を、trueの間だけ止める。
+  **側を区別しない1つのフラグ**とし、対象の対局では両者へ同じ制約をかける
 
 **HPの上書き・盤面の上書きは、新しいAPIを作らずルール画面(4.2節)と同じ「差し替え」で行う**。
 `MatchState.start_match()`で通常どおり対局を作った直後、`CardMatchSolo`が`hp`と`board`を

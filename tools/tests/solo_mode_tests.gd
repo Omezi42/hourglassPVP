@@ -1,6 +1,6 @@
 class_name SoloModeTests
 extends RefCounted
-## ソロモード(GameDesign.md 27章)がMatchStateへ足す3つの上書きプロパティの検証。
+## ソロモード(GameDesign.md 27章)がMatchStateへ足す4つの上書きプロパティの検証。
 ## Architecture.md 10.15節「既定値のままなら今までの全モードを一切変えない」を確かめる。
 
 var _assert: Callable
@@ -12,6 +12,7 @@ func run(assert_true: Callable) -> void:
 	_test_sand_drop_count_override_drops_extra_grains()
 	_test_flip_disabled_blocks_normal_flip_but_not_flip_right()
 	_test_clash_damage_multiplier_doubles_combat_damage()
+	_test_mana_frozen_stops_the_max_mana_increase()
 
 
 func _card(id: String) -> CardData:
@@ -46,6 +47,7 @@ func _test_defaults_match_existing_behavior() -> void:
 	_assert.call(state.sand_drop_count == 1, "sand_drop_count should default to 1")
 	_assert.call(not state.flip_disabled, "flip_disabled should default to false")
 	_assert.call(state.clash_damage_multiplier == 1, "clash_damage_multiplier should default to 1")
+	_assert.call(not state.mana_frozen, "mana_frozen should default to false")
 
 
 func _test_sand_drop_count_override_drops_extra_grains() -> void:
@@ -99,4 +101,20 @@ func _test_clash_damage_multiplier_doubles_combat_damage() -> void:
 	_assert.call(
 		defender.health == 2 and defender.attack == 1,
 		"clash_damage_multiplier should double the damage dealt to the defender"
+	)
+
+
+func _test_mana_frozen_stops_the_max_mana_increase() -> void:
+	var state := _new_match()
+	_assert.call(state.max_mana[MatchState.Side.A] == 1, "turn 1 should grant 1 mana as usual")
+	state.mana_frozen = true
+	state.end_turn()
+	_assert.call(
+		state.max_mana[MatchState.Side.B] == 0,
+		"mana_frozen should stop the max mana increase on the next turn"
+	)
+	state.end_turn()
+	_assert.call(
+		state.max_mana[MatchState.Side.A] == 1,
+		"mana_frozen should keep applying to later turns too"
 	)

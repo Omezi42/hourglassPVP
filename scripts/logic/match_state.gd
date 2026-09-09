@@ -108,6 +108,8 @@ var sand_drop_count := 1
 var flip_disabled := false
 ## 相打ち(4章)で受けるダメージの倍率。双方に同じ倍率がかかるため対称性は崩れない。
 var clash_damage_multiplier := 1
+## true の間、自分のターン開始時に最大マナが増えない(既定は毎ターン+1)。
+var mana_frozen := false
 
 ## マリガン(初手の引き直し)を待っている間だけ true。
 var mulligan_pending := false
@@ -246,7 +248,8 @@ func empty_slots(side: int) -> Array:
 func _begin_turn() -> void:
 	turn_count += 1
 	var side := current_turn
-	max_mana[side] = mini(max_mana[side] + 1, MAX_MANA)
+	if not mana_frozen:
+		max_mana[side] = mini(max_mana[side] + 1, MAX_MANA)
 	mana[side] = max_mana[side]
 	mana_changed.emit(side, mana[side], max_mana[side])
 	for unit in units(side):
