@@ -1917,8 +1917,15 @@ UI層へ依存することになる。
 |---|---|
 | `CardData.set_id`(String) | そのカードが属するカードセットのid。空文字は基本セット(常に所有済み) |
 | `CardSetLibrary`(`scripts/data/card_set_library.gd`, static) | セットの定義(id・表示名・狙いの一文・カードidの並び・価格)。`UserProfileLibrary` / `ShopCatalog` と同じ流儀 |
-| `players/{uid}.owned_card_sets`(Array[String]) | 購入済みのセットid。`owned_icons` 等と同じ場所に置く |
+| `players/{uid}.owned_card_sets`(Array[String]) | 所有済みのセットid。`owned_icons` 等と同じ場所に置く |
 
+- **`price = 0` は「ショップで売らない」印とする**(GameDesign.md 8章「買い切り以外の
+  追加手段も検討してよい」)。`ShopCatalog`のカードセット品目は`price > 0`のものだけを
+  並べ、`price == 0`のセットはステージクリア等の別経路(10.15節のソロモードなど)でしか
+  所有できない
+- **無料で所有させる経路は `AccountService.unlock_card_set(uid, set_id)` の1本に集約する。**
+  `purchase()`と同じ`commit()`の形を使うが、残高の確認・減算を行わない点だけが違う。
+  今後、買い切り以外の入手経路(記念配布等)を足すときもここを通す
 - **`CardLibrary` はプールを絞らない。**全カードを返す既存の責務は変えず、
   「デッキへ入れられるかどうか」の絞り込みは**呼び出し側**(デッキ編集・CPU戦のランダムデッキ
   生成)が `set_id == "" or owned_card_sets に含む` で行う。`CardLibrary` 自体に
@@ -2348,18 +2355,26 @@ GameDesign.md 27章の実装方針。**チュートリアルではなく、既�
 
 ### ソロモード限定カードの所有(GameDesign.md 27章)
 
-- `CardData` に `@export var solo_exclusive: bool = false` を足す。既存70種は既定値のまま
-- `players/{uid}` に `owned_cards: Array[String]` を足す(`owned_icons`/`owned_emotes`と同じ
-  流儀)。`AccountService.owned_card_ids()` / `grant_card(id)` を追加する。**通信に失敗した
-  付与はローカルへ退避し、次に成功した時点でまとめて反映する**(15章の砂金と同じ扱い。
-  ソロモードはオフラインでも遊べるCPU戦を含むため必要)
-- **デッキ編集・カード一覧(砂時計図鑑)は、`solo_exclusive`かつ未所有のカードを弾く。**
-  図鑑では9章に用意済みの「未収集はシルエット+『?』」の表現(実装は`AlmanacEntry.locked`と
-  して枠組みだけ作ってあった)を、この3枚で初めて実際に使う。デッキ編集の一覧では
-  選択できないカードとして暗く表示する(マナ不足のカードと同じ表現)
-- **`CardDeckSave.random_deck()`(CPU戦のデッキ生成)は`solo_exclusive`のカードを常に除く**
-  (プレイヤー本人が未所有でも、除外は所有状態を見ずに一律で行う。実装が単純になるうえ、
-  「持っていないカードをCPUだけが使う」という状態を最初から作らない)
+**10.8.1節のカードセットの仕組みをそのまま使う。**ソロモードのためだけに
+`solo_exclusive`/`owned_cards`のような別の所有フィールドを作らない——8章が
+「買い切り以外の追加手段」を明示的に許容しており、ステージのクリアはその1つとして
+そのまま乗る。**10.8.1節はこのソロモードの実装と合わせて着手し、両方が同じ
+`CardData.set_id` / `CardSetLibrary` / `players/{uid}.owned_card_sets` を使う。**
+
+- 新カード3枚は `set_id = "solo"` を持ち、`CardSetLibrary` に「ソロモードセット」
+  として1件登録する。**`price = 0` はショップに並べない印**とする
+  (`ShopCatalog.items()`はカードセットの品目を作るとき`price > 0`のものだけを拾う)
+- 付与は `AccountService.unlock_card_set(uid, set_id)` を新設して行う。`purchase()`と
+  同じ「`updateTime`を前提条件にした`commit()`」で`owned_card_sets`へ追加するが、
+  **残高の確認・減算は行わない**(無料付与のため)。**通信に失敗した付与はローカルへ
+  退避し、次に成功した時点でまとめて反映する**(15章の砂金と同じ扱い。ソロモードは
+  オフラインでも遊べるCPU戦を含むため必要)
+- **デッキ編集・砂時計図鑑は、`set_id != "" and not owned_card_sets.has(set_id)`の
+  カードを弾く**(10.8.1節)。図鑑の「未収集はシルエット+『?』」の表現
+  (`AlmanacEntry.locked`として枠組みだけ作ってあった)を、この3枚で初めて実際に使う
+- **`CardDeckSave.random_deck()`(CPU戦のデッキ生成)は`set_id != ""`のカードを常に除く**
+  (10.8.1節の「CPU戦のデッキ生成が所有カードだけから組むか」がまだ未確定のため、
+  当面はカードセット全般を安全側に倒して除く。決まり次第まとめて見直す)
 
 ### ホーム画面のソロタブ
 
