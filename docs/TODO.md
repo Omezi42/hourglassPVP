@@ -1,5 +1,44 @@
 # 開発タスク・進捗(TODO)
 
+## ソロモード
+
+仕様は GameDesign.md 27章、実装設計は Architecture.md 10.15節。
+チュートリアルではなく、一人用の高難度チャレンジとして新設する。
+
+- [x] GameDesign.md 27章を新設。9章(ホームタブ4つ化・ソロタブの新設)・
+      13章(CPU戦の入口移設)・24章(リーサルパズルの入口移設)を合わせて更新
+- [x] Architecture.md 10.15節(データ構造・MatchStateへの3つの上書きプロパティ・
+      特殊勝利条件の外側判定・思考レベル固定・連戦型のHP持ち越し・カード所有の最小対応)を追記
+- [ ] **ホームタブの再編**(最初の実装単位)
+  - [ ] `SoloTab` を新設し、`DeckTab`/`BattleTab`/`RulesTab` と並べて4タブ化
+  - [ ] `BattleTab` から CPU戦・リーサルパズルの入口を外し、`SoloTab` へ移す
+        (中身の画面・遷移先は変更しない)
+  - [ ] ヘッドレススモークテスト・gdlint / gdformat
+- [ ] `SoloStageData` / `SoloMatchConfig`(Resource)と `SoloLibrary` / `SoloProgress`(static)
+- [ ] `MatchState` へ `sand_drop_count` / `flip_disabled` / `clash_damage_multiplier` を追加
+      (いずれも既定値で全モード無変更であることをテストで確認する)
+- [ ] `CardMatchSolo`(対局設定の適用・特殊勝利条件の監視・連戦型のHP持ち越し・報酬付与)
+- [ ] `CardSoloMapScreen` / `CardSoloStageDetail`(ステージツリーの表示・挑戦の確認パネル)
+- [ ] ソロモード限定カード3種の追加(`add-hourglass` Skillの流れで、色違い運用のまま
+      3枚とも生成する。イラストは新規に起こさない)
+  - [ ] 刻限の砂(砂時計・コスト2・総量4・反転:カードを1枚引く)
+  - [ ] 見習いの盾(砂時計・コスト3・総量4・守護 + 設置:自分の他の砂時計1体の総量+1)
+  - [ ] 揺さぶりの一手(砂術・コスト2・相手の砂時計1体を反転させる)
+  - [ ] `docs/Hourglasses.md` へ「ソロモードセット」として3枚を記載(基本セット70枚とは
+        別数え。8章の方針どおり)
+- [ ] カード所有の最小対応:`CardData.solo_exclusive` / `players/{uid}.owned_cards` /
+      `AccountService.owned_card_ids()` / `grant_card()`(通信失敗時のローカル退避込み)
+  - [ ] デッキ編集・砂時計図鑑で、未所有の`solo_exclusive`カードを弾く/シルエット表示にする
+        (図鑑の「未収集」表現は9章に仕込んだまま未使用だったもの。ここで初めて使う)
+  - [ ] `CardDeckSave.random_deck()`(CPU戦のデッキ生成)で`solo_exclusive`を常に除く
+- [ ] v1の10ステージ分のリソースを作成(GameDesign.md 27章の表のとおり)。
+      **パズル型3問は既存のリーサルパズル5問より難度を上げる**。
+      `tools/tests/puzzle_mission_tests.gd`と同じ考え方で、用意した解答手順が
+      実際に機能することをテストで確かめてから出荷する
+- [ ] ヘッドレステスト・gdlint / gdformatを通してから完了報告する
+
+---
+
 ## リーサルパズル: エンドレスモード
 
 仕様は GameDesign.md 24章「エンドレスモード」、実装設計は Architecture.md 10.12.1節。
