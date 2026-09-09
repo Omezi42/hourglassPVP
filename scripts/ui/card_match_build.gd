@@ -17,7 +17,7 @@ static func make_bar(screen: CardMatchScreen, opponent: bool, top: float) -> Pla
 	bar.position = Vector2(CardMatchScreen.MARGIN, top)
 	bar.size = Vector2(CardMatchScreen.BAR_WIDTH, PlayerInfoBar.BAR_HEIGHT)
 	if opponent:
-		bar.face_pressed.connect(screen._on_face_pressed)
+		bar.face_pressed.connect(screen.touch.on_face_pressed)
 	bar.graveyard_pressed.connect(screen._on_graveyard_pressed.bind(opponent))
 	screen.add_child(bar)
 	return bar
@@ -39,12 +39,12 @@ static func make_row(screen: CardMatchScreen, top: float, opponent: bool) -> Arr
 		)
 		view.size = CardView.BOARD_SIZE_PX
 		view.pressed.connect(
-			screen._on_foe_slot_pressed if opponent else screen._on_own_slot_pressed
+			screen.touch.on_foe_slot_pressed if opponent else screen.touch.on_own_slot_pressed
 		)
 		view.hovered.connect(screen._on_view_hovered)
 		view.mouse_exited.connect(screen._on_view_left)
 		if not opponent:
-			view.drop_handler = screen._on_slot_drop.bind(i)
+			view.drop_handler = screen.touch.on_slot_drop.bind(i)
 		screen.add_child(view)
 		views.append(view)
 	return views

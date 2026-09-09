@@ -376,6 +376,7 @@ UIに依存しない、対局ルールそのものを扱う層。
 | `CardMatchReplay`(`scripts/ui/card_match_replay.gd`) | リプレイの再生コントロール。**任意の手数の局面は初期状態から手を並べ直して作る** |
 | `CardMatchOnline`(`scripts/ui/card_match_online.gd`) | オンライン対戦の3つの入口(開始・切断からの復帰・観戦)。`card_match_screen.gd` が1000行の上限に達したため切り出した。画面側には `main.gd` から呼ぶ薄い委譲だけが残る |
 | `CardMatchSpell`(`scripts/ui/card_match_spell.gd`) | 砂術を撃つ操作の段取り(GameDesign.md 6章)。`card_match_screen.gd` が1000行の上限に達したため切り出した |
+| `CardMatchTouch`(`scripts/ui/card_match_touch.gd`) | 盤面と手札を押す/ドラッグする操作の受け口。**押した先で何が起きるかの分岐だけ**を持ち、適用は `MatchState` へ、対象選択の段取りは `CardMatchSpell` / `CardMatchEffectTarget` / `CardMatchFlipRight` へ渡す。**`_build()` より先に生成する**——組み立ての途中で駒のシグナルへ接続されるため、後から作ると接続の時点で null を掴む(`_detail` を後から作って踏んだのと同じ穴) |
 | `CardMatchFlipRight`(`scripts/ui/card_match_flip_right.gd`) | 反転権(GameDesign.md 2章)の段取り。ボタンの生成・対象選択(`CardMatchSelection.Kind.FLIP_RIGHT`)・`MatchAction.flip_right()` の適用を1箇所へ集める。**「戻る」ボタンと同じ位置に置く**——戻るボタンは再生・観戦(`_interactive == false`)だけ、反転権は対局中(`_interactive == true`)だけに出るため両者は同時に見えず、行動の列を再配置せずに済む |
 
 **砂術は `CardView.Mode.HAND` の中の分岐として描く**(GameDesign.md 9章)。

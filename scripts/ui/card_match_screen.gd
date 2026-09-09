@@ -56,6 +56,11 @@ var puzzle: CardMatchPuzzle:
 	get:
 		return _puzzle
 ## ソロモードの進行(GameDesign.md 27章)。ステージを1つ始めるのはこれを通す。
+## 盤面と手札を押す操作の受け口(`CardMatchBuild` がシグナルへ接続する)。
+var touch: CardMatchTouch:
+	get:
+		return _touch
+
 var solo: CardMatchSolo:
 	get:
 		return _solo
@@ -141,9 +146,13 @@ var _history: CardMatchActionHistory
 var _puzzle: CardMatchPuzzle
 var _solo: CardMatchSolo
 var _geometry: CardMatchGeometry
+var _touch: CardMatchTouch
 
 
 func _ready() -> void:
+	# **`_build()` より先に作る。**組み立ての途中で駒のシグナルへ接続されるため、
+	# 後から作ると接続の時点で null を掴む(`_detail` を後から作って踏んだのと同じ穴)。
+	_touch = CardMatchTouch.new(self)
 	_build()
 	set_process(true)
 	_outcome = CardMatchOutcome.new(self)
@@ -437,7 +446,7 @@ func _build() -> void:
 		view.mode = CardView.Mode.HAND
 		view.visible = false
 		view.hover_zoom = true
-		view.pressed.connect(_on_hand_pressed)
+		view.pressed.connect(_touch.on_hand_pressed)
 		view.hovered.connect(_on_view_hovered)
 		view.mouse_exited.connect(_on_view_left)
 		add_child(view)
@@ -608,125 +617,6 @@ func _on_view_left() -> void:
 
 
 # --- 操作 ---------------------------------------------------------------
-
-
-func _on_hand_pressed(view: CardView) -> void:
-	var index := _hand_views.find(view)
-	if index < 0 or not _my_turn():
-		return
-	if state.can_cast(my_side, index):
-		_spell.begin(index)
-		return
-	if not state.can_play(my_side, index):
-		return
-	_selection.select_hand(index)
-	refresh()
-
-
-## 手札を空き枠へドラッグして出す(GameDesign.md 9章)。押して枠を選ぶ経路と同じ
-## `_play_selected()` へ合流させ、設置効果の対象選択も同じように働くようにする。
-func _on_slot_drop(source: CardView, slot: int) -> void:
-	var index := _hand_views.find(source)
-	if index < 0 or not _my_turn() or state.board[my_side][slot] != null:
-		return
-	if state.can_cast(my_side, index):
-		_spell.begin(index)
-		return
-	if not state.can_play(my_side, index):
-		return
-	_selection.select_hand(index)
-	_play_selected(slot)
-
-
-func _on_own_slot_pressed(view: CardView) -> void:
-	var slot := _own_slots.find(view)
-	if slot < 0 or not _my_turn():
-		return
-	if _selection.is_flip_right():
-		_flip_right.use_at(my_side, slot)
-		return
-	if _selection.is_targeting():
-		_handle_own_targeting(slot)
-		return
-	if _selection.is_hand_selection():
-		# 上書き設置は行わないため、埋まっている枠は選べない。
-		if state.board[my_side][slot] == null:
-			_play_selected(slot)
-		return
-	if state.board[my_side][slot] == null:
-		_selection.clear()
-	else:
-		_selection.select_board(slot)
-	refresh()
-
-
-## 対象選択中に自分の場を押したとき(砂術の味方対象 / 設置効果の味方対象)。
-func _handle_own_targeting(slot: int) -> void:
-	if state.board[my_side][slot] == null:
-		_selection.clear()
-		refresh()
-		return
-	# 味方1体を対象に取る砂術は、自分の駒を押して確定する。
-	if _selection.slot < 0:
-		_spell.cast_at(my_side, slot)
-		return
-	# 味方1体を対象に取る設置効果(ハロー/ピボット等)。
-	var card: CardData = state.hand[my_side][_selection.hand_index]
-	if _effect_target.target_side(card) == my_side:
-		_effect_target.confirm(my_side, slot)
-		return
-	_selection.clear()
-	refresh()
-
-
-func _on_foe_slot_pressed(view: CardView) -> void:
-	var slot := _foe_slots.find(view)
-	if slot < 0 or not _my_turn():
-		return
-	if _selection.is_flip_right():
-		_flip_right.use_at(MatchState.other_side(my_side), slot)
-		return
-	if _selection.is_targeting():
-		_handle_foe_targeting(slot)
-		return
-	if _selection.is_board_selection() and state.can_attack(my_side, _selection.slot, slot):
-		_perform(MatchAction.attack(my_side, _selection.slot, slot))
-		_selection.clear()
-		_hide_detail()
-		refresh()
-
-
-## 対象選択中に相手の場を押したとき(砂術の相手対象 / 設置効果の相手対象)。
-func _handle_foe_targeting(slot: int) -> void:
-	var foe := MatchState.other_side(my_side)
-	if state.board[foe][slot] == null:
-		return
-	# slot が -1 のままなら砂術(置く枠を持たない)。
-	if _selection.slot < 0:
-		_spell.cast_at(foe, slot)
-		return
-	# 味方1体を対象に取る設置効果は相手の場を押しても確定しない
-	# (自分の場を押させる。`_handle_own_targeting()` 側で処理する)。
-	var card: CardData = state.hand[my_side][_selection.hand_index]
-	if _effect_target.target_side(card) != foe:
-		return
-	_effect_target.confirm(foe, slot)
-
-
-func _on_face_pressed() -> void:
-	if not _my_turn() or not _selection.is_board_selection():
-		return
-	if not state.can_attack(my_side, _selection.slot, -1):
-		return
-	_perform(MatchAction.attack(my_side, _selection.slot, -1))
-	_selection.clear()
-	refresh()
-
-
-## 相手1体・味方1体を対象に取る設置効果は、出す前に対象を選ばせる(GameDesign.md 9章)。
-## 対象がいなければ選ばせる意味がないため、そのまま出す(`CardMatchEffectTarget` が判断する)。
-func _play_selected(slot: int) -> void:
-	_effect_target.begin(_selection.hand_index, slot)
 
 
 func _on_flip_pressed() -> void:
