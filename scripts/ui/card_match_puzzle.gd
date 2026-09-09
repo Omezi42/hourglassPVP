@@ -18,12 +18,16 @@ var _settled := false
 ## エンドレス(GameDesign.md 24章)かどうか。true の間は初回クリア報酬・進捗記録を
 ## 行わず、「次の問題へ」で新しい問題を生成し続けられる。
 var _endless := false
+## ソロモード(GameDesign.md 27章)のパズル型ステージから始めた場合の、そのステージ。
+## **進捗と報酬の行き先がリーサルパズルとは別になる**——`SoloProgress` へ書かないと
+## 次のステージが永久に開かない。
+var _solo_stage: SoloStageData = null
 
 
 func _init(screen: CardMatchScreen) -> void:
 	_screen = screen
 	_panel = CardPuzzleResult.new()
-	_panel.retry_pressed.connect(func() -> void: start(_stage, _endless))
+	_panel.retry_pressed.connect(func() -> void: start(_stage, _endless, _solo_stage))
 	_panel.next_pressed.connect(func() -> void: start(PuzzleGenerator.generate(), true))
 	_panel.quit_pressed.connect(func() -> void: finished.emit(_settled and _cleared()))
 	screen.add_child(_panel)
@@ -40,7 +44,9 @@ func stage() -> PuzzleStageData:
 
 ## 1問を始める。局面は `MatchState` を普通に作ってから、盤面・手札・マナを差し替える
 ## (ルール画面の教材の盤面と同じ作り方。Architecture.md 4.2節)。
-func start(target: PuzzleStageData, endless: bool = false) -> void:
+func start(
+	target: PuzzleStageData, endless: bool = false, solo_stage: SoloStageData = null
+) -> void:
 	if target == null:
 		return
 	# **局面を作ってから問題を覚える。**`_begin_state()` は画面の後始末を通り、
@@ -48,6 +54,7 @@ func start(target: PuzzleStageData, endless: bool = false) -> void:
 	_begin_state()
 	_stage = target
 	_endless = endless
+	_solo_stage = solo_stage
 	_settled = false
 	_panel.visible = false
 	_apply(target)
@@ -94,6 +101,7 @@ func close() -> void:
 	_stage = null
 	_settled = false
 	_endless = false
+	_solo_stage = null
 	_panel.visible = false
 
 
@@ -120,6 +128,9 @@ func _settle(cleared: bool) -> void:
 ## 初回クリアだけ砂金を出す(GameDesign.md 24章)。**通信は待たない**——
 ## 結果の表示を通信で止めない扱いは、対局の砂金(`CardMatchOutcome`)と同じ。
 func _grant() -> String:
+	# ソロモードのパズル型は、進捗も報酬もステージ側のもの(GameDesign.md 27章)。
+	if _solo_stage != null:
+		return CardMatchSolo.grant_stage_rewards(_solo_stage)
 	var uid := ""
 	if NetSession.client != null and NetSession.client.auth != null:
 		uid = NetSession.client.auth.uid

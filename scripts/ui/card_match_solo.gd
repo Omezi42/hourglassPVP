@@ -118,6 +118,16 @@ func _apply_config() -> void:
 	state.flip_disabled = _config.flip_disabled
 	state.clash_damage_multiplier = _config.clash_damage_multiplier
 	state.mana_frozen = _config.mana_frozen
+	# **凍結は「常に1のまま」を意味する**(GameDesign.md 27章)。この設定は最初の手番が
+	# 始まったあとに掛かるため、まだ手番の来ていない側は最大マナ0のまま凍りつく。
+	# 両者へ1を保証して、片側だけ何も出せない対局にならないようにする。
+	if _config.mana_frozen:
+		for target_side in [mine, foe]:
+			state.max_mana[target_side] = maxi(int(state.max_mana[target_side]), 1)
+			state.mana[target_side] = int(state.max_mana[target_side])
+			state.mana_changed.emit(
+				target_side, state.mana[target_side], state.max_mana[target_side]
+			)
 	if _config.hp_override > 0:
 		state.hp[mine] = _config.hp_override
 		state.hp[foe] = _config.hp_override
@@ -186,20 +196,28 @@ func _settle(cleared: bool) -> void:
 ## 初回クリアだけ報酬を出す(GameDesign.md 27章)。**通信は待たない**——結果の表示を
 ## 通信で止めない扱いは、対局の砂金(`CardMatchOutcome`)・パズルの砂金と同じ。
 func _grant() -> String:
+	return grant_stage_rewards(_stage)
+
+
+## ステージの報酬を渡す。**パズル型のステージも同じ経路を通す**——パズル型は進行が
+## `CardMatchPuzzle` 側にあるが、進捗を `SoloProgress` へ書かないと次のステージが
+## 永久に開かない(Architecture.md 10.15節)。そのため static にして両者で共有する。
+static func grant_stage_rewards(target: SoloStageData) -> String:
 	var uid := ""
 	if NetSession.client != null and NetSession.client.auth != null:
 		uid = NetSession.client.auth.uid
-	if not SoloProgress.mark_cleared(uid, _stage.id):
+	if not SoloProgress.mark_cleared(uid, target.id):
 		return "このステージはクリア済みです"
 	var parts: Array[String] = []
-	if _stage.reward_gold > 0:
+	if target.reward_gold > 0:
 		if NetSession.client == null or uid.is_empty():
-			AccountStore.add_pending_currency(_stage.reward_gold)
-			parts.append("+%d 砂金(次に接続できたときに反映)" % _stage.reward_gold)
+			AccountStore.add_pending_currency(target.reward_gold)
+			parts.append("+%d 砂金(次に接続できたときに反映)" % target.reward_gold)
 		else:
-			AccountService.grant(NetSession.client, uid, _stage.reward_gold, false)
-			parts.append("+%d 砂金" % _stage.reward_gold)
-	if not _stage.reward_card_set_id.is_empty():
-		AccountService.unlock_card_set(NetSession.client, uid, _stage.reward_card_set_id)
-		parts.append("%sを手に入れました" % CardSetLibrary.display_name(_stage.reward_card_set_id))
-	return "\n".join(parts)
+			AccountService.grant(NetSession.client, uid, target.reward_gold, false)
+			parts.append("+%d 砂金" % target.reward_gold)
+	if not target.reward_card_set_id.is_empty():
+		AccountService.unlock_card_set(NetSession.client, uid, target.reward_card_set_id)
+		parts.append("%sを手に入れました" % CardSetLibrary.display_name(target.reward_card_set_id))
+	return "
+".join(parts)

@@ -749,18 +749,29 @@ Main
   輪郭(`_outline_width()`)と面取り(`_bevel_width()`)もその比で連動させる。
   **単純な短辺比例では小さい側が細くならない**ため、2点を通る直線にしている
 - 紋章とテキストの重なりは、`.tres`側で個別に余白を指定するのではなく **`_get_content_margin()`をオーバーライドし、`shape`と`emblem_placement`から自動的に決まるようにする**。これにより`.tres`は「どのグループが何であるか」だけを持つ単純な状態に保てる
-- グループごとの割り当ては次の通り。v5.0で使うのは`back_nav`/`confirm_save`/`nav_tab`/`icon_square`/`wide_text`の5つで、対局画面の丸いアクションボタン(`action_*`)と再生コントロール(`transport_round`)は画面ごと撤去したため削除済み
+- グループごとの割り当ては次の通り。**実際に `resources/theme/buttons/` へ置いてあるのはこの7つだけ**で、
+  対局画面の丸いアクションボタン(`action_*`)・再生コントロール(`transport_round`)・
+  保存ボタン(`confirm_save`)は、それぞれの画面が撤去された/共通ヘッダーへ寄せられた時点で削除した。
+  **`.tres` を増やすときは、そのグループを実際に読む呼び出し(`CodedButton` のグループ定数)を必ず同時に足す**——
+  読まれない `.tres` は誰にも気づかれないまま残り、後から「使っているのかどうか」を判定できなくなる
 
-| グループ | Shape | Emblem | Placement |
-|---|---|---|---|
-| `back_nav` | CHEVRON_LEFT | NONE | - |
-| `confirm_save` | ROUNDED_RECT | CHECK | RIGHT_INSET |
-| `nav_tab` | PILL | HOURGLASS | TOP_BADGE |
-| `icon_square` | ROUNDED_RECT | NONE | - |
-| `wide_text` | ROUNDED_RECT | NONE | - |**enum名に`Variant`を使うとGodot組み込み型と衝突してパースエラーになるため`State`とする**。対応する`.tres`の1行目は `[gd_resource type="StyleBox" script_class="CodedButtonStyle" format=3]`(`type="Resource"` にすると `Script inherits from native type 'StyleBox'` エラーになる)
+| グループ | Shape | Emblem | Placement | 使う場所 |
+|---|---|---|---|---|
+| `back_nav` | CHEVRON_LEFT | NONE | - | 共通ヘッダーの戻る |
+| `nav_tab` | PILL | HOURGLASS | TOP_BADGE | ホーム画面の下部タブ |
+| `wide_text` | ROUNDED_RECT | NONE | - | 既定の横長ボタン |
+| `icon_square` | ROUNDED_RECT | NONE | - | 一覧の行などの小さな正方形 |
+| `primary_action` | ROUNDED_RECT | NONE | - | **塗りつぶした真鍮の面**(`filled`)。最も頻繁に押す操作 |
+| `icon_menu` | ROUNDED_RECT | MENU | CENTER | ホーム画面のハンバーガー |
+| `icon_discord` | ROUNDED_RECT | DISCORD | CENTER | 設定メニューのDiscord導線 |
+
+`UiPaint.Emblem` には、いま誰も使っていない紋章(`SWAP_ARROWS` / `BENCH` / `CHECK` /
+`ADVANCE` / `AWAKEN` / `HEAL` / `STRIKE`)が残っている。**enumの並びは `.tres` が
+整数で保存する保存データ**(11章)であり、途中の値を消すと `icon_menu` / `icon_discord` の
+紋章がずれるため、**使っていなくても消さない**。**enum名に`Variant`を使うとGodot組み込み型と衝突してパースエラーになるため`State`とする**。対応する`.tres`の1行目は `[gd_resource type="StyleBox" script_class="CodedButtonStyle" format=3]`(`type="Resource"` にすると `Script inherits from native type 'StyleBox'` エラーになる)
 - 既存の`.tscn`が参照している`resources/theme/buttons/img_{グループ名}_{state}.tres`は、**パスとExtResource参照を維持したまま中身だけをコードStyleBoxへ差し替える**。これによりシーン側の参照を書き換えずに全画面へ反映できる(J-0・L-2で実績のある手法)
 - 以下の9-slice/原寸に関する制約は、**画像アセットのまま残す資産にのみ適用される**(砂時計のイラスト、背景イラスト等)。コード描画のStyleBoxは解像度に依存しないため、9-sliceも原寸制約も存在せず、表示サイズはレイアウトの都合で自由に決めてよい
-- **`StyleBoxTexture`の`texture_margin_*`(9-slice/角保持スケーリング)は使用しない**。角部分だけ元ピクセルのまま残り縁が不自然に太くなるため(D-1で発覚した問題の根本原因)、`texture_margin_*`は常に0(未設定)とし、画像全体を単一の矩形として扱う。その代わり、**ボタン・パネル等の表示サイズは常に元画像のアスペクト比を保った倍率(縦横同じ倍率)でのみ決定する**。縦横を別々に指定して矩形を歪めることは禁止。置きたい場所に対して元画像のアスペクト比が合わない場合は、(a)その要素の固定サイズ自体をアスペクト比に合わせて再計算する、(b)固定サイズを崩せない場合は余白(レターボックス/ピラーボックス)を許容する、のいずれかで対応し、非等倍(縦横別倍率)の伸縮は行わない。既存の`board_panel.tres`(未使用、`BoardTable`のコード描画に置き換え済み)は本方針の適用外(参照されていないため削除候補だが未対応)
+- **`StyleBoxTexture`の`texture_margin_*`(9-slice/角保持スケーリング)は使用しない**。角部分だけ元ピクセルのまま残り縁が不自然に太くなるため(D-1で発覚した問題の根本原因)、`texture_margin_*`は常に0(未設定)とし、画像全体を単一の矩形として扱う。その代わり、**ボタン・パネル等の表示サイズは常に元画像のアスペクト比を保った倍率(縦横同じ倍率)でのみ決定する**。縦横を別々に指定して矩形を歪めることは禁止。置きたい場所に対して元画像のアスペクト比が合わない場合は、(a)その要素の固定サイズ自体をアスペクト比に合わせて再計算する、(b)固定サイズを崩せない場合は余白(レターボックス/ピラーボックス)を許容する、のいずれかで対応し、非等倍(縦横別倍率)の伸縮は行わない。(かつて存在した`board_panel.tres`は`BoardTable`のコード描画へ置き換えたため削除済み)
 
 ---
 

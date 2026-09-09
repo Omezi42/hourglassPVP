@@ -447,7 +447,7 @@ func _on_solo_requested() -> void:
 
 func _on_solo_stage_selected(stage: SoloStageData) -> void:
 	if stage.stage_type == SoloStageData.Kind.PUZZLE:
-		card_match_screen.puzzle.start(stage.puzzle)
+		card_match_screen.puzzle.start(stage.puzzle, false, stage)
 	else:
 		card_match_screen.solo.start(stage)
 	_match_return_screen = solo_map_screen
