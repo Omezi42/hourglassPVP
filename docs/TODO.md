@@ -76,11 +76,6 @@
 
 ### ソロモードの積み残し
 
-- [x] **第10ステージのアイコン報酬を実装した。**無料の付与を
-      `AccountService.unlock_free(client, uid, kind, id)` の1本へ集約し、
-      `unlock_card_set()` / `unlock_icon()` はそこへ `ShopCatalog.Kind` を渡すだけの
-      委譲にした。通信に失敗した分の退避(`AccountStore.add_pending_unlock()`)も
-      品種ごとに置き場を分けてある。第10階の報酬はアイコン「陽光」(`glow`)
 - [ ] 勝利条件の監視(`SURVIVE_TURNS` / `DESTROY_ALL_ENEMY_UNITS`)に自動テストが無い。
       `CardMatchScreen`(Control)を経由するため、既存のテストと同じく `MatchState` 単体では
       押さえられない。該当するステージを作ったときに実機で確認する
