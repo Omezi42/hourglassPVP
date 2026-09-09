@@ -99,6 +99,16 @@ var flip_right_remaining: Dictionary = {}
 ## 敗北の判定の両方がこれを見る。**手として送り合うため両者で同じ値になる。**
 var turn_forfeits: Dictionary = {}
 
+## ソロモード(GameDesign.md 27章)の特殊ルール用の上書き。**既定値のままなら
+## PvP・通常のCPU戦・リーサルパズル・誘導対局を一切変えない**。`CardMatchSolo`が
+## `start_match()`の直後、`_begin_turn()`が最初に走る前に設定する(Architecture.md 10.15節)。
+## 毎ターン終了時に落ちる砂の粒数。
+var sand_drop_count := 1
+## true の間、通常の反転(3章)を使えない。反転権(2章)は対象外。
+var flip_disabled := false
+## 相打ち(4章)で受けるダメージの倍率。双方に同じ倍率がかかるため対称性は崩れない。
+var clash_damage_multiplier := 1
+
 ## マリガン(初手の引き直し)を待っている間だけ true。
 var mulligan_pending := false
 ## 決着が疲労(デッキ切れ)によるものだったか。バランス検証の必須指標
@@ -261,7 +271,7 @@ func end_turn() -> void:
 		var unit: CardInstance = board[side][slot]
 		if unit == null:
 			continue
-		unit.tick()
+		unit.tick(sand_drop_count)
 		unit_ticked.emit(side, slot)
 		if unit.is_dead():
 			_destroy_unit(side, slot)
@@ -428,7 +438,7 @@ func cast_spell(side: int, hand_index: int, target: Dictionary = {}) -> bool:
 
 
 func can_flip(side: int, slot: int) -> bool:
-	if _match_over or current_turn != side:
+	if _match_over or current_turn != side or flip_disabled:
 		return false
 	var unit: CardInstance = board[side][slot]
 	return unit != null and unit.can_flip()
@@ -556,8 +566,10 @@ func combat_preview(side: int, slot: int, target_slot: int) -> Dictionary:
 	var defender: CardInstance = board[foe_side][target_slot]
 	if defender == null:
 		return {}
-	var to_defender := _preview_damage(defender, attacker.attack)
-	var to_attacker := _preview_damage(attacker, defender.attack)
+	var attacker_power := attacker.attack * clash_damage_multiplier
+	var defender_power := defender.attack * clash_damage_multiplier
+	var to_defender := _preview_damage(defender, attacker_power)
+	var to_attacker := _preview_damage(attacker, defender_power)
 	var defender_health := defender.health - to_defender
 	var attacker_health := attacker.health - to_attacker
 	if to_defender > 0 and attacker.has_keyword(CardEnums.Keyword.POISON):
@@ -566,7 +578,7 @@ func combat_preview(side: int, slot: int, target_slot: int) -> Dictionary:
 		attacker_health = 0
 	var pierce := 0
 	if to_defender > 0 and attacker.has_keyword(CardEnums.Keyword.PIERCE):
-		pierce = maxi(attacker.attack - defender.health, 0)
+		pierce = maxi(attacker_power - defender.health, 0)
 	return {
 		"attacker_health": maxi(attacker_health, 0),
 		"attacker_dead": attacker_health <= 0,
@@ -587,8 +599,9 @@ func _resolve_unit_combat(side: int, slot: int, target_slot: int) -> void:
 	var foe_side := other_side(side)
 	var attacker: CardInstance = board[side][slot]
 	var defender: CardInstance = board[foe_side][target_slot]
-	var attacker_power := attacker.attack
-	var defender_power := defender.attack
+	# **双方に同じ倍率がかかるため、相打ちの対称性は崩れない**(GameDesign.md 27章)。
+	var attacker_power := attacker.attack * clash_damage_multiplier
+	var defender_power := defender.attack * clash_damage_multiplier
 	var defender_health := defender.health
 	var attacker_health := attacker.health
 	# 硝子が割れたかどうかは、削られたかどうかでは分からない(どちらも与ダメージ0)。

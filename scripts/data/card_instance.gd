@@ -116,9 +116,10 @@ func drop_sand(amount: int) -> void:
 	attack += moved
 
 
-## ターン終了時の1粒。
-func tick() -> void:
-	drop_sand(1)
+## ターン終了時の1粒。**ソロモード(GameDesign.md 27章)の特殊ルールでは
+## `MatchState.sand_drop_count`により1粒より多いことがある**。
+func tick(amount: int = 1) -> void:
+	drop_sand(amount)
 
 
 ## ダメージを受ける。受けた分の砂は消える(総量が減る)。

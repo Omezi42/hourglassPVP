@@ -51,8 +51,11 @@
         (中身の画面・遷移先は変更しない)
   - [x] ヘッドレススモークテスト・gdlint / gdformat
 - [ ] `SoloStageData` / `SoloMatchConfig`(Resource)と `SoloLibrary` / `SoloProgress`(static)
-- [ ] `MatchState` へ `sand_drop_count` / `flip_disabled` / `clash_damage_multiplier` を追加
-      (いずれも既定値で全モード無変更であることをテストで確認する)
+- [x] `MatchState` へ `sand_drop_count` / `flip_disabled` / `clash_damage_multiplier` を追加。
+      `CardInstance.tick()`に粒数を渡せるようにし、`can_flip()`・`_resolve_unit_combat()`・
+      `combat_preview()`(UIの予測)を対応させた。反転権(`use_flip_right()`)は
+      `flip_disabled`の影響を受けない(27章の明記どおり)。
+      `tools/tests/solo_mode_tests.gd`で既定値が全モード無変更であることを含めて検証
 - [ ] `CardMatchSolo`(対局設定の適用・特殊勝利条件の監視・連戦型のHP持ち越し・報酬付与)
 - [ ] `CardSoloMapScreen` / `CardSoloStageDetail`(ステージツリーの表示・挑戦の確認パネル)
 - [x] ソロモード限定カード3種の追加(`add-hourglass` Skillの流れで、色違い運用のまま

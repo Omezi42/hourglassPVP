@@ -15,6 +15,7 @@ const PuzzleMissionTests = preload("res://tools/tests/puzzle_mission_tests.gd")
 const PuzzleGeneratorTests = preload("res://tools/tests/puzzle_generator_tests.gd")
 const MatchFxTests = preload("res://tools/tests/match_fx_tests.gd")
 const CpuDifficultyTests = preload("res://tools/tests/cpu_difficulty_tests.gd")
+const SoloModeTests = preload("res://tools/tests/solo_mode_tests.gd")
 
 var _failures := 0
 
@@ -35,6 +36,7 @@ func _run() -> void:
 	PuzzleGeneratorTests.new().run(_assert_true)
 	MatchFxTests.new().run(_assert_true)
 	CpuDifficultyTests.new().run(_assert_true)
+	SoloModeTests.new().run(_assert_true)
 	SoundSettingsTests.new().run(_assert_true)
 	OnlineTests.new().run(_assert_true)
 	AccountTests.new().run(_assert_true)
