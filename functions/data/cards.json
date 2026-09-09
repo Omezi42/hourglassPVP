@@ -699,6 +699,36 @@
 			"is_spell": true,
 			"pool_index": 70,
 			"total_sand": 0
+		},
+		{
+			"cannot_attack": false,
+			"cost": 2,
+			"describe": "反転:カードを1枚引く",
+			"display_name": "刻限の砂",
+			"id": "chime",
+			"is_spell": false,
+			"pool_index": 71,
+			"total_sand": 4
+		},
+		{
+			"cannot_attack": false,
+			"cost": 3,
+			"describe": "守護 / 設置:自分の他の砂時計1体の総量+1",
+			"display_name": "見習いの盾",
+			"id": "ward",
+			"is_spell": false,
+			"pool_index": 72,
+			"total_sand": 4
+		},
+		{
+			"cannot_attack": false,
+			"cost": 2,
+			"describe": "相手の砂時計1体を反転する",
+			"display_name": "揺さぶりの一手",
+			"id": "goad",
+			"is_spell": true,
+			"pool_index": 73,
+			"total_sand": 0
 		}
 	]
 }
