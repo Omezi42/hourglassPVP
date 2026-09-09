@@ -58,7 +58,9 @@ func _test_every_stage_is_solvable() -> void:
 		if not answers.has(stage.id):
 			_assert.call(false, "no answer recorded for " + stage.id)
 			continue
-		_assert.call(PuzzleSolver.solve(stage, answers[stage.id]), "stage should be solvable: " + stage.id)
+		_assert.call(
+			PuzzleSolver.solve(stage, answers[stage.id]), "stage should be solvable: " + stage.id
+		)
 
 
 ## 同じ日なら何度読んでも同じ3件が並ぶ(乱数で選ぶと起動のたびに変わる)。

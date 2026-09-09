@@ -6,6 +6,7 @@ extends RefCounted
 ## どちらも「用意した解答が本当に通るか」を出荷前に見るためのもので、片方だけに置くと
 ## もう片方が「データが読めること」しか確かめられなくなる。
 
+
 ## `CardMatchPuzzle._apply()` と同じ形の局面を、UIを起こさずに作る。
 static func build(stage: PuzzleStageData) -> MatchState:
 	var state := MatchState.new()
