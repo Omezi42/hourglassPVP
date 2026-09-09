@@ -20,21 +20,33 @@ signal random_match_deck_requested
 signal room_match_requested
 signal account_requested
 
-const NAV_HEIGHT_ACTIVE := 150
-const NAV_HEIGHT_INACTIVE := 108
-const NAV_ASPECT := 1.787
+## 下部タブの寸法。**幅は共通で、高さだけ変える。**幅まで変えると `HBoxContainer` の
+## 中で他のタブが横へ押し出され、選択するたびに4つの位置がずれる(実際にそうなった)。
+const NAV_WIDTH := 196
+const NAV_HEIGHT_ACTIVE := 128
+const NAV_HEIGHT_INACTIVE := 100
 const NAV_FONT_ACTIVE := 26
 const NAV_FONT_INACTIVE := 20
+## 選択していないタブへ掛ける色。沈めるだけで、押せないようには見せない。
+const NAV_INACTIVE_TINT := Color(0.70, 0.68, 0.66)
+## 下部タブに打つ印の大きさ(GameDesign.md 9章)。
+const NAV_BADGE_SIZE := 30.0
+## アカウント帯の右端をどれだけ空けるか(右上のメニューのボタンのぶん)。
+const ACCOUNT_BAR_RIGHT_INSET := 116.0
 const DECK_BACKGROUND := preload("res://assets/backgrounds/processed/home/background.png")
 const BATTLE_BACKGROUND := preload("res://assets/backgrounds/processed/battle/background.png")
 ## タブ切り替え時のクロスフェード時間。Main._show_only()の画面遷移と同じ考え方を踏襲する。
 const TAB_FADE_DURATION := 0.18
 
-## 下部タブの並び(GameDesign.md 9章)。
-const TAB_RULES := 0
+## 下部タブの並び(GameDesign.md 9章)。**行いで分ける**——以前は
+## 「ルール / デッキ / ソロ / バトル」で、対局を始める入口が4つのタブすべてに散っていた。
+const TAB_BATTLE := 0
 const TAB_DECK := 1
-const TAB_SOLO := 2
-const TAB_BATTLE := 3
+const TAB_RECORD := 2
+const TAB_LEARN := 3
+## タブの文言。クラス名(`BattleTab` / `DeckTab` / `RulesTab`)は `.tscn` の参照を
+## 壊さないため変えていないので、**画面に出る名前はここだけが持つ**。
+const TAB_LABELS := ["たたかう", "そろえる", "きろく", "おぼえる"]
 
 ## 右上のメニュー(ハンバーガー)ボタンのスタイル。
 const MENU_BUTTON_GROUP := "icon_menu"
@@ -44,8 +56,9 @@ var _tab_fade_tween: Tween
 var _active_tab: Control
 var _rules_tab: RulesTab
 var _rules_nav_button: Button
-var _solo_tab: SoloTab
-var _solo_nav_button: Button
+var _record_tab: RecordTab
+var _record_nav_button: Button
+var _record_badge: Label
 
 var _nameplate_button: AccountNameplateButton
 ## デイリーミッション(GameDesign.md 23章)のモーダル。最初に開いたときだけ作る。
@@ -69,8 +82,9 @@ var _currency_seen := false
 
 
 func _ready() -> void:
-	battle_tab.stats_requested.connect(func() -> void: stats_requested.emit())
-	battle_tab.mission_requested.connect(_on_mission_requested)
+	battle_tab.cpu_match_requested.connect(func() -> void: cpu_match_requested.emit())
+	battle_tab.puzzle_requested.connect(func() -> void: puzzle_requested.emit())
+	battle_tab.solo_requested.connect(func() -> void: solo_requested.emit())
 	battle_tab.resume_requested.connect(
 		func(record: Dictionary) -> void: online_resume_requested.emit(record)
 	)
@@ -81,15 +95,22 @@ func _ready() -> void:
 	deck_tab.deck_edit_pressed.connect(func() -> void: deck_list_requested.emit())
 	deck_tab.hourglass_list_pressed.connect(func() -> void: hourglass_list_requested.emit())
 	deck_tab.shop_pressed.connect(func() -> void: shop_requested.emit())
-	battle_tab.replay_list_requested.connect(func() -> void: replay_list_requested.emit())
 	battle_tab.random_match_deck_requested.connect(
 		func() -> void: random_match_deck_requested.emit()
 	)
 	battle_tab.room_match_requested.connect(func() -> void: room_match_requested.emit())
 	_build_rules_tab()
-	_build_solo_tab()
+	_build_record_tab()
+	deck_nav_button.text = TAB_LABELS[TAB_DECK]
+	battle_nav_button.text = TAB_LABELS[TAB_BATTLE]
 	deck_nav_button.pressed.connect(_select_tab.bind(TAB_DECK))
 	battle_nav_button.pressed.connect(_select_tab.bind(TAB_BATTLE))
+	# 並びを「たたかう / そろえる / きろく / おぼえる」に揃える(9章)。
+	var nav: Node = battle_nav_button.get_parent()
+	nav.move_child(battle_nav_button, 0)
+	nav.move_child(deck_nav_button, 1)
+	nav.move_child(_record_nav_button, 2)
+	nav.move_child(_rules_nav_button, 3)
 	_style_menu_button()
 	settings_button.pressed.connect(func() -> void: settings_panel.open())
 
@@ -106,6 +127,18 @@ func _ready() -> void:
 	$AccountBar.add_child(_currency_chip)
 	$AccountBar.move_child(_currency_chip, $AccountBar.get_children().find(currency_label) + 1)
 
+	# **残高は右端へ寄せる。**名札の隣へ詰めると、ヘッダーの左半分だけが賑やかになり、
+	# 右半分がまるごと空く(押す前に分かる情報を両端へ置く。GameDesign.md 9章)。
+	# 帯そのものが幅460pxしか無く、右へ寄せる余地が無い。メニューのボタンへ掛からない
+	# ところまで伸ばす(`.tscn` は書き換えない)。
+	$AccountBar.anchor_right = 1.0
+	$AccountBar.offset_right = -ACCOUNT_BAR_RIGHT_INSET
+	var spacer := Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	$AccountBar.add_child(spacer)
+	$AccountBar.move_child(spacer, $AccountBar.get_children().find(_currency_chip))
+
 	_sunday_banner = Label.new()
 	_sunday_banner.add_theme_font_size_override("font_size", 14)
 	_sunday_banner.add_theme_color_override("font_color", UiPalette.GLOW_AMBER)
@@ -114,10 +147,12 @@ func _ready() -> void:
 	$AccountBar.add_child(_sunday_banner)
 	$AccountBar.move_child(_sunday_banner, $AccountBar.get_children().find(_currency_chip) + 1)
 
-	# 初回起動時だけ「ルール」から始める(GameDesign.md 9章)。読了は測らない。
+	# 初回起動時だけ「おぼえる」から始める(GameDesign.md 9章)。読了は測らない。
+	# **2回目以降は「たたかう」**——ホームを開いて最初に見たいのは対局であり、
+	# デッキ編集は準備であって目的ではない。
 	var first_visit := not UiState.has_seen_home()
 	UiState.mark_home_seen()
-	_select_tab(TAB_RULES if first_visit else TAB_DECK)
+	_select_tab(TAB_LEARN if first_visit else TAB_BATTLE)
 	refresh_account()
 
 
@@ -159,20 +194,21 @@ func refresh_account() -> void:
 
 
 func _select_tab(index: int) -> void:
-	var tabs: Array[Control] = [_rules_tab, deck_tab, _solo_tab, battle_tab]
+	var tabs: Array[Control] = [battle_tab, deck_tab, _record_tab, _rules_tab]
 	var buttons: Array[Button] = [
-		_rules_nav_button, deck_nav_button, _solo_nav_button, battle_nav_button
+		battle_nav_button, deck_nav_button, _record_nav_button, _rules_nav_button
 	]
 	for i in buttons.size():
 		_apply_nav_style(buttons[i], i == index)
 	background.texture = BATTLE_BACKGROUND if index == TAB_BATTLE else DECK_BACKGROUND
+	# デッキも砂金も日課も画面の外で変わる。開くたびに札の副題を読み直す。
 	if index == TAB_BATTLE:
 		battle_tab.refresh()
-	# デッキも砂金も画面の外で変わる。開くたびに札の副題を読み直す。
 	elif index == TAB_DECK:
 		deck_tab.refresh()
-	elif index == TAB_SOLO:
-		_solo_tab.refresh()
+	elif index == TAB_RECORD:
+		_record_tab.refresh()
+	_refresh_record_badge()
 	var to_show: Control = tabs[index]
 	if to_show == _active_tab and to_show.visible and to_show.modulate.a >= 1.0:
 		return
@@ -204,37 +240,70 @@ func _build_rules_tab() -> void:
 	_rules_tab.keyword_dict_requested.connect(func() -> void: keyword_dict_requested.emit())
 	deck_tab.get_parent().add_child(_rules_tab)
 	# タブの中身が背面へ回らないよう、既存のタブと同じ並びへ入れる。
-	deck_tab.get_parent().move_child(_rules_tab, 0)
+	deck_tab.get_parent().move_child(_rules_tab, 3)
 
 	_rules_nav_button = deck_nav_button.duplicate(0) as Button
-	_rules_nav_button.text = "ルール"
-	_rules_nav_button.pressed.connect(_select_tab.bind(TAB_RULES))
+	_rules_nav_button.text = TAB_LABELS[TAB_LEARN]
+	_rules_nav_button.pressed.connect(_select_tab.bind(TAB_LEARN))
 	deck_nav_button.get_parent().add_child(_rules_nav_button)
-	deck_nav_button.get_parent().move_child(_rules_nav_button, 0)
 	# tscn 側で表示されているのはデッキタブのため、隠す相手の初期値をそこへ合わせる。
 	_active_tab = deck_tab
 
 
-## 「ソロ」タブとそのタブボタンはここで生成する(GameDesign.md 27章)。
+## 「きろく」タブとそのタブボタンはここで生成する(GameDesign.md 9章)。
 ## `_build_rules_tab()` と同じ理由で `scenes/home_screen.tscn` を書き換えずに追加する。
-## CPU戦・リーサルパズルは以前バトルタブにあった入口をここへ移したもので、
-## 中身の遷移先(`cpu_match_requested`/`puzzle_requested`)は変えない。
-func _build_solo_tab() -> void:
-	_solo_tab = SoloTab.new()
-	_solo_tab.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_solo_tab.visible = false
-	_solo_tab.cpu_match_requested.connect(func() -> void: cpu_match_requested.emit())
-	_solo_tab.puzzle_requested.connect(func() -> void: puzzle_requested.emit())
-	_solo_tab.solo_requested.connect(func() -> void: solo_requested.emit())
-	deck_tab.get_parent().add_child(_solo_tab)
-	# 並び順を「ルール/デッキ/ソロ/バトル」に揃える(9章)。
-	deck_tab.get_parent().move_child(_solo_tab, 2)
+## ミッション・戦績・リプレイは、以前バトルタブに対局の入口と並んでいたものを移した。
+func _build_record_tab() -> void:
+	_record_tab = RecordTab.new()
+	_record_tab.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_record_tab.visible = false
+	_record_tab.mission_requested.connect(_on_mission_requested)
+	_record_tab.stats_requested.connect(func() -> void: stats_requested.emit())
+	_record_tab.replay_list_requested.connect(func() -> void: replay_list_requested.emit())
+	deck_tab.get_parent().add_child(_record_tab)
+	deck_tab.get_parent().move_child(_record_tab, 2)
 
-	_solo_nav_button = deck_nav_button.duplicate(0) as Button
-	_solo_nav_button.text = "ソロ"
-	_solo_nav_button.pressed.connect(_select_tab.bind(TAB_SOLO))
-	deck_nav_button.get_parent().add_child(_solo_nav_button)
-	deck_nav_button.get_parent().move_child(_solo_nav_button, 2)
+	_record_nav_button = deck_nav_button.duplicate(0) as Button
+	_record_nav_button.text = TAB_LABELS[TAB_RECORD]
+	_record_nav_button.pressed.connect(_select_tab.bind(TAB_RECORD))
+	deck_nav_button.get_parent().add_child(_record_nav_button)
+
+
+## 受け取れるミッションがあることを、他のタブを見ている間も分かるようにする
+## (GameDesign.md 9章)。**タブ側の印は唯一の手がかり**であり、これが無いと日課は
+## 存在ごと忘れられる。
+func _refresh_record_badge() -> void:
+	if _record_nav_button == null or _record_tab == null:
+		return
+	var count := _record_tab.claimable_count()
+	if _record_nav_button.has_meta("badge") and int(_record_nav_button.get_meta("badge")) == count:
+		return
+	_record_nav_button.set_meta("badge", count)
+	if _record_badge == null:
+		_record_badge = Label.new()
+		_record_badge.add_theme_font_size_override("font_size", 16)
+		_record_badge.add_theme_color_override("font_color", Color(1, 1, 1))
+		_record_badge.add_theme_constant_override("outline_size", 0)
+		_record_badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_record_badge.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		_record_badge.custom_minimum_size = Vector2.ONE * NAV_BADGE_SIZE
+		_record_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		# 丸は専用クラスを足さず、角丸を半径いっぱいまで振った StyleBox で出す。
+		var dot := StyleBoxFlat.new()
+		dot.bg_color = Color(0.86, 0.24, 0.19)
+		dot.set_corner_radius_all(int(NAV_BADGE_SIZE * 0.5))
+		dot.border_width_bottom = 2
+		dot.border_width_top = 2
+		dot.border_width_left = 2
+		dot.border_width_right = 2
+		dot.border_color = Color(0.10, 0.07, 0.05)
+		_record_badge.add_theme_stylebox_override("normal", dot)
+		_record_nav_button.add_child(_record_badge)
+	_record_badge.text = str(count)
+	_record_badge.visible = count > 0
+	_record_badge.position = Vector2(
+		_record_nav_button.size.x - NAV_BADGE_SIZE * 0.9, -NAV_BADGE_SIZE * 0.25
+	)
 
 
 func _on_tab_fade_finished(hidden_tab: Control) -> void:
@@ -245,10 +314,17 @@ func _on_tab_fade_finished(hidden_tab: Control) -> void:
 
 func _apply_nav_style(button: Button, active: bool) -> void:
 	var height: float = NAV_HEIGHT_ACTIVE if active else NAV_HEIGHT_INACTIVE
-	button.custom_minimum_size = Vector2(roundi(height * NAV_ASPECT), height)
+	button.custom_minimum_size = Vector2(NAV_WIDTH, height)
+	# **選択していないタブを下端へ沈め、選択中だけを帯の中央へ置く。**こうすると
+	# 選択中の上端だけが持ち上がってせり出して見える。高さを変えるだけでは上下へ
+	# 均等に伸びるため、せり出しているのか大きいだけなのかが読み取りにくい。
+	button.size_flags_vertical = (Control.SIZE_SHRINK_CENTER if active else Control.SIZE_SHRINK_END)
 	button.add_theme_font_size_override(
 		"font_size", NAV_FONT_ACTIVE if active else NAV_FONT_INACTIVE
 	)
+	# **選択していないタブは沈める**(GameDesign.md 9章)。大きさの差だけでは現在地が
+	# 読み取れないため、彩度と明るさも落とす。
+	button.modulate = Color.WHITE if active else NAV_INACTIVE_TINT
 
 
 ## ホーム画面左上の名札ボタン(真鍮テクスチャ・アイコン・称号・名前)

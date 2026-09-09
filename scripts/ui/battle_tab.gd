@@ -1,17 +1,27 @@
 class_name BattleTab
 extends Control
+## ホーム画面の「たたかう」タブ(GameDesign.md 9章)。
+##
+## **対局の入口をすべてここへ集める。**以前はランダムマッチがこのタブ、CPU戦とパズルが
+## ソロタブ、誘導対局がルールタブにあり、「いまから1局遊びたい」の行き先が決まらなかった。
+## 上枠「だれかと」・下枠「ひとりで」の2つに分け、オンラインを上に置く。
+##
+## **クラス名は `BattleTab` のまま変えない。**`scenes/battle_tab.tscn` を
+## `scenes/home_screen.tscn` が instance しており、名前を変えると参照の書き換えという
+## 実害のある作業を招く(`DeckTab` / `RulesTab` を変えないのと同じ理由。Architecture.md 4章)。
+## 画面に出る名前が「たたかう」であることと、意味の上でも食い違わない。
 
 ## ここで成立するのはランダムマッチだけ(ルームマッチは専用画面が持つ。
 ## GameDesign.md 11章)。対局種別は受け取った側が「ランダム」として扱う。
 signal online_match_found(match_id: String, my_side: int, opponent_uid: String)
 signal resume_requested(record: Dictionary)
-signal stats_requested
-signal mission_requested
-signal replay_list_requested
 signal random_match_deck_requested
 ## ルームマッチの専用画面を開く。デッキ選択もその画面の中で行うため、
 ## 他の導線と違ってここでデッキ選択画面を挟まない(GameDesign.md 9章)。
 signal room_match_requested
+signal cpu_match_requested
+signal puzzle_requested
+signal solo_requested
 
 ## 通信待ち中の「...」演出。3個目まで打ってから空に戻る(対局画面の待機表現と統一)。
 const BUSY_DOTS_MAX := 3
@@ -20,36 +30,47 @@ const BUSY_DOTS_INTERVAL := 0.5
 const ANNOUNCE_BADGE_GAP := 8.0
 ## 印にカーソルを乗せたときだけ出す説明(GameDesign.md 11章)。
 const ANNOUNCE_NOTE := "公式Discordサーバーへ「対戦相手をさがしている人がいる」と通知を送りました"
-## 札の大きさ。**タブに与えられた領域(上端112px〜下部タブ)に対して中身が小さく、
-## 上下へ大きく余っていた**ため、指で押せる寸法(GameDesign.md 9章)へ寄せて背を高くした。
-## 行を増やすと収まらないので、増やすのは高さだけにする。
-const MAIN_TILE_SIZE := Vector2(360, 128)
-## 3枚並ぶため幅を広げる余地がほとんど無い。**背を高くすると紋章の透かしが太り、
-## 文字に使える幅がそのぶん減る**(「ミッション」が「ミッショ」で切れた)ので、
-## 高さの伸びは控えめにして見出しを1段小さくする。
-const SIDE_TILE_SIZE := Vector2(202, 84)
-const SIDE_FONT_SIZE := 18
+
+## アカウント帯を避ける上端と、下部タブに接する下端。他のタブと同じ値。
+const TOP_BAND := 112.0
+const BOTTOM := 560.0
+const FRAME_X := 140.0
+const FRAME_W := 1000.0
+## 復帰の帯(GameDesign.md 9章)。**急ぐ用件なので最上段へ置く。**
+const RESUME_RECT := Rect2(FRAME_X, TOP_BAND + 4.0, FRAME_W, 46.0)
+const RESUME_GAP := 16.0
+
+const ONLINE_FRAME_H := 164.0
+const SOLO_FRAME_H := 186.0
+const FRAME_GAP := 18.0
+const TILE_TOP := 46.0
+const TILE_PAD := 20.0
+const MAIN_TILE_SIZE := Vector2(600, 100)
+const SIDE_TILE_SIZE := Vector2(340, 100)
+const SOLO_TILE_SIZE := Vector2(306, 114)
+const SOLO_TILE_GAP := 320.0
+const MAIN_FONT_SIZE := 30
+const SIDE_FONT_SIZE := 24
+const SOLO_FONT_SIZE := 22
 
 var _queue: MatchmakingQueue
 var _busy := false
 var _busy_dots_timer: Timer
 var _busy_dot_count := 0
 var _status_base_text := ""
-## 切断した対局へ戻る導線(GameDesign.md 11章)。`.tscn` を書き換えずに済ませるため
-## コードで生成し、戻れる対局があるときだけ出す。
-var _resume_button: Button
-## 戦績(GameDesign.md 19章)。`.tscn` を書き換えずに済ませるためコードで生成する。
-var _stats_button: Button
-var _mission_button: Button
+## 切断した対局へ戻る導線(GameDesign.md 11章)。戻れる対局があるときだけ出す。
+var _resume_band: ResumeBand
+var _online_frame: HomeFrame
+var _solo_frame: HomeFrame
+var _random_tile: HomeTile
+var _room_tile: HomeTile
+var _cpu_tile: HomeTile
 ## 募集をDiscordへ知らせられたときに、待機中の文言の横へ出す丸い印
-## (GameDesign.md 11章)。`.tscn` を書き換えずに済ませるためコードで生成する。
+## (GameDesign.md 11章)。
 var _announce_badge: StatusBadge
+var _solo_tiles: Array[HomeTile] = []
 
 @onready var status_label: Label = $Margin/VBox/StatusLabel
-@onready var random_match_button: Button = $Margin/VBox/MainRow/RandomMatchButton
-@onready var room_match_button: Button = $Margin/VBox/MainRow/RoomMatchButton
-@onready var replay_button: Button = $Margin/VBox/SecondaryRow/ReplayButton
-@onready var cpu_match_button: Button = $Margin/VBox/SecondaryRow/CpuMatchButton
 @onready var cancel_button: Button = $CancelButton
 
 
@@ -58,26 +79,86 @@ func _ready() -> void:
 	_busy_dots_timer.wait_time = BUSY_DOTS_INTERVAL
 	_busy_dots_timer.timeout.connect(_on_busy_dots_timeout)
 	add_child(_busy_dots_timer)
-	# **入口は `HomeTile` にする**(GameDesign.md 9章)。`.tscn` を書き換えずに済ませるため、
-	# 置いてある `Button` を同じ場所・同じ大きさの札へ差し替える。
-	random_match_button = _to_tile(
-		random_match_button, "ランダムマッチ", "誰かと当たるまで待ちます", "burst", 27, MAIN_TILE_SIZE
-	)
-	room_match_button = _to_tile(
-		room_match_button, "ルームマッチ", "合言葉で友達と対戦します", "shield", 27, MAIN_TILE_SIZE
-	)
-	replay_button = _to_tile(replay_button, "リプレイ", "", "eye", SIDE_FONT_SIZE, SIDE_TILE_SIZE)
-	# CPU戦はソロタブへ移した(GameDesign.md 27章)。このタブの並びからは外す。
-	cpu_match_button.queue_free()
-	random_match_button.pressed.connect(func() -> void: random_match_deck_requested.emit())
-	room_match_button.pressed.connect(func() -> void: room_match_requested.emit())
-	replay_button.pressed.connect(func() -> void: replay_list_requested.emit())
+	_take_over_status_label()
+	_build()
 	cancel_button.pressed.connect(_on_cancel_pressed)
-	_build_resume_button()
-	_build_stats_button()
-	_build_side_buttons()
-	_build_announce_badge()
 	refresh()
+
+
+## `.tscn` の縦並び(`Margin/VBox`)は、枠を絶対座標へ置く新しい構成では使えない。
+## **待機中の文言だけを引き取り、残りは捨てる。**`.tscn` そのものは書き換えない
+## (`scenes/home_screen.tscn` が instance しているため。Architecture.md 4章)。
+func _take_over_status_label() -> void:
+	var margin: Node = $Margin
+	status_label.get_parent().remove_child(status_label)
+	add_child(status_label)
+	margin.queue_free()
+	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	_announce_badge = StatusBadge.new()
+	status_label.add_child(_announce_badge)
+
+
+func _build() -> void:
+	_resume_band = ResumeBand.make(RESUME_RECT)
+	_resume_band.pressed.connect(_on_resume_pressed)
+	add_child(_resume_band)
+
+	_online_frame = HomeFrame.make(Rect2(Vector2.ZERO, Vector2(FRAME_W, ONLINE_FRAME_H)), "だれかと")
+	add_child(_online_frame)
+	_random_tile = HomeTile.make(
+		"ランダムマッチ", "いますぐ相手を探す", "burst", MAIN_TILE_SIZE, MAIN_FONT_SIZE, true
+	)
+	_random_tile.pressed.connect(func() -> void: random_match_deck_requested.emit())
+	add_child(_random_tile)
+	_room_tile = HomeTile.make("ルームマッチ", "合言葉で友達と", "shield", SIDE_TILE_SIZE, SIDE_FONT_SIZE)
+	_room_tile.pressed.connect(func() -> void: room_match_requested.emit())
+	add_child(_room_tile)
+
+	_solo_frame = HomeFrame.make(Rect2(Vector2.ZERO, Vector2(FRAME_W, SOLO_FRAME_H)), "ひとりで")
+	add_child(_solo_frame)
+	# **副題で「自由な対局」と「決まった課題」を対比させる**(GameDesign.md 9章)。
+	# ソロモードはCPU対戦型・パズル型を含む上位集合であり、並べただけでは関係が読めない。
+	# **固定の数を書かない**——ステージを足したときに嘘になる。
+	_cpu_tile = HomeTile.make("CPU戦", "好きなデッキで1局", "hour", SOLO_TILE_SIZE, SOLO_FONT_SIZE)
+	_cpu_tile.pressed.connect(func() -> void: cpu_match_requested.emit())
+	add_child(_cpu_tile)
+	var solo_tile := HomeTile.make("ソロモード", "決まった条件の関門に挑む", "crown", SOLO_TILE_SIZE, SOLO_FONT_SIZE)
+	solo_tile.pressed.connect(func() -> void: solo_requested.emit())
+	add_child(solo_tile)
+	var puzzle_tile := HomeTile.make("リーサルパズル", "1手番で仕留める", "sword", SOLO_TILE_SIZE, SOLO_FONT_SIZE)
+	puzzle_tile.pressed.connect(func() -> void: puzzle_requested.emit())
+	add_child(puzzle_tile)
+	_solo_tiles = [_cpu_tile, solo_tile, puzzle_tile]
+	_layout()
+
+
+## 復帰の帯の有無で全体の位置が変わる。**どちらの場合も、与えられた領域
+## (上端112px〜下部タブ)の中央へ置く。**上端へ寄せると下半分がまるごと空き、
+## 帯の有無で上下の余白が食い違う。
+func _layout() -> void:
+	var stack: float = ONLINE_FRAME_H + FRAME_GAP + SOLO_FRAME_H
+	var band_on: bool = _resume_band != null and _resume_band.visible
+	if band_on:
+		stack += RESUME_RECT.size.y + RESUME_GAP
+	var origin: float = TOP_BAND + (BOTTOM - TOP_BAND - stack) * 0.5
+	var top := origin
+	if band_on:
+		_resume_band.position = Vector2(FRAME_X, origin)
+		top = origin + RESUME_RECT.size.y + RESUME_GAP
+	_online_frame.position = Vector2(FRAME_X, top)
+	_random_tile.position = _online_frame.position + Vector2(TILE_PAD, TILE_TOP)
+	_room_tile.position = (
+		_online_frame.position + Vector2(TILE_PAD + MAIN_TILE_SIZE.x + TILE_PAD, TILE_TOP)
+	)
+	var solo_top: float = top + ONLINE_FRAME_H + FRAME_GAP
+	_solo_frame.position = Vector2(FRAME_X, solo_top)
+	for i in _solo_tiles.size():
+		_solo_tiles[i].position = (
+			_solo_frame.position + Vector2(TILE_PAD + float(i) * SOLO_TILE_GAP, TILE_TOP + 2.0)
+		)
+	# 待機中の文言は、枠の見出しの右へ渡す(枠の中に置くと札へ被る)。
+	status_label.position = Vector2(FRAME_X + 240.0, top - 26.0)
+	status_label.size = Vector2(FRAME_W - 260.0, 30.0)
 
 
 func refresh() -> void:
@@ -86,69 +167,19 @@ func refresh() -> void:
 	_refresh_resume()
 	# 未保存でもプリセットの「基本」が返るため、常に対戦できる(GameDesign.md 18章)。
 	var ready_to_battle: bool = CardDeckSave.selected_deck().size() == MatchState.DECK_SIZE
-	random_match_button.disabled = not ready_to_battle
-	room_match_button.disabled = not ready_to_battle
-	_set_status("対戦できます" if ready_to_battle else "デッキを%d枚にしてください" % MatchState.DECK_SIZE)
-
-
-func _build_resume_button() -> void:
-	_resume_button = HomeTile.make("前回の対局へ戻る", "途中の対局が残っています", "hour", Vector2(360, 76), 21)
-	_resume_button.visible = false
-	_resume_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	_resume_button.pressed.connect(_on_resume_pressed)
-	var column: Control = status_label.get_parent()
-	column.add_child(_resume_button)
-	column.move_child(_resume_button, 0)
-
-
-func _build_announce_badge() -> void:
-	_announce_badge = StatusBadge.new()
-	status_label.add_child(_announce_badge)
-
-
-## 「戦績」はリプレイ・CPU戦と同じ「対局そのものではない導線」のため、専用の行を作らず
-## 同じ行へ並べる。行を1つ増やすと、タブの高さ(下部タブに挟まれた領域)を超える。
-func _build_stats_button() -> void:
-	_stats_button = HomeTile.make("戦績", "", "crown", SIDE_TILE_SIZE, SIDE_FONT_SIZE)
-	_stats_button.pressed.connect(func() -> void: stats_requested.emit())
-	replay_button.get_parent().add_child(_stats_button)
-
-
-## `.tscn` に置いてある `Button` を、同じ場所・同じ大きさの `HomeTile` へ置き換える。
-func _to_tile(
-	button: Button,
-	title: String,
-	subtitle: String,
-	emblem_id: String,
-	font_size: int,
-	tile_size := Vector2.ZERO
-) -> HomeTile:
-	var parent := button.get_parent()
-	var wanted: Vector2 = tile_size if tile_size != Vector2.ZERO else button.custom_minimum_size
-	var tile := HomeTile.make(title, subtitle, emblem_id, wanted, font_size)
-	tile.size_flags_horizontal = button.size_flags_horizontal
-	tile.size_flags_vertical = button.size_flags_vertical
-	parent.add_child(tile)
-	parent.move_child(tile, button.get_index())
-	parent.remove_child(button)
-	button.queue_free()
-	return tile
-
-
-## デイリーミッション(GameDesign.md 23章)も、対局そのものではない導線として
-## 「戦績」と同じ行に並べる。リーサルパズル・CPU戦はソロタブへ移した(27章)。
-func _build_side_buttons() -> void:
-	_mission_button = HomeTile.make("ミッション", "", "halo", SIDE_TILE_SIZE, SIDE_FONT_SIZE)
-	_mission_button.pressed.connect(func() -> void: mission_requested.emit())
-	replay_button.get_parent().add_child(_mission_button)
+	_random_tile.disabled = not ready_to_battle
+	_room_tile.disabled = not ready_to_battle
+	_cpu_tile.disabled = not ready_to_battle
+	_set_status("" if ready_to_battle else "デッキを%d枚にしてください" % MatchState.DECK_SIZE)
 
 
 ## 覚えている対局があるときだけ出す。終わっているかどうかは押した時点で確かめる
 ## (毎回ホームで通信すると、オフラインでも遊べるという前提を崩すため)。
 func _refresh_resume() -> void:
-	if _resume_button == null:
+	if _resume_band == null:
 		return
-	_resume_button.visible = not OnlineResume.pending().is_empty()
+	_resume_band.visible = not OnlineResume.pending().is_empty()
+	_layout()
 
 
 func _on_resume_pressed() -> void:
@@ -169,8 +200,9 @@ func _on_resume_pressed() -> void:
 ## 通信の完了を待つだけの短い処理では出さない。
 func _set_busy(busy: bool, cancellable: bool = false) -> void:
 	_busy = busy
-	random_match_button.disabled = busy
-	room_match_button.disabled = busy
+	_random_tile.disabled = busy
+	_room_tile.disabled = busy
+	_cpu_tile.disabled = busy
 	cancel_button.visible = busy and cancellable
 	if busy:
 		_busy_dot_count = 0
@@ -187,7 +219,6 @@ func _set_busy(busy: bool, cancellable: bool = false) -> void:
 ## ボタンが押せない状態が残る。
 func reset_after_match() -> void:
 	_discard_session()
-	# ボタンの再有効化・キャンセルボタンを隠す・文言の戻しは _set_busy(false) が全て行う。
 	_set_busy(false)
 
 
@@ -229,8 +260,7 @@ func _place_announce_badge() -> void:
 	var text := _status_base_text + ".".repeat(BUSY_DOTS_MAX)
 	var text_width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
 	_announce_badge.position = Vector2(
-		(status_label.size.x + text_width) * 0.5 + ANNOUNCE_BADGE_GAP,
-		(status_label.size.y - StatusBadge.DIAMETER) * 0.5
+		text_width + ANNOUNCE_BADGE_GAP, (status_label.size.y - StatusBadge.DIAMETER) * 0.5
 	)
 
 

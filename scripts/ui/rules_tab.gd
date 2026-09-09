@@ -26,7 +26,6 @@ const FRAME_GAP := 18.0
 const FRAME_PADDING := 18.0
 
 const CAPTION_FONT_SIZE := 17
-const HEADING_FONT_SIZE := 21
 
 ## 誘導対局(GameDesign.md 18章)。**まだ遊んでいない間はいちばん大きく出す**。
 ## 読み物より先に、実際に手を指して覚えられることを示すため。終えたら他と同じ大きさへ下げる。
@@ -68,10 +67,13 @@ func _ready() -> void:
 
 func _build_play_frame() -> void:
 	var rect := Rect2(FRAME_RECT.position, Vector2(FRAME_RECT.size.x, PLAY_FRAME_HEIGHT))
-	_add_frame(rect, "遊んで覚える")
+	add_child(HomeFrame.make(rect, "遊んで覚える"))
 	var first_time := not UiState.has_done_tutorial()
 	var button_size: Vector2 = PLAY_BUTTON_SIZE if first_time else PLAY_BUTTON_SIZE_DONE
-	var button := CodedButton.make("1局遊んで覚える", button_size)
+	# **まだ遊んでいない間はこのタブの主役**(9章の3段)。一度終えたら他と同じ面へ落とす。
+	var button := CodedButton.make_in_group(
+		"1局遊んで覚える", button_size, "primary_action" if first_time else CodedButton.WIDE_GROUP
+	)
 	button.add_theme_font_size_override(
 		"font_size", PLAY_FONT_SIZE if first_time else PLAY_FONT_SIZE_DONE
 	)
@@ -97,7 +99,7 @@ func _build_read_frame() -> void:
 	var rect := Rect2(
 		Vector2(FRAME_RECT.position.x, top), Vector2(FRAME_RECT.size.x, READ_FRAME_HEIGHT)
 	)
-	_add_frame(rect, "読んで覚える")
+	add_child(HomeFrame.make(rect, "読んで覚える"))
 	var width: float = READ_BUTTON_SIZE.x * READ_ITEMS.size() + READ_GAP * (READ_ITEMS.size() - 1)
 	var left: float = rect.position.x + (rect.size.x - width) * 0.5
 	var handlers: Array[Callable] = [
@@ -123,26 +125,6 @@ func _build_read_frame() -> void:
 
 
 ## 枠。中身は絶対座標で置くため、器はパネルと見出しだけを持つ。
-func _add_frame(rect: Rect2, heading: String) -> void:
-	var panel := Panel.new()
-	panel.position = rect.position
-	panel.size = rect.size
-	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var style: StyleBox = load("res://resources/theme/content_panel.tres")
-	if style != null:
-		panel.add_theme_stylebox_override("panel", style)
-	add_child(panel)
-
-	var label := Label.new()
-	label.text = heading
-	label.position = rect.position + Vector2(FRAME_PADDING, 12.0)
-	label.size = Vector2(rect.size.x - FRAME_PADDING * 2.0, 28)
-	label.add_theme_font_size_override("font_size", HEADING_FONT_SIZE)
-	label.add_theme_color_override("font_color", UiPalette.GLOW_AMBER)
-	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(label)
-
-
 func _add_caption(text: String, rect: Rect2) -> void:
 	var label := Label.new()
 	label.text = text

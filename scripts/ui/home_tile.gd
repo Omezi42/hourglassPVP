@@ -13,16 +13,32 @@ extends Button
 ## native の中央揃え1行では収まらない。
 
 const EMBLEM_ALPHA := 0.17
+## 紋章の透かしの上限。**比率だけで決めると、大きな札(そろえるタブのデッキ編集は
+## 600x306px)で紋章が文字より主張する**(モックで実際に起きた)。比率で求めたうえで
+## ここで止める。
+const EMBLEM_MAX_SIDE := 96.0
 const TITLE_COLOR := Color(0.96, 0.94, 0.89)
 const TITLE_DIM := Color(0.58, 0.55, 0.52)
 const SUB_COLOR := Color(0.96, 0.82, 0.45)
 const SUB_DIM := Color(0.52, 0.48, 0.42)
+## 塗りつぶした真鍮の面(`primary`)へ載せる副題。琥珀のままだと明るい面に沈む。
+const SUB_ON_BRASS := Color(0.30, 0.20, 0.07)
 const PADDING := 26.0
+## 未受取の印(GameDesign.md 9章)。
+const BADGE_COLOR := Color(0.86, 0.24, 0.19)
+const BADGE_RADIUS := 15.0
 
 var title := ""
 var subtitle := ""
 var title_size := 26
 var emblem: Texture2D
+## 塗りつぶした真鍮の面にする(そのタブでいちばんやってほしいこと1つだけ)。
+var primary := false
+## 0 より大きいとき、右上へ数の印を打つ。
+var badge_count := 0:
+	set(value):
+		badge_count = value
+		queue_redraw()
 
 var _font: Font
 
@@ -33,13 +49,19 @@ static func make(
 	tile_subtitle: String,
 	emblem_id: String,
 	tile_size: Vector2,
-	font_size := 26
+	font_size := 26,
+	is_primary := false
 ) -> HomeTile:
 	var tile := HomeTile.new()
 	tile.title = tile_title
 	tile.subtitle = tile_subtitle
 	tile.title_size = font_size
 	tile.emblem = UserProfileLibrary.get_icon_texture(emblem_id)
+	# **主役の面はここで当てる。**タブごとに外から `apply_styles()` を呼ぶ形にすると、
+	# 呼び忘れた画面だけ強弱が崩れる(GameDesign.md 9章の3段)。
+	if is_primary:
+		tile.primary = true
+		CodedButton.apply_styles(tile, "primary_action")
 	tile.custom_minimum_size = tile_size
 	tile.size = tile_size
 	return tile
@@ -75,10 +97,19 @@ func _text_width() -> float:
 func _emblem_rect() -> Rect2:
 	var panel := CodedButtonStyle.inner_rect(Rect2(Vector2.ZERO, size))
 	var side: float = minf(panel.size.y * 0.94, panel.size.x * 0.5)
+	side = minf(side, EMBLEM_MAX_SIDE)
 	return Rect2(
 		Vector2(panel.end.x - side - panel.size.y * 0.06, panel.get_center().y - side * 0.5),
 		Vector2(side, side)
 	)
+
+
+## 見出しの基準線。**小さな札では中央、大きな札では上寄せにする。**中央のまま背を
+## 高くすると、文字が札の真ん中へ沈んで「余白の中に置き忘れた」ように見える
+## (モックでそろえるタブのデッキ編集がそうなった)。
+func _title_center() -> float:
+	var centered: float = size.y * (0.48 if not subtitle.is_empty() else 0.5)
+	return minf(centered, PADDING + float(title_size) * 1.5)
 
 
 func _draw() -> void:
@@ -94,8 +125,7 @@ func _draw() -> void:
 			Color(UiPalette.BRASS_HIGHLIGHT, EMBLEM_ALPHA * (0.4 if dim else 1.0))
 		)
 	var has_sub := not subtitle.is_empty()
-	var center: float = size.y * (0.48 if has_sub else 0.5)
-	var title_y: float = center + float(title_size) * 0.36
+	var title_y: float = _title_center() + float(title_size) * 0.36
 	draw_string(
 		_font,
 		Vector2(PADDING, title_y),
@@ -106,6 +136,7 @@ func _draw() -> void:
 		TITLE_DIM if dim else TITLE_COLOR
 	)
 	if has_sub:
+		var sub_color := SUB_ON_BRASS if primary else SUB_COLOR
 		draw_string(
 			_font,
 			Vector2(PADDING, title_y + float(title_size) * 0.92),
@@ -113,5 +144,32 @@ func _draw() -> void:
 			HORIZONTAL_ALIGNMENT_LEFT,
 			_text_width(),
 			maxi(title_size - 10, 13),
-			SUB_DIM if dim else SUB_COLOR
+			SUB_DIM if dim else sub_color
 		)
+	if badge_count > 0:
+		draw_badge(self, Vector2(size.x - BADGE_RADIUS - 4.0, BADGE_RADIUS + 4.0), badge_count)
+
+
+## 未受取の数の印(GameDesign.md 9章)。**札と下部タブの両方へ同じ形で打つ**ため
+## static にしてある——タブのボタンは `HomeTile` ではなく `CodedButton` で作られており、
+## そこへも同じ印が要る。
+static func draw_badge(target: CanvasItem, at: Vector2, count: int) -> void:
+	var font := ThemeDB.fallback_font
+	if target is Control:
+		var theme_font := (target as Control).get_theme_default_font()
+		if theme_font != null:
+			font = theme_font
+	target.draw_circle(at, BADGE_RADIUS + 2.0, Color(0.10, 0.07, 0.05, 0.9))
+	target.draw_circle(at, BADGE_RADIUS, BADGE_COLOR)
+	var text := str(count)
+	var font_size := 17
+	var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	target.draw_string(
+		font,
+		at + Vector2(-width * 0.5, float(font_size) * 0.36),
+		text,
+		HORIZONTAL_ALIGNMENT_LEFT,
+		-1,
+		font_size,
+		Color(1, 1, 1)
+	)

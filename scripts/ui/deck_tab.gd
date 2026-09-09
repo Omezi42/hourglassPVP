@@ -20,7 +20,8 @@ const SIDE_TILE_SIZE := Vector2(272, 112)
 
 
 func _ready() -> void:
-	deck_edit_button = _to_tile(deck_edit_button, "デッキ編集", "sand", 30, MAIN_TILE_SIZE)
+	# **そのタブでいちばんやってほしいこと1つだけを塗りつぶした真鍮にする**(9章の3段)。
+	deck_edit_button = _to_tile(deck_edit_button, "デッキ編集", "sand", 30, MAIN_TILE_SIZE, true)
 	hourglass_list_button = _to_tile(hourglass_list_button, "砂時計図鑑", "eye", 22, SIDE_TILE_SIZE)
 	shop_button = _to_tile(shop_button, "ショップ", "crown", 22, SIDE_TILE_SIZE)
 	deck_edit_button.pressed.connect(func() -> void: deck_edit_pressed.emit())
@@ -54,10 +55,15 @@ static func _card_count() -> int:
 ## `.tscn` に置いてある `Button` を、同じ場所・同じ大きさの `HomeTile` へ置き換える。
 ## **`.tscn` を書き換えずに済ませるため**の手当てで、並び順(`get_index()`)も引き継ぐ。
 func _to_tile(
-	button: Button, title: String, emblem_id: String, font_size: int, tile_size: Vector2
+	button: Button,
+	title: String,
+	emblem_id: String,
+	font_size: int,
+	tile_size: Vector2,
+	is_primary := false
 ) -> HomeTile:
 	var parent := button.get_parent()
-	var tile := HomeTile.make(title, "", emblem_id, tile_size, font_size)
+	var tile := HomeTile.make(title, "", emblem_id, tile_size, font_size, is_primary)
 	tile.size_flags_horizontal = button.size_flags_horizontal
 	tile.size_flags_vertical = button.size_flags_vertical
 	parent.add_child(tile)
