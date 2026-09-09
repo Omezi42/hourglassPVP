@@ -82,12 +82,24 @@ static func owned_emote_ids() -> Array[String]:
 	return _owned(EmoteLibrary.DEFAULT_EMOTE_IDS, "owned_emotes")
 
 
+## 所有しているカードセットのid(GameDesign.md 8章・27章)。**基本セット70枚は
+## この配列に頼らない**(`CardData.set_id`が空文字のカードは常にデッキへ入れられる)。
+static func owned_card_set_ids() -> Array[String]:
+	return _owned([] as Array[String], "owned_card_sets")
+
+
+static func owns_card_set(set_id: String) -> bool:
+	return set_id.is_empty() or owned_card_set_ids().has(set_id)
+
+
 static func owns(kind: ShopCatalog.Kind, id: String) -> bool:
 	match kind:
 		ShopCatalog.Kind.EMOTE:
 			return owned_emote_ids().has(id)
 		ShopCatalog.Kind.PLAYMAT:
 			return owned_playmat_ids().has(id)
+		ShopCatalog.Kind.CARD_SET:
+			return owned_card_set_ids().has(id)
 		_:
 			return owned_icon_ids().has(id)
 
@@ -190,6 +202,40 @@ static func purchase(
 	return {"ok": false, "message": "購入できませんでした。接続を確認してください。"}
 
 
+## 無料でカードセットを解放する(ソロモードのステージ報酬など。GameDesign.md 27章)。
+## `purchase()`と違い残高の確認・減算を行わない。**通信は待たない**のが前提の
+## 呼び出し元(`CardMatchSolo`)もあるため、`await`せずに呼んでも動くよう
+## `grant()`と同じ「未サインイン・失敗時はローカルへ退避」の形にしてある。
+static func unlock_card_set(client: FirestoreClient, uid: String, set_id: String) -> void:
+	if owned_card_set_ids().has(set_id):
+		return
+	if uid == "" or client == null:
+		AccountStore.add_pending_card_set(set_id)
+		return
+	for _attempt in range(GRANT_RETRY):
+		var doc: Dictionary = await client.get_document_meta(_path(uid))
+		var fields: Dictionary = doc.get("fields", {})
+		var owned: Array = fields.get("owned_card_sets", [])
+		if owned.has(set_id):
+			_profile["owned_card_sets"] = owned
+			_save_unlocks_locally()
+			return
+		var next_owned := owned.duplicate()
+		next_owned.append(set_id)
+		var data := {"owned_card_sets": next_owned, "updated_at": Time.get_unix_time_from_system()}
+		var precondition := {}
+		if bool(doc.get("exists", false)) and str(doc.get("update_time", "")) != "":
+			precondition = {"updateTime": doc["update_time"]}
+		var ok: bool = await client.commit([client.update_write(_path(uid), data, precondition)])
+		if ok:
+			for field in data:
+				_profile[field] = data[field]
+			AccountStore.clear_pending_card_set(set_id)
+			_save_unlocks_locally()
+			return
+	AccountStore.add_pending_card_set(set_id)
+
+
 ## 所有・枠のフィールドを読む。プロフィールが空(オフライン)ならローカルの控えを見る。
 ## 品種ごとの所有リストのキー。**購入と所有の判定で同じものを使う**。
 static func _unlock_key(kind: ShopCatalog.Kind) -> String:
@@ -198,6 +244,8 @@ static func _unlock_key(kind: ShopCatalog.Kind) -> String:
 			return "owned_emotes"
 		ShopCatalog.Kind.PLAYMAT:
 			return "owned_playmats"
+		ShopCatalog.Kind.CARD_SET:
+			return "owned_card_sets"
 		_:
 			return "owned_icons"
 
@@ -225,7 +273,8 @@ static func _save_unlocks_locally() -> void:
 		_profile.get("owned_icons", []),
 		_profile.get("owned_emotes", []),
 		_profile.get("emote_slots", []),
-		_profile.get("owned_playmats", [])
+		_profile.get("owned_playmats", []),
+		_profile.get("owned_card_sets", [])
 	)
 
 
@@ -240,8 +289,17 @@ static func load_profile(client: FirestoreClient, uid: String) -> void:
 		_profile[key] = fields[key]
 	if _profile.get("icon_id", "") != "" or _profile.get("title_id", "") != "":
 		AccountStore.save_local_customization(icon_id(), title_id())
-	if fields.has("owned_icons") or fields.has("owned_emotes") or fields.has("owned_playmats"):
+	if (
+		fields.has("owned_icons")
+		or fields.has("owned_emotes")
+		or fields.has("owned_playmats")
+		or fields.has("owned_card_sets")
+	):
 		_save_unlocks_locally()
+	# 前回サインアウト中に無料付与が通らなかった分を、ここで流し直す
+	# (GameDesign.md 27章)。既に所有済みなら `unlock_card_set()` の先頭で何もしない。
+	for pending_id in AccountStore.get_pending_card_sets():
+		unlock_card_set(client, uid, str(pending_id))
 
 
 static func save_display_name(client: FirestoreClient, uid: String, name: String) -> bool:
@@ -406,6 +464,7 @@ static func _empty_profile() -> Dictionary:
 		"owned_icons": [],
 		"owned_emotes": [],
 		"owned_playmats": [],
+		"owned_card_sets": [],
 		"emote_slots": [],
 		"playmat_id": "",
 	}

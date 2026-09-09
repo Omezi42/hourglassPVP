@@ -125,9 +125,14 @@ static func default_deck() -> Array:
 
 
 ## ランダムな混成デッキ(CPUの相手用)。同名2枚までの制限を守る。
+## **カードセット(GameDesign.md 8章)に属するカードは常に除く**(Architecture.md 10.8.1節)。
+## プレイヤーが未所有の可能性があるカードをCPUだけが使う状態を避けるため、
+## 所有状態は見ずに`set_id`が空でないものを一律で弾く。
 static func random_deck(rng: RandomNumberGenerator) -> Array:
 	var pool: Array = []
 	for card in CardLibrary.all_cards():
+		if not card.set_id.is_empty():
+			continue
 		for i in COPY_LIMIT:
 			pool.append(card)
 	for i in range(pool.size() - 1, 0, -1):

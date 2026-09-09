@@ -28,8 +28,8 @@ const SPELL_BOTTOM := Color(0.28, 0.36, 0.68)
 var card: CardData
 var number := 0
 var selected := false
-## 未収集(GameDesign.md 9章)。**保有の仕組みが入るまでは常に false** で、
-## 全件を収集済みとして扱う。枠組みだけ先に作っておく。
+## 未収集(GameDesign.md 9章)。カードセット(8章)に属し、まだ所有していないカードで
+## true になる。基本セット70枚は`CardData.set_id`が空のため常にfalse。
 var locked := false
 
 var _font: Font
@@ -51,6 +51,10 @@ func show_card(new_card: CardData, new_number: int) -> void:
 
 
 func _gui_input(event: InputEvent) -> void:
+	# 未収集のカードは詳細を開かせない。「シルエットと『?』で示す」(GameDesign.md 9章)
+	# 以上、押して中身を読めてしまうと未収集の意味が無くなる。
+	if locked:
+		return
 	if _press.feed(event, size) == PressTracker.Result.CONFIRMED:
 		pressed.emit(card)
 

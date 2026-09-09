@@ -8,7 +8,7 @@ extends RefCounted
 ## 規則と値段だけを持つ。品揃えを別の表にすると、アイコンを1つ足したときに
 ## 並べ忘れた品と、初期解放でも購入品でもないどこにも出ないidが生まれる。
 
-enum Kind { ICON, EMOTE, PLAYMAT }
+enum Kind { ICON, EMOTE, PLAYMAT, CARD_SET }
 
 ## ランダムマッチの勝利(30)を1勝として、アイコンは3勝ぶん・エモートは5勝ぶん。
 ## エモートのほうが高いのは、4つの枠へセットする(GameDesign.md 9章)ぶん、
@@ -31,6 +31,10 @@ static func items() -> Array[Dictionary]:
 			list.append({"kind": Kind.EMOTE, "id": emote_id})
 	for mat_id in PlaymatLibrary.purchasable_ids():
 		list.append({"kind": Kind.PLAYMAT, "id": mat_id})
+	# **`price == 0`のカードセット(ソロモードセット等)は並べない**(GameDesign.md 8章)。
+	# ステージクリアのような買い切り以外の経路でしか所有できないため。
+	for set_id in CardSetLibrary.purchasable_ids():
+		list.append({"kind": Kind.CARD_SET, "id": set_id})
 	return list
 
 
@@ -41,6 +45,8 @@ static func price(kind: Kind, id := "") -> int:
 			return EMOTE_PRICE
 		Kind.PLAYMAT:
 			return PlaymatLibrary.price(id)
+		Kind.CARD_SET:
+			return CardSetLibrary.price(id)
 		_:
 			return ICON_PRICE
 
@@ -52,6 +58,8 @@ static func item_name(kind: Kind, id: String) -> String:
 			return EmoteLibrary.get_emote_name(id)
 		Kind.PLAYMAT:
 			return PlaymatLibrary.display_name(id)
+		Kind.CARD_SET:
+			return CardSetLibrary.display_name(id)
 		_:
 			return UserProfileLibrary.get_icon_name(id)
 
@@ -64,6 +72,10 @@ static func item_detail(kind: Kind, id: String) -> String:
 			return "「%s」" % EmoteLibrary.get_emote_text(id)
 		Kind.PLAYMAT:
 			return "対局の卓に敷く"
+		Kind.CARD_SET:
+			# 中身のカードそのものは砂時計一覧・デッキ編集で確認できるため、
+			# ここでは狙いの1行と枚数だけを添える(GameDesign.md 21章)。
+			return "%s(%d枚)" % [CardSetLibrary.description(id), CardSetLibrary.card_ids(id).size()]
 		_:
 			return "アイコン"
 
@@ -74,6 +86,8 @@ static func kind_name(kind: Kind) -> String:
 			return "エモート"
 		Kind.PLAYMAT:
 			return "プレイマット"
+		Kind.CARD_SET:
+			return "カードセット"
 		_:
 			return "アイコン"
 

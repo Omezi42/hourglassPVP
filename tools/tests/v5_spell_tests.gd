@@ -18,13 +18,21 @@ func run(assert_true: Callable) -> void:
 
 
 ## 基本セットは砂時計58種+砂術12種=70枚(GameDesign.md 8章)。
+## **カードセット(8章・27章)は基本セットに混ぜないため、`set_id`が空のものだけで数える。**
 func _test_pool_has_twelve_spells() -> void:
 	var spells: Array = []
+	var base_set: Array = []
 	for card in CardLibrary.all_cards():
 		if card.is_spell:
 			spells.append(card)
-	_assert.call(spells.size() == 12, "砂術は12種(%d)" % spells.size())
-	_assert.call(CardLibrary.all_cards().size() == 70, "基本セットは70枚")
+		if card.set_id.is_empty():
+			base_set.append(card)
+	var base_spells := 0
+	for card in base_set:
+		if card.is_spell:
+			base_spells += 1
+	_assert.call(base_spells == 12, "基本セットの砂術は12種(%d)" % base_spells)
+	_assert.call(base_set.size() == 70, "基本セットは70枚(%d)" % base_set.size())
 	for card in spells:
 		_assert.call(card.keywords.is_empty(), "砂術はキーワードを持たない: " + card.id)
 		_assert.call(not card.cannot_attack, "砂術は攻撃の制約を持たない: " + card.id)

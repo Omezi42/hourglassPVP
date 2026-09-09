@@ -13,6 +13,10 @@ extends Resource
 ## プールへ加えられた順の通し番号(GameDesign.md 9章の「追加順」)。
 ## **ファイル名や一覧の並びから導出しない**。id のアルファベット順は追加順ではないため。
 @export var pool_index: int = 0
+## 所属するカードセットのid(GameDesign.md 8章・21章・27章)。空文字は基本セット
+## (常に所有済み)。空でなければ `players/{uid}.owned_card_sets` に含まれるまで
+## デッキへ入れられない(Architecture.md 10.8.1節)。
+@export var set_id: String = ""
 ## 常在キーワード(GameDesign.md 6章)。0個でよい(バニラ)。
 @export var keywords: Array[CardEnums.Keyword] = []
 ## キーワードで表せない固有効果。0個でよい。

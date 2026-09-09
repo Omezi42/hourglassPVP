@@ -11,6 +11,7 @@ entries = {
 "blank": {"source": "sand", "hue": 0.635000, "sat": 0.550000, "sat_bias": 0.000000, "floor": 0.000000, "value": 1.000000, "value_bias": 0.000000, "threshold": 0.180000},
 "bloom": {"source": "sand", "hue": 0.450000, "sat": 1.050000, "sat_bias": 0.000000, "floor": 0.000000, "value": 1.000000, "value_bias": 0.000000, "threshold": 0.180000},
 "burst": {"source": "sand", "hue": 0.746000, "sat": 1.050000, "sat_bias": 0.000000, "floor": 0.000000, "value": 1.000000, "value_bias": 0.000000, "threshold": 0.180000},
+"chime": {"source": "page", "hue": 0.120000, "sat": 1.000000, "sat_bias": 0.000000, "floor": 0.000000, "value": 1.000000, "value_bias": 0.000000, "threshold": 0.180000},
 "crack": {"source": "sand", "hue": 0.932000, "sat": 1.050000, "sat_bias": 0.000000, "floor": 0.000000, "value": 1.000000, "value_bias": 0.000000, "threshold": 0.180000},
 "crown": {"source": "sand", "hue": 0.524000, "sat": 1.050000, "sat_bias": 0.000000, "floor": 0.000000, "value": 1.000000, "value_bias": 0.000000, "threshold": 0.180000},
 "dash": {"source": "sand", "hue": 0.434328, "sat": 0.863281, "sat_bias": -0.010547, "floor": 0.000000, "value": 1.060938, "value_bias": -0.009961, "threshold": 0.020000},
@@ -60,6 +61,7 @@ entries = {
 "vamp": {"source": "eye", "hue": 0.860000, "sat": 1.100000, "sat_bias": 0.000000, "floor": 0.000000, "value": 1.000000, "value_bias": 0.000000, "threshold": 0.180000},
 "wall": {"source": "sand", "hue": 0.034182, "sat": 0.559570, "sat_bias": -0.144922, "floor": 0.000586, "value": 0.848242, "value_bias": -0.001465, "threshold": 0.020000},
 "wand": {"source": "echo", "hue": 0.450000, "sat": 1.050000, "sat_bias": 0.000000, "floor": 0.000000, "value": 1.000000, "value_bias": 0.000000, "threshold": 0.180000},
+"ward": {"source": "shield", "hue": 0.300000, "sat": 1.000000, "sat_bias": 0.000000, "floor": 0.000000, "value": 1.000000, "value_bias": 0.000000, "threshold": 0.180000},
 "watcher": {"source": "sand", "hue": 0.339000, "sat": 0.550000, "sat_bias": 0.000000, "floor": 0.000000, "value": 1.000000, "value_bias": 0.000000, "threshold": 0.180000},
 "well": {"source": "sand", "hue": 0.228000, "sat": 1.050000, "sat_bias": 0.000000, "floor": 0.000000, "value": 1.000000, "value_bias": 0.000000, "threshold": 0.180000},
 "wheel": {"source": "sand", "hue": 0.672000, "sat": 1.050000, "sat_bias": 0.000000, "floor": 0.000000, "value": 1.000000, "value_bias": 0.000000, "threshold": 0.180000}

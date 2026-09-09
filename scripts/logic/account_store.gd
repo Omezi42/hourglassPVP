@@ -59,6 +59,29 @@ static func clear_pending_currency() -> void:
 	_store(data)
 
 
+## 通信に失敗してカードセットを解放できなかった場合に積む(GameDesign.md 27章)。
+## 砂金の退避(上記)と同じ理由で、ソロモードはCPU戦を含めオフラインでも遊べるため必要。
+static func add_pending_card_set(set_id: String) -> void:
+	var data := _load()
+	var pending: Array = data.get("pending_card_sets", [])
+	if not pending.has(set_id):
+		pending.append(set_id)
+	data["pending_card_sets"] = pending
+	_store(data)
+
+
+static func get_pending_card_sets() -> Array:
+	return _load().get("pending_card_sets", [])
+
+
+static func clear_pending_card_set(set_id: String) -> void:
+	var data := _load()
+	var pending: Array = data.get("pending_card_sets", [])
+	pending.erase(set_id)
+	data["pending_card_sets"] = pending
+	_store(data)
+
+
 ## ローカルにアイコンと称号を保存する(オフライン復帰用)。
 static func save_local_customization(icon_id: String, title_id: String, playmat_id := "") -> void:
 	var data := _load()
@@ -73,13 +96,18 @@ static func save_local_customization(icon_id: String, title_id: String, playmat_
 ## 買う操作そのものは通信を要する(GameDesign.md 21章)が、買った結果は
 ## 次に開いたときへ持ち越せないと、オフラインの間だけアイコンが選べなくなる。
 static func save_local_unlocks(
-	owned_icons: Array, owned_emotes: Array, emote_slots: Array, owned_playmats := []
+	owned_icons: Array,
+	owned_emotes: Array,
+	emote_slots: Array,
+	owned_playmats := [],
+	owned_card_sets := []
 ) -> void:
 	var data := _load()
 	data["owned_icons"] = owned_icons
 	data["owned_emotes"] = owned_emotes
 	data["emote_slots"] = emote_slots
 	data["owned_playmats"] = owned_playmats
+	data["owned_card_sets"] = owned_card_sets
 	_store(data)
 
 
@@ -90,6 +118,7 @@ static func load_local_unlocks() -> Dictionary:
 		"owned_emotes": data.get("owned_emotes", []),
 		"emote_slots": data.get("emote_slots", []),
 		"owned_playmats": data.get("owned_playmats", []),
+		"owned_card_sets": data.get("owned_card_sets", []),
 	}
 
 

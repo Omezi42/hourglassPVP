@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_chime_0"]
+script = ExtResource("script_effect")
+trigger = 1
+target = 5
+effect_type = 6
+value = 1
+card_id = ""
+keyword = -1
+
+[resource]
+script = ExtResource("script_card")
+id = "chime"
+display_name = "刻限の砂"
+cost = 2
+total_sand = 4
+pool_index = 71
+set_id = "solo"
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_chime_0")])
+rules_text = "反転:カードを1枚引く"
+cannot_attack = false
+is_token = false

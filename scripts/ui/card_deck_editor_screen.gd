@@ -252,7 +252,11 @@ func _refresh() -> void:
 		# **枚数は実数を出し、暗転だけを「入れられるか」で決める。**30枚に達した
 		# だけで全部が「2/2」になると、どれを2枚積んだのか読めなくなる。
 		var copies := _count_of(card)
-		var can_add: bool = not full and copies < CardDeckSave.COPY_LIMIT
+		var can_add: bool = (
+			not full
+			and copies < CardDeckSave.COPY_LIMIT
+			and AccountService.owns_card_set(card.set_id)
+		)
 		_card_views[i].show_card(card, copies, CardDeckSave.COPY_LIMIT, can_add)
 	_save_button.disabled = not full
 
@@ -333,6 +337,10 @@ func _add_card(card: CardData) -> void:
 	if _deck.size() >= MatchState.DECK_SIZE:
 		return
 	if _count_of(card) >= CardDeckSave.COPY_LIMIT:
+		return
+	# 未所有のカードセット(GameDesign.md 8章)に属するカードは追加できない。
+	# 一覧側は暗く表示して押させない想定だが、ここでも弾いておく。
+	if not AccountService.owns_card_set(card.set_id):
 		return
 	_deck.append(card)
 	_refresh()
