@@ -13,6 +13,8 @@ func run(assert_true: Callable) -> void:
 	_test_flip_disabled_blocks_normal_flip_but_not_flip_right()
 	_test_clash_damage_multiplier_doubles_combat_damage()
 	_test_mana_frozen_stops_the_max_mana_increase()
+	_test_solo_progress_round_trips_and_reports_first_clear()
+	_test_solo_library_unlock_depends_on_required_stages()
 
 
 func _card(id: String) -> CardData:
@@ -117,4 +119,39 @@ func _test_mana_frozen_stops_the_max_mana_increase() -> void:
 	_assert.call(
 		state.max_mana[MatchState.Side.A] == 1,
 		"mana_frozen should keep applying to later turns too"
+	)
+
+
+func _test_solo_progress_round_trips_and_reports_first_clear() -> void:
+	SoloProgress.reset_for_test()
+	_assert.call(
+		not SoloProgress.is_cleared("", "stage_1"), "an unrecorded stage should not be cleared"
+	)
+	_assert.call(SoloProgress.mark_cleared("", "stage_1"), "the first clear should report true")
+	_assert.call(SoloProgress.is_cleared("", "stage_1"), "the clear should be recorded")
+	_assert.call(
+		not SoloProgress.mark_cleared("", "stage_1"),
+		"clearing the same stage again should not report a first clear"
+	)
+	_assert.call(SoloProgress.cleared_count("") == 1, "only one stage should be recorded")
+
+
+func _test_solo_library_unlock_depends_on_required_stages() -> void:
+	SoloProgress.reset_for_test()
+	var first := SoloStageData.new()
+	first.id = "solo_test_1"
+	var second := SoloStageData.new()
+	second.id = "solo_test_2"
+	second.requires = ["solo_test_1"]
+	_assert.call(
+		SoloLibrary.is_unlocked(first, ""), "a stage without prerequisites should be unlocked"
+	)
+	_assert.call(
+		not SoloLibrary.is_unlocked(second, ""),
+		"a stage should stay locked until its prerequisites are cleared"
+	)
+	SoloProgress.mark_cleared("", "solo_test_1")
+	_assert.call(
+		SoloLibrary.is_unlocked(second, ""),
+		"clearing the prerequisite should unlock the next stage"
 	)

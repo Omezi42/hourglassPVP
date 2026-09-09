@@ -2302,7 +2302,7 @@ GameDesign.md 27章の実装方針。**チュートリアルではなく、既�
 | `requires` | Array[String] | 前提ステージのid。**複数持てるようにしておく**(v1では常に1つだが、将来の分岐に備える) |
 | `reward_gold` | int | 初回クリア時の砂金 |
 | `reward_icon_id` | String | 空なら無し。付与は`AccountService`の所有配列(10.8節と同じ経路) |
-| `reward_card_id` | String | 空なら無し。**ソロモード限定カード3種(下記)のいずれか** |
+| `reward_card_set_id` | String | 空なら無し。`CardSetLibrary`のid(ソロモード限定の1枚セット。10.8.1節・下記) |
 | `puzzle` | PuzzleStageData | `stage_type == PUZZLE` のときだけ使う。**既存のリーサルパズルと全く同じ形式を埋め込みで再利用する**(新しいフィールドを作らない) |
 | `match_config` | SoloMatchConfig | `PUZZLE` 以外で使う |
 
@@ -2312,7 +2312,7 @@ GameDesign.md 27章の実装方針。**チュートリアルではなく、既�
 |---|---|---|
 | `player_deck_ids` / `opponent_deck_ids` | Array[String] | 30枚ぶんのid。**プレイヤー自身の構築デッキは使わない**(GameDesign.md 27章) |
 | `opponent_count` | int | `GAUNTLET`(連戦型)でのみ2以上。既定1 |
-| `board_override` | Array[String] | `"id:体力:攻撃力"` の文字列(`PuzzleStageData`と同じ表現)。空なら通常どおり空の盤面から開始 |
+| `own_board_units` / `foe_board_units` | Array[String] | `"id:体力:攻撃力"` の文字列(`PuzzleStageData`の`own_units`/`foe_units`と同じ表現)。空なら通常どおり空の盤面から開始 |
 | `win_condition` | enum(`WinCondition`) | `HP_ZERO`(既定)/ `SURVIVE_TURNS` / `DESTROY_ALL_ENEMY_UNITS` |
 | `survive_turns` | int | `win_condition == SURVIVE_TURNS` のときの目標ターン数 |
 | `sand_drop_count` | int | 既定1。`MatchState.sand_drop_count` へそのまま渡す |

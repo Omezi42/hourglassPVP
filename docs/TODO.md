@@ -50,7 +50,9 @@
   - [x] `BattleTab` から CPU戦・リーサルパズルの入口を外し、`SoloTab` へ移す
         (中身の画面・遷移先は変更しない)
   - [x] ヘッドレススモークテスト・gdlint / gdformat
-- [ ] `SoloStageData` / `SoloMatchConfig`(Resource)と `SoloLibrary` / `SoloProgress`(static)
+- [x] `SoloStageData` / `SoloMatchConfig`(Resource)と `SoloLibrary` / `SoloProgress`(static)。
+      `SoloLibrary.is_unlocked()`(前提ステージがすべてクリア済みか)・
+      `SoloProgress`の初回クリア判定をテストで確認
 - [x] `MatchState` へ `sand_drop_count` / `flip_disabled` / `clash_damage_multiplier` /
       `mana_frozen` を追加。`CardInstance.tick()`に粒数を渡せるようにし、
       `can_flip()`・`_resolve_unit_combat()`・`combat_preview()`(UIの予測)・
