@@ -6,10 +6,8 @@ extends Control
 signal online_match_found(match_id: String, my_side: int, opponent_uid: String)
 signal resume_requested(record: Dictionary)
 signal stats_requested
-signal puzzle_requested
 signal mission_requested
 signal replay_list_requested
-signal cpu_match_requested
 signal random_match_deck_requested
 ## ルームマッチの専用画面を開く。デッキ選択もその画面の中で行うため、
 ## 他の導線と違ってここでデッキ選択画面を挟まない(GameDesign.md 9章)。
@@ -26,7 +24,7 @@ const ANNOUNCE_NOTE := "公式Discordサーバーへ「対戦相手をさがし�
 ## 上下へ大きく余っていた**ため、指で押せる寸法(GameDesign.md 9章)へ寄せて背を高くした。
 ## 行を増やすと収まらないので、増やすのは高さだけにする。
 const MAIN_TILE_SIZE := Vector2(360, 128)
-## 5枚並ぶため幅を広げる余地がほとんど無い。**背を高くすると紋章の透かしが太り、
+## 3枚並ぶため幅を広げる余地がほとんど無い。**背を高くすると紋章の透かしが太り、
 ## 文字に使える幅がそのぶん減る**(「ミッション」が「ミッショ」で切れた)ので、
 ## 高さの伸びは控えめにして見出しを1段小さくする。
 const SIDE_TILE_SIZE := Vector2(202, 84)
@@ -42,7 +40,6 @@ var _status_base_text := ""
 var _resume_button: Button
 ## 戦績(GameDesign.md 19章)。`.tscn` を書き換えずに済ませるためコードで生成する。
 var _stats_button: Button
-var _puzzle_button: Button
 var _mission_button: Button
 ## 募集をDiscordへ知らせられたときに、待機中の文言の横へ出す丸い印
 ## (GameDesign.md 11章)。`.tscn` を書き換えずに済ませるためコードで生成する。
@@ -70,13 +67,11 @@ func _ready() -> void:
 		room_match_button, "ルームマッチ", "合言葉で友達と対戦します", "shield", 27, MAIN_TILE_SIZE
 	)
 	replay_button = _to_tile(replay_button, "リプレイ", "", "eye", SIDE_FONT_SIZE, SIDE_TILE_SIZE)
-	cpu_match_button = _to_tile(
-		cpu_match_button, "CPU戦", "", "hour", SIDE_FONT_SIZE, SIDE_TILE_SIZE
-	)
+	# CPU戦はソロタブへ移した(GameDesign.md 27章)。このタブの並びからは外す。
+	cpu_match_button.queue_free()
 	random_match_button.pressed.connect(func() -> void: random_match_deck_requested.emit())
 	room_match_button.pressed.connect(func() -> void: room_match_requested.emit())
 	replay_button.pressed.connect(func() -> void: replay_list_requested.emit())
-	cpu_match_button.pressed.connect(func() -> void: cpu_match_requested.emit())
 	cancel_button.pressed.connect(_on_cancel_pressed)
 	_build_resume_button()
 	_build_stats_button()
@@ -93,7 +88,6 @@ func refresh() -> void:
 	var ready_to_battle: bool = CardDeckSave.selected_deck().size() == MatchState.DECK_SIZE
 	random_match_button.disabled = not ready_to_battle
 	room_match_button.disabled = not ready_to_battle
-	cpu_match_button.disabled = not ready_to_battle
 	_set_status("対戦できます" if ready_to_battle else "デッキを%d枚にしてください" % MatchState.DECK_SIZE)
 
 
@@ -141,12 +135,9 @@ func _to_tile(
 	return tile
 
 
-## リーサルパズル(GameDesign.md 24章)とデイリーミッション(同23章)も、
-## 対局そのものではない導線として「戦績」と同じ行に並べる。
+## デイリーミッション(GameDesign.md 23章)も、対局そのものではない導線として
+## 「戦績」と同じ行に並べる。リーサルパズル・CPU戦はソロタブへ移した(27章)。
 func _build_side_buttons() -> void:
-	_puzzle_button = HomeTile.make("パズル", "", "sword", SIDE_TILE_SIZE, SIDE_FONT_SIZE)
-	_puzzle_button.pressed.connect(func() -> void: puzzle_requested.emit())
-	replay_button.get_parent().add_child(_puzzle_button)
 	_mission_button = HomeTile.make("ミッション", "", "halo", SIDE_TILE_SIZE, SIDE_FONT_SIZE)
 	_mission_button.pressed.connect(func() -> void: mission_requested.emit())
 	replay_button.get_parent().add_child(_mission_button)

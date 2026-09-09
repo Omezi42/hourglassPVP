@@ -9,11 +9,11 @@
       13章(CPU戦の入口移設)・24章(リーサルパズルの入口移設)を合わせて更新
 - [x] Architecture.md 10.15節(データ構造・MatchStateへの3つの上書きプロパティ・
       特殊勝利条件の外側判定・思考レベル固定・連戦型のHP持ち越し・カード所有の最小対応)を追記
-- [ ] **ホームタブの再編**(最初の実装単位)
-  - [ ] `SoloTab` を新設し、`DeckTab`/`BattleTab`/`RulesTab` と並べて4タブ化
-  - [ ] `BattleTab` から CPU戦・リーサルパズルの入口を外し、`SoloTab` へ移す
+- [x] **ホームタブの再編**(最初の実装単位)
+  - [x] `SoloTab` を新設し、`DeckTab`/`BattleTab`/`RulesTab` と並べて4タブ化
+  - [x] `BattleTab` から CPU戦・リーサルパズルの入口を外し、`SoloTab` へ移す
         (中身の画面・遷移先は変更しない)
-  - [ ] ヘッドレススモークテスト・gdlint / gdformat
+  - [x] ヘッドレススモークテスト・gdlint / gdformat
 - [ ] `SoloStageData` / `SoloMatchConfig`(Resource)と `SoloLibrary` / `SoloProgress`(static)
 - [ ] `MatchState` へ `sand_drop_count` / `flip_disabled` / `clash_damage_multiplier` を追加
       (いずれも既定値で全モード無変更であることをテストで確認する)

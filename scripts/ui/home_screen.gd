@@ -32,16 +32,19 @@ const TAB_FADE_DURATION := 0.18
 ## 下部タブの並び(GameDesign.md 9章)。
 const TAB_RULES := 0
 const TAB_DECK := 1
-const TAB_BATTLE := 2
+const TAB_SOLO := 2
+const TAB_BATTLE := 3
 
 ## 右上のメニュー(ハンバーガー)ボタンのスタイル。
 const MENU_BUTTON_GROUP := "icon_menu"
 
 var _tab_fade_tween: Tween
-## いま表示しているタブ。3つに増えたため、隠す相手を index の対から求めない。
+## いま表示しているタブ。4つに増えたため、隠す相手を index の対から求めない。
 var _active_tab: Control
 var _rules_tab: RulesTab
 var _rules_nav_button: Button
+var _solo_tab: SoloTab
+var _solo_nav_button: Button
 
 var _nameplate_button: AccountNameplateButton
 ## デイリーミッション(GameDesign.md 23章)のモーダル。最初に開いたときだけ作る。
@@ -66,7 +69,6 @@ var _currency_seen := false
 
 func _ready() -> void:
 	battle_tab.stats_requested.connect(func() -> void: stats_requested.emit())
-	battle_tab.puzzle_requested.connect(func() -> void: puzzle_requested.emit())
 	battle_tab.mission_requested.connect(_on_mission_requested)
 	battle_tab.resume_requested.connect(
 		func(record: Dictionary) -> void: online_resume_requested.emit(record)
@@ -79,12 +81,12 @@ func _ready() -> void:
 	deck_tab.hourglass_list_pressed.connect(func() -> void: hourglass_list_requested.emit())
 	deck_tab.shop_pressed.connect(func() -> void: shop_requested.emit())
 	battle_tab.replay_list_requested.connect(func() -> void: replay_list_requested.emit())
-	battle_tab.cpu_match_requested.connect(func() -> void: cpu_match_requested.emit())
 	battle_tab.random_match_deck_requested.connect(
 		func() -> void: random_match_deck_requested.emit()
 	)
 	battle_tab.room_match_requested.connect(func() -> void: room_match_requested.emit())
 	_build_rules_tab()
+	_build_solo_tab()
 	deck_nav_button.pressed.connect(_select_tab.bind(TAB_DECK))
 	battle_nav_button.pressed.connect(_select_tab.bind(TAB_BATTLE))
 	_style_menu_button()
@@ -156,8 +158,10 @@ func refresh_account() -> void:
 
 
 func _select_tab(index: int) -> void:
-	var tabs: Array[Control] = [_rules_tab, deck_tab, battle_tab]
-	var buttons: Array[Button] = [_rules_nav_button, deck_nav_button, battle_nav_button]
+	var tabs: Array[Control] = [_rules_tab, deck_tab, _solo_tab, battle_tab]
+	var buttons: Array[Button] = [
+		_rules_nav_button, deck_nav_button, _solo_nav_button, battle_nav_button
+	]
 	for i in buttons.size():
 		_apply_nav_style(buttons[i], i == index)
 	background.texture = BATTLE_BACKGROUND if index == TAB_BATTLE else DECK_BACKGROUND
@@ -166,6 +170,8 @@ func _select_tab(index: int) -> void:
 	# デッキも砂金も画面の外で変わる。開くたびに札の副題を読み直す。
 	elif index == TAB_DECK:
 		deck_tab.refresh()
+	elif index == TAB_SOLO:
+		_solo_tab.refresh()
 	var to_show: Control = tabs[index]
 	if to_show == _active_tab and to_show.visible and to_show.modulate.a >= 1.0:
 		return
@@ -206,6 +212,27 @@ func _build_rules_tab() -> void:
 	deck_nav_button.get_parent().move_child(_rules_nav_button, 0)
 	# tscn 側で表示されているのはデッキタブのため、隠す相手の初期値をそこへ合わせる。
 	_active_tab = deck_tab
+
+
+## 「ソロ」タブとそのタブボタンはここで生成する(GameDesign.md 27章)。
+## `_build_rules_tab()` と同じ理由で `scenes/home_screen.tscn` を書き換えずに追加する。
+## CPU戦・リーサルパズルは以前バトルタブにあった入口をここへ移したもので、
+## 中身の遷移先(`cpu_match_requested`/`puzzle_requested`)は変えない。
+func _build_solo_tab() -> void:
+	_solo_tab = SoloTab.new()
+	_solo_tab.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_solo_tab.visible = false
+	_solo_tab.cpu_match_requested.connect(func() -> void: cpu_match_requested.emit())
+	_solo_tab.puzzle_requested.connect(func() -> void: puzzle_requested.emit())
+	deck_tab.get_parent().add_child(_solo_tab)
+	# 並び順を「ルール/デッキ/ソロ/バトル」に揃える(9章)。
+	deck_tab.get_parent().move_child(_solo_tab, 2)
+
+	_solo_nav_button = deck_nav_button.duplicate(0) as Button
+	_solo_nav_button.text = "ソロ"
+	_solo_nav_button.pressed.connect(_select_tab.bind(TAB_SOLO))
+	deck_nav_button.get_parent().add_child(_solo_nav_button)
+	deck_nav_button.get_parent().move_child(_solo_nav_button, 2)
 
 
 func _on_tab_fade_finished(hidden_tab: Control) -> void:
