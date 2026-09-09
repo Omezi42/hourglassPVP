@@ -180,6 +180,15 @@ func _test_solo_stages_form_a_single_path() -> void:
 				stage.requires == [stages[i - 1].id],
 				"stage %s should require the one before it" % stage.id
 			)
+		if not stage.reward_icon_id.is_empty():
+			_assert.call(
+				UserProfileLibrary.ICONS.has(stage.reward_icon_id),
+				"reward icon must exist: " + stage.reward_icon_id
+			)
+			_assert.call(
+				not UserProfileLibrary.INITIAL_ICON_IDS.has(stage.reward_icon_id),
+				"an icon everyone already owns is not a reward: " + stage.reward_icon_id
+			)
 		if not stage.reward_card_set_id.is_empty():
 			_assert.call(
 				CardSetLibrary.has_set(stage.reward_card_set_id),

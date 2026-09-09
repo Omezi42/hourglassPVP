@@ -203,26 +203,39 @@ static func purchase(
 
 
 ## 無料でカードセットを解放する(ソロモードのステージ報酬など。GameDesign.md 27章)。
-## `purchase()`と違い残高の確認・減算を行わない。**通信は待たない**のが前提の
-## 呼び出し元(`CardMatchSolo`)もあるため、`await`せずに呼んでも動くよう
-## `grant()`と同じ「未サインイン・失敗時はローカルへ退避」の形にしてある。
 static func unlock_card_set(client: FirestoreClient, uid: String, set_id: String) -> void:
-	if owned_card_set_ids().has(set_id):
+	await unlock_free(client, uid, ShopCatalog.Kind.CARD_SET, set_id)
+
+
+## 無料でアイコンを解放する(ソロモードの最終ステージの報酬。GameDesign.md 27章)。
+static func unlock_icon(client: FirestoreClient, uid: String, icon_id_value: String) -> void:
+	await unlock_free(client, uid, ShopCatalog.Kind.ICON, icon_id_value)
+
+
+## 無料の解放を1件通す。`purchase()`と違い残高の確認・減算を行わない。
+## **通信は待たない**のが前提の呼び出し元(`CardMatchSolo`)もあるため、`await`せずに
+## 呼んでも動くよう `grant()` と同じ「未サインイン・失敗時はローカルへ退避」の形にしてある。
+static func unlock_free(
+	client: FirestoreClient, uid: String, kind: ShopCatalog.Kind, id: String
+) -> void:
+	if owns(kind, id):
 		return
+	var key := _unlock_key(kind)
+	var pending_key := _pending_key(kind)
 	if uid == "" or client == null:
-		AccountStore.add_pending_card_set(set_id)
+		AccountStore.add_pending_unlock(pending_key, id)
 		return
 	for _attempt in range(GRANT_RETRY):
 		var doc: Dictionary = await client.get_document_meta(_path(uid))
 		var fields: Dictionary = doc.get("fields", {})
-		var owned: Array = fields.get("owned_card_sets", [])
-		if owned.has(set_id):
-			_profile["owned_card_sets"] = owned
+		var owned: Array = fields.get(key, [])
+		if owned.has(id):
+			_profile[key] = owned
 			_save_unlocks_locally()
 			return
 		var next_owned := owned.duplicate()
-		next_owned.append(set_id)
-		var data := {"owned_card_sets": next_owned, "updated_at": Time.get_unix_time_from_system()}
+		next_owned.append(id)
+		var data := {key: next_owned, "updated_at": Time.get_unix_time_from_system()}
 		var precondition := {}
 		if bool(doc.get("exists", false)) and str(doc.get("update_time", "")) != "":
 			precondition = {"updateTime": doc["update_time"]}
@@ -230,10 +243,19 @@ static func unlock_card_set(client: FirestoreClient, uid: String, set_id: String
 		if ok:
 			for field in data:
 				_profile[field] = data[field]
-			AccountStore.clear_pending_card_set(set_id)
+			AccountStore.clear_pending_unlock(pending_key, id)
 			_save_unlocks_locally()
 			return
-	AccountStore.add_pending_card_set(set_id)
+	AccountStore.add_pending_unlock(pending_key, id)
+
+
+## 通信に失敗した無料の解放をローカルへ控える置き場(`AccountStore`)。
+## **カードセットの置き場だけは以前からの名前をそのまま使う**——変えると、
+## 更新の前に積まれていた分が読めなくなる。
+static func _pending_key(kind: ShopCatalog.Kind) -> String:
+	if kind == ShopCatalog.Kind.CARD_SET:
+		return "pending_card_sets"
+	return "pending_" + _unlock_key(kind)
 
 
 ## 所有・枠のフィールドを読む。プロフィールが空(オフライン)ならローカルの控えを見る。
@@ -297,9 +319,10 @@ static func load_profile(client: FirestoreClient, uid: String) -> void:
 	):
 		_save_unlocks_locally()
 	# 前回サインアウト中に無料付与が通らなかった分を、ここで流し直す
-	# (GameDesign.md 27章)。既に所有済みなら `unlock_card_set()` の先頭で何もしない。
-	for pending_id in AccountStore.get_pending_card_sets():
-		unlock_card_set(client, uid, str(pending_id))
+	# (GameDesign.md 27章)。既に所有済みなら `unlock_free()` の先頭で何もしない。
+	for kind: ShopCatalog.Kind in [ShopCatalog.Kind.CARD_SET, ShopCatalog.Kind.ICON]:
+		for pending_id in AccountStore.get_pending_unlocks(_pending_key(kind)):
+			unlock_free(client, uid, kind, str(pending_id))
 
 
 static func save_display_name(client: FirestoreClient, uid: String, name: String) -> bool:

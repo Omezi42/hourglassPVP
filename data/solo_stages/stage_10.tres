@@ -27,6 +27,6 @@ description = "砂は2粒ずつ落ち、相打ちの傷は倍になる。HP20か
 stage_type = 2
 requires = Array[String](["solo_9"])
 reward_gold = 200
-reward_icon_id = ""
+reward_icon_id = "glow"
 reward_card_set_id = "solo_goad"
 match_config = SubResource("config")

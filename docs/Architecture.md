@@ -2384,10 +2384,15 @@ GameDesign.md 27章の実装方針。**チュートリアルではなく、既�
 (通常の砂金・戦績・リプレイ)を素通りする——ソロモードの報酬は`CardMatchSolo._grant()`が
 別に持つため、`MatchStats`(戦績)へ固定デッキの結果を混ぜない。
 
-**`reward_icon_id`は、この回ではまだ付与経路を実装していない。**アイコンの無料付与には
-`AccountService.unlock_card_set()`と同じ形の`unlock_icon()`相当が要るが、`v1`の10ステージは
-アイコン報酬を1つも使わない予定のため後回しにした。使うステージを作る回に、
-`AccountService`へ`ShopCatalog.Kind`を受け取る汎用の無料付与へまとめて実装し直す。
+**無料の付与は`AccountService.unlock_free(client, uid, kind, id)`の1本に集約する。**
+`purchase()`と同じ「`updateTime`を前提条件にした`commit()`」の形を使い、残高の確認・減算
+だけを行わない。`unlock_card_set()`と`unlock_icon()`はこれへ`ShopCatalog.Kind`を渡すだけの
+薄い委譲にしてある——**品種ごとに同じ30行を書き写すと、片方だけ直し忘れる**。
+通信に失敗した分は`AccountStore.add_pending_unlock(key, id)`へ積み、次のサインインで
+流し直す(15章の砂金と同じ扱い)。置き場は品種ごとに分ける(`_pending_key()`)——
+1つの配列へ混ぜると、復帰したときに互いの品種として解放しようとする。
+**カードセットの置き場だけは`pending_card_sets`という以前からの名前をそのまま使う**
+(変えると、この変更の前に積まれていた分が読めなくなる)。
 
 ### ソロモード限定カードの所有(GameDesign.md 27章)
 

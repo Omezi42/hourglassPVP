@@ -216,6 +216,9 @@ static func grant_stage_rewards(target: SoloStageData) -> String:
 		else:
 			AccountService.grant(NetSession.client, uid, target.reward_gold, false)
 			parts.append("+%d 砂金" % target.reward_gold)
+	if not target.reward_icon_id.is_empty():
+		AccountService.unlock_icon(NetSession.client, uid, target.reward_icon_id)
+		parts.append("アイコン「%s」を手に入れました" % UserProfileLibrary.get_icon_name(target.reward_icon_id))
 	if not target.reward_card_set_id.is_empty():
 		AccountService.unlock_card_set(NetSession.client, uid, target.reward_card_set_id)
 		parts.append("%sを手に入れました" % CardSetLibrary.display_name(target.reward_card_set_id))

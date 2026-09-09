@@ -59,26 +59,28 @@ static func clear_pending_currency() -> void:
 	_store(data)
 
 
-## 通信に失敗してカードセットを解放できなかった場合に積む(GameDesign.md 27章)。
+## 通信に失敗して無料の解放が通らなかった場合に積む(GameDesign.md 27章)。
 ## 砂金の退避(上記)と同じ理由で、ソロモードはCPU戦を含めオフラインでも遊べるため必要。
-static func add_pending_card_set(set_id: String) -> void:
+## **品種ごとの置き場は呼び出し側が `key` で渡す**(`AccountService._pending_key()`)。
+## カードセットとアイコンで別々の関数を持つと、品種を1つ足すたびに3つ書き足すことになる。
+static func add_pending_unlock(key: String, id: String) -> void:
 	var data := _load()
-	var pending: Array = data.get("pending_card_sets", [])
-	if not pending.has(set_id):
-		pending.append(set_id)
-	data["pending_card_sets"] = pending
+	var pending: Array = data.get(key, [])
+	if not pending.has(id):
+		pending.append(id)
+	data[key] = pending
 	_store(data)
 
 
-static func get_pending_card_sets() -> Array:
-	return _load().get("pending_card_sets", [])
+static func get_pending_unlocks(key: String) -> Array:
+	return _load().get(key, [])
 
 
-static func clear_pending_card_set(set_id: String) -> void:
+static func clear_pending_unlock(key: String, id: String) -> void:
 	var data := _load()
-	var pending: Array = data.get("pending_card_sets", [])
-	pending.erase(set_id)
-	data["pending_card_sets"] = pending
+	var pending: Array = data.get(key, [])
+	pending.erase(id)
+	data[key] = pending
 	_store(data)
 
 
