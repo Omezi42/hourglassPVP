@@ -78,7 +78,8 @@
       `CardSetLibrary` / `players/{uid}.owned_card_sets` /
       `AccountService.unlock_card_set()`(通信失敗時のローカル退避込み。
       `AccountStore.pending_card_sets`)を実装した
-  - [x] `CardSetLibrary`へ「ソロモードセット」(`price = 0`。ショップには並べない)を1件登録
+  - [x] `CardSetLibrary`へ「ソロモードセット」3枚ぶんを1枚ずつ別セットとして登録
+        (`solo_chime`/`solo_ward`/`solo_goad`。いずれも`price = 0`でショップには並べない)
   - [x] `ShopCatalog`に`Kind.CARD_SET`を追加(`price > 0`のセットだけを品目に並べる)
   - [x] デッキ編集(`WorkshopStockItem`の`enabled`)・砂時計図鑑(`AlmanacEntry.locked`)で、
         未所有セットのカードを弾く/シルエット表示にした

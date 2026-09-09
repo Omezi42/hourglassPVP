@@ -7,18 +7,37 @@ extends RefCounted
 ## 追加手段も検討してよい」)。ソロモード(27章)のようにステージクリアで解放するセットは、
 ## ここへ登録したうえで `ShopCatalog` 側が `price > 0` のものだけを品目に並べる。
 
+## **ソロモードの3枚(GameDesign.md 27章)は、1つの3枚セットではなく1枚ずつの
+## セットに分ける。**ステージごとに別々のカードを解放する設計(27章の10ステージ案)
+## のため、まとめて1セットにすると1回のクリアで3枚とも渡ってしまう。
 const SETS: Dictionary = {
-	"solo":
+	"solo_chime":
 	{
-		"id": "solo",
-		"display_name": "ソロモードセット",
-		"description": "ソロモードのステージをクリアして手に入る3枚。ショップでは売らない。",
-		"card_ids": ["chime", "ward", "goad"],
+		"id": "solo_chime",
+		"display_name": "刻限の砂(ソロモード)",
+		"description": "ソロモードのステージをクリアして手に入る。ショップでは売らない。",
+		"card_ids": ["chime"],
+		"price": 0,
+	},
+	"solo_ward":
+	{
+		"id": "solo_ward",
+		"display_name": "見習いの盾(ソロモード)",
+		"description": "ソロモードのステージをクリアして手に入る。ショップでは売らない。",
+		"card_ids": ["ward"],
+		"price": 0,
+	},
+	"solo_goad":
+	{
+		"id": "solo_goad",
+		"display_name": "揺さぶりの一手(ソロモード)",
+		"description": "ソロモードのステージをクリアして手に入る。ショップでは売らない。",
+		"card_ids": ["goad"],
 		"price": 0,
 	},
 }
 
-const ORDERED_IDS: Array[String] = ["solo"]
+const ORDERED_IDS: Array[String] = ["solo_chime", "solo_ward", "solo_goad"]
 
 
 static func has_set(set_id: String) -> bool:
