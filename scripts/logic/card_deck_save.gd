@@ -125,13 +125,14 @@ static func default_deck() -> Array:
 
 
 ## ランダムな混成デッキ(CPUの相手用)。同名2枚までの制限を守る。
-## **カードセット(GameDesign.md 8章)に属するカードは常に除く**(Architecture.md 10.8.1節)。
-## プレイヤーが未所有の可能性があるカードをCPUだけが使う状態を避けるため、
-## 所有状態は見ずに`set_id`が空でないものを一律で弾く。
+## **購入できるカードセット(GameDesign.md 8章・13章)は所有状況を見ずに含める。**
+## CPUが使うカードをプレイヤーの所有状況で絞らないことで、対局中に「このカードが
+## 欲しい」と思わせる出会いの場にする(ユーザー判断)。**`price = 0`のソロモード限定
+## セット(27章)だけは除く**——通貨で買えない以上、CPUに見せても購入へつながらない。
 static func random_deck(rng: RandomNumberGenerator) -> Array:
 	var pool: Array = []
 	for card in CardLibrary.all_cards():
-		if not card.set_id.is_empty():
+		if not card.set_id.is_empty() and CardSetLibrary.price(card.set_id) <= 0:
 			continue
 		for i in COPY_LIMIT:
 			pool.append(card)
