@@ -219,5 +219,4 @@ static func grant_stage_rewards(target: SoloStageData) -> String:
 	if not target.reward_card_set_id.is_empty():
 		AccountService.unlock_card_set(NetSession.client, uid, target.reward_card_set_id)
 		parts.append("%sを手に入れました" % CardSetLibrary.display_name(target.reward_card_set_id))
-	return "
-".join(parts)
+	return "\n".join(parts)

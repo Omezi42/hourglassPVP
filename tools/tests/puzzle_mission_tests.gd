@@ -58,62 +58,7 @@ func _test_every_stage_is_solvable() -> void:
 		if not answers.has(stage.id):
 			_assert.call(false, "no answer recorded for " + stage.id)
 			continue
-		_assert.call(_solve(stage, answers[stage.id]), "stage should be solvable: " + stage.id)
-
-
-func _solve(stage: PuzzleStageData, moves: Array) -> bool:
-	var state := _build(stage)
-	var mine: int = MatchState.Side.A
-	for move: Array in moves:
-		match String(move[0]):
-			"flip":
-				state.flip(mine, int(move[1]))
-			"attack":
-				state.attack(mine, int(move[1]), int(move[2]))
-			"play":
-				state.play_card(mine, int(move[1]), int(move[2]))
-			"cast":
-				var target := {}
-				if move.size() >= 4:
-					target = {"side": int(move[2]), "slot": int(move[3])}
-				state.cast_spell(mine, int(move[1]), target)
-	var cleared: bool = int(state.hp[MatchState.other_side(mine)]) <= 0
-	state.free()
-	return cleared
-
-
-## `CardMatchPuzzle._apply()` と同じ形の局面を、UIを起こさずに作る。
-func _build(stage: PuzzleStageData) -> MatchState:
-	var state := MatchState.new()
-	var deck := CardPresetDecks.basic()
-	state.start_match(deck, deck, MatchState.Side.A, 1, false, false)
-	var mine: int = MatchState.Side.A
-	var foe: int = MatchState.other_side(mine)
-	state.hp[mine] = stage.own_hp
-	state.hp[foe] = stage.foe_hp
-	state.max_mana[mine] = stage.mana
-	state.mana[mine] = stage.mana
-	state.hand[mine] = []
-	for id in stage.hand_ids:
-		state.hand[mine].append(CardLibrary.find_by_id(id))
-	_place(state, mine, stage.own_units)
-	_place(state, foe, stage.foe_units)
-	return state
-
-
-func _place(state: MatchState, side: int, rows: Array[String]) -> void:
-	var slots: Array = []
-	slots.resize(MatchState.BOARD_SIZE)
-	for i in rows.size():
-		var parsed := PuzzleStageData.parse_unit(rows[i])
-		if parsed.is_empty():
-			continue
-		var unit := CardInstance.new(parsed["card"])
-		unit.health = int(parsed["health"])
-		unit.attack = int(parsed["attack"])
-		unit.summoned_this_turn = false
-		slots[i] = unit
-	state.board[side] = slots
+		_assert.call(PuzzleSolver.solve(stage, answers[stage.id]), "stage should be solvable: " + stage.id)
 
 
 ## 同じ日なら何度読んでも同じ3件が並ぶ(乱数で選ぶと起動のたびに変わる)。

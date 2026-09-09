@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="SoloStageData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/solo_stage_data.gd" id="script_stage"]
+[ext_resource type="Script" path="res://scripts/data/solo_match_config.gd" id="script_config"]
+
+[sub_resource type="Resource" id="config"]
+script = ExtResource("script_config")
+player_deck_ids = Array[String](["grain", "grain", "wand", "wand", "seed", "seed", "glim", "glim", "husk", "husk", "shot", "shot", "pinch", "pinch", "turn", "turn", "shield", "shield", "watcher", "watcher", "sand", "sand", "flask", "flask", "dash", "dash", "dust", "dust", "salt", "salt"])
+opponent_deck_ids = Array[String](["grain", "grain", "wand", "wand", "seed", "seed", "glim", "glim", "husk", "husk", "shot", "shot", "pinch", "pinch", "turn", "turn", "sand", "sand", "dash", "dash", "salt", "salt", "tick", "tick", "spike", "spike", "hour", "hour", "dust", "dust"])
+opponent_count = 1
+own_board_units = Array[String]([])
+foe_board_units = Array[String](["sand:4:1", "glass:5:1"])
+win_condition = 1
+survive_turns = 8
+sand_drop_count = 1
+hp_override = 0
+mana_frozen = true
+flip_disabled = false
+clash_damage_multiplier = 1
+
+[resource]
+script = ExtResource("script_stage")
+id = "solo_9"
+order = 9
+display_name = "第9階 増えない砂"
+description = "マナが1のまま増えない。不利な盤面から、5回目の自分の手番まで生き延びれば勝ち。"
+stage_type = 2
+requires = Array[String](["solo_8"])
+reward_gold = 120
+reward_icon_id = ""
+reward_card_set_id = ""
+match_config = SubResource("config")

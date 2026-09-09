@@ -15,6 +15,9 @@ func run(assert_true: Callable) -> void:
 	_test_mana_frozen_stops_the_max_mana_increase()
 	_test_solo_progress_round_trips_and_reports_first_clear()
 	_test_solo_library_unlock_depends_on_required_stages()
+	_test_solo_stages_form_a_single_path()
+	_test_solo_stages_are_playable()
+	_test_solo_puzzle_stages_are_solvable()
 
 
 func _card(id: String) -> CardData:
@@ -155,3 +158,95 @@ func _test_solo_library_unlock_depends_on_required_stages() -> void:
 		SoloLibrary.is_unlocked(second, ""),
 		"clearing the prerequisite should unlock the next stage"
 	)
+
+
+## v1のステージは1本道(GameDesign.md 27章)。**順番と前提が食い違うと、
+## クリアしても次が開かない**という形でしか気づけないため、並びごと確かめる。
+func _test_solo_stages_form_a_single_path() -> void:
+	var stages := SoloLibrary.all_stages()
+	_assert.call(stages.size() == 10, "v1 should ship ten solo stages")
+	var seen := {}
+	for i in stages.size():
+		var stage := stages[i]
+		_assert.call(not seen.has(stage.id), "solo stage ids must be unique: " + stage.id)
+		seen[stage.id] = true
+		_assert.call(stage.order == i + 1, "solo stage order should be 1..10: " + stage.id)
+		_assert.call(not stage.display_name.is_empty(), "a solo stage needs a name: " + stage.id)
+		_assert.call(stage.reward_gold > 0, "a solo stage must pay gold: " + stage.id)
+		if i == 0:
+			_assert.call(stage.requires.is_empty(), "the first stage must be open from the start")
+		else:
+			_assert.call(
+				stage.requires == [stages[i - 1].id],
+				"stage %s should require the one before it" % stage.id
+			)
+		if not stage.reward_card_set_id.is_empty():
+			_assert.call(
+				CardSetLibrary.has_set(stage.reward_card_set_id),
+				"reward card set must exist: " + stage.reward_card_set_id
+			)
+
+
+## デッキ・盤面の中身が実際に読めること。カードidの打ち間違いはここで出る。
+func _test_solo_stages_are_playable() -> void:
+	for stage in SoloLibrary.all_stages():
+		if stage.stage_type == SoloStageData.Kind.PUZZLE:
+			_assert.call(stage.puzzle != null, "a puzzle stage needs a puzzle: " + stage.id)
+			_check_units(stage.puzzle.own_units + stage.puzzle.foe_units, stage.id)
+			for id in stage.puzzle.hand_ids:
+				_assert.call(_card(id) != null, "hand card must exist: " + id)
+			continue
+		var config := stage.match_config
+		_assert.call(config != null, "a match stage needs a config: " + stage.id)
+		for deck: Array[String] in [config.player_deck_ids, config.opponent_deck_ids]:
+			_assert.call(
+				deck.size() == MatchState.DECK_SIZE,
+				"a fixed deck must hold %d cards: %s" % [MatchState.DECK_SIZE, stage.id]
+			)
+			var counts := {}
+			for id in deck:
+				_assert.call(_card(id) != null, "deck card must exist: " + id)
+				counts[id] = int(counts.get(id, 0)) + 1
+				_assert.call(counts[id] <= 2, "a fixed deck may hold two copies at most: " + id)
+		_check_units(config.own_board_units + config.foe_board_units, stage.id)
+		if config.win_condition == SoloMatchConfig.WinCondition.SURVIVE_TURNS:
+			_assert.call(config.survive_turns > 0, "a survival stage needs a target: " + stage.id)
+
+
+## 盤面の1行が読めて、体力+攻撃力がそのカードの総量を超えていないこと。
+## 超えていると、砂が落ちて出来上がるはずのない駒を出題してしまう。
+func _check_units(rows: Array[String], stage_id: String) -> void:
+	for row in rows:
+		var parsed := PuzzleStageData.parse_unit(row)
+		_assert.call(not parsed.is_empty(), "unit row must parse: %s (%s)" % [row, stage_id])
+		if parsed.is_empty():
+			continue
+		var card: CardData = parsed["card"]
+		var sand: int = int(parsed["health"]) + int(parsed["attack"])
+		_assert.call(int(parsed["health"]) > 0, "a placed unit must be alive: " + row)
+		_assert.call(
+			sand <= card.total_sand, "a placed unit cannot hold more sand than its total: " + row
+		)
+
+
+## **パズル型は「解ける」ことまで確かめる**(リーサルパズルと同じ理由)。
+## 手順は問題ごとの解答にあたる。
+func _test_solo_puzzle_stages_are_solvable() -> void:
+	# 第1問: 守護(体力3)をちょうど割れるのは攻撃力3のロックだけ。サンドやウォールで
+	# 割ると余った打点がそのまま消え、本体へ13が届かない。
+	var answers := {
+		"solo_1": [["cast", 0], ["attack", 1, 0], ["attack", 0, -1], ["attack", 2, -1]],
+		# 第3問: 砕砂を硝子のミラーへ撃つと膜に吸われて消える。守護のゲートを削り、
+		# 弱ったところへ貫通を通して超過分を本体へ抜く。
+		"solo_3": [["cast", 0, 1, 0], ["attack", 0, 0], ["attack", 1, -1]],
+	}
+	for stage in SoloLibrary.all_stages():
+		if stage.stage_type != SoloStageData.Kind.PUZZLE:
+			continue
+		_assert.call(answers.has(stage.id), "no answer recorded for " + stage.id)
+		if not answers.has(stage.id):
+			continue
+		_assert.call(
+			PuzzleSolver.solve(stage.puzzle, answers[stage.id]),
+			"solo puzzle should be solvable: " + stage.id
+		)
