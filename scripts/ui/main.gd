@@ -430,6 +430,7 @@ func _on_puzzle_requested() -> void:
 func _on_puzzle_stage_selected(stage: PuzzleStageData) -> void:
 	card_match_screen.puzzle.start(stage)
 	_match_return_screen = puzzle_picker_screen
+	_show_only(card_match_screen)
 
 
 ## エンドレス(GameDesign.md 24章)。押すたびにその場で新しい問題を1つ生成する。
