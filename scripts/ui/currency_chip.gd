@@ -20,6 +20,16 @@ const GAP := 7.0
 const FONT_SIZE := 18
 const CORNER := 8.0
 
+## 大きさの倍率。**ホーム画面のヘッダーだけ大きく出す**——面積に余裕があり、残高は
+## 「押す前に分かるべきこと」の代表(GameDesign.md 9章)であるため。ショップのヘッダーは
+## 主アクションの位置へ収めるので既定のまま。
+var scale_factor := 1.0:
+	set(value):
+		scale_factor = maxf(value, 0.1)
+		if _font != null:
+			_relayout()
+		queue_redraw()
+
 var _amount := 0
 ## 表示中の値。数え上げの途中は残高と食い違う。
 var _shown := 0.0
@@ -31,7 +41,7 @@ var _tween: Tween
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_font = get_theme_default_font()
-	custom_minimum_size.y = HEIGHT
+	custom_minimum_size.y = HEIGHT * scale_factor
 	_relayout()
 
 
@@ -73,8 +83,10 @@ func _text() -> String:
 func _relayout() -> void:
 	if _font == null:
 		return
-	var width := _font.get_string_size(_text(), HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x
-	custom_minimum_size.x = PAD_X * 2.0 + EMBLEM_SIZE + GAP + width
+	var font_size := _font_size()
+	var width := _font.get_string_size(_text(), HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	custom_minimum_size.y = HEIGHT * scale_factor
+	custom_minimum_size.x = (PAD_X * 2.0 + EMBLEM_SIZE + GAP) * scale_factor + width
 	size.x = custom_minimum_size.x
 
 
@@ -82,8 +94,9 @@ func _draw() -> void:
 	if _font == null:
 		return
 	var ci := get_canvas_item()
-	var rect := Rect2(Vector2(0.0, (size.y - HEIGHT) * 0.5), Vector2(size.x, HEIGHT))
-	var points := UiPaint.rounded_rect_points_uniform(rect, CORNER, 5)
+	var height := HEIGHT * scale_factor
+	var rect := Rect2(Vector2(0.0, (size.y - height) * 0.5), Vector2(size.x, height))
+	var points := UiPaint.rounded_rect_points_uniform(rect, CORNER * scale_factor, 6)
 	var top := UiPalette.NAMEPLATE_PANEL_TOP.lerp(UiPalette.PANEL_AMBER_TOP, _pulse * 0.5)
 	var bottom := UiPalette.NAMEPLATE_PANEL_BOTTOM.lerp(UiPalette.PANEL_AMBER_TOP, _pulse * 0.4)
 	UiPaint.fill_gradient_polygon(ci, points, rect, [[0.0, top], [1.0, bottom]])
@@ -92,15 +105,25 @@ func _draw() -> void:
 	outline.append(points[0])
 	draw_polyline(outline, UiPalette.BRASS_MID.lerp(UiPalette.BRASS_HIGHLIGHT, _pulse), 2.0, true)
 
-	var center := Vector2(rect.position.x + PAD_X + EMBLEM_SIZE * 0.5, rect.get_center().y)
-	UiPaint.draw_emblem(ci, UiPaint.Emblem.HOURGLASS, center, EMBLEM_SIZE)
+	var emblem := EMBLEM_SIZE * scale_factor
+	var center := Vector2(
+		rect.position.x + PAD_X * scale_factor + emblem * 0.5, rect.get_center().y
+	)
+	UiPaint.draw_emblem(ci, UiPaint.Emblem.HOURGLASS, center, emblem)
 	var color := UiPalette.BRASS_HIGHLIGHT.lerp(Color(1, 1, 1, 1), _pulse)
 	draw_string(
 		_font,
-		Vector2(center.x + EMBLEM_SIZE * 0.5 + GAP, rect.get_center().y + FONT_SIZE * 0.36),
+		Vector2(
+			center.x + emblem * 0.5 + GAP * scale_factor, rect.get_center().y + _font_size() * 0.36
+		),
 		_text(),
 		HORIZONTAL_ALIGNMENT_LEFT,
 		-1,
-		FONT_SIZE,
+		_font_size(),
 		color
 	)
+
+
+## 倍率を掛けた字の大きさ。
+func _font_size() -> int:
+	return int(round(float(FONT_SIZE) * scale_factor))

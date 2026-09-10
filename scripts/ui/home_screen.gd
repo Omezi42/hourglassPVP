@@ -33,6 +33,10 @@ const NAV_INACTIVE_TINT := Color(0.70, 0.68, 0.66)
 const NAV_BADGE_SIZE := 30.0
 ## アカウント帯の右端をどれだけ空けるか(右上のメニューのボタンのぶん)。
 const ACCOUNT_BAR_RIGHT_INSET := 116.0
+## ヘッダーの残高を他の画面より大きく出す倍率。
+const CURRENCY_CHIP_SCALE := 1.55
+## 名札の大きさ。**帯(112px)の中で小さすぎると、右の残高とのつり合いが取れない。**
+const NAMEPLATE_SIZE := Vector2(268, 68)
 const DECK_BACKGROUND := preload("res://assets/backgrounds/processed/home/background.png")
 const BATTLE_BACKGROUND := preload("res://assets/backgrounds/processed/battle/background.png")
 ## タブ切り替え時のクロスフェード時間。Main._show_only()の画面遷移と同じ考え方を踏襲する。
@@ -99,6 +103,11 @@ func _ready() -> void:
 		func() -> void: random_match_deck_requested.emit()
 	)
 	battle_tab.room_match_requested.connect(func() -> void: room_match_requested.emit())
+	# 背景の絵の上へ帯と幕を敷く(GameDesign.md 9章)。**背景の直後へ入れる**——
+	# タブの中身・アカウント帯・下部タブはいずれもこれより手前に来る必要がある。
+	var scrim := HomeScrim.make()
+	add_child(scrim)
+	move_child(scrim, background.get_index() + 1)
 	_build_rules_tab()
 	_build_record_tab()
 	deck_nav_button.text = TAB_LABELS[TAB_DECK]
@@ -124,6 +133,8 @@ func _ready() -> void:
 	# .tscn は書き換えず、同じ場所へチップを挿して元のラベルを隠す。
 	currency_label.visible = false
 	_currency_chip = CurrencyChip.new()
+	# ヘッダーは面積に余裕があり、残高は押す前に分かるべきことの代表(9章)。
+	_currency_chip.scale_factor = CURRENCY_CHIP_SCALE
 	$AccountBar.add_child(_currency_chip)
 	$AccountBar.move_child(_currency_chip, $AccountBar.get_children().find(currency_label) + 1)
 
@@ -336,7 +347,7 @@ class AccountNameplateButton:
 	var _name_label: Label
 
 	func _init() -> void:
-		custom_minimum_size = Vector2(210, 56)
+		custom_minimum_size = NAMEPLATE_SIZE
 		size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		CodedButton.apply_styles(self, "wide_text")
 		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
@@ -344,28 +355,28 @@ class AccountNameplateButton:
 		var hbox := HBoxContainer.new()
 		hbox.set_anchors_preset(Control.PRESET_FULL_RECT)
 		hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		hbox.add_theme_constant_override("separation", 10)
-		hbox.offset_left = 12
-		hbox.offset_right = -12
+		hbox.add_theme_constant_override("separation", 12)
+		hbox.offset_left = 16
+		hbox.offset_right = -16
 		hbox.alignment = BoxContainer.ALIGNMENT_BEGIN
 
 		# アイコン枠
 		_icon_frame = PanelContainer.new()
 		_icon_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		_icon_frame.custom_minimum_size = Vector2(34, 34)
+		_icon_frame.custom_minimum_size = Vector2(46, 46)
 		_icon_frame.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		var frame_style := StyleBoxFlat.new()
 		frame_style.bg_color = Color(0.1, 0.08, 0.06, 0.9)
 		frame_style.border_color = UiPalette.BRASS_MID
 		frame_style.set_border_width_all(1)
-		frame_style.set_corner_radius_all(17)
+		frame_style.set_corner_radius_all(23)
 		_icon_frame.add_theme_stylebox_override("panel", frame_style)
 
 		_icon_rect = TextureRect.new()
 		_icon_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		_icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		_icon_rect.custom_minimum_size = Vector2(24, 24)
+		_icon_rect.custom_minimum_size = Vector2(34, 34)
 		_icon_rect.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		_icon_rect.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		_icon_frame.add_child(_icon_rect)
@@ -376,18 +387,18 @@ class AccountNameplateButton:
 		vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		vbox.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		vbox.add_theme_constant_override("separation", 1)
+		vbox.add_theme_constant_override("separation", 2)
 
 		_title_label = Label.new()
 		_title_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		_title_label.add_theme_font_size_override("font_size", 11)
+		_title_label.add_theme_font_size_override("font_size", 13)
 		_title_label.add_theme_color_override("font_color", UiPalette.BRASS_HIGHLIGHT)
 		_title_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		vbox.add_child(_title_label)
 
 		_name_label = Label.new()
 		_name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		_name_label.add_theme_font_size_override("font_size", 15)
+		_name_label.add_theme_font_size_override("font_size", 21)
 		_name_label.add_theme_color_override("font_color", UiPalette.TEXT_OFFWHITE)
 		_name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		vbox.add_child(_name_label)
