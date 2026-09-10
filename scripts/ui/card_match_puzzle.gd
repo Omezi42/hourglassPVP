@@ -160,8 +160,9 @@ func _apply(target: PuzzleStageData) -> void:
 	state.hand[foe] = []
 	_place(state, mine, target.own_units)
 	_place(state, foe, target.foe_units)
-	state.hp_changed.emit(mine, state.hp[mine])
-	state.hp_changed.emit(foe, state.hp[foe])
+	# **`hp_changed` は出さない。**`_screen.refresh()` が `state.hp` を直接読んで
+	# 情報帯を更新するため不要な上、`CardMatchSound`/`CardMatchLog` がこの信号を
+	# 「初期HP24 → 問題のHP」の被弾/回復として解釈し、開始直後に誤った演出とログを出す。
 	state.mana_changed.emit(mine, state.mana[mine], state.max_mana[mine])
 	state.hand_changed.emit(mine)
 	state.board_changed.emit(mine)

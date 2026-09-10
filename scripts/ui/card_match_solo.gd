@@ -105,6 +105,11 @@ func _begin_battle() -> void:
 		rng.randi_range(1, 1 << 30)
 	)
 	_apply_config()
+	# `_begin_state()` は自分の呼び出しの中で一度 `refresh()` しているが、その後の
+	# `_apply_config()` がHP・盤面を上書きするため、これが無いと差し替え後の
+	# 局面(HPの上書き・連戦の持ち越し・初期配置)が次の操作まで画面へ反映されない
+	# (`CardMatchPuzzle.start()` が `_apply()` の後で `refresh()` するのと同じ理由)。
+	_screen.refresh()
 
 
 func _deck_of(ids: Array[String]) -> Array:
@@ -144,8 +149,10 @@ func _apply_config() -> void:
 		state.hp[mine] = _carried_hp
 	_place(state, mine, _config.own_board_units)
 	_place(state, foe, _config.foe_board_units)
-	state.hp_changed.emit(mine, state.hp[mine])
-	state.hp_changed.emit(foe, state.hp[foe])
+	# **`hp_changed` は出さない。**`_screen.refresh()`(呼び出し元 `_begin_battle()`)が
+	# `state.hp` を直接読んで情報帯を更新するため不要な上、`CardMatchSound`/`CardMatchLog`
+	# がこの信号を「初期HP24 → 上書き後のHP」の被弾/回復として解釈し、開始直後に
+	# 誤った演出とログを出す(連戦型の持ち越しでは実際のHP変化のためなおさら誤読を招く)。
 	state.board_changed.emit(mine)
 	state.board_changed.emit(foe)
 	match _config.win_condition:
