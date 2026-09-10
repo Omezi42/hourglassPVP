@@ -135,6 +135,8 @@ func _ready() -> void:
 	_currency_chip = CurrencyChip.new()
 	# ヘッダーは面積に余裕があり、残高は押す前に分かるべきことの代表(9章)。
 	_currency_chip.scale_factor = CURRENCY_CHIP_SCALE
+	# 左の名札と背丈を揃える(左右で高さが違うと、同じ帯に載って見えない)。
+	_currency_chip.height_override = NAMEPLATE_SIZE.y
 	$AccountBar.add_child(_currency_chip)
 	$AccountBar.move_child(_currency_chip, $AccountBar.get_children().find(currency_label) + 1)
 
