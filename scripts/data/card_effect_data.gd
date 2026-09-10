@@ -14,3 +14,8 @@ extends Resource
 ## **value を流用して「守護は0番」のように持たせない。**どの整数が何を指すかを
 ## 呼び出し側が覚えている前提のコードになり、.tres を読んでも意味が取れなくなるため。
 @export var keyword: int = -1
+
+## コンボ系カードの発動条件(GameDesign.md 6章)。NONE(既定)なら常に発動する。
+@export var condition_scope: CardEnums.ConditionScope = CardEnums.ConditionScope.NONE
+## condition_scope が確認する総量(体力+攻撃力)の値。-1 は「条件なし」として扱う。
+@export var condition_total: int = -1

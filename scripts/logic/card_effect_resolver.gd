@@ -14,7 +14,22 @@ func _init(p_state: MatchState) -> void:
 ## hint は対象を選ばせる効果のための指定 {"side":..., "slot":...}。
 func resolve(side: int, unit: CardInstance, trigger: int, hint: Dictionary) -> void:
 	for effect in unit.effects_for(trigger):
-		_apply(side, unit, effect, hint)
+		if _condition_met(side, unit, effect):
+			_apply(side, unit, effect, hint)
+
+
+## コンボ系カードの発動条件(GameDesign.md 6章)。TARGET は対象そのものの絞り込みで
+## `_single_unit()` が扱うため、ここでは SELF / ANY_ALLY だけを見る。
+func _condition_met(side: int, unit: CardInstance, effect: CardEffectData) -> bool:
+	match effect.condition_scope:
+		CardEnums.ConditionScope.SELF:
+			return unit.total_sand() == effect.condition_total
+		CardEnums.ConditionScope.ANY_ALLY:
+			for ally in _state.units(side):
+				if ally.total_sand() == effect.condition_total:
+					return true
+			return false
+	return true
 
 
 func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Dictionary) -> void:
@@ -164,26 +179,40 @@ func _targets(side: int, unit: CardInstance, effect: CardEffectData, hint: Dicti
 		CardEnums.EffectTarget.ALL_ALLY_UNITS:
 			return _all_slots(side)
 		CardEnums.EffectTarget.ENEMY_UNIT:
-			return _single_unit(foe_side, hint)
+			return _single_unit(foe_side, hint, -1, effect)
 		CardEnums.EffectTarget.ALLY_UNIT:
 			# **自分自身は選べない**(GameDesign.md 6章)。効果を持つ駒が自分を強化すると
 			# 「他の駒を助ける」というカードの読みが崩れ、対象を選ぶ意味も無くなるため。
-			return _single_unit(side, hint, _slot_of(side, unit))
+			return _single_unit(side, hint, _slot_of(side, unit), effect)
 	return []
 
 
 ## 対象を1体だけ選ぶ効果の解決。相手側(ENEMY_UNIT)も自分側(ALLY_UNIT)もここを通る。
-func _single_unit(target_side: int, hint: Dictionary, exclude_slot := -1) -> Array:
+## effect.condition_scope が TARGET のとき、いまの総量が effect.condition_total と
+## 一致する候補だけへ絞る(コンボ系カード。GameDesign.md 6章)。
+func _single_unit(
+	target_side: int, hint: Dictionary, exclude_slot := -1, effect: CardEffectData = null
+) -> Array:
+	var filter_total := -1
+	if effect != null and effect.condition_scope == CardEnums.ConditionScope.TARGET:
+		filter_total = effect.condition_total
 	if hint.has("slot") and hint.get("side", target_side) == target_side:
 		var slot: int = hint["slot"]
-		if slot != exclude_slot and _state.board[target_side][slot] != null:
+		var hinted: CardInstance = _state.board[target_side][slot]
+		if (
+			slot != exclude_slot
+			and hinted != null
+			and (filter_total < 0 or hinted.total_sand() == filter_total)
+		):
 			return [{"side": target_side, "slot": slot}]
-	# 指定が無い・すでに居なくなっている場合は、最も生涯ダメージの大きい1体を選ぶ。
+	# 指定が無い・条件を満たさない場合は、条件を満たす中で最も生涯ダメージの大きい1体を選ぶ。
 	var best := -1
 	var best_value := -1
 	for slot in MatchState.BOARD_SIZE:
 		var candidate: CardInstance = _state.board[target_side][slot]
 		if candidate == null or slot == exclude_slot:
+			continue
+		if filter_total >= 0 and candidate.total_sand() != filter_total:
 			continue
 		var value := candidate.lifetime_damage()
 		if value > best_value:

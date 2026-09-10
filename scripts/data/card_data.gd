@@ -23,6 +23,11 @@ extends Resource
 @export var effects: Array[CardEffectData] = []
 ## 効果欄に出す一文。キーワードだけのカードは空でよい(キーワード名から自動生成する)。
 @export var rules_text: String = ""
+## コンボ系カード(GameDesign.md 6章)。自分のいまの総量(体力+攻撃力)が
+## conditional_keyword_total と一致する間だけ、このキーワードを持つ。
+## keywords 配列には含めない(常には持たないため)。-1 は「無し」。
+@export var conditional_keyword: int = -1
+@export var conditional_keyword_total: int = -1
 ## 攻撃できない代わりに総量が大きい駒(GameDesign.md 6章)。反転はできる。
 ## 守護と違い**語にしない**ため keywords ではなくフラグで持つ。
 @export var cannot_attack: bool = false

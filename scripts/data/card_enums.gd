@@ -24,6 +24,10 @@ enum Keyword {
 	DOUBLE_STRIKE,
 	## 場に出た瞬間に砂が2粒落ちる(すぐ攻撃できる)。
 	QUICK,
+	## 戦闘で与えるダメージが2倍になる。**語にしない**(コンボ系カードが
+	## `CardData.conditional_keyword` 経由で条件付きに持たせるためだけの値で、
+	## 常在の `keywords` 配列へ直接載るカードは無い)。
+	DAMAGE_BOOST,
 }
 
 ## トリガーキーワード(GameDesign.md 6章)。
@@ -103,6 +107,23 @@ enum EffectType {
 	INVERT_PLAYER_HP,
 }
 
+## コンボ系カードの発動条件が確認する範囲(GameDesign.md 6章)。
+## `CardEffectData.condition_scope` が使う。NONE なら常に発動する。
+##
+## **新しい値は必ず末尾へ足す**(EffectTarget と同じ理由)。
+enum ConditionScope {
+	## 条件なし。常に発動する。
+	NONE,
+	## この効果を持つ砂時計自身の、いまの総量(体力+攻撃力)を見る。
+	SELF,
+	## 選んだ対象の、いまの総量を見る。対象の絞り込みとして働く
+	## (条件を満たさない相手・味方は選べない)。
+	TARGET,
+	## 自分の場に、いまの総量が条件と一致する砂時計が1体でもいるかを見る。
+	## 選ぶ対象そのものの総量は問わない。
+	ANY_ALLY,
+}
+
 ## 語として見せるキーワード。**複数のカードに載っているものだけ**をここへ入れる。
 ## カードを追加してある能力が2枚目に載ったら、ここへ足して語へ昇格させる。
 const NAMED: Array[Keyword] = [Keyword.GUARD, Keyword.GLASS, Keyword.PIERCE, Keyword.QUICK]
@@ -123,6 +144,8 @@ static func keyword_short_text(keyword: int) -> String:
 			return "回復"
 		Keyword.DOUBLE_STRIKE:
 			return "2回攻撃"
+		Keyword.DAMAGE_BOOST:
+			return "倍撃"
 	return keyword_name(keyword)
 
 
@@ -143,6 +166,8 @@ static func keyword_name(keyword: int) -> String:
 			return "連撃"
 		Keyword.QUICK:
 			return "速落"
+		Keyword.DAMAGE_BOOST:
+			return "倍撃"
 	return ""
 
 
@@ -164,6 +189,8 @@ static func keyword_description(keyword: int) -> String:
 			return "1ターンに2回攻撃できる"
 		Keyword.QUICK:
 			return "場に出た瞬間に砂が2粒落ちる(すぐ攻撃できる)。"
+		Keyword.DAMAGE_BOOST:
+			return "戦闘で与えるダメージが2倍になる。"
 	return ""
 
 

@@ -38,10 +38,17 @@ func total_sand() -> int:
 
 ## **キーワードの問い合わせは必ずここを通す。**CardData を直接見ると、
 ## 後から与えられたキーワードと、消された状態を取りこぼす。
+## **コンボ系カード(GameDesign.md 6章)の条件付きキーワードもここで解決する**:
+## `data.conditional_keyword` が一致し、いまの総量が `conditional_keyword_total`
+## と等しい間だけ、そのキーワードを持つとみなす。
 func has_keyword(keyword: int) -> bool:
 	if silenced:
 		return false
-	return data.has_keyword(keyword) or granted_keywords.has(keyword)
+	if data.has_keyword(keyword) or granted_keywords.has(keyword):
+		return true
+	if data.conditional_keyword < 0 or data.conditional_keyword != keyword:
+		return false
+	return total_sand() == data.conditional_keyword_total
 
 
 ## この砂時計が持っているキーワードすべて(表示用)。

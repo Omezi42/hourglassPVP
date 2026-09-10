@@ -542,6 +542,8 @@ func attack(side: int, slot: int, target_slot: int) -> bool:
 	attack_performed.emit(side, slot, target_slot)
 	if target_slot < 0:
 		var power := attacker.attack
+		if attacker.has_keyword(CardEnums.Keyword.DAMAGE_BOOST):
+			power *= 2
 		damage_player(other_side(side), power)
 		_lifesteal(side, attacker, power)
 		return true
@@ -571,6 +573,10 @@ func combat_preview(side: int, slot: int, target_slot: int) -> Dictionary:
 		return {}
 	var attacker_power := attacker.attack * clash_damage_multiplier
 	var defender_power := defender.attack * clash_damage_multiplier
+	if attacker.has_keyword(CardEnums.Keyword.DAMAGE_BOOST):
+		attacker_power *= 2
+	if defender.has_keyword(CardEnums.Keyword.DAMAGE_BOOST):
+		defender_power *= 2
 	var to_defender := _preview_damage(defender, attacker_power)
 	var to_attacker := _preview_damage(attacker, defender_power)
 	var defender_health := defender.health - to_defender
@@ -605,6 +611,12 @@ func _resolve_unit_combat(side: int, slot: int, target_slot: int) -> void:
 	# **双方に同じ倍率がかかるため、相打ちの対称性は崩れない**(GameDesign.md 27章)。
 	var attacker_power := attacker.attack * clash_damage_multiplier
 	var defender_power := defender.attack * clash_damage_multiplier
+	# 倍撃(コンボ系カード。GameDesign.md 6章)は持っている側だけに掛かるため、
+	# clash_damage_multiplier と違い相打ちの対称性を崩す非対称な強化になる。
+	if attacker.has_keyword(CardEnums.Keyword.DAMAGE_BOOST):
+		attacker_power *= 2
+	if defender.has_keyword(CardEnums.Keyword.DAMAGE_BOOST):
+		defender_power *= 2
 	var defender_health := defender.health
 	var attacker_health := attacker.health
 	# 硝子が割れたかどうかは、削られたかどうかでは分からない(どちらも与ダメージ0)。
