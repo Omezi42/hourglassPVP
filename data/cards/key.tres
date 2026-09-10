@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_key_0"]
+script = ExtResource("script_effect")
+trigger = 0
+target = 6
+effect_type = 3
+value = 0
+card_id = ""
+keyword = -1
+condition_scope = 2
+condition_total = 5
+
+[sub_resource type="Resource" id="Effect_key_1"]
+script = ExtResource("script_effect")
+trigger = 0
+target = 6
+effect_type = 4
+value = 3
+card_id = ""
+keyword = -1
+condition_scope = 2
+condition_total = 5
+
+[resource]
+script = ExtResource("script_card")
+id = "key"
+display_name = "キー"
+cost = 3
+total_sand = 5
+pool_index = 76
+set_id = "combo_five"
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_key_0"), SubResource("Effect_key_1")])
+rules_text = "設置:総量が5の味方1体を選び、反転させて総量+3する"
+cannot_attack = false
+is_token = false
+art_id = "eye"

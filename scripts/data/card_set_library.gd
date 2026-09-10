@@ -35,9 +35,19 @@ const SETS: Dictionary = {
 		"card_ids": ["goad"],
 		"price": 0,
 	},
+	## 基本セット以後初のショップ販売カードセット(GameDesign.md 8章)。
+	## 「総量(体力+攻撃力)がちょうど5」を条件に発動するコンボ系5枚。
+	"combo_five":
+	{
+		"id": "combo_five",
+		"display_name": "五砂の刻",
+		"description": "総量がちょうど5になった一瞬に懸けるコンボ系5枚",
+		"card_ids": ["middle", "phase", "key", "cycle", "crest"],
+		"price": 500,
+	},
 }
 
-const ORDERED_IDS: Array[String] = ["solo_chime", "solo_ward", "solo_goad"]
+const ORDERED_IDS: Array[String] = ["solo_chime", "solo_ward", "solo_goad", "combo_five"]
 
 
 static func has_set(set_id: String) -> bool:

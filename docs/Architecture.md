@@ -104,6 +104,33 @@ UI側に散らさないため、語と enum の対応はここだけが持つ。
 **`value` を流用して「守護は0番」のように持たせない。**どの整数が何を指すかを
 呼び出し側が覚えている前提のコードになり、`.tres` を読んでも意味が取れなくなるため。
 
+### 2.3.1 コンボ系カード(条件付き効果。GameDesign.md 6章)
+
+「総量(体力+攻撃力)がちょうどNのとき」を条件に発動する効果のための、2つの仕組みを持つ。
+**新しい語(キーワード)は作らない**(既存の毒砂・吸命・連撃と同じく「1枚だけの固有効果」の
+延長として扱う。過去に「共鳴」という共通の語を提案したが、2枚使い回すだけの理由では
+語彙を増やさない方針とした)。
+
+- **`CardEffectData.condition_scope`**(`CardEnums.ConditionScope`: `NONE` / `SELF` /
+  `TARGET` / `ANY_ALLY`)と **`condition_total`**(見る総量の値。-1で条件なし)。
+  トリガー起動の効果(設置・反転・余砂・落砂・被弾のいずれでも)へ乗せられる汎用の条件。
+  `SELF` はその効果を持つ駒自身の総量、`ANY_ALLY` は自分の場のどこかに条件を満たす駒が
+  いるか、`TARGET` は `ENEMY_UNIT` / `ALLY_UNIT` の対象選択そのものを条件で絞り込む
+  (`CardEffectResolver._single_unit()` がヒント・自動選択の両方でこの絞り込みを掛ける)
+- **`CardData.conditional_keyword` / `conditional_keyword_total`**:常在のためだけの仕組み。
+  `keywords` 配列には入れず、`CardInstance.has_keyword()` が「いまの総量が
+  `conditional_keyword_total` と一致する間だけ `conditional_keyword` を持つ」と判定する。
+  既存の毒砂・貫通などの戦闘処理(`_resolve_unit_combat()` 等)はすべて `has_keyword()` を
+  経由して判定しているため、**条件付きで毒砂を持たせる場合、戦闘側のコードは一切変更しない**
+  で済む(このために `has_keyword()` を必ず通す設計にしてある。2.4節)
+
+**`Keyword.DAMAGE_BOOST`**(「この砂時計が戦闘で与えるダメージが2倍になる」)は、上記の
+`conditional_keyword` でしか使わない新設のキーワードで、`NAMED` には入れない。
+`attack()`(プレイヤーへの直接攻撃)・`combat_preview()`・`_resolve_unit_combat()` の3箇所で
+`attacker_power` / `defender_power` を計算した直後に `has_keyword(DAMAGE_BOOST)` を見て
+2倍にする。**`clash_damage_multiplier`(27章のソロモード特殊ルール)と違い、持っている側
+にしか掛からない非対称な倍率**であるため、相打ちの対称性を崩す(意図した挙動)。
+
 新しいカードは既存 enum の組み合わせで `.tres` を1個作るだけで追加でき、コード変更を要さない。
 
 ### 2.4 `CardInstance`(RefCounted)

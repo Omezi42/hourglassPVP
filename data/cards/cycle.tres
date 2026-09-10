@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_cycle_0"]
+script = ExtResource("script_effect")
+trigger = 1
+target = 3
+effect_type = 9
+value = 1
+card_id = ""
+keyword = -1
+condition_scope = 1
+condition_total = 5
+
+[resource]
+script = ExtResource("script_card")
+id = "cycle"
+display_name = "サイクル"
+cost = 3
+total_sand = 6
+pool_index = 77
+set_id = "combo_five"
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_cycle_0")])
+rules_text = "反転:このとき自分の総量が5なら、味方全体の攻撃力+1"
+cannot_attack = false
+is_token = false
+art_id = "wheel"
