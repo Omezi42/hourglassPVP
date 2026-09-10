@@ -80,6 +80,10 @@ func join_room(code: String) -> void:
 
 	var creator_uid: String = room["fields"].get("creator_uid", "")
 	var new_match_id := MatchIdGenerator.generate()
+	# 先手・後手はここで五分五分に振る(GameDesign.md 11章)。参加した側だけが1度振り、
+	# 両者は書かれた player_a / player_b を読んで自分の側を決める。
+	var sides := MatchSides.assign(creator_uid, auth.uid)
+	sides["created_at"] = Time.get_unix_time_from_system()
 	# ルームの更新とmatches/{id}の作成を1回のcommitで原子的に行う。別書き込みにすると、
 	# 作成側がmatch_idを見てmatches/{id}を読んだときにplayer_a/player_bがまだ空という窓が
 	# でき、その窓に入ると双方が後手(side B)と判定されて対局が始まらない
@@ -91,15 +95,7 @@ func join_room(code: String) -> void:
 				{"joiner_uid": auth.uid, "match_id": new_match_id},
 				{"updateTime": room["update_time"]}
 			),
-			client.update_write(
-				"matches/%s" % new_match_id,
-				{
-					"player_a": creator_uid,
-					"player_b": auth.uid,
-					"created_at": Time.get_unix_time_from_system()
-				},
-				{"exists": false}
-			)
+			client.update_write("matches/%s" % new_match_id, sides, {"exists": false})
 		]
 	)
 	if not claimed:

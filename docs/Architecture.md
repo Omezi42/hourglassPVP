@@ -1325,6 +1325,16 @@ pckから除外した後も true を返すことがあり、有無の判定に�
   `MatchmakingQueue`は「相手のキュー更新 + 自分のキュー更新 + `matches/{id}`の作成
   (`exists:false`)」の3write、`RoomMatch`は「ルーム更新 + `matches/{id}`の作成」の2writeを
   1つの`commit()`にまとめ、この窓自体を無くした
+- **先手・後手は`MatchSides.assign()`が五分五分に振る**(GameDesign.md 11章)。
+  振るのは**対局を成立させた側だけ**(`MatchmakingQueue._claim()` / `RoomMatch.join_room()`)で、
+  結果は上記のcommitの中で`matches/{id}`の`player_a`(先手)・`player_b`(後手)として
+  書かれる。両者は既存の判定(`player_a == 自分のuid`なら先手)をそのまま通るため、
+  **側を決める経路は1本のまま変わらない**。双方が別々に振ると必ず食い違うため、
+  振る場所を1箇所に閉じることがこの機能の要件になる
+  - **`opponent_uid`と`is_host`は側とは無関係**であり、従来どおり
+    creator / joiner の役から決める(部屋の開始操作はホストだけが行う)
+  - **CPU戦・ソロモード・誘導対局・パズルは`MatchState.Side.A`固定のまま**
+    (`start_match()`の第3引数を触らない)
 - **キューに残った切断済みプレイヤーを掴まない**。ブラウザを閉じたプレイヤーのキュー
   ドキュメントは残り続けるため、後から来た人がそれを掴んで永久に相手のデッキを待つ状態に
   なっていた。`joined_at`が`STALE_SECONDS`より古い候補は掴まずに削除し、待機中の自分は

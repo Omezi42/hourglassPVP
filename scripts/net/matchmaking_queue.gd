@@ -137,6 +137,10 @@ func _try_claim_or_check() -> bool:
 ## 双方が後手(side B)と判定されて対局が始まらなかった(Architecture.md 6.1節)。
 func _claim(mine: Dictionary, candidate: Dictionary) -> bool:
 	var new_match_id := MatchIdGenerator.generate()
+	# 先手・後手はここで五分五分に振る(GameDesign.md 11章)。掴んだ側だけが1度振り、
+	# 両者は書かれた player_a / player_b を読んで自分の側を決める。
+	var sides := MatchSides.assign(str(candidate["id"]), auth.uid)
+	sides["created_at"] = Time.get_unix_time_from_system()
 	var claimed: bool = await client.commit(
 		[
 			client.update_write(
@@ -147,15 +151,7 @@ func _claim(mine: Dictionary, candidate: Dictionary) -> bool:
 			client.update_write(
 				_doc_path(), {"match_id": new_match_id}, {"updateTime": mine["update_time"]}
 			),
-			client.update_write(
-				"matches/%s" % new_match_id,
-				{
-					"player_a": candidate["id"],
-					"player_b": auth.uid,
-					"created_at": Time.get_unix_time_from_system()
-				},
-				{"exists": false}
-			)
+			client.update_write("matches/%s" % new_match_id, sides, {"exists": false})
 		]
 	)
 	if claimed:
