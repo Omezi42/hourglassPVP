@@ -6,14 +6,14 @@
 [sub_resource type="Resource" id="config"]
 script = ExtResource("script_config")
 player_deck_ids = Array[String](["grain", "grain", "husk", "husk", "shield", "shield", "flask", "flask", "watcher", "watcher", "glass", "glass", "balm", "balm", "crown", "crown", "vamp", "vamp", "gate", "gate", "guard", "guard", "mirror", "mirror", "legacy", "legacy", "wall", "wall", "tower", "tower"])
-opponent_deck_ids = Array[String](["grain", "grain", "glim", "glim", "wand", "wand", "seed", "seed", "dash", "dash", "tick", "tick", "salt", "salt", "sand", "sand", "spike", "spike", "sword", "sword", "drill", "drill", "barb", "barb", "lance", "lance", "twin", "twin", "swarm", "swarm"])
+opponent_deck_ids = Array[String](["grain", "grain", "glim", "glim", "wand", "wand", "seed", "seed", "dash", "dash", "tick", "tick", "salt", "salt", "sand", "sand", "spike", "spike", "sword", "sword", "drill", "drill", "barb", "barb", "lance", "lance", "twin", "twin", "shield", "shield"])
 opponent_count = 2
 own_board_units = Array[String]([])
 foe_board_units = Array[String]([])
 win_condition = 0
 survive_turns = 0
 sand_drop_count = 1
-hp_override = 0
+hp_override = 30
 mana_frozen = false
 flip_disabled = false
 clash_damage_multiplier = 1
