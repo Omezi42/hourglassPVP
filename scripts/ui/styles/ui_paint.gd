@@ -200,8 +200,13 @@ static var _discord_texture: Texture2D = preload("res://assets/ui/brands/discord
 
 
 ## 4隅の半径を個別指定できる角丸矩形の外周点列を返す(TAB形状などの非対称角丸に対応)。
-## 半径0の角は丸めず矩形の頂点そのものになる(その角のsegments+1点が同一座標に潰れるだけで、
-## 他の角と同じ構築ロジックを使い回せるため特別扱いしない)。
+## 半径0の角は丸めず矩形の頂点そのものになる(他の角と同じ構築ロジックを使い回せるため、
+## 潰れること自体は特別扱いしない)。**ただし戻り値からは重複した頂点を必ず取り除く**——
+## 半径が辺の半分に達すると隣り合う2つの角が同じ中心を共有し、境目の頂点が重なる。
+## この重複したままの点列を三角形分割に掛けると、浮動小数点誤差しだいで
+## 「Invalid polygon data, triangulation failed」で分割に失敗し、その面が描かれない
+## (HPバーの残量が12px以下になった瞬間に実際に発生した)。circle_pointsを別に持っている
+## のと同じ理由であり、こちらは角丸矩形すべてに効く。
 static func rounded_rect_points(
 	rect: Rect2,
 	top_left: float,
@@ -232,7 +237,19 @@ static func rounded_rect_points(
 		for i in range(segments + 1):
 			var t: float = a0 + (a1 - a0) * float(i) / float(segments)
 			points.append(center + Vector2(cos(t), sin(t)) * r)
-	return points
+	return dedupe_ring(points)
+
+
+## 閉じた外周点列から、隣り合う同一座標の頂点(と、末尾が先頭と重なる場合のその末尾)を
+## 取り除く。三角形分割は重複した頂点を扱えないため、点列を作る側で必ず通す。
+static func dedupe_ring(points: PackedVector2Array) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	for point in points:
+		if out.is_empty() or not out[-1].is_equal_approx(point):
+			out.append(point)
+	while out.size() > 1 and out[0].is_equal_approx(out[-1]):
+		out.remove_at(out.size() - 1)
+	return out
 
 
 ## 全角同じ半径の簡易版。
@@ -268,7 +285,7 @@ static func chevron_left_points(
 		var t2: float = (0.5 * PI) * float(i) / float(segments)
 		points.append(bottom_right_center + Vector2(cos(t2), sin(t2)) * r)
 	points.append(shoulder_bottom)
-	return points
+	return dedupe_ring(points)
 
 
 ## 左右の端を中央(高さの半分の位置)へ向けて尖らせた六角形(タグ札/バナー形状)の

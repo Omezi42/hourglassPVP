@@ -2584,6 +2584,15 @@ GameDesign.md 27章の実装方針。**チュートリアルではなく、既�
 - **`class_name` を持つ2つのスクリプトが、互いの const を const から参照してはいけない。**
   読み込みが循環して**起動したまま固まる**(エラーも出ない)。実際に `CardMatchDetail` の
   const から `CardMatchScreen.TABLE_RECT` を読んで踏んだ。参照は関数の中(実行時)へ移す
+- **角丸の外周点列は、重複した頂点を残したまま塗ってはいけない。**半径が辺の半分に達すると
+  隣り合う2つの角が同じ中心を共有し、境目の頂点が重なる。この点列を
+  `canvas_item_add_polygon()` へ渡すと、浮動小数点誤差しだいで
+  **「Invalid polygon data, triangulation failed」でその面が黙って描かれなくなる**
+  (HPバーの残量が12px以下になった瞬間に実際に出た。エディタ実行でも出るがログを
+  見ていないと気づけず、幅によって出たり出なかったりする)。`UiPaint.rounded_rect_points()` /
+  `chevron_left_points()` は `dedupe_ring()` を通してから返す。**円は
+  `circle_points()` を使う**(4隅の弧の中心がすべて同一点へ縮退するため、
+  角丸矩形を円として流用しない)
 - **`.tscn` はテキストとして直接編集しない。**`tools/godot_apply_patch.gd` か
   一時ビルドスクリプト(適用後に削除)経由で更新する。ルートにスクリプトを持つシーンを
   再生成する際は `root.set_script()` を忘れない(忘れるとその画面が一切起動しなくなる)
