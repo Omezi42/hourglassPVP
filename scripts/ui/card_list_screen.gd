@@ -40,11 +40,13 @@ var _grid: GridContainer
 var _selected: CardData
 var _order_button: Button
 var _order: Order = Order.COST
+var _collected: Vector2i = Vector2i.ZERO
 var _font: Font
 var _heading: Control
 
 
 func _ready() -> void:
+	_collected = AccountService.collected_card_counts()
 	_font = get_theme_default_font()
 	if _font == null:
 		_font = ThemeDB.fallback_font
@@ -118,7 +120,7 @@ func _draw_heading() -> void:
 	_heading.draw_string(
 		_font,
 		Vector2(page.end.x - 156, page.position.y + 42),
-		"収集 %d / %d" % [_views.size(), _views.size()],
+		"収集 %d / %d" % [_collected.x, _collected.y],
 		HORIZONTAL_ALIGNMENT_RIGHT,
 		140,
 		16,

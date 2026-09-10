@@ -82,14 +82,9 @@ func refresh() -> void:
 		tile.set_subtitle(
 			"%s ・ %d 枚 ・ 全%dデッキ" % [String(decks[index]["name"]), selected.size(), decks.size()]
 		)
-	(hourglass_list_button as HomeTile).set_subtitle(
-		"収集 %d / %d 種" % [_card_count(), _card_count()]
-	)
+	var collected := AccountService.collected_card_counts()
+	(hourglass_list_button as HomeTile).set_subtitle("収集 %d / %d 種" % [collected.x, collected.y])
 	(shop_button as HomeTile).set_subtitle(CurrencyRules.label_text(AccountService.currency()))
-
-
-static func _card_count() -> int:
-	return CardLibrary.all_cards().size()
 
 
 ## `.tscn` に置いてある `Button` を、同じ場所・同じ大きさの `HomeTile` へ置き換える。

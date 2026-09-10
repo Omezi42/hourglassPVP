@@ -92,6 +92,18 @@ static func owns_card_set(set_id: String) -> bool:
 	return set_id.is_empty() or owned_card_set_ids().has(set_id)
 
 
+## 図鑑とホームに出す「収集 n / m」(GameDesign.md 9章)。所有していないカードセットの
+## カードは未発見のため数えない。**数え方をここ1箇所だけが持つ**——画面ごとに数えると
+## 片方だけが古くなり、実際に両方とも「全部集めた」と出していた。
+static func collected_card_counts() -> Vector2i:
+	var cards := CardLibrary.all_cards()
+	var owned := 0
+	for card in cards:
+		if owns_card_set(card.set_id):
+			owned += 1
+	return Vector2i(owned, cards.size())
+
+
 static func owns(kind: ShopCatalog.Kind, id: String) -> bool:
 	match kind:
 		ShopCatalog.Kind.EMOTE:
