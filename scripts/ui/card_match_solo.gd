@@ -77,7 +77,14 @@ func on_match_ended() -> void:
 ## 対局を1戦ぶん作る。中身はCPU戦と同じ経路(`_begin_state()`)で、固定デッキ・
 ## 上級CPU・特殊ルールをそのあとで重ねる(GameDesign.md 27章)。
 func _begin_battle() -> void:
+	# **`_reset_for_new_match()` は画面の後始末として `close()` を呼び、`_stage`/`_config`
+	# を消す。**先に控えて、戻してから使う(`CardMatchPuzzle` が `_begin_state()` のあとで
+	# 問題を覚えているのと同じ穴。Architecture.md 10.12節)。
+	var stage_kept := _stage
+	var config_kept := _config
 	_screen._reset_for_new_match()
+	_stage = stage_kept
+	_config = config_kept
 	_screen._cpu = CardCpuStrategy.new()
 	_screen._cpu.difficulty = CardCpuStrategy.Difficulty.EXPERT
 	_screen._interactive = true
@@ -89,6 +96,7 @@ func _begin_battle() -> void:
 	_screen.foe_bar.display_name = "CPU"
 	_screen.foe_bar.icon_id = UserProfileLibrary.CPU_ICON_ID
 	_screen.foe_bar.title_id = UserProfileLibrary.CPU_TITLE_ID
+	_screen._set_playmats(AccountService.playmat_id(), PlaymatLibrary.CPU_ID)
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
 	_screen._begin_state(
