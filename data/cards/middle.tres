@@ -1,6 +1,7 @@
-[gd_resource type="Resource" script_class="CardData" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="CardData" load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/emblems/middle.png" id="emblem"]
 
 [resource]
 script = ExtResource("script_card")
@@ -16,5 +17,6 @@ rules_text = "総量が5の間、毒砂を持つ(ダメージを与えた相手�
 cannot_attack = false
 is_token = false
 art_id = "poison"
+emblem = ExtResource("emblem")
 conditional_keyword = 3
 conditional_keyword_total = 5
