@@ -40,6 +40,19 @@ const FRAME_W := 1000.0
 const RESUME_RECT := Rect2(FRAME_X, TOP_BAND + 4.0, FRAME_W, 46.0)
 const RESUME_GAP := 16.0
 
+## 待機を中断するボタン(GameDesign.md 11章)。**「だれかと」の枠の見出しの行、
+## その右端へ置く。**以前は画面の右上へ絶対座標で置いており、アカウント帯の
+## 名札・砂金・メニューへ重なって文字が隠れていた。枠の名前を載せた真鍮のプレートと
+## 同じように枠の上端へ跨がらせることで、左=何の枠か / 右=いま止められる操作、
+## という1本の行として読める。
+const CANCEL_SIZE := Vector2(152, 38)
+## プレートと同じ跨がり方(`HomeFrame.HEADING_OVERLAP`)・同じ左右の余白
+## (`HomeFrame.HEADING_LEFT`)にそろえる。**const から他クラスの const を参照しない**
+## ため(Architecture.md 11章)、値は `_layout()` の中で実行時に読む。
+const CANCEL_FONT_SIZE := 20
+## 待機中の文言と、その右のボタンとのあいだに空ける幅。
+const CANCEL_GAP := 16.0
+
 const ONLINE_FRAME_H := 164.0
 const SOLO_FRAME_H := 186.0
 const FRAME_GAP := 18.0
@@ -82,6 +95,7 @@ func _ready() -> void:
 	_take_over_status_label()
 	_build()
 	cancel_button.pressed.connect(_on_cancel_pressed)
+	_take_over_cancel_button()
 	refresh()
 
 
@@ -96,6 +110,16 @@ func _take_over_status_label() -> void:
 	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	_announce_badge = StatusBadge.new()
 	status_label.add_child(_announce_badge)
+
+
+## `.tscn` のキャンセルボタンは画面の右上へアンカーで貼り付けてあり、そのままでは
+## `_layout()` が位置を決められない。**アンカーを左上へ戻して絶対座標の部品にする**
+## (`.tscn` そのものは書き換えない。Architecture.md 4章)。
+func _take_over_cancel_button() -> void:
+	cancel_button.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	cancel_button.custom_minimum_size = CANCEL_SIZE
+	cancel_button.size = CANCEL_SIZE
+	cancel_button.add_theme_font_size_override("font_size", CANCEL_FONT_SIZE)
 
 
 func _build() -> void:
@@ -129,6 +153,10 @@ func _build() -> void:
 	puzzle_tile.pressed.connect(func() -> void: puzzle_requested.emit())
 	add_child(puzzle_tile)
 	_solo_tiles = [_cpu_tile, solo_tile, puzzle_tile]
+	# 見出しの行は枠の上端に跨がるため、枠より後の子にしないとパネルへ隠れる
+	# (**後から `add_child()` した子ほど手前に描かれる**。Architecture.md 11章)。
+	move_child(status_label, get_child_count() - 1)
+	move_child(cancel_button, get_child_count() - 1)
 	_layout()
 
 
@@ -156,9 +184,24 @@ func _layout() -> void:
 		_solo_tiles[i].position = (
 			_solo_frame.position + Vector2(TILE_PAD + float(i) * SOLO_TILE_GAP, TILE_TOP + 2.0)
 		)
-	# 待機中の文言は、枠の見出しの右へ渡す(枠の中に置くと札へ被る)。
-	status_label.position = Vector2(FRAME_X + 240.0, top - 26.0)
-	status_label.size = Vector2(FRAME_W - 260.0, 30.0)
+	_layout_status_row(top)
+
+
+## 見出しの行(枠の上端に跨がる帯)へ、左から「枠の名前のプレート / 待機中の文言 /
+## キャンセル」を並べる。**文言とキャンセルは必ず同じ行に置く**——何が起きているかと、
+## それを止める手段が離れていると、止め方を探しに行くことになる。
+func _layout_status_row(top: float) -> void:
+	var plate_top: float = top - HomeFrame.HEADING_HEIGHT * HomeFrame.HEADING_OVERLAP
+	var plate_center: float = plate_top + HomeFrame.HEADING_HEIGHT * 0.5
+	cancel_button.position = Vector2(
+		FRAME_X + FRAME_W - HomeFrame.HEADING_LEFT - CANCEL_SIZE.x,
+		plate_center - CANCEL_SIZE.y * 0.5
+	)
+	cancel_button.size = CANCEL_SIZE
+	var status_left: float = FRAME_X + 240.0
+	var status_right: float = cancel_button.position.x - CANCEL_GAP
+	status_label.position = Vector2(status_left, plate_center - 15.0)
+	status_label.size = Vector2(maxf(status_right - status_left, 120.0), 30.0)
 
 
 func refresh() -> void:
