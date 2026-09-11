@@ -16,7 +16,7 @@ keyword = -1
 [resource]
 script = ExtResource("script_card")
 id = "chime"
-display_name = "刻限の砂"
+display_name = "チャイム"
 cost = 2
 total_sand = 4
 pool_index = 71

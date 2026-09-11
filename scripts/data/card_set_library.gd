@@ -14,7 +14,7 @@ const SETS: Dictionary = {
 	"solo_chime":
 	{
 		"id": "solo_chime",
-		"display_name": "刻限の砂(ソロモード)",
+		"display_name": "チャイム(ソロモード)",
 		"description": "ソロモードのステージをクリアして手に入る。ショップでは売らない。",
 		"card_ids": ["chime"],
 		"price": 0,
@@ -22,7 +22,7 @@ const SETS: Dictionary = {
 	"solo_ward":
 	{
 		"id": "solo_ward",
-		"display_name": "見習いの盾(ソロモード)",
+		"display_name": "ウォード(ソロモード)",
 		"description": "ソロモードのステージをクリアして手に入る。ショップでは売らない。",
 		"card_ids": ["ward"],
 		"price": 0,
