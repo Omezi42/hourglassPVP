@@ -729,6 +729,56 @@
 			"is_spell": true,
 			"pool_index": 73,
 			"total_sand": 0
+		},
+		{
+			"cannot_attack": false,
+			"cost": 3,
+			"describe": "総量が5の間、毒砂を持つ(ダメージを与えた相手を破壊する)",
+			"display_name": "ミドル",
+			"id": "middle",
+			"is_spell": false,
+			"pool_index": 74,
+			"total_sand": 6
+		},
+		{
+			"cannot_attack": false,
+			"cost": 3,
+			"describe": "総量が5の間、戦闘で与えるダメージが2倍になる",
+			"display_name": "フェイズ",
+			"id": "phase",
+			"is_spell": false,
+			"pool_index": 75,
+			"total_sand": 6
+		},
+		{
+			"cannot_attack": false,
+			"cost": 3,
+			"describe": "設置:総量が5の味方1体を選び、反転させて総量+3する",
+			"display_name": "キー",
+			"id": "key",
+			"is_spell": false,
+			"pool_index": 76,
+			"total_sand": 5
+		},
+		{
+			"cannot_attack": false,
+			"cost": 3,
+			"describe": "反転:このとき自分の総量が5なら、味方全体の攻撃力+1",
+			"display_name": "サイクル",
+			"id": "cycle",
+			"is_spell": false,
+			"pool_index": 77,
+			"total_sand": 6
+		},
+		{
+			"cannot_attack": false,
+			"cost": 5,
+			"describe": "落砂:味方に総量5の砂時計がいれば、相手の砂時計1体を破壊する",
+			"display_name": "クレスト",
+			"id": "crest",
+			"is_spell": false,
+			"pool_index": 78,
+			"total_sand": 8
 		}
 	]
 }

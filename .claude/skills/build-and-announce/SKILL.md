@@ -74,13 +74,47 @@ python tools/discord/build_update_banner.py {バージョン} --subtitle "..."
   (Godotがインポートして、告知用の画像がゲームのpckへ入ってしまう)
 - 出力は `tools/discord/out/update_banner.png`。**生成したら必ず目で確かめる**
 
+### 4.5. 目玉コンテンツの紹介画像を作る
+
+**バナーはバージョン番号を示すだけで、何が増えたのかまでは伝えない。**
+そのビルドでいちばん伝えたい追加コンテンツ(新カードセット・新ステージ等)を、
+実際のカード画像つきで見せる1枚を必ずもう1枚添える。文字だけの告知は
+目に留まりにくいため、**画像を伴わない回を作らない**。
+
+対象がカード(セット)の追加であれば、まずDiscord用のカード画像を用意する
+(`functions/data/card_art/{id}.png` に無ければ、非ヘッドレスで1度焼く。
+GPU描画が要るため `--headless` は付けない)。
+
+```
+"C:\Users\omezi\Documents\Godot_v4.6.2-stable_win64_console.exe" --path . \
+    --script tools/export_discord_card_art.gd
+```
+
+そのうえで紹介画像を組み立てる。
+
+```
+python tools/discord/build_spotlight.py \
+    --title "カードセット「○○」" \
+    --subtitle "1行で狙いを添える" \
+    --cards id1 id2 id3 id4 id5 \
+    --out tools/discord/out/spotlight_{バージョン}.png
+```
+
+- **カードが無い回**(ステージ追加・UI刷新など)は `--cards` を省略できるが、
+  その場合でも**スクリーンショット等の画像を別途用意して添えること**を優先する。
+  何も画像を持たない回は、バナーだけでも出す(お知らせを出さないより良い)
+- 出力先は `tools/discord/out/`。**`assets/` の下へ出さない**(4章と同じ理由)
+- **生成したら必ず目で確かめる**(カードが重なっていないか・文字が切れていないか)
+
 ### 5. 投稿する
 
 ```
 python tools/discord/discord_post.py tools/discord/drafts/update-{バージョン}.md \
-    --attach tools/discord/out/update_banner.png --dry-run
+    --attach tools/discord/out/update_banner.png \
+    --attach tools/discord/out/spotlight_{バージョン}.png --dry-run
 python tools/discord/discord_post.py tools/discord/drafts/update-{バージョン}.md \
-    --attach tools/discord/out/update_banner.png
+    --attach tools/discord/out/update_banner.png \
+    --attach tools/discord/out/spotlight_{バージョン}.png
 ```
 
 既定の宛先が #お知らせ。**必ず `--dry-run` で1度確認してから投稿する。**
