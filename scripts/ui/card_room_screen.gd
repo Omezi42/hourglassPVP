@@ -17,7 +17,10 @@ const PANEL_STYLE := "res://resources/theme/content_panel.tres"
 const SETTINGS_RECT := Rect2(24, ScreenHeader.CONTENT_TOP, 1232, 108)
 const CREATE_RECT := Rect2(24, 268, 604, 284)
 const JOIN_RECT := Rect2(652, 268, 604, 284)
-const STATUS_RECT := Rect2(24, 568, 1232, 88)
+## ホストの手番(相手が入室した後)は「キャンセル」「対局を開始」の2つが同時に
+## 並ぶため、ボタン2つぶんの高さ(56)を`content_panel.tres`の上下マージン(20×2)込みで
+## 収める高さにしてある。88のままだと縦にわずかに欠けていた。
+const STATUS_RECT := Rect2(24, 568, 1232, 104)
 ## 通信待ち中の「...」演出。バトルタブと同じ間隔・同じ打ち方に揃える。
 const BUSY_DOTS_MAX := 3
 const BUSY_DOTS_INTERVAL := 0.5
@@ -149,7 +152,15 @@ func _build_status() -> void:
 	line.add_theme_constant_override("separation", 24)
 	row.add_child(line)
 	_status_label = _make_label("", 22)
-	_status_label.custom_minimum_size = Vector2(920, 0)
+	# **キャンセル・対局を開始の2つが同時に並んだときにも右へはみ出さない幅にする。**
+	# 920のままだと、ホストの手番(2ボタン同時)で
+	# 920 + 24(間隔) + 200(キャンセル) + 24(間隔) + 200(対局を開始) = 1368 が
+	# パネルの内寸(1232 - 24×2 = 1184)を大きく超え、「対局を開始」ボタンが
+	# 画面の右端の外へ押し出されて見えなくなっていた(GameDesign.md「ルームマッチを
+	# 開始するときの画面でボタンが見切れる」不具合)。ボタン2つ分を差し引いた
+	# 700を敷居にし、**ボタンが少ない/無いときは`SIZE_EXPAND_FILL`で余った分だけ広がる**。
+	_status_label.custom_minimum_size = Vector2(700, 0)
+	_status_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	line.add_child(_status_label)
 	_cancel_button = CodedButton.make("キャンセル", Vector2(200, 56))
 	_cancel_button.visible = false
