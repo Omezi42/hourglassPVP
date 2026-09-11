@@ -1,8 +1,6 @@
 class_name HomeScreen
 extends Control
 
-## バトルタブで成立するのはランダムマッチだけ(ルームマッチは専用画面。11章)。
-signal online_match_found(match_id: String, my_side: int, opponent_uid: String)
 signal online_resume_requested(record: Dictionary)
 signal stats_requested
 signal puzzle_requested
@@ -91,10 +89,6 @@ func _ready() -> void:
 	battle_tab.solo_requested.connect(func() -> void: solo_requested.emit())
 	battle_tab.resume_requested.connect(
 		func(record: Dictionary) -> void: online_resume_requested.emit(record)
-	)
-	battle_tab.online_match_found.connect(
-		func(match_id: String, my_side: int, opponent_uid: String) -> void:
-			online_match_found.emit(match_id, my_side, opponent_uid)
 	)
 	deck_tab.deck_edit_pressed.connect(func() -> void: deck_list_requested.emit())
 	deck_tab.hourglass_list_pressed.connect(func() -> void: hourglass_list_requested.emit())

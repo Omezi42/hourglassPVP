@@ -23,6 +23,8 @@ var solo_map_screen: CardSoloMapScreen
 var shop_screen: CardShopScreen
 ## ルームマッチの専用画面(GameDesign.md 11章)。
 var card_room_screen: CardRoomScreen
+## ランダムマッチの専用画面(同章・Architecture.md 6.6節)。
+var card_random_match_screen: CardRandomMatchScreen
 ## CPU戦の思考レベル選択モーダル(GameDesign.md 13章)。
 var card_cpu_difficulty_picker: CardCpuDifficultyPicker
 
@@ -133,6 +135,13 @@ func _ready() -> void:
 	card_room_screen.matched.connect(_on_room_match_found)
 	card_room_screen.spectate_requested.connect(_on_spectate_requested)
 	_screens.append(card_room_screen)
+	card_random_match_screen = CardRandomMatchScreen.new()
+	card_random_match_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
+	card_random_match_screen.visible = false
+	add_child(card_random_match_screen)
+	card_random_match_screen.back_pressed.connect(func() -> void: _show_only(home_screen))
+	card_random_match_screen.matched.connect(_on_online_match_found)
+	_screens.append(card_random_match_screen)
 	puzzle_picker_screen = CardPuzzlePickerScreen.new()
 	puzzle_picker_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
 	puzzle_picker_screen.visible = false
@@ -166,7 +175,6 @@ func _ready() -> void:
 	# 対局画面から戻る先は各導線が設定するが、設定される前に戻る操作が起きても
 	# 落ちないよう既定をホームにしておく
 	_match_return_screen = home_screen
-	home_screen.online_match_found.connect(_on_online_match_found)
 	home_screen.online_resume_requested.connect(_on_online_resume_requested)
 	home_screen.stats_requested.connect(_on_stats_requested)
 	home_screen.puzzle_requested.connect(_on_puzzle_requested)
@@ -222,9 +230,10 @@ func _on_match_back() -> void:
 		solo_map_screen.open()
 	_show_only(_match_return_screen)
 	home_screen.refresh_account()
-	# 対局は待機状態(ボタンの無効化)を残したまま始まるため、戻った時点で両方とも解く。
+	# 対局は待機状態(ボタンの無効化)を残したまま始まるため、戻った時点で解く。
 	home_screen.reset_battle_tab()
 	card_room_screen.reset_after_match()
+	card_random_match_screen.reset_after_match()
 
 
 func _on_account_requested(from_title: bool) -> void:
@@ -287,8 +296,15 @@ func _request_battle(start: Callable) -> void:
 	_show_only(card_deck_list_screen)
 
 
+## ランダムマッチ(GameDesign.md 11章)。デッキ選択画面を終えたら、たたかうタブへは
+## 戻らずランダムマッチの専用画面へ入り、その画面がキューへの参加まで行う。
 func _on_random_match_deck_requested() -> void:
-	_request_battle(func() -> void: home_screen.battle_tab.begin_random_match())
+	_request_battle(func() -> void: _begin_random_match())
+
+
+func _begin_random_match() -> void:
+	_show_only(card_random_match_screen)
+	card_random_match_screen.begin_match()
 
 
 ## ルームマッチは専用画面へ直行する。**共通のデッキ選択画面を先に挟まない**
