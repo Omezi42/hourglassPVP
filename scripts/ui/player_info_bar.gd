@@ -152,6 +152,32 @@ func show_state(state: MatchState, side: int) -> void:
 	queue_redraw()
 
 
+## 前の対局の値を消して、まだ何も対局を見ていない状態へ戻す。次の `show_state()`
+## までのあいだ(オンライン対戦の山札・種の交換を待っている間など)、前の対局の
+## HP・マナ・山札の枚数が居座って見えることを防ぐ。
+func reset() -> void:
+	if _hp_tween != null and _hp_tween.is_valid():
+		_hp_tween.kill()
+	if _deck_tween != null and _deck_tween.is_valid():
+		_deck_tween.kill()
+	_hp = MatchState.INITIAL_HP
+	_shown_hp = float(_hp)
+	_mana = 0
+	_max_mana = 0
+	_deck = 0
+	_graveyard = 0
+	_hand = 0
+	_has_coin = false
+	_initialized = false
+	_flash = 0.0
+	_float_left = 0.0
+	_deck_pulse = 0.0
+	active = false
+	targetable = false
+	clock_seconds = -1.0
+	queue_redraw()
+
+
 ## エモートの吹き出しを名札付近へ出す(GameDesign.md 9章)。
 func show_emote(text: String) -> void:
 	for child in get_children():

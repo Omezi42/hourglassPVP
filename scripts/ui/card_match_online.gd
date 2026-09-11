@@ -32,6 +32,11 @@ func start(
 	_screen.my_side = p_my_side
 	_screen._own_deck = deck_self
 	_apply_player_names(client, opponent_uid)
+	# 山札・種の交換を待つ間は `state` がまだ無く、盤面も行動ボタンも実体を
+	# 持たない(`_reset_for_new_match()` で隠してある)。**「戻る」だけは
+	# ここで出す**——通信が詰まって`wait_for_opponent_setup()`が長引いても、
+	# 対局が始まる前ならいつでも中断してホームへ戻れる(GameDesign.md 11章)。
+	_screen._back_button.visible = true
 	_screen._status.set_waiting("対戦相手を待っています")
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
@@ -110,6 +115,7 @@ func resume(client: FirestoreClient, record: Dictionary) -> bool:
 		else CurrencyRules.MatchKind.RANDOM
 	)
 	_screen.my_side = p_my_side
+	_screen._back_button.visible = true
 	_apply_player_names(client, record.get("opponent_uid", ""))
 	var doc: Dictionary = await client.get_document("matches/%s" % match_id)
 	var deck_a := CardLibrary.deck_from_ids(doc.get("deck_a", []))
@@ -160,6 +166,7 @@ func spectate(client: FirestoreClient, p_match_id: String) -> bool:
 	_screen._cpu = null
 	_screen._interactive = false
 	_screen.my_side = MatchState.Side.A
+	_screen._back_button.visible = true
 	var record: Dictionary = await client.get_document("matches/%s" % p_match_id)
 	var deck_a := CardLibrary.deck_from_ids(record.get("deck_a", []))
 	var deck_b := CardLibrary.deck_from_ids(record.get("deck_b", []))

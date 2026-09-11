@@ -206,13 +206,13 @@ func _reset_for_new_match() -> void:
 	_client = null
 	_match_id = ""
 	_clocks.clear()
-	# 持ち時間を持たない対局(CPU戦・持ち時間を切ったルームマッチ)へ入ったときに、
-	# 前の対局の残り時間が情報帯に残らないようにする(負の値は表示しない)。
-	_own_bar.clock_seconds = -1.0
-	_foe_bar.clock_seconds = -1.0
 	if _alert != null:
 		_alert.remaining_seconds = -1.0
 		_alert.is_my_turn = false
+	# 前の対局のHP・マナ・山札の枚数・持ち時間が情報帯に残らないようにする
+	# (`reset()` が持ち時間も含めて未初期化の状態へ戻す)。
+	_own_bar.reset()
+	_foe_bar.reset()
 	_cpu_record = {}
 	if _puzzle != null:
 		_puzzle.close()
@@ -228,6 +228,47 @@ func _reset_for_new_match() -> void:
 	if state != null and is_instance_valid(state):
 		state.queue_free()
 	state = null
+	# **前の対局の盤面をここで消す。**`refresh()` は `state == null` の間ずっと
+	# 早期returnするため、これを怠るとオンライン対戦の山札・種の交換を待っている間
+	# (数秒〜タイムアウトまで数分かかりうる)、前の対局の駒・手札がそのまま
+	# 盤面に残り続ける。「対戦相手を待っています」の文言と実際に動く駒が同時に
+	# 見えるという、対局が壊れているようにしか見えない状態になっていた。
+	for view in _foe_slots:
+		view.clear()
+		view.selected = false
+		view.exhausted = false
+		view.ready_mark = false
+		view.preview_health = -1
+		view.preview_dead = false
+	for view in _own_slots:
+		view.clear()
+		view.selected = false
+		view.exhausted = false
+		view.ready_mark = false
+		view.preview_health = -1
+		view.preview_dead = false
+	for view in _hand_views:
+		view.clear()
+		view.visible = false
+	# 行動の列も、次の `refresh()`(`_begin_state()` の中)までは実体の無い
+	# 状態を操作させないよう一旦隠す。**「戻る」だけは例外**——設定を待つ間に
+	# 中断できる導線が無いと、通信が詰まったときに画面へ閉じ込められる
+	# (GameDesign.md 11章「対局が始まる前はいつでも中断してホームへ戻れる」)。
+	# ここでは表示させず、オンライン対戦の開始処理(`CardMatchOnline`)が
+	# 待機に入る直前に明示的に出す。
+	_end_turn_button.visible = false
+	_coin_button.visible = false
+	_log_button.visible = false
+	_surrender_button.visible = false
+	_flip_button.visible = false
+	_back_button.visible = false
+	# エモートボタン・打点アシストはいずれも既定で可視のまま作られ、通常は毎回の
+	# `refresh()` が `state == null` を考慮して隠す。だが `refresh()` 自体が
+	# `state == null` の間は早期returnするため、その経路を借りずここで直接呼ぶ。
+	if _emote != null:
+		_emote.refresh()
+	if _damage_assist != null:
+		_damage_assist.sync()
 
 
 ## CPU戦を開始する。`difficulty` 省略時は前回選んだ思考レベルを使う(GameDesign.md 13章)。

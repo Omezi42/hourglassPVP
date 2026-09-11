@@ -184,13 +184,21 @@ func _post_raw(url: String, body: Dictionary) -> Array:
 
 
 ## 送信はHttpJson経由で行い、タイムアウトと一時的失敗のリトライをそちらへ任せる
-## (Architecture.md 6.1節)。認証切れ(401)だけはここで1度トークンを更新して再送する。
+## (Architecture.md 6.1節)。認証切れはここで1度トークンを更新して再送する。
+##
+## **判定は401だけでなく403も含める。**Firestoreのセキュリティルールは
+## `request.auth != null` を見て許可の可否を決めるため、期限切れ・無効な
+## IDトークンは「認証されていない」扱いになり、実際にはIAM層の401ではなく
+## ルール評価の403(PERMISSION_DENIED)として返ってくることが多い。401だけを
+## 見ていると、期限切れのトークンのまま何度送っても403が返り続け、更新の機会が
+## 一度も来ない(ルームマッチの山札・種の交換がここで止まり、対局が始まらないまま
+## 「対戦相手を待っています」から進まなくなる不具合として現れていた)。
 func _send(url: String, method: HTTPClient.Method, body_string: String) -> Array:
 	await auth.ensure_fresh_token()
 	var result: Array = await HttpJson.request_with_retry(
 		self, url, method, _headers(), body_string
 	)
-	if result[0] == 401:
+	if result[0] == 401 or result[0] == 403:
 		await auth.force_refresh()
 		result = await HttpJson.request_with_retry(self, url, method, _headers(), body_string)
 
