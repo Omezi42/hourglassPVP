@@ -382,8 +382,10 @@ func _on_shop_back() -> void:
 	home_screen.refresh_account()
 
 
-## 砂時計一覧はカード一覧(CardListScreen)。
+## 砂時計一覧はカード一覧(CardListScreen)。所有状況はショップでの購入等で
+## 画面の外から変わるため、開くたびに数え直す(`open()`)。
 func _on_hourglass_list_requested() -> void:
+	card_list_screen.open()
 	_show_only(card_list_screen)
 
 

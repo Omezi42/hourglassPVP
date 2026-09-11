@@ -46,7 +46,6 @@ var _heading: Control
 
 
 func _ready() -> void:
-	_collected = AccountService.collected_card_counts()
 	_font = get_theme_default_font()
 	if _font == null:
 		_font = ThemeDB.fallback_font
@@ -54,6 +53,17 @@ func _ready() -> void:
 	# 開いた直後に解説が空のまま置かれないよう、先頭のカードを選んでおく。
 	if not _views.is_empty():
 		_select(_views[0].card)
+
+
+## 画面を開くたびにMainが呼ぶ。**所有状況(カードセットの購入等)は画面の外で
+## 変わるため**、`_ready()`で一度だけ数えた収集数・ロック表示を開くたびに
+## 数え直す。これが無いと、購入した直後にこの画面を開いてもロックが外れず、
+## アプリを再読み込みするまで反映されない(実際にそうなっていた)。
+func open() -> void:
+	_collected = AccountService.collected_card_counts()
+	if _heading != null:
+		_heading.queue_redraw()
+	_fill_grid()
 
 
 func _build() -> void:
