@@ -90,6 +90,7 @@ func _build() -> void:
 	column.add_child(_empty)
 	_scroll = ScrollContainer.new()
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	TouchScroll.enable(_scroll)
 	column.add_child(_scroll)
 	_grid = GridContainer.new()
 	_grid.columns = COLUMNS

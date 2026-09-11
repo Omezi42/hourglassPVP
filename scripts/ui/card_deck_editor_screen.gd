@@ -162,6 +162,7 @@ func _build_grid() -> void:
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	TouchScroll.enable(scroll)
 	container.add_child(scroll)
 
 	_pool = CardLibrary.sorted_by_cost()

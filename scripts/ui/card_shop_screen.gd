@@ -177,6 +177,7 @@ func _build() -> void:
 
 	var scroll := ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	TouchScroll.enable(scroll)
 	panel.add_child(scroll)
 	_list = VBoxContainer.new()
 	_list.add_theme_constant_override("separation", SECTION_SEPARATION)

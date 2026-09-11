@@ -89,6 +89,7 @@ func _build() -> void:
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	TouchScroll.enable(scroll)
 	column.add_child(scroll)
 	_grid = GridContainer.new()
 	_grid.columns = 2

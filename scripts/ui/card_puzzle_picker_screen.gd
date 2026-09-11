@@ -45,6 +45,7 @@ func _build() -> void:
 	scroll.position = GRID_RECT.position
 	scroll.size = GRID_RECT.size
 	scroll.custom_minimum_size = GRID_RECT.size
+	TouchScroll.enable(scroll)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	add_child(scroll)
 

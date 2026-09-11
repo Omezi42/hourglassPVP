@@ -92,6 +92,7 @@ func _build() -> void:
 	scroll.position = INDEX_RECT.position
 	scroll.size = INDEX_RECT.size
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	TouchScroll.enable(scroll)
 	add_child(scroll)
 	_grid = GridContainer.new()
 	_grid.columns = COLUMNS

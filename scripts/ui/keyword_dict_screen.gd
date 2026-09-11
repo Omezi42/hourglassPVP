@@ -45,6 +45,7 @@ func _build() -> void:
 	scroll.position = LIST_RECT.position
 	scroll.size = LIST_RECT.size
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	TouchScroll.enable(scroll)
 	add_child(scroll)
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 8)

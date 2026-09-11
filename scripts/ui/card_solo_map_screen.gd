@@ -39,6 +39,7 @@ func _build() -> void:
 	scroll.position = LIST_RECT.position
 	scroll.size = LIST_RECT.size
 	scroll.custom_minimum_size = LIST_RECT.size
+	TouchScroll.enable(scroll)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	add_child(scroll)
 

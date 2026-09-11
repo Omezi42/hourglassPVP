@@ -20,6 +20,7 @@ func _ready() -> void:
 	var style: StyleBox = load(PANEL_STYLE)
 	if style != null:
 		list_container.get_parent().add_theme_stylebox_override("panel", style)
+	TouchScroll.enable(list_container.get_parent())
 	screen_header.set_title("リプレイ")
 	screen_header.back_pressed.connect(func() -> void: back_pressed.emit())
 	# 案内は他の一覧と同じ組み立て(印 / 見出し / 1行)にする。.tscn の Label は

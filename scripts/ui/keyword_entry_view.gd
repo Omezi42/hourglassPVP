@@ -93,6 +93,7 @@ func _build() -> void:
 	var scroll := ScrollContainer.new()
 	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.custom_minimum_size = Vector2(0, CARD_SIZE.y + 12.0)
+	TouchScroll.enable(scroll)
 	add_child(scroll)
 	_cards_row = HBoxContainer.new()
 	_cards_row.add_theme_constant_override("separation", 10)

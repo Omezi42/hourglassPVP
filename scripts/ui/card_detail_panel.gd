@@ -341,5 +341,6 @@ func _make_body_scroll(text_width: float) -> Control:
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	TouchScroll.enable(scroll)
 	scroll.add_child(_body)
 	return scroll

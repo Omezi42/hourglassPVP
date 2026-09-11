@@ -61,6 +61,7 @@ func _ready() -> void:
 	name_input.max_length = AccountService.DISPLAY_NAME_MAX_LENGTH
 	name_input.text_changed.connect(_on_name_text_changed)
 	id_input.max_length = FirebaseAuth.ID_MAX_LENGTH
+	TouchScroll.enable(title_list.get_parent())
 
 	_setup_buttons()
 	_setup_profile_ui()
@@ -155,6 +156,7 @@ func _wrap_icon_grid() -> void:
 	var scroll := ScrollContainer.new()
 	scroll.custom_minimum_size = Vector2(0, ICON_SCROLL_HEIGHT)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	TouchScroll.enable(scroll)
 	parent.remove_child(icon_grid)
 	scroll.add_child(icon_grid)
 	icon_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL

@@ -80,6 +80,7 @@ func _build() -> void:
 	_scroll = ScrollContainer.new()
 	_scroll.custom_minimum_size = SCROLL_SIZE
 	_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	TouchScroll.enable(_scroll)
 	column.add_child(_scroll)
 	_row = HBoxContainer.new()
 	_row.add_theme_constant_override("separation", int(ROW_GAP))
