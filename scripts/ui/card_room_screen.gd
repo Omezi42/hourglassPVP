@@ -133,6 +133,7 @@ func _build_join() -> void:
 	_join_input = LineEdit.new()
 	_join_input.placeholder_text = "%d桁の数字" % RoomMatch.CODE_LENGTH
 	_join_input.max_length = RoomMatch.CODE_LENGTH
+	_join_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
 	_join_input.custom_minimum_size = Vector2(300, 56)
 	column.add_child(_join_input)
 	var buttons := HBoxContainer.new()

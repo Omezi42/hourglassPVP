@@ -273,6 +273,7 @@ func _build_controls() -> Control:
 	column.add_child(_make_label("受け取ったコードを読み込む", 20))
 	_input_field = _make_field(false)
 	_input_field.max_length = DeckCodeService.CODE_LENGTH
+	_input_field.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
 	_input_field.placeholder_text = "%d桁の数字" % DeckCodeService.CODE_LENGTH
 	var load_row := _make_row(_input_field, "読み込む", _on_load_pressed)
 	_load_button = load_row.get_child(1)

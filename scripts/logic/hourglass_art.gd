@@ -123,6 +123,16 @@ static func _bake_all() -> void:
 		for state in STATE_FILES.size():
 			await _bake(art_id, state)
 	_baking = false
+	# 焼き終えたCPU側の生画像(全カード×3状態ぶん)は、以後 texture() が
+	# 読まない(published済みのGPUテクスチャだけを返す)。持ち続けるとカードが
+	# 増えるほど際限なく積み上がる永続メモリになるため、ここで手放す
+	# (Webでのモバイルブラウザのメモリ上限対策)。
+	_free_baked_images()
+
+
+## `_baked`(生のImage)を手放す。焼き付け完了後は`texture()`が参照しない。
+static func _free_baked_images() -> void:
+	_baked.clear()
 
 
 static func _ordered_ids() -> Array[String]:
