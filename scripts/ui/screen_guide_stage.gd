@@ -13,7 +13,7 @@ extends RuleStage
 ## 行動の列。対局画面(`CardMatchScreen`)と同じ並びにする。
 const ACTION_GAP := 24.0
 const ACTION_SIZE := Vector2(148, 48)
-const ACTION_LABELS: Array[String] = ["コイン", "ターン終了", "ログ", "投了"]
+const ACTION_LABELS: Array[String] = ["反転権", "コイン", "ターン終了", "ログ", "投了", "エモート"]
 const ACTION_STEP := 60.0
 const FLIP_SIZE := Vector2(104, 30)
 ## 手札。対局画面と同じく盤面の真下へ中央で置く。
