@@ -154,6 +154,11 @@ func _ready() -> void:
 	$AccountBar.add_child(_sunday_banner)
 	$AccountBar.move_child(_sunday_banner, $AccountBar.get_children().find(_currency_chip) + 1)
 
+	# **`.tscn` はデッキタブだけが最初から visible=true になっている。**`_select_tab()` は
+	# 「直前に表示していたタブ」しかフェードアウトさせないため、初回の選択がデッキタブで
+	# ない場合(通常はこちら)、デッキタブの枠がずっと裏に残ったまま重なって見える
+	# (実際に「おぼえる」の見出しの裏へ「カード」の見出しが透けていた)。
+	deck_tab.visible = false
 	# 初回起動時だけ「おぼえる」から始める(GameDesign.md 9章)。読了は測らない。
 	# **2回目以降は「たたかう」**——ホームを開いて最初に見たいのは対局であり、
 	# デッキ編集は準備であって目的ではない。
