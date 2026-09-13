@@ -33,6 +33,10 @@ var _turn_marker := -1
 ## 相打ちで双方が削れるが、揺らすのは「打撃の強さ」なので当てた側の値を採る。
 ## 適用後は駒が盤面から消えていることがあるため、控えるのは capture() の時点。
 var _impact_power := 0
+## 相打ちの反撃(GameDesign.md 9章)。砂時計を狙った攻撃で、防御側の攻撃力が1以上のときだけ
+## 持つ。攻撃を適用する前に控える(適用後は破壊されて盤面から消えていることがあるため)。
+var _defender: CardView
+var _defender_dir := 1.0
 
 
 func _init(screen: CardMatchScreen) -> void:
@@ -63,6 +67,7 @@ func capture(action: Dictionary) -> void:
 	var foe := MatchState.other_side(side)
 	_target_center = _center_of(foe, target)
 	_follow_center = _pierce_center(side, slot, target)
+	_capture_defender(attacker, foe, target)
 	_armed = true
 	if _turn_marker != _screen.state.turn_count:
 		_turn_marker = _screen.state.turn_count
@@ -122,6 +127,23 @@ func _face_target(side: int) -> Vector2:
 	return at + Vector2(0.0, toward_board)
 
 
+## 相打ちの反撃(GameDesign.md 9章)。砂時計を狙った攻撃で、防御側の攻撃力が1以上のときだけ
+## `_defender` を控える(攻撃力0なら実際には反撃していないため突き出さない)。
+## 向きは、攻撃側が防御側から見てどちら側に立っているかで決める
+## (`CardViewStrike.play()` の `side_x` と同じ符号)。
+func _capture_defender(attacker: CardView, foe: int, target: int) -> void:
+	_defender = null
+	if target < 0:
+		return
+	var defender_unit: CardInstance = _screen.state.board[foe][target]
+	if defender_unit == null or defender_unit.attack <= 0:
+		return
+	_defender = _screen.view_at(foe, target)
+	var anchor := attacker.position + attacker.board_art_box().get_center()
+	var dside := signf(anchor.x - _target_center.x)
+	_defender_dir = dside if not is_zero_approx(dside) else 1.0
+
+
 ## 相手の情報帯・駒の中心。相手プレイヤーを狙う場合はHPバーそのものを的にする
 ## (「守護がいなければ本体を殴れる」という選択が、駒を殴るときと同じ動きで見える)。
 func _center_of(side: int, slot: int) -> Vector2:
@@ -150,6 +172,8 @@ func _on_impact() -> void:
 		if view != null:
 			view.play_shatter(hit["amount"])
 	_damage.clear()
+	if _defender != null:
+		_defender.play_counter(_defender_dir)
 
 
 func _on_finished() -> void:

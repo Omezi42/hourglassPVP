@@ -124,6 +124,13 @@ const STRIKE_PIERCE := 0.2
 const STRIKE_PIVOT_Y := 8.0
 ## 演出中は他の枠より手前へ出す。台座や隣の駒に潜ると渡っていく様子が見えない。
 const STRIKE_Z_INDEX := 20
+## 相打ちの反撃(GameDesign.md 9章)。`play_shatter()` だけでは防御側が一方的に受けて
+## いるようにしか見えないため、台座正面の紋章を攻撃側へ向けて短く突き出し、すぐ戻す。
+## 全身が渡っていく攻撃側の演出とは別枠の、紋章だけの軽い一撃として作る。
+const COUNTER_OUT := 0.09
+const COUNTER_RETURN := 0.16
+const COUNTER_DISTANCE := 10.0
+const COUNTER_LIFT := 3.0
 ## 手札のカードは小さく効果の文が読めないため、カーソルを乗せている間だけ拡大する
 ## (GameDesign.md 9章)。位置ではなく scale だけを動かし、下端中央を軸に上へ伸ばす。
 ## 画面側は毎フレーム position を置き直すため、位置を動かすと取り合いになる。
@@ -167,6 +174,9 @@ var strike_offset := Vector2.ZERO
 var strike_angle := 0.0
 var strike_flash := 0.0
 var strike_tween: Tween
+## 相打ちの反撃(GameDesign.md 9章)。紋章の描画位置へこのぶんだけ足す。
+var counter_offset := Vector2.ZERO
+var _counter_tween: Tween
 
 var _font: Font
 var _hovering := false
@@ -224,6 +234,33 @@ func show_card(p_card: CardData, p_enabled: bool) -> void:
 func play_shatter(amount: int) -> void:
 	_effect_amount = amount
 	_start_effect(Effect.SHATTER, SHATTER_DURATION)
+
+
+## 相打ちの反撃:紋章が攻撃側へ向けて短く突き出し、すぐ戻る(GameDesign.md 9章)。
+## `dir_x` は突き出す向き(正で右、負で左)。全身が渡っていく攻撃側の演出とは違う、
+## 紋章だけの軽い一撃として作る(誰が仕掛けたのかは攻撃側の動きだけで示す)。
+func play_counter(dir_x: float) -> void:
+	if _counter_tween != null and _counter_tween.is_valid():
+		_counter_tween.kill()
+	var out := Vector2(dir_x * COUNTER_DISTANCE, -COUNTER_LIFT)
+	_counter_tween = create_tween()
+	(
+		_counter_tween
+		. tween_method(_set_counter_offset, Vector2.ZERO, out, COUNTER_OUT)
+		. set_trans(Tween.TRANS_CUBIC)
+		. set_ease(Tween.EASE_OUT)
+	)
+	(
+		_counter_tween
+		. tween_method(_set_counter_offset, out, Vector2.ZERO, COUNTER_RETURN)
+		. set_trans(Tween.TRANS_BACK)
+		. set_ease(Tween.EASE_OUT)
+	)
+
+
+func _set_counter_offset(value: Vector2) -> void:
+	counter_offset = value
+	queue_redraw()
 
 
 ## 反転した:持ち上がって裏返り、着地する。
@@ -478,7 +515,8 @@ func _draw_pedestal_plaque(tint: Color) -> void:
 		return
 	var ci := get_canvas_item()
 	# 台座の輪より少し上へ据える。下げると名前の行に掛かる。
-	var center := Vector2(size.x * 0.5, PEDESTAL_CENTER_Y - 4.0)
+	# 相打ちの反撃中は counter_offset ぶんだけ攻撃側へ突き出す(GameDesign.md 9章)。
+	var center := Vector2(size.x * 0.5, PEDESTAL_CENTER_Y - 4.0) + counter_offset
 	UiPaint.fill_circle(ci, center, EMBLEM_PLAQUE_RADIUS, Color(0.08, 0.06, 0.05, 0.85), 24)
 	UiPaint.fill_circle(ci, center, EMBLEM_PLAQUE_RADIUS - 1.5, UiPalette.BRASS_MID * tint, 24)
 	var half := Vector2(EMBLEM_PLAQUE_SIDE, EMBLEM_PLAQUE_SIDE) * 0.5
