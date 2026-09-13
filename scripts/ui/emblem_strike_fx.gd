@@ -12,6 +12,10 @@ extends Control
 ##
 ## `CardMatchStrike`(実際の攻撃)と同じく、盤面より手前へ重ねる独立したオーバーレイ
 ## として持つ(`Control._draw()` は自分の子より背面に描かれるため)。
+##
+## **同時に複数飛ばせる**(`play_many()`)。全体に効く効果(スイープ等)が対象の数だけ
+## 紋章を同時に飛ばすために使う。進捗(`_progress`)は全飛翔で共有するため、
+## 対象の数によらず同時に発射・同時に着弾する。
 
 signal impact
 signal finished
@@ -35,8 +39,8 @@ const RING_MAX_RADIUS := 26.0
 
 var _style: int = CardEnums.EffectVisualStyle.STRIKE
 var _emblem: Texture2D
-var _from := Vector2.ZERO
-var _to := Vector2.ZERO
+## 同時に飛んでいる紋章。各要素は {"from": Vector2, "to": Vector2}。
+var _flights: Array[Dictionary] = []
 var _progress := 0.0
 var _visible_amount := 0.0
 ## 着弾後(SETTLE中)かどうか。恵与/払拭の輪はこの間だけ描く。
@@ -52,15 +56,27 @@ func _ready() -> void:
 	z_index = 24
 
 
-## 紋章を `from` から `to` へ飛ばす。同じ瞬間に複数飛ぶことは無い(効果の解決は
-## 1枚のカードにつき1度だけ)ため、`CardFlipBeam` と違い同時に1本しか持たない。
+## 紋章を `from` から `to` へ1本だけ飛ばす(単体を狙う効果)。
 func play(emblem: Texture2D, from: Vector2, to: Vector2, style: int) -> void:
+	_play_flights(emblem, [{"from": from, "to": to}], style)
+
+
+## 同じ紋章を `from` から `targets` それぞれへ同時に飛ばす(全体に効く効果。
+## GameDesign.md 9章)。1体ずつ順に飛ばすのではなく、全飛翔が同じ進捗を共有して
+## 同時に発射・同時に着弾する。
+func play_many(emblem: Texture2D, from: Vector2, targets: Array[Vector2], style: int) -> void:
+	var flights: Array[Dictionary] = []
+	for to in targets:
+		flights.append({"from": from, "to": to})
+	_play_flights(emblem, flights, style)
+
+
+func _play_flights(emblem: Texture2D, flights: Array[Dictionary], style: int) -> void:
 	if _tween != null and _tween.is_valid():
 		_tween.kill()
 	_style = style
 	_emblem = emblem
-	_from = from
-	_to = to
+	_flights = flights
 	_progress = 0.0
 	_visible_amount = 1.0
 	_settling = false
@@ -107,13 +123,19 @@ func _on_impact() -> void:
 
 func _on_finished() -> void:
 	_emblem = null
+	_flights.clear()
 	finished.emit()
 
 
 func _draw() -> void:
 	if _emblem == null or _visible_amount <= 0.0:
 		return
-	var at := _from.lerp(_to, _progress)
+	for flight in _flights:
+		_draw_flight(flight["from"], flight["to"])
+
+
+func _draw_flight(from: Vector2, to: Vector2) -> void:
+	var at := from.lerp(to, _progress)
 	if _style != CardEnums.EffectVisualStyle.DRAIN:
 		var arc := (
 			ARC_HEIGHT_DESCEND if _style == CardEnums.EffectVisualStyle.DESCEND else ARC_HEIGHT

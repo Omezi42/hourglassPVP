@@ -47,6 +47,10 @@ signal effect_targeted(source_side: int, source_slot: int, target_side: int, tar
 signal effect_struck(
 	source_side: int, source_slot: int, target_side: int, target_slot: int, style: int
 )
+## `effect_struck` の複数対象版(GameDesign.md 9章)。相手全体を狙う打撃効果
+## (スイープ・バースト等)が対象の数だけ紋章を同時に飛ばすために使う。
+## `targets` は `{"side":..., "slot":...}` の配列。
+signal effect_struck_many(source_side: int, source_slot: int, targets: Array, style: int)
 ## ドローを起こす設置効果・トリガーが、盤面上の駒から発動した(GameDesign.md 9章)。
 ## 山札の脈打ち(`cards_drawn`)とは別に、**発火元の駒自身へ紋章の光を添える**ための信号。
 ## 余砂(破壊時)のように駒が既に盤面から降りている場合は `source_slot` が -1 になり、

@@ -434,9 +434,10 @@ func _begin_state(
 	state.unit_damaged.connect(_strike.on_unit_damaged)
 	state.unit_ticked.connect(_strike.on_unit_ticked)
 	# 設置効果が単体の砂時計へダメージ/破壊を与えるときの「紋章が飛ぶ一撃」
-	# (GameDesign.md 9章)。全体に効く効果は従来どおり光の筋のままなので、
-	# `effect_targeted` とは別の信号で受ける。
+	# (GameDesign.md 9章)。`effect_targeted` とは別の信号で受ける。
 	state.effect_struck.connect(_effect_strike.on_effect_struck)
+	# 相手全体を狙う打撃効果(スイープ等)は、対象の数だけ紋章を同時に飛ばす。
+	state.effect_struck_many.connect(_effect_strike.on_effect_struck_many)
 	state.unit_flipped.connect(
 		func(side: int, slot: int) -> void: _flip_beam.play_flip(self, side, slot)
 	)

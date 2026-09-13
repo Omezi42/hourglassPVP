@@ -61,12 +61,16 @@ func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Diction
 			_state.damage_player(foe_side, _state.units(foe_side).size() * effect.value)
 		CardEnums.EffectType.DAMAGE_UNIT:
 			var single := _is_single_unit_target(effect.target)
-			for entry in _targets(side, unit, effect, hint):
+			var damage_entries := _targets(side, unit, effect, hint)
+			var damage_multi := effect.target == CardEnums.EffectTarget.ALL_ENEMY_UNITS
+			if damage_multi:
+				_strike_many(side, from, damage_entries, CardEnums.EffectVisualStyle.STRIKE)
+			for entry in damage_entries:
 				if single:
 					_strike(
 						side, from, entry["side"], entry["slot"], CardEnums.EffectVisualStyle.STRIKE
 					)
-				else:
+				elif not damage_multi:
 					_beam(side, from, entry["side"], entry["slot"])
 				_state.damage_unit(entry["side"], entry["slot"], effect.value)
 		CardEnums.EffectType.DESTROY_UNIT:
@@ -128,10 +132,15 @@ func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Diction
 						_beam(side, from, entry["side"], entry["slot"])
 					target.attack += effect.value
 		CardEnums.EffectType.DROP_SAND:
-			for entry in _targets(side, unit, effect, hint):
+			var drop_entries := _targets(side, unit, effect, hint)
+			var drop_multi := effect.target == CardEnums.EffectTarget.ALL_ENEMY_UNITS
+			if drop_multi:
+				_strike_many(side, from, drop_entries, CardEnums.EffectVisualStyle.STRIKE)
+			for entry in drop_entries:
 				var target := _unit_at(entry)
 				if target != null:
-					_beam(side, from, entry["side"], entry["slot"])
+					if not drop_multi:
+						_beam(side, from, entry["side"], entry["slot"])
 					target.drop_sand(effect.value)
 		CardEnums.EffectType.SUMMON:
 			_summon(side, effect.card_id)
@@ -231,6 +240,14 @@ func _beam(side: int, from: int, target_side: int, target_slot: int) -> void:
 ## (GameDesign.md 9章)。`style` は `CardEnums.EffectVisualStyle`。
 func _strike(side: int, from: int, target_side: int, target_slot: int, style: int) -> void:
 	_state.effect_struck.emit(side, from, target_side, target_slot, style)
+
+
+## 複数の対象へ同時に紋章の一撃を知らせる。`_strike()` の複数版で、相手全体を狙う
+## 打撃効果(ALL_ENEMY_UNITS)が対象の数だけ同時に紋章を飛ばすために使う(GameDesign.md 9章)。
+func _strike_many(side: int, from: int, entries: Array, style: int) -> void:
+	if entries.is_empty():
+		return
+	_state.effect_struck_many.emit(side, from, entries, style)
 
 
 func _player_side_for(side: int, target: int) -> int:

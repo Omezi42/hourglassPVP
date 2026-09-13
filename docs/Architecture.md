@@ -550,8 +550,18 @@ UIに依存しない、対局ルールそのものを扱う層。
 進行役として動く**(GameDesign.md 9章)。`CardEffectResolver._apply()` は、対象が単体
 (`ENEMY_UNIT` / `ALLY_UNIT`、または相手プレイヤーそのもの)のときだけ、光の筋
 (`effect_targeted`)の代わりに `MatchState.effect_struck` を発行する
-(`_is_single_unit_target()` で判定)。**全体に効く効果(`ALL_ENEMY_UNITS` 等)は対象が
-複数あって1本の紋章に絞れないため、従来どおり光の筋のままにする。**
+(`_is_single_unit_target()` で判定)。
+
+**相手全体を狙う打撃(`ALL_ENEMY_UNITS` × `DAMAGE_UNIT`/`DROP_SAND`)は、
+`MatchState.effect_struck_many`(`targets: Array` に `{"side":,"slot":}` を複数並べる)を
+発行する**(2026-09-14)。`EmblemStrikeFx` を単一の飛翔だけでなく複数の飛翔
+(`_flights: Array[Dictionary]`)を同時に進める形へ拡張し、`play()`(単体・既存)と
+`play_many()`(複数・新設)の2つの入口を持つ——**進捗(`_progress`)は全飛翔で共有する**
+ため、対象の数だけ紋章が同時に発射され同時に着弾する。`CardMatchEffectStrike._on_impact()`
+は元々 `_damage` を配列として扱っており(複数ヒットを想定して作ってあった)、
+`hold_damage()` が呼ばれるたびに要素を足すだけで**変更なしに複数体の砂の飛散を捌ける**。
+**味方全体を狙う恵与(`ALL_ALLY_UNITS` × `ADD_TOTAL`/`ADD_ATTACK`/`DROP_SAND`)は今回は
+対象外とし、従来どおり光の筋のままにする**(GameDesign.md 9章)。
 
 `effect_struck` は `style: CardEnums.EffectVisualStyle`(`STRIKE` / `DESCEND` / `DRAIN` /
 `SPIN`)を運ぶ。型は `_apply()` の分岐そのものが決める——`DAMAGE_UNIT` / `DESTROY_UNIT` /

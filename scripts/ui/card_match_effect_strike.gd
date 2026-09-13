@@ -60,6 +60,33 @@ func on_effect_struck(
 	_fx.play(source_unit.data.emblem, from, to, style)
 
 
+## `MatchState.effect_struck_many` を受ける。相手全体を狙う打撃効果(スイープ等)が
+## 対象の数だけ同時に紋章を飛ばす(GameDesign.md 9章)。`_on_impact()` は元々 `_damage`
+## を配列として持ち越す形になっており、複数のヒットもそのまま捌ける。
+func on_effect_struck_many(source_side: int, source_slot: int, targets: Array, style: int) -> void:
+	if source_slot < 0 or targets.is_empty():
+		return
+	var source_unit: CardInstance = _screen.state.board[source_side][source_slot]
+	if source_unit == null or source_unit.data.emblem == null:
+		return
+	_armed = true
+	_style = style
+	_spin_target = null
+	var from := CardFlipBeam.unit_center(_screen.view_at(source_side, source_slot))
+	var tos: Array[Vector2] = []
+	for entry in targets:
+		var target_side: int = entry["side"]
+		var target_slot: int = entry["slot"]
+		tos.append(
+			(
+				_screen._geometry.hp_bar_center(target_side)
+				if target_slot < 0
+				else CardFlipBeam.unit_center(_screen.view_at(target_side, target_slot))
+			)
+		)
+	_fx.play_many(source_unit.data.emblem, from, tos, style)
+
+
 ## 攻撃と同じく、紋章が当たるまで被ダメージの砂の飛散を持ち越す
 ## (`CardMatchStrike.on_unit_damaged()` から呼ぶ)。
 func hold_damage(side: int, slot: int, amount: int) -> void:

@@ -26,6 +26,7 @@ func run(assert_true: Callable) -> void:
 	_test_double_strike_allows_two_attacks()
 	_test_on_play_effects()
 	_test_effect_struck_styles()
+	_test_effect_struck_many_hits_all_enemies()
 	_test_flip_trigger_adds_total()
 	_test_fatigue_after_deck_runs_out()
 	_test_match_action_round_trip()
@@ -370,6 +371,44 @@ func _test_effect_struck_styles() -> void:
 		styles.size() == 1 and styles[0] == CardEnums.EffectVisualStyle.SPIN,
 		"eye's stat swap on an enemy should use the spin style"
 	)
+
+
+## 相手全体を狙う打撃効果(スイープ等)は、単体版(`effect_struck`)ではなく
+## `effect_struck_many` を1度だけ、対象の数ぶんの entries を添えて発行する
+## (GameDesign.md 9章)。
+func _test_effect_struck_many_hits_all_enemies() -> void:
+	var state := _new_match()
+	var single_styles: Array[int] = []
+	var many_calls: Array[Dictionary] = []
+	state.effect_struck.connect(
+		func(_ss: int, _sl: int, _ts: int, _tl: int, style: int) -> void:
+			single_styles.append(style)
+	)
+	state.effect_struck_many.connect(
+		func(_ss: int, _sl: int, targets: Array, style: int) -> void:
+			many_calls.append({"targets": targets, "style": style})
+	)
+
+	_force_play(state, MatchState.Side.B, "sand", 0)
+	_force_play(state, MatchState.Side.B, "sand", 1)
+	_force_play(state, MatchState.Side.A, "sweep", 0)
+
+	_assert.call(
+		many_calls.size() == 1, "sweep should emit effect_struck_many exactly once per cast"
+	)
+	_assert.call(
+		single_styles.is_empty(), "sweep should not also emit the single-target effect_struck"
+	)
+	if many_calls.size() == 1:
+		var call: Dictionary = many_calls[0]
+		_assert.call(
+			call["style"] == CardEnums.EffectVisualStyle.STRIKE,
+			"sweep hitting the whole enemy board should use the strike style"
+		)
+		var targets: Array = call["targets"]
+		_assert.call(
+			targets.size() == 2, "sweep should list both enemy units it struck as one cohort"
+		)
 
 
 func _test_on_play_effects() -> void:
