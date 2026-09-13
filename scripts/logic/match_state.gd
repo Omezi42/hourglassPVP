@@ -44,7 +44,14 @@ signal effect_targeted(source_side: int, source_slot: int, target_side: int, tar
 ## 同じ「適用の直前」に発行するが、こちらは光の筋ではなく**紋章が対象へ飛んで実際に
 ## 当てているような演出**を組むために使う。全体へ効く効果(ALL_ENEMY_UNITS等)は
 ## 対象が複数あって1本の紋章に絞れないため、従来どおり `effect_targeted` のままにする。
-signal effect_struck(source_side: int, source_slot: int, target_side: int, target_slot: int)
+signal effect_struck(
+	source_side: int, source_slot: int, target_side: int, target_slot: int, style: int
+)
+## ドローを起こす設置効果・トリガーが、盤面上の駒から発動した(GameDesign.md 9章)。
+## 山札の脈打ち(`cards_drawn`)とは別に、**発火元の駒自身へ紋章の光を添える**ための信号。
+## 余砂(破壊時)のように駒が既に盤面から降りている場合は `source_slot` が -1 になり、
+## その場合は発行しない(呼び出し側の判断。`effect_targeted` と同じ扱い)。
+signal effect_drawn(source_side: int, source_slot: int, count: int)
 signal match_ended(winner: int)
 ## 持ち時間が尽きて手番を強制的に終えた(GameDesign.md 5章)。`count` は連続回数。
 signal turn_forfeited(side: int, count: int)

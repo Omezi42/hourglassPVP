@@ -124,6 +124,23 @@ enum ConditionScope {
 	ANY_ALLY,
 }
 
+## 効果が対象へ届く演出の「型」(GameDesign.md 9章)。`MatchState.effect_struck` が運ぶ。
+## 全体に効く効果(対象が複数)は1本の紋章に絞れないため、この型を持たず
+## 従来どおり光の筋(`effect_targeted`)のままにする。
+##
+## **新しい値は必ず末尾へ足す**(EffectTarget と同じ理由。信号の整数値は保存しないが、
+## 他の enum と扱いを揃える)。
+enum EffectVisualStyle {
+	## 打撃。紋章が対象へ飛んで実際に当てる(ダメージ・破壊・確定の一撃)。
+	STRIKE,
+	## 恵与。紋章が対象へ舞い降りて馴染む(総量・攻撃力を足す、キーワードを与える)。
+	DESCEND,
+	## 払拭。紋章が対象に重なり、キーワード・効果の色が抜けて消える。
+	DRAIN,
+	## 反転。紋章が対象の周りを回ってから、体力と攻撃力が入れ替わる。
+	SPIN,
+}
+
 ## 語として見せるキーワード。**複数のカードに載っているものだけ**をここへ入れる。
 ## カードを追加してある能力が2枚目に載ったら、ここへ足して語へ昇格させる。
 const NAMED: Array[Keyword] = [Keyword.GUARD, Keyword.GLASS, Keyword.PIERCE, Keyword.QUICK]

@@ -27,6 +27,7 @@ func watch(state: MatchState) -> void:
 	state.cards_drawn.connect(_on_cards_drawn)
 	state.fatigue_damage.connect(_on_fatigue_damage)
 	state.effect_targeted.connect(_on_effect_targeted)
+	state.effect_drawn.connect(_on_effect_drawn)
 
 
 ## 攻撃が当たった瞬間。`CardMatchStrike` から呼ぶ。
@@ -72,6 +73,13 @@ func _on_cards_drawn(side: int, _count: int) -> void:
 ## (GameDesign.md 9章)。HPバーへの数字は情報帯側が従来どおり出す。
 func _on_fatigue_damage(side: int, _amount: int) -> void:
 	_screen.bar_for(side).play_deck_pulse(true)
+
+
+## ドローを起こす設置効果・トリガーが、盤面上の駒から発動した(GameDesign.md 9章)。
+## その駒の紋章へ短い光の輪を添える。山札の脈打ち(`_on_cards_drawn`)とは別に、
+## 「このカードが引かせた」ことを示すため。
+func _on_effect_drawn(side: int, slot: int, _count: int) -> void:
+	_defer(func() -> void: _screen.view_at(side, slot).play_spark())
 
 
 ## 設置効果:出した駒から対象へ筋を伸ばす。余砂は既に盤面から降りているため

@@ -25,6 +25,7 @@ func run(assert_true: Callable) -> void:
 	_test_poison_destroys_damaged_unit()
 	_test_double_strike_allows_two_attacks()
 	_test_on_play_effects()
+	_test_effect_struck_styles()
 	_test_flip_trigger_adds_total()
 	_test_fatigue_after_deck_runs_out()
 	_test_match_action_round_trip()
@@ -317,6 +318,57 @@ func _test_double_strike_allows_two_attacks() -> void:
 	_assert.call(not unit.can_attack(), "double strike should stop after two attacks")
 	_assert.call(
 		state.hp[MatchState.Side.B] == MatchState.INITIAL_HP - 4, "both attacks should land"
+	)
+
+
+## 単体を狙う設置効果は `MatchState.effect_struck` を、効果の種類に応じた型で
+## 発行する(GameDesign.md 9章)。紋章の演出(`CardMatchEffectStrike`)が正しい型で
+## 組まれるための前提であり、ここでは信号そのものを検証する。
+func _test_effect_struck_styles() -> void:
+	var state := _new_match()
+	var styles: Array[int] = []
+	state.effect_struck.connect(
+		func(_ss: int, _sl: int, _ts: int, _tl: int, style: int) -> void: styles.append(style)
+	)
+
+	# 相手プレイヤーへ直接ダメージを与える効果は「打撃」型で飛ぶ。
+	_force_play(state, MatchState.Side.A, "sword", 0)
+	_assert.call(
+		styles.size() == 1 and styles[0] == CardEnums.EffectVisualStyle.STRIKE,
+		"sword's hit on the player should use the strike style"
+	)
+	styles.clear()
+
+	# 相手の砂時計へダメージを与える効果も「打撃」型で飛ぶ。
+	_force_play(state, MatchState.Side.B, "sand", 0)
+	_force_play(state, MatchState.Side.A, "hammer", 1)
+	_assert.call(
+		styles.size() == 1 and styles[0] == CardEnums.EffectVisualStyle.STRIKE,
+		"hammer's hit on an enemy unit should use the strike style"
+	)
+	styles.clear()
+
+	# 味方1体を強化する効果は「恵与」型で飛ぶ(既に場にいる sword/hammer が対象になる)。
+	_force_play(state, MatchState.Side.A, "wand", 2)
+	_assert.call(
+		styles.size() == 1 and styles[0] == CardEnums.EffectVisualStyle.DESCEND,
+		"wand's buff on an ally should use the descend style"
+	)
+	styles.clear()
+
+	# 相手のキーワード・効果を消す効果は「払拭」型で飛ぶ。
+	_force_play(state, MatchState.Side.A, "blank", 3)
+	_assert.call(
+		styles.size() == 1 and styles[0] == CardEnums.EffectVisualStyle.DRAIN,
+		"blank's silence on an enemy should use the drain style"
+	)
+	styles.clear()
+
+	# 体力と攻撃力を入れ替える効果は「反転」型で飛ぶ。
+	_force_play(state, MatchState.Side.A, "eye", 4)
+	_assert.call(
+		styles.size() == 1 and styles[0] == CardEnums.EffectVisualStyle.SPIN,
+		"eye's stat swap on an enemy should use the spin style"
 	)
 
 

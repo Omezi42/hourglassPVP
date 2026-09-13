@@ -40,50 +40,92 @@ func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Diction
 	match effect.effect_type:
 		CardEnums.EffectType.DAMAGE_PLAYER:
 			var to_side := _player_side_for(side, effect.target)
-			_beam(side, from, to_side, -1)
+			if to_side != side:
+				_strike(side, from, to_side, -1, CardEnums.EffectVisualStyle.STRIKE)
+			else:
+				_beam(side, from, to_side, -1)
 			_state.damage_player(to_side, effect.value)
 		CardEnums.EffectType.HEAL_PLAYER:
 			var to_side := _player_side_for(side, effect.target)
-			_beam(side, from, to_side, -1)
+			if to_side == side:
+				_strike(side, from, to_side, -1, CardEnums.EffectVisualStyle.DESCEND)
+			else:
+				_beam(side, from, to_side, -1)
 			_state.heal_player(to_side, effect.value)
 		CardEnums.EffectType.DRAW:
+			if from >= 0:
+				_state.effect_drawn.emit(side, from, effect.value)
 			_state.draw(side, effect.value)
 		CardEnums.EffectType.DAMAGE_PLAYER_PER_ENEMY_UNIT:
-			_beam(side, from, foe_side, -1)
+			_strike(side, from, foe_side, -1, CardEnums.EffectVisualStyle.STRIKE)
 			_state.damage_player(foe_side, _state.units(foe_side).size() * effect.value)
 		CardEnums.EffectType.DAMAGE_UNIT:
-			var struck := _is_single_unit_target(effect.target)
+			var single := _is_single_unit_target(effect.target)
 			for entry in _targets(side, unit, effect, hint):
-				if struck:
-					_state.effect_struck.emit(side, from, entry["side"], entry["slot"])
+				if single:
+					_strike(
+						side, from, entry["side"], entry["slot"], CardEnums.EffectVisualStyle.STRIKE
+					)
 				else:
 					_beam(side, from, entry["side"], entry["slot"])
 				_state.damage_unit(entry["side"], entry["slot"], effect.value)
 		CardEnums.EffectType.DESTROY_UNIT:
-			var struck_destroy := _is_single_unit_target(effect.target)
+			var single_destroy := _is_single_unit_target(effect.target)
 			for entry in _targets(side, unit, effect, hint):
-				if struck_destroy:
-					_state.effect_struck.emit(side, from, entry["side"], entry["slot"])
+				if single_destroy:
+					_strike(
+						side, from, entry["side"], entry["slot"], CardEnums.EffectVisualStyle.STRIKE
+					)
 				else:
 					_beam(side, from, entry["side"], entry["slot"])
 				_state.destroy_unit(entry["side"], entry["slot"])
 		CardEnums.EffectType.SWAP_STATS:
+			var single_swap := _is_single_unit_target(effect.target)
 			for entry in _targets(side, unit, effect, hint):
 				var target := _unit_at(entry)
 				if target != null:
-					_beam(side, from, entry["side"], entry["slot"])
+					if single_swap:
+						_strike(
+							side,
+							from,
+							entry["side"],
+							entry["slot"],
+							CardEnums.EffectVisualStyle.SPIN
+						)
+					else:
+						_beam(side, from, entry["side"], entry["slot"])
 					target.flip()
 		CardEnums.EffectType.ADD_TOTAL:
+			var single_total := _is_single_unit_target(effect.target)
 			for entry in _targets(side, unit, effect, hint):
 				var target := _unit_at(entry)
 				if target != null:
-					_beam(side, from, entry["side"], entry["slot"])
+					if single_total:
+						_strike(
+							side,
+							from,
+							entry["side"],
+							entry["slot"],
+							CardEnums.EffectVisualStyle.DESCEND
+						)
+					else:
+						_beam(side, from, entry["side"], entry["slot"])
 					target.health += effect.value
 		CardEnums.EffectType.ADD_ATTACK:
+			var single_attack := _is_single_unit_target(effect.target)
 			for entry in _targets(side, unit, effect, hint):
 				var target := _unit_at(entry)
 				if target != null:
-					_beam(side, from, entry["side"], entry["slot"])
+					if single_attack:
+						_strike(
+							side,
+							from,
+							entry["side"],
+							entry["slot"],
+							CardEnums.EffectVisualStyle.DESCEND
+						)
+					else:
+						_beam(side, from, entry["side"], entry["slot"])
 					target.attack += effect.value
 		CardEnums.EffectType.DROP_SAND:
 			for entry in _targets(side, unit, effect, hint):
@@ -94,10 +136,20 @@ func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Diction
 		CardEnums.EffectType.SUMMON:
 			_summon(side, effect.card_id)
 		CardEnums.EffectType.GRANT_KEYWORD:
+			var single_keyword := _is_single_unit_target(effect.target)
 			for entry in _targets(side, unit, effect, hint):
 				var target := _unit_at(entry)
 				if target != null and effect.keyword >= 0:
-					_beam(side, from, entry["side"], entry["slot"])
+					if single_keyword:
+						_strike(
+							side,
+							from,
+							entry["side"],
+							entry["slot"],
+							CardEnums.EffectVisualStyle.DESCEND
+						)
+					else:
+						_beam(side, from, entry["side"], entry["slot"])
 					target.grant_keyword(effect.keyword)
 		CardEnums.EffectType.INVERT_PLAYER_HP:
 			var to_side := _player_side_for(side, effect.target)
@@ -108,10 +160,20 @@ func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Diction
 				_beam(side, from, entry["side"], entry["slot"])
 				_return_to_hand(entry["side"], entry["slot"])
 		CardEnums.EffectType.SILENCE:
+			var single_silence := _is_single_unit_target(effect.target)
 			for entry in _targets(side, unit, effect, hint):
 				var target := _unit_at(entry)
 				if target != null:
-					_beam(side, from, entry["side"], entry["slot"])
+					if single_silence:
+						_strike(
+							side,
+							from,
+							entry["side"],
+							entry["slot"],
+							CardEnums.EffectVisualStyle.DRAIN
+						)
+					else:
+						_beam(side, from, entry["side"], entry["slot"])
 					target.silence()
 
 
@@ -163,6 +225,12 @@ func _return_to_hand(side: int, slot: int) -> void:
 ## 盤面から消える効果でも、筋の行き先がまだ盤面に残っている状態で受け取れる。
 func _beam(side: int, from: int, target_side: int, target_slot: int) -> void:
 	_state.effect_targeted.emit(side, from, target_side, target_slot)
+
+
+## 単体を狙う「紋章の一撃」を知らせる。`_beam()` と対になり、適用の直前に出す
+## (GameDesign.md 9章)。`style` は `CardEnums.EffectVisualStyle`。
+func _strike(side: int, from: int, target_side: int, target_slot: int, style: int) -> void:
+	_state.effect_struck.emit(side, from, target_side, target_slot, style)
 
 
 func _player_side_for(side: int, target: int) -> int:

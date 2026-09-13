@@ -127,10 +127,9 @@ const STRIKE_Z_INDEX := 20
 ## 相打ちの反撃(GameDesign.md 9章)。`play_shatter()` だけでは防御側が一方的に受けて
 ## いるようにしか見えないため、台座正面の紋章を攻撃側へ向けて短く突き出し、すぐ戻す。
 ## 全身が渡っていく攻撃側の演出とは別枠の、紋章だけの軽い一撃として作る。
-const COUNTER_OUT := 0.09
-const COUNTER_RETURN := 0.16
-const COUNTER_DISTANCE := 10.0
-const COUNTER_LIFT := 3.0
+## ドローを起こした合図の光の輪(GameDesign.md 9章)。反撃より少し長く残す
+## (突き出す動きが無いぶん、輪だけで「起きたこと」を伝える必要があるため)。
+const SPARK_RADIUS := 24.0
 ## 手札のカードは小さく効果の文が読めないため、カーソルを乗せている間だけ拡大する
 ## (GameDesign.md 9章)。位置ではなく scale だけを動かし、下端中央を軸に上へ伸ばす。
 ## 画面側は毎フレーム position を置き直すため、位置を動かすと取り合いになる。
@@ -172,7 +171,9 @@ var strike_flash := 0.0
 var strike_tween: Tween
 ## 相打ちの反撃(GameDesign.md 9章)。紋章の描画位置へこのぶんだけ足す。
 var counter_offset := Vector2.ZERO
-var _counter_tween: Tween
+## 効果を持つ駒が発火した合図(GameDesign.md 9章)。ドローを起こす設置効果・
+## トリガーが盤面上の駒から起きたとき、紋章の周りへ短い光の輪を出す。
+var spark_amount := 0.0
 
 var _font: Font
 var _hovering := false
@@ -190,6 +191,7 @@ var _zoom_tween: Tween
 ## 設置の着地・破壊の崩落・硝子の割れる閃光。駒の上へ重ねて描く子ノード。
 var _fx: CardUnitFx
 var _strike: CardViewStrike
+var _flourish: CardViewFlourish
 
 
 func _ready() -> void:
@@ -235,31 +237,27 @@ func play_shatter(amount: int) -> void:
 ## 相打ちの反撃:紋章が攻撃側へ向けて短く突き出し、すぐ戻る(GameDesign.md 9章)。
 ## `dir_x` は突き出す向き(正で右、負で左)。全身が渡っていく攻撃側の演出とは違う、
 ## 紋章だけの軽い一撃として作る(誰が仕掛けたのかは攻撃側の動きだけで示す)。
+## 相打ちの反撃:紋章が攻撃側へ向けて短く突き出し、すぐ戻る(GameDesign.md 9章)。
+## `dir_x` は突き出す向き(正で右、負で左)。**段取りは `CardViewFlourish` が持つ**
+## (1ファイル1000行の上限に達したため、`CardViewStrike` と同じ形で切り出した)。
 func play_counter(dir_x: float) -> void:
-	if _counter_tween != null and _counter_tween.is_valid():
-		_counter_tween.kill()
-	var out := Vector2(dir_x * COUNTER_DISTANCE, -COUNTER_LIFT)
-	_counter_tween = create_tween()
-	(
-		_counter_tween
-		. tween_method(_set_counter_offset, Vector2.ZERO, out, COUNTER_OUT)
-		. set_trans(Tween.TRANS_CUBIC)
-		. set_ease(Tween.EASE_OUT)
-	)
-	(
-		_counter_tween
-		. tween_method(_set_counter_offset, out, Vector2.ZERO, COUNTER_RETURN)
-		. set_trans(Tween.TRANS_BACK)
-		. set_ease(Tween.EASE_OUT)
-	)
+	_ensure_flourish()
+	_flourish.play_counter(dir_x)
 
 
-func _set_counter_offset(value: Vector2) -> void:
-	counter_offset = value
-	queue_redraw()
+## 効果を持つ駒が発火した:紋章の周りへ短い光の輪を出す(GameDesign.md 9章)。
+## エコー・クラック・ページ・メモリーのようにドローを起こす設置効果・トリガーが、
+## その駒自身から働いたことを示す軽い合図。盤面を動かさないため、揺れも移動も伴わない。
+func play_spark() -> void:
+	_ensure_flourish()
+	_flourish.play_spark()
 
 
-## 反転した:持ち上がって裏返り、着地する。
+func _ensure_flourish() -> void:
+	if _flourish == null:
+		_flourish = CardViewFlourish.new(self)
+
+
 func play_flip() -> void:
 	if _flip_tween != null and _flip_tween.is_valid():
 		_flip_tween.kill()
@@ -530,6 +528,9 @@ func _draw_pedestal_plaque(tint: Color) -> void:
 		Color(UiPalette.BRASS_HIGHLIGHT, 0.95) * tint
 	)
 	UiPaint.draw_ring(ci, center, EMBLEM_PLAQUE_RADIUS, UiPalette.BRASS_HIGHLIGHT * tint, 1.0, 24)
+	if spark_amount > 0.01:
+		var radius := EMBLEM_PLAQUE_RADIUS + SPARK_RADIUS * (1.0 - spark_amount)
+		UiPaint.draw_ring(ci, center, radius, Color(1.0, 0.92, 0.6, 0.7 * spark_amount), 2.0, 28)
 
 
 func _draw_board_art(tint: Color, sink: float) -> void:

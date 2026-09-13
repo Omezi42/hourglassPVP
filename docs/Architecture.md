@@ -402,6 +402,7 @@ UIに依存しない、対局ルールそのものを扱う層。
 | `CurrencyChip`(`scripts/ui/currency_chip.gd`) | 砂金の残高(GameDesign.md 9章・15章)。文字列は `CurrencyRules.label_text()` だけが決め、画面ごとに組み立てない。増えたときだけ脈打たせて数え上げる |
 | `CodedButton`(`scripts/ui/coded_button.gd`) | コードで組むボタンの生成を集約する。画面ごとに `theme_override` を並べると指定漏れのボタンが混ざるため |
 | `CardViewStrike`(`scripts/ui/card_view_strike.gd`) | 攻撃の演出の段取り(寄る→溜める→当てる→戻る)。**`CardView` が1000行の上限に達したため切り出した**。分ける線は「駒の見た目」と「殴りに行く段取り」に引き、状態(offset / angle / flash)と描画は `CardView` 側に残す(絵に掛ける変換は描画のたびに要るため) |
+| `CardViewFlourish`(`scripts/ui/card_view_flourish.gd`) | 相打ちの反撃(`play_counter()`)とドローの合図(`play_spark()`)の段取り。`CardViewStrike` と同じ理由で切り出した。状態(`counter_offset` / `spark_amount`)と描画は `CardView` 側に残す |
 | `CardMatchReplay`(`scripts/ui/card_match_replay.gd`) | リプレイの再生コントロール。**任意の手数の局面は初期状態から手を並べ直して作る** |
 | `CardMatchOnline`(`scripts/ui/card_match_online.gd`) | オンライン対戦の3つの入口(開始・切断からの復帰・観戦)。`card_match_screen.gd` が1000行の上限に達したため切り出した。画面側には `main.gd` から呼ぶ薄い委譲だけが残る |
 | `CardMatchSpell`(`scripts/ui/card_match_spell.gd`) | 砂術を撃つ操作の段取り(GameDesign.md 6章)。`card_match_screen.gd` が1000行の上限に達したため切り出した |
@@ -545,18 +546,27 @@ UIに依存しない、対局ルールそのものを扱う層。
 攻撃側のいる方向へ向ける。相手プレイヤーを狙った攻撃(`target_slot == -1`)には
 紋章が無いため、この演出自体を発生させない。
 
-**設置効果が単体の砂時計へダメージ/破壊を与えるときは、`CardMatchEffectStrike` が
-`CardMatchStrike` と対になる進行役として動く**(GameDesign.md 9章)。`CardEffectResolver._apply()`
-は `DAMAGE_UNIT` / `DESTROY_UNIT` のうち `effect.target` が `ENEMY_UNIT` / `ALLY_UNIT`
-(単体)のときだけ、光の筋(`effect_targeted`)の代わりに `MatchState.effect_struck` を
-発行する(`_is_single_unit_target()`)。**全体に効く効果(`ALL_ENEMY_UNITS` 等)は対象が
+**単体を狙う設置効果・トリガーは、`CardMatchEffectStrike` が `CardMatchStrike` と対になる
+進行役として動く**(GameDesign.md 9章)。`CardEffectResolver._apply()` は、対象が単体
+(`ENEMY_UNIT` / `ALLY_UNIT`、または相手プレイヤーそのもの)のときだけ、光の筋
+(`effect_targeted`)の代わりに `MatchState.effect_struck` を発行する
+(`_is_single_unit_target()` で判定)。**全体に効く効果(`ALL_ENEMY_UNITS` 等)は対象が
 複数あって1本の紋章に絞れないため、従来どおり光の筋のままにする。**
 
-- `effect_struck` の受け口(`CardMatchEffectStrike.on_effect_struck()`)は、対象の駒の
-  ダメージ(`MatchState.damage_unit()`)が実際に呼ばれる**直前**に同期的に発火する
-  (`_apply()` の中で `emit()` の次の行が `damage_unit()` のため)。ここで `_armed = true`
+`effect_struck` は `style: CardEnums.EffectVisualStyle`(`STRIKE` / `DESCEND` / `DRAIN` /
+`SPIN`)を運ぶ。型は `_apply()` の分岐そのものが決める——`DAMAGE_UNIT` / `DESTROY_UNIT` /
+相手プレイヤーへの `DAMAGE_PLAYER` / `DAMAGE_PLAYER_PER_ENEMY_UNIT` は `STRIKE`、
+`ADD_TOTAL` / `ADD_ATTACK` / `GRANT_KEYWORD` / 自分への `HEAL_PLAYER` は `DESCEND`、
+`SILENCE` は `DRAIN`、`SWAP_STATS` は `SPIN`。**型ごとの紋章の動き方は `EmblemStrikeFx`
+(`scripts/ui/emblem_strike_fx.gd`)が持つ**(飛ぶ尺・弧の高さ・色味・着弾後の輪)。
+相手プレイヤーを狙う効果(`target_slot == -1`)は、対象の位置を `_screen._geometry
+.hp_bar_center(target_side)` から取る(砂時計ではなくHPバーへ飛ぶ)。
+
+- `effect_struck` の受け口(`CardMatchEffectStrike.on_effect_struck()`)は、対象への
+  変化(`MatchState.damage_unit()` 等)が実際に呼ばれる**直前**に同期的に発火する
+  (`_apply()` の中で `emit()` の次の行が状態の変更のため)。ここで `_armed = true`
   にしてから `EmblemStrikeFx.play()` でTweenを組み始める——この「armする」処理自体は
-  yieldしないので、直後の `damage_unit()` が `unit_damaged` を発行する時点では
+  yieldしないので、直後の状態変更が `unit_damaged` 等を発行する時点では
   既に armed 済みになっている
 - `CardMatchStrike.on_unit_damaged()` は、自分(`_armed`)が忙しくなければ
   `_screen.effect_strike.busy()` も見て、忙しければ `CardMatchEffectStrike.hold_damage()`
@@ -567,10 +577,35 @@ UIに依存しない、対局ルールそのものを扱う層。
   `_screen.strike_busy()`(`_strike.busy() or _effect_strike.busy()` に拡張済み)を見て
   自動的に持ち越すため、**`CardMatchEffectStrike` 側で個別に処理する必要が無い**。
   `_on_impact()` で `_screen.effects.flush()` / `_screen.sound.flush()` を呼べば揃って出る
-- 紋章が届いた瞬間(`EmblemStrikeFx.impact`)に `CardMatchShake.hit()` も鳴らし、
+- **盤面の揺れ(`CardMatchShake.hit()`)は `STRIKE` のときだけ鳴らす。**`DESTROY_UNIT`
+  のように `unit_damaged` を伴わない打撃もあるため、被ダメージ量が控えられていなければ
+  控えめな既定値(4)で揺らす。恵与・払拭・反転はそれぞれの演出自体が当たりの手応えを
+  持つため、重ねて揺らさない
+- **`SPIN` は、紋章が届いた瞬間に対象の `CardView.play_flip()` を呼ぶ。**体力と攻撃力の
+  入れ替え(`SWAP_STATS`)自体は既に解決済みのため、通常の反転(GameDesign.md 3章)と
+  **同じ裏返りの演出をそのまま再利用する**だけで済む。専用の反転描画を新設していない
+- 紋章が届いた瞬間(`EmblemStrikeFx.impact`)に上記の演出をまとめて出し、
   終わった瞬間(`finished`)に `_screen.on_strike_finished()`(`refresh()` を含む)を呼ぶ。
   **`CardMatchScreen._finish_action()` は `_strike.play()` に加えて
   `_effect_strike.busy()` も見て、armed なら `refresh()` を遅らせる**
+
+**ドローを起こす設置効果・トリガー(エコー・クラック・ページ・メモリー等)は、
+別の軽い信号 `MatchState.effect_drawn(source_side, source_slot, count)` を持つ**
+(GameDesign.md 9章)。`_apply()` の `DRAW` 分岐が、駒が盤面上にあるとき(`from >= 0`)
+だけ発行し、`CardMatchEffects._on_effect_drawn()` が `_defer()` 経由で
+`CardView.play_spark()`(紋章の周りへ短い光の輪を出すだけの軽い合図)を呼ぶ。
+**`effect_struck` と違い armed/持ち越しの仕組みを持たない**——盤面の駒を破壊・移動
+させる効果ではなく、タイミングのズレが実害にならないため。余砂(破壊時)は
+`_slot_of()` が -1 を返し発行されないため、光の筋(`effect_targeted`)と同じく
+駒が既に盤面から降りている場合は演出が出ない。
+
+**`CardView.play_counter()`(相打ちの反撃)と `play_spark()`(ドローの合図)の段取りは
+`CardViewFlourish` が持つ**(`scripts/ui/card_view_flourish.gd`)。`CardView` が
+1000行の上限に達したため、`CardViewStrike` と同じ形で切り出した——状態
+(`counter_offset` / `spark_amount`)は `CardView` に残して描画もそちらが行い、
+`CardViewFlourish` は Tween を組むだけの薄い層にする。`CardView` 側は
+`play_counter()` / `play_spark()` という同名の薄い委譲メソッドを持ち、呼び出し側の
+コードは変える必要がない。
 
 **この機能を作る過程で、`_perform()` の呼び出し元が揃って踏んでいた既存のバグを見つけて
 直した(2026-09-13)。**`_perform()` は `_finish_action()` の中で、演出が armed でなければ
