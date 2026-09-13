@@ -22,10 +22,11 @@ func begin(index: int) -> void:
 		_screen.selection.await_target(index, -1)
 		_screen.refresh()
 		return
+	# `_perform()` が `_finish_action()` の中で `refresh()` まで済ませるため、
+	# ここで重ねて呼ばない(`CardMatchEffectTarget.begin()` と同じ理由)。
 	_screen._perform(MatchAction.cast(_screen.my_side, index))
 	_screen.selection.clear()
 	_screen._hide_detail()
-	_screen.refresh()
 
 
 ## 対象選択中の砂術を、選ばれた1体へ撃つ。
@@ -34,9 +35,11 @@ func cast_at(side: int, slot: int) -> void:
 	# **`_perform()` より先に選択を解除する**(`CardMatchEffectTarget.confirm()` と同じ理由。
 	# 選択を残したまま呼ぶと、`refresh()` が既に手札から消えたカードを読みに行って落ちる)。
 	_screen.selection.clear()
+	# **ここでも `_screen.refresh()` を重ねて呼ばない**。単体へダメージを与える砂術
+	# (砕砂等)は紋章が対象へ飛ぶ演出(`CardMatchEffectStrike`)を組んでおり、
+	# `_finish_action()` がその演出が終わるまで `refresh()` を遅らせる。
 	_screen._perform(MatchAction.cast(_screen.my_side, index, {"side": side, "slot": slot}))
 	_screen._hide_detail()
-	_screen.refresh()
 
 
 ## その砂術が対象を1体選ぶなら、どちら側から選ぶか。取らないなら -1。

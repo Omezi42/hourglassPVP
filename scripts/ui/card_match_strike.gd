@@ -76,9 +76,15 @@ func capture(action: Dictionary) -> void:
 
 ## 被ダメージ:砂が砕けて散る。**攻撃の演出中は当たる瞬間まで持ち越す**
 ## (渡っている最中に相手の砂が消えると、因果が逆に見えるため)。
+## **設置効果の「紋章の一撃」(`CardMatchEffectStrike`)が組まれている間も同様**
+## (`effect_struck` は `MatchAction.apply()` の中、この信号より先に飛ぶため、
+## この時点で armed 済みかどうかを問い合わせられる)。
 func on_unit_damaged(side: int, slot: int, amount: int) -> void:
 	if _armed:
 		_damage.append({"side": side, "slot": slot, "amount": amount})
+		return
+	if _screen.effect_strike.busy():
+		_screen.effect_strike.hold_damage(side, slot, amount)
 		return
 	_screen.view_at(side, slot).play_shatter(amount)
 

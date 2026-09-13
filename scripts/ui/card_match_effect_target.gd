@@ -31,9 +31,11 @@ func begin(index: int, slot: int) -> void:
 		_screen.selection.await_target(index, slot)
 		_screen.refresh()
 		return
+	# `_perform()` が `_finish_action()` の中で `refresh()` まで済ませる
+	# (単体を狙う設置効果は紋章が届くまで遅らせる。`CardMatchEffectStrike`)ため、
+	# ここで重ねて呼ぶと、その演出より先に盤面を再同期してしまう。
 	_screen._perform(MatchAction.play(_screen.my_side, index, slot))
 	_screen.selection.clear()
-	_screen.refresh()
 
 
 ## 対象選択中の砂時計を、選ばれた1体を対象にして出す。
@@ -48,6 +50,10 @@ func confirm(side: int, slot: int) -> void:
 	# 既に場へ出て手札から消えたカードを `hand_index` で読みに行き、
 	# 「Out of bounds get index」で落ちる(実際に踏んだ)。
 	_screen.selection.clear()
+	# **ここでも `_screen.refresh()` を重ねて呼ばない**(直前のコメントと同じ理由)。
+	# ハンマーのように単体へダメージを与える設置効果は、紋章が対象へ飛んで実際に
+	# 当てる演出(`CardMatchEffectStrike`)を組んでおり、`_finish_action()` が
+	# その演出が終わるまで `refresh()` を遅らせる。ここで呼び直すと、演出の途中で
+	# 既にダメージ・破壊済みの盤面を見せてしまう。
 	_screen._perform(MatchAction.play(_screen.my_side, hand_index, play_slot, target))
 	_screen._hide_detail()
-	_screen.refresh()

@@ -97,10 +97,15 @@ func on_foe_slot_pressed(view: CardView) -> void:
 		_screen.selection.is_board_selection()
 		and _screen.state.can_attack(_screen.my_side, _screen.selection.slot, slot)
 	):
+		# **ここで `_screen.refresh()` を呼んではいけない。**攻撃は `_perform()` の中で
+		# `CardMatchStrike` が演出を組み、盤面の再同期(`refresh()`)は演出が当たって
+		# 台座へ戻りきった `on_strike_finished()` まで自然に遅延される。ここで
+		# 即座に呼び直すと、`MatchAction.apply()` で既に更新済みの盤面(破壊された駒が
+		# `null` になった状態)を演出の最中に読み直してしまい、**攻撃側・防御側の
+		# どちらも、実際に当たるより前に消えて見える**(実際にこれで踏んだ)。
 		_screen._perform(MatchAction.attack(_screen.my_side, _screen.selection.slot, slot))
 		_screen.selection.clear()
 		_screen._hide_detail()
-		_screen.refresh()
 
 
 ## 対象選択中に相手の場を押したとき(砂術の相手対象 / 設置効果の相手対象)。
@@ -125,9 +130,10 @@ func on_face_pressed() -> void:
 		return
 	if not _screen.state.can_attack(_screen.my_side, _screen.selection.slot, -1):
 		return
+	# `_screen.refresh()` を呼ばない理由は `on_foe_slot_pressed()` と同じ
+	# (演出が当たるまで盤面の再同期を遅らせる必要があるため)。
 	_screen._perform(MatchAction.attack(_screen.my_side, _screen.selection.slot, -1))
 	_screen.selection.clear()
-	_screen.refresh()
 
 
 ## 相手1体・味方1体を対象に取る設置効果は、出す前に対象を選ばせる(GameDesign.md 9章)。

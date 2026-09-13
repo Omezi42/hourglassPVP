@@ -375,6 +375,8 @@ UIに依存しない、対局ルールそのものを扱う層。
 | `CardMatchLog`(`scripts/ui/card_match_log.gd`) | 対局ログ。`MatchState` のシグナルを購読して日本語の行を積み、中央のモーダルとして開く。**記録と表示を同じクラスに持たせている**のは、実況に出す文と読み返す文を必ず一致させるため |
 | `CardMatchTurnFeed`(`scripts/ui/card_match_turn_feed.gd`) | 手番バナー・相手の1手の実況・スポットライト。**ログと同じ文言**を `CardMatchLog.describe()` から引く |
 | `CardMatchStrike`(`scripts/ui/card_match_strike.gd`) | 攻撃の演出の進行役。被ダメージの砂の飛散を**当たる瞬間まで持ち越す**。砂の演出(`unit_damaged`/`unit_ticked`)の受け口も持つ |
+| `CardMatchEffectStrike`(`scripts/ui/card_match_effect_strike.gd`) | 設置効果が単体の砂時計へダメージ/破壊を与えるときの進行役。`MatchState.effect_struck` を受け、`EmblemStrikeFx` で紋章を対象へ飛ばし、当たるまで被ダメージ・破壊の演出を持ち越す。`CardMatchStrike` と同じ形の「先に控える→飛ぶ→当たる→戻る」段取りを、駒が動く攻撃とは別枠で持つ |
+| `EmblemStrikeFx`(`scripts/ui/emblem_strike_fx.gd`) | 紋章が対象へ飛ぶ演出そのもの(`Control`)。`CardFlipBeam` と同じく盤面より手前の独立したオーバーレイとして持つ |
 | `CardMatchShake`(`scripts/ui/card_match_shake.gd`) | 当たった瞬間の盤面の揺れ(GameDesign.md 9章)。**卓と場の駒だけ**を動かす |
 | `CardMatchEffects`(`scripts/ui/card_match_effects.gd`) | 攻撃以外の演出の進行役(設置の着地 / 破壊の崩落 / 設置効果の光の筋 / 硝子の割れる閃光 / ドローと疲労の山札の脈打ち)。`CardMatchSound` と同じく `MatchState` のシグナルだけを見る |
 | `CardUnitFx`(`scripts/ui/card_unit_fx.gd`) | `CardView` の子として駒へ重ねる演出のうち、**盤面の状態を一切参照しないもの**(着地・崩落・硝子の閃光)。いずれも起きた瞬間に渡された引数だけで完結する |
@@ -542,6 +544,47 @@ UIに依存しない、対局ルールそのものを扱う層。
 `side_x` として計算しているのと同じ符号)を `CardMatchStrike` 側でも算出し、
 攻撃側のいる方向へ向ける。相手プレイヤーを狙った攻撃(`target_slot == -1`)には
 紋章が無いため、この演出自体を発生させない。
+
+**設置効果が単体の砂時計へダメージ/破壊を与えるときは、`CardMatchEffectStrike` が
+`CardMatchStrike` と対になる進行役として動く**(GameDesign.md 9章)。`CardEffectResolver._apply()`
+は `DAMAGE_UNIT` / `DESTROY_UNIT` のうち `effect.target` が `ENEMY_UNIT` / `ALLY_UNIT`
+(単体)のときだけ、光の筋(`effect_targeted`)の代わりに `MatchState.effect_struck` を
+発行する(`_is_single_unit_target()`)。**全体に効く効果(`ALL_ENEMY_UNITS` 等)は対象が
+複数あって1本の紋章に絞れないため、従来どおり光の筋のままにする。**
+
+- `effect_struck` の受け口(`CardMatchEffectStrike.on_effect_struck()`)は、対象の駒の
+  ダメージ(`MatchState.damage_unit()`)が実際に呼ばれる**直前**に同期的に発火する
+  (`_apply()` の中で `emit()` の次の行が `damage_unit()` のため)。ここで `_armed = true`
+  にしてから `EmblemStrikeFx.play()` でTweenを組み始める——この「armする」処理自体は
+  yieldしないので、直後の `damage_unit()` が `unit_damaged` を発行する時点では
+  既に armed 済みになっている
+- `CardMatchStrike.on_unit_damaged()` は、自分(`_armed`)が忙しくなければ
+  `_screen.effect_strike.busy()` も見て、忙しければ `CardMatchEffectStrike.hold_damage()`
+  へ渡す。**`unit_damaged` の受け口は1箇所(`_strike`)のまま**にし、「どちらの進行役が
+  いま演出を持っているか」で振り分ける形にしている(2つのクラスが同じ信号へ別々に
+  つなぐと、忙しくない方が即座に処理してしまう)
+- `unit_destroyed` / `unit_shielded` は既存の `CardMatchEffects._defer()` が
+  `_screen.strike_busy()`(`_strike.busy() or _effect_strike.busy()` に拡張済み)を見て
+  自動的に持ち越すため、**`CardMatchEffectStrike` 側で個別に処理する必要が無い**。
+  `_on_impact()` で `_screen.effects.flush()` / `_screen.sound.flush()` を呼べば揃って出る
+- 紋章が届いた瞬間(`EmblemStrikeFx.impact`)に `CardMatchShake.hit()` も鳴らし、
+  終わった瞬間(`finished`)に `_screen.on_strike_finished()`(`refresh()` を含む)を呼ぶ。
+  **`CardMatchScreen._finish_action()` は `_strike.play()` に加えて
+  `_effect_strike.busy()` も見て、armed なら `refresh()` を遅らせる**
+
+**この機能を作る過程で、`_perform()` の呼び出し元が揃って踏んでいた既存のバグを見つけて
+直した(2026-09-13)。**`_perform()` は `_finish_action()` の中で、演出が armed でなければ
+その場で `refresh()` する。ところが `card_match_touch.gd`(自分の攻撃)・
+`card_match_effect_target.gd`(設置効果の対象確定)・`card_match_spell.gd`(砂術の対象確定)は
+いずれも **`_perform()` の直後に、呼び出し側でも重ねて `_screen.refresh()` を呼んでいた**。
+攻撃のように `_strike` が armed になる手ではこの重複呼び出しが無害だったため気づかれずに
+残っていたが、**`MatchState` は `_perform()` の中で既に更新済み**(破壊された駒は
+`board[...]` から消えている)のため、armed のケースでこの重複呼び出しが走ると、
+**演出がまだ動いている最中に、既に破壊し終わった後の盤面を見せてしまう**(実際に
+「相打ちのとき、当たるより前に駒が消えて見える」という形で踏んだ)。呼び出し元の
+`refresh()` はいずれも削除し、`_finish_action()` の判断だけに任せている。**`_perform()` を
+呼ぶ新しい経路を足すときは、直後に `_screen.refresh()` を重ねて呼ばないこと。**
+`_finish_action()` が必ず適切なタイミングで呼ぶ。
 
 **当たった瞬間の盤面の揺れは `CardMatchShake` が持つ**(GameDesign.md 9章)。
 `CardMatchStrike._on_impact()` が、砂の飛散・持ち越した音と同じこの1点から呼ぶ。

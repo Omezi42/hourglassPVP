@@ -52,12 +52,20 @@ func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Diction
 			_beam(side, from, foe_side, -1)
 			_state.damage_player(foe_side, _state.units(foe_side).size() * effect.value)
 		CardEnums.EffectType.DAMAGE_UNIT:
+			var struck := _is_single_unit_target(effect.target)
 			for entry in _targets(side, unit, effect, hint):
-				_beam(side, from, entry["side"], entry["slot"])
+				if struck:
+					_state.effect_struck.emit(side, from, entry["side"], entry["slot"])
+				else:
+					_beam(side, from, entry["side"], entry["slot"])
 				_state.damage_unit(entry["side"], entry["slot"], effect.value)
 		CardEnums.EffectType.DESTROY_UNIT:
+			var struck_destroy := _is_single_unit_target(effect.target)
 			for entry in _targets(side, unit, effect, hint):
-				_beam(side, from, entry["side"], entry["slot"])
+				if struck_destroy:
+					_state.effect_struck.emit(side, from, entry["side"], entry["slot"])
+				else:
+					_beam(side, from, entry["side"], entry["slot"])
 				_state.destroy_unit(entry["side"], entry["slot"])
 		CardEnums.EffectType.SWAP_STATS:
 			for entry in _targets(side, unit, effect, hint):
@@ -161,6 +169,13 @@ func _player_side_for(side: int, target: int) -> int:
 	if target == CardEnums.EffectTarget.OWN_PLAYER:
 		return side
 	return MatchState.other_side(side)
+
+
+## 単体を狙う対象指定か(GameDesign.md 9章)。ENEMY_UNIT/ALLY_UNIT は必ず1体に絞られる
+## ため紋章が飛ぶ演出(`effect_struck`)にでき、ALL_ENEMY_UNITS等は対象が複数あって
+## 1本の紋章に絞れないため、従来どおり光の筋(`effect_targeted`)のままにする。
+func _is_single_unit_target(target: int) -> bool:
+	return target == CardEnums.EffectTarget.ENEMY_UNIT or target == CardEnums.EffectTarget.ALLY_UNIT
 
 
 func _unit_at(entry: Dictionary) -> CardInstance:

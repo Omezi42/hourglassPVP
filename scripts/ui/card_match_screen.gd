@@ -83,6 +83,11 @@ var effects: CardMatchEffects:
 var beam: CardFlipBeam:
 	get:
 		return _flip_beam
+## 設置効果が単体を狙うダメージ/破壊の演出(紋章が飛ぶ一撃。GameDesign.md 9章)。
+## `CardMatchStrike.on_unit_damaged()` が持ち越し先を判断するために読む。
+var effect_strike: CardMatchEffectStrike:
+	get:
+		return _effect_strike
 ## 当たった瞬間の盤面の揺れ。攻撃の進行役から呼ぶ。
 var shake: CardMatchShake:
 	get:
@@ -123,6 +128,7 @@ var _pile: CardPileViewer
 var _log_button: Button
 var _flip_beam: CardFlipBeam
 var _strike: CardMatchStrike
+var _effect_strike: CardMatchEffectStrike
 var _shake := CardMatchShake.new()
 var _sound: CardMatchSound
 var _effects: CardMatchEffects
@@ -158,6 +164,7 @@ func _ready() -> void:
 	_outcome = CardMatchOutcome.new(self)
 	_geometry = CardMatchGeometry.new(self)
 	_strike = CardMatchStrike.new(self)
+	_effect_strike = CardMatchEffectStrike.new(self)
 	_sound = CardMatchSound.new(self)
 	_effects = CardMatchEffects.new(self)
 	_online_ctl = CardMatchOnline.new(self)
@@ -426,6 +433,10 @@ func _begin_state(
 	# (GameDesign.md 9章)。取り違えるとルールを誤解するため。
 	state.unit_damaged.connect(_strike.on_unit_damaged)
 	state.unit_ticked.connect(_strike.on_unit_ticked)
+	# 設置効果が単体の砂時計へダメージ/破壊を与えるときの「紋章が飛ぶ一撃」
+	# (GameDesign.md 9章)。全体に効く効果は従来どおり光の筋のままなので、
+	# `effect_targeted` とは別の信号で受ける。
+	state.effect_struck.connect(_effect_strike.on_effect_struck)
 	state.unit_flipped.connect(
 		func(side: int, slot: int) -> void: _flip_beam.play_flip(self, side, slot)
 	)
@@ -770,8 +781,14 @@ func _perform(action: Dictionary) -> void:
 ## 1手を適用し終えたときの締め。攻撃なら演出を挟み、終わってから表示を更新する。
 ## **すべての適用経路(自分・オンライン・CPU)をここへ通す**ことで、
 ## 演出を挟むかどうかの判断が1箇所に収まる。
+##
+## 設置効果が単体を狙う「紋章の一撃」(`CardMatchEffectStrike`)は、`MatchAction.apply()`
+## の中で既に組み上がっている(`effect_struck` を受けて armed 済み)ため、ここでは
+## `busy()` を見るだけでよい。攻撃(`_strike`)と違って `play()` に当たる関数を持たない。
 func _finish_action() -> void:
 	if _strike.play():
+		return
+	if _effect_strike.busy():
 		return
 	on_strike_finished()
 
@@ -790,9 +807,10 @@ func bar_for(side: int) -> PlayerInfoBar:
 	return _own_bar if side == my_side else _foe_bar
 
 
-## 攻撃の演出中かどうか。効果音・演出を当たる瞬間まで持ち越すかの判断に使う。
+## 攻撃・設置効果の紋章突撃の演出中かどうか。効果音・演出を当たる瞬間まで
+## 持ち越すかの判断に使う。
 func strike_busy() -> bool:
-	return _strike.busy()
+	return _strike.busy() or _effect_strike.busy()
 
 
 ## 盤面の1枠の表示。切り出した進行役(`CardMatchStrike` 等)からも引く。

@@ -40,6 +40,11 @@ signal fatigue_damage(side: int, amount: int)
 ## 効果が対象を取った(GameDesign.md 9章)。`target_slot` が -1 なら相手プレイヤー。
 ## 出した駒から対象へ光の筋を伸ばすために、適用の直前に発行する。
 signal effect_targeted(source_side: int, source_slot: int, target_side: int, target_slot: int)
+## 設置効果が単体の砂時計へダメージ/破壊を与える(GameDesign.md 9章)。`effect_targeted` と
+## 同じ「適用の直前」に発行するが、こちらは光の筋ではなく**紋章が対象へ飛んで実際に
+## 当てているような演出**を組むために使う。全体へ効く効果(ALL_ENEMY_UNITS等)は
+## 対象が複数あって1本の紋章に絞れないため、従来どおり `effect_targeted` のままにする。
+signal effect_struck(source_side: int, source_slot: int, target_side: int, target_slot: int)
 signal match_ended(winner: int)
 ## 持ち時間が尽きて手番を強制的に終えた(GameDesign.md 5章)。`count` は連続回数。
 signal turn_forfeited(side: int, count: int)
