@@ -31,8 +31,10 @@ func begin(index: int) -> void:
 ## 対象選択中の砂術を、選ばれた1体へ撃つ。
 func cast_at(side: int, slot: int) -> void:
 	var index: int = _screen.selection.hand_index
-	_screen._perform(MatchAction.cast(_screen.my_side, index, {"side": side, "slot": slot}))
+	# **`_perform()` より先に選択を解除する**(`CardMatchEffectTarget.confirm()` と同じ理由。
+	# 選択を残したまま呼ぶと、`refresh()` が既に手札から消えたカードを読みに行って落ちる)。
 	_screen.selection.clear()
+	_screen._perform(MatchAction.cast(_screen.my_side, index, {"side": side, "slot": slot}))
 	_screen._hide_detail()
 	_screen.refresh()
 
