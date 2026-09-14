@@ -209,9 +209,10 @@
 - [ ] **`scripts/ui/card_effect_preview.gd` が995行**で、gdlint の上限(1000行)まで5行しかない。
       **次に実演を1本足すと落ちる。**台本(`Script` enum ごとの `_stage()`)と図版の描画を
       分けるのが自然な線
-- [ ] **`scripts/ui/card_match_screen.gd` が984行 / `scripts/ui/card_view.gd` が959行。**
+- [ ] **`scripts/ui/card_match_screen.gd` が981行 / `scripts/ui/card_view.gd` が994行**(手触りの回で
+      `CardViewPaint` へ描画を切り出したが、身構え・跳ね・取り消しの状態を足して元の行数へ戻った)。
       いずれも足す前に切り出す(`_screen` 参照を持つ `RefCounted` へ分ける既存の流儀)。
-      `card_view.gd` は攻撃の4段(`play_strike()` 以下)が `CardUnitFx` と同じ形で分けられる
+      `card_view.gd` は反転の段取り(`play_flip()` 一式)を `CardViewStrike` と同じ形で分けられる
 - [ ] **`tools/tests/run_tests.gd` が876行の `v5_rules_tests.gd` と並んで上限に近い。**
       新しいテストは引き続き別ファイルへ置く
 - [ ] **フォントが1.66MB**で、pck 4.1MBの4割にあたる。デッキ名がユーザーの自由入力である以上
