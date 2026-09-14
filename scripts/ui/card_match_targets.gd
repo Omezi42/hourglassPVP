@@ -51,25 +51,41 @@ func refresh() -> void:
 	for slot in state.attackable_slots(foe):
 		var view := _screen.view_at(foe, slot)
 		view.selected = true
-		_show_preview(view, slot)
+		var preview: Dictionary = state.combat_preview(my_side, selection.slot, slot)
+		view.preview_health = preview["target_health"]
+		view.preview_dead = preview["target_dead"]
 	_screen.foe_bar.targetable = state.can_attack_player(my_side)
+	refresh_own_preview()
 
 
-## 「この攻撃の後どうなるか」を、狙える相手の駒と自分の駒の両方へ出す。
-## 相打ちである以上、攻撃側の結果まで見せないと判断できない。
-## 攻撃側の予測は狙える相手が複数いると1つに定まらないため、**最も自分が削られる組**
-## (最悪の場合)を出す。安全に見えて実は死ぬ、という取り違えを避けるため。
-func _show_preview(view: CardView, target_slot: int) -> void:
+## 攻撃側の「この攻撃の後どうなるか」だけを組み直す。指している相手が変わったときに
+## 盤面全体を同期し直さずに済むよう、相手側の予測とは分けてある。
+##
+## 相打ちである以上、攻撃側の結果まで見せないと判断できない。**狙う相手の上に
+## カーソルがある間はその1組の結果**を出し、離れているときは狙える相手が複数いて
+## 1つに定まらないため**最も自分が削られる組**(最悪の場合)を出す(GameDesign.md 9章)。
+## 安全に見えて実は死ぬ、という取り違えを避けるため。
+func refresh_own_preview() -> void:
+	var state := _screen.state
 	var selection := _screen.selection
-	var preview: Dictionary = _screen.state.combat_preview(
-		_screen.my_side, selection.slot, target_slot
-	)
-	if preview.is_empty():
+	var my_side := _screen.my_side
+	var own: CardView = _screen.view_at(my_side, selection.slot)
+	own.preview_health = -1
+	own.preview_dead = false
+	own.queue_redraw()
+	if not selection.is_board_selection():
 		return
-	view.preview_health = preview["target_health"]
-	view.preview_dead = preview["target_dead"]
-	var own: CardView = _screen.view_at(_screen.my_side, selection.slot)
-	var worse: bool = own.preview_health < 0 or preview["attacker_health"] < own.preview_health
-	if worse:
-		own.preview_health = preview["attacker_health"]
-		own.preview_dead = preview["attacker_dead"]
+	var attacker: CardInstance = state.board[my_side][selection.slot]
+	if attacker == null or not attacker.can_attack():
+		return
+	var candidates: Array = state.attackable_slots(MatchState.other_side(my_side))
+	if state.can_attack_player(my_side):
+		candidates.append(CardMatchSelection.FACE)
+	if selection.hover_target in candidates:
+		candidates = [selection.hover_target]
+	for slot in candidates:
+		var preview: Dictionary = state.combat_preview(my_side, selection.slot, slot)
+		var worse: bool = own.preview_health < 0 or preview["attacker_health"] < own.preview_health
+		if worse:
+			own.preview_health = preview["attacker_health"]
+			own.preview_dead = preview["attacker_dead"]

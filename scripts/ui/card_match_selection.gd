@@ -15,9 +15,15 @@ enum Kind {
 	FLIP_RIGHT,
 }
 
+## 攻撃の予測で「いま指している相手」を表す(GameDesign.md 9章)。
+## `NO_HOVER` なら誰も指していない、`FACE` なら相手のHP帯、0以上なら相手の枠。
+const NO_HOVER := -2
+const FACE := -1
+
 var kind: int = Kind.NONE
 var hand_index := -1
 var slot := -1
+var hover_target := NO_HOVER
 
 
 func clear() -> void:
@@ -71,6 +77,14 @@ func is_hand_selection() -> bool:
 
 func is_board_selection() -> bool:
 	return kind == Kind.BOARD
+
+
+func hover(target: int) -> void:
+	hover_target = target
+
+
+func unhover() -> void:
+	hover_target = NO_HOVER
 
 
 func is_hand(index: int) -> bool:

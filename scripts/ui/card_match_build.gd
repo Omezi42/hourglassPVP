@@ -19,6 +19,8 @@ static func make_bar(screen: CardMatchScreen, opponent: bool, top: float) -> Pla
 	if opponent:
 		bar.face_pressed.connect(screen.touch.on_face_pressed)
 		bar.drop_handler = screen.touch.on_face_drop
+		bar.mouse_entered.connect(screen._set_hover_target.bind(CardMatchSelection.FACE))
+		bar.mouse_exited.connect(screen._set_hover_target.bind(CardMatchSelection.NO_HOVER))
 	bar.graveyard_pressed.connect(screen._on_graveyard_pressed.bind(opponent))
 	screen.add_child(bar)
 	return bar

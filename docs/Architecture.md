@@ -468,7 +468,13 @@ UIに依存しない、対局ルールそのものを扱う層。
   `CardView.preview_health` として体力のバッジの真下へ出す。**判定の順序は
   `_resolve_unit_combat()` と同じにすること**(硝子→毒砂)。攻撃側の予測は狙える相手が
   複数いると1つに定まらないため、**最も自分が削られる組**を出す(安全に見えて実は死ぬ、
-  という取り違えを避けるため)
+  という取り違えを避けるため)。**狙う相手を指している間だけその1組に置き換える**
+  (GameDesign.md 9章)。指している相手は `CardMatchSelection.hover_target`
+  (`NO_HOVER` / `FACE` / 相手の枠)が持ち、相手の駒の `hovered` / `mouse_exited` と
+  相手の情報帯の `mouse_entered` / `mouse_exited` から `CardMatchScreen._set_hover_target()`
+  が切り替える。Godotはドラッグ中も enter / exit を出すため、ドラッグとホバーで経路を分けない。
+  切り替えのたびに盤面全体を同期し直さず、`CardMatchTargets.refresh_own_preview()` が
+  攻撃側の予測だけを組み直す
 - ドラッグは `CardView` が `_get_drag_data()` / `_drop_data()` を持ち、枠側は
   `drop_handler`(Callable)で受ける。放されたら押して枠を選ぶ経路と同じ `_play_selected()`
   へ合流するため、設置効果の対象選択もそのまま働く

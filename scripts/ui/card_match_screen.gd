@@ -664,11 +664,25 @@ func _hide_detail() -> void:
 func _on_view_hovered(view: CardView) -> void:
 	if _detail != null:
 		_detail.hover(view)
+	var foe_slot := _foe_slots.find(view)
+	if foe_slot >= 0:
+		_set_hover_target(foe_slot)
 
 
 func _on_view_left() -> void:
 	if _detail != null:
 		_detail.leave()
+	_set_hover_target(CardMatchSelection.NO_HOVER)
+
+
+## 攻撃の予測で「いま指している相手」を切り替える(GameDesign.md 9章)。
+## 相手の駒・相手のHP帯へ入ったときと、そこから出たときに呼ぶ。
+func _set_hover_target(target: int) -> void:
+	if _selection == null or _selection.hover_target == target:
+		return
+	_selection.hover(target)
+	if state != null and _selection.is_board_selection():
+		_targets.refresh_own_preview()
 
 
 # --- 操作 ---------------------------------------------------------------
