@@ -58,6 +58,15 @@ const STAT_RADIUS := 15.0
 const LABEL_BADGE_GAP := 4.0
 ## その2行の間隔。
 const LABEL_LINE_GAP := 16.0
+## 取り消しの戻る動き(GameDesign.md 9章「対局画面の手触り」)。フッと消すのではなく
+## 短く縮んで消える。`selected` はすぐ false へ戻るため、この値だけで描く。
+const UNSELECT_DURATION := 0.1
+const UNSELECT_SHRINK := 0.78
+const UNSELECT_INSET := 6.0
+## バッジの跳ね(GameDesign.md 9章)。体力・攻撃力が変わった瞬間、その側のバッジだけ
+## 小さく跳ねる。
+const STAT_PUNCH_DURATION := 0.25
+const STAT_PUNCH_SCALE := 0.3
 ## 攻撃の予測。体力のバッジの真下へ、結果だけを小さく出す。
 const PREVIEW_RADIUS := 14.0
 const PREVIEW_GAP := 15.0
@@ -175,6 +184,13 @@ var counter_offset := Vector2.ZERO
 ## 効果を持つ駒が発火した合図(GameDesign.md 9章)。ドローを起こす設置効果・
 ## トリガーが盤面上の駒から起きたとき、紋章の周りへ短い光の輪を出す。
 var spark_amount := 0.0
+## 取り消しの戻る動き(GameDesign.md 9章「対局画面の手触り」)。`play_unselect()` が
+## 1.0にして0へ戻す。0の間は何も描かない。
+var unselect_amount := 0.0
+## バッジの跳ね(GameDesign.md 9章)。体力・攻撃力のどちらが変わったかで別々に持つ
+## (変わった側のバッジだけ跳ねるため)。
+var health_punch := 0.0
+var attack_punch := 0.0
 
 var _font: Font
 var _hovering := false
@@ -193,6 +209,12 @@ var _zoom_tween: Tween
 var _fx: CardUnitFx
 var _strike: CardViewStrike
 var _flourish: CardViewFlourish
+var _unselect_tween: Tween
+## バッジの跳ねの判定用。前回 `show_unit()` に渡された体力・攻撃力(GameDesign.md 9章)。
+var _prev_health := -1
+var _prev_attack := -1
+var _health_punch_tween: Tween
+var _attack_punch_tween: Tween
 
 
 func _ready() -> void:
@@ -210,12 +232,64 @@ func _ready() -> void:
 	add_child(_fx)
 
 
-## 場の砂時計として表示する。
+## 場の砂時計として表示する。**同じ駒が居続けているあいだ**、体力・攻撃力が前回から
+## 変わっていればバッジを跳ねさせる(GameDesign.md 9章)。駒が入れ替わった(出た/
+## 破壊された)ときは前回値が無関係になるため跳ねない。
 func show_unit(p_unit: CardInstance) -> void:
 	mode = Mode.BOARD
+	if p_unit != null and unit == p_unit:
+		if p_unit.health != _prev_health:
+			_punch_health()
+		if p_unit.attack != _prev_attack:
+			_punch_attack()
 	unit = p_unit
 	card = null if p_unit == null else p_unit.data
+	_prev_health = -1 if p_unit == null else p_unit.health
+	_prev_attack = -1 if p_unit == null else p_unit.attack
 	custom_minimum_size = BOARD_SIZE_PX
+	queue_redraw()
+
+
+func _punch_health() -> void:
+	health_punch = 1.0
+	if _health_punch_tween != null and _health_punch_tween.is_valid():
+		_health_punch_tween.kill()
+	_health_punch_tween = create_tween()
+	_health_punch_tween.set_ease(Tween.EASE_OUT)
+	_health_punch_tween.tween_method(_set_health_punch, 1.0, 0.0, STAT_PUNCH_DURATION)
+
+
+func _punch_attack() -> void:
+	attack_punch = 1.0
+	if _attack_punch_tween != null and _attack_punch_tween.is_valid():
+		_attack_punch_tween.kill()
+	_attack_punch_tween = create_tween()
+	_attack_punch_tween.set_ease(Tween.EASE_OUT)
+	_attack_punch_tween.tween_method(_set_attack_punch, 1.0, 0.0, STAT_PUNCH_DURATION)
+
+
+func _set_health_punch(value: float) -> void:
+	health_punch = value
+	queue_redraw()
+
+
+func _set_attack_punch(value: float) -> void:
+	attack_punch = value
+	queue_redraw()
+
+
+## 取り消しの戻る動き(GameDesign.md 9章)。光っていた枠を短く縮めて消す。
+func play_unselect() -> void:
+	if _unselect_tween != null and _unselect_tween.is_valid():
+		_unselect_tween.kill()
+	unselect_amount = 1.0
+	_unselect_tween = create_tween()
+	_unselect_tween.set_ease(Tween.EASE_OUT)
+	_unselect_tween.tween_method(_set_unselect_amount, 1.0, 0.0, UNSELECT_DURATION)
+
+
+func _set_unselect_amount(value: float) -> void:
+	unselect_amount = value
 	queue_redraw()
 
 
@@ -339,6 +413,8 @@ func _on_effect_finished() -> void:
 func clear() -> void:
 	card = null
 	unit = null
+	_prev_health = -1
+	_prev_attack = -1
 	queue_redraw()
 
 
@@ -434,9 +510,9 @@ func _tint() -> Color:
 
 
 func _draw_board_unit() -> void:
-	_draw_pedestal_base()
+	CardViewPaint.pedestal_base(self)
 	if card == null:
-		_draw_pedestal_ring()
+		CardViewPaint.pedestal_ring(self)
 		return
 	var tint := _tint()
 	var sink := SUMMONED_SINK if unit != null and unit.summoned_this_turn else 0.0
@@ -450,83 +526,14 @@ func _draw_board_unit() -> void:
 		draw_set_transform_matrix(Transform2D.IDENTITY)
 	# 輪は絵の後に描く。守護(太い真鍮の輪)と選択中(水色の輪)は駒が立っていても
 	# 必ず見えなければならないため、絵の下へ隠してはいけない。
-	_draw_pedestal_ring()
-	_draw_pedestal_plaque(tint)
+	CardViewPaint.pedestal_ring(self)
+	CardViewPaint.pedestal_plaque(self, tint)
 	if ready_mark and not selected:
-		_draw_pedestal_glow(Color(UiPalette.GLOW_AMBER, 0.18))
+		CardViewPaint.pedestal_glow(self, Color(UiPalette.GLOW_AMBER, 0.18))
 	if _hovering and enabled:
-		_draw_pedestal_glow(Color(1, 1, 1, 0.1))
+		CardViewPaint.pedestal_glow(self, Color(1, 1, 1, 0.1))
 	_draw_board_stats()
 	_draw_board_labels(tint)
-
-
-## 台座。空き枠でも常に描き、そこへ砂時計が立つ場所であることを示す。
-func _draw_pedestal_base() -> void:
-	var ci := get_canvas_item()
-	var center := Vector2(size.x * 0.5, PEDESTAL_CENTER_Y)
-	UiPaint.fill_ellipse(ci, center, PEDESTAL_RADIUS * 1.12, Color(0.04, 0.03, 0.05, 0.3), 32)
-	UiPaint.fill_ellipse(ci, center, PEDESTAL_RADIUS, Color(0.24, 0.19, 0.18, 0.45), 32)
-	UiPaint.fill_ellipse(
-		ci, center, PEDESTAL_RADIUS * 0.66, Color(UiPalette.PEDESTAL_DEFAULT_ACCENT, 0.14), 32
-	)
-
-
-## 台座の輪。守護は太い真鍮にする(手札の「枠を太くする」に対応。GameDesign.md 9章)。
-func _draw_pedestal_ring() -> void:
-	var center := Vector2(size.x * 0.5, PEDESTAL_CENTER_Y)
-	var guard := _has_live_keyword(CardEnums.Keyword.GUARD)
-	var color := UiPalette.BRASS_MID
-	var width := PEDESTAL_RING_WIDTH
-	if selected:
-		color = SELECT_CYAN
-		width = PEDESTAL_GUARD_RING_WIDTH
-	elif guard:
-		color = UiPalette.BRASS_HIGHLIGHT
-		width = PEDESTAL_GUARD_RING_WIDTH
-	elif card == null:
-		color = Color(UiPalette.BRASS_MID, 0.6)
-	UiPaint.draw_ellipse_ring(get_canvas_item(), center, PEDESTAL_RADIUS, color, width, 40)
-
-
-func _draw_pedestal_glow(color: Color) -> void:
-	UiPaint.fill_ellipse(
-		get_canvas_item(),
-		Vector2(size.x * 0.5, PEDESTAL_CENTER_Y),
-		PEDESTAL_RADIUS * 0.9,
-		color,
-		32
-	)
-
-
-## 台座の正面に彫り込んだ銘板。ここだけは濃く出し、近づいたときに
-## 「この駒が何者か」を確定できるようにする。
-func _draw_pedestal_plaque(tint: Color) -> void:
-	if card == null or card.emblem == null:
-		return
-	var ci := get_canvas_item()
-	# 台座の輪より少し上へ据える。下げると名前の行に掛かる。
-	# 相打ちの反撃中は counter_offset ぶんだけ攻撃側へ突き出す(GameDesign.md 9章)。
-	var center := Vector2(size.x * 0.5, PEDESTAL_CENTER_Y - 4.0) + counter_offset
-	UiPaint.fill_circle(ci, center, EMBLEM_PLAQUE_RADIUS, Color(0.08, 0.06, 0.05, 0.85), 24)
-	UiPaint.fill_circle(ci, center, EMBLEM_PLAQUE_RADIUS - 1.5, UiPalette.BRASS_MID * tint, 24)
-	var half := Vector2(EMBLEM_PLAQUE_SIDE, EMBLEM_PLAQUE_SIDE) * 0.5
-	# 影を1pxずらして重ね、真鍮へ彫り込まれたように見せる。
-	draw_texture_rect(
-		card.emblem,
-		Rect2(center - half + Vector2(0.0, 1.0), half * 2.0),
-		false,
-		Color(0.08, 0.06, 0.04, 0.7)
-	)
-	draw_texture_rect(
-		card.emblem,
-		Rect2(center - half, half * 2.0),
-		false,
-		Color(UiPalette.BRASS_HIGHLIGHT, 0.95) * tint
-	)
-	UiPaint.draw_ring(ci, center, EMBLEM_PLAQUE_RADIUS, UiPalette.BRASS_HIGHLIGHT * tint, 1.0, 24)
-	if spark_amount > 0.01:
-		var radius := EMBLEM_PLAQUE_RADIUS + SPARK_RADIUS * (1.0 - spark_amount)
-		UiPaint.draw_ring(ci, center, radius, Color(1.0, 0.92, 0.6, 0.7 * spark_amount), 2.0, 28)
 
 
 func _draw_board_art(tint: Color, sink: float) -> void:
@@ -579,36 +586,21 @@ func _draw_flip_landing() -> void:
 	)
 
 
-## 攻撃力=左下 / 体力=右下。台座の高さに合わせて左右へ振り分ける。
+## 攻撃力=左下 / 体力=右下。台座の高さに合わせて左右へ振り分ける。**値が変わった側だけ
+## バッジを跳ねさせる**(GameDesign.md 9章「対局画面の手触り」)。
 func _draw_board_stats() -> void:
 	if unit == null:
 		return
 	var y := PEDESTAL_CENTER_Y + 6.0
-	_stat(Vector2(STAT_RADIUS + 2.0, y), unit.attack, ATTACK_ORANGE)
-	_stat(Vector2(size.x - STAT_RADIUS - 2.0, y), unit.health, HEALTH_RED)
-	_draw_preview(Vector2(size.x - STAT_RADIUS - 2.0, y))
-
-
-## 「この攻撃の後どうなるか」を体力バッジの真下へ出す。相打ちのため攻撃側にも出る。
-func _draw_preview(anchor: Vector2) -> void:
-	if preview_health < 0:
-		return
-	var color := PREVIEW_DEAD if preview_dead else PREVIEW_ALIVE
-	var center := anchor + Vector2(0, STAT_RADIUS + PREVIEW_GAP)
-	draw_circle(center, PREVIEW_RADIUS, Color(0.08, 0.07, 0.06, 0.95))
-	draw_arc(center, PREVIEW_RADIUS, 0.0, TAU, 20, color, 2.0)
-	var text := "破壊" if preview_dead else str(preview_health)
-	var font_size := 12 if preview_dead else 15
-	var text_size := _font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
-	draw_string(
-		_font,
-		center + Vector2(-text_size.x * 0.5, text_size.y * 0.32),
-		text,
-		HORIZONTAL_ALIGNMENT_LEFT,
-		-1,
-		font_size,
-		color
+	var attack_radius := STAT_RADIUS * (1.0 + attack_punch * STAT_PUNCH_SCALE)
+	var health_radius := STAT_RADIUS * (1.0 + health_punch * STAT_PUNCH_SCALE)
+	CardViewPaint.stat(
+		self, Vector2(STAT_RADIUS + 2.0, y), unit.attack, ATTACK_ORANGE, attack_radius
 	)
+	CardViewPaint.stat(
+		self, Vector2(size.x - STAT_RADIUS - 2.0, y), unit.health, HEALTH_RED, health_radius
+	)
+	CardViewPaint.preview(self, Vector2(size.x - STAT_RADIUS - 2.0, y))
 
 
 func _draw_board_labels(tint: Color) -> void:
@@ -636,17 +628,28 @@ func _draw_hand_card() -> void:
 		[[0.0, Color(0.23, 0.2, 0.17, 1.0) * tint], [1.0, Color(0.11, 0.1, 0.09, 1.0) * tint]]
 	)
 	var border := SPELL_BORDER if card.is_spell else UiPalette.BRASS_MID
+	var border_width := NORMAL_BORDER
+	var outline_points := points
 	if selected:
 		border = SELECT_CYAN
-	var outline := points.duplicate()
-	outline.append(points[0])
-	draw_polyline(outline, border, GUARD_BORDER if selected else NORMAL_BORDER, true)
+		border_width = GUARD_BORDER
+	elif unselect_amount > 0.01:
+		# 取り消しの戻る動き(GameDesign.md 9章): 枠を短く縮めながら消す。
+		border = Color(SELECT_CYAN, unselect_amount)
+		border_width = GUARD_BORDER
+		var inset := UNSELECT_INSET * (1.0 - unselect_amount)
+		outline_points = UiPaint.rounded_rect_points_uniform(
+			rect.grow(-inset), HAND_CORNER * _hand_scale(), 6
+		)
+	var outline := outline_points.duplicate()
+	outline.append(outline_points[0])
+	draw_polyline(outline, border, border_width, true)
 	_draw_hand_art(tint)
-	_draw_hand_seal(tint)
+	CardViewPaint.hand_seal(self, tint)
 	_draw_hand_labels(tint)
 	_draw_hand_stats()
 	if not badge.is_empty():
-		_draw_badge(rect)
+		CardViewPaint.badge(self, rect)
 	if _hovering and enabled:
 		UiPaint.fill_gradient_polygon(
 			ci, points, rect, [[0.0, Color(1, 1, 1, 0.07)], [1.0, Color(1, 1, 1, 0.03)]]
@@ -694,29 +697,6 @@ func _hand_art_box() -> Rect2:
 	return Rect2(Vector2((size.x - side) * 0.5, 9.0 * scale), Vector2(side, side))
 
 
-## 封蝋の印。手札は紙の札であるため、台座の銘板ではなく蝋で押した印として出す。
-func _draw_hand_seal(tint: Color) -> void:
-	# 砂術は紋章を中央へ大きく出しているため、封蝋を重ねると同じ絵が2つ並ぶ。
-	if card.emblem == null or card.is_spell:
-		return
-	var ci := get_canvas_item()
-	var scale := _hand_scale()
-	var radius := HAND_SEAL_RADIUS * scale
-	var center := Vector2(radius + 4.0 * scale, size.y - radius - 4.0 * scale)
-	UiPaint.fill_circle(ci, center, radius + 1.0, Color(0.08, 0.05, 0.04, 0.8), 24)
-	UiPaint.fill_circle(ci, center, radius, UiPalette.BRASS_MID * tint, 24)
-	var half := Vector2(HAND_SEAL_SIDE, HAND_SEAL_SIDE) * 0.5 * scale
-	draw_texture_rect(
-		card.emblem,
-		Rect2(center - half + Vector2(0.0, 1.0), half * 2.0),
-		false,
-		Color(0.08, 0.05, 0.03, 0.7)
-	)
-	draw_texture_rect(
-		card.emblem, Rect2(center - half, half * 2.0), false, UiPalette.BRASS_HIGHLIGHT * tint
-	)
-
-
 ## 名前とキーワードは、**総量のバッジと封蝋が占める帯より上へ積む**。以前は下端から
 ## 24pxの位置へキーワードを置いており、「攻撃不可 守護」のように長い行が総量の数値へ
 ## 潜っていた(キーワード辞書で実際に読めなくなっていた)。上へ逃がすことで札の幅を
@@ -739,10 +719,12 @@ func _draw_hand_labels(tint: Color) -> void:
 func _draw_hand_stats() -> void:
 	var radius := STAT_RADIUS * _hand_scale()
 	var inset := radius + 3.0 * _hand_scale()
-	_stat(Vector2(inset, inset), card.cost, MANA_BLUE, radius)
+	CardViewPaint.stat(self, Vector2(inset, inset), card.cost, MANA_BLUE, radius)
 	if card.is_spell:
 		return
-	_stat(Vector2(size.x - inset, size.y - inset), card.total_sand, HEALTH_RED, radius)
+	CardViewPaint.stat(
+		self, Vector2(size.x - inset, size.y - inset), card.total_sand, HEALTH_RED, radius
+	)
 
 
 # --- 共通 ---------------------------------------------------------------
@@ -885,43 +867,10 @@ func _draw_drop(rect: Rect2) -> void:
 		draw_circle(Vector2(x, bottom), 8.0 * glow, Color(SAND_AMBER, 0.35 * (1.0 - glow)))
 
 
-func _draw_badge(rect: Rect2) -> void:
-	var width := _font.get_string_size(badge, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x + 12.0
-	var chip := Rect2(rect.size.x - width - 5, 5, width, 22)
-	draw_rect(chip, Color(0.08, 0.07, 0.06, 0.92))
-	draw_rect(chip, UiPalette.BRASS_HIGHLIGHT, false, 1.0)
-	draw_string(
-		_font,
-		chip.position + Vector2(6, 17),
-		badge,
-		HORIZONTAL_ALIGNMENT_LEFT,
-		-1,
-		15,
-		UiPalette.BRASS_HIGHLIGHT
-	)
-
-
 func _draw_empty() -> void:
 	var rect := Rect2(Vector2.ZERO, size)
 	var color := SELECT_CYAN if selected else Color(0.3, 0.28, 0.3, 0.5)
 	_dashed_rect(rect, color)
-
-
-func _stat(center: Vector2, value: int, color: Color, radius := STAT_RADIUS) -> void:
-	draw_circle(center, radius, Color(0.08, 0.07, 0.06, 0.95))
-	draw_arc(center, radius, 0.0, TAU, 24, color, 2.5 * radius / STAT_RADIUS)
-	var text := str(value)
-	var font_size := maxi(MIN_FONT_SIZE, roundi(20.0 * radius / STAT_RADIUS))
-	var width := _font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
-	draw_string(
-		_font,
-		center + Vector2(-width * 0.5, font_size * 0.35),
-		text,
-		HORIZONTAL_ALIGNMENT_LEFT,
-		-1,
-		font_size,
-		color
-	)
 
 
 ## カードの幅に収まらない文字列は、収まるまでフォントを縮めて描く。

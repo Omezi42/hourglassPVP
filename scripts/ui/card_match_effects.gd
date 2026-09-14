@@ -20,6 +20,11 @@ var _held: Array[Callable] = []
 ## ドラッグで放した座標。`"側:枠"` をキーに持ち、`unit_played` が届いた瞬間だけ読む
 ## (クリックで枠を選んだ場合は積まないため、その場合は従来どおり滑らずに着地する)。
 var _drop_origin: Dictionary = {}
+## 支払いの吸い込みの行き先(GameDesign.md 9章「対局画面の手触り」)。押した札の
+## global位置を側(int)をキーに控え、`unit_played`/`spell_cast` が届いた瞬間だけ読む。
+## 手札位置は出す前に消えるため、押した時点(`CardMatchTouch`/`CardMatchSpell`)で
+## 控えてもらう。控えが無ければ情報帯のマナ数字付近を既定の行き先にする。
+var _spend_origin: Dictionary = {}
 
 
 func _init(screen: CardMatchScreen) -> void:
@@ -28,6 +33,7 @@ func _init(screen: CardMatchScreen) -> void:
 
 func watch(state: MatchState) -> void:
 	state.unit_played.connect(_on_unit_played)
+	state.spell_cast.connect(_on_spell_cast)
 	state.unit_destroyed.connect(_on_unit_destroyed)
 	state.unit_shielded.connect(_on_unit_shielded)
 	state.cards_drawn.connect(_on_cards_drawn)
@@ -61,10 +67,18 @@ func _drop_key(side: int, slot: int) -> String:
 	return "%d:%d" % [side, slot]
 
 
+## 押した札のglobal位置を控える。`unit_played`/`spell_cast` が届いた瞬間、支払われた
+## ぶんのマナのピップをここへ向けて吸い込ませる(GameDesign.md 9章)。
+func queue_spend_origin(side: int, global_pos: Vector2) -> void:
+	_spend_origin[side] = global_pos
+
+
 ## 場に出した:台座の少し上から落ちて着地する。ドラッグで放した座標が控えてあれば、
 ## 先にそこから台座の中心へ滑ってから着地する。
 func _on_unit_played(side: int, slot: int) -> void:
 	var view := _screen.view_at(side, slot)
+	var cost: int = _screen.state.board[side][slot].data.cost
+	_play_spend(side, cost)
 	var key := _drop_key(side, slot)
 	if _drop_origin.has(key):
 		var origin: Vector2 = _drop_origin[key]
@@ -72,6 +86,22 @@ func _on_unit_played(side: int, slot: int) -> void:
 		_glide_to_pedestal(view, origin)
 		return
 	view.play_land()
+
+
+## 砂術を撃った(GameDesign.md 6章)。盤面へは出ないため、支払いの吸い込みだけを見せる。
+func _on_spell_cast(side: int, card: CardData) -> void:
+	_play_spend(side, card.cost)
+
+
+## 支払われたぶんのマナのピップを、押した札の位置(控えていなければマナの数字付近)へ
+## 吸い込ませる。
+func _play_spend(side: int, cost: int) -> void:
+	if cost <= 0:
+		return
+	var bar := _screen.bar_for(side)
+	var origin: Vector2 = _spend_origin.get(side, bar.mana_label_global())
+	_spend_origin.erase(side)
+	bar.spend_toward(cost, origin)
 
 
 func _glide_to_pedestal(view: CardView, global_origin: Vector2) -> void:

@@ -17,6 +17,10 @@ func _init(screen: CardMatchScreen) -> void:
 ## 「砂術か、置く枠まで決まった砂時計か」を1つの値で見分けられる。
 func begin(index: int) -> void:
 	var card: CardData = _screen.state.hand[_screen.my_side][index]
+	# 出す前に手札の位置を控える(GameDesign.md 9章「対局画面の手触り」)。撃った瞬間には
+	# もう墓地へ消えているため、支払いのピップが吸い込まれる先をいまのうちに渡しておく。
+	var view := _screen._hand_views[index]
+	_screen.effects.queue_spend_origin(_screen.my_side, view.global_position + view.size * 0.5)
 	var side := target_side(card)
 	if side >= 0 and not _screen.state.units(side).is_empty():
 		_screen.selection.await_target(index, -1)

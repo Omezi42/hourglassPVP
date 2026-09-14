@@ -62,7 +62,7 @@ func on_own_slot_pressed(view: CardView) -> void:
 			_play_selected(slot)
 		return
 	if _screen.state.board[_screen.my_side][slot] == null:
-		_screen.selection.clear()
+		_screen._cancel_selection()
 	else:
 		_screen.selection.select_board(slot)
 	_screen.refresh()
@@ -71,7 +71,7 @@ func on_own_slot_pressed(view: CardView) -> void:
 ## 対象選択中に自分の場を押したとき(砂術の味方対象 / 設置効果の味方対象)。
 func _handle_own_targeting(slot: int) -> void:
 	if _screen.state.board[_screen.my_side][slot] == null:
-		_screen.selection.clear()
+		_screen._cancel_selection()
 		_screen.refresh()
 		return
 	# 味方1体を対象に取る砂術は、自分の駒を押して確定する。
@@ -163,4 +163,10 @@ func on_face_pressed() -> void:
 ## 相手1体・味方1体を対象に取る設置効果は、出す前に対象を選ばせる(GameDesign.md 9章)。
 ## 対象がいなければ選ばせる意味がないため、そのまま出す(`CardMatchEffectTarget` が判断する)。
 func _play_selected(slot: int) -> void:
-	_screen._effect_target.begin(_screen.selection.hand_index, slot)
+	# 出す前に手札の位置を控える(GameDesign.md 9章「対局画面の手触り」)。出た瞬間には
+	# もう手札から消えているため、支払いのピップが吸い込まれる先をいまのうちに渡しておく。
+	var hand_index := _screen.selection.hand_index
+	if hand_index >= 0 and hand_index < _screen._hand_views.size():
+		var view := _screen._hand_views[hand_index]
+		_screen.effects.queue_spend_origin(_screen.my_side, view.global_position + view.size * 0.5)
+	_screen._effect_target.begin(hand_index, slot)

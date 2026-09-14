@@ -663,6 +663,10 @@ func _on_view_hovered(view: CardView) -> void:
 		_detail.hover(view)
 	if _hand_layout != null:
 		_hand_layout.on_hovered(view)
+	# 手札の札にカーソルを乗せている間、支払うぶんのマナのピップを脈打たせる
+	# (GameDesign.md 9章「対局画面の手触り」)。
+	if view.mode == CardView.Mode.HAND and view.card != null:
+		_own_bar.highlight_cost(view.card.cost)
 	var foe_slot := _foe_slots.find(view)
 	if foe_slot >= 0:
 		_set_hover_target(foe_slot)
@@ -673,6 +677,7 @@ func _on_view_left() -> void:
 		_detail.leave()
 	if _hand_layout != null:
 		_hand_layout.on_left()
+	_own_bar.highlight_cost(0)
 	_set_hover_target(CardMatchSelection.NO_HOVER)
 
 
@@ -899,9 +904,25 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if _selection.is_empty():
 		return
-	_selection.clear()
+	_cancel_selection()
 	refresh()
 	get_viewport().set_input_as_handled()
+
+
+## 選択を取り消す。光っていた枠を「短く縮んで消える」動きで消してから
+## `selection` をクリアする(GameDesign.md 9章「対局画面の手触り」)。**選択の完了
+## (出す/攻撃/反転/砂術を撃つ)による解除は対象にしない**——そちらは選んでいた駒が
+## 演出そのもので置き換わるため、フッと消える見え方にはならない。
+func _cancel_selection() -> void:
+	for view in _foe_slots:
+		if view.selected:
+			view.play_unselect()
+	for view in _own_slots:
+		if view.selected:
+			view.play_unselect()
+	if _selection.is_hand_selection() and _selection.hand_index < _hand_views.size():
+		_hand_views[_selection.hand_index].play_unselect()
+	_selection.clear()
 
 
 func _take_cpu_action() -> void:

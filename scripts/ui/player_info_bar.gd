@@ -70,6 +70,12 @@ const DECK_PULSE_DURATION := 0.45
 const SAND_GLINT_FRACTIONS := [0.10, 0.28, 0.47, 0.66, 0.85]
 const SAND_GLINT_SPEED := 0.9
 const SAND_GLINT_RADIUS := 1.6
+## マナのピップの光と吸い込み(GameDesign.md 9章「対局画面の手触り」)。ホバー中の札の
+## コストぶんを脈打たせ、支払った瞬間はそのぶんが札の方向へ吸われて消える。
+## 脈は `_glint_time`(砂粒のきらめきと同じ経過時間)へ乗せ、専用のタイマーを増やさない。
+const PIP_GLOW_SPEED := 6.0
+const PIP_GLOW_EXTRA := 3.0
+const SPEND_DURATION := 0.25
 
 ## 相手側かどうか。相手側だけ手札の枚数を出す。
 var is_opponent := false
@@ -116,6 +122,14 @@ var _deck_pulse_color := UiPalette.GLOW_AMBER
 var _deck_tween: Tween
 ## HPの砂粒のきらめきを進める経過時間。
 var _glint_time := 0.0
+## ホバー中の札のコスト。左からこの数だけピップを脈打たせる(0で消す)。
+var _highlight_cost := 0
+## 支払いで消えるピップの吸い込み(GameDesign.md 9章)。飛んでいる粒の出発位置(ピップの
+## ローカル座標)と、行き先(出した札のローカル座標)、進捗を持つ。
+var _spend_origins: Array[Vector2] = []
+var _spend_to := Vector2.ZERO
+var _spend_progress := 1.0
+var _spend_tween: Tween
 
 
 func _ready() -> void:
@@ -162,6 +176,8 @@ func reset() -> void:
 		_hp_tween.kill()
 	if _deck_tween != null and _deck_tween.is_valid():
 		_deck_tween.kill()
+	if _spend_tween != null and _spend_tween.is_valid():
+		_spend_tween.kill()
 	_hp = MatchState.INITIAL_HP
 	_shown_hp = float(_hp)
 	_mana = 0
@@ -174,6 +190,9 @@ func reset() -> void:
 	_flash = 0.0
 	_float_left = 0.0
 	_deck_pulse = 0.0
+	_highlight_cost = 0
+	_spend_origins.clear()
+	_spend_progress = 1.0
 	active = false
 	targetable = false
 	clock_seconds = -1.0
@@ -191,6 +210,54 @@ func show_emote(text: String) -> void:
 	# 相手側(画面上部)なら下へ、自分側(画面下部)なら上へ出す
 	bubble.position = Vector2(10.0, 48.0 if is_opponent else -36.0)
 	add_child(bubble)
+
+
+## 手札の札にカーソルを乗せている間、支払うぶんのマナのピップを脈打たせる
+## (GameDesign.md 9章「対局画面の手触り」)。**左から n 個**。n が現在のマナを超えるなら
+## 払えないため光らせない。`highlight_cost(0)` で消す。
+func highlight_cost(n: int) -> void:
+	if _highlight_cost == n:
+		return
+	_highlight_cost = n
+	queue_redraw()
+
+
+## 支払いで消える n 個のピップを、`target_global`(出した札/撃った砂術の手札位置)へ
+## 吸い込ませて消す(GameDesign.md 9章)。**呼ばれた時点でまだ `show_state()` を挟んで
+## いない場合**(`unit_played`/`spell_cast` は支払いの直後・盤面の再同期より前に発火する)、
+## `_mana` は支払う前の値のままなので、そこから左へ n 個を数えられる。
+func spend_toward(n: int, target_global: Vector2) -> void:
+	var count := mini(n, _mana)
+	if count <= 0:
+		return
+	_spend_origins.clear()
+	for i in count:
+		_spend_origins.append(Vector2(PIP_START_X + i * PIP_STEP, 28))
+	_spend_to = get_global_transform().affine_inverse() * target_global
+	if _spend_tween != null and _spend_tween.is_valid():
+		_spend_tween.kill()
+	_spend_progress = 0.0
+	_spend_tween = create_tween()
+	_spend_tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+	_spend_tween.tween_method(_set_spend_progress, 0.0, 1.0, SPEND_DURATION)
+	_spend_tween.finished.connect(_on_spend_finished)
+
+
+func _set_spend_progress(value: float) -> void:
+	_spend_progress = value
+	queue_redraw()
+
+
+func _on_spend_finished() -> void:
+	_spend_progress = 1.0
+	_spend_origins.clear()
+	queue_redraw()
+
+
+## マナの数字の位置(グローバル)。支払いの吸い込みの行き先を控えられなかったとき
+## (CPU・相手の手など、手札の札が画面に無い場合)の既定の行き先にする(GameDesign.md 9章)。
+func mana_label_global() -> Vector2:
+	return global_position + Vector2(MANA_TEXT_X, 30.0)
 
 
 ## 相手のHP帯へ駒を落として本体を殴る。押して選ぶ経路と同じ判定を `drop_handler` が持つ。
@@ -237,6 +304,7 @@ func _draw() -> void:
 	_draw_name_plate()
 	_draw_hp()
 	_draw_mana()
+	_draw_spend_flight()
 	_pile(deck_pile_rect().position, "山札", _deck)
 	_pile(_graveyard_rect().position, "墓地", _graveyard)
 	if is_opponent:
@@ -444,6 +512,9 @@ func _draw_hp() -> void:
 
 func _draw_mana() -> void:
 	_text(Vector2(MANA_TEXT_X, 36), "マナ %d/%d" % [_mana, _max_mana], 18)
+	var ci := get_canvas_item()
+	# 払えない(n > 現在マナ)ぶんは光らせない(GameDesign.md 9章)。
+	var glow_count := _highlight_cost if _highlight_cost <= _mana else 0
 	for i in _max_mana:
 		var center := Vector2(PIP_START_X + i * PIP_STEP, 28)
 		var filled: bool = i < _mana
@@ -458,6 +529,28 @@ func _draw_mana() -> void:
 		)
 		var arc_color := Color(0.75, 0.85, 1.0, 0.6) if filled else Color(0.4, 0.42, 0.48, 0.5)
 		draw_arc(center, PIP_RADIUS, 0.0, TAU, 16, arc_color, 1.5)
+		if i < glow_count:
+			_draw_pip_glow(ci, center)
+
+
+## 支払うぶんのピップの脈打ち。HPの砂粒のきらめきと同じ経過時間(`_glint_time`)へ乗せる。
+func _draw_pip_glow(ci: RID, center: Vector2) -> void:
+	var pulse := (sin(_glint_time * PIP_GLOW_SPEED) + 1.0) * 0.5
+	var radius := PIP_RADIUS + PIP_GLOW_EXTRA * pulse
+	UiPaint.draw_ring(ci, center, radius, Color(1.0, 0.92, 0.6, 0.5 + 0.4 * pulse), 2.0, 16)
+
+
+## 支払いで消えるピップが、出した札(または撃った砂術)の方向へ吸われて消える
+## (GameDesign.md 9章)。
+func _draw_spend_flight() -> void:
+	if _spend_origins.is_empty() or _spend_progress >= 1.0:
+		return
+	var ci := get_canvas_item()
+	var fade := 1.0 - _spend_progress
+	for origin in _spend_origins:
+		var pos: Vector2 = origin.lerp(_spend_to, _spend_progress)
+		var radius := PIP_RADIUS * (0.55 + 0.45 * fade)
+		UiPaint.fill_circle(ci, pos, radius, Color(1.0, 0.95, 0.72, fade), 12)
 
 
 ## コインを持っている間だけ、マナの並びの右隣に金色の粒を出す。

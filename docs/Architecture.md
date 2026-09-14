@@ -364,7 +364,8 @@ UIに依存しない、対局ルールそのものを扱う層。
 
 | クラス | 責務 |
 |---|---|
-| `CardView`(`scripts/ui/card_view.gd`) | カード1枚の表示。**守護の枠の強調は `guard_frame` で切る**(場だけ true。手札・砂時計一覧・デッキ編集は false。GameDesign.md 9章)。**手札と場で見た目を変える**(GameDesign.md 9章)。`Mode.HAND` はカードの枠を持ち **コスト=左上 / 総量=右下**、`Mode.BOARD` は**枠を持たず、丸い台座の上に立つ砂時計そのもの**として描き **攻撃力=左下 / 体力=右下**(コストは出さない)。体力と攻撃力の比で3枚のイラストを切り替え、守護は場でだけ台座の輪を太くし(手札は枠を太くしない。2026-09-14に廃止)、硝子は手札なら枠の内側・場ならガラスへ薄い膜を重ねる。**カード固有の紋章**は、場は台座の正面のメダル(`_draw_pedestal_plaque()`)、手札は左下の封蝋(`_draw_hand_seal()`)として出す |
+| `CardView`(`scripts/ui/card_view.gd`) | カード1枚の表示。**守護の枠の強調は `guard_frame` で切る**(場だけ true。手札・砂時計一覧・デッキ編集は false。GameDesign.md 9章)。**手札と場で見た目を変える**(GameDesign.md 9章)。`Mode.HAND` はカードの枠を持ち **コスト=左上 / 総量=右下**、`Mode.BOARD` は**枠を持たず、丸い台座の上に立つ砂時計そのもの**として描き **攻撃力=左下 / 体力=右下**(コストは出さない)。体力と攻撃力の比で3枚のイラストを切り替え、守護は場でだけ台座の輪を太くし(手札は枠を太くしない。2026-09-14に廃止)、硝子は手札なら枠の内側・場ならガラスへ薄い膜を重ねる。**カード固有の紋章**は、場は台座の正面のメダル、手札は左下の封蝋として出す(描画は `CardViewPaint`)。**バッジの跳ね**(`health_punch`/`attack_punch`)と**取り消しの戻る動き**(`unselect_amount`、`play_unselect()`)の状態はここが持つ(GameDesign.md 9章「対局画面の手触り」) |
+| `CardViewPaint`(`scripts/ui/card_view_paint.gd`, static) | `CardView._draw()` から台座・封蝋・バッジ・攻撃予測の描画を移す受け皿(`pedestal_base()`/`pedestal_ring()`/`pedestal_glow()`/`pedestal_plaque()`/`hand_seal()`/`badge()`/`stat()`/`preview()`)。`card_view.gd` が1000行の上限に達したため切り出した(Architecture.md 11章)。`UiPaint` と違って第1引数に `CardView`(= `CanvasItem`)を取る(`InkFigure`/`EmblemSeal` と同じ流儀)。状態は `CardView` に残し、ここは描画だけを持つ |
 | `BoardTable`(`scripts/ui/board_table.gd`) | 盤面12枠を載せる卓(GameDesign.md 9章)。**木の額 / プレイマット2枚 / 中央の真鍮のレール**の3層で描く |
 | `PlaymatLibrary`(`scripts/data/playmat_library.gd`, staticのみ) | プレイマットの定義(地の色・模様の種類・縁・箔・値段)。`UserProfileLibrary` と同じ流儀 |
 | `PlaymatPaint`(`scripts/ui/styles/playmat_paint.gd`, staticのみ) | マットの描画。**卓とショップの見本で同じ関数を通す**(別々に描くと、買う前に見た絵と実際に敷かれる絵が食い違う) |
@@ -547,7 +548,7 @@ UIに依存しない、対局ルールそのものを扱う層。
 
 **相打ちで砂時計を狙った攻撃は、防御側に `CardView.play_counter()` も重ねる**
 (GameDesign.md 9章)。`play_shatter()` だけでは防御側が一方的に受けているようにしか
-見えなかったため、**台座正面の紋章(`_draw_pedestal_plaque()`)そのものを攻撃側へ向けて
+見えなかったため、**台座正面の紋章(`CardViewPaint.pedestal_plaque()`)そのものを攻撃側へ向けて
 短く突き出し、すぐ戻す**軽い一撃を足した。全身が渡っていく攻撃側の演出とは別枠にし、
 `CardView.counter_offset` を紋章の描画位置へ足すだけに留める(台座・輪・体力表示は動かさない)。
 発火元は `CardMatchStrike.capture()` で、**攻撃を適用する前に**防御側のユニットと
