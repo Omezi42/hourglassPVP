@@ -51,6 +51,11 @@ static func pedestal_ring(view: CardView) -> void:
 		radius = CardView.PEDESTAL_RADIUS.lerp(
 			CardView.PEDESTAL_RADIUS * CardView.UNSELECT_SHRINK, 1.0 - view.unselect_amount
 		)
+	# 身構え(GameDesign.md 9章「対局画面の手触り」): 既存の選択の輪郭色そのままに、
+	# 濃さだけをゆっくり脈打たせる。新しい輪は描かない。
+	if view.brace:
+		var pulse := (sin(view._brace_pulse) + 1.0) * 0.5
+		color = Color(color, lerpf(CardView.BRACE_PULSE_MIN, CardView.BRACE_PULSE_MAX, pulse))
 	UiPaint.draw_ellipse_ring(view.get_canvas_item(), center, radius, color, width, 40)
 
 

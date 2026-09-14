@@ -19,6 +19,9 @@ func refresh() -> void:
 	var my_side := _screen.my_side
 	var foe := MatchState.other_side(my_side)
 	_screen.foe_bar.targetable = false
+	# 対象選択が終わったら(=ここで光りが組み直されるとき)身構えも必ず戻す
+	# (GameDesign.md 9章「対局画面の手触り」)。
+	_clear_brace()
 	if selection.is_flip_right():
 		# 反転権は敵味方どちらの砂時計も対象に取れる(GameDesign.md 2章)。
 		for side in [my_side, foe]:
@@ -89,3 +92,23 @@ func refresh_own_preview() -> void:
 		if worse:
 			own.preview_health = preview["attacker_health"]
 			own.preview_dead = preview["attacker_dead"]
+
+
+## 身構え(GameDesign.md 9章「対局画面の手触り」)。狙える(=光っている)相手へ
+## カーソルが乗ったら `CardView.brace` を立てる。
+func on_hovered(view: CardView) -> void:
+	if view.mode == CardView.Mode.BOARD and view.selected:
+		view.brace = true
+
+
+## 離れた、あるいは何らかの理由で光りが消える直前。どの駒が離れたかは問わず、
+## 身構えている駒があれば戻す(最大でも1体しか身構えていないため)。
+func on_left() -> void:
+	_clear_brace()
+
+
+func _clear_brace() -> void:
+	for view in _screen._foe_slots:
+		view.brace = false
+	for view in _screen._own_slots:
+		view.brace = false

@@ -83,6 +83,10 @@ var effects: CardMatchEffects:
 var beam: CardFlipBeam:
 	get:
 		return _flip_beam
+## 攻撃ドラッグの矢印(GameDesign.md 9章「対局画面の手触り」)。
+var drag_arrow: CardDragArrow:
+	get:
+		return _drag_arrow
 ## 設置効果が単体を狙うダメージ/破壊の演出(紋章が飛ぶ一撃。GameDesign.md 9章)。
 ## `CardMatchStrike.on_unit_damaged()` が持ち越し先を判断するために読む。
 var effect_strike: CardMatchEffectStrike:
@@ -127,6 +131,7 @@ var _result: CardMatchResult
 var _pile: CardPileViewer
 var _log_button: Button
 var _flip_beam: CardFlipBeam
+var _drag_arrow: CardDragArrow
 var _strike: CardMatchStrike
 var _effect_strike: CardMatchEffectStrike
 var _shake := CardMatchShake.new()
@@ -663,6 +668,8 @@ func _on_view_hovered(view: CardView) -> void:
 		_detail.hover(view)
 	if _hand_layout != null:
 		_hand_layout.on_hovered(view)
+	if _targets != null:
+		_targets.on_hovered(view)
 	# 手札の札にカーソルを乗せている間、支払うぶんのマナのピップを脈打たせる
 	# (GameDesign.md 9章「対局画面の手触り」)。
 	if view.mode == CardView.Mode.HAND and view.card != null:
@@ -677,6 +684,8 @@ func _on_view_left() -> void:
 		_detail.leave()
 	if _hand_layout != null:
 		_hand_layout.on_left()
+	if _targets != null:
+		_targets.on_left()
 	_own_bar.highlight_cost(0)
 	_set_hover_target(CardMatchSelection.NO_HOVER)
 

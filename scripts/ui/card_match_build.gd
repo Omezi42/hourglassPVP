@@ -52,6 +52,7 @@ static func make_row(screen: CardMatchScreen, top: float, opponent: bool) -> Arr
 		else:
 			view.drop_handler = screen.touch.on_slot_drop.bind(i)
 			view.drag_started.connect(screen.touch.on_own_slot_drag_started)
+			view.drag_ended.connect(screen.touch.on_own_slot_drag_ended)
 		screen.add_child(view)
 		views.append(view)
 	return views
@@ -76,6 +77,9 @@ static func add_button(
 static func overlays(screen: CardMatchScreen) -> void:
 	screen._flip_beam = CardFlipBeam.new()
 	screen.add_child(screen._flip_beam)
+	# 攻撃ドラッグの矢印も駒より手前(GameDesign.md 9章「対局画面の手触り」)。
+	screen._drag_arrow = CardDragArrow.new()
+	screen.add_child(screen._drag_arrow)
 	screen._detail = CardMatchDetail.new(screen)
 	# 通信待ちの文言と対象選択の案内は、駒より手前へ出すため独立したノードで描く。
 	screen._status = CardMatchStatus.new()

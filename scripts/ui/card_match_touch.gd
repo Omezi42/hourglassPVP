@@ -102,7 +102,8 @@ func on_foe_slot_pressed(view: CardView) -> void:
 
 
 ## 自分の駒をドラッグで掴んだ瞬間、押して選んだのと同じ状態にする(GameDesign.md 9章)。
-## 狙える相手が光り、相打ちの予測が出た状態で運べる。
+## 狙える相手が光り、相打ちの予測が出た状態で運べる。**駒の中心から指先へ矢印を引く**
+## (同章「対局画面の手触り」)。
 func on_own_slot_drag_started(view: CardView) -> void:
 	var slot := _screen._own_slots.find(view)
 	if slot < 0 or not _screen._my_turn() or _screen.state.board[_screen.my_side][slot] == null:
@@ -110,6 +111,12 @@ func on_own_slot_drag_started(view: CardView) -> void:
 	_screen.selection.select_board(slot)
 	_screen._hide_detail()
 	_screen.refresh()
+	_screen.drag_arrow.begin(CardFlipBeam.unit_center(view))
+
+
+## ドラッグを放した/取り消した(GameDesign.md 9章「対局画面の手触り」)。矢印を消す。
+func on_own_slot_drag_ended() -> void:
+	_screen.drag_arrow.end()
 
 
 ## 自分の駒を相手の駒へ落として攻撃する。押して選ぶ経路と同じ `_attack()` へ合流させる。

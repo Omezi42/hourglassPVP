@@ -11,7 +11,7 @@ extends RefCounted
 ## **UNIT_BREAK / GLASS_BREAK は音源を増やさず、既存の音を高さで鳴き分ける**
 ## (GameDesign.md 9章)。素材を1つ足すたびにCC0の音源を探して出所を記録する手間が
 ## 生まれるため、区別を付けたいだけの場面では `SFX_PITCH` で分ける。
-enum Sfx { FLIP, MOVE, SWAP, DAMAGE, RESULT_WIN, RESULT_LOSE, BUTTON, UNIT_BREAK, GLASS_BREAK }
+enum Sfx {FLIP, MOVE, SWAP, DAMAGE, RESULT_WIN, RESULT_LOSE, BUTTON, UNIT_BREAK, GLASS_BREAK, HOVER}
 
 const SETTINGS_PATH := "user://sound_settings.json"
 ## 被弾直後に決着音が続く等、複数の効果音がほぼ同時に鳴っても途切れないための同時再生数。
@@ -31,14 +31,23 @@ const SFX_PATHS := {
 	Sfx.BUTTON: "res://assets/sfx/button.wav",
 	Sfx.UNIT_BREAK: "res://assets/sfx/damage.ogg",
 	Sfx.GLASS_BREAK: "res://assets/sfx/damage.ogg",
+	Sfx.HOVER: "res://assets/sfx/button.wav",
 }
 
 ## 音の高さ。**同じ出来事は必ず同じ高さで鳴らす**(その場の値で散らすと、
 ## 何が起きたのかを音から判断できなくなる)。指定の無いものは等倍。
 ## 砂時計が壊れた音は被弾より低く、硝子の膜が割れた音は高くする。
+## ホバー音は押下音(BUTTON)と同じ音源を高く鳴らす(GameDesign.md 9章「対局画面の手触り」)。
 const SFX_PITCH := {
 	Sfx.UNIT_BREAK: 0.68,
 	Sfx.GLASS_BREAK: 1.62,
+	Sfx.HOVER: 1.6,
+}
+
+## 音源ごとの音量比(既定1.0)。**ホバー音は押下音と同じ音源のため、比率だけで
+## 小さく鳴らす**(音源を増やさない。GameDesign.md 9章)。
+const SFX_GAIN := {
+	Sfx.HOVER: 0.35,
 }
 
 static var _players: Array[AudioStreamPlayer] = []
@@ -76,7 +85,8 @@ static func play(sfx: Sfx) -> void:
 	var player := _players[_next_player_index]
 	_next_player_index = (_next_player_index + 1) % _players.size()
 	player.stream = stream
-	player.volume_db = _volume_to_db(_sfx_volume)
+	var gain: float = SFX_GAIN.get(sfx, 1.0)
+	player.volume_db = _volume_to_db(_sfx_volume * gain)
 	# **毎回入れ直す**。プールは使い回すため、前に鳴らした音の高さが残る。
 	player.pitch_scale = float(SFX_PITCH.get(sfx, 1.0))
 	player.play()
@@ -109,13 +119,17 @@ static func is_muted() -> bool:
 	return _sfx_volume <= 0.0
 
 
-## シーンツリーを走査し、全Buttonのpressedへボタン押下音を接続する。
-## 個別に繋ぐと数が多く漏れやすいため、Main起動時に一括で呼ぶ想定。
+## シーンツリーを走査し、全Buttonのpressedへボタン押下音、mouse_enteredへホバー音を
+## 接続する(GameDesign.md 9章「対局画面の手触り」)。個別に繋ぐと数が多く漏れやすいため、
+## Main起動時に一括で呼ぶ想定。
 static func wire_buttons(root: Node) -> void:
 	if root is Button:
-		var callback := play.bind(Sfx.BUTTON)
-		if not root.pressed.is_connected(callback):
-			root.pressed.connect(callback)
+		var press_callback := play.bind(Sfx.BUTTON)
+		if not root.pressed.is_connected(press_callback):
+			root.pressed.connect(press_callback)
+		var hover_callback := play.bind(Sfx.HOVER)
+		if not root.mouse_entered.is_connected(hover_callback):
+			root.mouse_entered.connect(hover_callback)
 	for child in root.get_children():
 		wire_buttons(child)
 

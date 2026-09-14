@@ -16,6 +16,9 @@ signal pressed(view: CardView)
 signal hovered(view: CardView)
 ## ドラッグで掴んだとき。場の駒なら攻撃の対象選択に入る(GameDesign.md 9章)。
 signal drag_started(view: CardView)
+## ドラッグを放した/取り消した(GameDesign.md 9章「対局画面の手触り」)。
+## `_notification(NOTIFICATION_DRAG_END)` から出す。
+signal drag_ended(view: CardView)
 ## 攻撃の演出が対象へ当たった瞬間。ダメージの見せ方はここへ合わせる。
 signal strike_impact
 ## 攻撃の演出が終わって台座へ戻りきった。
@@ -67,6 +70,13 @@ const UNSELECT_INSET := 6.0
 ## 小さく跳ねる。
 const STAT_PUNCH_DURATION := 0.25
 const STAT_PUNCH_SCALE := 0.3
+## 身構え(GameDesign.md 9章「対局画面の手触り」)。狙える相手にカーソルを乗せたら
+## わずかに縮み、輪郭(既存の選択の輪郭色)がゆっくり脈打つ。
+const BRACE_SCALE := 0.96
+const BRACE_SCALE_DURATION := 0.12
+const BRACE_PULSE_SPEED := 3.4
+const BRACE_PULSE_MIN := 0.35
+const BRACE_PULSE_MAX := 0.85
 ## 攻撃の予測。体力のバッジの真下へ、結果だけを小さく出す。
 const PREVIEW_RADIUS := 14.0
 const PREVIEW_GAP := 15.0
@@ -191,6 +201,19 @@ var unselect_amount := 0.0
 ## (変わった側のバッジだけ跳ねるため)。
 var health_punch := 0.0
 var attack_punch := 0.0
+## 身構え(GameDesign.md 9章「対局画面の手触り」)。`CardMatchTargets` が、狙える
+## (=`selected`)相手へカーソルが乗ったときだけ true にする。対象選択が終わったら
+## (`refresh()` で光りが消えるとき)必ず false へ戻す。
+var brace: bool = false:
+	set(value):
+		if brace == value:
+			return
+		brace = value
+		_animate_brace(value)
+		set_process(value)
+		if not value:
+			_brace_pulse = 0.0
+			queue_redraw()
 
 var _font: Font
 var _hovering := false
@@ -215,6 +238,9 @@ var _prev_health := -1
 var _prev_attack := -1
 var _health_punch_tween: Tween
 var _attack_punch_tween: Tween
+## 身構えの脈打ち(GameDesign.md 9章)。`brace` の間だけ `_process` で進める。
+var _brace_pulse := 0.0
+var _brace_tween: Tween
 
 
 func _ready() -> void:
@@ -230,6 +256,9 @@ func _ready() -> void:
 	_fx = CardUnitFx.new()
 	_fx.size = size
 	add_child(_fx)
+	# 身構えの脈打ちだけが継続的な再描画を要る(GameDesign.md 9章「対局画面の手触り」)。
+	# `brace` が立つまでは `_process` を止めておく。
+	set_process(false)
 
 
 ## 場の砂時計として表示する。**同じ駒が居続けているあいだ**、体力・攻撃力が前回から
@@ -275,6 +304,25 @@ func _set_health_punch(value: float) -> void:
 
 func _set_attack_punch(value: float) -> void:
 	attack_punch = value
+	queue_redraw()
+
+
+## 身構えのわずかな縮み(GameDesign.md 9章)。ノード全体の `scale` を使う
+## (手札のホバー拡大 `_zoom()` と同じ語彙)。中心から縮むよう軸を合わせる。
+func _animate_brace(active: bool) -> void:
+	pivot_offset = size * 0.5
+	if _brace_tween != null and _brace_tween.is_valid():
+		_brace_tween.kill()
+	_brace_tween = create_tween()
+	var target := Vector2.ONE * (BRACE_SCALE if active else 1.0)
+	_brace_tween.tween_property(self, "scale", target, BRACE_SCALE_DURATION)
+
+
+## 脈打つ輪郭のための継続的な再描画。`brace` の間だけ動く(`set_process()` で制御)。
+func _process(delta: float) -> void:
+	if not brace:
+		return
+	_brace_pulse += delta * BRACE_PULSE_SPEED
 	queue_redraw()
 
 
@@ -440,6 +488,13 @@ func _drop_data(_at_position: Vector2, data: Variant) -> void:
 	drop_handler.call((data as Dictionary)["card_view"])
 
 
+## ドラッグが終わった(枠に落とした/取り消した、いずれも)。攻撃ドラッグの矢印
+## (`CardDragArrow`)を消す合図として使う(GameDesign.md 9章「対局画面の手触り」)。
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_DRAG_END:
+		drag_ended.emit(self)
+
+
 ## 掴んでいる間はカードの絵だけを運ぶ。**札に描かれているのと同じ大きさ・同じ縦横比**に
 ## する。カードの枠に合わせると絵が札の中より大きく出て、掴んだ瞬間に絵が膨らんで見える。
 ## 動かす方向と逆へ遅れて傾く物理は `CardDragPreview` が持つ(GameDesign.md 9章)。
@@ -455,6 +510,9 @@ func _on_mouse_entered() -> void:
 	_hovering = true
 	if enabled:
 		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		# ホバー音(GameDesign.md 9章「対局画面の手触り」)。**既存のホバー表現
+		# (`_hovering and enabled`)と同じ条件**でのみ鳴らす。
+		SoundBank.play(SoundBank.Sfx.HOVER)
 	_zoom(true)
 	hovered.emit(self)
 	queue_redraw()
