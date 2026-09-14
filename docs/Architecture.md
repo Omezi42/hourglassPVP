@@ -2290,6 +2290,28 @@ UI層へ依存することになる。
 
 ---
 
+### 10.10.1 対局画面の手触り(GameDesign.md 9章「対局画面の手触り」)
+
+**新しい画面要素を足さず、既存の要素へ反応を足す。**`card_match_screen.gd` と
+`card_view.gd` はいずれも1000行の上限に張り付いているため、**足す前に切り出す**
+(11章)。切り出しは `_screen` / `_view` 参照を持つ `RefCounted` か、状態を持たない
+`static` の描画ヘルパのどちらかに限る。
+
+| クラス | 責務 |
+|---|---|
+| `CardMatchHandLayout`(`scripts/ui/card_match_hand_layout.gd`, RefCounted) | 手札の並べ方をすべて持つ。`_refresh_hand()` の位置計算を移し、**位置は代入せず Tween で滑らせる**(ドローで入った札に他の札が場所を空ける)。ホバー中の札の両隣を外へ避け、相手の手番では手札全体を沈める |
+| `CardDragPreview`(`scripts/ui/card_drag_preview.gd`, Control) | 手札をドラッグ中に指へ付いてくる絵。移動の速度から傾きを決めて描く。`CardView._get_drag_data()` はこれを作って返すだけにする |
+| `CardMatchDropGlide`(`CardMatchEffects` の1メソッドで足りる場合はクラスを作らない) | 空き枠へ放した位置から台座の中心へ滑らせてから着地演出(`play_land()` 相当)へ入る。`unit_played` を受ける既存の経路で、放した座標を `CardMatchTouch.on_slot_drop()` が控えて渡す |
+| `CardDragArrow`(`scripts/ui/card_drag_arrow.gd`, Control) | 攻撃をドラッグしている間、駒の中心から指先へ引く矢印。`CardFlipBeam` と同じく盤面より手前の独立したオーバーレイ |
+| `CardViewPaint`(`scripts/ui/card_view_paint.gd`, static) | `CardView._draw()` から台座・封蝋・バッジの描画を移す受け皿。バッジの跳ね(`stat_punch`)と身構え(`brace`)の状態は `CardView` に残し、描画だけをここへ寄せて行数を確保する |
+
+- **ピップの光と吸い込みは `PlayerInfoBar` が持つ。**`highlight_cost(n)` でホバー中の札のコストぶんを光らせ、`spend_toward(n, target: Vector2)` で消えるピップを札の方向へ流す。呼ぶのは画面側の `_on_view_hovered()` / `_on_view_left()` と、`unit_played` / `spell_cast` を受ける `CardMatchEffects`
+- **バッジの跳ねは `CardView` が `unit` の前回値を控えて差分で起こす。**`refresh()` のたびに `health` / `attack` を比べ、変わっていれば `stat_punch` を1.0にして Tween で0へ戻す。描画は `1 + stat_punch * 0.3` の拡縮
+- **身構えは `CardMatchTargets` が起こす。**光っている相手の駒へカーソルが乗ったら `CardView.brace = true`(わずかに縮み、輪郭を脈打たせる)。対象選択が終わるか外れたら戻す
+- **取り消しの「戻る」動きは `CardMatchSelection` の `clear()` を受けた画面側で、光っていた駒に `CardView.play_unselect()` を呼ぶ。**枠の強調を短く縮めて消す(0.1秒)
+- **ホバー音は `SoundBank.Sfx.HOVER` として足し、音源は `button.wav` を `SFX_PITCH` で高くし、新設の `SFX_GAIN`(音源ごとの音量比)で小さくする。**`wire_buttons()` が `mouse_entered` にもつなぎ、`CardView` は `hovered` を出すときに鳴らす。**対局中の駒・手札は `CardMatchSound` を経由せず `CardView` が直接鳴らす**(盤面の状態ではなくカーソルの出来事であるため)
+- **相手の手番で手札を沈める量は `SUMMONED_SINK` と同じ語彙(数px + 彩度落とし)**に留め、札の読みやすさを落とさない
+
 ### 10.11 デイリーミッション(GameDesign.md 23章)
 
 | クラス | 責務 |
