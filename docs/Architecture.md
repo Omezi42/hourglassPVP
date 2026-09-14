@@ -472,6 +472,12 @@ UIに依存しない、対局ルールそのものを扱う層。
 - ドラッグは `CardView` が `_get_drag_data()` / `_drop_data()` を持ち、枠側は
   `drop_handler`(Callable)で受ける。放されたら押して枠を選ぶ経路と同じ `_play_selected()`
   へ合流するため、設置効果の対象選択もそのまま働く
+- **攻撃も同じ仕組みで運ぶ。**攻撃できる自分の駒は `_refresh_row()` が `draggable` を立て、
+  掴んだ瞬間に `drag_started` で `CardMatchTouch.on_own_slot_drag_started()` が
+  押して選んだのと同じ選択状態を作る(狙える相手が光り、相打ちの予測が出る)。
+  落とす先は相手の駒(`on_foe_slot_drop`)と相手のHP帯(`PlayerInfoBar.drop_handler` →
+  `on_face_drop`)で、いずれも押して選ぶ経路と同じ `_attack()` へ合流する。
+  **`PlayerInfoBar` は `targetable` のときだけ受ける**(守護がいる間は本体へ落とせない)
 - **タッチ操作のゆらぎ吸収(`PressTracker`)**: スマホ等でのタップ時に指先がわずかに動いても
   キャンセル扱いにならないよう、8pxの許容マージン(`SLOP_MARGIN`)を持って判定する。また
   `InputEventScreenTouch` も直接受け取れるようにする

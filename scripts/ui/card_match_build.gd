@@ -18,6 +18,7 @@ static func make_bar(screen: CardMatchScreen, opponent: bool, top: float) -> Pla
 	bar.size = Vector2(CardMatchScreen.BAR_WIDTH, PlayerInfoBar.BAR_HEIGHT)
 	if opponent:
 		bar.face_pressed.connect(screen.touch.on_face_pressed)
+		bar.drop_handler = screen.touch.on_face_drop
 	bar.graveyard_pressed.connect(screen._on_graveyard_pressed.bind(opponent))
 	screen.add_child(bar)
 	return bar
@@ -43,8 +44,12 @@ static func make_row(screen: CardMatchScreen, top: float, opponent: bool) -> Arr
 		)
 		view.hovered.connect(screen._on_view_hovered)
 		view.mouse_exited.connect(screen._on_view_left)
-		if not opponent:
+		# 手札は自分の空き枠へ、場の駒は相手の駒へ落とす(GameDesign.md 9章)。
+		if opponent:
+			view.drop_handler = screen.touch.on_foe_slot_drop.bind(i)
+		else:
 			view.drop_handler = screen.touch.on_slot_drop.bind(i)
+			view.drag_started.connect(screen.touch.on_own_slot_drag_started)
 		screen.add_child(view)
 		views.append(view)
 	return views

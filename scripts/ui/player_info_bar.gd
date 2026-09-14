@@ -81,6 +81,8 @@ var icon_id := UserProfileLibrary.DEFAULT_ICON_ID
 var title_id := UserProfileLibrary.DEFAULT_TITLE_ID
 ## 攻撃の対象として選べる状態か。光らせて示す。
 var targetable := false
+## 自分の駒をこの帯へドラッグして放したときに呼ぶ処理(GameDesign.md 9章)。空なら受けない。
+var drop_handler := Callable()
 ## 残り持ち時間(秒)。負の値なら表示しない(CPU戦は持ち時間を使わない)。
 var clock_seconds := -1.0
 ## その手番に与えられた持ち時間。**時間切れを重ねた側は短くなる**(GameDesign.md 5章)ため、
@@ -189,6 +191,17 @@ func show_emote(text: String) -> void:
 	# 相手側(画面上部)なら下へ、自分側(画面下部)なら上へ出す
 	bubble.position = Vector2(10.0, 48.0 if is_opponent else -36.0)
 	add_child(bubble)
+
+
+## 相手のHP帯へ駒を落として本体を殴る。押して選ぶ経路と同じ判定を `drop_handler` が持つ。
+func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
+	if not targetable or not drop_handler.is_valid() or not data is Dictionary:
+		return false
+	return (data as Dictionary).get("card_view") is CardView
+
+
+func _drop_data(_at_position: Vector2, data: Variant) -> void:
+	drop_handler.call((data as Dictionary)["card_view"])
 
 
 func _gui_input(event: InputEvent) -> void:

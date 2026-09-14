@@ -14,6 +14,8 @@ signal pressed(view: CardView)
 ## マウスを乗せたとき。デッキ編集は、クリック(=編成へ加える)と切り離して
 ## 詳細の表示だけをホバーで切り替えるためにこれを使う。
 signal hovered(view: CardView)
+## ドラッグで掴んだとき。場の駒なら攻撃の対象選択に入る(GameDesign.md 9章)。
+signal drag_started(view: CardView)
 ## 攻撃の演出が対象へ当たった瞬間。ダメージの見せ方はここへ合わせる。
 signal strike_impact
 ## 攻撃の演出が終わって台座へ戻りきった。
@@ -153,8 +155,7 @@ var ready_mark := false
 var badge := ""
 ## 手札でホバーしたときに拡大するか。対局画面の手札だけが true。
 var hover_zoom := false
-## 手札からドラッグで出せるか(GameDesign.md 9章)。攻撃が既にドラッグに対応しているため、
-## 盤面へ物を置く操作だけがクリック限定なのは揃わない。
+## ドラッグで掴めるか(GameDesign.md 9章)。手札は空き枠へ出す、場の駒は相手を攻撃する。
 var draggable := false
 ## ドラッグを受ける枠なら、放されたときに呼ぶ処理を持つ。空なら受けない。
 var drop_handler := Callable()
@@ -349,6 +350,7 @@ func _get_drag_data(_at_position: Vector2) -> Variant:
 	if not draggable or card == null or not enabled:
 		return null
 	set_drag_preview(_make_drag_preview())
+	drag_started.emit(self)
 	return {"card_view": self}
 
 
@@ -365,9 +367,10 @@ func _drop_data(_at_position: Vector2, data: Variant) -> void:
 ## 掴んでいる間はカードの絵だけを運ぶ。**札に描かれているのと同じ大きさ・同じ縦横比**に
 ## する。カードの枠に合わせると絵が札の中より大きく出て、掴んだ瞬間に絵が膨らんで見える。
 func _make_drag_preview() -> Control:
-	var art := _fit_art(card.icon_upright, _hand_art_box()).size
+	var texture := _icon() if mode == Mode.BOARD else card.icon_upright
+	var art := _fit_art(texture, _hand_art_box() if mode == Mode.HAND else board_art_box()).size
 	var preview := TextureRect.new()
-	preview.texture = card.icon_upright
+	preview.texture = texture
 	preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	preview.stretch_mode = TextureRect.STRETCH_SCALE
 	preview.custom_minimum_size = art

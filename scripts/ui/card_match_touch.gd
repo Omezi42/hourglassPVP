@@ -93,19 +93,45 @@ func on_foe_slot_pressed(view: CardView) -> void:
 	if _screen.selection.is_targeting():
 		_handle_foe_targeting(slot)
 		return
-	if (
-		_screen.selection.is_board_selection()
-		and _screen.state.can_attack(_screen.my_side, _screen.selection.slot, slot)
-	):
-		# **ここで `_screen.refresh()` を呼んではいけない。**攻撃は `_perform()` の中で
-		# `CardMatchStrike` が演出を組み、盤面の再同期(`refresh()`)は演出が当たって
-		# 台座へ戻りきった `on_strike_finished()` まで自然に遅延される。ここで
-		# 即座に呼び直すと、`MatchAction.apply()` で既に更新済みの盤面(破壊された駒が
-		# `null` になった状態)を演出の最中に読み直してしまい、**攻撃側・防御側の
-		# どちらも、実際に当たるより前に消えて見える**(実際にこれで踏んだ)。
-		_screen._perform(MatchAction.attack(_screen.my_side, _screen.selection.slot, slot))
-		_screen.selection.clear()
-		_screen._hide_detail()
+	if _screen.selection.is_board_selection():
+		_attack(_screen.selection.slot, slot)
+
+
+## 自分の駒をドラッグで掴んだ瞬間、押して選んだのと同じ状態にする(GameDesign.md 9章)。
+## 狙える相手が光り、相打ちの予測が出た状態で運べる。
+func on_own_slot_drag_started(view: CardView) -> void:
+	var slot := _screen._own_slots.find(view)
+	if slot < 0 or not _screen._my_turn() or _screen.state.board[_screen.my_side][slot] == null:
+		return
+	_screen.selection.select_board(slot)
+	_screen._hide_detail()
+	_screen.refresh()
+
+
+## 自分の駒を相手の駒へ落として攻撃する。押して選ぶ経路と同じ `_attack()` へ合流させる。
+func on_foe_slot_drop(source: CardView, slot: int) -> void:
+	_attack(_screen._own_slots.find(source), slot)
+
+
+## 自分の駒を相手のHP帯へ落として本体を殴る。
+func on_face_drop(source: CardView) -> void:
+	_attack(_screen._own_slots.find(source), -1)
+
+
+func _attack(slot: int, target_slot: int) -> void:
+	if slot < 0 or not _screen._my_turn():
+		return
+	if not _screen.state.can_attack(_screen.my_side, slot, target_slot):
+		return
+	# **ここで `_screen.refresh()` を呼んではいけない。**攻撃は `_perform()` の中で
+	# `CardMatchStrike` が演出を組み、盤面の再同期(`refresh()`)は演出が当たって
+	# 台座へ戻りきった `on_strike_finished()` まで自然に遅延される。ここで
+	# 即座に呼び直すと、`MatchAction.apply()` で既に更新済みの盤面(破壊された駒が
+	# `null` になった状態)を演出の最中に読み直してしまい、**攻撃側・防御側の
+	# どちらも、実際に当たるより前に消えて見える**(実際にこれで踏んだ)。
+	_screen._perform(MatchAction.attack(_screen.my_side, slot, target_slot))
+	_screen.selection.clear()
+	_screen._hide_detail()
 
 
 ## 対象選択中に相手の場を押したとき(砂術の相手対象 / 設置効果の相手対象)。
@@ -126,14 +152,8 @@ func _handle_foe_targeting(slot: int) -> void:
 
 
 func on_face_pressed() -> void:
-	if not _screen._my_turn() or not _screen.selection.is_board_selection():
-		return
-	if not _screen.state.can_attack(_screen.my_side, _screen.selection.slot, -1):
-		return
-	# `_screen.refresh()` を呼ばない理由は `on_foe_slot_pressed()` と同じ
-	# (演出が当たるまで盤面の再同期を遅らせる必要があるため)。
-	_screen._perform(MatchAction.attack(_screen.my_side, _screen.selection.slot, -1))
-	_screen.selection.clear()
+	if _screen.selection.is_board_selection():
+		_attack(_screen.selection.slot, -1)
 
 
 ## 相手1体・味方1体を対象に取る設置効果は、出す前に対象を選ばせる(GameDesign.md 9章)。

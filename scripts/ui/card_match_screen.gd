@@ -579,6 +579,8 @@ func _refresh_row(views: Array[CardView], side: int) -> void:
 		views[i].enabled = true
 		views[i].preview_health = -1
 		views[i].preview_dead = false
+		# 攻撃できる自分の駒はドラッグでも運べる(GameDesign.md 9章)。
+		views[i].draggable = side == my_side and _my_turn() and unit != null and unit.can_attack()
 
 
 func _refresh_hand() -> void:
