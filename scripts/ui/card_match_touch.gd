@@ -38,6 +38,10 @@ func on_slot_drop(source: CardView, slot: int) -> void:
 		return
 	if not _screen.state.can_play(_screen.my_side, index):
 		return
+	# 放した座標を控えておく。台座の中心へ短く滑ってから着地する
+	# (GameDesign.md 9章「対局画面の手触り」)。クリックで枠を選んだ場合は控えないため、
+	# その場合は従来どおり滑らずに着地する。
+	_screen.effects.queue_drop_origin(_screen.my_side, slot, _screen.get_global_mouse_position())
 	_screen.selection.select_hand(index)
 	_play_selected(slot)
 

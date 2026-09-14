@@ -11,9 +11,15 @@ extends RefCounted
 ## **攻撃の演出中に起きたぶんは、当たる瞬間まで持ち越す**(`CardMatchStrike` が砂の飛散を
 ## 持ち越すのと同じ理由)。解決と同時に見せると、駒がまだ渡っている最中に相手が砕け始める。
 
+## 空き枠へドラッグで放したときの滑り(GameDesign.md 9章「対局画面の手触り」)。
+const DROP_GLIDE_DURATION := 0.12
+
 var _screen: CardMatchScreen
 ## 攻撃の演出中に預かった演出。当たった瞬間にまとめて出す。
 var _held: Array[Callable] = []
+## ドラッグで放した座標。`"側:枠"` をキーに持ち、`unit_played` が届いた瞬間だけ読む
+## (クリックで枠を選んだ場合は積まないため、その場合は従来どおり滑らずに着地する)。
+var _drop_origin: Dictionary = {}
 
 
 func _init(screen: CardMatchScreen) -> void:
@@ -45,9 +51,36 @@ func _defer(step: Callable) -> void:
 	step.call()
 
 
-## 場に出した:台座の少し上から落ちて着地する。
+## 空き枠へドラッグで放した座標を控える。放した位置から台座の中心へ短く滑ってから
+## 着地演出へ入る(GameDesign.md 9章)。`CardMatchTouch.on_slot_drop()` から呼ぶ。
+func queue_drop_origin(side: int, slot: int, global_pos: Vector2) -> void:
+	_drop_origin[_drop_key(side, slot)] = global_pos
+
+
+func _drop_key(side: int, slot: int) -> String:
+	return "%d:%d" % [side, slot]
+
+
+## 場に出した:台座の少し上から落ちて着地する。ドラッグで放した座標が控えてあれば、
+## 先にそこから台座の中心へ滑ってから着地する。
 func _on_unit_played(side: int, slot: int) -> void:
-	_screen.view_at(side, slot).play_land()
+	var view := _screen.view_at(side, slot)
+	var key := _drop_key(side, slot)
+	if _drop_origin.has(key):
+		var origin: Vector2 = _drop_origin[key]
+		_drop_origin.erase(key)
+		_glide_to_pedestal(view, origin)
+		return
+	view.play_land()
+
+
+func _glide_to_pedestal(view: CardView, global_origin: Vector2) -> void:
+	var target := view.position
+	view.position = global_origin - view.get_parent().global_position
+	var tween := view.create_tween()
+	tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tween.tween_property(view, "position", target, DROP_GLIDE_DURATION)
+	tween.finished.connect(view.play_land)
 
 
 ## 破壊された:砕けて台座へ崩れ落ちる。**枠が空になった後も演出だけが残る**ため、

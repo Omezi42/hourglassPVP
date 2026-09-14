@@ -153,12 +153,14 @@ var _puzzle: CardMatchPuzzle
 var _solo: CardMatchSolo
 var _geometry: CardMatchGeometry
 var _touch: CardMatchTouch
+var _hand_layout: CardMatchHandLayout
 
 
 func _ready() -> void:
 	# **`_build()` より先に作る。**組み立ての途中で駒のシグナルへ接続されるため、
 	# 後から作ると接続の時点で null を掴む(`_detail` を後から作って踏んだのと同じ穴)。
 	_touch = CardMatchTouch.new(self)
+	_hand_layout = CardMatchHandLayout.new(self)
 	_build()
 	set_process(true)
 	_outcome = CardMatchOutcome.new(self)
@@ -199,6 +201,8 @@ func _reset_for_new_match() -> void:
 	_log.clear()
 	if _history != null:
 		_history.clear()
+	if _hand_layout != null:
+		_hand_layout.reset()
 	_pile.visible = false
 	_selection.clear()
 	_cpu_timer.stop()
@@ -585,22 +589,15 @@ func _refresh_row(views: Array[CardView], side: int) -> void:
 
 func _refresh_hand() -> void:
 	var hand: Array = state.hand[my_side]
-	var count: int = mini(hand.size(), _hand_views.size())
+	# 位置・沈み・暗さは `CardMatchHandLayout` が持つ(GameDesign.md 9章「対局画面の手触り」)。
 	# 手札は最大10枚を超えうるため、収まらなくなったら重ねてでも領域内に留める
 	# (はみ出すと「ログ」「投了」のボタンへ潜り込んでしまう)。
-	var step := CardView.HAND_SIZE_PX.x + HAND_GAP
-	if count > 1:
-		step = minf(step, (HAND_AREA.size.x - CardView.HAND_SIZE_PX.x) / float(count - 1))
-	var width := CardView.HAND_SIZE_PX.x + maxf(count - 1, 0) * step
-	var start := HAND_AREA.position.x + (HAND_AREA.size.x - width) * 0.5
+	_hand_layout.apply(hand, state.current_turn == my_side)
+	var count: int = mini(hand.size(), _hand_views.size())
 	for i in _hand_views.size():
 		var view := _hand_views[i]
 		if i >= count:
-			view.visible = false
 			continue
-		view.visible = true
-		view.position = Vector2(start + i * step, HAND_TOP)
-		view.size = CardView.HAND_SIZE_PX
 		var usable: bool = state.can_play(my_side, i) or state.can_cast(my_side, i)
 		view.show_card(hand[i], _my_turn() and usable)
 		view.selected = _selection.is_hand(i)
@@ -664,6 +661,8 @@ func _hide_detail() -> void:
 func _on_view_hovered(view: CardView) -> void:
 	if _detail != null:
 		_detail.hover(view)
+	if _hand_layout != null:
+		_hand_layout.on_hovered(view)
 	var foe_slot := _foe_slots.find(view)
 	if foe_slot >= 0:
 		_set_hover_target(foe_slot)
@@ -672,6 +671,8 @@ func _on_view_hovered(view: CardView) -> void:
 func _on_view_left() -> void:
 	if _detail != null:
 		_detail.leave()
+	if _hand_layout != null:
+		_hand_layout.on_left()
 	_set_hover_target(CardMatchSelection.NO_HOVER)
 
 

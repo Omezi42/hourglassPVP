@@ -366,20 +366,13 @@ func _drop_data(_at_position: Vector2, data: Variant) -> void:
 
 ## 掴んでいる間はカードの絵だけを運ぶ。**札に描かれているのと同じ大きさ・同じ縦横比**に
 ## する。カードの枠に合わせると絵が札の中より大きく出て、掴んだ瞬間に絵が膨らんで見える。
+## 動かす方向と逆へ遅れて傾く物理は `CardDragPreview` が持つ(GameDesign.md 9章)。
 func _make_drag_preview() -> Control:
 	var texture := _icon() if mode == Mode.BOARD else card.icon_upright
 	var art := _fit_art(texture, _hand_art_box() if mode == Mode.HAND else board_art_box()).size
-	var preview := TextureRect.new()
-	preview.texture = texture
-	preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	preview.stretch_mode = TextureRect.STRETCH_SCALE
-	preview.custom_minimum_size = art
-	preview.size = art
-	preview.position = -art * 0.5
-	preview.modulate = Color(1, 1, 1, 0.85)
-	var holder := Control.new()
-	holder.add_child(preview)
-	return holder
+	var preview := CardDragPreview.new()
+	preview.setup(texture, art)
+	return preview
 
 
 func _on_mouse_entered() -> void:
