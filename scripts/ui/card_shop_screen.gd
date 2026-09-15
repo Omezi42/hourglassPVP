@@ -41,6 +41,10 @@ var _preview: ShopSetPreview
 var _busy := false
 ## 確認中の品。押した時点で控え、確定したときに買う。
 var _pending: Dictionary = {}
+## 確認中の品の札(GameDesign.md 9章)。購入が確定した瞬間、この矩形から
+## `_balance` へ向けて飛ばす。`_refresh()` が一覧を作り直すため、飛ばし終えるまで
+## 参照を保つ。
+var _pending_card: Control
 
 
 func _ready() -> void:
@@ -90,13 +94,13 @@ func _build_section_grid(kind: ShopCatalog.Kind, ids: Array) -> GridContainer:
 		var card := ShopItemCard.new(kind, str(id))
 		card.owned = AccountService.owns(kind, str(id))
 		card.affordable = AccountService.currency() >= ShopCatalog.price(kind, str(id))
-		card.pressed.connect(func() -> void: _on_item_pressed(kind, str(id)))
+		card.pressed.connect(func() -> void: _on_item_pressed(kind, str(id), card))
 		card.set_preview_requested.connect(func(set_id: String) -> void: _preview.open_set(set_id))
 		grid.add_child(card)
 	return grid
 
 
-func _on_item_pressed(kind: ShopCatalog.Kind, id: String) -> void:
+func _on_item_pressed(kind: ShopCatalog.Kind, id: String, card: Control) -> void:
 	if _busy or AccountService.owns(kind, id):
 		return
 	var cost := ShopCatalog.price(kind, id)
@@ -112,6 +116,7 @@ func _on_item_pressed(kind: ShopCatalog.Kind, id: String) -> void:
 		)
 		return
 	_pending = {"kind": kind, "id": id}
+	_pending_card = card
 	_confirm.open_confirm(
 		"購入の確認",
 		(
@@ -131,6 +136,7 @@ func _on_confirmed() -> void:
 		return
 	_busy = true
 	_set_message("購入しています…")
+	var flight_from: Control = _pending_card
 	var ok: bool = await NetSession.sign_in()
 	var result: Dictionary
 	if ok:
@@ -142,6 +148,11 @@ func _on_confirmed() -> void:
 		result = {"ok": false, "message": "接続できないため購入できません。"}
 	_busy = false
 	_pending = {}
+	_pending_card = null
+	# 品の絵が砂金チップへ向けて飛んでから残高を更新する(GameDesign.md 9章)。
+	# 残高が減る理由を数字の変化だけでなく絵でも見せるための順序。
+	if bool(result.get("ok", false)) and flight_from != null and is_instance_valid(flight_from):
+		await CardFlightFx.fly(self, flight_from.get_global_rect(), _balance.get_global_rect())
 	_set_message(str(result.get("message", "")))
 	_refresh()
 	if bool(result.get("ok", false)):
@@ -195,7 +206,11 @@ func _build() -> void:
 	_confirm = load(CONFIRM_SCENE).instantiate()
 	add_child(_confirm)
 	_confirm.confirmed.connect(_on_confirmed)
-	_confirm.cancelled.connect(func() -> void: _pending = {})
+	_confirm.cancelled.connect(
+		func() -> void:
+			_pending = {}
+			_pending_card = null
+	)
 
 	_preview = ShopSetPreview.new()
 	add_child(_preview)
@@ -302,6 +317,12 @@ class ShopItemCard:
 			_build_swatch(_thumb_rect())
 		mouse_default_cursor_shape = (
 			Control.CURSOR_ARROW if owned or not affordable else Control.CURSOR_POINTING_HAND
+		)
+		# 残高が足りず暗くなっている品は、手札のマナ不足カードと同じくホバーしても
+		# 反応しない(GameDesign.md 9章)。所有済みは`disabled=true`により
+		# Godot側のホバー描画自体が既に働かないため、対象は未所有・購入不可の品に絞る。
+		mouse_filter = (
+			Control.MOUSE_FILTER_IGNORE if _unaffordable() else Control.MOUSE_FILTER_STOP
 		)
 		# **`modulate`で丸ごと暗くする。**自前の`_draw()`より後に描かれる子
 		# (プレイマットの見本)は、`_draw()`内で塗った暗幕の上に乗ってしまい

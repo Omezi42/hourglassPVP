@@ -172,17 +172,19 @@ func _rebuild_playmat_row() -> void:
 		child.queue_free()
 	for mat_id in AccountService.owned_playmat_ids():
 		var swatch := PlaymatSwatch.new(mat_id)
-		swatch.pressed.connect(func() -> void: _on_playmat_selected(mat_id))
+		swatch.pressed.connect(func() -> void: _on_playmat_selected(mat_id, true))
 		playmat_row.add_child(swatch)
 
 
-func _on_playmat_selected(mat_id: String) -> void:
+func _on_playmat_selected(mat_id: String, bump_preview: bool = false) -> void:
 	_selected_playmat_id = mat_id
 	for child in playmat_row.get_children():
 		var swatch := child as PlaymatSwatch
 		if swatch != null:
 			swatch.is_selected = swatch.mat_id == mat_id
 			swatch.queue_redraw()
+	if bump_preview and _preview != null:
+		_preview.bump()
 
 
 ## 所有しているものだけを並べる(GameDesign.md 14章)。買った直後にも呼ぶ。
@@ -252,6 +254,8 @@ func _on_icon_selected(icon_id: String) -> void:
 		_icon_buttons[id].is_selected = (id == _selected_icon_id)
 		_icon_buttons[id].queue_redraw()
 	_update_preview()
+	if _preview != null:
+		_preview.bump()
 
 
 func _on_title_selected(title_id: String) -> void:
@@ -260,6 +264,8 @@ func _on_title_selected(title_id: String) -> void:
 		_title_buttons[id].is_selected = (id == _selected_title_id)
 		_title_buttons[id].queue_redraw()
 	_update_preview()
+	if _preview != null:
+		_preview.bump()
 
 
 func _update_preview() -> void:
@@ -485,16 +491,42 @@ class TitleListItem:
 ## 名札見本プレビュー
 class ProfilePreviewPlate:
 	extends Control
+	## アイコン・称号・マットを選んだ瞬間の跳ねの倍率と尺(GameDesign.md 9章)。
+	const BUMP_SCALE := 1.08
+	const BUMP_DURATION := 0.16
+
 	var display_name := ""
 	var icon_id := ""
 	var title_id := ""
 	var font: Font
+	var _bump_tween: Tween
 
 	func _ready() -> void:
 		custom_minimum_size = Vector2(170, 42)
+		pivot_offset = custom_minimum_size * 0.5
 		font = get_theme_default_font()
 		if font == null:
 			font = ThemeDB.fallback_font
+
+	## 選んだ瞬間の合図。リアルタイムプレビュー自体は既に更新済みで、
+	## 「変わった」ことを目で追える短い跳ねを足すだけ。
+	func bump() -> void:
+		if _bump_tween != null and _bump_tween.is_valid():
+			_bump_tween.kill()
+		scale = Vector2.ONE
+		_bump_tween = create_tween()
+		(
+			_bump_tween
+			. tween_property(self, "scale", Vector2.ONE * BUMP_SCALE, BUMP_DURATION * 0.4)
+			. set_trans(Tween.TRANS_SINE)
+			. set_ease(Tween.EASE_OUT)
+		)
+		(
+			_bump_tween
+			. tween_property(self, "scale", Vector2.ONE, BUMP_DURATION * 0.6)
+			. set_trans(Tween.TRANS_SINE)
+			. set_ease(Tween.EASE_IN)
+		)
 
 	func _draw() -> void:
 		var rect := Rect2(0, 0, 170, 40)
