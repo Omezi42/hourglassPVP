@@ -83,6 +83,7 @@ func refresh() -> void:
 			)
 		card.show_replay(doc, uid, opponent_name)
 		card.card_pressed.connect(func(match_id: String) -> void: replay_selected.emit(match_id))
+	ListRevealFx.stagger(list_container.get_children())
 
 
 ## そのリプレイでの対戦相手のuid。CPU戦は相手が存在しないため空文字を返す。

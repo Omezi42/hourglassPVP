@@ -66,6 +66,7 @@ func _refresh() -> void:
 	var uid := _uid()
 	for stage in stages:
 		_grid.add_child(_make_card(stage, PuzzleProgress.is_cleared(uid, stage.id)))
+	ListRevealFx.stagger(_grid.get_children())
 
 
 ## エンドレスの入口。Stage1〜10と同じ札の形を使い、狙いを1行添える

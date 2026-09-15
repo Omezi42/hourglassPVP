@@ -155,6 +155,8 @@ func _refresh_global() -> void:
 		_cards.add_child(
 			_make_row(display, [_cell("%d戦" % row["games"], COL_COUNT), _rate_cell(row)])
 		)
+	ListRevealFx.stagger(_summary.get_children())
+	ListRevealFx.stagger(_cards.get_children())
 
 
 ## 集計のカード別を、採用数の多い順に並べて返す。
@@ -207,6 +209,8 @@ func _refresh_own() -> void:
 		var card := CardLibrary.find_by_id(row["id"])
 		var name: String = card.display_name if card != null else row["id"]
 		_cards.add_child(_make_row(name, [_cell("%d戦" % row["games"], COL_COUNT), _rate_cell(row)]))
+	ListRevealFx.stagger(_summary.get_children())
+	ListRevealFx.stagger(_cards.get_children())
 
 
 func _summary_cells(totals: Dictionary) -> Array:

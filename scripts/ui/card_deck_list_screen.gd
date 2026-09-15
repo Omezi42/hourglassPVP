@@ -23,6 +23,8 @@ const CARD_SIZE := Vector2(596, 112)
 ## 代表として並べる紋章の数。30枚をそのまま並べるとカードに収まらない(GameDesign.md 9章)。
 const EMBLEM_COUNT := 5
 const EMBLEM_SIZE := Vector2(34, 34)
+## 削除した札が縮んで消えるまでの尺(GameDesign.md 9章)。
+const DELETE_SHRINK_DURATION := 0.15
 
 var _header: ScreenHeader
 var _grid: GridContainer
@@ -132,6 +134,7 @@ func _refresh() -> void:
 		child.queue_free()
 	for i in decks.size():
 		_grid.add_child(_make_card(i, decks[i], decks.size()))
+	ListRevealFx.stagger(_grid.get_children())
 
 
 ## 中央へ出す1行。**次にすることだけを書く**(何が無いかは見出しが言っている)。
@@ -278,7 +281,24 @@ func _on_delete_pressed(index: int) -> void:
 
 
 func _on_delete_confirmed() -> void:
-	if _pending_delete >= 0:
-		CardDeckSave.remove_deck(_pending_delete)
+	var index := _pending_delete
 	_pending_delete = -1
-	_refresh()
+	if index < 0:
+		return
+	var card: Control = (
+		_grid.get_child(index) as Control if index < _grid.get_child_count() else null
+	)
+	if card == null:
+		CardDeckSave.remove_deck(index)
+		_refresh()
+		return
+	# 消える前に縮めて見せる(GameDesign.md 9章「削除した札は縮んで消え、残りが詰まる」)。
+	# 実際の配列操作は演出の完了を待たずに行わず、Tween終了後にまとめて行う。
+	card.pivot_offset = card.size * 0.5
+	var tween := card.create_tween()
+	tween.tween_property(card, "scale", Vector2.ZERO, DELETE_SHRINK_DURATION)
+	tween.tween_callback(
+		func() -> void:
+			CardDeckSave.remove_deck(index)
+			_refresh()
+	)
