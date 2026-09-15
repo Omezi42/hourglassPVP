@@ -67,8 +67,11 @@ static func ensure_current_season(
 
 
 ## 対局の結果を段位へ反映する(GameDesign.md 28章)。10手未満の対局は数えない
-## (15章「不正な稼ぎ方への線引き」と同じ不正対策)。
-static func apply_result(client: FirestoreClient, uid: String, won: bool, move_count: int) -> void:
+## (15章「不正な稼ぎ方への線引き」と同じ不正対策)。`host`はunityroomランキングへの
+## 送信(`UnityroomRankingClient`)がHTTPRequestをぶら下げるためのノード。
+static func apply_result(
+	client: FirestoreClient, host: Node, uid: String, won: bool, move_count: int
+) -> void:
 	if uid == "" or client == null or move_count < MIN_MOVES:
 		return
 	for _attempt in range(RETRY):
@@ -102,6 +105,15 @@ static func apply_result(client: FirestoreClient, uid: String, won: bool, move_c
 		)
 		if ok:
 			AccountService.apply_local_fields(data)
+			# プラチナのままレートが動いた/いまプラチナへ昇格したときだけ、
+			# unityroomの公開ランキングへも送る(GameDesign.md 28章「要調査」への回答。
+			# UnityroomRankingClientのクラス冒頭を参照)。
+			if tier == RankRules.PLATINUM_KEY:
+				UnityroomRankingClient.send_score(
+					host,
+					UnityroomRankingClient.RANK_SCOREBOARD_ID,
+					float(data.get("rank_rating", AccountService.rank_rating()))
+				)
 			return
 
 

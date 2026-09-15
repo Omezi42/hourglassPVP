@@ -1,8 +1,12 @@
 extends RefCounted
 
-## ランクマッチ(GameDesign.md 28章)の通信を伴わない部分——段位表・星取り制の昇格・
-## プラチナのレート増減・シーズンキーの計算——を検証する。
+## ランクマッチ(GameDesign.md 28章)の検証。前半は通信を伴わない部分(段位表・
+## 星取り制の昇格・プラチナのレート増減・シーズンキーの計算)、後半は
+## `FakeFirestoreClient`を使って`RankProgress`の読み書きを実通信なしで確かめる
+## (`online_match_flow_tests.gd`と同じ流儀)。
 ## `run_tests.gd`が1000行の上限に近いため別ファイルへ切り出す(他のtestsと同じ流儀)。
+
+const FakeClient = preload("res://tools/tests/fake_firestore_client.gd")
 
 
 func run(assert_true: Callable) -> void:
@@ -11,6 +15,9 @@ func run(assert_true: Callable) -> void:
 	_test_rating_delta(assert_true)
 	_test_compare_tier(assert_true)
 	_test_season_key(assert_true)
+	await _test_apply_result_star_progress(assert_true)
+	await _test_apply_result_reaches_platinum(assert_true)
+	await _test_ensure_current_season_resets_and_grants_reward(assert_true)
 
 
 func _test_parse_and_display(assert_true: Callable) -> void:
@@ -119,3 +126,163 @@ func _test_season_key(assert_true: Callable) -> void:
 		RankProgress.current_season_key(september_jst_start) == "2026-09",
 		"00:00 JST on september 1st should already be september"
 	)
+
+
+func _make_client() -> Dictionary:
+	var tree := Engine.get_main_loop() as SceneTree
+	var auth := FirebaseAuth.new(null)
+	auth.uid = "uid-rank-test"
+	var client = FakeClient.new(auth)
+	tree.root.add_child(client)
+	return {"client": client, "host": tree.root, "uid": auth.uid}
+
+
+## 星取り制の昇格が`players/{uid}`へ正しく書き戻され、`AccountService`のキャッシュへも
+## 反映されること(GameDesign.md 28章「ブロンズ1〜3はブロンズは★2個で昇格」)。
+func _test_apply_result_star_progress(assert_true: Callable) -> void:
+	AccountService.reset()
+	var setup := _make_client()
+	var client = setup["client"]
+	var host: Node = setup["host"]
+	var uid: String = setup["uid"]
+	var path := AccountService.path(uid)
+
+	# 手数が足りない対局は段位を動かさない(15章と同じ不正対策)。
+	await RankProgress.apply_result(client, host, uid, true, RankProgress.MIN_MOVES - 1)
+	assert_true.call(
+		not client.store.has(path), "a match under the minimum move count should not write anything"
+	)
+
+	await RankProgress.apply_result(client, host, uid, true, RankProgress.MIN_MOVES)
+	assert_true.call(
+		AccountService.rank_tier() == "bronze1" and AccountService.rank_stars() == 1,
+		"a first win from bronze1 should award one star without advancing yet"
+	)
+
+	await RankProgress.apply_result(client, host, uid, true, RankProgress.MIN_MOVES)
+	assert_true.call(
+		AccountService.rank_tier() == "bronze2" and AccountService.rank_stars() == 0,
+		"reaching bronze's star requirement should advance to bronze2 and reset stars"
+	)
+	assert_true.call(
+		AccountService.rank_peak_tier() == "bronze2",
+		"the peak tier should track the highest tier reached this season"
+	)
+
+	await RankProgress.apply_result(client, host, uid, false, RankProgress.MIN_MOVES)
+	assert_true.call(
+		AccountService.rank_tier() == "bronze2" and AccountService.rank_stars() == 0,
+		"a loss with zero stars should not push the tier back down further"
+	)
+
+	client.queue_free()
+
+
+## ゴールド5から★4個でプラチナへ昇格し、以後はレートが増減すること(GameDesign.md 28章)。
+func _test_apply_result_reaches_platinum(assert_true: Callable) -> void:
+	AccountService.reset()
+	var setup := _make_client()
+	var client = setup["client"]
+	var host: Node = setup["host"]
+	var uid: String = setup["uid"]
+	var path := AccountService.path(uid)
+	client.store[path] = {
+		"fields": {"rank_tier": "gold5", "rank_stars": 3, "rank_peak_tier": "gold5"},
+		"update_time": "1"
+	}
+
+	await RankProgress.apply_result(client, host, uid, true, RankProgress.MIN_MOVES)
+	assert_true.call(
+		AccountService.rank_tier() == RankRules.PLATINUM_KEY,
+		"reaching gold5's star requirement should promote to platinum"
+	)
+	assert_true.call(
+		AccountService.rank_rating() == RankRules.PLATINUM_START_RATING,
+		"the first platinum rating should start at the platinum floor"
+	)
+	assert_true.call(
+		AccountService.rank_peak_tier() == RankRules.PLATINUM_KEY, "the peak tier should follow"
+	)
+
+	await RankProgress.apply_result(client, host, uid, true, RankProgress.MIN_MOVES)
+	assert_true.call(
+		(
+			AccountService.rank_rating()
+			== RankRules.PLATINUM_START_RATING + RankRules.rating_delta(1000, true)
+		),
+		"a platinum win should move the rating by the table's delta"
+	)
+
+	var before_loss := AccountService.rank_rating()
+	await RankProgress.apply_result(client, host, uid, false, RankProgress.MIN_MOVES)
+	assert_true.call(
+		AccountService.rank_rating() < before_loss, "a platinum loss should lower the rating"
+	)
+	assert_true.call(
+		AccountService.rank_tier() == RankRules.PLATINUM_KEY,
+		"platinum should never drop back to a star-based tier (no demotion)"
+	)
+
+	client.queue_free()
+
+
+## シーズンが変わると、未受領の月末報酬(帯に応じた額)を払ってから段位を初期化すること
+## (GameDesign.md 28章)。
+func _test_ensure_current_season_resets_and_grants_reward(assert_true: Callable) -> void:
+	AccountService.reset()
+	var setup := _make_client()
+	var client = setup["client"]
+	var host: Node = setup["host"]
+	var uid: String = setup["uid"]
+	var path := AccountService.path(uid)
+	client.store[path] = {
+		"fields":
+		{
+			"rank_season": "2026-08",
+			"rank_tier": "gold3",
+			"rank_stars": 2,
+			"rank_peak_tier": "gold3",
+			"rank_reward_claimed_season": "",
+			"currency": 100
+		},
+		"update_time": "1"
+	}
+	# 実際の経路(`NetSession.sign_in()`)ではサインインの時点で`load_profile()`が
+	# キャッシュを埋めてから`ensure_current_season()`が呼ばれる。`AccountService`は
+	# 読み込み先をキャッシュに頼るため、テストでもこの順序を再現する。
+	await AccountService.load_profile(client, uid)
+	var september := Time.get_unix_time_from_datetime_string("2026-09-01T12:00:00")
+
+	await RankProgress.ensure_current_season(client, uid, september)
+	assert_true.call(
+		AccountService.rank_season() == "2026-09", "the season key should move to the new month"
+	)
+	assert_true.call(
+		AccountService.rank_tier() == RankRules.INITIAL_TIER,
+		"a new season should reset the tier to bronze1"
+	)
+	assert_true.call(
+		AccountService.rank_stars() == 0, "a new season should reset the stars to zero"
+	)
+	assert_true.call(
+		AccountService.rank_peak_tier() == RankRules.INITIAL_TIER,
+		"a new season should reset the peak tier too"
+	)
+	assert_true.call(
+		AccountService.rank_reward_claimed_season() == "2026-08",
+		"the reward should be marked claimed for the season it was earned in"
+	)
+	assert_true.call(
+		AccountService.currency() == 100 + RankProgress.SEASON_REWARDS["gold"],
+		"a gold peak should pay out the gold season reward"
+	)
+
+	# 同じシーズン内で再度呼んでも、二重に払わない(rank_reward_claimed_seasonが
+	# rank_seasonと一致しているため、次にまたがるまで何もしない)。
+	await RankProgress.ensure_current_season(client, uid, september)
+	assert_true.call(
+		AccountService.currency() == 100 + RankProgress.SEASON_REWARDS["gold"],
+		"calling ensure_current_season again within the same season should not pay twice"
+	)
+
+	client.queue_free()

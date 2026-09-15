@@ -7,7 +7,7 @@ extends SceneTree
 ## 中身を見ずにサイズだけ眺めても気づけないため、名指しで確かめる。
 
 const FORBIDDEN := ["res://assets/bgm/", "res://tools/balance/out/", "tools/discord/out/"]
-const REQUIRED := ["res://data/discord_webhook.txt"]
+const REQUIRED := ["res://data/discord_webhook.txt", "res://data/unityroom_hmac_key.txt"]
 
 
 func _walk(path: String, out: Array) -> void:

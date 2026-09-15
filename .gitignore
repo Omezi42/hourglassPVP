@@ -40,6 +40,11 @@ assets/hourglasses/emblems/sources/
 # エクスポートはgitではなくファイルシステムを見るため、これでもpckには入る。
 /data/discord_webhook.txt
 
+# unityroomランキングAPIのHMAC認証用キー(GameDesign.md 28章)。この鍵は
+# Web書き出しの時点でクライアント側に埋め込まれるため秘匿はできないが、
+# 公開リポジトリへコミットする理由も無いため同じ扱いにする。
+/data/unityroom_hmac_key.txt
+
 __pycache__/
 tools/tmp_*
 

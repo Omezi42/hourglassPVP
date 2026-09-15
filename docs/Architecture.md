@@ -2912,18 +2912,44 @@ GameDesign.md 27章の実装方針。**チュートリアルではなく、既�
 **ブロンズ〜ゴールドはランキングへ出さない**(星取り制の段位はレートのような
 一意の順序を持たないため、"上位者一覧"に混ぜても意味を持つ順序にならない)。
 
-### unityroomランキング連携(要調査・未着手)
+### unityroomランキング連携(2026-09-15実装)
 
-GameDesign.md 28章のとおり、unityroomのランキング機能は対局1回ごとのスコア提出を
-前提にした仕組みであり、**月をまたいで推移する1つのレート値をそのまま出せるかは
-未確認**。調査すべき点:
+**調査結果:**unityroomのランキングAPI(`POST /gameplay_api/v1/scoreboards/{boardNo}/scores`、
+HMAC-SHA256署名)は「そのボードへ今回のスコアを送る」だけの一方向のAPIで、読み出し口は
+公開されていない。したがって**ゲーム内の`CardRankScreen`をunityroom側の値で
+置き換えることはできない**。「スコアの更新(上書き)」を許すかどうかはボードごとの
+記録方式(降順ハイスコア/昇順ハイスコア/常に記録)として**unityroom側のゲーム管理画面**が
+持っており、APIのリクエスト自体はどのモードでも同じ(サーバー側が保存するかどうかを
+判断し、結果を`{"saved": bool}`で返す)。
 
-- unityroomのランキングAPIが「スコアの更新(上書き)」を許すか、それとも
-  「毎回1件を追加する」方式しか持たないか
-- 許すとして、月初にレートが`bronze1`(=数値としては未定義)へ戻る瞬間の扱い
-  (unityroom側のランキングには前シーズンの値が残り続ける可能性がある)
+**採用した方針**:ゲーム内ランキング(`CardRankScreen`)を主としたまま、**unityroom側へは
+プラチナのレートが動くたびに追加で送る**(そのゲームページへ来た人が見る、公開された
+副次的なランキングという位置づけ。10.16節「連携できない場合はゲーム内ランキングのみで
+運用する」の中間案)。
 
-**調査が済むまでは連携を実装せず、10.16節のゲーム内ランキング画面だけで運用する。**
+| クラス | 責務 |
+|---|---|
+| `UnityroomRankingClient`(`scripts/net/unityroom_ranking_client.gd`, staticのみ) | HMAC署名の組み立てとスコア送信。Web書き出しでのみ動く(`OS.has_feature("web")`) |
+
+- **鍵は`data/unityroom_hmac_key.txt`に置き、`.gitignore`で管理外にする**
+  (`QueueNotifier`のDiscord Webhook URLと同じ扱い。6.3節)。Web書き出しの時点で
+  クライアントへ埋め込まれるため元々秘匿はできないが、公開リポジトリへコミットする
+  理由も無いため同じ扱いにする。`export_presets.cfg`の`include_filter`・
+  `tools/ensure_export_filters.py`・`tools/verify_web_pck.gd`のいずれにもこのファイルを追記済み
+- **署名はGodot組み込みの`HMACContext`だけで計算する**(外部ライブラリ不要)。
+  鍵はbase64、署名元文字列は`"POST\n{path}\n{unixTime}\n{scoreText}"`、結果は16進文字列。
+  手順はGodot用の非公式unityroom SDK(seisei0809/unityroom-godot-ranking、MIT)の実装を
+  踏襲しているが、鍵の置き場所(Inspectorではなく`data/`のファイル)と送信の再試行
+  (`HttpJson.request_with_retry`を再利用)はこのプロジェクトの流儀に合わせて書き直した
+- **呼び出しは`RankProgress.apply_result()`の中から、更新後の段位がプラチナのときだけ**
+  行う(`RANK_SCOREBOARD_ID`で指定するボードNoへ、`rank_rating`をスコアとして送る)。
+  応答は待たない(GameDesign.md 11章の募集通知と同じ「裏方の処理」としての扱い)
+- **unityroom側のボードは「常に記録」に設定しておく必要がある。**「ハイスコア」の
+  ままだと、シーズンが変わってレートが下がったときに古い最高値が残り続ける。この設定は
+  unityroomのゲーム管理画面で行うものであり、このプロジェクトのコードからは変更できない
+- **ボードNo(`RANK_SCOREBOARD_ID`、既定1)は、unityroomの管理画面で実際に作成した
+  ボードの番号に合わせて調整すること。**このプロジェクト側からボードを作成するAPIは
+  無い(unityroomの管理画面でのみ作成できる)
 
 ### 月初の表彰演出
 

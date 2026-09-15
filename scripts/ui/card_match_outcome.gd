@@ -27,7 +27,7 @@ func finish(kind: int, deck: Array) -> String:
 	save_replay()
 	_submit_record(kind)
 	if kind == CurrencyRules.MatchKind.RANKED:
-		RankProgress.apply_result(_screen._client, uid, won, state.turn_count)
+		RankProgress.apply_result(_screen._client, _screen, uid, won, state.turn_count)
 	return _grant(kind, won, state.turn_count, uid)
 
 
