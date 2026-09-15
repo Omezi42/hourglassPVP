@@ -135,6 +135,7 @@ func _build_join() -> void:
 	_join_input.max_length = RoomMatch.CODE_LENGTH
 	_join_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
 	_join_input.custom_minimum_size = Vector2(300, 56)
+	MobileTextInput.wire(_join_input, "ルームコード")
 	column.add_child(_join_input)
 	var buttons := HBoxContainer.new()
 	buttons.add_theme_constant_override("separation", 16)

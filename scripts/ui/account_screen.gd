@@ -62,6 +62,9 @@ func _ready() -> void:
 	name_input.text_changed.connect(_on_name_text_changed)
 	id_input.max_length = FirebaseAuth.ID_MAX_LENGTH
 	TouchScroll.enable(title_list.get_parent())
+	MobileTextInput.wire(name_input, "表示名")
+	MobileTextInput.wire(id_input, "ログインID")
+	MobileTextInput.wire(password_input, "パスワード")
 
 	_setup_buttons()
 	_setup_profile_ui()

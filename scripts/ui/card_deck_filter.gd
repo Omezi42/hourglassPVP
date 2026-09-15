@@ -198,6 +198,7 @@ func _build() -> void:
 	_search_input.placeholder_text = "名前で探す"
 	_search_input.custom_minimum_size = Vector2(PANEL_WIDTH - 48, 40)
 	_search_input.text_changed.connect(_on_query_changed)
+	MobileTextInput.wire(_search_input, "名前で探す")
 	column.add_child(_search_input)
 
 	# フッターボタン

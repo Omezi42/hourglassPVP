@@ -201,6 +201,7 @@ func _build_side() -> void:
 	_name_input.placeholder_text = "デッキ名"
 	_name_input.max_length = CardDeckSave.NAME_LIMIT
 	_name_input.custom_minimum_size = Vector2(228, 36)
+	MobileTextInput.wire(_name_input, "デッキ名")
 	top_row.add_child(_name_input)
 	_progress = Label.new()
 	_progress.add_theme_font_size_override("font_size", 20)
