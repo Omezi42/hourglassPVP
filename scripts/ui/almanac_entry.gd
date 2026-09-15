@@ -24,6 +24,14 @@ const TOTAL_TOP := Color(1.0, 0.84, 0.46)
 const TOTAL_BOTTOM := Color(0.72, 0.44, 0.12)
 const SPELL_TOP := Color(0.72, 0.80, 1.0)
 const SPELL_BOTTOM := Color(0.28, 0.36, 0.68)
+## 並び替え後のスライド(GameDesign.md 9章)にかける尺。
+const SLIDE_DURATION := 0.16
+
+## 並び替えのたびに一覧側(`CardListScreen`)が全件を作り直すため、インスタンス
+## 自身は前の並びの位置を持てない。**カードidをキーに、直前に確定した位置を
+## 並び替えをまたいで持ち越す**(`CardMatchHandLayout`と同じ「代入せずTweenで
+## 滑らせる」考え方を、作り直されるノードでも成立させるための器)。
+static var _last_position_by_id: Dictionary = {}
 
 var card: CardData
 var number := 0
@@ -34,6 +42,7 @@ var locked := false
 
 var _font: Font
 var _press := PressTracker.new()
+var _slide_tween: Tween
 
 
 func _ready() -> void:
@@ -48,6 +57,26 @@ func show_card(new_card: CardData, new_number: int) -> void:
 	card = new_card
 	number = new_number
 	queue_redraw()
+	# グリッドはこのフレームの終わりに子を並べ直すため、目標の位置は
+	# 並び終わってから読む(先に読むと(0,0)のままを掴む。`list_reveal_fx.gd`と同じ手順)。
+	call_deferred("_settle_position")
+
+
+## 並び替え前にこのカードがいた位置が分かれば、そこから今の位置へ短く滑らせる。
+## 初めて置かれるとき(記録が無い)は代入するだけで、動かして見せない。
+func _settle_position() -> void:
+	if card == null:
+		return
+	var target := position
+	var prev: Variant = _last_position_by_id.get(card.id)
+	if prev is Vector2 and prev != target:
+		if _slide_tween != null and _slide_tween.is_valid():
+			_slide_tween.kill()
+		position = prev
+		_slide_tween = create_tween()
+		_slide_tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		_slide_tween.tween_property(self, "position", target, SLIDE_DURATION)
+	_last_position_by_id[card.id] = target
 
 
 func _gui_input(event: InputEvent) -> void:

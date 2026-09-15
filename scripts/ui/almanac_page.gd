@@ -23,6 +23,12 @@ const LOG_HEIGHT := 96.0
 ## 値は26pxで y=102 まで伸びるため、そこへ掛からない位置に取る。
 const TEXT_TOP := 132.0
 const TERM_ROW_HEIGHT := 34.0
+## ページめくり(GameDesign.md 9章)。綴じ目(左端)を軸に紙が薄くなるまで畳み、
+## 畳みきった瞬間に中身を差し替えてから開き直す。
+const TURN_DURATION := 0.22
+## 右ページの砂時計のホバー傾き(GameDesign.md 9章)。押せば裏返ることへの誘い。
+const TILT_RADIANS := deg_to_rad(3.5)
+const TILT_DURATION := 0.15
 
 var card: CardData
 
@@ -34,6 +40,10 @@ var _terms: VBoxContainer
 var _flipped := false
 var _press := PressTracker.new()
 var _art_rect := Rect2()
+var _turn_tween: Tween
+var _hovering_art := false
+var _tilt_radians := 0.0
+var _tilt_tween: Tween
 
 
 func _ready() -> void:
@@ -42,6 +52,9 @@ func _ready() -> void:
 	if _font == null:
 		_font = ThemeDB.fallback_font
 	_build()
+	# ページを離れる動きが速いと、絵の矩形の外へ出た`_gui_input`の判定より先に
+	# カーソルがページ自体を抜けることがある。傾きを確実に戻すための保険。
+	mouse_exited.connect(_on_mouse_exited)
 
 
 func _build() -> void:
@@ -63,8 +76,41 @@ func _build() -> void:
 
 
 func show_card(new_card: CardData) -> void:
+	turn_to(new_card)
+
+
+## 一覧の1件を押したとき、紙がめくれてから次の解説が現れる(GameDesign.md 9章)。
+## 同じカードを選び直した場合や、初めて開く場合はめくらずに即座へ切り替える。
+func turn_to(new_card: CardData) -> void:
+	if new_card == card:
+		return
+	if card == null:
+		_apply_card(new_card)
+		return
+	if _turn_tween != null and _turn_tween.is_valid():
+		_turn_tween.kill()
+	pivot_offset = Vector2(0.0, size.y * 0.5)
+	_turn_tween = create_tween()
+	(
+		_turn_tween
+		. tween_property(self, "scale:x", 0.04, TURN_DURATION * 0.5)
+		. set_trans(Tween.TRANS_SINE)
+		. set_ease(Tween.EASE_IN)
+	)
+	_turn_tween.tween_callback(_apply_card.bind(new_card))
+	(
+		_turn_tween
+		. tween_property(self, "scale:x", 1.0, TURN_DURATION * 0.5)
+		. set_trans(Tween.TRANS_SINE)
+		. set_ease(Tween.EASE_OUT)
+	)
+
+
+func _apply_card(new_card: CardData) -> void:
 	card = new_card
 	_flipped = false
+	_hovering_art = false
+	_set_tilt(0.0)
 	_rebuild_terms()
 	if _preview != null:
 		_preview.show_card(card)
@@ -123,11 +169,37 @@ func _gui_input(event: InputEvent) -> void:
 	# 砂術は盤面へ出ないため裏返らない(反転できるのは砂時計だけ)。
 	if card == null or card.is_spell:
 		return
+	if event is InputEventMouseMotion:
+		_set_hovering_art(_art_rect.has_point(_local_of(event)))
 	if not _art_rect.has_point(_local_of(event)):
 		return
 	if _press.feed(event, size) == PressTracker.Result.CONFIRMED:
 		_flipped = not _flipped
 		queue_redraw()
+
+
+## **カーソルを乗せるとわずかに傾く**(GameDesign.md 9章)。押せば裏返ることへの
+## 誘いを、常時の案内文を置かずに伝える。
+func _set_hovering_art(hovering: bool) -> void:
+	if hovering == _hovering_art:
+		return
+	_hovering_art = hovering
+	if _tilt_tween != null and _tilt_tween.is_valid():
+		_tilt_tween.kill()
+	_tilt_tween = create_tween()
+	_tilt_tween.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	_tilt_tween.tween_method(
+		_set_tilt, _tilt_radians, TILT_RADIANS if _hovering_art else 0.0, TILT_DURATION
+	)
+
+
+func _set_tilt(value: float) -> void:
+	_tilt_radians = value
+	queue_redraw()
+
+
+func _on_mouse_exited() -> void:
+	_set_hovering_art(false)
 
 
 static func _local_of(event: InputEvent) -> Vector2:
@@ -161,7 +233,12 @@ func _draw() -> void:
 		# 標本の絵。**押すとひっくり返る**ため、落ちきりの絵と入れ替える。
 		var icon: Texture2D = card.icon_fallen if _flipped else card.icon_upright
 		if icon != null:
-			draw_texture_rect(icon, _art_rect, false)
+			if _tilt_radians != 0.0:
+				draw_set_transform(_art_rect.get_center(), _tilt_radians, Vector2.ONE)
+				draw_texture_rect(icon, Rect2(-_art_rect.size * 0.5, _art_rect.size), false)
+				draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+			else:
+				draw_texture_rect(icon, _art_rect, false)
 
 	var data_x := ART_WIDTH + DATA_GAP
 	_draw_field(Vector2(data_x, 58), "コスト", str(card.cost))
