@@ -2935,33 +2935,38 @@ GameDesign.md 28章に記載のとおり、具体的な見せ方(ホーム画面
 
 ## 10.17 掲示板(ラボ)(GameDesign.md 29章)
 
-**新規カード案を1つのFirestoreコレクションで管理し、承認・実装の判断は開発側が
-Firestoreコンソールから手作業で行う。**投稿の一覧・投票の受付は既存の`FirestoreClient`
-経由の読み書きだけで完結させ、専用の管理画面はクライアント側に作らない
-(単独開発の運用規模に対して、承認・実装判断のためだけの管理UIは過剰な設計になるため)。
+**新規カード案を1つのFirestoreコレクションで管理する。**投稿の一覧・投票の受付は
+プレイヤー側クライアントから既存の`FirestoreClient`経由で行うが、**承認・却下・
+月末の採用判断は、開発側だけが開く別のHTML管理ツールから行う**(2026-09-15、
+ユーザー判断。コストを下げて投稿数を増やす方針にしたため、Firestoreコンソールを
+手で操作するより専用ツールのほうが1件あたりの確認を速く済ませられる)。
 
 ### データ構造
 
 | コレクション/ドキュメント | フィールド |
 |---|---|
-| `lab_proposals/{id}` | `author_uid` / `card_name` / `description` / `card_kind`(`"hourglass"` / `"spell"`) / `month`(投稿時のJST月キー) / `status`(`"pending"` / `"approved"` / `"rejected"`) / `good_count`(int) / `result`(`""` / `"adopted"` / `"not_adopted"`) / `created_at` |
+| `lab_proposals/{id}` | `author_uid` / `card_name` / `description` / `card_kind`(`"hourglass"` / `"spell"`) / `month`(投稿時のJST月キー) / `status`(`"pending"` / `"approved"` / `"rejected"`) / `good_count`(int) / `result`(`""` / `"adopted"` / `"not_adopted"`) / `cost_paid`(int) / `created_at` |
 | `lab_proposals/{id}/votes/{uid}` | 存在するかどうかだけを見る(中身は空でよい)。1人1回までの投票をここで担保する |
 
 `status`と`result`を分けているのは、**「掲載されているか」と「月末にどうなったか」が
 別のタイミングで決まる**ため。`status`は承認フローの結果、`result`は月をまたいだ後で
 開発側が確定させる値であり、`status == "approved"`のまま`result`が空の投稿は
-「今月まだ結果が出ていない、投票受付中の投稿」を表す。
+「今月まだ結果が出ていない、投票受付中の投稿」を表す。**`cost_paid`は投稿時に
+実際に支払った額をそのまま複製したもの**で、将来コストの金額(いまは300砂金)を
+調整しても、過去の投稿を却下したときの返金額が食い違わないようにするために持つ。
 
 ### `LabProposalService`(`scripts/net/lab_proposal_service.gd`, static)
 
+**プレイヤー側クライアントが行うのは「投稿」「一覧の取得」「投票」の3つだけ**
+(承認・却下・返金・称号付与はすべて下記の管理ツール側=Cloud Functionsが行う)。
 `AccountService` / `MatchRecordService` と同じ「`FirestoreClient`を受け取るstaticのみの
 クラス」の流儀。
 
 - `submit(client, uid, name, description, kind)`:**登録済みアカウントであること**
   (下記)と`LabModeration.quick_check()`(自明なNGワードの弾き。下記)を通してから、
   `ShopCatalog`の購入と同じ「`updateTime`前提の`commit()`で残高を確認しつつ
-  10,000砂金を減算し、同時に`lab_proposals`へ`status = "pending"`のドキュメントを作る」
-  処理を1回の`commit()`で行う(10.8節の`purchase()`と同じ形)
+  300砂金を減算し、同時に`lab_proposals`へ`status = "pending"` / `cost_paid = 300`の
+  ドキュメントを作る」処理を1回の`commit()`で行う(10.8節の`purchase()`と同じ形)
 - `list_approved(client, month)`:`status == "approved" and month == month`の
   **単一の等価フィルタ**(`month`はドキュメントが1つの値しか持たないため、2条件でも
   複合インデックスを要求しない範囲に収まる。6章のクエリ方針)で取得し、
@@ -2970,16 +2975,43 @@ Firestoreコンソールから手作業で行う。**投稿の一覧・投票の
 - `vote(client, uid, proposal_id)`:`lab_proposals/{id}/votes/{uid}`の存在を確認し、
   無ければそのドキュメントの作成と親ドキュメントの`good_count`+1を1回の`commit()`で行う。
   競合したら読み直して再試行する(`OnlineMatch`の手の送信と同じ流儀。6.1節)
-- **承認(`pending`→`approved`/`rejected`)と、月末の`result`確定は、この関数群では
-  行わない。**開発側がFirestoreコンソールで`status`/`result`を直接書き換える運用とする
 
-### 却下時の返金
+### 管理ツール(`tools/lab_admin/`)
 
-`status`が`pending`から`rejected`へ変わったことを検知したら、**`AccountService.grant()`
-と同じ「取りこぼしても失われない」経路**で10,000砂金を全額返金する。返金は
-`CardLabScreen`が自分の投稿一覧を開いたとき(またはホームを開いたとき)に
-`rejected`かつ未返金(`refunded`フィールドが立っていないもの)を見つけて処理する
-遅延処理とし、専用の通知プッシュは持たない(掲示板を開けば気づける範囲で十分なため)。
+**プレイヤー向けのGodotクライアントとは別に、開発側だけが使う独立したHTMLページを
+1枚作る。**Discordの告知用スクリプト群(`tools/discord/`)と同じ「小さな単発ツール」の
+位置づけで、ゲーム本体のビルドには一切含めない。
+
+- **バニラのHTML+JavaScript(ビルド不要)**とし、フレームワークは使わない。管理者1人が
+  ローカルのブラウザで開くだけの用途に、ビルド環境を要求するのは過剰
+- **Firestoreへは直接触れず、専用のCloud Functions(`functions/lab_admin.js`)を
+  経由する。**理由は2つ:(1) 却下時の返金・採用時の称号付与は「複数ドキュメントへ
+  またがる書き込みを確実に両方成功させたい」処理であり、Admin SDKのトランザクションで
+  1回にまとめられるCloud Functions側で行うほうが、クライアントの`updateTime`前提の
+  往復より単純で確実。(2) ツールに広い書き込み権限(他人の`currency`や`owned_titles`を
+  書き換える権限)を持たせる先を、Firestoreのセキュリティルールではなく
+  **1個のシークレット文字列を知っているかどうか**に絞れる
+- **認証は共有シークレットの1本のみ。**`firebase functions:secrets:set`で
+  `LAB_ADMIN_SECRET`を設定し(6.3節のDiscord Webhook URL・10.14節のBotトークンと
+  同じ「シークレットはコミットしない」運用)、ツールはページを開いたときに
+  一度だけ入力を求めてブラウザの`localStorage`へ保存する。以後のリクエストは
+  すべてこのシークレットをヘッダーへ乗せて送る
+- `functions/lab_admin.js`が提供するアクション(1つのHTTPS関数`labAdmin`が
+  `action`フィールドで分岐する。`discordInteractions`と同じ「1関数に集約する」流儀):
+
+| action | 内容 |
+|---|---|
+| `list_pending` | `status == "pending"`を`created_at`昇順(古い順)で返す |
+| `list_current_month` | `status == "approved" and month == 今月`を`good_count`降順で返す(採用判断用のランキング) |
+| `approve(id)` | `status`を`"approved"`にする |
+| `reject(id)` | `status`を`"rejected"`にし、**同じトランザクションで**`players/{author_uid}.currency`へ`cost_paid`ぶんを加算する |
+| `set_result(id, result)` | `result`を書く。`"adopted"`のときは**同じトランザクションで**`players/{author_uid}.owned_titles`へ`"proposer"`を追加する |
+
+- **すべてAdmin SDKのFirestoreトランザクションで行う**(クライアント側のような
+  `updateTime`前提の`commit()`とリトライは不要。Cloud Functions側はセキュリティルールの
+  制約を受けない特権アクセスのため、通常の`runTransaction()`で足りる)
+- レスポンスはJSONで結果(成功/失敗と簡単な理由)を返し、ツール側はその場で
+  一覧を再取得して画面を更新する
 
 ### `LabModeration`(`scripts/logic/lab_moderation.gd`, static)
 
@@ -2989,7 +3021,7 @@ Firestoreコンソールから手作業で行う。**投稿の一覧・投票の
   時点で弾き、**通貨を消費する前に**気づけるようにする(通貨を払ってから却下・返金される
   よりも、投稿前に直せるほうが望ましいため)
 - ここで弾けなかったもの(商標・既存カードとの酷似・趣旨のズレなど、語のリストでは
-  判定できないもの)は、承認前の`pending`状態のまま開発側の目視確認に委ねる
+  判定できないもの)は、承認前の`pending`状態のまま管理ツールでの目視確認に委ねる
 
 ### 登録済みアカウント限定
 
@@ -2999,7 +3031,7 @@ Firestoreコンソールから手作業で行う。**投稿の一覧・投票の
 無反応にする**(21章のショップで残高不足の品を無反応にするのと同じ扱い。10.8節)。
 カーソルを乗せると「投稿・投票には登録済みアカウントが必要です」を出す。
 
-### UI
+### UI(プレイヤー側)
 
 | クラス | 責務 |
 |---|---|
@@ -3021,10 +3053,8 @@ Firestoreコンソールから手作業で行う。**投稿の一覧・投票の
 同じ形の配列を足し、`AccountScreen`の称号一覧は「初期の2つ + `owned_titles`」を
 選択肢とする(`owned_icons`が「初期の8種 + 購入分」を返すのと同じ組み立て。10.8節)。
 
-採用(`result = "adopted"`)が決まったら、開発側が`AccountService.unlock_free()`
-(10.15節と同じ「残高の確認・減算を行わない付与」の形。`ShopCatalog.Kind`へ`TITLE`を
-1つ追加する)でその投稿者の`owned_titles`へ`proposer`を手作業で足す。**専用の
-自動付与パイプラインは持たない**(月に最大1件しか発生しないため、手作業で十分)。
+**付与は上記の`set_result(id, "adopted")`が行う。**開発側は管理ツールでランキングを
+見て「この投稿を採用」を1回押すだけで、`result`の書き込みと称号の付与が同時に済む。
 
 ---
 
