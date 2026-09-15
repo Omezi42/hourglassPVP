@@ -27,6 +27,10 @@ const PADDING := 26.0
 ## 未受取の印(GameDesign.md 9章)。
 const BADGE_COLOR := Color(0.86, 0.24, 0.19)
 const BADGE_RADIUS := 15.0
+## ホバー浮き(GameDesign.md 9章)。紋章の透かしをわずかに明るく・上へ浮かせる。
+const HOVER_RISE_PX := 3.0
+const HOVER_ALPHA_BOOST := 0.45
+const HOVER_DURATION := 0.16
 
 var title := ""
 var subtitle := ""
@@ -41,6 +45,12 @@ var badge_count := 0:
 		queue_redraw()
 
 var _font: Font
+## ホバー浮きの進み(0〜1)。
+var _hover := 0.0
+var _hover_tween: Tween
+## 副題が外部要因で変わった瞬間に立て、減衰させながら短く光らせる。
+var _subtitle_flash := 0.0
+var _flash_tween: Tween
 
 
 ## 見出し・副題・紋章・大きさを与えて1枚作る(`CodedButton.make()` と同じ流儀)。
@@ -78,11 +88,40 @@ func _ready() -> void:
 	_font = get_theme_default_font()
 	if _font == null:
 		_font = ThemeDB.fallback_font
+	mouse_entered.connect(_on_hover_changed.bind(true))
+	mouse_exited.connect(_on_hover_changed.bind(false))
 
 
 ## 副題だけを差し替える(残高や枚数は画面へ戻るたびに変わる)。
 func set_subtitle(text_line: String) -> void:
 	subtitle = text_line
+	queue_redraw()
+
+
+## 副題が外部要因(砂金の増減・ミッションの進捗)で変わった瞬間に呼ぶ。押さなくても
+## 「何かが変わった」と分かるよう、その行だけ短く光らせる(GameDesign.md 9章)。
+func flash_subtitle() -> void:
+	if _flash_tween != null and _flash_tween.is_valid():
+		_flash_tween.kill()
+	_subtitle_flash = 1.0
+	_flash_tween = create_tween()
+	_flash_tween.tween_method(_set_subtitle_flash, 1.0, 0.0, 0.6)
+
+
+func _set_subtitle_flash(value: float) -> void:
+	_subtitle_flash = value
+	queue_redraw()
+
+
+func _on_hover_changed(hovering: bool) -> void:
+	if _hover_tween != null and _hover_tween.is_valid():
+		_hover_tween.kill()
+	_hover_tween = create_tween()
+	_hover_tween.tween_method(_set_hover, _hover, 1.0 if hovering else 0.0, HOVER_DURATION)
+
+
+func _set_hover(value: float) -> void:
+	_hover = value
 	queue_redraw()
 
 
@@ -94,12 +133,16 @@ func _text_width() -> float:
 
 ## 紋章を敷く矩形。**額縁の内側(暗く凹んだパネル)に必ず収める。**
 ## ボタンの矩形を基準に置くと、透かしが額縁へ載り上がって外へはみ出す。
+## ホバー中はわずかに浮かせる(GameDesign.md 9章)。
 func _emblem_rect() -> Rect2:
 	var panel := CodedButtonStyle.inner_rect(Rect2(Vector2.ZERO, size))
 	var side: float = minf(panel.size.y * 0.94, panel.size.x * 0.5)
 	side = minf(side, EMBLEM_MAX_SIDE)
 	return Rect2(
-		Vector2(panel.end.x - side - panel.size.y * 0.06, panel.get_center().y - side * 0.5),
+		Vector2(
+			panel.end.x - side - panel.size.y * 0.06,
+			panel.get_center().y - side * 0.5 - HOVER_RISE_PX * _hover
+		),
 		Vector2(side, side)
 	)
 
@@ -117,12 +160,16 @@ func _draw() -> void:
 		return
 	var dim := disabled
 	# 紋章は右側の透かし。**押す先が何なのかを絵でも示す**が、文字を邪魔しない濃さに留める。
+	# ホバー中はわずかに明るく浮く(GameDesign.md 9章)。
 	if emblem != null:
 		draw_texture_rect(
 			emblem,
 			_emblem_rect(),
 			false,
-			Color(UiPalette.BRASS_HIGHLIGHT, EMBLEM_ALPHA * (0.4 if dim else 1.0))
+			Color(
+				UiPalette.BRASS_HIGHLIGHT,
+				EMBLEM_ALPHA * (0.4 if dim else 1.0) * (1.0 + HOVER_ALPHA_BOOST * _hover)
+			)
 		)
 	var has_sub := not subtitle.is_empty()
 	var title_y: float = _title_center() + float(title_size) * 0.36
@@ -136,7 +183,9 @@ func _draw() -> void:
 		TITLE_DIM if dim else TITLE_COLOR
 	)
 	if has_sub:
+		# 副題が変わった直後は光らせる(GameDesign.md 9章)。押さなくても変化が分かるように。
 		var sub_color := SUB_ON_BRASS if primary else SUB_COLOR
+		sub_color = sub_color.lerp(Color(1, 1, 1), _subtitle_flash * 0.7)
 		draw_string(
 			_font,
 			Vector2(PADDING, title_y + float(title_size) * 0.92),

@@ -80,8 +80,8 @@ func refresh() -> void:
 		if row["done"] and not row["claimed"]:
 			claimable += 1
 	_mission_tile.badge_count = claimable
-	_mission_tile.set_subtitle("%d つ受け取れます" % claimable if claimable > 0 else "今日の3つに挑む")
-	_stats_tile.set_subtitle(_stats_line())
+	_apply_subtitle(_mission_tile, "%d つ受け取れます" % claimable if claimable > 0 else "今日の3つに挑む")
+	_apply_subtitle(_stats_tile, _stats_line())
 	_replay_tile.set_subtitle("直近%d件を残しています" % LocalReplayService.RETENTION_LIMIT)
 	var lines: Array[Dictionary] = []
 	for row in _rows:
@@ -111,6 +111,15 @@ func _uid() -> String:
 	if NetSession.client != null and NetSession.client.auth != null:
 		return NetSession.client.auth.uid
 	return ""
+
+
+## 前回と文字列が変わっていたら、その行だけ短く光らせる
+## (GameDesign.md 9章「押さなくても何かが変わったと分かるように」)。
+func _apply_subtitle(tile: HomeTile, text_line: String) -> void:
+	var changed := not tile.subtitle.is_empty() and tile.subtitle != text_line
+	tile.set_subtitle(text_line)
+	if changed:
+		tile.flash_subtitle()
 
 
 ## 戦績の副題。**対局数が0のうちはその旨を出す**(19章と同じ扱い)。

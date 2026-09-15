@@ -66,7 +66,7 @@ func _ready() -> void:
 	stats_screen.anchor_right = 1.0
 	stats_screen.anchor_bottom = 1.0
 	stats_screen.visible = false
-	stats_screen.back_pressed.connect(func() -> void: _show_only(home_screen))
+	stats_screen.back_pressed.connect(func() -> void: _show_only(home_screen, true))
 	add_child(stats_screen)
 	_screens.append(stats_screen)
 	card_match_screen = CardMatchScreen.new()
@@ -97,25 +97,25 @@ func _ready() -> void:
 	card_list_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
 	card_list_screen.visible = false
 	add_child(card_list_screen)
-	card_list_screen.back_pressed.connect(func() -> void: _show_only(home_screen))
+	card_list_screen.back_pressed.connect(func() -> void: _show_only(home_screen, true))
 	_screens.append(card_list_screen)
 	rule_screen = RuleScreen.new()
 	rule_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
 	rule_screen.visible = false
 	add_child(rule_screen)
-	rule_screen.back_pressed.connect(func() -> void: _show_only(home_screen))
+	rule_screen.back_pressed.connect(func() -> void: _show_only(home_screen, true))
 	_screens.append(rule_screen)
 	screen_guide_screen = ScreenGuideScreen.new()
 	screen_guide_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
 	screen_guide_screen.visible = false
 	add_child(screen_guide_screen)
-	screen_guide_screen.back_pressed.connect(func() -> void: _show_only(home_screen))
+	screen_guide_screen.back_pressed.connect(func() -> void: _show_only(home_screen, true))
 	_screens.append(screen_guide_screen)
 	keyword_dict_screen = KeywordDictScreen.new()
 	keyword_dict_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
 	keyword_dict_screen.visible = false
 	add_child(keyword_dict_screen)
-	keyword_dict_screen.back_pressed.connect(func() -> void: _show_only(home_screen))
+	keyword_dict_screen.back_pressed.connect(func() -> void: _show_only(home_screen, true))
 	_screens.append(keyword_dict_screen)
 	shop_screen = CardShopScreen.new()
 	shop_screen.anchor_right = 1.0
@@ -130,7 +130,7 @@ func _ready() -> void:
 	card_room_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
 	card_room_screen.visible = false
 	add_child(card_room_screen)
-	card_room_screen.back_pressed.connect(func() -> void: _show_only(home_screen))
+	card_room_screen.back_pressed.connect(func() -> void: _show_only(home_screen, true))
 	card_room_screen.deck_change_requested.connect(_on_room_deck_change_requested)
 	card_room_screen.matched.connect(_on_room_match_found)
 	card_room_screen.spectate_requested.connect(_on_spectate_requested)
@@ -139,13 +139,13 @@ func _ready() -> void:
 	card_random_match_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
 	card_random_match_screen.visible = false
 	add_child(card_random_match_screen)
-	card_random_match_screen.back_pressed.connect(func() -> void: _show_only(home_screen))
+	card_random_match_screen.back_pressed.connect(func() -> void: _show_only(home_screen, true))
 	card_random_match_screen.matched.connect(_on_online_match_found)
 	_screens.append(card_random_match_screen)
 	puzzle_picker_screen = CardPuzzlePickerScreen.new()
 	puzzle_picker_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
 	puzzle_picker_screen.visible = false
-	puzzle_picker_screen.back_pressed.connect(func() -> void: _show_only(home_screen))
+	puzzle_picker_screen.back_pressed.connect(func() -> void: _show_only(home_screen, true))
 	puzzle_picker_screen.stage_selected.connect(_on_puzzle_stage_selected)
 	puzzle_picker_screen.endless_selected.connect(_on_puzzle_endless_selected)
 	add_child(puzzle_picker_screen)
@@ -153,7 +153,7 @@ func _ready() -> void:
 	solo_map_screen = CardSoloMapScreen.new()
 	solo_map_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
 	solo_map_screen.visible = false
-	solo_map_screen.back_pressed.connect(func() -> void: _show_only(home_screen))
+	solo_map_screen.back_pressed.connect(func() -> void: _show_only(home_screen, true))
 	solo_map_screen.stage_selected.connect(_on_solo_stage_selected)
 	add_child(solo_map_screen)
 	_screens.append(solo_map_screen)
@@ -190,7 +190,7 @@ func _ready() -> void:
 	home_screen.cpu_match_requested.connect(_on_cpu_match_deck_requested)
 	home_screen.random_match_deck_requested.connect(_on_random_match_deck_requested)
 	home_screen.room_match_requested.connect(_on_room_match_requested)
-	replay_list_screen.back_pressed.connect(func() -> void: _show_only(home_screen))
+	replay_list_screen.back_pressed.connect(func() -> void: _show_only(home_screen, true))
 	replay_list_screen.replay_selected.connect(_on_replay_selected)
 	NetSession.ensure_ready(self)
 	HourglassArt.ensure_ready(self)
@@ -212,6 +212,21 @@ func _input(event: InputEvent) -> void:
 	set_process_input(false)
 
 
+## Escで戻れるようにする(GameDesign.md 9章)。いまの画面の `back_pressed` へ
+## 委譲するだけで、戻る先の判断はそれぞれの `back_pressed` ハンドラのまま変えない。
+## 対局画面(`CardMatchScreen`)は対象選択の取り消しに自前でEscを使っているため、
+## 対局中(`is_interactive()`)はここから発動させない。
+func _unhandled_input(event: InputEvent) -> void:
+	if not event.is_action_pressed("ui_cancel"):
+		return
+	if _active_screen == null or not _active_screen.has_signal("back_pressed"):
+		return
+	if _active_screen == card_match_screen and card_match_screen.is_interactive():
+		return
+	get_viewport().set_input_as_handled()
+	_active_screen.emit_signal("back_pressed")
+
+
 ## タイトル画面を押されたときの遷移。ロゴの演出 → 砂が画面を覆う → 画面を差し替える →
 ## 砂が下へ抜ける、の順で進める。砂が覆いきっている間に差し替えるため、
 ## 通常のクロスフェード(_show_only)は砂の下で起きて見えない。
@@ -228,7 +243,7 @@ func _on_match_back() -> void:
 		puzzle_picker_screen.open()
 	elif _match_return_screen == solo_map_screen:
 		solo_map_screen.open()
-	_show_only(_match_return_screen)
+	_show_only(_match_return_screen, true)
 	home_screen.refresh_account()
 	# 対局は待機状態(ボタンの無効化)を残したまま始まるため、戻った時点で解く。
 	home_screen.reset_battle_tab()
@@ -243,7 +258,7 @@ func _on_account_requested(from_title: bool) -> void:
 
 
 func _on_account_back() -> void:
-	_show_only(title_screen if _account_return_to_title else home_screen)
+	_show_only(title_screen if _account_return_to_title else home_screen, true)
 	home_screen.refresh_account()
 
 
@@ -345,7 +360,7 @@ func _on_deck_picked(index: int) -> void:
 ## デッキ一覧の戻る。選ぶ途中で戻った場合は待たせていた導線を捨てる。
 func _on_deck_list_back() -> void:
 	_pending_battle = Callable()
-	_show_only(_deck_pick_return if _deck_pick_return != null else home_screen)
+	_show_only(_deck_pick_return if _deck_pick_return != null else home_screen, true)
 	_deck_pick_return = home_screen
 
 
@@ -362,7 +377,7 @@ func _on_deck_edit_requested(index: int) -> void:
 ## 編集画面は一覧からしか開かないため、閉じたら一覧へ戻す。
 func _on_deck_editor_closed() -> void:
 	card_deck_list_screen.open_manage()
-	_show_only(card_deck_list_screen)
+	_show_only(card_deck_list_screen, true)
 
 
 ## デッキタブの「デッキ編集」。保存済みのデッキを並べた一覧から入る。
@@ -378,7 +393,7 @@ func _on_shop_requested() -> void:
 
 
 func _on_shop_back() -> void:
-	_show_only(home_screen)
+	_show_only(home_screen, true)
 	home_screen.refresh_account()
 
 
@@ -505,7 +520,9 @@ func _make_transition_blocker() -> ColorRect:
 
 ## 表示中の画面を screen へクロスフェードで切り替える。連打などで遷移中に
 ## 別の遷移が始まっても破綻しないよう、進行中のTweenをkillしてから作り直す。
-func _show_only(screen: Control) -> void:
+## going_back が真なら、フェードへ重ねる横移動の向きを戻る側にする
+## (GameDesign.md 9章「次の画面がわずかに右から滑り込み、戻るときは左へ抜ける」)。
+func _show_only(screen: Control, going_back: bool = false) -> void:
 	if screen == _active_screen:
 		return
 	if _fade_tween != null and _fade_tween.is_valid():
@@ -529,6 +546,7 @@ func _show_only(screen: Control) -> void:
 	_fade_tween.tween_property(screen, "modulate:a", 1.0, SCREEN_FADE_DURATION)
 	if previous != null:
 		_fade_tween.tween_property(previous, "modulate:a", 0.0, SCREEN_FADE_DURATION)
+	ScreenTransitionFx.apply(_fade_tween, screen, previous, going_back, SCREEN_FADE_DURATION)
 	_fade_tween.finished.connect(_on_transition_finished.bind(screen, previous))
 
 	# BGMの切り替えは画面遷移のハブであるここ1箇所で行い、画面ごとに書き散らさない
@@ -550,5 +568,6 @@ func _on_transition_finished(screen: Control, previous: Control) -> void:
 	if previous != null and previous != screen:
 		previous.visible = false
 		previous.modulate.a = 1.0
+	ScreenTransitionFx.reset(screen, previous)
 	_transition_blocker.visible = false
 	_fade_tween = null

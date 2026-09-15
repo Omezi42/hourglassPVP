@@ -92,6 +92,16 @@ func _set_pulse(value: float) -> void:
 	queue_redraw()
 
 
+## 着地の合図(GameDesign.md 9章)。**数値は変えない**——飛んできた粒が届いた瞬間に
+## 脈だけを出す。実際の残高反映は、呼び出し側が別途 `set_amount()` で行う
+## (ミッション受取は通信が確定するまで正しい残高を知らないため、脈と数値を分けている)。
+func bump() -> void:
+	if _tween != null and _tween.is_valid():
+		_tween.kill()
+	_tween = create_tween()
+	_tween.tween_method(_set_pulse, 1.0, 0.0, PULSE_DURATION)
+
+
 ## 桁が増えても文字が枠から出ないよう、幅は中身から決める。
 func _relayout() -> void:
 	if _font == null:

@@ -27,6 +27,12 @@ const SCRIM_COLOR := Color(0.05, 0.04, 0.06, 0.55)
 ## ヘッダーの下端に通す真鍮の細線。全画面で同じ位置に出て、ヘッダーの帯を構造として示す。
 const RULE_COLOR := Color(0.85, 0.62, 0.22, 0.35)
 
+## タイトルの着地(GameDesign.md 9章「遷移の着地でごく短く浮いてから止まる」)。
+const TITLE_LANDING_OFFSET := -2.0
+const TITLE_LANDING_DURATION := 0.14
+
+var _landing_tween: Tween
+
 @onready var back_button: Button = $Row/BackButton
 @onready var title_label: Label = $TitleLabel
 @onready var action_slot: HBoxContainer = $Row/ActionSlot
@@ -34,6 +40,25 @@ const RULE_COLOR := Color(0.85, 0.62, 0.22, 0.35)
 
 func _ready() -> void:
 	back_button.pressed.connect(func() -> void: back_pressed.emit())
+
+
+## 画面が表示されるたびに呼ばれる。`Main._show_only()` が screen.visible を
+## 切り替えると、その子であるこのヘッダーにも可視化の通知が届く。
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_VISIBILITY_CHANGED and is_visible_in_tree():
+		_play_title_landing()
+
+
+func _play_title_landing() -> void:
+	# `NOTIFICATION_VISIBILITY_CHANGED` は `_ready()`(`@onready` の解決)より
+	# 先に届くことがある。まだ子が無ければ何もしない。
+	if title_label == null:
+		return
+	if _landing_tween != null and _landing_tween.is_valid():
+		_landing_tween.kill()
+	title_label.position.y = TITLE_LANDING_OFFSET
+	_landing_tween = create_tween()
+	_landing_tween.tween_property(title_label, "position:y", 0.0, TITLE_LANDING_DURATION)
 
 
 ## `Control._draw()` は自分の子より背面に描かれるため、ここで敷いたものは

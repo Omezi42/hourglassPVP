@@ -6,6 +6,10 @@ extends Control
 ## 3行を読んで押すだけの用件のため(`SettingsPanel` と同じ「暗幕+中央パネル」の作り)。
 
 signal closed
+## 受け取った瞬間、押したボタンの位置と獲得額を運ぶ(GameDesign.md 9章)。
+## ヘッダーの `CurrencyChip` へ向けて飛ばす演出は `HomeScreen` 側が持つ
+## (このパネルは自分の外にあるチップの位置を知らないため)。
+signal reward_claimed(from_rect: Rect2, amount: int)
 
 const SCREEN_SIZE := Vector2(1280, 720)
 const PANEL_SIZE := Vector2(600, 420)
@@ -112,15 +116,18 @@ func _make_row(uid: String, row: Dictionary) -> Control:
 	var button := CodedButton.make("受取", CLAIM_SIZE)
 	button.disabled = not bool(row["done"])
 	button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	button.pressed.connect(func() -> void: _on_claim(uid, String(row["id"])))
+	button.pressed.connect(
+		func() -> void: _on_claim(uid, String(row["id"]), button, int(row["reward"]))
+	)
 	line.add_child(button)
 	return line
 
 
 ## **通信できないときは受け取らせない**(GameDesign.md 21章のショップと同じ理由)。
 ## 残高はアカウントにあり、手元で増やしても次に通信した時点で消える。
-func _on_claim(uid: String, id: String) -> void:
+func _on_claim(uid: String, id: String, button: Control, amount: int) -> void:
 	if DailyMissionService.claim(uid, id):
+		reward_claimed.emit(button.get_global_rect(), amount)
 		_refresh()
 		return
 	_note.text = "いま受け取れませんでした。接続を確かめてください"

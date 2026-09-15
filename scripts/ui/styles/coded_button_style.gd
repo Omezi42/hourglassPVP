@@ -60,9 +60,13 @@ const GLOW_RING_COUNT := 3
 const GLOW_RING_STEP := 5.0
 const GLOW_BASE_ALPHA := 0.14
 
-const PANEL_PRESSED_SINK := 2.0
+## GameDesign.md 9章「ボタンの押し込みをもう一段深くする」。以前は2.0pxで、
+## 実際に凹む感じまでは表現できていなかった。
+const PANEL_PRESSED_SINK := 3.0
 const PANEL_LIGHTEN := 0.25
 const PANEL_DARKEN := 0.35
+## 押下時、上端のハイライトをUiPalette実測値からさらに一段暗くする(同上)。
+const PRESSED_HIGHLIGHT_DARKEN := 0.16
 
 ## CHEVRON_LEFTの肩(shoulder、尖端から斜辺で繋がる直線区間の終点)のx位置を
 ## rect幅に対する比率で指定する
@@ -306,7 +310,7 @@ func _draw_frame(
 	]
 	if pressed:
 		stops = [
-			[0.0, UiPalette.BRASS_DARK],
+			[0.0, UiPalette.BRASS_DARK.darkened(PRESSED_HIGHLIGHT_DARKEN)],
 			[FRAME_MID_STOP, UiPalette.BRASS_PRESSED_MID],
 			[FRAME_DARK_STOP, UiPalette.BRASS_PRESSED_DARK],
 			[1.0, UiPalette.BRASS_PRESSED_MID],
@@ -347,7 +351,7 @@ func _draw_panel(
 		top_color = UiPalette.PANEL_AMBER_TOP
 		bottom_color = UiPalette.PANEL_AMBER_BOTTOM
 	elif pressed:
-		top_color = UiPalette.PANEL_PRESSED_TOP
+		top_color = UiPalette.PANEL_PRESSED_TOP.darkened(PRESSED_HIGHLIGHT_DARKEN)
 		bottom_color = UiPalette.PANEL_PRESSED_BOTTOM
 	if disabled:
 		top_color = UiPaint.disabled_tone(top_color)
@@ -401,7 +405,7 @@ func _draw_filled_panel(
 	]
 	if pressed:
 		stops = [
-			[0.0, UiPalette.BRASS_DARK],
+			[0.0, UiPalette.BRASS_DARK.darkened(PRESSED_HIGHLIGHT_DARKEN)],
 			[FRAME_MID_STOP, UiPalette.BRASS_PRESSED_MID],
 			[FRAME_DARK_STOP, UiPalette.BRASS_PRESSED_DARK],
 			[1.0, UiPalette.BRASS_PRESSED_MID],

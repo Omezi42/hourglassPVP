@@ -71,20 +71,30 @@ func _add_frame() -> void:
 
 
 ## タブを開くたびに副題を読み直す(デッキも砂金も画面の外で変わる)。
+## 前回と文字列が変わっていたら、その行だけ短く光らせる
+## (GameDesign.md 9章「押さなくても何かが変わったと分かるように」)。
 func refresh() -> void:
 	var decks := CardDeckSave.list_decks()
 	var selected := CardDeckSave.selected_deck()
 	var tile := deck_edit_button as HomeTile
 	if decks.is_empty():
-		tile.set_subtitle("プリセット「基本」で対戦できます")
+		_apply_subtitle(tile, "プリセット「基本」で対戦できます")
 	else:
 		var index: int = clampi(CardDeckSave.selected_index(), 0, decks.size() - 1)
-		tile.set_subtitle(
+		_apply_subtitle(
+			tile,
 			"%s ・ %d 枚 ・ 全%dデッキ" % [String(decks[index]["name"]), selected.size(), decks.size()]
 		)
 	var collected := AccountService.collected_card_counts()
-	(hourglass_list_button as HomeTile).set_subtitle("収集 %d / %d 種" % [collected.x, collected.y])
-	(shop_button as HomeTile).set_subtitle(CurrencyRules.label_text(AccountService.currency()))
+	_apply_subtitle(hourglass_list_button as HomeTile, "収集 %d / %d 種" % [collected.x, collected.y])
+	_apply_subtitle(shop_button as HomeTile, CurrencyRules.label_text(AccountService.currency()))
+
+
+func _apply_subtitle(tile: HomeTile, text_line: String) -> void:
+	var changed := not tile.subtitle.is_empty() and tile.subtitle != text_line
+	tile.set_subtitle(text_line)
+	if changed:
+		tile.flash_subtitle()
 
 
 ## `.tscn` に置いてある `Button` を、同じ場所・同じ大きさの `HomeTile` へ置き換える。

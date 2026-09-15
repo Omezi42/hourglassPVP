@@ -225,6 +225,10 @@ func _select_tab(index: int) -> void:
 	if to_show == _active_tab and to_show.visible and to_show.modulate.a >= 1.0:
 		return
 	var to_hide: Control = _active_tab
+	# 左のタブへ移ったか右のタブへ移ったかで、横滑りの向きを決める
+	# (GameDesign.md 9章「左のタブへ移れば次のタブは右から現れる」)。
+	var previous_index := tabs.find(to_hide)
+	var moved_left := previous_index >= 0 and index < previous_index
 	_active_tab = to_show
 	if _tab_fade_tween != null and _tab_fade_tween.is_valid():
 		_tab_fade_tween.kill()
@@ -235,7 +239,14 @@ func _select_tab(index: int) -> void:
 	_tab_fade_tween.tween_property(to_show, "modulate:a", 1.0, TAB_FADE_DURATION)
 	if to_hide != null and to_hide != to_show:
 		_tab_fade_tween.tween_property(to_hide, "modulate:a", 0.0, TAB_FADE_DURATION)
-		_tab_fade_tween.finished.connect(_on_tab_fade_finished.bind(to_hide))
+	ScreenTransitionFx.apply(
+		_tab_fade_tween,
+		to_show,
+		to_hide if to_hide != to_show else null,
+		moved_left,
+		TAB_FADE_DURATION
+	)
+	_tab_fade_tween.finished.connect(_on_tab_fade_finished.bind(to_show, to_hide))
 
 
 ## 「ルール」タブとそのタブボタンはここで生成する。`scenes/home_screen.tscn` を
@@ -318,9 +329,11 @@ func _refresh_record_badge() -> void:
 	)
 
 
-func _on_tab_fade_finished(hidden_tab: Control) -> void:
-	hidden_tab.visible = false
-	hidden_tab.modulate.a = 1.0
+func _on_tab_fade_finished(shown_tab: Control, hidden_tab: Control) -> void:
+	if hidden_tab != null and hidden_tab != shown_tab:
+		hidden_tab.visible = false
+		hidden_tab.modulate.a = 1.0
+	ScreenTransitionFx.reset(shown_tab, hidden_tab if hidden_tab != shown_tab else null)
 	_tab_fade_tween = null
 
 
@@ -422,5 +435,16 @@ func _on_mission_requested() -> void:
 	if _mission_panel == null:
 		_mission_panel = DailyMissionPanel.new()
 		_mission_panel.closed.connect(func() -> void: refresh_account())
+		_mission_panel.reward_claimed.connect(_on_mission_reward_claimed)
 		add_child(_mission_panel)
 	_mission_panel.open()
+
+
+## 受け取ったミッションの砂金を、押した位置からヘッダーの残高へ飛ばす
+## (GameDesign.md 9章)。数値そのものは通信が確定するまで正しく読めないため、
+## ここでは脈だけを出す(実際の反映はパネルを閉じたときの `refresh_account()` が行う)。
+func _on_mission_reward_claimed(from_rect: Rect2, _amount: int) -> void:
+	if _currency_chip == null:
+		return
+	await CardFlightFx.fly(_mission_panel, from_rect, _currency_chip.get_global_rect())
+	_currency_chip.bump()
