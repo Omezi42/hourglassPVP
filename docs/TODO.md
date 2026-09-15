@@ -196,6 +196,38 @@
 
 ---
 
+## 4.5. ランクマッチ・掲示板・公式大会(2026-09-15・仕様確定/未着手)
+
+仕様はGameDesign.md 28章、実装設計はArchitecture.md 10.16節。**着手順はランクマッチ→
+掲示板→公式大会と決めてある。**掲示板・公式大会はまだ仕様を書いていないため、
+ランクマッチが一段落してから改めてGameDesign.mdへの追記案を出す。
+
+### ランクマッチ(実装タスク)
+
+- [ ] `RankRules`(段位表・星の必要数・レートの増減表)
+- [ ] `players/{uid}` へ `rank_season` / `rank_tier` / `rank_stars` / `rank_rating` /
+      `rank_peak_tier` / `rank_reward_claimed_season` を追加
+- [ ] `RankProgress.ensure_current_season()`(遅延シーズンリセット・月末報酬の付与)
+- [ ] `RankProgress.apply_result()`(星取り制の昇格 / プラチナのレート変動 /
+      10手未満の対局を対象外にする不正対策)
+- [ ] `RankedMatchmakingQueue` + `CardRankedMatchScreen`(`CardRandomMatchScreen`の複製に近い)
+- [ ] `MatchKind.RANKED` を追加し、`CardMatchOutcome` から `RankProgress.apply_result()` を呼ぶ
+- [ ] `CardRankScreen`(自分の段位表示 + ランキング一覧)。`たたかう`タブへの入口追加
+- [ ] 月末報酬の具体的な額・品目を決める(GameDesign.md 28章に「次のステップで決める」と
+      書いた未確定事項)
+- [ ] unityroomランキング連携の技術調査(Architecture.md 10.16節「要調査」)。
+      連携できるかどうかで、ゲーム内ランキングだけで運用するか決まる
+- [ ] 月初の表彰演出の見せ方を決める(未確定のまま仕様化してある)
+- [ ] 実装後、CPU自己対戦ではなく**実際にランクマッチを何局か回して**、レートの動きが
+      不自然でないか確認する(§1の実機確認テーブルへ追加する)
+
+### 掲示板・公式大会
+
+- [ ] まだGameDesign.mdへ書いていない。ランクマッチが一段落したら、掲示板(投稿種別・
+      承認フロー・投票・月末実装)の仕様を追記案として提示し、承認を得てから着手する
+
+---
+
 ## 5. バランスの測り直し(まとめて1回で行う)
 
 **個別に測り直すと基準そのものが動いて無駄になる。**次にプールを触る回に、下記をまとめて行う。
