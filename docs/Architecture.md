@@ -2320,6 +2320,102 @@ UI層へ依存することになる。
 - **ホバー音は `SoundBank.Sfx.HOVER` として足し、音源は `button.wav` を `SFX_PITCH` で高くし、新設の `SFX_GAIN`(音源ごとの音量比)で小さくする。**`wire_buttons()` が `mouse_entered` にもつなぎ、`CardView` は `hovered` を出すときに鳴らす。**対局中の駒・手札は `CardMatchSound` を経由せず `CardView` が直接鳴らす**(盤面の状態ではなくカーソルの出来事であるため)
 - **相手の手番で手札を沈める量は `SUMMONED_SINK` と同じ語彙(数px + 彩度落とし)**に留め、札の読みやすさを落とさない
 
+### 10.10.2 メニュー画面群の手触り(GameDesign.md 9章「メニュー画面群の手触り」)
+
+**対局画面(10.10.1節)と同じ「既存要素へ反応を足す」方針。**新しいクラスは
+飛び先(棚の枠・チップ)が既に描画を持つ場合に限って必要になる。行数の上限
+(11章)に近いファイル(`home_screen.gd` 426行 / `card_deck_shelf.gd` 369行 /
+`card_shop_screen.gd` 485行はまだ余裕があるが、切り出しの流儀は同じ)。
+
+| クラス | 責務 |
+|---|---|
+| `ScreenTransitionFx`(`scripts/ui/screen_transition_fx.gd`, RefCounted) | `Main._show_only()` の横移動を1箇所へ持つ。フェードと同時に、前の画面を進行方向の逆へ・次の画面を進行方向から、それぞれ数十px分ずらしてから0へ寄せる |
+| `CardFlightFx`(`scripts/ui/card_flight_fx.gd`, Control) | 「一覧の札 ⇄ 棚の枠」「品の絵 ⇄ 砂金チップ」のように、**1枚の絵が画面上のある矩形から別の矩形へ飛ぶ**演出をまとめて引き受ける汎用オーバーレイ。`play(texture_or_control, from_rect, to_rect, duration)` の1メソッドだけを持ち、デッキ編集・ショップ・ミッション受取のいずれもこれを呼ぶ(専用クラスを画面ごとに作らない) |
+
+**全画面共通**
+
+- **ボタンの押し込みは `CodedButtonStyle` の `State.PRESSED` 側を1段深くする。**
+  `_frame_thickness()` / `_bevel_width()` はそのままに、PRESSED時のハイライトの
+  明度をもう一段落とし、影のオフセットを1px増やす。**全ボタン共通の定数を1つ
+  動かすだけ**であり、画面ごとの対応は不要
+- **画面遷移の横移動は `ScreenTransitionFx` が `Main._show_only()` の中で行う。**
+  `_show_only()` は呼び出し側が「進むのか戻るのか」を知らないため、**進む方向は
+  持たない**——`back_pressed` を経由した遷移だけを「戻る」として逆方向にし、
+  それ以外はすべて「進む」として同じ向きに揃える。`Main` の各 `back_pressed`
+  ハンドラは既に `_show_only(home_screen)` を直接呼んでいるため、これらを
+  `_show_only(home_screen, going_back = true)` に変えるだけで済む
+- **Escは `Main._unhandled_input()` に1つ足す。**現在の画面が `back_pressed` を
+  持つなら発行する。対局画面(`CardMatchScreen`)は自前で `Esc` を対象選択の
+  取り消しに使っているため、対局中はこの共通処理の対象から外す
+  (`is_interactive()` 相当の判定で振り分ける)
+- **ヘッダータイトルの着地の浮きは `ScreenHeader` 側**。`_show_only()` の
+  フェード開始と同時に `title_label.position.y` を -2 から 0 へ短く戻す
+
+**ホーム画面**
+
+- **タブの横滑りは、既存の `_select_tab()` のフェードへ横移動を足すだけ**
+  (専用クラスは作らない)。`to_show` の `position.x` を、タブの並び順で
+  「左のタブへ移ったか右のタブへ移ったか」から符号を決めて数十pxずらし0へ寄せる
+- **`HomeTile` のホバー浮きは `HomeTile` 自身に持たせる。**`mouse_entered` /
+  `mouse_exited` で紋章の透かしの明度・y位置を Tween する
+- **副題が外部要因で変わったときの光りは、`refresh()` の呼び出し側
+  (`_select_tab()` / `refresh_battle_tab()` 等)が前回の文字列と比較して
+  変化を検知し、`HomeTile.flash_subtitle()` を呼ぶ形にする**
+- **砂金チップの着地演出は `CardFlightFx` 経由。**ミッション受取
+  (`DailyMissionPanel`)・対局結果パネル(`CardMatchResult`)のいずれも、
+  獲得額が確定した位置からヘッダーの `CurrencyChip` へ向けて飛ばしてから
+  `CurrencyChip.bump()`(数え上げ)を呼ぶ
+
+**デッキ編集(時計工房)**
+
+- **一覧→棚・棚→一覧の飛びは `CardFlightFx`。**`CardDeckEditorScreen` が
+  押されたカードの矩形(一覧側 or 棚側)を控えており、加える/戻す処理の直前に
+  `CardFlightFx.play()` を呼んでから実際の配列操作(`CardDeckShelf.rebuild()` 等)
+  を行う。**演出の完了を待たずに配列操作は即座に行い、見た目だけが追いかける**
+  (対局画面の「ロジックは演出を待たない」方針と同じ)
+- **「2/2」バッジの跳ねは、`WorkshopStockItem` に `CardView` のバッジ跳ねと
+  同じ `count_punch` を持たせる。**枚数が変わった瞬間に1.0へ立ててTweenで戻す
+- **30枚到達の光りは `CardDeckShelf` が `rebuild()` の中で枚数を数え、
+  30に達した回だけ `glow_amount` を短く1.0へ立てる**(`_draw()` 側で棚全体に
+  淡いオーバーレイを重ねる)
+- **ドラッグの傾きは `CardDragPreview`(10.10.1節)をそのまま流用する。**
+  デッキ編集のドラッグ元(`WorkshopStockItem`)から同じクラスを呼ぶだけで、
+  対局側の実装を変える必要はない
+- **絞り込みモーダルは、開くボタンの矩形から膨らむ形にする。**
+  `CardDeckFilterModal` の開始スケールをボタン矩形相当の小さな値にし、
+  中心をそのボタンの中心へ合わせてから通常サイズへ Tween する
+
+**砂時計図鑑**
+
+- **ページめくりは `AlmanacPage` に `turn_to(card)` を足す。**いまの
+  `show_card()` を「めくる」演出込みに拡張し、右のページが一瞬めくれてから
+  新しい中身を `_draw()` する(紙の陰影を持つ `AlmanacBook._draw_pages()` の
+  質感をそのまま流用し、専用の紙のテクスチャは増やさない)
+- **右ページの砂時計のホバー傾きは `AlmanacPage._gui_input()` の反転判定の
+  近くへ、`mouse_entered`/`mouse_exited` で数度のtilt Tweenを足すだけ**
+- **並び替え後の札の再配置は `AlmanacBook` の一覧側(左ページ)が
+  `CardMatchHandLayout` と同じ「位置は代入せずTweenで滑らせる」方式を使う**
+  (新しいクラスは作らず、同じ考え方を左ページの一覧コンテナへ適用する)
+
+**ショップ・アカウント**
+
+- **購入時の飛びも `CardFlightFx`**。`CardShopScreen` が確認ダイアログの
+  「買う」を受けたら、品の絵の矩形からヘッダーの `CurrencyChip` へ飛ばしてから
+  残高を更新する
+- **アカウント画面の名札プレビューの跳ねは `NamePlatePreview`(既存クラスが
+  あればそこへ、無ければ `AccountScreen` 内の描画へ)`bump()` を足すだけ**
+- **買えない品でホバー無反応にするのは `ShopItemCard`(または該当クラス)の
+  `mouse_filter` を `enabled=false` の間 `MOUSE_FILTER_IGNORE` にする**
+
+**一覧系(デッキ一覧・リプレイ・戦績・パズル選択)**
+
+- **段差フェードインは、各一覧画面が持つ横2列グリッドの生成ループへ
+  `EmptyState` と同じ流儀で共通処理を1つ足す。**`scripts/ui/list_reveal_fx.gd`
+  (static)に `stagger(items: Array[Control], step := 0.03, max_staggered := 8)`
+  を持たせ、9件目以降は遅延0で同時に現れる
+- **削除時の縮小は、削除ボタンを押した画面側が `Tween` で対象カードの
+  `scale` を0へ縮めてから配列から取り除く**(専用クラスは不要)
+
 ### 10.11 デイリーミッション(GameDesign.md 23章)
 
 | クラス | 責務 |
