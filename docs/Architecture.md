@@ -1955,6 +1955,7 @@ GameDesign.md 14章(アカウント)・15章(通貨)の実装方針。認証は 
 | `cpu_reward_count` | int | その日付にCPU戦で報酬を得た回数 |
 | `owned_icons` | Array[String] | ショップで買ったアイコンのid。初期解放の8種は含めない |
 | `owned_emotes` | Array[String] | ショップで買ったエモートのid。初期解放の4種は含めない |
+| `owned_titles` | Array[String] | 所有を絞る称号のid(掲示板採用の「発案者」等)。初期の2種(「駆け出し決闘者」「称号なし」)は含めない。10.17節 |
 | `emote_slots` | Array[String] | 対局中に出す4つ。空なら初期の4種を使う |
 | `updated_at` | float | 最終更新時刻(Unix時間) |
 
@@ -2929,6 +2930,101 @@ GameDesign.md 28章のとおり、unityroomのランキング機能は対局1回
 GameDesign.md 28章に記載のとおり、具体的な見せ方(ホーム画面での告知等)は未確定。
 実装するときは、`HomeScreen`の副題が外部要因で変わったときの「光る」演出(10.10.2節)
 と同じ語彙(新しい要素を増やさず、既存の反応の仕組みへ乗せる)を優先して検討する。
+
+---
+
+## 10.17 掲示板(ラボ)(GameDesign.md 29章)
+
+**新規カード案を1つのFirestoreコレクションで管理し、承認・実装の判断は開発側が
+Firestoreコンソールから手作業で行う。**投稿の一覧・投票の受付は既存の`FirestoreClient`
+経由の読み書きだけで完結させ、専用の管理画面はクライアント側に作らない
+(単独開発の運用規模に対して、承認・実装判断のためだけの管理UIは過剰な設計になるため)。
+
+### データ構造
+
+| コレクション/ドキュメント | フィールド |
+|---|---|
+| `lab_proposals/{id}` | `author_uid` / `card_name` / `description` / `card_kind`(`"hourglass"` / `"spell"`) / `month`(投稿時のJST月キー) / `status`(`"pending"` / `"approved"` / `"rejected"`) / `good_count`(int) / `result`(`""` / `"adopted"` / `"not_adopted"`) / `created_at` |
+| `lab_proposals/{id}/votes/{uid}` | 存在するかどうかだけを見る(中身は空でよい)。1人1回までの投票をここで担保する |
+
+`status`と`result`を分けているのは、**「掲載されているか」と「月末にどうなったか」が
+別のタイミングで決まる**ため。`status`は承認フローの結果、`result`は月をまたいだ後で
+開発側が確定させる値であり、`status == "approved"`のまま`result`が空の投稿は
+「今月まだ結果が出ていない、投票受付中の投稿」を表す。
+
+### `LabProposalService`(`scripts/net/lab_proposal_service.gd`, static)
+
+`AccountService` / `MatchRecordService` と同じ「`FirestoreClient`を受け取るstaticのみの
+クラス」の流儀。
+
+- `submit(client, uid, name, description, kind)`:**登録済みアカウントであること**
+  (下記)と`LabModeration.quick_check()`(自明なNGワードの弾き。下記)を通してから、
+  `ShopCatalog`の購入と同じ「`updateTime`前提の`commit()`で残高を確認しつつ
+  10,000砂金を減算し、同時に`lab_proposals`へ`status = "pending"`のドキュメントを作る」
+  処理を1回の`commit()`で行う(10.8節の`purchase()`と同じ形)
+- `list_approved(client, month)`:`status == "approved" and month == month`の
+  **単一の等価フィルタ**(`month`はドキュメントが1つの値しか持たないため、2条件でも
+  複合インデックスを要求しない範囲に収まる。6章のクエリ方針)で取得し、
+  **`good_count`降順のソートはクライアント側で行う**(`orderBy`を重ねると複合
+  インデックスが要る。6.4節と同じ考え方)
+- `vote(client, uid, proposal_id)`:`lab_proposals/{id}/votes/{uid}`の存在を確認し、
+  無ければそのドキュメントの作成と親ドキュメントの`good_count`+1を1回の`commit()`で行う。
+  競合したら読み直して再試行する(`OnlineMatch`の手の送信と同じ流儀。6.1節)
+- **承認(`pending`→`approved`/`rejected`)と、月末の`result`確定は、この関数群では
+  行わない。**開発側がFirestoreコンソールで`status`/`result`を直接書き換える運用とする
+
+### 却下時の返金
+
+`status`が`pending`から`rejected`へ変わったことを検知したら、**`AccountService.grant()`
+と同じ「取りこぼしても失われない」経路**で10,000砂金を全額返金する。返金は
+`CardLabScreen`が自分の投稿一覧を開いたとき(またはホームを開いたとき)に
+`rejected`かつ未返金(`refunded`フィールドが立っていないもの)を見つけて処理する
+遅延処理とし、専用の通知プッシュは持たない(掲示板を開けば気づける範囲で十分なため)。
+
+### `LabModeration`(`scripts/logic/lab_moderation.gd`, static)
+
+**自動チェックと開発側の目視確認の2段構え**(GameDesign.md 29章)。
+
+- `quick_check(name, description)`:単純な禁止語の部分一致チェック。投稿しようとした
+  時点で弾き、**通貨を消費する前に**気づけるようにする(通貨を払ってから却下・返金される
+  よりも、投稿前に直せるほうが望ましいため)
+- ここで弾けなかったもの(商標・既存カードとの酷似・趣旨のズレなど、語のリストでは
+  判定できないもの)は、承認前の`pending`状態のまま開発側の目視確認に委ねる
+
+### 登録済みアカウント限定
+
+`AccountService.is_registered(profile)`(新設。`profile.login_id`が空文字でないかを
+見るだけの薄い判定。14章の`login_id`フィールドをそのまま使い、新しいフィールドは
+持たない)を、投稿ボタン・投票ボタンの両方で見る。**未登録の間はボタンを暗くして
+無反応にする**(21章のショップで残高不足の品を無反応にするのと同じ扱い。10.8節)。
+カーソルを乗せると「投稿・投票には登録済みアカウントが必要です」を出す。
+
+### UI
+
+| クラス | 責務 |
+|---|---|
+| `LabTab`(`scripts/ui/lab_tab.gd`) | ホーム画面5つ目のタブ「つくる」。`DeckTab`/`BattleTab`/`RecordTab`/`RulesTab`と同じ`HomeTile`ベースの構成 |
+| `CardLabScreen`(`scripts/ui/card_lab_screen.gd`) | 一覧(横2列グリッド。9章の一覧レイアウト規約)+ ヘッダー主アクションに「投稿する」と「今月/過去ログ」の切り替え |
+| `LabSubmitPanel`(`scripts/ui/lab_submit_panel.gd`) | 投稿フォーム(カード名・モチーフの説明・砂時計/砂術の選択)。暗幕+`content_panel.tres`の中央パネルという既存パターン |
+| `LabProposalCard`(`scripts/ui/lab_proposal_card.gd`) | 一覧の1件。カード名・説明の冒頭・得票数・(過去ログでは)採用/不採用の印を表示し、押すとGoodボタン付きの詳細を開く |
+
+**一覧の並び替えは`CardListScreen`(9章)と同じ語彙**(ヘッダー右のボタン1つで
+「今月」⇄「過去ログ」を往復する)。**過去ログは`result`が`""`でない投稿だけを対象にし、
+`rejected`は含めない**(GameDesign.md 29章「却下された投稿は一覧に出さない」)。
+
+### 採用時の称号付与
+
+**称号にも所有の概念が無かったため、`owned_titles`(Array[String])を`players/{uid}`へ
+新設する。**10.2節の時点では称号は「駆け出し決闘者」「称号なし」の2つしか無く、
+誰でも選べる前提だったため所有配列を持っていなかった。掲示板採用による称号
+「発案者」(`proposer`)が初めて**選べる人を絞る称号**になるため、`owned_icons`と
+同じ形の配列を足し、`AccountScreen`の称号一覧は「初期の2つ + `owned_titles`」を
+選択肢とする(`owned_icons`が「初期の8種 + 購入分」を返すのと同じ組み立て。10.8節)。
+
+採用(`result = "adopted"`)が決まったら、開発側が`AccountService.unlock_free()`
+(10.15節と同じ「残高の確認・減算を行わない付与」の形。`ShopCatalog.Kind`へ`TITLE`を
+1つ追加する)でその投稿者の`owned_titles`へ`proposer`を手作業で足す。**専用の
+自動付与パイプラインは持たない**(月に最大1件しか発生しないため、手作業で十分)。
 
 ---
 
