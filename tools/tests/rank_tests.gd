@@ -18,6 +18,7 @@ func run(assert_true: Callable) -> void:
 	await _test_apply_result_star_progress(assert_true)
 	await _test_apply_result_reaches_platinum(assert_true)
 	await _test_ensure_current_season_resets_and_grants_reward(assert_true)
+	await _test_ensure_current_season_first_time_has_no_ceremony(assert_true)
 
 
 func _test_parse_and_display(assert_true: Callable) -> void:
@@ -253,9 +254,21 @@ func _test_ensure_current_season_resets_and_grants_reward(assert_true: Callable)
 	await AccountService.load_profile(client, uid)
 	var september := Time.get_unix_time_from_datetime_string("2026-09-01T12:00:00")
 
-	await RankProgress.ensure_current_season(client, uid, september)
+	var result := await RankProgress.ensure_current_season(client, uid, september)
 	assert_true.call(
 		AccountService.rank_season() == "2026-09", "the season key should move to the new month"
+	)
+	assert_true.call(
+		bool(result.get("transitioned", false)),
+		"a returning player crossing into a new season should be flagged for the ceremony"
+	)
+	assert_true.call(
+		str(result.get("peak_tier", "")) == "gold3",
+		"the ceremony result should carry the peak tier reached last season"
+	)
+	assert_true.call(
+		int(result.get("reward", 0)) == RankProgress.SEASON_REWARDS["gold"],
+		"the ceremony result should carry the amount actually paid out"
 	)
 	assert_true.call(
 		AccountService.rank_tier() == RankRules.INITIAL_TIER,
@@ -283,6 +296,32 @@ func _test_ensure_current_season_resets_and_grants_reward(assert_true: Callable)
 	assert_true.call(
 		AccountService.currency() == 100 + RankProgress.SEASON_REWARDS["gold"],
 		"calling ensure_current_season again within the same season should not pay twice"
+	)
+
+	client.queue_free()
+
+
+## 一度もランクマッチを触ったことが無いプレイヤー(前のシーズンが存在しない)は、
+## 段位こそブロンズ1へ初期化されるが、表彰演出の対象にはならない
+## (GameDesign.md 28章「月初の表彰演出」。ブロンズ1到達を祝う演出は空虚なため)。
+func _test_ensure_current_season_first_time_has_no_ceremony(assert_true: Callable) -> void:
+	AccountService.reset()
+	var setup := _make_client()
+	var client = setup["client"]
+	var uid: String = setup["uid"]
+	var september := Time.get_unix_time_from_datetime_string("2026-09-01T12:00:00")
+
+	var result := await RankProgress.ensure_current_season(client, uid, september)
+	assert_true.call(
+		AccountService.rank_season() == "2026-09",
+		"a brand new player should still be initialized into the current season"
+	)
+	assert_true.call(
+		not bool(result.get("transitioned", false)),
+		"a brand new player should not be flagged for the season ceremony"
+	)
+	assert_true.call(
+		AccountService.currency() == 0, "a brand new player should not receive a season reward"
 	)
 
 	client.queue_free()

@@ -24,6 +24,7 @@ var _empty_state: EmptyState
 var _tier_label: Label
 var _cancel_button: Button
 var _ranking_button: Button
+var _ceremony: CardSeasonCeremonyPanel
 
 
 func _ready() -> void:
@@ -66,6 +67,11 @@ func _build() -> void:
 		_content_rect.get_center().x - CANCEL_SIZE.x * 0.5, _cancel_button_top()
 	)
 
+	# 表彰式は結果パネルより手前に描かれる必要があるため最後の子にする
+	# (Godotは後の子ほど手前に描く。Architecture.md 11章)。
+	_ceremony = CardSeasonCeremonyPanel.new()
+	add_child(_ceremony)
+
 
 ## デッキ選択画面から開く。開いた時点でシーズンを確認してからキューへ参加する。
 func begin_match() -> void:
@@ -75,8 +81,12 @@ func begin_match() -> void:
 	_set_status("マッチング中")
 	if not await _sign_in_or_fail():
 		return
-	await RankProgress.ensure_current_season(NetSession.client, NetSession.auth.uid)
+	var season_result := await RankProgress.ensure_current_season(
+		NetSession.client, NetSession.auth.uid
+	)
 	_refresh_tier_label()
+	if bool(season_result.get("transitioned", false)):
+		_ceremony.open(season_result)
 	_queue = RankedMatchmakingQueue.new(NetSession.client, NetSession.auth)
 	add_child(_queue)
 	_queue.matched.connect(_on_matched)

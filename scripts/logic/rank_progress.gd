@@ -13,13 +13,13 @@ const RETRY := 3
 const MIN_MOVES := 10
 const JST_OFFSET_HOURS := 9
 
-## 月末報酬(GameDesign.md 28章「具体的な額・品目は次のステップで決める」に対する暫定値)。
-## 到達した最高段位の帯に応じた砂金。正式な額は別途検討する(docs/TODO.md 4.5節)。
+## 月末報酬(GameDesign.md 28章)。到達した最高段位の帯に応じた砂金
+## (2026-09-15、ユーザー判断で確定)。
 const SEASON_REWARDS := {
-	"bronze": 0,
-	"silver": 100,
-	"gold": 300,
-	"platinum": 800,
+	"bronze": 100,
+	"silver": 300,
+	"gold": 800,
+	"platinum": 3000,
 }
 
 
@@ -33,23 +33,33 @@ static func current_season_key(at_unix_time: float = -1.0) -> String:
 
 ## ランクマッチへ入る直前・ランク画面を開いた直後に呼ぶ。シーズンが変わっていれば
 ## 旧シーズンの月末報酬(未受領なら)を付与してから、段位を初期化する。
+##
+## 戻り値は月初の表彰演出(GameDesign.md 28章)のための情報:
+## `{"transitioned": bool, "peak_tier": String, "reward": int}`。**`transitioned`が
+## trueになるのは、既にシーズンを経験したことがあるプレイヤーが次のシーズンへ
+## 切り替わったときだけ**で、このゲームを初めて触る(前のシーズンが存在しない)
+## プレイヤーへ「ブロンズに到達しました」のような空虚な表彰を出さないための区別。
 static func ensure_current_season(
 	client: FirestoreClient, uid: String, at_unix_time: float = -1.0
-) -> void:
+) -> Dictionary:
+	var none := {"transitioned": false, "peak_tier": "", "reward": 0}
 	if uid == "" or client == null:
-		return
+		return none
 	var current := current_season_key(at_unix_time)
 	var previous := AccountService.rank_season()
 	if previous == current:
-		return
-	if previous != "" and AccountService.rank_reward_claimed_season() != previous:
-		await _grant_season_reward(client, uid, previous, AccountService.rank_peak_tier())
+		return none
+	var is_first_season := previous.is_empty()
+	var peak_tier := AccountService.rank_peak_tier()
+	var reward := 0
+	if not is_first_season and AccountService.rank_reward_claimed_season() != previous:
+		reward = await _grant_season_reward(client, uid, previous, peak_tier)
 	for _attempt in range(RETRY):
 		var doc: Dictionary = await client.get_document_meta(AccountService.path(uid))
 		var fields: Dictionary = doc.get("fields", {})
 		if str(fields.get("rank_season", "")) == current:
 			AccountService.apply_local_fields(fields)
-			return
+			return {"transitioned": not is_first_season, "peak_tier": peak_tier, "reward": reward}
 		var data := {
 			"rank_season": current,
 			"rank_tier": RankRules.INITIAL_TIER,
@@ -63,7 +73,8 @@ static func ensure_current_season(
 		)
 		if ok:
 			AccountService.apply_local_fields(data)
-			return
+			return {"transitioned": not is_first_season, "peak_tier": peak_tier, "reward": reward}
+	return none
 
 
 ## 対局の結果を段位へ反映する(GameDesign.md 28章)。10手未満の対局は数えない
@@ -117,12 +128,14 @@ static func apply_result(
 			return
 
 
+## 実際に加算できた額を返す(失敗・対象外なら0)。呼び出し側が表彰演出へ表示する額を
+## 知るために使う。
 static func _grant_season_reward(
 	client: FirestoreClient, uid: String, old_season: String, peak_tier: String
-) -> void:
+) -> int:
 	var amount := int(SEASON_REWARDS.get(RankRules.bracket_of(peak_tier), 0))
 	if amount <= 0:
-		return
+		return 0
 	for _attempt in range(RETRY):
 		var doc: Dictionary = await client.get_document_meta(AccountService.path(uid))
 		var fields: Dictionary = doc.get("fields", {})
@@ -136,7 +149,8 @@ static func _grant_season_reward(
 		)
 		if ok:
 			AccountService.apply_local_fields(data)
-			return
+			return amount
+	return 0
 
 
 static func _precondition(doc: Dictionary) -> Dictionary:

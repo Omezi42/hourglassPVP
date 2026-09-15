@@ -24,6 +24,7 @@ var _own: VBoxContainer
 var _list: VBoxContainer
 var _empty: EmptyState
 var _fetching := false
+var _ceremony: CardSeasonCeremonyPanel
 
 
 func _ready() -> void:
@@ -32,7 +33,11 @@ func _ready() -> void:
 
 func open() -> void:
 	if NetSession.client != null and NetSession.auth != null:
-		await RankProgress.ensure_current_season(NetSession.client, NetSession.auth.uid)
+		var season_result := await RankProgress.ensure_current_season(
+			NetSession.client, NetSession.auth.uid
+		)
+		if bool(season_result.get("transitioned", false)):
+			_ceremony.open(season_result)
 	_refresh_own()
 	_fetch_leaderboard()
 
@@ -54,6 +59,9 @@ func _build() -> void:
 	_empty.size = LIST_RECT.size
 	_empty.visible = false
 	add_child(_empty)
+
+	_ceremony = CardSeasonCeremonyPanel.new()
+	add_child(_ceremony)
 
 
 func _refresh_own() -> void:
