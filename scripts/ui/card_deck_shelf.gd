@@ -21,6 +21,8 @@ extends Control
 signal card_hovered(card: CardData)
 signal hover_left
 signal card_removed(card: CardData)
+## 在庫棚のカードをドラッグしてこの棚へ落とした(GameDesign.md 9章「手触り」)。
+signal card_add_requested(card: CardData)
 
 ## 既定の横の枠数(工房)。縦は「デッキの枚数 ÷ これ」で決まる(30枚なら5段)。
 const DEFAULT_COLUMNS := 6
@@ -40,6 +42,9 @@ const NAME_COLOR := Color(0.88, 0.82, 0.70)
 const SOCKET_DARK := Color(0.045, 0.030, 0.020)
 const BACK_TOP := Color(0.10, 0.068, 0.048)
 const BACK_BOTTOM := Color(0.16, 0.105, 0.072)
+## 30枚に達した瞬間だけ棚全体へ重ねる淡い光の、強さと消えるまでの尺(GameDesign.md 9章)。
+const GLOW_DURATION := 0.6
+const GLOW_ALPHA := 0.35
 
 ## 表示するデッキ(CardData の配列。同名は重複して入る)。
 var deck: Array = []:
@@ -64,6 +69,12 @@ var _slots: Array = []
 ## 押せる場所。1要素 = {"rect":, "index":}
 var _hits: Array[Dictionary] = []
 var _hover_index := -1
+## 30枚到達の光り(GameDesign.md 9章)。0で何も描かない。
+var _glow_amount := 0.0
+var _glow_tween: Tween
+## 直前の `_rebuild()` 時点で30枚ちょうどだったか。**達した回だけ**光らせるため、
+## 満杯のまま毎回光らないよう変化のタイミングを覚えておく。
+var _was_full := false
 
 
 func _ready() -> void:
@@ -90,12 +101,41 @@ func _rebuild() -> void:
 	_slots = deck.duplicate()
 	_slots.sort_custom(CardLibrary.compare_by_cost)
 	_hover_index = -1
+	var full: bool = _slots.size() == _slot_count()
+	if full and not _was_full:
+		_start_glow()
+	_was_full = full
 	queue_redraw()
 
 
 ## 枠の総数。**デッキの枚数に追従させる**(2章の枚数を動かしても棚が食い違わない)。
 static func _slot_count() -> int:
 	return MatchState.DECK_SIZE
+
+
+## 30枚ちょうどになった瞬間だけ呼ぶ(GameDesign.md 9章)。保存ボタンの活性化以外にも、
+## 条件を満たしたことを盤面そのもので伝える。
+func _start_glow() -> void:
+	_glow_amount = 1.0
+	if _glow_tween != null and _glow_tween.is_valid():
+		_glow_tween.kill()
+	_glow_tween = create_tween()
+	_glow_tween.tween_method(_set_glow_amount, 1.0, 0.0, GLOW_DURATION)
+
+
+func _set_glow_amount(value: float) -> void:
+	_glow_amount = value
+	queue_redraw()
+
+
+## 指定したカードがいま収まっている枠のグローバル座標の矩形。見つからなければ
+## `Rect2()`(サイズ0)を返す。飛翔演出(`CardFlightFx`)の着地点/出発点を求めるために使う。
+func global_rect_for_card(card: CardData) -> Rect2:
+	var index := _slots.find(card)
+	if index < 0:
+		return Rect2()
+	var local := _slot_rect(index)
+	return Rect2(get_global_rect().position + local.position, local.size)
 
 
 func _rows() -> int:
@@ -125,6 +165,10 @@ func _draw() -> void:
 		_draw_slot(index, cell, Vector2(art_w, art_h))
 	if _slots.is_empty():
 		_draw_hint()
+	if _glow_amount > 0.0:
+		var glow := UiPalette.GLOW_AMBER
+		glow.a = _glow_amount * GLOW_ALPHA
+		draw_rect(rect, glow, true)
 
 
 ## 棚板。**厚みのある帯として段ごとに渡す**。1本線だと段が分かれて見えず、
@@ -152,6 +196,16 @@ func _draw_ledge(row: int, cell: Vector2) -> void:
 			Color(0, 0, 0, 0.26 * (1.0 - float(i) / 5.0)),
 			1.0
 		)
+
+
+## 1枠ぶんの矩形(ローカル座標)。`_draw()` が最新の `size` で毎回描き直すため、
+## `_draw_slot()` の当たり判定と `global_rect_for_card()` の着地点計算の両方がこれを通る。
+func _slot_rect(index: int) -> Rect2:
+	var rows := _rows()
+	var cell := Vector2(size.x / float(columns), size.y / float(rows))
+	var col: int = index % columns
+	var row: int = index / columns
+	return Rect2(Vector2(col * cell.x, row * cell.y), cell)
 
 
 func _draw_slot(index: int, cell: Vector2, art: Vector2) -> void:
@@ -367,3 +421,12 @@ func _index_at(at: Vector2) -> int:
 		if (hit["rect"] as Rect2).has_point(at):
 			return int(hit["index"])
 	return -1
+
+
+## 在庫棚(`WorkshopStockItem`)からのドラッグだけを受ける(GameDesign.md 9章)。
+func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
+	return not readonly and data is Dictionary and (data as Dictionary).has("stock_card")
+
+
+func _drop_data(_at_position: Vector2, data: Variant) -> void:
+	card_add_requested.emit((data as Dictionary)["stock_card"])

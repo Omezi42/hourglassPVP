@@ -20,6 +20,9 @@ const KIND_CHIP_WIDTH := 88.0
 const KIND_ALL := 0
 const KIND_UNIT := 1
 const KIND_SPELL := 2
+## 押したボタンの位置から膨らんで開く尺(GameDesign.md 9章「手触り」)。
+const BULGE_DURATION := 0.22
+const BULGE_MIN_SCALE := 0.12
 
 ## 0 は「すべて」。それ以外はそのコストだけを通す。
 var _cost := 0
@@ -32,6 +35,8 @@ var _search_input: LineEdit
 var _cost_buttons: Dictionary = {}
 var _keyword_buttons: Dictionary = {}
 var _kind_buttons: Dictionary = {}
+var _panel: PanelContainer
+var _bulge_tween: Tween
 
 
 func _ready() -> void:
@@ -41,8 +46,12 @@ func _ready() -> void:
 	_build()
 
 
-func open() -> void:
+## `from_rect` を渡すと、そのグローバル矩形(押したボタン)の位置から膨らんで開く
+## (GameDesign.md 9章)。省略すればいままでどおり即座に表示するだけ。
+func open(from_rect: Rect2 = Rect2()) -> void:
 	visible = true
+	if from_rect.size != Vector2.ZERO:
+		_bulge_from(from_rect)
 
 
 func close() -> void:
@@ -110,6 +119,7 @@ func _build() -> void:
 	if style != null:
 		panel.add_theme_stylebox_override("panel", style)
 	center.add_child(panel)
+	_panel = panel
 
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 14)
@@ -268,6 +278,41 @@ func _mark_selected(buttons: Dictionary, selected: int) -> void:
 func _on_query_changed(text: String) -> void:
 	_query = text.strip_edges()
 	changed.emit()
+
+
+## パネルの中心を `button_global_rect` の中心へ合わせてから、通常の位置・大きさへ
+## Tweenで戻す(GameDesign.md 9章「絞り込みモーダルは、押したボタンの位置から膨らんで開く」)。
+## `center`(CenterContainer)は `self` に対して原点(0,0)のまま敷いているため、
+## `self` のグローバル逆変換がそのまま `_panel` の親の局所座標になる。
+func _bulge_from(button_global_rect: Rect2) -> void:
+	if _panel == null or _panel.size == Vector2.ZERO:
+		return
+	var pivot := _panel.size * 0.5
+	_panel.pivot_offset = pivot
+	var target_position := _panel.position
+	var inverse := get_global_transform().affine_inverse()
+	var button_center: Vector2 = inverse * button_global_rect.get_center()
+	var start_scale := (button_global_rect.size / _panel.size).clamp(
+		Vector2(BULGE_MIN_SCALE, BULGE_MIN_SCALE), Vector2.ONE
+	)
+	_panel.scale = start_scale
+	_panel.position = button_center - pivot
+	if _bulge_tween != null and _bulge_tween.is_valid():
+		_bulge_tween.kill()
+	_bulge_tween = create_tween()
+	_bulge_tween.set_parallel(true)
+	(
+		_bulge_tween
+		. tween_property(_panel, "scale", Vector2.ONE, BULGE_DURATION)
+		. set_trans(Tween.TRANS_BACK)
+		. set_ease(Tween.EASE_OUT)
+	)
+	(
+		_bulge_tween
+		. tween_property(_panel, "position", target_position, BULGE_DURATION)
+		. set_trans(Tween.TRANS_SINE)
+		. set_ease(Tween.EASE_OUT)
+	)
 
 
 func _on_dim_input(event: InputEvent) -> void:

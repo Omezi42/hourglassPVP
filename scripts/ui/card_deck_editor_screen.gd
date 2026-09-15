@@ -39,6 +39,8 @@ const DETAIL_SIZE := CardDetailPanel.COMPACT_SIZE
 const DETAIL_BOUNDS := Rect2(16, 16, SCREEN_WIDTH - 32, 688)
 ## カードから外れてから詳細を消すまでの猶予。隣のカードへ移る途中で点滅させないため。
 const DETAIL_HIDE_DELAY := 0.15
+## 一覧⇄棚の飛翔演出の尺(GameDesign.md 9章「手触り」)。
+const FLIGHT_DURATION := 0.32
 
 var _save_button: Button
 var _filter: CardDeckFilter
@@ -156,7 +158,8 @@ func _build_grid() -> void:
 	toolbar.add_child(_count_label)
 
 	_filter_button = CodedButton.make("絞り込み", Vector2(130, 36))
-	_filter_button.pressed.connect(func() -> void: _filter.open())
+	# **押したボタンの位置から膨らんで開く**(GameDesign.md 9章「手触り」)。
+	_filter_button.pressed.connect(func() -> void: _filter.open(_filter_button.get_global_rect()))
 	toolbar.add_child(_filter_button)
 
 	var scroll := ScrollContainer.new()
@@ -218,6 +221,7 @@ func _build_side() -> void:
 	_shelf.card_hovered.connect(_on_shelf_hovered)
 	_shelf.hover_left.connect(_on_hover_left)
 	_shelf.card_removed.connect(_on_band_remove)
+	_shelf.card_add_requested.connect(_on_card_pressed)
 	column.add_child(_shelf)
 
 
@@ -343,15 +347,39 @@ func _add_card(card: CardData) -> void:
 	# 一覧側は暗く表示して押させない想定だが、ここでも弾いておく。
 	if not AccountService.owns_card_set(card.set_id):
 		return
+	# **飛翔の出発点は配列操作の前に控える**(押された一覧のカードの位置)。
+	var from_rect := _view_rect(card)
 	_deck.append(card)
 	_refresh()
+	_fly_card(card, from_rect, _shelf.global_rect_for_card(card))
 
 
 func _on_band_remove(card: CardData) -> void:
 	var index := _deck.find(card)
-	if index >= 0:
-		_deck.remove_at(index)
-		_refresh()
+	if index < 0:
+		return
+	# **飛翔の出発点(棚の枠)は配列操作の前に控える**(取り除くと枠から消えるため)。
+	var from_rect := _shelf.global_rect_for_card(card)
+	_deck.remove_at(index)
+	_refresh()
+	_fly_card(card, from_rect, _view_rect(card))
+
+
+## 一覧⇄棚の飛び(GameDesign.md 9章)。**演出の完了を待たず**、配列操作は既に済んだ
+## 後に見た目だけを追いかけさせる。矩形のどちらかが取れなかった場合は何も飛ばさない。
+func _fly_card(card: CardData, from_rect: Rect2, to_rect: Rect2) -> void:
+	if from_rect.size == Vector2.ZERO or to_rect.size == Vector2.ZERO:
+		return
+	var texture: Texture2D = card.emblem if card.is_spell else card.icon_upright
+	CardFlightFx.fly(self, from_rect, to_rect, FLIGHT_DURATION, texture)
+
+
+## 一覧側でそのカードが表示されている矩形(グローバル座標)。見つからなければ `Rect2()`。
+func _view_rect(card: CardData) -> Rect2:
+	var index := _pool.find(card)
+	if index < 0:
+		return Rect2()
+	return _card_views[index].get_global_rect()
 
 
 func _on_code_loaded(deck: Array) -> void:

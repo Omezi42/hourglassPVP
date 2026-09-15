@@ -18,6 +18,9 @@ const TOTAL_TOP := Color(1.0, 0.84, 0.46)
 const TOTAL_BOTTOM := Color(0.72, 0.44, 0.12)
 const SPELL_TOP := Color(0.72, 0.80, 1.0)
 const SPELL_BOTTOM := Color(0.28, 0.36, 0.68)
+## 「2/2」バッジの跳ね(GameDesign.md 9章)。枚数が変わった瞬間に1.0へ立てTweenで戻す。
+const PUNCH_DURATION := 0.25
+const PUNCH_SCALE := 0.3
 
 var card: CardData
 ## デッキへ入れている枚数。上限に達していたら暗くして「2/2」を出す。
@@ -29,6 +32,9 @@ var enabled := true
 
 var _font: Font
 var _press := PressTracker.new()
+var _has_shown := false
+var _count_punch := 0.0
+var _punch_tween: Tween
 
 
 func _ready() -> void:
@@ -40,16 +46,51 @@ func _ready() -> void:
 
 
 func show_card(new_card: CardData, new_count: int, new_limit: int, can_add := true) -> void:
+	# **初回表示は跳ねさせない。**デッキを開いた瞬間、既存の枚数がすべて0から
+	# 実数へ変わったように見えてしまうため、2回目以降の変化だけを合図とする。
+	var count_changed := _has_shown and new_card == card and new_count != count
 	card = new_card
 	count = new_count
 	limit = new_limit
 	enabled = can_add
+	_has_shown = true
+	if count_changed:
+		_start_punch()
+	queue_redraw()
+
+
+func _start_punch() -> void:
+	_count_punch = 1.0
+	if _punch_tween != null and _punch_tween.is_valid():
+		_punch_tween.kill()
+	_punch_tween = create_tween()
+	_punch_tween.tween_method(_set_count_punch, 1.0, 0.0, PUNCH_DURATION)
+
+
+func _set_count_punch(value: float) -> void:
+	_count_punch = value
 	queue_redraw()
 
 
 func _gui_input(event: InputEvent) -> void:
 	if _press.feed(event, size) == PressTracker.Result.CONFIRMED:
 		pressed.emit(card)
+
+
+## デッキ編集の棚(`CardDeckShelf`)へドラッグして加えられるようにする(GameDesign.md 9章)。
+## 傾きの物理は対局と同じ `CardDragPreview` をそのまま使う(Architecture.md 10.10.2節)。
+func _get_drag_data(_at_position: Vector2) -> Variant:
+	if card == null or not enabled:
+		return null
+	set_drag_preview(_make_drag_preview())
+	return {"stock_card": card}
+
+
+func _make_drag_preview() -> Control:
+	var texture: Texture2D = card.emblem if card.is_spell else card.icon_upright
+	var preview := CardDragPreview.new()
+	preview.setup(texture, _art_rect().size)
+	return preview
 
 
 func _draw() -> void:
@@ -93,7 +134,9 @@ func _draw() -> void:
 ## 2枚入れ終えた印。**上端の中央へ置く**——コストとの総量のあいだが唯一空いている
 ## 場所で、絵の下端は紋章の印と名前が使っている(以前ここへ出して重なった)。
 func _draw_maxed() -> void:
-	var rect := Rect2(size.x * 0.5 - 25.0, 5.0, 50.0, 24.0)
+	var base_rect := Rect2(size.x * 0.5 - 25.0, 5.0, 50.0, 24.0)
+	var boost: float = 1.0 + _count_punch * PUNCH_SCALE
+	var rect := Rect2(base_rect.get_center() - base_rect.size * 0.5 * boost, base_rect.size * boost)
 	var points := UiPaint.rounded_rect_points_uniform(rect, 6.0, 5)
 	UiPaint.fill_gradient_polygon(
 		get_canvas_item(),
