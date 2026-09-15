@@ -25,6 +25,10 @@ var shop_screen: CardShopScreen
 var card_room_screen: CardRoomScreen
 ## ランダムマッチの専用画面(同章・Architecture.md 6.6節)。
 var card_random_match_screen: CardRandomMatchScreen
+## ランクマッチの専用画面(GameDesign.md 28章)。
+var card_ranked_match_screen: CardRankedMatchScreen
+## ランクマッチの段位・ランキング一覧(同章)。
+var card_rank_screen: CardRankScreen
 ## CPU戦の思考レベル選択モーダル(GameDesign.md 13章)。
 var card_cpu_difficulty_picker: CardCpuDifficultyPicker
 
@@ -142,6 +146,20 @@ func _ready() -> void:
 	card_random_match_screen.back_pressed.connect(func() -> void: _show_only(home_screen, true))
 	card_random_match_screen.matched.connect(_on_online_match_found)
 	_screens.append(card_random_match_screen)
+	card_ranked_match_screen = CardRankedMatchScreen.new()
+	card_ranked_match_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
+	card_ranked_match_screen.visible = false
+	add_child(card_ranked_match_screen)
+	card_ranked_match_screen.back_pressed.connect(func() -> void: _show_only(home_screen, true))
+	card_ranked_match_screen.matched.connect(_on_ranked_match_found)
+	card_ranked_match_screen.ranking_requested.connect(_on_rank_screen_requested)
+	_screens.append(card_ranked_match_screen)
+	card_rank_screen = CardRankScreen.new()
+	card_rank_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
+	card_rank_screen.visible = false
+	add_child(card_rank_screen)
+	card_rank_screen.back_pressed.connect(func() -> void: _show_only(home_screen, true))
+	_screens.append(card_rank_screen)
 	puzzle_picker_screen = CardPuzzlePickerScreen.new()
 	puzzle_picker_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
 	puzzle_picker_screen.visible = false
@@ -189,6 +207,7 @@ func _ready() -> void:
 	home_screen.replay_list_requested.connect(_on_replay_list_requested)
 	home_screen.cpu_match_requested.connect(_on_cpu_match_deck_requested)
 	home_screen.random_match_deck_requested.connect(_on_random_match_deck_requested)
+	home_screen.ranked_match_deck_requested.connect(_on_ranked_match_deck_requested)
 	home_screen.room_match_requested.connect(_on_room_match_requested)
 	replay_list_screen.back_pressed.connect(func() -> void: _show_only(home_screen, true))
 	replay_list_screen.replay_selected.connect(_on_replay_selected)
@@ -249,6 +268,7 @@ func _on_match_back() -> void:
 	home_screen.reset_battle_tab()
 	card_room_screen.reset_after_match()
 	card_random_match_screen.reset_after_match()
+	card_ranked_match_screen.reset_after_match()
 
 
 func _on_account_requested(from_title: bool) -> void:
@@ -320,6 +340,23 @@ func _on_random_match_deck_requested() -> void:
 func _begin_random_match() -> void:
 	_show_only(card_random_match_screen)
 	card_random_match_screen.begin_match()
+
+
+## ランクマッチ(GameDesign.md 28章)。ランダムマッチと同じ形で、デッキ選択画面を
+## 終えたら専用画面へ入り、その画面がキューへの参加まで行う。
+func _on_ranked_match_deck_requested() -> void:
+	_request_battle(func() -> void: _begin_ranked_match())
+
+
+func _begin_ranked_match() -> void:
+	_show_only(card_ranked_match_screen)
+	card_ranked_match_screen.begin_match()
+
+
+## ランクマッチの待機画面から、段位・ランキング一覧を開く。
+func _on_rank_screen_requested() -> void:
+	_show_only(card_rank_screen)
+	card_rank_screen.open()
 
 
 ## ルームマッチは専用画面へ直行する。**共通のデッキ選択画面を先に挟まない**
@@ -430,6 +467,23 @@ func _on_screen_guide_requested() -> void:
 func _on_online_match_found(match_id: String, my_side: int, opponent_uid: String) -> void:
 	card_match_screen.start_online_match(
 		CardDeckSave.selected_deck(), NetSession.client, match_id, my_side, false, opponent_uid
+	)
+	_match_return_screen = home_screen
+	_show_only(card_match_screen)
+
+
+## ランクマッチ(GameDesign.md 28章)。オンライン対戦の経路(配置フェーズ無し)は
+## フリーマッチと同じで、`is_ranked`だけを立てて段位を対局結果に反映させる。
+func _on_ranked_match_found(match_id: String, my_side: int, opponent_uid: String) -> void:
+	card_match_screen.start_online_match(
+		CardDeckSave.selected_deck(),
+		NetSession.client,
+		match_id,
+		my_side,
+		false,
+		opponent_uid,
+		true,
+		true
 	)
 	_match_return_screen = home_screen
 	_show_only(card_match_screen)

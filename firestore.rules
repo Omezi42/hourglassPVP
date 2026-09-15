@@ -33,6 +33,11 @@ service cloud.firestore {
       allow read, write: if signedIn();
     }
 
+    // ランクマッチの待合室(GameDesign.md 28章)。フリーマッチのプールとは別に持つ。
+    match /ranked_queue/{uid} {
+      allow read, write: if signedIn();
+    }
+
     // ルームコード対戦の部屋。ドキュメントIDは4桁の数字のルームコード。
     match /rooms/{code} {
       allow read, write: if signedIn();

@@ -183,7 +183,10 @@ func _refresh_own() -> void:
 	_summary.add_child(_make_line("通算", 26))
 	_summary.add_child(_make_row("すべて", _summary_cells(all)))
 	for kind in [
-		CurrencyRules.MatchKind.RANDOM, CurrencyRules.MatchKind.ROOM, CurrencyRules.MatchKind.CPU
+		CurrencyRules.MatchKind.RANKED,
+		CurrencyRules.MatchKind.RANDOM,
+		CurrencyRules.MatchKind.ROOM,
+		CurrencyRules.MatchKind.CPU,
 	]:
 		var totals := MatchStats.totals(uid, kind)
 		if int(totals["games"]) == 0:
@@ -247,6 +250,8 @@ func _deck_names() -> Dictionary:
 
 func _kind_name(kind: int) -> String:
 	match kind:
+		CurrencyRules.MatchKind.RANKED:
+			return "ランクマッチ"
 		CurrencyRules.MatchKind.RANDOM:
 			return "ランダムマッチ"
 		CurrencyRules.MatchKind.ROOM:

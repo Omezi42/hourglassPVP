@@ -17,6 +17,7 @@ const MatchFxTests = preload("res://tools/tests/match_fx_tests.gd")
 const UiPaintTests = preload("res://tools/tests/ui_paint_tests.gd")
 const CpuDifficultyTests = preload("res://tools/tests/cpu_difficulty_tests.gd")
 const SoloModeTests = preload("res://tools/tests/solo_mode_tests.gd")
+const RankTests = preload("res://tools/tests/rank_tests.gd")
 
 var _failures := 0
 
@@ -39,6 +40,7 @@ func _run() -> void:
 	UiPaintTests.new().run(_assert_true)
 	CpuDifficultyTests.new().run(_assert_true)
 	SoloModeTests.new().run(_assert_true)
+	RankTests.new().run(_assert_true)
 	SoundSettingsTests.new().run(_assert_true)
 	OnlineTests.new().run(_assert_true)
 	AccountTests.new().run(_assert_true)

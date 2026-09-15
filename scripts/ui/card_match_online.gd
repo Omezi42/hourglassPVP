@@ -21,13 +21,16 @@ func start(
 	p_my_side: int,
 	is_room: bool = false,
 	opponent_uid: String = "",
-	time_limit: bool = true
+	time_limit: bool = true,
+	is_ranked: bool = false
 ) -> void:
 	_screen._reset_for_new_match()
 	_screen._cpu = null
 	_screen._interactive = true
 	_screen._match_kind = (
-		CurrencyRules.MatchKind.ROOM if is_room else CurrencyRules.MatchKind.RANDOM
+		CurrencyRules.MatchKind.RANKED
+		if is_ranked
+		else (CurrencyRules.MatchKind.ROOM if is_room else CurrencyRules.MatchKind.RANDOM)
 	)
 	_screen.my_side = p_my_side
 	_screen._own_deck = deck_self

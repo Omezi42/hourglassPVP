@@ -17,6 +17,9 @@ extends Control
 
 signal resume_requested(record: Dictionary)
 signal random_match_deck_requested
+## ランクマッチ(GameDesign.md 28章)。ランダムマッチと同じく、デッキ選択画面を
+## 終えたら専用画面(`CardRankedMatchScreen`)へ入る。
+signal ranked_match_deck_requested
 ## ルームマッチの専用画面を開く。デッキ選択もその画面の中で行うため、
 ## 他の導線と違ってここでデッキ選択画面を挟まない(GameDesign.md 9章)。
 signal room_match_requested
@@ -42,12 +45,14 @@ const SOLO_FRAME_H := 186.0
 const FRAME_GAP := 18.0
 const TILE_TOP := 46.0
 const TILE_PAD := 20.0
-const MAIN_TILE_SIZE := Vector2(600, 100)
-const SIDE_TILE_SIZE := Vector2(340, 100)
+## ランクマッチを足したため、以前の1主+1副(600/340)から1主+2副(400/260)へ改める。
+## いずれも `TILE_PAD` を挟んで並べると枠の内寸(1000px)にちょうど収まる。
+const MAIN_TILE_SIZE := Vector2(400, 100)
+const SIDE_TILE_SIZE := Vector2(260, 100)
 const SOLO_TILE_SIZE := Vector2(306, 114)
 const SOLO_TILE_GAP := 320.0
-const MAIN_FONT_SIZE := 30
-const SIDE_FONT_SIZE := 24
+const MAIN_FONT_SIZE := 26
+const SIDE_FONT_SIZE := 20
 const SOLO_FONT_SIZE := 22
 
 var _busy := false
@@ -59,6 +64,7 @@ var _resume_band: ResumeBand
 var _online_frame: HomeFrame
 var _solo_frame: HomeFrame
 var _random_tile: HomeTile
+var _ranked_tile: HomeTile
 var _room_tile: HomeTile
 var _cpu_tile: HomeTile
 var _solo_tiles: Array[HomeTile] = []
@@ -99,6 +105,9 @@ func _build() -> void:
 	)
 	_random_tile.pressed.connect(func() -> void: random_match_deck_requested.emit())
 	add_child(_random_tile)
+	_ranked_tile = HomeTile.make("ランクマッチ", "段位を賭けて戦う", "crown", SIDE_TILE_SIZE, SIDE_FONT_SIZE)
+	_ranked_tile.pressed.connect(func() -> void: ranked_match_deck_requested.emit())
+	add_child(_ranked_tile)
 	_room_tile = HomeTile.make("ルームマッチ", "合言葉で友達と", "shield", SIDE_TILE_SIZE, SIDE_FONT_SIZE)
 	_room_tile.pressed.connect(func() -> void: room_match_requested.emit())
 	add_child(_room_tile)
@@ -139,8 +148,12 @@ func _layout() -> void:
 		top = origin + RESUME_RECT.size.y + RESUME_GAP
 	_online_frame.position = Vector2(FRAME_X, top)
 	_random_tile.position = _online_frame.position + Vector2(TILE_PAD, TILE_TOP)
+	_ranked_tile.position = (
+		_online_frame.position + Vector2(TILE_PAD * 2 + MAIN_TILE_SIZE.x, TILE_TOP)
+	)
 	_room_tile.position = (
-		_online_frame.position + Vector2(TILE_PAD + MAIN_TILE_SIZE.x + TILE_PAD, TILE_TOP)
+		_online_frame.position
+		+ Vector2(TILE_PAD * 3 + MAIN_TILE_SIZE.x + SIDE_TILE_SIZE.x, TILE_TOP)
 	)
 	var solo_top: float = top + ONLINE_FRAME_H + FRAME_GAP
 	_solo_frame.position = Vector2(FRAME_X, solo_top)
@@ -169,6 +182,7 @@ func refresh() -> void:
 	# 未保存でもプリセットの「基本」が返るため、常に対戦できる(GameDesign.md 18章)。
 	var ready_to_battle: bool = CardDeckSave.selected_deck().size() == MatchState.DECK_SIZE
 	_random_tile.disabled = not ready_to_battle
+	_ranked_tile.disabled = not ready_to_battle
 	_room_tile.disabled = not ready_to_battle
 	_cpu_tile.disabled = not ready_to_battle
 	_set_status("" if ready_to_battle else "デッキを%d枚にしてください" % MatchState.DECK_SIZE)
@@ -200,6 +214,7 @@ func _on_resume_pressed() -> void:
 func _set_busy(busy: bool) -> void:
 	_busy = busy
 	_random_tile.disabled = busy
+	_ranked_tile.disabled = busy
 	_room_tile.disabled = busy
 	_cpu_tile.disabled = busy
 	if busy:

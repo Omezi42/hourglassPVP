@@ -142,6 +142,46 @@ func query_field_equals(collection: String, field: String, value: Variant, limit
 	)
 
 
+## players コレクションから、現在シーズンでプラチナに到達しているプレイヤーを
+## レート降順にlimit件クエリする(ランキング画面用。GameDesign.md 28章)。
+## season + tier の複合フィルタ + orderBy を要するため、Firestore側に複合
+## インデックスの作成が必要になる場合がある(Architecture.md 10.16節)。
+func query_ranked_leaderboard(collection: String, season: String, limit: int) -> Array:
+	return await _run_structured_query(
+		{
+			"from": [{"collectionId": collection}],
+			"where":
+			{
+				"compositeFilter":
+				{
+					"op": "AND",
+					"filters":
+					[
+						{
+							"fieldFilter":
+							{
+								"field": {"fieldPath": "rank_season"},
+								"op": "EQUAL",
+								"value": {"stringValue": season}
+							}
+						},
+						{
+							"fieldFilter":
+							{
+								"field": {"fieldPath": "rank_tier"},
+								"op": "EQUAL",
+								"value": {"stringValue": "platinum"}
+							}
+						}
+					]
+				}
+			},
+			"orderBy": [{"field": {"fieldPath": "rank_rating"}, "direction": "DESCENDING"}],
+			"limit": limit
+		}
+	)
+
+
 func _run_structured_query(structured_query: Dictionary) -> Array:
 	var result: Array = await _post_raw(
 		_base_url() + ":runQuery", {"structuredQuery": structured_query}

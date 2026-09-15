@@ -52,6 +52,7 @@
 | 切断からの復帰 | **保険の機能であり、動かなくても対局は成立する**ため優先しない |
 | 先手・後手のランダム化 | 何度か対局を成立させ、部屋を作った側・先に待っていた側が毎回同じ側にならないこと。**双方の画面で先手・後手が食い違わないこと**(食い違うと互いのデッキを待ち続けて始まらない) |
 | 対局の記録と分析 | 1局通して `match_records` が1件だけ残り、`stats/global` が1増えること |
+| ランクマッチの成立(2026-09-15実装) | 双方の画面でランクマッチ画面から対局画面へ遷移すること、対局後に両者の段位(★またはレート)が動くこと、`CardRankScreen`のランキングにプラチナ到達者が並ぶこと |
 
 ### Discord側で確認するもの
 
@@ -202,24 +203,31 @@
 掲示板→公式大会と決めてある。**掲示板・公式大会はまだ仕様を書いていないため、
 ランクマッチが一段落してから改めてGameDesign.mdへの追記案を出す。
 
-### ランクマッチ(実装タスク)
+### ランクマッチ(実装タスク・2026-09-15実装)
 
-- [ ] `RankRules`(段位表・星の必要数・レートの増減表)
-- [ ] `players/{uid}` へ `rank_season` / `rank_tier` / `rank_stars` / `rank_rating` /
-      `rank_peak_tier` / `rank_reward_claimed_season` を追加
-- [ ] `RankProgress.ensure_current_season()`(遅延シーズンリセット・月末報酬の付与)
-- [ ] `RankProgress.apply_result()`(星取り制の昇格 / プラチナのレート変動 /
-      10手未満の対局を対象外にする不正対策)
-- [ ] `RankedMatchmakingQueue` + `CardRankedMatchScreen`(`CardRandomMatchScreen`の複製に近い)
-- [ ] `MatchKind.RANKED` を追加し、`CardMatchOutcome` から `RankProgress.apply_result()` を呼ぶ
-- [ ] `CardRankScreen`(自分の段位表示 + ランキング一覧)。`たたかう`タブへの入口追加
-- [ ] 月末報酬の具体的な額・品目を決める(GameDesign.md 28章に「次のステップで決める」と
-      書いた未確定事項)
+- [x] ~~`RankRules`(段位表・星の必要数・レートの増減表)~~ → `scripts/logic/rank_rules.gd`。
+      通信を持たない純粋ロジックとして実装し、`tools/tests/rank_tests.gd` で検証済み
+- [x] ~~`players/{uid}` へ `rank_season` / `rank_tier` / `rank_stars` / `rank_rating` /
+      `rank_peak_tier` / `rank_reward_claimed_season` を追加~~ → `AccountService`の
+      `_empty_profile()`とgetterに追加
+- [x] ~~`RankProgress.ensure_current_season()`(遅延シーズンリセット・月末報酬の付与)~~
+- [x] ~~`RankProgress.apply_result()`(星取り制の昇格 / プラチナのレート変動 /
+      10手未満の対局を対象外にする不正対策)~~
+- [x] ~~`RankedMatchmakingQueue` + `CardRankedMatchScreen`(`CardRandomMatchScreen`の複製に近い)~~
+- [x] ~~`MatchKind.RANKED` を追加し、`CardMatchOutcome` から `RankProgress.apply_result()` を呼ぶ~~
+- [x] ~~`CardRankScreen`(自分の段位表示 + ランキング一覧)。`たたかう`タブへの入口追加~~ →
+      「だれかと」枠にランクマッチのタイルを追加(ランダムマッチ/ルームマッチと3枚並び)、
+      ランクマッチ画面のヘッダーから「ランキング」で`CardRankScreen`を開く
+- [ ] **月末報酬の額は暫定値のまま**(`RankProgress.SEASON_REWARDS`:ブロンズ0/シルバー100/
+      ゴールド300/プラチナ800砂金)。GameDesign.md 28章の「次のステップで決める」に対する
+      仮置きであり、正式な額をユーザーと決める
 - [ ] unityroomランキング連携の技術調査(Architecture.md 10.16節「要調査」)。
       連携できるかどうかで、ゲーム内ランキングだけで運用するか決まる
 - [ ] 月初の表彰演出の見せ方を決める(未確定のまま仕様化してある)
 - [ ] 実装後、CPU自己対戦ではなく**実際にランクマッチを何局か回して**、レートの動きが
-      不自然でないか確認する(§1の実機確認テーブルへ追加する)
+      不自然でないか確認する(§1の実機確認テーブルへ追加済み)
+- [ ] マッチング精度の改善(段位が近い相手を優先する)は当面見送り、早い者勝ちのまま
+      (Architecture.md 10.16節「次のステップ」)
 
 ### 掲示板(ラボ)(実装タスク・2026-09-15仕様確定)
 

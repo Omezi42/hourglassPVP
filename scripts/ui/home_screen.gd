@@ -15,6 +15,7 @@ signal rules_requested
 signal screen_guide_requested
 signal keyword_dict_requested
 signal random_match_deck_requested
+signal ranked_match_deck_requested
 signal room_match_requested
 signal account_requested
 
@@ -95,6 +96,9 @@ func _ready() -> void:
 	deck_tab.shop_pressed.connect(func() -> void: shop_requested.emit())
 	battle_tab.random_match_deck_requested.connect(
 		func() -> void: random_match_deck_requested.emit()
+	)
+	battle_tab.ranked_match_deck_requested.connect(
+		func() -> void: ranked_match_deck_requested.emit()
 	)
 	battle_tab.room_match_requested.connect(func() -> void: room_match_requested.emit())
 	# 背景の絵の上へ帯と幕を敷く(GameDesign.md 9章)。**背景の直後へ入れる**——

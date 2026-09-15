@@ -336,10 +336,11 @@ func start_online_match(
 	p_my_side: int,
 	is_room: bool = false,
 	opponent_uid: String = "",
-	time_limit: bool = true
+	time_limit: bool = true,
+	is_ranked: bool = false
 ) -> void:
 	await _online_ctl.start(
-		deck_self, client, p_match_id, p_my_side, is_room, opponent_uid, time_limit
+		deck_self, client, p_match_id, p_my_side, is_room, opponent_uid, time_limit, is_ranked
 	)
 
 

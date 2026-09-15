@@ -6,17 +6,19 @@ extends RefCounted
 ## 対局の種別。報酬額はこの種別で決まる。
 ## ローカル対戦(pass&play)・観戦・リプレイ再生は「自分が1人のプレイヤーとして
 ## 対局した」とは言えないため、NONEとして報酬の対象外にする。
-enum MatchKind { NONE, RANDOM, ROOM, CPU }
+enum MatchKind { NONE, RANDOM, ROOM, CPU, RANKED }
 
 const CURRENCY_NAME := "砂金"
 
 ## 種別ごとの [勝利, 敗北] の獲得量。負けても入るのは、勝てないプレイヤーが
 ## 一切貯められない状態を避けるため。ランダムマッチが厚いのは、相手が必要で
 ## 自分の都合だけでは繰り返せないため。
+## ランクマッチは当面ランダムマッチと同額とする(GameDesign.md 28章)。
 const REWARDS := {
 	MatchKind.RANDOM: [30, 10],
 	MatchKind.ROOM: [10, 5],
 	MatchKind.CPU: [5, 2],
+	MatchKind.RANKED: [30, 10],
 }
 
 ## これに満たない手数で終わった対局は報酬の対象外。開始直後に投了して
@@ -63,7 +65,12 @@ static func evaluate(
 		}
 	var pair: Array = REWARDS[kind]
 	var amount: int = int(pair[0] if won else pair[1])
-	var sunday := kind == MatchKind.RANDOM and SundayEventRules.is_active(at_unix_time)
+	# 日曜イベント(GameDesign.md 15章)はランダムマッチだけでなくランクマッチも対象
+	# (28章「ランクマッチの1局ごとの砂金報酬は...日曜イベント(15章)の対象にも含める」)。
+	var sunday := (
+		(kind == MatchKind.RANDOM or kind == MatchKind.RANKED)
+		and SundayEventRules.is_active(at_unix_time)
+	)
 	if sunday:
 		amount *= SundayEventRules.REWARD_MULTIPLIER
 	return {"amount": amount, "reason": "", "sunday": sunday}

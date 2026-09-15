@@ -57,6 +57,34 @@ static func cpu_reward_count_today() -> int:
 	return int(_profile.get("cpu_reward_count", 0))
 
 
+## ランクマッチの段位(GameDesign.md 28章)。読んでいなければ空文字(未初期化)。
+## シーズンの初期化は`RankProgress.ensure_current_season()`が行う。
+static func rank_season() -> String:
+	return str(_profile.get("rank_season", ""))
+
+
+static func rank_tier() -> String:
+	var tier := str(_profile.get("rank_tier", ""))
+	return tier if tier != "" else RankRules.INITIAL_TIER
+
+
+static func rank_stars() -> int:
+	return int(_profile.get("rank_stars", 0))
+
+
+static func rank_rating() -> int:
+	return int(_profile.get("rank_rating", 0))
+
+
+static func rank_peak_tier() -> String:
+	var tier := str(_profile.get("rank_peak_tier", ""))
+	return tier if tier != "" else RankRules.INITIAL_TIER
+
+
+static func rank_reward_claimed_season() -> String:
+	return str(_profile.get("rank_reward_claimed_season", ""))
+
+
 ## 所有しているアイコン(GameDesign.md 14章)。**初期解放を必ず先頭に含めて返す**。
 ## 呼ぶ側が「初期の8種 + 買った分」を自分で足す形にすると、足し忘れた画面で
 ## 既定のアイコンすら選べなくなる。
@@ -483,6 +511,19 @@ static func _path(uid: String) -> String:
 	return "%s/%s" % [COLLECTION, uid]
 
 
+## `players/{uid}` のパス。`RankProgress`のように、この外からも同じ書き込み先を
+## 組み立てる必要があるクラスのために公開する。
+static func path(uid: String) -> String:
+	return _path(uid)
+
+
+## 他サービス(`RankProgress`)が`players/{uid}`へ書き込んだ後、キャッシュへも
+## 同じ値を反映する。ここを通さずに書き込むと、次に読むまで古い値のまま表示される。
+static func apply_local_fields(data: Dictionary) -> void:
+	for key in data:
+		_profile[key] = data[key]
+
+
 static func _today() -> String:
 	return Time.get_date_string_from_system()
 
@@ -502,4 +543,10 @@ static func _empty_profile() -> Dictionary:
 		"owned_card_sets": [],
 		"emote_slots": [],
 		"playmat_id": "",
+		"rank_season": "",
+		"rank_tier": "",
+		"rank_stars": 0,
+		"rank_rating": 0,
+		"rank_peak_tier": "",
+		"rank_reward_claimed_season": "",
 	}
