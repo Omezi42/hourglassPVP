@@ -83,6 +83,11 @@ static func rank_progress_score() -> int:
 	return int(_profile.get("rank_progress_score", 0))
 
 
+## 現在の連勝数(GameDesign.md 28章「連勝ボーナス」)。勝利で+1、敗北で0へ戻る。
+static func rank_win_streak() -> int:
+	return int(_profile.get("rank_win_streak", 0))
+
+
 static func rank_peak_tier() -> String:
 	var tier := str(_profile.get("rank_peak_tier", ""))
 	return tier if tier != "" else RankRules.INITIAL_TIER
@@ -557,4 +562,5 @@ static func _empty_profile() -> Dictionary:
 		"rank_peak_tier": "",
 		"rank_reward_claimed_season": "",
 		"rank_progress_score": 0,
+		"rank_win_streak": 0,
 	}

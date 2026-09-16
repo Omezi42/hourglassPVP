@@ -67,6 +67,7 @@ static func ensure_current_season(
 			"rank_rating": 0,
 			"rank_peak_tier": RankRules.INITIAL_TIER,
 			"rank_progress_score": RankRules.progress_score(RankRules.INITIAL_TIER, 0, 0),
+			"rank_win_streak": 0,
 			"updated_at": Time.get_unix_time_from_system(),
 		}
 		var ok: bool = await client.commit(
@@ -103,10 +104,20 @@ static func apply_result(
 			data["rank_progress_score"] = RankRules.progress_score(tier, 0, rating)
 		else:
 			var stars: int = int(fields.get("rank_stars", 0))
-			stars = stars + 1 if won else RankRules.retreat_stars(stars)
+			var streak: int = int(fields.get("rank_win_streak", 0))
+			if won:
+				streak += 1
+				stars += RankRules.star_gain(streak)
+			else:
+				streak = 0
+				stars = RankRules.retreat_stars(stars)
 			var advanced := RankRules.advance_stars(tier, stars)
 			var next_tier: String = advanced["tier"]
-			data = {"rank_tier": next_tier, "rank_stars": advanced["stars"]}
+			data = {
+				"rank_tier": next_tier,
+				"rank_stars": advanced["stars"],
+				"rank_win_streak": streak,
+			}
 			if next_tier == RankRules.PLATINUM_KEY:
 				data["rank_rating"] = RankRules.PLATINUM_START_RATING
 				data["rank_progress_score"] = RankRules.progress_score(

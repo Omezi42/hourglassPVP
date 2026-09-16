@@ -16,7 +16,9 @@ func run(assert_true: Callable) -> void:
 	_test_compare_tier(assert_true)
 	_test_season_key(assert_true)
 	_test_progress_score(assert_true)
+	_test_win_streak_bonus(assert_true)
 	await _test_apply_result_star_progress(assert_true)
+	await _test_apply_result_win_streak_bonus(assert_true)
 	await _test_apply_result_reaches_platinum(assert_true)
 	await _test_ensure_current_season_resets_and_grants_reward(assert_true)
 	await _test_ensure_current_season_first_time_has_no_ceremony(assert_true)
@@ -64,6 +66,18 @@ func _test_star_advancement(assert_true: Callable) -> void:
 	assert_true.call(RankRules.retreat_stars(2) == 1, "a loss should remove one star")
 	assert_true.call(RankRules.star_requirement("bronze1") == 2, "bronze should require 2 stars")
 	assert_true.call(RankRules.star_requirement("gold3") == 4, "gold should require 4 stars")
+
+
+## 連勝ボーナス(GameDesign.md 28章「連勝ボーナス」)。3連勝以上のとき★の増分が+1される。
+func _test_win_streak_bonus(assert_true: Callable) -> void:
+	assert_true.call(RankRules.star_gain(1) == 1, "a first win should award the normal one star")
+	assert_true.call(RankRules.star_gain(2) == 1, "a second consecutive win is still just one star")
+	assert_true.call(
+		RankRules.star_gain(3) == 2, "the third consecutive win should award the bonus star"
+	)
+	assert_true.call(
+		RankRules.star_gain(5) == 2, "the bonus should keep applying as the streak continues"
+	)
 
 
 func _test_rating_delta(assert_true: Callable) -> void:
@@ -209,6 +223,59 @@ func _test_apply_result_star_progress(assert_true: Callable) -> void:
 	await RankProgress.apply_result(client, host, uid, false, RankProgress.MIN_MOVES)
 	assert_true.call(
 		AccountService.rank_tier() == "bronze2" and AccountService.rank_stars() == 0,
+		"a loss with zero stars should not push the tier back down further"
+	)
+
+	client.queue_free()
+
+
+## 連勝ボーナス(GameDesign.md 28章「連勝ボーナス」)。3連勝目の勝利からは★の増分が
+## +1(合計+2)になり、1敗すると連勝が0へ戻ってボーナスも外れること。
+func _test_apply_result_win_streak_bonus(assert_true: Callable) -> void:
+	AccountService.reset()
+	var setup := _make_client()
+	var client = setup["client"]
+	var host: Node = setup["host"]
+	var uid: String = setup["uid"]
+
+	await RankProgress.apply_result(client, host, uid, true, RankProgress.MIN_MOVES)
+	assert_true.call(
+		(
+			AccountService.rank_tier() == "bronze1"
+			and AccountService.rank_stars() == 1
+			and AccountService.rank_win_streak() == 1
+		),
+		"the first win should award one star and start a streak of one"
+	)
+
+	await RankProgress.apply_result(client, host, uid, true, RankProgress.MIN_MOVES)
+	assert_true.call(
+		(
+			AccountService.rank_tier() == "bronze2"
+			and AccountService.rank_stars() == 0
+			and AccountService.rank_win_streak() == 2
+		),
+		"the second win (still no bonus) should promote bronze1 and the streak should be two"
+	)
+
+	# 3連勝目でボーナスが乗り、通常なら1星のところが2星届く。ブロンズは2星で昇格するため、
+	# この1勝だけでbronze2からbronze3まで一気に進む。
+	await RankProgress.apply_result(client, host, uid, true, RankProgress.MIN_MOVES)
+	assert_true.call(
+		(
+			AccountService.rank_tier() == "bronze3"
+			and AccountService.rank_stars() == 0
+			and AccountService.rank_win_streak() == 3
+		),
+		"the third consecutive win should award the streak bonus and advance an extra step"
+	)
+
+	await RankProgress.apply_result(client, host, uid, false, RankProgress.MIN_MOVES)
+	assert_true.call(
+		AccountService.rank_win_streak() == 0, "a loss should reset the win streak to zero"
+	)
+	assert_true.call(
+		AccountService.rank_tier() == "bronze3",
 		"a loss with zero stars should not push the tier back down further"
 	)
 

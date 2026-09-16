@@ -25,6 +25,11 @@ const INITIAL_TIER := "bronze1"
 ## 十分大きく取り、プラチナの誰よりも下位の帯が上へ来ないようにする。
 const PROGRESS_SCORE_PLATINUM_BASE := 100000
 
+## 連勝ボーナス(GameDesign.md 28章「連勝ボーナス」・2026-09-16追記)。ゴールド以下で
+## この数以上の連勝が続いている間、勝利1回あたりの★増分に+1(合計+2)される。
+const WIN_STREAK_BONUS_THRESHOLD := 3
+const WIN_STREAK_BONUS_STARS := 1
+
 ## プラチナのレート帯ごとの増減(GameDesign.md 28章)。`min`以上の間その行を使う。
 ## 100上がるごとに勝利側-2・敗北側+2し、1600以上で打ち止め。
 const RATING_TABLE: Array[Dictionary] = [
@@ -88,6 +93,15 @@ static func advance_stars(tier_key: String, stars: int) -> Dictionary:
 ## 敗北時の星の減り方(0未満にはならない。GameDesign.md 28章)。
 static func retreat_stars(stars: int) -> int:
 	return maxi(stars - 1, 0)
+
+
+## 勝利1回で得る★の数(連勝ボーナス込み。GameDesign.md 28章「連勝ボーナス」)。
+## `streak_after_win`はこの勝利を含めた連勝数。3連勝以上のとき通常の+1へさらに
+## +1(合計+2)する。プラチナ(★を使わない)には呼ばないこと。
+static func star_gain(streak_after_win: int) -> int:
+	if streak_after_win >= WIN_STREAK_BONUS_THRESHOLD:
+		return 1 + WIN_STREAK_BONUS_STARS
+	return 1
 
 
 ## プラチナのレート増減。勝てば加算・負ければ減算した値を返す(呼び出し側で

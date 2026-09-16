@@ -82,6 +82,14 @@ func _refresh_own() -> void:
 	var peak := AccountService.rank_peak_tier()
 	if RankRules.compare_tier(peak, tier) > 0:
 		_own.add_child(_make_line("このシーズンの最高到達: %s" % RankRules.display_name(peak), 16))
+	# 連勝ボーナス(GameDesign.md 28章)はプラチナには効かないため、そこでは出さない。
+	# 見えない恩恵は活かされないため、何連勝中かとボーナスが乗っているかを1行で示す。
+	var streak := AccountService.rank_win_streak()
+	if tier != RankRules.PLATINUM_KEY and streak > 0:
+		var streak_text := "現在 %d連勝中" % streak
+		if streak >= RankRules.WIN_STREAK_BONUS_THRESHOLD:
+			streak_text += "(★+%d ボーナス中)" % RankRules.WIN_STREAK_BONUS_STARS
+		_own.add_child(_make_line(streak_text, 16))
 
 
 ## 集計は開いた回に1度だけ読む。

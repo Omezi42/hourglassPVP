@@ -2851,6 +2851,7 @@ GameDesign.md 27章の実装方針。**チュートリアルではなく、既�
 | `rank_peak_tier` | String | そのシーズン中に到達した最高段位。月末報酬の判定に使う |
 | `rank_reward_claimed_season` | String | 月末報酬を受け取り済みのシーズン。`rank_season`と一致していれば受取済み |
 | `rank_progress_score` | int | 帯・階級・★・レートを1本の順序へ束ねた合成スコア(`RankRules.progress_score()`)。ランキングの並び順そのもの |
+| `rank_win_streak` | int | 現在の連勝数。勝利で+1、敗北で0へ戻す。連勝ボーナス(GameDesign.md 28章)の判定に使う |
 
 ### シーズン切り替えは「サーバー側の一括更新」を持たない
 
@@ -2880,11 +2881,18 @@ GameDesign.md 27章の実装方針。**チュートリアルではなく、既�
 `RankProgress.apply_result(uid, won)` を足す。**`_match_kind == RANKED` のときだけ**
 呼ぶ(`MatchKind`に`RANKED`を1つ追加する。既存の`RANDOM`/`ROOM`と同列)。
 
-- `rank_tier`がブロンズ〜ゴールドの間:`RankRules.star_requirement(tier)`を見て
-  星を±1し、必要数に達したら次の段位・階級(無ければ次の帯)へ進める。
-  ゴールド5から星4個で満たしたら`rank_tier = "platinum"` / `rank_rating = 1000`にする
+- `rank_tier`がブロンズ〜ゴールドの間:勝利で`RankRules.star_gain(streak_after_win)`
+  (連勝ボーナス込みの★増分。GameDesign.md 28章「連勝ボーナス」)ぶん★を増やし、
+  敗北で`RankRules.retreat_stars()`(-1、下限0)。必要数に達したら次の段位・階級
+  (無ければ次の帯)へ進める。ゴールド5から必要数を満たしたら
+  `rank_tier = "platinum"` / `rank_rating = 1000`にする
 - `rank_tier == "platinum"`:`RankRules.rating_delta(rating, won)`(28章の表)を見て
-  加減する。**下限は設けない**(GameDesign.md 28章「レートが1000を下回っても降格しない」)
+  加減する。**下限は設けない**(GameDesign.md 28章「レートが1000を下回っても降格しない」)。
+  **連勝ボーナスはここでは効かない**(GameDesign.md 28章「プラチナには適用しない」)
+- **連勝は`players/{uid}.rank_win_streak`(int)で持つ。**勝てば+1、負ければ0へ戻す。
+  `RankRules.star_gain(streak_after_win)`は、この勝利を含めた連勝数が
+  `WIN_STREAK_BONUS_THRESHOLD`(3)以上のとき+1(合計+2)、それ未満は+1を返す。
+  シーズンが切り替わるとき(`ensure_current_season()`)は他の段位の値と同じく0へ戻す
 - 昇格・レート変動のたびに`rank_peak_tier`を「いまの段位のほうが高ければ」更新する
   (`RankRules.compare_tier()`で比較。星取り帯どうしはブロンズ<シルバー<ゴールド<プラチナの順、
   プラチナ内はレートの最高値を別途`rank_peak_rating`として持たず、`rank_peak_tier`は
