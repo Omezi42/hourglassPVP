@@ -9,6 +9,12 @@ extends RefCounted
 ##
 ## **アカウントごとに数える**(`LocalReplayService` と同じ理由)。ログアウトして
 ## 別のアカウントで遊んだぶんが混ざらないようにする。
+##
+## **このファイル自体はFirestoreを一切知らない。**同期(押す・引く)は
+## `MatchStatsService`(net層)が担当し、ここは「1局ぶんの増分を計算し、
+## 任意のバケット(Dictionary)へ適用する」計算と、ローカルの読み書きだけを持つ。
+## `apply_delta()` をローカル保存とFirestore同期の両方が共有することで、
+## 「どちらが正しい増分か」がズレる余地を無くしてある。
 
 const SAVE_PATH := "user://match_stats.json"
 ## デッキ別に覚えておく上限。多すぎると読み込みが重くなるだけで、
@@ -25,6 +31,36 @@ static var _data: Dictionary = {}
 static func record(owner_uid: String, kind: int, won: bool, turns: int, deck: Array) -> void:
 	_ensure_loaded()
 	var bucket := _bucket(owner_uid)
+	apply_delta(bucket, kind, won, turns, unique_card_ids(deck), deck_code_for(deck))
+	_save()
+
+
+## デッキ(`Array[CardData]`)から、戦績が数える単位(重複しないid・指紋)を作る。
+## Firestoreへ送る増分も同じものを使うため、ここを唯一の作り方にする。
+static func unique_card_ids(deck: Array) -> Array[String]:
+	var seen: Dictionary = {}
+	var ids: Array[String] = []
+	for card: CardData in deck:
+		if seen.has(card.id):
+			continue
+		seen[card.id] = true
+		ids.append(card.id)
+	return ids
+
+
+static func deck_code_for(deck: Array) -> String:
+	return CardDeckCode.fingerprint(deck) if not deck.is_empty() else ""
+
+
+## 1局ぶんの増分を任意のバケット(`{"kinds":, "cards":, "decks":}`)へ適用する。
+## ローカルの `record()` と `MatchStatsService` のFirestore同期が、同じ計算を
+## 共有するための唯一の入口。
+static func apply_delta(
+	bucket: Dictionary, kind: int, won: bool, turns: int, card_ids: Array, deck_code: String
+) -> void:
+	for field in ["kinds", "cards", "decks"]:
+		if not bucket.has(field):
+			bucket[field] = {}
 	var totals: Dictionary = bucket["kinds"]
 	var key := str(kind)
 	var entry: Dictionary = totals.get(key, {"games": 0, "wins": 0, "turns": 0})
@@ -32,9 +68,38 @@ static func record(owner_uid: String, kind: int, won: bool, turns: int, deck: Ar
 	entry["wins"] = int(entry["wins"]) + (1 if won else 0)
 	entry["turns"] = int(entry["turns"]) + turns
 	totals[key] = entry
-	_record_cards(bucket["cards"], deck, won)
-	_record_deck(bucket["decks"], deck, won)
+	var cards: Dictionary = bucket["cards"]
+	for id: String in card_ids:
+		var c: Dictionary = cards.get(id, {"games": 0, "wins": 0})
+		c["games"] = int(c["games"]) + 1
+		c["wins"] = int(c["wins"]) + (1 if won else 0)
+		cards[id] = c
+	if deck_code.is_empty():
+		return
+	var decks: Dictionary = bucket["decks"]
+	var d: Dictionary = decks.get(deck_code, {"games": 0, "wins": 0})
+	d["games"] = int(d["games"]) + 1
+	d["wins"] = int(d["wins"]) + (1 if won else 0)
+	decks[deck_code] = d
+	if decks.size() > DECK_LIMIT:
+		_drop_smallest(decks)
+
+
+## Firestoreから読んだ値でローカルのバケットを丸ごと差し替える
+## (`MatchStatsService` が別端末の分を取り込むときに使う)。
+static func replace_bucket(
+	owner_uid: String, kinds: Dictionary, cards: Dictionary, decks: Dictionary
+) -> void:
+	_ensure_loaded()
+	var key := owner_uid if not owner_uid.is_empty() else "local"
+	_data[key] = {"kinds": kinds, "cards": cards, "decks": decks}
 	_save()
+
+
+## いまローカルに持っているバケットをそのまま返す(Firestoreへの初回書き込み用)。
+static func bucket_snapshot(owner_uid: String) -> Dictionary:
+	_ensure_loaded()
+	return _bucket(owner_uid).duplicate(true)
 
 
 ## 集計。kind が負なら全種別の合計を返す。
@@ -73,31 +138,6 @@ static func _sorted_rows(source: Dictionary, key_name: String) -> Array:
 		rows.append({key_name: key, "games": int(entry["games"]), "wins": int(entry["wins"])})
 	rows.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a["games"] > b["games"])
 	return rows
-
-
-## 同じカードを2枚積んでいても1局は1局として数える(採用しているかどうかを見るため)。
-static func _record_cards(source: Dictionary, deck: Array, won: bool) -> void:
-	var seen: Dictionary = {}
-	for card: CardData in deck:
-		if seen.has(card.id):
-			continue
-		seen[card.id] = true
-		var entry: Dictionary = source.get(card.id, {"games": 0, "wins": 0})
-		entry["games"] = int(entry["games"]) + 1
-		entry["wins"] = int(entry["wins"]) + (1 if won else 0)
-		source[card.id] = entry
-
-
-static func _record_deck(source: Dictionary, deck: Array, won: bool) -> void:
-	if deck.is_empty():
-		return
-	var code := CardDeckCode.fingerprint(deck)
-	var entry: Dictionary = source.get(code, {"games": 0, "wins": 0})
-	entry["games"] = int(entry["games"]) + 1
-	entry["wins"] = int(entry["wins"]) + (1 if won else 0)
-	source[code] = entry
-	if source.size() > DECK_LIMIT:
-		_drop_smallest(source)
 
 
 ## 上限を超えたら、いちばん対局数の少ない構築を落とす。

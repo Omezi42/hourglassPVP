@@ -2113,6 +2113,37 @@ UI層へ依存することになる。
 **カード別は「そのカードを入れたデッキで戦った勝率」**であり、カードの強さではない
 (強さの測り方は `docs/BalanceReport_v5.md` 2章の方式による)。画面の見出しにもそう書く。
 
+### 10.7.0 戦績のFirestore同期(GameDesign.md 19章)
+
+**別端末からログインしても同じ記録を続けて見られるようにする。**`MatchStats`自体は
+Firestoreを一切知らないまま(ローカルの計算と保存だけを持つ)にし、同期は
+`MatchStatsService`(`scripts/net/match_stats_service.gd`, static)へ切り出す。
+
+| クラス | 責務 |
+|---|---|
+| `MatchStats.apply_delta()` | 1局ぶんの増分を任意のバケット(`{"kinds":, "cards":, "decks":}`)へ適用する計算そのもの。ローカルの`record()`とFirestore同期の両方がこれを共有する |
+| `MatchStats.replace_bucket()` / `bucket_snapshot()` | ローカルのバケットを丸ごと差し替える/取り出す(同期の押す・引くで使う) |
+| `MatchStatsService.push()` | 1局ぶんをFirestoreへ増分する。`AccountService.grant()`と同じ「`updateTime`前提の`commit()`でread-modify-write、競合したら読み直して再試行」の流儀 |
+| `MatchStatsService.sync_after_sign_in()` | サインイン直後、`players/{uid}`の`stats_kinds`/`stats_cards`/`stats_decks`でローカルを差し替え、退避してあった未送信分を送り直す |
+
+- `players/{uid}`へ`stats_kinds`/`stats_cards`/`stats_decks`の3フィールドを持たせる。
+  中身は`MatchStats`が今持つバケットの3要素(`kinds`/`cards`/`decks`)とそのまま同じ形で、
+  Firestoreのネストした`mapValue`(`FirestoreCodec`)がそのまま扱えるため変換は要らない
+- **押すのは対局終了のたびに、`CardMatchOutcome.finish()`から`await`せずに呼ぶ**
+  (砂金の付与と同じく、結果パネルの表示を通信で止めないため)。通信に失敗した・
+  未サインインの場合は`AccountStore.add_pending_match()`(1局ぶんの増分を
+  `{kind, won, turns, card_ids, deck_code}`として積む配列。砂金の退避と同じ理由で
+  CPU戦がオフラインでも成立するため必要)へ退避する
+- **引くのは`AccountService.load_profile()`が読んだフィールドをそのまま渡す形**
+  (`sync_after_sign_in()`は二重に通信しない)。ローカルを丸ごと差し替えたうえで、
+  退避してあった増分をローカルへ重ねて適用し直してから改めて送信を試みる。
+  **ローカルへ重ねるのを差し替えの直後に行う**のは、まだサーバーへ届いていない
+  「この端末で遊んだ分」が、差し替えた瞬間だけ画面から消えて見えることを防ぐため
+- **Firestore側の正当性検証は行わない**(既存方針。11章)。クライアントが計算した
+  増分をそのまま信じる
+- カード別・デッキ別の`.tres`が持つ意味(強さそのものではない)は変わらないため、
+  画面(`CardStatsScreen`等)の読み出し側は無変更で済む
+
 ---
 
 ### 10.7.1 プレイマット(GameDesign.md 9章・21章)

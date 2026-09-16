@@ -18,6 +18,7 @@ const UiPaintTests = preload("res://tools/tests/ui_paint_tests.gd")
 const CpuDifficultyTests = preload("res://tools/tests/cpu_difficulty_tests.gd")
 const SoloModeTests = preload("res://tools/tests/solo_mode_tests.gd")
 const RankTests = preload("res://tools/tests/rank_tests.gd")
+const MatchStatsSyncTests = preload("res://tools/tests/match_stats_sync_tests.gd")
 
 var _failures := 0
 
@@ -54,6 +55,7 @@ func _run() -> void:
 	await version_match.run(_assert_true)
 	var match_records := MatchRecordTests.new()
 	await match_records.run(_assert_true)
+	await MatchStatsSyncTests.new().run(_assert_true)
 
 	if _failures == 0:
 		print("tests passed")

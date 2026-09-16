@@ -370,6 +370,9 @@ static func load_profile(client: FirestoreClient, uid: String) -> void:
 		or fields.has("owned_card_sets")
 	):
 		_save_unlocks_locally()
+	# 戦績の同期(GameDesign.md 19章)。別端末で記録された分をローカルへ取り込み、
+	# まだ送れていない分(オフラインで遊んだCPU戦など)を送り直す。
+	MatchStatsService.sync_after_sign_in(client, uid, fields)
 	# 前回サインアウト中に無料付与が通らなかった分を、ここで流し直す
 	# (GameDesign.md 27章)。既に所有済みなら `unlock_free()` の先頭で何もしない。
 	for kind: ShopCatalog.Kind in [ShopCatalog.Kind.CARD_SET, ShopCatalog.Kind.ICON]:

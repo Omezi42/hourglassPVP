@@ -84,6 +84,27 @@ static func clear_pending_unlock(key: String, id: String) -> void:
 	_store(data)
 
 
+## 通信に失敗して戦績(`MatchStats`)をFirestoreへ送れなかった1局ぶんを積む
+## (GameDesign.md 19章)。砂金の退避と同じ理由で、CPU戦はオフラインでも成立するため必要。
+## 複数件が同時に積みうるため、砂金のような単一の合計値ではなく配列で持つ。
+static func add_pending_match(entry: Dictionary) -> void:
+	var data := _load()
+	var pending: Array = data.get("pending_matches", [])
+	pending.append(entry)
+	data["pending_matches"] = pending
+	_store(data)
+
+
+static func get_pending_matches() -> Array:
+	return _load().get("pending_matches", [])
+
+
+static func clear_pending_matches() -> void:
+	var data := _load()
+	data["pending_matches"] = []
+	_store(data)
+
+
 ## ローカルにアイコンと称号を保存する(オフライン復帰用)。
 static func save_local_customization(icon_id: String, title_id: String, playmat_id := "") -> void:
 	var data := _load()
