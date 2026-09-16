@@ -15,6 +15,7 @@ func run(assert_true: Callable) -> void:
 	_test_rating_delta(assert_true)
 	_test_compare_tier(assert_true)
 	_test_season_key(assert_true)
+	_test_progress_score(assert_true)
 	await _test_apply_result_star_progress(assert_true)
 	await _test_apply_result_reaches_platinum(assert_true)
 	await _test_ensure_current_season_resets_and_grants_reward(assert_true)
@@ -129,6 +130,37 @@ func _test_season_key(assert_true: Callable) -> void:
 	)
 
 
+## 合成スコア(GameDesign.md 28章「進行度でもランクに残る」)。ブロンズ〜ゴールドの
+## 帯・階級・★とプラチナのレートが、単調に増える1本の順序として並ぶこと。
+func _test_progress_score(assert_true: Callable) -> void:
+	assert_true.call(
+		RankRules.progress_score("bronze1", 0, 0) < RankRules.progress_score("bronze1", 1, 0),
+		"more stars at the same tier should score higher"
+	)
+	assert_true.call(
+		RankRules.progress_score("bronze3", 1, 0) < RankRules.progress_score("silver1", 0, 0),
+		"the lowest silver step should outscore the highest bronze step regardless of stars"
+	)
+	assert_true.call(
+		RankRules.progress_score("silver4", 2, 0) < RankRules.progress_score("gold1", 0, 0),
+		"crossing a bracket should always outscore staying in the previous one"
+	)
+	assert_true.call(
+		(
+			RankRules.progress_score("gold5", 3, 0)
+			< RankRules.progress_score(RankRules.PLATINUM_KEY, 0, 0)
+		),
+		"the lowest platinum score should outscore the highest gold score"
+	)
+	assert_true.call(
+		(
+			RankRules.progress_score(RankRules.PLATINUM_KEY, 0, 1000)
+			< RankRules.progress_score(RankRules.PLATINUM_KEY, 0, 1200)
+		),
+		"a higher platinum rating should score higher"
+	)
+
+
 func _make_client() -> Dictionary:
 	var tree := Engine.get_main_loop() as SceneTree
 	var auth := FirebaseAuth.new(null)
@@ -169,6 +201,10 @@ func _test_apply_result_star_progress(assert_true: Callable) -> void:
 		AccountService.rank_peak_tier() == "bronze2",
 		"the peak tier should track the highest tier reached this season"
 	)
+	assert_true.call(
+		AccountService.rank_progress_score() == RankRules.progress_score("bronze2", 0, 0),
+		"the progress score should follow the star-based tier too"
+	)
 
 	await RankProgress.apply_result(client, host, uid, false, RankProgress.MIN_MOVES)
 	assert_true.call(
@@ -203,6 +239,13 @@ func _test_apply_result_reaches_platinum(assert_true: Callable) -> void:
 	)
 	assert_true.call(
 		AccountService.rank_peak_tier() == RankRules.PLATINUM_KEY, "the peak tier should follow"
+	)
+	assert_true.call(
+		(
+			AccountService.rank_progress_score()
+			== RankRules.progress_score(RankRules.PLATINUM_KEY, 0, RankRules.PLATINUM_START_RATING)
+		),
+		"the progress score should be written alongside the platinum promotion"
 	)
 
 	await RankProgress.apply_result(client, host, uid, true, RankProgress.MIN_MOVES)

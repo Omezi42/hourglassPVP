@@ -3,8 +3,10 @@ extends Control
 ## ランクマッチの自分の段位と、現在シーズンのランキング一覧(GameDesign.md 28章)。
 ## `CardStatsScreen`と同じ「共通ヘッダー + `content_panel.tres`のパネル」の組み方を使う。
 ##
-## **ブロンズ〜ゴールドはランキングへ出さない**(28章)。星取り制の段位は
-## レートのような一意の順序を持たないため、上位者一覧に混ぜても意味を持つ順序にならない。
+## **ブロンズ〜プラチナまで全員を1本のランキングへ並べる**(2026-09-16、ユーザー判断
+## 「プラチナだけじゃなくて進行度でもランクに残ったら嬉しい」への対応)。並び順は
+## `RankRules.progress_score()`が合成する単一のスコアで、帯・階級・★・レートの
+## どこにいても一意に比較できる。
 
 signal back_pressed
 
@@ -18,7 +20,9 @@ const LIST_RECT := Rect2(
 ## 複合インデックスのクエリを軽く保つ)。
 const LEADERBOARD_LIMIT := 30
 const ROW_FONT_SIZE := 18
-const COL_RATING := 100.0
+## プラチナは数字だけ(「1024」)だが、それ未満は「ゴールド3 ★4」のように長くなるため
+## 単なるレート表示より広めに取る。
+const COL_RATING := 150.0
 
 var _own: VBoxContainer
 var _list: VBoxContainer
@@ -99,19 +103,25 @@ func _fetch_leaderboard() -> void:
 	)
 	_fetching = false
 	if docs.is_empty():
-		_empty.show_message("まだプラチナに到達したプレイヤーがいません", "")
+		_empty.show_message("まだ今シーズンの対局記録がありません", "")
 		_empty.visible = true
 		return
 	_empty.visible = false
-	_list.add_child(_make_line("プラチナ帯 ランキング", 22))
+	_list.add_child(_make_line("今シーズンのランキング", 22))
 	var rank := 1
 	for doc: Dictionary in docs:
 		var fields: Dictionary = doc.get("fields", {})
 		var name := str(fields.get("display_name", ""))
 		if name.is_empty():
 			name = "(名無し)"
-		var rating := int(fields.get("rank_rating", RankRules.PLATINUM_START_RATING))
-		_list.add_child(_make_row("%d位 %s" % [rank, name], [_cell("%d" % rating, COL_RATING)]))
+		var tier := str(fields.get("rank_tier", RankRules.INITIAL_TIER))
+		var status_text: String
+		if tier == RankRules.PLATINUM_KEY:
+			status_text = "%d" % int(fields.get("rank_rating", RankRules.PLATINUM_START_RATING))
+		else:
+			var display := RankRules.display_name(tier)
+			status_text = "%s ★%d" % [display, int(fields.get("rank_stars", 0))]
+		_list.add_child(_make_row("%d位 %s" % [rank, name], [_cell(status_text, COL_RATING)]))
 		rank += 1
 	ListRevealFx.stagger(_list.get_children())
 

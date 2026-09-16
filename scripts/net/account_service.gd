@@ -76,6 +76,13 @@ static func rank_rating() -> int:
 	return int(_profile.get("rank_rating", 0))
 
 
+## 帯を貫く合成スコア(GameDesign.md 28章「進行度でもランクに残る」)。
+## ランキングの並び順そのもの(`RankRules.progress_score()`)であり、
+## 段位・★・レートが動くたびに`RankProgress`が書き直す。
+static func rank_progress_score() -> int:
+	return int(_profile.get("rank_progress_score", 0))
+
+
 static func rank_peak_tier() -> String:
 	var tier := str(_profile.get("rank_peak_tier", ""))
 	return tier if tier != "" else RankRules.INITIAL_TIER
@@ -549,4 +556,5 @@ static func _empty_profile() -> Dictionary:
 		"rank_rating": 0,
 		"rank_peak_tier": "",
 		"rank_reward_claimed_season": "",
+		"rank_progress_score": 0,
 	}

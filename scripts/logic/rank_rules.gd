@@ -21,6 +21,10 @@ const PLATINUM_START_RATING := 1000
 ## 常にこの段位から始める。
 const INITIAL_TIER := "bronze1"
 
+## `progress_score()`が返すプラチナの底値。ブロンズ〜ゴールドの最大値より
+## 十分大きく取り、プラチナの誰よりも下位の帯が上へ来ないようにする。
+const PROGRESS_SCORE_PLATINUM_BASE := 100000
+
 ## プラチナのレート帯ごとの増減(GameDesign.md 28章)。`min`以上の間その行を使う。
 ## 100上がるごとに勝利側-2・敗北側+2し、1600以上で打ち止め。
 const RATING_TABLE: Array[Dictionary] = [
@@ -129,3 +133,19 @@ static func _rank_value(tier_key: String) -> int:
 	if parsed.is_empty():
 		return -1
 	return BRACKET_ORDER.find(parsed["bracket"]) * 10 + int(parsed["step"])
+
+
+## プラチナに満たないプレイヤーもランキングへ並べるための、段位全体を貫く単一の
+## 合成スコア(2026-09-16、ユーザー判断「進行度でもランクに残ったら嬉しい」への対応)。
+## ブロンズ〜ゴールドは帯・階級・★を積み上げた値、プラチナは`PROGRESS_SCORE_PLATINUM_BASE`
+## を底として実際のレートを足した値を返すため、**プラチナの誰よりも下位のブロンズが
+## 上に来ることは無い**。並べる側(Firestoreの`orderBy`)は`rank_progress_score`という
+## 1つのフィールドだけを見ればよく、帯によって並び方を切り替える必要がない。
+static func progress_score(tier_key: String, stars: int, rating: int) -> int:
+	if tier_key == PLATINUM_KEY:
+		return PROGRESS_SCORE_PLATINUM_BASE + rating
+	var parsed := parse(tier_key)
+	if parsed.is_empty():
+		return 0
+	var bracket_index := BRACKET_ORDER.find(parsed["bracket"])
+	return bracket_index * 100 + int(parsed["step"]) * 10 + maxi(stars, 0)

@@ -66,6 +66,7 @@ static func ensure_current_season(
 			"rank_stars": 0,
 			"rank_rating": 0,
 			"rank_peak_tier": RankRules.INITIAL_TIER,
+			"rank_progress_score": RankRules.progress_score(RankRules.INITIAL_TIER, 0, 0),
 			"updated_at": Time.get_unix_time_from_system(),
 		}
 		var ok: bool = await client.commit(
@@ -99,6 +100,7 @@ static func apply_result(
 			)
 			rating += RankRules.rating_delta(rating, won)
 			data = {"rank_rating": rating}
+			data["rank_progress_score"] = RankRules.progress_score(tier, 0, rating)
 		else:
 			var stars: int = int(fields.get("rank_stars", 0))
 			stars = stars + 1 if won else RankRules.retreat_stars(stars)
@@ -107,6 +109,13 @@ static func apply_result(
 			data = {"rank_tier": next_tier, "rank_stars": advanced["stars"]}
 			if next_tier == RankRules.PLATINUM_KEY:
 				data["rank_rating"] = RankRules.PLATINUM_START_RATING
+				data["rank_progress_score"] = RankRules.progress_score(
+					next_tier, 0, RankRules.PLATINUM_START_RATING
+				)
+			else:
+				data["rank_progress_score"] = RankRules.progress_score(
+					next_tier, int(advanced["stars"]), 0
+				)
 			tier = next_tier
 		if RankRules.compare_tier(tier, peak) > 0:
 			data["rank_peak_tier"] = tier
