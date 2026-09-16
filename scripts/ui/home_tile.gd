@@ -45,6 +45,10 @@ var badge_count := 0:
 		queue_redraw()
 
 var _font: Font
+## 見出しの書体。**主役の面(`primary`)だけ**明朝体(`UiFonts.display_font()`)にする。
+## 3段の強弱(GameDesign.md 9章)のうち、いちばん強い1枚だけへ格を足すためで、
+## 並んだタイルすべてを明朝体にすると強弱そのものが埋もれる。副題は常に本文書体のまま。
+var _title_font: Font
 ## ホバー浮きの進み(0〜1)。
 var _hover := 0.0
 var _hover_tween: Tween
@@ -88,6 +92,7 @@ func _ready() -> void:
 	_font = get_theme_default_font()
 	if _font == null:
 		_font = ThemeDB.fallback_font
+	_title_font = UiFonts.display_font(_font) if primary else _font
 	mouse_entered.connect(_on_hover_changed.bind(true))
 	mouse_exited.connect(_on_hover_changed.bind(false))
 
@@ -174,7 +179,7 @@ func _draw() -> void:
 	var has_sub := not subtitle.is_empty()
 	var title_y: float = _title_center() + float(title_size) * 0.36
 	draw_string(
-		_font,
+		_title_font if _title_font != null else _font,
 		Vector2(PADDING, title_y),
 		title,
 		HORIZONTAL_ALIGNMENT_LEFT,

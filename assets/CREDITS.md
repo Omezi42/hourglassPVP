@@ -59,7 +59,19 @@ Open Goldberg Variations は、Kickstarterで資金を集めて録音と楽譜�
 ## フォント
 
 `assets/fonts/ZenKakuGothicNew-Bold.ttf` は Google Fonts の「Zen Kaku Gothic New」
-(SIL Open Font License 1.1)。
+(SIL Open Font License 1.1)。本文・数値・ボタン等、UIの大半を担う本文用書体。
+
+`assets/fonts/ZenOldMincho-Display.ttf` は Google Fonts の「Zen Old Mincho」Black
+(SIL Open Font License 1.1)を元にした見出し専用の書体。タイトルロゴ・各画面の見出し・
+ホーム画面のタブ見出しなど、大きく組む箇所だけに使う(`UiFonts.display_font()`)。
+本文用書体と同じ「Zen」プロジェクトの明朝体で揃え、王道クラシカルな路線
+(GameDesign.md 9章)に合わせて格を持たせている。**配布物を増やさないよう、実際に
+見出しへ使っている文字だけへ`pyftsubset`(fontTools)で削ってある**(ひらがな・
+カタカナ全域 + 見出しで使う漢字・記号 + ASCII。約150KB、元のBlackウェイト全体は
+5.4MB)。将来この書体を使う見出しを増やしたときにサブセットへ無い文字があっても、
+`UiFonts`が本文用書体へのフォールバックを設定しているため文字化けはしない
+(表示が本文書体へ静かに戻るだけ)。サブセット手順は
+`assets/fonts/LICENSE_ZenOldMincho.txt` の末尾に記す。
 
 ---
 

@@ -40,6 +40,10 @@ var _landing_tween: Tween
 
 func _ready() -> void:
 	back_button.pressed.connect(func() -> void: back_pressed.emit())
+	# 画面タイトルは見出し専用の明朝体にする(GameDesign.md 9章「王道クラシカル」)。
+	# 全画面で同じ位置に出るため、ここを差し替えるだけで統一して効く。
+	var base := title_label.get_theme_font("font")
+	title_label.add_theme_font_override("font", UiFonts.display_font(base))
 
 
 ## 画面が表示されるたびに呼ばれる。`Main._show_only()` が screen.visible を

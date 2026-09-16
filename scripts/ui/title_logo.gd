@@ -98,7 +98,7 @@ func _draw_diamond(center: Vector2, radius: float) -> void:
 
 
 func _font() -> Font:
-	var font := get_theme_font("font", "Label")
-	if font != null:
-		return font
-	return ThemeDB.fallback_font
+	var base := get_theme_font("font", "Label")
+	if base == null:
+		base = ThemeDB.fallback_font
+	return UiFonts.display_font(base)

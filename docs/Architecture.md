@@ -929,6 +929,27 @@ Main
   - `scripts/ui/styles/ui_palette.gd`(`UiPalette`, `RefCounted`):プロジェクト全体のUI色の単一情報源。真鍮の明/中/暗、暗い下地、琥珀アクセント、無効時のグレー等をconstで持つ
   - `scripts/ui/styles/ui_paint.gd`(`UiPaint`, `RefCounted`):static関数だけの描画ユーティリティ。**第1引数は必ず `ci: RID`** とし `RenderingServer.canvas_item_add_*` 系で描く(`StyleBox._draw(to_canvas_item, rect)` からは `CanvasItem.draw_*` を呼べないため)。角丸矩形の頂点生成、多段階の縦グラデーション塗り、面取り(ベベル)、内側の落ち込み影、グレイン(ノイズ)重ねを提供する
   - 各`StyleBox`派生クラス(`CodedButtonStyle` 等)と、`Control._draw()`側(`BoardTable`/`BarPanel`/`HourglassSlot`)が、いずれも上記2つを呼んで描く
+- **見出しの書体は `scripts/ui/styles/ui_fonts.gd`(`UiFonts`, `RefCounted`)が単一の情報源として持つ。**
+  本文用(`ZenKakuGothicNew-Bold.ttf`、テーマの既定フォント)一色だと、大きなタイトルも
+  小さな数値も同じ太い角ゴシックになり、「量産型」の見た目に寄る。**タイトルロゴ
+  (`TitleLogo`)・各画面の共通ヘッダーの見出し(`ScreenHeader`)・ホーム画面の枠見出し
+  (`HomeFrame`)・主役の面(`primary`)を持つ`HomeTile`の見出しにだけ**、見出し専用の
+  明朝体(`assets/fonts/ZenOldMincho-Display.ttf`、Zen Old Mincho Blackが元)を
+  `UiFonts.display_font(fallback)` 経由で当てる。本文・数値・ボタン・副題は引き続き
+  本文用フォントのまま変えない(GameDesign.md 9章「王道クラシカル」なタイトルの路線を、
+  見出し全般へ薄く延長する形)
+  - **見出し用フォントは、実際に見出しへ使っている文字だけへ`pyftsubset`(fontTools)で
+    削ったサブセットとして配布する。**元のBlackウェイト全体(5.4MB)をそのまま入れると
+    フォント予算(本文用だけで1.66MB。6章「技術的負債」)がほぼ4倍に膨らみ、起動待ちへ
+    直結する。ひらがな・カタカナ全域 + いま見出しへ使っている漢字・記号 + ASCII に
+    絞った結果、pckへの寄与は約100KBに収まる(本文用の1.66MBに対して数%の増分)
+  - **`display_font()` は返すフォントへ `fallbacks = [fallback]` を設定してから返す。**
+    サブセットに無い文字を描画すると本来なら何も表示されないが、フォールバックを
+    設定しておくことで**その文字だけ静かに本文用フォントへ戻る**(豆腐にはならない)。
+    これにより、新しい見出し文字列を足したときにサブセットの更新を忘れても、
+    見た目が乱れるだけで機能は壊れない。**将来サブセットを更新する場合は、実際に
+    見出しへ使っている文字列を集め直し、`fontTools.subset` を掛け直す**(手順は
+    `assets/fonts/LICENSE_ZenOldMincho.txt` の末尾に残してある)
 - **背景イラストを持たない画面の下地は `ScreenBackdrop`
   (`scripts/ui/screen_backdrop.gd`、`Control._draw()` のみ)に集約する**。無地の `ColorRect` 1枚だと
   フラットベクターに見えるため、多段グラデーション + グレイン + 左右の落ち込みを掛ける。

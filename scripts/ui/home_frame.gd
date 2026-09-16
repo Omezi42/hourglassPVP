@@ -50,6 +50,9 @@ var rows_count_left := 0.0
 var rows_top := 0.0
 
 var _font: Font
+## 見出しだけは明朝体(`UiFonts.display_font()`)にする。行(`rows`)は数字を含む本文で
+## あり続けて読みやすさを優先するため、`_font` のまま変えない。
+var _heading_font: Font
 var _panel: StyleBox
 var _plate: StyleBox
 
@@ -71,6 +74,7 @@ func _ready() -> void:
 	_font = get_theme_default_font()
 	if _font == null:
 		_font = ThemeDB.fallback_font
+	_heading_font = UiFonts.display_font(_font)
 	_panel = load(PANEL_PATH)
 	_plate = load(PLATE_PATH)
 
@@ -80,8 +84,9 @@ func _draw() -> void:
 		draw_style_box(_panel, Rect2(Vector2.ZERO, size))
 	if heading.is_empty() or _font == null:
 		return
+	var heading_font: Font = _heading_font if _heading_font != null else _font
 	var text_width: float = (
-		_font.get_string_size(heading, HORIZONTAL_ALIGNMENT_LEFT, -1, HEADING_FONT_SIZE).x
+		heading_font.get_string_size(heading, HORIZONTAL_ALIGNMENT_LEFT, -1, HEADING_FONT_SIZE).x
 	)
 	var plate := Rect2(
 		Vector2(HEADING_LEFT, -HEADING_HEIGHT * HEADING_OVERLAP),
@@ -90,7 +95,7 @@ func _draw() -> void:
 	if _plate != null:
 		draw_style_box(_plate, plate)
 	draw_string(
-		_font,
+		heading_font,
 		plate.position + Vector2(HEADING_PADDING, HEADING_HEIGHT * 0.68),
 		heading,
 		HORIZONTAL_ALIGNMENT_LEFT,
