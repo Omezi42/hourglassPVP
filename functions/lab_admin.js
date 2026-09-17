@@ -51,12 +51,12 @@ async function handleLabAdmin(req, res, db, firestoreNs) {
 }
 
 async function listPending(db) {
-  const snapshot = await db
-    .collection(COLLECTION)
-    .where("status", "==", "pending")
-    .orderBy("created_at", "asc")
-    .get();
-  return snapshot.docs.map((doc) => ({id: doc.id, ...doc.data()}));
+  // 等価フィルタ1本だけにし、orderByは重ねない(複合インデックスを要求しない、
+  // GameDesign.md 6章のクエリ方針と同じ考え方)。並びはここで組み立ててから返す。
+  const snapshot = await db.collection(COLLECTION).where("status", "==", "pending").get();
+  const rows = snapshot.docs.map((doc) => ({id: doc.id, ...doc.data()}));
+  rows.sort((a, b) => (a.created_at || 0) - (b.created_at || 0));
+  return rows;
 }
 
 async function listCurrentMonth(db, month) {

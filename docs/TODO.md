@@ -288,13 +288,21 @@
       「投稿→残高が減り`pending`のドキュメントができる」「投票が1回だけ通り
       2回目は拒否される」までを実通信なしで確認済み(`run_tests.gd`へ登録し、
       全体のヘッドレステストが通ることを確認済み)
-- [ ] **デプロイと実機確認が残っている。**`firebase functions:secrets:set LAB_ADMIN_SECRET`
-      を設定し `firebase deploy --only functions`(`labAdmin`を含む)、
-      Firestoreコンソールへ更新した`firestore.rules`を貼り直す、
-      `tools/lab_admin/index.html`のエンドポイント欄へデプロイ後のURLを入れる、
-      という3つの手作業が要る。実装後、実際に投稿→管理ツールでの承認→投票→
-      (別の投稿で)却下の返金→月末の採用確定までの一連の流れを1人で通しで
-      確認する(§1の実機確認テーブルへ追加済み)
+- [x] ~~`LAB_ADMIN_SECRET`の設定と`labAdmin`のデプロイ~~(2026-09-17)。
+      `firestore.rules`もFirebaseコンソールへ反映済み。**関数の作成時にIAMの
+      「未認証呼び出しを許可」の設定が失敗する既知の不具合を踏んだ**(1回目の
+      デプロイは成功したが403 Forbiddenが返り続けた)。`gcloud run
+      services add-iam-policy-binding labadmin --region=us-central1
+      --member=allUsers --role=roles/run.invoker` を1回実行して解消した。
+      **併せて`listPending()`が`status`の等価フィルタと`created_at`の`orderBy`を
+      重ねており複合インデックスを要求していたことも発覚**(6章のクエリ方針に
+      反していた)。Firestore側のorderByをやめ、JS側でソートする形へ直して
+      再デプロイし、`curl`での動作確認(`list_pending` / `list_current_month`)
+      まで完了した
+- [ ] `tools/lab_admin/index.html`のエンドポイント欄へ
+      `https://labadmin-ske5k5hcaa-uc.a.run.app` を、シークレット欄へ発行した
+      `LAB_ADMIN_SECRET`を入力し、実際にブラウザから承認・却下・採用確定の
+      一連の流れを1人で通しで確認する(§1の実機確認テーブルへ追加済み)
 
 ### 公式大会「箱庭杯」(実装タスク・2026-09-15仕様確定)
 
