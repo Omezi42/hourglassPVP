@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>掲示板〈ラボ〉管理ツール</title>
+<style>
+  body { font-family: sans-serif; background: #1b1712; color: #eee5d8; margin: 0; padding: 24px; }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  h2 { font-size: 16px; margin-top: 32px; border-bottom: 1px solid #443a2c; padding-bottom: 4px; }
+  .row { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+  input[type=text], input[type=password] { padding: 6px; border-radius: 4px; border: 1px solid #6b5a3f; background: #2a241b; color: #eee5d8; flex: 1; }
+  button { padding: 6px 14px; border-radius: 4px; border: none; background: #b98b3d; color: #1b1712; cursor: pointer; font-weight: bold; }
+  button:hover { background: #d3a458; }
+  button.secondary { background: #4a4030; color: #eee5d8; }
+  button.danger { background: #8b3a30; color: #eee5d8; }
+  .card { background: #241f17; border: 1px solid #443a2c; border-radius: 6px; padding: 12px; margin-bottom: 10px; }
+  .card .meta { color: #a89878; font-size: 12px; margin-bottom: 6px; }
+  .card .desc { white-space: pre-wrap; margin: 8px 0; }
+  .card .actions { display: flex; gap: 8px; margin-top: 8px; }
+  #status { color: #d3a458; font-size: 13px; margin-left: 8px; }
+  .empty { color: #a89878; padding: 12px; }
+</style>
+</head>
+<body>
+  <h1>掲示板〈ラボ〉管理ツール</h1>
+  <p style="color:#a89878;">GameDesign.md 29章。承認・却下・月末の採用判断をここで行う。</p>
+
+  <div class="row">
+    <label>エンドポイント</label>
+    <input type="text" id="endpoint" placeholder="https://<region>-<project>.cloudfunctions.net/labAdmin">
+  </div>
+  <div class="row">
+    <label>シークレット</label>
+    <input type="password" id="secret" placeholder="LAB_ADMIN_SECRET">
+    <button onclick="saveConfig()">保存して読み込む</button>
+    <span id="status"></span>
+  </div>
+
+  <h2>審査待ち</h2>
+  <div id="pending" class="empty">読み込んでいません</div>
+
+  <h2>今月の得票ランキング(採用の確定)</h2>
+  <div class="row">
+    <label>月キー(YYYY-MM、空欄で今月)</label>
+    <input type="text" id="month" placeholder="2026-09" style="max-width:140px;">
+    <button class="secondary" onclick="loadCurrentMonth()">読み込む</button>
+  </div>
+  <div id="current_month" class="empty">読み込んでいません</div>
+
+<script>
+function loadConfig() {
+  return {
+    endpoint: localStorage.getItem("lab_admin_endpoint") || "",
+    secret: localStorage.getItem("lab_admin_secret") || "",
+  };
+}
+
+function saveConfig() {
+  const endpoint = document.getElementById("endpoint").value.trim();
+  const secret = document.getElementById("secret").value.trim();
+  localStorage.setItem("lab_admin_endpoint", endpoint);
+  localStorage.setItem("lab_admin_secret", secret);
+  loadPending();
+  loadCurrentMonth();
+}
+
+window.addEventListener("load", () => {
+  const cfg = loadConfig();
+  document.getElementById("endpoint").value = cfg.endpoint;
+  document.getElementById("secret").value = cfg.secret;
+  if (cfg.endpoint && cfg.secret) {
+    loadPending();
+    loadCurrentMonth();
+  }
+});
+
+async function callAdmin(action, extra) {
+  const cfg = loadConfig();
+  const status = document.getElementById("status");
+  status.textContent = "通信中…";
+  try {
+    const res = await fetch(cfg.endpoint, {
+      method: "POST",
+      headers: {"Content-Type": "application/json", "X-Admin-Secret": cfg.secret},
+      body: JSON.stringify({action, ...extra}),
+    });
+    const json = await res.json();
+    status.textContent = json.ok ? "OK" : ("エラー: " + json.message);
+    return json;
+  } catch (err) {
+    status.textContent = "通信エラー: " + err;
+    return {ok: false};
+  }
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
+}
+
+function proposalCard(p, actionsHtml) {
+  const kind = p.card_kind === "spell" ? "砂術" : "砂時計";
+  return `<div class="card">
+    <div class="meta">${escapeHtml(p.id)} / ${escapeHtml(p.month)} / Good ${p.good_count || 0} / ${escapeHtml(p.status)}${p.result ? " / " + escapeHtml(p.result) : ""}</div>
+    <strong>${escapeHtml(p.card_name)}(${kind})</strong>
+    <div class="desc">${escapeHtml(p.description)}</div>
+    <div class="actions">${actionsHtml}</div>
+  </div>`;
+}
+
+async function loadPending() {
+  const el = document.getElementById("pending");
+  el.innerHTML = "<div class='empty'>読み込み中…</div>";
+  const json = await callAdmin("list_pending", {});
+  if (!json.ok) {
+    el.innerHTML = "<div class='empty'>読み込みに失敗しました</div>";
+    return;
+  }
+  if (!json.proposals.length) {
+    el.innerHTML = "<div class='empty'>審査待ちの投稿はありません</div>";
+    return;
+  }
+  el.innerHTML = json.proposals.map((p) => proposalCard(p,
+    `<button onclick="approve('${p.id}')">承認</button>
+     <button class="danger" onclick="reject('${p.id}')">却下(返金)</button>`
+  )).join("");
+}
+
+async function approve(id) {
+  await callAdmin("approve", {id});
+  loadPending();
+}
+
+async function reject(id) {
+  await callAdmin("reject", {id});
+  loadPending();
+}
+
+async function loadCurrentMonth() {
+  const el = document.getElementById("current_month");
+  el.innerHTML = "<div class='empty'>読み込み中…</div>";
+  const month = document.getElementById("month").value.trim();
+  const json = await callAdmin("list_current_month", month ? {month} : {});
+  if (!json.ok) {
+    el.innerHTML = "<div class='empty'>読み込みに失敗しました</div>";
+    return;
+  }
+  if (!json.proposals.length) {
+    el.innerHTML = "<div class='empty'>今月の承認済み投稿はありません</div>";
+    return;
+  }
+  el.innerHTML = json.proposals.map((p) => proposalCard(p,
+    p.result
+      ? `<span>判定済み: ${escapeHtml(p.result)}</span>`
+      : `<button onclick="setResult('${p.id}', 'adopted')">採用として確定</button>
+         <button class="secondary" onclick="setResult('${p.id}', 'not_adopted')">不採用として確定</button>`
+  )).join("");
+}
+
+async function setResult(id, result) {
+  await callAdmin("set_result", {id, result});
+  loadCurrentMonth();
+}
+</script>
+</body>
+</html>

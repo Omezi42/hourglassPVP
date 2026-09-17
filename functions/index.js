@@ -26,11 +26,17 @@ const {
   sendDeckFollowup,
   buildCardEmbeds,
 } = require("./discord_commands");
+const {handleLabAdmin} = require("./lab_admin");
 
 // Botトークン・公開鍵と同じ扱いで、リポジトリへは一切コミットしない。
 // `firebase functions:secrets:set DISCORD_WEBHOOK_URL` / `DISCORD_PUBLIC_KEY` で設定する。
 const DISCORD_WEBHOOK_URL = defineSecret("DISCORD_WEBHOOK_URL");
 const DISCORD_PUBLIC_KEY = defineSecret("DISCORD_PUBLIC_KEY");
+// 掲示板〈ラボ〉の管理ツール(`tools/lab_admin/`)だけが知っているシークレット
+// (GameDesign.md 29章 / Architecture.md 10.17節)。Firestoreのルールではなく、
+// これを知っているかどうかだけで権限を絞る。
+// `firebase functions:secrets:set LAB_ADMIN_SECRET` で設定する。
+const LAB_ADMIN_SECRET = defineSecret("LAB_ADMIN_SECRET");
 
 const ANNOUNCE_MESSAGE =
   "☀️ 本日は日曜イベント開催中!\n" +
@@ -162,5 +168,23 @@ exports.discordInteractions = onRequest(
       type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
       data: {flags: 64, content: "未対応のコマンドです"},
     });
+  }
+);
+
+/**
+ * 掲示板〈ラボ〉の承認・却下・月末の採用判断(GameDesign.md 29章)。開発側だけが開く
+ * `tools/lab_admin/` の管理ツールから、共有シークレット(`X-Admin-Secret`ヘッダー)を
+ * 添えて呼ぶ。中身は `lab_admin.js` へ集約し、この関数は認証だけを持つ。
+ */
+exports.labAdmin = onRequest(
+  {secrets: [LAB_ADMIN_SECRET]},
+  async (req, res) => {
+    const secret = LAB_ADMIN_SECRET.value();
+    const provided = req.get("X-Admin-Secret");
+    if (!secret || !provided || provided !== secret) {
+      res.status(401).json({ok: false, message: "unauthorized"});
+      return;
+    }
+    await handleLabAdmin(req, res, admin.firestore(), admin.firestore);
   }
 );

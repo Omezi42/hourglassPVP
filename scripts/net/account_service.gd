@@ -122,6 +122,19 @@ static func owned_emote_ids() -> Array[String]:
 	return _owned(EmoteLibrary.DEFAULT_EMOTE_IDS, "owned_emotes")
 
 
+## 所有を絞る称号(掲示板〈ラボ〉採用の「発案者」・大会優勝の「箱庭王」)。
+## 誰でも選べる初期の2つ(`UserProfileLibrary.INITIAL_TITLE_IDS`)は含めない
+## (`owned_icon_ids()` と違い、こちらは常時選べる分と所有分を画面側で別に合わせる)。
+static func owned_titles() -> Array[String]:
+	return _owned([] as Array[String], "owned_titles")
+
+
+## 登録済みアカウントかどうか(GameDesign.md 14章)。匿名のままか判定する唯一の場所。
+## 掲示板〈ラボ〉の投稿・投票はこれが true のときだけ許す(29章)。
+static func is_registered() -> bool:
+	return not str(_profile.get("login_id", "")).is_empty()
+
+
 ## 所有しているカードセットのid(GameDesign.md 8章・27章)。**基本セット70枚は
 ## この配列に頼らない**(`CardData.set_id`が空文字のカードは常にデッキへ入れられる)。
 static func owned_card_set_ids() -> Array[String]:
@@ -556,6 +569,7 @@ static func _empty_profile() -> Dictionary:
 		"owned_emotes": [],
 		"owned_playmats": [],
 		"owned_card_sets": [],
+		"owned_titles": [],
 		"emote_slots": [],
 		"playmat_id": "",
 		"rank_season": "",

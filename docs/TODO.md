@@ -37,6 +37,7 @@
 | unityroomランキング連携(2026-09-15実装) | unityroomへ実際に書き出して公開した状態で、プラチナに到達したときスコア送信が成功すること(unityroom側のゲーム管理画面でそのボードの反応を見る)。**ボードを「常に記録」に設定していないと動作確認できない**ため、先にunityroom側の設定が要る |
 | シーズン表彰式(`CardSeasonCeremonyPanel`、2026-09-15実装) | ポップインの尺・拡大の勢い、紋章の色・文言の見え方。**実際にシーズンをまたがないと呼ばれない**ため、`RankProgress.current_season_key()`の`at_unix_time`を差し替えたテスト用ビルド、またはシーズンが実際に切り替わるのを待って確認する |
 | デッキコード | 発行したコードを別の端末で読み込めること |
+| 掲示板〈ラボ〉(2026-09-17実装) | ホーム画面「つくる」タブ→掲示板画面が開くこと。投稿フォームで残高が減り一覧に並ぶこと(承認前は自分にも見えない想定なので、承認後に見える)。「Good」投票が1回だけ通り2回目は拒否されること。**`functions/lab_admin.js`のデプロイと`LAB_ADMIN_SECRET`の設定、`tools/lab_admin/index.html`からの承認・却下・採用確定が実際に反映されること**(§4.5にデプロイ手順を記載) |
 | 砂時計の絵の1組化 | unityroomで読み込みが速くなっていること(pck 9.65MB → 3.13MB) |
 | 日曜イベント | 日曜以外の日に日付判定だけ差し替えて動作確認 |
 | カードセット「五砂の刻」(コンボ5枚) | ショップでの購入導線、デッキ編集での未購入時ロック表示、購入後の解放。総量5の条件が対局中に正しく判定されているか(硝子/被弾/相打ちで削れて5になった瞬間) |
@@ -253,25 +254,47 @@
 
 仕様はGameDesign.md 29章、実装設計はArchitecture.md 10.17節。
 
-- [ ] `players/{uid}` へ `owned_titles`(Array[String])を追加。「発案者」称号を
-      `UserProfileLibrary` へ登録する
-- [ ] `LabModeration.quick_check()`(投稿前の簡易NGワードチェック)
-- [ ] `LabProposalService`(`submit()` / `list_approved()` / `vote()`)。
-      `lab_proposals/{id}` と `lab_proposals/{id}/votes/{uid}` のFirestore構造
-- [ ] `AccountService.is_registered()`(`login_id`が空でないかの判定)を投稿・投票
-      ボタンの両方に適用。未登録時は暗く無反応にする(21章のショップと同じ扱い)
-- [ ] `LabTab`(ホーム画面5つ目のタブ「つくる」)+ `CardLabScreen` + `LabSubmitPanel` +
-      `LabProposalCard`
-- [ ] NGワードの禁止語リストを用意する(最初は最低限の語数で始め、運用しながら増やす)
-- [ ] **`functions/lab_admin.js`**(Cloud Functions・`labAdmin`1関数):
-      `list_pending` / `list_current_month` / `approve` / `reject`(返金つき) /
-      `set_result`(採用時は称号付与つき)。`LAB_ADMIN_SECRET`を
-      `firebase functions:secrets:set`で設定する
-- [ ] **`tools/lab_admin/index.html`**(ビルド不要のバニラHTML+JS管理ツール)。
-      シークレット入力→審査待ち一覧(承認/却下ボタン)→今月の得票ランキング(採用確定)
-      の1画面構成
-- [ ] 実装後、実際に投稿→管理ツールでの承認→投票→(別の投稿で)却下の返金→月末の
-      採用確定までの一連の流れを1人で通しで確認する(§1の実機確認テーブルへ追加する)
+- [x] ~~`players/{uid}` へ `owned_titles`(Array[String])を追加。「発案者」称号を
+      `UserProfileLibrary` へ登録する~~ → 「発案者」「箱庭王」(30章の優勝賞品も見込んで
+      先に登録)の2つを追加。`get_available_title_ids()` は初期の2つ(novice/none)だけを
+      返すよう変更し、`AccountService.owned_titles()` と合わせて `AccountScreen` が
+      一覧を組む(所有していないものは選ばせない。アイコンと同じ流儀)
+- [x] ~~`LabModeration.quick_check()`~~ → `scripts/logic/lab_moderation.gd`
+- [x] ~~`LabProposalService`(`submit()` / `list_approved()` / `vote()`)~~ →
+      `scripts/net/lab_proposal_service.gd`。`FirestoreClient.query_two_fields_equal()`
+      を新設し(既存の等価フィルタ1本のクエリと同じ流儀で、複合フィルタでも
+      orderByを重ねなければ複合インデックスを要求しないことを利用)、
+      `status == "approved" and month == 今月` の絞り込みに使う
+- [x] ~~`AccountService.is_registered()`~~ → 投稿・投票の両方の入口で見る。
+      未登録時は投稿ボタンを押すと案内を出し、投票・投稿の`Service`側でも
+      二重に拒否する(ボタンの無効化だけに頼らない)
+- [x] ~~`LabTab` + `CardLabScreen` + `LabSubmitPanel` + `LabProposalCard`~~ →
+      ホーム画面へ5つ目のタブ「つくる」を追加(`HomeScreen`の並び・下部タブ・
+      背景切り替えを4タブから5タブへ拡張)。一覧は横2列のグリッドで、
+      ヘッダー右に「投稿する」と「今月/過去ログ」の切り替えを置く
+- [x] ~~NGワードの禁止語リストを用意する~~ → 最低限の語数で `LabModeration.BANNED_WORDS`
+      へ置いた。運用しながら増やす
+- [x] ~~`functions/lab_admin.js`~~ → `list_pending` / `list_current_month` / `approve` /
+      `reject`(返金つき、Firestoreトランザクション) / `set_result`(採用時は
+      称号「発案者」付与つき) / `grant_tournament_prize`(30章の優勝賞品を先取りで実装。
+      称号「発案者」「箱庭王」を同時付与)。`functions/index.js` へ
+      `exports.labAdmin`(`X-Admin-Secret`ヘッダーでの認証)を追加
+- [x] ~~`tools/lab_admin/index.html`~~ → エンドポイント・シークレットを`localStorage`へ
+      保存するバニラHTML+JS。審査待ち一覧(承認/却下)と今月の得票ランキング
+      (採用/不採用の確定)の1画面構成
+- [x] ~~`firestore.rules` へ `lab_proposals` / `lab_proposals/{id}/votes/{uid}` を追加~~
+- [x] ~~検証(`tools/tests/lab_tests.gd`)~~ → NGワード判定・月キーの形式・
+      称号一覧の絞り込み・`is_registered()`に加え、`FakeFirestoreClient`を使って
+      「投稿→残高が減り`pending`のドキュメントができる」「投票が1回だけ通り
+      2回目は拒否される」までを実通信なしで確認済み(`run_tests.gd`へ登録し、
+      全体のヘッドレステストが通ることを確認済み)
+- [ ] **デプロイと実機確認が残っている。**`firebase functions:secrets:set LAB_ADMIN_SECRET`
+      を設定し `firebase deploy --only functions`(`labAdmin`を含む)、
+      Firestoreコンソールへ更新した`firestore.rules`を貼り直す、
+      `tools/lab_admin/index.html`のエンドポイント欄へデプロイ後のURLを入れる、
+      という3つの手作業が要る。実装後、実際に投稿→管理ツールでの承認→投票→
+      (別の投稿で)却下の返金→月末の採用確定までの一連の流れを1人で通しで
+      確認する(§1の実機確認テーブルへ追加済み)
 
 ### 公式大会「箱庭杯」(実装タスク・2026-09-15仕様確定)
 

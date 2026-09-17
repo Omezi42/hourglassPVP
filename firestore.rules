@@ -95,6 +95,21 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // 掲示板〈ラボ〉への新規カード案(GameDesign.md 29章)。投稿・投票はクライアントから
+    // 直接書けるようにするが、承認・却下・月末の採用判断(status/resultの変更)は
+    // 開発側の管理ツール(Cloud Functions、Admin SDK)からのみ行う。このルールでは
+    // 「サインイン済みなら誰でも読み書きできる」までしか絞れない(クライアントの
+    // 操作をそのまま信頼する既存方針。11章)ため、承認・却下の運用面での制約は
+    // 管理ツール側の責任とする。
+    match /lab_proposals/{proposalId} {
+      allow read, write: if signedIn();
+
+      // 1投稿1人1票(GameDesign.md 29章)。ドキュメントIDは投票者のuid。
+      match /votes/{voterUid} {
+        allow read, write: if signedIn();
+      }
+    }
+
     // カードスポットライトが直近30日の重複を避けるための最終紹介日時(同26章)。
     // ドキュメントIDはカードid。Cloud Scheduler経由のCloud Functions(Admin SDK)だけが
     // 触るため、クライアントには読み書きさせない。

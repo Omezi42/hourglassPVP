@@ -127,7 +127,21 @@ const TITLES: Dictionary = {
 		"name": "AI思考体",
 		"display": "AI思考体",
 	},
+	"proposer":
+	{
+		"name": "発案者",
+		"display": "発案者",
+	},
+	"hakoniwa_ou":
+	{
+		"name": "箱庭王",
+		"display": "箱庭王",
+	},
 }
+
+## 誰でも選べる称号(GameDesign.md 14章)。これ以外(「発案者」「箱庭王」)は
+## `AccountService.owned_titles()` に含まれている人だけが選べる。
+const INITIAL_TITLE_IDS: Array[String] = ["novice", "none"]
 
 static var _textures: Dictionary = {}
 
@@ -138,11 +152,13 @@ static func get_available_icon_ids() -> Array:
 	return ICONS.keys()
 
 
+## 誰でも選べる称号だけを返す(初期の2つ)。所有を絞る称号
+## (「発案者」「箱庭王」)は `AccountService.owned_titles()` と合わせて画面側が持つ
+## (`owned_icon_ids()` が「初期解放 + 購入分」を返すのと同じ形)。
 static func get_available_title_ids() -> Array:
 	var list: Array = []
-	for id in TITLES:
-		if id != "cpu_basic":
-			list.append(id)
+	for id in INITIAL_TITLE_IDS:
+		list.append(id)
 	return list
 
 

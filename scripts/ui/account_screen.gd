@@ -142,12 +142,7 @@ func _setup_profile_ui() -> void:
 	_emote_panel.anchor_bottom = 1.0
 	add_child(_emote_panel)
 
-	# 称号一覧 (スクロールリスト)
-	for title_id in UserProfileLibrary.get_available_title_ids():
-		var item := TitleListItem.new(title_id)
-		item.pressed.connect(func() -> void: _on_title_selected(title_id))
-		title_list.add_child(item)
-		_title_buttons[title_id] = item
+	_rebuild_title_list()
 
 
 ## アイコンはショップ(GameDesign.md 21章)で増えるため、一覧をスクロールできるように
@@ -190,6 +185,24 @@ func _on_playmat_selected(mat_id: String, bump_preview: bool = false) -> void:
 		_preview.bump()
 
 
+## 誰でも選べる初期の2つ + 所有を絞る称号(掲示板〈ラボ〉採用の「発案者」・
+## 大会優勝の「箱庭王」)。所有していない称号は一覧に出さない
+## (`_rebuild_icon_grid()` と同じ、所有していないものは選ぶ場所に混ぜない方針)。
+func _rebuild_title_list() -> void:
+	for child in title_list.get_children():
+		child.queue_free()
+	_title_buttons.clear()
+	var ids: Array = UserProfileLibrary.get_available_title_ids().duplicate()
+	for id in AccountService.owned_titles():
+		if not ids.has(id):
+			ids.append(id)
+	for title_id in ids:
+		var item := TitleListItem.new(title_id)
+		item.pressed.connect(func() -> void: _on_title_selected(title_id))
+		title_list.add_child(item)
+		_title_buttons[title_id] = item
+
+
 ## 所有しているものだけを並べる(GameDesign.md 14章)。買った直後にも呼ぶ。
 func _rebuild_icon_grid() -> void:
 	for child in icon_grid.get_children():
@@ -216,6 +229,7 @@ func refresh() -> void:
 	_selected_title_id = AccountService.title_id()
 	_selected_playmat_id = AccountService.playmat_id()
 	_rebuild_icon_grid()
+	_rebuild_title_list()
 	_rebuild_playmat_row()
 	_on_playmat_selected(_selected_playmat_id)
 	_refresh_view()

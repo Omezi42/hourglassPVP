@@ -18,6 +18,7 @@ signal random_match_deck_requested
 signal ranked_match_deck_requested
 signal room_match_requested
 signal account_requested
+signal lab_requested
 
 ## 下部タブの寸法。**幅は共通で、高さだけ変える。**幅まで変えると `HBoxContainer` の
 ## 中で他のタブが横へ押し出され、選択するたびに4つの位置がずれる(実際にそうなった)。
@@ -47,9 +48,10 @@ const TAB_BATTLE := 0
 const TAB_DECK := 1
 const TAB_RECORD := 2
 const TAB_LEARN := 3
+const TAB_LAB := 4
 ## タブの文言。クラス名(`BattleTab` / `DeckTab` / `RulesTab`)は `.tscn` の参照を
 ## 壊さないため変えていないので、**画面に出る名前はここだけが持つ**。
-const TAB_LABELS := ["たたかう", "そろえる", "きろく", "おぼえる"]
+const TAB_LABELS := ["たたかう", "そろえる", "きろく", "おぼえる", "つくる"]
 
 ## 右上のメニュー(ハンバーガー)ボタンのスタイル。
 const MENU_BUTTON_GROUP := "icon_menu"
@@ -62,6 +64,8 @@ var _rules_nav_button: Button
 var _record_tab: RecordTab
 var _record_nav_button: Button
 var _record_badge: Label
+var _lab_tab: LabTab
+var _lab_nav_button: Button
 
 var _nameplate_button: AccountNameplateButton
 ## デイリーミッション(GameDesign.md 23章)のモーダル。最初に開いたときだけ作る。
@@ -108,16 +112,18 @@ func _ready() -> void:
 	move_child(scrim, background.get_index() + 1)
 	_build_rules_tab()
 	_build_record_tab()
+	_build_lab_tab()
 	deck_nav_button.text = TAB_LABELS[TAB_DECK]
 	battle_nav_button.text = TAB_LABELS[TAB_BATTLE]
 	deck_nav_button.pressed.connect(_select_tab.bind(TAB_DECK))
 	battle_nav_button.pressed.connect(_select_tab.bind(TAB_BATTLE))
-	# 並びを「たたかう / そろえる / きろく / おぼえる」に揃える(9章)。
+	# 並びを「たたかう / そろえる / きろく / おぼえる / つくる」に揃える(9章・29章)。
 	var nav: Node = battle_nav_button.get_parent()
 	nav.move_child(battle_nav_button, 0)
 	nav.move_child(deck_nav_button, 1)
 	nav.move_child(_record_nav_button, 2)
 	nav.move_child(_rules_nav_button, 3)
+	nav.move_child(_lab_nav_button, 4)
 	_style_menu_button()
 	settings_button.pressed.connect(func() -> void: settings_panel.open())
 
@@ -210,9 +216,9 @@ func refresh_account() -> void:
 
 
 func _select_tab(index: int) -> void:
-	var tabs: Array[Control] = [battle_tab, deck_tab, _record_tab, _rules_tab]
+	var tabs: Array[Control] = [battle_tab, deck_tab, _record_tab, _rules_tab, _lab_tab]
 	var buttons: Array[Button] = [
-		battle_nav_button, deck_nav_button, _record_nav_button, _rules_nav_button
+		battle_nav_button, deck_nav_button, _record_nav_button, _rules_nav_button, _lab_nav_button
 	]
 	for i in buttons.size():
 		_apply_nav_style(buttons[i], i == index)
@@ -294,6 +300,22 @@ func _build_record_tab() -> void:
 	_record_nav_button.text = TAB_LABELS[TAB_RECORD]
 	_record_nav_button.pressed.connect(_select_tab.bind(TAB_RECORD))
 	deck_nav_button.get_parent().add_child(_record_nav_button)
+
+
+## 「つくる」タブとそのタブボタンはここで生成する(GameDesign.md 9章・29章)。
+## `_build_rules_tab()` と同じ理由で `scenes/home_screen.tscn` を書き換えずに追加する。
+func _build_lab_tab() -> void:
+	_lab_tab = LabTab.new()
+	_lab_tab.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_lab_tab.visible = false
+	_lab_tab.lab_requested.connect(func() -> void: lab_requested.emit())
+	deck_tab.get_parent().add_child(_lab_tab)
+	deck_tab.get_parent().move_child(_lab_tab, 4)
+
+	_lab_nav_button = deck_nav_button.duplicate(0) as Button
+	_lab_nav_button.text = TAB_LABELS[TAB_LAB]
+	_lab_nav_button.pressed.connect(_select_tab.bind(TAB_LAB))
+	deck_nav_button.get_parent().add_child(_lab_nav_button)
 
 
 ## 受け取れるミッションがあることを、他のタブを見ている間も分かるようにする

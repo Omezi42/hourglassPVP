@@ -31,6 +31,8 @@ var card_ranked_match_screen: CardRankedMatchScreen
 var card_rank_screen: CardRankScreen
 ## CPU戦の思考レベル選択モーダル(GameDesign.md 13章)。
 var card_cpu_difficulty_picker: CardCpuDifficultyPicker
+## 掲示板〈ラボ〉(GameDesign.md 29章)。
+var card_lab_screen: CardLabScreen
 
 var _match_return_screen: Control
 ## デッキ選択画面で確定するまで待たせている対局の導線(ランダム/CPU)。
@@ -160,6 +162,12 @@ func _ready() -> void:
 	add_child(card_rank_screen)
 	card_rank_screen.back_pressed.connect(func() -> void: _show_only(home_screen, true))
 	_screens.append(card_rank_screen)
+	card_lab_screen = CardLabScreen.new()
+	card_lab_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
+	card_lab_screen.visible = false
+	add_child(card_lab_screen)
+	card_lab_screen.back_pressed.connect(func() -> void: _show_only(home_screen, true))
+	_screens.append(card_lab_screen)
 	puzzle_picker_screen = CardPuzzlePickerScreen.new()
 	puzzle_picker_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
 	puzzle_picker_screen.visible = false
@@ -209,6 +217,7 @@ func _ready() -> void:
 	home_screen.random_match_deck_requested.connect(_on_random_match_deck_requested)
 	home_screen.ranked_match_deck_requested.connect(_on_ranked_match_deck_requested)
 	home_screen.room_match_requested.connect(_on_room_match_requested)
+	home_screen.lab_requested.connect(_on_lab_requested)
 	replay_list_screen.back_pressed.connect(func() -> void: _show_only(home_screen, true))
 	replay_list_screen.replay_selected.connect(_on_replay_selected)
 	NetSession.ensure_ready(self)
@@ -357,6 +366,12 @@ func _begin_ranked_match() -> void:
 func _on_rank_screen_requested() -> void:
 	_show_only(card_rank_screen)
 	card_rank_screen.open()
+
+
+## ホーム画面「つくる」タブから、掲示板〈ラボ〉を開く(GameDesign.md 29章)。
+func _on_lab_requested() -> void:
+	_show_only(card_lab_screen)
+	card_lab_screen.open()
 
 
 ## ルームマッチは専用画面へ直行する。**共通のデッキ選択画面を先に挟まない**

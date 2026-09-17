@@ -142,6 +142,48 @@ func query_field_equals(collection: String, field: String, value: Variant, limit
 	)
 
 
+## collection直下でfield1 == value1 AND field2 == value2のドキュメントをlimit件
+## クエリする(掲示板〈ラボ〉の`status == "approved" and month == 今月`。
+## Architecture.md 10.17節)。**等価フィルタを重ねるだけなら複合インデックスを
+## 要求しない**(orderByやレンジフィルタを混ぜたときだけ要る)。orderByは持たず、
+## `good_count`降順の並びはクライアント側で行う。
+func query_two_fields_equal(
+	collection: String, field1: String, value1: Variant, field2: String, value2: Variant, limit: int
+) -> Array:
+	return await _run_structured_query(
+		{
+			"from": [{"collectionId": collection}],
+			"where":
+			{
+				"compositeFilter":
+				{
+					"op": "AND",
+					"filters":
+					[
+						{
+							"fieldFilter":
+							{
+								"field": {"fieldPath": field1},
+								"op": "EQUAL",
+								"value": FirestoreCodec.encode_value(value1)
+							}
+						},
+						{
+							"fieldFilter":
+							{
+								"field": {"fieldPath": field2},
+								"op": "EQUAL",
+								"value": FirestoreCodec.encode_value(value2)
+							}
+						},
+					]
+				}
+			},
+			"limit": limit
+		}
+	)
+
+
 ## players コレクションから、現在シーズンで対局したプレイヤーを合成スコア
 ## (`rank_progress_score`。ブロンズ〜ゴールドの★とプラチナのレートを1本の
 ## 順序へ束ねた値。`RankRules.progress_score()`)の降順にlimit件クエリする
