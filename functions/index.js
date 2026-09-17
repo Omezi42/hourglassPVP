@@ -179,6 +179,17 @@ exports.discordInteractions = onRequest(
 exports.labAdmin = onRequest(
   {secrets: [LAB_ADMIN_SECRET]},
   async (req, res) => {
+    // 管理ツール(tools/lab_admin/index.html)は `file://`(origin "null")から
+    // 直接fetchするため、CORSのプリフライト(OPTIONS)に応答しないとブラウザが
+    // ブロックする。管理者しか知らないシークレットで既に絞っているため、
+    // オリジンはどこからでも許可してよい。
+    res.set("Access-Control-Allow-Origin", "*");
+    res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.set("Access-Control-Allow-Headers", "Content-Type, X-Admin-Secret");
+    if (req.method === "OPTIONS") {
+      res.status(204).send("");
+      return;
+    }
     const secret = LAB_ADMIN_SECRET.value();
     const provided = req.get("X-Admin-Secret");
     if (!secret || !provided || provided !== secret) {
