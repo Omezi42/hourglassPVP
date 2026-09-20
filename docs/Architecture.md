@@ -37,6 +37,8 @@ v5.0のカードが使う語彙を1箇所へ集める。旧ルールの `GameEnu
 | `NAMED`(const) | **語として見せる**キーワード。`GUARD` / `GLASS` / `PIERCE` / `QUICK` の4つ |
 | `Trigger` | `ON_PLAY`(設置)/ `ON_FLIP`(反転)/ `ON_DEATH`(余砂)/ `ON_TURN_END`(落砂)/ `ON_DAMAGED`(被弾) |
 | `EffectTarget` | `SELF` / `ENEMY_UNIT` / `ALL_ENEMY_UNITS` / `ALL_ALLY_UNITS` / `OPPONENT_PLAYER` / `OWN_PLAYER` / **`ALLY_UNIT`** |
+| `EffectVisualStyle` | `STRIKE` / `DESCEND` / `DRAIN` / `SPIN` / **`PULSE`**(その場で光の輪)/ **`RECALL`**(包んで手札へ戻す)|
+| `EffectOrigin` | `UNIT` / `SPELL` / `DEATH`。紋章の出どころ(4.0節) |
 | `EffectType` | `DAMAGE_PLAYER` / `DAMAGE_UNIT` / `DESTROY_UNIT` / `SWAP_STATS` / `ADD_TOTAL` / `DROP_SAND` / `DRAW` / `HEAL_PLAYER` / `DAMAGE_PLAYER_PER_ENEMY_UNIT` / `ADD_ATTACK` / `SUMMON` / `GRANT_KEYWORD` / `SILENCE` / **`RETURN_TO_HAND`** / **`INVERT_PLAYER_HP`** |
 
 **`CardEnums` の enum へ新しい値を足すときは、必ず末尾へ置く**(下記11章)。
@@ -574,8 +576,66 @@ UIに依存しない、対局ルールそのものを扱う層。
 ため、対象の数だけ紋章が同時に発射され同時に着弾する。`CardMatchEffectStrike._on_impact()`
 は元々 `_damage` を配列として扱っており(複数ヒットを想定して作ってあった)、
 `hold_damage()` が呼ばれるたびに要素を足すだけで**変更なしに複数体の砂の飛散を捌ける**。
-**味方全体を狙う恵与(`ALL_ALLY_UNITS` × `ADD_TOTAL`/`ADD_ATTACK`/`DROP_SAND`)は今回は
-対象外とし、従来どおり光の筋のままにする**(GameDesign.md 9章)。
+**味方全体を狙う恵与(`ALL_ALLY_UNITS` × `ADD_TOTAL`/`ADD_ATTACK`/`DROP_SAND`/`GRANT_KEYWORD`)も
+同じ `_strike_many()` を `DESCEND` で通す**(2026-09-21。それまでは光の筋のままだった)。
+
+#### 紋章の出どころ(`CardEnums.EffectOrigin`。2026-09-21)
+
+`effect_struck` / `effect_struck_many` の第2引数 `source_slot` だけでは、砂術(手札から撃つ)と
+余砂(駒が既に盤面から降りている)の紋章をどこから飛ばせばよいか決まらず、どちらも
+`source_slot < 0` で演出が丸ごと落ちていた。**末尾に `origin: CardEnums.EffectOrigin`
+(`UNIT` / `SPELL` / `DEATH`)を足し、`CardMatchEffectStrike` が出どころの座標を型から決める。**
+
+| origin | `source_slot` | 出どころ | 飛ぶ前の見せ方 |
+|---|---|---|---|
+| `UNIT` | 盤面の枠 | 駒の中心 | 従来どおり即座に飛ぶ |
+| `SPELL` | -1 | **自分の情報帯の中心**(`bar_for(side)`) | `EmblemStrikeFx.RISE` の間、紋章が大きく浮き上がってから飛ぶ |
+| `DEATH` | 砕けた枠 | **台座の銘板の位置**(`CardView.PEDESTAL_CENTER_Y`) | `EmblemStrikeFx.LINGER` の間、銘板として台座に残ってから飛ぶ |
+
+- `CardEffectResolver` は `resolve()` の入口で出どころを1度だけ決める(`_origin`)。
+  `_slot_of()` が枠を返せば `UNIT`、`hint` に `death_slot` があれば `DEATH`
+  (`MatchState._destroy_unit()` が `_fire(..., {"death_slot": slot})` で渡す)、
+  それ以外(`cast_spell()` が作る盤面に無い `CardInstance`)は `SPELL`。
+  **`from`(`_slot_of()` の戻り値)は対象の解決のために従来のまま残し、演出の出どころとは
+  分けて持つ**——`DEATH` で `from` を砕けた枠に差し替えると、`ALLY_UNIT` の除外や `SELF` の
+  判定が空の枠を指すことになる
+- **対象を取らない効果(ドロー・召喚)にも紋章の行き先を与える。**`DRAW` は出どころが
+  `SPELL` / `DEATH` のとき新設の型 `EffectVisualStyle.PULSE`(飛ばずにその場で光の輪を出して
+  消える)を `target_slot = -1` で発行する(`UNIT` のときは従来どおり `effect_drawn` →
+  `play_spark()`)。`SUMMON` は出どころによらず、置く先の空き枠へ `DESCEND` で飛ばす
+  (`_summon()` が選ぶ枠と同じ「最初の空き枠」を先に求めて発行する)
+- **`RETURN_TO_HAND` は新設の型 `RECALL`**、**`INVERT_PLAYER_HP` は `SPIN` を自分のHPバーへ**。
+  この2つの置き換えで `_beam()` を呼ぶ効果が1つも無くなるため、`_beam()` と
+  `effect_targeted`、`CardMatchEffects._on_effect_targeted()` は削除する。**光の筋
+  (`CardFlipBeam`)が残るのは通常の反転とドローの山札→手札だけ**
+- **enum へ足す値(`PULSE` / `RECALL`、`EffectOrigin` 自体)は末尾に置く**(11章)
+
+**砕けた駒の余砂は、崩落を先に見せてから銘板が飛ぶ。**`_destroy_unit()` は `_fire(ON_DEATH)` →
+`unit_destroyed` の順で出すため、`effect_struck(DEATH)` が先に届いて `CardMatchEffectStrike` が
+armed になり、そのままだと崩落(`_on_unit_destroyed` の `_defer()`)が着弾まで持ち越されて
+順序が逆になる。`CardMatchEffects._on_unit_destroyed()` は
+`effect_strike.is_death_origin(side, slot)` が真なら持ち越さず即座に `play_break()` を呼び、
+`EmblemStrikeFx` は `LINGER` のあいだ台座に銘板を描いてから飛ぶ。**攻撃の演出中に死んだ
+場合(相打ちで余砂持ちが砕けた)は、飛ぶこと自体を攻撃の着弾まで持ち越す**——
+`CardMatchEffectStrike.on_effect_struck*()` は `_screen._strike.busy()` なら段取りを
+`_pending` に積み、`CardMatchStrike._on_impact()` が `effects.flush()` の直後に
+`effect_strike.flush()` を呼ぶ。この間も `busy()` は真を返す(盤面の再同期を遅らせるため)。
+
+`CardMatchStrike.on_unit_damaged()` / `on_unit_ticked()` は **先に `effect_strike.busy()` を見て**
+持ち越す(以前は攻撃側の `_armed` を先に見ていた)。相打ちの被ダメージは余砂の発火より前に
+届くため、攻撃側が先に控える順序は変わらず、余砂の効果(バースト等)の被ダメージだけが
+紋章の着弾へ揃う。**`unit_ticked`(砂嵐・ラトル・ドリップの砂落ち)も同じく着弾まで持ち越す**
+(`hold_tick()`)。以前は紋章が届く前に砂が流れていた。
+
+**砂へ還す(`RECALL`)の駒の消え方は `CardUnitFx.play_recall(card, toward)`** が持つ
+(着地・崩落と同じく、起きた瞬間に渡された引数だけで完結する演出)。`MatchState.unit_returned`
+を `CardMatchEffects` が受け、`_defer()` で `view.play_recall(card, hand_center(side))` を積む——
+`RECALL` の紋章が armed の間は持ち越されるため、着弾の瞬間に駒が縮んで手札の方向へ
+吸い込まれる。`_hand_center()` はこのために `hand_center()` として公開する。
+
+**通常の反転と設置の着地は、台座の銘板を `CardView.play_spark()` で短く光らせる**
+(GameDesign.md 9章)。`CardFlipBeam.play_flip()` が `view.play_flip()` を呼ぶ箇所と、
+`CardMatchEffects._on_unit_played()` の `play_land()` の直後に足す。新しい描画は持たない。
 
 `effect_struck` は `style: CardEnums.EffectVisualStyle`(`STRIKE` / `DESCEND` / `DRAIN` /
 `SPIN`)を運ぶ。型は `_apply()` の分岐そのものが決める——`DAMAGE_UNIT` / `DESTROY_UNIT` /
@@ -619,9 +679,8 @@ UIに依存しない、対局ルールそのものを扱う層。
 だけ発行し、`CardMatchEffects._on_effect_drawn()` が `_defer()` 経由で
 `CardView.play_spark()`(紋章の周りへ短い光の輪を出すだけの軽い合図)を呼ぶ。
 **`effect_struck` と違い armed/持ち越しの仕組みを持たない**——盤面の駒を破壊・移動
-させる効果ではなく、タイミングのズレが実害にならないため。余砂(破壊時)は
-`_slot_of()` が -1 を返し発行されないため、光の筋(`effect_targeted`)と同じく
-駒が既に盤面から降りている場合は演出が出ない。
+させる効果ではなく、タイミングのズレが実害にならないため。余砂(破壊時)と砂術は
+`_slot_of()` が -1 を返すためこの経路には乗らず、`PULSE` の紋章(上記)で見せる。
 
 **`CardView.play_counter()`(相打ちの反撃)と `play_spark()`(ドローの合図)の段取りは
 `CardViewFlourish` が持つ**(`scripts/ui/card_view_flourish.gd`)。`CardView` が
