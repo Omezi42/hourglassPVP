@@ -2410,6 +2410,35 @@ Firestoreを一切知らないまま(ローカルの計算と保存だけを持�
 
 ---
 
+### 10.10.0 対局画面の再構築(GameDesign.md 9章「対局画面の再構築」・2026-09-21)
+
+**見た目の層だけを差し替える。**`MatchState`・各進行役(`CardMatchStrike` 等)・`CardMatchTouch` は
+触らず、座標定数と `_draw()` を持つクラスだけを変える。新しいクラスは2つ。
+
+| クラス | 責務 |
+|---|---|
+| `MatchBackdrop`(`scripts/ui/match_backdrop.gd`) | 対局画面専用の下地。石の広間(`RoomPaint` の部品を薄く)/ 吊りランプ / 卓の中心の光だまり(放射グラデーションの `GradientTexture2D` を1枚。同心の楕円を重ねると段が見える)/ 卓・情報帯・手札・行動の列への落ち影 / 四辺のビネット。`ScreenBackdrop.PLAIN` の代わりに `_build()` の先頭で足す |
+| `ActionColumnPanel`(`scripts/ui/action_column_panel.gd`) | 右端の行動の列の地(濃紺のパネル + 真鍮の縁)。ボタンより先に `add_child()` して背面へ置く。ボタン自体は従来どおり `CodedButton` で、丸い形(`Shape.CIRCLE`)を使う |
+
+- **卓の奥行きは `BoardTable` が額と面を台形で描く**ことで出す(`PERSPECTIVE_INSET`:奥の辺を
+  左右それぞれ何px狭めるか)。マットの層(`MatLayer`)は矩形のまま `clip_contents` で切り抜いて
+  いるため、**台形の額の内側に収まるよう層の矩形を奥の幅に合わせて縮める**(はみ出した布が
+  額の外へ出ないようにするため)
+- **相手の列の駒は `CardView.scale` で 0.92 倍にする**(`CardMatchScreen.FOE_ROW_SCALE`)。
+  `pivot_offset` を駒の中心に置き、`position` / `size` は変えない。これにより
+  `CardFlipBeam.unit_center()` / `CardMatchGeometry.slot_center()` / ドラッグの当たり判定は
+  従来の座標のまま使える(Godot は `scale` を持つ `Control` の入力を正しく変換する)。
+  攻撃の演出(`CardViewStrike`)は描画側の変換で駒を動かしており、`scale` と干渉しない
+- **台座は `CardViewPaint.pedestal_base()` が「上面の楕円 + 側面の帯」の器として描く**。
+  側面は上面の楕円の下半分を `PEDESTAL_HEIGHT` ぶん下へ押し出した帯で、暗い真鍮の縦グラデーション。
+  輪(`pedestal_ring()`)は上面の縁に掛ける。接地の影は器の足元へ移す
+- **情報帯(`PlayerInfoBar` / `BarPanel`)は寸法と地の色だけを変える**。`BAR_HEIGHT` を詰め、
+  地を濃紺(`UiPalette` へ `NAVY_PANEL` 系の色を足す)、縁を真鍮の細線に。持ち時間は右端の
+  丸い時計として `CLOCK_X` の位置に円で描く。要素の並び・シグナルの受け口は変えない
+- 座標定数(`TABLE_RECT` / `*_ROW_TOP` / `*_BAR_TOP` / `HAND_AREA` / `ACTION_COLUMN_X`)は
+  `CardMatchScreen` が持つまま値を更新する。**`CardMatchGeometry` はこれらを読むだけ**なので、
+  値を変えれば座標系の問い合わせは追従する
+
 ### 10.10.1 対局画面の手触り(GameDesign.md 9章「対局画面の手触り」)
 
 **新しい画面要素を足さず、既存の要素へ反応を足す。**`card_match_screen.gd` と

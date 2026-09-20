@@ -474,7 +474,7 @@ func _begin_state(
 
 func _build() -> void:
 	# 下地と卓は最初に足して盤面の駒より背面へ置く。
-	add_child(ScreenBackdrop.new())
+	add_child(MatchBackdrop.new())
 	# 卓の後ろにだけ淡い光を置いて浮かせる(GameDesign.md 9章)。BoardTableより先に
 	# 足すことで、卓の額の外周からわずかににじむだけの光として見える。
 	var table_glow := BoardGlow.new()

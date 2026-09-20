@@ -9,14 +9,15 @@ extends Control
 
 ## 光が届く距離。GameDesign.md「卓の後ろにだけ淡い光」の"わずかに"を保つため、
 ## 盤面の読みやすさを損なわない範囲(24〜40px)に収める。
-const RING_COUNT := 4
+const RING_COUNT := 5
 const RING_STEP := 9.0
 ## 卓の額の角丸(`BoardTable.FRAME_WIDTH` ではなく `_draw_frame()` の角丸半径18.0)に合わせる。
 const CORNER_RADIUS := 18.0
 const CORNER_SEGMENTS := 8
 ## 最も内側の輪の不透明度。卓の額に隠れて実際に見えるのは外側のにじみだけのため、
 ## ボタンのホバーグロー(0.14)よりやや低く抑える。
-const PEAK_ALPHA := 0.10
+## 「光と影」の検証(落ち影とセットで卓が浮く)で 0.10 → 0.16 へ上げた。
+const PEAK_ALPHA := 0.09
 
 
 func _ready() -> void:

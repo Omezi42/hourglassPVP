@@ -122,10 +122,29 @@ func _draw() -> void:
 
 func _draw_rail_layer() -> void:
 	var ci := _rail_layer.get_canvas_item()
-	UiPaint.draw_inner_shadow(
-		ci, Rect2(Vector2.ZERO, size).grow(-FRAME_WIDTH), 6.0, 6, 9, Color(0, 0, 0), 0.85
-	)
+	var inner := Rect2(Vector2.ZERO, size).grow(-FRAME_WIDTH)
+	_draw_ambient_light(ci, inner)
+	UiPaint.draw_inner_shadow(ci, inner, 6.0, 6, 9, Color(0, 0, 0), 0.85)
 	_draw_rail(ci)
+
+
+## 額の内側全体へ「上端が明るく下端がわずかに暗い」極薄の光を重ねる(「光と影」の検証)。
+## CPU専用マット(暗い)と自分のマット無し(木地)の上下が、同じ光を受けているように見せる。
+func _draw_ambient_light(ci: RID, rect: Rect2) -> void:
+	var points := UiPaint.rounded_rect_points_uniform(rect, 6.0, 6)
+	(
+		UiPaint
+		. fill_gradient_polygon(
+			ci,
+			points,
+			rect,
+			[
+				[0.0, Color(1.0, 1.0, 1.0, 0.06)],
+				[0.5, Color(1.0, 1.0, 1.0, 0.0)],
+				[1.0, Color(0.0, 0.0, 0.0, 0.08)],
+			]
+		)
+	)
 
 
 ## 木の額。卓の外周を囲う枠で、マットはこの内側へ敷く。

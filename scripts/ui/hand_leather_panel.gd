@@ -64,6 +64,8 @@ func _draw() -> void:
 	UiPaint.draw_bevel(ci, points, LEATHER_HIGHLIGHT, LEATHER_DARK, BEVEL_WIDTH, false)
 	_draw_stitch_line(ci, rect.position.y + SEAM_INSET_Y, rect)
 	_draw_stitch_line(ci, rect.end.y - SEAM_INSET_Y, rect)
+	# 上端の光の当たり(「光と影」の検証)。落ち影は`MatchBackdrop`が担う。
+	draw_rect(Rect2(rect.position.x, rect.position.y, rect.size.x, 3.0), Color(1.0, 1.0, 1.0, 0.05))
 
 
 ## 上下の縁ぞいに縫い目を1本ずつ通す。革の面らしさを足すディテールで、実際の刺繍と

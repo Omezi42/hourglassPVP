@@ -26,6 +26,13 @@ static func pedestal_base(view: CardView) -> void:
 		Color(UiPalette.PEDESTAL_DEFAULT_ACCENT, 0.14),
 		32
 	)
+	# 接地の影(「光と影」の検証): 駒が台座に立っていることを示す。輪(pedestal_ring)
+	# より前に描き、既存の台座の塗りの上へ重ねる。
+	if view.card != null:
+		var shadow_base := CardView.PEDESTAL_RADIUS * 0.85
+		UiPaint.fill_ellipse(ci, center, shadow_base * 0.85, Color(0.0, 0.0, 0.0, 0.10), 24)
+		UiPaint.fill_ellipse(ci, center, shadow_base * 0.65, Color(0.0, 0.0, 0.0, 0.14), 24)
+		UiPaint.fill_ellipse(ci, center, shadow_base * 0.45, Color(0.0, 0.0, 0.0, 0.18), 24)
 
 
 ## 台座の輪。守護は太い真鍮にする(GameDesign.md 9章)。**取り消しの戻る動き**
