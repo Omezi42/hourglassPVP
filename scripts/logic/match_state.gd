@@ -37,24 +37,23 @@ signal cards_drawn(side: int, count: int)
 ## 山札が尽きた側が受ける疲労ダメージ。**発生源が駒ではなく山札にある**ため、
 ## 通常の被ダメージとは別の経路で知らせる(GameDesign.md 9章)。
 signal fatigue_damage(side: int, amount: int)
-## 効果が対象を取った(GameDesign.md 9章)。`target_slot` が -1 なら相手プレイヤー。
-## 出した駒から対象へ光の筋を伸ばすために、適用の直前に発行する。
-signal effect_targeted(source_side: int, source_slot: int, target_side: int, target_slot: int)
-## 設置効果が単体の砂時計へダメージ/破壊を与える(GameDesign.md 9章)。`effect_targeted` と
-## 同じ「適用の直前」に発行するが、こちらは光の筋ではなく**紋章が対象へ飛んで実際に
-## 当てているような演出**を組むために使う。全体へ効く効果(ALL_ENEMY_UNITS等)は
-## 対象が複数あって1本の紋章に絞れないため、従来どおり `effect_targeted` のままにする。
+## 設置効果・砂術・余砂が対象へ「紋章の一撃」を届ける(GameDesign.md 9章)。
+## 適用の直前に発行する。`source_slot` は出どころの型(`origin`)によって意味が変わる
+## (Architecture.md 4.0節「紋章の出どころ」)。**光の筋(旧 `effect_targeted`)は
+## 廃止済み**——単体を狙う効果はすべてここへ、全体を狙う効果は下の複数版へ移った。
 signal effect_struck(
-	source_side: int, source_slot: int, target_side: int, target_slot: int, style: int
+	source_side: int, source_slot: int, target_side: int, target_slot: int, style: int, origin: int
 )
-## `effect_struck` の複数対象版(GameDesign.md 9章)。相手全体を狙う打撃効果
-## (スイープ・バースト等)が対象の数だけ紋章を同時に飛ばすために使う。
+## `effect_struck` の複数対象版(GameDesign.md 9章)。相手全体・味方全体を狙う効果
+## (スイープ・バースト・レガシー等)が対象の数だけ紋章を同時に飛ばすために使う。
 ## `targets` は `{"side":..., "slot":...}` の配列。
-signal effect_struck_many(source_side: int, source_slot: int, targets: Array, style: int)
+signal effect_struck_many(
+	source_side: int, source_slot: int, targets: Array, style: int, origin: int
+)
 ## ドローを起こす設置効果・トリガーが、盤面上の駒から発動した(GameDesign.md 9章)。
 ## 山札の脈打ち(`cards_drawn`)とは別に、**発火元の駒自身へ紋章の光を添える**ための信号。
-## 余砂(破壊時)のように駒が既に盤面から降りている場合は `source_slot` が -1 になり、
-## その場合は発行しない(呼び出し側の判断。`effect_targeted` と同じ扱い)。
+## UNIT起源(盤面に残っている駒から発動)のときだけ発行する。SPELL/DEATH起源のドローは
+## `effect_struck` を PULSE で発行する(呼び出し側の判断。Architecture.md 4.0節)。
 signal effect_drawn(source_side: int, source_slot: int, count: int)
 signal match_ended(winner: int)
 ## 持ち時間が尽きて手番を強制的に終えた(GameDesign.md 5章)。`count` は連続回数。
@@ -754,7 +753,10 @@ func _destroy_unit(side: int, slot: int) -> void:
 		return
 	board[side][slot] = null
 	graveyard[side].append(unit.data)
-	_fire(side, unit, CardEnums.Trigger.ON_DEATH, {})
+	# 紋章の出どころ(DEATH)を紐づけるため、砕けた枠を hint で運ぶ
+	# (Architecture.md 4.0節)。対象の絞り込み(hint.has("slot"))とは
+	# 別のキーのため、通常の対象選択には影響しない。
+	_fire(side, unit, CardEnums.Trigger.ON_DEATH, {"death_slot": slot})
 	unit_destroyed.emit(side, slot, unit.data)
 
 

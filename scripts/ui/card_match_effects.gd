@@ -36,9 +36,9 @@ func watch(state: MatchState) -> void:
 	state.spell_cast.connect(_on_spell_cast)
 	state.unit_destroyed.connect(_on_unit_destroyed)
 	state.unit_shielded.connect(_on_unit_shielded)
+	state.unit_returned.connect(_on_unit_returned)
 	state.cards_drawn.connect(_on_cards_drawn)
 	state.fatigue_damage.connect(_on_fatigue_damage)
-	state.effect_targeted.connect(_on_effect_targeted)
 	state.effect_drawn.connect(_on_effect_drawn)
 
 
@@ -74,7 +74,8 @@ func queue_spend_origin(side: int, global_pos: Vector2) -> void:
 
 
 ## 場に出した:台座の少し上から落ちて着地する。ドラッグで放した座標が控えてあれば、
-## 先にそこから台座の中心へ滑ってから着地する。
+## 先にそこから台座の中心へ滑ってから着地する。**着地の後に銘板を短く光らせる**
+## (GameDesign.md 9章「通常の反転と設置の着地」)。
 func _on_unit_played(side: int, slot: int) -> void:
 	var view := _screen.view_at(side, slot)
 	var cost: int = _screen.state.board[side][slot].data.cost
@@ -86,6 +87,7 @@ func _on_unit_played(side: int, slot: int) -> void:
 		_glide_to_pedestal(view, origin)
 		return
 	view.play_land()
+	view.play_spark()
 
 
 ## 砂術を撃った(GameDesign.md 6章)。盤面へは出ないため、支払いの吸い込みだけを見せる。
@@ -111,11 +113,18 @@ func _glide_to_pedestal(view: CardView, global_origin: Vector2) -> void:
 	tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	tween.tween_property(view, "position", target, DROP_GLIDE_DURATION)
 	tween.finished.connect(view.play_land)
+	tween.finished.connect(view.play_spark)
 
 
 ## 破壊された:砕けて台座へ崩れ落ちる。**枠が空になった後も演出だけが残る**ため、
-## 絵の元になるカードをここで渡しておく。
+## 絵の元になるカードをここで渡しておく。**余砂がその駒自身から発火した場合
+## (`effect_strike.is_death_origin()`)は、崩落を持ち越さず即座に出す**——
+## そのままだと崩落が紋章の着弾まで持ち越され、「崩落を先に見せてから銘板が飛ぶ」
+## 順序と逆になる(Architecture.md 4.0節)。
 func _on_unit_destroyed(side: int, slot: int, card: CardData) -> void:
+	if _screen.effect_strike.is_death_origin(side, slot):
+		_screen.view_at(side, slot).play_break(card)
+		return
 	_defer(func() -> void: _screen.view_at(side, slot).play_break(card))
 
 
@@ -129,7 +138,7 @@ func _on_cards_drawn(side: int, _count: int) -> void:
 	var bar := _screen.bar_for(side)
 	bar.play_deck_pulse(false)
 	var from: Vector2 = bar.position + bar.deck_pile_rect().get_center()
-	_screen.beam.play(from, _hand_center(side, bar), CardFlipBeam.COLOR)
+	_screen.beam.play(from, hand_center(side), CardFlipBeam.COLOR)
 
 
 ## 疲労:**発生源が駒ではなく山札にある**ため、山札そのものを赤く脈打たせる
@@ -145,28 +154,17 @@ func _on_effect_drawn(side: int, slot: int, _count: int) -> void:
 	_defer(func() -> void: _screen.view_at(side, slot).play_spark())
 
 
-## 設置効果:出した駒から対象へ筋を伸ばす。余砂は既に盤面から降りているため
-## 出どころが無く、その場合は筋を出さない。
-func _on_effect_targeted(
-	source_side: int, source_slot: int, target_side: int, target_slot: int
-) -> void:
-	if source_slot < 0:
-		return
-	var source := _screen.view_at(source_side, source_slot)
-	var to: Vector2 = (
-		_screen._geometry.hp_bar_center(target_side)
-		if target_slot < 0
-		else CardFlipBeam.unit_center(_screen.view_at(target_side, target_slot))
-	)
-	var hostile: bool = target_side != source_side
-	var color: Color = CardFlipBeam.EFFECT_HOSTILE if hostile else CardFlipBeam.EFFECT_FRIENDLY
-	var from := CardFlipBeam.unit_center(source)
-	_defer(func() -> void: _screen.beam.play(from, to, color))
+## 砂へ還す(GameDesign.md 9章):紋章が対象を包んだ後、駒が縮んで持ち主の手札の
+## 方向へ吸い込まれる。`RECALL` の紋章が armed の間は `_defer()` が持ち越すため、
+## 着弾の瞬間にこの消え方が起きる。
+func _on_unit_returned(side: int, slot: int, card: CardData) -> void:
+	_defer(func() -> void: _screen.view_at(side, slot)._fx.play_recall(card, hand_center(side)))
 
 
 ## ドローの行き先。自分の手札は画面下の帯、相手の手札は枚数の山で表している
 ## (中身は伏せるため。GameDesign.md 9章)。
-func _hand_center(side: int, bar: PlayerInfoBar) -> Vector2:
+func hand_center(side: int) -> Vector2:
 	if side == _screen.my_side:
 		return CardMatchScreen.HAND_AREA.get_center()
+	var bar := _screen.bar_for(side)
 	return bar.position + bar.hand_pile_rect().get_center()

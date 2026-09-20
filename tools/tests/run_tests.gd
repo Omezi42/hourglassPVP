@@ -35,6 +35,7 @@ func _run() -> void:
 	V5RulesTests.new().run(_assert_true)
 	V5VocabularyTests.new().run(_assert_true)
 	V5SpellTests.new().run(_assert_true)
+	EmblemFxTests.new().run(_assert_true)
 	HourglassArtTests.new().run(_assert_true)
 	PuzzleMissionTests.new().run(_assert_true)
 	PuzzleGeneratorTests.new().run(_assert_true)

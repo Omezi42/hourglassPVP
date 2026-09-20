@@ -443,11 +443,6 @@ func _begin_state(
 	# (GameDesign.md 9章)。取り違えるとルールを誤解するため。
 	state.unit_damaged.connect(_strike.on_unit_damaged)
 	state.unit_ticked.connect(_strike.on_unit_ticked)
-	# 設置効果が単体の砂時計へダメージ/破壊を与えるときの「紋章が飛ぶ一撃」
-	# (GameDesign.md 9章)。`effect_targeted` とは別の信号で受ける。
-	state.effect_struck.connect(_effect_strike.on_effect_struck)
-	# 相手全体を狙う打撃効果(スイープ等)は、対象の数だけ紋章を同時に飛ばす。
-	state.effect_struck_many.connect(_effect_strike.on_effect_struck_many)
 	state.unit_flipped.connect(
 		func(side: int, slot: int) -> void: _flip_beam.play_flip(self, side, slot)
 	)
@@ -470,6 +465,8 @@ func _begin_state(
 	# 効果音と演出は配り終えてから張る(初期手札のドローまで鳴らさないため)。
 	_sound.watch(state)
 	_effects.watch(state)
+	# 設置効果・砂術・余砂の「紋章が飛ぶ一撃」(GameDesign.md 9章)。
+	_effect_strike.watch(state)
 	# 決着で止めた対局のBGMを、「もう一度」で戻す(GameDesign.md 9章)。
 	MusicPlayer.play(MusicPlayer.Track.MATCH)
 	refresh()

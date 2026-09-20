@@ -54,6 +54,9 @@ func play_flip(screen: CardMatchScreen, side: int, slot: int, actor_side: int = 
 	# 色を変えるだけでは「ゲームの中心となる行動」に見えないため。
 	await play(from, unit_center(view), COLOR, true)
 	view.play_flip()
+	# 台座の銘板を短く光らせる(GameDesign.md 9章「通常の反転と設置の着地」)。
+	# ドローの合図と同じ光の輪を使い、新しい要素は増やさない。
+	view.play_spark()
 
 
 ## 駒の中心。筋の行き先として使う。

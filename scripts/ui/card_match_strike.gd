@@ -74,23 +74,27 @@ func capture(action: Dictionary) -> void:
 		_strikes_this_turn = 0
 
 
-## 被ダメージ:砂が砕けて散る。**攻撃の演出中は当たる瞬間まで持ち越す**
+## 被ダメージ:砂が砕けて散る。**設置効果の「紋章の一撃」(`CardMatchEffectStrike`)が
+## 組まれている間を先に見る**(相打ちの被ダメージは余砂の発火より前に届くため、
+## 攻撃側が先に控える順序は変わらず、余砂の効果(バースト等)の被ダメージだけが
+## 紋章の着弾へ揃う)。**攻撃の演出中は当たる瞬間まで持ち越す**
 ## (渡っている最中に相手の砂が消えると、因果が逆に見えるため)。
-## **設置効果の「紋章の一撃」(`CardMatchEffectStrike`)が組まれている間も同様**
-## (`effect_struck` は `MatchAction.apply()` の中、この信号より先に飛ぶため、
-## この時点で armed 済みかどうかを問い合わせられる)。
 func on_unit_damaged(side: int, slot: int, amount: int) -> void:
-	if _armed:
-		_damage.append({"side": side, "slot": slot, "amount": amount})
-		return
 	if _screen.effect_strike.busy():
 		_screen.effect_strike.hold_damage(side, slot, amount)
+		return
+	if _armed:
+		_damage.append({"side": side, "slot": slot, "amount": amount})
 		return
 	_screen.view_at(side, slot).play_shatter(amount)
 
 
 ## ターン終了の1粒:砂が下の部屋へ流れる。総量は変わらないため、砕く演出とは分ける。
+## 紋章の一撃(砂嵐・ラトル・ドリップ等)が組まれている間は、その着弾まで持ち越す。
 func on_unit_ticked(side: int, slot: int) -> void:
+	if _screen.effect_strike.busy():
+		_screen.effect_strike.hold_tick(side, slot)
+		return
 	_screen.view_at(side, slot).play_drop()
 
 
@@ -171,6 +175,9 @@ func _on_impact() -> void:
 	# 持ち越していた効果音と演出も、砂の飛散と同じこの瞬間に出す。
 	_screen.sound.flush()
 	_screen.effects.flush()
+	# 相打ちで余砂持ちが砕けた場合、紋章の発射自体をここまで持ち越している
+	# (Architecture.md 4.0節)。
+	_screen.effect_strike.flush()
 	# 打撃の重さは駒の動きだけでは伝わらないため、盤面そのものを短く揺らす。
 	_screen.shake.hit(_impact_power)
 	for hit in _damage:

@@ -34,171 +34,187 @@ func _condition_met(side: int, unit: CardInstance, effect: CardEffectData) -> bo
 
 func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Dictionary) -> void:
 	var foe_side := MatchState.other_side(side)
-	# 光の筋の出どころ(GameDesign.md 9章)。余砂は既に盤面から降りているため -1 になり、
-	# その場合は筋を出さない(呼び出し側の判断)。
+	# 対象の解決に使う枠(GameDesign.md 6章の SELF 除外・ALLY_UNIT 除外)。
+	# **紋章の出どころ(from_slot)とは分けて持つ**——DEATH で差し替えると
+	# ALLY_UNIT の除外や SELF の判定が空の枠を指すことになるため(Architecture.md 4.0節)。
 	var from := _slot_of(side, unit)
+	# 紋章の出どころ(GameDesign.md 9章「紋章の出どころ」)。UNIT/SPELL/DEATH の
+	# いずれかを、この効果1件ぶんの解決の入口で決める。
+	var origin := _origin_of(from, hint)
+	var from_slot := from if origin == CardEnums.EffectOrigin.UNIT else _origin_slot(hint, origin)
 	match effect.effect_type:
 		CardEnums.EffectType.DAMAGE_PLAYER:
 			var to_side := _player_side_for(side, effect.target)
-			if to_side != side:
-				_strike(side, from, to_side, -1, CardEnums.EffectVisualStyle.STRIKE)
-			else:
-				_beam(side, from, to_side, -1)
+			_strike(side, from_slot, to_side, -1, CardEnums.EffectVisualStyle.STRIKE, origin)
 			_state.damage_player(to_side, effect.value)
 		CardEnums.EffectType.HEAL_PLAYER:
 			var to_side := _player_side_for(side, effect.target)
-			if to_side == side:
-				_strike(side, from, to_side, -1, CardEnums.EffectVisualStyle.DESCEND)
-			else:
-				_beam(side, from, to_side, -1)
+			_strike(side, from_slot, to_side, -1, CardEnums.EffectVisualStyle.DESCEND, origin)
 			_state.heal_player(to_side, effect.value)
 		CardEnums.EffectType.DRAW:
-			if from >= 0:
-				_state.effect_drawn.emit(side, from, effect.value)
+			# 対象を取らない効果(GameDesign.md 9章)。盤面上の駒からならその場で
+			# 光る合図(effect_drawn)、砂術・余砂なら紋章がその場で弾けるPULSEにする。
+			if origin == CardEnums.EffectOrigin.UNIT:
+				_state.effect_drawn.emit(side, from_slot, effect.value)
+			else:
+				_strike(side, from_slot, side, -1, CardEnums.EffectVisualStyle.PULSE, origin)
 			_state.draw(side, effect.value)
 		CardEnums.EffectType.DAMAGE_PLAYER_PER_ENEMY_UNIT:
-			_strike(side, from, foe_side, -1, CardEnums.EffectVisualStyle.STRIKE)
+			_strike(side, from_slot, foe_side, -1, CardEnums.EffectVisualStyle.STRIKE, origin)
 			_state.damage_player(foe_side, _state.units(foe_side).size() * effect.value)
 		CardEnums.EffectType.DAMAGE_UNIT:
-			var single := _is_single_unit_target(effect.target)
 			var damage_entries := _targets(side, unit, effect, hint)
-			var damage_multi := effect.target == CardEnums.EffectTarget.ALL_ENEMY_UNITS
-			if damage_multi:
-				_strike_many(side, from, damage_entries, CardEnums.EffectVisualStyle.STRIKE)
+			_strike_for_targets(
+				side,
+				from_slot,
+				effect.target,
+				damage_entries,
+				CardEnums.EffectVisualStyle.STRIKE,
+				origin
+			)
 			for entry in damage_entries:
-				if single:
-					_strike(
-						side, from, entry["side"], entry["slot"], CardEnums.EffectVisualStyle.STRIKE
-					)
-				elif not damage_multi:
-					_beam(side, from, entry["side"], entry["slot"])
 				_state.damage_unit(entry["side"], entry["slot"], effect.value)
 		CardEnums.EffectType.DESTROY_UNIT:
-			var single_destroy := _is_single_unit_target(effect.target)
-			for entry in _targets(side, unit, effect, hint):
-				if single_destroy:
-					_strike(
-						side, from, entry["side"], entry["slot"], CardEnums.EffectVisualStyle.STRIKE
-					)
-				else:
-					_beam(side, from, entry["side"], entry["slot"])
+			var destroy_entries := _targets(side, unit, effect, hint)
+			_strike_for_targets(
+				side,
+				from_slot,
+				effect.target,
+				destroy_entries,
+				CardEnums.EffectVisualStyle.STRIKE,
+				origin
+			)
+			for entry in destroy_entries:
 				_state.destroy_unit(entry["side"], entry["slot"])
 		CardEnums.EffectType.SWAP_STATS:
-			var single_swap := _is_single_unit_target(effect.target)
-			for entry in _targets(side, unit, effect, hint):
+			var swap_entries := _targets(side, unit, effect, hint)
+			_strike_for_targets(
+				side,
+				from_slot,
+				effect.target,
+				swap_entries,
+				CardEnums.EffectVisualStyle.SPIN,
+				origin
+			)
+			for entry in swap_entries:
 				var target := _unit_at(entry)
 				if target != null:
-					if single_swap:
-						_strike(
-							side,
-							from,
-							entry["side"],
-							entry["slot"],
-							CardEnums.EffectVisualStyle.SPIN
-						)
-					else:
-						_beam(side, from, entry["side"], entry["slot"])
 					target.flip()
 		CardEnums.EffectType.ADD_TOTAL:
-			var single_total := _is_single_unit_target(effect.target)
-			for entry in _targets(side, unit, effect, hint):
+			var total_entries := _targets(side, unit, effect, hint)
+			_strike_for_targets(
+				side,
+				from_slot,
+				effect.target,
+				total_entries,
+				CardEnums.EffectVisualStyle.DESCEND,
+				origin
+			)
+			for entry in total_entries:
 				var target := _unit_at(entry)
 				if target != null:
-					if single_total:
-						_strike(
-							side,
-							from,
-							entry["side"],
-							entry["slot"],
-							CardEnums.EffectVisualStyle.DESCEND
-						)
-					else:
-						_beam(side, from, entry["side"], entry["slot"])
 					target.health += effect.value
 		CardEnums.EffectType.ADD_ATTACK:
-			var single_attack := _is_single_unit_target(effect.target)
-			for entry in _targets(side, unit, effect, hint):
+			var attack_entries := _targets(side, unit, effect, hint)
+			_strike_for_targets(
+				side,
+				from_slot,
+				effect.target,
+				attack_entries,
+				CardEnums.EffectVisualStyle.DESCEND,
+				origin
+			)
+			for entry in attack_entries:
 				var target := _unit_at(entry)
 				if target != null:
-					if single_attack:
-						_strike(
-							side,
-							from,
-							entry["side"],
-							entry["slot"],
-							CardEnums.EffectVisualStyle.DESCEND
-						)
-					else:
-						_beam(side, from, entry["side"], entry["slot"])
 					target.attack += effect.value
 		CardEnums.EffectType.DROP_SAND:
 			var drop_entries := _targets(side, unit, effect, hint)
-			var drop_multi := effect.target == CardEnums.EffectTarget.ALL_ENEMY_UNITS
-			if drop_multi:
-				_strike_many(side, from, drop_entries, CardEnums.EffectVisualStyle.STRIKE)
+			# 相手全体を削るのは打撃、味方全体・味方1体を削るのは自分で払う代償として
+			# 恵与の型で見せる(GameDesign.md 9章)。
+			var drop_style := (
+				CardEnums.EffectVisualStyle.STRIKE
+				if effect.target == CardEnums.EffectTarget.ALL_ENEMY_UNITS
+				else CardEnums.EffectVisualStyle.DESCEND
+			)
+			_strike_for_targets(side, from_slot, effect.target, drop_entries, drop_style, origin)
 			for entry in drop_entries:
 				var target := _unit_at(entry)
 				if target != null:
-					if not drop_multi:
-						_beam(side, from, entry["side"], entry["slot"])
 					target.drop_sand(effect.value)
 		CardEnums.EffectType.SUMMON:
+			var summon_slot := _first_empty_slot(side)
+			if summon_slot >= 0:
+				_strike(
+					side, from_slot, side, summon_slot, CardEnums.EffectVisualStyle.DESCEND, origin
+				)
 			_summon(side, effect.card_id)
 		CardEnums.EffectType.GRANT_KEYWORD:
-			var single_keyword := _is_single_unit_target(effect.target)
-			for entry in _targets(side, unit, effect, hint):
+			var keyword_entries := _targets(side, unit, effect, hint)
+			_strike_for_targets(
+				side,
+				from_slot,
+				effect.target,
+				keyword_entries,
+				CardEnums.EffectVisualStyle.DESCEND,
+				origin
+			)
+			for entry in keyword_entries:
 				var target := _unit_at(entry)
 				if target != null and effect.keyword >= 0:
-					if single_keyword:
-						_strike(
-							side,
-							from,
-							entry["side"],
-							entry["slot"],
-							CardEnums.EffectVisualStyle.DESCEND
-						)
-					else:
-						_beam(side, from, entry["side"], entry["slot"])
 					target.grant_keyword(effect.keyword)
 		CardEnums.EffectType.INVERT_PLAYER_HP:
 			var to_side := _player_side_for(side, effect.target)
-			_beam(side, from, to_side, -1)
+			_strike(side, from_slot, to_side, -1, CardEnums.EffectVisualStyle.SPIN, origin)
 			_invert_hp(to_side)
 		CardEnums.EffectType.RETURN_TO_HAND:
 			for entry in _targets(side, unit, effect, hint):
-				_beam(side, from, entry["side"], entry["slot"])
+				_strike(
+					side,
+					from_slot,
+					entry["side"],
+					entry["slot"],
+					CardEnums.EffectVisualStyle.RECALL,
+					origin
+				)
 				_return_to_hand(entry["side"], entry["slot"])
 		CardEnums.EffectType.SILENCE:
-			var single_silence := _is_single_unit_target(effect.target)
-			for entry in _targets(side, unit, effect, hint):
+			var silence_entries := _targets(side, unit, effect, hint)
+			_strike_for_targets(
+				side,
+				from_slot,
+				effect.target,
+				silence_entries,
+				CardEnums.EffectVisualStyle.DRAIN,
+				origin
+			)
+			for entry in silence_entries:
 				var target := _unit_at(entry)
 				if target != null:
-					if single_silence:
-						_strike(
-							side,
-							from,
-							entry["side"],
-							entry["slot"],
-							CardEnums.EffectVisualStyle.DRAIN
-						)
-					else:
-						_beam(side, from, entry["side"], entry["slot"])
 					target.silence()
 
 
 ## 空き枠へ砂時計を1体出す。**空きが無ければ何もしない**(GameDesign.md 6章)。
 ## 出した駒の設置効果は解決しない。連鎖すると1枚のカードが何をするか読めなくなるため。
+## 置く先は `_apply()` が `_first_empty_slot()` で先に求めた枠と同じ(紋章の飛ぶ先)。
 func _summon(side: int, card_id: String) -> void:
 	if card_id.is_empty():
 		return
 	var card := CardLibrary.find_by_id(card_id)
 	if card == null:
 		return
+	var slot := _first_empty_slot(side)
+	if slot < 0:
+		return
+	_state.board[side][slot] = CardInstance.new(card)
+	_state.board_changed.emit(side)
+
+
+func _first_empty_slot(side: int) -> int:
 	for slot in MatchState.BOARD_SIZE:
 		if _state.board[side][slot] == null:
-			_state.board[side][slot] = CardInstance.new(card)
-			_state.board_changed.emit(side)
-			return
+			return slot
+	return -1
 
 
 ## プレイヤーのHPを反転する(砂術。GameDesign.md 6章)。**残りHPと失ったHPを入れ替える**もので、
@@ -230,24 +246,53 @@ func _return_to_hand(side: int, slot: int) -> void:
 	_state.board_changed.emit(side)
 
 
-## 効果が対象を取ったことを知らせる。**適用の直前に出す**ことで、対象が破壊されて
-## 盤面から消える効果でも、筋の行き先がまだ盤面に残っている状態で受け取れる。
-func _beam(side: int, from: int, target_side: int, target_slot: int) -> void:
-	_state.effect_targeted.emit(side, from, target_side, target_slot)
+## 紋章の出どころ(GameDesign.md 9章 2026-09-21・Architecture.md 4.0節)。
+## 盤面に残っている駒(UNIT)ならその枠、砕けた駒の余砂(DEATH)なら `_fire()` が
+## 運んだ `death_slot`、それ以外(手札から撃った砂術。SPELL)は出どころを持たない。
+func _origin_of(from: int, hint: Dictionary) -> int:
+	if from >= 0:
+		return CardEnums.EffectOrigin.UNIT
+	if hint.has("death_slot"):
+		return CardEnums.EffectOrigin.DEATH
+	return CardEnums.EffectOrigin.SPELL
 
 
-## 単体を狙う「紋章の一撃」を知らせる。`_beam()` と対になり、適用の直前に出す
-## (GameDesign.md 9章)。`style` は `CardEnums.EffectVisualStyle`。
-func _strike(side: int, from: int, target_side: int, target_slot: int, style: int) -> void:
-	_state.effect_struck.emit(side, from, target_side, target_slot, style)
+## DEATH の出どころの枠(砕けた枠)。SPELL は枠を持たないため -1。
+## UNIT は呼び出し側(`from`)がそのまま使うため、ここでは扱わない。
+func _origin_slot(hint: Dictionary, origin: int) -> int:
+	if origin == CardEnums.EffectOrigin.DEATH:
+		return hint.get("death_slot", -1)
+	return -1
 
 
-## 複数の対象へ同時に紋章の一撃を知らせる。`_strike()` の複数版で、相手全体を狙う
-## 打撃効果(ALL_ENEMY_UNITS)が対象の数だけ同時に紋章を飛ばすために使う(GameDesign.md 9章)。
-func _strike_many(side: int, from: int, entries: Array, style: int) -> void:
+## 単体を狙う「紋章の一撃」を知らせる。適用の直前に出す(GameDesign.md 9章)。
+## `style` は `CardEnums.EffectVisualStyle`、`origin` は `CardEnums.EffectOrigin`。
+func _strike(
+	side: int, from_slot: int, target_side: int, target_slot: int, style: int, origin: int
+) -> void:
+	_state.effect_struck.emit(side, from_slot, target_side, target_slot, style, origin)
+
+
+## 複数の対象へ同時に紋章の一撃を知らせる。`_strike()` の複数版で、全体に効く効果
+## (ALL_ENEMY_UNITS / ALL_ALLY_UNITS)が対象の数だけ同時に紋章を飛ばすために使う
+## (GameDesign.md 9章)。
+func _strike_many(side: int, from_slot: int, entries: Array, style: int, origin: int) -> void:
 	if entries.is_empty():
 		return
-	_state.effect_struck_many.emit(side, from, entries, style)
+	_state.effect_struck_many.emit(side, from_slot, entries, style, origin)
+
+
+## 対象の数に応じて `_strike()`(単体を数だけ)か `_strike_many()`(全体を1度)を
+## 選んで知らせる。**全体に効く効果(ALL_ENEMY_UNITS / ALL_ALLY_UNITS)以外は
+## すべて単体として扱う**(SELF は自分自身の1体、ALLY_UNIT/ENEMY_UNIT も1体に絞られる)。
+func _strike_for_targets(
+	side: int, from_slot: int, target: int, entries: Array, style: int, origin: int
+) -> void:
+	if _is_single_unit_target(target):
+		for entry in entries:
+			_strike(side, from_slot, entry["side"], entry["slot"], style, origin)
+	else:
+		_strike_many(side, from_slot, entries, style, origin)
 
 
 func _player_side_for(side: int, target: int) -> int:
@@ -256,11 +301,13 @@ func _player_side_for(side: int, target: int) -> int:
 	return MatchState.other_side(side)
 
 
-## 単体を狙う対象指定か(GameDesign.md 9章)。ENEMY_UNIT/ALLY_UNIT は必ず1体に絞られる
-## ため紋章が飛ぶ演出(`effect_struck`)にでき、ALL_ENEMY_UNITS等は対象が複数あって
-## 1本の紋章に絞れないため、従来どおり光の筋(`effect_targeted`)のままにする。
+## 単体を狙う対象指定か(GameDesign.md 9章)。ALL_ENEMY_UNITS / ALL_ALLY_UNITS だけが
+## 対象を複数持ちうるため、それ以外(SELF / ENEMY_UNIT / ALLY_UNIT)は常に単体として扱う。
 func _is_single_unit_target(target: int) -> bool:
-	return target == CardEnums.EffectTarget.ENEMY_UNIT or target == CardEnums.EffectTarget.ALLY_UNIT
+	return (
+		target != CardEnums.EffectTarget.ALL_ENEMY_UNITS
+		and target != CardEnums.EffectTarget.ALL_ALLY_UNITS
+	)
 
 
 func _unit_at(entry: Dictionary) -> CardInstance:

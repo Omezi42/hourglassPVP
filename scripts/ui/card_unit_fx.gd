@@ -32,21 +32,32 @@ const BREAK_SAND_DRIFT := 26.0
 ## 硝子:膜が割れる閃光。
 const GLASS_DURATION := 0.3
 const GLASS_SHARDS := 8
+## 砂へ還す:紋章に包まれて縮み、手札の方向へ吸い込まれる(GameDesign.md 9章)。
+const RECALL_DURATION := 0.32
+const RECALL_MIN_SCALE := 0.15
 
 const SAND_AMBER := Color(0.93, 0.78, 0.42, 1.0)
 const GLASS_BLUE := Color(0.72, 0.92, 1.0, 1.0)
 const BREAK_WHITE := Color(1.0, 0.93, 0.82, 1.0)
+## 淡い水色寄りの白。破壊(白)・硝子(青)のどちらとも紛れない色にする。
+const RECALL_TINT := Color(0.85, 0.95, 1.0, 1.0)
 
 var _land := -1.0
 var _break := -1.0
 var _glass := -1.0
+var _recall := -1.0
 ## 崩れ落ちる駒の絵。破壊されると枠が空になるため、その瞬間に控える。
 var _break_texture: Texture2D
 var _break_rect := Rect2()
 var _glass_rect := Rect2()
+## 手札へ戻る駒の絵と、縮みながら向かう先(親=CardView の座標系)。
+var _recall_texture: Texture2D
+var _recall_rect := Rect2()
+var _recall_target := Vector2.ZERO
 var _land_tween: Tween
 var _break_tween: Tween
 var _glass_tween: Tween
+var _recall_tween: Tween
 
 
 func _ready() -> void:
@@ -80,6 +91,34 @@ func play_glass_break(rect: Rect2) -> void:
 	_glass_tween = _restart(_glass_tween, _set_glass, GLASS_DURATION)
 
 
+## 砂へ還す(GameDesign.md 9章):紋章に包まれた駒が縮み、持ち主の手札の方向へ
+## 吸い込まれて消える。**破壊の崩落(`play_break`)とは別の消え方**にして、
+## 壊れたのではなく戻ったことが読めるようにする。`toward` は呼び出し側(盤面全体の
+## 座標系)の点で、ここでは親(`CardView`)の座標系へ変換してから使う。
+func play_recall(card: CardData, toward: Vector2) -> void:
+	if card == null or card.icon_upright == null:
+		return
+	var view := get_parent() as CardView
+	if view == null:
+		return
+	size = view.size
+	var texture := card.icon_upright
+	var box := Rect2(
+		Vector2(
+			(size.x - CardView.BOARD_ART_SIDE) * 0.5,
+			CardView.PEDESTAL_CENTER_Y + 4.0 - CardView.BOARD_ART_SIDE
+		),
+		Vector2(CardView.BOARD_ART_SIDE, CardView.BOARD_ART_SIDE)
+	)
+	var scale: float = box.size.y / texture.get_size().y
+	var art_size := texture.get_size() * scale
+	var art_pos := box.position + Vector2((box.size.x - art_size.x) * 0.5, box.size.y - art_size.y)
+	_recall_rect = Rect2(art_pos, art_size)
+	_recall_texture = texture
+	_recall_target = toward - view.position
+	_recall_tween = _restart(_recall_tween, _set_recall, RECALL_DURATION)
+
+
 func _restart(tween: Tween, setter: Callable, duration: float) -> Tween:
 	if tween != null and tween.is_valid():
 		tween.kill()
@@ -106,6 +145,11 @@ func _set_glass(value: float) -> void:
 	queue_redraw()
 
 
+func _set_recall(value: float) -> void:
+	_recall = value
+	queue_redraw()
+
+
 func _draw() -> void:
 	if _land >= LAND_DUST_AT:
 		_draw_land_dust()
@@ -113,6 +157,8 @@ func _draw() -> void:
 		_draw_break()
 	if _glass >= 0.0:
 		_draw_glass()
+	if _recall >= 0.0:
+		_draw_recall()
 
 
 ## 着地の砂ぼこり。台座と同じ扁平な楕円を外へ広げ、足元へ粒を散らす。
@@ -243,3 +289,18 @@ func _draw_glass() -> void:
 		UiPaint.fill_ellipse(
 			get_canvas_item(), center, _glass_rect.size * 0.4, Color(1.0, 1.0, 1.0, 0.4 * flash), 28
 		)
+
+
+## 手札へ戻る:絵が縮みながら手札の方向へ移動し、淡い水色の輪郭を薄く重ねて消える。
+func _draw_recall() -> void:
+	var t := _recall
+	var scale: float = lerpf(1.0, RECALL_MIN_SCALE, t)
+	var center := _recall_rect.get_center().lerp(_recall_target, t)
+	var fade := 1.0 - t
+	var half := _recall_rect.size * 0.5 * scale
+	draw_texture_rect(
+		_recall_texture, Rect2(center - half, half * 2.0), false, Color(RECALL_TINT, fade)
+	)
+	UiPaint.draw_ellipse_ring(
+		get_canvas_item(), center, half * 1.15, Color(RECALL_TINT, 0.5 * fade), 1.6, 24
+	)

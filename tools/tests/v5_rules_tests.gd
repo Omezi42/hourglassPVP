@@ -329,7 +329,8 @@ func _test_effect_struck_styles() -> void:
 	var state := _new_match()
 	var styles: Array[int] = []
 	state.effect_struck.connect(
-		func(_ss: int, _sl: int, _ts: int, _tl: int, style: int) -> void: styles.append(style)
+		func(_ss: int, _sl: int, _ts: int, _tl: int, style: int, _origin: int) -> void:
+			styles.append(style)
 	)
 
 	# 相手プレイヤーへ直接ダメージを与える効果は「打撃」型で飛ぶ。
@@ -381,11 +382,11 @@ func _test_effect_struck_many_hits_all_enemies() -> void:
 	var single_styles: Array[int] = []
 	var many_calls: Array[Dictionary] = []
 	state.effect_struck.connect(
-		func(_ss: int, _sl: int, _ts: int, _tl: int, style: int) -> void:
+		func(_ss: int, _sl: int, _ts: int, _tl: int, style: int, _origin: int) -> void:
 			single_styles.append(style)
 	)
 	state.effect_struck_many.connect(
-		func(_ss: int, _sl: int, targets: Array, style: int) -> void:
+		func(_ss: int, _sl: int, targets: Array, style: int, _origin: int) -> void:
 			many_calls.append({"targets": targets, "style": style})
 	)
 
