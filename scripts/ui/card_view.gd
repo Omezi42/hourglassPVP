@@ -57,10 +57,6 @@ const TEXT_MARGIN := 5.0
 const MIN_FONT_SIZE := 9
 
 const STAT_RADIUS := 15.0
-## 手札の名前・キーワードの行を、下の隅のバッジの帯からどれだけ上へ逃がすか。
-const LABEL_BADGE_GAP := 4.0
-## その2行の間隔。
-const LABEL_LINE_GAP := 16.0
 ## 取り消しの戻る動き(GameDesign.md 9章「対局画面の手触り」)。フッと消すのではなく
 ## 短く縮んで消える。`selected` はすぐ false へ戻るため、この値だけで描く。
 const UNSELECT_DURATION := 0.1
@@ -114,17 +110,10 @@ const FLIP_LAND_AT := 0.82
 const FLIP_OVERSHOOT := 1.07
 const FLIP_SETTLE := 0.12
 
-## 手札のカード。
-const HAND_CORNER := 10.0
+## 手札の絵を収める正方形の一辺。札の面の作りは `HandCardPaint` が持つ。
 const HAND_ART_SIDE := 92.0
-## 手札は紙の札なので、紋章は台座ではなく**封蝋の印**として押す。
-## 砂術(GameDesign.md 6章)。砂時計の絵を持たないため、紋章を中央へ大きく置く。
-const SPELL_EMBLEM_SIDE := 62.0
-## 枠の色を砂時計と変え、手札を見た時点で「置くカードではない」と分かるようにする。
+## 砂術の枠の色。砂時計と変え、手札を見た時点で「置くカードではない」と分かるようにする。
 const SPELL_BORDER := Color(0.58, 0.72, 0.95, 1.0)
-
-const HAND_SEAL_RADIUS := 13.0
-const HAND_SEAL_SIDE := 16.0
 
 ## 攻撃の演出(GameDesign.md 9章)。「寄る → 溜める → 当てる → 戻る」の4段。
 const STRIKE_APPROACH := 0.28
@@ -554,8 +543,10 @@ func _gui_input(event: InputEvent) -> void:
 func _draw() -> void:
 	if mode == Mode.BOARD:
 		_draw_board_unit()
+	elif card == null:
+		_draw_empty()
 	else:
-		_draw_hand_card()
+		HandCardPaint.draw(self)
 	if _effect != Effect.NONE:
 		_draw_effect()
 
@@ -673,75 +664,6 @@ func _draw_board_labels(tint: Color) -> void:
 # --- 手札のカード -------------------------------------------------------
 
 
-func _draw_hand_card() -> void:
-	if card == null:
-		_draw_empty()
-		return
-	var ci := get_canvas_item()
-	var rect := Rect2(Vector2.ZERO, size)
-	var tint := _tint()
-	var points := UiPaint.rounded_rect_points_uniform(rect, HAND_CORNER * _hand_scale(), 6)
-	UiPaint.fill_gradient_polygon(
-		ci,
-		points,
-		rect,
-		[[0.0, Color(0.23, 0.2, 0.17, 1.0) * tint], [1.0, Color(0.11, 0.1, 0.09, 1.0) * tint]]
-	)
-	var border := SPELL_BORDER if card.is_spell else UiPalette.BRASS_MID
-	var border_width := NORMAL_BORDER
-	var outline_points := points
-	if selected:
-		border = SELECT_CYAN
-		border_width = GUARD_BORDER
-	elif unselect_amount > 0.01:
-		# 取り消しの戻る動き(GameDesign.md 9章): 枠を短く縮めながら消す。
-		border = Color(SELECT_CYAN, unselect_amount)
-		border_width = GUARD_BORDER
-		var inset := UNSELECT_INSET * (1.0 - unselect_amount)
-		outline_points = UiPaint.rounded_rect_points_uniform(
-			rect.grow(-inset), HAND_CORNER * _hand_scale(), 6
-		)
-	var outline := outline_points.duplicate()
-	outline.append(outline_points[0])
-	draw_polyline(outline, border, border_width, true)
-	_draw_hand_art(tint)
-	CardViewPaint.hand_seal(self, tint)
-	_draw_hand_labels(tint)
-	_draw_hand_stats()
-	if not badge.is_empty():
-		CardViewPaint.badge(self, rect)
-	if _hovering and enabled:
-		UiPaint.fill_gradient_polygon(
-			ci, points, rect, [[0.0, Color(1, 1, 1, 0.07)], [1.0, Color(1, 1, 1, 0.03)]]
-		)
-
-
-func _draw_hand_art(tint: Color) -> void:
-	if card.is_spell:
-		_draw_spell_emblem(tint)
-		return
-	var texture := _icon()
-	if texture == null:
-		return
-	draw_texture_rect(texture, _fit_art(texture, _hand_art_box()), false, tint)
-
-
-## 砂術は砂時計の絵を持たないため、紋章を絵の枠いっぱいに置く(GameDesign.md 9章)。
-func _draw_spell_emblem(tint: Color) -> void:
-	if card.emblem == null:
-		return
-	var box := _hand_art_box()
-	var half := Vector2(SPELL_EMBLEM_SIDE, SPELL_EMBLEM_SIDE) * 0.5 * _hand_scale()
-	var center := box.get_center()
-	draw_texture_rect(
-		card.emblem,
-		Rect2(center - half + Vector2(0.0, 2.0), half * 2.0),
-		false,
-		Color(0.06, 0.05, 0.09, 0.6)
-	)
-	draw_texture_rect(card.emblem, Rect2(center - half, half * 2.0), false, SPELL_BORDER * tint)
-
-
 ## 手札の見た目は `HAND_SIZE_PX`(118x158)を基準に組んである。**キーワード辞書のように
 ## 小さく置く場所があるため、各部の寸法はそこからの比で決める**。固定値のままだと、
 ## 名前とキーワードの行が札の外へ出たり、総量のバッジの上へ乗ったりする
@@ -755,36 +677,6 @@ func _hand_art_box() -> Rect2:
 	var scale := _hand_scale()
 	var side := HAND_ART_SIDE * scale
 	return Rect2(Vector2((size.x - side) * 0.5, 9.0 * scale), Vector2(side, side))
-
-
-## 名前とキーワードは、**総量のバッジと封蝋が占める帯より上へ積む**。以前は下端から
-## 24pxの位置へキーワードを置いており、「攻撃不可 守護」のように長い行が総量の数値へ
-## 潜っていた(キーワード辞書で実際に読めなくなっていた)。上へ逃がすことで札の幅を
-## まるごと使えるようになり、文字を縮めずに済む。
-func _draw_hand_labels(tint: Color) -> void:
-	var scale := _hand_scale()
-	var keyword_baseline := size.y - (2.0 * STAT_RADIUS + LABEL_BADGE_GAP) * scale
-	# 名前の高さは、キーワードの有無にかかわらず揃える。持たない札だけ下がると、
-	# 手札に並べたときに名前の行が凸凹になる。
-	var note := _keyword_text()
-	var name_baseline := keyword_baseline - LABEL_LINE_GAP * scale
-	_centered_text(
-		card.display_name, roundi(14 * scale), name_baseline, UiPalette.TEXT_OFFWHITE * tint
-	)
-	if not note.is_empty():
-		_centered_text(note, roundi(12 * scale), keyword_baseline, UiPalette.BRASS_HIGHLIGHT * tint)
-
-
-## コスト=左上 / 総量=右下。**砂術は総量を持たないため右下を出さない**(GameDesign.md 9章)。
-func _draw_hand_stats() -> void:
-	var radius := STAT_RADIUS * _hand_scale()
-	var inset := radius + 3.0 * _hand_scale()
-	CardViewPaint.stat(self, Vector2(inset, inset), card.cost, MANA_BLUE, radius)
-	if card.is_spell:
-		return
-	CardViewPaint.stat(
-		self, Vector2(size.x - inset, size.y - inset), card.total_sand, HEALTH_RED, radius
-	)
 
 
 # --- 共通 ---------------------------------------------------------------

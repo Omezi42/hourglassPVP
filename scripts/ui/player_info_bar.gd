@@ -27,14 +27,14 @@ const HP_BAR_SIZE := Vector2(226, 32)
 const HP_RIM_WIDTH := 3.0
 const HP_BADGE_RADIUS := 17.0
 ## マナの計器。コストと同じ青の丸いバッジに現在値、右の溝へ最大値ぶんの粒。
-const MANA_BADGE_CENTER := Vector2(496.0, CENTER_Y)
+const MANA_BADGE_CENTER := Vector2(504.0, CENTER_Y)
 const MANA_BADGE_RADIUS := 15.0
-const MANA_TROUGH_RECT := Rect2(520.0, 17.0, 196.0, 22.0)
-const PIP_START_X := 532.0
+const MANA_TROUGH_RECT := Rect2(528.0, 17.0, 190.0, 22.0)
+const PIP_START_X := 540.0
 const PIP_STEP := 18.0
 const PIP_RADIUS := 6.5
 ## コインはマナのバッジの肩に載せる小さな金貨。
-const COIN_CENTER := Vector2(508.0, 15.0)
+const COIN_CENTER := Vector2(516.0, 15.0)
 const COIN_RADIUS := 6.5
 ## 山札・墓地・手札の札。
 const PILE_SIZE := Vector2(74, 40)

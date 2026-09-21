@@ -371,7 +371,8 @@ UIに依存しない、対局ルールそのものを扱う層。
 | `BoardTable`(`scripts/ui/board_table.gd`) | 盤面12枠を載せる卓(GameDesign.md 9章)。**木の額 / プレイマット2枚 / 中央の真鍮のレール**の3層で描く |
 | `PlaymatLibrary`(`scripts/data/playmat_library.gd`, staticのみ) | プレイマットの定義(地の色・模様の種類・縁・箔・値段)。`UserProfileLibrary` と同じ流儀 |
 | `PlaymatPaint`(`scripts/ui/styles/playmat_paint.gd`, staticのみ) | マットの描画。**卓とショップの見本で同じ関数を通す**(別々に描くと、買う前に見た絵と実際に敷かれる絵が食い違う) |
-| `PlayerInfoBar`(`scripts/ui/player_info_bar.gd`) | 片方のプレイヤーの情報帯。HP・マナ(数字+ピップ)・山札・墓地・(相手のみ)手札の枚数・コインの有無 |
+| `PlayerInfoBar`(`scripts/ui/player_info_bar.gd`) | 片方のプレイヤーの情報帯。**1枚の板ではなく真鍮の器具の並び**(肖像メダル / 名札 / HPの器 / マナの計器 / 山の札 / 時計)として描く(GameDesign.md 9章「情報帯」)。器具ごとの落ち影も自分で持つ(`MatchBackdrop` は帯の影を描かない)。座標系の問い合わせ(`hp_bar_rect()` / `deck_pile_rect()` / `hand_pile_rect()` / `mana_label_global()`)は従来どおり |
+| `HandCardPaint`(`scripts/ui/hand_card_paint.gd`, static) | 手札の札の面(GameDesign.md 9章「手札」)。絵の窓・名前の帯・額・四隅の宝石・封蝋を描く。`card_view.gd` が1000行の上限に達していたため、手札の描画をまるごとここへ移した(`CardViewPaint` と同じく第1引数に `CardView` を取る)。窓の光だまりの色は `HourglassArt.accent_color()`(色相表から原本の砂の色を変換して求める。画像を読まない)|
 | `CardMatchSelection`(`scripts/ui/card_match_selection.gd`) | いま選んでいるもの(手札の1枚 / 自分の場の1枠 / 未選択)。選択の状態を1箇所へ集めて画面側の分岐を減らす |
 | `CardMatchScreen`(`scripts/ui/card_match_screen.gd`) | 上記を並べ、`MatchState` と同期し、操作(出す/反転/攻撃/コイン/ターン終了/投了)を受ける |
 | `CardMatchMulligan`(`scripts/ui/card_match_mulligan.gd`) | 対局開始前のマリガン画面。暗幕の上へ初期手札を並べ、選んだ枚数を `mulligan_confirmed(indices)` として返すところまでが責務で、適用は `MatchState` が行う |
@@ -2435,9 +2436,10 @@ Firestoreを一切知らないまま(ローカルの計算と保存だけを持�
 - **台座は `CardViewPaint.pedestal_base()` が「上面の楕円 + 側面の帯」の器として描く**。
   側面は上面の楕円の下半分を `PEDESTAL_HEIGHT` ぶん下へ押し出した帯で、暗い真鍮の縦グラデーション。
   輪(`pedestal_ring()`)は上面の縁に掛ける。接地の影は器の足元へ移す
-- **情報帯(`PlayerInfoBar` / `BarPanel`)は寸法と地の色だけを変える**。`BAR_HEIGHT` を詰め、
-  地を濃紺(`UiPalette` へ `NAVY_PANEL` 系の色を足す)、縁を真鍮の細線に。持ち時間は右端の
-  丸い時計として `CLOCK_X` の位置に円で描く。要素の並び・シグナルの受け口は変えない
+- **情報帯(`PlayerInfoBar`)は板を持たず、器具を並べる**(GameDesign.md 9章「情報帯」)。
+  肖像のメダルとバッジの真鍮の輪は `_brass_ring()`(外周と内周を1つのポリゴンにして縦グラデーション)、
+  濃紺の板は `_plate()`、丸いバッジは `_badge()` が描く。持ち時間は右端の丸い時計として
+  `CLOCK_X` の位置に円で描く。要素の並び・シグナルの受け口は変えない
 - 座標定数(`TABLE_RECT` / `*_ROW_TOP` / `*_BAR_TOP` / `HAND_AREA` / `ACTION_COLUMN_X`)は
   `CardMatchScreen` が持つまま値を更新する。**`CardMatchGeometry` はこれらを読むだけ**なので、
   値を変えれば座標系の問い合わせは追従する

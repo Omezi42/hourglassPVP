@@ -153,28 +153,6 @@ static func pedestal_plaque(view: CardView, tint: Color) -> void:
 		)
 
 
-## 封蝋の印。手札は紙の札であるため、台座の銘板ではなく蝋で押した印として出す。
-static func hand_seal(view: CardView, tint: Color) -> void:
-	if view.card.emblem == null or view.card.is_spell:
-		return
-	var ci := view.get_canvas_item()
-	var scale: float = view._hand_scale()
-	var radius := CardView.HAND_SEAL_RADIUS * scale
-	var center := Vector2(radius + 4.0 * scale, view.size.y - radius - 4.0 * scale)
-	UiPaint.fill_circle(ci, center, radius + 1.0, Color(0.08, 0.05, 0.04, 0.8), 24)
-	UiPaint.fill_circle(ci, center, radius, UiPalette.BRASS_MID * tint, 24)
-	var half := Vector2(CardView.HAND_SEAL_SIDE, CardView.HAND_SEAL_SIDE) * 0.5 * scale
-	view.draw_texture_rect(
-		view.card.emblem,
-		Rect2(center - half + Vector2(0.0, 1.0), half * 2.0),
-		false,
-		Color(0.08, 0.05, 0.03, 0.7)
-	)
-	view.draw_texture_rect(
-		view.card.emblem, Rect2(center - half, half * 2.0), false, UiPalette.BRASS_HIGHLIGHT * tint
-	)
-
-
 ## 右上の小さな添え字(デッキ編集の「2/2」など)。
 static func badge(view: CardView, rect: Rect2) -> void:
 	var width := view._font.get_string_size(view.badge, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x + 12.0

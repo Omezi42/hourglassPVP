@@ -17,6 +17,8 @@ const MASTER_DIR := "res://assets/hourglasses/master"
 const OVERRIDE_DIR := "res://assets/hourglasses/overrides"
 const TABLE_PATH := "res://data/hourglass_tints.tres"
 const SHADER_PATH := "res://resources/shaders/hourglass_tint.gdshader"
+## 原本(サンド)の砂の色。ここへ表の色変換を順に当てると、その絵の砂の色になる。
+const MASTER_SAND := Color(0.93, 0.66, 0.24, 1.0)
 
 static var _table: HourglassTintTable = null
 static var _published: Dictionary = {}
@@ -25,6 +27,8 @@ static var _overrides: Dictionary = {}
 static var _viewport: SubViewport = null
 static var _rect: ColorRect = null
 static var _baking := false
+## そのカードの砂の色(手札の窓の光だまりなどに使う)。絵のidごとに1度求めて控える。
+static var _accents: Dictionary = {}
 
 
 ## 起動時に1度だけ呼ぶ(Main._ready())。焼き付けはフレームをまたぐため、
@@ -81,6 +85,34 @@ static func texture(art_id: String, state: int) -> Texture2D:
 		made = ImageTexture.create_from_image(image)
 	_published[key] = made
 	return made
+
+
+## その絵の砂の色。原本の砂の色へ表の色変換(色相の回転・彩度・明度)を順に当てて求める。
+## 画像を読まないため焼き上がりを待たずに引ける。固有の絵を持つカードや表に無いidは原本の色。
+static func accent_color(art_id: String) -> Color:
+	if _accents.has(art_id):
+		return _accents[art_id]
+	_load_table()
+	var color := MASTER_SAND
+	if _table != null:
+		for step in _table.chain(art_id):
+			var h := fmod(color.h + float(step.get("hue", 0.0)), 1.0)
+			var sat := clampf(
+				maxf(
+					color.s * float(step.get("sat", 1.0)) + float(step.get("sat_bias", 0.0)),
+					float(step.get("floor", 0.0))
+				),
+				0.0,
+				1.0
+			)
+			var v := clampf(
+				color.v * float(step.get("value", 1.0)) + float(step.get("value_bias", 0.0)),
+				0.0,
+				1.0
+			)
+			color = Color.from_hsv(h, sat, v)
+	_accents[art_id] = color
+	return color
 
 
 ## 固有の絵(色違いでは足りないカード)。あればそれをそのまま使う。
