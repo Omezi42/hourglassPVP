@@ -231,11 +231,12 @@ func _draw_drop_shadows(ci: RID) -> void:
 		SHADOW_ALPHA_MIN,
 		SHADOW_ALPHA_MAX
 	)
+	# ActionColumnPanel(真鍮枠の操作盤)と同じ矩形に合わせる(GameDesign.md 9章「対局画面の再構築」)。
 	var action_rect := Rect2(
-		CardMatchScreen.ACTION_COLUMN_X - 8.0,
-		0.0,
-		size.x - (CardMatchScreen.ACTION_COLUMN_X - 8.0),
-		size.y
+		CardMatchScreen.ACTION_COLUMN_X + 6.0,
+		10.0,
+		1280.0 - CardMatchScreen.ACTION_COLUMN_X - 16.0,
+		700.0
 	)
 	_draw_shadow_layers(
 		ci,

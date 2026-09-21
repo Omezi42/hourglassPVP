@@ -79,8 +79,8 @@ static func add_button(
 ## 行動の列(GameDesign.md 9章「対局画面の再構築」)の丸いボタン。
 static func add_round_button(
 	screen: CardMatchScreen, label: String, diameter: float, filled: bool
-) -> Button:
-	var button := CodedButton.make_round(label, diameter, filled)
+) -> RoundActionButton:
+	var button := RoundActionButton.new(label, diameter, filled)
 	screen.add_child(button)
 	return button
 
@@ -93,6 +93,16 @@ static func round_button_x(diameter: float) -> float:
 		+ CardMatchScreen.ACTION_COLUMN_CENTER_OFFSET
 		- diameter * 0.5
 	)
+
+
+## 丸いボタンの中心yから左端y座標を求める(`round_button_x()`と対になる)。
+static func round_button_y(diameter: float, center_y: float) -> float:
+	return center_y - diameter * 0.5
+
+
+## `round_button_x()`/`round_button_y()`をまとめて呼ぶ(中心x・中心yの1点から置く)。
+static func round_button_pos(diameter: float, center_y: float) -> Vector2:
+	return Vector2(round_button_x(diameter), round_button_y(diameter, center_y))
 
 
 ## 盤面へ重ねるもの。**足す順がそのまま重なる順**になる(後の子ほど手前)。

@@ -8,7 +8,7 @@ extends RefCounted
 ## (`CardMatchSpell` 等と同じ流儀)。ボタンの生成・対象選択・適用をこの1箇所へ集める。
 
 var _screen: CardMatchScreen
-var _button: Button
+var _button: RoundActionButton
 
 
 func _init(screen: CardMatchScreen) -> void:
@@ -17,13 +17,9 @@ func _init(screen: CardMatchScreen) -> void:
 	# 再生・観戦(_interactive == false)だけに出て、反転権は対局中(_interactive == true)
 	# だけに出るため、行動の列を再配置せずに済む。小さな丸ボタン
 	# (GameDesign.md 9章「対局画面の再構築」)。
-	_button = CardMatchBuild.add_round_button(
-		screen, "反転権", CardMatchScreen.ACTION_ROUND_DIAMETER, false
-	)
-	_button.position = Vector2(
-		CardMatchBuild.round_button_x(CardMatchScreen.ACTION_ROUND_DIAMETER),
-		CardMatchScreen.BACK_BUTTON_TOP
-	)
+	var diameter := CardMatchScreen.ACTION_ROUND_DIAMETER_TOP
+	_button = CardMatchBuild.add_round_button(screen, "反転権", diameter, false)
+	_button.position = CardMatchBuild.round_button_pos(diameter, CardMatchScreen.BACK_BUTTON_TOP)
 	_button.visible = false
 	_button.pressed.connect(_on_pressed)
 
@@ -65,6 +61,7 @@ func refresh() -> void:
 		return
 	_button.visible = true
 	var remaining := int(state.flip_right_remaining.get(_screen.my_side, 0))
-	# 丸ボタンには「反転権(2)」が収まらないため2行にする(GameDesign.md 9章「対局画面の再構築」)。
-	_button.text = "反転権\n%d" % remaining
+	# 丸ボタンに「反転権2」は収まらないため、残り回数はバッジへ分けて出す
+	# (GameDesign.md 9章「対局画面の再構築」)。
+	_button.badge = str(remaining)
 	_button.disabled = not _screen.selection.is_flip_right() and not _ready_to_use()

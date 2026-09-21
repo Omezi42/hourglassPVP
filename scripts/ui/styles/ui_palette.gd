@@ -88,3 +88,6 @@ const NAVY_PANEL_BOTTOM := Color(0.05, 0.06, 0.13, 1.0)
 ## 情報帯の中の小さな山札・墓地・手札の札(`PlayerInfoBar._pile`)の地。
 ## `NAVY_PANEL_BOTTOM`より少し明るく、帯の地の上でも面として浮くようにする(段階2)。
 const NAVY_PANEL_PILE := Color(0.10, 0.13, 0.24, 1.0)
+## 主役の丸ボタン(ターン終了)の面。橙ではなく磨いた金真鍮として、リムと同じ材で揃える。
+const ROUND_FILLED_TOP := Color(0.95, 0.80, 0.46, 1.0)
+const ROUND_FILLED_BOTTOM := Color(0.60, 0.42, 0.18, 1.0)

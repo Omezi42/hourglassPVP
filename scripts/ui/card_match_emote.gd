@@ -4,7 +4,7 @@ extends RefCounted
 ## ボタン・ポップアップUI・クールダウン・相手ミュート・CPU返答を受け持つ。
 
 const COOLDOWN_SECONDS := 9.0
-## ボタンは「ログ」「投了」と同じ寸法・同じ作り方(`CodedButton.make_round`)で作る。
+## ボタンは「ログ」「投了」と同じ寸法・同じ作り方(`RoundActionButton`)で作る。
 ## 数pxでも違えると、同じ列に並んだときに1つだけ別物のボタンに見える。
 const EMOTE_BUTTON_DIAMETER := CardMatchScreen.ACTION_ROUND_DIAMETER
 const POPUP_WIDTH := 244.0
@@ -17,7 +17,7 @@ const POPUP_GAP := 8.0
 var mute_opponent := false
 
 var _screen: CardMatchScreen
-var _button: Button
+var _button: RoundActionButton
 var _popup: EmotePopupPanel
 var _mute_btn: Button
 ## 選択肢を入れる欄。中身は開くたびに組み直す(枠の設定は対局の外で変えられるため)。
@@ -32,7 +32,7 @@ func _init(screen: CardMatchScreen) -> void:
 
 
 func _setup_ui() -> void:
-	_button = CodedButton.make_round("エモート", EMOTE_BUTTON_DIAMETER, false)
+	_button = RoundActionButton.new("エモート", EMOTE_BUTTON_DIAMETER, false)
 	_button.pressed.connect(_toggle_popup)
 	_screen.add_child(_button)
 
@@ -134,11 +134,12 @@ func refresh() -> void:
 		_popup.visible = false
 		return
 
+	_button.label = "エモート"
 	if _cooldown > 0.0:
-		_button.text = _cooldown_label()
+		_button.badge = _cooldown_label()
 		_button.disabled = true
 	else:
-		_button.text = "エモート"
+		_button.badge = ""
 		_button.disabled = not can_use
 	if not can_use and _popup.visible:
 		_popup.visible = false
@@ -150,14 +151,14 @@ func tick(delta: float) -> void:
 		if _cooldown <= 0.0:
 			refresh()
 		else:
-			_button.text = _cooldown_label()
+			_button.badge = _cooldown_label()
 
 
-## クールダウン中も文言の頭は「エモート」のままにする。「9秒」とだけ出すと、
+## クールダウン中も文言は「エモート」のままにする。「9秒」とだけ出すと、
 ## 同じ列に並んだ「ログ」「投了」の中でそこだけ別のボタンへ変わったように見える。
-## 丸ボタンには収まらないため2行にする(GameDesign.md 9章「対局画面の再構築」)。
+## 残り秒はバッジへ分ける(GameDesign.md 9章「対局画面の再構築」)。
 func _cooldown_label() -> String:
-	return "エモート\n%d" % int(ceilf(_cooldown))
+	return str(int(ceilf(_cooldown)))
 
 
 func _toggle_popup() -> void:

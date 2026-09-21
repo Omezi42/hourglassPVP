@@ -23,27 +23,6 @@ static func make_icon(label: String, button_size: Vector2) -> Button:
 	return _build(label, button_size, ICON_GROUP)
 
 
-## 丸いボタン(対局画面「行動の列」。GameDesign.md 9章「対局画面の再構築」)。
-## `.tres` を新設せず、`primary_action`(塗りつぶし)/ `wide_text`(凹んだパネル)の
-## 各状態を複製して `shape` だけ CIRCLE へ差し替える。
-static func make_round(label: String, diameter: float, filled: bool) -> Button:
-	var button := Button.new()
-	button.text = label
-	button.custom_minimum_size = Vector2(diameter, diameter)
-	button.size = Vector2(diameter, diameter)
-	var source_group := PRIMARY_ACTION_GROUP if filled else WIDE_GROUP
-	for state in STATES:
-		var source: StyleBox = load(STYLE_PATH % [source_group, state])
-		if source is CodedButtonStyle:
-			var style: CodedButtonStyle = source.duplicate()
-			style.shape = CodedButtonStyle.Shape.CIRCLE
-			button.add_theme_stylebox_override(state, style)
-	button.add_theme_color_override("font_color", UiPalette.TEXT_OFFWHITE)
-	button.add_theme_color_override("font_hover_color", Color(1, 1, 1, 1))
-	button.add_theme_color_override("font_pressed_color", UiPalette.BRASS_HIGHLIGHT)
-	return button
-
-
 ## 紋章つきなど、グループを指定して作るボタン(公式Discordへの導線・メニューなど)。
 static func make_in_group(label: String, button_size: Vector2, group: String) -> Button:
 	return _build(label, button_size, group)

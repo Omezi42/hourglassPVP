@@ -15,25 +15,89 @@ const WEAVE_ALPHA := 0.16
 const WEAVE_ALPHA_SOFT := 0.08
 
 
-static func draw_mat(ci: CanvasItem, rect: Rect2, mat_id: String) -> void:
+## `top_inset`/`bottom_inset`を渡すと、`rect`の上辺・下辺をそれぞれ左右へその分だけ
+## 狭めた**台形**として塗り・縁飾り・隅飾りを描く(BoardTableの台形の額の内側に
+## 敷くマット用。GameDesign.md 9章「対局画面の再構築」)。省略時(既定0)は
+## 従来どおり矩形(角丸)のまま——ショップ・アカウントの見本はこちらを使う。
+static func draw_mat(
+	ci: CanvasItem, rect: Rect2, mat_id: String, top_inset: float = 0.0, bottom_inset: float = 0.0
+) -> void:
 	if mat_id == PlaymatLibrary.NONE_ID:
 		return
 	var mat := PlaymatLibrary.get_mat(mat_id)
 	var base: Color = mat["base"]
+	var trapezoid := top_inset > 0.0 or bottom_inset > 0.0
+	var shape := (
+		_trapezoid_points(rect, top_inset, bottom_inset)
+		if trapezoid
+		else UiPaint.rounded_rect_points_uniform(rect, 4.0, 3)
+	)
 	UiPaint.fill_gradient_polygon(
 		ci.get_canvas_item(),
-		UiPaint.rounded_rect_points_uniform(rect, 4.0, 3),
+		shape,
 		rect,
 		[[0.0, base.lightened(0.10)], [0.55, base], [1.0, base.darkened(0.22)]]
 	)
 	_draw_weave(ci, rect, mat)
-	_draw_border(ci, rect, mat)
+	if trapezoid:
+		_mask_outside_trapezoid(ci.get_canvas_item(), rect, top_inset, bottom_inset)
+	_draw_border(ci, rect, mat, top_inset, bottom_inset)
 	UiPaint.apply_grain(ci.get_canvas_item(), rect, 0.055)
 
 
+## 台形の4頂点(左上・右上・右下・左下の順)。
+static func _trapezoid_points(
+	rect: Rect2, top_inset: float, bottom_inset: float
+) -> PackedVector2Array:
+	return PackedVector2Array(
+		[
+			Vector2(rect.position.x + top_inset, rect.position.y),
+			Vector2(rect.end.x - top_inset, rect.position.y),
+			Vector2(rect.end.x - bottom_inset, rect.end.y),
+			Vector2(rect.position.x + bottom_inset, rect.end.y),
+		]
+	)
+
+
+## 織り(`_draw_weave`)は矩形のまま描くため、台形の外へはみ出した左右2つの帯が残る。
+## この帯を、上端・下端でフェルトの色(`FELT_NAVY_*`)へ滑らかに変わる四角形として
+## 塗りつぶし、台形の外側であることを隠す(2枚 × 上下の三角形で計4つぶん)。
+static func _mask_outside_trapezoid(
+	ci: RID, rect: Rect2, top_inset: float, bottom_inset: float
+) -> void:
+	var stops := [[0.0, UiPalette.FELT_NAVY_TOP], [1.0, UiPalette.FELT_NAVY_BOTTOM]]
+	var left := PackedVector2Array(
+		[
+			rect.position,
+			Vector2(rect.position.x + top_inset, rect.position.y),
+			Vector2(rect.position.x + bottom_inset, rect.end.y),
+			Vector2(rect.position.x, rect.end.y),
+		]
+	)
+	var right := PackedVector2Array(
+		[
+			Vector2(rect.end.x - top_inset, rect.position.y),
+			Vector2(rect.end.x, rect.position.y),
+			Vector2(rect.end.x, rect.end.y),
+			Vector2(rect.end.x - bottom_inset, rect.end.y),
+		]
+	)
+	UiPaint.fill_gradient_polygon(ci, left, rect, stops)
+	UiPaint.fill_gradient_polygon(ci, right, rect, stops)
+
+
 ## 縁飾り。マットが「敷いてある布」に見えるための二重線と、豪華な品だけの隅飾り。
-static func _draw_border(ci: CanvasItem, rect: Rect2, mat: Dictionary) -> void:
+static func _draw_border(
+	ci: CanvasItem, rect: Rect2, mat: Dictionary, top_inset: float = 0.0, bottom_inset: float = 0.0
+) -> void:
 	var edge: Color = mat["edge"]
+	if top_inset <= 0.0 and bottom_inset <= 0.0:
+		_draw_border_rect(ci, rect, mat, edge)
+		return
+	_draw_border_trapezoid(ci, rect, mat, edge, top_inset, bottom_inset)
+
+
+static func _draw_border_rect(ci: CanvasItem, rect: Rect2, mat: Dictionary, edge: Color) -> void:
 	var inset := rect.grow(-INSET)
 	ci.draw_rect(inset, Color(edge, 0.70), false, 2.0)
 	ci.draw_rect(inset.grow(-5.0), Color(edge, 0.36), false, 1.2)
@@ -64,6 +128,43 @@ static func _draw_border(ci: CanvasItem, rect: Rect2, mat: Dictionary) -> void:
 			Color(foil, 0.40),
 			2.0
 		)
+
+
+## 台形版の縁飾り。二重線は台形の4辺に沿った折れ線、隅飾りは台形の4頂点から
+## 実際の辺の向きへ沿って伸ばす(矩形前提の軸に揃えた腕だと、斜辺の隅で
+## 額の斜めの縁と噛み合わない)。
+static func _draw_border_trapezoid(
+	ci: CanvasItem, rect: Rect2, mat: Dictionary, edge: Color, top_inset: float, bottom_inset: float
+) -> void:
+	var inset_rect := rect.grow(-INSET)
+	var inner := _trapezoid_points(inset_rect, top_inset, bottom_inset)
+	var inner2 := _trapezoid_points(inset_rect.grow(-5.0), top_inset, bottom_inset)
+	_draw_outline(ci, inner, Color(edge, 0.70), 2.0)
+	_draw_outline(ci, inner2, Color(edge, 0.36), 1.2)
+	if not bool(mat.get("corners", false)):
+		return
+	var foil: Color = mat["foil"]
+	var arm := 34.0
+	var count := inner.size()
+	for i in count:
+		var corner: Vector2 = inner[i]
+		var prev: Vector2 = inner[(i - 1 + count) % count]
+		var next: Vector2 = inner[(i + 1) % count]
+		var dir_a := (prev - corner).normalized()
+		var dir_b := (next - corner).normalized()
+		ci.draw_line(corner, corner + dir_a * arm, Color(foil, 0.55), 2.6)
+		ci.draw_line(corner, corner + dir_b * arm, Color(foil, 0.55), 2.6)
+		var mid := corner + (dir_a + dir_b) * (arm * 0.5)
+		ci.draw_line(corner + dir_a * arm, mid, Color(foil, 0.40), 2.0)
+		ci.draw_line(corner + dir_b * arm, mid, Color(foil, 0.40), 2.0)
+
+
+static func _draw_outline(
+	ci: CanvasItem, points: PackedVector2Array, color: Color, width: float
+) -> void:
+	var closed := points.duplicate()
+	closed.append(points[0])
+	ci.draw_polyline(closed, color, width)
 
 
 static func _draw_weave(ci: CanvasItem, rect: Rect2, mat: Dictionary) -> void:

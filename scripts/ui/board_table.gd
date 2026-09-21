@@ -93,8 +93,17 @@ func _layout_layers() -> void:
 	var half := inner.size.y * DIVIDER_RATIO
 	_foe_layer.position = inner.position
 	_foe_layer.size = Vector2(inner.size.x, half)
+	# 額の斜辺は上(奥)へ向かって狭まる(PERSPECTIVE_INSET)。相手側は下端(レール寄り)
+	# でも半分だけ狭め、自分側の上端(レール寄り)と合わせて連続した奥行きにする
+	# (GameDesign.md 9章「対局画面の再構築」)。
+	_foe_layer.top_inset = PERSPECTIVE_INSET
+	_foe_layer.bottom_inset = PERSPECTIVE_INSET * 0.5
 	_own_layer.position = Vector2(inner.position.x, inner.position.y + half)
 	_own_layer.size = Vector2(inner.size.x, half)
+	_own_layer.top_inset = PERSPECTIVE_INSET * 0.5
+	_own_layer.bottom_inset = 0.0
+	_foe_layer.queue_redraw()
+	_own_layer.queue_redraw()
 	_rail_layer.position = Vector2.ZERO
 	_rail_layer.size = size
 	_rail_layer.queue_redraw()
@@ -320,10 +329,13 @@ class MatLayer:
 		set(value):
 			mat_id = value
 			queue_redraw()
+	## 上辺・下辺を左右へ狭める量(台形の額に沿わせるため)。既定0は矩形のまま。
+	var top_inset := 0.0
+	var bottom_inset := 0.0
 
 	func _init() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 		clip_contents = true
 
 	func _draw() -> void:
-		PlaymatPaint.draw_mat(self, Rect2(Vector2.ZERO, size), mat_id)
+		PlaymatPaint.draw_mat(self, Rect2(Vector2.ZERO, size), mat_id, top_inset, bottom_inset)
