@@ -2418,12 +2418,14 @@ Firestoreを一切知らないまま(ローカルの計算と保存だけを持�
 | クラス | 責務 |
 |---|---|
 | `MatchBackdrop`(`scripts/ui/match_backdrop.gd`) | 対局画面専用の下地。石の広間(`RoomPaint` の部品を薄く)/ 吊りランプ / 卓の中心の光だまり(放射グラデーションの `GradientTexture2D` を1枚。同心の楕円を重ねると段が見える)/ 卓・情報帯・手札・行動の列への落ち影 / 四辺のビネット。`ScreenBackdrop.PLAIN` の代わりに `_build()` の先頭で足す |
-| `ActionColumnPanel`(`scripts/ui/action_column_panel.gd`) | 右端の行動の列の地(濃紺のパネル + 真鍮の縁)。ボタンより先に `add_child()` して背面へ置く。ボタン自体は従来どおり `CodedButton` で、丸い形(`Shape.CIRCLE`)を使う |
+| `ActionColumnPanel`(`scripts/ui/action_column_panel.gd`) | 右端の行動の列の地。卓の脇に立てた**真鍮枠の操作盤**(濃紺の板 + 真鍮の額 + 上下の紋章入り飾り板 + ターン終了の周りの彫り込みの輪 + 群の区切り線)。ボタンより先に `add_child()` して背面へ置く |
+| `RoundActionButton`(`scripts/ui/round_action_button.gd`, `extends Button`) | 行動の列の丸ボタン。**`CodedButton` / `CodedButtonStyle` は使わない**——文字の幅で矩形が伸びる仕組みのため、丸のつもりが楕円のピルになる(実際にそうなった)。`text` は空にして `label` を自前で描き、`_get_minimum_size()` を直径で固定する。`filled`(ターン終了の金真鍮の面)/ `badge`(反転権の残り回数・エモートの残り秒)を持つ。ホバー・押下・`disabled` は `Button` のものをそのまま使い、`queue_redraw()` だけつなぐ |
 
 - **卓の奥行きは `BoardTable` が額と面を台形で描く**ことで出す(`PERSPECTIVE_INSET`:奥の辺を
-  左右それぞれ何px狭めるか)。マットの層(`MatLayer`)は矩形のまま `clip_contents` で切り抜いて
-  いるため、**台形の額の内側に収まるよう層の矩形を奥の幅に合わせて縮める**(はみ出した布が
-  額の外へ出ないようにするため)
+  左右それぞれ何px狭めるか)。**額は最前面の層(`_rail_layer`)にリング状のポリゴンとして描き、
+  マットの矩形の角を覆う**。マットの縁飾りが額の斜辺と平行になるよう、`PlaymatPaint.draw_mat()` は
+  `top_inset` / `bottom_inset` を受け取って台形として描く(相手側 = 全量と半量、自分側 = 半量と0)。
+  ショップ・アカウントの見本は引数を省略して矩形のまま
 - **相手の列の駒は `CardView.scale` で 0.92 倍にする**(`CardMatchScreen.FOE_ROW_SCALE`)。
   `pivot_offset` を駒の中心に置き、`position` / `size` は変えない。これにより
   `CardFlipBeam.unit_center()` / `CardMatchGeometry.slot_center()` / ドラッグの当たり判定は
