@@ -41,6 +41,11 @@ static func make_row(screen: CardMatchScreen, top: float, opponent: bool) -> Arr
 			start + i * (CardView.BOARD_SIZE_PX.x + CardMatchScreen.CARD_GAP), top
 		)
 		view.size = CardView.BOARD_SIZE_PX
+		if opponent:
+			# 相手の場だけをわずかに縮小して奥行きを出す(段階2)。中心を軸に縮めるため
+			# position/sizeそのものは変えず、pivot_offsetとscaleだけを設定する。
+			view.pivot_offset = CardView.BOARD_SIZE_PX * 0.5
+			view.scale = Vector2.ONE * CardMatchScreen.FOE_ROW_SCALE
 		view.pressed.connect(
 			screen.touch.on_foe_slot_pressed if opponent else screen.touch.on_own_slot_pressed
 		)

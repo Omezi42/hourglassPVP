@@ -85,3 +85,6 @@ const FELT_NAVY_BOTTOM := Color(0.07, 0.09, 0.19, 1.0)
 ## 行動の列(ActionColumnPanel)・情報帯の地。FELT_NAVY_* よりわずかに暗い。
 const NAVY_PANEL_TOP := Color(0.09, 0.11, 0.21, 1.0)
 const NAVY_PANEL_BOTTOM := Color(0.05, 0.06, 0.13, 1.0)
+## 情報帯の中の小さな山札・墓地・手札の札(`PlayerInfoBar._pile`)の地。
+## `NAVY_PANEL_BOTTOM`より少し明るく、帯の地の上でも面として浮くようにする(段階2)。
+const NAVY_PANEL_PILE := Color(0.10, 0.13, 0.24, 1.0)

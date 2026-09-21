@@ -11,13 +11,16 @@ signal back_pressed
 const CARD_GAP := 12.0
 const HAND_GAP := 8.0
 const MARGIN := 24.0
+## 相手の場6枠だけをわずかに縮小して奥行きを出す(段階2)。
+const FOE_ROW_SCALE := 0.92
 const FOE_BAR_TOP := 8.0
 const FOE_ROW_TOP := 92.0
 const OWN_ROW_TOP := 268.0
 const OWN_BAR_TOP := 456.0
 const HAND_TOP := 528.0
-## 手札は卓と同じ左右の範囲へ置き、盤面の真下で中央に揃える。
-const HAND_AREA := Rect2(190, 528, 900, 158)
+## 手札は卓と同じ左右の範囲へ置き、盤面の真下で中央に揃える。段階2で上端を自分の
+## 情報帯の下端(512)へ近づけた(下端686は変えず、HAND_TOP/札の位置も変えない)。
+const HAND_AREA := Rect2(190, 520, 900, 166)
 ## 12枠を載せる卓上(GameDesign.md 9章)。両陣営の6枠がこの上に並ぶ。
 const TABLE_RECT := Rect2(190, 74, 900, 372)
 const CPU_THINK_SECONDS := 0.5

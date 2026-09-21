@@ -17,25 +17,29 @@ const PIP_STEP := 20.0
 const PIP_RADIUS := 7.0
 ## 帯の中の横位置。マナのピップは上限10まで並ぶため、山札の山と重ならない位置から始める。
 const NAME_PLATE_RECT := Rect2(8, 8, 146, 40)
+## アイコンの円を名札の帯の左端よりこれだけ左へ食い込ませる(段階2、GameDesign.md 9章)。
+const NAME_ICON_OVERLAP := 6.0
 const HP_BAR_X := 162.0
 const MANA_TEXT_X := 418.0
 const PIP_START_X := 516.0
 const DECK_PILE_X := 730.0
 const GRAVE_PILE_X := 812.0
 const HAND_PILE_X := 894.0
-const CLOCK_X := 990.0
-const CLOCK_SIZE := Vector2(80, 40)
-const CLOCK_RADIUS := 6.0
+## 持ち時間の丸(段階2)。中心x座標。右端(CLOCK_X + CLOCK_RADIUS)が
+## `CardMatchScreen.BAR_WIDTH`(1060)からはみ出さない位置に置く。
+const CLOCK_X := 1034.0
+const CLOCK_DIAMETER := 40.0
+const CLOCK_RADIUS := CLOCK_DIAMETER * 0.5
 const BAR_CORNER := 10.0
 const HP_BAR_RADIUS := 6.0
 const PILE_RADIUS := 6.0
-## 山札・墓地・手札の山(_pile)の質感。グレインは小さい面のため控えめに、
-## 面取りは`board_table._draw_frame()`と同じ「グラデーション+グレイン+ベベル」の
-## 3段構成に揃える。
+## 山札・墓地・手札の山(_pile)の質感(段階2)。地は帯より少し明るい濃紺
+## (`UiPalette.NAVY_PANEL_PILE`)、グレインは小さい面のため控えめに、
+## 輪郭は真鍮の細い単線に留める。
 const PILE_GRAIN_ALPHA := 0.06
-const PILE_BEVEL_WIDTH := 1.5
-## 持ち時間プレート(_draw_clock)の質感。脈動パルス・危険域の縁取りは動的な色を
-## そのまま残し、平常時だけベベルへ差し替える。
+const PILE_OUTLINE_WIDTH := 1.0
+## 持ち時間の丸(_draw_clock)の質感。脈動パルス・危険域の縁取りは動的な色を
+## そのまま残し、平常時だけ真鍮の輪へ差し替える。
 const CLOCK_GRAIN_ALPHA := 0.05
 const CLOCK_BEVEL_WIDTH := 1.5
 ## マナのピップ(_draw_mana)の質感。小さい円のため、面取りではなく
@@ -285,9 +289,12 @@ func _draw() -> void:
 	var ci := get_canvas_item()
 	var rect := Rect2(Vector2.ZERO, size)
 	var points := UiPaint.rounded_rect_points_uniform(rect, BAR_CORNER, 6)
+	# 地は濃紺のフェルトと同じ系統にし、卓と同じ光を受けて見せる(GameDesign.md 9章「再構築」)。
 	UiPaint.fill_gradient_polygon(
-		ci, points, rect, [[0.0, UiPalette.BAR_FILL_TOP], [1.0, UiPalette.BAR_FILL_BOTTOM]]
+		ci, points, rect, [[0.0, UiPalette.NAVY_PANEL_TOP], [1.0, UiPalette.NAVY_PANEL_BOTTOM]]
 	)
+	UiPaint.apply_grain(ci, rect, 0.06)
+	UiPaint.draw_inner_shadow(ci, rect, BAR_CORNER, 4, 5, Color(0, 0, 0), 0.35)
 	var outline := points.duplicate()
 	outline.append(points[0])
 	var edge := Color(UiPalette.BRASS_MID, 0.95)
@@ -332,13 +339,20 @@ func _draw_name_plate() -> void:
 	outline.append(points[0])
 	draw_polyline(outline, UiPalette.BRASS_LIGHT, 1.5, true)
 
-	# アイコン描画(左端・円形枠)
-	var icon_rect := Rect2(14, 14, 28, 28)
-	var icon_center := icon_rect.position + icon_rect.size * 0.5
+	# アイコン描画(段階2: 名札の帯へ左へ6pxほど食い込ませ、真鍮の二重の輪で囲む)。
+	var icon_radius := 14.0
+	var ring_inner_radius := icon_radius + 1.0
+	var ring_outer_radius := icon_radius + 3.0
+	var icon_center := Vector2(
+		NAME_PLATE_RECT.position.x - NAME_ICON_OVERLAP + ring_outer_radius,
+		NAME_PLATE_RECT.position.y + NAME_PLATE_RECT.size.y * 0.5
+	)
+	var icon_rect := Rect2(icon_center - Vector2.ONE * icon_radius, Vector2.ONE * icon_radius * 2.0)
 	var icon_tex := UserProfileLibrary.get_icon_texture(icon_id)
 	if icon_tex != null:
 		draw_texture_rect(icon_tex, icon_rect, false)
-	draw_arc(icon_center, 14.5, 0.0, TAU, 20, UiPalette.BRASS_LIGHT, 1.5)
+	draw_arc(icon_center, ring_inner_radius, 0.0, TAU, 24, UiPalette.BRASS_MID, 2.0)
+	draw_arc(icon_center, ring_outer_radius, 0.0, TAU, 24, UiPalette.BRASS_HIGHLIGHT, 1.0)
 
 	# 称号と表示名の描画
 	var title_text := UserProfileLibrary.get_title_display(title_id)
@@ -355,34 +369,39 @@ func _draw_name_plate() -> void:
 		_text(Vector2(text_x, NAME_PLATE_RECT.position.y + 26), label, 17, UiPalette.TEXT_OFFWHITE)
 
 
-## 残り時間は「相手の手札」の右、情報帯の末尾に置く。
-## 真鍮枠のプレート内に秒数と砂時計アイコンを描画する。
+## 残り時間は情報帯の右端の丸に置く(段階2、GameDesign.md 9章「対局画面の再構築」)。
+## 地は真鍮の放射(暗→中の2段の同心円)+輪。矩形のプレートより盤面の台座(丸い皿)と
+## 意匠が揃う。
 func _draw_clock() -> void:
 	var ci := get_canvas_item()
-	var rect := Rect2(Vector2(CLOCK_X - 10, 8), CLOCK_SIZE)
+	var center := Vector2(CLOCK_X, size.y * 0.5)
 	var is_critical := clock_seconds <= 15.0 and active
 	var is_low := clock_seconds <= maxf(clock_total, 1.0) * 0.5
 
-	# プレート背景
-	var points := UiPaint.rounded_rect_points_uniform(rect, CLOCK_RADIUS, 5)
-	UiPaint.fill_gradient_polygon(
-		ci, points, rect, [[0.0, Color(0.18, 0.14, 0.12, 1.0)], [1.0, Color(0.08, 0.06, 0.06, 1.0)]]
+	# 地: 暗い真鍮の円の上へ、一回り小さい中間真鍮の円を重ねて放射風にする。
+	UiPaint.fill_circle(ci, center, CLOCK_RADIUS, UiPalette.BRASS_DARK, 24)
+	UiPaint.fill_circle(ci, center, CLOCK_RADIUS * 0.7, UiPalette.BRASS_MID, 24)
+	UiPaint.apply_grain(
+		ci,
+		Rect2(center - Vector2.ONE * CLOCK_RADIUS, Vector2.ONE * CLOCK_RADIUS * 2.0),
+		CLOCK_GRAIN_ALPHA
 	)
-	UiPaint.apply_grain(ci, rect, CLOCK_GRAIN_ALPHA)
 
-	# 枠線 (残り15秒以下かつ手番中なら脈動パルス)
-	var outline := points.duplicate()
-	outline.append(points[0])
+	# 輪 (残り15秒以下かつ手番中なら脈動パルス)
 	if is_critical:
 		var pulse := (sin(Time.get_ticks_msec() * 0.008) + 1.0) * 0.5
 		var pulse_color := UiPalette.WARNING_RED.lerp(UiPalette.GLOW_AMBER, pulse * 0.4)
-		draw_polyline(outline, pulse_color, 2.5, true)
-		draw_rect(rect.grow(1.5), Color(pulse_color, 0.15 * pulse))
+		UiPaint.draw_ring(ci, center, CLOCK_RADIUS, pulse_color, 2.5, 24)
+		var glow_radius := CLOCK_RADIUS + 1.5
+		draw_rect(
+			Rect2(center - Vector2.ONE * glow_radius, Vector2.ONE * glow_radius * 2.0),
+			Color(pulse_color, 0.15 * pulse)
+		)
 	elif is_low:
-		draw_polyline(outline, Color(UiPalette.WARNING_RED, 0.8), 1.5, true)
+		UiPaint.draw_ring(ci, center, CLOCK_RADIUS, Color(UiPalette.WARNING_RED, 0.8), 1.5, 24)
 	else:
-		UiPaint.draw_bevel(
-			ci, points, UiPalette.BRASS_LIGHT, UiPalette.OUTLINE_DARK, CLOCK_BEVEL_WIDTH, false
+		UiPaint.draw_ring(
+			ci, center, CLOCK_RADIUS, UiPalette.BRASS_HIGHLIGHT, CLOCK_BEVEL_WIDTH, 24
 		)
 
 	var minutes := int(clock_seconds) / 60
@@ -394,19 +413,13 @@ func _draw_clock() -> void:
 	elif is_low:
 		text_color = UiPalette.WARNING_RED
 
-	# ミニ砂時計アイコン (枠内左側)
-	var icon_x := rect.position.x + 10.0
-	var icon_y := rect.position.y + 14.0
-	var icon_color := UiPalette.WARNING_RED if is_critical or is_low else UiPalette.BRASS_LIGHT
-	draw_line(Vector2(icon_x, icon_y), Vector2(icon_x + 10, icon_y), icon_color, 1.5)
-	draw_line(Vector2(icon_x, icon_y + 14), Vector2(icon_x + 10, icon_y + 14), icon_color, 1.5)
-	draw_line(Vector2(icon_x, icon_y), Vector2(icon_x + 10, icon_y + 14), icon_color, 1.2)
-	draw_line(Vector2(icon_x + 10, icon_y), Vector2(icon_x, icon_y + 14), icon_color, 1.2)
-
-	_text(
-		Vector2(rect.position.x + 26, rect.position.y + 26),
+	draw_string(
+		_font,
+		Vector2(center.x - CLOCK_RADIUS, center.y + 5.0),
 		"%d:%02d" % [minutes, seconds],
-		16,
+		HORIZONTAL_ALIGNMENT_CENTER,
+		CLOCK_RADIUS * 2.0,
+		15,
 		text_color
 	)
 
@@ -561,12 +574,14 @@ func _draw_coin() -> void:
 
 
 ## 山札・墓地・手札の枚数。小さな山を模した角丸のプレートに枚数を載せる。
+## 段階2: 地を`NAVY_PANEL_PILE`(帯より少し明るい濃紺)にし、輪郭は真鍮1pxの
+## 単線にする(ベベルではなく細い縁取りに留め、帯の地との差を色だけで見せる)。
 func _pile(pos: Vector2, label: String, count: int) -> void:
 	var ci := get_canvas_item()
 	var rect := Rect2(pos, PILE_SIZE)
 	var points := UiPaint.rounded_rect_points_uniform(rect, PILE_RADIUS, 5)
 	UiPaint.fill_gradient_polygon(
-		ci, points, rect, [[0.0, Color(0.24, 0.18, 0.13, 1.0)], [1.0, Color(0.1, 0.08, 0.06, 1.0)]]
+		ci, points, rect, [[0.0, UiPalette.NAVY_PANEL_PILE], [1.0, UiPalette.NAVY_PANEL_BOTTOM]]
 	)
 	UiPaint.apply_grain(ci, rect, PILE_GRAIN_ALPHA)
 	var outline := points.duplicate()
@@ -576,9 +591,7 @@ func _pile(pos: Vector2, label: String, count: int) -> void:
 		draw_polyline(outline, Color(_deck_pulse_color, _deck_pulse), 3.0, true)
 		draw_rect(rect.grow(2.0), Color(_deck_pulse_color, 0.18 * _deck_pulse))
 	else:
-		UiPaint.draw_bevel(
-			ci, points, UiPalette.BRASS_LIGHT, UiPalette.OUTLINE_DARK, PILE_BEVEL_WIDTH, false
-		)
+		draw_polyline(outline, UiPalette.BRASS_MID, PILE_OUTLINE_WIDTH, true)
 	_text(Vector2(pos.x + 8, pos.y + 26), label, 15)
 	_text(Vector2(pos.x + 46, pos.y + 27), str(count), 19, UiPalette.GLOW_AMBER)
 

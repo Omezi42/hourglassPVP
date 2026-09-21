@@ -29,6 +29,10 @@ const STITCH_GAP := 6.0
 const STITCH_COLOR := Color(0.06, 0.04, 0.025, 0.6)
 const STITCH_WIDTH := 1.5
 
+## 上端の真鍮の細い縁(段階2)。情報帯の下からこの面が出てくるように見せる
+## (GameDesign.md 9章「対局画面の再構築」)。
+const TOP_BRASS_WIDTH := 1.5
+
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -66,6 +70,13 @@ func _draw() -> void:
 	_draw_stitch_line(ci, rect.end.y - SEAM_INSET_Y, rect)
 	# 上端の光の当たり(「光と影」の検証)。落ち影は`MatchBackdrop`が担う。
 	draw_rect(Rect2(rect.position.x, rect.position.y, rect.size.x, 3.0), Color(1.0, 1.0, 1.0, 0.05))
+	# 上端の真鍮の細い縁。情報帯の下からこの面が出てくるように見せる(段階2)。
+	draw_line(
+		Vector2(rect.position.x + CORNER_RADIUS, rect.position.y),
+		Vector2(rect.end.x - CORNER_RADIUS, rect.position.y),
+		UiPalette.BRASS_MID,
+		TOP_BRASS_WIDTH
+	)
 
 
 ## 上下の縁ぞいに縫い目を1本ずつ通す。革の面らしさを足すディテールで、実際の刺繍と

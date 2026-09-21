@@ -5,16 +5,24 @@ extends Control
 ## 質感を出す」方針で作り直した(J-17)。色はUiPalette、多段階グラデーション塗りは
 ## UiPaint(coded_button_style.gd等と共通のライブラリ)を経由する(フェーズ12 Q-6)。
 ##
+## 対局画面の再構築(GameDesign.md 9章)で、地を濃紺(`NAVY_PANEL_*`)・縁を真鍮へ
+## 差し替えた(段階2)。角丸・グレイン・内側の落ち込み影は情報帯(`PlayerInfoBar`)や
+## 行動の列と同じ質感の作り(グラデーション+グレイン+ベベル+落ち込み影)に揃える。
+##
 ## 四隅のリベット(鋲)は元々このバー独自の飾りとして存在したが、Architecture.md 4章の
 ## 「機能を伝えない純粋な飾りは置かない」方針(ボタンの角のネジ・渦巻き意匠を撤去した際に
 ## 確立した基準)に照らすと、このリベットも「バーが何かを固定されている」以上の意味を
 ## 伝えない純粋な小物装飾に当たると判断し、撤去した。
 
-const BORDER_WIDTH := 2.0
+const CORNER_RADIUS := 10.0
+const CORNER_SEGMENTS := 6
+const GRAIN_ALPHA := 0.06
+const BRASS_OUTLINE_WIDTH := 1.5
+const OUTER_OUTLINE_WIDTH := 1.0
 const EDGE_LINE_WIDTH := 1.5
 const EDGE_SHADOW_ALPHA_SCALE := 0.35
-## バーの縁取り(枠線)は他のコード描画UIと共通のGLOW_AMBERを使う。
-const BORDER_ALPHA := 0.9
+const INNER_SHADOW_LAYERS := 4
+const INNER_SHADOW_ALPHA := 0.35
 
 
 func _ready() -> void:
@@ -22,31 +30,33 @@ func _ready() -> void:
 
 
 func _draw() -> void:
+	var ci := get_canvas_item()
 	var rect := Rect2(Vector2.ZERO, size)
-	_draw_gradient_fill(rect)
-	var border_color := Color(
-		UiPalette.GLOW_AMBER.r, UiPalette.GLOW_AMBER.g, UiPalette.GLOW_AMBER.b, BORDER_ALPHA
-	)
-	draw_rect(rect, border_color, false, BORDER_WIDTH)
-	_draw_edge_lines(rect)
-
-
-## 上端をわずかに明るく・下端をわずかに暗くし、フラットな一色塗りより厚みのある質感にする。
-func _draw_gradient_fill(rect: Rect2) -> void:
-	var points := PackedVector2Array(
-		[
-			rect.position,
-			Vector2(rect.end.x, rect.position.y),
-			rect.end,
-			Vector2(rect.position.x, rect.end.y),
-		]
-	)
+	var points := UiPaint.rounded_rect_points_uniform(rect, CORNER_RADIUS, CORNER_SEGMENTS)
 	UiPaint.fill_gradient_polygon(
-		get_canvas_item(),
-		points,
-		rect,
-		[[0.0, UiPalette.BAR_FILL_TOP], [1.0, UiPalette.BAR_FILL_BOTTOM]]
+		ci, points, rect, [[0.0, UiPalette.NAVY_PANEL_TOP], [1.0, UiPalette.NAVY_PANEL_BOTTOM]]
 	)
+	UiPaint.apply_grain(ci, rect, GRAIN_ALPHA)
+	UiPaint.draw_inner_shadow(
+		ci,
+		rect,
+		CORNER_RADIUS,
+		CORNER_SEGMENTS,
+		INNER_SHADOW_LAYERS,
+		Color(0, 0, 0),
+		INNER_SHADOW_ALPHA
+	)
+	var outline := points.duplicate()
+	outline.append(points[0])
+	draw_polyline(outline, UiPalette.BRASS_MID, BRASS_OUTLINE_WIDTH, true)
+	var outer_rect := rect.grow(OUTER_OUTLINE_WIDTH)
+	var outer_points := UiPaint.rounded_rect_points_uniform(
+		outer_rect, CORNER_RADIUS + OUTER_OUTLINE_WIDTH, CORNER_SEGMENTS
+	)
+	var outer_outline := outer_points.duplicate()
+	outer_outline.append(outer_points[0])
+	draw_polyline(outer_outline, UiPalette.OUTLINE_DARK, OUTER_OUTLINE_WIDTH, true)
+	_draw_edge_lines(rect)
 
 
 ## 上下どちらのバーでも自然に見えるよう、上端に明るいハイライト・下端に薄い影を引く
