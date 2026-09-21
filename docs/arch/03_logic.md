@@ -4,7 +4,7 @@ UIに依存しない、対局ルールそのものを扱う層。
 
 ## 3.1 `MatchState`(`scripts/logic/match_state.gd`, Node)
 
-対局中の唯一の真実を保持する。旧 `GameState` とは別クラスとして並走させている。
+対局中の唯一の真実を保持する。
 
 保持するもの:両プレイヤーの `hp` / `mana` / `max_mana` / `deck`(山札)/ `hand` /
 `board`(6枠の `CardInstance`、空きは null)/ `graveyard`、`current_turn`、`first_side`、

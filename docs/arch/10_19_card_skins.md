@@ -34,7 +34,7 @@ getter が `HourglassArt.texture(art_key(), state)` を返す形で12箇所か�
   `CardData` ではなく `CardView` が解決済みのテクスチャを受け取る形へ変える
   (崩落の破片がスキンの絵と別物になるのを防ぐ)
 - **手札の窓の光だまりは `HandCardPaint` が `CardSkins.accent_color(card, viewer)` を
-  引く。**スキンが効いていなければ従来の `HourglassArt.accent_color()` を返す
+  引く。**スキンが効いていなければ `HourglassArt.accent_color()` を返す
 - **相手の設定は `CardMatchOnline` が `fetch_profile()` の直後に
   `CardSkins.set_opponent(owned, disabled)` で渡し、`_reset_for_new_match()` が消す**
   (プレイマットと同じ場所・同じ寿命)。`fetch_profile()` は `owned_skins` /

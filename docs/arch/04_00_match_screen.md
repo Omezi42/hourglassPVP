@@ -44,7 +44,7 @@
 - 座標定数(`TABLE_RECT` / `*_ROW_TOP` / `*_BAR_TOP` / `HAND_AREA` / `ACTION_COLUMN_X`)は `CardMatchScreen` が持ち、`CardMatchGeometry` は読むだけ
 - **手札は `CardView.HAND_SIZE_PX`(118x158)を基準に、各部を比(`_hand_scale()`)で決める**(固定値だと辞書のように小さく置いたとき名前がはみ出す)
 - **砂時計の絵は枠へ引き伸ばさず縦横比のまま収める**(`_fit_art()`)。キャンバスは400x513(`state_falling` だけ415x532)で、**倍率は3状態のうちいちばん高いキャンバスを基準に共通化する**(状態ごとに割ると `falling` へ切り替わった瞬間だけ縮む)。ドラッグのプレビューも同じ大きさ
-- **相手の列は `CardView.scale` で0.92倍**(`FOE_ROW_SCALE`)。`pivot_offset` を中心に置き `position`/`size` は変えないため、座標の問い合わせ・ドラッグの当たり判定は従来のまま
+- **相手の列は `CardView.scale` で0.92倍**(`FOE_ROW_SCALE`)。`pivot_offset` を中心に置き `position`/`size` は変えないため、座標の問い合わせ・ドラッグの当たり判定は等倍のまま扱える
 - **選択中の枠は水色、守護の枠は真鍮色**と系統を分ける
 - **「反転」ボタンは選んだ駒のすぐ下**(`_flip_button_position()`、高さ `FLIP_BUTTON_SIZE`)。上へ出すと相手の駒へ重なる
 - 総手数は `MatchState.turn_count` をそのまま使う(UI側で数えるとCPU同士・再生で0になる)

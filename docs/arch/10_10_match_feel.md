@@ -14,16 +14,16 @@
 
 ---
 
-## 10.10.0 対局画面の再構築(GameDesign.md 9章「対局画面の再構築」・2026-09-21)
+## 10.10.0 対局画面の見た目(GameDesign.md 9章「対局画面の見た目」)
 
-**見た目の層だけを差し替える。**`MatchState`・各進行役(`CardMatchStrike` 等)・`CardMatchTouch` は
-触らず、座標定数と `_draw()` を持つクラスだけを変える。新しいクラスは2つ。
+**見た目は独立した層として持つ。**`MatchState`・各進行役(`CardMatchStrike` 等)・`CardMatchTouch` は
+見た目を知らず、座標定数と `_draw()` を持つクラスだけが担う。
 
 | クラス | 責務 |
 |---|---|
 | `MatchBackdrop`(`scripts/ui/match_backdrop.gd`) | 対局画面専用の下地。石の広間(`RoomPaint` の部品を薄く)/ 吊りランプ / 卓の中心の光だまり(放射グラデーションの `GradientTexture2D` を1枚。同心の楕円を重ねると段が見える)/ 卓・情報帯・手札・行動の列への落ち影 / 四辺のビネット。`ScreenBackdrop.PLAIN` の代わりに `_build()` の先頭で足す |
 | `ActionColumnPanel`(`scripts/ui/action_column_panel.gd`) | 右端の行動の列の地。卓の脇に立てた**真鍮枠の操作盤**(濃紺の板 + 真鍮の額 + 上下の紋章入り飾り板 + ターン終了の周りの彫り込みの輪 + 群の区切り線)。ボタンより先に `add_child()` して背面へ置く |
-| `RoundActionButton`(`scripts/ui/round_action_button.gd`, `extends Button`) | 行動の列の丸ボタン。**`CodedButton` / `CodedButtonStyle` は使わない**——文字の幅で矩形が伸びる仕組みのため、丸のつもりが楕円のピルになる(実際にそうなった)。`text` は空にして `label` を自前で描き、`_get_minimum_size()` を直径で固定する。`filled`(ターン終了の金真鍮の面)/ `badge`(反転権の残り回数・エモートの残り秒)を持つ。ホバー・押下・`disabled` は `Button` のものをそのまま使い、`queue_redraw()` だけつなぐ |
+| `RoundActionButton`(`scripts/ui/round_action_button.gd`, `extends Button`) | 行動の列の丸ボタン。**`CodedButton` / `CodedButtonStyle` は使わない**——文字の幅で矩形が伸びる仕組みのため、丸のつもりが楕円のピルになる。`text` は空にして `label` を自前で描き、`_get_minimum_size()` を直径で固定する。`filled`(ターン終了の金真鍮の面)/ `badge`(反転権の残り回数・エモートの残り秒)を持つ。ホバー・押下・`disabled` は `Button` のものをそのまま使い、`queue_redraw()` だけつなぐ |
 | `TurnClockDial`(`scripts/ui/turn_clock_dial.gd`) | 行動の列の持ち時間の時計(GameDesign.md 9章)。いま手番の側の残り時間を1つだけ出し、時計を持たない対局は「∞」。書き込むのは `CardMatchClock.refresh_bars()` / `clear()` だけで、`CardMatchScreen._clock_dial` を直に触る(画面側の公開メソッドを増やさないため)。位置は `TurnClockDial.COLUMN_CENTER_Y` を `CardMatchBuild.make_clock_dial()` が読む |
 | `FlipRightGauge`(`scripts/ui/flip_right_gauge.gd`) | 反転権ボタンの下の真鍮の札。自分と相手の残り回数を総回数ぶんの粒で並べる(GameDesign.md 9章)。`CardMatchFlipRight` が持ち、`refresh()` のたびに `state.flip_right_remaining` と `first_side` から総回数を引いて渡す。再生・観戦でも出す(見る側にも両者の残りが分かる) |
 
@@ -35,7 +35,7 @@
 - **相手の列の駒は `CardView.scale` で 0.92 倍にする**(`CardMatchScreen.FOE_ROW_SCALE`)。
   `pivot_offset` を駒の中心に置き、`position` / `size` は変えない。これにより
   `CardFlipBeam.unit_center()` / `CardMatchGeometry.slot_center()` / ドラッグの当たり判定は
-  従来の座標のまま使える(Godot は `scale` を持つ `Control` の入力を正しく変換する)。
+  等倍の座標のまま使える(Godot は `scale` を持つ `Control` の入力を正しく変換する)。
   攻撃の演出(`CardViewStrike`)は描画側の変換で駒を動かしており、`scale` と干渉しない
 - **台座は `CardViewPaint.pedestal_base()` が「上面の楕円 + 側面の帯」の器として描く**。
   側面は上面の楕円の下半分を `PEDESTAL_HEIGHT` ぶん下へ押し出した帯で、暗い真鍮の縦グラデーション。

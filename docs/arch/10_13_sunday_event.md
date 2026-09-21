@@ -23,7 +23,7 @@ UTC時刻を +9時間して日本時間へ換算し、曜日を見る。**サー
 | 関数 | トリガー | 役割 |
 |---|---|---|
 | `announceSundayEvent` | Cloud Scheduler(`0 0 * * 0`, Asia/Tokyo) | Discordの#お知らせへ日曜イベント開始のメッセージを投稿する |
-| `discordInteractions` | HTTPS(Discordの Interactions Endpoint URL) | 将来のスラッシュコマンドを受け付ける入口。現時点ではコマンドを1つも持たず、`PING`(type 1)への`PONG`(type 1)応答だけを返す |
+| `discordInteractions` | HTTPS(Discordの Interactions Endpoint URL) | スラッシュコマンドの入口(10.14節)。`PING`(type 1)には`PONG`(type 1)を返す |
 
 - **常駐プロセスは持たない。**いずれの関数も呼ばれたときだけ実行され、
   リクエストの外で状態を保持しない
