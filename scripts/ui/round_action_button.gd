@@ -9,6 +9,9 @@ extends Button
 ## **`text`は空のままにし、文言は`label`として自前で描く**。
 
 const MIN_FONT_SIZE := 11
+## 紋章の下へ添える文言の大きさ(紋章に主役を譲るため、通常のフィット計算より
+## 小さく固定する)。
+const EMBLEM_LABEL_FONT_SIZE := 12
 const RIM_SEGMENTS := 28
 const BADGE_SEGMENTS := 16
 const SHADOW_SEGMENTS := 22
@@ -32,10 +35,16 @@ var filled: bool = false:
 	set(value):
 		filled = value
 		queue_redraw()
-## 右下に添える小さな数字(反転権の残り回数・エモートの残り秒)。空なら出さない。
+## 右下に添える小さな数字(エモートの残り秒)。空なら出さない。
 var badge: String = "":
 	set(value):
 		badge = value
+		queue_redraw()
+## 面の中央(文言があれば少し上)に描く紋章。反転権のように文言だけでは
+## 伝わりにくい操作に添える(GameDesign.md 9章「対局画面の再構築」)。
+var emblem: UiPaint.Emblem = UiPaint.Emblem.NONE:
+	set(value):
+		emblem = value
 		queue_redraw()
 
 var _font: Font
@@ -92,10 +101,18 @@ func _draw() -> void:
 	else:
 		_draw_hollow_face(ci, center, inner_radius, is_hovered_now, is_pressed_now, is_disabled)
 	_draw_top_highlight(ci, center, inner_radius, is_disabled)
-	# バッジがある間は、右下へ添える数字と文字が重ならないよう語を少し上へ寄せる
-	# (「反転権」のように3字ある語は、中央のままだと右下のバッジへ食い込む)。
-	var label_center := center + Vector2(0.0, -diameter * 0.12) if not badge.is_empty() else center
-	_draw_label(label_center, is_disabled)
+	if emblem != UiPaint.Emblem.NONE:
+		# 紋章は面の中央よりわずかに上、文言は紋章の下寄りへ小さく描く
+		# (反転権:紋章だけでは「何回できるか」が伝わらないため語も添える)。
+		UiPaint.draw_emblem(ci, emblem, center + Vector2(0.0, -diameter * 0.06), diameter * 0.30)
+		_draw_label(center + Vector2(0.0, diameter * 0.30), is_disabled, EMBLEM_LABEL_FONT_SIZE)
+	else:
+		# バッジがある間は、右下へ添える数字と文字が重ならないよう語を少し上へ寄せる
+		# (「反転権」のように3字ある語は、中央のままだと右下のバッジへ食い込む)。
+		var label_center := (
+			center + Vector2(0.0, -diameter * 0.12) if not badge.is_empty() else center
+		)
+		_draw_label(label_center, is_disabled)
 	if not badge.is_empty():
 		_draw_badge(ci, center, radius, is_disabled)
 	if is_hovered_now and not is_disabled and not is_pressed_now:
@@ -226,10 +243,10 @@ func _draw_top_arc(ci: RID, center: Vector2, r: float, color: Color, width: floa
 	RenderingServer.canvas_item_add_polyline(ci, points, colors, width, true)
 
 
-func _draw_label(center: Vector2, disabled_now: bool) -> void:
+func _draw_label(center: Vector2, disabled_now: bool, forced_font_size: int = 0) -> void:
 	if _font == null or label.is_empty():
 		return
-	var font_size := _fit_font_size()
+	var font_size := forced_font_size if forced_font_size > 0 else _fit_font_size()
 	var text_color: Color
 	var shadow_color: Color
 	if filled:

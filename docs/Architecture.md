@@ -2420,6 +2420,7 @@ Firestoreを一切知らないまま(ローカルの計算と保存だけを持�
 | `MatchBackdrop`(`scripts/ui/match_backdrop.gd`) | 対局画面専用の下地。石の広間(`RoomPaint` の部品を薄く)/ 吊りランプ / 卓の中心の光だまり(放射グラデーションの `GradientTexture2D` を1枚。同心の楕円を重ねると段が見える)/ 卓・情報帯・手札・行動の列への落ち影 / 四辺のビネット。`ScreenBackdrop.PLAIN` の代わりに `_build()` の先頭で足す |
 | `ActionColumnPanel`(`scripts/ui/action_column_panel.gd`) | 右端の行動の列の地。卓の脇に立てた**真鍮枠の操作盤**(濃紺の板 + 真鍮の額 + 上下の紋章入り飾り板 + ターン終了の周りの彫り込みの輪 + 群の区切り線)。ボタンより先に `add_child()` して背面へ置く |
 | `RoundActionButton`(`scripts/ui/round_action_button.gd`, `extends Button`) | 行動の列の丸ボタン。**`CodedButton` / `CodedButtonStyle` は使わない**——文字の幅で矩形が伸びる仕組みのため、丸のつもりが楕円のピルになる(実際にそうなった)。`text` は空にして `label` を自前で描き、`_get_minimum_size()` を直径で固定する。`filled`(ターン終了の金真鍮の面)/ `badge`(反転権の残り回数・エモートの残り秒)を持つ。ホバー・押下・`disabled` は `Button` のものをそのまま使い、`queue_redraw()` だけつなぐ |
+| `FlipRightGauge`(`scripts/ui/flip_right_gauge.gd`) | 反転権ボタンの下の真鍮の札。自分と相手の残り回数を総回数ぶんの粒で並べる(GameDesign.md 9章)。`CardMatchFlipRight` が持ち、`refresh()` のたびに `state.flip_right_remaining` と `first_side` から総回数を引いて渡す。再生・観戦でも出す(見る側にも両者の残りが分かる) |
 
 - **卓の奥行きは `BoardTable` が額と面を台形で描く**ことで出す(`PERSPECTIVE_INSET`:奥の辺を
   左右それぞれ何px狭めるか)。**額は最前面の層(`_rail_layer`)にリング状のポリゴンとして描き、

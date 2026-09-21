@@ -32,8 +32,9 @@ const ACTION_COLUMN_CENTER_OFFSET := 80.0
 const TURN_END_BUTTON_DIAMETER := 110.0
 const TURN_END_BUTTON_TOP := 330.0
 ## ログ・投了・エモート / 反転権・戻る(同じ位置のため直径を揃える) / コイン。
+## 反転権は紋章(SWAP_ARROWS)を面へ描くため、他より一回り大きく取る。
 const ACTION_ROUND_DIAMETER := 56.0
-const ACTION_ROUND_DIAMETER_TOP := 60.0
+const ACTION_ROUND_DIAMETER_TOP := 72.0
 const COIN_ROUND_DIAMETER := 48.0
 ## 反転ボタンは選んだ駒のすぐ下へ出す(GameDesign.md 9章)。
 const FLIP_BUTTON_SIZE := Vector2(104, 34)
@@ -42,8 +43,11 @@ const LOG_BUTTON_TOP := 505.0
 const SURRENDER_BUTTON_TOP := 580.0
 const EMOTE_BUTTON_TOP := 655.0
 ## 反転権・戻る・コインの中心y(反転権と戻るは同時に見えない)。
-const BACK_BUTTON_TOP := 68.0
-const COIN_BUTTON_TOP := 140.0
+const BACK_BUTTON_TOP := 74.0
+## 反転権ボタンの下端と、残り回数の札(FlipRightGauge)上端の間隔。
+const FLIP_GAUGE_GAP := 8.0
+## 反転権の札(FlipRightGauge、高さ44)ぶん下げてコインと重ならないようにする。
+const COIN_BUTTON_TOP := 176.0
 ## 情報帯の幅。行動の列(ACTION_COLUMN_X)の手前で止める。
 const BAR_WIDTH := ACTION_COLUMN_X - MARGIN - 24.0
 

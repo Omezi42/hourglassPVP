@@ -9,6 +9,7 @@ extends RefCounted
 
 var _screen: CardMatchScreen
 var _button: RoundActionButton
+var _gauge: FlipRightGauge
 
 
 func _init(screen: CardMatchScreen) -> void:
@@ -20,8 +21,21 @@ func _init(screen: CardMatchScreen) -> void:
 	var diameter := CardMatchScreen.ACTION_ROUND_DIAMETER_TOP
 	_button = CardMatchBuild.add_round_button(screen, "反転権", diameter, false)
 	_button.position = CardMatchBuild.round_button_pos(diameter, CardMatchScreen.BACK_BUTTON_TOP)
+	_button.emblem = UiPaint.Emblem.SWAP_ARROWS
 	_button.visible = false
 	_button.pressed.connect(_on_pressed)
+	# 自分・相手の残り回数の粒(scratchpad/match_rebuild_phase4.md)。再生・観戦でも
+	# 見る側の情報として出すため、ボタンとは別に可視状態を持つ。
+	_gauge = FlipRightGauge.new()
+	var gauge_x := (
+		CardMatchScreen.ACTION_COLUMN_X
+		+ CardMatchScreen.ACTION_COLUMN_CENTER_OFFSET
+		- FlipRightGauge.GAUGE_SIZE.x * 0.5
+	)
+	var gauge_y := CardMatchScreen.BACK_BUTTON_TOP + diameter * 0.5 + CardMatchScreen.FLIP_GAUGE_GAP
+	_gauge.position = Vector2(gauge_x, gauge_y)
+	_gauge.visible = false
+	screen.add_child(_gauge)
 
 
 func _on_pressed() -> void:
@@ -56,12 +70,34 @@ func _ready_to_use() -> bool:
 
 func refresh() -> void:
 	var state: MatchState = _screen.state
-	if state == null or not _screen.is_interactive():
+	if state == null:
+		_button.visible = false
+		_gauge.visible = false
+		return
+	# 札(自分・相手の残り回数)は再生・観戦でも見る側の情報として出す
+	# (scratchpad/match_rebuild_phase4.md)。対局が始まる前(state == null)だけ隠す。
+	_gauge.visible = true
+	_refresh_gauge(state)
+	if not _screen.is_interactive():
 		_button.visible = false
 		return
 	_button.visible = true
-	var remaining := int(state.flip_right_remaining.get(_screen.my_side, 0))
-	# 丸ボタンに「反転権2」は収まらないため、残り回数はバッジへ分けて出す
-	# (GameDesign.md 9章「対局画面の再構築」)。
-	_button.badge = str(remaining)
 	_button.disabled = not _screen.selection.is_flip_right() and not _ready_to_use()
+
+
+func _refresh_gauge(state: MatchState) -> void:
+	var foe := MatchState.other_side(_screen.my_side)
+	_gauge.set_counts(
+		int(state.flip_right_remaining.get(_screen.my_side, 0)),
+		_total_for(state, _screen.my_side),
+		int(state.flip_right_remaining.get(foe, 0)),
+		_total_for(state, foe)
+	)
+
+
+## 先手・後手で総回数が異なる(GameDesign.md 2章)ため、`state.first_side`から
+## その側の総量を引く。
+func _total_for(state: MatchState, side: int) -> int:
+	if side == state.first_side:
+		return MatchState.FLIP_RIGHT_FIRST
+	return MatchState.FLIP_RIGHT_SECOND
