@@ -29,7 +29,7 @@ bash tools/export_web.sh
 ```
 
 - ビルドIDが `project.godot` へ刻まれる(`application/config/build_id`)。
-  **この変更はそのままコミットする**(GameDesign.md 11章・Architecture.md 6.4節)
+  **この変更はそのままコミットする**(GameDesign.md 11章 = `docs/design/11_online.md`・Architecture.md 6.4節 = `docs/arch/06_online.md`)
 - 末尾に `tests passed` が出ること、`build/web/index.pck` のサイズが
   直前のビルドから跳ねていないことを確認する
 - **フィルタの確認は自動化してある。**`export_presets.cfg` はエディタで書き出すたびに

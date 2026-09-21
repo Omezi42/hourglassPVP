@@ -8,25 +8,27 @@
 
 # ドキュメント(唯一の情報源)
 
-**起動時には読み込まない。作業に関係する章だけを、見出しをGrepしてから該当範囲だけReadする。**
-GameDesign.md と Architecture.md はそれぞれ250KB超あり、丸ごと読むと1回で数万トークンを消費する。
+**起動時には読み込まない。作業に関係する章のファイルだけを読む。**
+GameDesign.md / Architecture.md は索引(章 → ファイルの表)で、本文は `docs/design/NN_*.md` /
+`docs/arch/NN_*.md` に章・節ごとに分かれている。コードやドキュメントの「GameDesign.md 9章」
+「Architecture.md 10.6節」は索引の表でファイルへ引く(章番号は安定した識別子。振り直さない)。
 
 | 内容 | ファイル |
 |---|---|
-| ゲーム仕様・ルール・UI・数値・演出 | `docs/GameDesign.md`(章番号つき) |
+| ゲーム仕様・ルール・UI・数値・演出 | `docs/GameDesign.md`(索引)→ `docs/design/` |
 | カード個別データ(コスト/総量/効果/勝率) | `docs/Hourglasses.md` |
-| 実装設計・アーキテクチャ | `docs/Architecture.md` |
+| 実装設計・アーキテクチャ | `docs/Architecture.md`(索引)→ `docs/arch/` |
 | **開発時の落とし穴**(コード・シーンを触る前に読む) | `docs/Pitfalls.md`(10KB) |
 | 開発タスク・進捗 | `docs/TODO.md` |
 | バランスの測り方と生データ | `docs/BalanceReport_v5.md` |
 | 砂時計アセット生成プロンプトの雛形 | `docs/AssetPromptTemplate.md` |
 | 次のカードセットの検討メモ(**未確定・情報源ではない**) | `docs/NextCardSet.md` |
 
-docsに置くのはこの8ファイルだけ。使わなくなった草案・レポートは残さず削除する(git履歴で辿れる)。
+docs直下に置くのはこの8ファイル(+ `design/` `arch/` の本文)だけ。使わなくなった草案・レポートは残さず削除する(git履歴で辿れる)。
 
 **読む目安**
 - 仕様に触れる実装 → GameDesign.md の該当章 + Architecture.md の対応節
-- 既存クラスを触る → Architecture.md でそのクラスの行を探す(4章の表・10章)
+- 既存クラスを触る → `docs/arch/` をクラス名でGrepしてその節を読む(4章の表・10章)
 - コードやシーンを触る前 → `docs/Pitfalls.md` を読む
 - カードを足す → `add-hourglass` Skill が手順を持つ
 

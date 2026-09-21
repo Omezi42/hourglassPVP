@@ -21,7 +21,7 @@ description: |
 
 ### 1. 仕様の確認・追記
 
-- `docs/Hourglasses.md` の現行カード一覧と、`docs/GameDesign.md` 6章(キーワードと値段表)を確認する
+- `docs/Hourglasses.md` の現行カード一覧と、`docs/design/06_keywords.md`(GameDesign.md 6章: キーワードと値段表)を確認する
 - 新しいカードの **コスト / 総量 / キーワードまたは効果** が、既存カードと重複・類似しすぎて
   いないか確認する
 - **総量の当たりは値段表から付ける。**バニラの基準総量は `1.9 + 1.33 × コスト` で、
@@ -35,7 +35,7 @@ description: |
 - `data/cards/{id}.tres`(`CardData`)を新規作成し、以下を埋める
   - `id` / `display_name` / `cost` / `total_sand`
   - `pool_index`(追加順の通し番号)。**いま一番大きい番号+1を入れる**。
-    砂時計一覧の「追加順」の並び(GameDesign.md 9章)がこれを読む。
+    砂時計一覧の「追加順」の並び(GameDesign.md 9章 = `docs/design/09_ui.md`)がこれを読む。
     確認は `grep -h pool_index data/cards/*.tres | sort -t= -k2 -n | tail -1`
   - `keywords`(`CardEnums.Keyword`。0個でよい)
   - `effects`(`CardEffectData` = トリガー × ターゲット × エフェクト。0個でよい)
@@ -53,7 +53,7 @@ description: |
   **これは参考用であり、配布物には入らない**(`.gdignore` 済み)
 - **元の絵が鋼や石のようにほぼ無彩色だと、色相をいくら回しても色が付かない。**
   その場合は下限を下げ(0.04程度)、下駄を履かせる(0.35〜0.45程度)
-- **色の数値を `data/hourglass_tints.tres` へ入れる**(Architecture.md 4.1節)。
+- **色の数値を `data/hourglass_tints.tres` へ入れる**(Architecture.md 4.1節 = `docs/arch/04_01_hourglass_art.md`)。
   `python tools/fit_hourglass_tints.py --write` を回せば、参考用の絵から逆算して
   表ごと書き直される。**実行時に絵を作っているのはこの表であり、画像ではない**
 - `.tres` に絵への参照は書かない。**別のカードの絵を借りる場合だけ `art_id` を書く**
