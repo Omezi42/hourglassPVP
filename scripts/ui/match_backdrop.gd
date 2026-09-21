@@ -186,15 +186,8 @@ static func _glow_texture() -> GradientTexture2D:
 	return texture
 
 
-## 卓・手札・情報帯それぞれの下へ落ち影を敷く。
+## 卓・手札・行動の列それぞれの下へ落ち影を敷く。
 func _draw_drop_shadows(ci: RID) -> void:
-	var bar_size := Vector2(CardMatchScreen.BAR_WIDTH, PlayerInfoBar.BAR_HEIGHT)
-	var foe_bar_rect := Rect2(
-		Vector2(CardMatchScreen.MARGIN, CardMatchScreen.FOE_BAR_TOP), bar_size
-	)
-	var own_bar_rect := Rect2(
-		Vector2(CardMatchScreen.MARGIN, CardMatchScreen.OWN_BAR_TOP), bar_size
-	)
 	_draw_shadow_layers(
 		ci,
 		CardMatchScreen.TABLE_RECT,
@@ -213,24 +206,7 @@ func _draw_drop_shadows(ci: RID) -> void:
 		SHADOW_ALPHA_MIN,
 		SHADOW_ALPHA_MAX
 	)
-	_draw_shadow_layers(
-		ci,
-		foe_bar_rect,
-		SHADOW_STEPS,
-		SHADOW_GROW_MIN,
-		SHADOW_GROW_MAX,
-		SHADOW_ALPHA_MIN,
-		SHADOW_ALPHA_MAX
-	)
-	_draw_shadow_layers(
-		ci,
-		own_bar_rect,
-		SHADOW_STEPS,
-		SHADOW_GROW_MIN,
-		SHADOW_GROW_MAX,
-		SHADOW_ALPHA_MIN,
-		SHADOW_ALPHA_MAX
-	)
+	# 情報帯は1枚の板ではなく器具の並びになったため、影は `PlayerInfoBar` が器具ごとに持つ。
 	# ActionColumnPanel(真鍮枠の操作盤)と同じ矩形に合わせる(GameDesign.md 9章「対局画面の再構築」)。
 	var action_rect := Rect2(
 		CardMatchScreen.ACTION_COLUMN_X + 6.0,
