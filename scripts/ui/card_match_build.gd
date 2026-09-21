@@ -71,6 +71,25 @@ static func add_button(
 	return button
 
 
+## 行動の列(GameDesign.md 9章「対局画面の再構築」)の丸いボタン。
+static func add_round_button(
+	screen: CardMatchScreen, label: String, diameter: float, filled: bool
+) -> Button:
+	var button := CodedButton.make_round(label, diameter, filled)
+	screen.add_child(button)
+	return button
+
+
+## 丸いボタンを行動の列の中心(`ACTION_COLUMN_X + ACTION_COLUMN_CENTER_OFFSET`)へ
+## 揃えるための左端x座標。
+static func round_button_x(diameter: float) -> float:
+	return (
+		CardMatchScreen.ACTION_COLUMN_X
+		+ CardMatchScreen.ACTION_COLUMN_CENTER_OFFSET
+		- diameter * 0.5
+	)
+
+
 ## 盤面へ重ねるもの。**足す順がそのまま重なる順**になる(後の子ほど手前)。
 ## 光の筋は駒より手前・ログより背面、ログは結果パネルより手前(GameDesign.md 9章)。
 ## 終局後は結果パネルが盤面全体を塞ぐため、その上からログを開けないと読み返せない。

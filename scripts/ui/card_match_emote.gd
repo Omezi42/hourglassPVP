@@ -4,9 +4,9 @@ extends RefCounted
 ## ボタン・ポップアップUI・クールダウン・相手ミュート・CPU返答を受け持つ。
 
 const COOLDOWN_SECONDS := 9.0
-## ボタンは「ログ」「投了」と同じ寸法・同じ作り方(`CodedButton.make`)で作る。
+## ボタンは「ログ」「投了」と同じ寸法・同じ作り方(`CodedButton.make_round`)で作る。
 ## 数pxでも違えると、同じ列に並んだときに1つだけ別物のボタンに見える。
-const EMOTE_BUTTON_SIZE := CardMatchScreen.ACTION_BUTTON_SIZE
+const EMOTE_BUTTON_DIAMETER := CardMatchScreen.ACTION_ROUND_DIAMETER
 const POPUP_WIDTH := 244.0
 const POPUP_PADDING := 12.0
 const POPUP_ITEM_HEIGHT := 34.0
@@ -32,7 +32,7 @@ func _init(screen: CardMatchScreen) -> void:
 
 
 func _setup_ui() -> void:
-	_button = CodedButton.make("エモート", EMOTE_BUTTON_SIZE)
+	_button = CodedButton.make_round("エモート", EMOTE_BUTTON_DIAMETER, false)
 	_button.pressed.connect(_toggle_popup)
 	_screen.add_child(_button)
 
@@ -155,8 +155,9 @@ func tick(delta: float) -> void:
 
 ## クールダウン中も文言の頭は「エモート」のままにする。「9秒」とだけ出すと、
 ## 同じ列に並んだ「ログ」「投了」の中でそこだけ別のボタンへ変わったように見える。
+## 丸ボタンには収まらないため2行にする(GameDesign.md 9章「対局画面の再構築」)。
 func _cooldown_label() -> String:
-	return "エモート %d" % int(ceilf(_cooldown))
+	return "エモート\n%d" % int(ceilf(_cooldown))
 
 
 func _toggle_popup() -> void:

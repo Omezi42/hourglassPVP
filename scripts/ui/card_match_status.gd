@@ -24,8 +24,10 @@ const WAITING_PANEL_PAD_X := 56.0
 const BUSY_DOTS_MAX := 3
 const BUSY_DOTS_INTERVAL := 0.5
 ## 不具合の報告と突き合わせるためのバージョン表示(GameDesign.md 11章)。
-## 行動の列のいちばん下、投了ボタンより下の空きへ小さく出す。
-const VERSION_POS := Vector2(1108, 678)
+## **左下の余白**(手札の面の左、x=24付近)へ小さく出す。以前は行動の列の下端に
+## 置いていたが、GameDesign.md 9章「対局画面の再構築」で丸ボタン化した「エモート」が
+## この位置まで下がり、文字の後半が隠れていた(Architecture.md 10.10.0節)。
+const VERSION_POS := Vector2(24, 700)
 const VERSION_FONT_SIZE := 12
 
 var waiting_text := ""

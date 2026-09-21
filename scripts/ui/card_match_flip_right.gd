@@ -15,9 +15,15 @@ func _init(screen: CardMatchScreen) -> void:
 	_screen = screen
 	# 「戻る」ボタンと同じ位置に置く。**両者は同時に見えない**——戻るボタンは
 	# 再生・観戦(_interactive == false)だけに出て、反転権は対局中(_interactive == true)
-	# だけに出るため、行動の列を再配置せずに済む。
-	_button = CardMatchBuild.add_button(screen, "反転権", CardMatchScreen.ACTION_BUTTON_SIZE)
-	_button.position = Vector2(CardMatchScreen.ACTION_COLUMN_X, CardMatchScreen.BACK_BUTTON_TOP)
+	# だけに出るため、行動の列を再配置せずに済む。小さな丸ボタン
+	# (GameDesign.md 9章「対局画面の再構築」)。
+	_button = CardMatchBuild.add_round_button(
+		screen, "反転権", CardMatchScreen.ACTION_ROUND_DIAMETER, false
+	)
+	_button.position = Vector2(
+		CardMatchBuild.round_button_x(CardMatchScreen.ACTION_ROUND_DIAMETER),
+		CardMatchScreen.BACK_BUTTON_TOP
+	)
 	_button.visible = false
 	_button.pressed.connect(_on_pressed)
 
@@ -59,5 +65,6 @@ func refresh() -> void:
 		return
 	_button.visible = true
 	var remaining := int(state.flip_right_remaining.get(_screen.my_side, 0))
-	_button.text = "反転権(%d)" % remaining
+	# 丸ボタンには「反転権(2)」が収まらないため2行にする(GameDesign.md 9章「対局画面の再構築」)。
+	_button.text = "反転権\n%d" % remaining
 	_button.disabled = not _screen.selection.is_flip_right() and not _ready_to_use()

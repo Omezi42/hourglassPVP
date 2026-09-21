@@ -1,12 +1,13 @@
 class_name MatchBackdrop
 extends Control
-## 対局画面専用の下地(GameDesign.md 9章「光と影」の検証用モック)。
-## `ScreenBackdrop.PLAIN` の代わりに使い、「1つの光源で照らされた卓」という質感を足す。
+## 対局画面専用の下地(GameDesign.md 9章「対局画面の再構築」)。
+## `ScreenBackdrop.PLAIN` の代わりに使い、「暗い石の広間に、吊りランプ1つで照らされた卓」
+## という質感を足す。
 ##
-## 描くのは背面から順に、床 → 卓の中心の光だまり → 卓・手札・情報帯への落ち影 →
-## 四辺のビネット。`CardMatchScreen` の座標は**関数の中で実行時に読む**
-## (Architecture.md 11章「class_nameを持つ2つのスクリプトが、互いのconstを
-## constから参照してはいけない」)。
+## 描くのは背面から順に、床 → 石壁の気配 → 卓の中心の光だまり → 吊りランプ →
+## 卓・手札・情報帯・行動の列への落ち影 → 四辺のビネット。`CardMatchScreen` の座標は
+## **関数の中で実行時に読む**(Architecture.md 11章「class_nameを持つ2つのスクリプトが、
+## 互いのconstをconstから参照してはいけない」)。
 
 ## 床の縦グラデーション。`ScreenBackdrop.STOPS` よりやや暖色寄り・やや暗め。
 const FLOOR_STOPS := [
@@ -26,6 +27,24 @@ const GLOW_HEIGHT_RATIO := 1.5
 const VIGNETTE_STEPS := 6
 const VIGNETTE_WIDTH_RATIO := 0.18
 const VIGNETTE_ALPHA := 0.45
+
+## 石壁の気配(GameDesign.md 9章「対局画面の再構築」)。上端と左右の端にだけ薄く見せ、
+## 床のグラデーションで上から被せて「見えるか見えないか」に落とす。
+const WALL_TOP_HEIGHT := 120.0
+const WALL_SIDE_WIDTH := 150.0
+const WALL_TINT := Color(0.55, 0.62, 0.78)
+const WALL_FADE_ALPHA := 0.55
+const WALL_SEED_TOP := 7
+const WALL_SEED_LEFT := 11
+const WALL_SEED_RIGHT := 13
+
+## 吊りランプ。卓の真上から1本の鎖で下げ、暖色の光を落とす(唯一の光源)。
+const LAMP_X := 640.0
+const LAMP_SIZE := Vector2(26.0, 30.0)
+const LAMP_LINK_COUNT := 7
+const LAMP_LINK_RADIUS := 3.0
+const LAMP_CONE_SPAN := 220.0
+const LAMP_GLOW_OFFSET_Y := -40.0
 
 ## 落ち影。光源は上・中央にあるものとして、影は真下へわずかにずらす。
 const SHADOW_OFFSET := Vector2(0.0, 8.0)
@@ -54,7 +73,9 @@ func _draw() -> void:
 	var ci := get_canvas_item()
 	var rect := Rect2(Vector2.ZERO, size)
 	_draw_floor(ci, rect)
+	_draw_wall_hint(rect)
 	_draw_glow_pool(ci)
+	_draw_lamp(ci)
 	_draw_drop_shadows(ci)
 	_draw_vignette()
 
@@ -67,10 +88,77 @@ func _draw_floor(ci: RID, rect: Rect2) -> void:
 	UiPaint.apply_grain(ci, rect, FLOOR_GRAIN_ALPHA)
 
 
+## 石の広間の気配。上端・左右の端だけへ薄い壁を描き、床の色を上から被せて沈める。
+func _draw_wall_hint(rect: Rect2) -> void:
+	var top_rect := Rect2(rect.position, Vector2(rect.size.x, WALL_TOP_HEIGHT))
+	var left_rect := Rect2(rect.position, Vector2(WALL_SIDE_WIDTH, rect.size.y))
+	var right_rect := Rect2(
+		Vector2(rect.end.x - WALL_SIDE_WIDTH, rect.position.y),
+		Vector2(WALL_SIDE_WIDTH, rect.size.y)
+	)
+	RoomPaint.wall(self, top_rect, WALL_SEED_TOP, WALL_TINT)
+	RoomPaint.wall(self, left_rect, WALL_SEED_LEFT, WALL_TINT)
+	RoomPaint.wall(self, right_rect, WALL_SEED_RIGHT, WALL_TINT)
+	for wall_rect in [top_rect, left_rect, right_rect]:
+		_fade_with_floor(wall_rect, rect.size.y)
+
+
+## 壁の上へ、その位置に相当する床の色をalpha 0.55で被せて薄く沈める。
+func _fade_with_floor(rect: Rect2, full_height: float) -> void:
+	var t: float = clampf(rect.get_center().y / full_height, 0.0, 1.0)
+	var color := UiPaint.sample_gradient(FLOOR_STOPS, t)
+	draw_rect(rect, Color(color.r, color.g, color.b, WALL_FADE_ALPHA))
+
+
+## 卓の真上に下げた吊りランプ。鎖(輪の連なり)+ 先端のランタン + 光の円錐。
+## `MatchBackdrop` は最背面のため、上の情報帯の裏へ鎖の上端が自然に隠れる。
+func _draw_lamp(ci: RID) -> void:
+	var bottom_y: float = CardMatchScreen.TABLE_RECT.position.y - 6.0
+	var lantern_top_y: float = bottom_y - LAMP_SIZE.y
+	draw_line(
+		Vector2(LAMP_X, 0.0), Vector2(LAMP_X, lantern_top_y), Color(0.10, 0.07, 0.05, 0.9), 2.0
+	)
+	for i in LAMP_LINK_COUNT:
+		var t: float = float(i) / float(LAMP_LINK_COUNT - 1)
+		var y: float = lerpf(0.0, lantern_top_y, t)
+		UiPaint.draw_ring(
+			ci, Vector2(LAMP_X, y), LAMP_LINK_RADIUS, Color(0.42, 0.33, 0.20, 0.85), 1.4, 10
+		)
+	_draw_lantern(ci, Vector2(LAMP_X, bottom_y))
+	RoomPaint.lamp(
+		self, Vector2(LAMP_X, bottom_y), CardMatchScreen.TABLE_RECT.get_center().y, LAMP_CONE_SPAN
+	)
+
+
+## ランタン本体(角丸矩形 + 上の笠 + 中の暖色の光)。
+func _draw_lantern(ci: RID, bottom_center: Vector2) -> void:
+	var rect := Rect2(bottom_center - Vector2(LAMP_SIZE.x * 0.5, LAMP_SIZE.y), LAMP_SIZE)
+	var cap := Rect2(rect.position.x - 4.0, rect.position.y - 6.0, rect.size.x + 8.0, 8.0)
+	UiPaint.fill_gradient_polygon(
+		ci,
+		UiPaint.rounded_rect_points_uniform(cap, 2.0, 4),
+		cap,
+		[[0.0, UiPalette.BRASS_LIGHT], [1.0, UiPalette.BRASS_DARK]]
+	)
+	var points := UiPaint.rounded_rect_points_uniform(rect, 4.0, 6)
+	UiPaint.fill_gradient_polygon(
+		ci, points, rect, [[0.0, UiPalette.BRASS_MID], [1.0, UiPalette.BRASS_DARK]]
+	)
+	UiPaint.draw_bevel(ci, points, UiPalette.BRASS_HIGHLIGHT, UiPalette.OUTLINE_DARK, 1.2, false)
+	var inner := rect.grow(-4.0)
+	UiPaint.fill_gradient_polygon(
+		ci,
+		UiPaint.rounded_rect_points_uniform(inner, 2.0, 4),
+		inner,
+		[[0.0, RoomPaint.LAMP_WARM], [1.0, RoomPaint.LAMP_WARM.darkened(0.2)]]
+	)
+
+
 ## 卓の後ろに広がる淡い光。`BoardGlow`(卓の額の外周だけを光らせる)とは別に、
-## より広い範囲の空気そのものを暖色で持ち上げる。
+## より広い範囲の空気そのものを暖色で持ち上げる。**吊りランプの真下にあたるよう、
+## 中心を卓の中心より40px上へずらす**(GameDesign.md 9章「対局画面の再構築」)。
 func _draw_glow_pool(_ci: RID) -> void:
-	var center: Vector2 = CardMatchScreen.TABLE_RECT.get_center()
+	var center: Vector2 = CardMatchScreen.TABLE_RECT.get_center() + Vector2(0.0, LAMP_GLOW_OFFSET_Y)
 	var half := Vector2(
 		CardMatchScreen.TABLE_RECT.size.x * GLOW_WIDTH_RATIO * 0.5,
 		CardMatchScreen.TABLE_RECT.size.y * GLOW_HEIGHT_RATIO * 0.5
@@ -137,6 +225,21 @@ func _draw_drop_shadows(ci: RID) -> void:
 	_draw_shadow_layers(
 		ci,
 		own_bar_rect,
+		SHADOW_STEPS,
+		SHADOW_GROW_MIN,
+		SHADOW_GROW_MAX,
+		SHADOW_ALPHA_MIN,
+		SHADOW_ALPHA_MAX
+	)
+	var action_rect := Rect2(
+		CardMatchScreen.ACTION_COLUMN_X - 8.0,
+		0.0,
+		size.x - (CardMatchScreen.ACTION_COLUMN_X - 8.0),
+		size.y
+	)
+	_draw_shadow_layers(
+		ci,
+		action_rect,
 		SHADOW_STEPS,
 		SHADOW_GROW_MIN,
 		SHADOW_GROW_MAX,

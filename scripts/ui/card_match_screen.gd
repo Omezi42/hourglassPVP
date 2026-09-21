@@ -21,19 +21,24 @@ const HAND_AREA := Rect2(190, 528, 900, 158)
 ## 12枠を載せる卓上(GameDesign.md 9章)。両陣営の6枠がこの上に並ぶ。
 const TABLE_RECT := Rect2(190, 74, 900, 372)
 const CPU_THINK_SECONDS := 0.5
-## 反転・コイン・ターン終了を縦に並べる右の列。
+## 反転権・コイン・ターン終了・ログ・投了・エモートを縦に並べる右の列。
+## GameDesign.md 9章「対局画面の再構築」により丸いボタンとして描く
+## (`CodedButton.make_round()`)。位置は列の中心 `ACTION_COLUMN_X + ACTION_COLUMN_CENTER_OFFSET`
+## へ揃える。
 const ACTION_COLUMN_X := 1108.0
-const TURN_END_BUTTON_SIZE := Vector2(148, 76)
-const TURN_END_BUTTON_TOP := 290.0
+const ACTION_COLUMN_CENTER_OFFSET := 74.0
+const TURN_END_BUTTON_DIAMETER := 96.0
+const TURN_END_BUTTON_TOP := 330.0
+const ACTION_ROUND_DIAMETER := 64.0
 const ACTION_BUTTON_SIZE := Vector2(148, 42)
 ## 反転ボタンは選んだ駒のすぐ下へ出す(GameDesign.md 9章)。
 const FLIP_BUTTON_SIZE := Vector2(104, 34)
 const FLIP_BUTTON_OVERLAP := 3.0
-const LOG_BUTTON_TOP := 384.0
-const SURRENDER_BUTTON_TOP := 434.0
-const EMOTE_BUTTON_TOP := 484.0
-## リプレイ・観戦のときだけ出す戻るボタン。行動の列の先頭に置く。
-const BACK_BUTTON_TOP := 24.0
+const LOG_BUTTON_TOP := 470.0
+const SURRENDER_BUTTON_TOP := 545.0
+const EMOTE_BUTTON_TOP := 620.0
+## リプレイ・観戦のときだけ出す戻るボタン。反転権と同じ位置(両者は同時に見えない)。
+const BACK_BUTTON_TOP := 60.0
 ## 情報帯の幅。行動の列(ACTION_COLUMN_X)の手前で止める。
 const BAR_WIDTH := ACTION_COLUMN_X - MARGIN - 24.0
 
@@ -181,7 +186,9 @@ func _ready() -> void:
 	_flip_right = CardMatchFlipRight.new(self)
 	_clocks = CardMatchClock.new(self)
 	_emote = CardMatchEmote.new(self)
-	_emote.set_position(Vector2(ACTION_COLUMN_X, EMOTE_BUTTON_TOP))
+	_emote.set_position(
+		Vector2(CardMatchBuild.round_button_x(ACTION_ROUND_DIAMETER), EMOTE_BUTTON_TOP)
+	)
 
 
 ## 前の対局の名残を落としてから新しい対局へ入る。結果パネル・ログ・選択・
@@ -475,6 +482,8 @@ func _begin_state(
 func _build() -> void:
 	# 下地と卓は最初に足して盤面の駒より背面へ置く。
 	add_child(MatchBackdrop.new())
+	# 行動の列の地。ボタンより先に足して背面へ置く(GameDesign.md 9章「対局画面の再構築」)。
+	add_child(ActionColumnPanel.new())
 	# 卓の後ろにだけ淡い光を置いて浮かせる(GameDesign.md 9章)。BoardTableより先に
 	# 足すことで、卓の額の外周からわずかににじむだけの光として見える。
 	var table_glow := BoardGlow.new()
@@ -516,25 +525,34 @@ func _build() -> void:
 	_flip_button.visible = false
 	_flip_button.pressed.connect(_on_flip_pressed)
 	_coin_button = CardMatchBuild.add_button(self, "コイン", ACTION_BUTTON_SIZE)
-	_coin_button.position = Vector2(ACTION_COLUMN_X, 230)
+	_coin_button.position = Vector2(ACTION_COLUMN_X, 190)
 	_coin_button.pressed.connect(_on_coin_pressed)
-	# ターン終了は画面中央付近の大きなボタンとする。
-	_end_turn_button = CardMatchBuild.add_button(
-		self, "ターン終了", TURN_END_BUTTON_SIZE, CodedButton.PRIMARY_ACTION_GROUP
+	# ターン終了は大きな丸い真鍮のボタン(GameDesign.md 9章「対局画面の再構築」)。
+	_end_turn_button = CardMatchBuild.add_round_button(
+		self, "ターン終了", TURN_END_BUTTON_DIAMETER, true
 	)
-	_end_turn_button.position = Vector2(ACTION_COLUMN_X, TURN_END_BUTTON_TOP)
+	_end_turn_button.position = Vector2(
+		CardMatchBuild.round_button_x(TURN_END_BUTTON_DIAMETER), TURN_END_BUTTON_TOP
+	)
 	_end_turn_button.pressed.connect(_on_end_turn_pressed)
-	# 「ログ」「投了」「エモート」はターン終了ボタンの下へ順に並べる。
-	_log_button = CardMatchBuild.add_button(self, "ログ", ACTION_BUTTON_SIZE)
-	_log_button.position = Vector2(ACTION_COLUMN_X, LOG_BUTTON_TOP)
+	# 「ログ」「投了」「エモート」はターン終了ボタンの下へ順に並べる小さな丸ボタン。
+	_log_button = CardMatchBuild.add_round_button(self, "ログ", ACTION_ROUND_DIAMETER, false)
+	_log_button.position = Vector2(
+		CardMatchBuild.round_button_x(ACTION_ROUND_DIAMETER), LOG_BUTTON_TOP
+	)
 	_log_button.pressed.connect(func() -> void: _log.set_open(true))
-	_surrender_button = CardMatchBuild.add_button(self, "投了", ACTION_BUTTON_SIZE)
-	_surrender_button.position = Vector2(ACTION_COLUMN_X, SURRENDER_BUTTON_TOP)
+	_surrender_button = CardMatchBuild.add_round_button(self, "投了", ACTION_ROUND_DIAMETER, false)
+	_surrender_button.position = Vector2(
+		CardMatchBuild.round_button_x(ACTION_ROUND_DIAMETER), SURRENDER_BUTTON_TOP
+	)
 	_surrender_button.pressed.connect(_on_surrender_pressed)
 	# リプレイ再生・観戦には終局の結果パネル(「ホームへ」)が出ないため、
 	# この戻るボタンが唯一の出口になる。対局中は投了が出口のため出さない。
-	_back_button = CardMatchBuild.add_button(self, "戻る", ACTION_BUTTON_SIZE)
-	_back_button.position = Vector2(ACTION_COLUMN_X, BACK_BUTTON_TOP)
+	# 反転権と同じ位置(両者は同時に見えない)。
+	_back_button = CardMatchBuild.add_round_button(self, "戻る", ACTION_ROUND_DIAMETER, false)
+	_back_button.position = Vector2(
+		CardMatchBuild.round_button_x(ACTION_ROUND_DIAMETER), BACK_BUTTON_TOP
+	)
 	_back_button.pressed.connect(func() -> void: back_pressed.emit())
 	_cpu_timer = Timer.new()
 	_cpu_timer.one_shot = true

@@ -85,9 +85,11 @@ const PREVIEW_DEAD := Color(1.0, 0.42, 0.36)
 const GUARD_BORDER := 4.0
 const NORMAL_BORDER := 2.0
 
-## 場の砂時計。台座は扁平な楕円として描き、その上に絵を載せる。
+## 場の砂時計。台座は「上面の楕円+側面の帯」を持つ高さのある真鍮の器として描く
+## (GameDesign.md 9章「対局画面の再構築」)。
 const PEDESTAL_CENTER_Y := 122.0
 const PEDESTAL_RADIUS := Vector2(54.0, 13.0)
+const PEDESTAL_HEIGHT := 9.0
 const PEDESTAL_RING_WIDTH := 2.0
 const PEDESTAL_GUARD_RING_WIDTH := 4.5
 const BOARD_ART_SIDE := 112.0

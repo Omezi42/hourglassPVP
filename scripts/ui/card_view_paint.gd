@@ -12,27 +12,64 @@ extends RefCounted
 
 
 ## 台座。空き枠でも常に描き、そこへ砂時計が立つ場所であることを示す。
+## **上面の楕円+側面の帯を持つ、高さのある真鍮の器**として描く
+## (GameDesign.md 9章「対局画面の再構築」)。光は上から受けるため、上面が明るく
+## 側面は暗い。
 static func pedestal_base(view: CardView) -> void:
 	var ci := view.get_canvas_item()
-	var center := Vector2(view.size.x * 0.5, CardView.PEDESTAL_CENTER_Y)
-	UiPaint.fill_ellipse(
-		ci, center, CardView.PEDESTAL_RADIUS * 1.12, Color(0.04, 0.03, 0.05, 0.3), 32
+	var top_center := Vector2(view.size.x * 0.5, CardView.PEDESTAL_CENTER_Y)
+	var bottom_center := top_center + Vector2(0.0, CardView.PEDESTAL_HEIGHT)
+	var radius := CardView.PEDESTAL_RADIUS
+	# 接地の影(「光と影」の検証): 器の**足元**(下の楕円の位置)へ敷く。
+	UiPaint.fill_ellipse(ci, bottom_center, radius * 1.12, Color(0.04, 0.03, 0.05, 0.35), 32)
+	# 側面: 上面の楕円の下半分(左→右) + 下面の楕円の下半分(右→左)で帯を作る。
+	var side_points := _pedestal_side_points(top_center, bottom_center, radius, 16)
+	var side_rect := Rect2(
+		top_center - Vector2(radius.x, 0.0),
+		Vector2(radius.x * 2.0, CardView.PEDESTAL_HEIGHT + radius.y)
 	)
-	UiPaint.fill_ellipse(ci, center, CardView.PEDESTAL_RADIUS, Color(0.24, 0.19, 0.18, 0.45), 32)
-	UiPaint.fill_ellipse(
+	UiPaint.fill_gradient_polygon(
 		ci,
-		center,
-		CardView.PEDESTAL_RADIUS * 0.66,
-		Color(UiPalette.PEDESTAL_DEFAULT_ACCENT, 0.14),
-		32
+		side_points,
+		side_rect,
+		[[0.0, UiPalette.BRASS_DARK], [1.0, UiPalette.BRASS_PRESSED_DARK]]
 	)
-	# 接地の影(「光と影」の検証): 駒が台座に立っていることを示す。輪(pedestal_ring)
-	# より前に描き、既存の台座の塗りの上へ重ねる。
+	# 上面: 地の色 → 中央へ明るい楕円 → 暗い落ち込み。
+	UiPaint.fill_ellipse(ci, top_center, radius, UiPalette.BRASS_MID, 32)
+	UiPaint.fill_ellipse(ci, top_center, radius * 0.7, UiPalette.BRASS_LIGHT, 32)
+	UiPaint.fill_ellipse(
+		ci, top_center, radius * 0.46, Color(UiPalette.PEDESTAL_DEFAULT_ACCENT, 0.14), 32
+	)
+	# 上端側の縁(奥の弧)に光の当たりを1本引く。
+	var highlight := PackedVector2Array()
+	for i in 11:
+		var t: float = float(i) / 10.0
+		var angle: float = lerpf(-PI * 0.82, -PI * 0.18, t)
+		highlight.append(top_center + Vector2(cos(angle) * radius.x, sin(angle) * radius.y))
+	view.draw_polyline(highlight, Color(UiPalette.BRASS_HIGHLIGHT, 0.5), 1.5, true)
+	# 駒が立っているときだけ、足元の影をもう一段濃く重ねる(既存の踏み込み表現)。
 	if view.card != null:
-		var shadow_base := CardView.PEDESTAL_RADIUS * 0.85
-		UiPaint.fill_ellipse(ci, center, shadow_base * 0.85, Color(0.0, 0.0, 0.0, 0.10), 24)
-		UiPaint.fill_ellipse(ci, center, shadow_base * 0.65, Color(0.0, 0.0, 0.0, 0.14), 24)
-		UiPaint.fill_ellipse(ci, center, shadow_base * 0.45, Color(0.0, 0.0, 0.0, 0.18), 24)
+		var shadow_base := radius * 0.85
+		UiPaint.fill_ellipse(ci, bottom_center, shadow_base * 0.85, Color(0.0, 0.0, 0.0, 0.12), 24)
+		UiPaint.fill_ellipse(ci, bottom_center, shadow_base * 0.65, Color(0.0, 0.0, 0.0, 0.16), 24)
+		UiPaint.fill_ellipse(ci, bottom_center, shadow_base * 0.45, Color(0.0, 0.0, 0.0, 0.20), 24)
+
+
+## 台座の側面の帯の点列(GameDesign.md 9章「対局画面の再構築」)。「下の楕円の
+## 下半分の弧(左→右) + 上の楕円の下半分の弧(右→左)」の順につなぎ、閉じた帯にする。
+static func _pedestal_side_points(
+	top_center: Vector2, bottom_center: Vector2, radius: Vector2, segments: int
+) -> PackedVector2Array:
+	var points := PackedVector2Array()
+	for i in range(segments + 1):
+		var t: float = float(i) / float(segments)
+		var angle: float = PI - t * PI
+		points.append(bottom_center + Vector2(cos(angle) * radius.x, sin(angle) * radius.y))
+	for i in range(segments + 1):
+		var t: float = float(i) / float(segments)
+		var angle: float = t * PI
+		points.append(top_center + Vector2(cos(angle) * radius.x, sin(angle) * radius.y))
+	return points
 
 
 ## 台座の輪。守護は太い真鍮にする(GameDesign.md 9章)。**取り消しの戻る動き**

@@ -77,3 +77,11 @@ const BAR_EDGE_HIGHLIGHT := Color(0.96, 0.82, 0.5, 0.35)
 ## 駒の台座光のデフォルト色(イラストからアクセントカラーをサンプリングできない場合の
 ## フォールバック)。GLOW_AMBERより明るく黄味寄りの「砂」の色のため別定数として持つ
 const PEDESTAL_DEFAULT_ACCENT := Color(0.9, 0.72, 0.34, 1.0)
+
+## 対局画面の再構築(GameDesign.md 9章)。卓の面=濃紺のベルベット。上端が明るく
+## 下端がわずかに暗い。
+const FELT_NAVY_TOP := Color(0.13, 0.16, 0.30, 1.0)
+const FELT_NAVY_BOTTOM := Color(0.07, 0.09, 0.19, 1.0)
+## 行動の列(ActionColumnPanel)・情報帯の地。FELT_NAVY_* よりわずかに暗い。
+const NAVY_PANEL_TOP := Color(0.09, 0.11, 0.21, 1.0)
+const NAVY_PANEL_BOTTOM := Color(0.05, 0.06, 0.13, 1.0)
