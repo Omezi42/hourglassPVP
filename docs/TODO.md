@@ -330,6 +330,29 @@
 - [ ] 初回開催に向けて、Discordでの告知・予選日程の案内文を用意する(運用面。
       コードの変更ではない)
 
+### カードスキン(2026-09-22仕様確定・未着手)
+
+仕様はGameDesign.md 31章、実装設計はArchitecture.md 10.19節。**1品=カード1枚の
+固有イラスト**をショップで売り、図鑑の右ページでカードごとにON/OFFする。
+
+- [ ] `SkinLibrary`(定義の表)と `CardSkins`(視点ごとの解決)を作る
+- [ ] `CardData.icon_*` を `CardSkins.texture(…, SELF)` 経由へ。`CardView.skin_viewer` を
+      足し、相手の列=`OPPONENT`、CPU・再生・観戦・教材・Discord画像=`NONE` を入れる。
+      `CardUnitFx.play_break()` は解決済みのテクスチャを受け取る形へ
+- [ ] `HandCardPaint` の光だまりの色を `CardSkins.accent_color()` 経由へ
+- [ ] `players/{uid}.owned_skins` / `disabled_skins`、`ShopCatalog.Kind.SKIN`(末尾)、
+      `AccountService.purchase()` / `owns()` の分岐、`set_skin_enabled()`、
+      `fetch_profile()` で相手の2配列を返す。`firestore.rules` は既存の
+      `players/{uid}` の範囲で足りるか確認する
+- [ ] `CardMatchOnline` で相手の設定を `CardSkins.set_opponent()` へ渡し、
+      `_reset_for_new_match()` で消す
+- [ ] 図鑑 `AlmanacPage` にON/OFFの切り替え(所有時のみ)。ショップ `ShopItemCard` に
+      3状態の見本
+- [ ] 最初のスキンを1枚用意する(ユーザーが `AssetPromptTemplate.md` で生成・透過。
+      対象カードとモチーフは別途相談)。取り込みは `assets/hourglasses/skins/{skin_id}/`
+- [ ] テスト:`CardSkins` の視点ごとの解決(所有あり/OFF/相手/NONE)をヘッドレスで押さえる
+- [ ] Discordの#お知らせへ紹介(新カードと同じ扱い)
+
 ---
 
 ## 5. バランスの測り直し(まとめて1回で行う)
