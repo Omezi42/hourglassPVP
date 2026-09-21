@@ -105,6 +105,14 @@ static func round_button_pos(diameter: float, center_y: float) -> Vector2:
 	return Vector2(round_button_x(diameter), round_button_y(diameter, center_y))
 
 
+## 行動の列の持ち時間の時計(GameDesign.md 9章)。丸ボタンと同じ列の中心へ置く。
+static func make_clock_dial(screen: CardMatchScreen) -> TurnClockDial:
+	var dial := TurnClockDial.new()
+	dial.position = round_button_pos(TurnClockDial.DIAMETER, TurnClockDial.COLUMN_CENTER_Y)
+	screen.add_child(dial)
+	return dial
+
+
 ## 盤面へ重ねるもの。**足す順がそのまま重なる順**になる(後の子ほど手前)。
 ## 光の筋は駒より手前・ログより背面、ログは結果パネルより手前(GameDesign.md 9章)。
 ## 終局後は結果パネルが盤面全体を塞ぐため、その上からログを開けないと読み返せない。

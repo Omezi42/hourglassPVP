@@ -229,7 +229,8 @@ func _compose_board(self_specs: Array, foe_specs: Array) -> Dictionary:
 	var slot_pitch: float = CardView.BOARD_SIZE_PX.x + BOARD_SLOT_GAP
 	var row_width: float = slot_pitch * MatchState.BOARD_SIZE - BOARD_SLOT_GAP
 	var width: float = maxf(row_width + BOARD_ROW_INSET * 2.0, BOARD_TABLE_SIZE.x)
-	var bar_width: float = maxf(width, PlayerInfoBar.CLOCK_X)
+	# 情報帯は右端の山の札(相手側の手札の札)まで収まる幅を取る。
+	var bar_width: float = maxf(width, PlayerInfoBar.HAND_PILE_X + PlayerInfoBar.PILE_SIZE.x + 8.0)
 	var table_x: float = (bar_width - BOARD_TABLE_SIZE.x) * 0.5
 	var row_x: float = (bar_width - row_width) * 0.5
 

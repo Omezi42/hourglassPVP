@@ -29,6 +29,8 @@ func start() -> void:
 func clear() -> void:
 	clock = null
 	_opponent_wait = 0.0
+	if _screen._clock_dial != null:
+		_screen._clock_dial.set_time(-1.0, MatchClock.DEFAULT_TURN_SECONDS, false)
 
 
 func active() -> bool:
@@ -67,24 +69,22 @@ func turn_seconds() -> float:
 	return clock.turn_seconds if clock != null else MatchClock.DEFAULT_TURN_SECONDS
 
 
+## 行動の列の時計(`TurnClockDial`)へ、いま手番の側の残り時間を渡す(GameDesign.md 9章)。
+## 時計を持たない対局は `set_time(-1)` のまま「∞」を出す。
 func refresh_bars() -> void:
 	if clock == null:
 		return
-	var foe := MatchState.other_side(_screen.my_side)
-	var own_bar := _screen.bar_for(_screen.my_side)
-	var foe_bar := _screen.bar_for(foe)
+	var state := _screen.state
+	var is_my_turn := state != null and state.current_turn == _screen.my_side
 	var own_rem := clock.get_remaining(_screen.my_side)
-	var foe_rem := clock.get_remaining(foe)
-	own_bar.clock_seconds = own_rem
-	foe_bar.clock_seconds = foe_rem
-	own_bar.clock_total = turn_seconds()
-	foe_bar.clock_total = turn_seconds()
-	own_bar.queue_redraw()
-	foe_bar.queue_redraw()
+	var active_side: int = state.current_turn if state != null else _screen.my_side
+	var dial := _screen._clock_dial
+	if dial != null:
+		dial.set_time(clock.get_remaining(active_side), turn_seconds(), is_my_turn)
 	var alert := _screen.alert
 	if alert != null:
 		alert.remaining_seconds = own_rem
-		alert.is_my_turn = _screen.state != null and _screen.state.current_turn == _screen.my_side
+		alert.is_my_turn = is_my_turn
 
 
 ## 相手の持ち時間が0になっても申告が来ない場合、猶予を置いて待っている側の勝ちにする。

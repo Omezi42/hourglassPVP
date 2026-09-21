@@ -44,11 +44,6 @@ const GRAVE_PILE_X := 812.0
 const HAND_PILE_X := 894.0
 const PILE_RADIUS := 6.0
 const PILE_GRAIN_ALPHA := 0.06
-## 持ち時間の丸(段階2)。中心x座標。右端(CLOCK_X + CLOCK_RADIUS)が
-## `CardMatchScreen.BAR_WIDTH`(1060)からはみ出さない位置に置く。
-const CLOCK_X := 1034.0
-const CLOCK_DIAMETER := 40.0
-const CLOCK_RADIUS := CLOCK_DIAMETER * 0.5
 const HP_BAR_RADIUS := 8.0
 ## 器具ごとの落ち影。板で囲わないぶん、1つずつが卓の上に置かれた物として影を持つ。
 const SHADOW_OFFSET := Vector2(0.0, 3.0)
@@ -58,10 +53,6 @@ const SHADOW_ALPHA := 0.32
 const RIM_WIDTH := 2.0
 ## 文字の下へ1pxずらして敷く暗い影(GameDesign.md 9章「数字は必ず読める」)。
 const TEXT_SHADOW := Color(0.05, 0.03, 0.02, 0.85)
-## 持ち時間の丸(_draw_clock)の質感。脈動パルス・危険域の縁取りは動的な色を
-## そのまま残し、平常時だけ真鍮の輪へ差し替える。
-const CLOCK_GRAIN_ALPHA := 0.05
-const CLOCK_BEVEL_WIDTH := 1.5
 ## マナのピップ(_draw_mana)の質感。小さい円のため、面取りではなく
 ## 「縁を暗く・内側に小さなハイライト」の2色使いで浮き彫りに見せる。
 const PIP_RIM_DARKEN := 0.25
@@ -113,11 +104,6 @@ var title_id := UserProfileLibrary.DEFAULT_TITLE_ID
 var targetable := false
 ## 自分の駒をこの帯へドラッグして放したときに呼ぶ処理(GameDesign.md 9章)。空なら受けない。
 var drop_handler := Callable()
-## 残り持ち時間(秒)。負の値なら表示しない(CPU戦は持ち時間を使わない)。
-var clock_seconds := -1.0
-## その手番に与えられた持ち時間。**時間切れを重ねた側は短くなる**(GameDesign.md 5章)ため、
-## 危険域を固定の秒数で決めると、半減した手番が最初から赤いままになる。割合で判定する。
-var clock_total := MatchClock.DEFAULT_TURN_SECONDS
 ## いまこの側の手番か。手番の側だけ明るくして、どちらが指す番かを示す
 ## (GameDesign.md 9章)。
 var active := false
@@ -219,7 +205,6 @@ func reset() -> void:
 	_spend_progress = 1.0
 	active = false
 	targetable = false
-	clock_seconds = -1.0
 	queue_redraw()
 
 
@@ -318,8 +303,6 @@ func _draw() -> void:
 		_pile(hand_pile_rect(), "手札", _hand)
 	if _has_coin:
 		_draw_coin()
-	if clock_seconds >= 0.0:
-		_draw_clock()
 
 
 func _draw_closed(points: PackedVector2Array, color: Color, width: float) -> void:
@@ -435,62 +418,6 @@ func _draw_name_plate() -> void:
 		_text_shadowed(Vector2(NAME_TEXT_X, top + 32), label, 16)
 	else:
 		_text_shadowed(Vector2(NAME_TEXT_X, top + 26), label, 18)
-
-
-## 残り時間は情報帯の右端の丸に置く(段階2、GameDesign.md 9章「対局画面の再構築」)。
-## 地は真鍮の放射(暗→中の2段の同心円)+輪。矩形のプレートより盤面の台座(丸い皿)と
-## 意匠が揃う。
-func _draw_clock() -> void:
-	var ci := get_canvas_item()
-	var center := Vector2(CLOCK_X, size.y * 0.5)
-	var is_critical := clock_seconds <= 15.0 and active
-	var is_low := clock_seconds <= maxf(clock_total, 1.0) * 0.5
-
-	# 地: 暗い真鍮の円の上へ、一回り小さい中間真鍮の円を重ねて放射風にする。
-	_shadow_circle(ci, center, CLOCK_RADIUS)
-	UiPaint.fill_circle(ci, center, CLOCK_RADIUS, UiPalette.BRASS_DARK, 24)
-	UiPaint.fill_circle(ci, center, CLOCK_RADIUS * 0.7, UiPalette.BRASS_MID, 24)
-	UiPaint.apply_grain(
-		ci,
-		Rect2(center - Vector2.ONE * CLOCK_RADIUS, Vector2.ONE * CLOCK_RADIUS * 2.0),
-		CLOCK_GRAIN_ALPHA
-	)
-
-	# 輪 (残り15秒以下かつ手番中なら脈動パルス)
-	if is_critical:
-		var pulse := (sin(Time.get_ticks_msec() * 0.008) + 1.0) * 0.5
-		var pulse_color := UiPalette.WARNING_RED.lerp(UiPalette.GLOW_AMBER, pulse * 0.4)
-		UiPaint.draw_ring(ci, center, CLOCK_RADIUS, pulse_color, 2.5, 24)
-		var glow_radius := CLOCK_RADIUS + 1.5
-		draw_rect(
-			Rect2(center - Vector2.ONE * glow_radius, Vector2.ONE * glow_radius * 2.0),
-			Color(pulse_color, 0.15 * pulse)
-		)
-	elif is_low:
-		UiPaint.draw_ring(ci, center, CLOCK_RADIUS, Color(UiPalette.WARNING_RED, 0.8), 1.5, 24)
-	else:
-		UiPaint.draw_ring(
-			ci, center, CLOCK_RADIUS, UiPalette.BRASS_HIGHLIGHT, CLOCK_BEVEL_WIDTH, 24
-		)
-
-	var minutes := int(clock_seconds) / 60
-	var seconds := int(clock_seconds) % 60
-	var text_color := UiPalette.TEXT_OFFWHITE
-	if is_critical:
-		var pulse := (sin(Time.get_ticks_msec() * 0.008) + 1.0) * 0.5
-		text_color = Color(1.0, 0.35 + 0.35 * pulse, 0.35 + 0.35 * pulse, 1.0)
-	elif is_low:
-		text_color = UiPalette.WARNING_RED
-
-	draw_string(
-		_font,
-		Vector2(center.x - CLOCK_RADIUS, center.y + 5.0),
-		"%d:%02d" % [minutes, seconds],
-		HORIZONTAL_ALIGNMENT_CENTER,
-		CLOCK_RADIUS * 2.0,
-		15,
-		text_color
-	)
 
 
 ## 山札の山。ドロー・疲労の演出の出どころとして画面側からも引く。

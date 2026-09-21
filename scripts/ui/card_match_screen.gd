@@ -166,6 +166,7 @@ var _status: CardMatchStatus
 var _online_ctl: CardMatchOnline
 var _emote: CardMatchEmote
 var _alert: CardMatchAlert
+var _clock_dial: TurnClockDial
 var _damage_assist: CardMatchDamageAssist
 var _history: CardMatchActionHistory
 var _puzzle: CardMatchPuzzle
@@ -491,6 +492,7 @@ func _build() -> void:
 	add_child(MatchBackdrop.new())
 	# 行動の列の地。ボタンより先に足して背面へ置く(GameDesign.md 9章「対局画面の再構築」)。
 	add_child(ActionColumnPanel.new())
+	_clock_dial = CardMatchBuild.make_clock_dial(self)
 	# 卓の後ろにだけ淡い光を置いて浮かせる(GameDesign.md 9章)。BoardTableより先に
 	# 足すことで、卓の額の外周からわずかににじむだけの光として見える。
 	var table_glow := BoardGlow.new()
