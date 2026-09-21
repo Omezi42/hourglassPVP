@@ -360,731 +360,174 @@ UIに依存しない、対局ルールそのものを扱う層。
 
 ### 4.0 対局画面
 
-**子がすべてコード描画の `Control` で Inspector から編集する値を持たないため、
-`.tscn` を作らず1クラスの中で組み立てている**(画像や配置を差し替える余地が無く、
-`.tscn` にしても編集する対象が存在しないため)。
+子がすべてコード描画の `Control` で Inspector から編集する値を持たないため、`.tscn` を作らず
+`CardMatchScreen` の中で組み立てる。**画面本体(`card_match_screen.gd`)と `CardView` は1000行の上限に
+張り付いており、機能は `_screen` / `_view` 参照を持つ `RefCounted` か static の描画ヘルパへ切り出す**(11章)。
+
+#### クラス一覧
 
 | クラス | 責務 |
 |---|---|
-| `CardView`(`scripts/ui/card_view.gd`) | カード1枚の表示。**守護の枠の強調は `guard_frame` で切る**(場だけ true。手札・砂時計一覧・デッキ編集は false。GameDesign.md 9章)。**手札と場で見た目を変える**(GameDesign.md 9章)。`Mode.HAND` はカードの枠を持ち **コスト=左上 / 総量=右下**、`Mode.BOARD` は**枠を持たず、丸い台座の上に立つ砂時計そのもの**として描き **攻撃力=左下 / 体力=右下**(コストは出さない)。体力と攻撃力の比で3枚のイラストを切り替え、守護は場でだけ台座の輪を太くし(手札は枠を太くしない。2026-09-14に廃止)、硝子は手札なら枠の内側・場ならガラスへ薄い膜を重ねる。**カード固有の紋章**は、場は台座の正面のメダル、手札は左下の封蝋として出す(描画は `CardViewPaint`)。**バッジの跳ね**(`health_punch`/`attack_punch`)と**取り消しの戻る動き**(`unselect_amount`、`play_unselect()`)の状態はここが持つ(GameDesign.md 9章「対局画面の手触り」) |
-| `CardViewPaint`(`scripts/ui/card_view_paint.gd`, static) | `CardView._draw()` から台座・封蝋・バッジ・攻撃予測の描画を移す受け皿(`pedestal_base()`/`pedestal_ring()`/`pedestal_glow()`/`pedestal_plaque()`/`hand_seal()`/`badge()`/`stat()`/`preview()`)。`card_view.gd` が1000行の上限に達したため切り出した(Architecture.md 11章)。`UiPaint` と違って第1引数に `CardView`(= `CanvasItem`)を取る(`InkFigure`/`EmblemSeal` と同じ流儀)。状態は `CardView` に残し、ここは描画だけを持つ |
-| `BoardTable`(`scripts/ui/board_table.gd`) | 盤面12枠を載せる卓(GameDesign.md 9章)。**木の額 / プレイマット2枚 / 中央の真鍮のレール**の3層で描く |
-| `PlaymatLibrary`(`scripts/data/playmat_library.gd`, staticのみ) | プレイマットの定義(地の色・模様の種類・縁・箔・値段)。`UserProfileLibrary` と同じ流儀 |
-| `PlaymatPaint`(`scripts/ui/styles/playmat_paint.gd`, staticのみ) | マットの描画。**卓とショップの見本で同じ関数を通す**(別々に描くと、買う前に見た絵と実際に敷かれる絵が食い違う) |
-| `PlayerInfoBar`(`scripts/ui/player_info_bar.gd`) | 片方のプレイヤーの情報帯。**1枚の板ではなく真鍮の器具の並び**(肖像メダル / 名札 / HPの器 / マナの計器 / 山の札 / 時計)として描く(GameDesign.md 9章「情報帯」)。器具ごとの落ち影も自分で持つ(`MatchBackdrop` は帯の影を描かない)。座標系の問い合わせ(`hp_bar_rect()` / `deck_pile_rect()` / `hand_pile_rect()` / `mana_label_global()`)は従来どおり |
-| `HandCardPaint`(`scripts/ui/hand_card_paint.gd`, static) | 手札の札の面(GameDesign.md 9章「手札」)。絵の窓・名前の帯・額・四隅の宝石・封蝋を描く。`card_view.gd` が1000行の上限に達していたため、手札の描画をまるごとここへ移した(`CardViewPaint` と同じく第1引数に `CardView` を取る)。窓の光だまりの色は `HourglassArt.accent_color()`(色相表から原本の砂の色を変換して求める。画像を読まない)|
-| `CardMatchSelection`(`scripts/ui/card_match_selection.gd`) | いま選んでいるもの(手札の1枚 / 自分の場の1枠 / 未選択)。選択の状態を1箇所へ集めて画面側の分岐を減らす |
-| `CardMatchScreen`(`scripts/ui/card_match_screen.gd`) | 上記を並べ、`MatchState` と同期し、操作(出す/反転/攻撃/コイン/ターン終了/投了)を受ける |
-| `CardMatchMulligan`(`scripts/ui/card_match_mulligan.gd`) | 対局開始前のマリガン画面。暗幕の上へ初期手札を並べ、選んだ枚数を `mulligan_confirmed(indices)` として返すところまでが責務で、適用は `MatchState` が行う |
-| `CardMatchLog`(`scripts/ui/card_match_log.gd`) | 対局ログ。`MatchState` のシグナルを購読して日本語の行を積み、中央のモーダルとして開く。**記録と表示を同じクラスに持たせている**のは、実況に出す文と読み返す文を必ず一致させるため |
-| `CardMatchTurnFeed`(`scripts/ui/card_match_turn_feed.gd`) | 手番バナー・相手の1手の実況・スポットライト。**ログと同じ文言**を `CardMatchLog.describe()` から引く |
-| `CardMatchStrike`(`scripts/ui/card_match_strike.gd`) | 攻撃の演出の進行役。被ダメージの砂の飛散を**当たる瞬間まで持ち越す**。砂の演出(`unit_damaged`/`unit_ticked`)の受け口も持つ |
-| `CardMatchEffectStrike`(`scripts/ui/card_match_effect_strike.gd`) | 設置効果が単体の砂時計へダメージ/破壊を与えるときの進行役。`MatchState.effect_struck` を受け、`EmblemStrikeFx` で紋章を対象へ飛ばし、当たるまで被ダメージ・破壊の演出を持ち越す。`CardMatchStrike` と同じ形の「先に控える→飛ぶ→当たる→戻る」段取りを、駒が動く攻撃とは別枠で持つ |
-| `EmblemStrikeFx`(`scripts/ui/emblem_strike_fx.gd`) | 紋章が対象へ飛ぶ演出そのもの(`Control`)。`CardFlipBeam` と同じく盤面より手前の独立したオーバーレイとして持つ |
-| `CardMatchShake`(`scripts/ui/card_match_shake.gd`) | 当たった瞬間の盤面の揺れ(GameDesign.md 9章)。**卓と場の駒だけ**を動かす |
-| `CardMatchEffects`(`scripts/ui/card_match_effects.gd`) | 攻撃以外の演出の進行役(設置の着地 / 破壊の崩落 / 設置効果の光の筋 / 硝子の割れる閃光 / ドローと疲労の山札の脈打ち)。`CardMatchSound` と同じく `MatchState` のシグナルだけを見る |
-| `CardUnitFx`(`scripts/ui/card_unit_fx.gd`) | `CardView` の子として駒へ重ねる演出のうち、**盤面の状態を一切参照しないもの**(着地・崩落・硝子の閃光)。いずれも起きた瞬間に渡された引数だけで完結する |
-| `CardMatchSound`(`scripts/ui/card_match_sound.gd`) | 対局中の効果音(GameDesign.md 9章)。**画面側の操作ではなく `MatchState` のシグナルだけを見て鳴らす**。自分の手・CPU・オンラインで届いた手・リプレイの再生はいずれも `MatchAction.apply()` を通って同じシグナルを出すため、経路ごとに鳴らし忘れる余地が消える |
-| `CardMatchTargets`(`scripts/ui/card_match_targets.gd`) | 置ける枠・殴れる相手の強調と、相打ちの予測 |
-| `CardMatchResult`(`scripts/ui/card_match_result.gd`) | 結果パネル。勝敗・最終HP・総手数・決着の要因と「ログ」「ホームへ」 |
-| `CardDeckListScreen`(`scripts/ui/card_deck_list_screen.gd`) | 保存済みデッキの一覧。**管理と対局前の選択を1つの画面が兼ねる**(4.5節) |
-| `CardDeckEditorScreen`(`scripts/ui/card_deck_editor_screen.gd`) | デッキ編集(30枚・同名2枚まで)。共通の `ScreenHeader` を使う |
-| `CardDeckSheet`(`scripts/ui/card_deck_sheet.gd`) | 共有用のデッキ表(GameDesign.md 9章)。**画面に置かず `SubViewport` の中だけで生きる**。`CardDeckShelf` を `readonly` の横10列にして敷き、作品名・バージョンを添える |
-| `CardDeckSharePanel`(`scripts/ui/card_deck_share_panel.gd`) | デッキの受け渡し。**デッキ表の画像とデッキコードを1つのパネルにまとめる**(旧 `CardDeckCodePanel`) |
-| `CardDeckFilter`(`scripts/ui/card_deck_filter.gd`) | 一覧の絞り込み(コスト・キーワード・名前)。条件の合成を1箇所へ集める |
-| `CardListScreen`(`scripts/ui/card_list_screen.gd`) | カード一覧。選ぶと右の詳細パネルへ出す。ヘッダーの主アクションのボタンで並び順(コスト順 / 追加順)を往復する |
-| `CardDetailPanel`(`scripts/ui/card_detail_panel.gd`) | カード1種の詳細。**キーワードは名前と説明の両方**を出す(語だけでは初見に伝わらない)。イラストの下に `CardEffectPreview` を挟む。**`SUMMON` を持つカードには、出るトークンの名前・総量・効果を1行で添える**(トークンは一覧に出ないため、ここで説明しないと調べる手段が無い。GameDesign.md 6章) |
-| `CardEffectPreview`(`scripts/ui/card_effect_preview.gd`) | 能力の実演。**カードごとではなくキーワード / 効果の種類ごとに1本**の台本を持つ(下記)。台本の並びの組み立てと図版の描画がここに残る |
-| `CardEffectStage`(`scripts/ui/card_effect_stage.gd`, staticのみ) | 台本が組み立てる「その瞬間の盤面」の部品(空の盤面・駒・光の筋・ポップ・イージング)。**台本はこれを組み合わせるだけで書ける**状態を保つ |
-| `CardEffectDemoKeyword`(`scripts/ui/card_effect_demo_keyword.gd`, staticのみ) | 常在キーワード7種と基本の砂の台本。**扱わない語には空の Dictionary を返させる**——既定の盤面を返させると、台本が無いことに気づけないまま何かが動いて見える |
-| `CardEffectDemoEnemy`(`scripts/ui/card_effect_demo_enemy.gd`, staticのみ) | 「相手の砂時計へ効く効果」の実演の中身 |
-| `InkFigure`(`scripts/ui/ink_figure.gd`, staticのみ) | 実演の図版を紙のインクで描く部品(砂時計・HPバー・矢印・守護の輪・硝子の膜・砕けた印)。`UiPaint` と同じ流儀で、**第1引数に描画先の `CanvasItem`** を取る |
-| `CardDeckShelf`(`scripts/ui/card_deck_shelf.gd`) | 編成中のデッキを**30枠の決まった棚**として描く(GameDesign.md 9章)。1つの `Control` が全枠を描き、当たり判定を矩形の表として持つ |
-| `EmblemSeal`(`scripts/ui/emblem_seal.gd`, staticのみ) | カード固有の紋章を「押した印」として描く。**カードを並べる3画面(図鑑の一覧・工房の在庫棚・編成中の棚)で共有する**——別々に描くと必ず片方だけ古くなる。`InkFigure` と同じく第1引数に `CanvasItem` を取る(紋章はテクスチャのため `draw_texture_rect()` を使う) |
-| `CardPileViewer`(`scripts/ui/card_pile_viewer.gd`) | 墓地の中身を見るモーダル。同じカードは1枚にまとめて枚数をバッジで出す |
-| `EmptyState`(`scripts/ui/empty_state.gd`) | 一覧に並べるものが無いとき/待っているときの見せ方(GameDesign.md 9章)。**印・見出し・1行の置き場を1箇所へ集める**——以前は画面ごとに `Label` を1つ置いており、広いパネルの左上に文が1行だけ残っていた。デッキ一覧・リプレイ一覧・戦績・パズル選択が使う |
-| `CurrencyChip`(`scripts/ui/currency_chip.gd`) | 砂金の残高(GameDesign.md 9章・15章)。文字列は `CurrencyRules.label_text()` だけが決め、画面ごとに組み立てない。増えたときだけ脈打たせて数え上げる |
-| `CodedButton`(`scripts/ui/coded_button.gd`) | コードで組むボタンの生成を集約する。画面ごとに `theme_override` を並べると指定漏れのボタンが混ざるため |
-| `CardViewStrike`(`scripts/ui/card_view_strike.gd`) | 攻撃の演出の段取り(寄る→溜める→当てる→戻る)。**`CardView` が1000行の上限に達したため切り出した**。分ける線は「駒の見た目」と「殴りに行く段取り」に引き、状態(offset / angle / flash)と描画は `CardView` 側に残す(絵に掛ける変換は描画のたびに要るため) |
-| `CardViewFlourish`(`scripts/ui/card_view_flourish.gd`) | 相打ちの反撃(`play_counter()`)とドローの合図(`play_spark()`)の段取り。`CardViewStrike` と同じ理由で切り出した。状態(`counter_offset` / `spark_amount`)と描画は `CardView` 側に残す |
-| `CardMatchReplay`(`scripts/ui/card_match_replay.gd`) | リプレイの再生コントロール。**任意の手数の局面は初期状態から手を並べ直して作る** |
-| `CardMatchOnline`(`scripts/ui/card_match_online.gd`) | オンライン対戦の3つの入口(開始・切断からの復帰・観戦)。`card_match_screen.gd` が1000行の上限に達したため切り出した。画面側には `main.gd` から呼ぶ薄い委譲だけが残る |
-| `CardMatchSpell`(`scripts/ui/card_match_spell.gd`) | 砂術を撃つ操作の段取り(GameDesign.md 6章)。`card_match_screen.gd` が1000行の上限に達したため切り出した |
-| `CardMatchTouch`(`scripts/ui/card_match_touch.gd`) | 盤面と手札を押す/ドラッグする操作の受け口。**押した先で何が起きるかの分岐だけ**を持ち、適用は `MatchState` へ、対象選択の段取りは `CardMatchSpell` / `CardMatchEffectTarget` / `CardMatchFlipRight` へ渡す。**`_build()` より先に生成する**——組み立ての途中で駒のシグナルへ接続されるため、後から作ると接続の時点で null を掴む(`_detail` を後から作って踏んだのと同じ穴) |
-| `CardMatchFlipRight`(`scripts/ui/card_match_flip_right.gd`) | 反転権(GameDesign.md 2章)の段取り。ボタンの生成・対象選択(`CardMatchSelection.Kind.FLIP_RIGHT`)・`MatchAction.flip_right()` の適用を1箇所へ集める。**「戻る」ボタンと同じ位置に置く**——戻るボタンは再生・観戦(`_interactive == false`)だけ、反転権は対局中(`_interactive == true`)だけに出るため両者は同時に見えず、行動の列を再配置せずに済む |
-| `CardDragArrow`(`scripts/ui/card_drag_arrow.gd`) | 攻撃をドラッグしている間、駒の中心から指先へ引く矢印(GameDesign.md 9章「対局画面の手触り」)。`CardFlipBeam` と同じく盤面より手前の独立したオーバーレイとして持つ。自分の場の駒をドラッグしたときだけ `CardMatchTouch` が `begin()`/`end()` を呼ぶ(手札のドラッグでは出さない) |
+| `CardMatchScreen` | 全体を並べ `MatchState` と同期し、操作を受ける。**自分の1手は必ず `_perform()` を通す**(適用と送信を1箇所に集め、送信し忘れる経路を作らない)。`_finish_action()` が演出の状態を見て `refresh()` の時機を決めるため、**`_perform()` の呼び出し元で `refresh()` を重ねて呼ばない** |
+| `CardMatchBuild` | 画面の子を生成する。`CardMatchTouch` は `_build()` より先に生成する(組み立て中に駒のシグナルへ接続されるため) |
+| `CardMatchGeometry` | 座標系の問い合わせ(`hp_bar_center()` / `slot_center()` / `playable_hand_rects()` / `end_turn_button_rect()`)。`CardMatchScreen` の座標定数を読むだけ |
+| `CardView` / `CardViewPaint` / `HandCardPaint` | 駒・札1枚の表示。`Mode.HAND`(枠あり・コスト左上/総量右下)と `Mode.BOARD`(枠なし・台座の上の砂時計・攻撃力左下/体力右下)。**砂術は `Mode.HAND` の中の分岐**(`is_spell` で絵の代わりに紋章・総量バッジなし・枠色変更。`Mode.SPELL` は作らない——場での見た目が存在せず、`BOARD` との組み合わせという有り得ない状態を表現できてしまう)。守護の輪は `guard_frame`(場だけ true)。状態(`health_punch`/`attack_punch`/`unselect_amount`/`counter_offset`/`spark_amount`/strikeの offset・angle・flash)は `CardView` が持ち、描画は `CardViewPaint`(台座・封蝋・バッジ・予測)と `HandCardPaint`(手札の面)が担う。いずれも第1引数に `CardView` を取る |
+| `CardViewStrike` / `CardViewFlourish` | 攻撃の4段の段取り / 相打ちの反撃(`play_counter()`)とドローの合図(`play_spark()`)の Tween。`CardView` に同名の薄い委譲を残す |
+| `CardUnitFx` | `CardView` の子として重ねる演出のうち盤面の状態を参照しないもの(着地 / 崩落 / 硝子の閃光 / `play_recall()`)。崩落は `CardData` を受け取り絵と矩形をその時点で控える(次の同期で `card` が null になるため) |
+| `CardDragPreview` / `CardDragArrow` | ドラッグ中に指へ付いてくる絵(速度から傾き)/ 攻撃ドラッグの駒→指先の矢印(自分の場の駒のときだけ) |
+| `CardMatchHandLayout` | 手札の並べ方。**位置は代入せず Tween で滑らせる**。ホバー中の両隣を避け、相手の手番で沈める |
+| `BoardTable` / `PlaymatLibrary` / `PlaymatPaint` | 卓(木の額 / マット2枚 / レール)。マットは `clip_contents` の子層(`MatLayer`)として敷く(模様が卓の外へ漏れる)。**卓とショップの見本で同じ描画関数を通す**。既定は `NONE_ID`(何も敷かない) |
+| `MatchBackdrop` / `ActionColumnPanel` / `RoundActionButton` / `TurnClockDial` / `FlipRightGauge` | 再構築(10.10.0節)で足した下地・行動の列の地・丸ボタン・持ち時間の時計・反転権の粒の札 |
+| `PlayerInfoBar` | 片方の情報帯。板を持たず真鍮の器具(メダル / 名札 / HPの器 / マナの計器 / 山の札)を並べる。`hp_bar_rect()` 等の座標の問い合わせ、`highlight_cost()` / `spend_toward()`(ピップの光と吸い込み)、`drop_handler`(HP帯へのドロップ。`targetable` のときだけ受ける)、`show_emote()` |
+| `CardMatchSelection` | いま選んでいるもの(手札 / 自分の枠 / TARGETING / FLIP_RIGHT / 未選択)と `hover_target`(`NO_HOVER` / `FACE` / 相手の枠) |
+| `CardMatchTouch` | 盤面と手札を押す/ドラッグする受け口。分岐だけを持ち、適用は `MatchState`、段取りは `CardMatchSpell` / `CardMatchEffectTarget` / `CardMatchFlipRight` へ渡す |
+| `CardMatchSpell` / `CardMatchEffectTarget` / `CardMatchFlipRight` | 砂術 / 設置効果の対象選択 / 反転権 の段取り。反転権のボタンは再生・観戦の「戻る」と同じ位置(両者は同時に見えない) |
+| `CardMatchTargets` | 置ける枠・殴れる相手の強調、相打ちの予測(`refresh_own_preview()`)、身構え(`CardView.brace`) |
+| `CardMatchDetail` | 詳細パネルの出し消し。出してよい状態か(対象選択中・マリガン中・演出中でない)、消すまでの猶予(`HIDE_DELAY`)、置き場(`CardDetailPanel.place_near()` に卓の範囲を渡す)。**`CardMatchScreen` の const を const から参照しない**(読み込みが循環して起動が固まる。11章) |
+| `CardMatchMulligan` | マリガン画面。選んだ枚数を `mulligan_confirmed(indices)` で返し、適用は `MatchState` |
+| `CardMatchLog` / `CardMatchTurnFeed` | ログ(記録と表示を同じクラスに持ち、実況と読み返しの文を一致させる)/ 手番バナーと相手の1手の実況(`CardMatchLog.describe()` から引く) |
+| `CardMatchStrike` / `CardMatchShake` | 攻撃の演出の進行役(被ダメージ・音を当たる瞬間まで持ち越す)/ 盤面の揺れ |
+| `CardMatchEffectStrike` / `EmblemStrikeFx` | 設置効果・トリガーの紋章の進行役 / 紋章が飛ぶ演出そのもの(独立したオーバーレイ) |
+| `CardMatchEffects` | 攻撃以外の演出の進行役(着地 / 崩落 / 硝子の閃光 / ドローと疲労の山札 / 砂へ還す)。`MatchState` のシグナルだけを見る |
+| `CardFlipBeam` | 反転の光の筋と駒の裏返り(`play_flip()`)。独立したオーバーレイ(`Control._draw()` は子より背面のため画面側で描くと卓に隠れる) |
+| `CardMatchSound` | 対局中の効果音。**画面側の操作ではなく `MatchState` のシグナルだけを見て鳴らす**(自分の手・CPU・オンライン・再生のすべてが同じ経路を通る) |
+| `CardMatchResult` / `CardMatchOutcome` | 結果パネル / 終局後の後始末(リプレイ保存・砂金・戦績・ミッション・記録) |
+| `CardMatchReplay` / `CardMatchOnline` / `CardMatchPuzzle` / `CardMatchSolo` / `CardMatchTutorial` | 再生コントロール / オンラインの3入口 / パズル / ソロ / 誘導対局。いずれも `_screen` 参照の切り出し |
+| `CardMatchEmote` / `EmotePopupPanel` / `EmoteBubble` | エモート(6.6節) |
+| `CardMatchAlert` / `CardMatchDamageAssist` / `CardMatchActionHistory` | 残り15秒の焦燥演出 / 打点アシスト / 直前の手の列 |
+| `CardDetailPanel` / `CardEffectPreview` / `CardEffectStage` / `CardEffectDemoKeyword` / `CardEffectDemoEnemy` / `InkFigure` | カード詳細と能力の実演(4.0.4節) |
+| `CardPileViewer` | 墓地の中身(同じカードは1枚にまとめ枚数バッジ) |
 
-**砂術は `CardView.Mode.HAND` の中の分岐として描く**(GameDesign.md 9章)。
-`Mode.SPELL` を足さないのは、**砂術に「場での見た目」が存在しない**ため。
-モードは「手札か場か」を表す軸であり、そこへカードの種類を混ぜると、
-`Mode.SPELL` と `Mode.BOARD` の組み合わせという有り得ない状態が表現できてしまう。
-違いは3つだけで、いずれも `card.is_spell` を見て切り替える。
+#### 4.0.1 寸法と描画
 
-- 砂時計の絵を描かず、**紋章を中央へ大きく**置く
-- **総量のバッジを出さない**(コストの左上だけ)
-- 枠の色を変える(`UiPalette` へ砂術用の1色を足す)
+- **右端148pxは行動の列**。盤面・情報帯・手札はその手前で止め、両情報帯は同じ幅(`BAR_WIDTH`)にする
+- 座標定数(`TABLE_RECT` / `*_ROW_TOP` / `*_BAR_TOP` / `HAND_AREA` / `ACTION_COLUMN_X`)は `CardMatchScreen` が持ち、`CardMatchGeometry` は読むだけ
+- **手札は `CardView.HAND_SIZE_PX`(118x158)を基準に、各部を比(`_hand_scale()`)で決める**(固定値だと辞書のように小さく置いたとき名前がはみ出す)
+- **砂時計の絵は枠へ引き伸ばさず縦横比のまま収める**(`_fit_art()`)。キャンバスは400x513(`state_falling` だけ415x532)で、**倍率は3状態のうちいちばん高いキャンバスを基準に共通化する**(状態ごとに割ると `falling` へ切り替わった瞬間だけ縮む)。ドラッグのプレビューも同じ大きさ
+- **相手の列は `CardView.scale` で0.92倍**(`FOE_ROW_SCALE`)。`pivot_offset` を中心に置き `position`/`size` は変えないため、座標の問い合わせ・ドラッグの当たり判定は従来のまま
+- **選択中の枠は水色、守護の枠は真鍮色**と系統を分ける
+- **「反転」ボタンは選んだ駒のすぐ下**(`_flip_button_position()`、高さ `FLIP_BUTTON_SIZE`)。上へ出すと相手の駒へ重なる
+- 総手数は `MatchState.turn_count` をそのまま使う(UI側で数えるとCPU同士・再生で0になる)
+- **ログは結果パネルより後に `add_child()`**(終局後も上から開けるように)。エモートのUIはさらに後なので終局後は隠す
 
-**砂術は空き枠が無くても暗くしない**(GameDesign.md 6章の例外)。
-`CardMatchScreen` が手札の暗転を決めるときに `is_spell` を見て枠の判定を飛ばす。
-押したときは枠の強調ではなく、対象を取る砂術なら対象選択(`CardMatchSelection.TARGETING`)へ、
-取らないならその場で `cast_spell()` を呼ぶ。
+#### 4.0.2 操作
 
-**手札の見た目は `CardView.HAND_SIZE_PX`(118x158)を基準に組み、各部の寸法はそこからの
-比(`_hand_scale()`)で決める**。固定値のままだと、キーワード辞書のように小さく置いた
-ときに名前とキーワードの行が札の外や総量のバッジの上へ出る(枠・輪郭の太さを大きさに
-合わせる `CodedButtonStyle` と同じ考え方。11章)。**名前とキーワードは下の隅のバッジの帯
-より上へ置く**(GameDesign.md 9章)。
+- **詳細のホバー**: `CardDetailPanel` を `interactive = false` で使う(語のボタンと実演を持たないため、外れたら消える形が成立する)。幅340px(`compact_width`)。ホバーの受け口は `_on_view_hovered()` / `_on_view_left()` という関数にし、その時点の `_detail` を読む(`_detail` は `_build()` の途中で作るため、生成時に束ねると空の参照を掴む)
+- **攻撃の予測**は `MatchState.combat_preview()`(盤面を変えずに計算。判定の順序は `_resolve_unit_combat()` と同じ:硝子→毒砂)が返し、`CardView.preview_health` へ出す。攻撃側は狙える相手が複数だと定まらないため**最も自分が削られる組**を出し、指している相手(`hover_target`)がある間だけその1組に置き換える。切り替えは相手の駒の `hovered`/`mouse_exited` と情報帯の `mouse_entered`/`mouse_exited` から。Godotはドラッグ中も enter/exit を出すため経路を分けない
+- **ドラッグ**: `CardView._get_drag_data()` / `_drop_data()`、枠側は `drop_handler`(Callable)。手札は放されたら押して選ぶ経路と同じ `_play_selected()` へ合流(設置効果の対象選択もそのまま働く)。攻撃は `draggable` な自分の駒の `drag_started` で押したのと同じ選択状態を作り、相手の駒(`on_foe_slot_drop`)か HP帯(`on_face_drop`)で `_attack()` へ合流
+- **タッチのゆらぎ吸収(`PressTracker`)**: 8px の許容マージン(`SLOP_MARGIN`)。`InputEventScreenTouch` も受ける
+- **設置効果の対象選択**は `CardMatchSelection.TARGETING`。枠まで決めた時点で止め、相手の駒を押すと `play_card()` の `target` へ渡す。相手の場が空ならそのまま出す。案内は行動の列へ出す(盤面へ重ねると対象の駒を隠す)
+- **対局の入口**: `Main._request_battle()` が導線を `Callable` として控え、デッキ選択画面(`CardDeckListScreen` の PICK)で選ばれたら `CardDeckSave.set_selected_index()` を書いてから呼ぶ。保存デッキが無いときだけ選択画面を挟まない。CPU戦は `start_cpu_match()` → `Timer`(`CPU_THINK_SECONDS`)→ `CardCpuStrategy.choose_action()` を1手ずつ
 
-**砂時計の絵は、枠へ引き伸ばさず縦横比のまま収める**(`CardView._fit_art()`)。絵のキャンバスは
-400x513(`state_falling` だけ 415x532)で、正方形の枠へ `draw_texture_rect()` すると横に潰れる。
-枠の下端で揃えて横は中央へ置き、台座に立って見えるようにする。**倍率は3状態のうちいちばん高い
-キャンバスを基準に共通化する**。状態ごとに自分の高さで割ると、キャンバスが数%大きい
-`state_falling` に切り替わった瞬間だけ絵が縮んで見えるため。**ドラッグ中のプレビューも同じ
-大きさで作る**(カードの枠 118x168 に合わせると、掴んだ瞬間に絵が膨らんで見える)。
+#### 4.0.3 演出の仕組み
 
-**対局画面の右端 148px は行動の列とし、盤面・情報帯・手札はその手前で止める。**
-反転・コイン・ターン終了・ログ・投了をこの1列へ縦に並べる。以前はログと投了だけが
-手札の右隣にあり、そのぶん手札の領域が左へ寄って、盤面の駒の列と手札の中心が94pxずれていた。
-情報帯も両者とも同じ幅(`BAR_WIDTH`)にして、対面させた2本の帯の右端を揃える。
+**ロジックは演出を待たない。**`MatchState` は即座に解決し、演出は結果を後から見せる(演出の完了へ依存させると再生・観戦・CPUの連続着手が尺に縛られる)。
 
-**対局中のカード詳細・攻撃の予測・ホバーの拡大・ドラッグでの設置**(GameDesign.md 9章)は、
-いずれも新しいクラスを足さずに既存のものへ寄せている。
+- **砂の演出は2種類のシグナルで受ける**: 被ダメージ `unit_damaged` → `play_shatter()`(砕けて散る・赤)、ターン終了 `unit_ticked` → `play_drop()`(下へ流れる・琥珀)。相乗りさせない
+- **攻撃**は `CardView.play_strike()`(1本の `Tween`、駒は上端を支点に振れる `_strike_pivot`。`pivot_offset` は回転と拡縮の両方に効くため描画側で変換)。防御側は当たった瞬間に `play_shatter()` + 小さな揺れ + **攻撃力が1以上なら `play_counter()`**(台座正面の紋章を攻撃側へ突き出す。向きは `CardViewStrike` の `side_x` と同じ符号)。`CardMatchStrike.capture()` が**適用前に**防御側のユニットと攻撃力を控える(適用後は消えている可能性がある)
+- **揺れ(`CardMatchShake`)**: `bind()` した卓と場の駒だけ。基準位置を控えて `base + offset` を書く(毎フレーム足すと累積する)ため、毎ターン並べ替わる手札は対象にできない。強さは攻撃力から、上書きは大きいほう
+- **反転**は `CardFlipBeam.play_flip(self, target_side, slot, actor_side)`。通常の反転は持ち主=手を出した側だが、反転権(`flip_right_used(actor_side, target_side, slot)`)では別々の値になりうるため第4引数で向きを渡す。届いたら `view.play_flip()` + 銘板の `play_spark()`
+- **光の筋(`CardFlipBeam`)は `_beams` の配列**で同時に何本でも出せる。進捗は Dictionary の要素に置く(ラムダは外側のローカル変数を値でキャプチャする。11章)。**残っているのは通常の反転とドローの山札→手札だけ**
+- **`CardMatchEffects` は `MatchState` のシグナル(`unit_played` / `unit_destroyed` / `unit_shielded` / `cards_drawn` / `fatigue_damage` / `effect_drawn` / `unit_returned`)だけを見る**。攻撃の演出中のぶんは `_defer()` で当たる瞬間まで持ち越し、`CardMatchStrike._on_impact()` が `effects.flush()` / `sound.flush()` / `effect_strike.flush()` を呼ぶ
+- 破壊は「絵を縦に3つへ割って左右へ落とす」。硝子の割れは `MatchState` が受ける前の `glass_intact` を控えて消えたときだけ `unit_shielded` を出す(与ダメージ0では判別できない)
 
-- 詳細は `CardDetailPanel` を `interactive = false` で使い、**手札・自分の駒・相手の駒に
-  カーソルを乗せている間**だけ、指しているカードと反対の端へ出す(GameDesign.md 9章)。
-  盤面の左右の余白は190pxしかなく、卓へ重ねる以外に置き場が無い。
-  **`interactive = false` のパネルは語のボタンと実演を持たない**ため、カーソルを
-  動かして触る先が無く、外れたら消える形が成立する
-- **出し消しは `CardMatchDetail`(`scripts/ui/card_match_detail.gd`、`_screen` 参照を持つ
-  `RefCounted`)が持つ。**`card_match_screen.gd` が1000行の上限に近いための切り出しで、
-  「いま出してよい状態か」(対象選択中・マリガン中・演出中でないか)の判定と、
-  外れてから消すまでの猶予(`HIDE_DELAY`)、置き場の計算をここへ集める
-- **置き場は指しているカードから対角**(`_place()`)。左右は反対の端(右へ出すときは
-  行動の列の手前で止める)、上下は反対の段。**縦は卓(`TABLE_RECT`)の範囲へ収め、
-  上下の情報帯には掛けない**(GameDesign.md 9章)。幅は340pxで、
-  `CardDetailPanel.compact_width` として渡す
-- **`CardMatchScreen` の const を `CardMatchDetail` の const から参照しない。**
-  互いを参照する定数になり、**読み込みが循環して起動が固まる**(実際にそうなった)。
-  卓の矩形と行動の列の位置は `_place()` の中で実行時に読む
-- **`_detail` は `_build()` の途中で作るため、駒より後に用意される。**ホバーの受け口は
-  `_on_view_hovered()` / `_on_view_left()` という関数にして、その時点の `_detail` を読む
-  (生成時に `_detail.hover` を束ねると、まだ空の参照を掴んで駒が1つも作れなくなる)
-- 予測は `MatchState.combat_preview()`(盤面を変えずに戦闘の結果だけを計算する)が返し、
-  `CardView.preview_health` として体力のバッジの真下へ出す。**判定の順序は
-  `_resolve_unit_combat()` と同じにすること**(硝子→毒砂)。攻撃側の予測は狙える相手が
-  複数いると1つに定まらないため、**最も自分が削られる組**を出す(安全に見えて実は死ぬ、
-  という取り違えを避けるため)。**狙う相手を指している間だけその1組に置き換える**
-  (GameDesign.md 9章)。指している相手は `CardMatchSelection.hover_target`
-  (`NO_HOVER` / `FACE` / 相手の枠)が持ち、相手の駒の `hovered` / `mouse_exited` と
-  相手の情報帯の `mouse_entered` / `mouse_exited` から `CardMatchScreen._set_hover_target()`
-  が切り替える。Godotはドラッグ中も enter / exit を出すため、ドラッグとホバーで経路を分けない。
-  切り替えのたびに盤面全体を同期し直さず、`CardMatchTargets.refresh_own_preview()` が
-  攻撃側の予測だけを組み直す
-- ドラッグは `CardView` が `_get_drag_data()` / `_drop_data()` を持ち、枠側は
-  `drop_handler`(Callable)で受ける。放されたら押して枠を選ぶ経路と同じ `_play_selected()`
-  へ合流するため、設置効果の対象選択もそのまま働く
-- **攻撃も同じ仕組みで運ぶ。**攻撃できる自分の駒は `_refresh_row()` が `draggable` を立て、
-  掴んだ瞬間に `drag_started` で `CardMatchTouch.on_own_slot_drag_started()` が
-  押して選んだのと同じ選択状態を作る(狙える相手が光り、相打ちの予測が出る)。
-  落とす先は相手の駒(`on_foe_slot_drop`)と相手のHP帯(`PlayerInfoBar.drop_handler` →
-  `on_face_drop`)で、いずれも押して選ぶ経路と同じ `_attack()` へ合流する。
-  **`PlayerInfoBar` は `targetable` のときだけ受ける**(守護がいる間は本体へ落とせない)
-- **タッチ操作のゆらぎ吸収(`PressTracker`)**: スマホ等でのタップ時に指先がわずかに動いても
-  キャンセル扱いにならないよう、8pxの許容マージン(`SLOP_MARGIN`)を持って判定する。また
-  `InputEventScreenTouch` も直接受け取れるようにする
+**紋章の演出(`effect_struck` / `effect_struck_many`)**
 
-**「反転」だけは選んだ駒のすぐ下へ出し、他の行動(コイン・ターン終了・ログ・投了)を
-画面右の列にまとめる**(GameDesign.md 9章)。反転は盤面の1体を指した操作であり、
-右の列まで視線とカーソルを往復させると遠い。位置は `_refresh_buttons()` が毎回
-`_flip_button_position()` から決める。**上ではなく下へ出す**のは、自分の場の上が
-相手の場であり、以前ここで**相手のカードへ重なった**ため(実際にレンダリングして発覚した)。
-駒の下端(y=436)と自分の情報帯の中身が始まる位置(y=464)のあいだへ収まる高さ
-(`FLIP_BUTTON_SIZE`)にして、HP・マナ・山札を隠さない。
+- `CardEffectResolver._apply()` は、対象が単体(`ENEMY_UNIT` / `ALLY_UNIT` / 相手プレイヤー)なら `effect_struck`、相手全体の打撃(`ALL_ENEMY_UNITS` × `DAMAGE_UNIT`/`DROP_SAND`)と味方全体の恵与(`ALL_ALLY_UNITS` × `ADD_TOTAL`/`ADD_ATTACK`/`DROP_SAND`/`GRANT_KEYWORD`)なら `effect_struck_many`(`targets: Array`)を、**状態を変更する直前に同期的に**発行する。`EmblemStrikeFx` は `play()`(単体)と `play_many()`(複数)を持ち、進捗は全飛翔で共有する
+- **型(`style: EffectVisualStyle`)は `_apply()` の分岐が決める**: `DAMAGE_UNIT` / `DESTROY_UNIT` / 相手への `DAMAGE_PLAYER` / `DAMAGE_PLAYER_PER_ENEMY_UNIT` = `STRIKE`、`ADD_TOTAL` / `ADD_ATTACK` / `GRANT_KEYWORD` / 自分への `HEAL_PLAYER` = `DESCEND`、`SILENCE` = `DRAIN`、`SWAP_STATS` = `SPIN`(届いたら対象の `play_flip()`)、`RETURN_TO_HAND` = `RECALL`、`INVERT_PLAYER_HP` = `SPIN` を自分のHPバーへ、出どころが `SPELL`/`DEATH` の `DRAW` = `PULSE`(飛ばずにその場で光の輪)、`SUMMON` = 置く先の空き枠へ `DESCEND`。型ごとの尺・弧・色・輪は `EmblemStrikeFx` が持つ。**盤面を揺らすのは `STRIKE` だけ**(被ダメージが無ければ既定値4)
+- **出どころ(`origin: EffectOrigin`)**は `resolve()` の入口で1度だけ決める: `_slot_of()` が枠を返せば `UNIT`(駒の中心から即座に)、`hint` に `death_slot` があれば `DEATH`(台座の銘板の位置に `LINGER` の間残ってから飛ぶ)、それ以外は `SPELL`(自分の情報帯の中心で `RISE` の間浮き上がってから飛ぶ)。対象の解決に使う `from` は演出の出どころとは分けて持つ(`DEATH` で砕けた枠に差し替えると `ALLY_UNIT` の除外や `SELF` が空の枠を指す)
+- **受け口は `CardMatchEffectStrike.on_effect_struck*()`**。ここで `_armed = true` にしてから Tween を組む(yieldしないので、直後の状態変更が出す `unit_damaged` の時点で armed 済み)。`CardMatchStrike.on_unit_damaged()` / `on_unit_ticked()` は**先に `effect_strike.busy()` を見て** `hold_damage()` / `hold_tick()` へ渡す(`unit_damaged` の受け口は `_strike` の1箇所のまま、どちらの進行役が持っているかで振り分ける)。`unit_destroyed` / `unit_shielded` は `_defer()` が `strike_busy()`(両方の busy)を見て自動的に持ち越す
+- **余砂は崩落を先に見せてから銘板が飛ぶ**。`_destroy_unit()` は `_fire(ON_DEATH)` → `unit_destroyed` の順のため、`CardMatchEffects._on_unit_destroyed()` は `effect_strike.is_death_origin()` なら持ち越さず即座に `play_break()`。**攻撃の演出中に死んだ場合は飛ぶこと自体を着弾まで持ち越す**(`_pending` に積み、`_on_impact()` の `effect_strike.flush()` で出す。この間も `busy()` は真)
+- `RECALL` は `MatchState.unit_returned` を `_defer()` で受け、着弾の瞬間に `view.play_recall(card, hand_center(side))`
+- **`effect_drawn(source_side, source_slot, count)`** は駒が盤面上にあるときだけ発行し、`play_spark()`(紋章の周りの光の輪)を呼ぶ。armed/持ち越しは持たない(タイミングのズレが実害にならない)
+- `EmblemStrikeFx.impact` で演出をまとめて出し、`finished` で `_screen.on_strike_finished()`(`refresh()` を含む)。`_finish_action()` は `_strike.play()` に加えて `_effect_strike.busy()` も見る
 
-**選択中の枠は水色、守護の枠は真鍮色**と系統を分ける。どちらも「枠を強調する」表現のため、
-同系色にすると取り違える。
+#### 4.0.4 カード詳細と能力の実演
 
-**総手数は `MatchState.turn_count` をそのまま使う。**UI側で「ターン終了を押した回数」を
-数えると、CPU同士で進めた場合や将来のリプレイ再生で0手になる(実際に検証中そうなった)。
+- `CardDetailPanel` はキーワードを名前と説明の両方で出し、`SUMMON` を持つカードには出るトークンの名前・総量・効果を1行添える。`interactive`(既定 true)のときだけ語のボタンと `CardEffectPreview` を持つ(4.3節)
+- **実演はカードごとではなく語彙ごとに台本(`Script` enum)を持つ**。`show_card()` が「named/plain キーワード → `ON_FLIP` → `effects` の `EffectType`」の順に並びを組み、能力の無いカードには基本の砂の動き。`show_demo()` は語を直接指定(辞書用)
+- **台本は「何が起きるか」だけを書き、「いつ」は `_stage()` が entry の `trigger` から前へ付ける**(`stage["trigger_note"]`)。トリガーを持たない実演は `stage["note"]` へ完成した文。怠ると余砂のカードが「場に出したとき、…」と嘘を言う
+- 台本は「時刻 → 盤面の状態」の純粋な関数で、駒は `CardView` を流用せず `InkFigure`(紙のインクの図版。`UiPaint` と同じ static で第1引数に `CanvasItem`)で簡略に描く。**部品の組み合わせだけで図版を組める状態を保つ**。下の部屋の砂は台形(三角だと浮いて見える)。基本の砂は1粒ずつ落とし、省略は「…」
+- `CardEffectDemoKeyword` は扱わない語に空の Dictionary を返させる(既定の盤面を返すと台本が無いことに気づけない)
 
-**ログは結果パネルより後に `add_child()` する。**終局後は結果パネルが盤面全体を塞ぐため、
-その上からログを開けないと読み返せない(GameDesign.md 9章)。
+#### 4.0.5 デッキ編集・デッキ一覧
 
-**v5.0のオンライン対戦は、山札の並びを「種」で共有して両者が同じ対局を再現する。**
-配置フェーズが無いため、`OnlineSetup.push_setup()` / `wait_for_opponent_setup()` で
-デッキ(30枚のid)と `seed` だけを交換し、そのまま `MatchState.start_match()` へ入る。
-1手の送受信は v1.0 と同じ `matches/{id}.actions` をそのまま使い、適用は
-`MatchAction.apply()` が受け持つ(`OnlineMatch.send()` は型に依存しないためそのまま流用できる)。
+- **2カラム**(`GRID_RECT` / `SIDE_RECT`)。高さは `ScreenHeader.CONTENT_TOP` / `CONTENT_HEIGHT` から取り、画面ごとに数えない
+- 絞り込みと検索は `CardDeckFilter` / `CardDeckFilterModal` が `matches(card)` として合成し、画面は `changed` を受けて並べ直す
+- **`CardDeckShelf` は1つの `Control` が30枠を `_draw()` で描き、当たり判定を矩形の表として持つ**(30個のノードだと1枚動かすたびに生成と破棄が走る)。枠の数は `MatchState.DECK_SIZE` から実行時に読む(横 `COLUMNS`=6)。空き枠も枠として描き当たり判定にも積む。バッジ半径は `clampf(art_w * 0.20, 8, 13)`。**共有のデッキ表(`CardDeckSheet`)も同じ棚**(`columns=10` / `readonly=true`)
+- 詳細は `interactive = false` で幅400px、`CardDetailPanel.place_near()` で置く(`MOUSE_FILTER_IGNORE` でホバーを奪わない)
+- 一覧のカードは `CardView.badge` で「2/2」。保存は30枚ちょうどのときだけ。編集画面は必ず一覧から `open(index)`(-1は新規)。デッキ名の入力欄は編成中の欄の上端
+- **ボタンの既定の文字色はテーマ側でオフホワイト**(`main_theme.tres`。指定を書き忘れた画面だけ黒い文字になる状態を無くすため。`font_hover_color` だけ暗いまま)
+- デッキ一覧・対局前の選択は `CardDeckListScreen` 1つが `Mode`(MANAGE / PICK)で兼ねる(4.5節)
 
-> **既知のトレードオフ:** 種を共有すると、改造したクライアントは相手の山札の並びと手札を
-> 手元で計算できる。「サーバー側での正当性検証は行わない」という方針(GameDesign.md 11章)の
-> 範囲として許容しているが、**不正対策を入れるときはここが最初の対象になる**。
-
-**自分の1手は必ず `CardMatchScreen._perform()` を通す。**適用と送信をここ1箇所に
-まとめることで、送信し忘れる操作の経路が生まれないようにしている。
-
-**リプレイは局面のスナップショットを持たない。**棋譜は「両者のデッキ・種・手の並び」だけで、
-巻き戻しは初期状態から手を並べ直して作る(v5.0はシャッフルが種から決まるため成立する)。
-`Main._on_replay_selected()` は**棋譜が `seed` を持つかどうか**で v5.0 と v1.0 の
-再生先を振り分ける。再生中は `_interactive = false` で操作をまとめて塞ぎ、
-結果パネルも出さない(最後の手まで進めるたびに操作を塞ぐと前後に動かせなくなるため)。
-
-**反転の段取りは `CardFlipBeam.play_flip()` が持つ**(光の筋と駒の裏返りが対になっており、対局画面へ置くと1000行の上限を圧迫するため)。**反転の演出は `CardFlipBeam`(光の筋)と `CardView.play_flip()`(駒の裏返り)の2段で作る。**
-`MatchState.unit_flipped` を受けて、まず反転した側の情報帯から対象の駒へ光の筋を伸ばし、
-届いたところで駒を持ち上げて裏返す。**光の筋は対局画面の `_draw()` ではなく独立した
-オーバーレイのノードとして持つ**。`Control._draw()` は自分の子より背面に描かれるため、
-画面側で描くと卓と駒に隠れて筋がほとんど見えない(実際にそうなった)。
-
-**反転権(GameDesign.md 2章)は `play_flip()` の第4引数 `actor_side` で向きを渡す。**
-通常の反転は「駒の持ち主 = 手を出した側」が常に成り立つため、光の筋は駒の持ち主の
-情報帯から伸びる。反転権は敵味方どちらの駒も対象に取れ、この前提が崩れるため、
-`MatchState.flip_right_used(actor_side, target_side, slot)` を別のシグナルとして受け、
-`play_flip(self, target_side, slot, actor_side)` のように駒の持ち主(`target_side`)と
-手を出した側(`actor_side`)を分けて渡す。
-
-**攻撃は `CardView.play_strike()` が駒そのものを動かして見せる**(GameDesign.md 9章)。
-「寄る → 溜める → 当てる → 戻る」の4段を1本の `Tween` で組み、**駒は上端を支点に振れる**
-(`_strike_pivot`)。`Control` の `pivot_offset` は回転と拡縮の両方に効いてしまうため、
-描画側で上端を中心にした変換を掛ける。攻撃側だけが渡っていき、**防御側は当たった瞬間に
-`play_shatter()` と小さな揺れで受ける**。攻撃の解決そのもの(`MatchState.attack()`)は
-演出を待たず即座に済ませ、**演出は結果を後から見せるだけにする**。ロジックを演出の完了へ
-依存させると、リプレイ・観戦・CPUの連続着手がすべて演出の尺に縛られるため。
-
-**相打ちで砂時計を狙った攻撃は、防御側に `CardView.play_counter()` も重ねる**
-(GameDesign.md 9章)。`play_shatter()` だけでは防御側が一方的に受けているようにしか
-見えなかったため、**台座正面の紋章(`CardViewPaint.pedestal_plaque()`)そのものを攻撃側へ向けて
-短く突き出し、すぐ戻す**軽い一撃を足した。全身が渡っていく攻撃側の演出とは別枠にし、
-`CardView.counter_offset` を紋章の描画位置へ足すだけに留める(台座・輪・体力表示は動かさない)。
-発火元は `CardMatchStrike.capture()` で、**攻撃を適用する前に**防御側のユニットと
-その攻撃力を控えておく(適用後は破壊されて盤面から消えている可能性があるため)。
-攻撃力が0(出したばかりの駒が狙われた場合)は実際に反撃していないため突き出さない。
-突き出す向きは、攻撃側が防御側から見てどちら側に立っているか(`CardViewStrike.play()` が
-`side_x` として計算しているのと同じ符号)を `CardMatchStrike` 側でも算出し、
-攻撃側のいる方向へ向ける。相手プレイヤーを狙った攻撃(`target_slot == -1`)には
-紋章が無いため、この演出自体を発生させない。
-
-**単体を狙う設置効果・トリガーは、`CardMatchEffectStrike` が `CardMatchStrike` と対になる
-進行役として動く**(GameDesign.md 9章)。`CardEffectResolver._apply()` は、対象が単体
-(`ENEMY_UNIT` / `ALLY_UNIT`、または相手プレイヤーそのもの)のときだけ、光の筋
-(`effect_targeted`)の代わりに `MatchState.effect_struck` を発行する
-(`_is_single_unit_target()` で判定)。
-
-**相手全体を狙う打撃(`ALL_ENEMY_UNITS` × `DAMAGE_UNIT`/`DROP_SAND`)は、
-`MatchState.effect_struck_many`(`targets: Array` に `{"side":,"slot":}` を複数並べる)を
-発行する**(2026-09-14)。`EmblemStrikeFx` を単一の飛翔だけでなく複数の飛翔
-(`_flights: Array[Dictionary]`)を同時に進める形へ拡張し、`play()`(単体・既存)と
-`play_many()`(複数・新設)の2つの入口を持つ——**進捗(`_progress`)は全飛翔で共有する**
-ため、対象の数だけ紋章が同時に発射され同時に着弾する。`CardMatchEffectStrike._on_impact()`
-は元々 `_damage` を配列として扱っており(複数ヒットを想定して作ってあった)、
-`hold_damage()` が呼ばれるたびに要素を足すだけで**変更なしに複数体の砂の飛散を捌ける**。
-**味方全体を狙う恵与(`ALL_ALLY_UNITS` × `ADD_TOTAL`/`ADD_ATTACK`/`DROP_SAND`/`GRANT_KEYWORD`)も
-同じ `_strike_many()` を `DESCEND` で通す**(2026-09-21。それまでは光の筋のままだった)。
-
-#### 紋章の出どころ(`CardEnums.EffectOrigin`。2026-09-21)
-
-`effect_struck` / `effect_struck_many` の第2引数 `source_slot` だけでは、砂術(手札から撃つ)と
-余砂(駒が既に盤面から降りている)の紋章をどこから飛ばせばよいか決まらず、どちらも
-`source_slot < 0` で演出が丸ごと落ちていた。**末尾に `origin: CardEnums.EffectOrigin`
-(`UNIT` / `SPELL` / `DEATH`)を足し、`CardMatchEffectStrike` が出どころの座標を型から決める。**
-
-| origin | `source_slot` | 出どころ | 飛ぶ前の見せ方 |
-|---|---|---|---|
-| `UNIT` | 盤面の枠 | 駒の中心 | 従来どおり即座に飛ぶ |
-| `SPELL` | -1 | **自分の情報帯の中心**(`bar_for(side)`) | `EmblemStrikeFx.RISE` の間、紋章が大きく浮き上がってから飛ぶ |
-| `DEATH` | 砕けた枠 | **台座の銘板の位置**(`CardView.PEDESTAL_CENTER_Y`) | `EmblemStrikeFx.LINGER` の間、銘板として台座に残ってから飛ぶ |
-
-- `CardEffectResolver` は `resolve()` の入口で出どころを1度だけ決める(`_origin`)。
-  `_slot_of()` が枠を返せば `UNIT`、`hint` に `death_slot` があれば `DEATH`
-  (`MatchState._destroy_unit()` が `_fire(..., {"death_slot": slot})` で渡す)、
-  それ以外(`cast_spell()` が作る盤面に無い `CardInstance`)は `SPELL`。
-  **`from`(`_slot_of()` の戻り値)は対象の解決のために従来のまま残し、演出の出どころとは
-  分けて持つ**——`DEATH` で `from` を砕けた枠に差し替えると、`ALLY_UNIT` の除外や `SELF` の
-  判定が空の枠を指すことになる
-- **対象を取らない効果(ドロー・召喚)にも紋章の行き先を与える。**`DRAW` は出どころが
-  `SPELL` / `DEATH` のとき新設の型 `EffectVisualStyle.PULSE`(飛ばずにその場で光の輪を出して
-  消える)を `target_slot = -1` で発行する(`UNIT` のときは従来どおり `effect_drawn` →
-  `play_spark()`)。`SUMMON` は出どころによらず、置く先の空き枠へ `DESCEND` で飛ばす
-  (`_summon()` が選ぶ枠と同じ「最初の空き枠」を先に求めて発行する)
-- **`RETURN_TO_HAND` は新設の型 `RECALL`**、**`INVERT_PLAYER_HP` は `SPIN` を自分のHPバーへ**。
-  この2つの置き換えで `_beam()` を呼ぶ効果が1つも無くなるため、`_beam()` と
-  `effect_targeted`、`CardMatchEffects._on_effect_targeted()` は削除する。**光の筋
-  (`CardFlipBeam`)が残るのは通常の反転とドローの山札→手札だけ**
-- **enum へ足す値(`PULSE` / `RECALL`、`EffectOrigin` 自体)は末尾に置く**(11章)
-
-**砕けた駒の余砂は、崩落を先に見せてから銘板が飛ぶ。**`_destroy_unit()` は `_fire(ON_DEATH)` →
-`unit_destroyed` の順で出すため、`effect_struck(DEATH)` が先に届いて `CardMatchEffectStrike` が
-armed になり、そのままだと崩落(`_on_unit_destroyed` の `_defer()`)が着弾まで持ち越されて
-順序が逆になる。`CardMatchEffects._on_unit_destroyed()` は
-`effect_strike.is_death_origin(side, slot)` が真なら持ち越さず即座に `play_break()` を呼び、
-`EmblemStrikeFx` は `LINGER` のあいだ台座に銘板を描いてから飛ぶ。**攻撃の演出中に死んだ
-場合(相打ちで余砂持ちが砕けた)は、飛ぶこと自体を攻撃の着弾まで持ち越す**——
-`CardMatchEffectStrike.on_effect_struck*()` は `_screen._strike.busy()` なら段取りを
-`_pending` に積み、`CardMatchStrike._on_impact()` が `effects.flush()` の直後に
-`effect_strike.flush()` を呼ぶ。この間も `busy()` は真を返す(盤面の再同期を遅らせるため)。
-
-`CardMatchStrike.on_unit_damaged()` / `on_unit_ticked()` は **先に `effect_strike.busy()` を見て**
-持ち越す(以前は攻撃側の `_armed` を先に見ていた)。相打ちの被ダメージは余砂の発火より前に
-届くため、攻撃側が先に控える順序は変わらず、余砂の効果(バースト等)の被ダメージだけが
-紋章の着弾へ揃う。**`unit_ticked`(砂嵐・ラトル・ドリップの砂落ち)も同じく着弾まで持ち越す**
-(`hold_tick()`)。以前は紋章が届く前に砂が流れていた。
-
-**砂へ還す(`RECALL`)の駒の消え方は `CardUnitFx.play_recall(card, toward)`** が持つ
-(着地・崩落と同じく、起きた瞬間に渡された引数だけで完結する演出)。`MatchState.unit_returned`
-を `CardMatchEffects` が受け、`_defer()` で `view.play_recall(card, hand_center(side))` を積む——
-`RECALL` の紋章が armed の間は持ち越されるため、着弾の瞬間に駒が縮んで手札の方向へ
-吸い込まれる。`_hand_center()` はこのために `hand_center()` として公開する。
-
-**通常の反転と設置の着地は、台座の銘板を `CardView.play_spark()` で短く光らせる**
-(GameDesign.md 9章)。`CardFlipBeam.play_flip()` が `view.play_flip()` を呼ぶ箇所と、
-`CardMatchEffects._on_unit_played()` の `play_land()` の直後に足す。新しい描画は持たない。
-
-`effect_struck` は `style: CardEnums.EffectVisualStyle`(`STRIKE` / `DESCEND` / `DRAIN` /
-`SPIN`)を運ぶ。型は `_apply()` の分岐そのものが決める——`DAMAGE_UNIT` / `DESTROY_UNIT` /
-相手プレイヤーへの `DAMAGE_PLAYER` / `DAMAGE_PLAYER_PER_ENEMY_UNIT` は `STRIKE`、
-`ADD_TOTAL` / `ADD_ATTACK` / `GRANT_KEYWORD` / 自分への `HEAL_PLAYER` は `DESCEND`、
-`SILENCE` は `DRAIN`、`SWAP_STATS` は `SPIN`。**型ごとの紋章の動き方は `EmblemStrikeFx`
-(`scripts/ui/emblem_strike_fx.gd`)が持つ**(飛ぶ尺・弧の高さ・色味・着弾後の輪)。
-相手プレイヤーを狙う効果(`target_slot == -1`)は、対象の位置を `_screen._geometry
-.hp_bar_center(target_side)` から取る(砂時計ではなくHPバーへ飛ぶ)。
-
-- `effect_struck` の受け口(`CardMatchEffectStrike.on_effect_struck()`)は、対象への
-  変化(`MatchState.damage_unit()` 等)が実際に呼ばれる**直前**に同期的に発火する
-  (`_apply()` の中で `emit()` の次の行が状態の変更のため)。ここで `_armed = true`
-  にしてから `EmblemStrikeFx.play()` でTweenを組み始める——この「armする」処理自体は
-  yieldしないので、直後の状態変更が `unit_damaged` 等を発行する時点では
-  既に armed 済みになっている
-- `CardMatchStrike.on_unit_damaged()` は、自分(`_armed`)が忙しくなければ
-  `_screen.effect_strike.busy()` も見て、忙しければ `CardMatchEffectStrike.hold_damage()`
-  へ渡す。**`unit_damaged` の受け口は1箇所(`_strike`)のまま**にし、「どちらの進行役が
-  いま演出を持っているか」で振り分ける形にしている(2つのクラスが同じ信号へ別々に
-  つなぐと、忙しくない方が即座に処理してしまう)
-- `unit_destroyed` / `unit_shielded` は既存の `CardMatchEffects._defer()` が
-  `_screen.strike_busy()`(`_strike.busy() or _effect_strike.busy()` に拡張済み)を見て
-  自動的に持ち越すため、**`CardMatchEffectStrike` 側で個別に処理する必要が無い**。
-  `_on_impact()` で `_screen.effects.flush()` / `_screen.sound.flush()` を呼べば揃って出る
-- **盤面の揺れ(`CardMatchShake.hit()`)は `STRIKE` のときだけ鳴らす。**`DESTROY_UNIT`
-  のように `unit_damaged` を伴わない打撃もあるため、被ダメージ量が控えられていなければ
-  控えめな既定値(4)で揺らす。恵与・払拭・反転はそれぞれの演出自体が当たりの手応えを
-  持つため、重ねて揺らさない
-- **`SPIN` は、紋章が届いた瞬間に対象の `CardView.play_flip()` を呼ぶ。**体力と攻撃力の
-  入れ替え(`SWAP_STATS`)自体は既に解決済みのため、通常の反転(GameDesign.md 3章)と
-  **同じ裏返りの演出をそのまま再利用する**だけで済む。専用の反転描画を新設していない
-- 紋章が届いた瞬間(`EmblemStrikeFx.impact`)に上記の演出をまとめて出し、
-  終わった瞬間(`finished`)に `_screen.on_strike_finished()`(`refresh()` を含む)を呼ぶ。
-  **`CardMatchScreen._finish_action()` は `_strike.play()` に加えて
-  `_effect_strike.busy()` も見て、armed なら `refresh()` を遅らせる**
-
-**ドローを起こす設置効果・トリガー(エコー・クラック・ページ・メモリー等)は、
-別の軽い信号 `MatchState.effect_drawn(source_side, source_slot, count)` を持つ**
-(GameDesign.md 9章)。`_apply()` の `DRAW` 分岐が、駒が盤面上にあるとき(`from >= 0`)
-だけ発行し、`CardMatchEffects._on_effect_drawn()` が `_defer()` 経由で
-`CardView.play_spark()`(紋章の周りへ短い光の輪を出すだけの軽い合図)を呼ぶ。
-**`effect_struck` と違い armed/持ち越しの仕組みを持たない**——盤面の駒を破壊・移動
-させる効果ではなく、タイミングのズレが実害にならないため。余砂(破壊時)と砂術は
-`_slot_of()` が -1 を返すためこの経路には乗らず、`PULSE` の紋章(上記)で見せる。
-
-**`CardView.play_counter()`(相打ちの反撃)と `play_spark()`(ドローの合図)の段取りは
-`CardViewFlourish` が持つ**(`scripts/ui/card_view_flourish.gd`)。`CardView` が
-1000行の上限に達したため、`CardViewStrike` と同じ形で切り出した——状態
-(`counter_offset` / `spark_amount`)は `CardView` に残して描画もそちらが行い、
-`CardViewFlourish` は Tween を組むだけの薄い層にする。`CardView` 側は
-`play_counter()` / `play_spark()` という同名の薄い委譲メソッドを持ち、呼び出し側の
-コードは変える必要がない。
-
-**この機能を作る過程で、`_perform()` の呼び出し元が揃って踏んでいた既存のバグを見つけて
-直した(2026-09-13)。**`_perform()` は `_finish_action()` の中で、演出が armed でなければ
-その場で `refresh()` する。ところが `card_match_touch.gd`(自分の攻撃)・
-`card_match_effect_target.gd`(設置効果の対象確定)・`card_match_spell.gd`(砂術の対象確定)は
-いずれも **`_perform()` の直後に、呼び出し側でも重ねて `_screen.refresh()` を呼んでいた**。
-攻撃のように `_strike` が armed になる手ではこの重複呼び出しが無害だったため気づかれずに
-残っていたが、**`MatchState` は `_perform()` の中で既に更新済み**(破壊された駒は
-`board[...]` から消えている)のため、armed のケースでこの重複呼び出しが走ると、
-**演出がまだ動いている最中に、既に破壊し終わった後の盤面を見せてしまう**(実際に
-「相打ちのとき、当たるより前に駒が消えて見える」という形で踏んだ)。呼び出し元の
-`refresh()` はいずれも削除し、`_finish_action()` の判断だけに任せている。**`_perform()` を
-呼ぶ新しい経路を足すときは、直後に `_screen.refresh()` を重ねて呼ばないこと。**
-`_finish_action()` が必ず適切なタイミングで呼ぶ。
-
-**当たった瞬間の盤面の揺れは `CardMatchShake` が持つ**(GameDesign.md 9章)。
-`CardMatchStrike._on_impact()` が、砂の飛散・持ち越した音と同じこの1点から呼ぶ。
-
-- **揺らす対象は `bind()` で登録した卓と場の駒だけ**とし、情報帯・手札・行動の列は入れない。
-  HP・マナ・山札は判断のために読み続けるものであり、攻撃のたびに揺れると読めなくなる
-- **基準位置を控えてから `base + offset` を書く。**毎フレーム `position` へ足す形にすると
-  揺れが累積して元の位置へ戻らない。**登録できるのは位置が後から変わらないものだけ**で、
-  毎ターン並べ替わる手札は構造的に対象にできない
-- 強さは当てた駒の攻撃力から決める。値は `CardMatchStrike.capture()` の時点で控える
-  (適用後は倒された駒が盤面から消えており、攻撃力を引けない)
-- **揺れている最中に次の攻撃が当たったら、振れ幅は足さずに大きいほうで上書きする。**
-  連撃や6枠が並ぶ中盤で累積し、盤面がぶれ続けるのを防ぐ
-
-**砂の演出は2種類を別のシグナルで受ける。**`MatchState` は被ダメージを `unit_damaged`、
-ターン終了の1粒を `unit_ticked` として別々に発行し、`CardView` が
-`play_shatter()`(砕けて外へ散る・赤)と `play_drop()`(下の部屋へ流れる・琥珀)で描き分ける。
-**この2つを取り違えるとルールを誤解する**(前者は総量が減り、後者は総量が変わらない)ため、
-演出上もっとも重要な区別として扱う(GameDesign.md 9章)。同じシグナルに相乗りさせない。
-
-**攻撃以外の演出は `CardMatchEffects` が1箇所で受ける**(GameDesign.md 9章)。
-`MatchState` へ足した5つのシグナル(`unit_shielded` / `cards_drawn` / `fatigue_damage` /
-`effect_targeted` と既存の `unit_played` / `unit_destroyed`)だけを見て、
-着地・崩落・光の筋・硝子の閃光・山札の脈打ちを出す。**攻撃の演出中に起きたぶんは
-当たる瞬間まで持ち越す**(`CardMatchStrike._on_impact()` が `flush()` を呼ぶ)。
-解決と同時に見せると、駒がまだ渡っている最中に相手が砕け始めるため。
-
-**破壊の演出は「絵を縦に3つへ割って左右へ落とす」形にする。**割れ目を線で描いて薄くする
-だけでは、絵が消えかけただけに見えて「壊れた」と読めなかった(実際に描画して確認した)。
-**枠が空になった後も描き続ける**ため、`CardView.play_break()` は `CardData` を受け取って
-絵と矩形をその時点で `CardUnitFx` へ渡す(次の同期で `card` は null になる)。
-
-**硝子が割れたことは、与ダメージが0かどうかでは分からない**(膜が吸った場合も、
-攻撃力0の駒に殴られた場合も0)。`MatchState` は受ける前の `glass_intact` を控えておき、
-消えていたときだけ `unit_shielded` を出す。
-
-**光の筋(`CardFlipBeam`)は同時に何本でも出せる**。全体に効く効果(スイープ)が対象の数だけ
-伸ばすため、1本ぶんの状態ではなく `_beams` の配列として持つ。**進捗は Dictionary の要素**に置く
-(ラムダは外側のローカル変数を値でキャプチャするため。11章)。色は反転=金 /
-効果=対象に応じた色(相手なら赤・味方なら緑)で分ける。
-
-**`effect_targeted` は効果を適用する直前に出す。**破壊のように対象が盤面から消える効果でも、
-筋の行き先がまだ残っている状態で受け取れるようにするため。**余砂は既に盤面から降りており
-出どころの枠が無い**(`_slot_of()` が -1 を返す)ので、その場合は筋を出さない。
-
-**設置効果の対象選択**は `CardMatchSelection.TARGETING` として持つ。カードを出す枠まで
-決めた時点でいったん止め、相手のカードを押すと `play_card()` の `target` へ渡して確定する。
-相手の場が空のときは選ばせる意味がないためそのまま出す。案内は**行動ボタンの列へ出す**
-(盤面へ重ねると、選ばせたい相手のカードそのものを隠してしまう)。
-
-`Main` は `card_match_screen` を `_ready()` で生成して `_screens` へ加える(`.tscn` を
-持たないため)。**対局(ランダムマッチ / ルームマッチ / CPU戦)はいずれも、開始の前に
-デッキ選択画面(`CardDeckListScreen` の PICK モード)を挟む**。`Main._request_battle()` が
-待たせる導線を `Callable` として控え、選ばれた時点で `CardDeckSave.set_selected_index()` を
-書いてから呼ぶ。**保存済みのデッキが1つも無いときだけ選択画面を挟まない**(選ぶ対象が
-存在せず、プリセットの「基本」で入るため。GameDesign.md 18章)。デッキは
-`CardDeckSave`(`user://card_decks.json`、v1.0の `DeckSave` とは形式が違うためファイルを
-分ける)の `selected_deck()` から読む。
-
-**能力の実演(`CardEffectPreview`)は、カード1枚ずつではなく語彙ごとに台本を持つ**
-(GameDesign.md 9章)。`show_card()` が `CardData` から
-「named/plain キーワード → `Trigger.ON_FLIP` → `effects` の `EffectType`」の順に
-台本(`Script` enum)の並びを組み、能力を持たないカードには基本の砂の動きの台本を当てる。
-**カードが増えても、既存の語彙の組み合わせであれば実演は自動的に付く**ため、
-新しい `.tres` を1個作るだけで済むという運用(1章)を崩さない。
-
-**台本は「何が起きるか」だけを書き、「いつ起きるか」は書かない。**設置・反転・余砂で
-同じ効果が載ることがあるため、台本が `stage["trigger_note"]` へ効果の中身だけを置き、
-`_stage()` が entry の `trigger` から「場に出したとき」「反転したとき」「壊れたとき」を
-前へ付ける。**これを怠ると、余砂のカードの実演が「場に出したとき、カードを1枚引く」と
-嘘を言う**(スプラウトを足した時点で実際にそうなった)。トリガーを持たない実演
-(守護・硝子など)は従来どおり `stage["note"]` へ完成した文を置く。
-
-台本は「時刻 → 盤面の状態」を返す純粋な関数として書き、`_process()` で進めた
-経過時間だけを状態として持つ。駒は `CardView` を流用せず**この中で簡略化して描く**
-(実演で見せたいのは体力・攻撃力・砂・矢印の動きだけで、紋章や台座は情報を増やさないため)。
-
-**描くのは紙のインクの図版**(GameDesign.md 9章)で、部品は `InkFigure` が持つ。
-
-- **部品の組み合わせだけで図版を組めるようにする。**新しいキーワードが増えても、
-  部品を1つ足せば台本が書ける状態を保つ(カードを毎日足す運用のため)
-- **`InkFigure` は `UiPaint` と同じく static だけを持ち、第1引数に描画先を取る。**
-  実演は `Control._draw()` からしか呼ばれないため RID ではなく `CanvasItem` を受け、
-  `draw_polyline()` などをそのまま使う
-- **砂時計の下の部屋の砂は台形で描く。**器が下へ広がっている以上、底は必ず満杯であり、
-  三角形にすると砂が宙に浮いた山に見える(実際に描いて気づいた)
-- **基本の砂の実演は1粒ずつ落とす。**飛ばして描くと「毎ターン1粒」というルールと
-  食い違う。間を省くときは矢印ではなく「…」でつなぐ
-
-**デッキ編集は「左=全カードのグリッド / 右=編成中のデッキ」の2カラムで組む**
-(GameDesign.md 9章)。左は絞り込みの列(`CardDeckFilter`)+ 名前の検索欄 + `GridContainer`、
-右は `PanelContainer` の中にデッキ名・枚数・`CardDeckShelf`(30枠の棚)の並び。
-**以前は一覧を画面下部の横1行の横スクロールに置いていた**が、カードが増えるほど
-目的の1枚へ届くまでの横送りが伸びるため、グリッド + 絞り込みへ変えた。
-
-- **絞り込みと検索はモーダル(`CardDeckFilter` / `CardDeckFilterModal`)が集約して持つ。**
-  画面上部にずらっと並べていたチップをモーダルダイアログへ移し、左カラム上の「絞り込み」ボタンから
-  開く形にした。コスト・キーワード・名前の3条件を `matches(card)` として合成し、画面側は
-  `changed` を受けて並べ直す。適用中の条件数がある場合はボタンにバッジを表示し、一括リセットも備える
-- **編成中のデッキは `CardDeckShelf`(`scripts/ui/card_deck_shelf.gd`)が30枠の決まった棚として
-  描く**(GameDesign.md 9章)。1枚ずつの `Control` を30個並べるのではなく、
-  **1つの `Control` が全枠を `_draw()` で描き、当たり判定は矩形の表として持つ**。
-  30個のノードを作ると、枚数を1枚動かすたびに生成と破棄が走る
-  - **枠の数は `MatchState.DECK_SIZE` から実行時に読む**(横 `COLUMNS`=6、縦はその商)。
-    定数へ焼くと、2章の枚数を動かしたときに棚だけが古い形のまま残る。
-    **const から他クラスの const を参照しない**という制約(11章)にも掛かる
-  - **枠の大きさは全枠そろう。**段ごとに詰め方を変えていた頃は、1枚動かすだけで
-    駒の大きさが変わって落ち着かなかった
-  - **空き枠も1つの枠として描き、当たり判定にも積む**(押しても何も起きない)。
-    描く位置と押せる位置を同じループで決めないと、必ずどこかで食い違う
-  - **バッジの半径は駒に比例させる**(`clampf(art_w * 0.20, 8, 13)`)
-  - **共有のデッキ表(`CardDeckSheet`)も同じ棚を使う。**変えるのは `columns`(10)と
-    `readonly`(ホバーも押下も受けない)の2つだけで、**共有のためだけの並べ方を作らない**
-- **詳細(`CardDetailPanel`)は `interactive = false` で持ち、一覧のカードや編成中の駒へ
-  カーソルを乗せている間だけ出す**(GameDesign.md 9章)。幅は右カラムぶん(400px)で、
-  `compact` の中身は縦積み。**出す位置は `CardDetailPanel.place_near()` が決める**
-  (カーソルの右下を既定に、はみ出す側だけ折り返す)。**置き場の規則を画面ごとに持たない**——
-  対局画面も同じ関数を通し、収める範囲(`bounds`)だけを画面が渡す。
-  パネルは `MOUSE_FILTER_IGNORE` でホバーを奪わないため、
-  カーソルの近くへ出しても出し消しを繰り返さない。外れてから消すまでの猶予は
-  対局画面と同じ理由で置く
-- **左右のカラムは共通ヘッダーが決めるコンテンツ領域(`ScreenHeader.CONTENT_TOP` / `CONTENT_HEIGHT`)へ揃える**(`GRID_RECT` / `SIDE_RECT`)。**高さを画面ごとに数えない**(以前は584pxと直に書いてあり、実際のコンテンツ開始位置(y=136)と食い違って下端の外周余白24pxが消え、一覧の最下段が画面の端で切れていた)。
-  以前は絞り込み列のぶん左側だけ下がり、右側上部に46pxの余白ができていたが、モーダル化により
-  左右の高さが揃い、一覧グリッドも縦幅が広がってカードを探しやすくなった
-- **編成中の欄は上から「デッキ名・枚数 / 30枠の棚」とする**。
-  **マナカーブの棒グラフは持たない**(GameDesign.md 9章)。並びがコスト順に固定されている
-  ため、`CardManaCurve` と `CardDeckBand` は参照0件になり削除した
-- **「あと何枚」の帯も持たない**(GameDesign.md 9章)。空いている枠の数がそのまま残りであり、
-  帯を出すと**そのぶん棚の高さが減って、足りているときと足りないときで駒の大きさが変わる**
-
-一覧のカードには `CardView.badge` で「2/2」を出し、入れられないカードは暗くする。
-**保存は30枚ちょうどのときだけ通す**(枚数が足りないデッキで対局へ入れないようにするため)。
-編集画面は**必ずデッキ一覧から開く**ため、`open(index)` で何番目のデッキを編集するのかを
-受け取り(-1 は新規作成)、閉じたら一覧へ戻る。デッキ名の入力欄は編成中の欄の上端へ置く
-(共通ヘッダーの右側は保存・プリセット・コードで埋まっており、入力欄を足すと画面タイトルへ
-食い込む)。
-**ボタンの既定の文字色は共通テーマ側で明るくしてある。**`main_theme.tres` の
-`Button/colors/font_color` は画像ボタン時代(明るい真鍮の面)に合わせた黒に近い色だったが、
-コード描画のボタンは中央パネルが暗いスレートのため、その色では文字が沈んで読めない。
-画面ごとに `theme_override_colors/font_color` を足して回る対症療法になっていたので、
-**テーマの既定をオフホワイトへ変えた**(指定を書き忘れた画面だけ黒い文字になる状態を無くすため)。
-`font_hover_color` だけは暗いままにしてある。ホバー時はパネルが明るい琥珀へ変わるため。
-
-`CardMatchScreen.start_cpu_match()` が `MatchState` を生成し、CPUの手番は `Timer` で
-`CPU_THINK_SECONDS` の間合いを置いてから `CardCpuStrategy.choose_action()` を1手ずつ適用する
-(1手ずつなのは、まとめて指すと何が起きたか追えないため)。
+#### 4.0.6 シーン構成
 
 ```
 Main
-├── TitleScreen              # 起動して最初に出る画面。押すとホームへ移る
-├── HomeScreen               # 下部3ボタン(ルール/デッキ/バトル)で機能を切り替える
-├── ReplayListScreen         # 保存済みリプレイの一覧
-├── AccountScreen            # アカウント(14章)
-│   (上記のうち対局画面を除く各画面は、先頭の子として共通の ScreenHeader を持つ)
-├── CardMatchScreen          # 対局・観戦・リプレイ再生(コードで組み立てる。4.0節)
-├── CardDeckListScreen       # デッキ一覧 / 対局前のデッキ選択(同上。4.5節)
-├── CardDeckEditorScreen     # デッキ編集(30枚・同名2枚まで。同上)
-├── CardListScreen           # カード一覧(同上)
-├── RuleScreen               # ルール(遊び方)の紙芝居(同上。4.2節)
-├── KeywordDictScreen        # キーワード辞書(同上。4.3節)
-├── CardSoloMapScreen        # ソロモードのステージツリー(同上。10.15節)
-├── CardRoomScreen           # ルームマッチ(同上。6.5節)
-└── CardRandomMatchScreen    # ランダムマッチの待機(同上。6.6節)
+├── TitleScreen              # 起動して最初に出る
+├── HomeScreen               # 下部5タブ
+├── ReplayListScreen
+├── AccountScreen
+│   (対局画面を除く各画面は先頭の子として共通の ScreenHeader を持つ)
+├── CardMatchScreen          # 対局・観戦・再生(コードで組み立てる)
+├── CardDeckListScreen / CardDeckEditorScreen / CardListScreen
+├── RuleScreen / KeywordDictScreen / ScreenGuideScreen
+├── CardSoloMapScreen / CardRoomScreen / CardRandomMatchScreen / CardRankedMatchScreen
+└── CardShopScreen / CardStatsScreen / CardLabScreen / CardRankScreen …
 ```
 
-**v1.0(位相制)の画面と、それを支えていたクラスは削除済み。**`MatchScreen` 一式・
-`GameBoard`/`HourglassSlot` 系・`DeckListScreen`/`DeckEditorScreen`/`HourglassListScreen`/
-`BattleDeckPickerScreen`、および `GameState`/`EffectResolver`/`HourglassData`/`SkillData`/
-`MatchSetup`/`DeckSave`/旧CPU戦略と `data/hourglasses/*.tres` を撤去した。
-**v1.0の棋譜は再生できなくなったため、`ReplayListScreen` は `seed` を持つ棋譜だけを一覧に出す**
-(記録そのものは消していない)。
+v1.0(位相制)の画面・クラス・`data/hourglasses/*.tres` は削除済み。`ReplayListScreen` は `seed` を持つ棋譜だけを一覧に出す。
 
-- `TitleScreen`(`scenes/title_screen.tscn`/`scripts/ui/title_screen.gd`):起動時に出る入口の画面(GameDesign.md 9章)。背景・ロゴ・「クリックしてはじめる」の3要素だけを持ち、押されたら`start_requested`を出すところまでが責務で、遷移の演出は`Main`が持つ。ロゴは`assets/title/logo.png`があればそれを、無ければ`TitleLogo`のコード描画を表示する(`ResourceLoader.exists()`で分岐する。`preload`だとファイルが無い時点でコンパイルが通らないため)。背景も同様に`assets/backgrounds/processed/title/background.png`があればそれを、無ければホーム画面のものを流用する
-- `TitleLogo`(`scripts/ui/title_logo.gd`、`Control._draw()`のみのコード描画):ロゴ画像が未配置のときの代替表示。金の面と影を1pxずらして重ね、濃紺の`draw_string_outline()`で縁取る。色は`UiPalette`経由
-- `SandTransition`(`scripts/ui/sand_transition.gd`、`Control._draw()`のみのコード描画):タイトルからホームへ移るときだけ使う専用トランジション(GameDesign.md 9章)。`Main`が`_ready()`で1個生成して最前面へ置き、`cover()`(砂が上から降りて画面を覆う)と`reveal()`(砂が下へ抜ける)をawaitして使う。砂の層は、砂面を`EDGE_SEGMENTS`分割した折れ線と奥側の辺で作る四辺形へ**頂点カラーのグラデーション**を乗せて塗る(段ごとの単色塗りだと境目が縞に見えるため)。**アンカーは`set_anchors_preset()`ではなく`anchor_right`/`anchor_bottom`への直接代入で設定する**。`set_anchors_preset()`は「今の矩形を保つように」offsetを計算し直すため、コードで生成した直後(サイズ0)のノードへ使うと0サイズのまま固定され、何も描かれない。砂が出ている間は`mouse_filter = STOP`で下の画面の操作も塞ぐ
-- `Main`:画面切り替え(`_show_only()`)はハードカットではなくクロスフェードで行う。**ただしタイトル→ホームだけは`_on_title_start_requested()`が「ロゴの演出→`SandTransition.cover()`→`_show_only()`→`SandTransition.reveal()`」の順に進める**(クロスフェード自体は砂の下で起きるため見えない)。表示中の画面と次の画面の`modulate:a`をTweenで補間し、実行中のTweenは新しい遷移の開始時に必ずkillしてから作り直すことで連打・割り込みに耐える。遷移中は透明な`ColorRect`ブロッカーを最前面に重ねて全画面の入力を塞ぐ。**v5.0の3画面は`.tscn`を持たないため`_ready()`で生成して`_screens`へ加える**
-- **ホーム画面の入口は `HomeTile`(`scripts/ui/home_tile.gd`)が持つ**(GameDesign.md 9章)。
-  見出し・副題・紋章の透かし・中身の砂時計を1枚の札として描く。
-  - **`Button` を継承する。**既存のタブが `Button` として参照している枠をそのまま
-    置き換えられ、押下・無効・ホバーの扱いも native のまま使える
-  - **文言は `text` へ入れず自前で描く**。見出しと副題を上下に置くため、
-    native の中央揃え1行では収まらない
-  - **紋章の透かしは `CodedButtonStyle.inner_rect()` の中へ収める。**
-    ボタンの矩形を基準に置くと**額縁へ載り上がって外へはみ出す**(実際にそうなった)。
-    額縁の太さはボタンの大きさで変わる(4章)ため目分量の余白では求められず、
-    **内側の矩形を返す関数を1つ持ってそこだけを出どころにする**
-  - **`.tscn` は書き換えず、`_ready()` で同じ場所・同じ大きさの札へ差し替える**
-    (`_to_tile()`)。並び順(`get_index()`)も引き継ぐ
-  - 副題は画面の外で変わる(デッキ・砂金)ため、**タブを開くたびに読み直す**
-    (`HomeScreen._select_tab()` / `refresh_account()` から `DeckTab.refresh()`)
-- **ホーム画面のタブは、上端112pxをアカウント帯のために空け、残りの領域の中央へ内容を置く**。
-  ContentArea の高さは下部タブを除いた560pxしかないため、ここを守らないと内容が画面の外
-  (上はアカウント帯の裏、下は下部タブの裏)へ出る。実際にルールタブは先頭のボタンが画面上端で
-  切れ、バトルタブは最終行が下部タブへ潜り込んでいた
+- `TitleScreen`(`.tscn`):背景・ロゴ・開始の導線だけを持ち `start_requested` を出す。ロゴは `assets/title/logo.png` があればそれ、無ければ `TitleLogo`(コード描画)を `ResourceLoader.exists()` で分岐(`preload` だと無い時点でコンパイルが通らない)。背景も同様
+- `SandTransition`:タイトル→ホーム専用。`Main` が1個生成して最前面へ置き `cover()` / `reveal()` を await。砂面は折れ線 + 頂点カラーのグラデーション(段ごとの単色だと縞に見える)。**アンカーは `anchor_right` / `anchor_bottom` へ直接代入**(11章)。砂の間は `mouse_filter = STOP`
+- `Main._show_only()`:クロスフェード(`modulate:a` の Tween、実行中の Tween は kill してから作り直す、遷移中は透明な `ColorRect` で入力を塞ぐ)。タイトル→ホームだけ `_on_title_start_requested()` が「ロゴの演出 → `cover()` → `_show_only()` → `reveal()`」。`.tscn` を持たない画面は `_ready()` で生成して `_screens` へ
+- BGMの切り替えも `_show_only()` から1箇所で(`_track_for()`。9章)
 
-#### タブの再編(GameDesign.md 9章・2026-09-10)
+#### 4.0.7 ホーム画面
 
-対局の入口が4つのタブすべてに散っていた状態を解くため、タブを行いで分け直す。
+- **タブは行いで分ける**(GameDesign.md 9章): たたかう=`BattleTab`(`.tscn`)/ そろえる=`DeckTab`(`.tscn`)/ きろく=`RecordTab` / おぼえる=`RulesTab` / つくる=`LabTab`。**`.tscn` を持つ2つはクラス名を変えない**(`home_screen.tscn` が instance しているため。画面に出る名前との食い違いは許容)。`SoloTab` は削除済み
+- `BattleTab` の `.tscn` の縦並び(`Margin/VBox`)は使わず、`StatusLabel` だけを引き取る(`_take_over_status_label()`)。`.tscn` は書き換えない
+- **入口はどのタブも `HomeTile`**(`Button` 継承。見出し・副題・紋章の透かし・砂時計を自前で描く。`text` へは入れない)。`.tscn` は書き換えず `_ready()` で同じ場所へ差し替える(`_to_tile()`)。**紋章の透かしは `CodedButtonStyle.inner_rect()` の中へ収め、比率で決めたうえで上限で止める**(額縁へ載り上がる / 大きな札で文字より主張する)。`primary`(塗りつぶした真鍮)と `badge`(未受取の数。下部タブへも同じ静的な描画関数で打つ)を引数で持つ
+- 枠は `HomeFrame`(`content_panel.tres` のパネル + 真鍮のプレートの見出し)。**枠の右へ並べる行(ミッションの進捗)は `HomeFrame` が描く**(`Control._draw()` は子より背面なので、タブ側で描くと枠に隠れる)。`BattleTab._layout()` は復帰の帯(`ResumeBand`。縁を琥珀にして急ぐ用件だと分かるようにする)の有無どちらでも領域の中央へ置き直す
+- `HomeScrim`(`Background` の直後):上=アカウント帯 / 中=タブ / 下=下部タブ を別々の濃さで落とす。**上下は中より濃く、対称に。3つの濃さは揃えて動かす**(片方だけ変えると重心が寄る)。アカウント帯の下端に中央が濃く左右で消える真鍮の細線
+- 下部タブは幅を共通にし高さだけ変える(幅まで変えると `HBoxContainer` で他が押し出される)。非選択を下端へ沈め、選択中だけ帯の中央へ
+- アカウント帯は `.tscn` の幅460pxを `_ready()` で右端まで伸ばし、残高を右へ寄せる(`ACCOUNT_BAR_RIGHT_INSET`)。ホームの残高だけ `CurrencyChip.scale_factor` で大きく、`height_override` で名札と揃える。`CurrencyChip` は単位を小さく数値を大きく別々に描き、紋章と文字のあいだに縦の細線
+- 副題は画面の外で変わるため、タブを開くたびに `refresh()` で読み直す
+- ホーム画面のタブは上端112pxをアカウント帯のために空け、残り(560px)の中央へ内容を置く
+- **初回起動の判定は `UiState`**(`user://ui_state.json`)。`RulesTab` とそのタブボタンは `HomeScreen._ready()` がコードで生成(既存のボタンを `duplicate()`)
 
-| タブ | クラス | 前身 |
-|---|---|---|
-| たたかう | `BattleTab` | ランダム/ルームはそのまま。`SoloTab` の3つを引き取り、記録の3つを外した |
-| そろえる | `DeckTab` | **中身もクラスもそのまま**(デッキ編集 / 図鑑 / ショップ) |
-| きろく | `RecordTab`(新規) | `BattleTab` から抜いた記録の3つ(ミッション / 戦績 / リプレイ) |
-| おぼえる | `RulesTab` | **中身もクラスもそのまま** |
+#### 4.0.8 共通部品とUIクローム
 
-- **`.tscn` を持つ2つ(`DeckTab` / `BattleTab`)はクラス名を変えない。**
-  `scenes/home_screen.tscn` がこの2つを instance しているため、名前を変えると参照の
-  書き換えという実害のある作業を招く。**画面に出る名前と内部のクラス名が食い違うことは
-  許容する**——ただし `BattleTab` が「たたかう」を担うのは意味の上でも食い違わない。
-  `RulesTab` はコード生成だが、中身が変わらないため同じく維持する
-- **`SoloTab` は削除した。**CPU戦・ソロモード・リーサルパズルの3つは `BattleTab` の
-  下枠へ移り、遷移先のシグナル(`cpu_match_requested` 等)は `HomeScreen` の側で
-  そのまま中継するため `Main` の配線は変わらない
-- **`BattleTab` の `.tscn` の縦並び(`Margin/VBox`)は使わない。**枠を絶対座標へ置く
-  構成に合わないため、**待機中の文言(`StatusLabel`)だけを引き取って残りは捨てる**
-  (`_take_over_status_label()`)。`.tscn` そのものは書き換えない
-- **枠の右側へ並べる行(日課の進み具合)は `HomeFrame` が描く。**枠は `Control` であり
-  その `_draw()` は子より背面に描かれるため、**タブ側で描くと枠のパネルに隠れて何も
-  見えない**(実際にミッションの進捗が消えた。11章)
-- **背景の絵の上へ帯と幕を敷くのは `HomeScrim`(`scripts/ui/home_scrim.gd`)。**
-  `Background` の直後(タブの中身・アカウント帯・下部タブより背面)へ1枚だけ置き、
-  上=アカウント帯 / 中=タブの中身 / 下=下部タブ の3つを別々の濃さで落とす。
-  **上下の帯は中より濃くし、上下で対称にする**——そこに乗るのは真鍮の小さな部品
-  (名札・残高・タブ)で、枠のような大きな面を持たないため、地が明るいと輪郭が背景へ
-  紛れる。中は `HomeFrame` が自分の面を持つぶん薄くてよい。**画面の端へ向かって濃くする**
-  のが3つに共通の形で、絵の見えている中央がそのまま奥行きになる
-- **3つの濃さは揃えて動かす。**一度「下の帯だけ外す」形にしたところ、**上と中にも同じ
-  幕が掛かっていることが画面から読み取れず**、下だけ明るい不揃いな状態になった。
-  片方だけ濃さを変えると画面の重心がそちらへ寄る
-- アカウント帯の下端にだけ真鍮の細線を通し、**中央が濃く左右の端で消える**形にする
-  (端まで一様に引くと帯が1本乗ったように見える。`ScreenHeader` の暗幕と同じ)
-- **入口はどのタブも `HomeTile`(見出し + 副題1行 + 紋章)で組む。**`RulesTab` だけ
-  「文字だけのボタン + その外に置いた説明文」で組んでおり、**4タブを切り替えると
-  そこだけ作りが違って見えた**。説明は札の副題として1行に収める(GameDesign.md 9章
-  「添えるのは文で1行までとし」)。**中身の説明はそれぞれの画面が持つ**ので、
-  ホームの札は「そこで何ができるか」が分かれば足りる
-- **4タブとも「枠(`HomeFrame`)の中に札を並べる」形へ揃える。**`DeckTab` だけ枠を
-  持たないと、切り替えたときにそこだけ札が背景の上へ直に浮いて見える。`.tscn` の
-  `CenterContainer` はそのまま使い、**縦並びの幅を枠の内側いっぱいに広げてから各札を
-  左寄せにする**ことで、枠と中身の左端を揃えている
-- **枠は `HomeFrame`(`scripts/ui/home_frame.gd`)が持つ。**`RulesTab._add_frame()` に
-  あった「`content_panel.tres` のパネル + 見出しのラベル」を切り出し、たたかう・きろく・
-  おぼえるの3タブで使う。**見出しは真鍮のプレートに載せる**(ラベルだけだと枠の一部に
-  見えず、何の枠なのか読めない)
-- **「前回の対局へ戻る」は `ResumeBand`(`scripts/ui/resume_band.gd`)として、たたかうタブの
-  最上段へ出す**(GameDesign.md 9章)。以前は `HomeTile` を縦の列の先頭へ差し込んでいたが、
-  **他の入口と同じ見た目の札では急ぐ用件だと分からない**。**縁を琥珀にして真鍮の札と系統を
-  分け**、左端へ赤い印を打つ。帯の有無で枠の位置が変わるため、`BattleTab._layout()` が
-  **どちらの場合も領域の中央へ置き直す**(上端へ寄せると下半分がまるごと空く)
-- **下部タブは幅を共通にし、高さだけ変える。**幅まで変えると `HBoxContainer` の中で他の
-  タブが横へ押し出され、選択するたびに4つの位置がずれる(実際にそうなった)。
-  **選択していないタブを下端へ沈め、選択中だけを帯の中央へ置く**ことで、選択中の上端だけが
-  持ち上がってせり出して見える
-- **アカウント帯は `.tscn` で幅460pxしか無い**ため、`_ready()` で右端まで伸ばして
-  残高を右へ寄せる(`ACCOUNT_BAR_RIGHT_INSET` はメニューのボタンのぶん)。
-  **ホームの残高だけ `CurrencyChip.scale_factor` で大きく出す**——ヘッダーは面積に
-  余裕があり、残高は「押す前に分かるべきこと」の代表(GameDesign.md 9章)であるため。
-  ショップのヘッダーは主アクションの位置へ収めるので既定のまま。**高さは
-  `height_override` で名札と揃える**(左右で背丈が違うと、同じ帯に載っているものとして
-  読めない)
-- **`CurrencyChip` は単位と数値を別々に描く。**「砂金」は毎回同じ語であり、数値と同じ
-  大きさで並べると**読みたいほうが埋もれる**。単位を小さくくすませ、数値を大きく・
-  影を1pxずらして敷いてから重ねる。紋章と文字のあいだには縦の細線を通し、
-  **紋章がただ左に置いてあるだけに見えないようにする**
+- `ScreenHeader`(`scenes/screen_header.tscn`):外周余白24px・ヘッダー高88px・コンテンツ開始y=136をここで決める。タイトルの後ろに中央が濃く左右へ消える暗幕、下端に真鍮の細線
+- `PressTracker`:押下→離した位置が要素内かで確定/取消(`CardView` / `ReplayListCard` / `ClickArea` が共用)
+- `EmptyState`:空の一覧・待機の見せ方(印・見出し・1行)を1箇所へ
+- `CodedButton`:ボタン生成の集約(画面ごとに `theme_override` を並べない)
+- `resources/theme/content_panel.tres`:一覧・詳細・モーダルの汎用パネル
+- **UIクロームはコード描画、3層に分ける**: `UiPalette`(色の単一情報源)/ `UiPaint`(static。**第1引数は `ci: RID`** で `RenderingServer.canvas_item_add_*` 系。`StyleBox._draw()` からは `CanvasItem.draw_*` を呼べないため)/ 各 `StyleBox` 派生と `Control._draw()` 側
+  - 質感の要件: **金属の反射カーブは最低5ストップ**(上端のハイライト・中央で落とし・**下端に照り返し**)/ **グレインを alpha 0.05〜0.10 で重ねる**(`static var` で1度生成してtile)/ **枠は上が明るい凸、中央パネルは上が暗い凹**で向きを逆に
+  - **意味を持たない小物の装飾(四隅のネジ・渦巻き)は付けない**。機能を示す形と紋章は積極的に付ける
+  - **グループの個性は「外形」と「紋章」だけ。材質は全グループ共通**
+- `CodedButtonStyle`(`extends StyleBox`):`State`(NORMAL/HOVER/PRESSED/DISABLED。`Variant` は組み込み型と衝突する)/ `Shape`(ROUNDED_RECT/CIRCLE/PILL/CHEVRON_LEFT)/ `Emblem` / `EmblemPlacement`(CENTER/UPPER/RIGHT_INSET/TOP_BADGE)。**枠・輪郭・面取りの太さは要素の大きさに合わせて細くする**(`_frame_thickness()` は「高さ56pxで12px / 34pxで5px」を通る直線。単純な短辺比例では小さい側が細くならない)。紋章とテキストの余白は `_get_content_margin()` が `shape` と `emblem_placement` から決める。`.tres` の1行目は `[gd_resource type="StyleBox" script_class="CodedButtonStyle" format=3]`
 
-#### `HomeTile` へ足すもの
+| グループ | Shape | Emblem | 使う場所 |
+|---|---|---|---|
+| `back_nav` | CHEVRON_LEFT | NONE | 共通ヘッダーの戻る |
+| `nav_tab` | PILL | HOURGLASS(TOP_BADGE) | ホームの下部タブ |
+| `wide_text` | ROUNDED_RECT | NONE | 既定の横長ボタン |
+| `icon_square` | ROUNDED_RECT | NONE | 小さな正方形 |
+| `primary_action` | ROUNDED_RECT | NONE | 塗りつぶした真鍮の面(`filled`) |
+| `icon_menu` | ROUNDED_RECT | MENU(CENTER) | ホームのハンバーガー |
+| `icon_discord` | ROUNDED_RECT | DISCORD(CENTER) | 設定メニューのDiscord導線 |
 
-- **`primary`(塗りつぶした真鍮の面)**。いまは `CodedButton.apply_styles(tile, "primary_action")`
-  を外から呼んで実現しているが、**タブごとに呼び忘れると強弱が崩れる**ため `HomeTile.make()`
-  の引数として持たせる
-- **`badge`(未受取の数の印)**。ミッションが使う。**札とタブの両方に出す**ため、
-  下部タブのボタンへも同じ印を打てる形(静的な描画関数)にする
-- **紋章の透かしの大きさに上限を掛ける。**いまは札の寸法から比率で決めているため、
-  大きな札(「そろえる」のデッキ編集は600x306px)では紋章が巨大になって文字より主張する
-  (モックで実際に起きた)。**比率で決めたうえで上限で止める**
-- `ScreenHeader`(`scenes/screen_header.tscn`):対局画面を除く全画面が使う共通ヘッダー。外周余白24px・ヘッダー高88px・コンテンツ開始y=136をこの1箇所で決め、画面ごとに個別の値を持たせない(GameDesign.md 9章)
-- クリック可能な各コンポーネント(`CardView`/`ReplayListCard`/`ClickArea`)は、押下確定の判定を `PressTracker`(RefCounted、押下→離した位置が要素内かどうかで確定/取消を返す)で共通化する
-
-- `resources/theme/content_panel.tres`(`StyleBoxFlat`):一覧・詳細・モーダル向けの汎用コンテンツパネル。背景イラストの上に情報を置く各画面(デッキ一覧・デッキ編集・砂時計一覧・配置画面・リプレイ一覧等)の主要ブロックに共通適用する
-- **UIクローム(ボタン・パネル枠・入力欄・棚板・名札等)はコード描画で作る**(GameDesign.md 9章)。以前は画面グループ単位のボタンシート画像を生成し `StyleBoxTexture` として割り当てていたが、品質管理のしやすさを理由に方針転換した。テキストは従来どおり画像・描画に焼き込まず `Button.text` をプロジェクト共通フォントで重ねる
-- コード描画の実体は以下の3層に分ける。画面ごとに描画コードを書き散らさず、必ずこの共通層を経由させる
-  - `scripts/ui/styles/ui_palette.gd`(`UiPalette`, `RefCounted`):プロジェクト全体のUI色の単一情報源。真鍮の明/中/暗、暗い下地、琥珀アクセント、無効時のグレー等をconstで持つ
-  - `scripts/ui/styles/ui_paint.gd`(`UiPaint`, `RefCounted`):static関数だけの描画ユーティリティ。**第1引数は必ず `ci: RID`** とし `RenderingServer.canvas_item_add_*` 系で描く(`StyleBox._draw(to_canvas_item, rect)` からは `CanvasItem.draw_*` を呼べないため)。角丸矩形の頂点生成、多段階の縦グラデーション塗り、面取り(ベベル)、内側の落ち込み影、グレイン(ノイズ)重ねを提供する
-  - 各`StyleBox`派生クラス(`CodedButtonStyle` 等)と、`Control._draw()`側(`BoardTable`/`BarPanel`/`HourglassSlot`)が、いずれも上記2つを呼んで描く
-- **見出しの書体は `scripts/ui/styles/ui_fonts.gd`(`UiFonts`, `RefCounted`)が単一の情報源として持つ。**
-  本文用(`ZenKakuGothicNew-Bold.ttf`、テーマの既定フォント)一色だと、大きなタイトルも
-  小さな数値も同じ太い角ゴシックになり、「量産型」の見た目に寄る。**タイトルロゴ
-  (`TitleLogo`)・各画面の共通ヘッダーの見出し(`ScreenHeader`)・ホーム画面の枠見出し
-  (`HomeFrame`)・主役の面(`primary`)を持つ`HomeTile`の見出しにだけ**、見出し専用の
-  明朝体(`assets/fonts/ZenOldMincho-Display.ttf`、Zen Old Mincho Blackが元)を
-  `UiFonts.display_font(fallback)` 経由で当てる。本文・数値・ボタン・副題は引き続き
-  本文用フォントのまま変えない(GameDesign.md 9章「王道クラシカル」なタイトルの路線を、
-  見出し全般へ薄く延長する形)
-  - **見出し用フォントは、実際に見出しへ使っている文字だけへ`pyftsubset`(fontTools)で
-    削ったサブセットとして配布する。**元のBlackウェイト全体(5.4MB)をそのまま入れると
-    フォント予算(本文用だけで1.66MB。6章「技術的負債」)がほぼ4倍に膨らみ、起動待ちへ
-    直結する。ひらがな・カタカナ全域 + いま見出しへ使っている漢字・記号 + ASCII に
-    絞った結果、pckへの寄与は約100KBに収まる(本文用の1.66MBに対して数%の増分)
-  - **`display_font()` は返すフォントへ `fallbacks = [fallback]` を設定してから返す。**
-    サブセットに無い文字を描画すると本来なら何も表示されないが、フォールバックを
-    設定しておくことで**その文字だけ静かに本文用フォントへ戻る**(豆腐にはならない)。
-    これにより、新しい見出し文字列を足したときにサブセットの更新を忘れても、
-    見た目が乱れるだけで機能は壊れない。**将来サブセットを更新する場合は、実際に
-    見出しへ使っている文字列を集め直し、`fontTools.subset` を掛け直す**(手順は
-    `assets/fonts/LICENSE_ZenOldMincho.txt` の末尾に残してある)
-- **背景イラストを持たない画面の下地は `ScreenBackdrop`
-  (`scripts/ui/screen_backdrop.gd`、`Control._draw()` のみ)に集約する**。無地の `ColorRect` 1枚だと
-  フラットベクターに見えるため、多段グラデーション + グレイン + 左右の落ち込みを掛ける。
-  画面ごとに下地の色と描き方を持たせない
-- **下地は「場所」として描く**(GameDesign.md 9章)。`ScreenBackdrop.Room` が
-  無地 / 書庫 / 記録室 / 控えの間 / 帳場 の5つを持ち、画面は `room` を1行入れるだけにする。
-  **部品(板壁・歯車・作業灯・吊り看板・木箱・本棚・引き出し)は
-  `RoomPaint`(`scripts/ui/styles/room_paint.gd`, staticのみ)が持つ。**
-  `UiPaint` と違い第1引数に `CanvasItem` を取る(`InkFigure` と同じ流儀)——
-  `draw_line()` などのインスタンス側の描画と、`UiPaint` の RID 側の描画の両方を使うため
-  - **`WorkshopBackdrop` も同じ部品から組む。**工房だけが独自に壁を持っていると、
-    壁の描き方を変えたときにそこだけ取り残される
-  - **場所ごとの違いは「壁の色味」と「据え付ける造作」の2つだけ**にする。
-    部品まで場所ごとに分けると、増やすたびに全種を描き足すことになる
-- **共通ヘッダー(`ScreenHeader`)はタイトルの後ろへ暗幕を敷き、下端に真鍮の細線を通す**。
-  背景イラストが賑やかな画面(アカウント・リプレイ一覧)で画面名が読めなくなるため。暗幕は
-  中央が濃く左右へ消える形にする(端まで一様に敷くと帯が1本乗ったように見える)。
-  `Control._draw()` は自分の子より背面に描かれるため、タイトル・戻るボタン・主アクションには被らない
-- コード描画で「無地の図形を置くだけ」にすると平坦でチープに見えるため、質感表現を必須要件として扱う。特に効くのは次の3点
-  - **金属の反射カーブを最低5ストップで表現する**。上端付近に明るいハイライト帯、中央で落とし、**下端に照り返し(バウンス光)を入れる**。この下端の明るさが金属らしさの決め手であり、2色グラデーションでは出ない
-  - **手続き的なグレイン(ノイズ)を薄く重ねる**(alpha 0.05〜0.10目安)。ノイズ画像は`static var`で1度だけ生成してキャッシュし、`canvas_item_add_texture_rect` の tile 指定で敷き詰める。フラットベクター感を消す最大の要因
-  - **枠と中央パネルでグラデーションの向きを逆にする**(枠=上が明るい凸、中央パネル=上が暗い凹)。加えて中央パネル上端へ多重の落ち込み影を重ね、彫り込まれた構造として読ませる
-- **UIに出す記号は、共通フォント(Zen Kaku Gothic New Bold)が字形を持つものだけを使う**。
-  持たない文字は豆腐(□)になる。**エディタ実行では別のフォントで代替されて気づけず、
-  書き出した版でだけ化ける**(実機で `▸`(U+25B8)・`▶`(U+25B6)が化けて発覚した)。
-  使える: `●` `○` `◆` `■` `▲` `▼` `→` `←` `↑` `↓` `★` `※` `×`(U+00D7)`−`(U+2212)`＋`。
-  使えない: `▸` `▶` `▷` `►` `◀` `✓` `✔` `✕`(U+2715)`▪` `⌛`。
-  **手で cmap を確認する運用は続かない**(実際に `✕` が書き出した版で豆腐になった)ため、
-  **`python tools/check_font_glyphs.py` が全 `.gd` / `.tres` の文字列を走査して報告する**。
-  記号を足したら1度回す
-- **共通テーマはボタンへ3px・ラベルへ2pxの暗い縁取りを掛けている。**暗い画面では文字を
-  浮かせるために要るが、**紙や明るい面へ濃いインクの文字を置くと、縁取りで字の内側が
-  潰れて読めなくなる**(砂時計図鑑で実際にそうなった)。明るい面を持つ画面は、その面の
-  中の `Control` へ `add_theme_constant_override("outline_size", 0)` を掛ける
-  (**テーマ側の既定は変えない**。暗い画面のほうが数として多い)
-- **意味を持たない小物の装飾(四隅のネジ/リベット、角の渦巻き・スクロール意匠)は付けない**。元の画像ボタンには存在したが、コード描画版で再現したところノイズに見えるとユーザーが判断し、完全撤去した。一方で、**機能を示す形と紋章は積極的に付ける**(次項)。両者の線引きは「そのボタンが何をするかを伝えているか」であり、伝えていない純粋な飾りは置かない
-- **グループごとの個性は「外形の形」と「紋章」だけで表現し、材質は全グループ共通に保つ**。元の画像ボタンは「戻る=左向き矢印の形」「保存=チェックマーク」「反転/移動/交代=紋章入りの円形メダリオン」「タブ=砂時計の徽章付きピル」というように、形と紋章が機能を語る設計だった。全グループを同一の見た目へ統一した結果この個性が失われたため復元した。ただし材質(反射カーブ・グレイン・面取り・落ち込み影)をグループごとに変えることは禁止する。材質を共通に保つことが、個性を出しつつ全体が調和して見えるための条件である
-- `CodedButtonStyle`(`scripts/ui/styles/coded_button_style.gd`, `extends StyleBox`)は、次の4つの`@export`で全ボタンを賄う
-  - `State`: NORMAL / HOVER / PRESSED / DISABLED
-  - `Shape`: ROUNDED_RECT / CIRCLE / PILL(両端が半円) / CHEVRON_LEFT(左辺が尖った五角形)
-  - `Emblem`: NONE / HOURGLASS / SWAP_ARROWS / BENCH / CHECK。描画実体は`UiPaint`側のstatic関数に置き、太い暗色の輪郭+真鍮の塗り+上側のハイライトによる浮き彫り表現とする(細い線画にしない)
-  - `EmblemPlacement`: CENTER / UPPER(下半分にテキストが入る) / RIGHT_INSET / TOP_BADGE(上端から少し飛び出す円形の徽章)
-- **枠・輪郭・面取りの太さは、要素の大きさに合わせて細くする**。`FRAME_THICKNESS`(12px)は
-  高さ56px前後のボタンに合わせた値で、これを高さ26pxの小さなボタン(帯の「−」「+」)へ
-  そのまま掛けると枠だけで面積の半分近くを占め、線が太すぎる印象になる。
-  `_frame_thickness()` が「高さ56pxで12px / 高さ34pxで5px」の2点を通る直線として求め、
-  輪郭(`_outline_width()`)と面取り(`_bevel_width()`)もその比で連動させる。
-  **単純な短辺比例では小さい側が細くならない**ため、2点を通る直線にしている
-- 紋章とテキストの重なりは、`.tres`側で個別に余白を指定するのではなく **`_get_content_margin()`をオーバーライドし、`shape`と`emblem_placement`から自動的に決まるようにする**。これにより`.tres`は「どのグループが何であるか」だけを持つ単純な状態に保てる
-- グループごとの割り当ては次の通り。**実際に `resources/theme/buttons/` へ置いてあるのはこの7つだけ**で、
-  対局画面の丸いアクションボタン(`action_*`)・再生コントロール(`transport_round`)・
-  保存ボタン(`confirm_save`)は、それぞれの画面が撤去された/共通ヘッダーへ寄せられた時点で削除した。
-  **`.tres` を増やすときは、そのグループを実際に読む呼び出し(`CodedButton` のグループ定数)を必ず同時に足す**——
-  読まれない `.tres` は誰にも気づかれないまま残り、後から「使っているのかどうか」を判定できなくなる
-
-| グループ | Shape | Emblem | Placement | 使う場所 |
-|---|---|---|---|---|
-| `back_nav` | CHEVRON_LEFT | NONE | - | 共通ヘッダーの戻る |
-| `nav_tab` | PILL | HOURGLASS | TOP_BADGE | ホーム画面の下部タブ |
-| `wide_text` | ROUNDED_RECT | NONE | - | 既定の横長ボタン |
-| `icon_square` | ROUNDED_RECT | NONE | - | 一覧の行などの小さな正方形 |
-| `primary_action` | ROUNDED_RECT | NONE | - | **塗りつぶした真鍮の面**(`filled`)。最も頻繁に押す操作 |
-| `icon_menu` | ROUNDED_RECT | MENU | CENTER | ホーム画面のハンバーガー |
-| `icon_discord` | ROUNDED_RECT | DISCORD | CENTER | 設定メニューのDiscord導線 |
-
-`UiPaint.Emblem` には、いま誰も使っていない紋章(`SWAP_ARROWS` / `BENCH` / `CHECK` /
-`ADVANCE` / `AWAKEN` / `HEAL` / `STRIKE`)が残っている。**enumの並びは `.tres` が
-整数で保存する保存データ**(11章)であり、途中の値を消すと `icon_menu` / `icon_discord` の
-紋章がずれるため、**使っていなくても消さない**。**enum名に`Variant`を使うとGodot組み込み型と衝突してパースエラーになるため`State`とする**。対応する`.tres`の1行目は `[gd_resource type="StyleBox" script_class="CodedButtonStyle" format=3]`(`type="Resource"` にすると `Script inherits from native type 'StyleBox'` エラーになる)
-- 既存の`.tscn`が参照している`resources/theme/buttons/img_{グループ名}_{state}.tres`は、**パスとExtResource参照を維持したまま中身だけをコードStyleBoxへ差し替える**。これによりシーン側の参照を書き換えずに全画面へ反映できる(J-0・L-2で実績のある手法)
-- 以下の9-slice/原寸に関する制約は、**画像アセットのまま残す資産にのみ適用される**(砂時計のイラスト、背景イラスト等)。コード描画のStyleBoxは解像度に依存しないため、9-sliceも原寸制約も存在せず、表示サイズはレイアウトの都合で自由に決めてよい
-- **`StyleBoxTexture`の`texture_margin_*`(9-slice/角保持スケーリング)は使用しない**。角部分だけ元ピクセルのまま残り縁が不自然に太くなるため(D-1で発覚した問題の根本原因)、`texture_margin_*`は常に0(未設定)とし、画像全体を単一の矩形として扱う。その代わり、**ボタン・パネル等の表示サイズは常に元画像のアスペクト比を保った倍率(縦横同じ倍率)でのみ決定する**。縦横を別々に指定して矩形を歪めることは禁止。置きたい場所に対して元画像のアスペクト比が合わない場合は、(a)その要素の固定サイズ自体をアスペクト比に合わせて再計算する、(b)固定サイズを崩せない場合は余白(レターボックス/ピラーボックス)を許容する、のいずれかで対応し、非等倍(縦横別倍率)の伸縮は行わない。(かつて存在した`board_panel.tres`は`BoardTable`のコード描画へ置き換えたため削除済み)
-
----
-
+  - **`.tres` を増やすときは、それを読む `CodedButton` のグループ定数を必ず同時に足す**(読まれない `.tres` は使っているか判定できなくなる)
+  - `UiPaint.Emblem` に未使用の紋章(`SWAP_ARROWS` / `BENCH` / `CHECK` / `ADVANCE` / `AWAKEN` / `HEAL` / `STRIKE`)が残るが、**enumの並びは `.tres` が整数で保存する保存データ**のため消さない(11章)
+  - `EmblemPlacement.CENTER` の紋章は単位座標 ±0.55 程度に留める(±0.85 まで描くと額縁へ載り上がる)
+  - 既存の `.tscn` が参照する `resources/theme/buttons/img_{グループ}_{state}.tres` はパスを維持したまま中身だけコードStyleBoxへ差し替えてある
+- **見出しの書体は `UiFonts.display_font(fallback)`**(Zen Old Mincho のサブセット、約100KB)。タイトルロゴ・共通ヘッダー・`HomeFrame`・`primary` の `HomeTile` にだけ当てる。**返すフォントへ `fallbacks` を設定する**ため、サブセットに無い文字は静かに本文用へ戻る(豆腐にならない)。サブセットの更新手順は `assets/fonts/LICENSE_ZenOldMincho.txt` 末尾
+- **背景イラストを持たない画面は `ScreenBackdrop`**(多段グラデーション + グレイン + 左右の落ち込み)。`Room`(無地 / 書庫 / 記録室 / 控えの間 / 帳場)を1行入れるだけ。部品は `RoomPaint`(static、第1引数 `CanvasItem`)。`WorkshopBackdrop` も同じ部品から組む。場所ごとの違いは壁の色味と造作だけ
+- **UIに出す記号は共通フォントが字形を持つものだけ**。使える: `● ○ ◆ ■ ▲ ▼ → ← ↑ ↓ ★ ※ ×(U+00D7) −(U+2212) ＋`。使えない: `▸ ▶ ▷ ► ◀ ✓ ✔ ✕ ▪ ⌛`。エディタ実行では代替されて気づけないため、**`python tools/check_font_glyphs.py` を記号を足したら回す**
+- **共通テーマはボタン3px・ラベル2pxの暗い縁取りを掛けている**。明るい面(紙)へ置く `Control` には `outline_size` を0にする(テーマ側の既定は変えない)
+- **画像アセットを使う場合は原寸のアスペクト比を保った倍率だけで大きさを決め、`StyleBoxTexture` の `texture_margin_*`(9-slice)は使わない**(角だけ元ピクセルのまま残り縁が太くなる)。コード描画のStyleBoxにはこの制約は無い
 ### 4.1 砂時計イラストの解像度と配置
 
 砂時計のイラストは、実行時に使うものと、それを作るための元データを明確に分ける。unityroom向けの
@@ -2478,124 +1921,40 @@ Firestoreを一切知らないまま(ローカルの計算と保存だけを持�
   `CardMatchScreen` が持つまま値を更新する。**`CardMatchGeometry` はこれらを読むだけ**なので、
   値を変えれば座標系の問い合わせは追従する
 
-### 10.10.1 対局画面の手触り(GameDesign.md 9章「対局画面の手触り」)
+### 10.10.1 対局画面の手触り(GameDesign.md 9章「操作への反応」)
 
-**新しい画面要素を足さず、既存の要素へ反応を足す。**`card_match_screen.gd` と
-`card_view.gd` はいずれも1000行の上限に張り付いているため、**足す前に切り出す**
-(11章)。切り出しは `_screen` / `_view` 参照を持つ `RefCounted` か、状態を持たない
-`static` の描画ヘルパのどちらかに限る。
+**新しい画面要素を足さず、既存の要素へ反応を足す。**実装済み。どこが持つかだけを残す。
 
-| クラス | 責務 |
+| 反応 | 持つ場所 |
 |---|---|
-| `CardMatchHandLayout`(`scripts/ui/card_match_hand_layout.gd`, RefCounted) | 手札の並べ方をすべて持つ。`_refresh_hand()` の位置計算を移し、**位置は代入せず Tween で滑らせる**(ドローで入った札に他の札が場所を空ける)。ホバー中の札の両隣を外へ避け、相手の手番では手札全体を沈める |
-| `CardDragPreview`(`scripts/ui/card_drag_preview.gd`, Control) | 手札をドラッグ中に指へ付いてくる絵。移動の速度から傾きを決めて描く。`CardView._get_drag_data()` はこれを作って返すだけにする |
-| `CardMatchDropGlide`(`CardMatchEffects` の1メソッドで足りる場合はクラスを作らない) | 空き枠へ放した位置から台座の中心へ滑らせてから着地演出(`play_land()` 相当)へ入る。`unit_played` を受ける既存の経路で、放した座標を `CardMatchTouch.on_slot_drop()` が控えて渡す |
-| `CardDragArrow`(`scripts/ui/card_drag_arrow.gd`, Control) | 攻撃をドラッグしている間、駒の中心から指先へ引く矢印。`CardFlipBeam` と同じく盤面より手前の独立したオーバーレイ |
-| `CardViewPaint`(`scripts/ui/card_view_paint.gd`, static) | `CardView._draw()` から台座・封蝋・バッジの描画を移す受け皿。バッジの跳ね(`stat_punch`)と身構え(`brace`)の状態は `CardView` に残し、描画だけをここへ寄せて行数を確保する |
+| 手札の並び(隣が避ける / ドローで場所を空ける / 相手手番で沈む) | `CardMatchHandLayout`(位置は代入せず Tween。沈める量は `SUMMONED_SINK` と同じ語彙) |
+| ドラッグ中の傾き | `CardDragPreview`(移動の速度から傾きを決める。`CardView._get_drag_data()` はこれを作って返すだけ) |
+| 放した位置から台座へ滑る | `CardMatchTouch.on_slot_drop()` が放した座標を控え、`unit_played` を受ける既存の経路で滑らせてから `play_land()` |
+| ピップの光と吸い込み | `PlayerInfoBar.highlight_cost(n)` / `spend_toward(n, target)`。呼ぶのは `_on_view_hovered()` / `_on_view_left()` と `CardMatchEffects`(`unit_played` / `spell_cast`) |
+| バッジの跳ね | `CardView` が `unit` の前回値を控えて差分で `stat_punch` を1.0にし Tween で戻す。描画は `1 + stat_punch * 0.3` の拡縮 |
+| 身構え | `CardMatchTargets` が光っている相手の駒へカーソルが乗ったら `CardView.brace = true` |
+| 取り消しの「戻る」 | `CardMatchSelection.clear()` を受けた画面側が `CardView.play_unselect()`(0.1秒で縮めて消す) |
+| 攻撃ドラッグの矢印 | `CardDragArrow` |
+| ホバー音 | `SoundBank.Sfx.HOVER`(`button.wav` を `SFX_PITCH` で高く、`SFX_GAIN` で小さく)。`wire_buttons()` が `mouse_entered` にもつなぎ、対局中の駒・手札は `CardView` が直接鳴らす(カーソルの出来事であり盤面の状態ではないため `CardMatchSound` を経由しない) |
 
-- **ピップの光と吸い込みは `PlayerInfoBar` が持つ。**`highlight_cost(n)` でホバー中の札のコストぶんを光らせ、`spend_toward(n, target: Vector2)` で消えるピップを札の方向へ流す。呼ぶのは画面側の `_on_view_hovered()` / `_on_view_left()` と、`unit_played` / `spell_cast` を受ける `CardMatchEffects`
-- **バッジの跳ねは `CardView` が `unit` の前回値を控えて差分で起こす。**`refresh()` のたびに `health` / `attack` を比べ、変わっていれば `stat_punch` を1.0にして Tween で0へ戻す。描画は `1 + stat_punch * 0.3` の拡縮
-- **身構えは `CardMatchTargets` が起こす。**光っている相手の駒へカーソルが乗ったら `CardView.brace = true`(わずかに縮み、輪郭を脈打たせる)。対象選択が終わるか外れたら戻す
-- **取り消しの「戻る」動きは `CardMatchSelection` の `clear()` を受けた画面側で、光っていた駒に `CardView.play_unselect()` を呼ぶ。**枠の強調を短く縮めて消す(0.1秒)
-- **ホバー音は `SoundBank.Sfx.HOVER` として足し、音源は `button.wav` を `SFX_PITCH` で高くし、新設の `SFX_GAIN`(音源ごとの音量比)で小さくする。**`wire_buttons()` が `mouse_entered` にもつなぎ、`CardView` は `hovered` を出すときに鳴らす。**対局中の駒・手札は `CardMatchSound` を経由せず `CardView` が直接鳴らす**(盤面の状態ではなくカーソルの出来事であるため)
-- **相手の手番で手札を沈める量は `SUMMONED_SINK` と同じ語彙(数px + 彩度落とし)**に留め、札の読みやすさを落とさない
+### 10.10.2 メニュー画面群の手触り(GameDesign.md 9章「操作への反応」)
 
-### 10.10.2 メニュー画面群の手触り(GameDesign.md 9章「メニュー画面群の手触り」)
+同じ方針。実装済み。
 
-**対局画面(10.10.1節)と同じ「既存要素へ反応を足す」方針。**新しいクラスは
-飛び先(棚の枠・チップ)が既に描画を持つ場合に限って必要になる。行数の上限
-(11章)に近いファイル(`home_screen.gd` 426行 / `card_deck_shelf.gd` 369行 /
-`card_shop_screen.gd` 485行はまだ余裕があるが、切り出しの流儀は同じ)。
-
-| クラス | 責務 |
+| 反応 | 持つ場所 |
 |---|---|
-| `ScreenTransitionFx`(`scripts/ui/screen_transition_fx.gd`, RefCounted) | `Main._show_only()` の横移動を1箇所へ持つ。フェードと同時に、前の画面を進行方向の逆へ・次の画面を進行方向から、それぞれ数十px分ずらしてから0へ寄せる |
-| `CardFlightFx`(`scripts/ui/card_flight_fx.gd`, Control) | 「一覧の札 ⇄ 棚の枠」「品の絵 ⇄ 砂金チップ」のように、**1枚の絵が画面上のある矩形から別の矩形へ飛ぶ**演出をまとめて引き受ける汎用オーバーレイ。`play(texture_or_control, from_rect, to_rect, duration)` の1メソッドだけを持ち、デッキ編集・ショップ・ミッション受取のいずれもこれを呼ぶ(専用クラスを画面ごとに作らない) |
-
-**全画面共通**
-
-- **ボタンの押し込みは `CodedButtonStyle` の `State.PRESSED` 側を1段深くする。**
-  `_frame_thickness()` / `_bevel_width()` はそのままに、PRESSED時のハイライトの
-  明度をもう一段落とし、影のオフセットを1px増やす。**全ボタン共通の定数を1つ
-  動かすだけ**であり、画面ごとの対応は不要
-- **画面遷移の横移動は `ScreenTransitionFx` が `Main._show_only()` の中で行う。**
-  `_show_only()` は呼び出し側が「進むのか戻るのか」を知らないため、**進む方向は
-  持たない**——`back_pressed` を経由した遷移だけを「戻る」として逆方向にし、
-  それ以外はすべて「進む」として同じ向きに揃える。`Main` の各 `back_pressed`
-  ハンドラは既に `_show_only(home_screen)` を直接呼んでいるため、これらを
-  `_show_only(home_screen, going_back = true)` に変えるだけで済む
-- **Escは `Main._unhandled_input()` に1つ足す。**現在の画面が `back_pressed` を
-  持つなら発行する。対局画面(`CardMatchScreen`)は自前で `Esc` を対象選択の
-  取り消しに使っているため、対局中はこの共通処理の対象から外す
-  (`is_interactive()` 相当の判定で振り分ける)
-- **ヘッダータイトルの着地の浮きは `ScreenHeader` 側**。`_show_only()` の
-  フェード開始と同時に `title_label.position.y` を -2 から 0 へ短く戻す
-
-**ホーム画面**
-
-- **タブの横滑りは、既存の `_select_tab()` のフェードへ横移動を足すだけ**
-  (専用クラスは作らない)。`to_show` の `position.x` を、タブの並び順で
-  「左のタブへ移ったか右のタブへ移ったか」から符号を決めて数十pxずらし0へ寄せる
-- **`HomeTile` のホバー浮きは `HomeTile` 自身に持たせる。**`mouse_entered` /
-  `mouse_exited` で紋章の透かしの明度・y位置を Tween する
-- **副題が外部要因で変わったときの光りは、`refresh()` の呼び出し側
-  (`_select_tab()` / `refresh_battle_tab()` 等)が前回の文字列と比較して
-  変化を検知し、`HomeTile.flash_subtitle()` を呼ぶ形にする**
-- **砂金チップの着地演出は `CardFlightFx` 経由。**ミッション受取
-  (`DailyMissionPanel`)・対局結果パネル(`CardMatchResult`)のいずれも、
-  獲得額が確定した位置からヘッダーの `CurrencyChip` へ向けて飛ばしてから
-  `CurrencyChip.bump()`(数え上げ)を呼ぶ
-
-**デッキ編集(時計工房)**
-
-- **一覧→棚・棚→一覧の飛びは `CardFlightFx`。**`CardDeckEditorScreen` が
-  押されたカードの矩形(一覧側 or 棚側)を控えており、加える/戻す処理の直前に
-  `CardFlightFx.play()` を呼んでから実際の配列操作(`CardDeckShelf.rebuild()` 等)
-  を行う。**演出の完了を待たずに配列操作は即座に行い、見た目だけが追いかける**
-  (対局画面の「ロジックは演出を待たない」方針と同じ)
-- **「2/2」バッジの跳ねは、`WorkshopStockItem` に `CardView` のバッジ跳ねと
-  同じ `count_punch` を持たせる。**枚数が変わった瞬間に1.0へ立ててTweenで戻す
-- **30枚到達の光りは `CardDeckShelf` が `rebuild()` の中で枚数を数え、
-  30に達した回だけ `glow_amount` を短く1.0へ立てる**(`_draw()` 側で棚全体に
-  淡いオーバーレイを重ねる)
-- **ドラッグの傾きは `CardDragPreview`(10.10.1節)をそのまま流用する。**
-  デッキ編集のドラッグ元(`WorkshopStockItem`)から同じクラスを呼ぶだけで、
-  対局側の実装を変える必要はない
-- **絞り込みモーダルは、開くボタンの矩形から膨らむ形にする。**
-  `CardDeckFilterModal` の開始スケールをボタン矩形相当の小さな値にし、
-  中心をそのボタンの中心へ合わせてから通常サイズへ Tween する
-
-**砂時計図鑑**
-
-- **ページめくりは `AlmanacPage` に `turn_to(card)` を足す。**いまの
-  `show_card()` を「めくる」演出込みに拡張し、右のページが一瞬めくれてから
-  新しい中身を `_draw()` する(紙の陰影を持つ `AlmanacBook._draw_pages()` の
-  質感をそのまま流用し、専用の紙のテクスチャは増やさない)
-- **右ページの砂時計のホバー傾きは `AlmanacPage._gui_input()` の反転判定の
-  近くへ、`mouse_entered`/`mouse_exited` で数度のtilt Tweenを足すだけ**
-- **並び替え後の札の再配置は `AlmanacBook` の一覧側(左ページ)が
-  `CardMatchHandLayout` と同じ「位置は代入せずTweenで滑らせる」方式を使う**
-  (新しいクラスは作らず、同じ考え方を左ページの一覧コンテナへ適用する)
-
-**ショップ・アカウント**
-
-- **購入時の飛びも `CardFlightFx`**。`CardShopScreen` が確認ダイアログの
-  「買う」を受けたら、品の絵の矩形からヘッダーの `CurrencyChip` へ飛ばしてから
-  残高を更新する
-- **アカウント画面の名札プレビューの跳ねは `NamePlatePreview`(既存クラスが
-  あればそこへ、無ければ `AccountScreen` 内の描画へ)`bump()` を足すだけ**
-- **買えない品でホバー無反応にするのは `ShopItemCard`(または該当クラス)の
-  `mouse_filter` を `enabled=false` の間 `MOUSE_FILTER_IGNORE` にする**
-
-**一覧系(デッキ一覧・リプレイ・戦績・パズル選択)**
-
-- **段差フェードインは、各一覧画面が持つ横2列グリッドの生成ループへ
-  `EmptyState` と同じ流儀で共通処理を1つ足す。**`scripts/ui/list_reveal_fx.gd`
-  (static)に `stagger(items: Array[Control], step := 0.03, max_staggered := 8)`
-  を持たせ、9件目以降は遅延0で同時に現れる
-- **削除時の縮小は、削除ボタンを押した画面側が `Tween` で対象カードの
-  `scale` を0へ縮めてから配列から取り除く**(専用クラスは不要)
-
+| 画面遷移の横移動 | `ScreenTransitionFx`(`Main._show_only()` の中)。`_show_only()` は進む/戻るを知らないため、`back_pressed` 経由の遷移だけを `going_back = true` で逆方向にし、それ以外は「進む」で揃える |
+| Esc / 右クリックで戻る | `Main._unhandled_input()`。現在の画面が `back_pressed` を持てば発行。対局画面は自前で使うため対象外 |
+| ボタンの押し込みを深く | `CodedButtonStyle` の `State.PRESSED`(ハイライトの明度をもう一段落とし影を1px増やす。全ボタン共通の定数1つ) |
+| ヘッダータイトルの着地 | `ScreenHeader` が `title_label.position.y` を -2 → 0 |
+| 絵が矩形から矩形へ飛ぶ(一覧⇄棚 / 品⇄砂金チップ / ミッション受取) | `CardFlightFx.play(texture_or_control, from_rect, to_rect, duration)` の1メソッド。画面ごとに専用クラスを作らない。**演出の完了を待たずに配列操作は即座に行い、見た目だけが追いかける** |
+| ホームのタブの横滑り | `_select_tab()` のフェードへ、タブの並び順で符号を決めた横移動を足す |
+| `HomeTile` のホバー浮き / 副題の光り | `HomeTile` 自身(`mouse_entered`/`mouse_exited`)/ `refresh()` の呼び出し側が前回の文字列と比較して `flash_subtitle()` |
+| 砂金チップの着地 | `DailyMissionPanel` / `CardMatchResult` が `CardFlightFx` で飛ばしてから `CurrencyChip.bump()` |
+| デッキ編集の「2/2」の跳ね / 30枚の光り / 絞り込みモーダルの膨らみ | `WorkshopStockItem.count_punch` / `CardDeckShelf.glow_amount`(`rebuild()` で30に達した回だけ)/ `CardDeckFilterModal` の開始スケールをボタン矩形に合わせる |
+| 図鑑のページめくり / ホバー傾き / 並び替えのスライド | `AlmanacPage.turn_to(card)` / `_gui_input()` 近くの tilt Tween / 左ページの一覧も「位置は Tween で滑らせる」方式 |
+| ショップ・アカウント | 購入は `CardFlightFx` で品→チップ → 残高更新 / 名札見本の `bump()` / 買えない品は `enabled=false` の間 `MOUSE_FILTER_IGNORE` |
+| 一覧の段差フェードイン / 削除の縮小 | `list_reveal_fx.gd` の `stagger(items, step=0.03, max_staggered=8)`(9件目以降は同時)/ 画面側が `scale` を0へ縮めてから配列から取り除く |
 ### 10.11 デイリーミッション(GameDesign.md 23章)
 
 | クラス | 責務 |
@@ -2782,91 +2141,29 @@ UTC時刻を +9時間して日本時間へ換算し、曜日を見る。**サー
 | `announceCardSpotlight` | Cloud Scheduler(毎日正午12:00 JST)。カードスポットライトの自動投稿 |
 | `tools/discord/register_commands.py` | 4つのスラッシュコマンドをDiscordへ登録する(既存の `tools/discord/apply_permissions.py` と同じ、`~/.hourglass_discord.json` からBotトークンを読む流儀)。コマンドの追加・変更のたびに実行し直す。ギルドコマンドとして登録するため反映は即時 |
 
-**カードデータのJSON化は `tools/export_web.sh` のビルド工程に組み込むが、画像・実演GIFは
-別扱いにする。**`export_discord_card_art.gd`(静止画のキャプチャ)も `record_effect_gif.gd`
-(GIFの素材フレーム)も、**実際にレンダリングされたピクセルを読む必要があるため
-`--headless` では動かず、GPUの描画コンテキストを持つ通常起動が要る**(実測で確認済み)。
-`export_web.sh` は全工程を `--headless` で回すことを前提にしたビルドスクリプトのため、
-ここへ非ヘッドレスの手順を混ぜると無人実行が壊れる。**画像・GIFは
-`tools/export_web.sh` の外に置き、カードを追加・変更したとき(`add-hourglass` Skillの
-手順の一部として)手動で実行し直す運用にする。**`functions/data/cards.json` だけは
-中身が数値の差分にすぎず実行コストも小さいため、引き続きビルドのたびに更新する。
-**画像・GIF・JSONのいずれもリポジトリへコミットする**(6.3節のWebhook URLのような
-秘匿情報ではないため、`data/discord_webhook.txt` とは扱いが異なる)。
 
-**実演GIFは語彙ごとではなく、カードごとに1本にする。**既存の `record_effect_gif.gd` は
-そのカードが持つ能力すべて(複数のキーワード・トリガーがあれば台本を繋げて)を
-通しで1周ぶん録る設計に既になっており、これをそのまま使うほうが「1枚のカードが
-何をするか」を1本で見せられて `/card` の目的に合う。**カードが増えるたびに
-生成本数も増える**が、1カードあたり数秒程度のため、70種規模であれば
-書き出しの手間として許容できる。生成はカードのidをそのままGIFのファイル名にする
-(`effect_gifs/{id}.gif`)。
+**運用**
 
-**`/deck` の画像はGodotを使わず、Functions側(Node.js)で完結させる。**
-組み合わせが無数にあるデッキ表は事前生成できず、都度Godotを起動して描画するのは
-常駐サーバーを持たない方針(10章)と相性が悪いため、`@napi-rs/canvas` で
-「コスト順に30枚のカード名・コスト・総量を並べただけの簡易画像」を独自に描く。
-ゲーム内の `CardDeckSheet` と見た目を合わせる必要はない。**`node-canvas` ではなく
-`@napi-rs/canvas` を選んだ**のは、前者がネイティブのCairoライブラリに依存し
-Cloud Functionsのビルド環境でのインストールが不安定になりやすいため。後者は
-プリビルドバイナリを持ち、APIもnode-canvasに近い。
-
-**`/card` `/deck` はいずれもコマンド応答の中で画像を返すが、届け方が異なる。**
-`/card` の画像・GIFはビルドのたびにリポジトリへコミット済み(上記)であり、
-**BGMの配信(Architecture.md 4.1.6節)と同じくjsDelivr経由でリポジトリから直接読む**
-(`https://cdn.jsdelivr.net/gh/Omezi42/hourglassPVP@main/functions/data/...`)。
-コマンド応答のEmbedへこのURLをそのまま埋め込むだけで済み、Bot側は1バイトも
-アップロードしない。**jsDelivrはキャッシュするため、pushしてから数分〜数時間は
-古い版が返ることがある**(BGMと同じ制約)。一方 `/deck` は都度その場で生成した
-バイト列であり、リポジトリに存在しないため、ファイルとして直接添付する
-(`multipart/form-data` で `files[0]` として送る)必要がある。
-
-**`/deck` は3秒の応答期限を超えうるため、deferred responseを使う。**
-`discordInteractions` はまず `DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE`(type 5、
-`flags: 64` でephemeralを維持したまま)を即座に返し、画像の生成が終わってから
-`PATCH /webhooks/{application_id}/{token}/messages/@original` を叩いて本文と
-画像を追送する。**`res.json()` で最初の応答を返した後も、`await` で追送処理を
-終えてから関数を返す。**Cloud Functionsはレスポンス送信後にCPUがスロットルされる
-ことがあり、`res.json()` の直後に `return` すると追送処理が保証されないため、
-`sendDeckFollowup()` の完了を待ってからハンドラを終える。
-
-**Firestoreへ新設するもの**
-
-| コレクション/ドキュメント | 内容 |
-|---|---|
-| `discord_links/{discord_user_id}` | `{uid: string}`。`/link` が1件を上書きする |
-| `discord_link_codes/{コード}` | `{uid: string}`。9章のデッキコードと同じ「8桁の数字を引換券として預ける」方式。`/link` が読んだら `discord_links` へ書き写し、**引換券自体は消さない**(9章の「預けたデッキは消さない」と同じ方針) |
-| `bot_spotlight_history/{card_id}` | `{last_shown: timestamp}`。そのカードを最後に紹介した日時。**カードごとに1件**であり、抽選のたびに全件(プールの枚数ぶん)を読んで、`last_shown` が30日以内でないものを候補にする |
-
-**`bot_spotlight_history` は範囲クエリを組まない。**プールの枚数は今のところ70枚
-(今後も日単位でしか増えない)であり、全件読んでFunctions側でフィルタするほうが、
-複合インデックスを要する範囲クエリを組むより単純になる(6章のクエリ方針と同じ考え方)。
-
-**`/link` のコード発行はGodot側(`DiscordLinkService.publish_code()`)が行う。**
-`AccountService` 経由で自分のuidを `discord_link_codes/{発行したコード}` へ書く、
-9章の `DeckCodeService.publish()` とほぼ同じ実装で、**衝突したら引き直す**点も同じ。
-
-**`/profile` が返す砂金・戦績は `players/{uid}` と `match_records` からそのまま読む。**
-Functions側もクライアントと同じFirestoreを直接読むため、専用のAPIは作らない。
-オンライン対戦の通算成績は `match_records` を `player_a`/`player_b` で検索して集計する
-(10.9節のクエリ方針=単一フィールドの等価フィルタという制約にそのまま従う)。
-**19章の戦績(CPU戦込みの通算)は `user://` のローカル保存のためサーバー側から読めず、
-`/profile` には出せない。**
-
-**すべてのコマンド応答は Discord の `flags: 64`(ephemeral)を付けて返す。**
-画像・GIFの添付があっても、ephemeralのまま返せる(Discord APIの制約ではない)。
-カードスポットライト(`announceCardSpotlight`)だけは通常のメッセージとして投稿する
-(コマンドへの応答ではなく、コミュニティ全体へ向けた自発的な投稿であるため)。
-
-**`discordInteractions` の分岐が増える。**現状はPING応答だけを持つ1つの関数だが、
-`data.name`(コマンド名)で `/card` `/deck` `/link` `/profile` の4つへ分岐を足す。
-署名検証(`verifyKey()`)は既存のまま全コマンド共通で通す。
-
-**新設したコレクションは `firestore.rules` へも追記する。**クライアントからの直接書き込みは
-`discord_link_codes` の発行(自分のuidを書く)だけを許可し、`discord_links` の書き込みは
-Cloud Functions側(`/link` の処理)からしか行わない形にする。
-
----
+- `functions/data/cards.json` は `tools/export_web.sh` がビルドのたびに更新する。**画像・実演GIFはビルドに組み込まない**——
+  実際にレンダリングしたピクセルを読むため `--headless` では動かず、通常起動が要る(11章)。カードを追加・変更したとき
+  (`add-hourglass` Skill の手順)に手動で実行し直す。画像・GIF・JSONはいずれもリポジトリへコミットする(秘匿情報ではない)
+- **実演GIFはカードごとに1本**(`effect_gifs/{id}.gif`)。`record_effect_gif.gd` がそのカードの能力すべてを通しで1周ぶん録る
+- **`/deck` の画像だけはFunctions側(Node.js、`@napi-rs/canvas`)で都度描く**(組み合わせが無数で事前生成できない。
+  `node-canvas` はCairo依存でCloud Functionsのビルドが不安定なため採らない)。ゲーム内の `CardDeckSheet` と見た目を合わせない
+- **`/card` の画像・GIFはjsDelivr経由でリポジトリから直接読む**(`https://cdn.jsdelivr.net/gh/Omezi42/hourglassPVP@main/functions/data/...`)。
+  Embedへ埋めるだけでBotはアップロードしない。pushから数分〜数時間は古い版が返ることがある。`/deck` は生成したバイト列を
+  `multipart/form-data` の `files[0]` として添付する
+- **`/deck` は3秒の応答期限を超えうるため deferred response**(type 5・`flags: 64`)を即座に返し、生成後に
+  `PATCH /webhooks/{application_id}/{token}/messages/@original` で追送する。**`res.json()` の直後に `return` せず、
+  追送(`sendDeckFollowup()`)の完了を `await` してからハンドラを終える**(応答送信後にCPUがスロットルされることがある)
+- **Firestore**: `discord_links/{discord_user_id}`(`{uid}`。`/link` が上書き)/ `discord_link_codes/{コード}`(`{uid}`。8桁の引換券、
+  読んでも消さない)/ `bot_spotlight_history/{card_id}`(`{last_shown}`。カードごとに1件で、抽選のたびに全件読んで30日以内を除く。
+  範囲クエリは組まない)。`firestore.rules` では `discord_link_codes` の発行だけをクライアントに許可し、`discord_links` はFunctionsだけが書く
+- `/link` のコード発行はGodot側 `DiscordLinkService.publish_code()`(`DeckCodeService.publish()` と同じ実装、衝突したら引き直す)
+- `/profile` は `players/{uid}` と `match_records`(`player_a`/`player_b` の等価フィルタ)から直接読む。**19章の戦績(CPU戦込み)は
+  ローカル保存のため出せない**
+- **応答はすべて `flags: 64`(ephemeral)**。カードスポットライト(`announceCardSpotlight`)だけは通常のメッセージ
+- `discordInteractions` は `data.name` で4コマンドへ分岐する。署名検証(`verifyKey()`)は全コマンド共通
 
 ### 10.15 ソロモード
 
