@@ -175,6 +175,26 @@
       いまは行き先が無い(これまでソロモードセットはショップに並ばず確認できなかったが、
       「五砂の刻」が最初の実例になる)
 
+### カードセット「静止の刻」(2026-09-22・仕様確定/未着手)
+
+仕様は GameDesign.md 6章(静止・反転できない・砂を上へ戻す)・8章、カードは
+`docs/Hourglasses.md`「カードセット: 静止の刻」、実装設計は Architecture.md 10.8.2節。
+コントロールデッキを成立させる9枚・900砂金。
+
+- [ ] 語彙:`Keyword.STILL`(NAMED入り)/ `EffectType.RAISE_SAND` + `CardInstance.raise_sand()` /
+      `CardData.cannot_flip`(`can_flip()` と `_can_use_flip_right()` の両方)/
+      `ConditionScope.ATTACK_OVER_HEALTH`。いずれも enum の末尾へ
+- [ ] `MatchState.unit_raised` シグナルと `CardView.play_raise()`(落砂の逆向きの流れ)
+- [ ] 実演の台本3本(静止 / 砂が上へ戻る / 条件付き破壊)。**`card_effect_preview.gd` は
+      995行で上限まで5行しか無いため、先に切り出す**(§6)
+- [ ] キーワード辞書(`KeywordEntries`)へ「静止」を足す
+- [ ] `.tres` 9枚(`pool_index` 79〜87)+ `CardSetLibrary` へ `still_time`(900)
+- [ ] 紋章9枚(`assets/hourglasses/emblems/`)と色違いの表(`tools/tint_hourglass_icons.gd`)
+- [ ] ヘッドレステスト:静止で砂が落ちない・落砂は発火する / `raise_sand()` の下限 /
+      `cannot_flip` が反転権にも効く / 時の裁きが若い駒を選べない
+- [ ] オアシス・アンヴィル・時計塔の400戦(他6枚は暫定値の記録のみ)
+- [ ] Discordへの告知(予告)→ 次のビルドで反映
+
 ### コンボ系5枚「五砂の刻」の仕上げ
 
 - [x] ~~紋章(emblem)が5枚とも未着手~~ → ミドル・フェイズ・キー・サイクル・クレストの

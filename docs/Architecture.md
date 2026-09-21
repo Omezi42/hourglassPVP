@@ -2355,6 +2355,39 @@ Firestoreを一切知らないまま(ローカルの計算と保存だけを持�
   見せる/隠すの判断はデッキ編集・図鑑の側(収集要素の演出)が引き続き持ち、ショップの
   プレビューは「買うかどうかを決めるための確認」という別の役目として並立させる
 
+### 10.8.2 カードセット「静止の刻」の新しい語彙(GameDesign.md 6章・8章)
+
+4つの語彙を足す。**いずれも既存の enum・フィールドの末尾へ足し、既存カードの挙動を変えない**
+(11章「enum の並びは保存データ」)。
+
+| 語彙 | 実装 | 触る場所 |
+|---|---|---|
+| **静止**(`Keyword.STILL`) | `NAMED` へ入れて語として見せる。`CardInstance.tick()` が `has_keyword(STILL)` なら砂を落とさない | `card_enums.gd` / `card_instance.gd` |
+| **砂が上へ戻る**(`EffectType.RAISE_SAND`) | `CardInstance.raise_sand(n)`:攻撃力-n / 体力+n。**攻撃力を下限0で止める**(戻せる量は攻撃力まで)。`drop_sand()` の逆向きだが、**負の値を `drop_sand()` へ渡す形にはしない**——砂の移動は名前で区別する既存方針(2.4節)のとおり | `card_enums.gd` / `card_instance.gd` / `card_effect_resolver.gd` |
+| **反転できない**(`CardData.cannot_flip`) | `cannot_attack` と同じフラグ。`MatchState.can_flip()` と **`_can_use_flip_right()` の両方**で弾く(GameDesign.md 6章。反転権は回数・時期の制限だけを無視する) | `card_data.gd` / `match_state.gd` |
+| **攻撃力が体力より多い**(`ConditionScope.ATTACK_OVER_HEALTH`) | `TARGET` と同じく対象の絞り込みとして働く。`condition_total` は使わない(-1のまま)。`CardEffectResolver._single_unit()` の絞り込みへ1分岐足す | `card_enums.gd` / `card_effect_resolver.gd` |
+
+- **静止は落砂(`ON_TURN_END`)の発火を止めない。**`end_turn()` は落砂 → `tick()` の順で
+  進むため、`tick()` の中で砂を落とさないだけで済む(スプリングの落砂は毎ターン働く)
+- **静止の駒を反転すると体力0で砕ける**(攻撃力0のため)。`flip()` の後の死亡判定は既存のまま
+  通るため、新しい処理は要らない。反転権で相手の静止の壁を消す使い方はこの経路で成立する
+- **`RAISE_SAND` の演出は `play_drop()` の逆向き**(下の部屋から上の部屋へ琥珀の砂が流れる)。
+  `MatchState` は `unit_ticked` と別に `unit_raised(side, slot, amount)` を出し、`CardView.play_raise()`
+  で描く。**被ダメージの飛散・落砂の流れと同じく、別のシグナルにして相乗りさせない**
+  (取り違えるとルールを誤解する。GameDesign.md 9章)。紋章の型は `DESCEND`(味方へ)/
+  `DRAIN`(相手へ。攻撃力を抜く払拭に近い)
+- **`combat_preview()` は触らない。**砂を上へ戻す効果は戦闘の解決には乗らないため
+- CPU(`CardCpuStrategy`)は静止の駒を `lifetime_damage()` で評価すると0になる(攻撃力が
+  伸びないため)。**壁としての価値を別に見積もる評価は足さない**(コントロールの価値は
+  貪欲法では測れず、コンボ系と同じく実測の対象外)。ただし `_choose_flip()` が静止の駒を
+  反転して自殺しないよう、攻撃力0の駒が反転候補から外れていることを確認する
+  (既存の「攻撃力が体力を上回ったら返す」判定で自然に外れるはず)
+- 実演(`CardEffectPreview`)の台本は3本:静止(砂が落ちずに止まる)/ 砂が上へ戻る /
+  条件付き破壊(老いた駒だけが砕け、若い駒には効かない)
+- カードセットの登録は `CardSetLibrary` へ `still_time`(価格900)を1件足し、9枚の `.tres` に
+  `set_id = "still_time"` を入れる(10.8.1節)。**購入導線・ロック表示・シルエットは
+  五砂の刻で通っている経路をそのまま使う**
+
 ### 10.9 対局の記録と分析(GameDesign.md 22章)
 
 | クラス | 責務 |
