@@ -48,12 +48,12 @@ func _draw_brass_frame(ci: RID, rect: Rect2, points: PackedVector2Array) -> void
 	var outer := UiPaint.rounded_rect_points_uniform(rect.grow(1.0), CORNER_RADIUS + 1.0, 5)
 	_draw_closed(outer, UiPalette.OUTLINE_DARK, 1.0)
 	UiPaint.draw_bevel(
-		ci, points, UiPalette.BRASS_HIGHLIGHT, UiPalette.BRASS_DARK, FRAME_WIDTH, false
+		ci, points, UiPalette.BRASS_RIM_LIGHT, UiPalette.BRASS_DARK, FRAME_WIDTH, false
 	)
 	var inner := UiPaint.rounded_rect_points_uniform(
 		rect.grow(-FRAME_WIDTH), maxf(CORNER_RADIUS - FRAME_WIDTH, 0.0), 5
 	)
-	_draw_closed(inner, Color(UiPalette.BRASS_HIGHLIGHT, 0.4), 1.0)
+	_draw_closed(inner, Color(UiPalette.BRASS_RIM_LIGHT, 0.5), 1.0)
 
 
 func _draw_closed(points: PackedVector2Array, color: Color, width: float) -> void:

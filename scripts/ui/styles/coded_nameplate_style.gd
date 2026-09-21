@@ -88,7 +88,7 @@ func _draw_frame(ci: RID, points: PackedVector2Array, rect: Rect2) -> void:
 	]
 	UiPaint.fill_gradient_polygon(ci, points, rect, stops)
 	UiPaint.draw_bevel(
-		ci, points, UiPalette.BRASS_HIGHLIGHT, UiPalette.BRASS_DARK, BEVEL_WIDTH_FRAME, false
+		ci, points, UiPalette.BRASS_RIM_LIGHT, UiPalette.BRASS_DARK, BEVEL_WIDTH_FRAME, false
 	)
 	UiPaint.apply_grain(ci, rect, GRAIN_ALPHA_FRAME)
 

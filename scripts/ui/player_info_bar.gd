@@ -353,7 +353,7 @@ func _brass_ring(ci: RID, center: Vector2, radius: float, width: float) -> void:
 			[1.0, UiPalette.BRASS_LIGHT]
 		]
 	)
-	UiPaint.draw_ring(ci, center, radius - width, Color(UiPalette.BRASS_HIGHLIGHT, 0.5), 1.0, 32)
+	UiPaint.draw_ring(ci, center, radius - width, Color(UiPalette.BRASS_RIM_LIGHT, 0.6), 1.0, 32)
 
 
 ## 濃紺の板(名札・山の札)。面取りの真鍮の細い縁を持つ。
@@ -371,7 +371,7 @@ func _plate(ci: RID, rect: Rect2, radius: float) -> PackedVector2Array:
 		1.0
 	)
 	UiPaint.draw_bevel(
-		ci, points, UiPalette.BRASS_HIGHLIGHT, UiPalette.BRASS_DARK, RIM_WIDTH, false
+		ci, points, UiPalette.BRASS_RIM_LIGHT, UiPalette.BRASS_DARK, RIM_WIDTH, false
 	)
 	return points
 
@@ -522,7 +522,7 @@ func _draw_hp() -> void:
 		1.0
 	)
 	UiPaint.draw_bevel(
-		ci, track, UiPalette.BRASS_HIGHLIGHT, UiPalette.BRASS_DARK, HP_RIM_WIDTH, false
+		ci, track, UiPalette.BRASS_RIM_LIGHT, UiPalette.BRASS_DARK, HP_RIM_WIDTH, false
 	)
 	if targetable:
 		var pulse := (sin(_glint_time * 4.0) + 1.0) * 0.5
@@ -582,7 +582,7 @@ func _draw_mana() -> void:
 		[[0.0, Color(0.03, 0.04, 0.09, 1.0)], [1.0, Color(0.08, 0.10, 0.19, 1.0)]]
 	)
 	UiPaint.draw_inner_shadow(ci, MANA_TROUGH_RECT, trough_radius, 6, 3, Color(0, 0, 0, 1), 0.5)
-	UiPaint.draw_bevel(ci, trough, UiPalette.BRASS_HIGHLIGHT, UiPalette.BRASS_DARK, 1.5, false)
+	UiPaint.draw_bevel(ci, trough, UiPalette.BRASS_RIM_LIGHT, UiPalette.BRASS_DARK, 1.5, false)
 	# 払えない(n > 現在マナ)ぶんは光らせない(GameDesign.md 9章)。
 	var glow_count := _highlight_cost if _highlight_cost <= _mana else 0
 	for i in _max_mana:

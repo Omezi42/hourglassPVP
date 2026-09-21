@@ -34,7 +34,7 @@ func _draw() -> void:
 
 	_fill_rect(ci, top_rect, UiPalette.WOOD_TOP, UiPalette.WOOD_MID)
 	_draw_grain(top_rect)
-	_fill_rect(ci, trim_rect, UiPalette.BRASS_HIGHLIGHT, UiPalette.BRASS_DARK)
+	_fill_rect(ci, trim_rect, UiPalette.BRASS_RIM_LIGHT, UiPalette.BRASS_DARK)
 	_fill_rect(ci, lip_rect, UiPalette.WOOD_MID, UiPalette.WOOD_DARK)
 
 	draw_line(

@@ -320,7 +320,7 @@ func _draw_frame(
 
 	UiPaint.fill_gradient_polygon(ci, points, rect, stops)
 
-	var light := UiPalette.BRASS_HIGHLIGHT
+	var light := UiPalette.BRASS_RIM_LIGHT
 	var dark := UiPalette.BRASS_DARK
 	if disabled:
 		light = UiPaint.disabled_tone(light)
@@ -417,7 +417,7 @@ func _draw_filled_panel(
 
 	UiPaint.fill_gradient_polygon(ci, points, rect, stops)
 
-	var light := UiPalette.BRASS_HIGHLIGHT
+	var light := UiPalette.BRASS_RIM_LIGHT
 	var dark := UiPalette.BRASS_DARK
 	if disabled:
 		light = UiPaint.disabled_tone(light)
@@ -573,7 +573,7 @@ func _draw_top_badge(ci: RID, outer_rect: Rect2, body_rect: Rect2, disabled: boo
 	if disabled:
 		stops = UiPaint.dim_gradient_stops(stops)
 	UiPaint.fill_gradient_polygon(ci, inner_points, inner_rect, stops)
-	var light := UiPalette.BRASS_HIGHLIGHT
+	var light := UiPalette.BRASS_RIM_LIGHT
 	var dark := UiPalette.BRASS_DARK
 	if disabled:
 		light = UiPaint.disabled_tone(light)

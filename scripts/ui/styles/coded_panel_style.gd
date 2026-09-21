@@ -115,7 +115,7 @@ func _draw_frame(ci: RID, points: PackedVector2Array, rect: Rect2) -> void:
 
 	UiPaint.fill_gradient_polygon(ci, points, rect, stops)
 
-	var light := UiPalette.BRASS_HIGHLIGHT
+	var light := UiPalette.BRASS_RIM_LIGHT
 	var dark := UiPalette.BRASS_DARK
 	if dimmed:
 		light = UiPaint.disabled_tone(light)
@@ -184,7 +184,7 @@ func _draw_header_badge(ci: RID, rect: Rect2) -> void:
 	]
 	UiPaint.fill_gradient_polygon(ci, inner_points, inner_rect, stops)
 	UiPaint.draw_bevel(
-		ci, inner_points, UiPalette.BRASS_HIGHLIGHT, UiPalette.BRASS_DARK, BEVEL_WIDTH_FRAME, false
+		ci, inner_points, UiPalette.BRASS_RIM_LIGHT, UiPalette.BRASS_DARK, BEVEL_WIDTH_FRAME, false
 	)
 
 	UiPaint.draw_emblem(ci, UiPaint.Emblem.HOURGLASS, center, radius * BADGE_ICON_RATIO)

@@ -181,7 +181,7 @@ static func _frame(
 ) -> void:
 	var outer := UiPaint.rounded_rect_points_uniform(rect.grow(1.0), CORNER * s + 1.0, 6)
 	_closed(view, outer, UiPalette.OUTLINE_DARK, 1.0)
-	var light := UiPalette.BRASS_HIGHLIGHT
+	var light := UiPalette.BRASS_RIM_LIGHT
 	var dark := UiPalette.BRASS_DARK
 	if view.card.is_spell:
 		light = CardView.SPELL_BORDER

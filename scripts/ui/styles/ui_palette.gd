@@ -15,6 +15,12 @@ const BRASS_MID := Color(0.44, 0.31, 0.24, 1.0)
 const BRASS_DARK := Color(0.33, 0.22, 0.16, 1.0)
 const BRASS_BOUNCE := Color(0.36, 0.25, 0.19, 1.0)
 
+## 額縁・縁取りの面取り(`UiPaint.draw_bevel`)の明るい側。BRASS_HIGHLIGHTは1pxの照り返しや
+## 文字・紋章のための「最も明るい真鍮」であり、これを数pxの帯として上辺に敷くと、暗い革や
+## 濃紺の上で枠だけが白っぽく浮く(手札の札・情報帯で実際にそう見えた)。面取りの帯には
+## HIGHLIGHTとLIGHTのあいだのこの色を使い、フィルの上端の細い照り返しだけをHIGHLIGHTに残す。
+const BRASS_RIM_LIGHT := Color(0.66, 0.53, 0.35, 1.0)
+
 ## 押下(pressed)時の真鍮。実測(pressed.png, x=10列): mid(y=89)=(59,47,33) / dark(y=150,最暗)=(46,31,24)
 const BRASS_PRESSED_MID := Color(0.23, 0.18, 0.13, 1.0)
 const BRASS_PRESSED_DARK := Color(0.18, 0.13, 0.1, 1.0)
