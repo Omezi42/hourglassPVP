@@ -779,6 +779,96 @@
 			"is_spell": false,
 			"pool_index": 78,
 			"total_sand": 8
+		},
+		{
+			"cannot_attack": false,
+			"cost": 3,
+			"describe": "守護 / 静止",
+			"display_name": "フリーズ",
+			"id": "freeze",
+			"is_spell": false,
+			"pool_index": 79,
+			"total_sand": 5
+		},
+		{
+			"cannot_attack": false,
+			"cost": 4,
+			"describe": "落砂:自分のHPを1回復する",
+			"display_name": "オアシス",
+			"id": "oasis",
+			"is_spell": false,
+			"pool_index": 80,
+			"total_sand": 7
+		},
+		{
+			"cannot_attack": false,
+			"cost": 4,
+			"describe": "静止 / 落砂:自分の他の砂時計1体の砂が1粒上へ戻る",
+			"display_name": "スプリング",
+			"id": "spring",
+			"is_spell": false,
+			"pool_index": 81,
+			"total_sand": 6
+		},
+		{
+			"cannot_attack": false,
+			"cost": 5,
+			"describe": "被弾:この砂時計の砂が1粒上へ戻る",
+			"display_name": "アンヴィル",
+			"id": "anvil",
+			"is_spell": false,
+			"pool_index": 82,
+			"total_sand": 9
+		},
+		{
+			"cannot_attack": false,
+			"cost": 7,
+			"describe": "反転できない / 守護",
+			"display_name": "クロノス",
+			"id": "chronos",
+			"is_spell": false,
+			"pool_index": 83,
+			"total_sand": 12
+		},
+		{
+			"cannot_attack": false,
+			"cost": 9,
+			"describe": "落砂:相手の砂時計すべてに1ダメージ",
+			"display_name": "時計塔",
+			"id": "clocktower",
+			"is_spell": false,
+			"pool_index": 84,
+			"total_sand": 11
+		},
+		{
+			"cannot_attack": false,
+			"cost": 1,
+			"describe": "自分の砂時計1体の砂が2粒上へ戻る",
+			"display_name": "巻き戻し",
+			"id": "rewind",
+			"is_spell": true,
+			"pool_index": 85,
+			"total_sand": 0
+		},
+		{
+			"cannot_attack": false,
+			"cost": 3,
+			"describe": "相手の砂時計すべての砂が2粒上へ戻る",
+			"display_name": "時間停止",
+			"id": "stasis",
+			"is_spell": true,
+			"pool_index": 86,
+			"total_sand": 0
+		},
+		{
+			"cannot_attack": false,
+			"cost": 3,
+			"describe": "攻撃力が体力より多い相手の砂時計1体を破壊する",
+			"display_name": "時の裁き",
+			"id": "verdict",
+			"is_spell": true,
+			"pool_index": 87,
+			"total_sand": 0
 		}
 	]
 }
