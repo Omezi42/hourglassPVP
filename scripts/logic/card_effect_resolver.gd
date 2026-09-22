@@ -142,6 +142,22 @@ func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Diction
 				var target := _unit_at(entry)
 				if target != null:
 					target.drop_sand(effect.value)
+		CardEnums.EffectType.RAISE_SAND:
+			var raise_entries := _targets(side, unit, effect, hint)
+			# 味方へは寿命を伸ばす恵与、相手へは攻撃力を抜く払拭として見せる(GameDesign.md 9章)。
+			var raise_style := (
+				CardEnums.EffectVisualStyle.DRAIN
+				if _is_enemy_target(effect.target)
+				else CardEnums.EffectVisualStyle.DESCEND
+			)
+			_strike_for_targets(side, from_slot, effect.target, raise_entries, raise_style, origin)
+			for entry in raise_entries:
+				var target := _unit_at(entry)
+				if target == null:
+					continue
+				var moved := target.raise_sand(effect.value)
+				if moved > 0:
+					_state.unit_raised.emit(entry["side"], entry["slot"], moved)
 		CardEnums.EffectType.SUMMON:
 			var summon_slot := _first_empty_slot(side)
 			if summon_slot >= 0:
@@ -310,6 +326,13 @@ func _is_single_unit_target(target: int) -> bool:
 	)
 
 
+func _is_enemy_target(target: int) -> bool:
+	return (
+		target == CardEnums.EffectTarget.ENEMY_UNIT
+		or target == CardEnums.EffectTarget.ALL_ENEMY_UNITS
+	)
+
+
 func _unit_at(entry: Dictionary) -> CardInstance:
 	return _state.board[entry["side"]][entry["slot"]]
 
@@ -335,22 +358,15 @@ func _targets(side: int, unit: CardInstance, effect: CardEffectData, hint: Dicti
 
 
 ## 対象を1体だけ選ぶ効果の解決。相手側(ENEMY_UNIT)も自分側(ALLY_UNIT)もここを通る。
-## effect.condition_scope が TARGET のとき、いまの総量が effect.condition_total と
-## 一致する候補だけへ絞る(コンボ系カード。GameDesign.md 6章)。
+## effect.condition_scope が対象の絞り込み(TARGET / ATTACK_OVER_HEALTH)のとき、
+## 条件を満たす候補だけへ絞る(GameDesign.md 6章)。
 func _single_unit(
 	target_side: int, hint: Dictionary, exclude_slot := -1, effect: CardEffectData = null
 ) -> Array:
-	var filter_total := -1
-	if effect != null and effect.condition_scope == CardEnums.ConditionScope.TARGET:
-		filter_total = effect.condition_total
 	if hint.has("slot") and hint.get("side", target_side) == target_side:
 		var slot: int = hint["slot"]
 		var hinted: CardInstance = _state.board[target_side][slot]
-		if (
-			slot != exclude_slot
-			and hinted != null
-			and (filter_total < 0 or hinted.total_sand() == filter_total)
-		):
+		if slot != exclude_slot and hinted != null and eligible_target(hinted, effect):
 			return [{"side": target_side, "slot": slot}]
 	# 指定が無い・条件を満たさない場合は、条件を満たす中で最も生涯ダメージの大きい1体を選ぶ。
 	var best := -1
@@ -359,13 +375,26 @@ func _single_unit(
 		var candidate: CardInstance = _state.board[target_side][slot]
 		if candidate == null or slot == exclude_slot:
 			continue
-		if filter_total >= 0 and candidate.total_sand() != filter_total:
+		if not eligible_target(candidate, effect):
 			continue
 		var value := candidate.lifetime_damage()
 		if value > best_value:
 			best_value = value
 			best = slot
 	return [] if best < 0 else [{"side": target_side, "slot": best}]
+
+
+## 対象の絞り込み(GameDesign.md 6章)。TARGET は総量の一致、ATTACK_OVER_HEALTH は
+## 攻撃力が体力より多いこと。UI・CPUも同じ物差しで候補を絞れるよう公開する。
+static func eligible_target(unit: CardInstance, effect: CardEffectData) -> bool:
+	if effect == null:
+		return true
+	match effect.condition_scope:
+		CardEnums.ConditionScope.TARGET:
+			return unit.total_sand() == effect.condition_total
+		CardEnums.ConditionScope.ATTACK_OVER_HEALTH:
+			return unit.attack > unit.health
+	return true
 
 
 func _all_slots(side: int) -> Array:

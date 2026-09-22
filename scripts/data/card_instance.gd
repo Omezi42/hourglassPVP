@@ -105,8 +105,14 @@ func can_attack() -> bool:
 	return not summoned_this_turn and attack > 0 and attacks_this_turn < max_attacks()
 
 
+## 反転できない駒(`CardData.cannot_flip`)は通常の反転も反転権も受け付けない
+## (GameDesign.md 6章)。反転権の判定 `MatchState._can_use_flip_right()` も `flippable()` を見る。
 func can_flip() -> bool:
-	return not summoned_this_turn and not flipped_this_turn
+	return flippable() and not summoned_this_turn and not flipped_this_turn
+
+
+func flippable() -> bool:
+	return not data.cannot_flip
 
 
 ## 反転:体力と攻撃力を入れ替える。
@@ -123,10 +129,25 @@ func drop_sand(amount: int) -> void:
 	attack += moved
 
 
+## 砂を n 粒上へ戻す(攻撃力-n / 体力+n)。落砂の逆向きで、戻せるのは攻撃力まで。
+## 総量は変わらない(GameDesign.md 6章)。**`drop_sand()` へ負の値を渡す形にはしない**——
+## 砂の移動は名前で区別する(Architecture.md 2.4節)。戻した量を返す。
+func raise_sand(amount: int) -> int:
+	var moved: int = mini(amount, attack)
+	attack -= moved
+	health += moved
+	return moved
+
+
 ## ターン終了時の1粒。**ソロモード(GameDesign.md 27章)の特殊ルールでは
 ## `MatchState.sand_drop_count`により1粒より多いことがある**。
-func tick(amount: int = 1) -> void:
+## 静止(GameDesign.md 6章)を持つ駒は落ちない。実際に落ちた量を返す。
+func tick(amount: int = 1) -> int:
+	if has_keyword(CardEnums.Keyword.STILL):
+		return 0
+	var before := attack
 	drop_sand(amount)
+	return attack - before
 
 
 ## ダメージを受ける。受けた分の砂は消える(総量が減る)。

@@ -32,6 +32,8 @@ enum Effect {
 	SHATTER,
 	## ターン終了の1粒。砂は落ちる(総量は変わらない)ので、下の部屋へ流れる。
 	DROP,
+	## 効果で砂が上へ戻る。落砂の逆向きで、下の部屋から上の部屋へ流れる(総量は変わらない)。
+	RAISE,
 }
 
 enum Mode {
@@ -429,6 +431,11 @@ func play_drop() -> void:
 	_start_effect(Effect.DROP, DROP_DURATION)
 
 
+## 効果で砂が上へ戻る:`play_drop()` の逆向き(GameDesign.md 6章)。
+func play_raise() -> void:
+	_start_effect(Effect.RAISE, DROP_DURATION)
+
+
 func _start_effect(kind: int, duration: float) -> void:
 	if _effect_tween != null and _effect_tween.is_valid():
 		_effect_tween.kill()
@@ -688,6 +695,8 @@ func _keyword_text() -> String:
 	var words: PackedStringArray = []
 	if card != null and card.cannot_attack:
 		words.append("攻撃不可")
+	if card != null and card.cannot_flip:
+		words.append("反転不可")
 	# 場に出ている駒は**その駒がいま持っている**キーワードを出す。CardData を直接見ると、
 	# 効果で与えられたキーワードと、消された状態が面に出ない。
 	for keyword in _live_keywords():
@@ -783,6 +792,8 @@ func _draw_effect() -> void:
 		rect = _fit_art(_icon(), board_art_box())
 	if _effect == Effect.SHATTER:
 		_draw_shatter(rect)
+	elif _effect == Effect.RAISE:
+		_draw_drop(rect, true)
 	else:
 		_draw_drop(rect)
 
@@ -802,21 +813,25 @@ func _draw_shatter(rect: Rect2) -> void:
 
 
 ## 下の部屋へ流れる:中央を細い砂の筋が下りていく。総量は変わらない。
-func _draw_drop(rect: Rect2) -> void:
+## `upward` なら逆向きに、下の部屋から上の部屋へ戻る(砂が上へ戻る効果)。
+func _draw_drop(rect: Rect2, upward := false) -> void:
 	var x := rect.position.x + rect.size.x * 0.5
 	var top := rect.position.y + rect.size.y * 0.2
 	var bottom := rect.position.y + rect.size.y * 0.78
-	var head: float = lerpf(top, bottom, _effect_progress)
-	draw_line(Vector2(x, top), Vector2(x, head), Color(SAND_AMBER, 0.55), 3.0)
+	var from := bottom if upward else top
+	var to := top if upward else bottom
+	var head: float = lerpf(from, to, _effect_progress)
+	var back := 1.0 if upward else -1.0
+	draw_line(Vector2(x, from), Vector2(x, head), Color(SAND_AMBER, 0.55), 3.0)
 	for i in 3:
-		var offset := float(i) * 6.0
-		var y: float = head - offset
-		if y < top:
+		var y: float = head + back * float(i) * 6.0
+		var outside: bool = y > bottom if upward else y < top
+		if outside:
 			continue
 		draw_circle(Vector2(x, y), 3.0 - i * 0.6, Color(SAND_AMBER, 0.9 - i * 0.25))
 	if _effect_progress > 0.85:
 		var glow := (_effect_progress - 0.85) / 0.15
-		draw_circle(Vector2(x, bottom), 8.0 * glow, Color(SAND_AMBER, 0.35 * (1.0 - glow)))
+		draw_circle(Vector2(x, to), 8.0 * glow, Color(SAND_AMBER, 0.35 * (1.0 - glow)))
 
 
 func _draw_empty() -> void:

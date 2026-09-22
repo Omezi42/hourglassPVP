@@ -45,9 +45,32 @@ const SETS: Dictionary = {
 		"card_ids": ["middle", "phase", "key", "cycle", "crest"],
 		"price": 500,
 	},
+	## 2番目のカードセット(GameDesign.md 8章)。「時を止める・巻き戻す」枠で、
+	## 老いない駒・砂を上へ戻す・回復・条件付き除去を足してコントロールデッキを成立させる。
+	"still_time":
+	{
+		"id": "still_time",
+		"display_name": "静止の刻",
+		"description": "時を止め、砂を巻き戻して長期戦へ持ち込む受けの9枚",
+		"card_ids":
+		[
+			"freeze",
+			"oasis",
+			"spring",
+			"anvil",
+			"chronos",
+			"clocktower",
+			"rewind",
+			"stasis",
+			"verdict",
+		],
+		"price": 900,
+	},
 }
 
-const ORDERED_IDS: Array[String] = ["solo_chime", "solo_ward", "solo_goad", "combo_five"]
+const ORDERED_IDS: Array[String] = [
+	"solo_chime", "solo_ward", "solo_goad", "combo_five", "still_time"
+]
 
 
 static func has_set(set_id: String) -> bool:

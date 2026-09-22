@@ -152,6 +152,8 @@ func _fill_body(card: CardData) -> void:
 	_body.add_child(_make_line("毎ターン終了時に砂が1粒落ちて 体力-1 / 攻撃力+1"))
 	if card.cannot_attack:
 		_body.add_child(_make_line("攻撃できない(反転はできる)"))
+	if card.cannot_flip:
+		_body.add_child(_make_line("反転できない(反転権でも反転できない)"))
 	for keyword in card.named_keywords():
 		_body.add_child(_make_term_row(KeywordEntries.keyword_entry(keyword)))
 	for keyword in card.plain_keywords():
@@ -162,7 +164,12 @@ func _fill_body(card: CardData) -> void:
 		_body.add_child(_make_term_row(KeywordEntries.trigger_entry(triggers[i]), text))
 	if triggers.is_empty() and not card.rules_text.is_empty():
 		_body.add_child(_make_line(card.rules_text))
-	if card.keywords.is_empty() and card.rules_text.is_empty() and not card.cannot_attack:
+	if (
+		card.keywords.is_empty()
+		and card.rules_text.is_empty()
+		and not card.cannot_attack
+		and not card.cannot_flip
+	):
 		_body.add_child(_make_line("効果を持たない基準のカード。"))
 	for line in _token_lines(card):
 		_body.add_child(_make_line(line))

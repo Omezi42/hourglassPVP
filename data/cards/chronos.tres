@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/emblems/chronos.png" id="emblem"]
+
+[resource]
+script = ExtResource("script_card")
+id = "chronos"
+display_name = "クロノス"
+cost = 7
+total_sand = 12
+pool_index = 83
+set_id = "still_time"
+keywords = Array[int]([0])
+effects = Array[Resource]([])
+rules_text = ""
+cannot_attack = false
+cannot_flip = true
+is_token = false
+art_id = "hour"
+emblem = ExtResource("emblem")

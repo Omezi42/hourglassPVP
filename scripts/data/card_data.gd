@@ -31,6 +31,9 @@ extends Resource
 ## 攻撃できない代わりに総量が大きい駒(GameDesign.md 6章)。反転はできる。
 ## 守護と違い**語にしない**ため keywords ではなくフラグで持つ。
 @export var cannot_attack: bool = false
+## 反転できない駒(GameDesign.md 6章。「攻撃できない」の鏡像)。**反転権でも反転できない**。
+## 放置すると攻撃力が総量-1まで伸びる時限爆弾として働く。語にしないためフラグで持つ。
+@export var cannot_flip: bool = false
 ## 効果で場に出る砂時計(トークン)。CardLibrary.all_cards() が返さないため、
 ## デッキ編集にも砂時計一覧にも現れない。
 @export var is_token: bool = false
@@ -93,6 +96,8 @@ func describe() -> String:
 		return rules_text if not rules_text.is_empty() else "効果なし"
 	if cannot_attack:
 		parts.append("攻撃できない")
+	if cannot_flip:
+		parts.append("反転できない")
 	for keyword in named_keywords():
 		parts.append(CardEnums.keyword_name(keyword))
 	for keyword in plain_keywords():

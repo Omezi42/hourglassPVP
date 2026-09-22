@@ -34,18 +34,20 @@ const DEMOS := {
 	CardEnums.Keyword.GLASS: CardEffectPreview.Demo.GLASS,
 	CardEnums.Keyword.PIERCE: CardEffectPreview.Demo.PIERCE,
 	CardEnums.Keyword.QUICK: CardEffectPreview.Demo.QUICK,
+	CardEnums.Keyword.STILL: CardEffectPreview.Demo.STILL,
 	CardEnums.Keyword.POISON: CardEffectPreview.Demo.POISON,
 	CardEnums.Keyword.LIFESTEAL: CardEffectPreview.Demo.LIFESTEAL,
 	CardEnums.Keyword.DOUBLE_STRIKE: CardEffectPreview.Demo.DOUBLE_STRIKE,
 }
 
-## 語にする4種 → 語にしない3種 → トリガー5種の順に並べる。
+## 語にする5種 → 語にしない3種 → トリガー5種の順に並べる。
 ## 語にするものを先に置くのは、カードの面へ出ているぶん引かれる回数が多いため。
 const ORDER: Array[Array] = [
 	[Kind.KEYWORD, CardEnums.Keyword.GUARD],
 	[Kind.KEYWORD, CardEnums.Keyword.GLASS],
 	[Kind.KEYWORD, CardEnums.Keyword.PIERCE],
 	[Kind.KEYWORD, CardEnums.Keyword.QUICK],
+	[Kind.KEYWORD, CardEnums.Keyword.STILL],
 	[Kind.KEYWORD, CardEnums.Keyword.POISON],
 	[Kind.KEYWORD, CardEnums.Keyword.LIFESTEAL],
 	[Kind.KEYWORD, CardEnums.Keyword.DOUBLE_STRIKE],

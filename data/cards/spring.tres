@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/emblems/spring.png" id="emblem"]
+
+[sub_resource type="Resource" id="Effect_spring_0"]
+script = ExtResource("script_effect")
+trigger = 3
+target = 6
+effect_type = 15
+value = 1
+card_id = ""
+keyword = -1
+
+[resource]
+script = ExtResource("script_card")
+id = "spring"
+display_name = "スプリング"
+cost = 4
+total_sand = 6
+pool_index = 81
+set_id = "still_time"
+keywords = Array[int]([8])
+effects = Array[Resource]([SubResource("Effect_spring_0")])
+rules_text = "落砂:自分の他の砂時計1体の砂が1粒上へ戻る"
+cannot_attack = false
+is_token = false
+art_id = "sprout"
+emblem = ExtResource("emblem")

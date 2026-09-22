@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/emblems/oasis.png" id="emblem"]
+
+[sub_resource type="Resource" id="Effect_oasis_0"]
+script = ExtResource("script_effect")
+trigger = 3
+target = 5
+effect_type = 7
+value = 1
+card_id = ""
+keyword = -1
+
+[resource]
+script = ExtResource("script_card")
+id = "oasis"
+display_name = "オアシス"
+cost = 4
+total_sand = 7
+pool_index = 80
+set_id = "still_time"
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_oasis_0")])
+rules_text = "落砂:自分のHPを1回復する"
+cannot_attack = false
+is_token = false
+art_id = "bloom"
+emblem = ExtResource("emblem")

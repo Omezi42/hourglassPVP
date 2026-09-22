@@ -28,6 +28,8 @@ enum Keyword {
 	## `CardData.conditional_keyword` 経由で条件付きに持たせるためだけの値で、
 	## 常在の `keywords` 配列へ直接載るカードは無い)。
 	DAMAGE_BOOST,
+	## ターン終了時に砂が落ちない(老いない代わりに攻撃力も伸びない)。静止の刻。
+	STILL,
 }
 
 ## トリガーキーワード(GameDesign.md 6章)。
@@ -105,6 +107,9 @@ enum EffectType {
 	## 対象プレイヤーのHPを反転する(初期HP - 現在HP)。value は使わない。
 	## 砂時計の反転(体力と攻撃力の入れ替え)を、プレイヤー自身へ持ち込んだもの。
 	INVERT_PLAYER_HP,
+	## 砂を value 粒上へ戻す(攻撃力-value / 体力+value)。DROP_SAND の逆向きで、
+	## 戻せるのは攻撃力まで(0未満にはならない)。総量は変わらない(GameDesign.md 6章)。
+	RAISE_SAND,
 }
 
 ## コンボ系カードの発動条件が確認する範囲(GameDesign.md 6章)。
@@ -122,6 +127,9 @@ enum ConditionScope {
 	## 自分の場に、いまの総量が条件と一致する砂時計が1体でもいるかを見る。
 	## 選ぶ対象そのものの総量は問わない。
 	ANY_ALLY,
+	## 選んだ対象の攻撃力が体力より多いか(老いた駒・反転した駒)。TARGET と同じく
+	## 対象の絞り込みとして働き、condition_total は使わない(静止の刻)。
+	ATTACK_OVER_HEALTH,
 }
 
 ## 効果が対象へ届く演出の「型」(GameDesign.md 9章)。`MatchState.effect_struck` /
@@ -164,7 +172,9 @@ enum EffectOrigin {
 
 ## 語として見せるキーワード。**複数のカードに載っているものだけ**をここへ入れる。
 ## カードを追加してある能力が2枚目に載ったら、ここへ足して語へ昇格させる。
-const NAMED: Array[Keyword] = [Keyword.GUARD, Keyword.GLASS, Keyword.PIERCE, Keyword.QUICK]
+const NAMED: Array[Keyword] = [
+	Keyword.GUARD, Keyword.GLASS, Keyword.PIERCE, Keyword.QUICK, Keyword.STILL
+]
 
 
 static func is_named(keyword: int) -> bool:
@@ -206,6 +216,8 @@ static func keyword_name(keyword: int) -> String:
 			return "速落"
 		Keyword.DAMAGE_BOOST:
 			return "倍撃"
+		Keyword.STILL:
+			return "静止"
 	return ""
 
 
@@ -229,6 +241,8 @@ static func keyword_description(keyword: int) -> String:
 			return "場に出た瞬間に砂が2粒落ちる(すぐ攻撃できる)。"
 		Keyword.DAMAGE_BOOST:
 			return "戦闘で与えるダメージが2倍になる。"
+		Keyword.STILL:
+			return "ターン終了時に砂が落ちない(老いない代わりに攻撃力も伸びない)。"
 	return ""
 
 

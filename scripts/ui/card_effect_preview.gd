@@ -41,6 +41,12 @@ enum Demo {
 	FX_RETURN_TO_HAND,
 	## 自分のHPを反転する(砂術)。残りHPと失ったHPが入れ替わる。
 	FX_INVERT_HP,
+	## 静止:ターン終了時に砂が落ちない(静止の刻)。
+	STILL,
+	## 砂が上へ戻る(攻撃力-n / 体力+n)。落砂の逆向き。
+	FX_RAISE_SAND,
+	## 条件付き破壊:攻撃力が体力より多い駒だけが砕け、若い駒には効かない。
+	FX_DESTROY_AGED,
 }
 
 const MIN_SIZE := Vector2(320, 200)
@@ -155,6 +161,8 @@ static func _demo_for_keyword(keyword: int) -> int:
 			return Demo.DOUBLE_STRIKE
 		CardEnums.Keyword.QUICK:
 			return Demo.QUICK
+		CardEnums.Keyword.STILL:
+			return Demo.STILL
 	return -1
 
 
@@ -204,6 +212,14 @@ static func _entry_for_effect(effect: CardEffectData) -> Dictionary:
 			demo = Demo.FX_RETURN_TO_HAND
 		CardEnums.EffectType.INVERT_PLAYER_HP:
 			demo = Demo.FX_INVERT_HP
+		CardEnums.EffectType.RAISE_SAND:
+			demo = Demo.FX_RAISE_SAND
+	# 対象の絞り込み(攻撃力>体力)を持つ破壊は、効かない駒があることまで見せる。
+	if (
+		demo == Demo.FX_DESTROY_UNIT
+		and effect.condition_scope == CardEnums.ConditionScope.ATTACK_OVER_HEALTH
+	):
+		demo = Demo.FX_DESTROY_AGED
 	# 反転がトリガーの効果は、反転そのものの実演を兼ねる(2本並べると同じ動きが続くため)。
 	# キーワードを与える効果だけは、値が「いくつ」ではなく「どの語か」を指す。
 	var value := maxi(effect.value, 1)
@@ -234,7 +250,10 @@ func _stage(entry: Dictionary, t: float) -> Dictionary:
 		stage = _stage_add_total(
 			t, value, trigger == CardEnums.Trigger.ON_FLIP, entry.get("all", false)
 		)
-	elif entry.get("ally", false) and (demo == Demo.FX_SWAP_STATS or demo == Demo.FX_DROP_SAND):
+	elif (
+		entry.get("ally", false)
+		and (demo == Demo.FX_SWAP_STATS or demo == Demo.FX_DROP_SAND or demo == Demo.FX_RAISE_SAND)
+	):
 		# 味方を対象にする反転・砂落としは、相手への攻撃を挟まない
 		# (下の `_stage_on_enemy_unit` は「攻撃して当てる」演出であり、味方には使えない)。
 		# 砂術は盤面に自分自身を持たないため「他の」を付けない(GameDesign.md 6章の
@@ -517,14 +536,21 @@ func _stage_on_enemy_unit(t: float, demo: int, value: int, all: bool) -> Diction
 	var stage := CardEffectStage.empty_stage()
 	var own := CardEffectStage.piece(6, 0, 6)
 	own["fade"] = CardEffectStage.seg(t, 0.0, 0.15)
-	var foes: Array = [CardEffectStage.piece(5, 1, 6)]
+	# 砂が上へ戻る効果は攻撃力までしか戻せないため、戻す余地のある老いた的にする。
+	var aged := demo == Demo.FX_RAISE_SAND or demo == Demo.FX_DESTROY_AGED
+	var foes: Array = [CardEffectStage.piece(2, 4, 6) if aged else CardEffectStage.piece(5, 1, 6)]
 	if all:
-		foes.append(CardEffectStage.piece(4, 2, 6))
+		foes.append(CardEffectStage.piece(3, 3, 6) if aged else CardEffectStage.piece(4, 2, 6))
+	# 条件付き破壊は、条件を満たさない若い駒を並べて「効かない」ことまで見せる。
+	if demo == Demo.FX_DESTROY_AGED:
+		foes.append(CardEffectStage.piece(5, 1, 6))
 	stage["trigger_note"] = CardEffectDemoEnemy.note(demo, value, all)
+	# 条件付き破壊の若い駒(末尾)は対象に取らない。
+	var struck: int = foes.size() - 1 if demo == Demo.FX_DESTROY_AGED else foes.size()
 	# 的が砕けた後も矢印が残らないよう、当たったところで消す。
 	if t >= 0.3 and t < 0.8:
 		var beams: Array = []
-		for i in foes.size():
+		for i in struck:
 			beams.append(
 				CardEffectStage.beam(
 					["own", 0], ["foe", i], CardEffectStage.seg(t, 0.3 + 0.06 * i, 0.6 + 0.06 * i)
@@ -533,8 +559,8 @@ func _stage_on_enemy_unit(t: float, demo: int, value: int, all: bool) -> Diction
 		stage["beams"] = beams
 	if t >= 0.62:
 		var landed := CardEffectStage.seg(t, 0.62, 0.85)
-		for foe in foes:
-			CardEffectDemoEnemy.apply(foe, demo, value, landed)
+		for i in struck:
+			CardEffectDemoEnemy.apply(foes[i], demo, value, landed)
 	stage["own"] = [own]
 	stage["foe"] = foes
 	return stage
@@ -559,6 +585,8 @@ func _stage_on_ally_unit(
 		scope = "自分の他の砂時計1体" if exclude_self else "自分の砂時計1体"
 	if demo == Demo.FX_SWAP_STATS:
 		stage["trigger_note"] = "%sの体力と攻撃力を入れ替える" % scope
+	elif demo == Demo.FX_RAISE_SAND:
+		stage["trigger_note"] = "%sの砂が%d粒上へ戻る(攻撃力-%d / 体力+%d)" % [scope, value, value, value]
 	else:
 		stage["trigger_note"] = "%sの砂が%d粒落ちる" % [scope, value]
 	if t >= 0.3 and t < 0.8:

@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/emblems/freeze.png" id="emblem"]
+
+[resource]
+script = ExtResource("script_card")
+id = "freeze"
+display_name = "フリーズ"
+cost = 3
+total_sand = 5
+pool_index = 79
+set_id = "still_time"
+keywords = Array[int]([0, 8])
+effects = Array[Resource]([])
+rules_text = ""
+cannot_attack = false
+is_token = false
+art_id = "halo"
+emblem = ExtResource("emblem")

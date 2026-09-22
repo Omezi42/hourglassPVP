@@ -29,6 +29,8 @@ static func stage(demo: int, t: float) -> Dictionary:
 			return _stage_quick(t)
 		CardEffectPreview.Demo.FLIP:
 			return _stage_flip(t)
+		CardEffectPreview.Demo.STILL:
+			return _stage_still(t)
 	return {}
 
 
@@ -236,4 +238,19 @@ static func _stage_flip(t: float) -> Dictionary:
 	own["flip"] = flip if t >= 0.3 and t <= 0.7 else -1.0
 	stage["note"] = "反転すると体力と攻撃力が入れ替わる"
 	stage["own"] = [own]
+	return stage
+
+
+## 静止:隣の駒は毎ターン砂が落ちて老いていくが、静止の駒は止まったまま。
+static func _stage_still(t: float) -> Dictionary:
+	var stage := CardEffectStage.empty_stage()
+	var total := 5
+	var steps := total
+	var step: int = clampi(int(t * float(steps)), 0, steps - 1)
+	var still := CardEffectStage.piece(total, 0, total)
+	var mate := CardEffectStage.piece(total - step, step, total)
+	stage["note"] = "ターン終了時に砂が落ちない(体力も攻撃力も変わらない)"
+	if step >= 2:
+		stage["note"] = "老いない代わりに攻撃力も伸びない"
+	stage["own"] = [still, mate]
 	return stage

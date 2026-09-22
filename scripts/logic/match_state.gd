@@ -28,6 +28,10 @@ signal flip_right_used(actor_side: int, target_side: int, slot: int)
 ## ターン終了時に砂が1粒落ちたとき。**ダメージ(砂が消える)とは別のシグナルにする**。
 ## UI側でこの2つを別の演出として描き分けるため(GameDesign.md 9章)。
 signal unit_ticked(side: int, slot: int)
+## 効果で砂が上へ戻ったとき(攻撃力-amount / 体力+amount。GameDesign.md 6章)。
+## **落砂(`unit_ticked`)・被ダメージとは別のシグナルにする**。落砂の逆向きの流れとして
+## 描き分けるため(取り違えるとルールを誤解する。GameDesign.md 9章)。
+signal unit_raised(side: int, slot: int, amount: int)
 ## 攻撃が行われたとき。target_slot が -1 なら相手プレイヤーへの攻撃。
 signal attack_performed(side: int, slot: int, target_slot: int)
 signal mulligan_finished
@@ -289,8 +293,9 @@ func end_turn() -> void:
 		var unit: CardInstance = board[side][slot]
 		if unit == null:
 			continue
-		unit.tick(sand_drop_count)
-		unit_ticked.emit(side, slot)
+		# 静止の駒は落ちない。落ちていないのに砂が流れる演出を出さない。
+		if unit.tick(sand_drop_count) > 0:
+			unit_ticked.emit(side, slot)
 		if unit.is_dead():
 			_destroy_unit(side, slot)
 	board_changed.emit(side)
@@ -493,7 +498,9 @@ func _can_use_flip_right(side: int, target_side: int, slot: int) -> bool:
 		return false
 	if slot < 0 or slot >= BOARD_SIZE:
 		return false
-	return board[target_side][slot] != null
+	var unit: CardInstance = board[target_side][slot]
+	# 「反転できない」は駒の性質のため反転権でも覆せない(GameDesign.md 6章)。
+	return unit != null and unit.flippable()
 
 
 ## 反転権を使う。敵味方問わず1体を反転させる。マナは不要。

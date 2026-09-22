@@ -304,7 +304,8 @@ func _spell_value(state: MatchState, side: int, card: CardData) -> float:
 	var value := 0.0
 	for effect in card.effects_for(CardEnums.Trigger.ON_PLAY):
 		if effect.target == CardEnums.EffectTarget.ENEMY_UNIT:
-			if _strongest_enemy(state, MatchState.other_side(side)) < 0:
+			# 条件付きの対象(時の裁き等)は、条件を満たす相手がいなければ撃たない。
+			if _strongest_enemy(state, MatchState.other_side(side), effect) < 0:
 				return 0.0
 		elif effect.target == CardEnums.EffectTarget.ALLY_UNIT:
 			if _strongest_ally(state, side) < 0:
@@ -317,6 +318,11 @@ func _spell_value(state: MatchState, side: int, card: CardData) -> float:
 			if (
 				effect.effect_type == CardEnums.EffectType.DROP_SAND
 				and _best_ally_drop(state, side, effect.value)["slot"] < 0
+			):
+				return 0.0
+			if (
+				effect.effect_type == CardEnums.EffectType.RAISE_SAND
+				and _best_ally_raise(state, side, effect.value)["slot"] < 0
 			):
 				return 0.0
 		value += _on_play_value(state, side, effect)
@@ -409,7 +415,7 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 		CardEnums.EffectType.DRAW:
 			value = effect.value * 3.0
 		CardEnums.EffectType.DESTROY_UNIT:
-			var target := _strongest_enemy(state, foe_side)
+			var target := _strongest_enemy(state, foe_side, effect)
 			if target >= 0:
 				value = float(state.board[foe_side][target].lifetime_damage())
 		CardEnums.EffectType.DAMAGE_UNIT:
@@ -458,6 +464,19 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 				# 味方の砂を落とすのは「体力を攻撃力へ換える」取引であり、
 				# 得な駒とそうでない駒がある。いちばん得をする駒の増分を見る。
 				value = float(_best_ally_drop(state, side, effect.value)["gain"])
+		CardEnums.EffectType.RAISE_SAND:
+			# 砂を上へ戻す(GameDesign.md 6章)。味方なら寿命が伸びるぶんの増分、
+			# 相手なら抜ける攻撃力ぶん(こちらの本体・駒がその手番に受けずに済む量)を見る。
+			if effect.target == CardEnums.EffectTarget.ALLY_UNIT:
+				value = float(_best_ally_raise(state, side, effect.value)["gain"])
+			elif effect.target == CardEnums.EffectTarget.ALL_ENEMY_UNITS:
+				for unit in state.units(foe_side):
+					value += float(mini(unit.attack, effect.value)) * FACE_WEIGHT
+			elif effect.target == CardEnums.EffectTarget.ENEMY_UNIT:
+				var slot := _strongest_enemy(state, foe_side)
+				if slot >= 0:
+					var foe: CardInstance = state.board[foe_side][slot]
+					value = float(mini(foe.attack, effect.value)) * FACE_WEIGHT
 		CardEnums.EffectType.INVERT_PLAYER_HP:
 			# 残りHPと失ったHPを入れ替える。**劣勢のときだけ得になる**(満タンで撃つと負ける)。
 			var own: int = state.hp[side]
@@ -489,6 +508,23 @@ func _best_ally_drop(state: MatchState, side: int, amount: int) -> Dictionary:
 		if health <= 0:
 			continue
 		var gain := _lifetime_of(health, unit.attack + amount) - float(unit.lifetime_damage())
+		if gain > best["gain"]:
+			best = {"slot": slot, "gain": gain}
+	return best
+
+
+## 砂を上へ戻して最も得をする味方と、その得の大きさ。攻撃力0の駒には効かないため、
+## 戻せる砂が無い駒は候補にしない。得をする駒がいなければ slot は -1。
+func _best_ally_raise(state: MatchState, side: int, amount: int) -> Dictionary:
+	var best := {"slot": -1, "gain": 0.0}
+	for slot in MatchState.BOARD_SIZE:
+		var unit: CardInstance = state.board[side][slot]
+		if unit == null or unit.attack <= 0:
+			continue
+		var moved: int = mini(amount, unit.attack)
+		var gain := (
+			_lifetime_of(unit.health + moved, unit.attack - moved) - float(unit.lifetime_damage())
+		)
 		if gain > best["gain"]:
 			best = {"slot": slot, "gain": gain}
 	return best
@@ -527,6 +563,8 @@ func _effect_target(state: MatchState, side: int, card: CardData) -> Dictionary:
 				slot = _best_ally_flip(state, side)["slot"]
 			elif effect.effect_type == CardEnums.EffectType.DROP_SAND:
 				slot = _best_ally_drop(state, side, effect.value)["slot"]
+			elif effect.effect_type == CardEnums.EffectType.RAISE_SAND:
+				slot = _best_ally_raise(state, side, effect.value)["slot"]
 			if slot >= 0:
 				return {"side": side, "slot": slot}
 	return {}
@@ -540,7 +578,7 @@ func _enemy_target_slot(state: MatchState, foe_side: int, effect: CardEffectData
 		var picked := _expert_damageable_enemy(state, foe_side)
 		if picked >= 0:
 			return picked
-	return _strongest_enemy(state, foe_side)
+	return _strongest_enemy(state, foe_side, effect)
 
 
 ## 上級:硝子が残っている駒を除いた中で、いちばん生涯ダメージの大きい1体。
@@ -674,12 +712,14 @@ func _lifetime_of(health: int, attack: int) -> float:
 	return float(health * attack) + float(health * (health - 1)) / 2.0
 
 
-func _strongest_enemy(state: MatchState, foe_side: int) -> int:
+## いちばん生涯ダメージの大きい相手。`effect` を渡すと、その効果の対象の絞り込み
+## (総量の一致・攻撃力>体力。GameDesign.md 6章)を満たす駒だけから選ぶ。
+func _strongest_enemy(state: MatchState, foe_side: int, effect: CardEffectData = null) -> int:
 	var best := -1
 	var best_value := -1
 	for slot in MatchState.BOARD_SIZE:
 		var unit: CardInstance = state.board[foe_side][slot]
-		if unit == null:
+		if unit == null or not CardEffectResolver.eligible_target(unit, effect):
 			continue
 		var value := unit.lifetime_damage()
 		if value > best_value:
@@ -754,7 +794,7 @@ func _choose_flip_right_setup(state: MatchState, side: int) -> Dictionary:
 			continue
 		# 反転させると新しい体力は「いまの攻撃力」になる。それを自分の最大攻撃力で
 		# 仕留められて、かつ反転させないと仕留められない場合だけ価値がある。
-		if foe.attack <= 0 or foe.attack > best_attack:
+		if foe.attack <= 0 or foe.attack > best_attack or not foe.flippable():
 			continue
 		# **殺すのは反転そのものではなく、直後の攻撃**なので余砂の発火は他の除去と
 		# 同じ扱いになる(既存の `_choose_attack` も攻撃の一撃で殺す際に余砂を
@@ -777,7 +817,7 @@ func _choose_flip_right(state: MatchState, side: int) -> Dictionary:
 	var best_gain := FLIP_RIGHT_MIN_GAIN
 	for slot in MatchState.BOARD_SIZE:
 		var unit: CardInstance = state.board[side][slot]
-		if unit == null:
+		if unit == null or not unit.flippable():
 			continue
 		var gain := _lifetime_of(unit.attack, unit.health) - float(unit.lifetime_damage())
 		if unit.data.effects_for(CardEnums.Trigger.ON_FLIP).size() > 0:
@@ -787,7 +827,7 @@ func _choose_flip_right(state: MatchState, side: int) -> Dictionary:
 			best = MatchAction.flip_right(side, side, slot)
 	for slot in MatchState.BOARD_SIZE:
 		var foe: CardInstance = state.board[foe_side][slot]
-		if foe == null:
+		if foe == null or not foe.flippable():
 			continue
 		# **反転権は攻撃した後にしか検討しない**(出す→攻撃する→反転する→終える)ため、
 		# 敵を生かしたまま反転させると、体力の少ない側へ攻撃力の高い側を渡すだけになり、

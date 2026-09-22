@@ -27,8 +27,9 @@ var _origin_side := MatchState.Side.A
 var _origin_slot := -1
 ## 当たる瞬間まで持ち越す被ダメージ。{"side":..., "slot":..., "amount":...}
 var _damage: Array[Dictionary] = []
-## 当たる瞬間まで持ち越すターン終了の1粒(砂嵐・ラトル・ドリップ等)。
-## {"side":..., "slot":...}
+## 当たる瞬間まで持ち越すターン終了の1粒(砂嵐・ラトル・ドリップ等)と、
+## 効果で上へ戻る砂(巻き戻し・時間停止等。`raise` が true)。
+## {"side":..., "slot":..., "raise": bool}
 var _ticks: Array[Dictionary] = []
 ## 反転(SPIN)のときだけ使う。当たった瞬間に `CardView.play_flip()` を呼ぶ対象。
 var _spin_target: CardView
@@ -54,6 +55,7 @@ func watch(state: MatchState) -> void:
 	state.effect_struck.connect(on_effect_struck)
 	state.effect_struck_many.connect(on_effect_struck_many)
 	state.spell_cast.connect(_on_spell_cast)
+	state.unit_raised.connect(on_unit_raised)
 
 
 ## 演出中かどうか。攻撃と同じく盤面の再同期を遅らせるのに使う
@@ -155,7 +157,19 @@ func hold_damage(side: int, slot: int, amount: int) -> void:
 ## ターン終了の1粒(砂嵐・ラトル・ドリップ等)も、紋章が当たるまで持ち越す
 ## (`CardMatchStrike.on_unit_ticked()` から呼ぶ)。以前は紋章が届く前に砂が流れていた。
 func hold_tick(side: int, slot: int) -> void:
-	_ticks.append({"side": side, "slot": slot})
+	_ticks.append({"side": side, "slot": slot, "raise": false})
+
+
+## 効果で砂が上へ戻った(`MatchState.unit_raised`。GameDesign.md 6章)。落砂の逆向きの
+## 流れとして描き、紋章が当たるまで持ち越す。**落砂・被ダメージと同じシグナルに
+## 相乗りさせない**(取り違えるとルールを誤解する。GameDesign.md 9章)。
+func on_unit_raised(side: int, slot: int, _amount: int) -> void:
+	if _armed:
+		_ticks.append({"side": side, "slot": slot, "raise": true})
+		return
+	var view: CardView = _screen.view_at(side, slot)
+	if view != null:
+		view.play_raise()
 
 
 ## 紋章が対象へ届いた瞬間。持ち越していた演出(被ダメージ・砂落ち・反転)を
@@ -177,7 +191,11 @@ func _on_impact() -> void:
 	_damage.clear()
 	for tick in _ticks:
 		var view: CardView = _screen.view_at(tick["side"], tick["slot"])
-		if view != null:
+		if view == null:
+			continue
+		if tick["raise"]:
+			view.play_raise()
+		else:
 			view.play_drop()
 	_ticks.clear()
 	if _spin_target != null:
