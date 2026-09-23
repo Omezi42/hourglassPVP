@@ -19,6 +19,9 @@ const STYLE_STATES := ["normal", "hover", "pressed", "disabled", "focus"]
 ## アイコンの縁取りの太さ(直径に対する比)。浮き彫りに見せるため、白いシルエットを
 ## 縁の色で周囲へずらして敷いてから面の色を重ねる。
 const ICON_OUTLINE_RATIO := 0.03
+## アイコンの半辺(直径に対する比)。取り込みアイコンは正方形いっぱいに描かれているため、
+## 手描き紋章(0.30)より小さく取って面の余白を残す。
+const ICON_HALF_RATIO := 0.21
 const ICON_OUTLINE_DIRECTIONS := [
 	Vector2(1, 0),
 	Vector2(-1, 0),
@@ -124,7 +127,7 @@ func _draw() -> void:
 		# (反転権:紋章だけでは「何回できるか」が伝わらないため語も添える)。
 		var emblem_center := center + Vector2(0.0, -diameter * 0.06)
 		if emblem_texture != null:
-			_draw_icon(emblem_center, diameter * 0.30, is_disabled)
+			_draw_icon(emblem_center, diameter * ICON_HALF_RATIO, is_disabled)
 		else:
 			UiPaint.draw_emblem(ci, emblem, emblem_center, diameter * 0.30)
 		_draw_label(center + Vector2(0.0, diameter * 0.30), is_disabled, EMBLEM_LABEL_FONT_SIZE)
