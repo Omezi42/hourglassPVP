@@ -9,8 +9,6 @@ extends Control
 ## (目盛があれば時計だと読める)。危険域(半分以下)は赤、残り15秒以下で手番中なら脈打つ。
 
 const DIAMETER := 56.0
-## 行動の列での中心y。コインとターン終了のあいだ(`CardMatchScreen` の座標系)。
-const COLUMN_CENTER_Y := 240.0
 const RING_WIDTH := 3.0
 const TICK_COUNT := 12
 const CRITICAL_SECONDS := 15.0

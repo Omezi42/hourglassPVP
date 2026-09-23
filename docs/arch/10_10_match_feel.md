@@ -5,8 +5,8 @@
 | クラス | 責務 |
 |---|---|
 | `CardMatchAlert`(`scripts/ui/card_match_alert.gd`) | タイムリミット演出(焦燥演出)。残り15秒以下で脈動・警告表示 |
-| `CardMatchDamageAssist`(`scripts/ui/card_match_damage_assist.gd`) | 盤面総攻撃力(直接攻撃打点)の算出とアシスト表示 |
-| `CardMatchActionHistory`(`scripts/ui/card_match_action_history.gd`) | 直近のアクション履歴ミニプレビュー |
+| `CardMatchDamageAssist`(`scripts/ui/card_match_damage_assist.gd`) | 盤面総攻撃力(直接攻撃打点)の算出とアシスト表示。相手の `PlayerInfoBar.hp_bar_rect()` の右隣へ `_ready()` で位置を決め、枠を描かない |
+| `CardMatchActionHistory`(`scripts/ui/card_match_action_history.gd`) | 直前の手の列。`watch(state)` で `MatchState` の `unit_played` / `spell_cast` / `attack_performed` / `unit_flipped` / `flip_right_used` を受けて積む(自分・CPU・オンラインのどの適用経路でも同じ信号が出るため、経路ごとに積まない)。`_begin_state()` が `_effects.watch()` の隣で呼ぶ |
 | `BoardTable`(`scripts/ui/board_table.gd`) | 卓上装飾のインタラクティブトイ(クリック時の歯車・砂埃アニメーション) |
 
 - **タイムリミット演出**: `CardMatchClock` の残り時間を監視し、残り15秒を切ると警告パルス(アンバー〜赤)と微細な揺れを付与する。
@@ -22,6 +22,7 @@
 | クラス | 責務 |
 |---|---|
 | `MatchBackdrop`(`scripts/ui/match_backdrop.gd`) | 対局画面専用の下地。石の広間(`RoomPaint` の部品を薄く)/ 吊りランプ / 卓の中心の光だまり(放射グラデーションの `GradientTexture2D` を1枚。同心の楕円を重ねると段が見える)/ 卓・情報帯・手札・行動の列への落ち影 / 四辺のビネット。`ScreenBackdrop.PLAIN` の代わりに `_build()` の先頭で足す |
+| `ActionColumnLayout`(`scripts/ui/action_column_layout.gd`) | 行動の列の縦の並び(3つの群の中心y・区切り線のy)。間隔は `GAP_TIGHT` / `GAP_GROUP` の2つから積み上げて求める。ボタンは `CardMatchBuild.action_column()`、反転権は `CardMatchFlipRight`、エモートは `CardMatchEmote`、時計は `make_clock_dial()` がこれを読んで置く |
 | `ActionColumnPanel`(`scripts/ui/action_column_panel.gd`) | 右端の行動の列の地。卓の脇に立てた**真鍮枠の操作盤**(濃紺の板 + 真鍮の額 + 上下の紋章入り飾り板 + ターン終了の周りの彫り込みの輪 + 群の区切り線)。ボタンより先に `add_child()` して背面へ置く |
 | `RoundActionButton`(`scripts/ui/round_action_button.gd`, `extends Button`) | 行動の列の丸ボタン。**`CodedButton` / `CodedButtonStyle` は使わない**——文字の幅で矩形が伸びる仕組みのため、丸のつもりが楕円のピルになる。`text` は空にして `label` を自前で描き、`_get_minimum_size()` を直径で固定する。`filled`(ターン終了の金真鍮の面)/ `badge`(反転権の残り回数・エモートの残り秒)を持つ。ホバー・押下・`disabled` は `Button` のものをそのまま使い、`queue_redraw()` だけつなぐ |
 | `TurnClockDial`(`scripts/ui/turn_clock_dial.gd`) | 行動の列の持ち時間の時計(GameDesign.md 9章)。いま手番の側の残り時間を1つだけ出し、時計を持たない対局は「∞」。書き込むのは `CardMatchClock.refresh_bars()` / `clear()` だけで、`CardMatchScreen._clock_dial` を直に触る(画面側の公開メソッドを増やさないため)。位置は `TurnClockDial.COLUMN_CENTER_Y` を `CardMatchBuild.make_clock_dial()` が読む |
@@ -42,7 +43,7 @@
   輪(`pedestal_ring()`)は上面の縁に掛ける。接地の影は器の足元へ移す
 - **情報帯(`PlayerInfoBar`)は板を持たず、器具を並べる**(GameDesign.md 9章「情報帯」)。
   肖像のメダルとバッジの真鍮の輪は `_brass_ring()`(外周と内周を1つのポリゴンにして縦グラデーション)、
-  濃紺の板は `_plate()`、丸いバッジは `_badge()` が描く。持ち時間は情報帯には持たず、
+  濃紺の板は `_plate()`、丸いバッジは `_badge()` が描く。**右の群(マナ・山の札)は帯の右端から `RIGHT_GROUP_WIDTH` の位置を原点に置く**(`_right_x()`)ため、帯の幅が違う画面(ルール画面の図)でも右端に揃う。帯の最小幅は `MIN_WIDTH`。持ち時間は情報帯には持たず、
   行動の列の `TurnClockDial` が出す。要素の並び・シグナルの受け口は変えない
 - 座標定数(`TABLE_RECT` / `*_ROW_TOP` / `*_BAR_TOP` / `HAND_AREA` / `ACTION_COLUMN_X`)は
   `CardMatchScreen` が持つまま値を更新する。**`CardMatchGeometry` はこれらを読むだけ**なので、

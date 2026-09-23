@@ -6,7 +6,7 @@ extends RefCounted
 const COOLDOWN_SECONDS := 9.0
 ## ボタンは「ログ」「投了」と同じ寸法・同じ作り方(`RoundActionButton`)で作る。
 ## 数pxでも違えると、同じ列に並んだときに1つだけ別物のボタンに見える。
-const EMOTE_BUTTON_DIAMETER := CardMatchScreen.ACTION_ROUND_DIAMETER
+const EMOTE_BUTTON_DIAMETER := ActionColumnLayout.SMALL_DIAMETER
 const POPUP_WIDTH := 244.0
 const POPUP_PADDING := 12.0
 const POPUP_ITEM_HEIGHT := 34.0

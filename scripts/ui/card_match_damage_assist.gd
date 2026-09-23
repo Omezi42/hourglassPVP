@@ -3,11 +3,20 @@ extends Control
 ## 盤面総攻撃力(打点アシスト)表示(GameDesign.md 9章)。
 ## 自陣の即時攻撃可能な総打点を算出し、相手の守護の有無やリーサル(トドメ)の
 ## 機会をひと目で把握できるように支援する。
+##
+## **相手の情報帯のHPの器の右隣へ、枠を持たない文字として置く**(GameDesign.md 9章
+## 「対局画面の見た目」)。枠で囲うとボタンに見えるため、山の札と同じ「見出し + 数字」の語彙で彫る。
 
-const PANEL_SIZE := Vector2(148, 30)
-const PANEL_RADIUS := 5.0
-## 行動の列の中で、コインのボタン(y=230)へ掛からない高さ。
-const PANEL_TOP := 184.0
+const AREA_SIZE := Vector2(150, PlayerInfoBar.BAR_HEIGHT)
+## HPの器のバッジの右端からの余白。
+const HP_GAP := 14.0
+const LABEL_BASELINE := 22.0
+const VALUE_BASELINE := 46.0
+const LABEL_FONT_SIZE := 11
+const VALUE_FONT_SIZE := 21
+const NOTE_FONT_SIZE := 13
+const NOTE_GAP := 8.0
+const LETHAL_PULSE_SPEED := 0.01
 
 var _screen: CardMatchScreen
 var _font: Font
@@ -24,10 +33,16 @@ func _init(screen: CardMatchScreen) -> void:
 
 func _ready() -> void:
 	_font = TextGlyphs.ui_font()
-	custom_minimum_size = PANEL_SIZE
-	size = PANEL_SIZE
-	# 行動の列の先頭側。コインのボタン(y=230)より上へ置く。
-	position = Vector2(CardMatchScreen.ACTION_COLUMN_X, PANEL_TOP)
+	custom_minimum_size = AREA_SIZE
+	size = AREA_SIZE
+	var bar := _screen.foe_bar
+	var hp := bar.hp_bar_rect()
+	position = bar.position + Vector2(hp.end.x + PlayerInfoBar.HP_BADGE_RADIUS + HP_GAP, 0.0)
+
+
+func _process(_delta: float) -> void:
+	if visible and _is_lethal:
+		queue_redraw()
 
 
 func sync() -> void:
@@ -70,72 +85,33 @@ func sync() -> void:
 func _draw() -> void:
 	if not visible:
 		return
-
-	var ci := get_canvas_item()
-	var rect := Rect2(Vector2.ZERO, PANEL_SIZE)
-	var points := UiPaint.rounded_rect_points_uniform(rect, PANEL_RADIUS, 5)
-
-	# 背景グラデーション
-	var bg_top := Color(0.16, 0.13, 0.11, 0.95)
-	var bg_bottom := Color(0.09, 0.07, 0.06, 0.98)
+	var label := "総打点" if _has_guard else "直接打点"
+	_text(Vector2(0, LABEL_BASELINE), label, LABEL_FONT_SIZE, UiPalette.BRASS_HIGHLIGHT)
+	var value := str(_total_attack)
+	var value_color := UiPalette.GLOW_AMBER
+	if _has_guard:
+		value_color = UiPalette.TEXT_MUTED
+	_text(Vector2(0, VALUE_BASELINE), value, VALUE_FONT_SIZE, value_color)
+	var note_x := (
+		_font.get_string_size(value, HORIZONTAL_ALIGNMENT_LEFT, -1, VALUE_FONT_SIZE).x + NOTE_GAP
+	)
 	if _is_lethal:
-		bg_top = Color(0.28, 0.20, 0.08, 0.95)
-		bg_bottom = Color(0.14, 0.10, 0.04, 0.98)
-
-	UiPaint.fill_gradient_polygon(ci, points, rect, [[0.0, bg_top], [1.0, bg_bottom]])
-
-	var outline := points.duplicate()
-	outline.append(points[0])
-
-	var border_color := UiPalette.BRASS_LIGHT
-	var border_width := 1.2
-	if _is_lethal:
-		var pulse := (sin(Time.get_ticks_msec() * 0.01) + 1.0) * 0.5
-		border_color = UiPalette.GLOW_AMBER.lerp(UiPalette.BRASS_HIGHLIGHT, pulse)
-		border_width = 2.0
-		draw_rect(rect.grow(1.5), Color(UiPalette.GLOW_AMBER, 0.2 * pulse))
+		var pulse := (sin(Time.get_ticks_msec() * LETHAL_PULSE_SPEED) + 1.0) * 0.5
+		var color := UiPalette.GLOW_AMBER.lerp(UiPalette.BRASS_HIGHLIGHT, pulse)
+		_text(Vector2(note_x, VALUE_BASELINE - 2.0), "決着可能", NOTE_FONT_SIZE, color)
 	elif _has_guard:
-		border_color = UiPalette.BRASS_MID
+		_text(Vector2(note_x, VALUE_BASELINE - 2.0), "守護あり", NOTE_FONT_SIZE, UiPalette.TEXT_MUTED)
 
-	draw_polyline(outline, border_color, border_width, true)
 
-	# テキスト描画
-	if _is_lethal:
-		draw_string(
-			_font, Vector2(10, 20), "決着可能!", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, UiPalette.GLOW_AMBER
-		)
-		draw_string(
-			_font,
-			Vector2(88, 21),
-			"打点 %d" % _total_attack,
-			HORIZONTAL_ALIGNMENT_LEFT,
-			-1,
-			14,
-			UiPalette.BRASS_HIGHLIGHT
-		)
-	elif _has_guard:
-		draw_string(
-			_font, Vector2(10, 20), "守護あり", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, UiPalette.TEXT_MUTED
-		)
-		draw_string(
-			_font,
-			Vector2(76, 20),
-			"総打点 %d" % _total_attack,
-			HORIZONTAL_ALIGNMENT_LEFT,
-			-1,
-			13,
-			UiPalette.TEXT_OFFWHITE
-		)
-	else:
-		draw_string(
-			_font, Vector2(12, 20), "直接打点", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, UiPalette.BRASS_LIGHT
-		)
-		draw_string(
-			_font,
-			Vector2(86, 21),
-			str(_total_attack),
-			HORIZONTAL_ALIGNMENT_LEFT,
-			-1,
-			16,
-			UiPalette.GLOW_AMBER
-		)
+## 砂の上でも床の上でも読めるよう、暗い影を1pxずらして敷く(情報帯の数字と同じ)。
+func _text(pos: Vector2, value: String, font_size: int, color: Color) -> void:
+	draw_string(
+		_font,
+		pos + Vector2.ONE,
+		value,
+		HORIZONTAL_ALIGNMENT_LEFT,
+		-1,
+		font_size,
+		PlayerInfoBar.TEXT_SHADOW
+	)
+	draw_string(_font, pos, value, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color)
