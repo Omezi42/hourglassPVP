@@ -365,7 +365,8 @@ func _refresh() -> void:
 		str(step["text"]) if is_read_step else str(step["done" if _showing_done else "text"])
 	)
 	if _stuck and not _showing_done and not is_read_step:
-		line = TutorialSteps.STUCK_TEXT
+		var focus := str(step.get("focus", ""))
+		line = TutorialSteps.STUCK_TEXT if focus == "hand" else TutorialSteps.STUCK_WAIT_TEXT
 	_label.text = (_fact + line) if _showing_done and not _fact.is_empty() else line
 	_dots.queue_redraw()
 	queue_redraw()
@@ -457,11 +458,41 @@ func _is_stuck() -> bool:
 		return false
 	if _index >= TutorialSteps.STEPS.size():
 		return false
-	if str(TutorialSteps.STEPS[_index].get("focus", "")) != "hand":
-		return false
 	if _state.current_turn != _my_side or _state.is_match_over():
 		return false
-	return _screen._geometry.playable_hand_rects().is_empty()
+	match str(TutorialSteps.STEPS[_index].get("focus", "")):
+		"hand":
+			return _screen._geometry.playable_hand_rects().is_empty()
+		"attack_unit", "attack_face", "flip":
+			return _actor_slots().is_empty()
+	return false
+
+
+## いまの段の操作を、この手番に行える自分の駒。攻撃の段は、求める相手(駒 / 本体)を
+## 実際に殴れる駒だけを数える。
+func _actor_slots() -> Array[int]:
+	var found: Array[int] = []
+	var focus := str(TutorialSteps.STEPS[_index].get("focus", ""))
+	for slot in MatchState.BOARD_SIZE:
+		if focus == "flip":
+			if _state.can_flip(_my_side, slot):
+				found.append(slot)
+		elif not _attack_targets(slot, focus).is_empty():
+			found.append(slot)
+	return found
+
+
+## slot の駒が殴れる相手。駒の段なら相手の枠番号、本体の段なら -1 を返す。
+func _attack_targets(slot: int, focus: String) -> Array[int]:
+	var targets: Array[int] = []
+	if focus == "attack_face":
+		if _state.can_attack(_my_side, slot, -1):
+			targets.append(-1)
+		return targets
+	for target: int in _state.attackable_slots(MatchState.other_side(_my_side)):
+		if _state.can_attack(_my_side, slot, target):
+			targets.append(target)
+	return targets
 
 
 ## 何段階のうちどこにいるかを点で示す(GameDesign.md 18章)。
@@ -523,17 +554,13 @@ func _focus_rects() -> Array[Rect2]:
 			found.append_array(_screen._geometry.playable_hand_rects())
 		"end_turn":
 			found.append(_screen._geometry.end_turn_button_rect())
-		"attack_unit":
-			for slot in MatchState.BOARD_SIZE:
-				var unit: CardInstance = _state.board[_my_side][slot]
-				if unit != null and unit.can_attack():
-					found.append(_slot_rect(_my_side, slot))
-		"attack_face":
-			found.append(_screen._geometry.hp_bar_global_rect(MatchState.other_side(_my_side)))
-		"flip":
-			for slot in MatchState.BOARD_SIZE:
-				if _state.can_flip(_my_side, slot):
-					found.append(_slot_rect(_my_side, slot))
+		"mulligan":
+			if _state.mulligan_pending and _screen._mulligan != null:
+				found.append(_screen._mulligan.confirm_rect())
+		"attack_unit", "attack_face", "flip":
+			if _stuck:
+				return [_screen._geometry.end_turn_button_rect()] as Array[Rect2]
+			found.append_array(_actor_focus_rects(str(TutorialSteps.STEPS[_index]["focus"])))
 		"flip_right":
 			for side in [_my_side, MatchState.other_side(_my_side)]:
 				for slot in MatchState.BOARD_SIZE:
@@ -571,6 +598,24 @@ func _number_rects() -> Array[Rect2]:
 			found.append(_screen._geometry.hp_bar_global_rect(MatchState.other_side(_my_side)))
 		"flip_right":
 			found.append(_screen._geometry.flip_right_gauge_rect())
+	return found
+
+
+## 攻撃の段は2段階で囲む。自分の駒を選ぶ前は殴れる自分の駒を、選んだ後はその駒で殴れる
+## 相手(駒か本体のHP帯)を囲み、次に押す場所へ視線を運ぶ(GameDesign.md 18章)。
+func _actor_focus_rects(focus: String) -> Array[Rect2]:
+	var found: Array[Rect2] = []
+	var actors := _actor_slots()
+	var chosen: CardMatchSelection = _screen.selection
+	if focus != "flip" and chosen.is_board_selection() and actors.has(chosen.slot):
+		for target in _attack_targets(chosen.slot, focus):
+			if target < 0:
+				found.append(_screen._geometry.hp_bar_global_rect(MatchState.other_side(_my_side)))
+			else:
+				found.append(_slot_rect(MatchState.other_side(_my_side), target))
+		return found
+	for slot in actors:
+		found.append(_slot_rect(_my_side, slot))
 	return found
 
 

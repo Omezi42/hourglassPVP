@@ -130,6 +130,11 @@ func _on_card_pressed(view: CardView) -> void:
 	_refresh()
 
 
+## 確定ボタンの位置。誘導対局が押す場所として囲む(GameDesign.md 18章)。
+func confirm_rect() -> Rect2:
+	return _button.get_global_rect()
+
+
 func _on_confirm_pressed() -> void:
 	if _waiting:
 		return
