@@ -24,7 +24,7 @@
 | `CardMatchSpell` / `CardMatchEffectTarget` / `CardMatchFlipRight` | 砂術 / 設置効果の対象選択 / 反転権 の段取り。反転権のボタンは再生・観戦の「戻る」と同じ位置(両者は同時に見えない)。反転権は `_build()` の中で重ね物(マリガンの暗幕など)より先に作る(後から足すと暗幕より手前に描かれる) |
 | `CardMatchTargets` | 置ける枠・殴れる相手の強調、相打ちの予測(`refresh_own_preview()`)、身構え(`CardView.brace`) |
 | `CardMatchDetail` | 詳細パネルの出し消し。出してよい状態か(対象選択中・マリガン中・演出中でない)、消すまでの猶予(`HIDE_DELAY`)、置き場(`CardDetailPanel.place_near()` に卓の範囲を渡す)。**`CardMatchScreen` の const を const から参照しない**(読み込みが循環して起動が固まる。11章) |
-| `CardMatchMulligan` | マリガン画面。選んだ枚数を `mulligan_confirmed(indices)` で返し、適用は `MatchState`。札の列の奥の光は `MulliganStageLight`、選んだ札へ重ねる裏返しの印は `MulliganPickMark`(札の子ノード。`_draw()` は子より背面のため) |
+| `CardMatchMulligan` | マリガン画面。選んだ枚数を `mulligan_confirmed(indices)` で返し、適用は `MatchState`。札の列の奥の光は `MulliganStageLight`、選んだ札へ重ねる引き直しの印は `MulliganPickMark`(アイコンは `assets/ui/icons/redraw.png`)(札の子ノード。`_draw()` は子より背面のため) |
 | `CardMatchLog` / `CardMatchTurnFeed` | ログ(記録と表示を同じクラスに持ち、実況と読み返しの文を一致させる)/ 手番バナーと相手の1手の実況(`CardMatchLog.describe()` から引く) |
 | `CardMatchStrike` / `CardMatchShake` | 攻撃の演出の進行役(被ダメージ・音を当たる瞬間まで持ち越す)/ 盤面の揺れ |
 | `CardMatchEffectStrike` / `EmblemStrikeFx` | 設置効果・トリガーの紋章の進行役 / 紋章が飛ぶ演出そのもの(独立したオーバーレイ) |

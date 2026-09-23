@@ -761,7 +761,9 @@ func _start_cpu_mulligan() -> void:
 		return
 	var foe := MatchState.other_side(my_side)
 	_perform(MatchAction.mulligan(foe, _cpu.choose_mulligan(state, foe)))
-	_mulligan.show_hand(state.hand[my_side])
+	_mulligan.show_hand(
+		state.hand[my_side], state.first_side == my_side, state.coin_available.get(my_side, false)
+	)
 
 
 func _on_mulligan_confirmed(indices: Array) -> void:

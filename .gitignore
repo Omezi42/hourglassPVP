@@ -28,6 +28,7 @@
 
 # アイコンの取り込み元(素材そのものの再配布を避けるため除外する)
 assets/hourglasses/emblems/sources/
+assets/ui/icons/sources/
 
 # お知らせのたびに作り直す画像(生成物のため管理しない)。
 # assets/ の下に置くとGodotがインポートしてpckへ入ってしまうため、

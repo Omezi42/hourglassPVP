@@ -71,7 +71,12 @@ func start(
 	# マリガンは手と同じ `actions` として送り合う(GameDesign.md 2章)。両者の確定が
 	# 揃うまで対局は始まらないため、持ち時間はここを抜けてから動かし始める。
 	if _screen.state.mulligan_pending:
-		_screen._mulligan.show_hand(_screen.state.hand[_screen.my_side])
+		var state: MatchState = _screen.state
+		_screen._mulligan.show_hand(
+			state.hand[_screen.my_side],
+			state.first_side == _screen.my_side,
+			state.coin_available.get(_screen.my_side, false)
+		)
 		await _screen.state.mulligan_finished
 	# 持ち時間はオンライン対戦だけが使う(GameDesign.md 13章)。ルームマッチでは切れるため
 	# (5章)、切ってあるときは時計そのものを作らない。**時計を持たない状態は既にCPU戦が

@@ -85,6 +85,17 @@ Open Goldberg Variations は、Kickstarterで資金を集めて録音と楽譜�
 
 ---
 
+## UIのアイコン(`assets/ui/icons/`)
+
+[icooon-mono](https://icooon-mono.com/)(商用利用可・クレジット表記不要)のアイコンを、カードの紋章と
+同じ手順(`sources/` にSVGを置き、`tools/build_emblem_icons.gd` で白のPNGへ焼き直す)で取り込んだもの。
+
+| ファイル | 使う場所 | 元アイコン |
+|---|---|---|
+| `redraw.png` | マリガンで引き直す札の印 | リロード、やり直しのアイコン(11971) |
+
+---
+
 ## カードの紋章(`assets/hourglasses/emblems/`)
 
 すべて [icooon-mono](https://icooon-mono.com/)(商用利用可・クレジット表記不要)の

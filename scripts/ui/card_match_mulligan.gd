@@ -11,8 +11,9 @@ const SCREEN_SIZE := Vector2(1280, 720)
 const CARD_SIZE := CardView.HAND_SIZE_PX * 1.35
 const CARD_GAP := 28.0
 const CARD_ROW_Y := 150.0
-const TITLE_Y := 50.0
-const HINT_Y := 108.0
+const TURN_ORDER_Y := 16.0
+const TITLE_Y := 48.0
+const HINT_Y := 106.0
 ## 確定ボタンは誘導対局の帯(`CardMatchTutorial.MULLIGAN_BAND_TOP`)より上に収める。
 const BUTTON_SIZE := Vector2(280, 60)
 const BUTTON_Y := 398.0
@@ -32,6 +33,8 @@ var _marks: Array[MulliganPickMark] = []
 var _picked: Array[bool] = []
 var _title: Label
 var _hint: Label
+## 自分が先手か後手か(GameDesign.md 9章)。残す札の重さの判断が手番で変わるため見出しの上に出す。
+var _turn_order: Label
 var _button: Button
 var _waiting := false
 var _dim: ColorRect
@@ -49,8 +52,12 @@ func _ready() -> void:
 	_build()
 
 
-## 初期手札を並べて開く。
-func show_hand(cards: Array) -> void:
+## 初期手札を並べて開く。`has_coin` は後手がコインを持って始めるか(2章)。
+func show_hand(cards: Array, is_first: bool, has_coin: bool) -> void:
+	if is_first:
+		_turn_order.text = "あなたは先手です"
+	else:
+		_turn_order.text = "あなたは後手です" + ("(コイン1枚)" if has_coin else "")
 	_waiting = false
 	_picked.clear()
 	for view in _views:
@@ -98,6 +105,8 @@ func _start_entrance() -> void:
 	_stage.modulate.a = 0.0
 	_tween.tween_property(_stage, "modulate:a", 1.0, DIM_FADE_DURATION)
 	_title.modulate.a = 0.0
+	_turn_order.modulate.a = 0.0
+	_tween.tween_property(_turn_order, "modulate:a", 1.0, DIM_FADE_DURATION)
 	_hint.modulate.a = 0.0
 	_tween.tween_property(_title, "modulate:a", 1.0, DIM_FADE_DURATION)
 	_tween.tween_property(_hint, "modulate:a", 1.0, DIM_FADE_DURATION)
@@ -199,6 +208,8 @@ func _build() -> void:
 	_stage = MulliganStageLight.new()
 	add_child(_stage)
 
+	_turn_order = _make_label(22, TURN_ORDER_Y)
+	_turn_order.add_theme_color_override("font_color", UiPalette.GLOW_AMBER)
 	_title = _make_label(40, TITLE_Y)
 	_hint = _make_label(20, HINT_Y)
 	_hint.add_theme_color_override("font_color", UiPalette.BRASS_HIGHLIGHT)

@@ -4,8 +4,11 @@ extends Control
 ## 札(`CardView`)の子として足す。**`Control._draw()` は子より背面に描かれる**ため、
 ## 札の `_draw()` ではなく独立したノードで札の絵の上へ重ねる。
 
+const ICON := preload("res://assets/ui/icons/redraw.png")
 const RADIUS := 30.0
-const EMBLEM_SIDE := 34.0
+const ICON_SIDE := 36.0
+## 真鍮の面へ彫り込んだように、面より暗い色で乗せる。
+const ICON_COLOR := Color(0.2, 0.13, 0.08, 0.92)
 const POP_SCALE := 1.25
 const POP_DURATION := 0.16
 
@@ -51,4 +54,7 @@ func _draw() -> void:
 	)
 	UiPaint.draw_ring(ci, center, RADIUS - 1.0, UiPalette.BRASS_HIGHLIGHT, 2.0, 28)
 	UiPaint.draw_ring(ci, center, RADIUS - 5.0, UiPalette.BRASS_DARK, 1.0, 28)
-	UiPaint.draw_emblem(ci, UiPaint.Emblem.SWAP_ARROWS, center, EMBLEM_SIDE)
+	var icon_rect := Rect2(
+		center - Vector2(ICON_SIDE, ICON_SIDE) * 0.5, Vector2(ICON_SIDE, ICON_SIDE)
+	)
+	draw_texture_rect(ICON, icon_rect, false, ICON_COLOR)
