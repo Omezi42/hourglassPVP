@@ -39,25 +39,12 @@ func end_turn_button_rect() -> Rect2:
 	return Rect2(_screen._end_turn_button.position, _screen._end_turn_button.size)
 
 
-## マナのバッジと、いま出せる手札のコストのバッジ(GameDesign.md 18章「数字の光」)。
-## 話題が「コストとマナ」の段(出す)でだけ使う。
-func mana_and_cost_rects(side: int) -> Array[Rect2]:
-	var found: Array[Rect2] = []
+## マナのバッジ(GameDesign.md 18章「数字の光」)。話題が「使ったマナ」の段(出す)でだけ使う。
+func mana_badge_rect(side: int) -> Rect2:
 	var bar: PlayerInfoBar = _screen._own_bar if side == _screen.my_side else _screen._foe_bar
-	found.append(
-		_badge_rect(bar.position + PlayerInfoBar.MANA_BADGE_CENTER, PlayerInfoBar.MANA_BADGE_RADIUS)
+	return _badge_rect(
+		bar.position + PlayerInfoBar.MANA_BADGE_CENTER, PlayerInfoBar.MANA_BADGE_RADIUS
 	)
-	if side == _screen.my_side:
-		for view: CardView in _screen._hand_views:
-			if view.visible and view.card != null:
-				found.append(_cost_badge_rect(view))
-	return found
-
-
-func _cost_badge_rect(view: CardView) -> Rect2:
-	var s: float = view._hand_scale()
-	var center := view.position + Vector2.ONE * HandCardPaint.GEM_INSET * s
-	return _badge_rect(center, HandCardPaint.GEM_RADIUS * s)
 
 
 ## 盤面の1体の体力・攻撃力のバッジ(GameDesign.md 18章「数字の光」)。

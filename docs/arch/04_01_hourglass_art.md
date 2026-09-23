@@ -159,7 +159,7 @@ pckから除外した後も true を返すことがあり、有無の判定に�
 |---|---|
 | `CardPresetDecks`(`scripts/logic/card_preset_decks.gd`, static) | プリセット3つを「idと枚数の表」として持つ。30枚に足りない場合はコストの安い順に埋めるため、**表が古くなっても対局へ入れなくなることはない** |
 | `CardPresetPicker`(`scripts/ui/card_preset_picker.gd`) | プリセットを選ぶモーダル。名前だけでは何のデッキか分からないため、狙いの一文を必ず添える |
-| `CardMatchTutorial`(`scripts/ui/card_match_tutorial.gd`) | 誘導対局の台本の進行そのもの。台本の手を1つずつ`MatchState`のシグナルで達成を判定し、関門(`gate_*()`)・CPUの手(`cpu_action()`)もここが答える。**帯の中身(すなえる・文・「つぎへ」)は `_band` という1つの `Control` の子として相対座標で持つ**。マリガン中だけ帯を下げるため、動かすのが `_band.position` の1箇所で済む。**「閉じる」は持たない**——台本は最後の一撃で勝って終わり、自由に続ける段が無いため |
+| `CardMatchTutorial`(`scripts/ui/card_match_tutorial.gd`) | 誘導対局の台本の進行そのもの。台本の手を1つずつ`MatchState`のシグナルで達成を判定し、関門(`gate_*()`)・CPUの手(`cpu_action()`)もここが答える。**帯の中身(すなえる・文・「つぎへ」)は `_band` という1つの `Control` の子として相対座標で持つ**。マリガン中だけ帯を下げるため、動かすのが `_band.position` の1箇所で済む。**「閉じる」は持たない**——台本は最後の一撃で勝って終わり、自由に続ける段が無いため。勝って終わったときは最後の手の `done` を締めの一言として残し、自分を親の最前面へ移して結果パネルより手前に出す。CPUの間合いは `cpu_delay()` が答え、`CardMatchScreen` はCPUのタイマーをこれで始める(帯の予告文の長さに比例) |
 | `TutorialCpuStrategy`(`scripts/logic/tutorial_cpu_strategy.gd`) | `CardCpuStrategy`を継承するが貪欲法は呼ばず、`CardMatchTutorial.cpu_action()`へ委譲するだけの台本用の代役 |
 | `SunaeruPortrait`(`scripts/ui/sunaeru_portrait.gd`) | 指示の帯の左端に置くすなえるの立ち絵。**絵を持つだけのノード**にし、何を言うかは `CardMatchTutorial` が持つ |
 

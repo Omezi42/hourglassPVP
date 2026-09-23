@@ -829,7 +829,7 @@ func on_strike_finished() -> void:
 	if _cpu_followup:
 		_cpu_followup = false
 		if _cpu != null and not state.is_match_over():
-			_cpu_timer.start(CPU_THINK_SECONDS * 0.4)
+			_cpu_timer.start(_tutorial.cpu_delay(CPU_THINK_SECONDS * 0.4))
 
 
 ## 情報帯。ドロー・疲労の演出の出どころとして進行役から引く。
@@ -891,7 +891,7 @@ func _on_turn_started(side: int) -> void:
 	if side == my_side and _interactive and not state.is_match_over() and not is_tutorial:
 		_feed.announce_turn()
 	if _cpu != null and side != my_side and not state.is_match_over():
-		_cpu_timer.start(CPU_THINK_SECONDS)
+		_cpu_timer.start(_tutorial.cpu_delay(CPU_THINK_SECONDS))
 
 
 ## 選択は右クリックとEscでも取り消せるようにする(GameDesign.md 9章)。

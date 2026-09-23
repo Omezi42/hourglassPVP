@@ -23,7 +23,12 @@ func _run() -> void:
 	for i in MAX_POLLS:
 		await create_timer(POLL_SECONDS).timeout
 		if st.is_match_over():
-			print("tutorial flow passed" if st.hp[s.my_side] > 0 else "tutorial flow FAILED: lost")
+			if st.hp[s.my_side] <= 0:
+				print("tutorial flow FAILED: lost")
+			elif not t.visible or t._label.text.is_empty():
+				print("tutorial flow FAILED: no closing line")
+			else:
+				print("tutorial flow passed")
 			quit()
 			return
 		if t._showing_done or not t._callout_active.is_empty():

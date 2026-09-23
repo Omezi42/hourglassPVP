@@ -40,6 +40,11 @@ func _init(screen: CardMatchScreen) -> void:
 	screen.add_child(_gauge)
 
 
+## 反転権のボタンの矩形。誘導対局で次に押す場所として囲む(GameDesign.md 18章)。
+func button_rect() -> Rect2:
+	return Rect2(_button.position, _button.size)
+
+
 func _on_pressed() -> void:
 	if _screen.selection.is_flip_right():
 		_screen.selection.clear()

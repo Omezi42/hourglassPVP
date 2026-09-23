@@ -51,9 +51,14 @@ const FOCUS_RINGS := [0, 1]
 ## 輪郭とは色を分け、押す場所と読む場所を取り違えさせない。
 const NUMBER_GLOW_COLOR := Color(1.0, 0.82, 0.35)
 const NEXT_SIZE := Vector2(88, 36)
+## CPUが指す前に帯の文を読み切れるだけ待つ(GameDesign.md 18章)。文の長さに比例させる。
+const READ_SECONDS_BASE := 1.0
+const READ_SECONDS_PER_CHAR := 0.1
+## CPUの台本を指し終えてからターンを返すまでの間。最後の手の結果を見届けさせる。
+const CPU_HANDOFF_SECONDS := 1.2
 ## 自分の駒が「戦闘ではなくターン終了の砂落ち」で割れた初回に1度だけ出す補足
 ## (GameDesign.md 18章)。
-const CALLOUT_OWN_UNIT_DIED_TO_SAND := "体力が0になると割れちゃう。返せば長生きするよ"
+const CALLOUT_OWN_UNIT_DIED_TO_SAND := "体力が0になると割れちゃうよ。反転すれば長生きできるんだ"
 
 ## `CardMatchScreen._on_match_ended()` が結果パネルの案内文を選ぶために読む。
 
@@ -342,7 +347,12 @@ func _complete_current_step() -> void:
 	var kind := str(step.get("kind", ""))
 	if kind == "mulligan":
 		_place_band(false)
-	if str(step.get("side", "")) == "b" or kind == "mulligan":
+	# 一度説明したことは繰り返さない。説明の無い手は終えたらすぐ次の指示へ進む(GameDesign.md 18章)。
+	if (
+		str(step.get("side", "")) == "b"
+		or kind == "mulligan"
+		or str(step.get("done", "")).is_empty()
+	):
 		_index += 1
 		_enter_step()
 		return
@@ -365,14 +375,28 @@ func _enter_step() -> void:
 	_refresh()
 
 
+## 対局が終わった。台本の最後まで進めて勝ったときは、結果パネルより手前で
+## すなえるが締めの一言を話す(GameDesign.md 18章)。それ以外(投了など)は帯を消す。
 func _finish() -> void:
-	if not visible and not _active:
+	if not _active:
 		return
-	if _active:
-		FunnelService.reach(FunnelService.TUTORIAL_CLEAR)
-		UiState.mark_tutorial_done()
-	visible = false
+	var won := _state != null and _state.winner == _my_side
+	FunnelService.reach(FunnelService.TUTORIAL_CLEAR)
+	UiState.mark_tutorial_done()
 	_active = false
+	if not won:
+		visible = false
+		return
+	var closing := str(_current_step().get("done", ""))
+	_index = _steps.size()
+	_callout_active = ""
+	_showing_done = false
+	_label.text = closing
+	_next_button.visible = false
+	_portrait.cheer()
+	get_parent().move_child(self, -1)
+	_dots.queue_redraw()
+	queue_redraw()
 
 
 func _on_next_pressed() -> void:
@@ -390,6 +414,16 @@ func _on_next_pressed() -> void:
 ## 指している間にCPUが「指す手が無い」と見てターンを終えてしまい、台本が止まる。
 func cpu_waiting() -> bool:
 	return _active and (_showing_done or not _callout_active.is_empty())
+
+
+## CPUが次に指すまでの間。誘導対局の間は、帯に出ているCPUの手の予告を読み切れる長さにする。
+func cpu_delay(base: float) -> float:
+	if not _active:
+		return base
+	var step := _current_step()
+	if str(step.get("side", "")) != "b":
+		return CPU_HANDOFF_SECONDS
+	return READ_SECONDS_BASE + READ_SECONDS_PER_CHAR * str(step.get("wait_text", "")).length()
 
 
 # --- MatchStateの信号 -----------------------------------------------------
@@ -513,7 +547,7 @@ func _on_hp_changed(side: int, new_hp: int) -> void:
 ## 数字で見せて伝える(GameDesign.md 18章)。
 func _update_attack_fact() -> void:
 	if _face_damage > 0 and _dealt == 0:
-		_fact = "相手のHPへ%dダメージ! " % _face_damage
+		_fact = "相手のHPへ%dダメージ！" % _face_damage
 	elif _dealt > 0 or _taken > 0:
 		_fact = "相手に%dダメージ、こっちも%d削れたよ。" % [_dealt, _taken]
 	_refresh()
@@ -546,7 +580,7 @@ func _fact_for(step: Dictionary) -> String:
 
 func _fact_for_play(step: Dictionary) -> String:
 	var played: CardInstance = _refs.get(str(step.get("ref", "")))
-	return "" if played == null else "「%s」を出したよ。" % played.data.display_name
+	return "" if played == null else "マナを%dつかったよ。" % played.data.cost
 
 
 func _fact_for_end_turn(step: Dictionary) -> String:
@@ -580,7 +614,7 @@ func _fact_for_flip_right(step: Dictionary) -> String:
 	var target: CardInstance = _refs.get(str(step.get("target_ref", "")))
 	if target == null:
 		return ""
-	return "相手の「%s」の攻撃力が%dになったよ。" % [target.data.display_name, target.attack]
+	return "相手の「%s」の体力が%dになったよ。" % [target.data.display_name, target.health]
 
 
 # --- 見た目 -----------------------------------------------------------
@@ -685,7 +719,7 @@ func _refresh() -> void:
 	else:
 		line = str(step.get("done", "")) if _showing_done else str(step.get("text", ""))
 	_label.text = (
-		(_fact + line) if (_showing_done and not is_info and not _fact.is_empty()) else line
+		(_fact + "\n" + line) if (_showing_done and not is_info and not _fact.is_empty()) else line
 	)
 	_dots.queue_redraw()
 	queue_redraw()
@@ -750,6 +784,10 @@ func _focus_rects() -> Array[Rect2]:
 			if slot >= 0:
 				found.append(_slot_rect(_my_side, slot))
 		"flip_right":
+			# 反転権のボタンを押す前はボタンを、押した後は対象を囲む(攻撃の段と同じ2段階)。
+			if not _screen.selection.is_flip_right():
+				found.append(_screen._flip_right.button_rect())
+				return found
 			var wants_side := (
 				_my_side
 				if str(step.get("target_side", "")) == "own"
@@ -812,7 +850,7 @@ func _number_rects() -> Array[Rect2]:
 		return found
 	match topic:
 		"mana":
-			found.append_array(_screen._geometry.mana_and_cost_rects(_my_side))
+			found.append(_screen._geometry.mana_badge_rect(_my_side))
 		"stats":
 			var slot := _slot_of(_my_side, str(step.get("ref", "")))
 			if slot >= 0:

@@ -170,7 +170,8 @@ static func overlays(screen: CardMatchScreen) -> void:
 	screen._tutorial = CardMatchTutorial.new()
 	screen.add_child(screen._tutorial)
 	screen._tutorial.cpu_resumed.connect(
-		func() -> void: screen._cpu_timer.start(CardMatchScreen.CPU_THINK_SECONDS)
+		func() -> void:
+			screen._cpu_timer.start(screen._tutorial.cpu_delay(CardMatchScreen.CPU_THINK_SECONDS))
 	)
 	screen._result = CardMatchResult.new()
 	screen._result.home_pressed.connect(func() -> void: screen.back_pressed.emit())
