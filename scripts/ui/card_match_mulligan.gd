@@ -28,6 +28,8 @@ const DEAL_DURATION := 0.32
 const DEAL_STAGGER := 0.05
 const DIM_FADE_DURATION := 0.3
 
+## 誘導対局の間は札を選べない(GameDesign.md 18章)。「このままで開始」だけを受け付ける。
+var picking_disabled := false
 var _views: Array[CardView] = []
 var _marks: Array[MulliganPickMark] = []
 var _picked: Array[bool] = []
@@ -130,7 +132,7 @@ func close() -> void:
 
 
 func _on_card_pressed(view: CardView) -> void:
-	if _waiting:
+	if _waiting or picking_disabled:
 		return
 	var index := _views.find(view)
 	if index < 0:
@@ -179,7 +181,7 @@ func _refresh(animate: bool = true) -> void:
 		_button.text = "確定しました"
 		return
 	_title.text = "引き直すカードを選んでください"
-	_hint.text = "選んだカードは山札へ戻し、同じ枚数を引き直します"
+	_hint.text = ("すなえるの指示に従って、そのまま開始してください" if picking_disabled else "選んだカードは山札へ戻し、同じ枚数を引き直します")
 	_button.disabled = false
 	_button.text = "このままで開始" if count == 0 else "%d枚を引き直す" % count
 

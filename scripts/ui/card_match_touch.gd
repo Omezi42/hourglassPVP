@@ -18,6 +18,8 @@ func on_hand_pressed(view: CardView) -> void:
 	var index := _screen._hand_views.find(view)
 	if index < 0 or not _screen._my_turn():
 		return
+	if not _screen._tutorial.gate_hand_select(index):
+		return
 	if _screen.state.can_cast(_screen.my_side, index):
 		_screen._spell.begin(index)
 		return
@@ -32,6 +34,8 @@ func on_hand_pressed(view: CardView) -> void:
 func on_slot_drop(source: CardView, slot: int) -> void:
 	var index := _screen._hand_views.find(source)
 	if index < 0 or not _screen._my_turn() or _screen.state.board[_screen.my_side][slot] != null:
+		return
+	if not _screen._tutorial.gate_hand_select(index):
 		return
 	if _screen.state.can_cast(_screen.my_side, index):
 		_screen._spell.begin(index)
@@ -51,7 +55,8 @@ func on_own_slot_pressed(view: CardView) -> void:
 	if slot < 0 or not _screen._my_turn():
 		return
 	if _screen.selection.is_flip_right():
-		_screen._flip_right.use_at(_screen.my_side, slot)
+		if _screen._tutorial.gate_flip_right_target(_screen.my_side, slot):
+			_screen._flip_right.use_at(_screen.my_side, slot)
 		return
 	if _screen.selection.is_targeting():
 		_handle_own_targeting(slot)
@@ -63,7 +68,7 @@ func on_own_slot_pressed(view: CardView) -> void:
 		return
 	if _screen.state.board[_screen.my_side][slot] == null:
 		_screen._cancel_selection()
-	else:
+	elif _screen._tutorial.gate_board_select(slot):
 		_screen.selection.select_board(slot)
 	_screen.refresh()
 
@@ -92,7 +97,9 @@ func on_foe_slot_pressed(view: CardView) -> void:
 	if slot < 0 or not _screen._my_turn():
 		return
 	if _screen.selection.is_flip_right():
-		_screen._flip_right.use_at(MatchState.other_side(_screen.my_side), slot)
+		var foe_side := MatchState.other_side(_screen.my_side)
+		if _screen._tutorial.gate_flip_right_target(foe_side, slot):
+			_screen._flip_right.use_at(foe_side, slot)
 		return
 	if _screen.selection.is_targeting():
 		_handle_foe_targeting(slot)
@@ -107,6 +114,8 @@ func on_foe_slot_pressed(view: CardView) -> void:
 func on_own_slot_drag_started(view: CardView) -> void:
 	var slot := _screen._own_slots.find(view)
 	if slot < 0 or not _screen._my_turn() or _screen.state.board[_screen.my_side][slot] == null:
+		return
+	if not _screen._tutorial.gate_board_select(slot):
 		return
 	_screen.selection.select_board(slot)
 	_screen._hide_detail()
@@ -133,6 +142,8 @@ func _attack(slot: int, target_slot: int) -> void:
 	if slot < 0 or not _screen._my_turn():
 		return
 	if not _screen.state.can_attack(_screen.my_side, slot, target_slot):
+		return
+	if not _screen._tutorial.gate_attack_target(target_slot):
 		return
 	# **ここで `_screen.refresh()` を呼んではいけない。**攻撃は `_perform()` の中で
 	# `CardMatchStrike` が演出を組み、盤面の再同期(`refresh()`)は演出が当たって

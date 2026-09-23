@@ -199,12 +199,13 @@ static func overlays(screen: CardMatchScreen) -> void:
 
 
 ## 誘導対局を始める(GameDesign.md 18章)。台本(`TutorialScriptData`、Architecture.md
-## 4.1.5節)の山札を切らずに使い、プレイヤーが先手、CPUは初級で固定する。
+## 4.1.5節)の山札を切らずに使い、プレイヤーが先手、CPUの手も台本どおりに指す。
 static func start_tutorial(screen: CardMatchScreen) -> void:
 	var script: TutorialScriptData = load(TutorialScriptData.RESOURCE_PATH)
-	screen.start_cpu_match(
-		script.deck_a(), script.deck_b(), CardCpuStrategy.Difficulty.BEGINNER, true
-	)
+	screen.start_cpu_match(script.deck_a(), script.deck_b(), -1, true, script)
+	# 相手(CPU)の開始HPだけ台本の値へ差し替える(GameDesign.md 18章「相手のHPは4から」)。
+	screen.state.hp[MatchState.other_side(screen.my_side)] = script.foe_start_hp
+	screen.refresh_bars()
 	screen._tutorial.watch(screen, screen.state, screen.my_side)
 
 

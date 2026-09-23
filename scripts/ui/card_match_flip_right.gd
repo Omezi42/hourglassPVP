@@ -45,7 +45,7 @@ func _on_pressed() -> void:
 		_screen.selection.clear()
 		_screen.refresh()
 		return
-	if not _ready_to_use():
+	if not _ready_to_use() or not _screen._tutorial.gate_flip_right_begin():
 		return
 	_screen.selection.begin_flip_right()
 	_screen.refresh()

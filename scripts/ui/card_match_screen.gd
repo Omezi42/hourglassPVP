@@ -243,6 +243,7 @@ func _reset_for_new_match() -> void:
 	_match_start_pending = true
 	if _mulligan != null:
 		_mulligan.close()
+		_mulligan.picking_disabled = false
 	if _tutorial != null:
 		_tutorial.reset_for_new_match()
 	set_process(true)
@@ -286,13 +287,24 @@ func _reset_for_new_match() -> void:
 
 
 ## CPU戦を開始する。`difficulty` 省略時は前回選んだ思考レベルを使う(GameDesign.md 13章)。
+## `tutorial_script` を渡すと誘導対局として始める(GameDesign.md 18章)。CPUの手を
+## 台本から出す `TutorialCpuStrategy` に差し替え、マリガンの札の選択を塞ぐ。
 func start_cpu_match(
-	deck_self: Array, deck_foe: Array, difficulty: int = -1, keep_deck_order: bool = false
+	deck_self: Array,
+	deck_foe: Array,
+	difficulty: int = -1,
+	keep_deck_order: bool = false,
+	tutorial_script: TutorialScriptData = null
 ) -> void:
 	_reset_for_new_match()
 	_own_deck = deck_self
-	_cpu = CardCpuStrategy.new()
-	_cpu.difficulty = CardCpuStrategy.resolve_difficulty(difficulty)
+	if tutorial_script != null:
+		_tutorial.load_script(tutorial_script)
+		_mulligan.picking_disabled = true
+		_cpu = TutorialCpuStrategy.new(_tutorial)
+	else:
+		_cpu = CardCpuStrategy.new()
+		_cpu.difficulty = CardCpuStrategy.resolve_difficulty(difficulty)
 	_interactive = true
 	_match_kind = CurrencyRules.MatchKind.CPU
 	my_side = MatchState.Side.A
@@ -690,6 +702,8 @@ func _set_hover_target(target: int) -> void:
 func _on_flip_pressed() -> void:
 	if not _my_turn() or not _selection.is_board_selection():
 		return
+	if not _tutorial.gate_flip_confirm():
+		return
 	_perform(MatchAction.flip(my_side, _selection.slot))
 	refresh()
 
@@ -701,7 +715,7 @@ func _on_coin_pressed() -> void:
 
 
 func _on_end_turn_pressed() -> void:
-	if _my_turn():
+	if _my_turn() and _tutorial.gate_end_turn():
 		_selection.clear()
 		_hide_detail()
 		_perform(MatchAction.end_turn(my_side))

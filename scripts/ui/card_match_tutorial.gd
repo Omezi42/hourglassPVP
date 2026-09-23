@@ -1,29 +1,24 @@
 class_name CardMatchTutorial
 extends Control
-## 誘導対局の指示(GameDesign.md 18章)。実際の対局画面でそのまま手を指させ、
-## 8段(`TutorialSteps.STEPS`)ごとに1つだけ操作を求める。段の文言・完了の合図・
-## focus・数字の光は `scripts/data/tutorial_steps.gd` へ切り出してある
-## (Architecture.md 4.1.5節「8段へ増えると本体の処理と混ざって読みにくくなるため」)。
+## 誘導対局の進行そのもの(GameDesign.md 18章)。**両者の手をすべて決めた台本**
+## (`TutorialScriptData`)を先頭から順に指させる。プレイヤーの手はここが答える
+## 「関門」(`gate_*()`)だけを通し、CPUの手は `TutorialCpuStrategy` が `cpu_action()`
+## 経由でここへ問い合わせる。台本の内容そのもの(deck/steps)はここへ書かず
+## `resources/tutorial/tutorial_script.tres` だけを直せば済むようにする。
 ##
 ## **話すのはマスコットのすなえる**(GameDesign.md 18章)。指示だけが帯に出ていると
 ## 話者がおらず、画面が一方的に命令しているように読めるため。指示の文は短く保つこと。
-## このゲームは覚えることが多く、長い語りはルールの読解を妨げる。
 ##
-## **手は塞がない**(`mouse_filter` は IGNORE)。指示に従わない操作を禁止すると
-## 「言われた通りにしか動かせない」体験になり、自分で考える余地が消える。
-## ここは「次に何をすれば良いか分からない」状態を埋めるためだけに置く。
+## **プレイヤーは指示された1か所しか押せない**。`gate_*()` が偽を返す操作は
+## `CardMatchTouch`/`CardMatchMulligan`/`CardMatchScreen` 側で何も起きずに終わる。
+## メニューからの投了・ホームへ戻る導線はどの関門も塞がない。
 ##
 ## **段階を終えたときの説明は時間で消さない。**「つぎへ」を押すまで残す。読む速さは人により、
-## 1秒足らずでは読み切れない(GameDesign.md 18章)。同じ理由で**途中で閉じる導線も置かない**。
-## 一度閉じると、以降の段階の案内が二度と読めなくなるため。
-
-signal finished
+## 1秒足らずでは読み切れない(GameDesign.md 18章)。
 
 const SCREEN_SIZE := Vector2(1280, 720)
 ## 置き場所は**卓の上端へ横長に渡した帯**とする。相手のHP・マナ・山札を覆う位置
 ## (画面の最上段)は避ける。攻撃や反転の判断に要る情報が誘導対局の間ずっと読めなくなるため。
-## 手札の右隣へ置いていた時期もあるが、手札を盤面の真下で中央へ揃えた際に重なった。
-## すなえるの立ち絵を左端へ足したぶん、帯を左へ広げてある(文の幅は変えていない)。
 const BAND_RECT := Rect2(206, 74, 824, 64)
 ## **マリガンの間だけ帯を下げる**。マリガン画面は見出し・手札・確定ボタンで y=66〜432 を
 ## 使うため、通常の位置(y=74)へ出すと見出しへ重なる。確定ボタンの下が唯一の空きになる。
@@ -38,11 +33,11 @@ const BAND_INSET := BAND_FRAME + 4.0
 ## 話し手として目に入らない。
 const PORTRAIT_SIZE := Vector2(72, 96)
 const PORTRAIT_TEXT_GAP := 6.0
-## 進み具合の点。**終わりが見えないと、いつまで案内が続くのか分からない**
-## (GameDesign.md 18章)。「つぎへ」の左へ小さく並べる。8段ぶん並ぶため5段のときより詰める。
-const DOTS_WIDTH := 72.0
-const DOT_RADIUS := 3.5
-const DOT_STEP := 9.0
+## 進み具合の点。準備+4手番の5つ(GameDesign.md 18章)。
+const STAGE_COUNT := 5
+const DOTS_WIDTH := 60.0
+const DOT_RADIUS := 4.0
+const DOT_STEP := 12.0
 ## いま触るものを囲む枠(GameDesign.md 18章)。手は塞がず、視線だけを誘導する。
 const FOCUS_COLOR := Color(0.55, 0.9, 1.0)
 const FOCUS_PERIOD := 1.2
@@ -53,21 +48,31 @@ const FOCUS_RINGS := [0, 1]
 ## 輪郭とは色を分け、押す場所と読む場所を取り違えさせない。
 const NUMBER_GLOW_COLOR := Color(1.0, 0.82, 0.35)
 const NEXT_SIZE := Vector2(88, 36)
+## 自分の駒が「戦闘ではなくターン終了の砂落ち」で割れた初回に1度だけ出す補足
+## (GameDesign.md 18章)。
+const CALLOUT_OWN_UNIT_DIED_TO_SAND := "体力が0になると割れちゃう。返せば長生きするよ"
 
+## `CardMatchScreen._on_match_ended()` が結果パネルの案内文を選ぶために読む。
 var ran_this_match := false
 
 var _state: MatchState
 var _my_side := MatchState.Side.A
+var _screen: CardMatchScreen
+var _steps: Array = []
 var _index := 0
-var _showing_done := false
-var _outro := false
+## 台本の「置いた駒」を後の手から参照するための表(参照名 → CardInstance)。
+var _refs: Dictionary = {}
+## 台本を読み込んでいる間(マリガンの選択を塞ぐ範囲)。`visible`(帯の表示)より広い——
+## マリガン画面はまだ帯を出す前から関門を効かせる必要がある。
+var _active := false
+
 var _label: Label
 var _band: Control
 var _next_button: Button
 var _portrait: SunaeruPortrait
-var _screen: CardMatchScreen
 var _dots: Control
 var _elapsed := 0.0
+var _showing_done := false
 ## 段階を終えたときの一言へ差し込む、いま自分の盤面で起きた実際の数値
 ## (GameDesign.md 18章)。一般論より目の前の駒と結びついた説明のほうが速く入る。
 var _fact := ""
@@ -78,18 +83,10 @@ var _dealt := 0
 var _taken := 0
 var _face_damage := 0
 var _foe_hp := 0
-## 求めた操作が今できない(出せる札が1枚も無い)状態か。
-var _stuck := false
 
-## 1度だけの補足(GameDesign.md 18章)。待ち行列1本で持ち、段階の説明を読んでいない
-## 時にだけ出す。出したかどうかはこの対局の中だけで覚え、保存しない。
-var _callout_queue: Array[String] = []
 var _callout_active := ""
-var _callout_sand_death_shown := false
-var _callout_guard_shown := false
-## 直前に砂が落ちきった(ターン終了の1粒)枠。**戦闘によるダメージ死とは別経路**
-## (Architecture.md 4.1.5節)。`turn_started` のたびに空にするため、他ターンの
-## 値が誤って戦闘死と一致することはない。
+var _callout_shown := false
+## 直前に砂が落ちきった(ターン終了の1粒)枠。**戦闘によるダメージ死とは別経路**。
 var _tick_pending: Dictionary = {}
 
 
@@ -100,135 +97,380 @@ func _ready() -> void:
 	_build()
 
 
+## 台本を読み込む。**マリガンの選択より前に呼ぶ**——`gate_mulligan_pick()` は
+## `_active` だけを見るため、これを呼んでからでないと引き直しを塞げない。
+func load_script(script: TutorialScriptData) -> void:
+	_steps = script.steps
+	_index = 0
+	_refs.clear()
+	_active = true
+	ran_this_match = true
+
+
 ## 対局が始まったところから見張り始める。
 func watch(screen: CardMatchScreen, state: MatchState, my_side: int) -> void:
 	_screen = screen
 	_state = state
 	_my_side = my_side
-	_index = 0
 	_showing_done = false
-	_outro = false
-	_callout_queue = []
 	_callout_active = ""
-	_callout_sand_death_shown = false
-	_callout_guard_shown = false
+	_callout_shown = false
 	_tick_pending = {}
-	ran_this_match = true
-	state.unit_played.connect(func(side: int, _slot: int) -> void: _advance_if("play", side))
-	state.unit_played.connect(_on_unit_played_for_callout)
-	state.attack_performed.connect(
-		func(side: int, _slot: int, target_slot: int) -> void:
-			_advance_if("attack", side, "face" if target_slot < 0 else "unit")
-	)
-	state.unit_flipped.connect(func(side: int, _slot: int) -> void: _advance_if("flip", side))
-	state.flip_right_used.connect(
-		func(actor_side: int, _target_side: int, _slot: int) -> void:
-			_advance_if("flip_right", actor_side)
-	)
-	# ターンを終えたことは「相手の手番が始まった」ことで分かる。
-	state.turn_started.connect(
-		func(side: int) -> void: _advance_if("end_turn", MatchState.other_side(side))
-	)
-	state.turn_started.connect(func(_side: int) -> void: _tick_pending.clear())
-	state.mulligan_finished.connect(func() -> void: _advance_if("mulligan", _my_side))
+	state.unit_played.connect(_on_unit_played)
+	state.attack_performed.connect(_on_attack_performed)
+	state.unit_flipped.connect(_on_unit_flipped)
+	state.flip_right_used.connect(_on_flip_right_used)
+	state.turn_started.connect(_on_turn_started)
+	state.mulligan_finished.connect(_on_mulligan_finished)
 	state.unit_damaged.connect(_on_unit_damaged)
 	state.hp_changed.connect(_on_hp_changed)
 	state.unit_ticked.connect(
 		func(side: int, slot: int) -> void: _tick_pending["%d:%d" % [side, slot]] = true
 	)
 	state.unit_destroyed.connect(_on_unit_destroyed)
+	state.match_ended.connect(func(_winner: int) -> void: _finish())
 	# マリガンの間は暗幕より手前へ、確定ボタンの下へ下げて出す(GameDesign.md 18章)。
 	_place_band(state.mulligan_pending)
 	visible = true
-	_refresh()
+	_enter_step()
 
 
-func close() -> void:
-	visible = false
-	finished.emit()
-
-
-## 新しい対局へ入る前の後始末(GameDesign.md 18章)。誘導対局かどうかの記録も、
-## その対局を離れる時点で一緒に落とす。
+## 新しい対局へ入る前の後始末(GameDesign.md 18章)。
 func reset_for_new_match() -> void:
 	visible = false
+	_active = false
 	ran_this_match = false
+	_steps = []
+	_index = 0
+	_refs.clear()
 
 
-## 帯の位置をマリガン中かどうかで切り替える。
+## CPUの手番。台本の現在の手が `side` のものであれば `MatchAction` の形で返す。
+## 一致しなければ空を返し、呼び出し側(`TutorialCpuStrategy`)がターン終了で埋める。
+func cpu_action(state: MatchState, side: int) -> Dictionary:
+	var step := _current_step()
+	if step.is_empty() or _side_for(str(step.get("side", ""))) != side:
+		return {}
+	return _cpu_action_for(state, side, step)
+
+
+func _cpu_action_for(state: MatchState, side: int, step: Dictionary) -> Dictionary:
+	match str(step.get("kind", "")):
+		"play":
+			return _cpu_play_action(state, side, step)
+		"attack":
+			return _cpu_attack_action(side, step)
+		"flip":
+			var slot := _slot_of(side, str(step.get("actor_ref", "")))
+			return {} if slot < 0 else MatchAction.flip(side, slot)
+		"flip_right":
+			return _cpu_flip_right_action(side, step)
+		"end_turn":
+			return MatchAction.end_turn(side)
+	return {}
+
+
+func _cpu_play_action(state: MatchState, side: int, step: Dictionary) -> Dictionary:
+	var hand_index := _hand_index_of(state, side, str(step.get("card_id", "")))
+	var empty: Array = state.empty_slots(side)
+	if hand_index < 0 or empty.is_empty():
+		return {}
+	return MatchAction.play(side, hand_index, empty[0])
+
+
+func _cpu_attack_action(side: int, step: Dictionary) -> Dictionary:
+	var actor_slot := _slot_of(side, str(step.get("actor_ref", "")))
+	if actor_slot < 0:
+		return {}
+	if str(step.get("target_kind", "")) == "face":
+		return MatchAction.attack(side, actor_slot, -1)
+	var target_slot := _slot_of(MatchState.other_side(side), str(step.get("target_ref", "")))
+	return {} if target_slot < 0 else MatchAction.attack(side, actor_slot, target_slot)
+
+
+func _cpu_flip_right_action(side: int, step: Dictionary) -> Dictionary:
+	var target_side := (
+		side if str(step.get("target_side", "")) == "own" else MatchState.other_side(side)
+	)
+	var target := _slot_of(target_side, str(step.get("target_ref", "")))
+	return {} if target < 0 else MatchAction.flip_right(side, target_side, target)
+
+
+# --- 関門(GameDesign.md 18章) -------------------------------------------
+# 通常の対局(`_active == false`)では常にtrueを返す。
+
+
+func gate_hand_select(index: int) -> bool:
+	if not _active:
+		return true
+	var step := _current_step()
+	if step.is_empty() or step.get("side", "") != "a" or step.get("kind", "") != "play":
+		return false
+	var hand: Array = _state.hand[_my_side]
+	return index >= 0 and index < hand.size() and hand[index].id == str(step.get("card_id", ""))
+
+
+## 手札を選ばずに自分の駒を選ぶ操作(攻撃/反転の手を始める)。
+func gate_board_select(slot: int) -> bool:
+	if not _active:
+		return true
+	var step := _current_step()
+	if step.is_empty() or step.get("side", "") != "a":
+		return false
+	var kind := str(step.get("kind", ""))
+	if kind != "attack" and kind != "flip":
+		return false
+	return _slot_of(_my_side, str(step.get("actor_ref", ""))) == slot
+
+
+func gate_flip_confirm() -> bool:
+	if not _active:
+		return true
+	var step := _current_step()
+	return not step.is_empty() and step.get("side", "") == "a" and step.get("kind", "") == "flip"
+
+
+## target_slot が -1 なら本体。
+func gate_attack_target(target_slot: int) -> bool:
+	if not _active:
+		return true
+	var step := _current_step()
+	if step.is_empty() or step.get("side", "") != "a" or step.get("kind", "") != "attack":
+		return false
+	var wants_face := str(step.get("target_kind", "")) == "face"
+	if wants_face:
+		return target_slot < 0
+	if target_slot < 0:
+		return false
+	return _slot_of(MatchState.other_side(_my_side), str(step.get("target_ref", ""))) == target_slot
+
+
+func gate_flip_right_begin() -> bool:
+	if not _active:
+		return true
+	var step := _current_step()
+	return (
+		not step.is_empty() and step.get("side", "") == "a" and step.get("kind", "") == "flip_right"
+	)
+
+
+func gate_flip_right_target(target_side: int, slot: int) -> bool:
+	if not _active:
+		return true
+	var step := _current_step()
+	if step.is_empty() or step.get("side", "") != "a" or step.get("kind", "") != "flip_right":
+		return false
+	var wants_side := (
+		_my_side if str(step.get("target_side", "")) == "own" else MatchState.other_side(_my_side)
+	)
+	if target_side != wants_side:
+		return false
+	return _slot_of(wants_side, str(step.get("target_ref", ""))) == slot
+
+
+func gate_end_turn() -> bool:
+	if not _active:
+		return true
+	var step := _current_step()
+	return (
+		not step.is_empty() and step.get("side", "") == "a" and step.get("kind", "") == "end_turn"
+	)
+
+
+## マリガンは札を選べず「このままで開始」だけを受け付ける(GameDesign.md 18章)。
+func gate_mulligan_pick() -> bool:
+	return not _active
+
+
+# --- 台本の進行 -----------------------------------------------------------
+
+
+func _current_step() -> Dictionary:
+	return _steps[_index] if _index >= 0 and _index < _steps.size() else {}
+
+
+func _side_for(tag: String) -> int:
+	if tag == "a":
+		return _my_side
+	if tag == "b":
+		return MatchState.other_side(_my_side)
+	return -1
+
+
+func _slot_of(side: int, ref: String) -> int:
+	if ref.is_empty():
+		return -1
+	var target: CardInstance = _refs.get(ref)
+	if target == null:
+		return -1
+	for slot in MatchState.BOARD_SIZE:
+		if _state.board[side][slot] == target:
+			return slot
+	return -1
+
+
+func _hand_index_of(state: MatchState, side: int, card_id: String) -> int:
+	var hand: Array = state.hand[side]
+	for i in hand.size():
+		var card: CardData = hand[i]
+		if card.id == card_id:
+			return i
+	return -1
+
+
 func _place_band(during_mulligan: bool) -> void:
 	_band.position = Vector2(
 		BAND_RECT.position.x, MULLIGAN_BAND_TOP if during_mulligan else BAND_RECT.position.y
 	)
 
 
-func _advance_if(event: String, side: int, target: String = "") -> void:
-	if not visible or side != _my_side or _index >= TutorialSteps.STEPS.size():
+## 台本の1手が実際に起きた。CPU/マリガンの手はそのまま次へ、プレイヤーの手は
+## 「終えたときの説明」を出して「つぎへ」を待つ。
+func _complete_current_step() -> void:
+	if _state != null and _state.is_match_over():
+		_finish()
 		return
-	var step: Dictionary = TutorialSteps.STEPS[_index]
-	if _showing_done or str(step["event"]) != event:
+	var step := _current_step()
+	if step.is_empty():
 		return
-	if event == "attack" and str(step.get("target", "")) != target:
-		return
-	_showing_done = true
-	_fact = _fact_for(event)
-	if event == "attack":
-		# ダメージはこの後に届く。数え終えたところで文を組み直す。
-		_begin_attack_count()
 	if _portrait != null:
 		_portrait.cheer()
-	if event == "mulligan":
+	var kind := str(step.get("kind", ""))
+	if kind == "mulligan":
 		_place_band(false)
+	if str(step.get("side", "")) == "b" or kind == "mulligan":
+		_index += 1
+		_enter_step()
+		return
+	_fact = _fact_for(step)
+	_showing_done = true
+	if kind == "attack":
+		_begin_attack_count()
 	_refresh()
 
 
-## 段階を終えた瞬間の盤面から、一言へ差し込む事実を1つ取り出す。
-## 取り出せない場合は空文字を返し、従来どおりの一般的な説明だけを出す。
-func _fact_for(event: String) -> String:
-	match event:
-		"play":
-			var played := _newest_unit()
-			return "" if played == null else "「%s」を出したよ。" % played.data.display_name
-		"end_turn":
-			var ticked := _newest_unit()
-			if ticked == null:
-				return ""
-			return (
-				"%sの体力が%d→%d、攻撃力が%d→%dになったよ。"
-				% [
-					ticked.data.display_name,
-					ticked.health + 1,
-					ticked.health,
-					ticked.attack - 1,
-					ticked.attack,
-				]
-			)
-		"flip":
-			var flipped := _newest_unit()
-			if flipped == null:
-				return ""
-			return (
-				"体力%d・攻撃力%dが入れ替わって、体力%d・攻撃力%dになったよ。"
-				% [flipped.attack, flipped.health, flipped.health, flipped.attack]
-			)
-	return ""
+func _enter_step() -> void:
+	if _state != null and _state.is_match_over():
+		_finish()
+		return
+	if _index >= _steps.size():
+		_finish()
+		return
+	_showing_done = str(_current_step().get("side", "")) == "info"
+	_fact = ""
+	_refresh()
 
 
-## 自分の場に残っている駒を1体返す。段階1で1体出すところから始まるため、
-## 枠の順に最初に見つかったものでよい。
-func _newest_unit() -> CardInstance:
-	for slot in MatchState.BOARD_SIZE:
-		var unit: CardInstance = _state.board[_my_side][slot]
-		if unit != null:
-			return unit
-	return null
+func _finish() -> void:
+	if not visible and not _active:
+		return
+	if _active:
+		FunnelService.reach(FunnelService.TUTORIAL_CLEAR)
+		UiState.mark_tutorial_done()
+	visible = false
+	_active = false
 
 
-func _slot_of(side: int, unit: CardInstance) -> int:
-	for slot in MatchState.BOARD_SIZE:
-		if _state.board[side][slot] == unit:
-			return slot
-	return -1
+func _on_next_pressed() -> void:
+	if not _callout_active.is_empty():
+		_callout_active = ""
+		_refresh()
+		return
+	if not _showing_done:
+		return
+	_index += 1
+	_enter_step()
+
+
+# --- MatchStateの信号 -----------------------------------------------------
+
+
+func _on_unit_played(side: int, slot: int) -> void:
+	var step := _current_step()
+	if (
+		step.is_empty()
+		or str(step.get("kind", "")) != "play"
+		or _side_for(str(step.get("side", ""))) != side
+	):
+		return
+	var unit: CardInstance = _state.board[side][slot]
+	if unit == null or unit.data.id != str(step.get("card_id", "")):
+		return
+	var ref := str(step.get("ref", ""))
+	if not ref.is_empty():
+		_refs[ref] = unit
+	_complete_current_step()
+
+
+func _on_attack_performed(side: int, slot: int, target_slot: int) -> void:
+	var step := _current_step()
+	if (
+		step.is_empty()
+		or str(step.get("kind", "")) != "attack"
+		or _side_for(str(step.get("side", ""))) != side
+	):
+		return
+	var actor: CardInstance = _state.board[side][slot]
+	if actor == null or actor != _refs.get(str(step.get("actor_ref", ""))):
+		return
+	var wants_face := str(step.get("target_kind", "")) == "face"
+	if wants_face != (target_slot < 0):
+		return
+	if not wants_face:
+		var expect := _slot_of(MatchState.other_side(side), str(step.get("target_ref", "")))
+		if expect != target_slot:
+			return
+	_complete_current_step()
+
+
+func _on_unit_flipped(side: int, slot: int) -> void:
+	var step := _current_step()
+	if (
+		step.is_empty()
+		or str(step.get("kind", "")) != "flip"
+		or _side_for(str(step.get("side", ""))) != side
+	):
+		return
+	var unit: CardInstance = _state.board[side][slot]
+	if unit == null or unit != _refs.get(str(step.get("actor_ref", ""))):
+		return
+	_complete_current_step()
+
+
+func _on_flip_right_used(actor_side: int, target_side: int, slot: int) -> void:
+	var step := _current_step()
+	if (
+		step.is_empty()
+		or str(step.get("kind", "")) != "flip_right"
+		or _side_for(str(step.get("side", ""))) != actor_side
+	):
+		return
+	var wants_side := (
+		actor_side
+		if str(step.get("target_side", "")) == "own"
+		else MatchState.other_side(actor_side)
+	)
+	if wants_side != target_side:
+		return
+	var unit: CardInstance = _state.board[target_side][slot]
+	if unit == null or unit != _refs.get(str(step.get("target_ref", ""))):
+		return
+	_complete_current_step()
+
+
+func _on_turn_started(side: int) -> void:
+	_tick_pending.clear()
+	var step := _current_step()
+	if step.is_empty() or str(step.get("kind", "")) != "end_turn":
+		return
+	if _side_for(str(step.get("side", ""))) == MatchState.other_side(side):
+		_complete_current_step()
+
+
+func _on_mulligan_finished() -> void:
+	var step := _current_step()
+	if not step.is_empty() and str(step.get("kind", "")) == "mulligan":
+		_complete_current_step()
 
 
 func _begin_attack_count() -> void:
@@ -270,106 +512,68 @@ func _update_attack_fact() -> void:
 ## 自分の駒が「戦闘ではなくターン終了の砂落ち」で割れた初回(GameDesign.md 18章)。
 func _on_unit_destroyed(side: int, slot: int, _card: CardData) -> void:
 	var key := "%d:%d" % [side, slot]
-	if side == _my_side and _tick_pending.get(key, false) and not _callout_sand_death_shown:
-		_callout_sand_death_shown = true
-		_callout_queue.append(TutorialSteps.CALLOUT_OWN_UNIT_DIED_TO_SAND)
-		_try_show_callout()
+	if side == _my_side and _tick_pending.get(key, false) and not _callout_shown:
+		_callout_shown = true
+		_callout_active = CALLOUT_OWN_UNIT_DIED_TO_SAND
+		visible = true
+		_refresh()
 	_tick_pending.erase(key)
 
 
-## 相手が守護を持つ駒を出した初回(GameDesign.md 18章)。
-func _on_unit_played_for_callout(side: int, slot: int) -> void:
-	if side == _my_side or _callout_guard_shown:
-		return
-	var unit: CardInstance = _state.board[side][slot]
-	if unit != null and unit.has_keyword(CardEnums.Keyword.GUARD):
-		_callout_guard_shown = true
-		_callout_queue.append(TutorialSteps.CALLOUT_FOE_GUARD_PLAYED)
-		_try_show_callout()
+## 段階を終えたときの一言へ差し込む、いま自分の盤面で起きた実際の数値。
+func _fact_for(step: Dictionary) -> String:
+	match str(step.get("kind", "")):
+		"play":
+			return _fact_for_play(step)
+		"end_turn":
+			return _fact_for_end_turn(step)
+		"flip":
+			return _fact_for_flip(step)
+		"flip_right":
+			return _fact_for_flip_right(step)
+	return ""
 
 
-## 待ち行列の先頭を出す。**段階の説明を読んでいる間([つぎへ]表示中)に起きたら、
-## それを閉じた後に出す**(GameDesign.md 18章)。締めの後(帯を閉じた後)でも出すため、
-## 閉じていれば帯を再表示する。
-func _try_show_callout() -> void:
-	if not _callout_active.is_empty() or _callout_queue.is_empty():
-		return
-	if not _outro and _showing_done:
-		return
-	_callout_active = _callout_queue.pop_front()
-	visible = true
-	_refresh()
+func _fact_for_play(step: Dictionary) -> String:
+	var played: CardInstance = _refs.get(str(step.get("ref", "")))
+	return "" if played == null else "「%s」を出したよ。" % played.data.display_name
 
 
-func _dismiss_callout() -> void:
-	_callout_active = ""
-	if _outro:
-		visible = false
-	_refresh()
-	_try_show_callout()
-
-
-func _on_next_pressed() -> void:
-	if not _callout_active.is_empty():
-		_dismiss_callout()
-		return
-	if _outro:
-		close()
-		_try_show_callout()
-		return
-	if not _showing_done:
-		return
-	_showing_done = false
-	_counting_attack = false
-	_fact = ""
-	_index += 1
-	_enter_step()
-
-
-## 次の段へ入る。**「読むだけ」の段(`event` が空)は操作を待たず、
-## 入った時点で「つぎへ」を出す**(GameDesign.md 18章「上に残った砂が体力…」)。
-func _enter_step() -> void:
-	if _index >= TutorialSteps.STEPS.size():
-		_outro = true
-		FunnelService.reach(FunnelService.TUTORIAL_CLEAR)
-		UiState.mark_tutorial_done()
-		_refresh()
-		return
-	if str(TutorialSteps.STEPS[_index].get("event", "")).is_empty():
-		_showing_done = true
-	_refresh()
-
-
-func _refresh() -> void:
-	# ボタンは一度広がると自分では縮まない。組み立て時に広がったまま帯の枠へかかるため、毎回戻す。
-	_next_button.size = NEXT_SIZE
-	if not _callout_active.is_empty():
-		_label.text = _callout_active
-		_next_button.text = "とじる" if _outro else "つぎへ"
-		_next_button.visible = true
-		_dots.queue_redraw()
-		queue_redraw()
-		return
-	if _outro:
-		_label.text = TutorialSteps.OUTRO_TEXT
-		_next_button.text = "とじる"
-		_next_button.visible = true
-		_dots.queue_redraw()
-		queue_redraw()
-		return
-	_next_button.text = "つぎへ"
-	_next_button.visible = _showing_done
-	var step: Dictionary = TutorialSteps.STEPS[_index]
-	var is_read_step := str(step.get("event", "")).is_empty()
-	var line: String = (
-		str(step["text"]) if is_read_step else str(step["done" if _showing_done else "text"])
+func _fact_for_end_turn(step: Dictionary) -> String:
+	var ref := str(step.get("ref", ""))
+	var ticked: CardInstance = _refs.get(ref) if not ref.is_empty() else null
+	if ticked == null:
+		return ""
+	return (
+		"%sの体力が%d→%d、攻撃力が%d→%dになったよ。"
+		% [
+			ticked.data.display_name,
+			ticked.health + 1,
+			ticked.health,
+			ticked.attack - 1,
+			ticked.attack,
+		]
 	)
-	if _stuck and not _showing_done and not is_read_step:
-		var focus := str(step.get("focus", ""))
-		line = TutorialSteps.STUCK_TEXT if focus == "hand" else TutorialSteps.STUCK_WAIT_TEXT
-	_label.text = (_fact + line) if _showing_done and not _fact.is_empty() else line
-	_dots.queue_redraw()
-	queue_redraw()
+
+
+func _fact_for_flip(step: Dictionary) -> String:
+	var flipped: CardInstance = _refs.get(str(step.get("actor_ref", "")))
+	if flipped == null:
+		return ""
+	return (
+		"体力%d・攻撃力%dが入れ替わって、体力%d・攻撃力%dになったよ。"
+		% [flipped.attack, flipped.health, flipped.health, flipped.attack]
+	)
+
+
+func _fact_for_flip_right(step: Dictionary) -> String:
+	var target: CardInstance = _refs.get(str(step.get("target_ref", "")))
+	if target == null:
+		return ""
+	return "相手の「%s」の攻撃力が%dになったよ。" % [target.data.display_name, target.attack]
+
+
+# --- 見た目 -----------------------------------------------------------
 
 
 func _build() -> void:
@@ -404,8 +608,6 @@ func _build() -> void:
 	_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var margin := MarginContainer.new()
 	# 文が「つぎへ」の下へ潜らないよう、ボタンぶんの余白を右へ空ける。
-	# **「つぎへ」が出ていない間も同じだけ空ける**。出入りのたびに文が折り返し直すため。
-	# 「つぎへ」と進み具合の点のぶんを右へ空ける。
 	margin.add_theme_constant_override("margin_right", int(NEXT_SIZE.x + BAND_INSET + DOTS_WIDTH))
 	# 左はすなえるの立ち絵ぶん。文と絵を重ねない。
 	margin.add_theme_constant_override(
@@ -414,8 +616,6 @@ func _build() -> void:
 	panel.add_child(margin)
 	margin.add_child(_label)
 
-	# **「閉じる」は置かない**(GameDesign.md 18章)。一度閉じると以降の案内が
-	# 読めなくなるため。帯は最後の「とじる」まで残る。
 	_next_button = CodedButton.make("つぎへ", NEXT_SIZE)
 	_next_button.visible = false
 	_next_button.position = Vector2(
@@ -424,7 +624,7 @@ func _build() -> void:
 	_next_button.pressed.connect(_on_next_pressed)
 	_band.add_child(_next_button)
 
-	# 進み具合の点は「つぎへ」の左へ置く。段の数だけ並べ、済んだものを塗る。
+	# 進み具合の点は「つぎへ」の左へ置く。準備+4手番の5つ(GameDesign.md 18章)。
 	_dots = Control.new()
 	_dots.position = Vector2(BAND_RECT.size.x - NEXT_SIZE.x - BAND_INSET - DOTS_WIDTH, 0.0)
 	_dots.size = Vector2(DOTS_WIDTH, BAND_RECT.size.y)
@@ -433,7 +633,6 @@ func _build() -> void:
 	_band.add_child(_dots)
 
 	# すなえるは帯の左端へ小さく置くだけにする(GameDesign.md 18章)。
-	# 盤面を新たに隠さないよう、帯の中に収める。
 	_portrait = SunaeruPortrait.new()
 	_portrait.size = PORTRAIT_SIZE
 	_portrait.position = Vector2(BAND_INSET, BAND_RECT.size.y - BAND_FRAME - PORTRAIT_SIZE.y)
@@ -444,67 +643,56 @@ func _process(delta: float) -> void:
 	if not visible:
 		return
 	_elapsed += delta
-	var stuck := _is_stuck()
-	if stuck != _stuck:
-		_stuck = stuck
-		_refresh()
 	queue_redraw()
 
 
-## 「出す」を求めているのに1枚も出せない状態か。マナは手番の始めに増えるため、
-## 毎フレーム見て切り替わったときだけ文を組み直す。
-func _is_stuck() -> bool:
-	if _screen == null or _state == null or _showing_done or _outro:
-		return false
-	if _index >= TutorialSteps.STEPS.size():
-		return false
-	if _state.current_turn != _my_side or _state.is_match_over():
-		return false
-	match str(TutorialSteps.STEPS[_index].get("focus", "")):
-		"hand":
-			return _screen._geometry.playable_hand_rects().is_empty()
-		"attack_unit", "attack_face", "flip":
-			return _actor_slots().is_empty()
-	return false
+func _refresh() -> void:
+	# ボタンは一度広がると自分では縮まない。組み立て時に広がったまま帯の枠へかかるため、毎回戻す。
+	_next_button.size = NEXT_SIZE
+	if not _callout_active.is_empty():
+		_label.text = _callout_active
+		_next_button.text = "つぎへ"
+		_next_button.visible = true
+		_dots.queue_redraw()
+		queue_redraw()
+		return
+	var step := _current_step()
+	if step.is_empty():
+		return
+	_next_button.text = "つぎへ"
+	var side := str(step.get("side", ""))
+	if side == "b":
+		_label.text = str(step.get("wait_text", ""))
+		_next_button.visible = false
+		_dots.queue_redraw()
+		queue_redraw()
+		return
+	var is_info := side == "info"
+	_next_button.visible = _showing_done or is_info
+	var line: String
+	if is_info:
+		line = str(step.get("text", ""))
+	else:
+		line = str(step.get("done", "")) if _showing_done else str(step.get("text", ""))
+	_label.text = (
+		(_fact + line) if (_showing_done and not is_info and not _fact.is_empty()) else line
+	)
+	_dots.queue_redraw()
+	queue_redraw()
 
 
-## いまの段の操作を、この手番に行える自分の駒。攻撃の段は、求める相手(駒 / 本体)を
-## 実際に殴れる駒だけを数える。
-func _actor_slots() -> Array[int]:
-	var found: Array[int] = []
-	var focus := str(TutorialSteps.STEPS[_index].get("focus", ""))
-	for slot in MatchState.BOARD_SIZE:
-		if focus == "flip":
-			if _state.can_flip(_my_side, slot):
-				found.append(slot)
-		elif not _attack_targets(slot, focus).is_empty():
-			found.append(slot)
-	return found
-
-
-## slot の駒が殴れる相手。駒の段なら相手の枠番号、本体の段なら -1 を返す。
-func _attack_targets(slot: int, focus: String) -> Array[int]:
-	var targets: Array[int] = []
-	if focus == "attack_face":
-		if _state.can_attack(_my_side, slot, -1):
-			targets.append(-1)
-		return targets
-	for target: int in _state.attackable_slots(MatchState.other_side(_my_side)):
-		if _state.can_attack(_my_side, slot, target):
-			targets.append(target)
-	return targets
-
-
-## 何段階のうちどこにいるかを点で示す(GameDesign.md 18章)。
+## 何手番のうちどこにいるかを点で示す(GameDesign.md 18章)。準備+4手番の5つ。
 func _draw_dots() -> void:
-	var count := TutorialSteps.STEPS.size()
-	var width: float = DOT_STEP * (count - 1)
+	var width: float = DOT_STEP * (STAGE_COUNT - 1)
 	var left: float = (DOTS_WIDTH - width) * 0.5
 	var y: float = _dots.size.y * 0.5
-	for i in count:
+	var step := _current_step()
+	var current_stage: int = (
+		int(step.get("stage", STAGE_COUNT - 1)) if not step.is_empty() else STAGE_COUNT
+	)
+	for i in STAGE_COUNT:
 		var at := Vector2(left + DOT_STEP * i, y)
-		var done: bool = _outro or i < _index or (i == _index and _showing_done)
-		if done:
+		if i < current_stage:
 			_dots.draw_circle(at, DOT_RADIUS, UiPalette.GLOW_AMBER)
 		else:
 			_dots.draw_circle(at, DOT_RADIUS, Color(UiPalette.GLOW_AMBER, 0.22))
@@ -527,46 +715,73 @@ func _draw() -> void:
 
 
 ## 光らせる場所。**説明を読んでいる間(「つぎへ」が出ている間)は光らせない**。
-## 次に何をするかはまだ示していないため。
 func _focus_rects() -> Array[Rect2]:
 	var found: Array[Rect2] = []
-	if (
-		_screen == null
-		or _state == null
-		or _showing_done
-		or _outro
-		or not _callout_active.is_empty()
-	):
+	if _screen == null or _state == null or _showing_done or not _callout_active.is_empty():
 		return found
-	if (
-		_index >= TutorialSteps.STEPS.size()
-		or _state.current_turn != _my_side
-		or _state.is_match_over()
-	):
+	var step := _current_step()
+	if step.is_empty() or _state.is_match_over():
 		return found
-	match str(TutorialSteps.STEPS[_index].get("focus", "")):
-		"hand":
-			# 出せる札が無いときは、代わりにターン終了を示す(GameDesign.md 18章)。
-			if _stuck:
-				return [_screen._geometry.end_turn_button_rect()] as Array[Rect2]
-			# **いま出せる手札だけを囲む。**空き枠まで一緒に光らせると盤面の大半が
-			# 枠だらけになり、どれを押せばよいのか却って分からない(実際に描いて確認した)。
-			found.append_array(_screen._geometry.playable_hand_rects())
-		"end_turn":
-			found.append(_screen._geometry.end_turn_button_rect())
+	var side := str(step.get("side", ""))
+	if side == "info" or side == "b" or _state.current_turn != _my_side:
+		return found
+	match str(step.get("kind", "")):
 		"mulligan":
 			if _state.mulligan_pending and _screen._mulligan != null:
 				found.append(_screen._mulligan.confirm_rect())
-		"attack_unit", "attack_face", "flip":
-			if _stuck:
-				return [_screen._geometry.end_turn_button_rect()] as Array[Rect2]
-			found.append_array(_actor_focus_rects(str(TutorialSteps.STEPS[_index]["focus"])))
+		"play":
+			found.append_array(_hand_rects_for(str(step.get("card_id", ""))))
+		"end_turn":
+			found.append(_screen._geometry.end_turn_button_rect())
+		"attack":
+			found.append_array(_attack_focus_rects(step))
+		"flip":
+			var slot := _slot_of(_my_side, str(step.get("actor_ref", "")))
+			if slot >= 0:
+				found.append(_slot_rect(_my_side, slot))
 		"flip_right":
-			for side in [_my_side, MatchState.other_side(_my_side)]:
-				for slot in MatchState.BOARD_SIZE:
-					var unit: CardInstance = _state.board[side][slot]
-					if unit != null and unit.flippable():
-						found.append(_slot_rect(side, slot))
+			var wants_side := (
+				_my_side
+				if str(step.get("target_side", "")) == "own"
+				else MatchState.other_side(_my_side)
+			)
+			var slot2 := _slot_of(wants_side, str(step.get("target_ref", "")))
+			if slot2 >= 0:
+				found.append(_slot_rect(wants_side, slot2))
+	return found
+
+
+func _hand_rects_for(card_id: String) -> Array[Rect2]:
+	var found: Array[Rect2] = []
+	var hand: Array = _state.hand[_my_side]
+	for i in hand.size():
+		var card: CardData = hand[i]
+		if card.id == card_id and i < _screen._hand_views.size():
+			var view := _screen._hand_views[i]
+			found.append(Rect2(view.position, view.size))
+			break
+	return found
+
+
+## 攻撃の段は2段階で囲む。自分の駒を選ぶ前は台本の駒を、選んだ後はその駒で殴る相手
+## (駒か本体のHP帯)を囲み、次に押す場所へ視線を運ぶ(GameDesign.md 18章)。
+func _attack_focus_rects(step: Dictionary) -> Array[Rect2]:
+	var found: Array[Rect2] = []
+	var actor_slot := _slot_of(_my_side, str(step.get("actor_ref", "")))
+	if actor_slot < 0:
+		return found
+	var chosen: CardMatchSelection = _screen.selection
+	if chosen.is_board_selection() and chosen.slot == actor_slot:
+		if str(step.get("target_kind", "")) == "face":
+			found.append(_screen._geometry.hp_bar_global_rect(MatchState.other_side(_my_side)))
+		else:
+			var target_slot := _slot_of(
+				MatchState.other_side(_my_side), str(step.get("target_ref", ""))
+			)
+			if target_slot >= 0:
+				found.append(_slot_rect(MatchState.other_side(_my_side), target_slot))
+		return found
+	found.append(_slot_rect(_my_side, actor_slot))
 	return found
 
 
@@ -574,48 +789,28 @@ func _focus_rects() -> Array[Rect2]:
 ## (段階を終えたときの説明)か、読むだけの段のときだけ光らせる。
 func _number_rects() -> Array[Rect2]:
 	var found: Array[Rect2] = []
-	if _screen == null or _state == null or _outro or not _callout_active.is_empty():
+	if _screen == null or _state == null or not _callout_active.is_empty():
 		return found
-	if _index >= TutorialSteps.STEPS.size():
+	var step := _current_step()
+	if step.is_empty():
 		return found
-	var step: Dictionary = TutorialSteps.STEPS[_index]
 	var topic := str(step.get("topic", ""))
 	if topic.is_empty():
 		return found
-	var is_read_step := str(step.get("event", "")).is_empty()
-	if not is_read_step and not _showing_done:
+	var is_info := str(step.get("side", "")) == "info"
+	if not is_info and not _showing_done:
 		return found
 	match topic:
 		"mana":
 			found.append_array(_screen._geometry.mana_and_cost_rects(_my_side))
 		"stats":
-			var unit := _newest_unit()
-			if unit != null:
-				var slot := _slot_of(_my_side, unit)
-				if slot >= 0:
-					found.append_array(_screen._geometry.unit_stat_rects(_my_side, slot))
+			var slot := _slot_of(_my_side, str(step.get("ref", "")))
+			if slot >= 0:
+				found.append_array(_screen._geometry.unit_stat_rects(_my_side, slot))
 		"foe_hp":
 			found.append(_screen._geometry.hp_bar_global_rect(MatchState.other_side(_my_side)))
 		"flip_right":
 			found.append(_screen._geometry.flip_right_gauge_rect())
-	return found
-
-
-## 攻撃の段は2段階で囲む。自分の駒を選ぶ前は殴れる自分の駒を、選んだ後はその駒で殴れる
-## 相手(駒か本体のHP帯)を囲み、次に押す場所へ視線を運ぶ(GameDesign.md 18章)。
-func _actor_focus_rects(focus: String) -> Array[Rect2]:
-	var found: Array[Rect2] = []
-	var actors := _actor_slots()
-	var chosen: CardMatchSelection = _screen.selection
-	if focus != "flip" and chosen.is_board_selection() and actors.has(chosen.slot):
-		for target in _attack_targets(chosen.slot, focus):
-			if target < 0:
-				found.append(_screen._geometry.hp_bar_global_rect(MatchState.other_side(_my_side)))
-			else:
-				found.append(_slot_rect(MatchState.other_side(_my_side), target))
-		return found
-	for slot in actors:
-		found.append(_slot_rect(_my_side, slot))
 	return found
 
 

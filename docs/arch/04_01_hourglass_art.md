@@ -184,19 +184,25 @@ pckから除外した後も true を返すことがあり、有無の判定に�
 
 **台本は `TutorialScriptData`(Resource、`resources/tutorial/tutorial_script.tres`)が持つ**(GameDesign.md 18章)。
 両者の山札のid(並び=引く順。`MatchState.keep_deck_order` で切らずに始める)、相手の開始HP、
-そして**両者の手を順に並べた `steps`**。各手は「どちらの手か / 行動(`MatchAction` と同じ形) / 指示の文 /
-終えたときの説明 / 光らせる数字」を持つ。読むだけの段は行動を持たない手として並べる。
+そして**両者の手を順に並べた `steps`**。各手は `side`("a"/"b"/"info")・`kind`(play/attack/flip/
+flip_right/end_turn/mulligan)・指示の文・終えたときの説明・光らせる数字を持つ。**盤面のどの枠へ
+置くか/どの枠を攻撃するかは枠番号ではなく`ref`(置いた駒に付ける参照名)で持つ**——空き枠は
+プレイヤーが自由に選べるため、置き先の枠番号は対局のたびに変わりうる。`CardMatchTutorial._refs`
+(参照名→`CardInstance`)がこれを盤面上の実際の枠へその場で引き直す。
 台本をコードへ書かないのは、カードの調整で成立しなくなったときに `.tres` だけを直せば済むようにするため。
 
-- **CPUの手は台本から出す**。`CardCpuStrategy` と同じ `choose_action()` を持つ台本用の指し手を `_cpu` に差し、
-  既存の間合い(1手ずつ間を置く)をそのまま使う
-- **プレイヤーの操作は、台本の次の手と一致するものだけを通す**。選択(手札・駒)と行動の確定の入口に
-  1つの関門を置き、誘導対局の間だけ `CardMatchTutorial` が可否を答える。通常の対局では関門は常に通す
-- マリガンは札を選べず「このままで開始」だけを受け付ける
+- **CPUの手は台本から出す**。`TutorialCpuStrategy`(`CardCpuStrategy`を継承するが貪欲法は呼ばず、
+  `CardMatchTutorial.cpu_action()`へ委譲するだけ)を`_cpu`に差し、既存の間合い(1手ずつ間を置く)を
+  そのまま使う。台本のCPUの手が尽きると(次の手の`side`が"a"になると)`end_turn`を返して自分で
+  ターンを終える
+- **プレイヤーの操作は、台本の次の手と一致するものだけを通す**。手札・駒の選択と行動の確定、
+  それぞれの入口で `CardMatchTutorial.gate_*()`(関門)を呼び、誘導対局の間だけ答えを返す。
+  通常の対局(`_active == false`)では常にtrueを返す
+- マリガンは札を選べず「このままで開始」だけを受け付ける(`CardMatchMulligan.picking_disabled`)
 - 光らせるのは台本の次の手が指す1か所(駒を選んで相手を押す手は、選ぶ前は自分の駒・選んだ後は相手)。
   説明中の数字の光は `CardMatchGeometry` から位置を取り、輪郭とは色を分ける
-- 成立は `tools/tests/` の自動テストが確かめる(台本の手を順に `MatchAction.apply()` し、すべて合法で、
-  最後の手でプレイヤーが勝つ)
+- 成立は `tools/tests/tutorial_script_tests.gd` が確かめる(台本の手を順に `MatchState` へ直接適用し、
+  すべて合法で、要所の数値が合っていて、最後の手でプレイヤーが勝つ)
 
 **指示は手を塞がない**(`mouse_filter` は IGNORE)。従わない操作を禁止すると
 「言われた通りにしか動かせない」体験になるため(GameDesign.md 18章)。
