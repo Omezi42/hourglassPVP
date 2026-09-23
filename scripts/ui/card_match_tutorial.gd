@@ -16,6 +16,9 @@ extends Control
 ## **段階を終えたときの説明は時間で消さない。**「つぎへ」を押すまで残す。読む速さは人により、
 ## 1秒足らずでは読み切れない(GameDesign.md 18章)。
 
+## 読み終えてCPUが指してよくなった(`cpu_waiting()` が偽へ戻った)。
+signal cpu_resumed
+
 const SCREEN_SIZE := Vector2(1280, 720)
 ## 置き場所は**卓の上端へ横長に渡した帯**とする。相手のHP・マナ・山札を覆う位置
 ## (画面の最上段)は避ける。攻撃や反転の判断に要る情報が誘導対局の間ずっと読めなくなるため。
@@ -53,6 +56,7 @@ const NEXT_SIZE := Vector2(88, 36)
 const CALLOUT_OWN_UNIT_DIED_TO_SAND := "体力が0になると割れちゃう。返せば長生きするよ"
 
 ## `CardMatchScreen._on_match_ended()` が結果パネルの案内文を選ぶために読む。
+
 var ran_this_match := false
 
 var _state: MatchState
@@ -375,11 +379,17 @@ func _on_next_pressed() -> void:
 	if not _callout_active.is_empty():
 		_callout_active = ""
 		_refresh()
-		return
-	if not _showing_done:
-		return
-	_index += 1
-	_enter_step()
+	elif _showing_done:
+		_index += 1
+		_enter_step()
+	if not cpu_waiting() and _state != null and _state.current_turn != _my_side:
+		cpu_resumed.emit()
+
+
+## 説明・補足を読んでいる間はCPUを待たせる。待たずに指すと、台本がまだプレイヤーの手を
+## 指している間にCPUが「指す手が無い」と見てターンを終えてしまい、台本が止まる。
+func cpu_waiting() -> bool:
+	return _active and (_showing_done or not _callout_active.is_empty())
 
 
 # --- MatchStateの信号 -----------------------------------------------------

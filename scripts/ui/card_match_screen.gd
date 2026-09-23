@@ -940,6 +940,8 @@ func _take_cpu_action() -> void:
 	if side == my_side:
 		return
 	var action := _cpu.choose_action(state, side)
+	if action.is_empty():
+		return
 	_record(action)
 	_strike.capture(action)
 	MatchAction.apply(state, action)

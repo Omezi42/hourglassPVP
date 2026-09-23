@@ -72,7 +72,7 @@ docs直下に置くのはこの8ファイル(+ `design/` `arch/` の本文)だ�
 
 ## 検証(変更のたびに必ず)
 
-- コードやシーンを変えたら `bash tools/check.sh`(gdformat → gdlint → ヘッドレステスト → 起動スモーク)を回し、
+- コードやシーンを変えたら `bash tools/check.sh`(gdformat → gdlint → ヘッドレステスト → 誘導対局の通し → 起動スモーク)を回し、
   ALL OK を確認してから完了報告する。個別に何度も走らせない
 - `.tscn` は直接編集せず、`.agents/` の headless-godot-skill-kit のパッチスクリプト経由で更新する
 - **画面の見た目の確認はスクリーンショットを撮って人に見せ、判断は人が行う。**Claude Codeが画像を読んで良し悪しを

@@ -169,6 +169,9 @@ static func overlays(screen: CardMatchScreen) -> void:
 	# 敷くと、いちばん案内が要る最初の画面ですなえるが読めなくなる。
 	screen._tutorial = CardMatchTutorial.new()
 	screen.add_child(screen._tutorial)
+	screen._tutorial.cpu_resumed.connect(
+		func() -> void: screen._cpu_timer.start(CardMatchScreen.CPU_THINK_SECONDS)
+	)
 	screen._result = CardMatchResult.new()
 	screen._result.home_pressed.connect(func() -> void: screen.back_pressed.emit())
 	screen._result.rematch_pressed.connect(screen._on_rematch_pressed)

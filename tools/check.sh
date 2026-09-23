@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 変更後の検証を1コマンドにまとめる: gdformat → gdlint → ヘッドレステスト → 起動スモーク。
+# 変更後の検証を1コマンドにまとめる: gdformat → gdlint → ヘッドレステスト → 誘導対局の通し → 起動スモーク。
 # 引数なし: git で変更のある .gd だけを整形・lint する。 --all: scripts/ と tools/ の全 .gd。
 # 出力は要点だけに絞る(ログ全文は logs/check_*.log)。
 set -u
@@ -28,6 +28,11 @@ echo "== headless tests"
 "$GODOT" --headless --path . --script res://tools/tests/run_tests.gd > logs/check_tests.log 2>&1
 grep -E "tests passed|FAILED|SCRIPT ERROR|Parse Error" logs/check_tests.log | head -20
 grep -qE "FAILED|SCRIPT ERROR|Parse Error" logs/check_tests.log && status=1
+
+echo "== tutorial flow"
+"$GODOT" --headless --path . --script res://tools/tests/tutorial_flow_smoke.gd > logs/check_flow.log 2>&1
+grep -E "tutorial flow|SCRIPT ERROR|Parse Error" logs/check_flow.log | head -10
+grep -q "tutorial flow passed" logs/check_flow.log || status=1
 
 echo "== startup smoke"
 "$GODOT" --headless --path . --quit-after 60 > logs/check_smoke.log 2>&1

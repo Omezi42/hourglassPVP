@@ -19,7 +19,10 @@ func choose_mulligan(_state: MatchState, _side: int) -> Array:
 	return []
 
 
+## 説明を読んでいる間は空を返して待つ。読み終えたら `cpu_resumed` で指し直す。
 func choose_action(state: MatchState, side: int) -> Dictionary:
+	if _tutorial.cpu_waiting():
+		return {}
 	var action := _tutorial.cpu_action(state, side)
 	if action.is_empty():
 		return MatchAction.end_turn(side)

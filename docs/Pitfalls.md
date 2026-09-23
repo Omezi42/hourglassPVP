@@ -15,6 +15,9 @@
 - **演出のスクリーンショットは `Engine.time_scale` を0.2程度へ落として撮る。**
   `get_viewport().get_texture().get_image()` + `save_png` は演出より実時間のコストが
   大きく、0.3秒程度の動きは撮り逃して「実装が効いていない」ように見える
+- **誘導対局は台本の手を `MatchState` へ当てるだけのテストでは壊れ方を拾えない。**帯が説明を出して「つぎへ」を
+  待つ間にCPUが先に指し、台本が止まる不具合はそれで通ってしまった。対局画面・帯・台本用のCPUを実際に動かす
+  `tools/tests/tutorial_flow_smoke.gd`(`check.sh` が回す)で確かめる
 - **エクスポート済みpckに対しても回す**
   (`godot --headless --main-pack build/web/index.pck --script res://tools/tests/run_tests.gd`)。
   `.tres` が `.tres.remap` になることに起因するパス解決の差異は、これでしか出ない
