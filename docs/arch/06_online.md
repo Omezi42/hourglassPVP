@@ -317,3 +317,29 @@ HTTPRequest をぶら下げると送信の途中で巻き添えに消える。�
 - 吹き出し(`EmoteBubble`)の大きさは `_ready()` で文字から決める。**`_draw()` の中で `size` を書き換えない**(レイアウトが変わって再描画が呼ばれ、毎フレーム描き直し続けるため)。
 - マリガン中(`state.mulligan_pending` / `_mulligan.visible`)はエモート送信を無効化し、**ボタン自体を隠す**(無効の見た目のボタンが「ログ」「投了」の隣に並ぶと、そこだけ色が違って見えるため)。
 - 相手のエモートミュートフラグ(`mute_opponent_emotes`)をサポートし、ミュート中は相手からのエモート吹き出し表示をスキップする。
+
+## 6.7 待っている間のCPU対戦(GameDesign.md 11章・28章)
+
+| クラス | 責務 |
+|---|---|
+| `MatchmakingQueue` | 待機中のCPU戦の印(キューの `cpu` フィールド)を持つ。`set_cpu_playing()` で書き換え、CPU戦中は掴まず `others_waiting(uids)` だけを出す |
+| `RankedMatchmakingQueue` | `MatchmakingQueue` の派生。コレクション(`ranked_queue`)とDiscordへの募集通知の有無だけを変える |
+| `WaitingCpuOffer`(`scripts/ui/waiting_cpu_offer.gd`) | 待機画面の「待っている間CPUと対戦する」ボタンと、出すまでの15秒。ランダム・ランクの両画面が持つ |
+| `WaitingCpuDeck`(`scripts/net/waiting_cpu_deck.gd`) | CPUに渡すデッキを `match_records` の直近の記録から1つ選ぶ。使えるものが無ければ `CardDeckSave.random_deck()` |
+| `WaitingCpuMatch`(`scripts/ui/waiting_cpu_match.gd`) | `Main` の子。いま待機中のCPU戦をしている画面、知らせ(`WaitingCpuPrompt`)と「続ける」を選んだ相手の記録を持つ |
+
+**掴んでよいのは両者とも `cpu` が偽の待機者どうし。**CPU戦中の側は `_try_claim_or_check()` で
+掴みに行かず、同じビルド・新しい待機者のuidを毎回のポーリングで `others_waiting` へ流す。
+「マッチングする」は `cpu` を偽へ戻して通常の待機へ戻すだけで、掴むのは次のポーリングの
+通常経路に任せる(掴む処理を2本持たない)。相手もCPU戦中なら、こちらが偽へ戻った時点で
+相手の `others_waiting` に現れ、相手の側に知らせが出る。
+
+**待機画面はCPU戦の間も生きたまま隠れている**(`Main._show_only()` は画面を解放しない)ため、
+キューのポーリング・生存確認はCPU戦の裏で続く。`Main._on_match_back()` は待機中のCPU戦から
+戻るときだけ `reset_after_match()` ではなく `resume_waiting()` を呼び、キューを残す。
+
+**打ち切りは `CardMatchScreen.abandon_match()`**。`_reset_for_new_match()` で盤面・CPUの
+タイマー・棋譜を捨てるだけで、`CardMatchOutcome` を通さないため勝敗・砂金・戦績・リプレイは残らない。
+
+**★を動かさないのは既存の経路のまま**:待機中のCPU戦は `start_cpu_match()` を通る通常のCPU戦
+(`MatchKind.CPU`)であり、`RankProgress.apply_result()` はランクマッチの対局でしか呼ばれない。
