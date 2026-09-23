@@ -123,7 +123,7 @@ func _apply_attack(step: Dictionary, side: int, index: int) -> void:
 	# 自分3:サンドで本体を攻撃すると4→3になる(GameDesign.md 18章)。
 	if str(step.get("actor_ref", "")) == "as1" and str(step.get("target_kind", "")) == "face":
 		_assert.call(
-			int(_state.hp[SIDE_B]) == 3, "step %d: face attack should bring the foe to 3" % index
+			int(_state.hp[SIDE_B]) == 4, "step %d: face attack should bring the foe to 4" % index
 		)
 	# 自分4:弱めたシールドをサンドで殴ると相打ちで双方が砕ける(GameDesign.md 18章)。
 	if str(step.get("actor_ref", "")) == "as1" and str(step.get("target_ref", "")) == "shield1":

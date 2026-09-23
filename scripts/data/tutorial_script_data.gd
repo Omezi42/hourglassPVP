@@ -12,8 +12,8 @@ const RESOURCE_PATH := "res://resources/tutorial/tutorial_script.tres"
 @export var deck_a_ids: Array[String] = []
 ## CPU側の山札(id、引く順)。
 @export var deck_b_ids: Array[String] = []
-## 相手(CPU)の開始HP。4手番で勝って終わるための値(GameDesign.md 18章)。
-@export var foe_start_hp: int = 4
+## 相手(CPU)の開始HP。4手番目の最後の一撃でぴったり0になる値(GameDesign.md 18章)。
+@export var foe_start_hp: int = 5
 ## 両者の手を順に並べた台本本体。各要素は以下の形の Dictionary:
 ##   side: "a"(プレイヤー) / "b"(CPU) / "info"(読むだけ、行動を持たない)
 ##   kind: "mulligan" / "play" / "attack" / "flip" / "flip_right" / "end_turn"

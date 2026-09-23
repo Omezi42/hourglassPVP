@@ -5,6 +5,7 @@
 [resource]
 script = ExtResource("1_5cgen")
 deck_a_ids = Array[String](["grain", "wand", "wand", "shield", "sand", "sand", "sword", "grain", "sword", "shield", "dash", "dash", "dust", "dust", "glass", "glass", "drill", "drill", "echo", "echo", "lock", "lock", "twin", "twin", "hammer", "hammer", "guard", "guard", "wall", "wall"])
+foe_start_hp = 5
 deck_b_ids = Array[String](["grain", "wand", "wand", "shield", "shield", "sand", "grain", "sand", "dash", "dash", "dust", "dust", "glass", "glass", "drill", "drill", "sword", "sword", "echo", "echo", "lock", "lock", "twin", "twin", "hammer", "hammer", "guard", "guard", "wall", "wall"])
 steps = Array[Dictionary]([{
 "kind": "mulligan",

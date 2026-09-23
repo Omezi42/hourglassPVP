@@ -52,10 +52,10 @@ const FOCUS_RINGS := [0, 1]
 const NUMBER_GLOW_COLOR := Color(1.0, 0.82, 0.35)
 const NEXT_SIZE := Vector2(88, 36)
 ## CPUが指す前に帯の文を読み切れるだけ待つ(GameDesign.md 18章)。文の長さに比例させる。
-const READ_SECONDS_BASE := 1.0
-const READ_SECONDS_PER_CHAR := 0.1
+const READ_SECONDS_BASE := 0.3
+const READ_SECONDS_PER_CHAR := 0.03
 ## CPUの台本を指し終えてからターンを返すまでの間。最後の手の結果を見届けさせる。
-const CPU_HANDOFF_SECONDS := 1.2
+const CPU_HANDOFF_SECONDS := 0.4
 ## 自分の駒が「戦闘ではなくターン終了の砂落ち」で割れた初回に1度だけ出す補足
 ## (GameDesign.md 18章)。
 const CALLOUT_OWN_UNIT_DIED_TO_SAND := "体力が0になると割れちゃうよ。反転すれば長生きできるんだ"
