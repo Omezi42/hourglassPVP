@@ -98,6 +98,9 @@ UI側に散らさないため、語と enum の対応はここだけが持つ。
   既存の毒砂・貫通などの戦闘処理(`_resolve_unit_combat()` 等)はすべて `has_keyword()` を
   経由して判定しているため、**条件付きで毒砂を持たせる場合、戦闘側のコードは一切変更しない**
   で済む(このために `has_keyword()` を必ず通す設計にしてある。2.4節)
+  表示用の `CardInstance.keywords()` も条件を満たしている間だけこのキーワードを含める。
+  札の名前の下の行の分類名は `CardData.category_name()` が返す(砂術=「砂術」/ トリガー付きの
+  効果=そのトリガー名 / `conditional_keyword` を持つ=「常在」/ どれでもない=空文字)
 
 **`Keyword.DAMAGE_BOOST`**(「この砂時計が戦闘で与えるダメージが2倍になる」)は、上記の
 `conditional_keyword` でしか使わない新設のキーワードで、`NAMED` には入れない。

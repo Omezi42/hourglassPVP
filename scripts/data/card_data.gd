@@ -79,6 +79,18 @@ func has_keyword(keyword: int) -> bool:
 	return keywords.has(keyword)
 
 
+## 札の名前の下の行に出す分類名(GameDesign.md 6章)。砂術はトリガーを持たないため「砂術」、
+## 条件付きの常在能力だけを持つカードは「常在」。どれにも当たらなければ空文字。
+func category_name() -> String:
+	if is_spell:
+		return "砂術"
+	if not effects.is_empty():
+		return CardEnums.trigger_name(effects[0].trigger)
+	if conditional_keyword >= 0:
+		return "常在"
+	return ""
+
+
 func effects_for(trigger: int) -> Array[CardEffectData]:
 	var found: Array[CardEffectData] = []
 	for effect in effects:

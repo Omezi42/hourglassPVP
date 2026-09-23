@@ -61,6 +61,9 @@ func keywords() -> Array:
 	for keyword in granted_keywords:
 		if not found.has(keyword):
 			found.append(keyword)
+	var conditional := data.conditional_keyword
+	if conditional >= 0 and not found.has(conditional) and has_keyword(conditional):
+		found.append(conditional)
 	return found
 
 
