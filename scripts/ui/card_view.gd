@@ -508,9 +508,10 @@ func _on_mouse_entered() -> void:
 	_hovering = true
 	if enabled:
 		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-		# ホバー音(GameDesign.md 9章「対局画面の手触り」)。**既存のホバー表現
-		# (`_hovering and enabled`)と同じ条件**でのみ鳴らす。
-		SoundBank.play(SoundBank.Sfx.HOVER)
+		# ホバー音(GameDesign.md 9章)。**空き枠では鳴らさない**。押しても何も
+		# 起きない場所で音だけ返ると、押せるように聞こえる。
+		if card != null:
+			SoundBank.play(SoundBank.Sfx.HOVER)
 	_zoom(true)
 	hovered.emit(self)
 	queue_redraw()
