@@ -4,9 +4,9 @@ extends Control
 ## `ScreenBackdrop.PLAIN` の代わりに使い、「暗い石の広間に、吊りランプ1つで照らされた卓」
 ## という質感を足す。
 ##
-## 描くのは背面から順に、床 → 石壁の気配 → 卓の中心の光だまり → 吊りランプ →
-## 卓・手札・情報帯・行動の列への落ち影 → 四辺のビネット。`CardMatchScreen` の座標は
-## **関数の中で実行時に読む**(Architecture.md 11章「class_nameを持つ2つのスクリプトが、
+## 描くのは背面から順に、床 → 石壁の気配 → 卓の中心の光だまり →
+## 卓・手札・情報帯・行動の列への落ち影 → 四辺のビネット。吊りランプは子の `SwingingLamp`。
+## `CardMatchScreen` の座標は**関数の中で実行時に読む**(Architecture.md 11章「class_nameを持つ2つのスクリプトが、
 ## 互いのconstをconstから参照してはいけない」)。
 
 ## 床の縦グラデーション。`ScreenBackdrop.STOPS` よりやや暖色寄り・やや暗め。
@@ -38,12 +38,7 @@ const WALL_SEED_TOP := 7
 const WALL_SEED_LEFT := 11
 const WALL_SEED_RIGHT := 13
 
-## 吊りランプ。卓の真上から1本の鎖で下げ、暖色の光を落とす(唯一の光源)。
-const LAMP_X := 640.0
-const LAMP_SIZE := Vector2(26.0, 30.0)
-const LAMP_LINK_COUNT := 7
-const LAMP_LINK_RADIUS := 3.0
-const LAMP_CONE_SPAN := 220.0
+## 吊りランプ(唯一の光源)は揺れるため子の `SwingingLamp` が描く。光だまりはその真下へ置く。
 const LAMP_GLOW_OFFSET_Y := -40.0
 
 ## 落ち影。光源は上・中央にあるものとして、影は真下へわずかにずらす。
@@ -67,6 +62,7 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	anchor_right = 1.0
 	anchor_bottom = 1.0
+	add_child(SwingingLamp.new())
 
 
 func _draw() -> void:
@@ -75,7 +71,6 @@ func _draw() -> void:
 	_draw_floor(ci, rect)
 	_draw_wall_hint(rect)
 	_draw_glow_pool(ci)
-	_draw_lamp(ci)
 	_draw_drop_shadows(ci)
 	_draw_vignette()
 
@@ -108,50 +103,6 @@ func _fade_with_floor(rect: Rect2, full_height: float) -> void:
 	var t: float = clampf(rect.get_center().y / full_height, 0.0, 1.0)
 	var color := UiPaint.sample_gradient(FLOOR_STOPS, t)
 	draw_rect(rect, Color(color.r, color.g, color.b, WALL_FADE_ALPHA))
-
-
-## 卓の真上に下げた吊りランプ。鎖(輪の連なり)+ 先端のランタン + 光の円錐。
-## `MatchBackdrop` は最背面のため、上の情報帯の裏へ鎖の上端が自然に隠れる。
-func _draw_lamp(ci: RID) -> void:
-	var bottom_y: float = CardMatchScreen.TABLE_RECT.position.y - 6.0
-	var lantern_top_y: float = bottom_y - LAMP_SIZE.y
-	draw_line(
-		Vector2(LAMP_X, 0.0), Vector2(LAMP_X, lantern_top_y), Color(0.10, 0.07, 0.05, 0.9), 2.0
-	)
-	for i in LAMP_LINK_COUNT:
-		var t: float = float(i) / float(LAMP_LINK_COUNT - 1)
-		var y: float = lerpf(0.0, lantern_top_y, t)
-		UiPaint.draw_ring(
-			ci, Vector2(LAMP_X, y), LAMP_LINK_RADIUS, Color(0.42, 0.33, 0.20, 0.85), 1.4, 10
-		)
-	_draw_lantern(ci, Vector2(LAMP_X, bottom_y))
-	RoomPaint.lamp(
-		self, Vector2(LAMP_X, bottom_y), CardMatchScreen.TABLE_RECT.get_center().y, LAMP_CONE_SPAN
-	)
-
-
-## ランタン本体(角丸矩形 + 上の笠 + 中の暖色の光)。
-func _draw_lantern(ci: RID, bottom_center: Vector2) -> void:
-	var rect := Rect2(bottom_center - Vector2(LAMP_SIZE.x * 0.5, LAMP_SIZE.y), LAMP_SIZE)
-	var cap := Rect2(rect.position.x - 4.0, rect.position.y - 6.0, rect.size.x + 8.0, 8.0)
-	UiPaint.fill_gradient_polygon(
-		ci,
-		UiPaint.rounded_rect_points_uniform(cap, 2.0, 4),
-		cap,
-		[[0.0, UiPalette.BRASS_LIGHT], [1.0, UiPalette.BRASS_DARK]]
-	)
-	var points := UiPaint.rounded_rect_points_uniform(rect, 4.0, 6)
-	UiPaint.fill_gradient_polygon(
-		ci, points, rect, [[0.0, UiPalette.BRASS_MID], [1.0, UiPalette.BRASS_DARK]]
-	)
-	UiPaint.draw_bevel(ci, points, UiPalette.BRASS_HIGHLIGHT, UiPalette.OUTLINE_DARK, 1.2, false)
-	var inner := rect.grow(-4.0)
-	UiPaint.fill_gradient_polygon(
-		ci,
-		UiPaint.rounded_rect_points_uniform(inner, 2.0, 4),
-		inner,
-		[[0.0, RoomPaint.LAMP_WARM], [1.0, RoomPaint.LAMP_WARM.darkened(0.2)]]
-	)
 
 
 ## 卓の後ろに広がる淡い光。`BoardGlow`(卓の額の外周だけを光らせる)とは別に、
