@@ -16,22 +16,9 @@ const RIM_SEGMENTS := 28
 const BADGE_SEGMENTS := 16
 const SHADOW_SEGMENTS := 22
 const STYLE_STATES := ["normal", "hover", "pressed", "disabled", "focus"]
-## アイコンの縁取りの太さ(直径に対する比)。浮き彫りに見せるため、白いシルエットを
-## 縁の色で周囲へずらして敷いてから面の色を重ねる。
-const ICON_OUTLINE_RATIO := 0.03
 ## アイコンの半辺(直径に対する比)。取り込みアイコンは正方形いっぱいに描かれているため、
 ## 手描き紋章(0.30)より小さく取って面の余白を残す。
 const ICON_HALF_RATIO := 0.21
-const ICON_OUTLINE_DIRECTIONS := [
-	Vector2(1, 0),
-	Vector2(-1, 0),
-	Vector2(0, 1),
-	Vector2(0, -1),
-	Vector2(0.7, 0.7),
-	Vector2(-0.7, 0.7),
-	Vector2(0.7, -0.7),
-	Vector2(-0.7, -0.7),
-]
 
 ## 丸の中の語。
 var label: String = "":
@@ -127,7 +114,9 @@ func _draw() -> void:
 		# (反転権:紋章だけでは「何回できるか」が伝わらないため語も添える)。
 		var emblem_center := center + Vector2(0.0, -diameter * 0.06)
 		if emblem_texture != null:
-			_draw_icon(emblem_center, diameter * ICON_HALF_RATIO, is_disabled)
+			UiPaint.draw_icon(
+				ci, emblem_texture, emblem_center, diameter * ICON_HALF_RATIO, is_disabled
+			)
 		else:
 			UiPaint.draw_emblem(ci, emblem, emblem_center, diameter * 0.30)
 		_draw_label(center + Vector2(0.0, diameter * 0.30), is_disabled, EMBLEM_LABEL_FONT_SIZE)
@@ -144,27 +133,6 @@ func _draw() -> void:
 		UiPaint.draw_ring(
 			ci, center, radius + 3.0, Color(UiPalette.GLOW_AMBER, 0.18), 3.0, RIM_SEGMENTS
 		)
-
-
-## 白いシルエットを、`UiPaint.draw_emblem()`と同じ「暗い縁+明るい上縁+真鍮の面」で描く。
-func _draw_icon(center: Vector2, half_side: float, is_disabled: bool) -> void:
-	var rect := Rect2(center - Vector2(half_side, half_side), Vector2(half_side, half_side) * 2.0)
-	var outline := UiPalette.OUTLINE_DARK
-	var highlight := UiPalette.BRASS_HIGHLIGHT
-	var face := UiPalette.BRASS_MID
-	if is_disabled:
-		outline = UiPaint.disabled_tone(outline)
-		highlight = UiPaint.disabled_tone(highlight)
-		face = UiPaint.disabled_tone(face)
-	var width: float = maxf(diameter * ICON_OUTLINE_RATIO, 1.0)
-	for direction in ICON_OUTLINE_DIRECTIONS:
-		draw_texture_rect(
-			emblem_texture, Rect2(rect.position + direction * width, rect.size), false, outline
-		)
-	draw_texture_rect(
-		emblem_texture, Rect2(rect.position + Vector2(0, -1), rect.size), false, highlight
-	)
-	draw_texture_rect(emblem_texture, rect, false, face)
 
 
 ## 真鍮のリム。外周点列と内周点列を同じ分割数で作り、対応する点どうしを結んで

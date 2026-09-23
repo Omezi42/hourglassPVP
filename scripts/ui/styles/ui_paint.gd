@@ -20,6 +20,22 @@ const EMBLEM_CHECK_MIN_WIDTH := 3.0
 ## Discordのマークを描く大きさ(draw_emblemのsizeに対する比率)。他の紋章が使う
 ## 単位座標の広がりと揃え、額縁の内側へ収まる値にしてある。
 const DISCORD_ICON_RATIO := 0.55
+## 取り込みアイコンの縁取りの太さ(アイコンの半辺に対する比)。白いシルエットを縁の色で
+## 周囲へずらして敷いてから面の色を重ね、多角形の紋章と同じ浮き彫りに見せる。
+const ICON_OUTLINE_RATIO := 0.14
+const ICON_OUTLINE_DIRECTIONS := [
+	Vector2(1, 0),
+	Vector2(-1, 0),
+	Vector2(0, 1),
+	Vector2(0, -1),
+	Vector2(0.7, 0.7),
+	Vector2(-0.7, 0.7),
+	Vector2(0.7, -0.7),
+	Vector2(-0.7, -0.7),
+]
+## 砂時計の紋章(icooon-mono)。半辺を`draw_emblem()`の`size`に対するこの比で描く。
+const HOURGLASS_ICON := preload("res://assets/ui/icons/hourglass.png")
+const HOURGLASS_ICON_HALF_RATIO := 0.9
 
 static var _grain_texture: ImageTexture
 static var _grain_rid: RID
@@ -27,18 +43,6 @@ static var _grain_rid: RID
 ## 紋章の図形定義(単位座標系、原点中心・概ね-1.0〜1.0の範囲)。すべて浮き彫り表現の
 ## 「太い暗色輪郭+真鍮グラデーション塗り+上側ハイライト線」で仕上げる。GDScriptの制約上
 ## Vector2を含む配列リテラルはconst初期化できないため、static varで持つ(値自体は不変)。
-static var _hourglass_points := PackedVector2Array(
-	[
-		Vector2(-0.85, -0.85),
-		Vector2(0.85, -0.85),
-		Vector2(0.16, 0.0),
-		Vector2(0.85, 0.85),
-		Vector2(-0.85, 0.85),
-		Vector2(-0.16, 0.0),
-	]
-)
-static var _hourglass_highlight := PackedVector2Array([Vector2(-0.7, -0.72), Vector2(0.7, -0.72)])
-
 ## 「移動」= 盤上の2駒を入れ替える操作を示す、上下逆向きの2本の矢印
 static var _swap_arrow_top_points := PackedVector2Array(
 	[
@@ -478,7 +482,7 @@ static func apply_grain(ci: RID, rect: Rect2, alpha: float) -> void:
 static func draw_emblem(ci: RID, emblem: Emblem, center: Vector2, size: float) -> void:
 	match emblem:
 		Emblem.HOURGLASS:
-			_emblem_fill(ci, center, size, _hourglass_points, _hourglass_highlight)
+			draw_icon(ci, HOURGLASS_ICON, center, size * HOURGLASS_ICON_HALF_RATIO)
 		Emblem.SWAP_ARROWS:
 			_emblem_fill(ci, center, size, _swap_arrow_top_points, _swap_arrow_top_highlight)
 			_emblem_fill(ci, center, size, _swap_arrow_bottom_points, _swap_arrow_bottom_highlight)
@@ -508,6 +512,29 @@ static func draw_emblem(ci: RID, emblem: Emblem, center: Vector2, size: float) -
 			_emblem_discord(ci, center, size)
 		_:
 			pass
+
+
+## 取り込みアイコン(`assets/ui/icons/`の白いシルエット)を、多角形の紋章と同じ
+## 「暗い縁+明るい上縁+真鍮の面」で描く。`disabled`は押せないボタンの上に置くとき。
+static func draw_icon(
+	ci: RID, texture: Texture2D, center: Vector2, half_side: float, disabled := false
+) -> void:
+	var rect := Rect2(center - Vector2(half_side, half_side), Vector2(half_side, half_side) * 2.0)
+	var outline := UiPalette.OUTLINE_DARK
+	var highlight := UiPalette.BRASS_HIGHLIGHT
+	var face := UiPalette.BRASS_MID
+	if disabled:
+		outline = disabled_tone(outline)
+		highlight = disabled_tone(highlight)
+		face = disabled_tone(face)
+	var rid := texture.get_rid()
+	var width: float = maxf(half_side * ICON_OUTLINE_RATIO, 1.0)
+	for direction in ICON_OUTLINE_DIRECTIONS:
+		var offset_rect := Rect2(rect.position + direction * width, rect.size)
+		RenderingServer.canvas_item_add_texture_rect(ci, offset_rect, rid, false, outline)
+	var highlight_rect := Rect2(rect.position + Vector2(0, -1), rect.size)
+	RenderingServer.canvas_item_add_texture_rect(ci, highlight_rect, rid, false, highlight)
+	RenderingServer.canvas_item_add_texture_rect(ci, rect, rid, false, face)
 
 
 ## 単位座標系の閉多角形(local_points)をcenter/sizeへ変換して塗り+輪郭+ハイライトを描く。

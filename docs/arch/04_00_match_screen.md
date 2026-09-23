@@ -160,6 +160,7 @@ v1.0(位相制)の画面・クラス・`data/hourglasses/*.tres` は削除済み
 | `icon_discord` | ROUNDED_RECT | DISCORD(CENTER) | 設定メニューのDiscord導線 |
 
   - **`.tres` を増やすときは、それを読む `CodedButton` のグループ定数を必ず同時に足す**(読まれない `.tres` は使っているか判定できなくなる)
+  - `UiPaint.Emblem.HOURGLASS` は多角形ではなく取り込みアイコン(`assets/ui/icons/hourglass.png`)を `UiPaint.draw_icon()` で描く(タイトル・通貨・行動の列・空の案内などすべてがこの1か所を通る)。反転権のボタンも同じ `draw_icon()` を使う
   - `UiPaint.Emblem` に未使用の紋章(`SWAP_ARROWS` / `BENCH` / `CHECK` / `ADVANCE` / `AWAKEN` / `HEAL` / `STRIKE`)が残るが、**enumの並びは `.tres` が整数で保存する保存データ**のため消さない(11章)
   - `EmblemPlacement.CENTER` の紋章は単位座標 ±0.55 程度に留める(±0.85 まで描くと額縁へ載り上がる)
   - 既存の `.tscn` が参照する `resources/theme/buttons/img_{グループ}_{state}.tres` はパスを維持したまま中身だけコードStyleBoxへ差し替えてある
