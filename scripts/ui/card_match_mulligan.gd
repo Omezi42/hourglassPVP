@@ -10,13 +10,15 @@ const SCREEN_SIZE := Vector2(1280, 720)
 ## 初期手札は対局の手札より大きく並べ、効果の文まで読めるようにする(詳細パネルはマリガン中に出さない)。
 const CARD_SIZE := CardView.HAND_SIZE_PX * 1.35
 const CARD_GAP := 28.0
-const CARD_ROW_Y := 150.0
-const TURN_ORDER_Y := 16.0
-const TITLE_Y := 48.0
-const HINT_Y := 106.0
-## 確定ボタンは誘導対局の帯(`CardMatchTutorial.MULLIGAN_BAND_TOP`)より上に収める。
+## 見出しから確定ボタンまでの一群を画面の縦の中ほどへ置く。誘導対局ではこの下へ帯が入る
+## (`CardMatchTutorial.MULLIGAN_BAND_TOP` は `BUTTON_Y` から決まる)。
+const CONTENT_TOP := 110.0
+const TURN_ORDER_Y := CONTENT_TOP
+const TITLE_Y := CONTENT_TOP + 32.0
+const HINT_Y := CONTENT_TOP + 90.0
+const CARD_ROW_Y := CONTENT_TOP + 152.0
 const BUTTON_SIZE := Vector2(280, 60)
-const BUTTON_Y := 398.0
+const BUTTON_Y := CONTENT_TOP + 410.0
 ## 札の列の後ろの光だまりが、列の左右と上下へはみ出す量。
 const STAGE_MARGIN := Vector2(150, 70)
 ## 引き直すカードは沈めて、押したことが手札の並びの中で分かるようにする。
