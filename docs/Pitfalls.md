@@ -43,6 +43,9 @@
   渡す値は生成側の戻り値の型まで揃える
 - **ラムダは外側のローカル変数を値でキャプチャする。**シグナルの引数をラムダから
   外側の変数へ代入しても伝わらない。`Array` / `Dictionary` でラップして要素へ代入する
+- **static だけのクラスに `reload()` のような `Script` の組み込みメソッドと同じ名前の関数を作らない。**
+  `ClassName.reload()` はその関数ではなく `GDScript.reload()` を呼び、**スクリプトを読み直して
+  static var をすべて初期値へ戻す**。エラーは出ず、「外から代入した static var が効かない」ように見える
 - **`var x := ProjectSettings.get_setting(...)` は Variant 推論の警告でコンパイルが落ちる**
   (警告がエラー扱いのため)。`var x: Variant = ...` と明示する
 

@@ -231,6 +231,7 @@ func _ready() -> void:
 	replay_list_screen.back_pressed.connect(func() -> void: _show_only(home_screen, true))
 	replay_list_screen.replay_selected.connect(_on_replay_selected)
 	NetSession.ensure_ready(self)
+	FunnelService.on_launch()
 	HourglassArt.ensure_ready(self)
 	SoundBank.ensure_ready(self)
 	SoundBank.wire_buttons(self)
@@ -269,6 +270,7 @@ func _unhandled_input(event: InputEvent) -> void:
 ## 砂が下へ抜ける、の順で進める。砂が覆いきっている間に差し替えるため、
 ## 通常のクロスフェード(_show_only)は砂の下で起きて見えない。
 func _on_title_start_requested() -> void:
+	FunnelService.reach(FunnelService.HOME)
 	await title_screen.play_launch()
 	await _sand_transition.cover()
 	_show_only(home_screen)
@@ -358,6 +360,7 @@ func _request_battle(start: Callable) -> void:
 ## ランダムマッチ(GameDesign.md 11章)。デッキ選択画面を終えたら、たたかうタブへは
 ## 戻らずランダムマッチの専用画面へ入り、その画面がキューへの参加まで行う。
 func _on_random_match_deck_requested() -> void:
+	FunnelService.reach(FunnelService.ONLINE_TRY)
 	_request_battle(func() -> void: _begin_random_match())
 
 
@@ -369,6 +372,7 @@ func _begin_random_match() -> void:
 ## ランクマッチ(GameDesign.md 28章)。ランダムマッチと同じ形で、デッキ選択画面を
 ## 終えたら専用画面へ入り、その画面がキューへの参加まで行う。
 func _on_ranked_match_deck_requested() -> void:
+	FunnelService.reach(FunnelService.ONLINE_TRY)
 	_request_battle(func() -> void: _begin_ranked_match())
 
 
@@ -392,6 +396,7 @@ func _on_lab_requested() -> void:
 ## ルームマッチは専用画面へ直行する。**共通のデッキ選択画面を先に挟まない**
 ## (GameDesign.md 9章)。デッキはその画面の中で選び直せる。
 func _on_room_match_requested() -> void:
+	FunnelService.reach(FunnelService.ONLINE_TRY)
 	card_room_screen.open()
 	_show_only(card_room_screen)
 
@@ -493,6 +498,7 @@ func _on_hourglass_list_requested() -> void:
 ## ルール(遊び方)。進捗は保存せず、開くたび先頭のページから始める。
 ## 誘導対局(GameDesign.md 18章)。通常のCPU戦と同じ画面へ入り、指示だけが重なる。
 func _on_tutorial_requested() -> void:
+	FunnelService.reach(FunnelService.TUTORIAL_START)
 	UiState.mark_tutorial_done()
 	card_match_screen.start_tutorial_match()
 	_match_return_screen = home_screen

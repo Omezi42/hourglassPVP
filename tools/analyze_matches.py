@@ -10,6 +10,7 @@
     python tools/analyze_matches.py --build 20260902-101530
     python tools/analyze_matches.py --days 7 --kind random
     python tools/analyze_matches.py --out out.md --post   # Discordへ投稿する
+    python tools/analyze_matches.py --funnel --days 7     # 来た人がどの段階まで進んだか
 
 読み取りは匿名サインインで行う(ゲーム本体と同じ経路)。棋譜(actions)は既定では
 取得しない。1局あたりの大半を占めるうえ、集計には要らないため。
@@ -53,6 +54,19 @@ END_REASON_LABELS = {
     "timeout": "時間切れ",
     "draw": "引き分け",
 }
+FUNNEL_PATH = "stats/funnel"
+# 段階の並び(scripts/net/funnel_service.gd のキーと同じ)。誘導対局を飛ばしてCPU戦へ行く人も
+# いて順には通らないため、割合はすべて起動に対して出す。
+FUNNEL_STEPS = [
+    ("launch", "起動"),
+    ("home", "ホーム"),
+    ("tutorial_start", "誘導対局を始めた"),
+    ("tutorial_clear", "誘導対局を終えた"),
+    ("match_end", "CPU戦を終えた"),
+    ("online_try", "オンラインの入口"),
+    ("online_end", "オンライン対戦を終えた"),
+    ("return", "別の日に来た"),
+]
 # これに満たないカードは、勝率が偶然で大きく振れるため一覧から省く。
 MIN_CARD_SAMPLES = 5
 
@@ -129,6 +143,42 @@ def fetch_records(project, token, with_actions):
         page_token = body.get("nextPageToken", "")
         if not page_token:
             return records
+
+
+def fetch_funnel(project, token):
+    url = (
+        "https://firestore.googleapis.com/v1/projects/%s/databases/(default)/documents/%s"
+        % (project, FUNNEL_PATH)
+    )
+    request = urllib.request.Request(url, headers={"Authorization": "Bearer %s" % token})
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            body = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as error:
+        if error.code == 404:
+            return {}
+        sys.exit("読み取りに失敗しました(%d): %s" % (error.code, error.read().decode("utf-8")[:400]))
+    fields = dict((k, decode(v)) for k, v in body.get("fields", {}).items())
+    return fields.get("days", {})
+
+
+def funnel_report(days, within_days):
+    """段階ごとの人数と、起動に対する割合。日のキーは "d20260925" の形。"""
+    if within_days:
+        start = time.strftime("d%Y%m%d", time.localtime(time.time() - within_days * 86400))
+        days = dict((day, counts) for day, counts in days.items() if day > start)
+    totals = Counter()
+    for counts in days.values():
+        totals.update(counts)
+    span = "直近%d日" % within_days if within_days else "通算"
+    lines = ["## 来た人がどの段階まで進んだか(%s・%d日分)" % (span, len(days)), ""]
+    lines += ["| 段階 | 人数 | 起動に対して |", "|---|---|---|"]
+    launched = totals.get("launch", 0)
+    for key, label in FUNNEL_STEPS:
+        count = totals.get(key, 0)
+        ratio = "%.0f%%" % (100.0 * count / launched) if launched else "—"
+        lines.append("| %s | %d | %s |" % (label, count, ratio))
+    return "\n".join(lines)
 
 
 def card_names():
@@ -247,14 +297,21 @@ def main():
     parser.add_argument(
         "--exclude-repeats", action="store_true", help="同じ2人の対局は最初の1局だけ数える"
     )
+    parser.add_argument(
+        "--funnel", action="store_true", help="対局ではなく、来た人の段階ごとの人数を出す"
+    )
     parser.add_argument("--with-actions", action="store_true", help="棋譜も取得する(重い)")
     parser.add_argument("--out", default="", help="集計をこのファイルへ書き出す")
     parser.add_argument("--post", action="store_true", help="Discordへ投稿する(--out が要る)")
     args = parser.parse_args()
 
     api_key, project = read_config()
-    records = fetch_records(project, sign_in(api_key), args.with_actions)
-    report = summarize(select(records, args), card_names(), args.top)
+    token = sign_in(api_key)
+    if args.funnel:
+        report = funnel_report(fetch_funnel(project, token), args.days)
+    else:
+        records = fetch_records(project, token, args.with_actions)
+        report = summarize(select(records, args), card_names(), args.top)
     print(report)
 
     if args.out:

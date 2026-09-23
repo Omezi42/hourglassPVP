@@ -22,6 +22,7 @@ const SoloModeTests = preload("res://tools/tests/solo_mode_tests.gd")
 const RankTests = preload("res://tools/tests/rank_tests.gd")
 const MatchStatsSyncTests = preload("res://tools/tests/match_stats_sync_tests.gd")
 const LabTests = preload("res://tools/tests/lab_tests.gd")
+const FunnelTests = preload("res://tools/tests/funnel_tests.gd")
 
 var _failures := 0
 
@@ -62,6 +63,7 @@ func _run() -> void:
 	await match_records.run(_assert_true)
 	await MatchStatsSyncTests.new().run(_assert_true)
 	await LabTests.new().run(_assert_true)
+	await FunnelTests.new().run(_assert_true)
 	var waiting_cpu := WaitingCpuTests.new()
 	await waiting_cpu.run(_assert_true)
 

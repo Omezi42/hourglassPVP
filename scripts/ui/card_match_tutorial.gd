@@ -260,6 +260,7 @@ func _on_next_pressed() -> void:
 	_index += 1
 	if _index >= STEPS.size():
 		_outro = true
+		FunnelService.reach(FunnelService.TUTORIAL_CLEAR)
 	_refresh()
 
 
