@@ -23,11 +23,6 @@ const LINE_STAGGER := 0.14
 const LINE_FADE := 0.22
 const PARTICLE_COUNT := 40
 const FLASH_DECAY := 1.1
-## 獲得額の行が読める状態になってから飛ばすまでの、ひと呼吸ぶんの間。
-const REWARD_FLIGHT_PAD := 0.12
-## 飛んでいく先(この画面にヘッダーの `CurrencyChip` は無いため、右上の角へ
-## 「ホームへ向かっていく」ことを示す目印として使う)。
-const REWARD_FLIGHT_TARGET := Vector2(1260.0, 20.0)
 
 var _dim: ColorRect
 var _panel: Control
@@ -43,8 +38,6 @@ var _revealing := false
 var _flash := 0.0
 ## 各粒 {"pos":Vector2, "speed":float, "drift":float, "phase":float, "size":float}
 var _particles: Array = []
-## 獲得額の行の添字(GameDesign.md 9章)。無ければ -1。
-var _reward_line_index := -1
 
 
 func _ready() -> void:
@@ -90,7 +83,6 @@ func show_for(
 		texts.append("決め手: %s" % CardMatchLog.reason_text(state, winner))
 	if not reward.is_empty():
 		texts.append(reward)
-	_reward_line_index = texts.size() - 1 if not reward.is_empty() else -1
 	for i in _lines.size():
 		var label: Label = _lines[i]
 		if i < texts.size():
@@ -104,7 +96,6 @@ func show_for(
 	_flash = 1.0 if _won else 0.0
 	visible = true
 	_start_entrance()
-	_play_reward_flight()
 
 
 func _title_text(winner: int, my_side: int) -> String:
@@ -209,24 +200,6 @@ func _spawn_particles() -> void:
 
 func _line_base_y(index: int) -> float:
 	return 116.0 + float(index) * 30.0
-
-
-## 獲得額の行が読める状態になったところで、そこから飛ばす(GameDesign.md 9章)。
-## `_currency_chip` はホーム画面にしか無く、対局画面からは触れないため、実際の着地の
-## 合図(数え上げ)は `Main` が戻り先でホームへ戻したとき、既存の `refresh_account()` が
-## 担う。ここで見せるのは「獲得額が確定した位置から飛んでいく」ところまで。
-func _play_reward_flight() -> void:
-	if _reward_line_index < 0 or _reward_line_index >= _lines.size():
-		return
-	var label := _lines[_reward_line_index]
-	var start: float = (
-		ENTRANCE_DURATION * 0.55 + float(_reward_line_index) * LINE_STAGGER + LINE_FADE
-	)
-	await get_tree().create_timer(start + REWARD_FLIGHT_PAD).timeout
-	if not visible or not label.visible:
-		return
-	var to_rect := Rect2(global_position + REWARD_FLIGHT_TARGET, Vector2(4.0, 4.0))
-	await CardFlightFx.fly(self, label.get_global_rect(), to_rect)
 
 
 func _build() -> void:

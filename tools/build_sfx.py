@@ -129,14 +129,21 @@ def ui_hover():
     return lowpass(x, 3000)
 
 
+def click(d, modes, tick_amp, thump_amp):
+    """音程感の無い短い打撃。高めの非整数倍の響き + 一瞬の雑音 + ごく短い低音の芯。"""
+    x = modal(d, modes, attack=0.0004)
+    tick = noise(0.008, 2500, 9000) * env(0.008, 0.0002, 0.0012)
+    thump = modal(d, [(140, 1.0, 0.008)], attack=0.0006)
+    return x + tick_amp * pad(tick, d) + thump_amp * thump
+
+
 def ui_press():
-    """真鍮の縁を張った木の釦を押した「ことっ」。胴鳴りの低音と木の打撃で、耳に刺さる高域を持たない。"""
-    d = 0.16
-    body = sweep_sine(d, 260, 190, 0.035, attack=0.001)
-    wood = modal(d, [(540, 1.0, 0.045), (1350, 0.45, 0.022), (2410, 0.18, 0.012)], attack=0.0008)
-    tick = noise(0.01, 2500, 6000) * env(0.01, 0.0003, 0.0015)
-    x = 0.6 * body + wood + 0.35 * pad(tick, d)
-    return lowpass(x, 7000)
+    """釦を押し込み、留め金が掛かる「カチッ」の2段。音程を下げず響きを短く詰め、間延びさせない。"""
+    d = 0.09
+    x = np.zeros(int(SR * d))
+    at(x, 0.45 * click(0.05, [(1900, 1, .006), (3300, .5, .004)], 0.6, 0.3), 0.0)
+    at(x, click(0.07, [(2150, 1, .009), (3550, .55, .006), (5300, .25, .004)], 0.8, 0.5), 0.018)
+    return lowpass(x, 11000)
 
 
 # ---- 対局 ----

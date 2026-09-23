@@ -78,7 +78,7 @@
 | 絵が矩形から矩形へ飛ぶ(一覧⇄棚 / 品⇄砂金チップ / ミッション受取) | `CardFlightFx.play(texture_or_control, from_rect, to_rect, duration)` の1メソッド。画面ごとに専用クラスを作らない。**演出の完了を待たずに配列操作は即座に行い、見た目だけが追いかける** |
 | ホームのタブの横滑り | `_select_tab()` のフェードへ、タブの並び順で符号を決めた横移動を足す |
 | `HomeTile` のホバー浮き / 副題の光り | `HomeTile` 自身(`mouse_entered`/`mouse_exited`)/ `refresh()` の呼び出し側が前回の文字列と比較して `flash_subtitle()` |
-| 砂金チップの着地 | `DailyMissionPanel` / `CardMatchResult` が `CardFlightFx` で飛ばしてから `CurrencyChip.bump()` |
+| 砂金チップの着地 | `DailyMissionPanel` が `CardFlightFx` で飛ばしてから `CurrencyChip.bump()` |
 | デッキ編集の「2/2」の跳ね / 30枚の光り / 絞り込みモーダルの膨らみ | `WorkshopStockItem.count_punch` / `CardDeckShelf.glow_amount`(`rebuild()` で30に達した回だけ)/ `CardDeckFilterModal` の開始スケールをボタン矩形に合わせる |
 | 図鑑のページめくり / ホバー傾き / 並び替えのスライド | `AlmanacPage.turn_to(card)` / `_gui_input()` 近くの tilt Tween / 左ページの一覧も「位置は Tween で滑らせる」方式 |
 | ショップ・アカウント | 購入は `CardFlightFx` で品→チップ → 残高更新 / 名札見本の `bump()` / 買えない品は `enabled=false` の間 `MOUSE_FILTER_IGNORE` |
