@@ -3,8 +3,8 @@
 
     python tools/discord/build_server_icon.py
 
-ホーム画面の背景に砂時計の絵を立てる。Discordは円で切り抜くため、
-真鍮の縁と絵は円の内側に収める。色は scripts/ui/styles/ui_palette.gd と同じ値。
+ホーム画面の背景に砂時計の絵を立てる。Discordは同じアイコンを円と角丸の両方で
+切り抜くため、縁は描かず、絵は円の内側に収める。色は scripts/ui/styles/ui_palette.gd と同じ値。
 """
 
 from pathlib import Path
@@ -18,8 +18,6 @@ OUT = Path("tools/discord/out/server_icon.png")
 
 SLATE_TOP = (26, 28, 36)
 GLOW_AMBER = (217, 158, 56)
-BRASS_HIGHLIGHT = (209, 179, 115)
-BRASS_DARK = (84, 56, 41)
 
 # 背景を沈めて砂時計を浮かせる度合い
 BACKGROUND_DIM = 0.35
@@ -30,10 +28,6 @@ HOURGLASS_OFFSET_Y = 6
 SHADOW_OFFSET = (6, 10)
 SHADOW_OPACITY = 0.55
 SHADOW_BLUR = 10
-RING_MARGIN = 6
-RING_OUTER_WIDTH = 14
-RING_INNER_INSET = 12
-RING_INNER_WIDTH = 4
 
 
 def background() -> Image.Image:
@@ -70,17 +64,8 @@ def hourglass(image: Image.Image) -> Image.Image:
     return base.convert("RGB")
 
 
-def ring(image: Image.Image) -> None:
-    draw = ImageDraw.Draw(image)
-    m = RING_MARGIN
-    draw.ellipse([m, m, SIZE - m, SIZE - m], outline=BRASS_DARK, width=RING_OUTER_WIDTH)
-    m += RING_INNER_INSET
-    draw.ellipse([m, m, SIZE - m, SIZE - m], outline=BRASS_HIGHLIGHT, width=RING_INNER_WIDTH)
-
-
 def main() -> None:
     image = hourglass(glow(background()))
-    ring(image)
     OUT.parent.mkdir(parents=True, exist_ok=True)
     image.save(OUT)
     print(OUT)
