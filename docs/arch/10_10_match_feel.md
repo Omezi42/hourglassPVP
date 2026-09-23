@@ -6,7 +6,7 @@
 |---|---|
 | `CardMatchAlert`(`scripts/ui/card_match_alert.gd`) | タイムリミット演出(焦燥演出)。残り15秒以下で脈動・警告表示 |
 | `CardMatchDamageAssist`(`scripts/ui/card_match_damage_assist.gd`) | 盤面総攻撃力(直接攻撃打点)の算出とアシスト表示。相手の `PlayerInfoBar.hp_bar_rect()` の右隣へ `_ready()` で位置を決め、枠を描かない |
-| `CardMatchActionHistory`(`scripts/ui/card_match_action_history.gd`) | 直前の手の列。`watch(state)` で `MatchState` の `unit_played` / `spell_cast` / `attack_performed` / `unit_flipped` / `flip_right_used` を受けて積む(自分・CPU・オンラインのどの適用経路でも同じ信号が出るため、経路ごとに積まない)。`_begin_state()` が `_effects.watch()` の隣で呼ぶ |
+| `CardMatchActionHistory`(`scripts/ui/card_match_action_history.gd`) | 直前の手の列。`watch(state)` で `MatchState` の `unit_played` / `spell_cast` / `attack_performed` / `unit_flipped` / `flip_right_used` を受けて積む(自分・CPU・オンラインのどの適用経路でも同じ信号が出るため、経路ごとに積まない)。`_begin_state()` が `_effects.watch()` の隣で呼ぶ。板の上だけでカーソルを受け(`_has_point`)、`CardMatchDetail.hover_card()` で詳細を出す。結果パネル・ログより背面へ足す |
 | `BoardTable`(`scripts/ui/board_table.gd`) | 卓上装飾のインタラクティブトイ(クリック時の歯車・砂埃アニメーション) |
 
 - **タイムリミット演出**: `CardMatchClock` の残り時間を監視し、残り15秒を切ると警告パルス(アンバー〜赤)と微細な揺れを付与する。

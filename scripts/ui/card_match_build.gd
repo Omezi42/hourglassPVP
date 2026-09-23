@@ -157,6 +157,9 @@ static func overlays(screen: CardMatchScreen) -> void:
 	screen._drag_arrow = CardDragArrow.new()
 	screen.add_child(screen._drag_arrow)
 	screen._detail = CardMatchDetail.new(screen)
+	# 直前の手の列は結果パネル・ログの暗幕より背面(開いている間に板へ触れられないように)。
+	screen._history = CardMatchActionHistory.new(screen)
+	screen.add_child(screen._history)
 	# 通信待ちの文言と対象選択の案内は、駒より手前へ出すため独立したノードで描く。
 	screen._status = CardMatchStatus.new()
 	screen.add_child(screen._status)
@@ -179,6 +182,7 @@ static func overlays(screen: CardMatchScreen) -> void:
 	screen._result.log_pressed.connect(func() -> void: screen._log.set_open(true))
 	screen.add_child(screen._result)
 	screen._log = CardMatchLog.new()
+	screen._log.detail = screen._detail
 	screen.add_child(screen._log)
 	screen._pile = CardPileViewer.new()
 	screen.add_child(screen._pile)
@@ -186,8 +190,6 @@ static func overlays(screen: CardMatchScreen) -> void:
 	screen.add_child(screen._alert)
 	screen._damage_assist = CardMatchDamageAssist.new(screen)
 	screen.add_child(screen._damage_assist)
-	screen._history = CardMatchActionHistory.new(screen)
-	screen.add_child(screen._history)
 	screen._puzzle = CardMatchPuzzle.new(screen)
 	screen._puzzle.finished.connect(
 		func(_cleared: bool) -> void:

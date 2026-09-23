@@ -23,6 +23,8 @@ const MARGIN := 12.0
 var _screen: CardMatchScreen
 var _panel: CardDetailPanel
 var _timer: Timer
+## 盤面の外(ログのモーダル)から出したか。その間は盤面の状態で引っ込めない。
+var _off_board := false
 
 
 func _init(screen: CardMatchScreen) -> void:
@@ -46,14 +48,22 @@ func _init(screen: CardMatchScreen) -> void:
 
 ## カードへカーソルが乗った。出してよい状態でなければ何も出さない。
 func hover(view: CardView) -> void:
-	if view == null or view.card == null or not allowed():
+	hover_card(view.card if view != null else null)
+
+
+## 駒を持たない所(直前の手の列・ログ)からも同じパネルを出す。
+## `off_board` はログのモーダルから読むとき。出さない間の規則は「盤面の上へ重なる」前提の
+## ものであり、盤面を覆ったモーダルの上では当たらないため掛けない。
+func hover_card(card: CardData, off_board := false) -> void:
+	if card == null or (not off_board and not allowed()):
 		hide_now()
 		return
+	_off_board = off_board
 	_timer.stop()
-	_panel.show_card(view.card)
+	_panel.show_card(card)
 	_panel.position = _place()
 	_panel.visible = true
-	# 履歴タイル(あとから add_child した子)より手前へ出す。
+	# 履歴タイル・ログ(あとから add_child した子)より手前へ出す。
 	_panel.move_to_front()
 
 
@@ -84,7 +94,7 @@ func hide_now() -> void:
 ## 盤面が変わったら、出してよい状態でなくなったぶんを引っ込める。
 ## ホバーは動かなければ再び飛んでこないため、`refresh()` から呼ぶ。
 func sync() -> void:
-	if _panel.visible and not allowed():
+	if _panel.visible and not _off_board and not allowed():
 		hide_now()
 
 

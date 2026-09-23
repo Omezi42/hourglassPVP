@@ -5,6 +5,10 @@ extends Control
 ##
 ## 記録と表示を1クラスに持たせているのは、**表示する文言と記録する文言を必ず同じにする**ため。
 ## 別々に組むと、実況に出る文と後から読み返す文がずれていく。
+##
+## 表示ではカード名(「」で囲んだ部分)を色分けし、カーソルを乗せると対局中と同じ詳細パネルを出す。
+## **行ごとに登場順のカードを控えておき、「」の出現順と対応させる**(名前から引き直すと、
+## 同名の別版やトークンを取り違える)。
 
 ## 1行を積んだ。**画面上の実況はこれを購読して同じ文言を出す**
 ## (実況とログが食い違わないようにするため。GameDesign.md 9章)。
@@ -15,8 +19,15 @@ const SCREEN_SIZE := Vector2(1280, 720)
 
 const PANEL_SIZE := Vector2(720, 480)
 const MAX_LINES := 200
+const CARD_NAME_COLOR := UiPalette.GLOW_AMBER
+const NAME_OPEN := "「"
+const NAME_CLOSE := "」"
+
+var detail: CardMatchDetail
 
 var _lines: PackedStringArray = []
+## `_lines` と同じ並びで、その行に出るカードを「」の出現順に持つ。
+var _line_cards: Array[Array] = []
 var _list: VBoxContainer
 var _scroll: ScrollContainer
 var _state: MatchState
@@ -60,6 +71,7 @@ func watch(state: MatchState) -> void:
 ## 購読していた `MatchState` は対局のたびに作り直されるため、参照も落とす。
 func clear() -> void:
 	_lines = []
+	_line_cards = []
 	_state = null
 	_last_hp = {}
 	if visible:
@@ -70,6 +82,8 @@ func set_open(open: bool) -> void:
 	visible = open
 	if open:
 		_rebuild()
+	elif detail != null:
+		detail.hide_now()
 
 
 func lines() -> PackedStringArray:
@@ -84,10 +98,12 @@ func record(line: String) -> void:
 
 
 ## 種別と場所を添えて積む。画面上の実況が「どこで起きたか」を知るために要る。
-func _append(line: String, kind: String, side: int, slot: int) -> void:
+func _append(line: String, kind: String, side: int, slot: int, cards: Array = []) -> void:
 	_lines.append(line)
+	_line_cards.append(cards)
 	if _lines.size() > MAX_LINES:
 		_lines.remove_at(0)
+		_line_cards.remove_at(0)
 	if visible:
 		_rebuild()
 	recorded.emit(line, kind, side, slot)
@@ -102,18 +118,30 @@ func _unit_name(side: int, slot: int) -> String:
 	return "「%s」" % unit.data.display_name if unit != null else "砂時計"
 
 
+## `_unit_name()` が「」を付けたときだけカードを返す(付けないときに控えると出現順がずれる)。
+func _unit_cards(side: int, slot: int) -> Array:
+	var unit: CardInstance = _state.board[side][slot]
+	return [unit.data] if unit != null else []
+
+
 func _on_turn_started(side: int) -> void:
 	_append("── %sのターン ──" % _name_of(side), "turn", side, -1)
 
 
 func _on_unit_played(side: int, slot: int) -> void:
-	_append("%sが%sを出した" % [_name_of(side), _unit_name(side, slot)], "play", side, slot)
+	_append(
+		"%sが%sを出した" % [_name_of(side), _unit_name(side, slot)],
+		"play",
+		side,
+		slot,
+		_unit_cards(side, slot)
+	)
 
 
 ## 砂術は盤面へ出ないため枠を持たない(GameDesign.md 6章)。スポットライトを当てる
 ## 先が無いので slot は -1 にする。
 func _on_spell_cast(side: int, card: CardData) -> void:
-	_append("%sが「%s」を使った" % [_name_of(side), card.display_name], "cast", side, -1)
+	_append("%sが「%s」を使った" % [_name_of(side), card.display_name], "cast", side, -1, [card])
 
 
 func _on_unit_flipped(side: int, slot: int) -> void:
@@ -125,7 +153,8 @@ func _on_unit_flipped(side: int, slot: int) -> void:
 		),
 		"flip",
 		side,
-		slot
+		slot,
+		_unit_cards(side, slot)
 	)
 
 
@@ -139,7 +168,8 @@ func _on_flip_right_used(actor_side: int, target_side: int, slot: int) -> void:
 		"%sが反転権で%sを反転(体力%d / 攻撃力%d)" % [_name_of(actor_side), described, unit.health, unit.attack],
 		"flip_right",
 		target_side,
-		slot
+		slot,
+		_unit_cards(target_side, slot)
 	)
 
 
@@ -150,7 +180,8 @@ func _on_attack(side: int, slot: int, target_slot: int) -> void:
 			"%sの%sが%sへ攻撃" % [_name_of(side), attacker, _name_of(MatchState.other_side(side))],
 			"attack",
 			side,
-			slot
+			slot,
+			_unit_cards(side, slot)
 		)
 		return
 	var foe := MatchState.other_side(side)
@@ -158,12 +189,13 @@ func _on_attack(side: int, slot: int, target_slot: int) -> void:
 		"%sの%sが%sの%sを攻撃" % [_name_of(side), attacker, _name_of(foe), _unit_name(foe, target_slot)],
 		"attack",
 		side,
-		slot
+		slot,
+		_unit_cards(side, slot) + _unit_cards(foe, target_slot)
 	)
 
 
 func _on_unit_destroyed(side: int, _slot: int, card: CardData) -> void:
-	_append("%sの「%s」が砕けた" % [_name_of(side), card.display_name], "death", side, -1)
+	_append("%sの「%s」が砕けた" % [_name_of(side), card.display_name], "death", side, -1, [card])
 
 
 func _on_hp_changed(side: int, new_hp: int) -> void:
@@ -265,8 +297,47 @@ func _rebuild() -> void:
 	for child in _list.get_children():
 		child.queue_free()
 	for i in range(_lines.size() - 1, -1, -1):
-		var label := Label.new()
-		label.text = _lines[i]
-		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		var label := RichTextLabel.new()
+		label.bbcode_enabled = true
+		label.fit_content = true
+		label.meta_underlined = false
 		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		label.text = _markup(_lines[i], _line_cards[i])
+		var cards: Array = _line_cards[i]
+		label.meta_hover_started.connect(
+			func(meta: Variant) -> void:
+				if detail != null:
+					detail.hover_card(cards[int(meta)], true)
+		)
+		label.meta_hover_ended.connect(
+			func(_meta: Variant) -> void:
+				if detail != null:
+					detail.leave()
+		)
 		_list.add_child(label)
+
+
+## 「」で囲んだカード名を、出現順に `cards` と対応させて色付きのリンクにする。
+## 控えより多い「」(カード以外の引用)は色を付けずにそのまま出す。
+func _markup(line: String, cards: Array) -> String:
+	var out := ""
+	var rest := line
+	var index := 0
+	while index < cards.size():
+		var open := rest.find(NAME_OPEN)
+		var close := rest.find(NAME_CLOSE, open + 1)
+		if open < 0 or close < 0:
+			break
+		var card_name := rest.substr(open, close - open + 1)
+		out += _escape(rest.left(open))
+		out += (
+			"[url=%d][color=#%s]%s[/color][/url]"
+			% [index, CARD_NAME_COLOR.to_html(false), _escape(card_name)]
+		)
+		rest = rest.substr(close + 1)
+		index += 1
+	return out + _escape(rest)
+
+
+func _escape(text: String) -> String:
+	return text.replace("[", "[lb]")

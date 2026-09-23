@@ -2,7 +2,7 @@ class_name CardMatchActionHistory
 extends Control
 ## 直前の手の列(GameDesign.md 9章)。卓の左の余白へ、直近の手を上から新しい順に積む。
 ## 1件は濃紺の板に真鍮の縁(名札・山の札と同じ語彙)で、左端の色が誰の手か、
-## 紋章と名前がどのカードかを示す。
+## 紋章と名前がどのカードかを示す。カーソルを乗せるとそのカードの詳細を出す(駒と同じパネル)。
 ##
 ## **手は `MatchState` の信号から拾う**。自分の操作・CPU・オンラインの相手のどの経路で
 ## 適用されても同じ信号が出るため、経路ごとに積む処理を書かずに済む。
@@ -34,11 +34,14 @@ var _items: Array[Dictionary] = []
 var _state: MatchState
 var _appear := 1.0
 var _appear_tween: Tween
+var _hovered: CardData
 
 
 func _init(screen: CardMatchScreen) -> void:
 	_screen = screen
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# 板の上だけでカーソルを受ける(`_has_point`)。板の無い所で奥の卓を塞がないため。
+	mouse_filter = Control.MOUSE_FILTER_STOP
+	mouse_exited.connect(_on_mouse_exited)
 
 
 func _ready() -> void:
@@ -67,7 +70,37 @@ func watch(state: MatchState) -> void:
 
 func clear() -> void:
 	_items.clear()
+	_hovered = null
 	queue_redraw()
+
+
+func _has_point(point: Vector2) -> bool:
+	return _card_at(point) != null
+
+
+func _card_at(point: Vector2) -> CardData:
+	var pitch := TILE_SIZE.y + TILE_GAP
+	var index := floori(point.y / pitch)
+	if index < 0 or index >= _items.size() or point.x < 0.0 or point.x > TILE_SIZE.x:
+		return null
+	if point.y - index * pitch > TILE_SIZE.y:
+		return null
+	return _items[index]["card"]
+
+
+func _gui_input(event: InputEvent) -> void:
+	if not event is InputEventMouseMotion:
+		return
+	var card := _card_at((event as InputEventMouseMotion).position)
+	if card == _hovered:
+		return
+	_hovered = card
+	_screen._detail.hover_card(card)
+
+
+func _on_mouse_exited() -> void:
+	_hovered = null
+	_screen._detail.leave()
 
 
 func _on_attack(side: int, slot: int, target_slot: int) -> void:
@@ -88,6 +121,8 @@ func _push(side: int, verb: String, card: CardData) -> void:
 	if card == null:
 		return
 	_items.push_front({"side": side, "verb": verb, "card": card})
+	# 積み直しで板の中身がずれるため、次にカーソルが動いたとき出し直させる。
+	_hovered = null
 	if _items.size() > MAX_TILES:
 		_items.pop_back()
 	if _appear_tween != null and _appear_tween.is_valid():
