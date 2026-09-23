@@ -90,8 +90,7 @@
     前者が上回るときだけ切る(`_expert_should_use_coin()`)
 - **難易度はCPU自己対戦のバランス検証(全体指標・カード別勝率)の対象にしない**。
   検証は常に `NORMAL` で行う(GameDesign.md 7章の指標は `NORMAL` の値のまま)
-- 誘導対局(4.1.5節)は `CardMatchTutorial` 経由のCPU戦であり、**`difficulty` を
-  明示的に `BEGINNER` へ固定して**渡す(初めての1局はまず勝てるようにするため。GameDesign.md 18章)
+- 誘導対局(4.1.5節)ではCPUの思考を使わず、台本の手を返す指し手を `_cpu` に差す(GameDesign.md 18章)
 
 ## 8.2 CPU戦の思考レベル選択画面
 
