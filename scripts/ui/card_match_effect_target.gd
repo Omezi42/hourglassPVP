@@ -34,8 +34,10 @@ func begin(index: int, slot: int) -> void:
 	# `_perform()` が `_finish_action()` の中で `refresh()` まで済ませる
 	# (単体を狙う設置効果は紋章が届くまで遅らせる。`CardMatchEffectStrike`)ため、
 	# ここで重ねて呼ぶと、その演出より先に盤面を再同期してしまう。
-	_screen._perform(MatchAction.play(_screen.my_side, index, slot))
+	# 選択は `_perform()` より先に解除する。残したままだと、その `refresh()` で
+	# 詰めて同じ位置へ来た次の手札が選択状態で描かれる。
 	_screen.selection.clear()
+	_screen._perform(MatchAction.play(_screen.my_side, index, slot))
 
 
 ## 対象選択中の砂時計を、選ばれた1体を対象にして出す。

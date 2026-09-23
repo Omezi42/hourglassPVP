@@ -28,8 +28,8 @@ func begin(index: int) -> void:
 		return
 	# `_perform()` が `_finish_action()` の中で `refresh()` まで済ませるため、
 	# ここで重ねて呼ばない(`CardMatchEffectTarget.begin()` と同じ理由)。
-	_screen._perform(MatchAction.cast(_screen.my_side, index))
 	_screen.selection.clear()
+	_screen._perform(MatchAction.cast(_screen.my_side, index))
 	_screen._hide_detail()
 
 
