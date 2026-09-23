@@ -115,7 +115,7 @@ func on_own_slot_drag_started(view: CardView) -> void:
 
 
 ## ドラッグを放した/取り消した(GameDesign.md 9章「対局画面の手触り」)。矢印を消す。
-func on_own_slot_drag_ended() -> void:
+func on_own_slot_drag_ended(_view: CardView) -> void:
 	_screen.drag_arrow.end()
 
 
