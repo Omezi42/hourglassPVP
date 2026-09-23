@@ -466,6 +466,15 @@ func _graveyard_rect() -> Rect2:
 ## HPバーは彫り込まれた溝に見せる(角丸 + 内側の落ち込み影)。残量の色は
 ## 十分なうちは琥珀、危険域まで減ったら赤(GameDesign.md 9章)。
 ## HPバーの矩形。攻撃の演出が本体を狙うときの的であり、被弾の演出の出どころでもある。
+## マナの数字のバッジと粒の列を合わせた矩形(ローカル)。誘導対局で「使ったマナ」を光らせる。
+func mana_rect() -> Rect2:
+	var badge := Rect2(
+		_right(MANA_BADGE_CENTER) - Vector2.ONE * MANA_BADGE_RADIUS,
+		Vector2.ONE * MANA_BADGE_RADIUS * 2.0
+	)
+	return badge.merge(Rect2(_right(MANA_TROUGH_RECT.position), MANA_TROUGH_RECT.size))
+
+
 func hp_bar_rect() -> Rect2:
 	return Rect2(Vector2(HP_BAR_X, CENTER_Y - HP_BAR_SIZE.y * 0.5), HP_BAR_SIZE)
 

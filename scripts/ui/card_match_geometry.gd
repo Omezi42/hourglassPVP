@@ -39,12 +39,11 @@ func end_turn_button_rect() -> Rect2:
 	return Rect2(_screen._end_turn_button.position, _screen._end_turn_button.size)
 
 
-## マナのバッジ(GameDesign.md 18章「数字の光」)。話題が「使ったマナ」の段(出す)でだけ使う。
+## マナのバッジと粒の列(GameDesign.md 18章「数字の光」)。話題が「使ったマナ」の段(出す)でだけ使う。
 func mana_badge_rect(side: int) -> Rect2:
 	var bar: PlayerInfoBar = _screen._own_bar if side == _screen.my_side else _screen._foe_bar
-	return _badge_rect(
-		bar.position + PlayerInfoBar.MANA_BADGE_CENTER, PlayerInfoBar.MANA_BADGE_RADIUS
-	)
+	var local := bar.mana_rect()
+	return Rect2(bar.position + local.position, local.size)
 
 
 ## 盤面の1体の体力・攻撃力のバッジ(GameDesign.md 18章「数字の光」)。
