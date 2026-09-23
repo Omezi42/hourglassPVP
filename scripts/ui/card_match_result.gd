@@ -13,7 +13,10 @@ signal home_pressed
 signal log_pressed
 
 const SCREEN_SIZE := Vector2(1280, 720)
-const PANEL_SIZE := Vector2(560, 340)
+## ボタン3つ(「CPUともう1局」が最長)を枠の内側へ収める幅にする。
+const PANEL_SIZE := Vector2(640, 340)
+const BUTTON_SIZE := Vector2(176, 56)
+const BUTTON_GAP := 16
 const ENTRANCE_DURATION := 0.42
 ## 行が現れる間隔。ここで区切ることで「勝敗 → 内訳 → 決め手」の順に読める。
 const LINE_STAGGER := 0.14
@@ -261,7 +264,7 @@ func _build() -> void:
 
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_theme_constant_override("separation", 20)
+	row.add_theme_constant_override("separation", BUTTON_GAP)
 	row.position = Vector2(0, PANEL_SIZE.y - 84.0)
 	row.size = Vector2(PANEL_SIZE.x, 64.0)
 	_panel.add_child(row)
@@ -327,6 +330,6 @@ func _draw_victory_flash(ci: RID) -> void:
 
 
 func _make_button(label: String, target: Signal) -> Button:
-	var button := CodedButton.make(label, Vector2(180, 56))
+	var button := CodedButton.make(label, BUTTON_SIZE)
 	button.pressed.connect(func() -> void: target.emit())
 	return button

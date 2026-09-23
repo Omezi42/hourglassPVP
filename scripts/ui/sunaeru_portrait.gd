@@ -13,7 +13,7 @@ const TEXTURE_PATH := "res://assets/mascot/mascot_avatar.png"
 const BOB_HEIGHT := 3.0
 const BOB_SECONDS := 2.4
 ## 段階を達成したときに跳ねる高さと尺。
-const CHEER_HEIGHT := 10.0
+const CHEER_HEIGHT := 6.0
 const CHEER_SECONDS := 0.45
 
 var _texture: Texture2D
@@ -43,13 +43,15 @@ func _draw() -> void:
 	if _texture == null:
 		return
 	# 縦横比のまま収め、下端で揃える(枠へ引き伸ばさない。Architecture.md 4.0節と同じ扱い)。
+	# 揺れと跳ねの幅を先に空けておき、どこまで動いても自分の矩形から出さない。
 	var src := Vector2(_texture.get_width(), _texture.get_height())
 	if src.x <= 0.0 or src.y <= 0.0:
 		return
-	var scale := minf(size.x / src.x, size.y / src.y)
+	var headroom := BOB_HEIGHT * 2.0 + CHEER_HEIGHT
+	var scale := minf(size.x / src.x, (size.y - headroom) / src.y)
 	var drawn := src * scale
 	var bob := sin(_time * TAU / BOB_SECONDS) * BOB_HEIGHT
 	# 跳ねは、上がって落ちる1山ぶん(sin の半周)にする。
 	var hop := sin((1.0 - _cheer / CHEER_SECONDS) * PI) * CHEER_HEIGHT if _cheer > 0.0 else 0.0
-	var pos := Vector2((size.x - drawn.x) * 0.5, size.y - drawn.y - bob - hop)
+	var pos := Vector2((size.x - drawn.x) * 0.5, size.y - BOB_HEIGHT - drawn.y - bob - hop)
 	draw_texture_rect(_texture, Rect2(pos, drawn), false)

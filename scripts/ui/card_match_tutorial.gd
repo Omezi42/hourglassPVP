@@ -28,7 +28,14 @@ const BAND_RECT := Rect2(206, 74, 824, 64)
 ## **マリガンの間だけ帯を下げる**。マリガン画面は見出し・手札・確定ボタンで y=66〜432 を
 ## 使うため、通常の位置(y=74)へ出すと見出しへ重なる。確定ボタンの下が唯一の空きになる。
 const MULLIGAN_BAND_TOP := 470.0
-const PORTRAIT_SIZE := Vector2(54, 64)
+## 帯の枠は大きなパネル用(枠8px・角丸16)より細くする。高さ64の帯に太い枠を使うと、
+## 文の入る高さが足りずパネルが帯より縦へ伸び、絵とボタンが枠からはみ出して見える。
+const BAND_FRAME := 4.0
+const BAND_CORNER := 10.0
+## 枠の内側へ置く絵・ボタン・文と枠との隙間。
+const BAND_INSET := BAND_FRAME + 4.0
+const PORTRAIT_SIZE := Vector2(48, 56)
+const PORTRAIT_TEXT_GAP := 6.0
 ## 進み具合の点。**終わりが見えないと、いつまで案内が続くのか分からない**
 ## (GameDesign.md 18章)。「つぎへ」の左へ小さく並べる。8段ぶん並ぶため5段のときより詰める。
 const DOTS_WIDTH := 72.0
@@ -44,7 +51,6 @@ const FOCUS_RINGS := [0, 1]
 ## 輪郭とは色を分け、押す場所と読む場所を取り違えさせない。
 const NUMBER_GLOW_COLOR := Color(1.0, 0.82, 0.35)
 const NEXT_SIZE := Vector2(88, 36)
-const BUTTON_MARGIN := 10.0
 
 var ran_this_match := false
 
@@ -372,8 +378,15 @@ func _build() -> void:
 	panel.custom_minimum_size = BAND_RECT.size
 	panel.size = BAND_RECT.size
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var style: StyleBox = load("res://resources/theme/content_panel.tres")
-	if style != null:
+	var base: StyleBox = load("res://resources/theme/content_panel.tres")
+	if base is CodedPanelStyle:
+		var style := base.duplicate() as CodedPanelStyle
+		style.frame_thickness = BAND_FRAME
+		style.corner_radius = BAND_CORNER
+		style.content_margin_left = 0.0
+		style.content_margin_right = 0.0
+		style.content_margin_top = BAND_INSET
+		style.content_margin_bottom = BAND_INSET
 		panel.add_theme_stylebox_override("panel", style)
 	_band.add_child(panel)
 
@@ -388,11 +401,11 @@ func _build() -> void:
 	# 文が「つぎへ」の下へ潜らないよう、ボタンぶんの余白を右へ空ける。
 	# **「つぎへ」が出ていない間も同じだけ空ける**。出入りのたびに文が折り返し直すため。
 	# 「つぎへ」と進み具合の点のぶんを右へ空ける。
-	margin.add_theme_constant_override(
-		"margin_right", int(NEXT_SIZE.x + BUTTON_MARGIN + DOTS_WIDTH)
-	)
+	margin.add_theme_constant_override("margin_right", int(NEXT_SIZE.x + BAND_INSET + DOTS_WIDTH))
 	# 左はすなえるの立ち絵ぶん。文と絵を重ねない。
-	margin.add_theme_constant_override("margin_left", int(PORTRAIT_SIZE.x))
+	margin.add_theme_constant_override(
+		"margin_left", int(BAND_INSET + PORTRAIT_SIZE.x + PORTRAIT_TEXT_GAP)
+	)
 	panel.add_child(margin)
 	margin.add_child(_label)
 
@@ -401,14 +414,14 @@ func _build() -> void:
 	_next_button = CodedButton.make("つぎへ", NEXT_SIZE)
 	_next_button.visible = false
 	_next_button.position = Vector2(
-		BAND_RECT.size.x - NEXT_SIZE.x - BUTTON_MARGIN, (BAND_RECT.size.y - NEXT_SIZE.y) * 0.5
+		BAND_RECT.size.x - NEXT_SIZE.x - BAND_INSET, (BAND_RECT.size.y - NEXT_SIZE.y) * 0.5
 	)
 	_next_button.pressed.connect(_on_next_pressed)
 	_band.add_child(_next_button)
 
 	# 進み具合の点は「つぎへ」の左へ置く。段の数だけ並べ、済んだものを塗る。
 	_dots = Control.new()
-	_dots.position = Vector2(BAND_RECT.size.x - NEXT_SIZE.x - BUTTON_MARGIN - DOTS_WIDTH, 0.0)
+	_dots.position = Vector2(BAND_RECT.size.x - NEXT_SIZE.x - BAND_INSET - DOTS_WIDTH, 0.0)
 	_dots.size = Vector2(DOTS_WIDTH, BAND_RECT.size.y)
 	_dots.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_dots.draw.connect(_draw_dots)
@@ -418,6 +431,7 @@ func _build() -> void:
 	# 盤面を新たに隠さないよう、帯の中に収める。
 	_portrait = SunaeruPortrait.new()
 	_portrait.size = PORTRAIT_SIZE
+	_portrait.position = Vector2(BAND_INSET, (BAND_RECT.size.y - PORTRAIT_SIZE.y) * 0.5)
 	_band.add_child(_portrait)
 
 
