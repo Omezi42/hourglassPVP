@@ -82,6 +82,10 @@ const STUCK_TEXT := "いまはマナが足りないみたい。「ターン終�
 ## 続きを投げ出されたように読める。**これ以上は喋らせない**。
 const OUTRO_TEXT := "あとは自由に遊んでみてね。相手のHPを0にしたら勝ちだよ。駒を押せば効果も読めるよ!"
 
+## この対局が誘導対局として始まったか。`close()` で帯を閉じた後も対局は続くため、
+## 結果パネルの主/副の入れ替え(GameDesign.md 18章)には `visible` ではなくこちらを使う。
+var ran_this_match := false
+
 var _state: MatchState
 var _my_side := MatchState.Side.A
 var _index := 0
@@ -123,6 +127,7 @@ func watch(screen: CardMatchScreen, state: MatchState, my_side: int) -> void:
 	_index = 0
 	_showing_done = false
 	_outro = false
+	ran_this_match = true
 	state.unit_played.connect(func(side: int, _slot: int) -> void: _advance_if("play", side))
 	state.attack_performed.connect(
 		func(side: int, _slot: int, _target: int) -> void: _advance_if("attack", side)
@@ -144,6 +149,13 @@ func watch(screen: CardMatchScreen, state: MatchState, my_side: int) -> void:
 func close() -> void:
 	visible = false
 	finished.emit()
+
+
+## 新しい対局へ入る前の後始末(GameDesign.md 18章)。誘導対局かどうかの記録も、
+## その対局を離れる時点で一緒に落とす。
+func reset_for_new_match() -> void:
+	visible = false
+	ran_this_match = false
 
 
 ## 帯の位置をマリガン中かどうかで切り替える。
@@ -261,6 +273,7 @@ func _on_next_pressed() -> void:
 	if _index >= STEPS.size():
 		_outro = true
 		FunnelService.reach(FunnelService.TUTORIAL_CLEAR)
+		UiState.mark_tutorial_done()
 	_refresh()
 
 

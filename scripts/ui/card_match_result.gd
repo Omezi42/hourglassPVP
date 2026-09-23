@@ -55,10 +55,21 @@ func _ready() -> void:
 
 
 ## 勝敗を表示する。my_side が負なら「先手/後手の勝利」と第三者視点で書く。
+## 誘導対局だけ主/副を入れ替える(GameDesign.md 18章)。「CPUともう1局」を真鍮の主要ボタンへ
+## 昇格させ、「ホームへ」は既定の凹んだパネルのまま残す。
 func show_for(
-	state: MatchState, my_side: int, moves: int, reward: String = "", can_rematch: bool = false
+	state: MatchState,
+	my_side: int,
+	moves: int,
+	reward: String = "",
+	can_rematch: bool = false,
+	is_tutorial: bool = false
 ) -> void:
 	_rematch.visible = can_rematch
+	_rematch.text = "CPUともう1局" if is_tutorial else "もう一度"
+	CodedButton.apply_styles(
+		_rematch, CodedButton.PRIMARY_ACTION_GROUP if is_tutorial else CodedButton.WIDE_GROUP
+	)
 	var winner: int = state.winner
 	_won = my_side >= 0 and winner == my_side
 	_neutral = my_side < 0 or winner < 0

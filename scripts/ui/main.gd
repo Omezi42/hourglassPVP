@@ -269,11 +269,18 @@ func _unhandled_input(event: InputEvent) -> void:
 ## タイトル画面を押されたときの遷移。ロゴの演出 → 砂が画面を覆う → 画面を差し替える →
 ## 砂が下へ抜ける、の順で進める。砂が覆いきっている間に差し替えるため、
 ## 通常のクロスフェード(_show_only)は砂の下で起きて見えない。
+## ホームを一度も開いていない人は、ホームを経ずに誘導対局へ直行する(GameDesign.md 18章)。
 func _on_title_start_requested() -> void:
-	FunnelService.reach(FunnelService.HOME)
+	var first_visit := not UiState.has_seen_home()
+	FunnelService.reach(FunnelService.TUTORIAL_START if first_visit else FunnelService.HOME)
 	await title_screen.play_launch()
 	await _sand_transition.cover()
-	_show_only(home_screen)
+	if first_visit:
+		card_match_screen.start_tutorial_match()
+		_match_return_screen = home_screen
+		_show_only(card_match_screen)
+	else:
+		_show_only(home_screen)
 	await _sand_transition.reveal()
 
 
@@ -499,7 +506,6 @@ func _on_hourglass_list_requested() -> void:
 ## 誘導対局(GameDesign.md 18章)。通常のCPU戦と同じ画面へ入り、指示だけが重なる。
 func _on_tutorial_requested() -> void:
 	FunnelService.reach(FunnelService.TUTORIAL_START)
-	UiState.mark_tutorial_done()
 	card_match_screen.start_tutorial_match()
 	_match_return_screen = home_screen
 	_show_only(card_match_screen)
