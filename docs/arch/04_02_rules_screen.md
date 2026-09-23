@@ -23,5 +23,7 @@
 これは v5.0 の画面が `.tscn` を持たないのと同じ流儀。
 
 **初回起動の判定は `UiState`(`scripts/logic/ui_state.gd`、`user://ui_state.json`)が持つ。**
-`CardDeckSave` 等と同じ「Autoloadを使わずstaticで持つ」流儀。ホーム画面を一度でも開いたら
-記録し、以後は「デッキ」タブから始める(GameDesign.md 9章)。
+`CardDeckSave` 等と同じ「Autoloadを使わずstaticで持つ」流儀。`home_seen` が偽のままタイトルを押されたら、
+`Main` はホームを出さずに誘導対局を始める(GameDesign.md 18章)。`home_seen` はホームを表示した時点で立てるため、
+誘導対局の途中でブラウザを閉じた人は次の起動でも誘導対局から始まる。`tutorial_done` は締めのひと言まで
+進んだ時点(`FunnelService.TUTORIAL_CLEAR` と同じ所)で立て、「1局遊んで覚える」の入口を下げる判定に使う。
