@@ -3,7 +3,7 @@ extends Control
 ## 対局画面右端「行動の列」の地(GameDesign.md 9章「対局画面の再構築」)。
 ## 壁ではなく**卓の脇に立てた真鍮枠の操作盤**として描く——
 ## 濃紺の板 + 真鍮の額 + 上下の飾り板(紋章入り)+ ターン終了を囲む彫り込みの輪 +
-## 反転権〜コインの群とログ〜エモートの群を分ける区切り線。
+## 3つの群(`ActionColumnLayout`)の間の区切り線。
 ##
 ## `CardMatchScreen` の定数を実行時に読んで矩形を決める(Architecture.md 11章
 ## 「class_nameを持つ2つのスクリプトが、互いのconstをconstから参照してはいけない」)。
@@ -14,10 +14,6 @@ const PLATE_EMBLEM_SIZE := 10.0
 const FRAME_WIDTH := 4.0
 const CORNER_RADIUS := 14.0
 const DIVIDER_RATIO := 0.6
-## 反転権〜コインの群とログ〜エモートの群の間の区切り線(パネル内のローカルy)。
-const DIVIDER_LOCAL_Y := 420.0
-## ターン終了ボタンの周りへ添える彫り込みの輪の、ボタン半径からの余白。
-const TURN_END_RING_MARGIN := 12.0
 
 
 func _ready() -> void:
@@ -39,7 +35,8 @@ func _draw() -> void:
 	_draw_plate(ci, rect, true)
 	_draw_plate(ci, rect, false)
 	_draw_turn_end_ring(ci)
-	_draw_divider(rect)
+	for divider_y: float in ActionColumnLayout.DIVIDER_YS:
+		_draw_divider(rect, divider_y - position.y)
 
 
 ## 板の外周を真鍮の帯として縁取る。外側にごく細い暗い輪郭、内側にごく細い明るい線を
@@ -80,20 +77,19 @@ func _draw_plate(ci: RID, rect: Rect2, top: bool) -> void:
 func _draw_turn_end_ring(ci: RID) -> void:
 	var screen_center := Vector2(
 		CardMatchScreen.ACTION_COLUMN_X + CardMatchScreen.ACTION_COLUMN_CENTER_OFFSET,
-		CardMatchScreen.TURN_END_BUTTON_TOP
+		ActionColumnLayout.TURN_END_Y
 	)
 	var center := screen_center - position
-	var r: float = CardMatchScreen.TURN_END_BUTTON_DIAMETER * 0.5 + TURN_END_RING_MARGIN
+	var r: float = (
+		ActionColumnLayout.TURN_END_DIAMETER * 0.5 + ActionColumnLayout.TURN_END_RING_MARGIN
+	)
 	UiPaint.draw_ring(ci, center, r, UiPalette.OUTLINE_DARK, 1.5, 30)
 	UiPaint.draw_ring(ci, center, r - 2.0, Color(UiPalette.BRASS_HIGHLIGHT, 0.35), 1.0, 30)
 
 
-func _draw_divider(rect: Rect2) -> void:
+func _draw_divider(rect: Rect2, local_y: float) -> void:
 	var width := rect.size.x * DIVIDER_RATIO
 	var x0 := rect.get_center().x - width * 0.5
 	draw_line(
-		Vector2(x0, DIVIDER_LOCAL_Y),
-		Vector2(x0 + width, DIVIDER_LOCAL_Y),
-		Color(UiPalette.BRASS_MID, 0.6),
-		1.5
+		Vector2(x0, local_y), Vector2(x0 + width, local_y), Color(UiPalette.BRASS_MID, 0.6), 1.5
 	)

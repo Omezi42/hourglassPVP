@@ -24,30 +24,14 @@ const HAND_AREA := Rect2(190, 520, 900, 166)
 ## 12枠を載せる卓上(GameDesign.md 9章)。両陣営の6枠がこの上に並ぶ。
 const TABLE_RECT := Rect2(190, 74, 900, 372)
 const CPU_THINK_SECONDS := 0.5
-## 反転権・コイン・ターン終了・ログ・投了・エモートを縦に並べる右の列
+## 反転権・コイン・時計・ターン終了・ログ・エモート・投了を縦に並べる右の列
 ## (`ActionColumnPanel`/`RoundActionButton`。GameDesign.md 9章)。列の中心xは
-## `ACTION_COLUMN_X+ACTION_COLUMN_CENTER_OFFSET`、各定数は丸の中心y(`_place_round()`)。
+## `ACTION_COLUMN_X+ACTION_COLUMN_CENTER_OFFSET`、縦の並びは `ActionColumnLayout`。
 const ACTION_COLUMN_X := 1108.0
 const ACTION_COLUMN_CENTER_OFFSET := 80.0
-const TURN_END_BUTTON_DIAMETER := 110.0
-const TURN_END_BUTTON_TOP := 330.0
-## ログ・投了・エモート / 反転権・戻る(同じ位置のため直径を揃える) / コイン。
-## 反転権は紋章(SWAP_ARROWS)を面へ描くため、他より一回り大きく取る。
-const ACTION_ROUND_DIAMETER := 56.0
-const ACTION_ROUND_DIAMETER_TOP := 72.0
-const COIN_ROUND_DIAMETER := 48.0
 ## 反転ボタンは選んだ駒のすぐ下へ出す(GameDesign.md 9章)。
 const FLIP_BUTTON_SIZE := Vector2(104, 34)
 const FLIP_BUTTON_OVERLAP := 3.0
-const LOG_BUTTON_TOP := 505.0
-const SURRENDER_BUTTON_TOP := 580.0
-const EMOTE_BUTTON_TOP := 655.0
-## 反転権・戻る・コインの中心y(反転権と戻るは同時に見えない)。
-const BACK_BUTTON_TOP := 74.0
-## 反転権ボタンの下端と、残り回数の札(FlipRightGauge)上端の間隔。
-const FLIP_GAUGE_GAP := 8.0
-## 反転権の札(FlipRightGauge、高さ44)ぶん下げてコインと重ならないようにする。
-const COIN_BUTTON_TOP := 176.0
 ## 情報帯の幅。行動の列(ACTION_COLUMN_X)の手前で止める。
 const BAR_WIDTH := ACTION_COLUMN_X - MARGIN - 24.0
 
@@ -197,7 +181,11 @@ func _ready() -> void:
 	_flip_right = CardMatchFlipRight.new(self)
 	_clocks = CardMatchClock.new(self)
 	_emote = CardMatchEmote.new(self)
-	_emote.set_position(CardMatchBuild.round_button_pos(ACTION_ROUND_DIAMETER, EMOTE_BUTTON_TOP))
+	_emote.set_position(
+		CardMatchBuild.round_button_pos(
+			ActionColumnLayout.SMALL_DIAMETER, ActionColumnLayout.EMOTE_Y
+		)
+	)
 
 
 ## 前の対局の名残を落としてから新しい対局へ入る。結果パネル・ログ・選択・
@@ -390,8 +378,6 @@ func _on_action_received(action: Dictionary) -> void:
 		if _emote != null:
 			_emote.handle_emote(action)
 		return
-	if _history != null:
-		_history.push_action(action.get("side", MatchState.other_side(my_side)), action)
 	_strike.capture(action)
 	MatchAction.apply(state, action)
 	if _clocks.active() and state != null and not state.is_match_over():
@@ -480,6 +466,7 @@ func _begin_state(
 	# 効果音と演出は配り終えてから張る(初期手札のドローまで鳴らさないため)。
 	_sound.watch(state)
 	_effects.watch(state)
+	_history.watch(state)
 	# 設置効果・砂術・余砂の「紋章が飛ぶ一撃」(GameDesign.md 9章)。
 	_effect_strike.watch(state)
 	# 決着で止めた対局のBGMを、「もう一度」で戻す(GameDesign.md 9章)。
@@ -533,26 +520,7 @@ func _build() -> void:
 	_flip_button = CardMatchBuild.add_button(self, "反転", FLIP_BUTTON_SIZE)
 	_flip_button.visible = false
 	_flip_button.pressed.connect(_on_flip_pressed)
-	_coin_button = CardMatchBuild.add_round_button(self, "コイン", COIN_ROUND_DIAMETER, false)
-	_place_round(_coin_button, COIN_ROUND_DIAMETER, COIN_BUTTON_TOP)
-	_coin_button.pressed.connect(_on_coin_pressed)
-	# ターン終了は大きな丸い真鍮のボタン(GameDesign.md 9章「対局画面の再構築」)。
-	_end_turn_button = CardMatchBuild.add_round_button(
-		self, "ターン終了", TURN_END_BUTTON_DIAMETER, true
-	)
-	_place_round(_end_turn_button, TURN_END_BUTTON_DIAMETER, TURN_END_BUTTON_TOP)
-	_end_turn_button.pressed.connect(_on_end_turn_pressed)
-	# 「ログ」「投了」「エモート」はターン終了ボタンの下へ順に並べる小さな丸ボタン。
-	_log_button = CardMatchBuild.add_round_button(self, "ログ", ACTION_ROUND_DIAMETER, false)
-	_place_round(_log_button, ACTION_ROUND_DIAMETER, LOG_BUTTON_TOP)
-	_log_button.pressed.connect(func() -> void: _log.set_open(true))
-	_surrender_button = CardMatchBuild.add_round_button(self, "投了", ACTION_ROUND_DIAMETER, false)
-	_place_round(_surrender_button, ACTION_ROUND_DIAMETER, SURRENDER_BUTTON_TOP)
-	_surrender_button.pressed.connect(_on_surrender_pressed)
-	# リプレイ・観戦の戻る導線。反転権と同じ位置(両者は同時に見えない)。
-	_back_button = CardMatchBuild.add_round_button(self, "戻る", ACTION_ROUND_DIAMETER_TOP, false)
-	_place_round(_back_button, ACTION_ROUND_DIAMETER_TOP, BACK_BUTTON_TOP)
-	_back_button.pressed.connect(func() -> void: back_pressed.emit())
+	CardMatchBuild.action_column(self)
 	_cpu_timer = Timer.new()
 	_cpu_timer.one_shot = true
 	_cpu_timer.timeout.connect(_take_cpu_action)
@@ -565,10 +533,6 @@ func _build() -> void:
 	shaken.append_array(_foe_slots)
 	shaken.append_array(_own_slots)
 	_shake.bind(shaken)
-
-
-func _place_round(button: Button, diameter: float, center_y: float) -> void:
-	button.position = CardMatchBuild.round_button_pos(diameter, center_y)
 
 
 # --- 表示の同期 ---------------------------------------------------------
@@ -808,8 +772,6 @@ func _on_mulligan_confirmed(indices: Array) -> void:
 func _perform(action: Dictionary) -> void:
 	if _emote != null and action.get("type", "") != "emote":
 		_emote.close_popup()
-	if _history != null and action.get("type", "") != "emote":
-		_history.push_action(my_side, action)
 	_record(action)
 	_strike.capture(action)
 	MatchAction.apply(state, action)

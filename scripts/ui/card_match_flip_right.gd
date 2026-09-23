@@ -18,9 +18,9 @@ func _init(screen: CardMatchScreen) -> void:
 	# 再生・観戦(_interactive == false)だけに出て、反転権は対局中(_interactive == true)
 	# だけに出るため、行動の列を再配置せずに済む。小さな丸ボタン
 	# (GameDesign.md 9章「対局画面の再構築」)。
-	var diameter := CardMatchScreen.ACTION_ROUND_DIAMETER_TOP
+	var diameter := ActionColumnLayout.FLIP_RIGHT_DIAMETER
 	_button = CardMatchBuild.add_round_button(screen, "反転権", diameter, false)
-	_button.position = CardMatchBuild.round_button_pos(diameter, CardMatchScreen.BACK_BUTTON_TOP)
+	_button.position = CardMatchBuild.round_button_pos(diameter, ActionColumnLayout.FLIP_RIGHT_Y)
 	_button.emblem = UiPaint.Emblem.SWAP_ARROWS
 	_button.visible = false
 	_button.pressed.connect(_on_pressed)
@@ -32,7 +32,7 @@ func _init(screen: CardMatchScreen) -> void:
 		+ CardMatchScreen.ACTION_COLUMN_CENTER_OFFSET
 		- FlipRightGauge.GAUGE_SIZE.x * 0.5
 	)
-	var gauge_y := CardMatchScreen.BACK_BUTTON_TOP + diameter * 0.5 + CardMatchScreen.FLIP_GAUGE_GAP
+	var gauge_y := ActionColumnLayout.FLIP_GAUGE_TOP
 	_gauge.position = Vector2(gauge_x, gauge_y)
 	_gauge.visible = false
 	screen.add_child(_gauge)

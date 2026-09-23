@@ -17,7 +17,7 @@
 | `CardDragPreview` / `CardDragArrow` | ドラッグ中に指へ付いてくる絵(速度から傾き)/ 攻撃ドラッグの駒→指先の矢印(自分の場の駒のときだけ) |
 | `CardMatchHandLayout` | 手札の並べ方。**位置は代入せず Tween で滑らせる**。ホバー中の両隣を避け、相手の手番で沈める |
 | `BoardTable` / `PlaymatLibrary` / `PlaymatPaint` | 卓(木の額 / マット2枚 / レール)。マットは `clip_contents` の子層(`MatLayer`)として敷く(模様が卓の外へ漏れる)。**卓とショップの見本で同じ描画関数を通す**。既定は `NONE_ID`(何も敷かない) |
-| `MatchBackdrop` / `ActionColumnPanel` / `RoundActionButton` / `TurnClockDial` / `FlipRightGauge` | 再構築(10.10.0節)で足した下地・行動の列の地・丸ボタン・持ち時間の時計・反転権の粒の札 |
+| `MatchBackdrop` / `ActionColumnLayout` / `ActionColumnPanel` / `RoundActionButton` / `TurnClockDial` / `FlipRightGauge` | 再構築(10.10.0節)で足した下地・行動の列の並び・行動の列の地・丸ボタン・持ち時間の時計・反転権の粒の札 |
 | `PlayerInfoBar` | 片方の情報帯。板を持たず真鍮の器具(メダル / 名札 / HPの器 / マナの計器 / 山の札)を並べる。`hp_bar_rect()` 等の座標の問い合わせ、`highlight_cost()` / `spend_toward()`(ピップの光と吸い込み)、`drop_handler`(HP帯へのドロップ。`targetable` のときだけ受ける)、`show_emote()` |
 | `CardMatchSelection` | いま選んでいるもの(手札 / 自分の枠 / TARGETING / FLIP_RIGHT / 未選択)と `hover_target`(`NO_HOVER` / `FACE` / 相手の枠) |
 | `CardMatchTouch` | 盤面と手札を押す/ドラッグする受け口。分岐だけを持ち、適用は `MatchState`、段取りは `CardMatchSpell` / `CardMatchEffectTarget` / `CardMatchFlipRight` へ渡す |

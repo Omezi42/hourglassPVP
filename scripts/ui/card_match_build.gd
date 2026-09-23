@@ -85,6 +85,40 @@ static func add_round_button(
 	return button
 
 
+## 行動の列の丸ボタン(GameDesign.md 9章)。縦の並びは `ActionColumnLayout` の3つの群。
+## 反転権は `CardMatchFlipRight`、エモートは `CardMatchEmote`、時計は `make_clock_dial()` が置く。
+static func action_column(screen: CardMatchScreen) -> void:
+	screen._coin_button = _column_button(
+		screen, "コイン", ActionColumnLayout.COIN_DIAMETER, ActionColumnLayout.COIN_Y
+	)
+	screen._coin_button.pressed.connect(screen._on_coin_pressed)
+	screen._end_turn_button = _column_button(
+		screen, "ターン終了", ActionColumnLayout.TURN_END_DIAMETER, ActionColumnLayout.TURN_END_Y, true
+	)
+	screen._end_turn_button.pressed.connect(screen._on_end_turn_pressed)
+	screen._log_button = _column_button(
+		screen, "ログ", ActionColumnLayout.SMALL_DIAMETER, ActionColumnLayout.LOG_Y
+	)
+	screen._log_button.pressed.connect(func() -> void: screen._log.set_open(true))
+	screen._surrender_button = _column_button(
+		screen, "投了", ActionColumnLayout.SMALL_DIAMETER, ActionColumnLayout.SURRENDER_Y
+	)
+	screen._surrender_button.pressed.connect(screen._on_surrender_pressed)
+	# リプレイ・観戦の戻る導線。反転権と同じ位置(両者は同時に見えない)。
+	screen._back_button = _column_button(
+		screen, "戻る", ActionColumnLayout.FLIP_RIGHT_DIAMETER, ActionColumnLayout.FLIP_RIGHT_Y
+	)
+	screen._back_button.pressed.connect(func() -> void: screen.back_pressed.emit())
+
+
+static func _column_button(
+	screen: CardMatchScreen, label: String, diameter: float, center_y: float, filled := false
+) -> RoundActionButton:
+	var button := add_round_button(screen, label, diameter, filled)
+	button.position = round_button_pos(diameter, center_y)
+	return button
+
+
 ## 丸いボタンを行動の列の中心(`ACTION_COLUMN_X + ACTION_COLUMN_CENTER_OFFSET`)へ
 ## 揃えるための左端x座標。
 static func round_button_x(diameter: float) -> float:
@@ -108,7 +142,7 @@ static func round_button_pos(diameter: float, center_y: float) -> Vector2:
 ## 行動の列の持ち時間の時計(GameDesign.md 9章)。丸ボタンと同じ列の中心へ置く。
 static func make_clock_dial(screen: CardMatchScreen) -> TurnClockDial:
 	var dial := TurnClockDial.new()
-	dial.position = round_button_pos(TurnClockDial.DIAMETER, TurnClockDial.COLUMN_CENTER_Y)
+	dial.position = round_button_pos(TurnClockDial.DIAMETER, ActionColumnLayout.CLOCK_Y)
 	screen.add_child(dial)
 	return dial
 

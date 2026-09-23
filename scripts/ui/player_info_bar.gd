@@ -11,37 +11,43 @@ const MANA_BLUE := Color(0.35, 0.6, 0.95, 1.0)
 const MANA_EMPTY := Color(0.2, 0.22, 0.28, 1.0)
 const DANGER_RATIO := 0.4
 ## 帯は1枚の板で囲わず、卓の台座・ターン終了ボタンと同じ語彙の「真鍮の器具」を
-## 横に並べる(GameDesign.md 9章「対局画面の再構築」)。左から 肖像のメダル / 名札 /
-## HPの器 / マナの計器 / 山の札 / 時計。座標はすべて帯のローカル(高さ BAR_HEIGHT)。
+## 横に並べる(GameDesign.md 9章「対局画面の見た目」)。**左の群(肖像のメダル / 名札 / HPの器)と
+## 右の群(マナの計器 / 山札・墓地・手札の札)に分け、中央は空ける**(卓の真上の吊りランプを見せる)。
+## 上下の帯で同じ位置に同じものを置く。座標はすべて帯のローカル(高さ BAR_HEIGHT)。
 const CENTER_Y := BAR_HEIGHT * 0.5
 ## 肖像のメダル。真鍮の太い輪の中にアイコンを嵌める。
 const PORTRAIT_CENTER := Vector2(30.0, CENTER_Y)
 const PORTRAIT_RADIUS := 26.0
 const PORTRAIT_RING_WIDTH := 4.0
 ## 名札。メダルの右から伸びる濃紺の板。
-const NAME_PLATE_RECT := Rect2(44.0, 9.0, 166.0, 38.0)
+const NAME_PLATE_RECT := Rect2(44.0, 9.0, 152.0, 38.0)
 const NAME_TEXT_X := 64.0
 ## HPの器。真鍮の縁 + ガラス越しの砂。右端に体力の丸いバッジ(場の駒と同じ語彙)を嵌める。
-const HP_BAR_X := 226.0
-const HP_BAR_SIZE := Vector2(226, 32)
+const HP_BAR_X := 206.0
+const HP_BAR_SIZE := Vector2(180, 32)
 const HP_RIM_WIDTH := 3.0
 const HP_BADGE_RADIUS := 17.0
+## 右の群は帯の右端から `RIGHT_GROUP_WIDTH` の位置を原点に置く(帯の幅が画面ごとに違っても右端に揃う)。
+const RIGHT_GROUP_WIDTH := 413.0
 ## マナの計器。コストと同じ青の丸いバッジに現在値、右の溝へ最大値ぶんの粒。
-const MANA_BADGE_CENTER := Vector2(504.0, CENTER_Y)
+const MANA_BADGE_CENTER := Vector2(15.0, CENTER_Y)
 const MANA_BADGE_RADIUS := 15.0
-const MANA_TROUGH_RECT := Rect2(528.0, 17.0, 190.0, 22.0)
-const PIP_START_X := 540.0
-const PIP_STEP := 18.0
+const MANA_TROUGH_RECT := Rect2(39.0, 17.0, 168.0, 22.0)
+const PIP_START_X := 51.0
+const PIP_STEP := 16.0
 const PIP_RADIUS := 6.5
 ## コインはマナのバッジの肩に載せる小さな金貨。
-const COIN_CENTER := Vector2(516.0, 15.0)
+const COIN_CENTER := Vector2(27.0, 15.0)
 const COIN_RADIUS := 6.5
-## 山札・墓地・手札の札。
-const PILE_SIZE := Vector2(74, 40)
+## 山札・墓地・手札の札。帯の右端へ詰める。手札は相手側だけで、自分側はその位置を空ける。
+const PILE_SIZE := Vector2(62, 40)
 const PILE_TOP := 8.0
-const DECK_PILE_X := 730.0
-const GRAVE_PILE_X := 812.0
-const HAND_PILE_X := 894.0
+const DECK_PILE_X := 219.0
+const GRAVE_PILE_X := 285.0
+const HAND_PILE_X := 351.0
+## 左の群の右端(HPの器のバッジ)から右の群までに最低限空ける幅。帯の最小幅を決める。
+const GROUP_MIN_GAP := 24.0
+const MIN_WIDTH := HP_BAR_X + HP_BAR_SIZE.x + HP_BADGE_RADIUS + GROUP_MIN_GAP + RIGHT_GROUP_WIDTH
 const PILE_RADIUS := 6.0
 const PILE_GRAIN_ALPHA := 0.06
 const HP_BAR_RADIUS := 8.0
@@ -241,7 +247,7 @@ func spend_toward(n: int, target_global: Vector2) -> void:
 		return
 	_spend_origins.clear()
 	for i in count:
-		_spend_origins.append(Vector2(PIP_START_X + i * PIP_STEP, CENTER_Y))
+		_spend_origins.append(Vector2(_right_x() + PIP_START_X + i * PIP_STEP, CENTER_Y))
 	_spend_to = get_global_transform().affine_inverse() * target_global
 	if _spend_tween != null and _spend_tween.is_valid():
 		_spend_tween.kill()
@@ -266,7 +272,7 @@ func _on_spend_finished() -> void:
 ## マナの数字の位置(グローバル)。支払いの吸い込みの行き先を控えられなかったとき
 ## (CPU・相手の手など、手札の札が画面に無い場合)の既定の行き先にする(GameDesign.md 9章)。
 func mana_label_global() -> Vector2:
-	return global_position + MANA_BADGE_CENTER
+	return global_position + _right(MANA_BADGE_CENTER)
 
 
 ## 相手のHP帯へ駒を落として本体を殴る。押して選ぶ経路と同じ判定を `drop_handler` が持つ。
@@ -303,6 +309,15 @@ func _draw() -> void:
 		_pile(hand_pile_rect(), "手札", _hand)
 	if _has_coin:
 		_draw_coin()
+
+
+## 右の群の原点(帯のローカルx)。
+func _right_x() -> float:
+	return size.x - RIGHT_GROUP_WIDTH
+
+
+func _right(offset: Vector2) -> Vector2:
+	return Vector2(_right_x() + offset.x, offset.y)
 
 
 func _draw_closed(points: PackedVector2Array, color: Color, width: float) -> void:
@@ -422,12 +437,12 @@ func _draw_name_plate() -> void:
 
 ## 山札の山。ドロー・疲労の演出の出どころとして画面側からも引く。
 func deck_pile_rect() -> Rect2:
-	return Rect2(Vector2(DECK_PILE_X, PILE_TOP), PILE_SIZE)
+	return Rect2(Vector2(_right_x() + DECK_PILE_X, PILE_TOP), PILE_SIZE)
 
 
 ## 相手側だけに出る手札の山。ドローの行き先として使う。
 func hand_pile_rect() -> Rect2:
-	return Rect2(Vector2(HAND_PILE_X, PILE_TOP), PILE_SIZE)
+	return Rect2(Vector2(_right_x() + HAND_PILE_X, PILE_TOP), PILE_SIZE)
 
 
 ## 山札を脈打たせる。`danger` は疲労(GameDesign.md 9章)。
@@ -445,7 +460,7 @@ func _set_deck_pulse(value: float) -> void:
 
 
 func _graveyard_rect() -> Rect2:
-	return Rect2(Vector2(GRAVE_PILE_X, PILE_TOP), PILE_SIZE)
+	return Rect2(Vector2(_right_x() + GRAVE_PILE_X, PILE_TOP), PILE_SIZE)
 
 
 ## HPバーは彫り込まれた溝に見せる(角丸 + 内側の落ち込み影)。残量の色は
@@ -572,21 +587,22 @@ func _badge(
 ## マナは青のバッジに現在値、右の溝に最大値ぶんの粒(GameDesign.md 9章「数字とピップの併記」)。
 func _draw_mana() -> void:
 	var ci := get_canvas_item()
-	var trough_radius := MANA_TROUGH_RECT.size.y * 0.5
-	_shadow(ci, MANA_TROUGH_RECT, trough_radius)
-	var trough := UiPaint.rounded_rect_points_uniform(MANA_TROUGH_RECT, trough_radius, 6)
+	var trough_rect := Rect2(_right(MANA_TROUGH_RECT.position), MANA_TROUGH_RECT.size)
+	var trough_radius := trough_rect.size.y * 0.5
+	_shadow(ci, trough_rect, trough_radius)
+	var trough := UiPaint.rounded_rect_points_uniform(trough_rect, trough_radius, 6)
 	UiPaint.fill_gradient_polygon(
 		ci,
 		trough,
-		MANA_TROUGH_RECT,
+		trough_rect,
 		[[0.0, Color(0.03, 0.04, 0.09, 1.0)], [1.0, Color(0.08, 0.10, 0.19, 1.0)]]
 	)
-	UiPaint.draw_inner_shadow(ci, MANA_TROUGH_RECT, trough_radius, 6, 3, Color(0, 0, 0, 1), 0.5)
+	UiPaint.draw_inner_shadow(ci, trough_rect, trough_radius, 6, 3, Color(0, 0, 0, 1), 0.5)
 	UiPaint.draw_bevel(ci, trough, UiPalette.BRASS_RIM_LIGHT, UiPalette.BRASS_DARK, 1.5, false)
 	# 払えない(n > 現在マナ)ぶんは光らせない(GameDesign.md 9章)。
 	var glow_count := _highlight_cost if _highlight_cost <= _mana else 0
 	for i in _max_mana:
-		var center := Vector2(PIP_START_X + i * PIP_STEP, CENTER_Y)
+		var center := Vector2(_right_x() + PIP_START_X + i * PIP_STEP, CENTER_Y)
 		var filled: bool = i < _mana
 		var base_color := MANA_BLUE if filled else MANA_EMPTY
 		# 縁を暗く落としてから内側をひとまわり小さく塗り、面取り相当の立体感を出す。
@@ -601,7 +617,7 @@ func _draw_mana() -> void:
 		draw_arc(center, PIP_RADIUS, 0.0, TAU, 16, arc_color, 1.5)
 		if i < glow_count:
 			_draw_pip_glow(ci, center)
-	_badge(ci, MANA_BADGE_CENTER, _mana, MANA_BLUE, MANA_BADGE_RADIUS, 18)
+	_badge(ci, _right(MANA_BADGE_CENTER), _mana, MANA_BLUE, MANA_BADGE_RADIUS, 18)
 
 
 ## 支払うぶんのピップの脈打ち。HPの砂粒のきらめきと同じ経過時間(`_glint_time`)へ乗せる。
@@ -627,24 +643,25 @@ func _draw_spend_flight() -> void:
 ## コインを持っている間だけ、マナのバッジの肩に金貨を載せる。
 func _draw_coin() -> void:
 	var ci := get_canvas_item()
-	_shadow_circle(ci, COIN_CENTER, COIN_RADIUS)
+	var coin := _right(COIN_CENTER)
+	_shadow_circle(ci, coin, COIN_RADIUS)
 	UiPaint.fill_gradient_polygon(
 		ci,
-		UiPaint.circle_points(COIN_CENTER, COIN_RADIUS, 20),
-		Rect2(COIN_CENTER - Vector2.ONE * COIN_RADIUS, Vector2.ONE * COIN_RADIUS * 2.0),
+		UiPaint.circle_points(coin, COIN_RADIUS, 20),
+		Rect2(coin - Vector2.ONE * COIN_RADIUS, Vector2.ONE * COIN_RADIUS * 2.0),
 		[[0.0, Color(1.0, 0.9, 0.55)], [1.0, UiPalette.GLOW_AMBER.darkened(0.2)]]
 	)
-	UiPaint.draw_ring(ci, COIN_CENTER, COIN_RADIUS, UiPalette.BRASS_HIGHLIGHT, 1.5, 20)
-	UiPaint.draw_ring(
-		ci, COIN_CENTER, COIN_RADIUS * 0.55, Color(UiPalette.BRASS_DARK, 0.7), 1.0, 16
-	)
+	UiPaint.draw_ring(ci, coin, COIN_RADIUS, UiPalette.BRASS_HIGHLIGHT, 1.5, 20)
+	UiPaint.draw_ring(ci, coin, COIN_RADIUS * 0.55, Color(UiPalette.BRASS_DARK, 0.7), 1.0, 16)
 
 
 ## 山札・墓地・手札の枚数。濃紺の小さな札に、見出しを小さく上へ、枚数を大きく右下へ。
 func _pile(rect: Rect2, label: String, count: int) -> void:
 	var ci := get_canvas_item()
 	var points := _plate(ci, rect, PILE_RADIUS)
-	var pulsing: bool = _deck_pulse > 0.0 and is_equal_approx(rect.position.x, DECK_PILE_X)
+	var pulsing: bool = (
+		_deck_pulse > 0.0 and is_equal_approx(rect.position.x, deck_pile_rect().position.x)
+	)
 	if pulsing:
 		_draw_closed(points, Color(_deck_pulse_color, _deck_pulse), 3.0)
 		draw_rect(rect.grow(2.0), Color(_deck_pulse_color, 0.18 * _deck_pulse))
