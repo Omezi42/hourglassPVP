@@ -34,7 +34,9 @@ const BAND_FRAME := 4.0
 const BAND_CORNER := 10.0
 ## 枠の内側へ置く絵・ボタン・文と枠との隙間。
 const BAND_INSET := BAND_FRAME + 4.0
-const PORTRAIT_SIZE := Vector2(48, 56)
+## すなえるは帯の底に立たせ、頭を帯の上へはみ出させる。帯の高さに収めると小さすぎて
+## 話し手として目に入らない。
+const PORTRAIT_SIZE := Vector2(72, 96)
 const PORTRAIT_TEXT_GAP := 6.0
 ## 進み具合の点。**終わりが見えないと、いつまで案内が続くのか分からない**
 ## (GameDesign.md 18章)。「つぎへ」の左へ小さく並べる。8段ぶん並ぶため5段のときより詰める。
@@ -339,6 +341,8 @@ func _enter_step() -> void:
 
 
 func _refresh() -> void:
+	# ボタンは一度広がると自分では縮まない。組み立て時に広がったまま帯の枠へかかるため、毎回戻す。
+	_next_button.size = NEXT_SIZE
 	if not _callout_active.is_empty():
 		_label.text = _callout_active
 		_next_button.text = "とじる" if _outro else "つぎへ"
@@ -431,7 +435,7 @@ func _build() -> void:
 	# 盤面を新たに隠さないよう、帯の中に収める。
 	_portrait = SunaeruPortrait.new()
 	_portrait.size = PORTRAIT_SIZE
-	_portrait.position = Vector2(BAND_INSET, (BAND_RECT.size.y - PORTRAIT_SIZE.y) * 0.5)
+	_portrait.position = Vector2(BAND_INSET, BAND_RECT.size.y - BAND_FRAME - PORTRAIT_SIZE.y)
 	_band.add_child(_portrait)
 
 
