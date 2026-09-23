@@ -22,6 +22,7 @@ func run(assert_true: Callable) -> void:
 	_test_grant_keyword_makes_a_unit_a_guard()
 	_test_silence_removes_keywords_and_effects()
 	_test_cannot_attack_still_allows_flipping()
+	_test_conditional_keyword_card_is_shown_as_constant()
 
 
 # --- 検証用のカードを組み立てる -------------------------------------------
@@ -329,3 +330,18 @@ func _test_cannot_attack_still_allows_flipping() -> void:
 	_assert.call(not state.attack(MatchState.Side.A, 0, 0), "the attack should be refused")
 	_assert.call(state.flip(MatchState.Side.A, 0), "flipping should still be allowed")
 	_assert.call(unit.health == 4 and unit.attack == 2, "the flip should have swapped the sand")
+
+
+# --- コンボ系カード(条件付きの常在能力) -----------------------------------
+
+
+func _test_conditional_keyword_card_is_shown_as_constant() -> void:
+	var middle := CardLibrary.find_by_id("middle")
+	_assert.call(middle.effects.is_empty(), "middle holds its ability outside effects")
+	_assert.call(middle.category_name() == "常在", "a conditional ability reads as 常在")
+	var unit := CardInstance.new(middle)
+	_assert.call(
+		not unit.keywords().has(CardEnums.Keyword.POISON), "毒砂 is hidden while the total is not 5"
+	)
+	unit.health -= unit.total_sand() - middle.conditional_keyword_total
+	_assert.call(unit.keywords().has(CardEnums.Keyword.POISON), "毒砂 shows once the total is 5")
