@@ -10,13 +10,14 @@ extends Control
 ##
 ## 実行(固定デルタで書き出すため --write-movie と --fixed-fps を必ず付ける):
 ##   godot --path . --write-movie scratchpad/sq/f.png
-##     --fixed-fps 15 res://tools/record_thumbnail_square.tscn
+##     --fixed-fps 12 res://tools/record_thumbnail_square.tscn
+## 絵の焼き付けを待つ間も空のコマが書き出されるため、使うのは末尾の END_TIME×12 コマだけ。
 ##
 ## GIFへの変換(1280x720で書き出されるため中央を切り抜く。全コマ共通の色表で量子化し、
 ## 静止している背景をコマ間の差分に含めない):
-##   magick scratchpad/sq/f0*.png -crop 512x512+384+104 +repage +append -colors 160
+##   magick scratchpad/sq/f0*.png -crop 512x512+384+104 +repage +append -colors 96
 ##     -unique-colors scratchpad/sq/palette.png
-##   magick -delay 7 -loop 0 scratchpad/sq/f0*.png -crop 512x512+384+104 +repage
+##   magick -delay 8 -loop 0 scratchpad/sq/f0*.png -crop 512x512+384+104 +repage
 ##     -dither None -remap scratchpad/sq/palette.png -layers OptimizeFrame
 ##     -layers OptimizeTransparency icon512.gif
 ##
