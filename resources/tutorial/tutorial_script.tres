@@ -1,0 +1,8 @@
+[gd_resource type="Resource" script_class="TutorialScriptData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/tutorial_script_data.gd" id="1_5cgen"]
+
+[resource]
+script = ExtResource("1_5cgen")
+deck_a_ids = Array[String](["grain", "grain", "wand", "wand", "sand", "sand", "shield", "shield", "dash", "dash", "dust", "dust", "glass", "glass", "drill", "drill", "sword", "sword", "echo", "echo", "lock", "lock", "twin", "twin", "hammer", "hammer", "guard", "guard", "wall", "wall"])
+deck_b_ids = Array[String](["grain", "sand", "watcher", "sand", "sand", "lock", "lock", "grain", "watcher", "sand", "shield", "shield", "sand", "sand", "wall", "wall", "dash", "dash", "glass", "glass", "drill", "drill", "echo", "echo", "sword", "sword", "twin", "twin", "hammer", "hammer"])

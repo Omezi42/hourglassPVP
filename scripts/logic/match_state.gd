@@ -132,6 +132,9 @@ var mana_frozen := false
 
 ## マリガン(初手の引き直し)を待っている間だけ true。
 var mulligan_pending := false
+## true の間、山札を切らずに渡された順で引く(誘導対局の台本、GameDesign.md 18章)。
+## 既定は偽で、オンライン・リプレイ・既存モードの挙動は変えない。
+var keep_deck_order := false
 ## 決着が疲労(デッキ切れ)によるものだったか。バランス検証の必須指標
 ## 「本体ダメージで決着した割合」(GameDesign.md 7章)を測るために持つ。
 var finished_by_fatigue := false
@@ -179,8 +182,8 @@ func start_match(
 		var slots: Array = []
 		slots.resize(BOARD_SIZE)
 		board[side] = slots
-	deck[Side.A] = _shuffled(deck_a)
-	deck[Side.B] = _shuffled(deck_b)
+	deck[Side.A] = deck_a.duplicate() if keep_deck_order else _shuffled(deck_a)
+	deck[Side.B] = deck_b.duplicate() if keep_deck_order else _shuffled(deck_b)
 	var second_side := other_side(p_first_side)
 	coin_available[second_side] = use_coin_rule
 	flip_right_remaining[p_first_side] = FLIP_RIGHT_FIRST
@@ -231,7 +234,8 @@ func _apply_mulligan(side: int) -> void:
 		cards.remove_at(index)
 	for i in picked.size():
 		_draw_one(side)
-	deck[side] = _shuffled(deck[side] + picked)
+	# 台本(GameDesign.md 18章)は引き直したカードも切らず、山札の末尾へ戻すだけにする。
+	deck[side] = (deck[side] + picked) if keep_deck_order else _shuffled(deck[side] + picked)
 	_deck_exhausted[side] = deck[side].is_empty()
 	hand_changed.emit(side)
 

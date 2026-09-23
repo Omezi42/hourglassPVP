@@ -136,6 +136,7 @@ var _mulligan: CardMatchMulligan
 var _detail: CardMatchDetail
 var _own_deck: Array = []
 var _tutorial: CardMatchTutorial
+var _keep_deck_order := false
 var _outcome: CardMatchOutcome
 var _match_kind: CurrencyRules.MatchKind = CurrencyRules.MatchKind.NONE
 var _clocks: CardMatchClock
@@ -298,7 +299,9 @@ func _reset_for_new_match() -> void:
 
 
 ## CPU戦を開始する。`difficulty` 省略時は前回選んだ思考レベルを使う(GameDesign.md 13章)。
-func start_cpu_match(deck_self: Array, deck_foe: Array, difficulty: int = -1) -> void:
+func start_cpu_match(
+	deck_self: Array, deck_foe: Array, difficulty: int = -1, keep_deck_order: bool = false
+) -> void:
 	_reset_for_new_match()
 	_own_deck = deck_self
 	_cpu = CardCpuStrategy.new()
@@ -324,6 +327,7 @@ func start_cpu_match(deck_self: Array, deck_foe: Array, difficulty: int = -1) ->
 		"actions": [],
 		"source": "cpu",
 	}
+	_keep_deck_order = keep_deck_order
 	_begin_state(deck_self, deck_foe, seed_value, true)
 	_start_cpu_mulligan()
 
@@ -334,13 +338,8 @@ func abandon_match() -> void:
 
 
 ## 誘導対局を始める(GameDesign.md 18章)。中身は通常のCPU戦で、指示を重ねるだけ。
-## デッキは保存済みのものを使わずプリセットの「基本」で固定する。覚えてほしい動きが
-## 出ないデッキで始まると成立しないため。
 func start_tutorial_match() -> void:
-	start_cpu_match(
-		CardPresetDecks.basic(), CardPresetDecks.basic(), CardCpuStrategy.Difficulty.NORMAL
-	)
-	_tutorial.watch(self, state, my_side)
+	CardMatchBuild.start_tutorial(self)
 
 
 ## オンライン対戦の3つの入口は `CardMatchOnline` が持つ(Architecture.md 4.0節)。
@@ -452,6 +451,7 @@ func _begin_state(
 ) -> void:
 	state = MatchState.new()
 	add_child(state)
+	CardMatchBuild.apply_keep_deck_order(self, state)
 	state.turn_started.connect(_on_turn_started)
 	state.match_ended.connect(_on_match_ended)
 	# 砂の演出。**ダメージ(消える)とターン終了の1粒(落ちる)を別経路で受ける**

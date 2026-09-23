@@ -37,3 +37,53 @@ func playable_hand_rects() -> Array[Rect2]:
 ## ターン終了ボタンの矩形。誘導対局が「ここを押す」と光らせるのに使う。
 func end_turn_button_rect() -> Rect2:
 	return Rect2(_screen._end_turn_button.position, _screen._end_turn_button.size)
+
+
+## マナのバッジと、いま出せる手札のコストのバッジ(GameDesign.md 18章「数字の光」)。
+## 話題が「コストとマナ」の段(出す)でだけ使う。
+func mana_and_cost_rects(side: int) -> Array[Rect2]:
+	var found: Array[Rect2] = []
+	var bar: PlayerInfoBar = _screen._own_bar if side == _screen.my_side else _screen._foe_bar
+	found.append(
+		_badge_rect(bar.position + PlayerInfoBar.MANA_BADGE_CENTER, PlayerInfoBar.MANA_BADGE_RADIUS)
+	)
+	if side == _screen.my_side:
+		for view: CardView in _screen._hand_views:
+			if view.visible and view.card != null:
+				found.append(_cost_badge_rect(view))
+	return found
+
+
+func _cost_badge_rect(view: CardView) -> Rect2:
+	var s: float = view._hand_scale()
+	var center := view.position + Vector2.ONE * HandCardPaint.GEM_INSET * s
+	return _badge_rect(center, HandCardPaint.GEM_RADIUS * s)
+
+
+## 盤面の1体の体力・攻撃力のバッジ(GameDesign.md 18章「数字の光」)。
+## 話題が「駒の体力と攻撃力」の段(読むだけ)でだけ使う。
+func unit_stat_rects(side: int, slot: int) -> Array[Rect2]:
+	var view := _screen.view_at(side, slot)
+	var y := CardView.PEDESTAL_CENTER_Y + 6.0
+	var r := CardView.STAT_RADIUS
+	var attack_center := view.position + Vector2(r + 2.0, y)
+	var health_center := view.position + Vector2(view.size.x - r - 2.0, y)
+	return [_badge_rect(attack_center, r), _badge_rect(health_center, r)] as Array[Rect2]
+
+
+## HPバーの矩形(GameDesign.md 18章「数字の光」)。話題が「相手HP」の段でだけ使う。
+func hp_bar_global_rect(side: int) -> Rect2:
+	var bar: PlayerInfoBar = _screen._own_bar if side == _screen.my_side else _screen._foe_bar
+	var local := bar.hp_bar_rect()
+	return Rect2(bar.position + local.position, local.size)
+
+
+## 反転権の残り回数を示す粒(GameDesign.md 18章「数字の光」)。話題が「反転権の残り」の
+## 段でだけ使う。
+func flip_right_gauge_rect() -> Rect2:
+	var gauge: FlipRightGauge = _screen._flip_right._gauge
+	return Rect2(gauge.position, FlipRightGauge.GAUGE_SIZE)
+
+
+func _badge_rect(center: Vector2, radius: float) -> Rect2:
+	return Rect2(center - Vector2.ONE * radius, Vector2.ONE * radius * 2.0)

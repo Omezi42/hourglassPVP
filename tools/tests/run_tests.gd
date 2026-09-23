@@ -23,6 +23,7 @@ const RankTests = preload("res://tools/tests/rank_tests.gd")
 const MatchStatsSyncTests = preload("res://tools/tests/match_stats_sync_tests.gd")
 const LabTests = preload("res://tools/tests/lab_tests.gd")
 const FunnelTests = preload("res://tools/tests/funnel_tests.gd")
+const TutorialScriptTests = preload("res://tools/tests/tutorial_script_tests.gd")
 
 var _failures := 0
 
@@ -66,6 +67,7 @@ func _run() -> void:
 	await FunnelTests.new().run(_assert_true)
 	var waiting_cpu := WaitingCpuTests.new()
 	await waiting_cpu.run(_assert_true)
+	TutorialScriptTests.new().run(_assert_true)
 
 	if _failures == 0:
 		print("tests passed")

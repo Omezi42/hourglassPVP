@@ -162,3 +162,20 @@ static func overlays(screen: CardMatchScreen) -> void:
 			screen._solo.close()
 			screen.back_pressed.emit()
 	)
+
+
+## 誘導対局を始める(GameDesign.md 18章)。台本(`TutorialScriptData`、Architecture.md
+## 4.1.5節)の山札を切らずに使い、プレイヤーが先手、CPUは初級で固定する。
+static func start_tutorial(screen: CardMatchScreen) -> void:
+	var script: TutorialScriptData = load(TutorialScriptData.RESOURCE_PATH)
+	screen.start_cpu_match(
+		script.deck_a(), script.deck_b(), CardCpuStrategy.Difficulty.BEGINNER, true
+	)
+	screen._tutorial.watch(screen, screen.state, screen.my_side)
+
+
+## `start_cpu_match()` が誘導対局用に一度だけ立てたフラグを対局へ渡し、すぐ戻す
+## (GameDesign.md 18章)。`card_match_screen.gd` が1000行の上限に達しているための切り出し。
+static func apply_keep_deck_order(screen: CardMatchScreen, state: MatchState) -> void:
+	state.keep_deck_order = screen._keep_deck_order
+	screen._keep_deck_order = false

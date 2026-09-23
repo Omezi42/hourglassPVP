@@ -1,7 +1,9 @@
 class_name CardMatchTutorial
 extends Control
 ## 誘導対局の指示(GameDesign.md 18章)。実際の対局画面でそのまま手を指させ、
-## 段階ごとに1つだけ操作を求める。
+## 8段(`TutorialSteps.STEPS`)ごとに1つだけ操作を求める。段の文言・完了の合図・
+## focus・数字の光は `scripts/data/tutorial_steps.gd` へ切り出してある
+## (Architecture.md 4.1.5節「8段へ増えると本体の処理と混ざって読みにくくなるため」)。
 ##
 ## **話すのはマスコットのすなえる**(GameDesign.md 18章)。指示だけが帯に出ていると
 ## 話者がおらず、画面が一方的に命令しているように読めるため。指示の文は短く保つこと。
@@ -28,62 +30,22 @@ const BAND_RECT := Rect2(206, 74, 824, 64)
 const MULLIGAN_BAND_TOP := 470.0
 const PORTRAIT_SIZE := Vector2(54, 64)
 ## 進み具合の点。**終わりが見えないと、いつまで案内が続くのか分からない**
-## (GameDesign.md 18章)。「つぎへ」の左へ小さく並べる。
-const DOTS_WIDTH := 56.0
-const DOT_RADIUS := 4.0
-const DOT_STEP := 11.0
+## (GameDesign.md 18章)。「つぎへ」の左へ小さく並べる。8段ぶん並ぶため5段のときより詰める。
+const DOTS_WIDTH := 72.0
+const DOT_RADIUS := 3.5
+const DOT_STEP := 9.0
 ## いま触るものを囲む枠(GameDesign.md 18章)。手は塞がず、視線だけを誘導する。
 const FOCUS_COLOR := Color(0.55, 0.9, 1.0)
 const FOCUS_PERIOD := 1.2
 const FOCUS_GROW := 5.0
 const FOCUS_WIDTH := 2.5
 const FOCUS_RINGS := [0, 1]
+## 説明を読んでいる間に光らせる数字(GameDesign.md 18章「数字の光」)。操作を求める
+## 輪郭とは色を分け、押す場所と読む場所を取り違えさせない。
+const NUMBER_GLOW_COLOR := Color(1.0, 0.82, 0.35)
 const NEXT_SIZE := Vector2(88, 36)
 const BUTTON_MARGIN := 10.0
 
-## 段階の定義。`event` は完了とみなすシグナルの種類。
-const STEPS: Array[Dictionary] = [
-	{
-		"event": "mulligan",
-		"focus": "",
-		"text": "こんにちは、ぼくすなえる! まずは初手だよ。いらないカードは押すと引き直せるんだ",
-		"done": "そのまま始めてもぜんぜんいいんだよ。ここからが対局だよ!",
-	},
-	{
-		"event": "play",
-		"focus": "hand",
-		"text": "手札の砂時計を、空いている台座へ出してみてね",
-		"done": "出したばかりの子はまだ動けないんだ。攻撃も反転も次のターンからだよ",
-	},
-	{
-		"event": "end_turn",
-		"focus": "end_turn",
-		"text": "つぎは画面右の「ターン終了」を押してみてね",
-		"done": "ターンを終えるたびに、砂が1粒ずつ落ちていくんだ",
-	},
-	{
-		"event": "attack",
-		"focus": "attack",
-		"text": "攻撃力がついたら、その子で相手を殴ってみてね",
-		"done": "攻撃はおたがいさま。殴った側も相手の攻撃力ぶん削れちゃうんだ",
-	},
-	{
-		"event": "flip",
-		"focus": "flip",
-		"text": "さいごは反転だよ。自分の子を選んで「反転」を押してみてね",
-		"done": "攻撃力が体力を追い越したら返し時だよ。長生きするほど強くなるんだ",
-	},
-]
-## 出せる札が1枚も無いときに代わりに出す案内(GameDesign.md 18章)。1ターン目はマナが
-## 1しか無いため、手札によっては「出してみてね」と言われても1枚も出せない。
-const STUCK_TEXT := "いまはマナが足りないみたい。「ターン終了」を押すと、つぎのターンはマナが1つ増えるよ"
-
-## 締めのひと言(GameDesign.md 18章)。何の区切りも無く案内が消えると、
-## 続きを投げ出されたように読める。**これ以上は喋らせない**。
-const OUTRO_TEXT := "あとは自由に遊んでみてね。相手のHPを0にしたら勝ちだよ。駒を押せば効果も読めるよ!"
-
-## この対局が誘導対局として始まったか。`close()` で帯を閉じた後も対局は続くため、
-## 結果パネルの主/副の入れ替え(GameDesign.md 18章)には `visible` ではなくこちらを使う。
 var ran_this_match := false
 
 var _state: MatchState
@@ -111,6 +73,17 @@ var _foe_hp := 0
 ## 求めた操作が今できない(出せる札が1枚も無い)状態か。
 var _stuck := false
 
+## 1度だけの補足(GameDesign.md 18章)。待ち行列1本で持ち、段階の説明を読んでいない
+## 時にだけ出す。出したかどうかはこの対局の中だけで覚え、保存しない。
+var _callout_queue: Array[String] = []
+var _callout_active := ""
+var _callout_sand_death_shown := false
+var _callout_guard_shown := false
+## 直前に砂が落ちきった(ターン終了の1粒)枠。**戦闘によるダメージ死とは別経路**
+## (Architecture.md 4.1.5節)。`turn_started` のたびに空にするため、他ターンの
+## 値が誤って戦闘死と一致することはない。
+var _tick_pending: Dictionary = {}
+
 
 func _ready() -> void:
 	visible = false
@@ -127,19 +100,35 @@ func watch(screen: CardMatchScreen, state: MatchState, my_side: int) -> void:
 	_index = 0
 	_showing_done = false
 	_outro = false
+	_callout_queue = []
+	_callout_active = ""
+	_callout_sand_death_shown = false
+	_callout_guard_shown = false
+	_tick_pending = {}
 	ran_this_match = true
 	state.unit_played.connect(func(side: int, _slot: int) -> void: _advance_if("play", side))
+	state.unit_played.connect(_on_unit_played_for_callout)
 	state.attack_performed.connect(
-		func(side: int, _slot: int, _target: int) -> void: _advance_if("attack", side)
+		func(side: int, _slot: int, target_slot: int) -> void:
+			_advance_if("attack", side, "face" if target_slot < 0 else "unit")
 	)
 	state.unit_flipped.connect(func(side: int, _slot: int) -> void: _advance_if("flip", side))
+	state.flip_right_used.connect(
+		func(actor_side: int, _target_side: int, _slot: int) -> void:
+			_advance_if("flip_right", actor_side)
+	)
 	# ターンを終えたことは「相手の手番が始まった」ことで分かる。
 	state.turn_started.connect(
 		func(side: int) -> void: _advance_if("end_turn", MatchState.other_side(side))
 	)
+	state.turn_started.connect(func(_side: int) -> void: _tick_pending.clear())
 	state.mulligan_finished.connect(func() -> void: _advance_if("mulligan", _my_side))
 	state.unit_damaged.connect(_on_unit_damaged)
 	state.hp_changed.connect(_on_hp_changed)
+	state.unit_ticked.connect(
+		func(side: int, slot: int) -> void: _tick_pending["%d:%d" % [side, slot]] = true
+	)
+	state.unit_destroyed.connect(_on_unit_destroyed)
 	# マリガンの間は暗幕より手前へ、確定ボタンの下へ下げて出す(GameDesign.md 18章)。
 	_place_band(state.mulligan_pending)
 	visible = true
@@ -165,10 +154,13 @@ func _place_band(during_mulligan: bool) -> void:
 	)
 
 
-func _advance_if(event: String, side: int) -> void:
-	if not visible or side != _my_side or _index >= STEPS.size():
+func _advance_if(event: String, side: int, target: String = "") -> void:
+	if not visible or side != _my_side or _index >= TutorialSteps.STEPS.size():
 		return
-	if _showing_done or STEPS[_index]["event"] != event:
+	var step: Dictionary = TutorialSteps.STEPS[_index]
+	if _showing_done or str(step["event"]) != event:
+		return
+	if event == "attack" and str(step.get("target", "")) != target:
 		return
 	_showing_done = true
 	_fact = _fact_for(event)
@@ -214,7 +206,7 @@ func _fact_for(event: String) -> String:
 	return ""
 
 
-## 自分の場に残っている駒を1体返す。誘導対局は段階1で1体出すところから始まるため、
+## 自分の場に残っている駒を1体返す。段階1で1体出すところから始まるため、
 ## 枠の順に最初に見つかったものでよい。
 func _newest_unit() -> CardInstance:
 	for slot in MatchState.BOARD_SIZE:
@@ -222,6 +214,13 @@ func _newest_unit() -> CardInstance:
 		if unit != null:
 			return unit
 	return null
+
+
+func _slot_of(side: int, unit: CardInstance) -> int:
+	for slot in MatchState.BOARD_SIZE:
+		if _state.board[side][slot] == unit:
+			return slot
+	return -1
 
 
 func _begin_attack_count() -> void:
@@ -260,9 +259,55 @@ func _update_attack_fact() -> void:
 	_refresh()
 
 
+## 自分の駒が「戦闘ではなくターン終了の砂落ち」で割れた初回(GameDesign.md 18章)。
+func _on_unit_destroyed(side: int, slot: int, _card: CardData) -> void:
+	var key := "%d:%d" % [side, slot]
+	if side == _my_side and _tick_pending.get(key, false) and not _callout_sand_death_shown:
+		_callout_sand_death_shown = true
+		_callout_queue.append(TutorialSteps.CALLOUT_OWN_UNIT_DIED_TO_SAND)
+		_try_show_callout()
+	_tick_pending.erase(key)
+
+
+## 相手が守護を持つ駒を出した初回(GameDesign.md 18章)。
+func _on_unit_played_for_callout(side: int, slot: int) -> void:
+	if side == _my_side or _callout_guard_shown:
+		return
+	var unit: CardInstance = _state.board[side][slot]
+	if unit != null and unit.has_keyword(CardEnums.Keyword.GUARD):
+		_callout_guard_shown = true
+		_callout_queue.append(TutorialSteps.CALLOUT_FOE_GUARD_PLAYED)
+		_try_show_callout()
+
+
+## 待ち行列の先頭を出す。**段階の説明を読んでいる間([つぎへ]表示中)に起きたら、
+## それを閉じた後に出す**(GameDesign.md 18章)。締めの後(帯を閉じた後)でも出すため、
+## 閉じていれば帯を再表示する。
+func _try_show_callout() -> void:
+	if not _callout_active.is_empty() or _callout_queue.is_empty():
+		return
+	if not _outro and _showing_done:
+		return
+	_callout_active = _callout_queue.pop_front()
+	visible = true
+	_refresh()
+
+
+func _dismiss_callout() -> void:
+	_callout_active = ""
+	if _outro:
+		visible = false
+	_refresh()
+	_try_show_callout()
+
+
 func _on_next_pressed() -> void:
+	if not _callout_active.is_empty():
+		_dismiss_callout()
+		return
 	if _outro:
 		close()
+		_try_show_callout()
 		return
 	if not _showing_done:
 		return
@@ -270,27 +315,50 @@ func _on_next_pressed() -> void:
 	_counting_attack = false
 	_fact = ""
 	_index += 1
-	if _index >= STEPS.size():
+	_enter_step()
+
+
+## 次の段へ入る。**「読むだけ」の段(`event` が空)は操作を待たず、
+## 入った時点で「つぎへ」を出す**(GameDesign.md 18章「上に残った砂が体力…」)。
+func _enter_step() -> void:
+	if _index >= TutorialSteps.STEPS.size():
 		_outro = true
 		FunnelService.reach(FunnelService.TUTORIAL_CLEAR)
 		UiState.mark_tutorial_done()
+		_refresh()
+		return
+	if str(TutorialSteps.STEPS[_index].get("event", "")).is_empty():
+		_showing_done = true
 	_refresh()
 
 
 func _refresh() -> void:
+	if not _callout_active.is_empty():
+		_label.text = _callout_active
+		_next_button.text = "とじる" if _outro else "つぎへ"
+		_next_button.visible = true
+		_dots.queue_redraw()
+		queue_redraw()
+		return
 	if _outro:
-		_label.text = OUTRO_TEXT
+		_label.text = TutorialSteps.OUTRO_TEXT
 		_next_button.text = "とじる"
 		_next_button.visible = true
 		_dots.queue_redraw()
+		queue_redraw()
 		return
 	_next_button.text = "つぎへ"
 	_next_button.visible = _showing_done
-	var line := str(STEPS[_index]["done" if _showing_done else "text"])
-	if _stuck and not _showing_done:
-		line = STUCK_TEXT
+	var step: Dictionary = TutorialSteps.STEPS[_index]
+	var is_read_step := str(step.get("event", "")).is_empty()
+	var line: String = (
+		str(step["text"]) if is_read_step else str(step["done" if _showing_done else "text"])
+	)
+	if _stuck and not _showing_done and not is_read_step:
+		line = TutorialSteps.STUCK_TEXT
 	_label.text = (_fact + line) if _showing_done and not _fact.is_empty() else line
 	_dots.queue_redraw()
+	queue_redraw()
 
 
 func _build() -> void:
@@ -369,7 +437,9 @@ func _process(delta: float) -> void:
 func _is_stuck() -> bool:
 	if _screen == null or _state == null or _showing_done or _outro:
 		return false
-	if _index >= STEPS.size() or str(STEPS[_index].get("focus", "")) != "hand":
+	if _index >= TutorialSteps.STEPS.size():
+		return false
+	if str(TutorialSteps.STEPS[_index].get("focus", "")) != "hand":
 		return false
 	if _state.current_turn != _my_side or _state.is_match_over():
 		return false
@@ -378,10 +448,11 @@ func _is_stuck() -> bool:
 
 ## 何段階のうちどこにいるかを点で示す(GameDesign.md 18章)。
 func _draw_dots() -> void:
-	var width: float = DOT_STEP * (STEPS.size() - 1)
+	var count := TutorialSteps.STEPS.size()
+	var width: float = DOT_STEP * (count - 1)
 	var left: float = (DOTS_WIDTH - width) * 0.5
 	var y: float = _dots.size.y * 0.5
-	for i in STEPS.size():
+	for i in count:
 		var at := Vector2(left + DOT_STEP * i, y)
 		var done: bool = _outro or i < _index or (i == _index and _showing_done)
 		if done:
@@ -391,51 +462,100 @@ func _draw_dots() -> void:
 			_dots.draw_arc(at, DOT_RADIUS, 0.0, TAU, 16, Color(UiPalette.GLOW_AMBER, 0.7), 1.2)
 
 
-## いま触るものを囲む(GameDesign.md 18章)。**手は塞がず、視線だけを誘導する**ため、
+## いま触るもの(輪郭)と、いま話題にしている数字(色違いの光)を描く
+## (GameDesign.md 18章)。**手は塞がず、視線だけを誘導する**ため、
 ## `mouse_filter` は IGNORE のまま枠だけを描く。
 func _draw() -> void:
-	var rects := _focus_rects()
-	if rects.is_empty():
-		return
 	var pulse: float = 0.5 + 0.5 * sin(_elapsed * TAU / FOCUS_PERIOD)
-	for rect: Rect2 in rects:
+	for rect: Rect2 in _focus_rects():
 		for ring in FOCUS_RINGS:
 			var spread: float = 2.0 + FOCUS_GROW * (float(ring) + pulse)
 			var alpha: float = 0.8 / (float(ring) + 1.0)
 			draw_rect(rect.grow(spread), Color(FOCUS_COLOR, alpha), false, FOCUS_WIDTH)
+	for rect: Rect2 in _number_rects():
+		var spread: float = 2.0 + FOCUS_GROW * pulse
+		draw_rect(rect.grow(spread), Color(NUMBER_GLOW_COLOR, 0.85), false, FOCUS_WIDTH)
 
 
 ## 光らせる場所。**説明を読んでいる間(「つぎへ」が出ている間)は光らせない**。
 ## 次に何をするかはまだ示していないため。
 func _focus_rects() -> Array[Rect2]:
 	var found: Array[Rect2] = []
-	if _screen == null or _state == null or _showing_done or _outro:
+	if (
+		_screen == null
+		or _state == null
+		or _showing_done
+		or _outro
+		or not _callout_active.is_empty()
+	):
 		return found
-	if _index >= STEPS.size() or _state.current_turn != _my_side or _state.is_match_over():
+	if (
+		_index >= TutorialSteps.STEPS.size()
+		or _state.current_turn != _my_side
+		or _state.is_match_over()
+	):
 		return found
-	match str(STEPS[_index].get("focus", "")):
+	match str(TutorialSteps.STEPS[_index].get("focus", "")):
 		"hand":
 			# 出せる札が無いときは、代わりにターン終了を示す(GameDesign.md 18章)。
 			if _stuck:
 				return [_screen._geometry.end_turn_button_rect()] as Array[Rect2]
 			# **いま出せる手札だけを囲む。**空き枠まで一緒に光らせると盤面の大半が
 			# 枠だらけになり、どれを押せばよいのか却って分からない(実際に描いて確認した)。
-			# 押した後に空き枠が光るのは通常の操作のとおり(GameDesign.md 9章)。
 			found.append_array(_screen._geometry.playable_hand_rects())
 		"end_turn":
 			found.append(_screen._geometry.end_turn_button_rect())
-		"attack":
+		"attack_unit":
 			for slot in MatchState.BOARD_SIZE:
 				var unit: CardInstance = _state.board[_my_side][slot]
 				if unit != null and unit.can_attack():
-					found.append(_slot_rect(slot))
+					found.append(_slot_rect(_my_side, slot))
+		"attack_face":
+			found.append(_screen._geometry.hp_bar_global_rect(MatchState.other_side(_my_side)))
 		"flip":
 			for slot in MatchState.BOARD_SIZE:
 				if _state.can_flip(_my_side, slot):
-					found.append(_slot_rect(slot))
+					found.append(_slot_rect(_my_side, slot))
+		"flip_right":
+			for side in [_my_side, MatchState.other_side(_my_side)]:
+				for slot in MatchState.BOARD_SIZE:
+					var unit: CardInstance = _state.board[side][slot]
+					if unit != null and unit.flippable():
+						found.append(_slot_rect(side, slot))
 	return found
 
 
-func _slot_rect(slot: int) -> Rect2:
-	var view := _screen.view_at(_my_side, slot)
+## いま話題にしている数字(GameDesign.md 18章「数字の光」)。「つぎへ」表示中
+## (段階を終えたときの説明)か、読むだけの段のときだけ光らせる。
+func _number_rects() -> Array[Rect2]:
+	var found: Array[Rect2] = []
+	if _screen == null or _state == null or _outro or not _callout_active.is_empty():
+		return found
+	if _index >= TutorialSteps.STEPS.size():
+		return found
+	var step: Dictionary = TutorialSteps.STEPS[_index]
+	var topic := str(step.get("topic", ""))
+	if topic.is_empty():
+		return found
+	var is_read_step := str(step.get("event", "")).is_empty()
+	if not is_read_step and not _showing_done:
+		return found
+	match topic:
+		"mana":
+			found.append_array(_screen._geometry.mana_and_cost_rects(_my_side))
+		"stats":
+			var unit := _newest_unit()
+			if unit != null:
+				var slot := _slot_of(_my_side, unit)
+				if slot >= 0:
+					found.append_array(_screen._geometry.unit_stat_rects(_my_side, slot))
+		"foe_hp":
+			found.append(_screen._geometry.hp_bar_global_rect(MatchState.other_side(_my_side)))
+		"flip_right":
+			found.append(_screen._geometry.flip_right_gauge_rect())
+	return found
+
+
+func _slot_rect(side: int, slot: int) -> Rect2:
+	var view := _screen.view_at(side, slot)
 	return Rect2(view.position, view.size)
