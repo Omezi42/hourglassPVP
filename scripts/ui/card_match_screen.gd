@@ -256,7 +256,7 @@ func _reset_for_new_match() -> void:
 	if _mulligan != null:
 		_mulligan.close()
 	if _tutorial != null:
-		_tutorial.visible = false
+		_tutorial.reset_for_new_match()
 	set_process(true)
 	if state != null and is_instance_valid(state):
 		state.queue_free()
@@ -995,6 +995,6 @@ func _on_match_ended(_winner: int) -> void:
 		return
 	# 終局後の後始末(リプレイ・砂金・戦績)は `CardMatchOutcome` が持つ。
 	var reward := _outcome.finish(_match_kind, _own_deck)
-	_result.show_for(
-		state, my_side, state.turn_count, reward, _match_kind == CurrencyRules.MatchKind.CPU
-	)
+	var can_rematch := _match_kind == CurrencyRules.MatchKind.CPU
+	var is_tutorial := _tutorial.ran_this_match
+	_result.show_for(state, my_side, state.turn_count, reward, can_rematch, is_tutorial)

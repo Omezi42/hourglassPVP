@@ -169,12 +169,10 @@ func _ready() -> void:
 	# ない場合(通常はこちら)、デッキタブの枠がずっと裏に残ったまま重なって見える
 	# (実際に「おぼえる」の見出しの裏へ「カード」の見出しが透けていた)。
 	deck_tab.visible = false
-	# 初回起動時だけ「おぼえる」から始める(GameDesign.md 9章)。読了は測らない。
-	# **2回目以降は「たたかう」**——ホームを開いて最初に見たいのは対局であり、
-	# デッキ編集は準備であって目的ではない。
-	var first_visit := not UiState.has_seen_home()
+	# ホームは常に「たたかう」を初期選択する(GameDesign.md 9章)。
+	# 初めての人はホームを経ずに誘導対局へ直行し、ホームへ来るのはそこから戻ったときのため。
 	UiState.mark_home_seen()
-	_select_tab(TAB_LEARN if first_visit else TAB_BATTLE)
+	_select_tab(TAB_BATTLE)
 	refresh_account()
 
 
