@@ -118,7 +118,7 @@ Main
 
 v1.0(位相制)の画面・クラス・`data/hourglasses/*.tres` は削除済み。`ReplayListScreen` は `seed` を持つ棋譜だけを一覧に出す。
 
-- `TitleScreen`(`.tscn`):背景・ロゴ・開始の導線だけを持ち `start_requested` を出す。ロゴは `assets/title/logo.png` があればそれ、無ければ `TitleLogo`(コード描画)を `ResourceLoader.exists()` で分岐(`preload` だと無い時点でコンパイルが通らない)。背景も同様
+- `TitleScreen`(`.tscn`):背景・ロゴ・開始の導線だけを持ち `start_requested` を出す。ロゴは `assets/title/logo.png` があればそれ、無ければ `TitleLogo`(コード描画。縁と落ち影は自身が、金箔の面は部品ごとの子 `FoilLayer`(`foil_gradient.gdshader` で縦グラデーションを**掛け算**し、親のmodulateによるフェード・光を残す)が描く)を `ResourceLoader.exists()` で分岐(`preload` だと無い時点でコンパイルが通らない)。背景も同様
 - `SandTransition`:タイトル→ホーム専用。`Main` が1個生成して最前面へ置き `cover()` / `reveal()` を await。砂面は折れ線 + 頂点カラーのグラデーション(段ごとの単色だと縞に見える)。**アンカーは `anchor_right` / `anchor_bottom` へ直接代入**(11章)。砂の間は `mouse_filter = STOP`
 - `Main._show_only()`:クロスフェード(`modulate:a` の Tween、実行中の Tween は kill してから作り直す、遷移中は透明な `ColorRect` で入力を塞ぐ)。タイトル→ホームだけ `_on_title_start_requested()` が「ロゴの演出 → `cover()` → `_show_only()` → `reveal()`」。`.tscn` を持たない画面は `_ready()` で生成して `_screens` へ
 - BGMの切り替えも `_show_only()` から1箇所で(`_track_for()`。9章)
