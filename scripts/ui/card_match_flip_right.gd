@@ -7,6 +7,8 @@ extends RefCounted
 ## `card_match_screen.gd` が1000行の上限に達しているため切り出した
 ## (`CardMatchSpell` 等と同じ流儀)。ボタンの生成・対象選択・適用をこの1箇所へ集める。
 
+const ICON := preload("res://assets/ui/icons/flip_right.png")
+
 var _screen: CardMatchScreen
 var _button: RoundActionButton
 var _gauge: FlipRightGauge
@@ -21,7 +23,7 @@ func _init(screen: CardMatchScreen) -> void:
 	var diameter := ActionColumnLayout.FLIP_RIGHT_DIAMETER
 	_button = CardMatchBuild.add_round_button(screen, "反転権", diameter, false)
 	_button.position = CardMatchBuild.round_button_pos(diameter, ActionColumnLayout.FLIP_RIGHT_Y)
-	_button.emblem = UiPaint.Emblem.SWAP_ARROWS
+	_button.emblem_texture = ICON
 	_button.visible = false
 	_button.pressed.connect(_on_pressed)
 	# 自分・相手の残り回数の粒(scratchpad/match_rebuild_phase4.md)。再生・観戦でも
