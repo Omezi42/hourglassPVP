@@ -10,6 +10,7 @@ const V5VocabularyTests = preload("res://tools/tests/v5_vocabulary_tests.gd")
 const StillTimeTests = preload("res://tools/tests/still_time_tests.gd")
 const V5OnlineTests = preload("res://tools/tests/v5_online_tests.gd")
 const VersionMatchTests = preload("res://tools/tests/version_match_tests.gd")
+const WaitingCpuTests = preload("res://tools/tests/waiting_cpu_tests.gd")
 const HourglassArtTests = preload("res://tools/tests/hourglass_art_tests.gd")
 const MatchRecordTests = preload("res://tools/tests/match_record_tests.gd")
 const PuzzleMissionTests = preload("res://tools/tests/puzzle_mission_tests.gd")
@@ -61,6 +62,8 @@ func _run() -> void:
 	await match_records.run(_assert_true)
 	await MatchStatsSyncTests.new().run(_assert_true)
 	await LabTests.new().run(_assert_true)
+	var waiting_cpu := WaitingCpuTests.new()
+	await waiting_cpu.run(_assert_true)
 
 	if _failures == 0:
 		print("tests passed")

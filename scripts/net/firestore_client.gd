@@ -209,6 +209,23 @@ func query_ranked_leaderboard(collection: String, season: String, limit: int) ->
 	)
 
 
+## order_field の新しい順に limit 件を、fields のフィールドだけ取ってくる
+## (待っている間のCPU戦のデッキを対局の記録から選ぶ。Architecture.md 6.7節)。
+## 単一フィールドの並べ替えだけなので複合インデックスを要求しない。
+func query_recent(collection: String, order_field: String, limit: int, fields: Array) -> Array:
+	var projection: Array = []
+	for field in fields:
+		projection.append({"fieldPath": field})
+	return await _run_structured_query(
+		{
+			"from": [{"collectionId": collection}],
+			"select": {"fields": projection},
+			"orderBy": [{"field": {"fieldPath": order_field}, "direction": "DESCENDING"}],
+			"limit": limit
+		}
+	)
+
+
 func _run_structured_query(structured_query: Dictionary) -> Array:
 	var result: Array = await _post_raw(
 		_base_url() + ":runQuery", {"structuredQuery": structured_query}

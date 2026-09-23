@@ -33,6 +33,8 @@ var card_rank_screen: CardRankScreen
 var card_cpu_difficulty_picker: CardCpuDifficultyPicker
 ## 掲示板〈ラボ〉(GameDesign.md 29章)。
 var card_lab_screen: CardLabScreen
+## 待っている間のCPU戦(GameDesign.md 11章)。
+var waiting_cpu: WaitingCpuMatch
 
 var _match_return_screen: Control
 ## デッキ選択画面で確定するまで待たせている対局の導線(ランダム/CPU)。
@@ -187,6 +189,14 @@ func _ready() -> void:
 	card_cpu_difficulty_picker = CardCpuDifficultyPicker.new()
 	add_child(card_cpu_difficulty_picker)
 	card_cpu_difficulty_picker.picked.connect(_start_cpu_match)
+	# 相手が来た知らせは対局画面の上に重ねるため、同じく対局画面より手前に置く。
+	var waiting_prompt := WaitingCpuPrompt.new()
+	add_child(waiting_prompt)
+	waiting_cpu = WaitingCpuMatch.new(waiting_prompt)
+	add_child(waiting_cpu)
+	waiting_cpu.match_chosen.connect(_on_waiting_cpu_match_chosen)
+	for screen: Control in [card_random_match_screen, card_ranked_match_screen]:
+		screen.cpu_requested.connect(_on_waiting_cpu_requested.bind(screen))
 	_transition_blocker = _make_transition_blocker()
 	add_child(_transition_blocker)
 	_sand_transition = SandTransition.new()
@@ -276,8 +286,13 @@ func _on_match_back() -> void:
 	# 対局は待機状態(ボタンの無効化)を残したまま始まるため、戻った時点で解く。
 	home_screen.reset_battle_tab()
 	card_room_screen.reset_after_match()
-	card_random_match_screen.reset_after_match()
-	card_ranked_match_screen.reset_after_match()
+	# 待っている間のCPU戦から戻ったときだけ、キューを残して待機を続ける(GameDesign.md 11章)。
+	var waiting := waiting_cpu.finish()
+	for screen: Control in [card_random_match_screen, card_ranked_match_screen]:
+		if screen == waiting:
+			screen.resume_waiting()
+		else:
+			screen.reset_after_match()
 
 
 func _on_account_requested(from_title: bool) -> void:
@@ -396,6 +411,25 @@ func _on_cpu_match_deck_requested() -> void:
 	_request_battle(func() -> void: card_cpu_difficulty_picker.open())
 
 
+## 待機画面の「待っている間CPUと対戦する」(GameDesign.md 11章)。CPUのデッキを読む間に
+## キャンセル・マッチ成立で待機画面を離れていたら始めない。
+func _on_waiting_cpu_requested(screen: Control) -> void:
+	var deck: Array = await WaitingCpuDeck.pick(NetSession.client)
+	if _active_screen != screen or screen.queue == null:
+		return
+	waiting_cpu.begin(screen)
+	card_match_screen.start_cpu_match(CardDeckSave.selected_deck(), deck)
+	_match_return_screen = screen
+	_show_only(card_match_screen)
+
+
+## 知らせで「マッチングする」を選んだ。CPU戦を打ち切り、待機画面で通常の待機へ戻す。
+func _on_waiting_cpu_match_chosen(screen: Control) -> void:
+	card_match_screen.abandon_match()
+	_show_only(screen, true)
+	screen.resume_waiting()
+
+
 ## デッキ選択画面で1つ選んだ。以後の初期値として覚えてから、待たせていた導線へ進む。
 func _on_deck_picked(index: int) -> void:
 	CardDeckSave.set_selected_index(index)
@@ -480,6 +514,7 @@ func _on_screen_guide_requested() -> void:
 ## そのまま対局へ入る。is_room は砂金の獲得量(GameDesign.md 15章)、
 ## opponent_uid は相手の表示名(14章)に使う。
 func _on_online_match_found(match_id: String, my_side: int, opponent_uid: String) -> void:
+	waiting_cpu.finish()
 	card_match_screen.start_online_match(
 		CardDeckSave.selected_deck(), NetSession.client, match_id, my_side, false, opponent_uid
 	)
@@ -490,6 +525,7 @@ func _on_online_match_found(match_id: String, my_side: int, opponent_uid: String
 ## ランクマッチ(GameDesign.md 28章)。オンライン対戦の経路(配置フェーズ無し)は
 ## フリーマッチと同じで、`is_ranked`だけを立てて段位を対局結果に反映させる。
 func _on_ranked_match_found(match_id: String, my_side: int, opponent_uid: String) -> void:
+	waiting_cpu.finish()
 	card_match_screen.start_online_match(
 		CardDeckSave.selected_deck(),
 		NetSession.client,

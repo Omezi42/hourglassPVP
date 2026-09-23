@@ -8,6 +8,8 @@ extends Control
 signal back_pressed
 ## 対戦が成立した。`Main._on_ranked_match_found()` がそのまま受け取れる形にしてある。
 signal matched(match_id: String, my_side: int, opponent_uid: String)
+## 「待っている間CPUと対戦する」(GameDesign.md 11章)。`Main` がCPU戦を始める。
+signal cpu_requested
 ## ヘッダーの「ランキング」から、段位・ランキング一覧の画面(`CardRankScreen`)を開く。
 signal ranking_requested
 
@@ -16,7 +18,13 @@ const CANCEL_SIZE := Vector2(220, 64)
 const CANCEL_GAP := 40.0
 const RANKING_BUTTON_SIZE := Vector2(168, 48)
 
+## 待っている間のCPU戦のキュー。`WaitingCpuMatch` がCPU戦の印を立て、相手の知らせを受ける。
+var queue: MatchmakingQueue:
+	get:
+		return _queue if is_instance_valid(_queue) else null
+
 var _queue: RankedMatchmakingQueue
+var _cpu_offer: WaitingCpuOffer
 var _busy := false
 var _status_base_text := ""
 var _content_rect: Rect2
@@ -66,6 +74,8 @@ func _build() -> void:
 	_cancel_button.position = Vector2(
 		_content_rect.get_center().x - CANCEL_SIZE.x * 0.5, _cancel_button_top()
 	)
+	_cpu_offer = WaitingCpuOffer.new(self, _cancel_button)
+	_cpu_offer.requested.connect(func() -> void: cpu_requested.emit())
 
 	# 表彰式は結果パネルより手前に描かれる必要があるため最後の子にする
 	# (Godotは後の子ほど手前に描く。Architecture.md 11章)。
@@ -93,6 +103,7 @@ func begin_match() -> void:
 	_queue.failed.connect(_fail)
 	_queue.version_mismatch.connect(_on_version_mismatch)
 	_queue.join()
+	_cpu_offer.arm(WaitingCpuOffer.FIRST_DELAY_SECONDS)
 
 
 func _refresh_tier_label() -> void:
@@ -105,6 +116,15 @@ func _refresh_tier_label() -> void:
 	_tier_label.position = Vector2(
 		_content_rect.get_center().x - half_width, _content_rect.position.y - 6.0
 	)
+
+
+## 待っている間のCPU戦から戻ってきた。キューは残したまま、通常の待機に復帰する。
+## 待機が既に失敗で終わっていれば(`_queue` が無い)、その文言のまま何もしない。
+func resume_waiting() -> void:
+	if queue == null:
+		return
+	_queue.set_cpu_playing(false)
+	_cpu_offer.arm(0.0)
 
 
 ## 対局から戻ってきたときに、成立時の状態(キューのノード)を解く。
@@ -122,6 +142,7 @@ func _discard_session() -> void:
 func _set_busy(busy: bool) -> void:
 	_busy = busy
 	_cancel_button.visible = busy
+	_cpu_offer.hide()
 	# キューに参加している間にランキングへ移ると、そのまま待機が残ったまま画面だけ
 	# 離れてしまう(キャンセルされない)。押せなくして、その状態を作らせない。
 	_ranking_button.disabled = busy
@@ -186,6 +207,7 @@ func _on_version_mismatch(newer_exists: bool) -> void:
 func _on_matched(match_id: String, opponent_uid: String) -> void:
 	_busy = false
 	_cancel_button.visible = false
+	_cpu_offer.hide()
 	var match_doc: Dictionary = await NetSession.client.get_document("matches/%s" % match_id)
 	var my_side: int
 	if match_doc.get("player_a", "") == NetSession.auth.uid:

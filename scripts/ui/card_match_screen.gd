@@ -226,6 +226,8 @@ func _reset_for_new_match() -> void:
 	_pile.visible = false
 	_selection.clear()
 	_cpu_timer.stop()
+	_cpu = null
+	_cpu_followup = false
 	if _emote != null:
 		_emote.close_popup()
 	if _replay != null:
@@ -264,14 +266,7 @@ func _reset_for_new_match() -> void:
 	# (数秒〜タイムアウトまで数分かかりうる)、前の対局の駒・手札がそのまま
 	# 盤面に残り続ける。「対戦相手を待っています」の文言と実際に動く駒が同時に
 	# 見えるという、対局が壊れているようにしか見えない状態になっていた。
-	for view in _foe_slots:
-		view.clear()
-		view.selected = false
-		view.exhausted = false
-		view.ready_mark = false
-		view.preview_health = -1
-		view.preview_dead = false
-	for view in _own_slots:
+	for view in _foe_slots + _own_slots:
 		view.clear()
 		view.selected = false
 		view.exhausted = false
@@ -331,6 +326,11 @@ func start_cpu_match(deck_self: Array, deck_foe: Array, difficulty: int = -1) ->
 	}
 	_begin_state(deck_self, deck_foe, seed_value, true)
 	_start_cpu_mulligan()
+
+
+## 待っている間のCPU戦(GameDesign.md 11章)を、勝敗・砂金・戦績・リプレイを残さずに打ち切る。
+func abandon_match() -> void:
+	_reset_for_new_match()
 
 
 ## 誘導対局を始める(GameDesign.md 18章)。中身は通常のCPU戦で、指示を重ねるだけ。

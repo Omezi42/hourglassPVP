@@ -12,6 +12,9 @@ signal version_mismatch(newer_exists: bool)
 ## 募集をDiscordへ知らせられたかどうか(GameDesign.md 11章)。**文言としては出さず**、
 ## 届いたときだけ待機中の文言の横へ丸い印を添えるために使う。
 signal announce_result(ok: bool)
+## 待っている間のCPU戦の最中に、同じビルドの他の待機者がいる(GameDesign.md 11章)。
+## CPU戦中は掴みに行かないため、画面へ知らせて「マッチングする」を選ばせる。
+signal others_waiting(uids: Array)
 
 const COLLECTION := "matchmaking_queue"
 const POLL_INTERVAL_SECONDS := 2.0
@@ -28,6 +31,12 @@ const ANNOUNCE_RETRY_SECONDS := 30.0
 
 var client: FirestoreClient
 var auth: FirebaseAuth
+## 待合室のコレクション。ランクマッチは派生クラスで差し替える。
+var collection := COLLECTION
+## 待機側になったらDiscordへ募集を知らせるか(ランクマッチは知らせない)。
+var announces := true
+## 待っている間のCPU戦をしているか。立っている間は掴まず、掴まれない。
+var cpu_playing := false
 var _my_match_id: String = ""
 ## 募集の知らせが届いたか。届くまでは間を置いて試し直す(GameDesign.md 11章)。
 var _announced := false
@@ -42,6 +51,7 @@ func _init(p_client: FirestoreClient, p_auth: FirebaseAuth) -> void:
 
 func join() -> void:
 	_cancelled = false
+	cpu_playing = false
 	_my_match_id = ""
 	_announced = false
 	_announce_next_at = 0.0
@@ -50,7 +60,8 @@ func join() -> void:
 		{
 			"joined_at": Time.get_unix_time_from_system(),
 			"match_id": "",
-			"build": GameVersion.build_id()
+			"build": GameVersion.build_id(),
+			"cpu": false
 		}
 	)
 	if not joined:
@@ -65,7 +76,12 @@ func join() -> void:
 		# ここへ来た時点で「待機側になった」ことが確定する。即座にマッチが成立した
 		# 場合は上で return しているため、条件分岐を足さずに仕様を満たせる。
 		# 応答は待たない(通信の成否でポーリングを遅らせないため)
-		if not _announced and _now() >= _announce_next_at and QueueNotifier.can_send():
+		if (
+			announces
+			and not _announced
+			and _now() >= _announce_next_at
+			and QueueNotifier.can_send()
+		):
 			# **届くまで諦めない。**以前は1回試して終わりで、失敗しても画面には
 			# 何も出ず、待っている側には「誰も来ない」としか見えなかった。
 			_announce_next_at = _now() + ANNOUNCE_RETRY_SECONDS
@@ -89,6 +105,12 @@ func _now() -> float:
 	return Time.get_unix_time_from_system()
 
 
+## CPU戦を始めた・打ち切ったときに呼ぶ。相手は `cpu` を見て掴むかどうかを決める。
+func set_cpu_playing(playing: bool) -> void:
+	cpu_playing = playing
+	await client.set_document(_doc_path(), {"cpu": playing})
+
+
 func cancel() -> void:
 	_cancelled = true
 	await client.delete_document(_doc_path())
@@ -103,9 +125,10 @@ func _try_claim_or_check() -> bool:
 	if my_assigned_match_id != "":
 		return await _finalize_match(my_assigned_match_id, "")
 
-	var candidates: Array = await client.query_waiting(COLLECTION, QUERY_LIMIT)
+	var candidates: Array = await client.query_waiting(collection, QUERY_LIMIT)
 	var newer_seen := false
 	var mismatch_seen := false
+	var others: Array = []
 	for candidate in candidates:
 		if candidate["id"] == auth.uid:
 			continue
@@ -120,12 +143,20 @@ func _try_claim_or_check() -> bool:
 			mismatch_seen = true
 			newer_seen = newer_seen or GameVersion.is_newer_than_mine(their_build)
 			continue
+		# 掴むのは両者ともCPU戦をしていないときだけ。CPU戦中の側は知らせるだけにする。
+		if cpu_playing:
+			others.append(candidate["id"])
+			continue
+		if bool(candidate["fields"].get("cpu", false)):
+			continue
 		var claimed: bool = await _claim(mine, candidate)
 		if claimed:
 			return await _finalize_match(_my_match_id, candidate["id"])
 		# 失敗時(相手または自分のドキュメントが競合更新された)は、次のポーリングで
 		# 最新状態から再試行する(古いmineのまま他候補を試さない)
 		return false
+	if cpu_playing:
+		others_waiting.emit(others)
 	if mismatch_seen:
 		version_mismatch.emit(newer_seen)
 	return false
@@ -178,4 +209,4 @@ func _finalize_match(match_id: String, known_opponent_uid: String) -> bool:
 
 
 func _doc_path(uid: String = "") -> String:
-	return "%s/%s" % [COLLECTION, uid if uid != "" else auth.uid]
+	return "%s/%s" % [collection, uid if uid != "" else auth.uid]
