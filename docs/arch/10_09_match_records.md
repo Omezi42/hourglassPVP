@@ -35,3 +35,36 @@
 往復する**(`CardListScreen` の並び替えと同じ流儀)。みんなの側は開いた時点で1度だけ
 `stats/global` を読み、結果をセッション内に控える。**読めなかったときはその旨を1行で出す**
 (自分の戦績はローカルにあるため、通信できなくても読める)。
+
+## 通過数(GameDesign.md 22章「来た人がどこまで進んだか」)
+
+| クラス | 責務 |
+|---|---|
+| `FunnelService`(`scripts/net/funnel_service.gd`, static) | 段階を通ったことを端末に控え、`stats/funnel` の日ごとの人数へ1を足す |
+
+**端末の控えは `user://funnel.json`。**`first_day`(初めて起動した日)・`sent`(送り終えた段階)・
+`pending`(通ったがまだ送れていない段階 → 通った日)を持つ。`reach()` は `sent` にも `pending` にも
+無い段階だけを `pending` へ入れ、続けて送る。**送れたものだけを `sent` へ移す**ため、
+送れなかった段階は次の `flush()`(起動時)で送り直される。
+
+**送り先は `stats/funnel` の1件。**`days` の下に `{"d20260925": {"launch": 3, ...}}` の形で持つ
+(キーの先頭を英字にするのは、Firestoreのフィールドパスで数字始まりを避けるため)。
+更新は `MatchRecordService._bump_stats()` と同じく **`updateTime` を前提条件にした `commit()`**。
+**送信は1本ずつ直列に行う**(起動時に「起動」と「別の日に来た」が同時に立つため、
+並べて送ると自分どうしで競合する)。送っている間に立った段階は、次の1本にまとめて送る。
+
+**呼ぶ場所**(いずれも `await` しない):
+
+| 段階(キー) | 場所 |
+|---|---|
+| `launch` / `return` | `Main._ready()` の `FunnelService.on_launch()` |
+| `home` | `Main._on_title_start_requested()` |
+| `tutorial_start` | `Main._on_tutorial_requested()` |
+| `tutorial_clear` | `CardMatchTutorial` が最後の段階を終えたとき |
+| `match_end` / `online_end` | `CardMatchOutcome.finish()`(種別がCPUか、それ以外か) |
+| `online_try` | `Main` のランダム・ランク・ルームの入口 |
+
+**サインインは `FunnelService` が送る直前に `NetSession.sign_in()` で行う。**起動しただけの人にも
+匿名アカウントができるが、段階を送るにはどのみちサインインが要る。
+`tools/analyze_matches.py --funnel` が `stats/funnel` を読み、期間を指定して段階ごとの人数と
+前の段階からの割合を出す。
