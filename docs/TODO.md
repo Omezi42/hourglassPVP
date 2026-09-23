@@ -10,15 +10,12 @@
 
 ---
 
-## 0. 待っている間のCPU対戦(2026-09-23・着手中)
+## 0. 待っている間のCPU対戦(2026-09-23・実装済み)
 
-仕様は GameDesign.md 11章「待っている間のCPU対戦」・28章、設計は Architecture.md 6.7節。
-オンライン対局は通算16局・直近7日0局で、ランダムマッチ・ランクマッチが成立していないため最優先。
+仕様は GameDesign.md 11章・28章、設計は Architecture.md 6.7節。
 
-- [ ] キューの `cpu` と `others_waiting`、`RankedMatchmakingQueue` を派生へ
-- [ ] 待機画面のボタン(`WaitingCpuOffer`)、CPUのデッキ(`WaitingCpuDeck`)
-- [ ] 知らせ(`WaitingCpuPrompt`)と `Main` の遷移、`CardMatchScreen.abandon_match()`
-- [ ] テスト: CPU戦中の待機者を掴まないこと・`others_waiting` を出すこと
+- [ ] 次回 `ビルドして` でWeb版へ反映し、Discord #お知らせ で紹介する
+- [ ] 反映から1〜2週後に `tools/analyze_matches.py --days 14` で人どうしの対局数が増えたかを見る
 
 ## 1. 対局画面の再構築(2026-09-21・着手中)
 
