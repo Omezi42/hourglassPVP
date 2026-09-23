@@ -63,7 +63,7 @@
 | 身構え | `CardMatchTargets` が光っている相手の駒へカーソルが乗ったら `CardView.brace = true` |
 | 取り消しの「戻る」 | `CardMatchSelection.clear()` を受けた画面側が `CardView.play_unselect()`(0.1秒で縮めて消す) |
 | 攻撃ドラッグの矢印 | `CardDragArrow` |
-| ホバー音 | `SoundBank.Sfx.HOVER`(`button.wav` を `SFX_PITCH` で高く、`SFX_GAIN` で小さく)。`wire_buttons()` が `mouse_entered` にもつなぎ、対局中の駒・手札は `CardView` が直接鳴らす(カーソルの出来事であり盤面の状態ではないため `CardMatchSound` を経由しない) |
+| ホバー音 | `SoundBank.Sfx.HOVER`(ホバー専用の `hover.wav`。詳細は9章)。`wire_buttons()` が `mouse_entered` にもつなぎ(無効のボタンを除く)、対局中の駒・手札は `CardView` が直接鳴らす(カーソルの出来事であり盤面の状態ではないため `CardMatchSound` を経由しない) |
 
 ## 10.10.2 メニュー画面群の手触り(GameDesign.md 9章「操作への反応」)
 

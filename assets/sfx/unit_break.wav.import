@@ -2,13 +2,13 @@
 
 importer="wav"
 type="AudioStreamWAV"
-uid="uid://cv8w38hhbqab3"
-path="res://.godot/imported/flip.wav-ef7dd7c5d789777109d65cf76c8e2c90.sample"
+uid="uid://doxpc38x8rm7m"
+path="res://.godot/imported/unit_break.wav-e95c5310a57e09ef52c710d3f8de8ffa.sample"
 
 [deps]
 
-source_file="res://assets/sfx/flip.wav"
-dest_files=["res://.godot/imported/flip.wav-ef7dd7c5d789777109d65cf76c8e2c90.sample"]
+source_file="res://assets/sfx/unit_break.wav"
+dest_files=["res://.godot/imported/unit_break.wav-e95c5310a57e09ef52c710d3f8de8ffa.sample"]
 
 [params]
 

@@ -2,13 +2,13 @@
 
 importer="wav"
 type="AudioStreamWAV"
-uid="uid://cv8w38hhbqab3"
-path="res://.godot/imported/flip.wav-ef7dd7c5d789777109d65cf76c8e2c90.sample"
+uid="uid://cbxd51kfe4brv"
+path="res://.godot/imported/place.wav-908a1408e8dd05dc1e37358e198e3f15.sample"
 
 [deps]
 
-source_file="res://assets/sfx/flip.wav"
-dest_files=["res://.godot/imported/flip.wav-ef7dd7c5d789777109d65cf76c8e2c90.sample"]
+source_file="res://assets/sfx/place.wav"
+dest_files=["res://.godot/imported/place.wav-908a1408e8dd05dc1e37358e198e3f15.sample"]
 
 [params]
 

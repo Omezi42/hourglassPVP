@@ -2,7 +2,7 @@
 
 このプロジェクトが同梱している外部素材の出所・作者・ライセンスの記録。
 
-音源の採用条件は **CC0(パブリックドメイン)のみ**(GameDesign.md 9章)。アイコンは
+外部の音源の採用条件は **CC0(パブリックドメイン)のみ**(GameDesign.md 9章)。アイコンは
 **商用可・クレジット表記不要**であることを条件とする(CC0に限らない)。CC0は表示義務を持たないため
 この記録は法的な要求ではないが、後から「この素材はどこから来たのか」を追えないとライセンスの
 再確認も差し替えもできなくなるため、取り込んだものは必ずここへ書く。
@@ -11,27 +11,8 @@
 
 ## 効果音(`assets/sfx/`)
 
-すべて Kenney(https://kenney.nl/)による CC0 素材。各パックに同梱の License.txt で
-CC0 1.0 Universal であることを確認済み。
-
-| ファイル | 元素材 | パック |
-|---|---|---|
-| `button.wav` | `click_005.wav` | [Interface Sounds](https://kenney.nl/assets/interface-sounds) |
-| `flip.wav` | `switch_003.wav` | Interface Sounds |
-| `move.wav` | `drop_002.wav` | Interface Sounds |
-| `swap.wav` | `maximize_008.wav` | Interface Sounds |
-| `damage.ogg` | `impactGlass_medium_000.ogg` | [Impact Sounds](https://kenney.nl/assets/impact-sounds) |
-| `result_win.ogg` | `jingles_PIZZI02.ogg` | [Music Jingles](https://kenney.nl/assets/music-jingles) |
-| `result_lose.ogg` | `jingles_PIZZI01.ogg` | Music Jingles |
-
-選定の理由:
-
-- 被弾に**ガラスへの打撃音**を充てたのは、砂時計がガラス製であるため
-- 決着ジングルに**弦楽器のピチカート**を選んだのは、BGMのピアノ(クラシック)と音色が調和するため。
-  勝敗の鳴り分けは、17個ある候補を実際に再生してスペクトル重心の時間変化を測り、
-  **音程が上がって終わるもの(PIZZI02)を勝利、下がって終わるもの(PIZZI01)を敗北**に割り当てた
-- Interface Sounds の各候補は、長さ・ピーク・RMS・ゼロ交差率を計測した上で、
-  低めで柔らかい音(真鍮・木のUIに合う)を優先して選んだ
+外部素材は使っていない。すべて `tools/build_sfx.py` がコードで合成した、このプロジェクトの自作の音。
+音を直すときはスクリプトを直して再実行する。
 
 ## BGM(`assets/bgm/`)
 

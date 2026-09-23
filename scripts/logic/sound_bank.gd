@@ -8,55 +8,63 @@ extends RefCounted
 ## BGMの再生自体はMusicPlayerが担当し、こちらは音量の単一情報源としてのみ関わる
 ## (設定の読み書きを2クラスへ分散させると、同じJSONファイルを互いに上書きし合うため)。
 
-## **UNIT_BREAK / GLASS_BREAK は音源を増やさず、既存の音を高さで鳴き分ける**
-## (GameDesign.md 9章)。素材を1つ足すたびにCC0の音源を探して出所を記録する手間が
-## 生まれるため、区別を付けたいだけの場面では `SFX_PITCH` で分ける。
-enum Sfx {FLIP, MOVE, SWAP, DAMAGE, RESULT_WIN, RESULT_LOSE, BUTTON, UNIT_BREAK, GLASS_BREAK, HOVER}
+## 音源はすべて `tools/build_sfx.py` がコードで合成した自作の音(GameDesign.md 9章)。
+## **出来事ごとに専用の音を持ち、音量は音源の側で揃えてある**ため、再生時に高さや
+## 音量比をいじらない。ユーザーの音量はバス(SFX / BGM)の音量で効かせる。
+## 並びは保存データではないが、テストの `play_log` と突き合わせるため末尾へ足す。
+enum Sfx {
+	FLIP,
+	PLACE,
+	CLASH,
+	DAMAGE,
+	RESULT_WIN,
+	RESULT_LOSE,
+	BUTTON,
+	UNIT_BREAK,
+	GLASS_BREAK,
+	HOVER,
+	TURN_END,
+	TURN_START,
+}
 
 const SETTINGS_PATH := "user://sound_settings.json"
-## 被弾直後に決着音が続く等、複数の効果音がほぼ同時に鳴っても途切れないための同時再生数。
-const PLAYER_POOL_SIZE := 4
-## 音量0%を無音(ミュート)として扱うための下限。0より下はlinear_to_db()が-infを返すため避ける。
+const SFX_BUS := &"SFX"
+const BGM_BUS := &"BGM"
+## 被弾・破壊・決着が重なっても鳴っている音を途中で切らないための同時再生数。
+const PLAYER_POOL_SIZE := 8
+## ホバー音をなぞって連続で鳴らさないための間隔。手札を横切ると数十msおきに乗り換えるため。
+const HOVER_MIN_INTERVAL_MS := 70
 const MIN_AUDIBLE_VOLUME := 0.0001
-## BGMは効果音より控えめから始める。クラシックを最大音量で流すと操作音がかき消されるため。
-const DEFAULT_BGM_VOLUME := 0.6
+const SILENT_DB := -80.0
+const DEFAULT_SFX_VOLUME := 0.8
+const DEFAULT_BGM_VOLUME := 0.7
 
 const SFX_PATHS := {
 	Sfx.FLIP: "res://assets/sfx/flip.wav",
-	Sfx.MOVE: "res://assets/sfx/move.wav",
-	Sfx.SWAP: "res://assets/sfx/swap.wav",
-	Sfx.DAMAGE: "res://assets/sfx/damage.ogg",
-	Sfx.RESULT_WIN: "res://assets/sfx/result_win.ogg",
-	Sfx.RESULT_LOSE: "res://assets/sfx/result_lose.ogg",
-	Sfx.BUTTON: "res://assets/sfx/button.wav",
-	Sfx.UNIT_BREAK: "res://assets/sfx/damage.ogg",
-	Sfx.GLASS_BREAK: "res://assets/sfx/damage.ogg",
-	Sfx.HOVER: "res://assets/sfx/button.wav",
-}
-
-## 音の高さ。**同じ出来事は必ず同じ高さで鳴らす**(その場の値で散らすと、
-## 何が起きたのかを音から判断できなくなる)。指定の無いものは等倍。
-## 砂時計が壊れた音は被弾より低く、硝子の膜が割れた音は高くする。
-## ホバー音は押下音(BUTTON)と同じ音源を高く鳴らす(GameDesign.md 9章「対局画面の手触り」)。
-const SFX_PITCH := {
-	Sfx.UNIT_BREAK: 0.68,
-	Sfx.GLASS_BREAK: 1.62,
-	Sfx.HOVER: 1.6,
-}
-
-## 音源ごとの音量比(既定1.0)。**ホバー音は押下音と同じ音源のため、比率だけで
-## 小さく鳴らす**(音源を増やさない。GameDesign.md 9章)。
-const SFX_GAIN := {
-	Sfx.HOVER: 0.35,
+	Sfx.PLACE: "res://assets/sfx/place.wav",
+	Sfx.CLASH: "res://assets/sfx/clash.wav",
+	Sfx.DAMAGE: "res://assets/sfx/damage.wav",
+	Sfx.RESULT_WIN: "res://assets/sfx/result_win.wav",
+	Sfx.RESULT_LOSE: "res://assets/sfx/result_lose.wav",
+	Sfx.BUTTON: "res://assets/sfx/press.wav",
+	Sfx.UNIT_BREAK: "res://assets/sfx/unit_break.wav",
+	Sfx.GLASS_BREAK: "res://assets/sfx/glass_break.wav",
+	Sfx.HOVER: "res://assets/sfx/hover.wav",
+	Sfx.TURN_END: "res://assets/sfx/turn_end.wav",
+	Sfx.TURN_START: "res://assets/sfx/turn_start.wav",
 }
 
 static var _players: Array[AudioStreamPlayer] = []
 static var _next_player_index := 0
+## ホバー音は専用の1本で鳴らす。プールを使うと、鳴っている被弾や決着の音を
+## ホバーが途中で奪ってしまう。
+static var _hover_player: AudioStreamPlayer = null
+static var _last_hover_ms := -HOVER_MIN_INTERVAL_MS
 ## static varの初期化式はクラスへの初回アクセス時に一度だけ評価されるため、
 ## ensure_ready()(AudioStreamPlayerを配置できるNodeが要る)を待たずに、
 ## 音量設定を早期に確定できる。ホーム画面の設定ボタンはMainより先に
 ## _ready()が走るため、ここで読み込んでおかないと初期表示が反映されない。
-static var _sfx_volume := _load_volume("sfx_volume", 1.0)
+static var _sfx_volume := _load_volume("sfx_volume", DEFAULT_SFX_VOLUME)
 static var _bgm_volume := _load_volume("bgm_volume", DEFAULT_BGM_VOLUME)
 ## 実際に音を鳴らせない(ensure_ready未実行/ヘッドレス等)環境でも呼び出し履歴を追えるよう、
 ## 再生要求(音量0時は除く)を記録する。UIの見た目確認に加え、自動テストでの検証にも使う。
@@ -66,41 +74,41 @@ static var play_log: Array[Sfx] = []
 static func ensure_ready(parent: Node) -> void:
 	if _players.size() > 0:
 		return
+	_apply_bus_volume(SFX_BUS, _sfx_volume)
+	_apply_bus_volume(BGM_BUS, _bgm_volume)
+	# 音が重なったときに割れないよう、全体の出口で頭を押さえる。
+	AudioServer.add_bus_effect(0, AudioEffectHardLimiter.new())
 	for i in range(PLAYER_POOL_SIZE):
-		var player := AudioStreamPlayer.new()
-		player.volume_db = _volume_to_db(_sfx_volume)
-		parent.add_child(player)
-		_players.append(player)
+		_players.append(_make_player(parent))
+	_hover_player = _make_player(parent)
 
 
 static func play(sfx: Sfx) -> void:
 	if _sfx_volume <= 0.0:
 		return
+	if sfx == Sfx.HOVER:
+		var now := Time.get_ticks_msec()
+		if now - _last_hover_ms < HOVER_MIN_INTERVAL_MS:
+			return
+		_last_hover_ms = now
 	play_log.append(sfx)
 	if _players.is_empty():
 		return
 	var stream: AudioStream = load(SFX_PATHS[sfx])
 	if stream == null:
 		return
-	var player := _players[_next_player_index]
-	_next_player_index = (_next_player_index + 1) % _players.size()
+	var player := _hover_player if sfx == Sfx.HOVER else _free_player()
 	player.stream = stream
-	var gain: float = SFX_GAIN.get(sfx, 1.0)
-	player.volume_db = _volume_to_db(_sfx_volume * gain)
-	# **毎回入れ直す**。プールは使い回すため、前に鳴らした音の高さが残る。
-	player.pitch_scale = float(SFX_PITCH.get(sfx, 1.0))
 	player.play()
 
 
-## 0.0(無音)〜1.0(最大)の効果音音量。
 static func get_sfx_volume() -> float:
 	return _sfx_volume
 
 
 static func set_sfx_volume(value: float) -> void:
 	_sfx_volume = clampf(value, 0.0, 1.0)
-	for player in _players:
-		player.volume_db = _volume_to_db(_sfx_volume)
+	_apply_bus_volume(SFX_BUS, _sfx_volume)
 	_save_settings()
 
 
@@ -111,7 +119,7 @@ static func get_bgm_volume() -> float:
 
 static func set_bgm_volume(value: float) -> void:
 	_bgm_volume = clampf(value, 0.0, 1.0)
-	MusicPlayer.set_volume(_bgm_volume)
+	_apply_bus_volume(BGM_BUS, _bgm_volume)
 	_save_settings()
 
 
@@ -120,24 +128,71 @@ static func is_muted() -> bool:
 
 
 ## シーンツリーを走査し、全Buttonのpressedへボタン押下音、mouse_enteredへホバー音を
-## 接続する(GameDesign.md 9章「対局画面の手触り」)。個別に繋ぐと数が多く漏れやすいため、
+## 接続する(GameDesign.md 9章)。個別に繋ぐと数が多く漏れやすいため、
 ## Main起動時に一括で呼ぶ想定。
 static func wire_buttons(root: Node) -> void:
 	if root is Button:
 		var press_callback := play.bind(Sfx.BUTTON)
 		if not root.pressed.is_connected(press_callback):
 			root.pressed.connect(press_callback)
-		var hover_callback := play.bind(Sfx.HOVER)
+		var hover_callback := _on_button_hovered.bind(root)
 		if not root.mouse_entered.is_connected(hover_callback):
 			root.mouse_entered.connect(hover_callback)
 	for child in root.get_children():
 		wire_buttons(child)
 
 
-static func _volume_to_db(value: float) -> float:
+## 押せない(無効の)ボタンでは鳴らさない。ホバーの見た目も変わらないのに音だけ返ると、
+## 押せるように聞こえる。
+static func _on_button_hovered(button: Button) -> void:
+	if not button.disabled:
+		play(Sfx.HOVER)
+
+
+static func _make_player(parent: Node) -> AudioStreamPlayer:
+	var player := AudioStreamPlayer.new()
+	player.bus = SFX_BUS
+	parent.add_child(player)
+	return player
+
+
+## 鳴り終わっている1本を選ぶ。すべて鳴っていれば、順番が最も古いものを譲ってもらう。
+static func _free_player() -> AudioStreamPlayer:
+	for i in range(_players.size()):
+		var index := (_next_player_index + i) % _players.size()
+		if not _players[index].playing:
+			_next_player_index = (index + 1) % _players.size()
+			return _players[index]
+	var oldest := _players[_next_player_index]
+	_next_player_index = (_next_player_index + 1) % _players.size()
+	return oldest
+
+
+## バスが無ければ作る。バスの構成をファイル(default_bus_layout.tres)で持たないのは、
+## 2本しかないうえ、音量の単一情報源であるこのクラスの近くに置きたいため。
+static func bus_index(bus: StringName) -> int:
+	var index := AudioServer.get_bus_index(bus)
+	if index >= 0:
+		return index
+	AudioServer.add_bus()
+	index = AudioServer.bus_count - 1
+	AudioServer.set_bus_name(index, bus)
+	AudioServer.set_bus_send(index, &"Master")
+	return index
+
+
+static func _apply_bus_volume(bus: StringName, value: float) -> void:
+	var index := bus_index(bus)
+	AudioServer.set_bus_volume_db(index, volume_to_db(value))
+	AudioServer.set_bus_mute(index, value <= MIN_AUDIBLE_VOLUME)
+
+
+## スライダーの値を音量へ。**振幅の2乗で効かせる**と、耳の感じ方(対数)に近くなり、
+## 半分へ下げたときに「半分くらいになった」と聞こえる。線形のままだと上半分がほぼ変わらない。
+static func volume_to_db(value: float) -> float:
 	if value <= MIN_AUDIBLE_VOLUME:
-		return -80.0
-	return linear_to_db(value)
+		return SILENT_DB
+	return linear_to_db(value * value)
 
 
 ## 効果音・BGMを分ける前の保存データは音量を単一キー"volume"で持っていた。

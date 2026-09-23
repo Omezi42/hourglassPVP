@@ -8,7 +8,8 @@ func run(assert_true: Callable) -> void:
 	_test_shake_returns_to_its_base_position(assert_true)
 	_test_shake_takes_the_larger_amount_instead_of_stacking(assert_true)
 	_test_shake_does_nothing_without_targets(assert_true)
-	_test_break_and_glass_sounds_differ_in_pitch(assert_true)
+	_test_every_sound_has_its_own_file(assert_true)
+	_test_hover_sound_is_throttled(assert_true)
 
 
 ## 揺れは必ず元の位置へ戻る。**基準を控えずに position へ足すと戻らなくなる**ため、
@@ -56,13 +57,22 @@ func _test_shake_does_nothing_without_targets(assert_true: Callable) -> void:
 	assert_true.call(true, "対象が無くても揺れの呼び出しで落ちない")
 
 
-## 破壊と硝子は同じ音源を高さで鳴き分ける(GameDesign.md 9章)。
-## **同じ高さになっていたら鳴き分けの意味が無い**ため、値そのものを見る。
-func _test_break_and_glass_sounds_differ_in_pitch(assert_true: Callable) -> void:
-	var break_pitch: float = float(SoundBank.SFX_PITCH.get(SoundBank.Sfx.UNIT_BREAK, 1.0))
-	var glass_pitch: float = float(SoundBank.SFX_PITCH.get(SoundBank.Sfx.GLASS_BREAK, 1.0))
-	var damage_pitch: float = float(SoundBank.SFX_PITCH.get(SoundBank.Sfx.DAMAGE, 1.0))
-	assert_true.call(break_pitch < damage_pitch, "破壊は被弾より低い")
-	assert_true.call(glass_pitch > damage_pitch, "硝子は被弾より高い")
-	assert_true.call(SoundBank.SFX_PATHS.has(SoundBank.Sfx.UNIT_BREAK), "破壊にも音源が割り当ててある")
-	assert_true.call(SoundBank.SFX_PATHS.has(SoundBank.Sfx.GLASS_BREAK), "硝子にも音源が割り当ててある")
+## 出来事ごとに専用の音を持つ(GameDesign.md 9章)。**同じ音源を指していたら
+## 音だけで出来事を聞き分けられない**ため、全種が別々の実在するファイルを指すことを見る。
+func _test_every_sound_has_its_own_file(assert_true: Callable) -> void:
+	var seen := {}
+	for sfx: int in SoundBank.Sfx.values():
+		var path: String = SoundBank.SFX_PATHS.get(sfx, "")
+		assert_true.call(ResourceLoader.load(path) != null, "音源が読める: %s" % path)
+		assert_true.call(not seen.has(path), "音源が他と重ならない: %s" % path)
+		seen[path] = true
+
+
+## ホバー音は短い間隔では重ねない(手札をなぞったときに連打にしない)。
+func _test_hover_sound_is_throttled(assert_true: Callable) -> void:
+	SoundBank.play_log.clear()
+	SoundBank.play(SoundBank.Sfx.HOVER)
+	SoundBank.play(SoundBank.Sfx.HOVER)
+	var hovers := SoundBank.play_log.count(SoundBank.Sfx.HOVER)
+	assert_true.call(SoundBank.get_sfx_volume() <= 0.0 or hovers == 1, "続けて乗ってもホバー音は1回")
+	SoundBank.play_log.clear()

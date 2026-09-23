@@ -51,8 +51,9 @@ func _ready() -> void:
 
 
 ## 自分の手番が回ってきた。**自分の番のときだけ出す**(相手の番であることは
-## 情報帯の明暗と実況で分かるため、二重に知らせない)。
+## 情報帯の明暗と実況で分かるため、二重に知らせない)。幕と同時に2音の鐘を鳴らす。
 func announce_turn() -> void:
+	SoundBank.play(SoundBank.Sfx.TURN_START)
 	_banner_text = "あなたの番"
 	_banner_duration = BANNER_DURATION
 	_banner_big = false

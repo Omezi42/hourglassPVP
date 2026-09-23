@@ -2,13 +2,13 @@
 
 importer="wav"
 type="AudioStreamWAV"
-uid="uid://cv8w38hhbqab3"
-path="res://.godot/imported/flip.wav-ef7dd7c5d789777109d65cf76c8e2c90.sample"
+uid="uid://170v3s5nqnhs"
+path="res://.godot/imported/clash.wav-86aca3adb8757357dda7a97fc0419344.sample"
 
 [deps]
 
-source_file="res://assets/sfx/flip.wav"
-dest_files=["res://.godot/imported/flip.wav-ef7dd7c5d789777109d65cf76c8e2c90.sample"]
+source_file="res://assets/sfx/clash.wav"
+dest_files=["res://.godot/imported/clash.wav-86aca3adb8757357dda7a97fc0419344.sample"]
 
 [params]
 

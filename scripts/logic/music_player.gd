@@ -5,7 +5,7 @@ extends RefCounted
 ## 「Autoloadを使わずstaticで持つ」流儀に揃える。
 ## 効果音が「1発鳴らして終わり」なのに対し、BGMはクロスフェード・ループ・
 ## 自動再生制限の解除といった継続的な状態を持つため、クラスを分けている。
-## 音量の単一情報源はSoundBank側にあり、こちらへは一方向にプッシュされる。
+## ユーザーの音量はSoundBankがBGMバスの音量で効かせる。こちらは曲ごとの補正だけを持つ。
 
 enum Track { TITLE, HOME, MATCH }
 
@@ -13,6 +13,15 @@ const TRACK_PATHS := {
 	Track.TITLE: "res://assets/bgm/title.ogg",
 	Track.HOME: "res://assets/bgm/home.ogg",
 	Track.MATCH: "res://assets/bgm/match.ogg",
+}
+
+## 曲ごとの音量補正(dB)。録音ごとに音量が大きく違い(タイトルは他より約12dB大きい)、
+## 画面を移るたびに音量が跳ねるため、3秒ごとの音量の上位1割が同じ高さになるよう揃える
+## (GameDesign.md 9章)。
+const TRACK_GAIN_DB := {
+	Track.TITLE: -9.9,
+	Track.HOME: 2.7,
+	Track.MATCH: 4.1,
 }
 
 ## 曲を切り替えるときのクロスフェード時間。画面遷移(0.18秒)よりかなり長くとり、
@@ -27,7 +36,6 @@ const TAIL_FADE := 3.0
 ## クロスフェード用に2本持つ。1本だけだと切り替え時に無音が挟まる。
 const PLAYER_COUNT := 2
 const SILENT_DB := -80.0
-const MIN_AUDIBLE_VOLUME := 0.0001
 ## トラック未指定を表す。enumの値と衝突しない負値を使う。
 const NO_TRACK := -1
 ## Web版ではBGMをpckへ入れず、ここから実行時に取りに行く(Architecture.md 4.1.6節)。
@@ -38,11 +46,7 @@ const EXTERNAL_BGM_BASE := "https://cdn.jsdelivr.net/gh/Omezi42/hourglassPVP@mai
 
 static var _players: Array[AudioStreamPlayer] = []
 static var _fades: Array[Tween] = []
-## 末尾フェード中かどうか。この間の音量は曲の終わりへ向けて絞っている途中であり、
-## 設定変更(set_volume)で元の音量へ戻してはいけない。
-static var _tail_fading: Array[bool] = []
 static var _active_index := 0
-static var _volume := 0.0
 static var _current := NO_TRACK
 ## ブラウザは最初のユーザー操作より前の音声再生を許さないため、操作を検知するまでは
 ## 要求されたトラックを覚えておくだけにし、notify_user_gesture()で実際に鳴らし始める。
@@ -64,11 +68,11 @@ static func ensure_ready(parent: Node) -> void:
 	for i in range(PLAYER_COUNT):
 		var player := AudioStreamPlayer.new()
 		player.volume_db = SILENT_DB
+		player.bus = SoundBank.BGM_BUS
 		parent.add_child(player)
 		player.finished.connect(_on_finished.bind(i))
 		_players.append(player)
 		_fades.append(null)
-		_tail_fading.append(false)
 
 
 ## 指定トラックへ切り替える。既に同じ曲が鳴っていれば何もしない
@@ -101,19 +105,6 @@ static func stop() -> void:
 	for i in range(_players.size()):
 		if _players[i].playing:
 			_fade_out_and_stop(i)
-
-
-## SoundBank.set_bgm_volume()から呼ばれる。自前で永続化はしない。
-static func set_volume(value: float) -> void:
-	_volume = clampf(value, 0.0, 1.0)
-	if _players.is_empty():
-		return
-	if not _players[_active_index].playing:
-		return
-	if _tail_fading[_active_index]:
-		return
-	_kill_fade(_active_index)
-	_players[_active_index].volume_db = _target_db()
 
 
 static func _start(track: int) -> void:
@@ -186,8 +177,7 @@ static func _begin(track: int, stream: AudioStream) -> void:
 	next.stream = stream
 	next.volume_db = SILENT_DB
 	next.play()
-	_tail_fading[_active_index] = false
-	_fade_to(_active_index, _target_db())
+	_fade_to(_active_index, _track_db(track))
 	_schedule_tail_fade(_active_index, track, stream.get_length())
 	if previous_index != _active_index and _players[previous_index].playing:
 		_fade_out_and_stop(previous_index)
@@ -217,7 +207,6 @@ static func _begin_tail_fade(index: int, track: int) -> void:
 		return
 	if not _players[index].playing:
 		return
-	_tail_fading[index] = true
 	_fade_to(index, SILENT_DB, TAIL_FADE)
 
 
@@ -258,13 +247,10 @@ static func _replay_if_unchanged(track: int, index: int) -> void:
 	var player := _players[index]
 	if player.playing:
 		return
-	_tail_fading[index] = false
-	player.volume_db = _target_db()
+	player.volume_db = _track_db(track)
 	player.play()
 	_schedule_tail_fade(index, track, player.stream.get_length())
 
 
-static func _target_db() -> float:
-	if _volume <= MIN_AUDIBLE_VOLUME:
-		return SILENT_DB
-	return linear_to_db(_volume)
+static func _track_db(track: int) -> float:
+	return float(TRACK_GAIN_DB.get(track, 0.0))

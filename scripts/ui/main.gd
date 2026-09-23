@@ -236,7 +236,6 @@ func _ready() -> void:
 	SoundBank.ensure_ready(self)
 	SoundBank.wire_buttons(self)
 	MusicPlayer.ensure_ready(self)
-	MusicPlayer.set_volume(SoundBank.get_bgm_volume())
 	_show_only(title_screen)
 
 

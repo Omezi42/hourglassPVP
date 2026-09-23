@@ -1,7 +1,7 @@
 class_name CardMatchSound
 extends RefCounted
-## 対局中の効果音(GameDesign.md 9章)。「カードを出す」「反転」「攻撃(相打ち)」
-## 「被弾」「決着」の5種を、`MatchState` のシグナルだけを見て鳴らす。
+## 対局中の効果音(GameDesign.md 9章)。出す・反転・相打ち・被弾・破壊・膜割れ・
+## ターン終了・決着を、`MatchState` のシグナルだけを見て鳴らす。
 ##
 ## **画面側の操作ではなく盤面の変化を起点にする。**自分の操作・CPUの手・オンラインで
 ## 届いた手・リプレイの再生はいずれも `MatchAction.apply()` を通って同じシグナルを出すため、
@@ -16,6 +16,7 @@ var _screen: CardMatchScreen
 var _held: Array[SoundBank.Sfx] = []
 ## 直前のHP。`hp_changed` は新しい値しか渡さないため、減ったかどうかをここで見る。
 var _hp: Dictionary = {}
+var _state: MatchState
 
 
 func _init(screen: CardMatchScreen) -> void:
@@ -24,6 +25,7 @@ func _init(screen: CardMatchScreen) -> void:
 
 ## `start_match()` の**後**に張る。配り始めの初期化までは鳴らさない。
 func watch(state: MatchState) -> void:
+	_state = state
 	_hp = {
 		MatchState.Side.A: int(state.hp[MatchState.Side.A]),
 		MatchState.Side.B: int(state.hp[MatchState.Side.B]),
@@ -36,6 +38,7 @@ func watch(state: MatchState) -> void:
 	state.hp_changed.connect(_on_hp_changed)
 	state.unit_destroyed.connect(_on_unit_destroyed)
 	state.unit_shielded.connect(_on_unit_shielded)
+	state.turn_started.connect(_on_turn_started)
 	state.match_ended.connect(_on_match_ended)
 
 
@@ -55,13 +58,13 @@ func _play(sfx: SoundBank.Sfx) -> void:
 
 
 func _on_unit_played(_side: int, _slot: int) -> void:
-	_play(SoundBank.Sfx.MOVE)
+	_play(SoundBank.Sfx.PLACE)
 
 
 ## 砂術も「カードを使った」音を鳴らす。盤面へ置く音と分けるほどの違いが無く、
 ## 効果そのものの音(被弾・破壊)は効果の側から鳴るため。
 func _on_spell_cast(_side: int, _card: CardData) -> void:
-	_play(SoundBank.Sfx.MOVE)
+	_play(SoundBank.Sfx.PLACE)
 
 
 func _on_unit_flipped(_side: int, _slot: int) -> void:
@@ -77,7 +80,7 @@ func _on_flip_right_used(_actor_side: int, _target_side: int, _slot: int) -> voi
 ## 被弾(HPの減り)の側で鳴るため、ここでは鳴らさない。
 func _on_attack_performed(_side: int, _slot: int, target_slot: int) -> void:
 	if target_slot >= 0:
-		_play(SoundBank.Sfx.SWAP)
+		_play(SoundBank.Sfx.CLASH)
 
 
 func _on_hp_changed(side: int, new_hp: int) -> void:
@@ -88,15 +91,21 @@ func _on_hp_changed(side: int, new_hp: int) -> void:
 
 
 ## **壊れた音は被弾とは別に鳴らす**(GameDesign.md 9章)。壊れることは盤面から1体
-## 減ることであり、削られただけの被弾とは意味が違う。音源は同じで高さだけを下げる。
+## 減ることであり、削られただけの被弾とは意味が違う。
 func _on_unit_destroyed(_side: int, _slot: int, _card: CardData) -> void:
 	_play(SoundBank.Sfx.UNIT_BREAK)
 
 
-## 硝子の膜が割れた。壊れた音とは逆に高く鳴らし、
+## 硝子の膜が割れた。壊れた音とは逆に高く軽い音にし、
 ## 「防がれた」と「壊れた」を音だけで取り違えないようにする。
 func _on_unit_shielded(_side: int, _slot: int) -> void:
 	_play(SoundBank.Sfx.GLASS_BREAK)
+
+
+## 手番が替わった。**前の手番が終わった音**なので、対局の最初の手番では鳴らさない。
+func _on_turn_started(_side: int) -> void:
+	if _state.turn_count > 1:
+		_play(SoundBank.Sfx.TURN_END)
 
 
 ## 決着では**BGMを止めて短いジングルへ切り替える**(GameDesign.md 9章)。

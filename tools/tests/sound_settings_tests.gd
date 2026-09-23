@@ -33,7 +33,7 @@ func run(assert_true: Callable) -> void:
 	if FileAccess.file_exists(SoundBank.SETTINGS_PATH):
 		DirAccess.remove_absolute(SoundBank.SETTINGS_PATH)
 	assert_true.call(
-		is_equal_approx(SoundBank._load_volume("bgm_volume", SoundBank.DEFAULT_BGM_VOLUME), 0.6),
+		is_equal_approx(SoundBank._load_volume("bgm_volume", SoundBank.DEFAULT_BGM_VOLUME), 0.7),
 		"missing settings should fall back to the default bgm volume"
 	)
 
@@ -48,6 +48,16 @@ func run(assert_true: Callable) -> void:
 		is_equal_approx(SoundBank._load_volume("bgm_volume", 1.0), 0.15),
 		"set_bgm_volume should persist"
 	)
+	var bgm_bus := SoundBank.bus_index(SoundBank.BGM_BUS)
+	assert_true.call(
+		is_equal_approx(AudioServer.get_bus_volume_db(bgm_bus), SoundBank.volume_to_db(0.15)),
+		"set_bgm_volume should drive the BGM bus"
+	)
+	# 聴感に沿う曲線: 半分へ下げたら約-12dB(線形のままだと-6dBで、ほとんど下がって聞こえない)
+	assert_true.call(
+		absf(SoundBank.volume_to_db(0.5) - linear_to_db(0.25)) < 0.01, "volume curve is squared"
+	)
+	assert_true.call(SoundBank.volume_to_db(0.0) <= -80.0, "zero volume is silent")
 
 	_restore(backup)
 
