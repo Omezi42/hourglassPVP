@@ -159,7 +159,8 @@ pckから除外した後も true を返すことがあり、有無の判定に�
 |---|---|
 | `CardPresetDecks`(`scripts/logic/card_preset_decks.gd`, static) | プリセット3つを「idと枚数の表」として持つ。30枚に足りない場合はコストの安い順に埋めるため、**表が古くなっても対局へ入れなくなることはない** |
 | `CardPresetPicker`(`scripts/ui/card_preset_picker.gd`) | プリセットを選ぶモーダル。名前だけでは何のデッキか分からないため、狙いの一文を必ず添える |
-| `CardMatchTutorial`(`scripts/ui/card_match_tutorial.gd`) | 誘導対局の指示。段階ごとに1つだけ操作を求め、`MatchState` のシグナルで達成を判定する。**帯の中身(すなえる・文・「つぎへ」「閉じる」)は `_band` という1つの `Control` の子として相対座標で持つ**。マリガン中だけ帯を下げるため、動かすのが `_band.position` の1箇所で済む |
+| `CardMatchTutorial`(`scripts/ui/card_match_tutorial.gd`) | 誘導対局の台本の進行そのもの。台本の手を1つずつ`MatchState`のシグナルで達成を判定し、関門(`gate_*()`)・CPUの手(`cpu_action()`)もここが答える。**帯の中身(すなえる・文・「つぎへ」)は `_band` という1つの `Control` の子として相対座標で持つ**。マリガン中だけ帯を下げるため、動かすのが `_band.position` の1箇所で済む。**「閉じる」は持たない**——台本は最後の一撃で勝って終わり、自由に続ける段が無いため |
+| `TutorialCpuStrategy`(`scripts/logic/tutorial_cpu_strategy.gd`) | `CardCpuStrategy`を継承するが貪欲法は呼ばず、`CardMatchTutorial.cpu_action()`へ委譲するだけの台本用の代役 |
 | `SunaeruPortrait`(`scripts/ui/sunaeru_portrait.gd`) | 指示の帯の左端に置くすなえるの立ち絵。**絵を持つだけのノード**にし、何を言うかは `CardMatchTutorial` が持つ |
 
 **指示は「文」だけでなく「いま触るもの」も示す**(GameDesign.md 18章)。`CardMatchTutorial`
@@ -199,6 +200,9 @@ flip_right/end_turn/mulligan)・指示の文・終えたときの説明・光ら
   それぞれの入口で `CardMatchTutorial.gate_*()`(関門)を呼び、誘導対局の間だけ答えを返す。
   通常の対局(`_active == false`)では常にtrueを返す
 - マリガンは札を選べず「このままで開始」だけを受け付ける(`CardMatchMulligan.picking_disabled`)
+- **手番の切り替わりの「あなたの番」は出さない**(GameDesign.md 9章)。`CardMatchScreen._on_turn_started()`
+  が `is_tutorial` を見て `_feed.announce_turn()` を呼ばないぶんだけ分岐する。手番の流れはすなえるの帯が
+  案内するため、実況と二重に出す必要がない
 - 光らせるのは台本の次の手が指す1か所(駒を選んで相手を押す手は、選ぶ前は自分の駒・選んだ後は相手)。
   説明中の数字の光は `CardMatchGeometry` から位置を取り、輪郭とは色を分ける
 - 成立は `tools/tests/tutorial_script_tests.gd` が確かめる(台本の手を順に `MatchState` へ直接適用し、

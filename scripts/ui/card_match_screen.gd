@@ -887,7 +887,8 @@ func _on_turn_started(side: int) -> void:
 			return
 	_match_start_pending = false
 	# 自分の番が回ってきたことだけ知らせる。相手の番であることは情報帯の縁と実況で分かる。
-	if side == my_side and _interactive and not state.is_match_over():
+	# **誘導対局では出さない**(GameDesign.md 9章)。手番の流れはすなえるの帯が案内するため。
+	if side == my_side and _interactive and not state.is_match_over() and not is_tutorial:
 		_feed.announce_turn()
 	if _cpu != null and side != my_side and not state.is_match_over():
 		_cpu_timer.start(CPU_THINK_SECONDS)

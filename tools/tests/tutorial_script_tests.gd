@@ -59,8 +59,15 @@ func _apply_step(step: Dictionary, index: int) -> void:
 		"attack":
 			_apply_attack(step, side, index)
 		"flip":
-			var slot := _slot_of(side, str(step.get("actor_ref", "")))
+			var actor_ref := str(step.get("actor_ref", ""))
+			var slot := _slot_of(side, actor_ref)
 			_assert.call(_state.flip(side, slot), "step %d: flip should be legal" % index)
+			# 自分4:2枚目のサンドは反転で1/4になり、攻撃力を上げて決めきる形になる。
+			if actor_ref == "as2":
+				var as2: CardInstance = _refs["as2"]
+				_assert.call(
+					as2.health == 1 and as2.attack == 4, "step %d: as2 should flip to 1/4" % index
+				)
 		"flip_right":
 			var target_side := (
 				side if str(step.get("target_side", "")) == "own" else MatchState.other_side(side)
@@ -70,10 +77,13 @@ func _apply_step(step: Dictionary, index: int) -> void:
 				_state.use_flip_right(side, target_side, slot),
 				"step %d: flip_right should be legal" % index
 			)
-			# 反転権で相手のサンドを弱めた:攻撃力が下がる(GameDesign.md 18章「弱める」)。
-			if str(step.get("target_ref", "")) == "bs":
-				var bs: CardInstance = _refs["bs"]
-				_assert.call(bs.attack == 1, "step %d: bs should be weakened to attack 1" % index)
+			# 反転権でシールドを返した:3/1→1/3になる(GameDesign.md 18章)。
+			if str(step.get("target_ref", "")) == "shield1":
+				var shield1: CardInstance = _refs["shield1"]
+				_assert.call(
+					shield1.health == 1 and shield1.attack == 3,
+					"step %d: shield1 should flip to 1/3" % index
+				)
 		"end_turn":
 			_state.end_turn()
 			_check_after_end_turn(index)
@@ -112,8 +122,24 @@ func _apply_attack(step: Dictionary, side: int, index: int) -> void:
 		)
 	# 自分3:サンドで本体を攻撃すると4→3になる(GameDesign.md 18章)。
 	if str(step.get("actor_ref", "")) == "as1" and str(step.get("target_kind", "")) == "face":
-		if int(_state.hp[SIDE_B]) == 3:
-			_assert.call(true, "step %d: face attack should bring the foe to 3" % index)
+		_assert.call(
+			int(_state.hp[SIDE_B]) == 3, "step %d: face attack should bring the foe to 3" % index
+		)
+	# 自分4:弱めたシールドをサンドで殴ると相打ちで双方が砕ける(GameDesign.md 18章)。
+	if str(step.get("actor_ref", "")) == "as1" and str(step.get("target_ref", "")) == "shield1":
+		_assert.call(
+			not _state.board[side].has(_refs["as1"]),
+			"step %d: as1 should be destroyed in the trade" % index
+		)
+		_assert.call(
+			not _state.board[MatchState.other_side(side)].has(_refs["shield1"]),
+			"step %d: shield1 should be destroyed in the trade" % index
+		)
+	# 自分4:反転したサンドの本体攻撃で3→0になり勝利する(GameDesign.md 18章)。
+	if str(step.get("actor_ref", "")) == "as2" and str(step.get("target_kind", "")) == "face":
+		_assert.call(
+			int(_state.hp[SIDE_B]) == 0, "step %d: the final blow should bring the foe to 0" % index
+		)
 
 
 func _check_after_end_turn(index: int) -> void:
