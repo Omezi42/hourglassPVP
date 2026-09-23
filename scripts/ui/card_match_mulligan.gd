@@ -7,10 +7,20 @@ extends Control
 signal confirmed(indices: Array)
 
 const SCREEN_SIZE := Vector2(1280, 720)
-const CARD_GAP := 24.0
-const CARD_ROW_Y := 172.0
+## 初期手札は対局の手札より大きく並べ、効果の文まで読めるようにする(詳細パネルはマリガン中に出さない)。
+const CARD_SIZE := CardView.HAND_SIZE_PX * 1.35
+const CARD_GAP := 28.0
+const CARD_ROW_Y := 150.0
+const TITLE_Y := 50.0
+const HINT_Y := 108.0
+## 確定ボタンは誘導対局の帯(`CardMatchTutorial.MULLIGAN_BAND_TOP`)より上に収める。
+const BUTTON_SIZE := Vector2(280, 60)
+const BUTTON_Y := 398.0
+## 札の列の後ろの光だまりが、列の左右と上下へはみ出す量。
+const STAGE_MARGIN := Vector2(150, 70)
 ## 引き直すカードは沈めて、押したことが手札の並びの中で分かるようにする。
-const PICKED_SINK := 14.0
+const PICKED_SINK := 18.0
+const PICK_DURATION := 0.14
 ## 開いた瞬間、手札が配られるように下から浮き上がってくる距離と間隔。
 const DEAL_RISE := 46.0
 const DEAL_DURATION := 0.32
@@ -18,13 +28,16 @@ const DEAL_STAGGER := 0.05
 const DIM_FADE_DURATION := 0.3
 
 var _views: Array[CardView] = []
+var _marks: Array[MulliganPickMark] = []
 var _picked: Array[bool] = []
 var _title: Label
 var _hint: Label
 var _button: Button
 var _waiting := false
 var _dim: ColorRect
+var _stage: MulliganStageLight
 var _tween: Tween
+var _pick_tweens: Dictionary = {}
 
 
 func _ready() -> void:
@@ -43,19 +56,30 @@ func show_hand(cards: Array) -> void:
 	for view in _views:
 		view.queue_free()
 	_views.clear()
+	_marks.clear()
+	_pick_tweens.clear()
 	var total := cards.size()
-	var width := total * CardView.HAND_SIZE_PX.x + maxf(total - 1, 0) * CARD_GAP
+	var width := total * CARD_SIZE.x + maxf(total - 1, 0) * CARD_GAP
 	var left := (SCREEN_SIZE.x - width) * 0.5
+	_stage.position = Vector2(left, CARD_ROW_Y) - STAGE_MARGIN
+	_stage.size = Vector2(width, CARD_SIZE.y) + STAGE_MARGIN * 2.0
+	_stage.queue_redraw()
 	for i in total:
 		var view := CardView.new()
 		view.mode = CardView.Mode.HAND
-		view.position = Vector2(left + i * (CardView.HAND_SIZE_PX.x + CARD_GAP), CARD_ROW_Y)
+		view.position = Vector2(left + i * (CARD_SIZE.x + CARD_GAP), CARD_ROW_Y)
 		view.pressed.connect(_on_card_pressed)
 		add_child(view)
 		view.show_card(cards[i], true)
+		view.size = CARD_SIZE
+		# 裏返した印は絵の窓の中央へ重ねる。
+		var mark := MulliganPickMark.new()
+		view.add_child(mark)
+		mark.position = view._hand_art_box().get_center() - mark.size * 0.5
 		_views.append(view)
+		_marks.append(mark)
 		_picked.append(false)
-	_refresh()
+	_refresh(false)
 	visible = true
 	_start_entrance()
 
@@ -71,6 +95,8 @@ func _start_entrance() -> void:
 	_tween.set_parallel(true)
 	_dim.modulate.a = 0.0
 	_tween.tween_property(_dim, "modulate:a", 1.0, DIM_FADE_DURATION)
+	_stage.modulate.a = 0.0
+	_tween.tween_property(_stage, "modulate:a", 1.0, DIM_FADE_DURATION)
 	_title.modulate.a = 0.0
 	_hint.modulate.a = 0.0
 	_tween.tween_property(_title, "modulate:a", 1.0, DIM_FADE_DURATION)
@@ -117,7 +143,8 @@ func _on_confirm_pressed() -> void:
 	confirmed.emit(indices)
 
 
-func _refresh() -> void:
+## `animate` が false のときは沈み具合を即座に合わせる(開いた直後は配る演出が位置を動かすため)。
+func _refresh(animate: bool = true) -> void:
 	var count := 0
 	for i in _views.size():
 		var view: CardView = _views[i]
@@ -126,7 +153,10 @@ func _refresh() -> void:
 			count += 1
 		view.enabled = not picked
 		view.badge = "戻す" if picked else ""
-		view.position.y = CARD_ROW_Y + (PICKED_SINK if picked else 0.0)
+		_marks[i].set_shown(picked)
+		var target_y := CARD_ROW_Y + (PICKED_SINK if picked else 0.0)
+		if animate:
+			_sink(view, target_y)
 		view.queue_redraw()
 	if _waiting:
 		_title.text = "相手を待っています"
@@ -140,18 +170,36 @@ func _refresh() -> void:
 	_button.text = "このままで開始" if count == 0 else "%d枚を引き直す" % count
 
 
+## 選んだ札を沈める / 戻す。押した瞬間に位置が飛ぶと、どの札が動いたのか目で追えない。
+func _sink(view: CardView, target_y: float) -> void:
+	var running: Tween = _pick_tweens.get(view)
+	if running != null and running.is_valid():
+		running.kill()
+	var tween := create_tween()
+	(
+		tween
+		. tween_property(view, "position:y", target_y, PICK_DURATION)
+		. set_trans(Tween.TRANS_SINE)
+		. set_ease(Tween.EASE_OUT)
+	)
+	_pick_tweens[view] = tween
+
+
 func _build() -> void:
 	_dim = ColorRect.new()
 	_dim.color = Color(0, 0, 0, 0.78)
 	_dim.size = SCREEN_SIZE
 	_dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_dim)
+	_stage = MulliganStageLight.new()
+	add_child(_stage)
 
-	_title = _make_label(40, 66.0)
-	_hint = _make_label(20, 124.0)
+	_title = _make_label(40, TITLE_Y)
+	_hint = _make_label(20, HINT_Y)
+	_hint.add_theme_color_override("font_color", UiPalette.BRASS_HIGHLIGHT)
 
-	_button = CodedButton.make("このままで開始", Vector2(280, 64))
-	_button.position = Vector2((SCREEN_SIZE.x - 280.0) * 0.5, 368.0)
+	_button = CodedButton.make("このままで開始", BUTTON_SIZE)
+	_button.position = Vector2((SCREEN_SIZE.x - BUTTON_SIZE.x) * 0.5, BUTTON_Y)
 	_button.pressed.connect(_on_confirm_pressed)
 	add_child(_button)
 

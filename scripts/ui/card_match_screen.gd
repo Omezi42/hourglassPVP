@@ -178,7 +178,6 @@ func _ready() -> void:
 	_targets = CardMatchTargets.new(self)
 	_spell = CardMatchSpell.new(self)
 	_effect_target = CardMatchEffectTarget.new(self)
-	_flip_right = CardMatchFlipRight.new(self)
 	_clocks = CardMatchClock.new(self)
 	_emote = CardMatchEmote.new(self)
 	_emote.set_position(
@@ -521,6 +520,8 @@ func _build() -> void:
 	_flip_button.visible = false
 	_flip_button.pressed.connect(_on_flip_pressed)
 	CardMatchBuild.action_column(self)
+	# 反転権も行動の列の一員。重ね物(マリガンの暗幕など)より先に足して背面へ置く。
+	_flip_right = CardMatchFlipRight.new(self)
 	_cpu_timer = Timer.new()
 	_cpu_timer.one_shot = true
 	_cpu_timer.timeout.connect(_take_cpu_action)
