@@ -96,6 +96,7 @@ func _ready() -> void:
 	# 色変換の焼き付けを待ってから画面を組む(Pitfalls.md/HourglassArt冒頭のコメント)。
 	# 待つ間は何も足していない黒地のままなので、頭に余計なコマが入っても幕は要らない。
 	await HourglassArt.ensure_ready_and_wait(self)
+	_start_audio()
 	title_screen = load("res://scenes/title_screen.tscn").instantiate()
 	title_screen.visible = false
 	add_child(title_screen)
@@ -113,6 +114,17 @@ func _ready() -> void:
 	add_child(sand)
 	_build_captions()
 	call_deferred("_run")
+
+
+## 音はMain._ready()が準備するため、ここで同じ準備をする。音量はプレイヤーの設定ではなく
+## 既定値で鳴らす(設定は保存しない)。BGMはクリック待ちの解錠を先に済ませて即座に流す。
+func _start_audio() -> void:
+	SoundBank._sfx_volume = SoundBank.DEFAULT_SFX_VOLUME
+	SoundBank._bgm_volume = SoundBank.DEFAULT_BGM_VOLUME
+	SoundBank.ensure_ready(self)
+	MusicPlayer.ensure_ready(self)
+	MusicPlayer.notify_user_gesture()
+	MusicPlayer.play(MusicPlayer.Track.MATCH)
 
 
 ## テロップ層。**最前面の独立ノード**として最後に足す(Pitfalls.md「後から add_child() した
