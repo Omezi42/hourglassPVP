@@ -22,7 +22,7 @@ func begin(index: int) -> void:
 	var view := _screen._hand_views[index]
 	_screen.effects.queue_spend_origin(_screen.my_side, view.global_position + view.size * 0.5)
 	var side := target_side(card)
-	if side >= 0 and not _screen.state.units(side).is_empty():
+	if side >= 0 and CardMatchEffectTarget.has_candidate(_screen.state, card, side):
 		_screen.selection.await_target(index, -1)
 		_screen.refresh()
 		return
@@ -48,9 +48,4 @@ func cast_at(side: int, slot: int) -> void:
 
 ## その砂術が対象を1体選ぶなら、どちら側から選ぶか。取らないなら -1。
 func target_side(card: CardData) -> int:
-	for effect in card.effects_for(CardEnums.Trigger.ON_PLAY):
-		if effect.target == CardEnums.EffectTarget.ENEMY_UNIT:
-			return MatchState.other_side(_screen.my_side)
-		if effect.target == CardEnums.EffectTarget.ALLY_UNIT:
-			return _screen.my_side
-	return -1
+	return CardMatchEffectTarget.side_for(card, _screen.my_side)

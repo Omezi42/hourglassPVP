@@ -1,10 +1,9 @@
 extends "res://tools/record_pv_vertical.gd"
-## とどめ問題ショート(縦長・約20秒)。エンドレス(GameDesign.md 24章)の問題を1問出し、
-## 考える時間を数えてから、生成器が検証した解答手順を対局画面でそのまま再生する。
-## 台本は tools/shorts/make_short.py が puzzle_lines.json から組み、--narration= で渡す
-## (問題の種 `seed` も台本に入れる。同じ種なら同じ問題になる)。
+## とどめ問題ショート(縦長・約25秒)。問題集(tools/shorts/puzzles.json。puzzle_forge.gd が
+## 総当たりで選んだ難しい問題)から1問出し、考える時間を数えてから、正解手順を対局画面でそのまま再生する。
+## 台本は tools/shorts/make_short.py が puzzle_lines.json から組み、問題ごと --narration= で渡す。
 ##
-##   python tools/shorts/make_short.py puzzle 12
+##   python tools/shorts/make_short.py puzzle 3
 
 const TITLE_TEXT := "砂時計アリーナ とどめ問題"
 const PLAYER_NAME := "あなた"
@@ -17,6 +16,9 @@ const ZOOM_RESULT := 1.6
 const STEP_LEAD := 0.35
 const STEP_HOLD := 0.85
 const STEP_STICKER_OFFSET := Vector2(250, -300)
+## 考える時間に字幕の欄へ出す、効果を持つカードの一覧。
+const LEGEND_FONT_SIZE := 38
+const NO_EFFECT_TEXT := "効果なし"
 ## 考える時間の数字(映像の右上に大きく出す)。
 const COUNT_CENTER := Vector2(930, 520)
 const COUNT_FONT_SIZE := 200
@@ -30,9 +32,10 @@ var _count: Label
 
 
 func _run() -> void:
-	var generated := PuzzleGenerator.generate_with_solution(int(_narration["seed"]))
-	_stage_data = generated["stage"]
-	_solution = generated["solution"]
+	var entry: Dictionary = _narration["puzzle"]
+	_stage_data = _stage_from(entry["stage"])
+	for action in entry["solution"]:
+		_solution.append(_whole_numbers(action))
 	_title.text = TITLE_TEXT
 	_start_puzzle()
 	_build_count()
@@ -42,6 +45,12 @@ func _run() -> void:
 	await _p1_problem()
 	await _p2_think()
 	await _p3_answer()
+	# 問題集の手順が画面の局面で通らなかったら、崩れた動画を書き出さずに失敗で終える。
+	var solved := int(match_screen.state.hp[MatchState.other_side(match_screen.my_side)]) <= 0
+	if not solved:
+		push_error("正解手順で相手のHPが0になりませんでした")
+		get_tree().quit(1)
+		return
 	await _p4_result()
 	await _v9_outro()
 	_capturing = false
@@ -64,6 +73,49 @@ func _build_count() -> void:
 	_count.get_parent().move_child(_count, _flash.get_index())
 
 
+func _stage_from(data: Dictionary) -> PuzzleStageData:
+	var stage := PuzzleStageData.new()
+	stage.id = "forge"
+	stage.title = data["title"]
+	stage.hint = data["hint"]
+	stage.foe_hp = int(data["foe_hp"])
+	stage.own_hp = int(data["own_hp"])
+	stage.mana = int(data["mana"])
+	stage.hand_ids.assign(data["hand_ids"])
+	stage.own_units.assign(data["own_units"])
+	stage.foe_units.assign(data["foe_units"])
+	return stage
+
+
+## JSONを通ると整数が小数になるため、手の番号を整数へ戻す。
+func _whole_numbers(value: Variant) -> Variant:
+	if value is float:
+		return int(value)
+	if value is Dictionary:
+		var copy := {}
+		for key in value:
+			copy[key] = _whole_numbers(value[key])
+		return copy
+	return value
+
+
+## 盤面と手札のうち効果を持つカードを「名前:効果」の行にする(盤面を見ただけでは効果が分からないため)。
+func _legend() -> String:
+	var cards := {}
+	for row in _stage_data.own_units + _stage_data.foe_units:
+		var parsed := PuzzleStageData.parse_unit(row)
+		if not parsed.is_empty():
+			cards[(parsed["card"] as CardData).id] = parsed["card"]
+	for id in _stage_data.hand_ids:
+		cards[id] = _card(id)
+	var lines: PackedStringArray = []
+	for card in cards.values():
+		var text := (card as CardData).describe()
+		if text != NO_EFFECT_TEXT:
+			lines.append("[color=#ffcf4a]%s[/color] %s" % [card.display_name, text])
+	return "\n".join(lines)
+
+
 func _heads() -> Array:
 	return _narration["heads"]
 
@@ -82,13 +134,13 @@ func _p1_problem() -> void:
 	await _until(length, 0.0)
 
 
-## 2. 残りの体力を見出しに出し、考える時間を数える。字幕は問題のヒントに替える。
+## 2. 残りの体力を見出しに出し、考える時間を数える。字幕はカードの効果の一覧に替える。
 func _p2_think() -> void:
 	var length := _say(1)
 	_headline(String(_heads()[1]).replace("{hp}", str(_stage_data.foe_hp)))
 	_punch()
 	await _until(length, 0.0)
-	_sub.text = "[center]%s[/center]" % _stage_data.hint
+	_sub.text = "[center][font_size=%d]%s[/font_size][/center]" % [LEGEND_FONT_SIZE, _legend()]
 	_count.visible = true
 	for remaining in range(THINK_SECONDS, 0, -1):
 		_count.text = str(remaining)
@@ -112,35 +164,31 @@ func _p3_answer() -> void:
 		await _play_step(step)
 
 
-func _play_step(step: Dictionary) -> void:
-	var my := match_screen.my_side
-	var slot := int(step.get("slot", -1))
-	var action: Dictionary
+func _play_step(action: Dictionary) -> void:
 	var from: Control
 	var to: Control
 	var label: String
-	match String(step["type"]):
+	match String(action["type"]):
 		"flip":
-			action = MatchAction.flip(my, slot)
-			from = match_screen.own_slot_view(slot)
+			from = match_screen.own_slot_view(action["slot"])
 			to = from
 			label = "反転!"
+		"flip_right":
+			from = _slot_view(action["target_side"], action["slot"])
+			to = from
+			label = "反転権!"
 		"attack":
-			var target_slot := int(step["target_slot"])
-			action = MatchAction.attack(my, slot, target_slot)
-			from = match_screen.own_slot_view(slot)
-			if target_slot < 0:
+			from = match_screen.own_slot_view(action["slot"])
+			if int(action["target_slot"]) < 0:
 				to = match_screen.foe_bar
-				label = "攻撃!"
+				label = "本体を攻撃!"
 			else:
-				to = match_screen.foe_slot_view(target_slot)
-				label = "守護を割る!"
-		"cast_id":
-			var index := _hand_index(String(step["card_id"]))
-			action = MatchAction.cast(my, index)
-			from = match_screen.hand_view(index)
-			to = match_screen.foe_bar
-			label = "砂術!"
+				to = match_screen.foe_slot_view(action["target_slot"])
+				label = "駒を攻撃!"
+		"play", "cast":
+			from = match_screen.hand_view(action["hand_index"])
+			to = _target_view(action.get("target", {}))
+			label = "出す!" if action["type"] == "play" else "砂術!"
 	_cam_to(_center_of(from).lerp(_center_of(to), 0.5), ZOOM_STEP)
 	_sticker(label, VIEW_RECT.get_center() + STEP_STICKER_OFFSET, STEP_LEAD + STEP_HOLD * 0.6)
 	await _wait(STEP_LEAD)
@@ -151,12 +199,17 @@ func _play_step(step: Dictionary) -> void:
 	await _wait(STEP_HOLD)
 
 
-func _hand_index(card_id: String) -> int:
-	var hand: Array = match_screen.state.hand[match_screen.my_side]
-	for i in hand.size():
-		if (hand[i] as CardData).id == card_id:
-			return i
-	return -1
+func _slot_view(side: int, slot: int) -> Control:
+	if side == match_screen.my_side:
+		return match_screen.own_slot_view(slot)
+	return match_screen.foe_slot_view(slot)
+
+
+## 対象を取る手はその駒へ、取らない手は相手の情報帯へ寄る。
+func _target_view(target: Dictionary) -> Control:
+	if target.has("side"):
+		return _slot_view(target["side"], target["slot"])
+	return match_screen.foe_bar
 
 
 ## 4. 実際のエンドレスの結果パネル(「正解!」)へ寄る。

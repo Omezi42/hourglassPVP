@@ -38,5 +38,6 @@
 | 10.17節 | 掲示板(ラボ)(GameDesign.md 29章) | [`arch/10_17_lab.md`](arch/10_17_lab.md) |
 | 10.18節 | 公式大会「箱庭杯」(GameDesign.md 30章) | [`arch/10_18_tournament.md`](arch/10_18_tournament.md) |
 | 10.19節 | カードスキン(GameDesign.md 31章) | [`arch/10_19_card_skins.md`](arch/10_19_card_skins.md) |
+| 10.20節 | 宣伝用の撮影ツール(ショート動画・とどめ問題の問題集) | [`arch/10_20_promo_capture.md`](arch/10_20_promo_capture.md) |
 | 11章 | 開発時の落とし穴 | [`Pitfalls.md`](Pitfalls.md)(コードやシーンを触る前に読む。新しく踏んだ穴もそちらへ足す) |
 | — | 未検討事項 | [`arch/99_open_issues.md`](arch/99_open_issues.md) |

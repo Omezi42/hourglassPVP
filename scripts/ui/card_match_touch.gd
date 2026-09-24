@@ -79,14 +79,17 @@ func _handle_own_targeting(slot: int) -> void:
 		_screen._cancel_selection()
 		_screen.refresh()
 		return
-	# 味方1体を対象に取る砂術は、自分の駒を押して確定する。
-	if _screen.selection.slot < 0:
-		_screen._spell.cast_at(_screen.my_side, slot)
-		return
-	# 味方1体を対象に取る設置効果(ハロー/ピボット等)。
 	var card: CardData = _screen.state.hand[_screen.my_side][_screen.selection.hand_index]
 	if _screen._effect_target.target_side(card) == _screen.my_side:
-		_screen._effect_target.confirm(_screen.my_side, slot)
+		# 条件を満たさない駒は光らせておらず、押しても何も起きない(選択は保つ)。
+		if not CardMatchEffectTarget.can_target(_screen.state, card, _screen.my_side, slot):
+			return
+		# 味方1体を対象に取る砂術は、自分の駒を押して確定する。
+		if _screen.selection.slot < 0:
+			_screen._spell.cast_at(_screen.my_side, slot)
+		else:
+			# 味方1体を対象に取る設置効果(ハロー/ピボット等)。
+			_screen._effect_target.confirm(_screen.my_side, slot)
 		return
 	_screen.selection.clear()
 	_screen.refresh()
@@ -159,7 +162,8 @@ func _attack(slot: int, target_slot: int) -> void:
 ## 対象選択中に相手の場を押したとき(砂術の相手対象 / 設置効果の相手対象)。
 func _handle_foe_targeting(slot: int) -> void:
 	var foe := MatchState.other_side(_screen.my_side)
-	if _screen.state.board[foe][slot] == null:
+	var card: CardData = _screen.state.hand[_screen.my_side][_screen.selection.hand_index]
+	if not CardMatchEffectTarget.can_target(_screen.state, card, foe, slot):
 		return
 	# slot が -1 のままなら砂術(置く枠を持たない)。
 	if _screen.selection.slot < 0:
@@ -167,7 +171,6 @@ func _handle_foe_targeting(slot: int) -> void:
 		return
 	# 味方1体を対象に取る設置効果は相手の場を押しても確定しない
 	# (自分の場を押させる。`_handle_own_targeting()` 側で処理する)。
-	var card: CardData = _screen.state.hand[_screen.my_side][_screen.selection.hand_index]
 	if _screen._effect_target.target_side(card) != foe:
 		return
 	_screen._effect_target.confirm(foe, slot)

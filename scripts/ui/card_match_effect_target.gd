@@ -15,19 +15,47 @@ func _init(screen: CardMatchScreen) -> void:
 
 ## その砂時計の設置効果が対象を1体選ぶなら、どちら側から選ぶか。取らないなら -1。
 func target_side(card: CardData) -> int:
+	return side_for(card, _screen.my_side)
+
+
+## 手札の1枚(砂時計・砂術とも)が対象を1体選ぶなら、どちら側から選ぶか。取らないなら -1。
+static func side_for(card: CardData, my_side: int) -> int:
+	var effect := targeting_effect(card)
+	if effect == null:
+		return -1
+	if effect.target == CardEnums.EffectTarget.ENEMY_UNIT:
+		return MatchState.other_side(my_side)
+	return my_side
+
+
+## 手札の1枚が出したときに対象を1体選ぶ効果。取らないなら null。
+static func targeting_effect(card: CardData) -> CardEffectData:
 	for effect in card.effects_for(CardEnums.Trigger.ON_PLAY):
-		if effect.target == CardEnums.EffectTarget.ENEMY_UNIT:
-			return MatchState.other_side(_screen.my_side)
-		if effect.target == CardEnums.EffectTarget.ALLY_UNIT:
-			return _screen.my_side
-	return -1
+		if effect.target in [CardEnums.EffectTarget.ENEMY_UNIT, CardEnums.EffectTarget.ALLY_UNIT]:
+			return effect
+	return null
+
+
+## その駒を対象に選べるか。条件付きの対象(総量5・攻撃力>体力)は満たす駒だけを
+## 選ばせる(GameDesign.md 6章)。判定は解決側と同じ `eligible_target()` を使う。
+static func can_target(state: MatchState, card: CardData, side: int, slot: int) -> bool:
+	var unit: CardInstance = state.board[side][slot]
+	return unit != null and CardEffectResolver.eligible_target(unit, targeting_effect(card))
+
+
+## 対象に選べる駒が1体でもいるか。いなければ対象選択へ入らずそのまま出す(効果は不発)。
+static func has_candidate(state: MatchState, card: CardData, side: int) -> bool:
+	for slot in MatchState.BOARD_SIZE:
+		if can_target(state, card, side, slot):
+			return true
+	return false
 
 
 ## 手札の1枚を出す。対象を取り、かつ選べる相手がいるときだけ対象選択へ入る。
 func begin(index: int, slot: int) -> void:
 	var card: CardData = _screen.state.hand[_screen.my_side][index]
 	var side := target_side(card)
-	if side >= 0 and not _screen.state.units(side).is_empty():
+	if side >= 0 and has_candidate(_screen.state, card, side):
 		_screen.selection.await_target(index, slot)
 		_screen.refresh()
 		return

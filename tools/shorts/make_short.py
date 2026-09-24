@@ -3,7 +3,9 @@
 
     python tools/shorts/make_short.py card <カードid>
     python tools/shorts/make_short.py card all   # 台本のある全カード。書き出し済みは飛ばす(途中から再開できる)
-    python tools/shorts/make_short.py puzzle <種>  # とどめ問題。種(1以上の整数)ごとに別の問題になる
+    python tools/shorts/make_short.py puzzle <番号>  # とどめ問題。番号は問題集 puzzles.json の1始まり
+    python tools/shorts/make_short.py puzzle all     # 問題集の全問。書き出し済みは飛ばす
+    python tools/shorts/make_short.py forge <問数>   # 難しい問題を並列で探して問題集へ足す(数十分かかる)
 
 1. 台本(ナレーション + 見出し)を tools/shorts/card_lines.json / puzzle_lines.json から組む
 2. VOICEVOXエンジンで読み上げる(tools/pv_voice.py。エンジンを先に起動しておく)
@@ -14,10 +16,12 @@
 """
 
 import json
+import math
 import os
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -45,16 +49,65 @@ def card_narration(card_id: str) -> dict:
     return {**SPEAKER, "card": card_id, "heads": entry["heads"], "lines": entry["lines"] + [table["cta"]]}
 
 
-# 問題は撮影側(Godot)が種から組み直すため、台本は問題によらず同じ。
-def puzzle_narration(seed: str) -> dict:
-    if not seed.isdigit() or int(seed) == 0:
-        sys.exit(f"とどめ問題の種は1以上の整数にしてください: {seed}")
+# 台本は問題によらず同じ。問題そのもの(局面と正解手順)を台本に同梱して撮影側へ渡す。
+def puzzle_narration(number: str) -> dict:
+    book = load_json(PUZZLE_BOOK)
+    if not number.isdigit() or not 1 <= int(number) <= len(book):
+        sys.exit(f"問題集の番号は 1〜{len(book)} で指定してください: {number}")
     entry = load_json("puzzle_lines.json")
     cta = load_json("card_lines.json")["cta"]
-    return {**SPEAKER, "seed": int(seed), "heads": entry["heads"], "lines": entry["lines"] + [cta]}
+    return {**SPEAKER, "puzzle": book[int(number) - 1], "heads": entry["heads"], "lines": entry["lines"] + [cta]}
+
+
+def targets(kind: str) -> list:
+    if kind == "card":
+        return list(load_json("card_lines.json")["cards"])
+    return [str(n) for n in range(1, len(load_json(PUZZLE_BOOK)) + 1)]
+
+
+# 問題探し(puzzle_forge.gd)は1問に数十秒〜数分かかるため、CPUのコア数に合わせて並列で回し、
+# 見つかった問題を問題集の末尾へ足す(既存の番号は動かさない)。
+def forge(count: int) -> None:
+    workers = max(1, (os.cpu_count() or 2) - 2)
+    per_worker = math.ceil(count / workers)
+    base_seed = int(time.time())
+    WORK_DIR.mkdir(parents=True, exist_ok=True)
+    outs = [WORK_DIR / f"forge_{i}.json" for i in range(workers)]
+    procs = []
+    for i, out in enumerate(outs):
+        out.unlink(missing_ok=True)
+        command = [
+            GODOT, "--headless", "--path", ".", "--script", "res://tools/shorts/puzzle_forge.gd", "--",
+            f"--count={per_worker}", f"--seed={base_seed + i}", f"--out={out}",
+        ]
+        procs.append(subprocess.Popen([str(p) for p in command], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL))
+    print(f"{workers}並列で {per_worker}問ずつ探しています…", flush=True)
+    for proc in procs:
+        proc.wait()
+    book_path = ROOT / "tools/shorts" / PUZZLE_BOOK
+    book = load_json(PUZZLE_BOOK) if book_path.exists() else []
+    known = {signature(entry["stage"]) for entry in book}
+    added = 0
+    for out in outs:
+        if not out.exists():
+            continue
+        for entry in json.loads(out.read_text(encoding="utf-8")):
+            if signature(entry["stage"]) in known:
+                continue
+            known.add(signature(entry["stage"]))
+            book.append(entry)
+            added += 1
+        out.unlink()
+    book_path.write_text(json.dumps(book, ensure_ascii=False, indent="\t") + "\n", encoding="utf-8")
+    print(f"問題集へ {added}問を足しました(計 {len(book)}問)")
+
+
+def signature(stage: dict) -> str:
+    return json.dumps([stage["mana"], stage["hand_ids"], stage["own_units"], stage["foe_units"]])
 
 
 NARRATIONS = {"card": card_narration, "puzzle": puzzle_narration}
+PUZZLE_BOOK = "puzzles.json"
 
 
 def run(command: list) -> None:
@@ -63,21 +116,23 @@ def run(command: list) -> None:
 
 
 def main() -> None:
-    if len(sys.argv) < 3 or sys.argv[1] not in SCENES:
+    if len(sys.argv) < 3 or sys.argv[1] not in [*SCENES, "forge"]:
         sys.exit(__doc__)
     kind, target = sys.argv[1], sys.argv[2]
-    if target != "all" or kind != "card":
+    if kind == "forge":
+        forge(int(target))
+        return
+    if target != "all":
         make(kind, target)
         return
-    table = load_json("card_lines.json")
     failed = []
-    for card_id in table["cards"]:
-        if (OUT_DIR / f"{kind}_{card_id}.mp4").exists():
+    for name in targets(kind):
+        if (OUT_DIR / f"{kind}_{name}.mp4").exists():
             continue
         try:
-            make(kind, card_id)
+            make(kind, name)
         except subprocess.CalledProcessError:
-            failed.append(card_id)
+            failed.append(name)
     print("失敗:", " ".join(failed) if failed else "なし")
 
 
