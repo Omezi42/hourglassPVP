@@ -16,6 +16,7 @@
 | 4.3節 | キーワード辞書(GameDesign.md 17章) | [`arch/04_03_keyword_dict.md`](arch/04_03_keyword_dict.md) |
 | 4.4節 | 画面の見かた(GameDesign.md 20章) | [`arch/04_04_screen_guide.md`](arch/04_04_screen_guide.md) |
 | 4.5節 | デッキを複数持つ(GameDesign.md 9章) | [`arch/04_05_multi_deck.md`](arch/04_05_multi_deck.md) |
+| 4.6節 | unityroom以外の配信先(GameDesign.md 10章) | [`arch/04_06_portals.md`](arch/04_06_portals.md) |
 | 5章 | 拡張運用について | [`arch/05_extension.md`](arch/05_extension.md) |
 | 6章 | オンライン対戦の実装方針 | [`arch/06_online.md`](arch/06_online.md) |
 | 7章 | リプレイ・観戦の実装方針 | [`arch/07_replay.md`](arch/07_replay.md) |
