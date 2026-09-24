@@ -10,6 +10,7 @@ const SAVE_PATH := "user://ui_state.json"
 const KEY_HOME_SEEN := "home_seen"
 const KEY_TUTORIAL_DONE := "tutorial_done"
 
+static var _save_path := SAVE_PATH
 static var _loaded := false
 static var _state: Dictionary = {}
 
@@ -46,7 +47,7 @@ static func _ensure_loaded() -> void:
 	if _loaded:
 		return
 	_loaded = true
-	var file := FileAccess.open(SAVE_PATH, FileAccess.READ)
+	var file := FileAccess.open(_save_path, FileAccess.READ)
 	if file == null:
 		return
 	var parsed: Variant = JSON.parse_string(file.get_as_text())
@@ -56,7 +57,7 @@ static func _ensure_loaded() -> void:
 
 
 static func _save() -> void:
-	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
+	var file := FileAccess.open(_save_path, FileAccess.WRITE)
 	if file == null:
 		return
 	file.store_string(JSON.stringify(_state))

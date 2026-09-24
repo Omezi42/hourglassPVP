@@ -646,6 +646,9 @@ func _show_only(screen: Control, going_back: bool = false) -> void:
 
 	var previous := _active_screen
 	_active_screen = screen
+	# `HomeScreen._ready()` は表示されなくても起動時に走るため、印は実際に出した時点で立てる。
+	if screen == home_screen:
+		UiState.mark_home_seen()
 
 	for s in _screens:
 		if s != previous and s != screen:

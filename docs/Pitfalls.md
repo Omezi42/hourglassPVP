@@ -57,6 +57,10 @@
 
 ### Godotの挙動
 
+- **`main.tscn` の画面はすべて起動時に `_ready()` が走る。**表示されていない画面も同じ。
+  「その画面を見た」の印を `_ready()` で立てると起動した時点で立ってしまい、初回だけの分岐が
+  黙って効かなくなる。印は `Main._show_only()` で実際に出したときに立てる
+  (`tools/tests/first_launch_smoke.gd` が見張る)
 - **`set_anchors_preset()` は「今の矩形を保つように」offsetを計算し直す。**コードで生成した
   直後(サイズ0)のノードへ使うと0サイズのまま固定され、何も描かれない。
   `anchor_right` / `anchor_bottom` への直接代入で設定する

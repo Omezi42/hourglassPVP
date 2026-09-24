@@ -171,7 +171,6 @@ func _ready() -> void:
 	deck_tab.visible = false
 	# ホームは常に「たたかう」を初期選択する(GameDesign.md 9章)。
 	# 初めての人はホームを経ずに誘導対局へ直行し、ホームへ来るのはそこから戻ったときのため。
-	UiState.mark_home_seen()
 	_select_tab(TAB_BATTLE)
 	refresh_account()
 
