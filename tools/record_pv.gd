@@ -31,18 +31,22 @@ const HAND_IDS := ["hammer", "tempest", "poison", "glass", "shield"]
 
 ## 寄りの倍率(カット1・3で使う「駒そのものを中心に拡大」する演出)。
 const ZOOM_CLOSE := 1.85
+## カット1開始時の寄り(まだ何も置いていない盤面から寄り始める)。
+const ZOOM_START := 1.25
+## カット1で出す手札(先頭のドリルを出す)。
+const C1_HAND_IDS := ["drill", "hammer", "tempest", "poison", "glass"]
 
-## カット1(0-3秒): 体力/攻撃力の説明。
-## ズームが落ち着くのを一拍待ってからテロップを出す(対局開始の実況は`_quietly()`で消す)。
-const C1_CAPTION_DELAY := 0.3
-const C1_LINE2_DELAY := 0.7
-const C1_TICK_HOLD := 0.6
-const C1_END_HOLD := 0.2
-## カット2(3-6秒): 早回しでの砂の遷移。
-const C2_TICK_GAP := 0.45
-const C2_ZOOM_OUT_DELAY := 0.6
-const C2_ZOOM_OUT_DURATION := 1.4
-const C2_END_HOLD := 0.3
+## カット1(0-2.5秒): 手札から出す→体力/攻撃力の説明。**最初のフレームから動かす**
+## (ズームは寄り続け、置いた直後にターン終了で砂が落ちる。静止して待たない)。
+const C1_ZOOM_DURATION := 2.0
+const C1_LINE1_DELAY := 0.4
+const C1_TICK_DELAY := 0.6
+const C1_END_HOLD := 0.6
+## カット2(2.5-5秒): 早回しでの砂の遷移。ズームを戻す動きと重ねて同時に動かす。
+const C2_ROUNDS := 3
+const C2_TICK_GAP := 0.35
+const C2_ZOOM_OUT_DURATION := 1.2
+const C2_END_HOLD := 0.4
 ## カット3(6-10秒): 反転(スローモーション)。
 const C3_TIME_SCALE := 0.5
 const C3_FLIP_WAIT := 0.9
@@ -89,6 +93,9 @@ var _caption_sub: Label
 func _ready() -> void:
 	anchor_right = 1.0
 	anchor_bottom = 1.0
+	# 色変換の焼き付けを待ってから画面を組む(Pitfalls.md/HourglassArt冒頭のコメント)。
+	# 待つ間は何も足していない黒地のままなので、頭に余計なコマが入っても幕は要らない。
+	await HourglassArt.ensure_ready_and_wait(self)
 	title_screen = load("res://scenes/title_screen.tscn").instantiate()
 	title_screen.visible = false
 	add_child(title_screen)
@@ -271,44 +278,41 @@ func _run() -> void:
 	get_tree().quit()
 
 
-## 1. 寄り: 上の砂=体力、下の砂=攻撃力。ターン終了で1粒落ちる。
+## 1. 手札からドリルを出す。最初のフレームから寄りが動き続け、静止して待たない。
+## 上の砂=体力、下の砂=攻撃力。着地したターン終了で1粒落ちる。
 func _cut1() -> void:
 	_clear_board()
-	_unit(match_screen.my_side, 0, "drill", 6, 1)
+	var my := match_screen.my_side
+	# 空き枠(0)を残し、両隣に既に育った駒を置いて盤面をにぎやかにしておく。
+	_unit(my, 1, "lock", 6, 1)
+	_unit(my, 2, "sand", 6, 1)
+	_dress_hand(C1_HAND_IDS)
+	match_screen.state.current_turn = my
 	match_screen.refresh()
 	var view := match_screen.own_slot_view(0)
 	_zoom_set_pivot(view.position + view.size * 0.5)
-	match_screen.scale = Vector2.ONE * ZOOM_CLOSE
-	await _wait(C1_CAPTION_DELAY)
+	match_screen.scale = Vector2.ONE * ZOOM_START
+	_zoom_to(ZOOM_CLOSE, C1_ZOOM_DURATION)
+	match_screen._perform(MatchAction.play(my, 0, 0))
+	await _wait(C1_LINE1_DELAY)
 	await _cap_show("上の砂は「体力」")
-	await _wait(C1_LINE2_DELAY)
-	await _cap_add_line("下の砂は「攻撃力」")
-	await _wait(C1_TICK_HOLD)
-	match_screen.state.current_turn = match_screen.my_side
-	_quietly(match_screen._perform.bind(MatchAction.end_turn(match_screen.my_side)))
-	await _wait(C1_TICK_HOLD)
-	_quietly(
-		match_screen._perform.bind(
-			MatchAction.end_turn(MatchState.other_side(match_screen.my_side))
-		)
-	)
+	await _wait(C1_TICK_DELAY)
+	_quietly(match_screen._perform.bind(MatchAction.end_turn(my)))
+	_cap_add_line("下の砂は「攻撃力」")
+	_quietly(match_screen._perform.bind(MatchAction.end_turn(MatchState.other_side(my))))
 	await _wait(C1_END_HOLD)
 	await _cap_hide()
 
 
-## 2. 早回し: 数ターンぶん砂が動き、途中から寄りを戻す。
+## 2. 早回し: 自陣3体・相手の駒が同時に砂を落とす。寄りを戻す動きも同時に始める。
 func _cut2() -> void:
-	await _cap_show("時が経つほど、強く脆くなる。")
-	await _wait(C2_ZOOM_OUT_DELAY)
 	_zoom_to(1.0, C2_ZOOM_OUT_DURATION)
-	for i in 2:
-		_quietly(match_screen._perform.bind(MatchAction.end_turn(match_screen.my_side)))
-		await _wait(C2_TICK_GAP)
-		_quietly(
-			match_screen._perform.bind(
-				MatchAction.end_turn(MatchState.other_side(match_screen.my_side))
-			)
-		)
+	_cap_show("時が経つほど、強く脆くなる。")
+	var my := match_screen.my_side
+	var foe := MatchState.other_side(my)
+	for i in C2_ROUNDS:
+		_quietly(match_screen._perform.bind(MatchAction.end_turn(my)))
+		_quietly(match_screen._perform.bind(MatchAction.end_turn(foe)))
 		await _wait(C2_TICK_GAP)
 	await _wait(C2_END_HOLD)
 	await _cap_hide()
