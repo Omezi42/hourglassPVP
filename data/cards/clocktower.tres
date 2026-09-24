@@ -16,7 +16,7 @@ keyword = -1
 [resource]
 script = ExtResource("script_card")
 id = "clocktower"
-display_name = "時計塔"
+display_name = "クロックタワー"
 cost = 9
 total_sand = 11
 pool_index = 84

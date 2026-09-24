@@ -834,7 +834,7 @@
 			"cannot_attack": false,
 			"cost": 9,
 			"describe": "落砂:相手の砂時計すべてに1ダメージ",
-			"display_name": "時計塔",
+			"display_name": "クロックタワー",
 			"id": "clocktower",
 			"is_spell": false,
 			"pool_index": 84,
