@@ -98,7 +98,7 @@ def forge(count: int) -> None:
             book.append(entry)
             added += 1
         out.unlink()
-    book_path.write_text(json.dumps(book, ensure_ascii=False, indent="\t") + "\n", encoding="utf-8")
+    book_path.write_text(json.dumps(book, ensure_ascii=False, indent="\t") + "\n", encoding="utf-8", newline="\n")
     print(f"問題集へ {added}問を足しました(計 {len(book)}問)")
 
 
