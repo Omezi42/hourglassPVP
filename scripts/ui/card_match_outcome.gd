@@ -22,11 +22,13 @@ func finish(kind: int, deck: Array) -> String:
 		return ""
 	var won: bool = state.winner == _screen.my_side
 	var uid := _uid()
-	MatchStats.record(uid, kind, won, state.turn_count, deck)
+	# 誘導対局は台本どおりに指すだけで、成績ではない(GameDesign.md 19章)。
+	if not _screen._tutorial.ran_this_match:
+		MatchStats.record(uid, kind, won, state.turn_count, deck)
+		MatchStatsService.push(_screen._client, uid, kind, won, state.turn_count, deck)
 	FunnelService.reach(
 		FunnelService.MATCH_END if kind == CurrencyRules.MatchKind.CPU else FunnelService.ONLINE_END
 	)
-	MatchStatsService.push(_screen._client, uid, kind, won, state.turn_count, deck)
 	DailyMissionService.commit(uid, won, state.turn_count)
 	save_replay()
 	_submit_record(kind)

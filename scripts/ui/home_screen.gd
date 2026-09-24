@@ -14,7 +14,6 @@ signal tutorial_requested
 signal rules_requested
 signal screen_guide_requested
 signal keyword_dict_requested
-signal random_match_deck_requested
 signal ranked_match_deck_requested
 signal room_match_requested
 signal account_requested
@@ -98,9 +97,6 @@ func _ready() -> void:
 	deck_tab.deck_edit_pressed.connect(func() -> void: deck_list_requested.emit())
 	deck_tab.hourglass_list_pressed.connect(func() -> void: hourglass_list_requested.emit())
 	deck_tab.shop_pressed.connect(func() -> void: shop_requested.emit())
-	battle_tab.random_match_deck_requested.connect(
-		func() -> void: random_match_deck_requested.emit()
-	)
 	battle_tab.ranked_match_deck_requested.connect(
 		func() -> void: ranked_match_deck_requested.emit()
 	)

@@ -23,8 +23,6 @@ var solo_map_screen: CardSoloMapScreen
 var shop_screen: CardShopScreen
 ## ルームマッチの専用画面(GameDesign.md 11章)。
 var card_room_screen: CardRoomScreen
-## ランダムマッチの専用画面(同章・Architecture.md 6.6節)。
-var card_random_match_screen: CardRandomMatchScreen
 ## ランクマッチの専用画面(GameDesign.md 28章)。
 var card_ranked_match_screen: CardRankedMatchScreen
 ## ランクマッチの段位・ランキング一覧(同章)。
@@ -146,13 +144,6 @@ func _ready() -> void:
 	card_room_screen.matched.connect(_on_room_match_found)
 	card_room_screen.spectate_requested.connect(_on_spectate_requested)
 	_screens.append(card_room_screen)
-	card_random_match_screen = CardRandomMatchScreen.new()
-	card_random_match_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
-	card_random_match_screen.visible = false
-	add_child(card_random_match_screen)
-	card_random_match_screen.back_pressed.connect(func() -> void: _show_only(home_screen, true))
-	card_random_match_screen.matched.connect(_on_online_match_found)
-	_screens.append(card_random_match_screen)
 	card_ranked_match_screen = CardRankedMatchScreen.new()
 	card_ranked_match_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
 	card_ranked_match_screen.visible = false
@@ -198,8 +189,9 @@ func _ready() -> void:
 	waiting_cpu = WaitingCpuMatch.new(waiting_prompt)
 	add_child(waiting_cpu)
 	waiting_cpu.match_chosen.connect(_on_waiting_cpu_match_chosen)
-	for screen: Control in [card_random_match_screen, card_ranked_match_screen]:
-		screen.cpu_requested.connect(_on_waiting_cpu_requested.bind(screen))
+	card_ranked_match_screen.cpu_requested.connect(
+		_on_waiting_cpu_requested.bind(card_ranked_match_screen)
+	)
 	_transition_blocker = _make_transition_blocker()
 	add_child(_transition_blocker)
 	_sand_transition = SandTransition.new()
@@ -227,7 +219,6 @@ func _ready() -> void:
 	home_screen.keyword_dict_requested.connect(func() -> void: _show_only(keyword_dict_screen))
 	home_screen.replay_list_requested.connect(_on_replay_list_requested)
 	home_screen.cpu_match_requested.connect(_on_cpu_match_deck_requested)
-	home_screen.random_match_deck_requested.connect(_on_random_match_deck_requested)
 	home_screen.ranked_match_deck_requested.connect(_on_ranked_match_deck_requested)
 	home_screen.room_match_requested.connect(_on_room_match_requested)
 	home_screen.lab_requested.connect(_on_lab_requested)
@@ -298,12 +289,10 @@ func _on_match_back() -> void:
 	home_screen.reset_battle_tab()
 	card_room_screen.reset_after_match()
 	# 待っている間のCPU戦から戻ったときだけ、キューを残して待機を続ける(GameDesign.md 11章)。
-	var waiting := waiting_cpu.finish()
-	for screen: Control in [card_random_match_screen, card_ranked_match_screen]:
-		if screen == waiting:
-			screen.resume_waiting()
-		else:
-			screen.reset_after_match()
+	if waiting_cpu.finish() == card_ranked_match_screen:
+		card_ranked_match_screen.resume_waiting()
+	else:
+		card_ranked_match_screen.reset_after_match()
 
 
 func _on_account_requested(from_title: bool) -> void:
@@ -366,20 +355,8 @@ func _request_battle(start: Callable) -> void:
 	_show_only(card_deck_list_screen)
 
 
-## ランダムマッチ(GameDesign.md 11章)。デッキ選択画面を終えたら、たたかうタブへは
-## 戻らずランダムマッチの専用画面へ入り、その画面がキューへの参加まで行う。
-func _on_random_match_deck_requested() -> void:
-	FunnelService.reach(FunnelService.ONLINE_TRY)
-	_request_battle(func() -> void: _begin_random_match())
-
-
-func _begin_random_match() -> void:
-	_show_only(card_random_match_screen)
-	card_random_match_screen.begin_match()
-
-
-## ランクマッチ(GameDesign.md 28章)。ランダムマッチと同じ形で、デッキ選択画面を
-## 終えたら専用画面へ入り、その画面がキューへの参加まで行う。
+## 「対戦する」= ランクマッチ(GameDesign.md 11章・28章)。デッキ選択画面を終えたら
+## たたかうタブへは戻らず専用画面へ入り、その画面がキューへの参加まで行う。
 func _on_ranked_match_deck_requested() -> void:
 	FunnelService.reach(FunnelService.ONLINE_TRY)
 	_request_battle(func() -> void: _begin_ranked_match())
@@ -537,20 +514,9 @@ func _on_screen_guide_requested() -> void:
 	_show_only(screen_guide_screen)
 
 
-## オンライン対戦(v5.0)。配置フェーズが無いため、デッキと山札の種を交換したら
-## そのまま対局へ入る。is_room は砂金の獲得量(GameDesign.md 15章)、
+## ランクマッチ(GameDesign.md 28章)。配置フェーズが無いため、デッキと山札の種を交換したら
+## そのまま対局へ入る。`is_ranked`を立てて段位を対局結果に反映させる。
 ## opponent_uid は相手の表示名(14章)に使う。
-func _on_online_match_found(match_id: String, my_side: int, opponent_uid: String) -> void:
-	waiting_cpu.finish()
-	card_match_screen.start_online_match(
-		CardDeckSave.selected_deck(), NetSession.client, match_id, my_side, false, opponent_uid
-	)
-	_match_return_screen = home_screen
-	_show_only(card_match_screen)
-
-
-## ランクマッチ(GameDesign.md 28章)。オンライン対戦の経路(配置フェーズ無し)は
-## フリーマッチと同じで、`is_ranked`だけを立てて段位を対局結果に反映させる。
 func _on_ranked_match_found(match_id: String, my_side: int, opponent_uid: String) -> void:
 	waiting_cpu.finish()
 	card_match_screen.start_online_match(

@@ -2,8 +2,7 @@ class_name CardRankedMatchScreen
 extends Control
 ## ランクマッチの専用画面(GameDesign.md 28章)。`CardRandomMatchScreen`と同じ形で、
 ## デッキ選択画面を終えた直後に開き、`RankedMatchmakingQueue`への参加から
-## マッチ成立までをここで完結させる。募集をDiscordへ知らせる仕組み(11章)は
-## フリーマッチだけのものであり、ここでは使わない。
+## マッチ成立までをここで完結させる。見知らぬ人との対戦はこの1つだけ(11章)。
 
 signal back_pressed
 ## 対戦が成立した。`Main._on_ranked_match_found()` がそのまま受け取れる形にしてある。
@@ -14,6 +13,11 @@ signal cpu_requested
 signal ranking_requested
 
 const HEADER_SCENE := "res://scenes/screen_header.tscn"
+const BUSY_DOTS_MAX := EmptyState.DOTS_MAX
+## 印にカーソルを乗せたときだけ出す説明(GameDesign.md 11章)。
+const ANNOUNCE_NOTE := "公式Discordサーバーへ「対戦相手をさがしている人がいる」と通知を送りました"
+## 印は待機中の文言のすぐ右へ置く(GameDesign.md 11章)。
+const ANNOUNCE_BADGE_GAP := 10.0
 const CANCEL_SIZE := Vector2(220, 64)
 const CANCEL_GAP := 40.0
 const RANKING_BUTTON_SIZE := Vector2(168, 48)
@@ -30,6 +34,7 @@ var _status_base_text := ""
 var _content_rect: Rect2
 var _empty_state: EmptyState
 var _tier_label: Label
+var _announce_badge: StatusBadge
 var _cancel_button: Button
 var _ranking_button: Button
 var _ceremony: CardSeasonCeremonyPanel
@@ -68,6 +73,9 @@ func _build() -> void:
 	_empty_state.size = _content_rect.size
 	add_child(_empty_state)
 
+	_announce_badge = StatusBadge.new()
+	add_child(_announce_badge)
+
 	_cancel_button = CodedButton.make("キャンセル", CANCEL_SIZE)
 	_cancel_button.pressed.connect(_on_cancel_pressed)
 	add_child(_cancel_button)
@@ -102,6 +110,7 @@ func begin_match() -> void:
 	_queue.matched.connect(_on_matched)
 	_queue.failed.connect(_fail)
 	_queue.version_mismatch.connect(_on_version_mismatch)
+	_queue.announce_result.connect(_on_announce_result)
 	_queue.join()
 	_cpu_offer.arm(WaitingCpuOffer.FIRST_DELAY_SECONDS)
 
@@ -152,7 +161,29 @@ func _set_busy(busy: bool) -> void:
 
 func _set_status(text: String) -> void:
 	_status_base_text = text
+	if _announce_badge != null:
+		_announce_badge.clear_note()
 	_empty_state.show_message(_status_base_text, "", _busy)
+	_place_announce_badge()
+
+
+## `EmptyState` は押せるものを持たないため、印は外側から同じ中央寄せを計算し直して重ねる。
+func _place_announce_badge() -> void:
+	var font := get_theme_default_font()
+	if _announce_badge == null or font == null:
+		return
+	var font_size := EmptyState.TITLE_FONT_SIZE
+	var text := _status_base_text + ".".repeat(BUSY_DOTS_MAX)
+	var half_width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x * 0.5
+	_announce_badge.position = Vector2(
+		_content_rect.get_center().x + half_width + ANNOUNCE_BADGE_GAP,
+		_title_baseline_y() - font_size * 0.72 - StatusBadge.DIAMETER * 0.5
+	)
+
+
+func _on_announce_result(ok: bool) -> void:
+	if ok and _announce_badge != null:
+		_announce_badge.show_note(ANNOUNCE_NOTE)
 
 
 func _title_baseline_y() -> float:

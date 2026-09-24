@@ -35,8 +35,6 @@ var client: FirestoreClient
 var auth: FirebaseAuth
 ## 待合室のコレクション。ランクマッチは派生クラスで差し替える。
 var collection := COLLECTION
-## 待機側になったらDiscordへ募集を知らせるか(ランクマッチは知らせない)。
-var announces := true
 ## 待っている間のCPU戦をしているか。立っている間は掴まず、掴まれない。
 var cpu_playing := false
 var _my_match_id: String = ""
@@ -69,12 +67,7 @@ func join() -> void:
 		# ここへ来た時点で「待機側になった」ことが確定する。即座にマッチが成立した
 		# 場合は上で return しているため、条件分岐を足さずに仕様を満たせる。
 		# 応答は待たない(通信の成否でポーリングを遅らせないため)
-		if (
-			announces
-			and not _announced
-			and _now() >= _announce_next_at
-			and QueueNotifier.can_send()
-		):
+		if not _announced and _now() >= _announce_next_at and QueueNotifier.can_send():
 			# **届くまで諦めない。**以前は1回試して終わりで、失敗しても画面には
 			# 何も出ず、待っている側には「誰も来ない」としか見えなかった。
 			_announce_next_at = _now() + ANNOUNCE_RETRY_SECONDS
@@ -141,7 +134,7 @@ func _try_claim_or_check() -> bool:
 	for candidate in candidates:
 		if candidate["id"] == auth.uid:
 			continue
-		if _is_stale(candidate):
+		if is_stale(candidate):
 			await client.delete_document(_doc_path(candidate["id"]))
 			continue
 		# バージョンが違う相手は掴まない(GameDesign.md 11章)。**掴まないだけで
@@ -199,7 +192,7 @@ func _claim(mine: Dictionary, candidate: Dictionary) -> bool:
 	return claimed
 
 
-func _is_stale(candidate: Dictionary) -> bool:
+static func is_stale(candidate: Dictionary) -> bool:
 	var read_at := FirestoreCodec.timestamp_seconds(candidate["read_time"])
 	var updated_at := FirestoreCodec.timestamp_seconds(candidate["update_time"])
 	return read_at - updated_at > STALE_SECONDS

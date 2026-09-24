@@ -17,7 +17,7 @@ const CARD_ROWS := 12
 const TOGGLE_SIZE := Vector2(168, 48)
 ## 数値の列。**戦績は数字を見比べる画面**であり、1本の文へ流し込むと桁の位置が
 ## 行ごとにずれて読み比べられない。列の幅をここで決め、行はこの表に従って組む。
-## 幅は、左の欄(内寸512px)で「ランダムマッチ」まで省略されずに収まる値にしてある。
+## 幅は、左の欄(内寸512px)で「ランダムマッチ」(過去の対局の種別)まで省略されずに収まる値にしてある。
 const COL_COUNT := 68.0
 const COL_WINS := 68.0
 const COL_RATE := 94.0
@@ -132,7 +132,7 @@ func _refresh_global() -> void:
 	)
 	_summary.add_child(_make_line("", 12))
 	_summary.add_child(_make_line("内訳", 26))
-	for kind: Array in [["kind_random", "ランダムマッチ"], ["kind_room", "ルームマッチ"]]:
+	for kind: Array in [["kind_random", "ランクマッチ"], ["kind_room", "ルームマッチ"]]:
 		_summary.add_child(
 			_make_row(str(kind[1]), [_cell("%d戦" % int(counts.get(kind[0], 0)), COL_COUNT)])
 		)

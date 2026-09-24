@@ -1,7 +1,7 @@
 class_name WaitingCpuOffer
 extends RefCounted
 ## 待機画面の「待っている間CPUと対戦する」ボタン(GameDesign.md 11章)。
-## ランダムマッチ・ランクマッチの両画面が持つ。人を待つ前にCPUへ流れないよう、
+## ランクマッチの待機画面が持つ。人を待つ前にCPUへ流れないよう、
 ## 待機を始めてから少し置いて出す。
 
 signal requested

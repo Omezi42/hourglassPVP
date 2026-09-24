@@ -67,7 +67,7 @@ func start(
 	_screen._online.action_received.connect(_screen._on_action_received)
 	_screen._online.start(p_match_id)
 	# 切断しても同じ対局へ戻れるようにする(GameDesign.md 11章)。
-	OnlineResume.remember(p_match_id, p_my_side, is_room, opponent_uid, time_limit)
+	OnlineResume.remember(p_match_id, p_my_side, is_room, opponent_uid, time_limit, is_ranked)
 	# マリガンは手と同じ `actions` として送り合う(GameDesign.md 2章)。両者の確定が
 	# 揃うまで対局は始まらないため、持ち時間はここを抜けてから動かし始める。
 	if _screen.state.mulligan_pending:
@@ -117,11 +117,7 @@ func resume(client: FirestoreClient, record: Dictionary) -> bool:
 	_screen._reset_for_new_match()
 	_screen._cpu = null
 	_screen._interactive = true
-	_screen._match_kind = (
-		CurrencyRules.MatchKind.ROOM
-		if bool(record.get("is_room", false))
-		else CurrencyRules.MatchKind.RANDOM
-	)
+	_screen._match_kind = OnlineResume.match_kind(record)
 	_screen.my_side = p_my_side
 	_screen._back_button.visible = true
 	_apply_player_names(client, record.get("opponent_uid", ""))

@@ -2,7 +2,7 @@ class_name QueueNotifier
 extends RefCounted
 ## 対戦相手の募集をDiscordへ知らせる(GameDesign.md 11章)。
 ##
-## ランダムマッチは同時に遊んでいる人がいなければ成立しない。待機側になったことを
+## ランクマッチは同時に遊んでいる人がいなければ成立しない。待機側になったことを
 ## コミュニティへ流し、いま遊べる人を呼べるようにする。
 ##
 ## **WebhookのURLはリポジトリへ置かない**(Architecture.md 6.3節)。

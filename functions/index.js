@@ -40,7 +40,7 @@ const LAB_ADMIN_SECRET = defineSecret("LAB_ADMIN_SECRET");
 
 const ANNOUNCE_MESSAGE =
   "☀️ 本日は日曜イベント開催中!\n" +
-  "ランダムマッチで手に入る砂金が、日付が変わるまで2倍になります。";
+  "ランクマッチで手に入る砂金が、日付が変わるまで2倍になります。";
 
 // カードスポットライトで、同じカードを続けて紹介しないための間隔(GameDesign.md 26章)。
 const SPOTLIGHT_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;

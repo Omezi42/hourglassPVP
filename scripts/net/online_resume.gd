@@ -12,8 +12,14 @@ const SAVE_PATH := "user://online_match.json"
 
 ## time_limit はルームマッチで切れる持ち時間の設定(GameDesign.md 5章)。復帰した対局が
 ## 途中から持ち時間ありに戻らないよう、側や種別と同じく覚えておく。
+## is_ranked を覚えないと、復帰したランクマッチで段位が動かない(GameDesign.md 28章)。
 static func remember(
-	match_id: String, my_side: int, is_room: bool, opponent_uid: String, time_limit: bool = true
+	match_id: String,
+	my_side: int,
+	is_room: bool,
+	opponent_uid: String,
+	time_limit: bool = true,
+	is_ranked: bool = false
 ) -> void:
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file == null:
@@ -30,12 +36,22 @@ static func remember(
 						"is_room": is_room,
 						"opponent_uid": opponent_uid,
 						"time_limit": time_limit,
+						"is_ranked": is_ranked,
 					}
 				)
 			)
 		)
 	)
 	file.close()
+
+
+## 復帰した対局の種別。`is_ranked` を持たない古い記録はフリーの対戦として扱う。
+static func match_kind(record: Dictionary) -> CurrencyRules.MatchKind:
+	if bool(record.get("is_room", false)):
+		return CurrencyRules.MatchKind.ROOM
+	if bool(record.get("is_ranked", false)):
+		return CurrencyRules.MatchKind.RANKED
+	return CurrencyRules.MatchKind.RANDOM
 
 
 ## 覚えている対局。無ければ空の Dictionary。

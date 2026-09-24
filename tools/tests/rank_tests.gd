@@ -15,6 +15,8 @@ func run(assert_true: Callable) -> void:
 	_test_rating_delta(assert_true)
 	_test_compare_tier(assert_true)
 	_test_season_key(assert_true)
+	_test_days_left_in_season(assert_true)
+	_test_resume_remembers_ranked(assert_true)
 	_test_progress_score(assert_true)
 	_test_win_streak_bonus(assert_true)
 	await _test_apply_result_star_progress(assert_true)
@@ -22,6 +24,34 @@ func run(assert_true: Callable) -> void:
 	await _test_apply_result_reaches_platinum(assert_true)
 	await _test_ensure_current_season_resets_and_grants_reward(assert_true)
 	await _test_ensure_current_season_first_time_has_no_ceremony(assert_true)
+
+
+func _test_days_left_in_season(assert_true: Callable) -> void:
+	var noon_jst := Time.get_unix_time_from_datetime_dict(
+		{"year": 2026, "month": 9, "day": 25, "hour": 3, "minute": 0, "second": 0}
+	)
+	assert_true.call(RankProgress.days_left_in_season(noon_jst) == 6, "9/25の昼(JST)はシーズン終了まで6日であること")
+	var last_minute := Time.get_unix_time_from_datetime_dict(
+		{"year": 2026, "month": 12, "day": 31, "hour": 14, "minute": 59, "second": 0}
+	)
+	assert_true.call(
+		RankProgress.days_left_in_season(last_minute) == 1, "月末の最後の1分(JST)は残り1日であること(年もまたぐ)"
+	)
+
+
+## 切断から復帰したランクマッチは、段位の動く対局として終わること(GameDesign.md 28章)。
+func _test_resume_remembers_ranked(assert_true: Callable) -> void:
+	assert_true.call(
+		OnlineResume.match_kind({"is_ranked": true}) == CurrencyRules.MatchKind.RANKED,
+		"復帰した対局の種別をランクマッチとして読むこと"
+	)
+	assert_true.call(
+		OnlineResume.match_kind({"is_room": true}) == CurrencyRules.MatchKind.ROOM,
+		"ルームマッチはルームマッチのまま"
+	)
+	assert_true.call(
+		OnlineResume.match_kind({}) == CurrencyRules.MatchKind.RANDOM, "種別を持たない古い記録はフリーの対戦として読むこと"
+	)
 
 
 func _test_parse_and_display(assert_true: Callable) -> void:

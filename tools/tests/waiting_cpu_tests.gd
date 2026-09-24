@@ -14,6 +14,7 @@ func run(assert_true: Callable) -> void:
 	await _test_cpu_player_hears_others()
 	_test_playable_decks()
 	_test_ranked_queue_collection()
+	await _test_count_waiting()
 
 
 func _test_does_not_claim_cpu_player() -> void:
@@ -62,8 +63,26 @@ func _test_playable_decks() -> void:
 func _test_ranked_queue_collection() -> void:
 	var queue := RankedMatchmakingQueue.new(null, FirebaseAuth.new(null))
 	_assert.call(queue.collection == "ranked_queue", "ランクマッチは別の待合室を使うこと")
-	_assert.call(not queue.announces, "ランクマッチはDiscordへ募集を知らせないこと")
 	queue.free()
+
+
+## ホームへ出す待機人数(GameDesign.md 9章)は、掴める相手だけを数える。
+func _test_count_waiting() -> void:
+	var queue := _make_queue("uid-me")
+	var client = queue.client
+	var ranked := RankedMatchmakingQueue.RANKED_COLLECTION
+	for waiter: Array in [
+		["uid-me", GameVersion.build_id(), ""],
+		["uid-other", GameVersion.build_id(), ""],
+		["uid-old", "19990101-000000", ""],
+		["uid-matched", GameVersion.build_id(), "m1"],
+	]:
+		client.store["%s/%s" % [ranked, waiter[0]]] = {
+			"fields": {"match_id": waiter[2], "build": waiter[1]}, "update_time": "1"
+		}
+	var count: int = await RankedMatchmakingQueue.count_waiting(client, "uid-me")
+	_assert.call(count == 1, "自分・違う版・成立済みを除いて数えること")
+	_free_queue(queue)
 
 
 func _add_waiter(queue: MatchmakingQueue, uid: String, cpu: bool) -> void:

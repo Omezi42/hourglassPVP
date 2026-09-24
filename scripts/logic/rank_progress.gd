@@ -31,6 +31,22 @@ static func current_season_key(at_unix_time: float = -1.0) -> String:
 	return "%04d-%02d" % [int(dict.get("year", 0)), int(dict.get("month", 0))]
 
 
+## いまのシーズンが終わるまでの日数(当日を1日と数える。JST基準)。ホームの札に出す(GameDesign.md 9章)。
+static func days_left_in_season(at_unix_time: float = -1.0) -> int:
+	var unix_time := at_unix_time if at_unix_time >= 0.0 else Time.get_unix_time_from_system()
+	var jst_time := unix_time + JST_OFFSET_HOURS * 3600.0
+	var today := Time.get_datetime_dict_from_unix_time(int(jst_time))
+	var year := int(today["year"])
+	var month := int(today["month"]) + 1
+	if month > 12:
+		month = 1
+		year += 1
+	var next_start := Time.get_unix_time_from_datetime_dict(
+		{"year": year, "month": month, "day": 1, "hour": 0, "minute": 0, "second": 0}
+	)
+	return ceili((float(next_start) - jst_time) / 86400.0)
+
+
 ## ランクマッチへ入る直前・ランク画面を開いた直後に呼ぶ。シーズンが変わっていれば
 ## 旧シーズンの月末報酬(未受領なら)を付与してから、段位を初期化する。
 ##

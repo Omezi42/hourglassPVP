@@ -134,7 +134,7 @@ func _test_currency_rules(assert_true: Callable) -> void:
 		CurrencyRules.format_reward(none) == "", "a silent non-reward should format to nothing"
 	)
 
-	# 日曜イベント(GameDesign.md 15章・25章): ランダムマッチだけ2倍、他は据え置き。
+	# 日曜イベント(GameDesign.md 15章・25章): ランクマッチ(と過去のフリーの対戦)だけ2倍、他は据え置き。
 	var sunday_ts := Time.get_unix_time_from_datetime_string("2026-09-06T12:00:00")
 	var sunday_random := CurrencyRules.evaluate(
 		CurrencyRules.MatchKind.RANDOM, true, enough, 0, sunday_ts

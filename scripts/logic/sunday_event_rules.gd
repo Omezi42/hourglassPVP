@@ -1,7 +1,7 @@
 class_name SundayEventRules
 extends RefCounted
 ## 日曜イベント(GameDesign.md 15章・25章)の判定。毎週日曜日(JST)のあいだ、
-## ランダムマッチの砂金獲得量が2倍になる。サーバー側で正当性検証を行わない
+## ランクマッチの砂金獲得量が2倍になる。サーバー側で正当性検証を行わない
 ## 既存方針(GameDesign.md 11章)に揃え、クライアントのローカル時刻をそのまま信頼する。
 
 const REWARD_MULTIPLIER := 2
@@ -22,5 +22,5 @@ static func is_active(at_unix_time: float = -1.0) -> bool:
 ## 日本語の1行表示。イベント中でなければ空文字を返す。
 static func banner_text(at_unix_time: float = -1.0) -> String:
 	if is_active(at_unix_time):
-		return "日曜イベント中:ランダムマッチの砂金が%d倍" % REWARD_MULTIPLIER
+		return "日曜イベント中:ランクマッチの砂金が%d倍" % REWARD_MULTIPLIER
 	return ""

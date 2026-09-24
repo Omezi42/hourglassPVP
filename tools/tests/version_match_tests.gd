@@ -118,7 +118,7 @@ func _test_stale_uses_server_time() -> void:
 	var queue := _make_queue("uid-me")
 	var skewed_clock := {"joined_at": 0.0}
 	_assert.call(
-		not queue._is_stale(
+		not MatchmakingQueue.is_stale(
 			{
 				"fields": skewed_clock,
 				"update_time": "2026-09-24T15:00:00.123456Z",
@@ -128,7 +128,7 @@ func _test_stale_uses_server_time() -> void:
 		"端末の時計がずれていても、最近更新された待機者は消さないこと"
 	)
 	_assert.call(
-		queue._is_stale(
+		MatchmakingQueue.is_stale(
 			{
 				"fields": skewed_clock,
 				"update_time": "2026-09-24T15:00:00.123456Z",
