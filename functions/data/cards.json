@@ -118,7 +118,7 @@
 			"id": "twin",
 			"is_spell": false,
 			"pool_index": 12,
-			"total_sand": 7
+			"total_sand": 6
 		},
 		{
 			"cannot_attack": false,
@@ -168,7 +168,7 @@
 			"id": "poison",
 			"is_spell": false,
 			"pool_index": 17,
-			"total_sand": 6
+			"total_sand": 5
 		},
 		{
 			"cannot_attack": false,
@@ -368,7 +368,7 @@
 			"id": "shell",
 			"is_spell": false,
 			"pool_index": 37,
-			"total_sand": 6
+			"total_sand": 7
 		},
 		{
 			"cannot_attack": false,
@@ -673,7 +673,7 @@
 		{
 			"cannot_attack": false,
 			"cost": 3,
-			"describe": "モートを2体出す",
+			"describe": "モートを3体出す",
 			"display_name": "砂王の呼び声",
 			"id": "call",
 			"is_spell": true,
@@ -838,7 +838,7 @@
 			"id": "clocktower",
 			"is_spell": false,
 			"pool_index": 84,
-			"total_sand": 11
+			"total_sand": 9
 		},
 		{
 			"cannot_attack": false,
