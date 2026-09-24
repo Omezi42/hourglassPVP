@@ -41,8 +41,9 @@ const RANK_SCOREBOARD_ID := 1
 
 ## 送れる状態かどうか(鍵が設定済み・Web書き出しかどうか)。`QueueNotifier.can_send()`
 ## と同じ形。Web書き出し以外では署名の仕組みそのものが意味を持たないため送らない。
+## unityroom以外の配信先では送り先が成立しないため送らない(Architecture.md 4.6節)。
 static func can_send() -> bool:
-	return OS.has_feature("web") and _hmac_key() != ""
+	return OS.has_feature("web") and _hmac_key() != "" and not PortalInfo.is_portal()
 
 
 ## スコアを送る。**応答は待たなくてよい**(失敗しても段位の更新そのものは通常どおり

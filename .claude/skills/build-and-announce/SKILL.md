@@ -39,6 +39,13 @@ bash tools/export_web.sh
   `tools/export_web.sh` が書き出し前に `tools/ensure_export_filters.py` で揃え直し、
   書き出し後に `tools/verify_web_pck.gd` でpckの中身を検査する。
   **`pck check passed` が出ないビルドは上げない**
+- **itch.io・PLiCy 向けの pck も同じスクリプトが Cloudflare Pages へ上げる**(`tools/deploy_pages.sh`。
+  Architecture.md 4.6節)。`!!! Cloudflare Pages へのデプロイに失敗` が出たら、ユーザーに
+  `npx wrangler login` を頼んでから `bash tools/deploy_pages.sh` だけを回し直す。
+  **上げないままにすると、その2サイトの人だけ古い版になり、unityroom の人とマッチングできない**
+- **Godot 本体を更新したビルドだけは、`build/portal.zip` を itch.io・PLiCy へ上げ直す必要がある**
+  (起動部の wasm と pck の版が合わないと、起動部が「unityroom版で遊んでください」と出して止まる)。
+  ユーザーに依頼する
 - **エディタのメニューから書き出さない。**必ずこのスクリプトを通す
   (エディタから出すとビルドIDが刻まれず、検査も走らない)
 

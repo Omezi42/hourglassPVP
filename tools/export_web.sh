@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Web(unityroom)向けの書き出し。
+# Web(unityroom・itch.io・PLiCy)向けの書き出し。
 # unityroomへ上げるのは build/web/index.pck だけ。
 # BGMはpckへ入れず(export_presets.cfg の exclude_filter)、実行時に
 # MusicPlayer がリポジトリからCDN経由で取りに行く(Architecture.md 4.1.6節)。
@@ -26,6 +26,11 @@ echo "build_id = $BUILD_ID"
 "$GODOT" --headless --path "$ROOT" --export-release "Web" "$OUT/index.html" > "$ROOT/logs/export_web.log" 2>&1
 "$GODOT" --headless --main-pack "$OUT/index.pck" --script res://tools/tests/run_tests.gd 2>&1 | grep -E "tests passed|FAILED" || true
 "$GODOT" --headless --main-pack "$OUT/index.pck" --script res://tools/verify_web_pck.gd 2>&1 | grep -E "pck check" || true
+
+# itch.io・PLiCy 向け(Architecture.md 4.6節)。起動部 build/portal.zip は Godot を上げたときだけ手で上げ直す。
+ENGINE_VERSION="$("$GODOT" --version | cut -d. -f1-3 | tr -dc 0-9.)"
+python "$ROOT/tools/make_portal.py" "$OUT" "$BUILD_ID" "$ENGINE_VERSION"
+bash "$ROOT/tools/deploy_pages.sh" || echo "!!! Cloudflare Pages へのデプロイに失敗(npx wrangler login を確認)"
 
 echo "--- unityroomへ上げるのはこれ ---"
 ls -la "$OUT/index.pck" | awk '{print $5, $9}'
