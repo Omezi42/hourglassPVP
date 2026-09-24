@@ -18,8 +18,6 @@
 
 ## 0.3 unityroom以外の配信先(GameDesign.md 10章・Architecture.md 4.6節)
 
-- [ ] 起動部(`tools/make_portal.py`)と `PortalInfo`・ランキング送信の判定を実装する
-- [ ] `export_web.sh` に Pages 用の出力とデプロイを足し、build-and-announce Skill へ手順を書く
 - [ ] Cloudflare Pages のプロジェクト `sunadokei-arena` を作り、初回デプロイする(ユーザーの `wrangler login` 待ち)
 - [ ] itch.io・PLiCy の作品ページを作り、`build/portal.zip` を上げる(ユーザー作業。紹介文と設定手順はClaudeが用意する)
 
