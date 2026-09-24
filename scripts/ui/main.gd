@@ -44,6 +44,8 @@ var _pending_battle := Callable()
 var _deck_pick_return: Control
 ## アカウント画面を閉じたときの戻り先。タイトルから開いた場合だけタイトルへ戻す。
 var _account_return_to_title := false
+## ショップをデッキ編集の導線から開いた。戻るとデッキ編集へ帰す。
+var _shop_from_editor := false
 
 var _screens: Array[Control] = []
 ## タイトルからホームへ移るときだけ使う砂のトランジション(GameDesign.md 9章)。
@@ -91,6 +93,7 @@ func _ready() -> void:
 	card_deck_editor_screen.visible = false
 	add_child(card_deck_editor_screen)
 	card_deck_editor_screen.back_pressed.connect(_on_deck_editor_closed)
+	card_deck_editor_screen.shop_requested.connect(_on_editor_shop_requested)
 	_screens.append(card_deck_editor_screen)
 	card_deck_list_screen = CardDeckListScreen.new()
 	card_deck_list_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -485,13 +488,26 @@ func _on_deck_list_requested() -> void:
 
 ## ショップ(GameDesign.md 21章)。残高は購入で動くため、開くたびに読み直す。
 func _on_shop_requested() -> void:
+	_shop_from_editor = false
 	shop_screen.open()
 	_show_only(shop_screen)
 
 
+## デッキ編集でロックされたカードを押した先(GameDesign.md 21章)。戻るとデッキ編集へ帰る。
+func _on_editor_shop_requested(set_id: String) -> void:
+	_shop_from_editor = true
+	shop_screen.open(set_id)
+	_show_only(shop_screen)
+
+
 func _on_shop_back() -> void:
-	_show_only(home_screen, true)
 	home_screen.refresh_account()
+	if _shop_from_editor:
+		_shop_from_editor = false
+		card_deck_editor_screen.refresh_ownership()
+		_show_only(card_deck_editor_screen, true)
+		return
+	_show_only(home_screen, true)
 
 
 ## 砂時計一覧はカード一覧(CardListScreen)。所有状況はショップでの購入等で

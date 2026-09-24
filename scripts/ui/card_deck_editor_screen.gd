@@ -7,9 +7,12 @@ extends Control
 ## 編成中のデッキは**コスト帯ごとの段**(`CardDeckShelf`)として見せる。
 
 signal back_pressed
+## 未所有のカードセットのカードを押し、ショップへ進むことを選んだ(GameDesign.md 21章)。
+signal shop_requested(set_id: String)
 
 const SCREEN_WIDTH := 1280.0
 const PANEL_STYLE := "res://resources/theme/content_panel.tres"
+const CONFIRM_SCENE := "res://scenes/confirm_modal.tscn"
 ## 在庫棚・組立台の内側(木箱の枠と上端の帯を除いた範囲)。**外形は下地が描く**。
 const GRID_RECT := Rect2(
 	WorkshopBackdrop.SHELF_RECT.position.x + 24,
@@ -53,6 +56,9 @@ var _detail: CardDetailPanel
 var _detail_hide_timer: Timer
 var _preset_picker: CardPresetPicker
 var _share_panel: CardDeckSharePanel
+var _shop_confirm: ConfirmModal
+## ショップへの導線を出している最中のカードセット。
+var _pending_set := ""
 ## 一覧に並べるカード。**コスト順**で固定する(GameDesign.md 9章の既定と揃える)。
 ## `_card_views` の並びと1対1で対応するため、参照する側は必ずこちらを見る。
 var _pool: Array[CardData] = []
@@ -104,6 +110,9 @@ func _build() -> void:
 	_share_panel = CardDeckSharePanel.new()
 	_share_panel.loaded.connect(_on_code_loaded)
 	add_child(_share_panel)
+	_shop_confirm = load(CONFIRM_SCENE).instantiate()
+	add_child(_shop_confirm)
+	_shop_confirm.confirmed.connect(func() -> void: shop_requested.emit(_pending_set))
 
 
 ## 画面名は吊り看板が示す(下地が描く)ため、ここは操作だけを置く。
@@ -258,12 +267,9 @@ func _refresh() -> void:
 		# **枚数は実数を出し、暗転だけを「入れられるか」で決める。**30枚に達した
 		# だけで全部が「2/2」になると、どれを2枚積んだのか読めなくなる。
 		var copies := _count_of(card)
-		var can_add: bool = (
-			not full
-			and copies < CardDeckSave.COPY_LIMIT
-			and AccountService.owns_card_set(card.set_id)
-		)
-		_card_views[i].show_card(card, copies, CardDeckSave.COPY_LIMIT, can_add)
+		var owned := AccountService.owns_card_set(card.set_id)
+		var can_add: bool = not full and copies < CardDeckSave.COPY_LIMIT and owned
+		_card_views[i].show_card(card, copies, CardDeckSave.COPY_LIMIT, can_add, not owned)
 	_save_button.disabled = not full
 
 
@@ -336,7 +342,27 @@ func _on_shelf_hovered(card: CardData) -> void:
 
 
 func _on_card_pressed(card: CardData) -> void:
+	if not AccountService.owns_card_set(card.set_id):
+		_offer_shop(card.set_id)
+		return
 	_add_card(card)
+
+
+## ショップから戻ったとき。購入していれば、そのセットのカードをここで足せるようにする。
+## 編成中のデッキは開き直さずそのまま残す。
+func refresh_ownership() -> void:
+	_refresh()
+
+
+func _offer_shop(set_id: String) -> void:
+	_pending_set = set_id
+	_hide_detail()
+	_shop_confirm.open_confirm(
+		"まだ持っていないカード",
+		"カードセット「%s」のカードです。ショップで購入するとデッキに入れられます。" % CardSetLibrary.display_name(set_id),
+		"ショップへ",
+		"閉じる"
+	)
 
 
 func _add_card(card: CardData) -> void:

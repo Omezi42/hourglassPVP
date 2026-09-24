@@ -38,6 +38,9 @@ var _balance_seen := false
 var _message: Label
 var _confirm: ConfirmModal
 var _preview: ShopSetPreview
+var _scroll: ScrollContainer
+## カードセットの品。デッキ編集から開いたとき、目当てのセットへスクロールするために持つ。
+var _set_cards: Array[ShopItemCard] = []
 var _busy := false
 ## 確認中の品。押した時点で控え、確定したときに買う。
 var _pending: Dictionary = {}
@@ -52,9 +55,22 @@ func _ready() -> void:
 
 
 ## 画面を開くたびにMainが呼ぶ。残高は購入で必ず動くため、開くたびに描き直す。
-func open() -> void:
+## focus_set_id を渡すと、そのカードセットの品までスクロールして開く(デッキ編集からの導線)。
+func open(focus_set_id := "") -> void:
 	_set_message("")
 	_refresh()
+	_scroll.scroll_vertical = 0
+	if focus_set_id != "":
+		_focus_set(focus_set_id)
+
+
+## 並べ直した直後はまだ大きさが決まっていないため、1フレーム待ってから寄せる。
+func _focus_set(set_id: String) -> void:
+	await get_tree().process_frame
+	for card in _set_cards:
+		if is_instance_valid(card) and card.id == set_id:
+			_scroll.ensure_control_visible(card)
+			return
 
 
 func _refresh() -> void:
@@ -62,6 +78,7 @@ func _refresh() -> void:
 	_balance_seen = true
 	for child in _list.get_children():
 		child.queue_free()
+	_set_cards.clear()
 	var by_kind: Dictionary = {}
 	for item in ShopCatalog.items():
 		var kind: ShopCatalog.Kind = item["kind"]
@@ -97,6 +114,8 @@ func _build_section_grid(kind: ShopCatalog.Kind, ids: Array) -> GridContainer:
 		card.pressed.connect(func() -> void: _on_item_pressed(kind, str(id), card))
 		card.set_preview_requested.connect(func(set_id: String) -> void: _preview.open_set(set_id))
 		grid.add_child(card)
+		if kind == ShopCatalog.Kind.CARD_SET:
+			_set_cards.append(card)
 	return grid
 
 
@@ -187,6 +206,7 @@ func _build() -> void:
 	add_child(panel)
 
 	var scroll := ScrollContainer.new()
+	_scroll = scroll
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	TouchScroll.enable(scroll)
 	panel.add_child(scroll)
