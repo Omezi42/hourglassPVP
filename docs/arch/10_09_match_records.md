@@ -47,6 +47,9 @@
 無い段階だけを `pending` へ入れ、続けて送る。**送れたものだけを `sent` へ移す**ため、
 送れなかった段階は次の `flush()`(起動時)で送り直される。
 
+**数え始める前から遊んでいた端末は `excluded` を立てて以後どの段階も数えない。**`on_launch()` の時点で
+控えに `first_day` が無いのに `UiState.has_seen_home()` が真なら、その端末は以前から遊んでいた人と見なす。
+
 **送り先は `stats/funnel` の1件。**`days` の下に `{"d20260925": {"launch": 3, ...}}` の形で持つ
 (キーの先頭を英字にするのは、Firestoreのフィールドパスで数字始まりを避けるため)。
 更新は `MatchRecordService._bump_stats()` と同じく **`updateTime` を前提条件にした `commit()`**。

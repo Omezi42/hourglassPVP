@@ -1,11 +1,12 @@
 extends RefCounted
 ## 通過数(GameDesign.md 22章 / Architecture.md 10.9節)を、差し替え用クライアントの上で検証する。
 ##
-## **確かめたいのは3点。**同じ段階は1回しか数えないこと、送れなかった段階は控えに残って
-## 次に送り直されること、日ごとに分けて足されること。
+## **確かめたいのは4点。**同じ段階は1回しか数えないこと、送れなかった段階は控えに残って
+## 次に送り直されること、日ごとに分けて足されること、数え始める前から遊んでいた端末を数えないこと。
 
 const FakeClient = preload("res://tools/tests/fake_firestore_client.gd")
 const TEST_SAVE := "user://funnel_test.json"
+const TEST_UI_SAVE := "user://funnel_test_ui_state.json"
 const OTHER_DAY := "d20000101"
 
 var _assert: Callable
@@ -60,6 +61,32 @@ func run(assert_true: Callable) -> void:
 		"counts should add up within a day"
 	)
 
+	_check_existing_player_excluded()
+
 	client.queue_free()
 	DirAccess.remove_absolute(TEST_SAVE)
 	FunnelService.use_for_test("")
+
+
+func _check_existing_player_excluded() -> void:
+	DirAccess.remove_absolute(TEST_SAVE)
+	DirAccess.remove_absolute(TEST_UI_SAVE)
+	FunnelService.use_for_test(TEST_SAVE)
+	UiState._save_path = TEST_UI_SAVE
+	UiState._loaded = false
+	UiState._state = {}
+	UiState.mark_home_seen()
+	FunnelService.on_launch()
+	FunnelService.reach(FunnelService.HOME)
+	_assert.call(
+		FunnelService.pending().is_empty(), "a device that played before counting should be ignored"
+	)
+	FunnelService.reload_state()
+	FunnelService.on_launch()
+	_assert.call(
+		FunnelService.pending().is_empty(), "the device should stay ignored after a restart"
+	)
+	UiState._save_path = UiState.SAVE_PATH
+	UiState._loaded = false
+	UiState._state = {}
+	DirAccess.remove_absolute(TEST_UI_SAVE)

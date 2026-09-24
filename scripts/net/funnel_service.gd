@@ -22,6 +22,7 @@ const ONLINE_END := "online_end"
 const KEY_FIRST_DAY := "first_day"
 const KEY_SENT := "sent"
 const KEY_PENDING := "pending"
+const KEY_EXCLUDED := "excluded"
 
 const SAVE_PATH := "user://funnel.json"
 
@@ -40,8 +41,13 @@ static func on_launch() -> void:
 	_ensure_loaded()
 	var today := today_key()
 	if str(_state.get(KEY_FIRST_DAY, "")).is_empty():
+		# 数え始める前から遊んでいた端末は、初めて来た人ではないため一切数えない。
+		if UiState.has_seen_home():
+			_state[KEY_EXCLUDED] = true
 		_state[KEY_FIRST_DAY] = today
 		_save()
+	if is_excluded():
+		return
 	_mark(LAUNCH, today)
 	if _state[KEY_FIRST_DAY] != today:
 		_mark(RETURN, today)
@@ -52,6 +58,8 @@ static func reach(step: String) -> void:
 	if not _enabled:
 		return
 	_ensure_loaded()
+	if is_excluded():
+		return
 	_mark(step, today_key())
 	flush()
 
@@ -112,6 +120,11 @@ static func today_key() -> String:
 static func pending() -> Dictionary:
 	_ensure_loaded()
 	return _state.get(KEY_PENDING, {})
+
+
+static func is_excluded() -> bool:
+	_ensure_loaded()
+	return bool(_state.get(KEY_EXCLUDED, false))
 
 
 static func has_reached(step: String) -> bool:
