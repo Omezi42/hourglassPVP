@@ -97,3 +97,10 @@ Zen Old Mincho の Black ウェイトから、見出し・タイトルなど限�
 pyftsubset(fontTools)で抜き出したサブセットです。ひらがな・カタカナ全域と、実際に
 UIの見出しへ使っている漢字・記号のみを含みます(数百グリフ・152KB程度)。元のフォント
 ファイルはこの派生の作成にのみ用いており、再配布していません。
+
+サブセットの作り直し(字を足すとき)は、Google Fonts の ZenOldMincho-Black.ttf を元に、
+いまのサブセットが持つ字 + 足す字を text.txt へ書き出して次を実行します。
+
+    python -m fontTools.subset ZenOldMincho-Black.ttf --text-file=text.txt
+        --layout-features='*' --name-IDs='*' --name-languages='*' --glyph-names
+        --output-file=assets/fonts/ZenOldMincho-Display.ttf
