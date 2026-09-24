@@ -11,6 +11,7 @@ X・YouTube Shorts へ毎日1本出す縦長の動画を、ゲームの実物の
 | `tools/shorts/record_card_short.gd` | カード紹介ショート。台本は `card_lines.json` |
 | `tools/shorts/record_puzzle_short.gd` | とどめ問題ショート。問題集 `puzzles.json` の1問を実際のエンドレスと同じ入口(`CardMatchPuzzle.start()`)で盤面へ出し、正解手順を `_perform()` で指す |
 | `tools/shorts/puzzle_forge.gd` / `puzzle_solver.gd` | とどめ問題の問題集を作る。下記 |
+| `tools/shorts/schedule.py` | 書き出した動画を投稿日へ割り振り、投稿文を添えて日付つきのフォルダへ並べる。下記 |
 
 ## とどめ問題の問題集(総当たりで選ぶ)
 
@@ -28,3 +29,13 @@ X・YouTube Shorts へ毎日1本出す縦長の動画を、ゲームの実物の
 
 探索は `MatchState` を1手ごとに写して実際のルールで進め、同じ局面に行き着いた枝はまとめる。
 **問題集は追記だけにして番号を動かさない**(書き出した動画のファイル名 `puzzle_<番号>.mp4` と対応させるため)。
+
+## 投稿の割り振り(`schedule.py`)
+
+投稿はAPIで自動化せず、ユーザーが YouTube Studio と X の予約投稿へ手で入れる。そのための素材を日付順に揃える。
+
+- 並びは「カード・カード・とどめ問題」の繰り返し。カードは固定の乱数で混ぜる(追加順のままだと同じコスト帯・種類が続く)
+- **割り振りの記録 `tools/shorts/schedule.json` はコミットする。**次の回は記録の最終日の翌日から続け、一度出したものは選ばない
+- 投稿文の効果の行は `functions/data/cards.json` の効果文をそのまま使う(台本の言い回しではなく、ゲーム内の表記に揃える)
+- Xの本文は全角2・URL23の重みで280以内かを確かめ、超えれば止まる。未書き出しの動画がある日も何も書かずに止まる
+- 出力は `tools/shorts/out/posts/<日付>_<種類>_<id>/`(動画 + `post.txt`)と一覧 `一覧.md`。生成物なので管理しない

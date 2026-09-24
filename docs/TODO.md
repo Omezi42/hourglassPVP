@@ -31,9 +31,9 @@
 カード紹介ショートととどめ問題ショートの2系統。Claudeが数週間ぶんの動画と投稿文をまとめて作り、予約投稿はユーザーが手で入れる。
 カード紹介は `tools/shorts/make_short.py card <id>`、とどめ問題は `make_short.py puzzle <番号>` で1本作れる
 (カードの台本は87枚ぶん `card_lines.json`、とどめ問題は問題集 `puzzles.json` を `make_short.py forge <問数>` で増やす)。
+投稿日への割り振りと投稿文は `tools/shorts/schedule.py`(Architecture.md 10.20節)。
 
-- [x] とどめ問題ショートの撮影ツール(`PuzzleGenerator` の問題を見せ、5秒数えてから解答手順を再生)
-- [ ] 一括書き出し: N日ぶんの動画と投稿文(Xの本文・YouTubeのタイトル/説明/タグ)を日付つきのフォルダへ
+- [ ] 割り振った最終日が近づいたら `python tools/shorts/schedule.py <日数>` で次の分を出す(とどめ問題が尽きたら先に `make_short.py forge`)
 
 ## 1. 対局画面の再構築(2026-09-21・実装済み)
 
