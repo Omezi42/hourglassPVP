@@ -3,14 +3,14 @@
 - バックエンドは自前サーバーを立てず、**Firestore(Firebase)のようなサーバーレスDB**を使う。1手を1ドキュメント書き込みとして扱う
 - 通信はGodot標準の `HTTPRequest` による **Firestore REST API呼び出し**で行う(認証はFirebase Authenticationの匿名サインイン)。unityroom向けのHTML5/WebGLエクスポートではGDExtension系プラグイン(サードパーティのFirebase SDKラッパー等)が不安定・非対応なことが多く、またFirebase公式C++ SDKもWebAssemblyターゲットを公式サポートしていないため、追加プラグイン不要でどの書き出し先でも確実に動く方式を優先する
 - 相手の手の反映は、ドキュメントの**ポーリング(数秒間隔での定期取得)**によって行う。リアルタイムリスナー(gRPC-Web双方向ストリーミング)は実装が複雑なため採用しない。ターン制で1手ごとの時間的猶予があるため、数秒の遅延は体験上問題にならない
-- `HomeScreen` の「対戦」タブを、**ランダムマッチ待機**・**ルームコード作成/参加**の2導線に分岐させる
+- `HomeScreen` の「対戦」タブを、**ランクマッチ待機**・**ルームコード作成/参加**の2導線に分岐させる
 - **ルームコードは4桁の数字**(`RoomMatch.CODE_LENGTH`)。取りうる番号が1万通りしか
   無いため、**空いている番号を選んで作る**(`create_document()` の `exists:false`)。
   埋まっていた場合は、その部屋が `ROOM_STALE_SECONDS` より古く、まだ対局が始まって
   いなければ番号ごと引き取る(`updateTime` を前提条件にした `commit()`)。**この
   引き取りが無いと、放置された部屋が番号を占め続けて作れなくなる**。観戦は
   `rooms/{code}` を辿るため部屋の文書自体は消さない(7章)
-- ランダムマッチのキューは、複数プレイヤーが同時に参加しても二重マッチや取りこぼしが起きないよう、**Firestoreのトランザクション(read-modify-write)でキューの追加/成立を原子的に処理する**。具体的には「待機中のドキュメントを1件取得→トランザクション内で取得できればマッチ成立とみなし両者のマッチIDを確定、取得できなければ自分が待機ドキュメントとして登録される」という手順を想定する
+- マッチングのキューは、複数プレイヤーが同時に参加しても二重マッチや取りこぼしが起きないよう、**Firestoreのトランザクション(read-modify-write)でキューの追加/成立を原子的に処理する**。具体的には「待機中のドキュメントを1件取得→トランザクション内で取得できればマッチ成立とみなし両者のマッチIDを確定、取得できなければ自分が待機ドキュメントとして登録される」という手順を想定する
 - 持ち時間の管理はロジック層の `MatchClock` が担う。**1手番につき60秒で、手番が移るたびに
   その側の残り時間を60秒へ戻す**(GameDesign.md 5章)。時間切れは `MatchState.match_ended` と
   同様の決着トリガーとして扱い、オンライン対戦時はこの持ち時間切れが切断・放置時の敗北条件を
@@ -60,7 +60,8 @@
 **局面のスナップショットは保存しない。**`matches/{id}` には「両者のデッキ・山札の種・
 指した手の並び」が残っており、そこから作り直せる(リプレイ・観戦とまったく同じ経路)。
 `OnlineResume`(`scripts/net/online_resume.gd`、`user://online_match.json`)が持つのは
-**どの対局のどちら側だったか**だけで、対局が始まった時点で書き、終局と対局前の中断で消す。
+**どの対局のどちら側だったか**と種別(`is_room` / `is_ranked` / `time_limit`)だけで、対局が始まった時点で書き、終局と対局前の中断で消す。
+**`is_ranked` を覚えないと、復帰したランクマッチが段位の動かない対局として終わる**(`resume()` は記録の種別から `MatchKind` を決める)。
 
 `CardMatchScreen.resume_online_match()` は、ドキュメントを読んで
 `_begin_state()` → 記録済みの手をすべて `MatchAction.apply()` → `OnlineMatch.start(id, 適用済みの数)`
@@ -195,7 +196,7 @@ HTTPRequest をぶら下げると送信の途中で巻き添えに消える。�
 
 結果は `notify_waiting()` の `on_done`(Callable)で返し、`MatchmakingQueue` が
 `announce_result` として画面へ流す。**文言としては出さない**(GameDesign.md 11章)。
-`CardRandomMatchScreen`(6.6節)は届いたときだけ待機中の文言の右へ `StatusBadge`(丸い印)を出し、
+`CardRankedMatchScreen`(6.6節)は届いたときだけ待機中の文言の右へ `StatusBadge`(丸い印)を出し、
 説明はカーソルを乗せたときのツールチップに預ける。**受け口を Callable
 にしているのは、待っている
 うちにキューが解放されることがあるため**で、`Callable.is_valid()` が偽になった時点で
@@ -252,24 +253,22 @@ HTTPRequest をぶら下げると送信の途中で巻き添えに消える。�
 | `CardRoomScreen`(`scripts/ui/card_room_screen.gd`) | ルームマッチの3つの入口(部屋を作る / コードで参加 / 観戦)と、その待機。使用デッキと持ち時間の設定もここに置く |
 
 **`RoomMatch` を持つのはこの画面**であり、`BattleTab` からは参加・観戦・部屋作成の
-コードをすべて外した(バトルタブに残るのはCPU戦・リプレイ・戦績・復帰の入口。
-ランダムマッチも6.6節の専用画面へ入るため、バトルタブは「入口の並び」だけを持つ)。
+コードをすべて外した(ランクマッチも6.6節の専用画面へ入るため、バトルタブは「入口の並び」だけを持つ)。
 待機中の巡回ドット・キャンセル・失敗の文言は、6.6節の画面と同じ組み立てをこの画面が
 自前で持つ。**共通化しない**のは、こちらは部屋の作成・相手待ち・参加・観戦待ちと状態が
 4つあり、6.6節側(マッチング中の1状態しか持たない)に合わせると使わない分岐を抱えるため。
 
 
-## 6.6 ランダムマッチ画面(GameDesign.md 11章)
+## 6.6 ランクマッチの待機画面(GameDesign.md 11章・28章)
 
 | クラス | 責務 |
 |---|---|
-| `CardRandomMatchScreen`(`scripts/ui/card_random_match_screen.gd`) | ランダムマッチの待機。デッキ選択画面でデッキを確定した直後に開き、マッチングキューへの参加・巡回ドット・キャンセル・募集通知の印をここで完結させる |
+| `CardRankedMatchScreen`(`scripts/ui/card_ranked_match_screen.gd`) | ランクマッチの待機。デッキ選択画面でデッキを確定した直後に開き、シーズンの確認・マッチングキューへの参加・巡回ドット・キャンセル・募集通知の印をここで完結させる |
 
-**`MatchmakingQueue` を持つのはこの画面**であり、`BattleTab` からはキューへ参加する
-コード(`begin_random_match()` / `_on_matched()` / `_announce_badge` 等)をすべて外した
-(GameDesign.md 11章)。バトルタブに残るのは「ランダムマッチ」の入口タイルが
-`random_match_deck_requested` を発行するところまでで、以後の待機・成立の処理は
-すべてこの画面が持つ。
+見知らぬ人との対戦はランクマッチ1つ(GameDesign.md 11章)。**`RankedMatchmakingQueue` を持つのはこの画面**であり、
+バトルタブに残るのは「対戦する」の札が `ranked_match_deck_requested` を発行するところまで。
+`MatchmakingQueue` は待ち行列の仕組み(原子的な成立・古い待機者の掃除・募集通知)を持つ基底で、
+`RankedMatchmakingQueue` がコレクション(`ranked_queue`)を差し替えて使う。
 
 **待機の見せ方は「一覧に並べるものが無いとき」の形(`EmptyState`、GameDesign.md 9章)を
 そのまま使う。**専用の全画面を持てるようになったことで、以前バトルタブの狭い行へ
@@ -281,7 +280,7 @@ HTTPRequest をぶら下げると送信の途中で巻き添えに消える。�
 「待機中の文言の右へ丸い印を添える」(GameDesign.md 11章)という配置をここでも守る。
 
 マッチが成立したら `matched(match_id, my_side, opponent_uid)` を発行し、`Main` は
-これを既存の `_on_online_match_found()` へそのままつなぐ(`CardRoomScreen.matched` が
+これを `_on_ranked_match_found()` へそのままつなぐ(`CardRoomScreen.matched` が
 `_on_room_match_found()` へつながるのと同じ形)。
 
 **持ち時間の入/切は `rooms/{code}` の `time_limit` として持つ**(GameDesign.md 5章)。

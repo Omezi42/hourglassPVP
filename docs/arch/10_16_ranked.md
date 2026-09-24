@@ -1,14 +1,14 @@
 # 10.16 ランクマッチ(GameDesign.md 28章)
 
 **新しいマッチングプールを1本追加するだけで、対局そのものの仕組みは一切変えない。**
-`MatchState`・`OnlineMatch`・`MatchAction` はランダムマッチ/ルームマッチと完全に共用し、
+`MatchState`・`OnlineMatch`・`MatchAction` はルームマッチと完全に共用し、
 ランクマッチ固有なのは「マッチングの入口」と「終局後に段位を更新する処理」の2箇所だけ。
 
 | クラス | 責務 |
 |---|---|
 | `RankRules`(`scripts/logic/rank_rules.gd`, static) | 段位表・星の必要数・レートの増減表(GameDesign.md 28章の表そのもの)を1箇所に持つ |
-| `RankedMatchmakingQueue`(`scripts/net/ranked_matchmaking_queue.gd`) | `MatchmakingQueue`とほぼ同じ実装だが、コレクションを`ranked_queue`に分ける(6.1節の原子的マッチ成立の仕組みをそのまま流用) |
-| `CardRankedMatchScreen`(`scripts/ui/card_ranked_match_screen.gd`) | `CardRandomMatchScreen`とほぼ同じ待機画面。見出しと使うキューが違うだけ |
+| `RankedMatchmakingQueue`(`scripts/net/ranked_matchmaking_queue.gd`) | `MatchmakingQueue`のコレクションを`ranked_queue`へ差し替える(6.1節の原子的マッチ成立・募集通知をそのまま使う)。ホームへ出す待機人数も `count_waiting()` で数える(自分を除く・古い待機者を除く・同じビルドだけ) |
+| `CardRankedMatchScreen`(`scripts/ui/card_ranked_match_screen.gd`) | 待機画面(6.6節) |
 | `RankProgress`(`scripts/logic/rank_progress.gd`, static) | `players/{uid}`の段位フィールドを読み書きする。シーズン切り替えの判定もここに集約する |
 | `CardRankScreen`(`scripts/ui/card_rank_screen.gd`) | 現在の段位・レートの表示と、ランキング一覧 |
 
@@ -80,8 +80,8 @@
 `CurrencyRules`が持つ「総手数10手未満は報酬対象外」の判定(`MatchState.turn_count`)を
 `RankProgress.apply_result()`の入口でも見て、**10手未満の対局は段位も動かさない**
 (自己対戦の繰り返しで手軽にレートを吊り上げる経路を塞ぐ)。**同一相手との連戦を
-検知する仕組みは持たない**(ランダムマッチのキューはそもそも相手を選べないため、
-結託した2アカウントが繰り返し対戦する形でしか成立せず、既存のランダムマッチの
+検知する仕組みは持たない**(キューはそもそも相手を選べないため、
+結託した2アカウントが繰り返し対戦する形でしか成立せず、既存の
 不正対策の範囲を超える。必要になった時点で別途検討する)。
 
 ## ランキング画面

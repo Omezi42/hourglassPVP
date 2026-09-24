@@ -11,7 +11,7 @@ UTC時刻を +9時間して日本時間へ換算し、曜日を見る。**サー
 
 - **`CurrencyRules` はこの判定を呼ぶだけで、曜日の計算そのものを持たない。**
   `grant_amount(kind, won)` が `SundayEventRules.is_active()` を見て、
-  ランダムマッチ(`MatchKind.RANDOM`)かつ true のときだけ倍率(2倍)を掛ける。
+  ランクマッチ(`MatchKind.RANKED`)かつ true のときだけ倍率(2倍)を掛ける(過去のフリーの対戦の種別 `MatchKind.RANDOM` も同じ扱いで残す)。
   ルームマッチ・CPU戦は `is_active()` を見ない
 - **表示は `HomeScreen` と `CardMatchOutcome`(結果パネル)の2箇所だけに足す。**
   いずれも `SundayEventRules.is_active()` を読むだけの1行で、通常時は何も出さない

@@ -112,7 +112,7 @@ Main
 ├── CardMatchScreen          # 対局・観戦・再生(コードで組み立てる)
 ├── CardDeckListScreen / CardDeckEditorScreen / CardListScreen
 ├── RuleScreen / KeywordDictScreen / ScreenGuideScreen
-├── CardSoloMapScreen / CardRoomScreen / CardRandomMatchScreen / CardRankedMatchScreen
+├── CardSoloMapScreen / CardRoomScreen / CardRankedMatchScreen
 └── CardShopScreen / CardStatsScreen / CardLabScreen / CardRankScreen …
 ```
 
@@ -128,7 +128,10 @@ v1.0(位相制)の画面・クラス・`data/hourglasses/*.tres` は削除済み
 - **タブは行いで分ける**(GameDesign.md 9章): たたかう=`BattleTab`(`.tscn`)/ そろえる=`DeckTab`(`.tscn`)/ きろく=`RecordTab` / おぼえる=`RulesTab` / つくる=`LabTab`。**`.tscn` を持つ2つはクラス名を変えない**(`home_screen.tscn` が instance しているため。画面に出る名前との食い違いは許容)。`SoloTab` は削除済み
 - `BattleTab` の `.tscn` の縦並び(`Margin/VBox`)は使わず、`StatusLabel` だけを引き取る(`_take_over_status_label()`)。`.tscn` は書き換えない
 - **入口はどのタブも `HomeTile`**(`Button` 継承。見出し・副題・紋章の透かし・砂時計を自前で描く。`text` へは入れない)。`.tscn` は書き換えず `_ready()` で同じ場所へ差し替える(`_to_tile()`)。**紋章の透かしは `CodedButtonStyle.inner_rect()` の中へ収め、比率で決めたうえで上限で止める**(額縁へ載り上がる / 大きな札で文字より主張する)。`primary`(塗りつぶした真鍮)と `badge`(未受取の数。下部タブへも同じ静的な描画関数で打つ)を引数で持つ
-- 枠は `HomeFrame`(`content_panel.tres` のパネル + 真鍮のプレートの見出し)。**枠の右へ並べる行(ミッションの進捗)は `HomeFrame` が描く**(`Control._draw()` は子より背面なので、タブ側で描くと枠に隠れる)。`BattleTab._layout()` は復帰の帯(`ResumeBand`。縁を琥珀にして急ぐ用件だと分かるようにする)の有無どちらでも領域の中央へ置き直す
+- 枠は `HomeFrame`(`content_panel.tres` のパネル + 真鍮のプレートの見出し)。**枠の右へ並べる行(ミッションの進捗)は `HomeFrame` が描く**(`Control._draw()` は子より背面なので、タブ側で描くと枠に隠れる)
+- `BattleTab` は枠を使わず、左に真鍮の `HomeTile`「対戦する」、右に凹んだ `HomeTile` の縦の列を置く。`_layout()` は復帰の帯(`ResumeBand`。縁を琥珀にして急ぐ用件だと分かるようにする)の有無で札と列の高さを縮める。
+  札の中身(段位・★・次の段位・シーズンの残り日数・待機人数)は `RankedEntryInfo`(札の子。マウスを通す)が描く。待機人数は `RankedMatchmakingQueue.count_waiting()` をタブが見えている間だけ一定間隔で読む。
+  **右の列を全部出すかは `MatchStats.totals(uid).games > 0` で決める**(誘導対局は戦績に数えないため、誘導対局だけを終えた人は2つのまま。GameDesign.md 9章・19章)
 - `HomeScrim`(`Background` の直後):上=アカウント帯 / 中=タブ / 下=下部タブ を別々の濃さで落とす。**上下は中より濃く、対称に。3つの濃さは揃えて動かす**(片方だけ変えると重心が寄る)。アカウント帯の下端に中央が濃く左右で消える真鍮の細線
 - 下部タブは幅を共通にし高さだけ変える(幅まで変えると `HBoxContainer` で他が押し出される)。非選択を下端へ沈め、選択中だけ帯の中央へ
 - アカウント帯は `.tscn` の幅460pxを `_ready()` で右端まで伸ばし、残高を右へ寄せる(`ACCOUNT_BAR_RIGHT_INSET`)。ホームの残高だけ `CurrencyChip.scale_factor` で大きく、`height_override` で名札と揃える。`CurrencyChip` は単位を小さく数値を大きく別々に描き、紋章と文字のあいだに縦の細線
