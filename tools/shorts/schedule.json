@@ -1,0 +1,170 @@
+[
+	{
+		"date": "2026-09-26",
+		"kind": "card",
+		"id": "forge",
+		"label": "フォージ"
+	},
+	{
+		"date": "2026-09-27",
+		"kind": "card",
+		"id": "turn",
+		"label": "逆さ砂"
+	},
+	{
+		"date": "2026-09-28",
+		"kind": "puzzle",
+		"id": "1",
+		"label": "とどめ問題 #1"
+	},
+	{
+		"date": "2026-09-29",
+		"kind": "card",
+		"id": "shot",
+		"label": "サンドショット"
+	},
+	{
+		"date": "2026-09-30",
+		"kind": "card",
+		"id": "wheel",
+		"label": "ホイール"
+	},
+	{
+		"date": "2026-10-01",
+		"kind": "puzzle",
+		"id": "2",
+		"label": "とどめ問題 #2"
+	},
+	{
+		"date": "2026-10-02",
+		"kind": "card",
+		"id": "twin",
+		"label": "ツイン"
+	},
+	{
+		"date": "2026-10-03",
+		"kind": "card",
+		"id": "gust",
+		"label": "砂嵐"
+	},
+	{
+		"date": "2026-10-04",
+		"kind": "puzzle",
+		"id": "3",
+		"label": "とどめ問題 #3"
+	},
+	{
+		"date": "2026-10-05",
+		"kind": "card",
+		"id": "pivot",
+		"label": "ピボット"
+	},
+	{
+		"date": "2026-10-06",
+		"kind": "card",
+		"id": "burst",
+		"label": "バースト"
+	},
+	{
+		"date": "2026-10-07",
+		"kind": "puzzle",
+		"id": "4",
+		"label": "とどめ問題 #4"
+	},
+	{
+		"date": "2026-10-08",
+		"kind": "card",
+		"id": "call",
+		"label": "砂王の呼び声"
+	},
+	{
+		"date": "2026-10-09",
+		"kind": "card",
+		"id": "drill",
+		"label": "ドリル"
+	},
+	{
+		"date": "2026-10-10",
+		"kind": "puzzle",
+		"id": "5",
+		"label": "とどめ問題 #5"
+	},
+	{
+		"date": "2026-10-11",
+		"kind": "card",
+		"id": "drip",
+		"label": "ドリップ"
+	},
+	{
+		"date": "2026-10-12",
+		"kind": "card",
+		"id": "spike",
+		"label": "スパイク"
+	},
+	{
+		"date": "2026-10-13",
+		"kind": "puzzle",
+		"id": "6",
+		"label": "とどめ問題 #6"
+	},
+	{
+		"date": "2026-10-14",
+		"kind": "card",
+		"id": "pike",
+		"label": "パイク"
+	},
+	{
+		"date": "2026-10-15",
+		"kind": "card",
+		"id": "chronos",
+		"label": "クロノス"
+	},
+	{
+		"date": "2026-10-16",
+		"kind": "puzzle",
+		"id": "7",
+		"label": "とどめ問題 #7"
+	},
+	{
+		"date": "2026-10-17",
+		"kind": "card",
+		"id": "freeze",
+		"label": "フリーズ"
+	},
+	{
+		"date": "2026-10-18",
+		"kind": "card",
+		"id": "gate",
+		"label": "ゲート"
+	},
+	{
+		"date": "2026-10-19",
+		"kind": "puzzle",
+		"id": "8",
+		"label": "とどめ問題 #8"
+	},
+	{
+		"date": "2026-10-20",
+		"kind": "card",
+		"id": "refill",
+		"label": "砂の補給"
+	},
+	{
+		"date": "2026-10-21",
+		"kind": "card",
+		"id": "hour",
+		"label": "アワー"
+	},
+	{
+		"date": "2026-10-22",
+		"kind": "puzzle",
+		"id": "9",
+		"label": "とどめ問題 #9"
+	},
+	{
+		"date": "2026-10-23",
+		"kind": "card",
+		"id": "bulwark",
+		"label": "砂の壁"
+	}
+]
