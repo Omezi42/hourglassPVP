@@ -29,9 +29,10 @@
 ## 0.7 SNSの定期投稿(X・YouTube Shorts を毎日1本)
 
 カード紹介ショートととどめ問題ショートの2系統。Claudeが数週間ぶんの動画と投稿文をまとめて作り、予約投稿はユーザーが手で入れる。
-カード紹介は `tools/shorts/make_short.py card <id>` で1本作れる(台本は87枚ぶん `tools/shorts/card_lines.json` にある)。
+カード紹介は `tools/shorts/make_short.py card <id>`、とどめ問題は `make_short.py puzzle <種>` で1本作れる
+(カードの台本は87枚ぶん `card_lines.json`、とどめ問題の台本は問題によらず共通で `puzzle_lines.json`)。
 
-- [ ] とどめ問題ショートの撮影ツール(`PuzzleGenerator` の問題を見せ、数秒おいて解答手順を再生)
+- [x] とどめ問題ショートの撮影ツール(`PuzzleGenerator` の問題を見せ、5秒数えてから解答手順を再生)
 - [ ] 一括書き出し: N日ぶんの動画と投稿文(Xの本文・YouTubeのタイトル/説明/タグ)を日付つきのフォルダへ
 - [ ] Architecture.md に宣伝用の撮影ツールの節を足す
 

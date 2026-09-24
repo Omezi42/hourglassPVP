@@ -48,11 +48,10 @@ static func generate(seed_value: int = 0) -> PuzzleStageData:
 	return _generate_full(seed_value)["stage"]
 
 
-## テスト専用。生成した問題に加え、意図した解答手順(`{"type":..., ...}` の配列)と
-## 分岐の数を返す。`_verify()` が実際に解けることを確かめた手順そのものであり、
-## テスト側で改めて正解を用意し直さずに独立した検証ができる
-## (`tools/tests/puzzle_generator_tests.gd`)。
-static func generate_for_test(seed_value: int) -> Dictionary:
+## 生成した問題に加え、意図した解答手順(`{"type":..., ...}` の配列)と分岐の数を返す。
+## `_verify()` が実際に解けることを確かめた手順そのもので、テスト(`puzzle_generator_tests.gd`)と
+## とどめ問題ショートの撮影(`tools/shorts/record_puzzle_short.gd`)が使う。
+static func generate_with_solution(seed_value: int) -> Dictionary:
 	return _generate_full(seed_value)
 
 

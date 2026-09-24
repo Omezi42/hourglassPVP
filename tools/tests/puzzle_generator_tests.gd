@@ -23,7 +23,7 @@ func run(assert_true: Callable) -> void:
 ## 生成器が返した手順どおりに指すと、実際に相手のHPが0以下になること。
 func _test_generated_puzzles_are_solvable() -> void:
 	for seed in range(1, SEED_COUNT + 1):
-		var result := PuzzleGenerator.generate_for_test(seed)
+		var result := PuzzleGenerator.generate_with_solution(seed)
 		var stage: PuzzleStageData = result["stage"]
 		_assert.call(
 			stage.foe_hp > 0, "generated puzzle must leave the opponent alive: seed %d" % seed
@@ -38,7 +38,7 @@ func _test_generated_puzzles_are_solvable() -> void:
 ## 確かめる。部品が1つしかない稀なケース(フォールバック等)は対象外。
 func _test_no_single_action_wins() -> void:
 	for seed in range(1, SEED_COUNT + 1):
-		var result := PuzzleGenerator.generate_for_test(seed)
+		var result := PuzzleGenerator.generate_with_solution(seed)
 		var solution: Array = result["solution"]
 		if solution.size() < 2:
 			continue
@@ -54,7 +54,7 @@ func _test_no_single_action_wins() -> void:
 func _test_branching_target_is_usually_met() -> void:
 	var below_target := 0
 	for seed in range(1, SEED_COUNT + 1):
-		var result := PuzzleGenerator.generate_for_test(seed)
+		var result := PuzzleGenerator.generate_with_solution(seed)
 		if int(result["branching"]) < PuzzleGenerator.MIN_BRANCHING:
 			below_target += 1
 	_assert.call(
