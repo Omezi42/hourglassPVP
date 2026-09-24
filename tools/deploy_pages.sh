@@ -4,4 +4,6 @@
 set -e
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PROJECT="sunadokei-arena"
-npx wrangler pages deploy "$ROOT/build/pages" --project-name "$PROJECT" --branch main --commit-dirty=true
+# リポジトリ直下の functions/(Cloud Functions)を Pages Functions と誤認させないため、build/pages の中から実行する
+cd "$ROOT/build/pages"
+npx wrangler pages deploy . --project-name "$PROJECT" --branch main --commit-dirty=true

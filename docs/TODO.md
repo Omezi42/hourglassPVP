@@ -18,7 +18,6 @@
 
 ## 0.3 unityroom以外の配信先(GameDesign.md 10章・Architecture.md 4.6節)
 
-- [ ] Cloudflare Pages のプロジェクト `sunadokei-arena` を作り、初回デプロイする(ユーザーの `wrangler login` 待ち)
 - [ ] itch.io・PLiCy の作品ページを作り、`build/portal.zip` を上げる(ユーザー作業。紹介文と設定手順はClaudeが用意する)
 
 ## 0.5 待っている間のCPU対戦(2026-09-23・実装済み)
