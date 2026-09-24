@@ -174,8 +174,10 @@ static func bus_index(bus: StringName) -> int:
 	var index := AudioServer.get_bus_index(bus)
 	if index >= 0:
 		return index
-	AudioServer.add_bus()
-	index = AudioServer.bus_count - 1
+	# add_bus()はWeb版(サンプル再生)でブラウザ側のバスの並びがずれ、出口の無い輪になって
+	# 全く鳴らなくなる(Pitfalls.md)。bus_countを増やす経路は末尾へ正しく足される。
+	index = AudioServer.bus_count
+	AudioServer.bus_count = index + 1
 	AudioServer.set_bus_name(index, bus)
 	AudioServer.set_bus_send(index, &"Master")
 	return index
