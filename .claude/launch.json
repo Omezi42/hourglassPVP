@@ -4,8 +4,23 @@
     {
       "name": "web-build",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "8073", "--directory", "build/web"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8073",
+        "--directory",
+        "build/web"
+      ],
       "port": 8073
+    },
+    {
+      "name": "card-tuner",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "tools/card_tuner/server.py"
+      ],
+      "port": 8790,
+      "autoPort": true
     }
   ]
 }
