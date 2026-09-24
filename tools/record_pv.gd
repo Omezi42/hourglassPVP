@@ -97,23 +97,30 @@ func _ready() -> void:
 	# 待つ間は何も足していない黒地のままなので、頭に余計なコマが入っても幕は要らない。
 	await HourglassArt.ensure_ready_and_wait(self)
 	_start_audio()
+	var host := _screen_host()
 	title_screen = load("res://scenes/title_screen.tscn").instantiate()
 	title_screen.visible = false
-	add_child(title_screen)
+	host.add_child(title_screen)
 	match_screen = CardMatchScreen.new()
 	match_screen.anchor_right = 1.0
 	match_screen.anchor_bottom = 1.0
 	match_screen.visible = false
-	add_child(match_screen)
+	host.add_child(match_screen)
 	list_screen = CardListScreen.new()
 	list_screen.anchor_right = 1.0
 	list_screen.anchor_bottom = 1.0
 	list_screen.visible = false
-	add_child(list_screen)
+	host.add_child(list_screen)
 	sand = SandTransition.new()
-	add_child(sand)
+	host.add_child(sand)
 	_build_captions()
 	call_deferred("_run")
+
+
+## 対局・図鑑・タイトルの画面を置く先。縦長版(record_pv_vertical.gd)は横長の画面を
+## SubViewport の中で動かすため、ここを差し替える。
+func _screen_host() -> Node:
+	return self
 
 
 ## 音はMain._ready()が準備するため、ここで同じ準備をする。音量はプレイヤーの設定ではなく
