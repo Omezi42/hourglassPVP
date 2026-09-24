@@ -9,7 +9,8 @@ v5.0を設計する過程では使い捨てのシミュレータ(現存しない
 測定に使うツール:
 
 - `tools/balance/run_v5_simulation.gd` … 混成デッキ同士の自己対戦。GameDesign.md 7章の5指標
-- `tools/balance/run_v5_card_check.gd` … カード1枚の値付け(下記 2章の方式)
+- `tools/balance/run_v5_card_check.gd` … カード1枚の値付け(下記 2章の方式)。`effect=0 values=2,3` で効果の値も振れる
+- `tools/card_tuner/server.py` … 上の測定をブラウザから回し、コスト・総量・効果の値・効果文を `.tres` と Hourglasses.md へ書き戻す調整画面(`python tools/card_tuner/server.py` → http://127.0.0.1:8790/)
 
 ---
 

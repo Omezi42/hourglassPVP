@@ -14,6 +14,7 @@ extends SceneTree
 ##
 ## cost / total を与えると、その値へ**メモリ上だけ**書き換えて測る(.tres は変えない)。
 ## `sweep=cost1,cost2,...` を与えると、その各コストで測って一覧にする。
+## `effect=0 values=2,3,4` を与えると、効果0番の value をその各値にして測る。
 
 const COPY_LIMIT := 2
 const FOCUS_COPIES := 2
@@ -54,15 +55,31 @@ func _run() -> void:
 	else:
 		totals.append(focus.total_sand)
 
+	var effect_index: int = int(args.get("effect", "-1"))
+	if effect_index >= focus.effects.size():
+		printerr("effect index out of range: ", effect_index)
+		quit(1)
+		return
+	var values: Array = [null]
+	if effect_index >= 0 and args.has("values"):
+		values = []
+		for value in str(args["values"]).split(","):
+			values.append(int(value))
+
 	print("=== %s の値付け検証(各%d戦)===" % [focus.display_name, games])
 	print("効果: %s" % focus.describe())
 	for cost in costs:
 		for total in totals:
-			focus.cost = cost
-			focus.total_sand = total
-			_rng.seed = base_seed
-			var rate := _measure(focus, games)
-			print("  コスト %d / 総量 %d -> 勝率 %.1f%%" % [cost, total, rate * 100.0])
+			for value in values:
+				focus.cost = cost
+				focus.total_sand = total
+				var label := "コスト %d / 総量 %d" % [cost, total]
+				if value != null:
+					focus.effects[effect_index].value = value
+					label += " / 効果%d の値 %d" % [effect_index, value]
+				_rng.seed = base_seed
+				var rate := _measure(focus, games)
+				print("  %s -> 勝率 %.1f%%" % [label, rate * 100.0])
 	quit()
 
 
