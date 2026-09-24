@@ -2,6 +2,7 @@
 """SNS用の縦長ショート(X・YouTube Shorts)を1本、台本から動画まで通しで作る。
 
     python tools/shorts/make_short.py card <カードid>
+    python tools/shorts/make_short.py card all   # 台本のある全カード。書き出し済みは飛ばす(途中から再開できる)
 
 1. 台本(ナレーション + 見出し)を tools/shorts/card_lines.json から組む
 2. VOICEVOXエンジンで読み上げる(tools/pv_voice.py。エンジンを先に起動しておく)
@@ -45,6 +46,22 @@ def main() -> None:
     if len(sys.argv) < 3 or sys.argv[1] not in SCENES:
         sys.exit(__doc__)
     kind, target = sys.argv[1], sys.argv[2]
+    if target != "all":
+        make(kind, target)
+        return
+    table = json.loads((ROOT / "tools/shorts/card_lines.json").read_text(encoding="utf-8"))
+    failed = []
+    for card_id in table["cards"]:
+        if (OUT_DIR / f"{kind}_{card_id}.mp4").exists():
+            continue
+        try:
+            make(kind, card_id)
+        except subprocess.CalledProcessError:
+            failed.append(card_id)
+    print("失敗:", " ".join(failed) if failed else "なし")
+
+
+def make(kind: str, target: str) -> None:
     work = WORK_DIR / f"{kind}_{target}"
     shutil.rmtree(work, ignore_errors=True)
     frames = work / "f"
