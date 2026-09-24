@@ -112,6 +112,8 @@ var _flash: ColorRect
 var _voice_player: AudioStreamPlayer
 var _voices: Array[AudioStream] = []
 var _lines: Array = []
+## 台本のJSON全体。ショート(tools/shorts/)は lines 以外の欄も読む。
+var _narration: Dictionary = {}
 var _frames_dir := ""
 var _frame_index := 0
 var _capturing := false
@@ -126,15 +128,16 @@ func _ready() -> void:
 
 func _parse_args() -> void:
 	var voice_dir := ""
+	var narration_path := "res://tools/pv_narration.json"
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--voice="):
 			voice_dir = arg.trim_prefix("--voice=")
 		elif arg.begins_with("--frames="):
 			_frames_dir = arg.trim_prefix("--frames=")
-	var narration: Dictionary = JSON.parse_string(
-		FileAccess.get_file_as_string("res://tools/pv_narration.json")
-	)
-	_lines = narration["lines"]
+		elif arg.begins_with("--narration="):
+			narration_path = arg.trim_prefix("--narration=")
+	_narration = JSON.parse_string(FileAccess.get_file_as_string(narration_path))
+	_lines = _narration["lines"]
 	for i in _lines.size():
 		var path := voice_dir.path_join("%02d.wav" % i)
 		_voices.append(AudioStreamWAV.load_from_file(path) if voice_dir != "" else null)
@@ -365,11 +368,7 @@ func _run() -> void:
 	_setup_match()
 	match_screen.visible = true
 	await get_tree().process_frame
-	_capturing = true
-	if _frames_dir != "":
-		var file := FileAccess.open(_frames_dir.path_join("start.txt"), FileAccess.WRITE)
-		file.store_string(str(_frame_index))
-		file.close()
+	_begin_capture()
 	await _v1_hook()
 	await _v2_sand()
 	await _v3_fast()
@@ -381,6 +380,15 @@ func _run() -> void:
 	await _v9_outro()
 	_capturing = false
 	get_tree().quit()
+
+
+## ここから連番の保存を始め、その番号を <frames>/start.txt へ書く(結合で音声の頭を揃えるため)。
+func _begin_capture() -> void:
+	_capturing = true
+	if _frames_dir != "":
+		var file := FileAccess.open(_frames_dir.path_join("start.txt"), FileAccess.WRITE)
+		file.store_string(str(_frame_index))
+		file.close()
 
 
 func _board_center() -> Vector2:
@@ -578,7 +586,7 @@ func _v9_outro() -> void:
 	title_screen.start_label.visible = false
 	title_screen.account_button.visible = false
 	await _swap_screen(title_screen)
-	var length := _say(8)
+	var length := _say(_lines.size() - 1)
 	_headline("ブラウザで\n今すぐ無料!")
 	_cam_cut(Vector2(STAGE_SIZE) * 0.5, ZOOM_OPEN * 0.6)
 	_cam_to(Vector2(STAGE_SIZE) * 0.5, ZOOM_WIDE * 1.2, length + OUTRO_HOLD)

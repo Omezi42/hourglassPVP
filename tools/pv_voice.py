@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """縦長PVのナレーション(tools/pv_narration.json)をVOICEVOXエンジンで読み上げ、WAVにする。
 
-    python tools/pv_voice.py <出力ディレクトリ>
+    python tools/pv_voice.py <出力ディレクトリ> [台本のJSON]
 
 VOICEVOXエンジン(既定 http://127.0.0.1:50021)を先に起動しておく。
 出力は 00.wav, 01.wav ... で、record_pv_vertical.tscn へ --voice=<出力ディレクトリ> で渡す。
+台本を省くと縦長PVの tools/pv_narration.json を読む(ショートは tools/shorts/make_short.py が組んだものを渡す)。
 [ ] は字幕の強調、| は字幕の改行の記号なので読み上げ前に外す。
 """
 import json
@@ -40,7 +41,8 @@ def main() -> None:
         sys.exit(__doc__)
     out_dir = Path(sys.argv[1])
     out_dir.mkdir(parents=True, exist_ok=True)
-    narration = json.loads(NARRATION.read_text(encoding="utf-8"))
+    source = Path(sys.argv[2]) if len(sys.argv) > 2 else NARRATION
+    narration = json.loads(source.read_text(encoding="utf-8"))
     speaker = speaker_id(narration["speaker"], narration["style"])
     for index, line in enumerate(narration["lines"]):
         text = line.replace("[", "").replace("]", "").replace("|", "")

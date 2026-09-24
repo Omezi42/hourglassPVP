@@ -51,3 +51,7 @@ tools/tmp_*
 
 # Cloud Functions(GameDesign.md 25章)の依存パッケージ。npm installで再生成できる。
 /functions/node_modules/
+
+# SNS用ショート動画の書き出し(生成物のため管理しない。.gdignore でpckへの混入も防ぐ)
+/tools/shorts/out/*
+!/tools/shorts/out/.gdignore
