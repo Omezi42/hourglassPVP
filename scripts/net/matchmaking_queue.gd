@@ -19,8 +19,10 @@ signal others_waiting(uids: Array)
 const COLLECTION := "matchmaking_queue"
 const POLL_INTERVAL_SECONDS := 2.0
 const QUERY_LIMIT := 5
-## joined_atがこれより古い待機者は、ブラウザを閉じた等で既に居ないものとして扱う。
-## 掴んでしまうと、相手のデッキを永久に待つ状態になるため。
+## 最後の更新(サーバーの`updateTime`)がこれより古い待機者は、ブラウザを閉じた等で
+## 既に居ないものとして扱う。掴んでしまうと、相手のデッキを永久に待つ状態になるため。
+## 端末の時計ではなくサーバーの時刻同士で比べる(端末の時計がずれていると、生きている
+## 待機者まで消してしまう)。
 const STALE_SECONDS := 60.0
 ## 待機中に自分のjoined_atを更新する間隔。更新はupdateTimeを変えるため、相手のclaimの
 ## 前提条件を無効化してしまう。ポーリング間隔より十分長くして衝突を避ける。
@@ -55,16 +57,7 @@ func join() -> void:
 	_my_match_id = ""
 	_announced = false
 	_announce_next_at = 0.0
-	var joined: bool = await client.set_document(
-		_doc_path(),
-		{
-			"joined_at": Time.get_unix_time_from_system(),
-			"match_id": "",
-			"build": GameVersion.build_id(),
-			"cpu": false
-		}
-	)
-	if not joined:
+	if not await _write_waiting_doc():
 		failed.emit("マッチングを開始できませんでした")
 		return
 
@@ -111,6 +104,18 @@ func set_cpu_playing(playing: bool) -> void:
 	await client.set_document(_doc_path(), {"cpu": playing})
 
 
+func _write_waiting_doc() -> bool:
+	return await client.set_document(
+		_doc_path(),
+		{
+			"joined_at": Time.get_unix_time_from_system(),
+			"match_id": "",
+			"build": GameVersion.build_id(),
+			"cpu": cpu_playing
+		}
+	)
+
+
 func cancel() -> void:
 	_cancelled = true
 	await client.delete_document(_doc_path())
@@ -119,6 +124,10 @@ func cancel() -> void:
 func _try_claim_or_check() -> bool:
 	var mine: Dictionary = await client.get_document_meta(_doc_path())
 	if not mine["exists"]:
+		# 裏のタブへ回す等で待機が止まっている間に、他の待機者に掃除されている。
+		# 書き直さないと、誰からも見えないまま待ち続ける
+		if mine["code"] == HTTPClient.RESPONSE_NOT_FOUND and not _cancelled:
+			await _write_waiting_doc()
 		return false
 
 	var my_assigned_match_id: String = mine["fields"].get("match_id", "")
@@ -191,8 +200,9 @@ func _claim(mine: Dictionary, candidate: Dictionary) -> bool:
 
 
 func _is_stale(candidate: Dictionary) -> bool:
-	var joined_at := float(candidate["fields"].get("joined_at", 0.0))
-	return Time.get_unix_time_from_system() - joined_at > STALE_SECONDS
+	var read_at := FirestoreCodec.timestamp_seconds(candidate["read_time"])
+	var updated_at := FirestoreCodec.timestamp_seconds(candidate["update_time"])
+	return read_at - updated_at > STALE_SECONDS
 
 
 func _finalize_match(match_id: String, known_opponent_uid: String) -> bool:

@@ -1,6 +1,9 @@
 class_name FirestoreCodec
 extends RefCounted
 
+## `YYYY-MM-DDTHH:MM:SS` の長さ。
+const TIMESTAMP_SECONDS_LENGTH := 19
+
 
 static func encode_fields(data: Dictionary) -> Dictionary:
 	var fields := {}
@@ -55,3 +58,10 @@ static func decode_value(value: Dictionary) -> Variant:
 			decoded_values.append(decode_value(item))
 		return decoded_values
 	return null
+
+
+## Firestoreの時刻(`2026-09-24T15:33:14.280256Z`)をUNIX秒へ。小数秒は捨てる。
+static func timestamp_seconds(text: String) -> float:
+	if text.length() < TIMESTAMP_SECONDS_LENGTH:
+		return 0.0
+	return float(Time.get_unix_time_from_datetime_string(text.left(TIMESTAMP_SECONDS_LENGTH)))

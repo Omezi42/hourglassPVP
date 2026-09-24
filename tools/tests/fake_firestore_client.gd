@@ -22,12 +22,13 @@ func get_document_meta(path: String) -> Dictionary:
 	await Engine.get_main_loop().process_frame
 	read_count += 1
 	if not store.has(path):
-		return {"exists": false, "fields": {}, "update_time": ""}
+		return {"exists": false, "fields": {}, "update_time": "", "code": 404}
 	var entry: Dictionary = store[path]
 	return {
 		"exists": true,
 		"fields": (entry["fields"] as Dictionary).duplicate(true),
-		"update_time": entry["update_time"]
+		"update_time": entry["update_time"],
+		"code": 200
 	}
 
 
@@ -83,7 +84,8 @@ func query_waiting(collection: String, limit: int) -> Array:
 			{
 				"id": path.substr(collection.length() + 1),
 				"fields": (entry["fields"] as Dictionary).duplicate(true),
-				"update_time": entry["update_time"]
+				"update_time": entry["update_time"],
+				"read_time": ""
 			}
 		)
 		if results.size() >= limit:

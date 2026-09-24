@@ -244,7 +244,8 @@ func _run_structured_query(structured_query: Dictionary) -> Array:
 			{
 				"id": doc_id,
 				"fields": FirestoreCodec.decode_fields(doc),
-				"update_time": doc.get("updateTime", "")
+				"update_time": doc.get("updateTime", ""),
+				"read_time": entry.get("readTime", "")
 			}
 		)
 	return docs

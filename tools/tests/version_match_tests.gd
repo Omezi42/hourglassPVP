@@ -16,6 +16,8 @@ func run(assert_true: Callable) -> void:
 	_test_game_version_rules()
 	await _test_queue_skips_other_builds()
 	await _test_queue_claims_same_build()
+	await _test_queue_rewrites_itself_after_being_swept()
+	_test_stale_uses_server_time()
 	await _test_room_join_rejects_other_build()
 
 
@@ -90,6 +92,51 @@ func _test_queue_claims_same_build() -> void:
 
 	_assert.call(claimed, "同じビルドの相手は掴めること")
 	_assert.call(matched[0], "掴んだらmatchedが発行されること")
+	_free_queue(queue)
+
+
+## 裏のタブで止まっている間に他の待機者に掃除されても、戻ってきたら待合室へ書き直すこと。
+## 書き直さないと誰からも見えないまま待ち続ける。
+func _test_queue_rewrites_itself_after_being_swept() -> void:
+	var queue := _make_queue("uid-me")
+	var client = queue.client
+	client.store.erase("%s/uid-me" % QUEUE)
+
+	var claimed: bool = await queue._try_claim_or_check()
+	var waiting: Array = await client.query_waiting(QUEUE, MatchmakingQueue.QUERY_LIMIT)
+
+	_assert.call(not claimed, "掃除された直後は掴まないこと")
+	_assert.call(
+		waiting.any(func(doc: Dictionary) -> bool: return doc["id"] == "uid-me"),
+		"掃除された自分を待合室へ書き直すこと"
+	)
+	_free_queue(queue)
+
+
+## 古さは端末の時計(joined_at)ではなくサーバーの時刻同士で測ること。
+func _test_stale_uses_server_time() -> void:
+	var queue := _make_queue("uid-me")
+	var skewed_clock := {"joined_at": 0.0}
+	_assert.call(
+		not queue._is_stale(
+			{
+				"fields": skewed_clock,
+				"update_time": "2026-09-24T15:00:00.123456Z",
+				"read_time": "2026-09-24T15:00:30.000000Z"
+			}
+		),
+		"端末の時計がずれていても、最近更新された待機者は消さないこと"
+	)
+	_assert.call(
+		queue._is_stale(
+			{
+				"fields": skewed_clock,
+				"update_time": "2026-09-24T15:00:00.123456Z",
+				"read_time": "2026-09-24T15:02:00.000000Z"
+			}
+		),
+		"更新が止まった待機者は消すこと"
+	)
 	_free_queue(queue)
 
 
