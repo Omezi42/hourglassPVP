@@ -24,8 +24,10 @@
 (GameDesign.md 22章)。
 
 **CPU戦・観戦・リプレイ再生では呼ばれない。**`finish()` 自体が `_interactive` のときにしか
-呼ばれず(観戦・再生を除外)、その中で `_cpu_record` が空でありオンラインの `_match_id` を
-持つ場合だけ記録する。
+呼ばれず(観戦・再生を除外)、その中で種別がランク・ルーム(と統合前のランダム)であり
+オンラインの `_match_id` を持つ場合だけ記録する(`MatchRecordService.is_recorded_kind()`)。
+**ランクマッチの種別キーは `"random"`**(見知らぬ人との対戦。戦績画面の「みんな」が `kind_random` を
+ランクマッチとして読む)。
 
 **集計は版で分けず `stats/global` の1件へ通算で貯める**(GameDesign.md 22章)。
 カードごとの成績は `cards` の下の map(`{id: {"g": 採用局数, "w": 勝った局数}}`)として持つ。
@@ -61,11 +63,25 @@
 | 段階(キー) | 場所 |
 |---|---|
 | `launch` / `return` | `Main._ready()` の `FunnelService.on_launch()` |
-| `home` | `Main._on_title_start_requested()` |
-| `tutorial_start` | `Main._on_tutorial_requested()` |
-| `tutorial_clear` | `CardMatchTutorial` が最後の段階を終えたとき |
+| `home` | `Main._show_only()` でホームを出したとき(「ホームを見た」の印と同じ時点) |
+| `tutorial_start` | `Main._on_tutorial_requested()` と、初回にタイトルから直行する `Main._on_title_start_requested()` |
+| `tutorial_clear` | `CardMatchTutorial._finish()` で勝って終えたとき |
 | `match_end` / `online_end` | `CardMatchOutcome.finish()`(種別がCPUか、それ以外か) |
 | `online_try` | `Main` のランダム・ランク・ルームの入口 |
+| `tutorial_NN` | `CardMatchTutorial._enter_step()`(NN は台本の手順の番号、2桁) |
+| `ranked_*` | `RankedWaitFunnel`(下記) |
+| `daily_puzzle` | `Main._on_puzzle_stage_selected()`(今日の1問を選んだとき) |
+
+**ランクマッチの待機は `RankedWaitFunnel`(`scripts/ui/ranked_wait_funnel.gd`, RefCounted)が追う。**
+`CardRankedMatchScreen` が1つ持ち、キューへ参加した時点で `begin()` を呼ぶ。`ranked_wait` をまだ通っていない
+(=その端末の最初の待機)ときだけ追い始め、`RANKED_WAIT_SECONDS` の各秒数にタイマーで `ranked_wait_N` を立てる。
+成立(`ranked_matched`)・キャンセル(`ranked_cancel`)・通信失敗で `end()` し、以後のタイマーは番号で無効にする
+(`WaitingCpuOffer` の予約の取り消しと同じ流儀)。CPU戦のボタンは `ranked_cpu` を立てるだけで追跡は続ける。
+
+**配信先ごとの人数は `portals` の下に `{"itch": {"d20260926": {"launch": 1, ...}}}` の形で、`days` と同じ書き込みで
+足す。**配信先は `PortalInfo.site()` が返す(自前の起動部でなければ `unityroom`、起動部ならホスト名と参照元に
+`itch` / `plicy` を含むかで見分け、どれでもなければ `other`)。端末の控え(`user://`)は配信先のオリジンごとに
+分かれるため、段階を通った時点ではなく送る時点で判定してよい。
 
 **サインインは `FunnelService` が送る直前に `NetSession.sign_in()` で行う。**起動しただけの人にも
 匿名アカウントができるが、段階を送るにはどのみちサインインが要る。

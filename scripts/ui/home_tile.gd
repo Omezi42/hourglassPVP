@@ -47,6 +47,11 @@ var locked := false:
 		locked = value
 		queue_redraw()
 var lock_hint := ""
+## 副題を琥珀で出す(まだ済ませていない「今日の」ものがあるとき。GameDesign.md 24章)。
+var subtitle_accent := false:
+	set(value):
+		subtitle_accent = value
+		queue_redraw()
 ## 0 より大きいとき、右上へ数の印を打つ。
 var badge_count := 0:
 	set(value):
@@ -203,6 +208,8 @@ func _draw() -> void:
 	if has_sub:
 		# 副題が変わった直後は光らせる(GameDesign.md 9章)。押さなくても変化が分かるように。
 		var sub_color := SUB_ON_BRASS if primary else SUB_COLOR
+		if subtitle_accent:
+			sub_color = UiPalette.GLOW_AMBER
 		sub_color = sub_color.lerp(Color(1, 1, 1), _subtitle_flash * 0.7)
 		draw_string(
 			_font,

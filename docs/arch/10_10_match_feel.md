@@ -58,7 +58,7 @@
 | 手札の並び(隣が避ける / ドローで場所を空ける / 相手手番で沈む) | `CardMatchHandLayout`(位置は代入せず Tween。沈める量は `SUMMONED_SINK` と同じ語彙) |
 | ドラッグ中の傾き | `CardDragPreview`(移動の速度から傾きを決める。`CardView._get_drag_data()` はこれを作って返すだけ) |
 | 放した位置から台座へ滑る | `CardMatchTouch.on_slot_drop()` が放した座標を控え、`unit_played` を受ける既存の経路で滑らせてから `play_land()` |
-| ピップの光と吸い込み | `PlayerInfoBar.highlight_cost(n)` / `spend_toward(n, target)`。呼ぶのは `_on_view_hovered()` / `_on_view_left()` と `CardMatchEffects`(`unit_played` / `spell_cast`) |
+| ピップの光と吸い込み | `PlayerInfoBar.highlight_cost(n)` / `spend_toward(n, target)`。呼ぶのは `CardMatchPointer.on_view_hovered()` / `on_view_left()` と `CardMatchEffects`(`unit_played` / `spell_cast`) |
 | バッジの跳ね | `CardView` が `unit` の前回値を控えて差分で `stat_punch` を1.0にし Tween で戻す。描画は `1 + stat_punch * 0.3` の拡縮 |
 | 身構え | `CardMatchTargets` が光っている相手の駒へカーソルが乗ったら `CardView.brace = true` |
 | 取り消しの「戻る」 | `CardMatchSelection.clear()` を受けた画面側が `CardView.play_unselect()`(0.1秒で縮めて消す) |

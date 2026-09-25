@@ -46,6 +46,9 @@ const LOCK_NOTICE := "CPU戦か対戦を1局遊ぶと解放されます"
 const DISABLED_ALPHA := 0.55
 ## 途中の対局があるときは札そのものが復帰の入口になる(GameDesign.md 9章)。
 const RESUME_TITLE := "対局へ戻る"
+const PUZZLE_SUBTITLE := "1手番で仕留める"
+const DAILY_OPEN := "今日の1問 まだ解いていません"
+const DAILY_DONE := "今日の1問 クリア済み"
 
 const MAIN_WIDTH := 600.0
 const COLUMN_GAP := 24.0
@@ -66,6 +69,7 @@ var _ranked_tile: HomeTile
 var _ranked_info: RankedEntryInfo
 var _cpu_tile: HomeTile
 var _room_tile: HomeTile
+var _puzzle_tile: HomeTile
 ## CPU戦の下に並ぶ入口。1局終えるまで錠前を掛ける(GameDesign.md 9章)。
 var _later_tiles: Array[HomeTile] = []
 ## 次にやってほしい入口1つに掛ける印(GameDesign.md 18章)。
@@ -117,11 +121,11 @@ func _build() -> void:
 	_cpu_tile.pressed.connect(func() -> void: cpu_match_requested.emit())
 	var solo_tile := _make_side_tile("ソロモード", "決まった条件の関門に挑む", "crown")
 	solo_tile.pressed.connect(_on_later_pressed.bind(solo_tile, solo_requested))
-	var puzzle_tile := _make_side_tile("リーサルパズル", "1手番で仕留める", "sword")
-	puzzle_tile.pressed.connect(_on_later_pressed.bind(puzzle_tile, puzzle_requested))
+	_puzzle_tile = _make_side_tile("リーサルパズル", PUZZLE_SUBTITLE, "sword")
+	_puzzle_tile.pressed.connect(_on_later_pressed.bind(_puzzle_tile, puzzle_requested))
 	_room_tile = _make_side_tile("ルームマッチ", "合言葉で友達と", "shield")
 	_room_tile.pressed.connect(_on_later_pressed.bind(_room_tile, room_match_requested))
-	_later_tiles = [solo_tile, puzzle_tile, _room_tile]
+	_later_tiles = [solo_tile, _puzzle_tile, _room_tile]
 	for tile in _later_tiles:
 		tile.lock_hint = LOCK_HINT
 	move_child(status_label, get_child_count() - 1)
@@ -188,6 +192,7 @@ func refresh() -> void:
 	var all_open := _all_entries_open()
 	for tile in _later_tiles:
 		tile.locked = not all_open
+	_refresh_daily_puzzle()
 	_refresh_resume()
 	_ranked_info.refresh()
 	_refresh_waiting()
@@ -196,6 +201,18 @@ func refresh() -> void:
 	_set_battle_disabled(not ready_to_battle)
 	_set_status("" if ready_to_battle else "デッキを%d枚にしてください" % MatchState.DECK_SIZE)
 	_next_mark.attach_to(_next_step_tile() if ready_to_battle and not _resume_pending else null)
+
+
+## 今日の1問があるあいだは、リーサルパズルの副題をその状態にする(GameDesign.md 24章)。
+func _refresh_daily_puzzle() -> void:
+	var daily := DailyPuzzle.today()
+	if daily == null:
+		_puzzle_tile.set_subtitle(PUZZLE_SUBTITLE)
+		_puzzle_tile.subtitle_accent = false
+		return
+	var cleared := PuzzleProgress.is_cleared(_uid(), daily.id)
+	_puzzle_tile.set_subtitle(DAILY_DONE if cleared else DAILY_OPEN)
+	_puzzle_tile.subtitle_accent = not cleared
 
 
 ## 1局も終えていなければCPU戦、人とまだ対戦していなければ「対戦する」(GameDesign.md 18章)。

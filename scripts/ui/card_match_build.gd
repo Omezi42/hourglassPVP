@@ -19,8 +19,8 @@ static func make_bar(screen: CardMatchScreen, opponent: bool, top: float) -> Pla
 	if opponent:
 		bar.face_pressed.connect(screen.touch.on_face_pressed)
 		bar.drop_handler = screen.touch.on_face_drop
-		bar.mouse_entered.connect(screen._set_hover_target.bind(CardMatchSelection.FACE))
-		bar.mouse_exited.connect(screen._set_hover_target.bind(CardMatchSelection.NO_HOVER))
+		bar.mouse_entered.connect(screen._pointer.set_hover_target.bind(CardMatchSelection.FACE))
+		bar.mouse_exited.connect(screen._pointer.set_hover_target.bind(CardMatchSelection.NO_HOVER))
 	bar.graveyard_pressed.connect(screen._on_graveyard_pressed.bind(opponent))
 	screen.add_child(bar)
 	return bar
@@ -49,8 +49,8 @@ static func make_row(screen: CardMatchScreen, top: float, opponent: bool) -> Arr
 		view.pressed.connect(
 			screen.touch.on_foe_slot_pressed if opponent else screen.touch.on_own_slot_pressed
 		)
-		view.hovered.connect(screen._on_view_hovered)
-		view.mouse_exited.connect(screen._on_view_left)
+		view.hovered.connect(screen._pointer.on_view_hovered)
+		view.mouse_exited.connect(screen._pointer.on_view_left)
 		# 手札は自分の空き枠へ、場の駒は相手の駒へ落とす(GameDesign.md 9章)。
 		if opponent:
 			view.drop_handler = screen.touch.on_foe_slot_drop.bind(i)
@@ -172,13 +172,10 @@ static func overlays(screen: CardMatchScreen) -> void:
 	# 敷くと、いちばん案内が要る最初の画面ですなえるが読めなくなる。
 	screen._tutorial = CardMatchTutorial.new()
 	screen.add_child(screen._tutorial)
-	screen._tutorial.cpu_resumed.connect(
-		func() -> void:
-			screen._cpu_timer.start(screen._tutorial.cpu_delay(CardMatchScreen.CPU_THINK_SECONDS))
-	)
+	screen._tutorial.cpu_resumed.connect(screen._cpu_ctl.schedule)
 	screen._result = CardMatchResult.new()
 	screen._result.home_pressed.connect(func() -> void: screen.back_pressed.emit())
-	screen._result.rematch_pressed.connect(screen._on_rematch_pressed)
+	screen._result.rematch_pressed.connect(screen._cpu_ctl.rematch)
 	screen._result.log_pressed.connect(func() -> void: screen._log.set_open(true))
 	screen.add_child(screen._result)
 	screen._log = CardMatchLog.new()

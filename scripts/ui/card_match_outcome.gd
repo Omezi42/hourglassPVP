@@ -38,10 +38,10 @@ func finish(kind: int, deck: Array) -> String:
 
 
 ## 分析用の記録(GameDesign.md 22章)。**オンライン対戦だけ**が対象で、CPU戦・観戦・
-## リプレイ再生では呼ばれない。**完了を待たない**(結果パネルの表示を通信で止めないため。
+## リプレイ再生では呼ばれない。ランクマッチは過去のランダムと同じ「見知らぬ人との対戦」として残す。**完了を待たない**(結果パネルの表示を通信で止めないため。
 ## 砂金の付与が既に通っている扱いと同じ)。失敗しても画面には何も出さない。
 func _submit_record(kind: int) -> void:
-	if kind != CurrencyRules.MatchKind.RANDOM and kind != CurrencyRules.MatchKind.ROOM:
+	if not MatchRecordService.is_recorded_kind(kind):
 		return
 	if _screen._client == null or _screen._match_id.is_empty():
 		return

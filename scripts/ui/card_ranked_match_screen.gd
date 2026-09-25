@@ -26,6 +26,7 @@ var queue: MatchmakingQueue:
 
 var _queue: RankedMatchmakingQueue
 var _cpu_offer: WaitingCpuOffer
+var _wait_funnel := RankedWaitFunnel.new(self)
 var _busy := false
 var _status_base_text := ""
 var _content_rect: Rect2
@@ -76,7 +77,11 @@ func _build() -> void:
 		_content_rect.get_center().x - CANCEL_SIZE.x * 0.5, _cancel_button_top()
 	)
 	_cpu_offer = WaitingCpuOffer.new(self, _cancel_button)
-	_cpu_offer.requested.connect(func() -> void: cpu_requested.emit())
+	_cpu_offer.requested.connect(
+		func() -> void:
+			_wait_funnel.switched_to_cpu()
+			cpu_requested.emit()
+	)
 
 	# 表彰式は結果パネルより手前に描かれる必要があるため最後の子にする
 	# (Godotは後の子ほど手前に描く。Architecture.md 11章)。
@@ -105,6 +110,7 @@ func begin_match() -> void:
 	_queue.version_mismatch.connect(_on_version_mismatch)
 	_queue.announce_result.connect(_on_announce_result)
 	_queue.join()
+	_wait_funnel.begin()
 	_cpu_offer.arm(WaitingCpuOffer.FIRST_DELAY_SECONDS)
 
 
@@ -195,6 +201,7 @@ func _sign_in_or_fail() -> bool:
 
 
 func _fail(message: String) -> void:
+	_wait_funnel.end()
 	_set_busy(false)
 	_set_status(message)
 
@@ -209,6 +216,7 @@ func _on_back_pressed() -> void:
 func _on_cancel_pressed() -> void:
 	var queue := _queue
 	_queue = null
+	_wait_funnel.end(FunnelService.RANKED_CANCEL)
 	_set_busy(false)
 	_set_status("キャンセルしました")
 	if queue != null:
@@ -226,6 +234,7 @@ func _on_version_mismatch(newer_exists: bool) -> void:
 ## 自分のuidがplayer_a/player_bのどちらとも一致しない場合はやり直させる
 ## (Architecture.md 6.1節)。
 func _on_matched(match_id: String, opponent_uid: String) -> void:
+	_wait_funnel.end(FunnelService.RANKED_MATCHED)
 	_busy = false
 	_cancel_button.visible = false
 	_cpu_offer.hide()

@@ -94,3 +94,22 @@ Web書き出し(WebAssembly)の実行速度で毎回これを間に合わせる�
 `_grant()` を呼ばない。結果パネルの「次の問題へ」は、エンドレスなら `PuzzleGenerator.generate()` を
 呼び直し、Stage1〜10なら `PuzzleLibrary` の並びで次の問題を、ソロモードのパズル型なら
 `CardMatchSolo.start_any()` で次のステージを始める。
+
+## 10.12.2 今日の1問(GameDesign.md 24章)
+
+| クラス / ファイル | 責務 |
+|---|---|
+| `DailyPuzzle`(`scripts/logic/daily_puzzle.gd`, static) | 日本時間の今日の日付を決め、`data/daily_puzzles/<YYYY-MM-DD>.tres` を引く。無ければ null |
+| `data/daily_puzzles/*.tres` | 1日1問の `PuzzleStageData`。**`tools/shorts/schedule.py` が投稿の割り振りから書き出す**(手で作らない) |
+
+**問題はStage1〜10と同じ `PuzzleStageData` で持ち、解く経路も同じ**(`CardMatchPuzzle.start(stage)`)。
+id を `daily_<日付>` にして `PuzzleProgress` へそのまま記録するため、初回クリアの判定と50砂金の渡し方は
+Stage1〜10と共通になる。所属の行と「次の問題へ」を出さない分岐だけを `DailyPuzzle.is_daily()` で見る。
+
+**同梱する(Firestoreから引かない)。**unityroomへはpckだけを上げるが、`.tres` はpckへ入るため届く。
+数週間先まで割り振っておき、ビルドのたびに一緒に出る。ファイルの有無は `ResourceLoader.exists()` ではなく
+`DirAccess` の一覧で見る(Pitfalls.md。書き出した版では `.remap` が付く)。
+
+**問題が解けることはテストで確かめる**(`tools/tests/daily_puzzle_tests.gd`)。同梱した各日の問題を
+問題集 `tools/shorts/puzzles.json` の正解手順で `MatchState` へ流し、相手のHPが0になることを見る。
+

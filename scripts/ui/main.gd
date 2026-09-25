@@ -166,7 +166,12 @@ func _ready() -> void:
 	puzzle_picker_screen = CardPuzzlePickerScreen.new()
 	puzzle_picker_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
 	puzzle_picker_screen.visible = false
-	puzzle_picker_screen.back_pressed.connect(func() -> void: _show_only(home_screen, true))
+	puzzle_picker_screen.back_pressed.connect(
+		func() -> void:
+			# 今日の1問を解いたかどうかを、たたかうタブの副題へ映す(GameDesign.md 24章)。
+			home_screen.refresh_battle_tab()
+			_show_only(home_screen, true)
+	)
 	puzzle_picker_screen.stage_selected.connect(_on_puzzle_stage_selected)
 	puzzle_picker_screen.endless_selected.connect(_on_puzzle_endless_selected)
 	add_child(puzzle_picker_screen)
@@ -265,7 +270,8 @@ func _unhandled_input(event: InputEvent) -> void:
 ## ホームを一度も開いていない人は、ホームを経ずに誘導対局へ直行する(GameDesign.md 18章)。
 func _on_title_start_requested() -> void:
 	var first_visit := not UiState.has_seen_home()
-	FunnelService.reach(FunnelService.TUTORIAL_START if first_visit else FunnelService.HOME)
+	if first_visit:
+		FunnelService.reach(FunnelService.TUTORIAL_START)
 	await title_screen.play_launch()
 	await _sand_transition.cover()
 	if first_visit:
@@ -559,6 +565,8 @@ func _on_puzzle_requested() -> void:
 
 
 func _on_puzzle_stage_selected(stage: PuzzleStageData) -> void:
+	if DailyPuzzle.is_daily(stage):
+		FunnelService.reach(FunnelService.DAILY_PUZZLE)
 	card_match_screen.puzzle.start(stage)
 	_match_return_screen = puzzle_picker_screen
 	_show_only(card_match_screen)
@@ -626,8 +634,10 @@ func _show_only(screen: Control, going_back: bool = false) -> void:
 	var previous := _active_screen
 	_active_screen = screen
 	# `HomeScreen._ready()` は表示されなくても起動時に走るため、印は実際に出した時点で立てる。
+	# 通過数の「ホーム」も同じ時点で数える(誘導対局を終えて初めてホームへ来た人を含めるため)。
 	if screen == home_screen:
 		UiState.mark_home_seen()
+		FunnelService.reach(FunnelService.HOME)
 
 	for s in _screens:
 		if s != previous and s != screen:

@@ -24,18 +24,6 @@ signal strike_impact
 ## 攻撃の演出が終わって台座へ戻りきった。
 signal strike_finished
 
-## 砂の動きの演出。**消える砂と落ちる砂は必ず描き分ける**(GameDesign.md 9章)。
-## この2つを取り違えるとルールを誤解するため、演出上もっとも重要な区別として扱う。
-enum Effect {
-	NONE,
-	## ダメージ。砂は消える(総量が減る)ので、砕けて外へ散る。
-	SHATTER,
-	## ターン終了の1粒。砂は落ちる(総量は変わらない)ので、下の部屋へ流れる。
-	DROP,
-	## 効果で砂が上へ戻る。落砂の逆向きで、下の部屋から上の部屋へ流れる(総量は変わらない)。
-	RAISE,
-}
-
 enum Mode {
 	## 場に出ている砂時計。枠を持たず、台座の上に立つ物体として描く。
 	BOARD,
@@ -51,9 +39,6 @@ const HEALTH_RED := Color(0.9, 0.3, 0.26, 1.0)
 ## 選択中の枠。守護の真鍮色と取り違えないよう、別系統の色にする。
 const SELECT_CYAN := Color(0.55, 0.9, 1.0, 1.0)
 const SAND_AMBER := Color(0.93, 0.78, 0.42, 1.0)
-const SHATTER_DURATION := 0.42
-const DROP_DURATION := 0.45
-const SHARD_COUNT := 9
 ## 文字を描くときに空ける左右の余白と、縮められる下限のフォントサイズ。
 const TEXT_MARGIN := 5.0
 const MIN_FONT_SIZE := 9
@@ -211,10 +196,7 @@ var brace: bool = false:
 var _font: Font
 var _hovering := false
 var _tracker := PressTracker.new()
-var _effect: int = Effect.NONE
-var _effect_progress := 0.0
-var _effect_amount := 0
-var _effect_tween: Tween
+var _sand: CardViewSandFx
 ## 反転の進捗(0.0〜1.0)。負のときは反転していない。
 var _art_reference_cache := 0.0
 var _art_reference_card: CardData
@@ -246,6 +228,7 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	mouse_entered.connect(_on_mouse_entered)
 	mouse_exited.connect(_on_mouse_exited)
+	_sand = CardViewSandFx.new(self)
 	_fx = CardUnitFx.new()
 	_fx.size = size
 	add_child(_fx)
@@ -344,15 +327,11 @@ func show_card(p_card: CardData, p_enabled: bool) -> void:
 	queue_redraw()
 
 
-## ダメージを受けた:砂が砕けて散る。
+## ダメージを受けた:砂が砕けて散る(消える砂と落ちる砂の描き分けは `CardViewSandFx`)。
 func play_shatter(amount: int) -> void:
-	_effect_amount = amount
-	_start_effect(Effect.SHATTER, SHATTER_DURATION)
+	_sand.play_shatter(amount)
 
 
-## 相打ちの反撃:紋章が攻撃側へ向けて短く突き出し、すぐ戻る(GameDesign.md 9章)。
-## `dir_x` は突き出す向き(正で右、負で左)。全身が渡っていく攻撃側の演出とは違う、
-## 紋章だけの軽い一撃として作る(誰が仕掛けたのかは攻撃側の動きだけで示す)。
 ## 相打ちの反撃:紋章が攻撃側へ向けて短く突き出し、すぐ戻る(GameDesign.md 9章)。
 ## `dir_x` は突き出す向き(正で右、負で左)。**段取りは `CardViewFlourish` が持つ**
 ## (1ファイル1000行の上限に達したため、`CardViewStrike` と同じ形で切り出した)。
@@ -437,32 +416,12 @@ func play_glass_break() -> void:
 
 ## ターン終了の1粒:砂が下の部屋へ流れる。
 func play_drop() -> void:
-	_start_effect(Effect.DROP, DROP_DURATION)
+	_sand.play_drop()
 
 
 ## 効果で砂が上へ戻る:`play_drop()` の逆向き(GameDesign.md 6章)。
 func play_raise() -> void:
-	_start_effect(Effect.RAISE, DROP_DURATION)
-
-
-func _start_effect(kind: int, duration: float) -> void:
-	if _effect_tween != null and _effect_tween.is_valid():
-		_effect_tween.kill()
-	_effect = kind
-	_effect_progress = 0.0
-	_effect_tween = create_tween()
-	_effect_tween.tween_method(_set_effect_progress, 0.0, 1.0, duration)
-	_effect_tween.finished.connect(_on_effect_finished)
-
-
-func _set_effect_progress(value: float) -> void:
-	_effect_progress = value
-	queue_redraw()
-
-
-func _on_effect_finished() -> void:
-	_effect = Effect.NONE
-	queue_redraw()
+	_sand.play_raise()
 
 
 func clear() -> void:
@@ -564,8 +523,7 @@ func _draw() -> void:
 		_draw_empty()
 	else:
 		HandCardPaint.draw(self)
-	if _effect != Effect.NONE:
-		_draw_effect()
+	_sand.draw()
 
 
 func _tint() -> Color:
@@ -785,58 +743,6 @@ func board_art_box() -> Rect2:
 		Vector2((size.x - BOARD_ART_SIDE) * 0.5, PEDESTAL_CENTER_Y + 4.0 - BOARD_ART_SIDE),
 		Vector2(BOARD_ART_SIDE, BOARD_ART_SIDE)
 	)
-
-
-func _draw_effect() -> void:
-	# 駒が倒されて枠が空になった後も、砕ける演出だけが残ることがある。
-	# その場合は絵を引けないため何も描かない。
-	if card == null:
-		return
-	var rect := Rect2(Vector2.ZERO, size)
-	if mode == Mode.BOARD:
-		rect = _fit_art(_icon(), board_art_box())
-	if _effect == Effect.SHATTER:
-		_draw_shatter(rect)
-	elif _effect == Effect.RAISE:
-		_draw_drop(rect, true)
-	else:
-		_draw_drop(rect)
-
-
-## 砕けて散る:中心から破片が外へ飛び、赤みを帯びて消える。
-func _draw_shatter(rect: Rect2) -> void:
-	var center := rect.position + rect.size * Vector2(0.5, 0.45)
-	var fade := 1.0 - _effect_progress
-	var reach := rect.size.x * (0.18 + 0.42 * _effect_progress)
-	var shards: int = SHARD_COUNT + mini(_effect_amount, 6)
-	for i in shards:
-		var angle := TAU * float(i) / float(shards)
-		var to := center + Vector2(cos(angle), sin(angle) * 0.8) * reach
-		var shard_size := 4.0 * fade + 1.0
-		draw_circle(to, shard_size, Color(0.95, 0.5, 0.4, fade * 0.9))
-	draw_rect(rect, Color(1.0, 0.35, 0.3, fade * 0.18))
-
-
-## 下の部屋へ流れる:中央を細い砂の筋が下りていく。総量は変わらない。
-## `upward` なら逆向きに、下の部屋から上の部屋へ戻る(砂が上へ戻る効果)。
-func _draw_drop(rect: Rect2, upward := false) -> void:
-	var x := rect.position.x + rect.size.x * 0.5
-	var top := rect.position.y + rect.size.y * 0.2
-	var bottom := rect.position.y + rect.size.y * 0.78
-	var from := bottom if upward else top
-	var to := top if upward else bottom
-	var head: float = lerpf(from, to, _effect_progress)
-	var back := 1.0 if upward else -1.0
-	draw_line(Vector2(x, from), Vector2(x, head), Color(SAND_AMBER, 0.55), 3.0)
-	for i in 3:
-		var y: float = head + back * float(i) * 6.0
-		var outside: bool = y > bottom if upward else y < top
-		if outside:
-			continue
-		draw_circle(Vector2(x, y), 3.0 - i * 0.6, Color(SAND_AMBER, 0.9 - i * 0.25))
-	if _effect_progress > 0.85:
-		var glow := (_effect_progress - 0.85) / 0.15
-		draw_circle(Vector2(x, to), 8.0 * glow, Color(SAND_AMBER, 0.35 * (1.0 - glow)))
 
 
 func _draw_empty() -> void:
