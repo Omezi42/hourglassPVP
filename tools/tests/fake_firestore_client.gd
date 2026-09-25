@@ -68,7 +68,7 @@ func delete_document(path: String) -> bool:
 	return true
 
 
-## 本物と同じく「collection直下で match_id == "" のもの」を返す。バージョンでの
+## 本物と同じく「collection直下で match_id == "" のもの」を返す(match_id を持たない文書は返さない)。バージョンでの
 ## 絞り込みはクライアント側で行うため(複合インデックスを避ける)、ここには持たせない。
 func query_waiting(collection: String, limit: int) -> Array:
 	await Engine.get_main_loop().process_frame
@@ -78,7 +78,9 @@ func query_waiting(collection: String, limit: int) -> Array:
 		if not path.begins_with("%s/" % collection):
 			continue
 		var entry: Dictionary = store[path]
-		if (entry["fields"] as Dictionary).get("match_id", "") != "":
+		# 本物と同じく、フィールドを持たない文書は等価フィルタに掛からない
+		var fields: Dictionary = entry["fields"]
+		if not fields.has("match_id") or fields["match_id"] != "":
 			continue
 		results.append(
 			{

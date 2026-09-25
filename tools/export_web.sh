@@ -25,6 +25,8 @@ echo "build_id = $BUILD_ID"
 
 "$GODOT" --headless --path "$ROOT" --export-release "Web" "$OUT/index.html" > "$ROOT/logs/export_web.log" 2>&1
 "$GODOT" --headless --main-pack "$OUT/index.pck" --script res://tools/tests/run_tests.gd 2>&1 | grep -E "tests passed|FAILED" || true
+# 書き出したpckのまま本物のFirebaseで2人をマッチングさせ、デッキと種の交換まで通す
+"$GODOT" --headless --main-pack "$OUT/index.pck" --script res://tools/tests/matchmaking_live_test.gd 2>&1 | grep -E "matchmaking live|NG:" || true
 "$GODOT" --headless --main-pack "$OUT/index.pck" --script res://tools/verify_web_pck.gd 2>&1 | grep -E "pck check" || true
 
 # itch.io・PLiCy 向け(Architecture.md 4.6節)。起動部 build/portal.zip は Godot を上げたときだけ手で上げ直す。

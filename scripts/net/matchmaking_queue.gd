@@ -35,6 +35,8 @@ var client: FirestoreClient
 var auth: FirebaseAuth
 ## 待合室のコレクション。ランクマッチは派生クラスで差し替える。
 var collection := COLLECTION
+## ポーリングの間隔。テストは実時間を縮めるために短くする。
+var poll_interval := POLL_INTERVAL_SECONDS
 ## 待っている間のCPU戦をしているか。立っている間は掴まず、掴まれない。
 var cpu_playing := false
 var _my_match_id: String = ""
@@ -66,16 +68,18 @@ func join() -> void:
 			return
 		# ここへ来た時点で「待機側になった」ことが確定する。即座にマッチが成立した
 		# 場合は上で return しているため、条件分岐を足さずに仕様を満たせる。
-		# 応答は待たない(通信の成否でポーリングを遅らせないため)
-		if not _announced and _now() >= _announce_next_at and QueueNotifier.can_send():
-			# **届くまで諦めない。**以前は1回試して終わりで、失敗しても画面には
-			# 何も出ず、待っている側には「誰も来ない」としか見えなかった。
-			_announce_next_at = _now() + ANNOUNCE_RETRY_SECONDS
-			QueueNotifier.notify_waiting(self, _on_announced)
+		_announce_if_due()
 		if Time.get_unix_time_from_system() - last_heartbeat >= HEARTBEAT_SECONDS:
 			last_heartbeat = Time.get_unix_time_from_system()
-			await client.set_document(_doc_path(), {"joined_at": last_heartbeat})
-		await get_tree().create_timer(POLL_INTERVAL_SECONDS).timeout
+			await _touch_waiting_doc({"joined_at": last_heartbeat})
+		await get_tree().create_timer(poll_interval).timeout
+
+
+## 応答は待たない(通信の成否でポーリングを遅らせないため)。届くまで間を置いて試し直す。
+func _announce_if_due() -> void:
+	if not _announced and _now() >= _announce_next_at and QueueNotifier.can_send():
+		_announce_next_at = _now() + ANNOUNCE_RETRY_SECONDS
+		QueueNotifier.notify_waiting(self, _on_announced)
 
 
 ## 届いたらそれ以上は送らない(待っている間ずっと知らせ続けると、通知そのものを
@@ -94,7 +98,15 @@ func _now() -> float:
 ## CPU戦を始めた・打ち切ったときに呼ぶ。相手は `cpu` を見て掴むかどうかを決める。
 func set_cpu_playing(playing: bool) -> void:
 	cpu_playing = playing
-	await client.set_document(_doc_path(), {"cpu": playing})
+	await _touch_waiting_doc({"cpu": playing})
+
+
+## 待機中の自分の文書の一部だけを書き換える。**無くなっていたら作らない。**掃除された後に
+## 一部のフィールドだけで作り直すと `match_id` を持たない文書になり、誰の検索にも掛からず、
+## 自分のポーリングも「在る」と見て書き直さないまま待ち続ける。無ければ次のポーリングが
+## `_write_waiting_doc()` で全フィールドを書き直す。
+func _touch_waiting_doc(fields: Dictionary) -> void:
+	await client.commit([client.update_write(_doc_path(), fields, {"exists": true})])
 
 
 func _write_waiting_doc() -> bool:
