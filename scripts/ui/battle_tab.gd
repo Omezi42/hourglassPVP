@@ -68,6 +68,8 @@ var _cpu_tile: HomeTile
 var _room_tile: HomeTile
 ## CPU戦の下に並ぶ入口。1局終えるまで錠前を掛ける(GameDesign.md 9章)。
 var _later_tiles: Array[HomeTile] = []
+## 次にやってほしい入口1つに掛ける印(GameDesign.md 18章)。
+var _next_mark := NextStepMark.new()
 
 @onready var status_label: Label = $Margin/VBox/StatusLabel
 
@@ -193,6 +195,20 @@ func refresh() -> void:
 	var ready_to_battle: bool = CardDeckSave.selected_deck().size() == MatchState.DECK_SIZE
 	_set_battle_disabled(not ready_to_battle)
 	_set_status("" if ready_to_battle else "デッキを%d枚にしてください" % MatchState.DECK_SIZE)
+	_next_mark.attach_to(_next_step_tile() if ready_to_battle and not _resume_pending else null)
+
+
+## 1局も終えていなければCPU戦、人とまだ対戦していなければ「対戦する」(GameDesign.md 18章)。
+func _next_step_tile() -> HomeTile:
+	var uid := _uid()
+	if int(MatchStats.totals(uid).get("games", 0)) == 0:
+		return _cpu_tile
+	for kind in [
+		CurrencyRules.MatchKind.RANKED, CurrencyRules.MatchKind.RANDOM, CurrencyRules.MatchKind.ROOM
+	]:
+		if int(MatchStats.totals(uid, kind).get("games", 0)) > 0:
+			return null
+	return _ranked_tile
 
 
 ## デッキが要る入口(対戦する / CPU戦 / ルームマッチ)を押せなくする。

@@ -74,6 +74,7 @@
 | 器の砕け・ひび・鼓動 | `HpVesselFx`(`PlayerInfoBar` の子のオーバーレイ)。ひびの本数はHPから毎回決め(状態を持たない)、砕けは `play_shatter()` の進捗だけを持つ。砕けた後は空の器とひびを残し、`PlayerInfoBar.reset()` で消す |
 | 「決着可能」の光 | `CardMatchDamageAssist.sync()` が前回の判定を控え、偽→真に変わった瞬間だけ光らせる |
 | 毒砂 | `MatchState.unit_poisoned(side, slot)` を毒砂が体力を0にした瞬間に出す。`CardMatchEffects` が枠を控え、続く `unit_destroyed` で `play_break()` の代わりに `CardView.play_melt()` を呼ぶ |
+| 「つぎはここ」(GameDesign.md 18章) | `NextStepMark`(札の最後の子のオーバーレイ。段位の表示に隠れないよう札の描画に入れない)。どの札へ掛けるかは `BattleTab._next_step_tile()` が戦績の種別ごとの対局数から決め、`refresh()` のたびに掛け直す |
 
 ## 10.10.2 メニュー画面群の手触り(GameDesign.md 9章「操作への反応」)
 
