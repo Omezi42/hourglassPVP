@@ -10,7 +10,8 @@ extends Control
 ## 押したときだけ行う**。画面を開くたびに預けると、使われないコードが際限なく増えるため。
 ##
 ## 「受け取る」は升と数字パッドを常に出す。読み込みは編集中のデッキを置き換える操作であり、
-## 渡す操作と同じ面に並べると押し間違えるため面を分けている。
+## 渡す操作と同じ面に並べると押し間違えるため面を分けている。さらに、引けたデッキへ入れ替える前に
+## 確認ダイアログを挟む(編集中の構築を黙って失わせないため)。
 
 signal loaded(deck: Array)
 
@@ -18,6 +19,7 @@ enum Face { SEND, RECEIVE }
 
 const SCREEN_SIZE := Vector2(1280, 720)
 const PANEL_STYLE := "res://resources/theme/content_panel.tres"
+const CONFIRM_SCENE := "res://scenes/confirm_modal.tscn"
 const PANEL_RECT := Rect2(40, 52, 1200, 616)
 const TITLE_POS := Vector2(32, 24)
 const TAB_SIZE := Vector2(150, 48)
@@ -46,7 +48,6 @@ const RECEIVE_SUB_POS := Vector2(180, 164)
 const RECEIVE_TILES_RECT := Rect2(180, 216, 480, 88)
 const LOAD_BUTTON_RECT := Rect2(180, 330, 480, 64)
 const RECEIVE_MESSAGE_POS := Vector2(180, 412)
-const RECEIVE_NOTE_POS := Vector2(180, 470)
 const RECEIVE_TEXT_WIDTH := 480.0
 const PAD_POS := Vector2(740, 150)
 const PAD_KEY_SIZE := Vector2(84, 64)
@@ -59,7 +60,8 @@ const MESSAGE_FONT_SIZE := 17
 
 const ISSUE_LABEL := "コードを発行してコピー"
 const COPY_LABEL := "コードをコピー"
-const RECEIVE_NOTE := "読み込むと編集中の内容が入れ替わります。保存するまで元のデッキは残ります"
+const REPLACE_TITLE := "デッキを入れ替えますか"
+const REPLACE_DETAIL := "編集中の内容がこのコードのデッキに入れ替わります。保存するまで元のデッキは残ります"
 
 var _face := Face.SEND
 var _send_view: Control
@@ -78,6 +80,9 @@ var _input_tiles: CodeTiles
 var _pad: NumberPad
 var _load_button: Button
 var _receive_message: Label
+var _replace_confirm: ConfirmModal
+## 引けたが、まだ入れ替えを確かめていないデッキ。
+var _pending_deck: Array = []
 var _deck: Array = []
 var _deck_name := ""
 ## 発行済みのコード。**画像を出すためだけに発行はしない**(通信が要るため)。
@@ -103,6 +108,8 @@ func open(deck: Array, deck_name: String) -> void:
 	_image_message.text = ""
 	_code_message.text = ""
 	_receive_message.text = ""
+	_pending_deck = []
+	_replace_confirm.visible = false
 	_set_busy(false)
 	_show_face(Face.SEND)
 	visible = true
@@ -216,6 +223,14 @@ func _on_load_pressed() -> void:
 		_fail(_receive_message, "このコードは読み込めませんでした")
 		return
 	_set_busy(false)
+	_receive_message.text = ""
+	_pending_deck = deck
+	_replace_confirm.open_confirm(REPLACE_TITLE, REPLACE_DETAIL, "入れ替える", "やめる")
+
+
+func _on_replace_confirmed() -> void:
+	var deck := _pending_deck
+	_pending_deck = []
 	loaded.emit(deck)
 	close()
 
@@ -269,6 +284,11 @@ func _build() -> void:
 	_build_code_card()
 	_receive_view = _make_layer(panel)
 	_build_receive()
+	# モーダルは最後に足す(後から足した子ほど手前に描かれる)。
+	_replace_confirm = load(CONFIRM_SCENE).instantiate()
+	add_child(_replace_confirm)
+	_replace_confirm.confirmed.connect(_on_replace_confirmed)
+	_replace_confirm.cancelled.connect(func() -> void: _pending_deck = [])
 
 
 ## 表そのもの。`SubViewport` は画面に見えず、その中身だけを `TextureRect` で映す。
@@ -353,10 +373,6 @@ func _build_receive() -> void:
 	_load_button = _make_button(_receive_view, "読み込む", LOAD_BUTTON_RECT, true)
 	_load_button.pressed.connect(_on_load_pressed)
 	_receive_message = _make_message(_receive_view, RECEIVE_MESSAGE_POS, RECEIVE_TEXT_WIDTH)
-	var note := _make_message(_receive_view, RECEIVE_NOTE_POS, RECEIVE_TEXT_WIDTH)
-	note.text = RECEIVE_NOTE
-	note.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
-	note.add_theme_font_size_override("font_size", SUB_FONT_SIZE)
 	# 確定は「読み込む」が持つため、パッドに「決定」は置かない(GameDesign.md 9章)。
 	_pad = NumberPad.make(_input_tiles.input, PAD_KEY_SIZE, false)
 	_pad.position = PAD_POS
