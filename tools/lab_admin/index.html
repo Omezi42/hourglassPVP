@@ -4,26 +4,31 @@
 <meta charset="UTF-8">
 <title>掲示板〈ラボ〉管理ツール</title>
 <style>
-  body { font-family: sans-serif; background: #1b1712; color: #eee5d8; margin: 0; padding: 24px; }
+  body { font-family: sans-serif; background: #1b1712; color: #eee5d8; margin: 0; padding: 24px; max-width: 980px; }
   h1 { font-size: 20px; margin-bottom: 4px; }
   h2 { font-size: 16px; margin-top: 32px; border-bottom: 1px solid #443a2c; padding-bottom: 4px; }
-  .row { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
-  input[type=text], input[type=password] { padding: 6px; border-radius: 4px; border: 1px solid #6b5a3f; background: #2a241b; color: #eee5d8; flex: 1; }
+  .row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  label { min-width: 96px; color: #a89878; font-size: 13px; }
+  input, textarea, select { padding: 6px; border-radius: 4px; border: 1px solid #6b5a3f; background: #2a241b; color: #eee5d8; font: inherit; }
+  input[type=text], input[type=password], textarea { flex: 1; }
   button { padding: 6px 14px; border-radius: 4px; border: none; background: #b98b3d; color: #1b1712; cursor: pointer; font-weight: bold; }
   button:hover { background: #d3a458; }
   button.secondary { background: #4a4030; color: #eee5d8; }
   button.danger { background: #8b3a30; color: #eee5d8; }
   .card { background: #241f17; border: 1px solid #443a2c; border-radius: 6px; padding: 12px; margin-bottom: 10px; }
+  .card.hidden { opacity: 0.55; border-style: dashed; }
+  .card.adopted { border-color: #d3a458; }
   .card .meta { color: #a89878; font-size: 12px; margin-bottom: 6px; }
   .card .desc { white-space: pre-wrap; margin: 8px 0; }
   .card .actions { display: flex; gap: 8px; margin-top: 8px; }
-  #status { color: #d3a458; font-size: 13px; margin-left: 8px; }
+  .count { font-size: 22px; font-weight: bold; float: right; }
+  #status { color: #d3a458; font-size: 13px; }
   .empty { color: #a89878; padding: 12px; }
 </style>
 </head>
 <body>
   <h1>掲示板〈ラボ〉管理ツール</h1>
-  <p style="color:#a89878;">GameDesign.md 29章。承認・却下・月末の採用判断をここで行う。</p>
+  <p style="color:#a89878;">GameDesign.md 29章。お題を立て、案を見回って非表示にし、締切後に採用の印を付けて結果を確定する。</p>
 
   <div class="row">
     <label>エンドポイント</label>
@@ -36,18 +41,38 @@
     <span id="status"></span>
   </div>
 
-  <h2>審査待ち</h2>
-  <div id="pending" class="empty">読み込んでいません</div>
-
-  <h2>今月の得票ランキング(採用の確定)</h2>
+  <h2>お題を立てる</h2>
+  <div class="row"><label>お題(20字)</label><input type="text" id="new_title" maxlength="20"></div>
+  <div class="row"><label>補足(80字)</label><input type="text" id="new_detail" maxlength="80"></div>
   <div class="row">
-    <label>月キー(YYYY-MM、空欄で今月)</label>
-    <input type="text" id="month" placeholder="2026-09" style="max-width:140px;">
-    <button class="secondary" onclick="loadCurrentMonth()">読み込む</button>
+    <label>期間(JST)</label>
+    <input type="date" id="new_start"> 0:00 〜 <input type="date" id="new_end"> 24:00
+    <button onclick="createRound()">この内容で立てる</button>
   </div>
-  <div id="current_month" class="empty">読み込んでいません</div>
+
+  <h2>回</h2>
+  <div class="row">
+    <select id="round_select" onchange="loadRound()"></select>
+    <button class="secondary" onclick="loadRounds()">回を読み直す</button>
+    <button id="fix_button" onclick="fixResults()">結果を確定する</button>
+  </div>
+  <div id="round_info" class="empty"></div>
+  <div id="proposals" class="empty">読み込んでいません</div>
+
+  <h2>大会の実装権(GameDesign.md 30章)</h2>
+  <div class="row"><label>優勝者のuid</label><input type="text" id="prize_uid"></div>
+  <div class="row"><label>カード名(案)</label><input type="text" id="prize_name" maxlength="20"></div>
+  <div class="row"><label>説明</label><textarea id="prize_desc" rows="3" maxlength="200"></textarea></div>
+  <div class="row">
+    <label>種別</label>
+    <select id="prize_kind"><option value="hourglass">砂時計</option><option value="spell">砂術</option></select>
+    <button onclick="grantPrize()">実装権と称号を付与する</button>
+  </div>
 
 <script>
+const JST_OFFSET = "+09:00";
+let rounds = [];
+
 function loadConfig() {
   return {
     endpoint: localStorage.getItem("lab_admin_endpoint") || "",
@@ -56,22 +81,16 @@ function loadConfig() {
 }
 
 function saveConfig() {
-  const endpoint = document.getElementById("endpoint").value.trim();
-  const secret = document.getElementById("secret").value.trim();
-  localStorage.setItem("lab_admin_endpoint", endpoint);
-  localStorage.setItem("lab_admin_secret", secret);
-  loadPending();
-  loadCurrentMonth();
+  localStorage.setItem("lab_admin_endpoint", document.getElementById("endpoint").value.trim());
+  localStorage.setItem("lab_admin_secret", document.getElementById("secret").value.trim());
+  loadRounds();
 }
 
 window.addEventListener("load", () => {
   const cfg = loadConfig();
   document.getElementById("endpoint").value = cfg.endpoint;
   document.getElementById("secret").value = cfg.secret;
-  if (cfg.endpoint && cfg.secret) {
-    loadPending();
-    loadCurrentMonth();
-  }
+  if (cfg.endpoint && cfg.secret) loadRounds();
 });
 
 async function callAdmin(action, extra) {
@@ -97,68 +116,108 @@ function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
 }
 
-function proposalCard(p, actionsHtml) {
-  const kind = p.card_kind === "spell" ? "砂術" : "砂時計";
-  return `<div class="card">
-    <div class="meta">${escapeHtml(p.id)} / ${escapeHtml(p.month)} / Good ${p.good_count || 0} / ${escapeHtml(p.status)}${p.result ? " / " + escapeHtml(p.result) : ""}</div>
-    <strong>${escapeHtml(p.card_name)}(${kind})</strong>
-    <div class="desc">${escapeHtml(p.description)}</div>
-    <div class="actions">${actionsHtml}</div>
-  </div>`;
+function formatDate(unixSeconds) {
+  return new Date(unixSeconds * 1000).toLocaleString("ja-JP", {timeZone: "Asia/Tokyo"});
 }
 
-async function loadPending() {
-  const el = document.getElementById("pending");
-  el.innerHTML = "<div class='empty'>読み込み中…</div>";
-  const json = await callAdmin("list_pending", {});
-  if (!json.ok) {
-    el.innerHTML = "<div class='empty'>読み込みに失敗しました</div>";
-    return;
-  }
-  if (!json.proposals.length) {
-    el.innerHTML = "<div class='empty'>審査待ちの投稿はありません</div>";
-    return;
-  }
-  el.innerHTML = json.proposals.map((p) => proposalCard(p,
-    `<button onclick="approve('${p.id}')">承認</button>
-     <button class="danger" onclick="reject('${p.id}')">却下(返金)</button>`
-  )).join("");
+function roundState(r) {
+  const now = Date.now() / 1000;
+  if (now < r.starts_at) return "開始前";
+  if (now < r.ends_at) return "募集中";
+  return r.results_fixed ? "結果確定済み" : "締切後・未確定";
 }
 
-async function approve(id) {
-  await callAdmin("approve", {id});
-  loadPending();
+async function createRound() {
+  const start = document.getElementById("new_start").value;
+  const end = document.getElementById("new_end").value;
+  if (!start || !end) return alert("期間を入れてください");
+  const startsAt = Date.parse(`${start}T00:00:00${JST_OFFSET}`) / 1000;
+  // 終了日の24:00(翌日0:00)を締切にする。
+  const endsAt = Date.parse(`${end}T00:00:00${JST_OFFSET}`) / 1000 + 86400;
+  const json = await callAdmin("create_round", {
+    title: document.getElementById("new_title").value,
+    detail: document.getElementById("new_detail").value,
+    starts_at: startsAt,
+    ends_at: endsAt,
+  });
+  if (json.ok) loadRounds();
 }
 
-async function reject(id) {
-  await callAdmin("reject", {id});
-  loadPending();
+async function loadRounds() {
+  const json = await callAdmin("list_rounds", {});
+  if (!json.ok) return;
+  rounds = json.rounds;
+  const select = document.getElementById("round_select");
+  select.innerHTML = rounds.map((r) =>
+    `<option value="${escapeHtml(r.id)}">${escapeHtml(r.title)}(${roundState(r)})</option>`).join("");
+  loadRound();
 }
 
-async function loadCurrentMonth() {
-  const el = document.getElementById("current_month");
-  el.innerHTML = "<div class='empty'>読み込み中…</div>";
-  const month = document.getElementById("month").value.trim();
-  const json = await callAdmin("list_current_month", month ? {month} : {});
-  if (!json.ok) {
-    el.innerHTML = "<div class='empty'>読み込みに失敗しました</div>";
+function selectedRound() {
+  const id = document.getElementById("round_select").value;
+  return rounds.find((r) => r.id === id);
+}
+
+async function loadRound() {
+  const round = selectedRound();
+  const box = document.getElementById("proposals");
+  const info = document.getElementById("round_info");
+  if (!round) {
+    info.textContent = "";
+    box.innerHTML = '<div class="empty">回がありません</div>';
     return;
   }
-  if (!json.proposals.length) {
-    el.innerHTML = "<div class='empty'>今月の承認済み投稿はありません</div>";
+  info.textContent = `${round.id} / ${formatDate(round.starts_at)} 〜 ${formatDate(round.ends_at)} / ${roundState(round)} / ${round.detail || ""}`;
+  document.getElementById("fix_button").disabled = roundState(round) !== "締切後・未確定";
+  const json = await callAdmin("list_round", {round_id: round.id});
+  if (!json.ok) return;
+  if (json.proposals.length === 0) {
+    box.innerHTML = '<div class="empty">案はまだありません</div>';
     return;
   }
-  el.innerHTML = json.proposals.map((p) => proposalCard(p,
-    p.result
-      ? `<span>判定済み: ${escapeHtml(p.result)}</span>`
-      : `<button onclick="setResult('${p.id}', 'adopted')">採用として確定</button>
-         <button class="secondary" onclick="setResult('${p.id}', 'not_adopted')">不採用として確定</button>`
-  )).join("");
+  box.innerHTML = json.proposals.map((p, i) => {
+    const kind = p.card_kind === "spell" ? "砂術" : "砂時計";
+    const adopted = p.result === "adopted";
+    const classes = ["card", p.hidden ? "hidden" : "", adopted ? "adopted" : ""].join(" ");
+    return `<div class="${classes}">
+      <span class="count">${p.good_count || 0}票</span>
+      <div class="meta">${i + 1}位 / ${escapeHtml(p.id)} / ${formatDate(p.created_at)}${p.hidden ? " / 非表示" : ""}${adopted ? " / 採用" : ""}</div>
+      <strong>${escapeHtml(p.card_name)}(${kind})</strong>
+      <div class="desc">${escapeHtml(p.description)}</div>
+      <div class="actions">
+        <button class="${p.hidden ? "secondary" : "danger"}" onclick="setHidden('${escapeHtml(p.id)}', ${!p.hidden})">${p.hidden ? "再表示する" : "非表示にする"}</button>
+        <button class="secondary" onclick="setResult('${escapeHtml(p.id)}', '${adopted ? "" : "adopted"}')">${adopted ? "採用を外す" : "採用する(称号を付与)"}</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+async function setHidden(id, hidden) {
+  const json = await callAdmin("set_hidden", {id, hidden});
+  if (json.ok) loadRound();
 }
 
 async function setResult(id, result) {
-  await callAdmin("set_result", {id, result});
-  loadCurrentMonth();
+  if (result === "adopted" && !confirm("採用し、投稿者に称号「発案者」を付与します")) return;
+  const json = await callAdmin("set_result", {id, result});
+  if (json.ok) loadRound();
+}
+
+async function fixResults() {
+  const round = selectedRound();
+  if (!round || !confirm(`「${round.title}」の結果を確定し、過去の回に採用の印を出します`)) return;
+  const json = await callAdmin("fix_results", {round_id: round.id});
+  if (json.ok) loadRounds();
+}
+
+async function grantPrize() {
+  if (!confirm("大会の実装権と称号「発案者」「箱庭王」を付与します")) return;
+  await callAdmin("grant_tournament_prize", {
+    uid: document.getElementById("prize_uid").value.trim(),
+    card_name: document.getElementById("prize_name").value.trim(),
+    description: document.getElementById("prize_desc").value.trim(),
+    kind: document.getElementById("prize_kind").value,
+  });
 }
 </script>
 </body>

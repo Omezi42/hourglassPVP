@@ -107,17 +107,12 @@
 
 ### 掲示板の作り直し(GameDesign.md 29章 / Architecture.md 10.17節)
 
-- [ ] 画面モックを見せて承認を取る
-- [ ] `LabRules`(判定)とテスト
-- [ ] `LabProposalService` を募集回・投票用紙の形へ
-- [ ] `firestore.rules` の `lab_rounds` / `lab_proposals` / `lab_ballots`
-- [ ] `functions/lab_admin.js` と `tools/lab_admin/index.html` を回の運用へ
-- [ ] `CardLabScreen` / `LabThemeBand` / `LabProposalCard` / `LabProposalDetail` / `LabSubmitPanel` / `LabTab`
-- [ ] ルールとCloud Functionsの反映、最初のお題を立てる(新しい版の公開と同時)
+- [ ] 旧方式の審査待ちの投稿を、いまの管理ツールで却下して返金する(反映より前・ユーザー作業)
+- [ ] ルール(`firebase deploy --only firestore:rules`)と `labAdmin`(`firebase deploy --only functions:labAdmin`)を、新しい版の公開と同時に反映する
+- [ ] 最初のお題を管理ツールで立てる
 
 ### 公式大会「箱庭杯」(GameDesign.md 30章 / Architecture.md 10.18節)
 
-- [ ] `tools/lab_admin/index.html` へ大会優勝者登録フォーム(掲示板の作り直しに含める)
 - [ ] 初回開催の告知・予選日程の案内文(運用)
 
 ### カードスキン(GameDesign.md 31章 / Architecture.md 10.19節・未着手)

@@ -172,7 +172,7 @@ exports.discordInteractions = onRequest(
 );
 
 /**
- * 掲示板〈ラボ〉の承認・却下・月末の採用判断(GameDesign.md 29章)。開発側だけが開く
+ * 掲示板〈ラボ〉のお題の作成・非表示・採用の確定(GameDesign.md 29章)。開発側だけが開く
  * `tools/lab_admin/` の管理ツールから、共有シークレット(`X-Admin-Secret`ヘッダー)を
  * 添えて呼ぶ。中身は `lab_admin.js` へ集約し、この関数は認証だけを持つ。
  */

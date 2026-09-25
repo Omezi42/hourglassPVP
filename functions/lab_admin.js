@@ -1,15 +1,16 @@
 /**
- * 掲示板〈ラボ〉の承認・却下・月末の採用判断(GameDesign.md 29章 / Architecture.md 10.17節)。
+ * 掲示板〈ラボ〉の運用(GameDesign.md 29章 / Architecture.md 10.17節)。
  *
- * プレイヤー側クライアントは投稿・一覧の取得・投票までしか行わない。承認・却下・
- * 採用の確定は、ここ(Cloud Functions、Admin SDK)を経由する `tools/lab_admin/` の
+ * プレイヤー側クライアントは回の取得・投稿・投票までしか行わない。お題の作成・非表示・
+ * 採用の印・結果の確定は、ここ(Cloud Functions、Admin SDK)を経由する `tools/lab_admin/` の
  * 管理ツールだけが行う。認証は共有シークレット1本のみ
- * (`firebase functions:secrets:set LAB_ADMIN_SECRET`)で、Firestoreのセキュリティ
- * ルールではなくこのシークレットを知っているかどうかで権限を絞る。
+ * (`firebase functions:secrets:set LAB_ADMIN_SECRET`)。
  */
 
-const COLLECTION = "lab_proposals";
-const PLAYERS_COLLECTION = "players";
+const ROUNDS = "lab_rounds";
+const PROPOSALS = "lab_proposals";
+const PLAYERS = "players";
+const JST_OFFSET_MS = 9 * 3600 * 1000;
 
 /**
  * `POST /labAdmin` の本文にある `action` で分岐する(`discordInteractions` と同じ、
@@ -26,18 +27,20 @@ async function handleLabAdmin(req, res, db, firestoreNs) {
 
   try {
     switch (action) {
-      case "list_pending":
-        return res.json({ok: true, proposals: await listPending(db)});
-      case "list_current_month":
-        return res.json({ok: true, proposals: await listCurrentMonth(db, body.month)});
-      case "approve":
-        await setStatus(db, body.id, "approved");
-        return res.json({ok: true});
-      case "reject":
-        await rejectAndRefund(db, firestoreNs, body.id);
+      case "list_rounds":
+        return res.json({ok: true, rounds: await listRounds(db)});
+      case "create_round":
+        return res.json({ok: true, id: await createRound(db, body)});
+      case "list_round":
+        return res.json({ok: true, proposals: await listRound(db, body.round_id)});
+      case "set_hidden":
+        await db.collection(PROPOSALS).doc(String(body.id)).update({hidden: Boolean(body.hidden)});
         return res.json({ok: true});
       case "set_result":
         await setResult(db, firestoreNs, body.id, body.result);
+        return res.json({ok: true});
+      case "fix_results":
+        await db.collection(ROUNDS).doc(String(body.round_id)).update({results_fixed: true});
         return res.json({ok: true});
       case "grant_tournament_prize":
         await grantTournamentPrize(db, firestoreNs, body);
@@ -50,63 +53,63 @@ async function handleLabAdmin(req, res, db, firestoreNs) {
   }
 }
 
-async function listPending(db) {
-  // 等価フィルタ1本だけにし、orderByは重ねない(複合インデックスを要求しない、
-  // GameDesign.md 6章のクエリ方針と同じ考え方)。並びはここで組み立ててから返す。
-  const snapshot = await db.collection(COLLECTION).where("status", "==", "pending").get();
-  const rows = snapshot.docs.map((doc) => ({id: doc.id, ...doc.data()}));
-  rows.sort((a, b) => (a.created_at || 0) - (b.created_at || 0));
-  return rows;
+async function listRounds(db) {
+  const snapshot = await db.collection(ROUNDS).orderBy("starts_at", "desc").get();
+  return snapshot.docs.map((doc) => ({id: doc.id, ...doc.data()}));
 }
 
-async function listCurrentMonth(db, month) {
-  const key = month || currentMonthKey();
-  const snapshot = await db
-    .collection(COLLECTION)
-    .where("status", "==", "approved")
-    .where("month", "==", key)
-    .get();
-  const rows = snapshot.docs.map((doc) => ({id: doc.id, ...doc.data()}));
-  rows.sort((a, b) => (b.good_count || 0) - (a.good_count || 0));
-  return rows;
-}
+/**
+ * 回を作る。`starts_at` / `ends_at` はunix秒。IDは `r` + 開始日(JST)の `YYYYMMDD`。
+ * 期間が既存の回と重なるときは断る(同時に開いている回は1つだけ。29章)。
+ */
+async function createRound(db, body) {
+  const title = String(body.title || "").trim();
+  const detail = String(body.detail || "").trim();
+  const startsAt = Number(body.starts_at);
+  const endsAt = Number(body.ends_at);
+  if (!title || title.length > 20) throw new Error("title is required (20 chars max)");
+  if (detail.length > 80) throw new Error("detail is 80 chars max");
+  if (!(startsAt > 0) || !(endsAt > startsAt)) throw new Error("invalid period");
 
-async function setStatus(db, id, status) {
-  await db.collection(COLLECTION).doc(String(id)).update({status});
-}
+  const rounds = await listRounds(db);
+  const overlap = rounds.find((r) => r.starts_at < endsAt && startsAt < r.ends_at);
+  if (overlap) throw new Error(`period overlaps round ${overlap.id}`);
 
-/** 却下し、投稿時に支払った砂金をそのまま返す(GameDesign.md 29章)。 */
-async function rejectAndRefund(db, firestoreNs, id) {
-  await db.runTransaction(async (tx) => {
-    const proposalRef = db.collection(COLLECTION).doc(String(id));
-    const proposalSnap = await tx.get(proposalRef);
-    if (!proposalSnap.exists) throw new Error("proposal not found");
-    const proposal = proposalSnap.data();
-    tx.update(proposalRef, {status: "rejected"});
-    const cost = Number(proposal.cost_paid || 0);
-    if (cost > 0 && proposal.author_uid) {
-      const playerRef = db.collection(PLAYERS_COLLECTION).doc(String(proposal.author_uid));
-      tx.set(
-        playerRef,
-        {currency: firestoreNs.FieldValue.increment(cost)},
-        {merge: true}
-      );
-    }
+  const jst = new Date(startsAt * 1000 + JST_OFFSET_MS);
+  const id = "r" + jst.toISOString().slice(0, 10).replace(/-/g, "");
+  const ref = db.collection(ROUNDS).doc(id);
+  await ref.create({
+    title,
+    detail,
+    starts_at: startsAt,
+    ends_at: endsAt,
+    results_fixed: false,
+    created_at: Date.now() / 1000,
   });
+  return id;
 }
 
-/** 月末の採用判断。`"adopted"` のときは投稿者へ称号「発案者」を付与する(29章)。 */
+/** 回の案を非表示も含めて得票順に返す(等価フィルタ1本。並べ替えはここで行う)。 */
+async function listRound(db, roundId) {
+  const snapshot = await db.collection(PROPOSALS).where("round_id", "==", String(roundId)).get();
+  const rows = snapshot.docs.map((doc) => ({id: doc.id, ...doc.data()}));
+  rows.sort((a, b) => (b.good_count || 0) - (a.good_count || 0) ||
+    (a.created_at || 0) - (b.created_at || 0));
+  return rows;
+}
+
+/** 採用の印。`"adopted"` のときは投稿者へ称号「発案者」を付与する(29章)。 */
 async function setResult(db, firestoreNs, id, result) {
+  const value = String(result) === "adopted" ? "adopted" : "";
   await db.runTransaction(async (tx) => {
-    const proposalRef = db.collection(COLLECTION).doc(String(id));
+    const proposalRef = db.collection(PROPOSALS).doc(String(id));
     const proposalSnap = await tx.get(proposalRef);
     if (!proposalSnap.exists) throw new Error("proposal not found");
     const proposal = proposalSnap.data();
-    tx.update(proposalRef, {result: String(result)});
-    if (String(result) === "adopted" && proposal.author_uid) {
-      const playerRef = db.collection(PLAYERS_COLLECTION).doc(String(proposal.author_uid));
+    tx.update(proposalRef, {result: value});
+    if (value === "adopted" && proposal.author_uid) {
       tx.set(
-        playerRef,
+        db.collection(PLAYERS).doc(String(proposal.author_uid)),
         {owned_titles: firestoreNs.FieldValue.arrayUnion("proposer")},
         {merge: true}
       );
@@ -115,9 +118,9 @@ async function setResult(db, firestoreNs, id, result) {
 }
 
 /**
- * 公式大会「箱庭杯」の優勝賞品(GameDesign.md 30章)。投票を経ない
- * `source: "tournament"` の投稿として`lab_proposals`へ直接作成し、
- * 同じトランザクションで称号「発案者」「箱庭王」の両方を付与する。
+ * 公式大会「箱庭杯」の優勝賞品(GameDesign.md 30章)。募集回に属さない
+ * `source: "tournament"` の案として直接作成し、同じトランザクションで
+ * 称号「発案者」「箱庭王」の両方を付与する。
  */
 async function grantTournamentPrize(db, firestoreNs, body) {
   const uid = String(body.uid || "");
@@ -128,35 +131,24 @@ async function grantTournamentPrize(db, firestoreNs, body) {
     throw new Error("uid, card_name, description are required");
   }
   await db.runTransaction(async (tx) => {
-    const proposalRef = db.collection(COLLECTION).doc();
-    tx.set(proposalRef, {
+    tx.set(db.collection(PROPOSALS).doc(), {
       author_uid: uid,
+      round_id: "",
       card_name: cardName,
       description: description,
       card_kind: kind === "spell" ? "spell" : "hourglass",
-      month: currentMonthKey(),
-      status: "approved",
+      hidden: false,
       good_count: 0,
       result: "adopted",
-      cost_paid: 0,
       source: "tournament",
       created_at: Date.now() / 1000,
     });
-    const playerRef = db.collection(PLAYERS_COLLECTION).doc(uid);
     tx.set(
-      playerRef,
+      db.collection(PLAYERS).doc(uid),
       {owned_titles: firestoreNs.FieldValue.arrayUnion("proposer", "hakoniwa_ou")},
       {merge: true}
     );
   });
-}
-
-/** `YYYY-MM`。ゲーム内クライアント(`LabProposalService.current_month()`)と同じJST換算。 */
-function currentMonthKey() {
-  const jst = new Date(Date.now() + 9 * 3600 * 1000);
-  const year = jst.getUTCFullYear();
-  const month = String(jst.getUTCMonth() + 1).padStart(2, "0");
-  return `${year}-${month}`;
 }
 
 module.exports = {handleLabAdmin};

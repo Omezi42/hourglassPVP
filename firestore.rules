@@ -95,19 +95,94 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // 掲示板〈ラボ〉への新規カード案(GameDesign.md 29章)。投稿・投票はクライアントから
-    // 直接書けるようにするが、承認・却下・月末の採用判断(status/resultの変更)は
-    // 開発側の管理ツール(Cloud Functions、Admin SDK)からのみ行う。このルールでは
-    // 「サインイン済みなら誰でも読み書きできる」までしか絞れない(クライアントの
-    // 操作をそのまま信頼する既存方針。11章)ため、承認・却下の運用面での制約は
-    // 管理ツール側の責任とする。
-    match /lab_proposals/{proposalId} {
-      allow read, write: if signedIn();
+    // 掲示板〈ラボ〉(GameDesign.md 29章 / Architecture.md 10.17節)。投票数で案を選ぶ仕組みは
+    // 票の水増しを許すと成り立たないため、11章の「クライアントを信頼する」方針の例外として
+    // 1回1人1件・1人3票・自分へは入れない・募集中だけ、をここで縛る。案と投票用紙の
+    // ドキュメントIDは `{round_id}_{uid}`(どちらも英数字のみ)。
+    function labRegistered() {
+      return get(/databases/$(database)/documents/players/$(request.auth.uid)).data.get('login_id', '') != '';
+    }
 
-      // 1投稿1人1票(GameDesign.md 29章)。ドキュメントIDは投票者のuid。
-      match /votes/{voterUid} {
-        allow read, write: if signedIn();
-      }
+    function labOpen(roundId) {
+      let round = get(/databases/$(database)/documents/lab_rounds/$(roundId)).data;
+      return request.time.toMillis() >= round.starts_at * 1000
+        && request.time.toMillis() < round.ends_at * 1000;
+    }
+
+    function labProposal(proposalId) {
+      return /databases/$(database)/documents/lab_proposals/$(proposalId);
+    }
+
+    function labBallot(roundId) {
+      return /databases/$(database)/documents/lab_ballots/$(roundId + '_' + request.auth.uid);
+    }
+
+    // 回はお題の作成(管理ツール=Admin SDK)だけが書く。
+    match /lab_rounds/{roundId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /lab_proposals/{proposalId} {
+      allow read: if signedIn();
+
+      allow create: if signedIn() && labRegistered()
+        && request.resource.data.keys().hasOnly(['author_uid', 'round_id', 'card_name',
+             'description', 'card_kind', 'hidden', 'good_count', 'result', 'source', 'created_at'])
+        && request.resource.data.author_uid == request.auth.uid
+        && proposalId == request.resource.data.round_id + '_' + request.auth.uid
+        && request.resource.data.card_name is string
+        && request.resource.data.card_name.size() <= 20
+        && request.resource.data.description is string
+        && request.resource.data.description.size() <= 200
+        && request.resource.data.card_kind in ['hourglass', 'spell']
+        && request.resource.data.hidden == false
+        && request.resource.data.good_count == 0
+        && request.resource.data.result == ''
+        && request.resource.data.source == 'vote'
+        && labOpen(request.resource.data.round_id);
+
+      // 投票:good_count の+1だけ。同じ書き込みで自分の投票用紙にこの案が1件足されていること。
+      allow update: if signedIn() && labRegistered()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['good_count'])
+        && request.resource.data.good_count == resource.data.good_count + 1
+        && resource.data.author_uid != request.auth.uid
+        && resource.data.hidden == false
+        && labOpen(resource.data.round_id)
+        && getAfter(labBallot(resource.data.round_id)).data.last_id == proposalId
+        && getAfter(labBallot(resource.data.round_id)).data.proposal_ids.size()
+             == (exists(labBallot(resource.data.round_id))
+                   ? get(labBallot(resource.data.round_id)).data.proposal_ids.size() : 0) + 1;
+
+      allow delete: if false;
+    }
+
+    // 1回1人1枚の投票用紙。proposal_ids は「前の内容 + [last_id]」で3件まで。
+    match /lab_ballots/{ballotId} {
+      allow read: if signedIn() && ballotId.split('_')[1] == request.auth.uid;
+
+      allow create: if signedIn() && labRegistered()
+        && request.resource.data.keys().hasOnly(['voter_uid', 'round_id', 'proposal_ids', 'last_id'])
+        && request.resource.data.voter_uid == request.auth.uid
+        && ballotId == request.resource.data.round_id + '_' + request.auth.uid
+        && request.resource.data.proposal_ids == [request.resource.data.last_id]
+        && getAfter(labProposal(request.resource.data.last_id)).data.good_count
+             == get(labProposal(request.resource.data.last_id)).data.good_count + 1
+        && get(labProposal(request.resource.data.last_id)).data.round_id == request.resource.data.round_id;
+
+      allow update: if signedIn() && labRegistered()
+        && request.resource.data.keys().hasOnly(['voter_uid', 'round_id', 'proposal_ids', 'last_id'])
+        && request.resource.data.voter_uid == request.auth.uid
+        && request.resource.data.round_id == resource.data.round_id
+        && request.resource.data.proposal_ids
+             == resource.data.proposal_ids.concat([request.resource.data.last_id])
+        && request.resource.data.proposal_ids.size() <= 3
+        && !(request.resource.data.last_id in resource.data.proposal_ids)
+        && getAfter(labProposal(request.resource.data.last_id)).data.good_count
+             == get(labProposal(request.resource.data.last_id)).data.good_count + 1
+        && get(labProposal(request.resource.data.last_id)).data.round_id == request.resource.data.round_id;
+
+      allow delete: if false;
     }
 
     // カードスポットライトが直近30日の重複を避けるための最終紹介日時(同26章)。

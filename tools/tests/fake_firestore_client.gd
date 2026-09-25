@@ -95,6 +95,51 @@ func query_waiting(collection: String, limit: int) -> Array:
 	return results
 
 
+## 本物と同じく collection 直下で field == value の文書を返す(フィールドを持たない文書は掛からない)。
+func query_field_equals(collection: String, field: String, value: Variant, limit: int) -> Array:
+	await Engine.get_main_loop().process_frame
+	read_count += 1
+	var results := _docs_in(collection).filter(
+		func(doc: Dictionary) -> bool:
+			return doc["fields"].has(field) and doc["fields"][field] == value
+	)
+	return results.slice(0, limit)
+
+
+## 本物と同じく order_field 降順(持たない文書は並べ替えに掛からず返らない)。
+func query_recent(collection: String, order_field: String, limit: int, _fields: Array) -> Array:
+	await Engine.get_main_loop().process_frame
+	read_count += 1
+	var results := _docs_in(collection).filter(
+		func(doc: Dictionary) -> bool: return doc["fields"].has(order_field)
+	)
+	results.sort_custom(
+		func(a: Dictionary, b: Dictionary) -> bool:
+			return float(a["fields"][order_field]) > float(b["fields"][order_field])
+	)
+	return results.slice(0, limit)
+
+
+## collection 直下(サブコレクションを除く)の文書を、クエリ結果と同じ形で返す。
+func _docs_in(collection: String) -> Array:
+	var docs: Array = []
+	var prefix := "%s/" % collection
+	for path in store.keys():
+		var rest := String(path).substr(prefix.length())
+		if not String(path).begins_with(prefix) or rest.contains("/"):
+			continue
+		var entry: Dictionary = store[path]
+		docs.append(
+			{
+				"id": rest,
+				"fields": (entry["fields"] as Dictionary).duplicate(true),
+				"update_time": entry["update_time"],
+				"read_time": ""
+			}
+		)
+	return docs
+
+
 ## テストから相手の手を差し込むための入り口(相手クライアントの書き込みを模す)。
 func append_action(path: String, action: Dictionary) -> void:
 	var entry: Dictionary = store[path]
