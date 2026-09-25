@@ -341,7 +341,7 @@ HTTPRequest をぶら下げると送信の途中で巻き添えに消える。�
 |---|---|
 | `MatchmakingQueue` | 待機中のCPU戦の印(キューの `cpu` フィールド)を持つ。`set_cpu_playing()` で書き換え、CPU戦中は掴まず `others_waiting(uids)` だけを出す |
 | `RankedMatchmakingQueue` | `MatchmakingQueue` の派生。コレクション(`ranked_queue`)とDiscordへの募集通知の有無だけを変える |
-| `WaitingCpuOffer`(`scripts/ui/waiting_cpu_offer.gd`) | 待機画面の「待っている間CPUと対戦する」ボタンと、出すまでの15秒。ランダム・ランクの両画面が持つ |
+| `WaitingCpuOffer`(`scripts/ui/waiting_cpu_offer.gd`) | 待機画面の「待っている間CPUと対戦する」ボタンと、出すまでの5秒(`FIRST_DELAY_SECONDS`)。ランクマッチの待機画面が持つ |
 | `WaitingCpuDeck`(`scripts/net/waiting_cpu_deck.gd`) | CPUに渡すデッキを `match_records` の直近の記録から1つ選ぶ。使えるものが無ければ `CardDeckSave.random_deck()` |
 | `WaitingCpuMatch`(`scripts/ui/waiting_cpu_match.gd`) | `Main` の子。いま待機中のCPU戦をしている画面、知らせ(`WaitingCpuPrompt`)と「続ける」を選んだ相手の記録を持つ |
 
