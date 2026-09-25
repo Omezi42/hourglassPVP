@@ -10,12 +10,10 @@
 
 | action | 内容 |
 |---|---|
-| `grant_tournament_prize(uid, card_name, description, kind)` | `lab_proposals`へ新しいドキュメントを`source = "tournament"` / `status = "approved"` / `result = "adopted"` / `cost_paid = 0`で直接作成し、**同じトランザクションで**`players/{uid}.owned_titles`へ`"proposer"`と`"hakoniwa_ou"`の両方を追加する |
+| `grant_tournament_prize(uid, card_name, description, kind)` | `lab_proposals`へ新しいドキュメントを`source = "tournament"` / `round_id = ""` / `result = "adopted"`で直接作成し、**同じトランザクションで**`players/{uid}.owned_titles`へ`"proposer"`と`"hakoniwa_ou"`の両方を追加する |
 
-- `lab_proposals`のフィールドへ`source`(`"vote"`(既定)/ `"tournament"`)を1つ足す。
-  **投票を経ないため`good_count`は0のまま**。`CardLabScreen`側は
-  `source == "tournament"`の投稿を「大会優勝作」の印付きで表示し、得票数の代わりに
-  その印を出す(得票0のまま並べると不人気な投稿に見えてしまうため)
+- **募集回に属さず投票を経ないため、募集中・過去の回の一覧には出ない。**投稿者本人の
+  「自分の投稿」に「大会優勝作」の印付きで出る
 - **NGチェック(`LabModeration`)は、この経路でも運営が目視で行う。**大会の優勝作
   だからといって自動的に通すことはしない
 - カードの値付け(6章)は、通常のカード追加フロー

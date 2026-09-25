@@ -100,11 +100,19 @@
 
 - [ ] 固有の絵を持つカードは1種も無い。色相はもう刻めないため、種類を増やすときは枠の形か装飾を変える手段が要る
 
+### 掲示板の作り直し(GameDesign.md 29章 / Architecture.md 10.17節)
+
+- [ ] 画面モックを見せて承認を取る
+- [ ] `LabRules`(判定)とテスト
+- [ ] `LabProposalService` を募集回・投票用紙の形へ
+- [ ] `firestore.rules` の `lab_rounds` / `lab_proposals` / `lab_ballots`
+- [ ] `functions/lab_admin.js` と `tools/lab_admin/index.html` を回の運用へ
+- [ ] `CardLabScreen` / `LabThemeBand` / `LabProposalCard` / `LabProposalDetail` / `LabSubmitPanel` / `LabTab`
+- [ ] ルールとCloud Functionsの反映、最初のお題を立てる(新しい版の公開と同時)
+
 ### 公式大会「箱庭杯」(GameDesign.md 30章 / Architecture.md 10.18節)
 
-- [ ] `lab_proposals.source`(`"vote"` / `"tournament"`)を追加
-- [ ] `tools/lab_admin/index.html` へ大会優勝者登録フォーム
-- [ ] `CardLabScreen` / `LabProposalCard` に「大会優勝作」の印
+- [ ] `tools/lab_admin/index.html` へ大会優勝者登録フォーム(掲示板の作り直しに含める)
 - [ ] 初回開催の告知・予選日程の案内文(運用)
 
 ### カードスキン(GameDesign.md 31章 / Architecture.md 10.19節・未着手)
