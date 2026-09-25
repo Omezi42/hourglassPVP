@@ -25,7 +25,7 @@
 - **ブラウザの自動再生制限に対応する**。`MusicPlayer.play()` は、最初のユーザー操作を検知するまで実際には鳴らさず、要求されたトラックを `_pending_track` として覚えておくだけにする。`Main` が最初のクリック/タップで `MusicPlayer.notify_user_gesture()` を呼び、そこで保留していたトラックの再生を始める
 - **対局中の効果音は `CardMatchSound` が1箇所で鳴らす**(GameDesign.md 9章)。対応は
   出す(砂術も)=`PLACE` / 反転(反転権も)=`FLIP` / 攻撃(相打ち)=`CLASH` / 被弾=`DAMAGE` /
-  破壊=`UNIT_BREAK` / 硝子の膜割れ=`GLASS_BREAK` / ターン終了=`TURN_END` / 決着=`RESULT_WIN`・`RESULT_LOSE`。**攻撃(相打ち)は「砂時計どうしの攻撃」
+  破壊=`UNIT_BREAK`(毒砂で体力が0になった駒は `POISON_MELT`。`unit_poisoned` で枠を控えて続く `unit_destroyed` を振り分ける)/ 硝子の膜割れ=`GLASS_BREAK` / ターン終了=`TURN_END` / HPの器が砕ける=`VESSEL_SHATTER`(`CardMatchFinale` が器を砕くときに鳴らす。割れる音は `HpVesselFx.BURST_AT` と同じ位置に合わせて合成する)/ 決着=`RESULT_WIN`・`RESULT_LOSE`。**攻撃(相打ち)は「砂時計どうしの攻撃」
   のときだけ鳴らし**、本体を殴った場合は被弾(HPの減り)の側で鳴る。HPの増減は
   `hp_changed` が新しい値しか渡さないため、直前の値をこのクラスが控えて減少だけを拾う
 - **ターン終了の音は `turn_started` で鳴らし、`turn_count` が1の(対局の最初の)手番では鳴らさない**。「前の手番が終わった」音であり、終わった手番の無い最初には合わないため。受け口はいずれも `MatchState` のシグナルで、画面側の分岐を増やさずにリプレイ・観戦・CPUのすべてで同じように鳴る
@@ -34,4 +34,4 @@
   駒がまだ渡っている最中に衝突音だけが先に鳴り、因果が逆に聞こえる
 - **決着でBGMを止めた後、「もう一度」で対局曲へ戻すのは `_begin_state()` の役目**。
   画面が切り替わらないため `Main._show_only()` を通らず、止めたままになる
-- **結果画面ではBGMを止め、勝敗別の短いジングルを鳴らす**(GameDesign.md 9章)。`CardMatchSound._on_match_ended()` が勝敗に応じて `RESULT_WIN`/`RESULT_LOSE` を鳴らし分ける
+- **結果パネルを出す瞬間にBGMを止め、勝敗別の短いジングルを鳴らす**(GameDesign.md 9章)。`CardMatchFinale` が締めを出す直前に `CardMatchSound.play_result()` を呼ぶ。`match_ended` の時点で鳴らすと、最後の一撃が当たる前に勝敗が聞こえてしまう

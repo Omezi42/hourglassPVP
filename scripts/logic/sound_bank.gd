@@ -25,6 +25,8 @@ enum Sfx {
 	HOVER,
 	TURN_END,
 	TURN_START,
+	POISON_MELT,
+	VESSEL_SHATTER,
 }
 
 const SETTINGS_PATH := "user://sound_settings.json"
@@ -52,6 +54,8 @@ const SFX_PATHS := {
 	Sfx.HOVER: "res://assets/sfx/hover.wav",
 	Sfx.TURN_END: "res://assets/sfx/turn_end.wav",
 	Sfx.TURN_START: "res://assets/sfx/turn_start.wav",
+	Sfx.POISON_MELT: "res://assets/sfx/poison_melt.wav",
+	Sfx.VESSEL_SHATTER: "res://assets/sfx/vessel_shatter.wav",
 }
 
 static var _players: Array[AudioStreamPlayer] = []

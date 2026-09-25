@@ -91,6 +91,7 @@ func _try_start() -> void:
 	for side in broken:
 		_screen.bar_for(side).play_shatter()
 	if not broken.is_empty():
+		SoundBank.play(SoundBank.Sfx.VESSEL_SHATTER)
 		var wait := HpVesselFx.SHATTER_DURATION + BREATH_SECONDS
 		await _screen.get_tree().create_timer(wait).timeout
 		if _screen.state != _state:
@@ -109,6 +110,7 @@ func _broken_sides() -> Array[int]:
 
 
 func _show_close() -> void:
+	_screen.sound.play_result()
 	match _close:
 		Close.PUZZLE:
 			_screen._puzzle.on_match_ended()

@@ -17,6 +17,8 @@ var _held: Array[SoundBank.Sfx] = []
 ## 直前のHP。`hp_changed` は新しい値しか渡さないため、減ったかどうかをここで見る。
 var _hp: Dictionary = {}
 var _state: MatchState
+## 毒砂で体力が0になった枠(`"側:枠"`)。続く破壊を溶ける音で鳴らす(GameDesign.md 9章)。
+var _poisoned: Dictionary = {}
 
 
 func _init(screen: CardMatchScreen) -> void:
@@ -37,9 +39,9 @@ func watch(state: MatchState) -> void:
 	state.attack_performed.connect(_on_attack_performed)
 	state.hp_changed.connect(_on_hp_changed)
 	state.unit_destroyed.connect(_on_unit_destroyed)
+	state.unit_poisoned.connect(_on_unit_poisoned)
 	state.unit_shielded.connect(_on_unit_shielded)
 	state.turn_started.connect(_on_turn_started)
-	state.match_ended.connect(_on_match_ended)
 
 
 ## 攻撃が当たった瞬間。`CardMatchStrike` から呼ぶ。
@@ -92,8 +94,17 @@ func _on_hp_changed(side: int, new_hp: int) -> void:
 
 ## **壊れた音は被弾とは別に鳴らす**(GameDesign.md 9章)。壊れることは盤面から1体
 ## 減ることであり、削られただけの被弾とは意味が違う。
-func _on_unit_destroyed(_side: int, _slot: int, _card: CardData) -> void:
+func _on_unit_destroyed(side: int, slot: int, _card: CardData) -> void:
+	var key := "%d:%d" % [side, slot]
+	if _poisoned.has(key):
+		_poisoned.erase(key)
+		_play(SoundBank.Sfx.POISON_MELT)
+		return
 	_play(SoundBank.Sfx.UNIT_BREAK)
+
+
+func _on_unit_poisoned(side: int, slot: int) -> void:
+	_poisoned["%d:%d" % [side, slot]] = true
 
 
 ## 硝子の膜が割れた。壊れた音とは逆に高く軽い音にし、
@@ -108,13 +119,10 @@ func _on_turn_started(_side: int) -> void:
 		_play(SoundBank.Sfx.TURN_END)
 
 
-## 決着では**BGMを止めて短いジングルへ切り替える**(GameDesign.md 9章)。
+## 結果パネルを出す瞬間に、**BGMを止めて短いジングルへ切り替える**(GameDesign.md 9章)。
 ## 結果パネルは数秒しか出ないため、数分あるクラシックを流し続けても冒頭しか聞かれない。
-## 再生モードは結果パネルを出さないため、曲も止めない。
-func _on_match_ended(winner: int) -> void:
-	flush()
-	if not _screen.interactive:
-		return
+## `CardMatchFinale` から呼ぶ(操作する対局だけ。再生・観戦は曲も止めない)。
+func play_result() -> void:
 	MusicPlayer.stop()
-	var won: bool = winner == _screen.my_side
+	var won: bool = _state.winner == _screen.my_side
 	SoundBank.play(SoundBank.Sfx.RESULT_WIN if won else SoundBank.Sfx.RESULT_LOSE)

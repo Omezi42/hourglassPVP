@@ -225,6 +225,38 @@ def glass_break():
     return highpass(lowpass(x, 13000), 900)
 
 
+def poison_melt():
+    """毒砂で溶ける「じゅわっ」。膨らんでしぼむ泡立ちの擦れ + 弾ける小さな泡 + 低く沈む音。硝子の破片は持たない。"""
+    d = 0.9
+    x = np.zeros(int(SR * d))
+    fizz = noise(d, 700, 4500) * env(d, 0.08, 0.22)
+    at(x, 0.5 * fizz, 0.0)
+    for i in range(9):
+        pop = sweep_sine(0.04, 320 + 60 * i, 900 + 80 * i, 0.012, attack=0.001)
+        at(x, RNG.uniform(0.25, 0.5) * pop, 0.05 + RNG.uniform(0, 0.6))
+    at(x, 0.7 * sweep_sine(0.5, 240, 80, 0.12, attack=0.01), 0.04)
+    return lowpass(x, 6000)
+
+
+## 器が割れる位置(秒)。`HpVesselFx` の BURST_AT(0.4)× SHATTER_DURATION(0.8)に合わせる。
+VESSEL_BURST_AT = 0.32
+
+
+def vessel_shatter():
+    """HPの器が砕ける。ぴし、ぴしぴしとひびが走り、割れて破片と砂が散る。駒の破壊より重く長い。"""
+    d = 1.5
+    x = np.zeros(int(SR * d))
+    for i, time in enumerate([0.0, 0.12, 0.2, 0.25, 0.28, 0.305]):
+        tick = noise(0.01, 2500, 10000) * env(0.01, 0.0002, 0.0015)
+        ring = glass_clink(0.08, 2600 + 250 * i, 0.5, 0.03)
+        at(x, (0.35 + 0.1 * i) * (pad(tick, 0.08) + ring), time)
+    at(x, shatter(1.0, 1500, 9000, 120, 1.3), VESSEL_BURST_AT)
+    at(x, 0.9 * sweep_sine(0.6, 95, 42, 0.16, attack=0.001), VESSEL_BURST_AT)
+    spill = grains(0.8, 1500, 1800, 8000, 0.0012, shape=lambda t: np.clip(t / 0.1, 0, 1) * np.exp(-t / 0.3))
+    at(x, 0.35 * spill, VESSEL_BURST_AT + 0.1)
+    return lowpass(x, 11000)
+
+
 def turn_end():
     """ターン終了。砂時計の砂がさらさらと落ちきる音。"""
     d = 0.9
@@ -293,6 +325,8 @@ if __name__ == "__main__":
     finish("damage", damage, -17)
     finish("unit_break", unit_break, -18)
     finish("glass_break", glass_break, -20)
+    finish("poison_melt", poison_melt, -19)
+    finish("vessel_shatter", vessel_shatter, -16)
     finish("turn_end", turn_end, -26)
     finish("turn_start", turn_start, -22)
     finish("result_win", result_win, -16)
