@@ -67,7 +67,7 @@ func on_own_slot_pressed(view: CardView) -> void:
 			_play_selected(slot)
 		return
 	if _screen.state.board[_screen.my_side][slot] == null:
-		_screen._cancel_selection()
+		_screen._pointer.cancel_selection()
 	elif _screen._tutorial.gate_board_select(slot):
 		_screen.selection.select_board(slot)
 	_screen.refresh()
@@ -76,7 +76,7 @@ func on_own_slot_pressed(view: CardView) -> void:
 ## 対象選択中に自分の場を押したとき(砂術の味方対象 / 設置効果の味方対象)。
 func _handle_own_targeting(slot: int) -> void:
 	if _screen.state.board[_screen.my_side][slot] == null:
-		_screen._cancel_selection()
+		_screen._pointer.cancel_selection()
 		_screen.refresh()
 		return
 	var card: CardData = _screen.state.hand[_screen.my_side][_screen.selection.hand_index]
