@@ -10,7 +10,7 @@
 | `DeckCodeService`(`scripts/net/deck_code_service.gd`, static) | 預ける(`publish`)・引く(`fetch`)。`AccountService` と同じく `FirestoreClient` を受け取る形にし、UI が Firestore を直接叩かない |
 | `CardDeckCode`(static) | デッキ ⇄ テキストの変換(`to_text` / `from_text`)と、戦績が使う指紋(下記) |
 
-- **発行は `CardDeckCodePanel` の「コードを発行」を押したときだけ行う。**画面を開くだけで
+- **発行は `CardDeckSharePanel` の「コードを発行してコピー」を押したときだけ行う。**画面を開くだけで
   預けると、使われないドキュメントが際限なく増える。**同じ構築には同じ番号を返す**ため、
   `publish()` は指紋 → コードの対応をセッション内でキャッシュする
 - **コードは使われていない番号を選んで作る**(`create_document()` の `exists:false`)。
@@ -26,8 +26,9 @@
 
 ## 10.6.1 デッキ表の画像(GameDesign.md 9章)
 
-**共有の入口は `CardDeckSharePanel` の1つだけ**とし、デッキ表とデッキコードを同じ
-パネルへ並べる。ヘッダーの主アクションは3つまでで
+**共有の入口は `CardDeckSharePanel` の1つだけ**とし、「渡す / 受け取る」の2面を
+`Face` で出し分ける(面ごとに `Control` の層を持ち、`visible` を切り替えるだけ)。渡す面にデッキ表と
+デッキコードを並べる。ヘッダーの主アクションは3つまでで
 既に保存・プリセットが埋まっており、**分けると4つ目が必要になる**という事情もある。
 
 | クラス | 責務 |
@@ -41,7 +42,7 @@
 - **棚は `CardDeckShelf` を使い回す**(`columns = 10` / `readonly = true`)。
   共有のためだけに似た並べ方をもう1つ書くと、片方だけが古くなる。
   **大きさは 1280x720 の固定**(枠の数が固定になったため高さも決まる)
-- **読み込み欄の `NumberPad` は「テンキー」ボタンで開閉する**(`with_confirm`。「決定」は「読み込む」と同じ処理)。パネルを開き直すたびに閉じる
+- **コードの表示と入力は `CodeTiles`(`digits = CODE_LENGTH`)**。ルーム画面と同じ升を使い回す。受け取る面の `NumberPad` は常に出し、「決定」は持たない(確定は「読み込む」)
 - **並びは `CardLibrary.compare_by_cost` を通す。**画面ごとに並べ方を決めない
   (GameDesign.md 9章)
 - **コードは既に発行済みのときだけ載せる。**画像を出すためだけに `publish()` を

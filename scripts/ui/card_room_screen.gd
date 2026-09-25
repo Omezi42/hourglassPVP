@@ -89,7 +89,7 @@ var _time_on_button: Button
 var _time_off_button: Button
 var _time_note: Label
 var _create_button: Button
-var _join_tiles: RoomCodeTiles
+var _join_tiles: CodeTiles
 var _join_pad: NumberPad
 var _join_button: Button
 var _spectate_button: Button
@@ -100,7 +100,7 @@ var _deck_button: Button
 var _room_view: Control
 var _code_caption: Label
 var _code_hint: Label
-var _room_tiles: RoomCodeTiles
+var _room_tiles: CodeTiles
 var _copy_button: Button
 var _my_seat: RoomSeat
 var _foe_seat: RoomSeat
@@ -230,7 +230,7 @@ func _build_join_card() -> void:
 		SUB_FONT_SIZE,
 		UiPalette.TEXT_MUTED
 	)
-	_join_tiles = RoomCodeTiles.new()
+	_join_tiles = CodeTiles.new()
 	_join_tiles.position = ENTRY_TILES_RECT.position
 	_join_tiles.size = ENTRY_TILES_RECT.size
 	card.add_child(_join_tiles)
@@ -261,7 +261,7 @@ func _build_code_plate() -> void:
 		plate, "", CODE_CAPTION_POS, STATUS_FONT_SIZE, UiPalette.TEXT_MUTED
 	)
 	_code_hint = _place_label(plate, "", CODE_HINT_POS, NOTE_FONT_SIZE, UiPalette.TEXT_MUTED)
-	_room_tiles = RoomCodeTiles.new()
+	_room_tiles = CodeTiles.new()
 	_room_tiles.position = ROOM_TILES_RECT.position
 	_room_tiles.size = ROOM_TILES_RECT.size
 	plate.add_child(_room_tiles)

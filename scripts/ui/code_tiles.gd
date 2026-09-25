@@ -1,6 +1,6 @@
-class_name RoomCodeTiles
+class_name CodeTiles
 extends Control
-## ルームコードを1桁ずつの升に描く(GameDesign.md 11章)。
+## 数字だけのコード(ルームコード・デッキコード)を1桁ずつの升に描く(GameDesign.md 9章・11章)。
 ##
 ## `editable` のときは透明な `LineEdit` を全面へ重ねて入力を受ける。文字は升が描くため、
 ## `LineEdit` 自身の文字・枠・カーソルは見せない。
@@ -17,6 +17,9 @@ const TILE_TOP := Color(0.04, 0.035, 0.04)
 const TILE_BOTTOM := Color(0.11, 0.10, 0.12)
 const RIM_SHADE := Color(0, 0, 0, 0.6)
 const CURSOR_ALPHA := 0.85
+
+## 升の数。組み立てた直後(`make_editable()` より前)に決める。
+var digits := RoomMatch.CODE_LENGTH
 
 var code := "":
 	set(value):
@@ -37,7 +40,7 @@ func make_editable(prompt_title: String) -> void:
 	input = LineEdit.new()
 	input.anchor_right = 1.0
 	input.anchor_bottom = 1.0
-	input.max_length = RoomMatch.CODE_LENGTH
+	input.max_length = digits
 	input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
 	input.context_menu_enabled = false
 	input.caret_blink = false
@@ -64,21 +67,21 @@ func set_editable(editable: bool) -> void:
 		queue_redraw()
 
 
-## 数字以外は落とす(4桁の数字しか取りえないため)。
+## 数字以外は落とす(コードは数字しか取りえないため)。
 func _on_text_changed(text: String) -> void:
-	var digits := ""
+	var kept := ""
 	for ch in text:
 		if ch >= "0" and ch <= "9":
-			digits += ch
-	if digits != text:
-		input.text = digits
-		input.caret_column = digits.length()
-	code = digits
+			kept += ch
+	if kept != text:
+		input.text = kept
+		input.caret_column = kept.length()
+	code = kept
 
 
 func _draw() -> void:
 	var rid := get_canvas_item()
-	var count := RoomMatch.CODE_LENGTH
+	var count := digits
 	var tile_w := size.x / (count + (count - 1) * TILE_GAP_RATIO)
 	var tile := Vector2(tile_w, size.y)
 	var radius := tile_w * TILE_RADIUS_RATIO

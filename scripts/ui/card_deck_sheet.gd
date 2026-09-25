@@ -119,7 +119,7 @@ func _draw_header() -> void:
 	draw_string(
 		_font,
 		Vector2(SHEET_SIZE.x - MARGIN - 360.0, 110.0),
-		"デッキ編集の「共有」から読み込めます",
+		"デッキ編集の「共有」→「受け取る」で読み込めます",
 		HORIZONTAL_ALIGNMENT_RIGHT,
 		360.0,
 		FOOTER_FONT_SIZE,

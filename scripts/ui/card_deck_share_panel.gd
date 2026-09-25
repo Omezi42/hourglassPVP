@@ -1,41 +1,83 @@
 class_name CardDeckSharePanel
 extends Control
-## デッキの受け渡し(GameDesign.md 9章)。**デッキ表の画像とデッキコードを1つのパネルに
-## まとめる**。どちらも「自分の構築を人へ渡す」ための手段であり、別々の場所へ置くと
-## 渡す方法が2つあること自体に気づけないため。
+## デッキの受け渡し(GameDesign.md 9章)。**「渡す」と「受け取る」の2つの面**を上の切り替えで出し分ける。
 ##
-## **コードは8桁の数字で、中身はサーバーへ預ける**(`DeckCodeService`)。
-## **発行はボタンを押したときだけ行う**。画面を開くたびに預けると、使われない
-## コードが際限なく増えるため。
+## 「渡す」は**デッキ表の画像とデッキコードを並べる**。どちらも自分の構築を人へ渡す手段であり、
+## 並べておかないと渡す方法が2つあること自体に気づけないため。左の見本は `SubViewport` の中の
+## `CardDeckSheet` の `ViewportTexture` そのもので、**書き出す画像と画面に見えているものが同じ実体**になる。
 ##
-## デッキ表は `SubViewport` の中の `CardDeckSheet` として組み、その `ViewportTexture` を
-## そのまま左へ映す。**書き出す画像と画面に見えているものが同じ実体**になる。
+## **コードは8桁の数字で、中身はサーバーへ預ける**(`DeckCodeService`)。**発行はボタンを
+## 押したときだけ行う**。画面を開くたびに預けると、使われないコードが際限なく増えるため。
+##
+## 「受け取る」は升と数字パッドを常に出す。読み込みは編集中のデッキを置き換える操作であり、
+## 渡す操作と同じ面に並べると押し間違えるため面を分けている。
 
 signal loaded(deck: Array)
 
-const SCREEN_SIZE := Vector2(1280, 720)
-const PANEL_WIDTH := 1140.0
-const PANEL_STYLE := "res://resources/theme/content_panel.tres"
-## コードは8桁の数字しか入らないため、欄は短くてよい。
-const FIELD_SIZE := Vector2(196, 44)
-const BUTTON_SIZE := Vector2(160, 48)
-const ROW_BUTTON_SIZE := Vector2(132, 44)
-const PAD_TOGGLE_SIZE := Vector2(110, 44)
-const PAD_KEY_SIZE := Vector2(64, 44)
-## 見本の幅。デッキ表(1280x900)を等倍で縮めて置く。
-const PREVIEW_WIDTH := 640.0
+enum Face { SEND, RECEIVE }
 
-var _own_field: LineEdit
-var _input_field: LineEdit
-var _pad: NumberPad
-var _message: Label
-var _issue_button: Button
-var _load_button: Button
-var _copy_image_button: Button
-var _save_image_button: Button
+const SCREEN_SIZE := Vector2(1280, 720)
+const PANEL_STYLE := "res://resources/theme/content_panel.tres"
+const PANEL_RECT := Rect2(40, 52, 1200, 616)
+const TITLE_POS := Vector2(32, 24)
+const TAB_SIZE := Vector2(150, 48)
+const TAB_LEFT := 452.0
+const TAB_TOP := 20.0
+const CLOSE_RECT := Rect2(1036, 20, 132, 48)
+
+const PREVIEW_RECT := Rect2(32, 96, 736, 414)
+const PREVIEW_NOTE_POS := Vector2(32, 530)
+const IMAGE_CARD_RECT := Rect2(796, 96, 372, 196)
+const CODE_CARD_RECT := Rect2(796, 308, 372, 276)
+const CARD_TITLE_POS := Vector2(24, 18)
+const CARD_SUB_POS := Vector2(24, 54)
+const CARD_BUTTON_LEFT := 24.0
+const CARD_INNER_WIDTH := 324.0
+const IMAGE_BUTTON_TOP := 92.0
+const IMAGE_MESSAGE_POS := Vector2(24, 154)
+const CODE_TILES_RECT := Rect2(24, 92, 324, 60)
+const CODE_BUTTON_RECT := Rect2(24, 170, 324, 56)
+const CODE_MESSAGE_POS := Vector2(24, 236)
+const BUTTON_HEIGHT := 52.0
+const BUTTON_GAP := 12.0
+
+const RECEIVE_TITLE_POS := Vector2(180, 120)
+const RECEIVE_SUB_POS := Vector2(180, 164)
+const RECEIVE_TILES_RECT := Rect2(180, 216, 480, 88)
+const LOAD_BUTTON_RECT := Rect2(180, 330, 480, 64)
+const RECEIVE_MESSAGE_POS := Vector2(180, 412)
+const RECEIVE_NOTE_POS := Vector2(180, 470)
+const RECEIVE_TEXT_WIDTH := 480.0
+const PAD_POS := Vector2(740, 150)
+const PAD_KEY_SIZE := Vector2(84, 64)
+
+const TITLE_FONT_SIZE := 28
+const CARD_TITLE_FONT_SIZE := 22
+const RECEIVE_TITLE_FONT_SIZE := 28
+const SUB_FONT_SIZE := 16
+const MESSAGE_FONT_SIZE := 17
+
+const ISSUE_LABEL := "コードを発行してコピー"
+const COPY_LABEL := "コードをコピー"
+const RECEIVE_NOTE := "読み込むと編集中の内容が入れ替わります。保存するまで元のデッキは残ります"
+
+var _face := Face.SEND
+var _send_view: Control
+var _receive_view: Control
+var _tabs: Array[Button] = []
 var _preview: TextureRect
 var _viewport: SubViewport
 var _sheet: CardDeckSheet
+var _copy_image_button: Button
+var _save_image_button: Button
+var _image_message: Label
+var _own_tiles: CodeTiles
+var _code_button: Button
+var _code_message: Label
+var _input_tiles: CodeTiles
+var _pad: NumberPad
+var _load_button: Button
+var _receive_message: Label
 var _deck: Array = []
 var _deck_name := ""
 ## 発行済みのコード。**画像を出すためだけに発行はしない**(通信が要るため)。
@@ -55,11 +97,14 @@ func open(deck: Array, deck_name: String) -> void:
 	_deck = deck
 	_deck_name = deck_name
 	_code = ""
-	_own_field.text = ""
-	_input_field.text = ""
-	_pad.visible = false
-	_message.text = ""
+	_own_tiles.code = ""
+	_input_tiles.input.text = ""
+	_input_tiles.code = ""
+	_image_message.text = ""
+	_code_message.text = ""
+	_receive_message.text = ""
 	_set_busy(false)
+	_show_face(Face.SEND)
 	visible = true
 	_refresh_sheet()
 
@@ -68,13 +113,22 @@ func close() -> void:
 	visible = false
 
 
+func _show_face(face: Face) -> void:
+	_face = face
+	_send_view.visible = face == Face.SEND
+	_receive_view.visible = face == Face.RECEIVE
+	for i in _tabs.size():
+		CodedButton.apply_styles(
+			_tabs[i], CodedButton.PRIMARY_ACTION_GROUP if i == face else CodedButton.WIDE_GROUP
+		)
+	if face == Face.RECEIVE and _input_tiles.input.editable:
+		_input_tiles.input.grab_focus()
+
+
 ## 表を組み直し、1フレームだけ描かせる。見本も書き出しもこの結果を使う。
 func _refresh_sheet() -> void:
 	_sheet.show_deck(_deck, _deck_name, _code)
-	# 高さは種類数で変わる(`CardDeckSheet`)。映す側もそのつど合わせる。
-	var sheet: Vector2 = _sheet.sheet_size()
-	_viewport.size = Vector2i(sheet)
-	_preview.custom_minimum_size = Vector2(PREVIEW_WIDTH, PREVIEW_WIDTH * sheet.y / sheet.x)
+	_viewport.size = Vector2i(_sheet.sheet_size())
 	_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 
 
@@ -106,82 +160,86 @@ func _write_image(prefer_clipboard: bool) -> void:
 	if _busy:
 		return
 	_set_busy(true)
-	_message.text = "画像を作成中"
+	_image_message.text = "画像を作成中"
 	var image: Image = await _sheet_image()
 	ImageShare.share_png(image, _file_name(), prefer_clipboard, _on_image_done)
 
 
 func _on_image_done(_ok: bool, message: String) -> void:
 	_set_busy(false)
-	_message.text = message
+	_image_message.text = message
 
 
-## 発行はここでだけ行う。同じ構築なら `DeckCodeService` が同じ番号を返すため、
-## 続けて押しても預けたものが増えることはない。
-func _on_issue_pressed() -> void:
+## 発行済みならコピーだけ、未発行なら発行してそのままコピーする(渡すまでを1回の押下で終える)。
+## 同じ構築なら `DeckCodeService` が同じ番号を返すため、押し直しても預けたものは増えない。
+func _on_code_pressed() -> void:
 	if _busy:
 		return
-	if _deck.size() != MatchState.DECK_SIZE:
-		_message.text = "デッキが%d枚のときだけコードを発行できます" % MatchState.DECK_SIZE
+	if _code != "":
+		_copy_code()
 		return
 	_set_busy(true)
-	_message.text = "コードを発行中"
+	_code_message.text = "コードを発行中"
 	if not await NetSession.sign_in():
-		_fail("通信に失敗しました。接続を確認してください")
+		_fail(_code_message, "通信に失敗しました。接続を確認してください")
 		return
 	var code: String = await DeckCodeService.publish(NetSession.client, _deck)
 	if code == "":
-		_fail("コードを発行できませんでした")
+		_fail(_code_message, "コードを発行できませんでした")
 		return
-	_own_field.text = code
 	_code = code
+	_own_tiles.code = code
 	# 発行した番号は画像にも載せる(GameDesign.md 9章)。
 	_refresh_sheet()
-	_message.text = "このコードを渡してください"
 	_set_busy(false)
+	_copy_code()
 
 
-func _on_copy_pressed() -> void:
-	if _own_field.text == "":
-		_message.text = "先にコードを発行してください"
-		return
-	DisplayServer.clipboard_set(_own_field.text)
-	_message.text = "コピーしました"
+func _copy_code() -> void:
+	DisplayServer.clipboard_set(_code)
+	_code_message.text = "コピーしました。画像にも番号が載ります"
 
 
 func _on_load_pressed() -> void:
 	if _busy:
 		return
-	if DeckCodeService.normalize(_input_field.text) == "":
-		_message.text = "コードは%d桁の数字です" % DeckCodeService.CODE_LENGTH
+	if DeckCodeService.normalize(_input_tiles.code) == "":
+		_receive_message.text = "コードは%d桁の数字です" % DeckCodeService.CODE_LENGTH
 		return
 	_set_busy(true)
-	_message.text = "読み込み中"
+	_receive_message.text = "読み込み中"
 	if not await NetSession.sign_in():
-		_fail("通信に失敗しました。接続を確認してください")
+		_fail(_receive_message, "通信に失敗しました。接続を確認してください")
 		return
-	var deck: Array = await DeckCodeService.fetch(NetSession.client, _input_field.text)
+	var deck: Array = await DeckCodeService.fetch(NetSession.client, _input_tiles.code)
 	if deck.is_empty():
-		_fail("このコードは読み込めませんでした")
+		_fail(_receive_message, "このコードは読み込めませんでした")
 		return
 	_set_busy(false)
 	loaded.emit(deck)
 	close()
 
 
-func _fail(message: String) -> void:
+func _fail(label: Label, message: String) -> void:
 	_set_busy(false)
-	_message.text = message
+	label.text = message
 
 
 func _set_busy(busy: bool) -> void:
 	_busy = busy
-	_issue_button.disabled = busy
-	_load_button.disabled = busy
-	_copy_image_button.disabled = busy or not ImageShare.can_copy()
+	var complete := _deck.size() == MatchState.DECK_SIZE
+	_code_button.disabled = busy or not complete
+	_code_button.text = COPY_LABEL if _code != "" else ISSUE_LABEL
+	if not complete:
+		_code_message.text = "%d枚そろうと発行できます" % MatchState.DECK_SIZE
+	_copy_image_button.disabled = busy
 	_save_image_button.disabled = busy
-	_input_field.editable = not busy
+	_load_button.disabled = busy
+	_input_tiles.set_editable(not busy)
 	_pad.set_disabled(busy)
+
+
+# --- 組み立て -----------------------------------------------------------
 
 
 func _build() -> void:
@@ -191,131 +249,173 @@ func _build() -> void:
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(dim)
 
-	var center := CenterContainer.new()
-	center.size = SCREEN_SIZE
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(center)
-
-	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(PANEL_WIDTH, 0)
-	panel.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	var style: StyleBox = load(PANEL_STYLE)
-	if style != null:
-		panel.add_theme_stylebox_override("panel", style)
-	center.add_child(panel)
-
-	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 12)
-	panel.add_child(column)
-	column.add_child(_make_label("デッキを共有する", 26))
-
-	var body := HBoxContainer.new()
-	body.add_theme_constant_override("separation", 20)
-	column.add_child(body)
-	body.add_child(_build_preview())
-	body.add_child(_build_controls())
-
-	_message = _make_label("", 18)
-	_message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_message.custom_minimum_size.x = PANEL_WIDTH - 40.0
-	column.add_child(_message)
-
-	var close_button := CodedButton.make("閉じる", BUTTON_SIZE)
-	close_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	var panel := _make_panel(self, PANEL_RECT)
+	_place_label(panel, "デッキを共有", TITLE_POS, TITLE_FONT_SIZE, UiPalette.TEXT_OFFWHITE)
+	var faces := ["渡す", "受け取る"]
+	for i in faces.size():
+		var tab := CodedButton.make(faces[i], TAB_SIZE)
+		tab.position = Vector2(TAB_LEFT + i * TAB_SIZE.x, TAB_TOP)
+		tab.pressed.connect(_show_face.bind(i))
+		panel.add_child(tab)
+		_tabs.append(tab)
+	var close_button := CodedButton.make("閉じる", CLOSE_RECT.size)
+	close_button.position = CLOSE_RECT.position
 	close_button.pressed.connect(close)
-	column.add_child(close_button)
+	panel.add_child(close_button)
+
+	_send_view = _make_layer(panel)
+	_build_preview()
+	_build_image_card()
+	_build_code_card()
+	_receive_view = _make_layer(panel)
+	_build_receive()
 
 
 ## 表そのもの。`SubViewport` は画面に見えず、その中身だけを `TextureRect` で映す。
-func _build_preview() -> Control:
-	var holder := VBoxContainer.new()
-	holder.add_theme_constant_override("separation", 8)
+func _build_preview() -> void:
 	_viewport = SubViewport.new()
 	_viewport.transparent_bg = false
 	_viewport.disable_3d = true
 	_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	_sheet = CardDeckSheet.new()
 	_viewport.add_child(_sheet)
-	holder.add_child(_viewport)
+	_send_view.add_child(_viewport)
 
 	_preview = TextureRect.new()
 	_preview.texture = _viewport.get_texture()
 	_preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	_preview.custom_minimum_size = Vector2(PREVIEW_WIDTH, PREVIEW_WIDTH * 0.7)
-	holder.add_child(_preview)
-	return holder
+	_preview.position = PREVIEW_RECT.position
+	_preview.size = PREVIEW_RECT.size
+	_send_view.add_child(_preview)
+	_place_label(
+		_send_view, "この画像がそのまま書き出されます", PREVIEW_NOTE_POS, SUB_FONT_SIZE, UiPalette.TEXT_MUTED
+	)
 
 
-func _build_controls() -> Control:
-	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 10)
-	column.custom_minimum_size.x = 400.0
-
-	column.add_child(_make_label("画像として渡す", 20))
-	var image_row := HBoxContainer.new()
-	image_row.add_theme_constant_override("separation", 10)
-	_copy_image_button = CodedButton.make("画像をコピー", Vector2(180, 48))
+func _build_image_card() -> void:
+	var card := _make_panel(_send_view, IMAGE_CARD_RECT)
+	_place_label(card, "画像で渡す", CARD_TITLE_POS, CARD_TITLE_FONT_SIZE, UiPalette.TEXT_OFFWHITE)
+	_place_label(card, "XやDiscordへそのまま貼れます", CARD_SUB_POS, SUB_FONT_SIZE, UiPalette.TEXT_MUTED)
+	# ブラウザ以外では画像をクリップボードへ置けない(Architecture.md 10.6.1節)。
+	# 押せないボタンを見せず、保存を主の操作として幅いっぱいに出す。
+	var can_copy := ImageShare.can_copy()
+	var half := (CARD_INNER_WIDTH - BUTTON_GAP) / 2.0
+	_copy_image_button = _make_button(
+		card, "画像をコピー", Rect2(CARD_BUTTON_LEFT, IMAGE_BUTTON_TOP, half, BUTTON_HEIGHT), true
+	)
 	_copy_image_button.pressed.connect(_on_copy_image_pressed)
-	_copy_image_button.disabled = not ImageShare.can_copy()
-	image_row.add_child(_copy_image_button)
-	_save_image_button = CodedButton.make("画像を保存", Vector2(160, 48))
+	_copy_image_button.visible = can_copy
+	var save_rect := Rect2(
+		CARD_BUTTON_LEFT + half + BUTTON_GAP, IMAGE_BUTTON_TOP, half, BUTTON_HEIGHT
+	)
+	if not can_copy:
+		save_rect = Rect2(CARD_BUTTON_LEFT, IMAGE_BUTTON_TOP, CARD_INNER_WIDTH, BUTTON_HEIGHT)
+	_save_image_button = _make_button(card, "画像を保存", save_rect, not can_copy)
 	_save_image_button.pressed.connect(_on_save_image_pressed)
-	image_row.add_child(_save_image_button)
-	column.add_child(image_row)
-	if not ImageShare.can_copy():
-		# ブラウザ以外では画像をクリップボードへ置けない(Architecture.md 10.6.1節)。
-		column.add_child(_make_label("この環境ではコピーできません。保存を使ってください", 15))
-
-	column.add_child(_make_label("コードとして渡す", 20))
-	_own_field = _make_field(true)
-	var own_row := _make_row(_own_field, "コピー", _on_copy_pressed)
-	_issue_button = CodedButton.make("発行", Vector2(110, FIELD_SIZE.y))
-	_issue_button.pressed.connect(_on_issue_pressed)
-	own_row.add_child(_issue_button)
-	column.add_child(own_row)
-
-	column.add_child(_make_label("受け取ったコードを読み込む", 20))
-	_input_field = _make_field(false)
-	_input_field.max_length = DeckCodeService.CODE_LENGTH
-	_input_field.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
-	_input_field.placeholder_text = "%d桁の数字" % DeckCodeService.CODE_LENGTH
-	MobileTextInput.wire(_input_field, "デッキコード")
-	var load_row := _make_row(_input_field, "読み込む", _on_load_pressed)
-	_load_button = load_row.get_child(1)
-	var pad_toggle := CodedButton.make("テンキー", PAD_TOGGLE_SIZE)
-	pad_toggle.pressed.connect(func() -> void: _pad.visible = not _pad.visible)
-	load_row.add_child(pad_toggle)
-	column.add_child(load_row)
-	_pad = NumberPad.make(_input_field, PAD_KEY_SIZE, true)
-	_pad.visible = false
-	_pad.confirmed.connect(_on_load_pressed)
-	column.add_child(_pad)
-	return column
+	_image_message = _make_message(card, IMAGE_MESSAGE_POS, CARD_INNER_WIDTH)
 
 
-func _make_row(field: LineEdit, label: String, handler: Callable) -> HBoxContainer:
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
-	row.add_child(field)
-	var button := CodedButton.make(label, ROW_BUTTON_SIZE)
-	button.pressed.connect(handler)
-	row.add_child(button)
-	return row
+func _build_code_card() -> void:
+	var card := _make_panel(_send_view, CODE_CARD_RECT)
+	_place_label(card, "コードで渡す", CARD_TITLE_POS, CARD_TITLE_FONT_SIZE, UiPalette.TEXT_OFFWHITE)
+	_place_label(
+		card,
+		"%d桁の番号を送ると、相手が読み込めます" % DeckCodeService.CODE_LENGTH,
+		CARD_SUB_POS,
+		SUB_FONT_SIZE,
+		UiPalette.TEXT_MUTED
+	)
+	_own_tiles = _make_tiles(card, CODE_TILES_RECT)
+	_code_button = _make_button(card, ISSUE_LABEL, CODE_BUTTON_RECT, true)
+	_code_button.pressed.connect(_on_code_pressed)
+	_code_message = _make_message(card, CODE_MESSAGE_POS, CARD_INNER_WIDTH)
 
 
-func _make_field(read_only: bool) -> LineEdit:
-	var field := LineEdit.new()
-	field.custom_minimum_size = FIELD_SIZE
-	field.editable = not read_only
-	# 渡す側の欄も選択してコピーできるようにするため、read_only は使うが無効化はしない。
-	field.select_all_on_focus = true
-	return field
+func _build_receive() -> void:
+	_place_label(
+		_receive_view,
+		"受け取ったコードを読み込む",
+		RECEIVE_TITLE_POS,
+		RECEIVE_TITLE_FONT_SIZE,
+		UiPalette.TEXT_OFFWHITE
+	)
+	_place_label(
+		_receive_view,
+		"%d桁の番号を入力します。貼り付けもできます" % DeckCodeService.CODE_LENGTH,
+		RECEIVE_SUB_POS,
+		SUB_FONT_SIZE,
+		UiPalette.TEXT_MUTED
+	)
+	_input_tiles = _make_tiles(_receive_view, RECEIVE_TILES_RECT)
+	_input_tiles.make_editable("デッキコード")
+	_input_tiles.submitted.connect(_on_load_pressed)
+	_load_button = _make_button(_receive_view, "読み込む", LOAD_BUTTON_RECT, true)
+	_load_button.pressed.connect(_on_load_pressed)
+	_receive_message = _make_message(_receive_view, RECEIVE_MESSAGE_POS, RECEIVE_TEXT_WIDTH)
+	var note := _make_message(_receive_view, RECEIVE_NOTE_POS, RECEIVE_TEXT_WIDTH)
+	note.text = RECEIVE_NOTE
+	note.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
+	note.add_theme_font_size_override("font_size", SUB_FONT_SIZE)
+	# 確定は「読み込む」が持つため、パッドに「決定」は置かない(GameDesign.md 9章)。
+	_pad = NumberPad.make(_input_tiles.input, PAD_KEY_SIZE, false)
+	_pad.position = PAD_POS
+	_receive_view.add_child(_pad)
 
 
-func _make_label(text: String, font_size: int) -> Label:
+func _make_layer(parent: Control) -> Control:
+	var layer := Control.new()
+	layer.size = PANEL_RECT.size
+	layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(layer)
+	return layer
+
+
+func _make_panel(parent: Control, rect: Rect2) -> Panel:
+	var panel := Panel.new()
+	panel.position = rect.position
+	panel.size = rect.size
+	var style: StyleBox = load(PANEL_STYLE)
+	if style != null:
+		panel.add_theme_stylebox_override("panel", style)
+	parent.add_child(panel)
+	return panel
+
+
+func _make_tiles(parent: Control, rect: Rect2) -> CodeTiles:
+	var tiles := CodeTiles.new()
+	tiles.digits = DeckCodeService.CODE_LENGTH
+	tiles.position = rect.position
+	tiles.size = rect.size
+	parent.add_child(tiles)
+	return tiles
+
+
+## primary: 主要な操作は塗りつぶした真鍮、副次的な操作は凹んだパネル。
+func _make_button(parent: Control, text: String, rect: Rect2, primary: bool) -> Button:
+	var group := CodedButton.PRIMARY_ACTION_GROUP if primary else CodedButton.WIDE_GROUP
+	var button := CodedButton.make_in_group(text, rect.size, group)
+	button.position = rect.position
+	parent.add_child(button)
+	return button
+
+
+func _make_message(parent: Control, at: Vector2, width: float) -> Label:
+	var label := _place_label(parent, "", at, MESSAGE_FONT_SIZE, UiPalette.TEXT_OFFWHITE)
+	# 折り返しは size より先に立てる(Pitfalls.md)。
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.size = Vector2(width, 0)
+	return label
+
+
+func _place_label(
+	parent: Control, text: String, at: Vector2, font_size: int, color: Color
+) -> Label:
 	var label := Label.new()
 	label.text = text
+	label.position = at
 	label.add_theme_font_size_override("font_size", font_size)
-	label.add_theme_color_override("font_color", UiPalette.TEXT_OFFWHITE)
+	label.add_theme_color_override("font_color", color)
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(label)
 	return label
