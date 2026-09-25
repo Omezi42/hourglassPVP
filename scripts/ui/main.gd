@@ -150,7 +150,6 @@ func _ready() -> void:
 	add_child(card_ranked_match_screen)
 	card_ranked_match_screen.back_pressed.connect(func() -> void: _show_only(home_screen, true))
 	card_ranked_match_screen.matched.connect(_on_ranked_match_found)
-	card_ranked_match_screen.ranking_requested.connect(_on_rank_screen_requested)
 	_screens.append(card_ranked_match_screen)
 	card_rank_screen = CardRankScreen.new()
 	card_rank_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -208,6 +207,7 @@ func _ready() -> void:
 	_match_return_screen = home_screen
 	home_screen.online_resume_requested.connect(_on_online_resume_requested)
 	home_screen.stats_requested.connect(_on_stats_requested)
+	home_screen.rank_requested.connect(_on_rank_screen_requested)
 	home_screen.puzzle_requested.connect(_on_puzzle_requested)
 	home_screen.solo_requested.connect(_on_solo_requested)
 	home_screen.deck_list_requested.connect(_on_deck_list_requested)

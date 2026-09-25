@@ -47,6 +47,27 @@ static func days_left_in_season(at_unix_time: float = -1.0) -> int:
 	return ceili((float(next_start) - jst_time) / 86400.0)
 
 
+## 画面へ出す自分の段位。保存がまだ前のシーズンなら、切り替わった後の初期値で返す
+## (初期化の書き込みは次にランクマッチかランク画面へ入ったとき。GameDesign.md 28章)。
+static func standing() -> Dictionary:
+	var season := AccountService.rank_season()
+	if season != "" and season != current_season_key():
+		return {
+			"tier": RankRules.INITIAL_TIER,
+			"stars": 0,
+			"rating": 0,
+			"streak": 0,
+			"peak": RankRules.INITIAL_TIER,
+		}
+	return {
+		"tier": AccountService.rank_tier(),
+		"stars": AccountService.rank_stars(),
+		"rating": AccountService.rank_rating(),
+		"streak": AccountService.rank_win_streak(),
+		"peak": AccountService.rank_peak_tier(),
+	}
+
+
 ## ランクマッチへ入る直前・ランク画面を開いた直後に呼ぶ。シーズンが変わっていれば
 ## 旧シーズンの月末報酬(未受領なら)を付与してから、段位を初期化する。
 ##

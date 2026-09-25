@@ -10,7 +10,10 @@
 | `RankedMatchmakingQueue`(`scripts/net/ranked_matchmaking_queue.gd`) | `MatchmakingQueue`のコレクションを`ranked_queue`へ差し替える(6.1節の原子的マッチ成立・募集通知をそのまま使う)。ホームへ出す待機人数も `count_waiting()` で数える(自分を除く・古い待機者を除く・同じビルドだけ) |
 | `CardRankedMatchScreen`(`scripts/ui/card_ranked_match_screen.gd`) | 待機画面(6.6節) |
 | `RankProgress`(`scripts/logic/rank_progress.gd`, static) | `players/{uid}`の段位フィールドを読み書きする。シーズン切り替えの判定もここに集約する |
-| `CardRankScreen`(`scripts/ui/card_rank_screen.gd`) | 現在の段位・レートの表示と、ランキング一覧 |
+| `CardRankScreen`(`scripts/ui/card_rank_screen.gd`) | ランク画面(GameDesign.md 28章)。取得と組み立てだけを持つ |
+| `RankOwnPanel`(`scripts/ui/rank_own_panel.gd`) | 左の自分の段位と月末報酬の段 |
+| `RankBoardRow`(`scripts/ui/rank_board_row.gd`) | ランキングの1行(一覧と最下段の自分の行で共用) |
+| `RankMedal`(`scripts/ui/rank_medal.gd`, static) | 帯の金属のメダルと★の描画。`RankedEntryInfo`(ホームの札)とランク画面が共用する |
 
 ## `players/{uid}` へ足すフィールド
 
@@ -86,8 +89,8 @@
 
 ## ランキング画面
 
-`CardRankScreen`は、自分の段位・星(またはレート)を大きく表示し、下に現在シーズンの
-参加者一覧を出す。**ブロンズ〜プラチナまで全員を1本のランキングへ並べる**(GameDesign.md 28章)。
+`CardRankScreen`は、左に自分の段位(`RankOwnPanel`)、右に現在シーズンの
+参加者一覧(`RankBoardRow`を縦に並べた`ScrollContainer`と、最下段に固定した自分の行)を出す。**ブロンズ〜プラチナまで全員を1本のランキングへ並べる**(GameDesign.md 28章)。
 
 **帯・階級・★・レートを1つの合成スコアへ束ねる。**星取り制の段位はレートのような
 一意の順序を持たないため、そのままでは"参加者一覧"に混ぜても意味を持つ順序にならない。
@@ -109,9 +112,9 @@
 **取得は`players`コレクションを`rank_season == 今月のキー`の単一フィールドの
 等価フィルタで絞り込み、`rank_progress_score`降順に並べる**(6章のクエリ方針にある
 単一フィールドの等価フィルタ+単一の`orderBy`に収まる。以前の`rank_tier == "platinum"`
-との複合フィルタより単純になった)。一覧の各行は、プラチナなら数字のレート、
-それ未満なら「ゴールド3 ★4」のように帯の表示名と★を出す(`CardRankScreen`が
-`rank_tier`を見て分岐する)。
+との複合フィルタより単純になった)。行の表示名・アイコン・称号は同じドキュメントの
+`display_name` / `icon_id` / `title_id` をそのまま使う(追加の読み込みはしない)。
+自分の順位は取得した一覧の中の自分のuidの位置で決め、無ければ「圏外」とする。
 
 ## unityroomランキング連携
 

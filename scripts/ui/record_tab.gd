@@ -11,6 +11,7 @@ extends Control
 signal mission_requested
 signal stats_requested
 signal replay_list_requested
+signal rank_requested
 
 ## アカウント帯を避ける上端。他のタブと同じ値。
 const TOP_BAND := 112.0
@@ -28,15 +29,16 @@ const PROGRESS_TOP := 44.0
 const PROGRESS_COUNT_X := 880.0
 
 const HISTORY_FRAME := Rect2(FRAME_X, TOP_BAND + 200.0, FRAME_W, 234.0)
-const HISTORY_TILE_SIZE := Vector2(470, 150)
+const HISTORY_TILE_SIZE := Vector2(306, 150)
 const HISTORY_TILE_TOP := 54.0
 const HISTORY_FONT_SIZE := 28
-const HISTORY_GAP := 490.0
+const HISTORY_GAP := 327.0
 
 var _mission_frame: HomeFrame
 var _mission_tile: HomeTile
 var _stats_tile: HomeTile
 var _replay_tile: HomeTile
+var _rank_tile: HomeTile
 ## 今日の3つ(`DailyMissionService.missions()` の行)。`_draw()` が読む。
 var _rows: Array[Dictionary] = []
 
@@ -65,6 +67,12 @@ func _ready() -> void:
 	)
 	_replay_tile.pressed.connect(func() -> void: replay_list_requested.emit())
 	add_child(_replay_tile)
+	_rank_tile = HomeTile.make("ランク", "", "tower", HISTORY_TILE_SIZE, HISTORY_FONT_SIZE)
+	_rank_tile.position = (
+		HISTORY_FRAME.position + Vector2(TILE_PAD + HISTORY_GAP * 2.0, HISTORY_TILE_TOP)
+	)
+	_rank_tile.pressed.connect(func() -> void: rank_requested.emit())
+	add_child(_rank_tile)
 	refresh()
 
 
@@ -83,6 +91,7 @@ func refresh() -> void:
 	_apply_subtitle(_mission_tile, "%d つ受け取れます" % claimable if claimable > 0 else "今日の3つに挑む")
 	_apply_subtitle(_stats_tile, _stats_line())
 	_replay_tile.set_subtitle("直近%d件を残しています" % LocalReplayService.RETENTION_LIMIT)
+	_apply_subtitle(_rank_tile, _rank_line())
 	var lines: Array[Dictionary] = []
 	for row in _rows:
 		(
@@ -120,6 +129,15 @@ func _apply_subtitle(tile: HomeTile, text_line: String) -> void:
 	tile.set_subtitle(text_line)
 	if changed:
 		tile.flash_subtitle()
+
+
+## ランクの副題はいまの段位(GameDesign.md 9章)。プラチナはレートを添える。
+func _rank_line() -> String:
+	var standing := RankProgress.standing()
+	var tier: String = standing["tier"]
+	if tier == RankRules.PLATINUM_KEY:
+		return "%s レート%d" % [RankRules.display_name(tier), int(standing["rating"])]
+	return "%s ★%d" % [RankRules.display_name(tier), int(standing["stars"])]
 
 
 ## 戦績の副題。**対局数が0のうちはその旨を出す**(19章と同じ扱い)。

@@ -5,19 +5,11 @@ extends Control
 ## 待っている人の数とシーズンの残り日数を描く。途中の対局があるときは下端の行が琥珀の知らせになる。
 ## 札(`HomeTile`)の子として全面に敷き、押下は札へ通す。光は左上から当たるものとして陰影を付ける。
 
-## 帯ごとの金属の色 [明 / 中 / 暗]。
-const METALS := {
-	"bronze": [Color(0.90, 0.63, 0.40), Color(0.64, 0.38, 0.21), Color(0.34, 0.18, 0.09)],
-	"silver": [Color(0.95, 0.96, 0.98), Color(0.68, 0.71, 0.76), Color(0.36, 0.38, 0.44)],
-	"gold": [Color(1.00, 0.90, 0.55), Color(0.86, 0.64, 0.22), Color(0.48, 0.31, 0.07)],
-	"platinum": [Color(0.93, 0.98, 1.00), Color(0.66, 0.80, 0.88), Color(0.32, 0.42, 0.53)],
-}
 ## 真鍮へ彫り込んだ文字: 本体の暗色と、彫りの下縁に返る光。
 const ENGRAVE_COLOR := Color(0.23, 0.14, 0.05)
 const ENGRAVE_LIGHT := Color(1.0, 0.93, 0.74, 0.55)
 const CAPTION_COLOR := Color(0.23, 0.14, 0.05, 0.72)
 const SHADOW_COLOR := Color(0.10, 0.06, 0.02)
-const SPECULAR_COLOR := Color(1.0, 1.0, 1.0, 0.5)
 const STAR_EMPTY_FILL := Color(0.22, 0.13, 0.05, 0.38)
 ## 下端の凹んだ行。
 const WELL_TOP := Color(0.11, 0.07, 0.04, 0.94)
@@ -47,7 +39,6 @@ const MEDAL_CENTER_RATIO := 0.4
 const STAR_RATIO := 0.17
 const STAR_ROW := 1.33
 const STAR_SPACING := 2.7
-const STAR_INNER := 0.45
 const WELL_HEIGHT := 50.0
 const WELL_INSET := 14.0
 const WELL_RADIUS := 8.0
@@ -60,7 +51,6 @@ const DOT_TEXT_GAP := 10.0
 const PULSE_SPEED := 3.2
 const SEGMENTS := 48
 const CORNER_SEGMENTS := 12
-const ARC_SEGMENTS := 16
 
 var _tier := RankRules.INITIAL_TIER
 var _stars := 0
@@ -86,14 +76,10 @@ func _ready() -> void:
 
 
 func refresh() -> void:
-	_tier = AccountService.rank_tier()
-	_stars = AccountService.rank_stars()
-	_rating = AccountService.rank_rating()
-	# 前のシーズンの段位は、ランクマッチへ入った時点で初期化される(GameDesign.md 28章)。
-	var season := AccountService.rank_season()
-	if season != "" and season != RankProgress.current_season_key():
-		_tier = RankRules.INITIAL_TIER
-		_stars = 0
+	var standing := RankProgress.standing()
+	_tier = standing["tier"]
+	_stars = standing["stars"]
+	_rating = standing["rating"]
 	_days_left = RankProgress.days_left_in_season()
 	queue_redraw()
 
@@ -192,59 +178,8 @@ func _draw_engraved(font: Font, at: Vector2, text: String, font_size: int) -> vo
 	draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, ENGRAVE_COLOR)
 
 
-func _metal() -> Array:
-	return METALS.get(RankRules.bracket_of(_tier), METALS["bronze"])
-
-
-## 帯の金属のメダル。縁は光を受けて上が明るく、内側の面は一段沈んで下が明るい。
 func _draw_medal(center: Vector2, radius: float) -> void:
-	var metal := _metal()
-	var light: Color = metal[0]
-	var mid: Color = metal[1]
-	var dark: Color = metal[2]
-	var edge: float = maxf(1.0, radius * 0.035)
-	# 札へ落ちる影(下へずらして2段で柔らかく)。
-	_fill_circle(center + Vector2(0.0, radius * 0.1), radius * 1.06, Color(SHADOW_COLOR, 0.18))
-	_fill_circle(center + Vector2(0.0, radius * 0.06), radius * 1.01, Color(SHADOW_COLOR, 0.3))
-	_fill_gradient_circle(center, radius, [[0.0, light], [0.45, mid], [1.0, dark]])
-	_ring(center, radius, Color(SHADOW_COLOR, 0.75), edge)
-	# 縁と面の境の溝。
-	_ring(center, radius * 0.82, Color(dark.darkened(0.35), 0.9), edge * 1.6)
-	var field := radius * 0.8
-	_fill_gradient_circle(
-		center, field, [[0.0, dark.lerp(mid, 0.35)], [0.6, mid], [1.0, light.lerp(mid, 0.3)]]
-	)
-	_ring(center, radius * 0.66, Color(dark, 0.45), edge)
-	_ring(center + Vector2(0.0, edge), radius * 0.66, Color(light, 0.45), edge)
-	_draw_medal_mark(center, radius, light, dark)
-	# 左上の照り返し。
-	_arc(center, radius * 0.92, PI * 1.08, PI * 1.55, SPECULAR_COLOR, radius * 0.05)
-	_arc(center, field * 0.9, PI * 1.12, PI * 1.4, Color(SPECULAR_COLOR, 0.22), radius * 0.03)
-
-
-## 面に打つ刻印。星取りの帯は段の数字、プラチナは砂時計。
-func _draw_medal_mark(center: Vector2, radius: float, light: Color, dark: Color) -> void:
-	if _tier == RankRules.PLATINUM_KEY:
-		var side := radius * 0.9
-		var rect := Rect2(center - Vector2.ONE * side * 0.5, Vector2.ONE * side)
-		draw_texture_rect(UiPaint.HOURGLASS_ICON, rect, false, Color(dark, 0.9))
-		return
-	var step := str(int(RankRules.parse(_tier).get("step", 1)))
-	var font_size := int(radius * 1.05)
-	var width := _display.get_string_size(step, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
-	var ascent := _display.get_ascent(font_size) - _display.get_descent(font_size)
-	var at := center + Vector2(-width * 0.5, ascent * 0.5)
-	var offset: float = maxf(1.0, radius * 0.025)
-	draw_string(
-		_display,
-		at + Vector2(0.0, offset),
-		step,
-		HORIZONTAL_ALIGNMENT_LEFT,
-		-1,
-		font_size,
-		Color(light, 0.8)
-	)
-	draw_string(_display, at, step, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, dark.darkened(0.3))
+	RankMedal.draw_medal(self, center, radius, _tier, _display)
 
 
 ## 徽章の下に★を並べる。取った★は琥珀に光り、まだの★は真鍮へ彫った窪みにする。
@@ -254,25 +189,17 @@ func _draw_stars(center: Vector2, radius: float) -> void:
 	var need := RankRules.star_requirement(_tier)
 	var spacing := radius * STAR_SPACING
 	var left := center.x - spacing * float(need - 1) * 0.5
-	var outline: float = maxf(1.0, radius * 0.09)
+	var outline := RankMedal.star_outline(radius)
 	for i in need:
 		var at := Vector2(left + spacing * float(i), center.y)
-		var points := _star_points(at, radius)
-		var closed := points.duplicate()
-		closed.append(points[0])
 		if i < _stars:
-			var rect := Rect2(at - Vector2.ONE * radius, Vector2.ONE * radius * 2.0)
-			UiPaint.fill_gradient_polygon(
-				get_canvas_item(),
-				points,
-				rect,
-				[[0.0, UiPalette.ROUND_FILLED_TOP], [1.0, UiPalette.ROUND_FILLED_BOTTOM]]
-			)
-			draw_polyline(closed, Color(SHADOW_COLOR, 0.8), outline, true)
-		else:
-			draw_colored_polygon(points, STAR_EMPTY_FILL)
-			draw_polyline(_offset(closed, Vector2(0.0, 1.0)), ENGRAVE_LIGHT, outline, true)
-			draw_polyline(closed, Color(ENGRAVE_COLOR, 0.55), outline, true)
+			RankMedal.draw_filled_star(self, at, radius)
+			continue
+		var points := RankMedal.star_points(at, radius)
+		var closed := RankMedal.closed(points)
+		draw_colored_polygon(points, STAR_EMPTY_FILL)
+		draw_polyline(_offset(closed, Vector2(0.0, 1.0)), ENGRAVE_LIGHT, outline, true)
+		draw_polyline(closed, Color(ENGRAVE_COLOR, 0.55), outline, true)
 
 
 ## 下端の凹んだ行。左に待っている人(または途中の対局の知らせ)、右にシーズンの残り日数。
@@ -343,32 +270,6 @@ func _draw_dot(center: Vector2, color: Color) -> void:
 
 func _fill_circle(center: Vector2, radius: float, color: Color) -> void:
 	draw_colored_polygon(UiPaint.circle_points(center, radius, SEGMENTS), color)
-
-
-func _fill_gradient_circle(center: Vector2, radius: float, stops: Array) -> void:
-	var rect := Rect2(center - Vector2.ONE * radius, Vector2.ONE * radius * 2.0)
-	UiPaint.fill_gradient_polygon(
-		get_canvas_item(), UiPaint.circle_points(center, radius, SEGMENTS), rect, stops
-	)
-
-
-func _ring(center: Vector2, radius: float, color: Color, width: float) -> void:
-	draw_arc(center, radius, 0.0, TAU, SEGMENTS, color, width, true)
-
-
-func _arc(
-	center: Vector2, radius: float, from: float, to: float, color: Color, width: float
-) -> void:
-	draw_arc(center, radius, from, to, ARC_SEGMENTS, color, width, true)
-
-
-static func _star_points(center: Vector2, radius: float) -> PackedVector2Array:
-	var points := PackedVector2Array()
-	for i in 10:
-		var angle := -PI * 0.5 + PI * float(i) / 5.0
-		var r := radius if i % 2 == 0 else radius * STAR_INNER
-		points.append(center + Vector2(cos(angle), sin(angle)) * r)
-	return points
 
 
 static func _offset(points: PackedVector2Array, by: Vector2) -> PackedVector2Array:

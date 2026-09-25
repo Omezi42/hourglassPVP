@@ -9,8 +9,6 @@ signal back_pressed
 signal matched(match_id: String, my_side: int, opponent_uid: String)
 ## 「待っている間CPUと対戦する」(GameDesign.md 11章)。`Main` がCPU戦を始める。
 signal cpu_requested
-## ヘッダーの「ランキング」から、段位・ランキング一覧の画面(`CardRankScreen`)を開く。
-signal ranking_requested
 
 const HEADER_SCENE := "res://scenes/screen_header.tscn"
 const BUSY_DOTS_MAX := EmptyState.DOTS_MAX
@@ -20,7 +18,6 @@ const ANNOUNCE_NOTE := "公式Discordサーバーへ「対戦相手をさがし�
 const ANNOUNCE_BADGE_GAP := 10.0
 const CANCEL_SIZE := Vector2(220, 64)
 const CANCEL_GAP := 40.0
-const RANKING_BUTTON_SIZE := Vector2(168, 48)
 
 ## 待っている間のCPU戦のキュー。`WaitingCpuMatch` がCPU戦の印を立て、相手の知らせを受ける。
 var queue: MatchmakingQueue:
@@ -36,7 +33,6 @@ var _empty_state: EmptyState
 var _tier_label: Label
 var _announce_badge: StatusBadge
 var _cancel_button: Button
-var _ranking_button: Button
 var _ceremony: CardSeasonCeremonyPanel
 
 
@@ -52,9 +48,6 @@ func _build() -> void:
 	add_child(header)
 	header.set_title("ランクマッチ")
 	header.back_pressed.connect(_on_back_pressed)
-	_ranking_button = CodedButton.make("ランキング", RANKING_BUTTON_SIZE)
-	_ranking_button.pressed.connect(func() -> void: ranking_requested.emit())
-	header.add_action(_ranking_button)
 
 	_content_rect = Rect2(
 		ScreenHeader.OUTER_MARGIN,
@@ -152,9 +145,6 @@ func _set_busy(busy: bool) -> void:
 	_busy = busy
 	_cancel_button.visible = busy
 	_cpu_offer.hide()
-	# キューに参加している間にランキングへ移ると、そのまま待機が残ったまま画面だけ
-	# 離れてしまう(キャンセルされない)。押せなくして、その状態を作らせない。
-	_ranking_button.disabled = busy
 	if not busy:
 		_discard_session()
 

@@ -3,6 +3,7 @@ extends Control
 
 signal online_resume_requested(record: Dictionary)
 signal stats_requested
+signal rank_requested
 signal puzzle_requested
 signal deck_list_requested
 signal hourglass_list_requested
@@ -286,6 +287,7 @@ func _build_record_tab() -> void:
 	_record_tab.mission_requested.connect(_on_mission_requested)
 	_record_tab.stats_requested.connect(func() -> void: stats_requested.emit())
 	_record_tab.replay_list_requested.connect(func() -> void: replay_list_requested.emit())
+	_record_tab.rank_requested.connect(func() -> void: rank_requested.emit())
 	deck_tab.get_parent().add_child(_record_tab)
 	deck_tab.get_parent().move_child(_record_tab, 2)
 
