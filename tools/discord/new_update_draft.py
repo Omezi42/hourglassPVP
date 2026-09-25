@@ -14,12 +14,13 @@
 """
 
 import argparse
-import datetime
 import re
 import subprocess
 from pathlib import Path
 
 DRAFTS = Path("tools/discord/drafts")
+PROJECT = Path("project.godot")
+VERSION = re.compile(r'^config/version="(.*)"$', re.M)
 STATE = Path.home() / ".hourglass_announce_state"
 
 # プレイヤーに関係しない可能性が高いコミット。落とさず「除外候補」として印を付ける
@@ -55,20 +56,23 @@ def commits() -> list[str]:
     return [line for line in out.stdout.splitlines() if line.strip()]
 
 
+def built_version() -> str:
+    """直前に書き出したビルドの版番号。日付を自前で計算すると、UTCで刻む版番号と日本時間の朝にずれる。"""
+    found = VERSION.search(PROJECT.read_text(encoding="utf-8"))
+    if found is None:
+        raise SystemExit("project.godot に config/version が見つからない")
+    return found.group(1)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="更新のお知らせの下書きを起こす")
-    parser.add_argument("--version", default="", help="既定は今日の日付(2026.08.30)")
+    parser.add_argument("--version", default="", help="既定は project.godot の config/version")
     args = parser.parse_args()
 
-    today = datetime.date.today()
-    version = args.version or today.strftime("%Y.%m.%d")
-
+    version = args.version or built_version()
     path = DRAFTS / f"update-{version}.md"
-    suffix = 2
-    while path.exists():
-        version = f"{today.strftime('%Y.%m.%d')}-{suffix}"
-        path = DRAFTS / f"update-{version}.md"
-        suffix += 1
+    if path.exists():
+        raise SystemExit(f"{path} は既にある。ビルドし直してから起こすこと")
 
     log = commits()
     keep = [c for c in log if not NOISE.search(c)]

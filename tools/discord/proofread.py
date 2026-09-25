@@ -14,7 +14,7 @@ from pathlib import Path
 
 CONFIG_PATH = Path.home() / ".hourglass_gemini.json"
 # 混雑(503)のときは後ろの候補へ順に落とす
-MODELS = ["gemini-flash-latest", "gemini-3.8-flash", "gemini-3.5-flash", "gemini-2.5-flash"]
+MODELS = ["gemini-flash-latest", "gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-2.5-flash"]
 ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
 PROMPT = """あなたは日本語の校正者です。次の文章はブラウザゲーム「砂時計アリーナ」の
