@@ -18,6 +18,7 @@ const TUTORIAL_CLEAR := "tutorial_clear"
 const MATCH_END := "match_end"
 const ONLINE_TRY := "online_try"
 const ONLINE_END := "online_end"
+const DAILY_PUZZLE := "daily_puzzle"
 ## 誘導対局の手順(`tutorial_step()` で番号を付ける)。
 const TUTORIAL_STEP_FORMAT := "tutorial_%02d"
 ## ランクマッチの最初の待機(`RankedWaitFunnel`)。

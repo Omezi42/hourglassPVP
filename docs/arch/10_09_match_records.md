@@ -70,6 +70,7 @@
 | `online_try` | `Main` のランダム・ランク・ルームの入口 |
 | `tutorial_NN` | `CardMatchTutorial._enter_step()`(NN は台本の手順の番号、2桁) |
 | `ranked_*` | `RankedWaitFunnel`(下記) |
+| `daily_puzzle` | `Main._on_puzzle_stage_selected()`(今日の1問を選んだとき) |
 
 **ランクマッチの待機は `RankedWaitFunnel`(`scripts/ui/ranked_wait_funnel.gd`, RefCounted)が追う。**
 `CardRankedMatchScreen` が1つ持ち、キューへ参加した時点で `begin()` を呼ぶ。`ranked_wait` をまだ通っていない

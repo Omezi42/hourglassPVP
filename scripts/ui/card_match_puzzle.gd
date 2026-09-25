@@ -130,6 +130,9 @@ func _outcome(cleared: bool, reward: StageReward) -> CardChallengeResult.Outcome
 		outcome.stage_name = _solo_stage.display_name
 	elif _endless:
 		outcome.eyebrow = "リーサルパズル ・ エンドレス"
+	elif DailyPuzzle.is_daily(_stage):
+		outcome.eyebrow = DailyPuzzle.EYEBROW
+		outcome.stage_name = _stage.title
 	else:
 		outcome.eyebrow = "リーサルパズル"
 		outcome.stage_name = _stage.title
