@@ -21,10 +21,10 @@ const ENTRANCE_DURATION := 0.42
 ## 行が現れる間隔。ここで区切ることで「勝敗 → 内訳 → 決め手」の順に読める。
 const LINE_STAGGER := 0.14
 const LINE_FADE := 0.22
-const PARTICLE_COUNT := 40
 const FLASH_DECAY := 1.1
 
 var _dim: ColorRect
+var _sand: ResultSandFall
 var _panel: Control
 var _title: Label
 var _lines: Array[Label] = []
@@ -36,8 +36,6 @@ var _neutral := false
 var _reveal_elapsed := 0.0
 var _revealing := false
 var _flash := 0.0
-## 各粒 {"pos":Vector2, "speed":float, "drift":float, "phase":float, "size":float}
-var _particles: Array = []
 
 
 func _ready() -> void:
@@ -92,7 +90,7 @@ func show_for(
 		else:
 			label.visible = false
 
-	_spawn_particles()
+	_sand.start(_won or _neutral)
 	_flash = 1.0 if _won else 0.0
 	visible = true
 	_start_entrance()
@@ -149,53 +147,9 @@ func _process(delta: float) -> void:
 	if _flash > 0.0:
 		_flash = maxf(_flash - delta * FLASH_DECAY, 0.0)
 		active = true
-	for p in _particles:
-		p["pos"].y += p["speed"] * delta
-		p["phase"] += delta * 1.4
-		p["pos"].x += sin(p["phase"]) * p["drift"] * delta
-		if p["pos"].y > SCREEN_SIZE.y + 12.0:
-			p["pos"].y = -randf() * 60.0
-			p["pos"].x = randf() * SCREEN_SIZE.x
-		active = true
-	queue_redraw()
 	_panel.queue_redraw()
 	if not active:
 		set_process(false)
-
-
-## 舞い落ちる粒。勝利=琥珀の砂、敗北=くすんだ灰。GameDesign.md 9章の
-## 「消える砂と落ちる砂を演出で分ける」思想を結果パネルへも及ぼし、
-## ここでも砂時計モチーフの延長として見せる。
-func _draw() -> void:
-	var ci := get_canvas_item()
-	var color: Color = (
-		Color(UiPalette.GLOW_AMBER, 0.55) if (_won or _neutral) else Color(0.55, 0.53, 0.5, 0.35)
-	)
-	for p in _particles:
-		UiPaint.fill_circle(ci, p["pos"], p["size"], color, 8)
-
-
-func _spawn_particles() -> void:
-	_particles.clear()
-	var rng := RandomNumberGenerator.new()
-	rng.randomize()
-	for i in PARTICLE_COUNT:
-		(
-			_particles
-			. append(
-				{
-					"pos":
-					Vector2(
-						rng.randf() * SCREEN_SIZE.x, rng.randf() * SCREEN_SIZE.y - SCREEN_SIZE.y
-					),
-					"speed":
-					rng.randf_range(40.0, 110.0) * (0.6 if not (_won or _neutral) else 1.0),
-					"drift": rng.randf_range(-12.0, 12.0),
-					"phase": rng.randf() * TAU,
-					"size": rng.randf_range(1.2, 2.6),
-				}
-			)
-		)
 
 
 func _line_base_y(index: int) -> float:
@@ -203,6 +157,10 @@ func _line_base_y(index: int) -> float:
 
 
 func _build() -> void:
+	# 粒は暗幕の奥に置く(暗幕越しにうっすら見える程度に留める)。
+	_sand = ResultSandFall.new()
+	_sand.size = SCREEN_SIZE
+	add_child(_sand)
 	_dim = ColorRect.new()
 	_dim.color = Color(0, 0, 0, 0.72)
 	_dim.size = SCREEN_SIZE
@@ -248,41 +206,10 @@ func _build() -> void:
 	row.add_child(_make_button("ホームへ", home_pressed))
 
 
-## パネル本体の質感(Architecture.md 4章のコード描画方針: 多段グラデーション + 面取り +
-## 内側の落ち込み影 + グレイン)。勝敗で色調だけを差し替える。
+## パネル本体の質感は `ResultPanelFrame` が持つ。勝利の瞬間だけ光条を重ねる。
 func _draw_panel() -> void:
 	var ci: RID = _panel.get_canvas_item()
-	var rect := Rect2(Vector2.ZERO, PANEL_SIZE)
-	var points := UiPaint.rounded_rect_points_uniform(rect, 20.0, 8)
-	var stops: Array
-	var light_edge: Color
-	var dark_edge: Color
-	if _won or _neutral:
-		stops = [
-			[0.0, Color(0.46, 0.28, 0.08, 0.98)],
-			[0.35, Color(0.24, 0.15, 0.07, 0.98)],
-			[1.0, Color(0.1, 0.08, 0.07, 0.98)],
-		]
-		light_edge = UiPalette.BRASS_HIGHLIGHT
-		dark_edge = UiPalette.BRASS_DARK
-	else:
-		stops = [
-			[0.0, Color(0.22, 0.22, 0.25, 0.98)],
-			[0.4, Color(0.13, 0.13, 0.16, 0.98)],
-			[1.0, Color(0.06, 0.06, 0.08, 0.98)],
-		]
-		light_edge = Color(0.4, 0.4, 0.44, 1.0)
-		dark_edge = Color(0.05, 0.05, 0.06, 1.0)
-	UiPaint.fill_gradient_polygon(ci, points, rect, stops)
-	UiPaint.draw_inner_shadow(ci, rect.grow(-3.0), 18.0, 26, 4, Color(0, 0, 0), 0.32)
-	UiPaint.draw_bevel(ci, points, light_edge, dark_edge, 3.0, false)
-	var outline := points.duplicate()
-	outline.append(points[0])
-	var outline_colors := PackedColorArray()
-	outline_colors.resize(outline.size())
-	outline_colors.fill(UiPalette.OUTLINE_DARK)
-	RenderingServer.canvas_item_add_polyline(ci, outline, outline_colors, 2.0, true)
-	UiPaint.apply_grain(ci, rect, 0.05)
+	ResultPanelFrame.draw(ci, PANEL_SIZE, _won or _neutral)
 	if _flash > 0.0 and _won:
 		_draw_victory_flash(ci)
 

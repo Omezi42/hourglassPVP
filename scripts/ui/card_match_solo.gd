@@ -11,7 +11,7 @@ extends RefCounted
 signal finished(cleared: bool)
 
 var _screen: CardMatchScreen
-var _panel: CardSoloResult
+var _panel: CardChallengeResult
 var _stage: SoloStageData = null
 var _config: SoloMatchConfig = null
 ## 連戦型(GAUNTLET)でいま何戦目か(0始まり)。
@@ -24,10 +24,45 @@ var _cleared := false
 
 func _init(screen: CardMatchScreen) -> void:
 	_screen = screen
-	_panel = CardSoloResult.new()
+	_panel = CardChallengeResult.new()
 	_panel.retry_pressed.connect(func() -> void: start(_stage))
+	_panel.next_pressed.connect(func() -> void: start_any(next_stage_of(_stage)))
 	_panel.quit_pressed.connect(func() -> void: finished.emit(_settled and _cleared))
-	screen.add_child(_panel)
+	_panel.log_pressed.connect(func() -> void: _screen._log.set_open(true))
+	add_result_panel(screen, _panel)
+
+
+## 結果パネルを対局画面へ置く。**ログより奥に差し込む**——結果パネルの「ログ」で開いたログが
+## パネルの下へ隠れないように(閉じると結果パネルへ戻る。GameDesign.md 27章)。
+static func add_result_panel(screen: CardMatchScreen, panel: CardChallengeResult) -> void:
+	screen.add_child(panel)
+	screen.move_child(panel, screen._log.get_index())
+
+
+## 種別に応じてパズル・対局を振り分けて始める(一覧から選んだときも「次のステージへ」も同じ)。
+func start_any(target: SoloStageData) -> void:
+	if target == null:
+		return
+	if target.stage_type == SoloStageData.Kind.PUZZLE:
+		_screen.puzzle.start(target.puzzle, false, target)
+	else:
+		start(target)
+
+
+## 並び順で次のステージ。まだ開いていなければ null。
+static func next_stage_of(current: SoloStageData) -> SoloStageData:
+	var stages := SoloLibrary.all_stages()
+	var index := stages.find(current)
+	if index < 0 or index + 1 >= stages.size():
+		return null
+	var candidate: SoloStageData = stages[index + 1]
+	if not SoloLibrary.is_unlocked(candidate, StageReward.current_uid()):
+		return null
+	return candidate
+
+
+static func eyebrow_of(target: SoloStageData) -> String:
+	return "ソロモード ・ ステージ%d ・ %s" % [target.order, target.kind_label()]
 
 
 ## いま挑戦中か。終局の受け口が結果パネルを出し分けるのに使う。
@@ -202,39 +237,80 @@ func _on_unit_destroyed_for_wipe(side: int, _slot: int, _card: CardData) -> void
 func _settle(cleared: bool) -> void:
 	_settled = true
 	_cleared = cleared
-	var reward := ""
+	var reward: StageReward = null
 	if cleared:
-		reward = _grant()
-	_panel.show_for(cleared, _stage, reward)
+		reward = grant_stage_rewards(_stage)
+	_panel.show_for(_outcome(cleared, reward))
 
 
-## 初回クリアだけ報酬を出す(GameDesign.md 27章)。**通信は待たない**——結果の表示を
-## 通信で止めない扱いは、対局の砂金(`CardMatchOutcome`)・パズルの砂金と同じ。
-func _grant() -> String:
-	return grant_stage_rewards(_stage)
-
-
-## ステージの報酬を渡す。**パズル型のステージも同じ経路を通す**——パズル型は進行が
-## `CardMatchPuzzle` 側にあるが、進捗を `SoloProgress` へ書かないと次のステージが
-## 永久に開かない(Architecture.md 10.15節)。そのため static にして両者で共有する。
-static func grant_stage_rewards(target: SoloStageData) -> String:
-	var uid := ""
-	if NetSession.client != null and NetSession.client.auth != null:
-		uid = NetSession.client.auth.uid
-	if not SoloProgress.mark_cleared(uid, target.id):
-		return "このステージはクリア済みです"
-	var parts: Array[String] = []
-	if target.reward_gold > 0:
-		if NetSession.client == null or uid.is_empty():
-			AccountStore.add_pending_currency(target.reward_gold)
-			parts.append("+%d 砂金(次に接続できたときに反映)" % target.reward_gold)
+## 結果パネルの中身(GameDesign.md 27章「結果パネル」)。負けは勝利条件までの残りを数字で出す。
+func _outcome(cleared: bool, reward: StageReward) -> CardChallengeResult.Outcome:
+	var outcome := CardChallengeResult.Outcome.new()
+	outcome.cleared = cleared
+	outcome.reward = reward
+	outcome.eyebrow = eyebrow_of(_stage)
+	outcome.stage_name = _stage.display_name
+	outcome.show_log = true
+	var state: MatchState = _screen.state
+	var mine: int = _screen.my_side
+	var foe: int = MatchState.other_side(mine)
+	if cleared:
+		if _config.opponent_count > 1:
+			outcome.summary_value = _config.opponent_count
+			outcome.summary_tail = "連戦を突破"
 		else:
-			AccountService.grant(NetSession.client, uid, target.reward_gold, false)
-			parts.append("+%d 砂金" % target.reward_gold)
+			match _config.win_condition:
+				SoloMatchConfig.WinCondition.SURVIVE_TURNS:
+					outcome.summary_lead = "最後まで生き延びた"
+				SoloMatchConfig.WinCondition.DESTROY_ALL_ENEMY_UNITS:
+					outcome.summary_lead = "相手の場を空にした"
+				_:
+					outcome.summary_lead = "自分のHP"
+					outcome.summary_value = int(state.hp[mine])
+					outcome.summary_tail = "を残して勝利"
+		outcome.next_label = "次のステージへ" if next_stage_of(_stage) != null else ""
+		return outcome
+	var prefix := "%d戦目で倒れた ・ " % (_gauntlet_index + 1) if _config.opponent_count > 1 else ""
+	match _config.win_condition:
+		SoloMatchConfig.WinCondition.SURVIVE_TURNS:
+			outcome.summary_lead = prefix + "生き延びるまで あと"
+			outcome.summary_value = _own_turns_left(state)
+			outcome.summary_tail = "手番"
+		SoloMatchConfig.WinCondition.DESTROY_ALL_ENEMY_UNITS:
+			outcome.summary_lead = prefix + "相手の場に あと"
+			outcome.summary_value = state.units(foe).size()
+			outcome.summary_tail = "体"
+		_:
+			outcome.summary_lead = prefix + "相手のHP あと"
+			outcome.summary_value = maxi(int(state.hp[foe]), 0)
+	outcome.tray_title = "ステージの条件"
+	outcome.tray_text = _stage.description
+	return outcome
+
+
+## 生存の達成は `turn_count` が `survive_turns` を超えた自分の手番(`_on_turn_started_for_survival`)。
+## `turn_count` は両者の手番を通しで数えるため、残りの手番のうち自分のものは半分(切り上げ)になる。
+func _own_turns_left(state: MatchState) -> int:
+	var turns_left := _config.survive_turns + 1 - state.turn_count
+	return maxi(ceili(turns_left / 2.0), 1)
+
+
+## ステージの報酬を渡す(初回クリアだけ。GameDesign.md 27章)。**通信は待たない**——結果の
+## 表示を通信で止めない扱いは、対局の砂金(`CardMatchOutcome`)・パズルの砂金と同じ。
+## **パズル型のステージも同じ経路を通す**——パズル型は進行が `CardMatchPuzzle` 側にあるが、
+## 進捗を `SoloProgress` へ書かないと次のステージが永久に開かない(Architecture.md 10.15節)。
+## そのため static にして両者で共有する。
+static func grant_stage_rewards(target: SoloStageData) -> StageReward:
+	var reward := StageReward.new()
+	var uid := StageReward.current_uid()
+	if not SoloProgress.mark_cleared(uid, target.id):
+		reward.already_cleared = true
+		return reward
+	reward.grant_gold(uid, target.reward_gold)
 	if not target.reward_icon_id.is_empty():
 		AccountService.unlock_icon(NetSession.client, uid, target.reward_icon_id)
-		parts.append("アイコン「%s」を手に入れました" % UserProfileLibrary.get_icon_name(target.reward_icon_id))
+		reward.icon_id = target.reward_icon_id
 	if not target.reward_card_set_id.is_empty():
 		AccountService.unlock_card_set(NetSession.client, uid, target.reward_card_set_id)
-		parts.append("%sを手に入れました" % CardSetLibrary.display_name(target.reward_card_set_id))
-	return "\n".join(parts)
+		reward.card_set_id = target.reward_card_set_id
+	return reward

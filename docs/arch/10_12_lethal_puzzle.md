@@ -6,7 +6,9 @@
 | `PuzzleLibrary`(`scripts/logic/puzzle_library.gd`, static) | `data/puzzles/` を走査して `order` 順に返す。`CardLibrary` と同じ流儀(`.remap` の扱いを含む) |
 | `PuzzleProgress`(`scripts/logic/puzzle_progress.gd`, static) | クリア記録。`user://puzzle_progress.json` へアカウントごとに持つ |
 | `CardMatchPuzzle`(`scripts/ui/card_match_puzzle.gd`, RefCounted) | 局面の差し替えと正誤の判定。`CardMatchOnline` と同じ `_screen` 参照の切り出し |
-| `CardPuzzleResult`(`scripts/ui/card_puzzle_result.gd`) | 正解 / 失敗のパネル。「もう一度」「一覧へ」 |
+| `CardChallengeResult`(`scripts/ui/card_challenge_result.gd`) | ソロモード(10.15節)と共用の結果パネル。中身は呼び出し側が `CardChallengeResult.Outcome` に詰めて渡し、パネルは並べ方とボタンの主従(GameDesign.md 24章の表)だけを持つ。高さは中身に合わせて1コマ後に決める(折り返す説明文の高さがそれまで確定しないため) |
+| `StageReward`(`scripts/logic/stage_reward.gd`) | 初回クリアで渡したもの(砂金・控えたか・カードセット・アイコン・解き直しか)。結果パネルが札にして並べるため、文ではなく中身で返す |
+| `ResultPanelFrame` / `ResultSandFall`(`scripts/ui/`) | 結果パネルの質感と舞い落ちる砂。`CardMatchResult` と `CardChallengeResult` が共有する |
 | `CardPuzzlePickerScreen`(`scripts/ui/card_puzzle_picker_screen.gd`) | ステージ選択。共通ヘッダー + 横2列のグリッド |
 
 **専用の対局画面(`CardPuzzleScreen`)は作らない。**盤面・手札・演出・ログはすべて
@@ -89,5 +91,6 @@ Web書き出し(WebAssembly)の実行速度で毎回これを間に合わせる�
 **エンドレスの問題は保存しない。**`PuzzleLibrary`(Stage1〜10)とは別の生成経路であり、
 `PuzzleProgress`(初回クリアの記録)も触らない。`CardMatchPuzzle` は
 `start(target, endless)` の第2引数でこれを区別し、`endless` のときは
-`_grant()` を呼ばず、結果パネルへ「次の問題へ」(`PuzzleGenerator.generate()` を
-呼び直して `start()` する)を追加で出す。
+`_grant()` を呼ばない。結果パネルの「次の問題へ」は、エンドレスなら `PuzzleGenerator.generate()` を
+呼び直し、Stage1〜10なら `PuzzleLibrary` の並びで次の問題を、ソロモードのパズル型なら
+`CardMatchSolo.start_any()` で次のステージを始める。

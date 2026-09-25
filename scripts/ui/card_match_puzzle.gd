@@ -13,7 +13,7 @@ signal finished(cleared: bool)
 
 var _screen: CardMatchScreen
 var _stage: PuzzleStageData = null
-var _panel: CardPuzzleResult
+var _panel: CardChallengeResult
 var _settled := false
 ## エンドレス(GameDesign.md 24章)かどうか。true の間は初回クリア報酬・進捗記録を
 ## 行わず、「次の問題へ」で新しい問題を生成し続けられる。
@@ -26,11 +26,11 @@ var _solo_stage: SoloStageData = null
 
 func _init(screen: CardMatchScreen) -> void:
 	_screen = screen
-	_panel = CardPuzzleResult.new()
+	_panel = CardChallengeResult.new()
 	_panel.retry_pressed.connect(func() -> void: start(_stage, _endless, _solo_stage))
-	_panel.next_pressed.connect(func() -> void: start(PuzzleGenerator.generate(), true))
+	_panel.next_pressed.connect(_start_next)
 	_panel.quit_pressed.connect(func() -> void: finished.emit(_settled and _cleared()))
-	screen.add_child(_panel)
+	CardMatchSolo.add_result_panel(screen, _panel)
 
 
 ## いま解いている最中か。終局の受け口が結果パネルを出し分けるのに使う。
@@ -106,43 +106,92 @@ func close() -> void:
 
 
 func _cleared() -> bool:
-	var state: MatchState = _screen.state
-	if state == null:
-		return false
-	return int(state.hp[MatchState.other_side(_screen.my_side)]) <= 0
+	return _screen.state != null and _foe_hp() <= 0
 
 
 func _settle(cleared: bool) -> void:
 	_settled = true
-	var reward := ""
+	var reward: StageReward = null
 	# エンドレスは初回クリアという区切りが成立しないため、砂金を出さない
 	# (GameDesign.md 24章「エンドレスモード」)。
 	if cleared and not _endless:
 		reward = _grant()
+	_panel.show_for(_outcome(cleared, reward))
+
+
+## 結果パネルの中身(GameDesign.md 24章「結果パネル」)。ソロモードのパズル型は、
+## 所属・名前・次の行き先をステージ側のものにする(27章)。
+func _outcome(cleared: bool, reward: StageReward) -> CardChallengeResult.Outcome:
+	var outcome := CardChallengeResult.Outcome.new()
+	outcome.cleared = cleared
+	outcome.reward = reward
+	if _solo_stage != null:
+		outcome.eyebrow = CardMatchSolo.eyebrow_of(_solo_stage)
+		outcome.stage_name = _solo_stage.display_name
+	elif _endless:
+		outcome.eyebrow = "リーサルパズル ・ エンドレス"
+	else:
+		outcome.eyebrow = "リーサルパズル"
+		outcome.stage_name = _stage.title
+	if cleared:
+		outcome.summary_lead = "相手のHP"
+		outcome.summary_value = _stage.foe_hp
+		outcome.summary_tail = "を削りきった"
+	else:
+		outcome.summary_lead = "相手のHP あと"
+		outcome.summary_value = maxi(_foe_hp(), 0)
+		outcome.tray_title = "ヒント"
+		outcome.tray_text = _stage.hint
+	outcome.next_label = _next_label(cleared)
+	return outcome
+
+
+## 「次の問題へ」はStage1〜10なら正解の後だけ、エンドレスは失敗しても出す(24章の表)。
+func _next_label(cleared: bool) -> String:
+	if _endless:
+		return "次の問題へ"
+	if not cleared:
+		return ""
+	if _solo_stage != null:
+		return "次のステージへ" if CardMatchSolo.next_stage_of(_solo_stage) != null else ""
+	return "次の問題へ" if _next_puzzle() != null else ""
+
+
+func _start_next() -> void:
+	if _endless:
+		start(PuzzleGenerator.generate(), true)
+	elif _solo_stage != null:
+		_screen.solo.start_any(CardMatchSolo.next_stage_of(_solo_stage))
+	else:
+		start(_next_puzzle())
+
+
+func _next_puzzle() -> PuzzleStageData:
+	var stages := PuzzleLibrary.all_stages()
+	var index := stages.find(_stage)
+	if index < 0 or index + 1 >= stages.size():
+		return null
+	return stages[index + 1]
+
+
+func _foe_hp() -> int:
 	var state: MatchState = _screen.state
-	if state != null:
-		_panel.set_remaining(int(state.hp[MatchState.other_side(_screen.my_side)]))
-	_panel.show_for(cleared, _stage, reward, _endless)
+	return 0 if state == null else int(state.hp[MatchState.other_side(_screen.my_side)])
 
 
 ## 初回クリアだけ砂金を出す(GameDesign.md 24章)。**通信は待たない**——
 ## 結果の表示を通信で止めない扱いは、対局の砂金(`CardMatchOutcome`)と同じ。
-func _grant() -> String:
+func _grant() -> StageReward:
 	# ソロモードのパズル型は、進捗も報酬もステージ側のもの(GameDesign.md 27章)。
 	if _solo_stage != null:
 		return CardMatchSolo.grant_stage_rewards(_solo_stage)
-	var uid := ""
-	if NetSession.client != null and NetSession.client.auth != null:
-		uid = NetSession.client.auth.uid
+	var reward := StageReward.new()
+	var uid := StageReward.current_uid()
 	if not PuzzleProgress.mark_cleared(uid, _stage.id):
-		return "この問題は解決済み"
-	if NetSession.client == null or uid.is_empty():
-		# 通信できないときは手元へ控え、次に加算が通ったときにまとめて足す
-		# (対局の砂金と同じ扱い。Architecture.md 10.2節)。
-		AccountStore.add_pending_currency(PuzzleProgress.CLEAR_REWARD)
-		return "+%d 砂金(次に接続できたときに反映)" % PuzzleProgress.CLEAR_REWARD
-	AccountService.grant(NetSession.client, uid, PuzzleProgress.CLEAR_REWARD, false)
-	return "+%d 砂金" % PuzzleProgress.CLEAR_REWARD
+		reward.already_cleared = true
+		return reward
+	reward.grant_gold(uid, PuzzleProgress.CLEAR_REWARD)
+	return reward
 
 
 ## 問題の局面を盤面へ写す。**駒は出したターン扱いを解いて置く**

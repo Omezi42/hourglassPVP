@@ -13,7 +13,7 @@ GameDesign.md 27章の実装方針。**チュートリアルではなく、既�
 | `SoloProgress`(`scripts/logic/solo_progress.gd`, static) | クリア記録。`user://solo_progress.json` へアカウントごとに持つ。`PuzzleProgress`と同じ流儀 |
 | `CardSoloMapScreen`(`scripts/ui/card_solo_map_screen.gd`) | ステージの一覧。v1は分岐しない1本道のため、`CardPuzzlePickerScreen`と同じ「縦に並ぶ横長カード」の形をそのまま使う。**専用の確認パネル(`CardSoloStageDetail`)は作らない**——カード自体が名前・種別・説明・初回クリア報酬を出しており、「挑戦」を押すとそのまま始まる |
 | `CardMatchSolo`(`scripts/ui/card_match_solo.gd`, RefCounted) | `_screen` 参照を持つ切り出し(`CardMatchPuzzle`/`CardMatchOnline`と同じ流儀)。対局設定の適用・特殊勝利条件の監視・連戦型のHP持ち越し・クリア時の報酬付与を行う |
-| `CardSoloResult`(`scripts/ui/card_solo_result.gd`) | ステージの結果パネル。`CardPuzzleResult`と同じ理由で、対局の結果パネル(`CardMatchResult`)を流用しない |
+| `CardChallengeResult`(`scripts/ui/card_challenge_result.gd`) | ステージの結果パネル。リーサルパズルと共用(10.12節)。`CardMatchSolo.add_result_panel()` が**ログより奥へ差し込む**——パネルの「ログ」で開いたログが下へ隠れないように |
 | `CardMatchGeometry`(`scripts/ui/card_match_geometry.gd`, RefCounted) | `card_match_screen.gd`が1000行の上限に迫ったため、`hp_bar_center()`/`slot_center()`/`playable_hand_rects()`/`end_turn_button_rect()`の4つの座標系の問い合わせをここへ切り出した。ソロモード固有の役目は持たないが、この節の実装で足りなくなった行数を確保するために行った |
 
 **`SoloStageData` のフィールド**
@@ -86,11 +86,12 @@ GameDesign.md 27章の実装方針。**チュートリアルではなく、既�
 デッキやマナまで持ち越すと1戦目の事故がそのまま2戦目の難度を歪めるため)。
 
 **`CardMatchScreen`は`puzzle`と同じ形で`solo: CardMatchSolo`の公開getterを持つ**
-(`_solo`は`CardMatchBuild`が`_puzzle`と並べて生成する)。`Main._on_solo_stage_selected()`が
-`stage.stage_type`を見て、`PUZZLE`なら`card_match_screen.puzzle.start(stage.puzzle)`、
-それ以外は`card_match_screen.solo.start(stage)`を呼び分ける。`_on_match_ended()`も
+(`_solo`は`CardMatchBuild`が`_puzzle`と並べて生成する)。`CardMatchSolo.start_any()`が
+`stage.stage_type`を見て、`PUZZLE`なら`puzzle.start(stage.puzzle, false, stage)`、
+それ以外は`start(stage)`を呼び分ける。一覧から選んだとき(`Main._on_solo_stage_selected()`)も
+結果パネルの「次のステージへ」もここを通す。`_on_match_ended()`も
 `_puzzle.active()`の直後に`_solo.active()`を同じ形で見て、該当すれば`CardMatchOutcome`
-(通常の砂金・戦績・リプレイ)を素通りする——ソロモードの報酬は`CardMatchSolo._grant()`が
+(通常の砂金・戦績・リプレイ)を素通りする——ソロモードの報酬は`CardMatchSolo.grant_stage_rewards()`が
 別に持つため、`MatchStats`(戦績)へ固定デッキの結果を混ぜない。
 
 **無料の付与は`AccountService.unlock_free(client, uid, kind, id)`の1本に集約する。**
