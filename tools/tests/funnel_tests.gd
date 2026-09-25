@@ -1,13 +1,15 @@
 extends RefCounted
 ## 通過数(GameDesign.md 22章 / Architecture.md 10.9節)を、差し替え用クライアントの上で検証する。
 ##
-## **確かめたいのは4点。**同じ段階は1回しか数えないこと、送れなかった段階は控えに残って
-## 次に送り直されること、日ごとに分けて足されること、数え始める前から遊んでいた端末を数えないこと。
+## **確かめたいのは6点。**同じ段階は1回しか数えないこと、送れなかった段階は控えに残って
+## 次に送り直されること、日ごとに分けて足されること、配信先ごとにも足されること、
+## 数え始める前から遊んでいた端末を数えないこと、ランクマッチは最初の待機だけを追うこと。
 
 const FakeClient = preload("res://tools/tests/fake_firestore_client.gd")
 const TEST_SAVE := "user://funnel_test.json"
 const TEST_UI_SAVE := "user://funnel_test_ui_state.json"
 const OTHER_DAY := "d20000101"
+const SITE := "itch"
 
 var _assert: Callable
 
@@ -49,7 +51,8 @@ func run(assert_true: Callable) -> void:
 
 	var merged := FunnelService.merge(
 		{"days": days},
-		{FunnelService.LAUNCH: OTHER_DAY, FunnelService.HOME: FunnelService.today_key()}
+		{FunnelService.LAUNCH: OTHER_DAY, FunnelService.HOME: FunnelService.today_key()},
+		SITE
 	)
 	var merged_days: Dictionary = merged["days"]
 	_assert.call(
@@ -60,12 +63,47 @@ func run(assert_true: Callable) -> void:
 		int(merged_days[FunnelService.today_key()][FunnelService.HOME]) == 2,
 		"counts should add up within a day"
 	)
+	_assert.call(
+		int(merged["portals"][SITE][OTHER_DAY][FunnelService.LAUNCH]) == 1,
+		"each step should also be counted for the site"
+	)
+	_assert.call(
+		PortalInfo.site_from_place("html-classic.itch.zone https://someone.itch.io/") == "itch",
+		"itch.io should be told apart from its hosts"
+	)
+	_assert.call(
+		PortalInfo.site_from_place("example.com ") == PortalInfo.SITE_OTHER,
+		"an unknown site should fall back to other"
+	)
+	_check_ranked_wait_first_only(tree)
 
 	_check_existing_player_excluded()
 
 	client.queue_free()
 	DirAccess.remove_absolute(TEST_SAVE)
 	FunnelService.use_for_test("")
+
+
+func _check_ranked_wait_first_only(tree: SceneTree) -> void:
+	var tracker := RankedWaitFunnel.new(tree.root)
+	tracker.begin()
+	tracker.switched_to_cpu()
+	tracker.end(FunnelService.RANKED_CANCEL)
+	_assert.call(
+		(
+			FunnelService.has_reached(FunnelService.RANKED_WAIT)
+			and FunnelService.has_reached(FunnelService.RANKED_CPU)
+			and FunnelService.has_reached(FunnelService.RANKED_CANCEL)
+		),
+		"the first wait should be followed to its end"
+	)
+	var second := RankedWaitFunnel.new(tree.root)
+	second.begin()
+	second.end(FunnelService.RANKED_MATCHED)
+	_assert.call(
+		not FunnelService.has_reached(FunnelService.RANKED_MATCHED),
+		"a later wait should not be counted"
+	)
 
 
 func _check_existing_player_excluded() -> void:

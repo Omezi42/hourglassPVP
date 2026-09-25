@@ -369,6 +369,7 @@ func _enter_step() -> void:
 	if _index >= _steps.size():
 		_finish()
 		return
+	FunnelService.reach(FunnelService.tutorial_step(_index))
 	_showing_done = str(_current_step().get("side", "")) == "info"
 	_fact = ""
 	_refresh()

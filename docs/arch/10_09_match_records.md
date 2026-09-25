@@ -68,6 +68,19 @@
 | `tutorial_clear` | `CardMatchTutorial._finish()` で勝って終えたとき |
 | `match_end` / `online_end` | `CardMatchOutcome.finish()`(種別がCPUか、それ以外か) |
 | `online_try` | `Main` のランダム・ランク・ルームの入口 |
+| `tutorial_NN` | `CardMatchTutorial._enter_step()`(NN は台本の手順の番号、2桁) |
+| `ranked_*` | `RankedWaitFunnel`(下記) |
+
+**ランクマッチの待機は `RankedWaitFunnel`(`scripts/ui/ranked_wait_funnel.gd`, RefCounted)が追う。**
+`CardRankedMatchScreen` が1つ持ち、キューへ参加した時点で `begin()` を呼ぶ。`ranked_wait` をまだ通っていない
+(=その端末の最初の待機)ときだけ追い始め、`RANKED_WAIT_SECONDS` の各秒数にタイマーで `ranked_wait_N` を立てる。
+成立(`ranked_matched`)・キャンセル(`ranked_cancel`)・通信失敗で `end()` し、以後のタイマーは番号で無効にする
+(`WaitingCpuOffer` の予約の取り消しと同じ流儀)。CPU戦のボタンは `ranked_cpu` を立てるだけで追跡は続ける。
+
+**配信先ごとの人数は `portals` の下に `{"itch": {"d20260926": {"launch": 1, ...}}}` の形で、`days` と同じ書き込みで
+足す。**配信先は `PortalInfo.site()` が返す(自前の起動部でなければ `unityroom`、起動部ならホスト名と参照元に
+`itch` / `plicy` を含むかで見分け、どれでもなければ `other`)。端末の控え(`user://`)は配信先のオリジンごとに
+分かれるため、段階を通った時点ではなく送る時点で判定してよい。
 
 **サインインは `FunnelService` が送る直前に `NetSession.sign_in()` で行う。**起動しただけの人にも
 匿名アカウントができるが、段階を送るにはどのみちサインインが要る。
