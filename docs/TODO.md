@@ -54,6 +54,16 @@
 
 - [ ] 割り振った最終日が近づいたら `python tools/shorts/schedule.py <日数>` で次の分を出す(とどめ問題が尽きたら先に `make_short.py forge`)
 
+## 0.9 演出の山場(2026-09-26)
+
+仕様は GameDesign.md 9章「演出」・18章「初回の導線」、設計は Architecture.md 10.10.3節。
+
+- [ ] `card_match_screen.gd` から `_reset_for_new_match()` を `CardMatchReset` へ切り出す
+- [ ] 決着の瞬間(`CardMatchFinale` / `HpVesselFx`)
+- [ ] HPが少ないときのひびと鼓動、「決着可能」の光
+- [ ] 毒砂の溶解(`unit_poisoned` / `play_melt()`)
+- [ ] たたかうタブの「つぎはここ」
+
 ## 1. 対局画面の再構築(2026-09-21・実装済み)
 
 仕様は GameDesign.md 9章「対局画面の再構築」、設計は Architecture.md 10.10.0節。
@@ -77,11 +87,6 @@
 ### カードセット
 
 - [ ] クロックタワー(9/11)が58%。総量を下げても下がらないため、効果の側(頻度・範囲)で調整するか判断する
-
-### 紋章の演出でやらなかった分
-
-- [ ] **毒砂**。`CardEffectResolver` を経由せず戦闘の中で解決されるため紋章の仕組みに乗っていない。
-      対象が輪郭ごと溶けるように消える案があれば別途
 
 ### ソロモード
 

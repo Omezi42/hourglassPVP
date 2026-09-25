@@ -65,6 +65,16 @@
 | 攻撃ドラッグの矢印 | `CardDragArrow` |
 | ホバー音 | `SoundBank.Sfx.HOVER`(ホバー専用の `hover.wav`。詳細は9章)。`wire_buttons()` が `mouse_entered` にもつなぎ(無効のボタンを除く)、対局中の駒・手札は `CardView` が直接鳴らす(カーソルの出来事であり盤面の状態ではないため `CardMatchSound` を経由しない) |
 
+## 10.10.3 決着の瞬間・HPが少ないとき・毒砂(GameDesign.md 9章「演出」)
+
+| 仕組み | 持つ場所 |
+|---|---|
+| 終局の受け口 | `CardMatchFinale.on_match_ended()`。`MatchState.match_ended` は手の適用中に出るため、ここでは後始末(`CardMatchOutcome.finish()`)だけを即座に済ませ、見せる側は `_pending` に積む。`CardMatchScreen.on_strike_finished()` と、演出の無い経路のための `call_deferred` の両方から `_try_start()` を呼び、**攻撃・紋章の演出が終わっていればそこで始める**(1度だけ) |
+| 決着の一撃の時間の流れ | `CardMatchFinale.on_impact()`。`CardMatchStrike` / `CardMatchEffectStrike` の当たった瞬間から呼び、終局していてHP0の側があれば `Engine.time_scale` を下げ、`ignore_time_scale` のタイマーで戻す。`CardMatchReset` と画面を離れる経路でも1.0へ戻す |
+| 器の砕け・ひび・鼓動 | `HpVesselFx`(`PlayerInfoBar` の子のオーバーレイ)。ひびの本数はHPから毎回決め(状態を持たない)、砕けは `play_shatter()` の進捗だけを持つ。砕けた後は空の器とひびを残し、`PlayerInfoBar.reset()` で消す |
+| 「決着可能」の光 | `CardMatchDamageAssist.sync()` が前回の判定を控え、偽→真に変わった瞬間だけ光らせる |
+| 毒砂 | `MatchState.unit_poisoned(side, slot)` を毒砂が体力を0にした瞬間に出す。`CardMatchEffects` が枠を控え、続く `unit_destroyed` で `play_break()` の代わりに `CardView.play_melt()` を呼ぶ |
+
 ## 10.10.2 メニュー画面群の手触り(GameDesign.md 9章「操作への反応」)
 
 同じ方針。実装済み。

@@ -13,7 +13,7 @@
 | `CardMatchGeometry` | 座標系の問い合わせ(`hp_bar_center()` / `slot_center()` / `playable_hand_rects()` / `end_turn_button_rect()`)。`CardMatchScreen` の座標定数を読むだけ |
 | `CardView` / `CardViewPaint` / `HandCardPaint` | 駒・札1枚の表示。`Mode.HAND`(枠あり・コスト左上/総量右下)と `Mode.BOARD`(枠なし・台座の上の砂時計・攻撃力左下/体力右下)。**砂術は `Mode.HAND` の中の分岐**(`is_spell` で絵の代わりに紋章・総量バッジなし・枠色変更。`Mode.SPELL` は作らない——場での見た目が存在せず、`BOARD` との組み合わせという有り得ない状態を表現できてしまう)。守護の輪は `guard_frame`(場だけ true)。状態(`health_punch`/`attack_punch`/`unselect_amount`/`counter_offset`/`spark_amount`/strikeの offset・angle・flash)は `CardView` が持ち、描画は `CardViewPaint`(台座・封蝋・バッジ・予測)と `HandCardPaint`(手札の面)が担う。いずれも第1引数に `CardView` を取る |
 | `CardViewStrike` / `CardViewFlourish` | 攻撃の4段の段取り / 相打ちの反撃(`play_counter()`)とドローの合図(`play_spark()`)の Tween。`CardView` に同名の薄い委譲を残す |
-| `CardUnitFx` | `CardView` の子として重ねる演出のうち盤面の状態を参照しないもの(着地 / 崩落 / 硝子の閃光 / `play_recall()`)。崩落は `CardData` を受け取り絵と矩形をその時点で控える(次の同期で `card` が null になるため) |
+| `CardUnitFx` | `CardView` の子として重ねる演出のうち盤面の状態を参照しないもの(着地 / 崩落 / 毒砂の溶解 `play_melt()` / 硝子の閃光 / `play_recall()`)。崩落は `CardData` を受け取り絵と矩形をその時点で控える(次の同期で `card` が null になるため) |
 | `CardDragPreview` / `CardDragArrow` | ドラッグ中に指へ付いてくる絵(速度から傾き)/ 攻撃ドラッグの駒→指先の矢印(自分の場の駒のときだけ) |
 | `CardMatchHandLayout` | 手札の並べ方。**位置は代入せず Tween で滑らせる**。ホバー中の両隣を避け、相手の手番で沈める |
 | `BoardTable` / `PlaymatLibrary` / `PlaymatPaint` | 卓(木の額 / マット2枚 / レール)。マットは `clip_contents` の子層(`MatLayer`)として敷く(模様が卓の外へ漏れる)。**卓とショップの見本で同じ描画関数を通す**。既定は `NONE_ID`(何も敷かない) |
@@ -32,6 +32,8 @@
 | `CardFlipBeam` | 反転の光の筋と駒の裏返り(`play_flip()`)。独立したオーバーレイ(`Control._draw()` は子より背面のため画面側で描くと卓に隠れる) |
 | `CardMatchSound` | 対局中の効果音。**画面側の操作ではなく `MatchState` のシグナルだけを見て鳴らす**(自分の手・CPU・オンライン・再生のすべてが同じ経路を通る) |
 | `CardMatchResult` / `CardMatchOutcome` | 結果パネル / 終局後の後始末(リプレイ保存・砂金・戦績・ミッション・記録) |
+| `CardMatchFinale` / `HpVesselFx` | 決着の瞬間(10.10.3節)。終局の後始末は即座に済ませ、結果パネル・パズル・ソロの締めは手の演出が終わってから出す / HPの器のひびと砕け |
+| `CardMatchReset` | 対局をまたいで残る表示・進行役を片付ける(`_reset_for_new_match()` の中身) |
 | `CardMatchReplay` / `CardMatchOnline` / `CardMatchPuzzle` / `CardMatchSolo` / `CardMatchTutorial` | 再生コントロール / オンラインの3入口 / パズル / ソロ / 誘導対局。いずれも `_screen` 参照の切り出し |
 | `CardMatchEmote` / `EmotePopupPanel` / `EmoteBubble` | エモート(6.6節) |
 | `CardMatchAlert` / `CardMatchDamageAssist` / `CardMatchActionHistory` | 残り15秒の焦燥演出 / 打点アシスト / 直前の手の列 |
