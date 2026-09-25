@@ -39,6 +39,9 @@ const FRAME_W := 1000.0
 const STATUS_TOP := TOP_BAND + 4.0
 const STATUS_ROW := 32.0
 const RANKED_TITLE := "対戦する"
+## 未解放の入口(GameDesign.md 9章)。消さずに錠前を掛けて、解放の条件を添える。
+const LOCK_HINT := "1局遊ぶと解放"
+const LOCK_NOTICE := "CPU戦か対戦を1局遊ぶと解放されます"
 ## 押せないときに札の中身を沈める濃さ(札の面と一緒に暗く見せる)。
 const DISABLED_ALPHA := 0.55
 ## 途中の対局があるときは札そのものが復帰の入口になる(GameDesign.md 9章)。
@@ -63,7 +66,7 @@ var _ranked_tile: HomeTile
 var _ranked_info: RankedEntryInfo
 var _cpu_tile: HomeTile
 var _room_tile: HomeTile
-## CPU戦の下に並ぶ入口。1局終えるまで出さない(GameDesign.md 9章)。
+## CPU戦の下に並ぶ入口。1局終えるまで錠前を掛ける(GameDesign.md 9章)。
 var _later_tiles: Array[HomeTile] = []
 
 @onready var status_label: Label = $Margin/VBox/StatusLabel
@@ -111,14 +114,25 @@ func _build() -> void:
 	_cpu_tile = _make_side_tile("CPU戦", "好きなデッキで1局", "hour")
 	_cpu_tile.pressed.connect(func() -> void: cpu_match_requested.emit())
 	var solo_tile := _make_side_tile("ソロモード", "決まった条件の関門に挑む", "crown")
-	solo_tile.pressed.connect(func() -> void: solo_requested.emit())
+	solo_tile.pressed.connect(_on_later_pressed.bind(solo_tile, solo_requested))
 	var puzzle_tile := _make_side_tile("リーサルパズル", "1手番で仕留める", "sword")
-	puzzle_tile.pressed.connect(func() -> void: puzzle_requested.emit())
+	puzzle_tile.pressed.connect(_on_later_pressed.bind(puzzle_tile, puzzle_requested))
 	_room_tile = _make_side_tile("ルームマッチ", "合言葉で友達と", "shield")
-	_room_tile.pressed.connect(func() -> void: room_match_requested.emit())
+	_room_tile.pressed.connect(_on_later_pressed.bind(_room_tile, room_match_requested))
 	_later_tiles = [solo_tile, puzzle_tile, _room_tile]
+	for tile in _later_tiles:
+		tile.lock_hint = LOCK_HINT
 	move_child(status_label, get_child_count() - 1)
 	_layout()
+
+
+## 未解放の入口は押しても進まず、解放の条件を示す(GameDesign.md 9章)。
+func _on_later_pressed(tile: HomeTile, request: Signal) -> void:
+	if not tile.locked:
+		request.emit()
+		return
+	tile.flash_subtitle()
+	_set_status(LOCK_NOTICE)
 
 
 func _make_side_tile(title: String, subtitle: String, emblem: String) -> HomeTile:
@@ -171,7 +185,7 @@ func refresh() -> void:
 		return
 	var all_open := _all_entries_open()
 	for tile in _later_tiles:
-		tile.visible = all_open
+		tile.locked = not all_open
 	_refresh_resume()
 	_ranked_info.refresh()
 	_refresh_waiting()

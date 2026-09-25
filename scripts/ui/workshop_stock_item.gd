@@ -23,8 +23,6 @@ const PUNCH_DURATION := 0.25
 const PUNCH_SCALE := 0.3
 ## 未所有のカードセットの錠前(GameDesign.md 21章)。暗転だけでは「30枚に達した」と区別できない。
 const LOCK_PLATE_RADIUS := 20.0
-const LOCK_PLATE := Color(0.10, 0.07, 0.05, 0.78)
-const LOCK_BRASS := Color(0.86, 0.68, 0.38)
 
 var card: CardData
 ## デッキへ入れている枚数。上限に達していたら暗くして「2/2」を出す。
@@ -139,7 +137,7 @@ func _draw() -> void:
 	if maxed:
 		_draw_maxed()
 	if locked:
-		_draw_lock(art.get_center())
+		UiPaint.draw_lock(self, art.get_center(), LOCK_PLATE_RADIUS)
 
 
 ## 2枚入れ終えた印。**上端の中央へ置く**——コストとの総量のあいだが唯一空いている
@@ -167,16 +165,6 @@ func _draw_maxed() -> void:
 		15,
 		Color(1.0, 0.86, 0.5)
 	)
-
-
-## 錠前。暗い円の上へ真鍮の錠を描く(掛け金の弧 + 胴)。
-func _draw_lock(center: Vector2) -> void:
-	var r := LOCK_PLATE_RADIUS
-	draw_colored_polygon(UiPaint.circle_points(center, r, 24), LOCK_PLATE)
-	draw_arc(center + Vector2(0, -r * 0.12), r * 0.30, PI, TAU, 12, LOCK_BRASS, r * 0.12)
-	var body := Rect2(center + Vector2(-r * 0.45, -r * 0.12), Vector2(r * 0.9, r * 0.62))
-	draw_colored_polygon(UiPaint.rounded_rect_points_uniform(body, r * 0.1, 3), LOCK_BRASS)
-	draw_circle(body.get_center(), r * 0.09, LOCK_PLATE)
 
 
 ## 絵を置く矩形。棚板の上へ立てるため、下端を名前の帯の手前で止める。

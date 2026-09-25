@@ -599,6 +599,19 @@ static func _emblem_discord(ci: RID, center: Vector2, size: float) -> void:
 	)
 
 
+## 錠前。暗い円の上へ真鍮の錠を描く(掛け金の弧 + 胴)。まだ使えないものの印として
+## デッキ編集の未所有セット・ホームの未解放の入口が共通に使う。
+static func draw_lock(item: CanvasItem, center: Vector2, radius: float) -> void:
+	var r := radius
+	item.draw_colored_polygon(circle_points(center, r, 24), UiPalette.LOCK_PLATE)
+	item.draw_arc(
+		center + Vector2(0, -r * 0.12), r * 0.30, PI, TAU, 12, UiPalette.LOCK_BRASS, r * 0.12
+	)
+	var body := Rect2(center + Vector2(-r * 0.45, -r * 0.12), Vector2(r * 0.9, r * 0.62))
+	item.draw_colored_polygon(rounded_rect_points_uniform(body, r * 0.1, 3), UiPalette.LOCK_BRASS)
+	item.draw_circle(body.get_center(), r * 0.09, UiPalette.LOCK_PLATE)
+
+
 ## 無効/後退(disabled・読み取り専用等)状態の色変換。色自身の輝度へ寄せて彩度を落とした
 ## うえで暗くする(UiPalette.DISABLED_DESATURATE/DISABLED_DARKEN参照)。単純に中間グレーへ
 ## lerpすると暗い元色ほど明るくなってしまう(無効なのに目立つ)ため、必ず暗くなる方向のみへ

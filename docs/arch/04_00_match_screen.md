@@ -132,7 +132,7 @@ v1.0(位相制)の画面・クラス・`data/hourglasses/*.tres` は削除済み
 - `BattleTab` は枠を使わず、左に真鍮の `HomeTile`「対戦する」、右に凹んだ `HomeTile` の縦の列を置く。札と列の大きさは固定。
   札の中身(段位の徽章・段位名・次の段位・シーズンの残り日数・下端の凹んだ行)は `RankedEntryInfo`(札の子。マウスを通す)が `_draw()` で描く。
   **途中の対局があるときは札そのものが復帰の入口になる**(見出しを「対局へ戻る」へ替え、押下を `_on_resume_pressed()` へ回す)。待機人数は `RankedMatchmakingQueue.count_waiting()` をタブが見えている間だけ一定間隔で読む。
-  **右の列を全部出すかは `MatchStats.totals(uid).games > 0` で決める**(誘導対局は戦績に数えないため、誘導対局だけを終えた人は2つのまま。GameDesign.md 9章・19章)
+  **右の列の錠前(`HomeTile.locked` / `lock_hint`。錠前は `UiPaint.draw_lock()` をデッキ編集と共用)を外すかは `MatchStats.totals(uid).games > 0` で決める**(誘導対局は戦績に数えないため、誘導対局だけを終えた人は錠前が掛かったまま。GameDesign.md 9章・19章)
 - `HomeScrim`(`Background` の直後):上=アカウント帯 / 中=タブ / 下=下部タブ を別々の濃さで落とす。**上下は中より濃く、対称に。3つの濃さは揃えて動かす**(片方だけ変えると重心が寄る)。アカウント帯の下端に中央が濃く左右で消える真鍮の細線
 - 下部タブは幅を共通にし高さだけ変える(幅まで変えると `HBoxContainer` で他が押し出される)。非選択を下端へ沈め、選択中だけ帯の中央へ
 - アカウント帯は `.tscn` の幅460pxを `_ready()` で右端まで伸ばし、残高を右へ寄せる(`ACCOUNT_BAR_RIGHT_INSET`)。ホームの残高だけ `CurrencyChip.scale_factor` で大きく、`height_override` で名札と揃える。`CurrencyChip` は単位を小さく数値を大きく別々に描き、紋章と文字のあいだに縦の細線

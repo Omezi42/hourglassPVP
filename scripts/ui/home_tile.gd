@@ -31,6 +31,8 @@ const BADGE_RADIUS := 15.0
 const HOVER_RISE_PX := 3.0
 const HOVER_ALPHA_BOOST := 0.45
 const HOVER_DURATION := 0.16
+## 錠前の半径(紋章の矩形の一辺に対する比)。
+const LOCK_RATIO := 0.3
 
 var title := ""
 var subtitle := ""
@@ -38,6 +40,13 @@ var title_size := 26
 var emblem: Texture2D
 ## 塗りつぶした真鍮の面にする(そのタブでいちばんやってほしいこと1つだけ)。
 var primary := false
+## まだ解放していない入口(GameDesign.md 9章)。押せるが、紋章の代わりに錠前を出し、
+## 副題の代わりに `lock_hint` を沈めた色で出す。消さずに見せるのは「その機能が無い」と思わせないため。
+var locked := false:
+	set(value):
+		locked = value
+		queue_redraw()
+var lock_hint := ""
 ## 0 より大きいとき、右上へ数の印を打つ。
 var badge_count := 0:
 	set(value):
@@ -163,10 +172,13 @@ func _title_center() -> float:
 func _draw() -> void:
 	if _font == null:
 		return
-	var dim := disabled
+	var dim := disabled or locked
 	# 紋章は右側の透かし。**押す先が何なのかを絵でも示す**が、文字を邪魔しない濃さに留める。
 	# ホバー中はわずかに明るく浮く(GameDesign.md 9章)。
-	if emblem != null:
+	if locked:
+		var lock_rect := _emblem_rect()
+		UiPaint.draw_lock(self, lock_rect.get_center(), lock_rect.size.x * LOCK_RATIO)
+	elif emblem != null:
 		draw_texture_rect(
 			emblem,
 			_emblem_rect(),
@@ -176,7 +188,8 @@ func _draw() -> void:
 				EMBLEM_ALPHA * (0.4 if dim else 1.0) * (1.0 + HOVER_ALPHA_BOOST * _hover)
 			)
 		)
-	var has_sub := not subtitle.is_empty()
+	var sub_text := lock_hint if locked else subtitle
+	var has_sub := not sub_text.is_empty()
 	var title_y: float = _title_center() + float(title_size) * 0.36
 	draw_string(
 		_title_font if _title_font != null else _font,
@@ -194,7 +207,7 @@ func _draw() -> void:
 		draw_string(
 			_font,
 			Vector2(PADDING, title_y + float(title_size) * 0.92),
-			subtitle,
+			sub_text,
 			HORIZONTAL_ALIGNMENT_LEFT,
 			_text_width(),
 			maxi(title_size - 10, 13),
