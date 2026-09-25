@@ -146,6 +146,7 @@ v1.0(位相制)の画面・クラス・`data/hourglasses/*.tres` は削除済み
 - `PressTracker`:押下→離した位置が要素内かで確定/取消(`CardView` / `ReplayListCard` / `ClickArea` が共用)
 - `EmptyState`:空の一覧・待機の見せ方(印・見出し・1行)を1箇所へ
 - `CodedButton`:ボタン生成の集約(画面ごとに `theme_override` を並べない)
+- `NumberPad`(`GridContainer`):数字だけの欄へ添える3×4の数字パッド(GameDesign.md 9章)。押した数字を対象の `LineEdit` へ足して `text_changed` を流す(欄の絞り込みをキーボード入力と同じ経路で通す)。キーは `FOCUS_NONE`(欄のフォーカスを奪わない)。「決定」は `with_confirm` のときだけ置き `confirmed` を流す
 - `resources/theme/content_panel.tres`:一覧・詳細・モーダルの汎用パネル
 - **UIクロームはコード描画、3層に分ける**: `UiPalette`(色の単一情報源)/ `UiPaint`(static。**第1引数は `ci: RID`** で `RenderingServer.canvas_item_add_*` 系。`StyleBox._draw()` からは `CanvasItem.draw_*` を呼べないため)/ 各 `StyleBox` 派生と `Control._draw()` 側
   - 質感の要件: **金属の反射カーブは最低5ストップ**(上端のハイライト・中央で落とし・**下端に照り返し**)/ **グレインを alpha 0.05〜0.10 で重ねる**(`static var` で1度生成してtile)/ **枠は上が明るい凸、中央パネルは上が暗い凹**で向きを逆に

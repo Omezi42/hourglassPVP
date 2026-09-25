@@ -28,9 +28,11 @@ const TIME_ON_RECT := Rect2(32, 152, 160, 56)
 const TIME_OFF_RECT := Rect2(204, 152, 160, 56)
 const TIME_NOTE_POS := Vector2(32, 222)
 const CREATE_BUTTON_RECT := Rect2(152, 300, 300, 72)
-const ENTRY_TILES_RECT := Rect2(127, 128, 350, 96)
-const JOIN_BUTTON_RECT := Rect2(62, 300, 230, 72)
-const SPECTATE_BUTTON_RECT := Rect2(312, 300, 230, 72)
+const ENTRY_TILES_RECT := Rect2(32, 120, 300, 80)
+const JOIN_BUTTON_RECT := Rect2(32, 220, 300, 64)
+const SPECTATE_BUTTON_RECT := Rect2(32, 296, 300, 64)
+const PAD_POS := Vector2(364, 120)
+const PAD_KEY_SIZE := Vector2(64, 54)
 const DECK_CAPTION_POS := Vector2(32, 18)
 const DECK_NAME_POS := Vector2(32, 44)
 const DECK_BUTTON_RECT := Rect2(1000, 26, 200, 60)
@@ -88,6 +90,7 @@ var _time_off_button: Button
 var _time_note: Label
 var _create_button: Button
 var _join_tiles: RoomCodeTiles
+var _join_pad: NumberPad
 var _join_button: Button
 var _spectate_button: Button
 var _message_label: Label
@@ -233,6 +236,9 @@ func _build_join_card() -> void:
 	card.add_child(_join_tiles)
 	_join_tiles.make_editable("ルームコード")
 	_join_tiles.submitted.connect(_on_join_pressed)
+	_join_pad = NumberPad.make(_join_tiles.input, PAD_KEY_SIZE, false)
+	_join_pad.position = PAD_POS
+	card.add_child(_join_pad)
 	_join_button = _make_button(card, "参加する", JOIN_BUTTON_RECT, true)
 	_join_button.pressed.connect(_on_join_pressed)
 	_spectate_button = _make_button(card, "観戦する", SPECTATE_BUTTON_RECT, false)
@@ -416,6 +422,7 @@ func _set_busy(busy: bool) -> void:
 	_join_button.disabled = busy
 	_spectate_button.disabled = busy
 	_join_tiles.set_editable(not busy)
+	_join_pad.set_disabled(busy)
 	_refresh_settings()
 
 

@@ -20,11 +20,14 @@ const PANEL_STYLE := "res://resources/theme/content_panel.tres"
 const FIELD_SIZE := Vector2(196, 44)
 const BUTTON_SIZE := Vector2(160, 48)
 const ROW_BUTTON_SIZE := Vector2(132, 44)
+const PAD_TOGGLE_SIZE := Vector2(110, 44)
+const PAD_KEY_SIZE := Vector2(64, 44)
 ## 見本の幅。デッキ表(1280x900)を等倍で縮めて置く。
 const PREVIEW_WIDTH := 640.0
 
 var _own_field: LineEdit
 var _input_field: LineEdit
+var _pad: NumberPad
 var _message: Label
 var _issue_button: Button
 var _load_button: Button
@@ -54,6 +57,7 @@ func open(deck: Array, deck_name: String) -> void:
 	_code = ""
 	_own_field.text = ""
 	_input_field.text = ""
+	_pad.visible = false
 	_message.text = ""
 	_set_busy(false)
 	visible = true
@@ -177,6 +181,7 @@ func _set_busy(busy: bool) -> void:
 	_copy_image_button.disabled = busy or not ImageShare.can_copy()
 	_save_image_button.disabled = busy
 	_input_field.editable = not busy
+	_pad.set_disabled(busy)
 
 
 func _build() -> void:
@@ -278,7 +283,14 @@ func _build_controls() -> Control:
 	MobileTextInput.wire(_input_field, "デッキコード")
 	var load_row := _make_row(_input_field, "読み込む", _on_load_pressed)
 	_load_button = load_row.get_child(1)
+	var pad_toggle := CodedButton.make("テンキー", PAD_TOGGLE_SIZE)
+	pad_toggle.pressed.connect(func() -> void: _pad.visible = not _pad.visible)
+	load_row.add_child(pad_toggle)
 	column.add_child(load_row)
+	_pad = NumberPad.make(_input_field, PAD_KEY_SIZE, true)
+	_pad.visible = false
+	_pad.confirmed.connect(_on_load_pressed)
+	column.add_child(_pad)
 	return column
 
 
