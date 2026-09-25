@@ -17,6 +17,10 @@ const VALUE_FONT_SIZE := 21
 const NOTE_FONT_SIZE := 13
 const NOTE_GAP := 8.0
 const LETHAL_PULSE_SPEED := 0.01
+## 「決着可能」に変わった瞬間の光(GameDesign.md 9章)。脈打ちだけでは変わった瞬間に気づきにくい。
+const LETHAL_FLASH_DURATION := 0.7
+const LETHAL_FLASH_GROW := 6
+const LETHAL_FLASH_RADII := Vector2(46.0, 16.0)
 
 var _screen: CardMatchScreen
 var _font: Font
@@ -24,6 +28,8 @@ var _total_attack := 0
 var _has_guard := false
 var _is_lethal := false
 var _ready_count := 0
+var _lethal_flash := 0.0
+var _flash_tween: Tween
 
 
 func _init(screen: CardMatchScreen) -> void:
@@ -49,10 +55,12 @@ func sync() -> void:
 	var state := _screen.state
 	if state == null or state.is_match_over() or not _screen.is_interactive():
 		visible = false
+		_is_lethal = false
 		return
 
 	if state.current_turn != _screen.my_side:
 		visible = false
+		_is_lethal = false
 		return
 
 	_total_attack = 0
@@ -76,7 +84,10 @@ func sync() -> void:
 			break
 
 	var foe_hp: int = state.hp[foe_side]
+	var was_lethal := _is_lethal
 	_is_lethal = not _has_guard and _total_attack >= foe_hp and foe_hp > 0
+	if _is_lethal and not was_lethal:
+		_play_lethal_flash()
 
 	visible = _ready_count > 0 or _total_attack > 0
 	queue_redraw()
@@ -98,9 +109,34 @@ func _draw() -> void:
 	if _is_lethal:
 		var pulse := (sin(Time.get_ticks_msec() * LETHAL_PULSE_SPEED) + 1.0) * 0.5
 		var color := UiPalette.GLOW_AMBER.lerp(UiPalette.BRASS_HIGHLIGHT, pulse)
-		_text(Vector2(note_x, VALUE_BASELINE - 2.0), "決着可能", NOTE_FONT_SIZE, color)
+		var font_size := NOTE_FONT_SIZE + roundi(LETHAL_FLASH_GROW * _lethal_flash)
+		if _lethal_flash > 0.0:
+			var note_width := (
+				_font.get_string_size("決着可能", HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+			)
+			UiPaint.fill_ellipse(
+				get_canvas_item(),
+				Vector2(note_x + note_width * 0.5, VALUE_BASELINE - 7.0),
+				LETHAL_FLASH_RADII * (0.6 + 0.4 * _lethal_flash),
+				Color(UiPalette.GLOW_AMBER, 0.45 * _lethal_flash),
+				24
+			)
+			color = color.lerp(Color.WHITE, _lethal_flash)
+		_text(Vector2(note_x, VALUE_BASELINE - 2.0), "決着可能", font_size, color)
 	elif _has_guard:
 		_text(Vector2(note_x, VALUE_BASELINE - 2.0), "守護あり", NOTE_FONT_SIZE, UiPalette.TEXT_MUTED)
+
+
+func _play_lethal_flash() -> void:
+	if _flash_tween != null and _flash_tween.is_valid():
+		_flash_tween.kill()
+	_flash_tween = create_tween()
+	_flash_tween.tween_method(_set_lethal_flash, 1.0, 0.0, LETHAL_FLASH_DURATION)
+
+
+func _set_lethal_flash(value: float) -> void:
+	_lethal_flash = value
+	queue_redraw()
 
 
 ## 砂の上でも床の上でも読めるよう、暗い影を1pxずらして敷く(情報帯の数字と同じ)。

@@ -187,6 +187,7 @@ func _on_impact() -> void:
 	_damage.clear()
 	if _defender != null:
 		_defender.play_counter(_defender_dir)
+	_screen.finale.on_impact()
 
 
 func _on_finished() -> void:

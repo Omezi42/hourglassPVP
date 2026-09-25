@@ -18,6 +18,8 @@ signal unit_damaged(side: int, slot: int, amount: int)
 ## 硝子が最初のダメージを1度だけ無効にした(GameDesign.md 9章)。膜が割れたことを
 ## その場で示さないと、次の攻撃が通るかどうかを判断できない。
 signal unit_shielded(side: int, slot: int)
+## 毒砂で体力が0になった。続く `unit_destroyed` を割れではなく溶解で見せるため(GameDesign.md 9章)。
+signal unit_poisoned(side: int, slot: int)
 ## 砂時計が破壊されたとき。
 signal unit_destroyed(side: int, slot: int, card: CardData)
 signal unit_flipped(side: int, slot: int)
@@ -665,8 +667,10 @@ func _resolve_unit_combat(side: int, slot: int, target_slot: int) -> void:
 	_lifesteal(foe_side, defender, dealt_to_attacker)
 	if dealt_to_defender > 0 and attacker.has_keyword(CardEnums.Keyword.POISON):
 		defender.health = 0
+		unit_poisoned.emit(foe_side, target_slot)
 	if dealt_to_attacker > 0 and defender.has_keyword(CardEnums.Keyword.POISON):
 		attacker.health = 0
+		unit_poisoned.emit(side, slot)
 	# 被弾は毒砂まで解決してから。ここで生きている駒だけが発動できる。
 	_resolve_damaged(foe_side, defender, dealt_to_defender)
 	_resolve_damaged(side, attacker, dealt_to_attacker)

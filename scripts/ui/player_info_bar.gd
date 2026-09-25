@@ -122,6 +122,8 @@ var _graveyard := 0
 var _hand := 0
 var _has_coin := false
 var _font: Font
+## HPの器のひび・鼓動・砕け(GameDesign.md 9章「決着の瞬間」)。
+var _vessel: HpVesselFx
 var _tracker := PressTracker.new()
 ## 被弾の演出。HPは瞬時に減らさず、この値から実際の値へ補間する。
 var _shown_hp := float(MatchState.INITIAL_HP)
@@ -155,6 +157,11 @@ func _ready() -> void:
 	custom_minimum_size = Vector2(0, BAR_HEIGHT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	set_process(true)
+	_vessel = HpVesselFx.new()
+	_vessel.vessel_rect = hp_bar_rect()
+	_vessel.badge_center = Vector2(hp_bar_rect().end.x, hp_bar_rect().get_center().y)
+	_vessel.badge_radius = HP_BADGE_RADIUS
+	add_child(_vessel)
 
 
 ## HPの砂粒のきらめきだけを進める(GameDesign.md 9章)。他の変化は従来どおり
@@ -168,6 +175,8 @@ func _process(delta: float) -> void:
 func show_state(state: MatchState, side: int) -> void:
 	var previous := _hp
 	_hp = state.hp[side]
+	if _vessel != null:
+		_vessel.hp = _hp
 	# **最初の1回は演出しない。**教材の盤面(ルール画面・画面の見かた)は初期値30から
 	# 教材用のHPへ差し替えるため、そのままだと開いた瞬間に「-6」が浮いてしまう。
 	if not _initialized:
@@ -203,6 +212,8 @@ func reset() -> void:
 	_hand = 0
 	_has_coin = false
 	_initialized = false
+	if _vessel != null:
+		_vessel.reset()
 	_flash = 0.0
 	_float_left = 0.0
 	_deck_pulse = 0.0
@@ -443,6 +454,12 @@ func deck_pile_rect() -> Rect2:
 ## 相手側だけに出る手札の山。ドローの行き先として使う。
 func hand_pile_rect() -> Rect2:
 	return Rect2(Vector2(_right_x() + HAND_PILE_X, PILE_TOP), PILE_SIZE)
+
+
+## 決着でHPが0になった。器にひびが走って砕ける(GameDesign.md 9章)。
+func play_shatter() -> void:
+	if _vessel != null:
+		_vessel.play_shatter()
 
 
 ## 山札を脈打たせる。`danger` は疲労(GameDesign.md 9章)。

@@ -415,6 +415,15 @@ func play_break(broken: CardData) -> void:
 	_fx.play_break(texture, _fit_art(texture, board_art_box()))
 
 
+## 毒砂で破壊された:割れずに溶け落ちる(GameDesign.md 9章)。
+func play_melt(melted: CardData) -> void:
+	_fx.size = size
+	var texture: Texture2D = melted.icon_fallen if melted != null else null
+	if texture == null:
+		return
+	_fx.play_melt(texture, _fit_art(texture, board_art_box()))
+
+
 ## 硝子が最初のダメージを吸った:膜が割れる閃光を出す。
 func play_glass_break() -> void:
 	if card == null:

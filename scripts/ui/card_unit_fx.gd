@@ -32,6 +32,15 @@ const BREAK_SAND_DRIFT := 26.0
 ## 硝子:膜が割れる閃光。
 const GLASS_DURATION := 0.3
 const GLASS_SHARDS := 8
+## 毒砂:割れずに紫に染まり、上から台座へ溶け落ちる(GameDesign.md 9章)。
+const MELT_DURATION := 0.75
+## 染まりきるまでの割合と、溶けながら裾が広がる量(幅に対する割合)。
+const MELT_TINT_AT := 0.25
+const MELT_SPREAD := 0.3
+const MELT_DRIPS := 5
+const MELT_DRIP_FALL := 18.0
+const MELT_BUBBLES := 4
+const POISON_VIOLET := Color(0.64, 0.36, 0.86, 1.0)
 ## 砂へ還す:紋章に包まれて縮み、手札の方向へ吸い込まれる(GameDesign.md 9章)。
 const RECALL_DURATION := 0.32
 const RECALL_MIN_SCALE := 0.15
@@ -46,6 +55,7 @@ var _land := -1.0
 var _break := -1.0
 var _glass := -1.0
 var _recall := -1.0
+var _melt := -1.0
 ## 崩れ落ちる駒の絵。破壊されると枠が空になるため、その瞬間に控える。
 var _break_texture: Texture2D
 var _break_rect := Rect2()
@@ -58,6 +68,7 @@ var _land_tween: Tween
 var _break_tween: Tween
 var _glass_tween: Tween
 var _recall_tween: Tween
+var _melt_tween: Tween
 
 
 func _ready() -> void:
@@ -83,6 +94,15 @@ func play_break(texture: Texture2D, rect: Rect2) -> void:
 	_break_texture = texture
 	_break_rect = rect
 	_break_tween = _restart(_break_tween, _set_break, BREAK_DURATION)
+
+
+## 毒砂で破壊された。崩落(`play_break`)と同じく枠が空になった後も描き続ける。
+func play_melt(texture: Texture2D, rect: Rect2) -> void:
+	if texture == null:
+		return
+	_break_texture = texture
+	_break_rect = rect
+	_melt_tween = _restart(_melt_tween, _set_melt, MELT_DURATION)
 
 
 ## 硝子が最初のダメージを吸った。
@@ -145,6 +165,11 @@ func _set_glass(value: float) -> void:
 	queue_redraw()
 
 
+func _set_melt(value: float) -> void:
+	_melt = value
+	queue_redraw()
+
+
 func _set_recall(value: float) -> void:
 	_recall = value
 	queue_redraw()
@@ -159,6 +184,8 @@ func _draw() -> void:
 		_draw_glass()
 	if _recall >= 0.0:
 		_draw_recall()
+	if _melt >= 0.0:
+		_draw_melt()
 
 
 ## 着地の砂ぼこり。台座と同じ扁平な楕円を外へ広げ、足元へ粒を散らす。
@@ -304,3 +331,53 @@ func _draw_recall() -> void:
 	UiPaint.draw_ellipse_ring(
 		get_canvas_item(), center, half * 1.15, Color(RECALL_TINT, 0.5 * fade), 1.6, 24
 	)
+
+
+## 毒砂の溶解:絵が紫に染まり、足元を残したまま上から押し潰されて裾が広がる。
+## **ガラスの破片を出さない**ことで、割れる通常の破壊と見分けさせる。
+func _draw_melt() -> void:
+	var t := _melt
+	var tint := Color.WHITE.lerp(POISON_VIOLET, clampf(t / MELT_TINT_AT, 0.0, 1.0))
+	var fade: float = 1.0 - clampf((t - 0.7) / 0.3, 0.0, 1.0)
+	var sink: float = t * t
+	var height: float = _break_rect.size.y * (1.0 - sink)
+	var width: float = _break_rect.size.x * (1.0 + MELT_SPREAD * sink)
+	var bottom: float = _break_rect.end.y
+	var center_x: float = _break_rect.get_center().x
+	if height > 1.0:
+		draw_texture_rect(
+			_break_texture,
+			Rect2(Vector2(center_x - width * 0.5, bottom - height), Vector2(width, height)),
+			false,
+			Color(tint, fade)
+		)
+	var floor_y := CardView.PEDESTAL_CENTER_Y - 2.0
+	var ci := get_canvas_item()
+	UiPaint.fill_ellipse(
+		ci,
+		Vector2(center_x, floor_y),
+		Vector2(CardView.PEDESTAL_RADIUS.x * 0.6 * sink, 5.0 * sink),
+		Color(POISON_VIOLET, 0.75 * fade),
+		28
+	)
+	for i in MELT_DRIPS:
+		var start: float = 0.15 + 0.1 * float(i % 3)
+		var local: float = clampf((t - start) / (1.0 - start), 0.0, 1.0)
+		if local <= 0.0:
+			continue
+		var x: float = center_x + (float(i) - (MELT_DRIPS - 1) * 0.5) * width / float(MELT_DRIPS)
+		var top: float = bottom - height * 0.5
+		var y: float = lerpf(top, floor_y, local) + MELT_DRIP_FALL * local * local * 0.2
+		UiPaint.fill_ellipse(
+			ci,
+			Vector2(x, y),
+			Vector2(2.2, 3.4),
+			Color(POISON_VIOLET, 0.9 * (1.0 - local * 0.5)),
+			12
+		)
+	for i in MELT_BUBBLES:
+		var phase: float = fmod(t * 2.0 + float(i) * 0.27, 1.0)
+		var at := Vector2(center_x + (float(i) - 1.5) * 10.0, floor_y - 4.0 - 16.0 * phase)
+		UiPaint.draw_ring(
+			ci, at, 1.5 + 1.5 * phase, Color(POISON_VIOLET, 0.8 * (1.0 - phase) * fade), 1.0, 12
+		)

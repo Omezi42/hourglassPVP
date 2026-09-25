@@ -25,6 +25,8 @@ var _drop_origin: Dictionary = {}
 ## 手札位置は出す前に消えるため、押した時点(`CardMatchTouch`/`CardMatchSpell`)で
 ## 控えてもらう。控えが無ければ情報帯のマナ数字付近を既定の行き先にする。
 var _spend_origin: Dictionary = {}
+## 毒砂で体力が0になった枠(`"側:枠"`)。続く `unit_destroyed` を溶解で見せる(GameDesign.md 9章)。
+var _poisoned: Dictionary = {}
 
 
 func _init(screen: CardMatchScreen) -> void:
@@ -35,6 +37,7 @@ func watch(state: MatchState) -> void:
 	state.unit_played.connect(_on_unit_played)
 	state.spell_cast.connect(_on_spell_cast)
 	state.unit_destroyed.connect(_on_unit_destroyed)
+	state.unit_poisoned.connect(_on_unit_poisoned)
 	state.unit_shielded.connect(_on_unit_shielded)
 	state.unit_returned.connect(_on_unit_returned)
 	state.cards_drawn.connect(_on_cards_drawn)
@@ -77,6 +80,7 @@ func queue_spend_origin(side: int, global_pos: Vector2) -> void:
 ## 先にそこから台座の中心へ滑ってから着地する。**着地の後に銘板を短く光らせる**
 ## (GameDesign.md 9章「通常の反転と設置の着地」)。
 func _on_unit_played(side: int, slot: int) -> void:
+	_poisoned.erase(_drop_key(side, slot))
 	var view := _screen.view_at(side, slot)
 	var cost: int = _screen.state.board[side][slot].data.cost
 	_play_spend(side, cost)
@@ -122,10 +126,22 @@ func _glide_to_pedestal(view: CardView, global_origin: Vector2) -> void:
 ## そのままだと崩落が紋章の着弾まで持ち越され、「崩落を先に見せてから銘板が飛ぶ」
 ## 順序と逆になる(Architecture.md 4.0節)。
 func _on_unit_destroyed(side: int, slot: int, card: CardData) -> void:
+	var melted := _poisoned.has(_drop_key(side, slot))
+	_poisoned.erase(_drop_key(side, slot))
+	var fall := func() -> void:
+		var view := _screen.view_at(side, slot)
+		if melted:
+			view.play_melt(card)
+		else:
+			view.play_break(card)
 	if _screen.effect_strike.is_death_origin(side, slot):
-		_screen.view_at(side, slot).play_break(card)
+		fall.call()
 		return
-	_defer(func() -> void: _screen.view_at(side, slot).play_break(card))
+	_defer(fall)
+
+
+func _on_unit_poisoned(side: int, slot: int) -> void:
+	_poisoned[_drop_key(side, slot)] = true
 
 
 ## 硝子が最初のダメージを吸った:膜が割れる閃光を出す。

@@ -90,6 +90,10 @@ var drag_arrow: CardDragArrow:
 var effect_strike: CardMatchEffectStrike:
 	get:
 		return _effect_strike
+## 決着の瞬間。攻撃・紋章の進行役が当たった瞬間に呼ぶ。
+var finale: CardMatchFinale:
+	get:
+		return _finale
 ## 当たった瞬間の盤面の揺れ。攻撃の進行役から呼ぶ。
 var shake: CardMatchShake:
 	get:
@@ -134,6 +138,7 @@ var _drag_arrow: CardDragArrow
 var _strike: CardMatchStrike
 var _effect_strike: CardMatchEffectStrike
 var _shake := CardMatchShake.new()
+var _finale: CardMatchFinale
 var _sound: CardMatchSound
 var _effects: CardMatchEffects
 var _targets: CardMatchTargets
@@ -169,6 +174,7 @@ func _ready() -> void:
 	_build()
 	set_process(true)
 	_outcome = CardMatchOutcome.new(self)
+	_finale = CardMatchFinale.new(self)
 	_geometry = CardMatchGeometry.new(self)
 	_strike = CardMatchStrike.new(self)
 	_effect_strike = CardMatchEffectStrike.new(self)
@@ -187,9 +193,6 @@ func _ready() -> void:
 	)
 
 
-## 前の対局の名残を落としてから新しい対局へ入る。結果パネル・ログ・選択・
-## タイマー・通信・棋譜はいずれも画面が使い回されるため対局をまたいで残り、
-## 片付けないと2局目が「対戦終了の表示のまま遊べない」状態になる。
 ## 卓へ敷くマットを決める(GameDesign.md 9章)。自分の設定と相手の設定を別々に受ける。
 ## **公開メソッドにしない**——このクラスは既に gdlint の上限へ張り付いており、
 ## 切り出した進行役(`CardMatchOnline` 等)は他の私設メンバも直に触っている。
@@ -201,89 +204,7 @@ func _set_playmats(own_id: String, foe_id: String) -> void:
 
 
 func _reset_for_new_match() -> void:
-	# **リプレイと観戦は既定のマット**(棋譜はマットを記録しない。GameDesign.md 9章)。
-	# 対局へ入る側がこの後で敷き替える。
-	_set_playmats(PlaymatLibrary.DEFAULT_ID, PlaymatLibrary.DEFAULT_ID)
-	_result.visible = false
-	_log.set_open(false)
-	_log.clear()
-	if _history != null:
-		_history.clear()
-	if _hand_layout != null:
-		_hand_layout.reset()
-	_pile.visible = false
-	_selection.clear()
-	_cpu_timer.stop()
-	_cpu = null
-	_cpu_followup = false
-	if _emote != null:
-		_emote.close_popup()
-	if _replay != null:
-		_replay.stop()
-	if _online != null:
-		# 停止したノードは解放しない(Architecture.md 6.1節)。参照だけを落とす。
-		_online.stop()
-	_setup = null
-	_client = null
-	_match_id = ""
-	_clocks.clear()
-	if _alert != null:
-		_alert.remaining_seconds = -1.0
-		_alert.is_my_turn = false
-	# 前の対局のHP・マナ・山札の枚数・持ち時間が情報帯に残らないようにする
-	# (`reset()` が持ち時間も含めて未初期化の状態へ戻す)。
-	_own_bar.reset()
-	_foe_bar.reset()
-	_cpu_record = {}
-	if _puzzle != null:
-		_puzzle.close()
-	if _solo != null:
-		_solo.close()
-	_status.set_waiting("")
-	_match_start_pending = true
-	if _mulligan != null:
-		_mulligan.close()
-		_mulligan.picking_disabled = false
-	if _tutorial != null:
-		_tutorial.reset_for_new_match()
-	set_process(true)
-	if state != null and is_instance_valid(state):
-		state.queue_free()
-	state = null
-	# **前の対局の盤面をここで消す。**`refresh()` は `state == null` の間ずっと
-	# 早期returnするため、これを怠るとオンライン対戦の山札・種の交換を待っている間
-	# (数秒〜タイムアウトまで数分かかりうる)、前の対局の駒・手札がそのまま
-	# 盤面に残り続ける。「対戦相手を待っています」の文言と実際に動く駒が同時に
-	# 見えるという、対局が壊れているようにしか見えない状態になっていた。
-	for view in _foe_slots + _own_slots:
-		view.clear()
-		view.selected = false
-		view.exhausted = false
-		view.ready_mark = false
-		view.preview_health = -1
-		view.preview_dead = false
-	for view in _hand_views:
-		view.clear()
-		view.visible = false
-	# 行動の列も、次の `refresh()`(`_begin_state()` の中)までは実体の無い
-	# 状態を操作させないよう一旦隠す。**「戻る」だけは例外**——設定を待つ間に
-	# 中断できる導線が無いと、通信が詰まったときに画面へ閉じ込められる
-	# (GameDesign.md 11章「対局が始まる前はいつでも中断してホームへ戻れる」)。
-	# ここでは表示させず、オンライン対戦の開始処理(`CardMatchOnline`)が
-	# 待機に入る直前に明示的に出す。
-	_end_turn_button.visible = false
-	_coin_button.visible = false
-	_log_button.visible = false
-	_surrender_button.visible = false
-	_flip_button.visible = false
-	_back_button.visible = false
-	# エモートボタン・打点アシストはいずれも既定で可視のまま作られ、通常は毎回の
-	# `refresh()` が `state == null` を考慮して隠す。だが `refresh()` 自体が
-	# `state == null` の間は早期returnするため、その経路を借りずここで直接呼ぶ。
-	if _emote != null:
-		_emote.refresh()
-	if _damage_assist != null:
-		_damage_assist.sync()
+	CardMatchReset.run(self)
 
 
 ## CPU戦を開始する。`difficulty` 省略時は前回選んだ思考レベルを使う(GameDesign.md 13章)。
@@ -826,6 +747,7 @@ func _finish_action() -> void:
 ## 攻撃の演出が終わった(攻撃でなければ即座に呼ばれる)。
 func on_strike_finished() -> void:
 	refresh()
+	_finale.on_actions_settled()
 	if _cpu_followup:
 		_cpu_followup = false
 		if _cpu != null and not state.is_match_over():
@@ -961,22 +883,6 @@ func _on_match_ended(_winner: int) -> void:
 	OnlineResume.clear()
 	_selection.clear()
 	_hide_detail()
-	refresh()
 	_stop_polling()
-	# 再生中は結果パネルを出さない。最後の手まで進めるたびに操作を塞ぐと
-	# 前後に動かせなくなるため(GameDesign.md 9章)。
-	if not _interactive:
-		return
-	# パズルは勝敗ではなく正誤で締める(GameDesign.md 24章)。リプレイも砂金も戦績も出さない。
-	if _puzzle != null and _puzzle.active():
-		_puzzle.on_match_ended()
-		return
-	# ソロモードのステージ報酬は`CardMatchSolo`が持つ(GameDesign.md 27章)。同上。
-	if _solo != null and _solo.active():
-		_solo.on_match_ended()
-		return
-	# 終局後の後始末(リプレイ・砂金・戦績)は `CardMatchOutcome` が持つ。
-	var reward := _outcome.finish(_match_kind, _own_deck)
-	var can_rematch := _match_kind == CurrencyRules.MatchKind.CPU
-	var is_tutorial := _tutorial.ran_this_match
-	_result.show_for(state, my_side, state.turn_count, reward, can_rematch, is_tutorial)
+	# 結果パネル等は決着の手の演出が終わってから出す(GameDesign.md 9章「決着の瞬間」)。
+	_finale.on_match_ended()

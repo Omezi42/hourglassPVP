@@ -201,6 +201,7 @@ func _on_impact() -> void:
 	if _spin_target != null:
 		_spin_target.play_flip()
 		_spin_target = null
+	_screen.finale.on_impact()
 
 
 func _on_finished() -> void:
