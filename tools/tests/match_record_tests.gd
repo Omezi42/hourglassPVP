@@ -65,6 +65,18 @@ func run(assert_true: Callable) -> void:
 	_assert.call(record["player_b"] == "uid-b", "both player ids should be kept")
 
 	_assert_stats(client, decks)
+	_assert.call(
+		MatchRecordService.is_recorded_kind(CurrencyRules.MatchKind.RANKED),
+		"ranked matches should be recorded"
+	)
+	_assert.call(
+		MatchRecordService.kind_key(CurrencyRules.MatchKind.RANKED) == "random",
+		"ranked matches should share the key of matches against strangers"
+	)
+	_assert.call(
+		not MatchRecordService.is_recorded_kind(CurrencyRules.MatchKind.CPU),
+		"cpu matches should not be recorded"
+	)
 	state.queue_free()
 	client.queue_free()
 

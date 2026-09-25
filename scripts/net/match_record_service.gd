@@ -57,6 +57,20 @@ static func end_reason_key(reason: int) -> String:
 	return "hp"
 
 
+## ランクマッチ・ルームマッチと、統合前のランダムマッチ(復帰した古い対局)を記録する。
+static func is_recorded_kind(kind: int) -> bool:
+	return (
+		kind
+		in [
+			CurrencyRules.MatchKind.RANKED,
+			CurrencyRules.MatchKind.RANDOM,
+			CurrencyRules.MatchKind.ROOM
+		]
+	)
+
+
+## ランクマッチは「見知らぬ人との対戦」として統合前のランダムと同じ "random" で持つ
+## (戦績画面の「みんな」と分析の道具が同じキーで読むため)。
 static func kind_key(kind: int) -> String:
 	return "room" if kind == CurrencyRules.MatchKind.ROOM else "random"
 

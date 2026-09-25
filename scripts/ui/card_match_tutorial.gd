@@ -380,12 +380,13 @@ func _finish() -> void:
 	if not _active:
 		return
 	var won := _state != null and _state.winner == _my_side
-	FunnelService.reach(FunnelService.TUTORIAL_CLEAR)
 	UiState.mark_tutorial_done()
 	_active = false
 	if not won:
 		visible = false
 		return
+	# 台本は勝ちで終わるため、投了で閉じた人は「終えた」に数えない(GameDesign.md 22章)。
+	FunnelService.reach(FunnelService.TUTORIAL_CLEAR)
 	var closing := str(_current_step().get("done", ""))
 	_index = _steps.size()
 	_callout_active = ""

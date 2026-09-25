@@ -24,8 +24,10 @@
 (GameDesign.md 22章)。
 
 **CPU戦・観戦・リプレイ再生では呼ばれない。**`finish()` 自体が `_interactive` のときにしか
-呼ばれず(観戦・再生を除外)、その中で `_cpu_record` が空でありオンラインの `_match_id` を
-持つ場合だけ記録する。
+呼ばれず(観戦・再生を除外)、その中で種別がランク・ルーム(と統合前のランダム)であり
+オンラインの `_match_id` を持つ場合だけ記録する(`MatchRecordService.is_recorded_kind()`)。
+**ランクマッチの種別キーは `"random"`**(見知らぬ人との対戦。戦績画面の「みんな」が `kind_random` を
+ランクマッチとして読む)。
 
 **集計は版で分けず `stats/global` の1件へ通算で貯める**(GameDesign.md 22章)。
 カードごとの成績は `cards` の下の map(`{id: {"g": 採用局数, "w": 勝った局数}}`)として持つ。
@@ -61,9 +63,9 @@
 | 段階(キー) | 場所 |
 |---|---|
 | `launch` / `return` | `Main._ready()` の `FunnelService.on_launch()` |
-| `home` | `Main._on_title_start_requested()` |
-| `tutorial_start` | `Main._on_tutorial_requested()` |
-| `tutorial_clear` | `CardMatchTutorial` が最後の段階を終えたとき |
+| `home` | `Main._show_only()` でホームを出したとき(「ホームを見た」の印と同じ時点) |
+| `tutorial_start` | `Main._on_tutorial_requested()` と、初回にタイトルから直行する `Main._on_title_start_requested()` |
+| `tutorial_clear` | `CardMatchTutorial._finish()` で勝って終えたとき |
 | `match_end` / `online_end` | `CardMatchOutcome.finish()`(種別がCPUか、それ以外か) |
 | `online_try` | `Main` のランダム・ランク・ルームの入口 |
 | `daily_puzzle` | `Main._on_puzzle_stage_selected()`(今日の1問を選んだとき) |

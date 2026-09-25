@@ -34,7 +34,7 @@
     使われなかった。**足した後は先手2・後手3で5指標すべてが目標圏へ収まることを確認した
     (`docs/BalanceReport_v5.md` 12.4節)
 - マリガンの選択は `choose_mulligan()` が持つ(コスト4以上を戻す)
-- CPUの手番になったら `CardMatchScreen` が `CPU_THINK_SECONDS` の間合いを置いてから
+- CPUの手番になったら `CardMatchCpu`(4.0節)が `CPU_THINK_SECONDS` の間合いを置いてから
   1手だけ適用し、また間合いを置く。**まとめて指すと何が起きたか追えない**ため1手ずつ進める
 - 適用の経路は自分の手・オンラインの手・リプレイ再生と同じ `MatchAction.apply()`。
   CPUのためだけの経路を作らない
