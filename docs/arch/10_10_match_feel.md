@@ -92,5 +92,5 @@
 | 砂金チップの着地 | `DailyMissionPanel` が `CardFlightFx` で飛ばしてから `CurrencyChip.bump()` |
 | デッキ編集の「2/2」の跳ね / 30枚の光り / 絞り込みモーダルの膨らみ | `WorkshopStockItem.count_punch` / `CardDeckShelf.glow_amount`(`rebuild()` で30に達した回だけ)/ `CardDeckFilterModal` の開始スケールをボタン矩形に合わせる |
 | 図鑑のページめくり / ホバー傾き / 並び替えのスライド | `AlmanacPage.turn_to(card)` / `_gui_input()` 近くの tilt Tween / 左ページの一覧も「位置は Tween で滑らせる」方式 |
-| ショップ・アカウント | 購入は `CardFlightFx` で品→チップ → 残高更新 / 名札見本の `bump()` / 買えない品は `enabled=false` の間 `MOUSE_FILTER_IGNORE` |
+| ショップ・アカウント | 購入は `CardFlightFx` で品→チップ → 残高更新 / 見本(`AccountTablePreview`)の `bump()` / 買えない品は `enabled=false` の間 `MOUSE_FILTER_IGNORE` |
 | 一覧の段差フェードイン / 削除の縮小 | `list_reveal_fx.gd` の `stagger(items, step=0.03, max_staggered=8)`(9件目以降は同時)/ 画面側が `scale` を0へ縮めてから配列から取り除く |

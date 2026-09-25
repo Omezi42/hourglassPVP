@@ -1,19 +1,30 @@
 class_name AccountScreen
 extends Control
-## アカウントの状態確認・表示名の変更・アイコン/称号設定・登録・ログイン・ログアウトを行う画面
-## (GameDesign.md 14章、Architecture.md 10.5)。
-## 2カラム構成(左: プロフィール設定 / 右: アカウント管理)。
+## アカウント画面(GameDesign.md 14章、Architecture.md 10.5)。
+## 左 = 自分とアカウント(見本・表示名・状態・登録/ログイン)、右 = 見た目を選ぶ4つのタブ。
+## 選んだものはその場で保存する(保存ボタンを置かない)。
 
 signal back_pressed
 ## 表示名・残高・アイコン・称号が変わったことを通知する。ホーム画面のヘッダーが購読する。
 signal profile_changed
 
+const PANEL_STYLE := "res://resources/theme/content_panel.tres"
 const OK_COLOR := Color(0.62, 0.86, 0.6, 1)
 const ERROR_COLOR := Color(1, 0.55, 0.5, 1)
-const HINT_COLOR := Color(0.86, 0.82, 0.74, 1)
-## アイコン一覧の高さ。初期の8種(2行)がちょうど収まり、買って増えたぶんは
-## スクロールで受ける。
-const ICON_SCROLL_HEIGHT := 96
+const WARNING_COLOR := Color(1, 0.72, 0.45, 1)
+## パネルの横位置は画面中央からの距離で持つ(左520px・右696px、間16px)。
+const LEFT_PANEL_X := Vector2(-616, -96)
+const RIGHT_PANEL_X := Vector2(-80, 616)
+const PANEL_TOP := 128.0
+const PANEL_BOTTOM_MARGIN := 24.0
+const PREVIEW_HEIGHT := 150
+const NAME_CAPTION_WIDTH := 70
+const STATUS_FONT_SIZE := 19
+const SMALL_FONT_SIZE := 14
+const ACCOUNT_BUTTON_SIZE := Vector2(220, 50)
+const DISCORD_BUTTON_SIZE := Vector2(220, 42)
+## 選んでから保存するまでの待ち。続けて選び直したときに書き込みを重ねない。
+const SAVE_DELAY := 0.5
 
 var _busy := false
 var _selected_icon_id := UserProfileLibrary.DEFAULT_ICON_ID
@@ -21,581 +32,368 @@ var _selected_title_id := UserProfileLibrary.DEFAULT_TITLE_ID
 ## いま敷くプレイマット(GameDesign.md 9章・14章)。ショップは買う場所であって
 ## 設定する場所を兼ねないため、選ぶのはここ。
 var _selected_playmat_id := PlaymatLibrary.DEFAULT_ID
+var _saving := false
+var _save_again := false
 
-var _icon_buttons: Dictionary = {}
-var _title_buttons: Dictionary = {}
-var _preview: ProfilePreviewPlate
-
-var _profile_save_button: Button
-var _emote_button: Button
-var _emote_panel: EmoteSlotPanel
-var _register_button: Button
-var _login_button: Button
-var _logout_button: Button
-var _discord_link_button: Button
-var _discord_link_label: Label
+var _preview: AccountTablePreview
+var _name_input: LineEdit
+var _status_label: Label
+var _currency_label: Label
+var _note_label: Label
+var _message_label: Label
+var _guest_row: HBoxContainer
+var _member_row: HBoxContainer
+var _account_buttons: Array[Button] = []
+var _discord_label: Label
+var _looks: AccountLooksTabs
+var _save_label: Label
+var _dialog: AccountCredentialDialog
+var _save_timer: Timer
 
 @onready var screen_header: ScreenHeader = $ScreenHeader
-@onready
-var preview_container: Control = $Panel/Margin/Columns/LeftColumn/PreviewRow/PreviewContainer
-@onready var name_input: LineEdit = $Panel/Margin/Columns/LeftColumn/NameRow/NameInput
-@onready var icon_grid: GridContainer = $Panel/Margin/Columns/LeftColumn/IconGrid
-@onready var playmat_row: HBoxContainer = $Panel/Margin/Columns/LeftColumn/PlaymatRow
-@onready var title_list: VBoxContainer = $Panel/Margin/Columns/LeftColumn/TitleScroll/TitleList
-@onready var save_row: CenterContainer = $Panel/Margin/Columns/LeftColumn/SaveRow
-
-@onready var status_label: Label = $Panel/Margin/Columns/RightColumn/StatusLabel
-@onready var currency_label: Label = $Panel/Margin/Columns/RightColumn/CurrencyLabel
-@onready var credential_box: VBoxContainer = $Panel/Margin/Columns/RightColumn/CredentialBox
-@onready var id_input: LineEdit = $Panel/Margin/Columns/RightColumn/CredentialBox/IdRow/IdInput
-# ノードのパスが1行に収まらないため、1つ上の欄から辿る。
-@onready var password_input: LineEdit = credential_box.get_node("PasswordRow/PasswordInput")
-@onready var button_row: HBoxContainer = $Panel/Margin/Columns/RightColumn/CredentialBox/ButtonRow
-@onready var logout_row: CenterContainer = $Panel/Margin/Columns/RightColumn/LogoutRow
-@onready var message_label: Label = $Panel/Margin/Columns/RightColumn/MessageLabel
 
 
 func _ready() -> void:
 	screen_header.set_title("アカウント")
-	screen_header.back_pressed.connect(func() -> void: back_pressed.emit())
-	name_input.max_length = AccountService.DISPLAY_NAME_MAX_LENGTH
-	name_input.text_changed.connect(_on_name_text_changed)
-	id_input.max_length = FirebaseAuth.ID_MAX_LENGTH
-	TouchScroll.enable(title_list.get_parent())
-	MobileTextInput.wire(name_input, "表示名")
-	MobileTextInput.wire(id_input, "ログインID")
-	MobileTextInput.wire(password_input, "パスワード")
-
-	_setup_buttons()
-	_setup_profile_ui()
-
-
-func _setup_buttons() -> void:
-	_profile_save_button = CodedButton.make("プロフィールを保存", Vector2(240, 46))
-	_profile_save_button.pressed.connect(_on_profile_save_pressed)
-	save_row.add_child(_profile_save_button)
-
-	_register_button = CodedButton.make("登録する", Vector2(170, 48))
-	_register_button.pressed.connect(_on_register_pressed)
-	button_row.add_child(_register_button)
-
-	_login_button = CodedButton.make("ログイン", Vector2(170, 48))
-	_login_button.pressed.connect(_on_login_pressed)
-	button_row.add_child(_login_button)
-
-	_logout_button = CodedButton.make("ログアウト", Vector2(200, 48))
-	_logout_button.pressed.connect(_on_logout_pressed)
-	logout_row.add_child(_logout_button)
-
-	_setup_discord_link_ui()
-
-	# エモートの枠(GameDesign.md 9章)はヘッダーの主アクションから開く。左カラムは
-	# 既に埋まっており、ここへ4つの枠を足すと下端の保存ボタンを押し出すため。
-	_emote_button = CodedButton.make("エモート", Vector2(160, 46))
-	_emote_button.pressed.connect(func() -> void: _emote_panel.open())
-	screen_header.add_action(_emote_button)
-
-
-## Discordアカウントとの連携コード発行(GameDesign.md 26章)。`.tscn` は変えず、
-## 右カラムへ実行時にボタンとラベルを差し込む(`_emote_button` などと同じ流儀)。
-func _setup_discord_link_ui() -> void:
-	var right_column := message_label.get_parent()
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 12)
-	_discord_link_button = CodedButton.make("Discord連携コード", Vector2(190, 42))
-	_discord_link_button.pressed.connect(_on_discord_link_pressed)
-	row.add_child(_discord_link_button)
-	_discord_link_label = Label.new()
-	_discord_link_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_discord_link_label.custom_minimum_size = Vector2(200, 0)
-	_discord_link_label.add_theme_color_override("font_color", HINT_COLOR)
-	row.add_child(_discord_link_label)
-	right_column.add_child(row)
-	right_column.move_child(row, message_label.get_index())
-
-
-func _on_discord_link_pressed() -> void:
-	if _busy:
-		return
-	_set_busy(true)
-	_discord_link_label.text = "発行しています…"
-	var uid := NetSession.auth.uid if NetSession.auth != null else ""
-	var code: String = await DiscordLinkService.publish_code(NetSession.client, uid)
-	_set_busy(false)
-	if code.is_empty():
-		_discord_link_label.text = ""
-		_set_message("連携コードの発行に失敗しました。接続を確認してください。", ERROR_COLOR)
-	else:
-		_discord_link_label.text = "コード: %s" % code
-		_set_message("Discordで「/link %s」と入力してください。" % code, OK_COLOR)
-
-
-func _setup_profile_ui() -> void:
-	_preview = ProfilePreviewPlate.new()
-	preview_container.add_child(_preview)
-	_wrap_icon_grid()
-	_rebuild_icon_grid()
-
-	_emote_panel = EmoteSlotPanel.new()
-	# アンカーは直接代入する(`set_anchors_preset()` は生成直後のサイズ0を保つため)。
-	_emote_panel.anchor_right = 1.0
-	_emote_panel.anchor_bottom = 1.0
-	add_child(_emote_panel)
-
-	_rebuild_title_list()
-
-
-## アイコンはショップ(GameDesign.md 21章)で増えるため、一覧をスクロールできるように
-## `ScrollContainer` を実行時に挟む(`.tscn` は変えない)。9種買うと17個で5行になり、
-## そのままでは左カラム下端の保存ボタンを押し出す。
-func _wrap_icon_grid() -> void:
-	var parent := icon_grid.get_parent()
-	var index := icon_grid.get_index()
-	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(0, ICON_SCROLL_HEIGHT)
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	TouchScroll.enable(scroll)
-	parent.remove_child(icon_grid)
-	scroll.add_child(icon_grid)
-	icon_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	parent.add_child(scroll)
-	parent.move_child(scroll, index)
-
-
-## プレイマットの帯。所有しているマットを横に並べる(アイコン・称号と同じ、
-## 所有しているものだけを出す流儀)。**見本は盤面と同じ `PlaymatPaint` を通す**
-## (選ぶ絵と敷かれる絵を食い違わせない)。
-func _rebuild_playmat_row() -> void:
-	for child in playmat_row.get_children():
-		child.queue_free()
-	for mat_id in AccountService.owned_playmat_ids():
-		var swatch := PlaymatSwatch.new(mat_id)
-		swatch.pressed.connect(func() -> void: _on_playmat_selected(mat_id, true))
-		playmat_row.add_child(swatch)
-
-
-func _on_playmat_selected(mat_id: String, bump_preview: bool = false) -> void:
-	_selected_playmat_id = mat_id
-	for child in playmat_row.get_children():
-		var swatch := child as PlaymatSwatch
-		if swatch != null:
-			swatch.is_selected = swatch.mat_id == mat_id
-			swatch.queue_redraw()
-	if bump_preview and _preview != null:
-		_preview.bump()
-
-
-## 誰でも選べる初期の2つ + 所有を絞る称号(掲示板〈ラボ〉採用の「発案者」・
-## 大会優勝の「箱庭王」)。所有していない称号は一覧に出さない
-## (`_rebuild_icon_grid()` と同じ、所有していないものは選ぶ場所に混ぜない方針)。
-func _rebuild_title_list() -> void:
-	for child in title_list.get_children():
-		child.queue_free()
-	_title_buttons.clear()
-	var ids: Array = UserProfileLibrary.get_available_title_ids().duplicate()
-	for id in AccountService.owned_titles():
-		if not ids.has(id):
-			ids.append(id)
-	for title_id in ids:
-		var item := TitleListItem.new(title_id)
-		item.pressed.connect(func() -> void: _on_title_selected(title_id))
-		title_list.add_child(item)
-		_title_buttons[title_id] = item
-
-
-## 所有しているものだけを並べる(GameDesign.md 14章)。買った直後にも呼ぶ。
-func _rebuild_icon_grid() -> void:
-	for child in icon_grid.get_children():
-		child.queue_free()
-	_icon_buttons.clear()
-	for icon_id in AccountService.owned_icon_ids():
-		var btn := IconButton.new(icon_id)
-		btn.pressed.connect(func() -> void: _on_icon_selected(icon_id))
-		icon_grid.add_child(btn)
-		_icon_buttons[icon_id] = btn
+	screen_header.back_pressed.connect(_on_back_pressed)
+	_save_timer = Timer.new()
+	_save_timer.one_shot = true
+	_save_timer.wait_time = SAVE_DELAY
+	_save_timer.timeout.connect(_save_profile)
+	add_child(_save_timer)
+	_build_left(_panel(LEFT_PANEL_X))
+	_build_right(_panel(RIGHT_PANEL_X))
+	_dialog = AccountCredentialDialog.new()
+	_dialog.submitted.connect(_on_credentials_submitted)
+	# モーダルは最後の子へ置く(後から足した子ほど手前に描かれる)。
+	add_child(_dialog)
 
 
 ## 画面を開くたびにMainが呼ぶ。サインインが済んでいなければここで済ませる。
 func refresh() -> void:
 	_set_busy(true)
-	_set_message("接続しています…", HINT_COLOR)
+	_set_message("接続しています…", UiPalette.TEXT_MUTED)
+	_save_label.text = ""
 	var ok: bool = await NetSession.sign_in()
 	_set_busy(false)
 	if not ok:
 		_set_message("接続できませんでした(%s)。オフラインのままでも遊べます。" % NetSession.last_error, ERROR_COLOR)
 	else:
-		_set_message("", HINT_COLOR)
+		_set_message("", UiPalette.TEXT_MUTED)
+	_load_from_account()
+
+
+## 保存済みの値を画面へ読み込む(開いたとき・ログインやログアウトでアカウントが変わったとき)。
+func _load_from_account() -> void:
 	_selected_icon_id = AccountService.icon_id()
 	_selected_title_id = AccountService.title_id()
 	_selected_playmat_id = AccountService.playmat_id()
-	_rebuild_icon_grid()
-	_rebuild_title_list()
-	_rebuild_playmat_row()
-	_on_playmat_selected(_selected_playmat_id)
-	_refresh_view()
-
-
-func _refresh_view() -> void:
-	var registered: bool = NetSession.auth != null and NetSession.auth.is_registered()
-	if registered:
-		status_label.text = "ログイン中: %s" % NetSession.auth.login_id
-	else:
-		status_label.text = "ゲスト (この端末のゲストとして遊んでいます)"
-	currency_label.text = CurrencyRules.label_text(AccountService.currency())
-	name_input.text = AccountService.display_name()
-
-	# アイコン選択ボタンのハイライト更新
-	for id in _icon_buttons:
-		var btn: IconButton = _icon_buttons[id]
-		btn.is_selected = (id == _selected_icon_id)
-		btn.queue_redraw()
-
-	# 称号ボタンのハイライト更新
-	for id in _title_buttons:
-		var item: TitleListItem = _title_buttons[id]
-		item.is_selected = (id == _selected_title_id)
-		item.queue_redraw()
-
-	# プレビュー更新
+	_name_input.text = AccountService.display_name()
+	_looks.reload(_selected_icon_id, _selected_title_id, _selected_playmat_id)
+	_discord_label.text = ""
+	_refresh_account()
 	_update_preview()
 
-	# 登録済みならIDとパスワードの入力欄は不要。代わりにログアウトを出す
-	credential_box.visible = not registered
-	logout_row.visible = registered
+
+func _refresh_account() -> void:
+	var registered: bool = NetSession.auth != null and NetSession.auth.is_registered()
+	_currency_label.text = CurrencyRules.label_text(AccountService.currency())
+	if registered:
+		_status_label.text = "ID: %s でログイン中" % NetSession.auth.login_id
+		_note_label.text = "別の端末やブラウザからも、このIDとパスワードで続きを遊べます。"
+		_note_label.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
+	else:
+		_status_label.text = "ゲストで遊んでいます"
+		_note_label.text = "ゲストの記録と砂金は、このブラウザにだけ残ります。ブラウザのデータを消すと失われます。IDを登録すると、別の端末からも続きを遊べます。"
+		_note_label.add_theme_color_override("font_color", WARNING_COLOR)
+	_guest_row.visible = not registered
+	_member_row.visible = registered
 	profile_changed.emit()
+
+
+func _update_preview() -> void:
+	_preview.show_profile(
+		_name_input.text, _selected_icon_id, _selected_title_id, _selected_playmat_id
+	)
+
+
+# ---------------------------------------------------------------- 見た目の選択と保存
 
 
 func _on_icon_selected(icon_id: String) -> void:
 	_selected_icon_id = icon_id
-	for id in _icon_buttons:
-		_icon_buttons[id].is_selected = (id == _selected_icon_id)
-		_icon_buttons[id].queue_redraw()
-	_update_preview()
-	if _preview != null:
-		_preview.bump()
+	_on_looks_changed()
 
 
 func _on_title_selected(title_id: String) -> void:
 	_selected_title_id = title_id
-	for id in _title_buttons:
-		_title_buttons[id].is_selected = (id == _selected_title_id)
-		_title_buttons[id].queue_redraw()
+	_on_looks_changed()
+
+
+func _on_playmat_selected(mat_id: String) -> void:
+	_selected_playmat_id = mat_id
+	_on_looks_changed()
+
+
+func _on_looks_changed() -> void:
+	_looks.mark_selected(_selected_icon_id, _selected_title_id, _selected_playmat_id)
 	_update_preview()
-	if _preview != null:
-		_preview.bump()
-
-
-func _update_preview() -> void:
-	if _preview != null:
-		_preview.display_name = name_input.text
-		_preview.icon_id = _selected_icon_id
-		_preview.title_id = _selected_title_id
-		_preview.queue_redraw()
+	_preview.bump()
+	_save_timer.start()
 
 
 func _on_name_text_changed(text: String) -> void:
 	var kept := TextGlyphs.sanitize(text)
 	if kept != text:
-		var caret := maxi(name_input.caret_column - (text.length() - kept.length()), 0)
-		name_input.text = kept
-		name_input.caret_column = caret
+		var caret := maxi(_name_input.caret_column - (text.length() - kept.length()), 0)
+		_name_input.text = kept
+		_name_input.caret_column = caret
 		_set_message("この文字は使えません(絵文字などは表示できません)。", ERROR_COLOR)
 	_update_preview()
 
 
-func _on_profile_save_pressed() -> void:
-	if _busy:
+## 表示名は入力欄から離れたとき・Enterで保存する(1文字ごとに書き込まない)。
+func _commit_name() -> void:
+	if _name_input.text.strip_edges() != AccountService.display_name():
+		_save_timer.stop()
+		_save_profile()
+
+
+## 戻るときは待ちを打ち切ってすぐ保存する(待ちの間に離れても選んだものを消さない)。
+func _on_back_pressed() -> void:
+	if not _save_timer.is_stopped():
+		_save_timer.stop()
+		_save_profile()
+	else:
+		_commit_name()
+	_dialog.visible = false
+	back_pressed.emit()
+
+
+func _save_profile() -> void:
+	if _saving:
+		_save_again = true
 		return
-	_set_busy(true)
+	_saving = true
 	var uid := NetSession.auth.uid if NetSession.auth != null else ""
 	var ok: bool = await AccountService.save_profile(
 		NetSession.client,
 		uid,
-		name_input.text,
+		_name_input.text,
 		_selected_icon_id,
 		_selected_title_id,
 		_selected_playmat_id
 	)
-	_set_busy(false)
+	_saving = false
+	_show_saved(ok)
+	profile_changed.emit()
+	if _save_again:
+		_save_again = false
+		_save_profile()
+
+
+func _show_saved(ok: bool) -> void:
 	if ok:
-		_set_message("プロフィールを保存しました。", OK_COLOR)
+		_save_label.text = "保存しました"
+		_save_label.add_theme_color_override("font_color", OK_COLOR)
 	else:
-		_set_message("プロフィールの保存に失敗しました。接続を確認してください。", ERROR_COLOR)
-	_refresh_view()
+		_save_label.text = "保存できませんでした。接続を確認してください。"
+		_save_label.add_theme_color_override("font_color", ERROR_COLOR)
 
 
-func _on_register_pressed() -> void:
+# ---------------------------------------------------------------- アカウント
+
+
+func _open_dialog(mode: AccountCredentialDialog.Mode) -> void:
 	if _busy:
 		return
+	var registered: bool = NetSession.auth != null and NetSession.auth.is_registered()
+	_dialog.open(mode, -1 if registered else AccountService.currency())
+
+
+func _on_credentials_submitted(
+	mode: AccountCredentialDialog.Mode, login_id: String, password: String
+) -> void:
 	_set_busy(true)
-	_set_message("登録しています…", HINT_COLOR)
-	var error: String = await NetSession.register(id_input.text, password_input.text)
+	var error: String
+	if mode == AccountCredentialDialog.Mode.REGISTER:
+		error = await NetSession.register(login_id, password)
+	else:
+		error = await NetSession.log_in(login_id, password)
 	_set_busy(false)
-	if error == "":
-		password_input.text = ""
+	_dialog.finish(error)
+	if not error.is_empty():
+		return
+	if mode == AccountCredentialDialog.Mode.REGISTER:
 		_set_message("登録しました。次からはこのIDとパスワードでログインできます。", OK_COLOR)
+		_refresh_account()
 	else:
-		_set_message(error, ERROR_COLOR)
-	_refresh_view()
-
-
-func _on_login_pressed() -> void:
-	if _busy:
-		return
-	_set_busy(true)
-	_set_message("ログインしています…", HINT_COLOR)
-	var error: String = await NetSession.log_in(id_input.text, password_input.text)
-	_set_busy(false)
-	if error == "":
-		password_input.text = ""
 		_set_message("ログインしました。", OK_COLOR)
-	else:
-		_set_message(error, ERROR_COLOR)
-	_refresh_view()
+		_load_from_account()
 
 
 func _on_logout_pressed() -> void:
 	if _busy:
 		return
 	_set_busy(true)
-	_set_message("ログアウトしています…", HINT_COLOR)
+	_set_message("ログアウトしています…", UiPalette.TEXT_MUTED)
 	await NetSession.log_out()
 	_set_busy(false)
-	id_input.text = ""
-	password_input.text = ""
 	_set_message("ログアウトしました。ゲストとして遊べます。", OK_COLOR)
-	_refresh_view()
+	_load_from_account()
+
+
+func _on_discord_link_pressed() -> void:
+	if _busy:
+		return
+	_set_busy(true)
+	_discord_label.text = "発行しています…"
+	var uid := NetSession.auth.uid if NetSession.auth != null else ""
+	var code: String = await DiscordLinkService.publish_code(NetSession.client, uid)
+	_set_busy(false)
+	if code.is_empty():
+		_discord_label.text = ""
+		_set_message("連携コードの発行に失敗しました。接続を確認してください。", ERROR_COLOR)
+	else:
+		_discord_label.text = "コード: %s" % code
+		_set_message("Discordで「/link %s」と入力してください。" % code, OK_COLOR)
 
 
 func _set_busy(value: bool) -> void:
 	_busy = value
-	if _profile_save_button != null:
-		_profile_save_button.disabled = value
-	if _register_button != null:
-		_register_button.disabled = value
-	if _login_button != null:
-		_login_button.disabled = value
-	if _logout_button != null:
-		_logout_button.disabled = value
-	if _discord_link_button != null:
-		_discord_link_button.disabled = value
+	for button in _account_buttons:
+		button.disabled = value
 
 
 func _set_message(text: String, color: Color) -> void:
-	message_label.text = text
-	message_label.add_theme_color_override("font_color", color)
+	_message_label.text = text
+	_message_label.add_theme_color_override("font_color", color)
 
 
-## アイコン選択用ボタン(真鍮枠・丸型)
-## プレイマットの見本1枚。押すとそれを敷く。
-class PlaymatSwatch:
-	extends Button
-
-	const SWATCH_SIZE := Vector2(84, 54)
-
-	var mat_id: String
-	var is_selected := false
-	var _font: Font
-
-	func _init(p_mat_id: String) -> void:
-		mat_id = p_mat_id
-		custom_minimum_size = SWATCH_SIZE
-		flat = true
-		# 模様は矩形の外まで伸びる。見本でも必ず切り抜く(BoardTable と同じ理由)。
-		clip_contents = true
-		tooltip_text = PlaymatLibrary.display_name(p_mat_id)
-		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-
-	func _ready() -> void:
-		_font = get_theme_default_font()
-		if _font == null:
-			_font = ThemeDB.fallback_font
-
-	func _draw() -> void:
-		var rect := Rect2(Vector2.ZERO, size)
-		PlaymatPaint.draw_mat(self, rect, mat_id)
-		draw_rect(
-			rect,
-			UiPalette.GLOW_AMBER if is_selected else UiPalette.BRASS_DARK,
-			false,
-			3.0 if is_selected else 1.4
-		)
-		# 「なし」は何も描かれない空の枠になるため、見本だけは文字を添える
-		# (GameDesign.md 9章「所有しているものだけをアカウント画面の一覧に出す」の
-		# 一覧が、押しても何も起きないように見えないようにするため)。
-		if mat_id == PlaymatLibrary.NONE_ID and _font != null:
-			draw_string(
-				_font,
-				Vector2(0, rect.size.y * 0.5 + 5),
-				PlaymatLibrary.display_name(mat_id),
-				HORIZONTAL_ALIGNMENT_CENTER,
-				rect.size.x,
-				14,
-				UiPalette.TEXT_OFFWHITE
-			)
+# ---------------------------------------------------------------- 組み立て
 
 
-class IconButton:
-	extends Button
-	var icon_id: String
-	var is_selected := false
-
-	func _init(p_icon_id: String) -> void:
-		icon_id = p_icon_id
-		custom_minimum_size = Vector2(44, 44)
-		flat = true
-
-	func _draw() -> void:
-		var rect := Rect2(Vector2.ZERO, size)
-		var center := rect.position + rect.size * 0.5
-		var bg_color := Color(0.12, 0.1, 0.08, 0.9)
-		draw_circle(center, 20.0, bg_color)
-		var tex := UserProfileLibrary.get_icon_texture(icon_id)
-		if tex != null:
-			draw_texture_rect(tex, Rect2(center - Vector2(16, 16), Vector2(32, 32)), false)
-		if is_selected:
-			draw_arc(center, 20.0, 0.0, TAU, 28, UiPalette.GLOW_AMBER, 2.5)
-			# 外側の微かなハロー
-			draw_arc(center, 22.0, 0.0, TAU, 28, Color(1.0, 0.84, 0.4, 0.4), 1.0)
-		else:
-			draw_arc(center, 20.0, 0.0, TAU, 28, UiPalette.BRASS_MID, 1.2)
+func _panel(x_range: Vector2) -> VBoxContainer:
+	var panel := PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", load(PANEL_STYLE))
+	panel.anchor_left = 0.5
+	panel.anchor_right = 0.5
+	panel.anchor_bottom = 1.0
+	panel.offset_left = x_range.x
+	panel.offset_right = x_range.y
+	panel.offset_top = PANEL_TOP
+	panel.offset_bottom = -PANEL_BOTTOM_MARGIN
+	add_child(panel)
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 10)
+	panel.add_child(column)
+	return column
 
 
-## 称号選択用リスト項目(真鍮スタイル・選択ハイライト)
-class TitleListItem:
-	extends Button
-	var title_id: String
-	var is_selected := false
-	var _font: Font
+func _build_left(column: VBoxContainer) -> void:
+	column.add_child(_label("対局ではこう見えます", SMALL_FONT_SIZE, UiPalette.TEXT_MUTED))
+	_preview = AccountTablePreview.new()
+	_preview.custom_minimum_size = Vector2(0, PREVIEW_HEIGHT)
+	column.add_child(_preview)
 
-	func _init(p_title_id: String) -> void:
-		title_id = p_title_id
-		custom_minimum_size = Vector2(0, 34)
-		flat = true
+	var name_row := HBoxContainer.new()
+	name_row.add_theme_constant_override("separation", 12)
+	column.add_child(name_row)
+	var caption := _label("表示名", 16, UiPalette.TEXT_OFFWHITE)
+	caption.custom_minimum_size = Vector2(NAME_CAPTION_WIDTH, 0)
+	name_row.add_child(caption)
+	_name_input = LineEdit.new()
+	_name_input.placeholder_text = "10文字まで"
+	_name_input.max_length = AccountService.DISPLAY_NAME_MAX_LENGTH
+	_name_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_name_input.text_changed.connect(_on_name_text_changed)
+	_name_input.text_submitted.connect(func(_text: String) -> void: _commit_name())
+	_name_input.focus_exited.connect(_commit_name)
+	MobileTextInput.wire(_name_input, "表示名")
+	name_row.add_child(_name_input)
 
-	func _ready() -> void:
-		_font = get_theme_default_font()
-		if _font == null:
-			_font = ThemeDB.fallback_font
+	column.add_child(HSeparator.new())
+	var status_row := HBoxContainer.new()
+	column.add_child(status_row)
+	_status_label = _label("", STATUS_FONT_SIZE, UiPalette.TEXT_OFFWHITE)
+	_status_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	status_row.add_child(_status_label)
+	_currency_label = _label("", STATUS_FONT_SIZE, UiPalette.BRASS_HIGHLIGHT)
+	status_row.add_child(_currency_label)
+	_note_label = _wrapping_label(SMALL_FONT_SIZE)
+	column.add_child(_note_label)
 
-	func _draw() -> void:
-		var rect := Rect2(Vector2.ZERO, size)
-		var points := UiPaint.rounded_rect_points_uniform(rect, 4.0, 4)
-		var bg_top := Color(0.18, 0.15, 0.12, 0.9) if is_selected else Color(0.1, 0.08, 0.07, 0.8)
-		var bg_bottom := (
-			Color(0.12, 0.1, 0.08, 0.9) if is_selected else Color(0.06, 0.05, 0.04, 0.8)
-		)
-		UiPaint.fill_gradient_polygon(
-			get_canvas_item(), points, rect, [[0.0, bg_top], [1.0, bg_bottom]]
-		)
+	var spacer := Control.new()
+	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	column.add_child(spacer)
+	_message_label = _wrapping_label(SMALL_FONT_SIZE)
+	_message_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	column.add_child(_message_label)
 
-		var outline := points.duplicate()
-		outline.append(points[0])
-		var border_color := UiPalette.GLOW_AMBER if is_selected else UiPalette.BRASS_DARK
-		var border_width := 1.5 if is_selected else 1.0
-		draw_polyline(outline, border_color, border_width, true)
+	_guest_row = _button_row(column)
+	var register := CodedButton.make_in_group(
+		"IDを登録する", ACCOUNT_BUTTON_SIZE, CodedButton.PRIMARY_ACTION_GROUP
+	)
+	register.pressed.connect(_open_dialog.bind(AccountCredentialDialog.Mode.REGISTER))
+	_add_account_button(_guest_row, register)
+	var login := CodedButton.make("登録済みのIDで入る", ACCOUNT_BUTTON_SIZE)
+	login.pressed.connect(_open_dialog.bind(AccountCredentialDialog.Mode.LOGIN))
+	_add_account_button(_guest_row, login)
 
-		if _font == null:
-			return
-		var mark := "◆ " if is_selected else "   "
-		var text := mark + UserProfileLibrary.get_title_name(title_id)
-		var text_color := UiPalette.GLOW_AMBER if is_selected else UiPalette.TEXT_OFFWHITE
-		draw_string(
-			_font, Vector2(12, size.y - 10), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, text_color
-		)
+	_member_row = _button_row(column)
+	var logout := CodedButton.make("ログアウト", ACCOUNT_BUTTON_SIZE)
+	logout.pressed.connect(_on_logout_pressed)
+	_add_account_button(_member_row, logout)
+
+	var discord_row := _button_row(column)
+	var discord := CodedButton.make("Discordと連携", DISCORD_BUTTON_SIZE)
+	discord.pressed.connect(_on_discord_link_pressed)
+	_add_account_button(discord_row, discord)
+	_discord_label = _label("", 16, UiPalette.BRASS_HIGHLIGHT)
+	discord_row.add_child(_discord_label)
 
 
-## 名札見本プレビュー
-class ProfilePreviewPlate:
-	extends Control
-	## アイコン・称号・マットを選んだ瞬間の跳ねの倍率と尺(GameDesign.md 9章)。
-	const BUMP_SCALE := 1.08
-	const BUMP_DURATION := 0.16
+func _build_right(column: VBoxContainer) -> void:
+	_looks = AccountLooksTabs.new()
+	_looks.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_looks.icon_selected.connect(_on_icon_selected)
+	_looks.title_selected.connect(_on_title_selected)
+	_looks.playmat_selected.connect(_on_playmat_selected)
+	_looks.emote_saved.connect(_show_saved)
+	column.add_child(_looks)
+	var foot := HBoxContainer.new()
+	column.add_child(foot)
+	_save_label = _label("", SMALL_FONT_SIZE, OK_COLOR)
+	_save_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	foot.add_child(_save_label)
+	foot.add_child(_label("選ぶとすぐに反映され、保存されます", SMALL_FONT_SIZE, UiPalette.TEXT_MUTED))
 
-	var display_name := ""
-	var icon_id := ""
-	var title_id := ""
-	var font: Font
-	var _bump_tween: Tween
 
-	func _ready() -> void:
-		custom_minimum_size = Vector2(170, 42)
-		pivot_offset = custom_minimum_size * 0.5
-		font = get_theme_default_font()
-		if font == null:
-			font = ThemeDB.fallback_font
+func _button_row(parent: Container) -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 14)
+	parent.add_child(row)
+	return row
 
-	## 選んだ瞬間の合図。リアルタイムプレビュー自体は既に更新済みで、
-	## 「変わった」ことを目で追える短い跳ねを足すだけ。
-	func bump() -> void:
-		if _bump_tween != null and _bump_tween.is_valid():
-			_bump_tween.kill()
-		scale = Vector2.ONE
-		_bump_tween = create_tween()
-		(
-			_bump_tween
-			. tween_property(self, "scale", Vector2.ONE * BUMP_SCALE, BUMP_DURATION * 0.4)
-			. set_trans(Tween.TRANS_SINE)
-			. set_ease(Tween.EASE_OUT)
-		)
-		(
-			_bump_tween
-			. tween_property(self, "scale", Vector2.ONE, BUMP_DURATION * 0.6)
-			. set_trans(Tween.TRANS_SINE)
-			. set_ease(Tween.EASE_IN)
-		)
 
-	func _draw() -> void:
-		var rect := Rect2(0, 0, 170, 40)
-		var points := UiPaint.rounded_rect_points_uniform(rect, 6.0, 5)
-		UiPaint.fill_gradient_polygon(
-			get_canvas_item(),
-			points,
-			rect,
-			[[0.0, UiPalette.NAMEPLATE_PANEL_TOP], [1.0, UiPalette.NAMEPLATE_PANEL_BOTTOM]]
-		)
-		var outline := points.duplicate()
-		outline.append(points[0])
-		draw_polyline(outline, UiPalette.BRASS_LIGHT, 1.5, true)
+func _add_account_button(row: HBoxContainer, button: Button) -> void:
+	row.add_child(button)
+	_account_buttons.append(button)
 
-		var icon_rect := Rect2(6, 6, 28, 28)
-		var icon_center := icon_rect.position + icon_rect.size * 0.5
-		var icon_tex := UserProfileLibrary.get_icon_texture(icon_id)
-		if icon_tex != null:
-			draw_texture_rect(icon_tex, icon_rect, false)
-		draw_arc(icon_center, 14.5, 0.0, TAU, 20, UiPalette.BRASS_LIGHT, 1.5)
 
-		var title_text := UserProfileLibrary.get_title_display(title_id)
-		var label := display_name.strip_edges()
-		if label.is_empty():
-			label = "ゲスト"
-		var text_x := 40.0
-		if not title_text.is_empty():
-			draw_string(
-				font,
-				Vector2(text_x, 16),
-				title_text,
-				HORIZONTAL_ALIGNMENT_LEFT,
-				120,
-				11,
-				UiPalette.BRASS_HIGHLIGHT
-			)
-			draw_string(
-				font,
-				Vector2(text_x, 32),
-				label,
-				HORIZONTAL_ALIGNMENT_LEFT,
-				120,
-				15,
-				UiPalette.TEXT_OFFWHITE
-			)
-		else:
-			draw_string(
-				font,
-				Vector2(text_x, 26),
-				label,
-				HORIZONTAL_ALIGNMENT_LEFT,
-				120,
-				17,
-				UiPalette.TEXT_OFFWHITE
-			)
+func _label(text: String, font_size: int, color: Color) -> Label:
+	var label := Label.new()
+	label.text = text
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", color)
+	return label
+
+
+func _wrapping_label(font_size: int) -> Label:
+	var label := Label.new()
+	# 折り返しは幅が決まる前に立てる(Pitfalls「autowrap_mode は size より先に」)。
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	label.add_theme_font_size_override("font_size", font_size)
+	return label
