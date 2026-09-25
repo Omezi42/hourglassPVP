@@ -18,6 +18,7 @@ const TUTORIAL_CLEAR := "tutorial_clear"
 const MATCH_END := "match_end"
 const ONLINE_TRY := "online_try"
 const ONLINE_END := "online_end"
+const DAILY_PUZZLE := "daily_puzzle"
 
 const KEY_FIRST_DAY := "first_day"
 const KEY_SENT := "sent"

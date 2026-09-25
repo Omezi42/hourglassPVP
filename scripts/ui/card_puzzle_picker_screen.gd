@@ -59,14 +59,24 @@ func _build() -> void:
 func _refresh() -> void:
 	for child in _grid.get_children():
 		child.queue_free()
-	# **エンドレス(GameDesign.md 24章)は一覧の先頭に固定で置く。**Stage1〜10とは
-	# 別枠であり、一覧が空でも常に遊べる入口として出す。
+	var uid := _uid()
+	# 今日の1問が先頭、エンドレスがその次(GameDesign.md 24章)。どちらもStage1〜10とは別枠。
+	var daily := DailyPuzzle.today()
+	if daily != null:
+		_grid.add_child(_make_daily_card(daily, PuzzleProgress.is_cleared(uid, daily.id)))
 	_grid.add_child(_make_endless_card())
 	var stages := PuzzleLibrary.all_stages()
-	var uid := _uid()
 	for stage in stages:
 		_grid.add_child(_make_card(stage, PuzzleProgress.is_cleared(uid, stage.id)))
 	ListRevealFx.stagger(_grid.get_children())
+
+
+func _make_daily_card(stage: PuzzleStageData, cleared: bool) -> Control:
+	return _make_entry_card(
+		"今日の1問%s" % ("  ★" if cleared else ""),
+		"%s ・ 初回クリアで%d砂金" % [stage.title, PuzzleProgress.CLEAR_REWARD],
+		func() -> void: stage_selected.emit(stage)
+	)
 
 
 ## エンドレスの入口。Stage1〜10と同じ札の形を使い、狙いを1行添える

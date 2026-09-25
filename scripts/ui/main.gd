@@ -166,7 +166,12 @@ func _ready() -> void:
 	puzzle_picker_screen = CardPuzzlePickerScreen.new()
 	puzzle_picker_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
 	puzzle_picker_screen.visible = false
-	puzzle_picker_screen.back_pressed.connect(func() -> void: _show_only(home_screen, true))
+	puzzle_picker_screen.back_pressed.connect(
+		func() -> void:
+			# 今日の1問を解いたかどうかを、たたかうタブの副題へ映す(GameDesign.md 24章)。
+			home_screen.refresh_battle_tab()
+			_show_only(home_screen, true)
+	)
 	puzzle_picker_screen.stage_selected.connect(_on_puzzle_stage_selected)
 	puzzle_picker_screen.endless_selected.connect(_on_puzzle_endless_selected)
 	add_child(puzzle_picker_screen)
@@ -559,6 +564,8 @@ func _on_puzzle_requested() -> void:
 
 
 func _on_puzzle_stage_selected(stage: PuzzleStageData) -> void:
+	if DailyPuzzle.is_daily(stage):
+		FunnelService.reach(FunnelService.DAILY_PUZZLE)
 	card_match_screen.puzzle.start(stage)
 	_match_return_screen = puzzle_picker_screen
 	_show_only(card_match_screen)

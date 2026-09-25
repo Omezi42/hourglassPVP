@@ -66,6 +66,7 @@
 | `tutorial_clear` | `CardMatchTutorial` が最後の段階を終えたとき |
 | `match_end` / `online_end` | `CardMatchOutcome.finish()`(種別がCPUか、それ以外か) |
 | `online_try` | `Main` のランダム・ランク・ルームの入口 |
+| `daily_puzzle` | `Main._on_puzzle_stage_selected()`(今日の1問を選んだとき) |
 
 **サインインは `FunnelService` が送る直前に `NetSession.sign_in()` で行う。**起動しただけの人にも
 匿名アカウントができるが、段階を送るにはどのみちサインインが要る。
