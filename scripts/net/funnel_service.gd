@@ -19,6 +19,15 @@ const MATCH_END := "match_end"
 const ONLINE_TRY := "online_try"
 const ONLINE_END := "online_end"
 const DAILY_PUZZLE := "daily_puzzle"
+## 誘導対局の手順(`tutorial_step()` で番号を付ける)。
+const TUTORIAL_STEP_FORMAT := "tutorial_%02d"
+## ランクマッチの最初の待機(`RankedWaitFunnel`)。
+const RANKED_WAIT := "ranked_wait"
+const RANKED_WAIT_SECONDS: Array[int] = [5, 15, 30, 60]
+const RANKED_WAIT_FORMAT := "ranked_wait_%d"
+const RANKED_CPU := "ranked_cpu"
+const RANKED_MATCHED := "ranked_matched"
+const RANKED_CANCEL := "ranked_cancel"
 
 const KEY_FIRST_DAY := "first_day"
 const KEY_SENT := "sent"
@@ -96,20 +105,37 @@ static func send(client: FirestoreClient, batch: Dictionary) -> bool:
 		var precondition: Dictionary = (
 			{"updateTime": meta["update_time"]} if meta.get("exists", false) else {"exists": false}
 		)
-		var updated := merge(meta.get("fields", {}), batch)
+		var updated := merge(meta.get("fields", {}), batch, PortalInfo.site())
 		if await client.commit([client.update_write(STATS_PATH, updated, precondition)]):
 			return true
 	return false
 
 
-static func merge(fields: Dictionary, batch: Dictionary) -> Dictionary:
+## 合計(`days`)と配信先ごと(`portals`)の両方へ同じ段階を足す。
+static func merge(fields: Dictionary, batch: Dictionary, site: String) -> Dictionary:
 	var days: Dictionary = (fields.get("days", {}) as Dictionary).duplicate(true)
+	var portals: Dictionary = (fields.get("portals", {}) as Dictionary).duplicate(true)
+	var site_days: Dictionary = portals.get(site, {})
 	for step: String in batch:
 		var day: String = batch[step]
-		var counts: Dictionary = days.get(day, {})
-		counts[step] = int(counts.get(step, 0)) + 1
-		days[day] = counts
-	return {"days": days, "updated_at": Time.get_unix_time_from_system()}
+		_bump(days, day, step)
+		_bump(site_days, day, step)
+	portals[site] = site_days
+	return {"days": days, "portals": portals, "updated_at": Time.get_unix_time_from_system()}
+
+
+static func _bump(days: Dictionary, day: String, step: String) -> void:
+	var counts: Dictionary = days.get(day, {})
+	counts[step] = int(counts.get(step, 0)) + 1
+	days[day] = counts
+
+
+static func tutorial_step(index: int) -> String:
+	return TUTORIAL_STEP_FORMAT % index
+
+
+static func ranked_wait_after(seconds: int) -> String:
+	return RANKED_WAIT_FORMAT % seconds
 
 
 ## Firestoreのフィールドパスで数字始まりを避けるため、先頭に英字を付ける。

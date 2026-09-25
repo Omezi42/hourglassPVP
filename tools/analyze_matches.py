@@ -68,6 +68,21 @@ FUNNEL_STEPS = [
     ("daily_puzzle", "今日の1問を始めた"),
     ("return", "別の日に来た"),
 ]
+TUTORIAL_SCRIPT = ROOT / "resources" / "tutorial" / "tutorial_script.tres"
+TUTORIAL_STEP_KEY = "tutorial_%02d"
+TUTORIAL_TEXT_CHARS = 18
+TUTORIAL_SIDES = {"a": "あなた", "b": "CPU", "info": "説明"}
+# ランクマッチの最初の待機(funnel_service.gd の RANKED_* と同じ)。割合は待機を始めた人に対して出す。
+RANKED_WAIT_SECONDS = [5, 15, 30, 60]
+RANKED_STEPS = (
+    [("ranked_wait", "待機を始めた")]
+    + [("ranked_wait_%d" % s, "%d秒待った" % s) for s in RANKED_WAIT_SECONDS]
+    + [
+        ("ranked_cpu", "CPU戦へ切り替えた"),
+        ("ranked_matched", "人と対戦が成立した"),
+        ("ranked_cancel", "自分でやめた"),
+    ]
+)
 # これに満たないカードは、勝率が偶然で大きく振れるため一覧から省く。
 MIN_CARD_SAMPLES = 5
 
@@ -159,26 +174,70 @@ def fetch_funnel(project, token):
         if error.code == 404:
             return {}
         sys.exit("読み取りに失敗しました(%d): %s" % (error.code, error.read().decode("utf-8")[:400]))
-    fields = dict((k, decode(v)) for k, v in body.get("fields", {}).items())
-    return fields.get("days", {})
+    return dict((k, decode(v)) for k, v in body.get("fields", {}).items())
 
 
-def funnel_report(days, within_days):
-    """段階ごとの人数と、起動に対する割合。日のキーは "d20260925" の形。"""
+def sum_days(days, within_days):
+    """日のキーは "d20260925" の形。期間内の日を足し合わせて (合計, 日数) を返す。"""
     if within_days:
         start = time.strftime("d%Y%m%d", time.localtime(time.time() - within_days * 86400))
         days = dict((day, counts) for day, counts in days.items() if day > start)
     totals = Counter()
     for counts in days.values():
         totals.update(counts)
-    span = "直近%d日" % within_days if within_days else "通算"
-    lines = ["## 来た人がどの段階まで進んだか(%s・%d日分)" % (span, len(days)), ""]
-    lines += ["| 段階 | 人数 | 起動に対して |", "|---|---|---|"]
-    launched = totals.get("launch", 0)
-    for key, label in FUNNEL_STEPS:
+    return totals, len(days)
+
+
+def ratio_table(totals, steps, base_key, base_label):
+    lines = ["| 段階 | 人数 | %sに対して |" % base_label, "|---|---|---|"]
+    base = totals.get(base_key, 0)
+    for key, label in steps:
         count = totals.get(key, 0)
-        ratio = "%.0f%%" % (100.0 * count / launched) if launched else "—"
+        ratio = "%.0f%%" % (100.0 * count / base) if base else "—"
         lines.append("| %s | %d | %s |" % (label, count, ratio))
+    return lines
+
+
+def tutorial_steps():
+    """台本の手順を (キー, 見出し) で返す。見出しは番号・誰の手か・種類・指示の冒頭。"""
+    text = TUTORIAL_SCRIPT.read_text(encoding="utf-8")
+    body = text[text.index("steps = ") :]
+    steps = []
+    for index, chunk in enumerate(re.split(r"\}, \{", body)):
+        side = re.search(r'"side": "(\w+)"', chunk)
+        kind = re.search(r'"kind": "(\w+)"', chunk)
+        words = re.search(r'"(?:text|wait_text)": "([^"\\]*)', chunk)
+        label = "%02d %s %s %s" % (
+            index,
+            TUTORIAL_SIDES.get(side.group(1) if side else "", "?"),
+            kind.group(1) if kind else "",
+            words.group(1)[:TUTORIAL_TEXT_CHARS] if words else "",
+        )
+        steps.append((TUTORIAL_STEP_KEY % index, label))
+    return steps
+
+
+def funnel_report(fields, within_days):
+    """段階ごとの人数(起動に対する割合)・誘導対局の手順・ランクマッチの待機・配信先ごと。"""
+    totals, day_count = sum_days(fields.get("days", {}), within_days)
+    span = "直近%d日" % within_days if within_days else "通算"
+    lines = ["## 来た人がどの段階まで進んだか(%s・%d日分)" % (span, day_count), ""]
+    lines += ratio_table(totals, FUNNEL_STEPS, "launch", "起動")
+    lines += ["", "## 誘導対局の手順ごと(台本を書き換えた日をまたいで比べない)", ""]
+    lines += ratio_table(totals, tutorial_steps(), "tutorial_start", "始めた人")
+    lines += ["", "## ランクマッチの最初の待機", ""]
+    lines += ratio_table(totals, RANKED_STEPS, "ranked_wait", "待機を始めた人")
+    sites = dict(
+        (site, sum_days(days, within_days)[0])
+        for site, days in sorted(fields.get("portals", {}).items())
+    )
+    if sites:
+        lines += ["", "## 配信先ごと", ""]
+        lines.append("| 段階 | " + " | ".join(sites) + " |")
+        lines.append("|---|" + "---|" * len(sites))
+        for key, label in FUNNEL_STEPS:
+            counts = " | ".join(str(site_totals.get(key, 0)) for site_totals in sites.values())
+            lines.append("| %s | %s |" % (label, counts))
     return "\n".join(lines)
 
 
