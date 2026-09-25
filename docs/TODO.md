@@ -143,8 +143,7 @@
 
 ## 5. 技術的負債・整理
 
-- [ ] `card_match_screen.gd` が1000行ちょうど(コメント1行も足せない)。`card_view.gd` 888行、`card_effect_preview.gd` 824行。
-      足す前に切り出す
+- [ ] `card_effect_preview.gd` 852行・`card_match_tutorial.gd` 866行。足す前に切り出す
 - [ ] `run_tests.gd` と `v5_rules_tests.gd` が上限に近い。新しいテストは別ファイルへ
 - [ ] 本文用フォント1.66MBがpckの4割。自由入力があるためサブセット化できず、起動時間を詰める必要が出た時点で判断
 - [ ] Discord用の生成物が63MB(カード画像7.6MB・GIF55MB)。次にカードを増やす回にGIFの色数・尺を削るか判断

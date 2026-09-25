@@ -148,8 +148,8 @@ Discord用のカード画像・実演GIF(10.14節)を作る過程で踏んだも
 
 ### 行数の上限
 
-- gdlint の `max-file-lines` が1000行。`card_match_screen.gd` と `run_tests.gd` は
-  この上限に張り付いているため、**足す前に切り出す**
+- gdlint の `max-file-lines` が1000行。`run_tests.gd` は上限に張り付き、`card_effect_preview.gd` /
+  `card_match_tutorial.gd` / `card_view.gd` も800行台にあるため、**足す前に切り出す**
   (`_screen` 参照を持つ `RefCounted` へ分ける既存の流儀に従う)
 
 ---

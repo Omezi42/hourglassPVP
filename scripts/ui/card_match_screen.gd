@@ -164,6 +164,8 @@ var _solo: CardMatchSolo
 var _geometry: CardMatchGeometry
 var _touch: CardMatchTouch
 var _hand_layout: CardMatchHandLayout
+var _cpu_ctl: CardMatchCpu
+var _pointer: CardMatchPointer
 
 
 func _ready() -> void:
@@ -171,6 +173,8 @@ func _ready() -> void:
 	# 後から作ると接続の時点で null を掴む(`_detail` を後から作って踏んだのと同じ穴)。
 	_touch = CardMatchTouch.new(self)
 	_hand_layout = CardMatchHandLayout.new(self)
+	_cpu_ctl = CardMatchCpu.new(self)
+	_pointer = CardMatchPointer.new(self)
 	_build()
 	set_process(true)
 	_outcome = CardMatchOutcome.new(self)
@@ -217,39 +221,7 @@ func start_cpu_match(
 	keep_deck_order: bool = false,
 	tutorial_script: TutorialScriptData = null
 ) -> void:
-	_reset_for_new_match()
-	_own_deck = deck_self
-	if tutorial_script != null:
-		_tutorial.load_script(tutorial_script)
-		_mulligan.picking_disabled = true
-		_cpu = TutorialCpuStrategy.new(_tutorial)
-	else:
-		_cpu = CardCpuStrategy.new()
-		_cpu.difficulty = CardCpuStrategy.resolve_difficulty(difficulty)
-	_interactive = true
-	_match_kind = CurrencyRules.MatchKind.CPU
-	my_side = MatchState.Side.A
-	_own_bar.display_name = AccountService.display_name()
-	_own_bar.icon_id = AccountService.icon_id()
-	_own_bar.title_id = AccountService.title_id()
-	_foe_bar.display_name = "CPU"
-	_foe_bar.icon_id = UserProfileLibrary.CPU_ICON_ID
-	_foe_bar.title_id = UserProfileLibrary.CPU_TITLE_ID
-	_set_playmats(AccountService.playmat_id(), PlaymatLibrary.CPU_ID)
-	# CPU戦もリプレイとして残すため、山札の種を決めてから始める(GameDesign.md 12章)。
-	var rng := RandomNumberGenerator.new()
-	rng.randomize()
-	var seed_value := rng.randi_range(1, 1 << 30)
-	_cpu_record = {
-		"deck_a": CardLibrary.ids_from_deck(deck_self),
-		"deck_b": CardLibrary.ids_from_deck(deck_foe),
-		"seed": seed_value,
-		"actions": [],
-		"source": "cpu",
-	}
-	_keep_deck_order = keep_deck_order
-	_begin_state(deck_self, deck_foe, seed_value, true)
-	_start_cpu_mulligan()
+	_cpu_ctl.start(deck_self, deck_foe, difficulty, keep_deck_order, tutorial_script)
 
 
 ## 待っている間のCPU戦(GameDesign.md 11章)を、勝敗・砂金・戦績・リプレイを残さずに打ち切る。
@@ -444,8 +416,8 @@ func _build() -> void:
 		view.visible = false
 		view.hover_zoom = true
 		view.pressed.connect(_touch.on_hand_pressed)
-		view.hovered.connect(_on_view_hovered)
-		view.mouse_exited.connect(_on_view_left)
+		view.hovered.connect(_pointer.on_view_hovered)
+		view.mouse_exited.connect(_pointer.on_view_left)
 		add_child(view)
 		_hand_views.append(view)
 	# 反転だけは選んだ駒のすぐ下へ出す。位置は `_refresh_buttons()` が毎回決める。
@@ -457,7 +429,7 @@ func _build() -> void:
 	_flip_right = CardMatchFlipRight.new(self)
 	_cpu_timer = Timer.new()
 	_cpu_timer.one_shot = true
-	_cpu_timer.timeout.connect(_take_cpu_action)
+	_cpu_timer.timeout.connect(_cpu_ctl.take_action)
 	add_child(_cpu_timer)
 	# 盤面へ重ねるもの(光の筋・実況・マリガン・ログ・結果パネル等)は最後に足す。
 	CardMatchBuild.overlays(self)
@@ -578,45 +550,6 @@ func _hide_detail() -> void:
 		_detail.hide_now()
 
 
-## 詳細は `_build()` の途中で作るため、駒より後に用意される。受け口を関数にして
-## その時点の `_detail` を読む(生成時に束ねると、まだ空の参照を掴む)。
-func _on_view_hovered(view: CardView) -> void:
-	if _detail != null:
-		_detail.hover(view)
-	if _hand_layout != null:
-		_hand_layout.on_hovered(view)
-	if _targets != null:
-		_targets.on_hovered(view)
-	# 手札の札にカーソルを乗せている間、支払うぶんのマナのピップを脈打たせる
-	# (GameDesign.md 9章「対局画面の手触り」)。
-	if view.mode == CardView.Mode.HAND and view.card != null:
-		_own_bar.highlight_cost(view.card.cost)
-	var foe_slot := _foe_slots.find(view)
-	if foe_slot >= 0:
-		_set_hover_target(foe_slot)
-
-
-func _on_view_left() -> void:
-	if _detail != null:
-		_detail.leave()
-	if _hand_layout != null:
-		_hand_layout.on_left()
-	if _targets != null:
-		_targets.on_left()
-	_own_bar.highlight_cost(0)
-	_set_hover_target(CardMatchSelection.NO_HOVER)
-
-
-## 攻撃の予測で「いま指している相手」を切り替える(GameDesign.md 9章)。
-## 相手の駒・相手のHP帯へ入ったときと、そこから出たときに呼ぶ。
-func _set_hover_target(target: int) -> void:
-	if _selection == null or _selection.hover_target == target:
-		return
-	_selection.hover(target)
-	if state != null and _selection.is_board_selection():
-		_targets.refresh_own_preview()
-
-
 # --- 操作 ---------------------------------------------------------------
 
 
@@ -687,26 +620,14 @@ func _record(action: Dictionary) -> void:
 		(_cpu_record["actions"] as Array).append(action)
 
 
-## 自分の1手を適用する。オンラインなら同時に相手へ送る。
-## **すべての操作をこの1箇所へ通す**ことで、送信し忘れる経路が生まれないようにする。
-## CPUのマリガンは先に決めておく。適用の順序は `MatchState` が A → B に固定するため、
-## どちらが先に確定しても同じ対局になる。
-func _start_cpu_mulligan() -> void:
-	if not state.mulligan_pending:
-		return
-	var foe := MatchState.other_side(my_side)
-	_perform(MatchAction.mulligan(foe, _cpu.choose_mulligan(state, foe)))
-	_mulligan.show_hand(
-		state.hand[my_side], state.first_side == my_side, state.coin_available.get(my_side, false)
-	)
-
-
 func _on_mulligan_confirmed(indices: Array) -> void:
 	if state == null or not state.mulligan_pending:
 		return
 	_perform(MatchAction.mulligan(my_side, indices))
 
 
+## 自分の1手を適用する。オンラインなら同時に相手へ送る。
+## **すべての操作をこの1箇所へ通す**ことで、送信し忘れる経路が生まれないようにする。
 func _perform(action: Dictionary) -> void:
 	if _emote != null and action.get("type", "") != "emote":
 		_emote.close_popup()
@@ -748,10 +669,7 @@ func _finish_action() -> void:
 func on_strike_finished() -> void:
 	refresh()
 	_finale.on_actions_settled()
-	if _cpu_followup:
-		_cpu_followup = false
-		if _cpu != null and not state.is_match_over():
-			_cpu_timer.start(_tutorial.cpu_delay(CPU_THINK_SECONDS * 0.4))
+	_cpu_ctl.on_actions_settled()
 
 
 ## 情報帯。ドロー・疲労の演出の出どころとして進行役から引く。
@@ -804,79 +722,19 @@ func _on_turn_started(side: int) -> void:
 		_match_start_pending = false
 		if not state.is_match_over():
 			_feed.announce_match_start(side == my_side)
-			if _cpu != null and side != my_side:
-				_cpu_timer.start(CPU_THINK_SECONDS)
+			_cpu_ctl.on_turn_started(side, true)
 			return
 	_match_start_pending = false
 	# 自分の番が回ってきたことだけ知らせる。相手の番であることは情報帯の縁と実況で分かる。
 	# **誘導対局では出さない**(GameDesign.md 9章)。手番の流れはすなえるの帯が案内するため。
 	if side == my_side and _interactive and not state.is_match_over() and not is_tutorial:
 		_feed.announce_turn()
-	if _cpu != null and side != my_side and not state.is_match_over():
-		_cpu_timer.start(_tutorial.cpu_delay(CPU_THINK_SECONDS))
+	_cpu_ctl.on_turn_started(side)
 
 
-## 選択は右クリックとEscでも取り消せるようにする(GameDesign.md 9章)。
-## 「他を押す」以外に戻る手段が無いと、対象選択に入った後の抜け方が分からない。
+## 右クリック/Escでの取り消しは `CardMatchPointer` が持つ。
 func _unhandled_input(event: InputEvent) -> void:
-	if not _interactive:
-		return
-	var cancelled := event.is_action_pressed("ui_cancel")
-	if not cancelled and event is InputEventMouseButton:
-		var click := event as InputEventMouseButton
-		cancelled = click.pressed and click.button_index == MOUSE_BUTTON_RIGHT
-	if not cancelled:
-		return
-	# エモートの選択も同じ操作で閉じる。開いたまま盤面を隠し続ける状態を作らない。
-	if _emote != null and _emote.popup_open():
-		_emote.close_popup()
-		get_viewport().set_input_as_handled()
-		return
-	if _selection.is_empty():
-		return
-	_cancel_selection()
-	refresh()
-	get_viewport().set_input_as_handled()
-
-
-## 選択を取り消す。光っていた枠を「短く縮んで消える」動きで消してから
-## `selection` をクリアする(GameDesign.md 9章「対局画面の手触り」)。**選択の完了
-## (出す/攻撃/反転/砂術を撃つ)による解除は対象にしない**——そちらは選んでいた駒が
-## 演出そのもので置き換わるため、フッと消える見え方にはならない。
-func _cancel_selection() -> void:
-	for view in _foe_slots:
-		if view.selected:
-			view.play_unselect()
-	for view in _own_slots:
-		if view.selected:
-			view.play_unselect()
-	if _selection.is_hand_selection() and _selection.hand_index < _hand_views.size():
-		_hand_views[_selection.hand_index].play_unselect()
-	_selection.clear()
-
-
-func _take_cpu_action() -> void:
-	if _cpu == null or state.is_match_over():
-		return
-	var side := state.current_turn
-	if side == my_side:
-		return
-	var action := _cpu.choose_action(state, side)
-	if action.is_empty():
-		return
-	_record(action)
-	_strike.capture(action)
-	MatchAction.apply(state, action)
-	# 続けて指すのは演出が終わってから。重ねると駒が2体同時に渡ってしまう。
-	_cpu_followup = action["type"] != "end_turn" and not state.is_match_over()
-	_finish_action()
-
-
-## 同じデッキでもう1局(GameDesign.md 9章)。相手のデッキは13章のとおり毎回ランダムに組む。
-func _on_rematch_pressed() -> void:
-	var rng := RandomNumberGenerator.new()
-	rng.randomize()
-	start_cpu_match(_own_deck, CardDeckSave.random_deck(rng))
+	_pointer.on_unhandled_input(event)
 
 
 func _on_match_ended(_winner: int) -> void:

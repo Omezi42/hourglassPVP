@@ -33,7 +33,7 @@ func _test_script_is_legal_and_player_wins() -> void:
 		var step: Dictionary = script.steps[i]
 		_apply_step(step, i)
 		# CPUの手はここでは1手ずつ台本どおりに適用するだけで、そのターンの最後の手の
-		# あとに実際のCPU(`_take_cpu_action()`)が自分でターン終了を返す
+		# あとに実際のCPU(`CardMatchCpu.take_action()`)が自分でターン終了を返す
 		# (`TutorialCpuStrategy.choose_action()`が台本を使い切ると `end_turn` を返す)。
 		if str(step.get("side", "")) == "b":
 			var next_is_b := (

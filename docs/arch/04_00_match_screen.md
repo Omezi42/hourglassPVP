@@ -2,17 +2,17 @@
 
 子がすべてコード描画の `Control` で Inspector から編集する値を持たないため、`.tscn` を作らず
 `CardMatchScreen` の中で組み立てる。**画面本体(`card_match_screen.gd`)と `CardView` は1000行の上限に
-張り付いており、機能は `_screen` / `_view` 参照を持つ `RefCounted` か static の描画ヘルパへ切り出す**(11章)。
+届かないよう、機能は `_screen` / `_view` 参照を持つ `RefCounted` か static の描画ヘルパへ切り出す**(11章)。
 
 ## クラス一覧
 
 | クラス | 責務 |
 |---|---|
 | `CardMatchScreen` | 全体を並べ `MatchState` と同期し、操作を受ける。**自分の1手は必ず `_perform()` を通す**(適用と送信を1箇所に集め、送信し忘れる経路を作らない)。`_finish_action()` が演出の状態を見て `refresh()` の時機を決めるため、**`_perform()` の呼び出し元で `refresh()` を重ねて呼ばない** |
-| `CardMatchBuild` | 画面の子を生成する。`CardMatchTouch` は `_build()` より先に生成する(組み立て中に駒のシグナルへ接続されるため) |
+| `CardMatchBuild` | 画面の子を生成する。`CardMatchTouch` / `CardMatchHandLayout` / `CardMatchCpu` / `CardMatchPointer` は `_build()` より先に生成する(組み立て中に駒・タイマー・結果パネルのシグナルへ接続されるため) |
 | `CardMatchGeometry` | 座標系の問い合わせ(`hp_bar_center()` / `slot_center()` / `playable_hand_rects()` / `end_turn_button_rect()`)。`CardMatchScreen` の座標定数を読むだけ |
 | `CardView` / `CardViewPaint` / `HandCardPaint` | 駒・札1枚の表示。`Mode.HAND`(枠あり・コスト左上/総量右下)と `Mode.BOARD`(枠なし・台座の上の砂時計・攻撃力左下/体力右下)。**砂術は `Mode.HAND` の中の分岐**(`is_spell` で絵の代わりに紋章・総量バッジなし・枠色変更。`Mode.SPELL` は作らない——場での見た目が存在せず、`BOARD` との組み合わせという有り得ない状態を表現できてしまう)。守護の輪は `guard_frame`(場だけ true)。状態(`health_punch`/`attack_punch`/`unselect_amount`/`counter_offset`/`spark_amount`/strikeの offset・angle・flash)は `CardView` が持ち、描画は `CardViewPaint`(台座・封蝋・バッジ・予測)と `HandCardPaint`(手札の面)が担う。いずれも第1引数に `CardView` を取る |
-| `CardViewStrike` / `CardViewFlourish` | 攻撃の4段の段取り / 相打ちの反撃(`play_counter()`)とドローの合図(`play_spark()`)の Tween。`CardView` に同名の薄い委譲を残す |
+| `CardViewStrike` / `CardViewFlourish` / `CardViewSandFx` | 攻撃の4段の段取り / 相打ちの反撃(`play_counter()`)とドローの合図(`play_spark()`)の Tween / 砂の動き(`play_shatter()` 消える・`play_drop()` 落ちる・`play_raise()` 戻る)の Tween と描画。`CardView` に同名の薄い委譲を残す。`CardViewSandFx` は絵の上へ重ねるため `CardView._draw()` の最後から `draw()` を呼ぶ |
 | `CardUnitFx` | `CardView` の子として重ねる演出のうち盤面の状態を参照しないもの(着地 / 崩落 / 毒砂の溶解 `play_melt()` / 硝子の閃光 / `play_recall()`)。崩落は `CardData` を受け取り絵と矩形をその時点で控える(次の同期で `card` が null になるため) |
 | `CardDragPreview` / `CardDragArrow` | ドラッグ中に指へ付いてくる絵(速度から傾き)/ 攻撃ドラッグの駒→指先の矢印(自分の場の駒のときだけ) |
 | `CardMatchHandLayout` | 手札の並べ方。**位置は代入せず Tween で滑らせる**。ホバー中の両隣を避け、相手の手番で沈める |
@@ -20,6 +20,7 @@
 | `MatchBackdrop` / `ActionColumnLayout` / `ActionColumnPanel` / `RoundActionButton` / `TurnClockDial` / `FlipRightGauge` | 再構築(10.10.0節)で足した下地・行動の列の並び・行動の列の地・丸ボタン・持ち時間の時計・反転権の粒の札 |
 | `PlayerInfoBar` | 片方の情報帯。板を持たず真鍮の器具(メダル / 名札 / HPの器 / マナの計器 / 山の札)を並べる。`hp_bar_rect()` 等の座標の問い合わせ、`highlight_cost()` / `spend_toward()`(ピップの光と吸い込み)、`drop_handler`(HP帯へのドロップ。`targetable` のときだけ受ける)、`show_emote()` |
 | `CardMatchSelection` | いま選んでいるもの(手札 / 自分の枠 / TARGETING / FLIP_RIGHT / 未選択)と `hover_target`(`NO_HOVER` / `FACE` / 相手の枠) |
+| `CardMatchPointer` | 駒へのホバーを詳細・手札の並び・対象の光・マナのピップ・攻撃の予測(`set_hover_target()`)へ配る受け口と、右クリック/Escでの選択の取り消し(`cancel_selection()`)。`CardMatchScreen._unhandled_input()` はここへ渡すだけ |
 | `CardMatchTouch` | 盤面と手札を押す/ドラッグする受け口。分岐だけを持ち、適用は `MatchState`、段取りは `CardMatchSpell` / `CardMatchEffectTarget` / `CardMatchFlipRight` へ渡す |
 | `CardMatchSpell` / `CardMatchEffectTarget` / `CardMatchFlipRight` | 砂術 / 設置効果の対象選択 / 反転権 の段取り。反転権のボタンは再生・観戦の「戻る」と同じ位置(両者は同時に見えない)。反転権は `_build()` の中で重ね物(マリガンの暗幕など)より先に作る(後から足すと暗幕より手前に描かれる) |
 | `CardMatchTargets` | 置ける枠・殴れる相手の強調、相打ちの予測(`refresh_own_preview()`)、身構え(`CardView.brace`) |
@@ -34,6 +35,7 @@
 | `CardMatchResult` / `CardMatchOutcome` | 結果パネル / 終局後の後始末(リプレイ保存・砂金・戦績・ミッション・記録) |
 | `CardMatchFinale` / `HpVesselFx` | 決着の瞬間(10.10.3節)。終局の後始末は即座に済ませ、結果パネル・パズル・ソロの締めは手の演出が終わってから出す / HPの器のひびと砕け |
 | `CardMatchReset` | 対局をまたいで残る表示・進行役を片付ける(`_reset_for_new_match()` の中身) |
+| `CardMatchCpu` | CPU戦の進行。`start_cpu_match()` の中身(棋譜の用意・マリガン)、思考の間合い(`schedule()` / `on_turn_started()` / 同じ手番の続きの `on_actions_settled()`)、1手の適用(`take_action()`)、「もう一度」(`rematch()`)。戦略・タイマー・棋譜(`_cpu` / `_cpu_timer` / `_cpu_record`)は画面が持ったまま、他の進行役と同じく直に触る |
 | `CardMatchReplay` / `CardMatchOnline` / `CardMatchPuzzle` / `CardMatchSolo` / `CardMatchTutorial` | 再生コントロール / オンラインの3入口 / パズル / ソロ / 誘導対局。いずれも `_screen` 参照の切り出し |
 | `CardMatchEmote` / `EmotePopupPanel` / `EmoteBubble` | エモート(6.6節) |
 | `CardMatchAlert` / `CardMatchDamageAssist` / `CardMatchActionHistory` | 残り15秒の焦燥演出 / 打点アシスト / 直前の手の列 |
@@ -54,12 +56,12 @@
 
 ## 4.0.2 操作
 
-- **詳細のホバー**: `CardDetailPanel` を `interactive = false` で使う(語のボタンと実演を持たないため、外れたら消える形が成立する)。幅340px(`compact_width`)。ホバーの受け口は `_on_view_hovered()` / `_on_view_left()` という関数にし、その時点の `_detail` を読む(`_detail` は `_build()` の途中で作るため、生成時に束ねると空の参照を掴む)
+- **詳細のホバー**: `CardDetailPanel` を `interactive = false` で使う(語のボタンと実演を持たないため、外れたら消える形が成立する)。幅340px(`compact_width`)。ホバーの受け口は `CardMatchPointer.on_view_hovered()` / `on_view_left()` にし、その時点の `_detail` を読む(`_detail` は `_build()` の途中で作るため、生成時に束ねると空の参照を掴む)
 - **攻撃の予測**は `MatchState.combat_preview()`(盤面を変えずに計算。判定の順序は `_resolve_unit_combat()` と同じ:硝子→毒砂)が返し、`CardView.preview_health` へ出す。攻撃側は狙える相手が複数だと定まらないため**最も自分が削られる組**を出し、指している相手(`hover_target`)がある間だけその1組に置き換える。切り替えは相手の駒の `hovered`/`mouse_exited` と情報帯の `mouse_entered`/`mouse_exited` から。Godotはドラッグ中も enter/exit を出すため経路を分けない
 - **ドラッグ**: `CardView._get_drag_data()` / `_drop_data()`、枠側は `drop_handler`(Callable)。手札は放されたら押して選ぶ経路と同じ `_play_selected()` へ合流(設置効果の対象選択もそのまま働く)。攻撃は `draggable` な自分の駒の `drag_started` で押したのと同じ選択状態を作り、相手の駒(`on_foe_slot_drop`)か HP帯(`on_face_drop`)で `_attack()` へ合流
 - **タッチのゆらぎ吸収(`PressTracker`)**: 8px の許容マージン(`SLOP_MARGIN`)。`InputEventScreenTouch` も受ける
 - **設置効果の対象選択**は `CardMatchSelection.TARGETING`。枠まで決めた時点で止め、相手の駒を押すと `play_card()` の `target` へ渡す。相手の場が空ならそのまま出す。案内は行動の列へ出す(盤面へ重ねると対象の駒を隠す)
-- **対局の入口**: `Main._request_battle()` が導線を `Callable` として控え、デッキ選択画面(`CardDeckListScreen` の PICK)で選ばれたら `CardDeckSave.set_selected_index()` を書いてから呼ぶ。保存デッキが無いときだけ選択画面を挟まない。CPU戦は `start_cpu_match()` → `Timer`(`CPU_THINK_SECONDS`)→ `CardCpuStrategy.choose_action()` を1手ずつ
+- **対局の入口**: `Main._request_battle()` が導線を `Callable` として控え、デッキ選択画面(`CardDeckListScreen` の PICK)で選ばれたら `CardDeckSave.set_selected_index()` を書いてから呼ぶ。保存デッキが無いときだけ選択画面を挟まない。CPU戦は `start_cpu_match()` → `CardMatchCpu` が `Timer`(`CPU_THINK_SECONDS`)→ `CardCpuStrategy.choose_action()` を1手ずつ
 
 ## 4.0.3 演出の仕組み
 
