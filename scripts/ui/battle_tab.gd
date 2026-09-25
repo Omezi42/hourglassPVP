@@ -38,9 +38,11 @@ const FRAME_W := 1000.0
 ## 待機中・失敗の文言を置く行。
 const STATUS_TOP := TOP_BAND + 4.0
 const STATUS_ROW := 32.0
-## 復帰の帯(GameDesign.md 9章)。**急ぐ用件なので最上段へ置く。**
-const RESUME_HEIGHT := 46.0
-const RESUME_GAP := 16.0
+const RANKED_TITLE := "対戦する"
+## 押せないときに札の中身を沈める濃さ(札の面と一緒に暗く見せる)。
+const DISABLED_ALPHA := 0.55
+## 途中の対局があるときは札そのものが復帰の入口になる(GameDesign.md 9章)。
+const RESUME_TITLE := "対局へ戻る"
 
 const MAIN_WIDTH := 600.0
 const COLUMN_GAP := 24.0
@@ -55,8 +57,8 @@ var _busy_dots_timer: Timer
 var _busy_dot_count := 0
 var _status_base_text := ""
 var _waiting_timer: Timer
-## 切断した対局へ戻る導線(GameDesign.md 11章)。戻れる対局があるときだけ出す。
-var _resume_band: ResumeBand
+## 切断した対局へ戻れるか(GameDesign.md 11章)。立っている間は札を押すと復帰する。
+var _resume_pending := false
 var _ranked_tile: HomeTile
 var _ranked_info: RankedEntryInfo
 var _cpu_tile: HomeTile
@@ -94,14 +96,12 @@ func _take_over_status_label() -> void:
 
 
 func _build() -> void:
-	_resume_band = ResumeBand.make(Rect2(FRAME_X, 0.0, FRAME_W, RESUME_HEIGHT))
-	_resume_band.pressed.connect(_on_resume_pressed)
-	add_child(_resume_band)
-
 	_ranked_tile = HomeTile.make(
-		"対戦する", "人と戦って段位を上げる", "burst", Vector2(MAIN_WIDTH, 0.0), MAIN_FONT_SIZE, true
+		RANKED_TITLE, "", "", Vector2(MAIN_WIDTH, 0.0), MAIN_FONT_SIZE, true
 	)
-	_ranked_tile.pressed.connect(func() -> void: ranked_match_deck_requested.emit())
+	# 右側は段位の徽章が占めるため、紋章の透かしは敷かない。
+	_ranked_tile.emblem = null
+	_ranked_tile.pressed.connect(_on_ranked_pressed)
 	add_child(_ranked_tile)
 	_ranked_info = RankedEntryInfo.new()
 	_ranked_tile.add_child(_ranked_info)
@@ -127,15 +127,10 @@ func _make_side_tile(title: String, subtitle: String, emblem: String) -> HomeTil
 	return tile
 
 
-## 復帰の帯があるときは、そのぶん札と列を縮める。
 func _layout() -> void:
-	var top := STATUS_TOP
-	status_label.position = Vector2(FRAME_X, top)
+	status_label.position = Vector2(FRAME_X, STATUS_TOP)
 	status_label.size = Vector2(FRAME_W, STATUS_ROW)
-	top += STATUS_ROW
-	if _resume_band.visible:
-		_resume_band.position = Vector2(FRAME_X, top)
-		top += RESUME_HEIGHT + RESUME_GAP
+	var top := STATUS_TOP + STATUS_ROW
 	var height: float = BOTTOM - BOTTOM_MARGIN - top
 	_ranked_tile.position = Vector2(FRAME_X, top)
 	_ranked_tile.size = Vector2(MAIN_WIDTH, height)
@@ -190,15 +185,23 @@ func refresh() -> void:
 func _set_battle_disabled(disabled: bool) -> void:
 	for tile in [_ranked_tile, _cpu_tile, _room_tile]:
 		tile.disabled = disabled
+	_ranked_info.modulate.a = DISABLED_ALPHA if disabled else 1.0
 
 
 ## 覚えている対局があるときだけ出す。終わっているかどうかは押した時点で確かめる
 ## (毎回ホームで通信すると、オフラインでも遊べるという前提を崩すため)。
 func _refresh_resume() -> void:
-	if _resume_band == null:
-		return
-	_resume_band.visible = not OnlineResume.pending().is_empty()
-	_layout()
+	_resume_pending = not OnlineResume.pending().is_empty()
+	_ranked_tile.title = RESUME_TITLE if _resume_pending else RANKED_TITLE
+	_ranked_tile.queue_redraw()
+	_ranked_info.set_resume(_resume_pending)
+
+
+func _on_ranked_pressed() -> void:
+	if _resume_pending:
+		_on_resume_pressed()
+	else:
+		ranked_match_deck_requested.emit()
 
 
 func _on_resume_pressed() -> void:
