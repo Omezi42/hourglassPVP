@@ -8,7 +8,8 @@
     python tools/shorts/make_short.py forge <問数>   # 難しい問題を並列で探して問題集へ足す(数十分かかる)
 
 1. 台本(ナレーション + 見出し)を tools/shorts/card_lines.json / puzzle_lines.json から組む
-2. VOICEVOXエンジンで読み上げる(tools/pv_voice.py。エンジンを先に起動しておく)
+2. VOICEVOXエンジンで読み上げる(tools/pv_voice.py)。エンジンが応答しなければ VOICEVOX_ENGINE の run.exe を
+   起動して待つ(手で起動するならそのファイルを実行する。黒い窓が開いている間が起動中)
 3. Godotで撮る(非ヘッドレス。1080x1920のPNG連番 + 音声用のAVI)
 4. ffmpegで結合して tools/shorts/out/<種類>_<id>.mp4 へ出す
 
@@ -22,10 +23,14 @@ import shutil
 import subprocess
 import sys
 import time
+import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 GODOT = Path(r"C:\Users\omezi\Documents\Godot_v4.6.2-stable_win64_console.exe")
+VOICEVOX_ENGINE = Path.home() / "Documents/voicevox-engine/run.exe"
+ENGINE_URL = "http://127.0.0.1:50021/version"
+ENGINE_BOOT_SECONDS = 120
 FFMPEG = Path(os.environ.get("LOCALAPPDATA", "")) / "Microsoft/WinGet/Links/ffmpeg.exe"
 OUT_DIR = ROOT / "tools/shorts/out"
 WORK_DIR = OUT_DIR / "work"
@@ -136,7 +141,33 @@ def main() -> None:
     print("失敗:", " ".join(failed) if failed else "なし")
 
 
+def engine_ready() -> bool:
+    try:
+        with urllib.request.urlopen(ENGINE_URL, timeout=2):
+            return True
+    except OSError:
+        return False
+
+
+# 読み上げの前にエンジンが応答するかを見て、止まっていれば起動する(撮影が終わっても動かしたまま残る)。
+def ensure_engine() -> None:
+    if engine_ready():
+        return
+    if not VOICEVOX_ENGINE.exists():
+        sys.exit(f"VOICEVOXエンジンが見つかりません: {VOICEVOX_ENGINE}")
+    print("VOICEVOXエンジンを起動しています…", flush=True)
+    subprocess.Popen([str(VOICEVOX_ENGINE), "--host", "127.0.0.1", "--port", "50021"],
+                     creationflags=getattr(subprocess, "CREATE_NEW_CONSOLE", 0))
+    deadline = time.time() + ENGINE_BOOT_SECONDS
+    while time.time() < deadline:
+        if engine_ready():
+            return
+        time.sleep(2)
+    sys.exit("VOICEVOXエンジンが起動しませんでした")
+
+
 def make(kind: str, target: str) -> None:
+    ensure_engine()
     work = WORK_DIR / f"{kind}_{target}"
     shutil.rmtree(work, ignore_errors=True)
     frames = work / "f"
