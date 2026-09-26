@@ -3,19 +3,31 @@
 		"date": "2026-09-26",
 		"kind": "card",
 		"id": "forge",
-		"label": "フォージ"
+		"label": "フォージ",
+		"reserved": [
+			"youtube",
+			"x"
+		]
 	},
 	{
 		"date": "2026-09-27",
 		"kind": "puzzle",
 		"id": "10",
-		"label": "とどめ問題 #1"
+		"label": "とどめ問題 #1",
+		"reserved": [
+			"youtube",
+			"x"
+		]
 	},
 	{
 		"date": "2026-09-27",
 		"kind": "card",
 		"id": "turn",
-		"label": "逆さ砂"
+		"label": "逆さ砂",
+		"reserved": [
+			"youtube",
+			"x"
+		]
 	},
 	{
 		"date": "2026-09-28",
@@ -39,7 +51,11 @@
 		"date": "2026-09-29",
 		"kind": "card",
 		"id": "shot",
-		"label": "サンドショット"
+		"label": "サンドショット",
+		"reserved": [
+			"youtube",
+			"x"
+		]
 	},
 	{
 		"date": "2026-09-30",
@@ -51,7 +67,11 @@
 		"date": "2026-09-30",
 		"kind": "card",
 		"id": "wheel",
-		"label": "ホイール"
+		"label": "ホイール",
+		"reserved": [
+			"youtube",
+			"x"
+		]
 	},
 	{
 		"date": "2026-10-01",
@@ -75,7 +95,11 @@
 		"date": "2026-10-02",
 		"kind": "card",
 		"id": "twin",
-		"label": "ツイン"
+		"label": "ツイン",
+		"reserved": [
+			"youtube",
+			"x"
+		]
 	},
 	{
 		"date": "2026-10-03",
@@ -87,7 +111,11 @@
 		"date": "2026-10-03",
 		"kind": "card",
 		"id": "gust",
-		"label": "砂嵐"
+		"label": "砂嵐",
+		"reserved": [
+			"youtube",
+			"x"
+		]
 	},
 	{
 		"date": "2026-10-04",
@@ -111,7 +139,11 @@
 		"date": "2026-10-05",
 		"kind": "card",
 		"id": "pivot",
-		"label": "ピボット"
+		"label": "ピボット",
+		"reserved": [
+			"youtube",
+			"x"
+		]
 	},
 	{
 		"date": "2026-10-06",
@@ -123,7 +155,11 @@
 		"date": "2026-10-06",
 		"kind": "card",
 		"id": "burst",
-		"label": "バースト"
+		"label": "バースト",
+		"reserved": [
+			"youtube",
+			"x"
+		]
 	},
 	{
 		"date": "2026-10-07",
@@ -147,7 +183,11 @@
 		"date": "2026-10-08",
 		"kind": "card",
 		"id": "call",
-		"label": "砂王の呼び声"
+		"label": "砂王の呼び声",
+		"reserved": [
+			"youtube",
+			"x"
+		]
 	},
 	{
 		"date": "2026-10-09",

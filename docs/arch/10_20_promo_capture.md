@@ -12,6 +12,7 @@ X・YouTube Shorts へ毎日1本出す縦長の動画を、ゲームの実物の
 | `tools/shorts/record_puzzle_short.gd` | とどめ問題ショート。問題集 `puzzles.json` の1問を実際のエンドレスと同じ入口(`CardMatchPuzzle.start()`)で盤面へ出し、正解手順を `_perform()` で指す |
 | `tools/shorts/puzzle_forge.gd` / `puzzle_solver.gd` | とどめ問題の問題集を作る。下記 |
 | `tools/shorts/schedule.py` | 書き出した動画を投稿日へ割り振り、投稿文を添えて日付つきのフォルダへ並べる。下記 |
+| `tools/shorts/reserve.py` | 予約投稿へまだ入れていないものの一覧と、入れた印(`schedule.json` の `reserved`)。下記 |
 
 ## とどめ問題の問題集(総当たりで選ぶ)
 
@@ -32,7 +33,8 @@ X・YouTube Shorts へ毎日1本出す縦長の動画を、ゲームの実物の
 
 ## 投稿の割り振り(`schedule.py`)
 
-投稿はAPIで自動化せず、ユーザーが YouTube Studio と X の予約投稿へ手で入れる。そのための素材を日付順に揃える。
+投稿は Claude が Claude in Chrome で YouTube Studio と X の予約投稿へ週1回まとめて入れる(手順は `post-shorts` Skill)。
+APIを使わないのは、X API が従量課金で予約の機能を持たず、YouTube API は審査を通すまでアップロードが非公開に固定されるため。
 
 - **毎日、カード紹介(19:00)ととどめ問題(12:00)を1本ずつ。**時刻を分けるのは同じ日に2本を並べないため。
   とどめ問題を昼にするのは、ゲームの「今日の1問」(0:00切り替え)と同じ問題が遊べる時間を長く取るため
@@ -45,3 +47,9 @@ X・YouTube Shorts へ毎日1本出す縦長の動画を、ゲームの実物の
 - Xの本文は全角2・URL23・改行2(Windowsでコピーすると CRLF になるため)の重みで280以内かを確かめ、超えれば止まる
 - 出力は `tools/shorts/out/posts/<日付>_<種類>_<id>/`(動画 + `post.txt`)と一覧 `一覧.md`。生成物なので管理しない。
   **動画が未書き出しの日はフォルダを作らず、一覧に「動画なし」と出す**(撮り終えてから回し直せば埋まる)
+
+## 予約の記録(`reserve.py`)
+
+- `list <youtube|x>` は明日から7日ぶんのうち、動画があってまだ印の無いものを本文つきの JSON で出す
+- `done <日付> <種類> <youtube|x>` は `schedule.json` の該当項目の `reserved` へサイト名を足す。
+  `schedule.py` は知らない鍵をそのまま残すため、割り振りを延ばしても印は消えない
