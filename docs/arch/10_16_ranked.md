@@ -110,9 +110,9 @@
 (`AccountService.rank_progress_score()`で読む)。
 
 **取得は`players`コレクションを`rank_season == 今月のキー`の単一フィールドの
-等価フィルタで絞り込み、`rank_progress_score`降順に並べる**(6章のクエリ方針にある
-単一フィールドの等価フィルタ+単一の`orderBy`に収まる。以前の`rank_tier == "platinum"`
-との複合フィルタより単純になった)。行の表示名・アイコン・称号は同じドキュメントの
+等価フィルタで絞り込み、`rank_progress_score`降順に並べる**。等価フィルタと別フィールドの
+`orderBy`の組み合わせはFirestoreが複合インデックスを要求するため、`firestore.indexes.json`に
+(`rank_season`昇順, `rank_progress_score`降順)を置き、`firebase deploy --only firestore:indexes`で反映する。行の表示名・アイコン・称号は同じドキュメントの
 `display_name` / `icon_id` / `title_id` をそのまま使う(追加の読み込みはしない)。
 自分の順位は取得した一覧の中の自分のuidの位置で決め、無ければ「圏外」とする。
 

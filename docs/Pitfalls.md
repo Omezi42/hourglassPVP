@@ -140,6 +140,9 @@ Discord用のカード画像・実演GIF(10.14節)を作る過程で踏んだも
   `assets/fonts/` のようなプロジェクトルート直下のファイルを参照しようとしても
   本番環境には存在しない。フォントのように実行時に要るファイルは `functions/` の
   中へコピーして持たせる
+- **Firestoreの「等価フィルタ + 別フィールドの`orderBy`」は複合インデックスが要る。**
+  無いとクエリは400で失敗し、`FirestoreClient`は空配列を返すので「まだ記録がありません」に見える。
+  そういうクエリを足したら `firestore.indexes.json` へ書き、`firebase deploy --only firestore:indexes` で反映する
 
 ### 触ってはいけないもの
 

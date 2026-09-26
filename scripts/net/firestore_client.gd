@@ -146,8 +146,8 @@ func query_field_equals(collection: String, field: String, value: Variant, limit
 ## (`rank_progress_score`。ブロンズ〜ゴールドの★とプラチナのレートを1本の
 ## 順序へ束ねた値。`RankRules.progress_score()`)の降順にlimit件クエリする
 ## (ランキング画面用。GameDesign.md 28章「進行度でもランクに残る」)。
-## season の単一フィールドの等価フィルタ + orderBy に収まるため、
-## 複合インデックスを要求しない(6章のクエリ方針)。
+## 等価フィルタと別フィールドの orderBy の組み合わせは複合インデックスを要求するため、
+## `firestore.indexes.json` の (rank_season, rank_progress_score 降順) を使う。
 func query_ranked_leaderboard(collection: String, season: String, limit: int) -> Array:
 	return await _run_structured_query(
 		{
