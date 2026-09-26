@@ -39,7 +39,7 @@ FOOTER = f"砂時計で戦うカードバトル「砂時計アリーナ」\nブ�
 HASHTAGS = "#砂時計アリーナ #ブラウザゲーム #インディーゲーム"
 YOUTUBE_TAGS = "砂時計アリーナ,カードゲーム,ブラウザゲーム,インディーゲーム,ずんだもん,Shorts"
 CREDIT = "VOICEVOX:ずんだもん"
-DAILY_NOTE = "ゲームの「今日の1問」でも同じ問題が解けます"
+DAILY_NOTE = "ゲームの「今日の1問」でも解けます"
 X_LIMIT = 280
 X_URL_WEIGHT = 23
 
@@ -78,15 +78,15 @@ def card_post(card: dict) -> tuple[str, str]:
 
 def puzzle_post(number: int, stage: dict) -> tuple[str, str]:
     body = (
-        f"【とどめ問題 #{number}】\n相手の体力はあと{stage['foe_hp']}。\nこのターンで勝ちきれる？\n"
-        f"答えは動画の後半で！\n{DAILY_NOTE}\n\n{FOOTER}\n{HASHTAGS}"
+        f"【とどめ問題 #{number}】\n相手の体力はあと{stage['foe_hp']}。このターンで勝ちきれる？\n"
+        f"答えは動画の後半で！{DAILY_NOTE}\n\n{FOOTER}\n{HASHTAGS}"
     )
     return body, f"【とどめ問題 #{number}】このターンで勝ちきれる？｜砂時計アリーナ #Shorts"
 
 
-# Xは全角を2、URLを一律23と数える。
+# Xは全角を2、URLを一律23と数える。改行も2と数える(Windowsでコピーすると CRLF になり、Xはそれを2文字と数える)。
 def x_weight(text: str) -> int:
-    text = text.replace(GAME_URL, "")
+    text = text.replace(GAME_URL, "").replace("\n", "\r\n")
     return X_URL_WEIGHT + sum(1 if ord(ch) < 0x1100 else 2 for ch in text)
 
 
