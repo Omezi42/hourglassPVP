@@ -3,20 +3,22 @@ extends RefCounted
 ## 待っている間のCPU戦(GameDesign.md 11章)でCPUに渡すデッキを選ぶ。
 ## 他のプレイヤーが実際に組んだデッキを使うため、オンライン対戦の記録(22章)の直近から
 ## 1つ選ぶ。持ち主は画面に出さないので、記録からはデッキだけを読む。
+## 戻り値は `CardCpuDecks.pick()` と同じ `{"name", "cards"}`。記録から選んだときは
+## `name` を空にし、画面には「CPU」だけを出す(`CardCpuDecks.foe_name()`)。
 
 const RECORDS := "match_records"
 const RECENT_LIMIT := 30
 const FIELDS := ["deck_a", "deck_b"]
 
 
-static func pick(client: FirestoreClient) -> Array:
+static func pick(client: FirestoreClient) -> Dictionary:
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
 	var records: Array = await client.query_recent(RECORDS, "finished_at", RECENT_LIMIT, FIELDS)
 	var decks := playable_decks(records)
 	if decks.is_empty():
-		return CardDeckSave.random_deck(rng)
-	return decks[rng.randi_range(0, decks.size() - 1)]
+		return CardCpuDecks.pick(rng)
+	return {"name": "", "cards": decks[rng.randi_range(0, decks.size() - 1)]}
 
 
 ## いまの版でそのまま組めるデッキだけを残す。消えたカード・変わった枚数の制限を含む

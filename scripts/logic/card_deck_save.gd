@@ -124,26 +124,6 @@ static func default_deck() -> Array:
 	return deck
 
 
-## ランダムな混成デッキ(CPUの相手用)。同名2枚までの制限を守る。
-## **購入できるカードセット(GameDesign.md 8章・13章)は所有状況を見ずに含める。**
-## CPUが使うカードをプレイヤーの所有状況で絞らないことで、対局中に「このカードが
-## 欲しい」と思わせる出会いの場にする(ユーザー判断)。**`price = 0`のソロモード限定
-## セット(27章)だけは除く**——通貨で買えない以上、CPUに見せても購入へつながらない。
-static func random_deck(rng: RandomNumberGenerator) -> Array:
-	var pool: Array = []
-	for card in CardLibrary.all_cards():
-		if not card.set_id.is_empty() and CardSetLibrary.price(card.set_id) <= 0:
-			continue
-		for i in COPY_LIMIT:
-			pool.append(card)
-	for i in range(pool.size() - 1, 0, -1):
-		var j := rng.randi_range(0, i)
-		var tmp: Variant = pool[i]
-		pool[i] = pool[j]
-		pool[j] = tmp
-	return pool.slice(0, MatchState.DECK_SIZE)
-
-
 static func _sanitize_name(value: String) -> String:
 	var trimmed := value.strip_edges()
 	if trimmed == "":

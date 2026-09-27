@@ -18,7 +18,8 @@ func start(
 	deck_foe: Array,
 	difficulty: int,
 	keep_deck_order: bool,
-	tutorial_script: TutorialScriptData
+	tutorial_script: TutorialScriptData,
+	foe_name: String = "CPU"
 ) -> void:
 	var s := _screen
 	s._reset_for_new_match()
@@ -36,7 +37,7 @@ func start(
 	s._own_bar.display_name = AccountService.display_name()
 	s._own_bar.icon_id = AccountService.icon_id()
 	s._own_bar.title_id = AccountService.title_id()
-	s._foe_bar.display_name = "CPU"
+	s._foe_bar.display_name = foe_name
 	s._foe_bar.icon_id = UserProfileLibrary.CPU_ICON_ID
 	s._foe_bar.title_id = UserProfileLibrary.CPU_TITLE_ID
 	s._set_playmats(AccountService.playmat_id(), PlaymatLibrary.CPU_ID)
@@ -118,8 +119,11 @@ func take_action() -> void:
 	s._finish_action()
 
 
-## 同じデッキでもう1局(GameDesign.md 9章)。相手のデッキは13章のとおり毎回ランダムに組む。
+## 同じデッキでもう1局(GameDesign.md 9章)。相手のデッキは13章のとおり毎回選び直す。
 func rematch() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
-	_screen.start_cpu_match(_screen._own_deck, CardDeckSave.random_deck(rng))
+	var deck: Dictionary = CardCpuDecks.pick(rng)
+	_screen.start_cpu_match(
+		_screen._own_deck, deck["cards"], -1, false, null, CardCpuDecks.foe_name(deck)
+	)

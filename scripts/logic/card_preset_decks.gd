@@ -89,11 +89,12 @@ static func basic() -> Array:
 static func deck_of(preset_id: String) -> Array:
 	for preset in PRESETS:
 		if preset["id"] == preset_id:
-			return _build(preset["cards"])
+			return build(preset["cards"])
 	return CardDeckSave.default_deck()
 
 
-static func _build(counts: Dictionary) -> Array:
+## カードのidと枚数の表(GameDesign.md 13章のCPUデッキと共用)から30枚を組む。
+static func build(counts: Dictionary) -> Array:
 	var deck: Array = []
 	for card_id: String in counts:
 		var card := CardLibrary.find_by_id(card_id)

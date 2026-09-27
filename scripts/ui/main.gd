@@ -338,12 +338,15 @@ func _on_spectate_requested(match_id: String) -> void:
 		_show_only(card_match_screen)
 
 
-## CPU戦(v5.0)。先手/後手は常にプレイヤーが先手とし、相手のデッキはランダムに組む
-## (GameDesign.md 13章)。
+## CPU戦(v5.0)。先手/後手は常にプレイヤーが先手とし、相手のデッキは作戦を持った
+## CPUデッキ(GameDesign.md 13章)から選ぶ。
 func _start_cpu_match() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
-	card_match_screen.start_cpu_match(CardDeckSave.selected_deck(), CardDeckSave.random_deck(rng))
+	var deck: Dictionary = CardCpuDecks.pick(rng)
+	card_match_screen.start_cpu_match(
+		CardDeckSave.selected_deck(), deck["cards"], -1, false, null, CardCpuDecks.foe_name(deck)
+	)
 	_match_return_screen = home_screen
 	_show_only(card_match_screen)
 
@@ -411,11 +414,13 @@ func _on_cpu_match_deck_requested() -> void:
 ## 待機画面の「待っている間CPUと対戦する」(GameDesign.md 11章)。CPUのデッキを読む間に
 ## キャンセル・マッチ成立で待機画面を離れていたら始めない。
 func _on_waiting_cpu_requested(screen: Control) -> void:
-	var deck: Array = await WaitingCpuDeck.pick(NetSession.client)
+	var deck: Dictionary = await WaitingCpuDeck.pick(NetSession.client)
 	if _active_screen != screen or screen.queue == null:
 		return
 	waiting_cpu.begin(screen)
-	card_match_screen.start_cpu_match(CardDeckSave.selected_deck(), deck)
+	card_match_screen.start_cpu_match(
+		CardDeckSave.selected_deck(), deck["cards"], -1, false, null, CardCpuDecks.foe_name(deck)
+	)
 	_match_return_screen = screen
 	_show_only(card_match_screen)
 
