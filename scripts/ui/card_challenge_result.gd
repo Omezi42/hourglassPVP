@@ -51,17 +51,9 @@ const TRAY_RIM_LIGHT := Color(1, 0.9, 0.7, 0.12)
 
 ## 報酬の札
 const REWARD_GAP := 28
-const REWARD_VISUAL_SIZE := Vector2(64, 88)
-const REWARD_ART_MAX := Vector2(60, 80)
-const REWARD_ICON_SIZE := 56.0
-const COIN_RADIUS := 24.0
-const COIN_RIM := 3.0
-const COIN_SHINE := Color(1, 0.9, 0.6, 0.5)
 const REWARD_AMOUNT_FONT_SIZE := 30
 const REWARD_NAME_FONT_SIZE := 20
 const REWARD_SUB_FONT_SIZE := 13
-const POOL_RADIUS := Vector2(30, 7)
-const POOL_ALPHA := 0.35
 
 var _dim: ColorRect
 var _sand: ResultSandFall
@@ -296,16 +288,18 @@ func _reward_tray(reward: StageReward, width: float) -> Control:
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", REWARD_GAP)
 	if reward.gold > 0:
-		row.add_child(_reward_item(_coin_visual(), "+%d" % reward.gold, "砂金", true))
+		row.add_child(_reward_item(StageRewardTokens.coin(), "+%d" % reward.gold, "砂金", true))
 	var card := reward.card()
 	if card != null:
 		var art := HourglassArt.texture(card.art_key(), HourglassArt.State.UPRIGHT)
-		row.add_child(_reward_item(_art_visual(art, true), card.display_name, "新しいカード", false))
+		row.add_child(
+			_reward_item(StageRewardTokens.art(art, true), card.display_name, "新しいカード", false)
+		)
 	if not reward.icon_id.is_empty():
 		var icon := UserProfileLibrary.get_icon_texture(reward.icon_id)
 		row.add_child(
 			_reward_item(
-				_art_visual(icon, false),
+				StageRewardTokens.art(icon, false),
 				UserProfileLibrary.get_icon_name(reward.icon_id),
 				"新しいアイコン",
 				false
@@ -336,56 +330,6 @@ func _reward_item(visual: Control, head: String, sub: String, is_amount: bool) -
 
 
 ## 砂金の硬貨。
-func _coin_visual() -> Control:
-	var visual := Control.new()
-	visual.custom_minimum_size = REWARD_VISUAL_SIZE
-	visual.draw.connect(
-		func() -> void:
-			var ci := visual.get_canvas_item()
-			var center := REWARD_VISUAL_SIZE * 0.5
-			UiPaint.fill_circle(ci, center, COIN_RADIUS, UiPalette.BRASS_DARK, 32)
-			UiPaint.fill_circle(ci, center, COIN_RADIUS - COIN_RIM, UiPalette.GLOW_AMBER, 32)
-			UiPaint.fill_circle(ci, center + Vector2(-5, -6), COIN_RADIUS * 0.38, COIN_SHINE, 20)
-			UiPaint.draw_ring(ci, center, COIN_RADIUS, UiPalette.OUTLINE_DARK, 2.0, 32)
-	)
-	return visual
-
-
-## 手に入れたカード(砂時計を光だまりの上に立てる)・アイコンの絵。
-func _art_visual(texture: Texture2D, standing: bool) -> Control:
-	var visual := Control.new()
-	visual.custom_minimum_size = REWARD_VISUAL_SIZE
-	visual.draw.connect(
-		func() -> void:
-			if texture == null:
-				return
-			var box := REWARD_VISUAL_SIZE
-			if not standing:
-				var side := REWARD_ICON_SIZE
-				visual.draw_texture_rect(
-					texture, Rect2((box - Vector2(side, side)) * 0.5, Vector2(side, side)), false
-				)
-				return
-			var foot := Vector2(box.x * 0.5, box.y - POOL_RADIUS.y)
-			UiPaint.fill_ellipse(
-				visual.get_canvas_item(),
-				foot,
-				POOL_RADIUS,
-				Color(UiPalette.GLOW_AMBER, POOL_ALPHA),
-				24
-			)
-			var tex_size := texture.get_size()
-			var fit: float = minf(REWARD_ART_MAX.x / tex_size.x, REWARD_ART_MAX.y / tex_size.y)
-			var draw_size := tex_size * fit
-			visual.draw_texture_rect(
-				texture,
-				Rect2(Vector2(foot.x - draw_size.x * 0.5, foot.y + 2.0 - draw_size.y), draw_size),
-				false
-			)
-	)
-	return visual
-
-
 func _text_tray(heading: String, body: String, width: float) -> Control:
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 4)

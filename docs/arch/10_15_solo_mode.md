@@ -11,7 +11,10 @@ GameDesign.md 27章の実装方針。**チュートリアルではなく、既�
 | `SoloMatchConfig`(Resource、`SoloStageData` に埋め込む) | パズル型以外の4種が使う対局設定(下記) |
 | `SoloLibrary`(`scripts/logic/solo_library.gd`, static) | `data/solo_stages/` を `order` 順に返す。`PuzzleLibrary`と同じ流儀(`.remap`の扱いを含む) |
 | `SoloProgress`(`scripts/logic/solo_progress.gd`, static) | クリア記録。`user://solo_progress.json` へアカウントごとに持つ。`PuzzleProgress`と同じ流儀 |
-| `CardSoloMapScreen`(`scripts/ui/card_solo_map_screen.gd`) | ステージの一覧。v1は分岐しない1本道のため、`CardPuzzlePickerScreen`と同じ「縦に並ぶ横長カード」の形をそのまま使う。**専用の確認パネル(`CardSoloStageDetail`)は作らない**——カード自体が名前・種別・説明・初回クリア報酬を出しており、「挑戦」を押すとそのまま始まる |
+| `CardSoloMapScreen`(`scripts/ui/card_solo_map_screen.gd`) | ステージ一覧の画面。左に `SoloTrail`(スクロール)、右に `SoloStageDetail` を置き、開いたときに次に挑むステージを選ぶ |
+| `SoloTrail`(`scripts/ui/solo_trail.gd`) | 蛇行する1本道と駒を自前で描き、押された駒を `stage_chosen` で知らせる。駒の位置は並び順から `node_center()` で決まり、データに座標を持たない |
+| `SoloStageDetail`(`scripts/ui/solo_stage_detail.gd`) | 選んだステージの名前・種別・説明・初回クリアの報酬と「挑戦」ボタン |
+| `StageRewardTokens`(`scripts/ui/stage_reward_tokens.gd`, static) | 報酬の絵(砂金の硬貨・砂時計・アイコン)。結果パネルとステージ詳細で同じ絵を使うため共有する |
 | `CardMatchSolo`(`scripts/ui/card_match_solo.gd`, RefCounted) | `_screen` 参照を持つ切り出し(`CardMatchPuzzle`/`CardMatchOnline`と同じ流儀)。対局設定の適用・特殊勝利条件の監視・連戦型のHP持ち越し・クリア時の報酬付与を行う |
 | `CardChallengeResult`(`scripts/ui/card_challenge_result.gd`) | ステージの結果パネル。リーサルパズルと共用(10.12節)。`CardMatchSolo.add_result_panel()` が**ログより奥へ差し込む**——パネルの「ログ」で開いたログが下へ隠れないように |
 | `CardMatchGeometry`(`scripts/ui/card_match_geometry.gd`, RefCounted) | `card_match_screen.gd`が1000行の上限に迫ったため、`hp_bar_center()`/`slot_center()`/`playable_hand_rects()`/`end_turn_button_rect()`の4つの座標系の問い合わせをここへ切り出した。ソロモード固有の役目は持たないが、この節の実装で足りなくなった行数を確保するために行った |

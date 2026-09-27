@@ -1,21 +1,22 @@
 class_name CardSoloMapScreen
 extends Control
-## ソロモードのステージ一覧(GameDesign.md 27章)。
-##
-## **v1は分岐しない1本道**のため、`CardPuzzlePickerScreen`と同じ「縦に並ぶ横長カード」の
-## 形をそのまま使う(GameDesign.md 9章の一覧の規約に沿う)。見た目をツリー状の道に
-## 作り込むのは、分岐を持たない間は優先度が低い将来の見た目の作り込みとして残す。
+## ソロモードのステージ一覧(GameDesign.md 27章)。左に蛇行する1本道(`SoloTrail`)、右に選んだ
+## ステージの中身と「挑戦」(`SoloStageDetail`)を置く。開いたときは次に挑むステージを選んでおく。
 
 signal back_pressed
 signal stage_selected(stage: SoloStageData)
 
 const HEADER_SCENE := "res://scenes/screen_header.tscn"
-const PANEL_STYLE := "res://resources/theme/content_panel.tres"
-const LIST_RECT := Rect2(24, ScreenHeader.CONTENT_TOP, 1232, ScreenHeader.CONTENT_HEIGHT)
-const CARD_SIZE := Vector2(1232, 108)
-const ACTION_SIZE := Vector2(132, 52)
+const MAP_RECT := Rect2(24, ScreenHeader.CONTENT_TOP, 820, ScreenHeader.CONTENT_HEIGHT)
+const DETAIL_RECT := Rect2(868, ScreenHeader.CONTENT_TOP, 388, ScreenHeader.CONTENT_HEIGHT)
 
-var _list: VBoxContainer
+var _scroll: ScrollContainer
+var _trail: SoloTrail
+var _detail: SoloStageDetail
+var _empty: EmptyState
+var _stages: Array[SoloStageData] = []
+var _cleared: Array[bool] = []
+var _unlocked: Array[bool] = []
 
 
 func _ready() -> void:
@@ -35,90 +36,73 @@ func _build() -> void:
 	header.set_title("ソロモード")
 	header.back_pressed.connect(func() -> void: back_pressed.emit())
 
-	var scroll := ScrollContainer.new()
-	scroll.position = LIST_RECT.position
-	scroll.size = LIST_RECT.size
-	scroll.custom_minimum_size = LIST_RECT.size
-	TouchScroll.enable(scroll)
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	add_child(scroll)
+	_scroll = ScrollContainer.new()
+	_scroll.position = MAP_RECT.position
+	_scroll.size = MAP_RECT.size
+	_scroll.custom_minimum_size = MAP_RECT.size
+	TouchScroll.enable(_scroll)
+	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	add_child(_scroll)
 
-	_list = VBoxContainer.new()
-	_list.add_theme_constant_override("separation", 12)
-	_list.custom_minimum_size.x = LIST_RECT.size.x
-	scroll.add_child(_list)
+	var centering := CenterContainer.new()
+	centering.custom_minimum_size = MAP_RECT.size
+	_scroll.add_child(centering)
+	_trail = SoloTrail.new()
+	_trail.stage_chosen.connect(_select)
+	centering.add_child(_trail)
+
+	_detail = SoloStageDetail.new()
+	_detail.position = DETAIL_RECT.position
+	_detail.size = DETAIL_RECT.size
+	_detail.custom_minimum_size = DETAIL_RECT.size
+	_detail.challenge_pressed.connect(
+		func(stage: SoloStageData) -> void: stage_selected.emit(stage)
+	)
+	add_child(_detail)
+
+	_empty = EmptyState.new()
+	_empty.position = MAP_RECT.position
+	_empty.size = Vector2(DETAIL_RECT.end.x - MAP_RECT.position.x, MAP_RECT.size.y)
+	add_child(_empty)
 
 
 func _refresh() -> void:
-	for child in _list.get_children():
-		child.queue_free()
-	var stages := SoloLibrary.all_stages()
-	if stages.is_empty():
-		var empty := EmptyState.new()
-		empty.custom_minimum_size = LIST_RECT.size
-		_list.add_child(empty)
-		empty.show_message("まだステージがありません", "近日公開")
+	_stages = SoloLibrary.all_stages()
+	var has_stages := not _stages.is_empty()
+	_scroll.visible = has_stages
+	_detail.visible = has_stages
+	_empty.visible = not has_stages
+	if not has_stages:
+		_empty.show_message("まだステージがありません", "近日公開")
 		return
 	var uid := _uid()
-	for stage in stages:
-		_list.add_child(_make_card(stage, uid))
+	_cleared.clear()
+	_unlocked.clear()
+	for stage in _stages:
+		_cleared.append(SoloProgress.is_cleared(uid, stage.id))
+		_unlocked.append(SoloLibrary.is_unlocked(stage, uid))
+	_trail.show_stages(_stages, _cleared, _unlocked, MAP_RECT.size.x)
+	var next := _next_stage_index()
+	_select(next)
+	_scroll_to.call_deferred(next)
 
 
-func _make_card(stage: SoloStageData, uid: String) -> Control:
-	var cleared := SoloProgress.is_cleared(uid, stage.id)
-	var unlocked := SoloLibrary.is_unlocked(stage, uid)
-	var panel := PanelContainer.new()
-	panel.custom_minimum_size = CARD_SIZE
-	var style: StyleBox = load(PANEL_STYLE)
-	if style != null:
-		panel.add_theme_stylebox_override("panel", style)
-	panel.modulate = Color(1, 1, 1, 1) if unlocked else Color(1, 1, 1, 0.5)
-
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 12)
-	panel.add_child(row)
-
-	var column := VBoxContainer.new()
-	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	column.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	row.add_child(column)
-	var title := Label.new()
-	title.text = "%d. %s%s" % [stage.order, stage.display_name, "  ★" if cleared else ""]
-	title.add_theme_font_size_override("font_size", 22)
-	column.add_child(title)
-	var detail := Label.new()
-	if unlocked:
-		detail.text = (
-			"%s / %s%s" % [stage.kind_label(), stage.description, _reward_hint(stage, cleared)]
-		)
-	else:
-		detail.text = "前のステージをクリアすると挑戦できます"
-	detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	detail.add_theme_font_size_override("font_size", 15)
-	detail.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
-	column.add_child(detail)
-
-	var button := CodedButton.make("挑戦", ACTION_SIZE)
-	button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	button.disabled = not unlocked
-	button.pressed.connect(func() -> void: stage_selected.emit(stage))
-	row.add_child(button)
-	return panel
+func _select(index: int) -> void:
+	_trail.select(index)
+	_detail.show_stage(_stages[index], _cleared[index], _unlocked[index])
 
 
-## 初回クリアの報酬を1行で添える。**クリア済みなら出さない**——解き直しでは
-## 報酬が出ないため(GameDesign.md 27章)、二度と手に入らない額を見せ続けない。
-func _reward_hint(stage: SoloStageData, cleared: bool) -> String:
-	if cleared:
-		return ""
-	var parts: Array[String] = []
-	if stage.reward_gold > 0:
-		parts.append("+%d砂金" % stage.reward_gold)
-	if not stage.reward_card_set_id.is_empty():
-		parts.append(CardSetLibrary.display_name(stage.reward_card_set_id))
-	if parts.is_empty():
-		return ""
-	return "(初回クリア: %s)" % ", ".join(parts)
+## 解放済みで未クリアの先頭。すべてクリア済みなら最後のステージ。
+func _next_stage_index() -> int:
+	for i in _stages.size():
+		if _unlocked[i] and not _cleared[i]:
+			return i
+	return _stages.size() - 1
+
+
+func _scroll_to(index: int) -> void:
+	var center_y := _trail.node_center(index).y
+	_scroll.scroll_vertical = int(maxf(center_y - MAP_RECT.size.y * 0.5, 0.0))
 
 
 func _uid() -> String:
