@@ -116,10 +116,11 @@ func _on_destination_chosen(index: int) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
 	_run.choose(index, rng)
+	# `in_battle`を立てたまま保存しておく。対局の途中で抜けたら負けにする(27章「中断と再開」)ため。
+	SoloProgress.save_run(_uid(), _run)
 	if _run.in_battle:
 		battle_requested.emit(_run)
 		return
-	SoloProgress.save_run(_uid(), _run)
 	_refresh()
 
 
