@@ -91,7 +91,8 @@ func _begin_battle() -> void:
 	_screen._begin_state(
 		CardLibrary.deck_from_ids(_run.deck_ids),
 		CardCpuDecks.deck_of(foe_deck_id),
-		rng.randi_range(1, 1 << 30)
+		rng.randi_range(1, 1 << 30),
+		true
 	)
 	_apply_run_state()
 	# `_begin_state()` は自分の呼び出しの中で一度 `refresh()` しているが、その後の
