@@ -4,7 +4,6 @@ extends Control
 ##
 ## **対局の入口をすべてここへ集める。**上段に真鍮の札「対戦する」(= ランクマッチ)と
 ## 「ソロモード」を同格に2枚、下段に凹んだパネル(CPU戦 / リーサルパズル / ルームマッチ)を横に並べる。
-## 1局も終えていない人には「対戦する」とCPU戦だけを出す。
 ##
 ## **クラス名は `BattleTab` のまま変えない。**`scenes/battle_tab.tscn` を
 ## `scenes/home_screen.tscn` が instance しており、名前を変えると参照の書き換えという
@@ -40,9 +39,6 @@ const STATUS_TOP := TOP_BAND + 4.0
 const STATUS_ROW := 32.0
 const RANKED_TITLE := "対戦する"
 const SOLO_TITLE := "ソロモード"
-## 未解放の入口(GameDesign.md 9章)。消さずに錠前を掛けて、解放の条件を添える。
-const LOCK_HINT := "1局遊ぶと解放"
-const LOCK_NOTICE := "CPU戦か対戦を1局遊ぶと解放されます"
 ## 押せないときに札の中身を沈める濃さ(札の面と一緒に暗く見せる)。
 const DISABLED_ALPHA := 0.55
 ## 途中の対局があるときは札そのものが復帰の入口になる(GameDesign.md 9章)。
@@ -73,8 +69,6 @@ var _solo_info: SoloEntryInfo
 var _cpu_tile: HomeTile
 var _room_tile: HomeTile
 var _puzzle_tile: HomeTile
-## 1局終えるまで錠前を掛ける入口(GameDesign.md 9章)。
-var _later_tiles: Array[HomeTile] = []
 ## 次にやってほしい入口1つに掛ける印(GameDesign.md 18章)。
 var _next_mark := NextStepMark.new()
 
@@ -121,7 +115,7 @@ func _build() -> void:
 	# 人と遊べないときも繰り返し遊べるよう、「対戦する」と同格に並べる(GameDesign.md 9章)。
 	_solo_tile = HomeTile.make(SOLO_TITLE, "", "", Vector2(MAIN_WIDTH, 0.0), MAIN_FONT_SIZE, true)
 	_solo_tile.emblem = null
-	_solo_tile.pressed.connect(_on_later_pressed.bind(_solo_tile, solo_requested))
+	_solo_tile.pressed.connect(func() -> void: solo_requested.emit())
 	add_child(_solo_tile)
 	_solo_info = SoloEntryInfo.new()
 	_solo_tile.add_child(_solo_info)
@@ -130,23 +124,11 @@ func _build() -> void:
 	_cpu_tile = _make_side_tile("CPU戦", "好きなデッキで1局", "hour")
 	_cpu_tile.pressed.connect(func() -> void: cpu_match_requested.emit())
 	_puzzle_tile = _make_side_tile("リーサルパズル", PUZZLE_SUBTITLE, "sword")
-	_puzzle_tile.pressed.connect(_on_later_pressed.bind(_puzzle_tile, puzzle_requested))
+	_puzzle_tile.pressed.connect(func() -> void: puzzle_requested.emit())
 	_room_tile = _make_side_tile("ルームマッチ", "合言葉で友達と", "shield")
-	_room_tile.pressed.connect(_on_later_pressed.bind(_room_tile, room_match_requested))
-	_later_tiles = [_solo_tile, _puzzle_tile, _room_tile]
-	for tile in _later_tiles:
-		tile.lock_hint = LOCK_HINT
+	_room_tile.pressed.connect(func() -> void: room_match_requested.emit())
 	move_child(status_label, get_child_count() - 1)
 	_layout()
-
-
-## 未解放の入口は押しても進まず、解放の条件を示す(GameDesign.md 9章)。
-func _on_later_pressed(tile: HomeTile, request: Signal) -> void:
-	if not tile.locked:
-		request.emit()
-		return
-	tile.flash_subtitle()
-	_set_status(LOCK_NOTICE)
 
 
 func _make_side_tile(title: String, subtitle: String, emblem: String) -> HomeTile:
@@ -173,11 +155,6 @@ func _layout() -> void:
 		side_tiles[i].size = Vector2(SIDE_WIDTH, SIDE_HEIGHT)
 
 
-## 1局でも終えていれば(誘導対局は戦績に数えない)すべての入口を出す(GameDesign.md 9章)。
-func _all_entries_open() -> bool:
-	return int(MatchStats.totals(_uid()).get("games", 0)) > 0
-
-
 ## 待っている人の数を読む。タブが見えていないとき・通信できないときは行を隠す。
 func _refresh_waiting() -> void:
 	if not is_visible_in_tree():
@@ -198,11 +175,6 @@ func _uid() -> String:
 func refresh() -> void:
 	if _busy:
 		return
-	var all_open := _all_entries_open()
-	for tile in _later_tiles:
-		tile.locked = not all_open
-	# 錠前が掛かっている間は、錠前と解放の条件だけを見せる(GameDesign.md 9章)。
-	_solo_info.visible = all_open
 	_solo_info.refresh(_uid())
 	_refresh_daily_puzzle()
 	_refresh_resume()
