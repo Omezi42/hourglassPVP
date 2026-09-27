@@ -180,6 +180,7 @@ func _settle(won: bool) -> void:
 	_run.finish_battle(won, hp_left, rng)
 	var reached := SoloProgress.record(uid, _run)
 	if _run.over:
+		SoloProgress.save_finished(uid, _run, "")
 		SoloProgress.clear_run(uid)
 	else:
 		SoloProgress.save_run(uid, _run)

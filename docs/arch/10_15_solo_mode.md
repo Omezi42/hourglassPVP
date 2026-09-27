@@ -11,12 +11,15 @@ GameDesign.md 27章の実装方針。**遠征の規則(道・山札・HP・候�
 | `SoloRun`(`scripts/logic/solo_run.gd`, RefCounted) | 遠征1回ぶんの状態と規則。道の生成・行き先の選択・勝敗の反映・候補の生成・山札への追加。`to_dict()` / `from_dict()` で保存できる。乱数は呼び出し側から受け取る |
 | `SoloProgress`(`scripts/logic/solo_progress.gd`, static) | 遠征の保存(続きから再開)と、遠征をまたいで残る記録(最多勝利数・踏破回数・到達済みの節目)。`user://solo_progress.json` へアカウントごとに持つ |
 | `CardMatchSolo`(`scripts/ui/card_match_solo.gd`, RefCounted) | `_screen` 参照を持つ切り出し。行き先の対局を始め、関門の特殊ルールを当て、終局で `SoloRun` へ結果を返し、砂金・節目の報酬を渡して結果パネルを出す |
-| `CardSoloMapScreen`(`scripts/ui/card_solo_map_screen.gd`) | 遠征の画面。出発・道・候補の3つの状態の出し分けと、`SoloRun`/`SoloProgress`への保存・読み込みだけを持つ。見た目は下記4つの子へ委ねる |
+| `CardSoloMapScreen`(`scripts/ui/card_solo_map_screen.gd`) | 遠征の画面。出発・道・行き先の詳細・候補・記録の状態の出し分けと、`SoloRun`/`SoloProgress`への保存・読み込みだけを持つ。見た目は下記の子へ委ねる |
 | `SoloDepartureView`(`scripts/ui/solo_departure_view.gd`, Control) | 出発の画面。作戦の札を3枚並べ、押すと`theme_chosen`を出す |
-| `SoloRouteView`(`scripts/ui/solo_route_view.gd`, Control) | 道の画面。6段の駒を描き、いま選ぶ段の駒だけを押せるようにして`destination_chosen`を出す |
-| `SoloStatusPanel`(`scripts/ui/solo_status_panel.gd`, Control) | 道の右側の状態パネル。作戦名・HPのバー・勝った数・山札の一覧(スクロール)と「遠征をやめる」(`abandon_requested`) |
-| `SoloOfferOverlay`(`scripts/ui/solo_offer_overlay.gd`, Control) | 候補のオーバーレイ。道を暗幕で覆い、候補の`CardView`を並べて`card_chosen`/`skip_pressed`を出す |
-| `SoloUiPaint`(`scripts/ui/solo_ui_paint.gd`, static) | 出発の札・状態パネルが共用する額縁パネルの描画と、当たり判定だけの透明ボタン |
+| `SoloRouteView`(`scripts/ui/solo_route_view.gd`, Control) | 道の画面。6段の駒を描く。駒を押しても対局は始めず`destination_selected`(選択解除は-1)を出すだけで、選んだ駒に真鍮の輪を付ける(`set_selected()`)。`show_record()`で押せない表示モード(遠征の記録で再利用)にもなる |
+| `SoloStatusPanel`(`scripts/ui/solo_status_panel.gd`, Control) | 道の右側の状態パネル。作戦名・HPのバー・勝った数・`SoloDeckList`と「遠征をやめる」(`abandon_requested`) |
+| `SoloDestinationPanel`(`scripts/ui/solo_destination_panel.gd`, Control) | 行き先の詳細。道で駒を選んだときに状態パネルの代わりに同じ位置へ出す。相手・狙い・CPUの強さ・15種の絵(対局・関門)または回復後のHP(泉)を出し、「挑む」(泉は「休む」。`challenge_pressed`)/「戻る」(`back_pressed`)を持つ |
+| `SoloOfferOverlay`(`scripts/ui/solo_offer_overlay.gd`, Control) | 候補のオーバーレイ。道を暗幕で覆い、候補の`CardView`を並べて`card_chosen`/`skip_pressed`を出す。右端に`SoloDeckList`でいまの山札を出し、カードの列は残りの幅で中央寄せする |
+| `SoloRunSummary`(`scripts/ui/solo_run_summary.gd`, Control) | 遠征の記録。`open()`で終わった遠征を1度だけ出す。押せない`SoloRouteView`(`show_record()`)・`SoloDeckList`・「出発へ」を持つ |
+| `SoloDeckList`(`scripts/ui/solo_deck_list.gd`, Control) | 山札の一覧(コスト順・スクロール)。状態パネル・候補オーバーレイ・遠征の記録が共用する |
+| `SoloUiPaint`(`scripts/ui/solo_ui_paint.gd`, static) | 出発の札・状態パネル・行き先の詳細・候補の山札欄が共用する額縁パネルの描画と、当たり判定だけの透明ボタン |
 | `CardChallengeResult` / `StageRewardTokens` | 結果パネルと報酬の絵。リーサルパズル(10.12節)と共用。`StageReward`は複数の節目(カードセット・アイコン)が同時に届いたときのため`card_set_ids`/`icon_ids`の配列も持つ |
 
 ## `SoloGateData`
@@ -77,12 +80,13 @@ GameDesign.md 27章の実装方針。**遠征の規則(道・山札・HP・候�
 ## `SoloProgress`
 
 `user://solo_progress.json` にアカウントごと(未サインインは `"local"`)に
-`{"run": {...} or null, "best_wins": int, "clears": int, "milestones": [String]}` を持つ。
+`{"run": {...} or null, "best_wins": int, "clears": int, "milestones": [String], "finished": {...} or null}` を持つ。
 以前の形式(ステージidの配列)を読んだときは空の記録として扱う。
 
-- `load_run(uid) -> SoloRun` — 保存中の遠征。`in_battle` のまま残っていたら負けとして遠征を終え、`null` を返す
+- `load_run(uid) -> SoloRun` — 保存中の遠征。`in_battle` のまま残っていたら負けとして遠征を終え、`finished`(理由`"abandoned_mid_battle"`)を保存して `null` を返す
 - `save_run(uid, run)` / `clear_run(uid)` — 行き先の選択・決着・候補の選択のたびに保存する
 - `record(uid, run) -> Array[Dictionary]` — 決着のたびに呼び、最多勝利数・踏破回数を更新し、**初めて到達した節目**を返す
+- `save_finished(uid, run, reason)` / `take_finished(uid) -> Dictionary` — 遠征が終わったとき(負け・踏破・対局途中の中断)の`SoloRun.to_dict()`と理由(`"abandoned_mid_battle"`か空)を`{"run", "reason"}`で持つ。`take_finished`は読んだら消し、`CardSoloMapScreen.open()`が`SoloRunSummary`を1度だけ出すのに使う。**「遠征をやめる」では呼ばない**(自分で終えたため記録は出さない)
 
 **節目**は `SoloRun.MILESTONES` の表で持つ(`{"id", "wins" or "cleared", "card_set", "icon"}`)。
 解放は `AccountService.unlock_card_set()` / `unlock_icon()`(`unlock_free` の委譲。通信できないときは
@@ -95,8 +99,9 @@ GameDesign.md 27章の実装方針。**遠征の規則(道・山札・HP・候�
   (`MatchState.start_match()` は枚数を検査しない)。思考レベルは `run.difficulty()`。相手の名札は `CardCpuDecks.foe_name()`
 - `_begin_state()` の直後に `hp[自分] = run.hp` を差し替え、関門なら特殊ルールと盤面を当てる。`hp_changed` は出さない
   (情報帯は `refresh()` が `state.hp` を直接読む。信号を出すと音とログが「被弾」と誤読する)
-- `on_match_ended()` — `run.finish_battle()` → `SoloProgress.save_run()` / `record()` → 砂金(`StageReward.grant_gold()`)と
-  節目の解放 → 結果パネル。`CardMatchScreen._on_match_ended()` は `_solo.active()` のとき通常の砂金・戦績・リプレイを素通りする
+- `on_match_ended()` — `run.finish_battle()` → `SoloProgress.record()` → 遠征が終わっていれば`save_finished(uid, run, "")`のあと`clear_run()`、
+  続いていれば`save_run()` → 砂金(`StageReward.grant_gold()`)と節目の解放 → 結果パネル。
+  `CardMatchScreen._on_match_ended()` は `_solo.active()` のとき通常の砂金・戦績・リプレイを素通りする
 - `_reset_for_new_match()` は `close()` を呼ぶため、`_begin_state()` の前に遠征を控えて戻す(10.12節と同じ穴)
 
 ## ソロモード限定カードの所有

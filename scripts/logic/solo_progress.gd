@@ -23,6 +23,7 @@ static func load_run(uid: String) -> SoloRun:
 		return run
 	run.finish_battle(false, 0, RandomNumberGenerator.new())
 	record(uid, run)
+	save_finished(uid, run, "abandoned_mid_battle")
 	clear_run(uid)
 	return null
 
@@ -36,6 +37,27 @@ static func save_run(uid: String, run: SoloRun) -> void:
 
 static func clear_run(uid: String) -> void:
 	save_run(uid, null)
+
+
+## 遠征が終わったとき(負け・踏破・対局途中の中断扱い)の記録(GameDesign.md 27章「画面」)。
+## 「遠征をやめる」では呼ばない(自分で終えたため、記録を出さない)。
+static func save_finished(uid: String, run: SoloRun, reason: String) -> void:
+	var entry := _entry(uid)
+	entry["finished"] = {"run": run.to_dict(), "reason": reason}
+	_data[_key(uid)] = entry
+	_save()
+
+
+## 保存中の遠征の記録を読み、読んだら消す(次に遠征の画面を開いたとき1度だけ出すため)。
+static func take_finished(uid: String) -> Dictionary:
+	var entry := _entry(uid)
+	var finished: Variant = entry.get("finished", null)
+	if not (finished is Dictionary):
+		return {}
+	entry["finished"] = null
+	_data[_key(uid)] = entry
+	_save()
+	return finished
 
 
 static func best_wins(uid: String) -> int:

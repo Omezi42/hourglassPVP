@@ -24,6 +24,8 @@ func run(assert_true: Callable) -> void:
 	_test_solo_run_round_trips_through_dict()
 	_test_solo_progress_in_battle_run_counts_as_a_loss_on_load()
 	_test_solo_progress_milestones_fire_once()
+	_test_solo_progress_saves_finished_run_and_takes_it_once()
+	_test_solo_progress_interrupted_run_saves_finished_with_abandon_reason()
 	_test_solo_gates_load_and_reference_real_units()
 
 
@@ -312,6 +314,44 @@ func _test_solo_progress_milestones_fire_once() -> void:
 	var reached_again := SoloProgress.record("", run)
 	_assert.call(reached_again.is_empty(), "the same milestone should not fire twice")
 	_assert.call(SoloProgress.best_wins("") == 2, "record() should update best_wins")
+
+
+## 遠征の記録(GameDesign.md 27章「画面」)。負けたときの`SoloRun.to_dict()`を
+## `"finished"`として保存し、読んだら消える(1度だけ出すため)。
+func _test_solo_progress_saves_finished_run_and_takes_it_once() -> void:
+	SoloProgress.reset_for_test()
+	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], _rng(19))
+	run.choose(0, _rng(19))
+	run.finish_battle(false, 0, _rng(20))
+	_assert.call(run.over, "the run should be over after a loss")
+	SoloProgress.save_finished("", run, "")
+	var finished := SoloProgress.take_finished("")
+	_assert.call(not finished.is_empty(), "save_finished should be readable via take_finished")
+	_assert.call(
+		str(finished.get("reason", "x")) == "", "a normal loss should save an empty reason"
+	)
+	var restored := SoloRun.from_dict(finished.get("run", {}))
+	_assert.call(restored.over, "the saved run should round-trip as over")
+	var second := SoloProgress.take_finished("")
+	_assert.call(second.is_empty(), "take_finished should clear the record after reading it once")
+
+
+## `SoloProgress.load_run()`で中断扱いになったときは、理由「対局の途中で抜けた」を持つ
+## (GameDesign.md 27章「中断と再開」)。
+func _test_solo_progress_interrupted_run_saves_finished_with_abandon_reason() -> void:
+	SoloProgress.reset_for_test()
+	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], _rng(21))
+	run.choose(0, _rng(21))
+	_assert.call(run.in_battle, "the setup battle should be in progress")
+	SoloProgress.save_run("", run)
+	var loaded := SoloProgress.load_run("")
+	_assert.call(loaded == null, "an interrupted run should not be resumable")
+	var finished := SoloProgress.take_finished("")
+	_assert.call(not finished.is_empty(), "an interrupted run should be recorded as finished")
+	_assert.call(
+		str(finished.get("reason", "")) == "abandoned_mid_battle",
+		"an interrupted run should carry the abandoned_mid_battle reason"
+	)
 
 
 func _test_solo_gates_load_and_reference_real_units() -> void:
