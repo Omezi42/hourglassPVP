@@ -33,19 +33,31 @@
 		"date": "2026-09-28",
 		"kind": "puzzle",
 		"id": "1",
-		"label": "とどめ問題 #2"
+		"label": "とどめ問題 #2",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-09-28",
 		"kind": "card",
 		"id": "temper",
-		"label": "テンパー"
+		"label": "テンパー",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-09-29",
 		"kind": "puzzle",
 		"id": "11",
-		"label": "とどめ問題 #3"
+		"label": "とどめ問題 #3",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-09-29",
@@ -61,7 +73,11 @@
 		"date": "2026-09-30",
 		"kind": "puzzle",
 		"id": "12",
-		"label": "とどめ問題 #4"
+		"label": "とどめ問題 #4",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-09-30",
@@ -77,19 +93,31 @@
 		"date": "2026-10-01",
 		"kind": "puzzle",
 		"id": "2",
-		"label": "とどめ問題 #5"
+		"label": "とどめ問題 #5",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-10-01",
 		"kind": "card",
 		"id": "recall",
-		"label": "砂へ還す"
+		"label": "砂へ還す",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-10-02",
 		"kind": "puzzle",
 		"id": "13",
-		"label": "とどめ問題 #6"
+		"label": "とどめ問題 #6",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-10-02",
@@ -105,7 +133,11 @@
 		"date": "2026-10-03",
 		"kind": "puzzle",
 		"id": "14",
-		"label": "とどめ問題 #7"
+		"label": "とどめ問題 #7",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-10-03",
@@ -121,13 +153,21 @@
 		"date": "2026-10-04",
 		"kind": "puzzle",
 		"id": "3",
-		"label": "とどめ問題 #8"
+		"label": "とどめ問題 #8",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-10-04",
 		"kind": "card",
 		"id": "lance",
-		"label": "ランス"
+		"label": "ランス",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-10-05",
