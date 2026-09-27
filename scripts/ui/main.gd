@@ -179,7 +179,12 @@ func _ready() -> void:
 	solo_map_screen = CardSoloMapScreen.new()
 	solo_map_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
 	solo_map_screen.visible = false
-	solo_map_screen.back_pressed.connect(func() -> void: _show_only(home_screen, true))
+	solo_map_screen.back_pressed.connect(
+		func() -> void:
+			# 遠征の進み具合を、たたかうタブの「ソロモード」の札へ映す(GameDesign.md 9章)。
+			home_screen.refresh_battle_tab()
+			_show_only(home_screen, true)
+	)
 	solo_map_screen.battle_requested.connect(_on_solo_battle_requested)
 	add_child(solo_map_screen)
 	_screens.append(solo_map_screen)

@@ -133,10 +133,13 @@ v1.0(位相制)の画面・クラス・`data/hourglasses/*.tres` は削除済み
 - `BattleTab` の `.tscn` の縦並び(`Margin/VBox`)は使わず、`StatusLabel` だけを引き取る(`_take_over_status_label()`)。`.tscn` は書き換えない
 - **入口はどのタブも `HomeTile`**(`Button` 継承。見出し・副題・紋章の透かし・砂時計を自前で描く。`text` へは入れない)。`.tscn` は書き換えず `_ready()` で同じ場所へ差し替える(`_to_tile()`)。**紋章の透かしは `CodedButtonStyle.inner_rect()` の中へ収め、比率で決めたうえで上限で止める**(額縁へ載り上がる / 大きな札で文字より主張する)。`primary`(塗りつぶした真鍮)と `badge`(未受取の数。下部タブへも同じ静的な描画関数で打つ)を引数で持つ
 - 枠は `HomeFrame`(`content_panel.tres` のパネル + 真鍮のプレートの見出し)。**枠の右へ並べる行(ミッションの進捗)は `HomeFrame` が描く**(`Control._draw()` は子より背面なので、タブ側で描くと枠に隠れる)
-- `BattleTab` は枠を使わず、左に真鍮の `HomeTile`「対戦する」、右に凹んだ `HomeTile` の縦の列を置く。札と列の大きさは固定。
-  札の中身(段位の徽章・段位名・次の段位・シーズンの残り日数・下端の凹んだ行)は `RankedEntryInfo`(札の子。マウスを通す)が `_draw()` で描く。
+- `BattleTab` は枠を使わず、上段に真鍮の `HomeTile`「対戦する」「ソロモード」を横に2枚、下段に凹んだ `HomeTile` を横に3枚置く。札の大きさは固定。
+  札の中身は札の子(マウスを通す)が `_draw()` で描く: 「対戦する」は `RankedEntryInfo`(段位の徽章・段位名・次の段位・シーズンの残り日数・下端の凹んだ行)、
+  「ソロモード」は `SoloEntryInfo`(`SoloProgress.load_run()` の遠征の作戦名・6段の進み具合・勝ち数とHP、遠征が無ければ記録)。
+  真鍮へ彫り込んだ文字と下端の凹んだ行は2つで同じ見た目にするため `EntryTilePaint`(static)に置く。
+  ソロモードの札は錠前が掛かっている間は中身を隠す。遠征の画面から戻ったときに `refresh()` し直す
   **途中の対局があるときは札そのものが復帰の入口になる**(見出しを「対局へ戻る」へ替え、押下を `_on_resume_pressed()` へ回す)。待機人数は `RankedMatchmakingQueue.count_waiting()` をタブが見えている間だけ一定間隔で読む。
-  **右の列の錠前(`HomeTile.locked` / `lock_hint`。錠前は `UiPaint.draw_lock()` をデッキ編集と共用)を外すかは `MatchStats.totals(uid).games > 0` で決める**(誘導対局は戦績に数えないため、誘導対局だけを終えた人は錠前が掛かったまま。GameDesign.md 9章・19章)
+  **ソロモード・下段の錠前(`HomeTile.locked` / `lock_hint`。錠前は `UiPaint.draw_lock()` をデッキ編集と共用)を外すかは `MatchStats.totals(uid).games > 0` で決める**(誘導対局は戦績に数えないため、誘導対局だけを終えた人は錠前が掛かったまま。GameDesign.md 9章・19章)
 - `HomeScrim`(`Background` の直後):上=アカウント帯 / 中=タブ / 下=下部タブ を別々の濃さで落とす。**上下は中より濃く、対称に。3つの濃さは揃えて動かす**(片方だけ変えると重心が寄る)。アカウント帯の下端に中央が濃く左右で消える真鍮の細線
 - 下部タブは幅を共通にし高さだけ変える(幅まで変えると `HBoxContainer` で他が押し出される)。非選択を下端へ沈め、選択中だけ帯の中央へ
 - アカウント帯は `.tscn` の幅460pxを `_ready()` で右端まで伸ばし、残高を右へ寄せる(`ACCOUNT_BAR_RIGHT_INSET`)。ホームの残高だけ `CurrencyChip.scale_factor` で大きく、`height_override` で名札と揃える。`CurrencyChip` は単位を小さく数値を大きく別々に描き、紋章と文字のあいだに縦の細線

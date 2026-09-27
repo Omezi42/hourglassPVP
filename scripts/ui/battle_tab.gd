@@ -2,8 +2,8 @@ class_name BattleTab
 extends Control
 ## ホーム画面の「たたかう」タブ(GameDesign.md 9章)。
 ##
-## **対局の入口をすべてここへ集める。**左に真鍮の札「対戦する」(= ランクマッチ)を1枚、
-## 右に凹んだパネルの列(CPU戦 / ソロモード / リーサルパズル / ルームマッチ)を置く。
+## **対局の入口をすべてここへ集める。**上段に真鍮の札「対戦する」(= ランクマッチ)と
+## 「ソロモード」を同格に2枚、下段に凹んだパネル(CPU戦 / リーサルパズル / ルームマッチ)を横に並べる。
 ## 1局も終えていない人には「対戦する」とCPU戦だけを出す。
 ##
 ## **クラス名は `BattleTab` のまま変えない。**`scenes/battle_tab.tscn` を
@@ -39,6 +39,7 @@ const FRAME_W := 1000.0
 const STATUS_TOP := TOP_BAND + 4.0
 const STATUS_ROW := 32.0
 const RANKED_TITLE := "対戦する"
+const SOLO_TITLE := "ソロモード"
 ## 未解放の入口(GameDesign.md 9章)。消さずに錠前を掛けて、解放の条件を添える。
 const LOCK_HINT := "1局遊ぶと解放"
 const LOCK_NOTICE := "CPU戦か対戦を1局遊ぶと解放されます"
@@ -50,11 +51,11 @@ const PUZZLE_SUBTITLE := "1手番で仕留める"
 const DAILY_OPEN := "今日の1問 まだ解いていません"
 const DAILY_DONE := "今日の1問 クリア済み"
 
-const MAIN_WIDTH := 600.0
-const COLUMN_GAP := 24.0
-const SIDE_WIDTH := FRAME_W - MAIN_WIDTH - COLUMN_GAP
-const SIDE_GAP := 20.0
-const SIDE_MAX_HEIGHT := 86.0
+const TILE_GAP := 20.0
+const MAIN_WIDTH := (FRAME_W - TILE_GAP) / 2.0
+const SIDE_COUNT := 3
+const SIDE_WIDTH := (FRAME_W - TILE_GAP * float(SIDE_COUNT - 1)) / float(SIDE_COUNT)
+const SIDE_HEIGHT := 80.0
 const MAIN_FONT_SIZE := 40
 const SIDE_FONT_SIZE := 22
 
@@ -67,10 +68,12 @@ var _waiting_timer: Timer
 var _resume_pending := false
 var _ranked_tile: HomeTile
 var _ranked_info: RankedEntryInfo
+var _solo_tile: HomeTile
+var _solo_info: SoloEntryInfo
 var _cpu_tile: HomeTile
 var _room_tile: HomeTile
 var _puzzle_tile: HomeTile
-## CPU戦の下に並ぶ入口。1局終えるまで錠前を掛ける(GameDesign.md 9章)。
+## 1局終えるまで錠前を掛ける入口(GameDesign.md 9章)。
 var _later_tiles: Array[HomeTile] = []
 ## 次にやってほしい入口1つに掛ける印(GameDesign.md 18章)。
 var _next_mark := NextStepMark.new()
@@ -115,17 +118,22 @@ func _build() -> void:
 	_ranked_info = RankedEntryInfo.new()
 	_ranked_tile.add_child(_ranked_info)
 
-	# **副題で「自由な対局」と「決まった課題」を対比させる**(GameDesign.md 9章)。
-	# **固定の数を書かない**——ステージを足したときに嘘になる。
+	# 人と遊べないときも繰り返し遊べるよう、「対戦する」と同格に並べる(GameDesign.md 9章)。
+	_solo_tile = HomeTile.make(SOLO_TITLE, "", "", Vector2(MAIN_WIDTH, 0.0), MAIN_FONT_SIZE, true)
+	_solo_tile.emblem = null
+	_solo_tile.pressed.connect(_on_later_pressed.bind(_solo_tile, solo_requested))
+	add_child(_solo_tile)
+	_solo_info = SoloEntryInfo.new()
+	_solo_tile.add_child(_solo_info)
+
+	# **固定の数を書かない**——ステージを足したときに嘘になる(GameDesign.md 9章)。
 	_cpu_tile = _make_side_tile("CPU戦", "好きなデッキで1局", "hour")
 	_cpu_tile.pressed.connect(func() -> void: cpu_match_requested.emit())
-	var solo_tile := _make_side_tile("ソロモード", "決まった条件の関門に挑む", "crown")
-	solo_tile.pressed.connect(_on_later_pressed.bind(solo_tile, solo_requested))
 	_puzzle_tile = _make_side_tile("リーサルパズル", PUZZLE_SUBTITLE, "sword")
 	_puzzle_tile.pressed.connect(_on_later_pressed.bind(_puzzle_tile, puzzle_requested))
 	_room_tile = _make_side_tile("ルームマッチ", "合言葉で友達と", "shield")
 	_room_tile.pressed.connect(_on_later_pressed.bind(_room_tile, room_match_requested))
-	_later_tiles = [solo_tile, _puzzle_tile, _room_tile]
+	_later_tiles = [_solo_tile, _puzzle_tile, _room_tile]
 	for tile in _later_tiles:
 		tile.lock_hint = LOCK_HINT
 	move_child(status_label, get_child_count() - 1)
@@ -151,17 +159,18 @@ func _layout() -> void:
 	status_label.position = Vector2(FRAME_X, STATUS_TOP)
 	status_label.size = Vector2(FRAME_W, STATUS_ROW)
 	var top := STATUS_TOP + STATUS_ROW
-	var height: float = BOTTOM - BOTTOM_MARGIN - top
+	var side_top: float = BOTTOM - BOTTOM_MARGIN - SIDE_HEIGHT
+	var main_size := Vector2(MAIN_WIDTH, side_top - TILE_GAP - top)
 	_ranked_tile.position = Vector2(FRAME_X, top)
-	_ranked_tile.size = Vector2(MAIN_WIDTH, height)
-	_ranked_info.size = _ranked_tile.size
-	var side_height: float = minf(SIDE_MAX_HEIGHT, (height - SIDE_GAP * 3.0) / 4.0)
-	var side_x: float = FRAME_X + MAIN_WIDTH + COLUMN_GAP
-	var side_tiles: Array[HomeTile] = [_cpu_tile]
-	side_tiles.append_array(_later_tiles)
+	_ranked_tile.size = main_size
+	_ranked_info.size = main_size
+	_solo_tile.position = Vector2(FRAME_X + MAIN_WIDTH + TILE_GAP, top)
+	_solo_tile.size = main_size
+	_solo_info.size = main_size
+	var side_tiles: Array[HomeTile] = [_cpu_tile, _puzzle_tile, _room_tile]
 	for i in side_tiles.size():
-		side_tiles[i].position = Vector2(side_x, top + float(i) * (side_height + SIDE_GAP))
-		side_tiles[i].size = Vector2(SIDE_WIDTH, side_height)
+		side_tiles[i].position = Vector2(FRAME_X + float(i) * (SIDE_WIDTH + TILE_GAP), side_top)
+		side_tiles[i].size = Vector2(SIDE_WIDTH, SIDE_HEIGHT)
 
 
 ## 1局でも終えていれば(誘導対局は戦績に数えない)すべての入口を出す(GameDesign.md 9章)。
@@ -192,6 +201,9 @@ func refresh() -> void:
 	var all_open := _all_entries_open()
 	for tile in _later_tiles:
 		tile.locked = not all_open
+	# 錠前が掛かっている間は、錠前と解放の条件だけを見せる(GameDesign.md 9章)。
+	_solo_info.visible = all_open
+	_solo_info.refresh(_uid())
 	_refresh_daily_puzzle()
 	_refresh_resume()
 	_ranked_info.refresh()
