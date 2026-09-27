@@ -16,6 +16,8 @@ const CARD_SIZE := Vector2(300, 330)
 const CARD_GAP := 36.0
 const MEDAL_RADIUS := 46.0
 const MEDAL_TOP_OFFSET := 36.0
+## メダルの内側の円に対する絵の大きさ。
+const MEDAL_ICON_RATIO := 1.1
 const NAME_FONT_SIZE := 24
 const DESC_FONT_SIZE := 15
 const OWNED_FONT_SIZE := 14
@@ -96,12 +98,18 @@ func _build_card(rect: Rect2, boon: SoloBoonData) -> void:
 	medal.position = rect.position + Vector2(rect.size.x * 0.5 - MEDAL_RADIUS, MEDAL_TOP_OFFSET)
 	medal.size = Vector2(MEDAL_RADIUS, MEDAL_RADIUS) * 2.0
 	medal.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var icon := boon.icon()
 	medal.draw.connect(
 		func() -> void:
 			var center := Vector2(MEDAL_RADIUS, MEDAL_RADIUS)
+			var inner := MEDAL_RADIUS - 6.0
 			medal.draw_circle(center, MEDAL_RADIUS, UiPalette.BRASS_MID)
-			medal.draw_circle(center, MEDAL_RADIUS - 6.0, UiPalette.NAVY_PANEL_TOP)
-			medal.draw_arc(center, MEDAL_RADIUS - 6.0, 0, TAU, 48, UiPalette.GLOW_AMBER, 2.0)
+			medal.draw_circle(center, inner, UiPalette.NAVY_PANEL_TOP)
+			medal.draw_arc(center, inner, 0, TAU, 48, UiPalette.GLOW_AMBER, 2.0)
+			if icon != null:
+				var side := inner * MEDAL_ICON_RATIO
+				var icon_rect := Rect2(center - Vector2.ONE * side * 0.5, Vector2.ONE * side)
+				medal.draw_texture_rect(icon, icon_rect, false, UiPalette.GLOW_AMBER)
 	)
 	_cards_box.add_child(medal)
 

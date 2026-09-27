@@ -76,6 +76,12 @@ Open Goldberg Variations は、Kickstarterで資金を集めて録音と楽譜�
 | `redraw.png` | マリガンで引き直す札の印 | リロード、やり直しのアイコン(11971) |
 | `flip_right.png` | 対局画面の反転権のボタン | Uターン矢印-2(12605) |
 | `hourglass.png` | 砂時計の紋章(タイトル・通貨・行動の列など) | スタンダードな砂時計アイコン(11603) |
+| `boon_tough_body.png` | 遠征の恩恵「丈夫な体」のメダル | ハートのアイコン素材 1(11296) |
+| `boon_deep_spring.png` | 遠征の恩恵「深い泉」のメダル | 波アイコン1(16243) |
+| `boon_keen_eye.png` | 遠征の恩恵「目利き」のメダル | 虫眼鏡のアイコン(10819) |
+| `boon_preemptive_sand.png` | 遠征の恩恵「先制の砂」のメダル | 弓矢アイコン(14115) |
+| `boon_well_prepared.png` | 遠征の恩恵「用意周到」のメダル | トランプアイコン1(14031) |
+| `boon_win_streak.png` | 遠征の恩恵「勝ち癖」のメダル | トロフィーアイコン(14520) |
 
 ---
 

@@ -4,6 +4,9 @@ extends Resource
 ## `data/solo_boons/{id}.tres`。恩恵を1つ足すのは `.tres` を1個作るだけで済む
 ## (Architecture.md 10.15節)。効果の数値は既定0で、使わないものは書かなくてよい。
 
+## メダルの絵は `assets/ui/icons/boon_{id}.png`(白のシルエット。CREDITS.md)。
+const ICON_PATH := "res://assets/ui/icons/boon_%s.png"
+
 @export var id: String = ""
 @export var display_name: String = ""
 ## 1〜2行の説明。恩恵の札・状態パネルの一覧に出す。
@@ -21,3 +24,9 @@ extends Resource
 @export var extra_opening_draw: int = 0
 ## 勝ち癖: 対局に勝つとHPがN回復する(上限はいまの最大HP)。
 @export var win_heal: int = 0
+
+
+## メダルの絵。無ければ null(メダルは枠だけを描く)。
+func icon() -> Texture2D:
+	var path := ICON_PATH % id
+	return load(path) if ResourceLoader.exists(path) else null
