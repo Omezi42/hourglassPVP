@@ -1,7 +1,8 @@
 class_name SoloModeTests
 extends RefCounted
-## ソロモード(GameDesign.md 27章)がMatchStateへ足す4つの上書きプロパティの検証。
-## Architecture.md 10.15節「既定値のままなら今までの全モードを一切変えない」を確かめる。
+## 遠征(ソロモード。GameDesign.md 27章)の検証。`SoloRun`の規則を中心に、
+## `MatchState`へ足した3つの上書きプロパティ(Architecture.md 10.15節)、
+## `SoloProgress`の保存・記録、関門データの健全さを確かめる。
 
 var _assert: Callable
 
@@ -12,12 +13,18 @@ func run(assert_true: Callable) -> void:
 	_test_sand_drop_count_override_drops_extra_grains()
 	_test_flip_disabled_blocks_normal_flip_but_not_flip_right()
 	_test_clash_damage_multiplier_doubles_combat_damage()
-	_test_mana_frozen_stops_the_max_mana_increase()
-	_test_solo_progress_round_trips_and_reports_first_clear()
-	_test_solo_library_unlock_depends_on_required_stages()
-	_test_solo_stages_form_a_single_path()
-	_test_solo_stages_are_playable()
-	_test_solo_puzzle_stages_are_solvable()
+	_test_solo_run_creates_a_fifteen_card_deck_one_of_each()
+	_test_solo_run_route_follows_the_rules()
+	_test_solo_run_cpu_decks_never_repeat_in_a_run()
+	_test_solo_run_win_advances_and_builds_an_offer()
+	_test_solo_run_offer_excludes_owned_pairs_solo_only_cards_and_tokens()
+	_test_solo_run_take_and_pass_offer()
+	_test_solo_run_loss_ends_the_run()
+	_test_solo_run_clearing_the_final_floor_marks_cleared()
+	_test_solo_run_round_trips_through_dict()
+	_test_solo_progress_in_battle_run_counts_as_a_loss_on_load()
+	_test_solo_progress_milestones_fire_once()
+	_test_solo_gates_load_and_reference_real_units()
 
 
 func _card(id: String) -> CardData:
@@ -47,12 +54,17 @@ func _force_play(state: MatchState, side: int, id: String, slot: int) -> CardIns
 	return state.board[side][slot]
 
 
+func _rng(seed_value: int) -> RandomNumberGenerator:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed_value
+	return rng
+
+
 func _test_defaults_match_existing_behavior() -> void:
 	var state := _new_match()
 	_assert.call(state.sand_drop_count == 1, "sand_drop_count should default to 1")
 	_assert.call(not state.flip_disabled, "flip_disabled should default to false")
 	_assert.call(state.clash_damage_multiplier == 1, "clash_damage_multiplier should default to 1")
-	_assert.call(not state.mana_frozen, "mana_frozen should default to false")
 
 
 func _test_sand_drop_count_override_drops_extra_grains() -> void:
@@ -109,153 +121,212 @@ func _test_clash_damage_multiplier_doubles_combat_damage() -> void:
 	)
 
 
-func _test_mana_frozen_stops_the_max_mana_increase() -> void:
-	var state := _new_match()
-	_assert.call(state.max_mana[MatchState.Side.A] == 1, "turn 1 should grant 1 mana as usual")
-	state.mana_frozen = true
-	state.end_turn()
-	_assert.call(
-		state.max_mana[MatchState.Side.B] == 0,
-		"mana_frozen should stop the max mana increase on the next turn"
-	)
-	state.end_turn()
-	_assert.call(
-		state.max_mana[MatchState.Side.A] == 1,
-		"mana_frozen should keep applying to later turns too"
-	)
-
-
-func _test_solo_progress_round_trips_and_reports_first_clear() -> void:
-	SoloProgress.reset_for_test()
-	_assert.call(
-		not SoloProgress.is_cleared("", "stage_1"), "an unrecorded stage should not be cleared"
-	)
-	_assert.call(SoloProgress.mark_cleared("", "stage_1"), "the first clear should report true")
-	_assert.call(SoloProgress.is_cleared("", "stage_1"), "the clear should be recorded")
-	_assert.call(
-		not SoloProgress.mark_cleared("", "stage_1"),
-		"clearing the same stage again should not report a first clear"
-	)
-	_assert.call(SoloProgress.cleared_count("") == 1, "only one stage should be recorded")
-
-
-func _test_solo_library_unlock_depends_on_required_stages() -> void:
-	SoloProgress.reset_for_test()
-	var first := SoloStageData.new()
-	first.id = "solo_test_1"
-	var second := SoloStageData.new()
-	second.id = "solo_test_2"
-	second.requires = ["solo_test_1"]
-	_assert.call(
-		SoloLibrary.is_unlocked(first, ""), "a stage without prerequisites should be unlocked"
-	)
-	_assert.call(
-		not SoloLibrary.is_unlocked(second, ""),
-		"a stage should stay locked until its prerequisites are cleared"
-	)
-	SoloProgress.mark_cleared("", "solo_test_1")
-	_assert.call(
-		SoloLibrary.is_unlocked(second, ""),
-		"clearing the prerequisite should unlock the next stage"
-	)
-
-
-## v1のステージは1本道(GameDesign.md 27章)。**順番と前提が食い違うと、
-## クリアしても次が開かない**という形でしか気づけないため、並びごと確かめる。
-func _test_solo_stages_form_a_single_path() -> void:
-	var stages := SoloLibrary.all_stages()
-	_assert.call(stages.size() == 10, "v1 should ship ten solo stages")
+func _test_solo_run_creates_a_fifteen_card_deck_one_of_each() -> void:
+	var theme_id := CardCpuDecks.deck_ids()[0]
+	var run := SoloRun.create(theme_id, _rng(1))
+	_assert.call(run.deck_ids.size() == 15, "the starting deck should hold 15 cards")
 	var seen := {}
-	for i in stages.size():
-		var stage := stages[i]
-		_assert.call(not seen.has(stage.id), "solo stage ids must be unique: " + stage.id)
-		seen[stage.id] = true
-		_assert.call(stage.order == i + 1, "solo stage order should be 1..10: " + stage.id)
-		_assert.call(not stage.display_name.is_empty(), "a solo stage needs a name: " + stage.id)
-		_assert.call(stage.reward_gold > 0, "a solo stage must pay gold: " + stage.id)
-		if i == 0:
-			_assert.call(stage.requires.is_empty(), "the first stage must be open from the start")
-		else:
-			_assert.call(
-				stage.requires == [stages[i - 1].id],
-				"stage %s should require the one before it" % stage.id
-			)
-		if not stage.reward_icon_id.is_empty():
-			_assert.call(
-				UserProfileLibrary.ICONS.has(stage.reward_icon_id),
-				"reward icon must exist: " + stage.reward_icon_id
-			)
-			_assert.call(
-				not UserProfileLibrary.INITIAL_ICON_IDS.has(stage.reward_icon_id),
-				"an icon everyone already owns is not a reward: " + stage.reward_icon_id
-			)
-		if not stage.reward_card_set_id.is_empty():
-			_assert.call(
-				CardSetLibrary.has_set(stage.reward_card_set_id),
-				"reward card set must exist: " + stage.reward_card_set_id
-			)
+	for id in run.deck_ids:
+		_assert.call(not seen.has(id), "the starting deck should hold one of each card: " + id)
+		seen[id] = true
+	_assert.call(run.hp == MatchState.INITIAL_HP, "hp should start at MatchState.INITIAL_HP")
+	_assert.call(run.floor == 0, "a fresh run should start at floor 0")
 
 
-## デッキ・盤面の中身が実際に読めること。カードidの打ち間違いはここで出る。
-func _test_solo_stages_are_playable() -> void:
-	for stage in SoloLibrary.all_stages():
-		if stage.stage_type == SoloStageData.Kind.PUZZLE:
-			_assert.call(stage.puzzle != null, "a puzzle stage needs a puzzle: " + stage.id)
-			_check_units(stage.puzzle.own_units + stage.puzzle.foe_units, stage.id)
-			for id in stage.puzzle.hand_ids:
-				_assert.call(_card(id) != null, "hand card must exist: " + id)
-			continue
-		var config := stage.match_config
-		_assert.call(config != null, "a match stage needs a config: " + stage.id)
-		for deck: Array[String] in [config.player_deck_ids, config.opponent_deck_ids]:
+## 道の規則(GameDesign.md 27章「道」): 1〜5段目は2〜3個、各段には対局か関門が1つ以上、
+## 泉は1段に1つまで・1段目には出さない。6段目は対局1つだけ。
+func _test_solo_run_route_follows_the_rules() -> void:
+	for trial in 8:
+		var run := SoloRun.create(CardCpuDecks.deck_ids()[0], _rng(100 + trial))
+		_assert.call(run.route.size() == SoloRun.FLOOR_COUNT, "the route should hold 6 floors")
+		for floor_i in range(SoloRun.FLOOR_COUNT - 1):
+			var options: Array = run.route[floor_i]
 			_assert.call(
-				deck.size() == MatchState.DECK_SIZE,
-				"a fixed deck must hold %d cards: %s" % [MatchState.DECK_SIZE, stage.id]
+				options.size() >= 2 and options.size() <= 3,
+				"floor %d should offer 2-3 destinations" % floor_i
 			)
-			var counts := {}
-			for id in deck:
-				_assert.call(_card(id) != null, "deck card must exist: " + id)
-				counts[id] = int(counts.get(id, 0)) + 1
-				_assert.call(counts[id] <= 2, "a fixed deck may hold two copies at most: " + id)
-		_check_units(config.own_board_units + config.foe_board_units, stage.id)
-		if config.win_condition == SoloMatchConfig.WinCondition.SURVIVE_TURNS:
-			_assert.call(config.survive_turns > 0, "a survival stage needs a target: " + stage.id)
-
-
-## 盤面の1行が読めて、体力+攻撃力がそのカードの総量を超えていないこと。
-## 超えていると、砂が落ちて出来上がるはずのない駒を出題してしまう。
-func _check_units(rows: Array[String], stage_id: String) -> void:
-	for row in rows:
-		var parsed := PuzzleStageData.parse_unit(row)
-		_assert.call(not parsed.is_empty(), "unit row must parse: %s (%s)" % [row, stage_id])
-		if parsed.is_empty():
-			continue
-		var card: CardData = parsed["card"]
-		var sand: int = int(parsed["health"]) + int(parsed["attack"])
-		_assert.call(int(parsed["health"]) > 0, "a placed unit must be alive: " + row)
+			var non_spring := 0
+			var springs := 0
+			for dest in options:
+				var kind: int = int(dest["kind"])
+				if kind == SoloRun.Kind.SPRING:
+					springs += 1
+				else:
+					non_spring += 1
+			_assert.call(non_spring >= 1, "floor %d needs a battle or gate" % floor_i)
+			_assert.call(springs <= 1, "floor %d should offer at most one spring" % floor_i)
+			if floor_i == 0:
+				_assert.call(springs == 0, "the first floor should not offer a spring")
+		var final_options: Array = run.route[SoloRun.FLOOR_COUNT - 1]
+		_assert.call(final_options.size() == 1, "the final floor should offer one destination")
 		_assert.call(
-			sand <= card.total_sand, "a placed unit cannot hold more sand than its total: " + row
+			int(final_options[0]["kind"]) == SoloRun.Kind.BATTLE,
+			"the final floor's destination must be a battle"
 		)
 
 
-## **パズル型は「解ける」ことまで確かめる**(リーサルパズルと同じ理由)。
-## 手順は問題ごとの解答にあたる。
-func _test_solo_puzzle_stages_are_solvable() -> void:
-	# 第1問: 守護(体力3)をちょうど割れるのは攻撃力3のロックだけ。サンドやウォールで
-	# 割ると余った打点がそのまま消え、本体へ13が届かない。
-	var answers := {
-		"solo_1": [["cast", 0], ["attack", 1, 0], ["attack", 0, -1], ["attack", 2, -1]],
-		# 第3問: 砕砂を硝子のミラーへ撃つと膜に吸われて消える。守護のゲートを削り、
-		# 弱ったところへ貫通を通して超過分を本体へ抜く。
-		"solo_3": [["cast", 0, 1, 0], ["attack", 0, 0], ["attack", 1, -1]],
-	}
-	for stage in SoloLibrary.all_stages():
-		if stage.stage_type != SoloStageData.Kind.PUZZLE:
-			continue
-		_assert.call(answers.has(stage.id), "no answer recorded for " + stage.id)
-		if not answers.has(stage.id):
-			continue
+func _test_solo_run_cpu_decks_never_repeat_in_a_run() -> void:
+	for trial in 8:
+		var run := SoloRun.create(CardCpuDecks.deck_ids()[0], _rng(200 + trial))
+		var used := {}
+		for options in run.route:
+			for dest in options:
+				var deck_id := str(dest.get("cpu_deck", ""))
+				if deck_id.is_empty():
+					continue
+				_assert.call(
+					not used.has(deck_id),
+					"a CPU deck should not appear twice in one run: " + deck_id
+				)
+				used[deck_id] = true
+
+
+func _test_solo_run_win_advances_and_builds_an_offer() -> void:
+	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], _rng(3))
+	run.choose(0, _rng(3))
+	_assert.call(run.in_battle, "choosing a battle/gate destination should set in_battle")
+	var was_gate := (
+		int(run.active_destination().get("kind", SoloRun.Kind.BATTLE)) == SoloRun.Kind.GATE
+	)
+	run.finish_battle(true, 18, _rng(4))
+	_assert.call(not run.in_battle, "finishing a battle should clear in_battle")
+	_assert.call(run.wins == 1, "a win should increase wins")
+	_assert.call(run.floor == 1, "a win should advance the floor")
+	_assert.call(run.hp == 18, "hp should carry over from the battle")
+	var expected_size := SoloRun.GATE_OFFER_SIZE if was_gate else SoloRun.OFFER_SIZE
+	_assert.call(run.offer.size() == expected_size, "a win should offer the right number of cards")
+
+
+func _test_solo_run_offer_excludes_owned_pairs_solo_only_cards_and_tokens() -> void:
+	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], _rng(5))
+	# 山札を全カード2枚持ちにしておく(候補が「既に2枚あるカード」を外すことを確かめる)。
+	run.deck_ids = run.deck_ids.duplicate()
+	for id in run.deck_ids.duplicate():
+		run.deck_ids.append(id)
+	run.choose(0, _rng(5))
+	run.finish_battle(true, 18, _rng(6))
+	for id in run.offer:
+		var count := 0
+		for owned in run.deck_ids:
+			if owned == id:
+				count += 1
 		_assert.call(
-			PuzzleSolver.solve(stage.puzzle, answers[stage.id]),
-			"solo puzzle should be solvable: " + stage.id
+			count < SoloRun.MAX_DECK_COPIES, "the offer should not repeat an owned pair: " + id
 		)
+		var card := _card(id)
+		_assert.call(card != null, "an offered card id should exist: " + id)
+		_assert.call(not card.is_token, "the offer should not include a token: " + id)
+		_assert.call(
+			card.set_id.is_empty() or CardSetLibrary.price(card.set_id) > 0,
+			"the offer should not include a price==0 set card: " + id
+		)
+	var seen := {}
+	for id in run.offer:
+		_assert.call(not seen.has(id), "the offer should not repeat a card: " + id)
+		seen[id] = true
+
+
+func _test_solo_run_take_and_pass_offer() -> void:
+	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], _rng(7))
+	run.choose(0, _rng(7))
+	run.finish_battle(true, 20, _rng(8))
+	var offered := run.offer[0]
+	var before := run.deck_ids.size()
+	run.take(offered)
+	_assert.call(run.deck_ids.size() == before + 1, "take() should add the card to the deck")
+	_assert.call(run.offer.is_empty(), "take() should clear the offer")
+
+	var run2 := SoloRun.create(CardCpuDecks.deck_ids()[1], _rng(9))
+	run2.choose(0, _rng(9))
+	run2.finish_battle(true, 20, _rng(10))
+	var before2 := run2.deck_ids.size()
+	run2.pass_offer()
+	_assert.call(run2.deck_ids.size() == before2, "pass_offer() should not change the deck")
+	_assert.call(run2.offer.is_empty(), "pass_offer() should clear the offer")
+
+
+func _test_solo_run_loss_ends_the_run() -> void:
+	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], _rng(11))
+	run.choose(0, _rng(11))
+	run.finish_battle(false, 0, _rng(12))
+	_assert.call(run.over, "a loss should end the run")
+	_assert.call(not run.cleared, "a loss should not count as cleared")
+
+
+func _test_solo_run_clearing_the_final_floor_marks_cleared() -> void:
+	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], _rng(13))
+	while not run.over:
+		var options := run.current_destinations()
+		var index := 0
+		for i in options.size():
+			if int(options[i]["kind"]) != SoloRun.Kind.SPRING:
+				index = i
+				break
+		run.choose(index, _rng(14))
+		if run.in_battle:
+			run.finish_battle(true, MatchState.INITIAL_HP, _rng(15))
+			if not run.offer.is_empty():
+				run.pass_offer()
+	_assert.call(run.cleared, "winning every battle should clear the run")
+	_assert.call(run.floor == SoloRun.FLOOR_COUNT, "a cleared run should reach the final floor")
+
+
+func _test_solo_run_round_trips_through_dict() -> void:
+	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], _rng(16))
+	run.choose(0, _rng(16))
+	run.finish_battle(true, 20, _rng(17))
+	var restored := SoloRun.from_dict(run.to_dict())
+	_assert.call(restored.theme_id == run.theme_id, "from_dict should restore theme_id")
+	_assert.call(restored.deck_ids == run.deck_ids, "from_dict should restore deck_ids")
+	_assert.call(restored.hp == run.hp, "from_dict should restore hp")
+	_assert.call(restored.floor == run.floor, "from_dict should restore floor")
+	_assert.call(restored.wins == run.wins, "from_dict should restore wins")
+	_assert.call(restored.offer == run.offer, "from_dict should restore offer")
+	_assert.call(restored.route.size() == run.route.size(), "from_dict should restore the route")
+	var kind: int = int(restored.route[0][0]["kind"])
+	_assert.call(kind == int(run.route[0][0]["kind"]), "from_dict should restore route entry types")
+
+
+func _test_solo_progress_in_battle_run_counts_as_a_loss_on_load() -> void:
+	SoloProgress.reset_for_test()
+	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], _rng(18))
+	run.choose(0, _rng(18))
+	_assert.call(run.in_battle, "the setup battle should be in progress")
+	SoloProgress.save_run("", run)
+	var loaded := SoloProgress.load_run("")
+	_assert.call(loaded == null, "loading a run stuck in_battle should discard it")
+	_assert.call(
+		SoloProgress.best_wins("") == 0, "the discarded run should count as a loss, not a win"
+	)
+
+
+func _test_solo_progress_milestones_fire_once() -> void:
+	SoloProgress.reset_for_test()
+	var run := SoloRun.new()
+	run.wins = 2
+	var reached := SoloProgress.record("", run)
+	_assert.call(reached.size() == 1, "reaching 2 wins should fire exactly one milestone")
+	_assert.call(
+		str(reached[0]["id"]) == "solo_wins_2", "the 2-win milestone should fire at 2 wins"
+	)
+	var reached_again := SoloProgress.record("", run)
+	_assert.call(reached_again.is_empty(), "the same milestone should not fire twice")
+	_assert.call(SoloProgress.best_wins("") == 2, "record() should update best_wins")
+
+
+func _test_solo_gates_load_and_reference_real_units() -> void:
+	var gates := SoloGateLibrary.all_gates()
+	_assert.call(gates.size() == 7, "GameDesign.md 27章 lists seven gates")
+	var seen := {}
+	for gate in gates:
+		_assert.call(not seen.has(gate.id), "gate ids must be unique: " + gate.id)
+		seen[gate.id] = true
+		_assert.call(not gate.display_name.is_empty(), "a gate needs a name: " + gate.id)
+		_assert.call(not gate.description.is_empty(), "a gate needs a description: " + gate.id)
+		for row in gate.own_board_units + gate.foe_board_units:
+			var parsed := PuzzleStageData.parse_unit(row)
+			_assert.call(
+				not parsed.is_empty(), "gate unit row must parse: %s (%s)" % [row, gate.id]
+			)
+		if gate.win_condition == SoloGateData.WinCondition.SURVIVE_TURNS:
+			_assert.call(gate.survive_turns > 0, "a survival gate needs a target: " + gate.id)
