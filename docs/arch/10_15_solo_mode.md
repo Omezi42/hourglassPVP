@@ -1,137 +1,100 @@
-# 10.15 ソロモード
+# 10.15 ソロモード(遠征)
 
-GameDesign.md 27章の実装方針。**チュートリアルではなく、既存の対局エンジン
-(`MatchState`)を土台にした一人用の高難度コンテンツ**として作る。専用の対局ルールを
-新設せず、リーサルパズル(10.12節)がそうしているように、既存のクラスへ薄い
-オーバーライドを重ねる形にする。
+GameDesign.md 27章の実装方針。**遠征の規則(道・山札・HP・候補)は対局画面から切り離した純粋なロジック
+(`SoloRun`)に置き、対局そのものは既存の CPU 戦の経路(`_begin_state()`)へ薄い上書きを重ねる。**
+遠征の規則をヘッドレステストで確かめられるようにするため。
 
 | クラス | 責務 |
 |---|---|
-| `SoloStageData`(`scripts/data/solo_stage_data.gd`, Resource) | 1ステージぶんの定義。`data/solo_stages/{id}.tres` |
-| `SoloMatchConfig`(Resource、`SoloStageData` に埋め込む) | パズル型以外の4種が使う対局設定(下記) |
-| `SoloLibrary`(`scripts/logic/solo_library.gd`, static) | `data/solo_stages/` を `order` 順に返す。`PuzzleLibrary`と同じ流儀(`.remap`の扱いを含む) |
-| `SoloProgress`(`scripts/logic/solo_progress.gd`, static) | クリア記録。`user://solo_progress.json` へアカウントごとに持つ。`PuzzleProgress`と同じ流儀 |
-| `CardSoloMapScreen`(`scripts/ui/card_solo_map_screen.gd`) | ステージ一覧の画面。左に `SoloTrail`(スクロール)、右に `SoloStageDetail` を置き、開いたときに次に挑むステージを選ぶ |
-| `SoloTrail`(`scripts/ui/solo_trail.gd`) | 蛇行する1本道と駒を自前で描き、押された駒を `stage_chosen` で知らせる。駒の位置は並び順から `node_center()` で決まり、データに座標を持たない |
-| `SoloStageDetail`(`scripts/ui/solo_stage_detail.gd`) | 選んだステージの名前・種別・説明・初回クリアの報酬と「挑戦」ボタン |
-| `StageRewardTokens`(`scripts/ui/stage_reward_tokens.gd`, static) | 報酬の絵(砂金の硬貨・砂時計・アイコン)。結果パネルとステージ詳細で同じ絵を使うため共有する |
-| `CardMatchSolo`(`scripts/ui/card_match_solo.gd`, RefCounted) | `_screen` 参照を持つ切り出し(`CardMatchPuzzle`/`CardMatchOnline`と同じ流儀)。対局設定の適用・特殊勝利条件の監視・連戦型のHP持ち越し・クリア時の報酬付与を行う |
-| `CardChallengeResult`(`scripts/ui/card_challenge_result.gd`) | ステージの結果パネル。リーサルパズルと共用(10.12節)。`CardMatchSolo.add_result_panel()` が**ログより奥へ差し込む**——パネルの「ログ」で開いたログが下へ隠れないように |
-| `CardMatchGeometry`(`scripts/ui/card_match_geometry.gd`, RefCounted) | `card_match_screen.gd`が1000行の上限に迫ったため、`hp_bar_center()`/`slot_center()`/`playable_hand_rects()`/`end_turn_button_rect()`の4つの座標系の問い合わせをここへ切り出した。ソロモード固有の役目は持たないが、この節の実装で足りなくなった行数を確保するために行った |
+| `SoloGateData`(`scripts/data/solo_gate_data.gd`, Resource) | 関門1つぶんの特殊ルール。`data/solo_gates/{id}.tres`。1つ足すのは `.tres` 1個 |
+| `SoloGateLibrary`(`scripts/logic/solo_gate_library.gd`, static) | `data/solo_gates/` を id 順に返す。`PuzzleLibrary` と同じ流儀(`.remap` の扱いを含む) |
+| `SoloRun`(`scripts/logic/solo_run.gd`, RefCounted) | 遠征1回ぶんの状態と規則。道の生成・行き先の選択・勝敗の反映・候補の生成・山札への追加。`to_dict()` / `from_dict()` で保存できる。乱数は呼び出し側から受け取る |
+| `SoloProgress`(`scripts/logic/solo_progress.gd`, static) | 遠征の保存(続きから再開)と、遠征をまたいで残る記録(最多勝利数・踏破回数・到達済みの節目)。`user://solo_progress.json` へアカウントごとに持つ |
+| `CardMatchSolo`(`scripts/ui/card_match_solo.gd`, RefCounted) | `_screen` 参照を持つ切り出し。行き先の対局を始め、関門の特殊ルールを当て、終局で `SoloRun` へ結果を返し、砂金・節目の報酬を渡して結果パネルを出す |
+| `CardSoloMapScreen`(`scripts/ui/card_solo_map_screen.gd`) | 遠征の画面。出発(作戦の3択)・道・候補の選択・山札の中身を出す(構成は9章のモックで決める) |
+| `CardChallengeResult` / `StageRewardTokens` | 結果パネルと報酬の絵。リーサルパズル(10.12節)と共用 |
 
-**`SoloStageData` のフィールド**
+## `SoloGateData`
 
 | フィールド | 型 | 内容 |
 |---|---|---|
-| `id` | String | 一意識別子 |
-| `order` | int | ステージの並び順(v1は1本道のため、これがそのままツリー上の位置になる) |
-| `display_name` / `description` | String | 名前と1〜2行の説明 |
-| `stage_type` | enum(`Kind`) | `PUZZLE` / `CPU_MATCH` / `SPECIAL_RULE` / `GAUNTLET` / `RESTRICTED` |
-| `requires` | Array[String] | 前提ステージのid。**複数持てるようにしておく**(v1では常に1つだが、将来の分岐に備える) |
-| `reward_gold` | int | 初回クリア時の砂金 |
-| `reward_icon_id` | String | 空なら無し。付与は`AccountService`の所有配列(10.8節と同じ経路) |
-| `reward_card_set_id` | String | 空なら無し。`CardSetLibrary`のid(ソロモード限定の1枚セット。10.8.1節・下記) |
-| `puzzle` | PuzzleStageData | `stage_type == PUZZLE` のときだけ使う。**既存のリーサルパズルと全く同じ形式を埋め込みで再利用する**(新しいフィールドを作らない) |
-| `match_config` | SoloMatchConfig | `PUZZLE` 以外で使う |
+| `id` / `display_name` / `description` | String | 一意識別子・名前・1〜2行の説明 |
+| `own_board_units` / `foe_board_units` | Array[String] | 初期盤面。`"id:体力:攻撃力"`(`PuzzleStageData` と同じ表現)。空なら空の盤面 |
+| `win_condition` | enum `WinCondition` | `HP_ZERO`(既定)/ `SURVIVE_TURNS` / `DESTROY_ALL_ENEMY_UNITS` |
+| `survive_turns` | int | `SURVIVE_TURNS` のときの目標(`MatchState.turn_count`、両者の手番の通し数) |
+| `sand_drop_count` | int | 既定1。`MatchState.sand_drop_count` へ渡す |
+| `flip_disabled` | bool | `MatchState.flip_disabled` へ渡す(反転権は対象外) |
+| `clash_damage_multiplier` | int | 既定1。`MatchState.clash_damage_multiplier` へ渡す |
 
-**`SoloMatchConfig` のフィールド**
+**`MatchState` の上書き用プロパティは3つ**(`sand_drop_count` / `flip_disabled` / `clash_damage_multiplier`)。
+既定値のままなら他の全モードを一切変えない。`CardMatchSolo` が `_begin_state()` の直後、最初の手番の前に設定する。
+盤面の上書きは新しいAPIを作らず、`board` を直接差し替える(ルール画面・4.2節と同じ)。
 
-| フィールド | 型 | 内容 |
-|---|---|---|
-| `player_deck_ids` / `opponent_deck_ids` | Array[String] | 30枚ぶんのid。**プレイヤー自身の構築デッキは使わない**(GameDesign.md 27章) |
-| `opponent_count` | int | `GAUNTLET`(連戦型)でのみ2以上。既定1 |
-| `own_board_units` / `foe_board_units` | Array[String] | `"id:体力:攻撃力"` の文字列(`PuzzleStageData`の`own_units`/`foe_units`と同じ表現)。空なら通常どおり空の盤面から開始 |
-| `win_condition` | enum(`WinCondition`) | `HP_ZERO`(既定)/ `SURVIVE_TURNS` / `DESTROY_ALL_ENEMY_UNITS` |
-| `survive_turns` | int | `win_condition == SURVIVE_TURNS` のときの目標ターン数 |
-| `sand_drop_count` | int | 既定1。`MatchState.sand_drop_count` へそのまま渡す |
-| `hp_override` | int | 0なら`MatchState.INITIAL_HP`のまま。0より大きければ両者のHPをこの値で開始する |
-| `mana_frozen` | bool | true なら自分のターン開始時に最大マナが増えない |
-| `flip_disabled` | bool | true なら`MatchState.flip_disabled`へ渡す(3章の通常の反転を止める。反転権は対象外) |
-| `clash_damage_multiplier` | int | 既定1。`MatchState.clash_damage_multiplier`へ渡す |
+**特殊勝利条件は `MatchState` 本体を変えず、外側の監視で判定する。**`SURVIVE_TURNS` は `turn_started` で目標を超えた
+自分の手番に相手を投了させ、`DESTROY_ALL_ENEMY_UNITS` は `unit_destroyed` のたびに相手の場を数えて空なら投了させる。
+通常のHP0の決着はどちらでも生かしておく。
 
-**`MatchState` へ足す4つの上書き用プロパティ**(GameDesign.md 27章「特殊ルールのバリエーション」)。
-いずれも**既定値のままなら今までの全モード(PvP・通常のCPU戦・リーサルパズル・誘導対局)を
-一切変えない**。ソロモードの `CardMatchSolo` が `start_match()` の直後、`_begin_turn()`が
-最初に走る前に設定する。
+## `SoloRun`
 
-- `sand_drop_count: int = 1` — `end_turn()` が各ユニットへ`tick()`する際、この粒数を渡す
-  (既存の `drop_sand(1)` 呼び出し箇所を `drop_sand(sand_drop_count)` へ変える)
-- `flip_disabled: bool = false` — `can_flip()` の先頭で true なら常に false を返す。
-  **反転権(`use_flip_right()`)はこのフラグを見ない**(GameDesign.md 27章の明記どおり)
-- `clash_damage_multiplier: int = 1` — `_resolve_unit_combat()` と `combat_preview()`
-  (UIの予測)が双方の`take_damage()`へ渡す量にこの倍率を掛ける。**双方に同じ倍率が
-  かかるため、相打ちの対称性は崩れない**
-- `mana_frozen: bool = false` — `_begin_turn()` の「最大マナ+1」を、trueの間だけ止める。
-  **側を区別しない1つのフラグ**とし、対象の対局では両者へ同じ制約をかける
+**状態**(すべて `to_dict()` に入る)
 
-**HPの上書き・盤面の上書きは、新しいAPIを作らずルール画面(4.2節)と同じ「差し替え」で行う**。
-`MatchState.start_match()`で通常どおり対局を作った直後、`CardMatchSolo`が`hp`と`board`を
-直接書き換える。**HPの下限・上限チェックは`heal_player()`/`damage_player()`を経由しないため
-ここでは働かないが、初期化時の一度きりの代入であり問題にならない**(3.1.1節の`INVERT_PLAYER_HP`
-実装時に確立した既存の注意点と同じ)。
+| フィールド | 内容 |
+|---|---|
+| `theme_id` | 出発で選んだ作戦(`CardCpuDecks` の id) |
+| `deck_ids: Array[String]` | いまの山札 |
+| `hp` | 持ち越すHP。開始は `MatchState.INITIAL_HP` |
+| `floor` | いま選ぶ段(0始まり。`FLOOR_COUNT` = 6 で踏破) |
+| `wins` | この遠征で勝った数 |
+| `route: Array` | 段ごとの行き先の配列。行き先は `{"kind": Kind, "cpu_deck": id, "gate": id}`(泉は空文字) |
+| `offer: Array[String]` | 勝った直後に選べる候補。空なら候補待ちではない |
+| `in_battle` | 行き先の対局を始めてから決着するまで true。**これが true のまま読み込んだら負けとして遠征を終える**(27章「中断と再開」) |
+| `over` / `cleared` | 遠征が終わったか / 踏破したか |
 
-**特殊勝利条件は`MatchState`本体を変えず、外側の監視で判定する**(`CardMatchPuzzle`が
-リーサルパズルの成否を`MatchState`の外で判定しているのと同じ考え方)。
+**規則の定数**: `FLOOR_COUNT = 6` / `SPRING_HEAL = 8` / `OFFER_SIZE = 3` / `GATE_OFFER_SIZE = 4` / `THEME_CHOICES = 3` /
+`EXPERT_FROM_FLOOR = 2` / `GOLD_PER_WIN = 20` / `CLEAR_GOLD = 100`。
 
-- `SURVIVE_TURNS`:`turn_started`シグナルで手番数を数え、目標へ達し、かつ自分のHPが
-  残っていればステージクリアとする。**通常のHP0での敗北判定(`MatchState`本体)はそのまま
-  生かしておく**——生き残る前に自分が倒されたら、既存の経路で普通に負ける
-- `DESTROY_ALL_ENEMY_UNITS`:`unit_destroyed`のたびに相手の場を数え、6枠すべて空になった
-  時点でクリアとする
+**操作**
 
-**思考レベルは常に上級で固定する**(GameDesign.md 27章)。`CardMatchSolo`は
-`CardCpuStrategy.Difficulty.EXPERT`を明示的に渡し、選択画面(8.2節)を挟まない
-(誘導対局が`NORMAL`を明示固定しているのと対になる)。
+- `static theme_choices(rng) -> Array[String]` — 出発で示す作戦の id を3つ
+- `static create(theme_id, rng) -> SoloRun` — 作戦の15種を1枚ずつ山札にし、道を作る
+- `choose(index, rng)` — いまの段の行き先を選ぶ。泉なら回復して次の段へ進む。対局・関門なら `in_battle` を立てる
+- `finish_battle(won, hp_left, rng)` — 決着を返す。勝ちなら `wins` と `floor` を進め、`hp` を控え、候補を作る(最終段なら踏破)。負けなら遠征を終える
+- `take(card_id)` / `pass_offer()` — 候補から1枚足す / 見送る
+- `difficulty()` — 段で決まる思考レベル(`EXPERT_FROM_FLOOR` 未満は中級)
 
-**`GAUNTLET`(連戦型)は、`_screen`のCPU対局を`opponent_count`回繰り返しつつ、
-プレイヤーのHPだけを次の対局へ持ち越す**。持ち越すのは`hp`のみで、山札・手札・盤面は
-対局ごとに引き直す(「合間の回復は無い」というルールの本体はHPの持ち越しだけで表現でき、
-デッキやマナまで持ち越すと1戦目の事故がそのまま2戦目の難度を歪めるため)。
+**道の生成**: 1〜5段目は2〜3個の行き先。各段に対局か関門を1つ以上、泉は1段に1つまで・1段目には出さない。
+6段目は対局1つだけ。**CPUデッキは1回の遠征で重複させない**(8つを切り混ぜて順に割り当てる)。
 
-**`CardMatchScreen`は`puzzle`と同じ形で`solo: CardMatchSolo`の公開getterを持つ**
-(`_solo`は`CardMatchBuild`が`_puzzle`と並べて生成する)。`CardMatchSolo.start_any()`が
-`stage.stage_type`を見て、`PUZZLE`なら`puzzle.start(stage.puzzle, false, stage)`、
-それ以外は`start(stage)`を呼び分ける。一覧から選んだとき(`Main._on_solo_stage_selected()`)も
-結果パネルの「次のステージへ」もここを通す。`_on_match_ended()`も
-`_puzzle.active()`の直後に`_solo.active()`を同じ形で見て、該当すれば`CardMatchOutcome`
-(通常の砂金・戦績・リプレイ)を素通りする——ソロモードの報酬は`CardMatchSolo.grant_stage_rewards()`が
-別に持つため、`MatchStats`(戦績)へ固定デッキの結果を混ぜない。
+**候補の生成**: 1枚は作戦のCPUデッキの15種から、残りは「基本セット + `price > 0` のカードセット」のうち
+トークンでないカードから。山札に既に2枚あるカード・同じ候補の中の重複は除く。候補を作れる数が足りなければ出せるだけ出す。
 
-**無料の付与は`AccountService.unlock_free(client, uid, kind, id)`の1本に集約する。**
-`purchase()`と同じ「`updateTime`を前提条件にした`commit()`」の形を使い、残高の確認・減算
-だけを行わない。`unlock_card_set()`と`unlock_icon()`はこれへ`ShopCatalog.Kind`を渡すだけの
-薄い委譲にしてある——**品種ごとに同じ30行を書き写すと、片方だけ直し忘れる**。
-通信に失敗した分は`AccountStore.add_pending_unlock(key, id)`へ積み、次のサインインで
-流し直す(15章の砂金と同じ扱い)。置き場は品種ごとに分ける(`_pending_key()`)——
-1つの配列へ混ぜると、復帰したときに互いの品種として解放しようとする。
-**カードセットの置き場だけは`pending_card_sets`という以前からの名前をそのまま使う**
-(変えると、この変更の前に積まれていた分が読めなくなる)。
+## `SoloProgress`
 
-## ソロモード限定カードの所有(GameDesign.md 27章)
+`user://solo_progress.json` にアカウントごと(未サインインは `"local"`)に
+`{"run": {...} or null, "best_wins": int, "clears": int, "milestones": [String]}` を持つ。
+以前の形式(ステージidの配列)を読んだときは空の記録として扱う。
 
-**10.8.1節のカードセットの仕組みをそのまま使う。**ソロモードのためだけに
-`solo_exclusive`/`owned_cards`のような別の所有フィールドを作らない——8章が
-「買い切り以外の追加手段」を明示的に許容しており、ステージのクリアはその1つとして
-そのまま乗る。**10.8.1節はこのソロモードの実装と合わせて着手し、両方が同じ
-`CardData.set_id` / `CardSetLibrary` / `players/{uid}.owned_card_sets` を使う。**
+- `load_run(uid) -> SoloRun` — 保存中の遠征。`in_battle` のまま残っていたら負けとして遠征を終え、`null` を返す
+- `save_run(uid, run)` / `clear_run(uid)` — 行き先の選択・決着・候補の選択のたびに保存する
+- `record(uid, run) -> Array[Dictionary]` — 決着のたびに呼び、最多勝利数・踏破回数を更新し、**初めて到達した節目**を返す
 
-- 新カード3枚は `set_id = "solo"` を持ち、`CardSetLibrary` に「ソロモードセット」
-  として1件登録する。**`price = 0` はショップに並べない印**とする
-  (`ShopCatalog.items()`はカードセットの品目を作るとき`price > 0`のものだけを拾う)
-- 付与は `AccountService.unlock_card_set(uid, set_id)` を新設して行う。`purchase()`と
-  同じ「`updateTime`を前提条件にした`commit()`」で`owned_card_sets`へ追加するが、
-  **残高の確認・減算は行わない**(無料付与のため)。**通信に失敗した付与はローカルへ
-  退避し、次に成功した時点でまとめて反映する**(15章の砂金と同じ扱い。ソロモードは
-  オフラインでも遊べるCPU戦を含むため必要)
-- **デッキ編集・砂時計図鑑は、`set_id != "" and not owned_card_sets.has(set_id)`の
-  カードを弾く**(10.8.1節)。図鑑の「未収集はシルエット+『?』」の表現
-  (`AlmanacEntry.locked`として枠組みだけ作ってあった)を、この3枚で初めて実際に使う
-- **CPUデッキ(`CardCpuDecks`、8章)には `price == 0` のカードセットのカードを入れない**
-  (10.8.1節の決定どおり。`tools/tests/cpu_deck_tests.gd` が確かめる)
+**節目**は `SoloRun.MILESTONES` の表で持つ(`{"id", "wins" or "cleared", "card_set", "icon"}`)。
+解放は `AccountService.unlock_card_set()` / `unlock_icon()`(`unlock_free` の委譲。通信できないときは
+`AccountStore.add_pending_unlock()` へ積み、次のサインインで流し直す)。
 
-## ホーム画面のソロタブ
+## 対局の組み立て(`CardMatchSolo`)
 
-`SoloTab`(`scripts/ui/solo_tab.gd`)は`DeckTab`/`BattleTab`/`RulesTab`と同じ形で、
-大きなボタン3つ(CPU戦・リーサルパズル・ソロモード)を縦に並べる。CPU戦・リーサルパズルの
-遷移先(`Main._start_cpu_match()`系・`CardPuzzlePickerScreen`)はそのまま流用し、
-**ボタンの置き場所だけをBattleTabから移す**。
+- `start(run)` — いまの行き先の対局を作る。`_begin_state()` へ、自分側に `run.deck_ids` の `CardData`、
+  相手側に `CardCpuDecks.deck_of(cpu_deck)` を渡す。**30枚未満の山札を通すのはこの経路だけ**
+  (`MatchState.start_match()` は枚数を検査しない)。思考レベルは `run.difficulty()`。相手の名札は `CardCpuDecks.foe_name()`
+- `_begin_state()` の直後に `hp[自分] = run.hp` を差し替え、関門なら特殊ルールと盤面を当てる。`hp_changed` は出さない
+  (情報帯は `refresh()` が `state.hp` を直接読む。信号を出すと音とログが「被弾」と誤読する)
+- `on_match_ended()` — `run.finish_battle()` → `SoloProgress.save_run()` / `record()` → 砂金(`StageReward.grant_gold()`)と
+  節目の解放 → 結果パネル。`CardMatchScreen._on_match_ended()` は `_solo.active()` のとき通常の砂金・戦績・リプレイを素通りする
+- `_reset_for_new_match()` は `close()` を呼ぶため、`_begin_state()` の前に遠征を控えて戻す(10.12節と同じ穴)
+
+## ソロモード限定カードの所有
+
+**10.8.1節のカードセットの仕組みをそのまま使う。**3枚は `set_id` = `solo_chime` / `solo_ward` / `solo_goad` の
+1枚セット(`price = 0` はショップに並べない印)。デッキ編集・図鑑は未所有のカードを弾く(10.8.1節)。
+**`price == 0` のセットのカードは、CPUデッキにも遠征の候補にも入れない**(`tools/tests/cpu_deck_tests.gd` / `solo_mode_tests.gd` が確かめる)。

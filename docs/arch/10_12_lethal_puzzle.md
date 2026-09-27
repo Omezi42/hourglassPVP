@@ -92,8 +92,7 @@ Web書き出し(WebAssembly)の実行速度で毎回これを間に合わせる�
 `PuzzleProgress`(初回クリアの記録)も触らない。`CardMatchPuzzle` は
 `start(target, endless)` の第2引数でこれを区別し、`endless` のときは
 `_grant()` を呼ばない。結果パネルの「次の問題へ」は、エンドレスなら `PuzzleGenerator.generate()` を
-呼び直し、Stage1〜10なら `PuzzleLibrary` の並びで次の問題を、ソロモードのパズル型なら
-`CardMatchSolo.start_any()` で次のステージを始める。
+呼び直し、Stage1〜10なら `PuzzleLibrary` の並びで次の問題を始める。
 
 ## 10.12.2 今日の1問(GameDesign.md 24章)
 
