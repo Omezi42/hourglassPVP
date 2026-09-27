@@ -180,7 +180,7 @@ func _ready() -> void:
 	solo_map_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
 	solo_map_screen.visible = false
 	solo_map_screen.back_pressed.connect(func() -> void: _show_only(home_screen, true))
-	solo_map_screen.stage_selected.connect(_on_solo_stage_selected)
+	solo_map_screen.battle_requested.connect(_on_solo_battle_requested)
 	add_child(solo_map_screen)
 	_screens.append(solo_map_screen)
 	# 難易度モーダルは対局へ入る前の確認なので、対局画面より手前(後の子)に置く。
@@ -590,8 +590,8 @@ func _on_solo_requested() -> void:
 	_show_only(solo_map_screen)
 
 
-func _on_solo_stage_selected(stage: SoloStageData) -> void:
-	card_match_screen.solo.start_any(stage)
+func _on_solo_battle_requested(run: SoloRun) -> void:
+	card_match_screen.solo.start(run)
 	_match_return_screen = solo_map_screen
 	_show_only(card_match_screen)
 
