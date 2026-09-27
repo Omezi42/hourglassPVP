@@ -191,6 +191,8 @@ func _settle(won: bool) -> void:
 
 ## 砂金(対局・関門に勝つたびに20、踏破で100)と節目の限定カード・アイコンを渡す。
 ## **通信は待たない**——結果の表示を通信で止めない扱いは、対局の砂金と同じ。
+## **複数の節目が同時に届いたときは、すべてを結果パネルの札として並べる**(4勝目の
+## 「ウォード」と踏破の「揺さぶりの一手」が同時に届く場合など。GameDesign.md 27章)。
 func _grant_rewards(uid: String, won: bool, reached: Array[Dictionary]) -> StageReward:
 	var reward := StageReward.new()
 	if won:
@@ -200,13 +202,15 @@ func _grant_rewards(uid: String, won: bool, reached: Array[Dictionary]) -> Stage
 		var card_set_id := str(milestone.get("card_set", ""))
 		if not card_set_id.is_empty():
 			AccountService.unlock_card_set(NetSession.client, uid, card_set_id)
-			if reward.card_set_id.is_empty():
-				reward.card_set_id = card_set_id
+			reward.card_set_ids.append(card_set_id)
 		var icon_id := str(milestone.get("icon", ""))
 		if not icon_id.is_empty():
 			AccountService.unlock_icon(NetSession.client, uid, icon_id)
-			if reward.icon_id.is_empty():
-				reward.icon_id = icon_id
+			reward.icon_ids.append(icon_id)
+	if not reward.card_set_ids.is_empty():
+		reward.card_set_id = reward.card_set_ids[0]
+	if not reward.icon_ids.is_empty():
+		reward.icon_id = reward.icon_ids[0]
 	return reward
 
 

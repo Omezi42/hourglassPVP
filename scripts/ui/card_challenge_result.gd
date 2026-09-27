@@ -295,18 +295,17 @@ func _reward_tray(reward: StageReward, width: float) -> Control:
 	row.add_theme_constant_override("separation", REWARD_GAP)
 	if reward.gold > 0:
 		row.add_child(_reward_item(StageRewardTokens.coin(), "+%d" % reward.gold, "砂金", true))
-	var card := reward.card()
-	if card != null:
+	for card in reward.cards():
 		var art := HourglassArt.texture(card.art_key(), HourglassArt.State.UPRIGHT)
 		row.add_child(
 			_reward_item(StageRewardTokens.art(art, true), card.display_name, "新しいカード", false)
 		)
-	if not reward.icon_id.is_empty():
-		var icon := UserProfileLibrary.get_icon_texture(reward.icon_id)
+	for icon_id in reward.icons():
+		var icon := UserProfileLibrary.get_icon_texture(icon_id)
 		row.add_child(
 			_reward_item(
 				StageRewardTokens.art(icon, false),
-				UserProfileLibrary.get_icon_name(reward.icon_id),
+				UserProfileLibrary.get_icon_name(icon_id),
 				"新しいアイコン",
 				false
 			)

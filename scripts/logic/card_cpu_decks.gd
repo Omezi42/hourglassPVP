@@ -186,6 +186,15 @@ static func summary_of(id: String) -> String:
 	return ""
 
 
+## 作戦の15種(1枚ずつ)のid(ソロモード・27章の出発の札・道の駒アイコンに使う)。
+static func card_ids_of(id: String) -> Array[String]:
+	var ids: Array[String] = []
+	for card: CardData in deck_of(id):
+		if not ids.has(card.id):
+			ids.append(card.id)
+	return ids
+
+
 ## `{"name", "cards"}` から対局中に出す相手の名前を作る(GameDesign.md 13章・11章)。
 static func foe_name(deck: Dictionary) -> String:
 	var name := str(deck.get("name", ""))

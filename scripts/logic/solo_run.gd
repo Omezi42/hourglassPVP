@@ -38,6 +38,9 @@ var wins := 0
 var route: Array = []
 ## 勝った直後に選べる候補。空なら候補待ちではない。
 var offer: Array[String] = []
+## 段ごとに選んだ行き先のindex(`route[i]`の中の位置)。道の描画で、選び終えた段の
+## どの駒を真鍮で明るくするかに使う(画面・27章)。`choose()`のたびに足す。
+var chosen: Array[int] = []
 ## 行き先の対局を始めてから決着するまで true。
 var in_battle := false
 var over := false
@@ -89,6 +92,7 @@ func choose(index: int, _rng: RandomNumberGenerator) -> void:
 	var options := current_destinations()
 	if index < 0 or index >= options.size():
 		return
+	chosen.append(index)
 	var dest: Dictionary = options[index]
 	if int(dest.get("kind", Kind.BATTLE)) == Kind.SPRING:
 		hp = mini(hp + SPRING_HEAL, MatchState.INITIAL_HP)
@@ -139,6 +143,7 @@ func to_dict() -> Dictionary:
 		"wins": wins,
 		"route": route,
 		"offer": offer,
+		"chosen": chosen,
 		"in_battle": in_battle,
 		"over": over,
 		"cleared": cleared,
@@ -156,6 +161,8 @@ static func from_dict(data: Dictionary) -> SoloRun:
 	run.route = _route_from_variant(data.get("route", []))
 	for id in data.get("offer", []):
 		run.offer.append(str(id))
+	for index in data.get("chosen", []):
+		run.chosen.append(int(index))
 	run.in_battle = bool(data.get("in_battle", false))
 	run.over = bool(data.get("over", false))
 	run.cleared = bool(data.get("cleared", false))
