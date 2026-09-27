@@ -7,13 +7,12 @@ signal theme_chosen(theme_id: String)
 ## 砂の深さの矢印を押した(-1/+1)。選べる範囲の判定・保存は呼び出し側が持つ。
 signal depth_changed(delta: int)
 
-const CONTENT_TOP := ScreenHeader.CONTENT_TOP
-const CONTENT_HEIGHT := ScreenHeader.CONTENT_HEIGHT
 const MARGIN := 24.0
 const CARD_GAP := 24.0
 const CARD_PADDING := 22.0
 const CARDS_BOTTOM_MARGIN := 40.0
-const ICON_COLUMNS := 8
+const ICON_COLUMNS := 6
+const ICON_ASPECT := 1.32
 const ICON_GAP := 6.0
 const ICON_ROW_GAP := 10.0
 const ICON_GRID_TOP_OFFSET := 96.0
@@ -29,6 +28,7 @@ const DEPTH_LABEL_GAP := 8.0
 const DEPTH_LABEL_FONT_SIZE := 18
 const CONDITION_FONT_SIZE := 13
 const CONDITION_LINE_HEIGHT := 18.0
+const CONDITION_SEPARATOR := " ・ "
 const CONDITIONS_TOP_GAP := 8.0
 const CARDS_TOP_GAP := 18.0
 
@@ -58,38 +58,27 @@ func show_data(
 		child.queue_free()
 	var width := size.x
 	_add_label(
-		Rect2(MARGIN, CONTENT_TOP, width - MARGIN * 2.0, 34.0),
+		Rect2(MARGIN, 0.0, width - MARGIN * 2.0, 34.0),
 		"作戦を選んで出発",
 		HEADING_FONT_SIZE,
 		UiPalette.TEXT_OFFWHITE,
 		HORIZONTAL_ALIGNMENT_CENTER,
 		true
 	)
-	var depth_top := CONTENT_TOP + DEPTH_ROW_TOP_OFFSET
+	var depth_top := DEPTH_ROW_TOP_OFFSET
 	_build_depth_row(width, depth_top, depth, max_depth)
 	var conditions_top := depth_top + DEPTH_ARROW_SIZE.y + CONDITIONS_TOP_GAP
 	var conditions := SoloRun.depth_condition_lines(depth)
-	if conditions.is_empty():
-		_add_label(
-			Rect2(MARGIN, conditions_top, width - MARGIN * 2.0, CONDITION_LINE_HEIGHT),
-			"条件なし",
-			CONDITION_FONT_SIZE,
-			UiPalette.TEXT_MUTED,
-			HORIZONTAL_ALIGNMENT_CENTER
-		)
-		conditions_top += CONDITION_LINE_HEIGHT
-	else:
-		for line in conditions:
-			_add_label(
-				Rect2(MARGIN, conditions_top, width - MARGIN * 2.0, CONDITION_LINE_HEIGHT),
-				line,
-				CONDITION_FONT_SIZE,
-				UiPalette.TEXT_MUTED,
-				HORIZONTAL_ALIGNMENT_CENTER
-			)
-			conditions_top += CONDITION_LINE_HEIGHT
+	_add_label(
+		Rect2(MARGIN, conditions_top, width - MARGIN * 2.0, CONDITION_LINE_HEIGHT),
+		"条件なし" if conditions.is_empty() else CONDITION_SEPARATOR.join(conditions),
+		CONDITION_FONT_SIZE,
+		UiPalette.TEXT_MUTED,
+		HORIZONTAL_ALIGNMENT_CENTER
+	)
+	conditions_top += CONDITION_LINE_HEIGHT
 	var cards_top := conditions_top + CARDS_TOP_GAP
-	var cards_bottom := CONTENT_TOP + CONTENT_HEIGHT - CARDS_BOTTOM_MARGIN
+	var cards_bottom := size.y - CARDS_BOTTOM_MARGIN
 	var card_w: float = (width - MARGIN * 2.0 - CARD_GAP * 2.0) / 3.0
 	var card_h := cards_bottom - cards_top
 	for i in theme_ids.size():
@@ -209,12 +198,26 @@ func _build_seal(rect: Rect2, depth: int) -> void:
 func _build_icons(rect: Rect2, ids: Array[String]) -> void:
 	var grid_top := rect.position.y + CARD_PADDING + ICON_GRID_TOP_OFFSET
 	var inner_w: float = rect.size.x - CARD_PADDING * 2.0
-	var icon_w: float = (inner_w - float(ICON_COLUMNS - 1) * ICON_GAP) / float(ICON_COLUMNS)
-	var icon_h := icon_w * 1.32
+	var rows := ceili(float(ids.size()) / float(ICON_COLUMNS))
+	var inner_h: float = rect.end.y - CARD_PADDING - grid_top
+	# 札の高さに収まる大きさまで絵を広げる(幅と高さの小さいほうで決める)。
+	var icon_w: float = minf(
+		(inner_w - float(ICON_COLUMNS - 1) * ICON_GAP) / float(ICON_COLUMNS),
+		(
+			(inner_h - float(maxi(rows - 1, 0)) * (ICON_GAP + ICON_ROW_GAP))
+			/ float(maxi(rows, 1))
+			/ ICON_ASPECT
+		)
+	)
+	var icon_h := icon_w * ICON_ASPECT
+	var grid_left := (
+		rect.position.x
+		+ (rect.size.x - (icon_w * ICON_COLUMNS + ICON_GAP * (ICON_COLUMNS - 1))) * 0.5
+	)
 	for i in ids.size():
 		var col := i % ICON_COLUMNS
 		var row := i / ICON_COLUMNS
-		var x := rect.position.x + CARD_PADDING + float(col) * (icon_w + ICON_GAP)
+		var x := grid_left + float(col) * (icon_w + ICON_GAP)
 		var y := grid_top + float(row) * (icon_h + ICON_GAP + ICON_ROW_GAP)
 		_build_icon(Rect2(x, y, icon_w, icon_h), ids[i])
 
