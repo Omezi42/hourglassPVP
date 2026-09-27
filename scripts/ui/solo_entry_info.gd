@@ -95,7 +95,7 @@ func _draw_running() -> void:
 		EntryTilePaint.WELL_TEXT
 	)
 	EntryTilePaint.draw_well_right(
-		self, _font, rect, "%d勝 ・ HP %d/%d" % [_run.wins, _run.hp, MatchState.INITIAL_HP]
+		self, _font, rect, "%d勝 ・ HP %d/%d" % [_run.wins, _run.hp, _run.max_hp]
 	)
 
 

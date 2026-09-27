@@ -698,7 +698,10 @@ func refresh_bars() -> void:
 	if state == null:
 		return
 	_foe_bar.show_state(state, MatchState.other_side(my_side))
-	_own_bar.show_state(state, my_side)
+	var own_max := MatchState.INITIAL_HP
+	if _solo != null and _solo.active():
+		own_max = _solo.max_hp()
+	_own_bar.show_state(state, my_side, own_max)
 
 
 ## いま操作を受け付ける対局か(再生・観戦では実況を出さない)。

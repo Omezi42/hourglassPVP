@@ -4,19 +4,24 @@ extends RefCounted
 ## 対局画面から切り離した純粋なロジックで、乱数は呼び出し側から受け取る。
 ## `to_dict()` / `from_dict()` はそのままJSONへ通せる形(enumは整数)。
 
-## 行き先の種類。泉は `cpu_deck` / `gate` を空文字のまま持つ。
-enum Kind { BATTLE, GATE, SPRING }
+## 行き先の種類。泉・工房は `cpu_deck` / `gate` を空文字のまま持つ。
+## `WORKSHOP` は保存データ(`route`)の一部のため末尾へ足す(Pitfalls.md)。
+enum Kind { BATTLE, GATE, SPRING, WORKSHOP }
 
 const FLOOR_COUNT := 6
 const SPRING_HEAL := 8
-const OFFER_SIZE := 3
-const GATE_OFFER_SIZE := 4
 const THEME_CHOICES := 3
 const EXPERT_FROM_FLOOR := 2
 const GOLD_PER_WIN := 20
 const CLEAR_GOLD := 100
 ## 同名カードは山札に2枚まで(GameDesign.md 27章「山札を育てる」)。
 const MAX_DECK_COPIES := 2
+## 束の数(既定)。恩恵「目利き」の`extra_bundles`だけ増える。
+const BUNDLE_COUNT := 3
+## 1つの束の中のカード枚数。
+const BUNDLE_CARDS := 3
+## 恩恵の候補数。
+const BOON_OFFER_SIZE := 3
 
 ## 遠征をまたいで残る限定カード・アイコンの節目(GameDesign.md 27章)。
 ## `wins` を持つ行は初めてその勝利数に届いたとき、`cleared` を持つ行は
@@ -30,14 +35,25 @@ const MILESTONES: Array[Dictionary] = [
 var theme_id := ""
 var deck_ids: Array[String] = []
 var hp := MatchState.INITIAL_HP
+## 恩恵「丈夫な体」で伸びる最大HP(GameDesign.md 27章「恩恵」)。
+var max_hp := MatchState.INITIAL_HP
 ## いま選ぶ段(0始まり)。`FLOOR_COUNT` に達したら踏破。
 var floor := 0
 var wins := 0
 ## 段ごとの行き先の配列。`route[floor]` が、その段で選べる行き先(2〜3個)の配列。
-## 行き先は `{"kind": Kind, "cpu_deck": id, "gate": id}`(泉は空文字)。
+## 行き先は `{"kind": Kind, "cpu_deck": id, "gate": id}`(泉・工房は空文字)。
 var route: Array = []
-## 勝った直後に選べる候補。空なら候補待ちではない。
-var offer: Array[String] = []
+## 勝った直後に選べる束の候補。空なら候補待ちではない。
+## 束は `{"theme": id, "cards": [id, id, id]}`。
+var offer: Array[Dictionary] = []
+## 関門に勝った直後に選べる恩恵の候補。空なら候補待ちではない。
+var boon_offer: Array[String] = []
+## `boon_offer`を作った関門のid(恩恵の画面の小見出し「関門『名前』を越えた」用)。
+var last_gate_id := ""
+## 得た恩恵のid(GameDesign.md 27章「恩恵」。同じ恩恵は1回の遠征で1度だけ)。
+var boons: Array[String] = []
+## 工房を開いている間 true(GameDesign.md 27章「画面」)。
+var workshop_open := false
 ## 段ごとに選んだ行き先のindex(`route[i]`の中の位置)。道の描画で、選び終えた段の
 ## どの駒を真鍮で明るくするかに使う(画面・27章)。`choose()`のたびに足す。
 var chosen: Array[int] = []
@@ -64,7 +80,8 @@ static func create(theme_id: String, rng: RandomNumberGenerator) -> SoloRun:
 	var run := SoloRun.new()
 	run.theme_id = theme_id
 	run.deck_ids = _unique_ids(CardCpuDecks.deck_of(theme_id))
-	run.hp = MatchState.INITIAL_HP
+	run.max_hp = MatchState.INITIAL_HP
+	run.hp = run.max_hp
 	run.route = _build_route(rng)
 	return run
 
@@ -76,9 +93,16 @@ func difficulty() -> int:
 	return CardCpuStrategy.Difficulty.NORMAL
 
 
-## いまの段で選べる行き先。候補待ち・決着後は空。
+## いまの段で選べる行き先。候補待ち・工房を開いている間・決着後は空。
 func current_destinations() -> Array:
-	if over or in_battle or not offer.is_empty() or floor >= route.size():
+	if (
+		over
+		or in_battle
+		or workshop_open
+		or not offer.is_empty()
+		or not boon_offer.is_empty()
+		or floor >= route.size()
+	):
 		return []
 	return route[floor]
 
@@ -87,51 +111,149 @@ func active_destination() -> Dictionary:
 	return _active
 
 
-## いまの段の行き先を選ぶ。泉なら回復して次の段へ進む。対局・関門なら `in_battle` を立てる。
+## いまの段の行き先を選ぶ。泉なら回復して次の段へ進み、工房なら開く。対局・関門なら
+## `in_battle` を立てる。
 func choose(index: int, _rng: RandomNumberGenerator) -> void:
 	var options := current_destinations()
 	if index < 0 or index >= options.size():
 		return
 	chosen.append(index)
 	var dest: Dictionary = options[index]
-	if int(dest.get("kind", Kind.BATTLE)) == Kind.SPRING:
-		hp = mini(hp + SPRING_HEAL, MatchState.INITIAL_HP)
+	var kind := int(dest.get("kind", Kind.BATTLE))
+	if kind == Kind.SPRING:
+		hp = mini(hp + SPRING_HEAL + spring_bonus(), max_hp)
 		floor += 1
+		return
+	if kind == Kind.WORKSHOP:
+		workshop_open = true
 		return
 	_active = dest
 	in_battle = true
 
 
-## 行き先の対局の決着を返す。勝ちなら`wins`と`floor`を進め、`hp`を控え、候補を作る
-## (最終段なら踏破)。負けなら遠征を終える。
+## 行き先の対局の決着を返す。勝ちなら`wins`と`floor`を進め、`hp`を控え、関門なら恩恵の
+## 候補を、それ以外は束の候補を作る(最終段なら踏破)。負けなら遠征を終える。
 func finish_battle(won: bool, hp_left: int, rng: RandomNumberGenerator) -> void:
 	var was_gate := int(_active.get("kind", Kind.BATTLE)) == Kind.GATE
+	var gate_id := str(_active.get("gate", ""))
 	in_battle = false
 	hp = maxi(hp_left, 0)
 	_active = {}
 	if not won:
 		over = true
 		return
+	hp = mini(hp + win_heal(), max_hp)
 	wins += 1
 	floor += 1
 	if floor >= FLOOR_COUNT:
 		cleared = true
 		over = true
 		return
-	offer = _build_offer(rng, was_gate)
+	if was_gate:
+		last_gate_id = gate_id
+		boon_offer = _build_boon_offer(rng)
+	else:
+		offer = _build_bundle_offer(rng)
 
 
-## 候補から1枚を山札へ足す。
-func take(card_id: String) -> void:
-	if not offer.has(card_id):
+## 恩恵の候補から1つ得る。丈夫な体は即座にHPも回復する。束の候補はこのあとに作る
+## (GameDesign.md 27章「恩恵」)。
+func take_boon(id: String) -> void:
+	if not boon_offer.has(id):
 		return
-	deck_ids.append(card_id)
+	boons.append(id)
+	boon_offer = []
+	var boon := SoloBoonLibrary.find_by_id(id)
+	if boon != null and boon.max_hp_bonus > 0:
+		max_hp += boon.max_hp_bonus
+		hp = mini(hp + boon.max_hp_bonus, max_hp)
+	var rng := RandomNumberGenerator.new()
+	rng.randomize()
+	offer = _build_bundle_offer(rng)
+
+
+## 束を1つ選び、その3枚をまとめて山札へ足す。
+func take_bundle(index: int) -> void:
+	if index < 0 or index >= offer.size():
+		return
+	var bundle: Dictionary = offer[index]
+	for id in bundle.get("cards", []):
+		deck_ids.append(str(id))
 	offer = []
 
 
-## 候補を足さずに見送る。
+## 束を足さずに見送る。
 func pass_offer() -> void:
 	offer = []
+
+
+## 山札から1枚を抜く。工房を閉じ、次の段へ進む。
+func workshop_remove(card_id: String) -> void:
+	if not workshop_open:
+		return
+	var index := deck_ids.find(card_id)
+	if index == -1:
+		return
+	deck_ids.remove_at(index)
+	_close_workshop()
+
+
+## 山札の1枚を複製する(同名は2枚まで)。工房を閉じ、次の段へ進む。
+func workshop_duplicate(card_id: String) -> void:
+	if not workshop_open:
+		return
+	if not deck_ids.has(card_id):
+		return
+	if deck_ids.count(card_id) >= MAX_DECK_COPIES:
+		return
+	deck_ids.append(card_id)
+	_close_workshop()
+
+
+## 何もせず工房を閉じ、次の段へ進む。
+func workshop_skip() -> void:
+	if not workshop_open:
+		return
+	_close_workshop()
+
+
+func _close_workshop() -> void:
+	workshop_open = false
+	floor += 1
+
+
+## 恩恵「深い泉」の合計(GameDesign.md 27章「恩恵」)。
+func spring_bonus() -> int:
+	return _boon_total("spring_bonus")
+
+
+## 恩恵「目利き」の合計。束の数は `BUNDLE_COUNT + extra_bundles()`。
+func extra_bundles() -> int:
+	return _boon_total("extra_bundles")
+
+
+## 恩恵「先制の砂」の合計。対局開始時に相手のHPから引く(`CardMatchSolo`)。
+func foe_hp_penalty() -> int:
+	return _boon_total("foe_hp_penalty")
+
+
+## 恩恵「用意周到」の合計。対局の最初の手札に足す枚数(`CardMatchSolo`)。
+func extra_opening_draw() -> int:
+	return _boon_total("extra_opening_draw")
+
+
+## 恩恵「勝ち癖」の合計。勝利時にHPへ足す(上限は`max_hp`)。
+func win_heal() -> int:
+	return _boon_total("win_heal")
+
+
+func _boon_total(field: String) -> int:
+	var total := 0
+	for id in boons:
+		var boon := SoloBoonLibrary.find_by_id(id)
+		if boon != null:
+			total += int(boon.get(field))
+	return total
 
 
 func to_dict() -> Dictionary:
@@ -139,10 +261,15 @@ func to_dict() -> Dictionary:
 		"theme_id": theme_id,
 		"deck_ids": deck_ids,
 		"hp": hp,
+		"max_hp": max_hp,
 		"floor": floor,
 		"wins": wins,
 		"route": route,
 		"offer": offer,
+		"boon_offer": boon_offer,
+		"last_gate_id": last_gate_id,
+		"boons": boons,
+		"workshop_open": workshop_open,
 		"chosen": chosen,
 		"in_battle": in_battle,
 		"over": over,
@@ -155,18 +282,40 @@ static func from_dict(data: Dictionary) -> SoloRun:
 	run.theme_id = str(data.get("theme_id", ""))
 	for id in data.get("deck_ids", []):
 		run.deck_ids.append(str(id))
-	run.hp = int(data.get("hp", MatchState.INITIAL_HP))
+	run.max_hp = int(data.get("max_hp", MatchState.INITIAL_HP))
+	run.hp = int(data.get("hp", run.max_hp))
 	run.floor = int(data.get("floor", 0))
 	run.wins = int(data.get("wins", 0))
 	run.route = _route_from_variant(data.get("route", []))
-	for id in data.get("offer", []):
-		run.offer.append(str(id))
+	# 以前の形式(束ではなくカードidの配列)を読んだときは、offerを捨てて候補待ちを解く
+	# (CLAUDE.md「仕様変更フロー」ではなくPitfalls.mdの保存データの互換の話)。
+	run.offer = _offer_from_variant(data.get("offer", []))
+	for id in data.get("boon_offer", []):
+		run.boon_offer.append(str(id))
+	run.last_gate_id = str(data.get("last_gate_id", ""))
+	for id in data.get("boons", []):
+		run.boons.append(str(id))
+	run.workshop_open = bool(data.get("workshop_open", false))
 	for index in data.get("chosen", []):
 		run.chosen.append(int(index))
 	run.in_battle = bool(data.get("in_battle", false))
 	run.over = bool(data.get("over", false))
 	run.cleared = bool(data.get("cleared", false))
 	return run
+
+
+static func _offer_from_variant(raw: Variant) -> Array[Dictionary]:
+	var offer: Array[Dictionary] = []
+	if not (raw is Array):
+		return offer
+	for entry in raw:
+		if not (entry is Dictionary):
+			continue
+		var cards: Array[String] = []
+		for id in (entry as Dictionary).get("cards", []):
+			cards.append(str(id))
+		offer.append({"theme": str((entry as Dictionary).get("theme", "")), "cards": cards})
+	return offer
 
 
 static func _route_from_variant(raw: Variant) -> Array:
@@ -198,7 +347,7 @@ static func _build_route(rng: RandomNumberGenerator) -> Array:
 	var deck_pool := _string_array(_shuffled(CardCpuDecks.deck_ids(), rng))
 	var final_deck: String = deck_pool.pop_back()
 	var gate_pool := _string_array(_shuffled(SoloGateLibrary.all_ids(), rng))
-	# 8つのうち7つをfloors 0〜4へ配る。1段目は泉が出せないため必ず2つ受け取る。
+	# 8つのうち7つをfloors 0〜4へ配る。1段目は泉・工房が出せないため必ず2つ受け取る。
 	# 残る1つは1〜4段目のうちどれか1段へ(その段は行き先が3個になり得る)。
 	var extra_floor := 1 + rng.randi_range(0, 3)
 	var route: Array = []
@@ -207,10 +356,12 @@ static func _build_route(rng: RandomNumberGenerator) -> Array:
 		var destinations: Array = []
 		for _n in non_spring_count:
 			destinations.append(_next_destination(deck_pool, gate_pool, rng))
-		var allow_spring := floor_i > 0
-		var add_spring := allow_spring and (non_spring_count == 1 or rng.randf() < 0.5)
-		if add_spring:
-			destinations.append({"kind": Kind.SPRING, "cpu_deck": "", "gate": ""})
+		# 泉と工房は合わせて1段に1つまで・1段目には出さない(GameDesign.md 27章「道」)。
+		var allow_extra := floor_i > 0
+		var add_extra := allow_extra and (non_spring_count == 1 or rng.randf() < 0.5)
+		if add_extra:
+			var extra_kind := Kind.WORKSHOP if rng.randf() < 0.5 else Kind.SPRING
+			destinations.append({"kind": extra_kind, "cpu_deck": "", "gate": ""})
 		route.append(_shuffled(destinations, rng))
 	route.append([{"kind": Kind.BATTLE, "cpu_deck": final_deck, "gate": ""}])
 	return route
@@ -226,37 +377,45 @@ static func _next_destination(
 	return {"kind": Kind.BATTLE, "cpu_deck": deck_id, "gate": ""}
 
 
-## 勝った候補(27章「山札を育てる」)。1枚は作戦のCPUデッキの15種から、残りは
-## 「基本セット + `price > 0` のカードセット」のうちトークンでないカードから。
-## 山札に既に2枚あるカード・同じ候補の中の重複は除く。
-func _build_offer(rng: RandomNumberGenerator, is_gate: bool) -> Array[String]:
-	var size := GATE_OFFER_SIZE if is_gate else OFFER_SIZE
+## 恩恵の候補(GameDesign.md 27章「恩恵」)。まだ持っていない恩恵から3つ。
+func _build_boon_offer(rng: RandomNumberGenerator) -> Array[String]:
+	var pool: Array[String] = []
+	for boon in SoloBoonLibrary.all_boons():
+		if not boons.has(boon.id):
+			pool.append(boon.id)
+	pool = _string_array(_shuffled(pool, rng))
+	return pool.slice(0, mini(BOON_OFFER_SIZE, pool.size()))
+
+
+## 束の候補(GameDesign.md 27章「山札を育てる」)。1つは選んだ作戦の束、残りは他の作戦から
+## 重ならないように選ぶ。3枚そろわない作戦は束にしない。数は`BUNDLE_COUNT + extra_bundles()`。
+func _build_bundle_offer(rng: RandomNumberGenerator) -> Array[Dictionary]:
 	var counts := _deck_counts()
-	var result: Array[String] = []
-	var theme_pool: Array[String] = []
-	for id in _unique_ids(CardCpuDecks.deck_of(theme_id)):
-		if int(counts.get(id, 0)) < MAX_DECK_COPIES:
-			theme_pool.append(id)
-	theme_pool = _string_array(_shuffled(theme_pool, rng))
-	if not theme_pool.is_empty():
-		result.append(theme_pool[0])
-	var general_pool: Array[String] = []
-	for card in CardLibrary.all_cards():
-		if result.has(card.id):
-			continue
-		if int(counts.get(card.id, 0)) >= MAX_DECK_COPIES:
-			continue
-		if not (card.set_id.is_empty() or CardSetLibrary.price(card.set_id) > 0):
-			continue
-		general_pool.append(card.id)
-	general_pool = _string_array(_shuffled(general_pool, rng))
-	for id in general_pool:
-		if result.size() >= size:
+	var target := BUNDLE_COUNT + extra_bundles()
+	var themes: Array[String] = []
+	if _theme_pool(theme_id, counts).size() >= BUNDLE_CARDS:
+		themes.append(theme_id)
+	for id in _string_array(_shuffled(CardCpuDecks.deck_ids(), rng)):
+		if themes.size() >= target:
 			break
-		if result.has(id):
+		if themes.has(id):
 			continue
-		result.append(id)
-	return result
+		if _theme_pool(id, counts).size() >= BUNDLE_CARDS:
+			themes.append(id)
+	var bundles: Array[Dictionary] = []
+	for t in themes:
+		var pool := _string_array(_shuffled(_theme_pool(t, counts), rng))
+		bundles.append({"theme": t, "cards": pool.slice(0, BUNDLE_CARDS)})
+	return bundles
+
+
+## 作戦の15種のうち、山札に既に2枚あるカードを除いたもの。
+func _theme_pool(id: String, counts: Dictionary) -> Array[String]:
+	var pool: Array[String] = []
+	for card_id in CardCpuDecks.card_ids_of(id):
+		if int(counts.get(card_id, 0)) < MAX_DECK_COPIES:
+			pool.append(card_id)
+	return pool
 
 
 func _deck_counts() -> Dictionary:

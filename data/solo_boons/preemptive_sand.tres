@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="SoloBoonData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/solo_boon_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "preemptive_sand"
+display_name = "先制の砂"
+description = "対局の開始時、相手のHPが3少ない。"
+max_hp_bonus = 0
+spring_bonus = 0
+extra_bundles = 0
+foe_hp_penalty = 3
+extra_opening_draw = 0
+win_heal = 0

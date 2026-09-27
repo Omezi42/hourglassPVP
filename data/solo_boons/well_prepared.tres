@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="SoloBoonData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/solo_boon_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "well_prepared"
+display_name = "用意周到"
+description = "対局の最初の手札を1枚多く引く。"
+max_hp_bonus = 0
+spring_bonus = 0
+extra_bundles = 0
+foe_hp_penalty = 0
+extra_opening_draw = 1
+win_heal = 0

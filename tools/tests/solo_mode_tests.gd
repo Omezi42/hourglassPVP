@@ -2,7 +2,7 @@ class_name SoloModeTests
 extends RefCounted
 ## 遠征(ソロモード。GameDesign.md 27章)の検証。`SoloRun`の規則を中心に、
 ## `MatchState`へ足した3つの上書きプロパティ(Architecture.md 10.15節)、
-## `SoloProgress`の保存・記録、関門データの健全さを確かめる。
+## `SoloProgress`の保存・記録、関門・恩恵データの健全さを確かめる。
 
 var _assert: Callable
 
@@ -16,17 +16,22 @@ func run(assert_true: Callable) -> void:
 	_test_solo_run_creates_a_fifteen_card_deck_one_of_each()
 	_test_solo_run_route_follows_the_rules()
 	_test_solo_run_cpu_decks_never_repeat_in_a_run()
-	_test_solo_run_win_advances_and_builds_an_offer()
-	_test_solo_run_offer_excludes_owned_pairs_solo_only_cards_and_tokens()
-	_test_solo_run_take_and_pass_offer()
+	_test_solo_run_battle_win_builds_a_bundle_offer()
+	_test_solo_run_gate_win_builds_a_boon_offer_then_a_bundle_offer()
+	_test_solo_run_bundle_offer_excludes_owned_pairs_and_repeated_themes()
+	_test_solo_run_take_bundle_and_pass_offer()
+	_test_solo_run_boons_do_not_repeat_and_apply_their_effects()
+	_test_solo_run_workshop_remove_duplicate_and_skip()
 	_test_solo_run_loss_ends_the_run()
 	_test_solo_run_clearing_the_final_floor_marks_cleared()
 	_test_solo_run_round_trips_through_dict()
+	_test_solo_run_loads_the_previous_save_format()
 	_test_solo_progress_in_battle_run_counts_as_a_loss_on_load()
 	_test_solo_progress_milestones_fire_once()
 	_test_solo_progress_saves_finished_run_and_takes_it_once()
 	_test_solo_progress_interrupted_run_saves_finished_with_abandon_reason()
 	_test_solo_gates_load_and_reference_real_units()
+	_test_solo_boons_load_and_have_exactly_one_effect_each()
 
 
 func _card(id: String) -> CardData:
@@ -132,11 +137,14 @@ func _test_solo_run_creates_a_fifteen_card_deck_one_of_each() -> void:
 		_assert.call(not seen.has(id), "the starting deck should hold one of each card: " + id)
 		seen[id] = true
 	_assert.call(run.hp == MatchState.INITIAL_HP, "hp should start at MatchState.INITIAL_HP")
+	_assert.call(
+		run.max_hp == MatchState.INITIAL_HP, "max_hp should start at MatchState.INITIAL_HP"
+	)
 	_assert.call(run.floor == 0, "a fresh run should start at floor 0")
 
 
 ## 道の規則(GameDesign.md 27章「道」): 1〜5段目は2〜3個、各段には対局か関門が1つ以上、
-## 泉は1段に1つまで・1段目には出さない。6段目は対局1つだけ。
+## 泉と工房は合わせて1段に1つまで・1段目には出さない。6段目は対局1つだけ。
 func _test_solo_run_route_follows_the_rules() -> void:
 	for trial in 8:
 		var run := SoloRun.create(CardCpuDecks.deck_ids()[0], _rng(100 + trial))
@@ -148,17 +156,17 @@ func _test_solo_run_route_follows_the_rules() -> void:
 				"floor %d should offer 2-3 destinations" % floor_i
 			)
 			var non_spring := 0
-			var springs := 0
+			var extras := 0
 			for dest in options:
 				var kind: int = int(dest["kind"])
-				if kind == SoloRun.Kind.SPRING:
-					springs += 1
+				if kind == SoloRun.Kind.SPRING or kind == SoloRun.Kind.WORKSHOP:
+					extras += 1
 				else:
 					non_spring += 1
 			_assert.call(non_spring >= 1, "floor %d needs a battle or gate" % floor_i)
-			_assert.call(springs <= 1, "floor %d should offer at most one spring" % floor_i)
+			_assert.call(extras <= 1, "floor %d should offer at most one spring/workshop" % floor_i)
 			if floor_i == 0:
-				_assert.call(springs == 0, "the first floor should not offer a spring")
+				_assert.call(extras == 0, "the first floor should not offer a spring or workshop")
 		var final_options: Array = run.route[SoloRun.FLOOR_COUNT - 1]
 		_assert.call(final_options.size() == 1, "the final floor should offer one destination")
 		_assert.call(
@@ -183,73 +191,243 @@ func _test_solo_run_cpu_decks_never_repeat_in_a_run() -> void:
 				used[deck_id] = true
 
 
-func _test_solo_run_win_advances_and_builds_an_offer() -> void:
+## 対局(関門でない)に勝つと、束の候補がすぐ作られる(GameDesign.md 27章「山札を育てる」)。
+func _test_solo_run_battle_win_builds_a_bundle_offer() -> void:
 	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], _rng(3))
-	run.choose(0, _rng(3))
-	_assert.call(run.in_battle, "choosing a battle/gate destination should set in_battle")
-	var was_gate := (
-		int(run.active_destination().get("kind", SoloRun.Kind.BATTLE)) == SoloRun.Kind.GATE
-	)
+	# floor 0 は対局か関門のみ。関門でない行き先を選ぶ。
+	var options := run.current_destinations()
+	var battle_index := 0
+	for i in options.size():
+		if int(options[i]["kind"]) == SoloRun.Kind.BATTLE:
+			battle_index = i
+			break
+	run.choose(battle_index, _rng(3))
+	_assert.call(run.in_battle, "choosing a battle destination should set in_battle")
 	run.finish_battle(true, 18, _rng(4))
 	_assert.call(not run.in_battle, "finishing a battle should clear in_battle")
 	_assert.call(run.wins == 1, "a win should increase wins")
 	_assert.call(run.floor == 1, "a win should advance the floor")
 	_assert.call(run.hp == 18, "hp should carry over from the battle")
-	var expected_size := SoloRun.GATE_OFFER_SIZE if was_gate else SoloRun.OFFER_SIZE
-	_assert.call(run.offer.size() == expected_size, "a win should offer the right number of cards")
+	_assert.call(run.boon_offer.is_empty(), "a plain battle win should not offer a boon")
+	_assert.call(
+		run.offer.size() == SoloRun.BUNDLE_COUNT, "a battle win should offer BUNDLE_COUNT bundles"
+	)
 
 
-func _test_solo_run_offer_excludes_owned_pairs_solo_only_cards_and_tokens() -> void:
+## 関門に勝つと、まず恩恵の候補ができる。恩恵を選ぶと、そのあとで束の候補ができる
+## (GameDesign.md 27章「恩恵」)。
+func _test_solo_run_gate_win_builds_a_boon_offer_then_a_bundle_offer() -> void:
+	var run: SoloRun = null
+	var gate_index := -1
+	for trial in 20:
+		var candidate := SoloRun.create(CardCpuDecks.deck_ids()[0], _rng(500 + trial))
+		var options := candidate.current_destinations()
+		for i in options.size():
+			if int(options[i]["kind"]) == SoloRun.Kind.GATE:
+				gate_index = i
+				run = candidate
+				break
+		if run != null:
+			break
+	_assert.call(run != null, "at least one of the trial runs should offer a gate on floor 0")
+	if run == null:
+		return
+	run.choose(gate_index, _rng(6))
+	run.finish_battle(true, 20, _rng(7))
+	_assert.call(run.offer.is_empty(), "a gate win should not build a bundle offer yet")
+	_assert.call(
+		run.boon_offer.size() == SoloRun.BOON_OFFER_SIZE,
+		"a gate win should offer BOON_OFFER_SIZE boons"
+	)
+	run.take_boon(run.boon_offer[0])
+	_assert.call(run.boon_offer.is_empty(), "take_boon should clear the boon offer")
+	_assert.call(run.boons.size() == 1, "take_boon should record the boon")
+	_assert.call(
+		run.offer.size() == SoloRun.BUNDLE_COUNT,
+		"take_boon should build the bundle offer afterwards"
+	)
+
+
+func _test_solo_run_bundle_offer_excludes_owned_pairs_and_repeated_themes() -> void:
 	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], _rng(5))
-	# 山札を全カード2枚持ちにしておく(候補が「既に2枚あるカード」を外すことを確かめる)。
+	# 山札を全カード2枚持ちにしておく(束が「既に2枚あるカード」を外すことを確かめる)。
 	run.deck_ids = run.deck_ids.duplicate()
 	for id in run.deck_ids.duplicate():
 		run.deck_ids.append(id)
-	run.choose(0, _rng(5))
+	var options := run.current_destinations()
+	var battle_index := 0
+	for i in options.size():
+		if int(options[i]["kind"]) == SoloRun.Kind.BATTLE:
+			battle_index = i
+			break
+	run.choose(battle_index, _rng(5))
 	run.finish_battle(true, 18, _rng(6))
-	for id in run.offer:
-		var count := 0
-		for owned in run.deck_ids:
-			if owned == id:
-				count += 1
+	var themes := {}
+	for bundle in run.offer:
+		var theme_id := str(bundle.get("theme", ""))
+		_assert.call(not themes.has(theme_id), "a theme should not appear twice in one offer")
+		themes[theme_id] = true
+		var cards: Array = bundle.get("cards", [])
 		_assert.call(
-			count < SoloRun.MAX_DECK_COPIES, "the offer should not repeat an owned pair: " + id
+			cards.size() == SoloRun.BUNDLE_CARDS, "a bundle should hold BUNDLE_CARDS cards"
 		)
-		var card := _card(id)
-		_assert.call(card != null, "an offered card id should exist: " + id)
-		_assert.call(not card.is_token, "the offer should not include a token: " + id)
-		_assert.call(
-			card.set_id.is_empty() or CardSetLibrary.price(card.set_id) > 0,
-			"the offer should not include a price==0 set card: " + id
-		)
-	var seen := {}
-	for id in run.offer:
-		_assert.call(not seen.has(id), "the offer should not repeat a card: " + id)
-		seen[id] = true
+		var seen := {}
+		for id in cards:
+			_assert.call(not seen.has(id), "a bundle should not repeat a card: " + str(id))
+			seen[id] = true
+			var owned_count := 0
+			for owned in run.deck_ids:
+				if owned == id:
+					owned_count += 1
+			_assert.call(
+				owned_count < SoloRun.MAX_DECK_COPIES,
+				"a bundle should not offer an owned pair: " + str(id)
+			)
+			_assert.call(
+				CardCpuDecks.card_ids_of(theme_id).has(str(id)),
+				"a bundle's cards should belong to its own theme: " + str(id)
+			)
 
 
-func _test_solo_run_take_and_pass_offer() -> void:
+func _test_solo_run_take_bundle_and_pass_offer() -> void:
 	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], _rng(7))
-	run.choose(0, _rng(7))
-	run.finish_battle(true, 20, _rng(8))
-	var offered := run.offer[0]
+	_win_battle_floor(run, 7)
 	var before := run.deck_ids.size()
-	run.take(offered)
-	_assert.call(run.deck_ids.size() == before + 1, "take() should add the card to the deck")
-	_assert.call(run.offer.is_empty(), "take() should clear the offer")
+	var bundle: Dictionary = run.offer[0]
+	run.take_bundle(0)
+	_assert.call(
+		run.deck_ids.size() == before + int(bundle["cards"].size()),
+		"take_bundle() should add the bundle's cards to the deck"
+	)
+	_assert.call(run.offer.is_empty(), "take_bundle() should clear the offer")
 
 	var run2 := SoloRun.create(CardCpuDecks.deck_ids()[1], _rng(9))
-	run2.choose(0, _rng(9))
-	run2.finish_battle(true, 20, _rng(10))
+	_win_battle_floor(run2, 9)
 	var before2 := run2.deck_ids.size()
 	run2.pass_offer()
 	_assert.call(run2.deck_ids.size() == before2, "pass_offer() should not change the deck")
 	_assert.call(run2.offer.is_empty(), "pass_offer() should clear the offer")
 
 
+## 関門ではない対局を選んで勝つ(束の候補がすぐ作られることを前提にするテスト用)。
+func _win_battle_floor(run: SoloRun, seed_value: int) -> void:
+	var options := run.current_destinations()
+	var index := 0
+	for i in options.size():
+		if int(options[i]["kind"]) == SoloRun.Kind.BATTLE:
+			index = i
+			break
+	run.choose(index, _rng(seed_value))
+	run.finish_battle(true, run.max_hp, _rng(seed_value + 1))
+
+
+## 対局・関門のどちらでもよいので、いまの段を勝って進める(泉・工房は選ばない)。
+func _win_any_floor(run: SoloRun, seed_value: int) -> void:
+	var options := run.current_destinations()
+	var index := 0
+	for i in options.size():
+		var kind: int = int(options[i]["kind"])
+		if kind == SoloRun.Kind.BATTLE or kind == SoloRun.Kind.GATE:
+			index = i
+			break
+	run.choose(index, _rng(seed_value))
+	run.finish_battle(true, run.max_hp, _rng(seed_value + 1))
+
+
+## 恩恵(GameDesign.md 27章「恩恵」): 同じ恩恵は1回の遠征で1度しか出ず、効果が反映される。
+func _test_solo_run_boons_do_not_repeat_and_apply_their_effects() -> void:
+	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], _rng(30))
+	run.boons.append("tough_body")
+	_assert.call(run.spring_bonus() == 0, "spring_bonus should be 0 without deep_spring")
+	run.boons.append("deep_spring")
+	_assert.call(run.spring_bonus() == 4, "deep_spring should add +4 to spring healing")
+	run.boons.append("keen_eye")
+	_assert.call(run.extra_bundles() == 1, "keen_eye should add one extra bundle")
+	run.boons.append("preemptive_sand")
+	_assert.call(run.foe_hp_penalty() == 3, "preemptive_sand should subtract 3 from the foe's hp")
+	run.boons.append("well_prepared")
+	_assert.call(run.extra_opening_draw() == 1, "well_prepared should add one extra opening draw")
+	run.boons.append("win_streak")
+	_assert.call(run.win_heal() == 3, "win_streak should heal 3 on a win")
+
+	var fresh := SoloRun.create(CardCpuDecks.deck_ids()[0], _rng(31))
+	fresh.max_hp = 24
+	fresh.hp = 10
+	fresh.boon_offer = ["tough_body", "deep_spring", "keen_eye"]
+	fresh.take_boon("tough_body")
+	_assert.call(fresh.max_hp == 28, "take_boon(tough_body) should raise max_hp by 4")
+	_assert.call(fresh.hp == 14, "take_boon(tough_body) should heal by the same amount")
+	_assert.call(not fresh.boons.has("deep_spring"), "take_boon should not grant an unchosen boon")
+
+
+## 工房(GameDesign.md 27章「道」「画面」): 抜く・複製・何もしない、いずれも次の段へ進む。
+func _test_solo_run_workshop_remove_duplicate_and_skip() -> void:
+	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], _rng(40))
+	run.hp = run.max_hp
+	# 工房が出るところまで段を勝ち進める。
+	var workshop_index := -1
+	while workshop_index == -1 and not run.over:
+		var options := run.current_destinations()
+		for i in options.size():
+			if int(options[i]["kind"]) == SoloRun.Kind.WORKSHOP:
+				workshop_index = i
+				break
+		if workshop_index != -1:
+			break
+		_win_any_floor(run, 400 + run.floor)
+		if not run.boon_offer.is_empty():
+			run.take_boon(run.boon_offer[0])
+		if not run.offer.is_empty():
+			run.pass_offer()
+	if workshop_index == -1:
+		return
+	var floor_before := run.floor
+	run.choose(workshop_index, _rng(41))
+	_assert.call(run.workshop_open, "choosing a workshop destination should open it")
+	_assert.call(
+		run.current_destinations().is_empty(),
+		"no destination should be choosable while the workshop is open"
+	)
+
+	run.workshop_skip()
+	_assert.call(not run.workshop_open, "workshop_skip should close the workshop")
+	_assert.call(run.floor == floor_before + 1, "workshop_skip should advance the floor")
+
+	# 抜く。
+	var run2 := SoloRun.create(CardCpuDecks.deck_ids()[1], _rng(43))
+	run2.workshop_open = true
+	var before_size := run2.deck_ids.size()
+	var target_id: String = run2.deck_ids[0]
+	run2.workshop_remove(target_id)
+	_assert.call(run2.deck_ids.size() == before_size - 1, "workshop_remove should remove one copy")
+	_assert.call(not run2.workshop_open, "workshop_remove should close the workshop")
+
+	# 複製(同名は2枚まで)。
+	var run3 := SoloRun.create(CardCpuDecks.deck_ids()[2], _rng(44))
+	run3.workshop_open = true
+	var dup_id: String = run3.deck_ids[0]
+	run3.workshop_duplicate(dup_id)
+	_assert.call(run3.deck_ids.count(dup_id) == 2, "workshop_duplicate should add a second copy")
+	_assert.call(not run3.workshop_open, "workshop_duplicate should close the workshop")
+
+	var run4 := SoloRun.create(CardCpuDecks.deck_ids()[3], _rng(45))
+	run4.workshop_open = true
+	var dup_id4: String = run4.deck_ids[0]
+	run4.workshop_duplicate(dup_id4)
+	run4.workshop_open = true
+	run4.workshop_duplicate(dup_id4)
+	_assert.call(run4.deck_ids.count(dup_id4) == 2, "workshop_duplicate should refuse a third copy")
+
+
 func _test_solo_run_loss_ends_the_run() -> void:
 	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], _rng(11))
-	run.choose(0, _rng(11))
+	var options := run.current_destinations()
+	var battle_index := 0
+	for i in options.size():
+		if int(options[i]["kind"]) == SoloRun.Kind.BATTLE:
+			battle_index = i
+			break
+	run.choose(battle_index, _rng(11))
 	run.finish_battle(false, 0, _rng(12))
 	_assert.call(run.over, "a loss should end the run")
 	_assert.call(not run.cleared, "a loss should not count as cleared")
@@ -258,15 +436,23 @@ func _test_solo_run_loss_ends_the_run() -> void:
 func _test_solo_run_clearing_the_final_floor_marks_cleared() -> void:
 	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], _rng(13))
 	while not run.over:
+		if run.workshop_open:
+			run.workshop_skip()
+			continue
 		var options := run.current_destinations()
 		var index := 0
 		for i in options.size():
-			if int(options[i]["kind"]) != SoloRun.Kind.SPRING:
+			if (
+				int(options[i]["kind"]) != SoloRun.Kind.SPRING
+				and int(options[i]["kind"]) != SoloRun.Kind.WORKSHOP
+			):
 				index = i
 				break
 		run.choose(index, _rng(14))
 		if run.in_battle:
-			run.finish_battle(true, MatchState.INITIAL_HP, _rng(15))
+			run.finish_battle(true, run.max_hp, _rng(15))
+			if not run.boon_offer.is_empty():
+				run.take_boon(run.boon_offer[0])
 			if not run.offer.is_empty():
 				run.pass_offer()
 	_assert.call(run.cleared, "winning every battle should clear the run")
@@ -275,24 +461,62 @@ func _test_solo_run_clearing_the_final_floor_marks_cleared() -> void:
 
 func _test_solo_run_round_trips_through_dict() -> void:
 	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], _rng(16))
-	run.choose(0, _rng(16))
-	run.finish_battle(true, 20, _rng(17))
+	_win_battle_floor(run, 16)
 	var restored := SoloRun.from_dict(run.to_dict())
 	_assert.call(restored.theme_id == run.theme_id, "from_dict should restore theme_id")
 	_assert.call(restored.deck_ids == run.deck_ids, "from_dict should restore deck_ids")
 	_assert.call(restored.hp == run.hp, "from_dict should restore hp")
+	_assert.call(restored.max_hp == run.max_hp, "from_dict should restore max_hp")
 	_assert.call(restored.floor == run.floor, "from_dict should restore floor")
 	_assert.call(restored.wins == run.wins, "from_dict should restore wins")
-	_assert.call(restored.offer == run.offer, "from_dict should restore offer")
+	_assert.call(
+		restored.offer.size() == run.offer.size(), "from_dict should restore the bundle offer"
+	)
+	if not run.offer.is_empty():
+		_assert.call(
+			str(restored.offer[0]["theme"]) == str(run.offer[0]["theme"]),
+			"from_dict should restore a bundle's theme"
+		)
 	_assert.call(restored.route.size() == run.route.size(), "from_dict should restore the route")
 	var kind: int = int(restored.route[0][0]["kind"])
 	_assert.call(kind == int(run.route[0][0]["kind"]), "from_dict should restore route entry types")
 
 
+## 以前の形式(束ではなくカードidの配列。max_hp無し)を読んでも壊れない
+## (Pitfalls.md「データとコードの境目」)。
+func _test_solo_run_loads_the_previous_save_format() -> void:
+	var legacy := {
+		"theme_id": CardCpuDecks.deck_ids()[0],
+		"deck_ids": ["sand", "grain"],
+		"hp": 12,
+		"floor": 2,
+		"wins": 2,
+		"route": [],
+		"offer": ["sand", "grain", "wand"],
+		"chosen": [0, 0],
+		"in_battle": false,
+		"over": false,
+		"cleared": false,
+	}
+	var run := SoloRun.from_dict(legacy)
+	_assert.call(run.max_hp == MatchState.INITIAL_HP, "a legacy save should default max_hp")
+	_assert.call(run.hp == 12, "a legacy save should keep hp")
+	_assert.call(run.offer.is_empty(), "a legacy string offer should be discarded")
+	_assert.call(run.boon_offer.is_empty(), "a legacy save should have no boon offer")
+	_assert.call(run.boons.is_empty(), "a legacy save should have no boons")
+	_assert.call(not run.workshop_open, "a legacy save should not have the workshop open")
+
+
 func _test_solo_progress_in_battle_run_counts_as_a_loss_on_load() -> void:
 	SoloProgress.reset_for_test()
 	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], _rng(18))
-	run.choose(0, _rng(18))
+	var options := run.current_destinations()
+	var battle_index := 0
+	for i in options.size():
+		if int(options[i]["kind"]) == SoloRun.Kind.BATTLE:
+			battle_index = i
+			break
+	run.choose(battle_index, _rng(18))
 	_assert.call(run.in_battle, "the setup battle should be in progress")
 	SoloProgress.save_run("", run)
 	var loaded := SoloProgress.load_run("")
@@ -321,7 +545,13 @@ func _test_solo_progress_milestones_fire_once() -> void:
 func _test_solo_progress_saves_finished_run_and_takes_it_once() -> void:
 	SoloProgress.reset_for_test()
 	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], _rng(19))
-	run.choose(0, _rng(19))
+	var options := run.current_destinations()
+	var battle_index := 0
+	for i in options.size():
+		if int(options[i]["kind"]) == SoloRun.Kind.BATTLE:
+			battle_index = i
+			break
+	run.choose(battle_index, _rng(19))
 	run.finish_battle(false, 0, _rng(20))
 	_assert.call(run.over, "the run should be over after a loss")
 	SoloProgress.save_finished("", run, "")
@@ -341,7 +571,13 @@ func _test_solo_progress_saves_finished_run_and_takes_it_once() -> void:
 func _test_solo_progress_interrupted_run_saves_finished_with_abandon_reason() -> void:
 	SoloProgress.reset_for_test()
 	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], _rng(21))
-	run.choose(0, _rng(21))
+	var options := run.current_destinations()
+	var battle_index := 0
+	for i in options.size():
+		if int(options[i]["kind"]) == SoloRun.Kind.BATTLE:
+			battle_index = i
+			break
+	run.choose(battle_index, _rng(21))
 	_assert.call(run.in_battle, "the setup battle should be in progress")
 	SoloProgress.save_run("", run)
 	var loaded := SoloProgress.load_run("")
@@ -370,3 +606,27 @@ func _test_solo_gates_load_and_reference_real_units() -> void:
 			)
 		if gate.win_condition == SoloGateData.WinCondition.SURVIVE_TURNS:
 			_assert.call(gate.survive_turns > 0, "a survival gate needs a target: " + gate.id)
+
+
+## 恩恵(GameDesign.md 27章「恩恵」)は6つ、どれもちょうど1つの効果を持つ。
+func _test_solo_boons_load_and_have_exactly_one_effect_each() -> void:
+	var boons := SoloBoonLibrary.all_boons()
+	_assert.call(boons.size() == 6, "GameDesign.md 27章 lists six boons")
+	var seen := {}
+	for boon in boons:
+		_assert.call(not seen.has(boon.id), "boon ids must be unique: " + boon.id)
+		seen[boon.id] = true
+		_assert.call(not boon.display_name.is_empty(), "a boon needs a name: " + boon.id)
+		_assert.call(not boon.description.is_empty(), "a boon needs a description: " + boon.id)
+		var effects := 0
+		for field in [
+			"max_hp_bonus",
+			"spring_bonus",
+			"extra_bundles",
+			"foe_hp_penalty",
+			"extra_opening_draw",
+			"win_heal",
+		]:
+			if int(boon.get(field)) != 0:
+				effects += 1
+		_assert.call(effects == 1, "a boon should have exactly one nonzero effect: " + boon.id)

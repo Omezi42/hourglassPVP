@@ -54,12 +54,13 @@ func start(
 	}
 	s._keep_deck_order = keep_deck_order
 	s._begin_state(deck_self, deck_foe, seed_value, true)
-	_start_mulligan()
+	begin_mulligan()
 
 
 ## CPUのマリガンは先に決めておく。適用の順序は `MatchState` が A → B に固定するため、
-## どちらが先に確定しても同じ対局になる。
-func _start_mulligan() -> void:
+## どちらが先に確定しても同じ対局になる。ソロモード(`CardMatchSolo._begin_battle()`)も
+## `_begin_state()`のあとにこれを呼ぶ(Architecture.md 10.15節)。
+func begin_mulligan() -> void:
 	var s := _screen
 	if not s.state.mulligan_pending:
 		return

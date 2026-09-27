@@ -41,6 +41,11 @@ func active() -> bool:
 	return _run != null
 
 
+## いまの遠征の最大HP(恩恵「丈夫な体」で伸びる。情報帯のHPの器・GameDesign.md 27章)。
+func max_hp() -> int:
+	return _run.max_hp if _run != null else MatchState.INITIAL_HP
+
+
 ## `run.choose()` で `in_battle` を立てた行き先を始める。
 func start(run: SoloRun) -> void:
 	if run == null or not run.in_battle:
@@ -101,7 +106,14 @@ func _begin_battle() -> void:
 		rng.randi_range(1, 1 << 30),
 		true
 	)
+	# 恩恵「用意周到」の追加ドローは、マリガンで見せる手札より前に足す
+	# (GameDesign.md 27章「恩恵」)。効果音・演出は初期手札のドローには鳴らさないため
+	# (`_begin_state()`の同じ理由)、信号を出す`draw()`ではなく`_draw_one()`を直接使う。
+	# マリガンの流れ(`CardMatchCpu.begin_mulligan()`)はこのあとに呼ぶ。
+	for _i in _run.extra_opening_draw():
+		_screen.state._draw_one(_screen.my_side)
 	_apply_run_state()
+	_screen._cpu_ctl.begin_mulligan()
 	# `_begin_state()` は自分の呼び出しの中で一度 `refresh()` しているが、その後の
 	# `_apply_run_state()` がHP・盤面を上書きするため、これが無いと差し替え後の
 	# 局面が次の操作まで画面へ反映されない(`CardMatchPuzzle.start()`と同じ理由)。
@@ -115,6 +127,10 @@ func _apply_run_state() -> void:
 	var mine: int = _screen.my_side
 	var foe: int = MatchState.other_side(mine)
 	state.hp[mine] = _run.hp
+	# 恩恵「先制の砂」(GameDesign.md 27章「恩恵」)。
+	var penalty := _run.foe_hp_penalty()
+	if penalty > 0:
+		state.hp[foe] = maxi(state.hp[foe] - penalty, 1)
 	if _gate != null:
 		state.sand_drop_count = _gate.sand_drop_count
 		state.flip_disabled = _gate.flip_disabled

@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="SoloBoonData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/solo_boon_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "deep_spring"
+display_name = "深い泉"
+description = "泉の回復+4。"
+max_hp_bonus = 0
+spring_bonus = 4
+extra_bundles = 0
+foe_hp_penalty = 0
+extra_opening_draw = 0
+win_heal = 0

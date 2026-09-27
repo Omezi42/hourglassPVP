@@ -93,7 +93,7 @@ func open(finished: Dictionary) -> void:
 	_name_label.text = (
 		"作戦「%s」 ・ %d勝 / %d段" % [CardCpuDecks.name_of(run.theme_id), run.wins, SoloRun.FLOOR_COUNT]
 	)
-	_stats_label.text = "残りHP %d" % run.hp
+	_stats_label.text = "残りHP %d ・ 持っている恩恵: %s" % [run.hp, _boon_names(run.boons)]
 	var lost_floor := -1 if run.cleared else run.floor
 	_route.show_record(run.route, run.chosen, lost_floor)
 	_deck_label.text = "最後の山札 %d枚" % run.deck_ids.size()
@@ -103,6 +103,17 @@ func open(finished: Dictionary) -> void:
 		_note_label.text = "対局の途中で抜けたため、遠征は終わりました"
 	visible = true
 	_layout()
+
+
+func _boon_names(boons: Array[String]) -> String:
+	if boons.is_empty():
+		return "なし"
+	var names: Array[String] = []
+	for id in boons:
+		var boon := SoloBoonLibrary.find_by_id(id)
+		if boon != null:
+			names.append(boon.display_name)
+	return "、".join(names)
 
 
 func _layout() -> void:

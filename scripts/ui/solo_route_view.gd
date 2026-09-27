@@ -280,6 +280,18 @@ func _draw_kind_glyph(
 			)
 		SoloRun.Kind.SPRING:
 			UiPaint.fill_ellipse(ci, center, Vector2(s, s * 0.6), Color(color, 0.85), 20)
+		SoloRun.Kind.WORKSHOP:
+			var half := s * 0.6
+			RenderingServer.canvas_item_add_line(
+				ci, center + Vector2(-half, half), center + Vector2(half, -half), color, 3.0
+			)
+			RenderingServer.canvas_item_add_line(
+				ci,
+				center + Vector2(-half * 0.3, half * 0.7),
+				center + Vector2(half * 0.7, -half * 0.3),
+				color,
+				3.0
+			)
 
 
 func _draw_label(at: Vector2, text: String, font_size: int, color: Color) -> void:
@@ -297,6 +309,8 @@ func _draw_label(at: Vector2, text: String, font_size: int, color: Color) -> voi
 func _kind_label(kind: int, is_final: bool, col: int) -> String:
 	if kind == SoloRun.Kind.SPRING:
 		return "泉"
+	if kind == SoloRun.Kind.WORKSHOP:
+		return "工房"
 	var base := "最終戦" if is_final else ("関門" if kind == SoloRun.Kind.GATE else "対局")
 	if col >= SoloRun.EXPERT_FROM_FLOOR:
 		return "%s ・ 上級" % base
@@ -309,6 +323,8 @@ func _detail_label(dest: Dictionary) -> String:
 	var kind: int = int(dest.get("kind", SoloRun.Kind.BATTLE))
 	if kind == SoloRun.Kind.SPRING:
 		return "HP +%d" % SoloRun.SPRING_HEAL
+	if kind == SoloRun.Kind.WORKSHOP:
+		return "抜く・複製"
 	if kind == SoloRun.Kind.GATE:
 		var gate := SoloGateLibrary.find_by_id(str(dest.get("gate", "")))
 		return gate.display_name if gate != null else "関門"

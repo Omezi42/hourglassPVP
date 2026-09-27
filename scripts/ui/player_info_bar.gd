@@ -115,6 +115,9 @@ var drop_handler := Callable()
 var active := false
 
 var _hp := MatchState.INITIAL_HP
+## HPの器の上限。ソロモード(遠征)の恩恵「丈夫な体」で`MatchState.INITIAL_HP`を超える
+## (GameDesign.md 27章「恩恵」、Architecture.md 10.15節)。
+var _max_hp := MatchState.INITIAL_HP
 var _mana := 0
 var _max_mana := 0
 var _deck := 0
@@ -171,10 +174,12 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 
-## 対局の状態から自分の側の値をまとめて取り込む。
-func show_state(state: MatchState, side: int) -> void:
+## 対局の状態から自分の側の値をまとめて取り込む。`max_hp`はソロモードの遠征だけ
+## `MatchState.INITIAL_HP`と異なる(GameDesign.md 27章「恩恵」)。
+func show_state(state: MatchState, side: int, max_hp: int = MatchState.INITIAL_HP) -> void:
 	var previous := _hp
 	_hp = state.hp[side]
+	_max_hp = max_hp
 	if _vessel != null:
 		_vessel.hp = _hp
 	# **最初の1回は演出しない。**教材の盤面(ルール画面・画面の見かた)は初期値30から
@@ -204,6 +209,7 @@ func reset() -> void:
 	if _spend_tween != null and _spend_tween.is_valid():
 		_spend_tween.kill()
 	_hp = MatchState.INITIAL_HP
+	_max_hp = MatchState.INITIAL_HP
 	_shown_hp = float(_hp)
 	_mana = 0
 	_max_mana = 0
@@ -529,7 +535,7 @@ func _draw_hp() -> void:
 	UiPaint.fill_gradient_polygon(
 		ci, track, rect, [[0.0, Color(0.05, 0.04, 0.04, 1.0)], [1.0, Color(0.12, 0.09, 0.08, 1.0)]]
 	)
-	var ratio := clampf(_shown_hp / float(MatchState.INITIAL_HP), 0.0, 1.0)
+	var ratio := clampf(_shown_hp / float(maxi(_max_hp, 1)), 0.0, 1.0)
 	var inner := rect.grow(-HP_RIM_WIDTH)
 	if ratio > 0.0:
 		var fill_rect := Rect2(inner.position, Vector2(inner.size.x * ratio, inner.size.y))
@@ -582,7 +588,7 @@ func _draw_hp() -> void:
 	# 上限は器の中に小さく、現在値は右端の丸いバッジに(場の駒の体力バッジと同じ語彙)。
 	_text_shadowed(
 		Vector2(rect.end.x - HP_BADGE_RADIUS - 44.0, rect.position.y + 21),
-		"/ %d" % MatchState.INITIAL_HP,
+		"/ %d" % _max_hp,
 		13,
 		Color(UiPalette.TEXT_OFFWHITE, 0.85)
 	)

@@ -82,10 +82,10 @@ func _ready() -> void:
 	resized.connect(_layout)
 
 
-## 行き先1つぶんの詳細を出す。`floor`はその行き先がある段(0始まり)。`hp`は泉の
-## 「HP a → b」に使う、いまのHP。
-func show_data(dest: Dictionary, floor: int, hp: int) -> void:
+## 行き先1つぶんの詳細を出す。`run`は泉の「HP a → b」・工房の見出しに使う。
+func show_data(dest: Dictionary, run: SoloRun) -> void:
 	_dest = dest
+	var floor := run.floor
 	var kind: int = int(dest.get("kind", SoloRun.Kind.BATTLE))
 	var is_final := floor == SoloRun.FLOOR_COUNT - 1
 	var is_expert := floor >= SoloRun.EXPERT_FROM_FLOOR
@@ -104,9 +104,24 @@ func show_data(dest: Dictionary, floor: int, hp: int) -> void:
 		_gate_desc_label.visible = false
 		_gate_note_label.visible = false
 		_hp_label.visible = true
-		var healed := mini(hp + SoloRun.SPRING_HEAL, MatchState.INITIAL_HP)
-		_hp_label.text = "HP %d → %d" % [hp, healed]
+		var healed := mini(run.hp + SoloRun.SPRING_HEAL + run.spring_bonus(), run.max_hp)
+		_hp_label.text = "HP %d → %d" % [run.hp, healed]
 		_challenge_button.text = "休む"
+		_layout()
+		return
+
+	if kind == SoloRun.Kind.WORKSHOP:
+		_heading_label.text = "%d段目 ・ 工房" % (floor + 1)
+		_foe_label.visible = false
+		_summary_label.visible = false
+		_difficulty_label.visible = false
+		_icon_grid.visible = false
+		_gate_name_label.visible = false
+		_gate_desc_label.visible = false
+		_gate_note_label.visible = false
+		_hp_label.visible = true
+		_hp_label.text = "山札から1枚を抜くか、1枚を複製する"
+		_challenge_button.text = "入る"
 		_layout()
 		return
 
@@ -125,7 +140,7 @@ func show_data(dest: Dictionary, floor: int, hp: int) -> void:
 	if gate != null:
 		_gate_name_label.text = gate.display_name
 		_gate_desc_label.text = gate.description
-		_gate_note_label.text = "勝つと候補が4枚に"
+		_gate_note_label.text = "勝つと恩恵を1つ"
 	_hp_label.visible = false
 	_challenge_button.text = "挑む"
 	_layout()
@@ -189,7 +204,7 @@ func _layout() -> void:
 	_heading_label.size = Vector2(size.x - PADDING * 2.0, 26.0)
 	top += 34.0
 	var kind: int = int(_dest.get("kind", SoloRun.Kind.BATTLE))
-	if kind == SoloRun.Kind.SPRING:
+	if kind == SoloRun.Kind.SPRING or kind == SoloRun.Kind.WORKSHOP:
 		_hp_label.position = Vector2(PADDING, top + 40.0)
 		_hp_label.size = Vector2(size.x - PADDING * 2.0, 32.0)
 	else:

@@ -1,7 +1,7 @@
 class_name CardSoloMapScreen
 extends Control
-## 遠征(ソロモード)の画面(GameDesign.md 27章)。出発・道・行き先の詳細・候補・
-## 記録の状態の出し分けと、`SoloRun`/`SoloProgress`への保存・読み込みだけを持つ
+## 遠征(ソロモード)の画面(GameDesign.md 27章)。出発・道・行き先の詳細・束・恩恵・
+## 工房・記録の状態の出し分けと、`SoloRun`/`SoloProgress`への保存・読み込みだけを持つ
 ## (Architecture.md 10.15節)。見た目は責務ごとの子へ委ねる。
 
 signal back_pressed
@@ -24,7 +24,9 @@ var _departure: SoloDepartureView
 var _route: SoloRouteView
 var _status: SoloStatusPanel
 var _destination: SoloDestinationPanel
-var _offer: SoloOfferOverlay
+var _bundle: SoloBundleOverlay
+var _boon: SoloBoonOverlay
+var _workshop: SoloWorkshopOverlay
 var _summary: SoloRunSummary
 var _confirm: ConfirmModal
 ## 道で選択中の行き先(-1は未選択)。`_route`が描くリング自体は自分で持つため、
@@ -87,13 +89,29 @@ func _build() -> void:
 	_destination.back_pressed.connect(_on_destination_back_pressed)
 	add_child(_destination)
 
-	_offer = SoloOfferOverlay.new()
-	_offer.position = Vector2.ZERO
-	_offer.size = SCREEN_SIZE
-	_offer.visible = false
-	_offer.card_chosen.connect(_on_offer_card_chosen)
-	_offer.skip_pressed.connect(_on_offer_skip)
-	add_child(_offer)
+	_bundle = SoloBundleOverlay.new()
+	_bundle.position = Vector2.ZERO
+	_bundle.size = SCREEN_SIZE
+	_bundle.visible = false
+	_bundle.bundle_chosen.connect(_on_bundle_chosen)
+	_bundle.skip_pressed.connect(_on_bundle_skip)
+	add_child(_bundle)
+
+	_boon = SoloBoonOverlay.new()
+	_boon.position = Vector2.ZERO
+	_boon.size = SCREEN_SIZE
+	_boon.visible = false
+	_boon.boon_chosen.connect(_on_boon_chosen)
+	add_child(_boon)
+
+	_workshop = SoloWorkshopOverlay.new()
+	_workshop.position = Vector2.ZERO
+	_workshop.size = SCREEN_SIZE
+	_workshop.visible = false
+	_workshop.card_removed.connect(_on_workshop_removed)
+	_workshop.card_duplicated.connect(_on_workshop_duplicated)
+	_workshop.skip_pressed.connect(_on_workshop_skip)
+	add_child(_workshop)
 
 	# `departure_pressed`は接続しない。押すと自分で隠れ、`open()`が既に出している
 	# 出発の画面(`_departure`)がその下に見えているだけで足りるため。
@@ -110,10 +128,15 @@ func _build() -> void:
 func _refresh() -> void:
 	_selected_index = -1
 	var has_run := _run != null
-	var offer_open := has_run and not _run.offer.is_empty()
+	var boon_open := has_run and not _run.boon_offer.is_empty()
+	var bundle_open := has_run and not boon_open and not _run.offer.is_empty()
+	var workshop_open := has_run and not boon_open and not bundle_open and _run.workshop_open
+	var route_open := has_run and not boon_open and not bundle_open and not workshop_open
 	_departure.visible = not has_run
-	_route.visible = has_run and not offer_open
-	_offer.visible = offer_open
+	_route.visible = route_open
+	_boon.visible = boon_open
+	_bundle.visible = bundle_open
+	_workshop.visible = workshop_open
 	if not has_run:
 		var rng := RandomNumberGenerator.new()
 		rng.randomize()
@@ -124,8 +147,19 @@ func _refresh() -> void:
 		_status.visible = false
 		_destination.visible = false
 		return
-	if offer_open:
-		_offer.show_data(_run.offer, _run.wins, _run.deck_ids, _run.theme_id)
+	if boon_open:
+		var gate := SoloGateLibrary.find_by_id(_run.last_gate_id)
+		_boon.show_data(_run.boon_offer, _run.boons, gate.display_name if gate != null else "")
+		_status.visible = false
+		_destination.visible = false
+		return
+	if bundle_open:
+		_bundle.show_data(_run.offer, _run.wins, _run.deck_ids, _run.theme_id)
+		_status.visible = false
+		_destination.visible = false
+		return
+	if workshop_open:
+		_workshop.show_data(_run.deck_ids)
 		_status.visible = false
 		_destination.visible = false
 		return
@@ -141,17 +175,17 @@ func _on_destination_selected(index: int) -> void:
 
 
 func _update_side_panel() -> void:
-	if _run == null or not _run.offer.is_empty():
+	if _run == null:
 		return
 	var options := _run.current_destinations()
 	var destination_open := _selected_index >= 0 and _selected_index < options.size()
 	_status.visible = not destination_open
 	_destination.visible = destination_open
 	if destination_open:
-		_destination.show_data(options[_selected_index], _run.floor, _run.hp)
+		_destination.show_data(options[_selected_index], _run)
 	else:
 		_selected_index = -1
-		_status.show_data(_run.theme_id, _run.hp, MatchState.INITIAL_HP, _run.wins, _run.deck_ids)
+		_status.show_data(_run.theme_id, _run.hp, _run.max_hp, _run.wins, _run.deck_ids, _run.boons)
 
 
 func _on_destination_back_pressed() -> void:
@@ -172,6 +206,7 @@ func _on_theme_chosen(theme_id: String) -> void:
 	_refresh()
 
 
+## 行き先を選ぶ。対局・関門なら対局へ進み、泉・工房ならここで結果を反映して道へ戻る。
 func _on_destination_chosen(index: int) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
@@ -184,13 +219,33 @@ func _on_destination_chosen(index: int) -> void:
 	_refresh()
 
 
-func _on_offer_card_chosen(card_id: String) -> void:
-	_run.take(card_id)
+func _on_bundle_chosen(index: int) -> void:
+	_run.take_bundle(index)
 	_after_offer_choice()
 
 
-func _on_offer_skip() -> void:
+func _on_bundle_skip() -> void:
 	_run.pass_offer()
+	_after_offer_choice()
+
+
+func _on_boon_chosen(boon_id: String) -> void:
+	_run.take_boon(boon_id)
+	_after_offer_choice()
+
+
+func _on_workshop_removed(card_id: String) -> void:
+	_run.workshop_remove(card_id)
+	_after_offer_choice()
+
+
+func _on_workshop_duplicated(card_id: String) -> void:
+	_run.workshop_duplicate(card_id)
+	_after_offer_choice()
+
+
+func _on_workshop_skip() -> void:
+	_run.workshop_skip()
 	_after_offer_choice()
 
 

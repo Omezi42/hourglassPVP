@@ -8,10 +8,11 @@ signal abandon_requested
 
 const PADDING := 22.0
 const THEME_FONT_SIZE := 20
+const BOONS_FONT_SIZE := 13
 const WINS_FONT_SIZE := 16
 const DECK_LABEL_FONT_SIZE := 14
 const HP_BAR_HEIGHT := 26.0
-const HP_TOP_GAP := 40.0
+const HP_TOP_GAP := 62.0
 const HP_FONT_SIZE := 14
 const WINS_GAP := 8.0
 const LIST_GAP := 44.0
@@ -20,6 +21,7 @@ const BUTTON_SIZE := Vector2(180, 44)
 
 var _panel_canvas: Control
 var _theme_label: Label
+var _boons_label: Label
 var _hp_canvas: Control
 var _wins_label: Label
 var _list_label: Label
@@ -43,6 +45,9 @@ func _ready() -> void:
 	_theme_label = _make_label(THEME_FONT_SIZE, UiPalette.BRASS_HIGHLIGHT)
 	add_child(_theme_label)
 
+	_boons_label = _make_label(BOONS_FONT_SIZE, UiPalette.TEXT_MUTED)
+	add_child(_boons_label)
+
 	_hp_canvas = Control.new()
 	_hp_canvas.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_hp_canvas.draw.connect(_draw_hp_bar)
@@ -65,9 +70,12 @@ func _ready() -> void:
 	_layout()
 
 
-## 作戦名・HP・勝った数・山札の一覧を出し直す。
-func show_data(theme_id: String, hp: int, max_hp: int, wins: int, deck_ids: Array[String]) -> void:
+## 作戦名・持っている恩恵・HP・勝った数・山札の一覧を出し直す。
+func show_data(
+	theme_id: String, hp: int, max_hp: int, wins: int, deck_ids: Array[String], boons: Array[String]
+) -> void:
 	_theme_label.text = "作戦「%s」" % CardCpuDecks.name_of(theme_id)
+	_boons_label.text = "持っている恩恵: %s" % _boon_names(boons)
 	_hp = hp
 	_max_hp = max_hp
 	_hp_canvas.queue_redraw()
@@ -75,6 +83,17 @@ func show_data(theme_id: String, hp: int, max_hp: int, wins: int, deck_ids: Arra
 	_list_label.text = "山札 %d枚" % deck_ids.size()
 	_deck_list.show_data(deck_ids)
 	_layout()
+
+
+func _boon_names(boons: Array[String]) -> String:
+	if boons.is_empty():
+		return "なし"
+	var names: Array[String] = []
+	for id in boons:
+		var boon := SoloBoonLibrary.find_by_id(id)
+		if boon != null:
+			names.append(boon.display_name)
+	return "、".join(names)
 
 
 func _draw_hp_bar() -> void:
@@ -114,6 +133,8 @@ func _layout() -> void:
 	_panel_canvas.size = size
 	_theme_label.position = Vector2(PADDING, PADDING)
 	_theme_label.size = Vector2(size.x - PADDING * 2.0, 28.0)
+	_boons_label.position = Vector2(PADDING, PADDING + 26.0)
+	_boons_label.size = Vector2(size.x - PADDING * 2.0, 18.0)
 	var hp_rect := Rect2(PADDING, PADDING + HP_TOP_GAP, size.x - PADDING * 2.0, HP_BAR_HEIGHT)
 	_hp_canvas.position = hp_rect.position
 	_hp_canvas.size = hp_rect.size
