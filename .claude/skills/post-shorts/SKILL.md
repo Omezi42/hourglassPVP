@@ -76,6 +76,9 @@ python tools/shorts/reserve.py list youtube --days 7
 
 ### 4. 片付け
 
-- 予約一覧をもう一度読み、二重に入っていないか・日時がずれていないかを確かめる
+- 予約一覧をもう一度読み、二重に入っていないか・日時がずれていないか・動画が付いているかを確かめる
+  - X: 予約一覧のダイアログの文字を日付ごとに区切ると、各予約の末尾に動画の長さ(`0:12` など)が出る。無ければ動画が付いていない
+  - YouTube: 一覧の `ytcp-video-row` の `.video` に、予約時刻(`scheduledPublishingDetails.scheduledPublishings[0].scheduledTimeSeconds`)と
+    処理の状態(`status` が `VIDEO_STATUS_PROCESSED`)がある。画面の一覧には日付しか出ないため、時刻はここで確かめる
 - `tools/shorts/schedule.json` の印をコミットして push する
 - 作ったタブを閉じる

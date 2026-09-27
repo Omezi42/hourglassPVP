@@ -37,10 +37,12 @@ CARD_ORDER_SEED = 42
 GAME_URL = "https://unityroom.com/games/sunadokei_arena"
 FOOTER = f"砂時計で戦うカードバトル「砂時計アリーナ」\nブラウザで無料で遊べます▶ {GAME_URL}"
 HASHTAGS = "#砂時計アリーナ #ブラウザゲーム #インディーゲーム"
+YOUTUBE_TITLE_HASHTAGS = "#Shorts #インディーゲーム #カードゲーム #ブラウザゲーム #unityroom #ずんだもん"
 YOUTUBE_TAGS = "砂時計アリーナ,カードゲーム,ブラウザゲーム,インディーゲーム,ずんだもん,Shorts"
 CREDIT = "VOICEVOX:ずんだもん"
 DAILY_NOTE = "ゲームの「今日の1問」でも解けます"
 X_LIMIT = 280
+YOUTUBE_TITLE_LIMIT = 100
 X_URL_WEIGHT = 23
 
 DAILY_TRES = """[gd_resource type="Resource" script_class="PuzzleStageData" load_steps=2 format=3]
@@ -73,7 +75,7 @@ def dump(value) -> str:
 def card_post(card: dict) -> tuple[str, str]:
     stats = f"コスト{card['cost']}の砂術" if card["is_spell"] else f"コスト{card['cost']} / 総量{card['total_sand']}"
     body = f"【カード紹介】{card['display_name']}\n{stats}\n{card['describe']}\n\n{FOOTER}\n{HASHTAGS}"
-    return body, f"【カード紹介】{card['display_name']}｜砂時計アリーナ #Shorts"
+    return body, f"【カード紹介】{card['display_name']}｜砂時計アリーナ {YOUTUBE_TITLE_HASHTAGS}"
 
 
 def puzzle_post(number: int, stage: dict) -> tuple[str, str]:
@@ -81,7 +83,7 @@ def puzzle_post(number: int, stage: dict) -> tuple[str, str]:
         f"【とどめ問題 #{number}】\n相手の体力はあと{stage['foe_hp']}。このターンで勝ちきれる？\n"
         f"答えは動画の後半で！{DAILY_NOTE}\n\n{FOOTER}\n{HASHTAGS}"
     )
-    return body, f"【とどめ問題 #{number}】このターンで勝ちきれる？｜砂時計アリーナ #Shorts"
+    return body, f"【とどめ問題 #{number}】このターンで勝ちきれる？｜砂時計アリーナ {YOUTUBE_TITLE_HASHTAGS}"
 
 
 # Xは全角を2、URLを一律23と数える。改行も2と数える(Windowsでコピーすると CRLF になり、Xはそれを2文字と数える)。
@@ -177,6 +179,8 @@ def write_posts(ledger: list, book: list) -> list:
             body, title = puzzle_post(int(entry["label"].split("#")[1]), book[int(entry["id"]) - 1]["stage"])
         if x_weight(body) > X_LIMIT:
             sys.exit(f"Xの本文が長すぎます({x_weight(body)}/{X_LIMIT}): {entry['date']} {entry['label']}")
+        if len(title) > YOUTUBE_TITLE_LIMIT:
+            sys.exit(f"YouTubeのタイトルが長すぎます({len(title)}/{YOUTUBE_TITLE_LIMIT}): {entry['date']} {entry['label']}")
         video = OUT_DIR / f"{kind}_{entry['id']}.mp4"
         folder = POSTS_DIR / f"{entry['date']}_{kind}_{entry['id']}"
         if not video.exists():
