@@ -20,6 +20,7 @@ const COLUMNS := 2
 const CARD_SIZE := Vector2(596, 132)
 ## ヒントの折り返し幅を決めるため、「挑戦」と余白を引いた値を見出しへ渡す。
 const ACTION_SIZE := Vector2(132, 52)
+const ROW_SEPARATION := 12
 
 var _grid: GridContainer
 
@@ -57,7 +58,9 @@ func _build() -> void:
 
 
 func _refresh() -> void:
+	# 外してから消す。残したままだと、消える前の札までグリッドの升目と登場演出に数えられる。
 	for child in _grid.get_children():
+		_grid.remove_child(child)
 		child.queue_free()
 	var uid := _uid()
 	# 今日の1問が先頭、エンドレスがその次(GameDesign.md 24章)。どちらもStage1〜10とは別枠。
@@ -101,11 +104,13 @@ func _make_entry_card(title_text: String, hint_text: String, on_pressed: Callabl
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = CARD_SIZE
 	var style: StyleBox = load(PANEL_STYLE)
+	var inner_width := CARD_SIZE.x
 	if style != null:
 		panel.add_theme_stylebox_override("panel", style)
+		inner_width -= style.get_margin(SIDE_LEFT) + style.get_margin(SIDE_RIGHT)
 
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 12)
+	row.add_theme_constant_override("separation", ROW_SEPARATION)
 	panel.add_child(row)
 
 	# 見出しとヒントは上へ寄せる。中央揃えのままだと、1行の問題と2行の問題で
@@ -121,6 +126,9 @@ func _make_entry_card(title_text: String, hint_text: String, on_pressed: Callabl
 	var hint := Label.new()
 	hint.text = hint_text
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	# 折り返す幅を先に決める。幅0のまま高さを見積もると1文字ずつ折り返した高さになり、
+	# グリッドの行が縦に伸びて2行目以降が画面の外へ押し出される。
+	hint.custom_minimum_size.x = inner_width - ACTION_SIZE.x - ROW_SEPARATION
 	hint.add_theme_font_size_override("font_size", 15)
 	hint.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
 	column.add_child(hint)
