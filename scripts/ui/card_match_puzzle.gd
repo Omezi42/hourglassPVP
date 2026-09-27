@@ -18,16 +18,12 @@ var _settled := false
 ## エンドレス(GameDesign.md 24章)かどうか。true の間は初回クリア報酬・進捗記録を
 ## 行わず、「次の問題へ」で新しい問題を生成し続けられる。
 var _endless := false
-## ソロモード(GameDesign.md 27章)のパズル型ステージから始めた場合の、そのステージ。
-## **進捗と報酬の行き先がリーサルパズルとは別になる**——`SoloProgress` へ書かないと
-## 次のステージが永久に開かない。
-var _solo_stage: SoloStageData = null
 
 
 func _init(screen: CardMatchScreen) -> void:
 	_screen = screen
 	_panel = CardChallengeResult.new()
-	_panel.retry_pressed.connect(func() -> void: start(_stage, _endless, _solo_stage))
+	_panel.retry_pressed.connect(func() -> void: start(_stage, _endless))
 	_panel.next_pressed.connect(_start_next)
 	_panel.quit_pressed.connect(func() -> void: finished.emit(_settled and _cleared()))
 	CardMatchSolo.add_result_panel(screen, _panel)
@@ -44,9 +40,7 @@ func stage() -> PuzzleStageData:
 
 ## 1問を始める。局面は `MatchState` を普通に作ってから、盤面・手札・マナを差し替える
 ## (ルール画面の教材の盤面と同じ作り方。Architecture.md 4.2節)。
-func start(
-	target: PuzzleStageData, endless: bool = false, solo_stage: SoloStageData = null
-) -> void:
+func start(target: PuzzleStageData, endless: bool = false) -> void:
 	if target == null:
 		return
 	# **局面を作ってから問題を覚える。**`_begin_state()` は画面の後始末を通り、
@@ -54,7 +48,6 @@ func start(
 	_begin_state()
 	_stage = target
 	_endless = endless
-	_solo_stage = solo_stage
 	_settled = false
 	_panel.visible = false
 	_apply(target)
@@ -101,7 +94,6 @@ func close() -> void:
 	_stage = null
 	_settled = false
 	_endless = false
-	_solo_stage = null
 	_panel.visible = false
 
 
@@ -119,16 +111,12 @@ func _settle(cleared: bool) -> void:
 	_panel.show_for(_outcome(cleared, reward))
 
 
-## 結果パネルの中身(GameDesign.md 24章「結果パネル」)。ソロモードのパズル型は、
-## 所属・名前・次の行き先をステージ側のものにする(27章)。
+## 結果パネルの中身(GameDesign.md 24章「結果パネル」)。
 func _outcome(cleared: bool, reward: StageReward) -> CardChallengeResult.Outcome:
 	var outcome := CardChallengeResult.Outcome.new()
 	outcome.cleared = cleared
 	outcome.reward = reward
-	if _solo_stage != null:
-		outcome.eyebrow = CardMatchSolo.eyebrow_of(_solo_stage)
-		outcome.stage_name = _solo_stage.display_name
-	elif _endless:
+	if _endless:
 		outcome.eyebrow = "リーサルパズル ・ エンドレス"
 	elif DailyPuzzle.is_daily(_stage):
 		outcome.eyebrow = DailyPuzzle.EYEBROW
@@ -155,16 +143,12 @@ func _next_label(cleared: bool) -> String:
 		return "次の問題へ"
 	if not cleared:
 		return ""
-	if _solo_stage != null:
-		return "次のステージへ" if CardMatchSolo.next_stage_of(_solo_stage) != null else ""
 	return "次の問題へ" if _next_puzzle() != null else ""
 
 
 func _start_next() -> void:
 	if _endless:
 		start(PuzzleGenerator.generate(), true)
-	elif _solo_stage != null:
-		_screen.solo.start_any(CardMatchSolo.next_stage_of(_solo_stage))
 	else:
 		start(_next_puzzle())
 
@@ -185,9 +169,6 @@ func _foe_hp() -> int:
 ## 初回クリアだけ砂金を出す(GameDesign.md 24章)。**通信は待たない**——
 ## 結果の表示を通信で止めない扱いは、対局の砂金(`CardMatchOutcome`)と同じ。
 func _grant() -> StageReward:
-	# ソロモードのパズル型は、進捗も報酬もステージ側のもの(GameDesign.md 27章)。
-	if _solo_stage != null:
-		return CardMatchSolo.grant_stage_rewards(_solo_stage)
 	var reward := StageReward.new()
 	var uid := StageReward.current_uid()
 	if not PuzzleProgress.mark_cleared(uid, _stage.id):

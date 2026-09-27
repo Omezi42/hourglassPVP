@@ -81,6 +81,9 @@ class Outcome:
 	var reward: StageReward = null
 	## 「次の問題へ」「次のステージへ」。空なら次が無い。
 	var next_label := ""
+	## 空でなければ、ボタンをこの1つだけにする(`quit_pressed`を出す)。
+	## ソロモード(GameDesign.md 27章)の「道へ戻る」「遠征を終える」で使う。
+	var single_action_label := ""
 	var show_log := false
 
 
@@ -144,6 +147,9 @@ func _buttons(outcome: Outcome) -> HBoxContainer:
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", BUTTON_GAP)
+	if not outcome.single_action_label.is_empty():
+		row.add_child(_primary(outcome.single_action_label, quit_pressed))
+		return row
 	var has_next := not outcome.next_label.is_empty()
 	if _cleared:
 		if has_next:

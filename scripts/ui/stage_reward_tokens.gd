@@ -1,7 +1,7 @@
 class_name StageRewardTokens
 extends RefCounted
-## 初回クリアの報酬の絵(砂金の硬貨・砂時計・アイコン)。結果パネル(`CardChallengeResult`)と
-## ソロモードのステージ詳細(`SoloStageDetail`)が同じ絵で報酬を見せるため、ここへ集める。
+## 初回クリアの報酬の絵(砂金の硬貨・砂時計・アイコン)。リーサルパズル・ソロモードの
+## 結果パネル(`CardChallengeResult`)が同じ絵で報酬を見せるため、ここへ集める。
 
 const VISUAL_SIZE := Vector2(64, 88)
 const ART_MAX := Vector2(60, 80)
