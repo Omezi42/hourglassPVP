@@ -164,10 +164,37 @@ static func deck_of(id: String) -> Array:
 	return CardPresetDecks.basic()
 
 
+## 8つの id(ソロモード・27章の出発の選択肢はここから引く)。
+static func deck_ids() -> Array[String]:
+	var ids: Array[String] = []
+	for row in DECKS:
+		ids.append(str(row["id"]))
+	return ids
+
+
+static func name_of(id: String) -> String:
+	for row in DECKS:
+		if row["id"] == id:
+			return str(row["name"])
+	return ""
+
+
+static func summary_of(id: String) -> String:
+	for row in DECKS:
+		if row["id"] == id:
+			return str(row["summary"])
+	return ""
+
+
 ## `{"name", "cards"}` から対局中に出す相手の名前を作る(GameDesign.md 13章・11章)。
 static func foe_name(deck: Dictionary) -> String:
 	var name := str(deck.get("name", ""))
 	return FOE_NAME_PLAIN if name.is_empty() else FOE_NAME_PREFIX + name
+
+
+## idから直接、対局中に出す相手の名前を作る(ソロモード・27章)。
+static func foe_name_of(id: String) -> String:
+	return foe_name({"name": name_of(id)})
 
 
 static func _cards_of(row: Dictionary) -> Array:
