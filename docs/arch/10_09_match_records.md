@@ -72,6 +72,9 @@
 | `tutorial_NN` | `CardMatchTutorial._enter_step()`(NN は台本の手順の番号、2桁) |
 | `ranked_*` | `RankedWaitFunnel`(下記) |
 | `daily_puzzle` | `Main._on_puzzle_stage_selected()`(今日の1問を選んだとき) |
+| `solo_start` / `solo_again` | `CardSoloMapScreen._on_theme_chosen()`。`solo_start` を既に通っていれば `solo_again` |
+| `solo_floor3` | `CardSoloMapScreen._on_destination_chosen()`(選ぶ前の段が3段目以降) |
+| `solo_win` / `solo_clear` | `CardMatchSolo._settle()`(勝ったとき / 踏破したとき) |
 
 **ランクマッチの待機は `RankedWaitFunnel`(`scripts/ui/ranked_wait_funnel.gd`, RefCounted)が追う。**
 `CardRankedMatchScreen` が1つ持ち、キューへ参加した時点で `begin()` を呼ぶ。`ranked_wait` をまだ通っていない

@@ -67,6 +67,11 @@ FUNNEL_STEPS = [
     ("online_try", "オンラインの入口"),
     ("online_end", "オンライン対戦を終えた"),
     ("daily_puzzle", "今日の1問を始めた"),
+    ("solo_start", "遠征を始めた"),
+    ("solo_win", "遠征で1勝した"),
+    ("solo_floor3", "遠征の3段目に着いた"),
+    ("solo_clear", "遠征を踏破した"),
+    ("solo_again", "2回目の遠征を始めた"),
     ("return", "別の日に来た"),
 ]
 TUTORIAL_SCRIPT = ROOT / "resources" / "tutorial" / "tutorial_script.tres"

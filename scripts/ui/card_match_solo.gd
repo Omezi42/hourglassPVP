@@ -205,6 +205,10 @@ func _settle(won: bool) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
 	_run.finish_battle(won, hp_left, rng)
+	if won:
+		FunnelService.reach(FunnelService.SOLO_WIN)
+	if _run.cleared:
+		FunnelService.reach(FunnelService.SOLO_CLEAR)
 	var reached := SoloProgress.record(uid, _run)
 	if _run.over:
 		SoloProgress.save_finished(uid, _run, "")

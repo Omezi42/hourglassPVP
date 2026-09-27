@@ -18,6 +18,8 @@ const ABANDON_TITLE := "遠征をやめますか"
 const ABANDON_MESSAGE := "ここでやめると、いまの遠征は終わります。"
 const ABANDON_CONFIRM_TEXT := "やめる"
 const ABANDON_CANCEL_TEXT := "キャンセル"
+## 通過数「遠征の3段目に着いた」の段(0始まり。GameDesign.md 22章)。
+const FUNNEL_FLOOR_INDEX := 2
 
 var _run: SoloRun = null
 var _departure: SoloDepartureView
@@ -224,6 +226,10 @@ func _on_theme_chosen(theme_id: String) -> void:
 	rng.randomize()
 	_run = SoloRun.create(theme_id, _departure_depth, rng)
 	_departure_themes = []
+	if FunnelService.has_reached(FunnelService.SOLO_START):
+		FunnelService.reach(FunnelService.SOLO_AGAIN)
+	else:
+		FunnelService.reach(FunnelService.SOLO_START)
 	SoloProgress.save_run(_uid(), _run)
 	_refresh()
 
@@ -240,6 +246,8 @@ func _on_departure_depth_changed(delta: int) -> void:
 func _on_destination_chosen(index: int) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
+	if _run.floor >= FUNNEL_FLOOR_INDEX:
+		FunnelService.reach(FunnelService.SOLO_FLOOR3)
 	_run.choose(index, rng)
 	# `in_battle`を立てたまま保存しておく。対局の途中で抜けたら負けにする(27章「中断と再開」)ため。
 	SoloProgress.save_run(_uid(), _run)
