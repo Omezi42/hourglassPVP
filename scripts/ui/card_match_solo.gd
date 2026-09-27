@@ -11,6 +11,7 @@ signal finished
 
 var _screen: CardMatchScreen
 var _panel: CardChallengeResult
+var _plaque: SoloMatchPlaque
 var _run: SoloRun = null
 var _gate: SoloGateData = null
 var _settled := false
@@ -22,6 +23,10 @@ func _init(screen: CardMatchScreen) -> void:
 	_panel.quit_pressed.connect(func() -> void: finished.emit())
 	_panel.log_pressed.connect(func() -> void: _screen._log.set_open(true))
 	add_result_panel(screen, _panel)
+	# 遠征の札(GameDesign.md 27章)も結果パネル・ログより背面に置く(`add_result_panel`と同じ理由)。
+	_plaque = SoloMatchPlaque.new(screen, self)
+	screen.add_child(_plaque)
+	screen.move_child(_plaque, screen._result.get_index())
 
 
 ## 結果パネルを対局画面へ置く。**ログより奥に差し込む**——結果パネルの「ログ」で開いたログが
@@ -45,6 +50,7 @@ func start(run: SoloRun) -> void:
 	_settled = false
 	_panel.visible = false
 	_begin_battle()
+	_plaque.start(_run, _gate)
 
 
 func close() -> void:
@@ -52,6 +58,7 @@ func close() -> void:
 	_gate = null
 	_settled = false
 	_panel.visible = false
+	_plaque.close()
 
 
 ## 相手のHPが0になった等、`MatchState.match_ended` から呼ばれる。
@@ -154,6 +161,7 @@ func _on_turn_started_for_survival(side: int) -> void:
 		return
 	if state.turn_count > _gate.survive_turns:
 		state.surrender(MatchState.other_side(_screen.my_side))
+	_plaque.refresh()
 
 
 ## 相手の場の砂時計をすべて破壊した(GameDesign.md 27章)。
@@ -163,6 +171,7 @@ func _on_unit_destroyed_for_wipe(side: int, _slot: int, _card: CardData) -> void
 		return
 	if state.units(side).is_empty():
 		state.surrender(side)
+	_plaque.refresh()
 
 
 func _settle(won: bool) -> void:
@@ -282,3 +291,17 @@ func _fill_win_summary(
 func _own_turns_left(state: MatchState, gate: SoloGateData) -> int:
 	var turns_left := gate.survive_turns + 1 - state.turn_count
 	return maxi(ceili(turns_left / 2.0), 1)
+
+
+## 特殊勝利条件の関門が持つ残りの数(GameDesign.md 27章「遠征の札」)。関門でない・
+## 特殊勝利条件を持たない関門のときは-1。対局中の遠征の札(`SoloMatchPlaque`)から呼ぶ。
+func remaining_for(gate: SoloGateData) -> int:
+	if gate == null or _screen.state == null:
+		return -1
+	match gate.win_condition:
+		SoloGateData.WinCondition.SURVIVE_TURNS:
+			return _own_turns_left(_screen.state, gate)
+		SoloGateData.WinCondition.DESTROY_ALL_ENEMY_UNITS:
+			return _screen.state.units(MatchState.other_side(_screen.my_side)).size()
+		_:
+			return -1
