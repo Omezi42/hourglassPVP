@@ -1,8 +1,8 @@
 class_name SoloStatusPanel
 extends Control
 ## 遠征(ソロモード)の状態パネル(GameDesign.md 27章「画面」)。作戦名・HPのバー・
-## 勝った数・山札の一覧(コスト順・スクロール)を出す。右下の「遠征をやめる」は
-## 確認を挟む(呼び出し側が持つ)。見た目は承認済みのモック(`tools/tmp_mock_solo.gd`)のとおり。
+## 勝った数・山札の一覧(`SoloDeckList`)を出す。右下の「遠征をやめる」は
+## 確認を挟む(呼び出し側が持つ)。
 
 signal abandon_requested
 
@@ -10,8 +10,6 @@ const PADDING := 22.0
 const THEME_FONT_SIZE := 20
 const WINS_FONT_SIZE := 16
 const DECK_LABEL_FONT_SIZE := 14
-const ROW_HEIGHT := 30.0
-const ROW_INNER_GAP := 4.0
 const HP_BAR_HEIGHT := 26.0
 const HP_TOP_GAP := 40.0
 const HP_FONT_SIZE := 14
@@ -19,16 +17,13 @@ const WINS_GAP := 8.0
 const LIST_GAP := 44.0
 const LIST_LABEL_HEIGHT := 22.0
 const BUTTON_SIZE := Vector2(180, 44)
-const CARD_NAME_FONT_SIZE := 15
-const CARD_COST_FONT_SIZE := 14
 
 var _panel_canvas: Control
 var _theme_label: Label
 var _hp_canvas: Control
 var _wins_label: Label
 var _list_label: Label
-var _scroll: ScrollContainer
-var _list_box: VBoxContainer
+var _deck_list: SoloDeckList
 var _abandon_button: Button
 var _hp := 0
 var _max_hp := MatchState.INITIAL_HP
@@ -59,14 +54,8 @@ func _ready() -> void:
 	_list_label = _make_label(DECK_LABEL_FONT_SIZE, UiPalette.TEXT_MUTED)
 	add_child(_list_label)
 
-	_scroll = ScrollContainer.new()
-	TouchScroll.enable(_scroll)
-	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	add_child(_scroll)
-	_list_box = VBoxContainer.new()
-	_list_box.add_theme_constant_override("separation", 2)
-	_list_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_scroll.add_child(_list_box)
+	_deck_list = SoloDeckList.new()
+	add_child(_deck_list)
 
 	_abandon_button = CodedButton.make("遠征をやめる", BUTTON_SIZE)
 	_abandon_button.pressed.connect(func() -> void: abandon_requested.emit())
@@ -84,75 +73,8 @@ func show_data(theme_id: String, hp: int, max_hp: int, wins: int, deck_ids: Arra
 	_hp_canvas.queue_redraw()
 	_wins_label.text = "%d勝" % wins
 	_list_label.text = "山札 %d枚" % deck_ids.size()
-	_rebuild_list(deck_ids)
+	_deck_list.show_data(deck_ids)
 	_layout()
-
-
-func _rebuild_list(deck_ids: Array[String]) -> void:
-	for child in _list_box.get_children():
-		_list_box.remove_child(child)
-		child.queue_free()
-	for row in _deck_rows(deck_ids):
-		_list_box.add_child(_deck_row(row["card"], row["count"]))
-
-
-func _deck_rows(deck_ids: Array[String]) -> Array[Dictionary]:
-	var counts := {}
-	for id in deck_ids:
-		counts[id] = int(counts.get(id, 0)) + 1
-	var cards: Array[CardData] = []
-	for id in counts:
-		var card := CardLibrary.find_by_id(str(id))
-		if card != null:
-			cards.append(card)
-	cards.sort_custom(func(a: CardData, b: CardData) -> bool: return a.cost < b.cost)
-	var rows: Array[Dictionary] = []
-	for card in cards:
-		rows.append({"card": card, "count": int(counts.get(card.id, 1))})
-	return rows
-
-
-func _deck_row(card: CardData, count: int) -> Control:
-	var row := Control.new()
-	row.custom_minimum_size = Vector2(0, ROW_HEIGHT - ROW_INNER_GAP)
-	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.draw.connect(
-		func() -> void:
-			var ci := row.get_canvas_item()
-			var gem_radius := (ROW_HEIGHT - ROW_INNER_GAP) * 0.5
-			var gem_center := Vector2(gem_radius, gem_radius)
-			UiPaint.fill_circle(ci, gem_center, gem_radius * 0.85, UiPalette.OUTLINE_DARK, 20)
-			UiPaint.fill_circle(ci, gem_center, gem_radius * 0.72, CardView.MANA_BLUE, 20)
-			var font := row.get_theme_default_font()
-			if font == null:
-				return
-			var cost_text := str(card.cost)
-			var cw := (
-				font
-				. get_string_size(cost_text, HORIZONTAL_ALIGNMENT_LEFT, -1, CARD_COST_FONT_SIZE)
-				. x
-			)
-			row.draw_string(
-				font,
-				gem_center - Vector2(cw * 0.5, -5.0),
-				cost_text,
-				HORIZONTAL_ALIGNMENT_LEFT,
-				-1,
-				CARD_COST_FONT_SIZE,
-				Color.WHITE
-			)
-			row.draw_string(
-				font,
-				Vector2(gem_radius * 2.0 + 10.0, (ROW_HEIGHT - ROW_INNER_GAP) * 0.72),
-				"%s ×%d" % [card.display_name, count],
-				HORIZONTAL_ALIGNMENT_LEFT,
-				row.size.x - gem_radius * 2.0 - 10.0,
-				CARD_NAME_FONT_SIZE,
-				UiPalette.TEXT_OFFWHITE
-			)
-	)
-	return row
 
 
 func _draw_hp_bar() -> void:
@@ -207,8 +129,8 @@ func _layout() -> void:
 		size.x - PADDING * 2.0,
 		size.y - PADDING - BUTTON_SIZE.y - 12.0 - list_top_y
 	)
-	_scroll.position = list_rect.position
-	_scroll.size = list_rect.size
+	_deck_list.position = list_rect.position
+	_deck_list.size = list_rect.size
 	_abandon_button.position = Vector2(
 		size.x - PADDING - BUTTON_SIZE.x, size.y - PADDING - BUTTON_SIZE.y
 	)
