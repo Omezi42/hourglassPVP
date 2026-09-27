@@ -96,6 +96,13 @@ var _callout_active := ""
 var _callout_shown := false
 ## 直前に砂が落ちきった(ターン終了の1粒)枠。**戦闘によるダメージ死とは別経路**。
 var _tick_pending: Dictionary = {}
+## 帯の右上の「スキップ」(GameDesign.md 18章)。
+var _skip: TutorialSkip
+
+
+## `watch()` より前に対局画面の参照が要る(`_build()` が帯へ「スキップ」を足すため)。
+func _init(screen: CardMatchScreen) -> void:
+	_screen = screen
 
 
 func _ready() -> void:
@@ -682,6 +689,10 @@ func _build() -> void:
 	_portrait.size = PORTRAIT_SIZE
 	_portrait.position = Vector2(BAND_INSET, BAND_RECT.size.y - BAND_FRAME - PORTRAIT_SIZE.y)
 	_band.add_child(_portrait)
+
+	# 帯の右上の「スキップ」。マリガン中も含め、閉じ込めないため常に出す(GameDesign.md 18章)。
+	_skip = TutorialSkip.new(_screen, BAND_RECT.size)
+	_band.add_child(_skip)
 
 
 func _process(delta: float) -> void:

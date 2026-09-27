@@ -214,14 +214,16 @@ func _reset_for_new_match() -> void:
 ## CPU戦を開始する。`difficulty` 省略時は前回選んだ思考レベルを使う(GameDesign.md 13章)。
 ## `tutorial_script` を渡すと誘導対局として始める(GameDesign.md 18章)。CPUの手を
 ## 台本から出す `TutorialCpuStrategy` に差し替え、マリガンの札の選択を塞ぐ。
+## `foe_name` は対局中に出す相手の名前(既定「CPU」。13章「CPU ・ デッキ名」)。
 func start_cpu_match(
 	deck_self: Array,
 	deck_foe: Array,
 	difficulty: int = -1,
 	keep_deck_order: bool = false,
-	tutorial_script: TutorialScriptData = null
+	tutorial_script: TutorialScriptData = null,
+	foe_name: String = "CPU"
 ) -> void:
-	_cpu_ctl.start(deck_self, deck_foe, difficulty, keep_deck_order, tutorial_script)
+	_cpu_ctl.start(deck_self, deck_foe, difficulty, keep_deck_order, tutorial_script, foe_name)
 
 
 ## 待っている間のCPU戦(GameDesign.md 11章)を、勝敗・砂金・戦績・リプレイを残さずに打ち切る。
@@ -504,7 +506,9 @@ func _refresh_buttons() -> void:
 	_end_turn_button.disabled = not _my_turn()
 	_end_turn_button.modulate = Color(1, 1, 1)
 	_log_button.visible = _interactive
-	_surrender_button.visible = _interactive and not over
+	# 誘導対局はスキップと役目が重なるため投了を出さない(GameDesign.md 18章)。
+	var is_tutorial := _tutorial != null and _tutorial.visible
+	_surrender_button.visible = _interactive and not over and not is_tutorial
 	_back_button.visible = not _interactive
 	_coin_button.visible = _interactive and state.coin_available.get(my_side, false)
 	_coin_button.disabled = not _my_turn()

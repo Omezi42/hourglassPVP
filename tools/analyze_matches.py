@@ -62,6 +62,7 @@ FUNNEL_STEPS = [
     ("home", "ホーム"),
     ("tutorial_start", "誘導対局を始めた"),
     ("tutorial_clear", "誘導対局を終えた"),
+    ("tutorial_skip", "誘導対局を飛ばした"),
     ("match_end", "CPU戦を終えた"),
     ("online_try", "オンラインの入口"),
     ("online_end", "オンライン対戦を終えた"),

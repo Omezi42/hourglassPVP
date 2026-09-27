@@ -170,7 +170,7 @@ static func overlays(screen: CardMatchScreen) -> void:
 	screen.add_child(screen._mulligan)
 	# **誘導対局の帯はマリガンより後に足す**(GameDesign.md 18章)。マリガンの暗幕の下へ
 	# 敷くと、いちばん案内が要る最初の画面ですなえるが読めなくなる。
-	screen._tutorial = CardMatchTutorial.new()
+	screen._tutorial = CardMatchTutorial.new(screen)
 	screen.add_child(screen._tutorial)
 	screen._tutorial.cpu_resumed.connect(screen._cpu_ctl.schedule)
 	screen._result = CardMatchResult.new()
