@@ -7,7 +7,10 @@
 
 - **新しい `class_name` を持つスクリプトを追加した直後は `godot --headless --path . --import` を
   1度実行する。**`.godot/global_script_class_cache.cfg` へ登録されず、`--script` 起動が
-  「Could not find type "..." in the current scope」で失敗する
+  「Could not find type "..." in the current scope」で失敗する。`.godot/` はgit管理外のため、
+  **新しいworktreeやpull直後も同じ状態になる。**このとき `run_tests.gd` はコンパイルに失敗したまま
+  V5のテストだけ途中まで走り、**無関係なテスト名の付いたエラーを残して終了せずに固まる**
+  (原因のテストがあるように見える)。`check.sh` は足りない `class_name` を見つけると自動で `--import` する
 - **`tools/tests/run_tests.gd` は `scripts/ui/` を読まないため、UIのパースエラーを検出できない。**
   UIを触ったら `--quit-after` での起動スモークまで回す
 - **GUIのクリックはヘッドレスでは一切届かない**(`push_input` しても

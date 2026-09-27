@@ -14,6 +14,12 @@ const SEPARATOR := ","
 const COUNT_MARK := "*"
 ## 指紋の形式。`HG1-` + 上記テキストを deflate で縮めて Base64 にしたもの。
 const FINGERPRINT_PREFIX := "HG1-"
+## 指紋の先頭に置く「元の長さ」のバイト数。
+const LENGTH_HEADER_SIZE := 2
+## zlib の最小の大きさ(ヘッダ2 + 本体1 + Adler-32の4)。
+const ZLIB_MIN_SIZE := 7
+const ZLIB_METHOD_DEFLATE := 8
+const ZLIB_HEADER_CHECK := 31
 
 
 ## デッキ(CardData の配列)を「id*枚数」のテキストにする。
@@ -72,13 +78,22 @@ static func deck_from_fingerprint(code: String) -> Array:
 	if not _is_base64(payload):
 		return []
 	var blob := Marshalls.base64_to_raw(payload)
-	if blob.size() < 3:
+	if blob.size() < LENGTH_HEADER_SIZE + ZLIB_MIN_SIZE:
 		return []
 	var length: int = blob[0] | (blob[1] << 8)
-	var raw := blob.slice(2).decompress(length, FileAccess.COMPRESSION_DEFLATE)
+	var packed := blob.slice(LENGTH_HEADER_SIZE)
+	# 展開に失敗するとエンジン側がエラーを出すため、zlib として成立しないものは先に弾く。
+	if length == 0 or not _is_zlib_header(packed[0], packed[1]):
+		return []
+	var raw := packed.decompress(length, FileAccess.COMPRESSION_DEFLATE)
 	if raw.is_empty():
 		return []
 	return from_text(raw.get_string_from_utf8())
+
+
+## RFC 1950: 圧縮方式が deflate で、先頭2バイトを16bitとして31で割り切れること。
+static func _is_zlib_header(cmf: int, flg: int) -> bool:
+	return (cmf & 0x0F) == ZLIB_METHOD_DEFLATE and ((cmf << 8) | flg) % ZLIB_HEADER_CHECK == 0
 
 
 static func _is_base64(text: String) -> bool:

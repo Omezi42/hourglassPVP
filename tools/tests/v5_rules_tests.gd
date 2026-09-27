@@ -848,7 +848,7 @@ func _test_deck_code_round_trips() -> void:
 			var after := CardLibrary.ids_from_deck(back)
 			after.sort()
 			_assert.call(before == after, "decoding %s should give the same cards" % preset["id"])
-	for broken in ["", "HG1-", "HG1-!!!!", "nope", "HG1-QUJD"]:
+	for broken in ["", "HG1-", "HG1-!!!!", "nope", "HG1-QUJD", "HG1-AAAAAAAAAAAA"]:
 		_assert.call(
 			CardDeckCode.deck_from_fingerprint(broken).is_empty(),
 			"a broken fingerprint should decode to nothing"
