@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="SoloGateData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/solo_gate_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "empty_board"
+display_name = "空にする"
+description = "相手の場の砂時計をすべて破壊すれば勝ち(相手のHPを0にしても勝ち)。"
+own_board_units = Array[String]([])
+foe_board_units = Array[String](["shield:3:0", "sand:4:0"])
+win_condition = 2
+survive_turns = 0
+sand_drop_count = 1
+flip_disabled = false
+clash_damage_multiplier = 1

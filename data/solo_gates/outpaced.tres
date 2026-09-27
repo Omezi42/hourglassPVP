@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="SoloGateData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/solo_gate_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "outpaced"
+display_name = "先を越された盤"
+description = "相手の場に守護の砂時計が1体いる状態から始まる。"
+own_board_units = Array[String]([])
+foe_board_units = Array[String](["guard:7:0"])
+win_condition = 0
+survive_turns = 0
+sand_drop_count = 1
+flip_disabled = false
+clash_damage_multiplier = 1

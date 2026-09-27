@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="SoloGateData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/solo_gate_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "no_flip"
+display_name = "返せない砂"
+description = "通常の反転が使えない(反転権は使える)。"
+own_board_units = Array[String]([])
+foe_board_units = Array[String]([])
+win_condition = 0
+survive_turns = 0
+sand_drop_count = 1
+flip_disabled = true
+clash_damage_multiplier = 1

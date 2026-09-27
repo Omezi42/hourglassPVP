@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="SoloGateData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/solo_gate_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "guard_wall"
+display_name = "守りの壁"
+description = "相手は3体を展開済み。こちらには攻撃できない守護の壁が1体ある。"
+own_board_units = Array[String](["gate:9:0"])
+foe_board_units = Array[String](["shield:3:0", "sand:4:0", "glass:5:0"])
+win_condition = 0
+survive_turns = 0
+sand_drop_count = 1
+flip_disabled = false
+clash_damage_multiplier = 1
