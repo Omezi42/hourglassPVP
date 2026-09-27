@@ -47,6 +47,8 @@
 - 表の健全さは `tools/tests/cpu_deck_tests.gd` が見張る:全行が補充(`_fill`)なしでちょうど30枚になる・
   同名2枚まで・`price == 0` のカードセット(ソロモード限定。10.15節)のカードを含まない。
   カードを消したり枚数の制限を変えたりしたときに、黙って別の中身へすり替わるのを防ぐため
+- デッキどうしの強さの釣り合いは `tools/balance/run_cpu_deck_league.gd` で測る(総当たり・ランダム混成相手。
+  `trial=id,...` で表を変えずに候補の15種を測れる)。表を変えたら回し、`BalanceReport_v5.md` 13章を更新する
 - 誘導対局のときだけ台本(`TutorialScriptData`、4.1.5節)の山札を切らずに使う(GameDesign.md 18章)
 - CPU戦はオンライン対戦ではないため、`matches/{match_id}` への書き込みは行わない。
   棋譜は `LocalReplayService` がローカルへ保存する(7.1節)
