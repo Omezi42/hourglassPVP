@@ -127,10 +127,11 @@ func _apply_run_state() -> void:
 	var mine: int = _screen.my_side
 	var foe: int = MatchState.other_side(mine)
 	state.hp[mine] = _run.hp
-	# 恩恵「先制の砂」(GameDesign.md 27章「恩恵」)。
-	var penalty := _run.foe_hp_penalty()
-	if penalty > 0:
-		state.hp[foe] = maxi(state.hp[foe] - penalty, 1)
+	# 深さ3以上の「相手のHPが多い状態で始まる」と恩恵「先制の砂」を合算する
+	# (GameDesign.md 27章「砂の深さ」「恩恵」)。
+	var foe_delta := _run.foe_hp_delta()
+	if foe_delta != 0:
+		state.hp[foe] = maxi(state.hp[foe] + foe_delta, 1)
 	if _gate != null:
 		state.sand_drop_count = _gate.sand_drop_count
 		state.flip_disabled = _gate.flip_disabled
@@ -223,7 +224,7 @@ func _settle(won: bool) -> void:
 func _grant_rewards(uid: String, won: bool, reached: Array[Dictionary]) -> StageReward:
 	var reward := StageReward.new()
 	if won:
-		var amount := SoloRun.GOLD_PER_WIN + (SoloRun.CLEAR_GOLD if _run.cleared else 0)
+		var amount := SoloRun.GOLD_PER_WIN + (_run.clear_gold() if _run.cleared else 0)
 		reward.grant_gold(uid, amount)
 	for milestone in reached:
 		var card_set_id := str(milestone.get("card_set", ""))
@@ -261,7 +262,8 @@ func _outcome(
 		kind_label = "最終戦"
 	elif gate != null:
 		kind_label = "関門"
-	outcome.eyebrow = "ソロモード ・ %d段目 ・ %s" % [floor_played + 1, kind_label]
+	var depth_lead := "深さ%d ・ " % _run.depth if _run.depth > 0 else ""
+	outcome.eyebrow = "ソロモード ・ %s%d段目 ・ %s" % [depth_lead, floor_played + 1, kind_label]
 	var foe_name := CardCpuDecks.foe_name_of(foe_deck_id)
 	outcome.stage_name = ("%s ・ " % gate.display_name) + foe_name if gate != null else foe_name
 	outcome.single_action_label = "遠征を終える" if _run.over else "道へ戻る"

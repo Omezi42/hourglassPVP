@@ -22,6 +22,30 @@ const BUNDLE_COUNT := 3
 const BUNDLE_CARDS := 3
 ## 恩恵の候補数。
 const BOON_OFFER_SIZE := 3
+## 踏破の砂金は深さに応じて増える(GameDesign.md 27章「遠征をまたいで残るもの」)。
+const CLEAR_GOLD_PER_DEPTH := 50
+
+## 砂の深さ(難度)の上限(GameDesign.md 27章「砂の深さ」)。
+const DEPTH_MAX := 5
+const DEPTH_EXPERT_FROM := 1
+const DEPTH_SPRING_FROM := 2
+const DEPTH_SPRING_HEAL := 5
+const DEPTH_FOE_HP_FROM := 3
+const DEPTH_FOE_HP_BONUS := 4
+const DEPTH_BUNDLE_FROM := 4
+const DEPTH_BUNDLE_PENALTY := 1
+const DEPTH_MAX_HP_FROM := 5
+const DEPTH_START_MAX_HP := 20
+
+## 深さで加わる条件(出発の画面の一覧に使う。GameDesign.md 27章「砂の深さ」)。
+## 条件は積み重なる——`depth_condition_lines()`は`depth`以下のものをすべて返す。
+const DEPTH_CONDITIONS: Array[Dictionary] = [
+	{"depth": 1, "text": "CPUが1段目から上級"},
+	{"depth": 2, "text": "泉の回復が5になる"},
+	{"depth": 3, "text": "相手のHPが4多い状態で対局を始める"},
+	{"depth": 4, "text": "束の候補が1つ減る"},
+	{"depth": 5, "text": "遠征の開始時の最大HPが20"},
+]
 
 ## 遠征をまたいで残る限定カード・アイコンの節目(GameDesign.md 27章)。
 ## `wins` を持つ行は初めてその勝利数に届いたとき、`cleared` を持つ行は
@@ -34,6 +58,9 @@ const MILESTONES: Array[Dictionary] = [
 
 var theme_id := ""
 var deck_ids: Array[String] = []
+## 砂の深さ(難度。0〜`DEPTH_MAX`)。踏破したあとも条件を重ねて挑み直せる
+## (GameDesign.md 27章「砂の深さ」)。遠征の間は変わらない。
+var depth := 0
 var hp := MatchState.INITIAL_HP
 ## 恩恵「丈夫な体」で伸びる最大HP(GameDesign.md 27章「恩恵」)。
 var max_hp := MatchState.INITIAL_HP
@@ -76,21 +103,48 @@ static func theme_choices(rng: RandomNumberGenerator) -> Array[String]:
 
 
 ## 作戦の15種を1枚ずつ山札にし、道を作る(GameDesign.md 27章「遠征の流れ」)。
-static func create(theme_id: String, rng: RandomNumberGenerator) -> SoloRun:
+static func create(theme_id: String, depth: int, rng: RandomNumberGenerator) -> SoloRun:
 	var run := SoloRun.new()
 	run.theme_id = theme_id
+	run.depth = clampi(depth, 0, DEPTH_MAX)
 	run.deck_ids = _unique_ids(CardCpuDecks.deck_of(theme_id))
-	run.max_hp = MatchState.INITIAL_HP
+	run.max_hp = starting_max_hp(run.depth)
 	run.hp = run.max_hp
 	run.route = _build_route(rng)
 	return run
 
 
+## 遠征開始時の最大HP(GameDesign.md 27章「砂の深さ」)。深さ5で20になる。
+static func starting_max_hp(depth: int) -> int:
+	return DEPTH_START_MAX_HP if depth >= DEPTH_MAX_HP_FROM else MatchState.INITIAL_HP
+
+
+## 深さで加わる条件の説明。積み重なるため`depth`以下のものをすべて返す
+## (GameDesign.md 27章「砂の深さ」)。深さ0は空(呼び出し側が「条件なし」を出す)。
+static func depth_condition_lines(depth: int) -> Array[String]:
+	var lines: Array[String] = []
+	for entry in DEPTH_CONDITIONS:
+		if int(entry["depth"]) <= depth:
+			lines.append(str(entry["text"]))
+	return lines
+
+
+## 段で決まる思考レベルの閾値。深さ1以上はCPUが1段目から上級になる
+## (GameDesign.md 27章「道」「砂の深さ」)。
+func expert_from_floor() -> int:
+	return 0 if depth >= DEPTH_EXPERT_FROM else EXPERT_FROM_FLOOR
+
+
 ## 段で決まる思考レベル(GameDesign.md 27章「道」)。
 func difficulty() -> int:
-	if floor >= EXPERT_FROM_FLOOR:
+	if floor >= expert_from_floor():
 		return CardCpuStrategy.Difficulty.EXPERT
 	return CardCpuStrategy.Difficulty.NORMAL
+
+
+## 踏破の砂金(GameDesign.md 27章「遠征をまたいで残るもの」)。深さに応じて増える。
+func clear_gold() -> int:
+	return CLEAR_GOLD + depth * CLEAR_GOLD_PER_DEPTH
 
 
 ## いまの段で選べる行き先。候補待ち・工房を開いている間・決着後は空。
@@ -121,7 +175,7 @@ func choose(index: int, _rng: RandomNumberGenerator) -> void:
 	var dest: Dictionary = options[index]
 	var kind := int(dest.get("kind", Kind.BATTLE))
 	if kind == Kind.SPRING:
-		hp = mini(hp + SPRING_HEAL + spring_bonus(), max_hp)
+		hp = mini(hp + spring_heal() + spring_bonus(), max_hp)
 		floor += 1
 		return
 	if kind == Kind.WORKSHOP:
@@ -222,6 +276,26 @@ func _close_workshop() -> void:
 	floor += 1
 
 
+## 泉で回復する基礎量。深さ2以上では基礎量そのものが5になる(GameDesign.md 27章
+## 「砂の深さ」)。恩恵「深い泉」の`spring_bonus()`はこの上に足す。
+func spring_heal() -> int:
+	return DEPTH_SPRING_HEAL if depth >= DEPTH_SPRING_FROM else SPRING_HEAL
+
+
+## 対局開始時に相手のHPへ足す増減。深さ3以上の+4と恩恵「先制の砂」の-3を合算する
+## (GameDesign.md 27章「砂の深さ」「恩恵」)。下限1は呼び出し側(`CardMatchSolo`)が当てる。
+func foe_hp_delta() -> int:
+	var bonus := DEPTH_FOE_HP_BONUS if depth >= DEPTH_FOE_HP_FROM else 0
+	return bonus - foe_hp_penalty()
+
+
+## 束の候補数。恩恵「目利き」の`extra_bundles()`と深さ4以上の-1を合算し、最低1つは残す
+## (GameDesign.md 27章「山札を育てる」「砂の深さ」)。
+func bundle_target() -> int:
+	var penalty := DEPTH_BUNDLE_PENALTY if depth >= DEPTH_BUNDLE_FROM else 0
+	return maxi(BUNDLE_COUNT + extra_bundles() - penalty, 1)
+
+
 ## 恩恵「深い泉」の合計(GameDesign.md 27章「恩恵」)。
 func spring_bonus() -> int:
 	return _boon_total("spring_bonus")
@@ -260,6 +334,7 @@ func to_dict() -> Dictionary:
 	return {
 		"theme_id": theme_id,
 		"deck_ids": deck_ids,
+		"depth": depth,
 		"hp": hp,
 		"max_hp": max_hp,
 		"floor": floor,
@@ -282,6 +357,8 @@ static func from_dict(data: Dictionary) -> SoloRun:
 	run.theme_id = str(data.get("theme_id", ""))
 	for id in data.get("deck_ids", []):
 		run.deck_ids.append(str(id))
+	# 旧データ(深さ無し)は深さ0として読む(Pitfalls.md「データとコードの境目」)。
+	run.depth = clampi(int(data.get("depth", 0)), 0, DEPTH_MAX)
 	run.max_hp = int(data.get("max_hp", MatchState.INITIAL_HP))
 	run.hp = int(data.get("hp", run.max_hp))
 	run.floor = int(data.get("floor", 0))
@@ -391,7 +468,7 @@ func _build_boon_offer(rng: RandomNumberGenerator) -> Array[String]:
 ## 重ならないように選ぶ。3枚そろわない作戦は束にしない。数は`BUNDLE_COUNT + extra_bundles()`。
 func _build_bundle_offer(rng: RandomNumberGenerator) -> Array[Dictionary]:
 	var counts := _deck_counts()
-	var target := BUNDLE_COUNT + extra_bundles()
+	var target := bundle_target()
 	var themes: Array[String] = []
 	if _theme_pool(theme_id, counts).size() >= BUNDLE_CARDS:
 		themes.append(theme_id)

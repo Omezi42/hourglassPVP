@@ -68,6 +68,7 @@ GameDesign.md 27章の実装方針。**遠征の規則(道・山札・HP・束�
 | フィールド | 内容 |
 |---|---|
 | `theme_id` | 出発で選んだ作戦(`CardCpuDecks` の id) |
+| `depth` | 砂の深さ(0〜`DEPTH_MAX`=5)。出発で選び、遠征の間は変わらない(GameDesign.md 27章「砂の深さ」) |
 | `deck_ids: Array[String]` | いまの山札 |
 | `hp` / `max_hp` | 持ち越すHPと、恩恵「丈夫な体」で伸びる上限。開始はどちらも `MatchState.INITIAL_HP` |
 | `floor` | いま選ぶ段(0始まり。`FLOOR_COUNT` = 6 で踏破) |
@@ -95,8 +96,26 @@ GameDesign.md 27章の実装方針。**遠征の規則(道・山札・HP・束�
 - `take_boon(id)` — 恩恵を1つ得る。丈夫な体は即座にHPも回復する。得たあとで束の候補を作る
 - `take_bundle(index)` / `pass_offer()` — 束を1つ選んで3枚まとめて山札に足す / 見送る
 - `workshop_remove(id)` / `workshop_duplicate(id)` / `workshop_skip()` — 山札から1枚抜く/複製する(2枚まで)/何もしない。いずれも工房を閉じ、次の段へ進む
-- `difficulty()` — 段で決まる思考レベル(`EXPERT_FROM_FLOOR` 未満は中級)
+- `difficulty()` — 段で決まる思考レベル(`expert_from_floor()` 未満は中級)
 - `spring_bonus()` / `extra_bundles()` / `foe_hp_penalty()` / `extra_opening_draw()` / `win_heal()` — 得た恩恵の対応する効果の合計
+
+**砂の深さ**(GameDesign.md 27章「砂の深さ」): `depth`(0〜`DEPTH_MAX`)ごとの条件は累積し、
+恩恵と合算する関数を`SoloRun`が持つ。
+
+| 関数 | 内容 |
+|---|---|
+| `expert_from_floor()` | 深さ1以上で0(`difficulty()`が使う思考レベルの閾値) |
+| `spring_heal()` | 深さ2以上で`DEPTH_SPRING_HEAL`(5)。恩恵「深い泉」の`spring_bonus()`はこの上に足す |
+| `foe_hp_delta()` | 深さ3以上の`DEPTH_FOE_HP_BONUS`(+4)と恩恵「先制の砂」の`foe_hp_penalty()`を合算した増減。`CardMatchSolo._apply_run_state()`が下限1で当てる |
+| `bundle_target()` | `BUNDLE_COUNT + extra_bundles()`から深さ4以上で1引く(最低1) |
+| `starting_max_hp(depth)`(static) | 深さ5で`DEPTH_START_MAX_HP`(20)。`create()`が使う |
+| `clear_gold()` | 踏破の砂金。`CLEAR_GOLD + depth * CLEAR_GOLD_PER_DEPTH` |
+| `depth_condition_lines(depth)`(static) | 出発の画面に出す条件の一覧(`DEPTH_CONDITIONS`表を`depth`以下で絞る) |
+
+`SoloProgress`は選べる最大の深さ(`unlocked_depth`。深さNで踏破するとN+1)・作戦ごとの
+最も深い踏破(`theme_depths`)・前回選んだ深さ(`last_depth`)を持つ。`CardSoloMapScreen`は
+出発で示す3作戦(`_departure_themes`)を深さの矢印では引き直さず、キャッシュしたまま
+`_departure_depth`だけ動かす。
 
 **道の生成**: 1〜5段目は2〜3個の行き先。各段に対局か関門を1つ以上、泉と工房は合わせて1段に1つまで・1段目には出さない。
 6段目は対局1つだけ。**CPUデッキは1回の遠征で重複させない**(8つを切り混ぜて順に割り当てる)。
@@ -109,14 +128,18 @@ GameDesign.md 27章の実装方針。**遠征の規則(道・山札・HP・束�
 ## `SoloProgress`
 
 `user://solo_progress.json` にアカウントごと(未サインインは `"local"`)に
-`{"run": {...} or null, "best_wins": int, "clears": int, "milestones": [String], "finished": {...} or null}` を持つ。
+`{"run": {...} or null, "best_wins": int, "clears": int, "milestones": [String], "finished": {...} or null,
+"unlocked_depth": int, "theme_depths": {theme_id: depth}, "last_depth": int}` を持つ。
 以前の形式(ステージidの配列)を読んだときは空の記録として扱う。`SoloRun.from_dict()`自体も、束が
 カードidの配列だった旧形式(`max_hp`無し)を読んだとき、候補を捨てて`max_hp`を既定値へ戻すことで壊れずに読む
-(Pitfalls.md「データとコードの境目」)。
+(Pitfalls.md「データとコードの境目」)。`depth`の無い旧データは深さ0として読む(同じ理由)。
 
 - `load_run(uid) -> SoloRun` — 保存中の遠征。`in_battle` のまま残っていたら負けとして遠征を終え、`finished`(理由`"abandoned_mid_battle"`)を保存して `null` を返す
 - `save_run(uid, run)` / `clear_run(uid)` — 行き先の選択・決着・候補の選択のたびに保存する
-- `record(uid, run) -> Array[Dictionary]` — 決着のたびに呼び、最多勝利数・踏破回数を更新し、**初めて到達した節目**を返す
+- `record(uid, run) -> Array[Dictionary]` — 決着のたびに呼び、最多勝利数・踏破回数を更新し、**初めて到達した節目**を返す。
+  踏破していれば`unlocked_depth`(深さN+1まで、上限`SoloRun.DEPTH_MAX`)・`theme_depths[run.theme_id]`も更新する
+- `unlocked_depth(uid)` / `theme_best_depth(uid, theme_id)`(未踏破は-1) / `cleared_theme_count(uid)` /
+  `last_depth(uid)` / `set_last_depth(uid, depth)` — 砂の深さの到達記録と前回選んだ深さ(GameDesign.md 27章「砂の深さ」)
 - `save_finished(uid, run, reason)` / `take_finished(uid) -> Dictionary` — 遠征が終わったとき(負け・踏破・対局途中の中断)の`SoloRun.to_dict()`と理由(`"abandoned_mid_battle"`か空)を`{"run", "reason"}`で持つ。`take_finished`は読んだら消し、`CardSoloMapScreen.open()`が`SoloRunSummary`を1度だけ出すのに使う。**「遠征をやめる」では呼ばない**(自分で終えたため記録は出さない)
 
 **節目**は `SoloRun.MILESTONES` の表で持つ(`{"id", "wins" or "cleared", "card_set", "icon"}`)。

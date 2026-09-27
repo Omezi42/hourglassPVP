@@ -90,12 +90,14 @@ func open(finished: Dictionary) -> void:
 	var run := SoloRun.from_dict(finished.get("run", {}))
 	var reason := str(finished.get("reason", ""))
 	_title.text = "踏破" if run.cleared else "遠征の終わり"
+	var depth_part := " ・ 深さ%d" % run.depth if run.depth > 0 else ""
 	_name_label.text = (
-		"作戦「%s」 ・ %d勝 / %d段" % [CardCpuDecks.name_of(run.theme_id), run.wins, SoloRun.FLOOR_COUNT]
+		"作戦「%s」%s ・ %d勝 / %d段"
+		% [CardCpuDecks.name_of(run.theme_id), depth_part, run.wins, SoloRun.FLOOR_COUNT]
 	)
 	_stats_label.text = "残りHP %d ・ 持っている恩恵: %s" % [run.hp, _boon_names(run.boons)]
 	var lost_floor := -1 if run.cleared else run.floor
-	_route.show_record(run.route, run.chosen, lost_floor)
+	_route.show_record(run.route, run.chosen, lost_floor, run.expert_from_floor())
 	_deck_label.text = "最後の山札 %d枚" % run.deck_ids.size()
 	_deck_list.show_data(run.deck_ids)
 	_note_label.visible = reason == "abandoned_mid_battle"

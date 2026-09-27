@@ -68,12 +68,50 @@ static func clears(uid: String) -> int:
 	return int(_entry(uid).get("clears", 0))
 
 
+## 出発で選べる最大の深さ(GameDesign.md 27章「砂の深さ」)。深さNで踏破すると
+## N+1が選べるようになる(作戦を問わない)。
+static func unlocked_depth(uid: String) -> int:
+	return int(_entry(uid).get("unlocked_depth", 0))
+
+
+## その作戦で踏破したことのある最も深い深さ(出発の札の封蝋の印)。未踏破は-1。
+static func theme_best_depth(uid: String, theme_id: String) -> int:
+	var depths: Dictionary = _entry(uid).get("theme_depths", {})
+	if not depths.has(theme_id):
+		return -1
+	return int(depths[theme_id])
+
+
+## 踏破した作戦の数(出発の記録「踏破した作戦 N / 8」)。
+static func cleared_theme_count(uid: String) -> int:
+	var depths: Dictionary = _entry(uid).get("theme_depths", {})
+	return depths.size()
+
+
+## 前回選んだ深さ(出発の画面が覚えておく)。
+static func last_depth(uid: String) -> int:
+	return int(_entry(uid).get("last_depth", 0))
+
+
+static func set_last_depth(uid: String, depth: int) -> void:
+	var entry := _entry(uid)
+	entry["last_depth"] = depth
+	_data[_key(uid)] = entry
+	_save()
+
+
 ## 決着のたびに呼ぶ。最多勝利数・踏破回数を更新し、初めて到達した節目を返す。
 static func record(uid: String, run: SoloRun) -> Array[Dictionary]:
 	var entry := _entry(uid)
 	entry["best_wins"] = maxi(int(entry.get("best_wins", 0)), run.wins)
 	if run.cleared:
 		entry["clears"] = int(entry.get("clears", 0)) + 1
+		entry["unlocked_depth"] = maxi(
+			int(entry.get("unlocked_depth", 0)), mini(run.depth + 1, SoloRun.DEPTH_MAX)
+		)
+		var depths: Dictionary = entry.get("theme_depths", {})
+		depths[run.theme_id] = maxi(int(depths.get(run.theme_id, -1)), run.depth)
+		entry["theme_depths"] = depths
 	var milestones: Array = entry.get("milestones", [])
 	var reached: Array[Dictionary] = []
 	for milestone in SoloRun.MILESTONES:

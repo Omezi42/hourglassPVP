@@ -82,7 +82,10 @@ func _ready() -> void:
 func start(run: SoloRun, gate: SoloGateData) -> void:
 	_run = run
 	_gate = gate
-	_floor_text = "遠征 ・ %d段目" % (run.floor + 1)
+	if run.depth > 0:
+		_floor_text = "遠征 ・ 深さ%d ・ %d段目" % [run.depth, run.floor + 1]
+	else:
+		_floor_text = "遠征 ・ %d段目" % (run.floor + 1)
 	if run.floor == SoloRun.FLOOR_COUNT - 1:
 		_kind_text = "最終戦"
 	elif gate != null:

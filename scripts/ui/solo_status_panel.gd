@@ -70,11 +70,19 @@ func _ready() -> void:
 	_layout()
 
 
-## 作戦名・持っている恩恵・HP・勝った数・山札の一覧を出し直す。
+## 作戦名・持っている恩恵・HP・勝った数・山札の一覧を出し直す。`depth`が0なら
+## 添えない(GameDesign.md 27章「砂の深さ」)。
 func show_data(
-	theme_id: String, hp: int, max_hp: int, wins: int, deck_ids: Array[String], boons: Array[String]
+	theme_id: String,
+	hp: int,
+	max_hp: int,
+	wins: int,
+	deck_ids: Array[String],
+	boons: Array[String],
+	depth: int
 ) -> void:
-	_theme_label.text = "作戦「%s」" % CardCpuDecks.name_of(theme_id)
+	var depth_part := " ・ 深さ%d" % depth if depth > 0 else ""
+	_theme_label.text = "作戦「%s」%s" % [CardCpuDecks.name_of(theme_id), depth_part]
 	_boons_label.text = "持っている恩恵: %s" % _boon_names(boons)
 	_hp = hp
 	_max_hp = max_hp

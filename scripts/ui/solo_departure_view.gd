@@ -1,16 +1,17 @@
 class_name SoloDepartureView
 extends Control
-## 遠征(ソロモード)の出発の画面(GameDesign.md 27章「画面」)。作戦の札を3枚
-## 横に並べ、押すと出発する。見た目は承認済みのモック(`tools/tmp_mock_solo.gd`)のとおり。
+## 遠征(ソロモード)の出発の画面(GameDesign.md 27章「画面」)。砂の深さの選択と、
+## 作戦の札を3枚横に並べ、押すと出発する。
 
 signal theme_chosen(theme_id: String)
+## 砂の深さの矢印を押した(-1/+1)。選べる範囲の判定・保存は呼び出し側が持つ。
+signal depth_changed(delta: int)
 
 const CONTENT_TOP := ScreenHeader.CONTENT_TOP
 const CONTENT_HEIGHT := ScreenHeader.CONTENT_HEIGHT
 const MARGIN := 24.0
 const CARD_GAP := 24.0
 const CARD_PADDING := 22.0
-const CARDS_TOP_OFFSET := 56.0
 const CARDS_BOTTOM_MARGIN := 40.0
 const ICON_COLUMNS := 8
 const ICON_GAP := 6.0
@@ -21,13 +22,37 @@ const NAME_FONT_SIZE := 26
 const SUMMARY_FONT_SIZE := 15
 const RECORD_FONT_SIZE := 15
 
+const DEPTH_ROW_TOP_OFFSET := 44.0
+const DEPTH_ARROW_SIZE := Vector2(28, 28)
+const DEPTH_LABEL_WIDTH := 200.0
+const DEPTH_LABEL_GAP := 8.0
+const DEPTH_LABEL_FONT_SIZE := 18
+const CONDITION_FONT_SIZE := 13
+const CONDITION_LINE_HEIGHT := 18.0
+const CONDITIONS_TOP_GAP := 8.0
+const CARDS_TOP_GAP := 18.0
+
+const SEAL_RADIUS := 18.0
+const SEAL_MARGIN := 14.0
+const SEAL_FONT_SIZE := 15
+
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
-## 出発で示す3つの作戦の一覧と、いちばん多く勝った数・踏破回数を出す。
-func show_data(theme_ids: Array[String], best_wins: int, clears: int) -> void:
+## 出発で示す3つの作戦・砂の深さの選択・記録を出す。`theme_best_depths`は`theme_ids`と
+## 同じ並びで、その作戦を踏破したことのある最も深い深さ(未踏破は-1。GameDesign.md 27章)。
+func show_data(
+	theme_ids: Array[String],
+	best_wins: int,
+	clears: int,
+	depth: int,
+	max_depth: int,
+	cleared_theme_count: int,
+	theme_count: int,
+	theme_best_depths: Array[int]
+) -> void:
 	for child in get_children():
 		remove_child(child)
 		child.queue_free()
@@ -40,23 +65,75 @@ func show_data(theme_ids: Array[String], best_wins: int, clears: int) -> void:
 		HORIZONTAL_ALIGNMENT_CENTER,
 		true
 	)
-	var cards_top := CONTENT_TOP + CARDS_TOP_OFFSET
+	var depth_top := CONTENT_TOP + DEPTH_ROW_TOP_OFFSET
+	_build_depth_row(width, depth_top, depth, max_depth)
+	var conditions_top := depth_top + DEPTH_ARROW_SIZE.y + CONDITIONS_TOP_GAP
+	var conditions := SoloRun.depth_condition_lines(depth)
+	if conditions.is_empty():
+		_add_label(
+			Rect2(MARGIN, conditions_top, width - MARGIN * 2.0, CONDITION_LINE_HEIGHT),
+			"条件なし",
+			CONDITION_FONT_SIZE,
+			UiPalette.TEXT_MUTED,
+			HORIZONTAL_ALIGNMENT_CENTER
+		)
+		conditions_top += CONDITION_LINE_HEIGHT
+	else:
+		for line in conditions:
+			_add_label(
+				Rect2(MARGIN, conditions_top, width - MARGIN * 2.0, CONDITION_LINE_HEIGHT),
+				line,
+				CONDITION_FONT_SIZE,
+				UiPalette.TEXT_MUTED,
+				HORIZONTAL_ALIGNMENT_CENTER
+			)
+			conditions_top += CONDITION_LINE_HEIGHT
+	var cards_top := conditions_top + CARDS_TOP_GAP
 	var cards_bottom := CONTENT_TOP + CONTENT_HEIGHT - CARDS_BOTTOM_MARGIN
 	var card_w: float = (width - MARGIN * 2.0 - CARD_GAP * 2.0) / 3.0
 	var card_h := cards_bottom - cards_top
 	for i in theme_ids.size():
 		var rect := Rect2(MARGIN + float(i) * (card_w + CARD_GAP), cards_top, card_w, card_h)
-		_build_card(rect, theme_ids[i])
+		var best_depth := theme_best_depths[i] if i < theme_best_depths.size() else -1
+		_build_card(rect, theme_ids[i], best_depth)
 	_add_label(
 		Rect2(MARGIN, cards_bottom + 6.0, width - MARGIN * 2.0, 26.0),
-		"いちばん多く勝った数 %d ・ 踏破 %d回" % [best_wins, clears],
+		(
+			"いちばん多く勝った数 %d ・ 踏破 %d回 ・ 踏破した作戦 %d / %d"
+			% [best_wins, clears, cleared_theme_count, theme_count]
+		),
 		RECORD_FONT_SIZE,
 		UiPalette.TEXT_MUTED,
 		HORIZONTAL_ALIGNMENT_CENTER
 	)
 
 
-func _build_card(rect: Rect2, theme_id: String) -> void:
+## 「◀ 砂の深さ N ▶」。選べない側の矢印は沈める(disabled)。
+func _build_depth_row(width: float, top: float, depth: int, max_depth: int) -> void:
+	var center_x := width * 0.5
+	var left_button := CodedButton.make_icon("◀", DEPTH_ARROW_SIZE)
+	left_button.position = Vector2(
+		center_x - DEPTH_LABEL_WIDTH * 0.5 - DEPTH_ARROW_SIZE.x - DEPTH_LABEL_GAP, top
+	)
+	left_button.disabled = depth <= 0
+	left_button.pressed.connect(func() -> void: depth_changed.emit(-1))
+	add_child(left_button)
+	var right_button := CodedButton.make_icon("▶", DEPTH_ARROW_SIZE)
+	right_button.position = Vector2(center_x + DEPTH_LABEL_WIDTH * 0.5 + DEPTH_LABEL_GAP, top)
+	right_button.disabled = depth >= max_depth
+	right_button.pressed.connect(func() -> void: depth_changed.emit(1))
+	add_child(right_button)
+	_add_label(
+		Rect2(center_x - DEPTH_LABEL_WIDTH * 0.5, top + 2.0, DEPTH_LABEL_WIDTH, DEPTH_ARROW_SIZE.y),
+		"砂の深さ %d" % depth,
+		DEPTH_LABEL_FONT_SIZE,
+		UiPalette.TEXT_OFFWHITE,
+		HORIZONTAL_ALIGNMENT_CENTER,
+		true
+	)
+
+
+func _build_card(rect: Rect2, theme_id: String, best_depth: int) -> void:
 	var canvas := Control.new()
 	canvas.position = Vector2.ZERO
 	canvas.size = size
@@ -86,11 +163,47 @@ func _build_card(rect: Rect2, theme_id: String) -> void:
 		HORIZONTAL_ALIGNMENT_CENTER
 	)
 	_build_icons(rect, CardCpuDecks.card_ids_of(theme_id))
+	if best_depth >= 0:
+		_build_seal(rect, best_depth)
 	var button := SoloUiPaint.transparent_button()
 	button.position = rect.position
 	button.size = rect.size
 	button.pressed.connect(func() -> void: theme_chosen.emit(theme_id))
 	add_child(button)
+
+
+## その作戦で踏破したことがあれば、札の右上に真鍮の封蝋の印を押し、中に踏破した
+## 最も深い深さの数字を入れる(GameDesign.md 27章「画面」)。
+func _build_seal(rect: Rect2, depth: int) -> void:
+	var center := (
+		rect.position + Vector2(rect.size.x - SEAL_MARGIN - SEAL_RADIUS, SEAL_MARGIN + SEAL_RADIUS)
+	)
+	var seal := Control.new()
+	seal.position = center - Vector2.ONE * SEAL_RADIUS
+	seal.size = Vector2.ONE * SEAL_RADIUS * 2.0
+	seal.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	seal.draw.connect(
+		func() -> void:
+			var c := Vector2.ONE * SEAL_RADIUS
+			seal.draw_circle(c, SEAL_RADIUS, UiPalette.BRASS_DARK)
+			seal.draw_circle(c, SEAL_RADIUS - 3.0, UiPalette.BRASS_MID)
+			seal.draw_arc(c, SEAL_RADIUS - 5.0, 0, TAU, 32, UiPalette.BRASS_HIGHLIGHT, 1.5)
+			var font := seal.get_theme_default_font()
+			if font == null:
+				return
+			var text := str(depth)
+			var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, SEAL_FONT_SIZE).x
+			seal.draw_string(
+				font,
+				Vector2(c.x - w * 0.5, c.y + 5.0),
+				text,
+				HORIZONTAL_ALIGNMENT_LEFT,
+				-1,
+				SEAL_FONT_SIZE,
+				UiPalette.NAVY_PANEL_TOP
+			)
+	)
+	add_child(seal)
 
 
 func _build_icons(rect: Rect2, ids: Array[String]) -> void:

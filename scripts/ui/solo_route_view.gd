@@ -35,6 +35,9 @@ var _selected := -1
 ## 表示モード(遠征の記録・27章「画面」)では駒を押せず、明滅も出さない。
 var _record_mode := false
 var _record_lost := -1
+## CPUが上級になる段(`SoloRun.expert_from_floor()`)。深さで前倒しになる
+## (GameDesign.md 27章「砂の深さ」)。
+var _expert_from := SoloRun.EXPERT_FROM_FLOOR
 
 
 func _ready() -> void:
@@ -53,25 +56,28 @@ func _process(_delta: float) -> void:
 
 
 ## `SoloRun.route`・いま選ぶ段・段ごとに選んだindexの履歴から道を描き直す。
-func show_data(route: Array, floor: int, chosen: Array[int]) -> void:
+## `expert_from`は`SoloRun.expert_from_floor()`(深さで前倒しになる)。
+func show_data(route: Array, floor: int, chosen: Array[int], expert_from: int) -> void:
 	_record_mode = false
 	_record_lost = -1
 	_selected = -1
 	_route = route
 	_floor = floor
 	_chosen = chosen
+	_expert_from = expert_from
 	_rebuild(true)
 
 
 ## 遠征の記録(GameDesign.md 27章「画面」)。押せない表示だけで、選んだ段は真鍮、
 ## 負けた段には×を重ねる。`lost_floor`は負けた段のindex(踏破・やめたときは-1)。
-func show_record(route: Array, chosen: Array[int], lost_floor: int) -> void:
+func show_record(route: Array, chosen: Array[int], lost_floor: int, expert_from: int) -> void:
 	_record_mode = true
 	_record_lost = lost_floor
 	_selected = -1
 	_route = route
 	_floor = chosen.size()
 	_chosen = chosen
+	_expert_from = expert_from
 	_rebuild(false)
 
 
@@ -304,15 +310,15 @@ func _draw_label(at: Vector2, text: String, font_size: int, color: Color) -> voi
 	)
 
 
-## CPUが上級になる段(`SoloRun.EXPERT_FROM_FLOOR`以上)の対局・関門は
-## 1行目へ「・ 上級」を添える(GameDesign.md 27章「道」)。泉には強さが無い。
+## CPUが上級になる段(`_expert_from`以上。深さで前倒しになる)の対局・関門は
+## 1行目へ「・ 上級」を添える(GameDesign.md 27章「道」「砂の深さ」)。泉には強さが無い。
 func _kind_label(kind: int, is_final: bool, col: int) -> String:
 	if kind == SoloRun.Kind.SPRING:
 		return "泉"
 	if kind == SoloRun.Kind.WORKSHOP:
 		return "工房"
 	var base := "最終戦" if is_final else ("関門" if kind == SoloRun.Kind.GATE else "対局")
-	if col >= SoloRun.EXPERT_FROM_FLOOR:
+	if col >= _expert_from:
 		return "%s ・ 上級" % base
 	return base
 

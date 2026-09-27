@@ -88,7 +88,7 @@ func show_data(dest: Dictionary, run: SoloRun) -> void:
 	var floor := run.floor
 	var kind: int = int(dest.get("kind", SoloRun.Kind.BATTLE))
 	var is_final := floor == SoloRun.FLOOR_COUNT - 1
-	var is_expert := floor >= SoloRun.EXPERT_FROM_FLOOR
+	var is_expert := floor >= run.expert_from_floor()
 	var gate := (
 		SoloGateLibrary.find_by_id(str(dest.get("gate", ""))) if kind == SoloRun.Kind.GATE else null
 	)

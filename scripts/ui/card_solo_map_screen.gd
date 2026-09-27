@@ -32,6 +32,9 @@ var _confirm: ConfirmModal
 ## 道で選択中の行き先(-1は未選択)。`_route`が描くリング自体は自分で持つため、
 ## ここでは行き先の詳細パネルの出し分けにだけ使う。
 var _selected_index := -1
+## 出発で示す3つの作戦(深さを変えても引き直さない。GameDesign.md 27章「画面」)。
+var _departure_themes: Array[String] = []
+var _departure_depth := 0
 
 
 func _ready() -> void:
@@ -61,6 +64,7 @@ func _build() -> void:
 	_departure.position = CONTENT_RECT.position
 	_departure.size = CONTENT_RECT.size
 	_departure.theme_chosen.connect(_on_theme_chosen)
+	_departure.depth_changed.connect(_on_departure_depth_changed)
 	add_child(_departure)
 
 	var route_w := CONTENT_RECT.size.x * ROUTE_RATIO - STATUS_GAP * 0.5
@@ -138,11 +142,26 @@ func _refresh() -> void:
 	_bundle.visible = bundle_open
 	_workshop.visible = workshop_open
 	if not has_run:
-		var rng := RandomNumberGenerator.new()
-		rng.randomize()
 		var uid := _uid()
+		if _departure_themes.is_empty():
+			var rng := RandomNumberGenerator.new()
+			rng.randomize()
+			_departure_themes = SoloRun.theme_choices(rng)
+			_departure_depth = clampi(
+				SoloProgress.last_depth(uid), 0, SoloProgress.unlocked_depth(uid)
+			)
+		var best_depths: Array[int] = []
+		for id in _departure_themes:
+			best_depths.append(SoloProgress.theme_best_depth(uid, id))
 		_departure.show_data(
-			SoloRun.theme_choices(rng), SoloProgress.best_wins(uid), SoloProgress.clears(uid)
+			_departure_themes,
+			SoloProgress.best_wins(uid),
+			SoloProgress.clears(uid),
+			_departure_depth,
+			SoloProgress.unlocked_depth(uid),
+			SoloProgress.cleared_theme_count(uid),
+			CardCpuDecks.deck_ids().size(),
+			best_depths
 		)
 		_status.visible = false
 		_destination.visible = false
@@ -163,7 +182,7 @@ func _refresh() -> void:
 		_status.visible = false
 		_destination.visible = false
 		return
-	_route.show_data(_run.route, _run.floor, _run.chosen)
+	_route.show_data(_run.route, _run.floor, _run.chosen, _run.expert_from_floor())
 	_update_side_panel()
 
 
@@ -185,7 +204,9 @@ func _update_side_panel() -> void:
 		_destination.show_data(options[_selected_index], _run)
 	else:
 		_selected_index = -1
-		_status.show_data(_run.theme_id, _run.hp, _run.max_hp, _run.wins, _run.deck_ids, _run.boons)
+		_status.show_data(
+			_run.theme_id, _run.hp, _run.max_hp, _run.wins, _run.deck_ids, _run.boons, _run.depth
+		)
 
 
 func _on_destination_back_pressed() -> void:
@@ -201,8 +222,17 @@ func _on_destination_challenge_pressed() -> void:
 func _on_theme_chosen(theme_id: String) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
-	_run = SoloRun.create(theme_id, rng)
+	_run = SoloRun.create(theme_id, _departure_depth, rng)
+	_departure_themes = []
 	SoloProgress.save_run(_uid(), _run)
+	_refresh()
+
+
+## 砂の深さの矢印(選べる範囲の判定・保存はここで持つ。GameDesign.md 27章「画面」)。
+func _on_departure_depth_changed(delta: int) -> void:
+	var uid := _uid()
+	_departure_depth = clampi(_departure_depth + delta, 0, SoloProgress.unlocked_depth(uid))
+	SoloProgress.set_last_depth(uid, _departure_depth)
 	_refresh()
 
 

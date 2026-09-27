@@ -79,7 +79,8 @@ func _draw_departure() -> void:
 
 
 func _draw_running() -> void:
-	EntryTilePaint.draw_caption(self, _font, "遠征中の作戦")
+	var caption := "遠征中の作戦 ・ 深さ%d" % _run.depth if _run.depth > 0 else "遠征中の作戦"
+	EntryTilePaint.draw_caption(self, _font, caption)
 	EntryTilePaint.draw_head(self, _display, CardCpuDecks.name_of(_run.theme_id))
 	_draw_route(EntryTilePaint.rule_y() + ROUTE_TOP_GAP)
 	var rect := EntryTilePaint.well_rect(size)

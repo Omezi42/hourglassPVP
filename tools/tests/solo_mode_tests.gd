@@ -32,6 +32,11 @@ func run(assert_true: Callable) -> void:
 	_test_solo_progress_interrupted_run_saves_finished_with_abandon_reason()
 	_test_solo_gates_load_and_reference_real_units()
 	_test_solo_boons_load_and_have_exactly_one_effect_each()
+	_test_solo_run_depth_conditions_accumulate()
+	_test_solo_run_depth_combines_with_boons()
+	_test_solo_run_starting_max_hp_and_clear_gold_scale_with_depth()
+	_test_solo_run_loads_legacy_save_without_depth()
+	_test_solo_progress_unlocked_depth_and_theme_best_depth()
 
 
 func _card(id: String) -> CardData:
@@ -130,7 +135,7 @@ func _test_clash_damage_multiplier_doubles_combat_damage() -> void:
 
 func _test_solo_run_creates_a_fifteen_card_deck_one_of_each() -> void:
 	var theme_id := CardCpuDecks.deck_ids()[0]
-	var run := SoloRun.create(theme_id, _rng(1))
+	var run := SoloRun.create(theme_id, 0, _rng(1))
 	_assert.call(run.deck_ids.size() == 15, "the starting deck should hold 15 cards")
 	var seen := {}
 	for id in run.deck_ids:
@@ -147,7 +152,7 @@ func _test_solo_run_creates_a_fifteen_card_deck_one_of_each() -> void:
 ## 泉と工房は合わせて1段に1つまで・1段目には出さない。6段目は対局1つだけ。
 func _test_solo_run_route_follows_the_rules() -> void:
 	for trial in 8:
-		var run := SoloRun.create(CardCpuDecks.deck_ids()[0], _rng(100 + trial))
+		var run := SoloRun.create(CardCpuDecks.deck_ids()[0], 0, _rng(100 + trial))
 		_assert.call(run.route.size() == SoloRun.FLOOR_COUNT, "the route should hold 6 floors")
 		for floor_i in range(SoloRun.FLOOR_COUNT - 1):
 			var options: Array = run.route[floor_i]
@@ -177,7 +182,7 @@ func _test_solo_run_route_follows_the_rules() -> void:
 
 func _test_solo_run_cpu_decks_never_repeat_in_a_run() -> void:
 	for trial in 8:
-		var run := SoloRun.create(CardCpuDecks.deck_ids()[0], _rng(200 + trial))
+		var run := SoloRun.create(CardCpuDecks.deck_ids()[0], 0, _rng(200 + trial))
 		var used := {}
 		for options in run.route:
 			for dest in options:
@@ -193,7 +198,7 @@ func _test_solo_run_cpu_decks_never_repeat_in_a_run() -> void:
 
 ## 対局(関門でない)に勝つと、束の候補がすぐ作られる(GameDesign.md 27章「山札を育てる」)。
 func _test_solo_run_battle_win_builds_a_bundle_offer() -> void:
-	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], _rng(3))
+	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], 0, _rng(3))
 	# floor 0 は対局か関門のみ。関門でない行き先を選ぶ。
 	var options := run.current_destinations()
 	var battle_index := 0
@@ -220,7 +225,7 @@ func _test_solo_run_gate_win_builds_a_boon_offer_then_a_bundle_offer() -> void:
 	var run: SoloRun = null
 	var gate_index := -1
 	for trial in 20:
-		var candidate := SoloRun.create(CardCpuDecks.deck_ids()[0], _rng(500 + trial))
+		var candidate := SoloRun.create(CardCpuDecks.deck_ids()[0], 0, _rng(500 + trial))
 		var options := candidate.current_destinations()
 		for i in options.size():
 			if int(options[i]["kind"]) == SoloRun.Kind.GATE:
@@ -249,7 +254,7 @@ func _test_solo_run_gate_win_builds_a_boon_offer_then_a_bundle_offer() -> void:
 
 
 func _test_solo_run_bundle_offer_excludes_owned_pairs_and_repeated_themes() -> void:
-	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], _rng(5))
+	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], 0, _rng(5))
 	# 山札を全カード2枚持ちにしておく(束が「既に2枚あるカード」を外すことを確かめる)。
 	run.deck_ids = run.deck_ids.duplicate()
 	for id in run.deck_ids.duplicate():
@@ -290,7 +295,7 @@ func _test_solo_run_bundle_offer_excludes_owned_pairs_and_repeated_themes() -> v
 
 
 func _test_solo_run_take_bundle_and_pass_offer() -> void:
-	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], _rng(7))
+	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], 0, _rng(7))
 	_win_battle_floor(run, 7)
 	var before := run.deck_ids.size()
 	var bundle: Dictionary = run.offer[0]
@@ -301,7 +306,7 @@ func _test_solo_run_take_bundle_and_pass_offer() -> void:
 	)
 	_assert.call(run.offer.is_empty(), "take_bundle() should clear the offer")
 
-	var run2 := SoloRun.create(CardCpuDecks.deck_ids()[1], _rng(9))
+	var run2 := SoloRun.create(CardCpuDecks.deck_ids()[1], 0, _rng(9))
 	_win_battle_floor(run2, 9)
 	var before2 := run2.deck_ids.size()
 	run2.pass_offer()
@@ -336,7 +341,7 @@ func _win_any_floor(run: SoloRun, seed_value: int) -> void:
 
 ## 恩恵(GameDesign.md 27章「恩恵」): 同じ恩恵は1回の遠征で1度しか出ず、効果が反映される。
 func _test_solo_run_boons_do_not_repeat_and_apply_their_effects() -> void:
-	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], _rng(30))
+	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], 0, _rng(30))
 	run.boons.append("tough_body")
 	_assert.call(run.spring_bonus() == 0, "spring_bonus should be 0 without deep_spring")
 	run.boons.append("deep_spring")
@@ -350,7 +355,7 @@ func _test_solo_run_boons_do_not_repeat_and_apply_their_effects() -> void:
 	run.boons.append("win_streak")
 	_assert.call(run.win_heal() == 3, "win_streak should heal 3 on a win")
 
-	var fresh := SoloRun.create(CardCpuDecks.deck_ids()[0], _rng(31))
+	var fresh := SoloRun.create(CardCpuDecks.deck_ids()[0], 0, _rng(31))
 	fresh.max_hp = 24
 	fresh.hp = 10
 	fresh.boon_offer = ["tough_body", "deep_spring", "keen_eye"]
@@ -362,7 +367,7 @@ func _test_solo_run_boons_do_not_repeat_and_apply_their_effects() -> void:
 
 ## 工房(GameDesign.md 27章「道」「画面」): 抜く・複製・何もしない、いずれも次の段へ進む。
 func _test_solo_run_workshop_remove_duplicate_and_skip() -> void:
-	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], _rng(40))
+	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], 0, _rng(40))
 	run.hp = run.max_hp
 	# 工房が出るところまで段を勝ち進める。
 	var workshop_index := -1
@@ -394,7 +399,7 @@ func _test_solo_run_workshop_remove_duplicate_and_skip() -> void:
 	_assert.call(run.floor == floor_before + 1, "workshop_skip should advance the floor")
 
 	# 抜く。
-	var run2 := SoloRun.create(CardCpuDecks.deck_ids()[1], _rng(43))
+	var run2 := SoloRun.create(CardCpuDecks.deck_ids()[1], 0, _rng(43))
 	run2.workshop_open = true
 	var before_size := run2.deck_ids.size()
 	var target_id: String = run2.deck_ids[0]
@@ -403,14 +408,14 @@ func _test_solo_run_workshop_remove_duplicate_and_skip() -> void:
 	_assert.call(not run2.workshop_open, "workshop_remove should close the workshop")
 
 	# 複製(同名は2枚まで)。
-	var run3 := SoloRun.create(CardCpuDecks.deck_ids()[2], _rng(44))
+	var run3 := SoloRun.create(CardCpuDecks.deck_ids()[2], 0, _rng(44))
 	run3.workshop_open = true
 	var dup_id: String = run3.deck_ids[0]
 	run3.workshop_duplicate(dup_id)
 	_assert.call(run3.deck_ids.count(dup_id) == 2, "workshop_duplicate should add a second copy")
 	_assert.call(not run3.workshop_open, "workshop_duplicate should close the workshop")
 
-	var run4 := SoloRun.create(CardCpuDecks.deck_ids()[3], _rng(45))
+	var run4 := SoloRun.create(CardCpuDecks.deck_ids()[3], 0, _rng(45))
 	run4.workshop_open = true
 	var dup_id4: String = run4.deck_ids[0]
 	run4.workshop_duplicate(dup_id4)
@@ -420,7 +425,7 @@ func _test_solo_run_workshop_remove_duplicate_and_skip() -> void:
 
 
 func _test_solo_run_loss_ends_the_run() -> void:
-	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], _rng(11))
+	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], 0, _rng(11))
 	var options := run.current_destinations()
 	var battle_index := 0
 	for i in options.size():
@@ -434,7 +439,7 @@ func _test_solo_run_loss_ends_the_run() -> void:
 
 
 func _test_solo_run_clearing_the_final_floor_marks_cleared() -> void:
-	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], _rng(13))
+	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], 0, _rng(13))
 	while not run.over:
 		if run.workshop_open:
 			run.workshop_skip()
@@ -460,7 +465,7 @@ func _test_solo_run_clearing_the_final_floor_marks_cleared() -> void:
 
 
 func _test_solo_run_round_trips_through_dict() -> void:
-	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], _rng(16))
+	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], 0, _rng(16))
 	_win_battle_floor(run, 16)
 	var restored := SoloRun.from_dict(run.to_dict())
 	_assert.call(restored.theme_id == run.theme_id, "from_dict should restore theme_id")
@@ -509,7 +514,7 @@ func _test_solo_run_loads_the_previous_save_format() -> void:
 
 func _test_solo_progress_in_battle_run_counts_as_a_loss_on_load() -> void:
 	SoloProgress.reset_for_test()
-	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], _rng(18))
+	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], 0, _rng(18))
 	var options := run.current_destinations()
 	var battle_index := 0
 	for i in options.size():
@@ -544,7 +549,7 @@ func _test_solo_progress_milestones_fire_once() -> void:
 ## `"finished"`として保存し、読んだら消える(1度だけ出すため)。
 func _test_solo_progress_saves_finished_run_and_takes_it_once() -> void:
 	SoloProgress.reset_for_test()
-	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], _rng(19))
+	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], 0, _rng(19))
 	var options := run.current_destinations()
 	var battle_index := 0
 	for i in options.size():
@@ -570,7 +575,7 @@ func _test_solo_progress_saves_finished_run_and_takes_it_once() -> void:
 ## (GameDesign.md 27章「中断と再開」)。
 func _test_solo_progress_interrupted_run_saves_finished_with_abandon_reason() -> void:
 	SoloProgress.reset_for_test()
-	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], _rng(21))
+	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], 0, _rng(21))
 	var options := run.current_destinations()
 	var battle_index := 0
 	for i in options.size():
@@ -606,6 +611,192 @@ func _test_solo_gates_load_and_reference_real_units() -> void:
 			)
 		if gate.win_condition == SoloGateData.WinCondition.SURVIVE_TURNS:
 			_assert.call(gate.survive_turns > 0, "a survival gate needs a target: " + gate.id)
+
+
+## 砂の深さ(GameDesign.md 27章「砂の深さ」)の条件は積み重なる。
+func _test_solo_run_depth_conditions_accumulate() -> void:
+	var run0 := SoloRun.create(CardCpuDecks.deck_ids()[0], 0, _rng(60))
+	_assert.call(
+		run0.expert_from_floor() == SoloRun.EXPERT_FROM_FLOOR,
+		"depth 0 keeps the normal expert floor"
+	)
+	_assert.call(run0.spring_heal() == SoloRun.SPRING_HEAL, "depth 0 keeps the normal spring heal")
+	_assert.call(run0.foe_hp_delta() == 0, "depth 0 has no foe hp delta")
+	_assert.call(
+		run0.bundle_target() == SoloRun.BUNDLE_COUNT, "depth 0 keeps the normal bundle count"
+	)
+
+	var run1 := SoloRun.create(CardCpuDecks.deck_ids()[0], 1, _rng(61))
+	_assert.call(run1.expert_from_floor() == 0, "depth 1 should make the CPU expert from floor 0")
+	_assert.call(
+		run1.spring_heal() == SoloRun.SPRING_HEAL, "depth 1 should not yet change spring heal"
+	)
+
+	var run2 := SoloRun.create(CardCpuDecks.deck_ids()[0], 2, _rng(62))
+	_assert.call(run2.expert_from_floor() == 0, "depth 2 should still keep the depth 1 condition")
+	_assert.call(run2.spring_heal() == 5, "depth 2 should set the spring heal to 5")
+	_assert.call(run2.foe_hp_delta() == 0, "depth 2 should not yet add a foe hp bonus")
+
+	var run3 := SoloRun.create(CardCpuDecks.deck_ids()[0], 3, _rng(63))
+	_assert.call(run3.foe_hp_delta() == 4, "depth 3 should add +4 to the foe's starting hp")
+	_assert.call(
+		run3.bundle_target() == SoloRun.BUNDLE_COUNT, "depth 3 should not yet reduce bundles"
+	)
+
+	var run4 := SoloRun.create(CardCpuDecks.deck_ids()[0], 4, _rng(64))
+	_assert.call(
+		run4.bundle_target() == SoloRun.BUNDLE_COUNT - 1,
+		"depth 4 should reduce the bundle count by 1"
+	)
+	_assert.call(
+		run4.max_hp == MatchState.INITIAL_HP, "depth 4 should not yet raise the starting max hp"
+	)
+
+	var run5 := SoloRun.create(CardCpuDecks.deck_ids()[0], 5, _rng(65))
+	_assert.call(run5.max_hp == 20, "depth 5 should start at 20 max hp")
+	_assert.call(run5.hp == 20, "depth 5 should start with full hp at the new max")
+	# 深さ5でも1〜4段目の条件はすべて残る。
+	_assert.call(run5.expert_from_floor() == 0, "depth 5 should keep the depth 1 condition")
+	_assert.call(run5.spring_heal() == 5, "depth 5 should keep the depth 2 condition")
+	_assert.call(run5.foe_hp_delta() == 4, "depth 5 should keep the depth 3 condition")
+	_assert.call(
+		run5.bundle_target() == SoloRun.BUNDLE_COUNT - 1,
+		"depth 5 should keep the depth 4 condition"
+	)
+
+	_assert.call(
+		SoloRun.depth_condition_lines(0).is_empty(), "depth 0 should offer no condition lines"
+	)
+	_assert.call(
+		SoloRun.depth_condition_lines(3).size() == 3, "depth 3 should offer three condition lines"
+	)
+	_assert.call(
+		SoloRun.depth_condition_lines(5).size() == 5,
+		"depth 5 should offer all five condition lines"
+	)
+
+
+## 深さの条件は恩恵と合算する(GameDesign.md 27章「恩恵」「砂の深さ」)。
+func _test_solo_run_depth_combines_with_boons() -> void:
+	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], 3, _rng(66))
+	run.boons.append("preemptive_sand")
+	_assert.call(
+		run.foe_hp_delta() == 4 - 3, "depth 3's +4 should combine with preemptive_sand's -3"
+	)
+
+	var spring_run := SoloRun.create(CardCpuDecks.deck_ids()[0], 2, _rng(67))
+	spring_run.boons.append("deep_spring")
+	_assert.call(
+		spring_run.spring_heal() + spring_run.spring_bonus() == 5 + 4,
+		"depth 2's base heal of 5 should combine with deep_spring's +4"
+	)
+
+	var bundle_run := SoloRun.create(CardCpuDecks.deck_ids()[0], 4, _rng(68))
+	bundle_run.boons.append("keen_eye")
+	_assert.call(
+		bundle_run.bundle_target() == SoloRun.BUNDLE_COUNT - 1 + 1,
+		"depth 4's -1 should combine with keen_eye's +1"
+	)
+
+
+## 開始の最大HP・踏破の砂金は深さに応じて増える(GameDesign.md 27章「砂の深さ」
+## 「遠征をまたいで残るもの」)。
+func _test_solo_run_starting_max_hp_and_clear_gold_scale_with_depth() -> void:
+	_assert.call(
+		SoloRun.starting_max_hp(4) == MatchState.INITIAL_HP,
+		"depth 4 should not raise the starting max hp"
+	)
+	_assert.call(SoloRun.starting_max_hp(5) == 20, "depth 5 should raise the starting max hp to 20")
+
+	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], 3, _rng(69))
+	_assert.call(
+		run.clear_gold() == SoloRun.CLEAR_GOLD + 3 * SoloRun.CLEAR_GOLD_PER_DEPTH,
+		"clear_gold should add CLEAR_GOLD_PER_DEPTH per depth"
+	)
+	var run0 := SoloRun.create(CardCpuDecks.deck_ids()[0], 0, _rng(70))
+	_assert.call(
+		run0.clear_gold() == SoloRun.CLEAR_GOLD, "depth 0 should not change the clear gold"
+	)
+
+
+## 深さの無い旧データは深さ0として読む(Pitfalls.md「データとコードの境目」)。
+func _test_solo_run_loads_legacy_save_without_depth() -> void:
+	var legacy := {
+		"theme_id": CardCpuDecks.deck_ids()[0],
+		"deck_ids": ["sand"],
+		"hp": 12,
+		"max_hp": 24,
+		"floor": 1,
+		"wins": 1,
+		"route": [],
+		"chosen": [0],
+		"in_battle": false,
+		"over": false,
+		"cleared": false,
+	}
+	var run := SoloRun.from_dict(legacy)
+	_assert.call(run.depth == 0, "a save without a depth field should default to depth 0")
+
+
+## 選べる最大の深さは踏破するとN+1に伸び(上限は`DEPTH_MAX`)、作戦ごとの最も深い踏破も
+## 別々に覚える(GameDesign.md 27章「砂の深さ」「遠征をまたいで残るもの」)。
+func _test_solo_progress_unlocked_depth_and_theme_best_depth() -> void:
+	SoloProgress.reset_for_test()
+	var theme_a := CardCpuDecks.deck_ids()[0]
+	var theme_b := CardCpuDecks.deck_ids()[1]
+	_assert.call(SoloProgress.unlocked_depth("") == 0, "a fresh account should only unlock depth 0")
+	_assert.call(
+		SoloProgress.theme_best_depth("", theme_a) == -1, "an uncleared theme should report -1"
+	)
+	_assert.call(SoloProgress.cleared_theme_count("") == 0, "a fresh account has cleared no themes")
+
+	var run_a := SoloRun.new()
+	run_a.theme_id = theme_a
+	run_a.depth = 2
+	run_a.wins = SoloRun.FLOOR_COUNT
+	run_a.cleared = true
+	SoloProgress.record("", run_a)
+	_assert.call(SoloProgress.unlocked_depth("") == 3, "clearing depth 2 should unlock depth 3")
+	_assert.call(
+		SoloProgress.theme_best_depth("", theme_a) == 2, "theme_a's best depth should be recorded"
+	)
+	_assert.call(SoloProgress.cleared_theme_count("") == 1, "one theme should now be cleared")
+
+	# 別の作戦を浅い深さで踏破しても、他の作戦の記録は減らない。
+	var run_b := SoloRun.new()
+	run_b.theme_id = theme_b
+	run_b.depth = 0
+	run_b.wins = SoloRun.FLOOR_COUNT
+	run_b.cleared = true
+	SoloProgress.record("", run_b)
+	_assert.call(
+		SoloProgress.unlocked_depth("") == 3,
+		"unlocked_depth should not drop when a shallower run clears"
+	)
+	_assert.call(
+		SoloProgress.theme_best_depth("", theme_a) == 2, "theme_a's record should be unaffected"
+	)
+	_assert.call(
+		SoloProgress.theme_best_depth("", theme_b) == 0, "theme_b's best depth should be recorded"
+	)
+	_assert.call(SoloProgress.cleared_theme_count("") == 2, "two themes should now be cleared")
+
+	# depth 5を踏破しても上限(DEPTH_MAX=5)を超えない。
+	var run_max := SoloRun.new()
+	run_max.theme_id = theme_a
+	run_max.depth = SoloRun.DEPTH_MAX
+	run_max.wins = SoloRun.FLOOR_COUNT
+	run_max.cleared = true
+	SoloProgress.record("", run_max)
+	_assert.call(
+		SoloProgress.unlocked_depth("") == SoloRun.DEPTH_MAX,
+		"unlocked_depth should cap at DEPTH_MAX"
+	)
+
+	SoloProgress.set_last_depth("", 3)
+	_assert.call(
+		SoloProgress.last_depth("") == 3, "set_last_depth should be readable via last_depth"
+	)
 
 
 ## 恩恵(GameDesign.md 27章「恩恵」)は6つ、どれもちょうど1つの効果を持つ。
