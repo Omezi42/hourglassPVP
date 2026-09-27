@@ -331,9 +331,12 @@ func _detail_label(dest: Dictionary) -> String:
 		return "HP +%d" % SoloRun.SPRING_HEAL
 	if kind == SoloRun.Kind.WORKSHOP:
 		return "抜く・複製"
+	# 関門は関門名、最終戦は主の名前(`gate`に主のidが入る。GameDesign.md 27章「主」)。
+	var gate := SoloGateLibrary.find_by_id(str(dest.get("gate", "")))
+	if gate != null:
+		return gate.display_name
 	if kind == SoloRun.Kind.GATE:
-		var gate := SoloGateLibrary.find_by_id(str(dest.get("gate", "")))
-		return gate.display_name if gate != null else "関門"
+		return "関門"
 	var cpu_deck := str(dest.get("cpu_deck", ""))
 	if cpu_deck.is_empty():
 		return "対局"

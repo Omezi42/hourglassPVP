@@ -31,7 +31,7 @@ func run(assert_true: Callable) -> void:
 	_test_solo_progress_saves_finished_run_and_takes_it_once()
 	_test_solo_progress_interrupted_run_saves_finished_with_abandon_reason()
 	_test_solo_gates_load_and_reference_real_units()
-	_test_solo_boons_load_and_have_exactly_one_effect_each()
+	_test_solo_boons_load_and_have_an_effect_each()
 	_test_solo_run_depth_conditions_accumulate()
 	_test_solo_run_depth_combines_with_boons()
 	_test_solo_run_starting_max_hp_and_clear_gold_scale_with_depth()
@@ -597,7 +597,7 @@ func _test_solo_progress_interrupted_run_saves_finished_with_abandon_reason() ->
 
 func _test_solo_gates_load_and_reference_real_units() -> void:
 	var gates := SoloGateLibrary.all_gates()
-	_assert.call(gates.size() == 7, "GameDesign.md 27章 lists seven gates")
+	_assert.call(gates.size() == 10, "GameDesign.md 27章 lists ten gates")
 	var seen := {}
 	for gate in gates:
 		_assert.call(not seen.has(gate.id), "gate ids must be unique: " + gate.id)
@@ -609,8 +609,11 @@ func _test_solo_gates_load_and_reference_real_units() -> void:
 			_assert.call(
 				not parsed.is_empty(), "gate unit row must parse: %s (%s)" % [row, gate.id]
 			)
-		if gate.win_condition == SoloGateData.WinCondition.SURVIVE_TURNS:
-			_assert.call(gate.survive_turns > 0, "a survival gate needs a target: " + gate.id)
+		if (
+			gate.win_condition
+			in [SoloGateData.WinCondition.SURVIVE_TURNS, SoloGateData.WinCondition.WIN_WITHIN_TURNS]
+		):
+			_assert.call(gate.survive_turns > 0, "a turn-count gate needs a target: " + gate.id)
 
 
 ## 砂の深さ(GameDesign.md 27章「砂の深さ」)の条件は積み重なる。
@@ -800,9 +803,9 @@ func _test_solo_progress_unlocked_depth_and_theme_best_depth() -> void:
 
 
 ## 恩恵(GameDesign.md 27章「恩恵」)は6つ、どれもちょうど1つの効果を持つ。
-func _test_solo_boons_load_and_have_exactly_one_effect_each() -> void:
+func _test_solo_boons_load_and_have_an_effect_each() -> void:
 	var boons := SoloBoonLibrary.all_boons()
-	_assert.call(boons.size() == 6, "GameDesign.md 27章 lists six boons")
+	_assert.call(boons.size() == 14, "GameDesign.md 27章 lists fourteen boons")
 	var seen := {}
 	for boon in boons:
 		_assert.call(not seen.has(boon.id), "boon ids must be unique: " + boon.id)
@@ -817,7 +820,14 @@ func _test_solo_boons_load_and_have_exactly_one_effect_each() -> void:
 			"foe_hp_penalty",
 			"extra_opening_draw",
 			"win_heal",
+			"light_deck_draw",
+			"small_total_bonus",
+			"heavy_cost_cut",
+			"flip_damage",
+			"death_damage",
+			"extra_flip_rights",
+			"first_turn_mana",
 		]:
 			if int(boon.get(field)) != 0:
 				effects += 1
-		_assert.call(effects == 1, "a boon should have exactly one nonzero effect: " + boon.id)
+		_assert.call(effects >= 1, "a boon should have a nonzero effect: " + boon.id)

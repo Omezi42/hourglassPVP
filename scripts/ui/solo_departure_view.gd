@@ -31,6 +31,9 @@ const CONDITION_LINE_HEIGHT := 18.0
 const CONDITION_SEPARATOR := " ・ "
 const CONDITIONS_TOP_GAP := 8.0
 const CARDS_TOP_GAP := 18.0
+const BOSS_FONT_SIZE := 15
+const BOSS_LINE_HEIGHT := 22.0
+const BOSS_TOP_GAP := 6.0
 
 const SEAL_RADIUS := 18.0
 const SEAL_MARGIN := 14.0
@@ -51,7 +54,8 @@ func show_data(
 	max_depth: int,
 	cleared_theme_count: int,
 	theme_count: int,
-	theme_best_depths: Array[int]
+	theme_best_depths: Array[int],
+	boss_id: String = ""
 ) -> void:
 	for child in get_children():
 		remove_child(child)
@@ -77,6 +81,18 @@ func show_data(
 		HORIZONTAL_ALIGNMENT_CENTER
 	)
 	conditions_top += CONDITION_LINE_HEIGHT
+	# この遠征の主(GameDesign.md 27章「主」)。最後の相手を見て作戦を選べるようにする。
+	var boss := SoloGateLibrary.find_by_id(boss_id)
+	if boss != null:
+		conditions_top += BOSS_TOP_GAP
+		_add_label(
+			Rect2(MARGIN, conditions_top, width - MARGIN * 2.0, BOSS_LINE_HEIGHT),
+			"最終戦の主 ・ %s ─ %s" % [boss.display_name, boss.description],
+			BOSS_FONT_SIZE,
+			UiPalette.BRASS_HIGHLIGHT,
+			HORIZONTAL_ALIGNMENT_CENTER
+		)
+		conditions_top += BOSS_LINE_HEIGHT
 	var cards_top := conditions_top + CARDS_TOP_GAP
 	var cards_bottom := size.y - CARDS_BOTTOM_MARGIN
 	var card_w: float = (width - MARGIN * 2.0 - CARD_GAP * 2.0) / 3.0

@@ -21,6 +21,8 @@ const ICON_COLUMNS := 5
 const ICON_GAP := 8.0
 const ICON_ROW_GAP := 12.0
 const ICON_TOP_GAP := 14.0
+## 相手の作戦の絵の数(15種)。自分の山札の写しを使う相手も、この数までを並べる。
+const ICON_COUNT := 15
 
 var _panel_canvas: Control
 var _heading_label: Label
@@ -35,6 +37,7 @@ var _hp_label: Label
 var _challenge_button: Button
 var _back_button: Button
 var _dest: Dictionary = {}
+var _icon_ids: Array[String] = []
 
 
 func _ready() -> void:
@@ -89,10 +92,11 @@ func show_data(dest: Dictionary, run: SoloRun) -> void:
 	var kind: int = int(dest.get("kind", SoloRun.Kind.BATTLE))
 	var is_final := floor == SoloRun.FLOOR_COUNT - 1
 	var is_expert := floor >= run.expert_from_floor()
-	var gate := (
-		SoloGateLibrary.find_by_id(str(dest.get("gate", ""))) if kind == SoloRun.Kind.GATE else null
-	)
+	# 最終戦の`gate`には主のidが入る(GameDesign.md 27章「主」)。
+	var gate := SoloGateLibrary.find_by_id(str(dest.get("gate", "")))
 	var cpu_deck := str(dest.get("cpu_deck", ""))
+	var mirror := SoloRun.uses_player_deck(dest)
+	_icon_ids = _player_icon_ids(run.deck_ids) if mirror else CardCpuDecks.card_ids_of(cpu_deck)
 
 	if kind == SoloRun.Kind.SPRING:
 		_heading_label.text = "%d段目 ・ 泉" % (floor + 1)
@@ -128,8 +132,8 @@ func show_data(dest: Dictionary, run: SoloRun) -> void:
 	var kind_label := "最終戦" if is_final else ("関門" if kind == SoloRun.Kind.GATE else "対局")
 	_heading_label.text = "%d段目 ・ %s" % [floor + 1, kind_label]
 	_foe_label.visible = true
-	_foe_label.text = "CPU ・ %s" % CardCpuDecks.name_of(cpu_deck)
-	_summary_label.visible = true
+	_foe_label.text = SoloRun.foe_name_of(dest)
+	_summary_label.visible = not mirror
 	_summary_label.text = CardCpuDecks.summary_of(cpu_deck)
 	_difficulty_label.visible = true
 	_difficulty_label.text = "CPUの強さ ・ %s" % ("上級" if is_expert else "中級")
@@ -140,10 +144,24 @@ func show_data(dest: Dictionary, run: SoloRun) -> void:
 	if gate != null:
 		_gate_name_label.text = gate.display_name
 		_gate_desc_label.text = gate.description
-		_gate_note_label.text = "勝つと恩恵を1つ"
+		_gate_note_label.text = "倒せば踏破" if is_final else "勝つと恩恵を1つ"
 	_hp_label.visible = false
 	_challenge_button.text = "挑む"
 	_layout()
+
+
+## 自分の山札の種類をコスト順に`ICON_COUNT`まで(鏡写し・鏡の主。GameDesign.md 27章「画面」)。
+static func _player_icon_ids(deck_ids: Array[String]) -> Array[String]:
+	var cards: Array[CardData] = []
+	for id in deck_ids:
+		var card := CardLibrary.find_by_id(id)
+		if card != null and not cards.has(card):
+			cards.append(card)
+	cards.sort_custom(func(a: CardData, b: CardData) -> bool: return a.cost < b.cost)
+	var ids: Array[String] = []
+	for card in cards.slice(0, ICON_COUNT):
+		ids.append(card.id)
+	return ids
 
 
 func _build_icons(ids: Array[String]) -> void:
@@ -221,11 +239,11 @@ func _layout() -> void:
 			(size.x - PADDING * 2.0 - float(ICON_COLUMNS - 1) * ICON_GAP) / float(ICON_COLUMNS)
 		)
 		var icon_h := icon_w * 1.32
-		var rows := ceili(15.0 / float(ICON_COLUMNS))
+		var rows := ceili(float(ICON_COUNT) / float(ICON_COLUMNS))
 		var grid_h := icon_h * float(rows) + (ICON_GAP + ICON_ROW_GAP) * float(maxi(rows - 1, 0))
 		_icon_grid.position = Vector2(PADDING, top)
 		_icon_grid.size = Vector2(size.x - PADDING * 2.0, grid_h)
-		_build_icons(CardCpuDecks.card_ids_of(str(_dest.get("cpu_deck", ""))))
+		_build_icons(_icon_ids)
 		top += grid_h + 12.0
 		_gate_name_label.position = Vector2(PADDING, top)
 		_gate_name_label.size = Vector2(size.x - PADDING * 2.0, 22.0)

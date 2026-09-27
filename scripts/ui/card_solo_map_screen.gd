@@ -36,6 +36,8 @@ var _confirm: ConfirmModal
 var _selected_index := -1
 ## 出発で示す3つの作戦(深さを変えても引き直さない。GameDesign.md 27章「画面」)。
 var _departure_themes: Array[String] = []
+## 出発で示す最終戦の主(GameDesign.md 27章「主」)。作戦と同じく開き直すまで引き直さない。
+var _departure_boss := ""
 var _departure_depth := 0
 
 
@@ -149,6 +151,7 @@ func _refresh() -> void:
 			var rng := RandomNumberGenerator.new()
 			rng.randomize()
 			_departure_themes = SoloRun.theme_choices(rng)
+			_departure_boss = SoloRun.boss_choice(rng)
 			_departure_depth = clampi(
 				SoloProgress.last_depth(uid), 0, SoloProgress.unlocked_depth(uid)
 			)
@@ -163,7 +166,8 @@ func _refresh() -> void:
 			SoloProgress.unlocked_depth(uid),
 			SoloProgress.cleared_theme_count(uid),
 			CardCpuDecks.deck_ids().size(),
-			best_depths
+			best_depths,
+			_departure_boss
 		)
 		_status.visible = false
 		_destination.visible = false
@@ -224,7 +228,7 @@ func _on_destination_challenge_pressed() -> void:
 func _on_theme_chosen(theme_id: String) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
-	_run = SoloRun.create(theme_id, _departure_depth, rng)
+	_run = SoloRun.create(theme_id, _departure_depth, rng, _departure_boss)
 	_departure_themes = []
 	if FunnelService.has_reached(FunnelService.SOLO_START):
 		FunnelService.reach(FunnelService.SOLO_AGAIN)

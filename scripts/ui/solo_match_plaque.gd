@@ -87,7 +87,7 @@ func start(run: SoloRun, gate: SoloGateData) -> void:
 	else:
 		_floor_text = "遠征 ・ %d段目" % (run.floor + 1)
 	if run.floor == SoloRun.FLOOR_COUNT - 1:
-		_kind_text = "最終戦"
+		_kind_text = "主『%s』" % gate.display_name if gate != null else "最終戦"
 	elif gate != null:
 		_kind_text = "関門『%s』" % gate.display_name
 	else:
@@ -121,7 +121,7 @@ func _sync_goal() -> void:
 	if _goal_value < 0:
 		return
 	match _gate.win_condition:
-		SoloGateData.WinCondition.SURVIVE_TURNS:
+		SoloGateData.WinCondition.SURVIVE_TURNS, SoloGateData.WinCondition.WIN_WITHIN_TURNS:
 			_goal_lead = "あと"
 			_goal_tail = "手番"
 		SoloGateData.WinCondition.DESTROY_ALL_ENEMY_UNITS:

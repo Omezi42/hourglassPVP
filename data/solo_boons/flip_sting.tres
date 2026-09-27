@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="SoloBoonData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/solo_boon_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "flip_sting"
+display_name = "返し上手"
+description = "自分の砂時計を反転するたび(反転権を含む)、相手に1ダメージ。"
+changes_play = true
+flip_damage = 1

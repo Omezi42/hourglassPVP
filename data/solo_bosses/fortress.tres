@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="SoloGateData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/solo_gate_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "fortress"
+display_name = "城塞の主"
+description = "相手の場に守護の砂時計が3体いる状態から始まる。相手のHPが8多い。"
+own_board_units = Array[String]([])
+foe_board_units = Array[String](["shield:4:0", "guard:7:0", "shield:4:0"])
+win_condition = 0
+survive_turns = 0
+sand_drop_count = 1
+flip_disabled = false
+clash_damage_multiplier = 1
+foe_hp_bonus = 8
+foe_uses_player_deck = false
+cpu_deck = "heavy"

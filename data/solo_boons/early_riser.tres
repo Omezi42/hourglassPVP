@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="SoloBoonData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/solo_boon_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "early_riser"
+display_name = "早起き"
+description = "対局の最初の自分の手番だけ、マナ+1。"
+changes_play = true
+first_turn_mana = 1

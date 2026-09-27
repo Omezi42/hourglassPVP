@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="SoloBoonData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/solo_boon_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "heavy_sand"
+display_name = "重い砂"
+description = "山札のコスト5以上の砂時計はコスト-1。"
+changes_play = true
+heavy_cost_min = 5
+heavy_cost_cut = 1

@@ -14,6 +14,7 @@ var _panel: CardChallengeResult
 var _plaque: SoloMatchPlaque
 var _run: SoloRun = null
 var _gate: SoloGateData = null
+var _boon_effects: SoloBoonEffects = null
 var _settled := false
 
 
@@ -61,6 +62,7 @@ func start(run: SoloRun) -> void:
 func close() -> void:
 	_run = null
 	_gate = null
+	_boon_effects = null
 	_settled = false
 	_panel.visible = false
 	_plaque.close()
@@ -93,16 +95,22 @@ func _begin_battle() -> void:
 	_screen.bar_for(MatchState.Side.A).display_name = AccountService.display_name()
 	_screen.bar_for(MatchState.Side.A).icon_id = AccountService.icon_id()
 	_screen.bar_for(MatchState.Side.A).title_id = AccountService.title_id()
-	var foe_deck_id := str(_run.active_destination().get("cpu_deck", ""))
-	_screen.foe_bar.display_name = CardCpuDecks.foe_name_of(foe_deck_id)
+	var dest := _run.active_destination()
+	_screen.foe_bar.display_name = SoloRun.foe_name_of(dest)
 	_screen.foe_bar.icon_id = UserProfileLibrary.CPU_ICON_ID
 	_screen.foe_bar.title_id = UserProfileLibrary.CPU_TITLE_ID
 	_screen._set_playmats(AccountService.playmat_id(), PlaymatLibrary.CPU_ID)
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
+	# 鏡写し・鏡の主の相手は、恩恵で書き換える前の山札の写しを使う(GameDesign.md 27章)。
+	var foe_cards: Array = (
+		CardLibrary.deck_from_ids(_run.deck_ids)
+		if SoloRun.uses_player_deck(dest)
+		else CardCpuDecks.deck_of(str(dest.get("cpu_deck", "")))
+	)
 	_screen._begin_state(
-		CardLibrary.deck_from_ids(_run.deck_ids),
-		CardCpuDecks.deck_of(foe_deck_id),
+		SoloBoonEffects.modded_deck(CardLibrary.deck_from_ids(_run.deck_ids), _run),
+		foe_cards,
 		rng.randi_range(1, 1 << 30),
 		true
 	)
@@ -129,7 +137,7 @@ func _apply_run_state() -> void:
 	state.hp[mine] = _run.hp
 	# 深さ3以上の「相手のHPが多い状態で始まる」と恩恵「先制の砂」を合算する
 	# (GameDesign.md 27章「砂の深さ」「恩恵」)。
-	var foe_delta := _run.foe_hp_delta()
+	var foe_delta := _run.foe_hp_delta() + (_gate.foe_hp_bonus if _gate != null else 0)
 	if foe_delta != 0:
 		state.hp[foe] = maxi(state.hp[foe] + foe_delta, 1)
 	if _gate != null:
@@ -143,11 +151,15 @@ func _apply_run_state() -> void:
 	# がこの信号を被弾/回復の演出と誤読する。
 	state.board_changed.emit(mine)
 	state.board_changed.emit(foe)
+	_boon_effects = SoloBoonEffects.new()
+	_boon_effects.attach(state, mine, _run)
 	if _gate == null:
 		return
 	match _gate.win_condition:
 		SoloGateData.WinCondition.SURVIVE_TURNS:
 			state.turn_started.connect(_on_turn_started_for_survival)
+		SoloGateData.WinCondition.WIN_WITHIN_TURNS:
+			state.turn_started.connect(_on_turn_started_for_deadline)
 		SoloGateData.WinCondition.DESTROY_ALL_ENEMY_UNITS:
 			state.unit_destroyed.connect(_on_unit_destroyed_for_wipe)
 
@@ -181,6 +193,17 @@ func _on_turn_started_for_survival(side: int) -> void:
 	_plaque.refresh()
 
 
+## 期限の手番までに倒せなかった(GameDesign.md 27章「速攻勝負」)。期限を超えた相手の手番の
+## 始まりで自分を投了させる。
+func _on_turn_started_for_deadline(side: int) -> void:
+	var state: MatchState = _screen.state
+	if state == null or state.is_match_over() or _gate == null:
+		return
+	if side != _screen.my_side and state.turn_count > _gate.survive_turns:
+		state.surrender(_screen.my_side)
+	_plaque.refresh()
+
+
 ## 相手の場の砂時計をすべて破壊した(GameDesign.md 27章)。
 func _on_unit_destroyed_for_wipe(side: int, _slot: int, _card: CardData) -> void:
 	var state: MatchState = _screen.state
@@ -199,7 +222,7 @@ func _settle(won: bool) -> void:
 	var hp_left := int(state.hp[mine])
 	var foe_hp_left := int(state.hp[foe])
 	var floor_played := _run.floor
-	var foe_deck_id := str(_run.active_destination().get("cpu_deck", ""))
+	var foe_name := SoloRun.foe_name_of(_run.active_destination())
 	var gate := _gate
 	var uid := StageReward.current_uid()
 	var rng := RandomNumberGenerator.new()
@@ -217,7 +240,7 @@ func _settle(won: bool) -> void:
 		SoloProgress.save_run(uid, _run)
 	var reward := _grant_rewards(uid, won, reached)
 	_panel.show_for(
-		_outcome(won, floor_played, gate, foe_deck_id, hp_left, foe_hp_left, state, reward)
+		_outcome(won, floor_played, gate, foe_name, hp_left, foe_hp_left, state, reward)
 	)
 
 
@@ -251,7 +274,7 @@ func _outcome(
 	won: bool,
 	floor_played: int,
 	gate: SoloGateData,
-	foe_deck_id: String,
+	foe_name: String,
 	hp_left: int,
 	foe_hp_left: int,
 	state: MatchState,
@@ -268,7 +291,6 @@ func _outcome(
 		kind_label = "関門"
 	var depth_lead := "深さ%d ・ " % _run.depth if _run.depth > 0 else ""
 	outcome.eyebrow = "ソロモード ・ %s%d段目 ・ %s" % [depth_lead, floor_played + 1, kind_label]
-	var foe_name := CardCpuDecks.foe_name_of(foe_deck_id)
 	outcome.stage_name = ("%s ・ " % gate.display_name) + foe_name if gate != null else foe_name
 	outcome.single_action_label = "遠征を終える" if _run.over else "道へ戻る"
 	if won:
@@ -321,7 +343,7 @@ func remaining_for(gate: SoloGateData) -> int:
 	if gate == null or _screen.state == null:
 		return -1
 	match gate.win_condition:
-		SoloGateData.WinCondition.SURVIVE_TURNS:
+		SoloGateData.WinCondition.SURVIVE_TURNS, SoloGateData.WinCondition.WIN_WITHIN_TURNS:
 			return _own_turns_left(_screen.state, gate)
 		SoloGateData.WinCondition.DESTROY_ALL_ENEMY_UNITS:
 			return _screen.state.units(MatchState.other_side(_screen.my_side)).size()

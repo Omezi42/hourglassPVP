@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="SoloBoonData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/solo_boon_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "light_pack"
+display_name = "身軽"
+description = "山札が20枚以下なら、対局の最初の手札を2枚多く引く。"
+changes_play = true
+light_deck_max = 20
+light_deck_draw = 2

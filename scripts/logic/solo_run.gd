@@ -22,6 +22,8 @@ const BUNDLE_COUNT := 3
 const BUNDLE_CARDS := 3
 ## 恩恵の候補数。
 const BOON_OFFER_SIZE := 3
+## 相手が自分の山札の写しを使うときの相手の名前(GameDesign.md 27章「画面」)。
+const MIRROR_FOE_NAME := "あなたの山札"
 ## 踏破の砂金は深さに応じて増える(GameDesign.md 27章「遠征をまたいで残るもの」)。
 const CLEAR_GOLD_PER_DEPTH := 50
 
@@ -57,6 +59,9 @@ const MILESTONES: Array[Dictionary] = [
 ]
 
 var theme_id := ""
+## 最終戦の主(`data/solo_bosses/`のid。GameDesign.md 27章「主」)。出発の画面で決まる。
+## 主が無かった頃の保存データは空で、最終戦は通常の対局になる。
+var boss_id := ""
 var deck_ids: Array[String] = []
 ## 砂の深さ(難度。0〜`DEPTH_MAX`)。踏破したあとも条件を重ねて挑み直せる
 ## (GameDesign.md 27章「砂の深さ」)。遠征の間は変わらない。
@@ -102,16 +107,40 @@ static func theme_choices(rng: RandomNumberGenerator) -> Array[String]:
 	return ids.slice(0, THEME_CHOICES)
 
 
+## 出発で示す最終戦の主(GameDesign.md 27章「主」)。主が1体も無ければ空。
+static func boss_choice(rng: RandomNumberGenerator) -> String:
+	var ids := SoloGateLibrary.boss_ids()
+	if ids.is_empty():
+		return ""
+	return ids[rng.randi_range(0, ids.size() - 1)]
+
+
 ## 作戦の15種を1枚ずつ山札にし、道を作る(GameDesign.md 27章「遠征の流れ」)。
-static func create(theme_id: String, depth: int, rng: RandomNumberGenerator) -> SoloRun:
+static func create(
+	theme_id: String, depth: int, rng: RandomNumberGenerator, boss_id: String = ""
+) -> SoloRun:
 	var run := SoloRun.new()
 	run.theme_id = theme_id
+	run.boss_id = boss_id
 	run.depth = clampi(depth, 0, DEPTH_MAX)
 	run.deck_ids = _unique_ids(CardCpuDecks.deck_of(theme_id))
 	run.max_hp = starting_max_hp(run.depth)
 	run.hp = run.max_hp
-	run.route = _build_route(rng)
+	run.route = _build_route(rng, boss_id)
 	return run
+
+
+## 行き先の相手の名前(「CPU ・ 速攻」)。相手が自分の山札の写しを使う関門・主では
+## 「CPU ・ あなたの山札」(GameDesign.md 27章「画面」)。
+static func foe_name_of(dest: Dictionary) -> String:
+	if uses_player_deck(dest):
+		return CardCpuDecks.FOE_NAME_PREFIX + MIRROR_FOE_NAME
+	return CardCpuDecks.foe_name_of(str(dest.get("cpu_deck", "")))
+
+
+static func uses_player_deck(dest: Dictionary) -> bool:
+	var gate := SoloGateLibrary.find_by_id(str(dest.get("gate", "")))
+	return gate != null and gate.foe_uses_player_deck
 
 
 ## 遠征開始時の最大HP(GameDesign.md 27章「砂の深さ」)。深さ5で20になる。
@@ -218,9 +247,9 @@ func take_boon(id: String) -> void:
 	boons.append(id)
 	boon_offer = []
 	var boon := SoloBoonLibrary.find_by_id(id)
-	if boon != null and boon.max_hp_bonus > 0:
-		max_hp += boon.max_hp_bonus
-		hp = mini(hp + boon.max_hp_bonus, max_hp)
+	if boon != null and boon.max_hp_bonus != 0:
+		max_hp = maxi(max_hp + boon.max_hp_bonus, 1)
+		hp = clampi(hp + maxi(boon.max_hp_bonus, 0), 1, max_hp)
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
 	offer = _build_bundle_offer(rng)
@@ -298,41 +327,54 @@ func bundle_target() -> int:
 
 ## 恩恵「深い泉」の合計(GameDesign.md 27章「恩恵」)。
 func spring_bonus() -> int:
-	return _boon_total("spring_bonus")
+	return boon_total("spring_bonus")
 
 
 ## 恩恵「目利き」の合計。束の数は `BUNDLE_COUNT + extra_bundles()`。
 func extra_bundles() -> int:
-	return _boon_total("extra_bundles")
+	return boon_total("extra_bundles")
 
 
 ## 恩恵「先制の砂」の合計。対局開始時に相手のHPから引く(`CardMatchSolo`)。
 func foe_hp_penalty() -> int:
-	return _boon_total("foe_hp_penalty")
+	return boon_total("foe_hp_penalty")
 
 
-## 恩恵「用意周到」の合計。対局の最初の手札に足す枚数(`CardMatchSolo`)。
+## 対局の最初の手札に足す枚数(`CardMatchSolo`)。恩恵「用意周到」の合計に、山札が
+## 閾値以下のときの「身軽」を足す(GameDesign.md 27章「恩恵」)。
 func extra_opening_draw() -> int:
-	return _boon_total("extra_opening_draw")
+	var total := boon_total("extra_opening_draw")
+	for boon in owned_boons():
+		if boon.light_deck_max > 0 and deck_ids.size() <= boon.light_deck_max:
+			total += boon.light_deck_draw
+	return total
+
+
+func owned_boons() -> Array[SoloBoonData]:
+	var found: Array[SoloBoonData] = []
+	for id in boons:
+		var boon := SoloBoonLibrary.find_by_id(id)
+		if boon != null:
+			found.append(boon)
+	return found
 
 
 ## 恩恵「勝ち癖」の合計。勝利時にHPへ足す(上限は`max_hp`)。
 func win_heal() -> int:
-	return _boon_total("win_heal")
+	return boon_total("win_heal")
 
 
-func _boon_total(field: String) -> int:
+func boon_total(field: String) -> int:
 	var total := 0
-	for id in boons:
-		var boon := SoloBoonLibrary.find_by_id(id)
-		if boon != null:
-			total += int(boon.get(field))
+	for boon in owned_boons():
+		total += int(boon.get(field))
 	return total
 
 
 func to_dict() -> Dictionary:
 	return {
 		"theme_id": theme_id,
+		"boss_id": boss_id,
 		"deck_ids": deck_ids,
 		"depth": depth,
 		"hp": hp,
@@ -355,6 +397,7 @@ func to_dict() -> Dictionary:
 static func from_dict(data: Dictionary) -> SoloRun:
 	var run := SoloRun.new()
 	run.theme_id = str(data.get("theme_id", ""))
+	run.boss_id = str(data.get("boss_id", ""))
 	for id in data.get("deck_ids", []):
 		run.deck_ids.append(str(id))
 	# 旧データ(深さ無し)は深さ0として読む(Pitfalls.md「データとコードの境目」)。
@@ -418,11 +461,16 @@ static func _route_from_variant(raw: Variant) -> Array:
 	return route
 
 
-## 8つのCPUデッキ(floors 0〜4で7つ・最終戦で1つ)・7つの関門を切り混ぜて重複なく割り当てる。
-## 1〜5段目は2〜3個、6段目は対局1つだけ(GameDesign.md 27章「道」)。
-static func _build_route(rng: RandomNumberGenerator) -> Array:
+## 8つのCPUデッキ(floors 0〜4で7つ・最終戦で1つ)・関門を切り混ぜて重複なく割り当てる。
+## 1〜5段目は2〜3個、6段目は主との対局1つだけ(GameDesign.md 27章「道」「主」)。
+## 主が作戦を持つときは、その作戦を最終戦に回して1〜5段目の相手と重ねない。
+static func _build_route(rng: RandomNumberGenerator, boss_id: String = "") -> Array:
 	var deck_pool := _string_array(_shuffled(CardCpuDecks.deck_ids(), rng))
+	var boss := SoloGateLibrary.find_by_id(boss_id)
 	var final_deck: String = deck_pool.pop_back()
+	if boss != null and deck_pool.has(boss.cpu_deck):
+		deck_pool[deck_pool.find(boss.cpu_deck)] = final_deck
+		final_deck = boss.cpu_deck
 	var gate_pool := _string_array(_shuffled(SoloGateLibrary.all_ids(), rng))
 	# 8つのうち7つをfloors 0〜4へ配る。1段目は泉・工房が出せないため必ず2つ受け取る。
 	# 残る1つは1〜4段目のうちどれか1段へ(その段は行き先が3個になり得る)。
@@ -440,7 +488,8 @@ static func _build_route(rng: RandomNumberGenerator) -> Array:
 			var extra_kind := Kind.WORKSHOP if rng.randf() < 0.5 else Kind.SPRING
 			destinations.append({"kind": extra_kind, "cpu_deck": "", "gate": ""})
 		route.append(_shuffled(destinations, rng))
-	route.append([{"kind": Kind.BATTLE, "cpu_deck": final_deck, "gate": ""}])
+	var final_gate := boss.id if boss != null else ""
+	route.append([{"kind": Kind.BATTLE, "cpu_deck": final_deck, "gate": final_gate}])
 	return route
 
 
@@ -455,13 +504,25 @@ static func _next_destination(
 
 
 ## 恩恵の候補(GameDesign.md 27章「恩恵」)。まだ持っていない恩恵から3つ。
+## 戦い方を変える恩恵(◆)が残っていれば、1つは必ずそこから選ぶ。
 func _build_boon_offer(rng: RandomNumberGenerator) -> Array[String]:
+	var play_pool: Array[String] = []
 	var pool: Array[String] = []
 	for boon in SoloBoonLibrary.all_boons():
-		if not boons.has(boon.id):
-			pool.append(boon.id)
-	pool = _string_array(_shuffled(pool, rng))
-	return pool.slice(0, mini(BOON_OFFER_SIZE, pool.size()))
+		if boons.has(boon.id):
+			continue
+		pool.append(boon.id)
+		if boon.changes_play:
+			play_pool.append(boon.id)
+	var picked: Array[String] = []
+	if not play_pool.is_empty():
+		picked.append(play_pool[rng.randi_range(0, play_pool.size() - 1)])
+	for id in _string_array(_shuffled(pool, rng)):
+		if picked.size() >= BOON_OFFER_SIZE:
+			break
+		if not picked.has(id):
+			picked.append(id)
+	return _string_array(_shuffled(picked, rng))
 
 
 ## 束の候補(GameDesign.md 27章「山札を育てる」)。1つは選んだ作戦の束、残りは他の作戦から

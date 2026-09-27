@@ -6,8 +6,9 @@ GameDesign.md 27章の実装方針。**遠征の規則(道・山札・HP・束�
 
 | クラス | 責務 |
 |---|---|
-| `SoloGateData`(`scripts/data/solo_gate_data.gd`, Resource) | 関門1つぶんの特殊ルール。`data/solo_gates/{id}.tres`。1つ足すのは `.tres` 1個 |
-| `SoloGateLibrary`(`scripts/logic/solo_gate_library.gd`, static) | `data/solo_gates/` を id 順に返す。`PuzzleLibrary` と同じ流儀(`.remap` の扱いを含む) |
+| `SoloGateData`(`scripts/data/solo_gate_data.gd`, Resource) | 関門・主1つぶんの特殊ルール。関門は`data/solo_gates/{id}.tres`、主は`data/solo_bosses/{id}.tres`。1つ足すのは `.tres` 1個 |
+| `SoloGateLibrary`(`scripts/logic/solo_gate_library.gd`, static) | 関門(`all_gates()`)と主(`all_bosses()`/`boss_ids()`)を id 順に返す。`find_by_id()`はどちらも引く。`PuzzleLibrary` と同じ流儀(`.remap` の扱いを含む) |
+| `SoloBoonEffects`(`scripts/logic/solo_boon_effects.gd`, RefCounted) | 対局の中で働く恩恵。`modded_deck()`(static)が小さな軍勢・重い砂を山札の写しへ当て、`attach(state, side, run)`が反転権を足し、返し上手・置き土産・早起きを`MatchState`の信号へつなぐ。対局ごとに作り直す |
 | `SoloBoonData`(`scripts/data/solo_boon_data.gd`, Resource) | 恩恵1つぶんの効果。`data/solo_boons/{id}.tres`。効果の数値は既定0で、使うものだけ書く |
 | `SoloBoonLibrary`(`scripts/logic/solo_boon_library.gd`, static) | `data/solo_boons/` を id 順に返す。`SoloGateLibrary` と同じ流儀 |
 | `SoloRun`(`scripts/logic/solo_run.gd`, RefCounted) | 遠征1回ぶんの状態と規則。道の生成・行き先の選択・勝敗の反映・束/恩恵の候補生成・工房・山札への反映。`to_dict()` / `from_dict()` で保存できる。乱数は呼び出し側から受け取る |
@@ -40,17 +41,23 @@ GameDesign.md 27章の実装方針。**遠征の規則(道・山札・HP・束�
 | `sand_drop_count` | int | 既定1。`MatchState.sand_drop_count` へ渡す |
 | `flip_disabled` | bool | `MatchState.flip_disabled` へ渡す(反転権は対象外) |
 | `clash_damage_multiplier` | int | 既定1。`MatchState.clash_damage_multiplier` へ渡す |
+| `foe_hp_bonus` | int | 対局開始時に相手のHPへ足す(主の+8) |
+| `foe_uses_player_deck` | bool | 相手が自分の山札の写し(恩恵で書き換える前)を使う(鏡写し・鏡の主) |
+| `cpu_deck` | String | 主の作戦。空なら道を作るときに残りから割り当てる。関門では使わない |
+
+`WinCondition`は`HP_ZERO` / `SURVIVE_TURNS` / `DESTROY_ALL_ENEMY_UNITS` / `WIN_WITHIN_TURNS`(整数で保存するため末尾へ足す)。
+`WIN_WITHIN_TURNS`は`survive_turns`を期限として使い、`turn_count`がそれを超えた相手の手番の始まりで自分を投了させる。
 
 **`MatchState` の上書き用プロパティは3つ**(`sand_drop_count` / `flip_disabled` / `clash_damage_multiplier`)。
 既定値のままなら他の全モードを一切変えない。`CardMatchSolo` が `_begin_state()` の直後、最初の手番の前に設定する。
 盤面の上書きは新しいAPIを作らず、`board` を直接差し替える(ルール画面・4.2節と同じ)。
 
 **特殊勝利条件は `MatchState` 本体を変えず、外側の監視で判定する。**`SURVIVE_TURNS` は `turn_started` で目標を超えた
-自分の手番に相手を投了させ、`DESTROY_ALL_ENEMY_UNITS` は `unit_destroyed` のたびに相手の場を数えて空なら投了させる。
+自分の手番に相手を投了させ、`WIN_WITHIN_TURNS` は期限を超えた相手の手番に自分を投了させ、`DESTROY_ALL_ENEMY_UNITS` は `unit_destroyed` のたびに相手の場を数えて空なら投了させる。
 通常のHP0の決着はどちらでも生かしておく。
 
-`SoloBoonData`のフィールドは、`id` / `display_name` / `description` に加えて効果の数値6つ(既定0)を持つ。
-1つの恩恵は1つだけ非0にする(`tools/tests/solo_mode_tests.gd`が確かめる)。
+`SoloBoonData`のフィールドは、`id` / `display_name` / `description` / `changes_play`(◆。戦い方を変える恩恵)に加えて
+効果の数値(既定0)を持つ。恩恵は効果を1つ以上非0にする(`tools/tests/solo_mode_tests.gd`が確かめる)。
 
 | フィールド | 効果 |
 |---|---|
@@ -60,6 +67,16 @@ GameDesign.md 27章の実装方針。**遠征の規則(道・山札・HP・束�
 | `foe_hp_penalty` | 先制の砂: 対局開始時、相手のHPをN引く(`CardMatchSolo._apply_run_state()`) |
 | `extra_opening_draw` | 用意周到: 対局の最初の手札をN枚多く引く(`CardMatchSolo._begin_battle()`) |
 | `win_heal` | 勝ち癖: 勝利のたびにHPをN回復(上限`max_hp`。`SoloRun.finish_battle()`) |
+| `light_deck_max` / `light_deck_draw` | 身軽: 山札がmax枚以下なら最初の手札+draw(`SoloRun.extra_opening_draw()`に合算) |
+| `small_cost_max` / `small_total_bonus` | 小さな軍勢: コストmax以下の砂時計の総量+bonus(`SoloBoonEffects.modded_deck()`) |
+| `heavy_cost_min` / `heavy_cost_cut` | 重い砂: コストmin以上の砂時計のコスト-cut(同上) |
+| `flip_damage` | 返し上手: 自分の砂時計の反転(`unit_flipped`)と、自分の駒への反転権(`flip_right_used`)のたびに相手へNダメージ |
+| `death_damage` | 置き土産: 自分の砂時計の`unit_destroyed`のたびに相手へNダメージ |
+| `extra_flip_rights` | 砂袋: `flip_right_remaining`へ足す |
+| `first_turn_mana` | 早起き: 最初の自分の`turn_started`で`mana`へ足す |
+
+`max_hp_bonus`は負の値(硝子の心臓の-6)も取る。`take_boon()`は最大HPを増減し、HPは増えるときだけ足して新しい最大HPで頭打ちにする。
+**`modded_deck()`は共有の`CardData`を書き換えず、当てるカードだけ`duplicate()`する**(他のモードへ漏らさないため)。
 
 ## `SoloRun`
 
@@ -68,6 +85,7 @@ GameDesign.md 27章の実装方針。**遠征の規則(道・山札・HP・束�
 | フィールド | 内容 |
 |---|---|
 | `theme_id` | 出発で選んだ作戦(`CardCpuDecks` の id) |
+| `boss_id` | 最終戦の主(`data/solo_bosses/`のid)。出発の画面で`boss_choice()`が決め、`create()`へ渡す。無い保存データは空(最終戦は通常の対局) |
 | `depth` | 砂の深さ(0〜`DEPTH_MAX`=5)。出発で選び、遠征の間は変わらない(GameDesign.md 27章「砂の深さ」) |
 | `deck_ids: Array[String]` | いまの山札 |
 | `hp` / `max_hp` | 持ち越すHPと、恩恵「丈夫な体」で伸びる上限。開始はどちらも `MatchState.INITIAL_HP` |
@@ -90,7 +108,9 @@ GameDesign.md 27章の実装方針。**遠征の規則(道・山札・HP・束�
 **操作**
 
 - `static theme_choices(rng) -> Array[String]` — 出発で示す作戦の id を3つ
-- `static create(theme_id, rng) -> SoloRun` — 作戦の15種を1枚ずつ山札にし、道を作る
+- `static create(theme_id, depth, rng, boss_id) -> SoloRun` — 作戦の15種を1枚ずつ山札にし、道を作る
+- `static boss_choice(rng) -> String` — 出発で示す主を1体
+- `static foe_name_of(dest)` / `static uses_player_deck(dest)` — 行き先の相手の名前(鏡写し・鏡の主は「CPU ・ あなたの山札」)と、自分の山札の写しを使うか
 - `choose(index, rng)` — いまの段の行き先を選ぶ。泉なら回復して次の段へ進み、工房なら`workshop_open`を立てる。対局・関門なら `in_battle` を立てる
 - `finish_battle(won, hp_left, rng)` — 決着を返す。勝ちなら`win_heal()`を足して`wins`と`floor`を進め、関門なら恩恵の候補(`boon_offer`)を、それ以外は束の候補(`offer`)を作る(最終段なら踏破)。負けなら遠征を終える
 - `take_boon(id)` — 恩恵を1つ得る。丈夫な体は即座にHPも回復する。得たあとで束の候補を作る
@@ -118,12 +138,14 @@ GameDesign.md 27章の実装方針。**遠征の規則(道・山札・HP・束�
 `_departure_depth`だけ動かす。
 
 **道の生成**: 1〜5段目は2〜3個の行き先。各段に対局か関門を1つ以上、泉と工房は合わせて1段に1つまで・1段目には出さない。
-6段目は対局1つだけ。**CPUデッキは1回の遠征で重複させない**(8つを切り混ぜて順に割り当てる)。
+6段目は主との対局1つだけで、`gate`に主のidを入れる(`kind`は`BATTLE`のまま。`find_by_id()`が主も引くため、
+対局・遠征の札・結果パネルは関門と同じ経路で特殊ルールを当てる)。**CPUデッキは1回の遠征で重複させない**(8つを切り混ぜて順に割り当てる。
+主が作戦を持つときはそれを最終戦へ回す)。
 
 **束の生成**: 1つは選んだ作戦(`theme_id`)の束、残りは他の作戦から重ならないように選ぶ。作戦ごとの15種から、山札に
 既に2枚あるカードを除いて3枚。3枚そろわない作戦は束にしない。数は`BUNDLE_COUNT + extra_bundles()`。
 
-**恩恵の生成**: まだ持っていない恩恵から`BOON_OFFER_SIZE`つ。
+**恩恵の生成**: まだ持っていない恩恵から`BOON_OFFER_SIZE`つ。◆(`changes_play`)が残っていれば1つは必ずそこから選ぶ。
 
 ## `SoloProgress`
 
@@ -156,8 +178,10 @@ GameDesign.md 27章の実装方針。**遠征の規則(道・山札・HP・束�
   鳴らさない`_begin_state()`と同じ理由で使わない)。そのあと`_apply_run_state()`でHP・関門の特殊ルールを当ててから、
   `CardMatchCpu.begin_mulligan()`(CPU戦・オンラインと共用)でCPU側のマリガンを決め、自分の手札(追加ドローぶんを
   含む)をマリガン画面へ出す
-- `_apply_run_state()`: 自分のHPを`run.hp`へ差し替え、恩恵「先制の砂」があれば相手のHPを`foe_hp_penalty()`だけ
-  引く(下限1)。関門なら特殊ルールと盤面を当てる。**`hp_changed` は出さない**
+- `_begin_state()`へ渡す自分の山札は`SoloBoonEffects.modded_deck()`を通す。相手の山札は、鏡写し・鏡の主なら書き換える前の
+  自分の山札、それ以外は`CardCpuDecks.deck_of(cpu_deck)`
+- `_apply_run_state()`: 自分のHPを`run.hp`へ差し替え、相手のHPへ`foe_hp_delta()`と関門・主の`foe_hp_bonus`を足す
+  (下限1)。関門・主なら特殊ルールと盤面を当て、最後に`SoloBoonEffects.attach()`する(最初の手番の前)。**`hp_changed` は出さない**
   (情報帯は `refresh()` が `state.hp` を直接読む。信号を出すと音とログが「被弾」と誤読する)
 - `on_match_ended()` — `run.finish_battle()` → `SoloProgress.record()` → 遠征が終わっていれば`save_finished(uid, run, "")`のあと`clear_run()`、
   続いていれば`save_run()` → 砂金(`StageReward.grant_gold()`)と節目の解放 → 結果パネル。
