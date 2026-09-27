@@ -1,10 +1,15 @@
 class_name SoloRouteView
 extends Control
 ## 遠征(ソロモード)の道の画面(GameDesign.md 27章「画面」)。6段の道を描き、
-## いま選ぶ段の駒だけを押せるようにする。見た目は承認済みのモック
-## (`tools/tmp_mock_solo.gd`)のとおり。
+## いま選ぶ段の駒だけを押せるようにする。駒を押しても対局は始めず、選んだ駒に
+## 真鍮の輪を付けて`destination_selected`を出すだけにとどめる(実際に選ぶのは
+## `SoloDestinationPanel`の「挑む」)。
 
-signal destination_chosen(index: int)
+## 駒を押した(取り消せない選択ではない)。-1は選択解除。
+signal destination_selected(index: int)
+
+const SELECTED_RING_GAP := 6.0
+const SELECTED_RING_WIDTH := 4.0
 
 const PATH_COLUMNS := SoloRun.FLOOR_COUNT
 const NODE_RADIUS := 34.0
@@ -26,6 +31,10 @@ var _route: Array = []
 var _floor := 0
 var _chosen: Array[int] = []
 var _centers: Array = []
+var _selected := -1
+## 表示モード(遠征の記録・27章「画面」)では駒を押せず、明滅も出さない。
+var _record_mode := false
+var _record_lost := -1
 
 
 func _ready() -> void:
@@ -45,19 +54,45 @@ func _process(_delta: float) -> void:
 
 ## `SoloRun.route`・いま選ぶ段・段ごとに選んだindexの履歴から道を描き直す。
 func show_data(route: Array, floor: int, chosen: Array[int]) -> void:
+	_record_mode = false
+	_record_lost = -1
+	_selected = -1
+	_route = route
+	_floor = floor
+	_chosen = chosen
+	_rebuild(true)
+
+
+## 遠征の記録(GameDesign.md 27章「画面」)。押せない表示だけで、選んだ段は真鍮、
+## 負けた段には×を重ねる。`lost_floor`は負けた段のindex(踏破・やめたときは-1)。
+func show_record(route: Array, chosen: Array[int], lost_floor: int) -> void:
+	_record_mode = true
+	_record_lost = lost_floor
+	_selected = -1
+	_route = route
+	_floor = chosen.size()
+	_chosen = chosen
+	_rebuild(false)
+
+
+func _rebuild(interactive: bool) -> void:
 	for button in _buttons:
 		remove_child(button)
 		button.queue_free()
 	_buttons = []
 	_canvas.position = Vector2.ZERO
 	_canvas.size = size
-	_route = route
-	_floor = floor
-	_chosen = chosen
 	var col_w: float = size.x / float(PATH_COLUMNS)
 	_centers = _column_centers(col_w)
 	_canvas.queue_redraw()
-	_add_current_buttons()
+	if interactive:
+		_add_current_buttons()
+
+
+## 選択中の駒を切り替える(戻る・別の駒を押したときに呼び出し側から呼ぶ)。-1で解除。
+func set_selected(index: int) -> void:
+	_selected = index
+	_canvas.queue_redraw()
 
 
 func _column_centers(col_w: float) -> Array:
@@ -88,6 +123,10 @@ func _node_center(col: int, row: int) -> Vector2:
 
 
 func _node_state(col: int, row: int) -> String:
+	if _record_mode:
+		if col < _chosen.size():
+			return "past_chosen" if _chosen_index(col) == row else "past_unchosen"
+		return "locked"
 	if col < _floor:
 		return "past_chosen" if _chosen_index(col) == row else "past_unchosen"
 	if col == _floor:
@@ -175,13 +214,24 @@ func _draw_node(
 		UiPaint.draw_ring(
 			ci, center, radius + CURRENT_RING_GAP, UiPalette.GLOW_AMBER, CURRENT_RING_WIDTH, 40
 		)
+	if not _record_mode and col == _floor and row == _selected:
+		UiPaint.draw_ring(
+			ci,
+			center,
+			radius + SELECTED_RING_GAP,
+			UiPalette.BRASS_HIGHLIGHT,
+			SELECTED_RING_WIDTH,
+			40
+		)
 	_draw_kind_glyph(
 		ci, center, radius, int(node.get("kind", SoloRun.Kind.BATTLE)), state, is_final
 	)
+	if _record_mode and col == _record_lost and row == _chosen_index(col):
+		_draw_loss_mark(ci, center, radius)
 	var label_color := UiPalette.TEXT_OFFWHITE if state != "locked" else UiPalette.TEXT_MUTED
 	_draw_label(
 		center + Vector2(0, radius + LABEL_GAP_1),
-		_kind_label(int(node.get("kind", SoloRun.Kind.BATTLE)), is_final),
+		_kind_label(int(node.get("kind", SoloRun.Kind.BATTLE)), is_final, col),
 		LABEL_FONT_SIZE_1,
 		label_color
 	)
@@ -191,6 +241,17 @@ func _draw_node(
 		LABEL_FONT_SIZE_2,
 		label_color
 	)
+
+
+## 遠征の記録で負けた駒に重ねる×(GameDesign.md 27章「画面」)。
+func _draw_loss_mark(ci: RID, center: Vector2, radius: float) -> void:
+	var s := radius * 0.5
+	var color := Color(0.75, 0.15, 0.12, 0.9)
+	for offset in [Vector2(-s, -s), Vector2(-s, s)]:
+		var points := PackedVector2Array([center + offset, center - offset])
+		RenderingServer.canvas_item_add_polyline(
+			ci, points, SoloUiPaint.fill_colors(points, color), 5.0, true
+		)
 
 
 func _draw_kind_glyph(
@@ -231,16 +292,15 @@ func _draw_label(at: Vector2, text: String, font_size: int, color: Color) -> voi
 	)
 
 
-func _kind_label(kind: int, is_final: bool) -> String:
-	if is_final:
-		return "最終戦"
-	match kind:
-		SoloRun.Kind.GATE:
-			return "関門"
-		SoloRun.Kind.SPRING:
-			return "泉"
-		_:
-			return "対局"
+## CPUが上級になる段(`SoloRun.EXPERT_FROM_FLOOR`以上)の対局・関門は
+## 1行目へ「・ 上級」を添える(GameDesign.md 27章「道」)。泉には強さが無い。
+func _kind_label(kind: int, is_final: bool, col: int) -> String:
+	if kind == SoloRun.Kind.SPRING:
+		return "泉"
+	var base := "最終戦" if is_final else ("関門" if kind == SoloRun.Kind.GATE else "対局")
+	if col >= SoloRun.EXPERT_FROM_FLOOR:
+		return "%s ・ 上級" % base
+	return base
 
 
 ## 泉は`cpu_deck`が空文字のため「HP+8」だけを出す。関門は関門名、対局はCPUの作戦名。
@@ -274,5 +334,8 @@ func _add_current_buttons() -> void:
 		_buttons.append(button)
 
 
+## 同じ駒をもう一度押すと選択を解除する(GameDesign.md 27章「画面」)。
 func _on_destination_pressed(index: int) -> void:
-	destination_chosen.emit(index)
+	_selected = -1 if _selected == index else index
+	_canvas.queue_redraw()
+	destination_selected.emit(_selected)
