@@ -1,0 +1,278 @@
+class_name SoloRouteView
+extends Control
+## 遠征(ソロモード)の道の画面(GameDesign.md 27章「画面」)。6段の道を描き、
+## いま選ぶ段の駒だけを押せるようにする。見た目は承認済みのモック
+## (`tools/tmp_mock_solo.gd`)のとおり。
+
+signal destination_chosen(index: int)
+
+const PATH_COLUMNS := SoloRun.FLOOR_COUNT
+const NODE_RADIUS := 34.0
+const FINAL_RADIUS := 44.0
+const ROW_GAP := 132.0
+const LABEL_FONT_SIZE_1 := 14
+const LABEL_FONT_SIZE_2 := 12
+const LABEL_GAP_1 := 20.0
+const LABEL_GAP_2 := 38.0
+const CURRENT_GLOW_ALPHA := 0.14
+const CURRENT_GLOW_SCALE := 1.5
+const CURRENT_GLOW_PULSE := 0.3
+const CURRENT_RING_GAP := 8.0
+const CURRENT_RING_WIDTH := 3.0
+
+var _canvas: Control
+var _buttons: Array[Button] = []
+var _route: Array = []
+var _floor := 0
+var _chosen: Array[int] = []
+var _centers: Array = []
+
+
+func _ready() -> void:
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_canvas = Control.new()
+	_canvas.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_canvas.draw.connect(_draw_route)
+	add_child(_canvas)
+
+
+## いま選ぶ段の駒の明滅(GameDesign.md 27章「画面」)を動かすため、見えている間だけ
+## 描き直す。
+func _process(_delta: float) -> void:
+	if visible and not _route.is_empty():
+		_canvas.queue_redraw()
+
+
+## `SoloRun.route`・いま選ぶ段・段ごとに選んだindexの履歴から道を描き直す。
+func show_data(route: Array, floor: int, chosen: Array[int]) -> void:
+	for button in _buttons:
+		remove_child(button)
+		button.queue_free()
+	_buttons = []
+	_canvas.position = Vector2.ZERO
+	_canvas.size = size
+	_route = route
+	_floor = floor
+	_chosen = chosen
+	var col_w: float = size.x / float(PATH_COLUMNS)
+	_centers = _column_centers(col_w)
+	_canvas.queue_redraw()
+	_add_current_buttons()
+
+
+func _column_centers(col_w: float) -> Array:
+	var centers: Array = []
+	for col in PATH_COLUMNS:
+		var nodes: Array = _route[col] if col < _route.size() else []
+		var cx := col_w * (float(col) + 0.5)
+		var n := nodes.size()
+		var top := size.y * 0.5 - ROW_GAP * float(maxi(n - 1, 0)) * 0.5
+		var col_centers: Array = []
+		for row in n:
+			col_centers.append(Vector2(cx, top + ROW_GAP * float(row)))
+		centers.append(col_centers)
+	return centers
+
+
+func _chosen_index(col: int) -> int:
+	return _chosen[col] if col < _chosen.size() else 0
+
+
+func _node_center(col: int, row: int) -> Vector2:
+	if col < 0 or col >= _centers.size():
+		return Vector2.ZERO
+	var col_centers: Array = _centers[col]
+	if row < 0 or row >= col_centers.size():
+		return Vector2.ZERO
+	return col_centers[row]
+
+
+func _node_state(col: int, row: int) -> String:
+	if col < _floor:
+		return "past_chosen" if _chosen_index(col) == row else "past_unchosen"
+	if col == _floor:
+		return "current"
+	return "locked"
+
+
+func _draw_route() -> void:
+	var ci := _canvas.get_canvas_item()
+	_draw_connections(ci)
+	for col in _centers.size():
+		var nodes: Array = _route[col] if col < _route.size() else []
+		for row in nodes.size():
+			_draw_node(ci, _node_center(col, row), nodes[row], col, row, col == PATH_COLUMNS - 1)
+
+
+## 選び終えた段どうしは砂を敷いた道でつなぐ。いま選ぶ段の手前までは、まだどちらへ
+## 進むか決めていないため素の道で全ての行き先へ延ばす(GameDesign.md 27章「画面」)。
+func _draw_connections(ci: RID) -> void:
+	for col in range(_centers.size() - 1):
+		if col >= _floor:
+			break
+		var from_center := _node_center(col, _chosen_index(col))
+		if col + 1 == _floor:
+			var next_nodes: Array = _centers[col + 1]
+			for row in next_nodes.size():
+				_draw_road(ci, from_center, next_nodes[row], false)
+		else:
+			_draw_road(ci, from_center, _node_center(col + 1, _chosen_index(col + 1)), true)
+
+
+func _draw_road(ci: RID, a: Vector2, b: Vector2, walked: bool) -> void:
+	var points := PackedVector2Array([a, b])
+	var edge := Color(0.05, 0.04, 0.03, 0.75)
+	var bed := Color(0.27, 0.21, 0.15, 1.0)
+	var sand := Color(0.93, 0.72, 0.36, 1.0)
+	RenderingServer.canvas_item_add_polyline(
+		ci, points, SoloUiPaint.fill_colors(points, edge), 20.0, true
+	)
+	RenderingServer.canvas_item_add_polyline(
+		ci, points, SoloUiPaint.fill_colors(points, bed), 13.0, true
+	)
+	if walked:
+		RenderingServer.canvas_item_add_polyline(
+			ci, points, SoloUiPaint.fill_colors(points, sand), 7.0, true
+		)
+
+
+func _draw_node(
+	ci: RID, center: Vector2, node: Dictionary, col: int, row: int, is_final: bool
+) -> void:
+	var state := _node_state(col, row)
+	var radius := FINAL_RADIUS if is_final else NODE_RADIUS
+	if state == "current":
+		var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.004)
+		var glow_radius := radius * (CURRENT_GLOW_SCALE + pulse * CURRENT_GLOW_PULSE)
+		UiPaint.fill_circle(
+			ci, center, glow_radius, Color(UiPalette.GLOW_AMBER, CURRENT_GLOW_ALPHA), 32
+		)
+	UiPaint.fill_ellipse(
+		ci, center + Vector2(0, 6), Vector2(radius, radius * 0.85), Color(0, 0, 0, 0.4), 28
+	)
+	var rim := UiPalette.BRASS_HIGHLIGHT
+	var face_stops: Array
+	match state:
+		"past_chosen":
+			face_stops = [[0.0, UiPalette.BRASS_HIGHLIGHT], [1.0, UiPalette.BRASS_MID]]
+		"current":
+			face_stops = [[0.0, UiPalette.NAVY_PANEL_TOP], [1.0, UiPalette.FELT_NAVY_TOP]]
+		"past_unchosen":
+			face_stops = [[0.0, UiPalette.PANEL_SLATE_TOP], [1.0, UiPalette.PANEL_SLATE_BOTTOM]]
+			rim = UiPalette.BRASS_DARK
+		_:
+			face_stops = [[0.0, UiPalette.PANEL_SLATE_TOP], [1.0, UiPalette.PANEL_PRESSED_BOTTOM]]
+			rim = UiPalette.BRASS_DARK
+	UiPaint.fill_circle(ci, center, radius, UiPalette.OUTLINE_DARK, 40)
+	UiPaint.fill_circle(ci, center, radius - 1.5, rim, 40)
+	UiPaint.fill_gradient_polygon(
+		ci,
+		UiPaint.circle_points(center, radius - 4.0, 40),
+		Rect2(center - Vector2.ONE * radius, Vector2.ONE * radius * 2.0),
+		face_stops
+	)
+	if state == "current":
+		UiPaint.draw_ring(
+			ci, center, radius + CURRENT_RING_GAP, UiPalette.GLOW_AMBER, CURRENT_RING_WIDTH, 40
+		)
+	_draw_kind_glyph(
+		ci, center, radius, int(node.get("kind", SoloRun.Kind.BATTLE)), state, is_final
+	)
+	var label_color := UiPalette.TEXT_OFFWHITE if state != "locked" else UiPalette.TEXT_MUTED
+	_draw_label(
+		center + Vector2(0, radius + LABEL_GAP_1),
+		_kind_label(int(node.get("kind", SoloRun.Kind.BATTLE)), is_final),
+		LABEL_FONT_SIZE_1,
+		label_color
+	)
+	_draw_label(
+		center + Vector2(0, radius + LABEL_GAP_2),
+		_detail_label(node),
+		LABEL_FONT_SIZE_2,
+		label_color
+	)
+
+
+func _draw_kind_glyph(
+	ci: RID, center: Vector2, radius: float, kind: int, state: String, is_final: bool
+) -> void:
+	var color := UiPalette.TEXT_OFFWHITE if state != "locked" else UiPalette.TEXT_MUTED
+	var s := radius * 0.42
+	if is_final:
+		UiPaint.draw_emblem(ci, UiPaint.Emblem.CHECK, center, s)
+		return
+	match kind:
+		SoloRun.Kind.BATTLE:
+			UiPaint.draw_ring(ci, center, s, color, 3.0, 20)
+		SoloRun.Kind.GATE:
+			var pts := PackedVector2Array(
+				[
+					center + Vector2(-s, s),
+					center + Vector2(-s, -s * 0.3),
+					center + Vector2(0, -s),
+					center + Vector2(s, -s * 0.3),
+					center + Vector2(s, s),
+				]
+			)
+			RenderingServer.canvas_item_add_polyline(
+				ci, pts, SoloUiPaint.fill_colors(pts, color), 3.0, true
+			)
+		SoloRun.Kind.SPRING:
+			UiPaint.fill_ellipse(ci, center, Vector2(s, s * 0.6), Color(color, 0.85), 20)
+
+
+func _draw_label(at: Vector2, text: String, font_size: int, color: Color) -> void:
+	var font := _canvas.get_theme_default_font()
+	if font == null:
+		return
+	var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	_canvas.draw_string(
+		font, at - Vector2(width * 0.5, 0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color
+	)
+
+
+func _kind_label(kind: int, is_final: bool) -> String:
+	if is_final:
+		return "最終戦"
+	match kind:
+		SoloRun.Kind.GATE:
+			return "関門"
+		SoloRun.Kind.SPRING:
+			return "泉"
+		_:
+			return "対局"
+
+
+## 泉は`cpu_deck`が空文字のため「HP+8」だけを出す。関門は関門名、対局はCPUの作戦名。
+## `cpu_deck`が(想定外に)空のまま渡ってきても崩れないよう、種類名だけへ落とす。
+func _detail_label(dest: Dictionary) -> String:
+	var kind: int = int(dest.get("kind", SoloRun.Kind.BATTLE))
+	if kind == SoloRun.Kind.SPRING:
+		return "HP +%d" % SoloRun.SPRING_HEAL
+	if kind == SoloRun.Kind.GATE:
+		var gate := SoloGateLibrary.find_by_id(str(dest.get("gate", "")))
+		return gate.display_name if gate != null else "関門"
+	var cpu_deck := str(dest.get("cpu_deck", ""))
+	if cpu_deck.is_empty():
+		return "対局"
+	return "CPU ・ %s" % CardCpuDecks.name_of(cpu_deck)
+
+
+func _add_current_buttons() -> void:
+	if _floor < 0 or _floor >= _route.size() or _floor >= _centers.size():
+		return
+	var nodes: Array = _route[_floor]
+	var col_centers: Array = _centers[_floor]
+	var radius := FINAL_RADIUS if _floor == PATH_COLUMNS - 1 else NODE_RADIUS
+	for row in nodes.size():
+		var center: Vector2 = col_centers[row]
+		var button := SoloUiPaint.transparent_button()
+		button.position = center - Vector2.ONE * radius
+		button.size = Vector2.ONE * radius * 2.0
+		button.pressed.connect(_on_destination_pressed.bind(row))
+		add_child(button)
+		_buttons.append(button)
+
+
+func _on_destination_pressed(index: int) -> void:
+	destination_chosen.emit(index)
