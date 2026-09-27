@@ -66,6 +66,7 @@
 | `home` | `Main._show_only()` でホームを出したとき(「ホームを見た」の印と同じ時点) |
 | `tutorial_start` | `Main._on_tutorial_requested()` と、初回にタイトルから直行する `Main._on_title_start_requested()` |
 | `tutorial_clear` | `CardMatchTutorial._finish()` で勝って終えたとき |
+| `tutorial_skip` | 誘導対局の「スキップ」を確かめて閉じたとき(`CardMatchTutorial`) |
 | `match_end` / `online_end` | `CardMatchOutcome.finish()`(種別がCPUか、それ以外か) |
 | `online_try` | `Main` のランダム・ランク・ルームの入口 |
 | `tutorial_NN` | `CardMatchTutorial._enter_step()`(NN は台本の手順の番号、2桁) |

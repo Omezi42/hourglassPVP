@@ -126,9 +126,8 @@ GameDesign.md 27章の実装方針。**チュートリアルではなく、既�
 - **デッキ編集・砂時計図鑑は、`set_id != "" and not owned_card_sets.has(set_id)`の
   カードを弾く**(10.8.1節)。図鑑の「未収集はシルエット+『?』」の表現
   (`AlmanacEntry.locked`として枠組みだけ作ってあった)を、この3枚で初めて実際に使う
-- **`CardDeckSave.random_deck()`(CPU戦のデッキ生成)は、`price == 0`のカードセットに
-  属するカードだけを除く**(10.8.1節の決定どおり)。ソロモード限定セットは`price == 0`
-  のためCPUデッキには一切混ざらない
+- **CPUデッキ(`CardCpuDecks`、8章)には `price == 0` のカードセットのカードを入れない**
+  (10.8.1節の決定どおり。`tools/tests/cpu_deck_tests.gd` が確かめる)
 
 ## ホーム画面のソロタブ
 

@@ -38,10 +38,16 @@
   1手だけ適用し、また間合いを置く。**まとめて指すと何が起きたか追えない**ため1手ずつ進める
 - 適用の経路は自分の手・オンラインの手・リプレイ再生と同じ `MatchAction.apply()`。
   CPUのためだけの経路を作らない
-- CPUのデッキは `CardDeckSave.random_deck()`(全カード×2の山から30枚)。誘導対局のときだけ
-  台本(`TutorialScriptData`、4.1.5節)の山札を切らずに使う(GameDesign.md 18章)。**ソロモード限定カード(10.15節)は
-  常にこの山から除く**(所有していないプレイヤーがCPU側の駒として先に見てしまうのを
-  避けるため)
+- CPUのデッキは `CardCpuDecks`(`scripts/logic/card_cpu_decks.gd`、static)の表から `pick(rng)` で1つ選ぶ
+  (GameDesign.md 13章)。戻り値は `{"name": String, "cards": Array}`。表の1行は id・名前・狙い・
+  `preset`(`CardPresetDecks` のid。中身を二重に持たないため)か `cards`(id → 枚数)のどちらかを持ち、
+  組み立ては `CardPresetDecks.build()` を共用する。**`CardPresetDecks` と同じく表として持ち `.tres` にしない**
+  (デッキはカードの参照の並びにすぎず、プリセットと流儀を揃えるため)。
+  相手の名前は `"CPU ・ " + name` として `start_cpu_match()` の `foe_name` へ渡す。「もう一度」(`CardMatchCpu.rematch()`)も引き直す
+- 表の健全さは `tools/tests/cpu_deck_tests.gd` が見張る:全行が補充(`_fill`)なしでちょうど30枚になる・
+  同名2枚まで・`price == 0` のカードセット(ソロモード限定。10.15節)のカードを含まない。
+  カードを消したり枚数の制限を変えたりしたときに、黙って別の中身へすり替わるのを防ぐため
+- 誘導対局のときだけ台本(`TutorialScriptData`、4.1.5節)の山札を切らずに使う(GameDesign.md 18章)
 - CPU戦はオンライン対戦ではないため、`matches/{match_id}` への書き込みは行わない。
   棋譜は `LocalReplayService` がローカルへ保存する(7.1節)
 
