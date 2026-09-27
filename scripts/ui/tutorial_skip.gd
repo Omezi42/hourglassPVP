@@ -9,6 +9,7 @@ extends Control
 ## 足すだけにする。
 
 const BUTTON_SIZE := Vector2(72, 22)
+const FONT_SIZE := 12
 const MARGIN := 6.0
 const CONFIRM_SCENE := "res://scenes/confirm_modal.tscn"
 const TITLE := "誘導対局を飛ばしますか?"
@@ -24,7 +25,7 @@ func _init(screen: CardMatchScreen, band_size: Vector2) -> void:
 	size = band_size
 
 	var button := CodedButton.make("スキップ", BUTTON_SIZE)
-	button.add_theme_font_size_override("font_size", 12)
+	button.add_theme_font_size_override("font_size", FONT_SIZE)
 	button.position = Vector2(band_size.x - BUTTON_SIZE.x - MARGIN, MARGIN)
 	button.pressed.connect(_on_skip_pressed)
 	add_child(button)
