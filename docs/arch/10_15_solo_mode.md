@@ -11,8 +11,13 @@ GameDesign.md 27章の実装方針。**遠征の規則(道・山札・HP・候�
 | `SoloRun`(`scripts/logic/solo_run.gd`, RefCounted) | 遠征1回ぶんの状態と規則。道の生成・行き先の選択・勝敗の反映・候補の生成・山札への追加。`to_dict()` / `from_dict()` で保存できる。乱数は呼び出し側から受け取る |
 | `SoloProgress`(`scripts/logic/solo_progress.gd`, static) | 遠征の保存(続きから再開)と、遠征をまたいで残る記録(最多勝利数・踏破回数・到達済みの節目)。`user://solo_progress.json` へアカウントごとに持つ |
 | `CardMatchSolo`(`scripts/ui/card_match_solo.gd`, RefCounted) | `_screen` 参照を持つ切り出し。行き先の対局を始め、関門の特殊ルールを当て、終局で `SoloRun` へ結果を返し、砂金・節目の報酬を渡して結果パネルを出す |
-| `CardSoloMapScreen`(`scripts/ui/card_solo_map_screen.gd`) | 遠征の画面。出発(作戦の3択)・道・候補の選択・山札の中身を出す(構成は9章のモックで決める) |
-| `CardChallengeResult` / `StageRewardTokens` | 結果パネルと報酬の絵。リーサルパズル(10.12節)と共用 |
+| `CardSoloMapScreen`(`scripts/ui/card_solo_map_screen.gd`) | 遠征の画面。出発・道・候補の3つの状態の出し分けと、`SoloRun`/`SoloProgress`への保存・読み込みだけを持つ。見た目は下記4つの子へ委ねる |
+| `SoloDepartureView`(`scripts/ui/solo_departure_view.gd`, Control) | 出発の画面。作戦の札を3枚並べ、押すと`theme_chosen`を出す |
+| `SoloRouteView`(`scripts/ui/solo_route_view.gd`, Control) | 道の画面。6段の駒を描き、いま選ぶ段の駒だけを押せるようにして`destination_chosen`を出す |
+| `SoloStatusPanel`(`scripts/ui/solo_status_panel.gd`, Control) | 道の右側の状態パネル。作戦名・HPのバー・勝った数・山札の一覧(スクロール)と「遠征をやめる」(`abandon_requested`) |
+| `SoloOfferOverlay`(`scripts/ui/solo_offer_overlay.gd`, Control) | 候補のオーバーレイ。道を暗幕で覆い、候補の`CardView`を並べて`card_chosen`/`skip_pressed`を出す |
+| `SoloUiPaint`(`scripts/ui/solo_ui_paint.gd`, static) | 出発の札・状態パネルが共用する額縁パネルの描画と、当たり判定だけの透明ボタン |
+| `CardChallengeResult` / `StageRewardTokens` | 結果パネルと報酬の絵。リーサルパズル(10.12節)と共用。`StageReward`は複数の節目(カードセット・アイコン)が同時に届いたときのため`card_set_ids`/`icon_ids`の配列も持つ |
 
 ## `SoloGateData`
 
@@ -47,6 +52,7 @@ GameDesign.md 27章の実装方針。**遠征の規則(道・山札・HP・候�
 | `wins` | この遠征で勝った数 |
 | `route: Array` | 段ごとの行き先の配列。行き先は `{"kind": Kind, "cpu_deck": id, "gate": id}`(泉は空文字) |
 | `offer: Array[String]` | 勝った直後に選べる候補。空なら候補待ちではない |
+| `chosen: Array[int]` | 段ごとに選んだ行き先のindex。`choose()`のたびに足す。道の画面(`SoloRouteView`)が、選び終えた段のどの駒を明るくするかに使う |
 | `in_battle` | 行き先の対局を始めてから決着するまで true。**これが true のまま読み込んだら負けとして遠征を終える**(27章「中断と再開」) |
 | `over` / `cleared` | 遠征が終わったか / 踏破したか |
 
