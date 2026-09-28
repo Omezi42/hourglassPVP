@@ -312,7 +312,7 @@ func spring_heal() -> int:
 
 
 ## 対局開始時に相手のHPへ足す増減。深さ3以上の+4と恩恵「先制の砂」の-3を合算する
-## (GameDesign.md 27章「砂の深さ」「恩恵」)。下限1は呼び出し側(`CardMatchSolo`)が当てる。
+## (GameDesign.md 27章「砂の深さ」「恩恵」)。下限1は呼び出し側(`SoloBattleRules`)が当てる。
 func foe_hp_delta() -> int:
 	var bonus := DEPTH_FOE_HP_BONUS if depth >= DEPTH_FOE_HP_FROM else 0
 	return bonus - foe_hp_penalty()
@@ -335,12 +335,12 @@ func extra_bundles() -> int:
 	return boon_total("extra_bundles")
 
 
-## 恩恵「先制の砂」の合計。対局開始時に相手のHPから引く(`CardMatchSolo`)。
+## 恩恵「先制の砂」の合計。対局開始時に相手のHPから引く(`SoloBattleRules`)。
 func foe_hp_penalty() -> int:
 	return boon_total("foe_hp_penalty")
 
 
-## 対局の最初の手札に足す枚数(`CardMatchSolo`)。恩恵「用意周到」の合計に、山札が
+## 対局の最初の手札に足す枚数(`SoloBattleRules`)。恩恵「用意周到」の合計に、山札が
 ## 閾値以下のときの「身軽」を足す(GameDesign.md 27章「恩恵」)。
 func extra_opening_draw() -> int:
 	var total := boon_total("extra_opening_draw")

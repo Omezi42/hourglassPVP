@@ -14,7 +14,7 @@ var _panel: CardChallengeResult
 var _plaque: SoloMatchPlaque
 var _run: SoloRun = null
 var _gate: SoloGateData = null
-var _boon_effects: SoloBoonEffects = null
+var _rules: SoloBattleRules = null
 var _settled := false
 
 
@@ -62,7 +62,7 @@ func start(run: SoloRun) -> void:
 func close() -> void:
 	_run = null
 	_gate = null
-	_boon_effects = null
+	_rules = null
 	_settled = false
 	_panel.visible = false
 	_plaque.close()
@@ -78,7 +78,7 @@ func on_match_ended() -> void:
 
 
 ## 対局を1つ作る。中身はCPU戦と同じ経路(`_begin_state()`)で、HP・関門の特殊ルールを
-## そのあとで重ねる(GameDesign.md 27章)。
+## `SoloBattleRules`で重ねる(GameDesign.md 27章)。
 func _begin_battle() -> void:
 	# **`_reset_for_new_match()` は画面の後始末として `close()` を呼び、`_run`/`_gate`
 	# を消す。**先に控えて、戻してから使う(`CardMatchPuzzle`と同じ穴。Architecture.md 10.12節)。
@@ -102,121 +102,21 @@ func _begin_battle() -> void:
 	_screen._set_playmats(AccountService.playmat_id(), PlaymatLibrary.CPU_ID)
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
-	# 鏡写し・鏡の主の相手は、恩恵で書き換える前の山札の写しを使う(GameDesign.md 27章)。
-	var foe_cards: Array = (
-		CardLibrary.deck_from_ids(_run.deck_ids)
-		if SoloRun.uses_player_deck(dest)
-		else CardCpuDecks.deck_of(str(dest.get("cpu_deck", "")))
-	)
-	if _gate != null and _gate.foe_quick:
-		foe_cards = SoloBoonEffects.quick_deck(foe_cards)
 	_screen._begin_state(
-		SoloBoonEffects.modded_deck(CardLibrary.deck_from_ids(_run.deck_ids), _run),
-		foe_cards,
+		SoloBattleRules.own_deck(_run),
+		SoloBattleRules.foe_deck(_run, dest, _gate),
 		rng.randi_range(1, 1 << 30),
 		true
 	)
-	# 恩恵「用意周到」の追加ドローは、マリガンで見せる手札より前に足す
-	# (GameDesign.md 27章「恩恵」)。効果音・演出は初期手札のドローには鳴らさないため
-	# (`_begin_state()`の同じ理由)、信号を出す`draw()`ではなく`_draw_one()`を直接使う。
-	# マリガンの流れ(`CardMatchCpu.begin_mulligan()`)はこのあとに呼ぶ。
-	for _i in _run.extra_opening_draw():
-		_screen.state._draw_one(_screen.my_side)
-	_apply_run_state()
+	# HP・特殊ルール・恩恵は通し測定と同じ`SoloBattleRules`で当てる(Architecture.md 10.15節)。
+	_rules = SoloBattleRules.new()
+	_rules.progressed.connect(_plaque.refresh)
+	_rules.apply(_screen.state, _screen.my_side, _run, _gate)
 	_screen._cpu_ctl.begin_mulligan()
 	# `_begin_state()` は自分の呼び出しの中で一度 `refresh()` しているが、その後の
-	# `_apply_run_state()` がHP・盤面を上書きするため、これが無いと差し替え後の
+	# `apply()` がHP・盤面を上書きするため、これが無いと差し替え後の
 	# 局面が次の操作まで画面へ反映されない(`CardMatchPuzzle.start()`と同じ理由)。
 	_screen.refresh()
-
-
-## HPの持ち越しと関門の特殊ルールを当てる。**HP・盤面の上書きは新しいAPIを作らず、
-## ルール画面(Architecture.md 4.2節)と同じ「差し替え」で行う。**
-func _apply_run_state() -> void:
-	var state: MatchState = _screen.state
-	var mine: int = _screen.my_side
-	var foe: int = MatchState.other_side(mine)
-	state.hp[mine] = _run.hp
-	# 深さ3以上の「相手のHPが多い状態で始まる」と恩恵「先制の砂」を合算する
-	# (GameDesign.md 27章「砂の深さ」「恩恵」)。
-	var foe_delta := _run.foe_hp_delta() + (_gate.foe_hp_bonus if _gate != null else 0)
-	if foe_delta != 0:
-		state.hp[foe] = maxi(state.hp[foe] + foe_delta, 1)
-	if _gate != null:
-		state.sand_drop_count = _gate.sand_drop_count
-		state.flip_disabled = _gate.flip_disabled
-		state.clash_damage_multiplier = _gate.clash_damage_multiplier
-		if _gate.flip_rights != 0:
-			state.flip_right_remaining[mine] = _gate.flip_rights
-			state.flip_right_remaining[foe] = _gate.flip_rights
-		_place(state, mine, _gate.own_board_units)
-		_place(state, foe, _gate.foe_board_units)
-	# **`hp_changed` は出さない。**`_screen.refresh()`(呼び出し元 `_begin_battle()`)が
-	# `state.hp` を直接読んで情報帯を更新するため不要な上、`CardMatchSound`/`CardMatchLog`
-	# がこの信号を被弾/回復の演出と誤読する。
-	state.board_changed.emit(mine)
-	state.board_changed.emit(foe)
-	_boon_effects = SoloBoonEffects.new()
-	_boon_effects.attach(state, mine, _run)
-	if _gate == null:
-		return
-	match _gate.win_condition:
-		SoloGateData.WinCondition.SURVIVE_TURNS:
-			state.turn_started.connect(_on_turn_started_for_survival)
-		SoloGateData.WinCondition.WIN_WITHIN_TURNS:
-			state.turn_started.connect(_on_turn_started_for_deadline)
-		SoloGateData.WinCondition.DESTROY_ALL_ENEMY_UNITS:
-			state.unit_destroyed.connect(_on_unit_destroyed_for_wipe)
-
-
-## 盤面の初期配置。`PuzzleStageData`と同じ`"id:体力:攻撃力"`の表現を読む。
-func _place(state: MatchState, side: int, rows: Array[String]) -> void:
-	if rows.is_empty():
-		return
-	var slots: Array = state.board[side]
-	for i in rows.size():
-		if i >= MatchState.BOARD_SIZE:
-			break
-		var parsed := PuzzleStageData.parse_unit(rows[i])
-		if parsed.is_empty():
-			continue
-		var unit := CardInstance.new(parsed["card"])
-		unit.health = int(parsed["health"])
-		unit.attack = int(parsed["attack"])
-		unit.summoned_this_turn = false
-		slots[i] = unit
-
-
-## 指定ターン数を生き延びた(GameDesign.md 27章)。**通常のHP0での敗北判定はそのまま
-## 生かしておく**——生き延びる前に自分が倒されたら、既存の経路で普通に負ける。
-func _on_turn_started_for_survival(side: int) -> void:
-	var state: MatchState = _screen.state
-	if state == null or state.is_match_over() or side != _screen.my_side or _gate == null:
-		return
-	if state.turn_count > _gate.survive_turns:
-		state.surrender(MatchState.other_side(_screen.my_side))
-	_plaque.refresh()
-
-
-## 期限の手番までに倒せなかった(GameDesign.md 27章「速攻勝負」)。期限を超えた相手の手番の
-## 始まりで自分を投了させる。
-func _on_turn_started_for_deadline(side: int) -> void:
-	var state: MatchState = _screen.state
-	if state == null or state.is_match_over() or _gate == null:
-		return
-	if side != _screen.my_side and state.turn_count > _gate.survive_turns:
-		state.surrender(_screen.my_side)
-	_plaque.refresh()
-
-
-## 相手の場の砂時計をすべて破壊した(GameDesign.md 27章)。
-func _on_unit_destroyed_for_wipe(side: int, _slot: int, _card: CardData) -> void:
-	var state: MatchState = _screen.state
-	if state == null or state.is_match_over() or side == _screen.my_side or _gate == null:
-		return
-	if state.units(side).is_empty():
-		state.surrender(side)
-	_plaque.refresh()
 
 
 func _settle(won: bool) -> void:
@@ -304,7 +204,7 @@ func _outcome(
 	var foe: int = MatchState.other_side(_screen.my_side)
 	if gate != null and gate.win_condition == SoloGateData.WinCondition.SURVIVE_TURNS:
 		outcome.summary_lead = "生き延びるまで あと"
-		outcome.summary_value = _own_turns_left(state, gate)
+		outcome.summary_value = SoloBattleRules.own_turns_left(state, gate)
 		outcome.summary_tail = "手番"
 	elif gate != null and gate.win_condition == SoloGateData.WinCondition.DESTROY_ALL_ENEMY_UNITS:
 		outcome.summary_lead = "相手の場に あと"
@@ -335,22 +235,7 @@ func _fill_win_summary(
 		outcome.summary_tail = "を残して勝利"
 
 
-## 生存の達成は`turn_count`が`survive_turns`を超えた自分の手番。`turn_count`は両者の
-## 手番を通しで数えるため、残りの手番のうち自分のものは半分(切り上げ)になる。
-func _own_turns_left(state: MatchState, gate: SoloGateData) -> int:
-	var turns_left := gate.survive_turns + 1 - state.turn_count
-	return maxi(ceili(turns_left / 2.0), 1)
-
-
 ## 特殊勝利条件の関門が持つ残りの数(GameDesign.md 27章「遠征の札」)。関門でない・
 ## 特殊勝利条件を持たない関門のときは-1。対局中の遠征の札(`SoloMatchPlaque`)から呼ぶ。
 func remaining_for(gate: SoloGateData) -> int:
-	if gate == null or _screen.state == null:
-		return -1
-	match gate.win_condition:
-		SoloGateData.WinCondition.SURVIVE_TURNS, SoloGateData.WinCondition.WIN_WITHIN_TURNS:
-			return _own_turns_left(_screen.state, gate)
-		SoloGateData.WinCondition.DESTROY_ALL_ENEMY_UNITS:
-			return _screen.state.units(MatchState.other_side(_screen.my_side)).size()
-		_:
-			return -1
+	return SoloBattleRules.remaining_for(_screen.state, _screen.my_side, gate)
