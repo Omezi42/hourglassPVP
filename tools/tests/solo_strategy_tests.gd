@@ -23,6 +23,7 @@ func run(assert_true: Callable) -> void:
 	_test_sand_pouch_adds_a_flip_right()
 	_test_early_riser_adds_mana_on_the_first_own_turn()
 	_test_mirror_uses_player_deck()
+	_test_quick_deck_adds_quick_to_copies_only()
 
 
 func _rng(seed_value: int) -> RandomNumberGenerator:
@@ -61,7 +62,7 @@ func _place(state: MatchState, side: int, slot: int) -> CardInstance:
 
 func _test_bosses_load_with_hp_bonus() -> void:
 	var bosses := SoloGateLibrary.all_bosses()
-	_assert.call(bosses.size() == 3, "GameDesign.md 27章 lists three bosses")
+	_assert.call(bosses.size() == 4, "GameDesign.md 27章 lists four bosses")
 	for boss in bosses:
 		_assert.call(boss.foe_hp_bonus == 8, "a boss should have 8 extra hp: " + boss.id)
 		_assert.call(
@@ -220,3 +221,18 @@ func _test_mirror_uses_player_deck() -> void:
 		SoloRun.foe_name_of({"gate": "mirror_lord", "cpu_deck": "rush"}).ends_with("あなたの山札"),
 		"the mirror foe is named after the player's deck"
 	)
+
+
+func _test_quick_deck_adds_quick_to_copies_only() -> void:
+	var sand := CardLibrary.find_by_id("sand")
+	var quick := SoloBoonEffects.quick_deck([sand])
+	_assert.call(quick[0].keywords.has(CardEnums.Keyword.QUICK), "hasty boss gives its units quick")
+	_assert.call(
+		not sand.keywords.has(CardEnums.Keyword.QUICK), "shared CardData must stay untouched"
+	)
+	var state := MatchState.new()
+	state.start_match(quick.duplicate(), quick.duplicate(), SIDE_A, 7, false, false)
+	state.hand[SIDE_A].push_front(quick[0])
+	state.mana[SIDE_A] = MatchState.MAX_MANA
+	state.play_card(SIDE_A, 0, 0)
+	_assert.call(not state.board[SIDE_A][0].summoned_this_turn, "a quick unit can attack at once")

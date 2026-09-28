@@ -24,6 +24,21 @@ static func modded_deck(cards: Array, run: SoloRun) -> Array:
 	return result
 
 
+## 急ぎの主: 砂時計へ速落を足した写しを返す(GameDesign.md 27章「主」)。
+static func quick_deck(cards: Array) -> Array:
+	var result: Array = []
+	for card: CardData in cards:
+		if card.is_spell or card.keywords.has(CardEnums.Keyword.QUICK):
+			result.append(card)
+			continue
+		var copy: CardData = card.duplicate()
+		var keywords := copy.keywords.duplicate()
+		keywords.append(CardEnums.Keyword.QUICK)
+		copy.keywords = keywords
+		result.append(copy)
+	return result
+
+
 static func _modded(card: CardData, boons: Array[SoloBoonData]) -> CardData:
 	if card.is_spell:
 		return card

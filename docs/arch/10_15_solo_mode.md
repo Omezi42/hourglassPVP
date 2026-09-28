@@ -8,7 +8,7 @@ GameDesign.md 27章の実装方針。**遠征の規則(道・山札・HP・束�
 |---|---|
 | `SoloGateData`(`scripts/data/solo_gate_data.gd`, Resource) | 関門・主1つぶんの特殊ルール。関門は`data/solo_gates/{id}.tres`、主は`data/solo_bosses/{id}.tres`。1つ足すのは `.tres` 1個 |
 | `SoloGateLibrary`(`scripts/logic/solo_gate_library.gd`, static) | 関門(`all_gates()`)と主(`all_bosses()`/`boss_ids()`)を id 順に返す。`find_by_id()`はどちらも引く。`PuzzleLibrary` と同じ流儀(`.remap` の扱いを含む) |
-| `SoloBoonEffects`(`scripts/logic/solo_boon_effects.gd`, RefCounted) | 対局の中で働く恩恵。`modded_deck()`(static)が小さな軍勢・重い砂を山札の写しへ当て、`attach(state, side, run)`が反転権を足し、返し上手・置き土産・早起きを`MatchState`の信号へつなぐ。対局ごとに作り直す |
+| `SoloBoonEffects`(`scripts/logic/solo_boon_effects.gd`, RefCounted) | 対局の中で働く恩恵。`modded_deck()`(static)が小さな軍勢・重い砂を、`quick_deck()`(static)が急ぎの主の速落を山札の写しへ当て、`attach(state, side, run)`が反転権を足し、返し上手・置き土産・早起きを`MatchState`の信号へつなぐ。対局ごとに作り直す |
 | `SoloBoonData`(`scripts/data/solo_boon_data.gd`, Resource) | 恩恵1つぶんの効果。`data/solo_boons/{id}.tres`。効果の数値は既定0で、使うものだけ書く |
 | `SoloBoonLibrary`(`scripts/logic/solo_boon_library.gd`, static) | `data/solo_boons/` を id 順に返す。`SoloGateLibrary` と同じ流儀 |
 | `SoloRun`(`scripts/logic/solo_run.gd`, RefCounted) | 遠征1回ぶんの状態と規則。道の生成・行き先の選択・勝敗の反映・束/恩恵の候補生成・工房・山札への反映。`to_dict()` / `from_dict()` で保存できる。乱数は呼び出し側から受け取る |
@@ -44,6 +44,8 @@ GameDesign.md 27章の実装方針。**遠征の規則(道・山札・HP・束�
 | `foe_hp_bonus` | int | 対局開始時に相手のHPへ足す(主の+8) |
 | `foe_uses_player_deck` | bool | 相手が自分の山札の写し(恩恵で書き換える前)を使う(鏡写し・鏡の主) |
 | `cpu_deck` | String | 主の作戦。空なら道を作るときに残りから割り当てる。関門では使わない |
+| `foe_quick` | bool | 相手の山札の砂時計へ速落を足す(急ぎの主)。`SoloBoonEffects.quick_deck()`が写しへ当てる |
+| `flip_rights` | int | 0以外なら双方の反転権をこの回数にする(反転の応酬)。恩恵「砂袋」はこの上に足す |
 
 `WinCondition`は`HP_ZERO` / `SURVIVE_TURNS` / `DESTROY_ALL_ENEMY_UNITS` / `WIN_WITHIN_TURNS`(整数で保存するため末尾へ足す)。
 `WIN_WITHIN_TURNS`は`survive_turns`を期限として使い、`turn_count`がそれを超えた相手の手番の始まりで自分を投了させる。

@@ -108,6 +108,8 @@ func _begin_battle() -> void:
 		if SoloRun.uses_player_deck(dest)
 		else CardCpuDecks.deck_of(str(dest.get("cpu_deck", "")))
 	)
+	if _gate != null and _gate.foe_quick:
+		foe_cards = SoloBoonEffects.quick_deck(foe_cards)
 	_screen._begin_state(
 		SoloBoonEffects.modded_deck(CardLibrary.deck_from_ids(_run.deck_ids), _run),
 		foe_cards,
@@ -144,6 +146,9 @@ func _apply_run_state() -> void:
 		state.sand_drop_count = _gate.sand_drop_count
 		state.flip_disabled = _gate.flip_disabled
 		state.clash_damage_multiplier = _gate.clash_damage_multiplier
+		if _gate.flip_rights != 0:
+			state.flip_right_remaining[mine] = _gate.flip_rights
+			state.flip_right_remaining[foe] = _gate.flip_rights
 		_place(state, mine, _gate.own_board_units)
 		_place(state, foe, _gate.foe_board_units)
 	# **`hp_changed` は出さない。**`_screen.refresh()`(呼び出し元 `_begin_battle()`)が

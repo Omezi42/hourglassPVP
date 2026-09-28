@@ -34,3 +34,7 @@ enum WinCondition { HP_ZERO, SURVIVE_TURNS, DESTROY_ALL_ENEMY_UNITS, WIN_WITHIN_
 @export var foe_uses_player_deck: bool = false
 ## 主の作戦(`CardCpuDecks`のid)。空なら道を作るときに残りから割り当てる。関門では使わない。
 @export var cpu_deck: String = ""
+## 相手の山札の砂時計がすべて速落を持つ(急ぎの主)。
+@export var foe_quick: bool = false
+## 0以外なら双方の反転権をこの回数にする(反転の応酬)。
+@export var flip_rights: int = 0

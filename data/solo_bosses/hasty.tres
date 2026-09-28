@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="SoloGateData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/solo_gate_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "hasty"
+display_name = "急ぎの主"
+description = "相手の砂時計はすべて速落を持つ。相手のHPが8多い。"
+own_board_units = Array[String]([])
+foe_board_units = Array[String]([])
+win_condition = 0
+survive_turns = 0
+sand_drop_count = 1
+flip_disabled = false
+clash_damage_multiplier = 1
+foe_hp_bonus = 8
+foe_uses_player_deck = false
+cpu_deck = "basic"
+foe_quick = true
+flip_rights = 0

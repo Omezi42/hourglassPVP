@@ -315,13 +315,19 @@ func _test_solo_run_take_bundle_and_pass_offer() -> void:
 
 
 ## 関門ではない対局を選んで勝つ(束の候補がすぐ作られることを前提にするテスト用)。
+## 通常の対局を勝つ。段に対局が無い(関門だけの)ときは、先頭を対局へ差し替えてから選ぶ
+## (関門の数で乱数の出目が変わっても、束の候補を確かめる前提を崩さないため)。
 func _win_battle_floor(run: SoloRun, seed_value: int) -> void:
 	var options := run.current_destinations()
-	var index := 0
+	var index := -1
 	for i in options.size():
 		if int(options[i]["kind"]) == SoloRun.Kind.BATTLE:
 			index = i
 			break
+	if index == -1:
+		index = 0
+		options[0]["kind"] = SoloRun.Kind.BATTLE
+		options[0]["gate"] = ""
 	run.choose(index, _rng(seed_value))
 	run.finish_battle(true, run.max_hp, _rng(seed_value + 1))
 
@@ -597,7 +603,7 @@ func _test_solo_progress_interrupted_run_saves_finished_with_abandon_reason() ->
 
 func _test_solo_gates_load_and_reference_real_units() -> void:
 	var gates := SoloGateLibrary.all_gates()
-	_assert.call(gates.size() == 10, "GameDesign.md 27章 lists ten gates")
+	_assert.call(gates.size() == 11, "GameDesign.md 27章 lists eleven gates")
 	var seen := {}
 	for gate in gates:
 		_assert.call(not seen.has(gate.id), "gate ids must be unique: " + gate.id)
