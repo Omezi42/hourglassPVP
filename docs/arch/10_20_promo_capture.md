@@ -7,7 +7,7 @@ X・YouTube Shorts へ毎日1本出す縦長の動画を、ゲームの実物の
 |---|---|
 | `tools/record_pv.gd` / `record_pv_vertical.gd` | 紹介PV。縦長版は横長の画面を SubViewport の中で動かし、縦の枠の中でカメラのように寄せる。ショートはすべてこれを継いで台本だけを差し替える |
 | `tools/pv_voice.py` | 台本の各行をVOICEVOXエンジンで読み上げてWAVにする。エンジンは `Documents/voicevox-engine/run.exe`(リポジトリの外)に置き、`make_short.py` が応答しなければ起動する |
-| `tools/shorts/make_short.py` | ショート1本を「台本 → 読み上げ → 撮影 → ffmpegで結合」まで通しで作る入口。とどめ問題の問題探し(`forge`)の並列実行も持つ |
+| `tools/shorts/make_short.py` | ショート1本を「台本 → 読み上げ → 撮影 → ffmpegで結合」まで通しで作る入口。とどめ問題の問題探し(`forge`)の並列実行も持つ。撮影前に `check.sh` と同じ判定で class_name の登録が古ければ `--import` し、撮影のログに `SCRIPT ERROR` があれば結合せずに止まる(Godotはエラーでも終了コード0で終わり、演出の抜けた動画が書き出されるため) |
 | `tools/shorts/record_card_short.gd` | カード紹介ショート。台本は `card_lines.json` |
 | `tools/shorts/record_puzzle_short.gd` | とどめ問題ショート。問題集 `puzzles.json` の1問を実際のエンドレスと同じ入口(`CardMatchPuzzle.start()`)で盤面へ出し、正解手順を `_perform()` で指す |
 | `tools/shorts/puzzle_forge.gd` / `puzzle_solver.gd` | とどめ問題の問題集を作る。下記 |
