@@ -10,7 +10,8 @@
 1. 台本(ナレーション + 見出し)を tools/shorts/card_lines.json / puzzle_lines.json から組む
 2. VOICEVOXエンジンで読み上げる(tools/pv_voice.py)。エンジンが応答しなければ VOICEVOX_ENGINE の run.exe を
    起動して待つ(手で起動するならそのファイルを実行する。黒い窓が開いている間が起動中)
-3. Godotで撮る(非ヘッドレス。1080x1920のPNG連番 + 音声用のAVI)
+3. Godotで撮る(非ヘッドレス。1080x1920のPNG連番 + 音声用のAVI)。class_name の登録が古ければ先に --import で直し、
+   撮影のログに SCRIPT ERROR が出たら結合せずに止まる(演出が抜けたまま書き出されるため)
 4. ffmpegで結合して tools/shorts/out/<種類>_<id>.mp4 へ出す
 
 撮影中はGodotのウィンドウが開く。閉じない。同時に2本走らせない(Pitfalls.md「非ヘッドレスの静止画・動画キャプチャ」)。
@@ -19,6 +20,7 @@
 import json
 import math
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -120,15 +122,55 @@ def run(command: list) -> None:
     subprocess.run([str(part) for part in command], cwd=ROOT, check=True)
 
 
+# tools/check.sh と同じ判定。.godot はgit管理外のため、新しい worktree や class_name を足した直後は登録が古く、
+# そのクラスを使うスクリプトがパースに失敗したまま撮影が進む。
+def ensure_class_cache() -> None:
+    listed = subprocess.run(
+        ["git", "ls-files", "scripts/*.gd", "tools/*.gd", "tools/**/*.gd"],
+        cwd=ROOT, check=True, capture_output=True, text=True, encoding="utf-8",
+    ).stdout.split()
+    names = set()
+    for path in listed:
+        text = (ROOT / path).read_text(encoding="utf-8", errors="replace")
+        names.update(re.findall(r"^class_name (\w+)", text, re.MULTILINE))
+    cache_path = ROOT / ".godot/global_script_class_cache.cfg"
+    cache = cache_path.read_text(encoding="utf-8", errors="replace") if cache_path.exists() else ""
+    missing = [name for name in sorted(names) if f'"class": &"{name}"' not in cache]
+    if missing:
+        print(f"class_name の登録を更新します({len(missing)}件: {' '.join(missing)})", flush=True)
+        subprocess.run([str(GODOT), "--headless", "--path", ".", "--import"], cwd=ROOT,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+# Godotはスクリプトのエラーがあっても終了コード0で終わるため、ログを見て SCRIPT ERROR があれば失敗にする。
+def run_godot(command: list) -> None:
+    print("$", " ".join(str(part) for part in command), flush=True)
+    proc = subprocess.Popen([str(part) for part in command], cwd=ROOT, stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace")
+    lines = []
+    for line in proc.stdout:
+        print(line, end="", flush=True)
+        lines.append(line.rstrip())
+    proc.wait()
+    errors = ["\n  ".join(lines[i:i + 2]) for i, line in enumerate(lines) if "SCRIPT ERROR" in line]
+    if errors or proc.returncode != 0:
+        print("撮影でスクリプトのエラーが出たため、結合せずに止めます:", *errors[:10], sep="\n", flush=True)
+        raise subprocess.CalledProcessError(proc.returncode or 1, command)
+
+
 def main() -> None:
     if len(sys.argv) < 3 or sys.argv[1] not in [*SCENES, "forge"]:
         sys.exit(__doc__)
     kind, target = sys.argv[1], sys.argv[2]
+    ensure_class_cache()
     if kind == "forge":
         forge(int(target))
         return
     if target != "all":
-        make(kind, target)
+        try:
+            make(kind, target)
+        except subprocess.CalledProcessError:
+            sys.exit(1)
         return
     failed = []
     for name in targets(kind):
@@ -177,7 +219,7 @@ def make(kind: str, target: str) -> None:
 
     run([sys.executable, "tools/pv_voice.py", work / "voice", narration_path])
     audio = work / "audio.avi"
-    run([
+    run_godot([
         GODOT, "--path", ".", "--write-movie", audio, "--fixed-fps", FPS, SCENES[kind], "--",
         f"--narration={narration_path}", f"--voice={work / 'voice'}", f"--frames={frames}",
     ])
