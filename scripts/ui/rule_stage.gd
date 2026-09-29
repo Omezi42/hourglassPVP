@@ -38,7 +38,7 @@ const DEMO_UNITS_SELF: Array = [
 ]
 const DEMO_UNITS_FOE: Array = [
 	{"id": "glass", "health": 3, "attack": 3},
-	{"id": "wall", "health": 7, "attack": 2},
+	{"id": "wall", "health": 9, "attack": 2},
 ]
 
 var _content: Control

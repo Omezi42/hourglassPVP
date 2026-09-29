@@ -148,7 +148,7 @@
 			"id": "mirror",
 			"is_spell": false,
 			"pool_index": 15,
-			"total_sand": 7
+			"total_sand": 8
 		},
 		{
 			"cannot_attack": false,
@@ -158,7 +158,7 @@
 			"id": "guard",
 			"is_spell": false,
 			"pool_index": 16,
-			"total_sand": 7
+			"total_sand": 8
 		},
 		{
 			"cannot_attack": false,
@@ -198,7 +198,7 @@
 			"id": "wall",
 			"is_spell": false,
 			"pool_index": 20,
-			"total_sand": 9
+			"total_sand": 11
 		},
 		{
 			"cannot_attack": false,
@@ -593,7 +593,7 @@
 		{
 			"cannot_attack": false,
 			"cost": 1,
-			"describe": "自分の砂時計1体の砂が2粒落ちる",
+			"describe": "自分の砂時計1体の砂が2粒落ち、攻撃力+1",
 			"display_name": "ひとつまみ",
 			"id": "pinch",
 			"is_spell": true,
@@ -603,7 +603,7 @@
 		{
 			"cannot_attack": false,
 			"cost": 1,
-			"describe": "自分の砂時計1体を反転する",
+			"describe": "自分の砂時計1体を反転し、総量+1",
 			"display_name": "逆さ砂",
 			"id": "turn",
 			"is_spell": true,
@@ -622,7 +622,7 @@
 		},
 		{
 			"cannot_attack": false,
-			"cost": 2,
+			"cost": 1,
 			"describe": "相手の砂時計1体の効果とキーワードを消す",
 			"display_name": "封砂",
 			"id": "seal",
@@ -672,7 +672,7 @@
 		},
 		{
 			"cannot_attack": false,
-			"cost": 3,
+			"cost": 2,
 			"describe": "モートを3体出す",
 			"display_name": "砂王の呼び声",
 			"id": "call",

@@ -289,7 +289,7 @@
 		"metrics": {
 			"first": 8,
 			"good_first": 2,
-			"min_len": 5,
+			"min_len": 4,
 			"p_random": 0.0026
 		},
 		"solution": [
@@ -318,12 +318,6 @@
 				"slot": 2,
 				"target_slot": -1,
 				"type": "attack"
-			},
-			{
-				"side": 0,
-				"slot": 2,
-				"target_side": 0,
-				"type": "flip_right"
 			}
 		],
 		"stage": {
