@@ -42,7 +42,7 @@ GLOW_AMBER = (217, 158, 56)
 CARD_SIZE = (300, 167)  # 720x400を5/12に縮小
 CARD_GAP = 18
 MARGIN = 36
-HEADER_HEIGHT = 120
+HEADER_HEIGHT = 144
 
 
 def background(size: tuple[int, int]) -> Image.Image:
@@ -81,7 +81,7 @@ def main() -> None:
     parser.add_argument("--out", default=str(DEFAULT_OUT))
     args = parser.parse_args()
 
-    cards = args.cards[:6]
+    cards = args.cards[:8]
     art_paths = []
     missing = []
     for card_id in cards:
@@ -94,7 +94,7 @@ def main() -> None:
         print(f"警告: カード画像が見つからない ({', '.join(missing)})。"
               f" 先に tools/export_discord_card_art.gd を実行すること")
 
-    cols = min(len(art_paths), 3) if art_paths else 1
+    cols = (4 if len(art_paths) > 6 else min(len(art_paths), 3)) if art_paths else 1
     rows = -(-len(art_paths) // cols) if art_paths else 0
     grid_w = cols * CARD_SIZE[0] + (cols - 1) * CARD_GAP if art_paths else 0
     grid_h = rows * CARD_SIZE[1] + (rows - 1) * CARD_GAP if art_paths else 0
