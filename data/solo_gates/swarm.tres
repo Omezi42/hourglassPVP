@@ -6,9 +6,9 @@
 script = ExtResource("1")
 id = "swarm"
 display_name = "小さな大軍"
-description = "相手の場にグレイン(総量3)が5体いる状態から始まる。"
+description = "相手の場に、砂が上下に1粒ずつのグレインが5体いる状態から始まる。"
 own_board_units = Array[String]([])
-foe_board_units = Array[String](["grain:3:0", "grain:3:0", "grain:3:0", "grain:3:0", "grain:3:0"])
+foe_board_units = Array[String](["grain:1:1", "grain:1:1", "grain:1:1", "grain:1:1", "grain:1:1"])
 win_condition = 0
 survive_turns = 0
 sand_drop_count = 1

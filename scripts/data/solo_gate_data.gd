@@ -28,7 +28,7 @@ enum WinCondition { HP_ZERO, SURVIVE_TURNS, DESTROY_ALL_ENEMY_UNITS, WIN_WITHIN_
 ## `MatchState.clash_damage_multiplier` へそのまま渡す。既定1。
 @export var clash_damage_multiplier: int = 1
 
-## 対局開始時に相手のHPへ足す(主の「HPが8多い」)。
+## 対局開始時に相手のHPへ足す(主の「HPが8多い」、速攻勝負・急ぎの主は負の値)。
 @export var foe_hp_bonus: int = 0
 ## 相手が自分の山札の写しを使う(鏡写し・鏡の主)。
 @export var foe_uses_player_deck: bool = false

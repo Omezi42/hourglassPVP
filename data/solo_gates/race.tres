@@ -6,14 +6,14 @@
 script = ExtResource("1")
 id = "race"
 display_name = "速攻勝負"
-description = "自分の8回目の手番が終わるまでに、相手のHPを0にしなければ負け。"
+description = "相手のHPが8少ない。自分の10回目の手番が終わるまでに、相手のHPを0にしなければ負け。"
 own_board_units = Array[String]([])
 foe_board_units = Array[String]([])
 win_condition = 3
-survive_turns = 15
+survive_turns = 19
 sand_drop_count = 1
 flip_disabled = false
 clash_damage_multiplier = 1
-foe_hp_bonus = 0
+foe_hp_bonus = -8
 foe_uses_player_deck = false
 cpu_deck = ""
