@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/emblems/vigil.png" id="emblem"]
+
+[sub_resource type="Resource" id="Effect_vigil_0"]
+script = ExtResource("script_effect")
+trigger = 5
+target = 4
+effect_type = 0
+value = 1
+card_id = ""
+keyword = -1
+
+[resource]
+script = ExtResource("script_card")
+id = "vigil"
+display_name = "ヴィジル"
+cost = 3
+total_sand = 4
+pool_index = 90
+set_id = "grave_sand"
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_vigil_0")])
+rules_text = "自分の他の砂時計が破壊されるたび、相手プレイヤーに1ダメージ"
+cannot_attack = false
+is_token = false
+art_id = "hour"
+emblem = ExtResource("emblem")

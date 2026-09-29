@@ -21,6 +21,13 @@ func begin(index: int) -> void:
 	# もう墓地へ消えているため、支払いのピップが吸い込まれる先をいまのうちに渡しておく。
 	var view := _screen._hand_views[index]
 	_screen.effects.queue_spend_origin(_screen.my_side, view.global_position + view.size * 0.5)
+	if CardMatchEffectTarget.choose_from_grave(
+		_screen,
+		card,
+		func(target: Dictionary) -> void:
+			_screen._perform(MatchAction.cast(_screen.my_side, index, target))
+	):
+		return
 	var side := target_side(card)
 	if side >= 0 and CardMatchEffectTarget.has_candidate(_screen.state, card, side):
 		_screen.selection.await_target(index, -1)

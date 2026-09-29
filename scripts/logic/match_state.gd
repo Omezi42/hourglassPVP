@@ -438,7 +438,7 @@ func can_cast(side: int, hand_index: int) -> bool:
 	var card: CardData = hand[side][hand_index]
 	if not card.is_spell:
 		return false
-	return mana[side] >= card.cost
+	return mana[side] >= card.cost and CardEffectResolver.castable(self, side, card)
 
 
 ## 手札の砂術を1枚撃つ。盤面へは置かず、効果を解決して墓地へ積む。
@@ -770,6 +770,11 @@ func _destroy_unit(side: int, slot: int) -> void:
 	# 別のキーのため、通常の対象選択には影響しない。
 	_fire(side, unit, CardEnums.Trigger.ON_DEATH, {"death_slot": slot})
 	unit_destroyed.emit(side, slot, unit.data)
+	# 同時に砕ける駒(相打ち・全体ダメージ)は反応させない。総量を足す効果で
+	# 体力0の駒が息を吹き返すと、同じ一撃で砕けたはずの駒だけが残ってしまうため。
+	for other in units(side):
+		if not other.is_dead():
+			_fire(side, other, CardEnums.Trigger.ON_ALLY_DEATH, {})
 
 
 func _cleanup_dead() -> void:

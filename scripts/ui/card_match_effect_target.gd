@@ -54,6 +54,13 @@ static func has_candidate(state: MatchState, card: CardData, side: int) -> bool:
 ## 手札の1枚を出す。対象を取り、かつ選べる相手がいるときだけ対象選択へ入る。
 func begin(index: int, slot: int) -> void:
 	var card: CardData = _screen.state.hand[_screen.my_side][index]
+	if choose_from_grave(
+		_screen,
+		card,
+		func(target: Dictionary) -> void:
+			_screen._perform(MatchAction.play(_screen.my_side, index, slot, target))
+	):
+		return
 	var side := target_side(card)
 	if side >= 0 and has_candidate(_screen.state, card, side):
 		_screen.selection.await_target(index, slot)
@@ -87,3 +94,27 @@ func confirm(side: int, slot: int) -> void:
 	# 既にダメージ・破壊済みの盤面を見せてしまう。
 	_screen._perform(MatchAction.play(_screen.my_side, hand_index, play_slot, target))
 	_screen._hide_detail()
+
+
+## 墓地から1体を選ぶ効果(GameDesign.md 6章・9章)なら、墓地の一覧を開いて選ばせ、
+## 選んだら `perform` へ `{"grave_index": i}` を渡す。選べるものが無ければ選ばずに出す
+## (効果は不発)。選ぶ一覧を開いたら true。
+static func choose_from_grave(screen: CardMatchScreen, card: CardData, perform: Callable) -> bool:
+	if CardEffectResolver.grave_choice_effect(card) == null:
+		return false
+	var choices := CardEffectResolver.grave_choices(screen.state, screen.my_side)
+	if choices.is_empty():
+		return false
+	screen._pile.open_choice(
+		"%s:墓地の砂時計を1体選ぶ" % card.display_name,
+		screen.state.graveyard[screen.my_side],
+		choices,
+		func(grave_index: int) -> void:
+			screen.selection.clear()
+			perform.call({"grave_index": grave_index})
+			screen._hide_detail(),
+		func() -> void:
+			screen.selection.clear()
+			screen.refresh()
+	)
+	return true

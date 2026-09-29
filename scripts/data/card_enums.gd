@@ -46,6 +46,9 @@ enum Trigger {
 	ON_TURN_END,
 	## 被弾:ダメージを受けたとき。硝子で無効化された場合は発動しない。
 	ON_DAMAGED,
+	## 自分の他の砂時計が破壊されたとき(遺砂の刻)。**語にしない**——札には「常在」と出し、
+	## 効果の文をそのまま書く(GameDesign.md 6章)。トークンの破壊にも反応する。
+	ON_ALLY_DEATH,
 }
 
 ## エフェクトの対象。
@@ -110,6 +113,13 @@ enum EffectType {
 	## 砂を value 粒上へ戻す(攻撃力-value / 体力+value)。DROP_SAND の逆向きで、
 	## 戻せるのは攻撃力まで(0未満にはならない)。総量は変わらない(GameDesign.md 6章)。
 	RAISE_SAND,
+	## 自分の墓地の砂時計(トークンを含む。砂術は含まない)1体につき、総量を value 増やす(遺砂の刻)。
+	ADD_TOTAL_PER_GRAVE,
+	## 自分の墓地の砂時計1体を手札へ戻す。対象 SELF は余砂で砕けたそのカード自身、
+	## それ以外はプレイヤーが墓地から選ぶ(hint の grave_index。トークンは選べない)。
+	RECOVER_FROM_GRAVE,
+	## 自分の墓地の砂時計1体を選んで空き枠へ出す(蘇生)。設置効果は解決しない。
+	REVIVE_FROM_GRAVE,
 }
 
 ## コンボ系カードの発動条件が確認する範囲(GameDesign.md 6章)。
@@ -259,4 +269,6 @@ static func trigger_name(trigger: int) -> String:
 			return "落砂"
 		Trigger.ON_DAMAGED:
 			return "被弾"
+		Trigger.ON_ALLY_DEATH:
+			return "常在"
 	return ""

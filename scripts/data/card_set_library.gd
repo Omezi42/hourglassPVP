@@ -66,10 +66,20 @@ const SETS: Dictionary = {
 		],
 		"price": 900,
 	},
+	## 3番目のカードセット(GameDesign.md 8章)。「砕けた砂は墓地に積もって次の糧になる」枠で、
+	## 味方の破壊への反応・自壊の手段・墓地を読む効果を足し、駒の死を資源にするデッキを成立させる。
+	"grave_sand":
+	{
+		"id": "grave_sand",
+		"display_name": "遺砂の刻",
+		"description": "砕けた砂を墓地から呼び戻し、駒の死を力に変える7枚",
+		"card_ids": ["drift", "moss", "vigil", "relic", "cairn", "burial", "awaken"],
+		"price": 700,
+	},
 }
 
 const ORDERED_IDS: Array[String] = [
-	"solo_chime", "solo_ward", "solo_goad", "combo_five", "still_time"
+	"solo_chime", "solo_ward", "solo_goad", "combo_five", "still_time", "grave_sand"
 ]
 
 

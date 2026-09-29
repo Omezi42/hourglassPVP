@@ -194,6 +194,43 @@ func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Diction
 					origin
 				)
 				_return_to_hand(entry["side"], entry["slot"])
+		CardEnums.EffectType.ADD_TOTAL_PER_GRAVE:
+			var grave_entries := _targets(side, unit, effect, hint)
+			var amount := grave_unit_count(_state, side) * effect.value
+			if amount > 0:
+				_strike_for_targets(
+					side,
+					from_slot,
+					effect.target,
+					grave_entries,
+					CardEnums.EffectVisualStyle.DESCEND,
+					origin
+				)
+				for entry in grave_entries:
+					var target := _unit_at(entry)
+					if target != null:
+						target.health += amount
+		CardEnums.EffectType.RECOVER_FROM_GRAVE:
+			var index := (
+				_graveyard_index_of(side, unit.data)
+				if effect.target == CardEnums.EffectTarget.SELF
+				else _grave_pick(side, hint)
+			)
+			if index >= 0:
+				# 手札が増える効果なのでドロー(DRAW)と同じ合図を使う。
+				if origin == CardEnums.EffectOrigin.UNIT:
+					_state.effect_drawn.emit(side, from_slot, 1)
+				else:
+					_strike(side, from_slot, side, -1, CardEnums.EffectVisualStyle.PULSE, origin)
+				_recover(side, index)
+		CardEnums.EffectType.REVIVE_FROM_GRAVE:
+			var revive_slot := _first_empty_slot(side)
+			var pick := _grave_pick(side, hint)
+			if revive_slot >= 0 and pick >= 0:
+				_strike(
+					side, from_slot, side, revive_slot, CardEnums.EffectVisualStyle.DESCEND, origin
+				)
+				_revive(side, pick, revive_slot)
 		CardEnums.EffectType.SILENCE:
 			var silence_entries := _targets(side, unit, effect, hint)
 			_strike_for_targets(
@@ -260,6 +297,96 @@ func _return_to_hand(side: int, slot: int) -> void:
 	_state.unit_returned.emit(side, slot, unit.data)
 	_state.hand_changed.emit(side)
 	_state.board_changed.emit(side)
+
+
+## 墓地から選ばれた1体の位置(GameDesign.md 6章「墓地を読む効果」)。指定が無い・選べない
+## ものを指している場合は、選べる中で最もコストの高い1体(同じなら新しいほう)へ向け直す。
+func _grave_pick(side: int, hint: Dictionary) -> int:
+	var choices := grave_choices(_state, side)
+	if hint.has("grave_index") and choices.has(int(hint["grave_index"])):
+		return int(hint["grave_index"])
+	return best_grave_choice(_state, side)
+
+
+## 墓地から選べる砂時計の位置(GameDesign.md 6章「墓地を読む効果」)。
+## 砂術とトークンは選べない。
+static func grave_choices(state: MatchState, side: int) -> Array[int]:
+	var found: Array[int] = []
+	for index in state.graveyard[side].size():
+		var card: CardData = state.graveyard[side][index]
+		if not card.is_spell and not card.is_token:
+			found.append(index)
+	return found
+
+
+## 墓地にある砂時計の数(トークンを含む。砂術は含まない)。
+static func grave_unit_count(state: MatchState, side: int) -> int:
+	var count := 0
+	for card in state.graveyard[side]:
+		if not (card as CardData).is_spell:
+			count += 1
+	return count
+
+
+static func best_grave_choice(state: MatchState, side: int) -> int:
+	var best := -1
+	for index in grave_choices(state, side):
+		if best < 0 or state.graveyard[side][index].cost >= state.graveyard[side][best].cost:
+			best = index
+	return best
+
+
+## 余砂で砕けたそのカード自身の位置。砕けた直後に積まれているため後ろから探す。
+func _graveyard_index_of(side: int, card: CardData) -> int:
+	var pile: Array = _state.graveyard[side]
+	for index in range(pile.size() - 1, -1, -1):
+		if pile[index] == card:
+			return index
+	return -1
+
+
+func _recover(side: int, index: int) -> void:
+	var card: CardData = _state.graveyard[side][index]
+	_state.graveyard[side].remove_at(index)
+	_state.hand[side].append(card)
+	_state.hand_changed.emit(side)
+
+
+## 蘇生。`_summon()` と同じく設置効果は解決しない。
+func _revive(side: int, index: int, slot: int) -> void:
+	var card: CardData = _state.graveyard[side][index]
+	_state.graveyard[side].remove_at(index)
+	_state.board[side][slot] = CardInstance.new(card)
+	_state.board_changed.emit(side)
+
+
+## 撃てる砂術か(GameDesign.md 6章「撃つ条件のある砂術」)。自分の駒を払う砂術は払う駒が、
+## 蘇生の砂術は選べる砂時計と空き枠がいるときだけ撃てる。
+static func castable(state: MatchState, side: int, card: CardData) -> bool:
+	for effect in card.effects_for(CardEnums.Trigger.ON_PLAY):
+		match effect.effect_type:
+			CardEnums.EffectType.DESTROY_UNIT:
+				if (
+					effect.target == CardEnums.EffectTarget.ALLY_UNIT
+					and state.units(side).is_empty()
+				):
+					return false
+			CardEnums.EffectType.REVIVE_FROM_GRAVE:
+				if grave_choices(state, side).is_empty() or state.empty_slots(side).is_empty():
+					return false
+	return true
+
+
+## 出したときに墓地から1体を選ばせる効果(レリック・目覚めの砂)。無ければ null。
+static func grave_choice_effect(card: CardData) -> CardEffectData:
+	for effect in card.effects_for(CardEnums.Trigger.ON_PLAY):
+		var picks := (
+			effect.effect_type == CardEnums.EffectType.RECOVER_FROM_GRAVE
+			or effect.effect_type == CardEnums.EffectType.REVIVE_FROM_GRAVE
+		)
+		if picks and effect.target != CardEnums.EffectTarget.SELF:
+			return effect
+	return null
 
 
 ## 紋章の出どころ(GameDesign.md 9章 2026-09-21・Architecture.md 4.0節)。
@@ -369,6 +496,12 @@ func _single_unit(
 		if slot != exclude_slot and hinted != null and eligible_target(hinted, effect):
 			return [{"side": target_side, "slot": slot}]
 	# 指定が無い・条件を満たさない場合は、条件を満たす中で最も生涯ダメージの大きい1体を選ぶ。
+	# 自分の駒を払う効果(砂葬)だけは逆に、最も小さい1体を払う。
+	var sacrifice := (
+		effect != null
+		and effect.effect_type == CardEnums.EffectType.DESTROY_UNIT
+		and effect.target == CardEnums.EffectTarget.ALLY_UNIT
+	)
 	var best := -1
 	var best_value := -1
 	for slot in MatchState.BOARD_SIZE:
@@ -378,7 +511,8 @@ func _single_unit(
 		if not eligible_target(candidate, effect):
 			continue
 		var value := candidate.lifetime_damage()
-		if value > best_value:
+		var better := value < best_value if sacrifice else value > best_value
+		if best < 0 or better:
 			best_value = value
 			best = slot
 	return [] if best < 0 else [{"side": target_side, "slot": best}]

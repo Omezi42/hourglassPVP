@@ -2,6 +2,9 @@ class_name CardPileViewer
 extends Control
 ## 墓地の中身を見るモーダル(GameDesign.md 9章)。山札の中身は見られない。
 ## 対局中に「何が落ちたか」を数え直せないと、残っている脅威を読めないため用意する。
+##
+## 墓地から1体を選ぶ効果(6章「墓地を読む効果」)では、同じ形で選べる砂時計だけを
+## 1枚ずつ並べて押させる(`open_choice()`)。
 
 const SCREEN_SIZE := Vector2(1280, 720)
 
@@ -18,6 +21,10 @@ var _title: Label
 var _grid: GridContainer
 var _scroll: ScrollContainer
 var _empty: Label
+var _close: Button
+## 選ぶモードのときの受け手。押した墓地の位置を渡す。見るだけのときは空。
+var _on_pick := Callable()
+var _on_cancel := Callable()
 
 
 func _ready() -> void:
@@ -31,9 +38,11 @@ func _ready() -> void:
 
 ## 同じカードは1枚にまとめ、枚数をバッジで出す。30枚が並ぶと読み取れないため。
 func open_pile(title: String, cards: Array) -> void:
+	_on_pick = Callable()
+	_on_cancel = Callable()
+	_close.text = "閉じる"
 	_title.text = "%s(%d枚)" % [title, cards.size()]
-	for child in _grid.get_children():
-		child.queue_free()
+	_clear_grid()
 	var counts: Dictionary = {}
 	var order: Array = []
 	for card in cards:
@@ -49,12 +58,58 @@ func open_pile(title: String, cards: Array) -> void:
 		view.badge = "×%d" % counts[card]
 		_grid.add_child(view)
 		view.show_card(card, true)
-	_empty.visible = cards.is_empty()
-	_scroll.visible = not cards.is_empty()
-	var rows: int = ceili(float(order.size()) / float(COLUMNS))
+	_show(cards.is_empty(), order.size())
+
+
+## 墓地から1体を選ばせる。`indices` は選べるものの墓地での位置で、同じカードでも
+## 1枚ずつ並べる(どの1枚を選んだかを位置で返すため)。やめると `on_cancel` を呼ぶ。
+func open_choice(
+	title: String, pile: Array, indices: Array[int], on_pick: Callable, on_cancel: Callable
+) -> void:
+	_on_pick = on_pick
+	_on_cancel = on_cancel
+	_close.text = "やめる"
+	_title.text = title
+	_clear_grid()
+	for index in indices:
+		var view := CardView.new()
+		view.mode = CardView.Mode.HAND
+		view.custom_minimum_size = CardView.HAND_SIZE_PX
+		_grid.add_child(view)
+		view.show_card(pile[index], true)
+		view.pressed.connect(func(_view: CardView) -> void: _pick(index))
+	_show(indices.is_empty(), indices.size())
+
+
+func _clear_grid() -> void:
+	for child in _grid.get_children():
+		child.queue_free()
+
+
+func _show(empty: bool, count: int) -> void:
+	_empty.visible = empty
+	_scroll.visible = not empty
+	var rows: int = ceili(float(count) / float(COLUMNS))
 	var row_height: float = CardView.HAND_SIZE_PX.y + ROW_GAP
 	_scroll.custom_minimum_size = Vector2(0, mini(maxi(rows, 1), MAX_ROWS) * row_height)
 	visible = true
+
+
+func _pick(index: int) -> void:
+	var on_pick := _on_pick
+	_on_pick = Callable()
+	_on_cancel = Callable()
+	visible = false
+	on_pick.call(index)
+
+
+func _dismiss() -> void:
+	var on_cancel := _on_cancel
+	_on_pick = Callable()
+	_on_cancel = Callable()
+	visible = false
+	if on_cancel.is_valid():
+		on_cancel.call()
 
 
 func _build() -> void:
@@ -98,12 +153,12 @@ func _build() -> void:
 	_grid.add_theme_constant_override("v_separation", int(ROW_GAP))
 	_scroll.add_child(_grid)
 	# VBoxContainer は子を横いっぱいに広げるため、明示的に中央へ縮める。
-	var close := CodedButton.make("閉じる", Vector2(160, 48))
-	close.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	close.pressed.connect(func() -> void: visible = false)
-	column.add_child(close)
+	_close = CodedButton.make("閉じる", Vector2(160, 48))
+	_close.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_close.pressed.connect(_dismiss)
+	column.add_child(_close)
 
 
 func _on_dim_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and (event as InputEventMouseButton).pressed:
-		visible = false
+		_dismiss()

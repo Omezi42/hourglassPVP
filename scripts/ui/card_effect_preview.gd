@@ -47,6 +47,14 @@ enum Demo {
 	FX_RAISE_SAND,
 	## 条件付き破壊:攻撃力が体力より多い駒だけが砕け、若い駒には効かない。
 	FX_DESTROY_AGED,
+	## 墓地の砂時計の数だけ総量が増える(遺砂の刻)。
+	FX_ADD_TOTAL_PER_GRAVE,
+	## 墓地の砂時計1体を手札へ戻す。
+	FX_RECOVER_FROM_GRAVE,
+	## 墓地の砂時計1体を場に出す(蘇生)。
+	FX_REVIVE_FROM_GRAVE,
+	## 自分の砂時計1体を払う(砂葬)。相手を攻撃する台本では見せられないため分ける。
+	FX_SACRIFICE,
 }
 
 const MIN_SIZE := Vector2(320, 200)
@@ -214,6 +222,14 @@ static func _entry_for_effect(effect: CardEffectData) -> Dictionary:
 			demo = Demo.FX_INVERT_HP
 		CardEnums.EffectType.RAISE_SAND:
 			demo = Demo.FX_RAISE_SAND
+		CardEnums.EffectType.ADD_TOTAL_PER_GRAVE:
+			demo = Demo.FX_ADD_TOTAL_PER_GRAVE
+		CardEnums.EffectType.RECOVER_FROM_GRAVE:
+			demo = Demo.FX_RECOVER_FROM_GRAVE
+		CardEnums.EffectType.REVIVE_FROM_GRAVE:
+			demo = Demo.FX_REVIVE_FROM_GRAVE
+	if demo == Demo.FX_DESTROY_UNIT and is_ally:
+		demo = Demo.FX_SACRIFICE
 	# 対象の絞り込み(攻撃力>体力)を持つ破壊は、効かない駒があることまで見せる。
 	if (
 		demo == Demo.FX_DESTROY_UNIT
@@ -231,6 +247,7 @@ static func _entry_for_effect(effect: CardEffectData) -> Dictionary:
 		"all": all,
 		"ally": is_ally,
 		"trigger": effect.trigger,
+		"self": effect.target == CardEnums.EffectTarget.SELF,
 	}
 
 
@@ -269,6 +286,8 @@ func _stage(entry: Dictionary, t: float) -> Dictionary:
 		# 返させると、台本が無いことに気づけないまま何かが動いて見える)。
 		stage = CardEffectDemoKeyword.stage(demo, t)
 		if stage.is_empty():
+			stage = CardEffectDemoGrave.stage(demo, t, entry.get("self", false))
+		if stage.is_empty():
 			stage = _stage_on_enemy_unit(t, demo, value, entry.get("all", false))
 	var trigger_note: String = stage.get("trigger_note", "")
 	if not trigger_note.is_empty():
@@ -293,6 +312,8 @@ static func _trigger_phrase(trigger: int) -> String:
 			return "自分のターンの終わりに"
 		CardEnums.Trigger.ON_DAMAGED:
 			return "ダメージを受けたとき"
+		CardEnums.Trigger.ON_ALLY_DEATH:
+			return "自分の他の砂時計が壊れたとき"
 	return "場に出したとき"
 
 

@@ -27,6 +27,10 @@ const MULLIGAN_KEEP_COST := 3
 ## **CPUが繰り返しトリガーを無視しないための下駄**である。
 const TURN_END_TURNS := 3
 const DAMAGED_TIMES := 2.0
+## 味方の破壊に反応する効果(遺砂の刻)が働く回数の見込み。同じく下駄。
+const ALLY_DEATH_TIMES := 2.0
+## 墓地から1体を手札へ戻す価値。ドロー1枚(3.0)と同じに見る。
+const RECOVER_VALUE := 3.0
 ## 反転権(GameDesign.md 2章)は対局に2〜3回しか無い希少な資源のため、
 ## 通常の反転よりゲインの下限を高く取り、僅かな得のために使い切らせない。
 const FLIP_RIGHT_MIN_GAIN := 3.0
@@ -401,6 +405,8 @@ func _repeating_value(state: MatchState, side: int, card: CardData) -> float:
 		value += _on_play_value(state, side, effect) * mini(card.total_sand, TURN_END_TURNS)
 	for effect in card.effects_for(CardEnums.Trigger.ON_DAMAGED):
 		value += _on_play_value(state, side, effect) * DAMAGED_TIMES
+	for effect in card.effects_for(CardEnums.Trigger.ON_ALLY_DEATH):
+		value += _on_play_value(state, side, effect) * ALLY_DEATH_TIMES
 	return value
 
 
@@ -415,9 +421,15 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 		CardEnums.EffectType.DRAW:
 			value = effect.value * 3.0
 		CardEnums.EffectType.DESTROY_UNIT:
-			var target := _strongest_enemy(state, foe_side, effect)
-			if target >= 0:
-				value = float(state.board[foe_side][target].lifetime_damage())
+			if effect.target == CardEnums.EffectTarget.ALLY_UNIT:
+				# 自分の駒を払う(砂葬)。払う駒の生涯ダメージぶんを失う。
+				var paid := _sacrifice_slot(state, side)
+				if paid >= 0:
+					value = -float(state.board[side][paid].lifetime_damage())
+			else:
+				var target := _strongest_enemy(state, foe_side, effect)
+				if target >= 0:
+					value = float(state.board[foe_side][target].lifetime_damage())
 		CardEnums.EffectType.DAMAGE_UNIT:
 			# **対象の広さを見る。**全体(ALL_ENEMY_UNITS)は並んでいるぶんだけ積み上がるが、
 			# 単体(ENEMY_UNIT)は1体ぶんしかない。区別しないと単体除去を過大評価する。
@@ -489,6 +501,16 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 				value = float(token.total_sand * (token.total_sand - 1)) / 2.0
 		CardEnums.EffectType.GRANT_KEYWORD:
 			value = 2.0
+		CardEnums.EffectType.ADD_TOTAL_PER_GRAVE:
+			value = CardEffectResolver.grave_unit_count(state, side) * effect.value * 2.0
+		CardEnums.EffectType.RECOVER_FROM_GRAVE:
+			if not CardEffectResolver.grave_choices(state, side).is_empty():
+				value = RECOVER_VALUE
+		CardEnums.EffectType.REVIVE_FROM_GRAVE:
+			var pick := CardEffectResolver.best_grave_choice(state, side)
+			if pick >= 0:
+				var revived: CardData = state.graveyard[side][pick]
+				value = float(revived.total_sand * (revived.total_sand - 1)) / 2.0
 		CardEnums.EffectType.SILENCE:
 			var slot := _strongest_enemy(state, foe_side)
 			if slot >= 0 and not state.board[foe_side][slot].keywords().is_empty():
@@ -559,7 +581,9 @@ func _effect_target(state: MatchState, side: int, card: CardData) -> Dictionary:
 		elif effect.target == CardEnums.EffectTarget.ALLY_UNIT:
 			# 反転と砂落としは「最も強い味方」ではなく「効かせて最も得をする味方」を選ぶ。
 			var slot: int = _strongest_ally(state, side)
-			if effect.effect_type == CardEnums.EffectType.SWAP_STATS:
+			if effect.effect_type == CardEnums.EffectType.DESTROY_UNIT:
+				slot = _sacrifice_slot(state, side)
+			elif effect.effect_type == CardEnums.EffectType.SWAP_STATS:
 				slot = _best_ally_flip(state, side)["slot"]
 			elif effect.effect_type == CardEnums.EffectType.DROP_SAND:
 				slot = _best_ally_drop(state, side, effect.value)["slot"]
@@ -567,6 +591,10 @@ func _effect_target(state: MatchState, side: int, card: CardData) -> Dictionary:
 				slot = _best_ally_raise(state, side, effect.value)["slot"]
 			if slot >= 0:
 				return {"side": side, "slot": slot}
+	if CardEffectResolver.grave_choice_effect(card) != null:
+		var pick := CardEffectResolver.best_grave_choice(state, side)
+		if pick >= 0:
+			return {"grave_index": pick}
 	return {}
 
 
@@ -599,6 +627,21 @@ func _expert_damageable_enemy(state: MatchState, foe_side: int) -> int:
 
 
 ## 味方のうち、いちばん生涯ダメージの大きい1体。強化はここへ乗せるのが効く。
+## 払う(砂葬で破壊する)なら最も惜しくない味方。生涯ダメージの最も小さい1体。
+func _sacrifice_slot(state: MatchState, side: int) -> int:
+	var best := -1
+	var best_value := 0.0
+	for slot in MatchState.BOARD_SIZE:
+		var unit: CardInstance = state.board[side][slot]
+		if unit == null:
+			continue
+		var value := float(unit.lifetime_damage())
+		if best < 0 or value < best_value:
+			best_value = value
+			best = slot
+	return best
+
+
 func _strongest_ally(state: MatchState, side: int) -> int:
 	var best := -1
 	var best_value := -1.0
