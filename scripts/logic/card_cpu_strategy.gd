@@ -738,8 +738,6 @@ func _choose_flip(state: MatchState, side: int) -> Dictionary:
 		var unit: CardInstance = state.board[side][slot]
 		if unit == null or not unit.can_flip():
 			continue
-		if _expert_flip_is_risky(state, side, unit):
-			continue
 		var gain := _lifetime_of(unit.attack, unit.health) - float(unit.lifetime_damage())
 		if unit.data.effects_for(CardEnums.Trigger.ON_FLIP).size() > 0:
 			gain += 2.0
@@ -747,22 +745,6 @@ func _choose_flip(state: MatchState, side: int) -> Dictionary:
 			best_gain = gain
 			best = MatchAction.flip(side, slot)
 	return best
-
-
-## 上級:反転で体力が下がった結果(新しい体力=いまの攻撃力)、相手がいま持っている
-## 攻撃力でその場で仕留められるようになる反転は避ける。「攻撃力が体力を上回ったら
-## 返す」という最適解自体(GameDesign.md 1章)は変えず、危険な1手だけを弾く。
-func _expert_flip_is_risky(state: MatchState, side: int, unit: CardInstance) -> bool:
-	if difficulty != Difficulty.EXPERT:
-		return false
-	var new_health := unit.attack
-	if new_health <= 0:
-		return false
-	var foe_side := MatchState.other_side(side)
-	for foe in state.units(foe_side):
-		if foe.attack >= new_health:
-			return true
-	return false
 
 
 # --- 反転権 ---------------------------------------------------------------

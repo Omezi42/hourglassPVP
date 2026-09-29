@@ -9,7 +9,7 @@ func run(assert_true: Callable) -> void:
 	_assert = assert_true
 	_test_all_difficulties_finish_a_match()
 	_test_beginner_never_flips_or_uses_flip_right()
-	_test_expert_avoids_a_lethal_flip()
+	_test_expert_takes_a_flip_that_raises_health()
 	_test_expert_mulligan_is_more_aggressive_with_few_light_cards()
 	_test_expert_coin_is_more_selective()
 	_test_expert_coin_helps_reach_a_better_card()
@@ -80,9 +80,9 @@ func _test_beginner_never_flips_or_uses_flip_right() -> void:
 	_assert.call(not saw_flip, "beginner should never flip or use flip right")
 
 
-## 上級は、反転した結果いま相手が持っている攻撃力でその場で仕留められるようになる
-## 反転を避ける(GameDesign.md 13章)。中級はこの危険を見ないため同じ場面でも反転する。
-func _test_expert_avoids_a_lethal_flip() -> void:
+## 上級も中級と同じく得な反転を取る(GameDesign.md 13章)。反転で体力が増えるため、
+## 相手の攻撃力で仕留められる場面でも反転を控える理由は無い。
+func _test_expert_takes_a_flip_that_raises_health() -> void:
 	var state := _new_match()
 	var mine: CardInstance = _force_play(state, MatchState.Side.A, "sand", 0)
 	mine.summoned_this_turn = false
@@ -92,17 +92,8 @@ func _test_expert_avoids_a_lethal_flip() -> void:
 
 	var expert := CardCpuStrategy.new()
 	expert.difficulty = CardCpuStrategy.Difficulty.EXPERT
-	var risky: Dictionary = expert._choose_flip(state, MatchState.Side.A)
-	_assert.call(
-		risky.is_empty(),
-		"expert should refuse a flip that would leave the unit dead to the foe's attack"
-	)
-
-	var normal := CardCpuStrategy.new()
-	var accepted: Dictionary = normal._choose_flip(state, MatchState.Side.A)
-	_assert.call(
-		not accepted.is_empty(), "normal should still take the flip (the risk check is expert-only)"
-	)
+	var flip: Dictionary = expert._choose_flip(state, MatchState.Side.A)
+	_assert.call(not flip.is_empty(), "expert should take a flip that raises health")
 
 
 ## 上級は、残す手札のコスト1〜2が少ないほど重いカードをより積極的に戻す
