@@ -38,6 +38,8 @@ const BAR_WIDTH := ACTION_COLUMN_X - MARGIN - 24.0
 var state: MatchState
 ## 自分の側。CPU戦・オンラインでは固定する。
 var my_side: int = MatchState.Side.A
+## ランクマッチの観戦では両者の手札を伏せる(GameDesign.md 12章)。対局ごとに落とす。
+var hide_hands := false
 ## いま選んでいるものと相手の情報帯。切り出した進行役(`CardMatchTargets` 等)から読む。
 var selection: CardMatchSelection:
 	get:
@@ -484,7 +486,7 @@ func _refresh_row(views: Array[CardView], side: int) -> void:
 
 
 func _refresh_hand() -> void:
-	var hand: Array = state.hand[my_side]
+	var hand: Array = [] if hide_hands else state.hand[my_side]
 	# 位置・沈み・暗さは `CardMatchHandLayout` が持つ(GameDesign.md 9章「対局画面の手触り」)。
 	# 手札は最大10枚を超えうるため、収まらなくなったら重ねてでも領域内に留める
 	# (はみ出すと「ログ」「投了」のボタンへ潜り込んでしまう)。

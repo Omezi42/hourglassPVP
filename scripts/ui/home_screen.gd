@@ -19,6 +19,7 @@ signal ranked_match_deck_requested
 signal room_match_requested
 signal account_requested
 signal lab_requested
+signal spectate_list_requested
 
 ## 下部タブの寸法。**幅は共通で、高さだけ変える。**幅まで変えると `HBoxContainer` の
 ## 中で他のタブが横へ押し出され、選択するたびに4つの位置がずれる(実際にそうなった)。
@@ -102,6 +103,7 @@ func _ready() -> void:
 		func() -> void: ranked_match_deck_requested.emit()
 	)
 	battle_tab.room_match_requested.connect(func() -> void: room_match_requested.emit())
+	battle_tab.spectate_list_requested.connect(func() -> void: spectate_list_requested.emit())
 	# 背景の絵の上へ帯と幕を敷く(GameDesign.md 9章)。**背景の直後へ入れる**——
 	# タブの中身・アカウント帯・下部タブはいずれもこれより手前に来る必要がある。
 	var scrim := HomeScrim.make()

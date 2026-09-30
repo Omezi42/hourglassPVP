@@ -100,6 +100,8 @@ const SPEND_DURATION := 0.25
 
 ## 相手側かどうか。相手側だけ手札の枚数を出す。
 var is_opponent := false
+## 自分側でも手札の山を出す(手札を伏せる観戦。GameDesign.md 12章)。
+var show_hand_pile := false
 ## 表示名(未設定なら「あなた」「相手」)。
 var display_name := ""
 ## アイコンID(GameDesign.md 14章)。
@@ -322,7 +324,7 @@ func _draw() -> void:
 	_draw_spend_flight()
 	_pile(deck_pile_rect(), "山札", _deck)
 	_pile(_graveyard_rect(), "墓地", _graveyard)
-	if is_opponent:
+	if is_opponent or show_hand_pile:
 		_pile(hand_pile_rect(), "手札", _hand)
 	if _has_coin:
 		_draw_coin()

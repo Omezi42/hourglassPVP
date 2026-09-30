@@ -84,6 +84,8 @@ func join_room(code: String) -> void:
 	# 両者は書かれた player_a / player_b を読んで自分の側を決める。
 	var sides := MatchSides.assign(creator_uid, auth.uid)
 	sides["created_at"] = Time.get_unix_time_from_system()
+	sides["kind"] = LiveMatchService.KIND_ROOM
+	sides["build"] = GameVersion.build_id()
 	# ルームの更新とmatches/{id}の作成を1回のcommitで原子的に行う。別書き込みにすると、
 	# 作成側がmatch_idを見てmatches/{id}を読んだときにplayer_a/player_bがまだ空という窓が
 	# でき、その窓に入ると双方が後手(side B)と判定されて対局が始まらない

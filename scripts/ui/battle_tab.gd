@@ -3,7 +3,7 @@ extends Control
 ## ホーム画面の「たたかう」タブ(GameDesign.md 9章)。
 ##
 ## **対局の入口をすべてここへ集める。**上段に真鍮の札「対戦する」(= ランクマッチ)と
-## 「ソロモード」を同格に2枚、下段に凹んだパネル(CPU戦 / リーサルパズル / ルームマッチ)を横に並べる。
+## 「ソロモード」を同格に2枚、下段に凹んだパネル(CPU戦 / リーサルパズル / ルームマッチ / 観戦)を横に並べる。
 ##
 ## **クラス名は `BattleTab` のまま変えない。**`scenes/battle_tab.tscn` を
 ## `scenes/home_screen.tscn` が instance しており、名前を変えると参照の書き換えという
@@ -21,6 +21,8 @@ signal room_match_requested
 signal cpu_match_requested
 signal puzzle_requested
 signal solo_requested
+## ランクマッチの観戦一覧を開く(GameDesign.md 12章)。デッキは要らない。
+signal spectate_list_requested
 
 ## 通信待ち中の「...」演出。3個目まで打ってから空に戻る(対局画面の待機表現と統一)。
 const BUSY_DOTS_MAX := 3
@@ -49,7 +51,7 @@ const DAILY_DONE := "今日の1問 クリア済み"
 
 const TILE_GAP := 20.0
 const MAIN_WIDTH := (FRAME_W - TILE_GAP) / 2.0
-const SIDE_COUNT := 3
+const SIDE_COUNT := 4
 const SIDE_WIDTH := (FRAME_W - TILE_GAP * float(SIDE_COUNT - 1)) / float(SIDE_COUNT)
 const SIDE_HEIGHT := 80.0
 const MAIN_FONT_SIZE := 40
@@ -69,6 +71,7 @@ var _solo_info: SoloEntryInfo
 var _cpu_tile: HomeTile
 var _room_tile: HomeTile
 var _puzzle_tile: HomeTile
+var _watch_tile: HomeTile
 ## 次にやってほしい入口1つに掛ける印(GameDesign.md 18章)。
 var _next_mark := NextStepMark.new()
 
@@ -127,6 +130,8 @@ func _build() -> void:
 	_puzzle_tile.pressed.connect(func() -> void: puzzle_requested.emit())
 	_room_tile = _make_side_tile("ルームマッチ", "合言葉で友達と", "shield")
 	_room_tile.pressed.connect(func() -> void: room_match_requested.emit())
+	_watch_tile = _make_side_tile("観戦", "いまの対局を見る", "eye")
+	_watch_tile.pressed.connect(func() -> void: spectate_list_requested.emit())
 	move_child(status_label, get_child_count() - 1)
 	_layout()
 
@@ -149,7 +154,7 @@ func _layout() -> void:
 	_solo_tile.position = Vector2(FRAME_X + MAIN_WIDTH + TILE_GAP, top)
 	_solo_tile.size = main_size
 	_solo_info.size = main_size
-	var side_tiles: Array[HomeTile] = [_cpu_tile, _puzzle_tile, _room_tile]
+	var side_tiles: Array[HomeTile] = [_cpu_tile, _puzzle_tile, _room_tile, _watch_tile]
 	for i in side_tiles.size():
 		side_tiles[i].position = Vector2(FRAME_X + float(i) * (SIDE_WIDTH + TILE_GAP), side_top)
 		side_tiles[i].size = Vector2(SIDE_WIDTH, SIDE_HEIGHT)

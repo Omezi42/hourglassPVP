@@ -29,6 +29,8 @@ var card_ranked_match_screen: CardRankedMatchScreen
 var card_rank_screen: CardRankScreen
 ## CPU戦の思考レベル選択モーダル(GameDesign.md 13章)。
 var card_cpu_difficulty_picker: CardCpuDifficultyPicker
+## ランクマッチの観戦一覧(GameDesign.md 12章)。
+var card_spectate_list_screen: CardSpectateListScreen
 ## 掲示板〈ラボ〉(GameDesign.md 29章)。
 var card_lab_screen: CardLabScreen
 ## 待っている間のCPU戦(GameDesign.md 11章)。
@@ -157,6 +159,13 @@ func _ready() -> void:
 	add_child(card_rank_screen)
 	card_rank_screen.back_pressed.connect(func() -> void: _show_only(home_screen, true))
 	_screens.append(card_rank_screen)
+	card_spectate_list_screen = CardSpectateListScreen.new()
+	card_spectate_list_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
+	card_spectate_list_screen.visible = false
+	add_child(card_spectate_list_screen)
+	card_spectate_list_screen.back_pressed.connect(func() -> void: _show_only(home_screen, true))
+	card_spectate_list_screen.spectate_requested.connect(_on_live_spectate_requested)
+	_screens.append(card_spectate_list_screen)
 	card_lab_screen = CardLabScreen.new()
 	card_lab_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
 	card_lab_screen.visible = false
@@ -232,6 +241,7 @@ func _ready() -> void:
 	home_screen.ranked_match_deck_requested.connect(_on_ranked_match_deck_requested)
 	home_screen.room_match_requested.connect(_on_room_match_requested)
 	home_screen.lab_requested.connect(_on_lab_requested)
+	home_screen.spectate_list_requested.connect(_on_spectate_list_requested)
 	replay_list_screen.back_pressed.connect(func() -> void: _show_only(home_screen, true))
 	replay_list_screen.replay_selected.connect(_on_replay_selected)
 	NetSession.ensure_ready(self)
@@ -292,6 +302,8 @@ func _on_match_back() -> void:
 	# パズル・ソロモードから戻ったときは、クリアの印を付け直すために一覧を組み直す。
 	if _match_return_screen == puzzle_picker_screen:
 		puzzle_picker_screen.open()
+	elif _match_return_screen == card_spectate_list_screen:
+		card_spectate_list_screen.open()
 	elif _match_return_screen == solo_map_screen:
 		solo_map_screen.open()
 	_show_only(_match_return_screen, true)
@@ -341,6 +353,20 @@ func _on_spectate_requested(match_id: String) -> void:
 	_match_return_screen = home_screen
 	if await card_match_screen.start_spectate(NetSession.client, match_id):
 		_show_only(card_match_screen)
+
+
+func _on_spectate_list_requested() -> void:
+	_show_only(card_spectate_list_screen)
+	card_spectate_list_screen.open()
+
+
+## 観戦一覧から選んだランクマッチ。観戦を終えたら一覧へ戻り、読み直す。
+func _on_live_spectate_requested(match_id: String) -> void:
+	if await card_match_screen.start_spectate(NetSession.client, match_id):
+		_match_return_screen = card_spectate_list_screen
+		_show_only(card_match_screen)
+	else:
+		card_spectate_list_screen.open()
 
 
 ## CPU戦(v5.0)。先手/後手は常にプレイヤーが先手とし、相手のデッキは作戦を持った

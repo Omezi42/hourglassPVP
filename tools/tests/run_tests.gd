@@ -29,6 +29,7 @@ const LabTests = preload("res://tools/tests/lab_tests.gd")
 const FunnelTests = preload("res://tools/tests/funnel_tests.gd")
 const TutorialScriptTests = preload("res://tools/tests/tutorial_script_tests.gd")
 const CpuDeckTests = preload("res://tools/tests/cpu_deck_tests.gd")
+const LiveMatchTests = preload("res://tools/tests/live_match_tests.gd")
 
 var _failures := 0
 
@@ -60,6 +61,7 @@ func _run() -> void:
 	await rank_tests.run(_assert_true)
 	SoundSettingsTests.new().run(_assert_true)
 	OnlineTests.new().run(_assert_true)
+	LiveMatchTests.new().run(_assert_true)
 	AccountTests.new().run(_assert_true)
 	# 送受信の流れだけはawaitを挟むため、コルーチンの実行中に解放されないよう参照を持つ
 	var flow_tests := OnlineMatchFlowTests.new()

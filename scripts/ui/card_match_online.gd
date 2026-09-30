@@ -177,6 +177,10 @@ func spectate(client: FirestoreClient, p_match_id: String) -> bool:
 	if deck_a.size() != MatchState.DECK_SIZE or deck_b.size() != MatchState.DECK_SIZE:
 		_screen._status.set_waiting("この対局はまだ始まっていません")
 		return false
+	# ランクマッチは両者の手札を伏せる(GameDesign.md 12章)。ルームマッチは先手の手札を見せる。
+	_screen.hide_hands = str(record.get("kind", "")) == LiveMatchService.KIND_RANKED
+	_screen._own_bar.show_hand_pile = _screen.hide_hands
+	_apply_spectated_names(client, str(record.get("player_a", "")), str(record.get("player_b", "")))
 	var actions: Array = record.get("actions", [])
 	_screen._begin_state(
 		deck_a, deck_b, int(record.get("seed", 0)), MatchAction.contains_mulligan(actions)
@@ -190,3 +194,18 @@ func spectate(client: FirestoreClient, p_match_id: String) -> bool:
 	_screen._online.action_received.connect(_screen._on_action_received)
 	_screen._online.start(p_match_id, actions.size())
 	return true
+
+
+## 観戦では両者とも対局者のプロフィールを出す(先手=自分側の帯、後手=相手側の帯)。
+func _apply_spectated_names(client: FirestoreClient, uid_a: String, uid_b: String) -> void:
+	var pairs := [[_screen._own_bar, uid_a], [_screen._foe_bar, uid_b]]
+	for pair in pairs:
+		var bar: PlayerInfoBar = pair[0]
+		var profile: Dictionary = await AccountService.fetch_profile(client, pair[1])
+		var name := str(profile.get("display_name", ""))
+		# 空のままだと帯が「あなた」「相手」と出てしまう。
+		bar.display_name = name if not name.is_empty() else CardRankScreen.NAMELESS
+		bar.icon_id = str(profile.get("icon_id", UserProfileLibrary.DEFAULT_ICON_ID))
+		bar.title_id = str(profile.get("title_id", UserProfileLibrary.DEFAULT_TITLE_ID))
+	if _screen.state != null:
+		_screen.refresh()

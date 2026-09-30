@@ -10,6 +10,7 @@ const RANKED_COLLECTION := "ranked_queue"
 func _init(p_client: FirestoreClient, p_auth: FirebaseAuth) -> void:
 	super(p_client, p_auth)
 	collection = RANKED_COLLECTION
+	match_kind = LiveMatchService.KIND_RANKED
 
 
 ## ホームへ出す「いま相手を待っている人」の数(GameDesign.md 9章)。

@@ -180,7 +180,7 @@ func _on_unit_returned(side: int, slot: int, card: CardData) -> void:
 ## ドローの行き先。自分の手札は画面下の帯、相手の手札は枚数の山で表している
 ## (中身は伏せるため。GameDesign.md 9章)。
 func hand_center(side: int) -> Vector2:
-	if side == _screen.my_side:
+	if side == _screen.my_side and not _screen.hide_hands:
 		return CardMatchScreen.HAND_AREA.get_center()
 	var bar := _screen.bar_for(side)
 	return bar.position + bar.hand_pile_rect().get_center()

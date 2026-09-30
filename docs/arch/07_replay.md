@@ -8,8 +8,8 @@
 - `ReplayListScreen`:`DeckListScreen` と同様の横長カード縦スクロール一覧。各カードは対局日時・勝敗・先手/後手に加え、`deck_a`/`deck_b` からデッキを代表する数枚のアイコンを表示する(30枚をそのまま並べるとカードに収まらないため)。`BattleTab` に追加する「リプレイ」ボタンから遷移する
 - 投了で終わった対局は、`actions`の末尾に`surrender`が1件入った状態で保存される。リプレイ再生時は他の手と同じく`OnlineMatch.apply()`へ流れて`match_ended`が発火するが、再生モードでは元々結果パネルを出さない仕様のため追加の分岐は要らない。手数表示では投了も1手として数える(将棋の棋譜で投了を1手と数えるのと同じ扱い)
 - 再生画面は新規シーンを作らず、対局画面に「再生モード」を追加する形で実装する。再生モードでは `MatchState` をデッキと種から作り直し、保存済み `actions` を1件ずつ `MatchAction.apply()` へ流し込んで進行を再現する。行動の列には、先頭へ/1手戻る/再生・一時停止/1手進む/最後へ、の5ボタンと手数表示、および一覧へ戻る導線を置き、盤面のクリック操作は無効化する
-- 観戦は既存の**ルームコード**を再利用する。`rooms/{code}` には対局成立後も `match_id` が残っているため、観戦者が同じコードを入力すると `rooms/{code}` から `match_id` を引き、`matches/{match_id}` の購読(ポーリング)を開始できる。ランクマッチには共有可能なコードが存在しないため観戦導線を用意しない
-- 対局画面に「観戦モード」を追加する(対局モード・再生モードに続く3つ目のモード)。`OnlineMatch` のポーリング機構をそのまま使い、`send_and_apply` を呼ばずに `action_received` シグナルだけを購読して盤面へ反映する。行動のボタンは出さず、盤面操作は無効化する。対局終了の検知(`match_ended`)は通常通り行うが、`finished_at`/`winner` の書き込みは対局者側のみが行い、観戦者側では行わない
+- ルームマッチの観戦は既存の**ルームコード**を再利用する。`rooms/{code}` には対局成立後も `match_id` が残っているため、観戦者が同じコードを入力すると `rooms/{code}` から `match_id` を引き、`matches/{match_id}` の購読(ポーリング)を開始できる
+- 対局画面に「観戦モード」を追加する(対局モード・再生モードに続く3つ目のモード)。入口は `CardMatchOnline.spectate(client, match_id)` の1つで、ルームマッチもランクマッチも同じ経路を通る。`OnlineMatch` のポーリング機構をそのまま使い、`send_and_apply` を呼ばずに `action_received` シグナルだけを購読して盤面へ反映する。行動のボタンは出さず、盤面操作は無効化する。対局終了の検知(`match_ended`)は通常通り行うが、`finished_at`/`winner` の書き込みは対局者側のみが行い、観戦者側では行わない。両者の情報帯には `player_a`/`player_b` のプロフィールを `AccountService.fetch_profile()` で引いて出す
 - `BattleTab` のルームコード入力欄に「観戦する」ボタンを追加し、参加導線と並べて配置する
 
 ## 7.1 CPU戦のローカルリプレイ保存(フェーズ11 K-2、実装済み)
@@ -46,3 +46,11 @@
   既存の`InfoLabel`へテキストとして組み込む形に留めている)。`Main._on_replay_selected()`は
   `match_id`が`"cpu_"`始まりかどうかで`start_local_replay()`/`start_replay()`を振り分ける
 - 観戦機能はCPU戦の対象外のまま変更していない(ローカル対局に第三者が参加する経路が存在しないため)
+
+## 7.2 ランクマッチの観戦一覧
+
+- **`matches/{id}` は作られた時点で `kind`(`"ranked"` / `"room"` / `"random"`)と `build` を持つ**。種別と版は一覧の絞り込みにしか使わないため、対局を作る1回のcommit(`MatchmakingQueue._claim()` / `RoomMatch.join()`)へ足すだけにする。`kind` は `MatchmakingQueue.match_kind`(派生の `RankedMatchmakingQueue` が差し替える)から書く
+- `LiveMatchService`(`scripts/net/live_match_service.gd`、staticのみ)が一覧を作る。`matches` を `created_at` の新しい順に `QUERY_LIMIT` 件取る1本のクエリ(`FirestoreClient.query_recent()`。単一フィールドの並べ替えだけなので複合インデックスは要らない)を投げ、クライアント側で「`kind` がランク・同じビルド・両者のデッキと種がある・`finished_at` も `abandoned` も無い・サーバー時刻の `read_time - update_time` が `LIVE_SECONDS` 以内」のものだけを残して `LIST_LIMIT` 件に切る。**生きているかどうかは端末の時計でなく `updateTime` と `readTime` で比べる**(Pitfalls.md)。持ち時間は1手番60秒で、時間切れも手として書かれるため、3分書き込みが無ければ両者とも去ったものとみなせる
+- ターン数は `actions` のうち手番を終える手(`end_turn` / `time_up`)の数 + 1 とする(`LiveMatchService.turn_of()`)
+- `CardSpectateListScreen`(`scripts/ui/card_spectate_list_screen.gd`)が一覧画面。行は `SpectateMatchRow`(左右に両者のアイコン・名前・段位の徽章、中央にターン数)で、押すと `spectate_requested(match_id)` を出す。名前と段位は行ごとに `players/{uid}` を読んで出す(最大20件の読み取り。`AccountService.fetch_profile()` は段位を持たないため)。観戦を終えて「戻る」を押すとこの一覧へ帰り、読み直す
+- **ランクマッチの観戦では両者の手札を伏せる**(GameDesign.md 12章)。`CardMatchScreen.hide_hands` が立っていると `_refresh_hand()` は空の手札として並べ、`PlayerInfoBar.show_hand_pile` を立てた自分側の情報帯にも手札の山を出す。ドローや「砂へ還す」の行き先(`CardMatchEffects.hand_center()`)もその山へ向ける。`CardMatchReset` が毎局落とす

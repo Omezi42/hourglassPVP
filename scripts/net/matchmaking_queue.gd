@@ -35,6 +35,8 @@ var client: FirestoreClient
 var auth: FirebaseAuth
 ## 待合室のコレクション。ランクマッチは派生クラスで差し替える。
 var collection := COLLECTION
+## 作る対局の種別(`matches/{id}.kind`。観戦一覧の絞り込みに使う)。ランクマッチは派生クラスで差し替える。
+var match_kind := LiveMatchService.KIND_RANDOM
 ## ポーリングの間隔。テストは実時間を縮めるために短くする。
 var poll_interval := POLL_INTERVAL_SECONDS
 ## 待っている間のCPU戦をしているか。立っている間は掴まず、掴まれない。
@@ -186,6 +188,8 @@ func _claim(mine: Dictionary, candidate: Dictionary) -> bool:
 	# 両者は書かれた player_a / player_b を読んで自分の側を決める。
 	var sides := MatchSides.assign(str(candidate["id"]), auth.uid)
 	sides["created_at"] = Time.get_unix_time_from_system()
+	sides["kind"] = match_kind
+	sides["build"] = GameVersion.build_id()
 	var claimed: bool = await client.commit(
 		[
 			client.update_write(

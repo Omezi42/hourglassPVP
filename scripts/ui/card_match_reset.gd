@@ -42,6 +42,8 @@ static func run(screen: CardMatchScreen) -> void:
 		screen._alert.is_my_turn = false
 	# 前の対局のHP・マナ・山札の枚数・持ち時間が情報帯に残らないようにする
 	# (`reset()` が持ち時間も含めて未初期化の状態へ戻す)。
+	screen.hide_hands = false
+	screen._own_bar.show_hand_pile = false
 	screen._own_bar.reset()
 	screen._foe_bar.reset()
 	screen._cpu_record = {}

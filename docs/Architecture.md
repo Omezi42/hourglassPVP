@@ -19,7 +19,7 @@
 | 4.6節 | unityroom以外の配信先(GameDesign.md 10章) | [`arch/04_06_portals.md`](arch/04_06_portals.md) |
 | 5章 | 拡張運用について | [`arch/05_extension.md`](arch/05_extension.md) |
 | 6章 | オンライン対戦の実装方針 | [`arch/06_online.md`](arch/06_online.md) |
-| 7章 | リプレイ・観戦の実装方針 | [`arch/07_replay.md`](arch/07_replay.md) |
+| 7章 | リプレイ・観戦の実装方針(7.2節 ランクマッチの観戦一覧を含む) | [`arch/07_replay.md`](arch/07_replay.md) |
 | 8章 | CPU戦の実装方針 | [`arch/08_cpu.md`](arch/08_cpu.md) |
 | 9章 | 効果音・BGMの実装方針 | [`arch/09_audio.md`](arch/09_audio.md) |
 | 10章 | アカウント・通貨の実装方針(10.1〜10.4節を含む) | [`arch/10_account.md`](arch/10_account.md) |
