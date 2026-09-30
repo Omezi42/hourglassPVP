@@ -869,6 +869,76 @@
 			"is_spell": true,
 			"pool_index": 87,
 			"total_sand": 0
+		},
+		{
+			"cannot_attack": false,
+			"cost": 2,
+			"describe": "余砂:このカードを手札に戻す",
+			"display_name": "ドリフト",
+			"id": "drift",
+			"is_spell": false,
+			"pool_index": 88,
+			"total_sand": 3
+		},
+		{
+			"cannot_attack": false,
+			"cost": 2,
+			"describe": "自分の他の砂時計が破壊されるたび、この砂時計の総量+1",
+			"display_name": "モス",
+			"id": "moss",
+			"is_spell": false,
+			"pool_index": 89,
+			"total_sand": 3
+		},
+		{
+			"cannot_attack": false,
+			"cost": 3,
+			"describe": "自分の他の砂時計が破壊されるたび、相手プレイヤーに1ダメージ",
+			"display_name": "ヴィジル",
+			"id": "vigil",
+			"is_spell": false,
+			"pool_index": 90,
+			"total_sand": 4
+		},
+		{
+			"cannot_attack": false,
+			"cost": 3,
+			"describe": "設置:自分の墓地の砂時計1体を選び、手札に戻す",
+			"display_name": "レリック",
+			"id": "relic",
+			"is_spell": false,
+			"pool_index": 91,
+			"total_sand": 4
+		},
+		{
+			"cannot_attack": false,
+			"cost": 4,
+			"describe": "設置:自分の墓地の砂時計1体につき、この砂時計の総量+1",
+			"display_name": "ケルン",
+			"id": "cairn",
+			"is_spell": false,
+			"pool_index": 92,
+			"total_sand": 3
+		},
+		{
+			"cannot_attack": false,
+			"cost": 2,
+			"describe": "自分の砂時計1体を破壊し、カードを2枚引く",
+			"display_name": "砂葬",
+			"id": "burial",
+			"is_spell": true,
+			"pool_index": 93,
+			"total_sand": 0
+		},
+		{
+			"cannot_attack": false,
+			"cost": 4,
+			"describe": "自分の墓地の砂時計1体を選び、場に出す",
+			"display_name": "目覚めの砂",
+			"id": "awaken",
+			"is_spell": true,
+			"pool_index": 94,
+			"total_sand": 0
 		}
 	]
 }
