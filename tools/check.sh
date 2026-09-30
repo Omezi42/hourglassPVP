@@ -29,7 +29,7 @@ fi
 # class_name の登録(.godot はgit管理外)が古いと、テストはコンパイルに失敗したまま一部だけ走り、
 # 関係ないテストの名前が付いたエラーを残して終わらずに固まる。足りなければ登録し直す。
 CLASS_CACHE=.godot/global_script_class_cache.cfg
-missing=$(git ls-files 'scripts/*.gd' 'tools/*.gd' 'tools/**/*.gd' | xargs grep -h '^class_name ' | awk '{print $2}'   | while read -r c; do grep -q "\"class\": &\"$c\"" "$CLASS_CACHE" 2>/dev/null || echo "$c"; done)
+missing=$(git ls-files -co --exclude-standard 'scripts/*.gd' 'tools/*.gd' 'tools/**/*.gd' | xargs grep -h '^class_name ' | awk '{print $2}'   | while read -r c; do grep -q "\"class\": &\"$c\"" "$CLASS_CACHE" 2>/dev/null || echo "$c"; done)
 if [ -n "$missing" ]; then
   echo "== class_name の登録を更新 ($(echo "$missing" | wc -l) 件)"
   timeout "$GODOT_TIMEOUT" "$GODOT" --headless --path . --import > logs/check_import.log 2>&1
