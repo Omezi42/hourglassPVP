@@ -39,7 +39,7 @@
 | `CardMatchReplay` / `CardMatchOnline` / `CardMatchPuzzle` / `CardMatchSolo` / `CardMatchTutorial` | 再生コントロール / オンラインの3入口 / パズル / ソロ / 誘導対局。いずれも `_screen` 参照の切り出し |
 | `CardMatchEmote` / `EmotePopupPanel` / `EmoteBubble` | エモート(6.6節) |
 | `CardMatchAlert` / `CardMatchDamageAssist` / `CardMatchActionHistory` | 残り15秒の焦燥演出 / 打点アシスト / 直前の手の列 |
-| `CardDetailPanel` / `CardEffectPreview` / `CardEffectStage` / `CardEffectDemoKeyword` / `CardEffectDemoEnemy` / `InkFigure` | カード詳細と能力の実演(4.0.4節) |
+| `CardDetailPanel` / `CardEffectPreview` / `CardEffectStage` / `CardEffectDemoKeyword` / `CardEffectDemoEffect` / `CardEffectDemoGrave` / `CardEffectDemoEnemy` / `InkFigure` | カード詳細と能力の実演(4.0.4節) |
 | `CardPileViewer` | 墓地の中身(同じカードは1枚にまとめ枚数バッジ) |
 
 ## 4.0.1 寸法と描画
@@ -92,7 +92,7 @@
 - **実演はカードごとではなく語彙ごとに台本(`Script` enum)を持つ**。`show_card()` が「named/plain キーワード → `ON_FLIP` → `effects` の `EffectType`」の順に並びを組み、能力の無いカードには基本の砂の動き。`show_demo()` は語を直接指定(辞書用)
 - **台本は「何が起きるか」だけを書き、「いつ」は `_stage()` が entry の `trigger` から前へ付ける**(`stage["trigger_note"]`)。トリガーを持たない実演は `stage["note"]` へ完成した文。怠ると余砂のカードが「場に出したとき、…」と嘘を言う
 - 台本は「時刻 → 盤面の状態」の純粋な関数で、駒は `CardView` を流用せず `InkFigure`(紙のインクの図版。`UiPaint` と同じ static で第1引数に `CanvasItem`)で簡略に描く。**部品の組み合わせだけで図版を組める状態を保つ**。下の部屋の砂は台形(三角だと浮いて見える)。基本の砂は1粒ずつ落とし、省略は「…」
-- `CardEffectDemoKeyword` は扱わない語に空の Dictionary を返させる(既定の盤面を返すと台本が無いことに気づけない)
+- 台本の中身は種類ごとのクラスが持つ(`CardEffectDemoEffect` = エフェクト、`CardEffectDemoKeyword` = 常在キーワードと基本の砂、`CardEffectDemoGrave` = 墓地)。`CardEffectPreview._stage()` はこの順に問い合わせ、最後は `CardEffectDemoEffect.on_enemy_unit()` へ回す。各クラスは扱わない種類に空の Dictionary を返させる(既定の盤面を返すと台本が無いことに気づけない)
 
 ## 4.0.5 デッキ編集・デッキ一覧
 

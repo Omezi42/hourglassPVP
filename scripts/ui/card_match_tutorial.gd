@@ -98,6 +98,8 @@ var _callout_shown := false
 var _tick_pending: Dictionary = {}
 ## 帯の右上の「スキップ」(GameDesign.md 18章)。
 var _skip: TutorialSkip
+## 光らせる場所の計算。対局が始まる(`watch()`)まで無い。
+var _focus: TutorialFocus
 
 
 ## `watch()` より前に対局画面の参照が要る(`_build()` が帯へ「スキップ」を足すため)。
@@ -131,6 +133,7 @@ func watch(screen: CardMatchScreen, state: MatchState, my_side: int) -> void:
 	_callout_active = ""
 	_callout_shown = false
 	_tick_pending = {}
+	_focus = TutorialFocus.new(screen, state, my_side, _slot_of)
 	state.unit_played.connect(_on_unit_played)
 	state.attack_performed.connect(_on_attack_performed)
 	state.unit_flipped.connect(_on_unit_flipped)
@@ -362,7 +365,7 @@ func _complete_current_step() -> void:
 		_index += 1
 		_enter_step()
 		return
-	_fact = _fact_for(step)
+	_fact = TutorialFacts.for_step(step, _refs)
 	_showing_done = true
 	if kind == "attack":
 		_begin_attack_count()
@@ -572,59 +575,6 @@ func _on_unit_destroyed(side: int, slot: int, _card: CardData) -> void:
 	_tick_pending.erase(key)
 
 
-## 段階を終えたときの一言へ差し込む、いま自分の盤面で起きた実際の数値。
-func _fact_for(step: Dictionary) -> String:
-	match str(step.get("kind", "")):
-		"play":
-			return _fact_for_play(step)
-		"end_turn":
-			return _fact_for_end_turn(step)
-		"flip":
-			return _fact_for_flip(step)
-		"flip_right":
-			return _fact_for_flip_right(step)
-	return ""
-
-
-func _fact_for_play(step: Dictionary) -> String:
-	var played: CardInstance = _refs.get(str(step.get("ref", "")))
-	return "" if played == null else "マナを%dつかったよ。" % played.data.cost
-
-
-func _fact_for_end_turn(step: Dictionary) -> String:
-	var ref := str(step.get("ref", ""))
-	var ticked: CardInstance = _refs.get(ref) if not ref.is_empty() else null
-	if ticked == null:
-		return ""
-	return (
-		"%sの体力が%d→%d、攻撃力が%d→%dになったよ。"
-		% [
-			ticked.data.display_name,
-			ticked.health + 1,
-			ticked.health,
-			ticked.attack - 1,
-			ticked.attack,
-		]
-	)
-
-
-func _fact_for_flip(step: Dictionary) -> String:
-	var flipped: CardInstance = _refs.get(str(step.get("actor_ref", "")))
-	if flipped == null:
-		return ""
-	return (
-		"体力%d・攻撃力%dが入れ替わって、体力%d・攻撃力%dになったよ。"
-		% [flipped.attack, flipped.health, flipped.health, flipped.attack]
-	)
-
-
-func _fact_for_flip_right(step: Dictionary) -> String:
-	var target: CardInstance = _refs.get(str(step.get("target_ref", "")))
-	if target == null:
-		return ""
-	return "相手の「%s」の体力が%dになったよ。" % [target.data.display_name, target.health]
-
-
 # --- 見た目 -----------------------------------------------------------
 
 
@@ -772,108 +722,24 @@ func _draw() -> void:
 
 ## 光らせる場所。**説明を読んでいる間(「つぎへ」が出ている間)は光らせない**。
 func _focus_rects() -> Array[Rect2]:
-	var found: Array[Rect2] = []
-	if _screen == null or _state == null or _showing_done or not _callout_active.is_empty():
-		return found
+	if _focus == null or _showing_done or not _callout_active.is_empty():
+		return []
 	var step := _current_step()
 	if step.is_empty() or _state.is_match_over():
-		return found
+		return []
 	var side := str(step.get("side", ""))
 	if side == "info" or side == "b" or _state.current_turn != _my_side:
-		return found
-	match str(step.get("kind", "")):
-		"mulligan":
-			if _state.mulligan_pending and _screen._mulligan != null:
-				found.append(_screen._mulligan.confirm_rect())
-		"play":
-			found.append_array(_hand_rects_for(str(step.get("card_id", ""))))
-		"end_turn":
-			found.append(_screen._geometry.end_turn_button_rect())
-		"attack":
-			found.append_array(_attack_focus_rects(step))
-		"flip":
-			var slot := _slot_of(_my_side, str(step.get("actor_ref", "")))
-			if slot >= 0:
-				found.append(_slot_rect(_my_side, slot))
-		"flip_right":
-			# 反転権のボタンを押す前はボタンを、押した後は対象を囲む(攻撃の段と同じ2段階)。
-			if not _screen.selection.is_flip_right():
-				found.append(_screen._flip_right.button_rect())
-				return found
-			var wants_side := (
-				_my_side
-				if str(step.get("target_side", "")) == "own"
-				else MatchState.other_side(_my_side)
-			)
-			var slot2 := _slot_of(wants_side, str(step.get("target_ref", "")))
-			if slot2 >= 0:
-				found.append(_slot_rect(wants_side, slot2))
-	return found
+		return []
+	return _focus.action_rects(step)
 
 
-func _hand_rects_for(card_id: String) -> Array[Rect2]:
-	var found: Array[Rect2] = []
-	var hand: Array = _state.hand[_my_side]
-	for i in hand.size():
-		var card: CardData = hand[i]
-		if card.id == card_id and i < _screen._hand_views.size():
-			var view := _screen._hand_views[i]
-			found.append(Rect2(view.position, view.size))
-			break
-	return found
-
-
-## 攻撃の段は2段階で囲む。自分の駒を選ぶ前は台本の駒を、選んだ後はその駒で殴る相手
-## (駒か本体のHP帯)を囲み、次に押す場所へ視線を運ぶ(GameDesign.md 18章)。
-func _attack_focus_rects(step: Dictionary) -> Array[Rect2]:
-	var found: Array[Rect2] = []
-	var actor_slot := _slot_of(_my_side, str(step.get("actor_ref", "")))
-	if actor_slot < 0:
-		return found
-	var chosen: CardMatchSelection = _screen.selection
-	if chosen.is_board_selection() and chosen.slot == actor_slot:
-		if str(step.get("target_kind", "")) == "face":
-			found.append(_screen._geometry.hp_bar_global_rect(MatchState.other_side(_my_side)))
-		else:
-			var target_slot := _slot_of(
-				MatchState.other_side(_my_side), str(step.get("target_ref", ""))
-			)
-			if target_slot >= 0:
-				found.append(_slot_rect(MatchState.other_side(_my_side), target_slot))
-		return found
-	found.append(_slot_rect(_my_side, actor_slot))
-	return found
-
-
-## いま話題にしている数字(GameDesign.md 18章「数字の光」)。「つぎへ」表示中
-## (段階を終えたときの説明)か、読むだけの段のときだけ光らせる。
+## 話題にしている数字は、「つぎへ」表示中(段階を終えたときの説明)か、読むだけの段のときだけ光らせる。
 func _number_rects() -> Array[Rect2]:
-	var found: Array[Rect2] = []
-	if _screen == null or _state == null or not _callout_active.is_empty():
-		return found
+	if _focus == null or not _callout_active.is_empty():
+		return []
 	var step := _current_step()
 	if step.is_empty():
-		return found
-	var topic := str(step.get("topic", ""))
-	if topic.is_empty():
-		return found
-	var is_info := str(step.get("side", "")) == "info"
-	if not is_info and not _showing_done:
-		return found
-	match topic:
-		"mana":
-			found.append(_screen._geometry.mana_badge_rect(_my_side))
-		"stats":
-			var slot := _slot_of(_my_side, str(step.get("ref", "")))
-			if slot >= 0:
-				found.append_array(_screen._geometry.unit_stat_rects(_my_side, slot))
-		"foe_hp":
-			found.append(_screen._geometry.hp_bar_global_rect(MatchState.other_side(_my_side)))
-		"flip_right":
-			found.append(_screen._geometry.flip_right_gauge_rect())
-	return found
-
-
-func _slot_rect(side: int, slot: int) -> Rect2:
-	var view := _screen.view_at(side, slot)
-	return Rect2(view.position, view.size)
+		return []
+	if str(step.get("side", "")) != "info" and not _showing_done:
+		return []
+	return _focus.number_rects(step)

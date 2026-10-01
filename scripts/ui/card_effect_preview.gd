@@ -73,19 +73,6 @@ const DEFAULT_DURATION := 4.4
 ## 阻まれた攻撃(守護)。効いた攻撃の朱と区別するため、くすんだ色で引く。
 const BLOCKED_COLOR := Color(0.52, 0.47, 0.38, 0.9)
 
-## 台本 → それを組み立てるメソッド。いずれも (進捗, 値) を受ける形へ揃えてある。
-const STAGE_METHODS := {
-	Demo.FX_DRAW: "_stage_draw",
-	Demo.FX_HEAL_PLAYER: "_stage_heal",
-	Demo.FX_DAMAGE_PLAYER: "_stage_damage_player",
-	Demo.FX_DAMAGE_PLAYER_PER_ENEMY_UNIT: "_stage_damage_per_unit",
-	Demo.FX_ADD_ATTACK: "_stage_add_attack",
-	Demo.FX_SUMMON: "_stage_summon",
-	Demo.FX_GRANT_KEYWORD: "_stage_grant_keyword",
-	Demo.FX_SILENCE: "_stage_silence",
-	Demo.FX_INVERT_HP: "_stage_invert_hp",
-}
-
 var _font: Font
 ## 実演の並び。1要素 = {"demo": int, "value": int, "all": bool}
 var _entries: Array[Dictionary] = []
@@ -255,7 +242,8 @@ static func _entry_for_effect(effect: CardEffectData) -> Dictionary:
 
 
 ## 台本と進捗(0.0〜1.0)から、その瞬間の盤面を組み立てる。
-## 分岐は対応表に持たせる(台本が増えても分岐の列が伸びないようにするため)。
+## 台本の中身は種類ごとのクラスが持ち、扱わない種類には空を返させて次のクラスへ回す
+## (既定の盤面を返させると、台本が無いことに気づけないまま何かが動いて見える)。
 func _stage(entry: Dictionary, t: float) -> Dictionary:
 	var demo := int(entry["demo"])
 	var value: int = entry.get("value", 1)
@@ -264,7 +252,7 @@ func _stage(entry: Dictionary, t: float) -> Dictionary:
 	if demo == Demo.FX_ADD_TOTAL:
 		# 「反転:総量+1」(グロウ)だけが実際に反転を伴う。設置/落砂/余砂の総量+効果は
 		# 反転しないため、台本の中で勝手に駒を裏返さない(トリガーで判定する)。
-		stage = _stage_add_total(
+		stage = CardEffectDemoEffect.add_total(
 			t, value, trigger == CardEnums.Trigger.ON_FLIP, entry.get("all", false)
 		)
 	elif (
@@ -272,23 +260,20 @@ func _stage(entry: Dictionary, t: float) -> Dictionary:
 		and (demo == Demo.FX_SWAP_STATS or demo == Demo.FX_DROP_SAND or demo == Demo.FX_RAISE_SAND)
 	):
 		# 味方を対象にする反転・砂落としは、相手への攻撃を挟まない
-		# (下の `_stage_on_enemy_unit` は「攻撃して当てる」演出であり、味方には使えない)。
+		# (`CardEffectDemoEffect.on_enemy_unit()` は「攻撃して当てる」演出であり、味方には使えない)。
 		# 砂術は盤面に自分自身を持たないため「他の」を付けない(GameDesign.md 6章の
 		# 自己除外は、効果を持つ砂時計自身を選べないという駒の制約であり砂術には無い)。
-		stage = _stage_on_ally_unit(
+		stage = CardEffectDemoEffect.on_ally_unit(
 			t, demo, value, entry.get("all", false), not entry.get("spell", false)
 		)
-	elif STAGE_METHODS.has(demo):
-		stage = call(STAGE_METHODS[demo], t, value)
 	else:
-		# 常在キーワードと基本の砂の台本は `CardEffectDemoKeyword` が持つ。扱わない語には
-		# 空を返させ、その場合だけ「相手の駒へ効く効果」の台本へ回す(既定の盤面を
-		# 返させると、台本が無いことに気づけないまま何かが動いて見える)。
+		stage = CardEffectDemoEffect.stage(demo, t, value)
+	if stage.is_empty():
 		stage = CardEffectDemoKeyword.stage(demo, t)
-		if stage.is_empty():
-			stage = CardEffectDemoGrave.stage(demo, t, entry.get("self", false))
-		if stage.is_empty():
-			stage = _stage_on_enemy_unit(t, demo, value, entry.get("all", false))
+	if stage.is_empty():
+		stage = CardEffectDemoGrave.stage(demo, t, entry.get("self", false))
+	if stage.is_empty():
+		stage = CardEffectDemoEffect.on_enemy_unit(t, demo, value, entry.get("all", false))
 	var trigger_note: String = stage.get("trigger_note", "")
 	if not trigger_note.is_empty():
 		# 砂術は「いつ」を持たない(効果は撃った瞬間に1度だけ起きる。GameDesign.md 6章)。
@@ -315,322 +300,6 @@ static func _trigger_phrase(trigger: int) -> String:
 		CardEnums.Trigger.ON_ALLY_DEATH:
 			return "自分の他の砂時計が壊れたとき"
 	return "場に出したとき"
-
-
-## 総量が増える。**「反転:総量+1」(グロウ)のときだけ駒が実際に裏返る**
-## (`show_flip`)。設置・落砂・余砂で載る同じ効果(フォージ・アンカー・ウェル・ハスク等)は
-## 反転を伴わないため、そこで駒を裏返すと起きていないことを起きたと見せることになる。
-func _stage_add_total(t: float, value: int, show_flip: bool, all: bool) -> Dictionary:
-	var stage := CardEffectStage.empty_stage()
-	var pieces: Array = [_add_total_piece(t, value, show_flip)]
-	if all:
-		pieces.append(_add_total_piece(t, value, show_flip))
-	var scope := "自分の砂時計すべて" if all else "この砂時計"
-	stage["trigger_note"] = "%sの総量が%d増える" % [scope, value]
-	if t >= 0.68:
-		var pops: Array = []
-		for i in pieces.size():
-			pops.append(
-				CardEffectStage.pop(
-					"own", i, "+%d" % value, UiPalette.GLOW_AMBER, CardEffectStage.seg(t, 0.68, 1.0)
-				)
-			)
-		stage["pops"] = pops
-	stage["own"] = pieces
-	return stage
-
-
-static func _add_total_piece(t: float, value: int, show_flip: bool) -> Dictionary:
-	var piece: Dictionary
-	if show_flip:
-		var flip := CardEffectStage.seg(t, 0.25, 0.55)
-		piece = CardEffectStage.piece(2, 3, 5) if flip < 0.5 else CardEffectStage.piece(3, 2, 5)
-		piece["flip"] = flip if t >= 0.25 and t <= 0.6 else -1.0
-	else:
-		piece = CardEffectStage.piece(3, 2, 5)
-	if t >= 0.68:
-		piece["h"] = 3 + value
-		piece["total"] = 5 + value
-	return piece
-
-
-## 攻撃力だけが増える。**体力が変わらないことが要点**なので、上の部屋は動かさない。
-func _stage_add_attack(t: float, value: int) -> Dictionary:
-	var stage := CardEffectStage.empty_stage()
-	var own := CardEffectStage.piece(3, 2, 5)
-	own["fade"] = CardEffectStage.seg(t, 0.0, 0.15)
-	stage["trigger_note"] = "攻撃力が%d増える" % value
-	if t >= 0.45:
-		own["a"] = 2 + value
-		own["total"] = 5 + value
-		stage["pops"] = [
-			CardEffectStage.pop(
-				"own", 0, "+%d" % value, UiPalette.GLOW_AMBER, CardEffectStage.seg(t, 0.45, 0.9)
-			)
-		]
-	stage["own"] = [own]
-	return stage
-
-
-## 空き枠へ砂時計が1体現れる。**空きが無ければ何も起きない**ことは文で補う。
-func _stage_summon(_t: float, _value: int) -> Dictionary:
-	var stage := CardEffectStage.empty_stage()
-	var own := CardEffectStage.piece(5, 0, 5)
-	own["fade"] = CardEffectStage.seg(_t, 0.0, 0.15)
-	stage["trigger_note"] = "空いた枠に砂時計が1体現れる"
-	var pieces: Array = [own]
-	if _t >= 0.4:
-		var token := CardEffectStage.piece(2, 0, 2)
-		token["fade"] = CardEffectStage.seg(_t, 0.4, 0.7)
-		pieces.append(token)
-	stage["own"] = pieces
-	return stage
-
-
-## 味方1体へキーワードを与える。守護なら台座の輪、硝子なら膜として現れる。
-func _stage_grant_keyword(t: float, keyword: int) -> Dictionary:
-	var stage := CardEffectStage.empty_stage()
-	var own := CardEffectStage.piece(5, 0, 5)
-	own["fade"] = CardEffectStage.seg(t, 0.0, 0.15)
-	var ally := CardEffectStage.piece(4, 1, 5)
-	ally["fade"] = CardEffectStage.seg(t, 0.0, 0.15)
-	var word := CardEnums.keyword_name(keyword)
-	if word.is_empty():
-		word = CardEnums.keyword_short_text(keyword)
-	stage["trigger_note"] = "自分の砂時計1体が【%s】を持つ" % word
-	if t >= 0.3:
-		stage["beams"] = [
-			CardEffectStage.beam(
-				["own", 0], ["own", 1], CardEffectStage.seg(t, 0.3, 0.6), false, InkFigure.GREEN
-			)
-		]
-	if t >= 0.6:
-		ally["guard"] = keyword == CardEnums.Keyword.GUARD
-		ally["glass"] = keyword == CardEnums.Keyword.GLASS
-		stage["pops"] = [
-			CardEffectStage.pop(
-				"own", 1, word, UiPalette.GLOW_AMBER, CardEffectStage.seg(t, 0.6, 1.0)
-			)
-		]
-	stage["own"] = [own, ally]
-	return stage
-
-
-## 相手1体の効果とキーワードを消す。守護の輪と硝子の膜が剥がれることで示す。
-func _stage_silence(t: float, _value: int) -> Dictionary:
-	var stage := CardEffectStage.empty_stage()
-	var own := CardEffectStage.piece(5, 0, 5)
-	own["fade"] = CardEffectStage.seg(t, 0.0, 0.15)
-	var foe := CardEffectStage.piece(4, 1, 5)
-	foe["fade"] = CardEffectStage.seg(t, 0.0, 0.15)
-	foe["guard"] = true
-	foe["glass"] = true
-	stage["trigger_note"] = "相手の砂時計1体のキーワードと効果が消える"
-	if t >= 0.3:
-		stage["beams"] = [
-			CardEffectStage.beam(["own", 0], ["foe", 0], CardEffectStage.seg(t, 0.3, 0.6))
-		]
-	if t >= 0.6:
-		foe["guard"] = false
-		foe["glass"] = false
-		stage["pops"] = [
-			CardEffectStage.pop("foe", 0, "効果なし", BLOCKED_COLOR, CardEffectStage.seg(t, 0.6, 1.0))
-		]
-	stage["own"] = [own]
-	stage["foe"] = [foe]
-	return stage
-
-
-func _stage_draw(t: float, value: int) -> Dictionary:
-	var stage := CardEffectStage.empty_stage()
-	var own := CardEffectStage.piece(5, 0, 5)
-	own["fade"] = CardEffectStage.seg(t, 0.0, 0.15)
-	stage["trigger_note"] = "カードを%d枚引く" % value
-	stage["draw_card"] = CardEffectStage.seg(t, 0.35, 0.85)
-	stage["own"] = [own]
-	return stage
-
-
-func _stage_heal(t: float, value: int) -> Dictionary:
-	var stage := CardEffectStage.empty_stage()
-	var own := CardEffectStage.piece(5, 0, 5)
-	own["fade"] = CardEffectStage.seg(t, 0.0, 0.15)
-	stage["own_hp"] = 0.6
-	stage["trigger_note"] = "自分のHPを%d回復する" % value
-	if t >= 0.35:
-		stage["beams"] = [
-			CardEffectStage.beam(
-				["own", 0],
-				["own_hp", 0],
-				CardEffectStage.seg(t, 0.35, 0.65),
-				false,
-				UiPalette.GLOW_AMBER
-			)
-		]
-	if t >= 0.65:
-		stage["own_hp"] = 0.6 + (float(value) / HP_MAX) * CardEffectStage.seg(t, 0.65, 0.9)
-		stage["pops"] = [
-			CardEffectStage.pop(
-				"own_hp", 0, "+%d" % value, UiPalette.GLOW_AMBER, CardEffectStage.seg(t, 0.65, 1.0)
-			)
-		]
-	stage["own"] = [own]
-	return stage
-
-
-## 残りHPと失ったHPを入れ替える。**深く削られているほど大きく戻る**ことを見せたいので、
-## 少ない側から多い側へ動かす形にしている。
-func _stage_invert_hp(t: float, _value: int) -> Dictionary:
-	var stage := CardEffectStage.empty_stage()
-	var own := CardEffectStage.piece(5, 0, 5)
-	own["fade"] = CardEffectStage.seg(t, 0.0, 0.15)
-	stage["own_hp"] = 0.2
-	stage["trigger_note"] = "自分の残りHPと失ったHPが入れ替わる"
-	if t >= 0.3:
-		stage["beams"] = [
-			CardEffectStage.beam(
-				["own", 0],
-				["own_hp", 0],
-				CardEffectStage.seg(t, 0.3, 0.6),
-				false,
-				UiPalette.GLOW_AMBER
-			)
-		]
-	if t >= 0.6:
-		stage["own_hp"] = 0.2 + 0.6 * CardEffectStage.seg(t, 0.6, 0.9)
-		stage["pops"] = [
-			CardEffectStage.pop(
-				"own_hp", 0, "反転", UiPalette.GLOW_AMBER, CardEffectStage.seg(t, 0.6, 1.0)
-			)
-		]
-	stage["own"] = [own]
-	return stage
-
-
-func _stage_damage_player(t: float, value: int) -> Dictionary:
-	var stage := CardEffectStage.empty_stage()
-	var own := CardEffectStage.piece(6, 0, 6)
-	own["fade"] = CardEffectStage.seg(t, 0.0, 0.15)
-	stage["trigger_note"] = "相手プレイヤーへ%dダメージ" % value
-	if t >= 0.3:
-		stage["beams"] = [
-			CardEffectStage.beam(["own", 0], ["foe_hp", 0], CardEffectStage.seg(t, 0.3, 0.62))
-		]
-	if t >= 0.62:
-		stage["foe_hp"] = 1.0 - float(value) / HP_MAX
-		stage["pops"] = [
-			CardEffectStage.pop(
-				"foe_hp", 0, "-%d" % value, InkFigure.RED, CardEffectStage.seg(t, 0.62, 1.0)
-			)
-		]
-	stage["own"] = [own]
-	stage["foe"] = [CardEffectStage.piece(4, 1, 5)]
-	return stage
-
-
-func _stage_damage_per_unit(t: float, value: int) -> Dictionary:
-	var stage := CardEffectStage.empty_stage()
-	var own := CardEffectStage.piece(6, 0, 6)
-	own["fade"] = CardEffectStage.seg(t, 0.0, 0.15)
-	var foes: Array = [CardEffectStage.piece(4, 1, 5), CardEffectStage.piece(3, 2, 5)]
-	var total: int = foes.size() * value
-	stage["note"] = "相手の砂時計の数 × %d ダメージを相手プレイヤーへ" % value
-	if t >= 0.3:
-		stage["beams"] = [
-			CardEffectStage.beam(["foe", 0], ["foe_hp", 0], CardEffectStage.seg(t, 0.3, 0.6)),
-			CardEffectStage.beam(["foe", 1], ["foe_hp", 0], CardEffectStage.seg(t, 0.38, 0.68)),
-		]
-	if t >= 0.68:
-		stage["foe_hp"] = 1.0 - float(total) / HP_MAX
-		var text := "-%d" % total
-		stage["pops"] = [
-			CardEffectStage.pop("foe_hp", 0, text, InkFigure.RED, CardEffectStage.seg(t, 0.68, 1.0))
-		]
-	stage["own"] = [own]
-	stage["foe"] = foes
-	return stage
-
-
-## 相手の砂時計を対象に取る効果(ダメージ / 破壊 / 反転 / 砂を落とす)。
-## 全体を対象にするものは的を2体にして、同じ動きを並べて見せる。
-func _stage_on_enemy_unit(t: float, demo: int, value: int, all: bool) -> Dictionary:
-	var stage := CardEffectStage.empty_stage()
-	var own := CardEffectStage.piece(6, 0, 6)
-	own["fade"] = CardEffectStage.seg(t, 0.0, 0.15)
-	# 砂が上へ戻る効果は攻撃力までしか戻せないため、戻す余地のある老いた的にする。
-	var aged := demo == Demo.FX_RAISE_SAND or demo == Demo.FX_DESTROY_AGED
-	var foes: Array = [CardEffectStage.piece(2, 4, 6) if aged else CardEffectStage.piece(5, 1, 6)]
-	if all:
-		foes.append(CardEffectStage.piece(3, 3, 6) if aged else CardEffectStage.piece(4, 2, 6))
-	# 条件付き破壊は、条件を満たさない若い駒を並べて「効かない」ことまで見せる。
-	if demo == Demo.FX_DESTROY_AGED:
-		foes.append(CardEffectStage.piece(5, 1, 6))
-	stage["trigger_note"] = CardEffectDemoEnemy.note(demo, value, all)
-	# 条件付き破壊の若い駒(末尾)は対象に取らない。
-	var struck: int = foes.size() - 1 if demo == Demo.FX_DESTROY_AGED else foes.size()
-	# 的が砕けた後も矢印が残らないよう、当たったところで消す。
-	if t >= 0.3 and t < 0.8:
-		var beams: Array = []
-		for i in struck:
-			beams.append(
-				CardEffectStage.beam(
-					["own", 0], ["foe", i], CardEffectStage.seg(t, 0.3 + 0.06 * i, 0.6 + 0.06 * i)
-				)
-			)
-		stage["beams"] = beams
-	if t >= 0.62:
-		var landed := CardEffectStage.seg(t, 0.62, 0.85)
-		for i in struck:
-			CardEffectDemoEnemy.apply(foes[i], demo, value, landed)
-	stage["own"] = [own]
-	stage["foe"] = foes
-	return stage
-
-
-## 味方の砂時計を対象に取る効果(反転 / 砂を落とす)。**攻撃ではないため相手の場は
-## 一切出さず**、自分の場の中で「持ち主 → 対象の1体」へ光の筋を送るだけにする
-## (`_stage_grant_keyword` と同じ語彙)。以前はここも `_stage_on_enemy_unit` を
-## 通していたため、味方を対象にするピボット・逆さ砂・ラトル・ドリップ・ひとつまみが
-## 「相手を攻撃してその駒を操作する」という誤った演出になっていた。
-func _stage_on_ally_unit(
-	t: float, demo: int, value: int, all: bool, exclude_self: bool
-) -> Dictionary:
-	var stage := CardEffectStage.empty_stage()
-	var caster := CardEffectStage.piece(6, 0, 6)
-	caster["fade"] = CardEffectStage.seg(t, 0.0, 0.15)
-	var allies: Array = [CardEffectStage.piece(3, 2, 5)]
-	if all:
-		allies.append(CardEffectStage.piece(2, 3, 5))
-	var scope := "自分の砂時計すべて"
-	if not all:
-		scope = "自分の他の砂時計1体" if exclude_self else "自分の砂時計1体"
-	if demo == Demo.FX_SWAP_STATS:
-		stage["trigger_note"] = "%sの体力と攻撃力を入れ替える" % scope
-	elif demo == Demo.FX_RAISE_SAND:
-		stage["trigger_note"] = "%sの砂が%d粒上へ戻る(攻撃力-%d / 体力+%d)" % [scope, value, value, value]
-	else:
-		stage["trigger_note"] = "%sの砂が%d粒落ちる" % [scope, value]
-	if t >= 0.3 and t < 0.8:
-		var beams: Array = []
-		for i in allies.size():
-			beams.append(
-				CardEffectStage.beam(
-					["own", 0],
-					["own", i + 1],
-					CardEffectStage.seg(t, 0.3 + 0.06 * i, 0.6 + 0.06 * i),
-					false,
-					InkFigure.GREEN
-				)
-			)
-		stage["beams"] = beams
-	if t >= 0.62:
-		var landed := CardEffectStage.seg(t, 0.62, 0.85)
-		for ally in allies:
-			CardEffectDemoEnemy.apply(ally, demo, value, landed)
-	var pieces: Array = [caster]
-	pieces.append_array(allies)
-	stage["own"] = pieces
-	return stage
 
 
 # --- 描画 ---------------------------------------------------------------
