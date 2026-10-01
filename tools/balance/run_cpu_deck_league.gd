@@ -8,10 +8,19 @@ extends SceneTree
 ##       games=100 seed=42
 ##
 ## `trial=id,id,...`(15種・各2枚)を与えると、表を変えずにその候補を8つとランダム混成へぶつける。
+## `levels=expert,normal` を与えると、デッキの強さではなく思考レベルどうしを比べる
+## (左の思考レベルがデッキを持つ全組・鏡写しを含め、その勝率を出す。先後は交互)。
 
 const COPY_LIMIT := 2
+const LEVELS := {
+	"beginner": CardCpuStrategy.Difficulty.BEGINNER,
+	"normal": CardCpuStrategy.Difficulty.NORMAL,
+	"expert": CardCpuStrategy.Difficulty.EXPERT,
+}
 
 var _rng := RandomNumberGenerator.new()
+var _level_left: CardCpuStrategy.Difficulty = CardCpuStrategy.Difficulty.NORMAL
+var _level_right: CardCpuStrategy.Difficulty = CardCpuStrategy.Difficulty.NORMAL
 
 
 func _init() -> void:
@@ -22,6 +31,10 @@ func _run() -> void:
 	var args := _parse_args()
 	var games: int = int(args.get("games", "100"))
 	_rng.seed = int(args.get("seed", "42"))
+	if args.has("levels"):
+		_run_levels(str(args["levels"]).split(","), games)
+		quit()
+		return
 	if args.has("trial"):
 		_run_trial(str(args["trial"]).split(","), games)
 		quit()
@@ -117,6 +130,26 @@ func _run_trial(card_ids: PackedStringArray, games: int) -> void:
 	print("候補 対ランダム %5.1f%%" % _pct([w, d]))
 
 
+func _run_levels(names: PackedStringArray, games: int) -> void:
+	if names.size() != 2 or not LEVELS.has(names[0]) or not LEVELS.has(names[1]):
+		printerr("levels は beginner/normal/expert から2つ")
+		return
+	_level_left = LEVELS[names[0]]
+	_level_right = LEVELS[names[1]]
+	var ids := CardCpuDecks.deck_ids()
+	var total := [0, 0]
+	for a in ids:
+		var deck_total := [0, 0]
+		for b in ids:
+			var rate := _rate(CardCpuDecks.deck_of(a), CardCpuDecks.deck_of(b), games)
+			for k in 2:
+				deck_total[k] += rate[k]
+		for k in 2:
+			total[k] += deck_total[k]
+		print("%s %-6s を持つ組 %5.1f%%" % [names[0], CardCpuDecks.name_of(a), _pct(deck_total)])
+	print("%s vs %s: %5.1f%% (%d局)" % [names[0], names[1], _pct(total), total[1]])
+
+
 func _rate(left: Array, right: Array, games: int) -> Array:
 	var w := 0
 	var d := 0
@@ -137,6 +170,8 @@ func _play(deck_left: Array, deck_right: Array, left_first: bool) -> int:
 	var state := MatchState.new()
 	var cpu_a := CardCpuStrategy.new()
 	var cpu_b := CardCpuStrategy.new()
+	cpu_a.difficulty = _level_left if left_first else _level_right
+	cpu_b.difficulty = _level_right if left_first else _level_left
 	var deck_a := deck_left if left_first else deck_right
 	var deck_b := deck_right if left_first else deck_left
 	state.start_match(deck_a, deck_b, MatchState.Side.A, _rng.randi_range(1, 1 << 30))
