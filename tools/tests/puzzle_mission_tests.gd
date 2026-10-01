@@ -13,6 +13,7 @@ func run(assert_true: Callable) -> void:
 	_test_every_stage_is_solvable()
 	_test_missions_are_stable_for_a_day()
 	_test_progress_needs_ten_moves()
+	_test_flip_right_counts_as_flip()
 	_test_claim_needs_completion()
 
 
@@ -89,6 +90,20 @@ func _test_progress_needs_ten_moves() -> void:
 	DailyMissionService.watch(_dummy_state(), MatchState.Side.A)
 	DailyMissionService.commit("uid-a", true, 10)
 	_assert.call(_progress("uid-a", id) == 1, "a full match must count once")
+
+
+## 反転権も「反転」に数え、使った側だけが進む(GameDesign.md 23章)。
+func _test_flip_right_counts_as_flip() -> void:
+	DailyMissionService.reset_for_test()
+	var id := _mission_id_for(DailyMissionData.Metric.FLIP)
+	if id.is_empty():
+		return
+	var state := _dummy_state()
+	DailyMissionService.watch(state, MatchState.Side.A)
+	state.flip_right_used.emit(MatchState.Side.A, MatchState.Side.B, 0)
+	state.flip_right_used.emit(MatchState.Side.B, MatchState.Side.A, 0)
+	DailyMissionService.commit("uid-a", true, 10)
+	_assert.call(_progress("uid-a", id) == 1, "only my flip right should count")
 
 
 ## 達成していない課題は受け取れない。

@@ -11,7 +11,7 @@
 **`Metric` の並びは保存データではない**(進捗は課題の id をキーに持つ)。
 
 **進捗は `MatchState` のシグナルだけで数える。**`DailyMissionService.watch(state, my_side)` を
-`_begin_state()` から張り、`unit_flipped` / `spell_cast` / `unit_played` / `attack_performed` と、
+`_begin_state()` から張り、`unit_flipped` と `flip_right_used`(使った側 `actor_side` で数える)/ `spell_cast` / `unit_played` / `attack_performed` と、
 落砂のために足した **`trigger_fired(side, trigger)`** を数える。`trigger_fired` は
 `MatchState._fire()`(効果の解決を1箇所へ通す私設のヘルパ)が、**効果を持つ駒のときだけ**出す。
 呼び出し側へ数える処理を配ると、トリガーを足すたびに書き漏らす。

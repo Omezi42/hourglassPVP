@@ -78,6 +78,7 @@ static func watch(state: MatchState, my_side: int) -> void:
 	_session = {"side": my_side}
 	state.trigger_fired.connect(_on_trigger)
 	state.unit_flipped.connect(_on_flip)
+	state.flip_right_used.connect(_on_flip_right)
 	state.spell_cast.connect(_on_cast)
 	state.unit_played.connect(_on_played)
 	state.attack_performed.connect(_on_attack)
@@ -117,6 +118,10 @@ static func _on_trigger(side: int, trigger: int) -> void:
 
 static func _on_flip(side: int, _slot: int) -> void:
 	_bump(side, DailyMissionData.Metric.FLIP)
+
+
+static func _on_flip_right(actor_side: int, _target_side: int, _slot: int) -> void:
+	_bump(actor_side, DailyMissionData.Metric.FLIP)
 
 
 static func _on_cast(side: int, _card: CardData) -> void:
