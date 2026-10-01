@@ -34,10 +34,9 @@ const RECOVER_VALUE := 3.0
 ## 反転権(GameDesign.md 2章)は対局に2〜3回しか無い希少な資源のため、
 ## 通常の反転よりゲインの下限を高く取り、僅かな得のために使い切らせない。
 const FLIP_RIGHT_MIN_GAIN := 3.0
-## 上級:本体を殴る前に、相手の場に残る攻撃可能な駒の合計攻撃力が
-## 自分の残りHPの何割を超えたら特攻を割り引くか。
-const EXPERT_FACE_RISK_RATIO := 0.7
-const EXPERT_FACE_DISCOUNT := 0.5
+## 上級:本体を殴る価値に掛ける倍率。`FACE_WEIGHT` はバランス指標に合わせた値で、
+## 勝ちに対しては盤面を取りすぎる。対中級の勝率が頭打ちになる手前の値(2.5で67%、3.5で70%、10で72%)。
+const EXPERT_FACE_WEIGHT_RATIO := 3.5
 ## 上級:カードを出した後に残るマナが、手札の中でいちばん軽いカードのコストにも
 ## 届かない(=そのターンもう何も出せない)場合に掛けるペナルティ。
 const EXPERT_MANA_LEFTOVER_PENALTY := 0.8
@@ -659,25 +658,39 @@ func _strongest_ally(state: MatchState, side: int) -> int:
 # --- 攻撃する -----------------------------------------------------------
 
 
-## 上級:相手の場に残る合計攻撃力が自分の残りHPに対して大きいときは、
-## 本体特攻の価値を割り引く。次の相手の手番で受け返す被害を、探索せずに
-## 「いまの盤面の合計」で近似する(GameDesign.md 13章)。トドメの一撃(上の早期returnの経路)
-## には掛からない。
-func _expert_face_caution(state: MatchState, side: int) -> float:
-	if difficulty != Difficulty.EXPERT:
-		return 1.0
-	if state.hp[side] <= 0:
-		return 1.0
-	var foe_side := MatchState.other_side(side)
-	var foe_total_attack := 0
-	for unit in state.units(foe_side):
-		foe_total_attack += unit.attack
-	if float(foe_total_attack) > float(state.hp[side]) * EXPERT_FACE_RISK_RATIO:
-		return EXPERT_FACE_DISCOUNT
-	return 1.0
+## 本体を殴る1点の価値。上級は中級より攻め急ぐ(GameDesign.md 13章)。
+func _face_weight() -> float:
+	if difficulty == Difficulty.EXPERT:
+		return FACE_WEIGHT * EXPERT_FACE_WEIGHT_RATIO
+	return FACE_WEIGHT
+
+
+## 上級:攻撃できる駒の攻撃力の合計で相手の本体を削りきれるなら、1体目を本体へ向ける。
+## 1手ごとに読み直すため、残りの駒も続けて本体を殴る(GameDesign.md 13章)。
+func _expert_lethal_attack(state: MatchState, side: int) -> Dictionary:
+	if difficulty != Difficulty.EXPERT or not state.can_attack_player(side):
+		return {}
+	var total := 0
+	var first := -1
+	for slot in MatchState.BOARD_SIZE:
+		var unit: CardInstance = state.board[side][slot]
+		if unit == null or not unit.can_attack() or unit.attack <= 0:
+			continue
+		var power := unit.attack
+		if unit.has_keyword(CardEnums.Keyword.DAMAGE_BOOST):
+			power *= 2
+		total += power
+		if first < 0:
+			first = slot
+	if first >= 0 and total >= state.hp[MatchState.other_side(side)]:
+		return MatchAction.attack(side, first, -1)
+	return {}
 
 
 func _choose_attack(state: MatchState, side: int) -> Dictionary:
+	var lethal := _expert_lethal_attack(state, side)
+	if not lethal.is_empty():
+		return lethal
 	var foe_side := MatchState.other_side(side)
 	var best: Dictionary = {}
 	var best_value := 0.0
@@ -689,7 +702,7 @@ func _choose_attack(state: MatchState, side: int) -> Dictionary:
 		if state.can_attack_player(side) and attacker.attack >= state.hp[foe_side]:
 			return MatchAction.attack(side, slot, -1)
 		if state.can_attack_player(side):
-			var face_value := attacker.attack * FACE_WEIGHT * _expert_face_caution(state, side)
+			var face_value := attacker.attack * _face_weight()
 			if face_value > best_value:
 				best_value = face_value
 				best = MatchAction.attack(side, slot, -1)
