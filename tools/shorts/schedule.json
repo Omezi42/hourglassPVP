@@ -173,7 +173,10 @@
 		"date": "2026-10-05",
 		"kind": "puzzle",
 		"id": "15",
-		"label": "とどめ問題 #9"
+		"label": "とどめ問題 #9",
+		"reserved": [
+			"x"
+		]
 	},
 	{
 		"date": "2026-10-05",
@@ -189,7 +192,10 @@
 		"date": "2026-10-06",
 		"kind": "puzzle",
 		"id": "16",
-		"label": "とどめ問題 #10"
+		"label": "とどめ問題 #10",
+		"reserved": [
+			"x"
+		]
 	},
 	{
 		"date": "2026-10-06",
@@ -205,19 +211,28 @@
 		"date": "2026-10-07",
 		"kind": "puzzle",
 		"id": "4",
-		"label": "とどめ問題 #11"
+		"label": "とどめ問題 #11",
+		"reserved": [
+			"x"
+		]
 	},
 	{
 		"date": "2026-10-07",
 		"kind": "card",
 		"id": "vamp",
-		"label": "ヴァンプ"
+		"label": "ヴァンプ",
+		"reserved": [
+			"x"
+		]
 	},
 	{
 		"date": "2026-10-08",
 		"kind": "puzzle",
 		"id": "17",
-		"label": "とどめ問題 #12"
+		"label": "とどめ問題 #12",
+		"reserved": [
+			"x"
+		]
 	},
 	{
 		"date": "2026-10-08",
@@ -233,25 +248,37 @@
 		"date": "2026-10-09",
 		"kind": "puzzle",
 		"id": "18",
-		"label": "とどめ問題 #13"
+		"label": "とどめ問題 #13",
+		"reserved": [
+			"x"
+		]
 	},
 	{
 		"date": "2026-10-09",
 		"kind": "card",
 		"id": "drill",
-		"label": "ドリル"
+		"label": "ドリル",
+		"reserved": [
+			"x"
+		]
 	},
 	{
 		"date": "2026-10-10",
 		"kind": "puzzle",
 		"id": "5",
-		"label": "とどめ問題 #14"
+		"label": "とどめ問題 #14",
+		"reserved": [
+			"x"
+		]
 	},
 	{
 		"date": "2026-10-10",
 		"kind": "card",
 		"id": "tick",
-		"label": "ティック"
+		"label": "ティック",
+		"reserved": [
+			"x"
+		]
 	},
 	{
 		"date": "2026-10-11",
