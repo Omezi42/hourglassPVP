@@ -10,6 +10,9 @@ const COLLECTION := "players"
 ## 残高の加算が他のタブと競合したときに読み直して再試行する回数。
 const GRANT_RETRY := 3
 const DISPLAY_NAME_MAX_LENGTH := 10
+## `get_document_meta()` の応答コードのうち、書き込みの土台にしてよいもの(無い=まだ作られていない)。
+const READ_OK := 200
+const READ_MISSING := 404
 
 ## 直近に読み込んだプロフィール。キーは `players/{uid}` のフィールドと同じ。
 static var _profile: Dictionary = _empty_profile()
@@ -233,6 +236,8 @@ static func purchase(
 
 	for _attempt in range(GRANT_RETRY):
 		var doc: Dictionary = await client.get_document_meta(_path(uid))
+		if not read_succeeded(doc):
+			break
 		var fields: Dictionary = doc.get("fields", {})
 		var owned: Array = fields.get(key, [])
 		if owned.has(id):
@@ -298,6 +303,8 @@ static func unlock_free(
 		return
 	for _attempt in range(GRANT_RETRY):
 		var doc: Dictionary = await client.get_document_meta(_path(uid))
+		if not read_succeeded(doc):
+			break
 		var fields: Dictionary = doc.get("fields", {})
 		var owned: Array = fields.get(key, [])
 		if owned.has(id):
@@ -464,6 +471,8 @@ static func grant(client: FirestoreClient, uid: String, amount: int, is_cpu: boo
 
 	for _attempt in range(GRANT_RETRY):
 		var doc: Dictionary = await client.get_document_meta(_path(uid))
+		if not read_succeeded(doc):
+			break
 		var fields: Dictionary = doc.get("fields", {})
 		var data := {
 			"currency": int(fields.get("currency", 0)) + total,
@@ -486,7 +495,7 @@ static func grant(client: FirestoreClient, uid: String, amount: int, is_cpu: boo
 			AccountStore.clear_pending_currency()
 			return currency()
 
-	# 競合が続いた・通信に失敗した。獲得分は手元に残して次回へ回す
+	# 競合が続いた・読み書きに失敗した。獲得分は手元に残して次回へ回す
 	AccountStore.add_pending_currency(amount)
 	return currency()
 
@@ -535,6 +544,13 @@ static func fetch_profile(client: FirestoreClient, uid: String) -> Dictionary:
 static func fetch_display_name(client: FirestoreClient, uid: String) -> String:
 	var profile := await fetch_profile(client, uid)
 	return str(profile.get("display_name", ""))
+
+
+## 読み取りが通ったか(在る・まだ無い)。**失敗した読み取りは空のフィールドを返すため、
+## それを土台に書くと残高や所有が空から上書きされる**(前提条件も空になり競合でも止まらない)。
+static func read_succeeded(doc: Dictionary) -> bool:
+	var code := int(doc.get("code", 0))
+	return code == READ_OK or code == READ_MISSING
 
 
 static func _current_uid() -> String:

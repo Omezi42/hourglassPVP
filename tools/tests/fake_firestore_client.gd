@@ -10,6 +10,8 @@ var store: Dictionary = {}
 var revision: int = 0
 ## この回数だけcommitを失敗させる(送信のリトライを検証するため)。
 var fail_commits: int = 0
+## この回数だけget_document_metaを通信失敗にする(本物と同じく空のフィールドとcode 0を返す)。
+var fail_reads: int = 0
 var commit_count: int = 0
 var read_count: int = 0
 
@@ -21,6 +23,9 @@ func _init(p_auth: FirebaseAuth) -> void:
 func get_document_meta(path: String) -> Dictionary:
 	await Engine.get_main_loop().process_frame
 	read_count += 1
+	if fail_reads > 0:
+		fail_reads -= 1
+		return {"exists": false, "fields": {}, "update_time": "", "code": 0}
 	if not store.has(path):
 		return {"exists": false, "fields": {}, "update_time": "", "code": 404}
 	var entry: Dictionary = store[path]

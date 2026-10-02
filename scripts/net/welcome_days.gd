@@ -11,9 +11,6 @@ const LAST_DAY_GOLD := 300
 const LAST_DAY_ICON := "mascot"
 const FIELD_DAYS := "welcome_days"
 const FIELD_DATE := "welcome_last_date"
-## 読み取りが失敗したときの応答コード以外で、書いてよい読み取りの結果(無い=まだ作られていない)。
-const READ_OK := 200
-const READ_MISSING := 404
 
 
 static func claimed_days() -> int:
@@ -62,8 +59,7 @@ static func claim(client: FirestoreClient, uid: String) -> int:
 	var today := DailyMissionService.today()
 	for _attempt in range(AccountService.GRANT_RETRY):
 		var doc: Dictionary = await client.get_document_meta(path)
-		var code := int(doc.get("code", 0))
-		if code != READ_OK and code != READ_MISSING:
+		if not AccountService.read_succeeded(doc):
 			return 0
 		var fields: Dictionary = doc.get("fields", {})
 		var days := int(fields.get(FIELD_DAYS, 0))
