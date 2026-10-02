@@ -44,8 +44,8 @@ static func place(state: MatchState, side: int, rows: Array[String]) -> void:
 
 
 ## 手順を適用し、相手のHPが0以下になったかを返す。手は
-## `["flip", slot]` / `["attack", slot, target]` / `["play", hand, slot]` /
-## `["cast", hand]`(対象を取るなら `["cast", hand, side, slot]`)の4種。
+## `["flip", slot]` / `["flip_right", slot]`(自陣の駒) / `["attack", slot, target]` /
+## `["play", hand, slot]` / `["cast", hand]`(対象を取るなら `["cast", hand, side, slot]`)の5種。
 static func solve(stage: PuzzleStageData, moves: Array) -> bool:
 	var state := build(stage)
 	var mine: int = MatchState.Side.A
@@ -53,6 +53,8 @@ static func solve(stage: PuzzleStageData, moves: Array) -> bool:
 		match String(move[0]):
 			"flip":
 				state.flip(mine, int(move[1]))
+			"flip_right":
+				state.use_flip_right(mine, mine, int(move[1]))
 			"attack":
 				state.attack(mine, int(move[1]), int(move[2]))
 			"play":

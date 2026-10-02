@@ -62,6 +62,18 @@ func _test_every_stage_is_solvable() -> void:
 		# 攻撃力5の駒で壁を割ると相打ちで失う。他の駒を反転して砕け役にする(第13問)。
 		"stage_13":
 		[["flip", 1], ["flip", 2], ["attack", 2, 0], ["attack", 0, -1], ["attack", 1, -1]],
+		# ホイールは反転のたびに2ダメージ。逆さ砂を含めて4度返す。ひとつまみは囮(第14問)。
+		"stage_14":
+		[
+			["cast", 0],
+			["cast", 0, 0, 0],
+			["flip", 0],
+			["flip", 1],
+			["flip_right", 0],
+			["flip_right", 0],
+			["attack", 0, 0],
+			["attack", 1, -1],
+		],
 	}
 	for stage in PuzzleLibrary.all_stages():
 		if not answers.has(stage.id):
