@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="PuzzleStageData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/puzzle_stage_data.gd" id="script_puzzle"]
+
+[resource]
+script = ExtResource("script_puzzle")
+id = "stage_11"
+title = "第11問 毒は大きな壁へ"
+hint = "毒砂は1でもダメージを通せば、どんなに硬い砂時計も破壊する"
+order = 11
+foe_hp = 5
+own_hp = 30
+mana = 0
+hand_ids = Array[String]([])
+own_units = Array[String](["poison:4:1", "sand:3:4", "sand:2:5"])
+foe_units = Array[String](["gate:10:3", "shield:2:1"])

@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="PuzzleStageData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/puzzle_stage_data.gd" id="script_puzzle"]
+
+[resource]
+script = ExtResource("script_puzzle")
+id = "stage_13"
+title = "第13問 砕ける役を選ぶ"
+hint = "壁を割る駒は相打ちで砕ける。反転して、砕けても惜しくない形にしてから当てる"
+order = 13
+foe_hp = 9
+own_hp = 30
+mana = 0
+hand_ids = Array[String]([])
+own_units = Array[String](["sand:1:5", "sand:4:2", "sand:3:1"])
+foe_units = Array[String](["gate:3:4"])

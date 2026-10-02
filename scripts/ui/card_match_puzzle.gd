@@ -137,7 +137,7 @@ func _outcome(cleared: bool, reward: StageReward) -> CardChallengeResult.Outcome
 	return outcome
 
 
-## 「次の問題へ」はStage1〜10なら正解の後だけ、エンドレスは失敗しても出す(24章の表)。
+## 「次の問題へ」は固定の問題なら正解の後だけ、エンドレスは失敗しても出す(24章の表)。
 func _next_label(cleared: bool) -> String:
 	if _endless:
 		return "次の問題へ"

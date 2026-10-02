@@ -88,11 +88,11 @@ Web書き出し(WebAssembly)の実行速度で毎回これを間に合わせる�
 欠けたときの不足分より紛らわしい駒の攻撃力の合計が必ず小さくなるようにしておくことで、
 「本来要らない駒を足せば帳尻が合ってしまう」という抜け道を作らない。
 
-**エンドレスの問題は保存しない。**`PuzzleLibrary`(Stage1〜10)とは別の生成経路であり、
+**エンドレスの問題は保存しない。**`PuzzleLibrary`(固定の問題)とは別の生成経路であり、
 `PuzzleProgress`(初回クリアの記録)も触らない。`CardMatchPuzzle` は
 `start(target, endless)` の第2引数でこれを区別し、`endless` のときは
 `_grant()` を呼ばない。結果パネルの「次の問題へ」は、エンドレスなら `PuzzleGenerator.generate()` を
-呼び直し、Stage1〜10なら `PuzzleLibrary` の並びで次の問題を始める。
+呼び直し、固定の問題なら `PuzzleLibrary` の並びで次の問題を始める。
 
 ## 10.12.2 今日の1問(GameDesign.md 24章)
 
@@ -101,9 +101,9 @@ Web書き出し(WebAssembly)の実行速度で毎回これを間に合わせる�
 | `DailyPuzzle`(`scripts/logic/daily_puzzle.gd`, static) | 日本時間の今日の日付を決め、`data/daily_puzzles/<YYYY-MM-DD>.tres` を引く。無ければ null |
 | `data/daily_puzzles/*.tres` | 1日1問の `PuzzleStageData`。**`tools/shorts/schedule.py` が投稿の割り振りから書き出す**(手で作らない) |
 
-**問題はStage1〜10と同じ `PuzzleStageData` で持ち、解く経路も同じ**(`CardMatchPuzzle.start(stage)`)。
+**問題は固定の問題と同じ `PuzzleStageData` で持ち、解く経路も同じ**(`CardMatchPuzzle.start(stage)`)。
 id を `daily_<日付>` にして `PuzzleProgress` へそのまま記録するため、初回クリアの判定と50砂金の渡し方は
-Stage1〜10と共通になる。所属の行と「次の問題へ」を出さない分岐だけを `DailyPuzzle.is_daily()` で見る。
+固定の問題と共通になる。所属の行と「次の問題へ」を出さない分岐だけを `DailyPuzzle.is_daily()` で見る。
 
 **同梱する(Firestoreから引かない)。**unityroomへはpckだけを上げるが、`.tres` はpckへ入るため届く。
 数週間先まで割り振っておき、ビルドのたびに一緒に出る。ファイルの有無は `ResourceLoader.exists()` ではなく

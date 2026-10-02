@@ -7,7 +7,7 @@ signal back_pressed
 signal stage_selected(stage: PuzzleStageData)
 ## エンドレス(GameDesign.md 24章)の入口が押された。生成そのものは呼び出し側
 ## (`Main`)が `PuzzleGenerator.generate()` を呼んで行う——この画面は
-## Stage1〜10の一覧と入口を並べる責務だけを持つ。
+## 固定の問題の一覧と入口を並べる責務だけを持つ。
 signal endless_selected
 
 const HEADER_SCENE := "res://scenes/screen_header.tscn"
@@ -63,7 +63,7 @@ func _refresh() -> void:
 		_grid.remove_child(child)
 		child.queue_free()
 	var uid := _uid()
-	# 今日の1問が先頭、エンドレスがその次(GameDesign.md 24章)。どちらもStage1〜10とは別枠。
+	# 今日の1問が先頭、エンドレスがその次(GameDesign.md 24章)。どちらも固定の問題とは別枠。
 	var daily := DailyPuzzle.today()
 	if daily != null:
 		_grid.add_child(_make_daily_card(daily, PuzzleProgress.is_cleared(uid, daily.id)))
@@ -82,7 +82,7 @@ func _make_daily_card(stage: PuzzleStageData, cleared: bool) -> Control:
 	)
 
 
-## エンドレスの入口。Stage1〜10と同じ札の形を使い、狙いを1行添える
+## エンドレスの入口。固定の問題と同じ札の形を使い、狙いを1行添える
 ## (GameDesign.md 9章「いまの状態を1行添えた札」と同じ考え方)。
 func _make_endless_card() -> Control:
 	return _make_entry_card(

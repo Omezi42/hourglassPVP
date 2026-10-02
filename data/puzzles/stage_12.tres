@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="PuzzleStageData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/puzzle_stage_data.gd" id="script_puzzle"]
+
+[resource]
+script = ExtResource("script_puzzle")
+id = "stage_12"
+title = "第12問 連撃を砕かせない"
+hint = "相打ちで先に砕けると2回目は来ない。連撃は2回とも本体へ"
+order = 12
+foe_hp = 10
+own_hp = 30
+mana = 0
+hand_ids = Array[String]([])
+own_units = Array[String](["twin:2:5", "sand:2:3", "sand:3:1"])
+foe_units = Array[String](["shield:2:2", "shield:2:1"])

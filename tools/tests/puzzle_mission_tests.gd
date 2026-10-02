@@ -54,6 +54,14 @@ func _test_every_stage_is_solvable() -> void:
 		# 硝子持ちの駒は道をふさいでいない。封砂を無効化にしか効かないミラーへ
 		# 撃つと、本当の壁であるゲートの守護が残って詰む(第10問)。
 		"stage_10": [["cast", 0, 1, 1], ["attack", 0, -1]],
+		# 毒砂は攻撃力1でも硬いゲートを破壊する。シールドへ使うとゲートが残って詰む(第11問)。
+		"stage_11": [["attack", 0, 0], ["attack", 1, 1], ["attack", 2, -1]],
+		# ツインは守護を殴ると相打ちで砕け、2回目が来ない。守護は他の2体で割る(第12問)。
+		"stage_12":
+		[["attack", 1, 0], ["flip", 2], ["attack", 2, 1], ["attack", 0, -1], ["attack", 0, -1]],
+		# 攻撃力5の駒で壁を割ると相打ちで失う。他の駒を反転して砕け役にする(第13問)。
+		"stage_13":
+		[["flip", 1], ["flip", 2], ["attack", 2, 0], ["attack", 0, -1], ["attack", 1, -1]],
 	}
 	for stage in PuzzleLibrary.all_stages():
 		if not answers.has(stage.id):
