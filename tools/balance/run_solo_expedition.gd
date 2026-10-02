@@ -8,6 +8,8 @@ extends SceneTree
 ##       runs=200 depths=0,1,2,3,4,5 seed=42 player=normal isolated=300 \
 ##       out=tools/balance/out/solo.md
 ##
+## `only=survive,empty_board` を与えると、`isolated` で測る関門・主をそのidだけに絞る(調整の試行用)。
+##
 ## 通しでは主まで届く遠征が少なく、主・関門ごとの試行数が偏る。`isolated=N` を与えると、
 ## 関門・主それぞれと通常の対局を同じ条件(作戦の15種×2の30枚・HP満タン・相手は上級)で
 ## N局ずつ直接指させ、難しさを通常の対局と並べて比べる表を足す。
@@ -54,7 +56,10 @@ func _run() -> void:
 	_report(stats, depths, runs)
 	var isolated := int(args.get("isolated", "0"))
 	if isolated > 0:
-		_report_isolated(isolated)
+		var only := PackedStringArray()
+		if not str(args.get("only", "")).is_empty():
+			only = str(args["only"]).split(",")
+		_report_isolated(isolated, only)
 	var out: String = args.get("out", "")
 	if not out.is_empty():
 		DirAccess.make_dir_recursive_absolute(out.get_base_dir())
@@ -204,7 +209,7 @@ func _isolated(gate_id: String, games: int) -> Array:
 	return cell
 
 
-func _report_isolated(games: int) -> void:
+func _report_isolated(games: int, only: PackedStringArray) -> void:
 	_out("")
 	_out("### 関門・主を単独で(各%d局・30枚・HP満タン・相手は上級)" % games)
 	_out("")
@@ -212,8 +217,11 @@ func _report_isolated(games: int) -> void:
 	_out("|---|---|")
 	_out("| 通常の対局 | %s |" % _rate(_isolated("", games)))
 	for gate in SoloGateLibrary.all_gates():
-		_out("| 関門 %s | %s |" % [gate.display_name, _rate(_isolated(gate.id, games))])
+		if only.is_empty() or gate.id in only:
+			_out("| 関門 %s | %s |" % [gate.display_name, _rate(_isolated(gate.id, games))])
 	for boss in SoloGateLibrary.all_bosses():
+		if not only.is_empty() and boss.id not in only:
+			continue
 		_out("| 主 %s | %s |" % [boss.display_name, _rate(_isolated(boss.id, games))])
 
 
