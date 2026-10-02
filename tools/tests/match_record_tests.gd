@@ -9,6 +9,7 @@ const MATCH_ID := "m_rec"
 const MATCH_PATH := "matches/m_rec"
 const RECORD_PATH := "match_records/m_rec"
 const SEED := 4242
+const STARTED_AT := 1790000000.0
 const FakeClient = preload("res://tools/tests/fake_firestore_client.gd")
 
 var _assert: Callable
@@ -31,6 +32,7 @@ func run(assert_true: Callable) -> void:
 			"actions": [{"type": "end_turn", "side": 0}],
 			"player_a": "uid-a",
 			"player_b": "uid-b",
+			"created_at": STARTED_AT,
 		},
 		"update_time": "0"
 	}
@@ -63,6 +65,10 @@ func run(assert_true: Callable) -> void:
 		(record["actions"] as Array).size() == 1, "the recorded actions should come from the match"
 	)
 	_assert.call(record["player_b"] == "uid-b", "both player ids should be kept")
+	_assert.call(
+		is_equal_approx(float(record["started_at"]), STARTED_AT),
+		"the start time should come from the match document so the match length can be measured"
+	)
 
 	_assert_stats(client, decks)
 	_assert.call(

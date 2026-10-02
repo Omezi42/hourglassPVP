@@ -37,6 +37,7 @@ SUMMARY_FIELDS = [
     "build",
     "version",
     "kind",
+    "started_at",
     "finished_at",
     "winner",
     "end_reason",
@@ -286,6 +287,21 @@ def drop_repeats(records):
     return picked
 
 
+def duration_line(records):
+    minutes = sorted(
+        (float(r.get("finished_at", 0)) - float(r.get("started_at", 0))) / 60.0
+        for r in records
+        if float(r.get("started_at", 0)) > 0 and float(r.get("finished_at", 0)) > float(r.get("started_at", 0))
+    )
+    if not minutes:
+        return "- 1局の時間: 開始時刻を持つ記録がまだ無い"
+    return "- 1局の時間: 平均 **%.1f分** / 中央値 %.1f分(目標 10〜15分、%d戦)" % (
+        sum(minutes) / len(minutes),
+        minutes[len(minutes) // 2],
+        len(minutes),
+    )
+
+
 def overview_lines(records):
     total = len(records)
     first_wins = sum(1 for r in records if r.get("winner") == "a")
@@ -303,6 +319,7 @@ def overview_lines(records):
         "- 対局数: **%d**" % total,
         "- 先手勝率: **%.1f%%**(目標 45〜55%%)" % (100.0 * first_wins / total),
         "- 決着手数: **%.1f手**(目標 20〜30手)" % (float(turns) / total),
+        duration_line(records),
         "- 種別: " + " / ".join("%s %d戦" % (k, v) for k, v in kinds.most_common()),
         "- 決着の要因: " + reason_text,
         "- ビルド: " + " / ".join("%s %d戦" % (k, v) for k, v in builds.most_common(5)),

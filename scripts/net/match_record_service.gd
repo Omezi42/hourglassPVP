@@ -80,6 +80,7 @@ static func _build(source: Dictionary, kind: int, state: MatchState) -> Dictiona
 		"build": GameVersion.build_id(),
 		"version": GameVersion.version(),
 		"kind": kind_key(kind),
+		"started_at": float(source.get("created_at", 0.0)),
 		"finished_at": Time.get_unix_time_from_system(),
 		"winner": "a" if state.winner == MatchState.Side.A else "b",
 		"end_reason": end_reason_key(state.end_reason),
