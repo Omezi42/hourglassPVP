@@ -6,7 +6,7 @@
 script = ExtResource("1")
 id = "hasty"
 display_name = "急ぎの主"
-description = "相手の砂時計はすべて速落を持つ。相手のHPが12少ない。"
+description = "相手の砂時計はすべて速落を持つ。相手のHPが8少ない。"
 own_board_units = Array[String]([])
 foe_board_units = Array[String]([])
 win_condition = 0
@@ -14,7 +14,7 @@ survive_turns = 0
 sand_drop_count = 1
 flip_disabled = false
 clash_damage_multiplier = 1
-foe_hp_bonus = -12
+foe_hp_bonus = -8
 foe_uses_player_deck = false
 cpu_deck = "basic"
 foe_quick = true

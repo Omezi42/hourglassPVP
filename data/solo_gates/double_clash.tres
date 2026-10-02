@@ -6,7 +6,7 @@
 script = ExtResource("1")
 id = "double_clash"
 display_name = "倍の傷"
-description = "相打ちで受けるダメージが2倍になる(双方)。"
+description = "相打ちで受けるダメージが2倍になる(双方)。相手のHPが12多い。"
 own_board_units = Array[String]([])
 foe_board_units = Array[String]([])
 win_condition = 0
@@ -14,3 +14,4 @@ survive_turns = 0
 sand_drop_count = 1
 flip_disabled = false
 clash_damage_multiplier = 2
+foe_hp_bonus = 12

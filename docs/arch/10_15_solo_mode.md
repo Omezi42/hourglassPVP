@@ -42,7 +42,7 @@ GameDesign.md 27章の実装方針。**遠征の規則(道・山札・HP・束�
 | `sand_drop_count` | int | 既定1。`MatchState.sand_drop_count` へ渡す |
 | `flip_disabled` | bool | `MatchState.flip_disabled` へ渡す(反転権は対象外) |
 | `clash_damage_multiplier` | int | 既定1。`MatchState.clash_damage_multiplier` へ渡す |
-| `foe_hp_bonus` | int | 対局開始時に相手のHPへ足す(主の+8) |
+| `foe_hp_bonus` | int | 対局開始時に相手のHPへ足す(主の+8、早すぎる落下・倍の傷の+12など。値は GameDesign.md 27章) |
 | `foe_uses_player_deck` | bool | 相手が自分の山札の写し(恩恵で書き換える前)を使う(鏡写し・鏡の主) |
 | `cpu_deck` | String | 主の作戦。空なら道を作るときに残りから割り当てる。関門では使わない |
 | `foe_quick` | bool | 相手の山札の砂時計へ速落を足す(急ぎの主)。`SoloBoonEffects.quick_deck()`が写しへ当てる |

@@ -6,11 +6,12 @@
 script = ExtResource("1")
 id = "fast_drop"
 display_name = "早すぎる落下"
-description = "毎ターン砂が2粒落ちる。"
+description = "毎ターン砂が2粒落ちる。相手の場に守護の砂時計が1体いて、相手のHPが12多い。"
 own_board_units = Array[String]([])
-foe_board_units = Array[String]([])
+foe_board_units = Array[String](["shield:3:0"])
 win_condition = 0
 survive_turns = 0
 sand_drop_count = 2
 flip_disabled = false
 clash_damage_multiplier = 1
+foe_hp_bonus = 12

@@ -63,7 +63,7 @@ func _place(state: MatchState, side: int, slot: int) -> CardInstance:
 func _test_bosses_load_with_hp_bonus() -> void:
 	var bosses := SoloGateLibrary.all_bosses()
 	_assert.call(bosses.size() == 4, "GameDesign.md 27章 lists four bosses")
-	var expected_bonus := {"quicksand": 8, "fortress": 8, "mirror_lord": 8, "hasty": -12}
+	var expected_bonus := {"quicksand": 20, "fortress": 8, "mirror_lord": 8, "hasty": -8}
 	for boss in bosses:
 		_assert.call(
 			boss.foe_hp_bonus == expected_bonus.get(boss.id), "boss hp bonus per 27章: " + boss.id

@@ -6,7 +6,7 @@
 script = ExtResource("1")
 id = "quicksand"
 display_name = "流砂の主"
-description = "毎ターン砂が2粒落ちる。相手のHPが8多い。"
+description = "毎ターン砂が2粒落ちる。相手のHPが20多い。"
 own_board_units = Array[String]([])
 foe_board_units = Array[String]([])
 win_condition = 0
@@ -14,6 +14,6 @@ survive_turns = 0
 sand_drop_count = 2
 flip_disabled = false
 clash_damage_multiplier = 1
-foe_hp_bonus = 8
+foe_hp_bonus = 20
 foe_uses_player_deck = false
 cpu_deck = "rush"
