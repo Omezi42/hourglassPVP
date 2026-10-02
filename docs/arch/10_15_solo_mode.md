@@ -18,7 +18,7 @@ GameDesign.md 27章の実装方針。**遠征の規則(道・山札・HP・束�
 | `SoloMatchPlaque`(`scripts/ui/solo_match_plaque.gd`, Control) | 遠征の対局中に卓の左へ常に出す「遠征の札」。段数・行き先の種類・特殊勝利条件の関門だけ持つ残りの数を表示する。`CardMatchSolo` が結果パネル・ログより背面に置く |
 | `CardSoloMapScreen`(`scripts/ui/card_solo_map_screen.gd`) | 遠征の画面。出発・道・行き先の詳細・束・恩恵・工房・記録の状態の出し分けと、`SoloRun`/`SoloProgress`への保存・読み込みだけを持つ。見た目は下記の子へ委ねる |
 | `SoloDepartureView`(`scripts/ui/solo_departure_view.gd`, Control) | 出発の画面。作戦の札を3枚並べ、押すと`theme_chosen`を出す |
-| `SoloRouteView`(`scripts/ui/solo_route_view.gd`, Control) | 道の画面。6段の駒を描く。駒を押しても対局は始めず`destination_selected`(選択解除は-1)を出すだけで、選んだ駒に真鍮の輪を付ける(`set_selected()`)。`show_record()`で押せない表示モード(遠征の記録で再利用)にもなる |
+| `SoloRouteView`(`scripts/ui/solo_route_view.gd`, Control) | 道の画面。6段の駒と、そのつながりを描く(行けない駒・道は`SoloRun.reachable()`で沈める)。いま選ぶ段の行ける駒(`SoloRun.open_rows()`)だけを押せる。駒を押しても対局は始めず`destination_selected`(選択解除は-1)を出すだけで、選んだ駒に真鍮の輪を付ける(`set_selected()`)。`show_record()`で押せない表示モード(遠征の記録で再利用)にもなる |
 | `SoloStatusPanel`(`scripts/ui/solo_status_panel.gd`, Control) | 道の右側の状態パネル。作戦名・持っている恩恵・HPのバー(上限は`SoloRun.max_hp`)・勝った数・`SoloDeckList`と「遠征をやめる」(`abandon_requested`) |
 | `SoloDestinationPanel`(`scripts/ui/solo_destination_panel.gd`, Control) | 行き先の詳細。道で駒を選んだときに状態パネルの代わりに同じ位置へ出す。相手・狙い・CPUの強さ・15種の絵(対局・関門)、回復後のHP(泉)、または工房の案内を出し、「挑む」(泉は「休む」、工房は「入る」。`challenge_pressed`)/「戻る」(`back_pressed`)を持つ |
 | `SoloBundleOverlay`(`scripts/ui/solo_bundle_overlay.gd`, Control) | 束のオーバーレイ。道を暗幕で覆い、束(作戦ごとの3枚を横長の札で縦に並べる)から1つ選んで`bundle_chosen`/`skip_pressed`を出す。右端に`SoloDeckList`でいまの山札を出す |
@@ -94,7 +94,7 @@ GameDesign.md 27章の実装方針。**遠征の規則(道・山札・HP・束�
 | `hp` / `max_hp` | 持ち越すHPと、恩恵「丈夫な体」で伸びる上限。開始はどちらも `MatchState.INITIAL_HP` |
 | `floor` | いま選ぶ段(0始まり。`FLOOR_COUNT` = 6 で踏破) |
 | `wins` | この遠征で勝った数 |
-| `route: Array` | 段ごとの行き先の配列。行き先は `{"kind": Kind, "cpu_deck": id, "gate": id}`(泉・工房は空文字) |
+| `route: Array` | 段ごとの行き先の配列。行き先は `{"kind": Kind, "cpu_deck": id, "gate": id, "next": [row, ...]}`(泉・工房は空文字。`next`は次の段のつながる行き先の位置。`next`の無い保存データは次の段のすべてへつながるものとして読む) |
 | `offer: Array[Dictionary]` | 勝った直後に選べる束の候補。束は`{"theme": id, "cards": [id, id, id]}`。空なら候補待ちではない |
 | `boon_offer: Array[String]` | 関門に勝った直後に選べる恩恵の候補。空なら候補待ちではない |
 | `boons: Array[String]` | 得た恩恵のid(同じ恩恵は1回の遠征で1度だけ) |
@@ -114,7 +114,10 @@ GameDesign.md 27章の実装方針。**遠征の規則(道・山札・HP・束�
 - `static create(theme_id, depth, rng, boss_id) -> SoloRun` — 作戦の15種を1枚ずつ山札にし、道を作る
 - `static boss_choice(rng) -> String` — 出発で示す主を1体
 - `static foe_name_of(dest)` / `static uses_player_deck(dest)` — 行き先の相手の名前(鏡写し・鏡の主は「CPU ・ あなたの山札」)と、自分の山札の写しを使うか
-- `choose(index, rng)` — いまの段の行き先を選ぶ。泉なら回復して次の段へ進み、工房なら`workshop_open`を立てる。対局・関門なら `in_battle` を立てる
+- `static next_rows(route, col, row) -> Array[int]` / `static open_rows(route, floor, chosen) -> Array[int]` / `static reachable(route, floor, chosen) -> Dictionary` —
+  行き先のつながる先 / いまの段で選べる行き先(直前に選んだ行き先の`next`。1段目はすべて) / いまの位置から行ける行き先(`Vector2i(段, 位置)`の集合)。道の画面もこれを使う
+- `is_open(index)` — いまの段のその行き先を選べるか
+- `choose(index, rng)` — いまの段の行き先を選ぶ(`is_open`でないものは無視する)。泉なら回復して次の段へ進み、工房なら`workshop_open`を立てる。対局・関門なら `in_battle` を立てる
 - `finish_battle(won, hp_left, rng)` — 決着を返す。勝ちなら`win_heal()`を足して`wins`と`floor`を進め、関門なら恩恵の候補(`boon_offer`)を、それ以外は束の候補(`offer`)を作る(最終段なら踏破)。負けなら遠征を終える
 - `take_boon(id)` — 恩恵を1つ得る。丈夫な体は即座にHPも回復する。得たあとで束の候補を作る
 - `take_bundle(index)` / `pass_offer()` — 束を1つ選んで3枚まとめて山札に足す / 見送る
@@ -141,6 +144,8 @@ GameDesign.md 27章の実装方針。**遠征の規則(道・山札・HP・束�
 `_departure_depth`だけ動かす。
 
 **道の生成**: 1〜5段目は2〜3個の行き先。各段に対局か関門を1つ以上、泉と工房は合わせて1段に1つまで・1段目には出さない。
+段どうしのつながりは、左上から右下へ進む階段(右・下・斜めの一歩を乱数で選ぶ)で張るため交差せず、どの行き先にも出入りの道が1本以上できる。
+出る道が3本になるもの・泉/工房どうしをつなぐものができたら引き直し、何度か失敗したら次の段の並びを混ぜ直す。5段目はすべて最終戦へつなぐ。
 6段目は主との対局1つだけで、`gate`に主のidを入れる(`kind`は`BATTLE`のまま。`find_by_id()`が主も引くため、
 対局・遠征の札・結果パネルは関門と同じ経路で特殊ルールを当てる)。**CPUデッキは1回の遠征で重複させない**(8つを切り混ぜて順に割り当てる。
 主が作戦を持つときはそれを最終戦へ回す)。

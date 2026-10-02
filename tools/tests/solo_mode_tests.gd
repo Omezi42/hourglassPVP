@@ -15,6 +15,9 @@ func run(assert_true: Callable) -> void:
 	_test_clash_damage_multiplier_doubles_combat_damage()
 	_test_solo_run_creates_a_fifteen_card_deck_one_of_each()
 	_test_solo_run_route_follows_the_rules()
+	_test_solo_run_route_links_follow_the_rules()
+	_test_solo_run_choose_only_follows_the_links()
+	_test_solo_run_route_without_links_is_fully_connected()
 	_test_solo_run_cpu_decks_never_repeat_in_a_run()
 	_test_solo_run_battle_win_builds_a_bundle_offer()
 	_test_solo_run_gate_win_builds_a_boon_offer_then_a_bundle_offer()
@@ -196,6 +199,82 @@ func _test_solo_run_cpu_decks_never_repeat_in_a_run() -> void:
 				used[deck_id] = true
 
 
+## 道のつながり(GameDesign.md 27章「道」): 出る道は1〜2本(5段目は最終戦へ1本)、どの行き先にも
+## 前の段から道が来る、交差しない、泉・工房どうしはつながない。
+func _test_solo_run_route_links_follow_the_rules() -> void:
+	for trial in 200:
+		var run := SoloRun.create(CardCpuDecks.deck_ids()[0], 0, _rng(900 + trial))
+		for col in range(SoloRun.FLOOR_COUNT - 1):
+			var options: Array = run.route[col]
+			var incoming := {}
+			var links: Array = []
+			for row in options.size():
+				var next := SoloRun.next_rows(run.route, col, row)
+				_assert.call(
+					next.size() >= 1 and next.size() <= SoloRun.MAX_LINKS,
+					"trial %d floor %d row %d should have 1-2 roads" % [trial, col, row]
+				)
+				for next_row in next:
+					incoming[next_row] = true
+					links.append(Vector2i(row, next_row))
+					_assert.call(
+						not (_is_rest(options[row]) and _is_rest(run.route[col + 1][next_row])),
+						"trial %d floor %d should not link two rest stops" % [trial, col]
+					)
+			_assert.call(
+				incoming.size() == (run.route[col + 1] as Array).size(),
+				"trial %d every destination on floor %d should be reachable" % [trial, col + 1]
+			)
+			for a in links:
+				for b in links:
+					_assert.call(
+						not (a.x < b.x and a.y > b.y),
+						"trial %d floor %d roads should not cross" % [trial, col]
+					)
+
+
+func _is_rest(dest: Dictionary) -> bool:
+	var kind := int(dest["kind"])
+	return kind == SoloRun.Kind.SPRING or kind == SoloRun.Kind.WORKSHOP
+
+
+## 直前に選んだ行き先からつながっていない行き先は選べない。
+func _test_solo_run_choose_only_follows_the_links() -> void:
+	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], 0, _rng(31))
+	run.route[0][0]["next"] = [0] as Array[int]
+	run.route[0][0]["kind"] = SoloRun.Kind.BATTLE
+	run.route[0][0]["gate"] = ""
+	run.choose(0, _rng(32))
+	run.finish_battle(true, run.max_hp, _rng(33))
+	run.pass_offer()
+	_assert.call(run.is_open(0), "the linked destination should be choosable")
+	_assert.call(not run.is_open(1), "an unlinked destination should not be choosable")
+	run.choose(1, _rng(34))
+	_assert.call(
+		run.chosen.size() == 1 and not run.in_battle and not run.workshop_open,
+		"choose should ignore an unlinked destination"
+	)
+
+
+## `next`の無い以前の保存データは、次の段のすべてへつながるものとして読む。
+func _test_solo_run_route_without_links_is_fully_connected() -> void:
+	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], 0, _rng(35))
+	var data := run.to_dict()
+	for options in data["route"]:
+		for dest in options:
+			dest.erase("next")
+	var restored := SoloRun.from_dict(data)
+	_assert.call(
+		SoloRun.next_rows(restored.route, 0, 0).size() == (restored.route[1] as Array).size(),
+		"a destination without next should link to every destination on the next floor"
+	)
+	var linked := SoloRun.from_dict(run.to_dict())
+	_assert.call(
+		SoloRun.next_rows(linked.route, 0, 0) == SoloRun.next_rows(run.route, 0, 0),
+		"from_dict should restore the roads"
+	)
+
+
 ## 対局(関門でない)に勝つと、束の候補がすぐ作られる(GameDesign.md 27章「山札を育てる」)。
 func _test_solo_run_battle_win_builds_a_bundle_offer() -> void:
 	var run := SoloRun.create(CardCpuDecks.deck_ids()[0], 0, _rng(3))
@@ -321,13 +400,13 @@ func _win_battle_floor(run: SoloRun, seed_value: int) -> void:
 	var options := run.current_destinations()
 	var index := -1
 	for i in options.size():
-		if int(options[i]["kind"]) == SoloRun.Kind.BATTLE:
+		if run.is_open(i) and int(options[i]["kind"]) == SoloRun.Kind.BATTLE:
 			index = i
 			break
 	if index == -1:
-		index = 0
-		options[0]["kind"] = SoloRun.Kind.BATTLE
-		options[0]["gate"] = ""
+		index = SoloRun.open_rows(run.route, run.floor, run.chosen)[0]
+		options[index]["kind"] = SoloRun.Kind.BATTLE
+		options[index]["gate"] = ""
 	run.choose(index, _rng(seed_value))
 	run.finish_battle(true, run.max_hp, _rng(seed_value + 1))
 
@@ -335,10 +414,10 @@ func _win_battle_floor(run: SoloRun, seed_value: int) -> void:
 ## 対局・関門のどちらでもよいので、いまの段を勝って進める(泉・工房は選ばない)。
 func _win_any_floor(run: SoloRun, seed_value: int) -> void:
 	var options := run.current_destinations()
-	var index := 0
+	var index := SoloRun.open_rows(run.route, run.floor, run.chosen)[0]
 	for i in options.size():
 		var kind: int = int(options[i]["kind"])
-		if kind == SoloRun.Kind.BATTLE or kind == SoloRun.Kind.GATE:
+		if run.is_open(i) and (kind == SoloRun.Kind.BATTLE or kind == SoloRun.Kind.GATE):
 			index = i
 			break
 	run.choose(index, _rng(seed_value))
@@ -380,7 +459,7 @@ func _test_solo_run_workshop_remove_duplicate_and_skip() -> void:
 	while workshop_index == -1 and not run.over:
 		var options := run.current_destinations()
 		for i in options.size():
-			if int(options[i]["kind"]) == SoloRun.Kind.WORKSHOP:
+			if run.is_open(i) and int(options[i]["kind"]) == SoloRun.Kind.WORKSHOP:
 				workshop_index = i
 				break
 		if workshop_index != -1:
@@ -451,10 +530,11 @@ func _test_solo_run_clearing_the_final_floor_marks_cleared() -> void:
 			run.workshop_skip()
 			continue
 		var options := run.current_destinations()
-		var index := 0
+		var index := SoloRun.open_rows(run.route, run.floor, run.chosen)[0]
 		for i in options.size():
 			if (
-				int(options[i]["kind"]) != SoloRun.Kind.SPRING
+				run.is_open(i)
+				and int(options[i]["kind"]) != SoloRun.Kind.SPRING
 				and int(options[i]["kind"]) != SoloRun.Kind.WORKSHOP
 			):
 				index = i

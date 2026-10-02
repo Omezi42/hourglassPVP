@@ -1,7 +1,7 @@
 class_name SoloRouteView
 extends Control
-## 遠征(ソロモード)の道の画面(GameDesign.md 27章「画面」)。6段の道を描き、
-## いま選ぶ段の駒だけを押せるようにする。駒を押しても対局は始めず、選んだ駒に
+## 遠征(ソロモード)の道の画面(GameDesign.md 27章「画面」)。6段の地図を描き、
+## いま選ぶ段の行ける駒だけを押せるようにする。駒を押しても対局は始めず、選んだ駒に
 ## 真鍮の輪を付けて`destination_selected`を出すだけにとどめる(実際に選ぶのは
 ## `SoloDestinationPanel`の「挑む」)。
 
@@ -24,6 +24,12 @@ const CURRENT_GLOW_SCALE := 1.5
 const CURRENT_GLOW_PULSE := 0.3
 const CURRENT_RING_GAP := 8.0
 const CURRENT_RING_WIDTH := 3.0
+## いまの位置から行けなくなった道の濃さと、行けなくなった駒に重ねる影(GameDesign.md 27章「画面」)。
+const CUT_ROAD_ALPHA := 0.3
+const CUT_NODE_SHADE := Color(0, 0, 0, 0.45)
+## 押した駒から次の段へ出る道を示す線。
+const PREVIEW_ROAD_ALPHA := 0.8
+const PREVIEW_ROAD_WIDTH := 4.0
 
 var _canvas: Control
 var _buttons: Array[Button] = []
@@ -38,6 +44,8 @@ var _record_lost := -1
 ## CPUが上級になる段(`SoloRun.expert_from_floor()`)。深さで前倒しになる
 ## (GameDesign.md 27章「砂の深さ」)。
 var _expert_from := SoloRun.EXPERT_FROM_FLOOR
+## いまの位置から行ける駒(`SoloRun.reachable()`)。表示モードでは空。
+var _reachable := {}
 
 
 func _ready() -> void:
@@ -65,6 +73,7 @@ func show_data(route: Array, floor: int, chosen: Array[int], expert_from: int) -
 	_floor = floor
 	_chosen = chosen
 	_expert_from = expert_from
+	_reachable = SoloRun.reachable(route, floor, chosen)
 	_rebuild(true)
 
 
@@ -78,6 +87,7 @@ func show_record(route: Array, chosen: Array[int], lost_floor: int, expert_from:
 	_floor = chosen.size()
 	_chosen = chosen
 	_expert_from = expert_from
+	_reachable = {}
 	_rebuild(false)
 
 
@@ -135,6 +145,8 @@ func _node_state(col: int, row: int) -> String:
 		return "locked"
 	if col < _floor:
 		return "past_chosen" if _chosen_index(col) == row else "past_unchosen"
+	if not _reachable.has(Vector2i(col, row)):
+		return "past_unchosen" if col == _floor else "cut"
 	if col == _floor:
 		return "current"
 	return "locked"
@@ -149,25 +161,41 @@ func _draw_route() -> void:
 			_draw_node(ci, _node_center(col, row), nodes[row], col, row, col == PATH_COLUMNS - 1)
 
 
-## 選び終えた段どうしは砂を敷いた道でつなぐ。いま選ぶ段の手前までは、まだどちらへ
-## 進むか決めていないため素の道で全ての行き先へ延ばす(GameDesign.md 27章「画面」)。
+## 駒どうしのつながりをすべて素の道で描き、通った道には砂を敷く。いまの位置から行けなく
+## なった道は沈め、押した駒から次の段へ出る道は琥珀の線で示す(GameDesign.md 27章「画面」)。
 func _draw_connections(ci: RID) -> void:
 	for col in range(_centers.size() - 1):
-		if col >= _floor:
-			break
-		var from_center := _node_center(col, _chosen_index(col))
-		if col + 1 == _floor:
-			var next_nodes: Array = _centers[col + 1]
-			for row in next_nodes.size():
-				_draw_road(ci, from_center, next_nodes[row], false)
-		else:
-			_draw_road(ci, from_center, _node_center(col + 1, _chosen_index(col + 1)), true)
+		for row in (_route[col] as Array).size():
+			for next_row in SoloRun.next_rows(_route, col, row):
+				var walked := _is_walked(col, row, next_row)
+				_draw_road(
+					ci,
+					_node_center(col, row),
+					_node_center(col + 1, next_row),
+					walked,
+					walked or _is_live_road(col, row, next_row),
+					not _record_mode and col == _floor and row == _selected
+				)
 
 
-func _draw_road(ci: RID, a: Vector2, b: Vector2, walked: bool) -> void:
+func _is_walked(col: int, row: int, next_row: int) -> bool:
+	return col + 1 < _floor and _chosen_index(col) == row and _chosen_index(col + 1) == next_row
+
+
+## 直前に選んだ駒からいまの段へ出る道と、いまの位置から行ける駒どうしの道。
+func _is_live_road(col: int, row: int, next_row: int) -> bool:
+	if not _reachable.has(Vector2i(col + 1, next_row)):
+		return false
+	if col < _floor:
+		return col + 1 == _floor and _chosen_index(col) == row
+	return _reachable.has(Vector2i(col, row))
+
+
+func _draw_road(ci: RID, a: Vector2, b: Vector2, walked: bool, live: bool, preview: bool) -> void:
 	var points := PackedVector2Array([a, b])
-	var edge := Color(0.05, 0.04, 0.03, 0.75)
-	var bed := Color(0.27, 0.21, 0.15, 1.0)
+	var alpha := 1.0 if live else CUT_ROAD_ALPHA
+	var edge := Color(0.05, 0.04, 0.03, 0.75 * alpha)
+	var bed := Color(0.27, 0.21, 0.15, alpha)
 	var sand := Color(0.93, 0.72, 0.36, 1.0)
 	RenderingServer.canvas_item_add_polyline(
 		ci, points, SoloUiPaint.fill_colors(points, edge), 20.0, true
@@ -178,6 +206,11 @@ func _draw_road(ci: RID, a: Vector2, b: Vector2, walked: bool) -> void:
 	if walked:
 		RenderingServer.canvas_item_add_polyline(
 			ci, points, SoloUiPaint.fill_colors(points, sand), 7.0, true
+		)
+	elif preview:
+		var glow := Color(UiPalette.GLOW_AMBER, PREVIEW_ROAD_ALPHA)
+		RenderingServer.canvas_item_add_polyline(
+			ci, points, SoloUiPaint.fill_colors(points, glow), PREVIEW_ROAD_WIDTH, true
 		)
 
 
@@ -234,7 +267,11 @@ func _draw_node(
 	)
 	if _record_mode and col == _record_lost and row == _chosen_index(col):
 		_draw_loss_mark(ci, center, radius)
-	var label_color := UiPalette.TEXT_OFFWHITE if state != "locked" else UiPalette.TEXT_MUTED
+	if state == "cut":
+		UiPaint.fill_circle(ci, center, radius + 1.0, CUT_NODE_SHADE, 40)
+	var label_color := (
+		UiPalette.TEXT_MUTED if state == "locked" or state == "cut" else UiPalette.TEXT_OFFWHITE
+	)
 	_draw_label(
 		center + Vector2(0, radius + LABEL_GAP_1),
 		_kind_label(int(node.get("kind", SoloRun.Kind.BATTLE)), is_final, col),
@@ -263,7 +300,9 @@ func _draw_loss_mark(ci: RID, center: Vector2, radius: float) -> void:
 func _draw_kind_glyph(
 	ci: RID, center: Vector2, radius: float, kind: int, state: String, is_final: bool
 ) -> void:
-	var color := UiPalette.TEXT_OFFWHITE if state != "locked" else UiPalette.TEXT_MUTED
+	var color := (
+		UiPalette.TEXT_MUTED if state == "locked" or state == "cut" else UiPalette.TEXT_OFFWHITE
+	)
 	var s := radius * 0.42
 	if is_final:
 		UiPaint.draw_emblem(ci, UiPaint.Emblem.CHECK, center, s)
@@ -349,7 +388,10 @@ func _add_current_buttons() -> void:
 	var nodes: Array = _route[_floor]
 	var col_centers: Array = _centers[_floor]
 	var radius := FINAL_RADIUS if _floor == PATH_COLUMNS - 1 else NODE_RADIUS
+	var open_rows := SoloRun.open_rows(_route, _floor, _chosen)
 	for row in nodes.size():
+		if not open_rows.has(row):
+			continue
 		var center: Vector2 = col_centers[row]
 		var button := SoloUiPaint.transparent_button()
 		button.position = center - Vector2.ONE * radius

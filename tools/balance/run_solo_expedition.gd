@@ -109,13 +109,16 @@ func _play_run(depth: int, stats: Dictionary) -> void:
 
 func _pick_destination(run: SoloRun) -> int:
 	var options := run.current_destinations()
+	var open_rows := SoloRun.open_rows(run.route, run.floor, run.chosen)
 	var fights: Array[int] = []
-	for i in options.size():
+	for i in open_rows:
 		var kind := int(options[i].get("kind", SoloRun.Kind.BATTLE))
 		if kind == SoloRun.Kind.SPRING and run.hp < run.max_hp * SPRING_BELOW:
 			return i
 		if kind == SoloRun.Kind.BATTLE or kind == SoloRun.Kind.GATE:
 			fights.append(i)
+	if fights.is_empty():
+		return open_rows[0]
 	return fights[_rng.randi_range(0, fights.size() - 1)]
 
 

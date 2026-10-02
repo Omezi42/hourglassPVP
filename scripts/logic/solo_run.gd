@@ -11,6 +11,11 @@ enum Kind { BATTLE, GATE, SPRING, WORKSHOP }
 const FLOOR_COUNT := 6
 const SPRING_HEAL := 8
 const THEME_CHOICES := 3
+## 1つの行き先から次の段へ出る道の最大数(GameDesign.md 27章「道」)。
+const MAX_LINKS := 2
+## 道のつながりを引き直す上限と、その途中で次の段の並びを混ぜ直す間隔。
+const LINK_ATTEMPTS := 100
+const LINK_RESHUFFLE_EVERY := 5
 const EXPERT_FROM_FLOOR := 2
 const GOLD_PER_WIN := 20
 const CLEAR_GOLD := 100
@@ -72,8 +77,9 @@ var max_hp := MatchState.INITIAL_HP
 ## いま選ぶ段(0始まり)。`FLOOR_COUNT` に達したら踏破。
 var floor := 0
 var wins := 0
-## 段ごとの行き先の配列。`route[floor]` が、その段で選べる行き先(2〜3個)の配列。
-## 行き先は `{"kind": Kind, "cpu_deck": id, "gate": id}`(泉・工房は空文字)。
+## 段ごとの行き先の配列。`route[floor]` が、その段に並ぶ行き先(2〜3個)の配列。
+## 行き先は `{"kind": Kind, "cpu_deck": id, "gate": id, "next": [row, ...]}`(泉・工房は空文字。
+## `next`は次の段のつながる行き先の位置。GameDesign.md 27章「道」)。
 var route: Array = []
 ## 勝った直後に選べる束の候補。空なら候補待ちではない。
 ## 束は `{"theme": id, "cards": [id, id, id]}`。
@@ -194,11 +200,56 @@ func active_destination() -> Dictionary:
 	return _active
 
 
+## いまの段のその行き先を、直前に選んだ行き先からの道で選べるか(GameDesign.md 27章「道」)。
+func is_open(index: int) -> bool:
+	return not current_destinations().is_empty() and open_rows(route, floor, chosen).has(index)
+
+
+## 行き先のつながる先(次の段の位置)。`next`の無い保存データは次の段のすべてへつなぐ。
+static func next_rows(route_data: Array, col: int, row: int) -> Array[int]:
+	var rows: Array[int] = []
+	if col + 1 >= route_data.size():
+		return rows
+	var dest: Dictionary = route_data[col][row]
+	if not dest.has("next"):
+		for next_row in (route_data[col + 1] as Array).size():
+			rows.append(next_row)
+		return rows
+	for next_row in dest["next"]:
+		rows.append(int(next_row))
+	return rows
+
+
+## いまの段で選べる行き先の位置。1段目はすべて、それ以降は直前に選んだ行き先の`next`。
+static func open_rows(route_data: Array, at_floor: int, chosen_rows: Array[int]) -> Array[int]:
+	var rows: Array[int] = []
+	if at_floor >= route_data.size():
+		return rows
+	if at_floor == 0 or chosen_rows.size() < at_floor:
+		for row in (route_data[at_floor] as Array).size():
+			rows.append(row)
+		return rows
+	return next_rows(route_data, at_floor - 1, chosen_rows[at_floor - 1])
+
+
+## いまの位置から行ける行き先(`Vector2i(段, 位置)`をキーにした集合)。道の画面が沈める駒・道を決める。
+static func reachable(route_data: Array, at_floor: int, chosen_rows: Array[int]) -> Dictionary:
+	var result := {}
+	for row in open_rows(route_data, at_floor, chosen_rows):
+		result[Vector2i(at_floor, row)] = true
+	for col in range(at_floor, route_data.size() - 1):
+		for row in (route_data[col] as Array).size():
+			if result.has(Vector2i(col, row)):
+				for next_row in next_rows(route_data, col, row):
+					result[Vector2i(col + 1, next_row)] = true
+	return result
+
+
 ## いまの段の行き先を選ぶ。泉なら回復して次の段へ進み、工房なら開く。対局・関門なら
-## `in_battle` を立てる。
+## `in_battle` を立てる。直前の行き先からつながっていない行き先は選べない。
 func choose(index: int, _rng: RandomNumberGenerator) -> void:
 	var options := current_destinations()
-	if index < 0 or index >= options.size():
+	if not is_open(index):
 		return
 	chosen.append(index)
 	var dest: Dictionary = options[index]
@@ -447,16 +498,17 @@ static func _route_from_variant(raw: Variant) -> Array:
 		if floor_options is Array:
 			for entry in floor_options:
 				if entry is Dictionary:
-					(
-						options
-						. append(
-							{
-								"kind": int(entry.get("kind", Kind.BATTLE)),
-								"cpu_deck": str(entry.get("cpu_deck", "")),
-								"gate": str(entry.get("gate", "")),
-							}
-						)
-					)
+					var dest := {
+						"kind": int(entry.get("kind", Kind.BATTLE)),
+						"cpu_deck": str(entry.get("cpu_deck", "")),
+						"gate": str(entry.get("gate", "")),
+					}
+					if entry.get("next") is Array:
+						var next: Array[int] = []
+						for row in entry["next"]:
+							next.append(int(row))
+						dest["next"] = next
+					options.append(dest)
 		route.append(options)
 	return route
 
@@ -489,8 +541,62 @@ static func _build_route(rng: RandomNumberGenerator, boss_id: String = "") -> Ar
 			destinations.append({"kind": extra_kind, "cpu_deck": "", "gate": ""})
 		route.append(_shuffled(destinations, rng))
 	var final_gate := boss.id if boss != null else ""
-	route.append([{"kind": Kind.BATTLE, "cpu_deck": final_deck, "gate": final_gate}])
+	route.append([{"kind": Kind.BATTLE, "cpu_deck": final_deck, "gate": final_gate, "next": []}])
+	_link_route(route, rng)
 	return route
+
+
+## 段どうしを道でつなぐ(GameDesign.md 27章「道」)。左上から右下への階段で張るため交差せず、
+## どの行き先にも出入りの道ができる。出る道が多すぎるもの・泉/工房どうしをつなぐものは引き直す。
+static func _link_route(route: Array, rng: RandomNumberGenerator) -> void:
+	for col in range(route.size() - 1):
+		var links: Array = []
+		for attempt in LINK_ATTEMPTS:
+			links = _staircase_links(
+				(route[col] as Array).size(), (route[col + 1] as Array).size(), rng
+			)
+			if _links_valid(route, col, links):
+				break
+			if attempt % LINK_RESHUFFLE_EVERY == LINK_RESHUFFLE_EVERY - 1:
+				route[col + 1] = _shuffled(route[col + 1], rng)
+		for row in (route[col] as Array).size():
+			var next: Array[int] = []
+			for link in links:
+				if link.x == row:
+					next.append(link.y)
+			route[col][row]["next"] = next
+
+
+static func _staircase_links(from_count: int, to_count: int, rng: RandomNumberGenerator) -> Array:
+	var links: Array = [Vector2i.ZERO]
+	var at := Vector2i.ZERO
+	while at != Vector2i(from_count - 1, to_count - 1):
+		var steps: Array = []
+		if at.x < from_count - 1:
+			steps.append(Vector2i(1, 0))
+		if at.y < to_count - 1:
+			steps.append(Vector2i(0, 1))
+		if at.x < from_count - 1 and at.y < to_count - 1:
+			steps.append(Vector2i(1, 1))
+		at += steps[rng.randi_range(0, steps.size() - 1)]
+		links.append(at)
+	return links
+
+
+static func _links_valid(route: Array, col: int, links: Array) -> bool:
+	var out_counts := {}
+	for link in links:
+		out_counts[link.x] = int(out_counts.get(link.x, 0)) + 1
+		if out_counts[link.x] > MAX_LINKS:
+			return false
+		if _is_rest(route[col][link.x]) and _is_rest(route[col + 1][link.y]):
+			return false
+	return true
+
+
+static func _is_rest(dest: Dictionary) -> bool:
+	var kind := int(dest.get("kind", Kind.BATTLE))
+	return kind == Kind.SPRING or kind == Kind.WORKSHOP
 
 
 static func _next_destination(
