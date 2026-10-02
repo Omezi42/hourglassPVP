@@ -122,7 +122,7 @@ GameDesign.md 27章の実装方針。**遠征の規則(道・山札・HP・束�
 - `take_boon(id)` — 恩恵を1つ得る。丈夫な体は即座にHPも回復する。得たあとで束の候補を作る
 - `take_bundle(index)` / `pass_offer()` — 束を1つ選んで3枚まとめて山札に足す / 見送る
 - `workshop_remove(id)` / `workshop_duplicate(id)` / `workshop_skip()` — 山札から1枚抜く/複製する(2枚まで)/何もしない。いずれも工房を閉じ、次の段へ進む
-- `difficulty()` — 段で決まる思考レベル(`expert_from_floor()` 未満は中級)
+- `difficulty()` — 段で決まる思考レベル(`expert_from_floor()` 以上は上級、それ未満で `BEGINNER_FLOORS` 未満の段は初級、残りは中級)。道と詳細の表示は `difficulty_name_at(col)` で同じ規則を読む
 - `spring_bonus()` / `extra_bundles()` / `foe_hp_penalty()` / `extra_opening_draw()` / `win_heal()` — 得た恩恵の対応する効果の合計
 
 **砂の深さ**(GameDesign.md 27章「砂の深さ」): `depth`(0〜`DEPTH_MAX`)ごとの条件は累積し、

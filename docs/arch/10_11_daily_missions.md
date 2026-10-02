@@ -23,3 +23,17 @@
 
 **受取だけは通信を要する**(`AccountService.grant()`)。残高はアカウントにあり、
 手元で受取済みにすると権利だけが消える(ショップと同じ扱い。10.8節)。
+
+## はじめの7日(GameDesign.md 23章)
+
+| クラス | 責務 |
+|---|---|
+| `WelcomeDays`(`scripts/net/welcome_days.gd`, static) | 日ごとの受け取るもの(`reward_for(day)`)・今日受け取れるか(`can_claim_today()`)・受取(`claim()`)。受け取った日数と最後に受け取った日(日本時間)は `players/{uid}` の `welcome_days` / `welcome_last_date` に持つ |
+| `WelcomeDaysPanel`(`scripts/ui/welcome_days_panel.gd`) | ホームに重ねる受取の札。`Main` がホームを出したときに `WelcomeDays.can_claim_today()` を見て開く |
+
+**受取は `players/{uid}` への1回の `commit()`(`updateTime` の前提条件付き)で、日数・日付・砂金をまとめて書く。**
+`AccountService.grant()` と別に書くと、片方だけ通ったときに権利か砂金のどちらかが消える。
+競合したら読み直して、今日のぶんがもう書かれていれば何もしない(2つのタブで同時に押した場合)。
+7日目のアイコンは `AccountService.unlock_icon()`(既に持っていれば何もしない)。
+日付の境目は `DailyMissionService.today()`(日本時間)を使う。
+CPU戦の結果パネルの1行は `WelcomeDays.tomorrow_line()` が返し、空文字なら出さない。
