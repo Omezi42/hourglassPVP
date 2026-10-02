@@ -175,7 +175,8 @@
 		"id": "15",
 		"label": "とどめ問題 #9",
 		"reserved": [
-			"x"
+			"x",
+			"youtube"
 		]
 	},
 	{
@@ -194,7 +195,8 @@
 		"id": "16",
 		"label": "とどめ問題 #10",
 		"reserved": [
-			"x"
+			"x",
+			"youtube"
 		]
 	},
 	{
@@ -213,7 +215,8 @@
 		"id": "4",
 		"label": "とどめ問題 #11",
 		"reserved": [
-			"x"
+			"x",
+			"youtube"
 		]
 	},
 	{
@@ -222,7 +225,8 @@
 		"id": "vamp",
 		"label": "ヴァンプ",
 		"reserved": [
-			"x"
+			"x",
+			"youtube"
 		]
 	},
 	{
@@ -231,7 +235,8 @@
 		"id": "17",
 		"label": "とどめ問題 #12",
 		"reserved": [
-			"x"
+			"x",
+			"youtube"
 		]
 	},
 	{
@@ -250,7 +255,8 @@
 		"id": "18",
 		"label": "とどめ問題 #13",
 		"reserved": [
-			"x"
+			"x",
+			"youtube"
 		]
 	},
 	{
@@ -259,7 +265,8 @@
 		"id": "drill",
 		"label": "ドリル",
 		"reserved": [
-			"x"
+			"x",
+			"youtube"
 		]
 	},
 	{
@@ -268,7 +275,8 @@
 		"id": "5",
 		"label": "とどめ問題 #14",
 		"reserved": [
-			"x"
+			"x",
+			"youtube"
 		]
 	},
 	{
@@ -277,7 +285,8 @@
 		"id": "tick",
 		"label": "ティック",
 		"reserved": [
-			"x"
+			"x",
+			"youtube"
 		]
 	},
 	{
