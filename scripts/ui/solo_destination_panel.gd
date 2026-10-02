@@ -91,7 +91,7 @@ func show_data(dest: Dictionary, run: SoloRun) -> void:
 	var floor := run.floor
 	var kind: int = int(dest.get("kind", SoloRun.Kind.BATTLE))
 	var is_final := floor == SoloRun.FLOOR_COUNT - 1
-	var is_expert := floor >= run.expert_from_floor()
+	var difficulty_name := SoloRun.difficulty_name_at(floor, run.expert_from_floor())
 	# 最終戦の`gate`には主のidが入る(GameDesign.md 27章「主」)。
 	var gate := SoloGateLibrary.find_by_id(str(dest.get("gate", "")))
 	var cpu_deck := str(dest.get("cpu_deck", ""))
@@ -136,7 +136,7 @@ func show_data(dest: Dictionary, run: SoloRun) -> void:
 	_summary_label.visible = not mirror
 	_summary_label.text = CardCpuDecks.summary_of(cpu_deck)
 	_difficulty_label.visible = true
-	_difficulty_label.text = "CPUの強さ ・ %s" % ("上級" if is_expert else "中級")
+	_difficulty_label.text = "CPUの強さ ・ %s" % difficulty_name
 	_icon_grid.visible = true
 	_gate_name_label.visible = gate != null
 	_gate_desc_label.visible = gate != null

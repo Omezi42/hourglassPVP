@@ -30,6 +30,7 @@ const FunnelTests = preload("res://tools/tests/funnel_tests.gd")
 const TutorialScriptTests = preload("res://tools/tests/tutorial_script_tests.gd")
 const CpuDeckTests = preload("res://tools/tests/cpu_deck_tests.gd")
 const LiveMatchTests = preload("res://tools/tests/live_match_tests.gd")
+const FirstDaysTests = preload("res://tools/tests/first_days_tests.gd")
 
 var _failures := 0
 
@@ -81,6 +82,8 @@ func _run() -> void:
 	await waiting_cpu.run(_assert_true)
 	TutorialScriptTests.new().run(_assert_true)
 	CpuDeckTests.new().run(_assert_true)
+	var first_days := FirstDaysTests.new()
+	await first_days.run(_assert_true)
 
 	if _failures == 0:
 		print("tests passed")

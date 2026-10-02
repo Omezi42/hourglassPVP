@@ -71,6 +71,8 @@ var _lab_nav_button: Button
 var _nameplate_button: AccountNameplateButton
 ## デイリーミッション(GameDesign.md 23章)のモーダル。最初に開いたときだけ作る。
 var _mission_panel: DailyMissionPanel
+var _welcome_panel: WelcomeDaysPanel
+var _welcome_checking := false
 ## 日曜イベント(GameDesign.md 15章・25章)の表示。通常時は空文字で隠れる。
 var _sunday_banner: Label
 ## 残高のチップ(GameDesign.md 9章)。**最初の1回だけは脈を出さない**——
@@ -470,4 +472,33 @@ func _on_mission_reward_claimed(from_rect: Rect2, _amount: int) -> void:
 	if _currency_chip == null:
 		return
 	await CardFlightFx.fly(_mission_panel, from_rect, _currency_chip.get_global_rect())
+	_currency_chip.bump()
+
+
+## はじめの7日(GameDesign.md 23章)。ホームを出すたびに `Main` が呼ぶ。今日のぶんがまだなら札を出す。
+## **通信できないときは出さない**(受け取れないため)。サインインを待つ間に二重に開かない。
+func offer_welcome_days() -> void:
+	if _welcome_checking or NetSession.auth == null:
+		return
+	if _welcome_panel != null and _welcome_panel.visible:
+		return
+	_welcome_checking = true
+	var signed_in: bool = await NetSession.sign_in()
+	_welcome_checking = false
+	if not signed_in or not visible or not WelcomeDays.can_claim_today():
+		return
+	if _welcome_panel == null:
+		_welcome_panel = WelcomeDaysPanel.new()
+		_welcome_panel.closed.connect(func() -> void: refresh_account())
+		_welcome_panel.reward_claimed.connect(_on_welcome_reward_claimed)
+		add_child(_welcome_panel)
+	else:
+		move_child(_welcome_panel, get_child_count() - 1)
+	_welcome_panel.open()
+
+
+func _on_welcome_reward_claimed(from_rect: Rect2, _amount: int) -> void:
+	if _currency_chip == null:
+		return
+	await CardFlightFx.fly(self, from_rect, _currency_chip.get_global_rect())
 	_currency_chip.bump()

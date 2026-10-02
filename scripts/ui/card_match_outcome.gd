@@ -15,7 +15,7 @@ func _init(screen: CardMatchScreen) -> void:
 	_screen = screen
 
 
-## 結果パネルへ出す1行(砂金)を返し、リプレイと戦績を残す。
+## 結果パネルへ出す行(砂金。CPU戦ははじめの7日の明日のぶんを改行で続ける)を返し、リプレイと戦績を残す。
 func finish(kind: int, deck: Array) -> String:
 	var state: MatchState = _screen.state
 	if state.winner < 0:
@@ -34,7 +34,11 @@ func finish(kind: int, deck: Array) -> String:
 	_submit_record(kind)
 	if kind == CurrencyRules.MatchKind.RANKED:
 		RankProgress.apply_result(_screen._client, _screen, uid, won, state.turn_count)
-	return _grant(kind, won, state.turn_count, uid)
+	var reward := _grant(kind, won, state.turn_count, uid)
+	var tomorrow := WelcomeDays.tomorrow_line()
+	if kind == CurrencyRules.MatchKind.CPU and not tomorrow.is_empty():
+		reward = tomorrow if reward.is_empty() else "%s\n%s" % [reward, tomorrow]
+	return reward
 
 
 ## 分析用の記録(GameDesign.md 22章)。**オンライン対戦だけ**が対象で、CPU戦・観戦・

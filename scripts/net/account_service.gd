@@ -51,6 +51,12 @@ static func currency() -> int:
 	return int(_profile.get("currency", 0))
 
 
+## キャッシュ済みのプロフィールの1欄(読んでいなければ `default`)。専用の読み口を持たない欄
+## (`WelcomeDays` など、`players/{uid}` に欄を足す他のサービス)が使う。
+static func profile_value(key: String, default: Variant) -> Variant:
+	return _profile.get(key, default)
+
+
 static func cpu_reward_count_today() -> int:
 	if str(_profile.get("cpu_reward_date", "")) != _today():
 		return 0

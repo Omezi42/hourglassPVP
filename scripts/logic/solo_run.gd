@@ -17,6 +17,8 @@ const MAX_LINKS := 2
 const LINK_ATTEMPTS := 100
 const LINK_RESHUFFLE_EVERY := 5
 const EXPERT_FROM_FLOOR := 2
+## 初級CPUの段(1段目)。遠征を始めた人が最初の1勝を挙げられるようにする(GameDesign.md 27章「道」)。
+const BEGINNER_FLOORS := 1
 const GOLD_PER_WIN := 20
 const CLEAR_GOLD := 100
 ## 同名カードは山札に2枚まで(GameDesign.md 27章「山札を育てる」)。
@@ -172,9 +174,26 @@ func expert_from_floor() -> int:
 
 ## 段で決まる思考レベル(GameDesign.md 27章「道」)。
 func difficulty() -> int:
-	if floor >= expert_from_floor():
+	return difficulty_at(floor, expert_from_floor())
+
+
+## `col` 段目の思考レベル。`expert_from` は `expert_from_floor()`(深さで前倒しになる)。
+static func difficulty_at(col: int, expert_from: int) -> int:
+	if col >= expert_from:
 		return CardCpuStrategy.Difficulty.EXPERT
+	if col < BEGINNER_FLOORS:
+		return CardCpuStrategy.Difficulty.BEGINNER
 	return CardCpuStrategy.Difficulty.NORMAL
+
+
+## 道と行き先の詳細に出す思考レベルの名前。
+static func difficulty_name_at(col: int, expert_from: int) -> String:
+	match difficulty_at(col, expert_from):
+		CardCpuStrategy.Difficulty.EXPERT:
+			return "上級"
+		CardCpuStrategy.Difficulty.BEGINNER:
+			return "初級"
+	return "中級"
 
 
 ## 踏破の砂金(GameDesign.md 27章「遠征をまたいで残るもの」)。深さに応じて増える。

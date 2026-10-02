@@ -7,7 +7,7 @@ extends Control
 signal back_pressed
 ## 対戦が成立した。`Main._on_ranked_match_found()` がそのまま受け取れる形にしてある。
 signal matched(match_id: String, my_side: int, opponent_uid: String)
-## 「待っている間CPUと対戦する」(GameDesign.md 11章)。`Main` がCPU戦を始める。
+## 待っている間のCPU戦(GameDesign.md 11章。自動で始まる場合とボタンの場合)。`Main` がCPU戦を始める。
 signal cpu_requested
 
 const HEADER_SCENE := "res://scenes/screen_header.tscn"
@@ -111,7 +111,12 @@ func begin_match() -> void:
 	_queue.announce_result.connect(_on_announce_result)
 	_queue.join()
 	_wait_funnel.begin()
-	_cpu_offer.arm(WaitingCpuOffer.FIRST_DELAY_SECONDS)
+	# 表彰式を読んでいる間にCPU戦へ移らないよう、閉じてから数え始める
+	if _ceremony.visible:
+		await _ceremony.closed
+		if not _busy or queue == null:
+			return
+	_cpu_offer.start_auto(WaitingCpuOffer.FIRST_DELAY_SECONDS)
 
 
 func _refresh_tier_label() -> void:

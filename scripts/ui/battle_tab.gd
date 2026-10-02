@@ -204,17 +204,18 @@ func _refresh_daily_puzzle() -> void:
 	_puzzle_tile.subtitle_accent = not cleared
 
 
-## 1局も終えていなければCPU戦、人とまだ対戦していなければ「対戦する」(GameDesign.md 18章)。
+## 1局も終えていなければCPU戦、遠征を始めていなければソロモード、今日の1問を解いていなければ
+## リーサルパズル(GameDesign.md 18章)。人と対戦できるかは相手次第のため、ひとりで進める入口へ案内する。
 func _next_step_tile() -> HomeTile:
 	var uid := _uid()
 	if int(MatchStats.totals(uid).get("games", 0)) == 0:
 		return _cpu_tile
-	for kind in [
-		CurrencyRules.MatchKind.RANKED, CurrencyRules.MatchKind.RANDOM, CurrencyRules.MatchKind.ROOM
-	]:
-		if int(MatchStats.totals(uid, kind).get("games", 0)) > 0:
-			return null
-	return _ranked_tile
+	if not SoloProgress.has_started(uid):
+		return _solo_tile
+	var daily := DailyPuzzle.today()
+	if daily != null and not PuzzleProgress.is_cleared(uid, daily.id):
+		return _puzzle_tile
+	return null
 
 
 ## デッキが要る入口(対戦する / CPU戦 / ルームマッチ)を押せなくする。

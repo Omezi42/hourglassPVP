@@ -674,6 +674,7 @@ func _show_only(screen: Control, going_back: bool = false) -> void:
 	if screen == home_screen:
 		UiState.mark_home_seen()
 		FunnelService.reach(FunnelService.HOME)
+		home_screen.offer_welcome_days()
 
 	for s in _screens:
 		if s != previous and s != screen:

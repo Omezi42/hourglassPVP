@@ -14,7 +14,9 @@ signal log_pressed
 
 const SCREEN_SIZE := Vector2(1280, 720)
 ## ボタン3つ(「CPUともう1局」が最長)を枠の内側へ収める幅にする。
-const PANEL_SIZE := Vector2(640, 340)
+const PANEL_SIZE := Vector2(640, 370)
+## 内訳の行の数(HP・手数・決め手・砂金・はじめの7日)。
+const LINE_COUNT := 5
 const BUTTON_SIZE := Vector2(176, 56)
 const BUTTON_GAP := 16
 const ENTRANCE_DURATION := 0.42
@@ -80,7 +82,7 @@ func show_for(
 	if winner >= 0:
 		texts.append("決め手: %s" % CardMatchLog.reason_text(state, winner))
 	if not reward.is_empty():
-		texts.append(reward)
+		texts.append_array(reward.split("\n"))
 	for i in _lines.size():
 		var label: Label = _lines[i]
 		if i < texts.size():
@@ -183,7 +185,7 @@ func _build() -> void:
 	_title.add_theme_font_size_override("font_size", 40)
 	_panel.add_child(_title)
 
-	for i in 4:
+	for i in LINE_COUNT:
 		var label := Label.new()
 		label.position = Vector2(0, _line_base_y(i))
 		label.size = Vector2(PANEL_SIZE.x, 26)

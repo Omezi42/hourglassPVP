@@ -31,6 +31,8 @@ static func load_run(uid: String) -> SoloRun:
 static func save_run(uid: String, run: SoloRun) -> void:
 	var entry := _entry(uid)
 	entry["run"] = null if run == null else run.to_dict()
+	if run != null:
+		entry["started"] = true
 	_data[_key(uid)] = entry
 	_save()
 
@@ -58,6 +60,18 @@ static func take_finished(uid: String) -> Dictionary:
 	_data[_key(uid)] = entry
 	_save()
 	return finished
+
+
+## 遠征を1度でも始めたか(GameDesign.md 18章「つぎはここ」)。この印を持つ前の版で始めた人は、
+## 進行中の遠征・終わった遠征の記録・選んだ深さのどれかが残っているため、それも始めた扱いにする。
+static func has_started(uid: String) -> bool:
+	var entry := _entry(uid)
+	return (
+		bool(entry.get("started", false))
+		or entry.get("run", null) != null
+		or entry.has("finished")
+		or entry.has("last_depth")
+	)
 
 
 static func best_wins(uid: String) -> int:

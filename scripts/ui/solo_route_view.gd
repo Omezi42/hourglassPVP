@@ -349,17 +349,17 @@ func _draw_label(at: Vector2, text: String, font_size: int, color: Color) -> voi
 	)
 
 
-## CPUが上級になる段(`_expert_from`以上。深さで前倒しになる)の対局・関門は
-## 1行目へ「・ 上級」を添える(GameDesign.md 27章「道」「砂の深さ」)。泉には強さが無い。
+## CPUが初級・上級の段の対局・関門は1行目へ「・ 初級」「・ 上級」を添える
+## (GameDesign.md 27章「道」「砂の深さ」)。中級は添えない。泉には強さが無い。
 func _kind_label(kind: int, is_final: bool, col: int) -> String:
 	if kind == SoloRun.Kind.SPRING:
 		return "泉"
 	if kind == SoloRun.Kind.WORKSHOP:
 		return "工房"
 	var base := "最終戦" if is_final else ("関門" if kind == SoloRun.Kind.GATE else "対局")
-	if col >= _expert_from:
-		return "%s ・ 上級" % base
-	return base
+	if SoloRun.difficulty_at(col, _expert_from) == CardCpuStrategy.Difficulty.NORMAL:
+		return base
+	return "%s ・ %s" % [base, SoloRun.difficulty_name_at(col, _expert_from)]
 
 
 ## 泉は`cpu_deck`が空文字のため「HP+8」だけを出す。関門は関門名、対局はCPUの作戦名。
