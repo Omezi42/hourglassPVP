@@ -100,6 +100,8 @@ static func _build(source: Dictionary, kind: int, state: MatchState) -> Dictiona
 static func _bump_stats(client: FirestoreClient, record: Dictionary) -> void:
 	for _attempt in STATS_RETRIES:
 		var meta: Dictionary = await client.get_document_meta(STATS_PATH)
+		if not AccountService.read_succeeded(meta):
+			return
 		var fields: Dictionary = meta.get("fields", {})
 		var precondition: Dictionary = (
 			{"updateTime": meta["update_time"]} if meta.get("exists", false) else {"exists": false}

@@ -109,6 +109,8 @@ static func flush_with(client: FirestoreClient) -> void:
 static func send(client: FirestoreClient, batch: Dictionary) -> bool:
 	for _attempt in STATS_RETRIES:
 		var meta: Dictionary = await client.get_document_meta(STATS_PATH)
+		if not AccountService.read_succeeded(meta):
+			return false
 		var precondition: Dictionary = (
 			{"updateTime": meta["update_time"]} if meta.get("exists", false) else {"exists": false}
 		)

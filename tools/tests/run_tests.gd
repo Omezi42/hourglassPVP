@@ -6,6 +6,7 @@ const OnlineTests = preload("res://tools/tests/online_tests.gd")
 const OnlineMatchFlowTests = preload("res://tools/tests/online_match_flow_tests.gd")
 const AccountTests = preload("res://tools/tests/account_tests.gd")
 const AccountServiceTests = preload("res://tools/tests/account_service_tests.gd")
+const ReadFailureTests = preload("res://tools/tests/read_failure_tests.gd")
 const V5RulesTests = preload("res://tools/tests/v5_rules_tests.gd")
 const V5VocabularyTests = preload("res://tools/tests/v5_vocabulary_tests.gd")
 const StillTimeTests = preload("res://tools/tests/still_time_tests.gd")
@@ -87,6 +88,8 @@ func _run() -> void:
 	await first_days.run(_assert_true)
 	var account_service := AccountServiceTests.new()
 	await account_service.run(_assert_true)
+	var read_failure := ReadFailureTests.new()
+	await read_failure.run(_assert_true)
 
 	if _failures == 0:
 		print("tests passed")

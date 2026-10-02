@@ -74,6 +74,8 @@ static func _push_entry(client: FirestoreClient, uid: String, entry: Dictionary)
 	var path := AccountService.path(uid)
 	for _attempt in range(RETRY):
 		var doc: Dictionary = await client.get_document_meta(path)
+		if not AccountService.read_succeeded(doc):
+			break
 		var fields: Dictionary = doc.get("fields", {})
 		var bucket := {
 			"kinds": fields.get("stats_kinds", {}),

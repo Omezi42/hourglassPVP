@@ -12,6 +12,8 @@ const RETRY := 3
 ## 段位を動かさない対局の下限(GameDesign.md 15章「不正な稼ぎ方への線引き」と同じ線)。
 const MIN_MOVES := 10
 const JST_OFFSET_HOURS := 9
+## `_grant_season_reward()` が月末報酬を渡せなかったときの戻り値。
+const REWARD_FAILED := -1
 
 ## 月末報酬(GameDesign.md 28章)。到達した最高段位の帯に応じた砂金
 ## (2026-09-15、ユーザー判断で確定)。
@@ -91,8 +93,13 @@ static func ensure_current_season(
 	var reward := 0
 	if not is_first_season and AccountService.rank_reward_claimed_season() != previous:
 		reward = await _grant_season_reward(client, uid, previous, peak_tier)
+		# 報酬を渡せないまま段位を切り替えると、旧シーズンの報酬を受け取る機会が消える
+		if reward == REWARD_FAILED:
+			return none
 	for _attempt in range(RETRY):
 		var doc: Dictionary = await client.get_document_meta(AccountService.path(uid))
+		if not AccountService.read_succeeded(doc):
+			return none
 		var fields: Dictionary = doc.get("fields", {})
 		if str(fields.get("rank_season", "")) == current:
 			AccountService.apply_local_fields(fields)
@@ -126,6 +133,8 @@ static func apply_result(
 		return
 	for _attempt in range(RETRY):
 		var doc: Dictionary = await client.get_document_meta(AccountService.path(uid))
+		if not AccountService.read_succeeded(doc):
+			return
 		var fields: Dictionary = doc.get("fields", {})
 		var tier := str(fields.get("rank_tier", RankRules.INITIAL_TIER))
 		if tier.is_empty():
@@ -185,8 +194,8 @@ static func apply_result(
 			return
 
 
-## 実際に加算できた額を返す(失敗・対象外なら0)。呼び出し側が表彰演出へ表示する額を
-## 知るために使う。
+## 実際に加算できた額を返す(対象外なら0、読み書きに失敗したら`REWARD_FAILED`)。
+## 呼び出し側が表彰演出へ表示する額を知るために使う。
 static func _grant_season_reward(
 	client: FirestoreClient, uid: String, old_season: String, peak_tier: String
 ) -> int:
@@ -195,6 +204,8 @@ static func _grant_season_reward(
 		return 0
 	for _attempt in range(RETRY):
 		var doc: Dictionary = await client.get_document_meta(AccountService.path(uid))
+		if not AccountService.read_succeeded(doc):
+			return REWARD_FAILED
 		var fields: Dictionary = doc.get("fields", {})
 		var data := {
 			"currency": int(fields.get("currency", 0)) + amount,
@@ -207,7 +218,7 @@ static func _grant_season_reward(
 		if ok:
 			AccountService.apply_local_fields(data)
 			return amount
-	return 0
+	return REWARD_FAILED
 
 
 static func _precondition(doc: Dictionary) -> Dictionary:
