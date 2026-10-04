@@ -68,10 +68,8 @@
 
 ### カードスキン(GameDesign.md 31章 / Architecture.md 10.19節)
 
-仕組みは実装済み。最初の1枚はソードの「聖剣」(`SkinLibrary` に定義済み・絵の到着待ち)。
+仕組みは実装済み。最初の1枚はソードの「聖剣」(絵も取り込み済み)。
 
-- [ ] 聖剣の絵を取り込む(ユーザーが生成・透過して `assets/hourglasses/incoming/sword_holy.png` へ置く)。
-      3分割・正規化して `assets/hourglasses/skins/sword_holy/state_{upright,falling,fallen}.png` へ。絵が揃うまでショップには並ばない
 - [ ] Discord #お知らせ へ紹介
 
 ### イラスト
