@@ -45,16 +45,21 @@ getter が `HourglassArt.texture(art_key(), state)` を返す形で12箇所か�
 
 | フィールド | 型 | 内容 |
 |---|---|---|
-| `owned_skins` | Array[String] | 買ったスキンのid |
-| `disabled_skins` | Array[String] | OFFにしたスキンのid。**ONの一覧ではなくOFFの一覧で持つ**——既定がONのため、購入時に所有と設定の2箇所を書かずに済む |
+| `owned_skins` | Array[String] | 買ったスキンのid。**配布のスキンは書かない**(全員が持つため。`AccountService.owned_skin_ids()` が `SkinLibrary.free_ids()` を足して返す) |
+| `disabled_skins` | Array[String] | OFFにした**買った**スキンのid。既定がONのため、購入時に所有と設定の2箇所を書かずに済む |
+| `enabled_skins` | Array[String] | ONにした**配布の**スキンのid。配布のスキンは既定がOFFのため、こちらはONの一覧で持つ |
+
+- 配布のスキンは `SkinLibrary` の定義で `"free": true`(価格0・ショップに並ばない)。
+  ON/OFFの判定は `CardSkins._resolve(owned, disabled, enabled)` 1箇所が、配布かどうかで見る一覧を切り替える。
+  相手の設定も `fetch_profile()` が3つの一覧を返し、同じ規則で解決する
 
 - `ShopCatalog.Kind` へ `SKIN` を**末尾に**足し(11章)、`items()` は `SkinLibrary.all()` を
   並べる。購入は `AccountService.purchase()` の既存の流儀のまま `owned_skins` へ追加する。
   `owns()` / `_owned_key()` に分岐を1つ足す
-- `AccountService.set_skin_enabled(client, skin_id, enabled)` が `disabled_skins` を
+- `AccountService.set_skin_enabled(client, skin_id, enabled)` が `disabled_skins`(配布なら `enabled_skins`)を
   `updateTime` 前提の `commit()` で書く。
   **未サインインでは切り替えられない**(ショップの購入と同じ理由。設定を手元だけで
-  持つと次に通信した時点で戻る)。`AccountStore.save_local_disabled_skins()` で控え、
+  持つと次に通信した時点で戻る)。`AccountStore.save_local_skin_choices()` で控え、
   `load_local_customization()` が返すため、起動直後の描画が通信を待たずに済む
 
 ## 画面

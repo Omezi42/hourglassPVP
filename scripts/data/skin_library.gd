@@ -14,13 +14,15 @@ const STATE_FILES: Array[String] = ["state_upright", "state_falling", "state_fal
 const PRICE_STANDARD := 500
 
 ## 1件 = 対象のカードid / 表示名 / 手札の窓の光だまりの色 / 価格。
+## `free` は配布のスキン(GameDesign.md 31章)。全員が初めから持ち、ショップに並ばず、最初はOFF。
 const SKINS: Dictionary = {
 	"sword_holy":
 	{
 		"card_id": "sword",
 		"name": "聖剣",
 		"accent": Color(0.98, 0.86, 0.52),
-		"price": PRICE_STANDARD,
+		"price": 0,
+		"free": true,
 	},
 }
 
@@ -38,6 +40,28 @@ static func all() -> Array[String]:
 			if has_art(String(skin_id)):
 				_available.append(String(skin_id))
 	return _available
+
+
+## ショップに並ぶもの。配布のスキンは売らない。
+static func purchasable_ids() -> Array[String]:
+	var ids: Array[String] = []
+	for skin_id in all():
+		if not is_free(skin_id):
+			ids.append(skin_id)
+	return ids
+
+
+## 全員が初めから持つスキン。
+static func free_ids() -> Array[String]:
+	var ids: Array[String] = []
+	for skin_id in all():
+		if is_free(skin_id):
+			ids.append(skin_id)
+	return ids
+
+
+static func is_free(skin_id: String) -> bool:
+	return bool(SKINS.get(skin_id, {}).get("free", false))
 
 
 static func has(skin_id: String) -> bool:

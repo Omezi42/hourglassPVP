@@ -36,7 +36,7 @@ static func items() -> Array[Dictionary]:
 	# ステージクリアのような買い切り以外の経路でしか所有できないため。
 	for set_id in CardSetLibrary.purchasable_ids():
 		list.append({"kind": Kind.CARD_SET, "id": set_id})
-	for skin_id in SkinLibrary.all():
+	for skin_id in SkinLibrary.purchasable_ids():
 		list.append({"kind": Kind.SKIN, "id": skin_id})
 	return list
 

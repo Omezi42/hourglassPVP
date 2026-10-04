@@ -128,47 +128,66 @@ static func owned_playmat_ids() -> Array[String]:
 	return _owned([PlaymatLibrary.DEFAULT_ID] as Array[String], "owned_playmats")
 
 
-## 買ったカードスキン(GameDesign.md 31章)。ONかどうかは `disabled_skin_ids()` が持つ。
+## 持っているカードスキン(GameDesign.md 31章)。**配布のスキンを必ず含めて返す**(サーバーには書かない)。
 static func owned_skin_ids() -> Array[String]:
-	return _owned([] as Array[String], "owned_skins")
+	return _owned(SkinLibrary.free_ids(), "owned_skins")
 
 
-## OFFにしたカードスキン。**既定がONのため、OFFの一覧で持つ**(買った時点で効く)。
+## OFFにした買ったスキン(既定がON)。
 static func disabled_skin_ids() -> Array[String]:
+	return _skin_choice("disabled_skins")
+
+
+## ONにした配布のスキン(既定がOFF)。
+static func enabled_skin_ids() -> Array[String]:
+	return _skin_choice("enabled_skins")
+
+
+static func skin_enabled(skin_id: String) -> bool:
+	return CardSkins.is_on(skin_id, owned_skin_ids(), disabled_skin_ids(), enabled_skin_ids())
+
+
+static func _skin_choice(key: String) -> Array[String]:
 	var list: Array[String] = []
-	var stored: Array = _profile.get("disabled_skins", [])
+	var stored: Array = _profile.get(key, [])
 	if stored.is_empty():
-		stored = AccountStore.load_local_customization().get("disabled_skins", [])
+		stored = AccountStore.load_local_customization().get(key, [])
 	for entry in stored:
 		list.append(str(entry))
 	return list
 
 
 ## スキンのON/OFFを切り替える(図鑑から)。**未サインインでは切り替えられない**——手元だけで
-## 持つと、次に通信した時点でサーバーの値へ戻るため。
+## 持つと、次に通信した時点でサーバーの値へ戻るため。配布のスキンはONの一覧、買ったスキンは
+## OFFの一覧へ書く(既定が逆のため。`CardSkins.is_on()`)。
 static func set_skin_enabled(
 	client: FirestoreClient, uid: String, skin_id: String, enabled: bool
 ) -> bool:
 	if uid == "" or client == null or not owned_skin_ids().has(skin_id):
 		return false
+	var free := SkinLibrary.is_free(skin_id)
+	var key := "enabled_skins" if free else "disabled_skins"
+	var listed := enabled if free else not enabled
 	for _attempt in range(GRANT_RETRY):
 		var doc: Dictionary = await client.get_document_meta(_path(uid))
 		if not read_succeeded(doc):
 			break
 		var fields: Dictionary = doc.get("fields", {})
-		var disabled: Array = (fields.get("disabled_skins", []) as Array).duplicate()
-		if enabled:
-			disabled.erase(skin_id)
-		elif not disabled.has(skin_id):
-			disabled.append(skin_id)
-		var data := {"disabled_skins": disabled, "updated_at": Time.get_unix_time_from_system()}
+		var ids: Array = (fields.get(key, []) as Array).duplicate()
+		if not listed:
+			ids.erase(skin_id)
+		elif not ids.has(skin_id):
+			ids.append(skin_id)
+		var data := {key: ids, "updated_at": Time.get_unix_time_from_system()}
 		var precondition := {}
 		if bool(doc.get("exists", false)) and str(doc.get("update_time", "")) != "":
 			precondition = {"updateTime": doc["update_time"]}
 		var ok: bool = await client.commit([client.update_write(_path(uid), data, precondition)])
 		if ok:
-			_profile["disabled_skins"] = disabled
-			AccountStore.save_local_disabled_skins(disabled)
+			_profile[key] = ids
+			AccountStore.save_local_skin_choices(
+				_profile.get("disabled_skins", []), _profile.get("enabled_skins", [])
+			)
 			CardSkins.invalidate()
 			return true
 	return false
@@ -450,8 +469,10 @@ static func load_profile(client: FirestoreClient, uid: String) -> void:
 		or fields.has("owned_skins")
 	):
 		_save_unlocks_locally()
-	if fields.has("disabled_skins"):
-		AccountStore.save_local_disabled_skins(fields["disabled_skins"])
+	if fields.has("disabled_skins") or fields.has("enabled_skins"):
+		AccountStore.save_local_skin_choices(
+			fields.get("disabled_skins", []), fields.get("enabled_skins", [])
+		)
 	CardSkins.invalidate()
 	# 戦績の同期(GameDesign.md 19章)。別端末で記録された分をローカルへ取り込み、
 	# まだ送れていない分(オフラインで遊んだCPU戦など)を送り直す。
@@ -568,6 +589,7 @@ static func fetch_profile(client: FirestoreClient, uid: String) -> Dictionary:
 			"playmat_id": PlaymatLibrary.DEFAULT_ID,
 			"owned_skins": [],
 			"disabled_skins": [],
+			"enabled_skins": [],
 		}
 	if uid == _current_uid():
 		return {
@@ -577,6 +599,7 @@ static func fetch_profile(client: FirestoreClient, uid: String) -> Dictionary:
 			"playmat_id": playmat_id(),
 			"owned_skins": owned_skin_ids(),
 			"disabled_skins": disabled_skin_ids(),
+			"enabled_skins": enabled_skin_ids(),
 		}
 	if _profile_cache.has(uid):
 		return _profile_cache[uid]
@@ -598,6 +621,7 @@ static func fetch_profile(client: FirestoreClient, uid: String) -> Dictionary:
 		"playmat_id": p_mat,
 		"owned_skins": fields.get("owned_skins", []),
 		"disabled_skins": fields.get("disabled_skins", []),
+		"enabled_skins": fields.get("enabled_skins", []),
 	}
 	_profile_cache[uid] = profile
 	return profile
@@ -656,6 +680,7 @@ static func _empty_profile() -> Dictionary:
 		"owned_card_sets": [],
 		"owned_skins": [],
 		"disabled_skins": [],
+		"enabled_skins": [],
 		"owned_titles": [],
 		"emote_slots": [],
 		"playmat_id": "",

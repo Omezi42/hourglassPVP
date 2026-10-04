@@ -145,7 +145,7 @@ func _sync_skin_toggle() -> void:
 	_skin_toggle.disabled = false
 	if skin_id.is_empty():
 		return
-	var enabled := not AccountService.disabled_skin_ids().has(skin_id)
+	var enabled := AccountService.skin_enabled(skin_id)
 	_skin_toggle.text = "スキン:ON" if enabled else "スキン:OFF"
 
 
@@ -160,9 +160,10 @@ func _on_skin_toggle_pressed() -> void:
 	var skin_id := _owned_skin()
 	if skin_id.is_empty():
 		return
-	var enabled := AccountService.disabled_skin_ids().has(skin_id)
 	_skin_toggle.disabled = true
-	await AccountService.set_skin_enabled(NetSession.client, _uid(), skin_id, enabled)
+	await AccountService.set_skin_enabled(
+		NetSession.client, _uid(), skin_id, not AccountService.skin_enabled(skin_id)
+	)
 	_sync_skin_toggle()
 	queue_redraw()
 

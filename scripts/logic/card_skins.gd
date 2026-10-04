@@ -49,8 +49,8 @@ static func active_skin(card: CardData, viewer: Viewer = Viewer.SELF) -> String:
 
 
 ## 対局の相手の設定を受け取る(`CardMatchOnline` が `fetch_profile()` の直後に呼ぶ)。
-static func set_opponent(owned: Array, disabled: Array) -> void:
-	_opponent_skins = _resolve(owned, disabled)
+static func set_opponent(owned: Array, disabled: Array, enabled: Array) -> void:
+	_opponent_skins = _resolve(owned, disabled, enabled)
 
 
 ## 対局を離れたら相手の設定を捨てる。CPU戦の相手はこれで元の絵になる。
@@ -66,13 +66,25 @@ static func invalidate() -> void:
 static func _self_map() -> Dictionary:
 	if not _self_ready:
 		_self_ready = true
-		_self_skins = _resolve(AccountService.owned_skin_ids(), AccountService.disabled_skin_ids())
+		_self_skins = _resolve(
+			AccountService.owned_skin_ids(),
+			AccountService.disabled_skin_ids(),
+			AccountService.enabled_skin_ids()
+		)
 	return _self_skins
 
 
-static func _resolve(owned: Array, disabled: Array) -> Dictionary:
+## 効いているかどうかの規則はここ1箇所。**配布のスキンは全員が持ち、既定がOFF**のため
+## ONの一覧(`enabled`)を、買ったスキンは既定がONのためOFFの一覧(`disabled`)を見る。
+static func is_on(skin_id: String, owned: Array, disabled: Array, enabled: Array) -> bool:
+	if SkinLibrary.is_free(skin_id):
+		return enabled.has(skin_id)
+	return owned.has(skin_id) and not disabled.has(skin_id)
+
+
+static func _resolve(owned: Array, disabled: Array, enabled: Array) -> Dictionary:
 	var map: Dictionary = {}
 	for skin_id in SkinLibrary.all():
-		if owned.has(skin_id) and not disabled.has(skin_id):
+		if is_on(skin_id, owned, disabled, enabled):
 			map[SkinLibrary.card_id(skin_id)] = skin_id
 	return map

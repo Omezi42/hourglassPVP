@@ -106,7 +106,11 @@ func _apply_player_names(client: FirestoreClient, opponent_uid: String) -> void:
 		AccountService.playmat_id(), str(profile.get("playmat_id", PlaymatLibrary.DEFAULT_ID))
 	)
 	# 相手のスキンも同じ経路で受け取る(GameDesign.md 31章)。見た目の品は相手に見えて値打ちになる。
-	CardSkins.set_opponent(profile.get("owned_skins", []), profile.get("disabled_skins", []))
+	CardSkins.set_opponent(
+		profile.get("owned_skins", []),
+		profile.get("disabled_skins", []),
+		profile.get("enabled_skins", [])
+	)
 	_screen.refresh()
 
 

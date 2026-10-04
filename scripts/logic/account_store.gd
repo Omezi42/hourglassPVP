@@ -105,10 +105,11 @@ static func clear_pending_matches() -> void:
 	_store(data)
 
 
-## OFFにしたカードスキン(GameDesign.md 31章)。起動直後の描画が通信を待たずに済むよう控える。
-static func save_local_disabled_skins(disabled_skins: Array) -> void:
+## カードスキンのON/OFF(GameDesign.md 31章)。起動直後の描画が通信を待たずに済むよう控える。
+static func save_local_skin_choices(disabled_skins: Array, enabled_skins: Array) -> void:
 	var data := _load()
 	data["disabled_skins"] = disabled_skins
+	data["enabled_skins"] = enabled_skins
 	_store(data)
 
 
@@ -162,6 +163,7 @@ static func load_local_customization() -> Dictionary:
 		"title_id": str(data.get("title_id", "")),
 		"playmat_id": str(data.get("playmat_id", "")),
 		"disabled_skins": data.get("disabled_skins", []),
+		"enabled_skins": data.get("enabled_skins", []),
 	}
 
 
