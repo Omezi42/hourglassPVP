@@ -139,6 +139,8 @@ var mode: int = Mode.BOARD
 ## 表示するカード。手札はこれだけ、盤面は unit も併せて持つ。
 var card: CardData
 var unit: CardInstance
+## 誰のカードとして絵を引くか(GameDesign.md 31章)。相手の駒・CPU・再生・教材では変える。
+var skin_viewer: CardSkins.Viewer = CardSkins.Viewer.SELF
 ## 出せる/選べる状態か。false なら暗く表示する。
 var enabled := true
 ## 選択中(枠・台座の輪を強調する)。
@@ -388,7 +390,7 @@ func play_land() -> void:
 ## 絵はこの時点で渡しておく(`card` は次の同期で null になる)。
 func play_break(broken: CardData) -> void:
 	_fx.size = size
-	var texture: Texture2D = broken.icon_fallen if broken != null else null
+	var texture := _art_of(broken, HourglassArt.State.FALLEN)
 	if texture == null:
 		return
 	_fx.play_break(texture, _fit_art(texture, board_art_box()))
@@ -397,7 +399,7 @@ func play_break(broken: CardData) -> void:
 ## 毒砂で破壊された:割れずに溶け落ちる(GameDesign.md 9章)。
 func play_melt(melted: CardData) -> void:
 	_fx.size = size
-	var texture: Texture2D = melted.icon_fallen if melted != null else null
+	var texture := _art_of(melted, HourglassArt.State.FALLEN)
 	if texture == null:
 		return
 	_fx.play_melt(texture, _fit_art(texture, board_art_box()))
@@ -465,7 +467,7 @@ func _notification(what: int) -> void:
 ## する。カードの枠に合わせると絵が札の中より大きく出て、掴んだ瞬間に絵が膨らんで見える。
 ## 動かす方向と逆へ遅れて傾く物理は `CardDragPreview` が持つ(GameDesign.md 9章)。
 func _make_drag_preview() -> Control:
-	var texture := _icon() if mode == Mode.BOARD else card.icon_upright
+	var texture := _icon() if mode == Mode.BOARD else _art(HourglassArt.State.UPRIGHT)
 	var art := _fit_art(texture, _hand_art_box() if mode == Mode.HAND else board_art_box()).size
 	var preview := CardDragPreview.new()
 	preview.setup(texture, art)
@@ -720,7 +722,8 @@ func _art_reference() -> float:
 		return _art_reference_cache
 	_art_reference_card = card
 	_art_reference_cache = 0.0
-	for texture in [card.icon_upright, card.icon_falling, card.icon_fallen]:
+	for state in HourglassArt.State.values():
+		var texture := _art(state)
 		if texture != null:
 			_art_reference_cache = maxf(_art_reference_cache, texture.get_size().y)
 	return _art_reference_cache
@@ -729,12 +732,20 @@ func _art_reference() -> float:
 ## 体力と攻撃力の比で3枚を切り替える(GameDesign.md 9章)。手札は常に上向き。
 func _icon() -> Texture2D:
 	if unit == null:
-		return card.icon_upright
+		return _art(HourglassArt.State.UPRIGHT)
 	if unit.attack > unit.health:
-		return card.icon_fallen
+		return _art(HourglassArt.State.FALLEN)
 	if unit.attack >= unit.health - 1:
-		return card.icon_falling
-	return card.icon_upright
+		return _art(HourglassArt.State.FALLING)
+	return _art(HourglassArt.State.UPRIGHT)
+
+
+func _art(state: int) -> Texture2D:
+	return _art_of(card, state)
+
+
+func _art_of(of: CardData, state: int) -> Texture2D:
+	return CardSkins.texture(of, state, skin_viewer) if of != null else null
 
 
 ## 場の絵を収める枠。下端が台座の高さに来る正方形。
@@ -748,7 +759,7 @@ func board_art_box() -> Rect2:
 func _draw_empty() -> void:
 	var rect := Rect2(Vector2.ZERO, size)
 	var color := SELECT_CYAN if selected else Color(0.3, 0.28, 0.3, 0.5)
-	_dashed_rect(rect, color)
+	CardViewPaint.dashed_rect(self, rect, color)
 
 
 ## カードの幅に収まらない文字列は、収まるまでフォントを縮めて描く。
@@ -770,21 +781,6 @@ func _centered_text(
 		font_size,
 		color
 	)
-
-
-func _dashed_rect(rect: Rect2, color: Color) -> void:
-	var x := rect.position.x
-	while x < rect.end.x:
-		var to := minf(x + 5, rect.end.x)
-		draw_line(Vector2(x, rect.position.y), Vector2(to, rect.position.y), color, 2.0)
-		draw_line(Vector2(x, rect.end.y), Vector2(to, rect.end.y), color, 2.0)
-		x += 10.0
-	var y := rect.position.y
-	while y < rect.end.y:
-		var to := minf(y + 5, rect.end.y)
-		draw_line(Vector2(rect.position.x, y), Vector2(rect.position.x, to), color, 2.0)
-		draw_line(Vector2(rect.end.x, y), Vector2(rect.end.x, to), color, 2.0)
-		y += 10.0
 
 
 ## 攻撃の演出。**段取りは CardViewStrike が持つ**(1ファイル1000行の上限に達したため、

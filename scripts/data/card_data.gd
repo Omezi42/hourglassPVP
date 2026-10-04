@@ -54,20 +54,22 @@ extends Resource
 ## (GameDesign.md 9章)。白のシルエットで持ち、色は描画側が決める。
 @export var emblem: Texture2D
 
+## 3状態のイラストは**自分の視点のスキン込み**で返す(GameDesign.md 31章)。相手の駒や
+## 教材のように視点が違う場所は `CardSkins.texture()` を直に呼ぶ。
 ## 体力が満ちている(=場に出た直後に近い)状態のイラスト。
 var icon_upright: Texture2D:
 	get:
-		return HourglassArt.texture(art_key(), HourglassArt.State.UPRIGHT)
+		return CardSkins.texture(self, HourglassArt.State.UPRIGHT)
 
 ## 砂が落ちている途中の状態のイラスト。
 var icon_falling: Texture2D:
 	get:
-		return HourglassArt.texture(art_key(), HourglassArt.State.FALLING)
+		return CardSkins.texture(self, HourglassArt.State.FALLING)
 
 ## 攻撃力に偏った(=砂が落ちきりに近い)状態のイラスト。
 var icon_fallen: Texture2D:
 	get:
-		return HourglassArt.texture(art_key(), HourglassArt.State.FALLEN)
+		return CardSkins.texture(self, HourglassArt.State.FALLEN)
 
 
 ## 実際に使う絵の id。

@@ -116,13 +116,13 @@ func play_glass_break(rect: Rect2) -> void:
 ## 壊れたのではなく戻ったことが読めるようにする。`toward` は呼び出し側(盤面全体の
 ## 座標系)の点で、ここでは親(`CardView`)の座標系へ変換してから使う。
 func play_recall(card: CardData, toward: Vector2) -> void:
-	if card == null or card.icon_upright == null:
-		return
 	var view := get_parent() as CardView
-	if view == null:
+	if card == null or view == null:
+		return
+	var texture := CardSkins.texture(card, HourglassArt.State.UPRIGHT, view.skin_viewer)
+	if texture == null:
 		return
 	size = view.size
-	var texture := card.icon_upright
 	var box := Rect2(
 		Vector2(
 			(size.x - CardView.BOARD_ART_SIDE) * 0.5,

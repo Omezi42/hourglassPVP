@@ -1,7 +1,7 @@
 class_name CardShopScreen
 extends Control
 ## ショップ(GameDesign.md 21章、Architecture.md 10.8)。砂金を使う唯一の場所で、
-## 売るのはアイコン・エモート・プレイマット・カードセット。共通のレイアウト規約
+## 売るのはアイコン・エモート・プレイマット・カードセット・カードスキン。共通のレイアウト規約
 ## (GameDesign.md 9章)に従い、`ScreenHeader` を使う。
 
 signal back_pressed
@@ -29,6 +29,7 @@ const SECTIONS: Array[Dictionary] = [
 	{"kind": ShopCatalog.Kind.EMOTE, "heading": "エモート"},
 	{"kind": ShopCatalog.Kind.PLAYMAT, "heading": "プレイマット"},
 	{"kind": ShopCatalog.Kind.CARD_SET, "heading": "カードセット"},
+	{"kind": ShopCatalog.Kind.SKIN, "heading": "カードスキン"},
 ]
 
 var _list: VBoxContainer
@@ -303,6 +304,8 @@ class ShopItemCard:
 	const CARD_SET_EMBLEM_LIMIT := 5
 	const CARD_SET_EMBLEM_RADIUS := 20.0
 	const CARD_SET_EMBLEM_STEP := 34.0
+	## カードスキンは3状態の絵を横に並べて見せる(GameDesign.md 31章)。見本の幅は高さのこの倍。
+	const SKIN_THUMB_WIDTH_RATIO := 2.1
 
 	var kind: ShopCatalog.Kind
 	var id: String
@@ -382,7 +385,8 @@ class ShopItemCard:
 	func _thumb_rect() -> Rect2:
 		var inner := _inner_rect()
 		var side: float = inner.size.y
-		return Rect2(inner.position, Vector2(side, side))
+		var width := side * SKIN_THUMB_WIDTH_RATIO if kind == ShopCatalog.Kind.SKIN else side
+		return Rect2(inner.position, Vector2(width, side))
 
 	## 未購入かつ残高が足りないとき。地の上への暗幕は `_ready()` の `modulate` が
 	## 一括でかけるため、ここは文字色などの判定にだけ使う
@@ -395,7 +399,7 @@ class ShopItemCard:
 			return
 		var inner := _inner_rect()
 		_draw_thumb(inner)
-		var text_left: float = inner.position.x + inner.size.y + 18.0
+		var text_left: float = _thumb_rect().end.x + 18.0
 		var text_width: float = inner.end.x - text_left - 152.0
 		var dim := owned or _unaffordable()
 		var text_color := UiPalette.TEXT_MUTED if dim else UiPalette.TEXT_OFFWHITE
@@ -435,6 +439,9 @@ class ShopItemCard:
 		if kind == ShopCatalog.Kind.CARD_SET:
 			_draw_card_set_thumb(inner)
 			return
+		if kind == ShopCatalog.Kind.SKIN:
+			_draw_skin_thumb()
+			return
 		var thumb := _thumb_rect()
 		var tex := UserProfileLibrary.get_icon_texture(id)
 		EmblemSeal.brass(self, thumb.get_center(), tex, thumb.size.y * 0.42)
@@ -462,6 +469,22 @@ class ShopItemCard:
 				16,
 				UiPalette.TEXT_MUTED
 			)
+
+	## 3状態の絵をそのまま並べる。**見た目が品そのもの**のため、所有・ON/OFFに関わらず
+	## スキンの絵を直に読む(`CardSkins` は通さない)。
+	func _draw_skin_thumb() -> void:
+		var thumb := _thumb_rect()
+		var cell := Vector2(thumb.size.x / float(SkinLibrary.STATE_FILES.size()), thumb.size.y)
+		for state in SkinLibrary.STATE_FILES.size():
+			var texture := SkinLibrary.texture(id, state)
+			if texture == null:
+				continue
+			var scale: float = minf(cell.x / texture.get_size().x, cell.y / texture.get_size().y)
+			var art := texture.get_size() * scale
+			var at := (
+				thumb.position + Vector2(cell.x * state + (cell.x - art.x) * 0.5, cell.y - art.y)
+			)
+			draw_texture_rect(texture, Rect2(at, art), false)
 
 	## 対局中の吹き出し(`EmoteBubble`)と同じ質感の真鍮枠パネルに文言を収める。
 	func _draw_emote_thumb() -> void:

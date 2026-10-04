@@ -474,6 +474,7 @@ func refresh() -> void:
 func _refresh_row(views: Array[CardView], side: int) -> void:
 	for i in MatchState.BOARD_SIZE:
 		var unit: CardInstance = state.board[side][i]
+		views[i].skin_viewer = skin_viewer_for(side)
 		views[i].show_unit(unit)
 		views[i].exhausted = unit != null and side == my_side and not unit.can_attack()
 		views[i].ready_mark = unit != null and side == my_side and unit.can_attack()
@@ -483,6 +484,14 @@ func _refresh_row(views: Array[CardView], side: int) -> void:
 		views[i].preview_dead = false
 		# 攻撃できる自分の駒はドラッグでも運べる(GameDesign.md 9章)。
 		views[i].draggable = side == my_side and _my_turn() and unit != null and unit.can_attack()
+
+
+## どちらの側の駒をどのスキンで描くか(GameDesign.md 31章)。**再生・観戦は元の絵**。
+## CPU戦の相手は `CardSkins` に相手の設定が無いため、`OPPONENT` のままで元の絵になる。
+func skin_viewer_for(side: int) -> CardSkins.Viewer:
+	if not _interactive:
+		return CardSkins.Viewer.NONE
+	return CardSkins.Viewer.SELF if side == my_side else CardSkins.Viewer.OPPONENT
 
 
 func _refresh_hand() -> void:
@@ -497,6 +506,7 @@ func _refresh_hand() -> void:
 		if i >= count:
 			continue
 		var usable: bool = state.can_play(my_side, i) or state.can_cast(my_side, i)
+		view.skin_viewer = skin_viewer_for(my_side)
 		view.show_card(hand[i], _my_turn() and usable)
 		view.selected = _selection.is_hand(i)
 		view.draggable = view.enabled
@@ -614,7 +624,7 @@ func _on_graveyard_pressed(opponent: bool) -> void:
 	if state == null:
 		return
 	var side: int = MatchState.other_side(my_side) if opponent else my_side
-	_pile.open_pile("相手の墓地" if opponent else "あなたの墓地", state.graveyard[side])
+	_pile.open_pile("相手の墓地" if opponent else "あなたの墓地", state.graveyard[side], skin_viewer_for(side))
 
 
 func _record(action: Dictionary) -> void:

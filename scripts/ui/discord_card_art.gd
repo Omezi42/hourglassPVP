@@ -44,7 +44,7 @@ func _draw() -> void:
 	if card.is_spell:
 		_draw_spell_plate(art_rect)
 	else:
-		var icon := card.icon_upright
+		var icon := CardSkins.texture(card, HourglassArt.State.UPRIGHT, CardSkins.Viewer.NONE)
 		if icon != null:
 			draw_texture_rect(icon, art_rect, false)
 		EmblemSeal.brass(

@@ -8,8 +8,8 @@ getter が `HourglassArt.texture(art_key(), state)` を返す形で12箇所か�
 
 | クラス | 責務 |
 |---|---|
-| `SkinLibrary`(`scripts/data/skin_library.gd`, staticのみ) | スキンの定義(id・対象カードid・表示名・手札の窓の光だまりの色・価格)。`PlaymatLibrary` と同じ流儀。絵は `assets/hourglasses/skins/{skin_id}/state_{upright,falling,fallen}.png` を読む |
-| `CardSkins`(`scripts/logic/card_skins.gd`, staticのみ) | 「いま誰の視点で、どのカードにどのスキンが効いているか」を答える。`texture(card, state, viewer)` / `accent_color(card, viewer)` の2つが入口 |
+| `SkinLibrary`(`scripts/data/skin_library.gd`, staticのみ) | スキンの定義(id・対象カードid・表示名・手札の窓の光だまりの色・価格)。`PlaymatLibrary` と同じ流儀。絵は `assets/hourglasses/skins/{skin_id}/state_{upright,falling,fallen}.png` を読む。**`all()` は3状態の絵が揃ったものだけを返す**(定義だけ先に入ったスキンを空の見本で売らないため) |
+| `CardSkins`(`scripts/logic/card_skins.gd`, staticのみ) | 「いま誰の視点で、どのカードにどのスキンが効いているか」を答える。`texture(card, state, viewer)` / `accent_color(card, viewer)` の2つが入口。自分の解決結果は控えておき、所有・ON/OFFが変わったら `AccountService` が `invalidate()` する(毎フレームの描画から引かれ、所有の読み口はローカルのファイルまで見に行くため) |
 
 ## 視点(`CardSkins.Viewer`)
 
@@ -28,8 +28,9 @@ getter が `HourglassArt.texture(art_key(), state)` を返す形で12箇所か�
   書き換えるわけではない(11章「`.tres` から読んだ `CardData` を書き換えない」には触れない)
 - **`CardView` に `skin_viewer` プロパティ(既定 `SELF`)を持たせ、`_fit_art()` の絵の
   取得だけを `CardSkins.texture(card, state, skin_viewer)` に変える。**
-  `CardMatchScreen._refresh_row()` が相手の列へ `OPPONENT`、`_interactive == false`
-  (再生・観戦)とCPU戦の相手の列へ `NONE` を入れる。`RuleStage` / `ScreenGuideStage` /
+  `CardMatchScreen.skin_viewer_for(side)` が場の列・手札・墓地の一覧(`CardPileViewer.open_pile()`)へ
+  自分=`SELF` / 相手=`OPPONENT`、`_interactive == false`(再生・観戦)なら `NONE` を返す。
+  CPU戦の相手は `CardSkins` に相手の設定が無いため `OPPONENT` のまま元の絵になる。`RuleStage` / `ScreenGuideStage` /
   `DiscordCardArt` が作る `CardView` は `NONE`。`CardUnitFx.play_break()` は
   `CardData` ではなく `CardView` が解決済みのテクスチャを受け取る形へ変える
   (崩落の破片がスキンの絵と別物になるのを防ぐ)
@@ -51,11 +52,10 @@ getter が `HourglassArt.texture(art_key(), state)` を返す形で12箇所か�
   並べる。購入は `AccountService.purchase()` の既存の流儀のまま `owned_skins` へ追加する。
   `owns()` / `_owned_key()` に分岐を1つ足す
 - `AccountService.set_skin_enabled(client, skin_id, enabled)` が `disabled_skins` を
-  `updateTime` 前提の `commit()` で書く(`emote_slots` の書き方と同じ)。
+  `updateTime` 前提の `commit()` で書く。
   **未サインインでは切り替えられない**(ショップの購入と同じ理由。設定を手元だけで
-  持つと次に通信した時点で戻る)。プレイマットと同じく
-  `AccountStore.load_local_customization()` にも写して、起動直後の描画が
-  通信を待たずに済むようにする
+  持つと次に通信した時点で戻る)。`AccountStore.save_local_disabled_skins()` で控え、
+  `load_local_customization()` が返すため、起動直後の描画が通信を待たずに済む
 
 ## 画面
 

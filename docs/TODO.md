@@ -66,17 +66,12 @@
 - [ ] 問題を増やす。毒砂(第11問)・連撃と相打ち(第12問)・砕け役を作る(第13問)・反転の効果を砂術と反転権で重ねる(第14問)は収録済み。
       複数の砂術の順番と駒の効果を噛み合わせる、10手を超える問題がまだ無い
 
-### カードスキン(GameDesign.md 31章 / Architecture.md 10.19節・未着手)
+### カードスキン(GameDesign.md 31章 / Architecture.md 10.19節)
 
-- [ ] `SkinLibrary` と `CardSkins`
-- [ ] `CardData.icon_*` を `CardSkins.texture(…, SELF)` 経由へ。`CardView.skin_viewer`(相手=`OPPONENT`、CPU・再生・観戦・教材・Discord画像=`NONE`)。
-      `CardUnitFx.play_break()` は解決済みのテクスチャを受け取る形へ
-- [ ] `HandCardPaint` の光だまりを `CardSkins.accent_color()` 経由へ
-- [ ] `players/{uid}.owned_skins` / `disabled_skins`、`ShopCatalog.Kind.SKIN`(末尾)、`purchase()` / `owns()`、`set_skin_enabled()`、`fetch_profile()`
-- [ ] `CardMatchOnline` で相手の設定を `CardSkins.set_opponent()` へ、`_reset_for_new_match()` で消す
-- [ ] 図鑑 `AlmanacPage` のON/OFF、ショップ `ShopItemCard` の3状態見本
-- [ ] 最初のスキン1枚(ユーザーが生成・透過。対象カードとモチーフは相談)
-- [ ] テスト: `CardSkins` の視点ごとの解決
+仕組みは実装済み。最初の1枚はソードの「聖剣」(`SkinLibrary` に定義済み・絵の到着待ち)。
+
+- [ ] 聖剣の絵を取り込む(ユーザーが生成・透過して `assets/hourglasses/incoming/sword_holy.png` へ置く)。
+      3分割・正規化して `assets/hourglasses/skins/sword_holy/state_{upright,falling,fallen}.png` へ。絵が揃うまでショップには並ばない
 - [ ] Discord #お知らせ へ紹介
 
 ### イラスト

@@ -211,3 +211,19 @@ static func preview(view: CardView, anchor: Vector2) -> void:
 		font_size,
 		color
 	)
+
+
+## 空き枠の点線。
+static func dashed_rect(view: CardView, rect: Rect2, color: Color) -> void:
+	var x := rect.position.x
+	while x < rect.end.x:
+		var to := minf(x + 5, rect.end.x)
+		view.draw_line(Vector2(x, rect.position.y), Vector2(to, rect.position.y), color, 2.0)
+		view.draw_line(Vector2(x, rect.end.y), Vector2(to, rect.end.y), color, 2.0)
+		x += 10.0
+	var y := rect.position.y
+	while y < rect.end.y:
+		var to := minf(y + 5, rect.end.y)
+		view.draw_line(Vector2(rect.position.x, y), Vector2(rect.position.x, to), color, 2.0)
+		view.draw_line(Vector2(rect.end.x, y), Vector2(rect.end.x, to), color, 2.0)
+		y += 10.0

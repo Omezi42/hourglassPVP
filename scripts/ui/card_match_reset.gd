@@ -12,6 +12,8 @@ static func run(screen: CardMatchScreen) -> void:
 	# **リプレイと観戦は既定のマット**(棋譜はマットを記録しない。GameDesign.md 9章)。
 	# 対局へ入る側がこの後で敷き替える。
 	screen._set_playmats(PlaymatLibrary.DEFAULT_ID, PlaymatLibrary.DEFAULT_ID)
+	# 相手のスキンも同じ寿命で持つ(GameDesign.md 31章)。オンライン対局だけが受け取り直す。
+	CardSkins.clear_opponent()
 	screen._result.visible = false
 	screen._log.set_open(false)
 	screen._log.clear()

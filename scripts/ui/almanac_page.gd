@@ -14,6 +14,11 @@ const INK := Color(0.20, 0.135, 0.075)
 const INK_SOFT := Color(0.40, 0.30, 0.19)
 const TERM_COLOR := Color(0.45, 0.20, 0.10)
 const ART_WIDTH := 128.0
+const ART_TOP := 58.0
+const ART_HEIGHT_RATIO := 1.30
+## スキンのON/OFF(GameDesign.md 31章)。絵のすぐ下に置く。
+const SKIN_TOGGLE_GAP := 6.0
+const SKIN_TOGGLE_HEIGHT := 28.0
 ## 絵と実演のあいだに置くデータ欄の左端(絵の右)。
 const DATA_GAP := 28.0
 const DEMO_HEIGHT := 172.0
@@ -44,6 +49,7 @@ var _turn_tween: Tween
 var _hovering_art := false
 var _tilt_radians := 0.0
 var _tilt_tween: Tween
+var _skin_toggle: Button
 
 
 func _ready() -> void:
@@ -73,6 +79,20 @@ func _build() -> void:
 	_terms.add_theme_constant_override("separation", 4)
 	_terms.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_terms)
+	_skin_toggle = Button.new()
+	_skin_toggle.flat = true
+	_skin_toggle.position = Vector2(4, ART_TOP + ART_WIDTH * ART_HEIGHT_RATIO + SKIN_TOGGLE_GAP)
+	_skin_toggle.custom_minimum_size = Vector2(ART_WIDTH, SKIN_TOGGLE_HEIGHT)
+	_skin_toggle.size = _skin_toggle.custom_minimum_size
+	_skin_toggle.add_theme_color_override("font_color", TERM_COLOR)
+	_skin_toggle.add_theme_color_override("font_hover_color", Color(0.72, 0.30, 0.14))
+	_skin_toggle.add_theme_color_override("font_disabled_color", INK_SOFT)
+	_skin_toggle.add_theme_font_size_override("font_size", 16)
+	_skin_toggle.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	_flatten_ink(_skin_toggle)
+	_skin_toggle.visible = false
+	_skin_toggle.pressed.connect(_on_skin_toggle_pressed)
+	add_child(_skin_toggle)
 
 
 func show_card(new_card: CardData) -> void:
@@ -112,8 +132,38 @@ func _apply_card(new_card: CardData) -> void:
 	_hovering_art = false
 	_set_tilt(0.0)
 	_rebuild_terms()
+	_sync_skin_toggle()
 	if _preview != null:
 		_preview.show_card(card)
+	queue_redraw()
+
+
+## **そのカードのスキンを持っているときだけ出す**(GameDesign.md 31章)。図鑑はショップを兼ねない。
+func _sync_skin_toggle() -> void:
+	var skin_id := _owned_skin()
+	_skin_toggle.visible = not skin_id.is_empty()
+	_skin_toggle.disabled = false
+	if skin_id.is_empty():
+		return
+	var enabled := not AccountService.disabled_skin_ids().has(skin_id)
+	_skin_toggle.text = "スキン:ON" if enabled else "スキン:OFF"
+
+
+func _owned_skin() -> String:
+	if card == null:
+		return ""
+	var skin_id := SkinLibrary.skin_for_card(card.id)
+	return skin_id if AccountService.owned_skin_ids().has(skin_id) else ""
+
+
+func _on_skin_toggle_pressed() -> void:
+	var skin_id := _owned_skin()
+	if skin_id.is_empty():
+		return
+	var enabled := AccountService.disabled_skin_ids().has(skin_id)
+	_skin_toggle.disabled = true
+	await AccountService.set_skin_enabled(NetSession.client, _uid(), skin_id, enabled)
+	_sync_skin_toggle()
 	queue_redraw()
 
 
@@ -216,8 +266,8 @@ func _draw() -> void:
 	draw_string(_font, Vector2(0, 32), card.display_name, HORIZONTAL_ALIGNMENT_LEFT, -1, 32, INK)
 	_draw_rule(Vector2(0, 44), size.x)
 
-	var art_h := ART_WIDTH * 1.30
-	_art_rect = Rect2(Vector2(4, 58), Vector2(ART_WIDTH, art_h))
+	var art_h := ART_WIDTH * ART_HEIGHT_RATIO
+	_art_rect = Rect2(Vector2(4, ART_TOP), Vector2(ART_WIDTH, art_h))
 	UiPaint.fill_ellipse(
 		get_canvas_item(),
 		Vector2(_art_rect.get_center().x, _art_rect.end.y - 4),

@@ -82,7 +82,7 @@ static func _window(view: CardView, ci: RID, s: float, tint: Color) -> void:
 	var bottom := SPELL_WINDOW_BOTTOM if card.is_spell else WINDOW_BOTTOM
 	UiPaint.fill_gradient_polygon(ci, points, rect, [[0.0, top * tint], [1.0, bottom * tint]])
 	var accent := (
-		CardView.SPELL_BORDER if card.is_spell else HourglassArt.accent_color(card.art_key())
+		CardView.SPELL_BORDER if card.is_spell else CardSkins.accent_color(card, view.skin_viewer)
 	)
 	_glow(view, rect, accent * tint)
 	if card.is_spell:
