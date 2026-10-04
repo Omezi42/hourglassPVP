@@ -16,6 +16,8 @@ const DATA_GAP := 32.0
 const FIELD_GAP := 150.0
 
 var card: CardData
+## 既定は元の絵。スキンの紹介画像を焼くときだけ SELF にする(GameDesign.md 31章)。
+var viewer := CardSkins.Viewer.NONE
 
 var _font: Font
 
@@ -44,7 +46,7 @@ func _draw() -> void:
 	if card.is_spell:
 		_draw_spell_plate(art_rect)
 	else:
-		var icon := CardSkins.texture(card, HourglassArt.State.UPRIGHT, CardSkins.Viewer.NONE)
+		var icon := CardSkins.texture(card, HourglassArt.State.UPRIGHT, viewer)
 		if icon != null:
 			draw_texture_rect(icon, art_rect, false)
 		EmblemSeal.brass(
