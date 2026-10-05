@@ -3,52 +3,50 @@ extends Control
 ## ショップ(GameDesign.md 21章、Architecture.md 10.8)。砂金を使う唯一の場所で、
 ## 売るのはアイコン・エモート・プレイマット・カードセット・カードスキン。共通のレイアウト規約
 ## (GameDesign.md 9章)に従い、`ScreenHeader` を使う。
+##
+## **左に品種のタブ、中央に品のタイル、右に選んだ品の詳細**。品が増えても1本のスクロールへ
+## 積み上がらず、目当ての品種へ1回で行けるようにする。
 
 signal back_pressed
 ## 買ったものはアカウント画面・ホームのヘッダーに効くため、購入のたびに通知する。
 signal purchased
 
 const HEADER_SCENE := "res://scenes/screen_header.tscn"
-const CONFIRM_SCENE := "res://scenes/confirm_modal.tscn"
 const PANEL_STYLE := "res://resources/theme/content_panel.tres"
-const LIST_RECT := Rect2(24, ScreenHeader.CONTENT_TOP, 1232, ScreenHeader.CONTENT_HEIGHT - 46)
-## 品は横2列のグリッド(GameDesign.md 9章)。縦1列にすると1画面に数件しか入らない。
-## **カードセットだけは1列**とする——対局の中身そのものを左右する特別な品であり
-## (Architecture.md 10.8.1)、他の3種より詳しく見せたいため。
-const COLUMNS := 2
-const CARD_SIZE := Vector2(570, 100)
-const GRID_SEPARATION := 14
-const CARD_SET_SIZE := Vector2(570 * 2 + GRID_SEPARATION, 140)
-const SECTION_SEPARATION := 22
-const MESSAGE_TOP := ScreenHeader.CONTENT_TOP + ScreenHeader.CONTENT_HEIGHT - 34
+const MARGIN := ScreenHeader.OUTER_MARGIN
+const SCREEN_WIDTH := 1280.0
+const COLUMN_GAP := 12.0
+const RAIL_WIDTH := 196.0
+const DETAIL_WIDTH := 388.0
+const TAB_HEIGHT := 64.0
+const TAB_GAP := 10
+const GRID_SEPARATION := 12
+## 中央の一覧の下に残す、購入の結果を1行で出す欄の高さ。
+const MESSAGE_HEIGHT := 34.0
+const MESSAGE_FONT_SIZE := 16
 
-## 品を並べる順とその見出し。`ShopCatalog.items()` はこの並びのまま返すため、
-## 表示側はここで束ね直すだけでよい。
-const SECTIONS: Array[Dictionary] = [
-	{"kind": ShopCatalog.Kind.ICON, "heading": "アイコン"},
-	{"kind": ShopCatalog.Kind.EMOTE, "heading": "エモート"},
-	{"kind": ShopCatalog.Kind.PLAYMAT, "heading": "プレイマット"},
+## タブの並び(対局への効き目が大きい順。GameDesign.md 21章)。
+const KINDS: Array[Dictionary] = [
 	{"kind": ShopCatalog.Kind.CARD_SET, "heading": "カードセット"},
 	{"kind": ShopCatalog.Kind.SKIN, "heading": "カードスキン"},
+	{"kind": ShopCatalog.Kind.PLAYMAT, "heading": "プレイマット"},
+	{"kind": ShopCatalog.Kind.EMOTE, "heading": "エモート"},
+	{"kind": ShopCatalog.Kind.ICON, "heading": "アイコン"},
 ]
 
-var _list: VBoxContainer
 var _balance: CurrencyChip
 ## 開いた直後は脈を出さない。買って減ったときも同じで、脈は増えたときだけ出る。
 var _balance_seen := false
 var _message: Label
-var _confirm: ConfirmModal
-var _preview: ShopSetPreview
+var _rail: VBoxContainer
 var _scroll: ScrollContainer
-## カードセットの品。デッキ編集から開いたとき、目当てのセットへスクロールするために持つ。
-var _set_cards: Array[ShopItemCard] = []
+var _grid: GridContainer
+var _detail: ShopDetailPane
+var _preview: ShopSetPreview
+var _kind: ShopCatalog.Kind = ShopCatalog.Kind.CARD_SET
+var _selected_id := ""
+var _tiles: Array[ShopItemTile] = []
 var _busy := false
-## 確認中の品。押した時点で控え、確定したときに買う。
-var _pending: Dictionary = {}
-## 確認中の品の札(GameDesign.md 9章)。購入が確定した瞬間、この矩形から
-## `_balance` へ向けて飛ばす。`_refresh()` が一覧を作り直すため、飛ばし終えるまで
-## 参照を保つ。
-var _pending_card: Control
 
 
 func _ready() -> void:
@@ -56,131 +54,186 @@ func _ready() -> void:
 
 
 ## 画面を開くたびにMainが呼ぶ。残高は購入で必ず動くため、開くたびに描き直す。
-## focus_set_id を渡すと、そのカードセットの品までスクロールして開く(デッキ編集からの導線)。
+## focus_set_id を渡すと、カードセットのタブでそのセットを選んで開く(デッキ編集からの導線)。
+## 渡さなければ先頭のタブの先頭の品を選ぶ(詳細が空の画面を見せない)。
 func open(focus_set_id := "") -> void:
 	_set_message("")
+	var by_kind := _ids_by_kind()
+	var sets: Array = by_kind.get(ShopCatalog.Kind.CARD_SET, [])
+	_selected_id = ""
+	if focus_set_id != "" and sets.has(focus_set_id):
+		_kind = ShopCatalog.Kind.CARD_SET
+		_selected_id = focus_set_id
+	else:
+		for entry in KINDS:
+			var ids: Array = by_kind.get(entry["kind"], [])
+			if not ids.is_empty():
+				_kind = entry["kind"]
+				_selected_id = str(ids[0])
+				break
 	_refresh()
-	_scroll.scroll_vertical = 0
-	if focus_set_id != "":
-		_focus_set(focus_set_id)
+	_scroll_to_selected()
 
 
-## 並べ直した直後はまだ大きさが決まっていないため、1フレーム待ってから寄せる。
-func _focus_set(set_id: String) -> void:
-	await get_tree().process_frame
-	for card in _set_cards:
-		if is_instance_valid(card) and card.id == set_id:
-			_scroll.ensure_control_visible(card)
-			return
+## `ShopCatalog.items()` を品種ごとに束ねる。
+func _ids_by_kind() -> Dictionary:
+	var by_kind: Dictionary = {}
+	for item in ShopCatalog.items():
+		if not by_kind.has(item["kind"]):
+			by_kind[item["kind"]] = []
+		by_kind[item["kind"]].append(str(item["id"]))
+	return by_kind
 
 
 func _refresh() -> void:
 	_balance.set_amount(AccountService.currency(), _balance_seen)
 	_balance_seen = true
-	for child in _list.get_children():
+	var by_kind := _ids_by_kind()
+	_build_tabs(by_kind)
+	_build_tiles(by_kind.get(_kind, []))
+	_detail.visible = not _selected_id.is_empty()
+	if _detail.visible:
+		_detail.show_item(_kind, _selected_id)
+
+
+## **売り物が0件の品種のタブは出さない**(GameDesign.md 21章)。
+func _build_tabs(by_kind: Dictionary) -> void:
+	for child in _rail.get_children():
 		child.queue_free()
-	_set_cards.clear()
-	var by_kind: Dictionary = {}
-	for item in ShopCatalog.items():
-		var kind: ShopCatalog.Kind = item["kind"]
-		if not by_kind.has(kind):
-			by_kind[kind] = []
-		by_kind[kind].append(str(item["id"]))
-	for section in SECTIONS:
-		var kind: ShopCatalog.Kind = section["kind"]
+	for entry in KINDS:
+		var kind: ShopCatalog.Kind = entry["kind"]
 		var ids: Array = by_kind.get(kind, [])
 		if ids.is_empty():
 			continue
-		_list.add_child(_build_section_header(str(section["heading"]), ids.size()))
-		_list.add_child(_build_section_grid(kind, ids))
+		var tab := ShopKindTab.new()
+		tab.kind = kind
+		tab.label_text = str(entry["heading"])
+		tab.total_count = ids.size()
+		for id in ids:
+			if AccountService.owns(kind, str(id)):
+				tab.owned_count += 1
+		tab.active = kind == _kind
+		tab.custom_minimum_size = Vector2(RAIL_WIDTH, TAB_HEIGHT)
+		tab.pressed.connect(func() -> void: _select_kind(kind))
+		_rail.add_child(tab)
 
 
-func _build_section_header(heading: String, count: int) -> Control:
-	var header := ShopSectionHeader.new()
-	header.label_text = heading
-	header.item_count = count
-	return header
-
-
-func _build_section_grid(kind: ShopCatalog.Kind, ids: Array) -> GridContainer:
-	var grid := GridContainer.new()
-	grid.columns = 1 if kind == ShopCatalog.Kind.CARD_SET else COLUMNS
-	grid.add_theme_constant_override("h_separation", GRID_SEPARATION)
-	grid.add_theme_constant_override("v_separation", GRID_SEPARATION)
-	grid.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+func _build_tiles(ids: Array) -> void:
+	for child in _grid.get_children():
+		child.queue_free()
+	_tiles.clear()
+	var columns := ShopItemTile.columns(_kind)
+	_grid.columns = columns
+	var tile_width := (_grid_width() - GRID_SEPARATION * (columns - 1)) / float(columns)
 	for id in ids:
-		var card := ShopItemCard.new(kind, str(id))
-		card.owned = AccountService.owns(kind, str(id))
-		card.affordable = AccountService.currency() >= ShopCatalog.price(kind, str(id))
-		card.pressed.connect(func() -> void: _on_item_pressed(kind, str(id), card))
-		card.set_preview_requested.connect(func(set_id: String) -> void: _preview.open_set(set_id))
-		grid.add_child(card)
-		if kind == ShopCatalog.Kind.CARD_SET:
-			_set_cards.append(card)
-	return grid
+		var tile := ShopItemTile.new(_kind, str(id))
+		tile.owned = AccountService.owns(_kind, str(id))
+		tile.affordable = AccountService.currency() >= ShopCatalog.price(_kind, str(id))
+		tile.selected = str(id) == _selected_id
+		tile.custom_minimum_size = Vector2(tile_width, ShopItemTile.height(_kind))
+		tile.pressed.connect(func() -> void: _select_item(str(id)))
+		_grid.add_child(tile)
+		_tiles.append(tile)
 
 
-func _on_item_pressed(kind: ShopCatalog.Kind, id: String, card: Control) -> void:
+## 一覧の内側の幅(パネルの余白とスクロールバーのぶんを除く)。
+func _grid_width() -> float:
+	var style: StyleBox = load(PANEL_STYLE)
+	var bar := _scroll.get_v_scroll_bar().get_combined_minimum_size().x
+	return _grid_rect().size.x - style.get_minimum_size().x - bar
+
+
+func _select_kind(kind: ShopCatalog.Kind) -> void:
+	if kind == _kind or _busy:
+		return
+	_kind = kind
+	var ids: Array = _ids_by_kind().get(kind, [])
+	_selected_id = str(ids[0]) if not ids.is_empty() else ""
+	_set_message("")
+	_refresh()
+	_scroll.scroll_vertical = 0
+	if _detail.visible:
+		_detail.show_item(_kind, _selected_id, true)
+
+
+func _select_item(id: String) -> void:
+	if id == _selected_id:
+		return
+	_selected_id = id
+	_set_message("")
+	for tile in _tiles:
+		tile.selected = tile.id == id
+	_detail.show_item(_kind, id, true)
+
+
+## 並べ直した直後はまだ大きさが決まっていないため、1フレーム待ってから寄せる。
+func _scroll_to_selected() -> void:
+	_scroll.scroll_vertical = 0
+	await get_tree().process_frame
+	for tile in _tiles:
+		if is_instance_valid(tile) and tile.selected:
+			_scroll.ensure_control_visible(tile)
+			return
+
+
+## 詳細の「購入する」。**選ぶ → 押す、の2段階を確認とし、ダイアログは出さない**(GameDesign.md 21章)。
+func _on_buy_requested(kind: ShopCatalog.Kind, id: String) -> void:
 	if _busy or AccountService.owns(kind, id):
 		return
-	var cost := ShopCatalog.price(kind, id)
-	if AccountService.currency() < cost:
-		_set_message(
-			(
-				"%sが足りません(あと%s)。"
-				% [
-					CurrencyRules.CURRENCY_NAME,
-					CurrencyRules.amount_text(cost - AccountService.currency())
-				]
-			)
-		)
-		return
-	_pending = {"kind": kind, "id": id}
-	_pending_card = card
-	_confirm.open_confirm(
-		"購入の確認",
-		(
-			"%s「%s」を %s で購入します。"
-			% [
-				ShopCatalog.kind_name(kind),
-				ShopCatalog.item_name(kind, id),
-				CurrencyRules.label_text(cost)
-			]
-		),
-		"購入する"
-	)
-
-
-func _on_confirmed() -> void:
-	if _busy or _pending.is_empty():
+	if AccountService.currency() < ShopCatalog.price(kind, id):
 		return
 	_busy = true
 	_set_message("購入しています…")
-	var flight_from: Control = _pending_card
+	var flight_from := _selected_tile_rect()
 	var ok: bool = await NetSession.sign_in()
 	var result: Dictionary
 	if ok:
 		var uid := NetSession.auth.uid if NetSession.auth != null else ""
-		result = await AccountService.purchase(
-			NetSession.client, uid, _pending["kind"], str(_pending["id"])
-		)
+		result = await AccountService.purchase(NetSession.client, uid, kind, id)
 	else:
 		result = {"ok": false, "message": "接続できないため購入できません。"}
 	_busy = false
-	_pending = {}
-	_pending_card = null
+	var bought := bool(result.get("ok", false))
 	# 品の絵が砂金チップへ向けて飛んでから残高を更新する(GameDesign.md 9章)。
 	# 残高が減る理由を数字の変化だけでなく絵でも見せるための順序。
-	if bool(result.get("ok", false)) and flight_from != null and is_instance_valid(flight_from):
-		await CardFlightFx.fly(self, flight_from.get_global_rect(), _balance.get_global_rect())
+	if bought:
+		await CardFlightFx.fly(self, flight_from, _balance.get_global_rect())
 	_set_message(str(result.get("message", "")))
 	_refresh()
-	if bool(result.get("ok", false)):
+	if bought:
 		purchased.emit()
+
+
+func _selected_tile_rect() -> Rect2:
+	for tile in _tiles:
+		if tile.selected:
+			return tile.get_global_rect()
+	return _detail.preview_global_rect()
 
 
 func _set_message(text: String) -> void:
 	_message.text = text
+
+
+func _rail_rect() -> Rect2:
+	return Rect2(MARGIN, ScreenHeader.CONTENT_TOP, RAIL_WIDTH, ScreenHeader.CONTENT_HEIGHT)
+
+
+func _detail_rect() -> Rect2:
+	return Rect2(
+		SCREEN_WIDTH - MARGIN - DETAIL_WIDTH,
+		ScreenHeader.CONTENT_TOP,
+		DETAIL_WIDTH,
+		ScreenHeader.CONTENT_HEIGHT
+	)
+
+
+func _grid_rect() -> Rect2:
+	var left := _rail_rect().end.x + COLUMN_GAP
+	var right := _detail_rect().position.x - COLUMN_GAP
+	return Rect2(
+		left, ScreenHeader.CONTENT_TOP, right - left, ScreenHeader.CONTENT_HEIGHT - MESSAGE_HEIGHT
+	)
 
 
 func _build() -> void:
@@ -197,353 +250,49 @@ func _build() -> void:
 	_balance.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	header.add_action(_balance)
 
-	var panel := PanelContainer.new()
-	panel.position = LIST_RECT.position
-	panel.custom_minimum_size = LIST_RECT.size
-	panel.size = LIST_RECT.size
-	var style: StyleBox = load(PANEL_STYLE)
-	if style != null:
-		panel.add_theme_stylebox_override("panel", style)
-	add_child(panel)
+	_rail = VBoxContainer.new()
+	_rail.position = _rail_rect().position
+	_rail.size = _rail_rect().size
+	_rail.add_theme_constant_override("separation", TAB_GAP)
+	add_child(_rail)
 
-	var scroll := ScrollContainer.new()
-	_scroll = scroll
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	TouchScroll.enable(scroll)
-	panel.add_child(scroll)
-	_list = VBoxContainer.new()
-	_list.add_theme_constant_override("separation", SECTION_SEPARATION)
-	_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.add_child(_list)
+	var grid_panel := _panel(_grid_rect())
+	add_child(grid_panel)
+	_scroll = ScrollContainer.new()
+	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	TouchScroll.enable(_scroll)
+	grid_panel.add_child(_scroll)
+	_grid = GridContainer.new()
+	_grid.add_theme_constant_override("h_separation", GRID_SEPARATION)
+	_grid.add_theme_constant_override("v_separation", GRID_SEPARATION)
+	_scroll.add_child(_grid)
 
 	_message = Label.new()
-	_message.position = Vector2(24, MESSAGE_TOP)
-	_message.size = Vector2(1232, 28)
+	_message.position = Vector2(_grid_rect().position.x, _grid_rect().end.y)
+	_message.size = Vector2(_grid_rect().size.x, MESSAGE_HEIGHT)
 	_message.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_message.add_theme_font_size_override("font_size", 16)
+	_message.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_message.add_theme_font_size_override("font_size", MESSAGE_FONT_SIZE)
 	_message.add_theme_color_override("font_color", UiPalette.TEXT_OFFWHITE)
 	add_child(_message)
 
-	_confirm = load(CONFIRM_SCENE).instantiate()
-	add_child(_confirm)
-	_confirm.confirmed.connect(_on_confirmed)
-	_confirm.cancelled.connect(
-		func() -> void:
-			_pending = {}
-			_pending_card = null
-	)
+	var detail_panel := _panel(_detail_rect())
+	add_child(detail_panel)
+	_detail = ShopDetailPane.new()
+	_detail.buy_requested.connect(_on_buy_requested)
+	_detail.set_preview_requested.connect(func(set_id: String) -> void: _preview.open_set(set_id))
+	detail_panel.add_child(_detail)
 
 	_preview = ShopSetPreview.new()
 	add_child(_preview)
 
 
-## 品の区分ごとの見出し。**真鍮の細い罫線 + 見出し + 件数**の1行で、地の暗い
-## パネルの上でも読める(GameDesign.md 9章のホーム画面の見出しプレートより軽い扱いに
-## 留める——ここは一覧の区切りであり、押せる入口ではないため)。
-class ShopSectionHeader:
-	extends Control
-	const HEIGHT := 34.0
-	const RULE_Y_INSET := 11.0
-	const RULE_LEAD := 22.0
-	const RULE_GAP := 14.0
-
-	var label_text := ""
-	var item_count := 0
-	var _font: Font
-
-	func _init() -> void:
-		custom_minimum_size = Vector2(0, HEIGHT)
-		size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		mouse_filter = Control.MOUSE_FILTER_IGNORE
-
-	func _ready() -> void:
-		_font = get_theme_default_font()
-		if _font == null:
-			_font = ThemeDB.fallback_font
-		queue_redraw()
-
-	func _draw() -> void:
-		if _font == null:
-			return
-		var y := size.y - RULE_Y_INSET
-		draw_line(Vector2(0.0, y), Vector2(RULE_LEAD, y), UiPalette.BRASS_HIGHLIGHT, 2.0, true)
-		var label := "%s(%d)" % [label_text, item_count]
-		var text_width: float = _font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x
-		draw_string(
-			_font,
-			Vector2(RULE_LEAD + 10.0, y + 6.0),
-			label,
-			HORIZONTAL_ALIGNMENT_LEFT,
-			-1,
-			18,
-			UiPalette.TEXT_OFFWHITE
-		)
-		var rule_start := RULE_LEAD + 10.0 + text_width + RULE_GAP
-		if rule_start < size.x:
-			draw_line(Vector2(rule_start, y), Vector2(size.x, y), UiPalette.BRASS_DARK, 1.0, true)
-
-
-## 品1件。アイコンはその絵を、エモートは実際に出る文言をそのまま出す
-## (GameDesign.md 21章)。買えない品は暗くして押しても何も起こさない。
-##
-## 地の面は `CodedButtonStyle`(真鍮の額縁+暗く凹んだ中央パネル)を流用する
-## (`HomeTile` と同じ流儀)。手描きの単色グラデーションより、他の画面と揃った
-## 質感(ベベル・グレイン・ホバーの発光)が自動で付く。
-class ShopItemCard:
-	extends Button
-	## カードセットのみ。「内容を見る」を押したときに、確認先(画面側)へ通知する。
-	## 押しても購入確認は開かない——子 `Button` が `MOUSE_FILTER_STOP` で入力を奪う。
-	signal set_preview_requested(set_id: String)
-
-	## エモートのサムネイルを収める矩形。
-	const EMOTE_THUMB_RECT := Rect2(16, 16, 84, 68)
-	const EMOTE_THUMB_TEXT_MARGIN := Vector2(8, 18)
-	const EMOTE_THUMB_FONT_SIZE := 11
-	const EMOTE_THUMB_MAX_LINES := 3
-	## カードセットの中身を紹介する紋章の並び。多すぎると読みにくいため上限を設ける。
-	const CARD_SET_EMBLEM_LIMIT := 5
-	const CARD_SET_EMBLEM_RADIUS := 20.0
-	const CARD_SET_EMBLEM_STEP := 34.0
-	## カードスキンは3状態の絵を横に並べて見せる(GameDesign.md 31章)。見本の幅は高さのこの倍。
-	const SKIN_THUMB_WIDTH_RATIO := 2.1
-
-	var kind: ShopCatalog.Kind
-	var id: String
-	var owned := false:
-		set(value):
-			owned = value
-			disabled = value
-	var affordable := true
-	var _font: Font
-
-	## プレイマットの見本を敷く層。切り抜きの効く子として持つ。
-	func _build_swatch(rect: Rect2) -> void:
-		var layer := BoardTable.MatLayer.new()
-		layer.mat_id = id
-		layer.position = rect.position
-		layer.size = rect.size
-		add_child(layer)
-
-	func _init(p_kind: ShopCatalog.Kind, p_id: String) -> void:
-		kind = p_kind
-		id = p_id
-		custom_minimum_size = CARD_SET_SIZE if kind == ShopCatalog.Kind.CARD_SET else CARD_SIZE
-		size = custom_minimum_size
-		CodedButton.apply_styles(self, "icon_square")
-		text = ""
-
-	func _ready() -> void:
-		_font = get_theme_default_font()
-		if _font == null:
-			_font = ThemeDB.fallback_font
-		if kind == ShopCatalog.Kind.PLAYMAT:
-			_build_swatch(_thumb_rect())
-		mouse_default_cursor_shape = (
-			Control.CURSOR_ARROW if owned or not affordable else Control.CURSOR_POINTING_HAND
-		)
-		# 残高が足りず暗くなっている品は、手札のマナ不足カードと同じくホバーしても
-		# 反応しない(GameDesign.md 9章)。所有済みは`disabled=true`により
-		# Godot側のホバー描画自体が既に働かないため、対象は未所有・購入不可の品に絞る。
-		mouse_filter = (
-			Control.MOUSE_FILTER_IGNORE if _unaffordable() else Control.MOUSE_FILTER_STOP
-		)
-		# **`modulate`で丸ごと暗くする。**自前の`_draw()`より後に描かれる子
-		# (プレイマットの見本)は、`_draw()`内で塗った暗幕の上に乗ってしまい
-		# 効かないため(子は常に親のCanvasItemより手前に描かれる)。`modulate`なら
-		# 背景・文字・子のいずれも一括で暗くでき、描画順を気にしなくてよい。
-		if owned or not affordable:
-			modulate = Color(0.7, 0.68, 0.65, 1.0)
-		if kind == ShopCatalog.Kind.CARD_SET:
-			_build_preview_link()
-		mouse_entered.connect(queue_redraw)
-		mouse_exited.connect(queue_redraw)
-
-	## **買う前に中身を確認できる場所は、この品自身が持つ**(GameDesign.md 21章)。
-	## デッキ編集・砂時計一覧は未所有カードをロック/シルエットで隠すため、それ以外の
-	## どこかで確認できるという前提は成立しない。所有の有無に関わらず常に押せる。
-	func _build_preview_link() -> void:
-		var inner := _inner_rect()
-		var link_size := Vector2(172.0, 26.0)
-		var link := Button.new()
-		link.flat = true
-		link.text = "内容を見る →"
-		link.add_theme_font_size_override("font_size", 14)
-		link.add_theme_color_override("font_color", UiPalette.BRASS_HIGHLIGHT)
-		link.add_theme_color_override("font_hover_color", UiPalette.TEXT_OFFWHITE)
-		link.mouse_filter = Control.MOUSE_FILTER_STOP
-		link.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-		link.position = Vector2(inner.end.x - link_size.x, inner.end.y - link_size.y - 2.0)
-		link.size = link_size
-		link.pressed.connect(func() -> void: set_preview_requested.emit(id))
-		add_child(link)
-
-	## 額縁の内側(暗く凹んだパネル)。中身はここへ収める(`CodedButtonStyle` と同じ規則)。
-	func _inner_rect() -> Rect2:
-		return CodedButtonStyle.inner_rect(Rect2(Vector2.ZERO, size))
-
-	## サムネイルを収める正方形。左端へ、高さいっぱいに置く。
-	func _thumb_rect() -> Rect2:
-		var inner := _inner_rect()
-		var side: float = inner.size.y
-		var width := side * SKIN_THUMB_WIDTH_RATIO if kind == ShopCatalog.Kind.SKIN else side
-		return Rect2(inner.position, Vector2(width, side))
-
-	## 未購入かつ残高が足りないとき。地の上への暗幕は `_ready()` の `modulate` が
-	## 一括でかけるため、ここは文字色などの判定にだけ使う
-	## (GameDesign.md 21章「買えないことは行を暗くすることで示す」)。
-	func _unaffordable() -> bool:
-		return not owned and not affordable
-
-	func _draw() -> void:
-		if _font == null:
-			return
-		var inner := _inner_rect()
-		_draw_thumb(inner)
-		var text_left: float = _thumb_rect().end.x + 18.0
-		var text_width: float = inner.end.x - text_left - 152.0
-		var dim := owned or _unaffordable()
-		var text_color := UiPalette.TEXT_MUTED if dim else UiPalette.TEXT_OFFWHITE
-		draw_string(
-			_font,
-			Vector2(text_left, inner.position.y + 26.0),
-			ShopCatalog.item_name(kind, id),
-			HORIZONTAL_ALIGNMENT_LEFT,
-			text_width,
-			20,
-			text_color
-		)
-		draw_multiline_string(
-			_font,
-			Vector2(text_left, inner.position.y + 48.0),
-			ShopCatalog.item_detail(kind, id),
-			HORIZONTAL_ALIGNMENT_LEFT,
-			text_width,
-			14,
-			2,
-			UiPalette.TEXT_MUTED
-		)
-		_draw_price(inner)
-
-	## アイコンは真鍮の印に紋章、**エモートは実際に出る文言そのもの**、
-	## プレイマットは実際に敷いた縮小見本、**カードセットは中身のカードの紋章を
-	## 数個並べたもの**を出す(GameDesign.md 21章)。名前だけでは何を買うのか
-	## 分からない品ほど、実物に近いものをそのまま見せる。
-	func _draw_thumb(inner: Rect2) -> void:
-		if kind == ShopCatalog.Kind.PLAYMAT:
-			# 見本は子の層(_build_swatch)へ描く。模様は矩形の外まで伸びるため
-			# 切り抜きが要る(`BoardTable` と同じ理由)。
-			return
-		if kind == ShopCatalog.Kind.EMOTE:
-			_draw_emote_thumb()
-			return
-		if kind == ShopCatalog.Kind.CARD_SET:
-			_draw_card_set_thumb(inner)
-			return
-		if kind == ShopCatalog.Kind.SKIN:
-			_draw_skin_thumb()
-			return
-		var thumb := _thumb_rect()
-		var tex := UserProfileLibrary.get_icon_texture(id)
-		EmblemSeal.brass(self, thumb.get_center(), tex, thumb.size.y * 0.42)
-
-	## カードセットの中身のカードから、上限ぶんの紋章を横一列に並べる。
-	## 収まらない残りは「+N」の数字だけで示す。
-	func _draw_card_set_thumb(inner: Rect2) -> void:
-		var ids := CardSetLibrary.card_ids(id)
-		var shown: int = mini(ids.size(), CARD_SET_EMBLEM_LIMIT)
-		var center_y: float = inner.position.y + inner.size.y * 0.5
-		var x: float = inner.position.x + CARD_SET_EMBLEM_RADIUS
-		for i in shown:
-			var card := CardLibrary.find_by_id(str(ids[i]))
-			if card != null:
-				EmblemSeal.brass(self, Vector2(x, center_y), card.emblem, CARD_SET_EMBLEM_RADIUS)
-			x += CARD_SET_EMBLEM_STEP
-		var remaining: int = ids.size() - shown
-		if remaining > 0 and _font != null:
-			draw_string(
-				_font,
-				Vector2(x - CARD_SET_EMBLEM_STEP + CARD_SET_EMBLEM_RADIUS + 4.0, center_y + 6.0),
-				"+%d" % remaining,
-				HORIZONTAL_ALIGNMENT_LEFT,
-				-1,
-				16,
-				UiPalette.TEXT_MUTED
-			)
-
-	## 3状態の絵をそのまま並べる。**見た目が品そのもの**のため、所有・ON/OFFに関わらず
-	## スキンの絵を直に読む(`CardSkins` は通さない)。
-	func _draw_skin_thumb() -> void:
-		var thumb := _thumb_rect()
-		var cell := Vector2(thumb.size.x / float(SkinLibrary.STATE_FILES.size()), thumb.size.y)
-		for state in SkinLibrary.STATE_FILES.size():
-			var texture := SkinLibrary.texture(id, state)
-			if texture == null:
-				continue
-			var scale: float = minf(cell.x / texture.get_size().x, cell.y / texture.get_size().y)
-			var art := texture.get_size() * scale
-			var at := (
-				thumb.position + Vector2(cell.x * state + (cell.x - art.x) * 0.5, cell.y - art.y)
-			)
-			draw_texture_rect(texture, Rect2(at, art), false)
-
-	## 対局中の吹き出し(`EmoteBubble`)と同じ質感の真鍮枠パネルに文言を収める。
-	func _draw_emote_thumb() -> void:
-		var rect := EMOTE_THUMB_RECT
-		var ci := get_canvas_item()
-		var points := UiPaint.rounded_rect_points_uniform(rect, 8.0, 5)
-		UiPaint.fill_gradient_polygon(
-			ci,
-			points,
-			rect,
-			[[0.0, Color(0.16, 0.13, 0.1, 0.95)], [1.0, Color(0.08, 0.06, 0.05, 0.95)]]
-		)
-		var dim := owned or _unaffordable()
-		var outline := points.duplicate()
-		outline.append(points[0])
-		draw_polyline(outline, UiPalette.BRASS_DARK if dim else UiPalette.BRASS_LIGHT, 1.2, true)
-		draw_multiline_string(
-			_font,
-			rect.position + EMOTE_THUMB_TEXT_MARGIN,
-			EmoteLibrary.get_emote_text(id),
-			HORIZONTAL_ALIGNMENT_LEFT,
-			rect.size.x - EMOTE_THUMB_TEXT_MARGIN.x * 2.0,
-			EMOTE_THUMB_FONT_SIZE,
-			EMOTE_THUMB_MAX_LINES,
-			UiPalette.TEXT_MUTED if dim else UiPalette.TEXT_OFFWHITE
-		)
-
-	## 価格は小さな真鍮の札(ピル)に載せる。**買えないことは行を暗くすることだけで
-	## 示し、価格を赤では書かない**(GameDesign.md 21章)。
-	func _draw_price(inner: Rect2) -> void:
-		var label := "所有済み" if owned else CurrencyRules.label_text(ShopCatalog.price(kind, id))
-		var pill_size := Vector2(132.0, 30.0)
-		var pill := Rect2(
-			Vector2(inner.end.x - pill_size.x, inner.get_center().y - pill_size.y * 0.5), pill_size
-		)
-		var ci := get_canvas_item()
-		var points := UiPaint.rounded_rect_points_uniform(pill, pill_size.y * 0.5, 5)
-		var top := UiPalette.BRASS_LIGHT
-		var bottom := UiPalette.BRASS_DARK
-		if owned:
-			top = Color(0.16, 0.16, 0.15, 1.0)
-			bottom = Color(0.09, 0.09, 0.08, 1.0)
-		elif not affordable:
-			top = Color(0.15, 0.12, 0.1, 1.0)
-			bottom = Color(0.08, 0.06, 0.05, 1.0)
-		UiPaint.fill_gradient_polygon(ci, points, pill, [[0.0, top], [1.0, bottom]])
-		var outline := points.duplicate()
-		outline.append(points[0])
-		var rim := UiPalette.BRASS_HIGHLIGHT if (not owned and affordable) else UiPalette.BRASS_MID
-		draw_polyline(outline, rim, 1.4, true)
-		var color := UiPalette.TEXT_MUTED
-		if not owned and affordable:
-			color = UiPalette.BRASS_HIGHLIGHT
-		draw_string(
-			_font,
-			pill.position + Vector2(0.0, pill_size.y * 0.68),
-			label,
-			HORIZONTAL_ALIGNMENT_CENTER,
-			pill_size.x,
-			16,
-			color
-		)
+func _panel(rect: Rect2) -> PanelContainer:
+	var panel := PanelContainer.new()
+	panel.position = rect.position
+	panel.custom_minimum_size = rect.size
+	panel.size = rect.size
+	var style: StyleBox = load(PANEL_STYLE)
+	if style != null:
+		panel.add_theme_stylebox_override("panel", style)
+	return panel

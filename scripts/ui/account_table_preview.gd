@@ -39,6 +39,11 @@ func show_profile(
 	queue_redraw()
 
 
+## 名札の吹き出しにエモートを出す(ショップの見本。対局と同じ出方を見せる)。
+func show_emote(text: String) -> void:
+	_bar.show_emote(text)
+
+
 ## 選んだ瞬間の合図(GameDesign.md 9章)。帯だけを軽く跳ねさせる。
 func bump() -> void:
 	if _bump_tween != null and _bump_tween.is_valid():
