@@ -441,10 +441,6 @@ func _test_shop(assert_true: Callable) -> void:
 	assert_true.call(not ids.has("hello"), "the shop should not sell an initially owned emote")
 	assert_true.call(ids.has("thanks"), "the shop should sell the added emotes")
 	assert_true.call(ShopCatalog.price(ShopCatalog.Kind.ICON) == 100, "an icon should cost 100")
-	assert_true.call(
-		ShopCatalog.price(ShopCatalog.Kind.ICON, "sword_holy") == 300,
-		"the holy sword icon should cost 300"
-	)
 	assert_true.call(ShopCatalog.price(ShopCatalog.Kind.EMOTE) == 200, "an emote should cost 200")
 	assert_true.call(
 		ShopCatalog.sells(ShopCatalog.Kind.ICON, "mascot"), "sells() should find a listed item"

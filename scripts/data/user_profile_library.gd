@@ -120,12 +120,6 @@ const ICONS: Dictionary = {
 		"name": "魔杖",
 		"path": "res://assets/hourglasses/emblems/wand.png",
 	},
-	"sword_holy":
-	{
-		"name": "聖剣",
-		"path": "res://assets/hourglasses/skins/sword_holy/avatar.png",
-		"price": 300,
-	},
 	"mascot":
 	{
 		"name": "すなえる",
@@ -196,12 +190,6 @@ static func get_available_title_ids() -> Array:
 	for id in INITIAL_TITLE_IDS:
 		list.append(id)
 	return list
-
-
-## ショップでの価格。`price` を持たないアイコンは一律の価格(GameDesign.md 21章)。
-static func get_icon_price(icon_id: String, default_price: int) -> int:
-	var entry: Dictionary = ICONS.get(icon_id, {})
-	return int(entry.get("price", default_price))
 
 
 static func get_icon_name(icon_id: String) -> String:
