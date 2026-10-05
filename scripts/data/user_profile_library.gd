@@ -90,6 +90,36 @@ const ICONS: Dictionary = {
 		"name": "尖塔",
 		"path": "res://assets/hourglasses/emblems/tower.png",
 	},
+	"watcher":
+	{
+		"name": "森梟",
+		"path": "res://assets/hourglasses/emblems/watcher.png",
+	},
+	"swarm":
+	{
+		"name": "蜜蜂",
+		"path": "res://assets/hourglasses/emblems/swarm.png",
+	},
+	"oasis":
+	{
+		"name": "椰子",
+		"path": "res://assets/hourglasses/emblems/oasis.png",
+	},
+	"flask":
+	{
+		"name": "秘薬",
+		"path": "res://assets/hourglasses/emblems/flask.png",
+	},
+	"tick":
+	{
+		"name": "天秤",
+		"path": "res://assets/hourglasses/emblems/tick.png",
+	},
+	"wand":
+	{
+		"name": "魔杖",
+		"path": "res://assets/hourglasses/emblems/wand.png",
+	},
 	"mascot":
 	{
 		"name": "すなえる",
