@@ -41,7 +41,7 @@ static func items() -> Array[Dictionary]:
 	return list
 
 
-## **プレイマットは品ごとに値が違う**ため、id を渡せる形にしてある。
+## **プレイマット・一部のアイコンは品ごとに値が違う**ため、id を渡せる形にしてある。
 static func price(kind: Kind, id := "") -> int:
 	match kind:
 		Kind.EMOTE:
@@ -53,7 +53,7 @@ static func price(kind: Kind, id := "") -> int:
 		Kind.SKIN:
 			return SkinLibrary.price(id)
 		_:
-			return ICON_PRICE
+			return UserProfileLibrary.get_icon_price(id, ICON_PRICE)
 
 
 ## 品の名前。アイコンは紋章のモチーフ名、エモートは種類の名前。
