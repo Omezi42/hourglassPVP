@@ -5,8 +5,8 @@ extends Control
 
 signal back_pressed
 signal stage_selected(stage: PuzzleStageData)
-## エンドレス(GameDesign.md 24章)の入口が押された。生成そのものは呼び出し側
-## (`Main`)が `PuzzleGenerator.generate()` を呼んで行う——この画面は
+## エンドレス(GameDesign.md 24章)の入口が押された。出題は呼び出し側
+## (`Main`)が `EndlessPuzzles.next()` で行う——この画面は
 ## 固定の問題の一覧と入口を並べる責務だけを持つ。
 signal endless_selected
 
@@ -86,7 +86,7 @@ func _make_daily_card(stage: PuzzleStageData, cleared: bool) -> Control:
 ## (GameDesign.md 9章「いまの状態を1行添えた札」と同じ考え方)。
 func _make_endless_card() -> Control:
 	return _make_entry_card(
-		"エンドレス", "解くたびに新しい問題が出る。腕試し専用(報酬なし)", func() -> void: endless_selected.emit()
+		"エンドレス", "次々に問題が出る。腕試し専用(報酬なし)", func() -> void: endless_selected.emit()
 	)
 
 

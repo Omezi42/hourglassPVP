@@ -3,8 +3,8 @@
 
 Godotのエディタで書き出すと export_presets.cfg のフィルタが空へ戻り、
 BGM(8.8MB)とシミュレーションの生データ(1.1MB)が混ざったpckができあがり、
-逆に data/discord_webhook.txt や data/unityroom_hmac_key.txt が落ちて
-募集通知・ランキング送信が飛ばなくなる。実際にこれが起きたため、
+逆に data/discord_webhook.txt や data/unityroom_hmac_key.txt、data/endless_puzzles.json が落ちて
+募集通知・ランキング送信・エンドレスが働かなくなる。実際にこれが起きたため、
 書き出しの直前に毎回ここで揃え直す。
 """
 
@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 
 WANT = {
-    "include_filter": '"data/discord_webhook.txt, data/unityroom_hmac_key.txt"',
+    "include_filter": '"data/discord_webhook.txt, data/unityroom_hmac_key.txt, data/endless_puzzles.json"',
     "exclude_filter": '"assets/bgm/*, tools/balance/*"',
     # 書き出し先も揃える。エディタから書き出したときに build/砂時計pvp.pck という
     # 別名のpckができ、unityroomへ間違った方を上げかけたため。

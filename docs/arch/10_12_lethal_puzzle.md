@@ -47,7 +47,7 @@
 (エンドレスと今日の1問を重ねないため)。
 
 **JSONのままpckへ入れる。**`.tres` を数百個置くより1ファイルの方が扱いやすい。リソースではないため
-`export_presets.cfg` の `include_filter` に載せる。読むのは `FileAccess`(`.remap` は付かない)。
+`export_presets.cfg` の `include_filter` に載せる(書き出しのたびに `tools/ensure_export_filters.py` が揃え直すため、そちらの表にも書く)。読むのは `FileAccess`(`.remap` は付かない)。
 JSONを通ると整数が小数になるため、`PuzzleStageData.from_dict()` で型を戻す。
 
 **問題集の各問が解けることはテストで確かめる**(`tools/tests/endless_puzzle_tests.gd`)。

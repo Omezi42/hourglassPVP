@@ -37,3 +37,19 @@ static func parse_unit(text: String) -> Dictionary:
 	if card == null:
 		return {}
 	return {"card": card, "health": int(parts[1]), "attack": int(parts[2])}
+
+
+## 問題集のJSON(`tools/shorts/puzzles.json` / `data/endless_puzzles.json` の `stage`)から作る。
+## JSONを通ると整数が小数になるため、型をここで戻す。
+static func from_dict(data: Dictionary, stage_id: String) -> PuzzleStageData:
+	var stage := PuzzleStageData.new()
+	stage.id = stage_id
+	stage.title = data["title"]
+	stage.hint = data["hint"]
+	stage.foe_hp = int(data["foe_hp"])
+	stage.own_hp = int(data["own_hp"])
+	stage.mana = int(data["mana"])
+	stage.hand_ids.assign(data["hand_ids"])
+	stage.own_units.assign(data["own_units"])
+	stage.foe_units.assign(data["foe_units"])
+	return stage

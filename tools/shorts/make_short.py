@@ -6,6 +6,7 @@
     python tools/shorts/make_short.py puzzle <番号>  # とどめ問題。番号は問題集 puzzles.json の1始まり
     python tools/shorts/make_short.py puzzle all     # 問題集の全問。書き出し済みは飛ばす
     python tools/shorts/make_short.py forge <問数>   # 難しい問題を並列で探して問題集へ足す(数十分かかる)
+    python tools/shorts/make_short.py forge-endless <問数>  # 同じ探し方でエンドレスの問題集 data/endless_puzzles.json へ足す
 
 1. 台本(ナレーション + 見出し)を tools/shorts/card_lines.json / puzzle_lines.json から組む
 2. VOICEVOXエンジンで読み上げる(tools/pv_voice.py)。エンジンが応答しなければ VOICEVOX_ENGINE の run.exe を
@@ -74,7 +75,8 @@ def targets(kind: str) -> list:
 
 # 問題探し(puzzle_forge.gd)は1問に数十秒〜数分かかるため、CPUのコア数に合わせて並列で回し、
 # 見つかった問題を問題集の末尾へ足す(既存の番号は動かさない)。
-def forge(count: int) -> None:
+# とどめ問題とエンドレスの問題集は重ねない(エンドレスで今日の1問の答えを先に知らないため)。
+def forge(count: int, book_path: Path) -> None:
     workers = max(1, (os.cpu_count() or 2) - 2)
     per_worker = math.ceil(count / workers)
     base_seed = int(time.time())
@@ -91,9 +93,9 @@ def forge(count: int) -> None:
     print(f"{workers}並列で {per_worker}問ずつ探しています…", flush=True)
     for proc in procs:
         proc.wait()
-    book_path = ROOT / "tools/shorts" / PUZZLE_BOOK
-    book = load_json(PUZZLE_BOOK) if book_path.exists() else []
-    known = {signature(entry["stage"]) for entry in book}
+    book = json.loads(book_path.read_text(encoding="utf-8")) if book_path.exists() else []
+    known = {signature(entry["stage"]) for path in FORGE_BOOKS.values() if path.exists()
+             for entry in json.loads(path.read_text(encoding="utf-8"))}
     added = 0
     for out in outs:
         if not out.exists():
@@ -110,11 +112,12 @@ def forge(count: int) -> None:
 
 
 def signature(stage: dict) -> str:
-    return json.dumps([stage["mana"], stage["hand_ids"], stage["own_units"], stage["foe_units"]])
+    return json.dumps([int(stage["mana"]), stage["hand_ids"], stage["own_units"], stage["foe_units"]])
 
 
 NARRATIONS = {"card": card_narration, "puzzle": puzzle_narration}
 PUZZLE_BOOK = "puzzles.json"
+FORGE_BOOKS = {"forge": ROOT / "tools/shorts" / PUZZLE_BOOK, "forge-endless": ROOT / "data/endless_puzzles.json"}
 
 
 def run(command: list) -> None:
@@ -159,12 +162,12 @@ def run_godot(command: list) -> None:
 
 
 def main() -> None:
-    if len(sys.argv) < 3 or sys.argv[1] not in [*SCENES, "forge"]:
+    if len(sys.argv) < 3 or sys.argv[1] not in [*SCENES, *FORGE_BOOKS]:
         sys.exit(__doc__)
     kind, target = sys.argv[1], sys.argv[2]
     ensure_class_cache()
-    if kind == "forge":
-        forge(int(target))
+    if kind in FORGE_BOOKS:
+        forge(int(target), FORGE_BOOKS[kind])
         return
     if target != "all":
         try:

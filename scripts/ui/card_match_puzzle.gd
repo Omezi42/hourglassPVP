@@ -16,7 +16,7 @@ var _stage: PuzzleStageData = null
 var _panel: CardChallengeResult
 var _settled := false
 ## エンドレス(GameDesign.md 24章)かどうか。true の間は初回クリア報酬・進捗記録を
-## 行わず、「次の問題へ」で新しい問題を生成し続けられる。
+## 行わず、「次の問題へ」で問題集から次々に出せる。
 var _endless := false
 
 
@@ -148,7 +148,7 @@ func _next_label(cleared: bool) -> String:
 
 func _start_next() -> void:
 	if _endless:
-		start(PuzzleGenerator.generate(), true)
+		start(EndlessPuzzles.next(), true)
 	else:
 		start(_next_puzzle())
 

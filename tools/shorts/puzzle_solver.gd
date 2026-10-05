@@ -1,8 +1,8 @@
 extends RefCounted
-## とどめ問題の総当たりソルバー(撮影用の問題を選ぶためのオフライン専用)。
+## 問題の総当たりソルバー(とどめ問題とエンドレスの問題集を選ぶためのオフライン専用)。
 ## 1手番のうちに指せる手(出す・撃つ・反転・反転権・攻撃)をすべて試し、局面が同じになった枝は
-## まとめて数える。ゲーム本体のエンドレスは実行速度の都合で総当たりを採らない(Architecture.md
-## 10.12.1節)が、撮影用の問題は手元で時間をかけて選べるため、実際のルール(`MatchState`)で解き切る。
+## まとめて数える。ゲームの中で回すには遅いため、エンドレスの問題集もこれで手元で選んで同梱する
+## (Architecture.md 10.12.1節)。
 
 const MINE := MatchState.Side.A
 const FOE := MatchState.Side.B
@@ -16,12 +16,16 @@ static var _var_cache := {}
 var node_budget := 60000
 var nodes := 0
 var aborted := false
+var probe_first := 0
+var probe_good_first := 0
 
 var _min_hp := {}
 var _win := {}
 
 
 ## 相手へ与えられる最大ダメージ。打ち切られたら -1。
+## あわせて `probe_first` / `probe_good_first`(初手の数と、最大打点へ届く初手の数)を残す。
+## `analyze()` の `first` / `good_first` と同じ値で、重い `analyze()` の前にふるい落とすのに使う。
 func max_damage(stage: PuzzleStageData) -> int:
 	var probe := stage.duplicate() as PuzzleStageData
 	probe.foe_hp = PROBE_HP
@@ -30,6 +34,17 @@ func max_damage(stage: PuzzleStageData) -> int:
 	nodes = 0
 	aborted = false
 	var reached := _min_foe_hp(state)
+	probe_first = 0
+	probe_good_first = 0
+	if not aborted:
+		for action in actions(state):
+			var child := step(state, action)
+			if child == null:
+				continue
+			probe_first += 1
+			if int(_min_hp.get(key_of(child), PROBE_HP)) <= reached:
+				probe_good_first += 1
+			child.free()
 	state.free()
 	return -1 if aborted else PROBE_HP - reached
 
@@ -143,10 +158,38 @@ func _solve(state: MatchState) -> Dictionary:
 
 ## `CardMatchPuzzle._apply()` と同じ形の局面を作る(反転権・コインもゲームと同じ扱い)。
 static func build(stage: PuzzleStageData) -> MatchState:
-	var state := PuzzleGenerator._build_state(stage)
+	var state := MatchState.new()
+	var deck := CardPresetDecks.basic()
+	state.start_match(deck, deck, MINE, 1, false, false)
+	state.hp[MINE] = stage.own_hp
+	state.hp[FOE] = stage.foe_hp
+	state.max_mana[MINE] = stage.mana
+	state.mana[MINE] = stage.mana
 	state.coin_available[MINE] = false
+	state.hand[MINE] = []
+	for id in stage.hand_ids:
+		var card := CardLibrary.find_by_id(id)
+		if card != null:
+			state.hand[MINE].append(card)
 	state.hand[FOE] = []
+	_place(state, MINE, stage.own_units)
+	_place(state, FOE, stage.foe_units)
 	return state
+
+
+static func _place(state: MatchState, side: int, rows: Array[String]) -> void:
+	var slots: Array = []
+	slots.resize(MatchState.BOARD_SIZE)
+	for i in mini(rows.size(), MatchState.BOARD_SIZE):
+		var parsed := PuzzleStageData.parse_unit(rows[i])
+		if parsed.is_empty():
+			continue
+		var unit := CardInstance.new(parsed["card"])
+		unit.health = int(parsed["health"])
+		unit.attack = int(parsed["attack"])
+		unit.summoned_this_turn = false
+		slots[i] = unit
+	state.board[side] = slots
 
 
 ## 1手を適用した新しい局面。適用できない手なら null。

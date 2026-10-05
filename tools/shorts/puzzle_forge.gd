@@ -3,13 +3,18 @@ extends SceneTree
 ## 盤面をランダムに組み、総当たり(puzzle_solver.gd)で最大打点を測って相手HPをそれに合わせ
 ## (=最善手順でしか届かず、届けばぴったり0になる)、難しさの基準を満たすものだけを残す。
 ##
-## ふだんは make_short.py forge <問数> から並列で回し、結果を tools/shorts/puzzles.json へまとめる。
+## ふだんは make_short.py forge <問数>(とどめ問題)/ forge-endless <問数>(エンドレス)から並列で回し、
+## 結果を tools/shorts/puzzles.json / data/endless_puzzles.json へまとめる。
 ##   godot --headless --path . --script res://tools/shorts/puzzle_forge.gd --
-##     --count=3 --seed=1 --out=<json>
+##     --count=3 --seed=1 --out=<json> [--tries=<試行の上限>]
 
 const Solver := preload("res://tools/shorts/puzzle_solver.gd")
 const BOOK_PATH := "res://tools/shorts/puzzles.json"
+## エンドレスの問題集。とどめ問題(今日の1問)と重ならないよう、どちらへ足すときも両方の盤面を避ける。
+const ENDLESS_BOOK_PATH := EndlessPuzzles.BOOK_PATH
 const MAX_TRIES := 4000
+## 合格する問題は数千局面で解き切れる。これを超える盤面は打ち切りまで回しても大半が落ちるため、早めに見切る。
+const NODE_BUDGET := 20000
 
 ## 難しさの基準。でたらめに指して勝てる確率・勝ちに繋がる初手の割合が小さく、手数が多いこと。
 const MAX_P_RANDOM := 0.02
@@ -41,6 +46,7 @@ func _init() -> void:
 	var count := 5
 	var seed_value := 1
 	var verbose := false
+	var tries := MAX_TRIES
 	var out_path := BOOK_PATH
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--count="):
@@ -49,17 +55,20 @@ func _init() -> void:
 			seed_value = int(arg.trim_prefix("--seed="))
 		elif arg.begins_with("--out="):
 			out_path = arg.trim_prefix("--out=")
+		elif arg.begins_with("--tries="):
+			tries = int(arg.trim_prefix("--tries="))
 		elif arg == "--verbose":
 			verbose = true
 	_rng.seed = seed_value
 	_build_pools()
 	var saved: Array = _load(out_path)
 	var known := {}
-	for entry in saved + _load(BOOK_PATH):
+	for entry in saved + _load(BOOK_PATH) + _load(ENDLESS_BOOK_PATH):
 		known[_signature(entry["stage"])] = true
 	var solver := Solver.new()
+	solver.node_budget = NODE_BUDGET
 	var added := 0
-	for attempt in MAX_TRIES:
+	for attempt in tries:
 		if added >= count:
 			break
 		var stage := _random_stage()
@@ -68,7 +77,7 @@ func _init() -> void:
 		var started := Time.get_ticks_msec()
 		var damage := solver.max_damage(stage)
 		var report := {}
-		if damage >= MIN_DAMAGE and damage <= MAX_DAMAGE:
+		if damage >= MIN_DAMAGE and damage <= MAX_DAMAGE and _few_good_first(solver):
 			stage.foe_hp = damage
 			report = solver.analyze(stage)
 		if verbose:
@@ -94,8 +103,14 @@ func _init() -> void:
 		added += 1
 		print("#%d  hp=%d  %s" % [saved.size(), damage, JSON.stringify(entry["metrics"])])
 		_save(out_path, saved)
-	print("追加 %d 問(試行 %d)" % [added, MAX_TRIES])
+	print("追加 %d 問(試行 %d)" % [added, tries])
 	quit()
+
+
+## `analyze()` は数十秒かかることがあるため、最大打点の探索で分かる初手の割合で先にふるう。
+func _few_good_first(solver: Solver) -> bool:
+	var ratio := float(solver.probe_good_first) / maxf(float(solver.probe_first), 1.0)
+	return ratio <= MAX_GOOD_FIRST_RATIO
 
 
 func _hard_enough(report: Dictionary) -> bool:

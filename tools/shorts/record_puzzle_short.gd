@@ -33,7 +33,7 @@ var _count: Label
 
 func _run() -> void:
 	var entry: Dictionary = _narration["puzzle"]
-	_stage_data = _stage_from(entry["stage"])
+	_stage_data = PuzzleStageData.from_dict(entry["stage"], "forge")
 	for action in entry["solution"]:
 		_solution.append(_whole_numbers(action))
 	_title.text = TITLE_TEXT
@@ -57,7 +57,7 @@ func _run() -> void:
 	get_tree().quit()
 
 
-## 実際のエンドレスと同じ入口で局面を作る。エンドレスは進捗も砂金も書かない(Architecture.md 10.12.1節)。
+## エンドレスと同じ入口で局面を作る。エンドレスは進捗も砂金も書かない(Architecture.md 10.12.1節)。
 func _start_puzzle() -> void:
 	match_screen.puzzle.start(_stage_data, true)
 	match_screen.bar_for(match_screen.my_side).display_name = PLAYER_NAME
@@ -71,20 +71,6 @@ func _build_count() -> void:
 	_count.visible = false
 	_frame.get_child(0).add_child(_count)
 	_count.get_parent().move_child(_count, _flash.get_index())
-
-
-func _stage_from(data: Dictionary) -> PuzzleStageData:
-	var stage := PuzzleStageData.new()
-	stage.id = "forge"
-	stage.title = data["title"]
-	stage.hint = data["hint"]
-	stage.foe_hp = int(data["foe_hp"])
-	stage.own_hp = int(data["own_hp"])
-	stage.mana = int(data["mana"])
-	stage.hand_ids.assign(data["hand_ids"])
-	stage.own_units.assign(data["own_units"])
-	stage.foe_units.assign(data["foe_units"])
-	return stage
 
 
 ## JSONを通ると整数が小数になるため、手の番号を整数へ戻す。

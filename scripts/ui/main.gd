@@ -608,9 +608,9 @@ func _on_puzzle_stage_selected(stage: PuzzleStageData) -> void:
 	_show_only(card_match_screen)
 
 
-## エンドレス(GameDesign.md 24章)。押すたびにその場で新しい問題を1つ生成する。
+## エンドレス(GameDesign.md 24章)。押すたびに同梱の問題集から1問を選ぶ。
 func _on_puzzle_endless_selected() -> void:
-	card_match_screen.puzzle.start(PuzzleGenerator.generate(), true)
+	card_match_screen.puzzle.start(EndlessPuzzles.next(), true)
 	_match_return_screen = puzzle_picker_screen
 	_show_only(card_match_screen)
 
