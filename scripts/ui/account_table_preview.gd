@@ -10,10 +10,15 @@ const FRAME_INSET := 8.0
 const BAR_MARGIN := Vector2(14, 12)
 ## 右の群(マナ・山札)が見本の外へ押し出される幅。左の群(肖像・名札・HP)だけを見せる。
 const BAR_WIDTH := 1200.0
+## 見せる左の群(肖像・名札・HP)の幅。見本がこれより狭ければ帯ごと縮めて収める。
+const LEFT_GROUP_WIDTH := (
+	PlayerInfoBar.HP_BAR_X + PlayerInfoBar.HP_BAR_SIZE.x + PlayerInfoBar.HP_BADGE_RADIUS
+)
 const FRAME_WIDTH := 1.5
 
 var mat_id := PlaymatLibrary.DEFAULT_ID
 var _bar: PlayerInfoBar
+var _fit_scale := 1.0
 var _bump_tween: Tween
 
 
@@ -48,17 +53,17 @@ func show_emote(text: String) -> void:
 func bump() -> void:
 	if _bump_tween != null and _bump_tween.is_valid():
 		_bump_tween.kill()
-	_bar.scale = Vector2.ONE
+	_bar.scale = Vector2.ONE * _fit_scale
 	_bump_tween = create_tween()
 	(
 		_bump_tween
-		. tween_property(_bar, "scale", Vector2.ONE * BUMP_SCALE, BUMP_DURATION * 0.4)
+		. tween_property(_bar, "scale", Vector2.ONE * _fit_scale * BUMP_SCALE, BUMP_DURATION * 0.4)
 		. set_trans(Tween.TRANS_SINE)
 		. set_ease(Tween.EASE_OUT)
 	)
 	(
 		_bump_tween
-		. tween_property(_bar, "scale", Vector2.ONE, BUMP_DURATION * 0.6)
+		. tween_property(_bar, "scale", Vector2.ONE * _fit_scale, BUMP_DURATION * 0.6)
 		. set_trans(Tween.TRANS_SINE)
 		. set_ease(Tween.EASE_IN)
 	)
@@ -67,9 +72,17 @@ func bump() -> void:
 func _layout() -> void:
 	if _bar == null:
 		return
+	_fit_scale = clampf((size.x - BAR_MARGIN.x * 2.0) / LEFT_GROUP_WIDTH, 0.0, 1.0)
+	if _bump_tween != null and _bump_tween.is_valid():
+		_bump_tween.kill()
 	_bar.size = Vector2(BAR_WIDTH, PlayerInfoBar.BAR_HEIGHT)
-	_bar.position = Vector2(BAR_MARGIN.x, size.y - PlayerInfoBar.BAR_HEIGHT - BAR_MARGIN.y)
+	_bar.scale = Vector2.ONE * _fit_scale
+	# 跳ねは肖像を中心にするため、縮めたぶんだけ位置を補って左下の余白を保つ。
 	_bar.pivot_offset = PlayerInfoBar.PORTRAIT_CENTER
+	var top_left := Vector2(
+		BAR_MARGIN.x, size.y - PlayerInfoBar.BAR_HEIGHT * _fit_scale - BAR_MARGIN.y
+	)
+	_bar.position = top_left - PlayerInfoBar.PORTRAIT_CENTER * (1.0 - _fit_scale)
 
 
 func _draw() -> void:
