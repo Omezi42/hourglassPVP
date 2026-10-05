@@ -52,6 +52,20 @@ const EMOTES: Dictionary = {
 		"name": "健闘",
 		"text": "よい勝負でした",
 	},
+	"flip_back":
+	{
+		"id": "flip_back",
+		"name": "逆転宣言",
+		"text": "ここからひっくり返します",
+		"price": 300,
+	},
+	"sand_murmur":
+	{
+		"id": "sand_murmur",
+		"name": "砂の音",
+		"text": "……サラサラ……",
+		"price": 300,
+	},
 }
 
 const ORDERED_IDS: Array[String] = [
@@ -63,6 +77,8 @@ const ORDERED_IDS: Array[String] = [
 	"think",
 	"thanks",
 	"good_game",
+	"flip_back",
+	"sand_murmur",
 ]
 
 ## 最初から持っていて、既定で4つの枠へ入っているエモート(GameDesign.md 9章)。
@@ -96,3 +112,9 @@ static func get_emote_name(emote_id: String) -> String:
 static func get_emote_text(emote_id: String) -> String:
 	var entry: Dictionary = EMOTES.get(emote_id, {})
 	return str(entry.get("text", ""))
+
+
+## 品ごとの価格。後から足した品だけが持ち、持たない品は0(ショップの一律の価格を使う。GameDesign.md 21章)。
+static func price(emote_id: String) -> int:
+	var entry: Dictionary = EMOTES.get(emote_id, {})
+	return int(entry.get("price", 0))

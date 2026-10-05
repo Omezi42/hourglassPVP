@@ -409,7 +409,7 @@ func _test_profile_customization(assert_true: Callable) -> void:
 
 func _test_emotes(assert_true: Callable) -> void:
 	var ids := EmoteLibrary.get_emote_ids()
-	assert_true.call(ids.size() == 8, "should have 8 emotes")
+	assert_true.call(ids.size() == 10, "should have 10 emotes")
 	assert_true.call(
 		EmoteLibrary.DEFAULT_EMOTE_IDS.size() == EmoteLibrary.SLOT_COUNT,
 		"the default emotes should fill every slot"
@@ -442,6 +442,10 @@ func _test_shop(assert_true: Callable) -> void:
 	assert_true.call(ids.has("thanks"), "the shop should sell the added emotes")
 	assert_true.call(ShopCatalog.price(ShopCatalog.Kind.ICON) == 100, "an icon should cost 100")
 	assert_true.call(ShopCatalog.price(ShopCatalog.Kind.EMOTE) == 200, "an emote should cost 200")
+	assert_true.call(
+		ShopCatalog.price(ShopCatalog.Kind.EMOTE, "flip_back") == 300,
+		"a later emote should keep its own price"
+	)
 	assert_true.call(
 		ShopCatalog.sells(ShopCatalog.Kind.ICON, "mascot"), "sells() should find a listed item"
 	)

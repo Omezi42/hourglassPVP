@@ -45,7 +45,8 @@ static func items() -> Array[Dictionary]:
 static func price(kind: Kind, id := "") -> int:
 	match kind:
 		Kind.EMOTE:
-			return EMOTE_PRICE
+			var own_price := EmoteLibrary.price(id)
+			return own_price if own_price > 0 else EMOTE_PRICE
 		Kind.PLAYMAT:
 			return PlaymatLibrary.price(id)
 		Kind.CARD_SET:
