@@ -9,16 +9,15 @@ X・YouTube Shorts へ毎日1本出す縦長の動画を、ゲームの実物の
 | `tools/pv_voice.py` | 台本の各行をVOICEVOXエンジンで読み上げてWAVにする。エンジンは `Documents/voicevox-engine/run.exe`(リポジトリの外)に置き、`make_short.py` が応答しなければ起動する |
 | `tools/shorts/make_short.py` | ショート1本を「台本 → 読み上げ → 撮影 → ffmpegで結合」まで通しで作る入口。とどめ問題の問題探し(`forge`)の並列実行も持つ。撮影前に `check.sh` と同じ判定で class_name の登録が古ければ `--import` し、撮影のログに `SCRIPT ERROR` があれば結合せずに止まる(Godotはエラーでも終了コード0で終わり、演出の抜けた動画が書き出されるため) |
 | `tools/shorts/record_card_short.gd` | カード紹介ショート。台本は `card_lines.json` |
-| `tools/shorts/record_puzzle_short.gd` | とどめ問題ショート。問題集 `puzzles.json` の1問を実際のエンドレスと同じ入口(`CardMatchPuzzle.start()`)で盤面へ出し、正解手順を `_perform()` で指す |
+| `tools/shorts/record_puzzle_short.gd` | とどめ問題ショート。問題集 `puzzles.json` の1問をエンドレスと同じ入口(`CardMatchPuzzle.start()`)で盤面へ出し、正解手順を `_perform()` で指す |
 | `tools/shorts/puzzle_forge.gd` / `puzzle_solver.gd` | とどめ問題の問題集を作る。下記 |
 | `tools/shorts/schedule.py` | 書き出した動画を投稿日へ割り振り、投稿文を添えて日付つきのフォルダへ並べる。下記 |
 | `tools/shorts/reserve.py` | 予約投稿へまだ入れていないものの一覧と、入れた印(`schedule.json` の `reserved`)。下記 |
 
 ## とどめ問題の問題集(総当たりで選ぶ)
 
-ゲーム本体のエンドレス(10.12.1節)は Web の実行速度に収めるため「正解を先に組んで逆算する」作りで、
-素直に全部を本体へ向ければ解ける問題が多い。**宣伝の動画は「しっかり考えないと解けない」ことが見どころ**のため、
-撮影用の問題は手元で時間をかけて選ぶ。
+**宣伝の動画は「しっかり考えないと解けない」ことが見どころ**のため、撮影用の問題は手元で時間をかけて選ぶ。
+同じ問題探しでエンドレスの問題集(10.12.1節)も作る(出力先と `make_short.py` の種類だけが違う)。
 
 1. 盤面・手札・マナをランダムに組む(撮影で読めるよう、効果の説明が要るカードは4種まで)
 2. **1手番で指せる手をすべて試して、相手へ与えられる最大ダメージを測り、相手HPをそれに合わせる。**
