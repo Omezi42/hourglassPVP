@@ -68,6 +68,11 @@
 - [ ] エンドレスの問題集を数百問まで増やす(GameDesign.md 24章 / Architecture.md 10.12.1節)。
       いまは15問。`make_short.py forge-endless` で書き足し、`endless_puzzle_tests.gd` の `MIN_BOOK_SIZE` を200へ戻す
 
+### カードセットの段階公開(GameDesign.md 21章 / Architecture.md 10.8.1節)
+
+- [ ] `planned_count` と「?」の枠の表示(タイル・詳細・収録カードを見る)
+- [ ] 最初の段階公開セットの枠・予定枚数・1枚目を決め、売り出す
+
 ### カードスキン(GameDesign.md 31章 / Architecture.md 10.19節)
 
 仕組みは実装済み。最初の1枚はソードの「聖剣」(配布・最初はOFF。絵も取り込み済み)。

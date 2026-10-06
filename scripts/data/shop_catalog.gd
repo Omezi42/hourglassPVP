@@ -83,7 +83,7 @@ static func item_detail(kind: Kind, id: String) -> String:
 		Kind.CARD_SET:
 			# 中身のカードそのものは砂時計一覧・デッキ編集で確認できるため、
 			# ここでは狙いの1行と枚数だけを添える(GameDesign.md 21章)。
-			return "%s(%d枚)" % [CardSetLibrary.description(id), CardSetLibrary.card_ids(id).size()]
+			return "%s(%s)" % [CardSetLibrary.description(id), CardSetLibrary.count_text(id)]
 		Kind.SKIN:
 			var card := CardLibrary.find_by_id(SkinLibrary.card_id(id))
 			return "「%s」の絵が変わる" % (card.display_name if card != null else "")

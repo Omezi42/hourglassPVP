@@ -6,6 +6,9 @@ extends RefCounted
 ## **`price == 0` はショップで売らないという印**(GameDesign.md 8章「買い切り以外の
 ## 追加手段も検討してよい」)。ソロモード(27章)のようにステージクリアで解放するセットは、
 ## ここへ登録したうえで `ShopCatalog` 側が `price > 0` のものだけを品目に並べる。
+##
+## **`planned_count` は段階公開の予定枚数**(GameDesign.md 21章)。`card_ids` には公開済みの
+## カードだけを書き、毎日のビルドで1枚ずつ末尾へ足す。出そろったセットには書かない。
 
 ## **ソロモードの3枚(GameDesign.md 27章)は、1つの3枚セットではなく1枚ずつの
 ## セットに分ける。**ステージごとに別々のカードを解放する設計(27章の10ステージ案)
@@ -100,6 +103,24 @@ static func card_ids(set_id: String) -> Array[String]:
 	for id in SETS.get(set_id, {}).get("card_ids", []):
 		found.append(str(id))
 	return found
+
+
+## 予定枚数(GameDesign.md 21章「段階公開」)。`planned_count` が無いセットは出そろっている。
+static func planned_count(set_id: String) -> int:
+	var listed := card_ids(set_id).size()
+	return maxi(int(SETS.get(set_id, {}).get("planned_count", listed)), listed)
+
+
+## まだ公開していない枚数。0なら通常のセットと同じに見せる。
+static func hidden_count(set_id: String) -> int:
+	return planned_count(set_id) - card_ids(set_id).size()
+
+
+## 品の名前やタイトルへ添える枚数。公開中は「n / m 枚公開中」。
+static func count_text(set_id: String) -> String:
+	if hidden_count(set_id) > 0:
+		return "%d / %d 枚公開中" % [card_ids(set_id).size(), planned_count(set_id)]
+	return "%d枚" % card_ids(set_id).size()
 
 
 ## 0はショップで売らないセット(GameDesign.md 8章)。

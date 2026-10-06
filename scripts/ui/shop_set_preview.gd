@@ -13,6 +13,11 @@ const PANEL_STYLE := "res://resources/theme/content_panel.tres"
 ## 横スクロールで残りを読む(墓地ビューアが縦の行数で同じことをしているのと同じ考え方)。
 const SCROLL_SIZE := Vector2(1140, 470)
 const ROW_GAP := 16.0
+## 段階公開でまだ出していない札(GameDesign.md 21章)。公開済みの札と同じ大きさで並べる。
+const HIDDEN_FRAME_WIDTH := 1.5
+const HIDDEN_MARK_SIZE := 96
+const HIDDEN_NAME_SIZE := 18
+const HIDDEN_NAME_GAP := 48.0
 
 var _title: Label
 var _row: HBoxContainer
@@ -28,11 +33,10 @@ func _ready() -> void:
 	_build()
 
 
-## そのセットの全カードを、購入の有無に関わらずそのまま見せる。
+## そのセットの全カードを、購入の有無に関わらずそのまま見せる。未公開の枠は「?」の札で示す。
 func open_set(set_id: String) -> void:
 	_title.text = (
-		"%s — 内容(%d枚)"
-		% [CardSetLibrary.display_name(set_id), CardSetLibrary.card_ids(set_id).size()]
+		"%s — 内容(%s)" % [CardSetLibrary.display_name(set_id), CardSetLibrary.count_text(set_id)]
 	)
 	for child in _row.get_children():
 		child.queue_free()
@@ -44,7 +48,41 @@ func open_set(set_id: String) -> void:
 		panel.interactive = false
 		_row.add_child(panel)
 		panel.show_card(card)
+	for i in CardSetLibrary.hidden_count(set_id):
+		_row.add_child(_hidden_slot())
 	visible = true
+
+
+func _hidden_slot() -> Control:
+	var slot := Control.new()
+	slot.custom_minimum_size = CardDetailPanel.PANEL_SIZE
+	slot.draw.connect(
+		func() -> void:
+			var font := slot.get_theme_default_font()
+			var rect := Rect2(Vector2.ZERO, slot.size)
+			slot.draw_rect(rect, UiPalette.BOARD_TABLE_FILL)
+			slot.draw_rect(rect, UiPalette.BRASS_DARK, false, HIDDEN_FRAME_WIDTH)
+			var mid := rect.get_center().y
+			slot.draw_string(
+				font,
+				Vector2(0.0, mid + HIDDEN_MARK_SIZE * 0.36),
+				"?",
+				HORIZONTAL_ALIGNMENT_CENTER,
+				rect.size.x,
+				HIDDEN_MARK_SIZE,
+				ShopItemArt.HIDDEN_MARK_COLOR
+			)
+			slot.draw_string(
+				font,
+				Vector2(0.0, mid + HIDDEN_MARK_SIZE * 0.36 + HIDDEN_NAME_GAP),
+				ShopItemArt.HIDDEN_NAME,
+				HORIZONTAL_ALIGNMENT_CENTER,
+				rect.size.x,
+				HIDDEN_NAME_SIZE,
+				UiPalette.TEXT_MUTED
+			)
+	)
+	return slot
 
 
 func _build() -> void:

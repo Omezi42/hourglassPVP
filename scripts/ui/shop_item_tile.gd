@@ -125,7 +125,7 @@ func _draw() -> void:
 		ShopCatalog.Kind.SKIN:
 			ShopItemArt.skin_states(self, art, id)
 		ShopCatalog.Kind.CARD_SET:
-			ShopItemArt.card_set_row(self, art, id)
+			ShopItemArt.card_set_row(self, art, id, _font)
 	_draw_footer()
 	if selected:
 		var ring := Rect2(Vector2.ONE * SELECT_INSET, size - Vector2.ONE * SELECT_INSET * 2.0)
@@ -146,7 +146,7 @@ func _draw_footer() -> void:
 	var baseline := inner.end.y - FOOTER_BASELINE_INSET
 	var name := ShopCatalog.item_name(kind, id)
 	if kind == ShopCatalog.Kind.CARD_SET:
-		name += "(%d枚)" % CardSetLibrary.card_ids(id).size()
+		name += "(%s)" % CardSetLibrary.count_text(id)
 	var name_color := UiPalette.OUTLINE_DARK if lit else UiPalette.TEXT_OFFWHITE
 	var text_left := inner.position.x + TEXT_PAD
 	var text_width := inner.size.x - TEXT_PAD * 2.0

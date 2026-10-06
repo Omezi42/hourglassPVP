@@ -16,43 +16,86 @@ const BUBBLE_FONT_SIZE := 16
 const BUBBLE_TOP := Color(0.16, 0.13, 0.1, 0.95)
 const BUBBLE_BOTTOM := Color(0.08, 0.06, 0.05, 0.95)
 const BUBBLE_OUTLINE_WIDTH := 1.2
+## 段階公開でまだ出していない枠(GameDesign.md 21章)。公開済みの絵を影にして「?」を重ねる。
+const HIDDEN_TINT := Color(0.55, 0.47, 0.36, 0.30)
+const HIDDEN_MARK_RATIO := 0.32
+const HIDDEN_MARK_COLOR := Color(0.78, 0.68, 0.52, 0.85)
+const HIDDEN_NAME := "近日公開"
 
 
-## カードセットの収録カードを横一列に並べる(タイル)。
-static func card_set_row(ci: CanvasItem, rect: Rect2, set_id: String) -> void:
+## カードセットの収録カードを横一列に並べる(タイル)。未公開の枠は予定枚数ぶん「?」で埋める。
+static func card_set_row(ci: CanvasItem, rect: Rect2, set_id: String, font: Font) -> void:
 	var ids := CardSetLibrary.card_ids(set_id)
+	var slots := CardSetLibrary.planned_count(set_id)
 	if ids.is_empty():
 		return
-	var cell := Vector2(rect.size.x / ids.size(), rect.size.y)
-	for i in ids.size():
-		_hourglass(ci, Rect2(rect.position + Vector2(cell.x * i, 0.0), cell), str(ids[i]))
+	var cell := Vector2(rect.size.x / slots, rect.size.y)
+	for i in slots:
+		var at := Rect2(rect.position + Vector2(cell.x * i, 0.0), cell)
+		if i < ids.size():
+			_hourglass(ci, at, ids[i])
+		else:
+			_hidden(ci, at, ids[0], font)
 
 
 ## カードセットの収録カードを名前つきで格子に並べる(詳細)。
 static func card_set_grid(ci: CanvasItem, rect: Rect2, set_id: String, font: Font) -> void:
 	var ids := CardSetLibrary.card_ids(set_id)
+	var slots := CardSetLibrary.planned_count(set_id)
 	if ids.is_empty():
 		return
-	var columns: int = mini(ids.size(), GRID_COLUMNS)
-	var rows: int = ceili(ids.size() / float(columns))
+	var columns: int = mini(slots, GRID_COLUMNS)
+	var rows: int = ceili(slots / float(columns))
 	var cell := Vector2(rect.size.x / columns, rect.size.y / rows)
-	for i in ids.size():
+	for i in slots:
 		var origin := (
 			rect.position + Vector2(cell.x * (i % columns), cell.y * floori(i / float(columns)))
 		)
 		var art := Rect2(origin, Vector2(cell.x, cell.y - NAME_HEIGHT))
-		_hourglass(ci, art, str(ids[i]))
-		var card := CardLibrary.find_by_id(str(ids[i]))
-		if card != null and font != null:
+		var label := HIDDEN_NAME
+		if i < ids.size():
+			_hourglass(ci, art, ids[i])
+			var card := CardLibrary.find_by_id(ids[i])
+			label = card.display_name if card != null else ""
+		else:
+			_hidden(ci, art, ids[0], font)
+		if font != null:
 			ci.draw_string(
 				font,
 				origin + Vector2(0.0, cell.y - CELL_PAD),
-				card.display_name,
+				label,
 				HORIZONTAL_ALIGNMENT_CENTER,
 				cell.x,
 				NAME_FONT_SIZE,
-				UiPalette.TEXT_OFFWHITE
+				UiPalette.TEXT_OFFWHITE if i < ids.size() else UiPalette.TEXT_MUTED
 			)
+
+
+## まだ公開していない枠。紋章は押さない(どのカードかを示すものが無いため)。
+static func _hidden(ci: CanvasItem, cell: Rect2, shape_card_id: String, font: Font) -> void:
+	var card := CardLibrary.find_by_id(shape_card_id)
+	if card == null:
+		return
+	var texture := HourglassArt.texture(card.art_key(), HourglassArt.State.UPRIGHT)
+	if texture == null:
+		return
+	var room := cell.grow(-CELL_PAD)
+	var scale: float = minf(room.size.x / texture.get_size().x, room.size.y / texture.get_size().y)
+	var art_size := texture.get_size() * scale
+	var at := room.position + (room.size - art_size) * 0.5
+	ci.draw_texture_rect(texture, Rect2(at, art_size), false, HIDDEN_TINT)
+	if font == null:
+		return
+	var mark_size := int(art_size.y * HIDDEN_MARK_RATIO)
+	ci.draw_string(
+		font,
+		Vector2(at.x, at.y + art_size.y * 0.5 + mark_size * 0.36),
+		"?",
+		HORIZONTAL_ALIGNMENT_CENTER,
+		art_size.x,
+		mark_size,
+		HIDDEN_MARK_COLOR
+	)
 
 
 ## 砂時計1つを枠に収め、紋章を押す。**色だけでは見分けられない**ため紋章を必ず添える(9章)。

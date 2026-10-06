@@ -176,6 +176,9 @@ func _caption() -> String:
 
 func _description() -> String:
 	if _kind == ShopCatalog.Kind.CARD_SET:
+		var hidden := CardSetLibrary.hidden_count(_id)
+		if hidden > 0:
+			return "%s\n毎日1枚ずつ公開・あと %d 枚" % [CardSetLibrary.description(_id), hidden]
 		return CardSetLibrary.description(_id)
 	return ShopCatalog.item_detail(_kind, _id)
 
