@@ -12549,5 +12549,5105 @@
 			],
 			"title": "とどめ問題"
 		}
+	},
+	{
+		"metrics": {
+			"first": 10,
+			"good_first": 3,
+			"min_len": 7,
+			"p_random": 0.0
+		},
+		"solution": [
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 1,
+				"target": {},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_side": 0,
+				"type": "flip_right"
+			}
+		],
+		"stage": {
+			"foe_hp": 12,
+			"foe_units": [
+				"-",
+				"-",
+				"-",
+				"-",
+				"anvil:6:2",
+				"-"
+			],
+			"hand_ids": [
+				"tick"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 3,
+			"own_hp": 24,
+			"own_units": [
+				"cycle:1:4",
+				"-",
+				"-",
+				"twin:2:2",
+				"-",
+				"-"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 10,
+			"good_first": 3,
+			"min_len": 7,
+			"p_random": 0.0001
+		},
+		"solution": [
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 1,
+				"target": {},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 11,
+			"foe_units": [
+				"eye:4:0",
+				"-",
+				"-",
+				"-",
+				"-",
+				"-"
+			],
+			"hand_ids": [
+				"legacy"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 4,
+			"own_hp": 24,
+			"own_units": [
+				"key:2:1",
+				"-",
+				"-",
+				"-",
+				"-",
+				"mirror:1:7"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 9,
+			"good_first": 2,
+			"min_len": 5,
+			"p_random": 0.0013
+		},
+		"solution": [
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 0,
+				"target": {},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_side": 1,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 5,
+			"foe_units": [
+				"-",
+				"ward:2:0",
+				"dust:3:0",
+				"-",
+				"-",
+				"-"
+			],
+			"hand_ids": [
+				"tick"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 2,
+			"own_hp": 24,
+			"own_units": [
+				"-",
+				"poison:1:2",
+				"-",
+				"poison:1:2",
+				"-",
+				"-"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 8,
+			"good_first": 2,
+			"min_len": 6,
+			"p_random": 0.0028
+		},
+		"solution": [
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 0,
+				"target": {},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_side": 1,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 8,
+			"foe_units": [
+				"-",
+				"freeze:3:0",
+				"-",
+				"-",
+				"-",
+				"-"
+			],
+			"hand_ids": [
+				"husk"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 1,
+			"own_hp": 24,
+			"own_units": [
+				"-",
+				"-",
+				"-",
+				"vamp:1:3",
+				"-",
+				"drill:3:2"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 8,
+			"good_first": 2,
+			"min_len": 6,
+			"p_random": 0.0026
+		},
+		"solution": [
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 0,
+				"target": {},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_side": 1,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 10,
+			"foe_units": [
+				"-",
+				"freeze:4:0",
+				"-",
+				"-",
+				"-",
+				"-"
+			],
+			"hand_ids": [
+				"husk"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 1,
+			"own_hp": 24,
+			"own_units": [
+				"-",
+				"-",
+				"mirror:2:4",
+				"-",
+				"-",
+				"lance:4:1"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 7,
+			"good_first": 2,
+			"min_len": 5,
+			"p_random": 0.0092
+		},
+		"solution": [
+			{
+				"hand_index": 0,
+				"side": 0,
+				"target": {
+					"side": 0,
+					"slot": 0
+				},
+				"type": "cast"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_side": 0,
+				"type": "flip_right"
+			}
+		],
+		"stage": {
+			"foe_hp": 6,
+			"foe_units": [
+				"sweep:3:1",
+				"-",
+				"-",
+				"-",
+				"-",
+				"-"
+			],
+			"hand_ids": [
+				"pinch"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 1,
+			"own_hp": 24,
+			"own_units": [
+				"tick:4:0",
+				"moss:3:0",
+				"-",
+				"-",
+				"-",
+				"-"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 15,
+			"good_first": 4,
+			"min_len": 6,
+			"p_random": 0.0024
+		},
+		"solution": [
+			{
+				"side": 0,
+				"slot": 4,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_side": 1,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_side": 1,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 4,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 14,
+			"foe_units": [
+				"ward:2:0",
+				"-",
+				"-",
+				"ward:3:0",
+				"-",
+				"-"
+			],
+			"hand_ids": [
+				"shield"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 3,
+			"own_hp": 24,
+			"own_units": [
+				"-",
+				"-",
+				"-",
+				"cycle:1:3",
+				"barb:4:3",
+				"lock:1:7"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 8,
+			"good_first": 2,
+			"min_len": 6,
+			"p_random": 0.0011
+		},
+		"solution": [
+			{
+				"side": 0,
+				"slot": 3,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_side": 1,
+				"type": "flip_right"
+			},
+			{
+				"hand_index": 0,
+				"side": 0,
+				"target": {},
+				"type": "cast"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_side": 1,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 11,
+			"foe_units": [
+				"-",
+				"-",
+				"-",
+				"gate:1:7",
+				"-",
+				"-"
+			],
+			"hand_ids": [
+				"stasis"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 3,
+			"own_hp": 24,
+			"own_units": [
+				"-",
+				"-",
+				"anvil:2:6",
+				"shell:5:1",
+				"-",
+				"-"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 11,
+			"good_first": 3,
+			"min_len": 7,
+			"p_random": 0.0001
+		},
+		"solution": [
+			{
+				"side": 0,
+				"slot": 1,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"hand_index": 1,
+				"side": 0,
+				"slot": 0,
+				"target": {},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 14,
+			"foe_units": [
+				"-",
+				"-",
+				"cycle:1:3",
+				"-",
+				"wall:9:2",
+				"-"
+			],
+			"hand_ids": [
+				"grain",
+				"rattle"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 2,
+			"own_hp": 24,
+			"own_units": [
+				"-",
+				"wheel:1:5",
+				"-",
+				"-",
+				"-",
+				"sweep:4:0"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 10,
+			"good_first": 3,
+			"min_len": 7,
+			"p_random": 0.0005
+		},
+		"solution": [
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 0,
+				"target": {},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 4,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"target_side": 1,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_slot": 5,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 4,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 9,
+			"foe_units": [
+				"-",
+				"-",
+				"pebble:2:0",
+				"-",
+				"-",
+				"guard:5:2"
+			],
+			"hand_ids": [
+				"legacy",
+				"shell"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 5,
+			"own_hp": 24,
+			"own_units": [
+				"-",
+				"sand:2:1",
+				"-",
+				"-",
+				"wall:8:1",
+				"-"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 10,
+			"good_first": 2,
+			"min_len": 6,
+			"p_random": 0.0002
+		},
+		"solution": [
+			{
+				"side": 0,
+				"slot": 2,
+				"type": "flip"
+			},
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 0,
+				"target": {},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 8,
+			"foe_units": [
+				"-",
+				"-",
+				"-",
+				"drift:1:1",
+				"-",
+				"-"
+			],
+			"hand_ids": [
+				"husk"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 1,
+			"own_hp": 24,
+			"own_units": [
+				"-",
+				"-",
+				"cycle:2:3",
+				"reverb:1:2",
+				"-",
+				"-"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 10,
+			"good_first": 3,
+			"min_len": 6,
+			"p_random": 0.0008
+		},
+		"solution": [
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 1,
+				"target": {},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_side": 1,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 11,
+			"foe_units": [
+				"-",
+				"shield:3:0",
+				"-",
+				"-",
+				"lock:1:5",
+				"-"
+			],
+			"hand_ids": [
+				"dust",
+				"glim"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 2,
+			"own_hp": 24,
+			"own_units": [
+				"shield:2:1",
+				"-",
+				"wall:3:7",
+				"-",
+				"-",
+				"-"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 12,
+			"good_first": 3,
+			"min_len": 6,
+			"p_random": 0.0003
+		},
+		"solution": [
+			{
+				"side": 0,
+				"slot": 3,
+				"type": "flip"
+			},
+			{
+				"hand_index": 1,
+				"side": 0,
+				"target": {
+					"side": 0,
+					"slot": 3
+				},
+				"type": "cast"
+			},
+			{
+				"side": 0,
+				"slot": 4,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_side": 0,
+				"type": "flip_right"
+			}
+		],
+		"stage": {
+			"foe_hp": 16,
+			"foe_units": [
+				"-",
+				"-",
+				"-",
+				"wall:3:7",
+				"-",
+				"-"
+			],
+			"hand_ids": [
+				"shell",
+				"turn"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 4,
+			"own_hp": 24,
+			"own_units": [
+				"-",
+				"-",
+				"-",
+				"wheel:3:1",
+				"rattle:1:4",
+				"-"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 11,
+			"good_first": 3,
+			"min_len": 7,
+			"p_random": 0.0003
+		},
+		"solution": [
+			{
+				"side": 0,
+				"slot": 0,
+				"type": "flip"
+			},
+			{
+				"hand_index": 1,
+				"side": 0,
+				"slot": 2,
+				"target": {},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_side": 0,
+				"type": "flip_right"
+			}
+		],
+		"stage": {
+			"foe_hp": 15,
+			"foe_units": [
+				"-",
+				"-",
+				"-",
+				"wheel:2:2",
+				"-",
+				"-"
+			],
+			"hand_ids": [
+				"drift",
+				"rattle"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 2,
+			"own_hp": 24,
+			"own_units": [
+				"anvil:4:3",
+				"wheel:3:3",
+				"-",
+				"-",
+				"-",
+				"-"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 12,
+			"good_first": 3,
+			"min_len": 6,
+			"p_random": 0.0003
+		},
+		"solution": [
+			{
+				"side": 0,
+				"slot": 4,
+				"type": "flip"
+			},
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 0,
+				"target": {},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 4,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 4,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 4,
+				"target_side": 0,
+				"type": "flip_right"
+			}
+		],
+		"stage": {
+			"foe_hp": 10,
+			"foe_units": [
+				"rattle:4:0",
+				"-",
+				"-",
+				"-",
+				"-",
+				"grain:3:0"
+			],
+			"hand_ids": [
+				"rattle",
+				"sand"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 2,
+			"own_hp": 24,
+			"own_units": [
+				"-",
+				"-",
+				"chronos:6:4",
+				"-",
+				"tick:1:2",
+				"-"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 10,
+			"good_first": 3,
+			"min_len": 6,
+			"p_random": 0.0009
+		},
+		"solution": [
+			{
+				"side": 0,
+				"slot": 5,
+				"type": "flip"
+			},
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 1,
+				"target": {},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 9,
+			"foe_units": [
+				"-",
+				"-",
+				"-",
+				"-",
+				"sand:1:4",
+				"-"
+			],
+			"hand_ids": [
+				"rattle"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 4,
+			"own_hp": 24,
+			"own_units": [
+				"wand:2:0",
+				"-",
+				"pike:5:0",
+				"-",
+				"-",
+				"shell:3:2"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 11,
+			"good_first": 3,
+			"min_len": 6,
+			"p_random": 0.0005
+		},
+		"solution": [
+			{
+				"side": 0,
+				"slot": 2,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 0,
+				"target": {},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"target_side": 0,
+				"type": "flip_right"
+			}
+		],
+		"stage": {
+			"foe_hp": 15,
+			"foe_units": [
+				"-",
+				"-",
+				"lock:3:3",
+				"-",
+				"-",
+				"-"
+			],
+			"hand_ids": [
+				"rattle",
+				"drift"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 2,
+			"own_hp": 24,
+			"own_units": [
+				"-",
+				"-",
+				"wheel:2:4",
+				"-",
+				"-",
+				"dust:1:2"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 13,
+			"good_first": 3,
+			"min_len": 7,
+			"p_random": 0.0
+		},
+		"solution": [
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 0,
+				"target": {},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 4,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 4,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 4,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 7,
+			"foe_units": [
+				"legacy:2:2",
+				"-",
+				"-",
+				"burst:1:4",
+				"-",
+				"-"
+			],
+			"hand_ids": [
+				"legacy"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 5,
+			"own_hp": 24,
+			"own_units": [
+				"-",
+				"rattle:2:1",
+				"-",
+				"-",
+				"blank:2:3",
+				"-"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 17,
+			"good_first": 3,
+			"min_len": 6,
+			"p_random": 0.0001
+		},
+		"solution": [
+			{
+				"side": 0,
+				"slot": 4,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"type": "flip"
+			},
+			{
+				"hand_index": 0,
+				"side": 0,
+				"target": {
+					"side": 0,
+					"slot": 5
+				},
+				"type": "cast"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"target_side": 0,
+				"type": "flip_right"
+			}
+		],
+		"stage": {
+			"foe_hp": 10,
+			"foe_units": [
+				"legacy:1:3",
+				"sand:1:3",
+				"-",
+				"-",
+				"-",
+				"-"
+			],
+			"hand_ids": [
+				"turn",
+				"grain",
+				"seal"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 1,
+			"own_hp": 24,
+			"own_units": [
+				"-",
+				"-",
+				"-",
+				"-",
+				"sand:1:3",
+				"tick:2:1"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 11,
+			"good_first": 3,
+			"min_len": 7,
+			"p_random": 0.0014
+		},
+		"solution": [
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 1,
+				"target": {},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_side": 1,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 9,
+			"foe_units": [
+				"-",
+				"shield:2:0",
+				"-",
+				"-",
+				"-",
+				"-"
+			],
+			"hand_ids": [
+				"husk"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 2,
+			"own_hp": 24,
+			"own_units": [
+				"sand:2:3",
+				"-",
+				"-",
+				"temper:1:1",
+				"-",
+				"eye:1:4"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 10,
+			"good_first": 3,
+			"min_len": 6,
+			"p_random": 0.0003
+		},
+		"solution": [
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 0,
+				"target": {
+					"side": 0,
+					"slot": 1
+				},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"target_side": 1,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 5,
+			"foe_units": [
+				"-",
+				"-",
+				"freeze:3:0",
+				"grain:2:0",
+				"-",
+				"dash:3:1"
+			],
+			"hand_ids": [
+				"forge"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 3,
+			"own_hp": 24,
+			"own_units": [
+				"-",
+				"moss:1:1",
+				"-",
+				"-",
+				"-",
+				"moss:1:0"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 10,
+			"good_first": 1,
+			"min_len": 7,
+			"p_random": 0.0001
+		},
+		"solution": [
+			{
+				"side": 0,
+				"slot": 1,
+				"type": "flip"
+			},
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 0,
+				"target": {},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_side": 0,
+				"type": "flip_right"
+			}
+		],
+		"stage": {
+			"foe_hp": 10,
+			"foe_units": [
+				"-",
+				"-",
+				"-",
+				"lock:7:0",
+				"-",
+				"-"
+			],
+			"hand_ids": [
+				"rattle",
+				"sand",
+				"tick"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 2,
+			"own_hp": 24,
+			"own_units": [
+				"-",
+				"barb:4:2",
+				"-",
+				"tick:3:0",
+				"-",
+				"-"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 10,
+			"good_first": 2,
+			"min_len": 4,
+			"p_random": 0.0012
+		},
+		"solution": [
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 0,
+				"target": {},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_side": 0,
+				"type": "flip_right"
+			}
+		],
+		"stage": {
+			"foe_hp": 11,
+			"foe_units": [
+				"-",
+				"-",
+				"-",
+				"-",
+				"pebble:1:1",
+				"lance:4:2"
+			],
+			"hand_ids": [
+				"seed"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 4,
+			"own_hp": 24,
+			"own_units": [
+				"-",
+				"-",
+				"vigil:3:0",
+				"-",
+				"-",
+				"wall:1:9"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 10,
+			"good_first": 3,
+			"min_len": 6,
+			"p_random": 0.002
+		},
+		"solution": [
+			{
+				"hand_index": 1,
+				"side": 0,
+				"target": {
+					"side": 0,
+					"slot": 2
+				},
+				"type": "cast"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_side": 0,
+				"type": "flip_right"
+			}
+		],
+		"stage": {
+			"foe_hp": 8,
+			"foe_units": [
+				"-",
+				"-",
+				"seed:1:0",
+				"-",
+				"-",
+				"-"
+			],
+			"hand_ids": [
+				"shield",
+				"pinch"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 2,
+			"own_hp": 24,
+			"own_units": [
+				"tick:2:1",
+				"-",
+				"grain:3:0",
+				"-",
+				"-",
+				"-"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 10,
+			"good_first": 3,
+			"min_len": 6,
+			"p_random": 0.001
+		},
+		"solution": [
+			{
+				"hand_index": 1,
+				"side": 0,
+				"slot": 0,
+				"target": {},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 4,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"target_side": 1,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_slot": 5,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 4,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 6,
+			"foe_units": [
+				"-",
+				"-",
+				"sand:3:1",
+				"-",
+				"-",
+				"ward:3:1"
+			],
+			"hand_ids": [
+				"grain",
+				"husk"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 1,
+			"own_hp": 24,
+			"own_units": [
+				"-",
+				"middle:2:2",
+				"-",
+				"-",
+				"freeze:4:1",
+				"-"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 9,
+			"good_first": 2,
+			"min_len": 6,
+			"p_random": 0.0003
+		},
+		"solution": [
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 0,
+				"target": {},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 5,
+			"foe_units": [
+				"moss:1:1",
+				"-",
+				"-",
+				"-",
+				"-",
+				"-"
+			],
+			"hand_ids": [
+				"seed",
+				"burst"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 4,
+			"own_hp": 24,
+			"own_units": [
+				"-",
+				"-",
+				"-",
+				"moss:2:1",
+				"-",
+				"lance:6:0"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 14,
+			"good_first": 4,
+			"min_len": 6,
+			"p_random": 0.0003
+		},
+		"solution": [
+			{
+				"hand_index": 0,
+				"side": 0,
+				"target": {
+					"side": 0,
+					"slot": 3
+				},
+				"type": "cast"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_side": 0,
+				"type": "flip_right"
+			}
+		],
+		"stage": {
+			"foe_hp": 20,
+			"foe_units": [
+				"-",
+				"-",
+				"-",
+				"-",
+				"mirror:3:4",
+				"middle:4:1"
+			],
+			"hand_ids": [
+				"turn"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 1,
+			"own_hp": 24,
+			"own_units": [
+				"-",
+				"-",
+				"lock:2:6",
+				"wheel:1:5",
+				"-",
+				"-"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 10,
+			"good_first": 3,
+			"min_len": 7,
+			"p_random": 0.001
+		},
+		"solution": [
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 0,
+				"target": {
+					"side": 0,
+					"slot": 4
+				},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 4,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 4,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 4,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 4,
+				"target_side": 0,
+				"type": "flip_right"
+			}
+		],
+		"stage": {
+			"foe_hp": 13,
+			"foe_units": [
+				"-",
+				"-",
+				"-",
+				"-",
+				"wand:1:0",
+				"-"
+			],
+			"hand_ids": [
+				"wand",
+				"seal"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 1,
+			"own_hp": 24,
+			"own_units": [
+				"-",
+				"-",
+				"-",
+				"-",
+				"wheel:5:0",
+				"tick:1:1"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 10,
+			"good_first": 3,
+			"min_len": 7,
+			"p_random": 0.0001
+		},
+		"solution": [
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 0,
+				"target": {},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"target_side": 1,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 13,
+			"foe_units": [
+				"-",
+				"key:5:0",
+				"ward:3:0",
+				"-",
+				"sand:1:4",
+				"-"
+			],
+			"hand_ids": [
+				"husk"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 1,
+			"own_hp": 24,
+			"own_units": [
+				"-",
+				"-",
+				"-",
+				"crown:3:2",
+				"-",
+				"wall:8:2"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 13,
+			"good_first": 3,
+			"min_len": 7,
+			"p_random": 0.0008
+		},
+		"solution": [
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 0,
+				"target": {},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_side": 1,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 4,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 20,
+			"foe_units": [
+				"-",
+				"shield:3:0",
+				"-",
+				"-",
+				"-",
+				"-"
+			],
+			"hand_ids": [
+				"shield"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 4,
+			"own_hp": 24,
+			"own_units": [
+				"-",
+				"-",
+				"wall:3:8",
+				"crown:5:0",
+				"vigil:1:2",
+				"bloom:1:8"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 12,
+			"good_first": 3,
+			"min_len": 6,
+			"p_random": 0.0001
+		},
+		"solution": [
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 0,
+				"target": {},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 4,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 4,
+				"target_side": 1,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 4,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 8,
+			"foe_units": [
+				"-",
+				"wall:7:2",
+				"-",
+				"sand:3:0",
+				"freeze:4:0",
+				"-"
+			],
+			"hand_ids": [
+				"husk"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 2,
+			"own_hp": 24,
+			"own_units": [
+				"-",
+				"sword:1:4",
+				"-",
+				"-",
+				"sword:2:2",
+				"dash:2:0"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 9,
+			"good_first": 2,
+			"min_len": 6,
+			"p_random": 0.0003
+		},
+		"solution": [
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 1,
+				"target": {},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_side": 1,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 8,
+			"foe_units": [
+				"ward:4:0",
+				"-",
+				"-",
+				"-",
+				"husk:1:4",
+				"-"
+			],
+			"hand_ids": [
+				"husk"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 1,
+			"own_hp": 24,
+			"own_units": [
+				"swarm:3:2",
+				"-",
+				"-",
+				"-",
+				"-",
+				"eye:1:3"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 11,
+			"good_first": 3,
+			"min_len": 5,
+			"p_random": 0.0008
+		},
+		"solution": [
+			{
+				"side": 0,
+				"slot": 0,
+				"type": "flip"
+			},
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 1,
+				"target": {
+					"side": 0,
+					"slot": 0
+				},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_side": 0,
+				"type": "flip_right"
+			}
+		],
+		"stage": {
+			"foe_hp": 12,
+			"foe_units": [
+				"-",
+				"-",
+				"-",
+				"-",
+				"-",
+				"dash:2:0"
+			],
+			"hand_ids": [
+				"ward",
+				"halo"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 5,
+			"own_hp": 24,
+			"own_units": [
+				"wheel:1:5",
+				"-",
+				"ward:2:0",
+				"-",
+				"-",
+				"-"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 10,
+			"good_first": 3,
+			"min_len": 7,
+			"p_random": 0.0001
+		},
+		"solution": [
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 2,
+				"target": {},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 7,
+			"foe_units": [
+				"-",
+				"husk:5:0",
+				"-",
+				"-",
+				"-",
+				"-"
+			],
+			"hand_ids": [
+				"legacy"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 5,
+			"own_hp": 24,
+			"own_units": [
+				"rattle:2:3",
+				"blank:2:2",
+				"-",
+				"-",
+				"-",
+				"-"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 14,
+			"good_first": 4,
+			"min_len": 7,
+			"p_random": 0.0001
+		},
+		"solution": [
+			{
+				"hand_index": 0,
+				"side": 0,
+				"target": {
+					"side": 0,
+					"slot": 1
+				},
+				"type": "cast"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_side": 0,
+				"type": "flip_right"
+			}
+		],
+		"stage": {
+			"foe_hp": 13,
+			"foe_units": [
+				"-",
+				"-",
+				"-",
+				"temper:2:0",
+				"-",
+				"wall:4:5"
+			],
+			"hand_ids": [
+				"turn"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 1,
+			"own_hp": 24,
+			"own_units": [
+				"anvil:6:3",
+				"tick:1:2",
+				"-",
+				"-",
+				"-",
+				"-"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 17,
+			"good_first": 5,
+			"min_len": 5,
+			"p_random": 0.0002
+		},
+		"solution": [
+			{
+				"side": 0,
+				"slot": 0,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 9,
+			"foe_units": [
+				"eye:1:3",
+				"eye:1:4",
+				"-",
+				"crown:3:2",
+				"-",
+				"-"
+			],
+			"hand_ids": [
+				"key"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 3,
+			"own_hp": 24,
+			"own_units": [
+				"grain:1:2",
+				"-",
+				"-",
+				"glow:6:1",
+				"-",
+				"-"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 14,
+			"good_first": 4,
+			"min_len": 7,
+			"p_random": 0.0
+		},
+		"solution": [
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 0,
+				"target": {},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 18,
+			"foe_units": [
+				"-",
+				"pike:4:2",
+				"-",
+				"-",
+				"sword:4:1",
+				"-"
+			],
+			"hand_ids": [
+				"husk",
+				"husk",
+				"grain"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 1,
+			"own_hp": 24,
+			"own_units": [
+				"-",
+				"phase:4:1",
+				"wall:1:8",
+				"-",
+				"-",
+				"-"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 8,
+			"good_first": 1,
+			"min_len": 7,
+			"p_random": 0.0
+		},
+		"solution": [
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 0,
+				"target": {},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_side": 0,
+				"type": "flip_right"
+			}
+		],
+		"stage": {
+			"foe_hp": 7,
+			"foe_units": [
+				"-",
+				"dust:1:3",
+				"phase:1:4",
+				"-",
+				"-",
+				"phase:6:0"
+			],
+			"hand_ids": [
+				"rattle"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 3,
+			"own_hp": 24,
+			"own_units": [
+				"-",
+				"-",
+				"-",
+				"tick:3:0",
+				"-",
+				"sand:3:0"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 8,
+			"good_first": 2,
+			"min_len": 5,
+			"p_random": 0.0037
+		},
+		"solution": [
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 1,
+				"target": {},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_side": 1,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_slot": 1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 6,
+			"foe_units": [
+				"-",
+				"guard:4:3",
+				"-",
+				"-",
+				"-",
+				"-"
+			],
+			"hand_ids": [
+				"dust"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 3,
+			"own_hp": 24,
+			"own_units": [
+				"key:2:3",
+				"-",
+				"-",
+				"guard:3:4",
+				"-",
+				"-"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 9,
+			"good_first": 2,
+			"min_len": 7,
+			"p_random": 0.0004
+		},
+		"solution": [
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 0,
+				"target": {},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"target_slot": 0,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"type": "flip"
+			},
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 0,
+				"target": {
+					"side": 0,
+					"slot": 2
+				},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 6,
+			"foe_units": [
+				"chronos:3:7",
+				"-",
+				"-",
+				"-",
+				"-",
+				"-"
+			],
+			"hand_ids": [
+				"husk",
+				"key"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 5,
+			"own_hp": 24,
+			"own_units": [
+				"-",
+				"-",
+				"drift:1:2",
+				"-",
+				"-",
+				"sand:1:3"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 9,
+			"good_first": 2,
+			"min_len": 6,
+			"p_random": 0.0021
+		},
+		"solution": [
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 0,
+				"target": {},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"target_side": 1,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 10,
+			"foe_units": [
+				"-",
+				"-",
+				"ward:3:0",
+				"-",
+				"-",
+				"-"
+			],
+			"hand_ids": [
+				"husk",
+				"grain",
+				"husk"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 1,
+			"own_hp": 24,
+			"own_units": [
+				"-",
+				"-",
+				"lance:3:3",
+				"-",
+				"-",
+				"crown:1:5"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 9,
+			"good_first": 2,
+			"min_len": 7,
+			"p_random": 0.0009
+		},
+		"solution": [
+			{
+				"hand_index": 0,
+				"side": 0,
+				"target": {
+					"side": 0,
+					"slot": 5
+				},
+				"type": "cast"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"target_side": 0,
+				"type": "flip_right"
+			}
+		],
+		"stage": {
+			"foe_hp": 9,
+			"foe_units": [
+				"-",
+				"-",
+				"-",
+				"tick:2:2",
+				"-",
+				"-"
+			],
+			"hand_ids": [
+				"turn",
+				"turn"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 1,
+			"own_hp": 24,
+			"own_units": [
+				"poison:2:1",
+				"-",
+				"-",
+				"-",
+				"-",
+				"tick:3:0"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 12,
+			"good_first": 3,
+			"min_len": 7,
+			"p_random": 0.0006
+		},
+		"solution": [
+			{
+				"side": 0,
+				"slot": 1,
+				"type": "flip"
+			},
+			{
+				"hand_index": 1,
+				"side": 0,
+				"slot": 0,
+				"target": {
+					"side": 0,
+					"slot": 1
+				},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_side": 0,
+				"type": "flip_right"
+			}
+		],
+		"stage": {
+			"foe_hp": 19,
+			"foe_units": [
+				"-",
+				"-",
+				"-",
+				"-",
+				"-",
+				"sand:1:2"
+			],
+			"hand_ids": [
+				"grain",
+				"wand",
+				"grain"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 1,
+			"own_hp": 24,
+			"own_units": [
+				"-",
+				"wall:9:2",
+				"-",
+				"wheel:3:2",
+				"-",
+				"-"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 10,
+			"good_first": 2,
+			"min_len": 6,
+			"p_random": 0.0001
+		},
+		"solution": [
+			{
+				"side": 0,
+				"slot": 4,
+				"type": "flip"
+			},
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 0,
+				"target": {},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"target_side": 1,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 6,
+			"foe_units": [
+				"sweep:3:1",
+				"-",
+				"guard:7:0",
+				"-",
+				"-",
+				"sand:3:1"
+			],
+			"hand_ids": [
+				"husk",
+				"shield"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 2,
+			"own_hp": 24,
+			"own_units": [
+				"-",
+				"-",
+				"-",
+				"grain:2:1",
+				"husk:4:0",
+				"-"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 11,
+			"good_first": 3,
+			"min_len": 6,
+			"p_random": 0.0003
+		},
+		"solution": [
+			{
+				"side": 0,
+				"slot": 2,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"hand_index": 0,
+				"side": 0,
+				"target": {
+					"side": 0,
+					"slot": 2
+				},
+				"type": "cast"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 13,
+			"foe_units": [
+				"-",
+				"-",
+				"-",
+				"-",
+				"phase:4:2",
+				"-"
+			],
+			"hand_ids": [
+				"pinch"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 4,
+			"own_hp": 24,
+			"own_units": [
+				"cycle:3:2",
+				"-",
+				"anvil:2:6",
+				"-",
+				"-",
+				"-"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 8,
+			"good_first": 2,
+			"min_len": 6,
+			"p_random": 0.0003
+		},
+		"solution": [
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 0,
+				"target": {},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_side": 1,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_slot": 1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 6,
+			"foe_units": [
+				"-",
+				"gate:6:1",
+				"-",
+				"-",
+				"-",
+				"-"
+			],
+			"hand_ids": [
+				"husk"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 3,
+			"own_hp": 24,
+			"own_units": [
+				"-",
+				"-",
+				"dash:1:2",
+				"lance:3:1",
+				"-",
+				"-"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 11,
+			"good_first": 2,
+			"min_len": 6,
+			"p_random": 0.0001
+		},
+		"solution": [
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 0,
+				"target": {},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 6,
+			"foe_units": [
+				"-",
+				"-",
+				"legacy:4:1",
+				"-",
+				"-",
+				"-"
+			],
+			"hand_ids": [
+				"seed",
+				"grain"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 1,
+			"own_hp": 24,
+			"own_units": [
+				"-",
+				"-",
+				"-",
+				"moss:1:1",
+				"-",
+				"middle:1:3"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 7,
+			"good_first": 2,
+			"min_len": 5,
+			"p_random": 0.0032
+		},
+		"solution": [
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 0,
+				"target": {},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"target_side": 1,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 8,
+			"foe_units": [
+				"-",
+				"-",
+				"-",
+				"-",
+				"-",
+				"freeze:4:0"
+			],
+			"hand_ids": [
+				"vigil"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 3,
+			"own_hp": 24,
+			"own_units": [
+				"-",
+				"seed:1:0",
+				"-",
+				"bloom:3:6",
+				"-",
+				"-"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 8,
+			"good_first": 2,
+			"min_len": 5,
+			"p_random": 0.0076
+		},
+		"solution": [
+			{
+				"hand_index": 1,
+				"side": 0,
+				"target": {
+					"side": 0,
+					"slot": 5
+				},
+				"type": "cast"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"target_side": 0,
+				"type": "flip_right"
+			}
+		],
+		"stage": {
+			"foe_hp": 6,
+			"foe_units": [
+				"-",
+				"-",
+				"-",
+				"-",
+				"bloom:7:0",
+				"-"
+			],
+			"hand_ids": [
+				"grain",
+				"pinch"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 1,
+			"own_hp": 24,
+			"own_units": [
+				"-",
+				"-",
+				"wand:1:0",
+				"-",
+				"-",
+				"tick:3:0"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 12,
+			"good_first": 3,
+			"min_len": 7,
+			"p_random": 0.0011
+		},
+		"solution": [
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 1,
+				"target": {},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_side": 1,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 19,
+			"foe_units": [
+				"-",
+				"guard:6:0",
+				"-",
+				"-",
+				"-",
+				"-"
+			],
+			"hand_ids": [
+				"dust",
+				"grain"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 2,
+			"own_hp": 24,
+			"own_units": [
+				"spike:2:1",
+				"-",
+				"wall:1:10",
+				"glass:1:5",
+				"-",
+				"-"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 8,
+			"good_first": 2,
+			"min_len": 7,
+			"p_random": 0.0023
+		},
+		"solution": [
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 1,
+				"target": {},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"target_side": 1,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 11,
+			"foe_units": [
+				"-",
+				"-",
+				"guard:6:0",
+				"-",
+				"-",
+				"-"
+			],
+			"hand_ids": [
+				"legacy"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 5,
+			"own_hp": 24,
+			"own_units": [
+				"vigil:3:1",
+				"-",
+				"-",
+				"pivot:5:1",
+				"-",
+				"-"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 10,
+			"good_first": 3,
+			"min_len": 6,
+			"p_random": 0.0011
+		},
+		"solution": [
+			{
+				"hand_index": 1,
+				"side": 0,
+				"slot": 1,
+				"target": {},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"target_side": 1,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 10,
+			"foe_units": [
+				"-",
+				"-",
+				"ward:2:1",
+				"-",
+				"middle:1:4",
+				"-"
+			],
+			"hand_ids": [
+				"cairn",
+				"burst"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 5,
+			"own_hp": 24,
+			"own_units": [
+				"middle:4:2",
+				"-",
+				"-",
+				"lock:1:6",
+				"-",
+				"-"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 8,
+			"good_first": 2,
+			"min_len": 7,
+			"p_random": 0.0008
+		},
+		"solution": [
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 1,
+				"target": {
+					"side": 0,
+					"slot": 0
+				},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 4,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_slot": 4,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 4,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 12,
+			"foe_units": [
+				"-",
+				"-",
+				"-",
+				"-",
+				"guard:2:4",
+				"-"
+			],
+			"hand_ids": [
+				"wand"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 1,
+			"own_hp": 24,
+			"own_units": [
+				"wheel:5:0",
+				"-",
+				"-",
+				"-",
+				"lock:6:2",
+				"-"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 8,
+			"good_first": 2,
+			"min_len": 7,
+			"p_random": 0.0016
+		},
+		"solution": [
+			{
+				"side": 0,
+				"slot": 4,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"target_slot": 2,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 4,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"hand_index": 0,
+				"side": 0,
+				"target": {
+					"side": 0,
+					"slot": 4
+				},
+				"type": "cast"
+			},
+			{
+				"side": 0,
+				"slot": 4,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 4,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 6,
+			"foe_units": [
+				"-",
+				"-",
+				"shield:2:1",
+				"-",
+				"-",
+				"-"
+			],
+			"hand_ids": [
+				"bulwark"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 2,
+			"own_hp": 24,
+			"own_units": [
+				"-",
+				"-",
+				"hammer:2:0",
+				"-",
+				"cycle:3:2",
+				"-"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 9,
+			"good_first": 2,
+			"min_len": 6,
+			"p_random": 0.0006
+		},
+		"solution": [
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 2,
+				"target": {},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"target_side": 1,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_slot": 5,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 6,
+			"foe_units": [
+				"-",
+				"-",
+				"-",
+				"-",
+				"legacy:3:3",
+				"guard:5:3"
+			],
+			"hand_ids": [
+				"tick"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 5,
+			"own_hp": 24,
+			"own_units": [
+				"blank:4:2",
+				"legacy:1:4",
+				"-",
+				"-",
+				"-",
+				"-"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 16,
+			"good_first": 4,
+			"min_len": 5,
+			"p_random": 0.0009
+		},
+		"solution": [
+			{
+				"hand_index": 0,
+				"side": 0,
+				"target": {},
+				"type": "cast"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 4,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_side": 0,
+				"type": "flip_right"
+			}
+		],
+		"stage": {
+			"foe_hp": 11,
+			"foe_units": [
+				"pike:1:5",
+				"-",
+				"cycle:3:3",
+				"-",
+				"wall:11:0",
+				"-"
+			],
+			"hand_ids": [
+				"call"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 4,
+			"own_hp": 24,
+			"own_units": [
+				"-",
+				"-",
+				"vigil:2:2",
+				"-",
+				"wall:2:7",
+				"-"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 14,
+			"good_first": 2,
+			"min_len": 5,
+			"p_random": 0.0001
+		},
+		"solution": [
+			{
+				"side": 0,
+				"slot": 1,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_side": 0,
+				"type": "flip_right"
+			}
+		],
+		"stage": {
+			"foe_hp": 12,
+			"foe_units": [
+				"-",
+				"seed:1:2",
+				"sand:4:1",
+				"sand:2:2",
+				"-",
+				"-"
+			],
+			"hand_ids": [
+				"blank"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 4,
+			"own_hp": 24,
+			"own_units": [
+				"husk:5:0",
+				"wheel:2:4",
+				"-",
+				"-",
+				"-",
+				"-"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 8,
+			"good_first": 2,
+			"min_len": 4,
+			"p_random": 0.0024
+		},
+		"solution": [
+			{
+				"side": 0,
+				"slot": 5,
+				"target_side": 1,
+				"type": "flip_right"
+			},
+			{
+				"hand_index": 0,
+				"side": 0,
+				"target": {},
+				"type": "cast"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"target_side": 1,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 6,
+			"foe_units": [
+				"-",
+				"-",
+				"-",
+				"-",
+				"-",
+				"gate:2:5"
+			],
+			"hand_ids": [
+				"stasis",
+				"burst"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 5,
+			"own_hp": 24,
+			"own_units": [
+				"-",
+				"-",
+				"pike:1:6",
+				"grain:1:0",
+				"-",
+				"-"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 10,
+			"good_first": 3,
+			"min_len": 7,
+			"p_random": 0.0001
+		},
+		"solution": [
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 0,
+				"target": {},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 4,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 4,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 4,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 14,
+			"foe_units": [
+				"-",
+				"dash:2:1",
+				"-",
+				"-",
+				"-",
+				"-"
+			],
+			"hand_ids": [
+				"legacy"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 5,
+			"own_hp": 24,
+			"own_units": [
+				"-",
+				"-",
+				"-",
+				"guard:5:1",
+				"wall:2:7",
+				"-"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 9,
+			"good_first": 2,
+			"min_len": 6,
+			"p_random": 0.0001
+		},
+		"solution": [
+			{
+				"side": 0,
+				"slot": 3,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 4,
+				"type": "flip"
+			},
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 0,
+				"target": {},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 7,
+			"foe_units": [
+				"-",
+				"-",
+				"-",
+				"-",
+				"rattle:3:0",
+				"-"
+			],
+			"hand_ids": [
+				"husk",
+				"barb"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 4,
+			"own_hp": 24,
+			"own_units": [
+				"-",
+				"-",
+				"-",
+				"phase:1:3",
+				"husk:6:0",
+				"-"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 17,
+			"good_first": 3,
+			"min_len": 7,
+			"p_random": 0.0
+		},
+		"solution": [
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 0,
+				"target": {},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 14,
+			"foe_units": [
+				"wall:1:8",
+				"-",
+				"forge:1:2",
+				"-",
+				"temper:2:0",
+				"-"
+			],
+			"hand_ids": [
+				"legacy",
+				"phase"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 5,
+			"own_hp": 24,
+			"own_units": [
+				"-",
+				"wall:3:8",
+				"lock:4:2",
+				"-",
+				"-",
+				"-"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 12,
+			"good_first": 3,
+			"min_len": 7,
+			"p_random": 0.0004
+		},
+		"solution": [
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 0,
+				"target": {
+					"side": 0,
+					"slot": 3
+				},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"target_slot": 3,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 9,
+			"foe_units": [
+				"-",
+				"crown:1:5",
+				"-",
+				"guard:2:4",
+				"-",
+				"-"
+			],
+			"hand_ids": [
+				"ward",
+				"crown"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 3,
+			"own_hp": 24,
+			"own_units": [
+				"-",
+				"-",
+				"-",
+				"wall:5:4",
+				"-",
+				"tick:2:2"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 9,
+			"good_first": 2,
+			"min_len": 6,
+			"p_random": 0.0003
+		},
+		"solution": [
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 2,
+				"target": {},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"target_side": 1,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 9,
+			"foe_units": [
+				"halo:4:1",
+				"-",
+				"guard:7:0",
+				"-",
+				"-",
+				"-"
+			],
+			"hand_ids": [
+				"husk"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 1,
+			"own_hp": 24,
+			"own_units": [
+				"barb:3:4",
+				"sand:1:4",
+				"-",
+				"-",
+				"-",
+				"-"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 8,
+			"good_first": 2,
+			"min_len": 7,
+			"p_random": 0.0005
+		},
+		"solution": [
+			{
+				"side": 0,
+				"slot": 0,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 1,
+				"target": {},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_side": 0,
+				"type": "flip_right"
+			}
+		],
+		"stage": {
+			"foe_hp": 12,
+			"foe_units": [
+				"-",
+				"-",
+				"lock:6:1",
+				"-",
+				"-",
+				"-"
+			],
+			"hand_ids": [
+				"rattle"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 2,
+			"own_hp": 24,
+			"own_units": [
+				"wheel:3:1",
+				"-",
+				"-",
+				"cycle:4:0",
+				"-",
+				"-"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 17,
+			"good_first": 4,
+			"min_len": 6,
+			"p_random": 0.0001
+		},
+		"solution": [
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 0,
+				"target": {
+					"side": 0,
+					"slot": 4
+				},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 4,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"target_side": 0,
+				"type": "flip_right"
+			}
+		],
+		"stage": {
+			"foe_hp": 12,
+			"foe_units": [
+				"-",
+				"wall:3:6",
+				"burst:3:1",
+				"-",
+				"-",
+				"sand:3:0"
+			],
+			"hand_ids": [
+				"wand"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 1,
+			"own_hp": 24,
+			"own_units": [
+				"-",
+				"-",
+				"wheel:3:2",
+				"-",
+				"cairn:1:2",
+				"-"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 10,
+			"good_first": 3,
+			"min_len": 7,
+			"p_random": 0.0003
+		},
+		"solution": [
+			{
+				"side": 0,
+				"slot": 1,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 5,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"hand_index": 1,
+				"side": 0,
+				"target": {
+					"side": 0,
+					"slot": 1
+				},
+				"type": "cast"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 16,
+			"foe_units": [
+				"-",
+				"-",
+				"spike:1:4",
+				"-",
+				"-",
+				"-"
+			],
+			"hand_ids": [
+				"goad",
+				"rewind"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 2,
+			"own_hp": 24,
+			"own_units": [
+				"-",
+				"glow:8:0",
+				"-",
+				"-",
+				"-",
+				"lock:6:2"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 12,
+			"good_first": 2,
+			"min_len": 6,
+			"p_random": 0.0005
+		},
+		"solution": [
+			{
+				"hand_index": 1,
+				"side": 0,
+				"target": {},
+				"type": "cast"
+			},
+			{
+				"side": 0,
+				"slot": 4,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 1,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 7,
+			"foe_units": [
+				"-",
+				"-",
+				"-",
+				"-",
+				"-",
+				"relic:3:0"
+			],
+			"hand_ids": [
+				"pivot",
+				"call"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 3,
+			"own_hp": 24,
+			"own_units": [
+				"moss:1:1",
+				"-",
+				"-",
+				"-",
+				"pivot:1:4",
+				"-"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 10,
+			"good_first": 3,
+			"min_len": 5,
+			"p_random": 0.0023
+		},
+		"solution": [
+			{
+				"hand_index": 0,
+				"side": 0,
+				"slot": 2,
+				"target": {},
+				"type": "play"
+			},
+			{
+				"side": 0,
+				"slot": 2,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_side": 1,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 3,
+				"target_slot": 3,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_slot": -1,
+				"type": "attack"
+			}
+		],
+		"stage": {
+			"foe_hp": 9,
+			"foe_units": [
+				"-",
+				"-",
+				"-",
+				"guard:6:2",
+				"-",
+				"-"
+			],
+			"hand_ids": [
+				"dust"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 2,
+			"own_hp": 24,
+			"own_units": [
+				"lock:1:7",
+				"swarm:4:0",
+				"-",
+				"halo:1:5",
+				"-",
+				"-"
+			],
+			"title": "とどめ問題"
+		}
+	},
+	{
+		"metrics": {
+			"first": 14,
+			"good_first": 4,
+			"min_len": 6,
+			"p_random": 0.0003
+		},
+		"solution": [
+			{
+				"hand_index": 0,
+				"side": 0,
+				"target": {
+					"side": 0,
+					"slot": 4
+				},
+				"type": "cast"
+			},
+			{
+				"side": 0,
+				"slot": 0,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 4,
+				"type": "flip"
+			},
+			{
+				"side": 0,
+				"slot": 4,
+				"target_slot": -1,
+				"type": "attack"
+			},
+			{
+				"side": 0,
+				"slot": 4,
+				"target_side": 0,
+				"type": "flip_right"
+			},
+			{
+				"side": 0,
+				"slot": 4,
+				"target_side": 0,
+				"type": "flip_right"
+			}
+		],
+		"stage": {
+			"foe_hp": 18,
+			"foe_units": [
+				"-",
+				"-",
+				"wall:5:5",
+				"-",
+				"wheel:4:1",
+				"-"
+			],
+			"hand_ids": [
+				"turn"
+			],
+			"hint": "このターンで相手の体力をちょうど0にしよう",
+			"mana": 2,
+			"own_hp": 24,
+			"own_units": [
+				"barb:2:4",
+				"-",
+				"-",
+				"-",
+				"wheel:1:5",
+				"-"
+			],
+			"title": "とどめ問題"
+		}
 	}
 ]

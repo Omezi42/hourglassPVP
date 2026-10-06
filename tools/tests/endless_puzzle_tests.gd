@@ -7,7 +7,7 @@ extends RefCounted
 const Solver := preload("res://tools/shorts/puzzle_solver.gd")
 const DAILY_BOOK_PATH := "res://tools/shorts/puzzles.json"
 ## 問題集はこれ以上の問数を同梱する。GameDesign.md 24章の「数百問」へ増やすまでの下限(TODO.md)。
-const MIN_BOOK_SIZE := 15
+const MIN_BOOK_SIZE := 200
 
 var _assert: Callable
 
