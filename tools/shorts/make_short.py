@@ -7,6 +7,7 @@
     python tools/shorts/make_short.py puzzle all     # 問題集の全問。書き出し済みは飛ばす
     python tools/shorts/make_short.py forge <問数>   # 難しい問題を並列で探して問題集へ足す(数十分かかる)
     python tools/shorts/make_short.py forge-endless <問数>  # 同じ探し方でエンドレスの問題集 data/endless_puzzles.json へ足す
+    python tools/shorts/make_short.py recheck-endless all  # カードやルールを変えた後、エンドレスの問題集を測り直して基準外を落とす
 
 1. 台本(ナレーション + 見出し)を tools/shorts/card_lines.json / puzzle_lines.json から組む
 2. VOICEVOXエンジンで読み上げる(tools/pv_voice.py)。エンジンが応答しなければ VOICEVOX_ENGINE の run.exe を
@@ -162,10 +163,15 @@ def run_godot(command: list) -> None:
 
 
 def main() -> None:
-    if len(sys.argv) < 3 or sys.argv[1] not in [*SCENES, *FORGE_BOOKS]:
+    if len(sys.argv) < 3 or sys.argv[1] not in [*SCENES, *FORGE_BOOKS, "recheck-endless"]:
         sys.exit(__doc__)
     kind, target = sys.argv[1], sys.argv[2]
     ensure_class_cache()
+    if kind == "recheck-endless":
+        book = FORGE_BOOKS["forge-endless"]
+        subprocess.run([str(GODOT), "--headless", "--path", ".", "--script", "res://tools/shorts/puzzle_forge.gd", "--",
+                        "--recheck", f"--out={book}"], cwd=ROOT, check=True)
+        return
     if kind in FORGE_BOOKS:
         forge(int(target), FORGE_BOOKS[kind])
         return

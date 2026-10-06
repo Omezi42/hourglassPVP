@@ -7,6 +7,7 @@ extends SceneTree
 ## 結果を tools/shorts/puzzles.json / data/endless_puzzles.json へまとめる。
 ##   godot --headless --path . --script res://tools/shorts/puzzle_forge.gd --
 ##     --count=3 --seed=1 --out=<json> [--tries=<試行の上限>]
+## 問題集をいまのルールで測り直す: -- --recheck --out=<json>
 
 const Solver := preload("res://tools/shorts/puzzle_solver.gd")
 const BOOK_PATH := "res://tools/shorts/puzzles.json"
@@ -47,6 +48,7 @@ func _init() -> void:
 	var seed_value := 1
 	var verbose := false
 	var tries := MAX_TRIES
+	var recheck := false
 	var out_path := BOOK_PATH
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--count="):
@@ -59,14 +61,19 @@ func _init() -> void:
 			tries = int(arg.trim_prefix("--tries="))
 		elif arg == "--verbose":
 			verbose = true
+		elif arg == "--recheck":
+			recheck = true
+	if recheck:
+		_recheck(out_path)
+		quit()
+		return
 	_rng.seed = seed_value
 	_build_pools()
 	var saved: Array = _load(out_path)
 	var known := {}
 	for entry in saved + _load(BOOK_PATH) + _load(ENDLESS_BOOK_PATH):
 		known[_signature(entry["stage"])] = true
-	var solver := Solver.new()
-	solver.node_budget = NODE_BUDGET
+	var solver := _make_solver()
 	var added := 0
 	for attempt in tries:
 		if added >= count:
@@ -75,18 +82,14 @@ func _init() -> void:
 		if known.has(_signature(_stage_dict(stage))) or legend_size(stage) > MAX_LEGEND:
 			continue
 		var started := Time.get_ticks_msec()
-		var damage := solver.max_damage(stage)
-		var report := {}
-		if damage >= MIN_DAMAGE and damage <= MAX_DAMAGE and _few_good_first(solver):
-			stage.foe_hp = damage
-			report = solver.analyze(stage)
+		var report := _evaluate(solver, stage)
 		if verbose:
 			print(
 				(
 					"試行%d  打点%d  局面%d  %dms  %s"
 					% [
 						attempt,
-						damage,
+						stage.foe_hp,
 						solver.nodes,
 						Time.get_ticks_msec() - started,
 						JSON.stringify(_metrics(report)) if not report.is_empty() else ""
@@ -95,16 +98,53 @@ func _init() -> void:
 			)
 		if report.is_empty() or not _hard_enough(report):
 			continue
-		var entry := {
-			"stage": _stage_dict(stage), "solution": report["solution"], "metrics": _metrics(report)
-		}
+		var entry := _entry(stage, report)
 		saved.append(entry)
 		known[_signature(entry["stage"])] = true
 		added += 1
-		print("#%d  hp=%d  %s" % [saved.size(), damage, JSON.stringify(entry["metrics"])])
+		print("#%d  hp=%d  %s" % [saved.size(), stage.foe_hp, JSON.stringify(entry["metrics"])])
 		_save(out_path, saved)
 	print("追加 %d 問(試行 %d)" % [added, tries])
 	quit()
+
+
+## 問題集の全問を、いまのカードとルールで測り直す(--out の問題集を書き換える)。
+## カードの調整やルールの変更で最大打点・正解手順・難しさが変わるため、基準を外れた問題は落とし、
+## 残った問題は相手HP・手順・数値を更新する。番号が動くため、とどめ問題の問題集には使わない。
+func _recheck(path: String) -> void:
+	var solver := _make_solver()
+	var kept: Array = []
+	var entries := _load(path)
+	for entry in entries:
+		var stage := PuzzleStageData.from_dict(entry["stage"], "forge")
+		var report := _evaluate(solver, stage)
+		if report.is_empty() or not _hard_enough(report):
+			print("落とす: %s" % _signature(entry["stage"]))
+			continue
+		kept.append(_entry(stage, report))
+	_save(path, kept)
+	print("再検査 %d 問中 %d 問を残した" % [entries.size(), kept.size()])
+
+
+func _make_solver() -> Solver:
+	var solver := Solver.new()
+	solver.node_budget = NODE_BUDGET
+	return solver
+
+
+## 最大打点を測って相手HPをそれに合わせ、難しさを解析する。基準の手前で落ちたら空を返す。
+func _evaluate(solver: Solver, stage: PuzzleStageData) -> Dictionary:
+	var damage := solver.max_damage(stage)
+	stage.foe_hp = damage
+	if damage < MIN_DAMAGE or damage > MAX_DAMAGE or not _few_good_first(solver):
+		return {}
+	return solver.analyze(stage)
+
+
+func _entry(stage: PuzzleStageData, report: Dictionary) -> Dictionary:
+	return {
+		"stage": _stage_dict(stage), "solution": report["solution"], "metrics": _metrics(report)
+	}
 
 
 ## `analyze()` は数十秒かかることがあるため、最大打点の探索で分かる初手の割合で先にふるう。

@@ -50,6 +50,10 @@
 `export_presets.cfg` の `include_filter` に載せる(書き出しのたびに `tools/ensure_export_filters.py` が揃え直すため、そちらの表にも書く)。読むのは `FileAccess`(`.remap` は付かない)。
 JSONを通ると整数が小数になるため、`PuzzleStageData.from_dict()` で型を戻す。
 
+**カードやルールを変えたら `make_short.py recheck-endless all` で測り直す。**最大打点・正解手順・難しさが
+変わるため、全問を同じ基準でもう一度測り、外れた問題を落として残りの相手HP・手順を書き直す
+(番号に動画が結び付くとどめ問題の問題集には使わない)。
+
 **問題集の各問が解けることはテストで確かめる**(`tools/tests/endless_puzzle_tests.gd`)。
 全問を正解手順で `MatchState` へ流して相手のHPが0になることと、今日の1問の問題集と重ならないことを見る。
 
