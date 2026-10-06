@@ -134,11 +134,16 @@ UIに依存しない、対局ルールそのものを扱う層。
   コイン(`use_coin()` のみで `can_use_coin()` を持たない)と同じく、UIは戻り値だけで
   成否を判断する。対象を選ぶ前の「押した枠に駒がいるか」は盤面を直接読めば足りる
 - `use_flip_right(side, target_side, slot)` は `flip()` とほぼ同じ手順(`unit.flip()` →
-  シグナル → `_fire(ON_FLIP)` → 死亡なら `_destroy_unit()`)を踏むが、**`unit_flipped` ではなく
+  シグナル → `_resolve_flipped()` → `_cleanup_dead()`)を踏むが、**`unit_flipped` ではなく
   専用の `flip_right_used(actor_side, target_side, slot)` を出す**。反転権は敵味方どちらの駒も
   対象に取れるため、「誰が手を出したか(actor_side)」と「駒の持ち主(target_side)」が
   別々の値になりうる。既存の `unit_flipped(side, slot)` は「持ち主=手を出した側」を前提に
   UI側(光の筋の向き)が組まれているため、同じ信号へ相乗りさせず分ける
+- **反転の後始末は `_resolve_flipped(side, unit)` 1つに集める**(GameDesign.md 6章「反転は、誰がどう起こしても
+  反転である」)。`flip()`・`use_flip_right()`・`CardEffectResolver` の `SWAP_STATS` がすべてこれを呼び、持ち主の側で
+  `ON_FLIP` を解決する。**`flipped_this_turn` を立てるのは `flip()` だけ**(1体1ターン1回は通常の反転の制限のため)。
+  体力0の駒は呼び出し側の `_cleanup_dead()` で砕く——逆さ砂のように反転の後へ総量を足す効果を途中で切らないため。
+  `SWAP_STATS` は `flippable()` でない駒を飛ばし、`eligible_target()` も候補から外す
 - `MatchAction.flip_right(side, target_side, slot)` / `apply()` の `"flip_right"` 分岐を足す。
   棋譜・オンライン送信・リプレイはすべて既存の `MatchAction` の経路をそのまま通る
 

@@ -895,7 +895,7 @@
 			}
 		],
 		"stage": {
-			"foe_hp": 12,
+			"foe_hp": 13,
 			"foe_units": [
 				"-",
 				"-",

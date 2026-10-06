@@ -98,8 +98,9 @@ func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Diction
 			)
 			for entry in swap_entries:
 				var target := _unit_at(entry)
-				if target != null:
+				if target != null and target.flippable():
 					target.flip()
+					_state._resolve_flipped(entry["side"], target)
 		CardEnums.EffectType.ADD_TOTAL:
 			var total_entries := _targets(side, unit, effect, hint)
 			_strike_for_targets(
@@ -495,6 +496,8 @@ func _single_unit(
 		var hinted: CardInstance = _state.board[target_side][slot]
 		if slot != exclude_slot and hinted != null and eligible_target(hinted, effect):
 			return [{"side": target_side, "slot": slot}]
+	if effect != null and effect.random_target:
+		return _random_unit(target_side, exclude_slot, effect)
 	# 指定が無い・条件を満たさない場合は、条件を満たす中で最も生涯ダメージの大きい1体を選ぶ。
 	# 自分の駒を払う効果(砂葬)だけは逆に、最も小さい1体を払う。
 	var sacrifice := (
@@ -518,11 +521,26 @@ func _single_unit(
 	return [] if best < 0 else [{"side": target_side, "slot": best}]
 
 
+## 条件を満たす中からランダムに1体(`CardEffectData.random_target`)。**対局の乱数(`MatchState._rng`)から
+## 引く**——オンラインとリプレイは同じ種から同じ順に引くことで結果が揃う(Architecture.md 6章)。
+func _random_unit(target_side: int, exclude_slot: int, effect: CardEffectData) -> Array:
+	var candidates: Array = []
+	for slot in MatchState.BOARD_SIZE:
+		var candidate: CardInstance = _state.board[target_side][slot]
+		if candidate != null and slot != exclude_slot and eligible_target(candidate, effect):
+			candidates.append({"side": target_side, "slot": slot})
+	if candidates.is_empty():
+		return []
+	return [candidates[_state._rng.randi_range(0, candidates.size() - 1)]]
+
+
 ## 対象の絞り込み(GameDesign.md 6章)。TARGET は総量の一致、ATTACK_OVER_HEALTH は
 ## 攻撃力が体力より多いこと。UI・CPUも同じ物差しで候補を絞れるよう公開する。
 static func eligible_target(unit: CardInstance, effect: CardEffectData) -> bool:
 	if effect == null:
 		return true
+	if effect.effect_type == CardEnums.EffectType.SWAP_STATS and not unit.flippable():
+		return false
 	match effect.condition_scope:
 		CardEnums.ConditionScope.TARGET:
 			return unit.total_sand() == effect.condition_total

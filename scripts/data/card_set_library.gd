@@ -79,10 +79,21 @@ const SETS: Dictionary = {
 		"card_ids": ["drift", "moss", "vigil", "relic", "cairn", "burial", "awaken"],
 		"price": 700,
 	},
+	## 4番目のカードセット(GameDesign.md 8章)。「1つの反転が次の反転を呼ぶ」枠で、反転を軸にした
+	## デッキを成立させる。最初の段階公開セット(21章)で、毎日1枚ずつ `card_ids` へ足す。
+	"echo_time":
+	{
+		"id": "echo_time",
+		"display_name": "反響の刻",
+		"description": "1つの反転が次の反転を呼ぶ、返しの連鎖の8枚",
+		"card_ids": ["reverb"],
+		"price": 800,
+		"planned_count": 8,
+	},
 }
 
 const ORDERED_IDS: Array[String] = [
-	"solo_chime", "solo_ward", "solo_goad", "combo_five", "still_time", "grave_sand"
+	"solo_chime", "solo_ward", "solo_goad", "combo_five", "still_time", "grave_sand", "echo_time"
 ]
 
 

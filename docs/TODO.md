@@ -72,7 +72,9 @@
 
 仕組みは実装済み(`CardSetLibrary` の `planned_count`)。
 
-- [ ] 最初の段階公開セットの枠・予定枚数・1枚目を決め、売り出す
+「反響の刻」(予定8枚・800砂金)を1枚目のリバーブで売り出した(GameDesign.md 8章)。
+
+- [ ] 2枚目以降を毎日1枚ずつ公開する(次は落砂で毎ターン味方1体を反転させる駒。`docs/Hourglasses.md` の残りの枠)
 
 ### カードスキン(GameDesign.md 31章 / Architecture.md 10.19節)
 

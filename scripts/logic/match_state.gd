@@ -478,10 +478,8 @@ func flip(side: int, slot: int) -> bool:
 	unit.flip()
 	unit.flipped_this_turn = true
 	unit_flipped.emit(side, slot)
-	_fire(side, unit, CardEnums.Trigger.ON_FLIP, {})
-	if unit.is_dead():
-		_destroy_unit(side, slot)
-	board_changed.emit(side)
+	_resolve_flipped(side, unit)
+	_cleanup_dead()
 	return true
 
 
@@ -514,11 +512,19 @@ func use_flip_right(side: int, target_side: int, slot: int) -> bool:
 	var unit: CardInstance = board[target_side][slot]
 	unit.flip()
 	flip_right_used.emit(side, target_side, slot)
-	_fire(target_side, unit, CardEnums.Trigger.ON_FLIP, {})
-	if unit.is_dead():
-		_destroy_unit(target_side, slot)
-	board_changed.emit(target_side)
+	_resolve_flipped(target_side, unit)
+	_cleanup_dead()
 	return true
+
+
+## 反転した後始末。**通常の反転・反転権・効果による反転(`CardEffectResolver` の SWAP_STATS)が
+## すべてここを通る**(GameDesign.md 6章「反転は、誰がどう起こしても反転である」)。
+## 持ち主の側で反転トリガーを発動させる。**1体1ターン1回の印は通常の反転(`flip()`)だけが付ける**——
+## 反転権と逆さ砂はその制限の外で返す手段であり、印を付けると手の反転を奪ってしまうため。体力0で砕くのは
+## 呼び出し側の `_cleanup_dead()` に任せる——逆さ砂のように反転の後へ総量を足す効果が
+## 続くとき、その途中で砕いてはいけないため。
+func _resolve_flipped(side: int, unit: CardInstance) -> void:
+	_fire(side, unit, CardEnums.Trigger.ON_FLIP, {})
 
 
 # --- 戦闘 ---------------------------------------------------------------

@@ -52,7 +52,8 @@ def read_card(card_id: str) -> dict:
             if x
         ),
         "keywords": [int(v) for v in kw.group(1).split(",") if v.strip()] if kw else [],
-        "art": card_id,
+        # 別のカードの絵を借りるカード(art_id)は、その絵を使う
+        "art": field("art_id") or card_id,
     }
 
 

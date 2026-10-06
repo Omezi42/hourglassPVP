@@ -556,7 +556,7 @@ func _best_ally_flip(state: MatchState, side: int) -> Dictionary:
 	var best := {"slot": -1, "gain": 0.0}
 	for slot in MatchState.BOARD_SIZE:
 		var unit: CardInstance = state.board[side][slot]
-		if unit == null:
+		if unit == null or not unit.flippable():
 			continue
 		var gain := _lifetime_of(unit.attack, unit.health) - float(unit.lifetime_damage())
 		if gain > best["gain"]:
@@ -776,6 +776,13 @@ func _strongest_enemy(state: MatchState, foe_side: int, effect: CardEffectData =
 	for slot in MatchState.BOARD_SIZE:
 		var unit: CardInstance = state.board[foe_side][slot]
 		if unit == null or not CardEffectResolver.eligible_target(unit, effect):
+			continue
+		# 効果で反転させても反転トリガーは持ち主を利する(GameDesign.md 6章)。反転権と同じく触らない。
+		if (
+			effect != null
+			and effect.effect_type == CardEnums.EffectType.SWAP_STATS
+			and not unit.data.effects_for(CardEnums.Trigger.ON_FLIP).is_empty()
+		):
 			continue
 		var value := unit.lifetime_damage()
 		if value > best_value:
