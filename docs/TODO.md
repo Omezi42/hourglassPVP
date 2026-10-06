@@ -66,7 +66,7 @@
 - [ ] 問題を増やす。毒砂(第11問)・連撃と相打ち(第12問)・砕け役を作る(第13問)・反転の効果を砂術と反転権で重ねる(第14問)は収録済み。
       複数の砂術の順番と駒の効果を噛み合わせる、10手を超える問題がまだ無い
 - [ ] エンドレスの問題集を数百問まで増やす(GameDesign.md 24章 / Architecture.md 10.12.1節)。
-      いまは24問。`make_short.py forge-endless` で書き足し、`endless_puzzle_tests.gd` の `MIN_BOOK_SIZE` を200へ戻す
+      いまは97問。`make_short.py forge-endless` で書き足し、`endless_puzzle_tests.gd` の `MIN_BOOK_SIZE` を200へ戻す
 
 ### カードセットの段階公開(GameDesign.md 21章 / Architecture.md 10.8.1節)
 
