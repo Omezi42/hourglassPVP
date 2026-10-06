@@ -70,7 +70,8 @@
 
 ### カードセットの段階公開(GameDesign.md 21章 / Architecture.md 10.8.1節)
 
-- [ ] `planned_count` と「?」の枠の表示(タイル・詳細・収録カードを見る)
+仕組みは実装済み(`CardSetLibrary` の `planned_count`)。
+
 - [ ] 最初の段階公開セットの枠・予定枚数・1枚目を決め、売り出す
 
 ### カードスキン(GameDesign.md 31章 / Architecture.md 10.19節)
