@@ -939,6 +939,16 @@
 			"is_spell": true,
 			"pool_index": 94,
 			"total_sand": 0
+		},
+		{
+			"cannot_attack": false,
+			"cost": 3,
+			"describe": "反転:自分の他の砂時計のうち、攻撃力が体力より多いランダムな1体を反転させる",
+			"display_name": "リバーブ",
+			"id": "reverb",
+			"is_spell": false,
+			"pool_index": 95,
+			"total_sand": 5
 		}
 	]
 }
