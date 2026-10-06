@@ -93,28 +93,49 @@ const SAND_GLINT_SPEED := 0.9
 const SAND_GLINT_RADIUS := 1.6
 ## マナのピップの光と吸い込み(GameDesign.md 9章「対局画面の手触り」)。ホバー中の札の
 ## コストぶんを脈打たせ、支払った瞬間はそのぶんが札の方向へ吸われて消える。
-## 脈は `_glint_time`(砂粒のきらめきと同じ経過時間)へ乗せ、専用のタイマーを増やさない。
+## 脈打ちは毎フレーム描き直す `PlayerInfoBarFx` が持つ。
 const PIP_GLOW_SPEED := 6.0
 const PIP_GLOW_EXTRA := 3.0
 const SPEND_DURATION := 0.25
 
 ## 相手側かどうか。相手側だけ手札の枚数を出す。
-var is_opponent := false
+var is_opponent := false:
+	set(value):
+		is_opponent = value
+		queue_redraw()
 ## 自分側でも手札の山を出す(手札を伏せる観戦。GameDesign.md 12章)。
-var show_hand_pile := false
+var show_hand_pile := false:
+	set(value):
+		show_hand_pile = value
+		queue_redraw()
 ## 表示名(未設定なら「あなた」「相手」)。
-var display_name := ""
+var display_name := "":
+	set(value):
+		display_name = value
+		queue_redraw()
 ## アイコンID(GameDesign.md 14章)。
-var icon_id := UserProfileLibrary.DEFAULT_ICON_ID
+var icon_id := UserProfileLibrary.DEFAULT_ICON_ID:
+	set(value):
+		icon_id = value
+		queue_redraw()
 ## 称号ID(GameDesign.md 14章)。
-var title_id := UserProfileLibrary.DEFAULT_TITLE_ID
+var title_id := UserProfileLibrary.DEFAULT_TITLE_ID:
+	set(value):
+		title_id = value
+		queue_redraw()
 ## 攻撃の対象として選べる状態か。光らせて示す。
-var targetable := false
+var targetable := false:
+	set(value):
+		targetable = value
+		queue_redraw()
 ## 自分の駒をこの帯へドラッグして放したときに呼ぶ処理(GameDesign.md 9章)。空なら受けない。
 var drop_handler := Callable()
 ## いまこの側の手番か。手番の側だけ明るくして、どちらが指す番かを示す
 ## (GameDesign.md 9章)。
-var active := false
+var active := false:
+	set(value):
+		active = value
+		queue_redraw()
 
 var _hp := MatchState.INITIAL_HP
 ## HPの器の上限。ソロモード(遠征)の恩恵「丈夫な体」で`MatchState.INITIAL_HP`を超える
@@ -129,6 +150,8 @@ var _has_coin := false
 var _font: Font
 ## HPの器のひび・鼓動・砕け(GameDesign.md 9章「決着の瞬間」)。
 var _vessel: HpVesselFx
+## 絶えず動く光(砂粒のきらめき・手番の輪・的の縁・ピップの脈打ち)。
+var _fx: PlayerInfoBarFx
 var _tracker := PressTracker.new()
 ## 被弾の演出。HPは瞬時に減らさず、この値から実際の値へ補間する。
 var _shown_hp := float(MatchState.INITIAL_HP)
@@ -143,8 +166,6 @@ var _initialized := false
 var _deck_pulse := 0.0
 var _deck_pulse_color := UiPalette.GLOW_AMBER
 var _deck_tween: Tween
-## HPの砂粒のきらめきを進める経過時間。
-var _glint_time := 0.0
 ## ホバー中の札のコスト。左からこの数だけピップを脈打たせる(0で消す)。
 var _highlight_cost := 0
 ## 支払いで消えるピップの吸い込み(GameDesign.md 9章)。飛んでいる粒の出発位置(ピップの
@@ -161,19 +182,13 @@ func _ready() -> void:
 		_font = ThemeDB.fallback_font
 	custom_minimum_size = Vector2(0, BAR_HEIGHT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	set_process(true)
+	_fx = PlayerInfoBarFx.new(self)
+	add_child(_fx)
 	_vessel = HpVesselFx.new()
 	_vessel.vessel_rect = hp_bar_rect()
 	_vessel.badge_center = Vector2(hp_bar_rect().end.x, hp_bar_rect().get_center().y)
 	_vessel.badge_radius = HP_BADGE_RADIUS
 	add_child(_vessel)
-
-
-## HPの砂粒のきらめきだけを進める(GameDesign.md 9章)。他の変化は従来どおり
-## `queue_redraw()` を都度呼ぶ側が持つため、ここでは経過時間を進めるだけでよい。
-func _process(delta: float) -> void:
-	_glint_time += delta
-	queue_redraw()
 
 
 ## 対局の状態から自分の側の値をまとめて取り込む。`max_hp`はソロモードの遠征だけ
@@ -328,6 +343,20 @@ func _draw() -> void:
 		_pile(hand_pile_rect(), "手札", _hand)
 	if _has_coin:
 		_draw_coin()
+	_sync_fx()
+
+
+## 動く光の層へ、いま描いた帯の状態を渡す。
+func _sync_fx() -> void:
+	if _fx == null:
+		return
+	var glow_centers: Array[Vector2] = []
+	# 払えない(n > 現在マナ)ぶんは光らせない(GameDesign.md 9章)。
+	if _highlight_cost <= _mana:
+		for i in mini(_highlight_cost, _max_mana):
+			glow_centers.append(Vector2(_right_x() + PIP_START_X + i * PIP_STEP, CENTER_Y))
+	var ratio := clampf(_shown_hp / float(maxi(_max_hp, 1)), 0.0, 1.0)
+	_fx.sync(active, targetable, hp_bar_rect(), ratio, glow_centers)
 
 
 ## 右の群の原点(帯のローカルx)。
@@ -423,16 +452,6 @@ func _draw_portrait(ci: RID) -> void:
 			icon_tex, Rect2(PORTRAIT_CENTER - Vector2.ONE * r, Vector2.ONE * r * 2.0), false
 		)
 	_brass_ring(ci, PORTRAIT_CENTER, PORTRAIT_RADIUS, PORTRAIT_RING_WIDTH)
-	if active:
-		var pulse := (sin(_glint_time * 3.0) + 1.0) * 0.5
-		UiPaint.draw_ring(
-			ci,
-			PORTRAIT_CENTER,
-			PORTRAIT_RADIUS + 2.5,
-			Color(UiPalette.GLOW_AMBER, 0.55 + 0.35 * pulse),
-			2.5,
-			32
-		)
 
 
 ## 名札。メダルの右から伸びる濃紺の板に、称号(小)と表示名(大)を載せる
@@ -504,31 +523,6 @@ func hp_bar_rect() -> Rect2:
 	return Rect2(Vector2(HP_BAR_X, CENTER_Y - HP_BAR_SIZE.y * 0.5), HP_BAR_SIZE)
 
 
-## HPの砂に光が当たっている粒をいくつか置き、ゆっくり明滅させる。**残っている砂の
-## 範囲だけ**描く(割合を超えた位置は隠れているので描かない)。
-func _draw_sand_glints(ci: RID, fill_rect: Rect2, ratio: float) -> void:
-	for i in SAND_GLINT_FRACTIONS.size():
-		var frac: float = SAND_GLINT_FRACTIONS[i]
-		if frac > ratio:
-			continue
-		var phase := float(i) * 1.7
-		var pulse := (sin(_glint_time * SAND_GLINT_SPEED + phase) + 1.0) * 0.5
-		var alpha := 0.15 + pulse * 0.45
-		var center := Vector2(
-			fill_rect.position.x + fill_rect.size.x * frac,
-			fill_rect.position.y + fill_rect.size.y * (0.35 + 0.3 * sin(phase))
-		)
-		UiPaint.fill_gradient_polygon(
-			ci,
-			UiPaint.circle_points(center, SAND_GLINT_RADIUS, 8),
-			Rect2(
-				center - Vector2(SAND_GLINT_RADIUS, SAND_GLINT_RADIUS),
-				Vector2(SAND_GLINT_RADIUS, SAND_GLINT_RADIUS) * 2.0
-			),
-			[[0.0, Color(1.0, 0.96, 0.82, alpha)], [1.0, Color(1.0, 0.96, 0.82, 0.0)]]
-		)
-
-
 func _draw_hp() -> void:
 	var ci := get_canvas_item()
 	var rect := hp_bar_rect()
@@ -552,7 +546,6 @@ func _draw_hp() -> void:
 			[[0.0, color.lightened(0.3)], [0.55, color], [1.0, color.darkened(0.3)]]
 		)
 		UiPaint.apply_grain(ci, fill_rect, 0.12)
-		_draw_sand_glints(ci, fill_rect, ratio)
 	# ガラス越しに見せる。上側3分の1へ白い反射の帯を薄く敷き、砂も器の地も同じ膜の下に置く。
 	var glass := Rect2(
 		inner.position + Vector2(4.0, 2.0), Vector2(inner.size.x - 8.0, inner.size.y * 0.32)
@@ -573,13 +566,6 @@ func _draw_hp() -> void:
 	UiPaint.draw_bevel(
 		ci, track, UiPalette.BRASS_RIM_LIGHT, UiPalette.BRASS_DARK, HP_RIM_WIDTH, false
 	)
-	if targetable:
-		var pulse := (sin(_glint_time * 4.0) + 1.0) * 0.5
-		_draw_closed(
-			UiPaint.rounded_rect_points_uniform(rect.grow(2.5), HP_BAR_RADIUS + 2.5, 6),
-			Color(UiPalette.WARNING_RED, 0.6 + 0.4 * pulse),
-			2.5
-		)
 	if _flash > 0.0:
 		UiPaint.fill_gradient_polygon(
 			ci,
@@ -633,8 +619,6 @@ func _draw_mana() -> void:
 	)
 	UiPaint.draw_inner_shadow(ci, trough_rect, trough_radius, 6, 3, Color(0, 0, 0, 1), 0.5)
 	UiPaint.draw_bevel(ci, trough, UiPalette.BRASS_RIM_LIGHT, UiPalette.BRASS_DARK, 1.5, false)
-	# 払えない(n > 現在マナ)ぶんは光らせない(GameDesign.md 9章)。
-	var glow_count := _highlight_cost if _highlight_cost <= _mana else 0
 	for i in _max_mana:
 		var center := Vector2(_right_x() + PIP_START_X + i * PIP_STEP, CENTER_Y)
 		var filled: bool = i < _mana
@@ -649,16 +633,7 @@ func _draw_mana() -> void:
 		)
 		var arc_color := Color(0.75, 0.85, 1.0, 0.6) if filled else Color(0.4, 0.42, 0.48, 0.5)
 		draw_arc(center, PIP_RADIUS, 0.0, TAU, 16, arc_color, 1.5)
-		if i < glow_count:
-			_draw_pip_glow(ci, center)
 	_badge(ci, _right(MANA_BADGE_CENTER), _mana, MANA_BLUE, MANA_BADGE_RADIUS, 18)
-
-
-## 支払うぶんのピップの脈打ち。HPの砂粒のきらめきと同じ経過時間(`_glint_time`)へ乗せる。
-func _draw_pip_glow(ci: RID, center: Vector2) -> void:
-	var pulse := (sin(_glint_time * PIP_GLOW_SPEED) + 1.0) * 0.5
-	var radius := PIP_RADIUS + PIP_GLOW_EXTRA * pulse
-	UiPaint.draw_ring(ci, center, radius, Color(1.0, 0.92, 0.6, 0.5 + 0.4 * pulse), 2.0, 16)
 
 
 ## 支払いで消えるピップが、出した札(または撃った砂術)の方向へ吸われて消える
