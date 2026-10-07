@@ -1,4 +1,4 @@
-[gd_resource type="GradientTexture2D" load_steps=2 format=3]
+[gd_resource type="GradientTexture2D" format=3 uid="uid://dyalthe88avu3"]
 
 ; HSliderのつまみ。画像アセットを追加せず、Godot標準のGradientTexture2D(放射状グラデーション)
 ; だけで真鍮色の丸いつまみを表現する(フェーズ12 Q-5)。色はUiPalette.BRASS_HIGHLIGHT/

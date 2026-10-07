@@ -1,0 +1,12 @@
+[gd_scene format=3]
+
+[ext_resource type="Theme" path="res://resources/theme/main_theme.tres" id="1_n61mk"]
+[ext_resource type="Script" path="res://scripts/boot/boot.gd" id="2_r2kcx"]
+
+[node name="Boot" type="Control" unique_id=1458190081]
+layout_mode = 3
+anchors_preset = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme = ExtResource("1_n61mk")
+script = ExtResource("2_r2kcx")

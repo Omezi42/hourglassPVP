@@ -1,4 +1,4 @@
-[gd_resource type="Theme" format=3]
+[gd_resource type="Theme" format=3 uid="uid://b2ithfhodxlni"]
 
 [ext_resource type="FontFile" path="res://assets/fonts/ZenKakuGothicNew-Bold.ttf" id="1_rjbnf"]
 [ext_resource type="StyleBox" path="res://resources/theme/coded_line_edit_normal.tres" id="2_lenorm"]

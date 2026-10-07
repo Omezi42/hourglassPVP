@@ -29,10 +29,13 @@ const BLINK_MIN_ALPHA := 0.28
 ## 押された瞬間の演出。ロゴが一瞬伸び上がって光る。
 const LAUNCH_DURATION := 0.42
 const LAUNCH_SCALE := 1.06
+## 読み込みを終える前に押されたときの文言(GameDesign.md 9章「タイトル」)。
+const LOADING_TEXT := "読み込み中… %d%%"
 
 var _started := false
 var _float_time := 0.0
 var _logo_rest_y := 0.0
+var _start_text := ""
 
 @onready var background: TextureRect = $Background
 @onready var logo_holder: Control = $LogoHolder
@@ -93,6 +96,13 @@ func play_launch() -> void:
 	)
 	tween.tween_property(start_label, "modulate:a", 0.0, LAUNCH_DURATION * 0.5)
 	await tween.finished
+
+
+## 読み込みを終える前に押された間、開始の文言を進み具合に替える。1で元の文言へ戻す。
+func show_loading(ratio: float) -> void:
+	if _start_text.is_empty():
+		_start_text = start_label.text
+	start_label.text = LOADING_TEXT % int(ratio * 100.0) if ratio < 1.0 else _start_text
 
 
 ## タイトルへ戻ってきた場合(将来ホームから戻す導線を足した場合)に備え、押せる状態へ戻す。

@@ -3,6 +3,8 @@ extends Control
 
 ## 画面切り替え時のクロスフェード時間。
 const SCREEN_FADE_DURATION := 0.18
+const TITLE_SCENE := "res://scenes/title_screen.tscn"
+const TITLE_NODE := "TitleScreen"
 
 ## v5.0の対局画面(子がすべてコード描画のControlで .tscn を持たないため _ready() で生成する)。
 var card_match_screen: CardMatchScreen
@@ -57,13 +59,18 @@ var _fade_tween: Tween
 ## フェード中に背後の画面がクリックされることを防ぐ。
 var _transition_blocker: ColorRect
 
-@onready var title_screen: TitleScreen = $TitleScreen
+## タイトルは起動シーン(`Boot`)が先に出したものを `adopt_title()` で受け取る(Architecture.md 4.0.6節)。
+@onready var title_screen: TitleScreen = get_node_or_null(TITLE_NODE)
 @onready var home_screen: HomeScreen = $HomeScreen
 @onready var replay_list_screen: ReplayListScreen = $ReplayListScreen
 @onready var account_screen: AccountScreen = $AccountScreen
 
 
 func _ready() -> void:
+	# 起動シーンを経ずに生成された(テストなど)ときは自分でタイトルを作る。
+	if title_screen == null:
+		adopt_title((load(TITLE_SCENE) as PackedScene).instantiate())
+		title_screen = get_node(TITLE_NODE)
 	_screens = [
 		title_screen,
 		home_screen,
@@ -260,6 +267,19 @@ func _input(event: InputEvent) -> void:
 		event is InputEventMouseButton or event is InputEventScreenTouch or event is InputEventKey
 	):
 		return
+	note_user_gesture()
+
+
+## 起動シーン(`Boot`)はタイトルを `Main` より先に出す。木へ入る前に呼び、`main.tscn` で
+## タイトルがあった位置(リプレイ一覧の直後)へ置く。遷移の重なり順を変えないため。
+func adopt_title(title: TitleScreen) -> void:
+	title.name = TITLE_NODE
+	add_child(title)
+	move_child(title, get_node("ReplayListScreen").get_index() + 1)
+
+
+## 最初の操作を受けた。BGMの再生を許し、以降は入力を見ない。
+func note_user_gesture() -> void:
 	MusicPlayer.notify_user_gesture()
 	set_process_input(false)
 

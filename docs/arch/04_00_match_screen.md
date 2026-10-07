@@ -107,8 +107,9 @@
 ## 4.0.6 シーン構成
 
 ```
+Boot                         # 起動シーン。タイトルだけを出し、残りを裏で読んでから Main へ引き渡す
 Main
-├── TitleScreen              # 起動して最初に出る
+├── TitleScreen              # Boot から adopt_title() で受け取る
 ├── HomeScreen               # 下部5タブ
 ├── ReplayListScreen
 ├── AccountScreen
@@ -122,6 +123,9 @@ Main
 
 v1.0(位相制)の画面・クラス・`data/hourglasses/*.tres` は削除済み。`ReplayListScreen` は `seed` を持つ棋譜だけを一覧に出す。
 
+- `Boot`(`scenes/boot.tscn`、起動シーン):`TitleScreen` だけを出し、`scripts/boot/script_load_order.gd` の順に1フレーム12msずつスクリプトを `load()` してから `main.tscn` を生成し、`Main.adopt_title()` でタイトルを渡す(Godot は class_name を参照するたびに参照先を解析するため、一度に読むと何も映らないまま十秒近く止まる)。読み終える前に押された開始・アカウントは預かり、`show_loading()` で進み具合を出して、引き渡した後にシグナルを出し直す。`Boot` は `Main` の型を書かない(書くとその時点で全画面がコンパイルされる)
+- `script_load_order.gd` は生成物(`tools/gen_script_load_order.gd`。`main.tscn` から辿れるスクリプトを参照される側から順に並べる)。`check.sh` が毎回作り直す。漏れがあっても `main.tscn` を読むときにまとめてコンパイルされるだけで壊れない
+- `Main` を単体で生成したとき(テスト)は自分で `TitleScreen` を作る
 - `TitleScreen`(`.tscn`):背景・ロゴ・開始の導線だけを持ち `start_requested` を出す。ロゴは `assets/title/logo.png` があればそれ、無ければ `TitleLogo`(コード描画。縁と落ち影は自身が、金箔の面は部品ごとの子 `FoilLayer`(`foil_gradient.gdshader` で縦グラデーションを**掛け算**し、親のmodulateによるフェード・光を残す)が描く)を `ResourceLoader.exists()` で分岐(`preload` だと無い時点でコンパイルが通らない)。背景も同様
 - `SandTransition`:タイトル→ホーム専用。`Main` が1個生成して最前面へ置き `cover()` / `reveal()` を await。砂面は折れ線 + 頂点カラーのグラデーション(段ごとの単色だと縞に見える)。**アンカーは `anchor_right` / `anchor_bottom` へ直接代入**(11章)。砂の間は `mouse_filter = STOP`
 - `Main._show_only()`:クロスフェード(`modulate:a` の Tween、実行中の Tween は kill してから作り直す、遷移中は透明な `ColorRect` で入力を塞ぐ)。タイトル→ホームだけ `_on_title_start_requested()` が「ロゴの演出 → `cover()` → `_show_only()` → `reveal()`」。`.tscn` を持たない画面は `_ready()` で生成して `_screens` へ

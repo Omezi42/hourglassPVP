@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 変更後の検証を1コマンドにまとめる: gdformat → gdlint → ヘッドレステスト → 誘導対局の通し → 初回起動の直行 → 起動スモーク。
+# 変更後の検証を1コマンドにまとめる: 読み込み順の生成 → gdformat → gdlint → ヘッドレステスト → 誘導対局の通し → 初回起動の直行 → 起動シーンの通し → 起動スモーク。
 # 引数なし: git で変更のある .gd だけを整形・lint する。 --all: scripts/ と tools/ の全 .gd。
 # 出力は要点だけに絞る(ログ全文は logs/check_*.log)。
 set -u
@@ -16,6 +16,10 @@ if [ "${1:-}" = "--all" ]; then
 else
   FILES=$( (git diff --name-only; git diff --cached --name-only; git ls-files --others --exclude-standard) | sort -u | grep '\.gd$' | while read -r f; do [ -f "$f" ] && echo "$f"; done)
 fi
+
+# 起動時に裏で読み込むスクリプトの順番(Architecture.md 4.0.6節)。古くても壊れはしないが、毎回書き直す。
+"$GODOT" --headless --path . --script res://tools/gen_script_load_order.gd > logs/check_load_order.log 2>&1
+FILES=$( (echo "$FILES"; git status --porcelain scripts/boot/script_load_order.gd | awk '{print $2}') | grep . | sort -u)
 
 status=0
 if [ -n "$FILES" ]; then
@@ -50,6 +54,11 @@ echo "== first launch"
 timeout "$GODOT_TIMEOUT" "$GODOT" --headless --path . --script res://tools/tests/first_launch_smoke.gd > logs/check_first.log 2>&1
 grep -E "first launch|SCRIPT ERROR|Parse Error" logs/check_first.log | head -10
 grep -q "first launch passed" logs/check_first.log || status=1
+
+echo "== boot"
+timeout "$GODOT_TIMEOUT" "$GODOT" --headless --path . --script res://tools/tests/boot_smoke.gd > logs/check_boot.log 2>&1
+grep -E "boot smoke|SCRIPT ERROR|Parse Error" logs/check_boot.log | head -10
+grep -q "boot smoke passed" logs/check_boot.log || status=1
 
 echo "== startup smoke"
 timeout "$GODOT_TIMEOUT" "$GODOT" --headless --path . --quit-after 60 > logs/check_smoke.log 2>&1

@@ -21,6 +21,18 @@
       ],
       "port": 8790,
       "autoPort": true
+    },
+    {
+      "name": "web-test",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8074",
+        "--directory",
+        "scratchpad/webtest"
+      ],
+      "port": 8074
     }
   ]
 }
