@@ -949,6 +949,16 @@
 			"is_spell": false,
 			"pool_index": 95,
 			"total_sand": 5
+		},
+		{
+			"cannot_attack": false,
+			"cost": 2,
+			"describe": "落砂:自分の他の砂時計のうち、攻撃力が体力より多いランダムな1体を反転させる",
+			"display_name": "ディレイ",
+			"id": "delay",
+			"is_spell": false,
+			"pool_index": 96,
+			"total_sand": 4
 		}
 	]
 }
