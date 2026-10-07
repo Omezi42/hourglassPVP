@@ -73,22 +73,28 @@ func _test_currency_rules(assert_true: Callable) -> void:
 	var enough := CurrencyRules.MIN_MOVES
 	# 日曜イベント(15章・25章)の倍率に左右されないよう、平日(月曜)の時刻で固定する。
 	var weekday := Time.get_unix_time_from_datetime_string("2026-09-07T12:00:00")
+	# 1日3勝ボーナスを使い切った状態で、対局種別ごとの基本額を見る。
+	var spent := CurrencyRules.BONUS_WIN_LIMIT
 
 	var random_win := CurrencyRules.evaluate(
-		CurrencyRules.MatchKind.RANDOM, true, enough, 0, weekday
+		CurrencyRules.MatchKind.RANDOM, true, enough, 0, spent, weekday
 	)
 	assert_true.call(int(random_win["amount"]) == 30, "a random match win should award 30")
 	assert_true.call(
 		not bool(random_win.get("sunday", false)), "a weekday match should not be a sunday reward"
 	)
 	var random_loss := CurrencyRules.evaluate(
-		CurrencyRules.MatchKind.RANDOM, false, enough, 0, weekday
+		CurrencyRules.MatchKind.RANDOM, false, enough, 0, spent, weekday
 	)
 	assert_true.call(int(random_loss["amount"]) == 10, "a random match loss should still award 10")
 
-	var room_win := CurrencyRules.evaluate(CurrencyRules.MatchKind.ROOM, true, enough, 0, weekday)
+	var room_win := CurrencyRules.evaluate(
+		CurrencyRules.MatchKind.ROOM, true, enough, 0, spent, weekday
+	)
 	assert_true.call(int(room_win["amount"]) == 10, "a room match win should award 10")
-	var cpu_win := CurrencyRules.evaluate(CurrencyRules.MatchKind.CPU, true, enough, 0, weekday)
+	var cpu_win := CurrencyRules.evaluate(
+		CurrencyRules.MatchKind.CPU, true, enough, 0, spent, weekday
+	)
 	assert_true.call(int(cpu_win["amount"]) == 5, "a cpu match win should award 5")
 
 	# 自分ひとりで繰り返せる対局ほど報酬が低いこと(GameDesign.md 15章の線引き)
@@ -101,7 +107,7 @@ func _test_currency_rules(assert_true: Callable) -> void:
 	)
 
 	var short_match := CurrencyRules.evaluate(
-		CurrencyRules.MatchKind.RANDOM, true, enough - 1, 0, weekday
+		CurrencyRules.MatchKind.RANDOM, true, enough - 1, 0, spent, weekday
 	)
 	assert_true.call(
 		int(short_match["amount"]) == 0, "a match shorter than the minimum awards none"
@@ -111,18 +117,20 @@ func _test_currency_rules(assert_true: Callable) -> void:
 	)
 
 	var capped := CurrencyRules.evaluate(
-		CurrencyRules.MatchKind.CPU, true, enough, CurrencyRules.CPU_DAILY_LIMIT, weekday
+		CurrencyRules.MatchKind.CPU, true, enough, CurrencyRules.CPU_DAILY_LIMIT, spent, weekday
 	)
 	assert_true.call(int(capped["amount"]) == 0, "cpu matches past the daily cap award none")
 	assert_true.call(str(capped["reason"]) != "", "reaching the daily cap should explain why")
 	var under_cap := CurrencyRules.evaluate(
-		CurrencyRules.MatchKind.CPU, true, enough, CurrencyRules.CPU_DAILY_LIMIT - 1, weekday
+		CurrencyRules.MatchKind.CPU, true, enough, CurrencyRules.CPU_DAILY_LIMIT - 1, spent, weekday
 	)
 	assert_true.call(int(under_cap["amount"]) == 5, "the last cpu match under the cap still awards")
 
 	# ローカル対戦・観戦・リプレイ再生は「自分が1人のプレイヤーとして対局した」とは
 	# 言えないため対象外。理由の表示も出さない(獲得できて当然の場面ではないため)
-	var none := CurrencyRules.evaluate(CurrencyRules.MatchKind.NONE, true, enough, 0, weekday)
+	var none := CurrencyRules.evaluate(
+		CurrencyRules.MatchKind.NONE, true, enough, 0, spent, weekday
+	)
 	assert_true.call(int(none["amount"]) == 0, "an unrewarded match kind awards none")
 	assert_true.call(str(none["reason"]) == "", "an unrewarded match kind should not explain")
 
@@ -137,7 +145,7 @@ func _test_currency_rules(assert_true: Callable) -> void:
 	# 日曜イベント(GameDesign.md 15章・25章): ランクマッチ(と過去のフリーの対戦)だけ2倍、他は据え置き。
 	var sunday_ts := Time.get_unix_time_from_datetime_string("2026-09-06T12:00:00")
 	var sunday_random := CurrencyRules.evaluate(
-		CurrencyRules.MatchKind.RANDOM, true, enough, 0, sunday_ts
+		CurrencyRules.MatchKind.RANDOM, true, enough, 0, spent, sunday_ts
 	)
 	assert_true.call(
 		int(sunday_random["amount"]) == 60, "a sunday random match win should award double"
@@ -146,13 +154,13 @@ func _test_currency_rules(assert_true: Callable) -> void:
 		bool(sunday_random.get("sunday", false)), "a sunday random match should flag the event"
 	)
 	var sunday_room := CurrencyRules.evaluate(
-		CurrencyRules.MatchKind.ROOM, true, enough, 0, sunday_ts
+		CurrencyRules.MatchKind.ROOM, true, enough, 0, spent, sunday_ts
 	)
 	assert_true.call(
 		int(sunday_room["amount"]) == 10, "room matches should not be affected by the sunday event"
 	)
 	var sunday_cpu := CurrencyRules.evaluate(
-		CurrencyRules.MatchKind.CPU, true, enough, 0, sunday_ts
+		CurrencyRules.MatchKind.CPU, true, enough, 0, spent, sunday_ts
 	)
 	assert_true.call(
 		int(sunday_cpu["amount"]) == 5, "cpu matches should not be affected by the sunday event"
@@ -160,6 +168,41 @@ func _test_currency_rules(assert_true: Callable) -> void:
 	assert_true.call(
 		CurrencyRules.format_reward(sunday_random).ends_with("(日曜イベント)"),
 		"a sunday reward should note the event in its label"
+	)
+
+	# 1日3勝ボーナス(GameDesign.md 15章): 最初の3勝に固定額を足し、日曜の倍率は掛けない。
+	var bonus_cpu := CurrencyRules.evaluate(
+		CurrencyRules.MatchKind.CPU, true, enough, 0, 0, weekday
+	)
+	assert_true.call(
+		int(bonus_cpu["amount"]) == 5 + CurrencyRules.BONUS_WIN_AMOUNT,
+		"the first win of the day should add the bonus"
+	)
+	assert_true.call(int(bonus_cpu["bonus"]) == 1, "the first win should be bonus 1")
+	assert_true.call(
+		CurrencyRules.format_reward(bonus_cpu).ends_with("(3勝ボーナス 1/3)"),
+		"a bonus reward should show its count"
+	)
+	var bonus_last := CurrencyRules.evaluate(
+		CurrencyRules.MatchKind.ROOM, true, enough, 0, CurrencyRules.BONUS_WIN_LIMIT - 1, weekday
+	)
+	assert_true.call(int(bonus_last["bonus"]) == CurrencyRules.BONUS_WIN_LIMIT, "the third win")
+	var bonus_loss := CurrencyRules.evaluate(
+		CurrencyRules.MatchKind.ROOM, false, enough, 0, 0, weekday
+	)
+	assert_true.call(int(bonus_loss["bonus"]) == 0, "a loss should not take a bonus")
+	var bonus_sunday := CurrencyRules.evaluate(
+		CurrencyRules.MatchKind.RANKED, true, enough, 0, 0, sunday_ts
+	)
+	assert_true.call(
+		int(bonus_sunday["amount"]) == 60 + CurrencyRules.BONUS_WIN_AMOUNT,
+		"the bonus should not be doubled on sunday"
+	)
+	var bonus_capped_cpu := CurrencyRules.evaluate(
+		CurrencyRules.MatchKind.CPU, true, enough, CurrencyRules.CPU_DAILY_LIMIT, 0, weekday
+	)
+	assert_true.call(
+		int(bonus_capped_cpu.get("bonus", 0)) == 0, "a capped cpu win should not take a bonus"
 	)
 
 

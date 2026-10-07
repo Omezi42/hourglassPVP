@@ -55,6 +55,8 @@ GameDesign.md 14章(アカウント)・15章(通貨)の実装方針。認証は 
 | `currency` | int | 砂金の残高 |
 | `cpu_reward_date` | String | CPU戦の報酬を数えている日付(`YYYY-MM-DD`) |
 | `cpu_reward_count` | int | その日付にCPU戦で報酬を得た回数 |
+| `bonus_win_date` | String | 1日3勝ボーナスを数えている日付(日本時間、`DailyMissionService.today()`) |
+| `bonus_win_count` | int | その日付にボーナスを得た勝ち数(上限 `CurrencyRules.BONUS_WIN_LIMIT`) |
 | `owned_icons` | Array[String] | ショップで買ったアイコンのid。初期解放の8種は含めない |
 | `owned_emotes` | Array[String] | ショップで買ったエモートのid。初期解放の4種は含めない |
 | `owned_titles` | Array[String] | 所有を絞る称号のid(掲示板採用の「発案者」等)。初期の2種(「駆け出し決闘者」「称号なし」)は含めない。10.17節 |
@@ -84,6 +86,10 @@ GameDesign.md 14章(アカウント)・15章(通貨)の実装方針。認証は 
   1人のプレイヤーとして対局した」とは言えないため
 - 判定は終局時に1度だけ行い、結果を `MatchResultPresenter` が結果パネルへ
   1行として出す(GameDesign.md 9章)
+- **1日3勝ボーナス**は `evaluate()` に今日のボーナス済み勝ち数(`AccountService.bonus_win_count_today()`)を
+  渡して判定し、結果に `bonus`(何勝目か。0なら無し)を返す。日曜の倍率はボーナスを足す前の額にだけ掛ける。
+  `AccountService.grant()` は `bonus` を受け取ったとき `bonus_win_date` / `bonus_win_count` を同じ書き込みで更新する
+  (CPU戦の回数と同じ流儀。別の書き込みにすると片方だけ失敗しうるため)
 
 ## 10.4 リプレイのアカウント紐づけ
 

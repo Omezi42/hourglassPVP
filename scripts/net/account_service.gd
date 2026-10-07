@@ -67,6 +67,13 @@ static func cpu_reward_count_today() -> int:
 	return int(_profile.get("cpu_reward_count", 0))
 
 
+## 今日(日本時間)すでに1日3勝ボーナスを得た勝ち数(GameDesign.md 15章)。
+static func bonus_win_count_today() -> int:
+	if str(_profile.get("bonus_win_date", "")) != DailyMissionService.today():
+		return 0
+	return int(_profile.get("bonus_win_count", 0))
+
+
 ## ランクマッチの段位(GameDesign.md 28章)。読んでいなければ空文字(未初期化)。
 ## シーズンの初期化は`RankProgress.ensure_current_season()`が行う。
 static func rank_season() -> String:
@@ -541,7 +548,15 @@ static func save_login_id(client: FirestoreClient, uid: String, login_id: String
 ## 通信に失敗した場合は加算分を `AccountStore` へ退避し、次回の成功時に
 ## まとめて足し込む。CPU戦はオフラインでも成立するため、この経路が無いと
 ## 獲得が消える。
-static func grant(client: FirestoreClient, uid: String, amount: int, is_cpu: bool) -> int:
+##
+## `bonus` は1日3勝ボーナスの何勝目か(0なら無し)。勝ち数は残高と同じ書き込みで残す。
+## 通信の前に手元の数を進めるのは、失敗しても同じ起動中に同じ枠を二度出さないため。
+static func grant(
+	client: FirestoreClient, uid: String, amount: int, is_cpu: bool, bonus: int = 0
+) -> int:
+	if bonus > 0:
+		_profile["bonus_win_date"] = DailyMissionService.today()
+		_profile["bonus_win_count"] = bonus
 	var pending := AccountStore.get_pending_currency()
 	var total := amount + pending
 	if uid == "" or total <= 0:
@@ -562,6 +577,9 @@ static func grant(client: FirestoreClient, uid: String, amount: int, is_cpu: boo
 			data["cpu_reward_count"] = (
 				(int(fields.get("cpu_reward_count", 0)) + 1) if same_day else 1
 			)
+		if bonus > 0:
+			data["bonus_win_date"] = DailyMissionService.today()
+			data["bonus_win_count"] = bonus
 
 		var precondition := {}
 		if bool(doc.get("exists", false)) and str(doc.get("update_time", "")) != "":
@@ -674,6 +692,8 @@ static func _empty_profile() -> Dictionary:
 		"currency": 0,
 		"cpu_reward_date": "",
 		"cpu_reward_count": 0,
+		"bonus_win_date": "",
+		"bonus_win_count": 0,
 		"owned_icons": [],
 		"owned_emotes": [],
 		"owned_playmats": [],

@@ -25,6 +25,9 @@ const REWARDS := {
 const MIN_MOVES := 10
 ## CPU戦で1日に報酬を得られる回数の上限。上限に達してもCPU戦自体は遊べる。
 const CPU_DAILY_LIMIT := 10
+## 1日3勝ボーナス(GameDesign.md 15章)。毎日最初のこの数の勝利に、固定額を足す。
+const BONUS_WIN_LIMIT := 3
+const BONUS_WIN_AMOUNT := 20
 
 
 ## 残高を画面へ出すときの文字列。**表記はここ1箇所で決める**——以前はホーム・ショップ・
@@ -46,13 +49,20 @@ static func amount_text(amount: int) -> String:
 	return ("-" if amount < 0 else "") + grouped
 
 
-## 判定結果を返す。`at_unix_time` は日曜イベント判定の基準時刻(テスト用。負値なら現在時刻)。
-## {"amount": int, "reason": String, "sunday": bool}
+## 判定結果を返す。`bonus_wins_today` は今日すでにボーナスを得た勝ち数。
+## `at_unix_time` は日曜イベント判定の基準時刻(テスト用。負値なら現在時刻)。
+## {"amount": int, "reason": String, "sunday": bool, "bonus": int}
 ##   amount … 実際に加算する額(0なら対象外)
 ##   reason … 対象外だった理由。結果パネルに1行として出す(対象なら空文字)
 ##   sunday … 日曜イベントの倍率が掛かったかどうか
+##   bonus  … 1日3勝ボーナスの何勝目か(0ならボーナス無し)
 static func evaluate(
-	kind: MatchKind, won: bool, move_count: int, cpu_today: int, at_unix_time: float = -1.0
+	kind: MatchKind,
+	won: bool,
+	move_count: int,
+	cpu_today: int,
+	bonus_wins_today: int,
+	at_unix_time: float = -1.0
 ) -> Dictionary:
 	if not REWARDS.has(kind):
 		return {"amount": 0, "reason": ""}
@@ -71,7 +81,12 @@ static func evaluate(
 	)
 	if sunday:
 		amount *= SundayEventRules.REWARD_MULTIPLIER
-	return {"amount": amount, "reason": "", "sunday": sunday}
+	# ボーナスは日曜の倍率を掛けない固定額(その日の区切りであり、種別で差をつけないため)
+	var bonus := 0
+	if won and bonus_wins_today < BONUS_WIN_LIMIT:
+		bonus = bonus_wins_today + 1
+		amount += BONUS_WIN_AMOUNT
+	return {"amount": amount, "reason": "", "sunday": sunday, "bonus": bonus}
 
 
 ## 結果パネルへ出す1行を組み立てる。
@@ -79,5 +94,8 @@ static func format_reward(result: Dictionary) -> String:
 	var amount: int = int(result.get("amount", 0))
 	if amount > 0:
 		var suffix := "(日曜イベント)" if bool(result.get("sunday", false)) else ""
+		var bonus: int = int(result.get("bonus", 0))
+		if bonus > 0:
+			suffix += "(%d勝ボーナス %d/%d)" % [BONUS_WIN_LIMIT, bonus, BONUS_WIN_LIMIT]
 		return "+%d %s%s" % [amount, CURRENCY_NAME, suffix]
 	return str(result.get("reason", ""))

@@ -61,10 +61,22 @@ func _submit_record(kind: int) -> void:
 ## 砂金の付与(GameDesign.md 15章)。**判定はキャッシュから即座に行い、実際の加算
 ## (通信)は待たない。**オフラインでも遊べるCPU戦で結果表示が止まらないようにするため。
 func _grant(kind: int, won: bool, moves: int, uid: String) -> String:
-	var result := CurrencyRules.evaluate(kind, won, moves, AccountService.cpu_reward_count_today())
+	var result := CurrencyRules.evaluate(
+		kind,
+		won,
+		moves,
+		AccountService.cpu_reward_count_today(),
+		AccountService.bonus_win_count_today()
+	)
 	var amount: int = int(result.get("amount", 0))
 	if amount > 0 and NetSession.client != null and not uid.is_empty():
-		AccountService.grant(NetSession.client, uid, amount, kind == CurrencyRules.MatchKind.CPU)
+		AccountService.grant(
+			NetSession.client,
+			uid,
+			amount,
+			kind == CurrencyRules.MatchKind.CPU,
+			int(result.get("bonus", 0))
+		)
 	return CurrencyRules.format_reward(result)
 
 
