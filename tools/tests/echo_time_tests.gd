@@ -15,6 +15,8 @@ func run(assert_true: Callable) -> void:
 	_test_reverb_flips_an_aged_ally()
 	_test_reverb_pair_does_not_loop()
 	_test_reverb_picks_only_eligible_at_random()
+	_test_delay_flips_an_aged_ally_at_turn_end()
+	_test_delay_triggers_reverb_chain()
 	_test_turn_spell_still_survives_on_fresh_unit()
 	_test_set_is_staged()
 
@@ -135,6 +137,34 @@ func _test_reverb_picks_only_eligible_at_random() -> void:
 	_assert.call(picked.size() == 2, "条件を満たす味方のどちらも選ばれうる")
 
 
+func _test_delay_flips_an_aged_ally_at_turn_end() -> void:
+	var state := _new_match()
+	_place(state, MatchState.Side.A, CardLibrary.find_by_id("delay"), 0)
+	var young := _place(state, MatchState.Side.A, _vanilla(6), 1)
+	young.drop_sand(1)
+	var aged := _place(state, MatchState.Side.A, _vanilla(6), 2)
+	aged.drop_sand(5)
+	state.end_turn()
+	_assert.call(aged.health == 4 and aged.attack == 2, "ディレイは落砂で攻撃力が体力より多い味方を返してから砂が落ちる")
+	_assert.call(young.health == 4 and young.attack == 2, "ディレイは若い味方を返さない")
+
+
+func _test_delay_triggers_reverb_chain() -> void:
+	var chained := false
+	for seed_value in range(1, 21):
+		var state := _new_match()
+		state._rng.seed = seed_value
+		_place(state, MatchState.Side.A, CardLibrary.find_by_id("delay"), 0)
+		var reverb := _place(state, MatchState.Side.A, CardLibrary.find_by_id("reverb"), 1)
+		reverb.drop_sand(4)
+		var aged := _place(state, MatchState.Side.A, _vanilla(6), 2)
+		aged.drop_sand(5)
+		state.end_turn()
+		if reverb.health == 3 and aged.health == 4:
+			chained = true
+	_assert.call(chained, "ディレイがリバーブを返すと、リバーブの反転が次の味方を返す")
+
+
 func _test_turn_spell_still_survives_on_fresh_unit() -> void:
 	var state := _new_match()
 	var fresh := CardInstance.new(_vanilla(3))
@@ -151,3 +181,4 @@ func _test_set_is_staged() -> void:
 	_assert.call(CardSetLibrary.price(SET_ID) == 800, "echo_time costs 800")
 	_assert.call(CardSetLibrary.planned_count(SET_ID) == 8, "echo_time plans 8 cards")
 	_assert.call(CardSetLibrary.card_ids(SET_ID)[0] == "reverb", "echo_time opens with reverb")
+	_assert.call(CardSetLibrary.card_ids(SET_ID)[1] == "delay", "echo_time second card is delay")
