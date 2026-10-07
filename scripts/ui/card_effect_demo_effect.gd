@@ -29,7 +29,33 @@ static func stage(demo: int, t: float, value: int) -> Dictionary:
 			return _stage_silence(t)
 		CardEffectPreview.Demo.FX_INVERT_HP:
 			return _stage_invert_hp(t)
+		CardEffectPreview.Demo.FX_RESET_FLIP:
+			return _stage_reset_flip(t)
 	return {}
+
+
+## 味方が反転した後で効果の持ち主が出て、同じ駒がもう一度反転する。
+static func _stage_reset_flip(t: float) -> Dictionary:
+	var stage := CardEffectStage.empty_stage()
+	var caster := CardEffectStage.piece(3, 0, 3)
+	caster["fade"] = CardEffectStage.seg(t, 0.3, 0.42)
+	var first := CardEffectStage.seg(t, 0.05, 0.25)
+	var second := CardEffectStage.seg(t, 0.68, 0.88)
+	var turned := first >= 0.5 and second < 0.5
+	var ally := CardEffectStage.piece(4, 1, 5) if turned else CardEffectStage.piece(1, 4, 5)
+	if t >= 0.05 and t <= 0.27:
+		ally["flip"] = first
+	elif t >= 0.68 and t <= 0.9:
+		ally["flip"] = second
+	if t >= 0.42 and t < 0.68:
+		stage["beams"] = [
+			CardEffectStage.beam(
+				["own", 0], ["own", 1], CardEffectStage.seg(t, 0.42, 0.62), false, InkFigure.GREEN
+			)
+		]
+	stage["trigger_note"] = "このターン反転した自分の砂時計が、もう一度反転できる"
+	stage["own"] = [caster, ally]
+	return stage
 
 
 ## 総量が増える。**「反転:総量+1」(グロウ)のときだけ駒が実際に裏返る**

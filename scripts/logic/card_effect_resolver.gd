@@ -232,6 +232,20 @@ func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Diction
 					side, from_slot, side, revive_slot, CardEnums.EffectVisualStyle.DESCEND, origin
 				)
 				_revive(side, pick, revive_slot)
+		CardEnums.EffectType.RESET_FLIP:
+			var reset_entries := _targets(side, unit, effect, hint).filter(
+				func(entry: Dictionary) -> bool: return _unit_at(entry).flipped_this_turn
+			)
+			_strike_for_targets(
+				side,
+				from_slot,
+				effect.target,
+				reset_entries,
+				CardEnums.EffectVisualStyle.DESCEND,
+				origin
+			)
+			for entry in reset_entries:
+				_unit_at(entry).flipped_this_turn = false
 		CardEnums.EffectType.SILENCE:
 			var silence_entries := _targets(side, unit, effect, hint)
 			_strike_for_targets(

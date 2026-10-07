@@ -31,6 +31,8 @@ const DAMAGED_TIMES := 2.0
 const ALLY_DEATH_TIMES := 2.0
 ## 墓地から1体を手札へ戻す価値。ドロー1枚(3.0)と同じに見る。
 const RECOVER_VALUE := 3.0
+## 反転トリガーを持つ駒を1回反転できることの価値(反転の選択とリピートの値付けで共有)。
+const FLIP_TRIGGER_BONUS := 2.0
 ## 反転権(GameDesign.md 2章)は対局に2〜3回しか無い希少な資源のため、
 ## 通常の反転よりゲインの下限を高く取り、僅かな得のために使い切らせない。
 const FLIP_RIGHT_MIN_GAIN := 3.0
@@ -113,6 +115,10 @@ func choose_action(state: MatchState, side: int) -> Dictionary:
 		action = step.call(state, side)
 		if not action.is_empty():
 			return action
+	# 反転済みの駒を戻すカード(リピート)は、攻撃と反転を済ませた後でないと空振りする。
+	action = _choose_play(state, side, true)
+	if not action.is_empty():
+		return action
 	return MatchAction.end_turn(side)
 
 
@@ -273,12 +279,14 @@ func _best_playable_value(state: MatchState, side: int, mana: int) -> float:
 # --- 出す ---------------------------------------------------------------
 
 
-func _choose_play(state: MatchState, side: int) -> Dictionary:
+func _choose_play(state: MatchState, side: int, flip_reset_turn := false) -> Dictionary:
 	var best: Dictionary = {}
 	var best_value := 0.0
 	var hand: Array = state.hand[side]
 	for index in hand.size():
 		var card: CardData = hand[index]
+		if _resets_flips(card) != flip_reset_turn:
+			continue
 		# 砂術は「出す」の中で一緒に選ぶ(Architecture.md 8章)。段を増やさず、
 		# 盤面へ置くカードと同じ物差しで比べる。
 		if card.is_spell:
@@ -510,6 +518,14 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 			if pick >= 0:
 				var revived: CardData = state.graveyard[side][pick]
 				value = float(revived.total_sand * (revived.total_sand - 1)) / 2.0
+		CardEnums.EffectType.RESET_FLIP:
+			# 戻した駒がもう一度起こせる反転トリガーの数だけを見る。
+			for unit in state.units(side):
+				if (
+					unit.flipped_this_turn
+					and unit.data.effects_for(CardEnums.Trigger.ON_FLIP).size() > 0
+				):
+					value += FLIP_TRIGGER_BONUS
 		CardEnums.EffectType.SILENCE:
 			var slot := _strongest_enemy(state, foe_side)
 			if slot >= 0 and not state.board[foe_side][slot].keywords().is_empty():
@@ -803,11 +819,18 @@ func _choose_flip(state: MatchState, side: int) -> Dictionary:
 			continue
 		var gain := _lifetime_of(unit.attack, unit.health) - float(unit.lifetime_damage())
 		if unit.data.effects_for(CardEnums.Trigger.ON_FLIP).size() > 0:
-			gain += 2.0
+			gain += FLIP_TRIGGER_BONUS
 		if gain > best_gain:
 			best_gain = gain
 			best = MatchAction.flip(side, slot)
 	return best
+
+
+static func _resets_flips(card: CardData) -> bool:
+	for effect in card.effects_for(CardEnums.Trigger.ON_PLAY):
+		if effect.effect_type == CardEnums.EffectType.RESET_FLIP:
+			return true
+	return false
 
 
 # --- 反転権 ---------------------------------------------------------------
@@ -866,7 +889,7 @@ func _choose_flip_right(state: MatchState, side: int) -> Dictionary:
 			continue
 		var gain := _lifetime_of(unit.attack, unit.health) - float(unit.lifetime_damage())
 		if unit.data.effects_for(CardEnums.Trigger.ON_FLIP).size() > 0:
-			gain += 2.0
+			gain += FLIP_TRIGGER_BONUS
 		if gain > best_gain:
 			best_gain = gain
 			best = MatchAction.flip_right(side, side, slot)

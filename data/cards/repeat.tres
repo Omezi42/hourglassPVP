@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/emblems/repeat.png" id="emblem"]
+
+[sub_resource type="Resource" id="Effect_repeat_0"]
+script = ExtResource("script_effect")
+trigger = 0
+target = 3
+effect_type = 19
+value = 0
+card_id = ""
+keyword = -1
+condition_scope = 0
+condition_total = -1
+random_target = false
+
+[resource]
+script = ExtResource("script_card")
+id = "repeat"
+display_name = "リピート"
+cost = 2
+total_sand = 4
+pool_index = 97
+set_id = "echo_time"
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_repeat_0")])
+rules_text = "設置:このターンすでに反転した自分の砂時計すべてを、もう一度反転できるようにする"
+cannot_attack = false
+is_token = false
+art_id = "chime"
+emblem = ExtResource("emblem")

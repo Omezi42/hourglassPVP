@@ -17,6 +17,8 @@ func run(assert_true: Callable) -> void:
 	_test_reverb_picks_only_eligible_at_random()
 	_test_delay_flips_an_aged_ally_at_turn_end()
 	_test_delay_triggers_reverb_chain()
+	_test_repeat_resets_flipped_allies()
+	_test_repeat_keeps_summoning_sickness()
 	_test_turn_spell_still_survives_on_fresh_unit()
 	_test_set_is_staged()
 
@@ -165,6 +167,35 @@ func _test_delay_triggers_reverb_chain() -> void:
 	_assert.call(chained, "ディレイがリバーブを返すと、リバーブの反転が次の味方を返す")
 
 
+func _play_repeat(state: MatchState) -> bool:
+	state.hand[MatchState.Side.A] = [CardLibrary.find_by_id("repeat")]
+	state.mana[MatchState.Side.A] = 2
+	return state.play_card(MatchState.Side.A, 0, 4)
+
+
+func _test_repeat_resets_flipped_allies() -> void:
+	var state := _new_match()
+	var flipped := _place(state, MatchState.Side.A, _vanilla(6), 0)
+	flipped.drop_sand(5)
+	var waiting := _place(state, MatchState.Side.A, _vanilla(6), 1)
+	_assert.call(state.flip(MatchState.Side.A, 0), "1回目の反転ができる")
+	_assert.call(not state.can_flip(MatchState.Side.A, 0), "反転した駒はそのターンもう反転できない")
+	_assert.call(_play_repeat(state), "リピートを出せる")
+	_assert.call(state.can_flip(MatchState.Side.A, 0), "リピートで反転済みの駒がもう一度反転できる")
+	_assert.call(state.flip(MatchState.Side.A, 0), "2回目の反転ができる")
+	_assert.call(
+		state.can_flip(MatchState.Side.A, 1) and not waiting.flipped_this_turn, "反転していない駒はそのまま"
+	)
+
+
+func _test_repeat_keeps_summoning_sickness() -> void:
+	var state := _new_match()
+	var fresh := CardInstance.new(_vanilla(6))
+	state.board[MatchState.Side.A][0] = fresh
+	_assert.call(_play_repeat(state), "リピートを出せる")
+	_assert.call(not state.can_flip(MatchState.Side.A, 0), "リピートでも出したターンの駒は反転できない")
+
+
 func _test_turn_spell_still_survives_on_fresh_unit() -> void:
 	var state := _new_match()
 	var fresh := CardInstance.new(_vanilla(3))
@@ -182,3 +213,4 @@ func _test_set_is_staged() -> void:
 	_assert.call(CardSetLibrary.planned_count(SET_ID) == 8, "echo_time plans 8 cards")
 	_assert.call(CardSetLibrary.card_ids(SET_ID)[0] == "reverb", "echo_time opens with reverb")
 	_assert.call(CardSetLibrary.card_ids(SET_ID)[1] == "delay", "echo_time second card is delay")
+	_assert.call(CardSetLibrary.card_ids(SET_ID)[2] == "repeat", "echo_time third card is repeat")
