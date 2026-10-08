@@ -959,6 +959,16 @@
 			"is_spell": false,
 			"pool_index": 96,
 			"total_sand": 4
+		},
+		{
+			"cannot_attack": false,
+			"cost": 2,
+			"describe": "設置:このターンすでに反転した自分の砂時計すべてを、もう一度反転できるようにする",
+			"display_name": "リピート",
+			"id": "repeat",
+			"is_spell": false,
+			"pool_index": 97,
+			"total_sand": 4
 		}
 	]
 }
