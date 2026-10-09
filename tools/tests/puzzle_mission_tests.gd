@@ -74,6 +74,22 @@ func _test_every_stage_is_solvable() -> void:
 			["attack", 0, 0],
 			["attack", 1, -1],
 		],
+		# リピートは出す前に返した駒だけをもう一度返せる。ホイールを砂術でも返し、
+		# 反転権は守護を割った後まで取っておく(第15問)。
+		"stage_15":
+		[
+			["flip", 0],
+			["cast", 1, 0, 0],
+			["cast", 1, 0, 0],
+			["flip", 1],
+			["play", 0, 2],
+			["flip", 0],
+			["flip", 1],
+			["attack", 1, 0],
+			["flip_right", 0],
+			["attack", 0, -1],
+			["flip_right", 0],
+		],
 	}
 	for stage in PuzzleLibrary.all_stages():
 		if not answers.has(stage.id):

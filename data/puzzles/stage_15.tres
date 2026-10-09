@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="PuzzleStageData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/puzzle_stage_data.gd" id="script_puzzle"]
+
+[resource]
+script = ExtResource("script_puzzle")
+id = "stage_15"
+title = "第15問 返して、落として、また返す"
+hint = "リピートが効くのは、出す前に返した駒だけ。砂術と攻撃の順番まで含めて組み立てる"
+order = 15
+foe_hp = 18
+own_hp = 30
+mana = 4
+hand_ids = Array[String](["repeat", "turn", "pinch"])
+own_units = Array[String](["wheel:2:3", "tick:1:4"])
+foe_units = Array[String](["shield:2:1"])
