@@ -9,6 +9,7 @@
 すべてそこに揃っており、**終局の直前に `ReplayService.mark_finished()` が書き終えている**。
 開始時刻 `started_at` も `matches/{id}` の `created_at`(対局が決まって作られた時刻)を写す。
 `analyze_matches.py` は `finished_at - started_at` の平均と中央値を出す(切断からの復帰で長く伸びた局があるため中央値も見る)。
+`started_at` を持たない記録は、`matches/{id}` が残っていればその `created_at` で補う(`matches` は30件で消えるため、補えるのは残っている間だけ)。
 対局画面へ棋譜の写しを持たせる案は採らない——オンライン対戦は自分の手しか手元に残しておらず、
 相手の手を含めた並びを正しく持つのは Firestore の側だけであるため。
 
@@ -93,3 +94,23 @@
 匿名アカウントができるが、段階を送るにはどのみちサインインが要る。
 `tools/analyze_matches.py --funnel` が `stats/funnel` を読み、期間を指定して段階ごとの人数と
 起動に対する割合を出す(段階は順に通るとは限らないため)。
+
+## 1局の時間(GameDesign.md 22章「1局の時間(CPU戦・遠征)」)
+
+| クラス | 責務 |
+|---|---|
+| `PlayTimeService`(`scripts/net/play_time_service.gd`, static) | CPU戦・遠征の1局ぶんの帯・手数・勝敗を `stats/play_time` の日ごとの数へ足す |
+
+**送り先は `stats/funnel` と分けた `stats/play_time` の1件。**通過数は「端末ごとに初回の1回だけ」、こちらは
+「1局ごと」に数えるため、同じ文書に置くと取り違えて読みやすい。起動直後の通過数の書き込みと競合しないためでもある。
+`days` の下に `{"d20261009": {"cpu_games": 3, "cpu_wins": 2, "cpu_turns": 61, "cpu_m10": 2, "cpu_over": 1, "solo_games": ...}}` の形で持つ。
+帯のキーは `m5` / `m10` / `m15` / `over`(`PlayTimeService.band_key()`)。更新は `FunnelService.send()` と同じく
+**`updateTime` を前提条件にした `commit()`**。**端末に控えず、送れなければその1局は捨てる。**
+`FunnelService` と同じく書き出した版でだけ送る(開発機の対局を混ぜないため)。
+
+**所要時間は `CardMatchScreen._begin_state()` で控えた `Time.get_ticks_msec()` からの経過**(`elapsed_seconds()`)。
+CPU戦・遠征はどちらも `CardMatchCpu` からこの経路で始まる。
+
+**呼ぶ場所**(いずれも `await` しない):CPU戦は `CardMatchOutcome.finish()`(種別がCPUで、誘導対局ではない局)、
+遠征は `CardMatchSolo._settle()`。今日の1問は `CardMatchFinale` がどちらも通さないため数えない。
+`tools/analyze_matches.py --play-time` が `stats/play_time` を読み、種別ごとに帯の局数と割合・平均手数・勝率を出す。
