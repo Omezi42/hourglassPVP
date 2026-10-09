@@ -82,6 +82,7 @@ const PATHS: Array[String] = [
 	"res://scripts/logic/ui_state.gd",
 	"res://scripts/net/portal_info.gd",
 	"res://scripts/net/funnel_service.gd",
+	"res://scripts/net/play_time_service.gd",
 	"res://scripts/logic/solo_progress.gd",
 	"res://scripts/logic/puzzle_progress.gd",
 	"res://scripts/logic/daily_puzzle.gd",

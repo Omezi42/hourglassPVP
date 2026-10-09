@@ -11,6 +11,7 @@
     python tools/analyze_matches.py --days 7 --kind random
     python tools/analyze_matches.py --out out.md --post   # Discordへ投稿する
     python tools/analyze_matches.py --funnel --days 7     # 来た人がどの段階まで進んだか
+    python tools/analyze_matches.py --play-time --days 7  # CPU戦・遠征の1局の時間
 
 読み取りは匿名サインインで行う(ゲーム本体と同じ経路)。棋譜(actions)は既定では
 取得しない。1局あたりの大半を占めるうえ、集計には要らないため。
@@ -56,6 +57,11 @@ END_REASON_LABELS = {
     "draw": "引き分け",
 }
 FUNNEL_PATH = "stats/funnel"
+MATCHES = "matches"
+# CPU戦・遠征の1局の時間(scripts/net/play_time_service.gd のキーと同じ)。
+PLAY_TIME_PATH = "stats/play_time"
+PLAY_TIME_KINDS = [("cpu", "CPU戦"), ("solo", "遠征")]
+PLAY_TIME_BANDS = [("m5", "〜5分"), ("m10", "〜10分"), ("m15", "〜15分"), ("over", "15分より長い")]
 # 段階の並び(scripts/net/funnel_service.gd のキーと同じ)。誘導対局を飛ばしてCPU戦へ行く人も
 # いて順には通らないため、割合はすべて起動に対して出す。
 FUNNEL_STEPS = [
@@ -139,13 +145,16 @@ def decode(value):
 def fetch_records(project, token, with_actions):
     """コレクションを丸ごと読む。**クエリで絞らない**のは、複合インデックスを要求せずに
     済ませるため(絞り込みは手元で行う。ゲーム本体のクエリ方針と同じ)。"""
+    fields = [] if with_actions else SUMMARY_FIELDS
+    return fetch_collection(project, token, COLLECTION, fields)
+
+
+def fetch_collection(project, token, collection, fields):
     base = (
         "https://firestore.googleapis.com/v1/projects/%s"
-        "/databases/(default)/documents/%s" % (project, COLLECTION)
+        "/databases/(default)/documents/%s" % (project, collection)
     )
-    mask = ""
-    if not with_actions:
-        mask = "".join("&mask.fieldPaths=%s" % field for field in SUMMARY_FIELDS)
+    mask = "".join("&mask.fieldPaths=%s" % field for field in fields)
     records = []
     page_token = ""
     while True:
@@ -168,10 +177,10 @@ def fetch_records(project, token, with_actions):
             return records
 
 
-def fetch_funnel(project, token):
+def fetch_stats(project, token, path):
     url = (
         "https://firestore.googleapis.com/v1/projects/%s/databases/(default)/documents/%s"
-        % (project, FUNNEL_PATH)
+        % (project, path)
     )
     request = urllib.request.Request(url, headers={"Authorization": "Bearer %s" % token})
     try:
@@ -182,6 +191,21 @@ def fetch_funnel(project, token):
             return {}
         sys.exit("読み取りに失敗しました(%d): %s" % (error.code, error.read().decode("utf-8")[:400]))
     return dict((k, decode(v)) for k, v in body.get("fields", {}).items())
+
+
+def fill_started_at(records, project, token):
+    """開始時刻を持たない記録は、リプレイの置き場 matches/{id} が残っていれば
+    その created_at で補う(matches はアカウントごとに30件で消えるため、補えるのは残っている間だけ)。"""
+    missing = [r for r in records if not float(r.get("started_at") or 0)]
+    if not missing:
+        return
+    created = dict(
+        (doc["id"], doc.get("created_at"))
+        for doc in fetch_collection(project, token, MATCHES, ["created_at"])
+    )
+    for record in missing:
+        if created.get(record["id"]):
+            record["started_at"] = float(created[record["id"]])
 
 
 def sum_days(days, within_days):
@@ -245,6 +269,40 @@ def funnel_report(fields, within_days):
         for key, label in FUNNEL_STEPS:
             counts = " | ".join(str(site_totals.get(key, 0)) for site_totals in sites.values())
             lines.append("| %s | %s |" % (label, counts))
+    return "\n".join(lines)
+
+
+def play_time_report(fields, within_days):
+    """CPU戦・遠征の1局の時間。CPUの手は人より速いため、人どうしの対局の長さそのものではない。"""
+    totals, day_count = sum_days(fields.get("days", {}), within_days)
+    span = "直近%d日" % within_days if within_days else "通算"
+    lines = [
+        "## 1局の時間(CPU戦・遠征、%s・%d日分)" % (span, day_count),
+        "",
+        "CPUの手は人より速いため、人どうしの対局の長さそのものではない(目標 10〜15分)。",
+        "",
+        "| 種別 | 局数 | " + " | ".join(label for _, label in PLAY_TIME_BANDS) + " | 平均手数 | 勝率 |",
+        "|---|---|" + "---|" * len(PLAY_TIME_BANDS) + "---|---|",
+    ]
+    for kind, label in PLAY_TIME_KINDS:
+        games = totals.get("%s_games" % kind, 0)
+        if not games:
+            lines.append("| %s | 0 |" % label + " — |" * (len(PLAY_TIME_BANDS) + 2))
+            continue
+        bands = " | ".join(
+            "%d(%.0f%%)" % (totals.get("%s_%s" % (kind, key), 0), 100.0 * totals.get("%s_%s" % (kind, key), 0) / games)
+            for key, _ in PLAY_TIME_BANDS
+        )
+        lines.append(
+            "| %s | %d | %s | %.1f手 | %.1f%% |"
+            % (
+                label,
+                games,
+                bands,
+                float(totals.get("%s_turns" % kind, 0)) / games,
+                100.0 * totals.get("%s_wins" % kind, 0) / games,
+            )
+        )
     return "\n".join(lines)
 
 
@@ -383,6 +441,9 @@ def main():
     parser.add_argument(
         "--funnel", action="store_true", help="対局ではなく、来た人の段階ごとの人数を出す"
     )
+    parser.add_argument(
+        "--play-time", action="store_true", help="CPU戦・遠征の1局の時間を出す"
+    )
     parser.add_argument("--with-actions", action="store_true", help="棋譜も取得する(重い)")
     parser.add_argument("--out", default="", help="集計をこのファイルへ書き出す")
     parser.add_argument("--post", action="store_true", help="Discordへ投稿する(--out が要る)")
@@ -391,9 +452,12 @@ def main():
     api_key, project = read_config()
     token = sign_in(api_key)
     if args.funnel:
-        report = funnel_report(fetch_funnel(project, token), args.days)
+        report = funnel_report(fetch_stats(project, token, FUNNEL_PATH), args.days)
+    elif args.play_time:
+        report = play_time_report(fetch_stats(project, token, PLAY_TIME_PATH), args.days)
     else:
         records = fetch_records(project, token, args.with_actions)
+        fill_started_at(records, project, token)
         report = summarize(select(records, args), card_names(), args.top)
     print(report)
 

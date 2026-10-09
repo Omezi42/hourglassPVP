@@ -133,6 +133,9 @@ func _settle(won: bool) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
 	_run.finish_battle(won, hp_left, rng)
+	PlayTimeService.record(
+		PlayTimeService.KIND_SOLO, _screen.elapsed_seconds(), state.turn_count, won
+	)
 	if won:
 		FunnelService.reach(FunnelService.SOLO_WIN)
 	if _run.cleared:

@@ -26,6 +26,10 @@ func finish(kind: int, deck: Array) -> String:
 	if not _screen._tutorial.ran_this_match:
 		MatchStats.record(uid, kind, won, state.turn_count, deck)
 		MatchStatsService.push(_screen._client, uid, kind, won, state.turn_count, deck)
+		if kind == CurrencyRules.MatchKind.CPU:
+			PlayTimeService.record(
+				PlayTimeService.KIND_CPU, _screen.elapsed_seconds(), state.turn_count, won
+			)
 	FunnelService.reach(
 		FunnelService.MATCH_END if kind == CurrencyRules.MatchKind.CPU else FunnelService.ONLINE_END
 	)
