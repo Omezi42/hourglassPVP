@@ -21,6 +21,7 @@ static func load_run(uid: String) -> SoloRun:
 	var run := SoloRun.from_dict(raw)
 	if not run.in_battle:
 		return run
+	FunnelService.reach_first_solo_battle(FunnelService.SOLO_B1_QUIT, run.floor)
 	run.finish_battle(false, 0, RandomNumberGenerator.new())
 	record(uid, run)
 	save_finished(uid, run, "abandoned_mid_battle")

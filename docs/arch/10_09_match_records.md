@@ -78,6 +78,12 @@
 | `solo_start` / `solo_again` | `CardSoloMapScreen._on_theme_chosen()`。`solo_start` を既に通っていれば `solo_again` |
 | `solo_floor3` | `CardSoloMapScreen._on_destination_chosen()`(選ぶ前の段が3段目以降) |
 | `solo_win` / `solo_clear` | `CardMatchSolo._settle()`(勝ったとき / 踏破したとき) |
+| `solo_b1_start` | `CardMatchSolo.start()` |
+| `solo_b1_win` / `solo_b1_lose` / `solo_b1_quit` | `CardMatchSolo._settle()`。投了は `MatchState.end_reason` が `SURRENDER` で、`SoloBattleRules.decided`(特殊勝利条件で決めた)が false のとき `solo_b1_quit` |
+| `solo_b1_quit`(閉じた) | `SoloProgress.load_run()` が `in_battle` のまま残った遠征を負けにしたとき |
+
+`solo_b1_*` は `FunnelService.reach_first_solo_battle(step, floor)` を通し、1段目(`floor == 0`)かつ
+`solo_again` をまだ通っていない(=最初の遠征)ときだけ立てる。
 
 **ランクマッチの待機は `RankedWaitFunnel`(`scripts/ui/ranked_wait_funnel.gd`, RefCounted)が追う。**
 `CardRankedMatchScreen` が1つ持ち、キューへ参加した時点で `begin()` を呼ぶ。`ranked_wait` をまだ通っていない
