@@ -49,6 +49,9 @@ enum Trigger {
 	## 自分の他の砂時計が破壊されたとき(遺砂の刻)。**語にしない**——札には「常在」と出し、
 	## 効果の文をそのまま書く(GameDesign.md 6章)。トークンの破壊にも反応する。
 	ON_ALLY_DEATH,
+	## 相手の砂時計が反転したとき(反響の刻)。ON_ALLY_DEATH と同じく語にせず「常在」と出す。
+	## 起こし方(通常の反転・反転権・効果)を問わない。
+	ON_ENEMY_FLIP,
 }
 
 ## エフェクトの対象。
@@ -272,6 +275,6 @@ static func trigger_name(trigger: int) -> String:
 			return "落砂"
 		Trigger.ON_DAMAGED:
 			return "被弾"
-		Trigger.ON_ALLY_DEATH:
+		Trigger.ON_ALLY_DEATH, Trigger.ON_ENEMY_FLIP:
 			return "常在"
 	return ""

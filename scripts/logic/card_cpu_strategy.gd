@@ -29,6 +29,8 @@ const TURN_END_TURNS := 3
 const DAMAGED_TIMES := 2.0
 ## 味方の破壊に反応する効果(遺砂の刻)が働く回数の見込み。同じく下駄。
 const ALLY_DEATH_TIMES := 2.0
+## 相手の反転に反応する効果(反響の刻)が働く回数の見込み。同じく下駄。
+const ENEMY_FLIP_TIMES := 2.0
 ## 墓地から1体を手札へ戻す価値。ドロー1枚(3.0)と同じに見る。
 const RECOVER_VALUE := 3.0
 ## 反転トリガーを持つ駒を1回反転できることの価値(反転の選択とリピートの値付けで共有)。
@@ -414,6 +416,8 @@ func _repeating_value(state: MatchState, side: int, card: CardData) -> float:
 		value += _on_play_value(state, side, effect) * DAMAGED_TIMES
 	for effect in card.effects_for(CardEnums.Trigger.ON_ALLY_DEATH):
 		value += _on_play_value(state, side, effect) * ALLY_DEATH_TIMES
+	for effect in card.effects_for(CardEnums.Trigger.ON_ENEMY_FLIP):
+		value += _on_play_value(state, side, effect) * ENEMY_FLIP_TIMES
 	return value
 
 

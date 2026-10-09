@@ -525,6 +525,12 @@ func use_flip_right(side: int, target_side: int, slot: int) -> bool:
 ## 続くとき、その途中で砕いてはいけないため。
 func _resolve_flipped(side: int, unit: CardInstance) -> void:
 	_fire(side, unit, CardEnums.Trigger.ON_FLIP, {})
+	# 相手の反転への反応(レゾナンス)。返した駒がさらに相手側を反応させるため、
+	# 効果側は「攻撃力が体力より多い」駒だけを返す(返すと条件から外れ、連鎖が必ず止まる)。
+	var foe_side := other_side(side)
+	for other in units(foe_side):
+		if not other.is_dead():
+			_fire(foe_side, other, CardEnums.Trigger.ON_ENEMY_FLIP, {})
 
 
 # --- 戦闘 ---------------------------------------------------------------

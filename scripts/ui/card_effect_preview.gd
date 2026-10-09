@@ -303,6 +303,8 @@ static func _trigger_phrase(trigger: int) -> String:
 			return "ダメージを受けたとき"
 		CardEnums.Trigger.ON_ALLY_DEATH:
 			return "自分の他の砂時計が壊れたとき"
+		CardEnums.Trigger.ON_ENEMY_FLIP:
+			return "相手の砂時計が反転したとき"
 	return "場に出したとき"
 
 

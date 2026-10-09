@@ -68,7 +68,7 @@
 
 「反響の刻」(予定8枚・800砂金)を1枚目のリバーブで売り出した(GameDesign.md 8章)。
 
-- [ ] 4枚目以降を毎日1枚ずつ公開する(次は相手の反転への反応。`docs/Hourglasses.md` の残りの枠)
+- [ ] 4枚目以降を毎日1枚ずつ公開する(次は反転権を増やす。`docs/Hourglasses.md` の残りの枠)
 
 ### カードスキン(GameDesign.md 31章 / Architecture.md 10.19節)
 

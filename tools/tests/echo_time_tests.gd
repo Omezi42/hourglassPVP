@@ -19,6 +19,10 @@ func run(assert_true: Callable) -> void:
 	_test_delay_triggers_reverb_chain()
 	_test_repeat_resets_flipped_allies()
 	_test_repeat_keeps_summoning_sickness()
+	_test_resonance_flips_an_aged_ally()
+	_test_resonance_ignores_own_flips()
+	_test_resonance_pair_does_not_loop()
+	_test_resonance_fires_flip_trigger()
 	_test_turn_spell_still_survives_on_fresh_unit()
 	_test_set_is_staged()
 
@@ -196,6 +200,54 @@ func _test_repeat_keeps_summoning_sickness() -> void:
 	_assert.call(not state.can_flip(MatchState.Side.A, 0), "リピートでも出したターンの駒は反転できない")
 
 
+func _aged(state: MatchState, side: int, id: String, slot: int) -> CardInstance:
+	var unit := _place(state, side, CardLibrary.find_by_id(id), slot)
+	unit.drop_sand(unit.health - 1)
+	return unit
+
+
+func _test_resonance_flips_an_aged_ally() -> void:
+	var state := _new_match()
+	_aged(state, MatchState.Side.A, "sand", 0)
+	var resonance := _aged(state, MatchState.Side.B, "resonance", 0)
+	var aged := _aged(state, MatchState.Side.B, "sand", 1)
+	var young := _place(state, MatchState.Side.B, _vanilla(5), 2)
+	_assert.call(state.flip(MatchState.Side.A, 0), "相手が反転できる")
+	_assert.call(aged.health > aged.attack, "相手の反転で、攻撃力が体力より多い味方が返る")
+	_assert.call(young.attack == 0, "若い味方は返らない")
+	_assert.call(resonance.attack > resonance.health, "レゾナンス自身は返らない")
+
+
+func _test_resonance_ignores_own_flips() -> void:
+	var state := _new_match()
+	_aged(state, MatchState.Side.A, "sand", 0)
+	_aged(state, MatchState.Side.A, "resonance", 1)
+	var aged := _aged(state, MatchState.Side.A, "sand", 2)
+	_assert.call(state.flip(MatchState.Side.A, 0), "反転できる")
+	_assert.call(aged.attack > aged.health, "自分の反転には反応しない")
+
+
+func _test_resonance_pair_does_not_loop() -> void:
+	var state := _new_match()
+	_aged(state, MatchState.Side.A, "sand", 0)
+	_aged(state, MatchState.Side.A, "resonance", 1)
+	var own := _aged(state, MatchState.Side.A, "sand", 2)
+	_aged(state, MatchState.Side.B, "resonance", 0)
+	var foe := _aged(state, MatchState.Side.B, "sand", 1)
+	_assert.call(state.flip(MatchState.Side.A, 0), "反転できる")
+	_assert.call(foe.health > foe.attack and own.health > own.attack, "向かい合うレゾナンスは、返せる駒が尽きたところで止まる")
+
+
+func _test_resonance_fires_flip_trigger() -> void:
+	var state := _new_match()
+	_aged(state, MatchState.Side.A, "sand", 0)
+	_aged(state, MatchState.Side.B, "resonance", 0)
+	var glow := _aged(state, MatchState.Side.B, "glow", 1)
+	var before := glow.total_sand()
+	_assert.call(state.flip(MatchState.Side.A, 0), "反転できる")
+	_assert.call(glow.total_sand() == before + 1, "レゾナンスが返した味方は、相手の手番でも反転トリガーを起こす")
+
+
 func _test_turn_spell_still_survives_on_fresh_unit() -> void:
 	var state := _new_match()
 	var fresh := CardInstance.new(_vanilla(3))
@@ -214,3 +266,6 @@ func _test_set_is_staged() -> void:
 	_assert.call(CardSetLibrary.card_ids(SET_ID)[0] == "reverb", "echo_time opens with reverb")
 	_assert.call(CardSetLibrary.card_ids(SET_ID)[1] == "delay", "echo_time second card is delay")
 	_assert.call(CardSetLibrary.card_ids(SET_ID)[2] == "repeat", "echo_time third card is repeat")
+	_assert.call(
+		CardSetLibrary.card_ids(SET_ID)[3] == "resonance", "echo_time fourth card is resonance"
+	)
