@@ -26,6 +26,11 @@ const SOLO_WIN := "solo_win"
 const SOLO_FLOOR3 := "solo_floor3"
 const SOLO_CLEAR := "solo_clear"
 const SOLO_AGAIN := "solo_again"
+## 最初の遠征の1段目(`reach_first_solo_battle()` で立てる)。
+const SOLO_B1_START := "solo_b1_start"
+const SOLO_B1_WIN := "solo_b1_win"
+const SOLO_B1_LOSE := "solo_b1_lose"
+const SOLO_B1_QUIT := "solo_b1_quit"
 ## 誘導対局の手順(`tutorial_step()` で番号を付ける)。
 const TUTORIAL_STEP_FORMAT := "tutorial_%02d"
 ## ランクマッチの最初の待機(`RankedWaitFunnel`)。
@@ -79,6 +84,13 @@ static func reach(step: String) -> void:
 		return
 	_mark(step, today_key())
 	flush()
+
+
+## 最初の遠征(`solo_again` を通る前)の1段目だけを数える(GameDesign.md 22章)。
+static func reach_first_solo_battle(step: String, floor_index: int) -> void:
+	if not _enabled or floor_index != 0 or has_reached(SOLO_AGAIN):
+		return
+	reach(step)
 
 
 ## 控えてある段階を送る。サインインできなければ次の機会へ回す。

@@ -9,6 +9,8 @@ extends RefCounted
 ## 特殊勝利条件の残りの数が変わりうる瞬間(遠征の札の更新用)。
 signal progressed
 
+## 特殊勝利条件で決着を付けたか(その投了はプレイヤーの投了ではない。GameDesign.md 22章)。
+var decided := false
 var _state: MatchState
 var _mine := MatchState.Side.A
 var _gate: SoloGateData = null
@@ -110,6 +112,7 @@ func _on_turn_started_for_survival(side: int) -> void:
 	if _state.is_match_over() or side != _mine:
 		return
 	if _state.turn_count > _gate.survive_turns:
+		decided = true
 		_state.surrender(MatchState.other_side(_mine))
 	progressed.emit()
 
@@ -119,6 +122,7 @@ func _on_turn_started_for_deadline(side: int) -> void:
 	if _state.is_match_over():
 		return
 	if side != _mine and _state.turn_count > _gate.survive_turns:
+		decided = true
 		_state.surrender(_mine)
 	progressed.emit()
 
@@ -128,5 +132,6 @@ func _on_unit_destroyed_for_wipe(side: int, _slot: int, _card: CardData) -> void
 	if _state.is_match_over() or side == _mine:
 		return
 	if _state.units(side).is_empty():
+		decided = true
 		_state.surrender(side)
 	progressed.emit()

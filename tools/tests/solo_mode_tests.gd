@@ -13,7 +13,7 @@ func run(assert_true: Callable) -> void:
 	_test_sand_drop_count_override_drops_extra_grains()
 	_test_flip_disabled_blocks_normal_flip_but_not_flip_right()
 	_test_clash_damage_multiplier_doubles_combat_damage()
-	_test_solo_run_creates_a_fifteen_card_deck_one_of_each()
+	_test_solo_run_creates_a_twenty_card_deck()
 	_test_solo_run_route_follows_the_rules()
 	_test_solo_run_route_links_follow_the_rules()
 	_test_solo_run_choose_only_follows_the_links()
@@ -136,14 +136,19 @@ func _test_clash_damage_multiplier_doubles_combat_damage() -> void:
 	)
 
 
-func _test_solo_run_creates_a_fifteen_card_deck_one_of_each() -> void:
+func _test_solo_run_creates_a_twenty_card_deck() -> void:
 	var theme_id := CardCpuDecks.deck_ids()[0]
 	var run := SoloRun.create(theme_id, 0, _rng(1))
-	_assert.call(run.deck_ids.size() == 15, "the starting deck should hold 15 cards")
-	var seen := {}
+	_assert.call(run.deck_ids.size() == 20, "the starting deck should hold 20 cards")
+	var copies := {}
 	for id in run.deck_ids:
-		_assert.call(not seen.has(id), "the starting deck should hold one of each card: " + id)
-		seen[id] = true
+		copies[id] = int(copies.get(id, 0)) + 1
+	for card: CardData in CardCpuDecks.deck_of(theme_id):
+		_assert.call(copies.has(card.id), "the starting deck should hold every kind: " + card.id)
+	_assert.call(
+		copies.values().count(SoloRun.MAX_DECK_COPIES) == SoloRun.START_EXTRA_COPIES,
+		"exactly START_EXTRA_COPIES kinds should have a second copy"
+	)
 	_assert.call(run.hp == MatchState.INITIAL_HP, "hp should start at MatchState.INITIAL_HP")
 	_assert.call(
 		run.max_hp == MatchState.INITIAL_HP, "max_hp should start at MatchState.INITIAL_HP"
@@ -710,7 +715,12 @@ func _test_solo_run_depth_conditions_accumulate() -> void:
 		"depth 0 keeps the normal expert floor"
 	)
 	_assert.call(run0.spring_heal() == SoloRun.SPRING_HEAL, "depth 0 keeps the normal spring heal")
-	_assert.call(run0.foe_hp_delta() == 0, "depth 0 has no foe hp delta")
+	_assert.call(
+		run0.foe_hp_delta() == -SoloRun.FIRST_FLOOR_FOE_HP_CUT,
+		"depth 0 cuts the foe hp on the first floor"
+	)
+	run0.floor = 1
+	_assert.call(run0.foe_hp_delta() == 0, "depth 0 has no foe hp delta after the first floor")
 	_assert.call(
 		run0.bundle_target() == SoloRun.BUNDLE_COUNT, "depth 0 keeps the normal bundle count"
 	)
