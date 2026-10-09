@@ -82,6 +82,14 @@ Open Goldberg Variations は、Kickstarterで資金を集めて録音と楽譜�
 | `boon_preemptive_sand.png` | 遠征の恩恵「先制の砂」のメダル | 弓矢アイコン(14115) |
 | `boon_well_prepared.png` | 遠征の恩恵「用意周到」のメダル | トランプアイコン1(14031) |
 | `boon_win_streak.png` | 遠征の恩恵「勝ち癖」のメダル | トロフィーアイコン(14520) |
+| `boon_early_riser.png` | 遠征の恩恵「早起き」のメダル | 初日の出のアイコン(11817) |
+| `boon_flip_sting.png` | 遠征の恩恵「返し上手」のメダル | カミナリアイコン(10242) |
+| `boon_glass_heart.png` | 遠征の恩恵「硝子の心臓」のメダル | 失恋の無料素材1(14109) |
+| `boon_heavy_sand.png` | 遠征の恩恵「重い砂」のメダル | 分銅のアイコン(13072) |
+| `boon_light_pack.png` | 遠征の恩恵「身軽」のメダル | 羽アイコン1(14640) |
+| `boon_parting_gift.png` | 遠征の恩恵「置き土産」のメダル | シンプルなプレゼントアイコン(11665) |
+| `boon_sand_pouch.png` | 遠征の恩恵「砂袋」のメダル | 麻袋型のドル袋の無料アイコン(無地)(10273) |
+| `boon_small_army.png` | 遠征の恩恵「小さな軍勢」のメダル | ローマのレギオン(12213) |
 
 ---
 
