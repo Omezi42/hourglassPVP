@@ -8,6 +8,9 @@ extends SceneTree
 ##       runs=200 depths=0,1,2,3,4,5 seed=42 player=normal isolated=300 \
 ##       out=tools/balance/out/solo.md
 ##
+## 序盤の難しさの試行: `start_deck=20` で初期の山札を作戦の15種+重ねる数枚にし、
+## `floor1_foe_hp=-6` で1段目の相手のHPを増減する(どちらも本番の規則には無い)。
+##
 ## `only=survive,empty_board` を与えると、`isolated` で測る関門・主をそのidだけに絞る(調整の試行用)。
 ##
 ## 通しでは主まで届く遠征が少なく、主・関門ごとの試行数が偏る。`isolated=N` を与えると、
@@ -18,10 +21,11 @@ extends SceneTree
 ## - 作戦・主は出発の候補から乱数で選ぶ(本番と同じ引き方)
 ## - 行き先は、HPが最大の`SPRING_BELOW`未満なら泉、それ以外は対局・関門から等確率。工房は選ばない
 ## - 束は選んだ作戦の束を足す(無ければ先頭)。恩恵は候補から等確率(恩恵どうしを偏りなく比べるため)
-## - マリガンは双方CPUの判断。自分側のCPUの思考レベルは `player=normal|expert`(既定は上級)
+## - マリガンは双方CPUの判断。自分側のCPUの思考レベルは `player=beginner|normal|expert`(既定は上級)
 
 const SPRING_BELOW := 0.6
 const PLAYER_LEVELS := {
+	"beginner": CardCpuStrategy.Difficulty.BEGINNER,
 	"normal": CardCpuStrategy.Difficulty.NORMAL,
 	"expert": CardCpuStrategy.Difficulty.EXPERT,
 }
@@ -29,6 +33,8 @@ const PLAYER_LEVELS := {
 var _rng := RandomNumberGenerator.new()
 var _lines: Array[String] = []
 var _player_level := "expert"
+var _start_deck := 0
+var _floor1_foe_hp := 0
 
 
 func _init() -> void:
@@ -41,9 +47,11 @@ func _run() -> void:
 	_rng.seed = int(args.get("seed", "42"))
 	_player_level = str(args.get("player", _player_level))
 	if not PLAYER_LEVELS.has(_player_level):
-		printerr("player は normal か expert")
+		printerr("player は beginner か normal か expert")
 		quit(1)
 		return
+	_start_deck = int(args.get("start_deck", "0"))
+	_floor1_foe_hp = int(args.get("floor1_foe_hp", "0"))
 	var depths: Array[int] = []
 	for token in str(args.get("depths", "0,1,2,3,4,5")).split(","):
 		depths.append(clampi(int(token), 0, SoloRun.DEPTH_MAX))
@@ -89,6 +97,7 @@ func _play_run(depth: int, stats: Dictionary) -> void:
 	var themes := SoloRun.theme_choices(_rng)
 	var theme: String = themes[_rng.randi_range(0, themes.size() - 1)]
 	var run := SoloRun.create(theme, depth, _rng, SoloRun.boss_choice(_rng))
+	_thicken_deck(run)
 	while not run.over:
 		if run.workshop_open:
 			run.workshop_skip()
@@ -110,6 +119,13 @@ func _play_run(depth: int, stats: Dictionary) -> void:
 		stats["clears"] += 1
 	else:
 		stats["lost_at"][run.floor] += 1
+
+
+## 初期の山札を`_start_deck`枚まで、作戦の15種から重ならないように2枚目を足して増やす。
+func _thicken_deck(run: SoloRun) -> void:
+	var extras := run.deck_ids.duplicate()
+	while run.deck_ids.size() < _start_deck and not extras.is_empty():
+		run.deck_ids.append(extras.pop_at(_rng.randi_range(0, extras.size() - 1)))
 
 
 func _pick_destination(run: SoloRun) -> int:
@@ -169,6 +185,8 @@ func _fight(run: SoloRun, dest: Dictionary, gate: SoloGateData, foe_level: int) 
 	)
 	var rules := SoloBattleRules.new()
 	rules.apply(state, mine, run, gate)
+	if run.floor == 0 and _floor1_foe_hp != 0:
+		state.hp[foe] = maxi(state.hp[foe] + _floor1_foe_hp, 1)
 	var own_cpu := CardCpuStrategy.new()
 	own_cpu.difficulty = PLAYER_LEVELS[_player_level]
 	var foe_cpu := CardCpuStrategy.new()
