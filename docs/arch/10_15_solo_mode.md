@@ -106,12 +106,12 @@ GameDesign.md 27章の実装方針。**遠征の規則(道・山札・HP・束�
 
 **規則の定数**: `FLOOR_COUNT = 6` / `SPRING_HEAL = 8` / `THEME_CHOICES = 3` / `EXPERT_FROM_FLOOR = 2` /
 `GOLD_PER_WIN = 20` / `CLEAR_GOLD = 100` / `MAX_DECK_COPIES = 2` / `BUNDLE_COUNT = 3` / `BUNDLE_CARDS = 3` /
-`BOON_OFFER_SIZE = 3`。
+`BOON_OFFER_SIZE = 3` / `START_EXTRA_COPIES = 5` / `FIRST_FLOOR_FOE_HP_CUT = 10`。
 
 **操作**
 
 - `static theme_choices(rng) -> Array[String]` — 出発で示す作戦の id を3つ
-- `static create(theme_id, depth, rng, boss_id) -> SoloRun` — 作戦の15種を1枚ずつ山札にし、道を作る
+- `static create(theme_id, depth, rng, boss_id) -> SoloRun` — 作戦の15種を1枚ずつと、乱数で選んだ`START_EXTRA_COPIES`(5)種の2枚目を山札にし、道を作る
 - `static boss_choice(rng) -> String` — 出発で示す主を1体
 - `static foe_name_of(dest)` / `static uses_player_deck(dest)` — 行き先の相手の名前(鏡写し・鏡の主は「CPU ・ あなたの山札」)と、自分の山札の写しを使うか
 - `static next_rows(route, col, row) -> Array[int]` / `static open_rows(route, floor, chosen) -> Array[int]` / `static reachable(route, floor, chosen) -> Dictionary` —
@@ -132,7 +132,7 @@ GameDesign.md 27章の実装方針。**遠征の規則(道・山札・HP・束�
 |---|---|
 | `expert_from_floor()` | 深さ1以上で0(`difficulty()`が使う思考レベルの閾値) |
 | `spring_heal()` | 深さ2以上で`DEPTH_SPRING_HEAL`(5)。恩恵「深い泉」の`spring_bonus()`はこの上に足す |
-| `foe_hp_delta()` | 深さ3以上の`DEPTH_FOE_HP_BONUS`(+4)と恩恵「先制の砂」の`foe_hp_penalty()`を合算した増減。`SoloBattleRules.apply()`が下限1で当てる |
+| `foe_hp_delta()` | 深さ3以上の`DEPTH_FOE_HP_BONUS`(+4)、深さ0の1段目の`-FIRST_FLOOR_FOE_HP_CUT`(-10)と恩恵「先制の砂」の`foe_hp_penalty()`を合算した増減。`SoloBattleRules.apply()`が下限1で当てる |
 | `bundle_target()` | `BUNDLE_COUNT + extra_bundles()`から深さ4以上で1引く(最低1) |
 | `starting_max_hp(depth)`(static) | 深さ5で`DEPTH_START_MAX_HP`(20)。`create()`が使う |
 | `clear_gold()` | 踏破の砂金。`CLEAR_GOLD + depth * CLEAR_GOLD_PER_DEPTH` |

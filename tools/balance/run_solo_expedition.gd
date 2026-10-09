@@ -8,7 +8,7 @@ extends SceneTree
 ##       runs=200 depths=0,1,2,3,4,5 seed=42 player=normal isolated=300 \
 ##       out=tools/balance/out/solo.md
 ##
-## 序盤の難しさの試行: `start_deck=20` で初期の山札を作戦の15種+重ねる数枚にし、
+## 序盤の難しさの試行: `start_deck=25` で初期の山札をその枚数まで(1枚しか無い種類の2枚目で)増やし、
 ## `floor1_foe_hp=-6` で1段目の相手のHPを増減する(どちらも本番の規則には無い)。
 ##
 ## `only=survive,empty_board` を与えると、`isolated` で測る関門・主をそのidだけに絞る(調整の試行用)。
@@ -121,9 +121,9 @@ func _play_run(depth: int, stats: Dictionary) -> void:
 		stats["lost_at"][run.floor] += 1
 
 
-## 初期の山札を`_start_deck`枚まで、作戦の15種から重ならないように2枚目を足して増やす。
+## 初期の山札を`_start_deck`枚まで、1枚しか無い種類の2枚目を足して増やす。
 func _thicken_deck(run: SoloRun) -> void:
-	var extras := run.deck_ids.duplicate()
+	var extras := run.deck_ids.filter(func(id: String) -> bool: return run.deck_ids.count(id) == 1)
 	while run.deck_ids.size() < _start_deck and not extras.is_empty():
 		run.deck_ids.append(extras.pop_at(_rng.randi_range(0, extras.size() - 1)))
 
@@ -213,7 +213,10 @@ func _isolated(gate_id: String, games: int) -> Array:
 	for i in games:
 		var theme: String = ids[_rng.randi_range(0, ids.size() - 1)]
 		var run := SoloRun.create(theme, 0, _rng)
-		run.deck_ids = run.deck_ids + run.deck_ids
+		var full: Array[String] = []
+		for card: CardData in CardCpuDecks.deck_of(theme):
+			full.append(card.id)
+		run.deck_ids = full
 		var foe_deck: String = (
 			gate.cpu_deck if gate != null and not gate.cpu_deck.is_empty() else theme
 		)

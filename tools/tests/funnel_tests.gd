@@ -1,9 +1,10 @@
 extends RefCounted
 ## 通過数(GameDesign.md 22章 / Architecture.md 10.9節)を、差し替え用クライアントの上で検証する。
 ##
-## **確かめたいのは6点。**同じ段階は1回しか数えないこと、送れなかった段階は控えに残って
+## **確かめたいのは7点。**同じ段階は1回しか数えないこと、送れなかった段階は控えに残って
 ## 次に送り直されること、日ごとに分けて足されること、配信先ごとにも足されること、
-## 数え始める前から遊んでいた端末を数えないこと、ランクマッチは最初の待機だけを追うこと。
+## 数え始める前から遊んでいた端末を数えないこと、ランクマッチは最初の待機だけを追うこと、
+## 遠征の1戦目は最初の遠征の1段目だけを数えること。
 
 const FakeClient = preload("res://tools/tests/fake_firestore_client.gd")
 const TEST_SAVE := "user://funnel_test.json"
@@ -76,6 +77,7 @@ func run(assert_true: Callable) -> void:
 		"an unknown site should fall back to other"
 	)
 	_check_ranked_wait_first_only(tree)
+	_check_first_solo_battle_only()
 
 	_check_existing_player_excluded()
 
@@ -103,6 +105,25 @@ func _check_ranked_wait_first_only(tree: SceneTree) -> void:
 	_assert.call(
 		not FunnelService.has_reached(FunnelService.RANKED_MATCHED),
 		"a later wait should not be counted"
+	)
+
+
+func _check_first_solo_battle_only() -> void:
+	FunnelService.reach_first_solo_battle(FunnelService.SOLO_B1_LOSE, 1)
+	_assert.call(
+		not FunnelService.has_reached(FunnelService.SOLO_B1_LOSE),
+		"a battle after the first floor should not count as the first battle"
+	)
+	FunnelService.reach_first_solo_battle(FunnelService.SOLO_B1_START, 0)
+	_assert.call(
+		FunnelService.has_reached(FunnelService.SOLO_B1_START),
+		"the first floor of the first expedition should be counted"
+	)
+	FunnelService.reach(FunnelService.SOLO_AGAIN)
+	FunnelService.reach_first_solo_battle(FunnelService.SOLO_B1_WIN, 0)
+	_assert.call(
+		not FunnelService.has_reached(FunnelService.SOLO_B1_WIN),
+		"a later expedition's first floor should not be counted"
 	)
 
 

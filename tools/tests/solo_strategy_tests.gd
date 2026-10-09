@@ -138,7 +138,7 @@ func _test_glass_heart_lowers_max_hp_and_widens_bundles() -> void:
 
 func _test_light_pack_draws_only_with_a_thin_deck() -> void:
 	var run := _run_with(["light_pack"])
-	_assert.call(run.extra_opening_draw() == 2, "a 15-card deck is light enough")
+	_assert.call(run.extra_opening_draw() == 2, "the 20-card starting deck is light enough")
 	while run.deck_ids.size() <= 20:
 		run.deck_ids.append(run.deck_ids[0])
 	_assert.call(run.extra_opening_draw() == 0, "a 21-card deck is too heavy for light pack")

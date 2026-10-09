@@ -29,6 +29,10 @@ const BUNDLE_COUNT := 3
 const BUNDLE_CARDS := 3
 ## 恩恵の候補数。
 const BOON_OFFER_SIZE := 3
+## 初期の山札で2枚目を足す種類の数(15種+5枚=20枚。GameDesign.md 27章「遠征の流れ」)。
+const START_EXTRA_COPIES := 5
+## 深さ0の1段目で相手のHPを減らす量(GameDesign.md 27章「道」)。
+const FIRST_FLOOR_FOE_HP_CUT := 10
 ## 相手が自分の山札の写しを使うときの相手の名前(GameDesign.md 27章「画面」)。
 const MIRROR_FOE_NAME := "あなたの山札"
 ## 踏破の砂金は深さに応じて増える(GameDesign.md 27章「遠征をまたいで残るもの」)。
@@ -132,6 +136,9 @@ static func create(
 	run.boss_id = boss_id
 	run.depth = clampi(depth, 0, DEPTH_MAX)
 	run.deck_ids = _unique_ids(CardCpuDecks.deck_of(theme_id))
+	var singles := run.deck_ids.duplicate()
+	for _i in mini(START_EXTRA_COPIES, singles.size()):
+		run.deck_ids.append(singles.pop_at(rng.randi_range(0, singles.size() - 1)))
 	run.max_hp = starting_max_hp(run.depth)
 	run.hp = run.max_hp
 	run.route = _build_route(rng, boss_id)
@@ -381,10 +388,12 @@ func spring_heal() -> int:
 	return DEPTH_SPRING_HEAL if depth >= DEPTH_SPRING_FROM else SPRING_HEAL
 
 
-## 対局開始時に相手のHPへ足す増減。深さ3以上の+4と恩恵「先制の砂」の-3を合算する
-## (GameDesign.md 27章「砂の深さ」「恩恵」)。下限1は呼び出し側(`SoloBattleRules`)が当てる。
+## 対局開始時に相手のHPへ足す増減。深さ3以上の+4、深さ0の1段目の-10と恩恵「先制の砂」の-3を合算する
+## (GameDesign.md 27章「道」「砂の深さ」「恩恵」)。下限1は呼び出し側(`SoloBattleRules`)が当てる。
 func foe_hp_delta() -> int:
 	var bonus := DEPTH_FOE_HP_BONUS if depth >= DEPTH_FOE_HP_FROM else 0
+	if depth == 0 and floor == 0:
+		bonus -= FIRST_FLOOR_FOE_HP_CUT
 	return bonus - foe_hp_penalty()
 
 

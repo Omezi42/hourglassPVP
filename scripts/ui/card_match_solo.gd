@@ -57,6 +57,7 @@ func start(run: SoloRun) -> void:
 	_panel.visible = false
 	_begin_battle()
 	_plaque.start(_run, _gate)
+	FunnelService.reach_first_solo_battle(FunnelService.SOLO_B1_START, _run.floor)
 
 
 func close() -> void:
@@ -132,6 +133,7 @@ func _settle(won: bool) -> void:
 	var uid := StageReward.current_uid()
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
+	FunnelService.reach_first_solo_battle(_first_battle_step(won, state), floor_played)
 	_run.finish_battle(won, hp_left, rng)
 	if won:
 		FunnelService.reach(FunnelService.SOLO_WIN)
@@ -239,3 +241,12 @@ func _fill_win_summary(
 ## 特殊勝利条件を持たない関門のときは-1。対局中の遠征の札(`SoloMatchPlaque`)から呼ぶ。
 func remaining_for(gate: SoloGateData) -> int:
 	return SoloBattleRules.remaining_for(_screen.state, _screen.my_side, gate)
+
+
+## 通過数の1戦目の段階。プレイヤーの投了は負けではなく「途中で抜けた」に数える(GameDesign.md 22章)。
+func _first_battle_step(won: bool, state: MatchState) -> String:
+	if won:
+		return FunnelService.SOLO_B1_WIN
+	if state.end_reason == MatchState.EndReason.SURRENDER and not _rules.decided:
+		return FunnelService.SOLO_B1_QUIT
+	return FunnelService.SOLO_B1_LOSE
