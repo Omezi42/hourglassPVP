@@ -135,6 +135,9 @@ func _settle(won: bool) -> void:
 	rng.randomize()
 	FunnelService.reach_first_solo_battle(_first_battle_step(won, state), floor_played)
 	_run.finish_battle(won, hp_left, rng)
+	PlayTimeService.record(
+		PlayTimeService.KIND_SOLO, _screen.elapsed_seconds(), state.turn_count, won
+	)
 	if won:
 		FunnelService.reach(FunnelService.SOLO_WIN)
 	if _run.cleared:

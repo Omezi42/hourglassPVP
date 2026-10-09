@@ -131,6 +131,8 @@ var _outcome: CardMatchOutcome
 var _match_kind: CurrencyRules.MatchKind = CurrencyRules.MatchKind.NONE
 var _clocks: CardMatchClock
 var _cpu_record: Dictionary = {}
+## 対局を始めた時刻(1局の時間。GameDesign.md 22章)。
+var _started_msec := 0
 var _log: CardMatchLog
 var _result: CardMatchResult
 var _pile: CardPileViewer
@@ -345,6 +347,7 @@ func _begin_state(
 ) -> void:
 	state = MatchState.new()
 	add_child(state)
+	_started_msec = Time.get_ticks_msec()
 	CardMatchBuild.apply_keep_deck_order(self, state)
 	state.turn_started.connect(_on_turn_started)
 	state.match_ended.connect(_on_match_ended)
@@ -754,6 +757,11 @@ func _on_turn_started(side: int) -> void:
 	if side == my_side and _interactive and not state.is_match_over() and not is_tutorial:
 		_feed.announce_turn()
 	_cpu_ctl.on_turn_started(side)
+
+
+## 対局を始めてからの秒数(マリガンを含む)。
+func elapsed_seconds() -> float:
+	return (Time.get_ticks_msec() - _started_msec) / 1000.0
 
 
 ## 右クリック/Escでの取り消しは `CardMatchPointer` が持つ。
