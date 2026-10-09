@@ -96,6 +96,43 @@ func refresh_own_preview() -> void:
 			own.preview_dead = preview["attacker_dead"]
 
 
+## 「反転」ボタンにカーソルが乗った。選んでいる駒の反転後と、この手番の終わりの値を出す
+## (GameDesign.md 9章)。
+func show_flip_forecast() -> void:
+	var selection := _screen.selection
+	if not _screen._my_turn() or not selection.is_board_selection():
+		return
+	var view: CardView = _screen.view_at(_screen.my_side, selection.slot)
+	view.flip_preview = TurnForecast.flip(_screen.state, _screen.my_side, selection.slot)
+	view.queue_redraw()
+
+
+## 「ターン終了」にカーソルが乗った。砂が落ちて割れる自分の駒へひびと「破壊」を出す。
+func show_turn_end_forecast() -> void:
+	if not _screen._my_turn():
+		return
+	for slot in TurnForecast.doomed_slots(_screen.state, _screen.my_side):
+		var view: CardView = _screen.view_at(_screen.my_side, slot)
+		view.crack_preview = true
+		view.preview_health = 0
+		view.preview_dead = true
+		view.queue_redraw()
+
+
+## 反転・ターン終了のボタンから離れた。ひびの「破壊」が攻撃側の予測を上書きしているため、
+## それを組み直す。
+func clear_forecast() -> void:
+	for view in _screen._own_slots:
+		if view.crack_preview:
+			view.preview_health = -1
+			view.preview_dead = false
+		view.flip_preview = {}
+		view.crack_preview = false
+		view.queue_redraw()
+	if _screen.selection.is_board_selection():
+		refresh_own_preview()
+
+
 ## 身構え(GameDesign.md 9章「対局画面の手触り」)。狙える(=光っている)相手へ
 ## カーソルが乗ったら `CardView.brace` を立てる。
 func on_hovered(view: CardView) -> void:

@@ -146,11 +146,20 @@ func raise_sand(amount: int) -> int:
 ## `MatchState.sand_drop_count`により1粒より多いことがある**。
 ## 静止(GameDesign.md 6章)を持つ駒は落ちない。実際に落ちた量を返す。
 func tick(amount: int = 1) -> int:
+	var after := ticked(health, attack, amount)
+	var moved := after.y - attack
+	health = after.x
+	attack = after.y
+	return moved
+
+
+## この駒が (p_health, p_attack) のときに砂が n 粒落ちた後の (体力, 攻撃力)。値は書き換えない
+## (反転・ターン終了の予測に使う。GameDesign.md 9章)。
+func ticked(p_health: int, p_attack: int, amount: int) -> Vector2i:
 	if has_keyword(CardEnums.Keyword.STILL):
-		return 0
-	var before := attack
-	drop_sand(amount)
-	return attack - before
+		return Vector2i(p_health, p_attack)
+	var moved: int = mini(amount, p_health)
+	return Vector2i(p_health - moved, p_attack + moved)
 
 
 ## ダメージを受ける。受けた分の砂は消える(総量が減る)。

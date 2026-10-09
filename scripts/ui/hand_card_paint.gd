@@ -216,7 +216,7 @@ static func _labels(view: CardView, s: float, tint: Color) -> void:
 	view._centered_text(
 		card.display_name, roundi(NAME_FONT * s), name_baseline, UiPalette.TEXT_OFFWHITE * tint
 	)
-	var note: String = view._keyword_text()
+	var note: String = CardViewPaint.keyword_text(view)
 	if note.is_empty():
 		return
 	var limit := view.size.x - (GEM_INSET + GEM_RADIUS + 2.0) * 2.0 * s

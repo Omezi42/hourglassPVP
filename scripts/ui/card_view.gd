@@ -162,6 +162,10 @@ var drop_handler := Callable()
 ## 負のときは出さない。`preview_dead` なら破壊されることを示す。
 var preview_health := -1
 var preview_dead := false
+## 「反転」ボタンにカーソルがある間の予測(`TurnForecast.flip()` の戻り値)。空なら出さない。
+var flip_preview: Dictionary = {}
+## 「ターン終了」にカーソルがある間、砂が落ちて割れる駒へひびを出す(GameDesign.md 9章)。
+var crack_preview := false
 ## 攻撃の演出の状態(GameDesign.md 9章)。**段取りは CardViewStrike が書き換える**ため
 ## 公開している。絵だけをこのぶんずらし、上端を支点にこの角度だけ回す。
 var striking := false
@@ -552,6 +556,8 @@ func _draw_board_unit() -> void:
 	if striking:
 		_drawstrike_flash()
 		draw_set_transform_matrix(Transform2D.IDENTITY)
+	if crack_preview:
+		CardViewPaint.crack(self)
 	# 輪は絵の後に描く。守護(太い真鍮の輪)と選択中(水色の輪)は駒が立っていても
 	# 必ず見えなければならないため、絵の下へ隠してはいけない。
 	CardViewPaint.pedestal_ring(self)
@@ -622,18 +628,19 @@ func _draw_board_stats() -> void:
 	var y := PEDESTAL_CENTER_Y + 6.0
 	var attack_radius := STAT_RADIUS * (1.0 + attack_punch * STAT_PUNCH_SCALE)
 	var health_radius := STAT_RADIUS * (1.0 + health_punch * STAT_PUNCH_SCALE)
-	CardViewPaint.stat(
-		self, Vector2(STAT_RADIUS + 2.0, y), unit.attack, ATTACK_ORANGE, attack_radius
-	)
-	CardViewPaint.stat(
-		self, Vector2(size.x - STAT_RADIUS - 2.0, y), unit.health, HEALTH_RED, health_radius
-	)
-	CardViewPaint.preview(self, Vector2(size.x - STAT_RADIUS - 2.0, y))
+	var attack_at := Vector2(STAT_RADIUS + 2.0, y)
+	var health_at := Vector2(size.x - STAT_RADIUS - 2.0, y)
+	CardViewPaint.stat(self, attack_at, unit.attack, ATTACK_ORANGE, attack_radius)
+	CardViewPaint.stat(self, health_at, unit.health, HEALTH_RED, health_radius)
+	if flip_preview.is_empty():
+		CardViewPaint.preview(self, health_at)
+	else:
+		CardViewPaint.flip_preview(self, attack_at, health_at)
 
 
 func _draw_board_labels(tint: Color) -> void:
 	_centered_text(card.display_name, 14, size.y - 18.0, UiPalette.TEXT_OFFWHITE * tint)
-	var note := _keyword_text()
+	var note := CardViewPaint.keyword_text(self)
 	if not note.is_empty():
 		_centered_text(note, 12, size.y - 3.0, UiPalette.BRASS_HIGHLIGHT * tint)
 
@@ -659,46 +666,12 @@ func _hand_art_box() -> Rect2:
 # --- 共通 ---------------------------------------------------------------
 
 
-## 名前の下の1行。**語として見せるキーワードだけを語で出し**、それ以外は短い言い換えで
-## 書く(GameDesign.md 6章)。1行しか無いので、全文は詳細パネルに任せる。
-func _keyword_text() -> String:
-	var words: PackedStringArray = []
-	if card != null and card.cannot_attack:
-		words.append("攻撃不可")
-	if card != null and card.cannot_flip:
-		words.append("反転不可")
-	# 場に出ている駒は**その駒がいま持っている**キーワードを出す。CardData を直接見ると、
-	# 効果で与えられたキーワードと、消された状態が面に出ない。
-	for keyword in _live_keywords():
-		if CardEnums.is_named(keyword):
-			words.append(CardEnums.keyword_name(keyword))
-		else:
-			words.append(CardEnums.keyword_short_text(keyword))
-	if unit != null and unit.silenced:
-		return "効果なし" if words.is_empty() else " ".join(words)
-	if words.is_empty() and not card.rules_text.is_empty():
-		return card.category_name()
-	return " ".join(words)
-
-
 ## 守護のように**形でも示すキーワード**(GameDesign.md 9章)の問い合わせ。
 ## 場の駒は付与・消去を反映する。
 func _has_live_keyword(keyword: int) -> bool:
 	if unit != null:
 		return unit.has_keyword(keyword)
 	return card != null and card.has_keyword(keyword)
-
-
-## いま持っているキーワード。手札のカードは定義そのまま、場の駒は付与・消去を反映する。
-func _live_keywords() -> Array:
-	if unit != null:
-		return unit.keywords()
-	var found: Array = []
-	for keyword in card.named_keywords():
-		found.append(keyword)
-	for keyword in card.plain_keywords():
-		found.append(keyword)
-	return found
 
 
 ## 砂時計の絵を、**元の縦横比のまま**枠へ収める(枠は正方形だが絵は縦長)。

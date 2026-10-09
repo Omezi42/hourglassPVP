@@ -124,6 +124,7 @@ const PATHS: Array[String] = [
 	"res://scripts/net/local_replay_service.gd",
 	"res://scripts/net/replay_service.gd",
 	"res://scripts/ui/card_pile_viewer.gd",
+	"res://scripts/logic/turn_forecast.gd",
 	"res://scripts/ui/round_action_button.gd",
 	"res://scripts/ui/flip_right_gauge.gd",
 	"res://scripts/ui/action_column_layout.gd",

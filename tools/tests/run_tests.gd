@@ -36,6 +36,7 @@ const CpuDeckTests = preload("res://tools/tests/cpu_deck_tests.gd")
 const CardSetTests = preload("res://tools/tests/card_set_tests.gd")
 const LiveMatchTests = preload("res://tools/tests/live_match_tests.gd")
 const FirstDaysTests = preload("res://tools/tests/first_days_tests.gd")
+const TurnForecastTests = preload("res://tools/tests/turn_forecast_tests.gd")
 
 var _failures := 0
 
@@ -53,6 +54,7 @@ func _run() -> void:
 	StillTimeTests.new().run(_assert_true)
 	GraveSandTests.new().run(_assert_true)
 	EchoTimeTests.new().run(_assert_true)
+	TurnForecastTests.new().run(_assert_true)
 	V5SpellTests.new().run(_assert_true)
 	EmblemFxTests.new().run(_assert_true)
 	HourglassArtTests.new().run(_assert_true)

@@ -428,6 +428,9 @@ func _build() -> void:
 	_flip_button = CardMatchBuild.add_button(self, "反転", FLIP_BUTTON_SIZE)
 	_flip_button.visible = false
 	_flip_button.pressed.connect(_on_flip_pressed)
+	# `_targets` は `_build()` の後に作るため、乗った時点で引く。
+	_flip_button.mouse_entered.connect(func() -> void: _targets.show_flip_forecast())
+	_flip_button.mouse_exited.connect(func() -> void: _targets.clear_forecast())
 	CardMatchBuild.action_column(self)
 	# 反転権も行動の列の一員。重ね物(マリガンの暗幕など)より先に足して背面へ置く。
 	_flip_right = CardMatchFlipRight.new(self)
@@ -482,6 +485,8 @@ func _refresh_row(views: Array[CardView], side: int) -> void:
 		views[i].enabled = true
 		views[i].preview_health = -1
 		views[i].preview_dead = false
+		views[i].flip_preview = {}
+		views[i].crack_preview = false
 		# 攻撃できる自分の駒はドラッグでも運べる(GameDesign.md 9章)。
 		views[i].draggable = side == my_side and _my_turn() and unit != null and unit.can_attack()
 

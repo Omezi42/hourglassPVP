@@ -23,7 +23,7 @@
 | `CardMatchPointer` | 駒へのホバーを詳細・手札の並び・対象の光・マナのピップ・攻撃の予測(`set_hover_target()`)へ配る受け口と、右クリック/Escでの選択の取り消し(`cancel_selection()`)。`CardMatchScreen._unhandled_input()` はここへ渡すだけ |
 | `CardMatchTouch` | 盤面と手札を押す/ドラッグする受け口。分岐だけを持ち、適用は `MatchState`、段取りは `CardMatchSpell` / `CardMatchEffectTarget` / `CardMatchFlipRight` へ渡す |
 | `CardMatchSpell` / `CardMatchEffectTarget` / `CardMatchFlipRight` | 砂術 / 設置効果の対象選択 / 反転権 の段取り。反転権のボタンは再生・観戦の「戻る」と同じ位置(両者は同時に見えない)。反転権は `_build()` の中で重ね物(マリガンの暗幕など)より先に作る(後から足すと暗幕より手前に描かれる) |
-| `CardMatchTargets` | 置ける枠・殴れる相手の強調、相打ちの予測(`refresh_own_preview()`)、身構え(`CardView.brace`) |
+| `CardMatchTargets` | 置ける枠・殴れる相手の強調、相打ちの予測(`refresh_own_preview()`)、反転・ターン終了の予測(4.0.2節)、身構え(`CardView.brace`) |
 | `CardMatchDetail` | 詳細パネルの出し消し。出してよい状態か(対象選択中・マリガン中・演出中でない)、消すまでの猶予(`HIDE_DELAY`)、置き場(`CardDetailPanel.place_near()` に卓の範囲を渡す)。駒を持たない所(直前の手の列・ログ)からは `hover_card(card, off_board)` で出す(ログからは `off_board = true` で出し、盤面の状態で引っ込めない)。**`CardMatchScreen` の const を const から参照しない**(読み込みが循環して起動が固まる。11章) |
 | `CardMatchMulligan` | マリガン画面。選んだ枚数を `mulligan_confirmed(indices)` で返し、適用は `MatchState`。札の列の奥の光は `MulliganStageLight`、選んだ札へ重ねる引き直しの印は `MulliganPickMark`(アイコンは `assets/ui/icons/redraw.png`)(札の子ノード。`_draw()` は子より背面のため) |
 | `CardMatchLog` / `CardMatchTurnFeed` | ログ(記録と表示を同じクラスに持ち、実況と読み返しの文を一致させる。行ごとに「」の出現順のカードを控え、表示では `RichTextLabel` の `[url]` で色付け・ホバー詳細にする)/ 手番バナーと相手の1手の実況(`CardMatchLog.describe()` から引く) |
@@ -58,6 +58,7 @@
 
 - **詳細のホバー**: `CardDetailPanel` を `interactive = false` で使う(語のボタンと実演を持たないため、外れたら消える形が成立する)。幅340px(`compact_width`)。ホバーの受け口は `CardMatchPointer.on_view_hovered()` / `on_view_left()` にし、その時点の `_detail` を読む(`_detail` は `_build()` の途中で作るため、生成時に束ねると空の参照を掴む)
 - **攻撃の予測**は `MatchState.combat_preview()`(盤面を変えずに計算。判定の順序は `_resolve_unit_combat()` と同じ:硝子→毒砂)が返し、`CardView.preview_health` へ出す。攻撃側は狙える相手が複数だと定まらないため**最も自分が削られる組**を出し、指している相手(`hover_target`)がある間だけその1組に置き換える。切り替えは相手の駒の `hovered`/`mouse_exited` と情報帯の `mouse_entered`/`mouse_exited` から。Godotはドラッグ中も enter/exit を出すため経路を分けない
+- **反転・ターン終了の予測**は `TurnForecast.flip()`(反転後と、この手番の終わりの値)/ `doomed_slots()`(砂の落下で割れる枠)が返す(`MatchState` は公開関数の上限に達しているため静的クラスに分けた)。どちらも `CardInstance.ticked()`(静止・`sand_drop_count` を反映し、値を書き換えない)で数え、`tick()` も同じ関数を通す。**落砂の効果は含めない**。表示は「反転」ボタン・「ターン終了」ボタンの `mouse_entered`/`mouse_exited` から `CardMatchTargets.show_flip_forecast()` / `show_turn_end_forecast()` / `clear_forecast()` を呼び、`CardView.flip_preview`(バッジ下の札。`CardViewPaint.flip_preview()`)と `crack_preview`(ひび。`CardViewPaint.crack()`)+ 既存の「破壊」の予測へ出す。離れたら攻撃側の予測を `refresh_own_preview()` で組み直す(ひびの「破壊」が上書きしているため)
 - **ドラッグ**: `CardView._get_drag_data()` / `_drop_data()`、枠側は `drop_handler`(Callable)。手札は放されたら押して選ぶ経路と同じ `_play_selected()` へ合流(設置効果の対象選択もそのまま働く)。攻撃は `draggable` な自分の駒の `drag_started` で押したのと同じ選択状態を作り、相手の駒(`on_foe_slot_drop`)か HP帯(`on_face_drop`)で `_attack()` へ合流
 - **タッチのゆらぎ吸収(`PressTracker`)**: 8px の許容マージン(`SLOP_MARGIN`)。`InputEventScreenTouch` も受ける
 - **設置効果の対象選択**は `CardMatchSelection.TARGETING`。枠まで決めた時点で止め、相手の駒を押すと `play_card()` の `target` へ渡す。相手の場が空ならそのまま出す。案内は行動の列へ出す(盤面へ重ねると対象の駒を隠す)

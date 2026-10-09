@@ -96,6 +96,11 @@ static func action_column(screen: CardMatchScreen) -> void:
 		screen, "ターン終了", ActionColumnLayout.TURN_END_DIAMETER, ActionColumnLayout.TURN_END_Y, true
 	)
 	screen._end_turn_button.pressed.connect(screen._on_end_turn_pressed)
+	# `_targets` は `_build()` の後に作るため、乗った時点で引く。
+	screen._end_turn_button.mouse_entered.connect(
+		func() -> void: screen._targets.show_turn_end_forecast()
+	)
+	screen._end_turn_button.mouse_exited.connect(func() -> void: screen._targets.clear_forecast())
 	screen._log_button = _column_button(
 		screen, "ログ", ActionColumnLayout.SMALL_DIAMETER, ActionColumnLayout.LOG_Y
 	)
