@@ -283,7 +283,7 @@ static func save_emote_slots(client: FirestoreClient, uid: String, slots: Array[
 		if owned.has(id) and not kept.has(id):
 			kept.append(id)
 	_profile["emote_slots"] = kept
-	_save_unlocks_locally()
+	save_unlocks_locally()
 	if uid == "" or client == null:
 		return true
 	return await client.set_document(
@@ -317,7 +317,7 @@ static func purchase(
 		var owned: Array = fields.get(key, [])
 		if owned.has(id):
 			_profile[key] = owned
-			_save_unlocks_locally()
+			save_unlocks_locally()
 			return {"ok": false, "message": "すでに所有しています。"}
 		var balance := int(fields.get("currency", 0))
 		if balance < cost:
@@ -340,7 +340,7 @@ static func purchase(
 		if ok:
 			for field in data:
 				_profile[field] = data[field]
-			_save_unlocks_locally()
+			save_unlocks_locally()
 			return {
 				"ok": true,
 				"message":
@@ -384,7 +384,7 @@ static func unlock_free(
 		var owned: Array = fields.get(key, [])
 		if owned.has(id):
 			_profile[key] = owned
-			_save_unlocks_locally()
+			save_unlocks_locally()
 			return
 		var next_owned := owned.duplicate()
 		next_owned.append(id)
@@ -397,7 +397,7 @@ static func unlock_free(
 			for field in data:
 				_profile[field] = data[field]
 			AccountStore.clear_pending_unlock(pending_key, id)
-			_save_unlocks_locally()
+			save_unlocks_locally()
 			return
 	AccountStore.add_pending_unlock(pending_key, id)
 
@@ -445,7 +445,7 @@ static func _owned(initial: Array[String], key: String) -> Array[String]:
 	return list
 
 
-static func _save_unlocks_locally() -> void:
+static func save_unlocks_locally() -> void:
 	AccountStore.save_local_unlocks(
 		_profile.get("owned_icons", []),
 		_profile.get("owned_emotes", []),
@@ -475,7 +475,7 @@ static func load_profile(client: FirestoreClient, uid: String) -> void:
 		or fields.has("owned_card_sets")
 		or fields.has("owned_skins")
 	):
-		_save_unlocks_locally()
+		save_unlocks_locally()
 	if fields.has("disabled_skins") or fields.has("enabled_skins"):
 		AccountStore.save_local_skin_choices(
 			fields.get("disabled_skins", []), fields.get("enabled_skins", [])

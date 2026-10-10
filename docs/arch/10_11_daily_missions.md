@@ -28,10 +28,11 @@
 
 | クラス | 責務 |
 |---|---|
-| `WelcomeDays`(`scripts/net/welcome_days.gd`, static) | 日ごとの受け取るもの(`reward_for(day)`)・今日受け取れるか(`can_claim_today()`)・受取(`claim()`)。受け取った日数と最後に受け取った日(日本時間)は `players/{uid}` の `welcome_days` / `welcome_last_date` に持つ |
-| `WelcomeDaysPanel`(`scripts/ui/welcome_days_panel.gd`) | ホームに重ねる受取の札。`Main` がホームを出したときに `WelcomeDays.can_claim_today()` を見て開く |
+| `WelcomeDays`(`scripts/net/welcome_days.gd`, static) | 日ごとの受け取るもの(`reward_text(day)` / `gold_for(day)`。2日目のセットは `offers_set(day)` / `set_choices()`)・今日受け取れるか(`can_claim_today()`)・受取(`claim()`)。受け取った日数と最後に受け取った日(日本時間)は `players/{uid}` の `welcome_days` / `welcome_last_date` に持つ |
+| `WelcomeDaysPanel`(`scripts/ui/welcome_days_panel.gd`) | ホームに重ねる受取の札。`Main` がホームを出したときに `WelcomeDays.can_claim_today()` を見て開く。セットの日は `ShopItemTile` を並べて選ばせ、`ShopSetPreview` で中身を見せる |
 
-**受取は `players/{uid}` への1回の `commit()`(`updateTime` の前提条件付き)で、日数・日付・砂金をまとめて書く。**
+**受取は `players/{uid}` への1回の `commit()`(`updateTime` の前提条件付き)で、日数・日付・砂金(セットの日は `owned_card_sets`)をまとめて書く。**
+選んだセットを読み直した時点で既に持っていれば、砂金(100)に替える。
 `AccountService.grant()` と別に書くと、片方だけ通ったときに権利か砂金のどちらかが消える。
 競合したら読み直して、今日のぶんがもう書かれていれば何もしない(2つのタブで同時に押した場合)。
 7日目のアイコンは `AccountService.unlock_icon()`(既に持っていれば何もしない)。
