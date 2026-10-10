@@ -5,9 +5,13 @@ extends Control
 const SCREEN_FADE_DURATION := 0.18
 const TITLE_SCENE := "res://scenes/title_screen.tscn"
 const TITLE_NODE := "TitleScreen"
+## 対局画面とその部品(約40本)は互いを参照する輪で、読むと一度にまとめてコンパイルされる
+## (Web版で約0.6秒)。型を書くと起動の裏読み込みに入りタイトルの動きを止めるため、
+## パスで読んで初めて要るときに作る(Architecture.md 4.0.6節)。
+const CARD_MATCH_SCREEN_SCRIPT := "res://scripts/ui/card_match_screen.gd"
 
-## v5.0の対局画面(子がすべてコード描画のControlで .tscn を持たないため _ready() で生成する)。
-var card_match_screen: CardMatchScreen
+## 対局画面(`CardMatchScreen`)。`_match_screen()` が初めて呼ばれたときに作る。
+var card_match_screen: Control
 var rule_screen: RuleScreen
 var screen_guide_screen: ScreenGuideScreen
 var keyword_dict_screen: KeywordDictScreen
@@ -86,15 +90,6 @@ func _ready() -> void:
 	stats_screen.back_pressed.connect(func() -> void: _show_only(home_screen, true))
 	add_child(stats_screen)
 	_screens.append(stats_screen)
-	card_match_screen = CardMatchScreen.new()
-	# アンカーは直接代入する。`set_anchors_preset()` は今の矩形を保つように offset を
-	# 計算し直すため、生成直後(サイズ0)のノードへ使うと0のまま固定される。
-	card_match_screen.anchor_right = 1.0
-	card_match_screen.anchor_bottom = 1.0
-	card_match_screen.visible = false
-	add_child(card_match_screen)
-	card_match_screen.back_pressed.connect(_on_card_match_back)
-	_screens.append(card_match_screen)
 	card_deck_editor_screen = CardDeckEditorScreen.new()
 	card_deck_editor_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
 	card_deck_editor_screen.visible = false
@@ -309,10 +304,14 @@ func _on_title_start_requested() -> void:
 		FunnelService.reach(FunnelService.TUTORIAL_START)
 	await title_screen.play_launch()
 	await _sand_transition.cover()
+	# 対局画面の読み込みで止まる1フレームを、砂が覆っている間に済ませる。
+	# 長くなったフレームの経過時間で砂の抜けが飛ばないよう、1フレーム待ってから進める。
+	_match_screen()
+	await get_tree().process_frame
 	if first_visit:
-		card_match_screen.start_tutorial_match()
+		_match_screen().start_tutorial_match()
 		_match_return_screen = home_screen
-		_show_only(card_match_screen)
+		_show_only(_match_screen())
 	else:
 		_show_only(home_screen)
 	await _sand_transition.reveal()
@@ -363,16 +362,16 @@ func _on_replay_selected(match_id: String) -> void:
 		if match_id.begins_with("cpu_")
 		else await NetSession.client.get_document("matches/%s" % match_id)
 	)
-	if not card_match_screen.start_replay(record):
+	if not _match_screen().start_replay(record):
 		return
 	_match_return_screen = replay_list_screen
-	_show_only(card_match_screen)
+	_show_only(_match_screen())
 
 
 func _on_spectate_requested(match_id: String) -> void:
 	_match_return_screen = home_screen
-	if await card_match_screen.start_spectate(NetSession.client, match_id):
-		_show_only(card_match_screen)
+	if await _match_screen().start_spectate(NetSession.client, match_id):
+		_show_only(_match_screen())
 
 
 func _on_spectate_list_requested() -> void:
@@ -382,9 +381,9 @@ func _on_spectate_list_requested() -> void:
 
 ## 観戦一覧から選んだランクマッチ。観戦を終えたら一覧へ戻り、読み直す。
 func _on_live_spectate_requested(match_id: String) -> void:
-	if await card_match_screen.start_spectate(NetSession.client, match_id):
+	if await _match_screen().start_spectate(NetSession.client, match_id):
 		_match_return_screen = card_spectate_list_screen
-		_show_only(card_match_screen)
+		_show_only(_match_screen())
 	else:
 		card_spectate_list_screen.open()
 
@@ -395,11 +394,11 @@ func _start_cpu_match() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
 	var deck: Dictionary = CardCpuDecks.pick(rng)
-	card_match_screen.start_cpu_match(
+	_match_screen().start_cpu_match(
 		CardDeckSave.selected_deck(), deck["cards"], -1, false, null, CardCpuDecks.foe_name(deck)
 	)
 	_match_return_screen = home_screen
-	_show_only(card_match_screen)
+	_show_only(_match_screen())
 
 
 ## 対局を始める前に、保存済みデッキから使うものを選ばせる(GameDesign.md 9章)。
@@ -469,16 +468,16 @@ func _on_waiting_cpu_requested(screen: Control) -> void:
 	if _active_screen != screen or screen.queue == null:
 		return
 	waiting_cpu.begin(screen)
-	card_match_screen.start_cpu_match(
+	_match_screen().start_cpu_match(
 		CardDeckSave.selected_deck(), deck["cards"], -1, false, null, CardCpuDecks.foe_name(deck)
 	)
 	_match_return_screen = screen
-	_show_only(card_match_screen)
+	_show_only(_match_screen())
 
 
 ## 知らせで「マッチングする」を選んだ。CPU戦を打ち切り、待機画面で通常の待機へ戻す。
 func _on_waiting_cpu_match_chosen(screen: Control) -> void:
-	card_match_screen.abandon_match()
+	_match_screen().abandon_match()
 	_show_only(screen, true)
 	screen.resume_waiting()
 
@@ -560,9 +559,9 @@ func _on_hourglass_list_requested() -> void:
 ## 誘導対局(GameDesign.md 18章)。通常のCPU戦と同じ画面へ入り、指示だけが重なる。
 func _on_tutorial_requested() -> void:
 	FunnelService.reach(FunnelService.TUTORIAL_START)
-	card_match_screen.start_tutorial_match()
+	_match_screen().start_tutorial_match()
 	_match_return_screen = home_screen
-	_show_only(card_match_screen)
+	_show_only(_match_screen())
 
 
 func _on_rules_requested() -> void:
@@ -581,7 +580,7 @@ func _on_screen_guide_requested() -> void:
 ## opponent_uid は相手の表示名(14章)に使う。
 func _on_ranked_match_found(match_id: String, my_side: int, opponent_uid: String) -> void:
 	waiting_cpu.finish()
-	card_match_screen.start_online_match(
+	_match_screen().start_online_match(
 		CardDeckSave.selected_deck(),
 		NetSession.client,
 		match_id,
@@ -592,7 +591,7 @@ func _on_ranked_match_found(match_id: String, my_side: int, opponent_uid: String
 		true
 	)
 	_match_return_screen = home_screen
-	_show_only(card_match_screen)
+	_show_only(_match_screen())
 
 
 ## ルームマッチ。持ち時間の入/切は部屋の設定であり、ここで対局画面まで運ぶ
@@ -601,7 +600,7 @@ func _on_ranked_match_found(match_id: String, my_side: int, opponent_uid: String
 func _on_room_match_found(
 	match_id: String, my_side: int, opponent_uid: String, time_limit: bool
 ) -> void:
-	card_match_screen.start_online_match(
+	_match_screen().start_online_match(
 		CardDeckSave.selected_deck(),
 		NetSession.client,
 		match_id,
@@ -611,7 +610,7 @@ func _on_room_match_found(
 		time_limit
 	)
 	_match_return_screen = home_screen
-	_show_only(card_match_screen)
+	_show_only(_match_screen())
 
 
 ## リーサルパズル(GameDesign.md 24章)。一覧で選んだ1問を対局画面で解く。
@@ -623,16 +622,16 @@ func _on_puzzle_requested() -> void:
 func _on_puzzle_stage_selected(stage: PuzzleStageData) -> void:
 	if DailyPuzzle.is_daily(stage):
 		FunnelService.reach(FunnelService.DAILY_PUZZLE)
-	card_match_screen.puzzle.start(stage)
+	_match_screen().puzzle.start(stage)
 	_match_return_screen = puzzle_picker_screen
-	_show_only(card_match_screen)
+	_show_only(_match_screen())
 
 
 ## エンドレス(GameDesign.md 24章)。押すたびに同梱の問題集から1問を選ぶ。
 func _on_puzzle_endless_selected() -> void:
-	card_match_screen.puzzle.start(EndlessPuzzles.next(), true)
+	_match_screen().puzzle.start(EndlessPuzzles.next(), true)
 	_match_return_screen = puzzle_picker_screen
-	_show_only(card_match_screen)
+	_show_only(_match_screen())
 
 
 ## ソロモード(GameDesign.md 27章)。一覧で選んだステージを種類ごとに振り分ける。
@@ -642,9 +641,9 @@ func _on_solo_requested() -> void:
 
 
 func _on_solo_battle_requested(run: SoloRun) -> void:
-	card_match_screen.solo.start(run)
+	_match_screen().solo.start(run)
 	_match_return_screen = solo_map_screen
-	_show_only(card_match_screen)
+	_show_only(_match_screen())
 
 
 func _on_stats_requested() -> void:
@@ -656,8 +655,8 @@ func _on_stats_requested() -> void:
 ## 理由を1行で示す(対局画面側が文言を出す)。
 func _on_online_resume_requested(record: Dictionary) -> void:
 	_match_return_screen = home_screen
-	_show_only(card_match_screen)
-	await card_match_screen.resume_online_match(NetSession.client, record)
+	_show_only(_match_screen())
+	await _match_screen().resume_online_match(NetSession.client, record)
 	home_screen.battle_tab.refresh()
 
 
@@ -665,6 +664,24 @@ func _on_online_resume_requested(record: Dictionary) -> void:
 func _on_card_match_back() -> void:
 	await card_match_screen.stop_networking()
 	_on_match_back()
+
+
+## 対局画面を返す。無ければ作り、もとの位置(統計画面の直後)へ差し込む
+## (後から足した子ほど手前に描かれ、モーダルや砂を覆ってしまうため)。
+func _match_screen() -> Control:
+	if card_match_screen != null:
+		return card_match_screen
+	card_match_screen = (load(CARD_MATCH_SCREEN_SCRIPT) as GDScript).new()
+	# アンカーは直接代入する。`set_anchors_preset()` は今の矩形を保つように offset を
+	# 計算し直すため、生成直後(サイズ0)のノードへ使うと0のまま固定される。
+	card_match_screen.anchor_right = 1.0
+	card_match_screen.anchor_bottom = 1.0
+	card_match_screen.visible = false
+	add_child(card_match_screen)
+	move_child(card_match_screen, stats_screen.get_index() + 1)
+	card_match_screen.connect("back_pressed", _on_card_match_back)
+	_screens.append(card_match_screen)
+	return card_match_screen
 
 
 func _make_transition_blocker() -> ColorRect:
