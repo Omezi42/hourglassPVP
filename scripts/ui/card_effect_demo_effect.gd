@@ -31,7 +31,24 @@ static func stage(demo: int, t: float, value: int) -> Dictionary:
 			return _stage_invert_hp(t)
 		CardEffectPreview.Demo.FX_RESET_FLIP:
 			return _stage_reset_flip(t)
+		CardEffectPreview.Demo.FX_GAIN_FLIP_RIGHT:
+			return _stage_gain_flip_right(t, value)
 	return {}
+
+
+static func _stage_gain_flip_right(t: float, value: int) -> Dictionary:
+	var stage := CardEffectStage.empty_stage()
+	var own := CardEffectStage.piece(3, 0, 3)
+	own["fade"] = CardEffectStage.seg(t, 0.0, 0.15)
+	stage["trigger_note"] = "反転権を%d回得る" % value
+	if t >= 0.4:
+		stage["pops"] = [
+			CardEffectStage.pop(
+				"own", 0, "反転権+%d" % value, UiPalette.GLOW_AMBER, CardEffectStage.seg(t, 0.4, 1.0)
+			)
+		]
+	stage["own"] = [own]
+	return stage
 
 
 ## 味方が反転した後で効果の持ち主が出て、同じ駒がもう一度反転する。

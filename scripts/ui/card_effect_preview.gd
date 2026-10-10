@@ -57,6 +57,8 @@ enum Demo {
 	FX_SACRIFICE,
 	## 反転済みの味方が、同じターンにもう一度反転できるようになる(反響の刻)。
 	FX_RESET_FLIP,
+	## 反転権の残り回数が増える(反響の刻)。
+	FX_GAIN_FLIP_RIGHT,
 }
 
 const MIN_SIZE := Vector2(320, 200)
@@ -219,6 +221,8 @@ static func _entry_for_effect(effect: CardEffectData) -> Dictionary:
 			demo = Demo.FX_REVIVE_FROM_GRAVE
 		CardEnums.EffectType.RESET_FLIP:
 			demo = Demo.FX_RESET_FLIP
+		CardEnums.EffectType.GAIN_FLIP_RIGHT:
+			demo = Demo.FX_GAIN_FLIP_RIGHT
 	if demo == Demo.FX_DESTROY_UNIT and is_ally:
 		demo = Demo.FX_SACRIFICE
 	# 対象の絞り込み(攻撃力>体力)を持つ破壊は、効かない駒があることまで見せる。

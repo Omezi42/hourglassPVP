@@ -246,6 +246,12 @@ func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Diction
 			)
 			for entry in reset_entries:
 				_unit_at(entry).flipped_this_turn = false
+		CardEnums.EffectType.GAIN_FLIP_RIGHT:
+			var gain_side := _player_side_for(side, effect.target)
+			_strike(side, from_slot, gain_side, -1, CardEnums.EffectVisualStyle.PULSE, origin)
+			_state.flip_right_remaining[gain_side] = (
+				int(_state.flip_right_remaining.get(gain_side, 0)) + effect.value
+			)
 		CardEnums.EffectType.SILENCE:
 			var silence_entries := _targets(side, unit, effect, hint)
 			_strike_for_targets(

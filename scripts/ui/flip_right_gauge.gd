@@ -57,10 +57,11 @@ func _draw() -> void:
 
 ## 語(自分/相手)の右へ、総回数ぶんの粒を並べる。相手の行も同じ語彙で描き、
 ## 色でなく行頭の語だけで区別する(scratchpad/match_rebuild_phase4.md)。
+## 効果やソロの恩恵で総回数を超えて得た残りも粒で見せる。
 func _draw_row(y: float, label_text: String, remaining: int, total: int) -> void:
 	_draw_engraved_label(Vector2(LABEL_X, y), label_text)
 	var ci := get_canvas_item()
-	for i in total:
+	for i in maxi(total, remaining):
 		var center := Vector2(PIP_START_X + i * PIP_STEP, y)
 		_draw_pip(ci, center, i < remaining)
 
