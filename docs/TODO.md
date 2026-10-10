@@ -79,7 +79,7 @@
 
 ### 技術的負債
 
-- [ ] 起動の裏読み込み(Architecture.md 4.0.6節)はWeb版で合計約9秒。うち `action_column_panel.gd` の1本が約1秒かかり、その間タイトルの動きが止まる。参照の輪を切って分けられるか判断
+- [ ] 起動の裏読み込み(Architecture.md 4.0.6節)で、タイトルを止める1本の最長はWeb版で約0.3秒の `card_instance.gd`(`CardInstance`・`MatchState`・`CardLibrary`・`AccountService` など15本の参照の輪)。次いで `card_effect_demo_*` の5本の輪、`card_view_*` の7本の輪(各0.1〜0.2秒)。輪を切れるか判断
 - [ ] `run_tests.gd` と `v5_rules_tests.gd` が上限に近い。新しいテストは別ファイルへ
 - [ ] 本文用フォント1.66MBがpckの4割。自由入力があるためサブセット化できず、起動時間を詰める必要が出た時点で判断
 - [ ] Discord用の生成物が63MB(カード画像7.6MB・GIF55MB)。次にカードを増やす回にGIFの色数・尺を削るか判断

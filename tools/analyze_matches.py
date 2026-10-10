@@ -87,6 +87,7 @@ FUNNEL_STEPS = [
 ]
 TUTORIAL_SCRIPT = ROOT / "resources" / "tutorial" / "tutorial_script.tres"
 TUTORIAL_STEP_KEY = "tutorial_%02d"
+TUTORIAL_SKIP_KEY = "tutorial_skip_%02d"
 TUTORIAL_TEXT_CHARS = 18
 TUTORIAL_SIDES = {"a": "あなた", "b": "CPU", "info": "説明"}
 # ランクマッチの最初の待機(funnel_service.gd の RANKED_* と同じ)。割合は待機を始めた人に対して出す。
@@ -233,6 +234,18 @@ def ratio_table(totals, steps, base_key, base_label):
     return lines
 
 
+def tutorial_table(totals):
+    """手順ごとに、入った人数(始めた人に対する割合)と、その手順で飛ばした人数を出す。"""
+    lines = ["| 段階 | 人数 | 始めた人に対して | スキップ |", "|---|---|---|---|"]
+    base = totals.get("tutorial_start", 0)
+    for index, (key, label) in enumerate(tutorial_steps()):
+        count = totals.get(key, 0)
+        ratio = "%.0f%%" % (100.0 * count / base) if base else "—"
+        skipped = totals.get(TUTORIAL_SKIP_KEY % index, 0)
+        lines.append("| %s | %d | %s | %d |" % (label, count, ratio, skipped))
+    return lines
+
+
 def tutorial_steps():
     """台本の手順を (キー, 見出し) で返す。見出しは番号・誰の手か・種類・指示の冒頭。"""
     text = TUTORIAL_SCRIPT.read_text(encoding="utf-8")
@@ -259,7 +272,7 @@ def funnel_report(fields, within_days):
     lines = ["## 来た人がどの段階まで進んだか(%s・%d日分)" % (span, day_count), ""]
     lines += ratio_table(totals, FUNNEL_STEPS, "launch", "起動")
     lines += ["", "## 誘導対局の手順ごと(台本を書き換えた日をまたいで比べない)", ""]
-    lines += ratio_table(totals, tutorial_steps(), "tutorial_start", "始めた人")
+    lines += tutorial_table(totals)
     lines += ["", "## ランクマッチの最初の待機", ""]
     lines += ratio_table(totals, RANKED_STEPS, "ranked_wait", "待機を始めた人")
     sites = dict(
