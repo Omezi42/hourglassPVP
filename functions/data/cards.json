@@ -979,6 +979,16 @@
 			"is_spell": false,
 			"pool_index": 98,
 			"total_sand": 6
+		},
+		{
+			"cannot_attack": false,
+			"cost": 2,
+			"describe": "設置:反転権を1回得る",
+			"display_name": "アンコール",
+			"id": "encore",
+			"is_spell": false,
+			"pool_index": 99,
+			"total_sand": 3
 		}
 	]
 }
