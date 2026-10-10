@@ -14,7 +14,22 @@ func run(assert_true: Callable) -> void:
 		var path := "%s/%s.png" % [HourglassArt.MASTER_DIR, HourglassArt.STATE_FILES[state]]
 		assert_true.call(ResourceLoader.exists(path), "原本の絵がある: " + path)
 
+	for state in HourglassArt.STATE_FILES.size():
+		var path := (
+			HourglassArt.REGION_FILE % [HourglassArt.MASTER_DIR, HourglassArt.STATE_FILES[state]]
+		)
+		assert_true.call(ResourceLoader.exists(path), "原本の領域マスクがある: " + path)
+
 	for art_id in table.entries.keys():
+		var entry: Dictionary = table.entries[art_id]
+		if entry.has("texture"):
+			var texture := String(entry["texture"])
+			assert_true.call(
+				HourglassArt.TEXTURES.has(texture), "%s の砂の質感が既知(%s)" % [art_id, texture]
+			)
+		if entry.has("frame"):
+			var frame := String(entry["frame"])
+			assert_true.call(HourglassArt.FRAMES.has(frame), "%s の枠の素材が既知(%s)" % [art_id, frame])
 		var chain := table.chain(String(art_id))
 		var depth := chain.size()
 		assert_true.call(depth <= 2, "%s の変換は2段まで" % art_id)

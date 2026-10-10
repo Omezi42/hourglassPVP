@@ -7,6 +7,7 @@ Web配信ではpckのサイズがそのままロード時間に直結するた�
 | ディレクトリ | 内容 | Godotの扱い |
 |---|---|---|
 | `assets/hourglasses/master/state_*.png` | **実行時に読む唯一の砂時計の絵**(サンドの3状態)。幅400px基準 | インポートする |
+| `assets/hourglasses/master/region_*.png` | 原本の領域マスク(R=砂 / G=枠 / B=ガラスの内側)。質感と枠の素材に使う | インポートする(ロスレス) |
 | `assets/hourglasses/processed/{id}/` | 色違いを焼いた参考用の絵。**実行時には読まない** | `.gdignore` で無視 |
 | `assets/hourglasses/overrides/{id}/state_*.png` | そのカードだけの固有の絵(あれば色変換より優先) | インポートする |
 | `assets/hourglasses/sources/{id}/` | 生成元(`source.png`)と縮小前の原寸`state_*.png` | `.gdignore` で無視 |
@@ -56,6 +57,23 @@ v' = clamp(v * value + value_bias, 0, 1)
   その間はタイトル画面が出ているため、砂時計の絵は1枚も画面に無い
 - **固有の絵(`overrides/{id}/`)があればそれをそのまま配り、色変換を行わない**
   (GameDesign.md 9章)
+
+## 砂の質感と枠の素材(GameDesign.md 9章)
+
+表の1件は `texture`(grain / liquid / crystal / glow / stardust)と `frame`(wood / iron / brass /
+stone / ebony / porcelain)を任意で持つ。**無ければ既定(さらさら・染め)で、色変換だけの今までの絵と同じ。**
+値を文字列で持つのは、`.tres` へ整数で残る enum の並び替え事故(Pitfalls.md)を避けるため。
+
+- **原本の砂と木枠はほぼ同じ色(色相0.08・彩度0.6〜0.7)で、色では分けられない。**そこで原本3状態ごとに
+  領域マスク `region_*.png` を持つ。`tools/build_hourglass_regions.gd` が、ガラスの中央から暗い輪郭で止まる
+  塗りつぶしで「ガラスの内側」を求め、内側の有彩色を砂・外側の有彩色を枠とする。**原本を差し替えたら回し直す**
+- **仕上げは色変換の後の別の1回**(`resources/shaders/hourglass_finish.gdshader`)。入力は色変換後の絵・
+  同じ状態の原本・マスクの3枚。枠の素材は原本の明度から描くため、色変換で枠が何色に染まっていても同じ素材になる
+- **子の絵へ仕上げは継がない。**親を焼いた結果のうち、子の入力にするのは仕上げ前の絵(`_baked`)で、
+  配るのは仕上げ後の絵(`_published`)。質感は1枚ずつの見分けのためのものであり、親子で揃える理由がない
+- 模様は場の駒の大きさ(原本の約0.25倍)で潰れないよう、原本の画素で7〜30pxの単位で刻む
+- `tools/fit_hourglass_tints.py --write` は表を書き直すときに既存の `texture` / `frame` を引き継ぐ
+- 仕上げのあるidは参考用の絵(`processed/`)と一致しないため、`verify_hourglass_art.gd` は比べずに飛ばす
 
 **色の数値は `tools/fit_hourglass_tints.py` が現行の絵から逆算した。**既知の変換を持つ
 40種は完全に一致し(誤差1/255はPNGの丸め)、変換の記録が無い9種とその子8種は

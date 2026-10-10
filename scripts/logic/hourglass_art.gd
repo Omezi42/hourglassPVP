@@ -17,6 +17,12 @@ const MASTER_DIR := "res://assets/hourglasses/master"
 const OVERRIDE_DIR := "res://assets/hourglasses/overrides"
 const TABLE_PATH := "res://data/hourglass_tints.tres"
 const SHADER_PATH := "res://resources/shaders/hourglass_tint.gdshader"
+const FINISH_SHADER_PATH := "res://resources/shaders/hourglass_finish.gdshader"
+## 原本の領域マスク(R=砂 / G=枠 / B=ガラスの内側)。tools/build_hourglass_regions.gd が焼く。
+const REGION_FILE := "%s/region_%s.png"
+## 表の `texture` / `frame` の値。並びはシェーダの定数と対応する(先頭の空文字が既定)。
+const TEXTURES: Array[String] = ["", "grain", "liquid", "crystal", "glow", "stardust"]
+const FRAMES: Array[String] = ["", "wood", "iron", "brass", "stone", "ebony", "porcelain"]
 ## 原本(サンド)の砂の色。ここへ表の色変換を順に当てると、その絵の砂の色になる。
 const MASTER_SAND := Color(0.93, 0.66, 0.24, 1.0)
 
@@ -26,6 +32,8 @@ static var _baked: Dictionary = {}
 static var _overrides: Dictionary = {}
 static var _viewport: SubViewport = null
 static var _rect: ColorRect = null
+static var _tint_material: ShaderMaterial = null
+static var _finish_material: ShaderMaterial = null
 static var _baking := false
 ## そのカードの砂の色(手札の窓の光だまりなどに使う)。絵のidごとに1度求めて控える。
 static var _accents: Dictionary = {}
@@ -62,9 +70,11 @@ static func _prepare(parent: Node) -> bool:
 	_rect = ColorRect.new()
 	_rect.anchor_right = 1.0
 	_rect.anchor_bottom = 1.0
-	var material := ShaderMaterial.new()
-	material.shader = load(SHADER_PATH)
-	_rect.material = material
+	_tint_material = ShaderMaterial.new()
+	_tint_material.shader = load(SHADER_PATH)
+	_finish_material = ShaderMaterial.new()
+	_finish_material.shader = load(FINISH_SHADER_PATH)
+	_rect.material = _tint_material
 	_viewport.add_child(_rect)
 	parent.add_child(_viewport)
 	return true
@@ -190,21 +200,54 @@ static func _bake(art_id: String, state: int) -> void:
 	if source == null:
 		return
 	var step: Dictionary = _table.entries[art_id]
-	_rect.material.set_shader_parameter("hue_shift", float(step.get("hue", 0.0)))
-	_rect.material.set_shader_parameter("saturation", float(step.get("sat", 1.0)))
-	_rect.material.set_shader_parameter("saturation_bias", float(step.get("sat_bias", 0.0)))
-	_rect.material.set_shader_parameter("saturation_floor", float(step.get("floor", 0.0)))
-	_rect.material.set_shader_parameter("value_scale", float(step.get("value", 1.0)))
-	_rect.material.set_shader_parameter("value_bias", float(step.get("value_bias", 0.0)))
-	_rect.material.set_shader_parameter("threshold", float(step.get("threshold", 0.0)))
-	_rect.material.set_shader_parameter("source_art", ImageTexture.create_from_image(source))
-	_viewport.size = source.get_size()
-	_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
-	await RenderingServer.frame_post_draw
-	var baked := _viewport.get_texture().get_image()
+	var tint := _tint_material
+	tint.set_shader_parameter("hue_shift", float(step.get("hue", 0.0)))
+	tint.set_shader_parameter("saturation", float(step.get("sat", 1.0)))
+	tint.set_shader_parameter("saturation_bias", float(step.get("sat_bias", 0.0)))
+	tint.set_shader_parameter("saturation_floor", float(step.get("floor", 0.0)))
+	tint.set_shader_parameter("value_scale", float(step.get("value", 1.0)))
+	tint.set_shader_parameter("value_bias", float(step.get("value_bias", 0.0)))
+	tint.set_shader_parameter("threshold", float(step.get("threshold", 0.0)))
+	tint.set_shader_parameter("source_art", ImageTexture.create_from_image(source))
+	var baked := await _render(_tint_material, source.get_size())
+	# 子の入力にするのは仕上げ前の絵(質感と枠は1枚ずつのもので、親子で継がない)。
 	_baked["%s|%d" % [art_id, state]] = baked
+	if has_finish(art_id):
+		baked = await _finish(art_id, state, baked)
 	var key := "%s|%d" % [art_id, state]
 	if _published.has(key) and _published[key] != null:
 		(_published[key] as ImageTexture).set_image(baked)
 	else:
 		_published[key] = ImageTexture.create_from_image(baked)
+
+
+## その絵が砂の質感か枠の素材を持つか(GameDesign.md 9章)。
+static func has_finish(art_id: String) -> bool:
+	_load_table()
+	if _table == null or not _table.has(art_id):
+		return false
+	var entry: Dictionary = _table.entries[art_id]
+	return entry.has("texture") or entry.has("frame")
+
+
+static func _finish(art_id: String, state: int, tinted: Image) -> Image:
+	var entry: Dictionary = _table.entries[art_id]
+	var region_path := REGION_FILE % [MASTER_DIR, STATE_FILES[state]]
+	var master_path := "%s/%s.png" % [MASTER_DIR, STATE_FILES[state]]
+	var material := _finish_material
+	material.set_shader_parameter("source_art", ImageTexture.create_from_image(tinted))
+	material.set_shader_parameter("master_art", load(master_path))
+	material.set_shader_parameter("region", load(region_path))
+	material.set_shader_parameter("px_size", Vector2(tinted.get_size()))
+	material.set_shader_parameter("texture_kind", maxi(TEXTURES.find(entry.get("texture", "")), 0))
+	material.set_shader_parameter("frame_kind", maxi(FRAMES.find(entry.get("frame", "")), 0))
+	material.set_shader_parameter("sand_color", accent_color(art_id))
+	return await _render(material, tinted.get_size())
+
+
+static func _render(material: ShaderMaterial, size: Vector2i) -> Image:
+	_rect.material = material
+	_viewport.size = size
+	_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+	await RenderingServer.frame_post_draw
+	return _viewport.get_texture().get_image()

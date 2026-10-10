@@ -57,6 +57,9 @@ description: |
   `python tools/fit_hourglass_tints.py --write` を回せば、参考用の絵から逆算して
   表ごと書き直される。**実行時に絵を作っているのはこの表であり、画像ではない**
 - `.tres` に絵への参照は書かない。**別のカードの絵を借りる場合だけ `art_id` を書く**
+- **隣の色のカードと見分けが付くよう、表の1件に砂の質感(`texture`)か枠の素材(`frame`)を足す**
+  (GameDesign.md 9章。値は Architecture.md 4.1節)。隣の色のカードと少なくとも一方を違える。
+  `fit_hourglass_tints.py --write` は既存の値を引き継ぐので、書き直した後に足せばよい
 - **一覧画面をレンダリングして、既存カードと見分けが付くことを必ず目で確かめる**。
   あわせて `Godot --path . --script res://tools/tests/verify_hourglass_art.gd`
   (画面ありで回すこと)で、焼いた絵が参考用の絵と一致することを確かめる

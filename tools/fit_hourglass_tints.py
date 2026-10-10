@@ -28,6 +28,8 @@ PROCESSED = "assets/hourglasses/processed"
 TINT_SCRIPT = "tools/tint_hourglass_icons.gd"
 MASTER = "sand"
 STATES = ["state_full", "state_falling", "state_empty"]
+# 砂の質感・枠の素材(GameDesign.md 9章)。逆算せず手で足す値なので、書き直すときに引き継ぐ。
+FINISH_FIELDS = ["texture", "frame"]
 IDENTITY = {"hue": 0.0, "sat": 1.0, "sat_bias": 0.0, "floor": 0.0, "value": 1.0, "value_bias": 0.0, "threshold": 0.0}
 
 
@@ -206,9 +208,28 @@ def main():
         write_table(table)
 
 
+def existing_finishes():
+    """表に既に書かれている砂の質感・枠の素材(手で足した値)。書き直しても消さない。"""
+    finishes = {}
+    path = "data/hourglass_tints.tres"
+    if not os.path.exists(path):
+        return finishes
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            m = re.match(r'"(\w+)": \{(.*)\}', line.strip().rstrip(","))
+            if not m:
+                continue
+            for field in FINISH_FIELDS:
+                v = re.search(r'"%s": "(\w+)"' % field, m.group(2))
+                if v:
+                    finishes.setdefault(m.group(1), {})[field] = v.group(1)
+    return finishes
+
+
 def write_table(table):
     """data/hourglass_tints.tres を書き出す。実行時はこれだけを読む。"""
     fields = ["source", "hue", "sat", "sat_bias", "floor", "value", "value_bias", "threshold"]
+    finishes = existing_finishes()
     lines = []
     for art_id in sorted(table):
         entry = table[art_id]
@@ -216,6 +237,9 @@ def write_table(table):
         for field in fields:
             value = entry[field]
             parts.append('"%s": "%s"' % (field, value) if field == "source" else '"%s": %.6f' % (field, float(value)))
+        for field in FINISH_FIELDS:
+            if field in finishes.get(art_id, {}):
+                parts.append('"%s": "%s"' % (field, finishes[art_id][field]))
         lines.append('"%s": {%s}' % (art_id, ", ".join(parts)))
     header = [
         '[gd_resource type="Resource" script_class="HourglassTintTable" load_steps=2 format=3]',
