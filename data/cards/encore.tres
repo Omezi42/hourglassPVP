@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/emblems/encore.png" id="emblem"]
+
+[sub_resource type="Resource" id="Effect_encore_0"]
+script = ExtResource("script_effect")
+trigger = 0
+target = 5
+effect_type = 20
+value = 1
+card_id = ""
+keyword = -1
+condition_scope = 0
+condition_total = -1
+random_target = false
+
+[resource]
+script = ExtResource("script_card")
+id = "encore"
+display_name = "アンコール"
+cost = 2
+total_sand = 3
+pool_index = 99
+set_id = "echo_time"
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_encore_0")])
+rules_text = "設置:反転権を1回得る"
+cannot_attack = false
+is_token = false
+art_id = "glim"
+emblem = ExtResource("emblem")

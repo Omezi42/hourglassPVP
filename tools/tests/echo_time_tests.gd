@@ -24,6 +24,7 @@ func run(assert_true: Callable) -> void:
 	_test_resonance_pair_does_not_loop()
 	_test_resonance_fires_flip_trigger()
 	_test_turn_spell_still_survives_on_fresh_unit()
+	_test_encore_gains_flip_right_beyond_initial()
 	_test_set_is_staged()
 
 
@@ -259,6 +260,22 @@ func _test_turn_spell_still_survives_on_fresh_unit() -> void:
 	)
 
 
+func _test_encore_gains_flip_right_beyond_initial() -> void:
+	var state := _new_match()
+	var before := int(state.flip_right_remaining[MatchState.Side.A])
+	state.hand[MatchState.Side.A] = [CardLibrary.find_by_id("encore")]
+	state.mana[MatchState.Side.A] = 2
+	_assert.call(state.play_card(MatchState.Side.A, 0, 0), "アンコールを出せる")
+	_assert.call(
+		int(state.flip_right_remaining[MatchState.Side.A]) == before + 1,
+		"アンコールの設置で反転権が1回増え、初期の回数を超えてもよい"
+	)
+	_assert.call(
+		int(state.flip_right_remaining[MatchState.Side.B]) == MatchState.FLIP_RIGHT_SECOND,
+		"相手の反転権は増えない"
+	)
+
+
 func _test_set_is_staged() -> void:
 	_assert.call(CardSetLibrary.has_set(SET_ID), "echo_time is registered")
 	_assert.call(CardSetLibrary.price(SET_ID) == 800, "echo_time costs 800")
@@ -269,3 +286,4 @@ func _test_set_is_staged() -> void:
 	_assert.call(
 		CardSetLibrary.card_ids(SET_ID)[3] == "resonance", "echo_time fourth card is resonance"
 	)
+	_assert.call(CardSetLibrary.card_ids(SET_ID)[4] == "encore", "echo_time fifth card is encore")

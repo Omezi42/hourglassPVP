@@ -530,6 +530,9 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 					and unit.data.effects_for(CardEnums.Trigger.ON_FLIP).size() > 0
 				):
 					value += FLIP_TRIGGER_BONUS
+		CardEnums.EffectType.GAIN_FLIP_RIGHT:
+			# 反転権1回は総量+1とほぼ同じ値打ち(GameDesign.md 6章)。ADD_TOTAL と同じに見る。
+			value = effect.value * 2.0
 		CardEnums.EffectType.SILENCE:
 			var slot := _strongest_enemy(state, foe_side)
 			if slot >= 0 and not state.board[foe_side][slot].keywords().is_empty():
