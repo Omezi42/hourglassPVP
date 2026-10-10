@@ -74,7 +74,7 @@ func _test_welcome_days() -> void:
 	_assert.call(int(fields["currency"]) == 150, "day 1 should add 100 to the balance")
 	_assert.call(not WelcomeDays.can_claim_today(), "day 1 cannot be claimed twice")
 	_assert.call(
-		WelcomeDays.tomorrow_line() == "明日来ると 100砂金 ・ はじめの7日 2/7",
+		WelcomeDays.tomorrow_line() == "明日来ると カードセットを1つ選べる ・ はじめの7日 2/7",
 		"tomorrow line after day 1: " + WelcomeDays.tomorrow_line()
 	)
 	_assert.call(await WelcomeDays.claim(client, UID) == 0, "a second claim on the same day")
@@ -82,14 +82,28 @@ func _test_welcome_days() -> void:
 
 	fields[WelcomeDays.FIELD_DATE] = OLD_DATE
 	AccountService.apply_local_fields({WelcomeDays.FIELD_DATE: OLD_DATE})
-	_assert.call(await WelcomeDays.claim(client, UID) == 2, "another day should be day 2")
-	_assert.call(int(fields["currency"]) == 250, "day 2 should add 100")
+	var choices := WelcomeDays.set_choices()
+	_assert.call(not choices.is_empty(), "day 2 offers the card sets the player lacks")
+	_assert.call(WelcomeDays.offers_set(WelcomeDays.SET_DAY), "day 2 is the set day")
+	_assert.call(await WelcomeDays.claim(client, UID, choices[0]) == 2, "another day is day 2")
+	_assert.call(int(fields["currency"]) == 150, "the set day gives the set instead of gold")
+	_assert.call(
+		(fields.get(WelcomeDays.OWNED_SETS, []) as Array).has(choices[0]),
+		"the chosen set is written in the same commit"
+	)
+	_assert.call(AccountService.owns_card_set(choices[0]), "the chosen set is usable at once")
+
+	# 別のタブで同じセットを先に手に入れていたら、ふつうの日の砂金に替える。
+	fields[WelcomeDays.FIELD_DAYS] = 1
+	fields[WelcomeDays.FIELD_DATE] = OLD_DATE
+	_assert.call(await WelcomeDays.claim(client, UID, choices[0]) == 2, "day 2 again")
+	_assert.call(int(fields["currency"]) == 250, "an owned set falls back to 100 gold")
 
 	fields[WelcomeDays.FIELD_DAYS] = WelcomeDays.DAYS
 	fields[WelcomeDays.FIELD_DATE] = OLD_DATE
 	_assert.call(await WelcomeDays.claim(client, UID) == 0, "nothing after the 7th day")
 	_assert.call(not WelcomeDays.can_claim_today(), "the cache follows the 7-day stop")
-	_assert.call(WelcomeDays.gold_for(WelcomeDays.DAYS) == 300, "day 7 gives 300")
+	_assert.call(WelcomeDays.gold_for(WelcomeDays.DAYS) == 400, "day 7 gives 400")
 	_assert.call(WelcomeDays.icon_for(WelcomeDays.DAYS) == "mascot", "day 7 gives the icon")
 	_assert.call(WelcomeDays.icon_for(1).is_empty(), "other days give no icon")
 
