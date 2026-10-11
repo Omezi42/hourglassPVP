@@ -9,6 +9,7 @@
 すべてそこに揃っており、**終局の直前に `ReplayService.mark_finished()` が書き終えている**。
 開始時刻 `started_at` も `matches/{id}` の `created_at`(対局が決まって作られた時刻)を写す。
 `analyze_matches.py` は `finished_at - started_at` の平均と中央値を出す(切断からの復帰で長く伸びた局があるため中央値も見る)。
+`--surrenders` は棋譜も取得し、`tools/replay_match_records.gd` を Godot で回して投了した時点の局面(HP・駒・手札・直近2手番に出たカード)を出す。棋譜は手札の位置しか持たないため局面はエンジンで並べ直すしかなく、**今のカードで再生する**ので、記録の最終HP・手数と合わない局は信用しない印を付ける。
 `started_at` を持たない記録は、`matches/{id}` が残っていればその `created_at` で補う(`matches` は30件で消えるため、補えるのは残っている間だけ)。
 対局画面へ棋譜の写しを持たせる案は採らない——オンライン対戦は自分の手しか手元に残しておらず、
 相手の手を含めた並びを正しく持つのは Firestore の側だけであるため。
