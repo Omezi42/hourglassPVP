@@ -989,6 +989,16 @@
 			"is_spell": false,
 			"pool_index": 99,
 			"total_sand": 3
+		},
+		{
+			"cannot_attack": false,
+			"cost": 3,
+			"describe": "攻撃力が体力より多い自分の砂時計すべてを反転する",
+			"display_name": "大合唱",
+			"id": "chorus",
+			"is_spell": true,
+			"pool_index": 100,
+			"total_sand": 0
 		}
 	]
 }
