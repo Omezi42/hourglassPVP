@@ -12,16 +12,20 @@
     python tools/analyze_matches.py --out out.md --post   # Discordへ投稿する
     python tools/analyze_matches.py --funnel --days 7     # 来た人がどの段階まで進んだか
     python tools/analyze_matches.py --play-time --days 7  # CPU戦・遠征の1局の時間
+    python tools/analyze_matches.py --surrenders --days 60  # 投了した局の局面
 
 読み取りは匿名サインインで行う(ゲーム本体と同じ経路)。棋譜(actions)は既定では
 取得しない。1局あたりの大半を占めるうえ、集計には要らないため。
+--surrenders は棋譜を取得し、Godotで再生して投了した時点の局面を作る(tools/replay_match_records.gd)。
 """
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -103,6 +107,13 @@ RANKED_STEPS = (
 )
 # これに満たないカードは、勝率が偶然で大きく振れるため一覧から省く。
 MIN_CARD_SAMPLES = 5
+GODOT = os.environ.get("GODOT", "C:/Users/omezi/Documents/Godot_v4.6.2-stable_win64_console.exe")
+REPLAY_SCRIPT = "res://tools/replay_match_records.gd"
+REPLAY_TIMEOUT = 600
+# 先手・後手の表記(記録の "a" が先手)。
+SEAT_LABELS = ["先手", "後手"]
+# この手数以下で投了した局は「序盤の投了」として分けて数える(1人4手番ずつ)。
+EARLY_SURRENDER_TURNS = 8
 
 
 def read_config():
@@ -446,6 +457,102 @@ def summarize(records, names, top):
     return "\n".join(lines)
 
 
+def replay_records(records):
+    """棋譜をGodotで再生し、id ごとの終局の局面を返す(tools/replay_match_records.gd)。"""
+    with tempfile.TemporaryDirectory() as work:
+        source = Path(work) / "records.json"
+        result = Path(work) / "replayed.json"
+        source.write_text(json.dumps(records, ensure_ascii=False), encoding="utf-8")
+        subprocess.run(
+            [GODOT, "--headless", "--path", str(ROOT), "--script", REPLAY_SCRIPT, "--",
+             "in=%s" % source, "out=%s" % result],
+            check=True,
+            capture_output=True,
+            timeout=REPLAY_TIMEOUT,
+        )
+        return dict((r["id"], r) for r in json.loads(result.read_text(encoding="utf-8")))
+
+
+def player_labels(records):
+    """プレイヤーIDは出さず、対局数の多い順に P1, P2 … と呼ぶ(同じ人の投了が偏っていないかを見るため)。"""
+    counts = Counter()
+    for record in records:
+        counts.update([record.get("player_a", ""), record.get("player_b", "")])
+    return dict((uid, "P%d" % (i + 1)) for i, (uid, _) in enumerate(counts.most_common()))
+
+
+def surrender_row(record, replay, labels):
+    loser = 1 if record.get("winner") == "a" else 0
+    date = time.strftime("%m/%d", time.localtime(float(record.get("finished_at", 0))))
+    player = labels.get(record.get("player_%s" % "ab"[loser], ""), "?")
+    head = "| %s | %s | %s %s | %d |" % (
+        date, record.get("version", "?"), SEAT_LABELS[loser], player, int(record.get("turns", 0))
+    )
+    if not replay.get("replayed"):
+        return head + " 再生できない(今のプールに無いカードを含む) |||||||"
+    own, foe = replay["sides"][loser], replay["sides"][1 - loser]
+    timing = "自分" if replay["current_side"] == loser else "相手"
+    recent = "、".join(
+        "%s%s" % ("" if play["side"] == loser else "相:", play["card"]) for play in replay["recent_plays"]
+    )
+    return head + " %s | %d/%d(%+d) | %d/%d | %d/%d | %d/%d | %s | %s |" % (
+        timing,
+        own["hp"], foe["hp"], own["hp"] - foe["hp"],
+        len(own["units"]), len(foe["units"]),
+        own["attack"], foe["attack"],
+        own["hand"], foe["hand"],
+        recent or "—",
+        "○" if replay["matches"] else "×",
+    )
+
+
+def surrender_report(records, replays):
+    """投了した局の局面(手数・HP差・駒の数・直前に出たカード)。数字はすべて投了した側から見る。"""
+    surrenders = [r for r in records if r.get("end_reason") == "surrender"]
+    labels = player_labels(records)
+    lines = [
+        "## 投了した局(%d局 / 全%d局)" % (len(surrenders), len(records)),
+        "",
+        "数字は「投了した側 / 相手」。手番は投了した時点で指していた側。",
+        "直前に出たカードは直近2手番ぶんで、「相:」は相手が出したもの。",
+        "再生一致 × は、今のカードで再生した局面が記録の最終HP・手数と合わない局(カードの数値が記録の版から変わった)。",
+        "",
+        "| 日付 | 版 | 投了した側 | 手数 | 手番 | HP(差) | 駒 | 盤面の攻撃力 | 手札 | 直前に出たカード | 再生一致 |",
+        "|---|---|---|---|---|---|---|---|---|---|---|",
+    ]
+    for record in sorted(surrenders, key=lambda r: float(r.get("finished_at", 0))):
+        lines.append(surrender_row(record, replays.get(record["id"], {}), labels))
+    lines += ["", "### まとめ", ""] + surrender_summary(surrenders, replays, labels)
+    return "\n".join(lines)
+
+
+def surrender_summary(surrenders, replays, labels):
+    if not surrenders:
+        return ["- 投了した局はない"]
+    early = sum(1 for r in surrenders if int(r.get("turns", 0)) <= EARLY_SURRENDER_TURNS)
+    seats = Counter(SEAT_LABELS[1 if r.get("winner") == "a" else 0] for r in surrenders)
+    people = Counter(labels.get(r.get("player_%s" % ("b" if r.get("winner") == "a" else "a"), ""), "?") for r in surrenders)
+    trusted = [r for r in surrenders if replays.get(r["id"], {}).get("matches")]
+    behind = 0
+    foe_cards = Counter()
+    for record in trusted:
+        replay = replays[record["id"]]
+        loser = 1 if record.get("winner") == "a" else 0
+        if replay["sides"][loser]["hp"] < replay["sides"][1 - loser]["hp"]:
+            behind += 1
+        foe_cards.update(p["card"] for p in replay["recent_plays"] if p["side"] != loser)
+    lines = [
+        "- %d手以下で投了: %d局 / それより後: %d局" % (EARLY_SURRENDER_TURNS, early, len(surrenders) - early),
+        "- 投了した側: " + " / ".join("%s %d局" % kv for kv in seats.most_common()),
+        "- 投了した人: " + " / ".join("%s %d局" % kv for kv in people.most_common()),
+        "- 再生が記録と一致した局: %d局(以下はこの局だけで数える)" % len(trusted),
+        "- HPで負けていた局: %d局 / %d局" % (behind, len(trusted)),
+    ]
+    if foe_cards:
+        lines.append("- 投了の直前に相手が出したカード: " + "、".join("%s %d" % kv for kv in foe_cards.most_common()))
+    return lines
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--build", default="", help="このビルドIDの対局だけを集計する")
@@ -462,6 +569,9 @@ def main():
         "--play-time", action="store_true", help="CPU戦・遠征の1局の時間を出す"
     )
     parser.add_argument("--with-actions", action="store_true", help="棋譜も取得する(重い)")
+    parser.add_argument(
+        "--surrenders", action="store_true", help="投了した局を棋譜から再生して局面を出す(棋譜を取得する)"
+    )
     parser.add_argument("--out", default="", help="集計をこのファイルへ書き出す")
     parser.add_argument("--post", action="store_true", help="Discordへ投稿する(--out が要る)")
     args = parser.parse_args()
@@ -473,9 +583,12 @@ def main():
     elif args.play_time:
         report = play_time_report(fetch_stats(project, token, PLAY_TIME_PATH), args.days)
     else:
-        records = fetch_records(project, token, args.with_actions)
+        records = fetch_records(project, token, args.with_actions or args.surrenders)
         fill_started_at(records, project, token)
-        report = summarize(select(records, args), card_names(), args.top)
+        picked = select(records, args)
+        report = summarize(picked, card_names(), args.top)
+        if args.surrenders and picked:
+            report += "\n\n" + surrender_report(picked, replay_records(picked))
     print(report)
 
     if args.out:
