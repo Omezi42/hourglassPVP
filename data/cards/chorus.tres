@@ -30,5 +30,5 @@ rules_text = "攻撃力が体力より多い自分の砂時計すべてを反転
 cannot_attack = false
 is_token = false
 is_spell = true
-art_id = "turn"
+art_id = "wheel"
 emblem = ExtResource("emblem")

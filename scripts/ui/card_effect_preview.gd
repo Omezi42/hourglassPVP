@@ -241,6 +241,7 @@ static func _entry_for_effect(effect: CardEffectData) -> Dictionary:
 		"value": value,
 		"all": all,
 		"ally": is_ally,
+		"aged": effect.condition_scope == CardEnums.ConditionScope.ATTACK_OVER_HEALTH,
 		"trigger": effect.trigger,
 		"self": effect.target == CardEnums.EffectTarget.SELF,
 	}
@@ -272,7 +273,12 @@ func _stage(entry: Dictionary, t: float) -> Dictionary:
 		# 砂術は盤面に自分自身を持たないため「他の」を付けない(GameDesign.md 6章の
 		# 自己除外は、効果を持つ砂時計自身を選べないという駒の制約であり砂術には無い)。
 		stage = CardEffectDemoEffect.on_ally_unit(
-			t, demo, value, entry.get("all", false), not entry.get("spell", false)
+			t,
+			demo,
+			value,
+			entry.get("all", false),
+			not entry.get("spell", false),
+			entry.get("aged", false)
 		)
 	else:
 		stage = CardEffectDemoEffect.stage(demo, t, value)

@@ -357,18 +357,21 @@ static func on_enemy_unit(t: float, demo: int, value: int, all: bool) -> Diction
 ## 味方の砂時計を対象に取る効果(反転 / 砂を落とす)。**攻撃ではないため相手の場は
 ## 一切出さず**、自分の場の中で「持ち主 → 対象の1体」へ光の筋を送るだけにする
 ## (`_stage_grant_keyword()` と同じ語彙)。
+## aged は対象の絞り込み(攻撃力>体力)。老いた駒だけを返し、若い駒は返さずに並べて見せる。
 static func on_ally_unit(
-	t: float, demo: int, value: int, all: bool, exclude_self: bool
+	t: float, demo: int, value: int, all: bool, exclude_self: bool, aged := false
 ) -> Dictionary:
 	var stage := CardEffectStage.empty_stage()
 	var caster := CardEffectStage.piece(6, 0, 6)
 	caster["fade"] = CardEffectStage.seg(t, 0.0, 0.15)
-	var allies: Array = [CardEffectStage.piece(3, 2, 5)]
+	var allies: Array = [CardEffectStage.piece(1, 4, 5) if aged else CardEffectStage.piece(3, 2, 5)]
 	if all:
 		allies.append(CardEffectStage.piece(2, 3, 5))
 	var scope := "自分の砂時計すべて"
 	if not all:
 		scope = "自分の他の砂時計1体" if exclude_self else "自分の砂時計1体"
+	if aged:
+		scope = "攻撃力が体力より多い" + scope
 	if demo == CardEffectPreview.Demo.FX_SWAP_STATS:
 		stage["trigger_note"] = "%sの体力と攻撃力を入れ替える" % scope
 	elif demo == CardEffectPreview.Demo.FX_RAISE_SAND:
@@ -394,5 +397,7 @@ static func on_ally_unit(
 			CardEffectDemoEnemy.apply(ally, demo, value, landed)
 	var pieces: Array = [caster]
 	pieces.append_array(allies)
+	if aged:
+		pieces.append(CardEffectStage.piece(5, 0, 5))
 	stage["own"] = pieces
 	return stage
