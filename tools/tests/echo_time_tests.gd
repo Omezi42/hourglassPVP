@@ -25,6 +25,8 @@ func run(assert_true: Callable) -> void:
 	_test_resonance_fires_flip_trigger()
 	_test_turn_spell_still_survives_on_fresh_unit()
 	_test_encore_gains_flip_right_beyond_initial()
+	_test_chorus_flips_only_aged_allies()
+	_test_chorus_does_not_reflip_chained_unit()
 	_test_set_is_staged()
 
 
@@ -276,6 +278,29 @@ func _test_encore_gains_flip_right_beyond_initial() -> void:
 	)
 
 
+func _test_chorus_flips_only_aged_allies() -> void:
+	var state := _new_match()
+	var aged := _place(state, MatchState.Side.A, _vanilla(6), 0)
+	aged.drop_sand(4)
+	var fresh := _place(state, MatchState.Side.A, _vanilla(6), 1)
+	var foe := _place(state, MatchState.Side.B, _vanilla(6), 0)
+	foe.drop_sand(4)
+	_assert.call(_cast(state, CardLibrary.find_by_id("chorus"), {}), "大合唱を撃てる")
+	_assert.call(aged.health == 4 and aged.attack == 2, "大合唱は攻撃力が体力より多い味方を反転する")
+	_assert.call(state.board[MatchState.Side.A][1] == fresh and fresh.health == 6, "大合唱は若い味方を返さない")
+	_assert.call(foe.health == 2, "大合唱は相手の砂時計を返さない")
+
+
+func _test_chorus_does_not_reflip_chained_unit() -> void:
+	var state := _new_match()
+	var reverb := _place(state, MatchState.Side.A, CardLibrary.find_by_id("reverb"), 0)
+	reverb.drop_sand(4)
+	var aged := _place(state, MatchState.Side.A, _vanilla(6), 1)
+	aged.drop_sand(4)
+	_cast(state, CardLibrary.find_by_id("chorus"), {})
+	_assert.call(reverb.health == 4 and aged.health == 4, "リバーブの連鎖で先に返った駒を、大合唱が返し直さない")
+
+
 func _test_set_is_staged() -> void:
 	_assert.call(CardSetLibrary.has_set(SET_ID), "echo_time is registered")
 	_assert.call(CardSetLibrary.price(SET_ID) == 800, "echo_time costs 800")
@@ -287,3 +312,4 @@ func _test_set_is_staged() -> void:
 		CardSetLibrary.card_ids(SET_ID)[3] == "resonance", "echo_time fourth card is resonance"
 	)
 	_assert.call(CardSetLibrary.card_ids(SET_ID)[4] == "encore", "echo_time fifth card is encore")
+	_assert.call(CardSetLibrary.card_ids(SET_ID)[5] == "chorus", "echo_time sixth card is chorus")

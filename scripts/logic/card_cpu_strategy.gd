@@ -459,8 +459,13 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 			elif effect.target == CardEnums.EffectTarget.ALL_ALLY_UNITS:
 				# 自分の盤面をまとめて反転するのは**得とは限らない**。損になる駒も
 				# あるため、増減をそのまま足し合わせる(負の値になりうる)。
+				# 絞り込み(大合唱)を満たす駒だけが返る。反転トリガーを持つ駒はその価値も積む。
 				for unit in state.units(side):
+					if not CardEffectResolver.eligible_target(unit, effect):
+						continue
 					value += _lifetime_of(unit.attack, unit.health) - float(unit.lifetime_damage())
+					if unit.data.effects_for(CardEnums.Trigger.ON_FLIP).size() > 0:
+						value += FLIP_TRIGGER_BONUS
 			elif effect.target == CardEnums.EffectTarget.ALL_ENEMY_UNITS:
 				for unit in state.units(foe_side):
 					value += _swap_value(unit)

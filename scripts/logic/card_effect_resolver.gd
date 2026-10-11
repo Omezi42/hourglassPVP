@@ -98,7 +98,8 @@ func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Diction
 			)
 			for entry in swap_entries:
 				var target := _unit_at(entry)
-				if target != null and target.flippable():
+				# 返す直前にも条件を見る(先に返した駒の反転トリガーで、既に返った駒を返し直さない)。
+				if target != null and eligible_target(target, effect):
 					target.flip()
 					_state._resolve_flipped(entry["side"], target)
 		CardEnums.EffectType.ADD_TOTAL:
@@ -493,9 +494,9 @@ func _targets(side: int, unit: CardInstance, effect: CardEffectData, hint: Dicti
 			var slot := _slot_of(side, unit)
 			return [] if slot < 0 else [{"side": side, "slot": slot}]
 		CardEnums.EffectTarget.ALL_ENEMY_UNITS:
-			return _all_slots(foe_side)
+			return _all_slots(foe_side, effect)
 		CardEnums.EffectTarget.ALL_ALLY_UNITS:
-			return _all_slots(side)
+			return _all_slots(side, effect)
 		CardEnums.EffectTarget.ENEMY_UNIT:
 			return _single_unit(foe_side, hint, -1, effect)
 		CardEnums.EffectTarget.ALLY_UNIT:
@@ -569,10 +570,12 @@ static func eligible_target(unit: CardInstance, effect: CardEffectData) -> bool:
 	return true
 
 
-func _all_slots(side: int) -> Array:
+## effect を渡すと、絞り込みの条件(eligible_target)を満たす駒だけを返す(大合唱)。
+func _all_slots(side: int, effect: CardEffectData = null) -> Array:
 	var found: Array = []
 	for slot in MatchState.BOARD_SIZE:
-		if _state.board[side][slot] != null:
+		var unit: CardInstance = _state.board[side][slot]
+		if unit != null and (effect == null or eligible_target(unit, effect)):
 			found.append({"side": side, "slot": slot})
 	return found
 
