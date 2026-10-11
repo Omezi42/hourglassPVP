@@ -295,7 +295,8 @@
 		"id": "19",
 		"label": "とどめ問題 #15",
 		"reserved": [
-			"x"
+			"x",
+			"youtube"
 		]
 	},
 	{
@@ -304,7 +305,8 @@
 		"id": "drip",
 		"label": "ドリップ",
 		"reserved": [
-			"x"
+			"x",
+			"youtube"
 		]
 	},
 	{
@@ -313,7 +315,8 @@
 		"id": "20",
 		"label": "とどめ問題 #16",
 		"reserved": [
-			"x"
+			"x",
+			"youtube"
 		]
 	},
 	{
@@ -322,7 +325,8 @@
 		"id": "spike",
 		"label": "スパイク",
 		"reserved": [
-			"x"
+			"x",
+			"youtube"
 		]
 	},
 	{
@@ -331,7 +335,8 @@
 		"id": "6",
 		"label": "とどめ問題 #17",
 		"reserved": [
-			"x"
+			"x",
+			"youtube"
 		]
 	},
 	{
@@ -340,7 +345,8 @@
 		"id": "key",
 		"label": "キー",
 		"reserved": [
-			"x"
+			"x",
+			"youtube"
 		]
 	},
 	{
@@ -349,7 +355,8 @@
 		"id": "21",
 		"label": "とどめ問題 #18",
 		"reserved": [
-			"x"
+			"x",
+			"youtube"
 		]
 	},
 	{
@@ -358,7 +365,8 @@
 		"id": "pike",
 		"label": "パイク",
 		"reserved": [
-			"x"
+			"x",
+			"youtube"
 		]
 	},
 	{
@@ -367,7 +375,8 @@
 		"id": "22",
 		"label": "とどめ問題 #19",
 		"reserved": [
-			"x"
+			"x",
+			"youtube"
 		]
 	},
 	{
@@ -376,7 +385,8 @@
 		"id": "chronos",
 		"label": "クロノス",
 		"reserved": [
-			"x"
+			"x",
+			"youtube"
 		]
 	},
 	{
@@ -419,13 +429,19 @@
 		"date": "2026-10-18",
 		"kind": "puzzle",
 		"id": "24",
-		"label": "とどめ問題 #22"
+		"label": "とどめ問題 #22",
+		"reserved": [
+			"x"
+		]
 	},
 	{
 		"date": "2026-10-18",
 		"kind": "card",
 		"id": "gate",
-		"label": "ゲート"
+		"label": "ゲート",
+		"reserved": [
+			"x"
+		]
 	},
 	{
 		"date": "2026-10-19",
