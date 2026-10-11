@@ -293,85 +293,127 @@
 		"date": "2026-10-11",
 		"kind": "puzzle",
 		"id": "19",
-		"label": "とどめ問題 #15"
+		"label": "とどめ問題 #15",
+		"reserved": [
+			"x"
+		]
 	},
 	{
 		"date": "2026-10-11",
 		"kind": "card",
 		"id": "drip",
-		"label": "ドリップ"
+		"label": "ドリップ",
+		"reserved": [
+			"x"
+		]
 	},
 	{
 		"date": "2026-10-12",
 		"kind": "puzzle",
 		"id": "20",
-		"label": "とどめ問題 #16"
+		"label": "とどめ問題 #16",
+		"reserved": [
+			"x"
+		]
 	},
 	{
 		"date": "2026-10-12",
 		"kind": "card",
 		"id": "spike",
-		"label": "スパイク"
+		"label": "スパイク",
+		"reserved": [
+			"x"
+		]
 	},
 	{
 		"date": "2026-10-13",
 		"kind": "puzzle",
 		"id": "6",
-		"label": "とどめ問題 #17"
+		"label": "とどめ問題 #17",
+		"reserved": [
+			"x"
+		]
 	},
 	{
 		"date": "2026-10-13",
 		"kind": "card",
 		"id": "key",
-		"label": "キー"
+		"label": "キー",
+		"reserved": [
+			"x"
+		]
 	},
 	{
 		"date": "2026-10-14",
 		"kind": "puzzle",
 		"id": "21",
-		"label": "とどめ問題 #18"
+		"label": "とどめ問題 #18",
+		"reserved": [
+			"x"
+		]
 	},
 	{
 		"date": "2026-10-14",
 		"kind": "card",
 		"id": "pike",
-		"label": "パイク"
+		"label": "パイク",
+		"reserved": [
+			"x"
+		]
 	},
 	{
 		"date": "2026-10-15",
 		"kind": "puzzle",
 		"id": "22",
-		"label": "とどめ問題 #19"
+		"label": "とどめ問題 #19",
+		"reserved": [
+			"x"
+		]
 	},
 	{
 		"date": "2026-10-15",
 		"kind": "card",
 		"id": "chronos",
-		"label": "クロノス"
+		"label": "クロノス",
+		"reserved": [
+			"x"
+		]
 	},
 	{
 		"date": "2026-10-16",
 		"kind": "puzzle",
 		"id": "7",
-		"label": "とどめ問題 #20"
+		"label": "とどめ問題 #20",
+		"reserved": [
+			"x"
+		]
 	},
 	{
 		"date": "2026-10-16",
 		"kind": "card",
 		"id": "wall",
-		"label": "ウォール"
+		"label": "ウォール",
+		"reserved": [
+			"x"
+		]
 	},
 	{
 		"date": "2026-10-17",
 		"kind": "puzzle",
 		"id": "23",
-		"label": "とどめ問題 #21"
+		"label": "とどめ問題 #21",
+		"reserved": [
+			"x"
+		]
 	},
 	{
 		"date": "2026-10-17",
 		"kind": "card",
 		"id": "freeze",
-		"label": "フリーズ"
+		"label": "フリーズ",
+		"reserved": [
+			"x"
+		]
 	},
 	{
 		"date": "2026-10-18",
