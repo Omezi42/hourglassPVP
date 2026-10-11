@@ -23,7 +23,10 @@ APIを使わないのは、X API が従量課金で予約の機能を持たず�
   - Chrome のウィンドウ全体が他のウィンドウ(Claude のアプリなど)に完全に覆われている → Windows の遮蔽判定で隠れた扱いになる。
     ユーザーに Chrome を並べて表示したままにしてもらう
   最初に確かめ、`hidden` ならユーザーへ頼む
-- 動画は1本10MB未満(`file_upload` の上限)。超えたら書き出しの設定を見直す
+- 動画は1本10MB未満(`file_upload` の上限)。超えたら書き出しの設定を見直す。上限は1回の browser_batch 全体にかかるので、
+  動画の添付は1回のバッチに1本だけにする
+- YouTube は1日のアップロード数に上限がある(電話番号の確認をしていないチャンネルで約10本)。
+  上限に当たると公開設定の画面に「1日のアップロード数の上限に達しました」と出る。そこで止め、残りは24時間後に回す
 
 ## 手順
 
@@ -47,16 +50,17 @@ python tools/shorts/reserve.py list youtube --days 7
 
 要素は `data-testid` で JS から触る(座標や ref のクリックは効かないことがある)。1本目で JS が要素を見つけられないときは画面を撮ってから触る。
 
-1. `https://x.com/compose/post` を開き、`[role=dialog] [data-testid=tweetTextarea_0]` を JS で `focus()` して `type` で本文を打つ(改行はそのまま入る)。
-   `find` で投稿ダイアログ内の file input の ref を取る
-2. `file_upload` で動画を付ける → `[data-testid=scheduleOption]` を JS で押す → 予約設定の `select`
-   (`SELECTOR_1`=月・`2`=日・`3`=年・`4`=時(24時間制)・`5`=分)を `HTMLSelectElement.prototype` の value セッターで入れて
+1. `https://x.com/compose/post` を開き、`[data-testid=tweetTextarea_0]` を JS で `focus()` して `type` で本文を打つ(改行はそのまま入る)。
+   (ウィンドウが狭いと投稿欄は `[role=dialog]` の外に全面表示される)。`find` で file input の ref を取る
+2. `file_upload` で動画を付け、`[data-testid=attachments]` の文が「準備完了」になるまで JS で待つ
+   (「処理中」のうちに日時を決めると「予約設定」が無効のまま戻らない)→ `[data-testid=scheduleOption]` を JS で押す → 予約設定の `select`
+   (画面上の並び順で 月・日・年・時(24時間制)・分。`SELECTOR_n` の番号は開くたびに増えるので id で引かない)を `HTMLSelectElement.prototype` の value セッターで入れて
    `change` を投げ、「確認する」を押す
-3. **10秒待ってから**確かめて押す。動画のアップロード中に押すと何も起きない。次の3つが揃ったときだけ `[data-testid=tweetButton]`(「予約設定」)を押す
+3. 次の3つが揃ったときだけ `[data-testid=tweetButton]`(「予約設定」)を押す
    - `[data-testid=attachments]` がある
    - `[data-testid="card.wrapper"]`(URLのリンクカード)が無い。リンクカードが出たままなら動画は付いていない
    - `[data-testid=scheduledTweetIndicator]` の文が狙った日時になっている
-4. 画面が `/home` へ移り、`[data-testid=toast]` に「ポストの送信日時: …」が出たら `reserve.py done <日付> <種類> x`
+4. 画面が `/home`(または `/i/graduated-access` の案内)へ移り、`[data-testid=toast]` に「ポストの送信日時: …」が出たら `reserve.py done <日付> <種類> x`
 
 ### 3. YouTube へ入れる(1本ずつ・2回の browser_batch)
 
