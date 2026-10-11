@@ -73,6 +73,7 @@
 | `match_end` / `online_end` | `CardMatchOutcome.finish()`(種別がCPUか、それ以外か) |
 | `online_try` | `Main` のランダム・ランク・ルームの入口 |
 | `tutorial_NN` | `CardMatchTutorial._enter_step()`(NN は台本の手順の番号、2桁) |
+| `tutorial_skip_NN` | `tutorial_skip` と同時に `FunnelService.reach_tutorial_skip(index)` で立てる(NN は飛ばしたときの手順。端末で最初のスキップだけ数え、合計を `tutorial_skip` と揃える) |
 | `ranked_*` | `RankedWaitFunnel`(下記) |
 | `daily_puzzle` | `Main._on_puzzle_stage_selected()`(今日の1問を選んだとき) |
 | `solo_start` / `solo_again` | `CardSoloMapScreen._on_theme_chosen()`。`solo_start` を既に通っていれば `solo_again` |

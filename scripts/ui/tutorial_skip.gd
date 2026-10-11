@@ -16,11 +16,14 @@ const TITLE := "誘導対局を飛ばしますか?"
 const BODY := "おぼえるタブからいつでも遊べます"
 
 var _screen: CardMatchScreen
+## 今の手順の番号を返す(通過数へ飛ばした手順を残すため)。
+var _step_index: Callable
 var _confirm: ConfirmModal
 
 
-func _init(screen: CardMatchScreen, band_size: Vector2) -> void:
+func _init(screen: CardMatchScreen, band_size: Vector2, step_index: Callable) -> void:
 	_screen = screen
+	_step_index = step_index
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	size = band_size
 
@@ -40,6 +43,6 @@ func _on_skip_pressed() -> void:
 
 
 func _on_skip_confirmed() -> void:
-	FunnelService.reach(FunnelService.TUTORIAL_SKIP)
+	FunnelService.reach_tutorial_skip(_step_index.call())
 	_screen.abandon_match()
 	_screen.back_pressed.emit()

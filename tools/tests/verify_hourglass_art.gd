@@ -22,6 +22,10 @@ func _run() -> void:
 	var checked := 0
 	var per_id := {}
 	for art_id in table.entries.keys():
+		# 質感と枠の素材を重ねた絵は参考用の絵(色変換だけ)と一致しない(Architecture.md 4.1節)。
+		if HourglassArt.has_finish(String(art_id)):
+			print("  %-9s 仕上げありのため比べない" % art_id)
+			continue
 		for state in HourglassArt.STATE_FILES.size():
 			var got: Texture2D = HourglassArt.texture(String(art_id), state)
 			var reference := _load_reference(String(art_id), state)

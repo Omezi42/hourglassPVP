@@ -12,6 +12,9 @@ const OUTPUT := "res://scripts/boot/script_load_order.gd"
 const SCAN_DIRS := ["res://scripts", "res://scenes"]
 ## 起動シーンそのものと、この順番のファイルは並べない(並べる前に読み込み済み)。
 const SKIP := ["res://scripts/boot/boot.gd", OUTPUT]
+## `Main` がパスで読み、初めて要るときに作るもの。これを含む参照の輪は並べない(読むと輪ごと
+## 一度にコンパイルされ、タイトルの動きが止まるため)。輪の外の参照先は並べる。
+const DEFERRED := ["res://scripts/ui/card_match_screen.gd"]
 
 var _class_paths := {}
 var _edges := {}
@@ -100,9 +103,12 @@ func _visit(v: String) -> void:
 		elif _on_stack.has(w):
 			_low[v] = mini(_low[v], _index[w])
 	if _low[v] == _index[v]:
+		var component: Array[String] = []
 		while true:
 			var w: String = _stack.pop_back()
 			_on_stack.erase(w)
-			_order.append(w)
+			component.append(w)
 			if w == v:
 				break
+		if not component.any(func(f: String) -> bool: return DEFERRED.has(f)):
+			_order.append_array(component)

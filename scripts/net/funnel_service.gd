@@ -33,6 +33,8 @@ const SOLO_B1_LOSE := "solo_b1_lose"
 const SOLO_B1_QUIT := "solo_b1_quit"
 ## 誘導対局の手順(`tutorial_step()` で番号を付ける)。
 const TUTORIAL_STEP_FORMAT := "tutorial_%02d"
+## 誘導対局を飛ばした手順(`reach_tutorial_skip()` で番号を付ける)。
+const TUTORIAL_SKIP_STEP_FORMAT := "tutorial_skip_%02d"
 ## ランクマッチの最初の待機(`RankedWaitFunnel`)。
 const RANKED_WAIT := "ranked_wait"
 const RANKED_WAIT_SECONDS: Array[int] = [5, 15, 30, 60]
@@ -91,6 +93,19 @@ static func reach_first_solo_battle(step: String, floor_index: int) -> void:
 	if not _enabled or floor_index != 0 or has_reached(SOLO_AGAIN):
 		return
 	reach(step)
+
+
+## 飛ばした手順は端末で最初のスキップだけ数え、合計を `tutorial_skip` と揃える(GameDesign.md 22章)。
+static func reach_tutorial_skip(index: int) -> void:
+	if not _enabled:
+		return
+	_ensure_loaded()
+	if is_excluded() or has_reached(TUTORIAL_SKIP):
+		return
+	var today := today_key()
+	_mark(TUTORIAL_SKIP, today)
+	_mark(tutorial_skip_at(index), today)
+	flush()
 
 
 ## 控えてある段階を送る。サインインできなければ次の機会へ回す。
@@ -153,6 +168,10 @@ static func _bump(days: Dictionary, day: String, step: String) -> void:
 
 static func tutorial_step(index: int) -> String:
 	return TUTORIAL_STEP_FORMAT % index
+
+
+static func tutorial_skip_at(index: int) -> String:
+	return TUTORIAL_SKIP_STEP_FORMAT % index
 
 
 static func ranked_wait_after(seconds: int) -> String:

@@ -641,7 +641,7 @@ func _build() -> void:
 	_band.add_child(_portrait)
 
 	# 帯の右上の「スキップ」。マリガン中も含め、閉じ込めないため常に出す(GameDesign.md 18章)。
-	_skip = TutorialSkip.new(_screen, BAND_RECT.size)
+	_skip = TutorialSkip.new(_screen, BAND_RECT.size, func() -> int: return _index)
 	_band.add_child(_skip)
 
 

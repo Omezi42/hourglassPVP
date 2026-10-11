@@ -1,10 +1,11 @@
 extends RefCounted
 ## 通過数(GameDesign.md 22章 / Architecture.md 10.9節)を、差し替え用クライアントの上で検証する。
 ##
-## **確かめたいのは7点。**同じ段階は1回しか数えないこと、送れなかった段階は控えに残って
+## **確かめたいのは8点。**同じ段階は1回しか数えないこと、送れなかった段階は控えに残って
 ## 次に送り直されること、日ごとに分けて足されること、配信先ごとにも足されること、
 ## 数え始める前から遊んでいた端末を数えないこと、ランクマッチは最初の待機だけを追うこと、
-## 遠征の1戦目は最初の遠征の1段目だけを数えること。
+## 遠征の1戦目は最初の遠征の1段目だけを数えること、
+## 誘導対局を飛ばした手順は最初のスキップだけを数えること。
 
 const FakeClient = preload("res://tools/tests/fake_firestore_client.gd")
 const TEST_SAVE := "user://funnel_test.json"
@@ -78,6 +79,7 @@ func run(assert_true: Callable) -> void:
 	)
 	_check_ranked_wait_first_only(tree)
 	_check_first_solo_battle_only()
+	_check_tutorial_skip_first_only()
 
 	_check_existing_player_excluded()
 
@@ -124,6 +126,22 @@ func _check_first_solo_battle_only() -> void:
 	_assert.call(
 		not FunnelService.has_reached(FunnelService.SOLO_B1_WIN),
 		"a later expedition's first floor should not be counted"
+	)
+
+
+func _check_tutorial_skip_first_only() -> void:
+	FunnelService.reach_tutorial_skip(2)
+	FunnelService.reach_tutorial_skip(5)
+	_assert.call(
+		(
+			FunnelService.has_reached(FunnelService.TUTORIAL_SKIP)
+			and FunnelService.has_reached(FunnelService.tutorial_skip_at(2))
+		),
+		"a skip should be counted with the step it happened on"
+	)
+	_assert.call(
+		not FunnelService.has_reached(FunnelService.tutorial_skip_at(5)),
+		"a later skip should not be counted"
 	)
 
 
