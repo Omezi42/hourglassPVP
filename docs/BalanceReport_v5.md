@@ -10,6 +10,7 @@ v5.0を設計する過程では使い捨てのシミュレータ(現存しない
 
 - `tools/balance/run_v5_simulation.gd` … 混成デッキ同士の自己対戦。GameDesign.md 7章の5指標
 - `tools/balance/run_v5_card_check.gd` … カード1枚の値付け(下記 2章の方式)。`effect=0 values=2,3` で効果の値も振れる
+- `tools/balance/run_card_batch.sh` … 全カード(または `ids=` / `ids=set:<set_id>` で絞ったカード)を2章の方式で順に測り、CSVへ書き出して目標の帯(50±6%、5.3節)から外れたカードを一覧にする。並列で回し、途中で止めても続きから再開できる
 - `tools/card_tuner/server.py` … 上の測定をブラウザから回し、コスト・総量・効果の値・効果文を `.tres` と Hourglasses.md へ書き戻す調整画面(`python tools/card_tuner/server.py` → http://127.0.0.1:8790/)
 
 ---
@@ -109,6 +110,13 @@ v5.0を設計する過程では使い捨てのシミュレータ(現存しない
 
 先手・後手は1戦ごとに入れ替える。**そのカードを入れたデッキの勝率が50%なら
 「同コスト帯の平均と釣り合っている」**と読む。
+
+全カードをまとめて測るときは裏で回す(8並列で全約100枚×800戦が数分〜十数分)。
+
+```
+nohup bash tools/balance/run_card_batch.sh tag=hp24 games=800 seed=42 > tools/balance/out/batch_hp24.log 2>&1 &
+bash tools/balance/run_card_batch.sh report tools/balance/out/card_batch_hp24.csv   # 目標外の一覧だけ出し直す
+```
 
 ---
 
