@@ -48,7 +48,7 @@ static func _stage_damage_plus_flips(t: float, value: int) -> Dictionary:
 	for i in spans.size():
 		var span: Array = spans[i]
 		var p := CardEffectStage.seg(t, span[0], span[1])
-		var piece := CardEffectStage.piece(1, 4, 5) if p >= 0.5 else CardEffectStage.piece(4, 1, 5)
+		var piece := CardEffectStage.piece(4, 1, 5) if p >= 0.5 else CardEffectStage.piece(1, 4, 5)
 		if t >= span[0] and t <= span[1]:
 			piece["flip"] = p
 		if t >= span[1]:
