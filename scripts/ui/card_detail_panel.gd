@@ -86,7 +86,8 @@ static func place_near(cursor: Vector2, panel: Vector2, bounds: Rect2) -> Vector
 	)
 
 
-func show_card(card: CardData) -> void:
+## `rules_text` は対局中にいまの値へ置き換えた札の文(空なら札のまま)。
+func show_card(card: CardData, rules_text := "") -> void:
 	if card == null:
 		clear()
 		return
@@ -100,7 +101,7 @@ func show_card(card: CardData) -> void:
 		_stats.text = "コスト %d  /  砂術" % card.cost
 	else:
 		_stats.text = "コスト %d  /  総量 %d" % [card.cost, card.total_sand]
-	_fill_body(card)
+	_fill_body(card, rules_text if not rules_text.is_empty() else card.rules_text)
 	if _preview != null:
 		_preview.show_card(card)
 	_fit()
@@ -136,15 +137,15 @@ func clear() -> void:
 ## **語として見せるキーワードは語のボタンと説明を並べる**(語だけでは初見に伝わらない)。
 ## 語にしない能力は、カードの面と同じ短い言い換え(「破壊」など)をボタンに出す。
 ## 盤面に出ていない語をここだけで見せると、呼び名が食い違うため(GameDesign.md 6章)。
-func _fill_body(card: CardData) -> void:
+func _fill_body(card: CardData, rules: String) -> void:
 	_clear_body()
 	# 砂術は盤面へ出ないため、砂の進み方の説明を出さない(GameDesign.md 6章)。
 	# 代わりに、盤面の枠を使わないことをその場で読めるようにする。
 	if card.is_spell:
 		_body.add_child(_make_line("砂術。盤面へ出ず、使うとすぐ効果が起きる"))
 		_body.add_child(_make_line("盤面の枠を使わないため、6枠が埋まっていても使える"))
-		if not card.rules_text.is_empty():
-			_body.add_child(_make_line(card.rules_text))
+		if not rules.is_empty():
+			_body.add_child(_make_line(rules))
 		for line in _token_lines(card):
 			_body.add_child(_make_line(line))
 		return
@@ -160,13 +161,13 @@ func _fill_body(card: CardData) -> void:
 		_body.add_child(_make_term_row(KeywordEntries.keyword_entry(keyword)))
 	var triggers := _triggers_of(card)
 	for i in triggers.size():
-		var text: String = card.rules_text if i == 0 else ""
+		var text: String = rules if i == 0 else ""
 		_body.add_child(_make_term_row(KeywordEntries.trigger_entry(triggers[i]), text))
-	if triggers.is_empty() and not card.rules_text.is_empty():
-		_body.add_child(_make_line(card.rules_text))
+	if triggers.is_empty() and not rules.is_empty():
+		_body.add_child(_make_line(rules))
 	if (
 		card.keywords.is_empty()
-		and card.rules_text.is_empty()
+		and rules.is_empty()
 		and not card.cannot_attack
 		and not card.cannot_flip
 	):

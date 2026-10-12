@@ -59,6 +59,10 @@ func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Diction
 			else:
 				_strike(side, from_slot, side, -1, CardEnums.EffectVisualStyle.PULSE, origin)
 			_state.draw(side, effect.value)
+		CardEnums.EffectType.DAMAGE_PLAYER_PLUS_FLIPS:
+			var to_side := _player_side_for(side, effect.target)
+			_strike(side, from_slot, to_side, -1, CardEnums.EffectVisualStyle.STRIKE, origin)
+			_state.damage_player(to_side, flip_damage(_state, side, effect))
 		CardEnums.EffectType.DAMAGE_PLAYER_PER_ENEMY_UNIT:
 			_strike(side, from_slot, foe_side, -1, CardEnums.EffectVisualStyle.STRIKE, origin)
 			_state.damage_player(foe_side, _state.units(foe_side).size() * effect.value)
@@ -397,6 +401,23 @@ static func castable(state: MatchState, side: int, card: CardData) -> bool:
 				if grave_choices(state, side).is_empty() or state.empty_slots(side).is_empty():
 					return false
 	return true
+
+
+## クレッシェンドの与えるダメージ。札の値に、このターン自分の砂時計が反転した回数を足す。
+static func flip_damage(state: MatchState, side: int, effect: CardEffectData) -> int:
+	return effect.value + int(state.flips_this_turn.get(side, 0))
+
+
+## 対局中に見せる札の文。反転の回数で伸びるダメージは、札の「%dダメージ」をいまの値へ置き換える
+## (数えながら遊ばせないため。GameDesign.md 6章)。
+static func live_rules_text(state: MatchState, side: int, card: CardData) -> String:
+	var text := card.rules_text
+	for effect in card.effects_for(CardEnums.Trigger.ON_PLAY):
+		if effect.effect_type == CardEnums.EffectType.DAMAGE_PLAYER_PLUS_FLIPS:
+			text = text.replace(
+				"%dダメージ" % effect.value, "%dダメージ" % flip_damage(state, side, effect)
+			)
+	return text
 
 
 ## 出したときに墓地から1体を選ばせる効果(レリック・目覚めの砂)。無ければ null。

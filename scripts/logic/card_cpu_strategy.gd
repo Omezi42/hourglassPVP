@@ -117,7 +117,8 @@ func choose_action(state: MatchState, side: int) -> Dictionary:
 		action = step.call(state, side)
 		if not action.is_empty():
 			return action
-	# 反転済みの駒を戻すカード(リピート)は、攻撃と反転を済ませた後でないと空振りする。
+	# 反転済みの駒を戻すカード(リピート)と反転の回数で伸びる砂術(クレッシェンド)は、
+	# 攻撃と反転を済ませた後でないと空振りする。
 	action = _choose_play(state, side, true)
 	if not action.is_empty():
 		return action
@@ -287,7 +288,7 @@ func _choose_play(state: MatchState, side: int, flip_reset_turn := false) -> Dic
 	var hand: Array = state.hand[side]
 	for index in hand.size():
 		var card: CardData = hand[index]
-		if _resets_flips(card) != flip_reset_turn:
+		if _after_flips(card) != flip_reset_turn:
 			continue
 		# 砂術は「出す」の中で一緒に選ぶ(Architecture.md 8章)。段を増やさず、
 		# 盤面へ置くカードと同じ物差しで比べる。
@@ -429,6 +430,8 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 			value = effect.value * FACE_WEIGHT
 		CardEnums.EffectType.DAMAGE_PLAYER_PER_ENEMY_UNIT:
 			value = state.units(foe_side).size() * effect.value * FACE_WEIGHT
+		CardEnums.EffectType.DAMAGE_PLAYER_PLUS_FLIPS:
+			value = CardEffectResolver.flip_damage(state, side, effect) * FACE_WEIGHT
 		CardEnums.EffectType.DRAW:
 			value = effect.value * 3.0
 		CardEnums.EffectType.DESTROY_UNIT:
@@ -838,10 +841,11 @@ func _choose_flip(state: MatchState, side: int) -> Dictionary:
 	return best
 
 
-static func _resets_flips(card: CardData) -> bool:
+static func _after_flips(card: CardData) -> bool:
 	for effect in card.effects_for(CardEnums.Trigger.ON_PLAY):
-		if effect.effect_type == CardEnums.EffectType.RESET_FLIP:
-			return true
+		match effect.effect_type:
+			CardEnums.EffectType.RESET_FLIP, CardEnums.EffectType.DAMAGE_PLAYER_PLUS_FLIPS:
+				return true
 	return false
 
 

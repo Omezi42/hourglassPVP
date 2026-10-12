@@ -60,11 +60,18 @@ func hover_card(card: CardData, off_board := false) -> void:
 		return
 	_off_board = off_board
 	_timer.stop()
-	_panel.show_card(card)
+	_panel.show_card(card, "" if off_board else _live_text(card))
 	_panel.position = _place()
 	_panel.visible = true
 	# 履歴タイル・ログ(あとから add_child した子)より手前へ出す。
 	_panel.move_to_front()
+
+
+## 自分の手札の札は、反転の回数で伸びる数字をいまの値で見せる(GameDesign.md 6章)。
+func _live_text(card: CardData) -> String:
+	if _screen.state == null or not _screen.state.hand[_screen.my_side].has(card):
+		return ""
+	return CardEffectResolver.live_rules_text(_screen.state, _screen.my_side, card)
 
 
 ## **カーソルの近くへ置く**(GameDesign.md 9章)。置き場の規則そのものは

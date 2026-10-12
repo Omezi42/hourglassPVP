@@ -128,6 +128,8 @@ enum EffectType {
 	RESET_FLIP,
 	## 対象プレイヤーの反転権の残り回数を value 増やす(反響の刻)。上限は無い。
 	GAIN_FLIP_RIGHT,
+	## 対象プレイヤーへ value + このターン自分の砂時計が反転した回数 のダメージ(反響の刻)。
+	DAMAGE_PLAYER_PLUS_FLIPS,
 }
 
 ## コンボ系カードの発動条件が確認する範囲(GameDesign.md 6章)。

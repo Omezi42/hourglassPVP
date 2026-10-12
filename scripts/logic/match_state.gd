@@ -116,6 +116,9 @@ var coin_available: Dictionary = {}
 ## 反転権の残り回数(Side をキーにした int)。対局開始時に先手・後手それぞれの
 ## 総量が入り、使うたびに減る。ターンをまたいで持ち越せる。
 var flip_right_remaining: Dictionary = {}
+## このターン、その側の砂時計が反転した回数(Side をキーにした int)。起こし方を問わず数え、
+## 手番の始めに両側とも0へ戻す(クレッシェンドが読む。GameDesign.md 6章)。
+var flips_this_turn: Dictionary = {}
 ## 側ごとの、連続した時間切れの回数。持ち時間を短くする段(GameDesign.md 5章)と
 ## 敗北の判定の両方がこれを見る。**手として送り合うため両者で同じ値になる。**
 var turn_forfeits: Dictionary = {}
@@ -271,6 +274,7 @@ func empty_slots(side: int) -> Array:
 func _begin_turn() -> void:
 	turn_count += 1
 	var side := current_turn
+	flips_this_turn.clear()
 	max_mana[side] = mini(max_mana[side] + 1, MAX_MANA)
 	mana[side] = max_mana[side]
 	mana_changed.emit(side, mana[side], max_mana[side])
@@ -524,6 +528,7 @@ func use_flip_right(side: int, target_side: int, slot: int) -> bool:
 ## 呼び出し側の `_cleanup_dead()` に任せる——逆さ砂のように反転の後へ総量を足す効果が
 ## 続くとき、その途中で砕いてはいけないため。
 func _resolve_flipped(side: int, unit: CardInstance) -> void:
+	flips_this_turn[side] = int(flips_this_turn.get(side, 0)) + 1
 	_fire(side, unit, CardEnums.Trigger.ON_FLIP, {})
 	# 相手の反転への反応(レゾナンス)。返した駒がさらに相手側を反応させるため、
 	# 効果側は「攻撃力が体力より多い」駒だけを返す(返すと条件から外れ、連鎖が必ず止まる)。

@@ -27,6 +27,8 @@ func run(assert_true: Callable) -> void:
 	_test_encore_gains_flip_right_beyond_initial()
 	_test_chorus_flips_only_aged_allies()
 	_test_chorus_does_not_reflip_chained_unit()
+	_test_crescendo_without_flips_deals_base()
+	_test_crescendo_counts_own_flips_this_turn()
 	_test_set_is_staged()
 
 
@@ -301,6 +303,37 @@ func _test_chorus_does_not_reflip_chained_unit() -> void:
 	_assert.call(reverb.health == 4 and aged.health == 4, "リバーブの連鎖で先に返った駒を、大合唱が返し直さない")
 
 
+func _test_crescendo_without_flips_deals_base() -> void:
+	var state := _new_match()
+	var before := int(state.hp[MatchState.Side.B])
+	_assert.call(_cast(state, CardLibrary.find_by_id("crescendo"), {}), "クレッシェンドを撃てる")
+	_assert.call(int(state.hp[MatchState.Side.B]) == before - 1, "反転していなければ1ダメージ")
+
+
+## 通常の反転と反転権で返した自分の駒は数え、反転権で返した相手の駒は数えない。手番が変わると0に戻る。
+func _test_crescendo_counts_own_flips_this_turn() -> void:
+	var state := _new_match()
+	_aged(state, MatchState.Side.A, "sand", 0)
+	_aged(state, MatchState.Side.A, "sand", 1)
+	_aged(state, MatchState.Side.B, "sand", 0)
+	state.flip_right_remaining[MatchState.Side.A] = 2
+	state.flip(MatchState.Side.A, 0)
+	state.use_flip_right(MatchState.Side.A, MatchState.Side.A, 1)
+	state.use_flip_right(MatchState.Side.A, MatchState.Side.B, 0)
+	var crescendo := CardLibrary.find_by_id("crescendo")
+	_assert.call(
+		CardEffectResolver.live_rules_text(state, MatchState.Side.A, crescendo).begins_with(
+			"相手プレイヤーに3ダメージ"
+		),
+		"手札の札の数字は、このターンの自分の反転の回数で伸びる"
+	)
+	var before := int(state.hp[MatchState.Side.B])
+	_cast(state, crescendo, {})
+	_assert.call(int(state.hp[MatchState.Side.B]) == before - 3, "自分の反転2回で3ダメージ")
+	state.end_turn()
+	_assert.call(int(state.flips_this_turn.get(MatchState.Side.A, 0)) == 0, "反転の回数は手番の始めに0へ戻る")
+
+
 func _test_set_is_staged() -> void:
 	_assert.call(CardSetLibrary.has_set(SET_ID), "echo_time is registered")
 	_assert.call(CardSetLibrary.price(SET_ID) == 800, "echo_time costs 800")
@@ -313,3 +346,6 @@ func _test_set_is_staged() -> void:
 	)
 	_assert.call(CardSetLibrary.card_ids(SET_ID)[4] == "encore", "echo_time fifth card is encore")
 	_assert.call(CardSetLibrary.card_ids(SET_ID)[5] == "chorus", "echo_time sixth card is chorus")
+	_assert.call(
+		CardSetLibrary.card_ids(SET_ID)[6] == "crescendo", "echo_time seventh card is crescendo"
+	)

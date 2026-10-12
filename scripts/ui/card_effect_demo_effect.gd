@@ -33,7 +33,50 @@ static func stage(demo: int, t: float, value: int) -> Dictionary:
 			return _stage_reset_flip(t)
 		CardEffectPreview.Demo.FX_GAIN_FLIP_RIGHT:
 			return _stage_gain_flip_right(t, value)
+		CardEffectPreview.Demo.FX_DAMAGE_PLUS_FLIPS:
+			return _stage_damage_plus_flips(t, value)
 	return {}
+
+
+## 味方2体が順に反転し、そのたびにダメージが1ずつ伸びてから相手プレイヤーへ届く。
+static func _stage_damage_plus_flips(t: float, value: int) -> Dictionary:
+	var stage := CardEffectStage.empty_stage()
+	var spans := [[0.05, 0.25], [0.3, 0.5]]
+	var pieces: Array = []
+	var pops: Array = []
+	var flips := 0
+	for i in spans.size():
+		var span: Array = spans[i]
+		var p := CardEffectStage.seg(t, span[0], span[1])
+		var piece := CardEffectStage.piece(1, 4, 5) if p >= 0.5 else CardEffectStage.piece(4, 1, 5)
+		if t >= span[0] and t <= span[1]:
+			piece["flip"] = p
+		if t >= span[1]:
+			flips += 1
+			if t < 0.62:
+				pops.append(
+					CardEffectStage.pop(
+						"own", i, "+1", UiPalette.GLOW_AMBER, CardEffectStage.seg(t, span[1], 0.62)
+					)
+				)
+		pieces.append(piece)
+	var damage := value + flips
+	stage["trigger_note"] = "相手プレイヤーへ%dダメージ(反転するたび+1)" % damage
+	if t >= 0.62:
+		stage["beams"] = [
+			CardEffectStage.beam(["own", 0], ["foe_hp", 0], CardEffectStage.seg(t, 0.62, 0.8))
+		]
+	if t >= 0.8:
+		stage["foe_hp"] = 1.0 - float(damage) / CardEffectPreview.HP_MAX
+		pops.append(
+			CardEffectStage.pop(
+				"foe_hp", 0, "-%d" % damage, InkFigure.RED, CardEffectStage.seg(t, 0.8, 1.0)
+			)
+		)
+	stage["pops"] = pops
+	stage["own"] = pieces
+	stage["foe"] = [CardEffectStage.piece(4, 1, 5)]
+	return stage
 
 
 static func _stage_gain_flip_right(t: float, value: int) -> Dictionary:

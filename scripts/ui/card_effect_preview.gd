@@ -59,6 +59,8 @@ enum Demo {
 	FX_RESET_FLIP,
 	## 反転権の残り回数が増える(反響の刻)。
 	FX_GAIN_FLIP_RIGHT,
+	## 自分の砂時計が反転するたびに、相手プレイヤーへのダメージが伸びる(反響の刻)。
+	FX_DAMAGE_PLUS_FLIPS,
 }
 
 const MIN_SIZE := Vector2(320, 200)
@@ -223,6 +225,8 @@ static func _entry_for_effect(effect: CardEffectData) -> Dictionary:
 			demo = Demo.FX_RESET_FLIP
 		CardEnums.EffectType.GAIN_FLIP_RIGHT:
 			demo = Demo.FX_GAIN_FLIP_RIGHT
+		CardEnums.EffectType.DAMAGE_PLAYER_PLUS_FLIPS:
+			demo = Demo.FX_DAMAGE_PLUS_FLIPS
 	if demo == Demo.FX_DESTROY_UNIT and is_ally:
 		demo = Demo.FX_SACRIFICE
 	# 対象の絞り込み(攻撃力>体力)を持つ破壊は、効かない駒があることまで見せる。
