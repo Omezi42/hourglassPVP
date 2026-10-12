@@ -3,7 +3,23 @@ extends RefCounted
 ## カード効果(トリガー × ターゲット × エフェクト)の評価と適用を1箇所に集約する。
 ## 新しいエフェクト種別を足すときは、ここへ1分岐を加えるだけで済む形を保つ。
 
+## 効果が別のトリガーを呼ぶ入れ子の深さの上限。仕様上の連鎖は必ず止まる(反転は対象を「攻撃力が体力より多い」駒に
+## 絞り、被弾の打ち合いは砂が尽きる)ため、ここへ達するのは不具合のときだけ。対局が止まらなくなる代わりに、
+## ログへ出してその先を打ち切る。値は盤面の砂の総量ぶん続く被弾の打ち合いより大きく、
+## GDScriptの呼び出しの深さの上限(1024。1段に5つ積む)より小さく取る。
+const MAX_CHAIN_DEPTH := 160
+## 1つの起点から連なる解決の回数の上限。深さだけでは、1段ごとに枝分かれする連鎖の総量を抑えられないため。
+const MAX_CHAIN_STEPS := 4096
+
+## この対局で達した最も深い入れ子・最も長い連鎖と、上限で打ち切った連鎖の数(網羅テストが見る)。
+var peak_depth := 0
+var peak_steps := 0
+var overflow_count := 0
+
 var _state: MatchState
+var _depth := 0
+var _steps := 0
+var _cut_off := false
 
 
 func _init(p_state: MatchState) -> void:
@@ -13,9 +29,34 @@ func _init(p_state: MatchState) -> void:
 ## unit が持つ trigger の効果をすべて適用する。
 ## hint は対象を選ばせる効果のための指定 {"side":..., "slot":...}。
 func resolve(side: int, unit: CardInstance, trigger: int, hint: Dictionary) -> void:
+	if _depth == 0:
+		_steps = 0
+		_cut_off = false
+	if _depth >= MAX_CHAIN_DEPTH or _steps >= MAX_CHAIN_STEPS:
+		_cut_off_chain(unit, trigger)
+		return
+	_depth += 1
+	_steps += 1
+	peak_depth = maxi(peak_depth, _depth)
+	peak_steps = maxi(peak_steps, _steps)
 	for effect in unit.effects_for(trigger):
 		if _condition_met(side, unit, effect):
 			_apply(side, unit, effect, hint)
+	_depth -= 1
+
+
+## 打ち切りは1つの連鎖につき1度だけ記録する(巻き戻る途中の呼び出しも同じ理由で弾かれるため)。
+func _cut_off_chain(unit: CardInstance, trigger: int) -> void:
+	if _cut_off:
+		return
+	_cut_off = true
+	overflow_count += 1
+	push_error(
+		(
+			"効果の連鎖が上限に達したため打ち切った: %s trigger=%d depth=%d steps=%d"
+			% [unit.data.id, trigger, _depth, _steps]
+		)
+	)
 
 
 ## コンボ系カードの発動条件(GameDesign.md 6章)。TARGET は対象そのものの絞り込みで
