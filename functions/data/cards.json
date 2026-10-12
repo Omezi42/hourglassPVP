@@ -999,6 +999,16 @@
 			"is_spell": true,
 			"pool_index": 100,
 			"total_sand": 0
+		},
+		{
+			"cannot_attack": false,
+			"cost": 2,
+			"describe": "相手プレイヤーに1ダメージを与える。\nこのターン自分の砂時計が反転するたび、このダメージ+1",
+			"display_name": "クレッシェンド",
+			"id": "crescendo",
+			"is_spell": true,
+			"pool_index": 101,
+			"total_sand": 0
 		}
 	]
 }
