@@ -20,7 +20,7 @@ const TRACK_PATHS := {
 ## (GameDesign.md 9章)。
 const TRACK_GAIN_DB := {
 	Track.TITLE: -9.9,
-	Track.HOME: 2.7,
+	Track.HOME: 8.2,
 	Track.MATCH: 4.1,
 }
 
@@ -39,7 +39,7 @@ const SILENT_DB := -80.0
 ## トラック未指定を表す。enumの値と衝突しない負値を使う。
 const NO_TRACK := -1
 ## Web版ではBGMをpckへ入れず、ここから実行時に取りに行く(Architecture.md 4.1.6節)。
-## 曲は合計8.8MBあり、pckへ入れると起動待ちがそのぶん延びるため。
+## 曲は合計8.6MBあり、pckへ入れると起動待ちがそのぶん延びるため。
 ## unityroomへはpckだけを上げる運用のため、index.htmlの隣へ素のoggを置く形は使えない。
 ## 置き場所はリポジトリそのもので、jsDelivr(CORS対応の無料CDN)経由で読む。
 const EXTERNAL_BGM_BASE := "https://cdn.jsdelivr.net/gh/Omezi42/hourglassPVP@main/assets/bgm/"

@@ -22,10 +22,10 @@
 | ファイル | 曲 | 演奏 | 出所 | ライセンス |
 |---|---|---|---|---|
 | `title.ogg` | ムソルグスキー「展覧会の絵」より「キエフの大門」 | 演奏者不明(musopen.org 提供) | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Modest_Mussorgsky_-_pictures_at_an_exhibition_-_x._la_grande_porte_de_kiev_-_allegro_alla_breve._maestoso._con_grandezza.ogg)(出所は musopen.org) | パブリックドメイン |
-| `home.ogg` | エリック・サティ「ジムノペディ第1番」 | Robin Alciatore | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Erik_Satie_-_gymnopedies_-_la_1_ere._lent_et_douloureux.ogg)(出所は musopen.org) | パブリックドメイン(録音者による放棄) |
+| `home.ogg` | J.S.バッハ「平均律クラヴィーア曲集 第1巻」前奏曲 第1番 ハ長調 BWV846 | Kimiko Ishizaka | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Kimiko_Ishizaka_-_Bach_-_Well-Tempered_Clavier,_Book_1_-_01_Prelude_No._1_in_C_major,_BWV_846.ogg)(出所は [Open Well-Tempered Clavier](https://welltemperedclavier.org/)) | CC0 |
 | `match.ogg` | J.S.バッハ「ゴルトベルク変奏曲 BWV988」アリア | Kimiko Ishizaka | [Open Goldberg Variations](https://opengoldbergvariations.org/) / [Internet Archive](https://archive.org/details/The_Open_Goldberg_Variations-11823) | CC0 |
 
-Open Goldberg Variations は、Kickstarterで資金を集めて録音と楽譜をまるごとCC0で公開した企画。
+Open Goldberg Variations と Open Well-Tempered Clavier は、いずれも Kimiko Ishizaka が資金を集めて録音と楽譜をまるごとCC0で公開した企画。
 
 `title.ogg` は元の録音(5分28秒・7.0MB)の**冒頭100秒をOggのページ境界でそのまま切り出したもの**
 (2.1MB)。タイトル画面はすぐに抜ける画面であり、曲の全長をpckへ入れるとWeb配信のロード時間に
