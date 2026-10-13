@@ -193,6 +193,8 @@ v1.0(位相制)の画面・クラス・`data/hourglasses/*.tres` は削除済み
 | `primary_action` | ROUNDED_RECT | NONE | 塗りつぶした真鍮の面(`filled`) |
 | `icon_menu` | ROUNDED_RECT | MENU(CENTER) | ホームのハンバーガー |
 | `icon_discord` | ROUNDED_RECT | DISCORD(CENTER) | 設定メニューのDiscord導線 |
+| `icon_x` | ROUNDED_RECT | X(CENTER) | 設定メニューのX導線 |
+| `icon_youtube` | ROUNDED_RECT | YOUTUBE(CENTER) | 設定メニューのYouTube導線 |
 
   - **`.tres` を増やすときは、それを読む `CodedButton` のグループ定数を必ず同時に足す**(読まれない `.tres` は使っているか判定できなくなる)
   - `UiPaint.Emblem.HOURGLASS` は多角形ではなく取り込みアイコン(`assets/ui/icons/hourglass.png`)を `UiPaint.draw_icon()` で描く(タイトル・通貨・行動の列・空の案内などすべてがこの1か所を通る)。反転権のボタンも同じ `draw_icon()` を使う

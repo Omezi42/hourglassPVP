@@ -58,11 +58,15 @@ Open Goldberg Variations と Open Well-Tempered Clavier は、いずれも Kimik
 
 ## 外部サービスのマーク(`assets/ui/brands/`)
 
-`discord_mark.svg` は Discord のシンボル。SVGそのものは
-[simple-icons](https://github.com/simple-icons/simple-icons)(リポジトリはCC0)から取り込み、
-**塗りを白へ変えただけ**で形は触っていない。マーク自体は Discord Inc. の商標であり、
-公式サーバーへの導線を示す目的でのみ使う(Discordのブランドガイドが認める blurple / 白 / 黒
-のうち白を使っている)。**形を作り替えたり、真鍮の紋章として塗り替えたりしない。**
+いずれも [simple-icons](https://github.com/simple-icons/simple-icons)(リポジトリはCC0)から取り込み、
+**塗りを白へ変えただけ**で形は触っていない。マーク自体は各社の商標であり、ホームのメニューから
+公式の窓口へ案内する目的でのみ使う。**形を作り替えたり、真鍮の紋章として塗り替えたりしない。**
+
+| ファイル | マーク | 商標 | 色の規定 |
+|---|---|---|---|
+| `discord_mark.svg` | Discord のシンボル | Discord Inc. | blurple / 白 / 黒 のうち白 |
+| `x_mark.svg` | X のロゴ | X Corp. | 黒 / 白 のうち白 |
+| `youtube_mark.svg` | YouTube のアイコン | Google LLC | 赤 / 白 / ほぼ黒 のうち白(他の2つとそろえるため) |
 
 ---
 

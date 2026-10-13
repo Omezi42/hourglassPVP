@@ -5,8 +5,21 @@ extends RefCounted
 ## Control._draw()側からもRID(get_canvas_item())を渡せば同じ関数を共用できる。
 
 ## ボタン種別を示す紋章(エンブレム)の絵柄。CodedButtonStyle.emblemから参照される。
+## 値は .tres に整数で保存されるため、新しい絵柄は末尾へ足す。
 enum Emblem {
-	NONE, HOURGLASS, SWAP_ARROWS, BENCH, CHECK, ADVANCE, AWAKEN, HEAL, STRIKE, MENU, DISCORD
+	NONE,
+	HOURGLASS,
+	SWAP_ARROWS,
+	BENCH,
+	CHECK,
+	ADVANCE,
+	AWAKEN,
+	HEAL,
+	STRIKE,
+	MENU,
+	DISCORD,
+	X,
+	YOUTUBE
 }
 
 const GRAIN_SIZE := 64
@@ -17,9 +30,9 @@ const EMBLEM_OUTLINE_WIDTH := 3.0
 const EMBLEM_HIGHLIGHT_WIDTH := 1.6
 const EMBLEM_CHECK_WIDTH_RATIO := 0.22
 const EMBLEM_CHECK_MIN_WIDTH := 3.0
-## Discordのマークを描く大きさ(draw_emblemのsizeに対する比率)。他の紋章が使う
+## 外部サービスのマークを描く大きさ(draw_emblemのsizeに対する比率)。他の紋章が使う
 ## 単位座標の広がりと揃え、額縁の内側へ収まる値にしてある。
-const DISCORD_ICON_RATIO := 0.55
+const BRAND_MARK_RATIO := 0.55
 ## 取り込みアイコンの縁取りの太さ(アイコンの半辺に対する比)。白いシルエットを縁の色で
 ## 周囲へずらして敷いてから面の色を重ね、多角形の紋章と同じ浮き彫りに見せる。
 const ICON_OUTLINE_RATIO := 0.14
@@ -196,11 +209,15 @@ static var _menu_bar_bottom_highlight := PackedVector2Array(
 	[Vector2(-0.45, 0.37), Vector2(0.45, 0.37)]
 )
 
-## Discord:公式サーバーへの導線に添えるマーク。**多角形で似せず、Discord公式の
-## シンボルをそのまま使う**(assets/ui/brands/discord_mark.svg、出所は assets/CREDITS.md)。
+## 公式の窓口への導線に添える外部サービスのマーク。**多角形で似せず、各社の公式の
+## シンボルをそのまま使う**(assets/ui/brands/、出所は assets/CREDITS.md)。
 ## 他の紋章と違って真鍮の浮き彫りにしないのは、ブランドのマークを勝手に塗り替えないため
-## (Discordの規定は blurple / 白 / 黒 のいずれかで使うことを求めている)。
-static var _discord_texture: Texture2D = preload("res://assets/ui/brands/discord_mark.svg")
+## (どの規定も白の単色を認めている)。
+static var _brand_textures := {
+	Emblem.DISCORD: preload("res://assets/ui/brands/discord_mark.svg"),
+	Emblem.X: preload("res://assets/ui/brands/x_mark.svg"),
+	Emblem.YOUTUBE: preload("res://assets/ui/brands/youtube_mark.svg"),
+}
 
 
 ## 4隅の半径を個別指定できる角丸矩形の外周点列を返す(TAB形状などの非対称角丸に対応)。
@@ -508,8 +525,8 @@ static func draw_emblem(ci: RID, emblem: Emblem, center: Vector2, size: float) -
 			_emblem_fill(ci, center, size, _menu_bar_top_points, _menu_bar_top_highlight)
 			_emblem_fill(ci, center, size, _menu_bar_mid_points, _menu_bar_mid_highlight)
 			_emblem_fill(ci, center, size, _menu_bar_bottom_points, _menu_bar_bottom_highlight)
-		Emblem.DISCORD:
-			_emblem_discord(ci, center, size)
+		Emblem.DISCORD, Emblem.X, Emblem.YOUTUBE:
+			_emblem_brand(ci, _brand_textures[emblem], center, size)
 		_:
 			pass
 
@@ -590,13 +607,11 @@ static func _emblem_check(ci: RID, center: Vector2, size: float) -> void:
 	_draw_polyline_solid(ci, highlight, UiPalette.BRASS_HIGHLIGHT, EMBLEM_HIGHLIGHT_WIDTH)
 
 
-## Discordのマーク。公式のシンボルを白で敷くだけにする(塗り替えない)。
-static func _emblem_discord(ci: RID, center: Vector2, size: float) -> void:
-	var half: float = size * DISCORD_ICON_RATIO
+## 外部サービスのマーク。公式のシンボルを白で敷くだけにする(塗り替えない)。
+static func _emblem_brand(ci: RID, texture: Texture2D, center: Vector2, size: float) -> void:
+	var half: float = size * BRAND_MARK_RATIO
 	var rect := Rect2(center - Vector2(half, half), Vector2(half, half) * 2.0)
-	RenderingServer.canvas_item_add_texture_rect(
-		ci, rect, _discord_texture.get_rid(), false, Color.WHITE
-	)
+	RenderingServer.canvas_item_add_texture_rect(ci, rect, texture.get_rid(), false, Color.WHITE)
 
 
 ## 錠前。暗い円の上へ真鍮の錠を描く(掛け金の弧 + 胴)。まだ使えないものの印として
