@@ -13,7 +13,7 @@ extends Control
 ## 設置:台座の少し上から落ちて着地する。
 const LAND_DURATION := 0.26
 const LAND_HEIGHT := 34.0
-## 看板の演出の重い着地(クロノス。GameDesign.md 9章)。高くから、少し長く落ちる。
+## カードの演出の重い着地(GameDesign.md 9章)。高くから、少し長く落ちる。
 const HEAVY_LAND_DURATION := 0.38
 const HEAVY_LAND_HEIGHT := 96.0
 ## 着地の砂ぼこりを出し始める進捗。
@@ -87,10 +87,11 @@ func land_offset() -> float:
 	return -_land_height * left * left
 
 
-func play_land(heavy := false) -> void:
+## `time_rate` はカードの演出の短縮版(GameDesign.md 9章)で尺を揃えるための割合。
+func play_land(heavy := false, time_rate := 1.0) -> void:
 	_land_height = HEAVY_LAND_HEIGHT if heavy else LAND_HEIGHT
 	var duration := HEAVY_LAND_DURATION if heavy else LAND_DURATION
-	_land_tween = _restart(_land_tween, _set_land, duration)
+	_land_tween = _restart(_land_tween, _set_land, duration * time_rate)
 
 
 ## 破壊された。**枠が空になった後も描き続ける**ため、絵と位置をここで受け取る。

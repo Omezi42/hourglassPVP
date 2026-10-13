@@ -87,13 +87,22 @@
 - **`effect_drawn(source_side, source_slot, count)`** は駒が盤面上にあるときだけ発行し、`play_spark()`(紋章の周りの光の輪)を呼ぶ。armed/持ち越しは持たない(タイミングのズレが実害にならない)
 - `EmblemStrikeFx.impact` で演出をまとめて出し、`finished` で `_screen.on_strike_finished()`(`refresh()` を含む)。`_finish_action()` は `_strike.play()` に加えて `_effect_strike.busy()` も見る
 
-**看板の演出(`CardData.signature_fx`。GameDesign.md 9章)**
+**カードの演出(GameDesign.md 9章)**
 
-- **効果が届くもの**(クロックタワー・砂塵嵐・時間停止・時の裁き)は `CardMatchEffectStrike.on_effect_struck*()` が `SignatureStrikeFx.handles()` を見て、`EmblemStrikeFx` の代わりに `SignatureStrikeFx.play(kind, from, targets)` へ渡す。armed・持ち越し・`_on_impact()` は紋章と共通で、**変えるのは届くまでの見せ方だけ**
-- 波紋・砂の帯のように対象へ順に届くものは、届いた対象ごとに `hit(index)` を出す。受け口の `_on_signature_hit()` はその枠の被ダメージの砂の飛散だけを先に出し、揺れ・破壊・効果音は最後の `impact` でまとめて出す
-- **場に出たときのもの**(クロノス)は `CardMatchEffects._on_unit_played()` が `CardView.play_land(true)`(重い着地)と `SignatureLandFx.play_chronos()` を呼ぶ。`landed` で卓を最大で揺らす。盤面の状態を持たないため armed にしない。置く音は `CardMatchSound` が鳴らさず、`SignatureLandFx` が専用の音を鳴らす
-- 絵の部品(鐘・天秤・歯車の輪・砂の帯・昇る砂粒)は `SignaturePaint` の static 関数。尺は効果音(`tools/build_sfx.py` の `sig_*`)の打点と同じ値で揃える
-- 枚数の上限(砂へ還す・時の逆流を含めて8枚)は `emblem_fx_tests.gd` が見張る
+カードごとの演出は**データではなくコード**で持つ(動きがカードごとに違い、値の組み合わせでは表せないため)。
+
+| 置き場所 | 役目 |
+|---|---|
+| `scripts/ui/signature/moves/{id}_entrance.gd` / `{id}_effect.gd` | 1枚ぶんの演出。`SignatureMove` を継ぎ、`impact_at()`(着弾 / 落ちきる瞬間)・`duration()`・`draw(item, t)` を書く。順に届く演出だけ `reaches(index, t)` を、重く落ちる登場は `heavy_land()` を、専用の音は `sound()` を上書きする |
+| `SignatureLibrary`(`signature_library.gd`) | カード id → 演出の表。`ENTRANCES`(場に出たとき)と `EFFECTS`(紋章が飛ぶ場面の代わり)。**カードに演出を付けるときはファイルを1つ置いてここへ1行足すだけ** |
+| `SignatureFxPlayer`(`signature_fx_player.gd`) | 再生役のオーバーレイ。時間 `t` を通常の尺の秒で進め、`hit(index)` / `impact` / `finished` を出す。短縮版は進みを `SHORT_RATE` 倍速くするだけで、演出側は尺の違いを知らない |
+| `SignaturePaint`(`signature_paint.gd`) | 鐘・天秤・歯車の輪・砂の帯・昇る砂粒などの絵の部品。2枚目以降のカードで使い回せる形はここへ足す |
+
+- **効果**: `CardMatchEffectStrike.on_effect_struck*()` が `SignatureLibrary.effect()` を引き、あれば紋章の代わりに再生する。armed・持ち越し・`_on_impact()` は紋章と共通。順に届いた対象は `_on_signature_hit()` が砂の飛散だけを先に出し、揺れ・破壊・効果音は `impact` でまとめて出す。盤面を揺らすかどうかは紋章と同じく型(`style`)が決める
+- **登場**: `CardMatchEffects._on_unit_played()` が `SignatureLibrary.entrance()` を引き、あれば `CardView.play_land(heavy_land(), rate)` と再生を同時に始める。`impact`(落ちきった瞬間)で銘板を光らせ、`heavy_land()` なら卓を最大で揺らす。重なっても切れないよう再生役は1回ごとに作って捨てる。専用の音を持つ登場では `CardMatchSound` が置く音を鳴らさない
+- **短縮版**: 一度出したカード id を `_seen`(効果)/ `_seen_entrances`(登場)に控え、`watch()`(対局の開始)で空にする
+- **専用の音**は `tools/build_sfx.py` の `sig_*` で合成し、打点の秒を演出の定数と揃える(短縮版でも音は同じものを鳴らす)
+- 規則(実在するカード・1.2秒以内・効果の専用音はコスト6以上)は `emblem_fx_tests.gd` が見張る
 
 ## 4.0.4 カード詳細と能力の実演
 

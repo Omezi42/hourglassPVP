@@ -15,7 +15,7 @@ func run(assert_true: Callable) -> void:
 	_test_draw_spell_emits_pulse()
 	_test_return_to_hand_spell_emits_recall()
 	_test_ally_wide_death_trigger_emits_descend_many()
-	_test_signature_cards_are_few()
+	_test_signature_moves_follow_rules()
 
 
 ## 砂術(砕砂)は盤面へ出ないため、`effect_struck` の出どころは SPELL になる。
@@ -150,14 +150,17 @@ func _deck_of(id: String) -> Array:
 	return deck
 
 
-## 看板の演出(GameDesign.md 9章)は砂へ還す・時の逆流を含めて8枚まで。
-## 型で見せる2枚を除いた6枚を、カードの `signature_fx` の上限とする。
-func _test_signature_cards_are_few() -> void:
-	const LIMIT := 6
-	var ids: Array[String] = []
-	for card in CardLibrary.all_cards():
-		if card.signature_fx != CardEnums.SignatureFx.NONE:
-			ids.append(card.id)
-	_assert.call(ids.size() <= LIMIT, "看板の演出は6枚まで: %s" % [ids])
-	for id in ["chronos", "clocktower", "tempest", "stasis", "verdict"]:
-		_assert.call(ids.has(id), "%s は看板の演出を持つ" % id)
+## カードの演出(GameDesign.md 9章):表のカードが実在し、尺が上限以内で、
+## 専用の音を持つ効果はコスト6以上だけであること。
+func _test_signature_moves_follow_rules() -> void:
+	for table: Dictionary in [SignatureLibrary.ENTRANCES, SignatureLibrary.EFFECTS]:
+		for id: String in table:
+			var card := CardLibrary.find_by_id(id)
+			_assert.call(card != null, "カードの演出の表のカードが実在する: %s" % id)
+			var move: SignatureMove = table[id].new()
+			_assert.call(
+				move.duration() <= SignatureMove.MAX_DURATION + 0.001, "%s の演出は1.2秒以内" % id
+			)
+			_assert.call(move.impact_at() <= move.duration(), "%s は終わる前に着弾する" % id)
+			if table == SignatureLibrary.EFFECTS and move.sound() >= 0 and card != null:
+				_assert.call(card.cost >= 6, "%s の効果の専用音はコスト6以上だけ" % id)

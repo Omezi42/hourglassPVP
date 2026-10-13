@@ -12,7 +12,6 @@ v5.0のカードが使う語彙を1箇所へ集める。
 | `EffectTarget` | `SELF` / `ENEMY_UNIT` / `ALL_ENEMY_UNITS` / `ALL_ALLY_UNITS` / `OPPONENT_PLAYER` / `OWN_PLAYER` / **`ALLY_UNIT`** |
 | `EffectVisualStyle` | `STRIKE` / `DESCEND` / `DRAIN` / `SPIN` / **`PULSE`**(その場で光の輪)/ **`RECALL`**(包んで手札へ戻す)|
 | `EffectOrigin` | `UNIT` / `SPELL` / `DEATH`。紋章の出どころ(4.0節) |
-| `SignatureFx` | `NONE` / `CHRONOS` / `CLOCKTOWER` / `TEMPEST` / `STASIS` / `VERDICT`。看板の演出(4.0.3節)。`.tres` が整数で保存する |
 | `EffectType` | `DAMAGE_PLAYER` / `DAMAGE_UNIT` / `DESTROY_UNIT` / `SWAP_STATS` / `ADD_TOTAL` / `DROP_SAND` / `DRAW` / `HEAL_PLAYER` / `DAMAGE_PLAYER_PER_ENEMY_UNIT` / `ADD_ATTACK` / `SUMMON` / `GRANT_KEYWORD` / `SILENCE` / **`RETURN_TO_HAND`** / **`INVERT_PLAYER_HP`** |
 
 **`CardEnums` の enum へ新しい値を足すときは、必ず末尾へ置く**(下記11章)。
@@ -55,7 +54,6 @@ UI側に散らさないため、語と enum の対応はここだけが持つ。
 | `is_spell` | bool | 砂術(GameDesign.md 6章)。**盤面へ出ず、効果だけを起こして墓地へ行く**。true のとき `total_sand` / `keywords` / `cannot_attack` は使わない |
 | `icon_upright` / `icon_falling` / `icon_fallen` | Texture2D | 体力が多い/半々/攻撃力に偏った状態のイラスト |
 | `emblem` | Texture2D | そのカードだけの紋章(モチーフのアイコン)。白のシルエットで持ち、色は描画側が決める |
-| `signature_fx` | `CardEnums.SignatureFx` | 看板の演出(GameDesign.md 9章)。`NONE` なら紋章の型で見せる |
 
 **イラストは全種で共通の1枚の色違いであるため、カードを見分けているのは実際には
 `emblem` である**(GameDesign.md 9章)。紋章は能力の分類ではなくカードのモチーフを表すので、

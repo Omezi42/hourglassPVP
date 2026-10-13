@@ -31,4 +31,3 @@ is_token = false
 is_spell = true
 art_id = "judge"
 emblem = ExtResource("emblem")
-signature_fx = 5

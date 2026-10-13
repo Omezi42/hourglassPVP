@@ -54,9 +54,6 @@ extends Resource
 ## (GameDesign.md 9章)。白のシルエットで持ち、色は描画側が決める。
 @export var emblem: Texture2D
 
-## 看板の演出(GameDesign.md 9章)。NONE なら紋章の型で見せる。
-@export var signature_fx: CardEnums.SignatureFx = CardEnums.SignatureFx.NONE
-
 ## 3状態のイラストは**自分の視点のスキン込み**で返す(GameDesign.md 31章)。相手の駒や
 ## 教材のように視点が違う場所は `CardSkins.texture()` を直に呼ぶ。
 ## 体力が満ちている(=場に出た直後に近い)状態のイラスト。

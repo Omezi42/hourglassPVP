@@ -14,7 +14,8 @@ extends RefCounted
 ## 空き枠へドラッグで放したときの滑り(GameDesign.md 9章「対局画面の手触り」)。
 const DROP_GLIDE_DURATION := 0.12
 
-var land_fx: SignatureLandFx
+## この対局で一度出した登場の演出(カード id)。2回目以降は短縮版にする(GameDesign.md 9章)。
+var _seen_entrances: Dictionary = {}
 
 var _screen: CardMatchScreen
 ## 攻撃の演出中に預かった演出。当たった瞬間にまとめて出す。
@@ -33,11 +34,10 @@ var _poisoned: Dictionary = {}
 
 func _init(screen: CardMatchScreen) -> void:
 	_screen = screen
-	land_fx = SignatureLandFx.new()
-	screen.add_child(land_fx)
 
 
 func watch(state: MatchState) -> void:
+	_seen_entrances.clear()
 	state.unit_played.connect(_on_unit_played)
 	state.spell_cast.connect(_on_spell_cast)
 	state.unit_destroyed.connect(_on_unit_destroyed)
@@ -89,9 +89,10 @@ func _on_unit_played(side: int, slot: int) -> void:
 	var data: CardData = _screen.state.board[side][slot].data
 	_play_spend(side, data.cost)
 	var key := _drop_key(side, slot)
-	if data.signature_fx == CardEnums.SignatureFx.CHRONOS:
+	var entrance := SignatureLibrary.entrance(data)
+	if entrance != null:
 		_drop_origin.erase(key)
-		_play_chronos(view)
+		_play_entrance(view, data, entrance)
 		return
 	if _drop_origin.has(key):
 		var origin: Vector2 = _drop_origin[key]
@@ -102,17 +103,23 @@ func _on_unit_played(side: int, slot: int) -> void:
 	view.play_spark()
 
 
-## 看板の演出(GameDesign.md 9章):高くから重く落ち、落ちきった瞬間に卓を大きく揺らして
-## 台座の周りへ歯車の輪を回す。
-func _play_chronos(view: CardView) -> void:
-	view.play_land(true)
-	land_fx.play_chronos(view.position + Vector2(view.size.x * 0.5, CardView.PEDESTAL_CENTER_Y))
-	land_fx.landed.connect(
+## 登場の演出(GameDesign.md 9章)。駒が台座へ落ちきった瞬間(`impact`)に銘板を光らせ、
+## 重く落ちる登場なら卓を大きく揺らす。重なっても切れないよう、1回ごとに再生役を作る。
+func _play_entrance(view: CardView, data: CardData, move: SignatureMove) -> void:
+	var short := _seen_entrances.has(data.id)
+	_seen_entrances[data.id] = true
+	move.from = view.position + Vector2(view.size.x * 0.5, CardView.PEDESTAL_CENTER_Y)
+	view.play_land(move.heavy_land(), SignatureFxPlayer.rate(short))
+	var player := SignatureFxPlayer.new()
+	_screen.add_child(player)
+	player.impact.connect(
 		func() -> void:
-			_screen.shake.hit(CardMatchFinale.IMPACT_SHAKE_POWER)
-			view.play_spark(),
-		CONNECT_ONE_SHOT
+			if move.heavy_land():
+				_screen.shake.hit(CardMatchFinale.IMPACT_SHAKE_POWER)
+			view.play_spark()
 	)
+	player.finished.connect(player.queue_free)
+	player.play(move, short)
 
 
 ## 砂術を撃った(GameDesign.md 6章)。盤面へは出ないため、支払いの吸い込みだけを見せる。

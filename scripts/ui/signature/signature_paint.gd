@@ -1,7 +1,7 @@
 class_name SignaturePaint
 extends RefCounted
-## 看板の演出(GameDesign.md 9章)で使う絵の部品。鐘・天秤・歯車の輪・砂の帯・昇る砂粒を
-## コードで描く。進行(いつ何をどれだけ描くか)は `SignatureStrikeFx` / `SignatureLandFx` が持ち、
+## カードの演出(GameDesign.md 9章)で使う絵の部品。鐘・天秤・歯車の輪・砂の帯・昇る砂粒を
+## コードで描く。進行(いつ何をどれだけ描くか)は `moves/` の各カードが持ち、
 ## ここは「この形をこの状態で描く」だけを受け持つ。
 
 const SAND := Color(0.93, 0.78, 0.42, 1.0)

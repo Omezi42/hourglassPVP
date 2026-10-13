@@ -29,9 +29,6 @@ enum Sfx {
 	VESSEL_SHATTER,
 	SIG_CHRONOS,
 	SIG_CLOCKTOWER,
-	SIG_TEMPEST,
-	SIG_STASIS,
-	SIG_VERDICT,
 }
 
 const SETTINGS_PATH := "user://sound_settings.json"
@@ -63,9 +60,6 @@ const SFX_PATHS := {
 	Sfx.VESSEL_SHATTER: "res://assets/sfx/vessel_shatter.wav",
 	Sfx.SIG_CHRONOS: "res://assets/sfx/sig_chronos.wav",
 	Sfx.SIG_CLOCKTOWER: "res://assets/sfx/sig_clocktower.wav",
-	Sfx.SIG_TEMPEST: "res://assets/sfx/sig_tempest.wav",
-	Sfx.SIG_STASIS: "res://assets/sfx/sig_stasis.wav",
-	Sfx.SIG_VERDICT: "res://assets/sfx/sig_verdict.wav",
 }
 
 static var _players: Array[AudioStreamPlayer] = []

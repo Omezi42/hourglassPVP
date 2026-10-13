@@ -19,9 +19,12 @@ extends RefCounted
 var _screen: CardMatchScreen
 var _fx: EmblemStrikeFx
 ## 看板の演出(GameDesign.md 9章)。紋章の代わりに飛ぶ。
-var _signature: SignatureStrikeFx
-## 看板の演出が狙う対象の枠。`SignatureStrikeFx.hit(index)` の index で引く。
+## カードの演出(GameDesign.md 9章)。紋章の代わりに再生する。
+var _signature: SignatureFxPlayer
+## カードの演出が狙う対象の枠。`SignatureFxPlayer.hit(index)` の index で引く。
 var _signature_targets: Array[Dictionary] = []
+## この対局で一度出したカードの演出(カード id)。2回目以降は短縮版にする。
+var _seen: Dictionary = {}
 var _armed := false
 ## いま組んでいる演出の型。`_on_impact()` が「打撃だけ揺らす」判断に使う。
 var _style := CardEnums.EffectVisualStyle.STRIKE
@@ -51,7 +54,7 @@ func _init(screen: CardMatchScreen) -> void:
 	screen.add_child(_fx)
 	_fx.impact.connect(_on_impact)
 	_fx.finished.connect(_on_finished)
-	_signature = SignatureStrikeFx.new()
+	_signature = SignatureFxPlayer.new()
 	screen.add_child(_signature)
 	_signature.hit.connect(_on_signature_hit)
 	_signature.impact.connect(_on_impact)
@@ -61,6 +64,7 @@ func _init(screen: CardMatchScreen) -> void:
 ## `MatchState` のシグナルへまとめて接続する(`CardMatchSound`/`CardMatchEffects` と
 ## 同じ流儀)。`card_match_screen.gd` の行数を増やさないための切り出し。
 func watch(state: MatchState) -> void:
+	_seen.clear()
 	state.effect_struck.connect(on_effect_struck)
 	state.effect_struck_many.connect(on_effect_struck_many)
 	state.spell_cast.connect(_on_spell_cast)
@@ -99,8 +103,10 @@ func on_effect_struck(
 		return
 	_arm(source_side, source_slot, origin, style)
 	var from := _origin_position(source_side, source_slot, origin)
-	if SignatureStrikeFx.handles(card.signature_fx) and target_slot >= 0:
-		_play_signature(card.signature_fx, from, [{"side": target_side, "slot": target_slot}])
+	if (
+		target_slot >= 0
+		and _play_signature(card, from, [{"side": target_side, "slot": target_slot}])
+	):
 		return
 	var to := (
 		from
@@ -126,8 +132,7 @@ func on_effect_struck_many(
 		return
 	_arm(source_side, source_slot, origin, style)
 	var from := _origin_position(source_side, source_slot, origin)
-	if SignatureStrikeFx.handles(card.signature_fx):
-		_play_signature(card.signature_fx, from, targets)
+	if _play_signature(card, from, targets):
 		return
 	var tos: Array[Vector2] = []
 	for entry in targets:
@@ -136,17 +141,24 @@ func on_effect_struck_many(
 	_queue(func() -> void: _fx.play_many(emblem, from, tos, style, origin))
 
 
-func _play_signature(kind: int, from: Vector2, targets: Array) -> void:
+## カードの演出を持っていれば紋章の代わりに再生して true を返す。
+func _play_signature(card: CardData, from: Vector2, targets: Array) -> bool:
+	var move := SignatureLibrary.effect(card)
+	if move == null:
+		return false
 	var entries: Array[Dictionary] = []
-	var tos: Array[Vector2] = []
+	move.from = from
 	for entry: Dictionary in targets:
 		entries.append({"side": entry["side"], "slot": entry["slot"]})
-		tos.append(_target_position(entry["side"], entry["slot"]))
+		move.targets.append(_target_position(entry["side"], entry["slot"]))
+	var short := _seen.has(card.id)
+	_seen[card.id] = true
 	_queue(
 		func() -> void:
 			_signature_targets = entries
-			_signature.play(kind, from, tos)
+			_signature.play(move, short)
 	)
+	return true
 
 
 ## 看板の演出が対象へ順に届いた(波紋・砂の帯)。その対象の砂の飛散と砂の動きだけを
