@@ -77,6 +77,13 @@
 
 - [ ] Discord #お知らせ へ紹介(図鑑でONにする手順も添える)
 
+### アプリ版(PWA)(GameDesign.md 10章 / Architecture.md 4.6節)
+
+- [ ] `make_portal.py` で `build/app/` を作る(manifest・`sw.js`・アイコン・`offline.html`・版切れの文言)
+- [ ] `PortalInfo.PORTAL_MARKS` に `github.io` を足し、`funnel_tests.gd` に1件足す。`analyze_matches.py --funnel` の配信先にも出す
+- [ ] `build-and-announce` の「Godot を更新したとき」の手順に `build/app/` の上げ直しを足す
+- [ ] 初回公開を Discord #お知らせ で告知(Android は Chrome のメニュー →「ホーム画面に追加」、iPhone は Safari の共有 →「ホーム画面に追加」)
+
 ### 技術的負債
 
 - [ ] 起動の裏読み込み(Architecture.md 4.0.6節)で、タイトルを止める1本の最長はWeb版で約0.3秒の `card_instance.gd`(`CardInstance`・`MatchState`・`CardLibrary`・`AccountService` など15本の参照の輪)。次いで `card_effect_demo_*` の5本の輪、`card_view_*` の7本の輪(各0.1〜0.2秒)。輪を切れるか判断
@@ -105,6 +112,7 @@
 
 ## 5. ユーザー作業
 
+- [ ] GitHub に公開リポジトリ `sunadokei-arena-app` を作り、Pages を有効にする(アプリ版の置き場所。Architecture.md 4.6節)
 - [ ] unityroom側のゲーム管理画面でボードを「常に記録」に設定し、`RANK_SCOREBOARD_ID` を実際のボード番号に合わせる
 - [ ] `/card` `/deck` `/link` `/profile` とカードスポットライトを Discord 上で実際に打つ(デプロイ・登録は済み)
 
