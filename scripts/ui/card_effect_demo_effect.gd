@@ -358,26 +358,32 @@ static func _stage_damage_per_unit(t: float, value: int) -> Dictionary:
 
 ## 相手の砂時計を対象に取る効果(ダメージ / 破壊 / 反転 / 砂を落とす)。
 ## 全体を対象にするものは的を2体にして、同じ動きを並べて見せる。
-static func on_enemy_unit(t: float, demo: int, value: int, all: bool) -> Dictionary:
+## aged_only は対象の絞り込み(攻撃力>体力)。反転は老いた的だけを返し、若い駒は返さずに並べて見せる。
+static func on_enemy_unit(
+	t: float, demo: int, value: int, all: bool, aged_only := false
+) -> Dictionary:
 	var stage := CardEffectStage.empty_stage()
 	var own := CardEffectStage.piece(6, 0, 6)
 	own["fade"] = CardEffectStage.seg(t, 0.0, 0.15)
 	# 砂が上へ戻る効果は攻撃力までしか戻せないため、戻す余地のある老いた的にする。
+	var aged_swap := aged_only and demo == CardEffectPreview.Demo.FX_SWAP_STATS
+	var spares_young := aged_swap or demo == CardEffectPreview.Demo.FX_DESTROY_AGED
 	var aged := (
-		demo == CardEffectPreview.Demo.FX_RAISE_SAND
+		aged_swap
+		or demo == CardEffectPreview.Demo.FX_RAISE_SAND
 		or demo == CardEffectPreview.Demo.FX_DESTROY_AGED
 	)
 	var foes: Array = [CardEffectStage.piece(2, 4, 6) if aged else CardEffectStage.piece(5, 1, 6)]
 	if all:
 		foes.append(CardEffectStage.piece(3, 3, 6) if aged else CardEffectStage.piece(4, 2, 6))
-	# 条件付き破壊は、条件を満たさない若い駒を並べて「効かない」ことまで見せる。
-	if demo == CardEffectPreview.Demo.FX_DESTROY_AGED:
+	# 条件付きの効果は、条件を満たさない若い駒を並べて「効かない」ことまで見せる。
+	if spares_young:
 		foes.append(CardEffectStage.piece(5, 1, 6))
 	stage["trigger_note"] = CardEffectDemoEnemy.note(demo, value, all)
-	# 条件付き破壊の若い駒(末尾)は対象に取らない。
-	var struck: int = (
-		foes.size() - 1 if demo == CardEffectPreview.Demo.FX_DESTROY_AGED else foes.size()
-	)
+	if aged_swap:
+		stage["trigger_note"] = "攻撃力が体力より多い" + stage["trigger_note"]
+	# 若い駒(末尾)は対象に取らない。
+	var struck: int = foes.size() - 1 if spares_young else foes.size()
 	# 的が砕けた後も矢印が残らないよう、当たったところで消す。
 	if t >= 0.3 and t < 0.8:
 		var beams: Array = []

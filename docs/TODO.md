@@ -69,9 +69,7 @@
 
 仕組みは実装済み(`CardSetLibrary` の `planned_count`)。
 
-「反響の刻」(予定8枚・800砂金)を1枚目のリバーブで売り出した(GameDesign.md 8章)。
-
-- [ ] 4枚目以降を毎日1枚ずつ公開する(次は反転で相手を返す大型。`docs/Hourglasses.md` の残りの枠)
+「反響の刻」(8枚・800砂金)は8枚目のカノンで全枚数を公開した(GameDesign.md 8章)。
 
 ### カードスキン(GameDesign.md 31章 / Architecture.md 10.19節)
 

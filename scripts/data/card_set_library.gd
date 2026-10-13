@@ -86,7 +86,8 @@ const SETS: Dictionary = {
 		"id": "echo_time",
 		"display_name": "反響の刻",
 		"description": "1つの反転が次の反転を呼ぶ、返しの連鎖の8枚",
-		"card_ids": ["reverb", "delay", "repeat", "resonance", "encore", "chorus", "crescendo"],
+		"card_ids":
+		["reverb", "delay", "repeat", "resonance", "encore", "chorus", "crescendo", "canon"],
 		"price": 800,
 		"planned_count": 8,
 	},

@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/emblems/canon.png" id="emblem"]
+
+[sub_resource type="Resource" id="Effect_canon_0"]
+script = ExtResource("script_effect")
+trigger = 1
+target = 1
+effect_type = 3
+value = 0
+card_id = ""
+keyword = -1
+condition_scope = 4
+condition_total = -1
+random_target = true
+
+[resource]
+script = ExtResource("script_card")
+id = "canon"
+display_name = "カノン"
+cost = 5
+total_sand = 9
+pool_index = 102
+set_id = "echo_time"
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_canon_0")])
+rules_text = "反転:相手の砂時計のうち、攻撃力が体力より多いランダムな1体を反転させる"
+cannot_attack = false
+is_token = false
+art_id = "twin"
+emblem = ExtResource("emblem")

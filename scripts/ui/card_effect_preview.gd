@@ -291,7 +291,9 @@ func _stage(entry: Dictionary, t: float) -> Dictionary:
 	if stage.is_empty():
 		stage = CardEffectDemoGrave.stage(demo, t, entry.get("self", false))
 	if stage.is_empty():
-		stage = CardEffectDemoEffect.on_enemy_unit(t, demo, value, entry.get("all", false))
+		stage = CardEffectDemoEffect.on_enemy_unit(
+			t, demo, value, entry.get("all", false), entry.get("aged", false)
+		)
 	var trigger_note: String = stage.get("trigger_note", "")
 	if not trigger_note.is_empty():
 		# 砂術は「いつ」を持たない(効果は撃った瞬間に1度だけ起きる。GameDesign.md 6章)。
