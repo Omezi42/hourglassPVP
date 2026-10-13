@@ -1009,6 +1009,16 @@
 			"is_spell": true,
 			"pool_index": 101,
 			"total_sand": 0
+		},
+		{
+			"cannot_attack": false,
+			"cost": 5,
+			"describe": "反転:相手の砂時計のうち、攻撃力が体力より多いランダムな1体を反転させる",
+			"display_name": "カノン",
+			"id": "canon",
+			"is_spell": false,
+			"pool_index": 102,
+			"total_sand": 9
 		}
 	]
 }
