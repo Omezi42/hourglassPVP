@@ -25,3 +25,4 @@ cannot_attack = false
 is_token = false
 is_spell = true
 emblem = ExtResource("emblem")
+signature_fx = 3

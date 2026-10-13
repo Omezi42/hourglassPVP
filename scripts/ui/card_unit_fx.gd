@@ -13,6 +13,9 @@ extends Control
 ## 設置:台座の少し上から落ちて着地する。
 const LAND_DURATION := 0.26
 const LAND_HEIGHT := 34.0
+## 看板の演出の重い着地(クロノス。GameDesign.md 9章)。高くから、少し長く落ちる。
+const HEAVY_LAND_DURATION := 0.38
+const HEAVY_LAND_HEIGHT := 96.0
 ## 着地の砂ぼこりを出し始める進捗。
 const LAND_DUST_AT := 0.66
 ## 破壊:ガラスが割れ、残っていた砂が台座へこぼれてから消える。
@@ -52,6 +55,7 @@ const BREAK_WHITE := Color(1.0, 0.93, 0.82, 1.0)
 const RECALL_TINT := Color(0.85, 0.95, 1.0, 1.0)
 
 var _land := -1.0
+var _land_height := LAND_HEIGHT
 var _break := -1.0
 var _glass := -1.0
 var _recall := -1.0
@@ -80,11 +84,13 @@ func land_offset() -> float:
 	if _land < 0.0:
 		return 0.0
 	var left := 1.0 - _land
-	return -LAND_HEIGHT * left * left
+	return -_land_height * left * left
 
 
-func play_land() -> void:
-	_land_tween = _restart(_land_tween, _set_land, LAND_DURATION)
+func play_land(heavy := false) -> void:
+	_land_height = HEAVY_LAND_HEIGHT if heavy else LAND_HEIGHT
+	var duration := HEAVY_LAND_DURATION if heavy else LAND_DURATION
+	_land_tween = _restart(_land_tween, _set_land, duration)
 
 
 ## 破壊された。**枠が空になった後も描き続ける**ため、絵と位置をここで受け取る。

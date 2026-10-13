@@ -87,6 +87,14 @@
 - **`effect_drawn(source_side, source_slot, count)`** は駒が盤面上にあるときだけ発行し、`play_spark()`(紋章の周りの光の輪)を呼ぶ。armed/持ち越しは持たない(タイミングのズレが実害にならない)
 - `EmblemStrikeFx.impact` で演出をまとめて出し、`finished` で `_screen.on_strike_finished()`(`refresh()` を含む)。`_finish_action()` は `_strike.play()` に加えて `_effect_strike.busy()` も見る
 
+**看板の演出(`CardData.signature_fx`。GameDesign.md 9章)**
+
+- **効果が届くもの**(クロックタワー・砂塵嵐・時間停止・時の裁き)は `CardMatchEffectStrike.on_effect_struck*()` が `SignatureStrikeFx.handles()` を見て、`EmblemStrikeFx` の代わりに `SignatureStrikeFx.play(kind, from, targets)` へ渡す。armed・持ち越し・`_on_impact()` は紋章と共通で、**変えるのは届くまでの見せ方だけ**
+- 波紋・砂の帯のように対象へ順に届くものは、届いた対象ごとに `hit(index)` を出す。受け口の `_on_signature_hit()` はその枠の被ダメージの砂の飛散だけを先に出し、揺れ・破壊・効果音は最後の `impact` でまとめて出す
+- **場に出たときのもの**(クロノス)は `CardMatchEffects._on_unit_played()` が `CardView.play_land(true)`(重い着地)と `SignatureLandFx.play_chronos()` を呼ぶ。`landed` で卓を最大で揺らす。盤面の状態を持たないため armed にしない。置く音は `CardMatchSound` が鳴らさず、`SignatureLandFx` が専用の音を鳴らす
+- 絵の部品(鐘・天秤・歯車の輪・砂の帯・昇る砂粒)は `SignaturePaint` の static 関数。尺は効果音(`tools/build_sfx.py` の `sig_*`)の打点と同じ値で揃える
+- 枚数の上限(砂へ還す・時の逆流を含めて8枚)は `emblem_fx_tests.gd` が見張る
+
 ## 4.0.4 カード詳細と能力の実演
 
 - `CardDetailPanel` はキーワードを名前と説明の両方で出し、`SUMMON` を持つカードには出るトークンの名前・総量・効果を1行添える。`interactive`(既定 true)のときだけ語のボタンと `CardEffectPreview` を持つ(4.3節)

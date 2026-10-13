@@ -462,6 +462,92 @@ def result_lose():
     return box_body(sequence(music_box, seq, 3.0))
 
 
+# ---- 看板の演出(カードごとに1つ。尺は SignatureStrikeFx / SignatureLandFx の定数に合わせる) ----
+
+## クロノスが落ちきる位置(秒)。`CardUnitFx` の重い着地の尺に合わせる。
+CHRONOS_LAND_AT = 0.38
+## 歯車の輪が回りきって噛み合う位置(秒)。`SignatureLandFx` の SPIN の終わりに合わせる。
+CHRONOS_LOCK_AT = 0.98
+
+
+def sig_chronos():
+    """クロノスの登場。高くから重く落ちる「どしん」、真鍮の歯車が回る「かたかた」、噛み合って止まる「がちん」。"""
+    d = 1.6
+    x = np.zeros(n_of(d))
+    at(x, thump(0.9, 90, 38, 0.25, width=0.002), CHRONOS_LAND_AT, 1.3)
+    at(x, strike(0.6, wood(150, 0.12), 0.004), CHRONOS_LAND_AT, 0.8)
+    at(x, strike(0.6, glass(1900, 0.2), 0.0005), CHRONOS_LAND_AT, 0.25)
+    dust = sand(0.4, 2500, 1500, 7000, lambda t: np.exp(-t / 0.1))
+    at(x, dust, CHRONOS_LAND_AT + 0.01, 0.4)
+    ticks = 9
+    for i in range(ticks):
+        time = CHRONOS_LAND_AT + 0.1 + (CHRONOS_LOCK_AT - CHRONOS_LAND_AT - 0.14) * i / (ticks - 1)
+        at(x, strike(0.08, brass(2300 + 40 * (i % 2), 0.02), 0.0002, 0.5, (3000, 9000)), time, 0.22)
+    at(x, strike(0.7, brass(420, 0.3), 0.0004, 0.6, (2000, 8000)), CHRONOS_LOCK_AT, 0.9)
+    at(x, thump(0.3, 180, 110, 0.05), CHRONOS_LOCK_AT, 0.4)
+    return lowpass(x, 11000)
+
+
+## 鐘が鳴る位置(秒)。`SignatureStrikeFx` の鐘の振りの頂点に合わせる。
+CLOCKTOWER_TOLL_AT = 0.16
+
+
+def sig_clocktower():
+    """クロックタワーの鐘「ごーん」。低い青銅の鐘が長く唸り、波紋の間ずっと響く。"""
+    d = 2.4
+    x = np.zeros(n_of(d))
+    bell = strike(d, brass(note(45), 1.4), 0.0008, 0.3, (1500, 6000))
+    hum = strike(d, brass(note(33), 2.0), 0.002)
+    at(x, bell + 0.5 * hum, CLOCKTOWER_TOLL_AT)
+    return lowpass(x, 8000)
+
+
+def sig_tempest():
+    """砂塵嵐。風が膨らんで吹き抜け、砂が叩きつけるように流れて去る。"""
+    d = 1.2
+    t = t_axis(d)
+    swell = np.clip(t / 0.18, 0, 1) ** 2 * np.clip((1.05 - t) / 0.45, 0, 1)
+    wind = bandpass(RNG.standard_normal(len(t)), 250, 1800) * swell
+    whistle = bandpass(RNG.standard_normal(len(t)), 1800, 3400) * swell ** 2
+    grit = sand(d, 9000, 1500, 9000, lambda t: np.clip(t / 0.2, 0, 1) * np.clip((0.95 - t) / 0.4, 0, 1))
+    return lowpass(0.5 * wind + 0.18 * whistle + 0.8 * grit, 10000)
+
+
+## 色が抜けきって砂が昇り始める位置(秒)。`SignatureStrikeFx` の STASIS の着弾に合わせる。
+STASIS_HALT_AT = 0.26
+
+
+def sig_stasis():
+    """時間停止。逆再生のように吸い込まれて止まり、硝子の粒が上へ昇っていく。"""
+    d = 1.4
+    x = np.zeros(n_of(d))
+    t = t_axis(STASIS_HALT_AT)
+    suck = bandpass(RNG.standard_normal(len(t)), 2000, 9000) * (t / STASIS_HALT_AT) ** 3
+    at(x, suck, 0.0, 0.35)
+    at(x, strike(0.9, glass(2400, 0.5), 0.0003), STASIS_HALT_AT, 0.7)
+    rise = [76, 79, 83, 86, 88, 91, 95]
+    for i, m in enumerate(rise):
+        at(x, strike(0.4, glass(note(m), 0.15), 0.0002), STASIS_HALT_AT + 0.06 + 0.07 * i, 0.22)
+    return highpass(lowpass(x, 13000), 300)
+
+
+## 天秤が傾ききる位置(秒)。`SignatureStrikeFx` の VERDICT の着弾に合わせる。
+VERDICT_TIP_AT = 0.64
+
+
+def sig_verdict():
+    """時の裁き。天秤の鎖が「ちりり」と鳴り、皿が傾ききって真鍮が「どん」と打つ。"""
+    d = 1.4
+    x = np.zeros(n_of(d))
+    for i, time in enumerate([0.04, 0.09, 0.15, 0.22]):
+        at(x, strike(0.15, brass(3100 + 180 * i, 0.04), 0.0002), time, 0.18)
+    creak = bandpass(RNG.standard_normal(n_of(0.3)), 600, 1600) * np.hanning(n_of(0.3))
+    at(x, creak, 0.3, 0.08)
+    at(x, strike(0.9, brass(220, 0.4), 0.0006, 0.5, (1500, 7000)), VERDICT_TIP_AT, 1.0)
+    at(x, thump(0.5, 140, 60, 0.1, width=0.002), VERDICT_TIP_AT, 0.8)
+    return lowpass(x, 10000)
+
+
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     finish("hover", ui_hover, -34, 0.0)
@@ -478,3 +564,8 @@ if __name__ == "__main__":
     finish("turn_start", turn_start, -22, 0.18)
     finish("result_win", result_win, -16, 0.2)
     finish("result_lose", result_lose, -19, 0.2)
+    finish("sig_chronos", sig_chronos, -17, 0.18)
+    finish("sig_clocktower", sig_clocktower, -18, 0.25)
+    finish("sig_tempest", sig_tempest, -20, 0.12)
+    finish("sig_stasis", sig_stasis, -20, 0.2)
+    finish("sig_verdict", sig_verdict, -18, 0.18)

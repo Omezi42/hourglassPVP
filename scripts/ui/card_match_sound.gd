@@ -59,7 +59,10 @@ func _play(sfx: SoundBank.Sfx) -> void:
 	SoundBank.play(sfx)
 
 
-func _on_unit_played(_side: int, _slot: int) -> void:
+## 看板の着地(クロノス)は `SignatureLandFx` が専用の音を鳴らすため、置く音を重ねない。
+func _on_unit_played(side: int, slot: int) -> void:
+	if _state.board[side][slot].data.signature_fx == CardEnums.SignatureFx.CHRONOS:
+		return
 	_play(SoundBank.Sfx.PLACE)
 
 

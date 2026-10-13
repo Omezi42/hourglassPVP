@@ -90,6 +90,8 @@ const PATHS: Array[String] = [
 	"res://scripts/logic/puzzle_library.gd",
 	"res://scripts/logic/music_player.gd",
 	"res://scripts/logic/match_clock.gd",
+	"res://scripts/ui/signature_paint.gd",
+	"res://scripts/ui/signature_land_fx.gd",
 	"res://scripts/ui/card_drag_arrow.gd",
 	"res://scripts/ui/emblem_strike_fx.gd",
 	"res://scripts/ui/card_match_shake.gd",

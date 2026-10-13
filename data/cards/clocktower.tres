@@ -28,3 +28,4 @@ cannot_attack = false
 is_token = false
 art_id = "tower"
 emblem = ExtResource("emblem")
+signature_fx = 2

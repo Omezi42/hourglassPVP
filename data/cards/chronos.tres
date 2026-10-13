@@ -19,3 +19,4 @@ cannot_flip = true
 is_token = false
 art_id = "hour"
 emblem = ExtResource("emblem")
+signature_fx = 1

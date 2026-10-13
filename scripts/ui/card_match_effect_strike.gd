@@ -18,6 +18,10 @@ extends RefCounted
 
 var _screen: CardMatchScreen
 var _fx: EmblemStrikeFx
+## 看板の演出(GameDesign.md 9章)。紋章の代わりに飛ぶ。
+var _signature: SignatureStrikeFx
+## 看板の演出が狙う対象の枠。`SignatureStrikeFx.hit(index)` の index で引く。
+var _signature_targets: Array[Dictionary] = []
 var _armed := false
 ## いま組んでいる演出の型。`_on_impact()` が「打撃だけ揺らす」判断に使う。
 var _style := CardEnums.EffectVisualStyle.STRIKE
@@ -47,6 +51,11 @@ func _init(screen: CardMatchScreen) -> void:
 	screen.add_child(_fx)
 	_fx.impact.connect(_on_impact)
 	_fx.finished.connect(_on_finished)
+	_signature = SignatureStrikeFx.new()
+	screen.add_child(_signature)
+	_signature.hit.connect(_on_signature_hit)
+	_signature.impact.connect(_on_impact)
+	_signature.finished.connect(_on_finished)
 
 
 ## `MatchState` のシグナルへまとめて接続する(`CardMatchSound`/`CardMatchEffects` と
@@ -90,6 +99,9 @@ func on_effect_struck(
 		return
 	_arm(source_side, source_slot, origin, style)
 	var from := _origin_position(source_side, source_slot, origin)
+	if SignatureStrikeFx.handles(card.signature_fx) and target_slot >= 0:
+		_play_signature(card.signature_fx, from, [{"side": target_side, "slot": target_slot}])
+		return
 	var to := (
 		from
 		if style == CardEnums.EffectVisualStyle.PULSE
@@ -114,11 +126,45 @@ func on_effect_struck_many(
 		return
 	_arm(source_side, source_slot, origin, style)
 	var from := _origin_position(source_side, source_slot, origin)
+	if SignatureStrikeFx.handles(card.signature_fx):
+		_play_signature(card.signature_fx, from, targets)
+		return
 	var tos: Array[Vector2] = []
 	for entry in targets:
 		tos.append(_target_position(entry["side"], entry["slot"]))
 	var emblem := card.emblem
 	_queue(func() -> void: _fx.play_many(emblem, from, tos, style, origin))
+
+
+func _play_signature(kind: int, from: Vector2, targets: Array) -> void:
+	var entries: Array[Dictionary] = []
+	var tos: Array[Vector2] = []
+	for entry: Dictionary in targets:
+		entries.append({"side": entry["side"], "slot": entry["slot"]})
+		tos.append(_target_position(entry["side"], entry["slot"]))
+	_queue(
+		func() -> void:
+			_signature_targets = entries
+			_signature.play(kind, from, tos)
+	)
+
+
+## 看板の演出が対象へ順に届いた(波紋・砂の帯)。その対象の砂の飛散と砂の動きだけを
+## 先に出し、揺れ・破壊・効果音は最後の `_on_impact()` でまとめて出す。
+func _on_signature_hit(index: int) -> void:
+	if index >= _signature_targets.size():
+		return
+	var target: Dictionary = _signature_targets[index]
+	var view: CardView = _screen.view_at(target["side"], target["slot"])
+	if view == null:
+		return
+	var rest: Array[Dictionary] = []
+	for hit in _damage:
+		if hit["side"] == target["side"] and hit["slot"] == target["slot"]:
+			view.play_shatter(hit["amount"])
+		else:
+			rest.append(hit)
+	_damage = rest
 
 
 func _arm(source_side: int, source_slot: int, origin: int, style: int) -> void:

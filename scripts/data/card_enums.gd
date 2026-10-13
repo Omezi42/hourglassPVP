@@ -190,6 +190,17 @@ enum EffectOrigin {
 	DEATH,
 }
 
+## 看板の演出(GameDesign.md 9章)。紋章の型の代わりに、そのカードだけの動きで効果を見せる。
+## `CardData.signature_fx` が `.tres` に整数で保存するため、**新しい値は必ず末尾へ足す**。
+enum SignatureFx {
+	NONE,
+	CHRONOS,
+	CLOCKTOWER,
+	TEMPEST,
+	STASIS,
+	VERDICT,
+}
+
 ## 語として見せるキーワード。**複数のカードに載っているものだけ**をここへ入れる。
 ## カードを追加してある能力が2枚目に載ったら、ここへ足して語へ昇格させる。
 const NAMED: Array[Keyword] = [

@@ -29,3 +29,4 @@ is_token = false
 is_spell = true
 art_id = "blank"
 emblem = ExtResource("emblem")
+signature_fx = 4

@@ -385,9 +385,9 @@ func _on_flip_finished() -> void:
 
 
 ## 場に出した:台座の少し上から落ちて着地する(GameDesign.md 9章)。
-func play_land() -> void:
+func play_land(heavy := false) -> void:
 	_fx.size = size
-	_fx.play_land()
+	_fx.play_land(heavy)
 
 
 ## 破壊された:砕けて台座へ崩れ落ちる。**枠が空になった後も演出だけが残る**ため、
