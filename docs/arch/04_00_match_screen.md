@@ -96,9 +96,10 @@
 | `scripts/ui/signature/moves/{id}_entrance.gd` / `{id}_effect.gd` | 1枚ぶんの演出。`SignatureMove` を継ぎ、`impact_at()`(着弾 / 落ちきる瞬間)・`duration()`・`draw(item, t)` を書く。順に届く演出だけ `reaches(index, t)` を、重く落ちる登場は `heavy_land()` を、専用の音は `sound()` を上書きする |
 | `SignatureLibrary`(`signature_library.gd`) | カード id → 演出の表。`ENTRANCES`(場に出たとき)と `EFFECTS`(紋章が飛ぶ場面の代わり)。**カードに演出を付けるときはファイルを1つ置いてここへ1行足すだけ** |
 | `SignatureFxPlayer`(`signature_fx_player.gd`) | 再生役のオーバーレイ。時間 `t` を通常の尺の秒で進め、`hit(index)` / `impact` / `finished` を出す。短縮版は進みを `SHORT_RATE` 倍速くするだけで、演出側は尺の違いを知らない |
-| `SignaturePaint`(`signature_paint.gd`) | 鐘・天秤・歯車の輪・砂の帯・昇る砂粒などの絵の部品。2枚目以降のカードで使い回せる形はここへ足す |
+| `SignaturePaint`(`signature_paint.gd`) | 鐘・天秤・歯車の輪・砂の帯・昇る砂粒・雪の結晶・水滴・ばね・槌・火花・時計の文字盤・恵与の金の輪などの絵の部品。2枚目以降のカードで使い回せる形はここへ足す(金床・氷の覆いのように1枚でしか使わない形は `moves/` の側に置く) |
 
-- **効果**: `CardMatchEffectStrike.on_effect_struck*()` が `SignatureLibrary.effect()` を引き、あれば紋章の代わりに再生する。armed・持ち越し・`_on_impact()` は紋章と共通。順に届いた対象は `_on_signature_hit()` が砂の飛散だけを先に出し、揺れ・破壊・効果音は `impact` でまとめて出す。盤面を揺らすかどうかは紋章と同じく型(`style`)が決める
+- **効果**: `CardMatchEffectStrike.on_effect_struck*()` が `SignatureLibrary.effect()` を引き、あれば紋章の代わりに再生する。対象がプレイヤーなら HPの器の中心を狙う(`slot` が -1。`_on_signature_hit()` は駒の砂を散らさない)。armed・持ち越し・`_on_impact()` は紋章と共通。順に届いた対象は `_on_signature_hit()` が砂の飛散だけを先に出し、揺れ・破壊・効果音は `impact` でまとめて出す。盤面を揺らすかどうかは紋章と同じく型(`style`)が決める
+- **演出の最中に起きた演出は後ろへ並べる**(`_signature_queue`)。効果の解決は同期的に入れ子になるため、砂塵嵐のダメージがアンヴィルの被弾を起こすと、砂塵嵐の再生中にアンヴィルの演出が届く。1つずつ番号(`gen`)を振り、持ち越した被ダメージ・砂の移動には **その枠を狙うまだ終わっていない演出のうち最も新しいものの番号**(`_gen_for()`)を付けて、その演出の着弾で出す(`_on_impact(upto)`)。「最新の番号」で付けると、砂塵嵐がアンヴィルの後ろの駒へ与えたダメージまでアンヴィルの着弾へずれる。型は再生する演出ごとに持ち(`job["style"]`)、着弾の瞬間に戻す
 - **登場**: `CardMatchEffects._on_unit_played()` が `SignatureLibrary.entrance()` を引き、あれば `CardView.play_land(heavy_land(), rate)` と再生を同時に始める。`impact`(落ちきった瞬間)で銘板を光らせ、`heavy_land()` なら卓を最大で揺らす。重なっても切れないよう再生役は1回ごとに作って捨てる。専用の音を持つ登場では `CardMatchSound` が置く音を鳴らさない
 - **短縮版**: 一度出したカード id を `_seen`(効果)/ `_seen_entrances`(登場)に控え、`watch()`(対局の開始)で空にする
 - **専用の音**は `tools/build_sfx.py` の `sig_*` で合成し、打点の秒を演出の定数と揃える(短縮版でも音は同じものを鳴らす)

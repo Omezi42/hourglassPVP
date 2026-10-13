@@ -18,11 +18,21 @@ extends RefCounted
 
 var _screen: CardMatchScreen
 var _fx: EmblemStrikeFx
-## 看板の演出(GameDesign.md 9章)。紋章の代わりに飛ぶ。
 ## カードの演出(GameDesign.md 9章)。紋章の代わりに再生する。
 var _signature: SignatureFxPlayer
 ## カードの演出が狙う対象の枠。`SignatureFxPlayer.hit(index)` の index で引く。
 var _signature_targets: Array[Dictionary] = []
+## 再生中のカードの演出の後に続ける演出(砂塵嵐に打たれたアンヴィルの被弾のように、
+## 演出の最中に起きた効果)。打ち切らずに順に出す。
+## {"move", "short", "entries", "style", "gen"}
+var _signature_queue: Array[Dictionary] = []
+## いま再生しているカードの演出。
+var _signature_job: Dictionary = {}
+## まだ終わっていないカードの演出(再生中・順番待ち・攻撃の着弾待ち)。持ち越した結果へ
+## その枠を狙う演出の番号を付け、その演出の着弾で出す(後ろに並んだ演出の結果を、
+## 前の演出の着弾で先に出さないため)。
+var _open_jobs: Array[Dictionary] = []
+var _issued := 0
 ## この対局で一度出したカードの演出(カード id)。2回目以降は短縮版にする。
 var _seen: Dictionary = {}
 var _armed := false
@@ -32,11 +42,11 @@ var _style := CardEnums.EffectVisualStyle.STRIKE
 var _origin := CardEnums.EffectOrigin.UNIT
 var _origin_side := MatchState.Side.A
 var _origin_slot := -1
-## 当たる瞬間まで持ち越す被ダメージ。{"side":..., "slot":..., "amount":...}
+## 当たる瞬間まで持ち越す被ダメージ。{"side":..., "slot":..., "amount":..., "gen":...}
 var _damage: Array[Dictionary] = []
 ## 当たる瞬間まで持ち越すターン終了の1粒(砂嵐・ラトル・ドリップ等)と、
 ## 効果で上へ戻る砂(巻き戻し・時間停止等。`raise` が true)。
-## {"side":..., "slot":..., "raise": bool}
+## {"side":..., "slot":..., "raise": bool, "gen":...}
 var _ticks: Array[Dictionary] = []
 ## 反転(SPIN)のときだけ使う。当たった瞬間に `CardView.play_flip()` を呼ぶ対象。
 var _spin_target: CardView
@@ -57,14 +67,16 @@ func _init(screen: CardMatchScreen) -> void:
 	_signature = SignatureFxPlayer.new()
 	screen.add_child(_signature)
 	_signature.hit.connect(_on_signature_hit)
-	_signature.impact.connect(_on_impact)
-	_signature.finished.connect(_on_finished)
+	_signature.impact.connect(_on_signature_impact)
+	_signature.finished.connect(_on_signature_finished)
 
 
 ## `MatchState` のシグナルへまとめて接続する(`CardMatchSound`/`CardMatchEffects` と
 ## 同じ流儀)。`card_match_screen.gd` の行数を増やさないための切り出し。
 func watch(state: MatchState) -> void:
 	_seen.clear()
+	_signature_queue.clear()
+	_open_jobs.clear()
 	state.effect_struck.connect(on_effect_struck)
 	state.effect_struck_many.connect(on_effect_struck_many)
 	state.spell_cast.connect(_on_spell_cast)
@@ -103,10 +115,7 @@ func on_effect_struck(
 		return
 	_arm(source_side, source_slot, origin, style)
 	var from := _origin_position(source_side, source_slot, origin)
-	if (
-		target_slot >= 0
-		and _play_signature(card, from, [{"side": target_side, "slot": target_slot}])
-	):
+	if _play_signature(card, from, [{"side": target_side, "slot": target_slot}]):
 		return
 	var to := (
 		from
@@ -151,14 +160,40 @@ func _play_signature(card: CardData, from: Vector2, targets: Array) -> bool:
 	for entry: Dictionary in targets:
 		entries.append({"side": entry["side"], "slot": entry["slot"]})
 		move.targets.append(_target_position(entry["side"], entry["slot"]))
-	var short := _seen.has(card.id)
+	_issued += 1
+	var job := {
+		"move": move,
+		"short": _seen.has(card.id),
+		"entries": entries,
+		"style": _style,
+		"gen": _issued,
+	}
 	_seen[card.id] = true
-	_queue(
-		func() -> void:
-			_signature_targets = entries
-			_signature.play(move, short)
-	)
+	_open_jobs.append(job)
+	_queue(_start_signature.bind(job))
 	return true
+
+
+func _start_signature(job: Dictionary) -> void:
+	if _signature.is_playing():
+		_signature_queue.append(job)
+		return
+	_signature_job = job
+	_signature_targets = job["entries"]
+	_signature.play(job["move"], job["short"])
+
+
+func _on_signature_impact() -> void:
+	_style = _signature_job["style"]
+	_on_impact(_signature_job["gen"])
+
+
+func _on_signature_finished() -> void:
+	_open_jobs.erase(_signature_job)
+	if _signature_queue.is_empty():
+		_on_finished()
+		return
+	_start_signature(_signature_queue.pop_front())
 
 
 ## 看板の演出が対象へ順に届いた(波紋・砂の帯)。その対象の砂の飛散と砂の動きだけを
@@ -167,12 +202,19 @@ func _on_signature_hit(index: int) -> void:
 	if index >= _signature_targets.size():
 		return
 	var target: Dictionary = _signature_targets[index]
+	# プレイヤー(HPの器)を狙う演出は駒の砂を散らさない。HPは `_on_impact()` で合わせる。
+	if target["slot"] < 0:
+		return
 	var view: CardView = _screen.view_at(target["side"], target["slot"])
 	if view == null:
 		return
 	var rest: Array[Dictionary] = []
 	for hit in _damage:
-		if hit["side"] == target["side"] and hit["slot"] == target["slot"]:
+		if (
+			hit["side"] == target["side"]
+			and hit["slot"] == target["slot"]
+			and hit["gen"] <= _signature_job["gen"]
+		):
 			view.play_shatter(hit["amount"])
 		else:
 			rest.append(hit)
@@ -209,13 +251,13 @@ func flush() -> void:
 ## 攻撃と同じく、紋章が当たるまで被ダメージの砂の飛散を持ち越す
 ## (`CardMatchStrike.on_unit_damaged()` から呼ぶ)。
 func hold_damage(side: int, slot: int, amount: int) -> void:
-	_damage.append({"side": side, "slot": slot, "amount": amount})
+	_damage.append({"side": side, "slot": slot, "amount": amount, "gen": _gen_for(side, slot)})
 
 
 ## ターン終了の1粒(砂嵐・ラトル・ドリップ等)も、紋章が当たるまで持ち越す
 ## (`CardMatchStrike.on_unit_ticked()` から呼ぶ)。以前は紋章が届く前に砂が流れていた。
 func hold_tick(side: int, slot: int) -> void:
-	_ticks.append({"side": side, "slot": slot, "raise": false})
+	_ticks.append({"side": side, "slot": slot, "raise": false, "gen": _gen_for(side, slot)})
 
 
 ## 効果で砂が上へ戻った(`MatchState.unit_raised`。GameDesign.md 6章)。落砂の逆向きの
@@ -223,7 +265,7 @@ func hold_tick(side: int, slot: int) -> void:
 ## 相乗りさせない**(取り違えるとルールを誤解する。GameDesign.md 9章)。
 func on_unit_raised(side: int, slot: int, _amount: int) -> void:
 	if _armed:
-		_ticks.append({"side": side, "slot": slot, "raise": true})
+		_ticks.append({"side": side, "slot": slot, "raise": true, "gen": _gen_for(side, slot)})
 		return
 	var view: CardView = _screen.view_at(side, slot)
 	if view != null:
@@ -233,21 +275,22 @@ func on_unit_raised(side: int, slot: int, _amount: int) -> void:
 ## 紋章が対象へ届いた瞬間。持ち越していた演出(被ダメージ・砂落ち・反転)を
 ## まとめて出す。**盤面の揺れは「打撃」だけ**(恵与・払拭・反転はそれぞれの
 ## 演出自体が当たりの手応えを持つため、重ねて揺らすと騒がしくなる)。
-func _on_impact() -> void:
+## `upto` を渡したカードの演出の着弾では、その番号までに持ち越した結果だけを出す。
+func _on_impact(upto := -1) -> void:
 	_screen.refresh_bars()
 	_screen.sound.flush()
 	_screen.effects.flush()
+	var damage := _take(_damage, upto)
 	if _style == CardEnums.EffectVisualStyle.STRIKE:
 		# 破壊だけの効果(`DESTROY_UNIT`)は `unit_damaged` を伴わないため、
 		# 量を持たないときは控えめな既定値で揺らす。
-		var power: int = _damage[0]["amount"] if not _damage.is_empty() else 4
+		var power: int = damage[0]["amount"] if not damage.is_empty() else 4
 		_screen.shake.hit(power)
-	for hit in _damage:
+	for hit in damage:
 		var view: CardView = _screen.view_at(hit["side"], hit["slot"])
 		if view != null:
 			view.play_shatter(hit["amount"])
-	_damage.clear()
-	for tick in _ticks:
+	for tick in _take(_ticks, upto):
 		var view: CardView = _screen.view_at(tick["side"], tick["slot"])
 		if view == null:
 			continue
@@ -255,11 +298,33 @@ func _on_impact() -> void:
 			view.play_raise()
 		else:
 			view.play_drop()
-	_ticks.clear()
 	if _spin_target != null:
 		_spin_target.play_flip()
 		_spin_target = null
 	_screen.finale.on_impact()
+
+
+## 持ち越す結果の番号。その枠を狙うまだ終わっていない演出のうち最も新しいものの番号で、
+## どれにも当たらなければ0(次の着弾で出す)。
+func _gen_for(side: int, slot: int) -> int:
+	for i in range(_open_jobs.size() - 1, -1, -1):
+		for entry: Dictionary in _open_jobs[i]["entries"]:
+			if entry["side"] == side and entry["slot"] == slot:
+				return _open_jobs[i]["gen"]
+	return 0
+
+
+## `pending` から番号が `upto` 以下のもの(`upto` が負ならすべて)を抜き出して返す。
+func _take(pending: Array[Dictionary], upto: int) -> Array[Dictionary]:
+	var taken: Array[Dictionary] = []
+	var rest: Array[Dictionary] = []
+	for entry in pending:
+		if upto < 0 or entry["gen"] <= upto:
+			taken.append(entry)
+		else:
+			rest.append(entry)
+	pending.assign(rest)
+	return taken
 
 
 func _on_finished() -> void:

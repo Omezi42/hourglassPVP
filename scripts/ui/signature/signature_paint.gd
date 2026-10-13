@@ -1,7 +1,8 @@
 class_name SignaturePaint
 extends RefCounted
-## カードの演出(GameDesign.md 9章)で使う絵の部品。鐘・天秤・歯車の輪・砂の帯・昇る砂粒を
-## コードで描く。進行(いつ何をどれだけ描くか)は `moves/` の各カードが持ち、
+## カードの演出(GameDesign.md 9章)で使う絵の部品。鐘・天秤・歯車の輪・砂の帯・昇る砂粒・
+## 雪の結晶・水滴・ばね・槌・火花・時計の文字盤・恵与の輪をコードで描く。
+## 進行(いつ何をどれだけ描くか)は `moves/` の各カードが持ち、
 ## ここは「この形をこの状態で描く」だけを受け持つ。
 
 const SAND := Color(0.93, 0.78, 0.42, 1.0)
@@ -14,6 +15,15 @@ const SCALE_CHAIN := 26.0
 const SCALE_PAN := Vector2(17.0, 5.0)
 const GEAR_TEETH := 18
 const GEAR_TOOTH := 7.0
+## 恵与の型(`EmblemStrikeFx` の DESCEND)と同じ金色。恵与の演出が届いた印に使う。
+const BOON := Color(1.0, 0.92, 0.62, 1.0)
+const ICE := Color(0.80, 0.93, 1.0, 1.0)
+const WATER := Color(0.60, 0.87, 1.0, 1.0)
+const SPARK_HOT := Color(1.0, 0.97, 0.80, 1.0)
+const SPARK_COOL := Color(1.0, 0.62, 0.20, 1.0)
+const DIAL_FACE := Color(0.96, 0.92, 0.82, 1.0)
+const HAMMER_HANDLE := 30.0
+const HAMMER_HEAD := Vector2(18.0, 10.0)
 
 
 ## 吊られた鐘。`swing` は支点まわりの傾き(ラジアン)。支点は `pivot`。
@@ -174,6 +184,178 @@ static func rising_grains(item: CanvasItem, center: Vector2, progress: float, al
 		var x := center.x + (_hash(i, 8) - 0.5) * 50.0
 		var y := center.y + 40.0 - local * SPAN
 		item.draw_circle(Vector2(x, y), 1.8, Color(SAND, alpha * (1.0 - local)))
+
+
+## 恵与が届いた印の金色の輪。`progress` は0→1で広がりながら薄れる。
+static func boon_ring(item: CanvasItem, center: Vector2, progress: float, alpha: float) -> void:
+	const REACH := 38.0
+	if alpha <= 0.0 or progress <= 0.0 or progress >= 1.0:
+		return
+	var radius := REACH * ease(progress, 0.4)
+	item.draw_arc(
+		center, radius, 0.0, TAU, 40, Color(BOON, alpha * 0.75 * (1.0 - progress)), 2.4, true
+	)
+
+
+## 雪の結晶。6本の腕にそれぞれ2対の小枝を付ける。`turn` は回った量(ラジアン)。
+static func snowflake(
+	item: CanvasItem, center: Vector2, radius: float, turn: float, alpha: float
+) -> void:
+	const TWIGS := [0.42, 0.7]
+	const TWIG_ANGLE := 0.8
+	if alpha <= 0.0 or radius <= 0.5:
+		return
+	var color := Color(ICE, alpha)
+	for i in range(6):
+		var dir := Vector2.UP.rotated(turn + TAU * float(i) / 6.0)
+		item.draw_line(center, center + dir * radius, color, 1.6, true)
+		for k: float in TWIGS:
+			var root := center + dir * radius * k
+			var twig := radius * (1.0 - k) * 0.6
+			item.draw_line(root, root + dir.rotated(TWIG_ANGLE) * twig, color, 1.2, true)
+			item.draw_line(root, root + dir.rotated(-TWIG_ANGLE) * twig, color, 1.2, true)
+	UiPaint.fill_circle(item.get_canvas_item(), center, radius * 0.16, Color(1, 1, 1, alpha), 12)
+
+
+## しずく形の水滴。`heading` は進む向きで、尾はその反対へ伸びる。
+static func water_drop(
+	item: CanvasItem, at: Vector2, radius: float, heading: Vector2, alpha: float
+) -> void:
+	const TAIL := 2.2
+	if alpha <= 0.0 or radius <= 0.3:
+		return
+	var ci := item.get_canvas_item()
+	var back := -heading.normalized() if heading.length() > 0.001 else Vector2.UP
+	var side := Vector2(-back.y, back.x)
+	var shape := PackedVector2Array()
+	shape.append(at + back * radius * TAIL)
+	for i in range(13):
+		var a := PI * float(i) / 12.0
+		shape.append(at + side * cos(a) * radius - back * sin(a) * radius)
+	var rect := Rect2(at - Vector2.ONE * radius * TAIL, Vector2.ONE * radius * TAIL * 2.0)
+	UiPaint.fill_gradient_polygon(
+		ci, shape, rect, [[0.0, Color(1, 1, 1, alpha)], [1.0, Color(WATER, alpha)]]
+	)
+	UiPaint.fill_circle(
+		ci, at - back * radius * 0.3 + side * radius * 0.35, radius * 0.28, Color(1, 1, 1, alpha), 8
+	)
+
+
+## 伸び縮みするばね。`a` から `b` へ `turns` 巻き。奥の線を先に暗く細く、手前を後から
+## 明るく太く描いて巻きの重なりを見せる。
+static func coil(
+	item: CanvasItem, a: Vector2, b: Vector2, turns: int, radius: float, alpha: float
+) -> void:
+	const STEPS_PER_TURN := 14
+	const LEAN := 0.35
+	var axis := b - a
+	if alpha <= 0.0 or axis.length() < 0.5:
+		return
+	var dir := axis.normalized()
+	var normal := Vector2(-dir.y, dir.x)
+	var steps := turns * STEPS_PER_TURN
+	var points: Array[Vector2] = []
+	for i in range(steps + 1):
+		var s := float(i) / float(steps)
+		var angle := TAU * float(turns) * s
+		points.append(
+			a + axis * s + dir * cos(angle) * radius * LEAN + normal * sin(angle) * radius
+		)
+	for front: bool in [false, true]:
+		var color := UiPalette.BRASS_HIGHLIGHT if front else UiPalette.BRASS_DARK
+		for i in range(steps):
+			var angle := TAU * float(turns) * (float(i) + 0.5) / float(steps)
+			if (cos(angle) > 0.0) != front:
+				continue
+			item.draw_line(
+				points[i], points[i + 1], Color(color, alpha), 2.6 if front else 1.6, true
+			)
+
+
+## 槌。`pivot` は柄の握り、`angle` は柄の向き(ラジアン)。頭は柄の先で柄と直交する。
+static func hammer(item: CanvasItem, pivot: Vector2, angle: float, alpha: float) -> void:
+	if alpha <= 0.0:
+		return
+	var dir := Vector2.from_angle(angle)
+	var across := dir.orthogonal()
+	var head := pivot + dir * HAMMER_HANDLE
+	item.draw_line(pivot, head, Color(UiPalette.OUTLINE_DARK, alpha * 0.8), 4.6)
+	item.draw_line(pivot, head, Color(UiPalette.WOOD_TOP.lightened(0.3), alpha), 3.0)
+	var half_long := across * HAMMER_HEAD.x * 0.5
+	var half_short := dir * HAMMER_HEAD.y * 0.5
+	var shape := PackedVector2Array(
+		[
+			head - half_long - half_short,
+			head + half_long - half_short,
+			head + half_long + half_short,
+			head - half_long + half_short,
+		]
+	)
+	var rect := Rect2(head - Vector2.ONE * HAMMER_HEAD.x, Vector2.ONE * HAMMER_HEAD.x * 2.0)
+	UiPaint.fill_gradient_polygon(
+		item.get_canvas_item(),
+		shape,
+		rect,
+		[[0.0, Color(0.72, 0.72, 0.78, alpha)], [1.0, Color(0.28, 0.28, 0.33, alpha)]]
+	)
+	var closed := shape.duplicate()
+	closed.append(shape[0])
+	item.draw_polyline(closed, Color(UiPalette.OUTLINE_DARK, alpha * 0.8), 1.2, true)
+
+
+## 打った点から上へ散る火花。`progress` は0→1で、重さで弧を描いて落ちながら冷める。
+static func sparks(item: CanvasItem, origin: Vector2, progress: float, alpha: float) -> void:
+	const COUNT := 14
+	const REACH := 48.0
+	const GRAVITY := 44.0
+	const TAIL := 0.14
+	if alpha <= 0.0 or progress <= 0.0 or progress >= 1.0:
+		return
+	for i in range(COUNT):
+		var angle := -PI * (0.08 + 0.84 * _hash(i, 11))
+		var velocity := Vector2.from_angle(angle) * REACH * (0.55 + 0.45 * _hash(i, 12))
+		var head := _ballistic(origin, velocity, GRAVITY, progress)
+		var tail := _ballistic(origin, velocity, GRAVITY, maxf(progress - TAIL, 0.0))
+		var color := SPARK_HOT.lerp(SPARK_COOL, progress)
+		item.draw_line(tail, head, Color(color, alpha * (1.0 - progress)), 1.8, true)
+
+
+## 時計の文字盤。`hand` は長針の角度(0で12時、正で時計回り)。短針は長針の12分の1だけ進む。
+static func clock_dial(
+	item: CanvasItem, center: Vector2, radius: float, hand: float, alpha: float
+) -> void:
+	const HOUR_START := TAU * 10.0 / 12.0
+	if alpha <= 0.0 or radius <= 1.0:
+		return
+	var ci := item.get_canvas_item()
+	UiPaint.fill_circle(ci, center, radius + 1.6, Color(UiPalette.OUTLINE_DARK, alpha * 0.8), 40)
+	UiPaint.fill_circle(ci, center, radius, Color(UiPalette.BRASS_HIGHLIGHT, alpha), 40)
+	UiPaint.fill_circle(ci, center, radius * 0.84, Color(DIAL_FACE, alpha * 0.94), 40)
+	for i in range(12):
+		var dir := Vector2.UP.rotated(TAU * float(i) / 12.0)
+		var major := i % 3 == 0
+		var inner := radius * (0.62 if major else 0.7)
+		item.draw_line(
+			center + dir * inner,
+			center + dir * radius * 0.8,
+			Color(UiPalette.BRASS_DARK, alpha),
+			1.8 if major else 1.0,
+			true
+		)
+	_dial_hand(item, center, HOUR_START + hand / 12.0, radius * 0.45, 2.8, alpha)
+	_dial_hand(item, center, hand, radius * 0.72, 1.8, alpha)
+	UiPaint.fill_circle(ci, center, radius * 0.1, Color(UiPalette.BRASS_DARK, alpha), 10)
+
+
+static func _dial_hand(
+	item: CanvasItem, center: Vector2, angle: float, length: float, width: float, alpha: float
+) -> void:
+	var tip := center + Vector2.UP.rotated(angle) * length
+	item.draw_line(center, tip, Color(UiPalette.OUTLINE_DARK, alpha), width, true)
+
+
+static func _ballistic(origin: Vector2, velocity: Vector2, gravity: float, t: float) -> Vector2:
+	return origin + velocity * t + Vector2(0.0, gravity * t * t)
 
 
 static func _rotated(

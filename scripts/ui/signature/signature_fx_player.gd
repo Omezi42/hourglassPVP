@@ -31,6 +31,10 @@ static func rate(short: bool) -> float:
 	return SHORT_RATE if short else 1.0
 
 
+func is_playing() -> bool:
+	return _move != null
+
+
 func play(move: SignatureMove, short := false) -> void:
 	if _tween != null and _tween.is_valid():
 		_tween.kill()
