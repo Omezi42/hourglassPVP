@@ -640,9 +640,9 @@ func _build() -> void:
 	_portrait.position = Vector2(BAND_INSET, BAND_RECT.size.y - BAND_FRAME - PORTRAIT_SIZE.y)
 	_band.add_child(_portrait)
 
-	# 帯の右上の「スキップ」。マリガン中も含め、閉じ込めないため常に出す(GameDesign.md 18章)。
-	_skip = TutorialSkip.new(_screen, BAND_RECT.size, func() -> int: return _index)
-	_band.add_child(_skip)
+	# 画面の左下に固定。マリガン中も含め、閉じ込めないため常に出す(GameDesign.md 18章)。
+	_skip = TutorialSkip.new(_screen, SCREEN_SIZE, func() -> int: return _index)
+	add_child(_skip)
 
 
 func _process(delta: float) -> void:

@@ -20,9 +20,9 @@ func _run() -> void:
 	s.start_tutorial_match()
 	var t: CardMatchTutorial = s._tutorial
 	var st: MatchState = s.state
-	# 帯の右上の「スキップ」(GameDesign.md 18章)が実際に帯の子として出ていること。
-	if t._skip == null or not t._band.get_children().has(t._skip):
-		print("tutorial flow FAILED: skip button missing from band")
+	# 画面の左下に固定の「スキップ」(GameDesign.md 18章)が帯とは別に出ていること。
+	if t._skip == null or not t.get_children().has(t._skip):
+		print("tutorial flow FAILED: skip button missing")
 		quit(1)
 		return
 	for i in MAX_POLLS:
