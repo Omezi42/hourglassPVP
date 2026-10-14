@@ -17,6 +17,15 @@ const ALL_CHIP_WIDTH := 68.0
 const KEYWORD_CHIP_WIDTH := 68.0
 const BUTTON_SIZE := Vector2(120, 44)
 const KIND_CHIP_WIDTH := 88.0
+const CHIP_GAP := 6
+const CLOSE_ICON_SIZE := Vector2(36, 36)
+const SEARCH_HEIGHT := 40.0
+## 縦(GameDesign.md 9章「縦画面」)。パネルは `PortraitModal` の論理幅で組み、中身ごと拡大する。
+## コストの札は幅に収まらないぶんを次の行へ送る。
+const PORTRAIT_CHIP_HEIGHT := 48.0
+const PORTRAIT_CLOSE_ICON_SIZE := Vector2(48, 48)
+const PORTRAIT_SEARCH_HEIGHT := 48.0
+const PORTRAIT_BUTTON_SIZE := Vector2(120, 52)
 const KIND_ALL := 0
 const KIND_UNIT := 1
 const KIND_SPELL := 2
@@ -36,6 +45,10 @@ var _cost_buttons: Dictionary = {}
 var _keyword_buttons: Dictionary = {}
 var _kind_buttons: Dictionary = {}
 var _panel: PanelContainer
+var _dim: ColorRect
+var _center: CenterContainer
+var _close_icon: Button
+var _footer_buttons: Array[Button] = []
 var _bulge_tween: Tween
 
 
@@ -44,11 +57,13 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	size = SCREEN_SIZE
 	_build()
+	PortraitModal.watch(self, _layout)
 
 
 ## `from_rect` を渡すと、そのグローバル矩形(押したボタン)の位置から膨らんで開く
 ## (GameDesign.md 9章)。省略すればいままでどおり即座に表示するだけ。
 func open(from_rect: Rect2 = Rect2()) -> void:
+	_layout()
 	visible = true
 	if from_rect.size != Vector2.ZERO:
 		_bulge_from(from_rect)
@@ -56,6 +71,26 @@ func open(from_rect: Rect2 = Rect2()) -> void:
 
 func close() -> void:
 	visible = false
+
+
+func _layout() -> void:
+	var portrait := ScreenOrientation.is_portrait()
+	size = PortraitModal.screen_size()
+	_dim.size = size
+	_center.size = size
+	var width := PortraitModal.WIDTH if portrait else PANEL_WIDTH
+	_panel.custom_minimum_size.x = width
+	var chip_height := PORTRAIT_CHIP_HEIGHT if portrait else CHIP_HEIGHT
+	for chips: Dictionary in [_kind_buttons, _cost_buttons, _keyword_buttons]:
+		for chip: Button in chips.values():
+			chip.custom_minimum_size.y = chip_height
+	_close_icon.custom_minimum_size = PORTRAIT_CLOSE_ICON_SIZE if portrait else CLOSE_ICON_SIZE
+	_search_input.custom_minimum_size = Vector2(
+		width - 48, PORTRAIT_SEARCH_HEIGHT if portrait else SEARCH_HEIGHT
+	)
+	for button in _footer_buttons:
+		button.custom_minimum_size = PORTRAIT_BUTTON_SIZE if portrait else BUTTON_SIZE
+	PortraitModal.fit(_center)
 
 
 func matches(card: CardData) -> bool:
@@ -100,17 +135,18 @@ func reset_filters() -> void:
 
 
 func _build() -> void:
-	var dim := ColorRect.new()
-	dim.color = Color(0, 0, 0, 0.65)
-	dim.size = SCREEN_SIZE
-	dim.mouse_filter = Control.MOUSE_FILTER_STOP
-	dim.gui_input.connect(_on_dim_input)
-	add_child(dim)
+	_dim = ColorRect.new()
+	_dim.color = Color(0, 0, 0, 0.65)
+	_dim.size = SCREEN_SIZE
+	_dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	_dim.gui_input.connect(_on_dim_input)
+	add_child(_dim)
 
-	var center := CenterContainer.new()
-	center.size = SCREEN_SIZE
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(center)
+	_center = CenterContainer.new()
+	_center.size = SCREEN_SIZE
+	_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_center)
+	var center := _center
 
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = Vector2(PANEL_WIDTH, 0)
@@ -136,9 +172,9 @@ func _build() -> void:
 	# **記号は同梱フォントが字形を持つものだけを使う**(Architecture.md 11章)。
 	# ✕(U+2715)には字形が無く、書き出した版でだけ豆腐になる。
 	# 検出は `python tools/check_font_glyphs.py`。
-	var close_icon := CodedButton.make_icon("×", Vector2(36, 36))
-	close_icon.pressed.connect(close)
-	header_row.add_child(close_icon)
+	_close_icon = CodedButton.make_icon("×", CLOSE_ICON_SIZE)
+	_close_icon.pressed.connect(close)
+	header_row.add_child(_close_icon)
 
 	# 種類選択(砂時計 / 砂術。GameDesign.md 6章)
 	var kind_label := Label.new()
@@ -161,8 +197,10 @@ func _build() -> void:
 	cost_label.add_theme_color_override("font_color", UiPalette.BRASS_HIGHLIGHT)
 	column.add_child(cost_label)
 
-	var cost_row := HBoxContainer.new()
-	cost_row.add_theme_constant_override("separation", 6)
+	# 縦では幅に収まらないため、収まらないぶんを次の行へ送る。
+	var cost_row := HFlowContainer.new()
+	cost_row.add_theme_constant_override("h_separation", CHIP_GAP)
+	cost_row.add_theme_constant_override("v_separation", CHIP_GAP)
 	column.add_child(cost_row)
 	_add_cost_chip(cost_row, "すべて", 0, ALL_CHIP_WIDTH)
 	for cost in _pool_costs():
@@ -196,7 +234,7 @@ func _build() -> void:
 
 	_search_input = LineEdit.new()
 	_search_input.placeholder_text = "名前で探す"
-	_search_input.custom_minimum_size = Vector2(PANEL_WIDTH - 48, 40)
+	_search_input.custom_minimum_size = Vector2(PANEL_WIDTH - 48, SEARCH_HEIGHT)
 	_search_input.text_changed.connect(_on_query_changed)
 	MobileTextInput.wire(_search_input, "名前で探す")
 	column.add_child(_search_input)
@@ -210,10 +248,12 @@ func _build() -> void:
 	var reset_button := CodedButton.make("リセット", BUTTON_SIZE)
 	reset_button.pressed.connect(reset_filters)
 	footer_row.add_child(reset_button)
+	_footer_buttons.append(reset_button)
 
 	var confirm_button := CodedButton.make("閉じる", BUTTON_SIZE)
 	confirm_button.pressed.connect(close)
 	footer_row.add_child(confirm_button)
+	_footer_buttons.append(confirm_button)
 
 
 ## プールに実在するコストだけを昇順で返す。
@@ -291,7 +331,7 @@ func _bulge_from(button_global_rect: Rect2) -> void:
 	var pivot := _panel.size * 0.5
 	_panel.pivot_offset = pivot
 	var target_position := _panel.position
-	var inverse := get_global_transform().affine_inverse()
+	var inverse := _panel.get_parent_control().get_global_transform().affine_inverse()
 	var button_center: Vector2 = inverse * button_global_rect.get_center()
 	var start_scale := (button_global_rect.size / _panel.size).clamp(
 		Vector2(BULGE_MIN_SCALE, BULGE_MIN_SCALE), Vector2.ONE

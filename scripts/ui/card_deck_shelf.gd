@@ -21,6 +21,8 @@ extends Control
 signal card_hovered(card: CardData)
 signal hover_left
 signal card_removed(card: CardData)
+## タッチで枠を長押しした(詳細を出す)。離したら `hover_left`。
+signal card_long_pressed(card: CardData)
 ## 在庫棚のカードをドラッグしてこの棚へ落とした(GameDesign.md 9章「手触り」)。
 signal card_add_requested(card: CardData)
 
@@ -73,6 +75,9 @@ var readonly := false:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE if value else Control.MOUSE_FILTER_STOP
 
 var _font: Font
+## タッチでは押した枠を離したときに戻す(長押しは詳細だけを出す。GameDesign.md 9章「タッチでの操作」)。
+var _long: LongPress
+var _press_index := -1
 ## 枠に収まった順。**1枠=1枚**なので、2枚積みは隣り合う2枠を占める。
 var _slots: Array = []
 ## 押せる場所。1要素 = {"rect":, "index":}
@@ -91,6 +96,8 @@ func _ready() -> void:
 	_font = get_theme_default_font()
 	if _font == null:
 		_font = ThemeDB.fallback_font
+	_long = LongPress.new(self)
+	_long.fired.connect(_on_long_press)
 
 
 func _notification(what: int) -> void:
@@ -403,6 +410,9 @@ func _draw_hover_glow(base: Vector2, art_w: float) -> void:
 func _gui_input(event: InputEvent) -> void:
 	if readonly:
 		return
+	if TouchInput.active:
+		_touch_input(event)
+		return
 	if event is InputEventMouseMotion:
 		_update_hover((event as InputEventMouseMotion).position)
 		return
@@ -413,6 +423,27 @@ func _gui_input(event: InputEvent) -> void:
 	var index := _index_at(press.position)
 	if index >= 0 and index < _slots.size():
 		card_removed.emit(_slots[index])
+
+
+## タッチ: 押して離したら戻す。長押しなら詳細だけを出し、離したら消す。
+func _touch_input(event: InputEvent) -> void:
+	if ClickArea.is_primary_click(event):
+		_press_index = _index_at((event as InputEventMouseButton).position)
+		_long.begin(get_global_mouse_position())
+	elif event is InputEventMouseMotion:
+		_long.move(get_global_mouse_position())
+	elif ClickArea.is_primary_release(event):
+		var index := _index_at((event as InputEventMouseButton).position)
+		if _long.end():
+			hover_left.emit()
+		elif index == _press_index and index >= 0 and index < _slots.size():
+			card_removed.emit(_slots[index])
+		_press_index = -1
+
+
+func _on_long_press() -> void:
+	if _press_index >= 0 and _press_index < _slots.size():
+		card_long_pressed.emit(_slots[_press_index])
 
 
 func _update_hover(at: Vector2) -> void:

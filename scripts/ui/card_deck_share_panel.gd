@@ -58,6 +58,38 @@ const RECEIVE_TITLE_FONT_SIZE := 28
 const SUB_FONT_SIZE := 16
 const MESSAGE_FONT_SIZE := 17
 
+## 縦(GameDesign.md 9章「縦画面」)。パネルは `PortraitModal` の論理幅で組み、中身ごと拡大する。
+## 見本の下に「画像で渡す」「コードで渡す」を縦に積み、受け取る面は升・読み込む・数字パッドを縦に並べる。
+const PORTRAIT_PANEL_SIZE := Vector2(PortraitModal.WIDTH, 880)
+const PORTRAIT_INNER_WIDTH := 392.0
+const PORTRAIT_SUB_FONT_SIZE := 17
+const PORTRAIT_RECTS := {
+	"title": Rect2(24, 20, 0, 0),
+	"tab0": Rect2(24, 80, 212, 52),
+	"tab1": Rect2(244, 80, 212, 52),
+	"close": Rect2(324, 16, 132, 48),
+	"preview": Rect2(24, 144, 432, 243),
+	"note": Rect2(24, 392, 0, 0),
+	"image_card": Rect2(24, 428, 432, 176),
+	"image_title": Rect2(20, 14, 0, 0),
+	"image_sub": Rect2(20, 48, 0, 0),
+	"image_message": Rect2(20, 140, PORTRAIT_INNER_WIDTH, 0),
+	"code_card": Rect2(24, 616, 432, 252),
+	"code_title": Rect2(20, 14, 0, 0),
+	"code_sub": Rect2(20, 48, 0, 0),
+	"own_tiles": Rect2(20, 84, PORTRAIT_INNER_WIDTH, 56),
+	"code_button": Rect2(20, 150, PORTRAIT_INNER_WIDTH, 52),
+	"code_message": Rect2(20, 210, PORTRAIT_INNER_WIDTH, 0),
+	"receive_title": Rect2(24, 160, 0, 0),
+	"receive_sub": Rect2(24, 206, 0, 0),
+	"input_tiles": Rect2(24, 252, 432, 72),
+	"load_button": Rect2(24, 340, 432, 60),
+	"receive_message": Rect2(24, 410, 432, 0),
+	"pad": Rect2(106, 460, 0, 0),
+}
+const PORTRAIT_IMAGE_BUTTON_TOP := 84.0
+const PORTRAIT_IMAGE_BUTTON_LEFT := 20.0
+
 const ISSUE_LABEL := "コードを発行してコピー"
 const COPY_LABEL := "コードをコピー"
 const REPLACE_TITLE := "デッキを入れ替えますか"
@@ -88,6 +120,14 @@ var _deck_name := ""
 ## 発行済みのコード。**画像を出すためだけに発行はしない**(通信が要るため)。
 var _code := ""
 var _busy := false
+var _panel: Panel
+var _dim: ColorRect
+## 置き直す部品(名前 → ノード)と、横の矩形。縦の矩形は `PORTRAIT_RECTS`。
+## 文字だけの部品は大きさ0の矩形(位置だけ)、折り返す1行は高さ0の矩形(幅だけ)で持つ。
+var _parts := {}
+var _landscape_rects := {}
+var _sub_labels: Array[Label] = []
+var _was_portrait := false
 
 
 func _ready() -> void:
@@ -96,6 +136,7 @@ func _ready() -> void:
 	# `set_anchors_preset()` は生成直後(サイズ0)のノードでは0のまま固定される。
 	size = SCREEN_SIZE
 	_build()
+	PortraitModal.watch(self, _layout)
 
 
 func open(deck: Array, deck_name: String) -> void:
@@ -112,12 +153,68 @@ func open(deck: Array, deck_name: String) -> void:
 	_replace_confirm.visible = false
 	_set_busy(false)
 	_show_face(Face.SEND)
+	_layout()
 	visible = true
 	_refresh_sheet()
 
 
 func close() -> void:
 	visible = false
+
+
+## 縦横で部品を置き直す。開いたまま向きが変わっても、入力中のコードや面は保つ。
+func _layout() -> void:
+	var portrait := ScreenOrientation.is_portrait()
+	# 横のまま一度も縦にしていなければ、作ったときの配置のまま触らない。
+	if not portrait and not _was_portrait:
+		return
+	_was_portrait = portrait
+	size = PortraitModal.screen_size()
+	_dim.size = size
+	var panel_size := PORTRAIT_PANEL_SIZE if portrait else PANEL_RECT.size
+	_panel.size = panel_size
+	_panel.position = (size - panel_size) * 0.5 if portrait else PANEL_RECT.position
+	for layer in [_send_view, _receive_view]:
+		layer.size = panel_size
+	for part_name in _parts:
+		var rect: Rect2 = (PORTRAIT_RECTS if portrait else _landscape_rects)[part_name]
+		var node: Control = _parts[part_name]
+		node.position = rect.position
+		if rect.size.x > 0.0:
+			var part_size := Vector2(rect.size.x, rect.size.y if rect.size.y > 0.0 else node.size.y)
+			if node is Button:
+				node.custom_minimum_size = part_size
+			node.size = part_size
+	_place_image_buttons(portrait)
+	for label in _sub_labels:
+		label.add_theme_font_size_override(
+			"font_size", PORTRAIT_SUB_FONT_SIZE if portrait else SUB_FONT_SIZE
+		)
+	PortraitModal.fit(_panel)
+
+
+## 画像の2つのボタン(コピーできない環境では保存だけを幅いっぱいに)。
+func _place_image_buttons(portrait: bool) -> void:
+	var left := PORTRAIT_IMAGE_BUTTON_LEFT if portrait else CARD_BUTTON_LEFT
+	var top := PORTRAIT_IMAGE_BUTTON_TOP if portrait else IMAGE_BUTTON_TOP
+	var inner := PORTRAIT_INNER_WIDTH if portrait else CARD_INNER_WIDTH
+	var half := (inner - BUTTON_GAP) / 2.0
+	for button in [_copy_image_button, _save_image_button]:
+		button.custom_minimum_size = Vector2.ZERO
+	_copy_image_button.position = Vector2(left, top)
+	_copy_image_button.size = Vector2(half, BUTTON_HEIGHT)
+	if _copy_image_button.visible:
+		_save_image_button.position = Vector2(left + half + BUTTON_GAP, top)
+		_save_image_button.size = Vector2(half, BUTTON_HEIGHT)
+	else:
+		_save_image_button.position = Vector2(left, top)
+		_save_image_button.size = Vector2(inner, BUTTON_HEIGHT)
+
+
+## 置き直す部品として控える。`rect` は横の矩形。
+func _keep(part_name: String, node: Control, rect: Rect2) -> void:
+	_parts[part_name] = node
+	_landscape_rects[part_name] = rect
 
 
 func _show_face(face: Face) -> void:
@@ -258,14 +355,19 @@ func _set_busy(busy: bool) -> void:
 
 
 func _build() -> void:
-	var dim := ColorRect.new()
-	dim.color = Color(0, 0, 0, 0.72)
-	dim.size = SCREEN_SIZE
-	dim.mouse_filter = Control.MOUSE_FILTER_STOP
-	add_child(dim)
+	_dim = ColorRect.new()
+	_dim.color = Color(0, 0, 0, 0.72)
+	_dim.size = SCREEN_SIZE
+	_dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(_dim)
 
 	var panel := _make_panel(self, PANEL_RECT)
-	_place_label(panel, "デッキを共有", TITLE_POS, TITLE_FONT_SIZE, UiPalette.TEXT_OFFWHITE)
+	_panel = panel
+	_keep(
+		"title",
+		_place_label(panel, "デッキを共有", TITLE_POS, TITLE_FONT_SIZE, UiPalette.TEXT_OFFWHITE),
+		Rect2(TITLE_POS, Vector2.ZERO)
+	)
 	var faces := ["渡す", "受け取る"]
 	for i in faces.size():
 		var tab := CodedButton.make(faces[i], TAB_SIZE)
@@ -273,10 +375,12 @@ func _build() -> void:
 		tab.pressed.connect(_show_face.bind(i))
 		panel.add_child(tab)
 		_tabs.append(tab)
+		_keep("tab%d" % i, tab, Rect2(tab.position, TAB_SIZE))
 	var close_button := CodedButton.make("閉じる", CLOSE_RECT.size)
 	close_button.position = CLOSE_RECT.position
 	close_button.pressed.connect(close)
 	panel.add_child(close_button)
+	_keep("close", close_button, CLOSE_RECT)
 
 	_send_view = _make_layer(panel)
 	_build_preview()
@@ -308,15 +412,26 @@ func _build_preview() -> void:
 	_preview.position = PREVIEW_RECT.position
 	_preview.size = PREVIEW_RECT.size
 	_send_view.add_child(_preview)
-	_place_label(
+	_keep("preview", _preview, PREVIEW_RECT)
+	var note := _place_label(
 		_send_view, "この画像がそのまま書き出されます", PREVIEW_NOTE_POS, SUB_FONT_SIZE, UiPalette.TEXT_MUTED
 	)
+	_keep_sub("note", note, PREVIEW_NOTE_POS)
 
 
 func _build_image_card() -> void:
 	var card := _make_panel(_send_view, IMAGE_CARD_RECT)
-	_place_label(card, "画像で渡す", CARD_TITLE_POS, CARD_TITLE_FONT_SIZE, UiPalette.TEXT_OFFWHITE)
-	_place_label(card, "XやDiscordへそのまま貼れます", CARD_SUB_POS, SUB_FONT_SIZE, UiPalette.TEXT_MUTED)
+	_keep("image_card", card, IMAGE_CARD_RECT)
+	_keep(
+		"image_title",
+		_place_label(card, "画像で渡す", CARD_TITLE_POS, CARD_TITLE_FONT_SIZE, UiPalette.TEXT_OFFWHITE),
+		Rect2(CARD_TITLE_POS, Vector2.ZERO)
+	)
+	_keep_sub(
+		"image_sub",
+		_place_label(card, "XやDiscordへそのまま貼れます", CARD_SUB_POS, SUB_FONT_SIZE, UiPalette.TEXT_MUTED),
+		CARD_SUB_POS
+	)
 	# ブラウザ以外では画像をクリップボードへ置けない(Architecture.md 10.6.1節)。
 	# 押せないボタンを見せず、保存を主の操作として幅いっぱいに出す。
 	var can_copy := ImageShare.can_copy()
@@ -334,49 +449,75 @@ func _build_image_card() -> void:
 	_save_image_button = _make_button(card, "画像を保存", save_rect, not can_copy)
 	_save_image_button.pressed.connect(_on_save_image_pressed)
 	_image_message = _make_message(card, IMAGE_MESSAGE_POS, CARD_INNER_WIDTH)
+	_keep("image_message", _image_message, Rect2(IMAGE_MESSAGE_POS, Vector2(CARD_INNER_WIDTH, 0)))
 
 
 func _build_code_card() -> void:
 	var card := _make_panel(_send_view, CODE_CARD_RECT)
-	_place_label(card, "コードで渡す", CARD_TITLE_POS, CARD_TITLE_FONT_SIZE, UiPalette.TEXT_OFFWHITE)
-	_place_label(
+	_keep("code_card", card, CODE_CARD_RECT)
+	_keep(
+		"code_title",
+		_place_label(card, "コードで渡す", CARD_TITLE_POS, CARD_TITLE_FONT_SIZE, UiPalette.TEXT_OFFWHITE),
+		Rect2(CARD_TITLE_POS, Vector2.ZERO)
+	)
+	var sub := _place_label(
 		card,
 		"%d桁の番号を送ると、相手が読み込めます" % DeckCodeService.CODE_LENGTH,
 		CARD_SUB_POS,
 		SUB_FONT_SIZE,
 		UiPalette.TEXT_MUTED
 	)
+	_keep_sub("code_sub", sub, CARD_SUB_POS)
 	_own_tiles = _make_tiles(card, CODE_TILES_RECT)
+	_keep("own_tiles", _own_tiles, CODE_TILES_RECT)
 	_code_button = _make_button(card, ISSUE_LABEL, CODE_BUTTON_RECT, true)
 	_code_button.pressed.connect(_on_code_pressed)
+	_keep("code_button", _code_button, CODE_BUTTON_RECT)
 	_code_message = _make_message(card, CODE_MESSAGE_POS, CARD_INNER_WIDTH)
+	_keep("code_message", _code_message, Rect2(CODE_MESSAGE_POS, Vector2(CARD_INNER_WIDTH, 0)))
 
 
 func _build_receive() -> void:
-	_place_label(
+	var title := _place_label(
 		_receive_view,
 		"受け取ったコードを読み込む",
 		RECEIVE_TITLE_POS,
 		RECEIVE_TITLE_FONT_SIZE,
 		UiPalette.TEXT_OFFWHITE
 	)
-	_place_label(
+	_keep("receive_title", title, Rect2(RECEIVE_TITLE_POS, Vector2.ZERO))
+	var sub := _place_label(
 		_receive_view,
 		"%d桁の番号を入力します。貼り付けもできます" % DeckCodeService.CODE_LENGTH,
 		RECEIVE_SUB_POS,
 		SUB_FONT_SIZE,
 		UiPalette.TEXT_MUTED
 	)
+	_keep_sub("receive_sub", sub, RECEIVE_SUB_POS)
 	_input_tiles = _make_tiles(_receive_view, RECEIVE_TILES_RECT)
+	_keep("input_tiles", _input_tiles, RECEIVE_TILES_RECT)
 	_input_tiles.make_editable("デッキコード")
 	_input_tiles.submitted.connect(_on_load_pressed)
 	_load_button = _make_button(_receive_view, "読み込む", LOAD_BUTTON_RECT, true)
 	_load_button.pressed.connect(_on_load_pressed)
+	_keep("load_button", _load_button, LOAD_BUTTON_RECT)
 	_receive_message = _make_message(_receive_view, RECEIVE_MESSAGE_POS, RECEIVE_TEXT_WIDTH)
+	_keep(
+		"receive_message",
+		_receive_message,
+		Rect2(RECEIVE_MESSAGE_POS, Vector2(RECEIVE_TEXT_WIDTH, 0))
+	)
 	# 確定は「読み込む」が持つため、パッドに「決定」は置かない(GameDesign.md 9章)。
 	_pad = NumberPad.make(_input_tiles.input, PAD_KEY_SIZE, false)
 	_pad.position = PAD_POS
 	_receive_view.add_child(_pad)
+	_keep("pad", _pad, Rect2(PAD_POS, Vector2.ZERO))
+
+
+## 補足の1行(縦では本文の目安まで大きくする)。
+func _keep_sub(part_name: String, label: Label, at: Vector2) -> void:
+	_keep(part_name, label, Rect2(at, Vector2.ZERO))
+	_sub_labels.append(label)
 
 
 func _make_layer(parent: Control) -> Control:

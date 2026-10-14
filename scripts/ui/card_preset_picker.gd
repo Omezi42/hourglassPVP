@@ -11,6 +11,15 @@ const PANEL_WIDTH := 720.0
 const PANEL_STYLE := "res://resources/theme/content_panel.tres"
 const ROW_BUTTON_SIZE := Vector2(200, 64)
 const SUMMARY_WIDTH := 420.0
+## 縦(GameDesign.md 9章「縦画面」)。パネルは `PortraitModal` の論理幅で組み、中身ごと拡大する。
+const PORTRAIT_ROW_BUTTON_SIZE := Vector2(140, 56)
+const PORTRAIT_SUMMARY_WIDTH := 272.0
+
+var _dim: ColorRect
+var _center: CenterContainer
+var _panel: PanelContainer
+var _row_buttons: Array[Button] = []
+var _summaries: Array[Label] = []
 
 
 func _ready() -> void:
@@ -19,10 +28,25 @@ func _ready() -> void:
 	# `set_anchors_preset()` は生成直後(サイズ0)のノードでは0のまま固定される。
 	size = SCREEN_SIZE
 	_build()
+	PortraitModal.watch(self, _layout)
 
 
 func open() -> void:
+	_layout()
 	visible = true
+
+
+func _layout() -> void:
+	var portrait := ScreenOrientation.is_portrait()
+	size = PortraitModal.screen_size()
+	_dim.size = size
+	_center.size = size
+	_panel.custom_minimum_size.x = PortraitModal.WIDTH if portrait else PANEL_WIDTH
+	for button in _row_buttons:
+		button.custom_minimum_size = PORTRAIT_ROW_BUTTON_SIZE if portrait else ROW_BUTTON_SIZE
+	for summary in _summaries:
+		summary.custom_minimum_size.x = PORTRAIT_SUMMARY_WIDTH if portrait else SUMMARY_WIDTH
+	PortraitModal.fit(_center)
 
 
 func close() -> void:
@@ -30,24 +54,25 @@ func close() -> void:
 
 
 func _build() -> void:
-	var dim := ColorRect.new()
-	dim.color = Color(0, 0, 0, 0.72)
-	dim.size = SCREEN_SIZE
-	dim.mouse_filter = Control.MOUSE_FILTER_STOP
-	add_child(dim)
+	_dim = ColorRect.new()
+	_dim.color = Color(0, 0, 0, 0.72)
+	_dim.size = SCREEN_SIZE
+	_dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(_dim)
 
-	var center := CenterContainer.new()
-	center.size = SCREEN_SIZE
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(center)
+	_center = CenterContainer.new()
+	_center.size = SCREEN_SIZE
+	_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_center)
 
 	var panel := PanelContainer.new()
+	_panel = panel
 	panel.custom_minimum_size = Vector2(PANEL_WIDTH, 0)
 	panel.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var style: StyleBox = load(PANEL_STYLE)
 	if style != null:
 		panel.add_theme_stylebox_override("panel", style)
-	center.add_child(panel)
+	_center.add_child(panel)
 
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 18)
@@ -80,6 +105,7 @@ func _make_row(preset: Dictionary) -> HBoxContainer:
 			close()
 	)
 	row.add_child(button)
+	_row_buttons.append(button)
 
 	var summary := Label.new()
 	summary.text = preset["summary"]
@@ -88,4 +114,5 @@ func _make_row(preset: Dictionary) -> HBoxContainer:
 	summary.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	summary.add_theme_color_override("font_color", UiPalette.TEXT_OFFWHITE)
 	row.add_child(summary)
+	_summaries.append(summary)
 	return row

@@ -91,6 +91,11 @@ func _gui_input(event: InputEvent) -> void:
 		pressed.emit(card)
 
 
+## 長押しが成立した押下を打ち切る(離しても足さない)。
+func cancel_press() -> void:
+	_press.cancel()
+
+
 ## デッキ編集の棚(`CardDeckShelf`)へドラッグして加えられるようにする(GameDesign.md 9章)。
 ## 傾きの物理は対局と同じ `CardDragPreview` をそのまま使う(Architecture.md 10.10.2節)。
 func _get_drag_data(_at_position: Vector2) -> Variant:

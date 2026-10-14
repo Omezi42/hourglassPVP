@@ -176,6 +176,7 @@ const PATHS: Array[String] = [
 	"res://scripts/ui/workshop_backdrop.gd",
 	"res://scripts/logic/mobile_text_input.gd",
 	"res://scripts/ui/card_deck_filter.gd",
+	"res://scripts/ui/long_press.gd",
 	"res://scripts/ui/card_deck_shelf.gd",
 	"res://scripts/ui/card_preset_picker.gd",
 	"res://scripts/ui/card_deck_sheet.gd",

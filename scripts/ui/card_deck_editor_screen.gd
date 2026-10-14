@@ -114,11 +114,19 @@ var _tab_buttons: Array[Button] = []
 var _portrait := false
 ## 縦で在庫棚を出しているか(false なら組立台)。
 var _show_stock := true
+## タッチの長押しで詳細を出す(ホバーの代わり。GameDesign.md 9章「タッチでの操作」)。
+var _long: LongPress
+var _long_view: WorkshopStockItem
 
 
 func _ready() -> void:
 	_build()
 	open()
+
+
+func _input(event: InputEvent) -> void:
+	if is_visible_in_tree():
+		TouchInput.note(event)
 
 
 ## 保存済みのデッキを1つ読み込んで開く。index が範囲外なら新規作成として開く。
@@ -148,6 +156,8 @@ func _build() -> void:
 	_build_grid()
 	_build_side()
 	_build_detail()
+	_long = LongPress.new(self)
+	_long.fired.connect(_on_stock_long_press)
 	# **モーダルは最後に足す。**`Control` は後から足した子ほど手前に描かれる。
 	_filter = CardDeckFilter.new()
 	_filter.changed.connect(_apply_filter)
@@ -249,6 +259,7 @@ func _build_grid() -> void:
 		view.pressed.connect(_on_card_pressed)
 		view.mouse_entered.connect(_on_stock_hovered.bind(view))
 		view.mouse_exited.connect(_on_hover_left)
+		view.gui_input.connect(_on_stock_input.bind(view))
 		_grid.add_child(view)
 		_card_views.append(view)
 
@@ -293,6 +304,7 @@ func _build_side() -> void:
 	_shelf.hover_left.connect(_on_hover_left)
 	_shelf.card_removed.connect(_on_band_remove)
 	_shelf.card_add_requested.connect(_on_card_pressed)
+	_shelf.card_long_pressed.connect(_show_detail)
 	column.add_child(_shelf)
 
 
@@ -482,12 +494,35 @@ func _on_hover_left() -> void:
 		_detail_hide_timer.start()
 
 
+## タッチから作られたホバーでは出さない(指を離しても消えないため)。代わりに長押しで出す。
 func _on_stock_hovered(view: WorkshopStockItem) -> void:
-	_show_detail(view.card)
+	if not TouchInput.active:
+		_show_detail(view.card)
 
 
 func _on_shelf_hovered(card: CardData) -> void:
-	_show_detail(card)
+	if not TouchInput.active:
+		_show_detail(card)
+
+
+func _on_stock_input(event: InputEvent, view: WorkshopStockItem) -> void:
+	if not TouchInput.active:
+		return
+	if ClickArea.is_primary_click(event):
+		_long_view = view
+		_long.begin(view.get_global_mouse_position())
+	elif event is InputEventMouseMotion:
+		_long.move(view.get_global_mouse_position())
+	elif ClickArea.is_primary_release(event) and _long.end():
+		_hide_detail()
+
+
+## 長押しが成立した。**離しても足さない**(押した扱いを打ち切る)。
+func _on_stock_long_press() -> void:
+	if _long_view == null or not is_instance_valid(_long_view):
+		return
+	_long_view.cancel_press()
+	_show_detail(_long_view.card)
 
 
 # --- 操作 ---------------------------------------------------------------
@@ -530,7 +565,11 @@ func _add_card(card: CardData) -> void:
 	var from_rect := _view_rect(card)
 	_deck.append(card)
 	_refresh()
-	_fly_card(card, from_rect, _shelf.global_rect_for_card(card))
+	# 縦で組立台を出していないときは、切り替えの「デッキ」へ飛ばす。
+	var to_rect := _shelf.global_rect_for_card(card)
+	if not _side_box.visible:
+		to_rect = _tab_buttons[1].get_global_rect()
+	_fly_card(card, from_rect, to_rect)
 
 
 func _on_band_remove(card: CardData) -> void:
@@ -541,7 +580,10 @@ func _on_band_remove(card: CardData) -> void:
 	var from_rect := _shelf.global_rect_for_card(card)
 	_deck.remove_at(index)
 	_refresh()
-	_fly_card(card, from_rect, _view_rect(card))
+	var to_rect := _view_rect(card)
+	if not _grid_box.visible:
+		to_rect = _tab_buttons[0].get_global_rect()
+	_fly_card(card, from_rect, to_rect)
 
 
 ## 一覧⇄棚の飛び(GameDesign.md 9章)。**演出の完了を待たず**、配列操作は既に済んだ
