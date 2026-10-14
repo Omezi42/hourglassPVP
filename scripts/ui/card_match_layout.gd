@@ -21,6 +21,8 @@ const PORTRAIT_HAND_HEIGHT := 236.0
 ## 駒の列を各陣地の中央からレールと反対側へ寄せる量。レールの右端の時計とターン終了に駒のバッジが掛からないように。
 const PORTRAIT_ROW_SPREAD := 30.0
 const PORTRAIT_GAP := 8.0
+const PORTRAIT_LOG_FONT_SIZE := 24
+const PORTRAIT_LOG_TITLE_FONT_SIZE := 30
 
 static var _landscape: CardMatchLayout
 static var _portrait: CardMatchLayout
@@ -75,6 +77,10 @@ var version_position := Vector2.ZERO
 ## マリガンの一群(見出し〜確定ボタン)の上端と、札の間隔。
 var mulligan_top := 0.0
 var mulligan_card_gap := 0.0
+## ログのパネルと文字の大きさ(0ならテーマの既定)。
+var log_panel_size := Vector2.ZERO
+var log_font_size := 0
+var log_title_font_size := 0
 
 
 static func current() -> CardMatchLayout:
@@ -145,6 +151,7 @@ static func _make_landscape() -> CardMatchLayout:
 	l.version_position = Vector2(24, 700)
 	l.mulligan_top = 110.0
 	l.mulligan_card_gap = CardMatchMulligan.CARD_GAP
+	l.log_panel_size = CardMatchLog.PANEL_SIZE
 	return l
 
 
@@ -208,4 +215,7 @@ static func _make_portrait() -> CardMatchLayout:
 	# 縦は一群を画面のちょうど中央へ。札は最大4枚を1.35倍のまま横1列に収めるため間隔を詰める。
 	l.mulligan_top = (l.screen_size.y - CardMatchMulligan.CONTENT_HEIGHT) * 0.5
 	l.mulligan_card_gap = 14.0
+	l.log_panel_size = Vector2(width - side * 2.0, l.screen_size.y - side * 10.0)
+	l.log_font_size = PORTRAIT_LOG_FONT_SIZE
+	l.log_title_font_size = PORTRAIT_LOG_TITLE_FONT_SIZE
 	return l

@@ -44,6 +44,8 @@ func _init(screen: CardMatchScreen) -> void:
 	)
 	_button.visible = false
 	_button.pressed.connect(toggle)
+	# ボタンだけはマリガン・結果パネル・ログの暗幕より背面へ(直前の手の列の直後)。
+	screen.move_child(_button, screen._history.get_index() + 1)
 	_blocker = Control.new()
 	_blocker.anchor_right = 1.0
 	_blocker.anchor_bottom = 1.0
