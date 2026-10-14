@@ -395,7 +395,8 @@
 		"id": "7",
 		"label": "とどめ問題 #20",
 		"reserved": [
-			"x"
+			"x",
+			"youtube"
 		]
 	},
 	{
@@ -404,7 +405,8 @@
 		"id": "wall",
 		"label": "ウォール",
 		"reserved": [
-			"x"
+			"x",
+			"youtube"
 		]
 	},
 	{
@@ -413,7 +415,8 @@
 		"id": "23",
 		"label": "とどめ問題 #21",
 		"reserved": [
-			"x"
+			"x",
+			"youtube"
 		]
 	},
 	{
@@ -422,7 +425,8 @@
 		"id": "freeze",
 		"label": "フリーズ",
 		"reserved": [
-			"x"
+			"x",
+			"youtube"
 		]
 	},
 	{
@@ -431,7 +435,8 @@
 		"id": "24",
 		"label": "とどめ問題 #22",
 		"reserved": [
-			"x"
+			"x",
+			"youtube"
 		]
 	},
 	{
@@ -440,44 +445,67 @@
 		"id": "gate",
 		"label": "ゲート",
 		"reserved": [
-			"x"
+			"x",
+			"youtube"
 		]
 	},
 	{
 		"date": "2026-10-19",
 		"kind": "puzzle",
 		"id": "8",
-		"label": "とどめ問題 #23"
+		"label": "とどめ問題 #23",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-10-19",
 		"kind": "card",
 		"id": "clocktower",
-		"label": "クロックタワー"
+		"label": "クロックタワー",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-10-20",
 		"kind": "puzzle",
 		"id": "25",
-		"label": "とどめ問題 #24"
+		"label": "とどめ問題 #24",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-10-20",
 		"kind": "card",
 		"id": "refill",
-		"label": "砂の補給"
+		"label": "砂の補給",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-10-21",
 		"kind": "puzzle",
 		"id": "26",
-		"label": "とどめ問題 #25"
+		"label": "とどめ問題 #25",
+		"reserved": [
+			"x"
+		]
 	},
 	{
 		"date": "2026-10-21",
 		"kind": "card",
 		"id": "hour",
-		"label": "アワー"
+		"label": "アワー",
+		"reserved": [
+			"x"
+		]
 	},
 	{
 		"date": "2026-10-22",
