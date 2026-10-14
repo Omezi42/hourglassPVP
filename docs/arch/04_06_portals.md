@@ -29,3 +29,25 @@ itch.io と PLiCy には**起動部だけ**を置き、pck は Cloudflare Pages(
 起動部は `window.hourglassPortal = true` を立ててからエンジンを起動する。unityroom のドメイン名に依存せずに
 「自前の起動部で動いているか」を判定するためで、`PortalInfo.is_portal()`(`scripts/net/portal_info.gd`)だけがこれを読む。
 `UnityroomRankingClient.can_send()` は `is_portal()` のとき送らない。
+
+## アプリ版(PWA)(GameDesign.md 10章「アプリ版」)
+
+itch.io・PLiCy と同じ起動部に、manifest と service worker を足したもの。pck は同じく Cloudflare Pages の `latest.json` から読む。
+
+- **置き場所は GitHub Pages**(公開リポジトリ `omezi42/sunadokei-arena-app`。起動部だけを置き、ソースは置かない)。
+  URL は `https://omezi42.github.io/sunadokei-arena-app/`。Cloudflare Pages は1ファイル25MiBまでのため wasm が載らない。
+  起動部を上げ直すのは Godot を更新したときだけなので、転送量の上限(月100GB目安)にも収まる
+- `tools/make_portal.py` が `build/portal/` と並べて `build/app/` を作る。中身は起動部 + `manifest.webmanifest` + `sw.js` +
+  アイコン(192・512px、`icon.svg` から書き出す) + `offline.html`
+- **Godot の PWA 書き出し(`progressive_web_app/*`)は使わない。**Web の書き出し設定は1つなので、オンにすると itch.io・PLiCy の
+  起動部にも service worker が入る。また Godot の service worker は `index.pck` を先読みの一覧に入れ、起動部の側に pck が無いと
+  インストールに失敗する
+- manifest は `display: "fullscreen"`・`orientation: "landscape"`・`start_url: "./"`・`name: "砂時計アリーナ"`
+- `sw.js` の動き:
+  - wasm・js・アイコンは Godot の版ごとのキャッシュから返す(版が変わるとキャッシュの名前も変わり、古いものは消す)
+  - `index.html` は毎回ネットから取り、取れなければ `offline.html` を返す(古い起動部を握り続けないため)
+  - pck・`latest.json` は別オリジンなので扱わない(pck はファイル名に build_id が入っており、ブラウザのキャッシュが効く)
+- 版が古いときの案内は、アプリ版だけ「アプリを開き直してください」にする(`make_portal.py` が起動部ごとに文言を差し込む)。
+  ほかの配信先と違い、起動部はこちらで上げ直すため
+- 配信先の判定は既存のまま `is_portal()` が真になる(ランキングを送らない)。`PortalInfo.PORTAL_MARKS` に `"github.io": "app"` を足し、
+  通過数の配信先を「アプリ版」として分ける
