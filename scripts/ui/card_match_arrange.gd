@@ -18,6 +18,7 @@ static func apply(screen: CardMatchScreen) -> void:
 	screen._mulligan.apply_layout(layout)
 	screen._result.apply_layout(layout)
 	screen._log.apply_layout(layout)
+	screen._detail.apply_layout(layout)
 	# 揺れの基準位置を取り直す(位置が変わった卓と駒を元の位置へ戻さないように)。
 	var shaken: Array[Control] = [screen._table]
 	shaken.append_array(screen._foe_slots)
@@ -55,10 +56,14 @@ static func _place_rows(screen: CardMatchScreen, layout: CardMatchLayout) -> voi
 		foe.position = layout.slot_position(true, i)
 		foe.base_scale = layout.piece_scale * CardMatchLayout.FOE_ROW_SCALE
 		foe.stat_scale = layout.stat_scale
+		foe.label_scale = layout.label_scale
 		var own := screen._own_slots[i]
 		own.position = layout.slot_position(false, i)
 		own.base_scale = layout.piece_scale
 		own.stat_scale = layout.stat_scale
+		own.label_scale = layout.label_scale
+	for view in screen._hand_views:
+		view.base_scale = layout.hand_scale
 
 
 static func _place_buttons(screen: CardMatchScreen, layout: CardMatchLayout) -> void:
@@ -66,7 +71,7 @@ static func _place_buttons(screen: CardMatchScreen, layout: CardMatchLayout) -> 
 	CardMatchBuild.center_on(screen._end_turn_button, layout.turn_end_center)
 	CardMatchBuild.center_on(screen._clock_dial, layout.clock_center)
 	CardMatchBuild.center_on(screen._back_button, layout.back_center)
-	screen._flip_right.place(layout.flip_right_center, layout.flip_gauge_top_center)
+	screen._flip_right.place(layout.flip_right_center, layout.flip_gauge_position)
 	CardMatchBuild.center_on(screen._log_button, layout.log_center)
 	CardMatchBuild.center_on(screen._surrender_button, layout.surrender_center)
 	var emote_half := Vector2.ONE * ActionColumnLayout.SMALL_DIAMETER * 0.5

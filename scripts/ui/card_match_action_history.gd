@@ -36,6 +36,8 @@ var _appear_tween: Tween
 var _hovered: CardData
 ## 縦画面では4件を横1列に並べる(新しい手が左。Architecture.md 4.7節)。
 var _horizontal := false
+## 並べる件数(縦は3件)。積むのは常に `MAX_TILES` 件。
+var _tiles := MAX_TILES
 
 
 func _init(screen: CardMatchScreen) -> void:
@@ -52,9 +54,10 @@ func _ready() -> void:
 ## 置き場所と並びの向き(`CardMatchArrange`)。
 func set_layout(layout: CardMatchLayout) -> void:
 	_horizontal = layout.history_horizontal
+	_tiles = layout.history_tiles
 	position = layout.history_position
 	scale = Vector2.ONE * layout.history_scale
-	size = _step() * (MAX_TILES - 1) + TILE_SIZE
+	size = _step() * (_tiles - 1) + TILE_SIZE
 	queue_redraw()
 
 
@@ -97,7 +100,7 @@ func _card_at(point: Vector2) -> CardData:
 	var step := _step()
 	var along := point.x if _horizontal else point.y
 	var index := floori(along / step.length())
-	if index < 0 or index >= _items.size():
+	if index < 0 or index >= mini(_items.size(), _tiles):
 		return null
 	if not Rect2(step * index, TILE_SIZE).has_point(point):
 		return null
@@ -156,7 +159,7 @@ func _draw() -> void:
 	if _items.is_empty() or _screen.state == null:
 		return
 	var step := _step()
-	for i in _items.size():
+	for i in mini(_items.size(), _tiles):
 		var at := step * (i - (1.0 - _appear))
 		var alpha := 1.0
 		if i == 0:

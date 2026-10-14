@@ -32,10 +32,10 @@ func _init(screen: CardMatchScreen) -> void:
 	screen.add_child(_gauge)
 
 
-## ボタンの中心と、残り回数の粒の上端の中心へ置く(`CardMatchArrange`)。
-func place(button_center: Vector2, gauge_top_center: Vector2) -> void:
+## ボタンの中心と、残り回数の粒の左上へ置く(`CardMatchArrange`)。
+func place(button_center: Vector2, gauge_position: Vector2) -> void:
 	CardMatchBuild.center_on(_button, button_center)
-	_gauge.position = gauge_top_center - Vector2(FlipRightGauge.GAUGE_SIZE.x * 0.5, 0.0)
+	_gauge.position = gauge_position
 
 
 ## 反転権のボタンの矩形。誘導対局で次に押す場所として囲む(GameDesign.md 18章)。

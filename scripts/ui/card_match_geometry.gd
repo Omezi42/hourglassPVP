@@ -30,7 +30,7 @@ func playable_hand_rects() -> Array[Rect2]:
 	var found: Array[Rect2] = []
 	for view in _screen._hand_views:
 		if view.visible and view.enabled:
-			found.append(Rect2(view.position, view.size))
+			found.append(_to_screen(view, Rect2(Vector2.ZERO, view.size)))
 	return found
 
 

@@ -136,6 +136,9 @@ const HAND_HOVER_SCALE := 1.14
 const HAND_HOVER_DURATION := 0.12
 ## タッチで押している間、手札の札を手札の上へ大きく浮かせる(GameDesign.md 9章「タッチでの操作」)。
 const HAND_TOUCH_SCALE := 1.5
+## 駒の下の文字を大きくしたとき(`label_scale`)、倍率1増えるごとに名前・キーワードの行を下げる量。
+const LABEL_NAME_DROP := 30.0
+const LABEL_NOTE_DROP := 52.0
 
 var mode: int = Mode.BOARD
 ## 表示するカード。手札はこれだけ、盤面は unit も併せて持つ。
@@ -192,7 +195,12 @@ var stat_scale := 1.0:
 	set(value):
 		stat_scale = value
 		queue_redraw()
-## 置き場所が決める駒の縮尺(相手の列・縦画面)。身構えの縮みはこれに掛ける。
+## 駒の下の名前・キーワードの文字の倍率(縦画面。GameDesign.md 9章)。
+var label_scale := 1.0:
+	set(value):
+		label_scale = value
+		queue_redraw()
+## 置き場所が決める縮尺(相手の列・縦画面の駒と手札)。身構えの縮み・手札の拡大はこれに掛ける。
 var base_scale := 1.0:
 	set(value):
 		base_scale = value
@@ -492,7 +500,7 @@ func _zoom(active: bool, zoom_scale := HAND_HOVER_SCALE) -> void:
 	if _zoom_tween != null and _zoom_tween.is_valid():
 		_zoom_tween.kill()
 	_zoom_tween = create_tween()
-	var target := Vector2.ONE * (zoom_scale if active else 1.0)
+	var target := Vector2.ONE * (zoom_scale if active else 1.0) * base_scale
 	_zoom_tween.tween_property(self, "scale", target, HAND_HOVER_DURATION)
 
 
@@ -629,10 +637,17 @@ func _draw_board_stats() -> void:
 
 
 func _draw_board_labels(tint: Color) -> void:
-	_centered_text(card.display_name, 14, size.y - 18.0, UiPalette.TEXT_OFFWHITE * tint)
+	# 文字を大きくしたぶんは駒の下へはみ出させる(上へ寄せると攻撃力・体力のバッジに重なる)。
+	var grow := label_scale - 1.0
+	var name_size := roundi(14 * label_scale)
+	var name_baseline := size.y - 18.0 + grow * LABEL_NAME_DROP
+	_centered_text(card.display_name, name_size, name_baseline, UiPalette.TEXT_OFFWHITE * tint)
 	var note := CardViewPaint.keyword_text(self)
 	if not note.is_empty():
-		_centered_text(note, 12, size.y - 3.0, UiPalette.BRASS_HIGHLIGHT * tint)
+		var note_baseline := size.y - 3.0 + grow * LABEL_NOTE_DROP
+		_centered_text(
+			note, roundi(12 * label_scale), note_baseline, UiPalette.BRASS_HIGHLIGHT * tint
+		)
 
 
 # --- 手札のカード -------------------------------------------------------

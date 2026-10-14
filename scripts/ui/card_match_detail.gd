@@ -85,7 +85,8 @@ func _place() -> Vector2:
 		Vector2(MARGIN, band.position.y),
 		Vector2(_screen.layout.play_right - MARGIN * 2.0, band.size.y)
 	)
-	return CardDetailPanel.place_near(_screen.get_local_mouse_position(), _panel.size, bounds)
+	var shown := _panel.size * _panel.scale
+	return CardDetailPanel.place_near(_screen.get_local_mouse_position(), shown, bounds)
 
 
 ## タッチの長押し(GameDesign.md 9章「タッチでの操作」)。指で隠れないよう、カーソルの近くではなく
@@ -96,9 +97,15 @@ func show_fixed(card: CardData) -> void:
 	_off_board = false
 	_timer.stop()
 	_panel.show_card(card, _live_text(card))
-	_panel.position = _screen.layout.table_rect.get_center() - _panel.size * 0.5
+	_panel.position = _screen.layout.table_rect.get_center() - _panel.size * _panel.scale * 0.5
 	_panel.visible = true
 	_panel.move_to_front()
+
+
+## 縦では文字を読める大きさにするため、パネルごと拡大する(GameDesign.md 9章「縦画面」)。
+func apply_layout(layout: CardMatchLayout) -> void:
+	_panel.scale = Vector2.ONE * layout.detail_scale
+	hide_now()
 
 
 func leave() -> void:

@@ -50,12 +50,20 @@ func apply(hand: Array, my_turn: bool) -> void:
 		_avoid_offsets.clear()
 	var layout := _screen.layout
 	var area := layout.hand_area
-	var step := CardView.HAND_SIZE_PX.x + CardMatchLayout.HAND_GAP
+	# 札は下端の中央を軸に縮尺を掛けるため、見た目の幅と上端から置く位置を逆算する。
+	var card := CardView.HAND_SIZE_PX
+	var shown := card * layout.hand_scale
+	# 扇の両端の札は傾いたぶん外へ張り出すため、その幅を除いた中へ並べる。
+	var usable := area.size.x
+	if layout.hand_fan and count > 1:
+		var outer_tilt := deg_to_rad(FAN_DEGREES * float(count - 1) * 0.5)
+		usable -= shown.y * sin(outer_tilt) * 2.0
+	var step := shown.x + CardMatchLayout.HAND_GAP
 	if count > 1:
-		step = minf(step, (area.size.x - CardView.HAND_SIZE_PX.x) / float(count - 1))
-	var width := CardView.HAND_SIZE_PX.x + maxf(count - 1, 0) * step
-	var start := area.position.x + (area.size.x - width) * 0.5
-	var top := layout.hand_top + (0.0 if my_turn else TURN_SINK)
+		step = minf(step, (usable - shown.x) / float(count - 1))
+	var width := shown.x + maxf(count - 1, 0) * step
+	var start := area.position.x + (area.size.x - width) * 0.5 - (card.x - shown.x) * 0.5
+	var top := layout.hand_top - (card.y - shown.y) + (0.0 if my_turn else TURN_SINK)
 	var tint := ACTIVE_MODULATE if my_turn else INACTIVE_MODULATE
 	for i in views.size():
 		var view := views[i]
