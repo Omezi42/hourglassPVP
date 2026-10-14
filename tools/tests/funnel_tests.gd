@@ -74,6 +74,10 @@ func run(assert_true: Callable) -> void:
 		"itch.io should be told apart from its hosts"
 	)
 	_assert.call(
+		PortalInfo.site_from_place("omezi42.github.io/sunadokei-arena-app/ ") == "app",
+		"the app on GitHub Pages should be told apart from its hosts"
+	)
+	_assert.call(
 		PortalInfo.site_from_place("example.com ") == PortalInfo.SITE_OTHER,
 		"an unknown site should fall back to other"
 	)

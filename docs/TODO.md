@@ -64,17 +64,11 @@
 
 「反響の刻」(8枚・800砂金)は8枚目のカノンで全枚数を公開した(GameDesign.md 8章)。
 
-### カードスキン(GameDesign.md 31章 / Architecture.md 10.19節)
-
-仕組みは実装済み。最初の1枚はソードの「聖剣」(配布・最初はOFF。絵も取り込み済み)。
-
-- [ ] Discord #お知らせ へ紹介(図鑑でONにする手順も添える)
-
 ### アプリ版(PWA)(GameDesign.md 10章 / Architecture.md 4.6節)
 
-- [ ] `make_portal.py` で `build/app/` を作る(manifest・`sw.js`・アイコン・`offline.html`・版切れの文言)
-- [ ] `PortalInfo.PORTAL_MARKS` に `github.io` を足し、`funnel_tests.gd` に1件足す。`analyze_matches.py --funnel` の配信先にも出す
-- [ ] `build-and-announce` の「Godot を更新したとき」の手順に `build/app/` の上げ直しを足す
+起動部の作成・配信先の判定・更新手順は実装済み(`build/app/`)。残りは次の2つ。
+
+- [ ] GitHub Pages へ `build/app/` を上げる(下の「ユーザー作業」のリポジトリ作成のあと。上げるのはユーザーに依頼)
 - [ ] 初回公開を Discord #お知らせ で告知(Android は Chrome のメニュー →「ホーム画面に追加」、iPhone は Safari の共有 →「ホーム画面に追加」)
 
 ### 技術的負債

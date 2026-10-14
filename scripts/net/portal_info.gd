@@ -10,7 +10,7 @@ const SITE_DESKTOP := "desktop"
 const SITE_UNITYROOM := "unityroom"
 const SITE_OTHER := "other"
 ## 起動部のときの見分け方(含む文字列 → 配信先)。
-const PORTAL_MARKS := {"itch": "itch", "hwcdn": "itch", "plicy": "plicy"}
+const PORTAL_MARKS := {"itch": "itch", "hwcdn": "itch", "plicy": "plicy", "github.io": "app"}
 
 
 static func is_portal() -> bool:
