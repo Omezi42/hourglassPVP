@@ -41,9 +41,14 @@ func _ready() -> void:
 	_font = TextGlyphs.ui_font()
 	custom_minimum_size = AREA_SIZE
 	size = AREA_SIZE
+
+
+## 相手の情報帯のHPの器の右隣(帯の縮尺・段を通した画面座標)。`CardMatchArrange` が呼ぶ。
+func place() -> void:
 	var bar := _screen.foe_bar
 	var hp := bar.hp_bar_rect()
-	position = bar.position + Vector2(hp.end.x + PlayerInfoBar.HP_BADGE_RADIUS + HP_GAP, 0.0)
+	var local := Vector2(hp.end.x + PlayerInfoBar.HP_BADGE_RADIUS + HP_GAP, hp.get_center().y)
+	position = bar.position + local * bar.scale - Vector2(0.0, AREA_SIZE.y * 0.5)
 
 
 func _process(_delta: float) -> void:

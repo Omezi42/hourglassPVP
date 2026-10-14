@@ -252,7 +252,21 @@ func _ready() -> void:
 	SoundBank.ensure_ready(self)
 	SoundBank.wire_buttons(self)
 	MusicPlayer.ensure_ready(self)
+	get_tree().root.size_changed.connect(_on_window_resized)
+	_on_window_resized()
 	_show_only(title_screen)
+
+
+## 縦横が変わったときだけ基準解像度を差し替え、全画面を並べ直させる(Architecture.md 4.7節)。
+## 表示していない画面にも呼ぶ(出した瞬間に古い配置が映らないように)。
+func _on_window_resized() -> void:
+	if not ScreenOrientation.update(get_tree().root.size):
+		return
+	var portrait := ScreenOrientation.is_portrait()
+	get_tree().root.content_scale_size = ScreenOrientation.base_size()
+	for screen in _screens:
+		if screen.has_method("apply_orientation"):
+			screen.call("apply_orientation", portrait)
 
 
 ## ブラウザは最初のユーザー操作より前の音声再生を許さないため、最初の入力をここで拾って
@@ -681,6 +695,8 @@ func _match_screen() -> Control:
 	move_child(card_match_screen, stats_screen.get_index() + 1)
 	card_match_screen.connect("back_pressed", _on_card_match_back)
 	_screens.append(card_match_screen)
+	if ScreenOrientation.is_portrait():
+		card_match_screen.call("apply_orientation", true)
 	return card_match_screen
 
 

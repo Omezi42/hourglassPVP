@@ -18,6 +18,9 @@ const AVOID_DURATION := 0.12
 const TURN_SINK := CardView.SUMMONED_SINK
 const ACTIVE_MODULATE := Color(1, 1, 1, 1)
 const INACTIVE_MODULATE := Color(0.82, 0.82, 0.85, 1.0)
+## 縦の扇(GameDesign.md 9章「縦の対局画面」)。中央から1枚離れるごとの傾きと、離れた数の2乗に掛ける下げ幅。
+const FAN_DEGREES := 3.0
+const FAN_DROP := 4.0
 
 var _screen: CardMatchScreen
 ## 直近の `apply()` が決めた、避け・沈みを含まない素の位置。
@@ -45,13 +48,22 @@ func apply(hand: Array, my_turn: bool) -> void:
 	if _hovered_index >= count:
 		_hovered_index = -1
 		_avoid_offsets.clear()
-	var area := CardMatchScreen.HAND_AREA
-	var step := CardView.HAND_SIZE_PX.x + CardMatchScreen.HAND_GAP
+	var layout := _screen.layout
+	var area := layout.hand_area
+	# 札は下端の中央を軸に縮尺を掛けるため、見た目の幅と上端から置く位置を逆算する。
+	var card := CardView.HAND_SIZE_PX
+	var shown := card * layout.hand_scale
+	# 扇の両端の札は傾いたぶん外へ張り出すため、その幅を除いた中へ並べる。
+	var usable := area.size.x
+	if layout.hand_fan and count > 1:
+		var outer_tilt := deg_to_rad(FAN_DEGREES * float(count - 1) * 0.5)
+		usable -= shown.y * sin(outer_tilt) * 2.0
+	var step := shown.x + CardMatchLayout.HAND_GAP
 	if count > 1:
-		step = minf(step, (area.size.x - CardView.HAND_SIZE_PX.x) / float(count - 1))
-	var width := CardView.HAND_SIZE_PX.x + maxf(count - 1, 0) * step
-	var start := area.position.x + (area.size.x - width) * 0.5
-	var top := CardMatchScreen.HAND_TOP + (0.0 if my_turn else TURN_SINK)
+		step = minf(step, (usable - shown.x) / float(count - 1))
+	var width := shown.x + maxf(count - 1, 0) * step
+	var start := area.position.x + (area.size.x - width) * 0.5 - (card.x - shown.x) * 0.5
+	var top := layout.hand_top - (card.y - shown.y) + (0.0 if my_turn else TURN_SINK)
 	var tint := ACTIVE_MODULATE if my_turn else INACTIVE_MODULATE
 	for i in views.size():
 		var view := views[i]
@@ -61,6 +73,12 @@ func apply(hand: Array, my_turn: bool) -> void:
 			_avoid_offsets.erase(view)
 			continue
 		var base := Vector2(start + i * step, top)
+		var from_middle := float(i) - float(count - 1) * 0.5
+		view.pivot_offset = Vector2(CardView.HAND_SIZE_PX.x * 0.5, CardView.HAND_SIZE_PX.y)
+		view.rotation = 0.0
+		if layout.hand_fan:
+			base.y += from_middle * from_middle * FAN_DROP
+			view.rotation = deg_to_rad(from_middle * FAN_DEGREES)
 		_base_positions[view] = base
 		var target: Vector2 = base + Vector2(_avoid_offsets.get(view, 0.0), 0.0)
 		view.visible = true

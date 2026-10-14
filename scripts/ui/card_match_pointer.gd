@@ -2,23 +2,83 @@ class_name CardMatchPointer
 extends RefCounted
 ## ポインタの受け口(Architecture.md 4.0節)。駒へのホバーを詳細・手札の並び・対象の光・
 ## マナのピップ・攻撃の予測へ配り、右クリックとEscで選択を取り消す(GameDesign.md 9章)。
-## 押す/ドラッグする操作は `CardMatchTouch` が持つ。
+## 押す/ドラッグする操作は `CardMatchTouch` が持つ。タッチではホバーの代わりに長押しで詳細を出す。
 ## 切り出した他の進行役と同じく、画面の私設メンバを直に触る。
 
+## 押したまま指を動かさずにこれだけ経ったら詳細を出す(GameDesign.md 9章「タッチでの操作」)。
+const LONG_PRESS_SECONDS := 0.45
+
 var _screen: CardMatchScreen
+var _long_timer: Timer
+var _press_view: CardView
+var _press_at := Vector2.ZERO
+var _long_pressed := false
 
 
 func _init(screen: CardMatchScreen) -> void:
 	_screen = screen
+	_long_timer = Timer.new()
+	_long_timer.one_shot = true
+	_long_timer.wait_time = LONG_PRESS_SECONDS
+	_long_timer.timeout.connect(_on_long_press)
+	screen.add_child(_long_timer)
+
+
+## 盤面と手札の駒の押下を見張る(`_build()` の中で1度)。
+func watch_views(views: Array[CardView]) -> void:
+	for view in views:
+		view.gui_input.connect(_on_view_input.bind(view))
+
+
+## タッチの押下。長押しの計時と、手札の札を浮かせる。
+func _on_view_input(event: InputEvent, view: CardView) -> void:
+	if not TouchInput.active:
+		return
+	if ClickArea.is_primary_click(event):
+		_press_view = view
+		_press_at = view.get_global_mouse_position()
+		_long_pressed = false
+		_long_timer.start()
+		if view.mode == CardView.Mode.HAND:
+			view.lift_for_touch(true)
+	elif _press_view != view:
+		return
+	elif ClickArea.is_primary_release(event):
+		_end_press()
+	elif event is InputEventMouseMotion and not _long_pressed:
+		# 指が動いたらドラッグとして扱い、長押しにも浮かせにもしない。
+		if view.get_global_mouse_position().distance_to(_press_at) > PressTracker.SLOP_MARGIN:
+			_long_timer.stop()
+			view.lift_for_touch(false)
+
+
+## 長押しが成立した。**離しても押した扱いにしない**(選択に入らない)。
+func _on_long_press() -> void:
+	if _press_view == null or not is_instance_valid(_press_view) or _press_view.card == null:
+		return
+	_long_pressed = true
+	_press_view._tracker.cancel()
+	_screen._detail.show_fixed(_press_view.card)
+
+
+func _end_press() -> void:
+	_long_timer.stop()
+	if _long_pressed:
+		_screen._detail.hide_now()
+	if is_instance_valid(_press_view):
+		_press_view.lift_for_touch(false)
+	_press_view = null
+	_long_pressed = false
 
 
 ## 詳細などは `_build()` の途中で作るため、駒より後に用意される。呼ばれた時点の参照を読む
 ## (生成時に束ねると、まだ空の参照を掴む)。
 func on_view_hovered(view: CardView) -> void:
 	var s := _screen
-	if s._detail != null:
+	# タッチから作られたホバーでは詳細も手札の避けも出さない(指を離しても消えないため)。
+	if s._detail != null and not TouchInput.active:
 		s._detail.hover(view)
-	if s._hand_layout != null:
+	if s._hand_layout != null and not TouchInput.active:
 		s._hand_layout.on_hovered(view)
 	if s._targets != null:
 		s._targets.on_hovered(view)

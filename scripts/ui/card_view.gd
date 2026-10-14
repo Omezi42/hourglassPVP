@@ -134,6 +134,11 @@ const SPARK_RADIUS := 24.0
 ## 画面側は毎フレーム position を置き直すため、位置を動かすと取り合いになる。
 const HAND_HOVER_SCALE := 1.14
 const HAND_HOVER_DURATION := 0.12
+## タッチで押している間、手札の札を手札の上へ大きく浮かせる(GameDesign.md 9章「タッチでの操作」)。
+const HAND_TOUCH_SCALE := 1.5
+## 駒の下の文字を大きくしたとき(`label_scale`)、倍率1増えるごとに名前・キーワードの行を下げる量。
+const LABEL_NAME_DROP := 30.0
+const LABEL_NOTE_DROP := 52.0
 
 var mode: int = Mode.BOARD
 ## 表示するカード。手札はこれだけ、盤面は unit も併せて持つ。
@@ -185,6 +190,21 @@ var unselect_amount := 0.0
 ## (変わった側のバッジだけ跳ねるため)。
 var health_punch := 0.0
 var attack_punch := 0.0
+## 場の攻撃力・体力のバッジの倍率(縦画面=1.4。Architecture.md 4.7節)。跳ねる演出はこの上に重なる。
+var stat_scale := 1.0:
+	set(value):
+		stat_scale = value
+		queue_redraw()
+## 駒の下の名前・キーワードの文字の倍率(縦画面。GameDesign.md 9章)。
+var label_scale := 1.0:
+	set(value):
+		label_scale = value
+		queue_redraw()
+## 置き場所が決める縮尺(相手の列・縦画面の駒と手札)。身構えの縮み・手札の拡大はこれに掛ける。
+var base_scale := 1.0:
+	set(value):
+		base_scale = value
+		scale = Vector2.ONE * (BRACE_SCALE if brace else 1.0) * value
 ## 身構え(GameDesign.md 9章「対局画面の手触り」)。`CardMatchTargets` が、狙える
 ## (=`selected`)相手へカーソルが乗ったときだけ true にする。対象選択が終わったら
 ## (`refresh()` で光りが消えるとき)必ず false へ戻す。
@@ -217,8 +237,6 @@ var _unselect_tween: Tween
 ## バッジの跳ねの判定用。前回 `show_unit()` に渡された体力・攻撃力(GameDesign.md 9章)。
 var _prev_health := -1
 var _prev_attack := -1
-var _health_punch_tween: Tween
-var _attack_punch_tween: Tween
 ## 身構えの脈打ち(GameDesign.md 9章)。`brace` の間だけ `_process` で進める。
 var _brace_pulse := 0.0
 var _brace_tween: Tween
@@ -250,42 +268,16 @@ func show_unit(p_unit: CardInstance) -> void:
 	mode = Mode.BOARD
 	if p_unit != null and unit == p_unit:
 		if p_unit.health != _prev_health:
-			_punch_health()
+			_ensure_flourish()
+			_flourish.punch_stat(true)
 		if p_unit.attack != _prev_attack:
-			_punch_attack()
+			_ensure_flourish()
+			_flourish.punch_stat(false)
 	unit = p_unit
 	card = null if p_unit == null else p_unit.data
 	_prev_health = -1 if p_unit == null else p_unit.health
 	_prev_attack = -1 if p_unit == null else p_unit.attack
 	custom_minimum_size = BOARD_SIZE_PX
-	queue_redraw()
-
-
-func _punch_health() -> void:
-	health_punch = 1.0
-	if _health_punch_tween != null and _health_punch_tween.is_valid():
-		_health_punch_tween.kill()
-	_health_punch_tween = create_tween()
-	_health_punch_tween.set_ease(Tween.EASE_OUT)
-	_health_punch_tween.tween_method(_set_health_punch, 1.0, 0.0, STAT_PUNCH_DURATION)
-
-
-func _punch_attack() -> void:
-	attack_punch = 1.0
-	if _attack_punch_tween != null and _attack_punch_tween.is_valid():
-		_attack_punch_tween.kill()
-	_attack_punch_tween = create_tween()
-	_attack_punch_tween.set_ease(Tween.EASE_OUT)
-	_attack_punch_tween.tween_method(_set_attack_punch, 1.0, 0.0, STAT_PUNCH_DURATION)
-
-
-func _set_health_punch(value: float) -> void:
-	health_punch = value
-	queue_redraw()
-
-
-func _set_attack_punch(value: float) -> void:
-	attack_punch = value
 	queue_redraw()
 
 
@@ -296,7 +288,7 @@ func _animate_brace(active: bool) -> void:
 	if _brace_tween != null and _brace_tween.is_valid():
 		_brace_tween.kill()
 	_brace_tween = create_tween()
-	var target := Vector2.ONE * (BRACE_SCALE if active else 1.0)
+	var target := Vector2.ONE * (BRACE_SCALE if active else 1.0) * base_scale
 	_brace_tween.tween_property(self, "scale", target, BRACE_SCALE_DURATION)
 
 
@@ -486,7 +478,8 @@ func _on_mouse_entered() -> void:
 		# 起きない場所で音だけ返ると、押せるように聞こえる。
 		if card != null:
 			SoundBank.play(SoundBank.Sfx.HOVER)
-	_zoom(true)
+	if not TouchInput.active:
+		_zoom(true)
 	hovered.emit(self)
 	queue_redraw()
 
@@ -499,7 +492,7 @@ func _on_mouse_exited() -> void:
 
 ## 拡大中は隣の札より手前へ出す。手札は絶対座標で並べているため、
 ## そのままだと後から足した右隣の札に上端を隠される。
-func _zoom(active: bool) -> void:
+func _zoom(active: bool, zoom_scale := HAND_HOVER_SCALE) -> void:
 	if not hover_zoom or mode != Mode.HAND:
 		return
 	pivot_offset = Vector2(size.x * 0.5, size.y)
@@ -507,8 +500,12 @@ func _zoom(active: bool) -> void:
 	if _zoom_tween != null and _zoom_tween.is_valid():
 		_zoom_tween.kill()
 	_zoom_tween = create_tween()
-	var target := Vector2.ONE * (HAND_HOVER_SCALE if active else 1.0)
+	var target := Vector2.ONE * (zoom_scale if active else 1.0) * base_scale
 	_zoom_tween.tween_property(self, "scale", target, HAND_HOVER_DURATION)
+
+
+func lift_for_touch(active: bool) -> void:
+	_zoom(active, HAND_TOUCH_SCALE)
 
 
 func _gui_input(event: InputEvent) -> void:
@@ -626,10 +623,11 @@ func _draw_board_stats() -> void:
 	if unit == null:
 		return
 	var y := PEDESTAL_CENTER_Y + 6.0
-	var attack_radius := STAT_RADIUS * (1.0 + attack_punch * STAT_PUNCH_SCALE)
-	var health_radius := STAT_RADIUS * (1.0 + health_punch * STAT_PUNCH_SCALE)
-	var attack_at := Vector2(STAT_RADIUS + 2.0, y)
-	var health_at := Vector2(size.x - STAT_RADIUS - 2.0, y)
+	var radius := STAT_RADIUS * stat_scale
+	var attack_radius := radius * (1.0 + attack_punch * STAT_PUNCH_SCALE)
+	var health_radius := radius * (1.0 + health_punch * STAT_PUNCH_SCALE)
+	var attack_at := Vector2(radius + 2.0, y)
+	var health_at := Vector2(size.x - radius - 2.0, y)
 	CardViewPaint.stat(self, attack_at, unit.attack, ATTACK_ORANGE, attack_radius)
 	CardViewPaint.stat(self, health_at, unit.health, HEALTH_RED, health_radius)
 	if flip_preview.is_empty():
@@ -639,10 +637,17 @@ func _draw_board_stats() -> void:
 
 
 func _draw_board_labels(tint: Color) -> void:
-	_centered_text(card.display_name, 14, size.y - 18.0, UiPalette.TEXT_OFFWHITE * tint)
+	# 文字を大きくしたぶんは駒の下へはみ出させる(上へ寄せると攻撃力・体力のバッジに重なる)。
+	var grow := label_scale - 1.0
+	var name_size := roundi(14 * label_scale)
+	var name_baseline := size.y - 18.0 + grow * LABEL_NAME_DROP
+	_centered_text(card.display_name, name_size, name_baseline, UiPalette.TEXT_OFFWHITE * tint)
 	var note := CardViewPaint.keyword_text(self)
 	if not note.is_empty():
-		_centered_text(note, 12, size.y - 3.0, UiPalette.BRASS_HIGHLIGHT * tint)
+		var note_baseline := size.y - 3.0 + grow * LABEL_NOTE_DROP
+		_centered_text(
+			note, roundi(12 * label_scale), note_baseline, UiPalette.BRASS_HIGHLIGHT * tint
+		)
 
 
 # --- 手札のカード -------------------------------------------------------

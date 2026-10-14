@@ -15,6 +15,10 @@ const POPUP_ITEM_GAP := 5.0
 const POPUP_GAP := 8.0
 
 var mute_opponent := false
+## ボタンの実体。縦画面ではメニューのパネルへ付け替える(`CardMatchMenu`)。
+var button: RoundActionButton:
+	get:
+		return _button
 
 var _screen: CardMatchScreen
 var _button: RoundActionButton
@@ -81,6 +85,12 @@ func _hairline() -> Control:
 	line.custom_minimum_size = Vector2(0.0, 1.0)
 	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return line
+
+
+## ポップアップを出す基準(ボタンの左上の画面座標)だけを差し替える。ボタンがメニューの中にあるとき用。
+func anchor_popup(at: Vector2) -> void:
+	_popup_anchor = at
+	_place_popup()
 
 
 ## エモートのボタンと、その上へ開くポップアップの位置。**ポップアップは下端をボタンの

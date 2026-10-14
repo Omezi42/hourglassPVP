@@ -67,7 +67,7 @@ func _push(pointer_speed_x: float) -> void:
 
 
 func _bottom_y() -> float:
-	return CardMatchScreen.TABLE_RECT.position.y - LANTERN_GAP
+	return CardMatchLayout.current().table_rect.position.y - LANTERN_GAP
 
 
 func _hit_rect() -> Rect2:
@@ -90,7 +90,7 @@ func _draw() -> void:
 		)
 	_draw_lantern(ci, Vector2(LAMP_X, bottom_y))
 	RoomPaint.lamp(
-		self, Vector2(LAMP_X, bottom_y), CardMatchScreen.TABLE_RECT.get_center().y, LAMP_CONE_SPAN
+		self, Vector2(LAMP_X, bottom_y), CardMatchLayout.current().rail_y(), LAMP_CONE_SPAN
 	)
 
 

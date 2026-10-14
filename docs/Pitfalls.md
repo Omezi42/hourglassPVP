@@ -11,6 +11,9 @@
   **新しいworktreeやpull直後も同じ状態になる。**このとき `run_tests.gd` はコンパイルに失敗したまま
   V5のテストだけ途中まで走り、**無関係なテスト名の付いたエラーを残して終了せずに固まる**
   (原因のテストがあるように見える)。`check.sh` は足りない `class_name` を見つけると自動で `--import` する
+- **新しいworktreeの `--import` は本文用フォント(`ZenKakuGothicNew-Bold.ttf`)の取り込みで落ちることがある**(Segmentation fault)。
+  取り込みが途中で止まり、テストは画像・フォントが読めないエラーを大量に出しながら固まる。本体の `.godot/imported/` と
+  `uid_cache.bin` をworktreeの `.godot/` へ写してから `--import` し直す
 - **`tools/tests/run_tests.gd` は `scripts/ui/` を読まないため、UIのパースエラーを検出できない。**
   UIを触ったら `--quit-after` での起動スモークまで回す
 - **GUIのクリックはヘッドレスでは一切届かない**(`push_input` しても

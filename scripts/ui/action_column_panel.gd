@@ -5,8 +5,7 @@ extends Control
 ## 濃紺の板 + 真鍮の額 + 上下の飾り板(紋章入り)+ ターン終了を囲む彫り込みの輪 +
 ## 3つの群(`ActionColumnLayout`)の間の区切り線。
 ##
-## `CardMatchScreen` の定数を実行時に読んで矩形を決める(Architecture.md 11章
-## 「class_nameを持つ2つのスクリプトが、互いのconstをconstから参照してはいけない」)。
+## 矩形は `CardMatchLayout.action_panel_rect`(`CardMatchArrange` が置く)。
 ## ボタンより先に `add_child()` して背面へ置く。
 
 const PLATE_HEIGHT := 22.0
@@ -18,8 +17,6 @@ const DIVIDER_RATIO := 0.6
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	position = Vector2(CardMatchScreen.ACTION_COLUMN_X + 6.0, 10.0)
-	size = Vector2(1280.0 - position.x - 16.0, 700.0)
 
 
 func _draw() -> void:
@@ -72,14 +69,9 @@ func _draw_plate(ci: RID, rect: Rect2, top: bool) -> void:
 	UiPaint.draw_emblem(ci, UiPaint.Emblem.HOURGLASS, plate_rect.get_center(), PLATE_EMBLEM_SIZE)
 
 
-## ターン終了ボタンの位置は`CardMatchScreen`の定数から求める(座標系はスクリーン共通)。
-## パネル自身の`_draw()`はパネルのローカル座標のため、パネルの`position`ぶんを引く。
+## ターン終了ボタンの中心は画面座標のため、パネルの`position`ぶんを引く。
 func _draw_turn_end_ring(ci: RID) -> void:
-	var screen_center := Vector2(
-		CardMatchScreen.ACTION_COLUMN_X + CardMatchScreen.ACTION_COLUMN_CENTER_OFFSET,
-		ActionColumnLayout.TURN_END_Y
-	)
-	var center := screen_center - position
+	var center := CardMatchLayout.current().turn_end_center - position
 	var r: float = (
 		ActionColumnLayout.TURN_END_DIAMETER * 0.5 + ActionColumnLayout.TURN_END_RING_MARGIN
 	)

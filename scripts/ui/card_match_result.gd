@@ -12,7 +12,6 @@ signal rematch_pressed
 signal home_pressed
 signal log_pressed
 
-const SCREEN_SIZE := Vector2(1280, 720)
 ## ボタン3つ(「CPUともう1局」が最長)を枠の内側へ収める幅にする。
 const PANEL_SIZE := Vector2(640, 370)
 ## 内訳の行の数(HP・手数・決め手・砂金・はじめの7日)。
@@ -45,9 +44,16 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	# **`set_anchors_preset()` は使わない**(Architecture.md 4章)。コードで生成した直後は
 	# サイズ0のため、暗幕が盤面を覆わずクリックも止められない状態になる。
-	size = SCREEN_SIZE
 	set_process(false)
 	_build()
+
+
+## 向きに合わせて置き直す(`CardMatchArrange`)。パネルは縦でも横と同じ大きさで画面の中央に置く。
+func apply_layout(layout: CardMatchLayout) -> void:
+	size = layout.screen_size
+	_sand.size = layout.screen_size
+	_dim.size = layout.screen_size
+	_panel.position = (layout.screen_size - PANEL_SIZE) * 0.5
 
 
 ## 勝敗を表示する。my_side が負なら「先手/後手の勝利」と第三者視点で書く。
@@ -161,18 +167,15 @@ func _line_base_y(index: int) -> float:
 func _build() -> void:
 	# 粒は暗幕の奥に置く(暗幕越しにうっすら見える程度に留める)。
 	_sand = ResultSandFall.new()
-	_sand.size = SCREEN_SIZE
 	add_child(_sand)
 	_dim = ColorRect.new()
 	_dim.color = Color(0, 0, 0, 0.72)
-	_dim.size = SCREEN_SIZE
 	_dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_dim)
 
 	_panel = Control.new()
 	_panel.custom_minimum_size = PANEL_SIZE
 	_panel.size = PANEL_SIZE
-	_panel.position = (SCREEN_SIZE - PANEL_SIZE) * 0.5
 	_panel.pivot_offset = PANEL_SIZE * 0.5
 	_panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	_panel.draw.connect(_draw_panel)

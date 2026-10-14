@@ -18,10 +18,34 @@ const SPARK_DURATION := 0.32
 var _view: CardView
 var _counter_tween: Tween
 var _spark_tween: Tween
+var _health_punch_tween: Tween
+var _attack_punch_tween: Tween
 
 
 func _init(view: CardView) -> void:
 	_view = view
+
+
+## 体力・攻撃力が変わった側のバッジを跳ねさせる(GameDesign.md 9章「対局画面の手触り」)。
+func punch_stat(health: bool) -> void:
+	var tween := _health_punch_tween if health else _attack_punch_tween
+	if tween != null and tween.is_valid():
+		tween.kill()
+	tween = _view.create_tween()
+	tween.set_ease(Tween.EASE_OUT)
+	tween.tween_method(_set_punch.bind(health), 1.0, 0.0, CardView.STAT_PUNCH_DURATION)
+	if health:
+		_health_punch_tween = tween
+	else:
+		_attack_punch_tween = tween
+
+
+func _set_punch(value: float, health: bool) -> void:
+	if health:
+		_view.health_punch = value
+	else:
+		_view.attack_punch = value
+	_view.queue_redraw()
 
 
 ## 相打ちの反撃:紋章が攻撃側へ向けて短く突き出し、すぐ戻る(GameDesign.md 9章)。

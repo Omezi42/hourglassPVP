@@ -48,6 +48,10 @@ const HAND_PILE_X := 351.0
 ## 左の群の右端(HPの器のバッジ)から右の群までに最低限空ける幅。帯の最小幅を決める。
 const GROUP_MIN_GAP := 24.0
 const MIN_WIDTH := HP_BAR_X + HP_BAR_SIZE.x + HP_BADGE_RADIUS + GROUP_MIN_GAP + RIGHT_GROUP_WIDTH
+## 縦画面の2段(`stacked`)。左の群と右の群を左端へ揃えて上下に積む。
+const STACK_GAP := 2.0
+const STACKED_WIDTH := RIGHT_GROUP_WIDTH
+const STACKED_HEIGHT := BAR_HEIGHT * 2.0 + STACK_GAP
 const PILE_RADIUS := 6.0
 const PILE_GRAIN_ALPHA := 0.06
 const HP_BAR_RADIUS := 8.0
@@ -123,6 +127,18 @@ var title_id := UserProfileLibrary.DEFAULT_TITLE_ID:
 	set(value):
 		title_id = value
 		queue_redraw()
+## 左の群(メダル・名札・HP)と右の群(マナ・山)を2段に積む(縦画面。Architecture.md 4.7節)。
+var stacked := false:
+	set(value):
+		stacked = value
+		_sync_vessel()
+		queue_redraw()
+## 2段のとき、右の群(マナの段)を上の段に置く。
+var mana_row_first := false:
+	set(value):
+		mana_row_first = value
+		_sync_vessel()
+		queue_redraw()
 ## 攻撃の対象として選べる状態か。光らせて示す。
 var targetable := false:
 	set(value):
@@ -185,10 +201,17 @@ func _ready() -> void:
 	_fx = PlayerInfoBarFx.new(self)
 	add_child(_fx)
 	_vessel = HpVesselFx.new()
+	_vessel.badge_radius = HP_BADGE_RADIUS
+	_sync_vessel()
+	add_child(_vessel)
+
+
+func _sync_vessel() -> void:
+	if _vessel == null:
+		return
 	_vessel.vessel_rect = hp_bar_rect()
 	_vessel.badge_center = Vector2(hp_bar_rect().end.x, hp_bar_rect().get_center().y)
-	_vessel.badge_radius = HP_BADGE_RADIUS
-	add_child(_vessel)
+	_vessel.queue_redraw()
 
 
 ## 対局の状態から自分の側の値をまとめて取り込む。`max_hp`はソロモードの遠征だけ
@@ -257,7 +280,7 @@ func show_emote(text: String) -> void:
 	bubble.text = text
 	bubble.is_opponent = is_opponent
 	# 相手側(画面上部)なら下へ、自分側(画面下部)なら上へ出す
-	bubble.position = Vector2(10.0, 48.0 if is_opponent else -36.0)
+	bubble.position = Vector2(10.0, size.y - 8.0 if is_opponent else -36.0)
 	add_child(bubble)
 
 
@@ -281,7 +304,7 @@ func spend_toward(n: int, target_global: Vector2) -> void:
 		return
 	_spend_origins.clear()
 	for i in count:
-		_spend_origins.append(Vector2(_right_x() + PIP_START_X + i * PIP_STEP, CENTER_Y))
+		_spend_origins.append(_right(Vector2(PIP_START_X + i * PIP_STEP, CENTER_Y)))
 	_spend_to = get_global_transform().affine_inverse() * target_global
 	if _spend_tween != null and _spend_tween.is_valid():
 		_spend_tween.kill()
@@ -306,7 +329,7 @@ func _on_spend_finished() -> void:
 ## マナの数字の位置(グローバル)。支払いの吸い込みの行き先を控えられなかったとき
 ## (CPU・相手の手など、手札の札が画面に無い場合)の既定の行き先にする(GameDesign.md 9章)。
 func mana_label_global() -> Vector2:
-	return global_position + _right(MANA_BADGE_CENTER)
+	return get_global_transform() * _right(MANA_BADGE_CENTER)
 
 
 ## 相手のHP帯へ駒を落として本体を殴る。押して選ぶ経路と同じ判定を `drop_handler` が持つ。
@@ -354,18 +377,36 @@ func _sync_fx() -> void:
 	# 払えない(n > 現在マナ)ぶんは光らせない(GameDesign.md 9章)。
 	if _highlight_cost <= _mana:
 		for i in mini(_highlight_cost, _max_mana):
-			glow_centers.append(Vector2(_right_x() + PIP_START_X + i * PIP_STEP, CENTER_Y))
+			glow_centers.append(_right(Vector2(PIP_START_X + i * PIP_STEP, CENTER_Y)))
 	var ratio := clampf(_shown_hp / float(maxi(_max_hp, 1)), 0.0, 1.0)
 	_fx.sync(active, targetable, hp_bar_rect(), ratio, glow_centers)
 
 
-## 右の群の原点(帯のローカルx)。
+## 右の群の原点(帯のローカルx)。2段のときは左端へ揃える。
 func _right_x() -> float:
-	return size.x - RIGHT_GROUP_WIDTH
+	return 0.0 if stacked else size.x - RIGHT_GROUP_WIDTH
+
+
+## 2段のときの各群の段の上端(帯のローカルy)。
+func _right_y() -> float:
+	return BAR_HEIGHT + STACK_GAP if stacked and not mana_row_first else 0.0
+
+
+func _left_y() -> float:
+	return BAR_HEIGHT + STACK_GAP if stacked and mana_row_first else 0.0
 
 
 func _right(offset: Vector2) -> Vector2:
-	return Vector2(_right_x() + offset.x, offset.y)
+	return Vector2(_right_x() + offset.x, _right_y() + offset.y)
+
+
+func _left(offset: Vector2) -> Vector2:
+	return offset + Vector2(0.0, _left_y())
+
+
+## 肖像のメダルの中心。手番の輪(`PlayerInfoBarFx`)が引く。
+func portrait_center() -> Vector2:
+	return _left(PORTRAIT_CENTER)
 
 
 func _draw_closed(points: PackedVector2Array, color: Color, width: float) -> void:
@@ -442,16 +483,15 @@ func _plate(ci: RID, rect: Rect2, radius: float) -> PackedVector2Array:
 ## 肖像のメダル。名札の左端へ重ね、真鍮の太い輪でアイコンを囲む。
 ## 手番の側はこの輪の外へ琥珀の光の輪を足す(GameDesign.md 9章)。
 func _draw_portrait(ci: RID) -> void:
-	_shadow_circle(ci, PORTRAIT_CENTER, PORTRAIT_RADIUS)
+	var center := portrait_center()
+	_shadow_circle(ci, center, PORTRAIT_RADIUS)
 	var inner_radius := PORTRAIT_RADIUS - PORTRAIT_RING_WIDTH
-	UiPaint.fill_circle(ci, PORTRAIT_CENTER, inner_radius, Color(0.05, 0.04, 0.03, 1.0), 32)
+	UiPaint.fill_circle(ci, center, inner_radius, Color(0.05, 0.04, 0.03, 1.0), 32)
 	var icon_tex := UserProfileLibrary.get_icon_texture(icon_id)
 	if icon_tex != null:
 		var r := inner_radius - 2.0
-		draw_texture_rect(
-			icon_tex, Rect2(PORTRAIT_CENTER - Vector2.ONE * r, Vector2.ONE * r * 2.0), false
-		)
-	_brass_ring(ci, PORTRAIT_CENTER, PORTRAIT_RADIUS, PORTRAIT_RING_WIDTH)
+		draw_texture_rect(icon_tex, Rect2(center - Vector2.ONE * r, Vector2.ONE * r * 2.0), false)
+	_brass_ring(ci, center, PORTRAIT_RADIUS, PORTRAIT_RING_WIDTH)
 
 
 ## 名札。メダルの右から伸びる濃紺の板に、称号(小)と表示名(大)を載せる
@@ -461,11 +501,12 @@ func _draw_name_plate() -> void:
 	var label := display_name
 	if label.is_empty():
 		label = "相手" if is_opponent else "あなた"
-	var points := _plate(ci, NAME_PLATE_RECT, 7.0)
+	var plate := Rect2(_left(NAME_PLATE_RECT.position), NAME_PLATE_RECT.size)
+	var points := _plate(ci, plate, 7.0)
 	if active:
 		_draw_closed(points, Color(UiPalette.GLOW_AMBER, 0.85), 1.5)
 	var title_text := UserProfileLibrary.get_title_display(title_id)
-	var top := NAME_PLATE_RECT.position.y
+	var top := plate.position.y
 	if not title_text.is_empty():
 		_text(Vector2(NAME_TEXT_X, top + 15), title_text, 11, UiPalette.BRASS_HIGHLIGHT)
 		_text_shadowed(Vector2(NAME_TEXT_X, top + 32), label, 16)
@@ -475,12 +516,12 @@ func _draw_name_plate() -> void:
 
 ## 山札の山。ドロー・疲労の演出の出どころとして画面側からも引く。
 func deck_pile_rect() -> Rect2:
-	return Rect2(Vector2(_right_x() + DECK_PILE_X, PILE_TOP), PILE_SIZE)
+	return Rect2(_right(Vector2(DECK_PILE_X, PILE_TOP)), PILE_SIZE)
 
 
 ## 相手側だけに出る手札の山。ドローの行き先として使う。
 func hand_pile_rect() -> Rect2:
-	return Rect2(Vector2(_right_x() + HAND_PILE_X, PILE_TOP), PILE_SIZE)
+	return Rect2(_right(Vector2(HAND_PILE_X, PILE_TOP)), PILE_SIZE)
 
 
 ## 決着でHPが0になった。器にひびが走って砕ける(GameDesign.md 9章)。
@@ -504,7 +545,7 @@ func _set_deck_pulse(value: float) -> void:
 
 
 func _graveyard_rect() -> Rect2:
-	return Rect2(Vector2(_right_x() + GRAVE_PILE_X, PILE_TOP), PILE_SIZE)
+	return Rect2(_right(Vector2(GRAVE_PILE_X, PILE_TOP)), PILE_SIZE)
 
 
 ## HPバーは彫り込まれた溝に見せる(角丸 + 内側の落ち込み影)。残量の色は
@@ -520,7 +561,7 @@ func mana_rect() -> Rect2:
 
 
 func hp_bar_rect() -> Rect2:
-	return Rect2(Vector2(HP_BAR_X, CENTER_Y - HP_BAR_SIZE.y * 0.5), HP_BAR_SIZE)
+	return Rect2(_left(Vector2(HP_BAR_X, CENTER_Y - HP_BAR_SIZE.y * 0.5)), HP_BAR_SIZE)
 
 
 func _draw_hp() -> void:
@@ -620,7 +661,7 @@ func _draw_mana() -> void:
 	UiPaint.draw_inner_shadow(ci, trough_rect, trough_radius, 6, 3, Color(0, 0, 0, 1), 0.5)
 	UiPaint.draw_bevel(ci, trough, UiPalette.BRASS_RIM_LIGHT, UiPalette.BRASS_DARK, 1.5, false)
 	for i in _max_mana:
-		var center := Vector2(_right_x() + PIP_START_X + i * PIP_STEP, CENTER_Y)
+		var center := _right(Vector2(PIP_START_X + i * PIP_STEP, CENTER_Y))
 		var filled: bool = i < _mana
 		var base_color := MANA_BLUE if filled else MANA_EMPTY
 		# 縁を暗く落としてから内側をひとまわり小さく塗り、面取り相当の立体感を出す。

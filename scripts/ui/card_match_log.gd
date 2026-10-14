@@ -15,9 +15,8 @@ extends Control
 ## `kind` は "turn" / "play" / "cast" / "flip" / "attack" / "death" / "hp" / "end"。
 signal recorded(line: String, kind: String, side: int, slot: int)
 
-const SCREEN_SIZE := Vector2(1280, 720)
-
 const PANEL_SIZE := Vector2(720, 480)
+const TITLE_FONT_SIZE := 24
 const MAX_LINES := 200
 const CARD_NAME_COLOR := UiPalette.GLOW_AMBER
 const NAME_OPEN := "「"
@@ -33,6 +32,15 @@ var _scroll: ScrollContainer
 var _state: MatchState
 var _side_labels := {MatchState.Side.A: "先手", MatchState.Side.B: "後手"}
 var _last_hp := {}
+var _panel: PanelContainer
+var _dim: ColorRect
+var _title: Label
+## 行の文字の大きさ(0ならテーマの既定)。縦では大きくする(`apply_layout()`)。
+var _line_font_size := 0
+## タッチでカード名を押して出している詳細のカードと、いまの押下の時点で出ていたカード。
+var _tapped_card: CardData
+var _press_card: CardData
+var _hide_pending := false
 
 
 func _ready() -> void:
@@ -40,8 +48,24 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	# **`set_anchors_preset()` は使わない**(Architecture.md 4章)。コードで生成した直後の
 	# サイズ0のノードへ使うと0のまま固定され、暗幕が盤面を覆わずクリックも止められない。
-	size = SCREEN_SIZE
 	_build()
+
+
+## 向きに合わせて置き直す(`CardMatchArrange`)。縦は画面をほぼ覆い、文字を大きくする(GameDesign.md 9章)。
+func apply_layout(layout: CardMatchLayout) -> void:
+	size = layout.screen_size
+	_dim.size = layout.screen_size
+	var panel_size := layout.log_panel_size
+	_panel.custom_minimum_size = panel_size
+	_panel.size = panel_size
+	_panel.position = (layout.screen_size - panel_size) * 0.5
+	_line_font_size = layout.log_font_size
+	if layout.log_title_font_size > 0:
+		_title.add_theme_font_size_override("font_size", layout.log_title_font_size)
+	else:
+		_title.add_theme_font_size_override("font_size", TITLE_FONT_SIZE)
+	if visible:
+		_rebuild()
 
 
 ## 自分が固定される対局(CPU戦・オンライン)では「あなた/相手」で書く。
@@ -80,6 +104,7 @@ func clear() -> void:
 
 func set_open(open: bool) -> void:
 	visible = open
+	_tapped_card = null
 	if open:
 		_rebuild()
 	elif detail != null:
@@ -245,32 +270,28 @@ static func reason_text(state: MatchState, winner: int) -> String:
 
 
 func _build() -> void:
-	var dim := ColorRect.new()
-	dim.color = Color(0, 0, 0, 0.6)
-	dim.size = SCREEN_SIZE
-	dim.mouse_filter = Control.MOUSE_FILTER_STOP
-	dim.gui_input.connect(_on_dim_input)
-	add_child(dim)
+	_dim = ColorRect.new()
+	_dim.color = Color(0, 0, 0, 0.6)
+	_dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	_dim.gui_input.connect(_on_dim_input)
+	add_child(_dim)
 
-	var panel := PanelContainer.new()
-	panel.custom_minimum_size = PANEL_SIZE
-	panel.size = PANEL_SIZE
-	panel.position = (Vector2(1280, 720) - PANEL_SIZE) * 0.5
+	_panel = PanelContainer.new()
 	var style: StyleBox = load("res://resources/theme/content_panel.tres")
 	if style != null:
-		panel.add_theme_stylebox_override("panel", style)
-	add_child(panel)
+		_panel.add_theme_stylebox_override("panel", style)
+	add_child(_panel)
 
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 12)
-	panel.add_child(column)
+	_panel.add_child(column)
 
 	# 見出しが無いと、暗幕の上に文だけが浮いていて何の一覧か分からない。
-	var title := Label.new()
-	title.text = "対局ログ"
-	title.add_theme_font_size_override("font_size", 24)
-	title.add_theme_color_override("font_color", UiPalette.GLOW_AMBER)
-	column.add_child(title)
+	_title = Label.new()
+	_title.text = "対局ログ"
+	_title.add_theme_font_size_override("font_size", TITLE_FONT_SIZE)
+	_title.add_theme_color_override("font_color", UiPalette.GLOW_AMBER)
+	column.add_child(_title)
 
 	_scroll = ScrollContainer.new()
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -302,19 +323,55 @@ func _rebuild() -> void:
 		label.fit_content = true
 		label.meta_underlined = false
 		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		if _line_font_size > 0:
+			label.add_theme_font_size_override("normal_font_size", _line_font_size)
 		label.text = _markup(_lines[i], _line_cards[i])
 		var cards: Array = _line_cards[i]
 		label.meta_hover_started.connect(
 			func(meta: Variant) -> void:
-				if detail != null:
+				if detail != null and not TouchInput.active:
 					detail.hover_card(cards[int(meta)], true)
 		)
 		label.meta_hover_ended.connect(
 			func(_meta: Variant) -> void:
-				if detail != null:
+				if detail != null and not TouchInput.active:
 					detail.leave()
 		)
+		label.gui_input.connect(_on_line_input)
+		label.meta_clicked.connect(func(meta: Variant) -> void: _on_name_tapped(cards[int(meta)]))
 		_list.add_child(label)
+
+
+## タッチで行を押した。名前以外なら詳細を消す(名前なら直後の `meta_clicked` が取り消す)。
+## 押下と `meta_clicked` のどちらが先に届いても同じ結果になるよう、判定は遅延で行う。
+func _on_line_input(event: InputEvent) -> void:
+	if not TouchInput.active or not ClickArea.is_primary_click(event):
+		return
+	_press_card = _tapped_card
+	_hide_pending = true
+	_settle_tap.call_deferred()
+
+
+## カード名を押した(GameDesign.md 9章「タッチでの操作」)。同じ名前の2度押しで消す。
+func _on_name_tapped(card: CardData) -> void:
+	if not TouchInput.active or detail == null:
+		return
+	_hide_pending = false
+	if card == _press_card:
+		_tapped_card = null
+		detail.hide_now()
+		return
+	_tapped_card = card
+	detail.hover_card(card, true)
+
+
+func _settle_tap() -> void:
+	if not _hide_pending:
+		return
+	_hide_pending = false
+	_tapped_card = null
+	if detail != null:
+		detail.hide_now()
 
 
 ## 「」で囲んだカード名を、出現順に `cards` と対応させて色付きのリンクにする。

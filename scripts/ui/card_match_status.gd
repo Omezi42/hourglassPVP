@@ -7,14 +7,10 @@ extends Control
 ## 独立したオーバーレイのノードとして持つ(`CardFlipBeam` と同じ理由)。
 ## `card_match_screen.gd` が1000行の上限に達しているため切り出した、という事情もある。
 
-const SCREEN_SIZE := Vector2(1280, 720)
-## 対象選択の案内。**行動ボタンの列へ出す**(盤面へ重ねると、選ばせたい相手の
-## カードそのものを隠してしまう)。
-const PROMPT_RECT := Rect2(1108, 240, 148, 52)
+## 対象選択の案内は行動のボタンの脇へ出す(盤面へ重ねると、選ばせたい相手の
+## カードそのものを隠してしまう)。位置は `CardMatchLayout.prompt_rect`。
 const WAITING_FONT_SIZE := 24
-## 卓の中央(TABLE_RECT: y=74〜446)へ据える。画面全体の中心(y=360)だと、
-## 手札より上の卓の範囲からわずかに外れて見えていた。
-const WAITING_PANEL_CENTER := Vector2(640, 260)
+## 通信待ちの札は卓の中央(`CardMatchLayout.waiting_center`)へ据える。
 ## 幅は文言(切断時の理由など、長い文言もある)に合わせて伸ばす。高さは固定。
 const WAITING_PANEL_MIN_WIDTH := 340.0
 const WAITING_PANEL_HEIGHT := 88.0
@@ -23,11 +19,7 @@ const WAITING_PANEL_PAD_X := 56.0
 ## (GameDesign.md 9章)。
 const BUSY_DOTS_MAX := 3
 const BUSY_DOTS_INTERVAL := 0.5
-## 不具合の報告と突き合わせるためのバージョン表示(GameDesign.md 11章)。
-## **左下の余白**(手札の面の左、x=24付近)へ小さく出す。以前は行動の列の下端に
-## 置いていたが、GameDesign.md 9章「対局画面の再構築」で丸ボタン化した「エモート」が
-## この位置まで下がり、文字の後半が隠れていた(Architecture.md 10.10.0節)。
-const VERSION_POS := Vector2(24, 700)
+## 不具合の報告と突き合わせるためのバージョン表示(GameDesign.md 11章)。位置は `CardMatchLayout.version_position`。
 const VERSION_FONT_SIZE := 12
 
 var waiting_text := ""
@@ -38,7 +30,6 @@ var _dots_timer: Timer
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	size = SCREEN_SIZE
 	_dots_timer = Timer.new()
 	_dots_timer.wait_time = BUSY_DOTS_INTERVAL
 	_dots_timer.timeout.connect(_on_dots_timeout)
@@ -71,7 +62,7 @@ func set_targeting(value: bool) -> void:
 func _draw() -> void:
 	draw_string(
 		get_theme_default_font(),
-		VERSION_POS,
+		CardMatchLayout.current().version_position,
 		GameVersion.display(),
 		HORIZONTAL_ALIGNMENT_LEFT,
 		-1,
@@ -96,7 +87,7 @@ func _draw_waiting_panel() -> void:
 	var text_size := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, WAITING_FONT_SIZE)
 	var width := maxf(WAITING_PANEL_MIN_WIDTH, text_size.x + WAITING_PANEL_PAD_X)
 	var panel_size := Vector2(width, WAITING_PANEL_HEIGHT)
-	var rect := Rect2(WAITING_PANEL_CENTER - panel_size * 0.5, panel_size)
+	var rect := Rect2(CardMatchLayout.current().waiting_center - panel_size * 0.5, panel_size)
 	var points := UiPaint.rounded_rect_points_uniform(rect, 14.0, 6)
 	UiPaint.fill_gradient_polygon(
 		get_canvas_item(),
@@ -120,11 +111,12 @@ func _draw_waiting_panel() -> void:
 
 func _draw_target_prompt() -> void:
 	var font := get_theme_default_font()
-	draw_rect(PROMPT_RECT, Color(0.08, 0.12, 0.14, 0.95))
-	draw_rect(PROMPT_RECT, CardView.SELECT_CYAN, false, 2.0)
+	var prompt := CardMatchLayout.current().prompt_rect
+	draw_rect(prompt, Color(0.08, 0.12, 0.14, 0.95))
+	draw_rect(prompt, CardView.SELECT_CYAN, false, 2.0)
 	draw_string(
 		font,
-		PROMPT_RECT.position + Vector2(12, 24),
+		prompt.position + Vector2(12, 24),
 		"対象を選ぶ",
 		HORIZONTAL_ALIGNMENT_LEFT,
 		-1,
@@ -133,7 +125,7 @@ func _draw_target_prompt() -> void:
 	)
 	draw_string(
 		font,
-		PROMPT_RECT.position + Vector2(12, 44),
+		prompt.position + Vector2(12, 44),
 		"他を押すと取消",
 		HORIZONTAL_ALIGNMENT_LEFT,
 		-1,

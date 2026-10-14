@@ -33,7 +33,7 @@
   マットの矩形の角を覆う**。マットの縁飾りが額の斜辺と平行になるよう、`PlaymatPaint.draw_mat()` は
   `top_inset` / `bottom_inset` を受け取って台形として描く(相手側 = 全量と半量、自分側 = 半量と0)。
   ショップ・アカウントの見本は引数を省略して矩形のまま
-- **相手の列の駒は `CardView.scale` で 0.92 倍にする**(`CardMatchScreen.FOE_ROW_SCALE`)。
+- **相手の列の駒は 0.92 倍にする**(`CardMatchLayout.FOE_ROW_SCALE` を `CardView.base_scale` に掛ける)。
   `pivot_offset` を駒の中心に置き、`position` / `size` は変えない。これにより
   `CardFlipBeam.unit_center()` / `CardMatchGeometry.slot_center()` / ドラッグの当たり判定は
   等倍の座標のまま使える(Godot は `scale` を持つ `Control` の入力を正しく変換する)。
@@ -49,8 +49,7 @@
   支払うピップの脈打ち)は子の `PlayerInfoBarFx` だけが毎フレーム描く。本体は影・板・真鍮の輪を重ねる重い絵で、
   毎フレーム描き直すと対局中の処理時間の4割を占めたため。本体の公開プロパティ(`active` / `targetable` /
   `display_name` など)は代入で描き直すセッターを持ち、本体の `_draw()` の最後に `_sync_fx()` で層へ値を渡す
-- 座標定数(`TABLE_RECT` / `*_ROW_TOP` / `*_BAR_TOP` / `HAND_AREA` / `ACTION_COLUMN_X`)は
-  `CardMatchScreen` が持つまま値を更新する。**`CardMatchGeometry` はこれらを読むだけ**なので、
+- 座標は `CardMatchLayout` が持つ(4.7節)。**`CardMatchGeometry` は置かれた部品の位置・縮尺から読むだけ**なので、
   値を変えれば座標系の問い合わせは追従する
 
 ## 10.10.1 対局画面の手触り(GameDesign.md 9章「操作への反応」)

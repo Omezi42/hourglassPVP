@@ -14,13 +14,13 @@ func _init(screen: CardMatchScreen) -> void:
 ## HPバーの中心。攻撃が相手プレイヤーを狙うときの的。
 func hp_bar_center(side: int) -> Vector2:
 	var bar: PlayerInfoBar = _screen._own_bar if side == _screen.my_side else _screen._foe_bar
-	return bar.position + bar.hp_bar_rect().get_center()
+	return bar.get_transform() * bar.hp_bar_rect().get_center()
 
 
 ## 盤面の1枠の中心。実況の吹き出しを出す位置に使う。
 func slot_center(side: int, slot: int) -> Vector2:
 	if slot < 0:
-		return Vector2(_screen.size.x * 0.5, CardMatchScreen.FOE_ROW_TOP)
+		return Vector2(_screen.size.x * 0.5, _screen.layout.foe_row_top)
 	var view := _screen.view_at(side, slot)
 	return view.position + Vector2(view.size.x * 0.5, CardView.PEDESTAL_CENTER_Y)
 
@@ -30,7 +30,7 @@ func playable_hand_rects() -> Array[Rect2]:
 	var found: Array[Rect2] = []
 	for view in _screen._hand_views:
 		if view.visible and view.enabled:
-			found.append(Rect2(view.position, view.size))
+			found.append(_to_screen(view, Rect2(Vector2.ZERO, view.size)))
 	return found
 
 
@@ -42,8 +42,7 @@ func end_turn_button_rect() -> Rect2:
 ## マナのバッジと粒の列(GameDesign.md 18章「数字の光」)。話題が「使ったマナ」の段(出す)でだけ使う。
 func mana_badge_rect(side: int) -> Rect2:
 	var bar: PlayerInfoBar = _screen._own_bar if side == _screen.my_side else _screen._foe_bar
-	var local := bar.mana_rect()
-	return Rect2(bar.position + local.position, local.size)
+	return _to_screen(bar, bar.mana_rect())
 
 
 ## 盤面の1体の体力・攻撃力のバッジ(GameDesign.md 18章「数字の光」)。
@@ -51,17 +50,16 @@ func mana_badge_rect(side: int) -> Rect2:
 func unit_stat_rects(side: int, slot: int) -> Array[Rect2]:
 	var view := _screen.view_at(side, slot)
 	var y := CardView.PEDESTAL_CENTER_Y + 6.0
-	var r := CardView.STAT_RADIUS
-	var attack_center := view.position + Vector2(r + 2.0, y)
-	var health_center := view.position + Vector2(view.size.x - r - 2.0, y)
-	return [_badge_rect(attack_center, r), _badge_rect(health_center, r)] as Array[Rect2]
+	var r := CardView.STAT_RADIUS * view.stat_scale
+	var attack := _badge_rect(Vector2(r + 2.0, y), r)
+	var health := _badge_rect(Vector2(view.size.x - r - 2.0, y), r)
+	return [_to_screen(view, attack), _to_screen(view, health)] as Array[Rect2]
 
 
 ## HPバーの矩形(GameDesign.md 18章「数字の光」)。話題が「相手HP」の段でだけ使う。
 func hp_bar_global_rect(side: int) -> Rect2:
 	var bar: PlayerInfoBar = _screen._own_bar if side == _screen.my_side else _screen._foe_bar
-	var local := bar.hp_bar_rect()
-	return Rect2(bar.position + local.position, local.size)
+	return _to_screen(bar, bar.hp_bar_rect())
 
 
 ## 反転権の残り回数を示す粒(GameDesign.md 18章「数字の光」)。話題が「反転権の残り」の
@@ -73,3 +71,8 @@ func flip_right_gauge_rect() -> Rect2:
 
 func _badge_rect(center: Vector2, radius: float) -> Rect2:
 	return Rect2(center - Vector2.ONE * radius, Vector2.ONE * radius * 2.0)
+
+
+## 部品のローカル矩形を画面座標へ(縮尺・軸を通す)。
+func _to_screen(control: Control, local: Rect2) -> Rect2:
+	return Rect2(control.get_transform() * local.position, local.size * control.scale)
