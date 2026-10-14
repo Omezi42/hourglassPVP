@@ -9,13 +9,10 @@ extends RefCounted
 ## 持たず static で置く**(組み立ては `_build()` から1度きり)。
 
 
-## 情報帯。**両者を同じ幅にする**。右端に行動の列を通すため、どちらもその手前で止める
-## (相手側だけ画面いっぱいに伸ばすと、対面させた2本の帯の右端が揃わない)。
-static func make_bar(screen: CardMatchScreen, opponent: bool, top: float) -> PlayerInfoBar:
+## 情報帯。位置と大きさは `CardMatchArrange` が置く。
+static func make_bar(screen: CardMatchScreen, opponent: bool) -> PlayerInfoBar:
 	var bar := PlayerInfoBar.new()
 	bar.is_opponent = opponent
-	bar.position = Vector2(CardMatchScreen.MARGIN, top)
-	bar.size = Vector2(CardMatchScreen.BAR_WIDTH, PlayerInfoBar.BAR_HEIGHT)
 	if opponent:
 		bar.face_pressed.connect(screen.touch.on_face_pressed)
 		bar.drop_handler = screen.touch.on_face_drop
@@ -26,26 +23,15 @@ static func make_bar(screen: CardMatchScreen, opponent: bool, top: float) -> Pla
 	return bar
 
 
-## 盤面の6枠。卓の幅に対して中央へ寄せる。
-static func make_row(screen: CardMatchScreen, top: float, opponent: bool) -> Array[CardView]:
+## 盤面の6枠。位置と縮尺は `CardMatchArrange` が置く。
+static func make_row(screen: CardMatchScreen, opponent: bool) -> Array[CardView]:
 	var views: Array[CardView] = []
-	var width := MatchState.BOARD_SIZE * CardView.BOARD_SIZE_PX.x
-	width += (MatchState.BOARD_SIZE - 1) * CardMatchScreen.CARD_GAP
-	var start := (
-		CardMatchScreen.TABLE_RECT.position.x + (CardMatchScreen.TABLE_RECT.size.x - width) * 0.5
-	)
 	for i in MatchState.BOARD_SIZE:
 		var view := CardView.new()
 		view.mode = CardView.Mode.BOARD
-		view.position = Vector2(
-			start + i * (CardView.BOARD_SIZE_PX.x + CardMatchScreen.CARD_GAP), top
-		)
 		view.size = CardView.BOARD_SIZE_PX
-		if opponent:
-			# 相手の場だけをわずかに縮小して奥行きを出す(段階2)。中心を軸に縮めるため
-			# position/sizeそのものは変えず、pivot_offsetとscaleだけを設定する。
-			view.pivot_offset = CardView.BOARD_SIZE_PX * 0.5
-			view.scale = Vector2.ONE * CardMatchScreen.FOE_ROW_SCALE
+		# 縮尺は中心を軸に掛ける(position/size は縮める前の大きさのまま)。
+		view.pivot_offset = CardView.BOARD_SIZE_PX * 0.5
 		view.pressed.connect(
 			screen.touch.on_foe_slot_pressed if opponent else screen.touch.on_own_slot_pressed
 		)
@@ -85,15 +71,13 @@ static func add_round_button(
 	return button
 
 
-## 行動の列の丸ボタン(GameDesign.md 9章)。縦の並びは `ActionColumnLayout` の3つの群。
-## 反転権は `CardMatchFlipRight`、エモートは `CardMatchEmote`、時計は `make_clock_dial()` が置く。
+## 行動の丸ボタン(GameDesign.md 9章)。位置は `CardMatchArrange` が置く。
+## 反転権は `CardMatchFlipRight`、エモートは `CardMatchEmote`、時計は `make_clock_dial()` が作る。
 static func action_column(screen: CardMatchScreen) -> void:
-	screen._coin_button = _column_button(
-		screen, "コイン", ActionColumnLayout.COIN_DIAMETER, ActionColumnLayout.COIN_Y
-	)
+	screen._coin_button = add_round_button(screen, "コイン", ActionColumnLayout.COIN_DIAMETER, false)
 	screen._coin_button.pressed.connect(screen._on_coin_pressed)
-	screen._end_turn_button = _column_button(
-		screen, "ターン終了", ActionColumnLayout.TURN_END_DIAMETER, ActionColumnLayout.TURN_END_Y, true
+	screen._end_turn_button = add_round_button(
+		screen, "ターン終了", ActionColumnLayout.TURN_END_DIAMETER, true
 	)
 	screen._end_turn_button.pressed.connect(screen._on_end_turn_pressed)
 	# `_targets` は `_build()` の後に作るため、乗った時点で引く。
@@ -101,53 +85,27 @@ static func action_column(screen: CardMatchScreen) -> void:
 		func() -> void: screen._targets.show_turn_end_forecast()
 	)
 	screen._end_turn_button.mouse_exited.connect(func() -> void: screen._targets.clear_forecast())
-	screen._log_button = _column_button(
-		screen, "ログ", ActionColumnLayout.SMALL_DIAMETER, ActionColumnLayout.LOG_Y
-	)
+	screen._log_button = add_round_button(screen, "ログ", ActionColumnLayout.SMALL_DIAMETER, false)
 	screen._log_button.pressed.connect(func() -> void: screen._log.set_open(true))
-	screen._surrender_button = _column_button(
-		screen, "投了", ActionColumnLayout.SMALL_DIAMETER, ActionColumnLayout.SURRENDER_Y
+	screen._surrender_button = add_round_button(
+		screen, "投了", ActionColumnLayout.SMALL_DIAMETER, false
 	)
 	screen._surrender_button.pressed.connect(screen._on_surrender_pressed)
 	# リプレイ・観戦の戻る導線。反転権と同じ位置(両者は同時に見えない)。
-	screen._back_button = _column_button(
-		screen, "戻る", ActionColumnLayout.FLIP_RIGHT_DIAMETER, ActionColumnLayout.FLIP_RIGHT_Y
+	screen._back_button = add_round_button(
+		screen, "戻る", ActionColumnLayout.FLIP_RIGHT_DIAMETER, false
 	)
 	screen._back_button.pressed.connect(func() -> void: screen.back_pressed.emit())
 
 
-static func _column_button(
-	screen: CardMatchScreen, label: String, diameter: float, center_y: float, filled := false
-) -> RoundActionButton:
-	var button := add_round_button(screen, label, diameter, filled)
-	button.position = round_button_pos(diameter, center_y)
-	return button
+## 丸い部品(ボタン・時計)の中心を `center` へ合わせる。
+static func center_on(control: Control, center: Vector2) -> void:
+	control.position = center - control.size * 0.5
 
 
-## 丸いボタンを行動の列の中心(`ACTION_COLUMN_X + ACTION_COLUMN_CENTER_OFFSET`)へ
-## 揃えるための左端x座標。
-static func round_button_x(diameter: float) -> float:
-	return (
-		CardMatchScreen.ACTION_COLUMN_X
-		+ CardMatchScreen.ACTION_COLUMN_CENTER_OFFSET
-		- diameter * 0.5
-	)
-
-
-## 丸いボタンの中心yから左端y座標を求める(`round_button_x()`と対になる)。
-static func round_button_y(diameter: float, center_y: float) -> float:
-	return center_y - diameter * 0.5
-
-
-## `round_button_x()`/`round_button_y()`をまとめて呼ぶ(中心x・中心yの1点から置く)。
-static func round_button_pos(diameter: float, center_y: float) -> Vector2:
-	return Vector2(round_button_x(diameter), round_button_y(diameter, center_y))
-
-
-## 行動の列の持ち時間の時計(GameDesign.md 9章)。丸ボタンと同じ列の中心へ置く。
+## 行動の列の持ち時間の時計(GameDesign.md 9章)。
 static func make_clock_dial(screen: CardMatchScreen) -> TurnClockDial:
 	var dial := TurnClockDial.new()
-	dial.position = round_button_pos(TurnClockDial.DIAMETER, ActionColumnLayout.CLOCK_Y)
 	screen.add_child(dial)
 	return dial
 

@@ -51,7 +51,7 @@ func _draw() -> void:
 		var pulse := (sin(_time * 3.0) + 1.0) * 0.5
 		UiPaint.draw_ring(
 			ci,
-			PlayerInfoBar.PORTRAIT_CENTER,
+			_bar.portrait_center(),
 			PlayerInfoBar.PORTRAIT_RADIUS + 2.5,
 			Color(UiPalette.GLOW_AMBER, 0.55 + 0.35 * pulse),
 			2.5,

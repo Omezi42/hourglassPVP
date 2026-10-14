@@ -57,12 +57,22 @@ const TABLE_SHADOW_ALPHA_MAX := 0.42
 
 static var _glow_cache: GradientTexture2D
 
+var _lamp: SwingingLamp
+
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	anchor_right = 1.0
 	anchor_bottom = 1.0
-	add_child(SwingingLamp.new())
+	_lamp = SwingingLamp.new()
+	add_child(_lamp)
+
+
+## 向きが変わった(`CardMatchArrange`)。縦では吊りランプを下ろさない(情報帯と直前の手に重なるため)。
+func redraw_layout(layout: CardMatchLayout) -> void:
+	_lamp.visible = not layout.portrait
+	_lamp.queue_redraw()
+	queue_redraw()
 
 
 func _draw() -> void:
@@ -109,10 +119,10 @@ func _fade_with_floor(rect: Rect2, full_height: float) -> void:
 ## より広い範囲の空気そのものを暖色で持ち上げる。**吊りランプの真下にあたるよう、
 ## 中心を卓の中心より40px上へずらす**(GameDesign.md 9章「対局画面の再構築」)。
 func _draw_glow_pool(_ci: RID) -> void:
-	var center: Vector2 = CardMatchScreen.TABLE_RECT.get_center() + Vector2(0.0, LAMP_GLOW_OFFSET_Y)
+	var table := CardMatchLayout.current().table_rect
+	var center: Vector2 = table.get_center() + Vector2(0.0, LAMP_GLOW_OFFSET_Y)
 	var half := Vector2(
-		CardMatchScreen.TABLE_RECT.size.x * GLOW_WIDTH_RATIO * 0.5,
-		CardMatchScreen.TABLE_RECT.size.y * GLOW_HEIGHT_RATIO * 0.5
+		table.size.x * GLOW_WIDTH_RATIO * 0.5, table.size.y * GLOW_HEIGHT_RATIO * 0.5
 	)
 	# 同心の楕円を重ねると段が見えるため、放射状のグラデーションを1枚で敷く。
 	draw_texture_rect(_glow_texture(), Rect2(center - half, half * 2.0), false)
@@ -139,9 +149,10 @@ static func _glow_texture() -> GradientTexture2D:
 
 ## 卓・手札・行動の列それぞれの下へ落ち影を敷く。
 func _draw_drop_shadows(ci: RID) -> void:
+	var layout := CardMatchLayout.current()
 	_draw_shadow_layers(
 		ci,
-		CardMatchScreen.TABLE_RECT,
+		layout.table_rect,
 		TABLE_SHADOW_STEPS,
 		SHADOW_GROW_MIN,
 		TABLE_SHADOW_GROW_MAX,
@@ -150,7 +161,7 @@ func _draw_drop_shadows(ci: RID) -> void:
 	)
 	_draw_shadow_layers(
 		ci,
-		CardMatchScreen.HAND_AREA,
+		layout.hand_area,
 		SHADOW_STEPS,
 		SHADOW_GROW_MIN,
 		SHADOW_GROW_MAX,
@@ -158,13 +169,10 @@ func _draw_drop_shadows(ci: RID) -> void:
 		SHADOW_ALPHA_MAX
 	)
 	# 情報帯は1枚の板ではなく器具の並びになったため、影は `PlayerInfoBar` が器具ごとに持つ。
-	# ActionColumnPanel(真鍮枠の操作盤)と同じ矩形に合わせる(GameDesign.md 9章「対局画面の再構築」)。
-	var action_rect := Rect2(
-		CardMatchScreen.ACTION_COLUMN_X + 6.0,
-		10.0,
-		1280.0 - CardMatchScreen.ACTION_COLUMN_X - 16.0,
-		700.0
-	)
+	# ActionColumnPanel(真鍮枠の操作盤)と同じ矩形に合わせる。縦では行動の列を置かない。
+	var action_rect := layout.action_panel_rect
+	if not action_rect.has_area():
+		return
 	_draw_shadow_layers(
 		ci,
 		action_rect,

@@ -8,32 +8,7 @@ extends Control
 
 signal back_pressed
 
-const CARD_GAP := 12.0
-const HAND_GAP := 8.0
-const MARGIN := 24.0
-## 相手の場6枠だけをわずかに縮小して奥行きを出す(段階2)。
-const FOE_ROW_SCALE := 0.92
-const FOE_BAR_TOP := 8.0
-const FOE_ROW_TOP := 92.0
-const OWN_ROW_TOP := 268.0
-const OWN_BAR_TOP := 456.0
-const HAND_TOP := 528.0
-## 手札は卓と同じ左右の範囲へ置き、盤面の真下で中央に揃える。段階2で上端を自分の
-## 情報帯の下端(512)へ近づけた(下端686は変えず、HAND_TOP/札の位置も変えない)。
-const HAND_AREA := Rect2(190, 520, 900, 166)
-## 12枠を載せる卓上(GameDesign.md 9章)。両陣営の6枠がこの上に並ぶ。
-const TABLE_RECT := Rect2(190, 74, 900, 372)
 const CPU_THINK_SECONDS := 0.5
-## 反転権・コイン・時計・ターン終了・ログ・エモート・投了を縦に並べる右の列
-## (`ActionColumnPanel`/`RoundActionButton`。GameDesign.md 9章)。列の中心xは
-## `ACTION_COLUMN_X+ACTION_COLUMN_CENTER_OFFSET`、縦の並びは `ActionColumnLayout`。
-const ACTION_COLUMN_X := 1108.0
-const ACTION_COLUMN_CENTER_OFFSET := 80.0
-## 反転ボタンは選んだ駒のすぐ下へ出す(GameDesign.md 9章)。
-const FLIP_BUTTON_SIZE := Vector2(104, 34)
-const FLIP_BUTTON_OVERLAP := 3.0
-## 情報帯の幅。行動の列(ACTION_COLUMN_X)の手前で止める。
-const BAR_WIDTH := ACTION_COLUMN_X - MARGIN - 24.0
 
 var state: MatchState
 ## 自分の側。CPU戦・オンラインでは固定する。
@@ -100,6 +75,11 @@ var finale: CardMatchFinale:
 var shake: CardMatchShake:
 	get:
 		return _shake
+
+## いまの向きの座標の組(Architecture.md 4.7節)。切り出した進行役は関数の中から読む。
+var layout: CardMatchLayout:
+	get:
+		return CardMatchLayout.current()
 
 var _foe_bar: PlayerInfoBar
 ## 卓。プレイマットを敷き替えるために持つ(GameDesign.md 9章)。
@@ -170,6 +150,12 @@ var _touch: CardMatchTouch
 var _hand_layout: CardMatchHandLayout
 var _cpu_ctl: CardMatchCpu
 var _pointer: CardMatchPointer
+## 向きが変わったときに置き直す下地・卓まわり(`CardMatchArrange`)。
+var _backdrop: MatchBackdrop
+var _action_panel: ActionColumnPanel
+var _table_glow: BoardGlow
+var _table_dust: BoardDust
+var _hand_panel: HandLeatherPanel
 
 
 func _ready() -> void:
@@ -194,11 +180,13 @@ func _ready() -> void:
 	_effect_target = CardMatchEffectTarget.new(self)
 	_clocks = CardMatchClock.new(self)
 	_emote = CardMatchEmote.new(self)
-	_emote.set_position(
-		CardMatchBuild.round_button_pos(
-			ActionColumnLayout.SMALL_DIAMETER, ActionColumnLayout.EMOTE_Y
-		)
-	)
+	CardMatchArrange.apply(self)
+
+
+## 向きが変わった(Architecture.md 4.7節)。盤面の状態は保ったまま部品を置き直す。
+func apply_orientation(portrait: bool) -> void:
+	CardMatchLayout.choose(portrait)
+	CardMatchArrange.apply(self)
 
 
 ## 卓へ敷くマットを決める(GameDesign.md 9章)。自分の設定と相手の設定を別々に受ける。
@@ -387,36 +375,30 @@ func _begin_state(
 
 func _build() -> void:
 	# 下地と卓は最初に足して盤面の駒より背面へ置く。
-	add_child(MatchBackdrop.new())
+	_backdrop = MatchBackdrop.new()
+	add_child(_backdrop)
 	# 行動の列の地。ボタンより先に足して背面へ置く(GameDesign.md 9章「対局画面の再構築」)。
-	add_child(ActionColumnPanel.new())
+	_action_panel = ActionColumnPanel.new()
+	add_child(_action_panel)
 	_clock_dial = CardMatchBuild.make_clock_dial(self)
 	# 卓の後ろにだけ淡い光を置いて浮かせる(GameDesign.md 9章)。BoardTableより先に
 	# 足すことで、卓の額の外周からわずかににじむだけの光として見える。
-	var table_glow := BoardGlow.new()
-	table_glow.position = TABLE_RECT.position
-	table_glow.size = TABLE_RECT.size
-	add_child(table_glow)
+	_table_glow = BoardGlow.new()
+	add_child(_table_glow)
 	_table = BoardTable.new()
-	_table.position = TABLE_RECT.position
-	_table.size = TABLE_RECT.size
 	add_child(_table)
 	# 卓の上に薄く漂う砂埃(GameDesign.md 9章「空気感」)。カードより先に足し、
 	# 駒の絵の手前へは出ないようにする。
-	var table_dust := BoardDust.new()
-	table_dust.position = TABLE_RECT.position
-	table_dust.size = TABLE_RECT.size
-	add_child(table_dust)
-	_foe_bar = CardMatchBuild.make_bar(self, true, FOE_BAR_TOP)
-	_own_bar = CardMatchBuild.make_bar(self, false, OWN_BAR_TOP)
-	_foe_slots = CardMatchBuild.make_row(self, FOE_ROW_TOP, true)
-	_own_slots = CardMatchBuild.make_row(self, OWN_ROW_TOP, false)
+	_table_dust = BoardDust.new()
+	add_child(_table_dust)
+	_foe_bar = CardMatchBuild.make_bar(self, true)
+	_own_bar = CardMatchBuild.make_bar(self, false)
+	_foe_slots = CardMatchBuild.make_row(self, true)
+	_own_slots = CardMatchBuild.make_row(self, false)
 	# 手札は「手元の面」の上に置く(GameDesign.md 9章)。革の面を、乗る手札のCardViewより
 	# 先に足して背面へ回す(札が宙に浮いて見えないようにするための下敷き)。
-	var hand_panel := HandLeatherPanel.new()
-	hand_panel.position = HAND_AREA.position
-	hand_panel.size = HAND_AREA.size
-	add_child(hand_panel)
+	_hand_panel = HandLeatherPanel.new()
+	add_child(_hand_panel)
 	for i in MatchState.DECK_SIZE:
 		var view := CardView.new()
 		view.mode = CardView.Mode.HAND
@@ -428,7 +410,7 @@ func _build() -> void:
 		add_child(view)
 		_hand_views.append(view)
 	# 反転だけは選んだ駒のすぐ下へ出す。位置は `_refresh_buttons()` が毎回決める。
-	_flip_button = CardMatchBuild.add_button(self, "反転", FLIP_BUTTON_SIZE)
+	_flip_button = CardMatchBuild.add_button(self, "反転", CardMatchLayout.FLIP_BUTTON_SIZE)
 	_flip_button.visible = false
 	_flip_button.pressed.connect(_on_flip_pressed)
 	# `_targets` は `_build()` の後に作るため、乗った時点で引く。
@@ -443,12 +425,6 @@ func _build() -> void:
 	add_child(_cpu_timer)
 	# 盤面へ重ねるもの(光の筋・実況・マリガン・ログ・結果パネル等)は最後に足す。
 	CardMatchBuild.overlays(self)
-	# 攻撃の揺れは**卓と場の駒だけ**を動かす(GameDesign.md 9章)。情報帯・手札・
-	# 行動の列は読み続けるものなので入れない。位置が後から変わらないものだけを渡す。
-	var shaken: Array[Control] = [_table]
-	shaken.append_array(_foe_slots)
-	shaken.append_array(_own_slots)
-	_shake.bind(shaken)
 
 
 # --- 表示の同期 ---------------------------------------------------------
@@ -547,8 +523,10 @@ func _refresh_buttons() -> void:
 ## 選んだ駒の真下。駒の中心へ横を揃え、下端へわずかに重ねて置く。
 func _flip_button_position(slot: int) -> Vector2:
 	var view: CardView = _own_slots[slot]
-	var x: float = view.position.x + (view.size.x - FLIP_BUTTON_SIZE.x) * 0.5
-	return Vector2(x, view.position.y + view.size.y - FLIP_BUTTON_OVERLAP)
+	var button_size := CardMatchLayout.FLIP_BUTTON_SIZE
+	var x: float = view.position.x + (view.size.x - button_size.x) * 0.5
+	var bottom := view.position.y + view.size.y * (1.0 + view.scale.y) * 0.5
+	return Vector2(x, bottom - CardMatchLayout.FLIP_BUTTON_OVERLAP)
 
 
 func _my_turn() -> bool:

@@ -46,10 +46,8 @@ func _ready() -> void:
 ## 手を出した側(`actor_side`)と駒の持ち主(`side`)を別々に受け取れるようにしている。
 func play_flip(screen: CardMatchScreen, side: int, slot: int, actor_side: int = side) -> void:
 	var view := screen.view_at(side, slot)
-	var bar_y: float = (
-		CardMatchScreen.OWN_BAR_TOP if actor_side == screen.my_side else CardMatchScreen.FOE_BAR_TOP
-	)
-	var from := Vector2(screen.size.x * 0.5, bar_y + PlayerInfoBar.BAR_HEIGHT * 0.5)
+	var bar := screen.bar_for(actor_side)
+	var from := Vector2(screen.size.x * 0.5, bar.position.y + bar.size.y * bar.scale.y * 0.5)
 	# 反転だけは砂粒と光条を伴う(GameDesign.md 9章)。設置効果と同じ筋を使う以上、
 	# 色を変えるだけでは「ゲームの中心となる行動」に見えないため。
 	await play(from, unit_center(view), COLOR, true)

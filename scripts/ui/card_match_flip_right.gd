@@ -22,22 +22,20 @@ func _init(screen: CardMatchScreen) -> void:
 	# (GameDesign.md 9章「対局画面の再構築」)。
 	var diameter := ActionColumnLayout.FLIP_RIGHT_DIAMETER
 	_button = CardMatchBuild.add_round_button(screen, "反転権", diameter, false)
-	_button.position = CardMatchBuild.round_button_pos(diameter, ActionColumnLayout.FLIP_RIGHT_Y)
 	_button.emblem_texture = ICON
 	_button.visible = false
 	_button.pressed.connect(_on_pressed)
 	# 自分・相手の残り回数の粒(scratchpad/match_rebuild_phase4.md)。再生・観戦でも
 	# 見る側の情報として出すため、ボタンとは別に可視状態を持つ。
 	_gauge = FlipRightGauge.new()
-	var gauge_x := (
-		CardMatchScreen.ACTION_COLUMN_X
-		+ CardMatchScreen.ACTION_COLUMN_CENTER_OFFSET
-		- FlipRightGauge.GAUGE_SIZE.x * 0.5
-	)
-	var gauge_y := ActionColumnLayout.FLIP_GAUGE_TOP
-	_gauge.position = Vector2(gauge_x, gauge_y)
 	_gauge.visible = false
 	screen.add_child(_gauge)
+
+
+## ボタンの中心と、残り回数の粒の上端の中心へ置く(`CardMatchArrange`)。
+func place(button_center: Vector2, gauge_top_center: Vector2) -> void:
+	CardMatchBuild.center_on(_button, button_center)
+	_gauge.position = gauge_top_center - Vector2(FlipRightGauge.GAUGE_SIZE.x * 0.5, 0.0)
 
 
 ## 反転権のボタンの矩形。誘導対局で次に押す場所として囲む(GameDesign.md 18章)。

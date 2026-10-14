@@ -209,6 +209,6 @@ func _on_unit_returned(side: int, slot: int, card: CardData) -> void:
 ## (中身は伏せるため。GameDesign.md 9章)。
 func hand_center(side: int) -> Vector2:
 	if side == _screen.my_side and not _screen.hide_hands:
-		return CardMatchScreen.HAND_AREA.get_center()
+		return _screen.layout.hand_area.get_center()
 	var bar := _screen.bar_for(side)
 	return bar.position + bar.hand_pile_rect().get_center()

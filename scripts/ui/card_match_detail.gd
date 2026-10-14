@@ -80,10 +80,10 @@ func _live_text(card: CardData) -> String:
 ## 対角へ出していたのは**パネルの中の語を押しに行く**前提があった頃の名残で、
 ## 読むだけになったいまは視線を画面の端まで往復させる理由が無い。
 func _place() -> Vector2:
-	var band := CardMatchScreen.TABLE_RECT
+	var band := _screen.layout.table_rect
 	var bounds := Rect2(
 		Vector2(MARGIN, band.position.y),
-		Vector2(CardMatchScreen.ACTION_COLUMN_X - MARGIN * 2.0, band.size.y)
+		Vector2(_screen.layout.play_right - MARGIN * 2.0, band.size.y)
 	)
 	return CardDetailPanel.place_near(_screen.get_local_mouse_position(), _panel.size, bounds)
 

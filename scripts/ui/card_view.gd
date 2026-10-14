@@ -185,6 +185,16 @@ var unselect_amount := 0.0
 ## (変わった側のバッジだけ跳ねるため)。
 var health_punch := 0.0
 var attack_punch := 0.0
+## 場の攻撃力・体力のバッジの倍率(縦画面=1.4。Architecture.md 4.7節)。跳ねる演出はこの上に重なる。
+var stat_scale := 1.0:
+	set(value):
+		stat_scale = value
+		queue_redraw()
+## 置き場所が決める駒の縮尺(相手の列・縦画面)。身構えの縮みはこれに掛ける。
+var base_scale := 1.0:
+	set(value):
+		base_scale = value
+		scale = Vector2.ONE * (BRACE_SCALE if brace else 1.0) * value
 ## 身構え(GameDesign.md 9章「対局画面の手触り」)。`CardMatchTargets` が、狙える
 ## (=`selected`)相手へカーソルが乗ったときだけ true にする。対象選択が終わったら
 ## (`refresh()` で光りが消えるとき)必ず false へ戻す。
@@ -296,7 +306,7 @@ func _animate_brace(active: bool) -> void:
 	if _brace_tween != null and _brace_tween.is_valid():
 		_brace_tween.kill()
 	_brace_tween = create_tween()
-	var target := Vector2.ONE * (BRACE_SCALE if active else 1.0)
+	var target := Vector2.ONE * (BRACE_SCALE if active else 1.0) * base_scale
 	_brace_tween.tween_property(self, "scale", target, BRACE_SCALE_DURATION)
 
 
@@ -626,10 +636,11 @@ func _draw_board_stats() -> void:
 	if unit == null:
 		return
 	var y := PEDESTAL_CENTER_Y + 6.0
-	var attack_radius := STAT_RADIUS * (1.0 + attack_punch * STAT_PUNCH_SCALE)
-	var health_radius := STAT_RADIUS * (1.0 + health_punch * STAT_PUNCH_SCALE)
-	var attack_at := Vector2(STAT_RADIUS + 2.0, y)
-	var health_at := Vector2(size.x - STAT_RADIUS - 2.0, y)
+	var radius := STAT_RADIUS * stat_scale
+	var attack_radius := radius * (1.0 + attack_punch * STAT_PUNCH_SCALE)
+	var health_radius := radius * (1.0 + health_punch * STAT_PUNCH_SCALE)
+	var attack_at := Vector2(radius + 2.0, y)
+	var health_at := Vector2(size.x - radius - 2.0, y)
 	CardViewPaint.stat(self, attack_at, unit.attack, ATTACK_ORANGE, attack_radius)
 	CardViewPaint.stat(self, health_at, unit.health, HEALTH_RED, health_radius)
 	if flip_preview.is_empty():

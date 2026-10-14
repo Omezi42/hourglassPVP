@@ -20,7 +20,7 @@ func draw(item: CanvasItem, t: float) -> void:
 
 
 func _band() -> Rect2:
-	var table := CardMatchScreen.TABLE_RECT
+	var table := CardMatchLayout.current().table_rect
 	var y := 0.0
 	for target in targets:
 		y += target.y

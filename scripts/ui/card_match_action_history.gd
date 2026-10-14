@@ -11,7 +11,6 @@ const TILE_SIZE := Vector2(156, 50)
 const TILE_GAP := 8.0
 const MAX_TILES := 4
 const TILE_RADIUS := 7.0
-const ORIGIN := Vector2(18.0, 96.0)
 const SIDE_STRIPE_WIDTH := 4.0
 const EMBLEM_RADIUS := 15.0
 const EMBLEM_X := 26.0
@@ -35,6 +34,8 @@ var _state: MatchState
 var _appear := 1.0
 var _appear_tween: Tween
 var _hovered: CardData
+## 縦画面では4件を横1列に並べる(新しい手が左。Architecture.md 4.7節)。
+var _horizontal := false
 
 
 func _init(screen: CardMatchScreen) -> void:
@@ -46,8 +47,22 @@ func _init(screen: CardMatchScreen) -> void:
 
 func _ready() -> void:
 	_font = TextGlyphs.ui_font()
-	position = ORIGIN
-	size = Vector2(TILE_SIZE.x, (TILE_SIZE.y + TILE_GAP) * MAX_TILES)
+
+
+## 置き場所と並びの向き(`CardMatchArrange`)。
+func set_layout(layout: CardMatchLayout) -> void:
+	_horizontal = layout.history_horizontal
+	position = layout.history_position
+	scale = Vector2.ONE * layout.history_scale
+	size = _step() * (MAX_TILES - 1) + TILE_SIZE
+	queue_redraw()
+
+
+## 1件ぶんの送り。
+func _step() -> Vector2:
+	if _horizontal:
+		return Vector2(TILE_SIZE.x + TILE_GAP, 0.0)
+	return Vector2(0.0, TILE_SIZE.y + TILE_GAP)
 
 
 ## 新しい対局の状態へつなぎ直す。前の対局の状態は解放済みのため切らなくてよい。
@@ -79,11 +94,12 @@ func _has_point(point: Vector2) -> bool:
 
 
 func _card_at(point: Vector2) -> CardData:
-	var pitch := TILE_SIZE.y + TILE_GAP
-	var index := floori(point.y / pitch)
-	if index < 0 or index >= _items.size() or point.x < 0.0 or point.x > TILE_SIZE.x:
+	var step := _step()
+	var along := point.x if _horizontal else point.y
+	var index := floori(along / step.length())
+	if index < 0 or index >= _items.size():
 		return null
-	if point.y - index * pitch > TILE_SIZE.y:
+	if not Rect2(step * index, TILE_SIZE).has_point(point):
 		return null
 	return _items[index]["card"]
 
@@ -139,16 +155,16 @@ func _set_appear(value: float) -> void:
 func _draw() -> void:
 	if _items.is_empty() or _screen.state == null:
 		return
-	var slide := (1.0 - _appear) * (TILE_SIZE.y + TILE_GAP)
+	var step := _step()
 	for i in _items.size():
-		var y := i * (TILE_SIZE.y + TILE_GAP) - slide
-		var x := 0.0
+		var at := step * (i - (1.0 - _appear))
 		var alpha := 1.0
 		if i == 0:
-			y = 0.0
-			x = -APPEAR_SHIFT * (1.0 - _appear)
+			at = Vector2(-APPEAR_SHIFT * (1.0 - _appear), 0.0)
+			if _horizontal:
+				at = Vector2(0.0, -APPEAR_SHIFT * (1.0 - _appear))
 			alpha = _appear
-		_draw_tile(Rect2(Vector2(x, y), TILE_SIZE), _items[i], alpha)
+		_draw_tile(Rect2(at, TILE_SIZE), _items[i], alpha)
 
 
 func _draw_tile(rect: Rect2, item: Dictionary, alpha: float) -> void:

@@ -60,18 +60,12 @@ func _init(screen: CardMatchScreen, solo: CardMatchSolo) -> void:
 
 func _ready() -> void:
 	_font = TextGlyphs.ui_font()
-	# 直前の手の列(`CardMatchActionHistory`)の下端+間隔に置く。実行時に読むことで、
-	# 互いのconstをconstから参照して読み込みが循環する不具合(Pitfalls.md)を避ける。
+	# 直前の手の列(`CardMatchActionHistory`)の下端+間隔に置く。
+	var history := _screen.layout.history_position
+	var pitch := CardMatchActionHistory.TILE_SIZE.y + CardMatchActionHistory.TILE_GAP
 	position = Vector2(
-		CardMatchActionHistory.ORIGIN.x,
-		(
-			CardMatchActionHistory.ORIGIN.y
-			+ (
-				(CardMatchActionHistory.TILE_SIZE.y + CardMatchActionHistory.TILE_GAP)
-				* CardMatchActionHistory.MAX_TILES
-			)
-			+ CardMatchActionHistory.TILE_GAP
-		)
+		history.x,
+		history.y + pitch * CardMatchActionHistory.MAX_TILES + CardMatchActionHistory.TILE_GAP
 	)
 	size = Vector2(CardMatchActionHistory.TILE_SIZE.x, HEIGHT)
 	visible = false
