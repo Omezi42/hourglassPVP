@@ -23,6 +23,8 @@ const PANEL_PAD := 24.0
 ## 縦は列を減らし、札と文字を大きくする(GameDesign.md 9章「縦画面」)。
 const PORTRAIT_COLUMNS := 4
 const PORTRAIT_MAX_ROWS := 4
+## 4列が画面の幅に収まる大きさ。
+const PORTRAIT_CARD_SCALE := 1.3
 
 var _title: Label
 var _grid: GridContainer
@@ -52,11 +54,10 @@ func _ready() -> void:
 func apply_layout(layout: CardMatchLayout) -> void:
 	size = layout.screen_size
 	_dim.size = layout.screen_size
-	_center.size = layout.screen_size
 	var zoom := layout.text_scale
 	_columns = PORTRAIT_COLUMNS if layout.portrait else COLUMNS
 	_max_rows = PORTRAIT_MAX_ROWS if layout.portrait else MAX_ROWS
-	_card_size = CardView.HAND_SIZE_PX * (layout.hand_scale if layout.portrait else 1.0)
+	_card_size = CardView.HAND_SIZE_PX * (PORTRAIT_CARD_SCALE if layout.portrait else 1.0)
 	_grid.columns = _columns
 	var width := _card_size.x * _columns + ROW_GAP * (_columns - 1) + PANEL_PAD * 2.0
 	_panel.custom_minimum_size = Vector2(width if layout.portrait else PANEL_WIDTH, 0)
@@ -65,6 +66,8 @@ func apply_layout(layout: CardMatchLayout) -> void:
 	_close.add_theme_font_size_override("font_size", roundi(CLOSE_FONT_SIZE * zoom))
 	_close.custom_minimum_size = CLOSE_SIZE * zoom
 	_close.size = CLOSE_SIZE * zoom
+	# 中身の最小幅を決めてから広さを合わせる(コンテナは先に広げると、横の幅のまま縮まない)。
+	_center.size = layout.screen_size
 
 
 ## 同じカードは1枚にまとめ、枚数をバッジで出す。30枚が並ぶと読み取れないため。
@@ -87,11 +90,12 @@ func open_pile(
 	for card in order:
 		var view := CardView.new()
 		view.mode = CardView.Mode.HAND
-		view.custom_minimum_size = _card_size
 		view.badge = "×%d" % counts[card]
 		view.skin_viewer = skin_viewer
 		_grid.add_child(view)
 		view.show_card(card, true)
+		# `show_card()` が札の大きさを既定へ戻すため、その後に合わせる。
+		view.custom_minimum_size = _card_size
 	_show(cards.is_empty(), order.size())
 
 
@@ -108,9 +112,9 @@ func open_choice(
 	for index in indices:
 		var view := CardView.new()
 		view.mode = CardView.Mode.HAND
-		view.custom_minimum_size = _card_size
 		_grid.add_child(view)
 		view.show_card(pile[index], true)
+		view.custom_minimum_size = _card_size
 		view.pressed.connect(func(_view: CardView) -> void: _pick(index))
 	_show(indices.is_empty(), indices.size())
 
