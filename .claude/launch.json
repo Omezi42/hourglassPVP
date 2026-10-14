@@ -33,6 +33,18 @@
         "scratchpad/webtest"
       ],
       "port": 8074
+    },
+    {
+      "name": "app-build",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8075",
+        "--directory",
+        "build/app"
+      ],
+      "port": 8075
     }
   ]
 }

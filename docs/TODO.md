@@ -66,9 +66,8 @@
 
 ### アプリ版(PWA)(GameDesign.md 10章 / Architecture.md 4.6節)
 
-起動部の作成・配信先の判定・更新手順は実装済み(`build/app/`)。残りは次の2つ。
+起動部は `https://omezi42.github.io/sunadokei-arena-app/` に公開済み。残りは告知だけ。
 
-- [ ] GitHub Pages へ `build/app/` を上げる(下の「ユーザー作業」のリポジトリ作成のあと。上げるのはユーザーに依頼)
 - [ ] 初回公開を Discord #お知らせ で告知(Android は Chrome のメニュー →「ホーム画面に追加」、iPhone は Safari の共有 →「ホーム画面に追加」)
 
 ### 技術的負債
@@ -99,7 +98,6 @@
 
 ## 5. ユーザー作業
 
-- [ ] GitHub に公開リポジトリ `sunadokei-arena-app` を作り、Pages を有効にする(アプリ版の置き場所。Architecture.md 4.6節)
 - [ ] unityroom側のゲーム管理画面でボードを「常に記録」に設定し、`RANK_SCOREBOARD_ID` を実際のボード番号に合わせる
 - [ ] `/card` `/deck` `/link` `/profile` とカードスポットライトを Discord 上で実際に打つ(デプロイ・登録は済み)
 
