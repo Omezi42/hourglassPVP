@@ -413,6 +413,10 @@ func _build() -> void:
 		view.mouse_exited.connect(_pointer.on_view_left)
 		add_child(view)
 		_hand_views.append(view)
+	var pressable: Array[CardView] = []
+	for views in [_hand_views, _foe_slots, _own_slots]:
+		pressable.append_array(views)
+	_pointer.watch_views(pressable)
 	# 反転だけは選んだ駒のすぐ下へ出す。位置は `_refresh_buttons()` が毎回決める。
 	_flip_button = CardMatchBuild.add_button(self, "反転", CardMatchLayout.FLIP_BUTTON_SIZE)
 	_flip_button.visible = false
@@ -518,6 +522,9 @@ func _refresh_buttons() -> void:
 	_flip_button.visible = show_flip
 	if show_flip:
 		_flip_button.position = _flip_button_position(_selection.slot)
+		# タッチにはホバーが無いため、反転の予測はボタンを出した時点で出す(GameDesign.md 9章)。
+		if TouchInput.active:
+			_targets.show_flip_forecast()
 	if _emote != null:
 		_emote.refresh()
 	if _flip_right != null:
@@ -746,6 +753,11 @@ func _on_turn_started(side: int) -> void:
 ## 対局を始めてからの秒数(マリガンを含む)。
 func elapsed_seconds() -> float:
 	return (Time.get_ticks_msec() - _started_msec) / 1000.0
+
+
+## タッチかどうかを入力ごとに控える(Architecture.md 4.7節)。
+func _input(event: InputEvent) -> void:
+	TouchInput.note(event)
 
 
 ## 右クリック/Escでの取り消しは `CardMatchPointer` が持つ。

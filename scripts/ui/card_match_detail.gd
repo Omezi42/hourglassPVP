@@ -88,6 +88,19 @@ func _place() -> Vector2:
 	return CardDetailPanel.place_near(_screen.get_local_mouse_position(), _panel.size, bounds)
 
 
+## タッチの長押し(GameDesign.md 9章「タッチでの操作」)。指で隠れないよう、カーソルの近くではなく
+## 卓の中央の固定位置へ出す。
+func show_fixed(card: CardData) -> void:
+	if card == null or _screen.state == null:
+		return
+	_off_board = false
+	_timer.stop()
+	_panel.show_card(card, _live_text(card))
+	_panel.position = _screen.layout.table_rect.get_center() - _panel.size * 0.5
+	_panel.visible = true
+	_panel.move_to_front()
+
+
 func leave() -> void:
 	if _panel.visible:
 		_timer.start()

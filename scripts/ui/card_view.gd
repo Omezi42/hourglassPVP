@@ -134,6 +134,8 @@ const SPARK_RADIUS := 24.0
 ## 画面側は毎フレーム position を置き直すため、位置を動かすと取り合いになる。
 const HAND_HOVER_SCALE := 1.14
 const HAND_HOVER_DURATION := 0.12
+## タッチで押している間、手札の札を手札の上へ大きく浮かせる(GameDesign.md 9章「タッチでの操作」)。
+const HAND_TOUCH_SCALE := 1.5
 
 var mode: int = Mode.BOARD
 ## 表示するカード。手札はこれだけ、盤面は unit も併せて持つ。
@@ -227,8 +229,6 @@ var _unselect_tween: Tween
 ## バッジの跳ねの判定用。前回 `show_unit()` に渡された体力・攻撃力(GameDesign.md 9章)。
 var _prev_health := -1
 var _prev_attack := -1
-var _health_punch_tween: Tween
-var _attack_punch_tween: Tween
 ## 身構えの脈打ち(GameDesign.md 9章)。`brace` の間だけ `_process` で進める。
 var _brace_pulse := 0.0
 var _brace_tween: Tween
@@ -260,42 +260,16 @@ func show_unit(p_unit: CardInstance) -> void:
 	mode = Mode.BOARD
 	if p_unit != null and unit == p_unit:
 		if p_unit.health != _prev_health:
-			_punch_health()
+			_ensure_flourish()
+			_flourish.punch_stat(true)
 		if p_unit.attack != _prev_attack:
-			_punch_attack()
+			_ensure_flourish()
+			_flourish.punch_stat(false)
 	unit = p_unit
 	card = null if p_unit == null else p_unit.data
 	_prev_health = -1 if p_unit == null else p_unit.health
 	_prev_attack = -1 if p_unit == null else p_unit.attack
 	custom_minimum_size = BOARD_SIZE_PX
-	queue_redraw()
-
-
-func _punch_health() -> void:
-	health_punch = 1.0
-	if _health_punch_tween != null and _health_punch_tween.is_valid():
-		_health_punch_tween.kill()
-	_health_punch_tween = create_tween()
-	_health_punch_tween.set_ease(Tween.EASE_OUT)
-	_health_punch_tween.tween_method(_set_health_punch, 1.0, 0.0, STAT_PUNCH_DURATION)
-
-
-func _punch_attack() -> void:
-	attack_punch = 1.0
-	if _attack_punch_tween != null and _attack_punch_tween.is_valid():
-		_attack_punch_tween.kill()
-	_attack_punch_tween = create_tween()
-	_attack_punch_tween.set_ease(Tween.EASE_OUT)
-	_attack_punch_tween.tween_method(_set_attack_punch, 1.0, 0.0, STAT_PUNCH_DURATION)
-
-
-func _set_health_punch(value: float) -> void:
-	health_punch = value
-	queue_redraw()
-
-
-func _set_attack_punch(value: float) -> void:
-	attack_punch = value
 	queue_redraw()
 
 
@@ -496,7 +470,8 @@ func _on_mouse_entered() -> void:
 		# 起きない場所で音だけ返ると、押せるように聞こえる。
 		if card != null:
 			SoundBank.play(SoundBank.Sfx.HOVER)
-	_zoom(true)
+	if not TouchInput.active:
+		_zoom(true)
 	hovered.emit(self)
 	queue_redraw()
 
@@ -509,7 +484,7 @@ func _on_mouse_exited() -> void:
 
 ## 拡大中は隣の札より手前へ出す。手札は絶対座標で並べているため、
 ## そのままだと後から足した右隣の札に上端を隠される。
-func _zoom(active: bool) -> void:
+func _zoom(active: bool, zoom_scale := HAND_HOVER_SCALE) -> void:
 	if not hover_zoom or mode != Mode.HAND:
 		return
 	pivot_offset = Vector2(size.x * 0.5, size.y)
@@ -517,8 +492,12 @@ func _zoom(active: bool) -> void:
 	if _zoom_tween != null and _zoom_tween.is_valid():
 		_zoom_tween.kill()
 	_zoom_tween = create_tween()
-	var target := Vector2.ONE * (HAND_HOVER_SCALE if active else 1.0)
+	var target := Vector2.ONE * (zoom_scale if active else 1.0)
 	_zoom_tween.tween_property(self, "scale", target, HAND_HOVER_DURATION)
+
+
+func lift_for_touch(active: bool) -> void:
+	_zoom(active, HAND_TOUCH_SCALE)
 
 
 func _gui_input(event: InputEvent) -> void:

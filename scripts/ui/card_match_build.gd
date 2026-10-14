@@ -80,11 +80,19 @@ static func action_column(screen: CardMatchScreen) -> void:
 		screen, "ターン終了", ActionColumnLayout.TURN_END_DIAMETER, true
 	)
 	screen._end_turn_button.pressed.connect(screen._on_end_turn_pressed)
-	# `_targets` は `_build()` の後に作るため、乗った時点で引く。
+	# `_targets` は `_build()` の後に作るため、乗った時点で引く。タッチでは押し込んでいる間だけ出す。
 	screen._end_turn_button.mouse_entered.connect(
-		func() -> void: screen._targets.show_turn_end_forecast()
+		func() -> void:
+			if not TouchInput.active:
+				screen._targets.show_turn_end_forecast()
 	)
 	screen._end_turn_button.mouse_exited.connect(func() -> void: screen._targets.clear_forecast())
+	screen._end_turn_button.button_down.connect(
+		func() -> void:
+			if TouchInput.active:
+				screen._targets.show_turn_end_forecast()
+	)
+	screen._end_turn_button.button_up.connect(func() -> void: screen._targets.clear_forecast())
 	screen._log_button = add_round_button(screen, "ログ", ActionColumnLayout.SMALL_DIAMETER, false)
 	screen._log_button.pressed.connect(func() -> void: screen._log.set_open(true))
 	screen._surrender_button = add_round_button(
