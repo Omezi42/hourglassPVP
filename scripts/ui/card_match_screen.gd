@@ -156,6 +156,8 @@ var _action_panel: ActionColumnPanel
 var _table_glow: BoardGlow
 var _table_dust: BoardDust
 var _hand_panel: HandLeatherPanel
+## 縦画面のメニュー(ログ・エモート・投了)。
+var _menu: CardMatchMenu
 
 
 func _ready() -> void:
@@ -180,6 +182,7 @@ func _ready() -> void:
 	_effect_target = CardMatchEffectTarget.new(self)
 	_clocks = CardMatchClock.new(self)
 	_emote = CardMatchEmote.new(self)
+	_menu = CardMatchMenu.new(self)
 	CardMatchArrange.apply(self)
 
 
@@ -380,7 +383,6 @@ func _build() -> void:
 	# 行動の列の地。ボタンより先に足して背面へ置く(GameDesign.md 9章「対局画面の再構築」)。
 	_action_panel = ActionColumnPanel.new()
 	add_child(_action_panel)
-	_clock_dial = CardMatchBuild.make_clock_dial(self)
 	# 卓の後ろにだけ淡い光を置いて浮かせる(GameDesign.md 9章)。BoardTableより先に
 	# 足すことで、卓の額の外周からわずかににじむだけの光として見える。
 	_table_glow = BoardGlow.new()
@@ -391,6 +393,8 @@ func _build() -> void:
 	# 駒の絵の手前へは出ないようにする。
 	_table_dust = BoardDust.new()
 	add_child(_table_dust)
+	# 時計は卓より手前(縦では卓のレールの右端の上に掛かる)。
+	_clock_dial = CardMatchBuild.make_clock_dial(self)
 	_foe_bar = CardMatchBuild.make_bar(self, true)
 	_own_bar = CardMatchBuild.make_bar(self, false)
 	_foe_slots = CardMatchBuild.make_row(self, true)
@@ -518,6 +522,8 @@ func _refresh_buttons() -> void:
 		_emote.refresh()
 	if _flip_right != null:
 		_flip_right.refresh()
+	if _menu != null:
+		_menu.refresh()
 
 
 ## 選んだ駒の真下。駒の中心へ横を揃え、下端へわずかに重ねて置く。

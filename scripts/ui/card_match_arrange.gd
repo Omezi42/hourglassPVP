@@ -68,3 +68,4 @@ static func _place_buttons(screen: CardMatchScreen, layout: CardMatchLayout) -> 
 	CardMatchBuild.center_on(screen._surrender_button, layout.surrender_center)
 	var emote_half := Vector2.ONE * ActionColumnLayout.SMALL_DIAMETER * 0.5
 	screen._emote.set_position(layout.emote_center - emote_half)
+	screen._menu.apply(layout)
