@@ -17,6 +17,8 @@ const GEAR_TEETH := 18
 const GEAR_TOOTH := 7.0
 ## 恵与の型(`EmblemStrikeFx` の DESCEND)と同じ金色。恵与の演出が届いた印に使う。
 const BOON := Color(1.0, 0.92, 0.62, 1.0)
+## 反転の型(`EmblemStrikeFx` の SPIN)と同じ淡い水色。反転させる演出が届く印に使う。
+const SPIN := Color(0.78, 0.92, 1.0, 1.0)
 const ICE := Color(0.80, 0.93, 1.0, 1.0)
 const WATER := Color(0.60, 0.87, 1.0, 1.0)
 const SPARK_HOT := Color(1.0, 0.97, 0.80, 1.0)
@@ -73,7 +75,13 @@ static func bell(item: CanvasItem, pivot: Vector2, swing: float, alpha: float) -
 
 
 ## 鐘の音の波紋。間を空けた3重の輪が、外側ほど濃く広がる。
-static func ripple(item: CanvasItem, center: Vector2, radius: float, alpha: float) -> void:
+static func ripple(
+	item: CanvasItem,
+	center: Vector2,
+	radius: float,
+	alpha: float,
+	color := Color(1.0, 0.88, 0.58, 1.0)
+) -> void:
 	const RINGS := 3
 	const GAP := 16.0
 	if alpha <= 0.0:
@@ -83,7 +91,7 @@ static func ripple(item: CanvasItem, center: Vector2, radius: float, alpha: floa
 		if r <= 0.0:
 			continue
 		var a := alpha * (1.0 - float(i) / float(RINGS))
-		item.draw_arc(center, r, 0.0, TAU, 72, Color(1.0, 0.88, 0.58, a * 0.7), 2.4 - 0.6 * i, true)
+		item.draw_arc(center, r, 0.0, TAU, 72, Color(color, a * 0.7), 2.4 - 0.6 * i, true)
 
 
 ## 天秤。`tilt` が正なら左の皿(攻撃力の側)が下がる。
@@ -345,6 +353,23 @@ static func clock_dial(
 	_dial_hand(item, center, HOUR_START + hand / 12.0, radius * 0.45, 2.8, alpha)
 	_dial_hand(item, center, hand, radius * 0.72, 1.8, alpha)
 	UiPaint.fill_circle(ci, center, radius * 0.1, Color(UiPalette.BRASS_DARK, alpha), 10)
+
+
+## 八分音符。`at` は玉の中心、`size` は玉の横の半径。
+static func note(item: CanvasItem, at: Vector2, size: float, color: Color, alpha: float) -> void:
+	if alpha <= 0.0 or size <= 0.5:
+		return
+	var ci := item.get_canvas_item()
+	var head := Vector2(size, size * 0.72)
+	UiPaint.fill_ellipse(ci, at, head + Vector2.ONE, Color(UiPalette.OUTLINE_DARK, alpha * 0.7), 16)
+	UiPaint.fill_ellipse(ci, at, head, Color(color, alpha), 16)
+	var foot := at + Vector2(head.x * 0.85, 0.0)
+	var top := foot - Vector2(0.0, size * 3.2)
+	item.draw_line(foot, top, Color(color, alpha), maxf(size * 0.28, 1.2), true)
+	var flag := PackedVector2Array(
+		[top, top + Vector2(size * 1.1, size * 0.9), top + Vector2(size * 0.9, size * 2.0)]
+	)
+	item.draw_polyline(flag, Color(color, alpha), maxf(size * 0.28, 1.2), true)
 
 
 static func _dial_hand(
