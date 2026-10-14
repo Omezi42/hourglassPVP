@@ -56,6 +56,13 @@
   内容の上端は `portrait_content_top()`(主アクションの行の有無で変わる)。各画面が自分の `apply_orientation()` から呼ぶ
 - `CardDeckListScreen`: 縦は1列、管理のボタンは名前の下の行。主アクションの行の有無で一覧の上端が変わるため、縦では `_refresh()` のたびに `_layout()` する
 
+## モーダル
+
+- `PortraitModal`(static のみ): 縦ではパネルを論理幅 `WIDTH`(480)で組み、`fit()` で `SCALE`(1.4)倍に中心から拡大する。
+  **コンテナの子は渡さない**(コンテナが `scale` を1へ戻す)。`CenterContainer` で中央へ置くモーダルはその箱ごと渡す
+- モーダルは画面ではないため `Main` から呼ばれない。開くたびに組み直し、開いている間の向きの変化は `PortraitModal.watch()` が受ける(状態は保つ)
+- 対象: `ConfirmModal`・`SettingsPanel`・`CardCpuDifficultyPicker`・`DailyMissionPanel`・`WelcomeDaysPanel`。拡大しても目安に足りない文字だけ縦の大きさを持つ
+
 ## タッチ操作
 
 - **長押しの詳細**: `CardMatchPointer` が駒・手札の `gui_input` を見張り、押下から `LONG_PRESS_SECONDS` 指が動かなければ
