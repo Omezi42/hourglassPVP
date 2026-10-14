@@ -35,7 +35,7 @@ MANAGE_ROLES = 1 << 28
 
 # 読ませるだけのチャンネル(@everyone の書き込みとスレッド作成を外す)。
 # リアクションは残す。お知らせに反応できるほうが場が動くため。
-READ_ONLY = ["welcome", "はじめに", "お知らせ", "通知"]
+READ_ONLY = ["welcome", "はじめに", "ゲームurl", "お知らせ", "通知"]
 DENY = (
     SEND_MESSAGES | CREATE_PUBLIC_THREADS | CREATE_PRIVATE_THREADS | SEND_MESSAGES_IN_THREADS
 )
