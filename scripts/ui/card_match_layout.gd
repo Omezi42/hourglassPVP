@@ -72,6 +72,9 @@ var play_right := 0.0
 var prompt_rect := Rect2()
 var waiting_center := Vector2.ZERO
 var version_position := Vector2.ZERO
+## マリガンの一群(見出し〜確定ボタン)の上端と、札の間隔。
+var mulligan_top := 0.0
+var mulligan_card_gap := 0.0
 
 
 static func current() -> CardMatchLayout:
@@ -140,6 +143,8 @@ static func _make_landscape() -> CardMatchLayout:
 	l.prompt_rect = Rect2(column_x, 240, 148, 52)
 	l.waiting_center = Vector2(640, 260)
 	l.version_position = Vector2(24, 700)
+	l.mulligan_top = 110.0
+	l.mulligan_card_gap = CardMatchMulligan.CARD_GAP
 	return l
 
 
@@ -200,4 +205,7 @@ static func _make_portrait() -> CardMatchLayout:
 	l.prompt_rect = Rect2(side * 2.0, rail - 26.0, 148, 52)
 	l.waiting_center = l.table_rect.get_center()
 	l.version_position = Vector2(side + 6.0, l.screen_size.y - 6.0)
+	# 縦は一群を画面のちょうど中央へ。札は最大4枚を1.35倍のまま横1列に収めるため間隔を詰める。
+	l.mulligan_top = (l.screen_size.y - CardMatchMulligan.CONTENT_HEIGHT) * 0.5
+	l.mulligan_card_gap = 14.0
 	return l
