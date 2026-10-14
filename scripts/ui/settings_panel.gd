@@ -46,6 +46,7 @@ func _ready() -> void:
 	sfx_slider.value_changed.connect(_on_sfx_changed)
 	bgm_slider.value_changed.connect(_on_bgm_changed)
 	close_button.pressed.connect(close)
+	PortraitModal.watch(self, _fit)
 
 
 ## 窓口への導線はコードで組み立てて音量の下へ挿す(.tscn のパッチは値がJSONのため
@@ -70,7 +71,12 @@ func _build_link_row() -> void:
 
 func open() -> void:
 	_sync_from_settings()
+	_fit()
 	visible = true
+
+
+func _fit() -> void:
+	PortraitModal.fit($CenterBox)
 
 
 func close() -> void:

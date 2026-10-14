@@ -79,6 +79,7 @@ const PATHS: Array[String] = [
 	"res://scripts/logic/solo_boon_library.gd",
 	"res://scripts/logic/solo_run.gd",
 	"res://scripts/ui/sunaeru_portrait.gd",
+	"res://scripts/ui/portrait_modal.gd",
 	"res://scripts/ui/confirm_modal.gd",
 	"res://scripts/logic/ui_state.gd",
 	"res://scripts/net/portal_info.gd",
