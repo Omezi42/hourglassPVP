@@ -18,6 +18,22 @@ const BENCH_RECT := Rect2(610, 112, 644, 586)
 const BAND_HEIGHT := 48.0
 ## 吊り看板。
 const SIGN_RECT := Rect2(464, 22, 352, 62)
+## 縦画面(GameDesign.md 9章「縦画面」)。在庫棚と組立台は同じ1つの木箱に切り替えて出す。
+const PORTRAIT_SIGN_RECT := Rect2(184, 22, 352, 62)
+const PORTRAIT_BOX_RECT := Rect2(24, 280, 672, 976)
+const SHELF_LABEL := "在  庫  棚"
+
+## 縦の配置で描くか。
+var portrait := false:
+	set(value):
+		portrait = value
+		size = Vector2(ScreenOrientation.base_size())
+		queue_redraw()
+## 縦で在庫棚(true)と組立台(false)のどちらの木箱を出すか。
+var show_shelf := true:
+	set(value):
+		show_shelf = value
+		queue_redraw()
 
 var _font: Font
 
@@ -32,6 +48,9 @@ func _ready() -> void:
 
 
 func _draw() -> void:
+	if portrait:
+		_draw_portrait()
+		return
 	var rect := Rect2(Vector2.ZERO, SCREEN_SIZE)
 	RoomPaint.wall(self, rect, 913)
 	RoomPaint.gear(self, Vector2(1180, 92), 78.0, 14, 0.0, 0.16)
@@ -39,8 +58,21 @@ func _draw() -> void:
 	RoomPaint.gear(self, Vector2(86, 636), 62.0, 12, 0.1, 0.12)
 	RoomPaint.lamp(self, Vector2(1010, -40), SCREEN_SIZE.y, 460.0)
 	RoomPaint.sign(self, SIGN_RECT, _font, "時計工房", 30)
-	_draw_box(SHELF_RECT, "在  庫  棚", true)
+	_draw_box(SHELF_RECT, SHELF_LABEL, true)
 	_draw_box(BENCH_RECT, "", false)
+
+
+func _draw_portrait() -> void:
+	var screen := Vector2(ScreenOrientation.PORTRAIT_SIZE)
+	RoomPaint.wall(self, Rect2(Vector2.ZERO, screen), 913)
+	RoomPaint.gear(self, Vector2(640, 196), 78.0, 14, 0.0, 0.16)
+	RoomPaint.gear(self, Vector2(70, 1236), 62.0, 12, 0.1, 0.12)
+	RoomPaint.lamp(self, Vector2(520, -40), screen.y, 460.0)
+	RoomPaint.sign(self, PORTRAIT_SIGN_RECT, _font, "時計工房", 30)
+	if show_shelf:
+		_draw_box(PORTRAIT_BOX_RECT, SHELF_LABEL, true)
+	else:
+		_draw_box(PORTRAIT_BOX_RECT, "", false)
 
 
 func _draw_box(rect: Rect2, label: String, hollow: bool) -> void:
