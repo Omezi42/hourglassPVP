@@ -58,46 +58,58 @@ const READ_TILE_SIZE := Vector2(304, 134)
 const READ_TILE_GAP := 322.0
 const READ_FONT_SIZE := 23
 
+## 縦画面(GameDesign.md 9章「縦画面」)。2つの枠は画面の幅いっぱいにし、読んで覚える3枚は縦に積む。
+const PORTRAIT_TILE_W := 628.0
+const PORTRAIT_TILE_TOP := 52.0
+const PORTRAIT_PLAY_HEIGHT := 150.0
+const PORTRAIT_PLAY_FONT := 36
+const PORTRAIT_PLAY_FONT_DONE := 32
+const PORTRAIT_READ_HEIGHT := 104.0
+const PORTRAIT_READ_GAP := 12.0
+const PORTRAIT_READ_FONT := 32
+
+var _play_frame: HomeFrame
+var _play_tile: HomeTile
+var _sunaeru: SunaeruPortrait
+var _read_frame: HomeFrame
+var _read_tiles: Array[HomeTile] = []
+var _first_time := false
+var _portrait := false
+
 
 func _ready() -> void:
-	var stack: float = PLAY_FRAME_HEIGHT + FRAME_GAP + READ_FRAME_HEIGHT
-	var top: float = TOP_BAND + (BOTTOM - TOP_BAND - stack) * 0.5
-	_build_play_frame(top)
-	_build_read_frame(top + PLAY_FRAME_HEIGHT + FRAME_GAP)
+	_build_play_frame()
+	_build_read_frame()
+	_layout()
 
 
-func _build_play_frame(top: float) -> void:
-	var rect := Rect2(Vector2(FRAME_X, top), Vector2(FRAME_W, PLAY_FRAME_HEIGHT))
-	add_child(HomeFrame.make(rect, "遊んで覚える"))
-	var first_time := not UiState.has_done_tutorial()
-	var tile := HomeTile.make(
+func _build_play_frame() -> void:
+	_play_frame = HomeFrame.make(Rect2(), "遊んで覚える")
+	add_child(_play_frame)
+	_first_time = not UiState.has_done_tutorial()
+	_play_tile = HomeTile.make(
 		"1局遊んで覚える",
-		"すなえるが手順を案内します" if first_time else "いつでも、もう一度挑戦できます",
+		"すなえるが手順を案内します" if _first_time else "いつでも、もう一度挑戦できます",
 		"",
 		PLAY_TILE_SIZE,
-		PLAY_FONT_SIZE if first_time else PLAY_FONT_SIZE_DONE,
-		first_time
+		PLAY_FONT_SIZE if _first_time else PLAY_FONT_SIZE_DONE,
+		_first_time
 	)
 	# **紋章は薄い透かしでは表情が伝わらない。**代わりに18章の案内役と同じ立ち絵を
 	# そのまま子ノードとして乗せる(浮遊アニメーション込み)。
-	tile.emblem = null
-	tile.position = rect.position + Vector2(TILE_PAD, TILE_TOP)
-	tile.pressed.connect(func() -> void: tutorial_requested.emit())
-	add_child(tile)
+	_play_tile.emblem = null
+	_play_tile.pressed.connect(func() -> void: tutorial_requested.emit())
+	add_child(_play_tile)
 
-	var portrait := SunaeruPortrait.new()
-	portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var portrait_size := PORTRAIT_SIZE if first_time else PORTRAIT_SIZE_DONE
-	portrait.size = portrait_size
-	portrait.position = Vector2(
-		PLAY_TILE_SIZE.x - portrait_size.x - PORTRAIT_RIGHT_PAD, PLAY_TILE_SIZE.y - portrait_size.y
-	)
-	tile.add_child(portrait)
+	_sunaeru = SunaeruPortrait.new()
+	_sunaeru.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_sunaeru.size = PORTRAIT_SIZE if _first_time else PORTRAIT_SIZE_DONE
+	_play_tile.add_child(_sunaeru)
 
 
-func _build_read_frame(top: float) -> void:
-	var rect := Rect2(Vector2(FRAME_X, top), Vector2(FRAME_W, READ_FRAME_HEIGHT))
-	add_child(HomeFrame.make(rect, "読んで覚える"))
+func _build_read_frame() -> void:
+	_read_frame = HomeFrame.make(Rect2(), "読んで覚える")
+	add_child(_read_frame)
 	var items := _read_items()
 	var handlers: Array[Callable] = [
 		func() -> void: rules_requested.emit(),
@@ -113,9 +125,85 @@ func _build_read_frame(top: float) -> void:
 			READ_TILE_SIZE,
 			READ_FONT_SIZE
 		)
-		tile.position = rect.position + Vector2(TILE_PAD + float(i) * READ_TILE_GAP, TILE_TOP + 4.0)
 		tile.pressed.connect(handlers[i])
 		add_child(tile)
+		_read_tiles.append(tile)
+
+
+## 縦横が変わったときに `HomeScreen` から呼ばれる(Architecture.md 4.7節)。
+func apply_orientation(portrait: bool) -> void:
+	_portrait = portrait
+	if _play_tile != null:
+		_layout()
+
+
+func _layout() -> void:
+	HomeTile.set_portrait_text(
+		_play_tile,
+		_portrait,
+		PORTRAIT_PLAY_FONT if _first_time else PORTRAIT_PLAY_FONT_DONE,
+		PLAY_FONT_SIZE if _first_time else PLAY_FONT_SIZE_DONE
+	)
+	for tile in _read_tiles:
+		HomeTile.set_portrait_text(tile, _portrait, PORTRAIT_READ_FONT, READ_FONT_SIZE)
+	_play_frame.set_portrait(_portrait)
+	_read_frame.set_portrait(_portrait)
+	var play_rect: Rect2
+	var read_rect: Rect2
+	var play_tile := Rect2()
+	var read_tiles: Array[Rect2] = []
+	if _portrait:
+		var step := PORTRAIT_READ_HEIGHT + PORTRAIT_READ_GAP
+		var play_height := PORTRAIT_TILE_TOP + PORTRAIT_PLAY_HEIGHT + TILE_PAD
+		var read_height := (
+			PORTRAIT_TILE_TOP + step * float(_read_tiles.size()) - PORTRAIT_READ_GAP + TILE_PAD
+		)
+		var top := HomeFrame.portrait_stack_top(play_height + HomeFrame.PORTRAIT_GAP + read_height)
+		play_rect = Rect2(HomeFrame.PORTRAIT_X, top, HomeFrame.PORTRAIT_W, play_height)
+		read_rect = Rect2(
+			HomeFrame.PORTRAIT_X,
+			play_rect.end.y + HomeFrame.PORTRAIT_GAP,
+			HomeFrame.PORTRAIT_W,
+			read_height
+		)
+		play_tile = Rect2(
+			play_rect.position + Vector2(TILE_PAD, PORTRAIT_TILE_TOP),
+			Vector2(PORTRAIT_TILE_W, PORTRAIT_PLAY_HEIGHT)
+		)
+		for i in _read_tiles.size():
+			read_tiles.append(
+				Rect2(
+					read_rect.position + Vector2(TILE_PAD, PORTRAIT_TILE_TOP + step * float(i)),
+					Vector2(PORTRAIT_TILE_W, PORTRAIT_READ_HEIGHT)
+				)
+			)
+	else:
+		var stack: float = PLAY_FRAME_HEIGHT + FRAME_GAP + READ_FRAME_HEIGHT
+		var top: float = TOP_BAND + (BOTTOM - TOP_BAND - stack) * 0.5
+		play_rect = Rect2(Vector2(FRAME_X, top), Vector2(FRAME_W, PLAY_FRAME_HEIGHT))
+		read_rect = Rect2(
+			Vector2(FRAME_X, top + PLAY_FRAME_HEIGHT + FRAME_GAP),
+			Vector2(FRAME_W, READ_FRAME_HEIGHT)
+		)
+		play_tile = Rect2(play_rect.position + Vector2(TILE_PAD, TILE_TOP), PLAY_TILE_SIZE)
+		for i in _read_tiles.size():
+			read_tiles.append(
+				Rect2(
+					(
+						read_rect.position
+						+ Vector2(TILE_PAD + float(i) * READ_TILE_GAP, TILE_TOP + 4.0)
+					),
+					READ_TILE_SIZE
+				)
+			)
+	HomeFrame.place(_play_frame, play_rect)
+	HomeFrame.place(_read_frame, read_rect)
+	HomeFrame.place(_play_tile, play_tile)
+	for i in _read_tiles.size():
+		HomeFrame.place(_read_tiles[i], read_tiles[i])
+	_sunaeru.position = Vector2(
+		play_tile.size.x - _sunaeru.size.x - PORTRAIT_RIGHT_PAD, play_tile.size.y - _sunaeru.size.y
+	)
 
 
 ## **副題は実データの件数から組み立てる**(押す前に分かるべきことの1行。9章)。

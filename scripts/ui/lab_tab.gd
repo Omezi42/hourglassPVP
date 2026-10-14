@@ -18,16 +18,45 @@ const TILE_TOP := 60.0
 const TILE_FONT_SIZE := 30
 const IDLE_SUBTITLE := "お題に沿ったカード案を出す・選ぶ"
 
+## 縦画面(GameDesign.md 9章「縦画面」)。枠と札を画面の幅いっぱいにする。
+const PORTRAIT_TILE_TOP := 60.0
+const PORTRAIT_TILE_SIZE := Vector2(628, 170)
+const PORTRAIT_TILE_FONT := 38
+
+var _frame: HomeFrame
 var _tile: HomeTile
 
 
 func _ready() -> void:
-	add_child(HomeFrame.make(FRAME, "つくる"))
+	_frame = HomeFrame.make(FRAME, "つくる")
+	add_child(_frame)
 	_tile = HomeTile.make("掲示板〈ラボ〉", IDLE_SUBTITLE, "eye", TILE_SIZE, TILE_FONT_SIZE, true)
 	_tile.position = FRAME.position + Vector2(TILE_PAD, TILE_TOP)
 	_tile.pressed.connect(func() -> void: lab_requested.emit())
 	add_child(_tile)
 	visibility_changed.connect(_refresh_subtitle)
+
+
+## 縦横が変わったときに `HomeScreen` から呼ばれる(Architecture.md 4.7節)。
+func apply_orientation(portrait: bool) -> void:
+	if _tile == null:
+		return
+	HomeTile.set_portrait_text(_tile, portrait, PORTRAIT_TILE_FONT, TILE_FONT_SIZE)
+	_frame.set_portrait(portrait)
+	if not portrait:
+		HomeFrame.place(_frame, FRAME)
+		HomeFrame.place(_tile, Rect2(FRAME.position + Vector2(TILE_PAD, TILE_TOP), TILE_SIZE))
+		return
+	var rect := Rect2(
+		HomeFrame.PORTRAIT_X,
+		HomeFrame.PORTRAIT_TOP,
+		HomeFrame.PORTRAIT_W,
+		PORTRAIT_TILE_TOP + PORTRAIT_TILE_SIZE.y + TILE_PAD
+	)
+	HomeFrame.place(_frame, rect)
+	HomeFrame.place(
+		_tile, Rect2(rect.position + Vector2(TILE_PAD, PORTRAIT_TILE_TOP), PORTRAIT_TILE_SIZE)
+	)
 
 
 func _refresh_subtitle() -> void:

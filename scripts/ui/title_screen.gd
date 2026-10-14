@@ -26,16 +26,33 @@ const FLOAT_PERIOD := 4.6
 ## 「クリックしてはじめる」の明滅。
 const BLINK_PERIOD := 1.6
 const BLINK_MIN_ALPHA := 0.28
+
 ## 押された瞬間の演出。ロゴが一瞬伸び上がって光る。
 const LAUNCH_DURATION := 0.42
 const LAUNCH_SCALE := 1.06
 ## 読み込みを終える前に押されたときの文言(GameDesign.md 9章「タイトル」)。
 const LOADING_TEXT := "読み込み中… %d%%"
 
+## 縦画面(GameDesign.md 9章「縦画面」)。ロゴは同じ大きさのまま画面の中央へ寄せ、
+## 開始の文言とアカウントの入口は指で読める・押せる大きさにする。
+const PORTRAIT_LOGO_CENTER := Vector2(360, 470)
+const PORTRAIT_START_TOP := 860.0
+const PORTRAIT_START_HEIGHT := 56.0
+const PORTRAIT_START_FONT := 34
+const PORTRAIT_ACCOUNT_SIZE := Vector2(260, 80)
+const PORTRAIT_ACCOUNT_FONT := 28
+const PORTRAIT_MARGIN := 24.0
+
 var _started := false
 var _float_time := 0.0
 var _logo_rest_y := 0.0
 var _start_text := ""
+## 横の配置(`.tscn` の値)。縦から戻すときに使う。
+var _landscape_logo := Vector2.ZERO
+var _landscape_start := Rect2()
+var _landscape_start_font := 0
+var _landscape_account := Rect2()
+var _landscape_account_font := 0
 
 @onready var background: TextureRect = $Background
 @onready var logo_holder: Control = $LogoHolder
@@ -52,6 +69,16 @@ func _ready() -> void:
 	logo_image.visible = logo != null
 	logo_drawn.visible = logo == null
 	_logo_rest_y = logo_holder.position.y
+	_landscape_logo = logo_holder.position
+	_landscape_start = Rect2(start_label.position, start_label.size)
+	_landscape_start_font = start_label.get_theme_font_size("font_size")
+	_landscape_account = Rect2(
+		account_button.offset_left,
+		account_button.offset_top,
+		account_button.offset_right,
+		account_button.offset_bottom
+	)
+	_landscape_account_font = account_button.get_theme_font_size("font_size")
 	logo_holder.pivot_offset = logo_holder.size * 0.5
 	account_button.pressed.connect(func() -> void: account_requested.emit())
 	_play_intro()
@@ -79,6 +106,36 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		return
 	if event.is_pressed() and (event.is_action("ui_accept") or event.is_action("ui_select")):
 		_begin_start()
+
+
+## 縦横が変わったときに `Main` から呼ばれる(Architecture.md 4.7節)。
+func apply_orientation(portrait: bool) -> void:
+	if not portrait:
+		logo_holder.position = _landscape_logo
+		start_label.position = _landscape_start.position
+		start_label.size = _landscape_start.size
+		start_label.add_theme_font_size_override("font_size", _landscape_start_font)
+		_set_account_offsets(_landscape_account)
+		account_button.add_theme_font_size_override("font_size", _landscape_account_font)
+	else:
+		logo_holder.position = PORTRAIT_LOGO_CENTER - logo_holder.size * 0.5
+		var width := float(ScreenOrientation.PORTRAIT_SIZE.x)
+		start_label.position = Vector2(0.0, PORTRAIT_START_TOP)
+		start_label.size = Vector2(width, PORTRAIT_START_HEIGHT)
+		start_label.add_theme_font_size_override("font_size", PORTRAIT_START_FONT)
+		var margin := Vector2.ONE * PORTRAIT_MARGIN
+		var end := -margin
+		_set_account_offsets(Rect2(end - PORTRAIT_ACCOUNT_SIZE, end))
+		account_button.add_theme_font_size_override("font_size", PORTRAIT_ACCOUNT_FONT)
+	_logo_rest_y = logo_holder.position.y
+
+
+## 右下に固定した入口の位置(`Rect2` の position を左上、size を右下の offset として使う)。
+func _set_account_offsets(offsets: Rect2) -> void:
+	account_button.offset_left = offsets.position.x
+	account_button.offset_top = offsets.position.y
+	account_button.offset_right = offsets.size.x
+	account_button.offset_bottom = offsets.size.y
 
 
 ## 押された瞬間の演出。Mainはこれを待ってから砂のトランジションへ入る。

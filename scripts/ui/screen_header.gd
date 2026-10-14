@@ -19,6 +19,20 @@ const CONTENT_TOP := OUTER_MARGIN + HEADER_HEIGHT + CONTENT_GAP
 ## (数え直すと、ヘッダーの高さを変えたときに追随しない画面が残る)。
 const CONTENT_HEIGHT := 720.0 - CONTENT_TOP - OUTER_MARGIN
 
+## 縦画面(GameDesign.md 9章「縦画面」)。ヘッダーの高さは横と同じで、文字と「戻る」を大きくする。
+## 主アクションはタイトルと同じ行に収まらないため、ヘッダーの下の1行へ右寄せで移す。
+const PORTRAIT_TITLE_FONT := 36
+const PORTRAIT_BACK_SIZE := Vector2(140, 76)
+const PORTRAIT_BUTTON_FONT := 26
+const PORTRAIT_ACTION_HEIGHT := 72.0
+const PORTRAIT_ACTION_GAP := 12.0
+## 縦の内容の開始位置。主アクションの行があるときはその下から。
+const PORTRAIT_CONTENT_TOP := CONTENT_TOP
+const PORTRAIT_CONTENT_TOP_WITH_ACTIONS := (
+	OUTER_MARGIN + HEADER_HEIGHT + PORTRAIT_ACTION_GAP + PORTRAIT_ACTION_HEIGHT + CONTENT_GAP
+)
+const PORTRAIT_CONTENT_BOTTOM := 1280.0 - OUTER_MARGIN
+
 ## タイトルの後ろへ敷く暗幕。背景イラストが賑やかな画面でも画面名が読めるようにする。
 ## 中央は濃く、左右へ向かって消える(端まで一様に敷くと帯が1本乗ったように見えるため)。
 const SCRIM_CORE_WIDTH := 420.0
@@ -32,6 +46,11 @@ const TITLE_LANDING_OFFSET := -2.0
 const TITLE_LANDING_DURATION := 0.14
 
 var _landing_tween: Tween
+var _portrait := false
+## 横の値(`.tscn`)。縦から戻すときに使う。
+var _title_font := 0
+var _back_size := Vector2.ZERO
+var _back_font := 0
 
 @onready var back_button: Button = $Row/BackButton
 @onready var title_label: Label = $TitleLabel
@@ -44,6 +63,71 @@ func _ready() -> void:
 	# 全画面で同じ位置に出るため、ここを差し替えるだけで統一して効く。
 	var base := title_label.get_theme_font("font")
 	title_label.add_theme_font_override("font", UiFonts.display_font(base))
+	_title_font = title_label.get_theme_font_size("font_size")
+	_back_size = back_button.custom_minimum_size
+	_back_font = back_button.get_theme_font_size("font_size")
+
+
+## 縦横に合わせて並べ直す。主アクションは縦ではヘッダーの下の行(右寄せ)へ移る。
+## 呼ぶのは各画面の `apply_orientation()`(Architecture.md 4.7節)。
+func apply_orientation(portrait: bool) -> void:
+	_portrait = portrait
+	title_label.add_theme_font_size_override(
+		"font_size", PORTRAIT_TITLE_FONT if portrait else _title_font
+	)
+	back_button.custom_minimum_size = PORTRAIT_BACK_SIZE if portrait else _back_size
+	back_button.add_theme_font_size_override(
+		"font_size", PORTRAIT_BUTTON_FONT if portrait else _back_font
+	)
+	var row: HBoxContainer = $Row
+	if portrait and action_slot.get_parent() == row:
+		row.remove_child(action_slot)
+		add_child(action_slot)
+	elif not portrait and action_slot.get_parent() != row:
+		remove_child(action_slot)
+		row.add_child(action_slot)
+	if portrait:
+		action_slot.anchor_left = 0.0
+		action_slot.anchor_right = 1.0
+		action_slot.anchor_top = 0.0
+		action_slot.anchor_bottom = 0.0
+		action_slot.offset_left = 0.0
+		action_slot.offset_right = 0.0
+		action_slot.offset_top = HEADER_HEIGHT + PORTRAIT_ACTION_GAP
+		action_slot.offset_bottom = action_slot.offset_top + PORTRAIT_ACTION_HEIGHT
+	for button in action_slot.get_children():
+		_fit_action(button as Control)
+
+
+## 縦では主アクションを指で押せる背丈と文字の目安(本文24px以上)にそろえる。横は作ったときの値へ戻す。
+func _fit_action(button: Control) -> void:
+	if button == null:
+		return
+	if not button.has_meta("landscape_size"):
+		button.set_meta("landscape_size", button.custom_minimum_size)
+		button.set_meta("landscape_font", button.get_theme_font_size("font_size"))
+	var landscape: Vector2 = button.get_meta("landscape_size")
+	if _portrait:
+		button.custom_minimum_size = Vector2(landscape.x, PORTRAIT_ACTION_HEIGHT)
+		button.add_theme_font_size_override("font_size", PORTRAIT_BUTTON_FONT)
+	else:
+		button.custom_minimum_size = landscape
+		button.add_theme_font_size_override("font_size", int(button.get_meta("landscape_font")))
+
+
+## 主アクションの行を使っているか(縦で、見えている主アクションがあるとき)。
+func has_action_row() -> bool:
+	if not _portrait:
+		return false
+	for child in action_slot.get_children():
+		if (child as Control).visible:
+			return true
+	return false
+
+
+## 縦の内容の開始位置(主アクションの行の有無で変わる)。
+func portrait_content_top() -> float:
+	return PORTRAIT_CONTENT_TOP_WITH_ACTIONS if has_action_row() else PORTRAIT_CONTENT_TOP
 
 
 ## 画面が表示されるたびに呼ばれる。`Main._show_only()` が screen.visible を
@@ -103,3 +187,5 @@ func add_action(button: Control) -> void:
 	if parent != null:
 		parent.remove_child(button)
 	action_slot.add_child(button)
+	if _portrait:
+		_fit_action(button)
