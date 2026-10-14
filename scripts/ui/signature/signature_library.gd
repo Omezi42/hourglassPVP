@@ -20,6 +20,10 @@ const EFFECTS := {
 	"spring": preload("res://scripts/ui/signature/moves/spring_effect.gd"),
 	"anvil": preload("res://scripts/ui/signature/moves/anvil_effect.gd"),
 	"rewind": preload("res://scripts/ui/signature/moves/rewind_effect.gd"),
+	"reverb": preload("res://scripts/ui/signature/moves/reverb_effect.gd"),
+	"delay": preload("res://scripts/ui/signature/moves/delay_effect.gd"),
+	"resonance": preload("res://scripts/ui/signature/moves/resonance_effect.gd"),
+	"canon": preload("res://scripts/ui/signature/moves/canon_effect.gd"),
 }
 
 
