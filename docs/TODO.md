@@ -66,9 +66,9 @@
 
 ### アプリ版(PWA)(GameDesign.md 10章 / Architecture.md 4.6節)
 
-起動部は `https://omezi42.github.io/sunadokei-arena-app/` に公開済み。残りは告知だけ。
+起動部は `https://omezi42.github.io/sunadokei-arena-app/` に公開済み。
 
-- [ ] 初回公開を Discord #お知らせ で告知(Android は Chrome のメニュー →「ホーム画面に追加」、iPhone は Safari の共有 →「ホーム画面に追加」)
+- [ ] 縦画面UIが完成したら、その版を Discord #お知らせ で告知する(アプリ版をスマホで縦持ちのまま遊べるようになったことを伝える)
 
 ### 技術的負債
 
