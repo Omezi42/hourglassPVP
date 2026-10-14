@@ -71,6 +71,20 @@
 - [ ] GitHub Pages へ `build/app/` を上げる(下の「ユーザー作業」のリポジトリ作成のあと。上げるのはユーザーに依頼)
 - [ ] 初回公開を Discord #お知らせ で告知(Android は Chrome のメニュー →「ホーム画面に追加」、iPhone は Safari の共有 →「ホーム画面に追加」)
 
+### 縦画面(GameDesign.md 9章「縦画面」/ Architecture.md 4.7節)
+
+全画面がそろうまで `ScreenOrientation.ENABLED` は false のまま。対局画面の配置はモックで承認済み(細部は実装しながら詰める)。
+
+- [ ] 土台: `ScreenOrientation` と `Main` の切り替え、`apply_orientation()` の取り決め
+- [ ] 対局画面: `CardMatchLayout` への座標の移し替え(横の見た目を変えずに)→ 縦の値の組
+- [ ] 対局画面の部品: 2段の情報帯 / バッジの倍率 / 横1列の直前の手 / メニュー
+- [ ] タッチ操作: 長押しの詳細・反転とターン終了の予測
+- [ ] マリガン・結果パネル・ログ・詳細パネルの縦の配置(モックを撮って見せてから)
+- [ ] タイトル・ホーム・デッキ選択(モックを撮って見せてから)
+- [ ] デッキ編集・デッキ一覧・砂時計図鑑(同上)
+- [ ] 残りの画面(ショップ・アカウント・戦績・リプレイ・ルーム・観戦・ランク・ラボ・パズル選択・ソロの地図・ルール・辞書・画面の見かた)
+- [ ] 公開: `ENABLED` を true、アプリ版の manifest の `orientation` を外す、Discord #お知らせ で告知
+
 ### 技術的負債
 
 - [ ] 起動の裏読み込み(Architecture.md 4.0.6節)で、タイトルを止める1本の最長はWeb版で約0.3秒の `card_instance.gd`(`CardInstance`・`MatchState`・`CardLibrary`・`AccountService` など15本の参照の輪)。次いで `card_effect_demo_*` の5本の輪、`card_view_*` の7本の輪(各0.1〜0.2秒)。輪を切れるか判断

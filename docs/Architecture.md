@@ -17,6 +17,7 @@
 | 4.4節 | 画面の見かた(GameDesign.md 20章) | [`arch/04_04_screen_guide.md`](arch/04_04_screen_guide.md) |
 | 4.5節 | デッキを複数持つ(GameDesign.md 9章) | [`arch/04_05_multi_deck.md`](arch/04_05_multi_deck.md) |
 | 4.6節 | unityroom以外の配信先(アプリ版を含む。GameDesign.md 10章) | [`arch/04_06_portals.md`](arch/04_06_portals.md) |
+| 4.7節 | 縦画面(GameDesign.md 9章) | [`arch/04_07_portrait.md`](arch/04_07_portrait.md) |
 | 5章 | 拡張運用について | [`arch/05_extension.md`](arch/05_extension.md) |
 | 6章 | オンライン対戦の実装方針 | [`arch/06_online.md`](arch/06_online.md) |
 | 7章 | リプレイ・観戦の実装方針(7.2節 ランクマッチの観戦一覧を含む) | [`arch/07_replay.md`](arch/07_replay.md) |
