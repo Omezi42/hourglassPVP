@@ -35,8 +35,9 @@
 - `CardMatchMenu`: 縦のときだけ出す「メニュー」ボタン(紋章 `MENU`)と、ログ・エモート・投了・スキップの横長のボタンを縦に並べたパネル。横では出さない。
   項目は押したら行動の列のボタンと同じ関数を呼ぶだけで、出す・押せる・エモートの残り秒は開くたびに元のボタン(`_log_button` など)から写す。
   スキップは `CardMatchTutorial.request_skip()` を通し、縦では `TutorialSkip` を隠す。エモートの選択肢はメニューの項目の脇へ開く(`anchor_popup()`)
-- マリガン(`apply_layout()`)は見出し〜確定ボタンの一群を縦の中央へ置き、最大4枚の札を1.35倍のまま横1列に詰めて並べる。
-  結果パネルは横と同じ大きさのまま画面の中央へ置く。誘導対局の帯はマリガンの確定ボタンの下端から位置を決める
+- マリガン(`apply_layout()`)は見出し〜確定ボタンの一群を縦の中央へ置き、札を `PORTRAIT_COLUMNS`(2)列・`PORTRAIT_CARD_SCALE`(2.0)倍で折り返す。
+  一群の高さは `content_height()` が初期手札の最大枚数から出す(先手・後手で一群が動かないように)。誘導対局の帯はマリガンの確定ボタンの下端から位置を決める
+- 結果パネル(`CardMatchResult.apply_layout()`)は縦で `PORTRAIT_PANEL_SIZE`(幅 `PortraitModal.WIDTH`)に組み、`PortraitModal.SCALE` 倍にする。入場の拡大はこの倍率へ戻す
 - ログ(`CardMatchLog.apply_layout()`)は縦で680x1180・文字を24px(見出し30px)にする。詳細パネルは横と同じ詰めた表示のまま
 - 再生の操作(`CardMatchReplay.apply_layout()`)は縦で `CardMatchLayout.replay_center` を中心に3列2段・1.4倍。
   遅れて作るため、作った直後にも `apply_layout()` を呼ぶ
@@ -68,6 +69,18 @@
 - `WorkshopStockItem.zoom`: `CELL_SIZE` の座標のまま `draw_set_transform()` で拡大して描く(縦=1.6、3列)。
   `CardDeckShelf.text_scale`: 名前・名前の帯・印の上限だけを拡大する(縦=1.7。枠と絵は `size` から決まる)
 - 詳細は縦では画面の中央に1.6倍で出す
+
+## 砂時計図鑑・辞書・ルール・画面の見かた・一覧
+
+- `CardListScreen.apply_orientation()`: `AlmanacBook.portrait` で1ページの本(`PORTRAIT_BOOK` / `PORTRAIT_PAGE`)を描き、`_select_tab()` で一覧と解説の片方だけを出す。
+  `AlmanacEntry.zoom`(縦=1.6)は `WorkshopStockItem` と同じく `CELL_SIZE` の座標のまま拡大して描く。
+  `AlmanacPage.set_page(size, scale)` はページを細く組み直して `scale` を掛ける(めくりの `scale:x` はこの倍率へ戻す。データ欄の間隔と効果の文の行数は紙の大きさから決める)
+- `KeywordPopup` は開くたびと向きの変化で `_fit()` し、`PortraitModal` の幅で組んで拡大する。`KeywordEntryView.set_layout()` が実演の幅と文字の大きさを持ち替える
+- `KeywordDictScreen` は縦で語のボタンを `VBox` から `GridContainer`(2列)へ移す。`RuleScreen` / `ScreenGuideScreen` は縦横の矩形を `apply_orientation()` で置き直し、盤面は `RuleStage._fit()` が枠に合わせる
+- 一覧の画面(`ReplayListScreen` / `CardSpectateListScreen` / `CardPuzzlePickerScreen`)は縦で1列。内容の矩形は `ScreenHeader.portrait_content_rect()`。
+  行の部品は `set_portrait()` で文字を持ち替える(`ReplayListCard`)か、2段に積んで拡大して描く(`SpectateMatchRow`)。パズルの札は向きの変化で作り直す
+- `EmptyState` は縦で中身を `PORTRAIT_ZOOM`(1.5)倍で描く
+- 画面を縦横で撮るのは `tools/capture_screen_layout`(非ヘッドレス。`class_name` か `.tscn` を並べる)
 
 ## モーダル
 
