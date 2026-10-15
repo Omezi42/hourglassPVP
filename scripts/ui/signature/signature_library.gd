@@ -9,6 +9,8 @@ const ENTRANCES := {
 	"chronos": preload("res://scripts/ui/signature/moves/chronos_entrance.gd"),
 	"freeze": preload("res://scripts/ui/signature/moves/freeze_entrance.gd"),
 	"relic": preload("res://scripts/ui/signature/moves/relic_entrance.gd"),
+	"middle": preload("res://scripts/ui/signature/moves/middle_entrance.gd"),
+	"phase": preload("res://scripts/ui/signature/moves/phase_entrance.gd"),
 }
 
 ## 効果が対象へ届くまで(設置・落砂・砂術など、紋章が飛ぶ場面の代わり)。
@@ -35,6 +37,9 @@ const EFFECTS := {
 	"encore": preload("res://scripts/ui/signature/moves/encore_effect.gd"),
 	"chorus": preload("res://scripts/ui/signature/moves/chorus_effect.gd"),
 	"crescendo": preload("res://scripts/ui/signature/moves/crescendo_effect.gd"),
+	"key": preload("res://scripts/ui/signature/moves/key_effect.gd"),
+	"cycle": preload("res://scripts/ui/signature/moves/cycle_effect.gd"),
+	"crest": preload("res://scripts/ui/signature/moves/crest_effect.gd"),
 }
 
 
