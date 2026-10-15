@@ -93,6 +93,11 @@
 - `CardRoomArrange`(static): ルームマッチ画面の縦横の置き場所(1000行の上限のための切り出し)
 - `LabProposalCard.set_portrait()`: 拡大の層を押し込みの層(`_face`)の親に分けて置く。`LabThemeBand.set_portrait()` は締切・票の段をお題の下へ移す
 - `SoloRouteView.vertical` と `relayout()`(段を下から上へ)、`SoloDepartureView.stacked`(作戦の札を上下に)。状態・行き先の詳細は1.25倍で道の下へ
+- 遠征の重ね画面(`SoloBundleOverlay` / `SoloBoonOverlay` / `SoloWorkshopOverlay` / `SoloRunSummary`)は `set_portrait()` を持ち、
+  `CardSoloMapScreen.apply_orientation()` が大きさと一緒に渡す。束・恩恵・工房は暗幕以外を `_body` にまとめ、縦では `size / PORTRAIT_ZOOM` で組んで
+  `PORTRAIT_ZOOM` 倍にする。工房の格子は縦では高さにも収まる縮尺を選ぶ(スクロールしないため)。
+  記録は道(`SoloRouteView.vertical`)を描き直す大きさが要るため拡大せず、文字・ボタンを縦の大きさにして山札の一覧だけを1.4倍にする。
+  道は大きさが変わっても自分では置き直さないため、記録の `_layout()` が `relayout()` を呼ぶ
 - `CardMatchFastForward`: 向きが変わったとき、有限の Tween を終わりまで進めてから並べ直す(終わりの無い Tween には触らない)。タイマーで待つ演出は打ち切らない
 
 ## モーダル
