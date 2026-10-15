@@ -2,7 +2,8 @@ class_name SoloBoonOverlay
 extends Control
 ## 遠征(ソロモード)の恩恵のオーバーレイ(GameDesign.md 27章「画面」)。関門に勝った
 ## 直後に出す。恩恵の札を3枚横に並べ、押すと得る(見送りは無い)。下に持っている恩恵の
-## 名前を並べる。
+## 名前を並べる。縦画面では札を横長の行にして縦に積み、中身ごと `PORTRAIT_ZOOM` 倍にする
+## (GameDesign.md 9章「縦画面」)。
 
 signal boon_chosen(boon_id: String)
 
@@ -23,7 +24,24 @@ const DESC_FONT_SIZE := 15
 const OWNED_FONT_SIZE := 14
 const OWNED_TOP_MARGIN := 40.0
 
+## 縦画面の配置(座標は `PORTRAIT_ZOOM` で割った論理の大きさ)。
+const PORTRAIT_ZOOM := 1.6
+const PORTRAIT_TITLE_TOP := 64.0
+const PORTRAIT_SUBTITLE_TOP := 110.0
+const PORTRAIT_SUBTITLE_HEIGHT := 56.0
+const PORTRAIT_CARDS_TOP := 180.0
+const PORTRAIT_SIDE_MARGIN := 16.0
+const PORTRAIT_ROW_HEIGHT := 150.0
+const PORTRAIT_ROW_GAP := 16.0
+const PORTRAIT_ROW_PADDING := 20.0
+const PORTRAIT_NAME_TOP := 22.0
+const PORTRAIT_DESC_TOP := 60.0
+const PORTRAIT_OWNED_FONT_SIZE := 15
+
+var portrait := false
+
 var _dim: ColorRect
+var _body: Control
 var _title: Label
 var _subtitle: Label
 var _cards_box: Control
@@ -37,17 +55,28 @@ func _ready() -> void:
 	_dim.color = DIM_COLOR
 	_dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_dim)
+	_body = Control.new()
+	_body.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_body)
 	_title = _label(TITLE_FONT_SIZE, UiPalette.TEXT_OFFWHITE, true)
-	add_child(_title)
+	_body.add_child(_title)
 	_subtitle = _label(SUBTITLE_FONT_SIZE, UiPalette.TEXT_MUTED)
-	add_child(_subtitle)
+	_subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_body.add_child(_subtitle)
 	_cards_box = Control.new()
 	_cards_box.mouse_filter = Control.MOUSE_FILTER_PASS
-	add_child(_cards_box)
+	_body.add_child(_cards_box)
 	_owned_label = _label(OWNED_FONT_SIZE, UiPalette.TEXT_MUTED)
-	add_child(_owned_label)
+	_owned_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_body.add_child(_owned_label)
 
 	resized.connect(_layout)
+	_layout()
+
+
+## 縦横を切り替える(`CardSoloMapScreen.apply_orientation()` から呼ぶ)。候補は保つ。
+func set_portrait(value: bool) -> void:
+	portrait = value
 	_layout()
 
 
@@ -64,7 +93,6 @@ func show_data(offer: Array[String], owned: Array[String], gate_name: String = "
 		if boon != null:
 			names.append(boon.display_name)
 	_owned_label.text = "持っている恩恵: %s" % ("、".join(names) if not names.is_empty() else "なし")
-	_rebuild_cards()
 	_layout()
 
 
@@ -72,15 +100,24 @@ func _rebuild_cards() -> void:
 	for child in _cards_box.get_children():
 		_cards_box.remove_child(child)
 		child.queue_free()
-	var total_w := CARD_SIZE.x * float(_offer.size()) + CARD_GAP * float(maxi(_offer.size() - 1, 0))
-	var left := (_cards_box.size.x - total_w) * 0.5
 	for i in _offer.size():
 		var boon := SoloBoonLibrary.find_by_id(_offer[i])
 		if boon == null:
 			continue
-		_build_card(
-			Rect2(left + float(i) * (CARD_SIZE.x + CARD_GAP), 0.0, CARD_SIZE.x, CARD_SIZE.y), boon
+		_build_card(_card_rect(i), boon)
+
+
+func _card_rect(i: int) -> Rect2:
+	if portrait:
+		return Rect2(
+			PORTRAIT_SIDE_MARGIN,
+			float(i) * (PORTRAIT_ROW_HEIGHT + PORTRAIT_ROW_GAP),
+			_cards_box.size.x - PORTRAIT_SIDE_MARGIN * 2.0,
+			PORTRAIT_ROW_HEIGHT
 		)
+	var total_w := CARD_SIZE.x * float(_offer.size()) + CARD_GAP * float(maxi(_offer.size() - 1, 0))
+	var left := (_cards_box.size.x - total_w) * 0.5
+	return Rect2(left + float(i) * (CARD_SIZE.x + CARD_GAP), 0.0, CARD_SIZE.x, CARD_SIZE.y)
 
 
 func _build_card(rect: Rect2, boon: SoloBoonData) -> void:
@@ -94,8 +131,23 @@ func _build_card(rect: Rect2, boon: SoloBoonData) -> void:
 	)
 	_cards_box.add_child(canvas)
 
+	# 横: メダルの下に名前と説明。縦: 左にメダル、右に名前と説明。
+	var medal_offset := Vector2(rect.size.x * 0.5 - MEDAL_RADIUS, MEDAL_TOP_OFFSET)
+	var name_rect := Rect2(0, MEDAL_TOP_OFFSET + MEDAL_RADIUS * 2.0 + 12.0, rect.size.x, 30.0)
+	var desc_rect := Rect2(
+		28.0, MEDAL_TOP_OFFSET + MEDAL_RADIUS * 2.0 + 46.0, rect.size.x - 56.0, 80.0
+	)
+	if portrait:
+		medal_offset = Vector2(PORTRAIT_ROW_PADDING, rect.size.y * 0.5 - MEDAL_RADIUS)
+		var text_left := PORTRAIT_ROW_PADDING * 2.0 + MEDAL_RADIUS * 2.0
+		var text_w := rect.size.x - text_left - PORTRAIT_ROW_PADDING
+		name_rect = Rect2(text_left, PORTRAIT_NAME_TOP, text_w, 30.0)
+		desc_rect = Rect2(
+			text_left, PORTRAIT_DESC_TOP, text_w, rect.size.y - PORTRAIT_DESC_TOP - 8.0
+		)
+
 	var medal := Control.new()
-	medal.position = rect.position + Vector2(rect.size.x * 0.5 - MEDAL_RADIUS, MEDAL_TOP_OFFSET)
+	medal.position = rect.position + medal_offset
 	medal.size = Vector2(MEDAL_RADIUS, MEDAL_RADIUS) * 2.0
 	medal.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var icon := boon.icon()
@@ -113,18 +165,19 @@ func _build_card(rect: Rect2, boon: SoloBoonData) -> void:
 	)
 	_cards_box.add_child(medal)
 
+	var align := HORIZONTAL_ALIGNMENT_LEFT if portrait else HORIZONTAL_ALIGNMENT_CENTER
 	var name_label := _label(NAME_FONT_SIZE, UiPalette.TEXT_OFFWHITE)
-	name_label.position = rect.position + Vector2(0, MEDAL_TOP_OFFSET + MEDAL_RADIUS * 2.0 + 12.0)
-	name_label.size = Vector2(rect.size.x, 30.0)
+	name_label.horizontal_alignment = align
+	name_label.position = rect.position + name_rect.position
+	name_label.size = name_rect.size
 	name_label.text = boon.display_name
 	_cards_box.add_child(name_label)
 
 	var desc_label := _label(DESC_FONT_SIZE, UiPalette.TEXT_MUTED)
+	desc_label.horizontal_alignment = align
 	desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	desc_label.position = (
-		rect.position + Vector2(28.0, MEDAL_TOP_OFFSET + MEDAL_RADIUS * 2.0 + 46.0)
-	)
-	desc_label.size = Vector2(rect.size.x - 56.0, 80.0)
+	desc_label.position = rect.position + desc_rect.position
+	desc_label.size = desc_rect.size
 	desc_label.text = boon.description
 	_cards_box.add_child(desc_label)
 
@@ -139,15 +192,33 @@ func _layout() -> void:
 	if _dim == null:
 		return
 	_dim.size = size
-	_title.position = Vector2(0, TITLE_TOP)
-	_title.size = Vector2(size.x, 44.0)
-	_subtitle.position = Vector2(0, SUBTITLE_TOP)
-	_subtitle.size = Vector2(size.x, 26.0)
-	_cards_box.position = Vector2(0, CARDS_TOP)
-	_cards_box.size = Vector2(size.x, CARD_SIZE.y)
+	var zoom := PORTRAIT_ZOOM if portrait else 1.0
+	_body.scale = Vector2.ONE * zoom
+	_body.size = size / zoom
+	var area := _body.size
+	var count := _offer.size()
+	var cards_top := PORTRAIT_CARDS_TOP if portrait else CARDS_TOP
+	var cards_h := (
+		PORTRAIT_ROW_HEIGHT * float(count) + PORTRAIT_ROW_GAP * float(maxi(count - 1, 0))
+		if portrait
+		else CARD_SIZE.y
+	)
+	_title.position = Vector2(0, PORTRAIT_TITLE_TOP if portrait else TITLE_TOP)
+	_title.size = Vector2(area.x, 44.0)
+	_subtitle.position = Vector2(
+		PORTRAIT_SIDE_MARGIN, PORTRAIT_SUBTITLE_TOP if portrait else SUBTITLE_TOP
+	)
+	_subtitle.size = Vector2(
+		area.x - PORTRAIT_SIDE_MARGIN * 2.0, PORTRAIT_SUBTITLE_HEIGHT if portrait else 26.0
+	)
+	_cards_box.position = Vector2(0, cards_top)
+	_cards_box.size = Vector2(area.x, cards_h)
 	_rebuild_cards()
-	_owned_label.position = Vector2(0, CARDS_TOP + CARD_SIZE.y + OWNED_TOP_MARGIN)
-	_owned_label.size = Vector2(size.x, 24.0)
+	_owned_label.add_theme_font_size_override(
+		"font_size", PORTRAIT_OWNED_FONT_SIZE if portrait else OWNED_FONT_SIZE
+	)
+	_owned_label.position = Vector2(PORTRAIT_SIDE_MARGIN, cards_top + cards_h + OWNED_TOP_MARGIN)
+	_owned_label.size = Vector2(area.x - PORTRAIT_SIDE_MARGIN * 2.0, 24.0)
 
 
 func _label(font_size: int, color: Color, display := false) -> Label:

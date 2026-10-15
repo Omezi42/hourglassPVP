@@ -3,7 +3,8 @@ extends Control
 ## 遠征(ソロモード)の工房のオーバーレイ(GameDesign.md 27章「画面」)。左に山札の
 ## 種類ごとに1枚、コスト順の格子を出し、押すと右の作業台に大きく出して「抜く」
 ## 「複製する」(同名は2枚まで)を結果つきで選ばせる。束・行き先の詳細と同じ
-## 「左で選び、右で結果を見て決める」形にそろえる。
+## 「左で選び、右で結果を見て決める」形にそろえる。縦画面では格子を上・作業台を下に積み、
+## 中身ごと `PORTRAIT_ZOOM` 倍にする(GameDesign.md 9章「縦画面」)。
 
 signal card_removed(card_id: String)
 signal card_duplicated(card_id: String)
@@ -43,7 +44,31 @@ const ACTION_RESULT_GAP := 16.0
 const SKIP_BUTTON_SIZE := Vector2(200, 44)
 const SKIP_TOP_GAP := 16.0
 
+## 縦画面の配置(座標は `PORTRAIT_ZOOM` で割った論理の大きさ)。作業台は左に札、右に
+## 「山札に N枚」と2つのボタン(結果はボタンの下)を積む。格子は列を減らし、収まらない
+## ときは札を縮めて全種を出す。
+const PORTRAIT_ZOOM := 1.4
+const PORTRAIT_TITLE_TOP := 28.0
+const PORTRAIT_SUBTITLE_TOP := 72.0
+const PORTRAIT_SUBTITLE_HEIGHT := 56.0
+const PORTRAIT_SUBTITLE_FONT_SIZE := 17
+const PORTRAIT_CONTENT_TOP := 136.0
+const PORTRAIT_SIDE_MARGIN := 20.0
+const PORTRAIT_BOTTOM_MARGIN := 20.0
+const PORTRAIT_GRID_COLUMNS := 5
+const PORTRAIT_PANEL_HEIGHT := 236.0
+const PORTRAIT_PANEL_PADDING := 16.0
+const PORTRAIT_PANEL_CARD_SCALE := 1.2
+const PORTRAIT_TEXT_FONT_SIZE := 17
+const PORTRAIT_EMPTY_FONT_SIZE := 22
+const PORTRAIT_ACTION_BUTTON_HEIGHT := 52.0
+const PORTRAIT_RESULT_HEIGHT := 24.0
+const PORTRAIT_SKIP_BUTTON_SIZE := Vector2(240, 52)
+
+var portrait := false
+
 var _dim: ColorRect
+var _body: Control
 var _title: Label
 var _subtitle: Label
 var _grid_box: Control
@@ -67,15 +92,19 @@ func _ready() -> void:
 	_dim.color = DIM_COLOR
 	_dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_dim)
+	_body = Control.new()
+	_body.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_body)
 	_title = _label(TITLE_FONT_SIZE, UiPalette.TEXT_OFFWHITE, true)
 	_title.text = "工房"
-	add_child(_title)
+	_body.add_child(_title)
 	_subtitle = _label(SUBTITLE_FONT_SIZE, UiPalette.TEXT_MUTED)
 	_subtitle.text = "山札から1枚を抜くか、1枚を複製する(同名は2枚まで)"
-	add_child(_subtitle)
+	_subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_body.add_child(_subtitle)
 	_grid_box = Control.new()
 	_grid_box.mouse_filter = Control.MOUSE_FILTER_PASS
-	add_child(_grid_box)
+	_body.add_child(_grid_box)
 
 	_panel_canvas = Control.new()
 	_panel_canvas.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -85,42 +114,48 @@ func _ready() -> void:
 				_panel_canvas.get_canvas_item(), Rect2(Vector2.ZERO, _panel_canvas.size), false
 			)
 	)
-	add_child(_panel_canvas)
+	_body.add_child(_panel_canvas)
 
 	_panel_empty_label = _label(PANEL_EMPTY_FONT_SIZE, UiPalette.TEXT_OFFWHITE, true)
 	_panel_empty_label.text = "カードを1枚選ぶ"
-	add_child(_panel_empty_label)
+	_body.add_child(_panel_empty_label)
 	_panel_deck_count_label = _label(PANEL_COUNT_FONT_SIZE, UiPalette.TEXT_MUTED)
-	add_child(_panel_deck_count_label)
+	_body.add_child(_panel_deck_count_label)
 
 	_panel_card = CardView.new()
 	_panel_card.mode = CardView.Mode.HAND
 	_panel_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_panel_card)
+	_body.add_child(_panel_card)
 	_panel_in_deck_label = _label(PANEL_COUNT_FONT_SIZE, UiPalette.TEXT_MUTED)
-	add_child(_panel_in_deck_label)
+	_body.add_child(_panel_in_deck_label)
 
 	_remove_button = CodedButton.make("抜く", ACTION_BUTTON_SIZE)
 	_remove_button.pressed.connect(_on_remove_pressed)
-	add_child(_remove_button)
+	_body.add_child(_remove_button)
 	_remove_result_label = _label(ACTION_RESULT_FONT_SIZE, UiPalette.TEXT_MUTED)
 	_remove_result_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	add_child(_remove_result_label)
+	_body.add_child(_remove_result_label)
 
 	_duplicate_button = CodedButton.make_in_group(
 		"複製する", ACTION_BUTTON_SIZE, CodedButton.PRIMARY_ACTION_GROUP
 	)
 	_duplicate_button.pressed.connect(_on_duplicate_pressed)
-	add_child(_duplicate_button)
+	_body.add_child(_duplicate_button)
 	_duplicate_result_label = _label(ACTION_RESULT_FONT_SIZE, UiPalette.TEXT_MUTED)
 	_duplicate_result_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	add_child(_duplicate_result_label)
+	_body.add_child(_duplicate_result_label)
 
 	_skip_button = CodedButton.make("何もしない", SKIP_BUTTON_SIZE)
 	_skip_button.pressed.connect(func() -> void: skip_pressed.emit())
-	add_child(_skip_button)
+	_body.add_child(_skip_button)
 
 	resized.connect(_layout)
+	_layout()
+
+
+## 縦横を切り替える(`CardSoloMapScreen.apply_orientation()` から呼ぶ)。選んでいる札は保つ。
+func set_portrait(value: bool) -> void:
+	portrait = value
 	_layout()
 
 
@@ -148,23 +183,47 @@ func _unique_ids() -> Array[String]:
 
 
 func _grid_rect() -> Rect2:
-	var grid_w := (size.x - SIDE_MARGIN * 2.0 - PANEL_GAP) * GRID_RATIO
-	return Rect2(SIDE_MARGIN, CONTENT_TOP, grid_w, size.y - CONTENT_TOP - CONTENT_BOTTOM_MARGIN)
+	var area := _body.size
+	if portrait:
+		var panel_rect := _panel_rect()
+		return Rect2(
+			PORTRAIT_SIDE_MARGIN,
+			PORTRAIT_CONTENT_TOP,
+			area.x - PORTRAIT_SIDE_MARGIN * 2.0,
+			panel_rect.position.y - SKIP_TOP_GAP - PORTRAIT_CONTENT_TOP
+		)
+	var grid_w := (area.x - SIDE_MARGIN * 2.0 - PANEL_GAP) * GRID_RATIO
+	return Rect2(SIDE_MARGIN, CONTENT_TOP, grid_w, area.y - CONTENT_TOP - CONTENT_BOTTOM_MARGIN)
 
 
 func _panel_rect() -> Rect2:
+	var area := _body.size
+	if portrait:
+		var top := _skip_top() - SKIP_TOP_GAP - PORTRAIT_PANEL_HEIGHT
+		return Rect2(
+			PORTRAIT_SIDE_MARGIN, top, area.x - PORTRAIT_SIDE_MARGIN * 2.0, PORTRAIT_PANEL_HEIGHT
+		)
 	var grid_rect := _grid_rect()
 	var panel_x := grid_rect.end.x + PANEL_GAP
-	return Rect2(panel_x, CONTENT_TOP, size.x - SIDE_MARGIN - panel_x, grid_rect.size.y)
+	return Rect2(panel_x, CONTENT_TOP, area.x - SIDE_MARGIN - panel_x, grid_rect.size.y)
+
+
+func _skip_top() -> float:
+	return _body.size.y - PORTRAIT_BOTTOM_MARGIN - PORTRAIT_SKIP_BUTTON_SIZE.y
 
 
 ## 格子1マスの大きさ。**`CardView.size`は`HAND_SIZE_PX`のまま保ち、`scale`で縮める**
 ## (`size`を縮めると中身が切り取られる。Pitfalls.md)。当たり判定は`scale`に従う。
-func _grid_cell(inner_w: float) -> Dictionary:
-	var card_w: float = (inner_w - float(GRID_COLUMNS - 1) * GRID_CARD_GAP) / float(GRID_COLUMNS)
+## 縦では格子の高さにも収める(格子はスクロールしないため)。
+func _grid_cell(grid_size: Vector2, count: int) -> Dictionary:
+	var columns := PORTRAIT_GRID_COLUMNS if portrait else GRID_COLUMNS
+	var card_w: float = (grid_size.x - float(columns - 1) * GRID_CARD_GAP) / float(columns)
 	var scale: float = clampf(card_w / CardView.HAND_SIZE_PX.x, 0.1, 1.0)
-	var card_size := CardView.HAND_SIZE_PX * scale
-	return {"scale": scale, "size": card_size}
+	if portrait:
+		var rows := ceili(float(count) / float(columns))
+		var card_h := (grid_size.y - float(maxi(rows - 1, 0)) * GRID_ROW_GAP) / float(maxi(rows, 1))
+		scale = clampf(minf(scale, card_h / CardView.HAND_SIZE_PX.y), 0.1, 1.0)
+	return {"scale": scale, "size": CardView.HAND_SIZE_PX * scale, "columns": columns}
 
 
 func _rebuild_grid() -> void:
@@ -172,15 +231,15 @@ func _rebuild_grid() -> void:
 		_grid_box.remove_child(child)
 		child.queue_free()
 	var ids := _unique_ids()
-	var inner_w := _grid_box.size.x
-	if inner_w <= 0.0:
+	if _grid_box.size.x <= 0.0:
 		return
-	var cell: Dictionary = _grid_cell(inner_w)
+	var cell: Dictionary = _grid_cell(_grid_box.size, ids.size())
 	var card_size: Vector2 = cell["size"]
 	var scale: float = cell["scale"]
+	var columns: int = cell["columns"]
 	for i in ids.size():
-		var col := i % GRID_COLUMNS
-		var row := i / GRID_COLUMNS
+		var col := i % columns
+		var row := i / columns
 		var pos := Vector2(
 			float(col) * (card_size.x + GRID_CARD_GAP), float(row) * (card_size.y + GRID_ROW_GAP)
 		)
@@ -252,10 +311,16 @@ func _layout() -> void:
 	if _dim == null:
 		return
 	_dim.size = size
-	_title.position = Vector2(0, TITLE_TOP)
-	_title.size = Vector2(size.x, 44.0)
-	_subtitle.position = Vector2(0, SUBTITLE_TOP)
-	_subtitle.size = Vector2(size.x, 26.0)
+	var zoom := PORTRAIT_ZOOM if portrait else 1.0
+	_body.scale = Vector2.ONE * zoom
+	_body.size = size / zoom
+	var area := _body.size
+	_apply_font_sizes()
+	_title.position = Vector2(0, PORTRAIT_TITLE_TOP if portrait else TITLE_TOP)
+	_title.size = Vector2(area.x, 44.0)
+	var side := PORTRAIT_SIDE_MARGIN if portrait else SIDE_MARGIN
+	_subtitle.position = Vector2(side, PORTRAIT_SUBTITLE_TOP if portrait else SUBTITLE_TOP)
+	_subtitle.size = Vector2(area.x - side * 2.0, PORTRAIT_SUBTITLE_HEIGHT if portrait else 26.0)
 
 	var grid_rect := _grid_rect()
 	_grid_box.position = grid_rect.position
@@ -265,15 +330,35 @@ func _layout() -> void:
 	var panel_rect := _panel_rect()
 	_panel_canvas.position = panel_rect.position
 	_panel_canvas.size = panel_rect.size
-	_layout_panel(panel_rect)
+	if portrait:
+		_layout_panel_portrait(panel_rect)
+	else:
+		_layout_panel(panel_rect)
 
+	var skip_size := PORTRAIT_SKIP_BUTTON_SIZE if portrait else SKIP_BUTTON_SIZE
+	_set_button_size(_skip_button, skip_size)
 	_skip_button.position = Vector2(
-		panel_rect.position.x + (panel_rect.size.x - SKIP_BUTTON_SIZE.x) * 0.5,
-		panel_rect.end.y + SKIP_TOP_GAP
+		panel_rect.position.x + (panel_rect.size.x - skip_size.x) * 0.5,
+		_skip_top() if portrait else panel_rect.end.y + SKIP_TOP_GAP
 	)
 
 
-func _layout_panel(panel_rect: Rect2) -> void:
+func _apply_font_sizes() -> void:
+	var pairs := [
+		[_subtitle, SUBTITLE_FONT_SIZE, PORTRAIT_SUBTITLE_FONT_SIZE],
+		[_panel_empty_label, PANEL_EMPTY_FONT_SIZE, PORTRAIT_EMPTY_FONT_SIZE],
+		[_panel_deck_count_label, PANEL_COUNT_FONT_SIZE, PORTRAIT_TEXT_FONT_SIZE],
+		[_panel_in_deck_label, PANEL_COUNT_FONT_SIZE, PORTRAIT_TEXT_FONT_SIZE],
+		[_remove_result_label, ACTION_RESULT_FONT_SIZE, PORTRAIT_TEXT_FONT_SIZE],
+		[_duplicate_result_label, ACTION_RESULT_FONT_SIZE, PORTRAIT_TEXT_FONT_SIZE],
+	]
+	for pair in pairs:
+		var label: Label = pair[0]
+		label.add_theme_font_size_override("font_size", pair[2] if portrait else pair[1])
+
+
+## 選んだ札・結果の文言・ボタンの出し分け(横縦で共通)。札を選んでいなければ `false`。
+func _fill_panel() -> bool:
 	var has_selection := not _selected_id.is_empty()
 	_panel_empty_label.visible = not has_selection
 	_panel_deck_count_label.visible = not has_selection
@@ -283,39 +368,54 @@ func _layout_panel(panel_rect: Rect2) -> void:
 	_remove_result_label.visible = has_selection
 	_duplicate_button.visible = has_selection
 	_duplicate_result_label.visible = has_selection
-
+	_panel_deck_count_label.text = "山札 %d枚" % _deck_ids.size()
 	if not has_selection:
+		return false
+	var card := CardLibrary.find_by_id(_selected_id)
+	if card == null:
+		return false
+	_panel_card.show_card(card, true)
+	var count := _deck_ids.count(_selected_id)
+	var duplicate_disabled := count >= SoloRun.MAX_DECK_COPIES
+	_panel_in_deck_label.text = "山札に %d枚" % count
+	_remove_result_label.text = "山札 %d → %d枚" % [_deck_ids.size(), _deck_ids.size() - 1]
+	_duplicate_button.disabled = duplicate_disabled
+	_duplicate_result_label.text = (
+		"同名は2枚まで"
+		if duplicate_disabled
+		else "山札 %d → %d枚" % [_deck_ids.size(), _deck_ids.size() + 1]
+	)
+	return true
+
+
+func _layout_panel(panel_rect: Rect2) -> void:
+	_set_button_size(_remove_button, ACTION_BUTTON_SIZE)
+	_set_button_size(_duplicate_button, ACTION_BUTTON_SIZE)
+	_remove_result_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	_duplicate_result_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	if not _fill_panel():
 		_panel_empty_label.position = Vector2(
 			panel_rect.position.x + PANEL_PADDING, panel_rect.position.y + PANEL_PADDING
 		)
 		_panel_empty_label.size = Vector2(panel_rect.size.x - PANEL_PADDING * 2.0, 28.0)
-		_panel_deck_count_label.text = "山札 %d枚" % _deck_ids.size()
 		_panel_deck_count_label.position = _panel_empty_label.position + Vector2(0, 34.0)
 		_panel_deck_count_label.size = Vector2(panel_rect.size.x - PANEL_PADDING * 2.0, 22.0)
 		return
 
-	var card := CardLibrary.find_by_id(_selected_id)
-	if card == null:
-		return
 	var card_size := CardView.HAND_SIZE_PX * PANEL_CARD_SCALE
 	var card_top := panel_rect.position.y + PANEL_PADDING + PANEL_CARD_TOP_GAP
 	_panel_card.position = Vector2(
 		panel_rect.position.x + (panel_rect.size.x - card_size.x) * 0.5, card_top
 	)
 	_panel_card.scale = Vector2.ONE * PANEL_CARD_SCALE
-	_panel_card.show_card(card, true)
 
-	var count := _deck_ids.count(_selected_id)
 	var in_deck_top := card_top + card_size.y + PANEL_DECK_LABEL_GAP
-	_panel_in_deck_label.text = "山札に %d枚" % count
 	_panel_in_deck_label.position = Vector2(panel_rect.position.x + PANEL_PADDING, in_deck_top)
 	_panel_in_deck_label.size = Vector2(panel_rect.size.x - PANEL_PADDING * 2.0, 22.0)
 	_panel_in_deck_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
-	var actions_top := in_deck_top + 30.0
-	var remove_top := actions_top
+	var remove_top := in_deck_top + 30.0
 	_remove_button.position = Vector2(panel_rect.position.x + PANEL_PADDING, remove_top)
-	_remove_result_label.text = "山札 %d → %d枚" % [_deck_ids.size(), _deck_ids.size() - 1]
 	_remove_result_label.position = Vector2(
 		_remove_button.position.x + ACTION_BUTTON_SIZE.x + ACTION_RESULT_GAP,
 		remove_top + (ACTION_BUTTON_SIZE.y - 18.0) * 0.5
@@ -325,19 +425,58 @@ func _layout_panel(panel_rect: Rect2) -> void:
 	)
 
 	var duplicate_top := remove_top + ACTION_BUTTON_SIZE.y + ACTION_ROW_GAP
-	var duplicate_disabled := count >= SoloRun.MAX_DECK_COPIES
-	_duplicate_button.disabled = duplicate_disabled
 	_duplicate_button.position = Vector2(panel_rect.position.x + PANEL_PADDING, duplicate_top)
-	_duplicate_result_label.text = (
-		"同名は2枚まで"
-		if duplicate_disabled
-		else "山札 %d → %d枚" % [_deck_ids.size(), _deck_ids.size() + 1]
-	)
 	_duplicate_result_label.position = Vector2(
 		_duplicate_button.position.x + ACTION_BUTTON_SIZE.x + ACTION_RESULT_GAP,
 		duplicate_top + (ACTION_BUTTON_SIZE.y - 18.0) * 0.5
 	)
 	_duplicate_result_label.size = _remove_result_label.size
+
+
+## 縦: 左に選んだ札、右に「山札に N枚」/「抜く」/結果 /「複製する」/結果 を積む。
+func _layout_panel_portrait(panel_rect: Rect2) -> void:
+	var pad := PORTRAIT_PANEL_PADDING
+	var inner_w := panel_rect.size.x - pad * 2.0
+	_remove_result_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_duplicate_result_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	if not _fill_panel():
+		var empty_top := panel_rect.position.y + panel_rect.size.y * 0.5 - 36.0
+		_panel_empty_label.position = Vector2(panel_rect.position.x + pad, empty_top)
+		_panel_empty_label.size = Vector2(inner_w, 34.0)
+		_panel_deck_count_label.position = _panel_empty_label.position + Vector2(0, 42.0)
+		_panel_deck_count_label.size = Vector2(inner_w, 26.0)
+		return
+
+	var card_size := CardView.HAND_SIZE_PX * PORTRAIT_PANEL_CARD_SCALE
+	_panel_card.scale = Vector2.ONE * PORTRAIT_PANEL_CARD_SCALE
+	_panel_card.position = Vector2(
+		panel_rect.position.x + pad, panel_rect.position.y + (panel_rect.size.y - card_size.y) * 0.5
+	)
+	var column_left := panel_rect.position.x + pad * 2.5 + card_size.x
+	var column_w := panel_rect.end.x - pad - column_left
+	var button_size := Vector2(column_w, PORTRAIT_ACTION_BUTTON_HEIGHT)
+	_set_button_size(_remove_button, button_size)
+	_set_button_size(_duplicate_button, button_size)
+	var top := panel_rect.position.y + pad
+	_panel_in_deck_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_panel_in_deck_label.position = Vector2(column_left, top)
+	_panel_in_deck_label.size = Vector2(column_w, PORTRAIT_RESULT_HEIGHT)
+	top += PORTRAIT_RESULT_HEIGHT + ACTION_ROW_GAP * 0.5
+	for pair in [
+		[_remove_button, _remove_result_label], [_duplicate_button, _duplicate_result_label]
+	]:
+		var button: Control = pair[0]
+		var result: Control = pair[1]
+		button.position = Vector2(column_left, top)
+		top += PORTRAIT_ACTION_BUTTON_HEIGHT
+		result.position = Vector2(column_left, top)
+		result.size = Vector2(column_w, PORTRAIT_RESULT_HEIGHT)
+		top += PORTRAIT_RESULT_HEIGHT + ACTION_ROW_GAP * 0.5
+
+
+func _set_button_size(button: Button, button_size: Vector2) -> void:
+	button.custom_minimum_size = button_size
+	button.size = button_size
 
 
 func _label(font_size: int, color: Color, display := false) -> Label:

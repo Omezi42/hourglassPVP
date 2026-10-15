@@ -150,6 +150,7 @@ func apply_orientation(portrait: bool) -> void:
 	)
 	for overlay: Control in [_bundle, _boon, _workshop, _summary]:
 		overlay.size = screen
+		overlay.call("set_portrait", portrait)
 	var content := _header.portrait_content_rect() if portrait else CONTENT_RECT
 	var zoom := PORTRAIT_SIDE_ZOOM if portrait else 1.0
 	_departure.stacked = portrait
