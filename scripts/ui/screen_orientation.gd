@@ -3,8 +3,8 @@ extends RefCounted
 ## 画面の向き(GameDesign.md 9章「縦画面」/ Architecture.md 4.7節)。
 ## 判定はウィンドウの縦横比だけで行い、配信先を見ない。
 
-## 全画面の縦の配置がそろうまで false(縦と横の画面が混ざらないようにするため)。
-const ENABLED := false
+## 縦の配置を止めるときだけ false にする(縦長のウィンドウでも横の配置を黒帯つきで出す)。
+const ENABLED := true
 const LANDSCAPE_SIZE := Vector2i(1280, 720)
 const PORTRAIT_SIZE := Vector2i(720, 1280)
 

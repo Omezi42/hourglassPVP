@@ -42,7 +42,7 @@ itch.io・PLiCy と同じ起動部に、manifest と service worker を足した
 - **Godot の PWA 書き出し(`progressive_web_app/*`)は使わない。**Web の書き出し設定は1つなので、オンにすると itch.io・PLiCy の
   起動部にも service worker が入る。また Godot の service worker は `index.pck` を先読みの一覧に入れ、起動部の側に pck が無いと
   インストールに失敗する
-- manifest は `display: "fullscreen"`・`orientation: "landscape"`・`start_url: "./"`・`name: "砂時計アリーナ"`
+- manifest は `display: "fullscreen"`・`orientation` 無し(端末の向きに従う)・`start_url: "./"`・`name: "砂時計アリーナ"`
 - `sw.js` の動き:
   - wasm・js・アイコンは Godot の版ごとのキャッシュから返す(版が変わるとキャッシュの名前も変わり、古いものは消す)
   - `index.html` は毎回ネットから取り、取れなければ `offline.html` を返す(古い起動部を握り続けないため)
