@@ -28,6 +28,7 @@ const MULLIGAN_BAND_GAP := 12.0
 ## 帯の枠は大きなパネル用(枠8px・角丸16)より細くする。高さ64の帯に太い枠を使うと、
 ## 文の入る高さが足りずパネルが帯より縦へ伸び、絵とボタンが枠からはみ出して見える。
 const BAND_FRAME := 4.0
+const BAND_FONT_SIZE := 16
 const BAND_CORNER := 10.0
 ## 枠の内側へ置く絵・ボタン・文と枠との隙間。
 const BAND_INSET := BAND_FRAME + 4.0
@@ -98,6 +99,9 @@ var _callout_shown := false
 var _tick_pending: Dictionary = {}
 ## 帯の右上の「スキップ」(GameDesign.md 18章)。
 var _skip: TutorialSkip
+## 帯の通常の位置と、帯の枠(向きで大きさが変わる)。
+var _band_home := BAND_RECT.position
+var _band_panel: PanelContainer
 ## 光らせる場所の計算。対局が始まる(`watch()`)まで無い。
 var _focus: TutorialFocus
 
@@ -112,6 +116,32 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	size = SCREEN_SIZE
 	_build()
+
+
+## 向きに合わせて帯を置き直す(`CardMatchArrange`)。縦は帯を画面の幅いっぱいにして拡大し、
+## スキップはメニューの中へ移す(帯の下の盤面を塞がないため。GameDesign.md 18章)。
+func apply_layout(layout: CardMatchLayout) -> void:
+	size = layout.screen_size
+	_band_home = layout.tutorial_band_position
+	var band_size := layout.tutorial_band_size
+	_band.scale = Vector2.ONE * layout.tutorial_scale
+	_band.size = band_size
+	_band_panel.custom_minimum_size = band_size
+	_band_panel.size = band_size
+	_label.add_theme_font_size_override("font_size", BAND_FONT_SIZE)
+	_next_button.position = Vector2(
+		band_size.x - NEXT_SIZE.x - BAND_INSET, (band_size.y - NEXT_SIZE.y) * 0.5
+	)
+	_dots.position = Vector2(band_size.x - NEXT_SIZE.x - BAND_INSET - DOTS_WIDTH, 0.0)
+	_dots.size = Vector2(DOTS_WIDTH, band_size.y)
+	_portrait.position = Vector2(BAND_INSET, band_size.y - BAND_FRAME - PORTRAIT_SIZE.y)
+	_skip.visible = not layout.portrait
+	_place_band(_screen.state != null and _screen.state.mulligan_pending)
+
+
+## メニューの「スキップ」から(縦)。横の「スキップ」と同じく確かめてから抜ける。
+func request_skip() -> void:
+	_skip.request()
 
 
 ## 台本を読み込む。**マリガンの選択より前に呼ぶ**——`gate_mulligan_pick()` は
@@ -338,11 +368,11 @@ func _hand_index_of(state: MatchState, side: int, card_id: String) -> int:
 
 func _place_band(during_mulligan: bool) -> void:
 	_band.position = Vector2(
-		BAND_RECT.position.x,
+		_band_home.x,
 		(
 			_screen._mulligan.confirm_rect().end.y + MULLIGAN_BAND_GAP
 			if during_mulligan
-			else BAND_RECT.position.y
+			else _band_home.y
 		)
 	)
 
@@ -591,6 +621,7 @@ func _build() -> void:
 	add_child(_band)
 
 	var panel := PanelContainer.new()
+	_band_panel = panel
 	panel.custom_minimum_size = BAND_RECT.size
 	panel.size = BAND_RECT.size
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -609,7 +640,7 @@ func _build() -> void:
 	_label = Label.new()
 	_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_label.add_theme_font_size_override("font_size", 16)
+	_label.add_theme_font_size_override("font_size", BAND_FONT_SIZE)
 	_label.add_theme_color_override("font_color", UiPalette.TEXT_OFFWHITE)
 	_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_label.mouse_filter = Control.MOUSE_FILTER_IGNORE

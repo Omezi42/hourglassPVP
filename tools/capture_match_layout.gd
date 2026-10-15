@@ -6,7 +6,7 @@ extends "res://tools/record_pv.gd"
 ## 実行(実際の描画結果を読むため --headless は付けない):
 ##   godot --path . res://tools/capture_match_layout.tscn -- <出力先フォルダ> [モード]
 ## モード: both(既定)/ landscape / portrait / overlays
-## overlays は縦で、重ね物(実況・墓地の一覧・再生の操作・誘導対局の帯)を1枚ずつ撮る。
+## overlays は縦で、重ね物(遠征の札・再生の操作)を1枚ずつ撮る。
 
 const SETTLE_SECONDS := 0.8
 const SETTLE_FRAMES := 4
@@ -104,32 +104,20 @@ func _dress_board() -> void:
 
 
 func _shoot_overlays() -> void:
-	var my := match_screen.my_side
-	var foe := MatchState.other_side(my)
-	var feed := match_screen._feed
-	feed.say("相手は『ドリル』で『ランス』を攻撃", match_screen._geometry.slot_center(foe, 1))
-	feed._banner_text = "あなたの番"
-	feed._banner_duration = CardMatchTurnFeed.BANNER_DURATION
-	feed._banner_left = CardMatchTurnFeed.BANNER_DURATION * 0.6
-	feed.set_process(false)
-	await _shoot(true, "overlay_feed.png")
-	feed.clear()
-
-	var pile: Array = []
-	for id in ["sand", "sand", "lance", "glass", "drill", "wall", "sword", "poison", "lock"]:
-		pile.append(_card(id))
-	match_screen._pile.open_pile("相手の墓地", pile)
-	await _shoot(true, "overlay_pile.png")
-	match_screen._pile.visible = false
-
-	var tutorial := match_screen._tutorial
-	tutorial._label.text = String.chr(10).join(
-		["相手に3ダメージ、こっちも2削れたよ。", "体力が0になると割れちゃうよ。反転すれば長生きできるんだ"]
-	)
-	tutorial._next_button.visible = true
-	tutorial.visible = true
-	await _shoot(true, "overlay_tutorial.png")
-	tutorial.visible = false
+	var solo := match_screen._solo
+	var plaque := solo._plaque
+	solo._run = SoloRun.new()
+	plaque._run = solo._run
+	plaque._floor_text = "遠征 ・ 深さ2 ・ 3段目"
+	plaque._kind_text = "関門『砂嵐の番人』"
+	plaque._goal_lead = "相手の場に あと"
+	plaque._goal_value = 3
+	plaque._goal_tail = "体"
+	plaque.visible = true
+	await _shoot(true, "overlay_solo.png")
+	solo._run = null
+	plaque.visible = false
+	CardMatchArrange.place_history(match_screen, match_screen.layout)
 
 	match_screen._interactive = false
 	var replay := CardMatchReplay.new()

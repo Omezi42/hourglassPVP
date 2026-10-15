@@ -29,18 +29,52 @@
 - `CardMatchDetail.apply_layout()`: パネルごと `scale`(縦=1.6)。置き場の計算は拡大後の大きさで行う
 - `CardMatchActionHistory.set_layout()`: 縦では3件を横1列に並べ、1.3倍で置く(積むのは常に4件)
 - 縦の反転権とコインはレールの左端(右端のターン終了と対)、対象選択の案内はレールの中央
-- `CardMatchMenu`: 縦のときだけ出す「メニュー」ボタンと、ログ・エモート・投了を縦に並べたパネル。横では出さない
-  (ボタンの実体は横の行動の列のものをパネルへ付け替えて使い、押したときの処理を二重に持たない)
+- `button_scale`(縦=1.4)は反転権・粒・コイン・メニューのボタン、`text_scale`(縦=1.5)は反転ボタン・対象選択の案内・実況の文字・
+  エモートの選択肢・墓地の一覧に掛ける。`CardMatchBuild.center_on()` は縮尺を通して中心を合わせる。誘導対局の帯は縦で画面幅いっぱい・1.4倍
+- 手札は縦で選んだ札を `hand_select_lift` だけ上へ出し、`z_index` で最前面へ(`CardMatchHandLayout`)
+- `CardMatchMenu`: 縦のときだけ出す「メニュー」ボタン(紋章 `MENU`)と、ログ・エモート・投了・スキップの横長のボタンを縦に並べたパネル。横では出さない。
+  項目は押したら行動の列のボタンと同じ関数を呼ぶだけで、出す・押せる・エモートの残り秒は開くたびに元のボタン(`_log_button` など)から写す。
+  スキップは `CardMatchTutorial.request_skip()` を通し、縦では `TutorialSkip` を隠す。エモートの選択肢はメニューの項目の脇へ開く(`anchor_popup()`)
 - マリガン(`apply_layout()`)は見出し〜確定ボタンの一群を縦の中央へ置き、最大4枚の札を1.35倍のまま横1列に詰めて並べる。
   結果パネルは横と同じ大きさのまま画面の中央へ置く。誘導対局の帯はマリガンの確定ボタンの下端から位置を決める
 - ログ(`CardMatchLog.apply_layout()`)は縦で680x1180・文字を24px(見出し30px)にする。詳細パネルは横と同じ詰めた表示のまま
-- 墓地の一覧(`CardPileViewer.apply_layout()`)は縦で4列、パネルを720幅いっぱいまで `CenterContainer` ごと拡大する。
-  実況(`CardMatchTurnFeed.apply_layout()`)は縦で文字と札を1.5倍。再生の操作(`CardMatchReplay.apply_layout()`)は
-  縦で `CardMatchLayout.replay_center` を中心に3列2段・1.4倍。再生の操作は作った直後にも `apply_layout()` を呼ぶ(遅れて作るため)
+- 再生の操作(`CardMatchReplay.apply_layout()`)は縦で `CardMatchLayout.replay_center` を中心に3列2段・1.4倍。
+  遅れて作るため、作った直後にも `apply_layout()` を呼ぶ
+- 遠征の札: `CardMatchArrange.place_history()` が直前の手の列を置き、縦の遠征では `set_layout(layout, 1)` で末尾の1件を空け、
+  `SoloMatchPlaque.apply_layout()` がその場所へ同じ縮尺で置く(`_compact` で2行に詰め、説明は札の下へ出す)。遠征の対局の開始・終了でも呼ぶ
 - 誘導対局が光らせる駒・手札の輪郭は `CardMatchGeometry.view_rect()`(縮尺を通した見た目の矩形)で取る
 - メニューのボタンは直前の手の列の直後へ並べ替え、マリガン・結果パネル・ログの暗幕より背面に置く(パネルと幕は最前面)
 - 縦では吊りランプと行動の列の板を出さない(情報帯と直前の手に重なり、列を置く幅も無いため)
 - 横と縦の見た目は `tools/capture_match_layout`(非ヘッドレス)で撮る
+
+## タイトル・ホーム・デッキ一覧
+
+- `TitleScreen.apply_orientation()`: ロゴ・開始の文言・「アカウント」を置き直す。横の値は `_ready()` で `.tscn` から控える
+- `HomeScreen.apply_orientation()`: 名札(`AccountNameplateButton.set_portrait()`)・日曜の知らせ・下部タブを組み直し、5つのタブの `apply_orientation()` を呼ぶ
+- タブ(`BattleTab` / `DeckTab` / `RecordTab` / `RulesTab` / `LabTab`)は位置を `_layout()` 1か所で決め、横は従来の定数、縦は `PORTRAIT_*` を使う。
+  縦の枠の幅・上下の範囲・積む上端は `HomeFrame.PORTRAIT_*` と `HomeFrame.portrait_stack_top()`、置き直しは `HomeFrame.place()`(最小の大きさから先に変える)
+- `HomeTile.set_portrait_text()`: 見出し・副題(24px・2行まで)・余白・紋章の上限・印の倍率を縦横で切り替える。副題の折り返しは `_subtitle_rows()` が区切りを優先して行う
+- `HomeFrame.set_portrait()`: 枠の見出しと行(今日の課題)の文字を縦の大きさにする
+- `DeckTab` は縦で図鑑・ショップを `Row`(HBox)から外して縦並びへ移す(`HBoxContainer` は向きを変えられない)
+- `BattleTab` の主役の2枚は `scale` 1.25、「つぎはここ」の印は `NextStepMark.tag_scale` 1.5
+- `ScreenHeader.apply_orientation()`: 縦で文字と「戻る」を大きくし、`ActionSlot` を `Row` から外してヘッダーの下の行へ置く。
+  内容の上端は `portrait_content_top()`(主アクションの行の有無で変わる)。各画面が自分の `apply_orientation()` から呼ぶ
+- `CardDeckListScreen`: 縦は1列、管理のボタンは名前の下の行。主アクションの行の有無で一覧の上端が変わるため、縦では `_refresh()` のたびに `_layout()` する
+
+## デッキ編集
+
+- `CardDeckEditorScreen.apply_orientation()`: 縦では在庫棚(`_grid_box`)と組立台(`_side_box`)を同じ木箱の矩形へ置き、`_select_tab()` で片方だけ出す。
+  下地(`WorkshopBackdrop.portrait` / `show_shelf`)も1つの木箱を描く
+- `WorkshopStockItem.zoom`: `CELL_SIZE` の座標のまま `draw_set_transform()` で拡大して描く(縦=1.6、3列)。
+  `CardDeckShelf.text_scale`: 名前・名前の帯・印の上限だけを拡大する(縦=1.7。枠と絵は `size` から決まる)
+- 詳細は縦では画面の中央に1.6倍で出す
+
+## モーダル
+
+- `PortraitModal`(static のみ): 縦ではパネルを論理幅 `WIDTH`(480)で組み、`fit()` で `SCALE`(1.4)倍に中心から拡大する。
+  **コンテナの子は渡さない**(コンテナが `scale` を1へ戻す)。`CenterContainer` で中央へ置くモーダルはその箱ごと渡す
+- モーダルは画面ではないため `Main` から呼ばれない。開くたびに組み直し、開いている間の向きの変化は `PortraitModal.watch()` が受ける(状態は保つ)
+- 対象: `ConfirmModal`・`SettingsPanel`・`CardCpuDifficultyPicker`・`DailyMissionPanel`・`WelcomeDaysPanel`。拡大しても目安に足りない文字だけ縦の大きさを持つ
 
 ## タッチ操作
 

@@ -28,10 +28,27 @@ const NAV_HEIGHT_ACTIVE := 128
 const NAV_HEIGHT_INACTIVE := 100
 const NAV_FONT_ACTIVE := 26
 const NAV_FONT_INACTIVE := 20
+## 縦画面(GameDesign.md 9章「縦画面」)の下部タブ。5つを画面の幅に収め、文字は小さな見出しの目安(20px)以上にする。
+const PORTRAIT_NAV_WIDTH := 132
+const PORTRAIT_NAV_HEIGHT_ACTIVE := 120
+const PORTRAIT_NAV_HEIGHT_INACTIVE := 96
+const PORTRAIT_NAV_FONT_ACTIVE := 28
+const PORTRAIT_NAV_FONT_INACTIVE := 24
+const PORTRAIT_NAV_BAR_HEIGHT := 136.0
+const PORTRAIT_NAV_SEPARATION := 6
+const NAV_BAR_HEIGHT := 160.0
+const NAV_SEPARATION := 32
+## 縦では日曜イベントの知らせをヘッダーの下の行へ出す(ヘッダーに収まる幅が無いため)。
+const PORTRAIT_BANNER_RECT := Rect2(24, 108, 672, 32)
+const BANNER_FONT := 14
+const PORTRAIT_BANNER_FONT := 22
 ## 選択していないタブへ掛ける色。沈めるだけで、押せないようには見せない。
 const NAV_INACTIVE_TINT := Color(0.70, 0.68, 0.66)
 ## 下部タブに打つ印の大きさ(GameDesign.md 9章)。
 const NAV_BADGE_SIZE := 30.0
+const NAV_BADGE_FONT := 16
+const PORTRAIT_NAV_BADGE_SIZE := 40.0
+const PORTRAIT_NAV_BADGE_FONT := 22
 ## アカウント帯の右端をどれだけ空けるか(右上のメニューのボタンのぶん)。
 const ACCOUNT_BAR_RIGHT_INSET := 116.0
 ## ヘッダーの残高を他の画面より大きく出す倍率。
@@ -79,6 +96,7 @@ var _sunday_banner: Label
 ## 起動して開いた時点の残高は「増えた」わけではない。
 var _currency_chip: CurrencyChip
 var _currency_seen := false
+var _portrait := false
 
 @onready var background: TextureRect = $Background
 @onready var deck_tab: DeckTab = $Layout/ContentArea/DeckTab
@@ -158,7 +176,7 @@ func _ready() -> void:
 	$AccountBar.move_child(spacer, $AccountBar.get_children().find(_currency_chip))
 
 	_sunday_banner = Label.new()
-	_sunday_banner.add_theme_font_size_override("font_size", 14)
+	_sunday_banner.add_theme_font_size_override("font_size", BANNER_FONT)
 	_sunday_banner.add_theme_color_override("font_color", UiPalette.GLOW_AMBER)
 	_sunday_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_sunday_banner.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
@@ -174,6 +192,50 @@ func _ready() -> void:
 	# 初めての人はホームを経ずに誘導対局へ直行し、ホームへ来るのはそこから戻ったときのため。
 	_select_tab(TAB_BATTLE)
 	refresh_account()
+
+
+## 縦横が変わったときに `Main` から呼ばれる(Architecture.md 4.7節)。並べ直すだけで、選んでいるタブは保つ。
+func apply_orientation(portrait: bool) -> void:
+	_portrait = portrait
+	_nameplate_button.set_portrait(portrait)
+	_place_sunday_banner()
+	var nav: HBoxContainer = battle_nav_button.get_parent()
+	nav.custom_minimum_size.y = PORTRAIT_NAV_BAR_HEIGHT if portrait else NAV_BAR_HEIGHT
+	nav.add_theme_constant_override(
+		"separation", PORTRAIT_NAV_SEPARATION if portrait else NAV_SEPARATION
+	)
+	var buttons: Array[Button] = [
+		battle_nav_button, deck_nav_button, _record_nav_button, _rules_nav_button, _lab_nav_button
+	]
+	var tabs: Array[Control] = [battle_tab, deck_tab, _record_tab, _rules_tab, _lab_tab]
+	for i in buttons.size():
+		_apply_nav_style(buttons[i], tabs[i] == _active_tab)
+	for tab in tabs:
+		tab.call("apply_orientation", portrait)
+	_refresh_record_badge.call_deferred(true)
+
+
+## 縦では知らせをヘッダーから外し、その下の行へ置く。横はアカウント帯の中(残高の右)。
+func _place_sunday_banner() -> void:
+	var bar: HBoxContainer = $AccountBar
+	var parent := _sunday_banner.get_parent()
+	if _portrait and parent == bar:
+		bar.remove_child(_sunday_banner)
+		add_child(_sunday_banner)
+		move_child(_sunday_banner, bar.get_index() + 1)
+	elif not _portrait and parent != bar:
+		remove_child(_sunday_banner)
+		bar.add_child(_sunday_banner)
+		bar.move_child(_sunday_banner, bar.get_children().find(_currency_chip) + 1)
+	_sunday_banner.add_theme_font_size_override(
+		"font_size", PORTRAIT_BANNER_FONT if _portrait else BANNER_FONT
+	)
+	_sunday_banner.horizontal_alignment = (
+		HORIZONTAL_ALIGNMENT_RIGHT if _portrait else HORIZONTAL_ALIGNMENT_LEFT
+	)
+	if _portrait:
+		_sunday_banner.position = PORTRAIT_BANNER_RECT.position
+		_sunday_banner.size = PORTRAIT_BANNER_RECT.size
 
 
 ## 右上のボタンをハンバーガー(横3本のバー)の紋章にする。文言を持たない代わりに
@@ -320,26 +382,28 @@ func _build_lab_tab() -> void:
 ## 受け取れるミッションがあることを、他のタブを見ている間も分かるようにする
 ## (GameDesign.md 9章)。**タブ側の印は唯一の手がかり**であり、これが無いと日課は
 ## 存在ごと忘れられる。
-func _refresh_record_badge() -> void:
+func _refresh_record_badge(force := false) -> void:
 	if _record_nav_button == null or _record_tab == null:
 		return
 	var count := _record_tab.claimable_count()
-	if _record_nav_button.has_meta("badge") and int(_record_nav_button.get_meta("badge")) == count:
+	if (
+		not force
+		and _record_nav_button.has_meta("badge")
+		and int(_record_nav_button.get_meta("badge")) == count
+	):
 		return
 	_record_nav_button.set_meta("badge", count)
 	if _record_badge == null:
 		_record_badge = Label.new()
-		_record_badge.add_theme_font_size_override("font_size", 16)
 		_record_badge.add_theme_color_override("font_color", Color(1, 1, 1))
 		_record_badge.add_theme_constant_override("outline_size", 0)
 		_record_badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		_record_badge.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		_record_badge.custom_minimum_size = Vector2.ONE * NAV_BADGE_SIZE
 		_record_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		# 丸は専用クラスを足さず、角丸を半径いっぱいまで振った StyleBox で出す。
 		var dot := StyleBoxFlat.new()
 		dot.bg_color = Color(0.86, 0.24, 0.19)
-		dot.set_corner_radius_all(int(NAV_BADGE_SIZE * 0.5))
+		dot.set_corner_radius_all(int(PORTRAIT_NAV_BADGE_SIZE * 0.5))
 		dot.border_width_bottom = 2
 		dot.border_width_top = 2
 		dot.border_width_left = 2
@@ -347,10 +411,16 @@ func _refresh_record_badge() -> void:
 		dot.border_color = Color(0.10, 0.07, 0.05)
 		_record_badge.add_theme_stylebox_override("normal", dot)
 		_record_nav_button.add_child(_record_badge)
+	var badge_size := PORTRAIT_NAV_BADGE_SIZE if _portrait else NAV_BADGE_SIZE
+	_record_badge.add_theme_font_size_override(
+		"font_size", PORTRAIT_NAV_BADGE_FONT if _portrait else NAV_BADGE_FONT
+	)
+	_record_badge.custom_minimum_size = Vector2.ONE * badge_size
+	_record_badge.size = _record_badge.custom_minimum_size
 	_record_badge.text = str(count)
 	_record_badge.visible = count > 0
 	_record_badge.position = Vector2(
-		_record_nav_button.size.x - NAV_BADGE_SIZE * 0.9, -NAV_BADGE_SIZE * 0.25
+		_record_nav_button.size.x - badge_size * 0.9, -badge_size * 0.25
 	)
 
 
@@ -364,14 +434,18 @@ func _on_tab_fade_finished(shown_tab: Control, hidden_tab: Control) -> void:
 
 func _apply_nav_style(button: Button, active: bool) -> void:
 	var height: float = NAV_HEIGHT_ACTIVE if active else NAV_HEIGHT_INACTIVE
-	button.custom_minimum_size = Vector2(NAV_WIDTH, height)
+	var width := NAV_WIDTH
+	var font_size := NAV_FONT_ACTIVE if active else NAV_FONT_INACTIVE
+	if _portrait:
+		height = PORTRAIT_NAV_HEIGHT_ACTIVE if active else PORTRAIT_NAV_HEIGHT_INACTIVE
+		width = PORTRAIT_NAV_WIDTH
+		font_size = PORTRAIT_NAV_FONT_ACTIVE if active else PORTRAIT_NAV_FONT_INACTIVE
+	button.custom_minimum_size = Vector2(width, height)
 	# **選択していないタブを下端へ沈め、選択中だけを帯の中央へ置く。**こうすると
 	# 選択中の上端だけが持ち上がってせり出して見える。高さを変えるだけでは上下へ
 	# 均等に伸びるため、せり出しているのか大きいだけなのかが読み取りにくい。
 	button.size_flags_vertical = (Control.SIZE_SHRINK_CENTER if active else Control.SIZE_SHRINK_END)
-	button.add_theme_font_size_override(
-		"font_size", NAV_FONT_ACTIVE if active else NAV_FONT_INACTIVE
-	)
+	button.add_theme_font_size_override("font_size", font_size)
 	# **選択していないタブは沈める**(GameDesign.md 9章)。大きさの差だけでは現在地が
 	# 読み取れないため、彩度と明るさも落とす。
 	button.modulate = Color.WHITE if active else NAV_INACTIVE_TINT
@@ -380,6 +454,15 @@ func _apply_nav_style(button: Button, active: bool) -> void:
 ## ホーム画面左上の名札ボタン(真鍮テクスチャ・アイコン・称号・名前)
 class AccountNameplateButton:
 	extends Button
+	const ICON_FRAME := 46.0
+	const ICON := 34.0
+	const TITLE_FONT := 13
+	const NAME_FONT := 21
+	const PORTRAIT_NAMEPLATE_SIZE := Vector2(316, 84)
+	const PORTRAIT_ICON_FRAME := 60.0
+	const PORTRAIT_ICON := 44.0
+	const PORTRAIT_TITLE_FONT := 20
+	const PORTRAIT_NAME_FONT := 28
 	var _icon_rect: TextureRect
 	var _icon_frame: PanelContainer
 	var _title_label: Label
@@ -402,20 +485,20 @@ class AccountNameplateButton:
 		# アイコン枠
 		_icon_frame = PanelContainer.new()
 		_icon_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		_icon_frame.custom_minimum_size = Vector2(46, 46)
+		_icon_frame.custom_minimum_size = Vector2.ONE * ICON_FRAME
 		_icon_frame.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		var frame_style := StyleBoxFlat.new()
 		frame_style.bg_color = Color(0.1, 0.08, 0.06, 0.9)
 		frame_style.border_color = UiPalette.BRASS_MID
 		frame_style.set_border_width_all(1)
-		frame_style.set_corner_radius_all(23)
+		frame_style.set_corner_radius_all(int(ICON_FRAME * 0.5))
 		_icon_frame.add_theme_stylebox_override("panel", frame_style)
 
 		_icon_rect = TextureRect.new()
 		_icon_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		_icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		_icon_rect.custom_minimum_size = Vector2(34, 34)
+		_icon_rect.custom_minimum_size = Vector2.ONE * ICON
 		_icon_rect.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		_icon_rect.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		_icon_frame.add_child(_icon_rect)
@@ -430,20 +513,35 @@ class AccountNameplateButton:
 
 		_title_label = Label.new()
 		_title_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		_title_label.add_theme_font_size_override("font_size", 13)
+		_title_label.add_theme_font_size_override("font_size", TITLE_FONT)
 		_title_label.add_theme_color_override("font_color", UiPalette.BRASS_HIGHLIGHT)
 		_title_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		vbox.add_child(_title_label)
 
 		_name_label = Label.new()
 		_name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		_name_label.add_theme_font_size_override("font_size", 21)
+		_name_label.add_theme_font_size_override("font_size", NAME_FONT)
 		_name_label.add_theme_color_override("font_color", UiPalette.TEXT_OFFWHITE)
 		_name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		vbox.add_child(_name_label)
 
 		hbox.add_child(vbox)
 		add_child(hbox)
+
+	## 縦では称号・名前を文字の目安(GameDesign.md 9章「縦画面」)まで大きくする。
+	func set_portrait(portrait: bool) -> void:
+		custom_minimum_size = PORTRAIT_NAMEPLATE_SIZE if portrait else NAMEPLATE_SIZE
+		var icon_frame := PORTRAIT_ICON_FRAME if portrait else ICON_FRAME
+		_icon_frame.custom_minimum_size = Vector2.ONE * icon_frame
+		var frame_style := _icon_frame.get_theme_stylebox("panel") as StyleBoxFlat
+		frame_style.set_corner_radius_all(int(icon_frame * 0.5))
+		_icon_rect.custom_minimum_size = Vector2.ONE * (PORTRAIT_ICON if portrait else ICON)
+		_title_label.add_theme_font_size_override(
+			"font_size", PORTRAIT_TITLE_FONT if portrait else TITLE_FONT
+		)
+		_name_label.add_theme_font_size_override(
+			"font_size", PORTRAIT_NAME_FONT if portrait else NAME_FONT
+		)
 
 	func update_profile(display_name: String, icon_id: String, title_id: String) -> void:
 		_icon_rect.texture = UserProfileLibrary.get_icon_texture(icon_id)

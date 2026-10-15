@@ -36,6 +36,21 @@ const ROW_TEXT_DONE := Color(0.96, 0.94, 0.89)
 const ROW_TEXT_TODO := Color(0.62, 0.58, 0.52)
 const ROW_COUNT_COLOR := Color(0.72, 0.67, 0.58)
 
+## 縦画面の値(GameDesign.md 9章「縦画面」: 本文24px以上・小さな見出し20px以上)。
+## 縦のタブはどれも画面の幅いっぱいの枠を上から積む。
+const PORTRAIT_X := 24.0
+const PORTRAIT_W := 672.0
+const PORTRAIT_PAD := 22.0
+const PORTRAIT_GAP := 30.0
+## 縦のタブの中身を置ける上端と下端(アカウント帯の下〜下部タブの上)。
+const PORTRAIT_TOP := 136.0
+const PORTRAIT_BOTTOM := 1130.0
+const PORTRAIT_HEADING_FONT_SIZE := 26
+const PORTRAIT_HEADING_HEIGHT := 42.0
+const PORTRAIT_ROW_FONT_SIZE := 24
+const PORTRAIT_ROW_HEIGHT := 38.0
+const PORTRAIT_ROW_MARK_GAP := 32.0
+
 var heading := "":
 	set(value):
 		heading = value
@@ -48,6 +63,12 @@ var rows: Array[Dictionary] = []:
 var rows_left := 0.0
 var rows_count_left := 0.0
 var rows_top := 0.0
+## 縦画面(GameDesign.md 9章「縦画面」)で文字を大きくするための値。既定は横の見た目のまま。
+var heading_font_size := HEADING_FONT_SIZE
+var heading_height := HEADING_HEIGHT
+var row_font_size := ROW_FONT_SIZE
+var row_height := ROW_HEIGHT
+var row_mark_gap := ROW_MARK_GAP
 
 var _font: Font
 ## 見出しだけは明朝体(`UiFonts.display_font()`)にする。行(`rows`)は数字を含む本文で
@@ -55,6 +76,28 @@ var _font: Font
 var _heading_font: Font
 var _panel: StyleBox
 var _plate: StyleBox
+
+
+## 縦横に合わせて見出しと行の文字の大きさを切り替える。
+func set_portrait(portrait: bool) -> void:
+	heading_font_size = PORTRAIT_HEADING_FONT_SIZE if portrait else HEADING_FONT_SIZE
+	heading_height = PORTRAIT_HEADING_HEIGHT if portrait else HEADING_HEIGHT
+	row_font_size = PORTRAIT_ROW_FONT_SIZE if portrait else ROW_FONT_SIZE
+	row_height = PORTRAIT_ROW_HEIGHT if portrait else ROW_HEIGHT
+	row_mark_gap = PORTRAIT_ROW_MARK_GAP if portrait else ROW_MARK_GAP
+	queue_redraw()
+
+
+## 札・枠を置き直す。**最小の大きさから先に変える**(`size` は最小より小さくならないため)。
+static func place(node: Control, rect: Rect2) -> void:
+	node.position = rect.position
+	node.custom_minimum_size = rect.size
+	node.size = rect.size
+
+
+## 縦のタブで、高さの合計が `total` になる枠の並びを上下の中央へ置くときの上端。
+static func portrait_stack_top(total: float) -> float:
+	return PORTRAIT_TOP + maxf((PORTRAIT_BOTTOM - PORTRAIT_TOP - total) * 0.5, 0.0)
 
 
 ## 枠を1つ作る。中身は呼び出し側が `add_child()` するのではなく、**タブが同じ親へ
@@ -86,21 +129,21 @@ func _draw() -> void:
 		return
 	var heading_font: Font = _heading_font if _heading_font != null else _font
 	var text_width: float = (
-		heading_font.get_string_size(heading, HORIZONTAL_ALIGNMENT_LEFT, -1, HEADING_FONT_SIZE).x
+		heading_font.get_string_size(heading, HORIZONTAL_ALIGNMENT_LEFT, -1, heading_font_size).x
 	)
 	var plate := Rect2(
-		Vector2(HEADING_LEFT, -HEADING_HEIGHT * HEADING_OVERLAP),
-		Vector2(text_width + HEADING_PADDING * 2.0, HEADING_HEIGHT)
+		Vector2(HEADING_LEFT, -heading_height * HEADING_OVERLAP),
+		Vector2(text_width + HEADING_PADDING * 2.0, heading_height)
 	)
 	if _plate != null:
 		draw_style_box(_plate, plate)
 	draw_string(
 		heading_font,
-		plate.position + Vector2(HEADING_PADDING, HEADING_HEIGHT * 0.68),
+		plate.position + Vector2(HEADING_PADDING, heading_height * 0.68),
 		heading,
 		HORIZONTAL_ALIGNMENT_LEFT,
 		-1,
-		HEADING_FONT_SIZE,
+		heading_font_size,
 		HEADING_COLOR
 	)
 	_draw_rows()
@@ -110,23 +153,23 @@ func _draw_rows() -> void:
 	for i in rows.size():
 		var row: Dictionary = rows[i]
 		var done: bool = row.get("done", false)
-		var y: float = rows_top + float(i) * ROW_HEIGHT + float(ROW_FONT_SIZE)
+		var y: float = rows_top + float(i) * row_height + float(row_font_size)
 		draw_string(
 			_font,
 			Vector2(rows_left, y),
 			"●" if done else "○",
 			HORIZONTAL_ALIGNMENT_LEFT,
 			-1,
-			ROW_FONT_SIZE,
+			row_font_size,
 			MARK_DONE if done else MARK_TODO
 		)
 		draw_string(
 			_font,
-			Vector2(rows_left + ROW_MARK_GAP, y),
+			Vector2(rows_left + row_mark_gap, y),
 			str(row.get("text", "")),
 			HORIZONTAL_ALIGNMENT_LEFT,
 			-1,
-			ROW_FONT_SIZE,
+			row_font_size,
 			ROW_TEXT_DONE if done else ROW_TEXT_TODO
 		)
 		draw_string(
@@ -135,6 +178,6 @@ func _draw_rows() -> void:
 			str(row.get("count", "")),
 			HORIZONTAL_ALIGNMENT_LEFT,
 			-1,
-			ROW_FONT_SIZE,
+			row_font_size,
 			ROW_COUNT_COLOR
 		)

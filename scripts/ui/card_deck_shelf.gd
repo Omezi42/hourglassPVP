@@ -29,6 +29,9 @@ const DEFAULT_COLUMNS := 6
 ## 棚板の厚みと、その下へ置く名前の取り分。
 const LEDGE_HEIGHT := 7.0
 const NAME_BAND := 17.0
+const NAME_FONT := 12
+## コスト・総量の印の半径の上限。
+const BADGE_MAX := 13.0
 ## 絵の縦横比(砂時計の絵は 1 : 1.30)。
 const ART_RATIO := 1.30
 
@@ -58,6 +61,12 @@ var columns := DEFAULT_COLUMNS:
 		columns = maxi(value, 1)
 		queue_redraw()
 ## 読むだけの棚(共有用のデッキ表)。ホバーも押下も受けない。
+## 名前・数字・名前の帯の倍率。縦画面で文字の目安まで大きくする(GameDesign.md 9章「縦画面」)。
+## 枠と絵の大きさは `size` から決まるため、ここは文字まわりだけに掛かる。
+var text_scale := 1.0:
+	set(value):
+		text_scale = value
+		queue_redraw()
 var readonly := false:
 	set(value):
 		readonly = value
@@ -157,7 +166,7 @@ func _draw() -> void:
 	var cell := Vector2(size.x / float(columns), size.y / float(rows))
 	# **横で頭打ちになったら高さも一緒に詰める。**幅だけを切り詰めると絵が縦へ伸びる
 	# (共有用の横長の表で実際にそうなった)。縦横比は必ず保つ。
-	var art_w: float = minf((cell.y - LEDGE_HEIGHT - NAME_BAND - 4.0) / ART_RATIO, cell.x - 12.0)
+	var art_w: float = minf((cell.y - LEDGE_HEIGHT - _name_band() - 4.0) / ART_RATIO, cell.x - 12.0)
 	var art_h: float = art_w * ART_RATIO
 	for row in rows:
 		_draw_ledge(row, cell)
@@ -173,8 +182,12 @@ func _draw() -> void:
 
 ## 棚板。**厚みのある帯として段ごとに渡す**。1本線だと段が分かれて見えず、
 ## 30枠が1枚の面へ貼り付いているように読める。
+func _name_band() -> float:
+	return NAME_BAND * text_scale
+
+
 func _draw_ledge(row: int, cell: Vector2) -> void:
-	var y: float = (row + 1) * cell.y - NAME_BAND - LEDGE_HEIGHT
+	var y: float = (row + 1) * cell.y - _name_band() - LEDGE_HEIGHT
 	var ledge := Rect2(6.0, y, size.x - 12.0, LEDGE_HEIGHT)
 	(
 		UiPaint
@@ -211,7 +224,7 @@ func _slot_rect(index: int) -> Rect2:
 func _draw_slot(index: int, cell: Vector2, art: Vector2) -> void:
 	var col: int = index % columns
 	var row: int = index / columns
-	var base := Vector2((col + 0.5) * cell.x, (row + 1) * cell.y - NAME_BAND - LEDGE_HEIGHT)
+	var base := Vector2((col + 0.5) * cell.x, (row + 1) * cell.y - _name_band() - LEDGE_HEIGHT)
 	var hit := Rect2(Vector2(col * cell.x, row * cell.y), cell)
 	_hits.append({"rect": hit, "index": index})
 	if index >= _slots.size():
@@ -231,7 +244,7 @@ func _draw_slot(index: int, cell: Vector2, art: Vector2) -> void:
 		var icon := card.icon_upright
 		if icon != null:
 			draw_texture_rect(icon, art_rect, false)
-	var badge_r: float = clampf(art.x * 0.20, 8.0, 13.0)
+	var badge_r: float = clampf(art.x * 0.20, 8.0, BADGE_MAX * text_scale)
 	_draw_diamond(art_rect.position + Vector2(badge_r * 0.4, badge_r), card.cost, badge_r)
 	_draw_total(Vector2(art_rect.end.x - badge_r * 0.4, art_rect.end.y - badge_r), card, badge_r)
 	# **紋章は絵の左下へ印として押す**(手札の封蝋と同じ置き場。GameDesign.md 9章)。
@@ -243,11 +256,11 @@ func _draw_slot(index: int, cell: Vector2, art: Vector2) -> void:
 	)
 	draw_string(
 		_font,
-		Vector2(col * cell.x, (row + 1) * cell.y - 4.0),
+		Vector2(col * cell.x, (row + 1) * cell.y - 4.0 * text_scale),
 		card.display_name,
 		HORIZONTAL_ALIGNMENT_CENTER,
 		cell.x,
-		12,
+		roundi(NAME_FONT * text_scale),
 		NAME_COLOR
 	)
 

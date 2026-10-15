@@ -48,8 +48,9 @@ var _damage: Array[Dictionary] = []
 ## 効果で上へ戻る砂(巻き戻し・時間停止等。`raise` が true)。
 ## {"side":..., "slot":..., "raise": bool, "gen":...}
 var _ticks: Array[Dictionary] = []
-## 反転(SPIN)のときだけ使う。当たった瞬間に `CardView.play_flip()` を呼ぶ対象。
-var _spin_target: CardView
+## 当たる瞬間まで持ち越す効果の反転(SPIN)。効果の反転は `unit_flipped` を出さないため、
+## ここで `CardView.play_flip()` を呼ぶ。{"side":..., "slot":..., "gen":...}
+var _spins: Array[Dictionary] = []
 ## 撃った直近の砂術(GameDesign.md 6章)。出どころが盤面に無いため、
 ## `spell_cast` から発動元の紋章を控えておく(side → CardData)。
 var _last_spell: Dictionary = {}
@@ -115,15 +116,15 @@ func on_effect_struck(
 		return
 	_arm(source_side, source_slot, origin, style)
 	var from := _origin_position(source_side, source_slot, origin)
-	if _play_signature(card, from, [{"side": target_side, "slot": target_slot}]):
+	var entries := [{"side": target_side, "slot": target_slot}]
+	if _play_signature(card, from, entries):
 		return
+	_hold_spins(entries, -1)
 	var to := (
 		from
 		if style == CardEnums.EffectVisualStyle.PULSE
 		else _target_position(target_side, target_slot)
 	)
-	if style == CardEnums.EffectVisualStyle.SPIN and target_slot >= 0:
-		_spin_target = _screen.view_at(target_side, target_slot)
 	var emblem := card.emblem
 	_queue(func() -> void: _fx.play(emblem, from, to, style, origin))
 
@@ -143,6 +144,7 @@ func on_effect_struck_many(
 	var from := _origin_position(source_side, source_slot, origin)
 	if _play_signature(card, from, targets):
 		return
+	_hold_spins(targets, -1)
 	var tos: Array[Vector2] = []
 	for entry in targets:
 		tos.append(_target_position(entry["side"], entry["slot"]))
@@ -171,8 +173,21 @@ func _play_signature(card: CardData, from: Vector2, targets: Array) -> bool:
 	}
 	_seen[card.id] = true
 	_open_jobs.append(job)
+	_hold_spins(entries, _issued)
 	_queue(_start_signature.bind(job))
 	return true
+
+
+## 反転(SPIN)の効果なら、対象の駒を返す演出を着弾まで持ち越す。`gen` が負なら紋章
+## (`_gen_for()` で番号を引く)。プレイヤーを狙う反転(HPの反転)は駒を持たない。
+func _hold_spins(entries: Array, gen: int) -> void:
+	if _style != CardEnums.EffectVisualStyle.SPIN:
+		return
+	for entry: Dictionary in entries:
+		if entry["slot"] < 0:
+			continue
+		var tag := gen if gen >= 0 else _gen_for(entry["side"], entry["slot"])
+		_spins.append({"side": entry["side"], "slot": entry["slot"], "gen": tag})
 
 
 func _start_signature(job: Dictionary) -> void:
@@ -209,6 +224,7 @@ func _on_signature_hit(index: int) -> void:
 	var view: CardView = _screen.view_at(target["side"], target["slot"])
 	if view == null:
 		return
+	_flip_views(_take_at(_spins, target["side"], target["slot"], _signature_job["gen"]))
 	var rest: Array[Dictionary] = []
 	for hit in _damage:
 		if (
@@ -228,7 +244,6 @@ func _arm(source_side: int, source_slot: int, origin: int, style: int) -> void:
 	_origin = origin
 	_origin_side = source_side
 	_origin_slot = source_slot
-	_spin_target = null
 
 
 ## 攻撃(`CardMatchStrike`)の演出中は、紋章の発射そのものを着弾まで持ち越す
@@ -299,9 +314,7 @@ func _on_impact(upto := -1) -> void:
 			view.play_raise()
 		else:
 			view.play_drop()
-	if _spin_target != null:
-		_spin_target.play_flip()
-		_spin_target = null
+	_flip_views(_take(_spins, upto))
 	_screen.finale.on_impact()
 
 
@@ -326,6 +339,26 @@ func _take(pending: Array[Dictionary], upto: int) -> Array[Dictionary]:
 			rest.append(entry)
 	pending.assign(rest)
 	return taken
+
+
+## `pending` から枠 (`side`, `slot`) かつ番号が `upto` 以下のものを抜き出して返す。
+func _take_at(pending: Array[Dictionary], side: int, slot: int, upto: int) -> Array[Dictionary]:
+	var taken: Array[Dictionary] = []
+	var rest: Array[Dictionary] = []
+	for entry in pending:
+		if entry["side"] == side and entry["slot"] == slot and entry["gen"] <= upto:
+			taken.append(entry)
+		else:
+			rest.append(entry)
+	pending.assign(rest)
+	return taken
+
+
+func _flip_views(spins: Array[Dictionary]) -> void:
+	for spin in spins:
+		var view: CardView = _screen.view_at(spin["side"], spin["slot"])
+		if view != null:
+			view.play_flip()
 
 
 func _on_finished() -> void:

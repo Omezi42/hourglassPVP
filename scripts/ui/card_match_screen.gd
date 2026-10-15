@@ -537,7 +537,7 @@ func _refresh_buttons() -> void:
 ## 選んだ駒の真下。駒の中心へ横を揃え、下端へわずかに重ねて置く。
 func _flip_button_position(slot: int) -> Vector2:
 	var view: CardView = _own_slots[slot]
-	var button_size := CardMatchLayout.FLIP_BUTTON_SIZE
+	var button_size := CardMatchLayout.FLIP_BUTTON_SIZE * _flip_button.scale
 	var x: float = view.position.x + (view.size.x - button_size.x) * 0.5
 	var bottom := view.position.y + view.size.y * (1.0 + view.scale.y) * 0.5
 	return Vector2(x, bottom - CardMatchLayout.FLIP_BUTTON_OVERLAP)

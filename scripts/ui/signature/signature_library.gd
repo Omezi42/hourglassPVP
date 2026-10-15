@@ -27,6 +27,14 @@ const EFFECTS := {
 	"cairn": preload("res://scripts/ui/signature/moves/cairn_effect.gd"),
 	"burial": preload("res://scripts/ui/signature/moves/burial_effect.gd"),
 	"awaken": preload("res://scripts/ui/signature/moves/awaken_effect.gd"),
+	"reverb": preload("res://scripts/ui/signature/moves/reverb_effect.gd"),
+	"delay": preload("res://scripts/ui/signature/moves/delay_effect.gd"),
+	"resonance": preload("res://scripts/ui/signature/moves/resonance_effect.gd"),
+	"canon": preload("res://scripts/ui/signature/moves/canon_effect.gd"),
+	"repeat": preload("res://scripts/ui/signature/moves/repeat_effect.gd"),
+	"encore": preload("res://scripts/ui/signature/moves/encore_effect.gd"),
+	"chorus": preload("res://scripts/ui/signature/moves/chorus_effect.gd"),
+	"crescendo": preload("res://scripts/ui/signature/moves/crescendo_effect.gd"),
 }
 
 

@@ -79,6 +79,13 @@ func apply(hand: Array, my_turn: bool) -> void:
 		if layout.hand_fan:
 			base.y += from_middle * from_middle * FAN_DROP
 			view.rotation = deg_to_rad(from_middle * FAN_DEGREES)
+		# 縦では選んだ札を上へ飛び出させ、重なった扇の最前面へ出す(GameDesign.md 9章)。
+		if layout.hand_select_lift > 0.0:
+			var picked := _screen.selection.is_hand(i)
+			view.z_index = 1 if picked else 0
+			if picked:
+				base.y -= layout.hand_select_lift
+				view.rotation = 0.0
 		_base_positions[view] = base
 		var target: Vector2 = base + Vector2(_avoid_offsets.get(view, 0.0), 0.0)
 		view.visible = true

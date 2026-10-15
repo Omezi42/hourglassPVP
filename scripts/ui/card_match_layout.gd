@@ -26,6 +26,14 @@ const PORTRAIT_HAND_SCALE := 1.35
 const PORTRAIT_DETAIL_SCALE := 1.6
 ## 駒の下の名前とキーワード。
 const PORTRAIT_LABEL_SCALE := 1.65
+## 丸いボタン(反転権・コイン・メニュー)と残り回数の粒。
+const PORTRAIT_BUTTON_SCALE := 1.4
+## 盤面へ重ねる文字の部品(反転ボタン・対象選択の案内・実況・エモート・墓地の一覧・誘導対局の帯)。
+const PORTRAIT_TEXT_SCALE := 1.5
+## 選んだ手札の札を飛び出させる量。
+const PORTRAIT_HAND_SELECT_LIFT := 40.0
+const PORTRAIT_TUTORIAL_SCALE := 1.4
+const PORTRAIT_TUTORIAL_BAND_HEIGHT := 100.0
 ## 駒の列を各陣地の中央からレールと反対側へ寄せる量。レールの右端の時計とターン終了に駒のバッジが掛からないように。
 const PORTRAIT_ROW_SPREAD := 45.0
 ## 相手の列はさらに上へ寄せる(レールの右端の時計に駒の下の文字が掛からないように)。
@@ -65,6 +73,13 @@ var label_scale := 1.0
 ## 手札の札と詳細パネルの縮尺。
 var hand_scale := 1.0
 var detail_scale := 1.0
+var button_scale := 1.0
+var text_scale := 1.0
+var hand_select_lift := 0.0
+## 誘導対局の帯(画面座標の位置と、縮尺を掛ける前の大きさ)と縮尺。
+var tutorial_band_position := Vector2.ZERO
+var tutorial_band_size := Vector2.ZERO
+var tutorial_scale := 1.0
 ## 直前の手の列。
 var history_position := Vector2.ZERO
 var history_horizontal := false
@@ -153,6 +168,8 @@ static func _make_landscape() -> CardMatchLayout:
 	l.own_row_top = 268.0
 	l.history_position = Vector2(18.0, 96.0)
 	l.history_tiles = CardMatchActionHistory.MAX_TILES
+	l.tutorial_band_position = CardMatchTutorial.BAND_RECT.position
+	l.tutorial_band_size = CardMatchTutorial.BAND_RECT.size
 	l.flip_right_center = Vector2(column_center, ActionColumnLayout.FLIP_RIGHT_Y)
 	l.flip_gauge_position = Vector2(
 		column_center - FlipRightGauge.GAUGE_SIZE.x * 0.5, ActionColumnLayout.FLIP_GAUGE_TOP
@@ -210,6 +227,12 @@ static func _make_portrait() -> CardMatchLayout:
 	l.label_scale = PORTRAIT_LABEL_SCALE
 	l.hand_scale = PORTRAIT_HAND_SCALE
 	l.detail_scale = PORTRAIT_DETAIL_SCALE
+	l.button_scale = PORTRAIT_BUTTON_SCALE
+	l.text_scale = PORTRAIT_TEXT_SCALE
+	l.hand_select_lift = PORTRAIT_HAND_SELECT_LIFT
+	l.tutorial_scale = PORTRAIT_TUTORIAL_SCALE
+	l.tutorial_band_position = Vector2(side, l.table_rect.position.y)
+	l.tutorial_band_size = Vector2(width / PORTRAIT_TUTORIAL_SCALE, PORTRAIT_TUTORIAL_BAND_HEIGHT)
 	l.slot_pitch = (width - side * 2.0) / float(MatchState.BOARD_SIZE)
 	var half_piece := CardView.BOARD_SIZE_PX * 0.5
 	l.slot_left = side * 2.0 + l.slot_pitch * 0.5 - half_piece.x
@@ -223,20 +246,21 @@ static func _make_portrait() -> CardMatchLayout:
 		l.turn_end_center.x, rail - end_radius - ActionColumnLayout.CLOCK_DIAMETER * 0.5
 	)
 	# 反転権(+残り回数の粒)とコインはレールの左端。右端のターン終了と対にする。
-	var flip_radius := ActionColumnLayout.FLIP_RIGHT_DIAMETER * 0.5
+	var flip_radius := ActionColumnLayout.FLIP_RIGHT_DIAMETER * 0.5 * PORTRAIT_BUTTON_SCALE
 	l.flip_right_center = Vector2(l.table_rect.position.x + PORTRAIT_GAP + flip_radius, rail)
+	var gauge_height := FlipRightGauge.GAUGE_SIZE.y * PORTRAIT_BUTTON_SCALE
 	l.flip_gauge_position = Vector2(
-		l.flip_right_center.x + flip_radius + PORTRAIT_GAP, rail - FlipRightGauge.GAUGE_SIZE.y * 0.5
+		l.flip_right_center.x + flip_radius + PORTRAIT_GAP, rail - gauge_height * 0.5
 	)
+	var coin_radius := ActionColumnLayout.COIN_DIAMETER * 0.5 * PORTRAIT_BUTTON_SCALE
 	l.coin_center = Vector2(
-		l.flip_right_center.x,
-		rail - flip_radius - PORTRAIT_GAP - ActionColumnLayout.COIN_DIAMETER * 0.5
+		l.flip_right_center.x + flip_radius + PORTRAIT_GAP + coin_radius,
+		rail - gauge_height * 0.5 - PORTRAIT_GAP - coin_radius
 	)
 	l.play_right = l.screen_size.x
-	var gauge_right := l.flip_gauge_position.x + FlipRightGauge.GAUGE_SIZE.x
-	var turn_end_left := l.turn_end_center.x - end_radius
-	l.replay_center = Vector2((gauge_right + turn_end_left) * 0.5, rail)
-	var prompt_size := Vector2(148, 52)
+	var gauge_right := l.flip_gauge_position.x + FlipRightGauge.GAUGE_SIZE.x * PORTRAIT_BUTTON_SCALE
+	l.replay_center = Vector2((gauge_right + l.turn_end_center.x - end_radius) * 0.5, rail)
+	var prompt_size := Vector2(148, 52) * PORTRAIT_TEXT_SCALE
 	l.prompt_rect = Rect2(Vector2(l.screen_size.x * 0.5, rail) - prompt_size * 0.5, prompt_size)
 	l.waiting_center = l.table_rect.get_center()
 	l.version_position = Vector2(side + 6.0, l.screen_size.y - 6.0)

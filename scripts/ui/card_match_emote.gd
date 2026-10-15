@@ -27,6 +27,8 @@ var _mute_btn: Button
 ## 選択肢を入れる欄。中身は開くたびに組み直す(枠の設定は対局の外で変えられるため)。
 var _items_box: VBoxContainer
 var _popup_anchor := Vector2.ZERO
+## メニューの項目の脇へ開くか(縦)。横ではボタンの上へ開く。
+var _popup_beside := false
 var _cooldown := 0.0
 
 
@@ -90,7 +92,19 @@ func _hairline() -> Control:
 ## ポップアップを出す基準(ボタンの左上の画面座標)だけを差し替える。ボタンがメニューの中にあるとき用。
 func anchor_popup(at: Vector2) -> void:
 	_popup_anchor = at
+	_popup_beside = true
 	_place_popup()
+
+
+## 縦では選択肢を拡大し、メニューの項目の脇へ開く(`CardMatchArrange`)。
+func apply_layout(layout: CardMatchLayout) -> void:
+	_popup.scale = Vector2.ONE * layout.text_scale
+	_popup_beside = false
+	_place_popup()
+
+
+func toggle_popup() -> void:
+	_toggle_popup()
 
 
 ## エモートのボタンと、その上へ開くポップアップの位置。**ポップアップは下端をボタンの
@@ -119,8 +133,12 @@ func _place_popup() -> void:
 	if _popup == null:
 		return
 	var height: float = maxf(_popup.get_combined_minimum_size().y, _popup.size.y)
+	var shown := Vector2(POPUP_WIDTH, height) * _popup.scale
+	if _popup_beside:
+		_popup.position = Vector2(_popup_anchor.x - shown.x - POPUP_GAP, _popup_anchor.y)
+		return
 	_popup.position = Vector2(
-		_popup_anchor.x - POPUP_WIDTH - 12.0, _popup_anchor.y - height - POPUP_GAP
+		_popup_anchor.x - shown.x - 12.0, _popup_anchor.y - shown.y - POPUP_GAP
 	)
 
 

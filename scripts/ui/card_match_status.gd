@@ -111,7 +111,11 @@ func _draw_waiting_panel() -> void:
 
 func _draw_target_prompt() -> void:
 	var font := get_theme_default_font()
-	var prompt := CardMatchLayout.current().prompt_rect
+	# 縦では案内ごと拡大する(`prompt_rect` は拡大後の大きさ)。中身は横の大きさで描いて縮尺を掛ける。
+	var shown := CardMatchLayout.current().prompt_rect
+	var zoom := CardMatchLayout.current().text_scale
+	draw_set_transform(shown.position, 0.0, Vector2.ONE * zoom)
+	var prompt := Rect2(Vector2.ZERO, shown.size / zoom)
 	draw_rect(prompt, Color(0.08, 0.12, 0.14, 0.95))
 	draw_rect(prompt, CardView.SELECT_CYAN, false, 2.0)
 	draw_string(
@@ -132,3 +136,4 @@ func _draw_target_prompt() -> void:
 		14,
 		UiPalette.TEXT_OFFWHITE
 	)
+	draw_set_transform_matrix(Transform2D.IDENTITY)

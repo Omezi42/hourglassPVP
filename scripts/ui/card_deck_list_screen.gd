@@ -23,6 +23,27 @@ const CARD_SIZE := Vector2(596, 112)
 ## 代表として並べる紋章の数。30枚をそのまま並べるとカードに収まらない(GameDesign.md 9章)。
 const EMBLEM_COUNT := 5
 const EMBLEM_SIZE := Vector2(34, 34)
+const NAME_FONT := 26
+const SUMMARY_FONT := 15
+const GUIDE_FONT := 20
+const ACTION_SIZE := Vector2(96, 44)
+const MOVE_SIZE := Vector2(48, 44)
+
+## 縦画面(GameDesign.md 9章「縦画面」)。1列にし、文字と紋章を大きく、
+## 管理のボタンは名前の下の行へ指で押せる大きさで並べる。
+const PORTRAIT_COLUMNS := 1
+const PORTRAIT_CARD_SIZE := Vector2(624, 124)
+## 管理ではボタンの行(72px + 間隔)のぶん背を足す。
+const PORTRAIT_MANAGE_CARD_SIZE := Vector2(624, 212)
+## 一覧の枠(`content_panel`)の左右の内側の余白の合計。折り返す案内の1行の幅に使う。
+const PANEL_INNER_MARGIN := 48.0
+const PORTRAIT_NAME_FONT := 32
+const PORTRAIT_SUMMARY_FONT := 24
+const PORTRAIT_GUIDE_FONT := 24
+const PORTRAIT_EMBLEM_SIZE := Vector2(44, 44)
+const PORTRAIT_ACTION_SIZE := Vector2(140, 72)
+const PORTRAIT_MOVE_SIZE := Vector2(96, 72)
+const PORTRAIT_BUTTON_FONT := 26
 ## 削除した札が縮んで消えるまでの尺(GameDesign.md 9章)。
 const DELETE_SHRINK_DURATION := 0.15
 
@@ -38,6 +59,8 @@ var _confirm: ConfirmModal
 var _mode: Mode = Mode.MANAGE
 var _reordering := false
 var _pending_delete := -1
+var _panel: PanelContainer
+var _portrait := false
 
 
 func _ready() -> void:
@@ -73,19 +96,19 @@ func _build() -> void:
 	_reorder_button.pressed.connect(_on_reorder_pressed)
 	_header.add_action(_reorder_button)
 
-	var panel := PanelContainer.new()
-	panel.position = LIST_RECT.position
-	panel.size = LIST_RECT.size
-	panel.custom_minimum_size = LIST_RECT.size
+	_panel = PanelContainer.new()
+	_panel.position = LIST_RECT.position
+	_panel.size = LIST_RECT.size
+	_panel.custom_minimum_size = LIST_RECT.size
 	var style: StyleBox = load(PANEL_STYLE)
 	if style != null:
-		panel.add_theme_stylebox_override("panel", style)
-	add_child(panel)
+		_panel.add_theme_stylebox_override("panel", style)
+	add_child(_panel)
 
 	var column := VBoxContainer.new()
-	panel.add_child(column)
+	_panel.add_child(column)
 	_empty_label = Label.new()
-	_empty_label.add_theme_font_size_override("font_size", 20)
+	_empty_label.add_theme_font_size_override("font_size", GUIDE_FONT)
 	_empty_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(_empty_label)
 	var scroll := ScrollContainer.new()
@@ -115,6 +138,40 @@ func _build() -> void:
 	_confirm.cancelled.connect(func() -> void: _pending_delete = -1)
 
 
+## 縦横が変わったときに `Main` から呼ばれる(Architecture.md 4.7節)。モードと並び替え中かどうかは保つ。
+func apply_orientation(portrait: bool) -> void:
+	_portrait = portrait
+	if _panel == null:
+		return
+	_header.apply_orientation(portrait)
+	_layout()
+	if is_visible_in_tree():
+		_refresh()
+
+
+func _layout() -> void:
+	var rect := LIST_RECT
+	if _portrait:
+		var top := _header.portrait_content_top()
+		rect = Rect2(
+			ScreenHeader.OUTER_MARGIN,
+			top,
+			ScreenOrientation.PORTRAIT_SIZE.x - ScreenHeader.OUTER_MARGIN * 2.0,
+			ScreenHeader.PORTRAIT_CONTENT_BOTTOM - top
+		)
+	_panel.position = rect.position
+	_panel.custom_minimum_size = rect.size
+	_panel.size = rect.size
+	_empty_state.position = rect.position + EMPTY_INSET
+	_empty_state.size = rect.size - EMPTY_INSET * 2.0
+	_empty_label.add_theme_font_size_override(
+		"font_size", PORTRAIT_GUIDE_FONT if _portrait else GUIDE_FONT
+	)
+	# 折り返す行には幅を与える(幅が決まる前の1文字ずつの高さが残るため。Pitfalls.md)。
+	_empty_label.custom_minimum_size.x = rect.size.x - PANEL_INNER_MARGIN if _portrait else 0.0
+	_grid.columns = PORTRAIT_COLUMNS if _portrait else 2
+
+
 # --- 表示 ---------------------------------------------------------------
 
 
@@ -126,11 +183,16 @@ func _refresh() -> void:
 	_reorder_button.visible = not picking and decks.size() > 1
 	_reorder_button.text = "並び替えを終える" if _reordering else "デッキ入れ替え"
 	_empty_label.text = _guide_text(decks.size(), picking)
+	# 縦では主アクションの行の有無で一覧の上端が変わる。
+	if _portrait:
+		_layout()
 	if decks.is_empty():
 		_empty_state.show_message("まだデッキがありません", _empty_hint(picking))
 	else:
 		_empty_state.hide_message()
+	# 同じフレームで2度組み直しても(向きの切り替え)古い札が並びに残らないよう、すぐ外す。
 	for child in _grid.get_children():
+		_grid.remove_child(child)
 		child.queue_free()
 	for i in decks.size():
 		_grid.add_child(_make_card(i, decks[i], decks.size()))
@@ -157,6 +219,10 @@ func _guide_text(count: int, picking: bool) -> String:
 func _make_card(index: int, deck: Dictionary, total: int) -> Control:
 	var area := ClickArea.new()
 	area.custom_minimum_size = CARD_SIZE
+	if _portrait:
+		area.custom_minimum_size = (
+			PORTRAIT_MANAGE_CARD_SIZE if _mode == Mode.MANAGE else PORTRAIT_CARD_SIZE
+		)
 	if _mode == Mode.PICK:
 		area.area_pressed.connect(func() -> void: deck_picked.emit(index))
 	else:
@@ -178,7 +244,14 @@ func _make_card(index: int, deck: Dictionary, total: int) -> Control:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 12)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	panel.add_child(row)
+	if _portrait and _mode == Mode.MANAGE:
+		var stack := VBoxContainer.new()
+		stack.add_theme_constant_override("separation", 12)
+		stack.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		panel.add_child(stack)
+		stack.add_child(row)
+	else:
+		panel.add_child(row)
 
 	var text_column := VBoxContainer.new()
 	text_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -187,17 +260,27 @@ func _make_card(index: int, deck: Dictionary, total: int) -> Control:
 	row.add_child(text_column)
 	var name_label := Label.new()
 	name_label.text = str(deck.get("name", CardDeckSave.DEFAULT_NAME))
-	name_label.add_theme_font_size_override("font_size", 26)
+	name_label.add_theme_font_size_override(
+		"font_size", PORTRAIT_NAME_FONT if _portrait else NAME_FONT
+	)
 	text_column.add_child(name_label)
 	var summary := Label.new()
 	summary.text = _summary_of(deck.get("cards", []))
-	summary.add_theme_font_size_override("font_size", 15)
+	summary.add_theme_font_size_override(
+		"font_size", PORTRAIT_SUMMARY_FONT if _portrait else SUMMARY_FONT
+	)
 	summary.add_theme_color_override("font_color", UiPalette.BRASS_HIGHLIGHT)
 	text_column.add_child(summary)
 
 	row.add_child(_make_emblems(deck.get("cards", [])))
 	if _mode == Mode.MANAGE:
-		row.add_child(_make_actions(index, total))
+		var actions := _make_actions(index, total)
+		if _portrait:
+			# 名前と紋章の行の下へ、右寄せで置く。
+			actions.alignment = BoxContainer.ALIGNMENT_END
+			row.get_parent().add_child(actions)
+		else:
+			row.add_child(actions)
 	return area
 
 
@@ -215,7 +298,7 @@ func _make_emblems(cards: Array) -> Control:
 	for card in distinct.slice(0, EMBLEM_COUNT):
 		var icon := TextureRect.new()
 		icon.texture = card.emblem if card.emblem != null else card.icon_upright
-		icon.custom_minimum_size = EMBLEM_SIZE
+		icon.custom_minimum_size = PORTRAIT_EMBLEM_SIZE if _portrait else EMBLEM_SIZE
 		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		icon.modulate = UiPalette.BRASS_HIGHLIGHT
@@ -224,27 +307,43 @@ func _make_emblems(cards: Array) -> Control:
 	return box
 
 
-func _make_actions(index: int, total: int) -> Control:
+func _make_actions(index: int, total: int) -> HBoxContainer:
 	var box := HBoxContainer.new()
 	box.add_theme_constant_override("separation", 8)
 	box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	if _reordering:
-		var up := CodedButton.make_icon("↑", Vector2(48, 44))
+		var up := _action_button("↑", true)
 		up.disabled = index == 0
 		up.pressed.connect(_on_move_pressed.bind(index, -1))
 		box.add_child(up)
-		var down := CodedButton.make_icon("↓", Vector2(48, 44))
+		var down := _action_button("↓", true)
 		down.disabled = index >= total - 1
 		down.pressed.connect(_on_move_pressed.bind(index, 1))
 		box.add_child(down)
 		return box
-	var edit := CodedButton.make("編集", Vector2(96, 44))
+	var edit := _action_button("編集")
 	edit.pressed.connect(func() -> void: edit_requested.emit(index))
 	box.add_child(edit)
-	var remove := CodedButton.make("削除", Vector2(96, 44))
+	var remove := _action_button("削除")
 	remove.pressed.connect(_on_delete_pressed.bind(index))
 	box.add_child(remove)
 	return box
+
+
+func _action_button(label: String, is_icon := false) -> Button:
+	var button_size := ACTION_SIZE
+	if is_icon:
+		button_size = PORTRAIT_MOVE_SIZE if _portrait else MOVE_SIZE
+	elif _portrait:
+		button_size = PORTRAIT_ACTION_SIZE
+	var button := (
+		CodedButton.make_icon(label, button_size)
+		if is_icon
+		else CodedButton.make(label, button_size)
+	)
+	if _portrait:
+		button.add_theme_font_size_override("font_size", PORTRAIT_BUTTON_FONT)
+	return button
 
 
 ## デッキの中身を1行で示す。枚数とコストの重心が分かれば、どの構築かを思い出せる。

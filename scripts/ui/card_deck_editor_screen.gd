@@ -32,6 +32,9 @@ const GRID_GAP := 6
 ## 本の外(木箱の上)へ置く操作。共通ヘッダーと同じ並び(左=戻る / 右=主アクション)。
 ## 戻るボタンの見た目。共通ヘッダー(`ScreenHeader`)と同じ左向きの五角形にする。
 const BACK_GROUP := "back_nav"
+## 縦の切り替えのうち、選んでいない側の見た目。
+const TAB_GROUP := "wide_text"
+const NAME_FONT := 18
 const BACK_RECT := Rect2(24, 30, 92, 42)
 const ACTION_SIZE := Vector2(126, 42)
 const ACTION_GAP := 10.0
@@ -44,6 +47,40 @@ const DETAIL_BOUNDS := Rect2(16, 16, SCREEN_WIDTH - 32, 688)
 const DETAIL_HIDE_DELAY := 0.15
 ## 一覧⇄棚の飛翔演出の尺(GameDesign.md 9章「手触り」)。
 const FLIGHT_DURATION := 0.32
+const COUNT_FONT := 16
+const FILTER_SIZE := Vector2(130, 36)
+const NAME_SIZE := Vector2(228, 36)
+const PROGRESS_FONT := 20
+
+## 縦画面(GameDesign.md 9章「縦画面」)。在庫棚と組立台を同じ木箱で切り替え、
+## 中身は文字の目安(本文24px以上)を満たす大きさにする。
+const PORTRAIT_BACK_RECT := Rect2(24, 22, 140, 64)
+const PORTRAIT_ACTION_SIZE := Vector2(170, 72)
+const PORTRAIT_ACTION_TOP := 112.0
+const PORTRAIT_TAB_RECT := Rect2(24, 196, 672, 72)
+const PORTRAIT_TAB_GAP := 12.0
+const PORTRAIT_BOX := WorkshopBackdrop.PORTRAIT_BOX_RECT
+const PORTRAIT_GRID_RECT := Rect2(
+	PORTRAIT_BOX.position.x + 24,
+	PORTRAIT_BOX.position.y + WorkshopBackdrop.BAND_HEIGHT + 10,
+	PORTRAIT_BOX.size.x - 48,
+	PORTRAIT_BOX.size.y - WorkshopBackdrop.BAND_HEIGHT - 26
+)
+const PORTRAIT_SIDE_RECT := Rect2(
+	PORTRAIT_BOX.position.x + 18,
+	PORTRAIT_BOX.position.y + 18,
+	PORTRAIT_BOX.size.x - 36,
+	PORTRAIT_BOX.size.y - 36
+)
+const PORTRAIT_GRID_COLUMNS := 3
+const PORTRAIT_STOCK_ZOOM := 1.6
+const PORTRAIT_SHELF_TEXT := 1.7
+const PORTRAIT_BUTTON_FONT := 26
+const PORTRAIT_COUNT_FONT := 24
+const PORTRAIT_FILTER_SIZE := Vector2(190, 64)
+const PORTRAIT_NAME_SIZE := Vector2(340, 64)
+const PORTRAIT_PROGRESS_FONT := 28
+const PORTRAIT_DETAIL_SCALE := 1.6
 
 var _save_button: Button
 var _filter: CardDeckFilter
@@ -68,6 +105,15 @@ var _deck: Array = []
 ## 編集中のデッキが一覧の何番目か。-1 は新規作成(保存すると末尾へ追加する)。
 var _index := -1
 var _name_input: LineEdit
+var _backdrop: WorkshopBackdrop
+var _back: Button
+var _actions: Array[Button] = []
+var _grid_box: VBoxContainer
+var _side_box: VBoxContainer
+var _tab_buttons: Array[Button] = []
+var _portrait := false
+## 縦で在庫棚を出しているか(false なら組立台)。
+var _show_stock := true
 
 
 func _ready() -> void:
@@ -95,8 +141,10 @@ func open(index: int = -1) -> void:
 
 
 func _build() -> void:
-	add_child(WorkshopBackdrop.new())
+	_backdrop = WorkshopBackdrop.new()
+	add_child(_backdrop)
 	_build_header()
+	_build_tabs()
 	_build_grid()
 	_build_side()
 	_build_detail()
@@ -121,10 +169,10 @@ func _build_header() -> void:
 	# 戻るの見た目は共通ヘッダーと揃える(GameDesign.md 9章)。この画面は本・工房の
 	# 紙面へ操作を載せないためヘッダーを持たないが、**ボタンの形まで別にすると
 	# 画面ごとに戻り方が違って見える**。
-	var back := CodedButton.make_in_group("戻る", BACK_RECT.size, BACK_GROUP)
-	back.position = BACK_RECT.position
-	back.pressed.connect(func() -> void: back_pressed.emit())
-	add_child(back)
+	_back = CodedButton.make_in_group("戻る", BACK_RECT.size, BACK_GROUP)
+	_back.position = BACK_RECT.position
+	_back.pressed.connect(func() -> void: back_pressed.emit())
+	add_child(_back)
 	# 右から「共有 / プリセット / 保存」の順に積む(左へ行くほど主要な操作)。
 	var labels := ["保存", "プリセット", "共有"]
 	var handlers: Array[Callable] = [
@@ -141,8 +189,19 @@ func _build_header() -> void:
 		)
 		button.pressed.connect(handlers[i])
 		add_child(button)
+		_actions.append(button)
 		if i == 0:
 			_save_button = button
+
+
+## 縦でだけ出す、在庫棚と組立台の切り替え。
+func _build_tabs() -> void:
+	for i in 2:
+		var tab := CodedButton.make("", Vector2.ZERO)
+		tab.visible = false
+		tab.pressed.connect(_select_tab.bind(i == 0))
+		add_child(tab)
+		_tab_buttons.append(tab)
 
 
 func _build_grid() -> void:
@@ -152,6 +211,7 @@ func _build_grid() -> void:
 	container.custom_minimum_size = GRID_RECT.size
 	container.add_theme_constant_override("separation", 8)
 	add_child(container)
+	_grid_box = container
 
 	# 上部ツールバー(件数表示 + 絞り込みボタン)
 	var toolbar := HBoxContainer.new()
@@ -160,13 +220,13 @@ func _build_grid() -> void:
 
 	_count_label = Label.new()
 	_count_label.text = ""
-	_count_label.add_theme_font_size_override("font_size", 16)
+	_count_label.add_theme_font_size_override("font_size", COUNT_FONT)
 	_count_label.add_theme_color_override("font_color", UiPalette.BRASS_HIGHLIGHT)
 	_count_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_count_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	toolbar.add_child(_count_label)
 
-	_filter_button = CodedButton.make("絞り込み", Vector2(130, 36))
+	_filter_button = CodedButton.make("絞り込み", FILTER_SIZE)
 	# **押したボタンの位置から膨らんで開く**(GameDesign.md 9章「手触り」)。
 	_filter_button.pressed.connect(func() -> void: _filter.open(_filter_button.get_global_rect()))
 	toolbar.add_child(_filter_button)
@@ -201,6 +261,7 @@ func _build_side() -> void:
 	column.custom_minimum_size = SIDE_RECT.size
 	column.add_theme_constant_override("separation", 8)
 	add_child(column)
+	_side_box = column
 
 	# 1. デッキ名と枚数
 	var top_row := HBoxContainer.new()
@@ -209,11 +270,11 @@ func _build_side() -> void:
 	_name_input = LineEdit.new()
 	_name_input.placeholder_text = "デッキ名"
 	_name_input.max_length = CardDeckSave.NAME_LIMIT
-	_name_input.custom_minimum_size = Vector2(228, 36)
+	_name_input.custom_minimum_size = NAME_SIZE
 	MobileTextInput.wire(_name_input, "デッキ名")
 	top_row.add_child(_name_input)
 	_progress = Label.new()
-	_progress.add_theme_font_size_override("font_size", 20)
+	_progress.add_theme_font_size_override("font_size", PROGRESS_FONT)
 	_progress.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_progress.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_progress.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -255,6 +316,91 @@ func _build_detail() -> void:
 	add_child(_detail_hide_timer)
 
 
+# --- 向き ---------------------------------------------------------------
+
+
+## 縦横が変わったときに `Main` から呼ばれる(Architecture.md 4.7節)。編成中のデッキ・名前・絞り込みは保つ。
+func apply_orientation(portrait: bool) -> void:
+	_portrait = portrait
+	if _grid_box == null:
+		return
+	_backdrop.portrait = portrait
+	var font := PORTRAIT_BUTTON_FONT if portrait else 0
+	_place(_back, PORTRAIT_BACK_RECT if portrait else BACK_RECT, font)
+	var action_size := PORTRAIT_ACTION_SIZE if portrait else ACTION_SIZE
+	var right := float(ScreenOrientation.base_size().x) - ScreenHeader.OUTER_MARGIN
+	for i in _actions.size():
+		var from_right := _actions.size() - i
+		var top := PORTRAIT_ACTION_TOP if portrait else BACK_RECT.position.y
+		var x := right - from_right * (action_size.x + ACTION_GAP) + ACTION_GAP
+		_place(_actions[i], Rect2(Vector2(x, top), action_size), font)
+	var tab_w := (PORTRAIT_TAB_RECT.size.x - PORTRAIT_TAB_GAP) * 0.5
+	for i in _tab_buttons.size():
+		_tab_buttons[i].visible = portrait
+		var at := PORTRAIT_TAB_RECT.position + Vector2((tab_w + PORTRAIT_TAB_GAP) * i, 0.0)
+		_place(_tab_buttons[i], Rect2(at, Vector2(tab_w, PORTRAIT_TAB_RECT.size.y)), font)
+	_place_box(_grid_box, PORTRAIT_GRID_RECT if portrait else GRID_RECT)
+	_place_box(_side_box, PORTRAIT_SIDE_RECT if portrait else SIDE_RECT)
+	_grid.columns = PORTRAIT_GRID_COLUMNS if portrait else GRID_COLUMNS
+	for view in _card_views:
+		view.zoom = PORTRAIT_STOCK_ZOOM if portrait else 1.0
+	_shelf.text_scale = PORTRAIT_SHELF_TEXT if portrait else 1.0
+	_shelf.custom_minimum_size.x = PORTRAIT_SIDE_RECT.size.x if portrait else SIDE_INNER_WIDTH
+	_count_label.add_theme_font_size_override(
+		"font_size", PORTRAIT_COUNT_FONT if portrait else COUNT_FONT
+	)
+	_place(
+		_filter_button, Rect2(Vector2.ZERO, PORTRAIT_FILTER_SIZE if portrait else FILTER_SIZE), font
+	)
+	_name_input.custom_minimum_size = PORTRAIT_NAME_SIZE if portrait else NAME_SIZE
+	_name_input.add_theme_font_size_override("font_size", font if portrait else NAME_FONT)
+	_progress.add_theme_font_size_override(
+		"font_size", PORTRAIT_PROGRESS_FONT if portrait else PROGRESS_FONT
+	)
+	_detail.scale = Vector2.ONE * (PORTRAIT_DETAIL_SCALE if portrait else 1.0)
+	_hide_detail()
+	_select_tab(_show_stock)
+
+
+## 縦で在庫棚と組立台を切り替える。横では両方を出す。
+func _select_tab(stock: bool) -> void:
+	_show_stock = stock
+	_grid_box.visible = stock or not _portrait
+	_side_box.visible = not stock or not _portrait
+	_backdrop.show_shelf = stock
+	for i in _tab_buttons.size():
+		var active: bool = (i == 0) == stock
+		CodedButton.apply_styles(
+			_tab_buttons[i], CodedButton.PRIMARY_ACTION_GROUP if active else TAB_GROUP
+		)
+	_refresh_tab_labels()
+
+
+func _refresh_tab_labels() -> void:
+	if _tab_buttons.is_empty():
+		return
+	_tab_buttons[0].text = "在庫棚"
+	_tab_buttons[1].text = "デッキ %d / %d 枚" % [_deck.size(), MatchState.DECK_SIZE]
+
+
+## ボタンを置き直す。`font` が0なら文字の大きさは作ったとき(テーマ)のまま。
+func _place(button: Control, rect: Rect2, font: int) -> void:
+	button.custom_minimum_size = rect.size
+	button.size = rect.size
+	if rect.position != Vector2.ZERO:
+		button.position = rect.position
+	if font > 0:
+		button.add_theme_font_size_override("font_size", font)
+	else:
+		button.remove_theme_font_size_override("font_size")
+
+
+func _place_box(box: Control, rect: Rect2) -> void:
+	box.position = rect.position
+	box.custom_minimum_size = rect.size
+	box.size = rect.size
+
+
 # --- 表示 ---------------------------------------------------------------
 
 
@@ -271,6 +417,7 @@ func _refresh() -> void:
 		var can_add: bool = not full and copies < CardDeckSave.COPY_LIMIT and owned
 		_card_views[i].show_card(card, copies, CardDeckSave.COPY_LIMIT, can_add, not owned)
 	_save_button.disabled = not full
+	_refresh_tab_labels()
 
 
 func _apply_filter() -> void:
@@ -312,9 +459,14 @@ func _show_detail(card: CardData) -> void:
 	if _detail_hide_timer != null:
 		_detail_hide_timer.stop()
 	_detail.show_card(card)
-	_detail.position = CardDetailPanel.place_near(
-		get_local_mouse_position(), _detail.size, DETAIL_BOUNDS
-	)
+	if _portrait:
+		# 縦は指で隠れないよう画面の中央へ固定して出す(対局画面の長押しと同じ)。
+		var screen := Vector2(ScreenOrientation.base_size())
+		_detail.position = (screen - _detail.size * _detail.scale) * 0.5
+	else:
+		_detail.position = CardDetailPanel.place_near(
+			get_local_mouse_position(), _detail.size, DETAIL_BOUNDS
+		)
 	_detail.visible = true
 
 
