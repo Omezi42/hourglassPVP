@@ -38,6 +38,8 @@ var kind: ShopCatalog.Kind
 var id := ""
 var owned := false
 var affordable := true
+## 名前と価格の文字の倍率。縦で中身ごと拡大しても目安(本文24px)に届かない置き場所が使う。
+var text_scale := 1.0
 var selected := false:
 	set(value):
 		selected = value
@@ -140,6 +142,14 @@ func _lit() -> bool:
 	return is_hovered() and (owned or affordable)
 
 
+func _name_font_size() -> int:
+	return roundi(NAME_FONT_SIZE * text_scale)
+
+
+func _price_font_size() -> int:
+	return roundi(PRICE_FONT_SIZE * text_scale)
+
+
 func _draw_footer() -> void:
 	var inner := _inner_rect()
 	var lit := _lit()
@@ -157,7 +167,7 @@ func _draw_footer() -> void:
 			name,
 			HORIZONTAL_ALIGNMENT_CENTER,
 			text_width,
-			NAME_FONT_SIZE,
+			_name_font_size(),
 			name_color
 		)
 	else:
@@ -166,8 +176,8 @@ func _draw_footer() -> void:
 			Vector2(text_left, baseline),
 			name,
 			HORIZONTAL_ALIGNMENT_LEFT,
-			text_width - PRICE_WIDTH,
-			NAME_FONT_SIZE,
+			text_width - PRICE_WIDTH * text_scale,
+			_name_font_size(),
 			name_color
 		)
 	_draw_price(baseline, lit)
@@ -178,7 +188,7 @@ func _draw_price(baseline: float, lit: bool) -> void:
 	var inner := _inner_rect()
 	var label := "✓ 所持" if owned else CurrencyRules.amount_text(ShopCatalog.price(kind, id))
 	var label_width := (
-		_font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, PRICE_FONT_SIZE).x
+		_font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, _price_font_size()).x
 	)
 	var price_right := inner.end.x - TEXT_PAD
 	if _stacked():
@@ -193,7 +203,7 @@ func _draw_price(baseline: float, lit: bool) -> void:
 			label,
 			HORIZONTAL_ALIGNMENT_LEFT,
 			-1,
-			PRICE_FONT_SIZE,
+			_price_font_size(),
 			UiPalette.BRASS_PRESSED_DARK if lit else UiPalette.TEXT_MUTED
 		)
 		return
@@ -204,12 +214,12 @@ func _draw_price(baseline: float, lit: bool) -> void:
 		label,
 		HORIZONTAL_ALIGNMENT_LEFT,
 		-1,
-		PRICE_FONT_SIZE,
+		_price_font_size(),
 		UiPalette.BRASS_PRESSED_DARK if lit else UiPalette.BRASS_HIGHLIGHT
 	)
 	var emblem_center := Vector2(
 		price_right - label_width - PRICE_EMBLEM_GAP - PRICE_EMBLEM_SIZE * 0.5,
-		baseline - PRICE_FONT_SIZE * 0.36
+		baseline - _price_font_size() * 0.36
 	)
 	UiPaint.draw_emblem(
 		get_canvas_item(), UiPaint.Emblem.HOURGLASS, emblem_center, PRICE_EMBLEM_SIZE

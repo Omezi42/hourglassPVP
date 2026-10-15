@@ -34,6 +34,13 @@ const PORTRAIT_BACK := Color(0.05, 0.04, 0.03)
 const EMPTY_STAR_FILL := Color(0, 0, 0, 0.35)
 const TEXT_SHADOW := Color(0, 0, 0, 0.6)
 const TEXT_SHADOW_OFFSET := Vector2(0, 1.5)
+## 縦画面(GameDesign.md 9章「縦画面」)。名前と段位を1行に並べる幅が無いため、上の段に称号・表示名、
+## 下の段にメダル・帯と階級・★(レート)を積み、中身ごと拡大する。順位とアイコンは2段の中央。
+const STACKED_HEIGHT := 78.0
+const STACKED_NAME_Y := 24.0
+const STACKED_STANDING_Y := 58.0
+const STACKED_TITLE_SIZE := 14
+const STACKED_TIER_GAP := 10.0
 
 ## 順位。0以下は上位の一覧に入っていない(「圏外」)。
 var rank := 0
@@ -45,6 +52,9 @@ var stars := 0
 var rating := 0
 var mine := false
 var zebra := false
+## 描く倍率と、2段に積むか(縦)。`set_portrait()` で決める。
+var zoom := 1.0
+var stacked := false
 var _font: Font
 var _display: Font
 
@@ -59,6 +69,18 @@ func _ready() -> void:
 	_display = UiFonts.display_font(_font)
 
 
+## 行の高さ(倍率を掛けた後)。
+func row_height() -> float:
+	return (STACKED_HEIGHT if stacked else HEIGHT) * zoom
+
+
+func set_portrait(portrait: bool, portrait_zoom: float) -> void:
+	stacked = portrait
+	zoom = portrait_zoom if portrait else 1.0
+	custom_minimum_size.y = row_height()
+	queue_redraw()
+
+
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED:
 		queue_redraw()
@@ -68,7 +90,9 @@ func _draw() -> void:
 	# 並べられる前(幅0)は角丸の点列が潰れて塗れない。
 	if _font == null or size.x <= RADIUS * 2.0:
 		return
-	var rect := Rect2(Vector2.ZERO, size)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE * zoom)
+	var area := size / zoom
+	var rect := Rect2(Vector2.ZERO, area)
 	var points := UiPaint.rounded_rect_points_uniform(rect, RADIUS, CORNER_SEGMENTS)
 	if mine:
 		UiPaint.fill_gradient_polygon(
@@ -83,11 +107,16 @@ func _draw() -> void:
 		draw_polyline(RankMedal.closed(points), Color(UiPalette.GLOW_AMBER, 0.85), 1.5, true)
 	elif zebra:
 		draw_colored_polygon(points, ZEBRA)
-	var center_y := size.y * 0.5
+	var center_y := area.y * 0.5
 	_draw_rank(center_y)
 	_draw_portrait(Vector2(PORTRAIT_X, center_y))
-	_draw_name(center_y)
-	_draw_standing(center_y)
+	var right := area.x - RIGHT_PAD
+	if stacked:
+		_draw_name(STACKED_NAME_Y, right - NAME_X)
+		_draw_stacked_standing(STACKED_STANDING_Y, right)
+		return
+	_draw_name(center_y, right - MEDAL_RIGHT - MEDAL_RADIUS - NAME_X)
+	_draw_standing(center_y, right)
 
 
 ## 1〜3位は金銀銅の丸に数字を打つ。
@@ -144,8 +173,7 @@ func _draw_portrait(center: Vector2) -> void:
 
 
 ## 称号(小)と表示名(大)。対局の名札(`PlayerInfoBar`)と同じ並び。
-func _draw_name(center_y: float) -> void:
-	var name_width := size.x - MEDAL_RIGHT - MEDAL_RADIUS - NAME_X - RIGHT_PAD
+func _draw_name(center_y: float, name_width: float) -> void:
 	var title := UserProfileLibrary.get_title_display(title_id)
 	if title.is_empty():
 		_text(
@@ -163,7 +191,7 @@ func _draw_name(center_y: float) -> void:
 		title,
 		HORIZONTAL_ALIGNMENT_LEFT,
 		name_width,
-		TITLE_SIZE,
+		STACKED_TITLE_SIZE if stacked else TITLE_SIZE,
 		UiPalette.BRASS_HIGHLIGHT
 	)
 	_text(
@@ -176,8 +204,7 @@ func _draw_name(center_y: float) -> void:
 	)
 
 
-func _draw_standing(center_y: float) -> void:
-	var right := size.x - RIGHT_PAD
+func _draw_standing(center_y: float, right: float) -> void:
 	if tier == RankRules.PLATINUM_KEY:
 		_text(
 			str(rating),
@@ -198,6 +225,32 @@ func _draw_standing(center_y: float) -> void:
 		TIER_WIDTH
 	)
 	RankMedal.draw_medal(self, Vector2(right - MEDAL_RIGHT, center_y), MEDAL_RADIUS, tier, _display)
+
+
+## 2段に積むときの下の段。メダルと帯・階級を名前の列の左端から、★(レート)を右端へ。
+func _draw_stacked_standing(center_y: float, right: float) -> void:
+	var medal_x := NAME_X + MEDAL_RADIUS
+	RankMedal.draw_medal(self, Vector2(medal_x, center_y), MEDAL_RADIUS, tier, _display)
+	var tier_left := medal_x + MEDAL_RADIUS + STACKED_TIER_GAP
+	_text(
+		RankRules.display_name(tier),
+		Vector2(tier_left, center_y + 6.0),
+		TIER_SIZE,
+		UiPalette.TEXT_OFFWHITE,
+		HORIZONTAL_ALIGNMENT_LEFT,
+		right - tier_left
+	)
+	if tier == RankRules.PLATINUM_KEY:
+		_text(
+			str(rating),
+			Vector2(right - RATING_WIDTH, center_y + 8.0),
+			RATING_SIZE,
+			UiPalette.TEXT_OFFWHITE,
+			HORIZONTAL_ALIGNMENT_RIGHT,
+			RATING_WIDTH
+		)
+	else:
+		_draw_stars(right, center_y)
 
 
 func _draw_stars(right: float, center_y: float) -> void:

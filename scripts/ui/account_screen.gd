@@ -23,6 +23,11 @@ const STATUS_FONT_SIZE := 19
 const SMALL_FONT_SIZE := 14
 const ACCOUNT_BUTTON_SIZE := Vector2(220, 50)
 const DISCORD_BUTTON_SIZE := Vector2(220, 42)
+## 縦画面(GameDesign.md 9章「縦画面」)。2つのパネルを上下に積み、`PortraitModal` と同じ論理幅で組んで
+## パネルごと拡大する。上の見本と登録は中身の高さで、下の見た目は残りの高さで出す。
+const PORTRAIT_GAP := 16.0
+const PORTRAIT_SMALL_FONT_SIZE := 16
+const PORTRAIT_BUTTON_SIZE := Vector2(220, 52)
 ## 選んでから保存するまでの待ち。続けて選び直したときに書き込みを重ねない。
 const SAVE_DELAY := 0.5
 
@@ -49,6 +54,11 @@ var _looks: AccountLooksTabs
 var _save_label: Label
 var _dialog: AccountCredentialDialog
 var _save_timer: Timer
+var _left_panel: PanelContainer
+var _right_panel: PanelContainer
+## 縦で文字を大きくする小さな文字(横の大きさは `SMALL_FONT_SIZE`)。
+var _small_labels: Array[Label] = []
+var _portrait := false
 
 @onready var screen_header: ScreenHeader = $ScreenHeader
 
@@ -61,8 +71,12 @@ func _ready() -> void:
 	_save_timer.wait_time = SAVE_DELAY
 	_save_timer.timeout.connect(_save_profile)
 	add_child(_save_timer)
-	_build_left(_panel(LEFT_PANEL_X))
-	_build_right(_panel(RIGHT_PANEL_X))
+	var left := _panel(LEFT_PANEL_X)
+	_left_panel = left.get_parent()
+	_build_left(left)
+	var right := _panel(RIGHT_PANEL_X)
+	_right_panel = right.get_parent()
+	_build_right(right)
 	_dialog = AccountCredentialDialog.new()
 	_dialog.submitted.connect(_on_credentials_submitted)
 	# モーダルは最後の子へ置く(後から足した子ほど手前に描かれる)。
@@ -108,6 +122,7 @@ func _refresh_account() -> void:
 		_note_label.add_theme_color_override("font_color", WARNING_COLOR)
 	_guest_row.visible = not registered
 	_member_row.visible = registered
+	_layout_portrait.call_deferred()
 	profile_changed.emit()
 
 
@@ -268,21 +283,78 @@ func _set_busy(value: bool) -> void:
 func _set_message(text: String, color: Color) -> void:
 	_message_label.text = text
 	_message_label.add_theme_color_override("font_color", color)
+	_layout_portrait.call_deferred()
 
 
 # ---------------------------------------------------------------- 組み立て
 
 
-func _panel(x_range: Vector2) -> VBoxContainer:
-	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", load(PANEL_STYLE))
+## 縦横が変わったときに `Main` から呼ばれる(Architecture.md 4.7節)。入力中の表示名と選択は保つ。
+func apply_orientation(portrait: bool) -> void:
+	_portrait = portrait
+	screen_header.apply_orientation(portrait)
+	_looks.set_portrait(portrait)
+	for label in _small_labels:
+		label.add_theme_font_size_override(
+			"font_size", PORTRAIT_SMALL_FONT_SIZE if portrait else SMALL_FONT_SIZE
+		)
+	for button in _account_buttons:
+		var landscape: Vector2 = button.get_meta("landscape_size")
+		button.custom_minimum_size = PORTRAIT_BUTTON_SIZE if portrait else landscape
+	if not portrait:
+		_anchor_panel(_left_panel, LEFT_PANEL_X)
+		_anchor_panel(_right_panel, RIGHT_PANEL_X)
+		return
+	_layout_portrait()
+	# 折り返す文の高さは幅が決まった後に定まるため、並べ終えてからもう一度合わせる。
+	_layout_portrait.call_deferred()
+
+
+## 上のパネルは中身の高さ(案内の文の行数で変わる)、下のパネルは残りの高さ。
+func _layout_portrait() -> void:
+	if not _portrait:
+		return
+	var content := screen_header.portrait_content_rect()
+	var zoom := PortraitModal.SCALE
+	var width := content.size.x / zoom
+	_left_panel.custom_minimum_size = Vector2.ZERO
+	var left_height := _left_panel.get_combined_minimum_size().y
+	_place_scaled(_left_panel, Rect2(content.position, Vector2(width, left_height)), zoom)
+	var right_top := content.position.y + left_height * zoom + PORTRAIT_GAP
+	_place_scaled(
+		_right_panel,
+		Rect2(content.position.x, right_top, width, (content.end.y - right_top) / zoom),
+		zoom
+	)
+
+
+## `rect` は位置だけ画面の座標で、大きさは拡大する前の値。
+func _place_scaled(panel: PanelContainer, rect: Rect2, zoom: float) -> void:
+	panel.anchor_left = 0.0
+	panel.anchor_right = 0.0
+	panel.anchor_top = 0.0
+	panel.anchor_bottom = 0.0
+	panel.position = rect.position
+	panel.size = rect.size
+	panel.scale = Vector2.ONE * zoom
+
+
+func _anchor_panel(panel: PanelContainer, x_range: Vector2) -> void:
+	panel.scale = Vector2.ONE
 	panel.anchor_left = 0.5
 	panel.anchor_right = 0.5
+	panel.anchor_top = 0.0
 	panel.anchor_bottom = 1.0
 	panel.offset_left = x_range.x
 	panel.offset_right = x_range.y
 	panel.offset_top = PANEL_TOP
 	panel.offset_bottom = -PANEL_BOTTOM_MARGIN
+
+
+func _panel(x_range: Vector2) -> VBoxContainer:
+	var panel := PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", load(PANEL_STYLE))
+	_anchor_panel(panel, x_range)
 	add_child(panel)
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 10)
@@ -378,6 +450,7 @@ func _button_row(parent: Container) -> HBoxContainer:
 
 
 func _add_account_button(row: HBoxContainer, button: Button) -> void:
+	button.set_meta("landscape_size", button.custom_minimum_size)
 	row.add_child(button)
 	_account_buttons.append(button)
 
@@ -387,6 +460,8 @@ func _label(text: String, font_size: int, color: Color) -> Label:
 	label.text = text
 	label.add_theme_font_size_override("font_size", font_size)
 	label.add_theme_color_override("font_color", color)
+	if font_size == SMALL_FONT_SIZE:
+		_small_labels.append(label)
 	return label
 
 
@@ -396,4 +471,6 @@ func _wrapping_label(font_size: int) -> Label:
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	label.add_theme_font_size_override("font_size", font_size)
+	if font_size == SMALL_FONT_SIZE:
+		_small_labels.append(label)
 	return label

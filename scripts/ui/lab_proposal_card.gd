@@ -43,10 +43,17 @@ const ADOPTED_RING := 2.0
 const HOURGLASS_CHIP := Color(0.62, 0.45, 0.2, 1.0)
 const SPELL_CHIP := Color(0.24, 0.33, 0.58, 1.0)
 const CHEVRON_COLOR := Color(0.68, 0.65, 0.60, 0.6)
+## 縦画面(GameDesign.md 9章「縦画面」)の論理幅と倍率。中身ごと拡大して1列の幅いっぱいにする。
+const PORTRAIT_WIDTH := 480.0
+const PORTRAIT_ZOOM := 1.4
 
 var proposal_id := ""
 
+## 拡大の層。押し込みの縮み(`_face` の scale)と分けるため、`_face` の親に置く。
+var _zoom_root: Control
 var _face: Control
+## 描く大きさ(拡大する前)。
+var _card_size := CARD_SIZE
 var _description: Label
 var _font: Font
 var _panel_style: CodedPanelStyle
@@ -73,12 +80,15 @@ func _init() -> void:
 	_panel_style.corner_radius = CORNER_RADIUS
 	_panel_style.frame_thickness = FRAME_THICKNESS
 
+	_zoom_root = Control.new()
+	_zoom_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_zoom_root)
 	_face = Control.new()
 	_face.size = CARD_SIZE
 	_face.pivot_offset = CARD_SIZE / 2.0
 	_face.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_face.draw.connect(_paint)
-	add_child(_face)
+	_zoom_root.add_child(_face)
 
 	_description = Label.new()
 	_description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -91,6 +101,19 @@ func _init() -> void:
 	_description.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
 	_description.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_face.add_child(_description)
+
+
+## 縦は論理幅 `PORTRAIT_WIDTH` で組み、`PORTRAIT_ZOOM` 倍で置く。横は従来の大きさ。
+func set_portrait(portrait: bool) -> void:
+	_card_size = Vector2(PORTRAIT_WIDTH, CARD_SIZE.y) if portrait else CARD_SIZE
+	var zoom := PORTRAIT_ZOOM if portrait else 1.0
+	_zoom_root.scale = Vector2.ONE * zoom
+	_face.size = _card_size
+	_face.pivot_offset = _card_size / 2.0
+	_description.size = Vector2(_card_size.x - PAD * 2.0 - SIDE_WIDTH, 0)
+	custom_minimum_size = _card_size * zoom
+	size = custom_minimum_size
+	_face.queue_redraw()
 
 
 func _ready() -> void:
@@ -160,7 +183,7 @@ func _on_hover_changed(hovering: bool) -> void:
 
 
 func _paint() -> void:
-	var rect := Rect2(Vector2.ZERO, CARD_SIZE)
+	var rect := Rect2(Vector2.ZERO, _card_size)
 	_face.draw_style_box(_panel_style, rect)
 	var ci := _face.get_canvas_item()
 	if _adopted:
@@ -198,16 +221,16 @@ func _paint() -> void:
 		Vector2(name_left, NAME_BASELINE),
 		_name,
 		HORIZONTAL_ALIGNMENT_LEFT,
-		CARD_SIZE.x - SIDE_WIDTH - name_left,
+		_card_size.x - SIDE_WIDTH - name_left,
 		NAME_FONT_SIZE,
 		UiPalette.TEXT_OFFWHITE
 	)
 
-	var side_left := CARD_SIZE.x - SIDE_WIDTH
+	var side_left := _card_size.x - SIDE_WIDTH
 	var side_center := side_left + SIDE_WIDTH * 0.5 - FRAME_THICKNESS
 	_face.draw_line(
 		Vector2(side_left, PAD),
-		Vector2(side_left, CARD_SIZE.y - PAD),
+		Vector2(side_left, _card_size.y - PAD),
 		Color(UiPalette.GLOW_AMBER, SIDE_RULE_ALPHA),
 		1.0
 	)
@@ -234,10 +257,10 @@ func _paint_open_side(ci: RID, side_center: float) -> void:
 	if _voted:
 		UiPaint.draw_emblem(ci, UiPaint.Emblem.CHECK, Vector2(side_center, MARK_Y), MARK_SIZE)
 		_centered(
-			"投票済み", CARD_SIZE.x - SIDE_WIDTH, MARK_LABEL_Y, RANK_FONT_SIZE, UiPalette.GLOW_AMBER
+			"投票済み", _card_size.x - SIDE_WIDTH, MARK_LABEL_Y, RANK_FONT_SIZE, UiPalette.GLOW_AMBER
 		)
 		return
-	var tip := Vector2(side_center + CHEVRON_HALF * 0.5, CARD_SIZE.y * 0.5)
+	var tip := Vector2(side_center + CHEVRON_HALF * 0.5, _card_size.y * 0.5)
 	(
 		_face
 		. draw_polyline(

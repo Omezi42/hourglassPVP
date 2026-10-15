@@ -18,10 +18,14 @@ const HIDDEN_FRAME_WIDTH := 1.5
 const HIDDEN_MARK_SIZE := 96
 const HIDDEN_NAME_SIZE := 18
 const HIDDEN_NAME_GAP := 48.0
+## 縦(GameDesign.md 9章「縦画面」)。`PortraitModal` の論理幅で組み、中身ごと拡大する(横スクロールのまま)。
+const PORTRAIT_SCROLL_SIZE := Vector2(PortraitModal.WIDTH - 48.0, 470)
 
 var _title: Label
 var _row: HBoxContainer
 var _scroll: ScrollContainer
+var _dim: ColorRect
+var _center: CenterContainer
 
 
 func _ready() -> void:
@@ -31,6 +35,7 @@ func _ready() -> void:
 	# サイズ0のノードへ使うと0のまま固定され、暗幕が盤面を覆わずクリックも止められない。
 	size = SCREEN_SIZE
 	_build()
+	PortraitModal.watch(self, _layout)
 
 
 ## そのセットの全カードを、購入の有無に関わらずそのまま見せる。未公開の枠は「?」の札で示す。
@@ -50,7 +55,19 @@ func open_set(set_id: String) -> void:
 		panel.show_card(card)
 	for i in CardSetLibrary.hidden_count(set_id):
 		_row.add_child(_hidden_slot())
+	_layout()
+	_scroll.scroll_horizontal = 0
 	visible = true
+
+
+func _layout() -> void:
+	size = PortraitModal.screen_size()
+	_dim.size = size
+	_center.size = size
+	_scroll.custom_minimum_size = (
+		PORTRAIT_SCROLL_SIZE if ScreenOrientation.is_portrait() else SCROLL_SIZE
+	)
+	PortraitModal.fit(_center)
 
 
 func _hidden_slot() -> Control:
@@ -86,18 +103,18 @@ func _hidden_slot() -> Control:
 
 
 func _build() -> void:
-	var dim := ColorRect.new()
-	dim.color = Color(0, 0, 0, 0.65)
-	dim.size = SCREEN_SIZE
-	dim.mouse_filter = Control.MOUSE_FILTER_STOP
-	dim.gui_input.connect(_on_dim_input)
-	add_child(dim)
+	_dim = ColorRect.new()
+	_dim.color = Color(0, 0, 0, 0.65)
+	_dim.size = SCREEN_SIZE
+	_dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	_dim.gui_input.connect(_on_dim_input)
+	add_child(_dim)
 
 	# 中身の幅で伸び縮みさせつつ画面の中央に置くため、CenterContainer へ入れる。
-	var center := CenterContainer.new()
-	center.size = SCREEN_SIZE
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(center)
+	_center = CenterContainer.new()
+	_center.size = SCREEN_SIZE
+	_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_center)
 
 	var panel := PanelContainer.new()
 	panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -105,7 +122,7 @@ func _build() -> void:
 	var style: StyleBox = load(PANEL_STYLE)
 	if style != null:
 		panel.add_theme_stylebox_override("panel", style)
-	center.add_child(panel)
+	_center.add_child(panel)
 
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 14)

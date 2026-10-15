@@ -32,3 +32,16 @@ static func watch(modal: Control, relayout: Callable) -> void:
 			if modal.visible:
 				relayout.call_deferred()
 	)
+
+
+## 中身の幅をそろえて持つモーダル用。`root` の子孫のうち、横で最小幅が `landscape_width` のものを
+## 縦では `WIDTH` に収まる幅(パネルの余白 `inset` を引いた値)へ、横では元の幅へ戻す。
+static func fit_width(root: Node, landscape_width: float, inset: float) -> void:
+	var portrait := ScreenOrientation.is_portrait()
+	for node in root.find_children("*", "Control", true, false):
+		var control := node as Control
+		if not control.has_meta("portrait_modal_width"):
+			if not is_equal_approx(control.custom_minimum_size.x, landscape_width):
+				continue
+			control.set_meta("portrait_modal_width", true)
+		control.custom_minimum_size.x = WIDTH - inset if portrait else landscape_width

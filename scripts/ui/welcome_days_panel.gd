@@ -27,6 +27,8 @@ const PORTRAIT_SET_ROWS_VISIBLE := 3
 const PORTRAIT_BUTTON_SIZE := Vector2(196, 56)
 const NOTE_FONT := 15
 const PORTRAIT_NOTE_FONT := 17
+## セットの札の名前・価格(15px)を、パネルごと1.4倍したうえで本文の目安(24px)へ届かせる倍率。
+const PORTRAIT_TILE_TEXT_SCALE := 24.0 / (ShopItemTile.NAME_FONT_SIZE * PortraitModal.SCALE)
 const FAILED_TEXT := "通信に失敗しました。次にホームを開いたときに受け取れます"
 const NOTE_TEXT := "来た日の数で進みます。続けて来なくても大丈夫です"
 const SET_NOTE_TEXT := "選んだセットは、受け取ったらすぐデッキ編成に使えます"
@@ -104,6 +106,8 @@ func _fill_sets() -> void:
 		tile.custom_minimum_size = Vector2(
 			tile_width, ShopItemTile.height(ShopCatalog.Kind.CARD_SET)
 		)
+		if ScreenOrientation.is_portrait():
+			tile.text_scale = PORTRAIT_TILE_TEXT_SCALE
 		tile.pressed.connect(_choose.bind(set_id))
 		_sets_grid.add_child(tile)
 

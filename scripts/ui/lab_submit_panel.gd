@@ -11,6 +11,8 @@ const PANEL_STYLE := "res://resources/theme/content_panel.tres"
 const FIELD_NORMAL := "res://resources/theme/coded_line_edit_normal.tres"
 const FIELD_FOCUS := "res://resources/theme/coded_line_edit_focus.tres"
 const DIM_COLOR := Color(0, 0, 0, 0.65)
+## パネルの左右の余白(`content_panel.tres`)。縦の中身の幅は `PortraitModal.WIDTH` からこれを引く。
+const PANEL_INSET := 48.0
 const FIELD_WIDTH := 680.0
 const DESCRIPTION_HEIGHT := 150.0
 const HEADING_FONT_SIZE := 24
@@ -39,6 +41,8 @@ var _preview_name: Label
 var _preview_body: Label
 var _confirm_message: Label
 var _send_button: Button
+var _dim: ColorRect
+var _center: CenterContainer
 
 
 func _ready() -> void:
@@ -46,6 +50,7 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	size = SCREEN_SIZE
 	_build()
+	PortraitModal.watch(self, _layout)
 
 
 func open(round: Dictionary) -> void:
@@ -56,17 +61,29 @@ func open(round: Dictionary) -> void:
 	_refresh_kind_buttons()
 	_refresh_counts()
 	_show_form("お題:%s" % str(round.get("title", "")), UiPalette.TEXT_MUTED)
+	_layout()
 	visible = true
+
+
+## 縦(GameDesign.md 9章「縦画面」)では `PortraitModal` の論理幅で組み、中身ごと拡大する。
+func _layout() -> void:
+	size = PortraitModal.screen_size()
+	_dim.size = size
+	_center.size = size
+	PortraitModal.fit_width(_center, FIELD_WIDTH, PANEL_INSET)
+	PortraitModal.fit(_center)
 
 
 func _build() -> void:
 	var dim := ColorRect.new()
+	_dim = dim
 	dim.color = DIM_COLOR
 	dim.size = SCREEN_SIZE
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(dim)
 
 	var center := CenterContainer.new()
+	_center = center
 	center.size = SCREEN_SIZE
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(center)

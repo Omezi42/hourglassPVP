@@ -8,11 +8,16 @@ const SUB_FONT_SIZE := 13
 const TEXT_LEFT := 22.0
 const LABEL_BASELINE_RATIO := 0.47
 const SUB_BASELINE_RATIO := 0.78
+## 縦画面(GameDesign.md 9章「縦画面」)の文字の大きさ。
+const PORTRAIT_LABEL_FONT_SIZE := 26
+const PORTRAIT_SUB_FONT_SIZE := 20
+const PORTRAIT_TEXT_LEFT := 18.0
 
 var kind: ShopCatalog.Kind
 var label_text := ""
 var owned_count := 0
 var total_count := 0
+var portrait := false
 var active := false:
 	set(value):
 		active = value
@@ -35,21 +40,22 @@ func _draw() -> void:
 		return
 	var main_color := UiPalette.OUTLINE_DARK if active else UiPalette.TEXT_OFFWHITE
 	var sub_color := UiPalette.BRASS_PRESSED_DARK if active else UiPalette.TEXT_MUTED
+	var left := PORTRAIT_TEXT_LEFT if portrait else TEXT_LEFT
 	draw_string(
 		_font,
-		Vector2(TEXT_LEFT, size.y * LABEL_BASELINE_RATIO),
+		Vector2(left, size.y * LABEL_BASELINE_RATIO),
 		label_text,
 		HORIZONTAL_ALIGNMENT_LEFT,
-		size.x - TEXT_LEFT,
-		LABEL_FONT_SIZE,
+		size.x - left,
+		PORTRAIT_LABEL_FONT_SIZE if portrait else LABEL_FONT_SIZE,
 		main_color
 	)
 	draw_string(
 		_font,
-		Vector2(TEXT_LEFT, size.y * SUB_BASELINE_RATIO),
+		Vector2(left, size.y * SUB_BASELINE_RATIO),
 		"所持 %d / %d" % [owned_count, total_count],
 		HORIZONTAL_ALIGNMENT_LEFT,
-		size.x - TEXT_LEFT,
-		SUB_FONT_SIZE,
+		size.x - left,
+		PORTRAIT_SUB_FONT_SIZE if portrait else SUB_FONT_SIZE,
 		sub_color
 	)

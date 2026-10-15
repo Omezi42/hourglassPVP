@@ -111,6 +111,12 @@ var _time_info: Label
 var _status_label: Label
 var _leave_button: Button
 var _start_button: Button
+var _header: ScreenHeader
+## 縦横で置き直す板(`CardRoomArrange`)。
+var _create_card: Panel
+var _join_card: Panel
+var _deck_strip: Panel
+var _code_plate: Panel
 
 
 func _ready() -> void:
@@ -140,6 +146,7 @@ func _build() -> void:
 	add_child(backdrop)
 	var header: ScreenHeader = load(HEADER_SCENE).instantiate()
 	add_child(header)
+	_header = header
 	header.set_title("ルームマッチ")
 	header.back_pressed.connect(_on_back_pressed)
 	_entrance = _make_layer()
@@ -154,6 +161,14 @@ func _build() -> void:
 	_build_code_plate()
 	_build_seats()
 	_build_footer()
+
+
+## 縦横が変わったときに `Main` から呼ばれる(Architecture.md 4.7節)。待機中の部屋・入力中のコードは保つ。
+func apply_orientation(portrait: bool) -> void:
+	if _header == null:
+		return
+	_header.apply_orientation(portrait)
+	CardRoomArrange.apply(self, portrait)
 
 
 func _make_layer() -> Control:
@@ -208,6 +223,7 @@ func _make_button(parent: Control, text: String, rect: Rect2, primary: bool) -> 
 
 func _build_create_card() -> void:
 	var card := _make_panel(_entrance, CREATE_RECT)
+	_create_card = card
 	_place_label(card, "部屋を作る", CARD_TITLE_POS, TITLE_FONT_SIZE, UiPalette.TEXT_OFFWHITE)
 	_place_label(card, "コードを発行して、友達を呼びます", CARD_SUB_POS, SUB_FONT_SIZE, UiPalette.TEXT_MUTED)
 	_place_label(card, "持ち時間", TIME_LABEL_POS, BODY_FONT_SIZE, UiPalette.TEXT_OFFWHITE)
@@ -222,6 +238,7 @@ func _build_create_card() -> void:
 
 func _build_join_card() -> void:
 	var card := _make_panel(_entrance, JOIN_RECT)
+	_join_card = card
 	_place_label(card, "コードで参加する", CARD_TITLE_POS, TITLE_FONT_SIZE, UiPalette.TEXT_OFFWHITE)
 	_place_label(
 		card,
@@ -247,6 +264,7 @@ func _build_join_card() -> void:
 
 func _build_deck_strip() -> void:
 	var strip := _make_panel(_entrance, DECK_RECT)
+	_deck_strip = strip
 	_place_label(strip, "使用デッキ", DECK_CAPTION_POS, NOTE_FONT_SIZE, UiPalette.TEXT_MUTED)
 	_deck_name_label = _place_label(
 		strip, "", DECK_NAME_POS, DECK_NAME_FONT_SIZE, UiPalette.TEXT_OFFWHITE
@@ -257,6 +275,7 @@ func _build_deck_strip() -> void:
 
 func _build_code_plate() -> void:
 	var plate := _make_panel(_room_view, CODE_RECT)
+	_code_plate = plate
 	_code_caption = _place_label(
 		plate, "", CODE_CAPTION_POS, STATUS_FONT_SIZE, UiPalette.TEXT_MUTED
 	)
@@ -294,11 +313,12 @@ func _build_seats() -> void:
 
 func _draw_vs() -> void:
 	var rid := _vs_mark.get_canvas_item()
-	UiPaint.fill_circle(rid, VS_CENTER, VS_RADIUS, UiPalette.OUTLINE_DARK, 32)
-	UiPaint.draw_ring(rid, VS_CENTER, VS_RADIUS, UiPalette.BRASS_LIGHT, VS_RING, 32)
+	var center := CardRoomArrange.vs_center()
+	UiPaint.fill_circle(rid, center, VS_RADIUS, UiPalette.OUTLINE_DARK, 32)
+	UiPaint.draw_ring(rid, center, VS_RADIUS, UiPalette.BRASS_LIGHT, VS_RING, 32)
 	_vs_mark.draw_string(
 		get_theme_default_font(),
-		VS_CENTER + Vector2(-VS_RADIUS, VS_FONT_SIZE * 0.36),
+		center + Vector2(-VS_RADIUS, VS_FONT_SIZE * 0.36),
 		"VS",
 		HORIZONTAL_ALIGNMENT_CENTER,
 		VS_RADIUS * 2.0,
@@ -356,8 +376,7 @@ func _show_room(role: Role) -> void:
 	_start_button.disabled = true
 	var leave_labels := {Role.HOST: "部屋を閉じる", Role.GUEST: "退出する"}
 	_leave_button.text = leave_labels.get(role, "キャンセル")
-	var leave_rect := LEAVE_RECT if role == Role.HOST else LEAVE_ALONE_RECT
-	_leave_button.position = leave_rect.position
+	CardRoomArrange.place_footer(self, ScreenOrientation.is_portrait())
 	_leave_button.disabled = false
 	_refresh_settings()
 

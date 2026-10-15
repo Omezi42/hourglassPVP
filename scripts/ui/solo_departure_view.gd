@@ -9,6 +9,8 @@ signal depth_changed(delta: int)
 
 const MARGIN := 24.0
 const CARD_GAP := 24.0
+## 縦画面では3つの作戦の札を上下に積む(横に並べる幅が無いため。GameDesign.md 9章「縦画面」)。
+const STACKED_CARD_GAP := 14.0
 const CARD_PADDING := 22.0
 const CARDS_BOTTOM_MARGIN := 40.0
 const ICON_COLUMNS := 6
@@ -38,6 +40,9 @@ const BOSS_TOP_GAP := 6.0
 const SEAL_RADIUS := 18.0
 const SEAL_MARGIN := 14.0
 const SEAL_FONT_SIZE := 15
+
+## 作戦の札を上下に積むか(縦画面)。次の表示から効く。
+var stacked := false
 
 
 func _ready() -> void:
@@ -97,8 +102,14 @@ func show_data(
 	var cards_bottom := size.y - CARDS_BOTTOM_MARGIN
 	var card_w: float = (width - MARGIN * 2.0 - CARD_GAP * 2.0) / 3.0
 	var card_h := cards_bottom - cards_top
+	var count := float(maxi(theme_ids.size(), 1))
+	if stacked:
+		card_w = width - MARGIN * 2.0
+		card_h = (cards_bottom - cards_top - STACKED_CARD_GAP * (count - 1.0)) / count
 	for i in theme_ids.size():
 		var rect := Rect2(MARGIN + float(i) * (card_w + CARD_GAP), cards_top, card_w, card_h)
+		if stacked:
+			rect.position = Vector2(MARGIN, cards_top + float(i) * (card_h + STACKED_CARD_GAP))
 		var best_depth := theme_best_depths[i] if i < theme_best_depths.size() else -1
 		_build_card(rect, theme_ids[i], best_depth)
 	_add_label(

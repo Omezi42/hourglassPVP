@@ -17,6 +17,11 @@ const BUTTON_SIZE := Vector2(360, 64)
 const GAP := 16.0
 const NOTE_FONT_SIZE := 18
 const NOTE_WIDTH := 720.0
+## 縦画面(GameDesign.md 9章「縦画面」)。ボタンを指で押せる背丈に、予告を本文の目安(24px)にし、2行に折る。
+const PORTRAIT_BUTTON_SIZE := Vector2(480, 80)
+const PORTRAIT_FONT_SIZE := 26
+const PORTRAIT_NOTE_FONT_SIZE := 24
+const PORTRAIT_NOTE_WIDTH := 640.0
 
 var button: Button
 ## 自動で始めるのを止めるボタン。`button` と同じ位置に出す。
@@ -29,33 +34,50 @@ var _serial := 0
 
 func _init(host: Control, below: Button) -> void:
 	_host = host
-	var at := Vector2(
-		below.position.x + (below.size.x - BUTTON_SIZE.x) * 0.5,
-		below.position.y + below.size.y + GAP
-	)
 	button = CodedButton.make_in_group(
 		"待っている間CPUと対戦する", BUTTON_SIZE, CodedButton.PRIMARY_ACTION_GROUP
 	)
 	button.pressed.connect(_on_pressed)
 	host.add_child(button)
-	button.position = at
 
 	wait_button = CodedButton.make("CPUと対戦せず待つ", BUTTON_SIZE)
 	wait_button.pressed.connect(_on_wait_pressed)
 	host.add_child(wait_button)
-	wait_button.position = at
 
 	_note = Label.new()
 	_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	# 折り返しは幅より先に立てる(Pitfalls.md)。
+	_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_note.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
-	_note.add_theme_font_size_override("font_size", NOTE_FONT_SIZE)
 	_note.text = AUTO_NOTE % int(FIRST_DELAY_SECONDS)
 	host.add_child(_note)
-	_note.size = Vector2(NOTE_WIDTH, NOTE_FONT_SIZE * 2.0)
-	_note.position = Vector2(
-		at.x + (BUTTON_SIZE.x - NOTE_WIDTH) * 0.5, at.y + BUTTON_SIZE.y + GAP * 0.5
-	)
+	place(below, false)
 	hide()
+
+
+## `below`(キャンセル)の真下へ置く。向きが変わったときにも呼ぶ。
+func place(below: Button, portrait: bool) -> void:
+	var button_size := PORTRAIT_BUTTON_SIZE if portrait else BUTTON_SIZE
+	var at := Vector2(
+		below.position.x + (below.size.x - button_size.x) * 0.5,
+		below.position.y + below.size.y + GAP
+	)
+	for target: Button in [button, wait_button]:
+		target.custom_minimum_size = button_size
+		target.size = button_size
+		target.position = at
+		if portrait:
+			target.add_theme_font_size_override("font_size", PORTRAIT_FONT_SIZE)
+		else:
+			target.remove_theme_font_size_override("font_size")
+	var note_font := PORTRAIT_NOTE_FONT_SIZE if portrait else NOTE_FONT_SIZE
+	var note_width := PORTRAIT_NOTE_WIDTH if portrait else NOTE_WIDTH
+	_note.add_theme_font_size_override("font_size", note_font)
+	_note.custom_minimum_size.x = note_width
+	_note.size = Vector2(note_width, note_font * 2.0)
+	_note.position = Vector2(
+		at.x + (button_size.x - note_width) * 0.5, at.y + button_size.y + GAP * 0.5
+	)
 
 
 ## 待機を始めたとき。`delay` 秒たっても隠されなければCPU戦を始める。

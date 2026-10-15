@@ -20,6 +20,8 @@ const LIST_WIDTH := 1232.0
 const COLUMN_GAP := 24
 const ROW_GAP := 14
 const REGISTER_NOTE := "投稿・投票は登録済みアカウントのみ"
+## 縦画面(GameDesign.md 9章「縦画面」)。帯は締切・票の段をお題の下へ積んで拡大し、一覧は1列にする。
+const PORTRAIT_BAND_GAP := 12.0
 
 var _header: ScreenHeader
 var _tabs: Array[Button] = []
@@ -40,6 +42,8 @@ var _ballot: Dictionary = {}
 var _own: Dictionary = {}
 var _rows_by_id: Dictionary = {}
 var _cards_by_id: Dictionary = {}
+var _portrait := false
+var _with_band := false
 
 
 func _ready() -> void:
@@ -94,13 +98,48 @@ func _build() -> void:
 	add_child(_submit_panel)
 
 
+## 縦横が変わったときに `Main` から呼ばれる(Architecture.md 4.7節)。開いているタブと一覧は保つ。
+func apply_orientation(portrait: bool) -> void:
+	_portrait = portrait
+	if _header == null:
+		return
+	_header.apply_orientation(portrait)
+	_band.set_portrait(portrait)
+	_grid.columns = 1 if portrait else 2
+	for card in _grid.get_children():
+		(card as LabProposalCard).set_portrait(portrait)
+	_layout(_with_band)
+
+
 ## 帯を出すかどうかで一覧の置き場を変える。
 func _layout(with_band: bool) -> void:
+	_with_band = with_band
 	_band.visible = with_band
+	if _portrait:
+		_layout_portrait(with_band)
+		return
+	_band.scale = Vector2.ONE
+	_band.position = BAND_RECT.position
+	_band.size = BAND_RECT.size
 	var top := BAND_RECT.end.y + BAND_GAP if with_band else ScreenHeader.CONTENT_TOP
 	var list_rect := Rect2(
 		LIST_LEFT, top, LIST_WIDTH, ScreenHeader.CONTENT_TOP + ScreenHeader.CONTENT_HEIGHT - top
 	)
+	_place_list(list_rect)
+
+
+func _layout_portrait(with_band: bool) -> void:
+	var content := _header.portrait_content_rect()
+	_band.scale = Vector2.ONE * LabThemeBand.PORTRAIT_ZOOM
+	_band.position = content.position
+	_band.size = Vector2(LabThemeBand.PORTRAIT_WIDTH, LabThemeBand.PORTRAIT_HEIGHT)
+	var top := content.position.y
+	if with_band:
+		top += LabThemeBand.PORTRAIT_HEIGHT * LabThemeBand.PORTRAIT_ZOOM + PORTRAIT_BAND_GAP
+	_place_list(Rect2(content.position.x, top, content.size.x, content.end.y - top))
+
+
+func _place_list(list_rect: Rect2) -> void:
 	_scroll.position = list_rect.position
 	_scroll.size = list_rect.size
 	_empty.position = list_rect.position
@@ -259,6 +298,7 @@ func _on_step_requested(delta: int) -> void:
 
 func _add_card(row: Dictionary) -> LabProposalCard:
 	var card := LabProposalCard.new()
+	card.set_portrait(_portrait)
 	_grid.add_child(card)
 	card.opened.connect(_on_card_opened)
 	_rows_by_id[row["id"]] = row

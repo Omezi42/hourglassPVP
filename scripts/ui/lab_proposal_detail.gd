@@ -8,6 +8,8 @@ signal vote_requested(proposal_id: String)
 const SCREEN_SIZE := Vector2(1280, 720)
 const PANEL_STYLE := "res://resources/theme/content_panel.tres"
 const DIM_COLOR := Color(0, 0, 0, 0.65)
+## パネルの左右の余白(`content_panel.tres`)。縦の中身の幅は `PortraitModal.WIDTH` からこれを引く。
+const PANEL_INSET := 48.0
 const PANEL_WIDTH := 760.0
 const BODY_MIN_HEIGHT := 180.0
 const KIND_FONT_SIZE := 15
@@ -26,6 +28,8 @@ var _name: Label
 var _body: Label
 var _note: Label
 var _vote_button: Button
+var _dim: ColorRect
+var _center: CenterContainer
 
 
 func _ready() -> void:
@@ -33,6 +37,7 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	size = SCREEN_SIZE
 	_build()
+	PortraitModal.watch(self, _layout)
 
 
 ## `vote_label` が空なら投票ボタンを出さない(締切後・自分の投稿)。
@@ -46,7 +51,17 @@ func open(proposal: Dictionary, vote_label: String, vote_enabled: bool, note: St
 	_vote_button.visible = not vote_label.is_empty()
 	_vote_button.text = vote_label
 	_vote_button.disabled = not vote_enabled
+	_layout()
 	visible = true
+
+
+## 縦(GameDesign.md 9章「縦画面」)では `PortraitModal` の論理幅で組み、中身ごと拡大する。
+func _layout() -> void:
+	size = PortraitModal.screen_size()
+	_dim.size = size
+	_center.size = size
+	PortraitModal.fit_width(_center, PANEL_WIDTH, PANEL_INSET)
+	PortraitModal.fit(_center)
 
 
 ## 投票の通信中は押せなくする。
@@ -66,6 +81,7 @@ func close() -> void:
 
 func _build() -> void:
 	var dim := ColorRect.new()
+	_dim = dim
 	dim.color = DIM_COLOR
 	dim.size = SCREEN_SIZE
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -73,6 +89,7 @@ func _build() -> void:
 	add_child(dim)
 
 	var center := CenterContainer.new()
+	_center = center
 	center.size = SCREEN_SIZE
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(center)

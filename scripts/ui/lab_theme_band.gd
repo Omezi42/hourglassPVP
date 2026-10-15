@@ -34,6 +34,15 @@ const VALUE_FONT_SIZE := 22
 const NOTE_FONT_SIZE := 13
 const DIVIDER_COLOR := Color(0.85, 0.62, 0.22, 0.3)
 const PIP_EMPTY := Color(0.68, 0.65, 0.60, 0.55)
+## 縦画面(GameDesign.md 9章「縦画面」)。お題の段の下へ締切・票・「案を出す」の段を積み、論理幅で組んで
+## 帯ごと `PORTRAIT_ZOOM` 倍にする(画面がこの倍率で置く)。
+const PORTRAIT_WIDTH := 480.0
+const PORTRAIT_HEIGHT := 262.0
+const PORTRAIT_ZOOM := 1.4
+const PORTRAIT_SIDE_DROP := 120.0
+const PORTRAIT_SUBMIT_RECT := Rect2(268, 160, 180, 60)
+const PORTRAIT_PREV_POS := Vector2(304, 162)
+const PORTRAIT_NEXT_POS := Vector2(384, 162)
 
 var _font: Font
 var _panel_style: StyleBox
@@ -48,6 +57,7 @@ var _note := ""
 var _submit_button: Button
 var _prev_button: Button
 var _next_button: Button
+var _portrait := false
 
 
 func _ready() -> void:
@@ -69,6 +79,25 @@ func _ready() -> void:
 	_next_button.position = NEXT_POS
 	_next_button.pressed.connect(func() -> void: step_requested.emit(-1))
 	add_child(_next_button)
+
+
+## 縦横の置き方を切り替える。大きさと拡大は画面が決める(縦は `PORTRAIT_WIDTH` x `PORTRAIT_HEIGHT`)。
+func set_portrait(portrait: bool) -> void:
+	_portrait = portrait
+	var submit := PORTRAIT_SUBMIT_RECT if portrait else SUBMIT_RECT
+	_submit_button.custom_minimum_size = submit.size
+	_submit_button.size = submit.size
+	_submit_button.position = submit.position
+	_prev_button.position = PORTRAIT_PREV_POS if portrait else PREV_POS
+	_next_button.position = PORTRAIT_NEXT_POS if portrait else NEXT_POS
+	queue_redraw()
+
+
+## 締切・票の段の左端と、横からの下げ幅(縦はお題の下の段へ移る)。
+func _side_at(baseline: float) -> Vector2:
+	if _portrait:
+		return Vector2(TEXT_LEFT, baseline + PORTRAIT_SIDE_DROP)
+	return Vector2(SIDE_LEFT, baseline)
 
 
 ## 募集中の回。`note` は「案を出す」を押せない理由(空なら出さない)。
@@ -128,7 +157,7 @@ func _draw() -> void:
 		Vector2(TEXT_LEFT, TITLE_Y),
 		_title,
 		HORIZONTAL_ALIGNMENT_LEFT,
-		DIVIDER_X - TEXT_LEFT * 2.0,
+		size.x - TEXT_LEFT * 2.0 if _portrait else DIVIDER_X - TEXT_LEFT * 2.0,
 		TITLE_FONT_SIZE,
 		UiPalette.TEXT_OFFWHITE
 	)
@@ -137,25 +166,35 @@ func _draw() -> void:
 		Vector2(TEXT_LEFT, DETAIL_Y),
 		_detail,
 		HORIZONTAL_ALIGNMENT_LEFT,
-		DETAIL_WIDTH,
+		size.x - TEXT_LEFT * 2.0 if _portrait else DETAIL_WIDTH,
 		DETAIL_FONT_SIZE,
 		UiPalette.TEXT_MUTED
 	)
-	draw_line(
-		Vector2(DIVIDER_X, DIVIDER_TOP),
-		Vector2(DIVIDER_X, size.y - DIVIDER_TOP),
-		DIVIDER_COLOR,
-		1.0
-	)
+	if _portrait:
+		var divider_y := DETAIL_Y + DIVIDER_TOP
+		draw_line(
+			Vector2(TEXT_LEFT, divider_y),
+			Vector2(size.x - TEXT_LEFT, divider_y),
+			DIVIDER_COLOR,
+			1.0
+		)
+	else:
+		draw_line(
+			Vector2(DIVIDER_X, DIVIDER_TOP),
+			Vector2(DIVIDER_X, size.y - DIVIDER_TOP),
+			DIVIDER_COLOR,
+			1.0
+		)
 	if _closed:
 		_pair("期間", _period_text, DEADLINE_Y)
 		_pair("結果", _result_text, VOTES_Y)
 		return
 	_pair("締切まで", _deadline_text, DEADLINE_Y)
-	var right := _text("残りの票", Vector2(SIDE_LEFT, VOTES_Y), CAPTION_FONT_SIZE, UiPalette.TEXT_MUTED)
+	var votes_at := _side_at(VOTES_Y)
+	var right := _text("残りの票", votes_at, CAPTION_FONT_SIZE, UiPalette.TEXT_MUTED)
 	for i in LabRules.VOTES_PER_ROUND:
 		var center := Vector2(
-			right + VALUE_GAP + PIP_RADIUS + i * PIP_STEP, VOTES_Y - PIP_RADIUS * 0.6
+			right + VALUE_GAP + PIP_RADIUS + i * PIP_STEP, votes_at.y - PIP_RADIUS * 0.6
 		)
 		if i < _votes_left:
 			UiPaint.fill_circle(
@@ -166,22 +205,23 @@ func _draw() -> void:
 				get_canvas_item(), center, PIP_RADIUS, PIP_EMPTY, PIP_RING, PIP_SEGMENTS
 			)
 	if not _note.is_empty():
+		var submit := PORTRAIT_SUBMIT_RECT if _portrait else SUBMIT_RECT
+		var note_y := NOTE_Y + (PORTRAIT_SIDE_DROP if _portrait else 0.0)
 		draw_string(
 			_font,
-			Vector2(SUBMIT_RECT.position.x, NOTE_Y),
+			Vector2(submit.position.x, note_y),
 			_note,
 			HORIZONTAL_ALIGNMENT_CENTER,
-			SUBMIT_RECT.size.x,
+			submit.size.x,
 			NOTE_FONT_SIZE,
 			UiPalette.TEXT_MUTED
 		)
 
 
 func _pair(caption: String, value: String, baseline: float) -> void:
-	var right := _text(
-		caption, Vector2(SIDE_LEFT, baseline), CAPTION_FONT_SIZE, UiPalette.TEXT_MUTED
-	)
-	_text(value, Vector2(right + VALUE_GAP, baseline), VALUE_FONT_SIZE, UiPalette.TEXT_OFFWHITE)
+	var at := _side_at(baseline)
+	var right := _text(caption, at, CAPTION_FONT_SIZE, UiPalette.TEXT_MUTED)
+	_text(value, Vector2(right + VALUE_GAP, at.y), VALUE_FONT_SIZE, UiPalette.TEXT_OFFWHITE)
 
 
 ## 1行描き、右端のx座標を返す。

@@ -18,6 +18,12 @@ const ANNOUNCE_NOTE := "公式Discordサーバーへ「対戦相手をさがし�
 const ANNOUNCE_BADGE_GAP := 10.0
 const CANCEL_SIZE := Vector2(220, 64)
 const CANCEL_GAP := 40.0
+const TIER_FONT_SIZE := 18
+## 縦画面(GameDesign.md 9章「縦画面」)。中央の待機の文言は `EmptyState` が拡大して描くため、印とボタンもそれに合わせる。
+const PORTRAIT_CANCEL_SIZE := Vector2(300, 76)
+const PORTRAIT_TIER_FONT_SIZE := 26
+## 待機の一群を縦の中央より上へ寄せる(下にCPU戦の入口と予告が続くため)。
+const PORTRAIT_CONTENT_HEIGHT := 760.0
 
 ## 待っている間のCPU戦のキュー。`WaitingCpuMatch` がCPU戦の印を立て、相手の知らせを受ける。
 var queue: MatchmakingQueue:
@@ -35,6 +41,8 @@ var _tier_label: Label
 var _announce_badge: StatusBadge
 var _cancel_button: Button
 var _ceremony: CardSeasonCeremonyPanel
+var _header: ScreenHeader
+var _portrait := false
 
 
 func _ready() -> void:
@@ -49,17 +57,13 @@ func _build() -> void:
 	add_child(header)
 	header.set_title("ランクマッチ")
 	header.back_pressed.connect(_on_back_pressed)
+	_header = header
 
-	_content_rect = Rect2(
-		ScreenHeader.OUTER_MARGIN,
-		ScreenHeader.CONTENT_TOP,
-		1280.0 - ScreenHeader.OUTER_MARGIN * 2.0,
-		ScreenHeader.CONTENT_HEIGHT
-	)
+	_content_rect = _landscape_content_rect()
 	_tier_label = Label.new()
 	_tier_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_tier_label.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
-	_tier_label.add_theme_font_size_override("font_size", 18)
+	_tier_label.add_theme_font_size_override("font_size", TIER_FONT_SIZE)
 	add_child(_tier_label)
 
 	_empty_state = EmptyState.new()
@@ -87,6 +91,46 @@ func _build() -> void:
 	# (Godotは後の子ほど手前に描く。Architecture.md 11章)。
 	_ceremony = CardSeasonCeremonyPanel.new()
 	add_child(_ceremony)
+
+
+func _landscape_content_rect() -> Rect2:
+	return Rect2(
+		ScreenHeader.OUTER_MARGIN,
+		ScreenHeader.CONTENT_TOP,
+		ScreenOrientation.LANDSCAPE_SIZE.x - ScreenHeader.OUTER_MARGIN * 2.0,
+		ScreenHeader.CONTENT_HEIGHT
+	)
+
+
+## 縦横が変わったときに `Main` から呼ばれる(Architecture.md 4.7節)。待機(キュー)は保つ。
+func apply_orientation(portrait: bool) -> void:
+	_portrait = portrait
+	if _header == null:
+		return
+	_header.apply_orientation(portrait)
+	_content_rect = _landscape_content_rect()
+	if portrait:
+		var content := _header.portrait_content_rect()
+		_content_rect = Rect2(content.position, Vector2(content.size.x, PORTRAIT_CONTENT_HEIGHT))
+	_empty_state.position = _content_rect.position
+	_empty_state.size = _content_rect.size
+	_tier_label.add_theme_font_size_override(
+		"font_size", PORTRAIT_TIER_FONT_SIZE if portrait else TIER_FONT_SIZE
+	)
+	var cancel_size := PORTRAIT_CANCEL_SIZE if portrait else CANCEL_SIZE
+	_cancel_button.custom_minimum_size = cancel_size
+	_cancel_button.size = cancel_size
+	if portrait:
+		_cancel_button.add_theme_font_size_override("font_size", ScreenHeader.PORTRAIT_BUTTON_FONT)
+	else:
+		_cancel_button.remove_theme_font_size_override("font_size")
+	_cancel_button.position = Vector2(
+		_content_rect.get_center().x - cancel_size.x * 0.5, _cancel_button_top()
+	)
+	_cpu_offer.place(_cancel_button, portrait)
+	if not _tier_label.text.is_empty():
+		_refresh_tier_label()
+	_place_announce_badge()
 
 
 ## デッキ選択画面から開く。開いた時点でシーズンを確認してからキューへ参加する。
@@ -121,7 +165,7 @@ func begin_match() -> void:
 
 func _refresh_tier_label() -> void:
 	_tier_label.text = "いまの段位: %s" % RankRules.display_name(AccountService.rank_tier())
-	var font_size := 18
+	var font_size := _tier_label.get_theme_font_size("font_size")
 	var half_width := (
 		_tier_label.get_theme_default_font().get_string_size(_tier_label.text, 0, -1, font_size).x
 		* 0.5
@@ -175,10 +219,10 @@ func _place_announce_badge() -> void:
 		return
 	var font_size := EmptyState.TITLE_FONT_SIZE
 	var text := _status_base_text + ".".repeat(BUSY_DOTS_MAX)
-	var half_width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x * 0.5
+	var text_width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
 	_announce_badge.position = Vector2(
-		_content_rect.get_center().x + half_width + ANNOUNCE_BADGE_GAP,
-		_title_baseline_y() - font_size * 0.72 - StatusBadge.DIAMETER * 0.5
+		_content_rect.get_center().x + text_width * 0.5 * _zoom() + ANNOUNCE_BADGE_GAP,
+		_title_baseline_y() - font_size * 0.72 * _zoom() - StatusBadge.DIAMETER * 0.5
 	)
 
 
@@ -187,15 +231,20 @@ func _on_announce_result(ok: bool) -> void:
 		_announce_badge.show_note(ANNOUNCE_NOTE)
 
 
+## `EmptyState` の描く倍率(縦は中身ごと拡大する)。
+func _zoom() -> float:
+	return EmptyState.PORTRAIT_ZOOM if _portrait else 1.0
+
+
 func _title_baseline_y() -> float:
 	var emblem_height := EmptyState.EMBLEM_SIZE * EmptyState.EMBLEM_VISUAL_RATIO
 	var block := emblem_height + EmptyState.EMBLEM_GAP + EmptyState.TITLE_FONT_SIZE
-	var top := _content_rect.position.y + (_content_rect.size.y - block) * 0.5
-	return top + emblem_height + EmptyState.EMBLEM_GAP
+	var top := (_content_rect.size.y / _zoom() - block) * 0.5
+	return _content_rect.position.y + (top + emblem_height + EmptyState.EMBLEM_GAP) * _zoom()
 
 
 func _cancel_button_top() -> float:
-	return _title_baseline_y() + CANCEL_GAP
+	return _title_baseline_y() + CANCEL_GAP * _zoom()
 
 
 func _sign_in_or_fail() -> bool:

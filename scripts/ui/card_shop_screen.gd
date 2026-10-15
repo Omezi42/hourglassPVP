@@ -25,6 +25,20 @@ const GRID_SEPARATION := 12
 const MESSAGE_HEIGHT := 34.0
 const MESSAGE_FONT_SIZE := 16
 
+## 縦画面(GameDesign.md 9章「縦画面」)。品種のタブを上に3列で並べ、その下の一覧と詳細を切り替えて1つずつ出す
+## (3つを並べる幅が無いため)。一覧と詳細はパネルごと拡大して置く。
+const PORTRAIT_SWITCH := ["一覧", "詳細"]
+const PORTRAIT_SWITCH_WIDTH := 200.0
+const PORTRAIT_KIND_COLUMNS := 3
+const PORTRAIT_KIND_HEIGHT := 84.0
+const PORTRAIT_GAP := 12.0
+const PORTRAIT_LIST_ZOOM := 1.6
+## アイコンは5列では1つの幅が足りないため、縦では3列にする。
+const PORTRAIT_ICON_COLUMNS := 3
+const PORTRAIT_MESSAGE_HEIGHT := 48.0
+const PORTRAIT_MESSAGE_FONT_SIZE := 24
+const PORTRAIT_CHIP_SCALE := 1.4
+
 ## タブの並び(対局への効き目が大きい順。GameDesign.md 21章)。
 const KINDS: Array[Dictionary] = [
 	{"kind": ShopCatalog.Kind.CARD_SET, "heading": "カードセット"},
@@ -38,7 +52,7 @@ var _balance: CurrencyChip
 ## 開いた直後は脈を出さない。買って減ったときも同じで、脈は増えたときだけ出る。
 var _balance_seen := false
 var _message: Label
-var _rail: VBoxContainer
+var _rail: GridContainer
 var _scroll: ScrollContainer
 var _grid: GridContainer
 var _detail: ShopDetailPane
@@ -47,6 +61,12 @@ var _kind: ShopCatalog.Kind = ShopCatalog.Kind.CARD_SET
 var _selected_id := ""
 var _tiles: Array[ShopItemTile] = []
 var _busy := false
+var _header: ScreenHeader
+var _grid_panel: PanelContainer
+var _detail_panel: PanelContainer
+var _switch: Array[Button] = []
+var _show_detail := false
+var _portrait := false
 
 
 func _ready() -> void:
@@ -94,6 +114,7 @@ func _refresh() -> void:
 	_detail.visible = not _selected_id.is_empty()
 	if _detail.visible:
 		_detail.show_item(_kind, _selected_id)
+	_select_view(_show_detail)
 
 
 ## **売り物が0件の品種のタブは出さない**(GameDesign.md 21章)。
@@ -113,7 +134,8 @@ func _build_tabs(by_kind: Dictionary) -> void:
 			if AccountService.owns(kind, str(id)):
 				tab.owned_count += 1
 		tab.active = kind == _kind
-		tab.custom_minimum_size = Vector2(RAIL_WIDTH, TAB_HEIGHT)
+		tab.portrait = _portrait
+		tab.custom_minimum_size = _kind_tab_size()
 		tab.pressed.connect(func() -> void: _select_kind(kind))
 		_rail.add_child(tab)
 
@@ -123,6 +145,8 @@ func _build_tiles(ids: Array) -> void:
 		child.queue_free()
 	_tiles.clear()
 	var columns := ShopItemTile.columns(_kind)
+	if _portrait and _kind == ShopCatalog.Kind.ICON:
+		columns = PORTRAIT_ICON_COLUMNS
 	_grid.columns = columns
 	var tile_width := (_grid_width() - GRID_SEPARATION * (columns - 1)) / float(columns)
 	for id in ids:
@@ -140,7 +164,7 @@ func _build_tiles(ids: Array) -> void:
 func _grid_width() -> float:
 	var style: StyleBox = load(PANEL_STYLE)
 	var bar := _scroll.get_v_scroll_bar().get_combined_minimum_size().x
-	return _grid_rect().size.x - style.get_minimum_size().x - bar
+	return _grid_rect().size.x / _list_zoom() - style.get_minimum_size().x - bar
 
 
 func _select_kind(kind: ShopCatalog.Kind) -> void:
@@ -158,12 +182,17 @@ func _select_kind(kind: ShopCatalog.Kind) -> void:
 
 func _select_item(id: String) -> void:
 	if id == _selected_id:
+		# 縦では、選び直さずに同じ品をもう一度押しても詳細へ進めるようにする。
+		if _portrait:
+			_select_view(true)
 		return
 	_selected_id = id
 	_set_message("")
 	for tile in _tiles:
 		tile.selected = tile.id == id
 	_detail.show_item(_kind, id, true)
+	if _portrait:
+		_select_view(true)
 
 
 ## 並べ直した直後はまだ大きさが決まっていないため、1フレーム待ってから寄せる。
@@ -205,6 +234,8 @@ func _on_buy_requested(kind: ShopCatalog.Kind, id: String) -> void:
 
 
 func _selected_tile_rect() -> Rect2:
+	if _portrait and _show_detail:
+		return _detail.preview_global_rect()
 	for tile in _tiles:
 		if tile.selected:
 			return tile.get_global_rect()
@@ -216,10 +247,40 @@ func _set_message(text: String) -> void:
 
 
 func _rail_rect() -> Rect2:
+	if _portrait:
+		var content := _header.portrait_content_rect()
+		var rows := ceili(float(KINDS.size()) / float(PORTRAIT_KIND_COLUMNS))
+		return Rect2(
+			content.position,
+			Vector2(content.size.x, PORTRAIT_KIND_HEIGHT * rows + TAB_GAP * (rows - 1))
+		)
 	return Rect2(MARGIN, ScreenHeader.CONTENT_TOP, RAIL_WIDTH, ScreenHeader.CONTENT_HEIGHT)
 
 
+func _kind_tab_size() -> Vector2:
+	if not _portrait:
+		return Vector2(RAIL_WIDTH, TAB_HEIGHT)
+	var columns := float(PORTRAIT_KIND_COLUMNS)
+	var width := (_rail_rect().size.x - TAB_GAP * (columns - 1.0)) / columns
+	return Vector2(width, PORTRAIT_KIND_HEIGHT)
+
+
+## 縦の一覧・詳細の下に残す、購入の結果の1行。
+func _portrait_message_rect() -> Rect2:
+	var content := _header.portrait_content_rect()
+	return Rect2(
+		content.position.x,
+		content.end.y - PORTRAIT_MESSAGE_HEIGHT,
+		content.size.x,
+		PORTRAIT_MESSAGE_HEIGHT
+	)
+
+
 func _detail_rect() -> Rect2:
+	if _portrait:
+		var content := _header.portrait_content_rect()
+		var bottom := _portrait_message_rect().position.y - PORTRAIT_GAP
+		return Rect2(content.position, Vector2(content.size.x, bottom - content.position.y))
 	return Rect2(
 		SCREEN_WIDTH - MARGIN - DETAIL_WIDTH,
 		ScreenHeader.CONTENT_TOP,
@@ -228,7 +289,13 @@ func _detail_rect() -> Rect2:
 	)
 
 
+## 画面上の一覧の矩形(縦は拡大した後の大きさ)。
 func _grid_rect() -> Rect2:
+	if _portrait:
+		var rail := _rail_rect()
+		var top := rail.end.y + PORTRAIT_GAP
+		var bottom := _portrait_message_rect().position.y - PORTRAIT_GAP
+		return Rect2(rail.position.x, top, rail.size.x, bottom - top)
 	var left := _rail_rect().end.x + COLUMN_GAP
 	var right := _detail_rect().position.x - COLUMN_GAP
 	return Rect2(
@@ -242,21 +309,26 @@ func _build() -> void:
 	add_child(backdrop)
 	var header: ScreenHeader = load(HEADER_SCENE).instantiate()
 	add_child(header)
+	_header = header
 	header.set_title("ショップ")
 	header.back_pressed.connect(func() -> void: back_pressed.emit())
+	_switch = PortraitTabs.make(
+		header, PORTRAIT_SWITCH, PORTRAIT_SWITCH_WIDTH, func(i: int) -> void: _select_view(i == 1)
+	)
 	# 残高はここでの購入で必ず動くため、ヘッダーの主アクションの位置へ常時出す
 	# (GameDesign.md 21章)。押すものではないのでボタンにはしない。
 	_balance = CurrencyChip.new()
 	_balance.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	header.add_action(_balance)
 
-	_rail = VBoxContainer.new()
-	_rail.position = _rail_rect().position
-	_rail.size = _rail_rect().size
-	_rail.add_theme_constant_override("separation", TAB_GAP)
+	_rail = GridContainer.new()
+	_rail.columns = 1
+	_rail.add_theme_constant_override("h_separation", TAB_GAP)
+	_rail.add_theme_constant_override("v_separation", TAB_GAP)
 	add_child(_rail)
 
 	var grid_panel := _panel(_grid_rect())
+	_grid_panel = grid_panel
 	add_child(grid_panel)
 	_scroll = ScrollContainer.new()
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -268,8 +340,6 @@ func _build() -> void:
 	_scroll.add_child(_grid)
 
 	_message = Label.new()
-	_message.position = Vector2(_grid_rect().position.x, _grid_rect().end.y)
-	_message.size = Vector2(_grid_rect().size.x, MESSAGE_HEIGHT)
 	_message.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_message.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_message.add_theme_font_size_override("font_size", MESSAGE_FONT_SIZE)
@@ -277,6 +347,7 @@ func _build() -> void:
 	add_child(_message)
 
 	var detail_panel := _panel(_detail_rect())
+	_detail_panel = detail_panel
 	add_child(detail_panel)
 	_detail = ShopDetailPane.new()
 	_detail.buy_requested.connect(_on_buy_requested)
@@ -285,6 +356,64 @@ func _build() -> void:
 
 	_preview = ShopSetPreview.new()
 	add_child(_preview)
+	_layout()
+
+
+func _list_zoom() -> float:
+	return PORTRAIT_LIST_ZOOM if _portrait else 1.0
+
+
+## 詳細の倍率。縦は横の幅のパネルを画面の幅いっぱいまで拡大する。
+func _detail_zoom() -> float:
+	return _detail_rect().size.x / DETAIL_WIDTH if _portrait else 1.0
+
+
+## 縦横が変わったときに `Main` から呼ばれる(Architecture.md 4.7節)。品種と選んでいる品は保つ。
+func apply_orientation(portrait: bool) -> void:
+	_portrait = portrait
+	if _header == null:
+		return
+	PortraitTabs.mark(_switch, int(_show_detail), portrait)
+	_header.apply_orientation(portrait)
+	_balance.scale_factor = PORTRAIT_CHIP_SCALE if portrait else 1.0
+	_balance.height_override = ScreenHeader.PORTRAIT_ACTION_HEIGHT if portrait else 0.0
+	_layout()
+	_refresh()
+
+
+func _layout() -> void:
+	var rail := _rail_rect()
+	_rail.columns = PORTRAIT_KIND_COLUMNS if _portrait else 1
+	_rail.position = rail.position
+	_rail.size = rail.size
+	_place_scaled(_grid_panel, _grid_rect(), _list_zoom())
+	_place_scaled(_detail_panel, _detail_rect(), _detail_zoom())
+	var grid := _grid_rect()
+	var message := Rect2(grid.position.x, grid.end.y, grid.size.x, MESSAGE_HEIGHT)
+	if _portrait:
+		message = _portrait_message_rect()
+	_message.position = message.position
+	_message.size = message.size
+	_message.add_theme_font_size_override(
+		"font_size", PORTRAIT_MESSAGE_FONT_SIZE if _portrait else MESSAGE_FONT_SIZE
+	)
+
+
+## 画面上の矩形 `rect` に、`zoom` 倍して収まるように置く(縦はパネルごと拡大する)。
+func _place_scaled(panel: Control, rect: Rect2, zoom: float) -> void:
+	panel.scale = Vector2.ONE * zoom
+	panel.position = rect.position
+	panel.custom_minimum_size = rect.size / zoom
+	panel.size = rect.size / zoom
+
+
+## 縦で一覧と詳細を切り替える。横では両方を出す。
+func _select_view(detail: bool) -> void:
+	_show_detail = detail
+	PortraitTabs.mark(_switch, int(detail), _portrait)
+	_rail.visible = not detail or not _portrait
+	_grid_panel.visible = not detail or not _portrait
+	_detail_panel.visible = detail or not _portrait
 
 
 func _panel(rect: Rect2) -> PanelContainer:

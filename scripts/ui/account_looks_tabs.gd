@@ -17,6 +17,10 @@ const ICON_COLUMNS := 6
 const MAT_COLUMNS := 3
 const GRID_GAP := 14
 const TITLE_GAP := 8
+## 縦画面(GameDesign.md 9章「縦画面」)。アカウント画面がパネルごと拡大して置くため、論理幅(480)に収める。
+const PORTRAIT_TAB_SIZE := Vector2(110, 52)
+const PORTRAIT_ICON_COLUMNS := 4
+const PORTRAIT_MAT_COLUMNS := 2
 
 var _tab_buttons: Array[Button] = []
 var _pages: Array[Control] = []
@@ -54,6 +58,14 @@ func _ready() -> void:
 		page.anchor_bottom = 1.0
 		body.add_child(page)
 	select_tab(Tab.ICON)
+
+
+func set_portrait(portrait: bool) -> void:
+	for button in _tab_buttons:
+		button.custom_minimum_size = PORTRAIT_TAB_SIZE if portrait else TAB_SIZE
+	_icon_grid.columns = PORTRAIT_ICON_COLUMNS if portrait else ICON_COLUMNS
+	_mat_grid.columns = PORTRAIT_MAT_COLUMNS if portrait else MAT_COLUMNS
+	_emote_page.set_portrait(portrait)
 
 
 func select_tab(index: int) -> void:

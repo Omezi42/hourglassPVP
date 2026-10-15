@@ -13,6 +13,8 @@ const SLOT_FONT_SIZE := 15
 const ROW_HEIGHT := 32
 const ROW_FONT_SIZE := 15
 const CAPTION_FONT_SIZE := 14
+## 縦画面では2列のまま論理幅(480)へ収める(アカウント画面がパネルごと拡大する)。
+const PORTRAIT_SLOT_SIZE := Vector2(220, 52)
 
 var _slots: Array[String] = []
 ## いま差し替えようとしている枠。
@@ -49,6 +51,11 @@ func _ready() -> void:
 	_list = VBoxContainer.new()
 	_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(_list)
+
+
+func set_portrait(portrait: bool) -> void:
+	for slot in _slot_buttons:
+		slot.custom_minimum_size = PORTRAIT_SLOT_SIZE if portrait else SLOT_SIZE
 
 
 ## 画面を開くたび・アカウントが変わるたびに呼ぶ。

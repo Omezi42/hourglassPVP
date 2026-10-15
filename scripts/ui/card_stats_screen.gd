@@ -23,6 +23,11 @@ const COL_WINS := 68.0
 const COL_RATE := 94.0
 const COL_TURNS := 92.0
 const ROW_FONT_SIZE := 18
+## 縦画面(GameDesign.md 9章「縦画面」)。2つの欄を上下に積んで1本のスクロールにし、文字を目安まで大きくする。
+## 数値の列は文字ほどには広げない(見出しの列の幅を残すため)。
+const PORTRAIT_TEXT_SCALE := 24.0 / ROW_FONT_SIZE
+const PORTRAIT_COLUMN_SCALE := 1.25
+const PORTRAIT_PANEL_GAP := 16
 
 ## 「自分」と「みんな」を往復する(GameDesign.md 22章)。並び替えの往復と同じ流儀。
 var _global := false
@@ -39,6 +44,13 @@ var _fetching := false
 var _summary: VBoxContainer
 var _cards: VBoxContainer
 var _toggle: Button
+var _header: ScreenHeader
+var _summary_panel: PanelContainer
+var _cards_panel: PanelContainer
+## 縦で2つの欄を積む箱。横では使わない。
+var _stack_scroll: ScrollContainer
+var _stack: VBoxContainer
+var _portrait := false
 
 
 func _ready() -> void:
@@ -264,6 +276,7 @@ func _kind_name(kind: int) -> String:
 ## 1行を「見出し(伸びる) + 右揃えの数値の列」として組む。
 ## `values` は [{"text":, "width":}] の並び。
 func _make_row(label: String, values: Array, font_size := ROW_FONT_SIZE) -> HBoxContainer:
+	var column_scale := PORTRAIT_COLUMN_SCALE if _portrait else 1.0
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	var name_label := _make_line(label, font_size)
@@ -272,7 +285,7 @@ func _make_row(label: String, values: Array, font_size := ROW_FONT_SIZE) -> HBox
 	row.add_child(name_label)
 	for cell: Dictionary in values:
 		var value := _make_line(str(cell["text"]), font_size)
-		value.custom_minimum_size.x = float(cell["width"])
+		value.custom_minimum_size.x = float(cell["width"]) * column_scale
 		value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		row.add_child(value)
 	return row
@@ -286,7 +299,8 @@ static func _cell(text: String, width: float) -> Dictionary:
 func _make_line(text: String, font_size: int) -> Label:
 	var label := Label.new()
 	label.text = text
-	label.add_theme_font_size_override("font_size", font_size)
+	var text_scale := PORTRAIT_TEXT_SCALE if _portrait else 1.0
+	label.add_theme_font_size_override("font_size", roundi(font_size * text_scale))
 	label.add_theme_color_override("font_color", UiPalette.TEXT_OFFWHITE)
 	return label
 
@@ -297,13 +311,25 @@ func _build() -> void:
 	add_child(backdrop)
 	var header: ScreenHeader = load(HEADER_SCENE).instantiate()
 	add_child(header)
+	_header = header
 	header.set_title("戦績")
 	header.back_pressed.connect(func() -> void: back_pressed.emit())
 	_toggle = CodedButton.make("みんなの戦績", TOGGLE_SIZE)
 	_toggle.pressed.connect(_on_toggle_pressed)
 	header.add_action(_toggle)
+	_stack_scroll = ScrollContainer.new()
+	_stack_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_stack_scroll.visible = false
+	TouchScroll.enable(_stack_scroll)
+	add_child(_stack_scroll)
+	_stack = VBoxContainer.new()
+	_stack.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_stack.add_theme_constant_override("separation", PORTRAIT_PANEL_GAP)
+	_stack_scroll.add_child(_stack)
 	_summary = _make_panel(SUMMARY_RECT)
+	_summary_panel = _summary.get_parent()
 	_cards = _make_panel(CARDS_RECT)
+	_cards_panel = _cards.get_parent()
 	# 記録が無い/読み込み中は、2つのパネルにまたがる中央へ1つだけ出す。
 	# 左の欄の左上へ1行だけ置くと、右の欄が空のまま残って画面が壊れて見える。
 	_empty = EmptyState.new()
@@ -311,6 +337,40 @@ func _build() -> void:
 	_empty.size = Vector2(CARDS_RECT.end.x - SUMMARY_RECT.position.x, SUMMARY_RECT.size.y)
 	_empty.visible = false
 	add_child(_empty)
+
+
+## 縦横が変わったときに `Main` から呼ばれる(Architecture.md 4.7節)。「自分 / みんな」は保つ。
+## 縦では2つの欄を1本のスクロールへ移して積む(GameDesign.md 9章「縦画面」)。
+func apply_orientation(portrait: bool) -> void:
+	_portrait = portrait
+	if _header == null:
+		return
+	_header.apply_orientation(portrait)
+	_stack_scroll.visible = portrait
+	for panel: PanelContainer in [_summary_panel, _cards_panel]:
+		panel.get_parent().remove_child(panel)
+		if portrait:
+			panel.custom_minimum_size = Vector2.ZERO
+			_stack.add_child(panel)
+		else:
+			add_child(panel)
+	if portrait:
+		var rect := _header.portrait_content_rect()
+		_stack_scroll.position = rect.position
+		_stack_scroll.size = rect.size
+		_empty.position = rect.position
+		_empty.size = rect.size
+	else:
+		for pair: Array in [[_summary_panel, SUMMARY_RECT], [_cards_panel, CARDS_RECT]]:
+			var rect: Rect2 = pair[1]
+			pair[0].position = rect.position
+			pair[0].custom_minimum_size = rect.size
+			pair[0].size = rect.size
+		_empty.position = SUMMARY_RECT.position
+		_empty.size = Vector2(CARDS_RECT.end.x - SUMMARY_RECT.position.x, SUMMARY_RECT.size.y)
+	# 空の案内は手前に置く(後から足した子ほど手前に描かれる)。
+	move_child(_empty, -1)
+	_refresh()
 
 
 func _make_panel(rect: Rect2) -> VBoxContainer:

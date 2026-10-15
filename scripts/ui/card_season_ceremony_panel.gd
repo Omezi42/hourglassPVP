@@ -18,12 +18,22 @@ const PANEL_SIZE := Vector2(560, 400)
 const PANEL_STYLE := "res://resources/theme/content_panel.tres"
 const EMBLEM_SIZE := 96.0
 const POP_IN_DURATION := 0.32
+const NOTE_INSET := 60.0
+const CLOSE_SIZE := Vector2(180, 48)
+## 縦(GameDesign.md 9章「縦画面」)。`PortraitModal` の論理幅で組み、中身ごと拡大する。
+const PORTRAIT_PANEL_SIZE := Vector2(PortraitModal.WIDTH, 400)
+const PORTRAIT_CLOSE_SIZE := Vector2(180, 56)
+const NOTE_FONT := 15
+## 拡大しても本文の目安(24px)に届かない注記だけ縦の大きさを持つ。
+const PORTRAIT_NOTE_FONT := 17
 
 var _dim: ColorRect
 var _panel: PanelContainer
 var _tier_label: Label
 var _reward_label: Label
 var _pop_tween: Tween
+var _note: Label
+var _close: Button
 
 
 func _ready() -> void:
@@ -31,6 +41,7 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	size = SCREEN_SIZE
 	_build()
+	PortraitModal.watch(self, _layout)
 
 
 ## `result`は`RankProgress.ensure_current_season()`の戻り値をそのまま渡す。
@@ -40,8 +51,23 @@ func open(result: Dictionary) -> void:
 	var reward := int(result.get("reward", 0))
 	_reward_label.text = "+%d %s" % [reward, CurrencyRules.CURRENCY_NAME] if reward > 0 else ""
 	_reward_label.visible = reward > 0
+	_layout()
 	visible = true
 	_play_pop_in()
+
+
+func _layout() -> void:
+	var portrait := ScreenOrientation.is_portrait()
+	var panel_size := PORTRAIT_PANEL_SIZE if portrait else PANEL_SIZE
+	size = PortraitModal.screen_size()
+	_dim.size = size
+	# 中身の最小幅を先に変える(パネルは中身より狭くならないため)。
+	_note.custom_minimum_size.x = panel_size.x - NOTE_INSET
+	_note.add_theme_font_size_override("font_size", PORTRAIT_NOTE_FONT if portrait else NOTE_FONT)
+	_close.custom_minimum_size = PORTRAIT_CLOSE_SIZE if portrait else CLOSE_SIZE
+	_panel.size = panel_size
+	_panel.position = (size - panel_size) * 0.5
+	PortraitModal.fit(_panel)
 
 
 func _build() -> void:
@@ -92,25 +118,26 @@ func _build() -> void:
 	_reward_label.add_theme_color_override("font_color", UiPalette.GLOW_AMBER)
 	box.add_child(_reward_label)
 
-	var note := Label.new()
-	note.text = "今シーズンはブロンズ1から新しく始まります"
-	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	note.custom_minimum_size.x = PANEL_SIZE.x - 60.0
-	note.add_theme_font_size_override("font_size", 15)
-	note.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
-	box.add_child(note)
+	_note = Label.new()
+	_note.text = "今シーズンはブロンズ1から新しく始まります"
+	_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_note.custom_minimum_size.x = PANEL_SIZE.x - NOTE_INSET
+	_note.add_theme_font_size_override("font_size", NOTE_FONT)
+	_note.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
+	box.add_child(_note)
 
-	var close := CodedButton.make("閉じる", Vector2(180, 48))
-	close.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	close.pressed.connect(func() -> void: _on_close())
-	box.add_child(close)
+	_close = CodedButton.make("閉じる", CLOSE_SIZE)
+	_close.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_close.pressed.connect(func() -> void: _on_close())
+	box.add_child(_close)
 
 
 ## 拡大しながら現れる(GameDesign.md 9章の手触り方針と同じ、既存の反応の語彙を使う)。
 func _play_pop_in() -> void:
 	_dim.modulate.a = 0.0
-	_panel.scale = Vector2(0.85, 0.85)
+	var settled := _panel.scale
+	_panel.scale = settled * 0.85
 	_panel.modulate.a = 0.0
 	if _pop_tween != null and _pop_tween.is_valid():
 		_pop_tween.kill()
@@ -120,7 +147,7 @@ func _play_pop_in() -> void:
 	_pop_tween.tween_property(_panel, "modulate:a", 1.0, POP_IN_DURATION * 0.6)
 	(
 		_pop_tween
-		. tween_property(_panel, "scale", Vector2.ONE, POP_IN_DURATION)
+		. tween_property(_panel, "scale", settled, POP_IN_DURATION)
 		. set_trans(Tween.TRANS_BACK)
 		. set_ease(Tween.EASE_OUT)
 	)

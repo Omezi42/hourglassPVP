@@ -14,6 +14,11 @@ const SCREEN_SIZE := Vector2(1280, 720)
 const CONTENT_RECT := Rect2(24, ScreenHeader.CONTENT_TOP, 1232, ScreenHeader.CONTENT_HEIGHT)
 const ROUTE_RATIO := 0.6
 const STATUS_GAP := 24.0
+## 縦画面(GameDesign.md 9章「縦画面」)。道を上に縦向きで描き、状態・行き先の詳細を下に置く
+## (中身ごと `PORTRAIT_SIDE_ZOOM` 倍)。
+const PORTRAIT_ROUTE_HEIGHT := 720.0
+const PORTRAIT_GAP := 16.0
+const PORTRAIT_SIDE_ZOOM := 1.25
 const ABANDON_TITLE := "遠征をやめますか"
 const ABANDON_MESSAGE := "ここでやめると、いまの遠征は終わります。"
 const ABANDON_CONFIRM_TEXT := "やめる"
@@ -39,6 +44,7 @@ var _departure_themes: Array[String] = []
 ## 出発で示す最終戦の主(GameDesign.md 27章「主」)。作戦と同じく開き直すまで引き直さない。
 var _departure_boss := ""
 var _departure_depth := 0
+var _header: ScreenHeader
 
 
 func _ready() -> void:
@@ -61,6 +67,7 @@ func _build() -> void:
 	add_child(backdrop)
 	var header: ScreenHeader = load(HEADER_SCENE).instantiate()
 	add_child(header)
+	_header = header
 	header.set_title("遠征")
 	header.back_pressed.connect(func() -> void: back_pressed.emit())
 
@@ -131,6 +138,50 @@ func _build() -> void:
 	_confirm = load(CONFIRM_SCENE).instantiate()
 	add_child(_confirm)
 	_confirm.confirmed.connect(_on_abandon_confirmed)
+
+
+## 縦横が変わったときに `Main` から呼ばれる(Architecture.md 4.7節)。遠征の状態と選んでいる駒は保つ。
+func apply_orientation(portrait: bool) -> void:
+	if _header == null:
+		return
+	_header.apply_orientation(portrait)
+	var screen := Vector2(
+		ScreenOrientation.PORTRAIT_SIZE if portrait else ScreenOrientation.LANDSCAPE_SIZE
+	)
+	for overlay: Control in [_bundle, _boon, _workshop, _summary]:
+		overlay.size = screen
+	var content := _header.portrait_content_rect() if portrait else CONTENT_RECT
+	var zoom := PORTRAIT_SIDE_ZOOM if portrait else 1.0
+	_departure.stacked = portrait
+	_departure.position = content.position
+	_departure.size = content.size / zoom
+	_departure.scale = Vector2.ONE * zoom
+	if portrait:
+		_route.position = content.position
+		_route.size = Vector2(content.size.x, PORTRAIT_ROUTE_HEIGHT)
+		var side_top := content.position.y + PORTRAIT_ROUTE_HEIGHT + PORTRAIT_GAP
+		var side := Vector2(content.size.x, content.end.y - side_top) / PORTRAIT_SIDE_ZOOM
+		for panel: Control in [_status, _destination]:
+			panel.position = Vector2(content.position.x, side_top)
+			panel.size = side
+			panel.scale = Vector2.ONE * PORTRAIT_SIDE_ZOOM
+	else:
+		var route_w := CONTENT_RECT.size.x * ROUTE_RATIO - STATUS_GAP * 0.5
+		var side_w := CONTENT_RECT.size.x * (1.0 - ROUTE_RATIO) - STATUS_GAP * 0.5
+		_route.position = CONTENT_RECT.position
+		_route.size = Vector2(route_w, CONTENT_RECT.size.y)
+		for panel: Control in [_status, _destination]:
+			panel.scale = Vector2.ONE
+			panel.position = Vector2(
+				CONTENT_RECT.position.x + route_w + STATUS_GAP, CONTENT_RECT.position.y
+			)
+			panel.size = Vector2(side_w, CONTENT_RECT.size.y)
+	_route.vertical = portrait
+	_route.relayout()
+	_route.set_selected(_selected_index)
+	# 出発の札は表示のたびに組むため、出ているときだけ組み直す。
+	if _departure.visible:
+		_refresh()
 
 
 func _refresh() -> void:

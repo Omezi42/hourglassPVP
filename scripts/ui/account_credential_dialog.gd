@@ -17,6 +17,9 @@ const NOTE_FONT_SIZE := 14
 const BUTTON_SIZE := Vector2(170, 48)
 const WARNING_COLOR := Color(1, 0.72, 0.45, 1)
 const ERROR_COLOR := Color(1, 0.55, 0.5, 1)
+## 縦(GameDesign.md 9章「縦画面」)。`PortraitModal` の論理幅で組み、中身ごと拡大する。
+const PORTRAIT_PANEL_TOP := 200.0
+const PORTRAIT_BUTTON_SIZE := Vector2(170, 56)
 
 var mode := Mode.REGISTER
 var _title: Label
@@ -26,6 +29,7 @@ var _warning: Label
 var _message: Label
 var _submit: Button
 var _cancel: Button
+var _panel: PanelContainer
 
 
 func _ready() -> void:
@@ -33,6 +37,7 @@ func _ready() -> void:
 	anchor_right = 1.0
 	anchor_bottom = 1.0
 	_build()
+	PortraitModal.watch(self, _layout)
 
 
 ## `guest_currency` はゲストのままログインするときに失う砂金。負ならゲストではない。
@@ -56,7 +61,21 @@ func open(p_mode: Mode, guest_currency: int) -> void:
 			)
 	_warning.visible = not _warning.text.is_empty()
 	_set_busy(false)
+	_layout()
 	visible = true
+
+
+func _layout() -> void:
+	var portrait := ScreenOrientation.is_portrait()
+	var width := PortraitModal.WIDTH if portrait else PANEL_WIDTH
+	_panel.offset_left = -width * 0.5
+	_panel.offset_right = width * 0.5
+	_panel.offset_top = PORTRAIT_PANEL_TOP if portrait else PANEL_TOP
+	for button in [_submit, _cancel]:
+		button.custom_minimum_size = PORTRAIT_BUTTON_SIZE if portrait else BUTTON_SIZE
+	# 上端を基準に拡大する(中心で拡大すると、伸びたぶんが上へはみ出す)。
+	_panel.pivot_offset = Vector2(width * 0.5, 0.0)
+	_panel.scale = Vector2.ONE * (PortraitModal.SCALE if portrait else 1.0)
 
 
 ## 通信の結果を受け取る。成功なら閉じ、失敗なら理由を出して入力を残す。
@@ -91,6 +110,7 @@ func _build() -> void:
 	add_child(dim)
 
 	var panel := PanelContainer.new()
+	_panel = panel
 	panel.add_theme_stylebox_override("panel", load(PANEL_STYLE))
 	panel.anchor_left = 0.5
 	panel.anchor_right = 0.5

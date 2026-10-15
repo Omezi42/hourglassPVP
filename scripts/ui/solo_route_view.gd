@@ -30,7 +30,18 @@ const CUT_NODE_SHADE := Color(0, 0, 0, 0.45)
 ## 押した駒から次の段へ出る道を示す線。
 const PREVIEW_ROAD_ALPHA := 0.8
 const PREVIEW_ROAD_WIDTH := 4.0
+## 縦画面(GameDesign.md 9章「縦画面」)。6段を下から上へ積み、同じ段の駒は横に並べる。
+## 駒の下の文字は本文の目安に近づけ、次の段の駒へ重ならない間隔にする。
+const VERTICAL_TOP_MARGIN := 64.0
+const VERTICAL_BOTTOM_MARGIN := 92.0
+const VERTICAL_ROW_GAP := 200.0
+const VERTICAL_LABEL_FONT_SIZE_1 := 20
+const VERTICAL_LABEL_FONT_SIZE_2 := 16
+const VERTICAL_LABEL_GAP_1 := 22.0
+const VERTICAL_LABEL_GAP_2 := 42.0
 
+## 段を下から上へ積むか(縦画面)。
+var vertical := false
 var _canvas: Control
 var _buttons: Array[Button] = []
 var _route: Array = []
@@ -105,6 +116,12 @@ func _rebuild(interactive: bool) -> void:
 		_add_current_buttons()
 
 
+## 大きさや向き(`vertical`)を変えた後に駒を置き直す。選んでいる駒は保つ。
+func relayout() -> void:
+	if not _route.is_empty():
+		_rebuild(not _record_mode)
+
+
 ## 選択中の駒を切り替える(戻る・別の駒を押したときに呼び出し側から呼ぶ)。-1で解除。
 func set_selected(index: int) -> void:
 	_selected = index
@@ -112,6 +129,8 @@ func set_selected(index: int) -> void:
 
 
 func _column_centers(col_w: float) -> Array:
+	if vertical:
+		return _floor_centers_vertical()
 	var centers: Array = []
 	for col in PATH_COLUMNS:
 		var nodes: Array = _route[col] if col < _route.size() else []
@@ -121,6 +140,23 @@ func _column_centers(col_w: float) -> Array:
 		var col_centers: Array = []
 		for row in n:
 			col_centers.append(Vector2(cx, top + ROW_GAP * float(row)))
+		centers.append(col_centers)
+	return centers
+
+
+## 縦: 段(col)を下から上へ、同じ段の駒(row)を左から右へ。
+func _floor_centers_vertical() -> Array:
+	var centers: Array = []
+	var span := size.y - VERTICAL_TOP_MARGIN - VERTICAL_BOTTOM_MARGIN
+	var step := span / float(maxi(PATH_COLUMNS - 1, 1))
+	for col in PATH_COLUMNS:
+		var nodes: Array = _route[col] if col < _route.size() else []
+		var cy := size.y - VERTICAL_BOTTOM_MARGIN - step * float(col)
+		var n := nodes.size()
+		var left := size.x * 0.5 - VERTICAL_ROW_GAP * float(maxi(n - 1, 0)) * 0.5
+		var col_centers: Array = []
+		for row in n:
+			col_centers.append(Vector2(left + VERTICAL_ROW_GAP * float(row), cy))
 		centers.append(col_centers)
 	return centers
 
@@ -273,15 +309,15 @@ func _draw_node(
 		UiPalette.TEXT_MUTED if state == "locked" or state == "cut" else UiPalette.TEXT_OFFWHITE
 	)
 	_draw_label(
-		center + Vector2(0, radius + LABEL_GAP_1),
+		center + Vector2(0, radius + (VERTICAL_LABEL_GAP_1 if vertical else LABEL_GAP_1)),
 		_kind_label(int(node.get("kind", SoloRun.Kind.BATTLE)), is_final, col),
-		LABEL_FONT_SIZE_1,
+		VERTICAL_LABEL_FONT_SIZE_1 if vertical else LABEL_FONT_SIZE_1,
 		label_color
 	)
 	_draw_label(
-		center + Vector2(0, radius + LABEL_GAP_2),
+		center + Vector2(0, radius + (VERTICAL_LABEL_GAP_2 if vertical else LABEL_GAP_2)),
 		_detail_label(node),
-		LABEL_FONT_SIZE_2,
+		VERTICAL_LABEL_FONT_SIZE_2 if vertical else LABEL_FONT_SIZE_2,
 		label_color
 	)
 

@@ -84,8 +84,9 @@ func show_item(kind: ShopCatalog.Kind, id: String, bump := false) -> void:
 
 
 ## 購入が確定した瞬間、品の絵を砂金チップへ飛ばす起点(9章)。
+## 縦ではパネルごと拡大して置くため、拡大を通した矩形を返す。
 func preview_global_rect() -> Rect2:
-	return Rect2(global_position + _preview_rect().position, _preview_rect().size)
+	return get_global_transform() * _preview_rect()
 
 
 func _preview_rect() -> Rect2:

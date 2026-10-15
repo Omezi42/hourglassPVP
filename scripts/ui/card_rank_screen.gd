@@ -26,6 +26,16 @@ const PINNED_RULE_GAP := 8.0
 ## 複合インデックスのクエリを軽く保つ)。
 const LEADERBOARD_LIMIT := 30
 const NAMELESS := "(名無し)"
+## 縦画面(GameDesign.md 9章「縦画面」)。自分の段位とランキングを切り替えて1つずつ出す
+## (並べると、どちらも文字が読める大きさにならないため)。段位は中身ごと幅いっぱいへ拡大し、
+## ランキングの行は2段に積んで拡大する。
+const PORTRAIT_TABS := ["自分の段位", "ランキング"]
+const PORTRAIT_ROW_ZOOM := 1.4
+const PORTRAIT_TITLE_SIZE := 30
+const PORTRAIT_NOTE_SIZE := 24
+const PORTRAIT_TITLE_HEIGHT := 44.0
+const PORTRAIT_NOTE_HEIGHT := 36.0
+const PORTRAIT_LIST_GAP := 16.0
 
 var _own: RankOwnPanel
 var _season_label: Label
@@ -36,6 +46,16 @@ var _pinned_rule: ColorRect
 var _empty: EmptyState
 var _fetching := false
 var _ceremony: CardSeasonCeremonyPanel
+var _header: ScreenHeader
+var _own_back: Panel
+var _board_back: Panel
+var _title: Label
+var _tabs: Array[Button] = []
+var _show_board := false
+## 中身として出すか(縦で隠している間も保つ)。
+var _pinned_shown := false
+var _empty_shown := false
+var _portrait := false
 
 
 func _ready() -> void:
@@ -58,53 +78,42 @@ func _build() -> void:
 	var backdrop := ScreenBackdrop.new()
 	backdrop.room = ScreenBackdrop.Room.VAULT
 	add_child(backdrop)
-	var header: ScreenHeader = load(HEADER_SCENE).instantiate()
-	add_child(header)
-	header.set_title("ランク")
-	header.back_pressed.connect(func() -> void: back_pressed.emit())
+	_header = load(HEADER_SCENE).instantiate()
+	add_child(_header)
+	_header.set_title("ランク")
+	_header.back_pressed.connect(func() -> void: back_pressed.emit())
+	var tab_width := (
+		(
+			(ScreenOrientation.PORTRAIT_SIZE.x - ScreenHeader.OUTER_MARGIN * 2.0)
+			- ScreenHeader.PORTRAIT_ACTION_GAP
+		)
+		/ float(PORTRAIT_TABS.size())
+	)
+	_tabs = PortraitTabs.make(
+		_header, PORTRAIT_TABS, tab_width, func(i: int) -> void: _select_tab(i == 1)
+	)
 
-	_add_panel(LEFT_RECT)
+	_own_back = _add_panel()
 	_own = RankOwnPanel.new()
-	_own.position = LEFT_RECT.position
-	_own.size = LEFT_RECT.size
 	add_child(_own)
 
-	_add_panel(RIGHT_RECT)
-	var inner := Rect2(RIGHT_RECT.position + RIGHT_PAD, RIGHT_RECT.size - RIGHT_PAD * 2.0)
-	var title := _make_label("今シーズンのランキング", TITLE_SIZE, UiPalette.TEXT_OFFWHITE)
-	title.position = inner.position
-	title.size = Vector2(inner.size.x, TITLE_HEIGHT)
-	add_child(title)
+	_board_back = _add_panel()
+	_title = _make_label("今シーズンのランキング", TITLE_SIZE, UiPalette.TEXT_OFFWHITE)
+	add_child(_title)
 	_season_label = _make_label("", NOTE_SIZE, UiPalette.TEXT_MUTED)
-	_season_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_season_label.position = inner.position
-	_season_label.size = Vector2(inner.size.x, TITLE_HEIGHT)
 	add_child(_season_label)
 
-	var pinned_top := inner.end.y - RankBoardRow.HEIGHT
 	_pinned = RankBoardRow.new()
 	_pinned.mine = true
-	_pinned.position = Vector2(inner.position.x, pinned_top)
-	_pinned.size = Vector2(inner.size.x, RankBoardRow.HEIGHT)
 	_pinned.visible = false
 	add_child(_pinned)
 	_pinned_rule = ColorRect.new()
 	_pinned_rule.color = Color(UiPalette.GLOW_AMBER, 0.45)
-	_pinned_rule.position = Vector2(inner.position.x, pinned_top - PINNED_RULE_GAP)
-	_pinned_rule.size = Vector2(inner.size.x, 1.0)
 	_pinned_rule.visible = false
 	add_child(_pinned_rule)
 
-	var list_rect := Rect2(
-		inner.position.x,
-		RIGHT_RECT.position.y + LIST_TOP,
-		inner.size.x,
-		pinned_top - PINNED_RULE_GAP * 2.0 - (RIGHT_RECT.position.y + LIST_TOP)
-	)
 	_scroll = ScrollContainer.new()
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_scroll.position = list_rect.position
-	_scroll.size = list_rect.size
 	TouchScroll.enable(_scroll)
 	add_child(_scroll)
 	_rows = VBoxContainer.new()
@@ -113,14 +122,91 @@ func _build() -> void:
 	_scroll.add_child(_rows)
 
 	_empty = EmptyState.new()
-	_empty.position = list_rect.position
-	_empty.size = list_rect.size
 	_empty.visible = false
 	add_child(_empty)
 
 	# 表彰式は最後の子にする(後から足した子ほど手前に描かれる)。
 	_ceremony = CardSeasonCeremonyPanel.new()
 	add_child(_ceremony)
+	_layout()
+
+
+## 縦横が変わったときに `Main` から呼ばれる(Architecture.md 4.7節)。並んでいる行は保つ。
+func apply_orientation(portrait: bool) -> void:
+	_portrait = portrait
+	if _header == null:
+		return
+	PortraitTabs.mark(_tabs, int(_show_board), portrait)
+	_header.apply_orientation(portrait)
+	_layout()
+	_select_tab(_show_board)
+
+
+## 縦で自分の段位とランキングを切り替える。横では両方を出す。
+func _select_tab(board: bool) -> void:
+	_show_board = board
+	PortraitTabs.mark(_tabs, int(board), _portrait)
+	for node: CanvasItem in [_own_back, _own]:
+		node.visible = not board or not _portrait
+	for node: CanvasItem in [_board_back, _title, _season_label, _scroll]:
+		node.visible = board or not _portrait
+	_pinned.visible = _pinned_shown and (board or not _portrait)
+	_pinned_rule.visible = _pinned.visible
+	_empty.visible = _empty_shown and (board or not _portrait)
+
+
+func _layout() -> void:
+	var content := _header.portrait_content_rect()
+	var own_rect := LEFT_RECT
+	var board_rect := RIGHT_RECT
+	_own.zoom = 1.0
+	if _portrait:
+		_own.zoom = content.size.x / LEFT_RECT.size.x
+		own_rect = Rect2(
+			content.position, Vector2(content.size.x, RankOwnPanel.content_height() * _own.zoom)
+		)
+		board_rect = content
+	_place(_own_back, own_rect)
+	_place(_own, own_rect)
+	_place(_board_back, board_rect)
+
+	var inner := Rect2(board_rect.position + RIGHT_PAD, board_rect.size - RIGHT_PAD * 2.0)
+	var title_height := PORTRAIT_TITLE_HEIGHT if _portrait else TITLE_HEIGHT
+	_title.add_theme_font_size_override(
+		"font_size", PORTRAIT_TITLE_SIZE if _portrait else TITLE_SIZE
+	)
+	_place(_title, Rect2(inner.position, Vector2(inner.size.x, title_height)))
+	# 縦は見出しの下の行へ回す(見出しと同じ行に収まらないため)。
+	_season_label.add_theme_font_size_override(
+		"font_size", PORTRAIT_NOTE_SIZE if _portrait else NOTE_SIZE
+	)
+	_season_label.horizontal_alignment = (
+		HORIZONTAL_ALIGNMENT_LEFT if _portrait else HORIZONTAL_ALIGNMENT_RIGHT
+	)
+	var note_top := inner.position.y + (title_height if _portrait else 0.0)
+	var note_height := PORTRAIT_NOTE_HEIGHT if _portrait else TITLE_HEIGHT
+	_place(_season_label, Rect2(inner.position.x, note_top, inner.size.x, note_height))
+
+	for row in [_pinned] + _rows.get_children():
+		(row as RankBoardRow).set_portrait(_portrait, PORTRAIT_ROW_ZOOM)
+	var pinned_top := inner.end.y - _pinned.row_height()
+	_place(_pinned, Rect2(inner.position.x, pinned_top, inner.size.x, _pinned.row_height()))
+	_place(_pinned_rule, Rect2(inner.position.x, pinned_top - PINNED_RULE_GAP, inner.size.x, 1.0))
+	var list_top := (
+		note_top + note_height + PORTRAIT_LIST_GAP
+		if _portrait
+		else board_rect.position.y + LIST_TOP
+	)
+	var list_rect := Rect2(
+		inner.position.x, list_top, inner.size.x, pinned_top - PINNED_RULE_GAP * 2.0 - list_top
+	)
+	_place(_scroll, list_rect)
+	_place(_empty, list_rect)
+
+
+func _place(node: Control, rect: Rect2) -> void:
+	node.position = rect.position
+	node.size = rect.size
 
 
 ## 集計は開いた回に1度だけ読む。
@@ -132,11 +218,11 @@ func _fetch_leaderboard() -> void:
 	_show_pinned(0)
 	if NetSession.client == null:
 		_empty.show_message("ランキングを取得できませんでした", "通信状況を確認してください")
-		_empty.visible = true
+		_set_empty_shown(true)
 		return
 	_fetching = true
 	_empty.show_message("ランキングを読み込んでいます", "", true)
-	_empty.visible = true
+	_set_empty_shown(true)
 	var docs: Array = await NetSession.client.query_ranked_leaderboard(
 		AccountService.COLLECTION, RankProgress.current_season_key(), LEADERBOARD_LIMIT
 	)
@@ -144,7 +230,7 @@ func _fetch_leaderboard() -> void:
 	if docs.is_empty():
 		_empty.show_message("まだ今シーズンの対局記録がありません", "")
 		return
-	_empty.visible = false
+	_set_empty_shown(false)
 	var my_uid := NetSession.auth.uid if NetSession.auth != null else ""
 	var my_rank := 0
 	for i in docs.size():
@@ -155,9 +241,15 @@ func _fetch_leaderboard() -> void:
 		row.mine = my_uid != "" and str(doc.get("id", "")) == my_uid
 		if row.mine:
 			my_rank = row.rank
+		row.set_portrait(_portrait, PORTRAIT_ROW_ZOOM)
 		_rows.add_child(row)
 	_show_pinned(my_rank)
 	ListRevealFx.stagger(_rows.get_children())
+
+
+func _set_empty_shown(shown: bool) -> void:
+	_empty_shown = shown
+	_select_tab(_show_board)
 
 
 func _row_from_fields(fields: Dictionary) -> RankBoardRow:
@@ -182,8 +274,8 @@ func _show_pinned(rank: int) -> void:
 	_pinned.tier = standing["tier"]
 	_pinned.stars = standing["stars"]
 	_pinned.rating = standing["rating"]
-	_pinned.visible = true
-	_pinned_rule.visible = true
+	_pinned_shown = true
+	_select_tab(_show_board)
 	_pinned.queue_redraw()
 
 
@@ -193,13 +285,12 @@ static func _season_title() -> String:
 	return "%d年%d月" % [int(parts[0]), int(parts[1])]
 
 
-func _add_panel(rect: Rect2) -> void:
+func _add_panel() -> Panel:
 	var panel := Panel.new()
-	panel.position = rect.position
-	panel.size = rect.size
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_theme_stylebox_override("panel", load(PANEL_STYLE))
 	add_child(panel)
+	return panel
 
 
 func _make_label(text: String, font_size: int, color: Color) -> Label:

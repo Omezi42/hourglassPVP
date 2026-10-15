@@ -40,6 +40,11 @@ const REWARD_TIERS: Array[String] = ["bronze1", "silver1", "gold1", "platinum"]
 const TEXT_SHADOW := Color(0, 0, 0, 0.6)
 const TEXT_SHADOW_OFFSET := Vector2(0, 1.5)
 
+## 描く倍率(縦画面で中身ごと拡大する。GameDesign.md 9章「縦画面」)。座標は倍率を掛ける前の値のまま持つ。
+var zoom := 1.0:
+	set(value):
+		zoom = value
+		queue_redraw()
 var _tier := RankRules.INITIAL_TIER
 var _stars := 0
 var _rating := 0
@@ -48,6 +53,11 @@ var _peak := RankRules.INITIAL_TIER
 var _days_left := 0
 var _font: Font
 var _display: Font
+
+
+## 中身の高さ(倍率を掛ける前)。縦はこれを `zoom` 倍した高さのパネルに置く。
+static func content_height() -> float:
+	return REWARD_SLOT_TOP + REWARD_SLOT_HEIGHT + PAD.y
 
 
 func _init() -> void:
@@ -73,7 +83,8 @@ func show_standing(standing: Dictionary, days_left: int) -> void:
 func _draw() -> void:
 	if _font == null:
 		return
-	var inner := Rect2(PAD, size - PAD * 2.0)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE * zoom)
+	var inner := Rect2(PAD, size / zoom - PAD * 2.0)
 	var platinum := _tier == RankRules.PLATINUM_KEY
 	_text(_font, Vector2(inner.position.x, HEAD_BASELINE), "いまの段位", HEAD_SIZE, UiPalette.TEXT_MUTED)
 	_text(

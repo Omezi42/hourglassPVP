@@ -188,6 +188,7 @@ func _ready() -> void:
 
 ## 向きが変わった(Architecture.md 4.7節)。盤面の状態は保ったまま部品を置き直す。
 func apply_orientation(portrait: bool) -> void:
+	CardMatchFastForward.run(self)
 	CardMatchLayout.choose(portrait)
 	CardMatchArrange.apply(self)
 
