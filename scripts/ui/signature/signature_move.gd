@@ -16,6 +16,9 @@ const FADE := 0.22
 var from := Vector2.ZERO
 ## 効果の対象の中心。登場では空。
 var targets: Array[Vector2] = []
+## 効果を呼んだ型(`CardEnums.EffectVisualStyle`)。型の違う効果を2つ持つカード(砂葬の
+## 破壊とドロー)が描き分けに使う。登場では使わない。
+var style := CardEnums.EffectVisualStyle.STRIKE
 
 
 ## 着弾の瞬間(秒)。登場では駒が台座へ落ちきった瞬間。

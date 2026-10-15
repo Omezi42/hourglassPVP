@@ -159,6 +159,7 @@ func _play_signature(card: CardData, from: Vector2, targets: Array) -> bool:
 		return false
 	var entries: Array[Dictionary] = []
 	move.from = from
+	move.style = _style
 	for entry: Dictionary in targets:
 		entries.append({"side": entry["side"], "slot": entry["slot"]})
 		move.targets.append(_target_position(entry["side"], entry["slot"]))

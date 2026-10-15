@@ -8,6 +8,7 @@ extends RefCounted
 const ENTRANCES := {
 	"chronos": preload("res://scripts/ui/signature/moves/chronos_entrance.gd"),
 	"freeze": preload("res://scripts/ui/signature/moves/freeze_entrance.gd"),
+	"relic": preload("res://scripts/ui/signature/moves/relic_entrance.gd"),
 }
 
 ## 効果が対象へ届くまで(設置・落砂・砂術など、紋章が飛ぶ場面の代わり)。
@@ -20,6 +21,12 @@ const EFFECTS := {
 	"spring": preload("res://scripts/ui/signature/moves/spring_effect.gd"),
 	"anvil": preload("res://scripts/ui/signature/moves/anvil_effect.gd"),
 	"rewind": preload("res://scripts/ui/signature/moves/rewind_effect.gd"),
+	"drift": preload("res://scripts/ui/signature/moves/drift_effect.gd"),
+	"moss": preload("res://scripts/ui/signature/moves/moss_effect.gd"),
+	"vigil": preload("res://scripts/ui/signature/moves/vigil_effect.gd"),
+	"cairn": preload("res://scripts/ui/signature/moves/cairn_effect.gd"),
+	"burial": preload("res://scripts/ui/signature/moves/burial_effect.gd"),
+	"awaken": preload("res://scripts/ui/signature/moves/awaken_effect.gd"),
 	"reverb": preload("res://scripts/ui/signature/moves/reverb_effect.gd"),
 	"delay": preload("res://scripts/ui/signature/moves/delay_effect.gd"),
 	"resonance": preload("res://scripts/ui/signature/moves/resonance_effect.gd"),
