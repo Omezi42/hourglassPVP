@@ -3,7 +3,7 @@
   "description": "砂時計アリーナ - Discordへの定期告知・将来のスラッシュコマンド受け口(GameDesign.md 25章)",
   "private": true,
   "engines": {
-    "node": "20"
+    "node": "22"
   },
   "main": "index.js",
   "dependencies": {
