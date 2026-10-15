@@ -367,6 +367,11 @@ static func _rotated(
 	return out
 
 
+## 粒ごとに決まった0〜1の揺らぎ。`moves/` の側で砂粒を散らすときに使う。
+static func jitter(i: int, salt: int) -> float:
+	return _hash(i, salt)
+
+
 ## 粒ごとに決まった揺らぎ。毎フレーム同じ値を返すため、乱数の種を持ち歩かずに済む。
 static func _hash(i: int, salt: int) -> float:
 	var v := sin(float(i) * 12.9898 + float(salt) * 78.233) * 43758.5453

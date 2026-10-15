@@ -93,7 +93,7 @@
 
 | 置き場所 | 役目 |
 |---|---|
-| `scripts/ui/signature/moves/{id}_entrance.gd` / `{id}_effect.gd` | 1枚ぶんの演出。`SignatureMove` を継ぎ、`impact_at()`(着弾 / 落ちきる瞬間)・`duration()`・`draw(item, t)` を書く。順に届く演出だけ `reaches(index, t)` を、重く落ちる登場は `heavy_land()` を、専用の音は `sound()` を上書きする |
+| `scripts/ui/signature/moves/{id}_entrance.gd` / `{id}_effect.gd` | 1枚ぶんの演出。`SignatureMove` を継ぎ、`impact_at()`(着弾 / 落ちきる瞬間)・`duration()`・`draw(item, t)` を書く。順に届く演出だけ `reaches(index, t)` を、重く落ちる登場は `heavy_land()` を、専用の音は `sound()` を上書きする。1枚が型の違う効果を2つ持つとき(砂葬の破壊とドロー)は、呼ばれた型 `style` を見て描き分ける |
 | `SignatureLibrary`(`signature_library.gd`) | カード id → 演出の表。`ENTRANCES`(場に出たとき)と `EFFECTS`(紋章が飛ぶ場面の代わり)。**カードに演出を付けるときはファイルを1つ置いてここへ1行足すだけ** |
 | `SignatureFxPlayer`(`signature_fx_player.gd`) | 再生役のオーバーレイ。時間 `t` を通常の尺の秒で進め、`hit(index)` / `impact` / `finished` を出す。短縮版は進みを `SHORT_RATE` 倍速くするだけで、演出側は尺の違いを知らない |
 | `SignaturePaint`(`signature_paint.gd`) | 鐘・天秤・歯車の輪・砂の帯・昇る砂粒・雪の結晶・水滴・ばね・槌・火花・時計の文字盤・恵与の金の輪などの絵の部品。2枚目以降のカードで使い回せる形はここへ足す(金床・氷の覆いのように1枚でしか使わない形は `moves/` の側に置く) |
