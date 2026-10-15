@@ -21,6 +21,12 @@ const GOAL_BASELINE := 62.0
 const FLOOR_FONT_SIZE := 11
 const KIND_FONT_SIZE := 15
 const GOAL_FONT_SIZE := 12
+## 縦: 直前の手の1件と同じ大きさ・同じ縮尺へ詰め、種別と目標(目標の無い対局は段目)の2行にする。
+## 縮尺を掛けて本文20px以上になる大きさ(GameDesign.md 9章「縦画面」)。
+const COMPACT_TOP_BASELINE := 21.0
+const COMPACT_BOTTOM_BASELINE := 42.0
+const COMPACT_KIND_FONT_SIZE := 16
+const COMPACT_SUB_FONT_SIZE := 15
 
 ## 残りの数が変わった瞬間の跳ね(`WorkshopStockItem`の「2/2」バッジと同じ流儀)。
 const PUNCH_DURATION := 0.25
@@ -48,6 +54,7 @@ var _goal_punch := 0.0
 var _punch_tween: Tween
 var _hover_panel: PanelContainer
 var _hover_label: Label
+var _compact := false
 
 
 func _init(screen: CardMatchScreen, solo: CardMatchSolo) -> void:
@@ -60,16 +67,29 @@ func _init(screen: CardMatchScreen, solo: CardMatchSolo) -> void:
 
 func _ready() -> void:
 	_font = TextGlyphs.ui_font()
-	# 直前の手の列(`CardMatchActionHistory`)の下端+間隔に置く。
-	var history := _screen.layout.history_position
-	var pitch := CardMatchActionHistory.TILE_SIZE.y + CardMatchActionHistory.TILE_GAP
-	position = Vector2(
-		history.x,
-		history.y + pitch * CardMatchActionHistory.MAX_TILES + CardMatchActionHistory.TILE_GAP
-	)
-	size = Vector2(CardMatchActionHistory.TILE_SIZE.x, HEIGHT)
 	visible = false
 	_build_hover_panel()
+	apply_layout(_screen.layout)
+
+
+## 横は直前の手の列(4件)の下端+間隔、縦は横1列の最後の1件の場所(`CardMatchArrange.place_history()`)。
+func apply_layout(layout: CardMatchLayout) -> void:
+	_compact = layout.portrait
+	var tile := CardMatchActionHistory.TILE_SIZE
+	var history := layout.history_position
+	scale = Vector2.ONE * layout.history_scale
+	if _compact:
+		var step := tile.x + CardMatchActionHistory.TILE_GAP
+		position = history + Vector2(step * (layout.history_tiles - 1) * layout.history_scale, 0.0)
+		size = tile
+	else:
+		var pitch := tile.y + CardMatchActionHistory.TILE_GAP
+		position = Vector2(
+			history.x,
+			history.y + pitch * CardMatchActionHistory.MAX_TILES + CardMatchActionHistory.TILE_GAP
+		)
+		size = Vector2(tile.x, HEIGHT)
+	queue_redraw()
 
 
 ## 遠征の対局を始めたときに呼ぶ(GameDesign.md 27章)。
@@ -157,6 +177,9 @@ func _draw() -> void:
 		ci, points, UiPalette.BRASS_RIM_LIGHT, UiPalette.BRASS_DARK, RIM_WIDTH, false
 	)
 	var max_width := size.x - MARGIN_X * 2.0
+	if _compact:
+		_draw_compact(max_width)
+		return
 	_text(
 		Vector2(MARGIN_X, FLOOR_BASELINE),
 		_floor_text,
@@ -175,11 +198,26 @@ func _draw() -> void:
 		_draw_goal(Vector2(MARGIN_X, GOAL_BASELINE), max_width)
 
 
-func _draw_goal(pos: Vector2, max_width: float) -> void:
+func _draw_compact(max_width: float) -> void:
+	_text(
+		Vector2(MARGIN_X, COMPACT_TOP_BASELINE),
+		_kind_text,
+		COMPACT_KIND_FONT_SIZE,
+		UiPalette.TEXT_OFFWHITE,
+		max_width
+	)
+	var bottom := Vector2(MARGIN_X, COMPACT_BOTTOM_BASELINE)
+	if _goal_value >= 0:
+		_draw_goal(bottom, max_width, COMPACT_SUB_FONT_SIZE)
+	else:
+		_text(bottom, _floor_text, COMPACT_SUB_FONT_SIZE, UiPalette.TEXT_MUTED, max_width)
+
+
+func _draw_goal(pos: Vector2, max_width: float, font_size: int = GOAL_FONT_SIZE) -> void:
 	var text := "%s %d %s" % [_goal_lead, _goal_value, _goal_tail]
 	var boost := 1.0 + _goal_punch * PUNCH_SCALE
 	draw_set_transform(pos, 0.0, Vector2.ONE * boost)
-	_text(Vector2.ZERO, text, GOAL_FONT_SIZE, UiPalette.GLOW_AMBER, max_width / boost)
+	_text(Vector2.ZERO, text, font_size, UiPalette.GLOW_AMBER, max_width / boost)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
@@ -208,7 +246,12 @@ func _on_mouse_entered() -> void:
 	if _gate == null:
 		return
 	_hover_label.text = _gate.description
-	_hover_panel.position = Vector2(size.x, 0.0) + HOVER_OFFSET
+	# 縦の札は列の右端にあるため、右ではなく下へ、札の右端に揃えて出す。
+	_hover_panel.position = (
+		Vector2(size.x - HOVER_WIDTH, size.y + HOVER_OFFSET.x)
+		if _compact
+		else Vector2(size.x, 0.0) + HOVER_OFFSET
+	)
 	_hover_panel.visible = true
 	_hover_panel.move_to_front()
 

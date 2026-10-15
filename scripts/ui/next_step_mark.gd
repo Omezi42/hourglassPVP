@@ -25,6 +25,9 @@ const TAG_STOPS := [
 	[1.0, Color(0.62, 0.44, 0.16)],
 ]
 
+## 札の印の大きさの倍率(縦画面で文字の目安を満たすため。GameDesign.md 9章「縦画面」)。
+var tag_scale := 1.0
+
 var _time := 0.0
 var _font: Font
 
@@ -36,6 +39,10 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	_time += delta
+	# 掛けた札が向きの切り替えで大きさを変えても輪が追いつくように。
+	var tile := get_parent() as Control
+	if tile != null and size != tile.size:
+		size = tile.size
 	queue_redraw()
 
 
@@ -65,26 +72,28 @@ func _draw() -> void:
 
 
 func _draw_tag(ci: RID) -> void:
-	var text_size := _font.get_string_size(LABEL, HORIZONTAL_ALIGNMENT_LEFT, -1, TAG_FONT_SIZE)
-	var tag_size := Vector2(text_size.x, float(TAG_FONT_SIZE)) + TAG_PADDING * 2.0
+	var font_size := roundi(TAG_FONT_SIZE * tag_scale)
+	var padding := TAG_PADDING * tag_scale
+	var radius := TAG_RADIUS * tag_scale
+	var text_size := _font.get_string_size(LABEL, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
+	var tag_size := Vector2(text_size.x, float(font_size)) + padding * 2.0
 	var rect := Rect2(
-		Vector2(size.x - tag_size.x - TAG_RIGHT, -tag_size.y * TAG_OVERHANG), tag_size
+		Vector2(size.x - tag_size.x - TAG_RIGHT * tag_scale, -tag_size.y * TAG_OVERHANG), tag_size
 	)
-	var points := UiPaint.rounded_rect_points_uniform(rect, TAG_RADIUS, 4)
+	var points := UiPaint.rounded_rect_points_uniform(rect, radius, 4)
 	draw_colored_polygon(
-		UiPaint.rounded_rect_points_uniform(rect.grow(1.5), TAG_RADIUS + 1.5, 4),
-		UiPalette.OUTLINE_DARK
+		UiPaint.rounded_rect_points_uniform(rect.grow(1.5), radius + 1.5, 4), UiPalette.OUTLINE_DARK
 	)
 	UiPaint.fill_gradient_polygon(ci, points, rect, TAG_STOPS)
 	UiPaint.draw_bevel(ci, points, UiPalette.BRASS_HIGHLIGHT, UiPalette.BRASS_DARK, 1.5, false)
-	var baseline := rect.position + Vector2(TAG_PADDING.x, TAG_PADDING.y + TAG_FONT_SIZE * 0.86)
+	var baseline := rect.position + Vector2(padding.x, padding.y + font_size * 0.86)
 	draw_string(
 		_font,
 		baseline + Vector2(0.0, 1.0),
 		LABEL,
 		HORIZONTAL_ALIGNMENT_LEFT,
 		-1,
-		TAG_FONT_SIZE,
+		font_size,
 		Color(1.0, 0.95, 0.8, 0.5)
 	)
-	draw_string(_font, baseline, LABEL, HORIZONTAL_ALIGNMENT_LEFT, -1, TAG_FONT_SIZE, TAG_TEXT)
+	draw_string(_font, baseline, LABEL, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, TAG_TEXT)

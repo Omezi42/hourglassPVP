@@ -52,9 +52,10 @@ func _ready() -> void:
 
 
 ## 置き場所と並びの向き(`CardMatchArrange`)。
-func set_layout(layout: CardMatchLayout) -> void:
+## `spare` は列の末尾から空ける件数(縦の遠征で、遠征の札に1件ぶんを譲る)。
+func set_layout(layout: CardMatchLayout, spare: int = 0) -> void:
 	_horizontal = layout.history_horizontal
-	_tiles = layout.history_tiles
+	_tiles = layout.history_tiles - spare
 	position = layout.history_position
 	scale = Vector2.ONE * layout.history_scale
 	size = _step() * (_tiles - 1) + TILE_SIZE

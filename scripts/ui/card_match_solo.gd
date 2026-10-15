@@ -47,6 +47,10 @@ func max_hp() -> int:
 	return _run.max_hp if _run != null else MatchState.INITIAL_HP
 
 
+func apply_layout(layout: CardMatchLayout) -> void:
+	_plaque.apply_layout(layout)
+
+
 ## `run.choose()` で `in_battle` を立てた行き先を始める。
 func start(run: SoloRun) -> void:
 	if run == null or not run.in_battle:
@@ -57,6 +61,7 @@ func start(run: SoloRun) -> void:
 	_panel.visible = false
 	_begin_battle()
 	_plaque.start(_run, _gate)
+	CardMatchArrange.place_history(_screen, _screen.layout)
 	FunnelService.reach_first_solo_battle(FunnelService.SOLO_B1_START, _run.floor)
 
 
@@ -67,6 +72,7 @@ func close() -> void:
 	_settled = false
 	_panel.visible = false
 	_plaque.close()
+	CardMatchArrange.place_history(_screen, _screen.layout)
 
 
 ## 相手のHPが0になった等、`MatchState.match_ended` から呼ばれる。

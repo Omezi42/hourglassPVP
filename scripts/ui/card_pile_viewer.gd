@@ -6,8 +6,6 @@ extends Control
 ## 墓地から1体を選ぶ効果(6章「墓地を読む効果」)では、同じ形で選べる砂時計だけを
 ## 1枚ずつ並べて押させる(`open_choice()`)。
 
-const SCREEN_SIZE := Vector2(1280, 720)
-
 const PANEL_STYLE := "res://resources/theme/content_panel.tres"
 ## パネルは幅だけ決め、高さは中身(何行並ぶか)に合わせて伸ばす。固定にすると
 ## 数枚しか無いときに中身が上へ寄り、下半分がまるごと空いて見える。
@@ -16,25 +14,32 @@ const PANEL_WIDTH := 880.0
 const MAX_ROWS := 3
 const COLUMNS := 6
 const ROW_GAP := 10.0
-## 縦は4列にして、パネルを画面の幅いっぱいまで拡大する(札の文字を読める大きさにするため)。
+const TITLE_FONT_SIZE := 24
+const EMPTY_FONT_SIZE := 18
+const CLOSE_FONT_SIZE := 20
+const CLOSE_SIZE := Vector2(160, 48)
+## パネルの枠の内側の余白(`content_panel.tres` の左右)。
+const PANEL_PAD := 24.0
+## 縦は列を減らし、札と文字を大きくする(GameDesign.md 9章「縦画面」)。
 const PORTRAIT_COLUMNS := 4
 const PORTRAIT_MAX_ROWS := 4
-## パネルの枠の内側の左右の余白(`content_panel.tres`)。
-const PANEL_PADDING_X := 48.0
+## 4列が画面の幅に収まる大きさ。
+const PORTRAIT_CARD_SCALE := 1.3
 
 var _title: Label
 var _grid: GridContainer
 var _scroll: ScrollContainer
 var _empty: Label
 var _close: Button
+## 選ぶモードのときの受け手。押した墓地の位置を渡す。見るだけのときは空。
+var _on_pick := Callable()
+var _on_cancel := Callable()
 var _dim: ColorRect
 var _center: CenterContainer
 var _panel: PanelContainer
 var _columns := COLUMNS
 var _max_rows := MAX_ROWS
-## 選ぶモードのときの受け手。押した墓地の位置を渡す。見るだけのときは空。
-var _on_pick := Callable()
-var _on_cancel := Callable()
+var _card_size := CardView.HAND_SIZE_PX
 
 
 func _ready() -> void:
@@ -42,24 +47,27 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	# **`set_anchors_preset()` は使わない**(Architecture.md 4章)。コードで生成した直後の
 	# サイズ0のノードへ使うと0のまま固定され、暗幕が盤面を覆わずクリックも止められない。
-	size = SCREEN_SIZE
 	_build()
 
 
-## 向きに合わせて置き直す(Architecture.md 4.7節)。縦は列を減らし、パネルごと拡大して中央へ置く。
+## 向きに合わせる(`CardMatchArrange`)。中身は開くたびに作るため、次に開いたときから効く。
 func apply_layout(layout: CardMatchLayout) -> void:
 	size = layout.screen_size
 	_dim.size = layout.screen_size
+	var zoom := layout.text_scale
 	_columns = PORTRAIT_COLUMNS if layout.portrait else COLUMNS
 	_max_rows = PORTRAIT_MAX_ROWS if layout.portrait else MAX_ROWS
+	_card_size = CardView.HAND_SIZE_PX * (PORTRAIT_CARD_SCALE if layout.portrait else 1.0)
 	_grid.columns = _columns
-	var grid_width := _columns * CardView.HAND_SIZE_PX.x + (_columns - 1) * ROW_GAP
-	var panel_width := grid_width + PANEL_PADDING_X if layout.portrait else PANEL_WIDTH
-	_panel.custom_minimum_size = Vector2(panel_width, 0)
-	var usable := layout.screen_size.x - CardMatchLayout.PORTRAIT_SIDE * 2.0
-	var zoom := usable / panel_width if layout.portrait else 1.0
-	_center.scale = Vector2.ONE * zoom
-	_center.size = layout.screen_size / zoom
+	var width := _card_size.x * _columns + ROW_GAP * (_columns - 1) + PANEL_PAD * 2.0
+	_panel.custom_minimum_size = Vector2(width if layout.portrait else PANEL_WIDTH, 0)
+	_title.add_theme_font_size_override("font_size", roundi(TITLE_FONT_SIZE * zoom))
+	_empty.add_theme_font_size_override("font_size", roundi(EMPTY_FONT_SIZE * zoom))
+	_close.add_theme_font_size_override("font_size", roundi(CLOSE_FONT_SIZE * zoom))
+	_close.custom_minimum_size = CLOSE_SIZE * zoom
+	_close.size = CLOSE_SIZE * zoom
+	# 中身の最小幅を決めてから広さを合わせる(コンテナは先に広げると、横の幅のまま縮まない)。
+	_center.size = layout.screen_size
 
 
 ## 同じカードは1枚にまとめ、枚数をバッジで出す。30枚が並ぶと読み取れないため。
@@ -82,11 +90,12 @@ func open_pile(
 	for card in order:
 		var view := CardView.new()
 		view.mode = CardView.Mode.HAND
-		view.custom_minimum_size = CardView.HAND_SIZE_PX
 		view.badge = "×%d" % counts[card]
 		view.skin_viewer = skin_viewer
 		_grid.add_child(view)
 		view.show_card(card, true)
+		# `show_card()` が札の大きさを既定へ戻すため、その後に合わせる。
+		view.custom_minimum_size = _card_size
 	_show(cards.is_empty(), order.size())
 
 
@@ -103,9 +112,9 @@ func open_choice(
 	for index in indices:
 		var view := CardView.new()
 		view.mode = CardView.Mode.HAND
-		view.custom_minimum_size = CardView.HAND_SIZE_PX
 		_grid.add_child(view)
 		view.show_card(pile[index], true)
+		view.custom_minimum_size = _card_size
 		view.pressed.connect(func(_view: CardView) -> void: _pick(index))
 	_show(indices.is_empty(), indices.size())
 
@@ -119,7 +128,7 @@ func _show(empty: bool, count: int) -> void:
 	_empty.visible = empty
 	_scroll.visible = not empty
 	var rows: int = ceili(float(count) / float(_columns))
-	var row_height: float = CardView.HAND_SIZE_PX.y + ROW_GAP
+	var row_height: float = _card_size.y + ROW_GAP
 	_scroll.custom_minimum_size = Vector2(0, mini(maxi(rows, 1), _max_rows) * row_height)
 	visible = true
 
@@ -144,14 +153,12 @@ func _dismiss() -> void:
 func _build() -> void:
 	_dim = ColorRect.new()
 	_dim.color = Color(0, 0, 0, 0.65)
-	_dim.size = SCREEN_SIZE
 	_dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	_dim.gui_input.connect(_on_dim_input)
 	add_child(_dim)
 
 	# 中身の高さで伸び縮みさせつつ画面の中央に置くため、CenterContainer へ入れる。
 	_center = CenterContainer.new()
-	_center.size = SCREEN_SIZE
 	_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_center)
 
@@ -167,7 +174,7 @@ func _build() -> void:
 	column.add_theme_constant_override("separation", 12)
 	_panel.add_child(column)
 	_title = Label.new()
-	_title.add_theme_font_size_override("font_size", 24)
+	_title.add_theme_font_size_override("font_size", TITLE_FONT_SIZE)
 	column.add_child(_title)
 	_empty = Label.new()
 	_empty.text = "まだ何も落ちていません。"
@@ -182,7 +189,7 @@ func _build() -> void:
 	_grid.add_theme_constant_override("v_separation", int(ROW_GAP))
 	_scroll.add_child(_grid)
 	# VBoxContainer は子を横いっぱいに広げるため、明示的に中央へ縮める。
-	_close = CodedButton.make("閉じる", Vector2(160, 48))
+	_close = CodedButton.make("閉じる", CLOSE_SIZE)
 	_close.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_close.pressed.connect(_dismiss)
 	column.add_child(_close)

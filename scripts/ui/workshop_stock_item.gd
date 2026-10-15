@@ -33,6 +33,13 @@ var limit := 2
 var enabled := true
 ## 未所有のカードセットに属する。押すとショップへの導線を出す(足せないが押せる)。
 var locked := false
+## 描く倍率。縦画面で名前と数字を文字の目安まで大きくする(GameDesign.md 9章「縦画面」)。
+## 中身は `CELL_SIZE` の座標のまま描き、まとめて拡大する。
+var zoom := 1.0:
+	set(value):
+		zoom = value
+		custom_minimum_size = CELL_SIZE * zoom
+		queue_redraw()
 
 var _font: Font
 var _press := PressTracker.new()
@@ -42,7 +49,7 @@ var _punch_tween: Tween
 
 
 func _ready() -> void:
-	custom_minimum_size = CELL_SIZE
+	custom_minimum_size = CELL_SIZE * zoom
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_font = get_theme_default_font()
 	if _font == null:
@@ -96,20 +103,22 @@ func _get_drag_data(_at_position: Vector2) -> Variant:
 func _make_drag_preview() -> Control:
 	var texture: Texture2D = card.emblem if card.is_spell else card.icon_upright
 	var preview := CardDragPreview.new()
-	preview.setup(texture, _art_rect().size)
+	preview.setup(texture, _art_rect().size * zoom)
 	return preview
 
 
 func _draw() -> void:
 	if card == null:
 		return
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE * zoom)
+	var base := _base_size()
 	var maxed: bool = count >= limit
 	var tint := Color.WHITE if enabled else Color(0.45, 0.42, 0.40)
 	var art := _art_rect()
 	# 棚板へ落ちる影。駒が板の上に立って見えるようにする。
 	UiPaint.fill_ellipse(
 		get_canvas_item(),
-		Vector2(size.x * 0.5, art.end.y + 2.0),
+		Vector2(base.x * 0.5, art.end.y + 2.0),
 		Vector2(art.size.x * 0.42, 6.0),
 		Color(0, 0, 0, 0.45),
 		24
@@ -125,15 +134,15 @@ func _draw() -> void:
 		EmblemSeal.brass(self, Vector2(art.position.x + 12.0, art.end.y - 12.0), card.emblem, 14.0)
 	draw_string(
 		_font,
-		Vector2(0, size.y - 8.0),
+		Vector2(0, base.y - 8.0),
 		card.display_name,
 		HORIZONTAL_ALIGNMENT_CENTER,
-		size.x,
+		base.x,
 		14,
 		NAME_COLOR if enabled else NAME_DIM
 	)
 	_draw_diamond(Vector2(16, 18), card.cost, 14.0)
-	_draw_total(Vector2(size.x - 16, 18), 13.0)
+	_draw_total(Vector2(base.x - 16, 18), 13.0)
 	if maxed:
 		_draw_maxed()
 	if locked:
@@ -143,7 +152,7 @@ func _draw() -> void:
 ## 2枚入れ終えた印。**上端の中央へ置く**——コストとの総量のあいだが唯一空いている
 ## 場所で、絵の下端は紋章の印と名前が使っている(以前ここへ出して重なった)。
 func _draw_maxed() -> void:
-	var base_rect := Rect2(size.x * 0.5 - 25.0, 5.0, 50.0, 24.0)
+	var base_rect := Rect2(_base_size().x * 0.5 - 25.0, 5.0, 50.0, 24.0)
 	var boost: float = 1.0 + _count_punch * PUNCH_SCALE
 	var rect := Rect2(base_rect.get_center() - base_rect.size * 0.5 * boost, base_rect.size * boost)
 	var points := UiPaint.rounded_rect_points_uniform(rect, 6.0, 5)
@@ -169,9 +178,15 @@ func _draw_maxed() -> void:
 
 ## 絵を置く矩形。棚板の上へ立てるため、下端を名前の帯の手前で止める。
 func _art_rect() -> Rect2:
-	var h: float = size.y - NAME_BAND
+	var base := _base_size()
+	var h: float = base.y - NAME_BAND
 	var w: float = h / 1.30
-	return Rect2(Vector2((size.x - w) * 0.5, 4.0), Vector2(w, h))
+	return Rect2(Vector2((base.x - w) * 0.5, 4.0), Vector2(w, h))
+
+
+## 拡大する前の大きさ(描く座標の範囲)。
+func _base_size() -> Vector2:
+	return size / zoom
 
 
 ## 砂術の札。**砂時計の絵を持たない**ため、紋章を中央へ大きく置く(GameDesign.md 9章)。

@@ -11,7 +11,7 @@ static func apply(screen: CardMatchScreen) -> void:
 	_place_bars(screen, layout)
 	_place_rows(screen, layout)
 	_place_buttons(screen, layout)
-	screen._history.set_layout(layout)
+	place_history(screen, layout)
 	screen._status.size = layout.screen_size
 	screen._status.queue_redraw()
 	screen._damage_assist.place()
@@ -19,8 +19,10 @@ static func apply(screen: CardMatchScreen) -> void:
 	screen._result.apply_layout(layout)
 	screen._log.apply_layout(layout)
 	screen._detail.apply_layout(layout)
-	screen._pile.apply_layout(layout)
 	screen._feed.apply_layout(layout)
+	screen._pile.apply_layout(layout)
+	screen._emote.apply_layout(layout)
+	screen._tutorial.apply_layout(layout)
 	if screen._replay != null:
 		screen._replay.apply_layout(layout)
 	# 揺れの基準位置を取り直す(位置が変わった卓と駒を元の位置へ戻さないように)。
@@ -30,6 +32,15 @@ static func apply(screen: CardMatchScreen) -> void:
 	screen._shake.bind(shaken)
 	if screen.state != null:
 		screen.refresh()
+
+
+## 直前の手の列と遠征の札。縦の遠征では列の3件目の場所を札に譲る(GameDesign.md 9章「縦の対局画面」)。
+## 遠征の対局を始めた・終えたときにも呼ぶ。
+static func place_history(screen: CardMatchScreen, layout: CardMatchLayout) -> void:
+	var solo := screen._solo != null and screen._solo.active()
+	screen._history.set_layout(layout, 1 if solo and layout.portrait else 0)
+	if screen._solo != null:
+		screen._solo.apply_layout(layout)
 
 
 static func _place_backdrop(screen: CardMatchScreen, layout: CardMatchLayout) -> void:
@@ -71,11 +82,14 @@ static func _place_rows(screen: CardMatchScreen, layout: CardMatchLayout) -> voi
 
 
 static func _place_buttons(screen: CardMatchScreen, layout: CardMatchLayout) -> void:
+	var button_scale := Vector2.ONE * layout.button_scale
+	screen._coin_button.scale = button_scale
+	screen._flip_button.scale = Vector2.ONE * layout.text_scale
 	CardMatchBuild.center_on(screen._coin_button, layout.coin_center)
 	CardMatchBuild.center_on(screen._end_turn_button, layout.turn_end_center)
 	CardMatchBuild.center_on(screen._clock_dial, layout.clock_center)
 	CardMatchBuild.center_on(screen._back_button, layout.back_center)
-	screen._flip_right.place(layout.flip_right_center, layout.flip_gauge_position)
+	screen._flip_right.place(layout.flip_right_center, layout.flip_gauge_position, button_scale)
 	CardMatchBuild.center_on(screen._log_button, layout.log_center)
 	CardMatchBuild.center_on(screen._surrender_button, layout.surrender_center)
 	var emote_half := Vector2.ONE * ActionColumnLayout.SMALL_DIAMETER * 0.5

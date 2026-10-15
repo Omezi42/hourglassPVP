@@ -106,9 +106,9 @@ static func action_column(screen: CardMatchScreen) -> void:
 	screen._back_button.pressed.connect(func() -> void: screen.back_pressed.emit())
 
 
-## 丸い部品(ボタン・時計)の中心を `center` へ合わせる。
+## 丸い部品(ボタン・時計)の中心を `center` へ合わせる。縮尺は左上を軸に掛かっている前提。
 static func center_on(control: Control, center: Vector2) -> void:
-	control.position = center - control.size * 0.5
+	control.position = center - control.size * control.scale * 0.5
 
 
 ## 行動の列の持ち時間の時計(GameDesign.md 9章)。

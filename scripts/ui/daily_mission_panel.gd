@@ -15,9 +15,21 @@ const SCREEN_SIZE := Vector2(1280, 720)
 const PANEL_SIZE := Vector2(600, 420)
 const PANEL_STYLE := "res://resources/theme/content_panel.tres"
 const CLAIM_SIZE := Vector2(120, 44)
+const CLOSE_SIZE := Vector2(180, 48)
+const NOTE_INSET := 60.0
+## 縦(GameDesign.md 9章「縦画面」)。`PortraitModal` の論理幅で組み、中身ごと拡大する。
+const PORTRAIT_PANEL_SIZE := Vector2(PortraitModal.WIDTH, 470)
+const PORTRAIT_CLAIM_SIZE := Vector2(120, 52)
+const PORTRAIT_CLOSE_SIZE := Vector2(180, 56)
+const SMALL_FONT := 15
+## 縦(パネルごと1.4倍)で本文の目安(24px)にする進み具合・注記の大きさ。
+const PORTRAIT_SMALL_FONT := 17
 
 var _rows: VBoxContainer
 var _note: Label
+var _dim: ColorRect
+var _panel: PanelContainer
+var _close: Button
 
 
 func _ready() -> void:
@@ -25,31 +37,47 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	size = SCREEN_SIZE
 	_build()
+	PortraitModal.watch(self, _layout)
 
 
 func open() -> void:
+	_layout()
 	_refresh()
 	visible = true
 
 
-func _build() -> void:
-	var dim := ColorRect.new()
-	dim.color = Color(0, 0, 0, 0.7)
-	dim.size = SCREEN_SIZE
-	dim.mouse_filter = Control.MOUSE_FILTER_STOP
-	add_child(dim)
+func _layout() -> void:
+	var portrait := ScreenOrientation.is_portrait()
+	var panel_size := PORTRAIT_PANEL_SIZE if portrait else PANEL_SIZE
+	size = PortraitModal.screen_size()
+	_dim.size = size
+	# 中身の最小幅を先に変える(パネルは中身より狭くならないため)。
+	_note.custom_minimum_size.x = panel_size.x - NOTE_INSET
+	_note.add_theme_font_size_override("font_size", _small_font())
+	_close.custom_minimum_size = PORTRAIT_CLOSE_SIZE if portrait else CLOSE_SIZE
+	_panel.size = panel_size
+	_panel.position = (size - panel_size) * 0.5
+	PortraitModal.fit(_panel)
 
-	var panel := PanelContainer.new()
-	panel.size = PANEL_SIZE
-	panel.position = (SCREEN_SIZE - PANEL_SIZE) * 0.5
+
+func _build() -> void:
+	_dim = ColorRect.new()
+	_dim.color = Color(0, 0, 0, 0.7)
+	_dim.size = SCREEN_SIZE
+	_dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(_dim)
+
+	_panel = PanelContainer.new()
+	_panel.size = PANEL_SIZE
+	_panel.position = (SCREEN_SIZE - PANEL_SIZE) * 0.5
 	var style: StyleBox = load(PANEL_STYLE)
 	if style != null:
-		panel.add_theme_stylebox_override("panel", style)
-	add_child(panel)
+		_panel.add_theme_stylebox_override("panel", style)
+	add_child(_panel)
 
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 12)
-	panel.add_child(box)
+	_panel.add_child(box)
 
 	var title := Label.new()
 	title.text = "デイリーミッション"
@@ -64,15 +92,19 @@ func _build() -> void:
 	_note = Label.new()
 	_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_note.custom_minimum_size.x = PANEL_SIZE.x - 60.0
-	_note.add_theme_font_size_override("font_size", 15)
+	_note.custom_minimum_size.x = PANEL_SIZE.x - NOTE_INSET
+	_note.add_theme_font_size_override("font_size", SMALL_FONT)
 	_note.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
 	box.add_child(_note)
 
-	var close := CodedButton.make("閉じる", Vector2(180, 48))
-	close.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	close.pressed.connect(func() -> void: _on_close())
-	box.add_child(close)
+	_close = CodedButton.make("閉じる", CLOSE_SIZE)
+	_close.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_close.pressed.connect(func() -> void: _on_close())
+	box.add_child(_close)
+
+
+func _small_font() -> int:
+	return PORTRAIT_SMALL_FONT if ScreenOrientation.is_portrait() else SMALL_FONT
 
 
 func _on_close() -> void:
@@ -102,7 +134,7 @@ func _make_row(uid: String, row: Dictionary) -> Control:
 	column.add_child(text)
 	var progress := Label.new()
 	progress.text = "%d / %d   報酬 %d 砂金" % [row["progress"], row["goal"], row["reward"]]
-	progress.add_theme_font_size_override("font_size", 15)
+	progress.add_theme_font_size_override("font_size", _small_font())
 	progress.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
 	column.add_child(progress)
 
@@ -113,7 +145,9 @@ func _make_row(uid: String, row: Dictionary) -> Control:
 		line.add_child(done)
 		return line
 
-	var button := CodedButton.make("受取", CLAIM_SIZE)
+	var button := CodedButton.make(
+		"受取", PORTRAIT_CLAIM_SIZE if ScreenOrientation.is_portrait() else CLAIM_SIZE
+	)
 	button.disabled = not bool(row["done"])
 	button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	button.pressed.connect(

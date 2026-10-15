@@ -27,10 +27,20 @@ const PADDING := 26.0
 ## 未受取の印(GameDesign.md 9章)。
 const BADGE_COLOR := Color(0.86, 0.24, 0.19)
 const BADGE_RADIUS := 15.0
+const BADGE_FONT_SIZE := 17
 ## ホバー浮き(GameDesign.md 9章)。紋章の透かしをわずかに明るく・上へ浮かせる。
 const HOVER_RISE_PX := 3.0
 const HOVER_ALPHA_BOOST := 0.45
 const HOVER_DURATION := 0.16
+
+## 縦画面の文字の大きさ(GameDesign.md 9章「縦画面」: 本文24px以上)。
+const PORTRAIT_SUBTITLE_SIZE := 24
+const PORTRAIT_SUBTITLE_LINES := 2
+const PORTRAIT_PADDING := 20.0
+const PORTRAIT_EMBLEM_SIDE := 64.0
+const PORTRAIT_BADGE_SCALE := 1.4
+## 副題を折り返したときの行の送り(文字の大きさに対する比)。
+const SUBTITLE_LINE_HEIGHT := 1.2
 
 var title := ""
 var subtitle := ""
@@ -43,6 +53,16 @@ var subtitle_accent := false:
 	set(value):
 		subtitle_accent = value
 		queue_redraw()
+## 縦画面(GameDesign.md 9章「縦画面」)で文字を大きくするための値。既定は横の見た目のまま。
+var padding := PADDING
+## 副題の大きさ。0 なら見出しから求める。
+var subtitle_size := 0
+## 副題を折り返してよい行数。
+var subtitle_lines := 1
+var emblem_max_side := EMBLEM_MAX_SIDE
+var badge_scale := 1.0
+## 0 より大きいとき、紋章のぶん文字から空ける幅(既定は札の高さから求める)。
+var emblem_reserve := 0.0
 ## 0 より大きいとき、右上へ数の印を打つ。
 var badge_count := 0:
 	set(value):
@@ -60,6 +80,20 @@ var _hover_tween: Tween
 ## 副題が外部要因で変わった瞬間に立て、減衰させながら短く光らせる。
 var _subtitle_flash := 0.0
 var _flash_tween: Tween
+
+
+## 縦横に合わせて文字の大きさを切り替える。横は作ったときの値へ戻す。
+static func set_portrait_text(
+	tile: HomeTile, portrait: bool, portrait_title: int, landscape_title: int
+) -> void:
+	tile.title_size = portrait_title if portrait else landscape_title
+	tile.subtitle_size = PORTRAIT_SUBTITLE_SIZE if portrait else 0
+	tile.subtitle_lines = PORTRAIT_SUBTITLE_LINES if portrait else 1
+	tile.padding = PORTRAIT_PADDING if portrait else PADDING
+	tile.emblem_max_side = PORTRAIT_EMBLEM_SIDE if portrait else EMBLEM_MAX_SIDE
+	tile.emblem_reserve = PORTRAIT_EMBLEM_SIDE if portrait else 0.0
+	tile.badge_scale = PORTRAIT_BADGE_SCALE if portrait else 1.0
+	tile.queue_redraw()
 
 
 ## 見出し・副題・紋章・大きさを与えて1枚作る(`CodedButton.make()` と同じ流儀)。
@@ -137,8 +171,10 @@ func _set_hover(value: float) -> void:
 
 ## 文字に使える幅。**右の紋章の透かしへ食い込ませない**(食い込むと副題が切れる)。
 func _text_width() -> float:
-	var reserved: float = size.y * 0.62 if emblem != null else 0.0
-	return maxf(size.x - PADDING * 2.0 - reserved, 40.0)
+	var reserved := 0.0
+	if emblem != null:
+		reserved = emblem_reserve if emblem_reserve > 0.0 else size.y * 0.62
+	return maxf(size.x - padding * 2.0 - reserved, 40.0)
 
 
 ## 紋章を敷く矩形。**額縁の内側(暗く凹んだパネル)に必ず収める。**
@@ -147,7 +183,7 @@ func _text_width() -> float:
 func _emblem_rect() -> Rect2:
 	var panel := CodedButtonStyle.inner_rect(Rect2(Vector2.ZERO, size))
 	var side: float = minf(panel.size.y * 0.94, panel.size.x * 0.5)
-	side = minf(side, EMBLEM_MAX_SIDE)
+	side = minf(side, emblem_max_side)
 	return Rect2(
 		Vector2(
 			panel.end.x - side - panel.size.y * 0.06,
@@ -162,7 +198,48 @@ func _emblem_rect() -> Rect2:
 ## (モックでそろえるタブのデッキ編集がそうなった)。
 func _title_center() -> float:
 	var centered: float = size.y * (0.48 if not subtitle.is_empty() else 0.5)
-	return minf(centered, PADDING + float(title_size) * 1.5)
+	var lines := _subtitle_rows().size()
+	if lines > 1:
+		# 折り返した副題まで含めた一群を札の上下の中央へ置く。
+		var title_h := float(title_size)
+		var sub_h := float(_subtitle_font_size())
+		var block := (
+			title_h * 0.8 + title_h * 0.92 + sub_h * (SUBTITLE_LINE_HEIGHT * (lines - 1) + 0.25)
+		)
+		return size.y * 0.5 - block * 0.5 + title_h * 0.8 - title_h * 0.36
+	return minf(centered, padding + float(title_size) * 1.5)
+
+
+func _subtitle_font_size() -> int:
+	return subtitle_size if subtitle_size > 0 else maxi(title_size - 10, 13)
+
+
+## 副題を行に分ける。**区切り(空白・「・」)があればそこで折る**(日本語は文字の間のどこでも折れるため、
+## 幅で詰めると「まだ解い / ていません」のように語の途中で切れる)。
+func _subtitle_rows() -> PackedStringArray:
+	if subtitle_lines <= 1 or _font == null or _fits(subtitle):
+		return PackedStringArray([subtitle])
+	for separator in [" ", "・"]:
+		var cut := subtitle.rfind(separator)
+		while cut > 0:
+			var head := subtitle.substr(0, cut).strip_edges()
+			if _fits(head):
+				var rest := subtitle.substr(cut + separator.length()).strip_edges()
+				if separator != " ":
+					head += separator
+				return PackedStringArray([head, rest])
+			cut = subtitle.rfind(separator, cut - 1)
+	var count := subtitle.length()
+	while count > 1 and not _fits(subtitle.substr(0, count)):
+		count -= 1
+	return PackedStringArray([subtitle.substr(0, count), subtitle.substr(count)])
+
+
+func _fits(text_line: String) -> bool:
+	var width := (
+		_font.get_string_size(text_line, HORIZONTAL_ALIGNMENT_LEFT, -1, _subtitle_font_size()).x
+	)
+	return width <= _text_width()
 
 
 func _draw() -> void:
@@ -185,7 +262,7 @@ func _draw() -> void:
 	var title_y: float = _title_center() + float(title_size) * 0.36
 	draw_string(
 		_title_font if _title_font != null else _font,
-		Vector2(PADDING, title_y),
+		Vector2(padding, title_y),
 		title,
 		HORIZONTAL_ALIGNMENT_LEFT,
 		_text_width(),
@@ -198,32 +275,39 @@ func _draw() -> void:
 		if subtitle_accent:
 			sub_color = UiPalette.GLOW_AMBER
 		sub_color = sub_color.lerp(Color(1, 1, 1), _subtitle_flash * 0.7)
-		draw_string(
-			_font,
-			Vector2(PADDING, title_y + float(title_size) * 0.92),
-			subtitle,
-			HORIZONTAL_ALIGNMENT_LEFT,
-			_text_width(),
-			maxi(title_size - 10, 13),
-			SUB_DIM if dim else sub_color
-		)
+		var sub_at := Vector2(padding, title_y + float(title_size) * 0.92)
+		for row in _subtitle_rows():
+			draw_string(
+				_font,
+				sub_at,
+				row,
+				HORIZONTAL_ALIGNMENT_LEFT,
+				_text_width(),
+				_subtitle_font_size(),
+				SUB_DIM if dim else sub_color
+			)
+			sub_at.y += float(_subtitle_font_size()) * SUBTITLE_LINE_HEIGHT
 	if badge_count > 0:
-		draw_badge(self, Vector2(size.x - BADGE_RADIUS - 4.0, BADGE_RADIUS + 4.0), badge_count)
+		var inset := BADGE_RADIUS * badge_scale + 4.0
+		draw_badge(self, Vector2(size.x - inset, inset), badge_count, badge_scale)
 
 
 ## 未受取の数の印(GameDesign.md 9章)。**札と下部タブの両方へ同じ形で打つ**ため
 ## static にしてある——タブのボタンは `HomeTile` ではなく `CodedButton` で作られており、
 ## そこへも同じ印が要る。
-static func draw_badge(target: CanvasItem, at: Vector2, count: int) -> void:
+static func draw_badge(
+	target: CanvasItem, at: Vector2, count: int, badge_scale_factor := 1.0
+) -> void:
+	var radius := BADGE_RADIUS * badge_scale_factor
 	var font := ThemeDB.fallback_font
 	if target is Control:
 		var theme_font := (target as Control).get_theme_default_font()
 		if theme_font != null:
 			font = theme_font
-	target.draw_circle(at, BADGE_RADIUS + 2.0, Color(0.10, 0.07, 0.05, 0.9))
-	target.draw_circle(at, BADGE_RADIUS, BADGE_COLOR)
+	target.draw_circle(at, radius + 2.0, Color(0.10, 0.07, 0.05, 0.9))
+	target.draw_circle(at, radius, BADGE_COLOR)
 	var text := str(count)
-	var font_size := 17
+	var font_size := roundi(BADGE_FONT_SIZE * badge_scale_factor)
 	var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
 	target.draw_string(
 		font,

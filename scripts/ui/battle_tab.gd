@@ -39,6 +39,7 @@ const FRAME_W := 1000.0
 ## 待機中・失敗の文言を置く行。
 const STATUS_TOP := TOP_BAND + 4.0
 const STATUS_ROW := 32.0
+const STATUS_FONT := 22
 const RANKED_TITLE := "対戦する"
 const SOLO_TITLE := "ソロモード"
 ## 押せないときに札の中身を沈める濃さ(札の面と一緒に暗く見せる)。
@@ -57,6 +58,21 @@ const SIDE_HEIGHT := 80.0
 const MAIN_FONT_SIZE := 40
 const SIDE_FONT_SIZE := 22
 
+## 縦画面(GameDesign.md 9章「縦画面」)。主役の2枚は縦に積み、横と同じ中身を拡大して置く。
+## 4つの入口は2列2段にする。
+const PORTRAIT_X := 24.0
+const PORTRAIT_W := 672.0
+const PORTRAIT_STATUS_FONT := 24
+const PORTRAIT_STATUS_ROW := 36.0
+const PORTRAIT_MAIN_SCALE := 1.25
+## 中身(段位・遠征の行)が収まる背丈。横の札と同じ組み立てのため、これより低くすると下端の行に重なる。
+const PORTRAIT_MAIN_HEIGHT := 293.0
+const PORTRAIT_GAP := 12.0
+const PORTRAIT_SIDE_HEIGHT := 108.0
+const PORTRAIT_SIDE_FONT := 30
+## 「つぎはここ」の印(14px)を小さな見出しの目安(20px)以上にする。
+const PORTRAIT_MARK_SCALE := 1.5
+
 var _busy := false
 var _busy_dots_timer: Timer
 var _busy_dot_count := 0
@@ -74,6 +90,7 @@ var _puzzle_tile: HomeTile
 var _watch_tile: HomeTile
 ## 次にやってほしい入口1つに掛ける印(GameDesign.md 18章)。
 var _next_mark := NextStepMark.new()
+var _portrait := false
 
 @onready var status_label: Label = $Margin/VBox/StatusLabel
 
@@ -142,7 +159,24 @@ func _make_side_tile(title: String, subtitle: String, emblem: String) -> HomeTil
 	return tile
 
 
+## 縦横が変わったときに `HomeScreen` から呼ばれる(Architecture.md 4.7節)。
+func apply_orientation(portrait: bool) -> void:
+	_portrait = portrait
+	if _ranked_tile != null:
+		_layout()
+
+
 func _layout() -> void:
+	_next_mark.tag_scale = PORTRAIT_MARK_SCALE if _portrait else 1.0
+	var side_tiles: Array[HomeTile] = [_cpu_tile, _puzzle_tile, _room_tile, _watch_tile]
+	for tile in side_tiles:
+		HomeTile.set_portrait_text(tile, _portrait, PORTRAIT_SIDE_FONT, SIDE_FONT_SIZE)
+	if _portrait:
+		_layout_portrait(side_tiles)
+		return
+	status_label.add_theme_font_size_override("font_size", STATUS_FONT)
+	for tile in [_ranked_tile, _solo_tile]:
+		tile.scale = Vector2.ONE
 	status_label.position = Vector2(FRAME_X, STATUS_TOP)
 	status_label.size = Vector2(FRAME_W, STATUS_ROW)
 	var top := STATUS_TOP + STATUS_ROW
@@ -154,10 +188,33 @@ func _layout() -> void:
 	_solo_tile.position = Vector2(FRAME_X + MAIN_WIDTH + TILE_GAP, top)
 	_solo_tile.size = main_size
 	_solo_info.size = main_size
-	var side_tiles: Array[HomeTile] = [_cpu_tile, _puzzle_tile, _room_tile, _watch_tile]
 	for i in side_tiles.size():
 		side_tiles[i].position = Vector2(FRAME_X + float(i) * (SIDE_WIDTH + TILE_GAP), side_top)
 		side_tiles[i].size = Vector2(SIDE_WIDTH, SIDE_HEIGHT)
+
+
+func _layout_portrait(side_tiles: Array[HomeTile]) -> void:
+	status_label.add_theme_font_size_override("font_size", PORTRAIT_STATUS_FONT)
+	status_label.position = Vector2(PORTRAIT_X, TOP_BAND)
+	status_label.size = Vector2(PORTRAIT_W, PORTRAIT_STATUS_ROW)
+	var top := TOP_BAND + PORTRAIT_STATUS_ROW
+	var main_size := Vector2(PORTRAIT_W / PORTRAIT_MAIN_SCALE, PORTRAIT_MAIN_HEIGHT)
+	var main_step := PORTRAIT_MAIN_HEIGHT * PORTRAIT_MAIN_SCALE + PORTRAIT_GAP
+	for i in 2:
+		var tile: HomeTile = [_ranked_tile, _solo_tile][i]
+		var info: Control = [_ranked_info, _solo_info][i]
+		tile.scale = Vector2.ONE * PORTRAIT_MAIN_SCALE
+		tile.position = Vector2(PORTRAIT_X, top + main_step * float(i))
+		tile.size = main_size
+		info.size = main_size
+	var side_top := top + main_step * 2.0
+	var side_w := (PORTRAIT_W - PORTRAIT_GAP) * 0.5
+	for i in side_tiles.size():
+		side_tiles[i].position = Vector2(
+			PORTRAIT_X + float(i % 2) * (side_w + PORTRAIT_GAP),
+			side_top + floorf(float(i) * 0.5) * (PORTRAIT_SIDE_HEIGHT + PORTRAIT_GAP)
+		)
+		side_tiles[i].size = Vector2(side_w, PORTRAIT_SIDE_HEIGHT)
 
 
 ## 待っている人の数を読む。タブが見えていないとき・通信できないときは行を隠す。

@@ -11,6 +11,9 @@ const PULSE_GLOW := 7.0
 const LABEL_SIZE := 15
 const REWARD_SIZE := 13
 const REWARD_BASELINE := 66.0
+## 縦(パネルごと1.4倍)で小さな見出しの目安(20px)以上にする大きさ。
+const PORTRAIT_LABEL_SIZE := 17
+const PORTRAIT_REWARD_SIZE := 15
 
 ## 受け取った日数。次の日(claimed + 1)が「今日」。
 var claimed := 0
@@ -27,6 +30,9 @@ func _process(delta: float) -> void:
 func _draw() -> void:
 	var step := size.x / float(WelcomeDays.DAYS)
 	var font := get_theme_default_font()
+	var portrait := ScreenOrientation.is_portrait()
+	var label_size := PORTRAIT_LABEL_SIZE if portrait else LABEL_SIZE
+	var reward_size := PORTRAIT_REWARD_SIZE if portrait else REWARD_SIZE
 	for i in WelcomeDays.DAYS:
 		var center := Vector2(step * (i + 0.5), RADIUS + 2.0)
 		var day := i + 1
@@ -50,14 +56,14 @@ func _draw() -> void:
 		if font == null:
 			continue
 		var label := str(day)
-		var width := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, LABEL_SIZE).x
+		var width := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, label_size).x
 		draw_string(
 			font,
-			center + Vector2(-width * 0.5, LABEL_SIZE * 0.35),
+			center + Vector2(-width * 0.5, label_size * 0.35),
 			label,
 			HORIZONTAL_ALIGNMENT_LEFT,
 			-1,
-			LABEL_SIZE,
+			label_size,
 			text_color
 		)
 		draw_string(
@@ -66,6 +72,6 @@ func _draw() -> void:
 			WelcomeDays.short_reward_text(day),
 			HORIZONTAL_ALIGNMENT_CENTER,
 			step,
-			REWARD_SIZE,
+			reward_size,
 			UiPalette.BRASS_HIGHLIGHT if day > claimed else UiPalette.TEXT_MUTED
 		)

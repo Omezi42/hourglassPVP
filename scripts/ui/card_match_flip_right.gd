@@ -32,8 +32,10 @@ func _init(screen: CardMatchScreen) -> void:
 	screen.add_child(_gauge)
 
 
-## ボタンの中心と、残り回数の粒の左上へ置く(`CardMatchArrange`)。
-func place(button_center: Vector2, gauge_position: Vector2) -> void:
+## ボタンの中心と、残り回数の粒の左上へ置く(`CardMatchArrange`)。縦では両方を拡大する。
+func place(button_center: Vector2, gauge_position: Vector2, button_scale: Vector2) -> void:
+	_button.scale = button_scale
+	_gauge.scale = button_scale
 	CardMatchBuild.center_on(_button, button_center)
 	_gauge.position = gauge_position
 

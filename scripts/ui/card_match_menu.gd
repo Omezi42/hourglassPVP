@@ -1,15 +1,17 @@
 class_name CardMatchMenu
 extends RefCounted
 ## 縦画面の「メニュー」(GameDesign.md 9章「縦の対局画面」/ Architecture.md 4.7節)。
-## ログ・エモート・投了を、メニューのボタンの下へ開くパネルへ縦に並べる。
-## **ボタンの実体は横の行動の列のものを付け替えて使い**、押したときの処理を二重に持たない。
+## ログ・エモート・投了(誘導対局ではスキップ)を、メニューのボタンの下へ開くパネルへ大きな横長のボタンで縦に並べる。
+## **押したときの処理は横の行動の列のボタンと同じ関数を呼ぶだけ**にし、出す・押せるかも元のボタンから写す。
 ## 横ではボタンもパネルも出さない。
 
-const PANEL_PADDING := 12.0
-const ITEM_GAP := 10.0
+const PANEL_PADDING := 14.0
+const ITEM_GAP := 12.0
 const PANEL_GAP := 8.0
 const CORNER_RADIUS := 12.0
 const FRAME_WIDTH := 3.0
+const ITEM_SIZE := Vector2(260, 68)
+const ITEM_FONT_SIZE := 28
 
 var _screen: CardMatchScreen
 var _button: RoundActionButton
@@ -17,8 +19,10 @@ var _button: RoundActionButton
 var _blocker: Control
 var _panel: MenuPanel
 var _portrait := false
-## 付け替える前の、対局画面の子としての並び順(横へ戻すときに重なり順を変えないため)。
-var _homes: Dictionary = {}
+var _log_item: Button
+var _emote_item: Button
+var _surrender_item: Button
+var _skip_item: Button
 
 
 class MenuPanel:
@@ -42,6 +46,7 @@ func _init(screen: CardMatchScreen) -> void:
 	_button = CardMatchBuild.add_round_button(
 		screen, "メニュー", ActionColumnLayout.SMALL_DIAMETER, false
 	)
+	_button.emblem = UiPaint.Emblem.MENU
 	_button.visible = false
 	_button.pressed.connect(toggle)
 	# ボタンだけはマリガン・結果パネル・ログの暗幕より背面へ(直前の手の列の直後)。
@@ -56,46 +61,32 @@ func _init(screen: CardMatchScreen) -> void:
 	_panel = MenuPanel.new()
 	_panel.visible = false
 	screen.add_child(_panel)
-	for item in _items():
-		_homes[item] = item.get_index()
-	# ログと投了は押したら閉じる。エモートは選択肢がパネルの脇へ開くため閉じない。
-	screen._log_button.pressed.connect(close)
-	screen._surrender_button.pressed.connect(close)
+	_log_item = _add_item("ログ", func() -> void: screen._log.set_open(true))
+	_emote_item = _add_item("エモート", func() -> void: screen._emote.toggle_popup())
+	_surrender_item = _add_item("投了", screen._on_surrender_pressed)
+	_skip_item = _add_item("スキップ", func() -> void: screen._tutorial.request_skip())
 
 
-func _items() -> Array[Control]:
-	return [_screen._log_button, _screen._emote.button, _screen._surrender_button]
+## 押したら閉じる(エモートは選択肢がパネルの脇へ開くため閉じない)。
+func _add_item(label: String, action: Callable) -> Button:
+	var item := CodedButton.make(label, ITEM_SIZE)
+	item.add_theme_font_size_override("font_size", ITEM_FONT_SIZE)
+	item.pressed.connect(
+		func() -> void:
+			if item != _emote_item:
+				close()
+			action.call()
+	)
+	_panel.add_child(item)
+	return item
 
 
-## 向きに合わせてボタンを付け替える(`CardMatchArrange`)。
+## 向きに合わせて置く(`CardMatchArrange`)。
 func apply(layout: CardMatchLayout) -> void:
 	_portrait = layout.portrait
 	close()
+	_button.scale = Vector2.ONE * layout.button_scale
 	CardMatchBuild.center_on(_button, layout.menu_center)
-	var items := _items()
-	if not _portrait:
-		for item in items:
-			if item.get_parent() != _screen:
-				item.reparent(_screen, false)
-				_screen.move_child(item, _homes[item])
-		refresh()
-		return
-	var diameter := ActionColumnLayout.SMALL_DIAMETER
-	var panel_size := Vector2(
-		diameter + PANEL_PADDING * 2.0,
-		diameter * items.size() + ITEM_GAP * (items.size() - 1) + PANEL_PADDING * 2.0
-	)
-	_panel.size = panel_size
-	_panel.position = Vector2(
-		layout.menu_center.x + diameter * 0.5 - panel_size.x,
-		layout.menu_center.y + diameter * 0.5 + PANEL_GAP
-	)
-	for i in items.size():
-		var item := items[i]
-		if item.get_parent() != _panel:
-			item.reparent(_panel, false)
-		item.position = Vector2(PANEL_PADDING, PANEL_PADDING + i * (diameter + ITEM_GAP))
-	_screen._emote.anchor_popup(_panel.position + _screen._emote.button.position)
 	refresh()
 
 
@@ -112,8 +103,32 @@ func toggle() -> void:
 	if _panel.visible:
 		close()
 		return
+	_sync_items()
 	_panel.visible = true
 	_blocker.visible = true
+
+
+## 出す項目と押せるかを元のボタンから写し、出す項目だけを詰めて並べる。
+func _sync_items() -> void:
+	var emote := _screen._emote.button
+	_log_item.visible = _screen._log_button.visible
+	_emote_item.visible = emote.visible
+	_emote_item.disabled = emote.disabled
+	_emote_item.text = "エモート" if emote.badge.is_empty() else "エモート(%s)" % emote.badge
+	_surrender_item.visible = _screen._surrender_button.visible
+	_skip_item.visible = _screen._tutorial.visible
+	var y := PANEL_PADDING
+	for item: Button in [_log_item, _emote_item, _surrender_item, _skip_item]:
+		item.size = ITEM_SIZE
+		if not item.visible:
+			continue
+		item.position = Vector2(PANEL_PADDING, y)
+		y += ITEM_SIZE.y + ITEM_GAP
+	_panel.size = Vector2(ITEM_SIZE.x + PANEL_PADDING * 2.0, y - ITEM_GAP + PANEL_PADDING)
+	var button_rect := Rect2(_button.position, _button.size * _button.scale)
+	_panel.position = Vector2(button_rect.end.x - _panel.size.x, button_rect.end.y + PANEL_GAP)
+	_screen._emote.anchor_popup(_panel.position + _emote_item.position)
+	_panel.queue_redraw()
 
 
 func close() -> void:

@@ -19,6 +19,14 @@ const SET_COLUMNS := 2
 const SET_GAP := 12
 ## タイル2段ぶん。セットが増えたら中でスクロールする。
 const SET_ROWS_VISIBLE := 2
+## 縦(GameDesign.md 9章「縦画面」)。`PortraitModal` の論理幅で組み、セットは1列で3つ見せる。
+const PORTRAIT_PANEL_SIZE := Vector2(PortraitModal.WIDTH, 380)
+const PORTRAIT_SET_PANEL_SIZE := Vector2(PortraitModal.WIDTH, 860)
+const PORTRAIT_SET_COLUMNS := 1
+const PORTRAIT_SET_ROWS_VISIBLE := 3
+const PORTRAIT_BUTTON_SIZE := Vector2(196, 56)
+const NOTE_FONT := 15
+const PORTRAIT_NOTE_FONT := 17
 const FAILED_TEXT := "通信に失敗しました。次にホームを開いたときに受け取れます"
 const NOTE_TEXT := "来た日の数で進みます。続けて来なくても大丈夫です"
 const SET_NOTE_TEXT := "選んだセットは、受け取ったらすぐデッキ編成に使えます"
@@ -35,6 +43,7 @@ var _preview: ShopSetPreview
 var _day := 0
 var _chosen_set := ""
 var _busy := false
+var _dim: ColorRect
 
 
 func _ready() -> void:
@@ -42,6 +51,7 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	size = SCREEN_SIZE
 	_build()
+	PortraitModal.watch(self, _relayout)
 
 
 func open() -> void:
@@ -56,23 +66,38 @@ func open_day(day: int) -> void:
 	_pips.queue_redraw()
 	_reward_label.text = "%d日目 ・ %s" % [day, WelcomeDays.reward_text(day)]
 	var picking := WelcomeDays.offers_set(day)
+	_apply_orientation()
 	_sets_scroll.visible = picking
 	_look_button.visible = picking
 	_note.text = SET_NOTE_TEXT if picking else NOTE_TEXT
 	if picking:
 		_fill_sets()
-	_resize_panel(SET_PANEL_SIZE if picking else PANEL_SIZE)
+	_resize_panel(_set_panel_size() if picking else _plain_panel_size())
 	_claim_button.text = "受け取る"
 	_busy = false
 	_refresh_buttons()
 	visible = true
 
 
+## 開いたまま向きが変わったとき。選んだセットは保つ。
+func _relayout() -> void:
+	_apply_orientation()
+	var picking := WelcomeDays.offers_set(_day)
+	if picking:
+		var chosen := _chosen_set
+		_fill_sets()
+		if not chosen.is_empty():
+			_choose(chosen)
+	_resize_panel(_set_panel_size() if picking else _plain_panel_size())
+
+
 func _fill_sets() -> void:
 	for child in _sets_grid.get_children():
+		_sets_grid.remove_child(child)
 		child.queue_free()
+	var columns := _sets_grid.columns
 	var tile_width := (
-		(SET_PANEL_SIZE.x - CONTENT_INSET - SET_GAP * (SET_COLUMNS - 1)) / float(SET_COLUMNS)
+		(_set_panel_size().x - CONTENT_INSET - SET_GAP * (columns - 1)) / float(columns)
 	)
 	for set_id in WelcomeDays.set_choices():
 		var tile := ShopItemTile.new(ShopCatalog.Kind.CARD_SET, set_id)
@@ -98,15 +123,44 @@ func _refresh_buttons() -> void:
 
 func _resize_panel(panel_size: Vector2) -> void:
 	_panel.size = panel_size
-	_panel.position = (SCREEN_SIZE - panel_size) * 0.5
+	_panel.position = (size - panel_size) * 0.5
+	PortraitModal.fit(_panel)
+
+
+func _set_panel_size() -> Vector2:
+	return PORTRAIT_SET_PANEL_SIZE if ScreenOrientation.is_portrait() else SET_PANEL_SIZE
+
+
+func _plain_panel_size() -> Vector2:
+	return PORTRAIT_PANEL_SIZE if ScreenOrientation.is_portrait() else PANEL_SIZE
+
+
+## 縦横で幅の決まる部品(段の粒・セットの一覧・注記・ボタン)を合わせ直す。
+func _apply_orientation() -> void:
+	var portrait := ScreenOrientation.is_portrait()
+	size = PortraitModal.screen_size()
+	_dim.size = size
+	var inner := _plain_panel_size().x - CONTENT_INSET
+	_pips.custom_minimum_size.x = inner
+	_note.custom_minimum_size.x = inner
+	_note.add_theme_font_size_override("font_size", PORTRAIT_NOTE_FONT if portrait else NOTE_FONT)
+	_pips.queue_redraw()
+	_sets_grid.columns = PORTRAIT_SET_COLUMNS if portrait else SET_COLUMNS
+	var rows := PORTRAIT_SET_ROWS_VISIBLE if portrait else SET_ROWS_VISIBLE
+	_sets_scroll.custom_minimum_size = Vector2(
+		_set_panel_size().x - CONTENT_INSET,
+		ShopItemTile.height(ShopCatalog.Kind.CARD_SET) * rows + SET_GAP * (rows - 1)
+	)
+	_look_button.custom_minimum_size = PORTRAIT_BUTTON_SIZE if portrait else LOOK_SIZE
+	_claim_button.custom_minimum_size = PORTRAIT_BUTTON_SIZE if portrait else CLAIM_SIZE
 
 
 func _build() -> void:
-	var dim := ColorRect.new()
-	dim.color = Color(0, 0, 0, 0.7)
-	dim.size = SCREEN_SIZE
-	dim.mouse_filter = Control.MOUSE_FILTER_STOP
-	add_child(dim)
+	_dim = ColorRect.new()
+	_dim.color = Color(0, 0, 0, 0.7)
+	_dim.size = SCREEN_SIZE
+	_dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(_dim)
 
 	_panel = PanelContainer.new()
 	var style: StyleBox = load(PANEL_STYLE)
@@ -158,7 +212,7 @@ func _build() -> void:
 	_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_note.custom_minimum_size.x = PANEL_SIZE.x - CONTENT_INSET
 	_note.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	_note.add_theme_font_size_override("font_size", 15)
+	_note.add_theme_font_size_override("font_size", NOTE_FONT)
 	_note.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
 	box.add_child(_note)
 

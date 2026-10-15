@@ -9,6 +9,10 @@ signal cancelled
 
 const DEFAULT_CONFIRM_COLOR := Color(0.96, 0.94, 0.89, 1)
 const DANGER_CONFIRM_COLOR := Color(1, 0.45, 0.4, 1)
+## 縦(パネルごと拡大)で2つのボタンが画面の幅に収まる大きさ。
+const PORTRAIT_BUTTON_SIZE := Vector2(168, 60)
+
+var _button_size := Vector2.ZERO
 
 @onready var dim: ColorRect = $Dim
 @onready var title_label: Label = $CenterBox/Panel/Margin/VBox/TitleLabel
@@ -20,8 +24,10 @@ const DANGER_CONFIRM_COLOR := Color(1, 0.45, 0.4, 1)
 func _ready() -> void:
 	visible = false
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	_button_size = confirm_button.custom_minimum_size
 	cancel_button.pressed.connect(_on_cancel_pressed)
 	confirm_button.pressed.connect(_on_confirm_pressed)
+	PortraitModal.watch(self, _cover_viewport)
 
 
 ## OKのみの通知として表示する。
@@ -60,6 +66,10 @@ func _cover_viewport() -> void:
 	anchor_bottom = 0.0
 	position = Vector2.ZERO if parent == null else -parent.global_position
 	size = get_viewport_rect().size
+	var button_size := PORTRAIT_BUTTON_SIZE if ScreenOrientation.is_portrait() else _button_size
+	cancel_button.custom_minimum_size = button_size
+	confirm_button.custom_minimum_size = button_size
+	PortraitModal.fit($CenterBox)
 
 
 func close() -> void:

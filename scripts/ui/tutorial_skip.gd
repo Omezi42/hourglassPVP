@@ -46,6 +46,11 @@ func _ready() -> void:
 	_button.size = BUTTON_SIZE
 
 
+## 縦ではメニューの「スキップ」から呼ぶ。
+func request() -> void:
+	_on_skip_pressed()
+
+
 func _on_skip_pressed() -> void:
 	_confirm.open_confirm(TITLE, BODY, "飛ばす", "もどる")
 

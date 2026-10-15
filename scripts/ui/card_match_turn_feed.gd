@@ -12,7 +12,6 @@ extends Control
 ## 盤面の駒より手前へ出す必要があるが、`Control._draw()` は自分の子より背面に描かれる。
 ## `CardMatchStatus` と同じく独立したオーバーレイのノードとして持つ。
 
-const SCREEN_SIZE := Vector2(1280, 720)
 const BANNER_DURATION := 1.1
 const BANNER_FONT_SIZE := 44
 ## 対局そのものが始まった瞬間だけ出す大きな幕(GameDesign.md 9章)。手番のバナーより
@@ -27,8 +26,6 @@ const CAPTION_PAD := Vector2(16.0, 9.0)
 const CAPTION_GAP := 44.0
 ## 実況に出す種別。ダメージ(hp)はHPバーの演出が示すため重ねない。
 const NARRATED := ["play", "cast", "flip", "attack", "time_up"]
-## 縦は720幅の基準で本文24px以上にする(GameDesign.md 9章「縦画面」)。実況の文字と札だけを拡大する。
-const PORTRAIT_CAPTION_SCALE := 1.5
 
 var _screen: CardMatchScreen
 var _font: Font
@@ -41,22 +38,22 @@ var _chain_turn_banner := false
 var _caption_text := ""
 var _caption_at := Vector2.ZERO
 var _caption_left := 0.0
-var _caption_scale := 1.0
+## 実況の文字の大きさ。縦では大きくする(`apply_layout()`)。
+var _caption_font_size := CAPTION_FONT_SIZE
 
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	size = SCREEN_SIZE
 	_font = get_theme_default_font()
 	if _font == null:
 		_font = ThemeDB.fallback_font
 	set_process(false)
 
 
-## 向きに合わせて置き直す(`CardMatchArrange`)。
+## 向きに合わせる(`CardMatchArrange`)。幕は卓の中央へ出す。
 func apply_layout(layout: CardMatchLayout) -> void:
 	size = layout.screen_size
-	_caption_scale = PORTRAIT_CAPTION_SCALE if layout.portrait else 1.0
+	_caption_font_size = roundi(CAPTION_FONT_SIZE * layout.text_scale)
 	queue_redraw()
 
 
@@ -128,7 +125,8 @@ func _draw_banner() -> void:
 	var alpha: float = minf(ratio * 3.0, 1.0) * minf((1.0 - ratio) * 6.0 + 0.2, 1.0)
 	var font_size := MATCH_START_FONT_SIZE if _banner_big else BANNER_FONT_SIZE
 	var width := _font.get_string_size(_banner_text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
-	var at := Vector2((size.x - width) * 0.5, size.y * 0.5)
+	var center := CardMatchLayout.current().table_rect.get_center()
+	var at := Vector2(center.x - width * 0.5, center.y + font_size * 0.36)
 	var plate := Rect2(
 		Vector2(at.x - 34.0, at.y - font_size - 6.0), Vector2(width + 68.0, font_size + 26.0)
 	)
@@ -164,22 +162,20 @@ func _draw_burst(center: Vector2, alpha: float) -> void:
 func _draw_caption() -> void:
 	var ratio := _caption_left / CAPTION_DURATION
 	var alpha: float = minf(ratio * 5.0, 1.0)
-	var k := _caption_scale
-	var font_size := roundi(CAPTION_FONT_SIZE * k)
-	var pad := CAPTION_PAD * k
-	var rise := (1.0 - ratio) * CAPTION_RISE * k
+	var rise := (1.0 - ratio) * CAPTION_RISE
+	var font_size := _caption_font_size
 	var width := _font.get_string_size(_caption_text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
 	# **相手の駒は画面の上半分にあるため、その上へ出すと駒の絵に重なる。**
 	# 盤面の中央側(下)へ逃がして、何が起きた駒なのかを隠さないようにする。
-	var below := _caption_at.y < size.y * 0.5
+	var below := _caption_at.y < CardMatchLayout.current().rail_y()
 	# 下へ出すときは、駒の名前とキーワードの行を跨ぐぶんだけ余分に離す。
-	var offset := (CAPTION_GAP + (26.0 if below else 0.0)) * k + rise
+	var offset := (CAPTION_GAP + (26.0 if below else 0.0)) + rise
 	var at := Vector2(_caption_at.x - width * 0.5, _caption_at.y + (offset if below else -offset))
-	at.x = clampf(at.x, pad.x + 8.0, size.x - width - pad.x - 8.0)
+	at.x = clampf(at.x, CAPTION_PAD.x + 8.0, size.x - width - CAPTION_PAD.x - 8.0)
 	at.y = clampf(at.y, font_size + 16.0, size.y - 16.0)
 	var plate := Rect2(
-		at - Vector2(pad.x, font_size + pad.y * 0.5),
-		Vector2(width + pad.x * 2.0, font_size + pad.y * 2.0)
+		at - Vector2(CAPTION_PAD.x, font_size + CAPTION_PAD.y * 0.5),
+		Vector2(width + CAPTION_PAD.x * 2.0, font_size + CAPTION_PAD.y * 2.0)
 	)
 	_draw_plate(plate, alpha * 0.88)
 	draw_string(
