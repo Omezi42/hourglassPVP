@@ -19,6 +19,10 @@ static func apply(screen: CardMatchScreen) -> void:
 	screen._result.apply_layout(layout)
 	screen._log.apply_layout(layout)
 	screen._detail.apply_layout(layout)
+	screen._pile.apply_layout(layout)
+	screen._feed.apply_layout(layout)
+	if screen._replay != null:
+		screen._replay.apply_layout(layout)
 	# 揺れの基準位置を取り直す(位置が変わった卓と駒を元の位置へ戻さないように)。
 	var shaken: Array[Control] = [screen._table]
 	shaken.append_array(screen._foe_slots)

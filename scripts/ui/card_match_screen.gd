@@ -302,6 +302,7 @@ func start_replay(record: Dictionary) -> bool:
 		_replay = CardMatchReplay.new()
 		_replay.state_rebuilt.connect(_on_replay_state)
 		add_child(_replay)
+		_replay.apply_layout(layout)
 	return _replay.load_record(record)
 
 

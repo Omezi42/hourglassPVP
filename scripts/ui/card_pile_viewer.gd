@@ -16,12 +16,22 @@ const PANEL_WIDTH := 880.0
 const MAX_ROWS := 3
 const COLUMNS := 6
 const ROW_GAP := 10.0
+## 縦は4列にして、パネルを画面の幅いっぱいまで拡大する(札の文字を読める大きさにするため)。
+const PORTRAIT_COLUMNS := 4
+const PORTRAIT_MAX_ROWS := 4
+## パネルの枠の内側の左右の余白(`content_panel.tres`)。
+const PANEL_PADDING_X := 48.0
 
 var _title: Label
 var _grid: GridContainer
 var _scroll: ScrollContainer
 var _empty: Label
 var _close: Button
+var _dim: ColorRect
+var _center: CenterContainer
+var _panel: PanelContainer
+var _columns := COLUMNS
+var _max_rows := MAX_ROWS
 ## 選ぶモードのときの受け手。押した墓地の位置を渡す。見るだけのときは空。
 var _on_pick := Callable()
 var _on_cancel := Callable()
@@ -34,6 +44,22 @@ func _ready() -> void:
 	# サイズ0のノードへ使うと0のまま固定され、暗幕が盤面を覆わずクリックも止められない。
 	size = SCREEN_SIZE
 	_build()
+
+
+## 向きに合わせて置き直す(Architecture.md 4.7節)。縦は列を減らし、パネルごと拡大して中央へ置く。
+func apply_layout(layout: CardMatchLayout) -> void:
+	size = layout.screen_size
+	_dim.size = layout.screen_size
+	_columns = PORTRAIT_COLUMNS if layout.portrait else COLUMNS
+	_max_rows = PORTRAIT_MAX_ROWS if layout.portrait else MAX_ROWS
+	_grid.columns = _columns
+	var grid_width := _columns * CardView.HAND_SIZE_PX.x + (_columns - 1) * ROW_GAP
+	var panel_width := grid_width + PANEL_PADDING_X if layout.portrait else PANEL_WIDTH
+	_panel.custom_minimum_size = Vector2(panel_width, 0)
+	var usable := layout.screen_size.x - CardMatchLayout.PORTRAIT_SIDE * 2.0
+	var zoom := usable / panel_width if layout.portrait else 1.0
+	_center.scale = Vector2.ONE * zoom
+	_center.size = layout.screen_size / zoom
 
 
 ## 同じカードは1枚にまとめ、枚数をバッジで出す。30枚が並ぶと読み取れないため。
@@ -92,9 +118,9 @@ func _clear_grid() -> void:
 func _show(empty: bool, count: int) -> void:
 	_empty.visible = empty
 	_scroll.visible = not empty
-	var rows: int = ceili(float(count) / float(COLUMNS))
+	var rows: int = ceili(float(count) / float(_columns))
 	var row_height: float = CardView.HAND_SIZE_PX.y + ROW_GAP
-	_scroll.custom_minimum_size = Vector2(0, mini(maxi(rows, 1), MAX_ROWS) * row_height)
+	_scroll.custom_minimum_size = Vector2(0, mini(maxi(rows, 1), _max_rows) * row_height)
 	visible = true
 
 
@@ -116,30 +142,30 @@ func _dismiss() -> void:
 
 
 func _build() -> void:
-	var dim := ColorRect.new()
-	dim.color = Color(0, 0, 0, 0.65)
-	dim.size = SCREEN_SIZE
-	dim.mouse_filter = Control.MOUSE_FILTER_STOP
-	dim.gui_input.connect(_on_dim_input)
-	add_child(dim)
+	_dim = ColorRect.new()
+	_dim.color = Color(0, 0, 0, 0.65)
+	_dim.size = SCREEN_SIZE
+	_dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	_dim.gui_input.connect(_on_dim_input)
+	add_child(_dim)
 
 	# 中身の高さで伸び縮みさせつつ画面の中央に置くため、CenterContainer へ入れる。
-	var center := CenterContainer.new()
-	center.size = SCREEN_SIZE
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(center)
+	_center = CenterContainer.new()
+	_center.size = SCREEN_SIZE
+	_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_center)
 
-	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(PANEL_WIDTH, 0)
-	panel.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_panel = PanelContainer.new()
+	_panel.custom_minimum_size = Vector2(PANEL_WIDTH, 0)
+	_panel.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var style: StyleBox = load(PANEL_STYLE)
 	if style != null:
-		panel.add_theme_stylebox_override("panel", style)
-	center.add_child(panel)
+		_panel.add_theme_stylebox_override("panel", style)
+	_center.add_child(_panel)
 
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 12)
-	panel.add_child(column)
+	_panel.add_child(column)
 	_title = Label.new()
 	_title.add_theme_font_size_override("font_size", 24)
 	column.add_child(_title)

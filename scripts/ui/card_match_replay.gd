@@ -13,6 +13,10 @@ const BUTTON_SIZE := Vector2(70, 40)
 ## 再生コントロールの置き場所。手札の上に重ねないよう、対局中の行動ボタンと同じ
 ## 画面右の列(x=1108、幅148)へ2列で並べる(再生中は行動ボタンを出さないため空いている)。
 const CONTROL_POSITION := Vector2(1108, 372)
+## 縦は行動の列が無いため、再生中は空くレールの中央(反転権の札とターン終了の間)へ3列2段で置く。
+const PORTRAIT_COLUMNS := 3
+const PORTRAIT_SCALE := 1.4
+const GRID_GAP := 8
 
 var deck_a: Array = []
 var deck_b: Array = []
@@ -29,6 +33,23 @@ var _play_button: Button
 func _ready() -> void:
 	visible = false
 	_build()
+
+
+## 向きに合わせて置き直す(`CardMatchArrange` と、作った直後の対局画面から呼ぶ)。
+func apply_layout(layout: CardMatchLayout) -> void:
+	if not layout.portrait:
+		_row.columns = 2
+		_row.scale = Vector2.ONE
+		_row.position = CONTROL_POSITION
+		return
+	_row.columns = PORTRAIT_COLUMNS
+	_row.scale = Vector2.ONE * PORTRAIT_SCALE
+	var rows := ceili(float(_row.get_child_count()) / float(PORTRAIT_COLUMNS))
+	var grid := Vector2(
+		PORTRAIT_COLUMNS * BUTTON_SIZE.x + (PORTRAIT_COLUMNS - 1) * GRID_GAP,
+		rows * BUTTON_SIZE.y + (rows - 1) * GRID_GAP
+	)
+	_row.position = layout.replay_center - grid * PORTRAIT_SCALE * 0.5
 
 
 ## 再生モードを抜ける。コントロールを隠し、自動再生のタイマーも止める。
@@ -77,8 +98,8 @@ func _refresh() -> void:
 func _build() -> void:
 	_row = GridContainer.new()
 	_row.columns = 2
-	_row.add_theme_constant_override("h_separation", 8)
-	_row.add_theme_constant_override("v_separation", 8)
+	_row.add_theme_constant_override("h_separation", GRID_GAP)
+	_row.add_theme_constant_override("v_separation", GRID_GAP)
 	_row.position = CONTROL_POSITION
 	add_child(_row)
 	_row.add_child(_make("先頭", func() -> void: goto(0)))

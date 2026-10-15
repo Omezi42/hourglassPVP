@@ -34,6 +34,10 @@
 - マリガン(`apply_layout()`)は見出し〜確定ボタンの一群を縦の中央へ置き、最大4枚の札を1.35倍のまま横1列に詰めて並べる。
   結果パネルは横と同じ大きさのまま画面の中央へ置く。誘導対局の帯はマリガンの確定ボタンの下端から位置を決める
 - ログ(`CardMatchLog.apply_layout()`)は縦で680x1180・文字を24px(見出し30px)にする。詳細パネルは横と同じ詰めた表示のまま
+- 墓地の一覧(`CardPileViewer.apply_layout()`)は縦で4列、パネルを720幅いっぱいまで `CenterContainer` ごと拡大する。
+  実況(`CardMatchTurnFeed.apply_layout()`)は縦で文字と札を1.5倍。再生の操作(`CardMatchReplay.apply_layout()`)は
+  縦で `CardMatchLayout.replay_center` を中心に3列2段・1.4倍。再生の操作は作った直後にも `apply_layout()` を呼ぶ(遅れて作るため)
+- 誘導対局が光らせる駒・手札の輪郭は `CardMatchGeometry.view_rect()`(縮尺を通した見た目の矩形)で取る
 - メニューのボタンは直前の手の列の直後へ並べ替え、マリガン・結果パネル・ログの暗幕より背面に置く(パネルと幕は最前面)
 - 縦では吊りランプと行動の列の板を出さない(情報帯と直前の手に重なり、列を置く幅も無いため)
 - 横と縦の見た目は `tools/capture_match_layout`(非ヘッドレス)で撮る

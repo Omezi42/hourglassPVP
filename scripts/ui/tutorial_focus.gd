@@ -74,8 +74,7 @@ func _hand_rects_for(card_id: String) -> Array[Rect2]:
 	for i in hand.size():
 		var card: CardData = hand[i]
 		if card.id == card_id and i < _screen._hand_views.size():
-			var view := _screen._hand_views[i]
-			found.append(Rect2(view.position, view.size))
+			found.append(_screen._geometry.view_rect(_screen._hand_views[i]))
 			break
 	return found
 
@@ -102,5 +101,4 @@ func _attack_rects(step: Dictionary) -> Array[Rect2]:
 
 
 func _slot_rect(side: int, slot: int) -> Rect2:
-	var view := _screen.view_at(side, slot)
-	return Rect2(view.position, view.size)
+	return _screen._geometry.view_rect(_screen.view_at(side, slot))

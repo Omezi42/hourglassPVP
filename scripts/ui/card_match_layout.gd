@@ -83,6 +83,8 @@ var log_center := Vector2.ZERO
 var emote_center := Vector2.ZERO
 var surrender_center := Vector2.ZERO
 var menu_center := Vector2.ZERO
+## 縦だけ: 再生の操作の中心(行動の列の代わり)。
+var replay_center := Vector2.ZERO
 ## 詳細パネルを収める範囲の右端(行動の列の手前)。
 var play_right := 0.0
 ## 対象選択の案内・通信待ちの札・バージョンの表示。
@@ -231,6 +233,9 @@ static func _make_portrait() -> CardMatchLayout:
 		rail - flip_radius - PORTRAIT_GAP - ActionColumnLayout.COIN_DIAMETER * 0.5
 	)
 	l.play_right = l.screen_size.x
+	var gauge_right := l.flip_gauge_position.x + FlipRightGauge.GAUGE_SIZE.x
+	var turn_end_left := l.turn_end_center.x - end_radius
+	l.replay_center = Vector2((gauge_right + turn_end_left) * 0.5, rail)
 	var prompt_size := Vector2(148, 52)
 	l.prompt_rect = Rect2(Vector2(l.screen_size.x * 0.5, rail) - prompt_size * 0.5, prompt_size)
 	l.waiting_center = l.table_rect.get_center()

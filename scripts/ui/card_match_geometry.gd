@@ -34,6 +34,11 @@ func playable_hand_rects() -> Array[Rect2]:
 	return found
 
 
+## 駒・手札の札の見た目の矩形(縮尺を通す)。誘導対局が光らせる輪郭に使う。
+func view_rect(view: CardView) -> Rect2:
+	return _to_screen(view, Rect2(Vector2.ZERO, view.size))
+
+
 ## ターン終了ボタンの矩形。誘導対局が「ここを押す」と光らせるのに使う。
 func end_turn_button_rect() -> Rect2:
 	return Rect2(_screen._end_turn_button.position, _screen._end_turn_button.size)
