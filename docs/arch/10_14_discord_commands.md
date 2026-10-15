@@ -28,6 +28,9 @@
 - **`/card` の画像・GIFはjsDelivr経由でリポジトリから直接読む**(`https://cdn.jsdelivr.net/gh/Omezi42/hourglassPVP@main/functions/data/...`)。
   Embedへ埋めるだけでBotはアップロードしない。pushから数分〜数時間は古い版が返ることがある。`/deck` は生成したバイト列を
   `multipart/form-data` の `files[0]` として添付する
+- **`functions/data/card_art` と `effect_gifs` は `firebase.json` の `functions.ignore` でデプロイから外す**(関数は読まず
+  jsDelivrが配るため。同梱すると約70MBが関数ごとのソース保管・ビルドイメージへ載り課金の元になる)。全関数は
+  `setGlobalOptions({maxInstances: 2})` で同時インスタンス数を絞る(公開URLへの大量リクエスト対策)
 - **`/deck` は3秒の応答期限を超えうるため deferred response**(type 5・`flags: 64`)を即座に返し、生成後に
   `PATCH /webhooks/{application_id}/{token}/messages/@original` で追送する。**`res.json()` の直後に `return` せず、
   追送(`sendDeckFollowup()`)の完了を `await` してからハンドラを終える**(応答送信後にCPUがスロットルされることがある)

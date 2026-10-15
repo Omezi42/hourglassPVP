@@ -6,6 +6,16 @@
   "functions": {
     "source": "functions",
     "runtime": "nodejs20",
-    "predeploy": []
+    "predeploy": [],
+    "ignore": [
+      "node_modules",
+      ".git",
+      ".gdignore",
+      "firebase-debug.log",
+      "firebase-debug.*.log",
+      "*.local",
+      "data/card_art",
+      "data/effect_gifs"
+    ]
   }
 }

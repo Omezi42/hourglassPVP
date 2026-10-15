@@ -8,6 +8,7 @@
  * その定期実行(Cloud Scheduler)だけを足し、常駐するプロセスは持たない。
  */
 
+const {setGlobalOptions} = require("firebase-functions/v2");
 const {onSchedule} = require("firebase-functions/v2/scheduler");
 const {onRequest} = require("firebase-functions/v2/https");
 const {defineSecret} = require("firebase-functions/params");
@@ -16,6 +17,9 @@ const logger = require("firebase-functions/logger");
 const admin = require("firebase-admin");
 
 admin.initializeApp();
+
+// 公開URLへの大量リクエストで課金が膨らまないよう、同時に立つインスタンス数を絞る。
+setGlobalOptions({maxInstances: 2});
 
 const cardsData = require("./data/cards.json");
 const {
