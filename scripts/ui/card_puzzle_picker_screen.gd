@@ -21,8 +21,18 @@ const CARD_SIZE := Vector2(596, 132)
 ## ヒントの折り返し幅を決めるため、「挑戦」と余白を引いた値を見出しへ渡す。
 const ACTION_SIZE := Vector2(132, 52)
 const ROW_SEPARATION := 12
+const TITLE_FONT := 22
+const HINT_FONT := 15
+## 縦画面(GameDesign.md 9章「縦画面」)。1列にし、札の幅を画面いっぱいに、文字とボタンを目安まで大きくする。
+const PORTRAIT_CARD_HEIGHT := 168.0
+const PORTRAIT_ACTION_SIZE := Vector2(150, 72)
+const PORTRAIT_TITLE_FONT := 30
+const PORTRAIT_HINT_FONT := 24
 
 var _grid: GridContainer
+var _header: ScreenHeader
+var _scroll: ScrollContainer
+var _portrait := false
 
 
 func _ready() -> void:
@@ -39,6 +49,7 @@ func _build() -> void:
 	add_child(backdrop)
 	var header: ScreenHeader = load(HEADER_SCENE).instantiate()
 	add_child(header)
+	_header = header
 	header.set_title("リーサルパズル")
 	header.back_pressed.connect(func() -> void: back_pressed.emit())
 
@@ -49,12 +60,27 @@ func _build() -> void:
 	TouchScroll.enable(scroll)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	add_child(scroll)
+	_scroll = scroll
 
 	_grid = GridContainer.new()
 	_grid.columns = COLUMNS
 	_grid.add_theme_constant_override("h_separation", 16)
 	_grid.add_theme_constant_override("v_separation", 16)
 	scroll.add_child(_grid)
+
+
+## 縦横が変わったときに `Main` から呼ばれる(Architecture.md 4.7節)。札は大きさが変わるため作り直す。
+func apply_orientation(portrait: bool) -> void:
+	_portrait = portrait
+	if _header == null:
+		return
+	_header.apply_orientation(portrait)
+	var rect := _header.portrait_content_rect() if portrait else GRID_RECT
+	_scroll.position = rect.position
+	_scroll.custom_minimum_size = rect.size
+	_scroll.size = rect.size
+	_grid.columns = 1 if portrait else COLUMNS
+	_refresh()
 
 
 func _refresh() -> void:
@@ -101,10 +127,15 @@ func _make_card(stage: PuzzleStageData, cleared: bool) -> Control:
 
 
 func _make_entry_card(title_text: String, hint_text: String, on_pressed: Callable) -> Control:
+	var card_size := CARD_SIZE
+	var action_size := ACTION_SIZE
+	if _portrait:
+		card_size = Vector2(_scroll.size.x, PORTRAIT_CARD_HEIGHT)
+		action_size = PORTRAIT_ACTION_SIZE
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = CARD_SIZE
+	panel.custom_minimum_size = card_size
 	var style: StyleBox = load(PANEL_STYLE)
-	var inner_width := CARD_SIZE.x
+	var inner_width := card_size.x
 	if style != null:
 		panel.add_theme_stylebox_override("panel", style)
 		inner_width -= style.get_margin(SIDE_LEFT) + style.get_margin(SIDE_RIGHT)
@@ -121,19 +152,23 @@ func _make_entry_card(title_text: String, hint_text: String, on_pressed: Callabl
 	row.add_child(column)
 	var title := Label.new()
 	title.text = title_text
-	title.add_theme_font_size_override("font_size", 22)
+	title.add_theme_font_size_override(
+		"font_size", PORTRAIT_TITLE_FONT if _portrait else TITLE_FONT
+	)
 	column.add_child(title)
 	var hint := Label.new()
 	hint.text = hint_text
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	# 折り返す幅を先に決める。幅0のまま高さを見積もると1文字ずつ折り返した高さになり、
 	# グリッドの行が縦に伸びて2行目以降が画面の外へ押し出される。
-	hint.custom_minimum_size.x = inner_width - ACTION_SIZE.x - ROW_SEPARATION
-	hint.add_theme_font_size_override("font_size", 15)
+	hint.custom_minimum_size.x = inner_width - action_size.x - ROW_SEPARATION
+	hint.add_theme_font_size_override("font_size", PORTRAIT_HINT_FONT if _portrait else HINT_FONT)
 	hint.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
 	column.add_child(hint)
 
-	var button := CodedButton.make("挑戦", ACTION_SIZE)
+	var button := CodedButton.make("挑戦", action_size)
+	if _portrait:
+		button.add_theme_font_size_override("font_size", ScreenHeader.PORTRAIT_BUTTON_FONT)
 	button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	button.pressed.connect(on_pressed)
 	row.add_child(button)

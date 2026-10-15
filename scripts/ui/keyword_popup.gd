@@ -11,8 +11,12 @@ const PANEL_STYLE := "res://resources/theme/content_panel.tres"
 const PANEL_SIZE := Vector2(600, 520)
 const MARGIN := 20
 const CLOSE_BUTTON_SIZE := Vector2(160, 52)
+## 縦はモーダルと同じく論理幅 `PortraitModal.WIDTH` で組んで拡大する。説明文は拡大後に本文24pxへ届く大きさ。
+const PORTRAIT_BODY_FONT := 18
 
 var _entry_view: KeywordEntryView
+var _center: CenterContainer
+var _panel: PanelContainer
 
 
 func _ready() -> void:
@@ -22,11 +26,24 @@ func _ready() -> void:
 	anchor_bottom = 1.0
 	visible = false
 	_build()
+	PortraitModal.watch(self, _fit)
 
 
 func open(entry: Dictionary) -> void:
+	_fit()
 	_entry_view.show_entry(entry)
 	visible = true
+
+
+func _fit() -> void:
+	var portrait := ScreenOrientation.is_portrait()
+	var width := PortraitModal.WIDTH if portrait else PANEL_SIZE.x
+	_panel.custom_minimum_size = Vector2(width, PANEL_SIZE.y)
+	_entry_view.set_layout(
+		minf(KeywordEntryView.PREVIEW_WIDTH, width - MARGIN * 2.0),
+		PORTRAIT_BODY_FONT if portrait else KeywordEntryView.BODY_FONT_SIZE
+	)
+	PortraitModal.fit(_center)
 
 
 func close() -> void:
@@ -47,8 +64,10 @@ func _build() -> void:
 	center.anchor_bottom = 1.0
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(center)
+	_center = center
 
 	var panel := PanelContainer.new()
+	_panel = panel
 	panel.custom_minimum_size = PANEL_SIZE
 	var style: StyleBox = load(PANEL_STYLE)
 	if style != null:

@@ -264,9 +264,9 @@ static func _make_portrait() -> CardMatchLayout:
 	l.prompt_rect = Rect2(Vector2(l.screen_size.x * 0.5, rail) - prompt_size * 0.5, prompt_size)
 	l.waiting_center = l.table_rect.get_center()
 	l.version_position = Vector2(side + 6.0, l.screen_size.y - 6.0)
-	# 縦は一群を画面のちょうど中央へ。札は最大4枚を1.35倍のまま横1列に収めるため間隔を詰める。
-	l.mulligan_top = (l.screen_size.y - CardMatchMulligan.CONTENT_HEIGHT) * 0.5
-	l.mulligan_card_gap = 14.0
+	# 縦は一群を画面のちょうど中央へ。札は2列に折り返す。
+	l.mulligan_top = (l.screen_size.y - CardMatchMulligan.content_height(true)) * 0.5
+	l.mulligan_card_gap = 24.0
 	l.log_panel_size = Vector2(width - side * 2.0, l.screen_size.y - side * 10.0)
 	l.log_font_size = PORTRAIT_LOG_FONT_SIZE
 	l.log_title_font_size = PORTRAIT_LOG_TITLE_FONT_SIZE

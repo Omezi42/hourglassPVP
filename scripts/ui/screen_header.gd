@@ -130,6 +130,17 @@ func portrait_content_top() -> float:
 	return PORTRAIT_CONTENT_TOP_WITH_ACTIONS if has_action_row() else PORTRAIT_CONTENT_TOP
 
 
+## 縦の内容を敷く矩形。左右は外周余白まで、上は `portrait_content_top()`、下は `PORTRAIT_CONTENT_BOTTOM`。
+func portrait_content_rect() -> Rect2:
+	var top := portrait_content_top()
+	return Rect2(
+		OUTER_MARGIN,
+		top,
+		ScreenOrientation.PORTRAIT_SIZE.x - OUTER_MARGIN * 2.0,
+		PORTRAIT_CONTENT_BOTTOM - top
+	)
+
+
 ## 画面が表示されるたびに呼ばれる。`Main._show_only()` が screen.visible を
 ## 切り替えると、その子であるこのヘッダーにも可視化の通知が届く。
 func _notification(what: int) -> void:

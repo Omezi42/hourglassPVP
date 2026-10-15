@@ -18,6 +18,14 @@ const PANEL_SIZE := Vector2(640, 370)
 const LINE_COUNT := 5
 const BUTTON_SIZE := Vector2(176, 56)
 const BUTTON_GAP := 16
+## 縦はモーダルと同じく論理幅 `PortraitModal.WIDTH` で組み、中身ごと拡大する(GameDesign.md 9章「縦画面」)。
+## 内訳の行は拡大後に本文24pxへ届く大きさにする。
+const PORTRAIT_PANEL_SIZE := Vector2(PortraitModal.WIDTH, 370)
+const PORTRAIT_BUTTON_SIZE := Vector2(148, 56)
+const PORTRAIT_BUTTON_GAP := 8
+const PORTRAIT_LINE_FONT := 18
+const LINE_FONT := 16
+const ENTRANCE_START_SCALE := 0.82
 const ENTRANCE_DURATION := 0.42
 ## 行が現れる間隔。ここで区切ることで「勝敗 → 内訳 → 決め手」の順に読める。
 const LINE_STAGGER := 0.14
@@ -30,7 +38,11 @@ var _panel: Control
 var _title: Label
 var _lines: Array[Label] = []
 var _rematch: Button
+var _buttons: Array[Button] = []
+var _button_row: HBoxContainer
 var _tween: Tween
+var _panel_size := PANEL_SIZE
+var _panel_scale := 1.0
 
 var _won := false
 var _neutral := false
@@ -48,12 +60,33 @@ func _ready() -> void:
 	_build()
 
 
-## 向きに合わせて置き直す(`CardMatchArrange`)。パネルは縦でも横と同じ大きさで画面の中央に置く。
+## 向きに合わせて置き直す(`CardMatchArrange`)。縦はパネルを細く組んで中身ごと拡大し、画面の中央に置く。
 func apply_layout(layout: CardMatchLayout) -> void:
 	size = layout.screen_size
 	_sand.size = layout.screen_size
 	_dim.size = layout.screen_size
-	_panel.position = (layout.screen_size - PANEL_SIZE) * 0.5
+	_panel_size = PORTRAIT_PANEL_SIZE if layout.portrait else PANEL_SIZE
+	_panel_scale = PortraitModal.SCALE if layout.portrait else 1.0
+	_panel.custom_minimum_size = _panel_size
+	_panel.size = _panel_size
+	_panel.pivot_offset = _panel_size * 0.5
+	_panel.position = (layout.screen_size - _panel_size) * 0.5
+	if not (_tween != null and _tween.is_running()):
+		_panel.scale = Vector2.ONE * _panel_scale
+	_title.size.x = _panel_size.x
+	var line_font := PORTRAIT_LINE_FONT if layout.portrait else LINE_FONT
+	for label in _lines:
+		label.size.x = _panel_size.x
+		label.add_theme_font_size_override("font_size", line_font)
+	var button_size := PORTRAIT_BUTTON_SIZE if layout.portrait else BUTTON_SIZE
+	for button in _buttons:
+		button.custom_minimum_size = button_size
+	_button_row.add_theme_constant_override(
+		"separation", PORTRAIT_BUTTON_GAP if layout.portrait else BUTTON_GAP
+	)
+	_button_row.position = Vector2(0, _panel_size.y - 84.0)
+	_button_row.size = Vector2(_panel_size.x, 64.0)
+	_panel.queue_redraw()
 
 
 ## 勝敗を表示する。my_side が負なら「先手/後手の勝利」と第三者視点で書く。
@@ -117,14 +150,14 @@ func _start_entrance() -> void:
 		_tween.kill()
 	_dim.modulate.a = 0.0
 	_panel.modulate.a = 0.0
-	_panel.scale = Vector2(0.82, 0.82)
+	_panel.scale = Vector2.ONE * (ENTRANCE_START_SCALE * _panel_scale)
 	_tween = create_tween()
 	_tween.set_parallel(true)
 	_tween.tween_property(_dim, "modulate:a", 1.0, ENTRANCE_DURATION * 0.7)
 	_tween.tween_property(_panel, "modulate:a", 1.0, ENTRANCE_DURATION).set_trans(Tween.TRANS_SINE)
 	(
 		_tween
-		. tween_property(_panel, "scale", Vector2.ONE, ENTRANCE_DURATION)
+		. tween_property(_panel, "scale", Vector2.ONE * _panel_scale, ENTRANCE_DURATION)
 		. set_trans(Tween.TRANS_BACK)
 		. set_ease(Tween.EASE_OUT)
 	)
@@ -192,6 +225,7 @@ func _build() -> void:
 		var label := Label.new()
 		label.position = Vector2(0, _line_base_y(i))
 		label.size = Vector2(PANEL_SIZE.x, 26)
+		label.add_theme_font_size_override("font_size", LINE_FONT)
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		label.add_theme_color_override("font_color", UiPalette.TEXT_OFFWHITE)
 		label.visible = false
@@ -204,6 +238,7 @@ func _build() -> void:
 	row.position = Vector2(0, PANEL_SIZE.y - 84.0)
 	row.size = Vector2(PANEL_SIZE.x, 64.0)
 	_panel.add_child(row)
+	_button_row = row
 	# 「もう一度」は連戦の導線(GameDesign.md 9章)。当面はCPU戦にだけ出す。
 	_rematch = _make_button("もう一度", rematch_pressed)
 	row.add_child(_rematch)
@@ -214,7 +249,7 @@ func _build() -> void:
 ## パネル本体の質感は `ResultPanelFrame` が持つ。勝利の瞬間だけ光条を重ねる。
 func _draw_panel() -> void:
 	var ci: RID = _panel.get_canvas_item()
-	ResultPanelFrame.draw(ci, PANEL_SIZE, _won or _neutral)
+	ResultPanelFrame.draw(ci, _panel_size, _won or _neutral)
 	if _flash > 0.0 and _won:
 		_draw_victory_flash(ci)
 
@@ -223,7 +258,7 @@ func _draw_panel() -> void:
 ## `_panel` の canvas item(ci)へ描く。`self`(ルート)の `draw_line()` を呼ぶと
 ## パネルではなくルート側の座標系へ描いてしまい、位置がずれるため。
 func _draw_victory_flash(ci: RID) -> void:
-	var center := Vector2(PANEL_SIZE.x * 0.5, 66.0)
+	var center := Vector2(_panel_size.x * 0.5, 66.0)
 	var alpha := _flash * 0.5
 	var count := 14
 	for i in count:
@@ -237,4 +272,5 @@ func _draw_victory_flash(ci: RID) -> void:
 func _make_button(label: String, target: Signal) -> Button:
 	var button := CodedButton.make(label, BUTTON_SIZE)
 	button.pressed.connect(func() -> void: target.emit())
+	_buttons.append(button)
 	return button

@@ -32,6 +32,25 @@ const PAGE_RECT := Rect2(
 const BACK_GROUP := "back_nav"
 const BACK_RECT := Rect2(24, 28, 96, 42)
 const ORDER_RECT := Rect2(SCREEN_SIZE.x - 24 - 168, 28, 168, 42)
+const HEADING_FONT := 25
+const COUNT_FONT := 16
+
+## 縦画面(GameDesign.md 9章「縦画面」)。1ページの本へ一覧と解説を切り替えて載せる(デッキ編集の在庫棚と同じ)。
+## 一覧の札は2列・1.6倍、解説のページは細く組んで1.4倍にする。
+const PORTRAIT_SCREEN := Vector2(720, 1280)
+const PORTRAIT_BACK_RECT := Rect2(24, 22, 140, 64)
+const PORTRAIT_ORDER_RECT := Rect2(PORTRAIT_SCREEN.x - 24 - 250, 22, 250, 64)
+const PORTRAIT_TAB_RECT := Rect2(24, 104, 672, 72)
+const PORTRAIT_TAB_GAP := 12.0
+const PORTRAIT_BUTTON_FONT := 26
+const PORTRAIT_COLUMNS := 2
+const PORTRAIT_ENTRY_ZOOM := 1.6
+const PORTRAIT_HEADING_FONT := 34
+const PORTRAIT_COUNT_FONT := 24
+const PORTRAIT_HEADING_DROP := 64.0
+const PORTRAIT_PAGE_SCALE := 1.4
+const PORTRAIT_PAGE_INSET := Vector2(20, 24)
+const TAB_GROUP := "wide_text"
 
 var _page: AlmanacPage
 var _keyword_popup: KeywordPopup
@@ -43,6 +62,13 @@ var _order: Order = Order.COST
 var _collected: Vector2i = Vector2i.ZERO
 var _font: Font
 var _heading: Control
+var _book: AlmanacBook
+var _back: Button
+var _scroll: ScrollContainer
+var _tab_buttons: Array[Button] = []
+var _portrait := false
+## 縦で一覧を出しているか(false なら解説)。
+var _show_index := true
 
 
 func _ready() -> void:
@@ -67,7 +93,8 @@ func open() -> void:
 
 
 func _build() -> void:
-	add_child(AlmanacBook.new())
+	_book = AlmanacBook.new()
+	add_child(_book)
 
 	# 戻るの見た目は共通ヘッダーと揃える(GameDesign.md 9章)。この画面は本・工房の
 	# 紙面へ操作を載せないためヘッダーを持たないが、**ボタンの形まで別にすると
@@ -76,6 +103,7 @@ func _build() -> void:
 	back.position = BACK_RECT.position
 	back.pressed.connect(func() -> void: back_pressed.emit())
 	add_child(back)
+	_back = back
 	_order_button = CodedButton.make("並び替え:%s" % ORDER_LABELS[_order], ORDER_RECT.size)
 	_order_button.position = ORDER_RECT.position
 	_order_button.pressed.connect(_on_order_pressed)
@@ -94,9 +122,12 @@ func _build() -> void:
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	TouchScroll.enable(scroll)
 	add_child(scroll)
+	_scroll = scroll
 	_grid = GridContainer.new()
 	_grid.columns = COLUMNS
-	_grid.add_theme_constant_override("h_separation", _h_separation())
+	_grid.add_theme_constant_override(
+		"h_separation", _h_separation(INDEX_RECT.size.x, COLUMNS, 1.0)
+	)
 	_grid.add_theme_constant_override("v_separation", 2)
 	scroll.add_child(_grid)
 	_fill_grid()
@@ -113,31 +144,119 @@ func _build() -> void:
 	add_child(_keyword_popup)
 	_page.keyword_pressed.connect(func(entry: Dictionary) -> void: _keyword_popup.open(entry))
 
+	for label in ["一覧", "解説"]:
+		var tab := CodedButton.make_in_group(label, Vector2(160, 64), TAB_GROUP)
+		tab.visible = false
+		tab.pressed.connect(_select_tab.bind(label == "一覧"))
+		add_child(tab)
+		_tab_buttons.append(tab)
+	# ポップは最後の子に置く(後から足した子ほど手前に描かれるため)。
+	move_child(_keyword_popup, -1)
+
+
+## 縦横が変わったときに `Main` から呼ばれる(Architecture.md 4.7節)。選んでいるカードと並び順は保つ。
+func apply_orientation(portrait: bool) -> void:
+	_portrait = portrait
+	if _book == null:
+		return
+	_book.portrait = portrait
+	_heading.size = _book.size
+	var font := PORTRAIT_BUTTON_FONT if portrait else 0
+	_place(_back, PORTRAIT_BACK_RECT if portrait else BACK_RECT, font)
+	_place(_order_button, PORTRAIT_ORDER_RECT if portrait else ORDER_RECT, font)
+	var tab_w := (PORTRAIT_TAB_RECT.size.x - PORTRAIT_TAB_GAP) * 0.5
+	for i in _tab_buttons.size():
+		var at := PORTRAIT_TAB_RECT.position + Vector2((tab_w + PORTRAIT_TAB_GAP) * i, 0.0)
+		_place(_tab_buttons[i], Rect2(at, Vector2(tab_w, PORTRAIT_TAB_RECT.size.y)), font)
+	var index := _index_rect()
+	_scroll.position = index.position
+	_scroll.size = index.size
+	var columns := PORTRAIT_COLUMNS if portrait else COLUMNS
+	var zoom := PORTRAIT_ENTRY_ZOOM if portrait else 1.0
+	_grid.columns = columns
+	_grid.add_theme_constant_override("h_separation", _h_separation(index.size.x, columns, zoom))
+	for view in _views:
+		view.zoom = zoom
+	if portrait:
+		var page := AlmanacBook.PORTRAIT_PAGE.grow_individual(
+			-PORTRAIT_PAGE_INSET.x,
+			-PORTRAIT_PAGE_INSET.y,
+			-PORTRAIT_PAGE_INSET.x,
+			-PORTRAIT_PAGE_INSET.y
+		)
+		_page.position = page.position
+		_page.set_page(page.size / PORTRAIT_PAGE_SCALE, PORTRAIT_PAGE_SCALE)
+	else:
+		_page.position = PAGE_RECT.position
+		_page.set_page(PAGE_RECT.size, 1.0)
+	_select_tab(_show_index)
+
+
+## 縦で一覧と解説を切り替える。横では両方を出す。
+func _select_tab(index: bool) -> void:
+	_show_index = index
+	_scroll.visible = index or not _portrait
+	_heading.visible = index or not _portrait
+	_page.visible = not index or not _portrait
+	_order_button.visible = index or not _portrait
+	for i in _tab_buttons.size():
+		_tab_buttons[i].visible = _portrait
+		var active: bool = (i == 0) == index
+		CodedButton.apply_styles(
+			_tab_buttons[i], CodedButton.PRIMARY_ACTION_GROUP if active else TAB_GROUP
+		)
+	_heading.queue_redraw()
+
+
+## 一覧を敷く範囲。縦は1ページの内側で、見出しのぶんを上へ空ける。
+func _index_rect() -> Rect2:
+	if not _portrait:
+		return INDEX_RECT
+	var page := AlmanacBook.PORTRAIT_PAGE
+	return Rect2(
+		page.position.x + 16,
+		page.position.y + PORTRAIT_HEADING_DROP + 12,
+		page.size.x - 32,
+		page.size.y - PORTRAIT_HEADING_DROP - 28
+	)
+
+
+func _place(button: Control, rect: Rect2, font: int) -> void:
+	button.custom_minimum_size = rect.size
+	button.size = rect.size
+	button.position = rect.position
+	if font > 0:
+		button.add_theme_font_size_override("font_size", font)
+	else:
+		button.remove_theme_font_size_override("font_size")
+
 
 ## 見出しと丁付けは紙へ直に刷る(枠を持つUI部品にしない)。
 ## **本より手前に描く独立したノードへ置く**——`Control._draw()` は自分の子より
 ## 背面に描かれるため、画面側で描くと本の紙に隠れて何も見えない(実際にそうなった)。
 func _draw_heading() -> void:
-	var page := AlmanacBook.LEFT_PAGE
+	var page := AlmanacBook.PORTRAIT_PAGE if _portrait else AlmanacBook.LEFT_PAGE
+	var baseline := PORTRAIT_HEADING_DROP - 14.0 if _portrait else 42.0
 	_heading.draw_string(
 		_font,
-		Vector2(page.position.x + 16, page.position.y + 42),
+		Vector2(page.position.x + 16, page.position.y + baseline),
 		"砂 時 計 図 鑑",
 		HORIZONTAL_ALIGNMENT_LEFT,
 		-1,
-		25,
+		PORTRAIT_HEADING_FONT if _portrait else HEADING_FONT,
 		AlmanacEntry.INK
 	)
 	_heading.draw_string(
 		_font,
-		Vector2(page.end.x - 156, page.position.y + 42),
+		Vector2(page.end.x - 216, page.position.y + baseline),
 		"収集 %d / %d" % [_collected.x, _collected.y],
 		HORIZONTAL_ALIGNMENT_RIGHT,
-		140,
-		16,
+		200,
+		PORTRAIT_COUNT_FONT if _portrait else COUNT_FONT,
 		AlmanacEntry.INK_SOFT
 	)
-	_draw_rule(Vector2(page.position.x + 16, page.position.y + 52), page.size.x - 32)
+	var rule_y := baseline + 10.0
+	_draw_rule(Vector2(page.position.x + 16, page.position.y + rule_y), page.size.x - 32)
 
 
 ## 飾り罫。両端へ菱形を置いた1本線。
@@ -156,12 +275,15 @@ func _draw_rule(at: Vector2, width: float) -> void:
 
 
 ## 一覧の幅から列の間隔を割り出す。縦のスクロールバーぶんを引いておく。
-static func _h_separation() -> int:
-	var usable := INDEX_RECT.size.x - SCROLLBAR_WIDTH - COLUMNS * AlmanacEntry.CELL_SIZE.x
-	return maxi(int(usable / float(COLUMNS - 1)), 0)
+static func _h_separation(width: float, columns: int, zoom: float) -> int:
+	var usable := width - SCROLLBAR_WIDTH - columns * AlmanacEntry.CELL_SIZE.x * zoom
+	return maxi(int(usable / float(columns - 1)), 0)
 
 
 func _select(card: CardData) -> void:
+	# 縦では一覧の札を押したら解説のページへめくる(開いたときに先頭を選んでおく分では切り替えない)。
+	if _portrait and _selected != null and _show_index:
+		_select_tab(false)
 	_selected = card
 	for view in _views:
 		view.selected = view.card == card
@@ -180,6 +302,7 @@ func _fill_grid() -> void:
 	var cards := _cards_in_order()
 	for i in cards.size():
 		var view := AlmanacEntry.new()
+		view.zoom = PORTRAIT_ENTRY_ZOOM if _portrait else 1.0
 		_grid.add_child(view)
 		view.show_card(cards[i], i + 1)
 		view.locked = not AccountService.owns_card_set(cards[i].set_id)

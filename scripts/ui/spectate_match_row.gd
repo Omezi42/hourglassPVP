@@ -19,12 +19,19 @@ const VS_SIZE := 13
 const PORTRAIT_BACK := Color(0.05, 0.04, 0.03)
 const TEXT_SHADOW := Color(0, 0, 0, 0.6)
 const TEXT_SHADOW_OFFSET := Vector2(0, 1.5)
+## 縦画面(GameDesign.md 9章「縦画面」)。向かい合わせに置く幅が無いため、先手・後手を上下2段に積み、
+## ターン数を右の列へ置いて中身ごと拡大する。
+const STACKED_HEIGHT := 124.0
+const STACKED_TURN_WIDTH := 112.0
 
 var match_id := ""
 var turn := 1
 ## `players/{uid}` のフィールド(空なら名無し・ブロンズ1として描く)。
 var player_a: Dictionary = {}
 var player_b: Dictionary = {}
+## 描く倍率と、2段に積むか(縦)。`set_portrait()` で決める。
+var zoom := 1.0
+var stacked := false
 var _font: Font
 var _display: Font
 
@@ -40,6 +47,13 @@ func _ready() -> void:
 	_display = UiFonts.display_font(_font)
 
 
+func set_portrait(portrait: bool, portrait_zoom: float) -> void:
+	stacked = portrait
+	zoom = portrait_zoom if portrait else 1.0
+	custom_minimum_size.y = (STACKED_HEIGHT if portrait else HEIGHT) * zoom
+	queue_redraw()
+
+
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED:
 		queue_redraw()
@@ -47,6 +61,10 @@ func _notification(what: int) -> void:
 
 func _draw() -> void:
 	if _font == null or size.x <= CENTER_WIDTH:
+		return
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE * zoom)
+	if stacked:
+		_draw_stacked(size / zoom)
 		return
 	var center_y := size.y * 0.5
 	var half := (size.x - CENTER_WIDTH) * 0.5
@@ -60,6 +78,20 @@ func _draw() -> void:
 		TURN_SIZE,
 		UiPalette.TEXT_OFFWHITE,
 		CENTER_WIDTH
+	)
+
+
+func _draw_stacked(area: Vector2) -> void:
+	var width := area.x - STACKED_TURN_WIDTH - EDGE_PAD * 2.0
+	_draw_player(player_a, EDGE_PAD, width, area.y * 0.27, false)
+	_draw_player(player_b, EDGE_PAD, width, area.y * 0.73, false)
+	var left := area.x - STACKED_TURN_WIDTH - EDGE_PAD
+	_text(
+		"%dターン目" % turn,
+		Vector2(left, area.y * 0.5 + 7.0),
+		TURN_SIZE,
+		UiPalette.TEXT_OFFWHITE,
+		STACKED_TURN_WIDTH
 	)
 
 

@@ -39,6 +39,13 @@ var selected := false
 ## 未収集(GameDesign.md 9章)。カードセット(8章)に属し、まだ所有していないカードで
 ## true になる。基本セット70枚は`CardData.set_id`が空のため常にfalse。
 var locked := false
+## 描く倍率。縦画面で名前と数字を文字の目安まで大きくする(GameDesign.md 9章「縦画面」)。
+## 中身は `CELL_SIZE` の座標のまま描き、まとめて拡大する(`WorkshopStockItem` と同じ)。
+var zoom := 1.0:
+	set(value):
+		zoom = value
+		custom_minimum_size = CELL_SIZE * zoom
+		queue_redraw()
 
 var _font: Font
 var _press := PressTracker.new()
@@ -46,7 +53,7 @@ var _slide_tween: Tween
 
 
 func _ready() -> void:
-	custom_minimum_size = CELL_SIZE
+	custom_minimum_size = CELL_SIZE * zoom
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_font = get_theme_default_font()
 	if _font == null:
@@ -91,6 +98,7 @@ func _gui_input(event: InputEvent) -> void:
 func _draw() -> void:
 	if card == null:
 		return
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE * zoom)
 	if selected:
 		_draw_selection()
 	draw_string(
@@ -111,10 +119,10 @@ func _draw() -> void:
 		EmblemSeal.brass(self, Vector2(art.position.x - 2.0, art.end.y - 10.0), card.emblem, 12.0)
 	draw_string(
 		_font,
-		Vector2(0, size.y - 6),
+		Vector2(0, _base_size().y - 6),
 		"— 未 発 見 —" if locked else card.display_name,
 		HORIZONTAL_ALIGNMENT_CENTER,
-		size.x,
+		_base_size().x,
 		15,
 		LOCKED_INK if locked else INK
 	)
@@ -129,14 +137,20 @@ func _draw() -> void:
 
 ## 絵を置く矩形。標本の欄(上)と名札(下)を分けて、重ならないようにする。
 func _art_rect() -> Rect2:
-	var h: float = size.y - NAME_BAND - ART_TOP
+	var base := _base_size()
+	var h: float = base.y - NAME_BAND - ART_TOP
 	var w: float = h / 1.30
-	return Rect2(Vector2((size.x - w) * 0.5, ART_TOP), Vector2(w, h))
+	return Rect2(Vector2((base.x - w) * 0.5, ART_TOP), Vector2(w, h))
+
+
+## 拡大する前の大きさ(描く座標の範囲)。
+func _base_size() -> Vector2:
+	return size / zoom
 
 
 ## いま開いている項目。紙へ引いた朱の下線と薄い当たりで示す。
 func _draw_selection() -> void:
-	var rect := Rect2(Vector2(2, 2), size - Vector2(4, 4))
+	var rect := Rect2(Vector2(2, 2), _base_size() - Vector2(4, 4))
 	UiPaint.fill_gradient_polygon(
 		get_canvas_item(),
 		UiPaint.rounded_rect_points_uniform(rect, 6.0, 5),

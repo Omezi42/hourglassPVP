@@ -5,12 +5,23 @@ signal card_pressed(match_id: String)
 
 ## 一覧のカードへ並べるデッキのアイコンの数(重複を除いた先頭から)。
 const DECK_PREVIEW := 5
+const ICON_SIZE := 40.0
+## 縦画面(GameDesign.md 9章「縦画面」)。1列で画面の幅を使い、文字と紋章を目安まで大きくする。
+## 日時と相手の行は折り返す(幅に収まらないため)。
+const PORTRAIT_BADGE_FONT := 24
+const PORTRAIT_BADGE_SIZE := Vector2(96, 40)
+const PORTRAIT_INFO_FONT := 24
+const PORTRAIT_CAPTION_FONT := 20
+const PORTRAIT_ICON_SIZE := 52.0
+## 情報の行の幅から引く量(左右の余白・勝敗のバッジ・間隔)。
+const PORTRAIT_INFO_INSET := PORTRAIT_BADGE_SIZE.x + 40.0
 
 var match_id: String = ""
 
 var _press_tracker := PressTracker.new()
 var _hovering := false
 var _rest_position := Vector2.ZERO
+var _portrait := false
 
 ## ホバー/押下のTween先。コンテナ(ListContainer)の直接の子である自分自身の
 ## position/scaleを外部から動かすと再レイアウト時に崩れるため、見た目専用の
@@ -25,6 +36,13 @@ var opponent_deck_row: HBoxContainer = $VisualRoot/Margin/VBox/Rows/OpponentGrou
 
 
 func _ready() -> void:
+	for label in [result_badge, info_label, $VisualRoot/Margin/VBox/Rows/OwnGroup/OwnCaption]:
+		label.set_meta("landscape_font", label.get_theme_font_size("font_size"))
+	$VisualRoot/Margin/VBox/Rows/OpponentGroup/OpponentCaption.set_meta(
+		"landscape_font",
+		$VisualRoot/Margin/VBox/Rows/OwnGroup/OwnCaption.get_meta("landscape_font")
+	)
+	result_badge.set_meta("landscape_size", result_badge.custom_minimum_size)
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	_rest_position = visual_root.position
 	resized.connect(_on_resized)
@@ -57,6 +75,39 @@ func _on_mouse_entered() -> void:
 func _on_mouse_exited() -> void:
 	_hovering = false
 	ClickArea.animate_hover(visual_root, false, _rest_position)
+
+
+## 縦横に合わせて文字と紋章の大きさを切り替える。`width` は縦の1列の幅。
+func set_portrait(portrait: bool, width: float) -> void:
+	_portrait = portrait
+	result_badge.custom_minimum_size = (
+		PORTRAIT_BADGE_SIZE if portrait else result_badge.get_meta("landscape_size")
+	)
+	_set_font(result_badge, PORTRAIT_BADGE_FONT)
+	_set_font(info_label, PORTRAIT_INFO_FONT)
+	for caption in [
+		$VisualRoot/Margin/VBox/Rows/OwnGroup/OwnCaption,
+		$VisualRoot/Margin/VBox/Rows/OpponentGroup/OpponentCaption
+	]:
+		_set_font(caption, PORTRAIT_CAPTION_FONT)
+	# 折り返す行には幅を与える(幅が決まる前の1文字ずつの高さが残るため。Pitfalls.md)。
+	info_label.autowrap_mode = (
+		TextServer.AUTOWRAP_WORD_SMART if portrait else TextServer.AUTOWRAP_OFF
+	)
+	info_label.custom_minimum_size.x = width - PORTRAIT_INFO_INSET if portrait else 0.0
+	for row in [own_deck_row, opponent_deck_row]:
+		for icon in row.get_children():
+			(icon as Control).custom_minimum_size = Vector2.ONE * _icon_size()
+
+
+func _set_font(label: Label, portrait_font: int) -> void:
+	label.add_theme_font_size_override(
+		"font_size", portrait_font if _portrait else int(label.get_meta("landscape_font"))
+	)
+
+
+func _icon_size() -> float:
+	return PORTRAIT_ICON_SIZE if _portrait else ICON_SIZE
 
 
 ## CPU戦(source == "cpu")は自分が常に先手(側A)のローカル対局のため、player_a/player_bの
@@ -121,7 +172,7 @@ func _fill_row(row: HBoxContainer, ids: Array) -> void:
 			continue
 		var icon := TextureRect.new()
 		icon.texture = data.icon_upright
-		icon.custom_minimum_size = Vector2(40, 40)
+		icon.custom_minimum_size = Vector2.ONE * _icon_size()
 		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		row.add_child(icon)

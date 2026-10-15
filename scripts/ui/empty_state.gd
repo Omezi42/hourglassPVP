@@ -19,6 +19,8 @@ const EMBLEM_GAP := 28.0
 const TITLE_FONT_SIZE := 21
 const HINT_FONT_SIZE := 16
 const HINT_GAP := 30.0
+## 縦画面では中身ごと拡大して描く(案内の1行が本文24pxに届くように。GameDesign.md 9章「縦画面」)。
+const PORTRAIT_ZOOM := 1.5
 
 var _title := ""
 var _hint := ""
@@ -63,12 +65,15 @@ func _process(delta: float) -> void:
 func _draw() -> void:
 	if _font == null or _title.is_empty():
 		return
+	var zoom := PORTRAIT_ZOOM if ScreenOrientation.is_portrait() else 1.0
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE * zoom)
+	var area := size / zoom
 	var emblem_height := EMBLEM_SIZE * EMBLEM_VISUAL_RATIO
 	var block := emblem_height + EMBLEM_GAP + TITLE_FONT_SIZE
 	if not _hint.is_empty():
 		block += HINT_GAP
-	var top := (size.y - block) * 0.5
-	var center_x := size.x * 0.5
+	var top := (area.y - block) * 0.5
+	var center_x := area.x * 0.5
 
 	# 印は砂時計1つだけにする。**空であることを責める画面にしない**ため、
 	# 「!」のような警告の記号は使わない。
@@ -81,7 +86,7 @@ func _draw() -> void:
 	var baseline := top + emblem_height + EMBLEM_GAP
 	# **巡回ドットは見出しの位置を動かさない**。中央揃えのまま末尾へ足すと、
 	# 待っている間ずっと文が左右へ揺れる(バトルタブの印の置き方と同じ考え方)。
-	var left := _line(_title, TITLE_FONT_SIZE, baseline, UiPalette.TEXT_OFFWHITE)
+	var left := _line(_title, TITLE_FONT_SIZE, baseline, UiPalette.TEXT_OFFWHITE, area.x)
 	if _waiting and _dots > 0:
 		var width := _font.get_string_size(_title, HORIZONTAL_ALIGNMENT_LEFT, -1, TITLE_FONT_SIZE).x
 		draw_string(
@@ -94,13 +99,13 @@ func _draw() -> void:
 			UiPalette.TEXT_OFFWHITE
 		)
 	if not _hint.is_empty():
-		_line(_hint, HINT_FONT_SIZE, baseline + HINT_GAP, UiPalette.TEXT_MUTED)
+		_line(_hint, HINT_FONT_SIZE, baseline + HINT_GAP, UiPalette.TEXT_MUTED, area.x)
 
 
 ## 中央へ1行描き、その左端のx座標を返す(巡回ドットを右へ足すために使う)。
-func _line(text: String, font_size: int, baseline: float, color: Color) -> float:
+func _line(text: String, font_size: int, baseline: float, color: Color, area_width: float) -> float:
 	var width := _font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
-	var left := (size.x - width) * 0.5
+	var left := (area_width - width) * 0.5
 	draw_string(
 		_font, Vector2(left, baseline), text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color
 	)

@@ -5,8 +5,9 @@ extends "res://tools/record_pv.gd"
 ##
 ## 実行(実際の描画結果を読むため --headless は付けない):
 ##   godot --path . res://tools/capture_match_layout.tscn -- <出力先フォルダ> [モード]
-## モード: both(既定)/ landscape / portrait / overlays
+## モード: both(既定)/ landscape / portrait / overlays / panels
 ## overlays は縦で、重ね物(遠征の札・再生の操作)を1枚ずつ撮る。
+## panels は縦で、マリガン(先手3枚・後手4枚)と結果パネルを1枚ずつ撮る。
 
 const SETTLE_SECONDS := 0.8
 const SETTLE_FRAMES := 4
@@ -19,7 +20,7 @@ var _which := "both"
 func _ready() -> void:
 	var args := OS.get_cmdline_user_args()
 	_which = args[1] if args.size() > 1 else "both"
-	var portrait_only := _which == "portrait" or _which == "overlays"
+	var portrait_only := _which in ["portrait", "overlays", "panels"]
 	ScreenOrientation.force_portrait_for_test(portrait_only)
 	CardMatchLayout.choose(portrait_only)
 	_stage = SubViewport.new()
@@ -57,6 +58,10 @@ func _run() -> void:
 	_dress_board()
 	if _which == "overlays":
 		await _shoot_overlays()
+		get_tree().quit()
+		return
+	if _which == "panels":
+		await _shoot_panels()
 		get_tree().quit()
 		return
 	if _which != "portrait":
@@ -128,3 +133,25 @@ func _shoot_overlays() -> void:
 	replay._counter.text = "12/40"
 	match_screen.refresh()
 	await _shoot(true, "overlay_replay.png")
+
+
+func _shoot_panels() -> void:
+	var mulligan := match_screen._mulligan
+	var hands := [
+		HAND_IDS.slice(0, MatchState.FIRST_PLAYER_HAND),
+		HAND_IDS.slice(0, MatchState.SECOND_PLAYER_HAND)
+	]
+	for ids in hands:
+		var cards: Array = []
+		for id in ids:
+			cards.append(_card(id))
+		mulligan.show_hand(cards, ids.size() == MatchState.FIRST_PLAYER_HAND, true)
+		mulligan._picked[1] = true
+		mulligan._refresh(false)
+		mulligan._place_cards()
+		await _shoot(true, "mulligan_%d.png" % ids.size())
+	mulligan.close()
+	match_screen.state.winner = match_screen.my_side
+	var reward := "砂金 +30\nはじめの7日 3日目を受け取りました"
+	match_screen._result.show_for(match_screen.state, match_screen.my_side, 23, reward, true)
+	await _shoot(true, "result.png")

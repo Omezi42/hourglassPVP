@@ -7,8 +7,18 @@ extends Control
 signal confirmed(indices: Array)
 
 ## 初期手札は対局の手札より大きく並べ、効果の文まで読めるようにする(詳細パネルはマリガン中に出さない)。
-const CARD_SIZE := CardView.HAND_SIZE_PX * 1.35
+const CARD_SCALE := 1.35
+const CARD_SIZE := CardView.HAND_SIZE_PX * CARD_SCALE
 const CARD_GAP := 28.0
+## 縦は札を2列に折り返し、名前とキーワードが縦の目安の文字に届く倍率で並べる(GameDesign.md 9章「縦画面」)。
+const PORTRAIT_CARD_SCALE := 2.0
+const PORTRAIT_COLUMNS := 2
+const PORTRAIT_ROW_GAP := 20.0
+const PORTRAIT_BUTTON_SIZE := Vector2(320, 80)
+const PORTRAIT_TURN_ORDER_FONT := 28
+const PORTRAIT_HINT_FONT := 24
+## 札の列の下端から確定ボタンまで。
+const BUTTON_MARGIN := 48.0
 ## 見出しから確定ボタンまでの一群を画面の縦の中ほどへ置く(上端は `CardMatchLayout.mulligan_top`)。
 ## 誘導対局ではこの下へ帯が入る(`CardMatchTutorial` が `confirm_rect()` から決める)。値は一群の上端からの距離。
 const TITLE_Y := 32.0
@@ -16,8 +26,8 @@ const HINT_Y := 90.0
 const CARD_ROW_Y := 152.0
 const BUTTON_SIZE := Vector2(280, 60)
 const BUTTON_Y := 410.0
-## 一群の高さ(上端から確定ボタンの下端まで)。
-const CONTENT_HEIGHT := BUTTON_Y + BUTTON_SIZE.y
+const TURN_ORDER_FONT := 22
+const HINT_FONT := 20
 ## 札の列の後ろの光だまりが、列の左右と上下へはみ出す量。
 const STAGE_MARGIN := Vector2(150, 70)
 ## 引き直すカードは沈めて、押したことが手札の並びの中で分かるようにする。
@@ -47,6 +57,9 @@ var _pick_tweens: Dictionary = {}
 var _screen_size := Vector2(ScreenOrientation.LANDSCAPE_SIZE)
 var _top := 0.0
 var _card_gap := CARD_GAP
+var _card_size := CARD_SIZE
+var _columns := MatchState.SECOND_PLAYER_HAND
+var _button_y := 0.0
 
 
 func _ready() -> void:
@@ -60,33 +73,76 @@ func _ready() -> void:
 ## 向きに合わせて置き直す(`CardMatchArrange`)。開いている間に呼ばれても札の選択は保つ。
 func apply_layout(layout: CardMatchLayout) -> void:
 	_screen_size = layout.screen_size
-	_top = layout.mulligan_top
 	_card_gap = layout.mulligan_card_gap
+	_card_size = CardView.HAND_SIZE_PX * (PORTRAIT_CARD_SCALE if layout.portrait else CARD_SCALE)
+	_columns = PORTRAIT_COLUMNS if layout.portrait else MatchState.SECOND_PLAYER_HAND
+	_button_y = button_offset(layout.portrait)
+	_top = layout.mulligan_top
 	size = _screen_size
 	_dim.size = _screen_size
+	_turn_order.add_theme_font_size_override(
+		"font_size", PORTRAIT_TURN_ORDER_FONT if layout.portrait else TURN_ORDER_FONT
+	)
+	_hint.add_theme_font_size_override(
+		"font_size", PORTRAIT_HINT_FONT if layout.portrait else HINT_FONT
+	)
 	for pair in [[_turn_order, 0.0], [_title, TITLE_Y], [_hint, HINT_Y]]:
 		var label: Label = pair[0]
 		label.position = Vector2(0, _top + pair[1])
 		label.size.x = _screen_size.x
-	_button.position = Vector2((_screen_size.x - BUTTON_SIZE.x) * 0.5, _top + BUTTON_Y)
+	var button_size := PORTRAIT_BUTTON_SIZE if layout.portrait else BUTTON_SIZE
+	_button.custom_minimum_size = button_size
+	_button.size = button_size
+	_button.position = Vector2((_screen_size.x - button_size.x) * 0.5, _top + _button_y)
+	for i in _views.size():
+		_views[i].size = _card_size
+		_marks[i].position = _views[i]._hand_art_box().get_center() - _marks[i].size * 0.5
 	_place_cards()
 
 
-## 札の列と後ろの光だまり。
+## 一群の上端から確定ボタンの上端まで。札の行数は初期手札の最大枚数で決める(先手・後手で一群が動かないように)。
+static func button_offset(portrait: bool) -> float:
+	if not portrait:
+		return BUTTON_Y
+	var rows := ceili(float(MatchState.SECOND_PLAYER_HAND) / PORTRAIT_COLUMNS)
+	var card_height := CardView.HAND_SIZE_PX.y * PORTRAIT_CARD_SCALE
+	return CARD_ROW_Y + rows * card_height + (rows - 1) * PORTRAIT_ROW_GAP + BUTTON_MARGIN
+
+
+## 一群の高さ(上端から確定ボタンの下端まで)。
+static func content_height(portrait: bool) -> float:
+	var button_size := PORTRAIT_BUTTON_SIZE if portrait else BUTTON_SIZE
+	return button_offset(portrait) + button_size.y
+
+
+## 札の列と後ろの光だまり。`_columns` 枚ごとに折り返し、端数の行も中央へ寄せる。
 func _place_cards() -> void:
 	var total := _views.size()
-	var width := total * CARD_SIZE.x + maxf(total - 1, 0) * _card_gap
-	var left := (_screen_size.x - width) * 0.5
-	_stage.position = Vector2(left, _top + CARD_ROW_Y) - STAGE_MARGIN
-	_stage.size = Vector2(width, CARD_SIZE.y) + STAGE_MARGIN * 2.0
+	var per_row := mini(total, _columns)
+	var rows := ceili(float(total) / maxi(per_row, 1))
+	var width := per_row * _card_size.x + maxf(per_row - 1, 0) * _card_gap
+	var height := rows * _card_size.y + maxf(rows - 1, 0) * PORTRAIT_ROW_GAP
+	_stage.position = Vector2((_screen_size.x - width) * 0.5, _top + CARD_ROW_Y) - STAGE_MARGIN
+	_stage.size = Vector2(width, height) + STAGE_MARGIN * 2.0
 	_stage.queue_redraw()
 	for i in total:
-		_views[i].position = Vector2(left + i * (CARD_SIZE.x + _card_gap), _row_y(i))
+		_views[i].position = Vector2(_column_x(i), _row_y(i))
+
+
+func _column_x(index: int) -> float:
+	var total := _views.size()
+	var row_start := index - index % _columns
+	var in_row := mini(_columns, total - row_start)
+	var width := in_row * _card_size.x + maxf(in_row - 1, 0) * _card_gap
+	var left := (_screen_size.x - width) * 0.5
+	return left + (index - row_start) * (_card_size.x + _card_gap)
 
 
 func _row_y(index: int) -> float:
 	var picked: bool = index < _picked.size() and _picked[index]
-	return _top + CARD_ROW_Y + (PICKED_SINK if picked else 0.0)
+	var row := int(float(index) / _columns)
+	var y := _top + CARD_ROW_Y + row * (_card_size.y + PORTRAIT_ROW_GAP)
+	return y + (PICKED_SINK if picked else 0.0)
 
 
 ## 初期手札を並べて開く。`has_coin` は後手がコインを持って始めるか(2章)。
@@ -108,7 +164,7 @@ func show_hand(cards: Array, is_first: bool, has_coin: bool) -> void:
 		view.pressed.connect(_on_card_pressed)
 		add_child(view)
 		view.show_card(cards[i], true)
-		view.size = CARD_SIZE
+		view.size = _card_size
 		# 裏返した印は絵の窓の中央へ重ねる。
 		var mark := MulliganPickMark.new()
 		view.add_child(mark)
@@ -237,10 +293,10 @@ func _build() -> void:
 	_stage = MulliganStageLight.new()
 	add_child(_stage)
 
-	_turn_order = _make_label(22)
+	_turn_order = _make_label(TURN_ORDER_FONT)
 	_turn_order.add_theme_color_override("font_color", UiPalette.GLOW_AMBER)
 	_title = _make_label(40)
-	_hint = _make_label(20)
+	_hint = _make_label(HINT_FONT)
 	_hint.add_theme_color_override("font_color", UiPalette.BRASS_HIGHLIGHT)
 
 	_button = CodedButton.make("このままで開始", BUTTON_SIZE)

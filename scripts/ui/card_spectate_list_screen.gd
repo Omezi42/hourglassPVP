@@ -12,12 +12,17 @@ const PANEL_RECT := Rect2(140, ScreenHeader.CONTENT_TOP, 1000, ScreenHeader.CONT
 const PAD := Vector2(24, 20)
 const ROW_GAP := 8
 const REFRESH_SIZE := Vector2(140, 44)
+## 縦画面(GameDesign.md 9章「縦画面」)。パネルを画面の幅いっぱいにし、行は2段に積んで拡大する。
+const PORTRAIT_ROW_ZOOM := 1.4
 
 var _scroll: ScrollContainer
 var _rows: VBoxContainer
 var _empty: EmptyState
 var _refresh_button: Button
 var _fetching := false
+var _header: ScreenHeader
+var _panel: Panel
+var _portrait := false
 
 
 func _ready() -> void:
@@ -34,6 +39,7 @@ func _build() -> void:
 	add_child(backdrop)
 	var header: ScreenHeader = load(HEADER_SCENE).instantiate()
 	add_child(header)
+	_header = header
 	header.set_title("観戦")
 	header.back_pressed.connect(func() -> void: back_pressed.emit())
 	_refresh_button = CodedButton.make("更新", REFRESH_SIZE)
@@ -46,6 +52,7 @@ func _build() -> void:
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_theme_stylebox_override("panel", load(PANEL_STYLE))
 	add_child(panel)
+	_panel = panel
 
 	var inner := Rect2(PANEL_RECT.position + PAD, PANEL_RECT.size - PAD * 2.0)
 	_scroll = ScrollContainer.new()
@@ -64,6 +71,23 @@ func _build() -> void:
 	_empty.size = inner.size
 	_empty.visible = false
 	add_child(_empty)
+
+
+## 縦横が変わったときに `Main` から呼ばれる(Architecture.md 4.7節)。並んでいる行は保つ。
+func apply_orientation(portrait: bool) -> void:
+	_portrait = portrait
+	if _header == null:
+		return
+	_header.apply_orientation(portrait)
+	var rect := _header.portrait_content_rect() if portrait else PANEL_RECT
+	_panel.position = rect.position
+	_panel.size = rect.size
+	var inner := Rect2(rect.position + PAD, rect.size - PAD * 2.0)
+	for target: Control in [_scroll, _empty]:
+		target.position = inner.position
+		target.size = inner.size
+	for row in _rows.get_children():
+		(row as SpectateMatchRow).set_portrait(portrait, PORTRAIT_ROW_ZOOM)
 
 
 func _fetch() -> void:
@@ -92,5 +116,6 @@ func _fetch() -> void:
 		row.player_a = entry["a"]
 		row.player_b = entry["b"]
 		row.pressed.connect(func() -> void: spectate_requested.emit(row.match_id))
+		row.set_portrait(_portrait, PORTRAIT_ROW_ZOOM)
 		_rows.add_child(row)
 	ListRevealFx.stagger(_rows.get_children())

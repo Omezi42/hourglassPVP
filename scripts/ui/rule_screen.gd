@@ -30,6 +30,20 @@ const REPLAY_BUTTON_SIZE := Vector2(200, 52)
 const COUNTER_SIZE := Vector2(120, 52)
 const COUNTER_FONT_SIZE := 20
 
+## 縦画面(GameDesign.md 9章「縦画面」)。上から「章のボタン(2列)/ 見出し / 本文 / 盤面 / ページ送り」と積む。
+const PORTRAIT_TOC_COLUMNS := 2
+const PORTRAIT_TOC_BUTTON_HEIGHT := 64.0
+const PORTRAIT_GAP := 12.0
+const PORTRAIT_HEADING_HEIGHT := 48.0
+const PORTRAIT_HEADING_FONT := 32
+const PORTRAIT_BODY_HEIGHT := 190.0
+const PORTRAIT_BODY_FONT := 24
+const PORTRAIT_BUTTON_FONT := 24
+const PORTRAIT_CONTROL_HEIGHT := 72.0
+const PORTRAIT_NAV_WIDTH := 170.0
+const PORTRAIT_REPLAY_WIDTH := 220.0
+const PORTRAIT_COUNTER_FONT := 26
+
 var _pages: Array = []
 var _index := 0
 var _chapter_buttons: Array[Button] = []
@@ -40,6 +54,8 @@ var _stage: RuleStage
 var _prev_button: Button
 var _next_button: Button
 var _replay_button: Button
+var _header: ScreenHeader
+var _stage_panel: PanelContainer
 
 
 func _ready() -> void:
@@ -75,6 +91,7 @@ func _build() -> void:
 
 	var header: ScreenHeader = load(HEADER_SCENE).instantiate()
 	add_child(header)
+	_header = header
 	header.set_title("遊び方")
 	header.back_pressed.connect(func() -> void: back_pressed.emit())
 
@@ -96,6 +113,7 @@ func _build() -> void:
 	if style != null:
 		stage_panel.add_theme_stylebox_override("panel", style)
 	add_child(stage_panel)
+	_stage_panel = stage_panel
 
 	_stage = RuleStage.new()
 	_stage.position = STAGE_RECT.position
@@ -144,6 +162,127 @@ func _build_controls() -> void:
 	_next_button.position = Vector2(BODY_LEFT + BODY_WIDTH - NAV_BUTTON_SIZE.x, CONTROLS_Y)
 	_next_button.pressed.connect(func() -> void: show_page(_index + 1))
 	add_child(_next_button)
+
+
+## 縦横が変わったときに `Main` から呼ばれる(Architecture.md 4.7節)。読んでいるページは保つ。
+func apply_orientation(portrait: bool) -> void:
+	if _header == null:
+		return
+	_header.apply_orientation(portrait)
+	if portrait:
+		_layout_portrait()
+	else:
+		_layout_landscape()
+	# 盤面は枠の大きさに合わせて組み直す(`RuleStage._fit()`)。
+	show_page(_index)
+
+
+func _layout_landscape() -> void:
+	for i in _chapter_buttons.size():
+		var at := Vector2(
+			TOC_RECT.position.x, TOC_RECT.position.y + (TOC_BUTTON_HEIGHT + TOC_GAP) * float(i)
+		)
+		_place(_chapter_buttons[i], Rect2(at, Vector2(TOC_RECT.size.x, TOC_BUTTON_HEIGHT)), 0)
+	_place_label(_heading, HEADING_RECT, HEADING_FONT_SIZE)
+	_place_label(_body, BODY_RECT, BODY_FONT_SIZE)
+	_place_stage(STAGE_RECT)
+	_place(_prev_button, Rect2(Vector2(BODY_LEFT, CONTROLS_Y), NAV_BUTTON_SIZE), 0)
+	_place_label(
+		_counter,
+		Rect2(BODY_LEFT + NAV_BUTTON_SIZE.x + 12.0, CONTROLS_Y, COUNTER_SIZE.x, COUNTER_SIZE.y),
+		COUNTER_FONT_SIZE
+	)
+	_place(
+		_replay_button,
+		Rect2(
+			Vector2(BODY_LEFT + (BODY_WIDTH - REPLAY_BUTTON_SIZE.x) * 0.5, CONTROLS_Y),
+			REPLAY_BUTTON_SIZE
+		),
+		0
+	)
+	_place(
+		_next_button,
+		Rect2(Vector2(BODY_LEFT + BODY_WIDTH - NAV_BUTTON_SIZE.x, CONTROLS_Y), NAV_BUTTON_SIZE),
+		0
+	)
+
+
+func _layout_portrait() -> void:
+	var content := _header.portrait_content_rect()
+	var left := content.position.x
+	var width := content.size.x
+	var column_w := (width - PORTRAIT_GAP) / PORTRAIT_TOC_COLUMNS
+	for i in _chapter_buttons.size():
+		var at := Vector2(
+			left + (column_w + PORTRAIT_GAP) * (i % PORTRAIT_TOC_COLUMNS),
+			content.position.y + (PORTRAIT_TOC_BUTTON_HEIGHT + PORTRAIT_GAP) * floorf(i / 2.0)
+		)
+		_place(
+			_chapter_buttons[i],
+			Rect2(at, Vector2(column_w, PORTRAIT_TOC_BUTTON_HEIGHT)),
+			PORTRAIT_BUTTON_FONT
+		)
+	var rows := ceili(float(_chapter_buttons.size()) / PORTRAIT_TOC_COLUMNS)
+	var y := content.position.y + rows * (PORTRAIT_TOC_BUTTON_HEIGHT + PORTRAIT_GAP) + PORTRAIT_GAP
+	_place_label(_heading, Rect2(left, y, width, PORTRAIT_HEADING_HEIGHT), PORTRAIT_HEADING_FONT)
+	y += PORTRAIT_HEADING_HEIGHT + PORTRAIT_GAP
+	_place_label(_body, Rect2(left, y, width, PORTRAIT_BODY_HEIGHT), PORTRAIT_BODY_FONT)
+	y += PORTRAIT_BODY_HEIGHT + PORTRAIT_GAP
+	var controls_y := content.end.y - PORTRAIT_CONTROL_HEIGHT
+	_place_stage(Rect2(left, y, width, controls_y - PORTRAIT_GAP - y))
+	var nav := Vector2(PORTRAIT_NAV_WIDTH, PORTRAIT_CONTROL_HEIGHT)
+	_place(_prev_button, Rect2(Vector2(left, controls_y), nav), PORTRAIT_BUTTON_FONT)
+	_place(
+		_next_button, Rect2(Vector2(content.end.x - nav.x, controls_y), nav), PORTRAIT_BUTTON_FONT
+	)
+	# 「もう一度見る」は前へ・次への間、ページ数はその上の盤面の右下に重ねずにボタンの間へ置く。
+	var middle := Rect2(
+		left + nav.x + PORTRAIT_GAP, controls_y, width - (nav.x + PORTRAIT_GAP) * 2.0, nav.y
+	)
+	_place(
+		_replay_button,
+		Rect2(
+			Vector2(middle.position.x, controls_y),
+			Vector2(PORTRAIT_REPLAY_WIDTH, PORTRAIT_CONTROL_HEIGHT)
+		),
+		PORTRAIT_BUTTON_FONT
+	)
+	_place_label(
+		_counter,
+		Rect2(
+			middle.position.x + PORTRAIT_REPLAY_WIDTH,
+			controls_y,
+			middle.size.x - PORTRAIT_REPLAY_WIDTH,
+			nav.y
+		),
+		PORTRAIT_COUNTER_FONT
+	)
+
+
+func _place_stage(rect: Rect2) -> void:
+	_stage_panel.position = rect.position
+	_stage_panel.custom_minimum_size = rect.size
+	_stage_panel.size = rect.size
+	_stage.position = rect.position
+	_stage.size = rect.size
+
+
+## ボタンを置き直す。`font` が0なら文字の大きさは作ったとき(テーマ)のまま。
+func _place(button: Control, rect: Rect2, font: int) -> void:
+	button.custom_minimum_size = rect.size
+	button.size = rect.size
+	button.position = rect.position
+	if font > 0:
+		button.add_theme_font_size_override("font_size", font)
+	else:
+		button.remove_theme_font_size_override("font_size")
+
+
+func _place_label(label: Label, rect: Rect2, font: int) -> void:
+	label.custom_minimum_size = rect.size
+	label.size = rect.size
+	label.position = rect.position
+	label.add_theme_font_size_override("font_size", font)
 
 
 ## いま読んでいる章のボタンだけ文字色を琥珀にする。目次は現在地の表示も兼ねる。

@@ -32,6 +32,21 @@ func _ready() -> void:
 	_build()
 
 
+## 実演の幅と文字の大きさを決め直す。縦のポップは細く組んで中身ごと拡大し(`KeywordPopup`)、
+## 縦の辞書は画面の幅のまま文字を大きくする(`KeywordDictScreen`)。
+func set_layout(
+	preview_width: float,
+	body_font: int,
+	caption_font := CAPTION_FONT_SIZE,
+	title_font := TITLE_FONT_SIZE
+) -> void:
+	_preview.custom_minimum_size.x = preview_width
+	_body.add_theme_font_size_override("font_size", body_font)
+	_title.add_theme_font_size_override("font_size", title_font)
+	for label in [_category, _cards_caption]:
+		label.add_theme_font_size_override("font_size", caption_font)
+
+
 func show_entry(entry: Dictionary) -> void:
 	_title.text = KeywordEntries.title(entry)
 	_category.text = KeywordEntries.category(entry)

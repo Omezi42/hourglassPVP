@@ -13,6 +13,9 @@ const SPINE := 640.0
 ## 紙のページ(本の内側)。左右それぞれ。
 const LEFT_PAGE := Rect2(70, 114, 552, 568)
 const RIGHT_PAGE := Rect2(642, 114, 568, 568)
+## 縦画面(GameDesign.md 9章「縦画面」)は1ページだけを開いた本。一覧と解説を切り替えて同じ紙へ載せる。
+const PORTRAIT_BOOK := Rect2(16, 196, 688, 1068)
+const PORTRAIT_PAGE := Rect2(32, 212, 650, 1036)
 
 const DESK_TOP := Color(0.16, 0.11, 0.075)
 const DESK_BOTTOM := Color(0.065, 0.045, 0.032)
@@ -21,6 +24,12 @@ const COVER_BOTTOM := Color(0.135, 0.022, 0.030)
 const GOLD_DIM := Color(0.52, 0.40, 0.18, 1.0)
 const PAPER_TOP := Color(0.90, 0.845, 0.70)
 const PAPER_BOTTOM := Color(0.775, 0.695, 0.535)
+
+var portrait := false:
+	set(value):
+		portrait = value
+		size = Vector2(ScreenOrientation.base_size())
+		queue_redraw()
 
 
 func _ready() -> void:
@@ -34,23 +43,34 @@ func _draw() -> void:
 	_draw_desk()
 	_draw_cover()
 	_draw_pages()
-	_draw_spine()
+	if not portrait:
+		_draw_spine()
+
+
+func _book() -> Rect2:
+	return PORTRAIT_BOOK if portrait else BOOK
+
+
+func _pages() -> Array[Rect2]:
+	if portrait:
+		return [PORTRAIT_PAGE]
+	return [LEFT_PAGE, RIGHT_PAGE]
 
 
 ## 机。上から光が当たった暗い木。
 func _draw_desk() -> void:
+	var screen := size
 	for i in 22:
 		var t := float(i) / 21.0
 		draw_rect(
-			Rect2(0, t * SCREEN_SIZE.y, SCREEN_SIZE.x, SCREEN_SIZE.y / 22.0 + 1.0),
-			DESK_TOP.lerp(DESK_BOTTOM, t)
+			Rect2(0, t * screen.y, screen.x, screen.y / 22.0 + 1.0), DESK_TOP.lerp(DESK_BOTTOM, t)
 		)
-	for i in 9:
+	for i in ceili(screen.y / 82.0):
 		var y := 30.0 + i * 82.0
-		draw_line(Vector2(0, y), Vector2(SCREEN_SIZE.x, y), Color(0, 0, 0, 0.22), 2.0)
-	UiPaint.apply_grain(get_canvas_item(), Rect2(Vector2.ZERO, SCREEN_SIZE), 0.07)
+		draw_line(Vector2(0, y), Vector2(screen.x, y), Color(0, 0, 0, 0.22), 2.0)
+	UiPaint.apply_grain(get_canvas_item(), Rect2(Vector2.ZERO, screen), 0.07)
 	# 本が机へ落とす影。
-	var shade := BOOK.grow(18)
+	var shade := _book().grow(18)
 	for i in 16:
 		UiPaint.fill_gradient_polygon(
 			get_canvas_item(),
@@ -62,15 +82,16 @@ func _draw_desk() -> void:
 
 ## 革の表紙。紙より一回り大きく、金の空押しで縁取る。
 func _draw_cover() -> void:
-	var points := UiPaint.rounded_rect_points_uniform(BOOK, 12.0, 8)
+	var book := _book()
+	var points := UiPaint.rounded_rect_points_uniform(book, 12.0, 8)
 	UiPaint.fill_gradient_polygon(
-		get_canvas_item(), points, BOOK, [[0.0, COVER_TOP], [1.0, COVER_BOTTOM]]
+		get_canvas_item(), points, book, [[0.0, COVER_TOP], [1.0, COVER_BOTTOM]]
 	)
-	UiPaint.apply_grain(get_canvas_item(), BOOK, 0.10)
+	UiPaint.apply_grain(get_canvas_item(), book, 0.10)
 	UiPaint.draw_bevel(
 		get_canvas_item(), points, Color(0.52, 0.16, 0.16), Color(0.05, 0.01, 0.01), 2.5, false
 	)
-	var inner := BOOK.grow(-9)
+	var inner := book.grow(-9)
 	_outline(UiPaint.rounded_rect_points_uniform(inner, 8.0, 6), GOLD_DIM, 2.0)
 	_outline(
 		UiPaint.rounded_rect_points_uniform(inner.grow(-5), 6.0, 6), Color(GOLD_DIM, 0.55), 1.0
@@ -79,7 +100,8 @@ func _draw_cover() -> void:
 
 ## 紙。左右のページを別々に敷き、外側の小口へ紙の束を描く。
 func _draw_pages() -> void:
-	for page in [LEFT_PAGE, RIGHT_PAGE]:
+	var pages := _pages()
+	for page in pages:
 		UiPaint.fill_gradient_polygon(
 			get_canvas_item(),
 			UiPaint.rounded_rect_points_uniform(page, 4.0, 5),
@@ -87,28 +109,32 @@ func _draw_pages() -> void:
 			[[0.0, PAPER_TOP], [1.0, PAPER_BOTTOM]]
 		)
 		UiPaint.apply_grain(get_canvas_item(), page, 0.09)
-	# 小口(紙の束)。外側の端へ細い線を重ねる。
+	# 小口(紙の束)。外側の端へ細い線を重ねる。縦は綴じ目の無い右側だけ。
+	var left: Rect2 = pages[0]
+	var right: Rect2 = pages[pages.size() - 1]
 	for i in 9:
 		var a := 0.30 * (1.0 - float(i) / 9.0)
+		if not portrait:
+			draw_line(
+				Vector2(left.position.x - i, left.position.y + i),
+				Vector2(left.position.x - i, left.end.y - i),
+				Color(0.42, 0.33, 0.22, a),
+				1.0
+			)
 		draw_line(
-			Vector2(LEFT_PAGE.position.x - i, LEFT_PAGE.position.y + i),
-			Vector2(LEFT_PAGE.position.x - i, LEFT_PAGE.end.y - i),
-			Color(0.42, 0.33, 0.22, a),
-			1.0
-		)
-		draw_line(
-			Vector2(RIGHT_PAGE.end.x + i, RIGHT_PAGE.position.y + i),
-			Vector2(RIGHT_PAGE.end.x + i, RIGHT_PAGE.end.y - i),
+			Vector2(right.end.x + i, right.position.y + i),
+			Vector2(right.end.x + i, right.end.y - i),
 			Color(0.42, 0.33, 0.22, a),
 			1.0
 		)
 	# 紙のシミ。同じ位置に重ねず、散らして薄く。
+	var book_rect := _book()
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 4211
 	for i in 14:
 		var at := Vector2(
-			rng.randf_range(BOOK.position.x + 40, BOOK.end.x - 40),
-			rng.randf_range(BOOK.position.y + 40, BOOK.end.y - 40)
+			rng.randf_range(book_rect.position.x + 40, book_rect.end.x - 40),
+			rng.randf_range(book_rect.position.y + 40, book_rect.end.y - 40)
 		)
 		UiPaint.fill_ellipse(
 			get_canvas_item(),

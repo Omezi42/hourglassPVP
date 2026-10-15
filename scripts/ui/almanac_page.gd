@@ -28,6 +28,11 @@ const LOG_HEIGHT := 96.0
 ## 値は26pxで y=102 まで伸びるため、そこへ掛からない位置に取る。
 const TEXT_TOP := 132.0
 const TERM_ROW_HEIGHT := 34.0
+const FIELD_PITCH := 118.0
+const RULES_FONT := 16
+## 効果の文は横の見開きで3行まで。縦の背の高いページでは実演の上端まで書く。
+const RULES_MIN_LINES := 3
+const RULES_LINE_HEIGHT := 24.0
 ## ページめくり(GameDesign.md 9章)。綴じ目(左端)を軸に紙が薄くなるまで畳み、
 ## 畳みきった瞬間に中身を差し替えてから開き直す。
 const TURN_DURATION := 0.22
@@ -50,6 +55,8 @@ var _hovering_art := false
 var _tilt_radians := 0.0
 var _tilt_tween: Tween
 var _skin_toggle: Button
+## 縦画面では細く組んだページを中身ごと拡大する(`set_page()`)。めくる動きはこの倍率へ戻す。
+var _page_scale := 1.0
 
 
 func _ready() -> void:
@@ -95,6 +102,22 @@ func _build() -> void:
 	add_child(_skin_toggle)
 
 
+## ページの大きさ(拡大する前)と倍率を決め直す。幅で折り返す行を組み直す。
+func set_page(page_size: Vector2, page_scale: float) -> void:
+	if _turn_tween != null and _turn_tween.is_valid():
+		_turn_tween.kill()
+	_page_scale = page_scale
+	custom_minimum_size = page_size
+	size = page_size
+	scale = Vector2.ONE * page_scale
+	_preview.position = Vector2(0, _demo_top())
+	_preview.custom_minimum_size = Vector2(size.x, DEMO_HEIGHT)
+	_preview.size = _preview.custom_minimum_size
+	_terms.custom_minimum_size.x = size.x - ART_WIDTH - DATA_GAP
+	_rebuild_terms()
+	queue_redraw()
+
+
 func show_card(new_card: CardData) -> void:
 	turn_to(new_card)
 
@@ -113,14 +136,14 @@ func turn_to(new_card: CardData) -> void:
 	_turn_tween = create_tween()
 	(
 		_turn_tween
-		. tween_property(self, "scale:x", 0.04, TURN_DURATION * 0.5)
+		. tween_property(self, "scale:x", 0.04 * _page_scale, TURN_DURATION * 0.5)
 		. set_trans(Tween.TRANS_SINE)
 		. set_ease(Tween.EASE_IN)
 	)
 	_turn_tween.tween_callback(_apply_card.bind(new_card))
 	(
 		_turn_tween
-		. tween_property(self, "scale:x", 1.0, TURN_DURATION * 0.5)
+		. tween_property(self, "scale:x", _page_scale, TURN_DURATION * 0.5)
 		. set_trans(Tween.TRANS_SINE)
 		. set_ease(Tween.EASE_OUT)
 	)
@@ -292,21 +315,29 @@ func _draw() -> void:
 				draw_texture_rect(icon, _art_rect, false)
 
 	var data_x := ART_WIDTH + DATA_GAP
+	# 欄の間隔は紙の幅で詰める(縦の細いページでも「分類」がはみ出さないように)。
+	var pitch := minf(FIELD_PITCH, (size.x - data_x) / 3.0)
 	_draw_field(Vector2(data_x, 58), "コスト", str(card.cost))
-	_draw_field(Vector2(data_x + 118, 58), "総量", "—" if card.is_spell else str(card.total_sand))
-	_draw_field(Vector2(data_x + 236, 58), "分類", "砂術" if card.is_spell else "砂時計")
+	_draw_field(Vector2(data_x + pitch, 58), "総量", "—" if card.is_spell else str(card.total_sand))
+	_draw_field(Vector2(data_x + pitch * 2.0, 58), "分類", "砂術" if card.is_spell else "砂時計")
 	if not card.rules_text.is_empty():
+		var text_top := TEXT_TOP + _terms.get_child_count() * TERM_ROW_HEIGHT
 		draw_multiline_string(
 			_font,
-			Vector2(data_x, TEXT_TOP + _terms.get_child_count() * TERM_ROW_HEIGHT),
+			Vector2(data_x, text_top),
 			card.rules_text,
 			HORIZONTAL_ALIGNMENT_LEFT,
 			size.x - data_x,
-			16,
-			3,
+			RULES_FONT,
+			_rules_lines(text_top),
 			INK
 		)
 	_draw_log()
+
+
+func _rules_lines(text_top: float) -> int:
+	var room := floori((_demo_top() - text_top) / RULES_LINE_HEIGHT)
+	return maxi(RULES_MIN_LINES, room)
 
 
 ## 砂術の札。紙の上でも「置くカードではない」と分かるよう、藍の枠へ紋章を大きく置く。

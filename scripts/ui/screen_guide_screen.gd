@@ -37,6 +37,16 @@ const HIGHLIGHT_WIDTH := 2.5
 ## 外へ広がる輪の本数。1本だと盤面の罫線や台座の輪と紛れる。
 const HIGHLIGHT_RINGS := [0, 1, 2]
 
+## 縦画面(GameDesign.md 9章「縦画面」)。上から「盤面 / 説明 / 項目のボタン(2列)」と積む。
+const PORTRAIT_STAGE_HEIGHT := 440.0
+const PORTRAIT_BODY_HEIGHT := 250.0
+const PORTRAIT_GAP := 12.0
+const PORTRAIT_COLUMNS := 2
+const PORTRAIT_BUTTON_HEIGHT := 64.0
+const PORTRAIT_BUTTON_FONT := 24
+const PORTRAIT_TITLE_FONT := 30
+const PORTRAIT_BODY_FONT := 24
+
 var _index := 0
 var _buttons: Array[Button] = []
 var _stage: ScreenGuideStage
@@ -44,6 +54,8 @@ var _overlay: Control
 var _title: Label
 var _body: Label
 var _elapsed := 0.0
+var _header: ScreenHeader
+var _body_panel: Panel
 
 
 func _ready() -> void:
@@ -81,6 +93,7 @@ func _build() -> void:
 	add_child(backdrop)
 	var header: ScreenHeader = load(HEADER_SCENE).instantiate()
 	add_child(header)
+	_header = header
 	header.set_title("画面の見かた")
 	header.back_pressed.connect(func() -> void: back_pressed.emit())
 
@@ -127,6 +140,7 @@ func _build_body() -> void:
 	if style != null:
 		panel.add_theme_stylebox_override("panel", style)
 	add_child(panel)
+	_body_panel = panel
 
 	_title = Label.new()
 	_title.position = BODY_RECT.position + Vector2(BODY_PADDING, BODY_PADDING * 0.6)
@@ -147,6 +161,73 @@ func _build_body() -> void:
 	_body.add_theme_color_override("font_color", UiPalette.TEXT_OFFWHITE)
 	_body.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_body)
+
+
+## 縦横が変わったときに `Main` から呼ばれる(Architecture.md 4.7節)。選んでいる項目は保つ。
+func apply_orientation(portrait: bool) -> void:
+	if _header == null:
+		return
+	_header.apply_orientation(portrait)
+	var stage := STAGE_RECT
+	var body := BODY_RECT
+	var title_font := TITLE_FONT_SIZE
+	var body_font := BODY_FONT_SIZE
+	if portrait:
+		var content := _header.portrait_content_rect()
+		stage = Rect2(content.position, Vector2(content.size.x, PORTRAIT_STAGE_HEIGHT))
+		body = Rect2(
+			content.position.x, stage.end.y + PORTRAIT_GAP, content.size.x, PORTRAIT_BODY_HEIGHT
+		)
+		title_font = PORTRAIT_TITLE_FONT
+		body_font = PORTRAIT_BODY_FONT
+		var column_w := (content.size.x - PORTRAIT_GAP) / PORTRAIT_COLUMNS
+		for i in _buttons.size():
+			var at := Vector2(
+				content.position.x + (column_w + PORTRAIT_GAP) * (i % PORTRAIT_COLUMNS),
+				(
+					body.end.y
+					+ PORTRAIT_GAP
+					+ (PORTRAIT_BUTTON_HEIGHT + PORTRAIT_GAP) * floorf(i / 2.0)
+				)
+			)
+			_place(
+				_buttons[i],
+				Rect2(at, Vector2(column_w, PORTRAIT_BUTTON_HEIGHT)),
+				PORTRAIT_BUTTON_FONT
+			)
+	else:
+		for i in _buttons.size():
+			var at := Vector2(
+				LIST_RECT.position.x, LIST_RECT.position.y + (LIST_BUTTON_HEIGHT + LIST_GAP) * i
+			)
+			_place(
+				_buttons[i],
+				Rect2(at, Vector2(LIST_RECT.size.x, LIST_BUTTON_HEIGHT)),
+				LIST_FONT_SIZE
+			)
+	for target: Control in [_stage, _overlay]:
+		target.position = stage.position
+		target.size = stage.size
+	_stage.build()
+	_body_panel.position = body.position
+	_body_panel.size = body.size
+	var title_h := title_font + 10.0
+	_title.position = body.position + Vector2(BODY_PADDING, BODY_PADDING * 0.6)
+	_title.size = Vector2(body.size.x - BODY_PADDING * 2.0, title_h)
+	_title.add_theme_font_size_override("font_size", title_font)
+	_body.position = _title.position + Vector2(0, title_h + 2.0)
+	_body.size = Vector2(
+		body.size.x - BODY_PADDING * 2.0, body.end.y - _body.position.y - BODY_PADDING
+	)
+	_body.add_theme_font_size_override("font_size", body_font)
+	_overlay.queue_redraw()
+
+
+func _place(button: Control, rect: Rect2, font: int) -> void:
+	button.custom_minimum_size = rect.size
+	button.size = rect.size
+	button.position = rect.position
+	button.add_theme_font_size_override("font_size", font)
 
 
 ## 選んだ項目の場所を脈打つ枠で囲む。**外へ広がる輪を3重に重ねる**。1本の細い枠だと

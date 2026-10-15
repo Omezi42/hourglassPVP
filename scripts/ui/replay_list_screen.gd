@@ -8,6 +8,7 @@ const REPLAY_CARD_SCENE := preload("res://scenes/replay_list_card.tscn")
 const PANEL_STYLE := "res://resources/theme/content_panel.tres"
 
 var _empty_state: EmptyState
+var _portrait := false
 
 @onready var list_container: GridContainer = $ScrollContainer/ListContainer
 @onready var screen_header: ScreenHeader = $ScreenHeader
@@ -31,6 +32,25 @@ func _ready() -> void:
 	_empty_state.size = empty_label.size
 	_empty_state.visible = false
 	add_child(_empty_state)
+
+
+## 縦横が変わったときに `Main` から呼ばれる(Architecture.md 4.7節)。縦は1列にする(GameDesign.md 9章「縦画面」)。
+func apply_orientation(portrait: bool) -> void:
+	_portrait = portrait
+	screen_header.apply_orientation(portrait)
+	var scroll: Control = list_container.get_parent()
+	var top := screen_header.portrait_content_top() if portrait else ScreenHeader.CONTENT_TOP
+	scroll.offset_top = top
+	var screen := Vector2(ScreenOrientation.base_size())
+	_empty_state.position = Vector2(ScreenHeader.OUTER_MARGIN, top)
+	_empty_state.size = screen - _empty_state.position - Vector2.ONE * ScreenHeader.OUTER_MARGIN
+	list_container.columns = 1 if portrait else 2
+	for card in list_container.get_children():
+		(card as ReplayListCard).set_portrait(portrait, _list_width())
+
+
+func _list_width() -> float:
+	return ScreenOrientation.PORTRAIT_SIZE.x - ScreenHeader.OUTER_MARGIN * 2.0
 
 
 ## オンライン対戦(Firestore)・CPU戦(user://ローカル)の両方のリプレイを取得し、
@@ -76,6 +96,7 @@ func refresh() -> void:
 		var card: ReplayListCard = REPLAY_CARD_SCENE.instantiate()
 		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		list_container.add_child(card)
+		card.set_portrait(_portrait, _list_width())
 		var opponent_name := ""
 		if ok:
 			opponent_name = await AccountService.fetch_display_name(
