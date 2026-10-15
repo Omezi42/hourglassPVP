@@ -82,12 +82,27 @@
 - `EmptyState` は縦で中身を `PORTRAIT_ZOOM`(1.5)倍で描く
 - 画面を縦横で撮るのは `tools/capture_screen_layout`(非ヘッドレス。`class_name` か `.tscn` を並べる)
 
+## その他の画面
+
+- `PortraitTabs`(static): 縦で2つの面を切り替えるボタン。ヘッダーの主アクションの行に置く(ランク・ショップ)
+- `RankOwnPanel.zoom`・`RankBoardRow.set_portrait()`: 段位は中身ごと拡大、ランキングの行は2段に積んで拡大して描く
+- `CardStatsScreen`: 縦では2つの欄を1本のスクロールへ移して積む
+- `CardShopScreen`: 一覧と詳細のパネルを拡大して置く(`_place_scaled`)。`ShopKindTab.portrait` で文字を大きくする。
+  `ShopItemTile.text_scale` は、はじめの7日の札(`WelcomeDaysPanel`)が使う
+- `AccountScreen`: 2つのパネルを `PortraitModal.SCALE` 倍で上下に置く(上は中身の高さ)。`AccountLooksTabs.set_portrait()` で列数を変える
+- `CardRoomArrange`(static): ルームマッチ画面の縦横の置き場所(1000行の上限のための切り出し)
+- `LabProposalCard.set_portrait()`: 拡大の層を押し込みの層(`_face`)の親に分けて置く。`LabThemeBand.set_portrait()` は締切・票の段をお題の下へ移す
+- `SoloRouteView.vertical` と `relayout()`(段を下から上へ)、`SoloDepartureView.stacked`(作戦の札を上下に)。状態・行き先の詳細は1.25倍で道の下へ
+- `CardMatchFastForward`: 向きが変わったとき、有限の Tween を終わりまで進めてから並べ直す(終わりの無い Tween には触らない)。タイマーで待つ演出は打ち切らない
+
 ## モーダル
 
 - `PortraitModal`(static のみ): 縦ではパネルを論理幅 `WIDTH`(480)で組み、`fit()` で `SCALE`(1.4)倍に中心から拡大する。
   **コンテナの子は渡さない**(コンテナが `scale` を1へ戻す)。`CenterContainer` で中央へ置くモーダルはその箱ごと渡す
 - モーダルは画面ではないため `Main` から呼ばれない。開くたびに組み直し、開いている間の向きの変化は `PortraitModal.watch()` が受ける(状態は保つ)
-- 対象: `ConfirmModal`・`SettingsPanel`・`CardCpuDifficultyPicker`・`DailyMissionPanel`・`WelcomeDaysPanel`。拡大しても目安に足りない文字だけ縦の大きさを持つ
+- 対象: `ConfirmModal`・`SettingsPanel`・`CardCpuDifficultyPicker`・`DailyMissionPanel`・`WelcomeDaysPanel`・`CardSeasonCeremonyPanel`・`ShopSetPreview`・
+  `AccountCredentialDialog`(上端を基準に拡大)・`LabProposalDetail`・`LabSubmitPanel`。拡大しても目安に足りない文字だけ縦の大きさを持つ
+- `PortraitModal.fit_width()`: 中身の幅をそろえて持つモーダル用。横で最小幅が同じ子孫を、縦では論理幅へ合わせる
 
 ## タッチ操作
 

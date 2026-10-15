@@ -74,7 +74,6 @@
 
 全画面がそろうまで `ScreenOrientation.ENABLED` は false のまま。対局画面の配置はモックで承認済み(細部は実装しながら詰める)。
 
-- [ ] 縦の配置の仕様化(GameDesign.md 9章「縦画面」・Architecture.md 4.7節へ、モックで足した画面ぶんを追記。文案はユーザーの承認待ち)
 - [ ] 遠征の重ね画面(束・恩恵・工房・遠征の記録)の縦の配置
 - [ ] 公開: `ENABLED` を true、アプリ版の manifest の `orientation` を外す(告知は上の「アプリ版(PWA)」節の項目)
 
