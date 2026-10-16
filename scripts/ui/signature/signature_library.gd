@@ -40,6 +40,12 @@ const EFFECTS := {
 	"key": preload("res://scripts/ui/signature/moves/key_effect.gd"),
 	"cycle": preload("res://scripts/ui/signature/moves/cycle_effect.gd"),
 	"crest": preload("res://scripts/ui/signature/moves/crest_effect.gd"),
+	"shot": preload("res://scripts/ui/signature/moves/shot_effect.gd"),
+	"shatter": preload("res://scripts/ui/signature/moves/shatter_effect.gd"),
+	"recall": preload("res://scripts/ui/signature/moves/recall_effect.gd"),
+	"refill": preload("res://scripts/ui/signature/moves/refill_effect.gd"),
+	"call": preload("res://scripts/ui/signature/moves/call_effect.gd"),
+	"reverse": preload("res://scripts/ui/signature/moves/reverse_effect.gd"),
 }
 
 
