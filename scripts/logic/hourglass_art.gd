@@ -25,6 +25,9 @@ const TEXTURES: Array[String] = ["", "grain", "liquid", "crystal", "glow", "star
 const FRAMES: Array[String] = ["", "wood", "iron", "brass", "stone", "ebony", "porcelain"]
 ## 原本(サンド)の砂の色。ここへ表の色変換を順に当てると、その絵の砂の色になる。
 const MASTER_SAND := Color(0.93, 0.66, 0.24, 1.0)
+## Web版は色違いを原本の半分の解像度で焼く。全カード×3状態の絵がGPUに常駐するため、
+## 原寸のままだとスマホのブラウザのメモリ上限に届く。撮影ツールのあるデスクトップは原寸。
+const WEB_BAKE_SCALE := 0.5
 
 static var _table: HourglassTintTable = null
 static var _published: Dictionary = {}
@@ -92,6 +95,11 @@ static func texture(art_id: String, state: int) -> Texture2D:
 	var image := _master_image(state)
 	var made: ImageTexture = null
 	if image != null:
+		# 焼き上がりと同じ大きさにしておく(カード側は絵の大きさを1度だけ測って控える)。
+		var size := _bake_size(state)
+		if image.get_size() != size:
+			image = image.duplicate()
+			image.resize(size.x, size.y, Image.INTERPOLATE_LANCZOS)
 		made = ImageTexture.create_from_image(image)
 	_published[key] = made
 	return made
@@ -209,7 +217,7 @@ static func _bake(art_id: String, state: int) -> void:
 	tint.set_shader_parameter("value_bias", float(step.get("value_bias", 0.0)))
 	tint.set_shader_parameter("threshold", float(step.get("threshold", 0.0)))
 	tint.set_shader_parameter("source_art", ImageTexture.create_from_image(source))
-	var baked := await _render(_tint_material, source.get_size())
+	var baked := await _render(_tint_material, _bake_size(state))
 	# 子の入力にするのは仕上げ前の絵(質感と枠は1枚ずつのもので、親子で継がない)。
 	# 子を持たない絵の生画像まで控えると、焼き終えるまで全カードぶんが積み上がる。
 	if _is_parent(art_id):
@@ -247,11 +255,19 @@ static func _finish(art_id: String, state: int, tinted: Image) -> Image:
 	material.set_shader_parameter("source_art", ImageTexture.create_from_image(tinted))
 	material.set_shader_parameter("master_art", load(master_path))
 	material.set_shader_parameter("region", load(region_path))
-	material.set_shader_parameter("px_size", Vector2(tinted.get_size()))
+	# 質感の模様は原寸の画素で刻む(縮めて焼いても粒の大きさを変えない)。
+	material.set_shader_parameter("px_size", Vector2(_master_image(state).get_size()))
 	material.set_shader_parameter("texture_kind", maxi(TEXTURES.find(entry.get("texture", "")), 0))
 	material.set_shader_parameter("frame_kind", maxi(FRAMES.find(entry.get("frame", "")), 0))
 	material.set_shader_parameter("sand_color", accent_color(art_id))
 	return await _render(material, tinted.get_size())
+
+
+static func _bake_size(state: int) -> Vector2i:
+	var size := _master_image(state).get_size()
+	if not OS.has_feature("web"):
+		return size
+	return Vector2i((Vector2(size) * WEB_BAKE_SCALE).round())
 
 
 static func _render(material: ShaderMaterial, size: Vector2i) -> Image:
