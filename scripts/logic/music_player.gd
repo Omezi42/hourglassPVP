@@ -69,6 +69,9 @@ static func ensure_ready(parent: Node) -> void:
 		var player := AudioStreamPlayer.new()
 		player.volume_db = SILENT_DB
 		player.bus = SoundBank.BGM_BUS
+		# Web版の既定(サンプル再生)は曲を丸ごとPCMへ展開し、3曲で数百MBを食って
+		# iOSのSafariがタブを落とす。BGMだけは逐次デコードで鳴らす。
+		player.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
 		parent.add_child(player)
 		player.finished.connect(_on_finished.bind(i))
 		_players.append(player)

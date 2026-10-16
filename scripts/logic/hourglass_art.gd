@@ -211,7 +211,9 @@ static func _bake(art_id: String, state: int) -> void:
 	tint.set_shader_parameter("source_art", ImageTexture.create_from_image(source))
 	var baked := await _render(_tint_material, source.get_size())
 	# 子の入力にするのは仕上げ前の絵(質感と枠は1枚ずつのもので、親子で継がない)。
-	_baked["%s|%d" % [art_id, state]] = baked
+	# 子を持たない絵の生画像まで控えると、焼き終えるまで全カードぶんが積み上がる。
+	if _is_parent(art_id):
+		_baked["%s|%d" % [art_id, state]] = baked
 	if has_finish(art_id):
 		baked = await _finish(art_id, state, baked)
 	var key := "%s|%d" % [art_id, state]
@@ -219,6 +221,13 @@ static func _bake(art_id: String, state: int) -> void:
 		(_published[key] as ImageTexture).set_image(baked)
 	else:
 		_published[key] = ImageTexture.create_from_image(baked)
+
+
+static func _is_parent(art_id: String) -> bool:
+	for entry in _table.entries.values():
+		if String((entry as Dictionary).get("source", "")) == art_id:
+			return true
+	return false
 
 
 ## その絵が砂の質感か枠の素材を持つか(GameDesign.md 9章)。
