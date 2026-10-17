@@ -50,6 +50,8 @@ const EFFECTS := {
 	"gust": preload("res://scripts/ui/signature/moves/gust_effect.gd"),
 	"seal": preload("res://scripts/ui/signature/moves/seal_effect.gd"),
 	"goad": preload("res://scripts/ui/signature/moves/goad_effect.gd"),
+	"pinch": preload("res://scripts/ui/signature/moves/pinch_effect.gd"),
+	"bulwark": preload("res://scripts/ui/signature/moves/bulwark_effect.gd"),
 }
 
 

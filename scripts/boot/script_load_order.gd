@@ -154,6 +154,8 @@ const PATHS: Array[String] = [
 	"res://scripts/ui/signature/moves/gust_effect.gd",
 	"res://scripts/ui/signature/moves/seal_effect.gd",
 	"res://scripts/ui/signature/moves/goad_effect.gd",
+	"res://scripts/ui/signature/moves/pinch_effect.gd",
+	"res://scripts/ui/signature/moves/bulwark_effect.gd",
 	"res://scripts/logic/music_player.gd",
 	"res://scripts/ui/signature/signature_fx_player.gd",
 	"res://scripts/ui/emblem_strike_fx.gd",

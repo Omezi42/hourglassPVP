@@ -157,6 +157,8 @@ func _play_signature(card: CardData, from: Vector2, targets: Array) -> bool:
 	var move := SignatureLibrary.effect(card)
 	if move == null:
 		return false
+	if _merges_into_open_job(card, targets):
+		return true
 	var entries: Array[Dictionary] = []
 	move.from = from
 	move.style = _style
@@ -170,12 +172,35 @@ func _play_signature(card: CardData, from: Vector2, targets: Array) -> bool:
 		"entries": entries,
 		"style": _style,
 		"gen": _issued,
+		"card": card.id,
+		"frame": Engine.get_process_frames(),
 	}
 	_seen[card.id] = true
 	_open_jobs.append(job)
 	_hold_spins(entries, _issued)
 	_queue(_start_signature.bind(job))
 	return true
+
+
+## 1枚が同じ対象へ同じ型の効果を続けて起こした(ひとつまみの砂を落とす+攻撃力+1など)なら、
+## 先に組んだ演出1回にまとめる(GameDesign.md 9章)。続けて起きた効果は同じフレームで届くため、
+## 同じフレームに組んだ演出だけを見る。結果は `_gen_for()` がその演出の番号を付けて着弾で出す。
+func _merges_into_open_job(card: CardData, targets: Array) -> bool:
+	var frame := Engine.get_process_frames()
+	for job: Dictionary in _open_jobs:
+		if job["card"] != card.id or job["style"] != _style or job["frame"] != frame:
+			continue
+		var entries: Array = job["entries"]
+		if entries.size() != targets.size():
+			continue
+		var same := true
+		for i in range(entries.size()):
+			if entries[i]["side"] != targets[i]["side"] or entries[i]["slot"] != targets[i]["slot"]:
+				same = false
+				break
+		if same:
+			return true
+	return false
 
 
 ## 反転(SPIN)の効果なら、対象の駒を返す演出を着弾まで持ち越す。`gen` が負なら紋章
