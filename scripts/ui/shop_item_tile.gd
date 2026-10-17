@@ -133,7 +133,7 @@ func _draw() -> void:
 		var ring := Rect2(Vector2.ONE * SELECT_INSET, size - Vector2.ONE * SELECT_INSET * 2.0)
 		var points := UiPaint.rounded_rect_points_uniform(ring, SELECT_CORNER, 5)
 		points.append(points[0])
-		draw_polyline(points, UiPalette.GLOW_AMBER, SELECT_WIDTH, true)
+		ShapePaint.polyline(get_canvas_item(), points, UiPalette.GLOW_AMBER, SELECT_WIDTH, true)
 
 
 ## ホバー中は面が琥珀に明るくなるため、文字を暗い色へ替えて読めるようにする

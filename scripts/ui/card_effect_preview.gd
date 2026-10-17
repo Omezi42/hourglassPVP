@@ -384,16 +384,20 @@ func _draw_frame() -> Rect2:
 		Vector2(rect.position.x, rect.end.y),
 		rect.end,
 	]:
-		draw_colored_polygon(
-			PackedVector2Array(
-				[
-					corner + Vector2(0, -4),
-					corner + Vector2(4, 0),
-					corner + Vector2(0, 4),
-					corner + Vector2(-4, 0),
-				]
-			),
-			Color(0.45, 0.33, 0.18, 0.85)
+		(
+			ShapePaint
+			. colored_polygon(
+				get_canvas_item(),
+				PackedVector2Array(
+					[
+						corner + Vector2(0, -4),
+						corner + Vector2(4, 0),
+						corner + Vector2(0, 4),
+						corner + Vector2(-4, 0),
+					]
+				),
+				Color(0.45, 0.33, 0.18, 0.85)
+			)
 		)
 	var note_height := NOTE_FONT_SIZE * 2 + 12
 	return Rect2(
@@ -510,8 +514,10 @@ func _draw_beam(layout: Dictionary, beam: Dictionary) -> void:
 	draw_line(from, head, Color(color, 0.9), 3.0)
 	var dir := (to - from).normalized()
 	var side := Vector2(-dir.y, dir.x) * 5.0
-	draw_colored_polygon(
-		PackedVector2Array([head + dir * 8.0, head - side, head + side]), Color(color, 0.95)
+	ShapePaint.colored_polygon(
+		get_canvas_item(),
+		PackedVector2Array([head + dir * 8.0, head - side, head + side]),
+		Color(color, 0.95)
 	)
 	if blocked and progress >= 1.0:
 		InkFigure.broken(self, to, 7.0)
@@ -561,4 +567,9 @@ func _draw_dots(index: int) -> void:
 	var start := size.x - 10.0 - float(count) * 10.0
 	for i in count:
 		var at := Vector2(start + float(i) * 10.0, 12.0)
-		draw_circle(at, 3.0, InkFigure.INK if i == index else Color(InkFigure.INK_SOFT, 0.5))
+		ShapePaint.circle(
+			get_canvas_item(),
+			at,
+			3.0,
+			InkFigure.INK if i == index else Color(InkFigure.INK_SOFT, 0.5)
+		)

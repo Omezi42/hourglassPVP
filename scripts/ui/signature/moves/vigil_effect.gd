@@ -72,12 +72,12 @@ func _flame(item: CanvasItem, base: Vector2, size: Vector2, alpha: float) -> voi
 		Rect2(base - Vector2(size.x, size.y), size * Vector2(2.0, 1.0)),
 		[[0.0, Color(FLAME_EDGE, alpha * 0.5)], [1.0, Color(FLAME_EDGE, alpha)]]
 	)
-	item.draw_colored_polygon(inner, Color(FLAME_CORE, alpha))
+	ShapePaint.colored_polygon(item.get_canvas_item(), inner, Color(FLAME_CORE, alpha))
 
 
 ## 火の矢の先端。進む向きへ尖った細い菱形。
 func _dart(item: CanvasItem, at: Vector2, dir: Vector2, alpha: float) -> void:
 	var across := dir.orthogonal() * 3.6
 	var shape := PackedVector2Array([at + dir * 12.0, at + across, at - dir * 8.0, at - across])
-	item.draw_colored_polygon(shape, Color(FLAME_EDGE, alpha))
+	ShapePaint.colored_polygon(item.get_canvas_item(), shape, Color(FLAME_EDGE, alpha))
 	UiPaint.fill_circle(item.get_canvas_item(), at, 2.4, Color(FLAME_CORE, alpha), 8)

@@ -38,8 +38,12 @@ func draw(item: CanvasItem, t: float) -> void:
 		for k in range(1, BENDS + 1):
 			var bend := angle + (SignaturePaint.jitter(i * BENDS + k, 13) - 0.5) * 1.0
 			line.append(line[k - 1] + Vector2.from_angle(bend) * reach / float(BENDS))
-		item.draw_polyline(line, Color(UiPalette.OUTLINE_DARK, alpha * 0.8), 2.6, true)
-		item.draw_polyline(line, Color(SignaturePaint.SPARK_HOT, alpha), 1.2, true)
+		ShapePaint.polyline(
+			item.get_canvas_item(), line, Color(UiPalette.OUTLINE_DARK, alpha * 0.8), 2.6, true
+		)
+		ShapePaint.polyline(
+			item.get_canvas_item(), line, Color(SignaturePaint.SPARK_HOT, alpha), 1.2, true
+		)
 
 
 ## 下を向いた砂の楔。`tip` は尖った先。
@@ -58,4 +62,6 @@ func _wedge(item: CanvasItem, tip: Vector2, alpha: float) -> void:
 	)
 	var closed := shape.duplicate()
 	closed.append(shape[0])
-	item.draw_polyline(closed, Color(UiPalette.OUTLINE_DARK, alpha * 0.8), 1.4, true)
+	ShapePaint.polyline(
+		item.get_canvas_item(), closed, Color(UiPalette.OUTLINE_DARK, alpha * 0.8), 1.4, true
+	)

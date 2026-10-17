@@ -39,8 +39,15 @@ func draw(item: CanvasItem, t: float) -> void:
 			at = land - Vector2(0.0, HOP * sin(hop * PI))
 			_puff(item, land, hop, alpha)
 		var grain_alpha := alpha * (1.0 - hop * 0.7)
-		item.draw_circle(at, GRAIN_RADIUS + 1.0, Color(SignaturePaint.SAND_DARK, grain_alpha))
-		item.draw_circle(at, GRAIN_RADIUS, Color(SignaturePaint.SAND, grain_alpha))
+		ShapePaint.circle(
+			item.get_canvas_item(),
+			at,
+			GRAIN_RADIUS + 1.0,
+			Color(SignaturePaint.SAND_DARK, grain_alpha)
+		)
+		ShapePaint.circle(
+			item.get_canvas_item(), at, GRAIN_RADIUS, Color(SignaturePaint.SAND, grain_alpha)
+		)
 
 
 ## 着地した点から左右へ広がって薄れる砂煙。
@@ -59,6 +66,9 @@ func _puff(item: CanvasItem, at: Vector2, progress: float, alpha: float) -> void
 		var side := -1.0 if k % 2 == 0 else 1.0
 		var reach := PUFF.x * (0.5 + SignaturePaint.jitter(k, 31)) * spread
 		var rise := 6.0 * SignaturePaint.jitter(k, 32) * sin(progress * PI)
-		item.draw_circle(
-			at + Vector2(side * reach, -rise), 1.4, Color(SignaturePaint.SAND, fade * 0.8)
+		ShapePaint.circle(
+			item.get_canvas_item(),
+			at + Vector2(side * reach, -rise),
+			1.4,
+			Color(SignaturePaint.SAND, fade * 0.8)
 		)

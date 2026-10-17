@@ -32,4 +32,14 @@ func draw(item: CanvasItem, t: float) -> void:
 			var radius := size * spread + ARC_GAP * k
 			var facing := 0.0 if side > 0.0 else PI
 			var color := Color(SignaturePaint.SPIN, alpha * (1.0 - beat))
-			item.draw_arc(center, radius, facing - 0.7, facing + 0.7, 12, color, 2.4, true)
+			ShapePaint.arc(
+				item.get_canvas_item(),
+				center,
+				radius,
+				facing - 0.7,
+				facing + 0.7,
+				12,
+				color,
+				2.4,
+				true
+			)

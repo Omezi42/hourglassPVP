@@ -66,7 +66,9 @@ static func bell(item: CanvasItem, pivot: Vector2, swing: float, alpha: float) -
 	)
 	var closed := shape.duplicate()
 	closed.append(shape[0])
-	item.draw_polyline(closed, Color(UiPalette.OUTLINE_DARK, alpha * 0.8), 1.2, true)
+	ShapePaint.polyline(
+		item.get_canvas_item(), closed, Color(UiPalette.OUTLINE_DARK, alpha * 0.8), 1.2, true
+	)
 	# 鐘は支点から逆に振れる舌を持つ。遅れて振れる分だけ鐘の内側で揺れて見える。
 	var clapper := pivot + Vector2(0.0, 6.0) + Vector2(0.0, h * 0.92).rotated(swing * 0.4)
 	UiPaint.fill_circle(ci, clapper, 3.4, Color(UiPalette.BRASS_DARK, alpha), 12)
@@ -91,7 +93,17 @@ static func ripple(
 		if r <= 0.0:
 			continue
 		var a := alpha * (1.0 - float(i) / float(RINGS))
-		item.draw_arc(center, r, 0.0, TAU, 72, Color(color, a * 0.7), 2.4 - 0.6 * i, true)
+		ShapePaint.arc(
+			item.get_canvas_item(),
+			center,
+			r,
+			0.0,
+			TAU,
+			72,
+			Color(color, a * 0.7),
+			2.4 - 0.6 * i,
+			true
+		)
 
 
 ## 天秤。`tilt` が正なら左の皿(攻撃力の側)が下がる。
@@ -191,7 +203,9 @@ static func rising_grains(item: CanvasItem, center: Vector2, progress: float, al
 			continue
 		var x := center.x + (_hash(i, 8) - 0.5) * 50.0
 		var y := center.y + 40.0 - local * SPAN
-		item.draw_circle(Vector2(x, y), 1.8, Color(SAND, alpha * (1.0 - local)))
+		ShapePaint.circle(
+			item.get_canvas_item(), Vector2(x, y), 1.8, Color(SAND, alpha * (1.0 - local))
+		)
 
 
 ## 恵与が届いた印の金色の輪。`progress` は0→1で広がりながら薄れる。
@@ -200,8 +214,16 @@ static func boon_ring(item: CanvasItem, center: Vector2, progress: float, alpha:
 	if alpha <= 0.0 or progress <= 0.0 or progress >= 1.0:
 		return
 	var radius := REACH * ease(progress, 0.4)
-	item.draw_arc(
-		center, radius, 0.0, TAU, 40, Color(BOON, alpha * 0.75 * (1.0 - progress)), 2.4, true
+	ShapePaint.arc(
+		item.get_canvas_item(),
+		center,
+		radius,
+		0.0,
+		TAU,
+		40,
+		Color(BOON, alpha * 0.75 * (1.0 - progress)),
+		2.4,
+		true
 	)
 
 
@@ -308,7 +330,9 @@ static func hammer(item: CanvasItem, pivot: Vector2, angle: float, alpha: float)
 	)
 	var closed := shape.duplicate()
 	closed.append(shape[0])
-	item.draw_polyline(closed, Color(UiPalette.OUTLINE_DARK, alpha * 0.8), 1.2, true)
+	ShapePaint.polyline(
+		item.get_canvas_item(), closed, Color(UiPalette.OUTLINE_DARK, alpha * 0.8), 1.2, true
+	)
 
 
 ## 打った点から上へ散る火花。`progress` は0→1で、重さで弧を描いて落ちながら冷める。
@@ -369,7 +393,9 @@ static func note(item: CanvasItem, at: Vector2, size: float, color: Color, alpha
 	var flag := PackedVector2Array(
 		[top, top + Vector2(size * 1.1, size * 0.9), top + Vector2(size * 0.9, size * 2.0)]
 	)
-	item.draw_polyline(flag, Color(color, alpha), maxf(size * 0.28, 1.2), true)
+	ShapePaint.polyline(
+		item.get_canvas_item(), flag, Color(color, alpha), maxf(size * 0.28, 1.2), true
+	)
 
 
 static func _dial_hand(

@@ -191,7 +191,7 @@ func _paint() -> void:
 			rect.grow(-1.0), CORNER_RADIUS, CHIP_SEGMENTS
 		)
 		ring.append(ring[0])
-		_face.draw_polyline(ring, UiPalette.GLOW_AMBER, ADOPTED_RING, true)
+		ShapePaint.polyline(_face.get_canvas_item(), ring, UiPalette.GLOW_AMBER, ADOPTED_RING, true)
 
 	var chip_text := "砂術" if _is_spell else "砂時計"
 	var chip_width := (
@@ -262,8 +262,9 @@ func _paint_open_side(ci: RID, side_center: float) -> void:
 		return
 	var tip := Vector2(side_center + CHEVRON_HALF * 0.5, _card_size.y * 0.5)
 	(
-		_face
-		. draw_polyline(
+		ShapePaint
+		. polyline(
+			_face.get_canvas_item(),
 			PackedVector2Array(
 				[
 					tip + Vector2(-CHEVRON_HALF, -CHEVRON_HALF),

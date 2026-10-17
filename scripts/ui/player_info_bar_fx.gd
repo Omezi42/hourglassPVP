@@ -154,16 +154,16 @@ func _paint_rim(shape: PaintedShape) -> void:
 			break
 	if start < 0:
 		ring.append(ring[0])
-		shape.draw_polyline(ring, color, RIM_WIDTH, true)
+		ShapePaint.polyline(shape.get_canvas_item(), ring, color, RIM_WIDTH, true)
 		return
 	var run := PackedVector2Array()
 	for k in ring.size() + 1:
 		var p := ring[(start + k) % ring.size()]
 		if p.distance_to(badge_center) < hidden_radius:
 			if run.size() >= 2:
-				shape.draw_polyline(run, color, RIM_WIDTH, true)
+				ShapePaint.polyline(shape.get_canvas_item(), run, color, RIM_WIDTH, true)
 			run = PackedVector2Array()
 		else:
 			run.append(p)
 	if run.size() >= 2:
-		shape.draw_polyline(run, color, RIM_WIDTH, true)
+		ShapePaint.polyline(shape.get_canvas_item(), run, color, RIM_WIDTH, true)

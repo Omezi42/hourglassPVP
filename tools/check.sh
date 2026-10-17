@@ -39,6 +39,17 @@ if [ -n "$missing" ]; then
   timeout "$GODOT_TIMEOUT" "$GODOT" --headless --path . --import > logs/check_import.log 2>&1
 fi
 
+# ポリゴン系の描画は ShapePaint を通す(Web版で描き直すたびにGLの番号を使い捨て、メモリが積み上がるため。Pitfalls.md)。
+echo "== polygon draw guard"
+POLY_CALLS=$(grep -rnE "\b(draw_colored_polygon|draw_polygon|draw_polyline|draw_polyline_colors|draw_arc|draw_circle|draw_dashed_line|draw_multiline|canvas_item_add_polygon|canvas_item_add_polyline|canvas_item_add_multiline|canvas_item_add_triangle_array|canvas_item_add_circle)\(" scripts --include=*.gd | grep -v "scripts/ui/styles/shape_paint.gd")
+if [ -n "$POLY_CALLS" ]; then
+  echo "$POLY_CALLS" | head -20
+  echo "ポリゴン系の draw_* は ShapePaint の同名の関数へ置き換える"
+  status=1
+else
+  echo "ok"
+fi
+
 echo "== headless tests"
 timeout "$GODOT_TIMEOUT" "$GODOT" --headless --path . --script res://tools/tests/run_tests.gd > logs/check_tests.log 2>&1
 grep -E "tests passed|FAILED|SCRIPT ERROR|Parse Error" logs/check_tests.log | head -20

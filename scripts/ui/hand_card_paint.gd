@@ -94,7 +94,9 @@ static func _window(view: CardView, ci: RID, s: float, tint: Color) -> void:
 	UiPaint.draw_inner_shadow(ci, rect, radius, 5, 3, Color(0, 0, 0, 1), 0.5)
 	var closed := points.duplicate()
 	closed.append(points[0])
-	view.draw_polyline(closed, Color(UiPalette.BRASS_MID, 0.9) * tint, 1.0, true)
+	ShapePaint.polyline(
+		view.get_canvas_item(), closed, Color(UiPalette.BRASS_MID, 0.9) * tint, 1.0, true
+	)
 
 
 ## 光だまり。窓の中央やや下(砂時計の胴のあたり)を中心に、放射状に色を落とす。
@@ -204,7 +206,7 @@ static func _frame(
 static func _closed(view: CardView, points: PackedVector2Array, color: Color, width: float) -> void:
 	var closed := points.duplicate()
 	closed.append(points[0])
-	view.draw_polyline(closed, color, width, true)
+	ShapePaint.polyline(view.get_canvas_item(), closed, color, width, true)
 
 
 ## 名前は帯の中央、キーワードはその下の行。キーワードの行の両脇は四隅のバッジが占めるため、

@@ -200,7 +200,7 @@ func _draw_plate(rect: Rect2, alpha: float) -> void:
 	)
 	var outline := points.duplicate()
 	outline.append(points[0])
-	draw_polyline(outline, Color(UiPalette.BRASS_MID, alpha), 1.5, true)
+	ShapePaint.polyline(get_canvas_item(), outline, Color(UiPalette.BRASS_MID, alpha), 1.5, true)
 
 
 ## 対局ログを購読して、**相手の手だけ**を同じ文言で実況する(GameDesign.md 9章)。

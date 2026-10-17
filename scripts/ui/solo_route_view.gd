@@ -233,19 +233,13 @@ func _draw_road(ci: RID, a: Vector2, b: Vector2, walked: bool, live: bool, previ
 	var edge := Color(0.05, 0.04, 0.03, 0.75 * alpha)
 	var bed := Color(0.27, 0.21, 0.15, alpha)
 	var sand := Color(0.93, 0.72, 0.36, 1.0)
-	RenderingServer.canvas_item_add_polyline(
-		ci, points, SoloUiPaint.fill_colors(points, edge), 20.0, true
-	)
-	RenderingServer.canvas_item_add_polyline(
-		ci, points, SoloUiPaint.fill_colors(points, bed), 13.0, true
-	)
+	ShapePaint.polyline_colors(ci, points, SoloUiPaint.fill_colors(points, edge), 20.0, true)
+	ShapePaint.polyline_colors(ci, points, SoloUiPaint.fill_colors(points, bed), 13.0, true)
 	if walked:
-		RenderingServer.canvas_item_add_polyline(
-			ci, points, SoloUiPaint.fill_colors(points, sand), 7.0, true
-		)
+		ShapePaint.polyline_colors(ci, points, SoloUiPaint.fill_colors(points, sand), 7.0, true)
 	elif preview:
 		var glow := Color(UiPalette.GLOW_AMBER, PREVIEW_ROAD_ALPHA)
-		RenderingServer.canvas_item_add_polyline(
+		ShapePaint.polyline_colors(
 			ci, points, SoloUiPaint.fill_colors(points, glow), PREVIEW_ROAD_WIDTH, true
 		)
 
@@ -328,9 +322,7 @@ func _draw_loss_mark(ci: RID, center: Vector2, radius: float) -> void:
 	var color := Color(0.75, 0.15, 0.12, 0.9)
 	for offset in [Vector2(-s, -s), Vector2(-s, s)]:
 		var points := PackedVector2Array([center + offset, center - offset])
-		RenderingServer.canvas_item_add_polyline(
-			ci, points, SoloUiPaint.fill_colors(points, color), 5.0, true
-		)
+		ShapePaint.polyline_colors(ci, points, SoloUiPaint.fill_colors(points, color), 5.0, true)
 
 
 func _draw_kind_glyph(
@@ -356,9 +348,7 @@ func _draw_kind_glyph(
 					center + Vector2(s, s),
 				]
 			)
-			RenderingServer.canvas_item_add_polyline(
-				ci, pts, SoloUiPaint.fill_colors(pts, color), 3.0, true
-			)
+			ShapePaint.polyline_colors(ci, pts, SoloUiPaint.fill_colors(pts, color), 3.0, true)
 		SoloRun.Kind.SPRING:
 			UiPaint.fill_ellipse(ci, center, Vector2(s, s * 0.6), Color(color, 0.85), 20)
 		SoloRun.Kind.WORKSHOP:

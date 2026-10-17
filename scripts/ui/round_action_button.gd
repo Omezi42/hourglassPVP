@@ -254,7 +254,7 @@ func _draw_top_arc(ci: RID, center: Vector2, r: float, color: Color, width: floa
 		var angle: float = lerpf(-PI * 0.82, -PI * 0.18, t)
 		points.append(center + Vector2(cos(angle), sin(angle)) * r)
 		colors.append(Color(color.r, color.g, color.b, color.a * sin(t * PI)))
-	RenderingServer.canvas_item_add_polyline(ci, points, colors, width, true)
+	ShapePaint.polyline_colors(ci, points, colors, width, true)
 
 
 func _draw_label(center: Vector2, disabled_now: bool, forced_font_size: int = 0) -> void:

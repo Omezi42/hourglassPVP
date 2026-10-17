@@ -31,4 +31,14 @@ func draw(item: CanvasItem, t: float) -> void:
 		var at := from.lerp(targets[0], ease(k, 1.6)) - Vector2.from_angle(toward) * radius
 		var color := Color(COLOR, alpha * (0.5 + 0.5 * grow))
 		var width := lerpf(2.0, 4.0, grow)
-		item.draw_arc(at, radius, toward - SPREAD, toward + SPREAD, 16, color, width, true)
+		ShapePaint.arc(
+			item.get_canvas_item(),
+			at,
+			radius,
+			toward - SPREAD,
+			toward + SPREAD,
+			16,
+			color,
+			width,
+			true
+		)

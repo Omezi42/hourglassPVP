@@ -36,7 +36,7 @@ func draw(item: CanvasItem, t: float) -> void:
 		var color := SignaturePaint.SAND.lerp(
 			SignaturePaint.SAND_DARK, SignaturePaint.jitter(i, 43)
 		)
-		item.draw_circle(at, 1.8, Color(color, alpha * minf(q * 4.0, 1.0)))
+		ShapePaint.circle(item.get_canvas_item(), at, 1.8, Color(color, alpha * minf(q * 4.0, 1.0)))
 	var form := ease(phase(t, SWIRL, FORM), 0.6)
 	if form > 0.0:
 		_outline(item, center, form, alpha)
@@ -53,7 +53,9 @@ func _outline(item: CanvasItem, center: Vector2, form: float, alpha: float) -> v
 			var y := GLASS_HALF.y * (1.0 - 2.0 * s)
 			var half := lerpf(WAIST, GLASS_HALF.x, absf(1.0 - 2.0 * s))
 			points.append(center + Vector2(side * half, y))
-		item.draw_polyline(points, Color(SignaturePaint.BOON, alpha * 0.9), 2.2, true)
+		ShapePaint.polyline(
+			item.get_canvas_item(), points, Color(SignaturePaint.BOON, alpha * 0.9), 2.2, true
+		)
 	var foot := center + Vector2(0.0, GLASS_HALF.y)
 	item.draw_line(
 		foot - Vector2(GLASS_HALF.x, 0.0),

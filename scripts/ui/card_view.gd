@@ -240,6 +240,8 @@ var _prev_attack := -1
 ## 身構えの脈打ち(GameDesign.md 9章)。`brace` の間だけ `_process` で進める。
 var _brace_pulse := 0.0
 var _brace_tween: Tween
+var _drawn_look: Array = []
+var _redraw_check_pending := false
 
 
 func _ready() -> void:
@@ -278,7 +280,7 @@ func show_unit(p_unit: CardInstance) -> void:
 	_prev_health = -1 if p_unit == null else p_unit.health
 	_prev_attack = -1 if p_unit == null else p_unit.attack
 	custom_minimum_size = BOARD_SIZE_PX
-	queue_redraw()
+	_redraw_if_changed()
 
 
 ## 身構えのわずかな縮み(GameDesign.md 9章)。ノード全体の `scale` を使う
@@ -322,7 +324,7 @@ func show_card(p_card: CardData, p_enabled: bool) -> void:
 	card = p_card
 	enabled = p_enabled
 	custom_minimum_size = HAND_SIZE_PX
-	queue_redraw()
+	_redraw_if_changed()
 
 
 ## ダメージを受けた:砂が砕けて散る(消える砂と落ちる砂の描き分けは `CardViewSandFx`)。
@@ -519,7 +521,65 @@ func _gui_input(event: InputEvent) -> void:
 		pressed.emit(self)
 
 
+## 対局画面は1手ごとに全部の枠へ `show_unit()` / `show_card()` を配り直す。前回描いたときと
+## 見た目を決める値が同じなら描き直さない(Web版では描き直しのたびにGLの番号を使い捨てる。
+## Pitfalls.md)。呼び出し側は直後に `selected` などを代入するため、比べるのはフレームの終わり。
+func _redraw_if_changed() -> void:
+	if _redraw_check_pending:
+		return
+	_redraw_check_pending = true
+	_check_redraw.call_deferred()
+
+
+func _check_redraw() -> void:
+	_redraw_check_pending = false
+	if _look() != _drawn_look:
+		queue_redraw()
+
+
+## 描いた見た目を決める値。演出(攻撃・反転・跳ね・ホバー)は自分で描き直すため含めない。
+func _look() -> Array:
+	var look := [
+		mode,
+		card,
+		unit,
+		skin_viewer,
+		enabled,
+		selected,
+		exhausted,
+		ready_mark,
+		badge,
+		preview_health,
+		preview_dead,
+		flip_preview.duplicate(),
+		crack_preview,
+		stat_scale,
+		label_scale,
+		size,
+		_hovering,
+	]
+	if unit != null:
+		(
+			look
+			. append_array(
+				[
+					unit.data,
+					unit.health,
+					unit.attack,
+					unit.summoned_this_turn,
+					unit.flipped_this_turn,
+					unit.attacks_this_turn,
+					unit.glass_intact,
+					unit.granted_keywords.duplicate(),
+					unit.silenced,
+				]
+			)
+		)
+	return look
+
+
 func _draw() -> void:
+	_drawn_look = _look()
 	if mode == Mode.BOARD:
 		_draw_board_unit()
 	elif card == null:

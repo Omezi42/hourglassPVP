@@ -42,8 +42,15 @@ func draw(item: CanvasItem, t: float) -> void:
 	if flash > 0.02:
 		var radius := FLASH_RADIUS * ease(flash, 0.3)
 		UiPaint.fill_circle(ci, meet, radius, Color(BLADE_CORE, alpha * (1.0 - flash)), 24)
-		item.draw_arc(
-			meet, radius * 1.4, 0.0, TAU, 32, Color(BLADE_EDGE, alpha * (1.0 - flash)), 2.0
+		ShapePaint.arc(
+			item.get_canvas_item(),
+			meet,
+			radius * 1.4,
+			0.0,
+			TAU,
+			32,
+			Color(BLADE_EDGE, alpha * (1.0 - flash)),
+			2.0
 		)
 
 
@@ -60,11 +67,14 @@ func _crescent(item: CanvasItem, center: Vector2, facing: float, alpha: float) -
 		shape.append(
 			center + Vector2.from_angle(a) * inner - Vector2.from_angle(facing) * THICK * 0.3
 		)
-	item.draw_colored_polygon(shape, Color(BLADE_EDGE, alpha))
+	ShapePaint.colored_polygon(item.get_canvas_item(), shape, Color(BLADE_EDGE, alpha))
 	var closed := shape.duplicate()
 	closed.append(shape[0])
-	item.draw_polyline(closed, Color(UiPalette.OUTLINE_DARK, alpha * 0.7), 1.2, true)
-	item.draw_arc(
+	ShapePaint.polyline(
+		item.get_canvas_item(), closed, Color(UiPalette.OUTLINE_DARK, alpha * 0.7), 1.2, true
+	)
+	ShapePaint.arc(
+		item.get_canvas_item(),
 		center,
 		BLADE - 1.5,
 		facing - half * 0.7,

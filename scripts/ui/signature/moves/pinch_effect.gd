@@ -45,7 +45,7 @@ func draw(item: CanvasItem, t: float) -> void:
 				continue
 			var drift := (SignaturePaint.jitter(i, 29) - 0.5) * 10.0
 			var at := tips.lerp(targets[0], minf(s * s, 1.0)) + Vector2(drift, 0.0)
-			item.draw_circle(at, 2.0, Color(SignaturePaint.SAND, alpha))
+			ShapePaint.circle(item.get_canvas_item(), at, 2.0, Color(SignaturePaint.SAND, alpha))
 	SignaturePaint.boon_ring(item, targets[0], phase(t, impact_at(), RING), alpha)
 
 
@@ -54,8 +54,10 @@ func _finger(item: CanvasItem, root: Vector2, tip: Vector2, alpha: float) -> voi
 		return
 	var dark := Color(UiPalette.OUTLINE_DARK, alpha * 0.7)
 	item.draw_line(root, tip, dark, THICK + 2.0, true)
-	item.draw_circle(tip, (THICK + 2.0) * 0.5, dark)
+	ShapePaint.circle(item.get_canvas_item(), tip, (THICK + 2.0) * 0.5, dark)
 	item.draw_line(root, tip, Color(FINGER_COLOR, alpha), THICK, true)
-	item.draw_circle(tip, THICK * 0.5, Color(FINGER_COLOR, alpha))
+	ShapePaint.circle(item.get_canvas_item(), tip, THICK * 0.5, Color(FINGER_COLOR, alpha))
 	var nail := tip.lerp(root, 0.22)
-	item.draw_circle(nail, THICK * 0.22, Color(FINGER_COLOR.lightened(0.4), alpha))
+	ShapePaint.circle(
+		item.get_canvas_item(), nail, THICK * 0.22, Color(FINGER_COLOR.lightened(0.4), alpha)
+	)

@@ -172,7 +172,7 @@ func _draw() -> void:
 	UiPaint.apply_grain(ci, rect, GRAIN_ALPHA)
 	var outline := points.duplicate()
 	outline.append(points[0])
-	draw_polyline(outline, UiPalette.OUTLINE_DARK, 1.0, true)
+	ShapePaint.polyline(get_canvas_item(), outline, UiPalette.OUTLINE_DARK, 1.0, true)
 	UiPaint.draw_bevel(
 		ci, points, UiPalette.BRASS_RIM_LIGHT, UiPalette.BRASS_DARK, RIM_WIDTH, false
 	)

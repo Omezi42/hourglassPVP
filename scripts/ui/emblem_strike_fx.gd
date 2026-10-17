@@ -283,16 +283,45 @@ func _draw_settle_ring(at: Vector2) -> void:
 	match _style:
 		CardEnums.EffectVisualStyle.DESCEND:
 			var radius := RING_MAX_RADIUS * (1.0 - fade)
-			draw_arc(at, radius, 0.0, TAU, 24, Color(1.0, 0.92, 0.62, 0.6 * fade), 2.0)
+			ShapePaint.arc(
+				get_canvas_item(), at, radius, 0.0, TAU, 24, Color(1.0, 0.92, 0.62, 0.6 * fade), 2.0
+			)
 		CardEnums.EffectVisualStyle.DRAIN:
 			var radius_in := RING_MAX_RADIUS * fade
-			draw_arc(at, radius_in, 0.0, TAU, 24, Color(0.2, 0.18, 0.22, 0.7 * fade), 2.0)
+			ShapePaint.arc(
+				get_canvas_item(),
+				at,
+				radius_in,
+				0.0,
+				TAU,
+				24,
+				Color(0.2, 0.18, 0.22, 0.7 * fade),
+				2.0
+			)
 		CardEnums.EffectVisualStyle.RECALL:
 			var radius_recall := RING_MAX_RADIUS * fade
-			draw_arc(at, radius_recall, 0.0, TAU, 24, Color(0.78, 0.92, 1.0, 0.6 * fade), 2.0)
+			ShapePaint.arc(
+				get_canvas_item(),
+				at,
+				radius_recall,
+				0.0,
+				TAU,
+				24,
+				Color(0.78, 0.92, 1.0, 0.6 * fade),
+				2.0
+			)
 		CardEnums.EffectVisualStyle.PULSE:
 			var radius_pulse := (RING_MAX_RADIUS * PULSE_RING_SCALE) * (1.0 - fade)
-			draw_arc(at, radius_pulse, 0.0, TAU, 24, Color(1.0, 0.86, 0.42, 0.65 * fade), 2.2)
+			ShapePaint.arc(
+				get_canvas_item(),
+				at,
+				radius_pulse,
+				0.0,
+				TAU,
+				24,
+				Color(1.0, 0.86, 0.42, 0.65 * fade),
+				2.2
+			)
 
 
 ## 型ごとの色味(GameDesign.md 9章)。打撃=素の紋章のまま、恵与=温かい金、

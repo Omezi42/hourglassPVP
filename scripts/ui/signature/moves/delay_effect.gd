@@ -38,7 +38,13 @@ func draw(item: CanvasItem, t: float) -> void:
 			var k := maxf(beat - TRAIL_GAP * i, 0.0)
 			var at := _arc(center, targets[0], k)
 			var a := alpha * (1.0 - float(i) / float(TRAIL + 1))
-			item.draw_circle(at, BEAT * (1.0 - 0.15 * i), Color(SignaturePaint.SPIN, a), true)
+			ShapePaint.circle(
+				item.get_canvas_item(),
+				at,
+				BEAT * (1.0 - 0.15 * i),
+				Color(SignaturePaint.SPIN, a),
+				true
+			)
 	SignaturePaint.ripple(
 		item, targets[0], 30.0 * phase(t, impact_at(), FADE), alpha, SignaturePaint.SPIN
 	)

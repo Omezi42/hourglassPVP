@@ -177,7 +177,7 @@ func _draw_locked(art: Rect2) -> void:
 		)
 		var closed := plate.duplicate()
 		closed.append(plate[0])
-		draw_polyline(closed, Color(0.36, 0.29, 0.19, 0.6), 2.0)
+		ShapePaint.polyline(get_canvas_item(), closed, Color(0.36, 0.29, 0.19, 0.6), 2.0)
 	else:
 		var icon := card.icon_upright
 		if icon != null:
@@ -204,7 +204,7 @@ func _draw_spell_plate(art: Rect2) -> void:
 	)
 	var closed := points.duplicate()
 	closed.append(points[0])
-	draw_polyline(closed, Color(0.20, 0.26, 0.42), 2.0)
+	ShapePaint.polyline(get_canvas_item(), closed, Color(0.20, 0.26, 0.42), 2.0)
 	if card.emblem != null:
 		var side: float = art.size.x * 0.66
 		draw_texture_rect(
@@ -232,7 +232,7 @@ func _draw_diamond(center: Vector2, value: int, r: float) -> void:
 	)
 	var closed := points.duplicate()
 	closed.append(points[0])
-	draw_polyline(closed, Color(0.03, 0.06, 0.14), 2.0)
+	ShapePaint.polyline(get_canvas_item(), closed, Color(0.03, 0.06, 0.14), 2.0)
 	draw_string(
 		_font,
 		center - Vector2(20, -5),

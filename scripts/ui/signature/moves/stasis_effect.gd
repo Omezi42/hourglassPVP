@@ -22,7 +22,9 @@ func draw(item: CanvasItem, t: float) -> void:
 	var rise := phase(t, DRAIN, HOLD)
 	for target in targets:
 		var box := Rect2(target - BOX * 0.5, BOX)
-		item.draw_colored_polygon(
-			UiPaint.rounded_rect_points_uniform(box, CORNER, 6), Color(WASH, WASH.a * wash)
+		ShapePaint.colored_polygon(
+			item.get_canvas_item(),
+			UiPaint.rounded_rect_points_uniform(box, CORNER, 6),
+			Color(WASH, WASH.a * wash)
 		)
 		SignaturePaint.rising_grains(item, target, rise, wash)

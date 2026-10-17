@@ -136,7 +136,9 @@ static func emote_bubble(ci: CanvasItem, rect: Rect2, emote_id: String, font: Fo
 	UiPaint.fill_gradient_polygon(rid, points, rect, [[0.0, BUBBLE_TOP], [1.0, BUBBLE_BOTTOM]])
 	var outline := points.duplicate()
 	outline.append(points[0])
-	ci.draw_polyline(outline, UiPalette.BRASS_LIGHT, BUBBLE_OUTLINE_WIDTH, true)
+	ShapePaint.polyline(
+		ci.get_canvas_item(), outline, UiPalette.BRASS_LIGHT, BUBBLE_OUTLINE_WIDTH, true
+	)
 	if font == null:
 		return
 	ci.draw_string(

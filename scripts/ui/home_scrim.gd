@@ -99,6 +99,4 @@ func _line_half(ci: RID, rect: Rect2, fade_out: bool) -> void:
 			Vector2(rect.position.x, rect.end.y)
 		]
 	)
-	RenderingServer.canvas_item_add_polygon(
-		ci, points, PackedColorArray([left, right, right, left])
-	)
+	ShapePaint.polygon(ci, points, PackedColorArray([left, right, right, left]))

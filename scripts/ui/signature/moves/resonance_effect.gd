@@ -39,7 +39,17 @@ func draw(item: CanvasItem, t: float) -> void:
 		for side in [-1.0, 1.0]:
 			var center := targets[0] + Vector2(side * wobble * 2.0, 0.0)
 			var mid := 0.0 if side > 0.0 else PI
-			item.draw_arc(center, SHIVER_RADIUS, mid - 0.5, mid + 0.5, 12, color, 2.0, true)
+			ShapePaint.arc(
+				item.get_canvas_item(),
+				center,
+				SHIVER_RADIUS,
+				mid - 0.5,
+				mid + 0.5,
+				12,
+				color,
+				2.0,
+				true
+			)
 
 
 func _fork(item: CanvasItem, base: Vector2, wobble: float, alpha: float) -> void:
@@ -52,8 +62,8 @@ func _fork(item: CanvasItem, base: Vector2, wobble: float, alpha: float) -> void
 		var tip := base + Vector2(x, -PRONG.y)
 		item.draw_line(foot, tip, outline, 4.6, true)
 		item.draw_line(foot, tip, brass, 3.0, true)
-	item.draw_arc(base, PRONG.x, 0.0, PI, 10, outline, 4.6, true)
-	item.draw_arc(base, PRONG.x, 0.0, PI, 10, brass, 3.0, true)
+	ShapePaint.arc(item.get_canvas_item(), base, PRONG.x, 0.0, PI, 10, outline, 4.6, true)
+	ShapePaint.arc(item.get_canvas_item(), base, PRONG.x, 0.0, PI, 10, brass, 3.0, true)
 	var stem := base + Vector2(0.0, PRONG.x)
 	item.draw_line(stem, stem + Vector2(0.0, STEM), outline, 4.6, true)
 	item.draw_line(stem, stem + Vector2(0.0, STEM), brass, 3.0, true)
@@ -72,4 +82,6 @@ func _waves(item: CanvasItem, start: Vector2, end: Vector2, travel: float, alpha
 		var color := Color(SignaturePaint.SPIN, alpha * (1.0 - k * 0.5))
 		var arc_from := toward - WAVE_SPREAD
 		var arc_to := toward + WAVE_SPREAD
-		item.draw_arc(start, reach * k, arc_from, arc_to, 16, color, 2.4, true)
+		ShapePaint.arc(
+			item.get_canvas_item(), start, reach * k, arc_from, arc_to, 16, color, 2.4, true
+		)

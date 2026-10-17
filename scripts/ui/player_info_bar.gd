@@ -101,6 +101,8 @@ const SAND_GLINT_RADIUS := 1.6
 const PIP_GLOW_SPEED := 6.0
 const PIP_GLOW_EXTRA := 3.0
 const SPEND_DURATION := 0.25
+const SPEND_PIP_COLOR := Color(1.0, 0.95, 0.72)
+const DECK_PULSE_FILL_ALPHA := 0.18
 
 ## 相手側かどうか。相手側だけ手札の枚数を出す。
 var is_opponent := false:
@@ -132,16 +134,18 @@ var stacked := false:
 	set(value):
 		stacked = value
 		_sync_vessel()
-		queue_redraw()
+		_redraw_all()
 ## 2段のとき、右の群(マナの段)を上の段に置く。
 var mana_row_first := false:
 	set(value):
 		mana_row_first = value
 		_sync_vessel()
-		queue_redraw()
+		_redraw_all()
 ## 攻撃の対象として選べる状態か。光らせて示す。
 var targetable := false:
 	set(value):
+		if targetable == value:
+			return
 		targetable = value
 		queue_redraw()
 ## 自分の駒をこの帯へドラッグして放したときに呼ぶ処理(GameDesign.md 9章)。空なら受けない。
@@ -150,6 +154,8 @@ var drop_handler := Callable()
 ## (GameDesign.md 9章)。
 var active := false:
 	set(value):
+		if active == value:
+			return
 		active = value
 		queue_redraw()
 
@@ -190,6 +196,12 @@ var _spend_origins: Array[Vector2] = []
 var _spend_to := Vector2.ZERO
 var _spend_progress := 1.0
 var _spend_tween: Tween
+var _spend_shapes: Array[PaintedShape] = []
+## 本体とは別に描き直す層。本体は影・板・真鍮の輪を重ねた重い絵で、描き直すたびに
+## Web版ではGLの番号を数百個使い捨てる(Pitfalls.md)。被弾・支払い・山札の動きはこちらで出す。
+var _hp_layer: PaintedShape
+var _float_layer: PaintedShape
+var _deck_pulse_shape: PaintedShape
 
 
 func _ready() -> void:
@@ -198,6 +210,13 @@ func _ready() -> void:
 		_font = ThemeDB.fallback_font
 	custom_minimum_size = Vector2(0, BAR_HEIGHT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
+	_hp_layer = PaintedShape.new(_paint_hp)
+	add_child(_hp_layer)
+	_deck_pulse_shape = PaintedShape.new(_paint_deck_pulse)
+	_deck_pulse_shape.modulate.a = 0.0
+	add_child(_deck_pulse_shape)
+	_float_layer = PaintedShape.new(_paint_float)
+	add_child(_float_layer)
 	_fx = PlayerInfoBarFx.new(self)
 	add_child(_fx)
 	_vessel = HpVesselFx.new()
@@ -217,6 +236,7 @@ func _sync_vessel() -> void:
 ## 対局の状態から自分の側の値をまとめて取り込む。`max_hp`はソロモードの遠征だけ
 ## `MatchState.INITIAL_HP`と異なる(GameDesign.md 27章「恩恵」)。
 func show_state(state: MatchState, side: int, max_hp: int = MatchState.INITIAL_HP) -> void:
+	var before := _shown_values()
 	var previous := _hp
 	_hp = state.hp[side]
 	_max_hp = max_hp
@@ -235,7 +255,20 @@ func show_state(state: MatchState, side: int, max_hp: int = MatchState.INITIAL_H
 	_graveyard = state.graveyard[side].size()
 	_hand = state.hand[side].size()
 	_has_coin = state.coin_available.get(side, false)
+	# 対局画面は1手ごとに両方の帯へ値を配り直す。変わっていない帯まで描き直さない。
+	if _shown_values() != before:
+		_redraw_all()
+
+
+func _shown_values() -> Array:
+	return [_hp, _max_hp, _shown_hp, _mana, _max_mana, _deck, _graveyard, _hand, _has_coin]
+
+
+func _redraw_all() -> void:
 	queue_redraw()
+	if _hp_layer != null:
+		_hp_layer.repaint()
+		_float_layer.repaint()
 
 
 ## 前の対局の値を消して、まだ何も対局を見ていない状態へ戻す。次の `show_state()`
@@ -268,7 +301,10 @@ func reset() -> void:
 	_spend_progress = 1.0
 	active = false
 	targetable = false
-	queue_redraw()
+	if _deck_pulse_shape != null:
+		_deck_pulse_shape.modulate.a = 0.0
+		_place_spend_flight()
+	_redraw_all()
 
 
 ## エモートの吹き出しを名札付近へ出す(GameDesign.md 9章)。
@@ -317,13 +353,13 @@ func spend_toward(n: int, target_global: Vector2) -> void:
 
 func _set_spend_progress(value: float) -> void:
 	_spend_progress = value
-	queue_redraw()
+	_place_spend_flight()
 
 
 func _on_spend_finished() -> void:
 	_spend_progress = 1.0
 	_spend_origins.clear()
-	queue_redraw()
+	_place_spend_flight()
 
 
 ## マナの数字の位置(グローバル)。支払いの吸い込みの行き先を控えられなかったとき
@@ -359,7 +395,6 @@ func _draw() -> void:
 	_draw_portrait(ci)
 	_draw_hp()
 	_draw_mana()
-	_draw_spend_flight()
 	_pile(deck_pile_rect(), "山札", _deck)
 	_pile(_graveyard_rect(), "墓地", _graveyard)
 	if is_opponent or show_hand_pile:
@@ -409,10 +444,10 @@ func portrait_center() -> Vector2:
 	return _left(PORTRAIT_CENTER)
 
 
-func _draw_closed(points: PackedVector2Array, color: Color, width: float) -> void:
+func _draw_closed(item: CanvasItem, points: PackedVector2Array, color: Color, width: float) -> void:
 	var closed := points.duplicate()
 	closed.append(points[0])
-	draw_polyline(closed, color, width, true)
+	ShapePaint.polyline(item.get_canvas_item(), closed, color, width, true)
 
 
 ## 器具1つぶんの落ち影。大きく薄い層から小さく濃い層へ重ねる(`MatchBackdrop` と同じ形)。
@@ -470,6 +505,7 @@ func _plate(ci: RID, rect: Rect2, radius: float) -> PackedVector2Array:
 	UiPaint.apply_grain(ci, rect, PILE_GRAIN_ALPHA)
 	UiPaint.draw_inner_shadow(ci, rect, radius, 5, 3, Color(0, 0, 0), 0.35)
 	_draw_closed(
+		self,
 		UiPaint.rounded_rect_points_uniform(rect.grow(1.0), radius + 1.0, 5),
 		UiPalette.OUTLINE_DARK,
 		1.0
@@ -504,14 +540,14 @@ func _draw_name_plate() -> void:
 	var plate := Rect2(_left(NAME_PLATE_RECT.position), NAME_PLATE_RECT.size)
 	var points := _plate(ci, plate, 7.0)
 	if active:
-		_draw_closed(points, Color(UiPalette.GLOW_AMBER, 0.85), 1.5)
+		_draw_closed(self, points, Color(UiPalette.GLOW_AMBER, 0.85), 1.5)
 	var title_text := UserProfileLibrary.get_title_display(title_id)
 	var top := plate.position.y
 	if not title_text.is_empty():
-		_text(Vector2(NAME_TEXT_X, top + 15), title_text, 11, UiPalette.BRASS_HIGHLIGHT)
-		_text_shadowed(Vector2(NAME_TEXT_X, top + 32), label, 16)
+		_text(self, Vector2(NAME_TEXT_X, top + 15), title_text, 11, UiPalette.BRASS_HIGHLIGHT)
+		_text_shadowed(self, Vector2(NAME_TEXT_X, top + 32), label, 16)
 	else:
-		_text_shadowed(Vector2(NAME_TEXT_X, top + 26), label, 18)
+		_text_shadowed(self, Vector2(NAME_TEXT_X, top + 26), label, 18)
 
 
 ## 山札の山。ドロー・疲労の演出の出どころとして画面側からも引く。
@@ -533,6 +569,7 @@ func play_shatter() -> void:
 ## 山札を脈打たせる。`danger` は疲労(GameDesign.md 9章)。
 func play_deck_pulse(danger: bool) -> void:
 	_deck_pulse_color = UiPalette.WARNING_RED if danger else UiPalette.GLOW_AMBER
+	_deck_pulse_shape.repaint()
 	if _deck_tween != null and _deck_tween.is_valid():
 		_deck_tween.kill()
 	_deck_tween = create_tween()
@@ -541,7 +578,7 @@ func play_deck_pulse(danger: bool) -> void:
 
 func _set_deck_pulse(value: float) -> void:
 	_deck_pulse = value
-	queue_redraw()
+	_deck_pulse_shape.modulate.a = value
 
 
 func _graveyard_rect() -> Rect2:
@@ -572,6 +609,14 @@ func _draw_hp() -> void:
 	UiPaint.fill_gradient_polygon(
 		ci, track, rect, [[0.0, Color(0.05, 0.04, 0.04, 1.0)], [1.0, Color(0.12, 0.09, 0.08, 1.0)]]
 	)
+
+
+## 器の中身から上(砂・ガラス・縁・バッジ)。被弾の補間で毎フレーム変わるため、
+## 本体とは別の層(`_hp_layer`)へ描き、本体の重い絵を巻き込まない。
+func _paint_hp(item: PaintedShape) -> void:
+	var ci := item.get_canvas_item()
+	var rect := hp_bar_rect()
+	var track := UiPaint.rounded_rect_points_uniform(rect, HP_BAR_RADIUS, 6)
 	var ratio := clampf(_shown_hp / float(maxi(_max_hp, 1)), 0.0, 1.0)
 	var inner := rect.grow(-HP_RIM_WIDTH)
 	if ratio > 0.0:
@@ -600,6 +645,7 @@ func _draw_hp() -> void:
 	UiPaint.draw_inner_shadow(ci, rect, HP_BAR_RADIUS, 6, 3, Color(0, 0, 0, 1), 0.55)
 	# 真鍮の縁。攻撃の的になっている間は赤く光る(GameDesign.md 9章)。
 	_draw_closed(
+		item,
 		UiPaint.rounded_rect_points_uniform(rect.grow(1.0), HP_BAR_RADIUS + 1.0, 6),
 		UiPalette.OUTLINE_DARK,
 		1.0
@@ -616,23 +662,28 @@ func _draw_hp() -> void:
 		)
 	# 上限は器の中に小さく、現在値は右端の丸いバッジに(場の駒の体力バッジと同じ語彙)。
 	_text_shadowed(
+		item,
 		Vector2(rect.end.x - HP_BADGE_RADIUS - 44.0, rect.position.y + 21),
 		"/ %d" % _max_hp,
 		13,
 		Color(UiPalette.TEXT_OFFWHITE, 0.85)
 	)
 	_badge(
-		ci, Vector2(rect.end.x, rect.get_center().y), _hp, CardView.HEALTH_RED, HP_BADGE_RADIUS, 20
+		item,
+		Vector2(rect.end.x, rect.get_center().y),
+		_hp,
+		CardView.HEALTH_RED,
+		HP_BADGE_RADIUS,
+		20
 	)
-	if _float_left > 0.0:
-		_draw_float(rect)
 
 
 ## 丸いバッジ。場の駒の体力・攻撃力・手札のコストと同じ語彙(暗い地 + 色の輪 + 数字)を、
 ## 真鍮の縁で器へ嵌め込んだ形にする。
 func _badge(
-	ci: RID, center: Vector2, value: int, color: Color, radius: float, font_size: int
+	item: CanvasItem, center: Vector2, value: int, color: Color, radius: float, font_size: int
 ) -> void:
+	var ci := item.get_canvas_item()
 	_shadow_circle(ci, center, radius)
 	UiPaint.draw_ring(ci, center, radius + 2.0, UiPalette.BRASS_MID, 2.0, 32)
 	UiPaint.draw_ring(ci, center, radius + 3.5, UiPalette.OUTLINE_DARK, 1.0, 32)
@@ -641,8 +692,8 @@ func _badge(
 	var text := str(value)
 	var width := _font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
 	var at := center + Vector2(-width * 0.5, font_size * 0.36)
-	_text(at + Vector2.ONE, text, font_size, TEXT_SHADOW)
-	_text(at, text, font_size, color)
+	_text(item, at + Vector2.ONE, text, font_size, TEXT_SHADOW)
+	_text(item, at, text, font_size, color)
 
 
 ## マナは青のバッジに現在値、右の溝に最大値ぶんの粒(GameDesign.md 9章「数字とピップの併記」)。
@@ -665,29 +716,54 @@ func _draw_mana() -> void:
 		var filled: bool = i < _mana
 		var base_color := MANA_BLUE if filled else MANA_EMPTY
 		# 縁を暗く落としてから内側をひとまわり小さく塗り、面取り相当の立体感を出す。
-		draw_circle(center, PIP_RADIUS, base_color.darkened(PIP_RIM_DARKEN))
-		draw_circle(center, PIP_RADIUS * PIP_CORE_RATIO, base_color)
+		ShapePaint.circle(
+			get_canvas_item(), center, PIP_RADIUS, base_color.darkened(PIP_RIM_DARKEN)
+		)
+		ShapePaint.circle(get_canvas_item(), center, PIP_RADIUS * PIP_CORE_RATIO, base_color)
 		var highlight_center := center + Vector2(-1, -1) * PIP_RADIUS * PIP_HIGHLIGHT_OFFSET
 		var highlight_alpha := 0.4 if filled else 0.14
-		draw_circle(
-			highlight_center, PIP_RADIUS * PIP_HIGHLIGHT_RATIO, Color(1, 1, 1, highlight_alpha)
+		ShapePaint.circle(
+			get_canvas_item(),
+			highlight_center,
+			PIP_RADIUS * PIP_HIGHLIGHT_RATIO,
+			Color(1, 1, 1, highlight_alpha)
 		)
 		var arc_color := Color(0.75, 0.85, 1.0, 0.6) if filled else Color(0.4, 0.42, 0.48, 0.5)
-		draw_arc(center, PIP_RADIUS, 0.0, TAU, 16, arc_color, 1.5)
-	_badge(ci, _right(MANA_BADGE_CENTER), _mana, MANA_BLUE, MANA_BADGE_RADIUS, 18)
+		ShapePaint.arc(get_canvas_item(), center, PIP_RADIUS, 0.0, TAU, 16, arc_color, 1.5)
+	_badge(self, _right(MANA_BADGE_CENTER), _mana, MANA_BLUE, MANA_BADGE_RADIUS, 18)
 
 
 ## 支払いで消えるピップが、出した札(または撃った砂術)の方向へ吸われて消える
 ## (GameDesign.md 9章)。
-func _draw_spend_flight() -> void:
-	if _spend_origins.is_empty() or _spend_progress >= 1.0:
-		return
-	var ci := get_canvas_item()
+func _place_spend_flight() -> void:
+	var flying := not _spend_origins.is_empty() and _spend_progress < 1.0
 	var fade := 1.0 - _spend_progress
-	for origin in _spend_origins:
-		var pos: Vector2 = origin.lerp(_spend_to, _spend_progress)
-		var radius := PIP_RADIUS * (0.55 + 0.45 * fade)
-		UiPaint.fill_circle(ci, pos, radius, Color(1.0, 0.95, 0.72, fade), 12)
+	while _spend_shapes.size() < _spend_origins.size():
+		var shape := PaintedShape.new(_paint_spend_pip)
+		add_child(shape)
+		move_child(shape, _fx.get_index())
+		_spend_shapes.append(shape)
+	for i in _spend_shapes.size():
+		var shape := _spend_shapes[i]
+		shape.visible = flying and i < _spend_origins.size()
+		if not shape.visible:
+			continue
+		var grow := 0.55 + 0.45 * fade
+		shape.position = _spend_origins[i].lerp(_spend_to, _spend_progress)
+		shape.scale = Vector2(grow, grow)
+		shape.modulate.a = fade
+
+
+func _paint_spend_pip(shape: PaintedShape) -> void:
+	UiPaint.fill_circle(shape.get_canvas_item(), Vector2.ZERO, PIP_RADIUS, SPEND_PIP_COLOR, 12)
+
+
+## 山札の脈打ちの光(縁 + 薄い面)。形は山札の札に合わせて1度だけ描き、強さは不透明度で出す。
+func _paint_deck_pulse(shape: PaintedShape) -> void:
+	var rect := deck_pile_rect()
+	var points := UiPaint.rounded_rect_points_uniform(rect, PILE_RADIUS, 5)
+	_draw_closed(shape, points, Color(_deck_pulse_color, 1.0), 3.0)
+	shape.draw_rect(rect.grow(2.0), Color(_deck_pulse_color, DECK_PULSE_FILL_ALPHA))
 
 
 ## コインを持っている間だけ、マナのバッジの肩に金貨を載せる。
@@ -708,33 +784,35 @@ func _draw_coin() -> void:
 ## 山札・墓地・手札の枚数。濃紺の小さな札に、見出しを小さく上へ、枚数を大きく右下へ。
 func _pile(rect: Rect2, label: String, count: int) -> void:
 	var ci := get_canvas_item()
-	var points := _plate(ci, rect, PILE_RADIUS)
-	var pulsing: bool = (
-		_deck_pulse > 0.0 and is_equal_approx(rect.position.x, deck_pile_rect().position.x)
-	)
-	if pulsing:
-		_draw_closed(points, Color(_deck_pulse_color, _deck_pulse), 3.0)
-		draw_rect(rect.grow(2.0), Color(_deck_pulse_color, 0.18 * _deck_pulse))
-	_text(rect.position + Vector2(7, 15), label, 11, UiPalette.BRASS_HIGHLIGHT)
+	_plate(ci, rect, PILE_RADIUS)
+	_text(self, rect.position + Vector2(7, 15), label, 11, UiPalette.BRASS_HIGHLIGHT)
 	var text := str(count)
 	var width := _font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 21).x
 	var at := Vector2(rect.end.x - 8.0 - width, rect.position.y + 34)
-	_text(at + Vector2.ONE, text, 21, TEXT_SHADOW)
-	_text(at, text, 21, UiPalette.GLOW_AMBER)
+	_text(self, at + Vector2.ONE, text, 21, TEXT_SHADOW)
+	_text(self, at, text, 21, UiPalette.GLOW_AMBER)
 
 
 func _text(
-	pos: Vector2, value: String, font_size: int, color: Color = UiPalette.TEXT_OFFWHITE
+	item: CanvasItem,
+	pos: Vector2,
+	value: String,
+	font_size: int,
+	color: Color = UiPalette.TEXT_OFFWHITE
 ) -> void:
-	draw_string(_font, pos, value, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color)
+	item.draw_string(_font, pos, value, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color)
 
 
 ## 数値は砂の上でも地の上でも同じ色で読めるよう、暗い影を1pxずらして敷く(GameDesign.md 9章)。
 func _text_shadowed(
-	pos: Vector2, value: String, font_size: int, color: Color = UiPalette.TEXT_OFFWHITE
+	item: CanvasItem,
+	pos: Vector2,
+	value: String,
+	font_size: int,
+	color: Color = UiPalette.TEXT_OFFWHITE
 ) -> void:
-	_text(pos + Vector2.ONE, value, font_size, TEXT_SHADOW)
-	_text(pos, value, font_size, color)
+	_text(item, pos + Vector2.ONE, value, font_size, TEXT_SHADOW)
+	_text(item, pos, value, font_size, color)
 
 
 ## HPが動いた。**瞬時に差し替えず補間し、バーを光らせ、増減を数字で浮かせる**
@@ -753,17 +831,19 @@ func _animate_hp(previous: int) -> void:
 
 func _set_shown_hp(value: float) -> void:
 	_shown_hp = value
-	queue_redraw()
+	_hp_layer.repaint()
+	# 砂粒のきらめきは残っている砂の範囲だけに置くため、割合を渡し直す。
+	_sync_fx()
 
 
 func _set_flash(value: float) -> void:
 	_flash = value
-	queue_redraw()
+	_hp_layer.repaint()
 
 
 func _set_float_left(value: float) -> void:
 	_float_left = value
-	queue_redraw()
+	_float_layer.repaint()
 
 
 ## 増減のフローティング数字。減ったら赤、回復したら琥珀。
@@ -771,7 +851,10 @@ func _set_float_left(value: float) -> void:
 ## **ダメージは大きさと色でも示す**(GameDesign.md 9章)。1と7が同じ見た目だと、
 ## 盤面へ目を戻す前に「どれだけ削られたのか」が分からない。**回復は大きさを変えない**
 ## ——受け身の出来事であり、強調する理由がないため。
-func _draw_float(rect: Rect2) -> void:
+func _paint_float(item: PaintedShape) -> void:
+	if _float_left <= 0.0:
+		return
+	var rect := hp_bar_rect()
 	var ratio := _float_left / FLOAT_DURATION
 	var color := UiPalette.GLOW_AMBER if _float_amount > 0 else CardView.HEALTH_RED
 	var text := "+%d" % _float_amount if _float_amount > 0 else str(_float_amount)
@@ -790,4 +873,4 @@ func _draw_float(rect: Rect2) -> void:
 		at = Vector2(rect.end.x - FLOAT_HEAVY_WIDTH, rect.position.y - FLOAT_HEAVY_LIFT - rise)
 		align = HORIZONTAL_ALIGNMENT_RIGHT
 		width = FLOAT_HEAVY_WIDTH
-	draw_string(_font, at, text, align, width, size, Color(color, minf(ratio * 2.0, 1.0)))
+	item.draw_string(_font, at, text, align, width, size, Color(color, minf(ratio * 2.0, 1.0)))

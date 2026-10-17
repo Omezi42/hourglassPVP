@@ -164,7 +164,7 @@ func _draw_maxed() -> void:
 	)
 	var closed := points.duplicate()
 	closed.append(points[0])
-	draw_polyline(closed, Color(0.72, 0.58, 0.36), 1.6)
+	ShapePaint.polyline(get_canvas_item(), closed, Color(0.72, 0.58, 0.36), 1.6)
 	draw_string(
 		_font,
 		Vector2(rect.position.x, rect.get_center().y + 6.0),
@@ -201,7 +201,7 @@ func _draw_spell_plate(p_rect: Rect2, tint: Color) -> void:
 	)
 	var closed := points.duplicate()
 	closed.append(points[0])
-	draw_polyline(closed, CardView.SPELL_BORDER, 2.2)
+	ShapePaint.polyline(get_canvas_item(), closed, CardView.SPELL_BORDER, 2.2)
 	if card.emblem != null:
 		var side: float = rect.size.x * 0.62
 		draw_texture_rect(
@@ -229,7 +229,7 @@ func _draw_diamond(center: Vector2, value: int, r: float) -> void:
 	)
 	var closed := points.duplicate()
 	closed.append(points[0])
-	draw_polyline(closed, Color(0.03, 0.06, 0.14), 2.0)
+	ShapePaint.polyline(get_canvas_item(), closed, Color(0.03, 0.06, 0.14), 2.0)
 	draw_string(
 		_font,
 		center - Vector2(20, -6),

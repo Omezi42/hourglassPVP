@@ -53,7 +53,7 @@ func _draw_brass_frame(ci: RID, rect: Rect2, points: PackedVector2Array) -> void
 func _draw_closed(points: PackedVector2Array, color: Color, width: float) -> void:
 	var closed := points.duplicate()
 	closed.append(points[0])
-	draw_polyline(closed, color, width, true)
+	ShapePaint.polyline(get_canvas_item(), closed, color, width, true)
 
 
 ## 上端・下端の真鍮の飾り板。中央に小さな砂時計の紋章を置き、操作盤そのものが

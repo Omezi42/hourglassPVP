@@ -255,7 +255,8 @@ func _rule(width: float) -> Control:
 			line.draw_line(mid - Vector2(reach, 0), mid - inset, faded, 1.0)
 			line.draw_line(mid + inset, mid + Vector2(reach, 0), faded, 1.0)
 			var d := RULE_DIAMOND
-			line.draw_colored_polygon(
+			ShapePaint.colored_polygon(
+				line.get_canvas_item(),
 				PackedVector2Array(
 					[
 						mid + Vector2(0, -d),

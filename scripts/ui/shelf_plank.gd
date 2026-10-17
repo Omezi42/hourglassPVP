@@ -83,4 +83,4 @@ func _draw_grain(rect: Rect2) -> void:
 				Vector2(rect.end.x, y + wobble_b),
 			]
 		)
-		draw_polyline(points, color, GRAIN_LINE_WIDTH, true)
+		ShapePaint.polyline(get_canvas_item(), points, color, GRAIN_LINE_WIDTH, true)

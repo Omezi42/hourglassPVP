@@ -80,7 +80,9 @@ func _draw_streams(item: CanvasItem, t: float) -> void:
 			if q <= 0.0 or q >= 1.0:
 				continue
 			var at := base + Vector2(sin(q * TAU + side) * 4.0, -DRAW_REACH * q)
-			item.draw_circle(at, 1.8, Color(SignaturePaint.SAND, alpha * (1.0 - q)))
+			ShapePaint.circle(
+				item.get_canvas_item(), at, 1.8, Color(SignaturePaint.SAND, alpha * (1.0 - q))
+			)
 
 
 func _drawing() -> bool:

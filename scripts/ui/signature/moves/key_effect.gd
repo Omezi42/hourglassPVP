@@ -78,7 +78,7 @@ func _keyhole(item: CanvasItem, at: Vector2, alpha: float) -> void:
 			at + Vector2(-HOLE * 0.45, HOLE * 1.1)
 		]
 	)
-	item.draw_colored_polygon(slot, Color(UiPalette.OUTLINE_DARK, alpha))
+	ShapePaint.colored_polygon(item.get_canvas_item(), slot, Color(UiPalette.OUTLINE_DARK, alpha))
 
 
 ## 上から差し込む鍵。`tip` は軸の先、`width` は回して奥行き方向へ倒れた見かけの幅(1→0)。

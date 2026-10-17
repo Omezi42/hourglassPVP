@@ -38,7 +38,7 @@ func draw(item: CanvasItem, t: float) -> void:
 		var stroke := _stroke(front, offset)
 		if stroke.size() >= 2:
 			var color := Color(SignaturePaint.SPIN, alpha * 0.75)
-			item.draw_polyline(stroke, color, 1.4, true)
+			ShapePaint.polyline(item.get_canvas_item(), stroke, color, 1.4, true)
 	for i in range(NOTES):
 		var along := front - NOTE_GAP * i
 		if along <= 0.0:

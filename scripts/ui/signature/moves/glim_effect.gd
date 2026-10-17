@@ -46,5 +46,5 @@ func _glint(item: CanvasItem, at: Vector2, size: float, alpha: float) -> void:
 		return
 	item.draw_line(at - Vector2(size, 0.0), at + Vector2(size, 0.0), Color(LIGHT, alpha), 1.6, true)
 	item.draw_line(at - Vector2(0.0, size), at + Vector2(0.0, size), Color(LIGHT, alpha), 1.6, true)
-	item.draw_circle(at, size * 0.35, Color(HALO, alpha * 0.5))
-	item.draw_circle(at, size * 0.18, Color(1, 1, 1, alpha))
+	ShapePaint.circle(item.get_canvas_item(), at, size * 0.35, Color(HALO, alpha * 0.5))
+	ShapePaint.circle(item.get_canvas_item(), at, size * 0.18, Color(1, 1, 1, alpha))

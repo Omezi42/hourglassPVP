@@ -169,4 +169,4 @@ func _draw_spine() -> void:
 func _outline(points: PackedVector2Array, color: Color, width: float) -> void:
 	var closed := points.duplicate()
 	closed.append(points[0])
-	draw_polyline(closed, color, width)
+	ShapePaint.polyline(get_canvas_item(), closed, color, width)

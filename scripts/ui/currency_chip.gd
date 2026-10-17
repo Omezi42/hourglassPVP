@@ -139,7 +139,13 @@ func _draw() -> void:
 	)
 	var outline := points.duplicate()
 	outline.append(points[0])
-	draw_polyline(outline, UiPalette.BRASS_MID.lerp(UiPalette.BRASS_HIGHLIGHT, _pulse), 2.0, true)
+	ShapePaint.polyline(
+		get_canvas_item(),
+		outline,
+		UiPalette.BRASS_MID.lerp(UiPalette.BRASS_HIGHLIGHT, _pulse),
+		2.0,
+		true
+	)
 
 	var emblem := EMBLEM_SIZE * scale_factor
 	var center := Vector2(

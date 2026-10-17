@@ -147,7 +147,8 @@ func _draw_portrait(center: Vector2, icon_id: String) -> void:
 			Rect2(center - Vector2.ONE * PORTRAIT_ICON, Vector2.ONE * PORTRAIT_ICON * 2.0),
 			false
 		)
-	draw_arc(
+	ShapePaint.arc(
+		get_canvas_item(),
 		center,
 		PORTRAIT_RADIUS,
 		0.0,

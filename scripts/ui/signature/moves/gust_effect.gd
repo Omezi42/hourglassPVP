@@ -43,7 +43,7 @@ func draw(item: CanvasItem, t: float) -> void:
 		var angle := t * 14.0 + TAU * SignaturePaint.jitter(i, 23)
 		var radius := lerpf(BOTTOM, TOP, s) * 1.1
 		var at := base + Vector2(cos(angle) * radius, sin(angle) * radius * 0.28 - HEIGHT * s)
-		item.draw_circle(at, 1.8, Color(SignaturePaint.SAND_DARK, alpha))
+		ShapePaint.circle(item.get_canvas_item(), at, 1.8, Color(SignaturePaint.SAND_DARK, alpha))
 
 
 func _measure() -> void:

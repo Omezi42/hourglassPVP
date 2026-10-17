@@ -54,17 +54,46 @@ static func draw_medal(
 		ci, center + Vector2(0.0, radius * 0.06), radius * 1.01, Color(SHADOW_COLOR, 0.3), SEGMENTS
 	)
 	fill_gradient_circle(item, center, radius, [[0.0, light], [0.45, mid], [1.0, dark]])
-	item.draw_arc(center, radius, 0.0, TAU, SEGMENTS, Color(SHADOW_COLOR, 0.75), edge, true)
+	ShapePaint.arc(
+		item.get_canvas_item(),
+		center,
+		radius,
+		0.0,
+		TAU,
+		SEGMENTS,
+		Color(SHADOW_COLOR, 0.75),
+		edge,
+		true
+	)
 	# 縁と面の境の溝。
-	item.draw_arc(
-		center, radius * 0.82, 0.0, TAU, SEGMENTS, Color(dark.darkened(0.35), 0.9), edge * 1.6, true
+	ShapePaint.arc(
+		item.get_canvas_item(),
+		center,
+		radius * 0.82,
+		0.0,
+		TAU,
+		SEGMENTS,
+		Color(dark.darkened(0.35), 0.9),
+		edge * 1.6,
+		true
 	)
 	var field := radius * 0.8
 	fill_gradient_circle(
 		item, center, field, [[0.0, dark.lerp(mid, 0.35)], [0.6, mid], [1.0, light.lerp(mid, 0.3)]]
 	)
-	item.draw_arc(center, radius * 0.66, 0.0, TAU, SEGMENTS, Color(dark, 0.45), edge, true)
-	item.draw_arc(
+	ShapePaint.arc(
+		item.get_canvas_item(),
+		center,
+		radius * 0.66,
+		0.0,
+		TAU,
+		SEGMENTS,
+		Color(dark, 0.45),
+		edge,
+		true
+	)
+	ShapePaint.arc(
+		item.get_canvas_item(),
 		center + Vector2(0.0, edge),
 		radius * 0.66,
 		0.0,
@@ -78,10 +107,19 @@ static func draw_medal(
 		_draw_mark(item, center, radius, tier, font, light, dark)
 	# 左上の照り返し。
 	var specular := Color(SPECULAR_COLOR, SPECULAR_COLOR.a * (0.4 if dim else 1.0))
-	item.draw_arc(
-		center, radius * 0.92, PI * 1.08, PI * 1.55, ARC_SEGMENTS, specular, radius * 0.05, true
+	ShapePaint.arc(
+		item.get_canvas_item(),
+		center,
+		radius * 0.92,
+		PI * 1.08,
+		PI * 1.55,
+		ARC_SEGMENTS,
+		specular,
+		radius * 0.05,
+		true
 	)
-	item.draw_arc(
+	ShapePaint.arc(
+		item.get_canvas_item(),
 		center,
 		field * 0.9,
 		PI * 1.12,
@@ -149,7 +187,9 @@ static func draw_filled_star(item: CanvasItem, at: Vector2, radius: float) -> vo
 		rect,
 		[[0.0, UiPalette.ROUND_FILLED_TOP], [1.0, UiPalette.ROUND_FILLED_BOTTOM]]
 	)
-	item.draw_polyline(closed(points), Color(SHADOW_COLOR, 0.8), star_outline(radius), true)
+	ShapePaint.polyline(
+		item.get_canvas_item(), closed(points), Color(SHADOW_COLOR, 0.8), star_outline(radius), true
+	)
 
 
 static func star_outline(radius: float) -> float:

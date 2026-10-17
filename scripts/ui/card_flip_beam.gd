@@ -98,13 +98,13 @@ func _draw_beam(beam: Dictionary) -> void:
 	var head: Vector2 = from.lerp(to, progress)
 	draw_line(from, head, Color(color, 0.3), 7.0)
 	draw_line(from, head, Color(color, 0.95), 2.0)
-	draw_circle(head, 7.0, Color(color, 0.9))
+	ShapePaint.circle(get_canvas_item(), head, 7.0, Color(color, 0.9))
 	if beam["grand"]:
 		_draw_grains(from, to, color, progress)
 	if progress <= BURST_AT:
 		return
 	var burst := (progress - BURST_AT) / (1.0 - BURST_AT)
-	draw_circle(to, 10.0 + 28.0 * burst, Color(color, 0.5 * (1.0 - burst)))
+	ShapePaint.circle(get_canvas_item(), to, 10.0 + 28.0 * burst, Color(color, 0.5 * (1.0 - burst)))
 	if beam["grand"]:
 		_draw_rays(to, color, burst)
 
@@ -122,7 +122,7 @@ func _draw_grains(from: Vector2, to: Vector2, color: Color, progress: float) -> 
 		# 位相をずらした正弦で散らす。毎フレーム乱数を引くと粒がちらつく。
 		var spread := sin(float(i) * 2.4 + progress * 16.0) * (2.5 + float(i) * 0.9)
 		var at := from.lerp(to, back) + across * spread
-		draw_circle(at, 1.0 + 2.0 * fade, Color(color, 0.75 * fade))
+		ShapePaint.circle(get_canvas_item(), at, 1.0 + 2.0 * fade, Color(color, 0.75 * fade))
 
 
 ## 着弾の光条。**閃光の円だけでは「届いた」ことしか伝わらない**ため、

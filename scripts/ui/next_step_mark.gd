@@ -66,8 +66,12 @@ func _draw() -> void:
 		Rect2(Vector2.ZERO, size).grow(GLOW_GROW), GLOW_RADIUS, 6
 	)
 	ring.append(ring[0])
-	draw_polyline(ring, Color(UiPalette.GLOW_AMBER, 0.12 + 0.18 * pulse), HALO_WIDTH, true)
-	draw_polyline(ring, Color(UiPalette.GLOW_AMBER, 0.45 + 0.5 * pulse), GLOW_WIDTH, true)
+	ShapePaint.polyline(
+		get_canvas_item(), ring, Color(UiPalette.GLOW_AMBER, 0.12 + 0.18 * pulse), HALO_WIDTH, true
+	)
+	ShapePaint.polyline(
+		get_canvas_item(), ring, Color(UiPalette.GLOW_AMBER, 0.45 + 0.5 * pulse), GLOW_WIDTH, true
+	)
 	_draw_tag(ci)
 
 
@@ -81,8 +85,10 @@ func _draw_tag(ci: RID) -> void:
 		Vector2(size.x - tag_size.x - TAG_RIGHT * tag_scale, -tag_size.y * TAG_OVERHANG), tag_size
 	)
 	var points := UiPaint.rounded_rect_points_uniform(rect, radius, 4)
-	draw_colored_polygon(
-		UiPaint.rounded_rect_points_uniform(rect.grow(1.5), radius + 1.5, 4), UiPalette.OUTLINE_DARK
+	ShapePaint.colored_polygon(
+		get_canvas_item(),
+		UiPaint.rounded_rect_points_uniform(rect.grow(1.5), radius + 1.5, 4),
+		UiPalette.OUTLINE_DARK
 	)
 	UiPaint.fill_gradient_polygon(ci, points, rect, TAG_STOPS)
 	UiPaint.draw_bevel(ci, points, UiPalette.BRASS_HIGHLIGHT, UiPalette.BRASS_DARK, 1.5, false)

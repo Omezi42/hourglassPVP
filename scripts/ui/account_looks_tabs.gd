@@ -221,7 +221,7 @@ class TitleRow:
 			border = UiPalette.GLOW_AMBER
 		elif is_hovered():
 			border = UiPalette.BRASS_LIGHT
-		draw_polyline(outline, border, 1.5 if is_selected else 1.0, true)
+		ShapePaint.polyline(get_canvas_item(), outline, border, 1.5 if is_selected else 1.0, true)
 		var font := get_theme_default_font()
 		var text := ("◆ " if is_selected else "    ") + UserProfileLibrary.get_title_name(title_id)
 		var color := UiPalette.GLOW_AMBER if is_selected else UiPalette.TEXT_OFFWHITE

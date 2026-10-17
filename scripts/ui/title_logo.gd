@@ -116,7 +116,7 @@ func _draw_diamond(layer: CanvasItem, center: Vector2, radius: float, color: Col
 			center + Vector2(-radius, 0.0),
 		]
 	)
-	layer.draw_colored_polygon(points, color)
+	ShapePaint.colored_polygon(layer.get_canvas_item(), points, color)
 
 
 func _emblem_rect() -> Rect2:

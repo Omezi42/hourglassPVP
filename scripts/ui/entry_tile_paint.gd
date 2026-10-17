@@ -180,4 +180,6 @@ static func draw_dot(target: CanvasItem, center: Vector2, color: Color, phase: f
 
 
 static func fill_circle(target: CanvasItem, center: Vector2, radius: float, color: Color) -> void:
-	target.draw_colored_polygon(UiPaint.circle_points(center, radius, SEGMENTS), color)
+	ShapePaint.colored_polygon(
+		target.get_canvas_item(), UiPaint.circle_points(center, radius, SEGMENTS), color
+	)

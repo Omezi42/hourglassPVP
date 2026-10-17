@@ -36,8 +36,10 @@ func draw(item: CanvasItem, t: float) -> void:
 	var count := maxi(int(STEPS * climb), 1)
 	for i in range(count + 1):
 		points.append(_vine(root, climb * float(i) / float(count)))
-	item.draw_polyline(points, Color(UiPalette.OUTLINE_DARK, alpha * 0.6), 4.2, true)
-	item.draw_polyline(points, Color(STEM, alpha), 2.6, true)
+	ShapePaint.polyline(
+		item.get_canvas_item(), points, Color(UiPalette.OUTLINE_DARK, alpha * 0.6), 4.2, true
+	)
+	ShapePaint.polyline(item.get_canvas_item(), points, Color(STEM, alpha), 2.6, true)
 	var unfurl := back_out(phase(t, CLIMB, UNFURL))
 	for k in range(LEAVES.size()):
 		var at: float = LEAVES[k]

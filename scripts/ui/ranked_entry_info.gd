@@ -127,11 +127,17 @@ func _draw_stars(center: Vector2, radius: float) -> void:
 			continue
 		var points := RankMedal.star_points(at, radius)
 		var closed := RankMedal.closed(points)
-		draw_colored_polygon(points, STAR_EMPTY_FILL)
-		draw_polyline(
-			_offset(closed, Vector2(0.0, 1.0)), EntryTilePaint.ENGRAVE_LIGHT, outline, true
+		ShapePaint.colored_polygon(get_canvas_item(), points, STAR_EMPTY_FILL)
+		ShapePaint.polyline(
+			get_canvas_item(),
+			_offset(closed, Vector2(0.0, 1.0)),
+			EntryTilePaint.ENGRAVE_LIGHT,
+			outline,
+			true
 		)
-		draw_polyline(closed, Color(EntryTilePaint.ENGRAVE_COLOR, 0.55), outline, true)
+		ShapePaint.polyline(
+			get_canvas_item(), closed, Color(EntryTilePaint.ENGRAVE_COLOR, 0.55), outline, true
+		)
 
 
 ## 下端の凹んだ行。左に待っている人(または途中の対局の知らせ)、右にシーズンの残り日数。

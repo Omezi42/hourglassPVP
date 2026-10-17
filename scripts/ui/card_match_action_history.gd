@@ -190,7 +190,7 @@ func _draw_tile(rect: Rect2, item: Dictionary, alpha: float) -> void:
 	UiPaint.apply_grain(ci, rect, GRAIN_ALPHA * alpha)
 	var outline := points.duplicate()
 	outline.append(points[0])
-	draw_polyline(outline, Color(UiPalette.OUTLINE_DARK, alpha), 1.0, true)
+	ShapePaint.polyline(get_canvas_item(), outline, Color(UiPalette.OUTLINE_DARK, alpha), 1.0, true)
 	UiPaint.draw_bevel(
 		ci,
 		points,

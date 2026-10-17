@@ -92,7 +92,9 @@ func _draw_shatter(rect: Rect2) -> void:
 		var angle := TAU * float(i) / float(shards)
 		var to := center + Vector2(cos(angle), sin(angle) * 0.8) * reach
 		var shard_size := 4.0 * fade + 1.0
-		_view.draw_circle(to, shard_size, Color(0.95, 0.5, 0.4, fade * 0.9))
+		ShapePaint.circle(
+			_view.get_canvas_item(), to, shard_size, Color(0.95, 0.5, 0.4, fade * 0.9)
+		)
 	_view.draw_rect(rect, Color(1.0, 0.35, 0.3, fade * 0.18))
 
 
@@ -113,7 +115,11 @@ func _draw_drop(rect: Rect2, upward := false) -> void:
 		var outside: bool = y > bottom if upward else y < top
 		if outside:
 			continue
-		_view.draw_circle(Vector2(x, y), 3.0 - i * 0.6, Color(amber, 0.9 - i * 0.25))
+		ShapePaint.circle(
+			_view.get_canvas_item(), Vector2(x, y), 3.0 - i * 0.6, Color(amber, 0.9 - i * 0.25)
+		)
 	if _progress > 0.85:
 		var glow := (_progress - 0.85) / 0.15
-		_view.draw_circle(Vector2(x, to), 8.0 * glow, Color(amber, 0.35 * (1.0 - glow)))
+		ShapePaint.circle(
+			_view.get_canvas_item(), Vector2(x, to), 8.0 * glow, Color(amber, 0.35 * (1.0 - glow))
+		)

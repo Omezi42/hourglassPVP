@@ -65,4 +65,4 @@ func _leaf(
 	for i in range(11, 0, -1):
 		var s := float(i) / 12.0
 		shape.append(root + dir * size.x * s - across * size.y * sin(s * PI) * 0.6)
-	item.draw_colored_polygon(shape, Color(LEAF_COLOR, alpha))
+	ShapePaint.colored_polygon(item.get_canvas_item(), shape, Color(LEAF_COLOR, alpha))

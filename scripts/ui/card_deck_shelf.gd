@@ -288,7 +288,7 @@ func _draw_socket(base: Vector2, art_w: float) -> void:
 			Vector2(base.x - half, top),
 		]
 	)
-	draw_polyline(outline, Color(0.48, 0.38, 0.24, 0.20), 1.6)
+	ShapePaint.polyline(get_canvas_item(), outline, Color(0.48, 0.38, 0.24, 0.20), 1.6)
 
 
 ## デッキが1枚も無いときだけ、棚の中ほどへ1行を置く。**受け皿の上へ文字を直に
@@ -304,7 +304,7 @@ func _draw_hint() -> void:
 	)
 	var closed := points.duplicate()
 	closed.append(points[0])
-	draw_polyline(closed, Color(0.58, 0.46, 0.30), 1.8)
+	ShapePaint.polyline(get_canvas_item(), closed, Color(0.58, 0.46, 0.30), 1.8)
 	draw_string(
 		_font,
 		Vector2(plate.position.x, plate.get_center().y + 6.0),
@@ -333,7 +333,7 @@ func _draw_diamond(center: Vector2, value: int, r: float) -> void:
 	)
 	var closed := points.duplicate()
 	closed.append(points[0])
-	draw_polyline(closed, Color(0.03, 0.06, 0.14), 2.0)
+	ShapePaint.polyline(get_canvas_item(), closed, Color(0.03, 0.06, 0.14), 2.0)
 	draw_string(
 		_font,
 		center - Vector2(20, -5),
@@ -380,7 +380,7 @@ func _draw_spell_plate(p_rect: Rect2, card: CardData) -> void:
 	)
 	var closed := points.duplicate()
 	closed.append(points[0])
-	draw_polyline(closed, CardView.SPELL_BORDER, 2.2)
+	ShapePaint.polyline(get_canvas_item(), closed, CardView.SPELL_BORDER, 2.2)
 	if card.emblem != null:
 		var side: float = rect.size.x * 0.62
 		draw_texture_rect(

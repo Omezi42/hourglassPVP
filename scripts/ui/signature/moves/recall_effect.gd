@@ -35,5 +35,7 @@ func draw(item: CanvasItem, t: float) -> void:
 			points.append(
 				floor_at + Vector2(cos(angle) * radius.x, sin(angle) * radius.y - HEIGHT * s)
 			)
-		item.draw_polyline(points, Color(SignaturePaint.SAND_DARK, alpha * 0.35), 4.0, true)
-		item.draw_polyline(points, Color(MIST, alpha * 0.85), 1.8, true)
+		ShapePaint.polyline(
+			item.get_canvas_item(), points, Color(SignaturePaint.SAND_DARK, alpha * 0.35), 4.0, true
+		)
+		ShapePaint.polyline(item.get_canvas_item(), points, Color(MIST, alpha * 0.85), 1.8, true)

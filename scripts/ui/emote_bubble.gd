@@ -74,7 +74,7 @@ func _draw() -> void:
 	)
 	var outline := points.duplicate()
 	outline.append(points[0])
-	draw_polyline(outline, UiPalette.BRASS_LIGHT, 1.5, true)
+	ShapePaint.polyline(get_canvas_item(), outline, UiPalette.BRASS_LIGHT, 1.5, true)
 
 	draw_string(
 		_font,

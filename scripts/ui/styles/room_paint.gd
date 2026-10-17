@@ -55,9 +55,17 @@ static func wall(ci: CanvasItem, rect: Rect2, seed_value: int, tint: Color = Col
 		)
 		for ratio in [0.12, 0.65]:
 			var ny: float = rect.position.y + rect.size.y * ratio
-			ci.draw_circle(Vector2(x + PLANK_WIDTH * 0.5, ny), 2.0, Color(0.05, 0.04, 0.03, 0.8))
-			ci.draw_circle(
-				Vector2(x + PLANK_WIDTH * 0.5 - 0.6, ny - 0.6), 1.1, Color(0.5, 0.42, 0.3, 0.55)
+			ShapePaint.circle(
+				ci.get_canvas_item(),
+				Vector2(x + PLANK_WIDTH * 0.5, ny),
+				2.0,
+				Color(0.05, 0.04, 0.03, 0.8)
+			)
+			ShapePaint.circle(
+				ci.get_canvas_item(),
+				Vector2(x + PLANK_WIDTH * 0.5 - 0.6, ny - 0.6),
+				1.1,
+				Color(0.5, 0.42, 0.3, 0.55)
 			)
 		x += PLANK_WIDTH
 	UiPaint.apply_grain(rid, rect, GRAIN_ALPHA)
@@ -77,7 +85,7 @@ static func gear(
 		var wave := sin(TAU * t * teeth)
 		var r: float = radius * (0.82 + 0.18 * clampf(wave * 3.0, -1.0, 1.0))
 		points.append(center + Vector2(cos(a), sin(a)) * r)
-	ci.draw_colored_polygon(points, Color(0.65, 0.5, 0.28, alpha))
+	ShapePaint.colored_polygon(ci.get_canvas_item(), points, Color(0.65, 0.5, 0.28, alpha))
 	UiPaint.draw_ring(rid, center, radius * 0.42, Color(0.7, 0.55, 0.3, alpha), 5.0, 30)
 	UiPaint.draw_ring(rid, center, radius * 0.12, Color(0.7, 0.55, 0.3, alpha), 4.0, 16)
 	for i in 5:
@@ -98,8 +106,9 @@ static func lamp(ci: CanvasItem, src: Vector2, height: float, span: float) -> vo
 		var half := lerpf(90.0, span, t)
 		var next_half := lerpf(90.0, span, next_t)
 		(
-			ci
-			. draw_colored_polygon(
+			ShapePaint
+			. colored_polygon(
+				ci.get_canvas_item(),
 				PackedVector2Array(
 					[
 						Vector2(src.x - half, lerpf(src.y, height, t)),
@@ -266,7 +275,7 @@ static func box_frame(ci: CanvasItem, rect: Rect2) -> void:
 		var d: Vector2 = corner[1]
 		ci.draw_line(c, c + Vector2(arm * d.x, 0), RIVET.darkened(0.15), 4.0)
 		ci.draw_line(c, c + Vector2(0, arm * d.y), RIVET.darkened(0.15), 4.0)
-		ci.draw_circle(c + d * 9.0, 3.0, RIVET)
+		ShapePaint.circle(ci.get_canvas_item(), c + d * 9.0, 3.0, RIVET)
 
 
 ## 本棚。背表紙の並びだけを影として置く(壁の飾りであり、読ませるものではない)。

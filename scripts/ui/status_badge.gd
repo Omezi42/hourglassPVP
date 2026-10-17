@@ -47,8 +47,8 @@ func _draw() -> void:
 	var center := size * 0.5
 	var radius := DIAMETER * 0.5
 	var fill := UiPalette.GLOW_AMBER if _hovered else UiPalette.BRASS_HIGHLIGHT
-	draw_circle(center, radius, UiPalette.OUTLINE_DARK)
-	draw_circle(center, radius - 2.0, fill)
+	ShapePaint.circle(get_canvas_item(), center, radius, UiPalette.OUTLINE_DARK)
+	ShapePaint.circle(get_canvas_item(), center, radius - 2.0, fill)
 	var font := get_theme_default_font()
 	if font == null:
 		return

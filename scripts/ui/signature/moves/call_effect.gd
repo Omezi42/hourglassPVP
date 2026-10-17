@@ -40,7 +40,17 @@ func draw(item: CanvasItem, t: float) -> void:
 		if q <= 0.0 or q >= 1.0:
 			continue
 		var color := Color(SignaturePaint.BOON, alpha * (1.0 - q))
-		item.draw_arc(bell, RING_REACH * q + BELL, -PI * 0.4, PI * 0.4, 16, color, 2.0, true)
+		ShapePaint.arc(
+			item.get_canvas_item(),
+			bell,
+			RING_REACH * q + BELL,
+			-PI * 0.4,
+			PI * 0.4,
+			16,
+			color,
+			2.0,
+			true
+		)
 	var floor_at := targets[0] + Vector2(0.0, CardView.BOARD_ART_SIDE * 0.5)
 	var beam := ease(phase(t, HORN, BEAM), 1.6)
 	if beam > 0.0 and t < impact_at() + RING:
@@ -88,8 +98,12 @@ func _horn(item: CanvasItem, center: Vector2, alpha: float) -> Vector2:
 		return bell
 	lower.reverse()
 	var shape := upper + lower
-	item.draw_colored_polygon(shape, Color(UiPalette.BRASS_HIGHLIGHT, alpha))
+	ShapePaint.colored_polygon(
+		item.get_canvas_item(), shape, Color(UiPalette.BRASS_HIGHLIGHT, alpha)
+	)
 	var closed := shape.duplicate()
 	closed.append(shape[0])
-	item.draw_polyline(closed, Color(UiPalette.OUTLINE_DARK, alpha * 0.8), 1.2, true)
+	ShapePaint.polyline(
+		item.get_canvas_item(), closed, Color(UiPalette.OUTLINE_DARK, alpha * 0.8), 1.2, true
+	)
 	return bell

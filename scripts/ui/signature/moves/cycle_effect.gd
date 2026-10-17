@@ -80,10 +80,12 @@ func _wheel(item: CanvasItem, center: Vector2, spin: float, alpha: float) -> voi
 		var tangent := Vector2(-sin(angle) * WHEEL.x, cos(angle) * WHEEL.y).normalized()
 		var across := tangent.orthogonal() * ARROW * 0.6
 		var head := PackedVector2Array([at + tangent * ARROW, at + across, at - across])
-		item.draw_colored_polygon(head, color)
+		ShapePaint.colored_polygon(item.get_canvas_item(), head, color)
 	if spin > 0.0 and spin < 1.0:
 		var segments := PackedVector2Array()
 		for k in range(ARC_SEGMENTS + 1):
 			var angle := TAU * spin * float(k) / float(ARC_SEGMENTS)
 			segments.append(center + Vector2(cos(angle) * WHEEL.x, sin(angle) * WHEEL.y))
-		item.draw_polyline(segments, Color(SignaturePaint.SPARK_HOT, alpha), 2.6, true)
+		ShapePaint.polyline(
+			item.get_canvas_item(), segments, Color(SignaturePaint.SPARK_HOT, alpha), 2.6, true
+		)

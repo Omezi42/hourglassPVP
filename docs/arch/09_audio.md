@@ -1,6 +1,6 @@
 # 9. 効果音・BGMの実装方針
 
-- 効果音は `SoundBank`(`RefCounted` 継承のstaticクラス)に集約する。`MatchSetup`/`DeckSave`/`NetSession` と同じ「Autoloadを使わずstaticで持つ」流儀に揃える
+- 効果音は `SoundBank`(`RefCounted` 継承のstaticクラス)に集約する。`MatchSetup`/`DeckSave`/`NetSession` と同じ「Autoloadを使わずstaticで持つ」流儀に揃える。**読み込んだ効果音の音源は `_streams` に持ち続ける**(Web版は音源ごとに音のデータをブラウザ側へ登録し、解放しても消さないため。Pitfalls.md)
 - `ensure_ready(parent)` を `Main._ready()` から1度だけ呼び、`AudioStreamPlayer` のプール(8本)とホバー専用の1本を生成する。staticクラス自体はNodeではないため、実際の再生には実ノードが要る。**プールは鳴り終わった1本を選び、すべて鳴っていれば最も古いものを譲る**(順番に使い回すと、鳴っている被弾や決着を途中で切る)。**ホバー音を専用の1本に分ける**のも同じ理由
 - `wire_buttons(root)` はシーンツリーを再帰的に走査し、全Buttonの `pressed` へ押下音、`mouse_entered` へホバー音を接続する。**ホバー音は無効(`disabled`)のボタンでは鳴らさない**。個別配線は漏れやすいため、`Main._ready()` で全体に対して1度呼ぶことを基本とするが、実行時に動的生成されるノード(例: `DeckListScreen` のカード一覧)は起動時の走査に含まれないため、生成元の画面スクリプト側で個別に呼び直す。`is_connected()` チェックにより二重接続は起きない。手札・駒のホバー音は `CardView` が操作可能なときだけ鳴らす
 - **ホバー音は `HOVER_MIN_INTERVAL_MS` の間隔の中では重ねない**(`SoundBank.play()` が見る)。手札を横切ると数十msおきに札を乗り換え、連打に聞こえるため

@@ -53,8 +53,12 @@ func draw(item: CanvasItem, t: float) -> void:
 	var outline := PackedVector2Array()
 	for p in glass:
 		outline.append(center + p.rotated(turn))
-	item.draw_polyline(outline, Color(UiPalette.OUTLINE_DARK, alpha * 0.7), 3.6, true)
-	item.draw_polyline(outline, Color(SignaturePaint.SPIN, alpha), 1.8, true)
+	ShapePaint.polyline(
+		item.get_canvas_item(), outline, Color(UiPalette.OUTLINE_DARK, alpha * 0.7), 3.6, true
+	)
+	ShapePaint.polyline(
+		item.get_canvas_item(), outline, Color(SignaturePaint.SPIN, alpha), 1.8, true
+	)
 	for y: float in [-HALF.y, HALF.y]:
 		var a := center + Vector2(-HALF.x - 3.0, y).rotated(turn)
 		var b := center + Vector2(HALF.x + 3.0, y).rotated(turn)
@@ -100,4 +104,4 @@ func _polygon(
 	var points := PackedVector2Array()
 	for p in shape:
 		points.append(center + p.rotated(turn))
-	item.draw_colored_polygon(points, color)
+	ShapePaint.colored_polygon(item.get_canvas_item(), points, color)

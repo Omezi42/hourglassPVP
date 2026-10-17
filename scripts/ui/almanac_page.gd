@@ -351,7 +351,7 @@ func _draw_spell_plate(rect: Rect2) -> void:
 	)
 	var closed := points.duplicate()
 	closed.append(points[0])
-	draw_polyline(closed, Color(0.20, 0.26, 0.42), 2.4)
+	ShapePaint.polyline(get_canvas_item(), closed, Color(0.20, 0.26, 0.42), 2.4)
 	if card.emblem != null:
 		var side: float = rect.size.x * 0.66
 		draw_texture_rect(
@@ -411,7 +411,8 @@ func _draw_rule(at: Vector2, width: float) -> void:
 	draw_line(at + Vector2(8, 0), at + Vector2(width - 8, 0), Color(0.45, 0.33, 0.18, 0.6), 1.4)
 	for x in [at.x + 2.0, at.x + width - 2.0]:
 		var c := Vector2(x, at.y)
-		draw_colored_polygon(
+		ShapePaint.colored_polygon(
+			get_canvas_item(),
 			PackedVector2Array(
 				[c + Vector2(0, -4), c + Vector2(4, 0), c + Vector2(0, 4), c + Vector2(-4, 0)]
 			),

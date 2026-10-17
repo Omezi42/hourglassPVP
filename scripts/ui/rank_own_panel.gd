@@ -134,9 +134,13 @@ func _draw_stars(center_x: float) -> void:
 			RankMedal.draw_filled_star(self, at, STAR_RADIUS)
 			continue
 		var points := RankMedal.star_points(at, STAR_RADIUS)
-		draw_colored_polygon(points, Color(0, 0, 0, 0.35))
-		draw_polyline(
-			RankMedal.closed(points), Color(UiPalette.BRASS_HIGHLIGHT, 0.45), outline, true
+		ShapePaint.colored_polygon(get_canvas_item(), points, Color(0, 0, 0, 0.35))
+		ShapePaint.polyline(
+			get_canvas_item(),
+			RankMedal.closed(points),
+			Color(UiPalette.BRASS_HIGHLIGHT, 0.45),
+			outline,
+			true
 		)
 
 
@@ -229,8 +233,14 @@ func _draw_rewards(inner: Rect2) -> void:
 			var points := UiPaint.rounded_rect_points_uniform(
 				rect, REWARD_SLOT_RADIUS, CORNER_SEGMENTS
 			)
-			draw_colored_polygon(points, Color(UiPalette.GLOW_AMBER, 0.14))
-			draw_polyline(RankMedal.closed(points), Color(UiPalette.GLOW_AMBER, 0.8), 1.5, true)
+			ShapePaint.colored_polygon(get_canvas_item(), points, Color(UiPalette.GLOW_AMBER, 0.14))
+			ShapePaint.polyline(
+				get_canvas_item(),
+				RankMedal.closed(points),
+				Color(UiPalette.GLOW_AMBER, 0.8),
+				1.5,
+				true
+			)
 		RankMedal.draw_medal(
 			self,
 			Vector2(rect.get_center().x, REWARD_MEDAL_Y),

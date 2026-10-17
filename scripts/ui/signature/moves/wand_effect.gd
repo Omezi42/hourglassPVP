@@ -46,7 +46,9 @@ func draw(item: CanvasItem, t: float) -> void:
 	for i in range(TRAIL, 0, -1):
 		var q := maxf(flight - 0.06 * float(i), 0.0)
 		var size := 2.6 * (1.0 - float(i) / float(TRAIL + 1))
-		item.draw_circle(_arc_at(tip, q), size, Color(SignaturePaint.BOON, alpha * 0.6))
+		ShapePaint.circle(
+			item.get_canvas_item(), _arc_at(tip, q), size, Color(SignaturePaint.BOON, alpha * 0.6)
+		)
 	_star(item, _arc_at(tip, flight), STAR, t * 6.0, alpha)
 
 
@@ -63,5 +65,5 @@ func _star(item: CanvasItem, at: Vector2, size: float, turn: float, alpha: float
 	for i in range(8):
 		var r := size if i % 2 == 0 else size * 0.32
 		shape.append(at + Vector2.UP.rotated(turn + TAU * float(i) / 8.0) * r)
-	item.draw_colored_polygon(shape, Color(SignaturePaint.BOON, alpha))
-	item.draw_circle(at, size * 0.3, Color(1, 1, 1, alpha))
+	ShapePaint.colored_polygon(item.get_canvas_item(), shape, Color(SignaturePaint.BOON, alpha))
+	ShapePaint.circle(item.get_canvas_item(), at, size * 0.3, Color(1, 1, 1, alpha))

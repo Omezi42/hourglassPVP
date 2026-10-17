@@ -34,8 +34,12 @@ func draw(item: CanvasItem, t: float) -> void:
 		for i in range(GRAINS):
 			var angle := TAU * float(i) / float(GRAINS) + SignaturePaint.jitter(i, 3)
 			var at := muzzle + Vector2.from_angle(angle) * SPREAD * (1.0 - gather)
-			item.draw_circle(at, 2.0, Color(SignaturePaint.SAND, alpha * gather))
-		item.draw_circle(muzzle, BULLET * gather, Color(SignaturePaint.SAND, alpha))
+			ShapePaint.circle(
+				item.get_canvas_item(), at, 2.0, Color(SignaturePaint.SAND, alpha * gather)
+			)
+		ShapePaint.circle(
+			item.get_canvas_item(), muzzle, BULLET * gather, Color(SignaturePaint.SAND, alpha)
+		)
 		return
 	var flight := ease(phase(t, GATHER, FLIGHT), 1.8)
 	if t < impact_at():
@@ -43,13 +47,17 @@ func draw(item: CanvasItem, t: float) -> void:
 			var q := maxf(flight - TAIL * float(i) / float(TAIL_POINTS), 0.0)
 			var size := BULLET * 0.7 * (1.0 - float(i) / float(TAIL_POINTS + 1))
 			var color := Color(SignaturePaint.SAND_DARK, alpha * 0.6)
-			item.draw_circle(muzzle.lerp(targets[0], q), size, color)
+			ShapePaint.circle(item.get_canvas_item(), muzzle.lerp(targets[0], q), size, color)
 		var head := muzzle.lerp(targets[0], flight)
-		item.draw_circle(head, BULLET + 1.2, Color(UiPalette.OUTLINE_DARK, alpha * 0.7))
-		item.draw_circle(head, BULLET, Color(SignaturePaint.SAND, alpha))
+		ShapePaint.circle(
+			item.get_canvas_item(), head, BULLET + 1.2, Color(UiPalette.OUTLINE_DARK, alpha * 0.7)
+		)
+		ShapePaint.circle(item.get_canvas_item(), head, BULLET, Color(SignaturePaint.SAND, alpha))
 		return
 	var burst := phase(t, impact_at(), BURST)
 	for i in range(GRAINS):
 		var dir := Vector2.from_angle(TAU * float(i) / float(GRAINS) + SignaturePaint.jitter(i, 7))
 		var at := targets[0] + dir * BURST_REACH * ease(burst, 0.4)
-		item.draw_circle(at, 2.2 * (1.0 - burst), Color(SignaturePaint.SAND, alpha))
+		ShapePaint.circle(
+			item.get_canvas_item(), at, 2.2 * (1.0 - burst), Color(SignaturePaint.SAND, alpha)
+		)

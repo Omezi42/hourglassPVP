@@ -32,7 +32,9 @@ func draw(item: CanvasItem, t: float) -> void:
 	UiPaint.fill_ellipse(ci, sack, SACK * appear, Color(SignaturePaint.SAND_DARK, alpha), 20)
 	if appear >= 1.0:
 		item.draw_line(sack, mouth, Color(SignaturePaint.SAND_DARK, alpha), NECK.x * 1.6)
-		item.draw_circle(sack.lerp(mouth, 0.55), NECK.y * 0.5, Color(TIE, alpha))
+		ShapePaint.circle(
+			item.get_canvas_item(), sack.lerp(mouth, 0.55), NECK.y * 0.5, Color(TIE, alpha)
+		)
 	for pour in range(POURS):
 		var q := phase(t, APPEAR + POUR * pour, POUR + FADE)
 		if q <= 0.0 or q >= 1.0:
@@ -43,7 +45,9 @@ func draw(item: CanvasItem, t: float) -> void:
 				continue
 			var drift := (SignaturePaint.jitter(i + pour * GRAINS, 17) - 0.5) * 12.0
 			var at := mouth + Vector2(drift, _toward_hand() * FALL * s * s)
-			item.draw_circle(at, 2.0, Color(SignaturePaint.SAND, alpha * (1.0 - s)))
+			ShapePaint.circle(
+				item.get_canvas_item(), at, 2.0, Color(SignaturePaint.SAND, alpha * (1.0 - s))
+			)
 
 
 ## 手札のある向き(1=下、-1=上)。情報帯が卓の下半分なら自分の側。

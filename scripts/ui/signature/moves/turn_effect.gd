@@ -35,7 +35,7 @@ func draw(item: CanvasItem, t: float) -> void:
 		var fall := ease(phase(t, 0.0, DROP), 2.0)
 		if fall < 1.0:
 			var at := targets[0] - Vector2(0.0, DROP_FROM * (1.0 - fall))
-			item.draw_circle(at, 3.4, Color(SignaturePaint.SAND, alpha))
+			ShapePaint.circle(item.get_canvas_item(), at, 3.4, Color(SignaturePaint.SAND, alpha))
 		SignaturePaint.boon_ring(item, targets[0], phase(t, impact_at(), RING), alpha)
 		return
 	var head := ease(phase(t, 0.0, CLIMB), 0.8)
@@ -43,13 +43,15 @@ func draw(item: CanvasItem, t: float) -> void:
 	var count := maxi(int(STEPS * head), 1)
 	for i in range(count + 1):
 		points.append(_path(head * float(i) / float(count)))
-	item.draw_polyline(points, Color(SignaturePaint.SPIN, alpha * 0.5), 3.0, true)
+	ShapePaint.polyline(
+		item.get_canvas_item(), points, Color(SignaturePaint.SPIN, alpha * 0.5), 3.0, true
+	)
 	for i in range(GRAINS):
 		var s := head - STREAK * float(i) / float(GRAINS)
 		if s <= 0.0:
 			continue
 		var color := Color(SignaturePaint.SAND, alpha * (1.0 - float(i) / float(GRAINS)))
-		item.draw_circle(_path(s), 2.4, color)
+		ShapePaint.circle(item.get_canvas_item(), _path(s), 2.4, color)
 
 
 ## 筋の道の上で `s`(0→1)進んだ位置。右の縁から真上へ昇り、頭上の半円で左へ回る。

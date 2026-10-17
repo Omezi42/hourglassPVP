@@ -73,10 +73,12 @@ func draw(item: CanvasItem, t: float) -> void:
 			Color(GLOW, alpha * open),
 			16
 		)
-	item.draw_colored_polygon(lid_shape, Color(STONE_LIGHT, alpha * rise))
+	ShapePaint.colored_polygon(item.get_canvas_item(), lid_shape, Color(STONE_LIGHT, alpha * rise))
 	var closed := lid_shape.duplicate()
 	closed.append(lid_shape[0])
-	item.draw_polyline(closed, Color(UiPalette.OUTLINE_DARK, alpha * rise * 0.8), 1.2, true)
+	ShapePaint.polyline(
+		item.get_canvas_item(), closed, Color(UiPalette.OUTLINE_DARK, alpha * rise * 0.8), 1.2, true
+	)
 	var mote := phase(t, impact_at() + RISE + OPEN * 0.6, MOTE)
 	if mote > 0.0 and mote < 1.0:
 		var at := (

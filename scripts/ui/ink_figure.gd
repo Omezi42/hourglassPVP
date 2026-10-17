@@ -39,8 +39,9 @@ static func hourglass(
 	# 上の部屋は頂点(くびれ)へ向かって溜まるため、そのまま三角形でよい。
 	if left > 0.02:
 		(
-			ci
-			. draw_colored_polygon(
+			ShapePaint
+			. colored_polygon(
+				ci.get_canvas_item(),
 				PackedVector2Array(
 					[
 						center + Vector2(-w * left, -h * left),
@@ -57,8 +58,9 @@ static func hourglass(
 		var top_y := h * (1.0 - poured)
 		var half := w * (1.0 - poured)
 		(
-			ci
-			. draw_colored_polygon(
+			ShapePaint
+			. colored_polygon(
+				ci.get_canvas_item(),
 				PackedVector2Array(
 					[
 						center + Vector2(-w, h),
@@ -118,7 +120,8 @@ static func arrow(ci: CanvasItem, from: Vector2, to: Vector2, color := INK) -> v
 	ci.draw_line(from, to, color, 1.8)
 	var direction := (to - from).normalized()
 	var side := Vector2(-direction.y, direction.x)
-	ci.draw_colored_polygon(
+	ShapePaint.colored_polygon(
+		ci.get_canvas_item(),
 		PackedVector2Array(
 			[to, to - direction * 8.0 + side * 4.5, to - direction * 8.0 - side * 4.5]
 		),
@@ -128,7 +131,7 @@ static func arrow(ci: CanvasItem, from: Vector2, to: Vector2, color := INK) -> v
 
 ## 届かない攻撃。守護に阻まれる線などを破線で示す。
 static func blocked_line(ci: CanvasItem, from: Vector2, to: Vector2) -> void:
-	ci.draw_dashed_line(from, to, Color(RED, 0.45), 1.6, 5.0)
+	ShapePaint.dashed_line(ci.get_canvas_item(), from, to, Color(RED, 0.45), 1.6, 5.0)
 
 
 ## 砕けた印。朱の×。
@@ -184,7 +187,7 @@ static func turn_arc(ci: CanvasItem, center: Vector2, radius: Vector2) -> void:
 	for i in 15:
 		var a: float = PI * (1.05 + 0.9 * float(i) / 14.0)
 		points.append(center + Vector2(cos(a) * radius.x, sin(a) * radius.y))
-	ci.draw_polyline(points, INK, 1.8)
+	ShapePaint.polyline(ci.get_canvas_item(), points, INK, 1.8)
 	arrow(ci, points[points.size() - 2], points[points.size() - 1])
 
 
@@ -200,4 +203,4 @@ static func caption(
 static func _stroke(ci: CanvasItem, points: PackedVector2Array, color: Color, width: float) -> void:
 	var closed := points.duplicate()
 	closed.append(points[0])
-	ci.draw_polyline(closed, color, width)
+	ShapePaint.polyline(ci.get_canvas_item(), closed, color, width)

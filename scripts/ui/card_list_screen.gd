@@ -266,7 +266,8 @@ func _draw_rule(at: Vector2, width: float) -> void:
 	)
 	for x in [at.x + 2.0, at.x + width - 2.0]:
 		var c := Vector2(x, at.y)
-		_heading.draw_colored_polygon(
+		ShapePaint.colored_polygon(
+			_heading.get_canvas_item(),
 			PackedVector2Array(
 				[c + Vector2(0, -4), c + Vector2(4, 0), c + Vector2(0, 4), c + Vector2(-4, 0)]
 			),

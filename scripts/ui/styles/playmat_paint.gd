@@ -164,7 +164,7 @@ static func _draw_outline(
 ) -> void:
 	var closed := points.duplicate()
 	closed.append(points[0])
-	ci.draw_polyline(closed, color, width)
+	ShapePaint.polyline(ci.get_canvas_item(), closed, color, width)
 
 
 static func _draw_weave(ci: CanvasItem, rect: Rect2, mat: Dictionary) -> void:
@@ -247,7 +247,7 @@ static func _stars(ci: CanvasItem, rect: Rect2, edge: Color, foil: Color) -> voi
 				ci.draw_line(points[i], points[j], Color(edge, WEAVE_ALPHA_SOFT), 1.0)
 	for i in points.size():
 		var r: float = 1.2 if i % 3 else 2.2
-		ci.draw_circle(points[i], r, Color(foil, WEAVE_ALPHA + 0.10))
+		ShapePaint.circle(ci.get_canvas_item(), points[i], r, Color(foil, WEAVE_ALPHA + 0.10))
 
 
 ## 唐草。左右対称に巻いた蔓を、上下の縁へ沿って流す。
@@ -262,7 +262,7 @@ static func _scroll(ci: CanvasItem, rect: Rect2, edge: Color, foil: Color) -> vo
 			curve.append(Vector2(x, base_y + sin(t) * 13.0 * dir))
 			x += 5.0
 		if curve.size() > 1:
-			ci.draw_polyline(curve, Color(edge, WEAVE_ALPHA + 0.06), 2.0)
+			ShapePaint.polyline(ci.get_canvas_item(), curve, Color(edge, WEAVE_ALPHA + 0.06), 2.0)
 		# 巻きひげ。1周期ごとに小さな渦を落とす。
 		var cx := rect.position.x + 16.0
 		while cx < rect.end.x - 16.0:
@@ -281,8 +281,9 @@ static func _scroll(ci: CanvasItem, rect: Rect2, edge: Color, foil: Color) -> vo
 	while mx < rect.end.x - 40.0:
 		var c := Vector2(mx, y)
 		(
-			ci
-			. draw_polyline(
+			ShapePaint
+			. polyline(
+				ci.get_canvas_item(),
 				PackedVector2Array(
 					[
 						c + Vector2(0, -7),

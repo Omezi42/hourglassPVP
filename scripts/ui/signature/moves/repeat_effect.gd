@@ -33,12 +33,24 @@ func _record(item: CanvasItem, at: Vector2, spin: float, groove: float, alpha: f
 	UiPaint.fill_circle(ci, at, RADIUS + 1.4, Color(UiPalette.OUTLINE_DARK, alpha * 0.8), 28)
 	UiPaint.fill_circle(ci, at, RADIUS, Color(0.1, 0.08, 0.07, alpha * 0.95), 28)
 	for r in [RADIUS * 0.82, RADIUS * 0.66]:
-		item.draw_arc(at, r, 0.0, TAU, 28, Color(1, 1, 1, alpha * 0.12), 1.0, true)
+		ShapePaint.arc(
+			item.get_canvas_item(), at, r, 0.0, TAU, 28, Color(1, 1, 1, alpha * 0.12), 1.0, true
+		)
 	var shine := Color(1, 1, 1, alpha * 0.3)
-	item.draw_arc(at, RADIUS * 0.74, spin, spin + 0.8, 8, shine, 1.6, true)
+	ShapePaint.arc(item.get_canvas_item(), at, RADIUS * 0.74, spin, spin + 0.8, 8, shine, 1.6, true)
 	UiPaint.fill_circle(ci, at, RADIUS * 0.36, Color(SignaturePaint.BOON, alpha), 16)
 	UiPaint.fill_circle(ci, at, RADIUS * 0.08, Color(UiPalette.OUTLINE_DARK, alpha), 8)
 	if groove > 0.0 and groove < 1.0:
 		var head := spin - PI * 0.5 + TAU * groove
 		var glow := Color(SignaturePaint.BOON, alpha * (1.0 - groove * 0.4))
-		item.draw_arc(at, RADIUS * 0.74, head - TAU * groove, head, 24, glow, 2.4, true)
+		ShapePaint.arc(
+			item.get_canvas_item(),
+			at,
+			RADIUS * 0.74,
+			head - TAU * groove,
+			head,
+			24,
+			glow,
+			2.4,
+			true
+		)

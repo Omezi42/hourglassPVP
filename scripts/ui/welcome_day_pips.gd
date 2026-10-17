@@ -47,12 +47,14 @@ func _draw() -> void:
 			var pulse := 0.5 + 0.5 * sin(_time * PULSE_SPEED)
 			var glow := UiPalette.GLOW_AMBER
 			glow.a = 0.35 * pulse
-			draw_circle(center, RADIUS + PULSE_GLOW * pulse, glow, true, -1.0, true)
+			ShapePaint.circle(
+				get_canvas_item(), center, RADIUS + PULSE_GLOW * pulse, glow, true, -1.0, true
+			)
 			fill = UiPalette.PANEL_AMBER_TOP
 			rim = UiPalette.GLOW_AMBER
 			text_color = UiPalette.TEXT_OFFWHITE
-		draw_circle(center, RADIUS, fill, true, -1.0, true)
-		draw_circle(center, RADIUS, rim, false, RIM_WIDTH, true)
+		ShapePaint.circle(get_canvas_item(), center, RADIUS, fill, true, -1.0, true)
+		ShapePaint.circle(get_canvas_item(), center, RADIUS, rim, false, RIM_WIDTH, true)
 		if font == null:
 			continue
 		var label := str(day)

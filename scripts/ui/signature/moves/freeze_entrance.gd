@@ -71,7 +71,9 @@ func _shell(item: CanvasItem, climb: float, alpha: float) -> void:
 	)
 	var closed := shape.duplicate()
 	closed.append(shape[0])
-	item.draw_polyline(closed, Color(SignaturePaint.ICE, 0.85 * alpha), 1.6, true)
+	ShapePaint.polyline(
+		item.get_canvas_item(), closed, Color(SignaturePaint.ICE, 0.85 * alpha), 1.6, true
+	)
 	# 氷の面に斜めの照り返しを1本入れて、透き通った塊に見せる。
 	var shine_top := maxf(top + corner, bottom - SHELL.y * 0.85)
 	if shine_top < bottom - SHELL.y * 0.2:

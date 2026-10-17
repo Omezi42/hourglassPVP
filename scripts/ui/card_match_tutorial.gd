@@ -735,10 +735,21 @@ func _draw_dots() -> void:
 	for i in STAGE_COUNT:
 		var at := Vector2(left + DOT_STEP * i, y)
 		if i < current_stage:
-			_dots.draw_circle(at, DOT_RADIUS, UiPalette.GLOW_AMBER)
+			ShapePaint.circle(_dots.get_canvas_item(), at, DOT_RADIUS, UiPalette.GLOW_AMBER)
 		else:
-			_dots.draw_circle(at, DOT_RADIUS, Color(UiPalette.GLOW_AMBER, 0.22))
-			_dots.draw_arc(at, DOT_RADIUS, 0.0, TAU, 16, Color(UiPalette.GLOW_AMBER, 0.7), 1.2)
+			ShapePaint.circle(
+				_dots.get_canvas_item(), at, DOT_RADIUS, Color(UiPalette.GLOW_AMBER, 0.22)
+			)
+			ShapePaint.arc(
+				_dots.get_canvas_item(),
+				at,
+				DOT_RADIUS,
+				0.0,
+				TAU,
+				16,
+				Color(UiPalette.GLOW_AMBER, 0.7),
+				1.2
+			)
 
 
 ## いま触るもの(輪郭)と、いま話題にしている数字(色違いの光)を描く

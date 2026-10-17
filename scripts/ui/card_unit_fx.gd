@@ -211,7 +211,9 @@ func _draw_land_dust() -> void:
 		var angle := PI * (0.15 + 0.7 * float(i) / 5.0)
 		var reach := 16.0 + 22.0 * ratio
 		var at := center + Vector2(cos(angle) * reach, -sin(angle) * reach * 0.35)
-		draw_circle(at, 2.6 * (1.0 - ratio), Color(SAND_AMBER, 0.8 * (1.0 - ratio)))
+		ShapePaint.circle(
+			get_canvas_item(), at, 2.6 * (1.0 - ratio), Color(SAND_AMBER, 0.8 * (1.0 - ratio))
+		)
 
 
 ## 破壊:絵が縦に3つへ割れて左右へずれながら落ち、残っていた砂が台座へこぼれる。
@@ -267,7 +269,8 @@ func _draw_break_shards(center: Vector2) -> void:
 		var at := center + direction * reach
 		var along := direction * (5.0 + 4.0 * fade)
 		var across := Vector2(-direction.y, direction.x) * (1.6 + 1.4 * fade)
-		draw_colored_polygon(
+		ShapePaint.colored_polygon(
+			get_canvas_item(),
 			PackedVector2Array([at + along, at - along + across, at - along - across]),
 			Color(GLASS_BLUE, 0.9 * fade)
 		)
@@ -288,7 +291,12 @@ func _draw_break_sand(center: Vector2, fade: float) -> void:
 		var spread: float = lane * 11.0 + (float(i) - 8.0) * 0.9
 		var x: float = center.x + spread * 0.4 + signf(lane) * BREAK_SAND_DRIFT * t
 		var y: float = lerpf(center.y, floor_y, t * t)
-		draw_circle(Vector2(x, y), 2.8 * (1.0 - t * 0.5), Color(SAND_AMBER, 0.95 - 0.35 * t))
+		ShapePaint.circle(
+			get_canvas_item(),
+			Vector2(x, y),
+			2.8 * (1.0 - t * 0.5),
+			Color(SAND_AMBER, 0.95 - 0.35 * t)
+		)
 	var pile: float = clampf((_break - 0.45) / 0.55, 0.0, 1.0)
 	if pile <= 0.0:
 		return

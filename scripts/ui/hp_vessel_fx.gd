@@ -139,11 +139,11 @@ func _draw_crack(path: Array, length: float) -> void:
 		left -= step
 	if drawn.size() < 2:
 		return
-	draw_polyline(drawn, CRACK_DARK, 1.6, true)
+	ShapePaint.polyline(get_canvas_item(), drawn, CRACK_DARK, 1.6, true)
 	var lit := PackedVector2Array()
 	for p in drawn:
 		lit.append(p + Vector2(1.0, 0.0))
-	draw_polyline(lit, CRACK_LIGHT, 0.8, true)
+	ShapePaint.polyline(get_canvas_item(), lit, CRACK_LIGHT, 0.8, true)
 
 
 ## 現在値の丸の外へ、どっ・くんと2回ずつ広がる赤い輪。
@@ -185,7 +185,8 @@ func _draw_shards(t: float) -> void:
 		var dir := velocity.normalized()
 		var tip := dir * (4.0 + 2.0 * fade)
 		var side := Vector2(-dir.y, dir.x) * 1.8
-		draw_colored_polygon(
+		ShapePaint.colored_polygon(
+			get_canvas_item(),
 			PackedVector2Array([at + tip, at - tip + side, at - tip - side]),
 			Color(GLASS, 0.9 * fade)
 		)
@@ -201,4 +202,9 @@ func _draw_spill(t: float) -> void:
 		var x := vessel_rect.position.x + vessel_rect.size.x * (float(i) + 0.5) / float(SAND_GRAINS)
 		var drift := sin(float(i) * 1.7) * 6.0 * local
 		var y := vessel_rect.end.y - 2.0 + SAND_FALL * local * local
-		draw_circle(Vector2(x + drift, y), 1.8 * (1.0 - 0.4 * local), Color(SAND_RED, 1.0 - local))
+		ShapePaint.circle(
+			get_canvas_item(),
+			Vector2(x + drift, y),
+			1.8 * (1.0 - 0.4 * local),
+			Color(SAND_RED, 1.0 - local)
+		)

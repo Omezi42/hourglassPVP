@@ -50,7 +50,7 @@ func _draw() -> void:
 	UiPaint.apply_grain(ci, rect, 0.05)
 	var closed := points.duplicate()
 	closed.append(points[0])
-	draw_polyline(closed, UiPalette.OUTLINE_DARK, 1.0, true)
+	ShapePaint.polyline(get_canvas_item(), closed, UiPalette.OUTLINE_DARK, 1.0, true)
 	_draw_row(ROW_Y[0], "自分", _own_remaining, _own_total)
 	_draw_row(ROW_Y[1], "相手", _foe_remaining, _foe_total)
 

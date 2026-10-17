@@ -49,7 +49,12 @@
   支払うピップの脈打ち)は子の `PlayerInfoBarFx` が持つ。本体は影・板・真鍮の輪を重ねる重い絵で、
   毎フレーム描き直すと対局中の処理時間の4割を占めたため。`PlayerInfoBarFx` と卓の砂埃(`BoardDust`)は光の形を
   `PaintedShape`(`scripts/ui/painted_shape.gd`)に1度だけ描き、毎フレームは位置・拡大・不透明度だけを動かす
-  (Web版ではポリゴンの描き直しのたびにGLの番号が使い捨てられ、メモリが積み上がるため。Pitfalls.md)。本体の公開プロパティ(`active` / `targetable` /
+  (描き直しの手間を減らすため)。情報帯の本体は、被弾で動くHPの器の中身(`_hp_layer`)・増減の数字(`_float_layer`)・
+  支払いの粒・山札の脈打ちを別の層へ分け、本体は値が変わったときだけ描き直す。`CardView` も1手ごとの配り直しで
+  見た目を決める値(`_look()`)が変わったときだけ描き直す
+- **面・輪・線は `ShapePaint`(`scripts/ui/styles/shape_paint.gd`)を通して三角形の primitive で描く。**引数は
+  CanvasItem の同名の `draw_*` に描き先の RID を足しただけ。Godot のポリゴン系の描画は描き直すたびにGLの番号を
+  使い捨て、Web版ではそれがメモリとして積み上がるため(Pitfalls.md)。`tools/check.sh` が直接呼び出しを見張る本体の公開プロパティ(`active` / `targetable` /
   `display_name` など)は代入で描き直すセッターを持ち、本体の `_draw()` の最後に `_sync_fx()` で層へ値を渡す
 - 座標は `CardMatchLayout` が持つ(4.7節)。**`CardMatchGeometry` は置かれた部品の位置・縮尺から読むだけ**なので、
   値を変えれば座標系の問い合わせは追従する

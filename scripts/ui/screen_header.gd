@@ -170,7 +170,8 @@ func _draw() -> void:
 	for direction in [-1.0, 1.0]:
 		var inner: float = center + core * direction
 		var outer: float = inner + SCRIM_FADE_WIDTH * direction
-		draw_polygon(
+		ShapePaint.polygon(
+			get_canvas_item(),
 			PackedVector2Array(
 				[
 					Vector2(inner, 0.0),

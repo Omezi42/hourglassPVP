@@ -38,7 +38,9 @@ func draw(item: CanvasItem, t: float) -> void:
 		var color := SignaturePaint.SAND.lerp(
 			SignaturePaint.SAND_DARK, SignaturePaint.jitter(i, 25)
 		)
-		item.draw_circle(at, 1.4 + SignaturePaint.jitter(i, 26) * 1.2, Color(color, fade))
+		ShapePaint.circle(
+			item.get_canvas_item(), at, 1.4 + SignaturePaint.jitter(i, 26) * 1.2, Color(color, fade)
+		)
 	var ring := phase(t, impact_at(), FADE)
 	if ring > 0.0:
 		UiPaint.draw_ellipse_ring(

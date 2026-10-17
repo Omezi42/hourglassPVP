@@ -419,7 +419,7 @@ static func fill_gradient_polygon(
 		if rect.size.y > 0.0:
 			t = (points[i].y - rect.position.y) / rect.size.y
 		colors[i] = sample_gradient(stops, t)
-	RenderingServer.canvas_item_add_polygon(ci, points, colors)
+	ShapePaint.polygon(ci, points, colors)
 
 
 ## 角丸輪郭の点列(rounded_rect_pointsの戻り値、上半分→下半分の順に並ぶ)を
@@ -450,7 +450,7 @@ static func _draw_polyline_solid(
 	var colors := PackedColorArray()
 	colors.resize(points.size())
 	colors.fill(color)
-	RenderingServer.canvas_item_add_polyline(ci, points, colors, width, true)
+	ShapePaint.polyline_colors(ci, points, colors, width, true)
 
 
 ## 凹みの落ち込み影。指定rectの内側に、上端が濃く下へ行くほど薄くなる多重の角丸ポリラインを
@@ -474,7 +474,7 @@ static func draw_inner_shadow(
 				t = (points[p].y - layer_rect.position.y) / layer_rect.size.y
 			var alpha: float = max_alpha * (1.0 - clampf(t, 0.0, 1.0)) * layer_scale
 			colors[p] = Color(color.r, color.g, color.b, alpha)
-		RenderingServer.canvas_item_add_polyline(ci, points, colors, 1.0, true)
+		ShapePaint.polyline_colors(ci, points, colors, 1.0, true)
 
 
 ## 質感ノイズ(グレイン)をrect全体へタイル状に薄く重ねる。フラットベクター感を消す最重要要素。
@@ -618,13 +618,24 @@ static func _emblem_brand(ci: RID, texture: Texture2D, center: Vector2, size: fl
 ## デッキ編集の未所有セット・ホームの未解放の入口が共通に使う。
 static func draw_lock(item: CanvasItem, center: Vector2, radius: float) -> void:
 	var r := radius
-	item.draw_colored_polygon(circle_points(center, r, 24), UiPalette.LOCK_PLATE)
-	item.draw_arc(
-		center + Vector2(0, -r * 0.12), r * 0.30, PI, TAU, 12, UiPalette.LOCK_BRASS, r * 0.12
+	ShapePaint.colored_polygon(
+		item.get_canvas_item(), circle_points(center, r, 24), UiPalette.LOCK_PLATE
+	)
+	ShapePaint.arc(
+		item.get_canvas_item(),
+		center + Vector2(0, -r * 0.12),
+		r * 0.30,
+		PI,
+		TAU,
+		12,
+		UiPalette.LOCK_BRASS,
+		r * 0.12
 	)
 	var body := Rect2(center + Vector2(-r * 0.45, -r * 0.12), Vector2(r * 0.9, r * 0.62))
-	item.draw_colored_polygon(rounded_rect_points_uniform(body, r * 0.1, 3), UiPalette.LOCK_BRASS)
-	item.draw_circle(body.get_center(), r * 0.09, UiPalette.LOCK_PLATE)
+	ShapePaint.colored_polygon(
+		item.get_canvas_item(), rounded_rect_points_uniform(body, r * 0.1, 3), UiPalette.LOCK_BRASS
+	)
+	ShapePaint.circle(item.get_canvas_item(), body.get_center(), r * 0.09, UiPalette.LOCK_PLATE)
 
 
 ## 無効/後退(disabled・読み取り専用等)状態の色変換。色自身の輝度へ寄せて彩度を落とした

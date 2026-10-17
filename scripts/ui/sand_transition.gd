@@ -142,7 +142,7 @@ func _draw_band(
 				_lerp_to_edge(edge_points[i], far_y, t1),
 			]
 		)
-		draw_polygon(quad, colors)
+		ShapePaint.polygon(get_canvas_item(), quad, colors)
 
 
 func _lerp_to_edge(point: Vector2, far_y: float, t: float) -> Vector2:
@@ -164,8 +164,8 @@ func _draw_streaks(edge: float, height: float) -> void:
 
 ## 砂面の縁。明るい線を引いて「砂の表面」として読ませる。
 func _draw_surface(edge_points: PackedVector2Array) -> void:
-	draw_polyline(edge_points, Color(1.0, 0.93, 0.7, 0.5), 6.0)
-	draw_polyline(edge_points, Color(1.0, 0.97, 0.85, 0.95), 2.5)
+	ShapePaint.polyline(get_canvas_item(), edge_points, Color(1.0, 0.93, 0.7, 0.5), 6.0)
+	ShapePaint.polyline(get_canvas_item(), edge_points, Color(1.0, 0.97, 0.85, 0.95), 2.5)
 
 
 ## 砂面から飛び出した砂粒。落下方向へ散らす。
@@ -178,4 +178,4 @@ func _draw_grains(edge: float, wave: float) -> void:
 		if y < -8.0 or y > size.y + 8.0:
 			continue
 		var alpha := clampf(1.0 - offset / spread, 0.0, 1.0) * 0.8
-		draw_circle(Vector2(x, y), g.z, Color(0.98, 0.82, 0.46, alpha))
+		ShapePaint.circle(get_canvas_item(), Vector2(x, y), g.z, Color(0.98, 0.82, 0.46, alpha))

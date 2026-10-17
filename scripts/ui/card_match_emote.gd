@@ -304,8 +304,8 @@ class EmotePopupPanel:
 		UiPaint.draw_inner_shadow(ci, rect, 8.0, 6, 4, UiPalette.OUTLINE_DARK, 0.5)
 		var outline := points.duplicate()
 		outline.append(points[0])
-		draw_polyline(outline, UiPalette.OUTLINE_DARK, 3.0, true)
-		draw_polyline(outline, UiPalette.BRASS_LIGHT, 1.4, true)
+		ShapePaint.polyline(get_canvas_item(), outline, UiPalette.OUTLINE_DARK, 3.0, true)
+		ShapePaint.polyline(get_canvas_item(), outline, UiPalette.BRASS_LIGHT, 1.4, true)
 
 
 ## エモート選択用カスタムボタン
@@ -336,7 +336,13 @@ class EmoteItemButton:
 
 		var outline := points.duplicate()
 		outline.append(points[0])
-		draw_polyline(outline, UiPalette.GLOW_AMBER if hovered else UiPalette.BRASS_MID, 1.2, true)
+		ShapePaint.polyline(
+			get_canvas_item(),
+			outline,
+			UiPalette.GLOW_AMBER if hovered else UiPalette.BRASS_MID,
+			1.2,
+			true
+		)
 
 		# 行頭の菱形。選べる行であることを、文字ではなく形で示す。
 		var mark := Vector2(13.0, size.y * 0.5)
@@ -350,7 +356,7 @@ class EmoteItemButton:
 			]
 		)
 		var mark_color := UiPalette.GLOW_AMBER if hovered else UiPalette.BRASS_MID
-		draw_colored_polygon(diamond, mark_color)
+		ShapePaint.colored_polygon(get_canvas_item(), diamond, mark_color)
 
 		if _font == null:
 			return

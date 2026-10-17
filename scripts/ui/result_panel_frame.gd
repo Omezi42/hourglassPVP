@@ -43,5 +43,5 @@ static func draw(ci: RID, panel_size: Vector2, bright: bool) -> void:
 	var outline_colors := PackedColorArray()
 	outline_colors.resize(outline.size())
 	outline_colors.fill(UiPalette.OUTLINE_DARK)
-	RenderingServer.canvas_item_add_polyline(ci, outline, outline_colors, OUTLINE_WIDTH, true)
+	ShapePaint.polyline_colors(ci, outline, outline_colors, OUTLINE_WIDTH, true)
 	UiPaint.apply_grain(ci, rect, GRAIN_ALPHA)

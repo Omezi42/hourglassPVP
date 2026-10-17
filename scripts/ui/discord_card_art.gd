@@ -93,7 +93,7 @@ func _draw_spell_plate(rect: Rect2) -> void:
 	)
 	var closed := points.duplicate()
 	closed.append(points[0])
-	draw_polyline(closed, Color(0.20, 0.26, 0.42), 2.4)
+	ShapePaint.polyline(get_canvas_item(), closed, Color(0.20, 0.26, 0.42), 2.4)
 	if card.emblem != null:
 		var side: float = rect.size.x * 0.62
 		draw_texture_rect(

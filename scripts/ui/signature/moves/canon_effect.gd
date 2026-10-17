@@ -64,8 +64,12 @@ func _clef(item: CanvasItem, center: Vector2, written: float, alpha: float) -> v
 	var path := _path(center)
 	var count := maxi(2, int(ceil(path.size() * written)))
 	var stroke := path.slice(0, count)
-	item.draw_polyline(stroke, Color(UiPalette.OUTLINE_DARK, alpha * 0.8), 5.0, true)
-	item.draw_polyline(stroke, Color(UiPalette.BRASS_HIGHLIGHT, alpha), 3.2, true)
+	ShapePaint.polyline(
+		item.get_canvas_item(), stroke, Color(UiPalette.OUTLINE_DARK, alpha * 0.8), 5.0, true
+	)
+	ShapePaint.polyline(
+		item.get_canvas_item(), stroke, Color(UiPalette.BRASS_HIGHLIGHT, alpha), 3.2, true
+	)
 
 
 ## 筆の道を Catmull-Rom で滑らかにした点列。

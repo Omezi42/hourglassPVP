@@ -63,6 +63,7 @@ const SFX_PATHS := {
 }
 
 static var _players: Array[AudioStreamPlayer] = []
+static var _streams: Dictionary = {}
 static var _next_player_index := 0
 ## ホバー音は専用の1本で鳴らす。プールを使うと、鳴っている被弾や決着の音を
 ## ホバーが途中で奪ってしまう。
@@ -102,12 +103,20 @@ static func play(sfx: Sfx) -> void:
 	play_log.append(sfx)
 	if _players.is_empty():
 		return
-	var stream: AudioStream = load(SFX_PATHS[sfx])
+	var stream := _stream(sfx)
 	if stream == null:
 		return
 	var player := _hover_player if sfx == Sfx.HOVER else _free_player()
 	player.stream = stream
 	player.play()
+
+
+## 効果音の音源は読み込んだものを持ち続ける。Web版は音源ごとに音のデータをブラウザ側へ登録し、
+## 音源が解放されても登録を消さない。手放すと次の `load()` が別の音源を作って登録が積み上がる(Pitfalls.md)。
+static func _stream(sfx: Sfx) -> AudioStream:
+	if not _streams.has(sfx):
+		_streams[sfx] = load(SFX_PATHS[sfx])
+	return _streams[sfx]
 
 
 static func get_sfx_volume() -> float:

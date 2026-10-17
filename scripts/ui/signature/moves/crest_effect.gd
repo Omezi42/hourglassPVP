@@ -47,10 +47,12 @@ func _crown(item: CanvasItem, base: Vector2, lit: int, alpha: float) -> void:
 		if i > 0:
 			var mid := left + BAND.x * (float(i) - 0.5) / float(POINTS)
 			outline.append(Vector2(mid, top - SPIKE))
-	item.draw_colored_polygon(outline, Color(UiPalette.BRASS_MID, alpha))
+	ShapePaint.colored_polygon(item.get_canvas_item(), outline, Color(UiPalette.BRASS_MID, alpha))
 	var closed := outline.duplicate()
 	closed.append(outline[0])
-	item.draw_polyline(closed, Color(UiPalette.OUTLINE_DARK, alpha * 0.8), 1.4, true)
+	ShapePaint.polyline(
+		item.get_canvas_item(), closed, Color(UiPalette.OUTLINE_DARK, alpha * 0.8), 1.4, true
+	)
 	for i in range(POINTS):
 		var mid := left + BAND.x * (float(i) + 0.5) / float(POINTS)
 		var tip := Vector2(mid, top - SPIKE)

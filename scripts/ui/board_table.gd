@@ -256,12 +256,12 @@ func _draw_corner_scrolls(ci: RID, rect: Rect2) -> void:
 			curve.append(
 				base + Vector2(cos(angle) * dir.x, sin(angle) * dir.y) * CORNER_SCROLL_SIZE * 0.3
 			)
-		# `ci` は呼び出し元のレイヤーの canvas item のため、`self.draw_polyline()` ではなく
+		# `ci` は呼び出し元のレイヤーの canvas item のため、`ShapePaint.polyline(get_canvas_item(), )` ではなく
 		# `RenderingServer` 経由で描く(`_draw_frame_ring()` からは前面のレイヤーを渡すため)。
 		var curve_colors := PackedColorArray()
 		curve_colors.resize(curve.size())
 		curve_colors.fill(color)
-		RenderingServer.canvas_item_add_polyline(ci, curve, curve_colors, 1.3, true)
+		ShapePaint.polyline_colors(ci, curve, curve_colors, 1.3, true)
 
 
 ## 中央のレールと紋章。**陣地の境目**を真鍮の物体として通し、盤面が対面していることを示す。

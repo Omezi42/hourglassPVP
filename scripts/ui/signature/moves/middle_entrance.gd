@@ -46,4 +46,14 @@ func draw(item: CanvasItem, t: float) -> void:
 	if pulse > 0.02:
 		var radius := PULSE_RADIUS * ease(pulse, 0.4)
 		UiPaint.fill_circle(ci, core, radius, Color(violet, alpha * 0.28 * (1.0 - pulse)), 32)
-		item.draw_arc(core, radius, 0.0, TAU, 40, Color(violet, alpha * (1.0 - pulse)), 2.2, true)
+		ShapePaint.arc(
+			item.get_canvas_item(),
+			core,
+			radius,
+			0.0,
+			TAU,
+			40,
+			Color(violet, alpha * (1.0 - pulse)),
+			2.2,
+			true
+		)

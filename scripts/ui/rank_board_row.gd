@@ -104,9 +104,15 @@ func _draw() -> void:
 				[1.0, Color(UiPalette.PANEL_AMBER_TOP.lightened(0.1), 0.35)]
 			]
 		)
-		draw_polyline(RankMedal.closed(points), Color(UiPalette.GLOW_AMBER, 0.85), 1.5, true)
+		ShapePaint.polyline(
+			get_canvas_item(),
+			RankMedal.closed(points),
+			Color(UiPalette.GLOW_AMBER, 0.85),
+			1.5,
+			true
+		)
 	elif zebra:
-		draw_colored_polygon(points, ZEBRA)
+		ShapePaint.colored_polygon(get_canvas_item(), points, ZEBRA)
 	var center_y := area.y * 0.5
 	_draw_rank(center_y)
 	_draw_portrait(Vector2(PORTRAIT_X, center_y))
@@ -160,7 +166,8 @@ func _draw_portrait(center: Vector2) -> void:
 			Rect2(center - Vector2.ONE * PORTRAIT_ICON, Vector2.ONE * PORTRAIT_ICON * 2.0),
 			false
 		)
-	draw_arc(
+	ShapePaint.arc(
+		get_canvas_item(),
 		center,
 		PORTRAIT_RADIUS,
 		0.0,
@@ -262,9 +269,13 @@ func _draw_stars(right: float, center_y: float) -> void:
 			RankMedal.draw_filled_star(self, at, STAR_RADIUS)
 			continue
 		var points := RankMedal.star_points(at, STAR_RADIUS)
-		draw_colored_polygon(points, EMPTY_STAR_FILL)
-		draw_polyline(
-			RankMedal.closed(points), Color(UiPalette.BRASS_HIGHLIGHT, 0.45), outline, true
+		ShapePaint.colored_polygon(get_canvas_item(), points, EMPTY_STAR_FILL)
+		ShapePaint.polyline(
+			get_canvas_item(),
+			RankMedal.closed(points),
+			Color(UiPalette.BRASS_HIGHLIGHT, 0.45),
+			outline,
+			true
 		)
 
 

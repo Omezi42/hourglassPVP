@@ -61,7 +61,9 @@ static func pedestal_base(view: CardView) -> void:
 		var t: float = float(i) / 10.0
 		var angle: float = lerpf(-PI * 0.82, -PI * 0.18, t)
 		highlight.append(top_center + Vector2(cos(angle) * radius.x, sin(angle) * radius.y))
-	view.draw_polyline(highlight, Color(UiPalette.BRASS_HIGHLIGHT, 0.5), 1.5, true)
+	ShapePaint.polyline(
+		view.get_canvas_item(), highlight, Color(UiPalette.BRASS_HIGHLIGHT, 0.5), 1.5, true
+	)
 	# 駒が立っているときだけ、足元の影をもう一段濃く重ねる(既存の踏み込み表現)。
 	if view.card != null:
 		var shadow_base := radius * 0.85
@@ -190,8 +192,17 @@ static func badge(view: CardView, rect: Rect2) -> void:
 ## ここでは大きさをそのまま使うだけにする(円の太さ・文字のサイズも半径に連動するため、
 ## 自然に一緒に跳ねる)。
 static func stat(view: CardView, center: Vector2, value: int, color: Color, radius: float) -> void:
-	view.draw_circle(center, radius, Color(0.08, 0.07, 0.06, 0.95))
-	view.draw_arc(center, radius, 0.0, TAU, 24, color, 2.5 * radius / CardView.STAT_RADIUS)
+	ShapePaint.circle(view.get_canvas_item(), center, radius, Color(0.08, 0.07, 0.06, 0.95))
+	ShapePaint.arc(
+		view.get_canvas_item(),
+		center,
+		radius,
+		0.0,
+		TAU,
+		24,
+		color,
+		2.5 * radius / CardView.STAT_RADIUS
+	)
 	var text := str(value)
 	var font_size := maxi(CardView.MIN_FONT_SIZE, roundi(20.0 * radius / CardView.STAT_RADIUS))
 	var width := view._font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
@@ -212,8 +223,12 @@ static func preview(view: CardView, anchor: Vector2) -> void:
 		return
 	var color := CardView.PREVIEW_DEAD if view.preview_dead else CardView.PREVIEW_ALIVE
 	var center := anchor + Vector2(0, CardView.STAT_RADIUS + CardView.PREVIEW_GAP)
-	view.draw_circle(center, CardView.PREVIEW_RADIUS, Color(0.08, 0.07, 0.06, 0.95))
-	view.draw_arc(center, CardView.PREVIEW_RADIUS, 0.0, TAU, 20, color, 2.0)
+	ShapePaint.circle(
+		view.get_canvas_item(), center, CardView.PREVIEW_RADIUS, Color(0.08, 0.07, 0.06, 0.95)
+	)
+	ShapePaint.arc(
+		view.get_canvas_item(), center, CardView.PREVIEW_RADIUS, 0.0, TAU, 20, color, 2.0
+	)
 	var text := "破壊" if view.preview_dead else str(view.preview_health)
 	var font_size := 12 if view.preview_dead else 15
 	var text_size := view._font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
@@ -288,8 +303,8 @@ static func crack(view: CardView) -> void:
 			var point := box.position + box.size * (p as Vector2)
 			points.append(point)
 			lit.append(point + Vector2(1.0, 0.0))
-		view.draw_polyline(points, HpVesselFx.CRACK_DARK, 2.0, true)
-		view.draw_polyline(lit, CRACK_LIGHT, 1.0, true)
+		ShapePaint.polyline(view.get_canvas_item(), points, HpVesselFx.CRACK_DARK, 2.0, true)
+		ShapePaint.polyline(view.get_canvas_item(), lit, CRACK_LIGHT, 1.0, true)
 
 
 ## 空き枠の点線。

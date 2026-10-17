@@ -31,11 +31,23 @@ func draw(item: CanvasItem, t: float) -> void:
 		var a := TAU * float(i) / float(LOBES * 4)
 		var wobble := 1.0 + 0.08 * sin(a * LOBES)
 		shape.append(at + Vector2(cos(a) * size.x, sin(a) * size.y) * wobble)
-	item.draw_colored_polygon(shape, Color(WAX_COLOR, alpha))
+	ShapePaint.colored_polygon(item.get_canvas_item(), shape, Color(WAX_COLOR, alpha))
 	var closed := shape.duplicate()
 	closed.append(shape[0])
-	item.draw_polyline(closed, Color(UiPalette.OUTLINE_DARK, alpha * 0.8), 1.4, true)
-	item.draw_arc(at, WAX * 0.7, 0.0, TAU, 32, Color(WAX_COLOR.darkened(0.3), alpha), 1.6, true)
+	ShapePaint.polyline(
+		item.get_canvas_item(), closed, Color(UiPalette.OUTLINE_DARK, alpha * 0.8), 1.4, true
+	)
+	ShapePaint.arc(
+		item.get_canvas_item(),
+		at,
+		WAX * 0.7,
+		0.0,
+		TAU,
+		32,
+		Color(WAX_COLOR.darkened(0.3), alpha),
+		1.6,
+		true
+	)
 	var mark := phase(t, DESCEND + PRESS, SET)
 	if mark > 0.0:
 		var reach := MARK * ease(mark, 0.5)

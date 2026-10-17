@@ -48,14 +48,16 @@ func _draw() -> void:
 	)
 	var outline := points.duplicate()
 	outline.append(points[0])
-	draw_polyline(outline, UiPalette.BRASS_MID, BRASS_OUTLINE_WIDTH, true)
+	ShapePaint.polyline(get_canvas_item(), outline, UiPalette.BRASS_MID, BRASS_OUTLINE_WIDTH, true)
 	var outer_rect := rect.grow(OUTER_OUTLINE_WIDTH)
 	var outer_points := UiPaint.rounded_rect_points_uniform(
 		outer_rect, CORNER_RADIUS + OUTER_OUTLINE_WIDTH, CORNER_SEGMENTS
 	)
 	var outer_outline := outer_points.duplicate()
 	outer_outline.append(outer_points[0])
-	draw_polyline(outer_outline, UiPalette.OUTLINE_DARK, OUTER_OUTLINE_WIDTH, true)
+	ShapePaint.polyline(
+		get_canvas_item(), outer_outline, UiPalette.OUTLINE_DARK, OUTER_OUTLINE_WIDTH, true
+	)
 	_draw_edge_lines(rect)
 
 

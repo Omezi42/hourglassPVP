@@ -155,9 +155,11 @@ func _build_card(rect: Rect2, boon: SoloBoonData) -> void:
 		func() -> void:
 			var center := Vector2(MEDAL_RADIUS, MEDAL_RADIUS)
 			var inner := MEDAL_RADIUS - 6.0
-			medal.draw_circle(center, MEDAL_RADIUS, UiPalette.BRASS_MID)
-			medal.draw_circle(center, inner, UiPalette.NAVY_PANEL_TOP)
-			medal.draw_arc(center, inner, 0, TAU, 48, UiPalette.GLOW_AMBER, 2.0)
+			ShapePaint.circle(medal.get_canvas_item(), center, MEDAL_RADIUS, UiPalette.BRASS_MID)
+			ShapePaint.circle(medal.get_canvas_item(), center, inner, UiPalette.NAVY_PANEL_TOP)
+			ShapePaint.arc(
+				medal.get_canvas_item(), center, inner, 0, TAU, 48, UiPalette.GLOW_AMBER, 2.0
+			)
 			if icon != null:
 				var side := inner * MEDAL_ICON_RATIO
 				var icon_rect := Rect2(center - Vector2.ONE * side * 0.5, Vector2.ONE * side)

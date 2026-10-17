@@ -43,7 +43,17 @@ func draw(item: CanvasItem, t: float) -> void:
 	var ring := phase(t, impact_at(), RING)
 	if ring > 0.0 and ring < 1.0:
 		var color := Color(PULSE, alpha * 0.7 * (1.0 - ring))
-		item.draw_arc(targets[0], 46.0 * ease(ring, 0.4), 0.0, TAU, 40, color, 2.4, true)
+		ShapePaint.arc(
+			item.get_canvas_item(),
+			targets[0],
+			46.0 * ease(ring, 0.4),
+			0.0,
+			TAU,
+			40,
+			color,
+			2.4,
+			true
+		)
 
 
 ## 手を打った瞬間の光。短い光条が放射状に伸びて消える。

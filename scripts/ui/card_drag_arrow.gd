@@ -57,4 +57,6 @@ func _draw() -> void:
 	var shaft_end := to - normal * HEAD_LENGTH
 	draw_line(_from, shaft_end, COLOR, LINE_WIDTH)
 	var side := Vector2(-normal.y, normal.x) * HEAD_WIDTH * 0.5
-	draw_colored_polygon(PackedVector2Array([to, shaft_end + side, shaft_end - side]), COLOR)
+	ShapePaint.colored_polygon(
+		get_canvas_item(), PackedVector2Array([to, shaft_end + side, shaft_end - side]), COLOR
+	)

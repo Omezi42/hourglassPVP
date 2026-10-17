@@ -97,7 +97,7 @@ func _draw_waiting_panel() -> void:
 	)
 	var outline := points.duplicate()
 	outline.append(points[0])
-	draw_polyline(outline, Color(UiPalette.BRASS_MID, 0.9), 2.0, true)
+	ShapePaint.polyline(get_canvas_item(), outline, Color(UiPalette.BRASS_MID, 0.9), 2.0, true)
 	draw_string(
 		font,
 		rect.get_center() + Vector2(-text_size.x * 0.5, text_size.y * 0.32),

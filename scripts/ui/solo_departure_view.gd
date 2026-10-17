@@ -201,9 +201,18 @@ func _build_seal(rect: Rect2, depth: int) -> void:
 	seal.draw.connect(
 		func() -> void:
 			var c := Vector2.ONE * SEAL_RADIUS
-			seal.draw_circle(c, SEAL_RADIUS, UiPalette.BRASS_DARK)
-			seal.draw_circle(c, SEAL_RADIUS - 3.0, UiPalette.BRASS_MID)
-			seal.draw_arc(c, SEAL_RADIUS - 5.0, 0, TAU, 32, UiPalette.BRASS_HIGHLIGHT, 1.5)
+			ShapePaint.circle(seal.get_canvas_item(), c, SEAL_RADIUS, UiPalette.BRASS_DARK)
+			ShapePaint.circle(seal.get_canvas_item(), c, SEAL_RADIUS - 3.0, UiPalette.BRASS_MID)
+			ShapePaint.arc(
+				seal.get_canvas_item(),
+				c,
+				SEAL_RADIUS - 5.0,
+				0,
+				TAU,
+				32,
+				UiPalette.BRASS_HIGHLIGHT,
+				1.5
+			)
 			var font := seal.get_theme_default_font()
 			if font == null:
 				return

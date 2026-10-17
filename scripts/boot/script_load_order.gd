@@ -4,6 +4,7 @@
 const PATHS: Array[String] = [
 	"res://scripts/ui/styles/ui_fonts.gd",
 	"res://scripts/ui/foil_layer.gd",
+	"res://scripts/ui/styles/shape_paint.gd",
 	"res://scripts/ui/title_logo.gd",
 	"res://scripts/ui/screen_orientation.gd",
 	"res://scripts/logic/sound_bank.gd",

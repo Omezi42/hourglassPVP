@@ -46,7 +46,7 @@ func draw(item: CanvasItem, t: float) -> void:
 			var s := ease(q, 1.4)
 			var spread := (SignaturePaint.jitter(i, 42) - 0.5) * 8.0
 			var at := center.lerp(targets[0], s) - Vector2(spread, ARC * sin(s * PI))
-			item.draw_circle(at, 1.8, Color(SignaturePaint.BOON, alpha))
+			ShapePaint.circle(item.get_canvas_item(), at, 1.8, Color(SignaturePaint.BOON, alpha))
 	SignaturePaint.boon_ring(item, targets[0], phase(t, impact_at(), RING), alpha)
 
 
@@ -71,4 +71,6 @@ func _half(item: CanvasItem, center: Vector2, side: float, open: float, alpha: f
 	)
 	var closed := shape.duplicate()
 	closed.append(shape[0])
-	item.draw_polyline(closed, Color(UiPalette.OUTLINE_DARK, alpha * 0.8), 1.2, true)
+	ShapePaint.polyline(
+		item.get_canvas_item(), closed, Color(UiPalette.OUTLINE_DARK, alpha * 0.8), 1.2, true
+	)
