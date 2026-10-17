@@ -46,6 +46,10 @@ const EFFECTS := {
 	"refill": preload("res://scripts/ui/signature/moves/refill_effect.gd"),
 	"call": preload("res://scripts/ui/signature/moves/call_effect.gd"),
 	"reverse": preload("res://scripts/ui/signature/moves/reverse_effect.gd"),
+	"turn": preload("res://scripts/ui/signature/moves/turn_effect.gd"),
+	"gust": preload("res://scripts/ui/signature/moves/gust_effect.gd"),
+	"seal": preload("res://scripts/ui/signature/moves/seal_effect.gd"),
+	"goad": preload("res://scripts/ui/signature/moves/goad_effect.gd"),
 }
 
 
