@@ -97,7 +97,7 @@ const SAND_GLINT_SPEED := 0.9
 const SAND_GLINT_RADIUS := 1.6
 ## マナのピップの光と吸い込み(GameDesign.md 9章「対局画面の手触り」)。ホバー中の札の
 ## コストぶんを脈打たせ、支払った瞬間はそのぶんが札の方向へ吸われて消える。
-## 脈打ちは毎フレーム描き直す `PlayerInfoBarFx` が持つ。
+## 脈打ちは `PlayerInfoBarFx` が持つ。
 const PIP_GLOW_SPEED := 6.0
 const PIP_GLOW_EXTRA := 3.0
 const SPEND_DURATION := 0.25

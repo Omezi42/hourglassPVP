@@ -5,7 +5,8 @@ extends Control
 ##
 ## 駒や数値の読みやすさを損なわないことを最優先し(9章「盤面の読みやすさを損なわない
 ## 範囲でしか作らない」と同じ考え方)、粒はごく小さく・薄く・ゆっくりにする。
-## クリックは奪わない(`MOUSE_FILTER_IGNORE`)。
+## クリックは奪わない(`MOUSE_FILTER_IGNORE`)。粒の形は `PaintedShape` に1度だけ描き、
+## 漂いと明滅は位置と不透明度だけで動かす(Architecture.md 10.10.3節)。
 
 const MOTE_COUNT := 10
 const RADIUS_RANGE := Vector2(1.2, 2.6)
@@ -22,14 +23,17 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_rng.seed = 42
 	for i in MOTE_COUNT:
+		var radius := _rng.randf_range(RADIUS_RANGE.x, RADIUS_RANGE.y)
+		var shape := PaintedShape.new(_paint_mote.bind(radius))
+		add_child(shape)
 		(
 			_motes
 			. append(
 				{
 					"pos": Vector2(_rng.randf_range(0.0, 1.0), _rng.randf_range(0.0, 1.0)),
-					"radius": _rng.randf_range(RADIUS_RANGE.x, RADIUS_RANGE.y),
 					"drift": Vector2(_rng.randf_range(-1.0, 1.0), _rng.randf_range(-0.3, 0.3)),
 					"phase": _rng.randf_range(0.0, TAU),
+					"shape": shape,
 				}
 			)
 		)
@@ -47,41 +51,17 @@ func _process(delta: float) -> void:
 		pos.y = fposmod(pos.y, 1.0)
 		mote["pos"] = pos
 		mote["phase"] += delta * FLICKER_SPEED
-	queue_redraw()
-
-
-func _draw() -> void:
-	var ci := get_canvas_item()
-	for mote in _motes:
-		var pos: Vector2 = mote["pos"] * size
-		var radius: float = mote["radius"]
 		var flicker := (sin(float(mote["phase"])) + 1.0) * 0.5
-		var alpha := PEAK_ALPHA * (0.35 + flicker * 0.65)
-		(
-			UiPaint
-			. fill_gradient_polygon(
-				ci,
-				UiPaint.circle_points(pos, radius, 8),
-				Rect2(pos - Vector2(radius, radius), Vector2(radius, radius) * 2.0),
-				[
-					[
-						0.0,
-						Color(
-							UiPalette.GLOW_AMBER.r,
-							UiPalette.GLOW_AMBER.g,
-							UiPalette.GLOW_AMBER.b,
-							alpha
-						)
-					],
-					[
-						1.0,
-						Color(
-							UiPalette.GLOW_AMBER.r,
-							UiPalette.GLOW_AMBER.g,
-							UiPalette.GLOW_AMBER.b,
-							0.0
-						)
-					],
-				]
-			)
-		)
+		var shape: PaintedShape = mote["shape"]
+		shape.position = pos * size
+		shape.modulate.a = PEAK_ALPHA * (0.35 + flicker * 0.65)
+
+
+func _paint_mote(shape: PaintedShape, radius: float) -> void:
+	var glow := UiPalette.GLOW_AMBER
+	UiPaint.fill_gradient_polygon(
+		shape.get_canvas_item(),
+		UiPaint.circle_points(Vector2.ZERO, radius, 8),
+		Rect2(-Vector2(radius, radius), Vector2(radius, radius) * 2.0),
+		[[0.0, Color(glow.r, glow.g, glow.b, 1.0)], [1.0, Color(glow.r, glow.g, glow.b, 0.0)]]
+	)
