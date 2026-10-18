@@ -1019,6 +1019,16 @@
 			"is_spell": false,
 			"pool_index": 102,
 			"total_sand": 9
+		},
+		{
+			"cannot_attack": false,
+			"cost": 1,
+			"describe": "設置:相手プレイヤーか相手の砂時計1体に1ダメージ",
+			"display_name": "スリング",
+			"id": "sling",
+			"is_spell": false,
+			"pool_index": 103,
+			"total_sand": 2
 		}
 	]
 }
