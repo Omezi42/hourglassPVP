@@ -248,6 +248,7 @@ static func _entry_for_effect(effect: CardEffectData) -> Dictionary:
 		"aged": effect.condition_scope == CardEnums.ConditionScope.ATTACK_OVER_HEALTH,
 		"trigger": effect.trigger,
 		"self": effect.target == CardEnums.EffectTarget.SELF,
+		"or_face": effect.target == CardEnums.EffectTarget.ENEMY_UNIT_OR_PLAYER,
 	}
 
 
@@ -292,7 +293,12 @@ func _stage(entry: Dictionary, t: float) -> Dictionary:
 		stage = CardEffectDemoGrave.stage(demo, t, entry.get("self", false))
 	if stage.is_empty():
 		stage = CardEffectDemoEffect.on_enemy_unit(
-			t, demo, value, entry.get("all", false), entry.get("aged", false)
+			t,
+			demo,
+			value,
+			entry.get("all", false),
+			entry.get("aged", false),
+			entry.get("or_face", false)
 		)
 	var trigger_note: String = stage.get("trigger_note", "")
 	if not trigger_note.is_empty():

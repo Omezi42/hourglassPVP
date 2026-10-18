@@ -37,8 +37,11 @@ static func apply(foe: Dictionary, demo: int, value: int, landed: float) -> void
 				foe["shatter"] = landed
 
 
-static func note(demo: int, value: int, all: bool) -> String:
+## or_face は本体も選べる効果(スリング)。実演は駒へ当てて見せ、文で本体も選べると添える。
+static func note(demo: int, value: int, all: bool, or_face := false) -> String:
 	var scope := "相手の砂時計すべて" if all else "相手の砂時計1体"
+	if or_face:
+		scope = "相手プレイヤーか相手の砂時計1体"
 	match demo:
 		CardEffectPreview.Demo.FX_DESTROY_UNIT:
 			return "%sを破壊する" % scope
