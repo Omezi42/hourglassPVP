@@ -495,7 +495,8 @@
 		"id": "26",
 		"label": "とどめ問題 #25",
 		"reserved": [
-			"x"
+			"x",
+			"youtube"
 		]
 	},
 	{
@@ -504,67 +505,106 @@
 		"id": "hour",
 		"label": "アワー",
 		"reserved": [
-			"x"
+			"x",
+			"youtube"
 		]
 	},
 	{
 		"date": "2026-10-22",
 		"kind": "puzzle",
 		"id": "9",
-		"label": "とどめ問題 #26"
+		"label": "とどめ問題 #26",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-10-22",
 		"kind": "card",
 		"id": "balm",
-		"label": "バーム"
+		"label": "バーム",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-10-23",
 		"kind": "puzzle",
 		"id": "27",
-		"label": "とどめ問題 #27"
+		"label": "とどめ問題 #27",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-10-23",
 		"kind": "card",
 		"id": "bulwark",
-		"label": "砂の壁"
+		"label": "砂の壁",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-10-24",
 		"kind": "puzzle",
 		"id": "28",
-		"label": "とどめ問題 #28"
+		"label": "とどめ問題 #28",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-10-24",
 		"kind": "card",
 		"id": "tempest",
-		"label": "砂塵嵐"
+		"label": "砂塵嵐",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-10-25",
 		"kind": "puzzle",
 		"id": "29",
-		"label": "とどめ問題 #29"
+		"label": "とどめ問題 #29",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-10-25",
 		"kind": "card",
 		"id": "well",
-		"label": "ウェル"
+		"label": "ウェル",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-10-26",
 		"kind": "puzzle",
 		"id": "30",
-		"label": "とどめ問題 #30"
+		"label": "とどめ問題 #30",
+		"reserved": [
+			"x"
+		]
 	},
 	{
 		"date": "2026-10-26",
 		"kind": "card",
 		"id": "oasis",
-		"label": "オアシス"
+		"label": "オアシス",
+		"reserved": [
+			"x"
+		]
 	}
 ]
