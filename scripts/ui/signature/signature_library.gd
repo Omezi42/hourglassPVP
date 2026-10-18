@@ -12,6 +12,8 @@ const ENTRANCES := {
 	"middle": preload("res://scripts/ui/signature/moves/middle_entrance.gd"),
 	"phase": preload("res://scripts/ui/signature/moves/phase_entrance.gd"),
 	"grain": preload("res://scripts/ui/signature/moves/grain_entrance.gd"),
+	"dash": preload("res://scripts/ui/signature/moves/dash_entrance.gd"),
+	"shield": preload("res://scripts/ui/signature/moves/shield_entrance.gd"),
 }
 
 ## 効果が対象へ届くまで(設置・落砂・砂術など、紋章が飛ぶ場面の代わり)。
@@ -58,6 +60,11 @@ const EFFECTS := {
 	"glim": preload("res://scripts/ui/signature/moves/glim_effect.gd"),
 	"husk": preload("res://scripts/ui/signature/moves/husk_effect.gd"),
 	"pebble": preload("res://scripts/ui/signature/moves/pebble_effect.gd"),
+	"salt": preload("res://scripts/ui/signature/moves/salt_effect.gd"),
+	"tick": preload("res://scripts/ui/signature/moves/tick_effect.gd"),
+	"rattle": preload("res://scripts/ui/signature/moves/rattle_effect.gd"),
+	"dust": preload("res://scripts/ui/signature/moves/dust_effect.gd"),
+	"flask": preload("res://scripts/ui/signature/moves/flask_effect.gd"),
 }
 
 
