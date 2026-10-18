@@ -91,10 +91,28 @@ const SETS: Dictionary = {
 		"price": 800,
 		"planned_count": 8,
 	},
+	## 5番目のカードセット(GameDesign.md 8章)。後手が勝ちにくい理由を1つずつ見つけて補う枠。
+	## 段階公開(21章)で、毎日1枚ずつ `card_ids` へ足す。
+	"chase_sand":
+	{
+		"id": "chase_sand",
+		"display_name": "追砂の刻",
+		"description": "先に動いた相手へ、細かな一手で追いつく10枚",
+		"card_ids": ["sling"],
+		"price": 1000,
+		"planned_count": 10,
+	},
 }
 
 const ORDERED_IDS: Array[String] = [
-	"solo_chime", "solo_ward", "solo_goad", "combo_five", "still_time", "grave_sand", "echo_time"
+	"solo_chime",
+	"solo_ward",
+	"solo_goad",
+	"combo_five",
+	"still_time",
+	"grave_sand",
+	"echo_time",
+	"chase_sand",
 ]
 
 

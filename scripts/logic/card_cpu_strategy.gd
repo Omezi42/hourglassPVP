@@ -183,6 +183,13 @@ func _random_target(state: MatchState, side: int, card: CardData) -> Dictionary:
 			var slots := state.units(foe_side)
 			if not slots.is_empty():
 				return {"side": foe_side, "slot": _random_slot_of(state, foe_side)}
+		elif effect.target == CardEnums.EffectTarget.ENEMY_UNIT_OR_PLAYER:
+			# 本体(-1)も駒と同じ重みで候補に入れる。
+			var choices: Array = [-1]
+			for slot in MatchState.BOARD_SIZE:
+				if state.board[foe_side][slot] != null:
+					choices.append(slot)
+			return {"side": foe_side, "slot": choices[_rng.randi_range(0, choices.size() - 1)]}
 		elif effect.target == CardEnums.EffectTarget.ALLY_UNIT:
 			var slots := state.units(side)
 			if not slots.is_empty():
@@ -451,6 +458,8 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 				var slot := _strongest_enemy(state, foe_side)
 				if slot >= 0:
 					value = _damage_value(state.board[foe_side][slot], effect.value)
+			elif effect.target == CardEnums.EffectTarget.ENEMY_UNIT_OR_PLAYER:
+				value = _unit_or_face_pick(state, foe_side, effect.value)["value"]
 			else:
 				for unit in state.units(foe_side):
 					value += _damage_value(unit, effect.value)
@@ -608,6 +617,10 @@ func _effect_target(state: MatchState, side: int, card: CardData) -> Dictionary:
 			var slot := _enemy_target_slot(state, foe_side, effect)
 			if slot >= 0:
 				return {"side": foe_side, "slot": slot}
+		elif effect.target == CardEnums.EffectTarget.ENEMY_UNIT_OR_PLAYER:
+			return {
+				"side": foe_side, "slot": _unit_or_face_pick(state, foe_side, effect.value)["slot"]
+			}
 		elif effect.target == CardEnums.EffectTarget.ALLY_UNIT:
 			# 反転と砂落としは「最も強い味方」ではなく「効かせて最も得をする味方」を選ぶ。
 			var slot: int = _strongest_ally(state, side)
@@ -626,6 +639,20 @@ func _effect_target(state: MatchState, side: int, card: CardData) -> Dictionary:
 		if pick >= 0:
 			return {"grave_index": pick}
 	return {}
+
+
+## 相手プレイヤーか相手の砂時計1体へダメージを与える効果(追砂の刻)の狙い先。
+## 駒へ与えて減る生涯ダメージと、本体へ与える値打ちを比べ、大きいほうを選ぶ。本体は枠 -1。
+func _unit_or_face_pick(state: MatchState, foe_side: int, amount: int) -> Dictionary:
+	var best := {"slot": -1, "value": amount * FACE_WEIGHT}
+	for slot in MatchState.BOARD_SIZE:
+		var unit: CardInstance = state.board[foe_side][slot]
+		if unit == null:
+			continue
+		var value := _damage_value(unit, amount)
+		if value > best["value"]:
+			best = {"slot": slot, "value": value}
+	return best
 
 
 ## ENEMY_UNIT を狙う効果の対象を選ぶ。上級はダメージ効果(DAMAGE_UNIT)のときだけ

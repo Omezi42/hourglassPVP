@@ -23,7 +23,10 @@ static func side_for(card: CardData, my_side: int) -> int:
 	var effect := targeting_effect(card)
 	if effect == null:
 		return -1
-	if effect.target == CardEnums.EffectTarget.ENEMY_UNIT:
+	if (
+		effect.target
+		in [CardEnums.EffectTarget.ENEMY_UNIT, CardEnums.EffectTarget.ENEMY_UNIT_OR_PLAYER]
+	):
 		return MatchState.other_side(my_side)
 	return my_side
 
@@ -31,7 +34,14 @@ static func side_for(card: CardData, my_side: int) -> int:
 ## 手札の1枚が出したときに対象を1体選ぶ効果。取らないなら null。
 static func targeting_effect(card: CardData) -> CardEffectData:
 	for effect in card.effects_for(CardEnums.Trigger.ON_PLAY):
-		if effect.target in [CardEnums.EffectTarget.ENEMY_UNIT, CardEnums.EffectTarget.ALLY_UNIT]:
+		if (
+			effect.target
+			in [
+				CardEnums.EffectTarget.ENEMY_UNIT,
+				CardEnums.EffectTarget.ALLY_UNIT,
+				CardEnums.EffectTarget.ENEMY_UNIT_OR_PLAYER,
+			]
+		):
 			return effect
 	return null
 
@@ -43,8 +53,17 @@ static func can_target(state: MatchState, card: CardData, side: int, slot: int) 
 	return unit != null and CardEffectResolver.eligible_target(unit, targeting_effect(card))
 
 
+## 相手プレイヤー(HPの器)も対象に選べるか(追砂の刻。GameDesign.md 9章)。
+static func can_target_face(card: CardData) -> bool:
+	var effect := targeting_effect(card)
+	return effect != null and effect.target == CardEnums.EffectTarget.ENEMY_UNIT_OR_PLAYER
+
+
 ## 対象に選べる駒が1体でもいるか。いなければ対象選択へ入らずそのまま出す(効果は不発)。
+## 本体も選べる効果は、駒がいなくても本体を選ばせる。
 static func has_candidate(state: MatchState, card: CardData, side: int) -> bool:
+	if can_target_face(card):
+		return true
 	for slot in MatchState.BOARD_SIZE:
 		if can_target(state, card, side, slot):
 			return true

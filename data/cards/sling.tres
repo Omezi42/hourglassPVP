@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/emblems/sling.png" id="emblem"]
+
+[sub_resource type="Resource" id="Effect_sling_0"]
+script = ExtResource("script_effect")
+trigger = 0
+target = 7
+effect_type = 1
+value = 1
+card_id = ""
+keyword = -1
+condition_scope = 0
+condition_total = -1
+random_target = false
+
+[resource]
+script = ExtResource("script_card")
+id = "sling"
+display_name = "スリング"
+cost = 1
+total_sand = 2
+pool_index = 103
+set_id = "chase_sand"
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_sling_0")])
+rules_text = "設置:相手プレイヤーか相手の砂時計1体に1ダメージ"
+cannot_attack = false
+is_token = false
+art_id = "pebble"
+emblem = ExtResource("emblem")

@@ -42,6 +42,7 @@ func refresh() -> void:
 			_screen.view_at(side, slot).selected = CardMatchEffectTarget.can_target(
 				state, card, side, slot
 			)
+		_screen.foe_bar.targetable = CardMatchEffectTarget.can_target_face(card)
 		return
 	if selection.is_hand_selection():
 		for slot in MatchState.BOARD_SIZE:

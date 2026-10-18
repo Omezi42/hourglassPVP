@@ -118,7 +118,10 @@ func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Diction
 				origin
 			)
 			for entry in damage_entries:
-				_state.damage_unit(entry["side"], entry["slot"], effect.value)
+				if entry["slot"] < 0:
+					_state.damage_player(entry["side"], effect.value)
+				else:
+					_state.damage_unit(entry["side"], entry["slot"], effect.value)
 		CardEnums.EffectType.DESTROY_UNIT:
 			var destroy_entries := _targets(side, unit, effect, hint)
 			_strike_for_targets(
@@ -541,6 +544,7 @@ func _is_enemy_target(target: int) -> bool:
 	return (
 		target == CardEnums.EffectTarget.ENEMY_UNIT
 		or target == CardEnums.EffectTarget.ALL_ENEMY_UNITS
+		or target == CardEnums.EffectTarget.ENEMY_UNIT_OR_PLAYER
 	)
 
 
@@ -551,21 +555,35 @@ func _unit_at(entry: Dictionary) -> CardInstance:
 ## 効果の対象になる砂時計を {"side":..., "slot":...} の配列として返す。
 func _targets(side: int, unit: CardInstance, effect: CardEffectData, hint: Dictionary) -> Array:
 	var foe_side := MatchState.other_side(side)
+	var found: Array = []
 	match effect.target:
 		CardEnums.EffectTarget.SELF:
 			var slot := _slot_of(side, unit)
-			return [] if slot < 0 else [{"side": side, "slot": slot}]
+			if slot >= 0:
+				found = [{"side": side, "slot": slot}]
 		CardEnums.EffectTarget.ALL_ENEMY_UNITS:
-			return _all_slots(foe_side, effect)
+			found = _all_slots(foe_side, effect)
 		CardEnums.EffectTarget.ALL_ALLY_UNITS:
-			return _all_slots(side, effect)
+			found = _all_slots(side, effect)
 		CardEnums.EffectTarget.ENEMY_UNIT:
-			return _single_unit(foe_side, hint, -1, effect)
+			found = _single_unit(foe_side, hint, -1, effect)
+		CardEnums.EffectTarget.ENEMY_UNIT_OR_PLAYER:
+			found = _unit_or_player(foe_side, hint, effect)
 		CardEnums.EffectTarget.ALLY_UNIT:
 			# **自分自身は選べない**(GameDesign.md 6章)。効果を持つ駒が自分を強化すると
 			# 「他の駒を助ける」というカードの読みが崩れ、対象を選ぶ意味も無くなるため。
-			return _single_unit(side, hint, _slot_of(side, unit), effect)
-	return []
+			found = _single_unit(side, hint, _slot_of(side, unit), effect)
+	return found
+
+
+## 相手プレイヤーか相手の砂時計1体(追砂の刻)。本体は枠 -1 で表す(攻撃の target_slot と同じ)。
+## 指定が無ければ駒を選び、駒がいなければ本体へ。
+func _unit_or_player(foe_side: int, hint: Dictionary, effect: CardEffectData) -> Array:
+	var face := [{"side": foe_side, "slot": -1}]
+	if hint.get("slot", 0) == -1 and hint.get("side", foe_side) == foe_side:
+		return face
+	var picked := _single_unit(foe_side, hint, -1, effect)
+	return face if picked.is_empty() else picked
 
 
 ## 対象を1体だけ選ぶ効果の解決。相手側(ENEMY_UNIT)も自分側(ALLY_UNIT)もここを通る。

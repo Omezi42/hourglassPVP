@@ -177,6 +177,16 @@ func _handle_foe_targeting(slot: int) -> void:
 
 
 func on_face_pressed() -> void:
+	if _screen.selection.is_targeting():
+		var card: CardData = _screen.state.hand[_screen.my_side][_screen.selection.hand_index]
+		if not CardMatchEffectTarget.can_target_face(card):
+			return
+		var foe := MatchState.other_side(_screen.my_side)
+		if _screen.selection.slot < 0:
+			_screen._spell.cast_at(foe, -1)
+		else:
+			_screen._effect_target.confirm(foe, -1)
+		return
 	if _screen.selection.is_board_selection():
 		_attack(_screen.selection.slot, -1)
 

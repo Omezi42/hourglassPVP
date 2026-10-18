@@ -74,6 +74,8 @@ enum EffectTarget {
 	OWN_PLAYER,
 	## 自分の砂時計1体(選択)。
 	ALLY_UNIT,
+	## 相手プレイヤーか相手の砂時計1体(選択。追砂の刻)。DAMAGE_UNIT と組み、本体を選べば本体へ与える。
+	ENEMY_UNIT_OR_PLAYER,
 }
 
 ## エフェクトの種類。
