@@ -14,6 +14,8 @@ const ENTRANCES := {
 	"grain": preload("res://scripts/ui/signature/moves/grain_entrance.gd"),
 	"dash": preload("res://scripts/ui/signature/moves/dash_entrance.gd"),
 	"shield": preload("res://scripts/ui/signature/moves/shield_entrance.gd"),
+	"sand": preload("res://scripts/ui/signature/moves/sand_entrance.gd"),
+	"watcher": preload("res://scripts/ui/signature/moves/watcher_entrance.gd"),
 }
 
 ## 効果が対象へ届くまで(設置・落砂・砂術など、紋章が飛ぶ場面の代わり)。
@@ -66,6 +68,11 @@ const EFFECTS := {
 	"rattle": preload("res://scripts/ui/signature/moves/rattle_effect.gd"),
 	"dust": preload("res://scripts/ui/signature/moves/dust_effect.gd"),
 	"flask": preload("res://scripts/ui/signature/moves/flask_effect.gd"),
+	"forge": preload("res://scripts/ui/signature/moves/forge_effect.gd"),
+	"temper": preload("res://scripts/ui/signature/moves/temper_effect.gd"),
+	"balm": preload("res://scripts/ui/signature/moves/balm_effect.gd"),
+	"hour": preload("res://scripts/ui/signature/moves/hour_effect.gd"),
+	"spike": preload("res://scripts/ui/signature/moves/spike_effect.gd"),
 }
 
 
