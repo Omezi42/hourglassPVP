@@ -98,7 +98,7 @@ const SETS: Dictionary = {
 		"id": "chase_sand",
 		"display_name": "追砂の刻",
 		"description": "先に動いた相手へ、細かな一手で追いつく10枚",
-		"card_ids": ["sling", "pelt"],
+		"card_ids": ["sling", "pelt", "bola"],
 		"price": 1000,
 		"planned_count": 10,
 	},

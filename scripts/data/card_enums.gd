@@ -152,6 +152,8 @@ enum ConditionScope {
 	## 選んだ対象の攻撃力が体力より多いか(老いた駒・反転した駒)。TARGET と同じく
 	## 対象の絞り込みとして働き、condition_total は使わない(静止の刻)。
 	ATTACK_OVER_HEALTH,
+	## 選んだ対象の体力が condition_total 以下か。TARGET と同じく対象の絞り込みとして働く(追砂の刻)。
+	HEALTH_AT_MOST,
 }
 
 ## 効果が対象へ届く演出の「型」(GameDesign.md 9章)。`MatchState.effect_struck` /

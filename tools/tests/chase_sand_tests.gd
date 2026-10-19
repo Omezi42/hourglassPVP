@@ -14,6 +14,8 @@ func run(assert_true: Callable) -> void:
 	_test_cpu_sling_prefers_fragile_unit()
 	_test_cpu_sling_goes_face_on_empty_board()
 	_test_pelt_hits_unit_and_draws()
+	_test_bola_destroys_only_low_health()
+	_test_bola_fizzles_on_sturdy_board()
 	_test_set_is_staged()
 
 
@@ -101,9 +103,37 @@ func _test_pelt_hits_unit_and_draws() -> void:
 	_assert.call(state.hand[MatchState.Side.A].size() == 1, "砂つぶてを撃つとカードを1枚引く")
 
 
+func _play_bola(state: MatchState, hint: Dictionary) -> void:
+	state.hand[MatchState.Side.A] = [CardLibrary.find_by_id("bola")]
+	state.mana[MatchState.Side.A] = 3
+	state.play_card(MatchState.Side.A, 0, 0, hint)
+
+
+func _test_bola_destroys_only_low_health() -> void:
+	var state := _new_match()
+	var sturdy := _place(state, MatchState.Side.B, _vanilla(5), 0)
+	_place(state, MatchState.Side.B, _vanilla(2), 1)
+	_assert.call(
+		not CardEffectResolver.eligible_target(sturdy, CardLibrary.find_by_id("bola").effects[0]),
+		"体力3以上の駒はボーラの対象に選べない"
+	)
+	_play_bola(state, {"side": MatchState.Side.B, "slot": 0})
+	_assert.call(state.board[MatchState.Side.B][0] == sturdy, "ボーラは体力の多い駒を破壊しない")
+	_assert.call(state.board[MatchState.Side.B][1] == null, "ボーラは体力2以下の駒を破壊する")
+
+
+func _test_bola_fizzles_on_sturdy_board() -> void:
+	var state := _new_match()
+	var sturdy := _place(state, MatchState.Side.B, _vanilla(3), 0)
+	_play_bola(state, {})
+	_assert.call(state.board[MatchState.Side.B][0] == sturdy, "体力2以下の駒がいなければボーラは不発")
+	_assert.call(state.board[MatchState.Side.A][0] != null, "不発でもボーラは場に残る")
+
+
 func _test_set_is_staged() -> void:
 	_assert.call(CardSetLibrary.has_set(SET_ID), "chase_sand is registered")
 	_assert.call(CardSetLibrary.price(SET_ID) == 1000, "chase_sand costs 1000")
 	_assert.call(CardSetLibrary.planned_count(SET_ID) == 10, "chase_sand plans 10 cards")
 	_assert.call(CardSetLibrary.card_ids(SET_ID)[0] == "sling", "chase_sand opens with sling")
 	_assert.call(CardSetLibrary.card_ids(SET_ID)[1] == "pelt", "chase_sand's second card is pelt")
+	_assert.call(CardSetLibrary.card_ids(SET_ID)[2] == "bola", "chase_sand's third card is bola")

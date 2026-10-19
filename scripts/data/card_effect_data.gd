@@ -17,7 +17,8 @@ extends Resource
 
 ## コンボ系カードの発動条件(GameDesign.md 6章)。NONE(既定)なら常に発動する。
 @export var condition_scope: CardEnums.ConditionScope = CardEnums.ConditionScope.NONE
-## condition_scope が確認する総量(体力+攻撃力)の値。-1 は「条件なし」として扱う。
+## condition_scope が比べる値。HEALTH_AT_MOST は体力の上限、それ以外は総量(体力+攻撃力)。
+## -1 は「条件なし」として扱う。
 @export var condition_total: int = -1
 ## 対象を1体取る効果で、条件を満たす中からランダムに選ぶ(反響の刻)。プレイヤーが選べない
 ## トリガー(相手の手番にも起きる反転など)のための指定で、札には「ランダムな」と書く(GameDesign.md 6章)。

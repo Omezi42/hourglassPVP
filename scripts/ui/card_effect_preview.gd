@@ -61,6 +61,8 @@ enum Demo {
 	FX_GAIN_FLIP_RIGHT,
 	## 自分の砂時計が反転するたびに、相手プレイヤーへのダメージが伸びる(反響の刻)。
 	FX_DAMAGE_PLUS_FLIPS,
+	## 条件付き破壊:体力が上限以下の駒だけが砕け、体力の多い駒には効かない(追砂の刻)。
+	FX_DESTROY_WEAK,
 }
 
 const MIN_SIZE := Vector2(320, 200)
@@ -235,11 +237,18 @@ static func _entry_for_effect(effect: CardEffectData) -> Dictionary:
 		and effect.condition_scope == CardEnums.ConditionScope.ATTACK_OVER_HEALTH
 	):
 		demo = Demo.FX_DESTROY_AGED
+	if (
+		demo == Demo.FX_DESTROY_UNIT
+		and effect.condition_scope == CardEnums.ConditionScope.HEALTH_AT_MOST
+	):
+		demo = Demo.FX_DESTROY_WEAK
 	# 反転がトリガーの効果は、反転そのものの実演を兼ねる(2本並べると同じ動きが続くため)。
 	# キーワードを与える効果だけは、値が「いくつ」ではなく「どの語か」を指す。
 	var value := maxi(effect.value, 1)
 	if demo == Demo.FX_GRANT_KEYWORD:
 		value = effect.keyword
+	elif demo == Demo.FX_DESTROY_WEAK:
+		value = effect.condition_total
 	return {
 		"demo": demo,
 		"value": value,

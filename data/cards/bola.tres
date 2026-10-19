@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/emblems/bola.png" id="emblem"]
+
+[sub_resource type="Resource" id="Effect_bola_0"]
+script = ExtResource("script_effect")
+trigger = 0
+target = 1
+effect_type = 2
+value = 0
+condition_scope = 5
+condition_total = 2
+
+[resource]
+script = ExtResource("script_card")
+id = "bola"
+display_name = "ボーラ"
+cost = 3
+total_sand = 4
+pool_index = 105
+set_id = "chase_sand"
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_bola_0")])
+rules_text = "設置:体力が2以下の相手の砂時計1体を破壊する"
+cannot_attack = false
+is_token = false
+art_id = "lance"
+emblem = ExtResource("emblem")

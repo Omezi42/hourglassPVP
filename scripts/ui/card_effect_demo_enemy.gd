@@ -24,7 +24,7 @@ static func apply(foe: Dictionary, demo: int, value: int, landed: float) -> void
 			var moved: int = mini(value, foe["a"])
 			foe["h"] = foe["h"] + moved
 			foe["a"] = foe["a"] - moved
-		CardEffectPreview.Demo.FX_DESTROY_AGED:
+		CardEffectPreview.Demo.FX_DESTROY_AGED, CardEffectPreview.Demo.FX_DESTROY_WEAK:
 			foe["shatter"] = landed
 		CardEffectPreview.Demo.FX_RETURN_TO_HAND:
 			# 砕けるのではなく盤面から消える。**破壊との違いはここでしか見せられない。**
@@ -47,6 +47,8 @@ static func note(demo: int, value: int, all: bool, or_face := false) -> String:
 			return "%sを破壊する" % scope
 		CardEffectPreview.Demo.FX_DESTROY_AGED:
 			return "攻撃力が体力より多い%sを破壊する(若い駒には効かない)" % scope
+		CardEffectPreview.Demo.FX_DESTROY_WEAK:
+			return "体力が%d以下の%sを破壊する(体力の多い駒には効かない)" % [value, scope]
 		CardEffectPreview.Demo.FX_RAISE_SAND:
 			return "%sの砂が%d粒上へ戻る(攻撃力-%d / 体力+%d)" % [scope, value, value, value]
 		CardEffectPreview.Demo.FX_SWAP_STATS:
