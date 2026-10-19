@@ -48,6 +48,12 @@ static func run(screen: CardMatchScreen) -> void:
 	screen._own_bar.show_hand_pile = false
 	screen._own_bar.reset()
 	screen._foe_bar.reset()
+	# 名前・アイコン・称号も対局ごとに入れ直す。残すと前のCPU戦の「CPU」が、
+	# プロフィールを取りに行っている間や取れなかったオンライン対戦の相手名に出る。
+	for bar in [screen._own_bar, screen._foe_bar]:
+		bar.display_name = ""
+		bar.icon_id = UserProfileLibrary.DEFAULT_ICON_ID
+		bar.title_id = UserProfileLibrary.DEFAULT_TITLE_ID
 	screen._cpu_record = {}
 	if screen._puzzle != null:
 		screen._puzzle.close()
