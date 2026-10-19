@@ -1029,6 +1029,16 @@
 			"is_spell": false,
 			"pool_index": 103,
 			"total_sand": 2
+		},
+		{
+			"cannot_attack": false,
+			"cost": 1,
+			"describe": "相手の砂時計1体に1ダメージ。カードを1枚引く",
+			"display_name": "砂つぶて",
+			"id": "pelt",
+			"is_spell": true,
+			"pool_index": 104,
+			"total_sand": 0
 		}
 	]
 }
