@@ -17,6 +17,7 @@ func run(assert_true: Callable) -> void:
 	_assert = assert_true
 	_test_date_switches_at_jst_midnight()
 	_test_every_daily_is_solvable()
+	_test_every_book_puzzle_is_solvable()
 
 
 func _test_date_switches_at_jst_midnight() -> void:
@@ -40,6 +41,16 @@ func _test_every_daily_is_solvable() -> void:
 		var answer: Array = book[int(entry["id"]) - 1]["solution"]
 		_assert.call(_solves(stage, answer), "daily puzzle should be solvable: " + date)
 	_assert.call(count > 0, "at least one daily puzzle should be bundled")
+
+
+## 割り振る前の問題も、いまのカードとルールで正解手順が通ることを確かめる(カードの調整で手順が崩れたら気づけるように)。
+func _test_every_book_puzzle_is_solvable() -> void:
+	var book: Array = _read(BOOK_PATH)
+	for i in book.size():
+		var stage := PuzzleStageData.from_dict(book[i]["stage"], "book")
+		_assert.call(
+			_solves(stage, book[i]["solution"]), "book puzzle should be solvable: #%d" % (i + 1)
+		)
 
 
 func _solves(stage: PuzzleStageData, answer: Array) -> bool:

@@ -1996,9 +1996,9 @@
 	{
 		"metrics": {
 			"first": 7,
-			"good_first": 2,
-			"min_len": 5,
-			"p_random": 0.0092
+			"good_first": 4,
+			"min_len": 4,
+			"p_random": 0.0489
 		},
 		"solution": [
 			{
@@ -2026,12 +2026,6 @@
 				"slot": 2,
 				"target_slot": -1,
 				"type": "attack"
-			},
-			{
-				"side": 0,
-				"slot": 2,
-				"target_side": 0,
-				"type": "flip_right"
 			}
 		],
 		"stage": {
