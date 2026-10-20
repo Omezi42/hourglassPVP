@@ -16,6 +16,8 @@ func run(assert_true: Callable) -> void:
 	_test_pelt_hits_unit_and_draws()
 	_test_bola_destroys_only_low_health()
 	_test_bola_fizzles_on_sturdy_board()
+	_test_nibble_hits_lowest_health()
+	_test_nibble_breaks_ties_leftmost()
 	_test_set_is_staged()
 
 
@@ -130,6 +132,28 @@ func _test_bola_fizzles_on_sturdy_board() -> void:
 	_assert.call(state.board[MatchState.Side.A][0] != null, "不発でもボーラは場に残る")
 
 
+func _end_turn_with_nibble(state: MatchState) -> void:
+	_place(state, MatchState.Side.A, CardLibrary.find_by_id("nibble"), 0)
+	state.end_turn()
+
+
+func _test_nibble_hits_lowest_health() -> void:
+	var state := _new_match()
+	var sturdy := _place(state, MatchState.Side.B, _vanilla(5), 0)
+	var weak := _place(state, MatchState.Side.B, _vanilla(3), 1)
+	_end_turn_with_nibble(state)
+	_assert.call(weak.health == 2, "ニブルは体力がいちばん少ない駒へ1ダメージ")
+	_assert.call(sturdy.health == 5, "ニブルは体力の多い駒を狙わない")
+
+
+func _test_nibble_breaks_ties_leftmost() -> void:
+	var state := _new_match()
+	var right := _place(state, MatchState.Side.B, _vanilla(3), 4)
+	var left := _place(state, MatchState.Side.B, _vanilla(3), 2)
+	_end_turn_with_nibble(state)
+	_assert.call(left.health == 2 and right.health == 3, "体力が同じならニブルは左の枠を狙う")
+
+
 func _test_set_is_staged() -> void:
 	_assert.call(CardSetLibrary.has_set(SET_ID), "chase_sand is registered")
 	_assert.call(CardSetLibrary.price(SET_ID) == 1000, "chase_sand costs 1000")
@@ -137,3 +161,6 @@ func _test_set_is_staged() -> void:
 	_assert.call(CardSetLibrary.card_ids(SET_ID)[0] == "sling", "chase_sand opens with sling")
 	_assert.call(CardSetLibrary.card_ids(SET_ID)[1] == "pelt", "chase_sand's second card is pelt")
 	_assert.call(CardSetLibrary.card_ids(SET_ID)[2] == "bola", "chase_sand's third card is bola")
+	_assert.call(
+		CardSetLibrary.card_ids(SET_ID)[3] == "nibble", "chase_sand's fourth card is nibble"
+	)

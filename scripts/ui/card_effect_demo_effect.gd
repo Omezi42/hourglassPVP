@@ -368,7 +368,10 @@ static func on_enemy_unit(
 	# 砂が上へ戻る効果は攻撃力までしか戻せないため、戻す余地のある老いた的にする。
 	var aged_swap := aged_only and demo == CardEffectPreview.Demo.FX_SWAP_STATS
 	var weak_only := demo == CardEffectPreview.Demo.FX_DESTROY_WEAK
-	var spares_young := aged_swap or weak_only or demo == CardEffectPreview.Demo.FX_DESTROY_AGED
+	var weakest := demo == CardEffectPreview.Demo.FX_DAMAGE_WEAKEST
+	var spares_young := (
+		aged_swap or weak_only or weakest or demo == CardEffectPreview.Demo.FX_DESTROY_AGED
+	)
 	var aged := (
 		aged_swap
 		or demo == CardEffectPreview.Demo.FX_RAISE_SAND
@@ -378,6 +381,9 @@ static func on_enemy_unit(
 	# 体力の上限で絞る破壊は、上限ちょうどの小さな的を砕いて見せる。
 	if weak_only:
 		foes = [CardEffectStage.piece(value, 1, value + 1)]
+	# 体力の少ない駒を選ぶ効果は、狙われない体力の多い駒(末尾)と並べて選び方を見せる。
+	if weakest:
+		foes = [CardEffectStage.piece(2, 2, 4)]
 	if all:
 		foes.append(CardEffectStage.piece(3, 3, 6) if aged else CardEffectStage.piece(4, 2, 6))
 	# 条件付きの効果は、条件を満たさない若い駒を並べて「効かない」ことまで見せる。

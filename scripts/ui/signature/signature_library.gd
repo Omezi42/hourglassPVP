@@ -50,6 +50,7 @@ const EFFECTS := {
 	"sling": preload("res://scripts/ui/signature/moves/sling_effect.gd"),
 	"pelt": preload("res://scripts/ui/signature/moves/pelt_effect.gd"),
 	"bola": preload("res://scripts/ui/signature/moves/bola_effect.gd"),
+	"nibble": preload("res://scripts/ui/signature/moves/nibble_effect.gd"),
 	"key": preload("res://scripts/ui/signature/moves/key_effect.gd"),
 	"cycle": preload("res://scripts/ui/signature/moves/cycle_effect.gd"),
 	"crest": preload("res://scripts/ui/signature/moves/crest_effect.gd"),

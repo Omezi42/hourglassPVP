@@ -599,6 +599,9 @@ func _single_unit(
 			return [{"side": target_side, "slot": slot}]
 	if effect != null and effect.random_target:
 		return _random_unit(target_side, exclude_slot, effect)
+	if effect != null and effect.lowest_health_target:
+		var weakest := lowest_health_slot(_state, target_side, effect, exclude_slot)
+		return [] if weakest < 0 else [{"side": target_side, "slot": weakest}]
 	# 指定が無い・条件を満たさない場合は、条件を満たす中で最も生涯ダメージの大きい1体を選ぶ。
 	# 自分の駒を払う効果(砂葬)だけは逆に、最も小さい1体を払う。
 	var sacrifice := (
@@ -633,6 +636,21 @@ func _random_unit(target_side: int, exclude_slot: int, effect: CardEffectData) -
 	if candidates.is_empty():
 		return []
 	return [candidates[_state._rng.randi_range(0, candidates.size() - 1)]]
+
+
+## 条件を満たす中で体力がいちばん少ない駒の枠(`CardEffectData.lowest_health_target`)。同点なら左の枠。
+## 駒がいなければ -1。CPUの見積もりも同じ選び方を使えるよう公開する。
+static func lowest_health_slot(
+	state: MatchState, target_side: int, effect: CardEffectData, exclude_slot := -1
+) -> int:
+	var best := -1
+	for slot in MatchState.BOARD_SIZE:
+		var candidate: CardInstance = state.board[target_side][slot]
+		if candidate == null or slot == exclude_slot or not eligible_target(candidate, effect):
+			continue
+		if best < 0 or candidate.health < state.board[target_side][best].health:
+			best = slot
+	return best
 
 
 ## 対象の絞り込み(GameDesign.md 6章)。TARGET は総量の一致、ATTACK_OVER_HEALTH は

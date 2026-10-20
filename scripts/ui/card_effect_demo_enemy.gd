@@ -49,6 +49,8 @@ static func note(demo: int, value: int, all: bool, or_face := false) -> String:
 			return "攻撃力が体力より多い%sを破壊する(若い駒には効かない)" % scope
 		CardEffectPreview.Demo.FX_DESTROY_WEAK:
 			return "体力が%d以下の%sを破壊する(体力の多い駒には効かない)" % [value, scope]
+		CardEffectPreview.Demo.FX_DAMAGE_WEAKEST:
+			return "体力がいちばん少ない%sへ%dダメージ(砂は消える)" % [scope, value]
 		CardEffectPreview.Demo.FX_RAISE_SAND:
 			return "%sの砂が%d粒上へ戻る(攻撃力-%d / 体力+%d)" % [scope, value, value, value]
 		CardEffectPreview.Demo.FX_SWAP_STATS:

@@ -456,6 +456,8 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 			# 単体(ENEMY_UNIT)は1体ぶんしかない。区別しないと単体除去を過大評価する。
 			if effect.target == CardEnums.EffectTarget.ENEMY_UNIT:
 				var slot := _strongest_enemy(state, foe_side)
+				if effect.lowest_health_target:
+					slot = CardEffectResolver.lowest_health_slot(state, foe_side, effect)
 				if slot >= 0:
 					value = _damage_value(state.board[foe_side][slot], effect.value)
 			elif effect.target == CardEnums.EffectTarget.ENEMY_UNIT_OR_PLAYER:

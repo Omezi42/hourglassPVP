@@ -23,3 +23,6 @@ extends Resource
 ## 対象を1体取る効果で、条件を満たす中からランダムに選ぶ(反響の刻)。プレイヤーが選べない
 ## トリガー(相手の手番にも起きる反転など)のための指定で、札には「ランダムな」と書く(GameDesign.md 6章)。
 @export var random_target: bool = false
+## 対象を1体取る効果で、条件を満たす中から体力がいちばん少ない駒を選ぶ(同点なら左の枠。追砂の刻)。
+## プレイヤーは選ばず、札には「体力がいちばん少ない」と書く(GameDesign.md 6章)。
+@export var lowest_health_target: bool = false

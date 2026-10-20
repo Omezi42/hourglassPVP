@@ -63,6 +63,8 @@ enum Demo {
 	FX_DAMAGE_PLUS_FLIPS,
 	## 条件付き破壊:体力が上限以下の駒だけが砕け、体力の多い駒には効かない(追砂の刻)。
 	FX_DESTROY_WEAK,
+	## 体力がいちばん少ない駒を選んでダメージ。体力の多い駒は狙わない(追砂の刻)。
+	FX_DAMAGE_WEAKEST,
 }
 
 const MIN_SIZE := Vector2(320, 200)
@@ -242,6 +244,8 @@ static func _entry_for_effect(effect: CardEffectData) -> Dictionary:
 		and effect.condition_scope == CardEnums.ConditionScope.HEALTH_AT_MOST
 	):
 		demo = Demo.FX_DESTROY_WEAK
+	if demo == Demo.FX_DAMAGE_UNIT and effect.lowest_health_target:
+		demo = Demo.FX_DAMAGE_WEAKEST
 	# 反転がトリガーの効果は、反転そのものの実演を兼ねる(2本並べると同じ動きが続くため)。
 	# キーワードを与える効果だけは、値が「いくつ」ではなく「どの語か」を指す。
 	var value := maxi(effect.value, 1)
