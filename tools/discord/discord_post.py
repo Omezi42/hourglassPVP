@@ -146,7 +146,7 @@ def main() -> None:
     parser.add_argument("body", nargs="?", help="本文のファイル。'-' で標準入力から読む")
     parser.add_argument("--attach", action="append", default=[], help="添える画像/GIF(複数可)")
     parser.add_argument("--delete", metavar="MESSAGE_ID", help="投稿済みメッセージを消す")
-    parser.add_argument("--edit", metavar="MESSAGE_ID", help="投稿済みメッセージを差し替える")
+    parser.add_argument("--edit", metavar="MESSAGE_ID", help="投稿済みメッセージを差し替える(--attach を付ければ添付も替える)")
     parser.add_argument("--dry-run", action="store_true", help="投稿せず内容だけ表示する")
     parser.add_argument("--username", default="", help="表示名を上書きする")
     parser.add_argument("--mention-role", default="", help="鳴らすロールID(既定は無音)")
@@ -191,9 +191,14 @@ def main() -> None:
     if args.edit:
         if len(chunks) > 1:
             sys.exit("差し替えは1メッセージに収まる本文のみ対応しています。")
-        payload = json.dumps({"content": chunks[0], "allowed_mentions": {"parse": []}})
-        _send(f"{url}/messages/{args.edit}", payload.encode("utf-8"), "application/json",
-              method="PATCH")
+        payload: dict = {"content": chunks[0], "allowed_mentions": {"parse": []}}
+        if files:
+            # 添付を渡したときは、前の添付を外して差し替える
+            payload["attachments"] = []
+            data, content_type = _multipart(payload, files)
+        else:
+            data, content_type = json.dumps(payload).encode("utf-8"), "application/json"
+        _send(f"{url}/messages/{args.edit}", data, content_type, method="PATCH")
         print(f"差し替えました message_id={args.edit}")
         return
 
