@@ -20,6 +20,7 @@ const ENTRANCES := {
 	"vamp": preload("res://scripts/ui/signature/moves/vamp_entrance.gd"),
 	"drill": preload("res://scripts/ui/signature/moves/drill_entrance.gd"),
 	"lance": preload("res://scripts/ui/signature/moves/lance_entrance.gd"),
+	"twin": preload("res://scripts/ui/signature/moves/twin_entrance.gd"),
 }
 
 ## 効果が対象へ届くまで(設置・落砂・砂術など、紋章が飛ぶ場面の代わり)。
@@ -89,6 +90,12 @@ const EFFECTS := {
 	"well": preload("res://scripts/ui/signature/moves/well_effect.gd"),
 	"burst": preload("res://scripts/ui/signature/moves/burst_effect.gd"),
 	"halo": preload("res://scripts/ui/signature/moves/halo_effect.gd"),
+	"legacy": preload("res://scripts/ui/signature/moves/legacy_effect.gd"),
+	"shell": preload("res://scripts/ui/signature/moves/shell_effect.gd"),
+	"swarm": preload("res://scripts/ui/signature/moves/swarm_effect.gd"),
+	"wheel": preload("res://scripts/ui/signature/moves/wheel_effect.gd"),
+	"barb": preload("res://scripts/ui/signature/moves/barb_effect.gd"),
+	"pike": preload("res://scripts/ui/signature/moves/pike_effect.gd"),
 }
 
 
