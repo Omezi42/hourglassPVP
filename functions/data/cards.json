@@ -1039,6 +1039,16 @@
 			"is_spell": true,
 			"pool_index": 104,
 			"total_sand": 0
+		},
+		{
+			"cannot_attack": false,
+			"cost": 3,
+			"describe": "設置:体力が2以下の相手の砂時計1体を破壊する",
+			"display_name": "ボーラ",
+			"id": "bola",
+			"is_spell": false,
+			"pool_index": 105,
+			"total_sand": 4
 		}
 	]
 }
