@@ -21,6 +21,11 @@ const ENTRANCES := {
 	"drill": preload("res://scripts/ui/signature/moves/drill_entrance.gd"),
 	"lance": preload("res://scripts/ui/signature/moves/lance_entrance.gd"),
 	"twin": preload("res://scripts/ui/signature/moves/twin_entrance.gd"),
+	"lock": preload("res://scripts/ui/signature/moves/lock_entrance.gd"),
+	"gate": preload("res://scripts/ui/signature/moves/gate_entrance.gd"),
+	"poison": preload("res://scripts/ui/signature/moves/poison_entrance.gd"),
+	"guard": preload("res://scripts/ui/signature/moves/guard_entrance.gd"),
+	"mirror": preload("res://scripts/ui/signature/moves/mirror_entrance.gd"),
 }
 
 ## 効果が対象へ届くまで(設置・落砂・砂術など、紋章が飛ぶ場面の代わり)。
@@ -97,6 +102,8 @@ const EFFECTS := {
 	"wheel": preload("res://scripts/ui/signature/moves/wheel_effect.gd"),
 	"barb": preload("res://scripts/ui/signature/moves/barb_effect.gd"),
 	"pike": preload("res://scripts/ui/signature/moves/pike_effect.gd"),
+	"drip": preload("res://scripts/ui/signature/moves/drip_effect.gd"),
+	"glow": preload("res://scripts/ui/signature/moves/glow_effect.gd"),
 }
 
 
