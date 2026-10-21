@@ -133,10 +133,13 @@ description: |
    ```
    python tools/discord/build_card_image.py --id {id} --label 砂時計紹介
    ```
-2. 能力の実演をGIFにする(効果を持つカードのみ)
+2. 能力の実演GIFと `/card` 用の詳細画像を焼き、**コミットする**
    ```
    bash tools/discord/build_effect_gif.sh {id}
+   "C:\Users\omezi\Documents\Godot_v4.6.2-stable_win64_console.exe" --path . --script tools/export_discord_card_art.gd
    ```
+   出力先の `functions/data/effect_gifs/` `card_art/` は `/card` と正午のカードスポットライトが
+   jsDelivr経由で読む場所。コミットし忘れるとそのカードの実演・画像がDiscordで出ない
 3. 下書きを `tools/discord/drafts/cards/{id}-1.md` `-2.md` へ書く。
    **文面はすなえるの口調**(一人称「ぼく」・語尾「〜だよ」)で、1通目は
    `## ⌛ 砂時計紹介 ── {名前}` の見出しとコスト・総量・持っている語、
@@ -145,13 +148,13 @@ description: |
 4. `--dry-run` で確認してから投稿する
    ```
    python tools/discord/discord_post.py tools/discord/drafts/cards/{id}-1.md --attach tools/discord/out/card_reveal.png
-   python tools/discord/discord_post.py tools/discord/drafts/cards/{id}-2.md --attach tools/discord/out/effect_{id}.gif
+   python tools/discord/discord_post.py tools/discord/drafts/cards/{id}-2.md --attach functions/data/effect_gifs/{id}.gif
    ```
 5. 返ってきた message_id を `tools/discord/posted.json` の
    `announce_webhook_url` へ記録する(あとで文面を直して差し替えられるようにするため)
 
 **GIFを作る前に、実演の文が正しいか1コマ抜いて確かめる**
-(`magick tools/discord/out/effect_{id}.gif -coalesce out_%02d.png`)。実演の文は
+(`magick functions/data/effect_gifs/{id}.gif -coalesce out_%02d.png`)。実演の文は
 トリガー(設置 / 反転 / 余砂)から組み立てているため、新しい組み合わせで
 おかしな文になっていないかはここでしか気づけない。
 

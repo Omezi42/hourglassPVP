@@ -6,8 +6,7 @@
 | `DiscordCardArt`(`scripts/ui/discord_card_art.gd`) | `/card` 用の詳細画像の描画。図鑑の右のページ(`AlmanacPage`)を元にするが、個人の戦績・裏返し操作・キーワードのボタンは持たない静的な1枚絵 |
 | `tools/export_discord_card_art.gd` | `DiscordCardArt` を全カードぶん順に表示し、レンダリングされたフレームをキャプチャして `functions/data/card_art/{id}.png` へ書き出す |
 | `tools/record_effect_gif.gd` / `.tscn`(既存) | カード1枚ぶんの実演(`CardEffectPreview`)を、詳細パネルと同じ地の上で1周分だけPNG連番として書き出す。**新規に作らず、既にある紹介動画用の撮影ツールをそのまま使う** |
-| `tools/export_discord_effect_gifs.sh` | 上記を全カードぶんループで呼び出す |
-| `tools/encode_discord_gifs.sh` | PNG連番をGIFへエンコードする。`record_effect_gif.gd` の冒頭コメントに既にある `magick`(ImageMagick)のコマンド列をそのまま使い、**全カードぶんループで回すラッパーにする**(Pillowでの再実装はしない) |
+| `tools/discord/build_effect_gif.sh` | 上記で録った連番を `magick` でGIFへエンコードし `functions/data/effect_gifs/{id}.gif` へ書き出す。引数にidを並べればそのカードだけ、無ければ全カード。**Discordの紹介投稿に添えるGIFも同じファイルを使い、出力先を1か所にする** |
 | `DiscordLinkService`(`scripts/net/discord_link_service.gd`, static) | アカウント画面の「Discord連携コード」発行。`DeckCodeService` と同じ「8桁の数字を発行してFirestoreへ預ける」方式 |
 | `functions/discord_commands.js`(Node.js) | `/card` `/deck` `/link` `/profile` のハンドラ。`discordInteractions` から呼ばれる |
 | `functions/deck_sheet_canvas.js`(Node.js) | `/deck` 用の簡易デッキ表画像を `@napi-rs/canvas` で描画する。ゲーム内の `CardDeckSheet` とは別実装であり、見た目の一致は求めない |

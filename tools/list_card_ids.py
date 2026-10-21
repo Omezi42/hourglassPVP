@@ -1,6 +1,6 @@
 """functions/data/cards.json からカードidを1行1件で標準出力へ書き出す。
 
-export_discord_effect_gifs.sh から呼ぶ。コマンドライン引数へパスを埋め込むと、
+tools/discord/build_effect_gif.sh から呼ぶ。コマンドライン引数へパスを埋め込むと、
 リポジトリのパスに含まれる日本語文字("砂時計pvp")がシェル→Pythonの受け渡しで
 文字化けしたため(実際に FileNotFoundError で踏んだ)、相対パスの直読みにしている。
 """
