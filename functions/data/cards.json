@@ -1049,6 +1049,16 @@
 			"is_spell": false,
 			"pool_index": 105,
 			"total_sand": 4
+		},
+		{
+			"cannot_attack": false,
+			"cost": 2,
+			"describe": "落砂:体力がいちばん少ない相手の砂時計1体に1ダメージ",
+			"display_name": "ニブル",
+			"id": "nibble",
+			"is_spell": false,
+			"pool_index": 106,
+			"total_sand": 2
 		}
 	]
 }
