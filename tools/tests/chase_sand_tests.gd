@@ -18,6 +18,7 @@ func run(assert_true: Callable) -> void:
 	_test_bola_fizzles_on_sturdy_board()
 	_test_nibble_hits_lowest_health()
 	_test_nibble_breaks_ties_leftmost()
+	_test_block_guards_and_draws_on_death()
 	_test_set_is_staged()
 
 
@@ -154,6 +155,16 @@ func _test_nibble_breaks_ties_leftmost() -> void:
 	_assert.call(left.health == 2 and right.health == 3, "体力が同じならニブルは左の枠を狙う")
 
 
+func _test_block_guards_and_draws_on_death() -> void:
+	var state := _new_match()
+	var block := CardLibrary.find_by_id("block")
+	_assert.call(block.keywords.has(CardEnums.Keyword.GUARD), "ブロックは守護を持つ")
+	_place(state, MatchState.Side.A, block, 0)
+	var hand := int(state.hand[MatchState.Side.A].size())
+	state.destroy_unit(MatchState.Side.A, 0)
+	_assert.call(state.hand[MatchState.Side.A].size() == hand + 1, "ブロックが破壊されると持ち主が1枚引く")
+
+
 func _test_set_is_staged() -> void:
 	_assert.call(CardSetLibrary.has_set(SET_ID), "chase_sand is registered")
 	_assert.call(CardSetLibrary.price(SET_ID) == 1000, "chase_sand costs 1000")
@@ -164,3 +175,4 @@ func _test_set_is_staged() -> void:
 	_assert.call(
 		CardSetLibrary.card_ids(SET_ID)[3] == "nibble", "chase_sand's fourth card is nibble"
 	)
+	_assert.call(CardSetLibrary.card_ids(SET_ID)[4] == "block", "chase_sand's fifth card is block")

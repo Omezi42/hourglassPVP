@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/emblems/block.png" id="emblem"]
+
+[sub_resource type="Resource" id="Effect_block_0"]
+script = ExtResource("script_effect")
+trigger = 2
+target = 5
+effect_type = 6
+value = 1
+
+[resource]
+script = ExtResource("script_card")
+id = "block"
+display_name = "ブロック"
+cost = 2
+total_sand = 3
+pool_index = 107
+set_id = "chase_sand"
+keywords = Array[int]([0])
+effects = Array[Resource]([SubResource("Effect_block_0")])
+rules_text = "余砂:カードを1枚引く"
+cannot_attack = false
+is_token = false
+art_id = "sweep"
+emblem = ExtResource("emblem")
