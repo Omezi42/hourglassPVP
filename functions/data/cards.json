@@ -1059,6 +1059,16 @@
 			"is_spell": false,
 			"pool_index": 106,
 			"total_sand": 2
+		},
+		{
+			"cannot_attack": false,
+			"cost": 2,
+			"describe": "守護 / 余砂:カードを1枚引く",
+			"display_name": "ブロック",
+			"id": "block",
+			"is_spell": false,
+			"pool_index": 107,
+			"total_sand": 3
 		}
 	]
 }
