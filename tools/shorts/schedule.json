@@ -595,7 +595,8 @@
 		"id": "30",
 		"label": "とどめ問題 #30",
 		"reserved": [
-			"x"
+			"x",
+			"youtube"
 		]
 	},
 	{
@@ -604,7 +605,130 @@
 		"id": "oasis",
 		"label": "オアシス",
 		"reserved": [
+			"x",
+			"youtube"
+		]
+	},
+	{
+		"date": "2026-10-27",
+		"kind": "puzzle",
+		"id": "31",
+		"label": "とどめ問題 #31",
+		"reserved": [
+			"x",
+			"youtube"
+		]
+	},
+	{
+		"date": "2026-10-27",
+		"kind": "card",
+		"id": "guard",
+		"label": "ガード",
+		"reserved": [
+			"x",
+			"youtube"
+		]
+	},
+	{
+		"date": "2026-10-28",
+		"kind": "puzzle",
+		"id": "32",
+		"label": "とどめ問題 #32",
+		"reserved": [
+			"x",
+			"youtube"
+		]
+	},
+	{
+		"date": "2026-10-28",
+		"kind": "card",
+		"id": "halo",
+		"label": "ハロー",
+		"reserved": [
+			"x",
+			"youtube"
+		]
+	},
+	{
+		"date": "2026-10-29",
+		"kind": "puzzle",
+		"id": "33",
+		"label": "とどめ問題 #33",
+		"reserved": [
+			"x",
+			"youtube"
+		]
+	},
+	{
+		"date": "2026-10-29",
+		"kind": "card",
+		"id": "crest",
+		"label": "クレスト",
+		"reserved": [
+			"x",
+			"youtube"
+		]
+	},
+	{
+		"date": "2026-10-30",
+		"kind": "puzzle",
+		"id": "34",
+		"label": "とどめ問題 #34",
+		"reserved": [
+			"x",
+			"youtube"
+		]
+	},
+	{
+		"date": "2026-10-30",
+		"kind": "card",
+		"id": "shield",
+		"label": "シールド",
+		"reserved": [
+			"x",
+			"youtube"
+		]
+	},
+	{
+		"date": "2026-10-31",
+		"kind": "puzzle",
+		"id": "35",
+		"label": "とどめ問題 #35",
+		"reserved": [
 			"x"
 		]
+	},
+	{
+		"date": "2026-10-31",
+		"kind": "card",
+		"id": "crack",
+		"label": "クラック",
+		"reserved": [
+			"x"
+		]
+	},
+	{
+		"date": "2026-11-01",
+		"kind": "puzzle",
+		"id": "36",
+		"label": "とどめ問題 #36"
+	},
+	{
+		"date": "2026-11-01",
+		"kind": "card",
+		"id": "sprout",
+		"label": "スプラウト"
+	},
+	{
+		"date": "2026-11-02",
+		"kind": "puzzle",
+		"id": "37",
+		"label": "とどめ問題 #37"
+	},
+	{
+		"date": "2026-11-02",
+		"kind": "card",
+		"id": "spring",
+		"label": "スプリング"
 	}
 ]
