@@ -79,12 +79,12 @@ service cloud.firestore {
       allow read, write: if signedIn();
     }
 
-    // Discordアカウントとの連携コード(GameDesign.md 26章)。ドキュメントIDは8桁の数字。
-    // deckcodesと同じ「預けたら消さない」引換券方式。読み取りはDiscord Bot(Admin SDK、
-    // ルールの制約を受けない)が行うため本来クライアントには不要だが、9章のデッキコードと
-    // 同様サインイン済みなら読めるようにしておく。
-    match /discord_link_codes/{code} {
-      allow read, write: if signedIn();
+    // 攻略サイトの公開用の集計(GameDesign.md 32章 / Architecture.md 10.21節)。
+    // サイトはログインしていない読み手にも見せるため、ここだけはサインイン無しで読める。
+    // 書くのは定期実行の publishWikiStats(Admin SDK)だけ。
+    match /public_stats/{docId} {
+      allow read: if true;
+      allow write: if false;
     }
 
     // Discordアカウント⇔ゲーム内uidの紐付け(同26章)。ドキュメントIDはDiscordの
@@ -93,6 +93,11 @@ service cloud.firestore {
     match /discord_links/{discordUserId} {
       allow read: if signedIn();
       allow write: if false;
+    }
+
+    // `/link` の失敗回数(同26章)。Functionsだけが読み書きする。
+    match /discord_link_attempts/{discordUserId} {
+      allow read, write: if false;
     }
 
     // 掲示板〈ラボ〉(GameDesign.md 29章 / Architecture.md 10.17節)。投票数で案を選ぶ仕組みは

@@ -1,5 +1,5 @@
 /**
- * Discordスラッシュコマンド `/card` `/deck` `/link` `/profile` のハンドラ
+ * Discordスラッシュコマンド `/card` `/deck` `/link` `/profile` と `/link` のフォーム送信のハンドラ
  * (GameDesign.md 26章 / Architecture.md 10.14節)。
  *
  * `discordInteractions`(index.js)から呼ばれる。常駐するBotプロセスは持たないため、
@@ -104,26 +104,106 @@ function handleCardCommand(interaction) {
 
 // --- /link -------------------------------------------------------------------
 
-async function handleLinkCommand(interaction, db) {
-  const code = optionValue(interaction, "code").trim();
-  const discordUserId = interactionUserId(interaction);
-  if (!/^[0-9]{8}$/.test(code)) {
-    return ephemeralMessage("コードは8桁の数字で入力してください。");
-  }
-  const codeDoc = await db.collection("discord_link_codes").doc(code).get();
-  if (!codeDoc.exists) {
-    return ephemeralMessage("そのコードは見つかりませんでした。ゲーム内で発行し直してください。");
-  }
-  const uid = codeDoc.data().uid;
-  if (!uid) {
-    return ephemeralMessage("そのコードは見つかりませんでした。ゲーム内で発行し直してください。");
-  }
-  // 1つのDiscordアカウントにつき1つのuidだけを保持する(GameDesign.md 26章)。
-  // 結び直すと前の紐付けを上書きする。
-  await db.collection("discord_links").doc(discordUserId).set({
-    uid,
-    linked_at: Date.now(),
+const LINK_MODAL_ID = "link_modal";
+const LINK_FIELD_ID = "login_id";
+const LINK_FIELD_PASSWORD = "password";
+// FirebaseAuth(scripts/net/firebase_auth.gd)の合成アドレスと同じ形にそろえる。
+const SYNTHETIC_EMAIL_DOMAIN = "hourglass-arena.local";
+const ID_MAX_LENGTH = 20;
+const PASSWORD_MAX_LENGTH = 128;
+// 認証の確認はすべてこの関数の回線から出るため、1人の総当たりで全員が止まらないよう絞る。
+const LINK_FAILURE_LIMIT = 5;
+const LINK_FAILURE_WINDOW_MS = 60 * 60 * 1000;
+const SIGN_IN_URL = "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=";
+const TEXT_INPUT_SHORT = 1;
+const ACTION_ROW = 1;
+const TEXT_INPUT = 4;
+
+/** `/link` はID/パスワードのフォームを開くだけ(GameDesign.md 26章)。 */
+function handleLinkCommand() {
+  const field = (id, label, maxLength) => ({
+    type: ACTION_ROW,
+    components: [
+      {type: TEXT_INPUT, custom_id: id, label, style: TEXT_INPUT_SHORT, required: true, max_length: maxLength},
+    ],
   });
+  return {
+    type: InteractionResponseType.MODAL,
+    data: {
+      custom_id: LINK_MODAL_ID,
+      title: "ゲーム内アカウントと連携",
+      components: [
+        field(LINK_FIELD_ID, "ID(ゲームのログインに使うもの)", ID_MAX_LENGTH),
+        field(LINK_FIELD_PASSWORD, "パスワード(保存しません)", PASSWORD_MAX_LENGTH),
+      ],
+    },
+  };
+}
+
+function modalValue(interaction, customId) {
+  const rows = (interaction.data && interaction.data.components) || [];
+  for (const row of rows) {
+    for (const component of row.components || []) {
+      if (component.custom_id === customId) return String(component.value || "");
+    }
+  }
+  return "";
+}
+
+/** ゲームのログインと同じ認証でuidを引く。違っていれば空文字。 */
+async function signInUid(apiKey, loginId, password) {
+  const response = await fetch(SIGN_IN_URL + apiKey, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
+      email: `${loginId.trim().toLowerCase()}@${SYNTHETIC_EMAIL_DOMAIN}`,
+      password,
+      returnSecureToken: false,
+    }),
+  });
+  if (!response.ok) return "";
+  const body = await response.json();
+  return body.localId || "";
+}
+
+/** 直近の窓で失敗が上限に達していれば true。 */
+async function linkLocked(attemptRef) {
+  const doc = await attemptRef.get();
+  if (!doc.exists) return false;
+  const {window_start: windowStart, failures} = doc.data();
+  return Date.now() - windowStart < LINK_FAILURE_WINDOW_MS && failures >= LINK_FAILURE_LIMIT;
+}
+
+async function recordLinkFailure(attemptRef) {
+  const doc = await attemptRef.get();
+  const now = Date.now();
+  const data = doc.exists ? doc.data() : null;
+  if (!data || now - data.window_start >= LINK_FAILURE_WINDOW_MS) {
+    await attemptRef.set({window_start: now, failures: 1});
+    return;
+  }
+  await attemptRef.update({failures: data.failures + 1});
+}
+
+async function handleLinkModalSubmit(interaction, db, apiKey) {
+  const discordUserId = interactionUserId(interaction);
+  const attemptRef = db.collection("discord_link_attempts").doc(discordUserId);
+  if (await linkLocked(attemptRef)) {
+    return ephemeralMessage("失敗が続いたため、しばらく時間をおいてからもう一度お試しください。");
+  }
+  const loginId = modalValue(interaction, LINK_FIELD_ID);
+  const password = modalValue(interaction, LINK_FIELD_PASSWORD);
+  const uid = await signInUid(apiKey, loginId, password);
+  if (!uid) {
+    await recordLinkFailure(attemptRef);
+    return ephemeralMessage(
+      "IDかパスワードが違います。ゲストのままの場合は、ゲーム内のアカウント画面で" +
+        "IDを登録してからお試しください。"
+    );
+  }
+  // 1つのDiscordアカウントにつき1つのuidだけを保持し、結び直すと上書きする(GameDesign.md 26章)。
+  await db.collection("discord_links").doc(discordUserId).set({uid, linked_at: Date.now()});
+  await attemptRef.delete();
   return ephemeralMessage("連携しました。これから /profile で確認できます。");
 }
 
@@ -153,8 +233,7 @@ async function handleProfileCommand(interaction, db) {
   const linkDoc = await db.collection("discord_links").doc(discordUserId).get();
   if (!linkDoc.exists) {
     return ephemeralMessage(
-      "まだ連携されていません。ゲーム内のアカウント画面で連携コードを発行し、" +
-        "`/link <コード>` を実行してください。"
+      "まだ連携されていません。`/link` を打ち、ゲームのログインに使うID/パスワードを入力してください。"
     );
   }
   const uid = linkDoc.data().uid;
@@ -235,6 +314,8 @@ async function editOriginalResponseWithImage(applicationId, token, buffer, filen
 module.exports = {
   handleCardCommand,
   handleLinkCommand,
+  handleLinkModalSubmit,
+  LINK_MODAL_ID,
   handleProfileCommand,
   deferDeckResponse,
   sendDeckFollowup,

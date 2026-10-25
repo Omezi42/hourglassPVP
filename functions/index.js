@@ -11,7 +11,7 @@
 const {setGlobalOptions} = require("firebase-functions/v2");
 const {onSchedule} = require("firebase-functions/v2/scheduler");
 const {onRequest} = require("firebase-functions/v2/https");
-const {defineSecret} = require("firebase-functions/params");
+const {defineSecret, defineString} = require("firebase-functions/params");
 const {verifyKey, InteractionType, InteractionResponseType} = require("discord-interactions");
 const logger = require("firebase-functions/logger");
 const admin = require("firebase-admin");
@@ -25,12 +25,15 @@ const cardsData = require("./data/cards.json");
 const {
   handleCardCommand,
   handleLinkCommand,
+  handleLinkModalSubmit,
+  LINK_MODAL_ID,
   handleProfileCommand,
   deferDeckResponse,
   sendDeckFollowup,
   buildCardEmbeds,
 } = require("./discord_commands");
 const {handleLabAdmin} = require("./lab_admin");
+const {publishWikiStats} = require("./wiki_stats");
 
 // Botトークン・公開鍵と同じ扱いで、リポジトリへは一切コミットしない。
 // `firebase functions:secrets:set DISCORD_WEBHOOK_URL` / `DISCORD_PUBLIC_KEY` で設定する。
@@ -41,6 +44,9 @@ const DISCORD_PUBLIC_KEY = defineSecret("DISCORD_PUBLIC_KEY");
 // これを知っているかどうかだけで権限を絞る。
 // `firebase functions:secrets:set LAB_ADMIN_SECRET` で設定する。
 const LAB_ADMIN_SECRET = defineSecret("LAB_ADMIN_SECRET");
+// ゲームのクライアントへ埋め込んでいる公開のWeb APIキー(`functions/.env`)。
+// `/link` がID/パスワードをゲームのログインと同じ認証で確かめるのに使う。
+const FIREBASE_WEB_API_KEY = defineString("FIREBASE_WEB_API_KEY");
 
 const ANNOUNCE_MESSAGE =
   "☀️ 本日は日曜イベント開催中!\n" +
@@ -117,6 +123,17 @@ exports.announceCardSpotlight = onSchedule(
 );
 
 /**
+ * 攻略サイトの「みんなの統計」を毎日1回作り直す(GameDesign.md 32章 / Architecture.md 10.21節)。
+ */
+exports.publishWikiStats = onSchedule(
+  {schedule: "0 5 * * *", timeZone: "Asia/Tokyo"},
+  async () => {
+    const index = await publishWikiStats(admin.firestore());
+    logger.info(`wiki stats published: ${index.games} games, ${index.builds.length} builds`);
+  }
+);
+
+/**
  * Discordスラッシュコマンドの受け口(GameDesign.md 26章)。常駐するBotプロセス
  * (Gateway接続)は持たず、DiscordのInteractions Endpoint URL(HTTPS方式)で受ける。
  */
@@ -150,7 +167,7 @@ exports.discordInteractions = onRequest(
           res.json(handleCardCommand(body));
           return;
         case "link":
-          res.json(await handleLinkCommand(body, db));
+          res.json(handleLinkCommand());
           return;
         case "profile":
           res.json(await handleProfileCommand(body, db));
@@ -165,6 +182,12 @@ exports.discordInteractions = onRequest(
         default:
           break;
       }
+    }
+
+    if (body.type === InteractionType.MODAL_SUBMIT && body.data.custom_id === LINK_MODAL_ID) {
+      const db = admin.firestore();
+      res.json(await handleLinkModalSubmit(body, db, FIREBASE_WEB_API_KEY.value()));
+      return;
     }
 
     // 未対応のインタラクション種別・コマンド。

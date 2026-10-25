@@ -22,7 +22,6 @@ const NAME_CAPTION_WIDTH := 70
 const STATUS_FONT_SIZE := 19
 const SMALL_FONT_SIZE := 14
 const ACCOUNT_BUTTON_SIZE := Vector2(220, 50)
-const DISCORD_BUTTON_SIZE := Vector2(220, 42)
 ## 縦画面(GameDesign.md 9章「縦画面」)。2つのパネルを上下に積み、`PortraitModal` と同じ論理幅で組んで
 ## パネルごと拡大する。上の見本と登録は中身の高さで、下の見た目は残りの高さで出す。
 const PORTRAIT_GAP := 16.0
@@ -49,7 +48,6 @@ var _message_label: Label
 var _guest_row: HBoxContainer
 var _member_row: HBoxContainer
 var _account_buttons: Array[Button] = []
-var _discord_label: Label
 var _looks: AccountLooksTabs
 var _save_label: Label
 var _dialog: AccountCredentialDialog
@@ -104,7 +102,6 @@ func _load_from_account() -> void:
 	_selected_playmat_id = AccountService.playmat_id()
 	_name_input.text = AccountService.display_name()
 	_looks.reload(_selected_icon_id, _selected_title_id, _selected_playmat_id)
-	_discord_label.text = ""
 	_refresh_account()
 	_update_preview()
 
@@ -258,22 +255,6 @@ func _on_logout_pressed() -> void:
 	_load_from_account()
 
 
-func _on_discord_link_pressed() -> void:
-	if _busy:
-		return
-	_set_busy(true)
-	_discord_label.text = "発行しています…"
-	var uid := NetSession.auth.uid if NetSession.auth != null else ""
-	var code: String = await DiscordLinkService.publish_code(NetSession.client, uid)
-	_set_busy(false)
-	if code.is_empty():
-		_discord_label.text = ""
-		_set_message("連携コードの発行に失敗しました。接続を確認してください。", ERROR_COLOR)
-	else:
-		_discord_label.text = "コード: %s" % code
-		_set_message("Discordで「/link %s」と入力してください。" % code, OK_COLOR)
-
-
 func _set_busy(value: bool) -> void:
 	_busy = value
 	for button in _account_buttons:
@@ -416,13 +397,6 @@ func _build_left(column: VBoxContainer) -> void:
 	var logout := CodedButton.make("ログアウト", ACCOUNT_BUTTON_SIZE)
 	logout.pressed.connect(_on_logout_pressed)
 	_add_account_button(_member_row, logout)
-
-	var discord_row := _button_row(column)
-	var discord := CodedButton.make("Discordと連携", DISCORD_BUTTON_SIZE)
-	discord.pressed.connect(_on_discord_link_pressed)
-	_add_account_button(discord_row, discord)
-	_discord_label = _label("", 16, UiPalette.BRASS_HIGHLIGHT)
-	discord_row.add_child(_discord_label)
 
 
 func _build_right(column: VBoxContainer) -> void:

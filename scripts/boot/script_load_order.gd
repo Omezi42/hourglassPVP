@@ -355,7 +355,6 @@ const PATHS: Array[String] = [
 	"res://scripts/ui/emote_slot_page.gd",
 	"res://scripts/ui/account_looks_tabs.gd",
 	"res://scripts/ui/account_credential_dialog.gd",
-	"res://scripts/net/discord_link_service.gd",
 	"res://scripts/ui/account_screen.gd",
 	"res://scripts/net/waiting_cpu_deck.gd",
 	"res://scripts/ui/main.gd",

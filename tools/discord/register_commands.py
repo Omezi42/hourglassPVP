@@ -37,15 +37,7 @@ COMMANDS = [
     },
     {
         "name": "link",
-        "description": "ゲーム内アカウントとDiscordアカウントを連携する",
-        "options": [
-            {
-                "type": STRING,
-                "name": "code",
-                "description": "ゲーム内アカウント画面で発行した8桁の連携コード",
-                "required": True,
-            }
-        ],
+        "description": "ゲームのID/パスワードでゲーム内アカウントとDiscordアカウントを連携する",
     },
     {
         "name": "profile",

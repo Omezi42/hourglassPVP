@@ -7,8 +7,8 @@
 | `tools/export_discord_card_art.gd` | `DiscordCardArt` を全カードぶん順に表示し、レンダリングされたフレームをキャプチャして `functions/data/card_art/{id}.png` へ書き出す |
 | `tools/record_effect_gif.gd` / `.tscn`(既存) | カード1枚ぶんの実演(`CardEffectPreview`)を、詳細パネルと同じ地の上で1周分だけPNG連番として書き出す。**新規に作らず、既にある紹介動画用の撮影ツールをそのまま使う** |
 | `tools/discord/build_effect_gif.sh` | 上記で録った連番を `magick` でGIFへエンコードし `functions/data/effect_gifs/{id}.gif` へ書き出す。引数にidを並べればそのカードだけ、無ければ全カード。**Discordの紹介投稿に添えるGIFも同じファイルを使い、出力先を1か所にする** |
-| `DiscordLinkService`(`scripts/net/discord_link_service.gd`, static) | アカウント画面の「Discord連携コード」発行。`DeckCodeService` と同じ「8桁の数字を発行してFirestoreへ預ける」方式 |
-| `functions/discord_commands.js`(Node.js) | `/card` `/deck` `/link` `/profile` のハンドラ。`discordInteractions` から呼ばれる |
+| `functions/discord_commands.js`(Node.js) | `/card` `/deck` `/link` `/profile` と `/link` のフォーム送信のハンドラ。`discordInteractions` から呼ばれる |
+| `functions/.env` | `FIREBASE_WEB_API_KEY`(`data/firebase_config.tres` の `api_key` と同じ値)。`/link` がID/パスワードを確かめるのに使う。クライアントに埋め込んでいる公開の値なのでコミットしてよい |
 | `functions/deck_sheet_canvas.js`(Node.js) | `/deck` 用の簡易デッキ表画像を `@napi-rs/canvas` で描画する。ゲーム内の `CardDeckSheet` とは別実装であり、見た目の一致は求めない |
 | `functions/fonts/ZenKakuGothicNew-Bold.ttf` | `assets/fonts/` からコピーした同梱フォント。`firebase.json` の `functions.source` が `functions` ディレクトリだけを見るため、`functions/` の外にあるファイルはデプロイされない |
 | `functions/.gdignore` | `functions/data/card_art/*.png` をGodotのインポート対象から外す。**置き忘れると `.png.import` が大量に生成される**(実際に70個生成された)。4.1.6節の「実行時に読まないディレクトリには`.gdignore`を置く」の実例 |
@@ -33,11 +33,14 @@
 - **`/deck` は3秒の応答期限を超えうるため deferred response**(type 5・`flags: 64`)を即座に返し、生成後に
   `PATCH /webhooks/{application_id}/{token}/messages/@original` で追送する。**`res.json()` の直後に `return` せず、
   追送(`sendDeckFollowup()`)の完了を `await` してからハンドラを終える**(応答送信後にCPUがスロットルされることがある)
-- **Firestore**: `discord_links/{discord_user_id}`(`{uid}`。`/link` が上書き)/ `discord_link_codes/{コード}`(`{uid}`。8桁の引換券、
-  読んでも消さない)/ `bot_spotlight_history/{card_id}`(`{last_shown}`。カードごとに1件で、抽選のたびに全件読んで30日以内を除く。
-  範囲クエリは組まない)。`firestore.rules` では `discord_link_codes` の発行だけをクライアントに許可し、`discord_links` はFunctionsだけが書く
-- `/link` のコード発行はGodot側 `DiscordLinkService.publish_code()`(`DeckCodeService.publish()` と同じ実装、衝突したら引き直す)
+- **Firestore**: `discord_links/{discord_user_id}`(`{uid}`。`/link` が上書き)/ `discord_link_attempts/{discord_user_id}`
+  (`{window_start, failures}`。失敗回数の窓)/ `bot_spotlight_history/{card_id}`(`{last_shown}`。カードごとに1件で、
+  抽選のたびに全件読んで30日以内を除く。範囲クエリは組まない)。`discord_links` `discord_link_attempts` はFunctionsだけが書く
+- **`/link` はモーダル(応答type 9)を返し、送信(`MODAL_SUBMIT`、`custom_id: "link_modal"`)で確かめる。**
+  IDを `FirebaseAuth._to_email()` と同じ `<小文字のid>@hourglass-arena.local` へ直し、`accounts:signInWithPassword` の
+  `localId` をuidとして使う(`returnSecureToken: false`。トークンは要らない)。パスワードはログへ出さない
+- 失敗(`INVALID_LOGIN_CREDENTIALS` 等)は `discord_link_attempts` へ数え、1時間に5回で打ち切る。成功したら消す
 - `/profile` は `players/{uid}` と `match_records`(`player_a`/`player_b` の等価フィルタ)から直接読む。**19章の戦績(CPU戦込み)は
   ローカル保存のため出せない**
 - **応答はすべて `flags: 64`(ephemeral)**。カードスポットライト(`announceCardSpotlight`)だけは通常のメッセージ
-- `discordInteractions` は `data.name` で4コマンドへ分岐する。署名検証(`verifyKey()`)は全コマンド共通
+- `discordInteractions` は `APPLICATION_COMMAND` を `data.name` で4コマンドへ、`MODAL_SUBMIT` を `data.custom_id` で分岐する。署名検証(`verifyKey()`)は全コマンド共通
