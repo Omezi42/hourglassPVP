@@ -1069,6 +1069,16 @@
 			"is_spell": false,
 			"pool_index": 107,
 			"total_sand": 3
+		},
+		{
+			"cannot_attack": false,
+			"cost": 3,
+			"describe": "守護 / 被弾:自分の他の砂時計1体の総量+1",
+			"display_name": "ヴォールト",
+			"id": "vault",
+			"is_spell": false,
+			"pool_index": 108,
+			"total_sand": 5
 		}
 	]
 }
