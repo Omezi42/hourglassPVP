@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # 攻略サイトを組み立てて Cloudflare Pages へ上げる(Architecture.md 10.21節)。
 # 認証は `npx wrangler login` 済みの資格情報を使う。初回だけ
-# `npx wrangler pages project create sunadokei-arena-wiki --production-branch main` が要る。
+# `npx wrangler pages project create sunadokei-arena-wiki --production-branch main --force` が要る(作成済み)。
 set -e
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PROJECT="sunadokei-arena-wiki"

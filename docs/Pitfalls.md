@@ -172,6 +172,10 @@ Discord用のカード画像・実演GIF(10.14節)を作る過程で踏んだも
 - **`firebase.json` の `functions.ignore` に `/` を含むパターンを書くと効かない。**firebase-tools は
   絶対パス全体と照合するため `data/card_art` は一致せず、黙って同梱される。フォルダ名だけ(`card_art`)で書き、
   デプロイ時の `packaged ... (N MB)` の値で効いたことを確かめる
+- **手元の `firebase deploy --only functions` が `User code failed to load ... Timeout after 10000` で止まる。**
+  `index.js` が読み込む `@napi-rs/canvas` などで、Windowsでの解析が10秒を超えるため。`FUNCTIONS_DISCOVERY_TIMEOUT=60` を付けて回す
+- **`wrangler pages project create` は既定でWorkersへ回され、`Missing entry-point` で失敗する。**新しいPagesプロジェクトを作る
+  初回だけ `--force` を付ける(以後の `pages deploy` には付けない)
 - **Firestoreの「等価フィルタ + 別フィールドの`orderBy`」は複合インデックスが要る。**
   無いとクエリは400で失敗し、`FirestoreClient`は空配列を返すので「まだ記録がありません」に見える。
   そういうクエリを足したら `firestore.indexes.json` へ書き、`firebase deploy --only firestore:indexes` で反映する
