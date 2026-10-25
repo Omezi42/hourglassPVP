@@ -7,7 +7,7 @@
 script = ExtResource("script_card")
 id = "freeze"
 display_name = "フリーズ"
-cost = 3
+cost = 2
 total_sand = 5
 pool_index = 79
 set_id = "still_time"

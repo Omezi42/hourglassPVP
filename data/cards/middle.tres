@@ -7,7 +7,7 @@
 script = ExtResource("script_card")
 id = "middle"
 display_name = "ミドル"
-cost = 3
+cost = 4
 total_sand = 6
 pool_index = 74
 set_id = "combo_five"

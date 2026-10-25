@@ -6,7 +6,7 @@
 
 [sub_resource type="Resource" id="Effect_crest_0"]
 script = ExtResource("script_effect")
-trigger = 3
+trigger = 0
 target = 1
 effect_type = 2
 value = 0
@@ -20,12 +20,12 @@ script = ExtResource("script_card")
 id = "crest"
 display_name = "クレスト"
 cost = 5
-total_sand = 8
+total_sand = 6
 pool_index = 78
 set_id = "combo_five"
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_crest_0")])
-rules_text = "落砂:味方に総量5の砂時計がいれば、相手の砂時計1体を破壊する"
+rules_text = "設置:味方に総量5の砂時計がいれば、相手の砂時計1体を破壊する"
 cannot_attack = false
 is_token = false
 art_id = "crown"

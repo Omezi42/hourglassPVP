@@ -188,10 +188,10 @@ func _test_expert_avoids_wasting_damage_on_a_glass_shielded_enemy() -> void:
 	var state := _new_match()
 	var foe_side := MatchState.Side.B
 	var glass_unit := CardInstance.new(_card("glass"))
-	glass_unit.drop_sand(1)  # total 6: health=5 / attack=1、生涯ダメージが高い側
+	glass_unit.drop_sand(1)  # total 5: health=4 / attack=1、生涯ダメージが高い側
 	state.board[foe_side][0] = glass_unit
-	var plain_unit := CardInstance.new(_card("sand"))
-	plain_unit.drop_sand(1)  # total 5: health=4 / attack=1、生涯ダメージはやや低い
+	var plain_unit := CardInstance.new(_card("grain"))
+	plain_unit.drop_sand(1)  # total 3: health=2 / attack=1、生涯ダメージは低い
 	state.board[foe_side][1] = plain_unit
 	_assert.call(
 		glass_unit.lifetime_damage() > plain_unit.lifetime_damage(),
