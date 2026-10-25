@@ -1,0 +1,62 @@
+class_name CardEffectDemoEnemy
+extends RefCounted
+## 「相手の砂時計へ効く効果」の実演の中身(GameDesign.md 9章)。
+##
+## `CardEffectPreview` が1000行の上限に達したため切り出した。純粋な static だけを持ち、
+## 渡された駒の Dictionary をその場の見た目へ書き換えるところまでが責務。
+
+
+static func apply(foe: Dictionary, demo: int, value: int, landed: float) -> void:
+	match demo:
+		CardEffectPreview.Demo.FX_DESTROY_UNIT:
+			foe["shatter"] = landed
+		CardEffectPreview.Demo.FX_SWAP_STATS:
+			foe["flip"] = landed if landed < 1.0 else -1.0
+			if landed >= 0.5:
+				var health: int = foe["h"]
+				foe["h"] = foe["a"]
+				foe["a"] = health
+		CardEffectPreview.Demo.FX_DROP_SAND:
+			foe["h"] = maxi(foe["h"] - value, 0)
+			foe["a"] = foe["a"] + value
+		CardEffectPreview.Demo.FX_RAISE_SAND:
+			# 戻せるのは攻撃力まで(GameDesign.md 6章)。
+			var moved: int = mini(value, foe["a"])
+			foe["h"] = foe["h"] + moved
+			foe["a"] = foe["a"] - moved
+		CardEffectPreview.Demo.FX_DESTROY_AGED, CardEffectPreview.Demo.FX_DESTROY_WEAK:
+			foe["shatter"] = landed
+		CardEffectPreview.Demo.FX_RETURN_TO_HAND:
+			# 砕けるのではなく盤面から消える。**破壊との違いはここでしか見せられない。**
+			foe["fade"] = 1.0 - landed
+		_:
+			var left: int = foe["h"] - value
+			foe["total"] = maxi(foe["total"] - value, foe["a"])
+			foe["h"] = maxi(left, 0)
+			if left <= 0:
+				foe["shatter"] = landed
+
+
+## or_face は本体も選べる効果(スリング)。実演は駒へ当てて見せ、文で本体も選べると添える。
+static func note(demo: int, value: int, all: bool, or_face := false) -> String:
+	var scope := "相手の砂時計すべて" if all else "相手の砂時計1体"
+	if or_face:
+		scope = "相手プレイヤーか相手の砂時計1体"
+	match demo:
+		CardEffectPreview.Demo.FX_DESTROY_UNIT:
+			return "%sを破壊する" % scope
+		CardEffectPreview.Demo.FX_DESTROY_AGED:
+			return "攻撃力が体力より多い%sを破壊する(若い駒には効かない)" % scope
+		CardEffectPreview.Demo.FX_DESTROY_WEAK:
+			return "体力が%d以下の%sを破壊する(体力の多い駒には効かない)" % [value, scope]
+		CardEffectPreview.Demo.FX_DAMAGE_WEAKEST:
+			return "体力がいちばん少ない%sへ%dダメージ(砂は消える)" % [scope, value]
+		CardEffectPreview.Demo.FX_RAISE_SAND:
+			return "%sの砂が%d粒上へ戻る(攻撃力-%d / 体力+%d)" % [scope, value, value, value]
+		CardEffectPreview.Demo.FX_SWAP_STATS:
+			return "%sの体力と攻撃力を入れ替える" % scope
+		CardEffectPreview.Demo.FX_DROP_SAND:
+			return "%sの砂が%d粒落ちる" % [scope, value]
+		CardEffectPreview.Demo.FX_RETURN_TO_HAND:
+			return "%sを持ち主の手札へ戻す" % scope
+	return "%sへ%dダメージ(砂は消える)" % [scope, value]
