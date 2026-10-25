@@ -129,6 +129,19 @@ func on_effect_struck(
 	_queue(func() -> void: _fx.play(emblem, from, to, style, origin))
 
 
+## 盤面の駒から起きたドロー(`MatchState.effect_drawn`。GameDesign.md 9章)。カードの演出を
+## 持っていれば静止の型として組み、自分のHPの器を狙って再生して true を返す。持たなければ
+## `CardMatchEffects` が紋章の周りへ光の輪を添える。
+func play_drawn(side: int, slot: int) -> bool:
+	var unit := CardEnums.EffectOrigin.UNIT
+	var card := _source_card(side, slot, unit)
+	if card == null or SignatureLibrary.effect(card) == null:
+		return false
+	_arm(side, slot, unit, CardEnums.EffectVisualStyle.PULSE)
+	_play_signature(card, _origin_position(side, slot, unit), [{"side": side, "slot": -1}])
+	return true
+
+
 ## `MatchState.effect_struck_many` を受ける。全体に効く効果(スイープ・レガシー等)が
 ## 対象の数だけ同時に紋章を飛ばす(GameDesign.md 9章)。`_on_impact()` は元々 `_damage`
 ## を配列として持ち越す形になっており、複数のヒットもそのまま捌ける。

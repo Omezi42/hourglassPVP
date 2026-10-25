@@ -113,6 +113,11 @@ const EFFECTS := {
 	"tower": preload("res://scripts/ui/signature/moves/tower_effect.gd"),
 	"anchor": preload("res://scripts/ui/signature/moves/anchor_effect.gd"),
 	"ward": preload("res://scripts/ui/signature/moves/ward_effect.gd"),
+	"echo": preload("res://scripts/ui/signature/moves/echo_effect.gd"),
+	"crack": preload("res://scripts/ui/signature/moves/crack_effect.gd"),
+	"memory": preload("res://scripts/ui/signature/moves/memory_effect.gd"),
+	"page": preload("res://scripts/ui/signature/moves/page_effect.gd"),
+	"chime": preload("res://scripts/ui/signature/moves/chime_effect.gd"),
 }
 
 

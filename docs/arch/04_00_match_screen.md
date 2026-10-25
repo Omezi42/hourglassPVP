@@ -84,7 +84,7 @@
 - **受け口は `CardMatchEffectStrike.on_effect_struck*()`**。ここで `_armed = true` にしてから Tween を組む(yieldしないので、直後の状態変更が出す `unit_damaged` の時点で armed 済み)。`CardMatchStrike.on_unit_damaged()` / `on_unit_ticked()` は**先に `effect_strike.busy()` を見て** `hold_damage()` / `hold_tick()` へ渡す(`unit_damaged` の受け口は `_strike` の1箇所のまま、どちらの進行役が持っているかで振り分ける)。`unit_destroyed` / `unit_shielded` は `_defer()` が `strike_busy()`(両方の busy)を見て自動的に持ち越す
 - **余砂は崩落を先に見せてから銘板が飛ぶ**。`_destroy_unit()` は `_fire(ON_DEATH)` → `unit_destroyed` の順のため、`CardMatchEffects._on_unit_destroyed()` は `effect_strike.is_death_origin()` なら持ち越さず即座に `play_break()`。**攻撃の演出中に死んだ場合は飛ぶこと自体を着弾まで持ち越す**(`_pending` に積み、`_on_impact()` の `effect_strike.flush()` で出す。この間も `busy()` は真)
 - `RECALL` は `MatchState.unit_returned` を `_defer()` で受け、着弾の瞬間に `view.play_recall(card, hand_center(side))`
-- **`effect_drawn(source_side, source_slot, count)`** は駒が盤面上にあるときだけ発行し、`play_spark()`(紋章の周りの光の輪)を呼ぶ。armed/持ち越しは持たない(タイミングのズレが実害にならない)
+- **`effect_drawn(source_side, source_slot, count)`** は駒が盤面上にあるときだけ発行し、`play_spark()`(紋章の周りの光の輪)を呼ぶ。armed/持ち越しは持たない(タイミングのズレが実害にならない)。カードの演出を持つカードは `CardMatchEffectStrike.play_drawn()` が静止の型(PULSE)として組み、自分のHPの器を狙って再生する(光の輪は出さない)
 - `EmblemStrikeFx.impact` で演出をまとめて出し、`finished` で `_screen.on_strike_finished()`(`refresh()` を含む)。`_finish_action()` は `_strike.play()` に加えて `_effect_strike.busy()` も見る
 
 **カードの演出(GameDesign.md 9章)**

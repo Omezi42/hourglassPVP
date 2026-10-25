@@ -193,8 +193,10 @@ func _on_fatigue_damage(side: int, _amount: int) -> void:
 
 ## ドローを起こす設置効果・トリガーが、盤面上の駒から発動した(GameDesign.md 9章)。
 ## その駒の紋章へ短い光の輪を添える。山札の脈打ち(`_on_cards_drawn`)とは別に、
-## 「このカードが引かせた」ことを示すため。
+## 「このカードが引かせた」ことを示すため。カードの演出を持つカードは、光の輪の代わりにそれを出す。
 func _on_effect_drawn(side: int, slot: int, _count: int) -> void:
+	if _screen.effect_strike.play_drawn(side, slot):
+		return
 	_defer(func() -> void: _screen.view_at(side, slot).play_spark())
 
 

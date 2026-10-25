@@ -398,6 +398,25 @@ static func note(item: CanvasItem, at: Vector2, size: float, color: Color, alpha
 	)
 
 
+## ドローの演出で手札へ向かう光の札。`turn` は傾き(ラジアン)、`size` は横の半幅。
+static func card_glint(
+	item: CanvasItem, at: Vector2, size: float, turn: float, alpha: float
+) -> void:
+	const ASPECT := 1.4
+	if alpha <= 0.0 or size <= 1.0:
+		return
+	var ci := item.get_canvas_item()
+	var half := Vector2(size, size * ASPECT)
+	var shape := PackedVector2Array()
+	for corner: Vector2 in [Vector2(-1, -1), Vector2(1, -1), Vector2(1, 1), Vector2(-1, 1)]:
+		shape.append(at + (corner * half).rotated(turn))
+	ShapePaint.circle(ci, at, size * 2.2, Color(BOON, alpha * 0.25))
+	ShapePaint.colored_polygon(ci, shape, Color(1.0, 0.98, 0.9, alpha))
+	var closed := shape.duplicate()
+	closed.append(shape[0])
+	ShapePaint.polyline(ci, closed, Color(BOON, alpha), 1.4, true)
+
+
 static func _dial_hand(
 	item: CanvasItem, center: Vector2, angle: float, length: float, width: float, alpha: float
 ) -> void:
