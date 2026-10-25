@@ -46,7 +46,7 @@ const DISCORD_PUBLIC_KEY = defineSecret("DISCORD_PUBLIC_KEY");
 const LAB_ADMIN_SECRET = defineSecret("LAB_ADMIN_SECRET");
 // ゲームのクライアントへ埋め込んでいる公開のWeb APIキー(`functions/.env`)。
 // `/link` がID/パスワードをゲームのログインと同じ認証で確かめるのに使う。
-const FIREBASE_WEB_API_KEY = defineString("FIREBASE_WEB_API_KEY");
+const AUTH_WEB_API_KEY = defineString("AUTH_WEB_API_KEY");
 
 const ANNOUNCE_MESSAGE =
   "☀️ 本日は日曜イベント開催中!\n" +
@@ -186,7 +186,7 @@ exports.discordInteractions = onRequest(
 
     if (body.type === InteractionType.MODAL_SUBMIT && body.data.custom_id === LINK_MODAL_ID) {
       const db = admin.firestore();
-      res.json(await handleLinkModalSubmit(body, db, FIREBASE_WEB_API_KEY.value()));
+      res.json(await handleLinkModalSubmit(body, db, AUTH_WEB_API_KEY.value()));
       return;
     }
 

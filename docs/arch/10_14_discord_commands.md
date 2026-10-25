@@ -8,7 +8,7 @@
 | `tools/record_effect_gif.gd` / `.tscn`(既存) | カード1枚ぶんの実演(`CardEffectPreview`)を、詳細パネルと同じ地の上で1周分だけPNG連番として書き出す。**新規に作らず、既にある紹介動画用の撮影ツールをそのまま使う** |
 | `tools/discord/build_effect_gif.sh` | 上記で録った連番を `magick` でGIFへエンコードし `functions/data/effect_gifs/{id}.gif` へ書き出す。引数にidを並べればそのカードだけ、無ければ全カード。**Discordの紹介投稿に添えるGIFも同じファイルを使い、出力先を1か所にする** |
 | `functions/discord_commands.js`(Node.js) | `/card` `/deck` `/link` `/profile` と `/link` のフォーム送信のハンドラ。`discordInteractions` から呼ばれる |
-| `functions/.env` | `FIREBASE_WEB_API_KEY`(`data/firebase_config.tres` の `api_key` と同じ値)。`/link` がID/パスワードを確かめるのに使う。クライアントに埋め込んでいる公開の値なのでコミットしてよい |
+| `functions/.env` | `AUTH_WEB_API_KEY`(`data/firebase_config.tres` の `api_key` と同じ値)。`/link` がID/パスワードを確かめるのに使う。クライアントに埋め込んでいる公開の値なのでコミットしてよい。`FIREBASE_` で始まる名前は予約されていてデプロイが止まる |
 | `functions/deck_sheet_canvas.js`(Node.js) | `/deck` 用の簡易デッキ表画像を `@napi-rs/canvas` で描画する。ゲーム内の `CardDeckSheet` とは別実装であり、見た目の一致は求めない |
 | `functions/fonts/ZenKakuGothicNew-Bold.ttf` | `assets/fonts/` からコピーした同梱フォント。`firebase.json` の `functions.source` が `functions` ディレクトリだけを見るため、`functions/` の外にあるファイルはデプロイされない |
 | `functions/.gdignore` | `functions/data/card_art/*.png` をGodotのインポート対象から外す。**置き忘れると `.png.import` が大量に生成される**(実際に70個生成された)。4.1.6節の「実行時に読まないディレクトリには`.gdignore`を置く」の実例 |
