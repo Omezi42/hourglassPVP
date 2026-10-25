@@ -28,9 +28,10 @@ const PRICE_WIDTH := 92.0
 const PRICE_EMBLEM_SIZE := 13.0
 const PRICE_EMBLEM_GAP := 4.0
 const ICON_SEAL_RATIO := 0.4
+## 選択枠。角はタイル自身の角丸に、太さは額縁の太さに合わせる(小さなタイルで枠だけ太く見せない)。
 const SELECT_INSET := 2.0
-const SELECT_CORNER := 12.0
-const SELECT_WIDTH := 3.0
+const SELECT_WIDTH_RATIO := 0.25
+const SELECT_WIDTH_MIN := 1.5
 ## 残高が足りない品の暗さ(GameDesign.md 21章「買えないことは品を暗くすることで示す」)。
 const UNAFFORDABLE_TONE := Color(0.62, 0.6, 0.58, 1.0)
 
@@ -130,16 +131,25 @@ func _draw() -> void:
 			ShopItemArt.card_set_row(self, art, id, _font)
 	_draw_footer()
 	if selected:
-		var ring := Rect2(Vector2.ONE * SELECT_INSET, size - Vector2.ONE * SELECT_INSET * 2.0)
-		var points := UiPaint.rounded_rect_points_uniform(ring, SELECT_CORNER, 5)
-		points.append(points[0])
-		ShapePaint.polyline(get_canvas_item(), points, UiPalette.GLOW_AMBER, SELECT_WIDTH, true)
+		_draw_select_ring()
+
+
+func _draw_select_ring() -> void:
+	var bounds := Rect2(Vector2.ZERO, size)
+	var ring := bounds.grow(-SELECT_INSET)
+	var corner := maxf(CodedButtonStyle.corner_radius(bounds) - SELECT_INSET, 0.0)
+	var width := maxf(
+		CodedButtonStyle.frame_thickness(bounds) * SELECT_WIDTH_RATIO, SELECT_WIDTH_MIN
+	)
+	var points := UiPaint.rounded_rect_points_uniform(ring, corner, 5)
+	points.append(points[0])
+	ShapePaint.polyline(get_canvas_item(), points, UiPalette.GLOW_AMBER, width, true)
 
 
 ## ホバー中は面が琥珀に明るくなるため、文字を暗い色へ替えて読めるようにする
-## (残高が足りない品はホバーで光らないので替えない)。
+## (残高が足りない品はホバーで光らないので替えない)。押している間は面が暗く沈むので替えない。
 func _lit() -> bool:
-	return is_hovered() and (owned or affordable)
+	return get_draw_mode() == DRAW_HOVER and (owned or affordable)
 
 
 func _name_font_size() -> int:

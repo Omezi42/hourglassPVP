@@ -38,8 +38,10 @@ func _ready() -> void:
 func _draw() -> void:
 	if _font == null:
 		return
-	var main_color := UiPalette.OUTLINE_DARK if active else UiPalette.TEXT_OFFWHITE
-	var sub_color := UiPalette.BRASS_PRESSED_DARK if active else UiPalette.TEXT_MUTED
+	# 凹んだパネルはホバーで琥珀に明るくなるため、真鍮の面と同じ暗い文字へ替える(`ShopItemTile` と同じ)。
+	var dark_text := active or get_draw_mode() == DRAW_HOVER
+	var main_color := UiPalette.OUTLINE_DARK if dark_text else UiPalette.TEXT_OFFWHITE
+	var sub_color := UiPalette.BRASS_PRESSED_DARK if dark_text else UiPalette.TEXT_MUTED
 	var left := PORTRAIT_TEXT_LEFT if portrait else TEXT_LEFT
 	draw_string(
 		_font,

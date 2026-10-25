@@ -250,6 +250,11 @@ func _corner_radii(rect: Rect2) -> PackedFloat32Array:
 
 
 func _effective_corner_radius(rect: Rect2) -> float:
+	return corner_radius(rect)
+
+
+## 角丸の半径(ROUNDED_RECT)。ボタンに重ねて縁を描く側(選択枠など)が角を揃えるのに使う。
+static func corner_radius(rect: Rect2) -> float:
 	return min(CORNER_RADIUS, rect.size.y * CORNER_RADIUS_HEIGHT_RATIO)
 
 
