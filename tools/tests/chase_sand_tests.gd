@@ -19,6 +19,7 @@ func run(assert_true: Callable) -> void:
 	_test_nibble_hits_lowest_health()
 	_test_nibble_breaks_ties_leftmost()
 	_test_block_guards_and_draws_on_death()
+	_test_vault_grows_ally_when_damaged()
 	_test_set_is_staged()
 
 
@@ -165,6 +166,19 @@ func _test_block_guards_and_draws_on_death() -> void:
 	_assert.call(state.hand[MatchState.Side.A].size() == hand + 1, "ブロックが破壊されると持ち主が1枚引く")
 
 
+func _test_vault_grows_ally_when_damaged() -> void:
+	var state := _new_match()
+	var vault := CardLibrary.find_by_id("vault")
+	_assert.call(vault.keywords.has(CardEnums.Keyword.GUARD), "ヴォールトは守護を持つ")
+	_place(state, MatchState.Side.A, vault, 0)
+	var ally := _place(state, MatchState.Side.A, _vanilla(3), 1)
+	var vault_unit: CardInstance = state.board[MatchState.Side.A][0]
+	var own_total := vault_unit.total_sand()
+	state.damage_unit(MatchState.Side.A, 0, 1)
+	_assert.call(ally.total_sand() == 4, "ヴォールトが被弾すると他の駒の総量+1")
+	_assert.call(vault_unit.total_sand() == own_total - 1, "ヴォールトは自分の総量を増やさない")
+
+
 func _test_set_is_staged() -> void:
 	_assert.call(CardSetLibrary.has_set(SET_ID), "chase_sand is registered")
 	_assert.call(CardSetLibrary.price(SET_ID) == 1000, "chase_sand costs 1000")
@@ -176,3 +190,4 @@ func _test_set_is_staged() -> void:
 		CardSetLibrary.card_ids(SET_ID)[3] == "nibble", "chase_sand's fourth card is nibble"
 	)
 	_assert.call(CardSetLibrary.card_ids(SET_ID)[4] == "block", "chase_sand's fifth card is block")
+	_assert.call(CardSetLibrary.card_ids(SET_ID)[5] == "vault", "chase_sand's sixth card is vault")

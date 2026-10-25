@@ -121,16 +121,33 @@ static func _stage_reset_flip(t: float) -> Dictionary:
 ## 総量が増える。**「反転:総量+1」(グロウ)のときだけ駒が実際に裏返る**
 ## (`show_flip`)。設置・落砂・余砂で載る同じ効果(フォージ・アンカー・ウェル・ハスク等)は
 ## 反転を伴わないため、そこで駒を裏返すと起きていないことを起きたと見せることになる。
-static func add_total(t: float, value: int, show_flip: bool, all: bool) -> Dictionary:
+## `ally` は対象が味方1体(ALLY_UNIT)のとき。効果の持ち主から対象へ線を引き、増えるのは対象だけ。
+## 砂術は盤面に自分自身を持たないため「他の」を付けない(`exclude_self`。`on_ally_unit()` と同じ)。
+static func add_total(
+	t: float, value: int, show_flip: bool, all: bool, ally := false, exclude_self := true
+) -> Dictionary:
 	var stage := CardEffectStage.empty_stage()
 	var pieces: Array = [_add_total_piece(t, value, show_flip)]
 	if all:
 		pieces.append(_add_total_piece(t, value, show_flip))
+	var grown := range(pieces.size())
 	var scope := "自分の砂時計すべて" if all else "この砂時計"
+	if ally and not all:
+		scope = "自分の他の砂時計1体" if exclude_self else "自分の砂時計1体"
+		var caster := CardEffectStage.piece(6, 0, 6)
+		caster["fade"] = CardEffectStage.seg(t, 0.0, 0.15)
+		pieces.push_front(caster)
+		grown = [1]
+		if t >= 0.3 and t < 0.68:
+			stage["beams"] = [
+				CardEffectStage.beam(
+					["own", 0], ["own", 1], CardEffectStage.seg(t, 0.3, 0.6), false, InkFigure.GREEN
+				)
+			]
 	stage["trigger_note"] = "%sの総量が%d増える" % [scope, value]
 	if t >= 0.68:
 		var pops: Array = []
-		for i in pieces.size():
+		for i in grown:
 			pops.append(
 				CardEffectStage.pop(
 					"own", i, "+%d" % value, UiPalette.GLOW_AMBER, CardEffectStage.seg(t, 0.68, 1.0)

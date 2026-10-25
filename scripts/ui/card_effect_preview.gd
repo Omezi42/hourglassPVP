@@ -280,7 +280,12 @@ func _stage(entry: Dictionary, t: float) -> Dictionary:
 		# 「反転:総量+1」(グロウ)だけが実際に反転を伴う。設置/落砂/余砂の総量+効果は
 		# 反転しないため、台本の中で勝手に駒を裏返さない(トリガーで判定する)。
 		stage = CardEffectDemoEffect.add_total(
-			t, value, trigger == CardEnums.Trigger.ON_FLIP, entry.get("all", false)
+			t,
+			value,
+			trigger == CardEnums.Trigger.ON_FLIP,
+			entry.get("all", false),
+			entry.get("ally", false),
+			not entry.get("spell", false)
 		)
 	elif (
 		entry.get("ally", false)
