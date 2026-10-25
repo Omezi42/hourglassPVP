@@ -58,6 +58,12 @@
 
 ## 3. Claudeが進められる作業
 
+### 攻略サイト(GameDesign.md 32章 / Architecture.md 10.21節)
+
+- [ ] 1段階目: カード辞典・みんなの統計(公開用の集計 `publishWikiStats` を含む)
+- [ ] 2段階目: ID/パスワードでのログイン・マイページの分析・ランキング
+- [ ] 3段階目: リプレイの再生(ゲームを `?replay=` で起動する入口、pckを版ごとに残す)
+
 ### カードセットの段階公開(GameDesign.md 21章 / Architecture.md 10.8.1節)
 
 仕組みは実装済み(`CardSetLibrary` の `planned_count`)。

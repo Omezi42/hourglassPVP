@@ -45,6 +45,18 @@
         "build/app"
       ],
       "port": 8075
+    },
+    {
+      "name": "wiki-build",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8076",
+        "--directory",
+        "build/wiki"
+      ],
+      "port": 8076
     }
   ]
 }

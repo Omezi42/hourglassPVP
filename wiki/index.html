@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>砂時計アリーナ 攻略データベース</title>
+  <meta name="description" content="砂時計アリーナの全カードと、みんなの対局から集めた統計">
+  <link rel="icon" href="art/sand_thumb.webp">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700&family=Zen+Old+Mincho:wght@700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="site-title" href="#cards">砂時計アリーナ<span>攻略データベース</span></a>
+      <nav class="site-nav" aria-label="ページ">
+        <a href="#cards" data-page="cards">カード辞典</a>
+        <a href="#stats" data-page="stats">みんなの統計</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="page" class="page" aria-live="polite"></main>
+
+  <dialog id="card-dialog" class="card-dialog">
+    <form method="dialog"><button class="card-dialog__close" aria-label="閉じる">×</button></form>
+    <img id="card-dialog-art" alt="">
+    <p id="card-dialog-text" class="card-dialog__text"></p>
+  </dialog>
+
+  <footer class="site-footer">
+    <a href="https://unityroom.com/games/sunadokei_arena" target="_blank" rel="noopener">ゲームを遊ぶ</a>
+  </footer>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

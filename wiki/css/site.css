@@ -1,0 +1,287 @@
+/* 配色はゲームの真鍮・砂・インクに合わせる(scripts/ui の定数) */
+:root {
+  --bg: #1d140d;
+  --bg-deep: #120c07;
+  --paper: #ecdcb6;
+  --paper-dim: #dbc79a;
+  --ink: #33220f;
+  --ink-soft: #664d30;
+  --brass: #92704f;
+  --brass-light: #d1b373;
+  --sand: #edc76b;
+  --win: #4f7a3a;
+  --lose: #a5432f;
+  --line: rgba(51, 34, 15, 0.18);
+  --radius: 10px;
+  --gutter: 16px;
+  font-family: "Zen Kaku Gothic New", system-ui, sans-serif;
+  font-weight: 500;
+  color: var(--paper);
+  background: var(--bg);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: radial-gradient(ellipse at top, #3a2817 0%, var(--bg) 55%, var(--bg-deep) 100%) fixed;
+}
+
+a { color: var(--sand); }
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: rgba(18, 12, 7, 0.92);
+  border-bottom: 1px solid rgba(209, 179, 115, 0.35);
+  backdrop-filter: blur(6px);
+}
+
+.site-header__inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 10px var(--gutter);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 24px;
+}
+
+.site-title {
+  font-family: "Zen Old Mincho", serif;
+  font-size: 1.3rem;
+  color: var(--sand);
+  text-decoration: none;
+  letter-spacing: 0.04em;
+}
+
+.site-title span {
+  margin-left: 10px;
+  font-family: "Zen Kaku Gothic New", sans-serif;
+  font-size: 0.8rem;
+  color: var(--brass-light);
+}
+
+.site-nav { display: flex; gap: 4px; }
+
+.site-nav a {
+  padding: 6px 14px;
+  border-radius: 999px;
+  color: var(--paper-dim);
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.site-nav a:hover { background: rgba(209, 179, 115, 0.12); }
+
+.site-nav a[aria-current="page"] {
+  background: linear-gradient(var(--brass-light), var(--brass));
+  color: var(--bg-deep);
+}
+
+.page {
+  flex: 1;
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px var(--gutter) 48px;
+}
+
+.page h1 {
+  font-family: "Zen Old Mincho", serif;
+  font-size: 1.7rem;
+  margin: 0 0 4px;
+  color: var(--sand);
+}
+
+.lead { margin: 0 0 20px; color: var(--paper-dim); font-size: 0.9rem; }
+
+.notice { padding: 40px 0; text-align: center; color: var(--paper-dim); }
+
+/* 絞り込みの帯 */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  margin-bottom: 18px;
+}
+
+.toolbar input[type="search"],
+.toolbar select {
+  font: inherit;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--brass);
+  background: var(--paper);
+  color: var(--ink);
+  min-width: 0;
+}
+
+.toolbar input[type="search"] { flex: 1 1 220px; }
+
+.segmented { display: inline-flex; border: 1px solid var(--brass); border-radius: 8px; overflow: hidden; }
+
+.segmented button {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 7px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--paper-dim);
+  cursor: pointer;
+}
+
+.segmented button[aria-pressed="true"] { background: var(--brass); color: var(--bg-deep); font-weight: 700; }
+
+.count { color: var(--paper-dim); font-size: 0.85rem; }
+
+/* カード辞典 */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 12px;
+}
+
+.card-tile {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 12px;
+  align-items: start;
+  padding: 12px;
+  border-radius: var(--radius);
+  background: linear-gradient(var(--paper), var(--paper-dim));
+  color: var(--ink);
+  border: 0;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.card-tile:hover { transform: translateY(-2px); box-shadow: 0 6px 14px rgba(0, 0, 0, 0.4); }
+.card-tile:focus-visible { outline: 3px solid var(--sand); outline-offset: 2px; }
+
+.card-tile img { width: 64px; height: 84px; object-fit: contain; border-radius: 6px; }
+
+.card-tile__name { font-family: "Zen Old Mincho", serif; font-size: 1.05rem; margin: 0 0 4px; }
+
+.card-tile__nums { display: flex; gap: 10px; font-size: 0.8rem; color: var(--ink-soft); margin-bottom: 6px; }
+.card-tile__nums b { color: var(--ink); font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+
+.card-tile__text { margin: 0; font-size: 0.85rem; line-height: 1.5; }
+
+.badge {
+  display: inline-block;
+  padding: 0 6px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  background: #3e4d73;
+  color: #fff;
+  vertical-align: 2px;
+  margin-left: 6px;
+}
+
+.card-dialog {
+  border: 0;
+  padding: 0;
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--ink);
+  max-width: min(720px, calc(100vw - 32px));
+}
+
+.card-dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
+.card-dialog img { display: block; width: 100%; height: auto; }
+.card-dialog__text { margin: 0; padding: 0 16px 14px; font-size: 0.9rem; }
+.card-dialog__text:empty { display: none; }
+
+.card-dialog__close {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(51, 34, 15, 0.12);
+  color: var(--ink);
+  font-size: 1.4rem;
+  cursor: pointer;
+}
+
+/* みんなの統計 */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.tile {
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  background: rgba(236, 220, 182, 0.08);
+  border: 1px solid rgba(209, 179, 115, 0.3);
+}
+
+.tile__label { font-size: 0.8rem; color: var(--paper-dim); }
+.tile__value { font-size: 1.8rem; font-weight: 700; color: var(--sand); font-variant-numeric: tabular-nums; }
+.tile__sub { font-size: 0.75rem; color: var(--paper-dim); }
+
+.ends { display: flex; height: 10px; border-radius: 5px; overflow: hidden; margin: 10px 0 6px; background: rgba(0, 0, 0, 0.3); }
+.ends span { height: 100%; }
+.ends-legend { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 0.75rem; color: var(--paper-dim); }
+.ends-legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; }
+
+.caveat {
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  border-left: 3px solid var(--sand);
+  background: rgba(237, 199, 107, 0.08);
+  font-size: 0.85rem;
+  color: var(--paper-dim);
+}
+
+.table-wrap {
+  overflow-x: auto;
+  border-radius: var(--radius);
+  background: linear-gradient(var(--paper), var(--paper-dim));
+  color: var(--ink);
+}
+
+table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+th, td { padding: 8px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { text-align: left; font-size: 0.78rem; color: var(--ink-soft); position: sticky; top: 0; background: var(--paper); }
+th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; }
+th button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+th button[aria-sort]::after { content: " ▼"; font-size: 0.65rem; }
+th button[aria-sort="ascending"]::after { content: " ▲"; }
+tbody tr:hover { background: rgba(51, 34, 15, 0.06); }
+
+.name-cell { display: flex; align-items: center; gap: 8px; }
+.name-cell img { width: 26px; height: 34px; object-fit: contain; }
+.name-cell button { font: inherit; color: var(--ink); background: none; border: 0; padding: 0; cursor: pointer; text-align: left; }
+.name-cell button:hover { text-decoration: underline; }
+
+.rate { display: inline-flex; align-items: center; gap: 8px; justify-content: flex-end; }
+.rate__bar { position: relative; width: 70px; height: 6px; border-radius: 3px; background: rgba(51, 34, 15, 0.15); }
+.rate__bar span { position: absolute; inset: 0 auto 0 0; border-radius: 3px; }
+.rate__bar::after { content: ""; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: var(--ink-soft); }
+.few { opacity: 0.45; }
+
+.updated { margin-top: 12px; font-size: 0.78rem; color: var(--paper-dim); text-align: right; }
+
+.site-footer { padding: 20px var(--gutter); text-align: center; font-size: 0.85rem; border-top: 1px solid rgba(209, 179, 115, 0.2); }
+
+@media (max-width: 600px) {
+  .site-title span { display: none; }
+  .page h1 { font-size: 1.4rem; }
+  th, td { padding: 7px 8px; }
+  .rate__bar { width: 44px; }
+}
