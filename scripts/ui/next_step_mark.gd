@@ -1,6 +1,6 @@
 class_name NextStepMark
 extends Control
-## たたかうタブで次にやってほしい入口1つに掛ける印(GameDesign.md 18章「初回の導線」)。
+## ホームで次にやってほしい入口1つに掛ける印(GameDesign.md 18章「初回の導線」)。
 ## 札の縁を琥珀の光でゆっくり脈打たせ、右上の角に真鍮の小札「つぎはここ」を掛ける。
 ##
 ## 札(`HomeTile`)の最後の子として重ねる。`Control._draw()` は子より背面に描かれるため、

@@ -131,18 +131,17 @@
 Boot                         # 起動シーン。タイトルだけを出し、残りを裏で読んでから Main へ引き渡す
 Main
 ├── TitleScreen              # Boot から adopt_title() で受け取る
-├── HomeScreen               # 下部5タブ
-├── ReplayListScreen
+├── HomeScreen               # 1画面(左=ソロ / 中央=バトル / 右=そろえる)
 ├── AccountScreen
 │   (対局画面を除く各画面は先頭の子として共通の ScreenHeader を持つ)
-├── CardMatchScreen          # 対局・観戦・再生(コードで組み立てる)
+├── CardMatchScreen          # 対局・再生(コードで組み立てる)
 ├── CardDeckListScreen / CardDeckEditorScreen / CardListScreen
 ├── RuleScreen / KeywordDictScreen / ScreenGuideScreen
 ├── CardSoloMapScreen / CardRoomScreen / CardRankedMatchScreen
-└── CardShopScreen / CardStatsScreen / CardLabScreen / CardRankScreen …
+└── CardShopScreen / CardStatsScreen / CardRankScreen …
 ```
 
-v1.0(位相制)の画面・クラス・`data/hourglasses/*.tres` は削除済み。`ReplayListScreen` は `seed` を持つ棋譜だけを一覧に出す。
+v1.0(位相制)の画面・クラス・`data/hourglasses/*.tres` は削除済み。
 
 - `Boot`(`scenes/boot.tscn`、起動シーン):`TitleScreen` だけを出し、`scripts/boot/script_load_order.gd` の順に1フレーム12msずつスクリプトを `load()` してから `main.tscn` を生成し、`Main.adopt_title()` でタイトルを渡す(Godot は class_name を参照するたびに参照先を解析するため、一度に読むと何も映らないまま十秒近く止まる)。読み終える前に押された開始・アカウントは預かり、`show_loading()` で進み具合を出して、引き渡した後にシグナルを出し直す。`Boot` は `Main` の型を書かない(書くとその時点で全画面がコンパイルされる)
 - `script_load_order.gd` は生成物(`tools/gen_script_load_order.gd`。`main.tscn` から辿れるスクリプトを参照される側から順に並べる)。`check.sh` が毎回作り直す。漏れがあっても `main.tscn` を読むときにまとめてコンパイルされるだけで壊れない
@@ -155,27 +154,31 @@ v1.0(位相制)の画面・クラス・`data/hourglasses/*.tres` は削除済み
 
 ## 4.0.7 ホーム画面
 
-- **タブは行いで分ける**(GameDesign.md 9章): たたかう=`BattleTab`(`.tscn`)/ そろえる=`DeckTab`(`.tscn`)/ きろく=`RecordTab` / おぼえる=`RulesTab` / つくる=`LabTab`。**`.tscn` を持つ2つはクラス名を変えない**(`home_screen.tscn` が instance しているため。画面に出る名前との食い違いは許容)。`SoloTab` は削除済み
-- `BattleTab` の `.tscn` の縦並び(`Margin/VBox`)は使わず、`StatusLabel` だけを引き取る(`_take_over_status_label()`)。`.tscn` は書き換えない
-- **入口はどのタブも `HomeTile`**(`Button` 継承。見出し・副題・紋章の透かし・砂時計を自前で描く。`text` へは入れない)。`.tscn` は書き換えず `_ready()` で同じ場所へ差し替える(`_to_tile()`)。**紋章の透かしは `CodedButtonStyle.inner_rect()` の中へ収め、比率で決めたうえで上限で止める**(額縁へ載り上がる / 大きな札で文字より主張する)。`primary`(塗りつぶした真鍮)と `badge`(未受取の数。下部タブへも同じ静的な描画関数で打つ)を引数で持つ
-- 枠は `HomeFrame`(`content_panel.tres` のパネル + 真鍮のプレートの見出し)。**枠の右へ並べる行(ミッションの進捗)は `HomeFrame` が描く**(`Control._draw()` は子より背面なので、タブ側で描くと枠に隠れる)
-- `BattleTab` は枠を使わず、上段に真鍮の `HomeTile`「対戦する」「ソロモード」を横に2枚、下段に凹んだ `HomeTile` を横に3枚置く。札の大きさは固定。
-  札の中身は札の子(マウスを通す)が `_draw()` で描く: 「対戦する」は `RankedEntryInfo`(段位の徽章・段位名・次の段位・シーズンの残り日数・下端の凹んだ行)、
-  「ソロモード」は `SoloEntryInfo`(`SoloProgress.load_run()` の遠征の作戦名・6段の進み具合・勝ち数とHP、遠征が無ければ記録)。
-  真鍮へ彫り込んだ文字と下端の凹んだ行は2つで同じ見た目にするため `EntryTilePaint`(static)に置く。
-  遠征の画面から戻ったときに `refresh()` し直す
-  **途中の対局があるときは札そのものが復帰の入口になる**(見出しを「対局へ戻る」へ替え、押下を `_on_resume_pressed()` へ回す)。待機人数は `RankedMatchmakingQueue.count_waiting()` をタブが見えている間だけ一定間隔で読む。
-- `HomeScrim`(`Background` の直後):上=アカウント帯 / 中=タブ / 下=下部タブ を別々の濃さで落とす。**上下は中より濃く、対称に。3つの濃さは揃えて動かす**(片方だけ変えると重心が寄る)。アカウント帯の下端に中央が濃く左右で消える真鍮の細線
-- 下部タブは幅を共通にし高さだけ変える(幅まで変えると `HBoxContainer` で他が押し出される)。非選択を下端へ沈め、選択中だけ帯の中央へ
+- **1画面に収め、タブを持たない**(GameDesign.md 9章)。`HomeScreen` の下に2つの列のクラスを常に出す:
+  `BattleTab`(`.tscn`。左=ソロモード / 中央=バトル)と `DeckTab`(`.tscn`。右=デッキ編集・図鑑・ショップ)。
+  **`.tscn` を持つ2つはクラス名を変えない**(`home_screen.tscn` が instance しているため。画面に出る名前との食い違いは許容)
+- **列の位置は `HomeLayout`(static)1か所で決める**(横の3列・右の列の3段・縦の積み方・3列の下の文言の行)。2つの列が別々に持つと幅や上端が食い違う
+- `BattleTab` の `.tscn` の縦並び(`Margin/VBox`)は使わず、`StatusLabel` だけを引き取る(`_take_over_status_label()`)。`DeckTab` も `.tscn` の `Center` を捨て、ボタンを `HomeTile` へ差し替えて列の直下へ置く(`_to_tile()`)。`.tscn` は書き換えない
+- **入口は `HomeTile`**(`Button` 継承。見出し・副題・紋章の透かしを自前で描く。`text` へは入れない)。**紋章の透かしは `CodedButtonStyle.inner_rect()` の中へ収め、比率で決めたうえで上限で止める**。`primary`(塗りつぶした真鍮)と `badge_count`(未受取の数)を持つ
+- 「バトル」の中身は `RankedEntryInfo`、「ソロモード」の中身は `SoloEntryInfo`(どちらも札の子でマウスを通し、札いっぱいにアンカーで追わせる)。
+  `RankedEntryInfo.tall` で縦長の札(中央へ縦に積み、見出し「バトル」も自分で彫る)と横長の札(右に徽章・左に文字。見出しは `HomeTile` が描く)を切り替える。
+  `head_on_top` / `show_well` はモーダルの「ランクマッチ」用(見出しを上に、待機の行を出さない)。
+  `SoloEntryInfo` は遠征(`SoloProgress.load_run()`)と今日の1問(`DailyPuzzle` / `PuzzleProgress`)の状態を凹んだ枠2つに描く。彫り文字と凹んだ枠は `EntryTilePaint`(static)
+- **「バトル」「ソロモード」を押すと `HomeModePicker` を出す**(暗幕 + 見出し + 同じ大きさの `HomeTile` の横並び + 補助のボタン1つ + 「とじる」)。
+  `BattleTab` が2つ(対局の種類 / ソロモード)を作り、**ヘッダーより手前に出すため `HomeScreen` が `mount_pickers()` で自分の子として預かる**。札を押すとモーダルを閉じてから札の `pressed` が届く。閉じるたびに `BattleTab.refresh()`
+- **途中の対局があるときは「バトル」そのものが復帰の入口になる**(見出しを「対局へ戻る」へ替え、押下を `_on_resume_pressed()` へ回す。モーダルは出さない)。待機人数は `RankedMatchmakingQueue.count_waiting()` をホームが見えている間だけ一定間隔で読む
+- 「つぎはここ」(`NextStepMark`)は2つ持つ。ホームの札(CPU戦なら「バトル」、遠征・リーサルパズルなら「ソロモード」)と、モーダルの札
+- ヘッダーのミッションの札は `HomeTile`(`HomeScreen._mission_tile`)。`DailyMissionService.missions()` から「今日 N / 3」と受け取れる数を `refresh_account()` のたびに読む。押すと `DailyMissionPanel`
+- メニュー(`SettingsPanel`)の「遊び方」は `learn_requested` を出すだけで、`HomeScreen` がメニューを閉じて `LearnMenu`(暗幕 + 中央のパネル。誘導対局・遊び方・画面の見かた・キーワード辞書)を開く
+- `HomeScrim`(`Background` の直後):上=アカウント帯 / 下=3列の中身 を別々の濃さで落とす。アカウント帯の下端に中央が濃く左右で消える真鍮の細線
 - アカウント帯は `.tscn` の幅460pxを `_ready()` で右端まで伸ばし、残高を右へ寄せる(`ACCOUNT_BAR_RIGHT_INSET`)。ホームの残高だけ `CurrencyChip.scale_factor` で大きく、`height_override` で名札と揃える。`CurrencyChip` は単位を小さく数値を大きく別々に描き、紋章と文字のあいだに縦の細線
-- 副題は画面の外で変わるため、タブを開くたびに `refresh()` で読み直す
-- ホーム画面のタブは上端112pxをアカウント帯のために空け、残り(560px)の中央へ内容を置く
-- **初回起動の判定は `UiState`**(`user://ui_state.json`)。`RulesTab` とそのタブボタンは `HomeScreen._ready()` がコードで生成(既存のボタンを `duplicate()`)
+- 副題は画面の外で変わるため、ホームを出すたびに `refresh()` で読み直す
+- **初回起動の判定は `UiState`**(`user://ui_state.json`)
 
 ## 4.0.8 共通部品とUIクローム
 
 - `ScreenHeader`(`scenes/screen_header.tscn`):外周余白24px・ヘッダー高88px・コンテンツ開始y=136をここで決める。タイトルの後ろに中央が濃く左右へ消える暗幕、下端に真鍮の細線
-- `PressTracker`:押下→離した位置が要素内かで確定/取消(`CardView` / `ReplayListCard` / `ClickArea` が共用)
+- `PressTracker`:押下→離した位置が要素内かで確定/取消(`CardView` / `ClickArea` が共用)
 - `EmptyState`:空の一覧・待機の見せ方(印・見出し・1行)を1箇所へ
 - `CodedButton`:ボタン生成の集約(画面ごとに `theme_override` を並べない)
 - `NumberPad`(`GridContainer`):数字だけの欄へ添える3×4の数字パッド(GameDesign.md 9章)。押した数字を対象の `LineEdit` へ足して `text_changed` を流す(欄の絞り込みをキーボード入力と同じ経路で通す)。キーは `FOCUS_NONE`(欄のフォーカスを奪わない)。「決定」は `with_confirm` のときだけ置き `confirmed` を流す
@@ -189,7 +192,6 @@ v1.0(位相制)の画面・クラス・`data/hourglasses/*.tres` は削除済み
 | グループ | Shape | Emblem | 使う場所 |
 |---|---|---|---|
 | `back_nav` | CHEVRON_LEFT | NONE | 共通ヘッダーの戻る |
-| `nav_tab` | PILL | HOURGLASS(TOP_BADGE) | ホームの下部タブ |
 | `wide_text` | ROUNDED_RECT | NONE | 既定の横長ボタン |
 | `icon_square` | ROUNDED_RECT | NONE | 小さな正方形 |
 | `primary_action` | ROUNDED_RECT | NONE | 塗りつぶした真鍮の面(`filled`) |

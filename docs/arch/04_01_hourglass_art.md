@@ -42,7 +42,7 @@ v' = clamp(v * value + value_bias, 0, 1)
 
 - **焼くのは `SubViewport` + シェーダで、結果を `ImageTexture` として持つ。**描画側は
   今までどおり `Texture2D` を受け取るだけで、`CardView` / `CardDetailPanel` /
-  `CardDeckShelf` / `CardDeckListScreen` / `ReplayListCard` のいずれも変更しない。
+  `CardDeckShelf` / `CardDeckListScreen` のいずれも変更しない。
   **描画のたびにシェーダを掛ける方式は採らない**。カードの絵は5つの画面がそれぞれ別の
   描き方(`draw_texture_rect` と `TextureRect`)で出しており、5箇所へシェーダを配ると
   1箇所書き漏らしただけで色が違うカードが出る

@@ -18,7 +18,7 @@
 | 9章 | UI設計メモ | [`design/09_ui.md`](design/09_ui.md) |
 | 10章 | 技術設計方針(毎日アプデ運用のための骨格) | [`design/10_tech_policy.md`](design/10_tech_policy.md) |
 | 11章 | オンライン対戦 | [`design/11_online.md`](design/11_online.md) |
-| 12章 | リプレイ・観戦 | [`design/12_replay.md`](design/12_replay.md) |
+| 12章 | リプレイ | [`design/12_replay.md`](design/12_replay.md) |
 | 13章 | CPU戦 | [`design/13_cpu.md`](design/13_cpu.md) |
 | 14章 | アカウント | [`design/14_account.md`](design/14_account.md) |
 | 15章 | 通貨 | [`design/15_currency.md`](design/15_currency.md) |
@@ -35,7 +35,7 @@
 | 26章 | Discordスラッシュコマンド | [`design/26_discord_commands.md`](design/26_discord_commands.md) |
 | 27章 | ソロモード | [`design/27_solo_mode.md`](design/27_solo_mode.md) |
 | 28章 | ランクマッチ | [`design/28_ranked.md`](design/28_ranked.md) |
-| 29章 | 掲示板(ラボ) | [`design/29_lab.md`](design/29_lab.md) |
+| 29章 | (欠番) | — |
 | 30章 | 公式大会「箱庭杯」 | [`design/30_tournament.md`](design/30_tournament.md) |
 | 31章 | カードスキン | [`design/31_card_skins.md`](design/31_card_skins.md) |
 | 32章 | 攻略サイト | [`design/32_wiki.md`](design/32_wiki.md) |

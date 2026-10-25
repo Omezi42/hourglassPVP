@@ -127,11 +127,6 @@ static func _room_portrait(screen: CardRoomScreen) -> void:
 	_place(screen._copy_button, COPY_BUTTON_RECT)
 	_zoom(screen._my_seat, Vector2(LEFT, _seat_top(0)), Vector2(WIDTH, SEAT_HEIGHT))
 	_zoom(screen._foe_seat, Vector2(LEFT, _seat_top(1)), Vector2(WIDTH, SEAT_HEIGHT))
-	var seats_top := _seat_top(0)
-	_place(
-		screen._spectate_state,
-		Rect2(LEFT, seats_top, WIDTH * ZOOM, (SEAT_HEIGHT * 2.0 + SEAT_GAP) * ZOOM)
-	)
 
 
 static func _room_landscape(screen: CardRoomScreen) -> void:
@@ -142,7 +137,6 @@ static func _room_landscape(screen: CardRoomScreen) -> void:
 	_place(screen._copy_button, CardRoomScreen.COPY_BUTTON_RECT)
 	_unzoom(screen._my_seat, CardRoomScreen.MINE_RECT)
 	_unzoom(screen._foe_seat, CardRoomScreen.FOE_RECT)
-	_place(screen._spectate_state, CardRoomScreen.SEATS_RECT)
 
 
 ## `index` は 0 = 自分、1 = 相手。

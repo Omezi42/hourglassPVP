@@ -1,13 +1,15 @@
 class_name BattleTab
 extends Control
-## ホーム画面の「たたかう」タブ(GameDesign.md 9章)。
+## ホームの左「ソロモード」と中央「バトル」の列(GameDesign.md 9章)。右の列は `DeckTab`。
 ##
-## **対局の入口をすべてここへ集める。**上段に真鍮の札「対戦する」(= ランクマッチ)と
-## 「ソロモード」を同格に2枚、下段に凹んだパネル(CPU戦 / リーサルパズル / ルームマッチ / 観戦)を横に並べる。
+## **対局の入口はホームに並べず、押してから選ばせる。**「バトル」を押すと対局の種類を選ぶ
+## モーダル(ランクマッチ / ルームマッチ / CPU戦)、「ソロモード」を押すと遠征 / リーサルパズルの
+## モーダルを出す(`HomeModePicker`)。モーダルはヘッダーより手前に出すため、
+## `HomeScreen` が `mount_pickers()` で自分の子として預かる。
 ##
 ## **クラス名は `BattleTab` のまま変えない。**`scenes/battle_tab.tscn` を
 ## `scenes/home_screen.tscn` が instance しており、名前を変えると参照の書き換えという
-## 実害のある作業を招く(`DeckTab` / `RulesTab` を変えないのと同じ理由。Architecture.md 4章)。
+## 実害のある作業を招く(`DeckTab` も同じ)。
 ##
 ## **マッチングの待機・成立は持たない**(Architecture.md 6.6節)。
 ## デッキ選択画面を終えた後は `CardRankedMatchScreen` へ入る。
@@ -21,75 +23,57 @@ signal room_match_requested
 signal cpu_match_requested
 signal puzzle_requested
 signal solo_requested
-## ランクマッチの観戦一覧を開く(GameDesign.md 12章)。デッキは要らない。
-signal spectate_list_requested
+## ランク画面(ランキング)。対局の種類を選ぶモーダルの「ランキングを見る」から開く(28章)。
+signal rank_requested
 
 ## 通信待ち中の「...」演出。3個目まで打ってから空に戻る(対局画面の待機表現と統一)。
 const BUSY_DOTS_MAX := 3
 const BUSY_DOTS_INTERVAL := 0.5
-## 待っている人の数を読み直す間隔(タブが見えている間だけ)。
+## 待っている人の数を読み直す間隔(ホームが見えている間だけ)。
 const WAITING_POLL_SECONDS := 15.0
-
-## アカウント帯を避ける上端と、下部タブに接する下端。他のタブと同じ値。
-const TOP_BAND := 112.0
-const BOTTOM := 560.0
-const BOTTOM_MARGIN := 16.0
-const FRAME_X := 140.0
-const FRAME_W := 1000.0
-## 待機中・失敗の文言を置く行。
-const STATUS_TOP := TOP_BAND + 4.0
-const STATUS_ROW := 32.0
 const STATUS_FONT := 22
-const RANKED_TITLE := "対戦する"
-const SOLO_TITLE := "ソロモード"
-## 押せないときに札の中身を沈める濃さ(札の面と一緒に暗く見せる)。
-const DISABLED_ALPHA := 0.55
-## 途中の対局があるときは札そのものが復帰の入口になる(GameDesign.md 9章)。
+const PORTRAIT_STATUS_FONT := 24
+
+const BATTLE_TITLE := "バトル"
 const RESUME_TITLE := "対局へ戻る"
+const RANKED_TITLE := "ランクマッチ"
+const EXPEDITION_TITLE := "遠征"
+const PUZZLE_TITLE := "リーサルパズル"
 const PUZZLE_SUBTITLE := "1手番で仕留める"
 const DAILY_OPEN := "今日の1問 まだ解いていません"
 const DAILY_DONE := "今日の1問 クリア済み"
-
-const TILE_GAP := 20.0
-const MAIN_WIDTH := (FRAME_W - TILE_GAP) / 2.0
-const SIDE_COUNT := 4
-const SIDE_WIDTH := (FRAME_W - TILE_GAP * float(SIDE_COUNT - 1)) / float(SIDE_COUNT)
-const SIDE_HEIGHT := 80.0
+const EXPEDITION_NEW := "作戦を選んで出発"
+const EXPEDITION_CONTINUE := "続きから進める"
 const MAIN_FONT_SIZE := 40
-const SIDE_FONT_SIZE := 22
-
-## 縦画面(GameDesign.md 9章「縦画面」)。主役の2枚は縦に積み、横と同じ中身を拡大して置く。
-## 4つの入口は2列2段にする。
-const PORTRAIT_X := 24.0
-const PORTRAIT_W := 672.0
-const PORTRAIT_STATUS_FONT := 24
-const PORTRAIT_STATUS_ROW := 36.0
-const PORTRAIT_MAIN_SCALE := 1.25
-## 中身(段位・遠征の行)が収まる背丈。横の札と同じ組み立てのため、これより低くすると下端の行に重なる。
-const PORTRAIT_MAIN_HEIGHT := 293.0
-const PORTRAIT_GAP := 12.0
-const PORTRAIT_SIDE_HEIGHT := 108.0
-const PORTRAIT_SIDE_FONT := 30
-## 「つぎはここ」の印(14px)を小さな見出しの目安(20px)以上にする。
+const PICKER_FONT_SIZE := 30
+## 縦画面では「バトル」も横長の札になり、見出しは札(`HomeTile`)が描く。
+const PORTRAIT_MAIN_FONT := 44
 const PORTRAIT_MARK_SCALE := 1.5
+const DISABLED_ALPHA := 0.55
+const RANKING_BUTTON_SIZE := Vector2(340, 56)
 
 var _busy := false
 var _busy_dots_timer: Timer
 var _busy_dot_count := 0
 var _status_base_text := ""
 var _waiting_timer: Timer
-## 切断した対局へ戻れるか(GameDesign.md 11章)。立っている間は札を押すと復帰する。
+## 切断した対局へ戻れるか(GameDesign.md 11章)。立っている間は「バトル」を押すと選択を挟まず復帰する。
 var _resume_pending := false
-var _ranked_tile: HomeTile
-var _ranked_info: RankedEntryInfo
+var _battle_tile: HomeTile
+var _battle_info: RankedEntryInfo
 var _solo_tile: HomeTile
 var _solo_info: SoloEntryInfo
-var _cpu_tile: HomeTile
+var _battle_picker: HomeModePicker
+var _ranked_tile: HomeTile
+var _ranked_info: RankedEntryInfo
 var _room_tile: HomeTile
+var _cpu_tile: HomeTile
+var _solo_picker: HomeModePicker
+var _expedition_tile: HomeTile
 var _puzzle_tile: HomeTile
-var _watch_tile: HomeTile
-## 次にやってほしい入口1つに掛ける印(GameDesign.md 18章)。
+## 次にやってほしい入口に掛ける印(GameDesign.md 18章)。ホームの札と、開いたモーダルの札に1つずつ。
 var _next_mark := NextStepMark.new()
+var _picker_mark := NextStepMark.new()
 var _portrait := false
 
 @onready var status_label: Label = $Margin/VBox/StatusLabel
@@ -111,121 +95,144 @@ func _ready() -> void:
 
 
 ## `.tscn` の縦並び(`Margin/VBox`)は、札を絶対座標へ置く構成では使えない。
-## **待機中の文言だけを引き取り、残りは捨てる。**`.tscn` そのものは書き換えない
-## (`scenes/home_screen.tscn` が instance しているため。Architecture.md 4章)。
+## **待機中の文言だけを引き取り、残りは捨てる。**`.tscn` そのものは書き換えない。
 func _take_over_status_label() -> void:
 	var margin: Node = $Margin
 	status_label.get_parent().remove_child(status_label)
 	add_child(status_label)
 	margin.queue_free()
-	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
 
 func _build() -> void:
-	_ranked_tile = HomeTile.make(
-		RANKED_TITLE, "", "", Vector2(MAIN_WIDTH, 0.0), MAIN_FONT_SIZE, true
-	)
-	# 右側は段位の徽章が占めるため、紋章の透かしは敷かない。
-	_ranked_tile.emblem = null
-	_ranked_tile.pressed.connect(_on_ranked_pressed)
-	add_child(_ranked_tile)
-	_ranked_info = RankedEntryInfo.new()
-	_ranked_tile.add_child(_ranked_info)
+	_battle_tile = HomeTile.make("", "", "", Vector2.ZERO, MAIN_FONT_SIZE, true)
+	# 段位の徽章が札を占めるため、紋章の透かしは敷かない。
+	_battle_tile.emblem = null
+	_battle_tile.pressed.connect(_on_battle_pressed)
+	add_child(_battle_tile)
+	_battle_info = RankedEntryInfo.new()
+	_battle_tile.add_child(_battle_info)
 
-	# 人と遊べないときも繰り返し遊べるよう、「対戦する」と同格に並べる(GameDesign.md 9章)。
-	_solo_tile = HomeTile.make(SOLO_TITLE, "", "", Vector2(MAIN_WIDTH, 0.0), MAIN_FONT_SIZE, true)
+	_solo_tile = HomeTile.make("", "", "", Vector2.ZERO, MAIN_FONT_SIZE)
 	_solo_tile.emblem = null
-	_solo_tile.pressed.connect(func() -> void: solo_requested.emit())
+	_solo_tile.pressed.connect(_open_picker.bind(false))
 	add_child(_solo_tile)
 	_solo_info = SoloEntryInfo.new()
 	_solo_tile.add_child(_solo_info)
-
-	# **固定の数を書かない**——ステージを足したときに嘘になる(GameDesign.md 9章)。
-	_cpu_tile = _make_side_tile("CPU戦", "好きなデッキで1局", "hour")
-	_cpu_tile.pressed.connect(func() -> void: cpu_match_requested.emit())
-	_puzzle_tile = _make_side_tile("リーサルパズル", PUZZLE_SUBTITLE, "sword")
-	_puzzle_tile.pressed.connect(func() -> void: puzzle_requested.emit())
-	_room_tile = _make_side_tile("ルームマッチ", "合言葉で友達と", "shield")
-	_room_tile.pressed.connect(func() -> void: room_match_requested.emit())
-	_watch_tile = _make_side_tile("観戦", "いまの対局を見る", "eye")
-	_watch_tile.pressed.connect(func() -> void: spectate_list_requested.emit())
+	_build_battle_picker()
+	_build_solo_picker()
+	for info: Control in [_battle_info, _solo_info, _ranked_info]:
+		# 札の大きさはモーダル側・向きの切り替えで変わる。中身は札いっぱいに追わせる。
+		info.anchor_right = 1.0
+		info.anchor_bottom = 1.0
 	move_child(status_label, get_child_count() - 1)
 	_layout()
 
 
-func _make_side_tile(title: String, subtitle: String, emblem: String) -> HomeTile:
-	var tile := HomeTile.make(title, subtitle, emblem, Vector2(SIDE_WIDTH, 0.0), SIDE_FONT_SIZE)
-	add_child(tile)
-	return tile
+## 「バトル」を押したあとに選ぶ3つ(9章)。ランクマッチは段位を、残りは副題を持つ。
+func _build_battle_picker() -> void:
+	_battle_picker = HomeModePicker.make("対局の種類を選ぶ")
+	_battle_picker.closed.connect(_on_picker_closed)
+	_ranked_tile = HomeTile.make("", "", "", Vector2.ZERO, PICKER_FONT_SIZE, true)
+	_ranked_tile.emblem = null
+	_ranked_tile.pressed.connect(func() -> void: ranked_match_deck_requested.emit())
+	_ranked_info = RankedEntryInfo.new()
+	_ranked_info.head_text = RANKED_TITLE
+	_ranked_info.head_on_top = true
+	_ranked_info.show_well = false
+	_ranked_tile.add_child(_ranked_info)
+	_battle_picker.add_tile(_ranked_tile)
+	# **固定の数を書かない**——ステージを足したときに嘘になる(GameDesign.md 9章)。
+	_room_tile = HomeTile.make("ルームマッチ", "合言葉で友達と", "shield", Vector2.ZERO, PICKER_FONT_SIZE)
+	_room_tile.pressed.connect(func() -> void: room_match_requested.emit())
+	_battle_picker.add_tile(_room_tile)
+	_cpu_tile = HomeTile.make("CPU戦", "好きなデッキで1局", "hour", Vector2.ZERO, PICKER_FONT_SIZE)
+	_cpu_tile.pressed.connect(func() -> void: cpu_match_requested.emit())
+	_battle_picker.add_tile(_cpu_tile)
+	var ranking := CodedButton.make("ランキングを見る", RANKING_BUTTON_SIZE)
+	ranking.pressed.connect(func() -> void: rank_requested.emit())
+	_battle_picker.set_extra_button(ranking)
+
+
+func _build_solo_picker() -> void:
+	_solo_picker = HomeModePicker.make("ソロモード")
+	_solo_picker.closed.connect(_on_picker_closed)
+	_expedition_tile = HomeTile.make(
+		EXPEDITION_TITLE, EXPEDITION_NEW, "", Vector2.ZERO, PICKER_FONT_SIZE, true
+	)
+	_expedition_tile.emblem = null
+	_expedition_tile.pressed.connect(func() -> void: solo_requested.emit())
+	_solo_picker.add_tile(_expedition_tile)
+	_puzzle_tile = HomeTile.make(
+		PUZZLE_TITLE, PUZZLE_SUBTITLE, "sword", Vector2.ZERO, PICKER_FONT_SIZE
+	)
+	_puzzle_tile.pressed.connect(func() -> void: puzzle_requested.emit())
+	_solo_picker.add_tile(_puzzle_tile)
+
+
+## モーダルはヘッダーより手前に出す必要があるため、ホーム画面の子として預ける。
+func mount_pickers(host: Control) -> void:
+	for picker in [_battle_picker, _solo_picker]:
+		if picker.get_parent() != null:
+			picker.get_parent().remove_child(picker)
+		host.add_child(picker)
 
 
 ## 縦横が変わったときに `HomeScreen` から呼ばれる(Architecture.md 4.7節)。
 func apply_orientation(portrait: bool) -> void:
 	_portrait = portrait
-	if _ranked_tile != null:
+	if _battle_tile != null:
 		_layout()
 
 
 func _layout() -> void:
 	_next_mark.tag_scale = PORTRAIT_MARK_SCALE if _portrait else 1.0
-	var side_tiles: Array[HomeTile] = [_cpu_tile, _puzzle_tile, _room_tile, _watch_tile]
-	for tile in side_tiles:
-		HomeTile.set_portrait_text(tile, _portrait, PORTRAIT_SIDE_FONT, SIDE_FONT_SIZE)
-	if _portrait:
-		_layout_portrait(side_tiles)
-		return
-	status_label.add_theme_font_size_override("font_size", STATUS_FONT)
-	for tile in [_ranked_tile, _solo_tile]:
-		tile.scale = Vector2.ONE
-	status_label.position = Vector2(FRAME_X, STATUS_TOP)
-	status_label.size = Vector2(FRAME_W, STATUS_ROW)
-	var top := STATUS_TOP + STATUS_ROW
-	var side_top: float = BOTTOM - BOTTOM_MARGIN - SIDE_HEIGHT
-	var main_size := Vector2(MAIN_WIDTH, side_top - TILE_GAP - top)
-	_ranked_tile.position = Vector2(FRAME_X, top)
-	_ranked_tile.size = main_size
-	_ranked_info.size = main_size
-	_solo_tile.position = Vector2(FRAME_X + MAIN_WIDTH + TILE_GAP, top)
-	_solo_tile.size = main_size
-	_solo_info.size = main_size
-	for i in side_tiles.size():
-		side_tiles[i].position = Vector2(FRAME_X + float(i) * (SIDE_WIDTH + TILE_GAP), side_top)
-		side_tiles[i].size = Vector2(SIDE_WIDTH, SIDE_HEIGHT)
+	_picker_mark.tag_scale = _next_mark.tag_scale
+	var battle_rect := HomeLayout.portrait_battle_rect() if _portrait else HomeLayout.column_rect(1)
+	var solo_rect := HomeLayout.portrait_solo_rect() if _portrait else HomeLayout.column_rect(0)
+	var status_rect := HomeLayout.portrait_status_rect() if _portrait else HomeLayout.status_rect()
+	_place(_battle_tile, battle_rect)
+	_place(_solo_tile, solo_rect)
+	# 縦では「バトル」も横長になり、徽章を右・文字を左に置く組み方へ戻す。見出しは札が描く。
+	_battle_info.tall = not _portrait
+	_ranked_info.tall = not _portrait
+	_refresh_battle_title()
+	status_label.add_theme_font_size_override(
+		"font_size", PORTRAIT_STATUS_FONT if _portrait else STATUS_FONT
+	)
+	status_label.position = status_rect.position
+	status_label.size = status_rect.size
+	_battle_picker.apply_orientation(_portrait)
+	_solo_picker.apply_orientation(_portrait)
 
 
-func _layout_portrait(side_tiles: Array[HomeTile]) -> void:
-	status_label.add_theme_font_size_override("font_size", PORTRAIT_STATUS_FONT)
-	status_label.position = Vector2(PORTRAIT_X, TOP_BAND)
-	status_label.size = Vector2(PORTRAIT_W, PORTRAIT_STATUS_ROW)
-	var top := TOP_BAND + PORTRAIT_STATUS_ROW
-	var main_size := Vector2(PORTRAIT_W / PORTRAIT_MAIN_SCALE, PORTRAIT_MAIN_HEIGHT)
-	var main_step := PORTRAIT_MAIN_HEIGHT * PORTRAIT_MAIN_SCALE + PORTRAIT_GAP
-	for i in 2:
-		var tile: HomeTile = [_ranked_tile, _solo_tile][i]
-		var info: Control = [_ranked_info, _solo_info][i]
-		tile.scale = Vector2.ONE * PORTRAIT_MAIN_SCALE
-		tile.position = Vector2(PORTRAIT_X, top + main_step * float(i))
-		tile.size = main_size
-		info.size = main_size
-	var side_top := top + main_step * 2.0
-	var side_w := (PORTRAIT_W - PORTRAIT_GAP) * 0.5
-	for i in side_tiles.size():
-		side_tiles[i].position = Vector2(
-			PORTRAIT_X + float(i % 2) * (side_w + PORTRAIT_GAP),
-			side_top + floorf(float(i) * 0.5) * (PORTRAIT_SIDE_HEIGHT + PORTRAIT_GAP)
-		)
-		side_tiles[i].size = Vector2(side_w, PORTRAIT_SIDE_HEIGHT)
+func _place(tile: HomeTile, rect: Rect2) -> void:
+	tile.custom_minimum_size = rect.size
+	tile.position = rect.position
+	tile.size = rect.size
 
 
-## 待っている人の数を読む。タブが見えていないとき・通信できないときは行を隠す。
+## 縦長の札は中身(`RankedEntryInfo`)が見出しを彫り、横長の札は `HomeTile` が見出しを描く。
+func _refresh_battle_title() -> void:
+	var head := RESUME_TITLE if _resume_pending else BATTLE_TITLE
+	_battle_info.head_text = head
+	_battle_tile.title = head if _portrait else ""
+	_battle_tile.title_size = PORTRAIT_MAIN_FONT if _portrait else MAIN_FONT_SIZE
+	_battle_tile.queue_redraw()
+	_battle_info.queue_redraw()
+	_ranked_tile.title = RANKED_TITLE if _portrait else ""
+	_ranked_tile.queue_redraw()
+
+
+## 待っている人の数を読む。ホームが見えていないとき・通信できないときは行を隠す。
 func _refresh_waiting() -> void:
 	if not is_visible_in_tree():
 		return
 	if NetSession.client == null or not await NetSession.sign_in():
-		_ranked_info.set_waiting(-1)
+		_battle_info.set_waiting(-1)
 		return
 	var count: int = await RankedMatchmakingQueue.count_waiting(NetSession.client, _uid())
-	_ranked_info.set_waiting(count)
+	_battle_info.set_waiting(count)
 
 
 func _uid() -> String:
@@ -237,65 +244,91 @@ func _uid() -> String:
 func refresh() -> void:
 	if _busy:
 		return
-	_solo_info.refresh(_uid())
-	_refresh_daily_puzzle()
+	var uid := _uid()
+	_solo_info.refresh(uid)
+	_refresh_solo_picker(uid)
 	_refresh_resume()
+	_battle_info.refresh()
 	_ranked_info.refresh()
 	_refresh_waiting()
 	# 未保存でもプリセットの「基本」が返るため、常に対戦できる(GameDesign.md 18章)。
 	var ready_to_battle: bool = CardDeckSave.selected_deck().size() == MatchState.DECK_SIZE
 	_set_battle_disabled(not ready_to_battle)
 	_set_status("" if ready_to_battle else "デッキを%d枚にしてください" % MatchState.DECK_SIZE)
-	_next_mark.attach_to(_next_step_tile() if ready_to_battle and not _resume_pending else null)
+	_refresh_next_marks(ready_to_battle and not _resume_pending)
 
 
 ## 今日の1問があるあいだは、リーサルパズルの副題をその状態にする(GameDesign.md 24章)。
-func _refresh_daily_puzzle() -> void:
+func _refresh_solo_picker(uid: String) -> void:
+	_expedition_tile.set_subtitle(
+		EXPEDITION_NEW if SoloProgress.load_run(uid) == null else EXPEDITION_CONTINUE
+	)
 	var daily := DailyPuzzle.today()
 	if daily == null:
 		_puzzle_tile.set_subtitle(PUZZLE_SUBTITLE)
 		_puzzle_tile.subtitle_accent = false
 		return
-	var cleared := PuzzleProgress.is_cleared(_uid(), daily.id)
+	var cleared := PuzzleProgress.is_cleared(uid, daily.id)
 	_puzzle_tile.set_subtitle(DAILY_DONE if cleared else DAILY_OPEN)
 	_puzzle_tile.subtitle_accent = not cleared
 
 
-## 1局も終えていなければCPU戦、遠征を始めていなければソロモード、今日の1問を解いていなければ
-## リーサルパズル(GameDesign.md 18章)。人と対戦できるかは相手次第のため、ひとりで進める入口へ案内する。
+## 1局も終えていなければCPU戦、遠征を始めていなければ遠征、今日の1問を解いていなければ
+## リーサルパズル(GameDesign.md 18章)。ホームではその入口を含む札に、モーダルではその入口の札に掛ける。
+func _refresh_next_marks(enabled: bool) -> void:
+	var target := _next_step_tile() if enabled else null
+	var home_tile: HomeTile = null
+	if target == _cpu_tile:
+		home_tile = _battle_tile
+	elif target != null:
+		home_tile = _solo_tile
+	_next_mark.attach_to(home_tile)
+	_picker_mark.attach_to(target)
+
+
 func _next_step_tile() -> HomeTile:
 	var uid := _uid()
 	if int(MatchStats.totals(uid).get("games", 0)) == 0:
 		return _cpu_tile
 	if not SoloProgress.has_started(uid):
-		return _solo_tile
+		return _expedition_tile
 	var daily := DailyPuzzle.today()
 	if daily != null and not PuzzleProgress.is_cleared(uid, daily.id):
 		return _puzzle_tile
 	return null
 
 
-## デッキが要る入口(対戦する / CPU戦 / ルームマッチ)を押せなくする。
+## デッキが要る入口(バトルと、モーダルのランクマッチ / ルームマッチ / CPU戦)を押せなくする。
 func _set_battle_disabled(disabled: bool) -> void:
-	for tile in [_ranked_tile, _cpu_tile, _room_tile]:
+	for tile in [_battle_tile, _ranked_tile, _room_tile, _cpu_tile]:
 		tile.disabled = disabled
-	_ranked_info.modulate.a = DISABLED_ALPHA if disabled else 1.0
+	_battle_info.modulate.a = DISABLED_ALPHA if disabled else 1.0
+	_ranked_info.modulate.a = _battle_info.modulate.a
 
 
 ## 覚えている対局があるときだけ出す。終わっているかどうかは押した時点で確かめる
 ## (毎回ホームで通信すると、オフラインでも遊べるという前提を崩すため)。
 func _refresh_resume() -> void:
 	_resume_pending = not OnlineResume.pending().is_empty()
-	_ranked_tile.title = RESUME_TITLE if _resume_pending else RANKED_TITLE
-	_ranked_tile.queue_redraw()
-	_ranked_info.set_resume(_resume_pending)
+	_refresh_battle_title()
+	_battle_info.set_resume(_resume_pending)
 
 
-func _on_ranked_pressed() -> void:
+func _on_battle_pressed() -> void:
 	if _resume_pending:
 		_on_resume_pressed()
 	else:
-		ranked_match_deck_requested.emit()
+		_open_picker(true)
+
+
+func _open_picker(battle: bool) -> void:
+	var picker := _battle_picker if battle else _solo_picker
+	picker.open()
+
+
+## 選んだ先へ移るときも、とじるで戻るときも、ホームの札の状態を読み直す。
+func _on_picker_closed() -> void:
+	refresh()
 
 
 func _on_resume_pressed() -> void:

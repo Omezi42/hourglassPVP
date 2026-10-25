@@ -109,11 +109,6 @@ var is_opponent := false:
 	set(value):
 		is_opponent = value
 		queue_redraw()
-## 自分側でも手札の山を出す(手札を伏せる観戦。GameDesign.md 12章)。
-var show_hand_pile := false:
-	set(value):
-		show_hand_pile = value
-		queue_redraw()
 ## 表示名(未設定なら「あなた」「相手」)。
 var display_name := "":
 	set(value):
@@ -397,7 +392,7 @@ func _draw() -> void:
 	_draw_mana()
 	_pile(deck_pile_rect(), "山札", _deck)
 	_pile(_graveyard_rect(), "墓地", _graveyard)
-	if is_opponent or show_hand_pile:
+	if is_opponent:
 		_pile(hand_pile_rect(), "手札", _hand)
 	if _has_coin:
 		_draw_coin()

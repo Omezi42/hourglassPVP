@@ -6,11 +6,6 @@ signal room_ready(match_id: String, opponent_uid: String, is_host: bool)
 signal room_closed
 signal matched(match_id: String, opponent_uid: String)
 signal join_failed(reason: String)
-signal spectate_ready(match_id: String)
-signal spectate_failed(reason: String)
-## 観戦しようとした部屋の対局がまだ始まっていない。弾かずに待ちへ入る
-## (GameDesign.md 11章)。画面が待機の文言へ切り替えるために1度だけ出す。
-signal spectate_waiting
 
 const COLLECTION := "rooms"
 ## コードは4桁の数字(GameDesign.md 11章)。口頭で伝えられる短さを優先する。
@@ -25,7 +20,7 @@ const STALE_SECONDS := 3600.0
 var client: FirestoreClient
 var auth: FirebaseAuth
 ## この部屋の持ち時間の入/切(GameDesign.md 5章)。作る側は create_room() の引数で決め、
-## 参加・観戦する側は部屋の文書から読んでここへ控える。対局画面まで運ぶのは画面側の仕事。
+## 参加する側は部屋の文書から読んでここへ控える。対局画面まで運ぶのは画面側の仕事。
 var time_limit := true
 var _code: String = ""
 var _my_match_id: String = ""
@@ -130,37 +125,6 @@ func start_room() -> bool:
 			)
 		]
 	)
-
-
-## 観戦用にコードからmatch_idを取得する。**対局がまだ始まっていなければ弾かずに待つ**
-## (GameDesign.md 11章)。版の突き合わせは待ち始める前に済ませる(版が違う部屋を
-## 待ち続けても、始まった瞬間に弾かれるだけのため)。
-func spectate(code: String) -> void:
-	_cancelled = false
-	var waiting_announced := false
-	while not _cancelled:
-		var room: Dictionary = await client.get_document_meta(_doc_path(code))
-		if not room["exists"]:
-			spectate_failed.emit("not_found")
-			return
-		# 観戦も同じ扱い。盤面は手の並びから作り直すため、版が違えば同じように食い違う。
-		var their_build: String = room["fields"].get("build", "")
-		if not GameVersion.matches_build(their_build):
-			spectate_failed.emit(
-				"version_older" if GameVersion.is_newer_than_mine(their_build) else "version_newer"
-			)
-			return
-		time_limit = bool(room["fields"].get("time_limit", true))
-		var match_id: String = room["fields"].get("match_id", "")
-		# started が無いのは旧版で既に成立した部屋。match_id がある旧部屋は
-		# 既に対局中として扱い、更新後の待機部屋(false)とは区別する。
-		if match_id != "" and bool(room["fields"].get("started", true)):
-			spectate_ready.emit(match_id)
-			return
-		if not waiting_announced:
-			waiting_announced = true
-			spectate_waiting.emit()
-		await get_tree().create_timer(POLL_INTERVAL_SECONDS).timeout
 
 
 func _wait_for_joiner() -> void:

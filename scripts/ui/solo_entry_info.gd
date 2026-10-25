@@ -1,24 +1,32 @@
 class_name SoloEntryInfo
 extends Control
-## たたかうタブの「ソロモード」の札に載せる中身(GameDesign.md 9章)。
-## 「対戦する」の札(`RankedEntryInfo`)と同じ組み立てで、遠征中なら作戦名と6段の進み具合、
-## 遠征が無ければ記録を描く。札(`HomeTile`)の子として全面に敷き、押下は札へ通す。
+## ホームの「ソロモード」の札に載せる中身(GameDesign.md 9章)。
+## 見出し「ソロモード」の下に、遠征とリーサルパズルの状態を凹んだ枠で1つずつ見せる。
+## 札が縦長なら枠を縦に、横長(縦画面)なら横に並べる。札(`HomeTile`)の子として全面に敷き、押下は札へ通す。
 
-const ROUTE_TOP_GAP := 20.0
-const NODE_RADIUS := 7.0
-const FINAL_RADIUS := 10.0
-const NODE_RIM := 2.0
-const ROUTE_LINE_WIDTH := 4.0
-const NODE_DONE := Color(0.55, 0.36, 0.12)
-const NODE_NOW := Color(1.0, 0.9, 0.6)
-const NODE_AHEAD := Color(0.78, 0.62, 0.34)
-const CONTINUE_DOT := Color(1.0, 0.78, 0.34)
-const PULSE_SPEED := 3.2
+const TITLE := "ソロモード"
+const TITLE_BASELINE := 70.0
+const TITLE_SIZE := 38
+const BOX_TOP := 112.0
+const BOX_INSET := 24.0
+const BOX_GAP := 20.0
+const BOX_HEAD_BASELINE := 48.0
+const BOX_HEAD_SIZE := 28
+const BOX_LINE_TOP := 90.0
+const BOX_LINE_STEP := 34.0
+const BOX_PAD := 20.0
+const LINE_SIZE := 18
+const NOTE_SIZE := 16
+const HEAD_COLOR := Color(0.96, 0.82, 0.45)
+const PUZZLE_LINE := "1手番で仕留める"
+const DAILY_OPEN := "今日の1問 まだ解いていません"
+const DAILY_DONE := "今日の1問 クリア済み"
 
 var _run: SoloRun = null
 var _best_wins := 0
 var _clears := 0
-var _phase := 0.0
+## 今日の1問の状態。0=無い日 / 1=まだ / 2=クリア済み(GameDesign.md 24章)。
+var _daily := 0
 var _font: Font
 var _display: Font
 
@@ -38,13 +46,9 @@ func refresh(uid: String) -> void:
 	_run = SoloProgress.load_run(uid)
 	_best_wins = SoloProgress.best_wins(uid)
 	_clears = SoloProgress.clears(uid)
+	var daily := DailyPuzzle.today()
+	_daily = 0 if daily == null else (2 if PuzzleProgress.is_cleared(uid, daily.id) else 1)
 	queue_redraw()
-
-
-func _process(delta: float) -> void:
-	if _run != null and is_visible_in_tree():
-		_phase = fmod(_phase + delta * PULSE_SPEED, TAU)
-		queue_redraw()
 
 
 func _notification(what: int) -> void:
@@ -55,71 +59,77 @@ func _notification(what: int) -> void:
 func _draw() -> void:
 	if _font == null:
 		return
+	draw_string(
+		_display,
+		Vector2(0.0, TITLE_BASELINE),
+		TITLE,
+		HORIZONTAL_ALIGNMENT_CENTER,
+		size.x,
+		TITLE_SIZE,
+		UiPalette.TEXT_OFFWHITE
+	)
+	var boxes := _box_rects()
+	_draw_box(boxes[0], "遠征", _expedition_lines())
+	_draw_box(boxes[1], "リーサルパズル", _puzzle_lines())
+
+
+func _box_rects() -> Array[Rect2]:
+	var area := Rect2(BOX_INSET, BOX_TOP, size.x - BOX_INSET * 2.0, size.y - BOX_TOP - BOX_INSET)
+	if size.y > size.x:
+		var h := (area.size.y - BOX_GAP) * 0.5
+		return [
+			Rect2(area.position, Vector2(area.size.x, h)),
+			Rect2(area.position + Vector2(0.0, h + BOX_GAP), Vector2(area.size.x, h)),
+		]
+	var w := (area.size.x - BOX_GAP) * 0.5
+	return [
+		Rect2(area.position, Vector2(w, area.size.y)),
+		Rect2(area.position + Vector2(w + BOX_GAP, 0.0), Vector2(w, area.size.y)),
+	]
+
+
+## 1行目は主な文、2行目は沈めた補足(琥珀は今日の1問がまだのとき)。
+func _expedition_lines() -> Array:
 	if _run == null:
-		_draw_departure()
-	else:
-		_draw_running()
+		return [
+			["作戦を選んで出発", EntryTilePaint.WELL_TEXT],
+			["いちばん多く勝った数 %d ・ 踏破 %d回" % [_best_wins, _clears], EntryTilePaint.WELL_MUTED],
+		]
+	return [
+		["%s で遠征中" % CardCpuDecks.name_of(_run.theme_id), EntryTilePaint.ACCENT_TEXT],
+		["%d勝 ・ HP %d/%d" % [_run.wins, _run.hp, _run.max_hp], EntryTilePaint.WELL_MUTED],
+	]
 
 
-func _draw_departure() -> void:
-	EntryTilePaint.draw_caption(self, _font, "つぎの遠征")
-	EntryTilePaint.draw_head(self, _display, "作戦を選んで出発")
-	EntryTilePaint.draw_line_text(self, _font, "いちばん多く勝った数 %d ・ 踏破 %d回" % [_best_wins, _clears])
-	var rect := EntryTilePaint.well_rect(size)
+func _puzzle_lines() -> Array:
+	var lines: Array = [[PUZZLE_LINE, EntryTilePaint.WELL_TEXT]]
+	if _daily == 1:
+		lines.append([DAILY_OPEN, UiPalette.GLOW_AMBER])
+	elif _daily == 2:
+		lines.append([DAILY_DONE, EntryTilePaint.WELL_MUTED])
+	return lines
+
+
+func _draw_box(rect: Rect2, head: String, lines: Array) -> void:
 	EntryTilePaint.draw_well(self, rect, false)
+	var width := rect.size.x - BOX_PAD * 2.0
+	# 「遠征」の字は見出し用の明朝体のサブセットに無い。2つの枠の見出しを揃えて本文書体で描く。
 	draw_string(
 		_font,
-		Vector2(rect.position.x + EntryTilePaint.WELL_INSET, EntryTilePaint.well_baseline(rect)),
-		"毎回ちがう道で山札を育てる",
+		rect.position + Vector2(BOX_PAD, BOX_HEAD_BASELINE),
+		head,
 		HORIZONTAL_ALIGNMENT_LEFT,
-		-1,
-		EntryTilePaint.WELL_TEXT_SIZE,
-		EntryTilePaint.WELL_TEXT
+		width,
+		BOX_HEAD_SIZE,
+		HEAD_COLOR
 	)
-
-
-func _draw_running() -> void:
-	var caption := "遠征中の作戦 ・ 深さ%d" % _run.depth if _run.depth > 0 else "遠征中の作戦"
-	EntryTilePaint.draw_caption(self, _font, caption)
-	EntryTilePaint.draw_head(self, _display, CardCpuDecks.name_of(_run.theme_id))
-	_draw_route(EntryTilePaint.rule_y() + ROUTE_TOP_GAP)
-	var rect := EntryTilePaint.well_rect(size)
-	EntryTilePaint.draw_well(self, rect, false)
-	EntryTilePaint.draw_dot(self, EntryTilePaint.well_dot_center(rect), CONTINUE_DOT, _phase)
-	draw_string(
-		_font,
-		Vector2(EntryTilePaint.well_text_left(rect), EntryTilePaint.well_baseline(rect)),
-		"続きから進める",
-		HORIZONTAL_ALIGNMENT_LEFT,
-		-1,
-		EntryTilePaint.WELL_TEXT_SIZE,
-		EntryTilePaint.WELL_TEXT
-	)
-	EntryTilePaint.draw_well_right(
-		self, _font, rect, "%d勝 ・ HP %d/%d" % [_run.wins, _run.hp, _run.max_hp]
-	)
-
-
-## 6段の道。選び終えた段は濃い真鍮、いまの段は明るく、先の段は沈める。最終戦は一回り大きい。
-func _draw_route(center_y: float) -> void:
-	var left := EntryTilePaint.LEFT + FINAL_RADIUS
-	var step := (EntryTilePaint.RULE_LENGTH - FINAL_RADIUS * 2.0) / float(SoloRun.FLOOR_COUNT - 1)
-	for i in SoloRun.FLOOR_COUNT - 1:
-		var from := Vector2(left + step * float(i), center_y)
-		var line_alpha := 0.9 if i < _run.floor else 0.35
-		draw_line(
-			from,
-			from + Vector2(step, 0.0),
-			Color(EntryTilePaint.ENGRAVE_COLOR, line_alpha),
-			ROUTE_LINE_WIDTH
+	for i in lines.size():
+		draw_string(
+			_font,
+			rect.position + Vector2(BOX_PAD, BOX_LINE_TOP + BOX_LINE_STEP * float(i)),
+			str(lines[i][0]),
+			HORIZONTAL_ALIGNMENT_LEFT,
+			width,
+			LINE_SIZE if i == 0 else NOTE_SIZE,
+			lines[i][1]
 		)
-	for i in SoloRun.FLOOR_COUNT:
-		var center := Vector2(left + step * float(i), center_y)
-		var radius := FINAL_RADIUS if i == SoloRun.FLOOR_COUNT - 1 else NODE_RADIUS
-		var fill := NODE_AHEAD
-		if i < _run.floor:
-			fill = NODE_DONE
-		elif i == _run.floor:
-			fill = NODE_NOW
-		EntryTilePaint.fill_circle(self, center, radius + NODE_RIM, EntryTilePaint.ENGRAVE_COLOR)
-		EntryTilePaint.fill_circle(self, center, radius, fill)

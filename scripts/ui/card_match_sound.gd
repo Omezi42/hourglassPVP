@@ -125,7 +125,7 @@ func _on_turn_started(_side: int) -> void:
 
 ## 結果パネルを出す瞬間に、**BGMを止めて短いジングルへ切り替える**(GameDesign.md 9章)。
 ## 結果パネルは数秒しか出ないため、数分あるクラシックを流し続けても冒頭しか聞かれない。
-## `CardMatchFinale` から呼ぶ(操作する対局だけ。再生・観戦は曲も止めない)。
+## `CardMatchFinale` から呼ぶ(操作する対局だけ。再生は曲も止めない)。
 func play_result() -> void:
 	MusicPlayer.stop()
 	var won: bool = _state.winner == _screen.my_side

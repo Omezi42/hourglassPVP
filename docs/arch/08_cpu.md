@@ -50,8 +50,7 @@
 - デッキどうしの強さの釣り合いは `tools/balance/run_cpu_deck_league.gd` で測る(総当たり・ランダム混成相手。
   `trial=id,...` で表を変えずに候補の15種を測れる)。表を変えたら回し、`BalanceReport_v5.md` 13章を更新する
 - 誘導対局のときだけ台本(`TutorialScriptData`、4.1.5節)の山札を切らずに使う(GameDesign.md 18章)
-- CPU戦はオンライン対戦ではないため、`matches/{match_id}` への書き込みは行わない。
-  棋譜は `LocalReplayService` がローカルへ保存する(7.1節)
+- CPU戦はオンライン対戦ではないため、`matches/{match_id}` への書き込みは行わない。棋譜も残さない(GameDesign.md 12章)
 
 ## 8.1 CPU戦の思考レベル(GameDesign.md 13章)
 
@@ -116,4 +115,4 @@
 - **選んだ値は `CardDeckSave` と同じ「Autoloadを使わずstaticで持つ」流儀**で
   `user://cpu_difficulty.json` へ永続化する(`CardCpuDifficultySave`)。前回選んだ値を
   次回の初期選択にするため(GameDesign.md 13章「対局のたびに選び直せる」)
-- 誘導対局・リプレイ再生・観戦はこの画面を通らない
+- 誘導対局・リプレイ再生はこの画面を通らない

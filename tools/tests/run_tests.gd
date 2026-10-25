@@ -31,13 +31,11 @@ const SoloModeTests = preload("res://tools/tests/solo_mode_tests.gd")
 const SoloStrategyTests = preload("res://tools/tests/solo_strategy_tests.gd")
 const RankTests = preload("res://tools/tests/rank_tests.gd")
 const MatchStatsSyncTests = preload("res://tools/tests/match_stats_sync_tests.gd")
-const LabTests = preload("res://tools/tests/lab_tests.gd")
 const FunnelTests = preload("res://tools/tests/funnel_tests.gd")
 const PlayTimeTests = preload("res://tools/tests/play_time_tests.gd")
 const TutorialScriptTests = preload("res://tools/tests/tutorial_script_tests.gd")
 const CpuDeckTests = preload("res://tools/tests/cpu_deck_tests.gd")
 const CardSetTests = preload("res://tools/tests/card_set_tests.gd")
-const LiveMatchTests = preload("res://tools/tests/live_match_tests.gd")
 const FirstDaysTests = preload("res://tools/tests/first_days_tests.gd")
 const TurnForecastTests = preload("res://tools/tests/turn_forecast_tests.gd")
 
@@ -51,7 +49,6 @@ func _init() -> void:
 func _run() -> void:
 	_test_match_clock_ticks_down_and_times_out()
 	_test_match_clock_resets_only_when_the_turn_changes_sides()
-	_test_local_replay_service_round_trips_and_enforces_retention()
 	V5RulesTests.new().run(_assert_true)
 	V5VocabularyTests.new().run(_assert_true)
 	StillTimeTests.new().run(_assert_true)
@@ -76,7 +73,6 @@ func _run() -> void:
 	await rank_tests.run(_assert_true)
 	SoundSettingsTests.new().run(_assert_true)
 	OnlineTests.new().run(_assert_true)
-	LiveMatchTests.new().run(_assert_true)
 	AccountTests.new().run(_assert_true)
 	# 送受信の流れだけはawaitを挟むため、コルーチンの実行中に解放されないよう参照を持つ
 	var flow_tests := OnlineMatchFlowTests.new()
@@ -90,7 +86,6 @@ func _run() -> void:
 	var match_records := MatchRecordTests.new()
 	await match_records.run(_assert_true)
 	await MatchStatsSyncTests.new().run(_assert_true)
-	await LabTests.new().run(_assert_true)
 	await FunnelTests.new().run(_assert_true)
 	await PlayTimeTests.new().run(_assert_true)
 	var waiting_cpu := WaitingCpuTests.new()
@@ -153,79 +148,6 @@ func _test_match_clock_resets_only_when_the_turn_changes_sides() -> void:
 	clock.tick(10.0)
 	clock.start_turn(MatchState.Side.A)
 	_assert_true(clock.get_remaining(MatchState.Side.A) == 10.0, "coming back around refills again")
-
-
-func _test_local_replay_service_round_trips_and_enforces_retention() -> void:
-	var backup: Variant = _backup_local_replay_save()
-
-	var file := FileAccess.open(LocalReplayService.SAVE_PATH, FileAccess.WRITE)
-	file.store_string("[]")
-	file = null
-
-	(
-		LocalReplayService
-		. mark_finished(
-			{
-				"deck_a": ["sand", "sword", "king", "wall", "shield"],
-				"deck_b": ["dash", "echo", "mirror", "eye", "judge"],
-				"placement_a": ["sand", "sword", "king"],
-				"placement_b": ["dash", "echo", "mirror"],
-				"actions": [{"type": "flip", "actor": 0, "side": 0, "position": 0}],
-				"winner": "a",
-			}
-		)
-	)
-	var replays: Array[Dictionary] = LocalReplayService.list_replays()
-	_assert_true(replays.size() == 1, "should save exactly 1 cpu replay")
-	if replays.size() == 1:
-		var fields: Dictionary = replays[0]["fields"]
-		_assert_true(
-			fields["deck_a"] == ["sand", "sword", "king", "wall", "shield"],
-			"deck_a should round-trip"
-		)
-		_assert_true(fields["winner"] == "a", "winner should round-trip")
-		_assert_true(fields["source"] == "cpu", "source should be tagged as cpu")
-		var fetched: Dictionary = LocalReplayService.get_replay(str(replays[0]["id"]))
-		_assert_true(
-			fetched.get("actions", []).size() == 1, "get_replay should return the same actions"
-		)
-
-	for i in range(LocalReplayService.RETENTION_LIMIT + 5):
-		LocalReplayService.mark_finished(
-			{
-				"deck_a": [],
-				"deck_b": [],
-				"placement_a": [],
-				"placement_b": [],
-				"actions": [],
-				"winner": "b"
-			}
-		)
-	var after_overflow: Array[Dictionary] = LocalReplayService.list_replays()
-	_assert_true(
-		after_overflow.size() == LocalReplayService.RETENTION_LIMIT,
-		"should cap saved replays at RETENTION_LIMIT"
-	)
-
-	_restore_local_replay_save(backup)
-
-
-func _backup_local_replay_save() -> Variant:
-	if not FileAccess.file_exists(LocalReplayService.SAVE_PATH):
-		return null
-	var file := FileAccess.open(LocalReplayService.SAVE_PATH, FileAccess.READ)
-	var content := file.get_as_text()
-	file = null
-	return content
-
-
-func _restore_local_replay_save(backup: Variant) -> void:
-	if backup == null:
-		if FileAccess.file_exists(LocalReplayService.SAVE_PATH):
-			DirAccess.remove_absolute(LocalReplayService.SAVE_PATH)
-		return
-	var file := FileAccess.open(LocalReplayService.SAVE_PATH, FileAccess.WRITE)
-	file.store_string(str(backup))
 
 
 func _assert_true(condition: bool, message: String) -> void:

@@ -1,6 +1,6 @@
 class_name CardMatchOnline
 extends RefCounted
-## オンライン対戦の3つの入口(開始・切断からの復帰・観戦)。
+## オンライン対戦の2つの入口(開始・切断からの復帰)。
 ## `CardMatchOutcome` 等と同じく `_screen` 参照を持つ切り出しで、
 ## `card_match_screen.gd` が1000行の上限に達したため分けている。
 ## 画面の private メンバを読むのは、既存の切り出しクラスと同じ流儀(Architecture.md 4.0節)。
@@ -116,7 +116,7 @@ func _apply_player_names(client: FirestoreClient, opponent_uid: String) -> void:
 
 ## 切断した対局へ戻る(GameDesign.md 11章)。局面は保存しておらず、
 ## `matches/{id}` に残る「デッキ・山札の種・指した手の並び」から作り直す
-## (リプレイ・観戦と同じ経路)。終わっている対局へは戻さない。
+## (リプレイと同じ経路)。終わっている対局へは戻さない。
 func resume(client: FirestoreClient, record: Dictionary) -> bool:
 	var match_id: String = record.get("match_id", "")
 	var p_my_side: int = int(record.get("side", MatchState.Side.A))
@@ -166,52 +166,3 @@ func resume(client: FirestoreClient, record: Dictionary) -> bool:
 ## 持ち時間の時計を作って動かし始める。開始と復帰で同じ手順を踏むため1箇所へ寄せる。
 func _start_clock() -> void:
 	_screen.clocks.start()
-
-
-## 観戦モードとして開始する(GameDesign.md 12章)。進行中の対局を第三者が見る。
-## 手を送らず、受け取って反映するだけ。観戦者のuidは対局者のどちらとも違うため、
-## OnlineMatch のポーリングは両者の手をそのまま配ってくる。
-func spectate(client: FirestoreClient, p_match_id: String) -> bool:
-	_screen._reset_for_new_match()
-	_screen._cpu = null
-	_screen._interactive = false
-	_screen.my_side = MatchState.Side.A
-	_screen._back_button.visible = true
-	var record: Dictionary = await client.get_document("matches/%s" % p_match_id)
-	var deck_a := CardLibrary.deck_from_ids(record.get("deck_a", []))
-	var deck_b := CardLibrary.deck_from_ids(record.get("deck_b", []))
-	if deck_a.size() != MatchState.DECK_SIZE or deck_b.size() != MatchState.DECK_SIZE:
-		_screen._status.set_waiting("この対局はまだ始まっていません")
-		return false
-	# ランクマッチは両者の手札を伏せる(GameDesign.md 12章)。ルームマッチは先手の手札を見せる。
-	_screen.hide_hands = str(record.get("kind", "")) == LiveMatchService.KIND_RANKED
-	_screen._own_bar.show_hand_pile = _screen.hide_hands
-	_apply_spectated_names(client, str(record.get("player_a", "")), str(record.get("player_b", "")))
-	var actions: Array = record.get("actions", [])
-	_screen._begin_state(
-		deck_a, deck_b, int(record.get("seed", 0)), MatchAction.contains_mulligan(actions)
-	)
-	# 既に進んでいる手をまとめて追いつかせてから、以降をポーリングで受け取る。
-	for action in actions:
-		MatchAction.apply(_screen.state, action)
-	_screen.refresh()
-	_screen._online = OnlineMatch.new(client)
-	_screen.add_child(_screen._online)
-	_screen._online.action_received.connect(_screen._on_action_received)
-	_screen._online.start(p_match_id, actions.size())
-	return true
-
-
-## 観戦では両者とも対局者のプロフィールを出す(先手=自分側の帯、後手=相手側の帯)。
-func _apply_spectated_names(client: FirestoreClient, uid_a: String, uid_b: String) -> void:
-	var pairs := [[_screen._own_bar, uid_a], [_screen._foe_bar, uid_b]]
-	for pair in pairs:
-		var bar: PlayerInfoBar = pair[0]
-		var profile: Dictionary = await AccountService.fetch_profile(client, pair[1])
-		var name := str(profile.get("display_name", ""))
-		# 空のままだと帯が「あなた」「相手」と出てしまう。
-		bar.display_name = name if not name.is_empty() else CardRankScreen.NAMELESS
-		bar.icon_id = str(profile.get("icon_id", UserProfileLibrary.DEFAULT_ICON_ID))
-		bar.title_id = str(profile.get("title_id", UserProfileLibrary.DEFAULT_TITLE_ID))
-	if _screen.state != null:
-		_screen.refresh()

@@ -34,7 +34,7 @@ func _init(p_client: FirestoreClient) -> void:
 	client = p_client
 
 
-## p_known_action_countは、既に手元で反映済みのaction件数(観戦を対局途中から
+## p_known_action_countは、既に手元で反映済みのaction件数(切断からの復帰で対局途中から
 ## 開始する場合など)。指定した件数以前のactionはaction_receivedとして再送しない。
 func start(p_match_id: String, p_known_action_count: int = 0) -> void:
 	match_id = p_match_id

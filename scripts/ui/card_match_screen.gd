@@ -13,8 +13,6 @@ const CPU_THINK_SECONDS := 0.5
 var state: MatchState
 ## 自分の側。CPU戦・オンラインでは固定する。
 var my_side: int = MatchState.Side.A
-## ランクマッチの観戦では両者の手札を伏せる(GameDesign.md 12章)。対局ごとに落とす。
-var hide_hands := false
 ## いま選んでいるものと相手の情報帯。切り出した進行役(`CardMatchTargets` 等)から読む。
 var selection: CardMatchSelection:
 	get:
@@ -110,7 +108,6 @@ var _keep_deck_order := false
 var _outcome: CardMatchOutcome
 var _match_kind: CurrencyRules.MatchKind = CurrencyRules.MatchKind.NONE
 var _clocks: CardMatchClock
-var _cpu_record: Dictionary = {}
 ## 対局を始めた時刻(1局の時間。GameDesign.md 22章)。
 var _started_msec := 0
 var _log: CardMatchLog
@@ -252,10 +249,6 @@ func resume_online_match(client: FirestoreClient, record: Dictionary) -> bool:
 	return await _online_ctl.resume(client, record)
 
 
-func start_spectate(client: FirestoreClient, p_match_id: String) -> bool:
-	return await _online_ctl.spectate(client, p_match_id)
-
-
 ## 持ち時間が尽きた。**減っているのは手番側の時計であり、相手の手番でも発火する**ため、
 ## 自分の側でなければ何もしない。申告できるのは自分の時間切れだけで(GameDesign.md 11章)、
 ## 相手の時間切れは `_watch_opponent_timeout()` が猶予を置いて拾う。
@@ -363,7 +356,7 @@ func _begin_state(
 	)
 	_log.watch(state)
 	# デイリーミッションの進捗(GameDesign.md 23章)。数えるだけで、
-	# 書き込むのは終局のとき(`CardMatchOutcome`)。観戦・再生では数えない。
+	# 書き込むのは終局のとき(`CardMatchOutcome`)。再生では数えない。
 	if _interactive:
 		DailyMissionService.watch(state, my_side)
 	_feed.watch(self, _log)
@@ -480,7 +473,7 @@ func _refresh_row(views: Array[CardView], side: int) -> void:
 		views[i].draggable = side == my_side and _my_turn() and unit != null and unit.can_attack()
 
 
-## どちらの側の駒をどのスキンで描くか(GameDesign.md 31章)。**再生・観戦は元の絵**。
+## どちらの側の駒をどのスキンで描くか(GameDesign.md 31章)。**再生は元の絵**。
 ## CPU戦の相手は `CardSkins` に相手の設定が無いため、`OPPONENT` のままで元の絵になる。
 func skin_viewer_for(side: int) -> CardSkins.Viewer:
 	if not _interactive:
@@ -489,7 +482,7 @@ func skin_viewer_for(side: int) -> CardSkins.Viewer:
 
 
 func _refresh_hand() -> void:
-	var hand: Array = [] if hide_hands else state.hand[my_side]
+	var hand: Array = state.hand[my_side]
 	# 位置・沈み・暗さは `CardMatchHandLayout` が持つ(GameDesign.md 9章「対局画面の手触り」)。
 	# 手札は最大10枚を超えうるため、収まらなくなったら重ねてでも領域内に留める
 	# (はみ出すと「ログ」「投了」のボタンへ潜り込んでしまう)。
@@ -628,15 +621,6 @@ func _on_graveyard_pressed(opponent: bool) -> void:
 	_pile.open_pile("相手の墓地" if opponent else "あなたの墓地", state.graveyard[side], skin_viewer_for(side))
 
 
-func _record(action: Dictionary) -> void:
-	# エモートは盤面を動かさないため棋譜へ残さない。残すとリプレイの手数だけが増え、
-	# コマ送りで何も起きない手を挟むことになる(オンラインは通信の経路として送る)。
-	if action.get("type", "") == "emote":
-		return
-	if not _cpu_record.is_empty():
-		(_cpu_record["actions"] as Array).append(action)
-
-
 func _on_mulligan_confirmed(indices: Array) -> void:
 	if state == null or not state.mulligan_pending:
 		return
@@ -648,7 +632,6 @@ func _on_mulligan_confirmed(indices: Array) -> void:
 func _perform(action: Dictionary) -> void:
 	if _emote != null and action.get("type", "") != "emote":
 		_emote.close_popup()
-	_record(action)
 	_strike.capture(action)
 	MatchAction.apply(state, action)
 	if _puzzle != null and _puzzle.active():
@@ -717,7 +700,7 @@ func refresh_bars() -> void:
 	_own_bar.show_state(state, my_side, own_max)
 
 
-## いま操作を受け付ける対局か(再生・観戦では実況を出さない)。
+## いま操作を受け付ける対局か(再生では実況を出さない)。
 func is_interactive() -> bool:
 	return _interactive
 

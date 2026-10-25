@@ -3,7 +3,7 @@
 | クラス | 責務 |
 |---|---|
 | `MatchStats`(`scripts/logic/match_stats.gd`, static) | `user://match_stats.json` へ積み上げる。アカウント(uid)ごとに「種別別の通算 / カード別 / デッキ別」を持つ |
-| `CardStatsScreen`(`scripts/ui/card_stats_screen.gd`) | 左に通算とデッキ別、右にカード別。共通の `ScreenHeader` を使う |
+| `CardStatsScreen`(`scripts/ui/card_stats_screen.gd`) | 左に通算とデッキ別、右にカード別。共通の `ScreenHeader` を使う。アカウント画面のヘッダーの「戦績」から開き、戻るとアカウント画面へ帰る |
 | `CardMatchOutcome`(`scripts/ui/card_match_outcome.gd`) | 終局後の後始末(リプレイの保存・砂金の付与・戦績の記録)。`card_match_screen.gd` が1000行の上限に達したため切り出した |
 
 **リプレイから集計しない。**リプレイは直近30件しか残らないため(GameDesign.md 12章)、
@@ -73,7 +73,7 @@ Firestoreを一切知らないまま(ローカルの計算と保存だけを持�
   - CPU戦 = 自分の設定 + `PlaymatLibrary.CPU_ID`
   - オンライン = 自分の設定 + `AccountService.fetch_profile()` の `playmat_id`
     (表示名・アイコン・称号と同じ経路)
-  - **リプレイ・観戦は既定**。`_reset_for_new_match()` が毎回既定へ戻し、
+  - **リプレイは既定**。`_reset_for_new_match()` が毎回既定へ戻し、
     対局へ入る側だけが敷き替える(棋譜はマットを記録しない)
 - **値段は品ごとに違う**ため、`ShopCatalog.price()` は `id` を受け取る形にしてある
   (アイコン・エモートは品種で一律)

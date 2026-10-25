@@ -1,7 +1,7 @@
 class_name CardRoomScreen
 extends Control
-## ルームマッチの専用画面(GameDesign.md 11章)。部屋を作る・コードで参加する・観戦する
-## の3つと、その待機をここで完結させる。画面は「入口」と「部屋の中」の2つの段を持つ。
+## ルームマッチの専用画面(GameDesign.md 11章)。部屋を作る・コードで参加する
+## の2つと、その待機をここで完結させる。画面は「入口」と「部屋の中」の2つの段を持つ。
 ##
 ## `RoomMatch` を持つのはこの画面であり、`BattleTab` からは同じ経路をすべて外してある。
 
@@ -10,9 +10,8 @@ signal back_pressed
 signal deck_change_requested
 ## 対戦が成立した。time_limit は部屋の設定(GameDesign.md 5章)で、対局画面まで運ぶ。
 signal matched(match_id: String, my_side: int, opponent_uid: String, time_limit: bool)
-signal spectate_requested(match_id: String)
 
-enum Role { NONE, HOST, GUEST, SPECTATOR }
+enum Role { NONE, HOST, GUEST }
 
 const HEADER_SCENE := "res://scenes/screen_header.tscn"
 const PANEL_STYLE := "res://resources/theme/content_panel.tres"
@@ -30,7 +29,6 @@ const TIME_NOTE_POS := Vector2(32, 222)
 const CREATE_BUTTON_RECT := Rect2(152, 300, 300, 72)
 const ENTRY_TILES_RECT := Rect2(32, 120, 300, 80)
 const JOIN_BUTTON_RECT := Rect2(32, 220, 300, 64)
-const SPECTATE_BUTTON_RECT := Rect2(32, 296, 300, 64)
 const PAD_POS := Vector2(364, 120)
 const PAD_KEY_SIZE := Vector2(64, 54)
 const DECK_CAPTION_POS := Vector2(32, 18)
@@ -44,7 +42,6 @@ const ROOM_TILES_RECT := Rect2(452, 18, 331, 92)
 const COPY_BUTTON_RECT := Rect2(832, 34, 150, 60)
 const MINE_RECT := Rect2(24, 288, 540, 272)
 const FOE_RECT := Rect2(716, 288, 540, 272)
-const SEATS_RECT := Rect2(24, 288, 1232, 272)
 const VS_CENTER := Vector2(640, 424)
 const VS_RADIUS := 42.0
 const VS_RING := 4.0
@@ -92,7 +89,6 @@ var _create_button: Button
 var _join_tiles: CodeTiles
 var _join_pad: NumberPad
 var _join_button: Button
-var _spectate_button: Button
 var _message_label: Label
 var _deck_name_label: Label
 var _deck_button: Button
@@ -106,7 +102,6 @@ var _my_seat: RoomSeat
 var _foe_seat: RoomSeat
 var _seat_deck_button: Button
 var _vs_mark: Control
-var _spectate_state: EmptyState
 var _time_info: Label
 var _status_label: Label
 var _leave_button: Button
@@ -258,8 +253,6 @@ func _build_join_card() -> void:
 	card.add_child(_join_pad)
 	_join_button = _make_button(card, "参加する", JOIN_BUTTON_RECT, true)
 	_join_button.pressed.connect(_on_join_pressed)
-	_spectate_button = _make_button(card, "観戦する", SPECTATE_BUTTON_RECT, false)
-	_spectate_button.pressed.connect(_on_spectate_pressed)
 
 
 func _build_deck_strip() -> void:
@@ -305,10 +298,6 @@ func _build_seats() -> void:
 	_vs_mark.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_vs_mark.draw.connect(_draw_vs)
 	_room_view.add_child(_vs_mark)
-	_spectate_state = EmptyState.new()
-	_spectate_state.position = SEATS_RECT.position
-	_spectate_state.size = SEATS_RECT.size
-	_room_view.add_child(_spectate_state)
 
 
 func _draw_vs() -> void:
@@ -359,19 +348,11 @@ func _show_room(role: Role) -> void:
 	_entrance.visible = false
 	_room_view.visible = true
 	_room_tiles.code = _code
-	var spectating := role == Role.SPECTATOR
-	_code_caption.text = "観戦するルーム" if spectating else "ルームコード"
+	_code_caption.text = "ルームコード"
 	_code_hint.text = "友達に伝えてください" if role == Role.HOST else ""
 	_copy_button.visible = role == Role.HOST
-	_my_seat.visible = not spectating
-	_foe_seat.visible = not spectating
-	_vs_mark.visible = not spectating
-	if spectating:
-		_spectate_state.show_message("対局の開始を待っています", "", true)
-	else:
-		_spectate_state.hide_message()
-		_show_my_seat()
-		_foe_seat.show_empty(WAIT_FOE_TEXT, WAIT_FOE_HINT)
+	_show_my_seat()
+	_foe_seat.show_empty(WAIT_FOE_TEXT, WAIT_FOE_HINT)
 	_start_button.visible = role == Role.HOST
 	_start_button.disabled = true
 	var leave_labels := {Role.HOST: "部屋を閉じる", Role.GUEST: "退出する"}
@@ -417,7 +398,6 @@ func _refresh_settings() -> void:
 	_time_note.text = TIME_ON_NOTE if _time_limit else TIME_OFF_NOTE
 	var limit := _room.time_limit if _room != null and _role == Role.GUEST else _time_limit
 	_time_info.text = "持ち時間: あり(1手番60秒)" if limit else "持ち時間: なし"
-	_time_info.visible = _role != Role.SPECTATOR
 
 
 func _set_time_limit(enabled: bool) -> void:
@@ -439,7 +419,6 @@ func _set_busy(busy: bool) -> void:
 	_busy = busy
 	_create_button.disabled = busy
 	_join_button.disabled = busy
-	_spectate_button.disabled = busy
 	_join_tiles.set_editable(not busy)
 	_join_pad.set_disabled(busy)
 	_refresh_settings()
@@ -547,26 +526,6 @@ func _on_join_pressed() -> void:
 	room.join_room(code)
 
 
-## 観戦は、対局がまだ始まっていなければ部屋の中で待つ(GameDesign.md 11章)。
-func _on_spectate_pressed() -> void:
-	if _busy:
-		return
-	var code := _room_code_input()
-	if code == "":
-		_message_label.text = "ルームコードは%d桁の数字です" % RoomMatch.CODE_LENGTH
-		return
-	_set_busy(true)
-	_set_status("観戦先を確認中", true)
-	if not await _sign_in_or_fail():
-		return
-	_code = code
-	var room := _new_room()
-	room.spectate_ready.connect(_on_spectate_ready)
-	room.spectate_waiting.connect(_on_spectate_waiting)
-	room.spectate_failed.connect(_on_spectate_failed)
-	room.spectate(code)
-
-
 ## **キャンセルは押した瞬間に効かせ、後片付け(通信)の完了は待たない**
 ## (応答が遅いと「押しても何も起きない」ように見えるため)。
 func _on_cancel_pressed() -> void:
@@ -637,25 +596,6 @@ func _set_starting(starting: bool) -> void:
 
 func _on_room_closed() -> void:
 	_fail("ルームが閉じられました")
-
-
-func _on_spectate_waiting() -> void:
-	_busy = false
-	_set_status("")
-	_show_room(Role.SPECTATOR)
-
-
-func _on_spectate_ready(match_id: String) -> void:
-	_busy = false
-	_set_status("観戦を開始します")
-	spectate_requested.emit(match_id)
-
-
-func _on_spectate_failed(reason: String) -> void:
-	var message := _version_message(reason)
-	if message == "":
-		message = "コードが見つかりません"
-	_fail("観戦できませんでした(%s)" % message)
 
 
 func _on_join_failed(reason: String) -> void:

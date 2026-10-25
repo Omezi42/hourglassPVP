@@ -35,7 +35,7 @@ var client: FirestoreClient
 var auth: FirebaseAuth
 ## 待合室のコレクション。ランクマッチは派生クラスで差し替える。
 var collection := COLLECTION
-## 作る対局の種別(`matches/{id}.kind`。観戦一覧の絞り込みに使う)。ランクマッチは派生クラスで差し替える。
+## 作る対局の種別(`matches/{id}.kind`)。ランクマッチは派生クラスで差し替える。
 var match_kind := LiveMatchService.KIND_RANDOM
 ## ポーリングの間隔。テストは実時間を縮めるために短くする。
 var poll_interval := POLL_INTERVAL_SECONDS

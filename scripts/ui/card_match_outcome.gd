@@ -45,7 +45,7 @@ func finish(kind: int, deck: Array) -> String:
 	return reward
 
 
-## 分析用の記録(GameDesign.md 22章)。**オンライン対戦だけ**が対象で、CPU戦・観戦・
+## 分析用の記録(GameDesign.md 22章)。**オンライン対戦だけ**が対象で、CPU戦・
 ## リプレイ再生では呼ばれない。ランクマッチは過去のランダムと同じ「見知らぬ人との対戦」として残す。**完了を待たない**(結果パネルの表示を通信で止めないため。
 ## 砂金の付与が既に通っている扱いと同じ)。失敗しても画面には何も出さない。
 func _submit_record(kind: int) -> void:
@@ -84,15 +84,11 @@ func _grant(kind: int, won: bool, moves: int, uid: String) -> String:
 	return CurrencyRules.format_reward(result)
 
 
-## リプレイとして残す(GameDesign.md 12章)。CPU戦はローカルへ1回だけ書き、
-## オンライン対戦は matches/{id} へ finished_at/winner を書く(観戦者は書かない)。
+## オンライン対戦のリプレイとして matches/{id} へ finished_at/winner を書く(GameDesign.md 12章)。
+## CPU戦は棋譜を残さない。
 func save_replay() -> void:
 	var state: MatchState = _screen.state
 	var winner := "a" if state.winner == MatchState.Side.A else "b"
-	if not _screen._cpu_record.is_empty():
-		_screen._cpu_record["winner"] = winner
-		LocalReplayService.mark_finished(_screen._cpu_record, _uid())
-		return
 	if _screen._client == null or _screen._match_id.is_empty():
 		return
 	var uid: String = _screen._client.auth.uid if _screen._client.auth != null else ""

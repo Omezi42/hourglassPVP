@@ -18,7 +18,7 @@
 
 **数えたぶんは終局まで書かない**(`commit()`)。10手に満たない対局は数えないため、
 対局中に書き込むと取り消せない。書くのは `CardMatchOutcome.finish()` の1箇所で、
-**戦績(`MatchStats`)と同じ行に並べる**。観戦・リプレイ再生は `_interactive` が false で
+**戦績(`MatchStats`)と同じ行に並べる**。リプレイ再生は `_interactive` が false で
 `watch()` を張らない。パズルは `finish()` へ到達しないため数えない。
 
 **受取だけは通信を要する**(`AccountService.grant()`)。残高はアカウントにあり、

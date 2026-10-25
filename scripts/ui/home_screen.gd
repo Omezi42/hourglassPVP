@@ -1,14 +1,16 @@
 class_name HomeScreen
 extends Control
+## ホーム画面(GameDesign.md 9章)。**1画面に収め、タブを持たない。**
+## ヘッダー(名札・ミッション・砂金・メニュー)の下を横に3等分し、左と中央を `BattleTab`
+## (ソロモード / バトル)、右を `DeckTab`(デッキ編集・図鑑・ショップ)が描く。列の位置は `HomeLayout`。
+## ルールを読む・覚える入口はメニューの「遊び方」(`LearnMenu`)、戦績はアカウント画面へ置く。
 
 signal online_resume_requested(record: Dictionary)
-signal stats_requested
 signal rank_requested
 signal puzzle_requested
 signal deck_list_requested
 signal hourglass_list_requested
 signal shop_requested
-signal replay_list_requested
 signal cpu_match_requested
 signal solo_requested
 signal tutorial_requested
@@ -18,76 +20,31 @@ signal keyword_dict_requested
 signal ranked_match_deck_requested
 signal room_match_requested
 signal account_requested
-signal lab_requested
-signal spectate_list_requested
 
-## 下部タブの寸法。**幅は共通で、高さだけ変える。**幅まで変えると `HBoxContainer` の
-## 中で他のタブが横へ押し出され、選択するたびに4つの位置がずれる(実際にそうなった)。
-const NAV_WIDTH := 196
-const NAV_HEIGHT_ACTIVE := 128
-const NAV_HEIGHT_INACTIVE := 100
-const NAV_FONT_ACTIVE := 26
-const NAV_FONT_INACTIVE := 20
-## 縦画面(GameDesign.md 9章「縦画面」)の下部タブ。5つを画面の幅に収め、文字は小さな見出しの目安(20px)以上にする。
-const PORTRAIT_NAV_WIDTH := 132
-const PORTRAIT_NAV_HEIGHT_ACTIVE := 120
-const PORTRAIT_NAV_HEIGHT_INACTIVE := 96
-const PORTRAIT_NAV_FONT_ACTIVE := 28
-const PORTRAIT_NAV_FONT_INACTIVE := 24
-const PORTRAIT_NAV_BAR_HEIGHT := 136.0
-const PORTRAIT_NAV_SEPARATION := 6
-const NAV_BAR_HEIGHT := 160.0
-const NAV_SEPARATION := 32
-## 縦では日曜イベントの知らせをヘッダーの下の行へ出す(ヘッダーに収まる幅が無いため)。
 const PORTRAIT_BANNER_RECT := Rect2(24, 108, 672, 32)
 const BANNER_FONT := 14
 const PORTRAIT_BANNER_FONT := 22
-## 選択していないタブへ掛ける色。沈めるだけで、押せないようには見せない。
-const NAV_INACTIVE_TINT := Color(0.70, 0.68, 0.66)
-## 下部タブに打つ印の大きさ(GameDesign.md 9章)。
-const NAV_BADGE_SIZE := 30.0
-const NAV_BADGE_FONT := 16
-const PORTRAIT_NAV_BADGE_SIZE := 40.0
-const PORTRAIT_NAV_BADGE_FONT := 22
-## アカウント帯の右端をどれだけ空けるか(右上のメニューのボタンのぶん)。
-const ACCOUNT_BAR_RIGHT_INSET := 116.0
-## ヘッダーの残高を他の画面より大きく出す倍率。
-const CURRENCY_CHIP_SCALE := 1.55
-## 名札の大きさ。**帯(112px)の中で小さすぎると、右の残高とのつり合いが取れない。**
-const NAMEPLATE_SIZE := Vector2(268, 68)
-const DECK_BACKGROUND := preload("res://assets/backgrounds/processed/home/background.png")
-const BATTLE_BACKGROUND := preload("res://assets/backgrounds/processed/battle/background.png")
-## タブ切り替え時のクロスフェード時間。Main._show_only()の画面遷移と同じ考え方を踏襲する。
-const TAB_FADE_DURATION := 0.18
 
-## 下部タブの並び(GameDesign.md 9章)。**行いで分ける**——以前は
-## 「ルール / デッキ / ソロ / バトル」で、対局を始める入口が4つのタブすべてに散っていた。
-const TAB_BATTLE := 0
-const TAB_DECK := 1
-const TAB_RECORD := 2
-const TAB_LEARN := 3
-const TAB_LAB := 4
-## タブの文言。クラス名(`BattleTab` / `DeckTab` / `RulesTab`)は `.tscn` の参照を
-## 壊さないため変えていないので、**画面に出る名前はここだけが持つ**。
-const TAB_LABELS := ["たたかう", "そろえる", "きろく", "おぼえる", "つくる"]
+const ACCOUNT_BAR_RIGHT_INSET := 116.0
+## 残高のチップの拡大率。ヘッダーは面積に余裕があり、残高は押す前に分かるべきことの代表(9章)。
+const CURRENCY_CHIP_SCALE := 1.55
+## 名札の大きさ。左右の部品(ミッション・残高)の背丈もこれに揃える。
+const NAMEPLATE_SIZE := Vector2(268, 68)
+const MISSION_SIZE := Vector2(250, 68)
+const MISSION_FONT := 20
+const PORTRAIT_MISSION_SIZE := Vector2(230, 84)
+const PORTRAIT_MISSION_FONT := 24
+const BACKGROUND := preload("res://assets/backgrounds/processed/battle/background.png")
 
 ## 右上のメニュー(ハンバーガー)ボタンのスタイル。
 const MENU_BUTTON_GROUP := "icon_menu"
 
-var _tab_fade_tween: Tween
-## いま表示しているタブ。4つに増えたため、隠す相手を index の対から求めない。
-var _active_tab: Control
-var _rules_tab: RulesTab
-var _rules_nav_button: Button
-var _record_tab: RecordTab
-var _record_nav_button: Button
-var _record_badge: Label
-var _lab_tab: LabTab
-var _lab_nav_button: Button
-
 var _nameplate_button: AccountNameplateButton
+## ヘッダーのミッションの札(GameDesign.md 9章・23章)。受け取れる数を赤い丸で出す。
+var _mission_tile: HomeTile
 ## デイリーミッション(GameDesign.md 23章)のモーダル。最初に開いたときだけ作る。
 var _mission_panel: DailyMissionPanel
+var _learn_menu: LearnMenu
 var _welcome_panel: WelcomeDaysPanel
 var _welcome_checking := false
 ## 日曜イベント(GameDesign.md 15章・25章)の表示。通常時は空文字で隠れる。
@@ -101,8 +58,6 @@ var _portrait := false
 @onready var background: TextureRect = $Background
 @onready var deck_tab: DeckTab = $Layout/ContentArea/DeckTab
 @onready var battle_tab: BattleTab = $Layout/ContentArea/BattleTab
-@onready var deck_nav_button: Button = $Layout/BottomNav/DeckNavButton
-@onready var battle_nav_button: Button = $Layout/BottomNav/BattleNavButton
 @onready var settings_button: Button = $SettingsButton
 @onready var settings_panel: SettingsPanel = $SettingsPanel
 @onready var account_button: Button = $AccountBar/AccountButton
@@ -110,53 +65,57 @@ var _portrait := false
 
 
 func _ready() -> void:
+	background.texture = BACKGROUND
 	battle_tab.cpu_match_requested.connect(func() -> void: cpu_match_requested.emit())
 	battle_tab.puzzle_requested.connect(func() -> void: puzzle_requested.emit())
 	battle_tab.solo_requested.connect(func() -> void: solo_requested.emit())
+	battle_tab.rank_requested.connect(func() -> void: rank_requested.emit())
 	battle_tab.resume_requested.connect(
 		func(record: Dictionary) -> void: online_resume_requested.emit(record)
 	)
-	deck_tab.deck_edit_pressed.connect(func() -> void: deck_list_requested.emit())
-	deck_tab.hourglass_list_pressed.connect(func() -> void: hourglass_list_requested.emit())
-	deck_tab.shop_pressed.connect(func() -> void: shop_requested.emit())
 	battle_tab.ranked_match_deck_requested.connect(
 		func() -> void: ranked_match_deck_requested.emit()
 	)
 	battle_tab.room_match_requested.connect(func() -> void: room_match_requested.emit())
-	battle_tab.spectate_list_requested.connect(func() -> void: spectate_list_requested.emit())
+	deck_tab.deck_edit_pressed.connect(func() -> void: deck_list_requested.emit())
+	deck_tab.hourglass_list_pressed.connect(func() -> void: hourglass_list_requested.emit())
+	deck_tab.shop_pressed.connect(func() -> void: shop_requested.emit())
+	# `.tscn` はデッキの列だけが最初から visible=true になっている。2つの列を常に出す。
+	deck_tab.visible = true
+	battle_tab.visible = true
 	# 背景の絵の上へ帯と幕を敷く(GameDesign.md 9章)。**背景の直後へ入れる**——
-	# タブの中身・アカウント帯・下部タブはいずれもこれより手前に来る必要がある。
+	# 列の中身・アカウント帯はいずれもこれより手前に来る必要がある。
 	var scrim := HomeScrim.make()
 	add_child(scrim)
 	move_child(scrim, background.get_index() + 1)
-	_build_rules_tab()
-	_build_record_tab()
-	_build_lab_tab()
-	deck_nav_button.text = TAB_LABELS[TAB_DECK]
-	battle_nav_button.text = TAB_LABELS[TAB_BATTLE]
-	deck_nav_button.pressed.connect(_select_tab.bind(TAB_DECK))
-	battle_nav_button.pressed.connect(_select_tab.bind(TAB_BATTLE))
-	# 並びを「たたかう / そろえる / きろく / おぼえる / つくる」に揃える(9章・29章)。
-	var nav: Node = battle_nav_button.get_parent()
-	nav.move_child(battle_nav_button, 0)
-	nav.move_child(deck_nav_button, 1)
-	nav.move_child(_record_nav_button, 2)
-	nav.move_child(_rules_nav_button, 3)
-	nav.move_child(_lab_nav_button, 4)
 	_style_menu_button()
 	settings_button.pressed.connect(func() -> void: settings_panel.open())
+	settings_panel.learn_requested.connect(_on_learn_requested)
+	_build_account_bar()
+	_build_learn_menu()
+	# モーダルはヘッダー・メニューより手前に出す(後から足した子ほど手前に描かれる)。
+	battle_tab.mount_pickers(self)
+	refresh_account()
 
+
+func _build_account_bar() -> void:
 	account_button.visible = false
 	_nameplate_button = AccountNameplateButton.new()
 	_nameplate_button.pressed.connect(func() -> void: account_requested.emit())
 	$AccountBar.add_child(_nameplate_button)
 	$AccountBar.move_child(_nameplate_button, 0)
 
+	_mission_tile = HomeTile.make("ミッション", "", "", MISSION_SIZE, MISSION_FONT)
+	_mission_tile.emblem = null
+	_mission_tile.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_mission_tile.pressed.connect(_on_mission_requested)
+	$AccountBar.add_child(_mission_tile)
+	$AccountBar.move_child(_mission_tile, 1)
+
 	# 残高は枠を持たない Label だったため、真鍮で組まれたヘッダーの中でそこだけ浮いていた。
 	# .tscn は書き換えず、同じ場所へチップを挿して元のラベルを隠す。
 	currency_label.visible = false
 	_currency_chip = CurrencyChip.new()
-	# ヘッダーは面積に余裕があり、残高は押す前に分かるべきことの代表(9章)。
 	_currency_chip.scale_factor = CURRENCY_CHIP_SCALE
 	# 左の名札と背丈を揃える(左右で高さが違うと、同じ帯に載って見えない)。
 	_currency_chip.height_override = NAMEPLATE_SIZE.y
@@ -183,36 +142,32 @@ func _ready() -> void:
 	$AccountBar.add_child(_sunday_banner)
 	$AccountBar.move_child(_sunday_banner, $AccountBar.get_children().find(_currency_chip) + 1)
 
-	# **`.tscn` はデッキタブだけが最初から visible=true になっている。**`_select_tab()` は
-	# 「直前に表示していたタブ」しかフェードアウトさせないため、初回の選択がデッキタブで
-	# ない場合(通常はこちら)、デッキタブの枠がずっと裏に残ったまま重なって見える
-	# (実際に「おぼえる」の見出しの裏へ「カード」の見出しが透けていた)。
-	deck_tab.visible = false
-	# ホームは常に「たたかう」を初期選択する(GameDesign.md 9章)。
-	# 初めての人はホームを経ずに誘導対局へ直行し、ホームへ来るのはそこから戻ったときのため。
-	_select_tab(TAB_BATTLE)
-	refresh_account()
+
+func _build_learn_menu() -> void:
+	_learn_menu = LearnMenu.new()
+	_learn_menu.tutorial_requested.connect(func() -> void: tutorial_requested.emit())
+	_learn_menu.rules_requested.connect(func() -> void: rules_requested.emit())
+	_learn_menu.screen_guide_requested.connect(func() -> void: screen_guide_requested.emit())
+	_learn_menu.keyword_dict_requested.connect(func() -> void: keyword_dict_requested.emit())
+	add_child(_learn_menu)
 
 
-## 縦横が変わったときに `Main` から呼ばれる(Architecture.md 4.7節)。並べ直すだけで、選んでいるタブは保つ。
+## メニューの「遊び方」(GameDesign.md 9章)。メニューを閉じてから、入口を並べたモーダルを出す。
+func _on_learn_requested() -> void:
+	settings_panel.close()
+	_learn_menu.open()
+
+
+## 縦横が変わったときに `Main` から呼ばれる(Architecture.md 4.7節)。
 func apply_orientation(portrait: bool) -> void:
 	_portrait = portrait
 	_nameplate_button.set_portrait(portrait)
+	_mission_tile.custom_minimum_size = PORTRAIT_MISSION_SIZE if portrait else MISSION_SIZE
+	HomeTile.set_portrait_text(_mission_tile, portrait, PORTRAIT_MISSION_FONT, MISSION_FONT)
 	_place_sunday_banner()
-	var nav: HBoxContainer = battle_nav_button.get_parent()
-	nav.custom_minimum_size.y = PORTRAIT_NAV_BAR_HEIGHT if portrait else NAV_BAR_HEIGHT
-	nav.add_theme_constant_override(
-		"separation", PORTRAIT_NAV_SEPARATION if portrait else NAV_SEPARATION
-	)
-	var buttons: Array[Button] = [
-		battle_nav_button, deck_nav_button, _record_nav_button, _rules_nav_button, _lab_nav_button
-	]
-	var tabs: Array[Control] = [battle_tab, deck_tab, _record_tab, _rules_tab, _lab_tab]
-	for i in buttons.size():
-		_apply_nav_style(buttons[i], tabs[i] == _active_tab)
-	for tab in tabs:
-		tab.call("apply_orientation", portrait)
-	_refresh_record_badge.call_deferred(true)
+	battle_tab.apply_orientation(portrait)
+	deck_tab.apply_orientation(portrait)
+	_learn_menu.apply_orientation(portrait)
 
 
 ## 縦では知らせをヘッダーから外し、その下の行へ置く。横はアカウント帯の中(残高の右)。
@@ -250,7 +205,7 @@ func refresh_battle_tab() -> void:
 	battle_tab.refresh()
 
 
-## 対局から戻ってきたときに、バトルタブへ残っているマッチングの待機状態を解く。
+## 対局から戻ってきたときに、バトルの列へ残っているマッチングの待機状態を解く。
 func reset_battle_tab() -> void:
 	battle_tab.reset_after_match()
 
@@ -273,182 +228,34 @@ func refresh_account() -> void:
 		_sunday_banner.visible = not banner_text.is_empty()
 	if deck_tab != null:
 		deck_tab.refresh()
+	_refresh_mission_tile()
 
 
-func _select_tab(index: int) -> void:
-	var tabs: Array[Control] = [battle_tab, deck_tab, _record_tab, _rules_tab, _lab_tab]
-	var buttons: Array[Button] = [
-		battle_nav_button, deck_nav_button, _record_nav_button, _rules_nav_button, _lab_nav_button
-	]
-	for i in buttons.size():
-		_apply_nav_style(buttons[i], i == index)
-	background.texture = BATTLE_BACKGROUND if index == TAB_BATTLE else DECK_BACKGROUND
-	# デッキも砂金も日課も画面の外で変わる。開くたびに札の副題を読み直す。
-	if index == TAB_BATTLE:
-		battle_tab.refresh()
-	elif index == TAB_DECK:
-		deck_tab.refresh()
-	elif index == TAB_RECORD:
-		_record_tab.refresh()
-	_refresh_record_badge()
-	var to_show: Control = tabs[index]
-	if to_show == _active_tab and to_show.visible and to_show.modulate.a >= 1.0:
+## 今日の3つの進み具合と、受け取れる数(GameDesign.md 9章・23章)。**この印は日課の唯一の
+## 手がかり**であり、これが無いと日課は存在ごと忘れられる。日付で入れ替わるため開くたびに読む。
+func _refresh_mission_tile() -> void:
+	if _mission_tile == null:
 		return
-	var to_hide: Control = _active_tab
-	# 左のタブへ移ったか右のタブへ移ったかで、横滑りの向きを決める
-	# (GameDesign.md 9章「左のタブへ移れば次のタブは右から現れる」)。
-	var previous_index := tabs.find(to_hide)
-	var moved_left := previous_index >= 0 and index < previous_index
-	_active_tab = to_show
-	if _tab_fade_tween != null and _tab_fade_tween.is_valid():
-		_tab_fade_tween.kill()
-	to_show.modulate.a = 0.0
-	to_show.visible = true
-	_tab_fade_tween = create_tween()
-	_tab_fade_tween.set_parallel(true)
-	_tab_fade_tween.tween_property(to_show, "modulate:a", 1.0, TAB_FADE_DURATION)
-	if to_hide != null and to_hide != to_show:
-		_tab_fade_tween.tween_property(to_hide, "modulate:a", 0.0, TAB_FADE_DURATION)
-	ScreenTransitionFx.apply(
-		_tab_fade_tween,
-		to_show,
-		to_hide if to_hide != to_show else null,
-		moved_left,
-		TAB_FADE_DURATION
-	)
-	_tab_fade_tween.finished.connect(_on_tab_fade_finished.bind(to_show, to_hide))
+	var rows := DailyMissionService.missions(_uid())
+	var done := 0
+	var claimable := 0
+	for row in rows:
+		if row["done"]:
+			done += 1
+			if not row["claimed"]:
+				claimable += 1
+	_mission_tile.badge_count = claimable
+	var line := "今日 %d / %d" % [done, rows.size()]
+	var changed := not _mission_tile.subtitle.is_empty() and _mission_tile.subtitle != line
+	_mission_tile.set_subtitle(line)
+	if changed:
+		_mission_tile.flash_subtitle()
 
 
-## 「ルール」タブとそのタブボタンはここで生成する。`scenes/home_screen.tscn` を
-## 書き換えずに3つ目を足すためで、ボタンは「デッキ」を複製して文言だけ差し替える
-## (スタイルの指定漏れが起きない)。複製の flags は0にして、後から張る
-## `pressed` の接続を引き継がせない。
-func _build_rules_tab() -> void:
-	_rules_tab = RulesTab.new()
-	_rules_tab.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_rules_tab.visible = false
-	_rules_tab.tutorial_requested.connect(func() -> void: tutorial_requested.emit())
-	_rules_tab.rules_requested.connect(func() -> void: rules_requested.emit())
-	_rules_tab.screen_guide_requested.connect(func() -> void: screen_guide_requested.emit())
-	_rules_tab.keyword_dict_requested.connect(func() -> void: keyword_dict_requested.emit())
-	deck_tab.get_parent().add_child(_rules_tab)
-	# タブの中身が背面へ回らないよう、既存のタブと同じ並びへ入れる。
-	deck_tab.get_parent().move_child(_rules_tab, 3)
-
-	_rules_nav_button = deck_nav_button.duplicate(0) as Button
-	_rules_nav_button.text = TAB_LABELS[TAB_LEARN]
-	_rules_nav_button.pressed.connect(_select_tab.bind(TAB_LEARN))
-	deck_nav_button.get_parent().add_child(_rules_nav_button)
-	# tscn 側で表示されているのはデッキタブのため、隠す相手の初期値をそこへ合わせる。
-	_active_tab = deck_tab
-
-
-## 「きろく」タブとそのタブボタンはここで生成する(GameDesign.md 9章)。
-## `_build_rules_tab()` と同じ理由で `scenes/home_screen.tscn` を書き換えずに追加する。
-## ミッション・戦績・リプレイは、以前バトルタブに対局の入口と並んでいたものを移した。
-func _build_record_tab() -> void:
-	_record_tab = RecordTab.new()
-	_record_tab.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_record_tab.visible = false
-	_record_tab.mission_requested.connect(_on_mission_requested)
-	_record_tab.stats_requested.connect(func() -> void: stats_requested.emit())
-	_record_tab.replay_list_requested.connect(func() -> void: replay_list_requested.emit())
-	_record_tab.rank_requested.connect(func() -> void: rank_requested.emit())
-	deck_tab.get_parent().add_child(_record_tab)
-	deck_tab.get_parent().move_child(_record_tab, 2)
-
-	_record_nav_button = deck_nav_button.duplicate(0) as Button
-	_record_nav_button.text = TAB_LABELS[TAB_RECORD]
-	_record_nav_button.pressed.connect(_select_tab.bind(TAB_RECORD))
-	deck_nav_button.get_parent().add_child(_record_nav_button)
-
-
-## 「つくる」タブとそのタブボタンはここで生成する(GameDesign.md 9章・29章)。
-## `_build_rules_tab()` と同じ理由で `scenes/home_screen.tscn` を書き換えずに追加する。
-func _build_lab_tab() -> void:
-	_lab_tab = LabTab.new()
-	_lab_tab.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_lab_tab.visible = false
-	_lab_tab.lab_requested.connect(func() -> void: lab_requested.emit())
-	deck_tab.get_parent().add_child(_lab_tab)
-	deck_tab.get_parent().move_child(_lab_tab, 4)
-
-	_lab_nav_button = deck_nav_button.duplicate(0) as Button
-	_lab_nav_button.text = TAB_LABELS[TAB_LAB]
-	_lab_nav_button.pressed.connect(_select_tab.bind(TAB_LAB))
-	deck_nav_button.get_parent().add_child(_lab_nav_button)
-
-
-## 受け取れるミッションがあることを、他のタブを見ている間も分かるようにする
-## (GameDesign.md 9章)。**タブ側の印は唯一の手がかり**であり、これが無いと日課は
-## 存在ごと忘れられる。
-func _refresh_record_badge(force := false) -> void:
-	if _record_nav_button == null or _record_tab == null:
-		return
-	var count := _record_tab.claimable_count()
-	if (
-		not force
-		and _record_nav_button.has_meta("badge")
-		and int(_record_nav_button.get_meta("badge")) == count
-	):
-		return
-	_record_nav_button.set_meta("badge", count)
-	if _record_badge == null:
-		_record_badge = Label.new()
-		_record_badge.add_theme_color_override("font_color", Color(1, 1, 1))
-		_record_badge.add_theme_constant_override("outline_size", 0)
-		_record_badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		_record_badge.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		_record_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		# 丸は専用クラスを足さず、角丸を半径いっぱいまで振った StyleBox で出す。
-		var dot := StyleBoxFlat.new()
-		dot.bg_color = Color(0.86, 0.24, 0.19)
-		dot.set_corner_radius_all(int(PORTRAIT_NAV_BADGE_SIZE * 0.5))
-		dot.border_width_bottom = 2
-		dot.border_width_top = 2
-		dot.border_width_left = 2
-		dot.border_width_right = 2
-		dot.border_color = Color(0.10, 0.07, 0.05)
-		_record_badge.add_theme_stylebox_override("normal", dot)
-		_record_nav_button.add_child(_record_badge)
-	var badge_size := PORTRAIT_NAV_BADGE_SIZE if _portrait else NAV_BADGE_SIZE
-	_record_badge.add_theme_font_size_override(
-		"font_size", PORTRAIT_NAV_BADGE_FONT if _portrait else NAV_BADGE_FONT
-	)
-	_record_badge.custom_minimum_size = Vector2.ONE * badge_size
-	_record_badge.size = _record_badge.custom_minimum_size
-	_record_badge.text = str(count)
-	_record_badge.visible = count > 0
-	_record_badge.position = Vector2(
-		_record_nav_button.size.x - badge_size * 0.9, -badge_size * 0.25
-	)
-
-
-func _on_tab_fade_finished(shown_tab: Control, hidden_tab: Control) -> void:
-	if hidden_tab != null and hidden_tab != shown_tab:
-		hidden_tab.visible = false
-		hidden_tab.modulate.a = 1.0
-	ScreenTransitionFx.reset(shown_tab, hidden_tab if hidden_tab != shown_tab else null)
-	_tab_fade_tween = null
-
-
-func _apply_nav_style(button: Button, active: bool) -> void:
-	var height: float = NAV_HEIGHT_ACTIVE if active else NAV_HEIGHT_INACTIVE
-	var width := NAV_WIDTH
-	var font_size := NAV_FONT_ACTIVE if active else NAV_FONT_INACTIVE
-	if _portrait:
-		height = PORTRAIT_NAV_HEIGHT_ACTIVE if active else PORTRAIT_NAV_HEIGHT_INACTIVE
-		width = PORTRAIT_NAV_WIDTH
-		font_size = PORTRAIT_NAV_FONT_ACTIVE if active else PORTRAIT_NAV_FONT_INACTIVE
-	button.custom_minimum_size = Vector2(width, height)
-	# **選択していないタブを下端へ沈め、選択中だけを帯の中央へ置く。**こうすると
-	# 選択中の上端だけが持ち上がってせり出して見える。高さを変えるだけでは上下へ
-	# 均等に伸びるため、せり出しているのか大きいだけなのかが読み取りにくい。
-	button.size_flags_vertical = (Control.SIZE_SHRINK_CENTER if active else Control.SIZE_SHRINK_END)
-	button.add_theme_font_size_override("font_size", font_size)
-	# **選択していないタブは沈める**(GameDesign.md 9章)。大きさの差だけでは現在地が
-	# 読み取れないため、彩度と明るさも落とす。
-	button.modulate = Color.WHITE if active else NAV_INACTIVE_TINT
+func _uid() -> String:
+	if NetSession.client != null and NetSession.client.auth != null:
+		return NetSession.client.auth.uid
+	return ""
 
 
 ## ホーム画面左上の名札ボタン(真鍮テクスチャ・アイコン・称号・名前)

@@ -51,7 +51,7 @@ static func emote(side: int, emote_id: String) -> Dictionary:
 
 
 ## 棋譜がマリガンを含むか(GameDesign.md 2章)。マリガンの導入前に保存された棋譜は
-## 含まないため、再生・観戦はこれを見て待つかどうかを決める。
+## 含まないため、再生はこれを見て待つかどうかを決める。
 static func contains_mulligan(actions: Array) -> bool:
 	for action in actions:
 		if action.get("type", "") == "mulligan":

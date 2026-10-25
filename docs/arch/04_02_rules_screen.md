@@ -5,7 +5,7 @@
 | `RulePages`(`scripts/ui/rule_pages.gd`, static) | 紙芝居の中身。章・見出し・本文・盤面の種類を Dictionary の配列として1箇所へ持つ |
 | `RuleStage`(`scripts/ui/rule_stage.gd`, Control) | 1ページ分の盤面。`RulePages` の指定に従って `CardView` 等を並べ、`play()` で演出を再生する |
 | `RuleScreen`(`scripts/ui/rule_screen.gd`, Control) | 目次・本文・`RuleStage`・ページ送りを並べる画面 |
-| `RulesTab`(`scripts/ui/rules_tab.gd`, Control) | ホーム画面の「ルール」タブ。**「遊んで覚える」と「読んで覚える」の2つの枠**に分け、入口だけを持つ(GameDesign.md 9章) |
+| `LearnMenu`(`scripts/ui/learn_menu.gd`, Control) | メニューの「遊び方」から開くモーダル。誘導対局・遊び方・画面の見かた・キーワード辞書の入口だけを持つ(GameDesign.md 9章) |
 
 **盤面は `CardView` / `BoardTable` / `PlayerInfoBar` / `CardInstance` / `MatchState` を
 そのまま使う。**ルール画面専用の描画を1つも書かないことが要件で、教材用の絵を別に持つと
@@ -17,9 +17,7 @@
 情報帯(HP・マナ・山札・墓地)を本物と同じ描画で出すにはこれが要る。ランダムな
 デッキから引いた局面をそのまま見せると、説明したい形が毎回変わってしまう。
 
-**`RulesTab` と「ルール」のタブボタンは `HomeScreen._ready()` がコードで生成する。**
-`scenes/home_screen.tscn` を書き換えずに済ませるためで、タブボタンは既存の
-「デッキ」ボタンを `duplicate()` して文言だけ差し替える(スタイルの指定漏れが起きない)。
+**`LearnMenu` は `HomeScreen._ready()` がコードで生成する**(`scenes/home_screen.tscn` を書き換えずに済ませるため)。
 これは v5.0 の画面が `.tscn` を持たないのと同じ流儀。
 
 **初回起動の判定は `UiState`(`scripts/logic/ui_state.gd`、`user://ui_state.json`)が持つ。**

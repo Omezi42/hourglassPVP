@@ -116,8 +116,5 @@
 
 再開するときは下記の残りから。
 
-- 掲示板の作り直し(GameDesign.md 29章 / Architecture.md 10.17節): 旧方式の審査待ちの投稿を管理ツールで却下して返金(ユーザー作業)→
-  ルール(`firebase deploy --only firestore:rules`)と `labAdmin`(`firebase deploy --only functions:labAdmin`)を新しい版の公開と同時に反映 →
-  最初のお題を管理ツールで立てる
 - 公式大会「箱庭杯」(GameDesign.md 30章 / Architecture.md 10.18節): 初回開催の告知・予選日程の案内文
 - ランクマッチ: マッチング精度(段位が近い相手を優先)

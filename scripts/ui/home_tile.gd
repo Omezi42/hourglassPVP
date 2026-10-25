@@ -292,9 +292,7 @@ func _draw() -> void:
 		draw_badge(self, Vector2(size.x - inset, inset), badge_count, badge_scale)
 
 
-## 未受取の数の印(GameDesign.md 9章)。**札と下部タブの両方へ同じ形で打つ**ため
-## static にしてある——タブのボタンは `HomeTile` ではなく `CodedButton` で作られており、
-## そこへも同じ印が要る。
+## 未受取の数の印(GameDesign.md 9章)。右上の角へ赤い丸で数を打つ。
 static func draw_badge(
 	target: CanvasItem, at: Vector2, count: int, badge_scale_factor := 1.0
 ) -> void:

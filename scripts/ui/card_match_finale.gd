@@ -33,7 +33,7 @@ func _init(screen: CardMatchScreen) -> void:
 	_screen = screen
 
 
-## 終局した。操作しない対局(再生・観戦)は従来どおり盤面を合わせるだけ。
+## 終局した。操作しない対局(再生)は従来どおり盤面を合わせるだけ。
 func on_match_ended() -> void:
 	if not _screen.is_interactive():
 		_screen.refresh()

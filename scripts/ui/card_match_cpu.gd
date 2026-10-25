@@ -1,8 +1,8 @@
 class_name CardMatchCpu
 extends RefCounted
-## CPU戦の進行(Architecture.md 4.0節)。始め方・棋譜の用意・マリガン・思考の間合い・1手の適用を持つ。
+## CPU戦の進行(Architecture.md 4.0節)。始め方・マリガン・思考の間合い・1手の適用を持つ。
 ## 何を指すかは `CardCpuStrategy` が決め、ここは「いつ・どう指させるか」だけを持つ。
-## 切り出した他の進行役と同じく、画面の私設メンバ(`_cpu` / `_cpu_timer` / `_cpu_record` /
+## 切り出した他の進行役と同じく、画面の私設メンバ(`_cpu` / `_cpu_timer` /
 ## `_cpu_followup`)を直に触る。
 
 var _screen: CardMatchScreen
@@ -41,17 +41,10 @@ func start(
 	s._foe_bar.icon_id = UserProfileLibrary.CPU_ICON_ID
 	s._foe_bar.title_id = UserProfileLibrary.CPU_TITLE_ID
 	s._set_playmats(AccountService.playmat_id(), PlaymatLibrary.CPU_ID)
-	# CPU戦もリプレイとして残すため、山札の種を決めてから始める(GameDesign.md 12章)。
+	# 山札の種は対局ごとに決める。
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
 	var seed_value := rng.randi_range(1, 1 << 30)
-	s._cpu_record = {
-		"deck_a": CardLibrary.ids_from_deck(deck_self),
-		"deck_b": CardLibrary.ids_from_deck(deck_foe),
-		"seed": seed_value,
-		"actions": [],
-		"source": "cpu",
-	}
 	s._keep_deck_order = keep_deck_order
 	s._begin_state(deck_self, deck_foe, seed_value, true)
 	begin_mulligan()
@@ -112,7 +105,6 @@ func take_action() -> void:
 	var action := s._cpu.choose_action(s.state, side)
 	if action.is_empty():
 		return
-	s._record(action)
 	s._strike.capture(action)
 	MatchAction.apply(s.state, action)
 	# 続けて指すのは演出が終わってから。重ねると駒が2体同時に渡ってしまう。

@@ -6,10 +6,6 @@
 [ext_resource type="Script" path="res://scripts/ui/deck_tab.gd" id="4_airqx"]
 [ext_resource type="PackedScene" path="res://scenes/battle_tab.tscn" id="5_ii2s2"]
 [ext_resource type="Script" path="res://scripts/ui/battle_tab.gd" id="6_f8xo1"]
-[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_nav_tab_normal.tres" id="7_airqx"]
-[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_nav_tab_pressed.tres" id="8_ii2s2"]
-[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_nav_tab_hover.tres" id="9_f8xo1"]
-[ext_resource type="StyleBox" path="res://resources/theme/buttons/img_nav_tab_disabled.tres" id="10_ii2s2"]
 [ext_resource type="StyleBox" path="res://resources/theme/buttons/img_icon_square_normal.tres" id="11_gxchb"]
 [ext_resource type="StyleBox" path="res://resources/theme/buttons/img_icon_square_pressed.tres" id="12_mnq0v"]
 [ext_resource type="StyleBox" path="res://resources/theme/buttons/img_icon_square_hover.tres" id="13_dyhnm"]
@@ -67,38 +63,6 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("6_f8xo1")
-
-[node name="BottomNav" type="HBoxContainer" parent="Layout" unique_id=1687139938]
-custom_minimum_size = Vector2(0, 160)
-layout_mode = 2
-theme_override_constants/separation = 32
-alignment = 1
-
-[node name="DeckNavButton" type="Button" parent="Layout/BottomNav" unique_id=106557106]
-layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-theme_override_styles/normal = ExtResource("7_airqx")
-theme_override_styles/pressed = ExtResource("8_ii2s2")
-theme_override_styles/hover = ExtResource("9_f8xo1")
-theme_override_styles/disabled = ExtResource("10_ii2s2")
-theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
-text = "デッキ"
-
-[node name="BattleNavButton" type="Button" parent="Layout/BottomNav" unique_id=63213975]
-layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-theme_override_styles/normal = ExtResource("7_airqx")
-theme_override_styles/pressed = ExtResource("8_ii2s2")
-theme_override_styles/hover = ExtResource("9_f8xo1")
-theme_override_styles/disabled = ExtResource("10_ii2s2")
-theme_override_colors/font_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_colors/font_pressed_color = Color(0.96, 0.94, 0.89, 1)
-theme_override_colors/font_hover_color = Color(0.96, 0.94, 0.89, 1)
-text = "バトル"
 
 [node name="SettingsButton" type="Button" parent="." unique_id=1202723650]
 custom_minimum_size = Vector2(88, 88)

@@ -19,7 +19,7 @@ static var _display_font: Font
 static var _display_font_loaded := false
 
 
-## 見出し専用の明朝体。タイトルロゴ・`ScreenHeader`のタイトル・`HomeFrame`の見出し・
+## 見出し専用の明朝体。タイトルロゴ・`ScreenHeader`のタイトル・
 ## `HomeTile`のうち主役(primary)の見出しに使う。読み込めなかった場合は本文用
 ## フォント(呼び出し側の既定フォント)をそのまま返すため、呼び出し側は null チェックを
 ## 気にせず使える。

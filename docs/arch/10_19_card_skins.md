@@ -2,7 +2,7 @@
 
 **絵を引く口を1つ足し、描画側は変えない。**砂時計の絵は `CardData.icon_upright` 等の
 getter が `HourglassArt.texture(art_key(), state)` を返す形で12箇所から読まれており
-(`CardView` / `AlmanacPage` / `CardDeckShelf` / `CardDeckListScreen` / `ReplayListCard` /
+(`CardView` / `AlmanacPage` / `CardDeckShelf` / `CardDeckListScreen` /
 `WorkshopStockItem` / `CardDetailPanel` 等)、ここへスキンの判定を挟めば
 「そのカードの絵を出すすべての場所で使う」(31章)が1箇所で成立する。
 
@@ -19,7 +19,7 @@ getter が `HourglassArt.texture(art_key(), state)` を返す形で12箇所か�
 |---|---|---|
 | `SELF`(既定) | `AccountService.owned_skin_ids()` − `disabled_skin_ids()` | 手札・自分の場の駒・図鑑・デッキ編集・墓地・デッキ表・一覧の代表アイコン |
 | `OPPONENT` | `fetch_profile()` で受け取った相手の `owned_skins` / `disabled_skins` | 対局中の相手の場の駒 |
-| `NONE` | 常に元の絵 | CPUの駒・リプレイ・観戦・ルール画面・画面の見かた・Discord用のカード画像 |
+| `NONE` | 常に元の絵 | CPUの駒・リプレイ・ルール画面・画面の見かた・Discord用のカード画像 |
 
 - **`CardData.icon_*` の getter は `SELF` で `CardSkins.texture()` を呼ぶ形へ変える。**
   ほとんどの画面は自分のカードしか描かないため、既定を `SELF` にすれば既存の呼び出し
@@ -29,7 +29,7 @@ getter が `HourglassArt.texture(art_key(), state)` を返す形で12箇所か�
 - **`CardView` に `skin_viewer` プロパティ(既定 `SELF`)を持たせ、`_fit_art()` の絵の
   取得だけを `CardSkins.texture(card, state, skin_viewer)` に変える。**
   `CardMatchScreen.skin_viewer_for(side)` が場の列・手札・墓地の一覧(`CardPileViewer.open_pile()`)へ
-  自分=`SELF` / 相手=`OPPONENT`、`_interactive == false`(再生・観戦)なら `NONE` を返す。
+  自分=`SELF` / 相手=`OPPONENT`、`_interactive == false`(再生)なら `NONE` を返す。
   CPU戦の相手は `CardSkins` に相手の設定が無いため `OPPONENT` のまま元の絵になる。`RuleStage` / `ScreenGuideStage` /
   `DiscordCardArt` が作る `CardView` は `NONE`。`CardUnitFx.play_break()` は
   `CardData` ではなく `CardView` が解決済みのテクスチャを受け取る形へ変える

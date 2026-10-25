@@ -59,7 +59,7 @@ GameDesign.md 14章(アカウント)・15章(通貨)の実装方針。認証は 
 | `bonus_win_count` | int | その日付にボーナスを得た勝ち数(上限 `CurrencyRules.BONUS_WIN_LIMIT`) |
 | `owned_icons` | Array[String] | ショップで買ったアイコンのid。初期解放の8種は含めない |
 | `owned_emotes` | Array[String] | ショップで買ったエモートのid。初期解放の4種は含めない |
-| `owned_titles` | Array[String] | 所有を絞る称号のid(掲示板採用の「発案者」等)。初期の2種(「駆け出し決闘者」「称号なし」)は含めない。10.17節 |
+| `owned_titles` | Array[String] | 所有を絞る称号のid(「発案者」「箱庭王」)。初期の2種(「駆け出し決闘者」「称号なし」)は含めない。10.17節 |
 | `emote_slots` | Array[String] | 対局中に出す4つ。空なら初期の4種を使う |
 | `updated_at` | float | 最終更新時刻(Unix時間) |
 
@@ -82,7 +82,7 @@ GameDesign.md 14章(アカウント)・15章(通貨)の実装方針。認証は 
   渡すだけにする。**オンライン対戦がどの種別かは、これまで
   対局画面が区別していなかった**ため、`HomeScreen.online_match_found` と
   オンライン対局の開始経路に対局種別を1つ足して伝える
-- ローカル対戦(pass&play)・観戦・リプレイ再生は報酬の対象外。いずれも「自分が
+- ローカル対戦(pass&play)・リプレイ再生は報酬の対象外。いずれも「自分が
   1人のプレイヤーとして対局した」とは言えないため
 - 判定は終局時に1度だけ行い、結果を `MatchResultPresenter` が結果パネルへ
   1行として出す(GameDesign.md 9章)
@@ -101,12 +101,5 @@ GameDesign.md 14章(アカウント)・15章(通貨)の実装方針。認証は 
   消してしまう。`list_replays()` が返す「自分の対局だけ・新しい順」の並びをそのまま使い、
   上限より後ろを消す。これに伴い `FirestoreClient.query_finished_matches_oldest_first()` は
   参照0件になったため削除した
-- CPU戦のリプレイ(`LocalReplayService`、`user://cpu_replays.json`)は保存先をローカルの
-  まま維持し、レコードへ `owner_uid` を足して一覧で自分のものだけを出す。アカウントを
-  切り替えたときに他のアカウントの記録が混ざらないようにするため。**保持上限も所有者ごとに
-  数え**、別のアカウントの記録を巻き添えで消さない。`owner_uid` を持たないレコード
-  (アカウント機能の導入前に保存されたもの)は、いま遊んでいるアカウントのものとして扱う。
-  サインインできておらず `owner_uid` が空のときは、絞り込む基準が無いため全件返す
 - 相手の表示名は `AccountService.fetch_display_name()` が `players/{uid}` から引き、
-  uidごとにキャッシュする。対局画面のHPバー(`PlayerStatusBar.setup()`)と
-  リプレイ一覧のカードが使う。未設定・取得失敗なら「自分」「相手」に落とす
+  uidごとにキャッシュする。対局画面のHPバー(`PlayerStatusBar.setup()`)が使う。未設定・取得失敗なら「自分」「相手」に落とす

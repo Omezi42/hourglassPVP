@@ -51,13 +51,11 @@
 ## タイトル・ホーム・デッキ一覧
 
 - `TitleScreen.apply_orientation()`: ロゴ・開始の文言・「アカウント」を置き直す。横の値は `_ready()` で `.tscn` から控える
-- `HomeScreen.apply_orientation()`: 名札(`AccountNameplateButton.set_portrait()`)・日曜の知らせ・下部タブを組み直し、5つのタブの `apply_orientation()` を呼ぶ
-- タブ(`BattleTab` / `DeckTab` / `RecordTab` / `RulesTab` / `LabTab`)は位置を `_layout()` 1か所で決め、横は従来の定数、縦は `PORTRAIT_*` を使う。
-  縦の枠の幅・上下の範囲・積む上端は `HomeFrame.PORTRAIT_*` と `HomeFrame.portrait_stack_top()`、置き直しは `HomeFrame.place()`(最小の大きさから先に変える)
-- `HomeTile.set_portrait_text()`: 見出し・副題(24px・2行まで)・余白・紋章の上限・印の倍率を縦横で切り替える。副題の折り返しは `_subtitle_rows()` が区切りを優先して行う
-- `HomeFrame.set_portrait()`: 枠の見出しと行(今日の課題)の文字を縦の大きさにする
-- `DeckTab` は縦で図鑑・ショップを `Row`(HBox)から外して縦並びへ移す(`HBoxContainer` は向きを変えられない)
-- `BattleTab` の主役の2枚は `scale` 1.25、「つぎはここ」の印は `NextStepMark.tag_scale` 1.5
+- `HomeScreen.apply_orientation()`: 名札(`AccountNameplateButton.set_portrait()`)・ミッションの札・日曜の知らせを組み直し、`BattleTab` / `DeckTab` / `LearnMenu` の `apply_orientation()` を呼ぶ
+- 列の位置は `HomeLayout` の `portrait_*`(上から バトル → ソロモード → 右の列の3つを横1列)。`BattleTab` は縦で `RankedEntryInfo.tall` を外して横長の組み方に戻す
+- `HomeTile.set_portrait_text()`: 見出し・副題(24px・2行まで)・余白・紋章の上限・印の倍率を縦横で切り替える。副題の折り返しは `_subtitle_rows()` が区切りを優先して行う。`DeckTab` は縦で紋章のぶんの空き(`emblem_reserve`)を0にする(3分の1の幅に見出しが入らないため)
+- `HomeModePicker` は縦で札を画面の幅いっぱいにして上から積む。横の文字の大きさは札のメタに控えて戻す
+- 「つぎはここ」の印は `NextStepMark.tag_scale` 1.5
 - `ScreenHeader.apply_orientation()`: 縦で文字と「戻る」を大きくし、`ActionSlot` を `Row` から外してヘッダーの下の行へ置く。
   内容の上端は `portrait_content_top()`(主アクションの行の有無で変わる)。各画面が自分の `apply_orientation()` から呼ぶ
 - `CardDeckListScreen`: 縦は1列、管理のボタンは名前の下の行。主アクションの行の有無で一覧の上端が変わるため、縦では `_refresh()` のたびに `_layout()` する
@@ -77,8 +75,7 @@
   `AlmanacPage.set_page(size, scale)` はページを細く組み直して `scale` を掛ける(めくりの `scale:x` はこの倍率へ戻す。データ欄の間隔と効果の文の行数は紙の大きさから決める)
 - `KeywordPopup` は開くたびと向きの変化で `_fit()` し、`PortraitModal` の幅で組んで拡大する。`KeywordEntryView.set_layout()` が実演の幅と文字の大きさを持ち替える
 - `KeywordDictScreen` は縦で語のボタンを `VBox` から `GridContainer`(2列)へ移す。`RuleScreen` / `ScreenGuideScreen` は縦横の矩形を `apply_orientation()` で置き直し、盤面は `RuleStage._fit()` が枠に合わせる
-- 一覧の画面(`ReplayListScreen` / `CardSpectateListScreen` / `CardPuzzlePickerScreen`)は縦で1列。内容の矩形は `ScreenHeader.portrait_content_rect()`。
-  行の部品は `set_portrait()` で文字を持ち替える(`ReplayListCard`)か、2段に積んで拡大して描く(`SpectateMatchRow`)。パズルの札は向きの変化で作り直す
+- 一覧の画面(`CardPuzzlePickerScreen`)は縦で1列。内容の矩形は `ScreenHeader.portrait_content_rect()`。パズルの札は向きの変化で作り直す
 - `EmptyState` は縦で中身を `PORTRAIT_ZOOM`(1.5)倍で描く
 - 画面を縦横で撮るのは `tools/capture_screen_layout`(非ヘッドレス。`class_name` か `.tscn` を並べる)
 

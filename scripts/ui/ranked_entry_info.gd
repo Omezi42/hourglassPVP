@@ -1,8 +1,9 @@
 class_name RankedEntryInfo
 extends Control
-## たたかうタブの「対戦する」の札に載せる中身(GameDesign.md 9章)。
-## 右に段位の徽章(帯ごとの金属のメダル+★)、左に段位名と次の段位まで、下端の凹んだ行に
+## ホームの「バトル」と、対局の種類を選ぶモーダルの「ランクマッチ」の札に載せる中身(GameDesign.md 9章)。
+## 段位の徽章(帯ごとの金属のメダル+★)・段位名・次の段位まで、下端の凹んだ行に
 ## 待っている人の数とシーズンの残り日数を描く。途中の対局があるときは下端の行が琥珀の知らせになる。
+## 札が縦長なら中央へ縦に積み(`tall`)、横長なら右に徽章・左に文字を置く(縦画面)。
 ## 札(`HomeTile`)の子として全面に敷き、押下は札へ通す。彫り文字と凹んだ行は `EntryTilePaint` と共用する。
 
 ## 真鍮へ彫り込んだ文字: 本体の暗色と、彫りの下縁に返る光。
@@ -20,6 +21,35 @@ const STAR_RATIO := 0.17
 const STAR_ROW := 1.33
 const STAR_SPACING := 2.7
 const PULSE_SPEED := 3.2
+
+## 縦長の札の組み方。位置は札の背に対する比で決める(ホームの列とモーダルの札で背が違うため)。
+const TALL_MEDAL_RATIO := 0.2
+const TALL_CAPTION_Y := 0.11
+const TALL_MEDAL_Y := 0.31
+const TALL_TIER_Y := 0.62
+const TALL_NEXT_Y := 0.68
+const TALL_HEAD_Y := 0.815
+const TALL_TIER_SIZE := 36
+const TALL_NEXT_SIZE := 18
+const TALL_HEAD_SIZE := 52
+## 見出しを上に置く組み方(モーダルの「ランクマッチ」。待機の行を持たない)。
+const TOP_HEAD_Y := 0.17
+const TOP_MEDAL_Y := 0.45
+const TOP_MEDAL_RATIO := 0.19
+const TOP_MEDAL_MAX := 64.0
+const TOP_TIER_Y := 0.75
+const TOP_NEXT_Y := 0.83
+const TOP_HEAD_SIZE := 34
+const TOP_TIER_SIZE := 26
+const TOP_NEXT_SIZE := 17
+
+## 縦長の札として中央へ積む。
+var tall := false
+## 縦長のときに札の中へ彫る見出し(「バトル」「対局へ戻る」「ランクマッチ」)。
+var head_text := ""
+## 見出しを上に置き、下端の行を出さない(モーダルの「ランクマッチ」)。
+var head_on_top := false
+var show_well := true
 
 var _tier := RankRules.INITIAL_TIER
 var _stars := 0
@@ -78,12 +108,47 @@ func _notification(what: int) -> void:
 func _draw() -> void:
 	if _font == null:
 		return
+	if tall:
+		_draw_tall()
+		return
 	_draw_left_column()
 	var radius: float = minf(size.y * MEDAL_RATIO, MEDAL_MAX_RADIUS)
 	var center := Vector2(size.x - MEDAL_RIGHT - radius, size.y * MEDAL_CENTER_RATIO)
 	_draw_medal(center, radius)
 	_draw_stars(center + Vector2(0.0, radius * STAR_ROW), radius * STAR_RATIO)
-	_draw_well()
+	if show_well:
+		_draw_well()
+
+
+func _draw_tall() -> void:
+	var h := size.y
+	if head_on_top:
+		_engraved_center(head_text, h * TOP_HEAD_Y, TOP_HEAD_SIZE, _display)
+		var top_radius: float = minf(size.x * TOP_MEDAL_RATIO, TOP_MEDAL_MAX)
+		_draw_medal_column(h * TOP_MEDAL_Y, top_radius)
+		_engraved_center(_tier_label(), h * TOP_TIER_Y, TOP_TIER_SIZE, _display)
+		_engraved_center(_next_line(), h * TOP_NEXT_Y, TOP_NEXT_SIZE, _font)
+		return
+	_engraved_center("いまの段位", h * TALL_CAPTION_Y, EntryTilePaint.CAPTION_SIZE, _font)
+	_draw_medal_column(h * TALL_MEDAL_Y, minf(size.x * TALL_MEDAL_RATIO, MEDAL_MAX_RADIUS))
+	_engraved_center(_tier_label(), h * TALL_TIER_Y, TALL_TIER_SIZE, _display)
+	_engraved_center(_next_line(), h * TALL_NEXT_Y, TALL_NEXT_SIZE, _font)
+	_engraved_center(head_text, h * TALL_HEAD_Y, TALL_HEAD_SIZE, _display)
+	if show_well:
+		_draw_well()
+
+
+func _draw_medal_column(center_y: float, radius: float) -> void:
+	var center := Vector2(size.x * 0.5, center_y)
+	_draw_medal(center, radius)
+	_draw_stars(center + Vector2(0.0, radius * STAR_ROW), radius * STAR_RATIO)
+
+
+func _engraved_center(text: String, baseline: float, font_size: int, font: Font) -> void:
+	var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	EntryTilePaint.draw_engraved(
+		self, font, Vector2((size.x - width) * 0.5, baseline), text, font_size
+	)
 
 
 func _draw_left_column() -> void:

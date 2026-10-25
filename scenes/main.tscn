@@ -4,8 +4,6 @@
 [ext_resource type="Theme" path="res://resources/theme/main_theme.tres" id="1_tipki"]
 [ext_resource type="PackedScene" path="res://scenes/home_screen.tscn" id="2_tipki"]
 [ext_resource type="Script" path="res://scripts/ui/home_screen.gd" id="3_85g3d"]
-[ext_resource type="PackedScene" path="res://scenes/replay_list_screen.tscn" id="15_jbj1t"]
-[ext_resource type="Script" path="res://scripts/ui/replay_list_screen.gd" id="16_muem4"]
 [ext_resource type="PackedScene" path="res://scenes/account_screen.tscn" id="19_gqmmt"]
 [ext_resource type="Script" path="res://scripts/ui/account_screen.gd" id="20_yc10j"]
 
@@ -27,15 +25,6 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("3_85g3d")
-
-[node name="ReplayListScreen" type="Control" parent="." unique_id=1599306711 instance=ExtResource("15_jbj1t")]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-script = ExtResource("16_muem4")
 
 [node name="AccountScreen" type="Control" parent="." unique_id=1856125998 instance=ExtResource("19_gqmmt")]
 layout_mode = 1

@@ -3,13 +3,16 @@ extends Control
 ## アカウント画面(GameDesign.md 14章、Architecture.md 10.5)。
 ## 左 = 自分とアカウント(見本・表示名・状態・登録/ログイン)、右 = 見た目を選ぶ4つのタブ。
 ## 選んだものはその場で保存する(保存ボタンを置かない)。
+## ヘッダーの主アクションに「戦績」(GameDesign.md 19章)。ホームには置かない入口のため、ここから開く。
 
 signal back_pressed
+signal stats_requested
 ## 表示名・残高・アイコン・称号が変わったことを通知する。ホーム画面のヘッダーが購読する。
 signal profile_changed
 
 const PANEL_STYLE := "res://resources/theme/content_panel.tres"
 const OK_COLOR := Color(0.62, 0.86, 0.6, 1)
+const STATS_BUTTON_SIZE := Vector2(160, 56)
 const ERROR_COLOR := Color(1, 0.55, 0.5, 1)
 const WARNING_COLOR := Color(1, 0.72, 0.45, 1)
 ## パネルの横位置は画面中央からの距離で持つ(左520px・右696px、間16px)。
@@ -64,6 +67,9 @@ var _portrait := false
 func _ready() -> void:
 	screen_header.set_title("アカウント")
 	screen_header.back_pressed.connect(_on_back_pressed)
+	var stats_button := CodedButton.make("戦績", STATS_BUTTON_SIZE)
+	stats_button.pressed.connect(func() -> void: stats_requested.emit())
+	screen_header.add_action(stats_button)
 	_save_timer = Timer.new()
 	_save_timer.one_shot = true
 	_save_timer.wait_time = SAVE_DELAY

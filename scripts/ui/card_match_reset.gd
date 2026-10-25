@@ -9,7 +9,7 @@ extends RefCounted
 
 
 static func run(screen: CardMatchScreen) -> void:
-	# **リプレイと観戦は既定のマット**(棋譜はマットを記録しない。GameDesign.md 9章)。
+	# **リプレイは既定のマット**(棋譜はマットを記録しない。GameDesign.md 9章)。
 	# 対局へ入る側がこの後で敷き替える。
 	screen._set_playmats(PlaymatLibrary.DEFAULT_ID, PlaymatLibrary.DEFAULT_ID)
 	# 相手のスキンも同じ寿命で持つ(GameDesign.md 31章)。オンライン対局だけが受け取り直す。
@@ -44,8 +44,6 @@ static func run(screen: CardMatchScreen) -> void:
 		screen._alert.is_my_turn = false
 	# 前の対局のHP・マナ・山札の枚数・持ち時間が情報帯に残らないようにする
 	# (`reset()` が持ち時間も含めて未初期化の状態へ戻す)。
-	screen.hide_hands = false
-	screen._own_bar.show_hand_pile = false
 	screen._own_bar.reset()
 	screen._foe_bar.reset()
 	# 名前・アイコン・称号も対局ごとに入れ直す。残すと前のCPU戦の「CPU」が、
@@ -54,7 +52,6 @@ static func run(screen: CardMatchScreen) -> void:
 		bar.display_name = ""
 		bar.icon_id = UserProfileLibrary.DEFAULT_ICON_ID
 		bar.title_id = UserProfileLibrary.DEFAULT_TITLE_ID
-	screen._cpu_record = {}
 	if screen._puzzle != null:
 		screen._puzzle.close()
 	if screen._solo != null:

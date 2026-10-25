@@ -99,7 +99,7 @@ static func action_column(screen: CardMatchScreen) -> void:
 		screen, "投了", ActionColumnLayout.SMALL_DIAMETER, false
 	)
 	screen._surrender_button.pressed.connect(screen._on_surrender_pressed)
-	# リプレイ・観戦の戻る導線。反転権と同じ位置(両者は同時に見えない)。
+	# リプレイの戻る導線。反転権と同じ位置(両者は同時に見えない)。
 	screen._back_button = add_round_button(
 		screen, "戻る", ActionColumnLayout.FLIP_RIGHT_DIAMETER, false
 	)

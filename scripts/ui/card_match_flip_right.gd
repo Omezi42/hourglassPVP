@@ -17,7 +17,7 @@ var _gauge: FlipRightGauge
 func _init(screen: CardMatchScreen) -> void:
 	_screen = screen
 	# 「戻る」ボタンと同じ位置に置く。**両者は同時に見えない**——戻るボタンは
-	# 再生・観戦(_interactive == false)だけに出て、反転権は対局中(_interactive == true)
+	# 再生(_interactive == false)だけに出て、反転権は対局中(_interactive == true)
 	# だけに出るため、行動の列を再配置せずに済む。小さな丸ボタン
 	# (GameDesign.md 9章「対局画面の再構築」)。
 	var diameter := ActionColumnLayout.FLIP_RIGHT_DIAMETER
@@ -25,7 +25,7 @@ func _init(screen: CardMatchScreen) -> void:
 	_button.emblem_texture = ICON
 	_button.visible = false
 	_button.pressed.connect(_on_pressed)
-	# 自分・相手の残り回数の粒(scratchpad/match_rebuild_phase4.md)。再生・観戦でも
+	# 自分・相手の残り回数の粒(scratchpad/match_rebuild_phase4.md)。再生でも
 	# 見る側の情報として出すため、ボタンとは別に可視状態を持つ。
 	_gauge = FlipRightGauge.new()
 	_gauge.visible = false
@@ -81,7 +81,7 @@ func refresh() -> void:
 		_button.visible = false
 		_gauge.visible = false
 		return
-	# 札(自分・相手の残り回数)は再生・観戦でも見る側の情報として出す
+	# 札(自分・相手の残り回数)は再生でも見る側の情報として出す
 	# (scratchpad/match_rebuild_phase4.md)。対局が始まる前(state == null)だけ隠す。
 	_gauge.visible = true
 	_refresh_gauge(state)

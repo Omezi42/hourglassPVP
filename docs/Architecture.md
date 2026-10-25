@@ -20,7 +20,7 @@
 | 4.7節 | 縦画面(GameDesign.md 9章) | [`arch/04_07_portrait.md`](arch/04_07_portrait.md) |
 | 5章 | 拡張運用について | [`arch/05_extension.md`](arch/05_extension.md) |
 | 6章 | オンライン対戦の実装方針 | [`arch/06_online.md`](arch/06_online.md) |
-| 7章 | リプレイ・観戦の実装方針(7.2節 ランクマッチの観戦一覧を含む) | [`arch/07_replay.md`](arch/07_replay.md) |
+| 7章 | リプレイの実装方針 | [`arch/07_replay.md`](arch/07_replay.md) |
 | 8章 | CPU戦の実装方針 | [`arch/08_cpu.md`](arch/08_cpu.md) |
 | 9章 | 効果音・BGMの実装方針 | [`arch/09_audio.md`](arch/09_audio.md) |
 | 10章 | アカウント・通貨の実装方針(10.1〜10.4節を含む) | [`arch/10_account.md`](arch/10_account.md) |
@@ -36,7 +36,7 @@
 | 10.14節 | Discordスラッシュコマンド(GameDesign.md 26章) | [`arch/10_14_discord_commands.md`](arch/10_14_discord_commands.md) |
 | 10.15節 | ソロモード | [`arch/10_15_solo_mode.md`](arch/10_15_solo_mode.md) |
 | 10.16節 | ランクマッチ(GameDesign.md 28章) | [`arch/10_16_ranked.md`](arch/10_16_ranked.md) |
-| 10.17節 | 掲示板(ラボ)(GameDesign.md 29章) | [`arch/10_17_lab.md`](arch/10_17_lab.md) |
+| 10.17節 | (欠番) | — |
 | 10.18節 | 公式大会「箱庭杯」(GameDesign.md 30章) | [`arch/10_18_tournament.md`](arch/10_18_tournament.md) |
 | 10.19節 | カードスキン(GameDesign.md 31章) | [`arch/10_19_card_skins.md`](arch/10_19_card_skins.md) |
 | 10.20節 | 宣伝用の撮影ツール(ショート動画・とどめ問題の問題集) | [`arch/10_20_promo_capture.md`](arch/10_20_promo_capture.md) |

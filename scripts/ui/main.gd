@@ -35,10 +35,6 @@ var card_ranked_match_screen: CardRankedMatchScreen
 var card_rank_screen: CardRankScreen
 ## CPU戦の思考レベル選択モーダル(GameDesign.md 13章)。
 var card_cpu_difficulty_picker: CardCpuDifficultyPicker
-## ランクマッチの観戦一覧(GameDesign.md 12章)。
-var card_spectate_list_screen: CardSpectateListScreen
-## 掲示板〈ラボ〉(GameDesign.md 29章)。
-var card_lab_screen: CardLabScreen
 ## 待っている間のCPU戦(GameDesign.md 11章)。
 var waiting_cpu: WaitingCpuMatch
 
@@ -66,7 +62,6 @@ var _transition_blocker: ColorRect
 ## タイトルは起動シーン(`Boot`)が先に出したものを `adopt_title()` で受け取る(Architecture.md 4.0.6節)。
 @onready var title_screen: TitleScreen = get_node_or_null(TITLE_NODE)
 @onready var home_screen: HomeScreen = $HomeScreen
-@onready var replay_list_screen: ReplayListScreen = $ReplayListScreen
 @onready var account_screen: AccountScreen = $AccountScreen
 
 
@@ -78,7 +73,6 @@ func _ready() -> void:
 	_screens = [
 		title_screen,
 		home_screen,
-		replay_list_screen,
 		account_screen,
 	]
 	# v5.0の対局画面は子がすべてコード描画のControlで .tscn を持たないため、
@@ -87,7 +81,8 @@ func _ready() -> void:
 	stats_screen.anchor_right = 1.0
 	stats_screen.anchor_bottom = 1.0
 	stats_screen.visible = false
-	stats_screen.back_pressed.connect(func() -> void: _show_only(home_screen, true))
+	# 戦績はアカウント画面から開く(GameDesign.md 9章・19章)。戻る先もアカウント画面。
+	stats_screen.back_pressed.connect(func() -> void: _show_only(account_screen, true))
 	add_child(stats_screen)
 	_screens.append(stats_screen)
 	card_deck_editor_screen = CardDeckEditorScreen.new()
@@ -146,7 +141,6 @@ func _ready() -> void:
 	card_room_screen.back_pressed.connect(func() -> void: _show_only(home_screen, true))
 	card_room_screen.deck_change_requested.connect(_on_room_deck_change_requested)
 	card_room_screen.matched.connect(_on_room_match_found)
-	card_room_screen.spectate_requested.connect(_on_spectate_requested)
 	_screens.append(card_room_screen)
 	card_ranked_match_screen = CardRankedMatchScreen.new()
 	card_ranked_match_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -161,25 +155,12 @@ func _ready() -> void:
 	add_child(card_rank_screen)
 	card_rank_screen.back_pressed.connect(func() -> void: _show_only(home_screen, true))
 	_screens.append(card_rank_screen)
-	card_spectate_list_screen = CardSpectateListScreen.new()
-	card_spectate_list_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
-	card_spectate_list_screen.visible = false
-	add_child(card_spectate_list_screen)
-	card_spectate_list_screen.back_pressed.connect(func() -> void: _show_only(home_screen, true))
-	card_spectate_list_screen.spectate_requested.connect(_on_live_spectate_requested)
-	_screens.append(card_spectate_list_screen)
-	card_lab_screen = CardLabScreen.new()
-	card_lab_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
-	card_lab_screen.visible = false
-	add_child(card_lab_screen)
-	card_lab_screen.back_pressed.connect(func() -> void: _show_only(home_screen, true))
-	_screens.append(card_lab_screen)
 	puzzle_picker_screen = CardPuzzlePickerScreen.new()
 	puzzle_picker_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
 	puzzle_picker_screen.visible = false
 	puzzle_picker_screen.back_pressed.connect(
 		func() -> void:
-			# 今日の1問を解いたかどうかを、たたかうタブの副題へ映す(GameDesign.md 24章)。
+			# 今日の1問を解いたかどうかを、ホームの「ソロモード」の札へ映す(GameDesign.md 24章)。
 			home_screen.refresh_battle_tab()
 			_show_only(home_screen, true)
 	)
@@ -192,7 +173,7 @@ func _ready() -> void:
 	solo_map_screen.visible = false
 	solo_map_screen.back_pressed.connect(
 		func() -> void:
-			# 遠征の進み具合を、たたかうタブの「ソロモード」の札へ映す(GameDesign.md 9章)。
+			# 遠征の進み具合を、ホームの「ソロモード」の札へ映す(GameDesign.md 9章)。
 			home_screen.refresh_battle_tab()
 			_show_only(home_screen, true)
 	)
@@ -222,12 +203,12 @@ func _ready() -> void:
 	title_screen.account_requested.connect(_on_account_requested.bind(true))
 	home_screen.account_requested.connect(_on_account_requested.bind(false))
 	account_screen.back_pressed.connect(_on_account_back)
+	account_screen.stats_requested.connect(_on_stats_requested)
 	account_screen.profile_changed.connect(func() -> void: home_screen.refresh_account())
 	# 対局画面から戻る先は各導線が設定するが、設定される前に戻る操作が起きても
 	# 落ちないよう既定をホームにしておく
 	_match_return_screen = home_screen
 	home_screen.online_resume_requested.connect(_on_online_resume_requested)
-	home_screen.stats_requested.connect(_on_stats_requested)
 	home_screen.rank_requested.connect(_on_rank_screen_requested)
 	home_screen.puzzle_requested.connect(_on_puzzle_requested)
 	home_screen.solo_requested.connect(_on_solo_requested)
@@ -238,14 +219,9 @@ func _ready() -> void:
 	home_screen.rules_requested.connect(_on_rules_requested)
 	home_screen.screen_guide_requested.connect(_on_screen_guide_requested)
 	home_screen.keyword_dict_requested.connect(func() -> void: _show_only(keyword_dict_screen))
-	home_screen.replay_list_requested.connect(_on_replay_list_requested)
 	home_screen.cpu_match_requested.connect(_on_cpu_match_deck_requested)
 	home_screen.ranked_match_deck_requested.connect(_on_ranked_match_deck_requested)
 	home_screen.room_match_requested.connect(_on_room_match_requested)
-	home_screen.lab_requested.connect(_on_lab_requested)
-	home_screen.spectate_list_requested.connect(_on_spectate_list_requested)
-	replay_list_screen.back_pressed.connect(func() -> void: _show_only(home_screen, true))
-	replay_list_screen.replay_selected.connect(_on_replay_selected)
 	NetSession.ensure_ready(self)
 	FunnelService.on_launch()
 	HourglassArt.ensure_ready(self)
@@ -280,11 +256,11 @@ func _input(event: InputEvent) -> void:
 
 
 ## 起動シーン(`Boot`)はタイトルを `Main` より先に出す。木へ入る前に呼び、`main.tscn` で
-## タイトルがあった位置(リプレイ一覧の直後)へ置く。遷移の重なり順を変えないため。
+## タイトルがあった位置(ホームの直後)へ置く。遷移の重なり順を変えないため。
 func adopt_title(title: TitleScreen) -> void:
 	title.name = TITLE_NODE
 	add_child(title)
-	move_child(title, get_node("ReplayListScreen").get_index() + 1)
+	move_child(title, get_node("HomeScreen").get_index() + 1)
 
 
 ## 最初の操作を受けた。BGMの再生を許し、以降は入力を見ない。
@@ -335,8 +311,6 @@ func _on_match_back() -> void:
 	# パズル・ソロモードから戻ったときは、クリアの印を付け直すために一覧を組み直す。
 	if _match_return_screen == puzzle_picker_screen:
 		puzzle_picker_screen.open()
-	elif _match_return_screen == card_spectate_list_screen:
-		card_spectate_list_screen.open()
 	elif _match_return_screen == solo_map_screen:
 		solo_map_screen.open()
 	_show_only(_match_return_screen, true)
@@ -360,46 +334,6 @@ func _on_account_requested(from_title: bool) -> void:
 func _on_account_back() -> void:
 	_show_only(title_screen if _account_return_to_title else home_screen, true)
 	home_screen.refresh_account()
-
-
-func _on_replay_list_requested() -> void:
-	replay_list_screen.refresh()
-	_show_only(replay_list_screen)
-
-
-## 棋譜を読み込んで再生画面へ。**v5.0の棋譜は `seed` を持つ**ことで見分けられる。
-## v1.0の棋譜(位相制・配置フェーズあり)は再生できないため、一覧の時点で除いてある。
-## CPU戦のローカルリプレイは"cpu_"始まりのidで区別する(LocalReplayService.mark_finished()参照)。
-func _on_replay_selected(match_id: String) -> void:
-	var record: Dictionary = (
-		LocalReplayService.get_replay(match_id)
-		if match_id.begins_with("cpu_")
-		else await NetSession.client.get_document("matches/%s" % match_id)
-	)
-	if not _match_screen().start_replay(record):
-		return
-	_match_return_screen = replay_list_screen
-	_show_only(_match_screen())
-
-
-func _on_spectate_requested(match_id: String) -> void:
-	_match_return_screen = home_screen
-	if await _match_screen().start_spectate(NetSession.client, match_id):
-		_show_only(_match_screen())
-
-
-func _on_spectate_list_requested() -> void:
-	_show_only(card_spectate_list_screen)
-	card_spectate_list_screen.open()
-
-
-## 観戦一覧から選んだランクマッチ。観戦を終えたら一覧へ戻り、読み直す。
-func _on_live_spectate_requested(match_id: String) -> void:
-	if await _match_screen().start_spectate(NetSession.client, match_id):
-		_match_return_screen = card_spectate_list_screen
-		_show_only(_match_screen())
-	else:
-		card_spectate_list_screen.open()
 
 
 ## CPU戦(v5.0)。先手/後手は常にプレイヤーが先手とし、相手のデッキは作戦を持った
@@ -429,7 +363,7 @@ func _request_battle(start: Callable) -> void:
 
 
 ## 「対戦する」= ランクマッチ(GameDesign.md 11章・28章)。デッキ選択画面を終えたら
-## たたかうタブへは戻らず専用画面へ入り、その画面がキューへの参加まで行う。
+## ホームへは戻らず専用画面へ入り、その画面がキューへの参加まで行う。
 func _on_ranked_match_deck_requested() -> void:
 	FunnelService.reach(FunnelService.ONLINE_TRY)
 	_request_battle(func() -> void: _begin_ranked_match())
@@ -444,12 +378,6 @@ func _begin_ranked_match() -> void:
 func _on_rank_screen_requested() -> void:
 	_show_only(card_rank_screen)
 	card_rank_screen.open()
-
-
-## ホーム画面「つくる」タブから、掲示板〈ラボ〉を開く(GameDesign.md 29章)。
-func _on_lab_requested() -> void:
-	_show_only(card_lab_screen)
-	card_lab_screen.open()
 
 
 ## ルームマッチは専用画面へ直行する。**共通のデッキ選択画面を先に挟まない**

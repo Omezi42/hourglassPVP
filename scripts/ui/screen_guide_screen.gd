@@ -151,7 +151,7 @@ func _build_body() -> void:
 	add_child(_title)
 
 	_body = Label.new()
-	# 折り返しは `size` より先に立てる(`RulesTab._add_caption()` と同じ理由)。
+	# 折り返しは `size` より先に立てる(折り返しが無効な間に広がった `size` は戻らないため)。
 	_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_body.position = BODY_RECT.position + Vector2(BODY_PADDING, BODY_PADDING * 0.6 + 32)
 	_body.size = Vector2(
