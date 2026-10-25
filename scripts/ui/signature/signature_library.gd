@@ -26,6 +26,7 @@ const ENTRANCES := {
 	"poison": preload("res://scripts/ui/signature/moves/poison_entrance.gd"),
 	"guard": preload("res://scripts/ui/signature/moves/guard_entrance.gd"),
 	"mirror": preload("res://scripts/ui/signature/moves/mirror_entrance.gd"),
+	"wall": preload("res://scripts/ui/signature/moves/wall_entrance.gd"),
 }
 
 ## 効果が対象へ届くまで(設置・落砂・砂術など、紋章が飛ぶ場面の代わり)。
@@ -105,6 +106,12 @@ const EFFECTS := {
 	"pike": preload("res://scripts/ui/signature/moves/pike_effect.gd"),
 	"drip": preload("res://scripts/ui/signature/moves/drip_effect.gd"),
 	"glow": preload("res://scripts/ui/signature/moves/glow_effect.gd"),
+	"bloom": preload("res://scripts/ui/signature/moves/bloom_effect.gd"),
+	"obelisk": preload("res://scripts/ui/signature/moves/obelisk_effect.gd"),
+	"sweep": preload("res://scripts/ui/signature/moves/sweep_effect.gd"),
+	"tower": preload("res://scripts/ui/signature/moves/tower_effect.gd"),
+	"anchor": preload("res://scripts/ui/signature/moves/anchor_effect.gd"),
+	"ward": preload("res://scripts/ui/signature/moves/ward_effect.gd"),
 }
 
 
