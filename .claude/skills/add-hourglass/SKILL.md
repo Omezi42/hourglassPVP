@@ -153,6 +153,11 @@ description: |
 5. 返ってきた message_id を `tools/discord/posted.json` の
    `announce_webhook_url` へ記録する(あとで文面を直して差し替えられるようにするため)
 
+**カードセットをまとめて足したときは、1枚ずつの2通ではなくセット全体を1通にまとめる**
+(`tools/discord/drafts/cards/pack-58-1.md` が見本)。Web版へ書き出すまでプレイヤーは触れないので、
+「追加したよ」ではなく「次のアップデートで追加される予定だよ」と予告の形で書く。
+追加からだいぶ経って未告知に気づいた場合は、告知するか尋ね、断られたら出さない。
+
 **GIFを作る前に、実演の文が正しいか1コマ抜いて確かめる**
 (`magick functions/data/effect_gifs/{id}.gif -coalesce out_%02d.png`)。実演の文は
 トリガー(設置 / 反転 / 余砂)から組み立てているため、新しい組み合わせで
