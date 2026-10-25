@@ -23,8 +23,9 @@ GameDesign.md / Architecture.md は索引(章 → ファイルの表)で、本�
 | バランスの測り方と生データ | `docs/BalanceReport_v5.md` |
 | 砂時計アセット生成プロンプトの雛形 | `docs/AssetPromptTemplate.md` |
 | 次のカードセットの検討メモ(**未確定・情報源ではない**) | `docs/NextCardSet.md` |
+| UI磨き込みの記録と人の判定(`ui-polish-loop` Skill が使う) | `docs/UiPolishLog.md` |
 
-docs直下に置くのはこの8ファイル(+ `design/` `arch/` の本文)だけ。使わなくなった草案・レポートは残さず削除する(git履歴で辿れる)。
+docs直下に置くのはこの9ファイル(+ `design/` `arch/` の本文)だけ。使わなくなった草案・レポートは残さず削除する(git履歴で辿れる)。
 
 **読む目安**
 - 仕様に触れる実装 → GameDesign.md の該当章 + Architecture.md の対応節
