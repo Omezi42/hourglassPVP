@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/emblems/hive.png" id="emblem"]
+
+[sub_resource type="Resource" id="Effect_hive_0"]
+script = ExtResource("script_effect")
+trigger = 4
+target = 0
+effect_type = 10
+value = 0
+card_id = "mote"
+keyword = -1
+
+[resource]
+script = ExtResource("script_card")
+id = "hive"
+display_name = "ハイヴ"
+cost = 3
+total_sand = 6
+pool_index = 109
+set_id = "chase_sand"
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_hive_0")])
+rules_text = "被弾:モートを1体出す"
+cannot_attack = false
+is_token = false
+art_id = "shell"
+emblem = ExtResource("emblem")

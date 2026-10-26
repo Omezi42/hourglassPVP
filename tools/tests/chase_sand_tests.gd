@@ -20,6 +20,7 @@ func run(assert_true: Callable) -> void:
 	_test_nibble_breaks_ties_leftmost()
 	_test_block_guards_and_draws_on_death()
 	_test_vault_grows_ally_when_damaged()
+	_test_hive_summons_mote_when_damaged()
 	_test_set_is_staged()
 
 
@@ -179,6 +180,14 @@ func _test_vault_grows_ally_when_damaged() -> void:
 	_assert.call(vault_unit.total_sand() == own_total - 1, "ヴォールトは自分の総量を増やさない")
 
 
+func _test_hive_summons_mote_when_damaged() -> void:
+	var state := _new_match()
+	_place(state, MatchState.Side.A, CardLibrary.find_by_id("hive"), 0)
+	state.damage_unit(MatchState.Side.A, 0, 1)
+	var summoned: CardInstance = state.board[MatchState.Side.A][1]
+	_assert.call(summoned != null and summoned.data.id == "mote", "ハイヴが被弾すると空き枠へモートが出る")
+
+
 func _test_set_is_staged() -> void:
 	_assert.call(CardSetLibrary.has_set(SET_ID), "chase_sand is registered")
 	_assert.call(CardSetLibrary.price(SET_ID) == 1000, "chase_sand costs 1000")
@@ -191,3 +200,4 @@ func _test_set_is_staged() -> void:
 	)
 	_assert.call(CardSetLibrary.card_ids(SET_ID)[4] == "block", "chase_sand's fifth card is block")
 	_assert.call(CardSetLibrary.card_ids(SET_ID)[5] == "vault", "chase_sand's sixth card is vault")
+	_assert.call(CardSetLibrary.card_ids(SET_ID)[6] == "hive", "chase_sand's seventh card is hive")
