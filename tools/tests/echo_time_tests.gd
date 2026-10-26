@@ -288,7 +288,7 @@ func _test_chorus_flips_only_aged_allies() -> void:
 	var foe := _place(state, MatchState.Side.B, _vanilla(6), 0)
 	foe.drop_sand(4)
 	_assert.call(_cast(state, CardLibrary.find_by_id("chorus"), {}), "大合唱を撃てる")
-	_assert.call(aged.health == 4 and aged.attack == 2, "大合唱は攻撃力が体力より多い味方を反転する")
+	_assert.call(aged.health == 5 and aged.attack == 2, "大合唱は攻撃力が体力より多い味方の総量+1して反転する")
 	_assert.call(state.board[MatchState.Side.A][1] == fresh and fresh.health == 6, "大合唱は若い味方を返さない")
 	_assert.call(foe.health == 2, "大合唱は相手の砂時計を返さない")
 
@@ -300,14 +300,14 @@ func _test_chorus_does_not_reflip_chained_unit() -> void:
 	var aged := _place(state, MatchState.Side.A, _vanilla(6), 1)
 	aged.drop_sand(4)
 	_cast(state, CardLibrary.find_by_id("chorus"), {})
-	_assert.call(reverb.health == 4 and aged.health == 4, "リバーブの連鎖で先に返った駒を、大合唱が返し直さない")
+	_assert.call(reverb.health == 5 and aged.health == 5, "リバーブの連鎖で先に返った駒を、大合唱が返し直さない")
 
 
 func _test_crescendo_without_flips_deals_base() -> void:
 	var state := _new_match()
 	var before := int(state.hp[MatchState.Side.B])
 	_assert.call(_cast(state, CardLibrary.find_by_id("crescendo"), {}), "クレッシェンドを撃てる")
-	_assert.call(int(state.hp[MatchState.Side.B]) == before - 1, "反転していなければ1ダメージ")
+	_assert.call(int(state.hp[MatchState.Side.B]) == before - 2, "反転していなければ2ダメージ")
 
 
 ## 通常の反転と反転権で返した自分の駒は数え、反転権で返した相手の駒は数えない。手番が変わると0に戻る。
@@ -323,13 +323,13 @@ func _test_crescendo_counts_own_flips_this_turn() -> void:
 	var crescendo := CardLibrary.find_by_id("crescendo")
 	_assert.call(
 		CardEffectResolver.live_rules_text(state, MatchState.Side.A, crescendo).begins_with(
-			"相手プレイヤーに3ダメージ"
+			"相手プレイヤーに4ダメージ"
 		),
 		"手札の札の数字は、このターンの自分の反転の回数で伸びる"
 	)
 	var before := int(state.hp[MatchState.Side.B])
 	_cast(state, crescendo, {})
-	_assert.call(int(state.hp[MatchState.Side.B]) == before - 3, "自分の反転2回で3ダメージ")
+	_assert.call(int(state.hp[MatchState.Side.B]) == before - 4, "自分の反転2回で4ダメージ")
 	state.end_turn()
 	_assert.call(int(state.flips_this_turn.get(MatchState.Side.A, 0)) == 0, "反転の回数は手番の始めに0へ戻る")
 
