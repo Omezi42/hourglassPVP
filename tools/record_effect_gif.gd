@@ -11,6 +11,8 @@ extends Control
 
 ## 実演の幅。高さは盤面の切り抜きの比率から決める。
 const PREVIEW_WIDTH := 480.0
+## 実演が枠へ最初の絵を映すまでに要るフレーム数(それより前は灰色の空のコマ)。
+const WARMUP_FRAMES := 3
 
 var _preview: CardEffectPreview
 
@@ -39,6 +41,9 @@ func _ready() -> void:
 	_preview.position = ((Vector2(1280.0, 720.0) - preview_size) * 0.5).floor()
 	_preview.cycle_finished.connect(get_tree().quit)
 	_preview.show_card(card)
+	# 実演の局面は次のフレームで組まれ、その次で初めて枠へ映る。それより前の空のコマを録らない。
+	for i in WARMUP_FRAMES:
+		await RenderingServer.frame_post_draw
 	if not info_path.is_empty():
 		var file := FileAccess.open(info_path, FileAccess.WRITE)
 		file.store_line(
