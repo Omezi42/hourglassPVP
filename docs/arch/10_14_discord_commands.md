@@ -5,7 +5,7 @@
 | `tools/export_card_data_json.gd` | ヘッドレスで `CardLibrary` を読み、`functions/data/cards.json` へ書き出す |
 | `DiscordCardArt`(`scripts/ui/discord_card_art.gd`) | `/card` 用の詳細画像の描画。図鑑の右のページ(`AlmanacPage`)を元にするが、個人の戦績・裏返し操作・キーワードのボタンは持たない静的な1枚絵 |
 | `tools/export_discord_card_art.gd` | `DiscordCardArt` を全カードぶん順に表示し、レンダリングされたフレームをキャプチャして `functions/data/card_art/{id}.png` へ書き出す |
-| `tools/record_effect_gif.gd` / `.tscn`(既存) | カード1枚ぶんの実演(`CardEffectPreview`)を、詳細パネルと同じ地の上で1周分だけPNG連番として書き出す。**新規に作らず、既にある紹介動画用の撮影ツールをそのまま使う** |
+| `tools/record_effect_gif.gd` / `.tscn` | 図鑑と同じ実演(`CardEffectPreview`。本物の対局画面の切り抜き)を画面中央に置き、`cycle_finished` までの1周をPNG連番として書き出す。**ゲーム内の実演をそのまま録り、GIF専用の描画を持たない** |
 | `tools/discord/build_effect_gif.sh` | 上記で録った連番を `magick` でGIFへエンコードし `functions/data/effect_gifs/{id}.gif` へ書き出す。引数にidを並べればそのカードだけ、無ければ全カード。**Discordの紹介投稿に添えるGIFも同じファイルを使い、出力先を1か所にする** |
 | `functions/discord_commands.js`(Node.js) | `/card` `/deck` `/link` `/profile` と `/link` のフォーム送信のハンドラ。`discordInteractions` から呼ばれる |
 | `functions/.env` | `AUTH_WEB_API_KEY`(`data/firebase_config.tres` の `api_key` と同じ値)。`/link` がID/パスワードを確かめるのに使う。クライアントに埋め込んでいる公開の値なのでコミットしてよい。`FIREBASE_` で始まる名前は予約されていてデプロイが止まる |
@@ -21,7 +21,7 @@
 - `functions/data/cards.json` は `tools/export_web.sh` がビルドのたびに更新する。**画像・実演GIFはビルドに組み込まない**——
   実際にレンダリングしたピクセルを読むため `--headless` では動かず、通常起動が要る(11章)。カードを追加・変更したとき
   (`add-hourglass` Skill の手順)に手動で実行し直す。画像・GIF・JSONはいずれもリポジトリへコミットする(秘匿情報ではない)
-- **実演GIFはカードごとに1本**(`effect_gifs/{id}.gif`)。`record_effect_gif.gd` がそのカードの能力すべてを通しで1周ぶん録る
+- **実演GIFはカードごとに1本**(`effect_gifs/{id}.gif`)。`record_effect_gif.gd` がそのカードの段すべてを通しで1周ぶん録る
 - **`/deck` の画像だけはFunctions側(Node.js、`@napi-rs/canvas`)で都度描く**(組み合わせが無数で事前生成できない。
   `node-canvas` はCairo依存でCloud Functionsのビルドが不安定なため採らない)。ゲーム内の `CardDeckSheet` と見た目を合わせない
 - **`/card` の画像・GIFはjsDelivr経由でリポジトリから直接読む**(`https://cdn.jsdelivr.net/gh/Omezi42/hourglassPVP@main/functions/data/...`)。

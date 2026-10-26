@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# カードの能力の実演(詳細パネルと同じもの)をGIFにする。
+# カードの能力の実演(図鑑と同じもの。本物の対局画面の切り抜き)をGIFにする。
 #   tools/discord/build_effect_gif.sh drill        # 1枚
 #   tools/discord/build_effect_gif.sh              # 全カード
 # 出力: functions/data/effect_gifs/<id>.gif(コミットし、jsDelivr経由で /card と
@@ -10,6 +10,8 @@ set -euo pipefail
 GODOT="${GODOT:-C:/Users/omezi/Documents/Godot_v4.6.2-stable_win64_console.exe}"
 FRAMES="scratchpad/fx"
 OUT_DIR="functions/data/effect_gifs"
+# 1周を録りきれずに固まったときの打ち切り(秒)。
+TIMEOUT=120
 
 if [ "$#" -gt 0 ]; then
   IDS="$*"
@@ -21,13 +23,16 @@ fi
 mkdir -p "$FRAMES" "$OUT_DIR"
 for CARD in $IDS; do
   OUT="$OUT_DIR/${CARD}.gif"
-  rm -f "$FRAMES"/*.png "$FRAMES"/*.wav
+  rm -f "$FRAMES"/*.png "$FRAMES"/*.wav "$FRAMES"/crop.txt
   # 固定デルタで書き出すため --write-movie と --fixed-fps は必須
-  "$GODOT" --path . --write-movie "$FRAMES/f.png" --fixed-fps 15 \
-    res://tools/record_effect_gif.tscn -- "$CARD" >/dev/null
-  # 書き出しは1280x720で行われるため、中央のパネルだけを切り抜く
-  magick -delay 7 -loop 0 "$FRAMES"/f0*.png -crop 600x340+340+190 +repage \
+  timeout "$TIMEOUT" "$GODOT" --path . --write-movie "$FRAMES/f.png" --fixed-fps 10 \
+    res://tools/record_effect_gif.tscn -- "$CARD" "$FRAMES/crop.txt" >/dev/null || true
+  # 撮影ツールが書いた切り抜く矩形と、録り始めのコマ番号(それより前は準備中の空のコマ)
+  CROP=$(sed -n 1p "$FRAMES/crop.txt" | tr -d '\r')
+  START=$(sed -n 2p "$FRAMES/crop.txt" | tr -d '\r')
+  FILES=$(ls "$FRAMES"/f*.png | awk -v s="$START" '{ n = $0; gsub(/.*f0*|\.png/, "", n); if (n + 0 >= s) print }')
+  magick -delay 10 -loop 0 $FILES -crop "$CROP" +repage \
     -colors 64 -layers OptimizeFrame -layers OptimizeTransparency "$OUT"
   printf '%s (%.0f KB)\n' "$OUT" "$(stat -c%s "$OUT" | awk '{print $1/1024}')"
 done
-rm -f "$FRAMES"/*.png "$FRAMES"/*.wav
+rm -f "$FRAMES"/*.png "$FRAMES"/*.wav "$FRAMES"/crop.txt

@@ -7,7 +7,7 @@ extends RefCounted
 ## 同じ手当てを他の画面へも広げる。**ただし画面ごとに壁を描き起こさない。**
 ## ここが板壁・棚・引き出し・窓・幕といった部品を持ち、各画面はそれを組み合わせるだけにする。
 ##
-## `UiPaint` と違い**第1引数に `CanvasItem` を取る**(`InkFigure` と同じ流儀)。
+## `UiPaint` と違い**第1引数に `CanvasItem` を取る**(`PlaymatPaint` と同じ流儀)。
 ## `draw_line()` などのインスタンス側の描画と、`UiPaint` の RID 側の描画の両方を使うため。
 
 const WALL_LIGHT := Color(0.20, 0.140, 0.098)

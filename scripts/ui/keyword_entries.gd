@@ -27,19 +27,6 @@ const TRIGGER_DESCRIPTIONS := {
 	CardEnums.Trigger.ON_DAMAGED: DAMAGED_TEXT,
 }
 
-## 実演の台本。持たない語は -1 とし、実演の枠自体を出さない。
-## 設置・余砂は「いつ発動するか」だけを表すため、単体で見せる動きが無い。
-const DEMOS := {
-	CardEnums.Keyword.GUARD: CardEffectPreview.Demo.GUARD,
-	CardEnums.Keyword.GLASS: CardEffectPreview.Demo.GLASS,
-	CardEnums.Keyword.PIERCE: CardEffectPreview.Demo.PIERCE,
-	CardEnums.Keyword.QUICK: CardEffectPreview.Demo.QUICK,
-	CardEnums.Keyword.STILL: CardEffectPreview.Demo.STILL,
-	CardEnums.Keyword.POISON: CardEffectPreview.Demo.POISON,
-	CardEnums.Keyword.LIFESTEAL: CardEffectPreview.Demo.LIFESTEAL,
-	CardEnums.Keyword.DOUBLE_STRIKE: CardEffectPreview.Demo.DOUBLE_STRIKE,
-}
-
 ## 語にする5種 → 語にしない3種 → トリガー5種の順に並べる。
 ## 語にするものを先に置くのは、カードの面へ出ているぶん引かれる回数が多いため。
 const ORDER: Array[Array] = [
@@ -98,13 +85,31 @@ static func category(entry: Dictionary) -> String:
 	return str(CATEGORY_NAMES.get(int(entry["kind"]), ""))
 
 
-## 実演の台本。持たない語は -1。
-static func demo(entry: Dictionary) -> int:
-	if int(entry["kind"]) == Kind.TRIGGER:
-		if int(entry["value"]) == CardEnums.Trigger.ON_FLIP:
-			return CardEffectPreview.Demo.FLIP
-		return -1
-	return int(DEMOS.get(int(entry["value"]), -1))
+## 実演に使う1枚と、見せる段({"card": CardData, "kind": int})。見せられなければ空。
+## **その語を持つ砂時計のうち、持っている能力がいちばん少ない1枚**を選ぶ
+## (ほかの能力が混ざらず、その語の働きだけが映るため)。同じ数ならコストの小さいほう。
+static func demo(entry: Dictionary) -> Dictionary:
+	var value: int = int(entry["value"])
+	var kind := (
+		CardEffectPlan.trigger_kind(value)
+		if int(entry["kind"]) == Kind.TRIGGER
+		else CardEffectPlan.keyword_kind(value)
+	)
+	if kind < 0:
+		return {}
+	var best: CardData = null
+	var best_size := 0
+	for card in cards_with(entry):
+		var kinds := CardEffectPlan.kinds(card)
+		if not kinds.has(kind):
+			continue
+		var plain := kinds.size() + card.effects.size()
+		if best == null or plain < best_size or (plain == best_size and card.cost < best.cost):
+			best = card
+			best_size = plain
+	if best == null:
+		return {}
+	return {"card": best, "kind": kind}
 
 
 ## その語を持つ砂時計。定義済みの全カードから毎回集めるため、

@@ -44,7 +44,8 @@ func play(move: SignatureMove, short := false) -> void:
 	_reached.clear()
 	_reached.resize(move.targets.size())
 	_reached.fill(false)
-	if move.sound() >= 0:
+	var screen := get_parent() as CardMatchScreen
+	if move.sound() >= 0 and (screen == null or not screen.silent):
 		SoundBank.play(move.sound())
 	_tween = create_tween()
 	_tween.tween_method(_set_t, 0.0, move.duration(), move.duration() * rate(short))

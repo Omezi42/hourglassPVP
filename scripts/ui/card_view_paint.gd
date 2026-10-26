@@ -4,8 +4,8 @@ extends RefCounted
 ## (Architecture.md 10.10.1節)。`card_view.gd` が1000行の上限に達したため切り出した
 ## (Architecture.md 11章)。
 ##
-## `UiPaint` と違って第1引数に `CardView`(= `CanvasItem`)を取る(`InkFigure` /
-## `EmblemSeal` と同じ流儀)。紋章はテクスチャのため `draw_texture_rect()` を使う場面が
+## `UiPaint` と違って第1引数に `CardView`(= `CanvasItem`)を取る(`EmblemSeal`
+## と同じ流儀)。紋章はテクスチャのため `draw_texture_rect()` を使う場面が
 ## 多く、`RenderingServer` 経由のRIDだけでは足りないため。**状態(`unit` / `card` /
 ## `selected` / `unselect_amount` / `counter_offset` / `spark_amount` 等)は
 ## `CardView` に残し、ここは描画だけを持つ。**

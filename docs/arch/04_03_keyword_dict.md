@@ -2,7 +2,7 @@
 
 | クラス | 責務 |
 |---|---|
-| `KeywordEntries`(`scripts/ui/keyword_entries.gd`, static) | 辞書の中身。語 → 表示名・説明・実演の `CardEffectPreview.Demo`・分類(常在 / トリガー)の対応表と並び順を1箇所へ持つ |
+| `KeywordEntries`(`scripts/ui/keyword_entries.gd`, static) | 辞書の中身。語 → 表示名・説明・実演に使う1枚の選び方・分類(常在 / トリガー)の対応表と並び順を1箇所へ持つ |
 | `KeywordDictScreen`(`scripts/ui/keyword_dict_screen.gd`, Control) | 左=語の一覧 / 右=選んだ語の詳細。共通の `ScreenHeader` を使う |
 | `KeywordEntryView`(`scripts/ui/keyword_entry_view.gd`, VBoxContainer) | 1語ぶんの表示(語 / 説明 / 実演 / その語を持つ砂時計)。**辞書画面の右カラムとポップの中身はどちらもこれ**で、同じ語を2箇所で別々に組み立てて片方だけ古くなる状態を防ぐ |
 | `KeywordPopup`(`scripts/ui/keyword_popup.gd`, Control) | 詳細パネルから出す1語ぶんのモーダル。暗幕 + コンテンツパネルの既存パターン |
@@ -35,6 +35,5 @@
 そのために**効果の欄をスクロールで包まない**——包むと高さが中身から決まらなくなる。
 幅は `compact_width` で渡す(既定は `COMPACT_SIZE.x`、対局画面は340px)。
 
-**実演(`CardEffectPreview`)は語を直接指定して再生できるようにする**(`show_demo()`)。
-既存の `show_card()` は `CardData` から台本の並びを組む入口であり、辞書は語がすでに
-決まっているためその手前へ入る。
+**実演は `KeywordEntries.demo()` が選んだ1枚を、その語の段だけに絞って再生する**
+(`CardEffectPreview.show_card(card, kind)`。段は `CardEffectPlan.keyword_kind()` / `trigger_kind()`)。

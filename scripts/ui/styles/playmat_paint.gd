@@ -5,7 +5,7 @@ extends RefCounted
 ## **対局の卓とショップの見本で同じ関数を通す。**別々に描くと、買う前に見た絵と
 ## 実際に敷かれる絵が食い違う(そうなったら見本の意味が無い)。
 ##
-## `UiPaint` と違い**第1引数に `CanvasItem` を取る**(`RoomPaint` / `InkFigure` と同じ流儀)。
+## `UiPaint` と違い**第1引数に `CanvasItem` を取る**(`RoomPaint` と同じ流儀)。
 
 ## 縁飾りを内側へ入れる量。
 const INSET := 9.0

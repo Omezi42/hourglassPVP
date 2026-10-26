@@ -27,8 +27,7 @@ const ICON_SIZE := Vector2(84, 84)
 const EMBLEM_SIZE := Vector2(44, 44)
 ## 語のボタンが下端で切れないよう、縦の詰めた実演にしてある。
 ## 大きく見たいときは語を押してキーワード辞書のポップで見られる(GameDesign.md 17章)。
-## 実演の枠。**上下に駒を対面させるため、駒の高さ2つぶんと余白が要る**
-## (`CardEffectPreview.PIECE_SIZE` と対で決めてある)。
+## 実演の枠。盤面と両者の情報帯を切り抜いて映すため、横長の比率に合わせてある。
 const PREVIEW_HEIGHT := 176.0
 ## 縦積みのとき、効果文の幅を出すためにパネルの幅から引く左右の余白。
 const COMPACT_PADDING := 56.0

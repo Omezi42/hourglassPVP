@@ -6,7 +6,7 @@ extends RefCounted
 ## にもかかわらず、カードを並べる画面(図鑑の一覧・工房の在庫棚・編成中の棚)には
 ## 紋章が出ていなかった。3画面で別々に描くと必ず片方だけ古くなるので、ここへ集める。
 ##
-## `UiPaint` と違って第1引数に `CanvasItem` を取る(`InkFigure` と同じ流儀)。
+## `UiPaint` と違って第1引数に `CanvasItem` を取る(`RoomPaint` と同じ流儀)。
 ## 紋章はテクスチャであり、`RenderingServer` 経由ではなく `draw_texture_rect()` で描く。
 
 const RIM := Color(0.62, 0.50, 0.30)

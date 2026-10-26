@@ -13,6 +13,8 @@ const CPU_THINK_SECONDS := 0.5
 var state: MatchState
 ## 自分の側。CPU戦・オンラインでは固定する。
 var my_side: int = MatchState.Side.A
+## 音を出さない対局(能力の実演。GameDesign.md 9章)。BGMを切り替えず、効果音も鳴らさない。
+var silent := false
 ## いま選んでいるものと相手の情報帯。切り出した進行役(`CardMatchTargets` 等)から読む。
 var selection: CardMatchSelection:
 	get:
@@ -361,13 +363,15 @@ func _begin_state(
 		DailyMissionService.watch(state, my_side)
 	_feed.watch(self, _log)
 	# 効果音と演出は配り終えてから張る(初期手札のドローまで鳴らさないため)。
-	_sound.watch(state)
+	if not silent:
+		_sound.watch(state)
 	_effects.watch(state)
 	_history.watch(state)
 	# 設置効果・砂術・余砂の「紋章が飛ぶ一撃」(GameDesign.md 9章)。
 	_effect_strike.watch(state)
 	# 決着で止めた対局のBGMを、「もう一度」で戻す(GameDesign.md 9章)。
-	MusicPlayer.play(MusicPlayer.Track.MATCH)
+	if not silent:
+		MusicPlayer.play(MusicPlayer.Track.MATCH)
 	refresh()
 
 

@@ -53,11 +53,11 @@ func show_entry(entry: Dictionary) -> void:
 	_body.text = KeywordEntries.description(entry)
 
 	var demo := KeywordEntries.demo(entry)
-	_preview.visible = demo >= 0
-	if demo >= 0:
-		_preview.show_demo(demo)
-	else:
+	_preview.visible = not demo.is_empty()
+	if demo.is_empty():
 		_preview.clear()
+	else:
+		_preview.show_card(demo["card"], int(demo["kind"]))
 
 	var cards := KeywordEntries.cards_with(entry)
 	_cards_caption.text = (EMPTY_TEXT if cards.is_empty() else "この能力を持つ砂時計(%d種)" % cards.size())
