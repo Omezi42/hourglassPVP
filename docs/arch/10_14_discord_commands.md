@@ -5,8 +5,8 @@
 | `tools/export_card_data_json.gd` | ヘッドレスで `CardLibrary` を読み、`functions/data/cards.json` へ書き出す |
 | `DiscordCardArt`(`scripts/ui/discord_card_art.gd`) | `/card` 用の詳細画像の描画。図鑑の右のページ(`AlmanacPage`)を元にするが、個人の戦績・裏返し操作・キーワードのボタンは持たない静的な1枚絵 |
 | `tools/export_discord_card_art.gd` | `DiscordCardArt` を全カードぶん順に表示し、レンダリングされたフレームをキャプチャして `functions/data/card_art/{id}.png` へ書き出す |
-| `tools/record_effect_gif.gd` / `.tscn` | 図鑑と同じ実演(`CardEffectPreview`。本物の対局画面の切り抜き)を画面中央に置き、`cycle_finished` までの1周をPNG連番として書き出す。**ゲーム内の実演をそのまま録り、GIF専用の描画を持たない** |
-| `tools/discord/build_effect_gif.sh` | 上記で録った連番を `magick` でGIFへエンコードし `functions/data/effect_gifs/{id}.gif` へ書き出す。引数にidを並べればそのカードだけ、無ければ全カード。**Discordの紹介投稿に添えるGIFも同じファイルを使い、出力先を1か所にする** |
+| `tools/record_effect_video.gd` / `.tscn` | 図鑑と同じ実演(`CardEffectPreview`。本物の対局画面の切り抜き)を幅960pxで画面中央に置き、`cycle_finished` までの1周をPNG連番として書き出す。切り抜く矩形と録り始めのコマ番号(枠へ最初の絵が映った後)をファイルへ書く。**ゲーム内の実演をそのまま録り、動画専用の描画を持たない** |
+| `tools/discord/build_effect_video.sh` | 上記で録った連番を `ffmpeg`(H.264・30fps・CRF 23)でMP4へエンコードし `functions/data/effect_videos/{id}.mp4` へ書き出す(1本およそ100〜200KB)。引数にidを並べればそのカードだけ、無ければ全カード。**Discordの紹介投稿に添える動画も同じファイルを使い、出力先を1か所にする** |
 | `functions/discord_commands.js`(Node.js) | `/card` `/deck` `/link` `/profile` と `/link` のフォーム送信のハンドラ。`discordInteractions` から呼ばれる |
 | `functions/.env` | `AUTH_WEB_API_KEY`(`data/firebase_config.tres` の `api_key` と同じ値)。`/link` がID/パスワードを確かめるのに使う。クライアントに埋め込んでいる公開の値なのでコミットしてよい。`FIREBASE_` で始まる名前は予約されていてデプロイが止まる |
 | `functions/deck_sheet_canvas.js`(Node.js) | `/deck` 用の簡易デッキ表画像を `@napi-rs/canvas` で描画する。ゲーム内の `CardDeckSheet` とは別実装であり、見た目の一致は求めない |
@@ -18,16 +18,18 @@
 
 **運用**
 
-- `functions/data/cards.json` は `tools/export_web.sh` がビルドのたびに更新する。**画像・実演GIFはビルドに組み込まない**——
+- `functions/data/cards.json` は `tools/export_web.sh` がビルドのたびに更新する。**画像・実演動画はビルドに組み込まない**——
   実際にレンダリングしたピクセルを読むため `--headless` では動かず、通常起動が要る(11章)。カードを追加・変更したとき
-  (`add-hourglass` Skill の手順)に手動で実行し直す。画像・GIF・JSONはいずれもリポジトリへコミットする(秘匿情報ではない)
-- **実演GIFはカードごとに1本**(`effect_gifs/{id}.gif`)。`record_effect_gif.gd` がそのカードの段すべてを通しで1周ぶん録る
+  (`add-hourglass` Skill の手順)に手動で実行し直す。画像・動画・JSONはいずれもリポジトリへコミットする(秘匿情報ではない)
+- **実演動画はカードごとに1本**(`effect_videos/{id}.mp4`)。`record_effect_video.gd` がそのカードの段すべてを通しで1周ぶん録る
 - **`/deck` の画像だけはFunctions側(Node.js、`@napi-rs/canvas`)で都度描く**(組み合わせが無数で事前生成できない。
   `node-canvas` はCairo依存でCloud Functionsのビルドが不安定なため採らない)。ゲーム内の `CardDeckSheet` と見た目を合わせない
-- **`/card` の画像・GIFはjsDelivr経由でリポジトリから直接読む**(`https://cdn.jsdelivr.net/gh/Omezi42/hourglassPVP@main/functions/data/...`)。
-  Embedへ埋めるだけでBotはアップロードしない。pushから数分〜数時間は古い版が返ることがある。`/deck` は生成したバイト列を
+- **`/card` の画像・動画はjsDelivr経由でリポジトリから直接読む**(`https://cdn.jsdelivr.net/gh/Omezi42/hourglassPVP@main/functions/data/...`)。
+  詳細画像はEmbedへ埋めるだけ。**実演動画はEmbedの画像欄で再生できないため、Functionsが読んで添付する**
+  (`/card` は1枚に絞れたら defer を返し、動画を読んでから `@original` を書き換える。読めなければ動画なしで返す。
+  正午のスポットライトもwebhookへ同じ本文を `multipart/form-data` で送る)。pushから数分〜数時間は古い版が返ることがある。`/deck` は生成したバイト列を
   `multipart/form-data` の `files[0]` として添付する
-- **`functions/data/card_art` と `effect_gifs` は `firebase.json` の `functions.ignore` でデプロイから外す**(関数は読まず
+- **`functions/data/card_art` と `effect_videos` は `firebase.json` の `functions.ignore` でデプロイから外す**(関数は読まず
   jsDelivrが配るため。同梱すると約70MBが関数ごとのソース保管・ビルドイメージへ載り課金の元になる)。全関数は
   `setGlobalOptions({maxInstances: 2})` で同時インスタンス数を絞る(公開URLへの大量リクエスト対策)
 - **`/deck` は3秒の応答期限を超えうるため deferred response**(type 5・`flags: 64`)を即座に返し、生成後に

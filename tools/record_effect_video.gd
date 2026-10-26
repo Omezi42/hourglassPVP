@@ -1,16 +1,16 @@
 extends Control
-## カードの能力の実演(CardEffectPreview)をGIFの素材フレームとして書き出す。
+## カードの能力の実演(CardEffectPreview)を動画の素材フレームとして書き出す。
 ## 図鑑で動いているもの(本物の対局画面の切り抜き)をそのまま録るため、ゲーム内と実演が食い違わない。
 ##
 ## 実行(固定デルタで書き出すため --write-movie と --fixed-fps を必ず付ける):
-##   godot --path . --write-movie scratchpad/fx/f.png --fixed-fps 10
-##     res://tools/record_effect_gif.tscn -- poison scratchpad/fx/crop.txt
+##   godot --path . --write-movie scratchpad/fx/f.png --fixed-fps 30
+##     res://tools/record_effect_video.tscn -- poison scratchpad/fx/crop.txt
 ##
-## 2つ目の引数のファイルへ「切り抜く矩形(magick の WxH+X+Y)」と「録り始めのコマ番号」を
-## 1行ずつ書く。GIFへの変換は tools/discord/build_effect_gif.sh が行う。
+## 2つ目の引数のファイルへ「切り抜く矩形(WxH+X+Y)」と「録り始めのコマ番号」を
+## 1行ずつ書く。MP4への変換は tools/discord/build_effect_video.sh が行う。
 
-## 実演の幅。高さは盤面の切り抜きの比率から決める。
-const PREVIEW_WIDTH := 480.0
+## 実演の幅。高さは盤面の切り抜きの比率から決める。盤面の数字が読める大きさにしてある。
+const PREVIEW_WIDTH := 960.0
 ## 実演が枠へ最初の絵を映すまでに要るフレーム数(それより前は灰色の空のコマ)。
 const WARMUP_FRAMES := 3
 

@@ -79,7 +79,7 @@ def split_message(body: str) -> list[str]:
 
 
 def _multipart(payload: dict, files: list[Path]) -> tuple[bytes, str]:
-    """画像やGIFを添えるときの本文(multipart/form-data)を組み立てる。"""
+    """画像や動画を添えるときの本文(multipart/form-data)を組み立てる。"""
     crlf = "\r\n"
     boundary = "----hourglass" + os.urandom(8).hex()
     parts: list[bytes] = []
@@ -144,7 +144,7 @@ def main() -> None:
     sys.stdin.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description="Discordへ1件投稿する")
     parser.add_argument("body", nargs="?", help="本文のファイル。'-' で標準入力から読む")
-    parser.add_argument("--attach", action="append", default=[], help="添える画像/GIF(複数可)")
+    parser.add_argument("--attach", action="append", default=[], help="添える画像・動画(複数可)")
     parser.add_argument("--delete", metavar="MESSAGE_ID", help="投稿済みメッセージを消す")
     parser.add_argument("--edit", metavar="MESSAGE_ID", help="投稿済みメッセージを差し替える(--attach を付ければ添付も替える)")
     parser.add_argument("--dry-run", action="store_true", help="投稿せず内容だけ表示する")

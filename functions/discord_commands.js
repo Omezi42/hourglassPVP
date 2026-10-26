@@ -10,7 +10,7 @@ const {InteractionResponseType} = require("discord-interactions");
 const cardsData = require("./data/cards.json");
 const {renderDeckSheet} = require("./deck_sheet_canvas");
 
-// カード画像・実演GIFはビルドのたびにリポジトリへコミットしている(10.14節)ため、
+// カード画像・実演動画はビルドのたびにリポジトリへコミットしている(10.14節)ため、
 // 常駐サーバーを持たずに配信するには、BGMと同じくjsDelivr経由でリポジトリから
 // 直接読ませる(Architecture.md 4.1.6節と同じ考え方)。@main を指すため、
 // 新しいカードを足してpushすれば数分〜数時間でここにも反映される
@@ -70,36 +70,84 @@ function buildCardEmbeds(card) {
       color: card.is_spell ? 0x4a5a90 : 0xb08a3e,
       image: {url: `${CDN_BASE}/functions/data/card_art/${card.id}.png`},
     },
-    {
-      title: "実演",
-      image: {url: `${CDN_BASE}/functions/data/effect_gifs/${card.id}.gif`},
-      color: card.is_spell ? 0x4a5a90 : 0xb08a3e,
-    },
   ];
 }
 
-function handleCardCommand(interaction) {
-  const query = optionValue(interaction, "name");
-  // 表示名が完全一致するカードは、部分一致の絞り込みより先に見る。「サンド」で調べたのに
-  // 「サンドショット」との複数候補にされ、正確に打ち込んだのに詳細を見られない、
-  // という実際に踏んだ不具合の修正(GameDesign.md 26章)。
+/**
+ * 能力の実演(MP4)を添付として読む。埋め込みの画像欄は動画を再生できないため、
+ * メッセージの添付として送り、Discordのプレイヤーで再生させる。読めなければ null
+ * (実演が無くてもカードの詳細は返す)。
+ */
+async function fetchEffectVideo(card) {
+  try {
+    const response = await fetch(`${CDN_BASE}/functions/data/effect_videos/${card.id}.mp4`);
+    if (!response.ok) return null;
+    return {
+      buffer: Buffer.from(await response.arrayBuffer()),
+      filename: `${card.id}.mp4`,
+      type: "video/mp4",
+    };
+  } catch (error) {
+    return null;
+  }
+}
+
+/** payload_json と添付ファイルを multipart の本文にまとめる。 */
+function messageForm(payload, files) {
+  const form = new FormData();
+  form.append("payload_json", JSON.stringify(payload));
+  files.forEach((file, index) => {
+    form.append(`files[${index}]`, new Blob([file.buffer], {type: file.type}), file.filename);
+  });
+  return form;
+}
+
+/** カードの詳細と実演の動画を1通にした本文。 */
+async function cardMessageForm(card, embeds) {
+  const video = await fetchEffectVideo(card);
+  return messageForm({embeds}, video ? [video] : []);
+}
+
+/**
+ * 表示名からカードを1枚に絞る。絞れなければ返す文を message に入れる。
+ * 表示名が完全一致するカードは、部分一致の絞り込みより先に見る。「サンド」で調べたのに
+ * 「サンドショット」との複数候補にされ、正確に打ち込んだのに詳細を見られない、
+ * という実際に踏んだ不具合の修正(GameDesign.md 26章)。
+ */
+function findCard(query) {
   const needle = query.trim().toLowerCase();
   const exact = cardsData.cards.find((c) => c.display_name.toLowerCase() === needle);
-  if (exact) {
-    return ephemeralMessage(null, buildCardEmbeds(exact));
-  }
+  if (exact) return {card: exact};
   const matches = searchCards(query);
   if (matches.length === 0) {
-    return ephemeralMessage(`「${query}」に一致するカードが見つかりませんでした。`);
+    return {message: `「${query}」に一致するカードが見つかりませんでした。`};
   }
   if (matches.length > 1) {
     const names = matches
       .slice(0, 10)
       .map((c) => c.display_name)
       .join(" / ");
-    return ephemeralMessage(`候補が複数あります。もう少し詳しく入力してください。\n${names}`);
+    return {message: `候補が複数あります。もう少し詳しく入力してください。\n${names}`};
   }
-  return ephemeralMessage(null, buildCardEmbeds(matches[0]));
+  return {card: matches[0]};
+}
+
+/**
+ * 1枚に絞れたら3秒以内にACK(defer)を返し、実演の動画を読み終えてから
+ * `sendCardFollowup` で追送する。絞れなければその場で文を返す。
+ */
+function handleCardCommand(interaction) {
+  const {card, message} = findCard(optionValue(interaction, "name"));
+  if (!card) return ephemeralMessage(message);
+  return deferEphemeralResponse();
+}
+
+async function sendCardFollowup(interaction) {
+  const {card} = findCard(optionValue(interaction, "name"));
+  if (!card) return;
+  const {application_id: applicationId, token} = interaction;
+  const url = `${DISCORD_API}/webhooks/${applicationId}/${token}/messages/@original`;
+  await fetch(url, {method: "PATCH", body: await cardMessageForm(card, buildCardEmbeds(card))});
 }
 
 // --- /link -------------------------------------------------------------------
@@ -252,7 +300,7 @@ async function handleProfileCommand(interaction, db) {
 // --- /deck ---------------------------------------------------------------------
 
 /** ephemeralのdeferred応答。実際の画像は後から webhook 経由で追送する(3秒制限を避ける)。 */
-function deferDeckResponse() {
+function deferEphemeralResponse() {
   return {
     type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
     data: {flags: EPHEMERAL},
@@ -302,22 +350,21 @@ async function editOriginalResponse(applicationId, token, payload) {
 
 async function editOriginalResponseWithImage(applicationId, token, buffer, filename) {
   const url = `${DISCORD_API}/webhooks/${applicationId}/${token}/messages/@original`;
-  const form = new FormData();
-  form.append(
-    "payload_json",
-    JSON.stringify({embeds: [{image: {url: `attachment://${filename}`}}]})
-  );
-  form.append("files[0]", new Blob([buffer], {type: "image/png"}), filename);
+  const form = messageForm({embeds: [{image: {url: `attachment://${filename}`}}]}, [
+    {buffer, filename, type: "image/png"},
+  ]);
   await fetch(url, {method: "PATCH", body: form});
 }
 
 module.exports = {
   handleCardCommand,
+  sendCardFollowup,
+  cardMessageForm,
   handleLinkCommand,
   handleLinkModalSubmit,
   LINK_MODAL_ID,
   handleProfileCommand,
-  deferDeckResponse,
+  deferEphemeralResponse,
   sendDeckFollowup,
   searchCards,
   parseDeckText,

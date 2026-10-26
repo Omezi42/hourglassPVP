@@ -133,12 +133,12 @@ description: |
    ```
    python tools/discord/build_card_image.py --id {id} --label 砂時計紹介
    ```
-2. 能力の実演GIFと `/card` 用の詳細画像を焼き、**コミットする**
+2. 能力の実演動画と `/card` 用の詳細画像を焼き、**コミットする**
    ```
-   bash tools/discord/build_effect_gif.sh {id}
+   bash tools/discord/build_effect_video.sh {id}
    "C:\Users\omezi\Documents\Godot_v4.6.2-stable_win64_console.exe" --path . --script tools/export_discord_card_art.gd
    ```
-   出力先の `functions/data/effect_gifs/` `card_art/` は `/card` と正午のカードスポットライトが
+   出力先の `functions/data/effect_videos/` `card_art/` は `/card` と正午のカードスポットライトが
    jsDelivr経由で読む場所。コミットし忘れるとそのカードの実演・画像がDiscordで出ない
 3. 下書きを `tools/discord/drafts/cards/{id}-1.md` `-2.md` へ書く。
    **文面はすなえるの口調**(一人称「ぼく」・語尾「〜だよ」)で、1通目は
@@ -148,7 +148,7 @@ description: |
 4. `--dry-run` で確認してから投稿する
    ```
    python tools/discord/discord_post.py tools/discord/drafts/cards/{id}-1.md --attach tools/discord/out/card_reveal.png
-   python tools/discord/discord_post.py tools/discord/drafts/cards/{id}-2.md --attach functions/data/effect_gifs/{id}.gif
+   python tools/discord/discord_post.py tools/discord/drafts/cards/{id}-2.md --attach functions/data/effect_videos/{id}.mp4
    ```
 5. 返ってきた message_id を `tools/discord/posted.json` の
    `announce_webhook_url` へ記録する(あとで文面を直して差し替えられるようにするため)
@@ -158,8 +158,8 @@ description: |
 「追加したよ」ではなく「次のアップデートで追加される予定だよ」と予告の形で書く。
 追加からだいぶ経って未告知に気づいた場合は、告知するか尋ね、断られたら出さない。
 
-**GIFを作ったら、能力が盤面に映っているか数コマ抜いて人に見せる**
-(`magick functions/data/effect_gifs/{id}.gif -coalesce out_%02d.png`)。実演の台本は
+**動画を作ったら、能力が盤面に映っているか人に見せる**
+(`functions/data/effect_videos/{id}.mp4` を `SendUserFile` で渡す)。実演の台本は
 キーワードとトリガーから自動で組む(`CardEffectPlan`)ため、新しい組み合わせで効果が
 出ない局面になっていないかはここで気づく。良し悪しの判定は人が行う。
 

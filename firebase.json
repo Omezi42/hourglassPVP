@@ -15,7 +15,8 @@
       "firebase-debug.*.log",
       "*.local",
       "card_art",
-      "effect_gifs"
+      "effect_gifs",
+      "effect_videos"
     ]
   }
 }

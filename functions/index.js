@@ -24,11 +24,13 @@ setGlobalOptions({maxInstances: 2});
 const cardsData = require("./data/cards.json");
 const {
   handleCardCommand,
+  sendCardFollowup,
+  cardMessageForm,
   handleLinkCommand,
   handleLinkModalSubmit,
   LINK_MODAL_ID,
   handleProfileCommand,
-  deferDeckResponse,
+  deferEphemeralResponse,
   sendDeckFollowup,
   buildCardEmbeds,
 } = require("./discord_commands");
@@ -113,8 +115,7 @@ exports.announceCardSpotlight = onSchedule(
     embeds[0].title = `【今日のカード】${embeds[0].title}`;
     const response = await fetch(webhookUrl, {
       method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({embeds}),
+      body: await cardMessageForm(card, embeds),
     });
     if (!response.ok) {
       logger.error(`discord webhook post failed with status ${response.status}`);
@@ -163,9 +164,15 @@ exports.discordInteractions = onRequest(
       const name = body.data && body.data.name;
       const db = admin.firestore();
       switch (name) {
-        case "card":
-          res.json(handleCardCommand(body));
+        case "card": {
+          // 実演の動画を添付するため、1枚に絞れたら defer を返してから追送する(/deck と同じ)。
+          const response = handleCardCommand(body);
+          res.json(response);
+          if (response.type === InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE) {
+            await sendCardFollowup(body);
+          }
           return;
+        }
         case "link":
           res.json(handleLinkCommand());
           return;
@@ -176,7 +183,7 @@ exports.discordInteractions = onRequest(
           // 3秒以内にACK(defer)を返し、画像の生成が終わってから追送する
           // (Architecture.md 10.14節)。res.json() の後も await で処理を続けることで、
           // Cloud Functionsのインスタンスがフォローアップの送信前に終了しないようにする。
-          res.json(deferDeckResponse());
+          res.json(deferEphemeralResponse());
           await sendDeckFollowup(body, db);
           return;
         default:
