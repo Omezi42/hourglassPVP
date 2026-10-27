@@ -91,6 +91,8 @@ var _hover_tween: Tween
 ## 副題が外部要因で変わった瞬間に立て、減衰させながら短く光らせる。
 var _subtitle_flash := 0.0
 var _flash_tween: Tween
+## 押下中に中身(自前の文字・絵と子の札の中身)を面と一緒に沈めている量。
+var _sink := 0.0
 
 
 ## 縦横に合わせて文字の大きさを切り替える。横は作ったときの値へ戻す。
@@ -172,7 +174,33 @@ func _on_hover_changed(hovering: bool) -> void:
 	if _hover_tween != null and _hover_tween.is_valid():
 		_hover_tween.kill()
 	_hover_tween = create_tween()
-	_hover_tween.tween_method(_set_hover, _hover, 1.0 if hovering else 0.0, HOVER_DURATION)
+	var target := 1.0 if hovering and not disabled else 0.0
+	_hover_tween.tween_method(_set_hover, _hover, target, HOVER_DURATION)
+
+
+## 押せない間はホバー表現もカーソル変更もしない(GameDesign.md 9章)。`disabled` の切り替えは
+## 再描画を起こすため、描く直前に合わせる。
+func _sync_disabled() -> void:
+	mouse_default_cursor_shape = (
+		Control.CURSOR_ARROW if disabled else Control.CURSOR_POINTING_HAND
+	)
+	if disabled and _hover > 0.0:
+		if _hover_tween != null and _hover_tween.is_valid():
+			_hover_tween.kill()
+		_hover = 0.0
+
+
+## 押下中は面(`CodedButtonStyle`)が沈むので、中身も同じだけ沈める。子の札の中身も一緒に動かす。
+func _sync_sink() -> void:
+	var mode := get_draw_mode()
+	var pressed_now := mode == DRAW_PRESSED or mode == DRAW_HOVER_PRESSED
+	var target := CodedButtonStyle.PANEL_PRESSED_SINK if pressed_now and not disabled else 0.0
+	if is_equal_approx(target, _sink):
+		return
+	for child in get_children():
+		if child is Control:
+			(child as Control).position.y += target - _sink
+	_sink = target
 
 
 func _set_hover(value: float) -> void:
@@ -298,8 +326,11 @@ func _fits(text_line: String) -> bool:
 
 
 func _draw() -> void:
+	_sync_disabled()
+	_sync_sink()
 	if _font == null:
 		return
+	draw_set_transform(Vector2(0.0, _sink))
 	var dim := disabled
 	if prop >= 0:
 		HomeProps.draw(prop, self, _prop_rect())
