@@ -39,7 +39,7 @@ const COUNT_FONT := 16
 ## 一覧の札は2列・1.6倍、解説のページは細く組んで1.4倍にする。
 const PORTRAIT_SCREEN := Vector2(720, 1280)
 const PORTRAIT_BACK_RECT := Rect2(24, 22, 140, 64)
-const PORTRAIT_ORDER_RECT := Rect2(PORTRAIT_SCREEN.x - 24 - 250, 22, 250, 64)
+const PORTRAIT_ORDER_RECT := Rect2(PORTRAIT_SCREEN.x - 24 - 300, 22, 300, 64)
 const PORTRAIT_TAB_RECT := Rect2(24, 104, 672, 72)
 const PORTRAIT_TAB_GAP := 12.0
 const PORTRAIT_BUTTON_FONT := 26

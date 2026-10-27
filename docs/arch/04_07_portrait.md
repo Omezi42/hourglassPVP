@@ -72,7 +72,7 @@
 
 - `CardListScreen.apply_orientation()`: `AlmanacBook.portrait` で1ページの本(`PORTRAIT_BOOK` / `PORTRAIT_PAGE`)を描き、`_select_tab()` で一覧と解説の片方だけを出す。
   `AlmanacEntry.zoom`(縦=1.6)は `WorkshopStockItem` と同じく `CELL_SIZE` の座標のまま拡大して描く。
-  `AlmanacPage.set_page(size, scale)` はページを細く組み直して `scale` を掛ける(めくりの `scale:x` はこの倍率へ戻す。データ欄の間隔と効果の文の行数は紙の大きさから決める)
+  `AlmanacPage.set_page(size, scale)` はページを細く組み直して `scale` を掛ける(めくりの `scale:x` はこの倍率へ戻す。データ欄の間隔は紙の幅から決め、文は幅で折り返して実演をその下へ続けて置く)
 - `KeywordPopup` は開くたびと向きの変化で `_fit()` し、`PortraitModal` の幅で組んで拡大する。`KeywordEntryView.set_layout()` が実演の幅と文字の大きさを持ち替える
 - `KeywordDictScreen` は縦で語のボタンを `VBox` から `GridContainer`(2列)へ移す。`RuleScreen` / `ScreenGuideScreen` は縦横の矩形を `apply_orientation()` で置き直し、盤面は `RuleStage._fit()` が枠に合わせる
 - 一覧の画面(`CardPuzzlePickerScreen`)は縦で1列。内容の矩形は `ScreenHeader.portrait_content_rect()`。パズルの札は向きの変化で作り直す

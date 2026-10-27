@@ -21,17 +21,22 @@ const SKIN_TOGGLE_GAP := 6.0
 const SKIN_TOGGLE_HEIGHT := 28.0
 ## 絵と実演のあいだに置くデータ欄の左端(絵の右)。
 const DATA_GAP := 28.0
-## 実演はページの下端に置く。横の見開きで切り抜きの横幅がページ幅に収まる高さにする。
+## 実演は絵と文の下に続けて置く(ページの下端へ寄せると、縦の背の高いページで文とのあいだが大きく空く)。
+## 横の見開きで切り抜きの横幅がページ幅に収まる高さにする。
 const DEMO_HEIGHT := 240.0
-const DEMO_BOTTOM_MARGIN := 12.0
+const DEMO_GAP := 12.0
+## 絵とスキンの切り替えが占める下端。実演はこれより下へ置く。
+const ART_BLOCK_BOTTOM := (
+	ART_TOP + ART_WIDTH * ART_HEIGHT_RATIO + SKIN_TOGGLE_GAP + SKIN_TOGGLE_HEIGHT
+)
 ## キーワードと効果の文を書き出す高さ。**データ欄の値の下から始める。**
 ## 値は26pxで y=102 まで伸びるため、そこへ掛からない位置に取る。
 const TEXT_TOP := 114.0
-const TEXT_SEPARATION := 2
-const TERM_BUTTON_SIZE := Vector2(96, 24)
-const TERM_GAP := 8
+const TEXT_SEPARATION := 4
 const FIELD_PITCH := 118.0
 const TEXT_FONT := 16
+## 語と説明のあいだ。効果の文のトリガー(「落砂:」)と同じ記号にする。
+const TERM_SEPARATOR := ":"
 ## トークンの中身の注記(「※ モート … 」)。本文より一段小さく、薄いインクで添える。
 const TOKEN_FONT := 14
 ## ページめくり(GameDesign.md 9章)。綴じ目(左端)を軸に紙が薄くなるまで畳み、
@@ -48,6 +53,8 @@ var _preview: CardEffectPreview
 ## キーワードの行と効果の文を上から積む欄。**説明が折り返しても後続が実際の高さの下へずれる**
 ## (1行ぶんの固定の間隔で置くと、折り返した説明へ効果の文や実演が重なる)。
 var _text: VBoxContainer
+## 文の中の語(キーワード・トリガー)の辞書項目。リンクの meta はこの添字。
+var _links: Array[Dictionary] = []
 ## 絵を押すと裏返る(GameDesign.md 9章)。**操作を促す表示は置かない**——
 ## 触れば気づくもののために常時の案内を出すと、紙面がそのぶん汚れる。
 var _flipped := false
@@ -75,11 +82,10 @@ func _ready() -> void:
 
 func _build() -> void:
 	_preview = CardEffectPreview.new()
-	_preview.position = Vector2(0, _demo_top())
 	_preview.custom_minimum_size = Vector2(size.x, DEMO_HEIGHT)
 	_preview.size = _preview.custom_minimum_size
 	add_child(_preview)
-	# キーワードの語は押せるボタンにする(GameDesign.md 17章)。図鑑は
+	# キーワードの語は押せるリンクにする(GameDesign.md 17章)。図鑑は
 	# パネルが留まる画面なので、押しに行った途中で消える心配がない。
 	_text = VBoxContainer.new()
 	# **データ欄(コスト・総量・分類)の下から始める。**同じ高さから書き出すと
@@ -88,6 +94,7 @@ func _build() -> void:
 	_text.custom_minimum_size.x = _text_width()
 	_text.add_theme_constant_override("separation", TEXT_SEPARATION)
 	_text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_text.minimum_size_changed.connect(_place_demo)
 	add_child(_text)
 	_skin_toggle = Button.new()
 	_skin_toggle.flat = true
@@ -113,7 +120,6 @@ func set_page(page_size: Vector2, page_scale: float) -> void:
 	custom_minimum_size = page_size
 	size = page_size
 	scale = Vector2.ONE * page_scale
-	_preview.position = Vector2(0, _demo_top())
 	_preview.custom_minimum_size = Vector2(size.x, DEMO_HEIGHT)
 	_preview.size = _preview.custom_minimum_size
 	_text.custom_minimum_size.x = _text_width()
@@ -194,73 +200,97 @@ func _on_skin_toggle_pressed() -> void:
 	queue_redraw()
 
 
-func _demo_top() -> float:
-	return size.y - DEMO_HEIGHT - DEMO_BOTTOM_MARGIN
+## 文の実際の高さが決まるたびに呼ぶ。ページからはみ出す場合だけ下端へ寄せる。
+func _place_demo() -> void:
+	var top := maxf(ART_BLOCK_BOTTOM, _text.position.y + _text.get_combined_minimum_size().y)
+	_preview.position = Vector2(0, minf(top + DEMO_GAP, size.y - DEMO_HEIGHT))
 
 
 func _text_width() -> float:
 	return size.x - ART_WIDTH - DATA_GAP
 
 
-## 制約・キーワードの行(語のボタンと説明)・効果の文・トークンの中身の順に積む。
+## 制約・キーワード・効果の文・トークンの中身の順に積む。
 ## **書く項目は詳細パネル(`CardDetailPanel`)と揃える**(図鑑だけ「攻撃できない」が抜ける、を起こさない)。
+## キーワードは効果の文と同じ「語:説明」の形で書く(トリガーの「落砂:」と見た目を揃える)。
 func _rebuild_text() -> void:
 	for child in _text.get_children():
 		_text.remove_child(child)
 		child.queue_free()
+	_links.clear()
+	_text.size = Vector2.ZERO
 	if card == null:
 		return
 	for line in CardDetailPanel.restriction_lines(card):
-		_text.add_child(_make_text(line, _text_width()))
-	for keyword in card.named_keywords():
-		_text.add_child(_make_term(KeywordEntries.keyword_entry(keyword)))
-	for keyword in card.plain_keywords():
-		_text.add_child(_make_term(KeywordEntries.keyword_entry(keyword)))
+		_text.add_child(_make_line(_escape(line)))
+	for keyword in card.named_keywords() + card.plain_keywords():
+		var entry := KeywordEntries.keyword_entry(keyword)
+		_text.add_child(_make_line(_term_line(entry, KeywordEntries.description(entry))))
 	if not card.rules_text.is_empty():
-		_text.add_child(_make_text(card.rules_text, _text_width()))
+		_text.add_child(_make_line(_rules_line()))
 	if CardDetailPanel.is_vanilla(card):
-		_text.add_child(_make_text(CardDetailPanel.VANILLA_TEXT, _text_width()))
+		_text.add_child(_make_line(_escape(CardDetailPanel.VANILLA_TEXT)))
 	for line in CardDetailPanel.token_lines(card):
-		_text.add_child(_make_text(line, _text_width(), TOKEN_FONT, INK_SOFT))
+		_text.add_child(_make_line(_escape(line), TOKEN_FONT, INK_SOFT))
+	_place_demo()
 
 
-func _make_term(entry: Dictionary) -> Control:
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", TERM_GAP)
-	var button := Button.new()
-	button.text = "【%s】" % KeywordEntries.title(entry)
-	button.flat = true
-	button.custom_minimum_size = TERM_BUTTON_SIZE
-	# 説明が折り返しても、語は説明の1行目の高さに揃える。
-	button.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	button.add_theme_color_override("font_color", TERM_COLOR)
-	button.add_theme_color_override("font_hover_color", Color(0.72, 0.30, 0.14))
-	button.add_theme_font_size_override("font_size", 18)
-	_flatten_ink(button)
-	button.pressed.connect(func() -> void: keyword_pressed.emit(entry))
-	row.add_child(button)
-	row.add_child(
-		_make_text(KeywordEntries.description(entry), _text_width() - TERM_BUTTON_SIZE.x - TERM_GAP)
+## 効果の文。先頭のトリガー名(「落砂:」など)をキーワードと同じリンクにする。
+func _rules_line() -> String:
+	if card.is_spell or card.effects.is_empty() or card.effects[0] == null:
+		return _escape(card.rules_text)
+	var trigger := card.effects[0].trigger
+	var head := CardEnums.trigger_name(trigger) + TERM_SEPARATOR
+	if not card.rules_text.begins_with(head):
+		return _escape(card.rules_text)
+	return _term_line(KeywordEntries.trigger_entry(trigger), card.rules_text.substr(head.length()))
+
+
+func _term_line(entry: Dictionary, body: String) -> String:
+	_links.append(entry)
+	return (
+		"[url=%d][color=#%s]%s[/color][/url]%s%s"
+		% [
+			_links.size() - 1,
+			TERM_COLOR.to_html(false),
+			_escape(KeywordEntries.title(entry)),
+			TERM_SEPARATOR,
+			_escape(body),
+		]
 	)
-	return row
 
 
-func _make_text(body: String, width: float, font_size := TEXT_FONT, color := INK) -> Label:
-	var text := Label.new()
-	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	text.custom_minimum_size.x = width
-	text.text = body
-	text.add_theme_color_override("font_color", color)
-	text.add_theme_font_size_override("font_size", font_size)
-	_flatten_ink(text)
-	return text
+func _make_line(bbcode: String, font_size := TEXT_FONT, color := INK) -> RichTextLabel:
+	var line := RichTextLabel.new()
+	line.bbcode_enabled = true
+	line.fit_content = true
+	line.scroll_active = false
+	line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	line.meta_underlined = false
+	line.custom_minimum_size.x = _text_width()
+	line.add_theme_color_override("default_color", color)
+	line.add_theme_font_size_override("normal_font_size", font_size)
+	_flatten_ink(line)
+	line.text = bbcode
+	line.meta_clicked.connect(_on_meta_clicked)
+	return line
+
+
+func _on_meta_clicked(meta: Variant) -> void:
+	keyword_pressed.emit(_links[int(str(meta))])
+
+
+static func _escape(text: String) -> String:
+	return text.replace("[", "[lb]")
 
 
 ## **紙の上の文字から縁取りを外す。**共通テーマはボタンへ3px・ラベルへ2pxの暗い
 ## 縁取りを掛けており、暗い画面では文字を浮かせるために要るが、**紙へ刷った濃い
 ## インクの文字に同じ縁取りを掛けると、字の内側が潰れて読めなくなる**。
+## 影も同じ理由で外す(紙の上で字が太って滲んで見える)。
 static func _flatten_ink(control: Control) -> void:
 	control.add_theme_constant_override("outline_size", 0)
+	control.add_theme_color_override("font_shadow_color", Color.TRANSPARENT)
 
 
 func _gui_input(event: InputEvent) -> void:
