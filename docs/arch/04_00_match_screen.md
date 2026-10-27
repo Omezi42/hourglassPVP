@@ -168,7 +168,7 @@ v1.0(位相制)の画面・クラス・`data/hourglasses/*.tres` は削除済み
 - **途中の対局があるときは「バトル」そのものが復帰の入口になる**(見出しを「対局へ戻る」へ替え、押下を `_on_resume_pressed()` へ回す。モーダルは出さない)。待機人数は `RankedMatchmakingQueue.count_waiting()` をホームが見えている間だけ一定間隔で読む
 - 「つぎはここ」(`NextStepMark`)は2つ持つ。ホームの札(CPU戦なら「バトル」、遠征・リーサルパズルなら「ソロモード」)と、モーダルの札
 - ヘッダーのミッションの札は `HomeTile`(`HomeScreen._mission_tile`)。`DailyMissionService.missions()` から「今日 N / 3」と受け取れる数を `refresh_account()` のたびに読む。押すと `DailyMissionPanel`
-- メニュー(`SettingsPanel`)の「遊び方」は `learn_requested` を出すだけで、`HomeScreen` がメニューを閉じて `LearnMenu`(暗幕 + 中央のパネル。誘導対局・遊び方・画面の見かた・キーワード辞書)を開く
+- メニューの左隣のルールブック(`icon_book`)は `HomeScreen._build_rulebook_button()` がメニューのボタンの位置から左へずらして置き、押すと `LearnMenu`(暗幕 + 中央のパネル。誘導対局・遊び方・画面の見かた・キーワード辞書)を開く
 - `HomeScrim`(`Background` の直後):上=アカウント帯 / 下=3列の中身 を別々の濃さで落とす。アカウント帯の下端に中央が濃く左右で消える真鍮の細線
 - アカウント帯は `.tscn` の幅460pxを `_ready()` で右端まで伸ばし、残高を右へ寄せる(`ACCOUNT_BAR_RIGHT_INSET`)。ホームの残高だけ `CurrencyChip.scale_factor` で大きく、`height_override` で名札と揃える。`CurrencyChip` は単位を小さく数値を大きく別々に描き、紋章と文字のあいだに縦の細線
 - 副題は画面の外で変わるため、ホームを出すたびに `refresh()` で読み直す
@@ -195,6 +195,7 @@ v1.0(位相制)の画面・クラス・`data/hourglasses/*.tres` は削除済み
 | `icon_square` | ROUNDED_RECT | NONE | 小さな正方形 |
 | `primary_action` | ROUNDED_RECT | NONE | 塗りつぶした真鍮の面(`filled`) |
 | `icon_menu` | ROUNDED_RECT | MENU(CENTER) | ホームのハンバーガー |
+| `icon_book` | ROUNDED_RECT | BOOK(CENTER) | ホームのルールブック(遊び方の入口) |
 | `icon_discord` | ROUNDED_RECT | DISCORD(CENTER) | 設定メニューのDiscord導線 |
 | `icon_x` | ROUNDED_RECT | X(CENTER) | 設定メニューのX導線 |
 | `icon_youtube` | ROUNDED_RECT | YOUTUBE(CENTER) | 設定メニューのYouTube導線 |

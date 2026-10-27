@@ -7,10 +7,6 @@ extends Control
 ## 音量の下には公式の窓口(Discord / X / YouTube)への導線を置く。設定と外部リンクは性質が違うが、
 ## 「ホーム画面の右上から開く1つの引き出し」へまとめたほうが、画面上のボタンを
 ## 増やさずに済む(9章のレイアウト規約はヘッダーへ主アクションを3つまでしか置かない)。
-## 音量の上には「遊び方」(本の紋章)を置き、ルールを読む・覚える入口(`LearnMenu`)を開く。
-
-## 「遊び方」を押した(GameDesign.md 9章)。開くのはホーム画面(`HomeScreen`)。
-signal learn_requested
 
 ## 公式の窓口(GameDesign.md 9章)。左から順に並べる。
 ## Discordは11章の募集通知と同じサーバー。
@@ -33,9 +29,6 @@ const OFFICIAL_LINKS := [
 ]
 const LINK_BUTTON_SIZE := Vector2(88, 88)
 const LINK_ROW_SEPARATION := 22
-const LEARN_BUTTON_SIZE := Vector2(376, 64)
-const LEARN_ICON := preload("res://assets/hourglasses/emblems/page.png")
-const LEARN_ICON_SIZE := 36
 
 @onready var dim: ColorRect = $Dim
 @onready var sfx_slider: HSlider = $CenterBox/Panel/Margin/VBox/SfxRow/Slider
@@ -49,7 +42,6 @@ func _ready() -> void:
 	visible = false
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	_build_link_row()
-	_build_learn_button()
 	_sync_from_settings()
 	sfx_slider.value_changed.connect(_on_sfx_changed)
 	bgm_slider.value_changed.connect(_on_bgm_changed)
@@ -75,22 +67,6 @@ func _build_link_row() -> void:
 		row.add_child(button)
 	vbox.add_child(row)
 	vbox.move_child(row, close_button.get_index())
-
-
-## 「遊び方」はタイトルのすぐ下(音量より上)へ挿す。ルールの入口はホームから外したため、
-## メニューを開いた人がまず目にする位置に置く。
-func _build_learn_button() -> void:
-	var vbox := close_button.get_parent() as VBoxContainer
-	if vbox == null:
-		return
-	var button := CodedButton.make("遊び方", LEARN_BUTTON_SIZE)
-	button.icon = LEARN_ICON
-	button.expand_icon = false
-	button.add_theme_constant_override("icon_max_width", LEARN_ICON_SIZE)
-	button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	button.pressed.connect(func() -> void: learn_requested.emit())
-	vbox.add_child(button)
-	vbox.move_child(button, $CenterBox/Panel/Margin/VBox/TitleLabel.get_index() + 1)
 
 
 func open() -> void:

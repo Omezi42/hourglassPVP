@@ -3,7 +3,7 @@ extends Control
 ## ホーム画面(GameDesign.md 9章)。**1画面に収め、タブを持たない。**
 ## ヘッダー(名札・ミッション・砂金・メニュー)の下を横に3等分し、左と中央を `BattleTab`
 ## (ソロモード / バトル)、右を `DeckTab`(デッキ編集・図鑑・ショップ)が描く。列の位置は `HomeLayout`。
-## ルールを読む・覚える入口はメニューの「遊び方」(`LearnMenu`)、戦績はアカウント画面へ置く。
+## ルールを読む・覚える入口はメニューの左隣のルールブック(`LearnMenu`)、戦績はアカウント画面へ置く。
 
 signal online_resume_requested(record: Dictionary)
 signal rank_requested
@@ -25,7 +25,8 @@ const PORTRAIT_BANNER_RECT := Rect2(24, 108, 672, 32)
 const BANNER_FONT := 14
 const PORTRAIT_BANNER_FONT := 22
 
-const ACCOUNT_BAR_RIGHT_INSET := 116.0
+## アカウント帯の右端。右上のルールブックとメニューのボタンへ掛からないところまで。
+const ACCOUNT_BAR_RIGHT_INSET := 216.0
 ## 残高のチップの拡大率。ヘッダーは面積に余裕があり、残高は押す前に分かるべきことの代表(9章)。
 const CURRENCY_CHIP_SCALE := 1.55
 ## 名札の大きさ。左右の部品(ミッション・残高)の背丈もこれに揃える。
@@ -38,6 +39,9 @@ const BACKGROUND := preload("res://assets/backgrounds/processed/battle/backgroun
 
 ## 右上のメニュー(ハンバーガー)ボタンのスタイル。
 const MENU_BUTTON_GROUP := "icon_menu"
+## メニューの左隣に置くルールブック(開いた本の紋章)。大きさはメニューと揃える。
+const RULEBOOK_BUTTON_GROUP := "icon_book"
+const RULEBOOK_GAP := 12.0
 
 var _nameplate_button: AccountNameplateButton
 ## ヘッダーのミッションの札(GameDesign.md 9章・23章)。受け取れる数を赤い丸で出す。
@@ -90,9 +94,9 @@ func _ready() -> void:
 	move_child(scrim, background.get_index() + 1)
 	_style_menu_button()
 	settings_button.pressed.connect(func() -> void: settings_panel.open())
-	settings_panel.learn_requested.connect(_on_learn_requested)
 	_build_account_bar()
 	_build_learn_menu()
+	_build_rulebook_button()
 	# モーダルはヘッダー・メニューより手前に出す(後から足した子ほど手前に描かれる)。
 	battle_tab.mount_pickers(self)
 	refresh_account()
@@ -152,10 +156,23 @@ func _build_learn_menu() -> void:
 	add_child(_learn_menu)
 
 
-## メニューの「遊び方」(GameDesign.md 9章)。メニューを閉じてから、入口を並べたモーダルを出す。
-func _on_learn_requested() -> void:
-	settings_panel.close()
-	_learn_menu.open()
+## ルールを読む・覚える入口(GameDesign.md 9章)。メニューの左隣へ同じ大きさで並べ、
+## 引き出しを開かなくても目に入るようにする。
+func _build_rulebook_button() -> void:
+	var button := CodedButton.make_in_group(
+		"", settings_button.custom_minimum_size, RULEBOOK_BUTTON_GROUP
+	)
+	button.tooltip_text = "遊び方"
+	button.anchor_left = settings_button.anchor_left
+	button.anchor_right = settings_button.anchor_right
+	var shift := settings_button.custom_minimum_size.x + RULEBOOK_GAP
+	button.offset_left = settings_button.offset_left - shift
+	button.offset_right = settings_button.offset_right - shift
+	button.offset_top = settings_button.offset_top
+	button.offset_bottom = settings_button.offset_bottom
+	button.pressed.connect(func() -> void: _learn_menu.open())
+	add_child(button)
+	move_child(button, settings_button.get_index())
 
 
 ## 縦横が変わったときに `Main` から呼ばれる(Architecture.md 4.7節)。
