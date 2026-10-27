@@ -240,13 +240,13 @@ func _make_line(text: String) -> Label:
 
 ## 語のボタンと、その説明を横に並べた1行。`override_text` が空でなければ説明の代わりに使う
 ## (トリガーの行では、カード固有の効果文をそのまま読ませたいため)。
-## `interactive` でないときはボタンを持たず、「【語】 説明」の1行の文にする。
+## `interactive` でないときはボタンを持たず、「守護:説明」の1行の文にする(砂時計図鑑と同じ記法)。
 func _make_term_row(entry: Dictionary, override_text: String = "") -> Control:
 	var body: String = (
 		override_text if not override_text.is_empty() else (KeywordEntries.description(entry))
 	)
 	if not interactive:
-		return _make_line("【%s】 %s" % [KeywordEntries.title(entry), _strip_term(body, entry)])
+		return _make_line("%s:%s" % [KeywordEntries.title(entry), _strip_term(body, entry)])
 
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
@@ -263,8 +263,8 @@ func _make_term_row(entry: Dictionary, override_text: String = "") -> Control:
 	return row
 
 
-## 効果の文は「余砂:モートを1体出す」のように語を頭に持つ。【】で括って前へ出す以上、
-## 文の側の語は取り除く(そのままだと「【余砂】 余砂:…」と2度読ませることになる)。
+## 効果の文は「余砂:モートを1体出す」のように語を頭に持つ。語を行の頭へ付ける以上、
+## 文の側の語は取り除く(そのままだと「余砂:余砂:…」と2度読ませることになる)。
 static func _strip_term(text: String, entry: Dictionary) -> String:
 	var title: String = KeywordEntries.title(entry)
 	if not text.begins_with(title):
