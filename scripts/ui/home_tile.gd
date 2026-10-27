@@ -41,6 +41,8 @@ const PORTRAIT_EMBLEM_SIDE := 64.0
 const PORTRAIT_BADGE_SCALE := 1.4
 ## 副題を折り返したときの行の送り(文字の大きさに対する比)。
 const SUBTITLE_LINE_HEIGHT := 1.2
+## 上寄せの見出しの基準線(1.5)から副題の基準線(+0.92)までの、見出しの大きさに対する比。
+const TITLE_BLOCK_RATIO := 2.42
 
 var title := ""
 var subtitle := ""
@@ -170,11 +172,23 @@ func _set_hover(value: float) -> void:
 
 
 ## 文字に使える幅。**右の紋章の透かしへ食い込ませない**(食い込むと副題が切れる)。
+## 縦長の札では紋章が文字の下にあるため空けない(空けると見出しが1文字しか残らない)。
 func _text_width() -> float:
 	var reserved := 0.0
-	if emblem != null:
+	if emblem != null and _emblem_beside_text():
 		reserved = emblem_reserve if emblem_reserve > 0.0 else size.y * 0.62
 	return maxf(size.x - padding * 2.0 - reserved, 40.0)
+
+
+## 紋章の上端が文字の段(見出し+副題の最大行数)より上にあるか。ホバーの浮きでは変えない。
+func _emblem_beside_text() -> bool:
+	var emblem_top := _emblem_rect().position.y + HOVER_RISE_PX * _hover
+	var text_bottom := (
+		padding
+		+ float(title_size) * TITLE_BLOCK_RATIO
+		+ float(_subtitle_font_size()) * SUBTITLE_LINE_HEIGHT * subtitle_lines
+	)
+	return emblem_top < text_bottom
 
 
 ## 紋章を敷く矩形。**額縁の内側(暗く凹んだパネル)に必ず収める。**
