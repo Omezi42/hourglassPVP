@@ -982,13 +982,13 @@
 		},
 		{
 			"cannot_attack": false,
-			"cost": 2,
+			"cost": 4,
 			"describe": "設置:反転権を1回得る",
 			"display_name": "アンコール",
 			"id": "encore",
 			"is_spell": false,
 			"pool_index": 99,
-			"total_sand": 3
+			"total_sand": 5
 		},
 		{
 			"cannot_attack": false,
@@ -1088,6 +1088,16 @@
 			"id": "hive",
 			"is_spell": false,
 			"pool_index": 109,
+			"total_sand": 6
+		},
+		{
+			"cannot_attack": false,
+			"cost": 4,
+			"describe": "設置:相手の砂時計1体につき、自分のHPを1回復する",
+			"display_name": "リリーフ",
+			"id": "relief",
+			"is_spell": false,
+			"pool_index": 110,
 			"total_sand": 6
 		}
 	]

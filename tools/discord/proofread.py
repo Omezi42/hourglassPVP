@@ -62,6 +62,9 @@ def main() -> None:
                 print(f"[{model}] {exc.code} のため次の候補へ", file=sys.stderr)
                 continue
             sys.exit(f"Gemini APIが失敗しました: {exc.code} {detail}")
+        except TimeoutError:
+            print(f"[{model}] 応答が無いため次の候補へ", file=sys.stderr)
+            continue
         except urllib.error.URLError as exc:
             sys.exit(f"Gemini APIへ接続できません: {exc}")
     if data is None:
