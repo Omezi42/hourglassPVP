@@ -47,6 +47,8 @@ func _ready() -> void:
 	_buy.add_theme_font_size_override("font_size", BUY_FONT_SIZE)
 	_buy.add_theme_color_override("font_color", UiPalette.OUTLINE_DARK)
 	_buy.add_theme_color_override("font_hover_color", UiPalette.OUTLINE_DARK)
+	# 押した後はフォーカスが残り、上書きしないと真鍮の面の上で文字だけ白く抜ける。
+	_buy.add_theme_color_override("font_focus_color", UiPalette.OUTLINE_DARK)
 	_buy.pressed.connect(func() -> void: buy_requested.emit(_kind, _id))
 	add_child(_buy)
 	resized.connect(_layout)

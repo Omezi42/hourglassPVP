@@ -30,11 +30,16 @@ static func make_in_group(label: String, button_size: Vector2, group: String) ->
 
 ## 既に .tscn に置かれているボタンのスタイルだけを差し替える。StyleBoxはリソース参照の
 ## ため .tscn のパッチ(値がJSON)では差し替えられず、ここを通す必要がある。
+## 無効の文字は面と同じ規則(`disabled_tone`)で沈める。テーマ既定の無効色は明るい StyleBoxFlat 向けの
+## 暗い茶色で、暗く沈めた真鍮の面の上ではほぼ同じ明るさになり文字だけが消える。
 static func apply_styles(button: Button, group: String) -> void:
 	for state in STATES:
 		var style: StyleBox = load(STYLE_PATH % [group, state])
 		if style != null:
 			button.add_theme_stylebox_override(state, style)
+	button.add_theme_color_override(
+		"font_disabled_color", UiPaint.disabled_tone(UiPalette.TEXT_OFFWHITE)
+	)
 
 
 static func _build(label: String, button_size: Vector2, group: String) -> Button:

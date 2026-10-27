@@ -27,6 +27,8 @@ const PRICE_FONT_SIZE := 15
 const PRICE_WIDTH := 92.0
 const PRICE_EMBLEM_SIZE := 13.0
 const PRICE_EMBLEM_GAP := 4.0
+## チェックの印は砂時計の印より横へ張り出すため、同じ枠に収まるよう小さく描く。
+const OWNED_CHECK_SIZE := 9.0
 const ICON_SEAL_RATIO := 0.4
 ## 選択枠。角はタイル自身の角丸に、太さは額縁の太さに合わせる(小さなタイルで枠だけ太く見せない)。
 const SELECT_INSET := 2.0
@@ -194,30 +196,19 @@ func _draw_footer() -> void:
 
 
 ## 価格(所持済みなら「✓ 所持」)。積むタイルは中央へ、並べるタイルは右端へ寄せる。
+## ✓ は同梱フォントに字形が無い(豆腐になる)ため、文字ではなく印として描く。
 func _draw_price(baseline: float, lit: bool) -> void:
 	var inner := _inner_rect()
-	var label := "✓ 所持" if owned else CurrencyRules.amount_text(ShopCatalog.price(kind, id))
+	var label := "所持" if owned else CurrencyRules.amount_text(ShopCatalog.price(kind, id))
 	var label_width := (
 		_font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, _price_font_size()).x
 	)
 	var price_right := inner.end.x - TEXT_PAD
 	if _stacked():
-		var block_width := label_width
-		if not owned:
-			block_width += PRICE_EMBLEM_SIZE + PRICE_EMBLEM_GAP
+		var block_width := label_width + PRICE_EMBLEM_SIZE + PRICE_EMBLEM_GAP
 		price_right = inner.get_center().x + block_width * 0.5
-	if owned:
-		draw_string(
-			_font,
-			Vector2(price_right - label_width, baseline),
-			label,
-			HORIZONTAL_ALIGNMENT_LEFT,
-			-1,
-			_price_font_size(),
-			UiPalette.BRASS_PRESSED_DARK if lit else UiPalette.TEXT_MUTED
-		)
-		return
 	# 価格は赤で書かない(GameDesign.md 21章)。単位は残高チップと同じ砂時計の印で示す。
+	var color := UiPalette.TEXT_MUTED if owned else UiPalette.BRASS_HIGHLIGHT
 	draw_string(
 		_font,
 		Vector2(price_right - label_width, baseline),
@@ -225,12 +216,15 @@ func _draw_price(baseline: float, lit: bool) -> void:
 		HORIZONTAL_ALIGNMENT_LEFT,
 		-1,
 		_price_font_size(),
-		UiPalette.BRASS_PRESSED_DARK if lit else UiPalette.BRASS_HIGHLIGHT
+		UiPalette.BRASS_PRESSED_DARK if lit else color
 	)
 	var emblem_center := Vector2(
 		price_right - label_width - PRICE_EMBLEM_GAP - PRICE_EMBLEM_SIZE * 0.5,
 		baseline - _price_font_size() * 0.36
 	)
 	UiPaint.draw_emblem(
-		get_canvas_item(), UiPaint.Emblem.HOURGLASS, emblem_center, PRICE_EMBLEM_SIZE
+		get_canvas_item(),
+		UiPaint.Emblem.CHECK if owned else UiPaint.Emblem.HOURGLASS,
+		emblem_center,
+		OWNED_CHECK_SIZE if owned else PRICE_EMBLEM_SIZE
 	)
