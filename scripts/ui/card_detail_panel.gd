@@ -21,6 +21,7 @@ signal keyword_pressed(entry: Dictionary)
 
 const PANEL_STYLE := "res://resources/theme/content_panel.tres"
 const PANEL_SIZE := Vector2(380, 460)
+const VANILLA_TEXT := "効果を持たない基準のカード。"
 const COMPACT_SIZE := Vector2(400, 392)
 const ICON_SIZE := Vector2(84, 84)
 ## カード固有の紋章(GameDesign.md 9章)。名前の左へ置き、カードの面より大きく見せる。
@@ -145,15 +146,13 @@ func _fill_body(card: CardData, rules: String) -> void:
 		_body.add_child(_make_line("盤面の枠を使わないため、6枠が埋まっていても使える"))
 		if not rules.is_empty():
 			_body.add_child(_make_line(rules))
-		for line in _token_lines(card):
+		for line in token_lines(card):
 			_body.add_child(_make_line(line))
 		return
 	_body.add_child(_make_line("場に出たとき  体力 %d / 攻撃力 0" % card.total_sand))
 	_body.add_child(_make_line("毎ターン終了時に砂が1粒落ちて 体力-1 / 攻撃力+1"))
-	if card.cannot_attack:
-		_body.add_child(_make_line("攻撃できない(反転はできる)"))
-	if card.cannot_flip:
-		_body.add_child(_make_line("反転できない(反転権でも反転できない)"))
+	for line in restriction_lines(card):
+		_body.add_child(_make_line(line))
 	for keyword in card.named_keywords():
 		_body.add_child(_make_term_row(KeywordEntries.keyword_entry(keyword)))
 	for keyword in card.plain_keywords():
@@ -164,21 +163,37 @@ func _fill_body(card: CardData, rules: String) -> void:
 		_body.add_child(_make_term_row(KeywordEntries.trigger_entry(triggers[i]), text))
 	if triggers.is_empty() and not rules.is_empty():
 		_body.add_child(_make_line(rules))
-	if (
-		card.keywords.is_empty()
-		and rules.is_empty()
-		and not card.cannot_attack
-		and not card.cannot_flip
-	):
-		_body.add_child(_make_line("効果を持たない基準のカード。"))
-	for line in _token_lines(card):
+	if is_vanilla(card):
+		_body.add_child(_make_line(VANILLA_TEXT))
+	for line in token_lines(card):
 		_body.add_child(_make_line(line))
+
+
+## 攻撃・反転の制約。キーワードではないため語のボタンを持たず、文で書く(砂時計図鑑と共通)。
+static func restriction_lines(card: CardData) -> Array[String]:
+	var lines: Array[String] = []
+	if card.cannot_attack:
+		lines.append("攻撃できない(反転はできる)")
+	if card.cannot_flip:
+		lines.append("反転できない(反転権でも反転できない)")
+	return lines
+
+
+## キーワードも効果も制約も持たない砂時計(バニラ)か。
+static func is_vanilla(card: CardData) -> bool:
+	return (
+		not card.is_spell
+		and card.keywords.is_empty()
+		and card.rules_text.is_empty()
+		and card.conditional_keyword < 0
+		and restriction_lines(card).is_empty()
+	)
 
 
 ## 効果で出る砂時計(トークン)の中身を1行で添える(GameDesign.md 6章)。
 ## トークンはデッキにも一覧にも出ないため、**それを出すカードの側で説明しないと
 ## 何が場に出るのかを調べる手段が無い**。
-static func _token_lines(card: CardData) -> Array[String]:
+static func token_lines(card: CardData) -> Array[String]:
 	var lines: Array[String] = []
 	var seen: Array[String] = []
 	for effect in card.effects:

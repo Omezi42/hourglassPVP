@@ -32,6 +32,8 @@ const TERM_BUTTON_SIZE := Vector2(96, 24)
 const TERM_GAP := 8
 const FIELD_PITCH := 118.0
 const TEXT_FONT := 16
+## トークンの中身の注記(「※ モート … 」)。本文より一段小さく、薄いインクで添える。
+const TOKEN_FONT := 14
 ## ページめくり(GameDesign.md 9章)。綴じ目(左端)を軸に紙が薄くなるまで畳み、
 ## 畳みきった瞬間に中身を差し替えてから開き直す。
 const TURN_DURATION := 0.22
@@ -200,19 +202,26 @@ func _text_width() -> float:
 	return size.x - ART_WIDTH - DATA_GAP
 
 
-## キーワードの行(語のボタンと説明)の下へ効果の文を続ける。
+## 制約・キーワードの行(語のボタンと説明)・効果の文・トークンの中身の順に積む。
+## **書く項目は詳細パネル(`CardDetailPanel`)と揃える**(図鑑だけ「攻撃できない」が抜ける、を起こさない)。
 func _rebuild_text() -> void:
 	for child in _text.get_children():
 		_text.remove_child(child)
 		child.queue_free()
 	if card == null:
 		return
+	for line in CardDetailPanel.restriction_lines(card):
+		_text.add_child(_make_text(line, _text_width()))
 	for keyword in card.named_keywords():
 		_text.add_child(_make_term(KeywordEntries.keyword_entry(keyword)))
 	for keyword in card.plain_keywords():
 		_text.add_child(_make_term(KeywordEntries.keyword_entry(keyword)))
 	if not card.rules_text.is_empty():
 		_text.add_child(_make_text(card.rules_text, _text_width()))
+	if CardDetailPanel.is_vanilla(card):
+		_text.add_child(_make_text(CardDetailPanel.VANILLA_TEXT, _text_width()))
+	for line in CardDetailPanel.token_lines(card):
+		_text.add_child(_make_text(line, _text_width(), TOKEN_FONT, INK_SOFT))
 
 
 func _make_term(entry: Dictionary) -> Control:
@@ -236,13 +245,13 @@ func _make_term(entry: Dictionary) -> Control:
 	return row
 
 
-func _make_text(body: String, width: float) -> Label:
+func _make_text(body: String, width: float, font_size := TEXT_FONT, color := INK) -> Label:
 	var text := Label.new()
 	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	text.custom_minimum_size.x = width
 	text.text = body
-	text.add_theme_color_override("font_color", INK)
-	text.add_theme_font_size_override("font_size", TEXT_FONT)
+	text.add_theme_color_override("font_color", color)
+	text.add_theme_font_size_override("font_size", font_size)
 	_flatten_ink(text)
 	return text
 
