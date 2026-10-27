@@ -46,3 +46,9 @@ func tick(delta: float) -> void:
 
 func get_remaining(side: int) -> float:
 	return remaining[side]
+
+
+## その側が**いまの手番で**持ち時間を使い切っているか。手番を終えた側の残りは
+## 次の手番まで戻らないため、0のまま残っていても尽きているとは言わない。
+func is_out(side: int) -> bool:
+	return side == active_side and remaining[side] <= 0.0

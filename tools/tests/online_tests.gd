@@ -18,6 +18,7 @@ func run(assert_true: Callable) -> void:
 	_test_actions_survive_the_firestore_codec(assert_true)
 	_test_clock_can_be_overwritten_by_the_opponent_value(assert_true)
 	_test_timeout_reports_the_side_that_actually_ran_out(assert_true)
+	_test_spent_clock_is_not_out_after_the_turn_passes(assert_true)
 	_test_online_setup_abort_messages(assert_true)
 
 
@@ -231,6 +232,24 @@ func _test_timeout_reports_the_side_that_actually_ran_out(assert_true: Callable)
 	assert_true.call(
 		is_equal_approx(clock.get_remaining(MatchState.Side.A), 50.0),
 		"the waiting side should keep the time it had left"
+	)
+
+
+## 時間切れで手番を渡した側の残りは0のまま次の手番まで残る。**それを「尽きている」と
+## 読むと、待っている側が20秒考えただけで相手を切断扱いにして勝ってしまう**。
+func _test_spent_clock_is_not_out_after_the_turn_passes(assert_true: Callable) -> void:
+	var clock := MatchClock.new(60.0)
+	clock.start_turn(MatchState.Side.B)
+	clock.tick(60.0)
+	assert_true.call(clock.is_out(MatchState.Side.B), "the side on turn should be out at 0")
+	clock.start_turn(MatchState.Side.A)
+	assert_true.call(
+		is_equal_approx(clock.get_remaining(MatchState.Side.B), 0.0),
+		"the spent clock keeps its 0 until that side's next turn"
+	)
+	assert_true.call(
+		not clock.is_out(MatchState.Side.B),
+		"a side that already passed its turn should not count as out of time"
 	)
 
 

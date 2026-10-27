@@ -149,11 +149,13 @@
   以降は何もしない不活性なノードとして残す
 - **持ち時間の同期**(GameDesign.md 11章):送信する手に`clock`(送信側の残り時間)を添え、
   受け取った側は`MatchClock.remaining[相手側]`をその値で上書きする。時間切れは
-  `{"type": "timeout", "side": ...}`を投了と同じ`actions`の1件として送る。相手の
+  `{"type": "time_up", "side": ...}`を投了と同じ`actions`の1件として送る。相手の
   申告が来ない(切断した)場合は、相手の残り時間が0になってから`OPPONENT_TIMEOUT_GRACE`
-  の猶予を置いて、待っている側の勝利として終局させる。この判定と通信状態の表示は
-  `MatchNetController`(`scripts/ui/match_net_controller.gd`、`_screen`参照を持つRefCounted)へ
-  切り出している(`match_screen.gd`が1000行の上限に近いため)
+  の猶予を置いて、`{"type": "timeout", "side": 相手}`を**手として送って**終局させる
+  (手元だけで終えると、生きていた相手と対局が食い違う)。この判定は `CardMatchClock` が持つ
+- **「尽きている」は `MatchClock.is_out(side)` で問う**。いま手番の側で残りが0のときだけ真。
+  時間切れで手番を渡した側の残りは次の手番まで0のまま残るため、`get_remaining() <= 0` で
+  判定すると、待つ側が20秒考えただけで相手を切断扱いにしてしまう
 - **対局開始前の中断**(GameDesign.md 11章):`OnlineSetup`に`cancel()`を持たせ、
   ポーリングを即座に打ち切ったうえで`matches/{id}`へ`abandoned`を書く。待っている側は
   `_poll_for_ids()`がこのフィールドを見つけた時点で待機をやめ、「対戦相手が対局を

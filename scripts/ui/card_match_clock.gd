@@ -90,12 +90,14 @@ func refresh_bars() -> void:
 ## 相手の持ち時間が0になっても申告が来ない場合、猶予を置いて待っている側の勝ちにする。
 ## **申告が届いている限り敗北にはしない**(GameDesign.md 11章)。ここに掛かるのは
 ## 「申告そのものが来ない=切断」の判定だけになる。
+## 決着は**手として送る**。手元だけで終局させると、相手が生きていた場合に対局が食い違い、
+## 復帰した相手も終わった対局へ戻れてしまう。
 func _watch_opponent_timeout(delta: float) -> void:
 	var foe := MatchState.other_side(_screen.my_side)
-	if clock.get_remaining(foe) > 0.0:
+	if not clock.is_out(foe):
 		_opponent_wait = 0.0
 		return
 	_opponent_wait += delta
 	if _opponent_wait >= OPPONENT_TIMEOUT_GRACE:
 		_opponent_wait = 0.0
-		_screen.state.surrender(foe, MatchState.EndReason.TIMEOUT)
+		_screen._perform({"type": "timeout", "side": foe})

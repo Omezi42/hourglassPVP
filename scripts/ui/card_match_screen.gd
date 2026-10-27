@@ -260,6 +260,9 @@ func _on_local_timeout(side: int) -> void:
 	if side != my_side:
 		return
 	if state != null and not state.is_match_over():
+		# ターン終了を押したときと同じく、選びかけの手を相手の手番へ持ち越さない。
+		_selection.clear()
+		_hide_detail()
 		_perform({"type": "time_up", "side": my_side})
 
 
