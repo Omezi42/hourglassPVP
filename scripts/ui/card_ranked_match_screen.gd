@@ -155,12 +155,12 @@ func begin_match() -> void:
 	_queue.announce_result.connect(_on_announce_result)
 	_queue.join()
 	_wait_funnel.begin()
-	# 表彰式を読んでいる間にCPU戦へ移らないよう、閉じてから数え始める
+	# 表彰式を読んでいる間にボタンが出ないよう、閉じてから数え始める
 	if _ceremony.visible:
 		await _ceremony.closed
 		if not _busy or queue == null:
 			return
-	_cpu_offer.start_auto(WaitingCpuOffer.FIRST_DELAY_SECONDS)
+	_cpu_offer.arm(WaitingCpuOffer.FIRST_DELAY_SECONDS)
 
 
 func _refresh_tier_label() -> void:

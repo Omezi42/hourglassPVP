@@ -2,7 +2,7 @@ extends RefCounted
 ## 初日〜2日目の導線(GameDesign.md 11章・18章・23章・27章)を確かめる。
 ##
 ## **確かめたいのは4点。**遠征の1段目が初級になること、はじめの7日が1日1回だけ・7日で止まること、
-## 遠征を始めたかどうかを覚えること(つぎはここ)、待機の自動CPU戦が時間で始まり・止められること。
+## 遠征を始めたかどうかを覚えること(つぎはここ)、待機のCPU戦が自動では始まらず、ボタンが時間で出ること。
 
 const FakeClient = preload("res://tools/tests/fake_firestore_client.gd")
 const UID := "uid-welcome"
@@ -17,7 +17,7 @@ func run(assert_true: Callable) -> void:
 	_test_solo_first_floor_is_beginner()
 	_test_solo_progress_remembers_start()
 	await _test_welcome_days()
-	await _test_waiting_cpu_auto_start()
+	await _test_waiting_cpu_never_auto_starts()
 
 
 func _test_solo_first_floor_is_beginner() -> void:
@@ -111,7 +111,7 @@ func _test_welcome_days() -> void:
 	AccountService.reset()
 
 
-func _test_waiting_cpu_auto_start() -> void:
+func _test_waiting_cpu_never_auto_starts() -> void:
 	var tree := Engine.get_main_loop() as SceneTree
 	var host := Control.new()
 	tree.root.add_child(host)
@@ -121,20 +121,16 @@ func _test_waiting_cpu_auto_start() -> void:
 	var requested := [0]
 	offer.requested.connect(func() -> void: requested[0] += 1)
 
-	offer.start_auto(AUTO_DELAY)
-	_assert.call(offer.wait_button.visible, "the stop button shows while counting down")
+	offer.arm(AUTO_DELAY)
+	_assert.call(not offer.button.visible, "the button waits for the delay")
 	await tree.create_timer(AUTO_DELAY * 3.0).timeout
-	_assert.call(requested[0] == 1, "the CPU match should start by itself")
-	_assert.call(not offer.wait_button.visible, "the countdown hides once started")
+	_assert.call(requested[0] == 0, "the CPU match must never start by itself")
+	_assert.call(offer.button.visible, "the button shows after the delay")
+	offer.button.pressed.emit()
+	_assert.call(requested[0] == 1, "pressing the button starts the CPU match")
 
-	offer.start_auto(AUTO_DELAY)
-	offer.wait_button.pressed.emit()
-	await tree.create_timer(AUTO_DELAY * 3.0).timeout
-	_assert.call(requested[0] == 1, "choosing to wait must stop the auto start")
-	_assert.call(offer.button.visible, "after waiting, the manual button shows")
-
-	offer.start_auto(AUTO_DELAY)
+	offer.arm(AUTO_DELAY)
 	offer.hide()
 	await tree.create_timer(AUTO_DELAY * 3.0).timeout
-	_assert.call(requested[0] == 1, "a found opponent (hide) must cancel the auto start")
+	_assert.call(not offer.button.visible, "a found opponent (hide) must cancel the button")
 	host.queue_free()
