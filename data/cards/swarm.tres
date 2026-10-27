@@ -20,5 +20,5 @@ total_sand = 6
 pool_index = 14
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_swarm_0")])
-rules_text = "設置:相手の砂時計の数 × 1 ダメージを相手プレイヤーへ"
+rules_text = "設置:相手の砂時計1体につき、相手プレイヤーに1ダメージ"
 emblem = ExtResource("emblem")

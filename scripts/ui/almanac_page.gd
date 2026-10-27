@@ -26,13 +26,12 @@ const DEMO_HEIGHT := 172.0
 const LOG_HEIGHT := 96.0
 ## キーワードと効果の文を書き出す高さ。**データ欄の値の下から始める。**
 ## 値は26pxで y=102 まで伸びるため、そこへ掛からない位置に取る。
-const TEXT_TOP := 132.0
-const TERM_ROW_HEIGHT := 34.0
+const TEXT_TOP := 114.0
+const TEXT_SEPARATION := 2
+const TERM_BUTTON_SIZE := Vector2(96, 24)
+const TERM_GAP := 8
 const FIELD_PITCH := 118.0
-const RULES_FONT := 16
-## 効果の文は横の見開きで3行まで。縦の背の高いページでは実演の上端まで書く。
-const RULES_MIN_LINES := 3
-const RULES_LINE_HEIGHT := 24.0
+const TEXT_FONT := 16
 ## ページめくり(GameDesign.md 9章)。綴じ目(左端)を軸に紙が薄くなるまで畳み、
 ## 畳みきった瞬間に中身を差し替えてから開き直す。
 const TURN_DURATION := 0.22
@@ -44,7 +43,9 @@ var card: CardData
 
 var _font: Font
 var _preview: CardEffectPreview
-var _terms: VBoxContainer
+## キーワードの行と効果の文を上から積む欄。**説明が折り返しても後続が実際の高さの下へずれる**
+## (1行ぶんの固定の間隔で置くと、折り返した説明へ効果の文や実演が重なる)。
+var _text: VBoxContainer
 ## 絵を押すと裏返る(GameDesign.md 9章)。**操作を促す表示は置かない**——
 ## 触れば気づくもののために常時の案内を出すと、紙面がそのぶん汚れる。
 var _flipped := false
@@ -78,14 +79,14 @@ func _build() -> void:
 	add_child(_preview)
 	# キーワードの語は押せるボタンにする(GameDesign.md 17章)。図鑑は
 	# パネルが留まる画面なので、押しに行った途中で消える心配がない。
-	_terms = VBoxContainer.new()
+	_text = VBoxContainer.new()
 	# **データ欄(コスト・総量・分類)の下から始める。**同じ高さから書き出すと
 	# 値の文字と重なる(実際に重なった)。
-	_terms.position = Vector2(ART_WIDTH + DATA_GAP, TEXT_TOP)
-	_terms.custom_minimum_size.x = size.x - ART_WIDTH - DATA_GAP
-	_terms.add_theme_constant_override("separation", 4)
-	_terms.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_terms)
+	_text.position = Vector2(ART_WIDTH + DATA_GAP, TEXT_TOP)
+	_text.custom_minimum_size.x = _text_width()
+	_text.add_theme_constant_override("separation", TEXT_SEPARATION)
+	_text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_text)
 	_skin_toggle = Button.new()
 	_skin_toggle.flat = true
 	_skin_toggle.position = Vector2(4, ART_TOP + ART_WIDTH * ART_HEIGHT_RATIO + SKIN_TOGGLE_GAP)
@@ -113,8 +114,8 @@ func set_page(page_size: Vector2, page_scale: float) -> void:
 	_preview.position = Vector2(0, _demo_top())
 	_preview.custom_minimum_size = Vector2(size.x, DEMO_HEIGHT)
 	_preview.size = _preview.custom_minimum_size
-	_terms.custom_minimum_size.x = size.x - ART_WIDTH - DATA_GAP
-	_rebuild_terms()
+	_text.custom_minimum_size.x = _text_width()
+	_rebuild_text()
 	queue_redraw()
 
 
@@ -154,7 +155,7 @@ func _apply_card(new_card: CardData) -> void:
 	_flipped = false
 	_hovering_art = false
 	_set_tilt(0.0)
-	_rebuild_terms()
+	_rebuild_text()
 	_sync_skin_toggle()
 	if _preview != null:
 		_preview.show_card(card)
@@ -195,41 +196,55 @@ func _demo_top() -> float:
 	return size.y - LOG_HEIGHT - DEMO_HEIGHT - 12.0
 
 
-## キーワードの行。語のボタンと説明を並べる。
-func _rebuild_terms() -> void:
-	for child in _terms.get_children():
-		_terms.remove_child(child)
+func _text_width() -> float:
+	return size.x - ART_WIDTH - DATA_GAP
+
+
+## キーワードの行(語のボタンと説明)の下へ効果の文を続ける。
+func _rebuild_text() -> void:
+	for child in _text.get_children():
+		_text.remove_child(child)
 		child.queue_free()
 	if card == null:
 		return
 	for keyword in card.named_keywords():
-		_terms.add_child(_make_term(KeywordEntries.keyword_entry(keyword)))
+		_text.add_child(_make_term(KeywordEntries.keyword_entry(keyword)))
 	for keyword in card.plain_keywords():
-		_terms.add_child(_make_term(KeywordEntries.keyword_entry(keyword)))
+		_text.add_child(_make_term(KeywordEntries.keyword_entry(keyword)))
+	if not card.rules_text.is_empty():
+		_text.add_child(_make_text(card.rules_text, _text_width()))
 
 
 func _make_term(entry: Dictionary) -> Control:
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 8)
+	row.add_theme_constant_override("separation", TERM_GAP)
 	var button := Button.new()
 	button.text = "【%s】" % KeywordEntries.title(entry)
 	button.flat = true
-	button.custom_minimum_size = Vector2(96, 30)
+	button.custom_minimum_size = TERM_BUTTON_SIZE
+	# 説明が折り返しても、語は説明の1行目の高さに揃える。
+	button.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	button.add_theme_color_override("font_color", TERM_COLOR)
 	button.add_theme_color_override("font_hover_color", Color(0.72, 0.30, 0.14))
 	button.add_theme_font_size_override("font_size", 18)
 	_flatten_ink(button)
 	button.pressed.connect(func() -> void: keyword_pressed.emit(entry))
 	row.add_child(button)
-	var text := Label.new()
-	text.text = KeywordEntries.description(entry)
-	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	text.custom_minimum_size.x = size.x - ART_WIDTH - DATA_GAP - 106.0
-	text.add_theme_color_override("font_color", INK)
-	text.add_theme_font_size_override("font_size", 16)
-	_flatten_ink(text)
-	row.add_child(text)
+	row.add_child(
+		_make_text(KeywordEntries.description(entry), _text_width() - TERM_BUTTON_SIZE.x - TERM_GAP)
+	)
 	return row
+
+
+func _make_text(body: String, width: float) -> Label:
+	var text := Label.new()
+	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	text.custom_minimum_size.x = width
+	text.text = body
+	text.add_theme_color_override("font_color", INK)
+	text.add_theme_font_size_override("font_size", TEXT_FONT)
+	_flatten_ink(text)
+	return text
 
 
 ## **紙の上の文字から縁取りを外す。**共通テーマはボタンへ3px・ラベルへ2pxの暗い
@@ -320,24 +335,7 @@ func _draw() -> void:
 	_draw_field(Vector2(data_x, 58), "コスト", str(card.cost))
 	_draw_field(Vector2(data_x + pitch, 58), "総量", "—" if card.is_spell else str(card.total_sand))
 	_draw_field(Vector2(data_x + pitch * 2.0, 58), "分類", "砂術" if card.is_spell else "砂時計")
-	if not card.rules_text.is_empty():
-		var text_top := TEXT_TOP + _terms.get_child_count() * TERM_ROW_HEIGHT
-		draw_multiline_string(
-			_font,
-			Vector2(data_x, text_top),
-			card.rules_text,
-			HORIZONTAL_ALIGNMENT_LEFT,
-			size.x - data_x,
-			RULES_FONT,
-			_rules_lines(text_top),
-			INK
-		)
 	_draw_log()
-
-
-func _rules_lines(text_top: float) -> int:
-	var room := floori((_demo_top() - text_top) / RULES_LINE_HEIGHT)
-	return maxi(RULES_MIN_LINES, room)
 
 
 ## 砂術の札。紙の上でも「置くカードではない」と分かるよう、藍の枠へ紋章を大きく置く。
