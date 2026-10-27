@@ -107,6 +107,12 @@ func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Diction
 		CardEnums.EffectType.DAMAGE_PLAYER_PER_ENEMY_UNIT:
 			_strike(side, from_slot, foe_side, -1, CardEnums.EffectVisualStyle.STRIKE, origin)
 			_state.damage_player(foe_side, _state.units(foe_side).size() * effect.value)
+		CardEnums.EffectType.HEAL_PLAYER_PER_ENEMY_UNIT:
+			# 相手の場が空なら回復は0。届くものが無いため紋章も飛ばさない。
+			var foes := _state.units(foe_side).size()
+			if foes > 0:
+				_strike(side, from_slot, side, -1, CardEnums.EffectVisualStyle.DESCEND, origin)
+				_state.heal_player(side, foes * effect.value)
 		CardEnums.EffectType.DAMAGE_UNIT:
 			var damage_entries := _targets(side, unit, effect, hint)
 			_strike_for_targets(

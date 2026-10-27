@@ -495,6 +495,8 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 				value = float(state.board[foe_side][slot].lifetime_damage()) * 0.7
 		CardEnums.EffectType.HEAL_PLAYER:
 			value = effect.value * FACE_WEIGHT
+		CardEnums.EffectType.HEAL_PLAYER_PER_ENEMY_UNIT:
+			value = state.units(foe_side).size() * effect.value * FACE_WEIGHT
 		CardEnums.EffectType.ADD_TOTAL:
 			value = effect.value * 2.0
 		CardEnums.EffectType.DROP_SAND:

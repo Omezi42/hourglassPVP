@@ -21,6 +21,8 @@ func run(assert_true: Callable) -> void:
 	_test_block_guards_and_draws_on_death()
 	_test_vault_grows_ally_when_damaged()
 	_test_hive_summons_mote_when_damaged()
+	_test_relief_heals_per_enemy_unit()
+	_test_relief_heals_nothing_on_empty_board()
 	_test_set_is_staged()
 
 
@@ -188,6 +190,29 @@ func _test_hive_summons_mote_when_damaged() -> void:
 	_assert.call(summoned != null and summoned.data.id == "mote", "ハイヴが被弾すると空き枠へモートが出る")
 
 
+func _play_relief(state: MatchState) -> void:
+	state.hand[MatchState.Side.A] = [CardLibrary.find_by_id("relief")]
+	state.mana[MatchState.Side.A] = 4
+	state.play_card(MatchState.Side.A, 0, 0, {})
+
+
+func _test_relief_heals_per_enemy_unit() -> void:
+	var state := _new_match()
+	for slot in 3:
+		_place(state, MatchState.Side.B, _vanilla(3), slot)
+	state.hp[MatchState.Side.A] = 10
+	_play_relief(state)
+	_assert.call(int(state.hp[MatchState.Side.A]) == 13, "リリーフは相手の砂時計1体につきHPを1回復する")
+
+
+func _test_relief_heals_nothing_on_empty_board() -> void:
+	var state := _new_match()
+	state.hp[MatchState.Side.A] = 10
+	_play_relief(state)
+	_assert.call(int(state.hp[MatchState.Side.A]) == 10, "相手の場が空ならリリーフは回復しない")
+	_assert.call(state.board[MatchState.Side.A][0] != null, "回復しなくてもリリーフは場に残る")
+
+
 func _test_set_is_staged() -> void:
 	_assert.call(CardSetLibrary.has_set(SET_ID), "chase_sand is registered")
 	_assert.call(CardSetLibrary.price(SET_ID) == 1000, "chase_sand costs 1000")
@@ -201,3 +226,6 @@ func _test_set_is_staged() -> void:
 	_assert.call(CardSetLibrary.card_ids(SET_ID)[4] == "block", "chase_sand's fifth card is block")
 	_assert.call(CardSetLibrary.card_ids(SET_ID)[5] == "vault", "chase_sand's sixth card is vault")
 	_assert.call(CardSetLibrary.card_ids(SET_ID)[6] == "hive", "chase_sand's seventh card is hive")
+	_assert.call(
+		CardSetLibrary.card_ids(SET_ID)[7] == "relief", "chase_sand's eighth card is relief"
+	)

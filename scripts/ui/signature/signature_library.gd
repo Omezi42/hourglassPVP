@@ -60,6 +60,7 @@ const EFFECTS := {
 	"block": preload("res://scripts/ui/signature/moves/block_effect.gd"),
 	"vault": preload("res://scripts/ui/signature/moves/vault_effect.gd"),
 	"hive": preload("res://scripts/ui/signature/moves/hive_effect.gd"),
+	"relief": preload("res://scripts/ui/signature/moves/relief_effect.gd"),
 	"key": preload("res://scripts/ui/signature/moves/key_effect.gd"),
 	"cycle": preload("res://scripts/ui/signature/moves/cycle_effect.gd"),
 	"crest": preload("res://scripts/ui/signature/moves/crest_effect.gd"),

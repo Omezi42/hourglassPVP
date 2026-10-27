@@ -175,6 +175,10 @@ func _play_signature(card: CardData, from: Vector2, targets: Array) -> bool:
 	var entries: Array[Dictionary] = []
 	move.from = from
 	move.style = _style
+	var foe_side := MatchState.other_side(_origin_side)
+	for slot in MatchState.BOARD_SIZE:
+		if _screen.state.board[foe_side][slot] != null:
+			move.foes.append(CardFlipBeam.unit_center(_screen.view_at(foe_side, slot)))
 	for entry: Dictionary in targets:
 		entries.append({"side": entry["side"], "slot": entry["slot"]})
 		move.targets.append(_target_position(entry["side"], entry["slot"]))

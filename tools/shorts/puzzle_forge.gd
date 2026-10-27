@@ -196,6 +196,7 @@ func _usable(card: CardData) -> bool:
 			in [
 				CardEnums.EffectType.DRAW,
 				CardEnums.EffectType.HEAL_PLAYER,
+				CardEnums.EffectType.HEAL_PLAYER_PER_ENEMY_UNIT,
 				CardEnums.EffectType.INVERT_PLAYER_HP,
 			]
 		):

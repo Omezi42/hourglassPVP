@@ -132,6 +132,8 @@ enum EffectType {
 	GAIN_FLIP_RIGHT,
 	## 対象プレイヤーへ value + このターン自分の砂時計が反転した回数 のダメージ(反響の刻)。
 	DAMAGE_PLAYER_PLUS_FLIPS,
+	## 相手の砂時計の数 × value だけ自分のHPを回復する(追砂の刻)。
+	HEAL_PLAYER_PER_ENEMY_UNIT,
 }
 
 ## コンボ系カードの発動条件が確認する範囲(GameDesign.md 6章)。
