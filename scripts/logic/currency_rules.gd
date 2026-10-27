@@ -22,7 +22,7 @@ const REWARDS := {
 
 ## これに満たない手数で終わった対局は報酬の対象外。開始直後に投了して
 ## 短時間で繰り返すことを防ぐ。
-const MIN_MOVES := 10
+const MIN_MOVES := 6
 ## CPU戦で1日に報酬を得られる回数の上限。上限に達してもCPU戦自体は遊べる。
 const CPU_DAILY_LIMIT := 10
 ## 1日3勝ボーナス(GameDesign.md 15章)。毎日最初のこの数の勝利に、固定額を足す。

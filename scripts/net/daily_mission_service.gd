@@ -12,7 +12,7 @@ const SAVE_PATH := "user://daily_missions.json"
 ## 日付の境目は日本時間の0時(GameDesign.md 23章)。
 const JST_OFFSET_SECONDS := 9 * 3600
 ## 報酬の対象になる最低の手数。開始直後に投げ捨てて回すのを防ぐ(GameDesign.md 15章と同じ線)。
-const MIN_MOVES := 10
+const MIN_MOVES := CurrencyRules.MIN_MOVES
 
 static var _loaded := false
 static var _muted := false
@@ -73,7 +73,7 @@ static func claim(owner_uid: String, id: String) -> bool:
 
 
 ## 対局を1つ見張る。**進捗はここでは書かず、`commit()` まで手元に溜める**
-## (10手に満たない対局は数えないため。GameDesign.md 23章)。
+## (MIN_MOVES手に満たない対局は数えないため。GameDesign.md 23章)。
 static func watch(state: MatchState, my_side: int) -> void:
 	_session = {"side": my_side}
 	state.trigger_fired.connect(_on_trigger)

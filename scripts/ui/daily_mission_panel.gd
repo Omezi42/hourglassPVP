@@ -118,7 +118,7 @@ func _refresh() -> void:
 	var uid := _uid()
 	for row in DailyMissionService.missions(uid):
 		_rows.add_child(_make_row(uid, row))
-	_note.text = "課題は毎日0時(日本時間)に入れ替わります。10手に満たない対局は数えません。"
+	_note.text = ("課題は毎日0時(日本時間)に入れ替わります。%d手に満たない対局は数えません。" % CurrencyRules.MIN_MOVES)
 
 
 func _make_row(uid: String, row: Dictionary) -> Control:

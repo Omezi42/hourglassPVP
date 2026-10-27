@@ -10,7 +10,7 @@ extends RefCounted
 
 const RETRY := 3
 ## 段位を動かさない対局の下限(GameDesign.md 15章「不正な稼ぎ方への線引き」と同じ線)。
-const MIN_MOVES := 10
+const MIN_MOVES := CurrencyRules.MIN_MOVES
 const JST_OFFSET_HOURS := 9
 ## `_grant_season_reward()` が月末報酬を渡せなかったときの戻り値。
 const REWARD_FAILED := -1
@@ -123,7 +123,7 @@ static func ensure_current_season(
 	return none
 
 
-## 対局の結果を段位へ反映する(GameDesign.md 28章)。10手未満の対局は数えない
+## 対局の結果を段位へ反映する(GameDesign.md 28章)。MIN_MOVES手未満の対局は数えない
 ## (15章「不正な稼ぎ方への線引き」と同じ不正対策)。`host`はunityroomランキングへの
 ## 送信(`UnityroomRankingClient`)がHTTPRequestをぶら下げるためのノード。
 static func apply_result(

@@ -12,7 +12,7 @@ func run(assert_true: Callable) -> void:
 	_test_stages_load()
 	_test_every_stage_is_solvable()
 	_test_missions_are_stable_for_a_day()
-	_test_progress_needs_ten_moves()
+	_test_progress_needs_min_moves()
 	_test_flip_right_counts_as_flip()
 	_test_claim_needs_completion()
 
@@ -114,17 +114,17 @@ func _test_missions_are_stable_for_a_day() -> void:
 		_assert.call(first[i]["id"] == second[i]["id"], "the same day must offer the same missions")
 
 
-## 10手に満たない対局は数えない(GameDesign.md 23章)。
-func _test_progress_needs_ten_moves() -> void:
+## MIN_MOVES手に満たない対局は数えない(GameDesign.md 23章)。
+func _test_progress_needs_min_moves() -> void:
 	DailyMissionService.reset_for_test()
 	var id := _mission_id_for(DailyMissionData.Metric.MATCH)
 	if id.is_empty():
 		return
 	DailyMissionService.watch(_dummy_state(), MatchState.Side.A)
-	DailyMissionService.commit("uid-a", true, 9)
+	DailyMissionService.commit("uid-a", true, DailyMissionService.MIN_MOVES - 1)
 	_assert.call(_progress("uid-a", id) == 0, "a short match must not count")
 	DailyMissionService.watch(_dummy_state(), MatchState.Side.A)
-	DailyMissionService.commit("uid-a", true, 10)
+	DailyMissionService.commit("uid-a", true, DailyMissionService.MIN_MOVES)
 	_assert.call(_progress("uid-a", id) == 1, "a full match must count once")
 
 
@@ -138,7 +138,7 @@ func _test_flip_right_counts_as_flip() -> void:
 	DailyMissionService.watch(state, MatchState.Side.A)
 	state.flip_right_used.emit(MatchState.Side.A, MatchState.Side.B, 0)
 	state.flip_right_used.emit(MatchState.Side.B, MatchState.Side.A, 0)
-	DailyMissionService.commit("uid-a", true, 10)
+	DailyMissionService.commit("uid-a", true, DailyMissionService.MIN_MOVES)
 	_assert.call(_progress("uid-a", id) == 1, "only my flip right should count")
 
 
