@@ -66,7 +66,7 @@ func _shoot(spec: String, portrait: bool, out_dir: String) -> void:
 	await get_tree().create_timer(SETTLE_SECONDS).timeout
 	for i in SETTLE_FRAMES:
 		await RenderingServer.frame_post_draw
-	var name := spec.get_file().get_basename().replace("|", "_").replace(",", "_")
+	var name := spec.get_file().get_basename().replace("|", "_").replace(",", "_").replace('"', "")
 	var path := out_dir.path_join("%s_%s.png" % [name, "portrait" if portrait else "landscape"])
 	_stage.get_texture().get_image().save_png(path)
 	print("SAVED=%s" % path)
