@@ -39,6 +39,7 @@ const CpuDeckTests = preload("res://tools/tests/cpu_deck_tests.gd")
 const CardSetTests = preload("res://tools/tests/card_set_tests.gd")
 const FirstDaysTests = preload("res://tools/tests/first_days_tests.gd")
 const TurnForecastTests = preload("res://tools/tests/turn_forecast_tests.gd")
+const TouchScrollTests = preload("res://tools/tests/touch_scroll_tests.gd")
 
 var _failures := 0
 
@@ -101,6 +102,8 @@ func _run() -> void:
 	await account_service.run(_assert_true)
 	var read_failure := ReadFailureTests.new()
 	await read_failure.run(_assert_true)
+	var touch_scroll := TouchScrollTests.new()
+	await touch_scroll.run(_assert_true, root)
 
 	if _failures == 0:
 		print("tests passed")

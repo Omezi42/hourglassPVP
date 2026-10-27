@@ -93,8 +93,12 @@ func _gui_input(event: InputEvent) -> void:
 
 ## デッキ編集の棚(`CardDeckShelf`)へドラッグして加えられるようにする(GameDesign.md 9章)。
 ## 傾きの物理は対局と同じ `CardDragPreview` をそのまま使う(Architecture.md 10.10.2節)。
-func _get_drag_data(_at_position: Vector2) -> Variant:
+func _get_drag_data(at_position: Vector2) -> Variant:
 	if card == null or not enabled:
+		return null
+	# 指で縦へ動かしたのは一覧のスクロール(`TouchScroll`)。棚へ運ぶのは横への動きだけ。
+	var moved := get_local_mouse_position() - at_position
+	if TouchScroll.is_touching() and absf(moved.y) > absf(moved.x):
 		return null
 	set_drag_preview(_make_drag_preview())
 	return {"stock_card": card}

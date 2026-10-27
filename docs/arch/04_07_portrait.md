@@ -117,3 +117,7 @@
 - ログのカード名: タッチのときはホバーではなく `meta_clicked` で詳細を出す。行の押下で「名前以外を押した」を
   遅延で仮置きし、同じ押下で `meta_clicked` が来たら取り消す(押下と `meta_clicked` の順序に依らず、同じ名前の2度押しで消える)
 - 反転の予測は「反転」ボタンを出した時点、ターン終了の予測は `button_down` で出し `button_up` で消す(タッチのときだけ)
+- **指スクロール**: `TouchScroll.enable(scroll)` を一覧の `ScrollContainer` ごとに1回呼ぶ。`SceneTree.node_added` で中身の
+  `Control` 全部の `gui_input` へ見張りを掛け(シグナルは各Control自身の処理より先に呼ばれる)、`InputEventScreenDrag` で動かす。
+  遊びを超えたら `NOTIFICATION_SCROLL_BEGIN` を配って押し込みを解き(BaseButton・`ClickArea`)、離す入力を `accept_event()` で
+  握りつぶす(`PressTracker` の確定を防ぐ)。ドラッグで運べる札は `TouchScroll.is_touching()` 中の縦の動きでは運ばない

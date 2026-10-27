@@ -44,6 +44,12 @@ func _gui_input(event: InputEvent) -> void:
 			animate_press(_visual_root, false)
 
 
+## 押したまま指で一覧をスクロールし始めた(`TouchScroll`)。押し込みを解く。
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_SCROLL_BEGIN and _press_tracker.cancel():
+		animate_press(_visual_root, false)
+
+
 func _on_resized() -> void:
 	_visual_root.pivot_offset = _visual_root.size / 2.0
 	if not _hovering:
