@@ -2,13 +2,14 @@ class_name UiState
 extends RefCounted
 ## 画面まわりの小さな永続状態(Autoloadを使わずstaticで持つ流儀。CardDeckSave と同じ)。
 ##
-## 「ホーム画面を一度でも開いたか」と「誘導対局を遊んだか」を持つ。前者は初回だけ「ルール」タブから
+## 「ホーム画面を一度でも開いたか」「誘導対局を遊んだか」「デッキ編集の表示(棚/リスト)」を持つ。ホームの印は初回だけ「ルール」タブから
 ## 始めるための判定に使う(GameDesign.md 9章)。読んだかどうかではなくホームを開いたかで
 ## 判定しているのは、読了を測るとルールを閉じただけの人へ何度も出てしまうため。
 
 const SAVE_PATH := "user://ui_state.json"
 const KEY_HOME_SEEN := "home_seen"
 const KEY_TUTORIAL_DONE := "tutorial_done"
+const KEY_DECK_AS_LIST := "deck_as_list"
 
 static var _save_path := SAVE_PATH
 static var _loaded := false
@@ -40,6 +41,20 @@ static func mark_tutorial_done() -> void:
 	if _state.get(KEY_TUTORIAL_DONE, false):
 		return
 	_state[KEY_TUTORIAL_DONE] = true
+	_save()
+
+
+## デッキ編集で編成中のデッキをリストで見せるか(false なら棚。GameDesign.md 9章)。
+static func deck_as_list() -> bool:
+	_ensure_loaded()
+	return bool(_state.get(KEY_DECK_AS_LIST, false))
+
+
+static func set_deck_as_list(value: bool) -> void:
+	_ensure_loaded()
+	if bool(_state.get(KEY_DECK_AS_LIST, false)) == value:
+		return
+	_state[KEY_DECK_AS_LIST] = value
 	_save()
 
 

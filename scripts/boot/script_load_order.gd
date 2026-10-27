@@ -250,6 +250,7 @@ const PATHS: Array[String] = [
 	"res://scripts/logic/mobile_text_input.gd",
 	"res://scripts/ui/card_deck_filter.gd",
 	"res://scripts/ui/card_deck_shelf.gd",
+	"res://scripts/ui/card_deck_list.gd",
 	"res://scripts/ui/card_preset_picker.gd",
 	"res://scripts/ui/card_deck_sheet.gd",
 	"res://scripts/net/match_id_generator.gd",

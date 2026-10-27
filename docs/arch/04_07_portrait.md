@@ -65,7 +65,7 @@
 - `CardDeckEditorScreen.apply_orientation()`: 縦では在庫棚(`_grid_box`)と組立台(`_side_box`)を同じ木箱の矩形へ置き、`_select_tab()` で片方だけ出す。
   下地(`WorkshopBackdrop.portrait` / `show_shelf`)も1つの木箱を描く
 - `WorkshopStockItem.zoom`: `CELL_SIZE` の座標のまま `draw_set_transform()` で拡大して描く(縦=1.6、3列)。
-  `CardDeckShelf.text_scale`: 名前・名前の帯・印の上限だけを拡大する(縦=1.7。枠と絵は `size` から決まる)
+  `CardDeckShelf.text_scale`: 名前・名前の帯・印の上限だけを拡大する(縦=1.7。枠と絵は `size` から決まる)。`CardDeckList.text_scale` も同じ値
 - 詳細は縦では画面の中央に1.6倍で出す
 
 ## 砂時計図鑑・辞書・ルール・画面の見かた・一覧

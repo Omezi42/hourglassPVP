@@ -51,6 +51,10 @@ const COUNT_FONT := 16
 const FILTER_SIZE := Vector2(130, 36)
 const NAME_SIZE := Vector2(228, 36)
 const PROGRESS_FONT := 20
+## 編成中のデッキの「棚 / リスト」の切り替え(GameDesign.md 9章)。
+const VIEW_LABELS := ["棚", "リスト"]
+const VIEW_SIZE := Vector2(72, 36)
+const VIEW_FONT := 16
 
 ## 縦画面(GameDesign.md 9章「縦画面」)。在庫棚と組立台を同じ木箱で切り替え、
 ## 中身は文字の目安(本文24px以上)を満たす大きさにする。
@@ -78,7 +82,9 @@ const PORTRAIT_SHELF_TEXT := 1.7
 const PORTRAIT_BUTTON_FONT := 26
 const PORTRAIT_COUNT_FONT := 24
 const PORTRAIT_FILTER_SIZE := Vector2(190, 64)
-const PORTRAIT_NAME_SIZE := Vector2(340, 64)
+const PORTRAIT_NAME_SIZE := Vector2(280, 64)
+const PORTRAIT_VIEW_SIZE := Vector2(92, 64)
+const PORTRAIT_VIEW_FONT := 24
 const PORTRAIT_PROGRESS_FONT := 28
 const PORTRAIT_DETAIL_SCALE := 1.6
 
@@ -88,6 +94,8 @@ var _filter_button: Button
 var _count_label: Label
 var _grid: GridContainer
 var _shelf: CardDeckShelf
+var _deck_list: CardDeckList
+var _view_buttons: Array[Button] = []
 var _progress: Label
 var _detail: CardDetailPanel
 var _detail_hide_timer: Timer
@@ -148,6 +156,7 @@ func _build() -> void:
 	_build_grid()
 	_build_side()
 	_build_detail()
+	_select_deck_view(UiState.deck_as_list())
 	# **モーダルは最後に足す。**`Control` は後から足した子ほど手前に描かれる。
 	_filter = CardDeckFilter.new()
 	_filter.changed.connect(_apply_filter)
@@ -279,6 +288,12 @@ func _build_side() -> void:
 	_progress.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_progress.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	top_row.add_child(_progress)
+	for i in VIEW_LABELS.size():
+		var view_button := CodedButton.make(VIEW_LABELS[i], VIEW_SIZE)
+		view_button.add_theme_font_size_override("font_size", VIEW_FONT)
+		view_button.pressed.connect(_select_deck_view.bind(i == 1))
+		top_row.add_child(view_button)
+		_view_buttons.append(view_button)
 
 	# 2. 編成中のデッキ(30枠の決まった棚)。
 	# **マナカーブの棒グラフは置かない**(GameDesign.md 9章)。
@@ -294,6 +309,36 @@ func _build_side() -> void:
 	_shelf.card_removed.connect(_on_band_remove)
 	_shelf.card_add_requested.connect(_on_card_pressed)
 	column.add_child(_shelf)
+
+	# 2'. 同じ場所へ出すリスト。どちらを出すかは保存しておき、開き直しても保つ。
+	_deck_list = CardDeckList.new()
+	_deck_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_deck_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_deck_list.card_hovered.connect(_on_shelf_hovered)
+	_deck_list.hover_left.connect(_on_hover_left)
+	_deck_list.card_removed.connect(_on_band_remove)
+	_deck_list.card_add_requested.connect(_on_card_pressed)
+	column.add_child(_deck_list)
+
+
+## 編成中のデッキを棚とリストのどちらで見せるか。
+func _select_deck_view(as_list: bool) -> void:
+	UiState.set_deck_as_list(as_list)
+	_shelf.visible = not as_list
+	_deck_list.visible = as_list
+	_hide_detail()
+	for i in _view_buttons.size():
+		var active: bool = (i == 1) == as_list
+		CodedButton.apply_styles(
+			_view_buttons[i], CodedButton.PRIMARY_ACTION_GROUP if active else TAB_GROUP
+		)
+
+
+## いま出している方(棚かリスト)で、そのカードが収まっている矩形。飛翔演出の端点。
+func _deck_rect(card: CardData) -> Rect2:
+	if _deck_list.visible:
+		return _deck_list.global_rect_for_card(card)
+	return _shelf.global_rect_for_card(card)
 
 
 func _build_detail() -> void:
@@ -346,6 +391,12 @@ func apply_orientation(portrait: bool) -> void:
 		view.zoom = PORTRAIT_STOCK_ZOOM if portrait else 1.0
 	_shelf.text_scale = PORTRAIT_SHELF_TEXT if portrait else 1.0
 	_shelf.custom_minimum_size.x = PORTRAIT_SIDE_RECT.size.x if portrait else SIDE_INNER_WIDTH
+	_deck_list.text_scale = PORTRAIT_SHELF_TEXT if portrait else 1.0
+	for view_button in _view_buttons:
+		_place(view_button, Rect2(Vector2.ZERO, PORTRAIT_VIEW_SIZE if portrait else VIEW_SIZE), 0)
+		view_button.add_theme_font_size_override(
+			"font_size", PORTRAIT_VIEW_FONT if portrait else VIEW_FONT
+		)
 	_count_label.add_theme_font_size_override(
 		"font_size", PORTRAIT_COUNT_FONT if portrait else COUNT_FONT
 	)
@@ -407,6 +458,7 @@ func _place_box(box: Control, rect: Rect2) -> void:
 func _refresh() -> void:
 	_progress.text = "%d / %d 枚" % [_deck.size(), MatchState.DECK_SIZE]
 	_shelf.deck = _deck.duplicate()
+	_deck_list.deck = _deck.duplicate()
 	var full: bool = _deck.size() >= MatchState.DECK_SIZE
 	for i in _card_views.size():
 		var card: CardData = _pool[i]
@@ -530,7 +582,7 @@ func _add_card(card: CardData) -> void:
 	var from_rect := _view_rect(card)
 	_deck.append(card)
 	_refresh()
-	_fly_card(card, from_rect, _shelf.global_rect_for_card(card))
+	_fly_card(card, from_rect, _deck_rect(card))
 
 
 func _on_band_remove(card: CardData) -> void:
@@ -538,7 +590,7 @@ func _on_band_remove(card: CardData) -> void:
 	if index < 0:
 		return
 	# **飛翔の出発点(棚の枠)は配列操作の前に控える**(取り除くと枠から消えるため)。
-	var from_rect := _shelf.global_rect_for_card(card)
+	var from_rect := _deck_rect(card)
 	_deck.remove_at(index)
 	_refresh()
 	_fly_card(card, from_rect, _view_rect(card))

@@ -119,6 +119,7 @@
 - **2カラム**(`GRID_RECT` / `SIDE_RECT`)。高さは `ScreenHeader.CONTENT_TOP` / `CONTENT_HEIGHT` から取り、画面ごとに数えない
 - 絞り込みと検索は `CardDeckFilter` / `CardDeckFilterModal` が `matches(card)` として合成し、画面は `changed` を受けて並べ直す
 - **`CardDeckShelf` は1つの `Control` が30枠を `_draw()` で描き、当たり判定を矩形の表として持つ**(30個のノードだと1枚動かすたびに生成と破棄が走る)。枠の数は `MatchState.DECK_SIZE` から実行時に読む(横 `COLUMNS`=6)。空き枠も枠として描き当たり判定にも積む。バッジ半径は `clampf(art_w * 0.20, 8, 13)`。**共有のデッキ表(`CardDeckSheet`)も同じ棚**(`columns=10` / `readonly=true`)
+- **`CardDeckList` は同じ場所へ出すリスト表示**(1種類1行・2列・1列 `ceil(DECK_SIZE/2)` 行で行の高さを固定)。シグナルと `global_rect_for_card()` は `CardDeckShelf` と同じ形で、画面は見えている方を `_deck_rect()` で選ぶ。どちらを出すかは `UiState.deck_as_list()` に保存
 - 詳細は `interactive = false` で幅400px、`CardDetailPanel.place_near()` で置く(`MOUSE_FILTER_IGNORE` でホバーを奪わない)
 - 一覧のカードは `CardView.badge` で「2/2」。保存は30枚ちょうどのときだけ。編集画面は必ず一覧から `open(index)`(-1は新規)。デッキ名の入力欄は編成中の欄の上端
 - **ボタンの既定の文字色はテーマ側でオフホワイト**(`main_theme.tres`。指定を書き忘れた画面だけ黒い文字になる状態を無くすため。`font_hover_color` だけ暗いまま)
