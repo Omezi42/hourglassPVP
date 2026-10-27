@@ -63,7 +63,6 @@ func open_set(set_id: String) -> void:
 func _layout() -> void:
 	size = PortraitModal.screen_size()
 	_dim.size = size
-	_center.size = size
 	_scroll.custom_minimum_size = (
 		PORTRAIT_SCROLL_SIZE if ScreenOrientation.is_portrait() else SCROLL_SIZE
 	)
@@ -111,8 +110,10 @@ func _build() -> void:
 	add_child(_dim)
 
 	# 中身の幅で伸び縮みさせつつ画面の中央に置くため、CenterContainer へ入れる。
+	# 大きさは代入せず画面へ張る(代入は中身の最小幅で広がったまま戻らない。Pitfalls.md)。
 	_center = CenterContainer.new()
-	_center.size = SCREEN_SIZE
+	_center.anchor_right = 1.0
+	_center.anchor_bottom = 1.0
 	_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_center)
 

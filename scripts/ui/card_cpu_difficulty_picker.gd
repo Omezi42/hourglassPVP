@@ -58,7 +58,6 @@ func _layout() -> void:
 	var portrait := ScreenOrientation.is_portrait()
 	size = PortraitModal.screen_size()
 	_dim.size = size
-	_center.size = size
 	_panel.custom_minimum_size.x = PortraitModal.WIDTH if portrait else PANEL_WIDTH
 	for button in _row_buttons:
 		button.custom_minimum_size = PORTRAIT_ROW_BUTTON_SIZE if portrait else ROW_BUTTON_SIZE
@@ -78,8 +77,10 @@ func _build() -> void:
 	_dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_dim)
 
+	# 大きさは代入せず画面へ張る(代入は中身の最小幅で広がったまま戻らない。Pitfalls.md)。
 	_center = CenterContainer.new()
-	_center.size = SCREEN_SIZE
+	_center.anchor_right = 1.0
+	_center.anchor_bottom = 1.0
 	_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_center)
 
