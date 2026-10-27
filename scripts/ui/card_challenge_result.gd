@@ -26,6 +26,11 @@ const LOG_FONT_SIZE := 14
 const DIM_COLOR := Color(0, 0, 0, 0.72)
 const ENTRANCE_DURATION := 0.42
 const ENTRANCE_SCALE := 0.86
+## 縦(GameDesign.md 9章「縦画面」)。`PortraitModal` の論理幅で組み、中身ごと拡大する。
+## ボタン3つが1行に収まるよう、余白とボタンを詰める。
+const PORTRAIT_PADDING := Vector2(28, 26)
+const PORTRAIT_PRIMARY_SIZE := Vector2(144, 56)
+const PORTRAIT_BUTTON_SIZE := Vector2(124, 56)
 
 const EYEBROW_FONT_SIZE := 14
 const TITLE_FONT_SIZE := 40
@@ -51,6 +56,7 @@ const TRAY_RIM_LIGHT := Color(1, 0.9, 0.7, 0.12)
 
 ## 報酬の札
 const REWARD_GAP := 28
+const REWARD_ROW_GAP := 14
 const REWARD_AMOUNT_FONT_SIZE := 30
 const REWARD_NAME_FONT_SIZE := 20
 const REWARD_SUB_FONT_SIZE := 13
@@ -62,6 +68,7 @@ var _box: VBoxContainer
 var _log_button: Button
 var _cleared := false
 var _tween: Tween
+var _outcome: Outcome
 
 
 ## 結果パネルへ渡す中身。組み立ては呼び出し側(`CardMatchPuzzle` / `CardMatchSolo`)が持つ。
@@ -94,14 +101,16 @@ func _ready() -> void:
 	# 暗幕が盤面を覆わずクリックも止められない状態になる。
 	size = SCREEN_SIZE
 	_build()
+	PortraitModal.watch(self, func() -> void: show_for(_outcome))
 
 
 func show_for(outcome: Outcome) -> void:
+	_outcome = outcome
 	_cleared = outcome.cleared
 	for child in _box.get_children():
 		_box.remove_child(child)
 		child.queue_free()
-	var inner_width := PANEL_WIDTH - PADDING.x * 2.0
+	var inner_width := _panel_width() - _padding().x * 2.0
 	_box.add_child(_label(outcome.eyebrow, EYEBROW_FONT_SIZE, UiPalette.TEXT_MUTED))
 	_box.add_child(
 		_label(
@@ -173,27 +182,33 @@ func _layout_and_enter() -> void:
 	await get_tree().process_frame
 	if not visible:
 		return
+	var screen := PortraitModal.screen_size()
+	size = screen
+	_sand.size = screen
+	_dim.size = screen
+	var width := _panel_width()
+	var padding := _padding()
 	var content := _box.get_combined_minimum_size()
-	var panel_size := Vector2(PANEL_WIDTH, content.y + PADDING.y * 2.0)
+	var panel_size := Vector2(width, content.y + padding.y * 2.0)
 	_panel.size = panel_size
-	_panel.position = ((SCREEN_SIZE - panel_size) * 0.5).round()
+	_panel.position = ((screen - panel_size) * 0.5).round()
 	_panel.pivot_offset = panel_size * 0.5
-	_box.size = Vector2(PANEL_WIDTH - PADDING.x * 2.0, content.y)
-	_log_button.position = Vector2(
-		PANEL_WIDTH - LOG_BUTTON_SIZE.x - LOG_BUTTON_MARGIN, LOG_BUTTON_MARGIN
-	)
+	_box.position = padding
+	_box.size = Vector2(width - padding.x * 2.0, content.y)
+	_log_button.position = Vector2(width - LOG_BUTTON_SIZE.x - LOG_BUTTON_MARGIN, LOG_BUTTON_MARGIN)
+	var zoom := PortraitModal.SCALE if ScreenOrientation.is_portrait() else 1.0
 	_panel.queue_redraw()
 	if _tween != null and _tween.is_valid():
 		_tween.kill()
 	_dim.modulate.a = 0.0
-	_panel.scale = Vector2.ONE * ENTRANCE_SCALE
+	_panel.scale = Vector2.ONE * ENTRANCE_SCALE * zoom
 	_tween = create_tween()
 	_tween.set_parallel(true)
 	_tween.tween_property(_dim, "modulate:a", 1.0, ENTRANCE_DURATION * 0.7)
 	_tween.tween_property(_panel, "modulate:a", 1.0, ENTRANCE_DURATION).set_trans(Tween.TRANS_SINE)
 	(
 		_tween
-		. tween_property(_panel, "scale", Vector2.ONE, ENTRANCE_DURATION)
+		. tween_property(_panel, "scale", Vector2.ONE * zoom, ENTRANCE_DURATION)
 		. set_trans(Tween.TRANS_BACK)
 		. set_ease(Tween.EASE_OUT)
 	)
@@ -223,6 +238,14 @@ func _build() -> void:
 	_log_button.add_theme_font_size_override("font_size", LOG_FONT_SIZE)
 	_log_button.pressed.connect(func() -> void: log_pressed.emit())
 	_panel.add_child(_log_button)
+
+
+func _panel_width() -> float:
+	return PortraitModal.WIDTH if ScreenOrientation.is_portrait() else PANEL_WIDTH
+
+
+func _padding() -> Vector2:
+	return PORTRAIT_PADDING if ScreenOrientation.is_portrait() else PADDING
 
 
 func _label(text: String, font_size: int, color: Color) -> Label:
@@ -290,10 +313,12 @@ func _summary(outcome: Outcome) -> HBoxContainer:
 	return row
 
 
+## 報酬が多くて受け皿の幅に入らなければ折り返す(縦の細いパネルでも溢れないように)。
 func _reward_tray(reward: StageReward, width: float) -> Control:
-	var row := HBoxContainer.new()
-	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_theme_constant_override("separation", REWARD_GAP)
+	var row := HFlowContainer.new()
+	row.alignment = FlowContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("h_separation", REWARD_GAP)
+	row.add_theme_constant_override("v_separation", REWARD_ROW_GAP)
 	if reward.gold > 0:
 		row.add_child(_reward_item(StageRewardTokens.coin(), "+%d" % reward.gold, "砂金", true))
 	for card in reward.cards():
@@ -377,12 +402,15 @@ func _recessed(content: Control, width: float) -> MarginContainer:
 
 
 func _primary(label: String, target: Signal) -> Button:
-	var button := CodedButton.make_in_group(label, PRIMARY_SIZE, CodedButton.PRIMARY_ACTION_GROUP)
+	var button_size := PORTRAIT_PRIMARY_SIZE if ScreenOrientation.is_portrait() else PRIMARY_SIZE
+	var button := CodedButton.make_in_group(label, button_size, CodedButton.PRIMARY_ACTION_GROUP)
 	button.pressed.connect(func() -> void: target.emit())
 	return button
 
 
 func _secondary(label: String, target: Signal) -> Button:
-	var button := CodedButton.make(label, BUTTON_SIZE)
+	var button := CodedButton.make(
+		label, PORTRAIT_BUTTON_SIZE if ScreenOrientation.is_portrait() else BUTTON_SIZE
+	)
 	button.pressed.connect(func() -> void: target.emit())
 	return button

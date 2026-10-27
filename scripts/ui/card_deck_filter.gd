@@ -23,6 +23,8 @@ const KIND_SPELL := 2
 ## 押したボタンの位置から膨らんで開く尺(GameDesign.md 9章「手触り」)。
 const BULGE_DURATION := 0.22
 const BULGE_MIN_SCALE := 0.12
+const CHIP_GAP := 6
+const SEARCH_INSET := 48.0
 
 ## 0 は「すべて」。それ以外はそのコストだけを通す。
 var _cost := 0
@@ -35,6 +37,8 @@ var _search_input: LineEdit
 var _cost_buttons: Dictionary = {}
 var _keyword_buttons: Dictionary = {}
 var _kind_buttons: Dictionary = {}
+var _dim: ColorRect
+var _center: CenterContainer
 var _panel: PanelContainer
 var _bulge_tween: Tween
 
@@ -44,14 +48,28 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	size = SCREEN_SIZE
 	_build()
+	PortraitModal.watch(self, _layout)
 
 
 ## `from_rect` を渡すと、そのグローバル矩形(押したボタン)の位置から膨らんで開く
 ## (GameDesign.md 9章)。省略すればいままでどおり即座に表示するだけ。
+## 膨らみは遅らせて始める(組み直した直後はパネルの位置がまだ決まっていないため)。
 func open(from_rect: Rect2 = Rect2()) -> void:
+	_layout()
 	visible = true
 	if from_rect.size != Vector2.ZERO:
-		_bulge_from(from_rect)
+		_bulge_from.call_deferred(from_rect)
+
+
+## 縦(GameDesign.md 9章「縦画面」)は `PortraitModal` の論理幅で組み、中身ごと拡大する。
+## チップの列は幅に収まらなければ折り返す。
+func _layout() -> void:
+	var width := PortraitModal.WIDTH if ScreenOrientation.is_portrait() else PANEL_WIDTH
+	size = PortraitModal.screen_size()
+	_dim.size = size
+	_panel.custom_minimum_size.x = width
+	_search_input.custom_minimum_size.x = width - SEARCH_INSET
+	PortraitModal.fit(_center)
 
 
 func close() -> void:
@@ -100,17 +118,19 @@ func reset_filters() -> void:
 
 
 func _build() -> void:
-	var dim := ColorRect.new()
-	dim.color = Color(0, 0, 0, 0.65)
-	dim.size = SCREEN_SIZE
-	dim.mouse_filter = Control.MOUSE_FILTER_STOP
-	dim.gui_input.connect(_on_dim_input)
-	add_child(dim)
+	_dim = ColorRect.new()
+	_dim.color = Color(0, 0, 0, 0.65)
+	_dim.size = SCREEN_SIZE
+	_dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	_dim.gui_input.connect(_on_dim_input)
+	add_child(_dim)
 
-	var center := CenterContainer.new()
-	center.size = SCREEN_SIZE
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(center)
+	# 大きさは代入せず画面へ張る(代入は中身の最小幅で広がったまま戻らない。Pitfalls.md)。
+	_center = CenterContainer.new()
+	_center.anchor_right = 1.0
+	_center.anchor_bottom = 1.0
+	_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_center)
 
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = Vector2(PANEL_WIDTH, 0)
@@ -118,7 +138,7 @@ func _build() -> void:
 	var style: StyleBox = load(PANEL_STYLE)
 	if style != null:
 		panel.add_theme_stylebox_override("panel", style)
-	center.add_child(panel)
+	_center.add_child(panel)
 	_panel = panel
 
 	var column := VBoxContainer.new()
@@ -147,8 +167,7 @@ func _build() -> void:
 	kind_label.add_theme_color_override("font_color", UiPalette.BRASS_HIGHLIGHT)
 	column.add_child(kind_label)
 
-	var kind_row := HBoxContainer.new()
-	kind_row.add_theme_constant_override("separation", 6)
+	var kind_row := _chip_row()
 	column.add_child(kind_row)
 	_add_kind_chip(kind_row, "すべて", KIND_ALL)
 	_add_kind_chip(kind_row, "砂時計", KIND_UNIT)
@@ -161,8 +180,7 @@ func _build() -> void:
 	cost_label.add_theme_color_override("font_color", UiPalette.BRASS_HIGHLIGHT)
 	column.add_child(cost_label)
 
-	var cost_row := HBoxContainer.new()
-	cost_row.add_theme_constant_override("separation", 6)
+	var cost_row := _chip_row()
 	column.add_child(cost_row)
 	_add_cost_chip(cost_row, "すべて", 0, ALL_CHIP_WIDTH)
 	for cost in _pool_costs():
@@ -175,8 +193,7 @@ func _build() -> void:
 	keyword_label.add_theme_color_override("font_color", UiPalette.BRASS_HIGHLIGHT)
 	column.add_child(keyword_label)
 
-	var keyword_row := HBoxContainer.new()
-	keyword_row.add_theme_constant_override("separation", 6)
+	var keyword_row := _chip_row()
 	column.add_child(keyword_row)
 	for keyword in CardEnums.NAMED:
 		var button := CodedButton.make(
@@ -214,6 +231,13 @@ func _build() -> void:
 	var confirm_button := CodedButton.make("閉じる", BUTTON_SIZE)
 	confirm_button.pressed.connect(close)
 	footer_row.add_child(confirm_button)
+
+
+func _chip_row() -> HFlowContainer:
+	var row := HFlowContainer.new()
+	row.add_theme_constant_override("h_separation", CHIP_GAP)
+	row.add_theme_constant_override("v_separation", CHIP_GAP)
+	return row
 
 
 ## プールに実在するコストだけを昇順で返す。
@@ -283,17 +307,17 @@ func _on_query_changed(text: String) -> void:
 
 ## パネルの中心を `button_global_rect` の中心へ合わせてから、通常の位置・大きさへ
 ## Tweenで戻す(GameDesign.md 9章「絞り込みモーダルは、押したボタンの位置から膨らんで開く」)。
-## `center`(CenterContainer)は `self` に対して原点(0,0)のまま敷いているため、
-## `self` のグローバル逆変換がそのまま `_panel` の親の局所座標になる。
+## 座標は `_center` の局所へ直す(縦では `_center` ごと拡大しているため、その倍率も割り戻す)。
 func _bulge_from(button_global_rect: Rect2) -> void:
 	if _panel == null or _panel.size == Vector2.ZERO:
 		return
 	var pivot := _panel.size * 0.5
 	_panel.pivot_offset = pivot
 	var target_position := _panel.position
-	var inverse := get_global_transform().affine_inverse()
-	var button_center: Vector2 = inverse * button_global_rect.get_center()
-	var start_scale := (button_global_rect.size / _panel.size).clamp(
+	var to_center := _center.get_global_transform()
+	var button_center: Vector2 = to_center.affine_inverse() * button_global_rect.get_center()
+	var button_size := button_global_rect.size / to_center.get_scale()
+	var start_scale := (button_size / _panel.size).clamp(
 		Vector2(BULGE_MIN_SCALE, BULGE_MIN_SCALE), Vector2.ONE
 	)
 	_panel.scale = start_scale

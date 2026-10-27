@@ -101,9 +101,14 @@
 
 - `PortraitModal`(static のみ): 縦ではパネルを論理幅 `WIDTH`(480)で組み、`fit()` で `SCALE`(1.4)倍に中心から拡大する。
   **コンテナの子は渡さない**(コンテナが `scale` を1へ戻す)。`CenterContainer` で中央へ置くモーダルはその箱ごと渡す
-- モーダルは画面ではないため `Main` から呼ばれない。開くたびに組み直し、開いている間の向きの変化は `PortraitModal.watch()` が受ける(状態は保つ)
-- 対象: `ConfirmModal`・`SettingsPanel`・`CardCpuDifficultyPicker`・`DailyMissionPanel`・`WelcomeDaysPanel`・`CardSeasonCeremonyPanel`・`ShopSetPreview`・
-  `AccountCredentialDialog`(上端を基準に拡大)・`LabProposalDetail`・`LabSubmitPanel`。拡大しても目安に足りない文字だけ縦の大きさを持つ
+- モーダルは画面ではないため `Main` から呼ばれない。開くたびに組み直し、開いている間の向きの変化は `PortraitModal.watch()` が受ける(状態は保つ。木から外れている間は受けない)
+- 全面に置く `CenterContainer` は `size` を代入せずアンカーで張る(代入するとその時点の最小幅で広がったまま縮まない。Pitfalls.md)
+- 対象: `ConfirmModal`・`SettingsPanel`・`LearnMenu`・`KeywordPopup`・`CardCpuDifficultyPicker`・`CardPresetPicker`・`CardDeckFilter`・`WaitingCpuPrompt`・
+  `DailyMissionPanel`・`WelcomeDaysPanel`・`CardSeasonCeremonyPanel`・`ShopSetPreview`・`CardChallengeResult`・`CardDeckSharePanel`・
+  `AccountCredentialDialog`(上端を基準に拡大)。拡大しても目安に足りない文字だけ縦の大きさを持つ
+- 縦で横幅に入らない並びは組み替える: `CardDeckFilter` のチップは折り返し(`HFlowContainer`)、`WaitingCpuPrompt` の2つのボタンは上下に積む、
+  `CardChallengeResult` は余白とボタンを詰めて3つを1行に収める。`CardDeckSharePanel` は見本・画像・コードを幅372の1列に積む(`PORTRAIT_*`)
+- 出てくる演出の途中で向きが変わったら演出を打ち切って組み直す(`CardChallengeResult` は出し直す)
 - `PortraitModal.fit_width()`: 中身の幅をそろえて持つモーダル用。横で最小幅が同じ子孫を、縦では論理幅へ合わせる
 
 ## タッチ操作

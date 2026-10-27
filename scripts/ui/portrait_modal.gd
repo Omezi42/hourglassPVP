@@ -26,11 +26,21 @@ static func fit(panel: Control) -> void:
 
 
 ## 開いている間に向きが変わったら `relayout` を呼ぶ(`Main` が向きを決め直した後に届くよう遅らせる)。
+## 木にいる間だけ繋ぐ(外れた後も繋いだままだと、消えたモーダルへ向きの変化が届いてエラーになる)。
 static func watch(modal: Control, relayout: Callable) -> void:
-	modal.get_tree().root.size_changed.connect(
+	var root := modal.get_tree().root
+	var on_resized := func() -> void:
+		if modal.visible:
+			relayout.call_deferred()
+	var attach := func() -> void:
+		if not root.size_changed.is_connected(on_resized):
+			root.size_changed.connect(on_resized)
+	attach.call()
+	modal.tree_entered.connect(attach)
+	modal.tree_exiting.connect(
 		func() -> void:
-			if modal.visible:
-				relayout.call_deferred()
+			if root.size_changed.is_connected(on_resized):
+				root.size_changed.disconnect(on_resized)
 	)
 
 

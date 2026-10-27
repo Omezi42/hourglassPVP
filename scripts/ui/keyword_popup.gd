@@ -39,8 +39,10 @@ func _fit() -> void:
 	var portrait := ScreenOrientation.is_portrait()
 	var width := PortraitModal.WIDTH if portrait else PANEL_SIZE.x
 	_panel.custom_minimum_size = Vector2(width, PANEL_SIZE.y)
+	# パネルの枠の内側の余白も引く(引かないと中身が枠のぶん広げ、縦では画面からはみ出す)。
+	var frame := _panel.get_theme_stylebox("panel").get_minimum_size().x
 	_entry_view.set_layout(
-		minf(KeywordEntryView.PREVIEW_WIDTH, width - MARGIN * 2.0),
+		minf(KeywordEntryView.PREVIEW_WIDTH, width - MARGIN * 2.0 - frame),
 		PORTRAIT_BODY_FONT if portrait else KeywordEntryView.BODY_FONT_SIZE
 	)
 	PortraitModal.fit(_center)

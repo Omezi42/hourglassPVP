@@ -52,6 +52,23 @@ const RECEIVE_TEXT_WIDTH := 480.0
 const PAD_POS := Vector2(740, 150)
 const PAD_KEY_SIZE := Vector2(84, 64)
 
+## 縦(GameDesign.md 9章「縦画面」)。`PortraitModal` の論理幅で組んで中身ごと拡大し、
+## 横に並べていた見本・画像・コードを幅 372 の1列に積む(札の中の配置は横と同じ)。
+const PORTRAIT_PANEL_SIZE := Vector2(PortraitModal.WIDTH, 868)
+const PORTRAIT_TITLE_POS := Vector2(54, 20)
+const PORTRAIT_CLOSE_RECT := Rect2(322, 16, 104, 44)
+const PORTRAIT_TAB_TOP := 72.0
+const PORTRAIT_PREVIEW_RECT := Rect2(54, 130, 372, 209)
+const PORTRAIT_PREVIEW_NOTE_POS := Vector2(54, 343)
+const PORTRAIT_IMAGE_CARD_POS := Vector2(54, 372)
+const PORTRAIT_CODE_CARD_POS := Vector2(54, 578)
+const PORTRAIT_RECEIVE_TITLE_POS := Vector2(54, 140)
+const PORTRAIT_RECEIVE_SUB_POS := Vector2(54, 184)
+const PORTRAIT_RECEIVE_TILES_RECT := Rect2(54, 228, 372, 72)
+const PORTRAIT_LOAD_BUTTON_RECT := Rect2(54, 316, 372, 60)
+const PORTRAIT_RECEIVE_MESSAGE_POS := Vector2(54, 388)
+const PORTRAIT_PAD_TOP := 440.0
+
 const TITLE_FONT_SIZE := 28
 const CARD_TITLE_FONT_SIZE := 22
 const RECEIVE_TITLE_FONT_SIZE := 28
@@ -88,6 +105,15 @@ var _deck_name := ""
 ## 発行済みのコード。**画像を出すためだけに発行はしない**(通信が要るため)。
 var _code := ""
 var _busy := false
+var _dim: ColorRect
+var _panel: Panel
+var _title: Label
+var _close_button: Button
+var _preview_note: Label
+var _image_card: Panel
+var _code_card: Panel
+var _receive_title: Label
+var _receive_sub: Label
 
 
 func _ready() -> void:
@@ -96,6 +122,7 @@ func _ready() -> void:
 	# `set_anchors_preset()` は生成直後(サイズ0)のノードでは0のまま固定される。
 	size = SCREEN_SIZE
 	_build()
+	PortraitModal.watch(self, _layout)
 
 
 func open(deck: Array, deck_name: String) -> void:
@@ -111,6 +138,7 @@ func open(deck: Array, deck_name: String) -> void:
 	_pending_deck = []
 	_replace_confirm.visible = false
 	_set_busy(false)
+	_layout()
 	_show_face(Face.SEND)
 	visible = true
 	_refresh_sheet()
@@ -118,6 +146,50 @@ func open(deck: Array, deck_name: String) -> void:
 
 func close() -> void:
 	visible = false
+
+
+## 横は `PANEL_RECT` の座標のまま、縦は `PORTRAIT_*` の1列へ置き直して拡大する。
+func _layout() -> void:
+	var portrait := ScreenOrientation.is_portrait()
+	size = PortraitModal.screen_size()
+	_dim.size = size
+	var panel_size := PORTRAIT_PANEL_SIZE if portrait else PANEL_RECT.size
+	_panel.size = panel_size
+	_panel.position = (size - panel_size) * 0.5
+	_send_view.size = panel_size
+	_receive_view.size = panel_size
+	_title.position = PORTRAIT_TITLE_POS if portrait else TITLE_POS
+	_place(_close_button, PORTRAIT_CLOSE_RECT if portrait else CLOSE_RECT)
+	var tab_left := (panel_size.x - TAB_SIZE.x * _tabs.size()) * 0.5 if portrait else TAB_LEFT
+	for i in _tabs.size():
+		_tabs[i].position = Vector2(
+			tab_left + i * TAB_SIZE.x, PORTRAIT_TAB_TOP if portrait else TAB_TOP
+		)
+	_place(_preview, PORTRAIT_PREVIEW_RECT if portrait else PREVIEW_RECT)
+	_preview_note.position = PORTRAIT_PREVIEW_NOTE_POS if portrait else PREVIEW_NOTE_POS
+	_image_card.position = PORTRAIT_IMAGE_CARD_POS if portrait else IMAGE_CARD_RECT.position
+	_code_card.position = PORTRAIT_CODE_CARD_POS if portrait else CODE_CARD_RECT.position
+	_receive_title.position = PORTRAIT_RECEIVE_TITLE_POS if portrait else RECEIVE_TITLE_POS
+	_receive_sub.position = PORTRAIT_RECEIVE_SUB_POS if portrait else RECEIVE_SUB_POS
+	_place(_input_tiles, PORTRAIT_RECEIVE_TILES_RECT if portrait else RECEIVE_TILES_RECT)
+	_place(_load_button, PORTRAIT_LOAD_BUTTON_RECT if portrait else LOAD_BUTTON_RECT)
+	_receive_message.position = (
+		PORTRAIT_RECEIVE_MESSAGE_POS if portrait else RECEIVE_MESSAGE_POS
+	)
+	_receive_message.size.x = (
+		PORTRAIT_LOAD_BUTTON_RECT.size.x if portrait else RECEIVE_TEXT_WIDTH
+	)
+	var pad_width := _pad.get_combined_minimum_size().x
+	_pad.position = (
+		Vector2((panel_size.x - pad_width) * 0.5, PORTRAIT_PAD_TOP) if portrait else PAD_POS
+	)
+	PortraitModal.fit(_panel)
+
+
+func _place(control: Control, rect: Rect2) -> void:
+	control.custom_minimum_size = rect.size
+	control.position = rect.position
+	control.size = rect.size
 
 
 func _show_face(face: Face) -> void:
@@ -258,14 +330,15 @@ func _set_busy(busy: bool) -> void:
 
 
 func _build() -> void:
-	var dim := ColorRect.new()
-	dim.color = Color(0, 0, 0, 0.72)
-	dim.size = SCREEN_SIZE
-	dim.mouse_filter = Control.MOUSE_FILTER_STOP
-	add_child(dim)
+	_dim = ColorRect.new()
+	_dim.color = Color(0, 0, 0, 0.72)
+	_dim.size = SCREEN_SIZE
+	_dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(_dim)
 
 	var panel := _make_panel(self, PANEL_RECT)
-	_place_label(panel, "デッキを共有", TITLE_POS, TITLE_FONT_SIZE, UiPalette.TEXT_OFFWHITE)
+	_panel = panel
+	_title = _place_label(panel, "デッキを共有", TITLE_POS, TITLE_FONT_SIZE, UiPalette.TEXT_OFFWHITE)
 	var faces := ["渡す", "受け取る"]
 	for i in faces.size():
 		var tab := CodedButton.make(faces[i], TAB_SIZE)
@@ -277,6 +350,7 @@ func _build() -> void:
 	close_button.position = CLOSE_RECT.position
 	close_button.pressed.connect(close)
 	panel.add_child(close_button)
+	_close_button = close_button
 
 	_send_view = _make_layer(panel)
 	_build_preview()
@@ -308,13 +382,14 @@ func _build_preview() -> void:
 	_preview.position = PREVIEW_RECT.position
 	_preview.size = PREVIEW_RECT.size
 	_send_view.add_child(_preview)
-	_place_label(
+	_preview_note = _place_label(
 		_send_view, "この画像がそのまま書き出されます", PREVIEW_NOTE_POS, SUB_FONT_SIZE, UiPalette.TEXT_MUTED
 	)
 
 
 func _build_image_card() -> void:
 	var card := _make_panel(_send_view, IMAGE_CARD_RECT)
+	_image_card = card
 	_place_label(card, "画像で渡す", CARD_TITLE_POS, CARD_TITLE_FONT_SIZE, UiPalette.TEXT_OFFWHITE)
 	_place_label(card, "XやDiscordへそのまま貼れます", CARD_SUB_POS, SUB_FONT_SIZE, UiPalette.TEXT_MUTED)
 	# ブラウザ以外では画像をクリップボードへ置けない(Architecture.md 10.6.1節)。
@@ -338,6 +413,7 @@ func _build_image_card() -> void:
 
 func _build_code_card() -> void:
 	var card := _make_panel(_send_view, CODE_CARD_RECT)
+	_code_card = card
 	_place_label(card, "コードで渡す", CARD_TITLE_POS, CARD_TITLE_FONT_SIZE, UiPalette.TEXT_OFFWHITE)
 	_place_label(
 		card,
@@ -353,14 +429,14 @@ func _build_code_card() -> void:
 
 
 func _build_receive() -> void:
-	_place_label(
+	_receive_title = _place_label(
 		_receive_view,
 		"受け取ったコードを読み込む",
 		RECEIVE_TITLE_POS,
 		RECEIVE_TITLE_FONT_SIZE,
 		UiPalette.TEXT_OFFWHITE
 	)
-	_place_label(
+	_receive_sub = _place_label(
 		_receive_view,
 		"%d桁の番号を入力します。貼り付けもできます" % DeckCodeService.CODE_LENGTH,
 		RECEIVE_SUB_POS,

@@ -56,7 +56,12 @@ func open(result: Dictionary) -> void:
 	_play_pop_in()
 
 
+## 出てくる途中で向きが変わったら演出を打ち切る(残すと前の向きの倍率へ戻してしまう)。
 func _layout() -> void:
+	if _pop_tween != null and _pop_tween.is_valid():
+		_pop_tween.kill()
+		_dim.modulate.a = 1.0
+		_panel.modulate.a = 1.0
 	var portrait := ScreenOrientation.is_portrait()
 	var panel_size := PORTRAIT_PANEL_SIZE if portrait else PANEL_SIZE
 	size = PortraitModal.screen_size()
