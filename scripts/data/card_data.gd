@@ -1,15 +1,16 @@
 class_name CardData
 extends Resource
 ## 砂時計(カード)1種の静的定義(GameDesign.md 1章)。
-## パラメータは コスト / 総量 / キーワードまたは効果 の3つだけで、
-## 体力・攻撃力は総量から導出されるため持たない。
+## 場の体力・攻撃力は 総量 と 初期攻撃力 から導出する。
 
 @export var id: String = ""
 @export var display_name: String = ""
 ## 場に出すために支払うマナ。
 @export var cost: int = 0
-## 体力と攻撃力の合計。場に出た時点で 体力=総量 / 攻撃力=0 で始まる。
+## 体力と攻撃力の合計。場に出た時点で 体力=総量-初期攻撃力 で始まる。
 @export var total_sand: int = 0
+## 場に出た時点ですでに下の部屋にある砂(GameDesign.md 1章)。コスト5以上・総量未満に限る(同7章)。
+@export var initial_attack: int = 0
 ## プールへ加えられた順の通し番号(GameDesign.md 9章の「追加順」)。
 ## **ファイル名や一覧の並びから導出しない**。id のアルファベット順は追加順ではないため。
 @export var pool_index: int = 0
@@ -75,6 +76,11 @@ var icon_fallen: Texture2D:
 ## 実際に使う絵の id。
 func art_key() -> String:
 	return art_id if not art_id.is_empty() else id
+
+
+## 場に出た時点の体力。
+func initial_health() -> int:
+	return total_sand - initial_attack
 
 
 func has_keyword(keyword: int) -> bool:

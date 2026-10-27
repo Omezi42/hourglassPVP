@@ -384,11 +384,16 @@ func _mana_leftover_penalty(state: MatchState, side: int, card: CardData) -> flo
 	return 0.0
 
 
-## カードを出したときに見込める価値。総量を体力とみなした生涯ダメージに、
-## 設置効果ぶんを足す。
+## 出した時点の体力・攻撃力での生涯ダメージ(h×a + h(h-1)/2。GameDesign.md 1章)。
+static func _lifetime_damage(card: CardData) -> float:
+	var health := card.initial_health()
+	return float(health * card.initial_attack) + float(health * (health - 1)) / 2.0
+
+
+## カードを出したときに見込める価値。生涯ダメージに設置効果ぶんを足す。
 func _card_value(state: MatchState, side: int, card: CardData) -> float:
 	var total := card.total_sand
-	var value := float(total * (total - 1)) / 2.0
+	var value := _lifetime_damage(card)
 	if card.has_keyword(CardEnums.Keyword.QUICK):
 		value += 2.0 * FACE_WEIGHT
 	if card.has_keyword(CardEnums.Keyword.GUARD):
@@ -530,7 +535,7 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 		CardEnums.EffectType.SUMMON:
 			var token := CardLibrary.find_by_id(effect.card_id)
 			if token != null and state.units(side).size() < MatchState.BOARD_SIZE:
-				value = float(token.total_sand * (token.total_sand - 1)) / 2.0
+				value = _lifetime_damage(token)
 		CardEnums.EffectType.GRANT_KEYWORD:
 			value = 2.0
 		CardEnums.EffectType.ADD_TOTAL_PER_GRAVE:
@@ -542,7 +547,7 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 			var pick := CardEffectResolver.best_grave_choice(state, side)
 			if pick >= 0:
 				var revived: CardData = state.graveyard[side][pick]
-				value = float(revived.total_sand * (revived.total_sand - 1)) / 2.0
+				value = _lifetime_damage(revived)
 		CardEnums.EffectType.RESET_FLIP:
 			# 戻した駒がもう一度起こせる反転トリガーの数だけを見る。
 			for unit in state.units(side):

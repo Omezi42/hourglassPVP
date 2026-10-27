@@ -36,14 +36,15 @@ UI側に散らさないため、語と enum の対応はここだけが持つ。
 ## 2.2 `CardData`(Resource, `.tres`)
 
 カード1種の静的定義。1カード = 1 `.tres`(`data/cards/{id}.tres`)。
-**体力・攻撃力のフィールドは持たない**。総量から導出される(GameDesign.md 1章)。
+**場の体力・攻撃力は `total_sand` と `initial_attack` から導出する**(GameDesign.md 1章)。
 
 | フィールド | 型 | 内容 |
 |---|---|---|
 | `id` | String | 一意識別子("sand", "sword" 等) |
 | `display_name` | String | 表示名 |
 | `cost` | int | 場に出すために支払うマナ |
-| `total_sand` | int | 総量(体力+攻撃力)。場に出た時点で 体力=総量 / 攻撃力=0 |
+| `total_sand` | int | 総量(体力+攻撃力)。場に出た時点で 体力=総量-`initial_attack` |
+| `initial_attack` | int | 場に出た時点の攻撃力(既定0)。コスト5以上・総量未満に限る(GameDesign.md 7章。`v5_rules_tests` が見張る) |
 | `pool_index` | int | プールへ加えられた順の通し番号。砂時計一覧の「追加順」がこれを読む |
 | `set_id` | String | 所属するカードセットのid。空文字は基本セット(常に所有済み)。GameDesign.md 8章・21章 |
 | `keywords` | Array[Keyword] | 常在キーワード。0個でよい(バニラ) |

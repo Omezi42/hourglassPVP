@@ -11,6 +11,7 @@ func run(assert_true: Callable) -> void:
 	_test_card_orders()
 	_test_lifetime_damage_formula()
 	_test_unit_starts_full_health_and_ticks()
+	_test_unit_starts_with_initial_attack()
 	_test_flip_swaps_health_and_attack()
 	_test_damage_removes_sand_from_total()
 	_test_opening_hands_and_first_turn_draw()
@@ -95,6 +96,11 @@ func _test_all_cards_load() -> void:
 			_assert.call(not card.effects.is_empty(), "spell %s should have an effect" % card.id)
 			continue
 		_assert.call(card.total_sand > 0, "card %s should have a positive total" % card.id)
+		# 初期攻撃力はコスト5以上・総量未満に限る(GameDesign.md 7章)。
+		_assert.call(
+			card.initial_attack == 0 or (card.cost >= 5 and card.initial_attack < card.total_sand),
+			"card %s should keep initial attack within the cost/total limits" % card.id
+		)
 
 
 ## 一覧の並び替え(GameDesign.md 9章)。コスト順・追加順のどちらも全件を返し、
@@ -156,6 +162,14 @@ func _test_unit_starts_full_health_and_ticks() -> void:
 	unit.tick()
 	_assert.call(unit.health == 4 and unit.attack == 1, "one tick should move one grain of sand")
 	_assert.call(unit.total_sand() == 5, "ticking should not change the total")
+
+
+func _test_unit_starts_with_initial_attack() -> void:
+	# .tres から読んだ CardData は書き換えない(Pitfalls.md)。複製に初期攻撃力を持たせる。
+	var data := _card("wall").duplicate() as CardData
+	data.initial_attack = 3
+	var unit := CardInstance.new(data)
+	_assert.call(unit.health == 8 and unit.attack == 3, "initial attack should start below")
 
 
 func _test_flip_swaps_health_and_attack() -> void:

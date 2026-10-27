@@ -149,7 +149,9 @@ func _fill_body(card: CardData, rules: String) -> void:
 		for line in token_lines(card):
 			_body.add_child(_make_line(line))
 		return
-	_body.add_child(_make_line("場に出たとき  体力 %d / 攻撃力 0" % card.total_sand))
+	_body.add_child(
+		_make_line("場に出たとき  体力 %d / 攻撃力 %d" % [card.initial_health(), card.initial_attack])
+	)
 	_body.add_child(_make_line("毎ターン終了時に砂が1粒落ちて 体力-1 / 攻撃力+1"))
 	for line in restriction_lines(card):
 		_body.add_child(_make_line(line))

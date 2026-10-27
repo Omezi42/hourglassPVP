@@ -26,8 +26,8 @@ var silenced: bool = false
 
 func _init(p_data: CardData) -> void:
 	data = p_data
-	health = p_data.total_sand
-	attack = 0
+	health = p_data.initial_health()
+	attack = p_data.initial_attack
 	glass_intact = p_data.has_keyword(CardEnums.Keyword.GLASS)
 
 

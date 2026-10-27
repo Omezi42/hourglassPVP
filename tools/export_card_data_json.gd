@@ -41,6 +41,7 @@ func _to_dict(card: CardData) -> Dictionary:
 		"display_name": card.display_name,
 		"cost": card.cost,
 		"total_sand": card.total_sand,
+		"initial_attack": card.initial_attack,
 		"is_spell": card.is_spell,
 		"cannot_attack": card.cannot_attack,
 		"pool_index": card.pool_index,
