@@ -268,7 +268,7 @@ func _test_encore_gains_flip_right_beyond_initial() -> void:
 	var state := _new_match()
 	var before := int(state.flip_right_remaining[MatchState.Side.A])
 	state.hand[MatchState.Side.A] = [CardLibrary.find_by_id("encore")]
-	state.mana[MatchState.Side.A] = 2
+	state.mana[MatchState.Side.A] = 4
 	_assert.call(state.play_card(MatchState.Side.A, 0, 0), "アンコールを出せる")
 	_assert.call(
 		int(state.flip_right_remaining[MatchState.Side.A]) == before + 1,
