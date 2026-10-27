@@ -1,8 +1,8 @@
 class_name HomeScreen
 extends Control
 ## ホーム画面(GameDesign.md 9章)。**1画面に収め、タブを持たない。**
-## ヘッダー(名札・ミッション・砂金・メニュー)の下を横に3等分し、左と中央を `BattleTab`
-## (ソロモード / バトル)、右を `DeckTab`(デッキ編集・図鑑・ショップ)が描く。列の位置は `HomeLayout`。
+## ヘッダー(名札・砂金・ルールブック・メニュー)の下は2段。上段の左「ミッション」はここ、中央「対戦する」と
+## 右「ソロモード」は `BattleTab`、下段(デッキ編集・図鑑・ショップ)は `DeckTab` が描く。位置は `HomeLayout`。
 ## ルールを読む・覚える入口はメニューの左隣のルールブック(`LearnMenu`)、戦績はアカウント画面へ置く。
 
 signal online_resume_requested(record: Dictionary)
@@ -25,16 +25,10 @@ const PORTRAIT_BANNER_RECT := Rect2(24, 108, 672, 32)
 const BANNER_FONT := 14
 const PORTRAIT_BANNER_FONT := 22
 
-## アカウント帯の右端。右上のルールブックとメニューのボタンへ掛からないところまで。
-const ACCOUNT_BAR_RIGHT_INSET := 216.0
 ## 残高のチップの拡大率。ヘッダーは面積に余裕があり、残高は押す前に分かるべきことの代表(9章)。
 const CURRENCY_CHIP_SCALE := 1.55
-## 名札の大きさ。左右の部品(ミッション・残高)の背丈もこれに揃える。
-const NAMEPLATE_SIZE := Vector2(268, 68)
-const MISSION_SIZE := Vector2(250, 68)
-const MISSION_FONT := 20
-const PORTRAIT_MISSION_SIZE := Vector2(230, 84)
-const PORTRAIT_MISSION_FONT := 24
+## 名札の大きさ。背丈はヘッダーの部品で揃える(`HomeLayout.header_height()`)。
+const NAMEPLATE_SIZE := Vector2(300, HomeLayout.HEADER_HEIGHT)
 const BACKGROUND := preload("res://assets/backgrounds/processed/battle/background.png")
 
 ## 右上のメニュー(ハンバーガー)ボタンのスタイル。
@@ -44,8 +38,10 @@ const RULEBOOK_BUTTON_GROUP := "icon_book"
 const RULEBOOK_GAP := 12.0
 
 var _nameplate_button: AccountNameplateButton
-## ヘッダーのミッションの札(GameDesign.md 9章・23章)。受け取れる数を赤い丸で出す。
+## 左の「ミッション」の札(GameDesign.md 9章・23章)。中身は `MissionEntryInfo` が描く。
 var _mission_tile: HomeTile
+var _mission_info: MissionEntryInfo
+var _rulebook_button: Button
 ## デイリーミッション(GameDesign.md 23章)のモーダル。最初に開いたときだけ作る。
 var _mission_panel: DailyMissionPanel
 var _learn_menu: LearnMenu
@@ -95,8 +91,10 @@ func _ready() -> void:
 	_style_menu_button()
 	settings_button.pressed.connect(func() -> void: settings_panel.open())
 	_build_account_bar()
+	_build_mission_tile()
 	_build_learn_menu()
 	_build_rulebook_button()
+	_place_header()
 	# モーダルはヘッダー・メニューより手前に出す(後から足した子ほど手前に描かれる)。
 	battle_tab.mount_pickers(self)
 	refresh_account()
@@ -109,29 +107,18 @@ func _build_account_bar() -> void:
 	$AccountBar.add_child(_nameplate_button)
 	$AccountBar.move_child(_nameplate_button, 0)
 
-	_mission_tile = HomeTile.make("ミッション", "", "", MISSION_SIZE, MISSION_FONT)
-	_mission_tile.emblem = null
-	_mission_tile.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	_mission_tile.pressed.connect(_on_mission_requested)
-	$AccountBar.add_child(_mission_tile)
-	$AccountBar.move_child(_mission_tile, 1)
-
 	# 残高は枠を持たない Label だったため、真鍮で組まれたヘッダーの中でそこだけ浮いていた。
 	# .tscn は書き換えず、同じ場所へチップを挿して元のラベルを隠す。
 	currency_label.visible = false
 	_currency_chip = CurrencyChip.new()
 	_currency_chip.scale_factor = CURRENCY_CHIP_SCALE
-	# 左の名札と背丈を揃える(左右で高さが違うと、同じ帯に載って見えない)。
-	_currency_chip.height_override = NAMEPLATE_SIZE.y
 	$AccountBar.add_child(_currency_chip)
 	$AccountBar.move_child(_currency_chip, $AccountBar.get_children().find(currency_label) + 1)
 
 	# **残高は右端へ寄せる。**名札の隣へ詰めると、ヘッダーの左半分だけが賑やかになり、
 	# 右半分がまるごと空く(押す前に分かる情報を両端へ置く。GameDesign.md 9章)。
-	# 帯そのものが幅460pxしか無く、右へ寄せる余地が無い。メニューのボタンへ掛からない
-	# ところまで伸ばす(`.tscn` は書き換えない)。
+	# 帯の幅は `_place_header()` がルールブックの手前まで伸ばす(`.tscn` は書き換えない)。
 	$AccountBar.anchor_right = 1.0
-	$AccountBar.offset_right = -ACCOUNT_BAR_RIGHT_INSET
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -145,6 +132,48 @@ func _build_account_bar() -> void:
 	_sunday_banner.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	$AccountBar.add_child(_sunday_banner)
 	$AccountBar.move_child(_sunday_banner, $AccountBar.get_children().find(_currency_chip) + 1)
+
+
+## 日課は目に入らないと忘れられるため、ヘッダーの小さな札ではなく中身ごと左の札に見せる(GameDesign.md 9章)。
+func _build_mission_tile() -> void:
+	_mission_tile = HomeTile.make("", "", "", Vector2.ZERO)
+	_mission_tile.emblem = null
+	_mission_tile.pressed.connect(_on_mission_requested)
+	$Layout/ContentArea.add_child(_mission_tile)
+	_mission_info = MissionEntryInfo.new()
+	_mission_info.anchor_right = 1.0
+	_mission_info.anchor_bottom = 1.0
+	_mission_tile.add_child(_mission_info)
+	_place_mission_tile()
+
+
+func _place_mission_tile() -> void:
+	var rect := HomeLayout.mission_rect(_portrait)
+	_mission_tile.custom_minimum_size = rect.size
+	_mission_tile.position = rect.position
+	_mission_tile.size = rect.size
+
+
+## ヘッダーの部品(名札・残高・ルールブック・メニュー)を同じ背丈にし、左右の端を下の札の列に揃える(GameDesign.md 9章)。
+func _place_header() -> void:
+	var margin := HomeLayout.header_margin(_portrait)
+	var height := HomeLayout.header_height(_portrait)
+	var top := HomeLayout.HEADER_TOP
+	var buttons: Array[Button] = [settings_button, _rulebook_button]
+	for i in buttons.size():
+		var right := margin + (height + RULEBOOK_GAP) * float(i)
+		var button := buttons[i]
+		button.custom_minimum_size = Vector2(height, height)
+		button.offset_left = -(right + height)
+		button.offset_right = -right
+		button.offset_top = top
+		button.offset_bottom = top + height
+	var bar: HBoxContainer = $AccountBar
+	bar.offset_left = margin
+	bar.offset_top = top
+	bar.offset_bottom = top + height
+	bar.offset_right = -(margin + (height + RULEBOOK_GAP) * float(buttons.size()) + RULEBOOK_GAP)
+	_currency_chip.height_override = height
 
 
 func _build_learn_menu() -> void:
@@ -165,22 +194,18 @@ func _build_rulebook_button() -> void:
 	button.tooltip_text = "遊び方"
 	button.anchor_left = settings_button.anchor_left
 	button.anchor_right = settings_button.anchor_right
-	var shift := settings_button.custom_minimum_size.x + RULEBOOK_GAP
-	button.offset_left = settings_button.offset_left - shift
-	button.offset_right = settings_button.offset_right - shift
-	button.offset_top = settings_button.offset_top
-	button.offset_bottom = settings_button.offset_bottom
 	button.pressed.connect(func() -> void: _learn_menu.open())
 	add_child(button)
 	move_child(button, settings_button.get_index())
+	_rulebook_button = button
 
 
 ## 縦横が変わったときに `Main` から呼ばれる(Architecture.md 4.7節)。
 func apply_orientation(portrait: bool) -> void:
 	_portrait = portrait
 	_nameplate_button.set_portrait(portrait)
-	_mission_tile.custom_minimum_size = PORTRAIT_MISSION_SIZE if portrait else MISSION_SIZE
-	HomeTile.set_portrait_text(_mission_tile, portrait, PORTRAIT_MISSION_FONT, MISSION_FONT)
+	_place_header()
+	_place_mission_tile()
 	_place_sunday_banner()
 	battle_tab.apply_orientation(portrait)
 	deck_tab.apply_orientation(portrait)
@@ -248,25 +273,11 @@ func refresh_account() -> void:
 	_refresh_mission_tile()
 
 
-## 今日の3つの進み具合と、受け取れる数(GameDesign.md 9章・23章)。**この印は日課の唯一の
-## 手がかり**であり、これが無いと日課は存在ごと忘れられる。日付で入れ替わるため開くたびに読む。
+## 今日の3つの進み具合と、受け取れる数(GameDesign.md 9章・23章)。日付で入れ替わるため開くたびに読む。
 func _refresh_mission_tile() -> void:
-	if _mission_tile == null:
+	if _mission_info == null:
 		return
-	var rows := DailyMissionService.missions(_uid())
-	var done := 0
-	var claimable := 0
-	for row in rows:
-		if row["done"]:
-			done += 1
-			if not row["claimed"]:
-				claimable += 1
-	_mission_tile.badge_count = claimable
-	var line := "今日 %d / %d" % [done, rows.size()]
-	var changed := not _mission_tile.subtitle.is_empty() and _mission_tile.subtitle != line
-	_mission_tile.set_subtitle(line)
-	if changed:
-		_mission_tile.flash_subtitle()
+	_mission_info.set_rows(DailyMissionService.missions(_uid()))
 
 
 func _uid() -> String:
@@ -282,7 +293,7 @@ class AccountNameplateButton:
 	const ICON := 34.0
 	const TITLE_FONT := 13
 	const NAME_FONT := 21
-	const PORTRAIT_NAMEPLATE_SIZE := Vector2(316, 84)
+	const PORTRAIT_NAMEPLATE_SIZE := Vector2(290, HomeLayout.PORTRAIT_HEADER_HEIGHT)
 	const PORTRAIT_ICON_FRAME := 60.0
 	const PORTRAIT_ICON := 44.0
 	const PORTRAIT_TITLE_FONT := 20

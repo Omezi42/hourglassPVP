@@ -1,17 +1,17 @@
 class_name DeckTab
 extends Control
-## ホームの右の列「デッキ編集」「砂時計図鑑」「ショップ」(GameDesign.md 9章)。左と中央は `BattleTab`。
+## ホームの下段「デッキ編集」「砂時計図鑑」「ショップ」(GameDesign.md 9章)。上段の対戦・ソロモードは `BattleTab`。
 ##
 ## **入口は `HomeTile` として出し、押す前に分かるべきことを1行添える。**
 ## いま何枚のデッキを持っているのか、砂金がいくらあるのかを押す前に読めるようにする。
-## 3つは同格の凹んだパネル(ホームで真鍮にするのは「バトル」だけ)。
+## 3つは同格の凹んだ横長の札で、左(縦画面では上)に小物の絵を添える(`HomeProps`)。
 
 signal deck_edit_pressed
 signal hourglass_list_pressed
 signal shop_pressed
 
 const TILE_FONT := 28
-## 縦画面では3つを横1列に並べる(幅が3分の1になるため、副題は2行まで折る)。
+## 縦画面では絵を上に置き、副題は2行まで折る。
 const PORTRAIT_TILE_FONT := 26
 
 var _tiles: Array[HomeTile] = []
@@ -23,9 +23,9 @@ var _portrait := false
 
 
 func _ready() -> void:
-	deck_edit_button = _to_tile(deck_edit_button, "デッキ編集", "sand")
-	hourglass_list_button = _to_tile(hourglass_list_button, "砂時計図鑑", "eye")
-	shop_button = _to_tile(shop_button, "ショップ", "crown")
+	deck_edit_button = _to_tile(deck_edit_button, "デッキ編集", HomeProps.Kind.CARDS)
+	hourglass_list_button = _to_tile(hourglass_list_button, "砂時計図鑑", HomeProps.Kind.BOOK)
+	shop_button = _to_tile(shop_button, "ショップ", HomeProps.Kind.CHEST)
 	deck_edit_button.pressed.connect(func() -> void: deck_edit_pressed.emit())
 	hourglass_list_button.pressed.connect(func() -> void: hourglass_list_pressed.emit())
 	shop_button.pressed.connect(func() -> void: shop_pressed.emit())
@@ -44,18 +44,14 @@ func apply_orientation(portrait: bool) -> void:
 
 func _layout() -> void:
 	for i in _tiles.size():
-		var rect := (
-			HomeLayout.portrait_collect_rect(i, _tiles.size())
-			if _portrait
-			else HomeLayout.collect_rect(i, _tiles.size())
-		)
+		var rect := HomeLayout.collect_rect(i, _portrait)
 		var tile := _tiles[i]
 		tile.custom_minimum_size = rect.size
 		tile.position = rect.position
 		tile.size = rect.size
 		HomeTile.set_portrait_text(tile, _portrait, PORTRAIT_TILE_FONT, TILE_FONT)
-		# 縦の3分の1の幅では、紋章のぶんを空けると見出しが入らない。紋章は文字の下の透かしにする。
-		tile.emblem_reserve = 0.0
+		# 長いデッキ名は横の札の幅に1行で収まらない。横でも2行まで折る。
+		tile.subtitle_lines = HomeTile.PORTRAIT_SUBTITLE_LINES
 
 
 ## タブを開くたびに副題を読み直す(デッキも砂金も画面の外で変わる)。
@@ -66,7 +62,10 @@ func refresh() -> void:
 	var selected := CardDeckSave.selected_deck()
 	var tile := deck_edit_button as HomeTile
 	if decks.is_empty():
-		_apply_subtitle(tile, "プリセット「基本」で対戦できます")
+		# 保存デッキが無くてもプリセット「基本」で対戦できる(GameDesign.md 9章)。
+		_apply_subtitle(
+			tile, "%s ・ %d 枚" % [String(CardPresetDecks.PRESETS[0]["name"]), selected.size()]
+		)
 	else:
 		var index: int = clampi(CardDeckSave.selected_index(), 0, decks.size() - 1)
 		_apply_subtitle(
@@ -87,8 +86,10 @@ func _apply_subtitle(tile: HomeTile, text_line: String) -> void:
 
 ## `.tscn` に置いてある `Button` を `HomeTile` へ置き換え、この列の直下へ移す。
 ## **`.tscn` を書き換えずに済ませるため**の手当て。
-func _to_tile(button: Button, title: String, emblem_id: String) -> HomeTile:
-	var tile := HomeTile.make(title, "", emblem_id, Vector2.ZERO, TILE_FONT)
+func _to_tile(button: Button, title: String, prop: HomeProps.Kind) -> HomeTile:
+	var tile := HomeTile.make(title, "", "", Vector2.ZERO, TILE_FONT)
+	tile.emblem = null
+	tile.prop = prop
 	add_child(tile)
 	_tiles.append(tile)
 	button.get_parent().remove_child(button)

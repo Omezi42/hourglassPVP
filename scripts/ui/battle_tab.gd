@@ -1,8 +1,8 @@
 class_name BattleTab
 extends Control
-## ホームの左「ソロモード」と中央「バトル」の列(GameDesign.md 9章)。右の列は `DeckTab`。
+## ホームの中央「対戦する」と右「ソロモード」の札(GameDesign.md 9章)。下段は `DeckTab`、左のミッションは `HomeScreen`。
 ##
-## **対局の入口はホームに並べず、押してから選ばせる。**「バトル」を押すと対局の種類を選ぶ
+## **対局の入口はホームに並べず、押してから選ばせる。**「対戦する」を押すと対局の種類を選ぶ
 ## モーダル(ランクマッチ / ルームマッチ / CPU戦)、「ソロモード」を押すと遠征 / リーサルパズルの
 ## モーダルを出す(`HomeModePicker`)。モーダルはヘッダーより手前に出すため、
 ## `HomeScreen` が `mount_pickers()` で自分の子として預かる。
@@ -34,7 +34,7 @@ const WAITING_POLL_SECONDS := 15.0
 const STATUS_FONT := 22
 const PORTRAIT_STATUS_FONT := 24
 
-const BATTLE_TITLE := "バトル"
+const BATTLE_TITLE := "対戦する"
 const RESUME_TITLE := "対局へ戻る"
 const RANKED_TITLE := "ランクマッチ"
 const EXPEDITION_TITLE := "遠征"
@@ -46,8 +46,6 @@ const EXPEDITION_NEW := "作戦を選んで出発"
 const EXPEDITION_CONTINUE := "続きから進める"
 const MAIN_FONT_SIZE := 40
 const PICKER_FONT_SIZE := 30
-## 縦画面では「バトル」も横長の札になり、見出しは札(`HomeTile`)が描く。
-const PORTRAIT_MAIN_FONT := 44
 const PORTRAIT_MARK_SCALE := 1.5
 const DISABLED_ALPHA := 0.55
 const RANKING_BUTTON_SIZE := Vector2(340, 56)
@@ -57,7 +55,7 @@ var _busy_dots_timer: Timer
 var _busy_dot_count := 0
 var _status_base_text := ""
 var _waiting_timer: Timer
-## 切断した対局へ戻れるか(GameDesign.md 11章)。立っている間は「バトル」を押すと選択を挟まず復帰する。
+## 切断した対局へ戻れるか(GameDesign.md 11章)。立っている間は「対戦する」を押すと選択を挟まず復帰する。
 var _resume_pending := false
 var _battle_tile: HomeTile
 var _battle_info: RankedEntryInfo
@@ -111,6 +109,7 @@ func _build() -> void:
 	_battle_tile.pressed.connect(_on_battle_pressed)
 	add_child(_battle_tile)
 	_battle_info = RankedEntryInfo.new()
+	_battle_info.showcase = true
 	_battle_tile.add_child(_battle_info)
 
 	_solo_tile = HomeTile.make("", "", "", Vector2.ZERO, MAIN_FONT_SIZE)
@@ -129,7 +128,7 @@ func _build() -> void:
 	_layout()
 
 
-## 「バトル」を押したあとに選ぶ3つ(9章)。ランクマッチは段位を、残りは副題を持つ。
+## 「対戦する」を押したあとに選ぶ3つ(9章)。ランクマッチは段位を、残りは副題を持つ。
 func _build_battle_picker() -> void:
 	_battle_picker = HomeModePicker.make("対局の種類を選ぶ")
 	_battle_picker.closed.connect(_on_picker_closed)
@@ -138,7 +137,6 @@ func _build_battle_picker() -> void:
 	_ranked_tile.pressed.connect(func() -> void: ranked_match_deck_requested.emit())
 	_ranked_info = RankedEntryInfo.new()
 	_ranked_info.head_text = RANKED_TITLE
-	_ranked_info.head_on_top = true
 	_ranked_info.show_well = false
 	_ranked_tile.add_child(_ranked_info)
 	_battle_picker.add_tile(_ranked_tile)
@@ -188,13 +186,10 @@ func apply_orientation(portrait: bool) -> void:
 func _layout() -> void:
 	_next_mark.tag_scale = PORTRAIT_MARK_SCALE if _portrait else 1.0
 	_picker_mark.tag_scale = _next_mark.tag_scale
-	var battle_rect := HomeLayout.portrait_battle_rect() if _portrait else HomeLayout.column_rect(1)
-	var solo_rect := HomeLayout.portrait_solo_rect() if _portrait else HomeLayout.column_rect(0)
-	var status_rect := HomeLayout.portrait_status_rect() if _portrait else HomeLayout.status_rect()
-	_place(_battle_tile, battle_rect)
-	_place(_solo_tile, solo_rect)
-	# 縦では「バトル」も横長になり、徽章を右・文字を左に置く組み方へ戻す。見出しは札が描く。
-	_battle_info.tall = not _portrait
+	var status_rect := HomeLayout.status_rect(_portrait)
+	_place(_battle_tile, HomeLayout.battle_rect(_portrait))
+	_place(_solo_tile, HomeLayout.solo_rect(_portrait))
+	# 縦のモーダルでは「ランクマッチ」が横長になり、徽章を右・文字を左に置く組み方へ戻す。見出しは札が描く。
 	_ranked_info.tall = not _portrait
 	_refresh_battle_title()
 	status_label.add_theme_font_size_override(
@@ -212,13 +207,9 @@ func _place(tile: HomeTile, rect: Rect2) -> void:
 	tile.size = rect.size
 
 
-## 縦長の札は中身(`RankedEntryInfo`)が見出しを彫り、横長の札は `HomeTile` が見出しを描く。
+## 「対戦する」の見出しは中身(`RankedEntryInfo`)が彫る。モーダルの横長の札だけは `HomeTile` が描く。
 func _refresh_battle_title() -> void:
-	var head := RESUME_TITLE if _resume_pending else BATTLE_TITLE
-	_battle_info.head_text = head
-	_battle_tile.title = head if _portrait else ""
-	_battle_tile.title_size = PORTRAIT_MAIN_FONT if _portrait else MAIN_FONT_SIZE
-	_battle_tile.queue_redraw()
+	_battle_info.head_text = RESUME_TITLE if _resume_pending else BATTLE_TITLE
 	_battle_info.queue_redraw()
 	_ranked_tile.title = RANKED_TITLE if _portrait else ""
 	_ranked_tile.queue_redraw()
@@ -298,7 +289,7 @@ func _next_step_tile() -> HomeTile:
 	return null
 
 
-## デッキが要る入口(バトルと、モーダルのランクマッチ / ルームマッチ / CPU戦)を押せなくする。
+## デッキが要る入口(「対戦する」と、モーダルのランクマッチ / ルームマッチ / CPU戦)を押せなくする。
 func _set_battle_disabled(disabled: bool) -> void:
 	for tile in [_battle_tile, _ranked_tile, _room_tile, _cpu_tile]:
 		tile.disabled = disabled

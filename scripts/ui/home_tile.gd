@@ -43,11 +43,20 @@ const PORTRAIT_BADGE_SCALE := 1.4
 const SUBTITLE_LINE_HEIGHT := 1.2
 ## 上寄せの見出しの基準線(1.5)から副題の基準線(+0.92)までの、見出しの大きさに対する比。
 const TITLE_BLOCK_RATIO := 2.42
+## 小物の絵(`prop`)の置き方。横長の札は左に、そうでなければ上に置く(GameDesign.md 9章)。
+const PROP_SIDE_RATIO := 2.0
+const PROP_INSET := 10.0
+const PROP_GAP := 12.0
+const PROP_TOP_RATIO := 0.38
+## 絵を左に置く札は、見出しと副題の一群を上下の中央へ置く。見出しの基準線をその中央から上げる量(見出しの大きさに対する比)。
+const PROP_TITLE_RISE := 0.3
 
 var title := ""
 var subtitle := ""
 var title_size := 26
 var emblem: Texture2D
+## 0 以上のとき、紋章の透かしの代わりに `HomeProps` の小物の絵を描く(`HomeProps.Kind`)。
+var prop := -1
 ## 塗りつぶした真鍮の面にする(そのタブでいちばんやってほしいこと1つだけ)。
 var primary := false
 ## 副題を琥珀で出す(まだ済ませていない「今日の」ものがあるとき。GameDesign.md 24章)。
@@ -72,7 +81,7 @@ var badge_count := 0:
 		queue_redraw()
 
 var _font: Font
-## 見出しの書体。**主役の面(`primary`)だけ**明朝体(`UiFonts.display_font()`)にする。
+## 見出しの書体。**主役の面(`primary`)と小物の絵を添えた札だけ**明朝体(`UiFonts.display_font()`)にする。
 ## 3段の強弱(GameDesign.md 9章)のうち、いちばん強い1枚だけへ格を足すためで、
 ## 並んだタイルすべてを明朝体にすると強弱そのものが埋もれる。副題は常に本文書体のまま。
 var _title_font: Font
@@ -133,7 +142,7 @@ func _ready() -> void:
 	_font = get_theme_default_font()
 	if _font == null:
 		_font = ThemeDB.fallback_font
-	_title_font = UiFonts.display_font(_font) if primary else _font
+	_title_font = UiFonts.display_font(_font) if primary or prop >= 0 else _font
 	mouse_entered.connect(_on_hover_changed.bind(true))
 	mouse_exited.connect(_on_hover_changed.bind(false))
 
@@ -174,10 +183,37 @@ func _set_hover(value: float) -> void:
 ## 文字に使える幅。**右の紋章の透かしへ食い込ませない**(食い込むと副題が切れる)。
 ## 縦長の札では紋章が文字の下にあるため空けない(空けると見出しが1文字しか残らない)。
 func _text_width() -> float:
+	if prop >= 0:
+		return maxf(size.x - _text_left() - padding, 40.0)
 	var reserved := 0.0
 	if emblem != null and _emblem_beside_text():
 		reserved = emblem_reserve if emblem_reserve > 0.0 else size.y * 0.62
 	return maxf(size.x - padding * 2.0 - reserved, 40.0)
+
+
+## 文字の左端。小物の絵を左に置く札では絵の右から。
+func _text_left() -> float:
+	if prop >= 0 and not _prop_on_top():
+		return _prop_rect().end.x + PROP_GAP
+	return padding
+
+
+func _prop_on_top() -> bool:
+	return size.x < size.y * PROP_SIDE_RATIO
+
+
+## 小物の絵を置く矩形。縦横比は `HomeProps.DESIGN_SIZE` に合わせる。
+func _prop_rect() -> Rect2:
+	var aspect := HomeProps.DESIGN_SIZE.x / HomeProps.DESIGN_SIZE.y
+	var rise := Vector2(0.0, HOVER_RISE_PX * _hover)
+	if _prop_on_top():
+		var top_h := size.y * PROP_TOP_RATIO
+		return Rect2(
+			Vector2((size.x - top_h * aspect) * 0.5, PROP_INSET) - rise,
+			Vector2(top_h * aspect, top_h)
+		)
+	var h := size.y - PROP_INSET * 2.0
+	return Rect2(Vector2(PROP_INSET * 1.4, PROP_INSET) - rise, Vector2(h * aspect, h))
 
 
 ## 紋章の上端が文字の段(見出し+副題の最大行数)より上にあるか。ホバーの浮きでは変えない。
@@ -224,6 +260,11 @@ func _title_center() -> float:
 	return minf(centered, padding + float(title_size) * 1.5)
 
 
+## 絵を添えた札は見出しと副題のあいだを少し空ける(見出しが明朝で背が高いため)。
+func _sub_gap() -> float:
+	return float(_subtitle_font_size()) * 0.3 if prop >= 0 else 0.0
+
+
 func _subtitle_font_size() -> int:
 	return subtitle_size if subtitle_size > 0 else maxi(title_size - 10, 13)
 
@@ -260,6 +301,8 @@ func _draw() -> void:
 	if _font == null:
 		return
 	var dim := disabled
+	if prop >= 0:
+		HomeProps.draw(prop, self, _prop_rect())
 	# 紋章は右側の透かし。**押す先が何なのかを絵でも示す**が、文字を邪魔しない濃さに留める。
 	# ホバー中はわずかに明るく浮く(GameDesign.md 9章)。
 	if emblem != null:
@@ -274,11 +317,24 @@ func _draw() -> void:
 		)
 	var has_sub := not subtitle.is_empty()
 	var title_y: float = _title_center() + float(title_size) * 0.36
+	var left := _text_left()
+	var align := HORIZONTAL_ALIGNMENT_LEFT
+	if prop >= 0 and _prop_on_top():
+		title_y = _prop_rect().end.y + float(title_size) * 1.25
+		align = HORIZONTAL_ALIGNMENT_CENTER
+	elif prop >= 0:
+		var sub_rows := float(_subtitle_rows().size() - 1)
+		var block := (
+			float(title_size) * 0.92
+			+ _sub_gap()
+			+ float(_subtitle_font_size()) * SUBTITLE_LINE_HEIGHT * sub_rows
+		)
+		title_y = size.y * 0.5 - block * 0.5 + float(title_size) * PROP_TITLE_RISE
 	draw_string(
 		_title_font if _title_font != null else _font,
-		Vector2(padding, title_y),
+		Vector2(left, title_y),
 		title,
-		HORIZONTAL_ALIGNMENT_LEFT,
+		align,
 		_text_width(),
 		title_size,
 		TITLE_DIM if dim else TITLE_COLOR
@@ -289,13 +345,13 @@ func _draw() -> void:
 		if subtitle_accent:
 			sub_color = UiPalette.GLOW_AMBER
 		sub_color = sub_color.lerp(Color(1, 1, 1), _subtitle_flash * 0.7)
-		var sub_at := Vector2(padding, title_y + float(title_size) * 0.92)
+		var sub_at := Vector2(left, title_y + float(title_size) * 0.92 + _sub_gap())
 		for row in _subtitle_rows():
 			draw_string(
 				_font,
 				sub_at,
 				row,
-				HORIZONTAL_ALIGNMENT_LEFT,
+				align,
 				_text_width(),
 				_subtitle_font_size(),
 				SUB_DIM if dim else sub_color

@@ -51,9 +51,9 @@
 ## タイトル・ホーム・デッキ一覧
 
 - `TitleScreen.apply_orientation()`: ロゴ・開始の文言・「アカウント」を置き直す。横の値は `_ready()` で `.tscn` から控える
-- `HomeScreen.apply_orientation()`: 名札(`AccountNameplateButton.set_portrait()`)・ミッションの札・日曜の知らせを組み直し、`BattleTab` / `DeckTab` / `LearnMenu` の `apply_orientation()` を呼ぶ
-- 列の位置は `HomeLayout` の `portrait_*`(上から バトル → ソロモード → 右の列の3つを横1列)。`BattleTab` は縦で `RankedEntryInfo.tall` を外して横長の組み方に戻す
-- `HomeTile.set_portrait_text()`: 見出し・副題(24px・2行まで)・余白・紋章の上限・印の倍率を縦横で切り替える。副題の折り返しは `_subtitle_rows()` が区切りを優先して行う。`DeckTab` は縦で紋章のぶんの空き(`emblem_reserve`)を0にする(3分の1の幅に見出しが入らないため)
+- `HomeScreen.apply_orientation()`: 名札(`AccountNameplateButton.set_portrait()`)・ヘッダー(`_place_header()`)・ミッションの札・日曜の知らせを組み直し、`BattleTab` / `DeckTab` / `LearnMenu` の `apply_orientation()` を呼ぶ
+- 札の位置は `HomeLayout` の各関数へ `portrait` を渡して引く(上から 対戦する → ミッションとソロモードを左右に → 下段の3つを横1列)。モーダルの「ランクマッチ」は縦で `RankedEntryInfo.tall` を外して横長の組み方に戻す
+- `HomeTile.set_portrait_text()`: 見出し・副題(24px・2行まで)・余白・紋章の上限・印の倍率を縦横で切り替える。副題の折り返しは `_subtitle_rows()` が区切りを優先して行う。下段の札は縦で小物の絵を上へ移す(`HomeTile._prop_on_top()`。札が横長でなくなるため)
 - `HomeModePicker` は縦で札を画面の幅いっぱいにして上から積む。横の文字の大きさは札のメタに控えて戻す
 - 「つぎはここ」の印は `NextStepMark.tag_scale` 1.5
 - `ScreenHeader.apply_orientation()`: 縦で文字と「戻る」を大きくし、`ActionSlot` を `Row` から外してヘッダーの下の行へ置く。

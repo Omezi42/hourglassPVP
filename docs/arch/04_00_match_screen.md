@@ -130,7 +130,7 @@
 Boot                         # 起動シーン。タイトルだけを出し、残りを裏で読んでから Main へ引き渡す
 Main
 ├── TitleScreen              # Boot から adopt_title() で受け取る
-├── HomeScreen               # 1画面(左=ソロ / 中央=バトル / 右=そろえる)
+├── HomeScreen               # 1画面(上段=ミッション・対戦する・ソロモード / 下段=そろえる)
 ├── AccountScreen
 │   (対局画面を除く各画面は先頭の子として共通の ScreenHeader を持つ)
 ├── CardMatchScreen          # 対局・再生(コードで組み立てる)
@@ -153,24 +153,28 @@ v1.0(位相制)の画面・クラス・`data/hourglasses/*.tres` は削除済み
 
 ## 4.0.7 ホーム画面
 
-- **1画面に収め、タブを持たない**(GameDesign.md 9章)。`HomeScreen` の下に2つの列のクラスを常に出す:
-  `BattleTab`(`.tscn`。左=ソロモード / 中央=バトル)と `DeckTab`(`.tscn`。右=デッキ編集・図鑑・ショップ)。
+- **1画面に収め、タブを持たない**(GameDesign.md 9章)。上段 = 左「ミッション」/ 中央「対戦する」/ 右「ソロモード」、下段 = デッキ編集・図鑑・ショップ。
+  「ミッション」は `HomeScreen` が `Layout/ContentArea` へ置き、「対戦する」「ソロモード」は `BattleTab`(`.tscn`)、下段は `DeckTab`(`.tscn`)が描く。
   **`.tscn` を持つ2つはクラス名を変えない**(`home_screen.tscn` が instance しているため。画面に出る名前との食い違いは許容)
-- **列の位置は `HomeLayout`(static)1か所で決める**(横の3列・右の列の3段・縦の積み方・3列の下の文言の行)。2つの列が別々に持つと幅や上端が食い違う
-- `BattleTab` の `.tscn` の縦並び(`Margin/VBox`)は使わず、`StatusLabel` だけを引き取る(`_take_over_status_label()`)。`DeckTab` も `.tscn` の `Center` を捨て、ボタンを `HomeTile` へ差し替えて列の直下へ置く(`_to_tile()`)。`.tscn` は書き換えない
-- **入口は `HomeTile`**(`Button` 継承。見出し・副題・紋章の透かしを自前で描く。`text` へは入れない)。**紋章の透かしは `CodedButtonStyle.inner_rect()` の中へ収め、比率で決めたうえで上限で止める**。`primary`(塗りつぶした真鍮)と `badge_count`(未受取の数)を持つ
-- 「バトル」の中身は `RankedEntryInfo`、「ソロモード」の中身は `SoloEntryInfo`(どちらも札の子でマウスを通し、札いっぱいにアンカーで追わせる)。
-  `RankedEntryInfo.tall` で縦長の札(中央へ縦に積み、見出し「バトル」も自分で彫る)と横長の札(右に徽章・左に文字。見出しは `HomeTile` が描く)を切り替える。
-  `head_on_top` / `show_well` はモーダルの「ランクマッチ」用(見出しを上に、待機の行を出さない)。
-  `SoloEntryInfo` は遠征(`SoloProgress.load_run()`)と今日の1問(`DailyPuzzle` / `PuzzleProgress`)の状態を凹んだ枠2つに描く。彫り文字と凹んだ枠は `EntryTilePaint`(static)
-- **「バトル」「ソロモード」を押すと `HomeModePicker` を出す**(暗幕 + 見出し + 同じ大きさの `HomeTile` の横並び + 補助のボタン1つ + 「とじる」)。
+- **札の位置とヘッダーの端・背丈は `HomeLayout`(static)1か所で決める**(`battle_rect` / `mission_rect` / `solo_rect` / `collect_rect` / `status_rect` / `header_margin` / `header_height`。どれも縦横を引数で受ける)。別々に持つと幅や端が食い違う
+- `BattleTab` の `.tscn` の縦並び(`Margin/VBox`)は使わず、`StatusLabel` だけを引き取る(`_take_over_status_label()`)。`DeckTab` も `.tscn` の `Center` を捨て、ボタンを `HomeTile` へ差し替えて直下へ置く(`_to_tile()`)。`.tscn` は書き換えない
+- **入口は `HomeTile`**(`Button` 継承。見出し・副題・紋章の透かしを自前で描く。`text` へは入れない)。**紋章の透かしは `CodedButtonStyle.inner_rect()` の中へ収め、比率で決めたうえで上限で止める**。`primary`(塗りつぶした真鍮)と `badge_count`(未受取の数)を持つ。
+  `prop`(`HomeProps.Kind`)を与えると紋章の代わりに小物の絵を描き、横長の札は絵を左・文字を右、そうでなければ絵を上・文字を下に中央揃えで置く(下段の3つ)
+- **小物の絵は `HomeProps`(static)**: カード3枚・革装の本・宝箱・贈り物の箱。`DESIGN_SIZE` の座標で描き、`draw()` が `draw_set_transform()` で置き場所の大きさへ縮尺を掛ける。後光の `glow()` は「対戦する」の砂時計の絵と遠征の地図でも使う
+- 札の中身はどれも札の子でマウスを通し、札いっぱいにアンカーで追わせる。彫り文字と凹んだ枠は `EntryTilePaint`(static)
+  - 「対戦する」= `RankedEntryInfo.showcase`(上に見出し・左に砂時計の絵 `assets/hourglasses/master/state_full.png`・右に段位・下端に待機の行)。
+    モーダルの「ランクマッチ」は `tall`(見出しを上に中央へ縦に積む)と横長(縦画面。右に徽章・左に文字。見出しは `HomeTile`)を切り替え、`show_well` を切る
+  - 「ソロモード」= `SoloEntryInfo`。遠征の道の小さな地図(`SoloRun.route` / `chosen` から下から上へ。遠征が無いときは `SAMPLE_COUNTS` の形を沈めた色で)と、
+    遠征(`SoloProgress.load_run()`)・今日の1問(`DailyPuzzle` / `PuzzleProgress`)の凹んだ枠2つ
+  - 「ミッション」= `MissionEntryInfo`。`DailyMissionService.missions()` の行を `refresh_account()` のたびに `set_rows()` で受け、見出し・達成数・贈り物の箱と受け取れる数・3つの進み具合を描く。押すと `DailyMissionPanel`
+- **「対戦する」「ソロモード」を押すと `HomeModePicker` を出す**(暗幕 + 見出し + 同じ大きさの `HomeTile` の横並び + 補助のボタン1つ + 「とじる」)。
   `BattleTab` が2つ(対局の種類 / ソロモード)を作り、**ヘッダーより手前に出すため `HomeScreen` が `mount_pickers()` で自分の子として預かる**。札を押すとモーダルを閉じてから札の `pressed` が届く。閉じるたびに `BattleTab.refresh()`
-- **途中の対局があるときは「バトル」そのものが復帰の入口になる**(見出しを「対局へ戻る」へ替え、押下を `_on_resume_pressed()` へ回す。モーダルは出さない)。待機人数は `RankedMatchmakingQueue.count_waiting()` をホームが見えている間だけ一定間隔で読む
-- 「つぎはここ」(`NextStepMark`)は2つ持つ。ホームの札(CPU戦なら「バトル」、遠征・リーサルパズルなら「ソロモード」)と、モーダルの札
-- ヘッダーのミッションの札は `HomeTile`(`HomeScreen._mission_tile`)。`DailyMissionService.missions()` から「今日 N / 3」と受け取れる数を `refresh_account()` のたびに読む。押すと `DailyMissionPanel`
-- メニューの左隣のルールブック(`icon_book`)は `HomeScreen._build_rulebook_button()` がメニューのボタンの位置から左へずらして置き、押すと `LearnMenu`(暗幕 + 中央のパネル。誘導対局・遊び方・画面の見かた・キーワード辞書)を開く
-- `HomeScrim`(`Background` の直後):上=アカウント帯 / 下=3列の中身 を別々の濃さで落とす。アカウント帯の下端に中央が濃く左右で消える真鍮の細線
-- アカウント帯は `.tscn` の幅460pxを `_ready()` で右端まで伸ばし、残高を右へ寄せる(`ACCOUNT_BAR_RIGHT_INSET`)。ホームの残高だけ `CurrencyChip.scale_factor` で大きく、`height_override` で名札と揃える。`CurrencyChip` は単位を小さく数値を大きく別々に描き、紋章と文字のあいだに縦の細線
+- **途中の対局があるときは「対戦する」そのものが復帰の入口になる**(見出しを「対局へ戻る」へ替え、押下を `_on_resume_pressed()` へ回す。モーダルは出さない)。待機人数は `RankedMatchmakingQueue.count_waiting()` をホームが見えている間だけ一定間隔で読む
+- 「つぎはここ」(`NextStepMark`)は2つ持つ。ホームの札(CPU戦なら「対戦する」、遠征・リーサルパズルなら「ソロモード」)と、モーダルの札
+- **ヘッダーの部品は `HomeScreen._place_header()` が並べる**: 名札・残高(`CurrencyChip.height_override`)・ルールブック(`icon_book`)・メニューを同じ背丈にし、左右の端を `HomeLayout.header_margin()` に揃える。
+  アカウント帯(`.tscn` の幅460px)は右端まで伸ばしてルールブックの手前で止め、残高を右へ寄せる。ルールブックを押すと `LearnMenu`(暗幕 + 中央のパネル。誘導対局・遊び方・画面の見かた・キーワード辞書)
+- `HomeScrim`(`Background` の直後):上=アカウント帯 / 下=札 を別々の濃さで落とす。アカウント帯の下端に中央が濃く左右で消える真鍮の細線
+- ホームの残高だけ `CurrencyChip.scale_factor` で大きくする。`CurrencyChip` は単位を小さく数値を大きく別々に描き、紋章と文字のあいだに縦の細線
 - 副題は画面の外で変わるため、ホームを出すたびに `refresh()` で読み直す
 - **初回起動の判定は `UiState`**(`user://ui_state.json`)
 
