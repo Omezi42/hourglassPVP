@@ -80,6 +80,7 @@ Open Goldberg Variations と Open Well-Tempered Clavier は、いずれも Kimik
 | `redraw.png` | マリガンで引き直す札の印 | リロード、やり直しのアイコン(11971) |
 | `flip_right.png` | 対局画面の反転権のボタン | Uターン矢印-2(12605) |
 | `hourglass.png` | 砂時計の紋章(タイトル・通貨・行動の列など) | スタンダードな砂時計アイコン(11603) |
+| `rulebook.png` | ホームのルールブック(遊び方の入口) | 文章付きのノートアイコン素材3(11124) |
 | `boon_tough_body.png` | 遠征の恩恵「丈夫な体」のメダル | ハートのアイコン素材 1(11296) |
 | `boon_deep_spring.png` | 遠征の恩恵「深い泉」のメダル | 波アイコン1(16243) |
 | `boon_keen_eye.png` | 遠征の恩恵「目利き」のメダル | 虫眼鏡のアイコン(10819) |

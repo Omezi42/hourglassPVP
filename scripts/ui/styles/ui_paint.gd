@@ -50,6 +50,9 @@ const ICON_OUTLINE_DIRECTIONS := [
 ## 砂時計の紋章(icooon-mono)。半辺を`draw_emblem()`の`size`に対するこの比で描く。
 const HOURGLASS_ICON := preload("res://assets/ui/icons/hourglass.png")
 const HOURGLASS_ICON_HALF_RATIO := 0.9
+## 開いた本(ホームのルールブック)。
+const BOOK_ICON := preload("res://assets/ui/icons/rulebook.png")
+const BOOK_ICON_HALF_RATIO := 0.9
 
 static var _grain_texture: ImageTexture
 static var _grain_rid: RID
@@ -209,17 +212,6 @@ static var _menu_bar_bottom_points := PackedVector2Array(
 static var _menu_bar_bottom_highlight := PackedVector2Array(
 	[Vector2(-0.45, 0.37), Vector2(0.45, 0.37)]
 )
-## 開いた本(ホームのルールブック)。左右のページが背で谷折りになり、外の角が少し持ち上がる。
-static var _book_left_points := PackedVector2Array(
-	[Vector2(-0.68, -0.40), Vector2(-0.05, -0.30), Vector2(-0.05, 0.52), Vector2(-0.68, 0.40)]
-)
-static var _book_left_highlight := PackedVector2Array(
-	[Vector2(-0.58, -0.32), Vector2(-0.13, -0.24)]
-)
-static var _book_right_points := PackedVector2Array(
-	[Vector2(0.05, -0.30), Vector2(0.68, -0.40), Vector2(0.68, 0.40), Vector2(0.05, 0.52)]
-)
-static var _book_right_highlight := PackedVector2Array([Vector2(0.13, -0.24), Vector2(0.58, -0.32)])
 
 ## 公式の窓口への導線に添える外部サービスのマーク。**多角形で似せず、各社の公式の
 ## シンボルをそのまま使う**(assets/ui/brands/、出所は assets/CREDITS.md)。
@@ -538,8 +530,7 @@ static func draw_emblem(ci: RID, emblem: Emblem, center: Vector2, size: float) -
 			_emblem_fill(ci, center, size, _menu_bar_mid_points, _menu_bar_mid_highlight)
 			_emblem_fill(ci, center, size, _menu_bar_bottom_points, _menu_bar_bottom_highlight)
 		Emblem.BOOK:
-			_emblem_fill(ci, center, size, _book_left_points, _book_left_highlight)
-			_emblem_fill(ci, center, size, _book_right_points, _book_right_highlight)
+			draw_icon(ci, BOOK_ICON, center, size * BOOK_ICON_HALF_RATIO)
 		Emblem.DISCORD, Emblem.X, Emblem.YOUTUBE:
 			_emblem_brand(ci, _brand_textures[emblem], center, size)
 		_:

@@ -195,7 +195,7 @@ v1.0(位相制)の画面・クラス・`data/hourglasses/*.tres` は削除済み
 | `icon_square` | ROUNDED_RECT | NONE | 小さな正方形 |
 | `primary_action` | ROUNDED_RECT | NONE | 塗りつぶした真鍮の面(`filled`) |
 | `icon_menu` | ROUNDED_RECT | MENU(CENTER) | ホームのハンバーガー |
-| `icon_book` | ROUNDED_RECT | BOOK(CENTER) | ホームのルールブック(遊び方の入口) |
+| `icon_book` | ROUNDED_RECT | BOOK(CENTER。`rulebook.png`) | ホームのルールブック(遊び方の入口) |
 | `icon_discord` | ROUNDED_RECT | DISCORD(CENTER) | 設定メニューのDiscord導線 |
 | `icon_x` | ROUNDED_RECT | X(CENTER) | 設定メニューのX導線 |
 | `icon_youtube` | ROUNDED_RECT | YOUTUBE(CENTER) | 設定メニューのYouTube導線 |
