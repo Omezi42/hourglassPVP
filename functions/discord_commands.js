@@ -88,6 +88,7 @@ async function fetchEffectVideo(card) {
       type: "video/mp4",
     };
   } catch (error) {
+    console.error(`effect video fetch failed: ${error}`);
     return null;
   }
 }
@@ -133,21 +134,35 @@ function findCard(query) {
 }
 
 /**
- * 1枚に絞れたら3秒以内にACK(defer)を返し、実演の動画を読み終えてから
- * `sendCardFollowup` で追送する。絞れなければその場で文を返す。
+ * 1枚に絞れたら、defer をコールバックAPIへ先に送り、実演の動画を読んで `@original` を書き換えてから
+ * null を返す(HTTPの応答はその後に返す)。絞れなければHTTPの応答として返す本文を返す。
+ *
+ * - HTTPの応答本文では添付を送れない
+ * - deferをHTTPの応答で返して後から追送すると、応答を返した後はCPUが絞られて追送に10秒以上かかる
+ * - 動画つきの返信をコールバックへ一度に送ると、コールドスタートで3秒の期限を越える
  */
-function handleCardCommand(interaction) {
+async function respondCardCommand(interaction) {
   const {card, message} = findCard(optionValue(interaction, "name"));
   if (!card) return ephemeralMessage(message);
-  return deferEphemeralResponse();
-}
-
-async function sendCardFollowup(interaction) {
-  const {card} = findCard(optionValue(interaction, "name"));
-  if (!card) return;
-  const {application_id: applicationId, token} = interaction;
+  const video = fetchEffectVideo(card);
+  const {id, token, application_id: applicationId} = interaction;
+  const deferred = await fetch(`${DISCORD_API}/interactions/${id}/${token}/callback`, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(deferEphemeralResponse()),
+  });
+  if (!deferred.ok) {
+    console.error(`card defer failed: ${deferred.status} ${await deferred.text()}`);
+    return null;
+  }
+  const loaded = await video;
   const url = `${DISCORD_API}/webhooks/${applicationId}/${token}/messages/@original`;
-  await fetch(url, {method: "PATCH", body: await cardMessageForm(card, buildCardEmbeds(card))});
+  const form = messageForm({embeds: buildCardEmbeds(card)}, loaded ? [loaded] : []);
+  const response = await fetch(url, {method: "PATCH", body: form});
+  if (!response.ok) {
+    console.error(`card reply failed: ${response.status} ${await response.text()}`);
+  }
+  return null;
 }
 
 // --- /link -------------------------------------------------------------------
@@ -357,8 +372,7 @@ async function editOriginalResponseWithImage(applicationId, token, buffer, filen
 }
 
 module.exports = {
-  handleCardCommand,
-  sendCardFollowup,
+  respondCardCommand,
   cardMessageForm,
   handleLinkCommand,
   handleLinkModalSubmit,

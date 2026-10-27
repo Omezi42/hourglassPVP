@@ -23,8 +23,7 @@ setGlobalOptions({maxInstances: 2});
 
 const cardsData = require("./data/cards.json");
 const {
-  handleCardCommand,
-  sendCardFollowup,
+  respondCardCommand,
   cardMessageForm,
   handleLinkCommand,
   handleLinkModalSubmit,
@@ -165,11 +164,13 @@ exports.discordInteractions = onRequest(
       const db = admin.firestore();
       switch (name) {
         case "card": {
-          // 実演の動画を添付するため、1枚に絞れたら defer を返してから追送する(/deck と同じ)。
-          const response = handleCardCommand(body);
-          res.json(response);
-          if (response.type === InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE) {
-            await sendCardFollowup(body);
+          // 実演の動画を添付した返信はコールバックへ直接送る(Architecture.md 10.14節)。
+          // 送れたときはHTTPの応答に本文を載せない。
+          const response = await respondCardCommand(body);
+          if (response) {
+            res.json(response);
+          } else {
+            res.status(204).end();
           }
           return;
         }

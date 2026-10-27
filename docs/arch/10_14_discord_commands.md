@@ -26,7 +26,9 @@
   `node-canvas` はCairo依存でCloud Functionsのビルドが不安定なため採らない)。ゲーム内の `CardDeckSheet` と見た目を合わせない
 - **`/card` の画像・動画はjsDelivr経由でリポジトリから直接読む**(`https://cdn.jsdelivr.net/gh/Omezi42/hourglassPVP@main/functions/data/...`)。
   詳細画像はEmbedへ埋めるだけ。**実演動画はEmbedの画像欄で再生できないため、Functionsが読んで添付する**
-  (`/card` は1枚に絞れたら defer を返し、動画を読んでから `@original` を書き換える。読めなければ動画なしで返す。
+  (`/card` は1枚に絞れたら defer を `/interactions/{id}/{token}/callback` へ送り、動画を読んで `@original` を書き換えてから
+  HTTPを204で返す。**deferをHTTPの応答で返して後から追送すると応答後にCPUが絞られて10秒以上かかり、動画つきの返信を
+  コールバックへ一度に送るとコールドスタートで3秒の期限を越えた**ため。動画を読めなければ動画なしで返す。
   正午のスポットライトもwebhookへ同じ本文を `multipart/form-data` で送る)。pushから数分〜数時間は古い版が返ることがある。`/deck` は生成したバイト列を
   `multipart/form-data` の `files[0]` として添付する
 - **`functions/data/card_art` と `effect_videos` は `firebase.json` の `functions.ignore` でデプロイから外す**(関数は読まず
