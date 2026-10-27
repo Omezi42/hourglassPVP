@@ -5,20 +5,19 @@ extends Control
 ##
 ## **同名2枚は「×2」の1行にまとめる。**棚は並べた形で見せ、リストは一目で読ませる役割のため。
 ## 1つの `Control` が全行を `_draw()` で描き、当たり判定を矩形の表として持つ(棚と同じ理由)。
+## **1列で `ScrollContainer` の中に置く。**高さは種類数から自分で決める(`custom_minimum_size.y`)。
 
 signal card_hovered(card: CardData)
 signal hover_left
 signal card_removed(card: CardData)
 signal card_add_requested(card: CardData)
 
-## 列の数。種類が最も多い(30種)ときも、スクロールなしで1面に収まるようにする。
-const COLUMNS := 2
 const PAD := 8.0
-const COLUMN_GAP := 10.0
-const ROW_GAP := 3.0
-## 行の高さに対する文字の割合と、文字の大きさの上限(縦は `text_scale` を掛ける)。
-const FONT_RATIO := 0.46
-const FONT_MAX := 15
+const ROW_GAP := 4.0
+## 横の行の高さ。縦は `text_scale` を掛ける。
+const ROW_HEIGHT := 44.0
+## 行の高さに対する文字の割合。
+const FONT_RATIO := 0.42
 const BADGE_RATIO := 0.36
 const ROW_TOP := Color(0.20, 0.135, 0.085)
 const ROW_BOTTOM := Color(0.13, 0.085, 0.052)
@@ -36,6 +35,7 @@ var deck: Array = []:
 var text_scale := 1.0:
 	set(value):
 		text_scale = value
+		_fit_height()
 		queue_redraw()
 
 var _font: Font
@@ -45,6 +45,9 @@ var _hover_index := -1
 var _glow_amount := 0.0
 var _glow_tween: Tween
 var _was_full := false
+## 押した行。**離したときに同じ行の上なら戻す**(指でのスクロールを押下にしないため)。
+var _press := PressTracker.new()
+var _pressed_index := -1
 
 
 func _ready() -> void:
@@ -57,6 +60,9 @@ func _ready() -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED:
 		queue_redraw()
+		return
+	if what == NOTIFICATION_SCROLL_BEGIN:
+		_press.cancel()
 		return
 	if what == NOTIFICATION_MOUSE_EXIT and _hover_index >= 0:
 		_hover_index = -1
@@ -78,7 +84,17 @@ func _rebuild() -> void:
 	if full and not _was_full:
 		_start_glow()
 	_was_full = full
+	_fit_height()
 	queue_redraw()
+
+
+func _fit_height() -> void:
+	var rows := _entries.size()
+	custom_minimum_size.y = PAD * 2.0 + rows * _row_height() + maxf(rows - 1, 0) * ROW_GAP
+
+
+func _row_height() -> float:
+	return ROW_HEIGHT * text_scale
 
 
 func _start_glow() -> void:
@@ -95,30 +111,33 @@ func _set_glow_amount(value: float) -> void:
 
 
 ## そのカードの行の、印のあたりの正方形(グローバル座標)。飛翔演出の着地点/出発点。
+## 見えていない行はスクロールして見せてから返す(飛んだ先が枠の外にならないように)。
 func global_rect_for_card(card: CardData) -> Rect2:
 	for index in _entries.size():
 		if _entries[index]["card"] == card:
 			var row := _row_rect(index)
 			var square := Rect2(row.position, Vector2(row.size.y, row.size.y))
-			return Rect2(get_global_rect().position + square.position, square.size)
+			return Rect2(_global_origin_after_reveal(row) + square.position, square.size)
 	return Rect2()
 
 
-## 1列に入る行の数。**最大の種類数(=デッキ枚数)から決め、行の高さを常に同じにする。**
-func _rows_per_column() -> int:
-	return int(ceil(float(MatchState.DECK_SIZE) / float(COLUMNS)))
+## スクロール位置を変えても子の位置が動くのは次の並べ直しのため、原点は親から計算する。
+func _global_origin_after_reveal(row: Rect2) -> Vector2:
+	var scroll := get_parent() as ScrollContainer
+	if scroll == null:
+		return get_global_rect().position
+	var view_h: float = scroll.size.y
+	var top := float(scroll.scroll_vertical)
+	if row.position.y < top:
+		scroll.scroll_vertical = int(row.position.y - PAD)
+	elif row.end.y > top + view_h:
+		scroll.scroll_vertical = int(ceilf(row.end.y + PAD - view_h))
+	return scroll.get_global_rect().position - Vector2(0.0, scroll.scroll_vertical)
 
 
 func _row_rect(index: int) -> Rect2:
-	var rows := _rows_per_column()
-	var col_w: float = (size.x - PAD * 2.0 - COLUMN_GAP * (COLUMNS - 1)) / float(COLUMNS)
-	var row_h: float = (size.y - PAD * 2.0 - ROW_GAP * (rows - 1)) / float(rows)
-	var col: int = index / rows
-	var row: int = index % rows
-	return Rect2(
-		Vector2(PAD + col * (col_w + COLUMN_GAP), PAD + row * (row_h + ROW_GAP)),
-		Vector2(col_w, row_h)
-	)
+	var h := _row_height()
+	return Rect2(Vector2(PAD, PAD + index * (h + ROW_GAP)), Vector2(size.x - PAD * 2.0, h))
 
 
 func _draw() -> void:
@@ -157,7 +176,7 @@ func _draw_row(index: int) -> void:
 
 	var h := row.size.y
 	var r: float = h * BADGE_RATIO
-	var font_size: int = roundi(minf(h * FONT_RATIO, FONT_MAX * text_scale))
+	var font_size: int = roundi(h * FONT_RATIO)
 	var baseline: float = row.get_center().y + font_size * 0.36
 	var x := row.position.x + h * 0.12
 	_draw_diamond(Vector2(x + r, row.get_center().y), card.cost, r)
@@ -260,7 +279,12 @@ func _draw_hint() -> void:
 	var font_size: int = roundi(HINT_FONT * text_scale)
 	var plate_w: float = minf(size.x - PAD * 4.0, font_size * 26.0)
 	var plate_h: float = font_size * 2.8
-	var plate := Rect2(size * 0.5 - Vector2(plate_w, plate_h) * 0.5, Vector2(plate_w, plate_h))
+	# 空のときは見えている範囲の中ほど(自分の高さは余白だけになっている)。
+	var view := size
+	var scroll := get_parent() as ScrollContainer
+	if scroll != null:
+		view = scroll.size
+	var plate := Rect2(view * 0.5 - Vector2(plate_w, plate_h) * 0.5, Vector2(plate_w, plate_h))
 	var points := UiPaint.rounded_rect_points_uniform(plate, 8.0, 6)
 	UiPaint.fill_gradient_polygon(
 		get_canvas_item(),
@@ -286,13 +310,25 @@ func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion:
 		_update_hover((event as InputEventMouseMotion).position)
 		return
-	var press := event as InputEventMouseButton
-	if press == null or not press.pressed or press.button_index != MOUSE_BUTTON_LEFT:
-		return
-	# **行を押すとその1枚が在庫へ戻る**(棚の枠と同じ)。2枚の行は1枚ずつ減る。
-	var index := _index_at(press.position)
-	if index >= 0:
-		card_removed.emit(_entries[index]["card"])
+	# **行を押して離すとその1枚が在庫へ戻る**(棚の枠と同じ)。2枚の行は1枚ずつ減る。
+	match _press.feed(event, size):
+		PressTracker.Result.PRESSED:
+			_pressed_index = _index_at(_event_position(event))
+		PressTracker.Result.CONFIRMED:
+			var index := _index_at(_event_position(event))
+			if index >= 0 and index == _pressed_index:
+				card_removed.emit(_entries[index]["card"])
+			_pressed_index = -1
+		PressTracker.Result.CANCELED:
+			_pressed_index = -1
+
+
+func _event_position(event: InputEvent) -> Vector2:
+	if event is InputEventMouse:
+		return (event as InputEventMouse).position
+	if event is InputEventScreenTouch:
+		return (event as InputEventScreenTouch).position
+	return Vector2(-1.0, -1.0)
 
 
 func _update_hover(at: Vector2) -> void:

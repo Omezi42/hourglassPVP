@@ -95,6 +95,7 @@ var _count_label: Label
 var _grid: GridContainer
 var _shelf: CardDeckShelf
 var _deck_list: CardDeckList
+var _deck_list_scroll: ScrollContainer
 var _view_buttons: Array[Button] = []
 var _progress: Label
 var _detail: CardDetailPanel
@@ -310,7 +311,12 @@ func _build_side() -> void:
 	_shelf.card_add_requested.connect(_on_card_pressed)
 	column.add_child(_shelf)
 
-	# 2'. 同じ場所へ出すリスト。どちらを出すかは保存しておき、開き直しても保つ。
+	# 2'. 同じ場所へ出すリスト(1列で縦にスクロール)。どちらを出すかは保存しておき、開き直しても保つ。
+	_deck_list_scroll = ScrollContainer.new()
+	_deck_list_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_deck_list_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	TouchScroll.enable(_deck_list_scroll)
+	column.add_child(_deck_list_scroll)
 	_deck_list = CardDeckList.new()
 	_deck_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_deck_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -318,14 +324,14 @@ func _build_side() -> void:
 	_deck_list.hover_left.connect(_on_hover_left)
 	_deck_list.card_removed.connect(_on_band_remove)
 	_deck_list.card_add_requested.connect(_on_card_pressed)
-	column.add_child(_deck_list)
+	_deck_list_scroll.add_child(_deck_list)
 
 
 ## 編成中のデッキを棚とリストのどちらで見せるか。
 func _select_deck_view(as_list: bool) -> void:
 	UiState.set_deck_as_list(as_list)
 	_shelf.visible = not as_list
-	_deck_list.visible = as_list
+	_deck_list_scroll.visible = as_list
 	_hide_detail()
 	for i in _view_buttons.size():
 		var active: bool = (i == 1) == as_list
@@ -336,7 +342,7 @@ func _select_deck_view(as_list: bool) -> void:
 
 ## いま出している方(棚かリスト)で、そのカードが収まっている矩形。飛翔演出の端点。
 func _deck_rect(card: CardData) -> Rect2:
-	if _deck_list.visible:
+	if _deck_list_scroll.visible:
 		return _deck_list.global_rect_for_card(card)
 	return _shelf.global_rect_for_card(card)
 
