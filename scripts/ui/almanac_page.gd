@@ -21,9 +21,9 @@ const SKIN_TOGGLE_GAP := 6.0
 const SKIN_TOGGLE_HEIGHT := 28.0
 ## 絵と実演のあいだに置くデータ欄の左端(絵の右)。
 const DATA_GAP := 28.0
-const DEMO_HEIGHT := 172.0
-## 下部に綴じる「あなたの記録」の高さ。
-const LOG_HEIGHT := 96.0
+## 実演はページの下端に置く。横の見開きで切り抜きの横幅がページ幅に収まる高さにする。
+const DEMO_HEIGHT := 240.0
+const DEMO_BOTTOM_MARGIN := 12.0
 ## キーワードと効果の文を書き出す高さ。**データ欄の値の下から始める。**
 ## 値は26pxで y=102 まで伸びるため、そこへ掛からない位置に取る。
 const TEXT_TOP := 114.0
@@ -195,7 +195,7 @@ func _on_skin_toggle_pressed() -> void:
 
 
 func _demo_top() -> float:
-	return size.y - LOG_HEIGHT - DEMO_HEIGHT - 12.0
+	return size.y - DEMO_HEIGHT - DEMO_BOTTOM_MARGIN
 
 
 func _text_width() -> float:
@@ -344,7 +344,6 @@ func _draw() -> void:
 	_draw_field(Vector2(data_x, 58), "コスト", str(card.cost))
 	_draw_field(Vector2(data_x + pitch, 58), "総量", "—" if card.is_spell else str(card.total_sand))
 	_draw_field(Vector2(data_x + pitch * 2.0, 58), "分類", "砂術" if card.is_spell else "砂時計")
-	_draw_log()
 
 
 ## 砂術の札。紙の上でも「置くカードではない」と分かるよう、藍の枠へ紋章を大きく置く。
@@ -369,45 +368,13 @@ func _draw_spell_plate(rect: Rect2) -> void:
 		)
 
 
-## **図鑑にその人自身の記録を綴じる**(GameDesign.md 9章)。集めた札を眺めるだけの
-## 場所にしない。数字は戦績(19章)が既に持っているものを引くだけで、新しく数えない。
-func _draw_log() -> void:
-	var top := size.y - LOG_HEIGHT
-	_draw_rule(Vector2(0, top), size.x)
-	draw_string(
-		_font, Vector2(0, top + 25), "あ な た の 記 録", HORIZONTAL_ALIGNMENT_LEFT, -1, 17, TERM_COLOR
-	)
-	# **戦績はカード別の行から引くだけ**にする(新しく数えるものを足さない)。
-	var games := 0
-	var wins := 0
-	for row in MatchStats.cards(_uid()):
-		if String(row.get("id", "")) == card.id:
-			games = int(row.get("games", 0))
-			wins = int(row.get("wins", 0))
-			break
-	_draw_field(Vector2(0, top + 34), "共に戦った", "%d 戦" % games)
-	var rate := "—" if games <= 0 else "%d %%" % int(round(float(wins) / float(games) * 100.0))
-	_draw_field(Vector2(150, top + 34), "勝率", rate)
-	# **紙の右端で折り返す。**左端からの絶対位置で置くと、ページの幅が変わったときに
-	# はみ出す(実際にはみ出した)。
-	draw_string(
-		_font,
-		Vector2(0, top + 82),
-		"※ カードの強さそのものではありません",
-		HORIZONTAL_ALIGNMENT_RIGHT,
-		size.x,
-		14,
-		INK_SOFT
-	)
-
-
 ## 見出しつきの1項目。値を大きく、ラベルを小さく。
 func _draw_field(at: Vector2, label: String, value: String) -> void:
 	draw_string(_font, at + Vector2(0, 15), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, INK_SOFT)
 	draw_string(_font, at + Vector2(0, 44), value, HORIZONTAL_ALIGNMENT_LEFT, -1, 26, INK)
 
 
-## 戦績はアカウントごとに数える(GameDesign.md 19章)。サインインしていなければ空。
+## スキンの切り替えを書き込むアカウント。サインインしていなければ空。
 static func _uid() -> String:
 	if NetSession.client == null or NetSession.client.auth == null:
 		return ""
