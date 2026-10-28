@@ -156,6 +156,8 @@ enum ConditionScope {
 	ATTACK_OVER_HEALTH,
 	## 選んだ対象の体力が condition_total 以下か。TARGET と同じく対象の絞り込みとして働く(追砂の刻)。
 	HEALTH_AT_MOST,
+	## 選んだ対象の総量が condition_total 以上か。TARGET と同じく対象の絞り込みとして働く(追砂の刻)。
+	TOTAL_AT_LEAST,
 }
 
 ## 効果が対象へ届く演出の「型」(GameDesign.md 9章)。`MatchState.effect_struck` /

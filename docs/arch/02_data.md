@@ -88,7 +88,7 @@ UI側に散らさないため、語と enum の対応はここだけが持つ。
 語彙を増やさない方針とした)。
 
 - **`CardEffectData.condition_scope`**(`CardEnums.ConditionScope`: `NONE` / `SELF` /
-  `TARGET` / `ANY_ALLY` / `ATTACK_OVER_HEALTH` / `HEALTH_AT_MOST`)と **`condition_total`**(比べる値。`HEALTH_AT_MOST` は体力の上限、それ以外は総量。-1で条件なし)。
+  `TARGET` / `ANY_ALLY` / `ATTACK_OVER_HEALTH` / `HEALTH_AT_MOST` / `TOTAL_AT_LEAST`)と **`condition_total`**(比べる値。`HEALTH_AT_MOST` は体力の上限、`TOTAL_AT_LEAST` は総量の下限、それ以外は総量。-1で条件なし)。
   トリガー起動の効果(設置・反転・余砂・落砂・被弾のいずれでも)へ乗せられる汎用の条件。
   `SELF` はその効果を持つ駒自身の総量、`ANY_ALLY` は自分の場のどこかに条件を満たす駒が
   いるか、`TARGET` は `ENEMY_UNIT` / `ALLY_UNIT` の対象選択そのものを条件で絞り込む

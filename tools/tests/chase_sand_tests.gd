@@ -23,6 +23,8 @@ func run(assert_true: Callable) -> void:
 	_test_hive_summons_mote_when_damaged()
 	_test_relief_heals_per_enemy_unit()
 	_test_relief_heals_nothing_on_empty_board()
+	_test_collapse_destroys_only_heavy()
+	_test_collapse_fizzles_on_light_board()
 	_test_set_is_staged()
 
 
@@ -213,6 +215,34 @@ func _test_relief_heals_nothing_on_empty_board() -> void:
 	_assert.call(state.board[MatchState.Side.A][0] != null, "回復しなくてもリリーフは場に残る")
 
 
+func _cast_collapse(state: MatchState, hint: Dictionary) -> void:
+	state.hand[MatchState.Side.A] = [CardLibrary.find_by_id("collapse")]
+	state.mana[MatchState.Side.A] = 3
+	state.cast_spell(MatchState.Side.A, 0, hint)
+
+
+func _test_collapse_destroys_only_heavy() -> void:
+	var state := _new_match()
+	var light := _place(state, MatchState.Side.B, _vanilla(6), 0)
+	_place(state, MatchState.Side.B, _vanilla(7), 1)
+	_assert.call(
+		not CardEffectResolver.eligible_target(
+			light, CardLibrary.find_by_id("collapse").effects[0]
+		),
+		"総量6以下の駒は崩落の対象に選べない"
+	)
+	_cast_collapse(state, {"side": MatchState.Side.B, "slot": 0})
+	_assert.call(state.board[MatchState.Side.B][0] == light, "崩落は総量の少ない駒を破壊しない")
+	_assert.call(state.board[MatchState.Side.B][1] == null, "崩落は総量7以上の駒を破壊する")
+
+
+func _test_collapse_fizzles_on_light_board() -> void:
+	var state := _new_match()
+	var light := _place(state, MatchState.Side.B, _vanilla(6), 0)
+	_cast_collapse(state, {})
+	_assert.call(state.board[MatchState.Side.B][0] == light, "総量7以上の駒がいなければ崩落は不発")
+
+
 func _test_set_is_staged() -> void:
 	_assert.call(CardSetLibrary.has_set(SET_ID), "chase_sand is registered")
 	_assert.call(CardSetLibrary.price(SET_ID) == 1000, "chase_sand costs 1000")
@@ -228,4 +258,7 @@ func _test_set_is_staged() -> void:
 	_assert.call(CardSetLibrary.card_ids(SET_ID)[6] == "hive", "chase_sand's seventh card is hive")
 	_assert.call(
 		CardSetLibrary.card_ids(SET_ID)[7] == "relief", "chase_sand's eighth card is relief"
+	)
+	_assert.call(
+		CardSetLibrary.card_ids(SET_ID)[8] == "collapse", "chase_sand's ninth card is collapse"
 	)

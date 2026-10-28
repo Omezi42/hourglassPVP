@@ -593,7 +593,8 @@ func _unit_or_player(foe_side: int, hint: Dictionary, effect: CardEffectData) ->
 
 
 ## 対象を1体だけ選ぶ効果の解決。相手側(ENEMY_UNIT)も自分側(ALLY_UNIT)もここを通る。
-## effect.condition_scope が対象の絞り込み(TARGET / ATTACK_OVER_HEALTH / HEALTH_AT_MOST)のとき、
+## effect.condition_scope が対象の絞り込み(TARGET / ATTACK_OVER_HEALTH / HEALTH_AT_MOST /
+## TOTAL_AT_LEAST)のとき、
 ## 条件を満たす候補だけへ絞る(GameDesign.md 6章)。
 func _single_unit(
 	target_side: int, hint: Dictionary, exclude_slot := -1, effect: CardEffectData = null
@@ -660,7 +661,7 @@ static func lowest_health_slot(
 
 
 ## 対象の絞り込み(GameDesign.md 6章)。TARGET は総量の一致、ATTACK_OVER_HEALTH は
-## 攻撃力が体力より多いこと、HEALTH_AT_MOST は体力が上限以下であること。
+## 攻撃力が体力より多いこと、HEALTH_AT_MOST は体力が上限以下、TOTAL_AT_LEAST は総量が下限以上であること。
 ## UI・CPUも同じ物差しで候補を絞れるよう公開する。
 static func eligible_target(unit: CardInstance, effect: CardEffectData) -> bool:
 	if effect == null:
@@ -674,6 +675,8 @@ static func eligible_target(unit: CardInstance, effect: CardEffectData) -> bool:
 			return unit.attack > unit.health
 		CardEnums.ConditionScope.HEALTH_AT_MOST:
 			return unit.health <= effect.condition_total
+		CardEnums.ConditionScope.TOTAL_AT_LEAST:
+			return unit.total_sand() >= effect.condition_total
 	return true
 
 
