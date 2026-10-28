@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 変更後の検証を1コマンドにまとめる: 読み込み順の生成 → gdformat → gdlint → ヘッドレステスト → 誘導対局の通し → 初回起動の直行 → 起動シーンの通し → 起動スモーク。
+# 変更後の検証を1コマンドにまとめる: 読み込み順の生成 → gdformat → gdlint → ヘッドレステスト → 誘導対局の通し → 初回起動の直行 → 起動シーンの通し → 遠征の画面の監査 → 起動スモーク。
 # 引数なし: git で変更のある .gd だけを整形・lint する。 --all: scripts/ と tools/ の全 .gd。
 # 出力は要点だけに絞る(ログ全文は logs/check_*.log)。
 set -u
@@ -70,6 +70,12 @@ echo "== boot"
 timeout "$GODOT_TIMEOUT" "$GODOT" --headless --path . --script res://tools/tests/boot_smoke.gd > logs/check_boot.log 2>&1
 grep -E "boot smoke|SCRIPT ERROR|Parse Error" logs/check_boot.log | head -10
 grep -q "boot smoke passed" logs/check_boot.log || status=1
+
+# 遠征の画面の合格基準(押せる部品の反応・文字の大きさと重なり・押せる高さ)。縦は道と下のパネルの組み直しが済むまで横だけ。
+echo "== solo ui audit"
+timeout "$GODOT_TIMEOUT" "$GODOT" --headless --path . --script res://tools/tests/solo_ui_audit.gd -- landscape > logs/check_solo_ui.log 2>&1
+grep -E "solo ui audit|SCRIPT ERROR|Parse Error" logs/check_solo_ui.log | head -10
+grep -q "solo ui audit passed" logs/check_solo_ui.log || { grep -E "^(landscape|portrait)/" logs/check_solo_ui.log | head -20; status=1; }
 
 echo "== startup smoke"
 timeout "$GODOT_TIMEOUT" "$GODOT" --headless --path . --quit-after 60 > logs/check_smoke.log 2>&1

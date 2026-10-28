@@ -250,11 +250,13 @@ func _build_card(pos: Vector2, card_size: Vector2, scale: float, card_id: String
 	var card := CardLibrary.find_by_id(card_id)
 	if card == null:
 		return
+	var root := SoloUiPaint.card_root(_grid_box.size)
+	_grid_box.add_child(root)
 	var view := CardView.new()
 	view.mode = CardView.Mode.HAND
 	view.position = pos
 	view.scale = Vector2(scale, scale)
-	_grid_box.add_child(view)
+	root.add_child(view)
 	view.show_card(card, true)
 	if _selected_id == card_id:
 		var ring := Control.new()
@@ -272,7 +274,7 @@ func _build_card(pos: Vector2, card_size: Vector2, scale: float, card_id: String
 					false
 				)
 		)
-		_grid_box.add_child(ring)
+		root.add_child(ring)
 	var count := _deck_ids.count(card_id)
 	if count >= 2:
 		var badge := _label(COUNT_BADGE_FONT_SIZE, COUNT_BADGE_COLOR)
@@ -280,8 +282,8 @@ func _build_card(pos: Vector2, card_size: Vector2, scale: float, card_id: String
 		badge.position = pos + Vector2(0, card_size.y - 4.0)
 		badge.size = Vector2(card_size.x - 6.0, 20.0)
 		badge.text = "×%d" % count
-		_grid_box.add_child(badge)
-	var button := SoloUiPaint.transparent_button()
+		root.add_child(badge)
+	var button := SoloUiPaint.choice_button(root, pos + card_size * 0.5)
 	button.position = pos
 	button.size = card_size
 	button.pressed.connect(_on_card_pressed.bind(card_id))

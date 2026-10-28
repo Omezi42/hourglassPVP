@@ -8,11 +8,13 @@ signal abandon_requested
 
 const PADDING := 22.0
 const THEME_FONT_SIZE := 20
-const BOONS_FONT_SIZE := 13
+const BOONS_FONT_SIZE := 16
 const WINS_FONT_SIZE := 16
-const DECK_LABEL_FONT_SIZE := 14
+const DECK_LABEL_FONT_SIZE := 16
 const HP_BAR_HEIGHT := 26.0
-const HP_TOP_GAP := 62.0
+const HP_TOP_GAP := 66.0
+## 作戦名の行の下から恩恵の行までの間(作戦名の字の高さぶん)。
+const BOONS_TOP_GAP := 30.0
 const HP_FONT_SIZE := 14
 const WINS_GAP := 8.0
 const LIST_GAP := 44.0
@@ -141,8 +143,8 @@ func _layout() -> void:
 	_panel_canvas.size = size
 	_theme_label.position = Vector2(PADDING, PADDING)
 	_theme_label.size = Vector2(size.x - PADDING * 2.0, 28.0)
-	_boons_label.position = Vector2(PADDING, PADDING + 26.0)
-	_boons_label.size = Vector2(size.x - PADDING * 2.0, 18.0)
+	_boons_label.position = Vector2(PADDING, PADDING + BOONS_TOP_GAP)
+	_boons_label.size = Vector2(size.x - PADDING * 2.0, 22.0)
 	var hp_rect := Rect2(PADDING, PADDING + HP_TOP_GAP, size.x - PADDING * 2.0, HP_BAR_HEIGHT)
 	_hp_canvas.position = hp_rect.position
 	_hp_canvas.size = hp_rect.size

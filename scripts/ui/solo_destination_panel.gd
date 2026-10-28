@@ -108,7 +108,7 @@ func show_data(dest: Dictionary, run: SoloRun) -> void:
 		_gate_desc_label.visible = false
 		_gate_note_label.visible = false
 		_hp_label.visible = true
-		var healed := mini(run.hp + SoloRun.SPRING_HEAL + run.spring_bonus(), run.max_hp)
+		var healed := mini(run.hp + run.spring_amount(), run.max_hp)
 		_hp_label.text = "HP %d → %d" % [run.hp, healed]
 		_challenge_button.text = "休む"
 		_layout()

@@ -20,20 +20,20 @@ const ICON_ROW_GAP := 10.0
 const ICON_GRID_TOP_OFFSET := 96.0
 const HEADING_FONT_SIZE := 26
 const NAME_FONT_SIZE := 26
-const SUMMARY_FONT_SIZE := 15
-const RECORD_FONT_SIZE := 15
+const SUMMARY_FONT_SIZE := 16
+const RECORD_FONT_SIZE := 16
 
 const DEPTH_ROW_TOP_OFFSET := 44.0
-const DEPTH_ARROW_SIZE := Vector2(28, 28)
+const DEPTH_ARROW_SIZE := Vector2(44, 44)
 const DEPTH_LABEL_WIDTH := 200.0
 const DEPTH_LABEL_GAP := 8.0
 const DEPTH_LABEL_FONT_SIZE := 18
-const CONDITION_FONT_SIZE := 13
-const CONDITION_LINE_HEIGHT := 18.0
+const CONDITION_FONT_SIZE := 16
+const CONDITION_LINE_HEIGHT := 22.0
 const CONDITION_SEPARATOR := " ・ "
 const CONDITIONS_TOP_GAP := 8.0
 const CARDS_TOP_GAP := 18.0
-const BOSS_FONT_SIZE := 15
+const BOSS_FONT_SIZE := 16
 const BOSS_LINE_HEIGHT := 22.0
 const BOSS_TOP_GAP := 6.0
 
@@ -67,6 +67,7 @@ func show_data(
 		child.queue_free()
 	var width := size.x
 	_add_label(
+		self,
 		Rect2(MARGIN, 0.0, width - MARGIN * 2.0, 34.0),
 		"作戦を選んで出発",
 		HEADING_FONT_SIZE,
@@ -75,10 +76,11 @@ func show_data(
 		true
 	)
 	var depth_top := DEPTH_ROW_TOP_OFFSET
-	_build_depth_row(width, depth_top, depth, max_depth)
-	var conditions_top := depth_top + DEPTH_ARROW_SIZE.y + CONDITIONS_TOP_GAP
+	var depth_row_h := _build_depth_row(width, depth_top, depth, max_depth)
+	var conditions_top := depth_top + depth_row_h + CONDITIONS_TOP_GAP
 	var conditions := SoloRun.depth_condition_lines(depth)
 	_add_label(
+		self,
 		Rect2(MARGIN, conditions_top, width - MARGIN * 2.0, CONDITION_LINE_HEIGHT),
 		"条件なし" if conditions.is_empty() else CONDITION_SEPARATOR.join(conditions),
 		CONDITION_FONT_SIZE,
@@ -91,6 +93,7 @@ func show_data(
 	if boss != null:
 		conditions_top += BOSS_TOP_GAP
 		_add_label(
+			self,
 			Rect2(MARGIN, conditions_top, width - MARGIN * 2.0, BOSS_LINE_HEIGHT),
 			"最終戦の主 ・ %s ─ %s" % [boss.display_name, boss.description],
 			BOSS_FONT_SIZE,
@@ -113,6 +116,7 @@ func show_data(
 		var best_depth := theme_best_depths[i] if i < theme_best_depths.size() else -1
 		_build_card(rect, theme_ids[i], best_depth)
 	_add_label(
+		self,
 		Rect2(MARGIN, cards_bottom + 6.0, width - MARGIN * 2.0, 26.0),
 		(
 			"いちばん多く勝った数 %d ・ 踏破 %d回 ・ 踏破した作戦 %d / %d"
@@ -124,12 +128,14 @@ func show_data(
 	)
 
 
-## 「◀ 砂の深さ N ▶」。選べない側の矢印は沈める(disabled)。
-func _build_depth_row(width: float, top: float, depth: int, max_depth: int) -> void:
+## 「◀ 砂の深さ N ▶」。選べない側の矢印は沈める(disabled)。矢印は面の画像が決める最小の
+## 大きさまで広がるため、実際の大きさで並べ、行の高さを返す。
+func _build_depth_row(width: float, top: float, depth: int, max_depth: int) -> float:
 	var center_x := width * 0.5
 	var left_button := CodedButton.make_icon("◀", DEPTH_ARROW_SIZE)
+	var arrow := left_button.get_combined_minimum_size().max(DEPTH_ARROW_SIZE)
 	left_button.position = Vector2(
-		center_x - DEPTH_LABEL_WIDTH * 0.5 - DEPTH_ARROW_SIZE.x - DEPTH_LABEL_GAP, top
+		center_x - DEPTH_LABEL_WIDTH * 0.5 - arrow.x - DEPTH_LABEL_GAP, top
 	)
 	left_button.disabled = depth <= 0
 	left_button.pressed.connect(func() -> void: depth_changed.emit(-1))
@@ -139,17 +145,22 @@ func _build_depth_row(width: float, top: float, depth: int, max_depth: int) -> v
 	right_button.disabled = depth >= max_depth
 	right_button.pressed.connect(func() -> void: depth_changed.emit(1))
 	add_child(right_button)
-	_add_label(
-		Rect2(center_x - DEPTH_LABEL_WIDTH * 0.5, top + 2.0, DEPTH_LABEL_WIDTH, DEPTH_ARROW_SIZE.y),
+	var label := _add_label(
+		self,
+		Rect2(center_x - DEPTH_LABEL_WIDTH * 0.5, top, DEPTH_LABEL_WIDTH, arrow.y),
 		"砂の深さ %d" % depth,
 		DEPTH_LABEL_FONT_SIZE,
 		UiPalette.TEXT_OFFWHITE,
 		HORIZONTAL_ALIGNMENT_CENTER,
 		true
 	)
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	return arrow.y
 
 
 func _build_card(rect: Rect2, theme_id: String, best_depth: int) -> void:
+	var card := SoloUiPaint.card_root(size)
+	add_child(card)
 	var canvas := Control.new()
 	canvas.position = Vector2.ZERO
 	canvas.size = size
@@ -157,8 +168,9 @@ func _build_card(rect: Rect2, theme_id: String, best_depth: int) -> void:
 	canvas.draw.connect(
 		func() -> void: SoloUiPaint.paint_panel(canvas.get_canvas_item(), rect, false)
 	)
-	add_child(canvas)
+	card.add_child(canvas)
 	_add_label(
+		card,
 		Rect2(rect.position.x, rect.position.y + CARD_PADDING, rect.size.x, 34.0),
 		CardCpuDecks.name_of(theme_id),
 		NAME_FONT_SIZE,
@@ -167,6 +179,7 @@ func _build_card(rect: Rect2, theme_id: String, best_depth: int) -> void:
 		true
 	)
 	_add_label(
+		card,
 		Rect2(
 			rect.position.x + CARD_PADDING,
 			rect.position.y + CARD_PADDING + 40.0,
@@ -178,10 +191,10 @@ func _build_card(rect: Rect2, theme_id: String, best_depth: int) -> void:
 		UiPalette.TEXT_MUTED,
 		HORIZONTAL_ALIGNMENT_CENTER
 	)
-	_build_icons(rect, CardCpuDecks.card_ids_of(theme_id))
+	_build_icons(card, rect, CardCpuDecks.card_ids_of(theme_id))
 	if best_depth >= 0:
-		_build_seal(rect, best_depth)
-	var button := SoloUiPaint.transparent_button()
+		_build_seal(card, rect, best_depth)
+	var button := SoloUiPaint.choice_button(card, rect.get_center())
 	button.position = rect.position
 	button.size = rect.size
 	button.pressed.connect(func() -> void: theme_chosen.emit(theme_id))
@@ -190,7 +203,7 @@ func _build_card(rect: Rect2, theme_id: String, best_depth: int) -> void:
 
 ## その作戦で踏破したことがあれば、札の右上に真鍮の封蝋の印を押し、中に踏破した
 ## 最も深い深さの数字を入れる(GameDesign.md 27章「画面」)。
-func _build_seal(rect: Rect2, depth: int) -> void:
+func _build_seal(parent: Control, rect: Rect2, depth: int) -> void:
 	var center := (
 		rect.position + Vector2(rect.size.x - SEAL_MARGIN - SEAL_RADIUS, SEAL_MARGIN + SEAL_RADIUS)
 	)
@@ -228,10 +241,10 @@ func _build_seal(rect: Rect2, depth: int) -> void:
 				UiPalette.NAVY_PANEL_TOP
 			)
 	)
-	add_child(seal)
+	parent.add_child(seal)
 
 
-func _build_icons(rect: Rect2, ids: Array[String]) -> void:
+func _build_icons(parent: Control, rect: Rect2, ids: Array[String]) -> void:
 	var grid_top := rect.position.y + CARD_PADDING + ICON_GRID_TOP_OFFSET
 	var inner_w: float = rect.size.x - CARD_PADDING * 2.0
 	var rows := ceili(float(ids.size()) / float(ICON_COLUMNS))
@@ -255,10 +268,10 @@ func _build_icons(rect: Rect2, ids: Array[String]) -> void:
 		var row := i / ICON_COLUMNS
 		var x := grid_left + float(col) * (icon_w + ICON_GAP)
 		var y := grid_top + float(row) * (icon_h + ICON_GAP + ICON_ROW_GAP)
-		_build_icon(Rect2(x, y, icon_w, icon_h), ids[i])
+		_build_icon(parent, Rect2(x, y, icon_w, icon_h), ids[i])
 
 
-func _build_icon(rect: Rect2, card_id: String) -> void:
+func _build_icon(parent: Control, rect: Rect2, card_id: String) -> void:
 	var card: CardData = CardLibrary.find_by_id(card_id)
 	if card == null:
 		return
@@ -287,17 +300,18 @@ func _build_icon(rect: Rect2, card_id: String) -> void:
 				false
 			)
 	)
-	add_child(box)
+	parent.add_child(box)
 
 
 func _add_label(
+	parent: Node,
 	rect: Rect2,
 	text: String,
 	font_size: int,
 	color: Color,
 	align := HORIZONTAL_ALIGNMENT_LEFT,
 	display := false
-) -> void:
+) -> Label:
 	var label := Label.new()
 	label.position = rect.position
 	label.size = rect.size
@@ -309,4 +323,5 @@ func _add_label(
 	label.text = text
 	if display:
 		label.add_theme_font_override("font", UiFonts.display_font(label.get_theme_default_font()))
-	add_child(label)
+	parent.add_child(label)
+	return label

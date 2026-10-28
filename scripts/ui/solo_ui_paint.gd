@@ -13,6 +13,8 @@ const GLOW_INSET := 4.0
 const GLOW_RADIUS := 22.0
 const GLOW_WIDTH := 3.0
 
+## ホバー・押下で動かす見た目のノードを、当たり判定のボタンに持たせる名前(`choice_button()`)。
+const HOVER_VISUAL_META := &"hover_visual"
 const TRANSPARENT_BUTTON_STATES: Array[String] = ["normal", "hover", "pressed", "focus", "disabled"]
 
 
@@ -46,7 +48,40 @@ static func fill_colors(points: PackedVector2Array, color: Color) -> PackedColor
 	return colors
 
 
-## 見た目を持たず当たり判定だけのボタン(額縁の絵の上に重ねる、道の駒・出発の札用)。
+## 札・駒の絵の上に重ねる当たり判定のボタン。押せる要素の共通の挙動(指カーソル)を持たせ、
+## ホバー・押下で何を動かすかを`visual`として覚えておく(GameDesign.md 9章「操作」)。
+static func hit_button(visual: Control) -> Button:
+	var button := transparent_button()
+	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	button.set_meta(HOVER_VISUAL_META, visual)
+	return button
+
+
+## 札の見た目(`visual`)をホバーで明るく浮かせ、押し込みで縮める。ボタン自身は動かさない
+## (浮いた縁でカーソルが外れて明滅しないため)。`pivot`は`visual`の中の札の中心。
+static func choice_button(visual: Control, pivot: Vector2) -> Button:
+	var button := hit_button(visual)
+	visual.pivot_offset = pivot
+	var rest := visual.position
+	button.mouse_entered.connect(func() -> void: ClickArea.animate_hover(visual, true, rest))
+	button.mouse_exited.connect(
+		func() -> void:
+			ClickArea.animate_hover(visual, false, rest)
+			ClickArea.animate_press(visual, false)
+	)
+	button.button_down.connect(func() -> void: ClickArea.animate_press(visual, true))
+	button.button_up.connect(func() -> void: ClickArea.animate_press(visual, false))
+	return button
+
+
+## 札の見た目をまとめる箱。ホバー・押下で札の部品を一緒に動かすため、部品はここへ足す。
+static func card_root(parent_size: Vector2) -> Control:
+	var root := Control.new()
+	root.size = parent_size
+	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return root
+
+
 static func transparent_button() -> Button:
 	var button := Button.new()
 	button.flat = true

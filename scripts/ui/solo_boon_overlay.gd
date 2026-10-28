@@ -121,6 +121,8 @@ func _card_rect(i: int) -> Rect2:
 
 
 func _build_card(rect: Rect2, boon: SoloBoonData) -> void:
+	var root := SoloUiPaint.card_root(_cards_box.size)
+	_cards_box.add_child(root)
 	var canvas := Control.new()
 	canvas.position = rect.position
 	canvas.size = rect.size
@@ -129,7 +131,7 @@ func _build_card(rect: Rect2, boon: SoloBoonData) -> void:
 		func() -> void:
 			SoloUiPaint.paint_panel(canvas.get_canvas_item(), Rect2(Vector2.ZERO, rect.size), false)
 	)
-	_cards_box.add_child(canvas)
+	root.add_child(canvas)
 
 	# 横: メダルの下に名前と説明。縦: 左にメダル、右に名前と説明。
 	var medal_offset := Vector2(rect.size.x * 0.5 - MEDAL_RADIUS, MEDAL_TOP_OFFSET)
@@ -165,7 +167,7 @@ func _build_card(rect: Rect2, boon: SoloBoonData) -> void:
 				var icon_rect := Rect2(center - Vector2.ONE * side * 0.5, Vector2.ONE * side)
 				medal.draw_texture_rect(icon, icon_rect, false, UiPalette.GLOW_AMBER)
 	)
-	_cards_box.add_child(medal)
+	root.add_child(medal)
 
 	var align := HORIZONTAL_ALIGNMENT_LEFT if portrait else HORIZONTAL_ALIGNMENT_CENTER
 	var name_label := _label(NAME_FONT_SIZE, UiPalette.TEXT_OFFWHITE)
@@ -173,7 +175,7 @@ func _build_card(rect: Rect2, boon: SoloBoonData) -> void:
 	name_label.position = rect.position + name_rect.position
 	name_label.size = name_rect.size
 	name_label.text = boon.display_name
-	_cards_box.add_child(name_label)
+	root.add_child(name_label)
 
 	var desc_label := _label(DESC_FONT_SIZE, UiPalette.TEXT_MUTED)
 	desc_label.horizontal_alignment = align
@@ -181,9 +183,9 @@ func _build_card(rect: Rect2, boon: SoloBoonData) -> void:
 	desc_label.position = rect.position + desc_rect.position
 	desc_label.size = desc_rect.size
 	desc_label.text = boon.description
-	_cards_box.add_child(desc_label)
+	root.add_child(desc_label)
 
-	var button := SoloUiPaint.transparent_button()
+	var button := SoloUiPaint.choice_button(root, rect.get_center())
 	button.position = rect.position
 	button.size = rect.size
 	button.pressed.connect(func() -> void: boon_chosen.emit(boon.id))

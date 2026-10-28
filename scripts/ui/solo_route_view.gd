@@ -16,14 +16,18 @@ const NODE_RADIUS := 34.0
 const FINAL_RADIUS := 44.0
 const ROW_GAP := 132.0
 const LABEL_FONT_SIZE_1 := 14
-const LABEL_FONT_SIZE_2 := 12
+const LABEL_FONT_SIZE_2 := 13
 const LABEL_GAP_1 := 20.0
-const LABEL_GAP_2 := 38.0
+const LABEL_GAP_2 := 39.0
 const CURRENT_GLOW_ALPHA := 0.14
 const CURRENT_GLOW_SCALE := 1.5
 const CURRENT_GLOW_PULSE := 0.3
 const CURRENT_RING_GAP := 8.0
 const CURRENT_RING_WIDTH := 3.0
+## 押せる駒のホバー・押下(GameDesign.md 9章「クリックできる要素は共通の挙動」)。
+const HOVER_GLOW_ALPHA := 0.3
+## 駒の当たり判定を絵より広げる幅(指で押し外さないため。GameDesign.md 9章「タッチ」)。
+const TAP_MARGIN := 6.0
 ## いまの位置から行けなくなった道の濃さと、行けなくなった駒に重ねる影(GameDesign.md 27章「画面」)。
 const CUT_ROAD_ALPHA := 0.3
 const CUT_NODE_SHADE := Color(0, 0, 0, 0.45)
@@ -49,6 +53,9 @@ var _floor := 0
 var _chosen: Array[int] = []
 var _centers: Array = []
 var _selected := -1
+## いま選ぶ段で、カーソルが乗っている駒・押し込んでいる駒(-1は無し)。
+var _hovered := -1
+var _pressed := -1
 ## 表示モード(遠征の記録・27章「画面」)では駒を押せず、明滅も出さない。
 var _record_mode := false
 var _record_lost := -1
@@ -57,6 +64,8 @@ var _record_lost := -1
 var _expert_from := SoloRun.EXPERT_FROM_FLOOR
 ## いまの位置から行ける駒(`SoloRun.reachable()`)。表示モードでは空。
 var _reachable := {}
+## 泉のラベルに出す回復量(`SoloRun.spring_amount()`。深さと恩恵で変わる)。
+var _spring_amount := SoloRun.SPRING_HEAL
 
 
 func _ready() -> void:
@@ -76,7 +85,10 @@ func _process(_delta: float) -> void:
 
 ## `SoloRun.route`・いま選ぶ段・段ごとに選んだindexの履歴から道を描き直す。
 ## `expert_from`は`SoloRun.expert_from_floor()`(深さで前倒しになる)。
-func show_data(route: Array, floor: int, chosen: Array[int], expert_from: int) -> void:
+func show_data(
+	route: Array, floor: int, chosen: Array[int], expert_from: int, spring_amount: int
+) -> void:
+	_spring_amount = spring_amount
 	_record_mode = false
 	_record_lost = -1
 	_selected = -1
@@ -90,7 +102,10 @@ func show_data(route: Array, floor: int, chosen: Array[int], expert_from: int) -
 
 ## 遠征の記録(GameDesign.md 27章「画面」)。押せない表示だけで、選んだ段は真鍮、
 ## 負けた段には×を重ねる。`lost_floor`は負けた段のindex(踏破・やめたときは-1)。
-func show_record(route: Array, chosen: Array[int], lost_floor: int, expert_from: int) -> void:
+func show_record(
+	route: Array, chosen: Array[int], lost_floor: int, expert_from: int, spring_amount: int
+) -> void:
+	_spring_amount = spring_amount
 	_record_mode = true
 	_record_lost = lost_floor
 	_selected = -1
@@ -107,6 +122,8 @@ func _rebuild(interactive: bool) -> void:
 		remove_child(button)
 		button.queue_free()
 	_buttons = []
+	_hovered = -1
+	_pressed = -1
 	_canvas.position = Vector2.ZERO
 	_canvas.size = size
 	var col_w: float = size.x / float(PATH_COLUMNS)
@@ -249,12 +266,16 @@ func _draw_node(
 ) -> void:
 	var state := _node_state(col, row)
 	var radius := FINAL_RADIUS if is_final else NODE_RADIUS
+	var hovered := state == "current" and row == _hovered
+	if hovered:
+		center += ClickArea.HOVER_LIFT
+	if state == "current" and row == _pressed:
+		radius *= ClickArea.PRESS_SCALE.x
 	if state == "current":
 		var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.004)
 		var glow_radius := radius * (CURRENT_GLOW_SCALE + pulse * CURRENT_GLOW_PULSE)
-		UiPaint.fill_circle(
-			ci, center, glow_radius, Color(UiPalette.GLOW_AMBER, CURRENT_GLOW_ALPHA), 32
-		)
+		var glow_alpha := HOVER_GLOW_ALPHA if hovered else CURRENT_GLOW_ALPHA
+		UiPaint.fill_circle(ci, center, glow_radius, Color(UiPalette.GLOW_AMBER, glow_alpha), 32)
 	UiPaint.fill_ellipse(
 		ci, center + Vector2(0, 6), Vector2(radius, radius * 0.85), Color(0, 0, 0, 0.4), 28
 	)
@@ -303,15 +324,15 @@ func _draw_node(
 		UiPalette.TEXT_MUTED if state == "locked" or state == "cut" else UiPalette.TEXT_OFFWHITE
 	)
 	_draw_label(
-		center + Vector2(0, radius + (VERTICAL_LABEL_GAP_1 if vertical else LABEL_GAP_1)),
+		center + Vector2(0, radius + _label_gap(true)),
 		_kind_label(int(node.get("kind", SoloRun.Kind.BATTLE)), is_final, col),
-		VERTICAL_LABEL_FONT_SIZE_1 if vertical else LABEL_FONT_SIZE_1,
+		_label_size(true),
 		label_color
 	)
 	_draw_label(
-		center + Vector2(0, radius + (VERTICAL_LABEL_GAP_2 if vertical else LABEL_GAP_2)),
+		center + Vector2(0, radius + _label_gap(false)),
 		_detail_label(node),
-		VERTICAL_LABEL_FONT_SIZE_2 if vertical else LABEL_FONT_SIZE_2,
+		_label_size(false),
 		label_color
 	)
 
@@ -365,6 +386,56 @@ func _draw_kind_glyph(
 			)
 
 
+## 駒の下の文字の矩形(画面座標)と実寸。`tools/tests/solo_ui_audit.gd` が重なりと大きさを測る。
+func label_boxes() -> Array[Dictionary]:
+	var boxes: Array[Dictionary] = []
+	var font := _canvas.get_theme_default_font()
+	if font == null:
+		return boxes
+	var xf := _canvas.get_global_transform()
+	var zoom := xf.get_scale().y
+	for col in _centers.size():
+		var nodes: Array = _route[col] if col < _route.size() else []
+		for row in nodes.size():
+			var is_final := col == PATH_COLUMNS - 1
+			var center := _node_center(col, row)
+			var radius := FINAL_RADIUS if is_final else NODE_RADIUS
+			var kind := int(nodes[row].get("kind", SoloRun.Kind.BATTLE))
+			var lines := [
+				[_kind_label(kind, is_final, col), _label_gap(true), _label_size(true)],
+				[_detail_label(nodes[row]), _label_gap(false), _label_size(false)],
+			]
+			for line: Array in lines:
+				var font_size: int = line[2]
+				var w := font.get_string_size(line[0], HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+				var baseline := center + Vector2(0, radius + float(line[1]))
+				var top_left := baseline - Vector2(w * 0.5, font.get_ascent(font_size))
+				(
+					boxes
+					. append(
+						{
+							"name": str(line[0]),
+							"rect":
+							Rect2(xf * top_left, Vector2(w, font.get_height(font_size)) * zoom),
+							"font_px": float(font_size) * zoom,
+						}
+					)
+				)
+	return boxes
+
+
+func _label_gap(first: bool) -> float:
+	if first:
+		return VERTICAL_LABEL_GAP_1 if vertical else LABEL_GAP_1
+	return VERTICAL_LABEL_GAP_2 if vertical else LABEL_GAP_2
+
+
+func _label_size(first: bool) -> int:
+	if first:
+		return VERTICAL_LABEL_FONT_SIZE_1 if vertical else LABEL_FONT_SIZE_1
+	return VERTICAL_LABEL_FONT_SIZE_2 if vertical else LABEL_FONT_SIZE_2
+
+
 func _draw_label(at: Vector2, text: String, font_size: int, color: Color) -> void:
 	var font := _canvas.get_theme_default_font()
 	if font == null:
@@ -388,12 +459,12 @@ func _kind_label(kind: int, is_final: bool, col: int) -> String:
 	return "%s ・ %s" % [base, SoloRun.difficulty_name_at(col, _expert_from)]
 
 
-## 泉は`cpu_deck`が空文字のため「HP+8」だけを出す。関門は関門名、対局はCPUの作戦名。
+## 泉は`cpu_deck`が空文字のため「HP +回復量」だけを出す。関門は関門名、対局はCPUの作戦名。
 ## `cpu_deck`が(想定外に)空のまま渡ってきても崩れないよう、種類名だけへ落とす。
 func _detail_label(dest: Dictionary) -> String:
 	var kind: int = int(dest.get("kind", SoloRun.Kind.BATTLE))
 	if kind == SoloRun.Kind.SPRING:
-		return "HP +%d" % SoloRun.SPRING_HEAL
+		return "HP +%d" % _spring_amount
 	if kind == SoloRun.Kind.WORKSHOP:
 		return "抜く・複製"
 	# 関門は関門名、最終戦は主の名前(`gate`に主のidが入る。GameDesign.md 27章「主」)。
@@ -419,10 +490,19 @@ func _add_current_buttons() -> void:
 		if not open_rows.has(row):
 			continue
 		var center: Vector2 = col_centers[row]
-		var button := SoloUiPaint.transparent_button()
-		button.position = center - Vector2.ONE * radius
-		button.size = Vector2.ONE * radius * 2.0
+		var button := SoloUiPaint.hit_button(_canvas)
+		var hit_radius := radius + TAP_MARGIN
+		button.position = center - Vector2.ONE * hit_radius
+		button.size = Vector2.ONE * hit_radius * 2.0
 		button.pressed.connect(_on_destination_pressed.bind(row))
+		button.mouse_entered.connect(func() -> void: _hovered = row)
+		button.mouse_exited.connect(
+			func() -> void:
+				_hovered = -1
+				_pressed = -1
+		)
+		button.button_down.connect(func() -> void: _pressed = row)
+		button.button_up.connect(func() -> void: _pressed = -1)
 		add_child(button)
 		_buttons.append(button)
 

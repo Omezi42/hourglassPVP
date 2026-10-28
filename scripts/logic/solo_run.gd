@@ -281,7 +281,7 @@ func choose(index: int, _rng: RandomNumberGenerator) -> void:
 	var dest: Dictionary = options[index]
 	var kind := int(dest.get("kind", Kind.BATTLE))
 	if kind == Kind.SPRING:
-		hp = mini(hp + spring_heal() + spring_bonus(), max_hp)
+		hp = mini(hp + spring_amount(), max_hp)
 		floor += 1
 		return
 	if kind == Kind.WORKSHOP:
@@ -386,6 +386,11 @@ func _close_workshop() -> void:
 ## 「砂の深さ」)。恩恵「深い泉」の`spring_bonus()`はこの上に足す。
 func spring_heal() -> int:
 	return DEPTH_SPRING_HEAL if depth >= DEPTH_SPRING_FROM else SPRING_HEAL
+
+
+## 泉で実際に回復する量(深さと恩恵「深い泉」を合算)。道・行き先の詳細の表示もこれを読む。
+func spring_amount() -> int:
+	return spring_heal() + spring_bonus()
 
 
 ## 対局開始時に相手のHPへ足す増減。深さ3以上の+4、深さ0の1段目の-10と恩恵「先制の砂」の-3を合算する

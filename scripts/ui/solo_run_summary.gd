@@ -126,7 +126,9 @@ func open(finished: Dictionary) -> void:
 	)
 	_stats_label.text = "残りHP %d ・ 持っている恩恵: %s" % [run.hp, _boon_names(run.boons)]
 	var lost_floor := -1 if run.cleared else run.floor
-	_route.show_record(run.route, run.chosen, lost_floor, run.expert_from_floor())
+	_route.show_record(
+		run.route, run.chosen, lost_floor, run.expert_from_floor(), run.spring_amount()
+	)
 	_deck_label.text = "最後の山札 %d枚" % run.deck_ids.size()
 	_deck_list.show_data(run.deck_ids)
 	_note_label.visible = reason == "abandoned_mid_battle"

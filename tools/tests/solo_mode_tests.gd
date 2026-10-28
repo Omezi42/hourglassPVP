@@ -786,7 +786,7 @@ func _test_solo_run_depth_combines_with_boons() -> void:
 	var spring_run := SoloRun.create(CardCpuDecks.deck_ids()[0], 2, _rng(67))
 	spring_run.boons.append("deep_spring")
 	_assert.call(
-		spring_run.spring_heal() + spring_run.spring_bonus() == 5 + 4,
+		spring_run.spring_amount() == 5 + 4,
 		"depth 2's base heal of 5 should combine with deep_spring's +4"
 	)
 

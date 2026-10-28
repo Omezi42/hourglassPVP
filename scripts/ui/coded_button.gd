@@ -40,6 +40,18 @@ static func apply_styles(button: Button, group: String) -> void:
 	button.add_theme_color_override(
 		"font_disabled_color", UiPaint.disabled_tone(UiPalette.TEXT_OFFWHITE)
 	)
+	# 押せるときだけ指カーソルにする(GameDesign.md 9章「クリックできる要素は共通の挙動」)。
+	# `disabled` には変更の信号が無いため、乗った瞬間に決め直す。
+	_update_cursor(button)
+	var update := _update_cursor.bind(button)
+	if not button.mouse_entered.is_connected(update):
+		button.mouse_entered.connect(update)
+
+
+static func _update_cursor(button: Button) -> void:
+	button.mouse_default_cursor_shape = (
+		Control.CURSOR_ARROW if button.disabled else Control.CURSOR_POINTING_HAND
+	)
 
 
 static func _build(label: String, button_size: Vector2, group: String) -> Button:

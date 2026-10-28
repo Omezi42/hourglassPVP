@@ -148,15 +148,30 @@ static func is_muted() -> bool:
 ## 接続する(GameDesign.md 9章)。個別に繋ぐと数が多く漏れやすいため、
 ## Main起動時に一括で呼ぶ想定。
 static func wire_buttons(root: Node) -> void:
-	if root is Button:
-		var press_callback := play.bind(Sfx.BUTTON)
-		if not root.pressed.is_connected(press_callback):
-			root.pressed.connect(press_callback)
-		var hover_callback := _on_button_hovered.bind(root)
-		if not root.mouse_entered.is_connected(hover_callback):
-			root.mouse_entered.connect(hover_callback)
+	_wire_button(root)
 	for child in root.get_children():
 		wire_buttons(child)
+
+
+## 起動時のボタンに加え、後からツリーへ足したボタンにも音をつなぐ。表示のたびに作り直す
+## ボタン(遠征の札・深さの矢印など)が無音のまま残らないようにするため。
+static func wire_tree(root: Node) -> void:
+	wire_buttons(root)
+	var tree := root.get_tree()
+	if not tree.node_added.is_connected(_wire_button):
+		tree.node_added.connect(_wire_button)
+
+
+static func _wire_button(node: Node) -> void:
+	if not node is Button:
+		return
+	var button := node as Button
+	var press_callback := play.bind(Sfx.BUTTON)
+	if not button.pressed.is_connected(press_callback):
+		button.pressed.connect(press_callback)
+	var hover_callback := _on_button_hovered.bind(button)
+	if not button.mouse_entered.is_connected(hover_callback):
+		button.mouse_entered.connect(hover_callback)
 
 
 ## 押せない(無効の)ボタンでは鳴らさない。ホバーの見た目も変わらないのに音だけ返ると、

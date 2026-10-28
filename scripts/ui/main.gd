@@ -226,7 +226,7 @@ func _ready() -> void:
 	FunnelService.on_launch()
 	HourglassArt.ensure_ready(self)
 	SoundBank.ensure_ready(self)
-	SoundBank.wire_buttons(self)
+	SoundBank.wire_tree(self)
 	MusicPlayer.ensure_ready(self)
 	get_tree().root.size_changed.connect(_on_window_resized)
 	_on_window_resized()

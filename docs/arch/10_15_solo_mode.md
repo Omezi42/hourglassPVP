@@ -26,7 +26,7 @@ GameDesign.md 27章の実装方針。**遠征の規則(道・山札・HP・束�
 | `SoloWorkshopOverlay`(`scripts/ui/solo_workshop_overlay.gd`, Control) | 工房のオーバーレイ。山札の種類ごとに1枚(2枚あるものは`×2`)並べ、押して選ぶと「抜く」「複製する」を出す。`card_removed`/`card_duplicated`/`skip_pressed`を出す |
 | `SoloRunSummary`(`scripts/ui/solo_run_summary.gd`, Control) | 遠征の記録。`open()`で終わった遠征を1度だけ出す。押せない`SoloRouteView`(`show_record()`)・持っている恩恵・`SoloDeckList`・「出発へ」を持つ |
 | `SoloDeckList`(`scripts/ui/solo_deck_list.gd`, Control) | 山札の一覧(コスト順・スクロール)。状態パネル・束/工房のオーバーレイ・遠征の記録が共用する |
-| `SoloUiPaint`(`scripts/ui/solo_ui_paint.gd`, static) | 出発の札・状態パネル・行き先の詳細・束/恩恵の札・山札欄が共用する額縁パネルの描画と、当たり判定だけの透明ボタン |
+| `SoloUiPaint`(`scripts/ui/solo_ui_paint.gd`, static) | 出発の札・状態パネル・行き先の詳細・束/恩恵の札・山札欄が共用する額縁パネルの描画と、札の絵に重ねる当たり判定のボタン。`choice_button(visual, pivot)`は札の部品をまとめた`card_root()`をホバーで浮かせ押下で縮め(9章の共通の挙動)、`hit_button()`は指カーソルだけを持たせる(道の駒は`SoloRouteView`がホバー・押下を自分で描く) |
 | `CardChallengeResult` / `StageRewardTokens` | 結果パネルと報酬の絵。リーサルパズル(10.12節)と共用。`StageReward`は複数の節目(カードセット・アイコン)が同時に届いたときのため`card_set_ids`/`icon_ids`の配列も持つ |
 
 ## `SoloGateData` / `SoloBoonData`
@@ -131,7 +131,7 @@ GameDesign.md 27章の実装方針。**遠征の規則(道・山札・HP・束�
 | 関数 | 内容 |
 |---|---|
 | `expert_from_floor()` | 深さ1以上で0(`difficulty()`が使う思考レベルの閾値) |
-| `spring_heal()` | 深さ2以上で`DEPTH_SPRING_HEAL`(5)。恩恵「深い泉」の`spring_bonus()`はこの上に足す |
+| `spring_heal()` | 深さ2以上で`DEPTH_SPRING_HEAL`(5)。恩恵「深い泉」の`spring_bonus()`はこの上に足す。実際の回復量は`spring_amount()`(両者の合計)で、`choose()`・道の泉のラベル・行き先の詳細が同じ値を読む |
 | `foe_hp_delta()` | 深さ3以上の`DEPTH_FOE_HP_BONUS`(+4)、深さ0の1段目の`-FIRST_FLOOR_FOE_HP_CUT`(-10)と恩恵「先制の砂」の`foe_hp_penalty()`を合算した増減。`SoloBattleRules.apply()`が下限1で当てる |
 | `bundle_target()` | `BUNDLE_COUNT + extra_bundles()`から深さ4以上で1引く(最低1) |
 | `starting_max_hp(depth)`(static) | 深さ5で`DEPTH_START_MAX_HP`(20)。`create()`が使う |
@@ -206,6 +206,13 @@ GameDesign.md 27章の実装方針。**遠征の規則(道・山札・HP・束�
 1枚セット(`price = 0` はショップに並べない印)。デッキ編集・図鑑は未所有のカードを弾く(10.8.1節)。
 **`price == 0` のセットのカードは、CPUデッキにも遠征の束にも入れない**(束は各作戦の`CardCpuDecks`の15種だけから
 選ぶため、構造上そもそも混ざらない。`tools/tests/cpu_deck_tests.gd` / `solo_mode_tests.gd` が確かめる)。
+
+## 画面の監査
+
+`tools/tests/solo_ui_audit.gd`(`check.sh`)が遠征の画面の機械で測れる合格基準を全状態で確かめる: 押せるボタンの指カーソル・音・ホバーの見た目、
+押せる高さ(横40px・縦72px)、文字の実寸(横13px・縦20px)、文字の重なり・はみ出し、泉の表示と回復量の一致。状態は`tools/solo_capture_fixture.gd`が
+固定の種で再現する(`SoloProgress.reset_for_test()`で保存を止めるため実データに触れない。撮影も同じ台で`capture_screen_layout.tscn`から行う)。
+縦は道と下のパネルの組み直しが済むまで`check.sh`では横だけを回す。
 
 ## 通し測定
 

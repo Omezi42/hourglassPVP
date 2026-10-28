@@ -240,7 +240,9 @@ func _refresh() -> void:
 		_status.visible = false
 		_destination.visible = false
 		return
-	_route.show_data(_run.route, _run.floor, _run.chosen, _run.expert_from_floor())
+	_route.show_data(
+		_run.route, _run.floor, _run.chosen, _run.expert_from_floor(), _run.spring_amount()
+	)
 	_update_side_panel()
 
 

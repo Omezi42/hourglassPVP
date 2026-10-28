@@ -2,7 +2,7 @@
 
 - 効果音は `SoundBank`(`RefCounted` 継承のstaticクラス)に集約する。`MatchSetup`/`DeckSave`/`NetSession` と同じ「Autoloadを使わずstaticで持つ」流儀に揃える。**読み込んだ効果音の音源は `_streams` に持ち続ける**(Web版は音源ごとに音のデータをブラウザ側へ登録し、解放しても消さないため。Pitfalls.md)
 - `ensure_ready(parent)` を `Main._ready()` から1度だけ呼び、`AudioStreamPlayer` のプール(8本)とホバー専用の1本を生成する。staticクラス自体はNodeではないため、実際の再生には実ノードが要る。**プールは鳴り終わった1本を選び、すべて鳴っていれば最も古いものを譲る**(順番に使い回すと、鳴っている被弾や決着を途中で切る)。**ホバー音を専用の1本に分ける**のも同じ理由
-- `wire_buttons(root)` はシーンツリーを再帰的に走査し、全Buttonの `pressed` へ押下音、`mouse_entered` へホバー音を接続する。**ホバー音は無効(`disabled`)のボタンでは鳴らさない**。個別配線は漏れやすいため、`Main._ready()` で全体に対して1度呼ぶことを基本とするが、実行時に動的生成されるノード(例: `DeckListScreen` のカード一覧)は起動時の走査に含まれないため、生成元の画面スクリプト側で個別に呼び直す。`is_connected()` チェックにより二重接続は起きない。手札・駒のホバー音は `CardView` が操作可能なときだけ鳴らす
+- `wire_buttons(root)` はシーンツリーを再帰的に走査し、全Buttonの `pressed` へ押下音、`mouse_entered` へホバー音を接続する。**ホバー音は無効(`disabled`)のボタンでは鳴らさない**。個別配線は漏れやすいため、`Main._ready()` が `wire_tree()` で起動時の全体を走査し、以後 `SceneTree.node_added` で後から足されたボタンにもつなぐ(表示のたびに作り直すボタンを無音のまま残さないため)。`is_connected()` チェックにより二重接続は起きない。手札・駒のホバー音は `CardView` が操作可能なときだけ鳴らす
 - **ホバー音は `HOVER_MIN_INTERVAL_MS` の間隔の中では重ねない**(`SoundBank.play()` が見る)。手札を横切ると数十msおきに札を乗り換え、連打に聞こえるため
 - 対局の効果音は `CardMatchSound`(後述)が、自分の番の鐘は「あなたの番」の幕を出す `CardMatchTurnFeed.announce_turn()` が鳴らす(幕と音を同じ条件にするため。誘導対局では幕ごと出ない)。行動の列のボタンは共通のボタン押下音と二重に鳴らさないため `wire_buttons()` の対象から除外する
 - **音量はバスで効かせる。**`SoundBank` が `SFX` と `BGM` の2本のバスを実行時に作り(`bus_index()`。2本しかないため `default_bus_layout.tres` は持たない。足すときは `add_bus()` ではなく `bus_count` を増やす。Web版では `add_bus()` がブラウザ側のバスの並びを壊し、全く鳴らなくなるため)、効果音のプレイヤーは `SFX`、BGMのプレイヤーは `BGM` へ流す。スライダーの値 v は `volume_to_db()` で**振幅 v² として**バスの音量へ変える(耳の感じ方に近づけるため。線形のままだと上半分がほとんど変わらない)。0%はバスをミュートする。音源ごとの音量差は音源の側で揃えてあるため、再生時に音量比や高さを掛けない

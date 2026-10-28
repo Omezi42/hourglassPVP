@@ -164,6 +164,8 @@ func _rebuild_rows() -> void:
 
 
 func _build_row(rect: Rect2, bundle: Dictionary, index: int) -> void:
+	var root := SoloUiPaint.card_root(_rows_box.size)
+	_rows_box.add_child(root)
 	var is_own := str(bundle.get("theme", "")) == _theme_id
 	var is_selected := index == _selected_index
 	var canvas := Control.new()
@@ -176,7 +178,7 @@ func _build_row(rect: Rect2, bundle: Dictionary, index: int) -> void:
 				canvas.get_canvas_item(), Rect2(Vector2.ZERO, rect.size), is_selected
 			)
 	)
-	_rows_box.add_child(canvas)
+	root.add_child(canvas)
 
 	var theme := str(bundle.get("theme", ""))
 	var cards: Array = bundle.get("cards", [])
@@ -203,7 +205,7 @@ func _build_row(rect: Rect2, bundle: Dictionary, index: int) -> void:
 	name_label.position = rect.position + name_rect.position
 	name_label.size = name_rect.size
 	name_label.text = "%sの束" % CardCpuDecks.name_of(theme)
-	_rows_box.add_child(name_label)
+	root.add_child(name_label)
 
 	if is_own:
 		var tag := _label(PORTRAIT_TAG_FONT_SIZE if portrait else TAG_FONT_SIZE, TAG_COLOR)
@@ -214,7 +216,7 @@ func _build_row(rect: Rect2, bundle: Dictionary, index: int) -> void:
 		tag.position = rect.position + tag_rect.position
 		tag.size = tag_rect.size
 		tag.text = TAG_TEXT
-		_rows_box.add_child(tag)
+		root.add_child(tag)
 
 	# **`CardView.size`は`HAND_SIZE_PX`のまま保つ。**縮めるには`size`ではなく`scale`を使う
 	# (`size`を縮めると中身が切り取られる。Pitfalls.md)。当たり判定は`scale`に従う。
@@ -233,7 +235,7 @@ func _build_row(rect: Rect2, bundle: Dictionary, index: int) -> void:
 			rect.position.x + cards_rect.position.x + float(k) * (card_size.x + CARD_GAP), cards_top
 		)
 		view.scale = Vector2(scale, scale)
-		_rows_box.add_child(view)
+		root.add_child(view)
 		view.show_card(card, true)
 
 	if portrait:
@@ -254,9 +256,9 @@ func _build_row(rect: Rect2, bundle: Dictionary, index: int) -> void:
 	summary_label.position = rect.position + summary_rect.position
 	summary_label.size = summary_rect.size
 	summary_label.text = CardCpuDecks.summary_of(theme)
-	_rows_box.add_child(summary_label)
+	root.add_child(summary_label)
 
-	var button := SoloUiPaint.transparent_button()
+	var button := SoloUiPaint.choice_button(root, rect.get_center())
 	button.position = rect.position
 	button.size = rect.size
 	button.pressed.connect(_on_row_pressed.bind(index))

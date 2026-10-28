@@ -59,6 +59,7 @@ var _back_font := 0
 
 func _ready() -> void:
 	back_button.pressed.connect(func() -> void: back_pressed.emit())
+	back_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	# 画面タイトルは見出し専用の明朝体にする(GameDesign.md 9章「王道クラシカル」)。
 	# 全画面で同じ位置に出るため、ここを差し替えるだけで統一して効く。
 	var base := title_label.get_theme_font("font")
