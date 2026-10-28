@@ -695,7 +695,8 @@
 		"id": "35",
 		"label": "とどめ問題 #35",
 		"reserved": [
-			"x"
+			"x",
+			"youtube"
 		]
 	},
 	{
@@ -704,31 +705,88 @@
 		"id": "crack",
 		"label": "クラック",
 		"reserved": [
-			"x"
+			"x",
+			"youtube"
 		]
 	},
 	{
 		"date": "2026-11-01",
 		"kind": "puzzle",
 		"id": "36",
-		"label": "とどめ問題 #36"
+		"label": "とどめ問題 #36",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-11-01",
 		"kind": "card",
 		"id": "sprout",
-		"label": "スプラウト"
+		"label": "スプラウト",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-11-02",
 		"kind": "puzzle",
 		"id": "37",
-		"label": "とどめ問題 #37"
+		"label": "とどめ問題 #37",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-11-02",
 		"kind": "card",
 		"id": "spring",
-		"label": "スプリング"
+		"label": "スプリング",
+		"reserved": [
+			"x",
+			"youtube"
+		]
+	},
+	{
+		"date": "2026-11-03",
+		"kind": "puzzle",
+		"id": "38",
+		"label": "とどめ問題 #38",
+		"reserved": [
+			"youtube",
+			"x"
+		]
+	},
+	{
+		"date": "2026-11-03",
+		"kind": "card",
+		"id": "poison",
+		"label": "ポイズン",
+		"reserved": [
+			"x",
+			"youtube"
+		]
+	},
+	{
+		"date": "2026-11-04",
+		"kind": "puzzle",
+		"id": "39",
+		"label": "とどめ問題 #39",
+		"reserved": [
+			"youtube",
+			"x"
+		]
+	},
+	{
+		"date": "2026-11-04",
+		"kind": "card",
+		"id": "barb",
+		"label": "バーブ",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	}
 ]
