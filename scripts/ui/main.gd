@@ -9,6 +9,9 @@ const TITLE_NODE := "TitleScreen"
 ## (Web版で約0.6秒)。型を書くと起動の裏読み込みに入りタイトルの動きを止めるため、
 ## パスで読んで初めて要るときに作る(Architecture.md 4.0.6節)。
 const CARD_MATCH_SCREEN_SCRIPT := "res://scripts/ui/card_match_screen.gd"
+## 他の画面にいる間に相手が見つかったとき、帯で知らせてから対局へ移るまでの間(GameDesign.md 11章)。
+const FOUND_NOTICE_SECONDS := 1.0
+const WAIT_BLOCKED_TEXT := "ランクマッチの待機をやめてから遊べます"
 
 ## 対局画面(`CardMatchScreen`)。`_match_screen()` が初めて呼ばれたときに作る。
 var card_match_screen: Control
@@ -37,6 +40,8 @@ var card_rank_screen: CardRankScreen
 var card_cpu_difficulty_picker: CardCpuDifficultyPicker
 ## 待っている間のCPU戦(GameDesign.md 11章)。
 var waiting_cpu: WaitingCpuMatch
+## ランクマッチを待機したまま他の画面にいる間の帯(同章)。
+var wait_banner: RankedWaitBanner
 
 var _match_return_screen: Control
 ## デッキ選択画面で確定するまで待たせている対局の導線(ランダム/CPU)。
@@ -148,6 +153,8 @@ func _ready() -> void:
 	add_child(card_ranked_match_screen)
 	card_ranked_match_screen.back_pressed.connect(func() -> void: _show_only(home_screen, true))
 	card_ranked_match_screen.matched.connect(_on_ranked_match_found)
+	card_ranked_match_screen.browse_requested.connect(func() -> void: _show_only(home_screen, true))
+	card_ranked_match_screen.waiting_ended.connect(_on_ranked_waiting_ended)
 	_screens.append(card_ranked_match_screen)
 	card_rank_screen = CardRankScreen.new()
 	card_rank_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -180,6 +187,11 @@ func _ready() -> void:
 	solo_map_screen.battle_requested.connect(_on_solo_battle_requested)
 	add_child(solo_map_screen)
 	_screens.append(solo_map_screen)
+	# 帯は画面の上に重ね、モーダルよりは奥に置く。
+	wait_banner = RankedWaitBanner.new()
+	add_child(wait_banner)
+	wait_banner.open_pressed.connect(func() -> void: _show_only(card_ranked_match_screen))
+	wait_banner.cancel_pressed.connect(card_ranked_match_screen.cancel_waiting)
 	# 難易度モーダルは対局へ入る前の確認なので、対局画面より手前(後の子)に置く。
 	card_cpu_difficulty_picker = CardCpuDifficultyPicker.new()
 	add_child(card_cpu_difficulty_picker)
@@ -208,20 +220,24 @@ func _ready() -> void:
 	# 対局画面から戻る先は各導線が設定するが、設定される前に戻る操作が起きても
 	# 落ちないよう既定をホームにしておく
 	_match_return_screen = home_screen
-	home_screen.online_resume_requested.connect(_on_online_resume_requested)
+	home_screen.online_resume_requested.connect(
+		func(record: Dictionary) -> void:
+			if not _blocked_by_ranked_wait():
+				_on_online_resume_requested(record)
+	)
 	home_screen.rank_requested.connect(_on_rank_screen_requested)
-	home_screen.puzzle_requested.connect(_on_puzzle_requested)
-	home_screen.solo_requested.connect(_on_solo_requested)
+	home_screen.puzzle_requested.connect(_unless_ranked_wait.bind(_on_puzzle_requested))
+	home_screen.solo_requested.connect(_unless_ranked_wait.bind(_on_solo_requested))
 	home_screen.deck_list_requested.connect(_on_deck_list_requested)
 	home_screen.hourglass_list_requested.connect(_on_hourglass_list_requested)
 	home_screen.shop_requested.connect(_on_shop_requested)
-	home_screen.tutorial_requested.connect(_on_tutorial_requested)
+	home_screen.tutorial_requested.connect(_unless_ranked_wait.bind(_on_tutorial_requested))
 	home_screen.rules_requested.connect(_on_rules_requested)
 	home_screen.screen_guide_requested.connect(_on_screen_guide_requested)
 	home_screen.keyword_dict_requested.connect(func() -> void: _show_only(keyword_dict_screen))
-	home_screen.cpu_match_requested.connect(_on_cpu_match_deck_requested)
+	home_screen.cpu_match_requested.connect(_unless_ranked_wait.bind(_on_cpu_match_deck_requested))
 	home_screen.ranked_match_deck_requested.connect(_on_ranked_match_deck_requested)
-	home_screen.room_match_requested.connect(_on_room_match_requested)
+	home_screen.room_match_requested.connect(_unless_ranked_wait.bind(_on_room_match_requested))
 	NetSession.ensure_ready(self)
 	FunnelService.on_launch()
 	HourglassArt.ensure_ready(self)
@@ -243,6 +259,7 @@ func _on_window_resized() -> void:
 	for screen in _screens:
 		if screen.has_method("apply_orientation"):
 			screen.call("apply_orientation", portrait)
+	wait_banner.apply_orientation(portrait)
 
 
 ## ブラウザは最初のユーザー操作より前の音声再生を許さないため、最初の入力をここで拾って
@@ -365,6 +382,9 @@ func _request_battle(start: Callable) -> void:
 ## 「対戦する」= ランクマッチ(GameDesign.md 11章・28章)。デッキ選択画面を終えたら
 ## ホームへは戻らず専用画面へ入り、その画面がキューへの参加まで行う。
 func _on_ranked_match_deck_requested() -> void:
+	if card_ranked_match_screen.is_waiting():
+		_show_only(card_ranked_match_screen)
+		return
 	FunnelService.reach(FunnelService.ONLINE_TRY)
 	_request_battle(func() -> void: _begin_ranked_match())
 
@@ -411,7 +431,7 @@ func _on_waiting_cpu_requested(screen: Control) -> void:
 		return
 	waiting_cpu.begin(screen)
 	_match_screen().start_cpu_match(
-		CardDeckSave.selected_deck(), deck["cards"], -1, false, null, CardCpuDecks.foe_name(deck)
+		screen.deck, deck["cards"], -1, false, null, CardCpuDecks.foe_name(deck)
 	)
 	_match_return_screen = screen
 	_show_only(_match_screen())
@@ -520,10 +540,17 @@ func _on_screen_guide_requested() -> void:
 ## ランクマッチ(GameDesign.md 28章)。配置フェーズが無いため、デッキと山札の種を交換したら
 ## そのまま対局へ入る。`is_ranked`を立てて段位を対局結果に反映させる。
 ## opponent_uid は相手の表示名(14章)に使う。
+## 他の画面にいる間に見つかったら、帯で知らせてから移り、対局後はその画面へ戻す(11章)。
 func _on_ranked_match_found(match_id: String, my_side: int, opponent_uid: String) -> void:
 	waiting_cpu.finish()
+	var return_screen: Control = home_screen
+	if wait_banner.visible:
+		wait_banner.show_found()
+		await get_tree().create_timer(FOUND_NOTICE_SECONDS).timeout
+		if _active_screen != card_ranked_match_screen:
+			return_screen = _active_screen
 	_match_screen().start_online_match(
-		CardDeckSave.selected_deck(),
+		card_ranked_match_screen.deck,
 		NetSession.client,
 		match_id,
 		my_side,
@@ -532,7 +559,7 @@ func _on_ranked_match_found(match_id: String, my_side: int, opponent_uid: String
 		true,
 		true
 	)
-	_match_return_screen = home_screen
+	_match_return_screen = return_screen
 	_show_only(_match_screen())
 
 
@@ -608,6 +635,32 @@ func _on_card_match_back() -> void:
 	_on_match_back()
 
 
+## 待機中は対局画面を使う遊びへ入れない(GameDesign.md 11章)。帯へ知らせて真を返す。
+func _blocked_by_ranked_wait() -> bool:
+	if not card_ranked_match_screen.is_waiting():
+		return false
+	wait_banner.flash(WAIT_BLOCKED_TEXT)
+	return true
+
+
+func _unless_ranked_wait(action: Callable) -> void:
+	if not _blocked_by_ranked_wait():
+		action.call()
+
+
+func _on_ranked_waiting_ended(message: String) -> void:
+	wait_banner.show_ended(message)
+
+
+## 帯は待機中、待機画面・対局画面・タイトル以外にいるときだけ出す。
+func _refresh_wait_banner() -> void:
+	var waiting := card_ranked_match_screen.is_waiting()
+	var away := not [card_ranked_match_screen, card_match_screen, title_screen].has(_active_screen)
+	if waiting and away and not wait_banner.visible:
+		wait_banner.begin(card_ranked_match_screen.started_msec)
+	wait_banner.set_shown(waiting and away)
+
+
 ## 対局画面を返す。無ければ作り、もとの位置(統計画面の直後)へ差し込む
 ## (後から足した子ほど手前に描かれ、モーダルや砂を覆ってしまうため)。
 func _match_screen() -> Control:
@@ -678,6 +731,7 @@ func _show_only(screen: Control, going_back: bool = false) -> void:
 	# BGMの切り替えは画面遷移のハブであるここ1箇所で行い、画面ごとに書き散らさない
 	# (Architecture.md 9章)。対局が終わって結果パネルが出ている間は対局画面が止める。
 	MusicPlayer.play(_track_for(screen))
+	_refresh_wait_banner()
 
 
 ## 画面ごとのBGM。対局だけ専用曲、タイトルだけ専用曲、それ以外はホーム曲。

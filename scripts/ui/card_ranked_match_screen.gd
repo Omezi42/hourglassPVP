@@ -9,6 +9,10 @@ signal back_pressed
 signal matched(match_id: String, my_side: int, opponent_uid: String)
 ## 待っている間のCPU戦(GameDesign.md 11章。自動で始まる場合とボタンの場合)。`Main` がCPU戦を始める。
 signal cpu_requested
+## 「ほかの画面を見る」(GameDesign.md 11章)。キューは残したまま `Main` がホームへ戻す。
+signal browse_requested
+## 失敗・キャンセルで待機が終わった。`message` は失敗の文言(キャンセルは空)。
+signal waiting_ended(message: String)
 
 const HEADER_SCENE := "res://scenes/screen_header.tscn"
 const BUSY_DOTS_MAX := EmptyState.DOTS_MAX
@@ -24,11 +28,17 @@ const PORTRAIT_CANCEL_SIZE := Vector2(300, 76)
 const PORTRAIT_TIER_FONT_SIZE := 26
 ## 待機の一群を縦の中央より上へ寄せる(下にCPU戦の入口と予告が続くため)。
 const PORTRAIT_CONTENT_HEIGHT := 760.0
+const BROWSE_SIZE := Vector2(220, 56)
 
 ## 待っている間のCPU戦のキュー。`WaitingCpuMatch` がCPU戦の印を立て、相手の知らせを受ける。
 var queue: MatchmakingQueue:
 	get:
 		return _queue if is_instance_valid(_queue) else null
+
+## 待機を始めた時点のデッキの複製。待機中に編集・保存しても、この対局には反映しない(GameDesign.md 11章)。
+var deck: Array = []
+## 待機を始めた時刻(`Time.get_ticks_msec()`)。待機の帯が経過時間を数える。
+var started_msec := 0
 
 var _queue: RankedMatchmakingQueue
 var _cpu_offer: WaitingCpuOffer
@@ -40,6 +50,7 @@ var _empty_state: EmptyState
 var _tier_label: Label
 var _announce_badge: StatusBadge
 var _cancel_button: Button
+var _browse_button: Button
 var _ceremony: CardSeasonCeremonyPanel
 var _header: ScreenHeader
 var _portrait := false
@@ -58,6 +69,11 @@ func _build() -> void:
 	header.set_title("ランクマッチ")
 	header.back_pressed.connect(_on_back_pressed)
 	_header = header
+	# 縦でヘッダーの下の行が出たり消えたりしないよう、待機していない間も置いたまま押せなくする。
+	_browse_button = CodedButton.make("ほかの画面を見る", BROWSE_SIZE)
+	_browse_button.disabled = true
+	_browse_button.pressed.connect(func() -> void: browse_requested.emit())
+	header.add_action(_browse_button)
 
 	_content_rect = _landscape_content_rect()
 	_tier_label = Label.new()
@@ -139,6 +155,8 @@ func begin_match() -> void:
 		return
 	_set_busy(true)
 	_set_status("マッチング中")
+	deck = CardDeckSave.selected_deck().duplicate()
+	started_msec = Time.get_ticks_msec()
 	if not await _sign_in_or_fail():
 		return
 	var season_result := await RankProgress.ensure_current_season(
@@ -155,6 +173,7 @@ func begin_match() -> void:
 	_queue.announce_result.connect(_on_announce_result)
 	_queue.join()
 	_wait_funnel.begin()
+	_browse_button.disabled = false
 	# 表彰式を読んでいる間にボタンが出ないよう、閉じてから数え始める
 	if _ceremony.visible:
 		await _ceremony.closed
@@ -173,6 +192,17 @@ func _refresh_tier_label() -> void:
 	_tier_label.position = Vector2(
 		_content_rect.get_center().x - half_width, _content_rect.position.y - 6.0
 	)
+
+
+## キューに入って相手を待っている(他の画面にいる間も真)。
+func is_waiting() -> bool:
+	return _busy and queue != null
+
+
+## 待機の帯の「やめる」。待機画面の外からキャンセルする。
+func cancel_waiting() -> void:
+	if is_waiting():
+		_on_cancel_pressed()
 
 
 ## 待っている間のCPU戦から戻ってきた。キューは残したまま、通常の待機に復帰する。
@@ -199,6 +229,7 @@ func _discard_session() -> void:
 func _set_busy(busy: bool) -> void:
 	_busy = busy
 	_cancel_button.visible = busy
+	_browse_button.disabled = true
 	_cpu_offer.hide()
 	if not busy:
 		_discard_session()
@@ -258,6 +289,7 @@ func _fail(message: String) -> void:
 	_wait_funnel.end()
 	_set_busy(false)
 	_set_status(message)
+	waiting_ended.emit(message)
 
 
 func _on_back_pressed() -> void:
@@ -274,6 +306,7 @@ func _on_cancel_pressed() -> void:
 	_set_busy(false)
 	_set_status("キャンセルしました")
 	if queue != null:
+		waiting_ended.emit("")
 		await queue.cancel()
 		queue.queue_free()
 
@@ -291,6 +324,7 @@ func _on_matched(match_id: String, opponent_uid: String) -> void:
 	_wait_funnel.end(FunnelService.RANKED_MATCHED)
 	_busy = false
 	_cancel_button.visible = false
+	_browse_button.disabled = true
 	_cpu_offer.hide()
 	var match_doc: Dictionary = await NetSession.client.get_document("matches/%s" % match_id)
 	var my_side: int

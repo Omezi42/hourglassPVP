@@ -298,6 +298,20 @@ HTTPRequest をぶら下げると送信の途中で巻き添えに消える。�
 これを `_on_ranked_match_found()` へそのままつなぐ(`CardRoomScreen.matched` が
 `_on_room_match_found()` へつながるのと同じ形)。
 
+**待機したまま他の画面を見る**(GameDesign.md 11章)は、待機画面が隠れても生きている
+(`Main._show_only()` は画面を解放しない)ことにそのまま乗せる。キューの持ち主は待機画面のまま変えない。
+
+| クラス | 責務 |
+|---|---|
+| `RankedWaitBanner`(`scripts/ui/ranked_wait_banner.gd`) | 待機中に他の画面の下端中央へ出す帯。経過時間・「待機画面へ」・「やめる」と、短い知らせ(`flash()`)・成立(`show_found()`)・失敗(`show_ended()`)を出す。どの画面に出すかは決めない |
+
+- 待機画面は `is_waiting()`・`deck`(待機を始めた時点のデッキの複製)・`waiting_ended(message)`(失敗・キャンセルで待機が終わった)を持つ。
+  成立時の対局・待っている間のCPU戦は `CardDeckSave.selected_deck()` ではなく `deck` を使う
+- **帯を出すかどうかは `Main._refresh_wait_banner()` の1箇所で決める**(`_show_only()` と `waiting_ended` から呼ぶ)
+- 対局画面を使う導線は `Main._blocked_by_ranked_wait()` を先頭で通し、待機中なら帯へ知らせて降りる
+- 他の画面にいる間に成立したら、`Main` は帯を「相手が見つかりました」にして1秒待ってから対局へ入り、
+  そのときの画面を `_match_return_screen` にする
+
 **持ち時間の入/切は `rooms/{code}` の `time_limit` として持つ**(GameDesign.md 5章)。
 部屋を作る側が書き、参加する側は `join_room()` が読んで `RoomMatch.time_limit` へ控える。
 両者が入室するとロビーへ入り、ホストが `started` を立てるまで対局へ遷移しない。
