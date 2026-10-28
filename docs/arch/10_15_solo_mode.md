@@ -20,6 +20,7 @@ GameDesign.md 27章の実装方針。**遠征の規則(道・山札・HP・束�
 | `SoloDepartureView`(`scripts/ui/solo_departure_view.gd`, Control) | 出発の画面。作戦の札を3枚並べ、押すと`theme_chosen`を出す |
 | `SoloRouteView`(`scripts/ui/solo_route_view.gd`, Control) | 道の画面。6段の駒と、そのつながりを描く(行けない駒・道は`SoloRun.reachable()`で沈める)。いま選ぶ段の行ける駒(`SoloRun.open_rows()`)だけを押せる。駒を押しても対局は始めず`destination_selected`(選択解除は-1)を出すだけで、選んだ駒に真鍮の輪を付ける(`set_selected()`)。`show_record()`で押せない表示モード(遠征の記録で再利用)にもなる |
 | `SoloStatusPanel`(`scripts/ui/solo_status_panel.gd`, Control) | 道の右側の状態パネル。作戦名・持っている恩恵・HPのバー(上限は`SoloRun.max_hp`)・勝った数・`SoloDeckList`と「遠征をやめる」(`abandon_requested`) |
+| `SoloStatusStrip`(`scripts/ui/solo_status_strip.gd`, Control) | 縦の地図の最下段の状態の帯。作戦名・深さ / HPのバーと勝った数 / 恩恵の3行と「山札 N枚 ▸」(`deck_pressed`)。縦の置き場所は4.7節 |
 | `SoloDestinationPanel`(`scripts/ui/solo_destination_panel.gd`, Control) | 行き先の詳細。道で駒を選んだときに状態パネルの代わりに同じ位置へ出す。相手・狙い・CPUの強さ・15種の絵(対局・関門)、回復後のHP(泉)、または工房の案内を出し、「挑む」(泉は「休む」、工房は「入る」。`challenge_pressed`)/「戻る」(`back_pressed`)を持つ |
 | `SoloBundleOverlay`(`scripts/ui/solo_bundle_overlay.gd`, Control) | 束のオーバーレイ。道を暗幕で覆い、束(作戦ごとの3枚を横長の札で縦に並べる)から1つ選んで`bundle_chosen`/`skip_pressed`を出す。右端に`SoloDeckList`でいまの山札を出す |
 | `SoloBoonOverlay`(`scripts/ui/solo_boon_overlay.gd`, Control) | 恩恵のオーバーレイ。関門に勝った直後に出す。恩恵の札(コード描画のメダル+名前+効果)を3枚並べ、押すと`boon_chosen`を出す(見送りは無い) |
@@ -212,7 +213,7 @@ GameDesign.md 27章の実装方針。**遠征の規則(道・山札・HP・束�
 `tools/tests/solo_ui_audit.gd`(`check.sh`)が遠征の画面の機械で測れる合格基準を全状態で確かめる: 押せるボタンの指カーソル・音・ホバーの見た目、
 押せる高さ(横40px・縦72px)、文字の実寸(横13px・縦20px)、文字の重なり・はみ出し、泉の表示と回復量の一致。状態は`tools/solo_capture_fixture.gd`が
 固定の種で再現する(`SoloProgress.reset_for_test()`で保存を止めるため実データに触れない。撮影も同じ台で`capture_screen_layout.tscn`から行う)。
-縦は道と下のパネルの組み直しが済むまで`check.sh`では横だけを回す。
+`check.sh`は縦横の両方を回す。
 
 ## 通し測定
 

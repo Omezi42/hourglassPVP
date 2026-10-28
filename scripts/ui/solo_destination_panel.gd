@@ -16,13 +16,16 @@ const GATE_NAME_FONT_SIZE := 16
 const GATE_DESC_FONT_SIZE := 13
 const HP_FONT_SIZE := 22
 const BUTTON_SIZE := Vector2(180, 44)
-const BACK_BUTTON_SIZE := Vector2(120, 40)
+const BACK_BUTTON_SIZE := Vector2(120, 44)
 const ICON_COLUMNS := 8
 const ICON_GAP := 8.0
 const ICON_ROW_GAP := 12.0
 const ICON_TOP_GAP := 14.0
 ## 相手の作戦の絵の数(15種)。自分の山札の写しを使う相手も、この数までを並べる。
 const ICON_COUNT := 15
+const GATE_DESC_MIN_HEIGHT := 34.0
+## 中身の下端からボタンの行までの間(縦の板の高さを中身ぶんにするときに使う)。
+const BUTTON_TOP_GAP := 16.0
 
 var _panel_canvas: Control
 var _heading_label: Label
@@ -38,6 +41,7 @@ var _challenge_button: Button
 var _back_button: Button
 var _dest: Dictionary = {}
 var _icon_ids: Array[String] = []
+var _content_bottom := 0.0
 
 
 func _ready() -> void:
@@ -225,6 +229,7 @@ func _layout() -> void:
 	if kind == SoloRun.Kind.SPRING or kind == SoloRun.Kind.WORKSHOP:
 		_hp_label.position = Vector2(PADDING, top + 40.0)
 		_hp_label.size = Vector2(size.x - PADDING * 2.0, 32.0)
+		_content_bottom = _hp_label.position.y + _hp_label.size.y
 	else:
 		_foe_label.position = Vector2(PADDING, top)
 		_foe_label.size = Vector2(size.x - PADDING * 2.0, 24.0)
@@ -247,14 +252,27 @@ func _layout() -> void:
 		top += grid_h + 12.0
 		_gate_name_label.position = Vector2(PADDING, top)
 		_gate_name_label.size = Vector2(size.x - PADDING * 2.0, 22.0)
-		_gate_desc_label.position = Vector2(PADDING, top + 22.0)
-		_gate_desc_label.size = Vector2(size.x - PADDING * 2.0, 34.0)
-		_gate_note_label.position = Vector2(PADDING, top + 58.0)
-		_gate_note_label.size = Vector2(size.x - PADDING * 2.0, 20.0)
+		_content_bottom = top
+		if _gate_name_label.visible:
+			_gate_desc_label.position = Vector2(PADDING, top + 22.0)
+			_gate_desc_label.size = Vector2(size.x - PADDING * 2.0, 0.0)
+			var desc_h := maxf(
+				GATE_DESC_MIN_HEIGHT,
+				float(_gate_desc_label.get_line_count()) * float(_gate_desc_label.get_line_height())
+			)
+			_gate_desc_label.size.y = desc_h
+			_gate_note_label.position = Vector2(PADDING, top + 24.0 + desc_h)
+			_gate_note_label.size = Vector2(size.x - PADDING * 2.0, 20.0)
+			_content_bottom = _gate_note_label.position.y + _gate_note_label.size.y
 	_back_button.position = Vector2(PADDING, size.y - PADDING - BACK_BUTTON_SIZE.y)
 	_challenge_button.position = Vector2(
 		size.x - PADDING - BUTTON_SIZE.x, size.y - PADDING - BUTTON_SIZE.y
 	)
+
+
+## 中身とボタンの行が収まる高さ(縦の下から引き出す板の高さ。幅を決めて`show_data()`した後に読む)。
+func content_height() -> float:
+	return _content_bottom + BUTTON_TOP_GAP + BUTTON_SIZE.y + PADDING
 
 
 func _make_label(font_size: int, color: Color) -> Label:

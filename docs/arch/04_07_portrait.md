@@ -89,7 +89,10 @@
 - `AccountScreen`: 2つのパネルを `PortraitModal.SCALE` 倍で上下に置く(上は中身の高さ)。`AccountLooksTabs.set_portrait()` で列数を変える
 - `CardRoomArrange`(static): ルームマッチ画面の縦横の置き場所(1000行の上限のための切り出し)
 - `LabProposalCard.set_portrait()`: 拡大の層を押し込みの層(`_face`)の親に分けて置く。`LabThemeBand.set_portrait()` は締切・票の段をお題の下へ移す
-- `SoloRouteView.vertical` と `relayout()`(段を下から上へ)、`SoloDepartureView.stacked`(作戦の札を上下に)。状態・行き先の詳細は1.25倍で道の下へ
+- `SoloRouteView.vertical` と `relayout()`(段を下から上へ)、`SoloDepartureView.stacked`(作戦の札を上下に)。縦の地図は
+  `CardSoloMapScreen` が道を画面の縦いっぱいに置き、下端に `SoloStatusStrip`(状態の帯)を置く。状態のパネル(山札の一覧)と行き先の詳細は
+  `PORTRAIT_SHEET_ZOOM` 倍の下から引き出す板として置き、道は `_route_clip`(切り抜き)の中で、いまの段が詳細の板の上に見える位置までずらす。
+  詳細の板の高さは `SoloDestinationPanel.content_height()`。山札の板の後ろの暗幕は押すと板をしまう(押せる部品としては数えない)
 - 遠征の重ね画面(`SoloBundleOverlay` / `SoloBoonOverlay` / `SoloWorkshopOverlay` / `SoloRunSummary`)は `set_portrait()` を持ち、
   `CardSoloMapScreen.apply_orientation()` が大きさと一緒に渡す。束・恩恵・工房は暗幕以外を `_body` にまとめ、縦では `size / PORTRAIT_ZOOM` で組んで
   `PORTRAIT_ZOOM` 倍にする。工房の格子は縦では高さにも収まる縮尺を選ぶ(スクロールしないため)。

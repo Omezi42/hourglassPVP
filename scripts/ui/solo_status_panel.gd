@@ -85,7 +85,7 @@ func show_data(
 ) -> void:
 	var depth_part := " ・ 深さ%d" % depth if depth > 0 else ""
 	_theme_label.text = "作戦「%s」%s" % [CardCpuDecks.name_of(theme_id), depth_part]
-	_boons_label.text = "持っている恩恵: %s" % _boon_names(boons)
+	_boons_label.text = "持っている恩恵: %s" % boon_names(boons)
 	_hp = hp
 	_max_hp = max_hp
 	_hp_canvas.queue_redraw()
@@ -95,7 +95,8 @@ func show_data(
 	_layout()
 
 
-func _boon_names(boons: Array[String]) -> String:
+## 恩恵の名前を「、」でつなぐ(縦の状態の帯 `SoloStatusStrip` も使う)。
+static func boon_names(boons: Array[String]) -> String:
 	if boons.is_empty():
 		return "なし"
 	var names: Array[String] = []
@@ -107,13 +108,18 @@ func _boon_names(boons: Array[String]) -> String:
 
 
 func _draw_hp_bar() -> void:
-	var ci := _hp_canvas.get_canvas_item()
-	var local := Rect2(Vector2.ZERO, _hp_canvas.size)
+	paint_hp_bar(_hp_canvas, _hp, _max_hp, HP_FONT_SIZE)
+
+
+## HPのバーを`canvas`いっぱいに描く(縦の状態の帯 `SoloStatusStrip` も使う)。
+static func paint_hp_bar(canvas: Control, hp: int, max_hp: int, font_size: int) -> void:
+	var ci := canvas.get_canvas_item()
+	var local := Rect2(Vector2.ZERO, canvas.size)
 	var track := UiPaint.rounded_rect_points_uniform(local, 8.0, 8)
 	UiPaint.fill_gradient_polygon(
 		ci, track, local, [[0.0, Color(0.05, 0.04, 0.04, 1.0)], [1.0, Color(0.12, 0.09, 0.08, 1.0)]]
 	)
-	var ratio := clampf(float(_hp) / float(maxi(_max_hp, 1)), 0.0, 1.0)
+	var ratio := clampf(float(hp) / float(maxi(max_hp, 1)), 0.0, 1.0)
 	var inner := local.grow(-3.0)
 	var fill_rect := Rect2(inner.position, Vector2(inner.size.x * ratio, inner.size.y))
 	if fill_rect.size.x > 0.0:
@@ -121,18 +127,21 @@ func _draw_hp_bar() -> void:
 		UiPaint.fill_gradient_polygon(
 			ci, fill, fill_rect, [[0.0, UiPalette.GLOW_AMBER], [1.0, UiPalette.BRASS_DARK]]
 		)
-	var font := _hp_canvas.get_theme_default_font()
+	var font := canvas.get_theme_default_font()
 	if font == null:
 		return
-	var text := "%d / %d" % [_hp, _max_hp]
-	var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, HP_FONT_SIZE).x
-	_hp_canvas.draw_string(
+	var text := "%d / %d" % [hp, max_hp]
+	var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	canvas.draw_string(
 		font,
-		Vector2(local.get_center().x - w * 0.5, local.get_center().y + 5.0),
+		Vector2(
+			local.get_center().x - w * 0.5,
+			local.get_center().y + (font.get_ascent(font_size) - font.get_descent(font_size)) * 0.5
+		),
 		text,
 		HORIZONTAL_ALIGNMENT_LEFT,
 		-1,
-		HP_FONT_SIZE,
+		font_size,
 		Color.WHITE
 	)
 

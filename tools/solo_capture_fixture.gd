@@ -6,7 +6,8 @@ extends CardSoloMapScreen
 ##   godot --path . res://tools/capture_screen_layout.tscn -- <出力先> <portrait|landscape> \
 ##     'SoloCaptureFixture|stage|"route"' ...
 ## 状態: departure / route / route_mid / dest_battle / dest_gate / dest_spring / dest_workshop /
-##       bundle / boon / workshop / workshop_pick / summary_lost / summary_cleared /
+##       route_deck(縦の山札の板) / bundle / boon / workshop / workshop_pick /
+##       summary_lost / summary_cleared /
 ##       departure_hover / route_hover(最初の札・駒にカーソルが乗った見た目)
 
 const SEED := 20261028
@@ -60,12 +61,17 @@ func stage(state: String) -> void:
 	_refresh()
 	if state == "route_hover":
 		_hover_first(_route)
+	if state == "route_deck":
+		_set_deck_sheet(true)
 	if state == "workshop_pick":
 		_workshop.call("_on_card_pressed", run.deck_ids[0])
 	if state.begins_with("dest_"):
 		var row := _row_of(run, _kind_of(state))
 		_route.set_selected(row)
 		_on_destination_selected(row)
+		# 道をずらす動きを終えた形で撮る・測る。
+		if _route_tween != null:
+			_route_tween.custom_step(ROUTE_SHIFT_SECONDS)
 
 
 ## カーソルが乗った見た目を撮るため、最初の札・駒のボタンへ乗ったことにする。

@@ -11,6 +11,7 @@ const STATES: Array[String] = [
 	"departure",
 	"route",
 	"route_mid",
+	"route_deck",
 	"dest_battle",
 	"dest_gate",
 	"dest_spring",
@@ -87,7 +88,10 @@ func _audit(state: String, portrait: bool) -> void:
 	var tag := "%s/%s" % ["portrait" if portrait else "landscape", state]
 	var texts: Array[Dictionary] = []
 	var buttons: Array[Button] = []
-	_collect(_front_layer(screen), texts, buttons)
+	for layer in _front_layers(screen):
+		_collect(layer, texts, buttons)
+	if _front_layers(screen) == [screen]:
+		texts = _without_hidden_route_labels(screen, texts)
 	for button in buttons:
 		_check_button(tag, button, portrait)
 	var screen_rect := Rect2(Vector2.ZERO, screen_size)
@@ -98,12 +102,26 @@ func _audit(state: String, portrait: bool) -> void:
 	await process_frame
 
 
-## 暗幕のオーバーレイが出ていれば、その下は押せず読めないので測らない。
-func _front_layer(screen: SoloCaptureFixture) -> Node:
+## 暗幕のオーバーレイ・縦の山札の板が出ていれば、その下は押せず読めないので測らない。
+func _front_layers(screen: SoloCaptureFixture) -> Array[Node]:
 	for overlay: Control in [screen._summary, screen._boon, screen._bundle, screen._workshop]:
 		if overlay.visible:
-			return overlay
-	return screen
+			return [overlay]
+	if screen._sheet_shade.visible:
+		return [screen._status, screen._sheet_close]
+	return [screen]
+
+
+## 道の文字のうち、切り抜きの外・縦の詳細の板の後ろにあるものは見えないので測らない。
+func _without_hidden_route_labels(
+	screen: SoloCaptureFixture, texts: Array[Dictionary]
+) -> Array[Dictionary]:
+	var seen := screen.route_visible_rect().grow(1.0)
+	var kept: Array[Dictionary] = []
+	for t in texts:
+		if t.has("node") or seen.encloses(t["rect"]):
+			kept.append(t)
+	return kept
 
 
 func _collect(node: Node, texts: Array[Dictionary], buttons: Array[Button]) -> void:
@@ -200,7 +218,12 @@ func _check_text(tag: String, t: Dictionary, portrait: bool, screen_rect: Rect2)
 	if not screen_rect.grow(1.0).encloses(rect):
 		_problems.append("%s: 文字「%s」が画面からはみ出す %s" % [tag, t["name"], rect])
 	var node: Variant = t.get("node")
-	if node is Label and (node as Label).autowrap_mode == TextServer.AUTOWRAP_OFF:
+	# 収まらないぶんを「…」で切る文字は、幅を超えても読める形で出る。
+	if (
+		node is Label
+		and (node as Label).autowrap_mode == TextServer.AUTOWRAP_OFF
+		and (node as Label).text_overrun_behavior == TextServer.OVERRUN_NO_TRIMMING
+	):
 		var label := node as Label
 		var font := label.get_theme_font("font")
 		var w := (

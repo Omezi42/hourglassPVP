@@ -73,7 +73,7 @@ grep -q "boot smoke passed" logs/check_boot.log || status=1
 
 # 遠征の画面の合格基準(押せる部品の反応・文字の大きさと重なり・押せる高さ)。縦は道と下のパネルの組み直しが済むまで横だけ。
 echo "== solo ui audit"
-timeout "$GODOT_TIMEOUT" "$GODOT" --headless --path . --script res://tools/tests/solo_ui_audit.gd -- landscape > logs/check_solo_ui.log 2>&1
+timeout "$GODOT_TIMEOUT" "$GODOT" --headless --path . --script res://tools/tests/solo_ui_audit.gd > logs/check_solo_ui.log 2>&1
 grep -E "solo ui audit|SCRIPT ERROR|Parse Error" logs/check_solo_ui.log | head -10
 grep -q "solo ui audit passed" logs/check_solo_ui.log || { grep -E "^(landscape|portrait)/" logs/check_solo_ui.log | head -20; status=1; }
 

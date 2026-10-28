@@ -287,6 +287,7 @@ const PATHS: Array[String] = [
 	"res://scripts/ui/solo_boon_overlay.gd",
 	"res://scripts/ui/solo_workshop_overlay.gd",
 	"res://scripts/ui/solo_run_summary.gd",
+	"res://scripts/ui/solo_status_strip.gd",
 	"res://scripts/ui/card_solo_map_screen.gd",
 	"res://scripts/ui/currency_chip.gd",
 	"res://scripts/ui/account_table_preview.gd",

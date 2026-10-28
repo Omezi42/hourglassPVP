@@ -40,9 +40,9 @@ const VERTICAL_TOP_MARGIN := 64.0
 const VERTICAL_BOTTOM_MARGIN := 92.0
 const VERTICAL_ROW_GAP := 200.0
 const VERTICAL_LABEL_FONT_SIZE_1 := 20
-const VERTICAL_LABEL_FONT_SIZE_2 := 16
+const VERTICAL_LABEL_FONT_SIZE_2 := 20
 const VERTICAL_LABEL_GAP_1 := 22.0
-const VERTICAL_LABEL_GAP_2 := 42.0
+const VERTICAL_LABEL_GAP_2 := 46.0
 
 ## 段を下から上へ積むか(縦画面)。
 var vertical := false
@@ -422,6 +422,16 @@ func label_boxes() -> Array[Dictionary]:
 					)
 				)
 	return boxes
+
+
+## いまの段の駒と下の2行のラベルが収まる下端(この部品の座標)。縦の地図で詳細の板の上に
+## いまの段を見せるために使う(Architecture.md 4.7節)。
+func current_floor_bottom() -> float:
+	var center := _node_center(_floor, 0)
+	var font := _canvas.get_theme_default_font()
+	var descent := font.get_descent(_label_size(false)) if font != null else 0.0
+	var radius := FINAL_RADIUS if _floor == PATH_COLUMNS - 1 else NODE_RADIUS
+	return center.y + radius + _label_gap(false) + descent
 
 
 func _label_gap(first: bool) -> float:
