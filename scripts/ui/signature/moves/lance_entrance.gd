@@ -1,6 +1,6 @@
 extends SignatureMove
 ## ランスの登場(GameDesign.md 9章):台座の左から長い槍が一直線に突き抜けて右へ消え、その軌跡に風の
-## 筋が残る(速落と貫通の印)。
+## 筋が残る(疾走と貫通の印)。
 
 const THRUST := 0.24
 const TRAIL := 0.34

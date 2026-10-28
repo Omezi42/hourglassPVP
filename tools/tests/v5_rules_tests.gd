@@ -96,10 +96,10 @@ func _test_all_cards_load() -> void:
 			_assert.call(not card.effects.is_empty(), "spell %s should have an effect" % card.id)
 			continue
 		_assert.call(card.total_sand > 0, "card %s should have a positive total" % card.id)
-		# 初期攻撃力はコスト5以上・総量未満に限る(GameDesign.md 7章)。
+		# 初期攻撃力は総量未満に限る(GameDesign.md 7章)。
 		_assert.call(
-			card.initial_attack == 0 or (card.cost >= 5 and card.initial_attack < card.total_sand),
-			"card %s should keep initial attack within the cost/total limits" % card.id
+			card.initial_attack >= 0 and card.initial_attack < card.total_sand,
+			"card %s should keep initial attack below its total" % card.id
 		)
 
 

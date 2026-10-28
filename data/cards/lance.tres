@@ -10,6 +10,7 @@ display_name = "ランス"
 cost = 4
 total_sand = 6
 pool_index = 13
+initial_attack = 2
 keywords = Array[int]([6, 2])
 effects = Array[Resource]([])
 rules_text = ""

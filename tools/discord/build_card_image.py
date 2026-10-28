@@ -27,7 +27,7 @@ BRASS_HIGHLIGHT = (209, 179, 115)
 BRASS_DARK = (84, 56, 41)
 TEXT_OFFWHITE = (245, 240, 227)
 
-KEYWORDS = {0: "守護", 1: "硝子", 2: "貫通", 3: "破壊", 4: "回復", 5: "2回攻撃", 6: "速落"}
+KEYWORDS = {0: "守護", 1: "硝子", 2: "貫通", 3: "破壊", 4: "回復", 5: "2回攻撃", 6: "疾走"}
 
 
 def read_card(card_id: str) -> dict:

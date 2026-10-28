@@ -420,7 +420,6 @@ func play_card(side: int, hand_index: int, slot: int, target: Dictionary = {}) -
 	mana_changed.emit(side, mana[side], max_mana[side])
 	var unit := CardInstance.new(card)
 	if unit.has_keyword(CardEnums.Keyword.QUICK):
-		unit.drop_sand(2)
 		unit.summoned_this_turn = false
 	board[side][slot] = unit
 	unit_played.emit(side, slot)

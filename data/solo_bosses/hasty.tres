@@ -6,7 +6,7 @@
 script = ExtResource("1")
 id = "hasty"
 display_name = "急ぎの主"
-description = "相手の砂時計はすべて速落を持つ。相手のHPが8少ない。"
+description = "相手の砂時計はすべて疾走を持ち、出た瞬間に砂が2粒落ちる。相手のHPが8少ない。"
 own_board_units = Array[String]([])
 foe_board_units = Array[String]([])
 win_condition = 0

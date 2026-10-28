@@ -7,7 +7,7 @@ extends RefCounted
 ## カードを足しても台本を書き足す作業が発生しない。対象を選ぶ効果は CPU と同じ選び方を使う。
 
 enum Kind {
-	PLAY, CAST, FLIP, DEATH, TURN_END, DAMAGED, ALLY_DEATH, ENEMY_FLIP, STRIKE, DOUBLE, GUARD
+	PLAY, CAST, FLIP, DEATH, TURN_END, DAMAGED, ALLY_DEATH, ENEMY_FLIP, STRIKE, DOUBLE, GUARD, RUSH
 }
 
 ## 実演の駒を置く枠。中央寄りに置き、両隣に味方と相手の駒が並ぶようにする。
@@ -85,7 +85,9 @@ static func keyword_kind(keyword: int) -> int:
 			return Kind.DOUBLE
 		CardEnums.Keyword.GUARD:
 			return Kind.GUARD
-		CardEnums.Keyword.QUICK, CardEnums.Keyword.STILL:
+		CardEnums.Keyword.QUICK:
+			return Kind.RUSH
+		CardEnums.Keyword.STILL:
 			return Kind.TURN_END
 	return -1
 
@@ -95,7 +97,7 @@ static func stage(state: MatchState, side: int, card: CardData, kind: int) -> Ar
 	var foe := MatchState.other_side(side)
 	_reset(state, side, card)
 	var subject: CardInstance = null
-	if kind != Kind.PLAY and kind != Kind.CAST:
+	if not kind in [Kind.PLAY, Kind.CAST, Kind.RUSH]:
 		var total := _demo_total(card)
 		var health := _subject_health(total, kind)
 		subject = _place(state, side, SUBJECT_SLOT, card, health, total - health)
@@ -108,6 +110,9 @@ static func stage(state: MatchState, side: int, card: CardData, kind: int) -> Ar
 			actions.append(MatchAction.play(side, 0, SUBJECT_SLOT, _target(state, side, card)))
 			if card.effects.is_empty():
 				actions.append(MatchAction.end_turn(side))
+		Kind.RUSH:
+			actions.append(MatchAction.play(side, 0, SUBJECT_SLOT, _target(state, side, card)))
+			actions.append(MatchAction.attack(side, SUBJECT_SLOT, FOE_TARGET_SLOT))
 		Kind.FLIP:
 			actions.append(MatchAction.flip(side, SUBJECT_SLOT))
 		Kind.TURN_END:

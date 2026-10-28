@@ -23,7 +23,7 @@ static func own_deck(run: SoloRun) -> Array:
 
 
 ## 相手の山札。鏡写し・鏡の主は恩恵で書き換える前の自分の山札の写しを使い、
-## 急ぎの主は速落を足す(GameDesign.md 27章「関門」「主」)。
+## 急ぎの主は疾走と落ちた砂を足す(GameDesign.md 27章「関門」「主」)。
 static func foe_deck(run: SoloRun, dest: Dictionary, gate: SoloGateData) -> Array:
 	var cards: Array = (
 		CardLibrary.deck_from_ids(run.deck_ids)

@@ -34,7 +34,7 @@ const PRESETS: Array[Dictionary] = [
 	{
 		"id": "rush",
 		"name": "速攻",
-		"summary": "速落と貫通で早く殴りきる",
+		"summary": "疾走と貫通で早く殴りきる",
 		"cards":
 		{
 			"grain": 2,

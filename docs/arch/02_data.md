@@ -6,7 +6,7 @@ v5.0のカードが使う語彙を1箇所へ集める。
 
 | enum | 値 |
 |---|---|
-| `Keyword` | `GUARD`(守護)/ `GLASS`(硝子)/ `PIERCE`(貫通)/ `POISON`(毒砂)/ `LIFESTEAL`(吸命)/ `DOUBLE_STRIKE`(連撃)/ `QUICK`(速落) |
+| `Keyword` | `GUARD`(守護)/ `GLASS`(硝子)/ `PIERCE`(貫通)/ `POISON`(毒砂)/ `LIFESTEAL`(吸命)/ `DOUBLE_STRIKE`(連撃)/ `QUICK`(疾走) |
 | `NAMED`(const) | **語として見せる**キーワード。`GUARD` / `GLASS` / `PIERCE` / `QUICK` の4つ |
 | `Trigger` | `ON_PLAY`(設置)/ `ON_FLIP`(反転)/ `ON_DEATH`(余砂)/ `ON_TURN_END`(落砂)/ `ON_DAMAGED`(被弾) |
 | `EffectTarget` | `SELF` / `ENEMY_UNIT` / `ALL_ENEMY_UNITS` / `ALL_ALLY_UNITS` / `OPPONENT_PLAYER` / `OWN_PLAYER` / **`ALLY_UNIT`** |
@@ -44,7 +44,7 @@ UI側に散らさないため、語と enum の対応はここだけが持つ。
 | `display_name` | String | 表示名 |
 | `cost` | int | 場に出すために支払うマナ |
 | `total_sand` | int | 総量(体力+攻撃力)。場に出た時点で 体力=総量-`initial_attack` |
-| `initial_attack` | int | 場に出た時点の攻撃力(既定0)。コスト5以上・総量未満に限る(GameDesign.md 7章。`v5_rules_tests` が見張る) |
+| `initial_attack` | int | 場に出た時点の攻撃力(既定0)。総量未満に限る(GameDesign.md 7章。`v5_rules_tests` が見張る。コスト5以上は目安で縛らない) |
 | `pool_index` | int | プールへ加えられた順の通し番号。砂時計一覧の「追加順」がこれを読む |
 | `set_id` | String | 所属するカードセットのid。空文字は基本セット(常に所有済み)。GameDesign.md 8章・21章 |
 | `keywords` | Array[Keyword] | 常在キーワード。0個でよい(バニラ) |
@@ -130,7 +130,7 @@ UI側に散らさないため、語と enum の対応はここだけが持つ。
 
 **砂の移動を3つのメソッドで区別する。**取り違えるとルールが崩れるため名前で分ける。
 
-- `drop_sand(n)` … 体力-n / 攻撃力+n。**総量は変わらない**(ターン終了の1粒・速落)
+- `drop_sand(n)` … 体力-n / 攻撃力+n。**総量は変わらない**(ターン終了の1粒)
 - `flip()` … 体力と攻撃力を入れ替える
 - `take_damage(n)` … 体力-n のみ。**総量が減る**(GameDesign.md 4章)。硝子が残っていれば
   1度だけ0を返して無効化する

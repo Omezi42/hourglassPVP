@@ -239,3 +239,12 @@ func _test_quick_deck_adds_quick_to_copies_only() -> void:
 	state.mana[SIDE_A] = MatchState.MAX_MANA
 	state.play_card(SIDE_A, 0, 0)
 	_assert.call(not state.board[SIDE_A][0].summoned_this_turn, "a quick unit can attack at once")
+	_assert.call(
+		state.board[SIDE_A][0].attack == SoloBoonEffects.HASTY_DROP,
+		"hasty boss units enter with sand already dropped"
+	)
+	var dash := CardLibrary.find_by_id("dash")
+	var kept: CardData = SoloBoonEffects.quick_deck([dash])[0]
+	_assert.call(
+		kept.initial_attack == dash.initial_attack, "cards that already rush keep their numbers"
+	)

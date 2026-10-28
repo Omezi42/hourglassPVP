@@ -10,6 +10,7 @@ display_name = "ダッシュ"
 cost = 2
 total_sand = 4
 pool_index = 3
+initial_attack = 2
 keywords = Array[int]([6])
 effects = Array[Resource]([])
 rules_text = ""

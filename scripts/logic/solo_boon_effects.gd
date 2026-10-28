@@ -6,6 +6,9 @@ extends RefCounted
 ## `attach()`で`MatchState`の信号へつなぐ。`MatchState`を持ち替えるたびに作り直す。
 ## ソロモードの自分の側にだけ当て、他のモードの経路は通らない。
 
+## 急ぎの主の砂時計が場に出た瞬間に落とす砂の粒数。
+const HASTY_DROP := 2
+
 var _state: MatchState
 var _side := MatchState.Side.A
 var _flip_damage := 0
@@ -24,7 +27,7 @@ static func modded_deck(cards: Array, run: SoloRun) -> Array:
 	return result
 
 
-## 急ぎの主: 砂時計へ速落を足した写しを返す(GameDesign.md 27章「主」)。
+## 急ぎの主: 砂時計へ疾走を足し、場に出た瞬間の砂を2粒落とした写しを返す(GameDesign.md 27章「主」)。
 static func quick_deck(cards: Array) -> Array:
 	var result: Array = []
 	for card: CardData in cards:
@@ -35,6 +38,7 @@ static func quick_deck(cards: Array) -> Array:
 		var keywords := copy.keywords.duplicate()
 		keywords.append(CardEnums.Keyword.QUICK)
 		copy.keywords = keywords
+		copy.initial_attack += HASTY_DROP
 		result.append(copy)
 	return result
 

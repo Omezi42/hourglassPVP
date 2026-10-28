@@ -239,7 +239,7 @@ static func keyword_name(keyword: int) -> String:
 		Keyword.DOUBLE_STRIKE:
 			return "連撃"
 		Keyword.QUICK:
-			return "速落"
+			return "疾走"
 		Keyword.DAMAGE_BOOST:
 			return "倍撃"
 		Keyword.STILL:
@@ -264,7 +264,7 @@ static func keyword_description(keyword: int) -> String:
 		Keyword.DOUBLE_STRIKE:
 			return "1ターンに2回攻撃できる"
 		Keyword.QUICK:
-			return "場に出た瞬間に砂が2粒落ちる(すぐ攻撃できる)。"
+			return "出したターンから攻撃できる。"
 		Keyword.DAMAGE_BOOST:
 			return "戦闘で与えるダメージが2倍になる。"
 		Keyword.STILL:

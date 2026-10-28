@@ -395,7 +395,7 @@ func _card_value(state: MatchState, side: int, card: CardData) -> float:
 	var total := card.total_sand
 	var value := _lifetime_damage(card)
 	if card.has_keyword(CardEnums.Keyword.QUICK):
-		value += 2.0 * FACE_WEIGHT
+		value += card.initial_attack * FACE_WEIGHT
 	if card.has_keyword(CardEnums.Keyword.GUARD):
 		value += 2.0
 	if card.has_keyword(CardEnums.Keyword.GLASS):
