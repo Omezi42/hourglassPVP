@@ -20,10 +20,6 @@ const LOCKED_INK := Color(0.46, 0.37, 0.25)
 const STAMP_RED := Color(0.63, 0.13, 0.11)
 const COST_TOP := Color(0.46, 0.70, 0.98)
 const COST_BOTTOM := Color(0.11, 0.24, 0.52)
-const TOTAL_TOP := Color(1.0, 0.84, 0.46)
-const TOTAL_BOTTOM := Color(0.72, 0.44, 0.12)
-const SPELL_TOP := Color(0.72, 0.80, 1.0)
-const SPELL_BOTTOM := Color(0.28, 0.36, 0.68)
 ## 並び替え後のスライド(GameDesign.md 9章)にかける尺。
 const SLIDE_DURATION := 0.16
 
@@ -113,10 +109,10 @@ func _draw() -> void:
 		var icon := card.icon_upright
 		if icon != null:
 			draw_texture_rect(icon, art, false)
-		# **紋章は絵の左下へ印として押す**(GameDesign.md 9章)。全種が同じ絵の色違いで
+		# **紋章は絵の右上へ印として押す**(GameDesign.md 9章)。全種が同じ絵の色違いで
 		# ある以上、一覧で見分けているのは実際にはこの紋章のほう。
-		# ここではコスト・総量と同じく**絵の外の隅**へ置く(絵の中へ入れると台に重なる)。
-		EmblemSeal.brass(self, Vector2(art.position.x - 2.0, art.end.y - 10.0), card.emblem, 12.0)
+		# ここではコストと同じく**絵の外の隅**へ置く(絵の中へ入れると台に重なる)。
+		EmblemSeal.brass(self, Vector2(art.end.x + 2.0, art.position.y + 10.0), card.emblem, 12.0)
 	draw_string(
 		_font,
 		Vector2(0, _base_size().y - 6),
@@ -128,11 +124,14 @@ func _draw() -> void:
 	)
 	if locked:
 		return
-	# **コストと総量は一覧の時点で読めるようにする**(現行の一覧と同じ情報量を保つ)。
+	# **コスト・攻撃力・体力は一覧の時点で読めるようにする**(現行の一覧と同じ情報量を保つ)。
 	# **採取済みの印は置かない**——未収集をシルエットで示す以上、
 	# 収集済みの側にも印を打つと同じことを2度言うことになる(GameDesign.md 9章)。
 	_draw_diamond(Vector2(art.position.x - 2, art.position.y + 10), card.cost, 12.0)
-	_draw_total(Vector2(art.end.x + 2, art.end.y - 10), 11.0)
+	var bottom := art.end.y - 10.0
+	CardStatBadge.pair(
+		self, _font, Vector2(art.position.x - 2, bottom), Vector2(art.end.x + 2, bottom), card, 11.0
+	)
 
 
 ## 絵を置く矩形。標本の欄(上)と名札(下)を分けて、重ならないようにする。
@@ -241,26 +240,4 @@ func _draw_diamond(center: Vector2, value: int, r: float) -> void:
 		40,
 		int(r + 2),
 		Color.WHITE
-	)
-
-
-## 総量。**砂術は総量を持たないため「術」と出す**(空欄にすると総量0と見分けが付かない)。
-func _draw_total(center: Vector2, r: float) -> void:
-	var top: Color = SPELL_TOP if card.is_spell else TOTAL_TOP
-	var bottom: Color = SPELL_BOTTOM if card.is_spell else TOTAL_BOTTOM
-	UiPaint.fill_gradient_polygon(
-		get_canvas_item(),
-		UiPaint.circle_points(center, r, 20),
-		Rect2(center - Vector2(r, r), Vector2(r, r) * 2.0),
-		[[0.0, top], [1.0, bottom]]
-	)
-	UiPaint.draw_ring(get_canvas_item(), center, r, Color(0.10, 0.06, 0.03), 1.6, 20)
-	draw_string(
-		_font,
-		center - Vector2(20, -5),
-		"術" if card.is_spell else str(card.total_sand),
-		HORIZONTAL_ALIGNMENT_CENTER,
-		40,
-		int(r + 1),
-		Color(0.14, 0.08, 0.03)
 	)

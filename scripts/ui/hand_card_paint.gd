@@ -5,7 +5,7 @@ extends RefCounted
 ## 状態(選択・ホバー・有効/無効)は `CardView` が持つ。
 ##
 ## 札は上から「絵の窓 / 名前の帯 / キーワードの行」の3段で組み、四隅に
-## 左上=コスト / 右下=総量 / 左下=封蝋 を置く(数値の配置はDCGの慣習どおり)。
+## 左上=コスト / 右上=封蝋 / 左下=攻撃力 / 右下=体力 を置く(数値の配置はDCGの慣習どおり。場の駒と同じ並び)。
 ## **絵の窓の奥にそのカードの色の光だまり**を敷く。絵は全種が同じ砂時計の色違いのため、
 ## 窓の奥まで同じ色で染めると、暗い手元の面の上でも1枚ずつの色が立つ。
 ## 寸法はすべて `HAND_SIZE_PX`(118x158)を基準にした比(`CardView._hand_scale()`)で決める。
@@ -24,7 +24,7 @@ const NAME_BAND_HEIGHT := 18.0
 const NAME_FONT := 13
 const KEYWORD_BASELINE := 133.0
 const KEYWORD_FONT := 11
-## 四隅の丸いバッジ(コスト・総量)と封蝋。
+## 四隅の丸いバッジ(コスト・攻撃力・体力)と封蝋。
 const GEM_RADIUS := 14.0
 const GEM_INSET := 16.0
 const SEAL_RADIUS := 12.0
@@ -231,8 +231,9 @@ static func _labels(view: CardView, s: float, tint: Color) -> void:
 	)
 
 
-## コスト=左上 / 総量=右下(GameDesign.md 9章)。場の駒のバッジと同じ「暗い地 + 色の輪 + 数字」を、
-## 真鍮の縁で額へ嵌め込んだ宝石として描く。**砂術は総量を持たないため右下を出さない**。
+## コスト=左上 / 攻撃力=左下 / 体力=右下(GameDesign.md 9章)。数値は場に出た時点のもの。
+## 場の駒のバッジと同じ「暗い地 + 色の輪 + 数字」を、真鍮の縁で額へ嵌め込んだ宝石として描く。
+## **砂術は攻撃力・体力を持たないため下の2つを出さない**。
 static func _gems(view: CardView, ci: RID, s: float, tint: Color) -> void:
 	var card: CardData = view.card
 	var radius := GEM_RADIUS * s
@@ -240,11 +241,15 @@ static func _gems(view: CardView, ci: RID, s: float, tint: Color) -> void:
 	_gem(view, ci, Vector2(inset, inset), card.cost, CardView.MANA_BLUE, radius, tint)
 	if card.is_spell:
 		return
+	var bottom := view.size.y - inset
+	_gem(
+		view, ci, Vector2(inset, bottom), card.initial_attack, CardView.ATTACK_ORANGE, radius, tint
+	)
 	_gem(
 		view,
 		ci,
-		Vector2(view.size.x - inset, view.size.y - inset),
-		card.total_sand,
+		Vector2(view.size.x - inset, bottom),
+		card.initial_health(),
 		CardView.HEALTH_RED,
 		radius,
 		tint
@@ -272,13 +277,13 @@ static func _gem(
 	view.draw_string(view._font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color * tint)
 
 
-## 左下の封蝋。紙の札に押した印として、縁を溶けた蝋のように少し不揃いに、面は真鍮で描く。
+## 右上の封蝋(左下は攻撃力が使う)。紙の札に押した印として、縁を溶けた蝋のように少し不揃いに、面は真鍮で描く。
 static func _seal(view: CardView, ci: RID, s: float, tint: Color) -> void:
 	var card: CardData = view.card
 	if card.emblem == null or card.is_spell:
 		return
 	var radius := SEAL_RADIUS * s
-	var center := Vector2(GEM_INSET * s, view.size.y - GEM_INSET * s)
+	var center := Vector2(view.size.x - GEM_INSET * s, GEM_INSET * s)
 	var wax := PackedVector2Array()
 	for i in 20:
 		var angle := TAU * float(i) / 20.0

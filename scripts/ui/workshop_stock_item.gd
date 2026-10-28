@@ -14,10 +14,6 @@ const NAME_COLOR := Color(0.88, 0.82, 0.70)
 const NAME_DIM := Color(0.62, 0.58, 0.52)
 const COST_TOP := Color(0.46, 0.70, 0.98)
 const COST_BOTTOM := Color(0.11, 0.24, 0.52)
-const TOTAL_TOP := Color(1.0, 0.84, 0.46)
-const TOTAL_BOTTOM := Color(0.72, 0.44, 0.12)
-const SPELL_TOP := Color(0.72, 0.80, 1.0)
-const SPELL_BOTTOM := Color(0.28, 0.36, 0.68)
 ## 「2/2」バッジの跳ね(GameDesign.md 9章)。枚数が変わった瞬間に1.0へ立てTweenで戻す。
 const PUNCH_DURATION := 0.25
 const PUNCH_SCALE := 0.3
@@ -133,9 +129,6 @@ func _draw() -> void:
 		var icon := card.icon_upright
 		if icon != null:
 			draw_texture_rect(icon, art, false, tint)
-		# **紋章は絵の左下へ印として押す**(GameDesign.md 9章)。色相だけでは
-		# 見分けられないため、カードを並べる画面には必ず添える。
-		EmblemSeal.brass(self, Vector2(art.position.x + 12.0, art.end.y - 12.0), card.emblem, 14.0)
 	draw_string(
 		_font,
 		Vector2(0, base.y - 8.0),
@@ -145,8 +138,12 @@ func _draw() -> void:
 		14,
 		NAME_COLOR if enabled else NAME_DIM
 	)
+	# 四隅は手札の札と同じ(GameDesign.md 9章)。紋章は色相だけでは見分けられないため必ず添える。
 	_draw_diamond(Vector2(16, 18), card.cost, 14.0)
-	_draw_total(Vector2(base.x - 16, 18), 13.0)
+	if not card.is_spell:
+		EmblemSeal.brass(self, Vector2(base.x - 16, 18), card.emblem, 14.0)
+	var bottom := art.end.y - 12.0
+	CardStatBadge.pair(self, _font, Vector2(16, bottom), Vector2(base.x - 16, bottom), card, 13.0)
 	if maxed:
 		_draw_maxed()
 	if locked:
@@ -242,26 +239,4 @@ func _draw_diamond(center: Vector2, value: int, r: float) -> void:
 		40,
 		int(r + 3),
 		Color.WHITE
-	)
-
-
-## 総量。**砂術は総量を持たないため「術」と出す**(空欄にすると総量0と見分けが付かない)。
-func _draw_total(center: Vector2, r: float) -> void:
-	var top: Color = SPELL_TOP if card.is_spell else TOTAL_TOP
-	var bottom: Color = SPELL_BOTTOM if card.is_spell else TOTAL_BOTTOM
-	UiPaint.fill_gradient_polygon(
-		get_canvas_item(),
-		UiPaint.circle_points(center, r, 20),
-		Rect2(center - Vector2(r, r), Vector2(r, r) * 2.0),
-		[[0.0, top], [1.0, bottom]]
-	)
-	UiPaint.draw_ring(get_canvas_item(), center, r, Color(0.10, 0.06, 0.03), 1.8, 20)
-	draw_string(
-		_font,
-		center - Vector2(20, -5),
-		"術" if card.is_spell else str(card.total_sand),
-		HORIZONTAL_ALIGNMENT_CENTER,
-		40,
-		int(r + 2),
-		Color(0.14, 0.08, 0.03)
 	)

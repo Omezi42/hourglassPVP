@@ -11,7 +11,7 @@
 | `CardMatchScreen` | 全体を並べ `MatchState` と同期し、操作を受ける。**自分の1手は必ず `_perform()` を通す**(適用と送信を1箇所に集め、送信し忘れる経路を作らない)。`_finish_action()` が演出の状態を見て `refresh()` の時機を決めるため、**`_perform()` の呼び出し元で `refresh()` を重ねて呼ばない** |
 | `CardMatchBuild` | 画面の子を生成する。`CardMatchTouch` / `CardMatchHandLayout` / `CardMatchCpu` / `CardMatchPointer` は `_build()` より先に生成する(組み立て中に駒・タイマー・結果パネルのシグナルへ接続されるため) |
 | `CardMatchGeometry` | 座標系の問い合わせ(`hp_bar_center()` / `slot_center()` / `playable_hand_rects()` / `end_turn_button_rect()`)。`CardMatchScreen` の座標定数を読むだけ |
-| `CardView` / `CardViewPaint` / `HandCardPaint` | 駒・札1枚の表示。`Mode.HAND`(枠あり・コスト左上/総量右下)と `Mode.BOARD`(枠なし・台座の上の砂時計・攻撃力左下/体力右下)。**砂術は `Mode.HAND` の中の分岐**(`is_spell` で絵の代わりに紋章・総量バッジなし・枠色変更。`Mode.SPELL` は作らない——場での見た目が存在せず、`BOARD` との組み合わせという有り得ない状態を表現できてしまう)。守護の輪は `guard_frame`(場だけ true)。状態(`health_punch`/`attack_punch`/`unselect_amount`/`counter_offset`/`spark_amount`/strikeの offset・angle・flash)は `CardView` が持ち、描画は `CardViewPaint`(台座・封蝋・バッジ・予測)と `HandCardPaint`(手札の面)が担う。いずれも第1引数に `CardView` を取る |
+| `CardView` / `CardViewPaint` / `HandCardPaint` | 駒・札1枚の表示。`Mode.HAND`(枠あり・コスト左上/封蝋右上/攻撃力左下/体力右下)と `Mode.BOARD`(枠なし・台座の上の砂時計・攻撃力左下/体力右下)。**砂術は `Mode.HAND` の中の分岐**(`is_spell` で絵の代わりに紋章・攻撃力と体力のバッジなし・枠色変更。`Mode.SPELL` は作らない——場での見た目が存在せず、`BOARD` との組み合わせという有り得ない状態を表現できてしまう)。守護の輪は `guard_frame`(場だけ true)。状態(`health_punch`/`attack_punch`/`unselect_amount`/`counter_offset`/`spark_amount`/strikeの offset・angle・flash)は `CardView` が持ち、描画は `CardViewPaint`(台座・封蝋・バッジ・予測)と `HandCardPaint`(手札の面)が担う。いずれも第1引数に `CardView` を取る |
 | `CardViewStrike` / `CardViewFlourish` / `CardViewSandFx` | 攻撃の4段の段取り / 相打ちの反撃(`play_counter()`)とドローの合図(`play_spark()`)の Tween / 砂の動き(`play_shatter()` 消える・`play_drop()` 落ちる・`play_raise()` 戻る)の Tween と描画。`CardView` に同名の薄い委譲を残す。`CardViewSandFx` は絵の上へ重ねるため `CardView._draw()` の最後から `draw()` を呼ぶ |
 | `CardUnitFx` | `CardView` の子として重ねる演出のうち盤面の状態を参照しないもの(着地 / 崩落 / 毒砂の溶解 `play_melt()` / 硝子の閃光 / `play_recall()`)。崩落は `CardData` を受け取り絵と矩形をその時点で控える(次の同期で `card` が null になるため) |
 | `CardDragPreview` / `CardDragArrow` | ドラッグ中に指へ付いてくる絵(速度から傾き)/ 攻撃ドラッグの駒→指先の矢印(自分の場の駒のときだけ) |
@@ -120,6 +120,7 @@
 - 絞り込みと検索は `CardDeckFilter` / `CardDeckFilterModal` が `matches(card)` として合成し、画面は `changed` を受けて並べ直す
 - **`CardDeckShelf` は1つの `Control` が30枠を `_draw()` で描き、当たり判定を矩形の表として持つ**(30個のノードだと1枚動かすたびに生成と破棄が走る)。枠の数は `MatchState.DECK_SIZE` から実行時に読む(横 `COLUMNS`=6)。空き枠も枠として描き当たり判定にも積む。バッジ半径は `clampf(art_w * 0.20, 8, 13)`。**共有のデッキ表(`CardDeckSheet`)も同じ棚**(`columns=10` / `readonly=true`)
 - **`CardDeckList` は同じ場所へ出すリスト表示**(1種類1行・1列・行の高さ固定。`ScrollContainer` の中に置き、種類数から `custom_minimum_size.y` を決める。行は `PressTracker` で離したときに確定し、指のスクロールで戻さない)。シグナルと `global_rect_for_card()` は `CardDeckShelf` と同じ形で、画面は見えている方を `_deck_rect()` で選ぶ。どちらを出すかは `UiState.deck_as_list()` に保存
+- **カードを並べる画面(`CardDeckShelf` / `CardDeckList` / `WorkshopStockItem` / `AlmanacEntry`)の攻撃力・体力の丸は `CardStatBadge.pair()` が描く**(場に出た時点の値。砂術は体力の位置へ「術」だけ)。紋章(`EmblemSeal`)は右上、手札の札(`HandCardPaint`)と同じ四隅
 - 詳細は `interactive = false` で幅400px、`CardDetailPanel.place_near()` で置く(`MOUSE_FILTER_IGNORE` でホバーを奪わない)
 - 一覧のカードは `CardView.badge` で「2/2」。保存は30枚ちょうどのときだけ。編集画面は必ず一覧から `open(index)`(-1は新規)。デッキ名の入力欄は編成中の欄の上端
 - **ボタンの既定の文字色はテーマ側でオフホワイト**(`main_theme.tres`。指定を書き忘れた画面だけ黒い文字になる状態を無くすため。`font_hover_color` だけ暗いまま)

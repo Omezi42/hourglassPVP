@@ -370,10 +370,13 @@ func _draw() -> void:
 
 	var data_x := ART_WIDTH + DATA_GAP
 	# 欄の間隔は紙の幅で詰める(縦の細いページでも「分類」がはみ出さないように)。
-	var pitch := minf(FIELD_PITCH, (size.x - data_x) / 3.0)
+	var pitch := minf(FIELD_PITCH, (size.x - data_x) / 4.0)
+	var attack := "—" if card.is_spell else str(card.initial_attack)
+	var health := "—" if card.is_spell else str(card.initial_health())
 	_draw_field(Vector2(data_x, 58), "コスト", str(card.cost))
-	_draw_field(Vector2(data_x + pitch, 58), "総量", "—" if card.is_spell else str(card.total_sand))
-	_draw_field(Vector2(data_x + pitch * 2.0, 58), "分類", "砂術" if card.is_spell else "砂時計")
+	_draw_field(Vector2(data_x + pitch, 58), "攻撃力", attack)
+	_draw_field(Vector2(data_x + pitch * 2.0, 58), "体力", health)
+	_draw_field(Vector2(data_x + pitch * 3.0, 58), "分類", "砂術" if card.is_spell else "砂時計")
 
 
 ## 砂術の札。紙の上でも「置くカードではない」と分かるよう、藍の枠へ紋章を大きく置く。

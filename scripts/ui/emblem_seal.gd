@@ -15,7 +15,7 @@ const FACE_BOTTOM := Color(0.16, 0.11, 0.07)
 const MARK := Color(0.96, 0.86, 0.62)
 
 
-## 真鍮の印。**絵の左下へ押す**(手札の封蝋と同じ置き場)。
+## 真鍮の印。**絵の右上へ押す**(手札の封蝋と同じ置き場。左下は攻撃力が使う)。
 static func brass(ci: CanvasItem, center: Vector2, emblem: Texture2D, radius: float) -> void:
 	if emblem == null:
 		return

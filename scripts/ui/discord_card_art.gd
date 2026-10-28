@@ -13,7 +13,7 @@ const PAPER_TOP := Color(0.90, 0.845, 0.70)
 const PAPER_BOTTOM := Color(0.775, 0.695, 0.535)
 const ART_WIDTH := 220.0
 const DATA_GAP := 32.0
-const FIELD_GAP := 150.0
+const FIELD_GAP := 108.0
 
 var card: CardData
 ## 既定は元の絵。スキンの紹介画像を焼くときだけ SELF にする(GameDesign.md 31章)。
@@ -50,15 +50,16 @@ func _draw() -> void:
 		if icon != null:
 			draw_texture_rect(icon, art_rect, false)
 		EmblemSeal.brass(
-			self, Vector2(art_rect.position.x - 2.0, art_rect.end.y - 12.0), card.emblem, 16.0
+			self, Vector2(art_rect.end.x + 2.0, art_rect.position.y + 12.0), card.emblem, 16.0
 		)
 
 	var data_x := art_rect.end.x + DATA_GAP
 	_draw_field(Vector2(data_x, 88), "コスト", str(card.cost))
-	_draw_field(
-		Vector2(data_x + FIELD_GAP, 88), "総量", "—" if card.is_spell else str(card.total_sand)
-	)
-	_draw_field(Vector2(data_x + FIELD_GAP * 2.0, 88), "分類", "砂術" if card.is_spell else "砂時計")
+	var attack := "—" if card.is_spell else str(card.initial_attack)
+	var health := "—" if card.is_spell else str(card.initial_health())
+	_draw_field(Vector2(data_x + FIELD_GAP, 88), "攻撃力", attack)
+	_draw_field(Vector2(data_x + FIELD_GAP * 2.0, 88), "体力", health)
+	_draw_field(Vector2(data_x + FIELD_GAP * 3.0, 88), "分類", "砂術" if card.is_spell else "砂時計")
 	draw_multiline_string(
 		_font,
 		Vector2(data_x, 170),

@@ -199,7 +199,10 @@ func _draw_row(index: int) -> void:
 		COUNT_COLOR if count > 1 else CardDeckShelf.NAME_COLOR
 	)
 	right -= count_w + h * 0.16
-	_draw_total(Vector2(right - r, row.get_center().y), card, r)
+	var health_at := Vector2(right - r, row.get_center().y)
+	if not card.is_spell:
+		right -= r * 2.0 + h * 0.08
+	CardStatBadge.pair(self, _font, Vector2(right - r, row.get_center().y), health_at, card, r)
 	right -= r * 2.0 + h * 0.16
 
 	# 名前が入らないときは文字を詰める(省略すると同じ頭の名前が見分けられない)。
@@ -243,22 +246,6 @@ func _draw_diamond(center: Vector2, value: int, r: float) -> void:
 	closed.append(points[0])
 	ShapePaint.polyline(get_canvas_item(), closed, Color(0.03, 0.06, 0.14), 1.6)
 	_draw_centered(center, str(value), int(r + 2), Color.WHITE)
-
-
-## 総量。砂術は総量を持たないため「術」と出す(棚と同じ)。
-func _draw_total(center: Vector2, card: CardData, r: float) -> void:
-	var top: Color = CardDeckShelf.SPELL_TOP if card.is_spell else CardDeckShelf.TOTAL_TOP
-	var bottom: Color = CardDeckShelf.SPELL_BOTTOM if card.is_spell else CardDeckShelf.TOTAL_BOTTOM
-	UiPaint.fill_gradient_polygon(
-		get_canvas_item(),
-		UiPaint.circle_points(center, r, 20),
-		Rect2(center - Vector2(r, r), Vector2(r, r) * 2.0),
-		[[0.0, top], [1.0, bottom]]
-	)
-	UiPaint.draw_ring(get_canvas_item(), center, r, Color(0.10, 0.06, 0.03), 1.6, 20)
-	_draw_centered(
-		center, "術" if card.is_spell else str(card.total_sand), int(r + 1), Color(0.14, 0.08, 0.03)
-	)
 
 
 func _draw_centered(center: Vector2, text: String, font_size: int, color: Color) -> void:
