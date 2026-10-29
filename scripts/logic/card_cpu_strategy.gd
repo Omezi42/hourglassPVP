@@ -437,6 +437,12 @@ func _repeating_value(state: MatchState, side: int, card: CardData) -> float:
 func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> float:
 	var foe_side := MatchState.other_side(side)
 	var value := 0.0
+	# 置く前の盤面で数える(この駒自身は数に入らない)。
+	if (
+		effect.condition_scope == CardEnums.ConditionScope.ENEMY_OUTNUMBERS
+		and state.units(foe_side).size() <= state.units(side).size()
+	):
+		return value
 	match effect.effect_type:
 		CardEnums.EffectType.DAMAGE_PLAYER:
 			value = effect.value * FACE_WEIGHT

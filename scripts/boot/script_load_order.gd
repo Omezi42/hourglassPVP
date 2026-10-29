@@ -161,6 +161,7 @@ const PATHS: Array[String] = [
 	"res://scripts/ui/signature/moves/hive_effect.gd",
 	"res://scripts/ui/signature/moves/relief_effect.gd",
 	"res://scripts/ui/signature/moves/collapse_effect.gd",
+	"res://scripts/ui/signature/moves/march_effect.gd",
 	"res://scripts/ui/signature/moves/key_effect.gd",
 	"res://scripts/ui/signature/moves/cycle_effect.gd",
 	"res://scripts/ui/signature/moves/crest_effect.gd",

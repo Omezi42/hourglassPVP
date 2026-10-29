@@ -39,9 +39,13 @@ func resolve(side: int, unit: CardInstance, trigger: int, hint: Dictionary) -> v
 	_steps += 1
 	peak_depth = maxi(peak_depth, _depth)
 	peak_steps = maxi(peak_steps, _steps)
+	# 条件は発動した瞬間の盤面で判定する(先の効果が盤面を変えても、後の効果の可否は変えない)。
+	var met: Array[CardEffectData] = []
 	for effect in unit.effects_for(trigger):
 		if _condition_met(side, unit, effect):
-			_apply(side, unit, effect, hint)
+			met.append(effect)
+	for effect in met:
+		_apply(side, unit, effect, hint)
 	_depth -= 1
 
 
@@ -60,7 +64,7 @@ func _cut_off_chain(unit: CardInstance, trigger: int) -> void:
 
 
 ## コンボ系カードの発動条件(GameDesign.md 6章)。TARGET は対象そのものの絞り込みで
-## `_single_unit()` が扱うため、ここでは SELF / ANY_ALLY だけを見る。
+## `_single_unit()` が扱うため、ここでは SELF / ANY_ALLY / ENEMY_OUTNUMBERS だけを見る。
 func _condition_met(side: int, unit: CardInstance, effect: CardEffectData) -> bool:
 	match effect.condition_scope:
 		CardEnums.ConditionScope.SELF:
@@ -70,6 +74,9 @@ func _condition_met(side: int, unit: CardInstance, effect: CardEffectData) -> bo
 				if ally.total_sand() == effect.condition_total:
 					return true
 			return false
+		CardEnums.ConditionScope.ENEMY_OUTNUMBERS:
+			var others := _state.units(side).size() - 1
+			return _state.units(MatchState.other_side(side)).size() > others
 	return true
 
 

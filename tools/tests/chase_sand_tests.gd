@@ -25,6 +25,8 @@ func run(assert_true: Callable) -> void:
 	_test_relief_heals_nothing_on_empty_board()
 	_test_collapse_destroys_only_heavy()
 	_test_collapse_fizzles_on_light_board()
+	_test_march_summons_when_outnumbered()
+	_test_march_fizzles_when_even()
 	_test_set_is_staged()
 
 
@@ -243,6 +245,27 @@ func _test_collapse_fizzles_on_light_board() -> void:
 	_assert.call(state.board[MatchState.Side.B][0] == light, "総量7以上の駒がいなければ崩落は不発")
 
 
+func _play_march(state: MatchState) -> void:
+	state.hand[MatchState.Side.A] = [CardLibrary.find_by_id("march")]
+	state.mana[MatchState.Side.A] = 4
+	state.play_card(MatchState.Side.A, 0, 0, {})
+
+
+func _test_march_summons_when_outnumbered() -> void:
+	var state := _new_match()
+	_place(state, MatchState.Side.B, _vanilla(3), 0)
+	_play_march(state)
+	_assert.call(state.units(MatchState.Side.A).size() == 3, "相手の駒が多ければマーチはモートを2体出す(自身は数えない)")
+
+
+func _test_march_fizzles_when_even() -> void:
+	var state := _new_match()
+	_place(state, MatchState.Side.A, _vanilla(3), 5)
+	_place(state, MatchState.Side.B, _vanilla(3), 0)
+	_play_march(state)
+	_assert.call(state.units(MatchState.Side.A).size() == 2, "駒の数が同じならマーチは不発")
+
+
 func _test_set_is_staged() -> void:
 	_assert.call(CardSetLibrary.has_set(SET_ID), "chase_sand is registered")
 	_assert.call(CardSetLibrary.price(SET_ID) == 1000, "chase_sand costs 1000")
@@ -262,3 +285,4 @@ func _test_set_is_staged() -> void:
 	_assert.call(
 		CardSetLibrary.card_ids(SET_ID)[8] == "collapse", "chase_sand's ninth card is collapse"
 	)
+	_assert.call(CardSetLibrary.card_ids(SET_ID)[9] == "march", "chase_sand's tenth card is march")

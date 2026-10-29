@@ -158,6 +158,8 @@ enum ConditionScope {
 	HEALTH_AT_MOST,
 	## 選んだ対象の総量が condition_total 以上か。TARGET と同じく対象の絞り込みとして働く(追砂の刻)。
 	TOTAL_AT_LEAST,
+	## 相手の砂時計の数が、この駒を除いた自分の砂時計の数より多いか。condition_total は使わない(追砂の刻)。
+	ENEMY_OUTNUMBERS,
 }
 
 ## 効果が対象へ届く演出の「型」(GameDesign.md 9章)。`MatchState.effect_struck` /

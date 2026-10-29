@@ -62,6 +62,7 @@ const EFFECTS := {
 	"hive": preload("res://scripts/ui/signature/moves/hive_effect.gd"),
 	"relief": preload("res://scripts/ui/signature/moves/relief_effect.gd"),
 	"collapse": preload("res://scripts/ui/signature/moves/collapse_effect.gd"),
+	"march": preload("res://scripts/ui/signature/moves/march_effect.gd"),
 	"key": preload("res://scripts/ui/signature/moves/key_effect.gd"),
 	"cycle": preload("res://scripts/ui/signature/moves/cycle_effect.gd"),
 	"crest": preload("res://scripts/ui/signature/moves/crest_effect.gd"),

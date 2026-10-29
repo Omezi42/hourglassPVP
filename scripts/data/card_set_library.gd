@@ -99,7 +99,18 @@ const SETS: Dictionary = {
 		"display_name": "追砂の刻",
 		"description": "先に動いた相手へ、細かな一手で追いつく10枚",
 		"card_ids":
-		["sling", "pelt", "bola", "nibble", "block", "vault", "hive", "relief", "collapse"],
+		[
+			"sling",
+			"pelt",
+			"bola",
+			"nibble",
+			"block",
+			"vault",
+			"hive",
+			"relief",
+			"collapse",
+			"march"
+		],
 		"price": 1000,
 		"planned_count": 10,
 	},
