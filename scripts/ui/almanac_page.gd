@@ -34,6 +34,7 @@ const ART_BLOCK_BOTTOM := (
 const TEXT_TOP := 114.0
 const TEXT_SEPARATION := 4
 const FIELD_PITCH := 118.0
+const FIELD_VALUE_FONT := 26
 const TEXT_FONT := 16
 ## 語と説明のあいだ。効果の文のトリガー(「落砂:」)と同じ記号にする。
 const TERM_SEPARATOR := ":"
@@ -141,7 +142,9 @@ func turn_to(new_card: CardData) -> void:
 		return
 	if _turn_tween != null and _turn_tween.is_valid():
 		_turn_tween.kill()
-	pivot_offset = Vector2(0.0, size.y * 0.5)
+	# **軸は左上に置く。**縦画面ではページ全体を拡大しているため、軸を縦の中央へ置くと
+	# 拡大の起点がずれて中身がページの上へはみ出す。
+	pivot_offset = Vector2.ZERO
 	_turn_tween = create_tween()
 	(
 		_turn_tween
@@ -369,14 +372,16 @@ func _draw() -> void:
 				draw_texture_rect(icon, _art_rect, false)
 
 	var data_x := ART_WIDTH + DATA_GAP
-	# 欄の間隔は紙の幅で詰める(縦の細いページでも「分類」がはみ出さないように)。
-	var pitch := minf(FIELD_PITCH, (size.x - data_x) / 4.0)
+	# 欄の間隔は紙の幅で詰める(縦の細いページでも最後の「分類」の値が紙の端を越えないように)。
+	var kind := "砂術" if card.is_spell else "砂時計"
+	var kind_width := _font.get_string_size(kind, HORIZONTAL_ALIGNMENT_LEFT, -1, FIELD_VALUE_FONT).x
+	var pitch := minf(FIELD_PITCH, (size.x - data_x - kind_width) / 3.0)
 	var attack := "—" if card.is_spell else str(card.initial_attack)
 	var health := "—" if card.is_spell else str(card.initial_health())
 	_draw_field(Vector2(data_x, 58), "コスト", str(card.cost))
 	_draw_field(Vector2(data_x + pitch, 58), "攻撃力", attack)
 	_draw_field(Vector2(data_x + pitch * 2.0, 58), "体力", health)
-	_draw_field(Vector2(data_x + pitch * 3.0, 58), "分類", "砂術" if card.is_spell else "砂時計")
+	_draw_field(Vector2(data_x + pitch * 3.0, 58), "分類", kind)
 
 
 ## 砂術の札。紙の上でも「置くカードではない」と分かるよう、藍の枠へ紋章を大きく置く。
@@ -404,7 +409,9 @@ func _draw_spell_plate(rect: Rect2) -> void:
 ## 見出しつきの1項目。値を大きく、ラベルを小さく。
 func _draw_field(at: Vector2, label: String, value: String) -> void:
 	draw_string(_font, at + Vector2(0, 15), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, INK_SOFT)
-	draw_string(_font, at + Vector2(0, 44), value, HORIZONTAL_ALIGNMENT_LEFT, -1, 26, INK)
+	draw_string(
+		_font, at + Vector2(0, 44), value, HORIZONTAL_ALIGNMENT_LEFT, -1, FIELD_VALUE_FONT, INK
+	)
 
 
 ## スキンの切り替えを書き込むアカウント。サインインしていなければ空。
