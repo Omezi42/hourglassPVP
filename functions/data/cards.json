@@ -1220,6 +1220,17 @@
 			"is_spell": true,
 			"pool_index": 111,
 			"total_sand": 0
+		},
+		{
+			"cannot_attack": false,
+			"cost": 4,
+			"describe": "設置:相手の砂時計が自分の他の砂時計より多ければ、モートを2体出す",
+			"display_name": "マーチ",
+			"id": "march",
+			"initial_attack": 0,
+			"is_spell": false,
+			"pool_index": 112,
+			"total_sand": 6
 		}
 	]
 }
