@@ -122,6 +122,7 @@ const EFFECTS := {
 	"memory": preload("res://scripts/ui/signature/moves/memory_effect.gd"),
 	"page": preload("res://scripts/ui/signature/moves/page_effect.gd"),
 	"chime": preload("res://scripts/ui/signature/moves/chime_effect.gd"),
+	"present": preload("res://scripts/ui/signature/moves/present_effect.gd"),
 }
 
 

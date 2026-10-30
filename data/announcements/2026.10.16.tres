@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="AnnouncementData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/announcement_data.gd" id="script_announcement"]
+
+[resource]
+script = ExtResource("script_announcement")
+version = "2026.10.16"
+body = "**あたらしいもの**
+- 「五砂の刻」のミドル、フェイズ、キー、サイクル、クレストの5枚に、専用の演出がついたよ! キーは2つの効果がそれぞれ違う動きで見られるから、出したときにじっくり見てみてね
+
+-# 遊ぶ → https://unityroom.com/games/sunadokei_arena"

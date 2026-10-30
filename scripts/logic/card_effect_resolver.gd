@@ -228,6 +228,13 @@ func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Diction
 					side, from_slot, side, summon_slot, CardEnums.EffectVisualStyle.DESCEND, origin
 				)
 			_summon(side, effect.card_id)
+		CardEnums.EffectType.ADD_CARD_TO_HAND:
+			var gift := CardLibrary.find_by_id(effect.card_id)
+			if gift != null:
+				var to_side := _player_side_for(side, effect.target)
+				_strike(side, from_slot, to_side, -1, CardEnums.EffectVisualStyle.DESCEND, origin)
+				_state.hand[to_side].append(gift)
+				_state.hand_changed.emit(to_side)
 		CardEnums.EffectType.GRANT_KEYWORD:
 			var keyword_entries := _targets(side, unit, effect, hint)
 			_strike_for_targets(

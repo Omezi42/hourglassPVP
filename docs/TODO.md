@@ -71,6 +71,13 @@
 
 「追砂の刻」(10枚・1000砂金)は10枚目のマーチで全枚数を公開した(GameDesign.md 8章)。
 
+### お知らせとプレゼント(GameDesign.md 33章 / Architecture.md 10.22節)
+
+Discordにある機能をゲームの中だけで完結させていく。1つ目としてお知らせとプレゼントを入れている。
+
+- [ ] お知らせ・プレゼントの画面と受け取り、砂術「プレゼント」を入れる(作業中)
+- [ ] 次に載せるDiscordの機能を決める(候補: カードスポットライト・日曜イベントの告知のような、ビルドと関係なく出る告知。Firestoreから読む形になる)
+
 ### アプリ版(PWA)(GameDesign.md 10章 / Architecture.md 4.6節)
 
 起動部は `https://omezi42.github.io/sunadokei-arena-app/` に公開済み。

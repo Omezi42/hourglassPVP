@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="AnnouncementData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/announcement_data.gd" id="script_announcement"]
+
+[resource]
+script = ExtResource("script_announcement")
+version = "2026.10.18-2"
+body = "**あたらしいもの**
+- 新しいカードセット「追砂の刻」がショップに並んだよ! これから1枚ずつ増えていくよ
+- 1枚目は「スリング」。出したとき、相手の砂時計1体か相手プレイヤーに1ダメージを与えるよ。相手のHPの器を押せば、プレイヤーを直接ねらえるよ
+- 基本セットの「ソルト」「ティック」「ラトル」「ダッシュ」「ダスト」「フラスコ」「シールド」にも、専用の演出がついたよ。出したときの動きを見てみてね
+
+-# 遊ぶ → https://unityroom.com/games/sunadokei_arena"

@@ -1,7 +1,7 @@
 class_name HomeScreen
 extends Control
 ## ホーム画面(GameDesign.md 9章)。**1画面に収め、タブを持たない。**
-## ヘッダー(名札・砂金・ルールブック・メニュー)の下は2段。上段の左「ミッション」はここ、中央「対戦する」と
+## ヘッダー(名札・砂金・お知らせ・ルールブック・メニュー)の下は2段。上段の左「ミッション」はここ、中央「対戦する」と
 ## 右「ソロモード」は `BattleTab`、下段(デッキ編集・図鑑・ショップ)は `DeckTab` が描く。位置は `HomeLayout`。
 ## ルールを読む・覚える入口はメニューの左隣のルールブック(`LearnMenu`)、戦績はアカウント画面へ置く。
 
@@ -36,12 +36,20 @@ const MENU_BUTTON_GROUP := "icon_menu"
 ## メニューの左隣に置くルールブック(開いた本の紋章)。大きさはメニューと揃える。
 const RULEBOOK_BUTTON_GROUP := "icon_book"
 const RULEBOOK_GAP := 12.0
+## ルールブックの左隣に置くお知らせ(手紙の紋章。GameDesign.md 33章)。
+const NOTICE_BUTTON_GROUP := "icon_letter"
+## 赤い丸の中心(ボタンの右上の角から内側へ)。
+const NOTICE_BADGE_INSET := Vector2(6, 6)
 
 var _nameplate_button: AccountNameplateButton
 ## 左の「ミッション」の札(GameDesign.md 9章・23章)。中身は `MissionEntryInfo` が描く。
 var _mission_tile: HomeTile
 var _mission_info: MissionEntryInfo
 var _rulebook_button: Button
+var _notice_button: Button
+var _notice_badge: Control
+## お知らせとプレゼント(GameDesign.md 33章)のモーダル。最初に開いたときだけ作る。
+var _notice_panel: NoticeBoardPanel
 ## デイリーミッション(GameDesign.md 23章)のモーダル。最初に開いたときだけ作る。
 var _mission_panel: DailyMissionPanel
 var _learn_menu: LearnMenu
@@ -94,6 +102,7 @@ func _ready() -> void:
 	_build_mission_tile()
 	_build_learn_menu()
 	_build_rulebook_button()
+	_build_notice_button()
 	_place_header()
 	# モーダルはヘッダー・メニューより手前に出す(後から足した子ほど手前に描かれる)。
 	battle_tab.mount_pickers(self)
@@ -159,7 +168,7 @@ func _place_header() -> void:
 	var margin := HomeLayout.header_margin(_portrait)
 	var height := HomeLayout.header_height(_portrait)
 	var top := HomeLayout.HEADER_TOP
-	var buttons: Array[Button] = [settings_button, _rulebook_button]
+	var buttons: Array[Button] = [settings_button, _rulebook_button, _notice_button]
 	for i in buttons.size():
 		var right := margin + (height + RULEBOOK_GAP) * float(i)
 		var button := buttons[i]
@@ -198,6 +207,54 @@ func _build_rulebook_button() -> void:
 	add_child(button)
 	move_child(button, settings_button.get_index())
 	_rulebook_button = button
+
+
+## お知らせとプレゼントの入口(GameDesign.md 9章・33章)。ルールブックの左隣へ同じ大きさで並べる。
+func _build_notice_button() -> void:
+	var button := CodedButton.make_in_group(
+		"", settings_button.custom_minimum_size, NOTICE_BUTTON_GROUP
+	)
+	button.tooltip_text = "お知らせ"
+	button.anchor_left = settings_button.anchor_left
+	button.anchor_right = settings_button.anchor_right
+	button.pressed.connect(_on_notice_requested)
+	add_child(button)
+	move_child(button, _rulebook_button.get_index())
+	_notice_button = button
+	_notice_badge = Control.new()
+	_notice_badge.anchor_right = 1.0
+	_notice_badge.anchor_bottom = 1.0
+	_notice_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_notice_badge.draw.connect(_draw_notice_badge)
+	button.add_child(_notice_badge)
+
+
+## 読んでいない回か受け取っていないプレゼントがあるときだけ赤い丸。数は受け取っていないプレゼントの件数。
+func _draw_notice_badge() -> void:
+	var gifts := GiftLibrary.unclaimed_count(DailyMissionService.today())
+	if gifts <= 0 and AnnouncementLibrary.unread_count() <= 0:
+		return
+	var at := Vector2(_notice_badge.size.x - NOTICE_BADGE_INSET.x, NOTICE_BADGE_INSET.y)
+	HomeTile.draw_badge(_notice_badge, at, gifts)
+
+
+func _on_notice_requested() -> void:
+	if _notice_panel == null:
+		_notice_panel = NoticeBoardPanel.new()
+		_notice_panel.closed.connect(func() -> void: refresh_account())
+		_notice_panel.reward_claimed.connect(_on_notice_reward_claimed)
+		add_child(_notice_panel)
+	else:
+		move_child(_notice_panel, get_child_count() - 1)
+	_notice_panel.open()
+	_notice_badge.queue_redraw()
+
+
+func _on_notice_reward_claimed(from_rect: Rect2, _amount: int) -> void:
+	if _currency_chip == null:
+		return
+	await CardFlightFx.fly(_notice_panel, from_rect, _currency_chip.get_global_rect())
+	_currency_chip.bump()
 
 
 ## 縦横が変わったときに `Main` から呼ばれる(Architecture.md 4.7節)。
@@ -270,6 +327,8 @@ func refresh_account() -> void:
 		_sunday_banner.visible = not banner_text.is_empty()
 	if deck_tab != null:
 		deck_tab.refresh()
+	if _notice_badge != null:
+		_notice_badge.queue_redraw()
 	_refresh_mission_tile()
 
 

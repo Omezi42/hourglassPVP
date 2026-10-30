@@ -38,6 +38,7 @@ const TutorialScriptTests = preload("res://tools/tests/tutorial_script_tests.gd"
 const CpuDeckTests = preload("res://tools/tests/cpu_deck_tests.gd")
 const CardSetTests = preload("res://tools/tests/card_set_tests.gd")
 const FirstDaysTests = preload("res://tools/tests/first_days_tests.gd")
+const NoticeGiftTests = preload("res://tools/tests/notice_gift_tests.gd")
 const TurnForecastTests = preload("res://tools/tests/turn_forecast_tests.gd")
 const TouchScrollTests = preload("res://tools/tests/touch_scroll_tests.gd")
 
@@ -98,6 +99,8 @@ func _run() -> void:
 	CardSetTests.new().run(_assert_true)
 	var first_days := FirstDaysTests.new()
 	await first_days.run(_assert_true)
+	var notice_gift := NoticeGiftTests.new()
+	await notice_gift.run(_assert_true)
 	var account_service := AccountServiceTests.new()
 	await account_service.run(_assert_true)
 	var read_failure := ReadFailureTests.new()

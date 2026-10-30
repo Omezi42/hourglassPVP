@@ -134,6 +134,8 @@ enum EffectType {
 	DAMAGE_PLAYER_PLUS_FLIPS,
 	## 相手の砂時計の数 × value だけ自分のHPを回復する(追砂の刻)。
 	HEAL_PLAYER_PER_ENEMY_UNIT,
+	## card_id のカードを、target が指すプレイヤーの手札へ1枚加える(プレゼント)。山札は減らない。
+	ADD_CARD_TO_HAND,
 }
 
 ## コンボ系カードの発動条件が確認する範囲(GameDesign.md 6章)。

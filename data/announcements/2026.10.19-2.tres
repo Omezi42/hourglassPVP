@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="AnnouncementData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/announcement_data.gd" id="script_announcement"]
+
+[resource]
+script = ExtResource("script_announcement")
+version = "2026.10.19-2"
+body = "**あたらしいもの**
+- 基本セットからさらに7枚(ブランク・クラウン・アイ・グラス・ピボット・ソード・ヴァンプ)に、1枚ずつちがう演出がついたよ。対戦で見てみてね
+
+**なおしたもの**
+- オンライン対戦で、相手の名前が「CPU」のままになることがあったのをなおしたよ
+
+-# 遊ぶ → https://unityroom.com/games/sunadokei_arena"

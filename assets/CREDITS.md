@@ -95,6 +95,7 @@ Open Goldberg Variations と Open Well-Tempered Clavier は、いずれも Kimik
 | `boon_parting_gift.png` | 遠征の恩恵「置き土産」のメダル | シンプルなプレゼントアイコン(11665) |
 | `boon_sand_pouch.png` | 遠征の恩恵「砂袋」のメダル | 麻袋型のドル袋の無料アイコン(無地)(10273) |
 | `boon_small_army.png` | 遠征の恩恵「小さな軍勢」のメダル | ローマのレギオン(12213) |
+| `announcements.png` | ホームのお知らせ(お知らせとプレゼントの入口) | 手紙の無料アイコンその7(12532) |
 
 ---
 
@@ -209,3 +210,4 @@ Open Goldberg Variations と Open Well-Tempered Clavier は、いずれも Kimik
 | リリーフ | 救急箱 | 救急箱のフリーアイコン1(12688) |
 | 崩落 | 地震 | 地震アイコン1(15889) |
 | マーチ | 足跡 | 足跡のアイコン1(12784) |
+| プレゼント | リボンを掛けた贈り物の箱 | プレゼントアイコン(15849) |

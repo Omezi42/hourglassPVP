@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="AnnouncementData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/announcement_data.gd" id="script_announcement"]
+
+[resource]
+script = ExtResource("script_announcement")
+version = "2026.10.20"
+body = "**あたらしいもの**
+- 追砂の刻に3枚目の砂時計「ボーラ」が加わったよ。出したときに、体力が2以下の相手の砂時計を1体破壊できるんだ
+- 基本セットからさらに7枚(スプラウト・ドリル・ハンマー・ウェル・バースト・ハロー・ランス)に、1枚ずつちがう演出がついたよ。対戦で見てみてね
+
+-# 遊ぶ → https://unityroom.com/games/sunadokei_arena"

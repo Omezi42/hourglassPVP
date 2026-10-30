@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="AnnouncementData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/announcement_data.gd" id="script_announcement"]
+
+[resource]
+script = ExtResource("script_announcement")
+version = "2026.10.15"
+body = "**あたらしいもの**
+- スマホを縦に持ったままでも遊べるようになったよ! 画面が縦長のときは、対局もホームもデッキ編集も縦向きの並びに切り替わるんだ
+- 縦画面では、カードを長押しすると詳しい説明が出るよ。文字も大きくしたから、スマホでも読みやすくなったよ
+- 「反響の刻」の8枚と「遺砂の刻」の7枚に、そのカードだけの演出がついたよ。出したときの動きを見てみてね
+
+-# 遊ぶ → https://unityroom.com/games/sunadokei_arena"

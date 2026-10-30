@@ -170,7 +170,11 @@ func _build() -> void:
 	add_child(_share_panel)
 	_shop_confirm = load(CONFIRM_SCENE).instantiate()
 	add_child(_shop_confirm)
-	_shop_confirm.confirmed.connect(func() -> void: shop_requested.emit(_pending_set))
+	_shop_confirm.confirmed.connect(
+		func() -> void:
+			if not _pending_set.is_empty():
+				shop_requested.emit(_pending_set)
+	)
 
 
 ## 画面名は吊り看板が示す(下地が描く)ため、ここは操作だけを置く。
@@ -565,8 +569,20 @@ func refresh_ownership() -> void:
 
 
 func _offer_shop(set_id: String) -> void:
-	_pending_set = set_id
 	_hide_detail()
+	# ショップで売らないセット(ソロモード・プレゼント)は、手に入れ方だけを伝える。
+	if CardSetLibrary.price(set_id) <= 0:
+		_pending_set = ""
+		_shop_confirm.open_notice(
+			"まだ持っていないカード",
+			(
+				"「%s」のカードです。%s"
+				% [CardSetLibrary.display_name(set_id), CardSetLibrary.description(set_id)]
+			),
+			"閉じる"
+		)
+		return
+	_pending_set = set_id
 	_shop_confirm.open_confirm(
 		"まだ持っていないカード",
 		"カードセット「%s」のカードです。ショップで購入するとデッキに入れられます。" % CardSetLibrary.display_name(set_id),

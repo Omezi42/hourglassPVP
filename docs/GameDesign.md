@@ -39,4 +39,5 @@
 | 30章 | 公式大会「箱庭杯」 | [`design/30_tournament.md`](design/30_tournament.md) |
 | 31章 | カードスキン | [`design/31_card_skins.md`](design/31_card_skins.md) |
 | 32章 | 攻略サイト | [`design/32_wiki.md`](design/32_wiki.md) |
+| 33章 | お知らせとプレゼント | [`design/33_announcements_gifts.md`](design/33_announcements_gifts.md) |
 | — | 未検証・今後の検討事項 | [`design/99_open_issues.md`](design/99_open_issues.md) |

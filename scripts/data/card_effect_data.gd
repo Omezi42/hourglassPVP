@@ -7,7 +7,7 @@ extends Resource
 @export var target: CardEnums.EffectTarget = CardEnums.EffectTarget.OPPONENT_PLAYER
 @export var effect_type: CardEnums.EffectType = CardEnums.EffectType.DAMAGE_PLAYER
 @export var value: int = 0
-## SUMMON で出す砂時計の id。他の効果では使わない。
+## SUMMON で出す砂時計・ADD_CARD_TO_HAND で手札へ加えるカードの id。他の効果では使わない。
 @export var card_id: String = ""
 ## GRANT_KEYWORD で与えるキーワード。他の効果では使わない(-1 = なし)。
 ##

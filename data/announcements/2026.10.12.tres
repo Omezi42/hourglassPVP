@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="AnnouncementData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/announcement_data.gd" id="script_announcement"]
+
+[resource]
+script = ExtResource("script_announcement")
+version = "2026.10.12"
+body = "**あたらしいもの**
+- カードセット「反響の刻」に7枚目の砂時計「クレッシェンド」が仲間入りしたよ。そのターンに自分が反転した回数だけダメージが増える砂術なんだ。セットを買ってある人は、追加の支払いなしでもう使えるよ
+- 対局中に手札のクレッシェンドの詳しい説明を開くと、いま使ったら何ダメージになるかの数字がそのまま出るようにしたよ
+
+-# 遊ぶ → https://unityroom.com/games/sunadokei_arena"

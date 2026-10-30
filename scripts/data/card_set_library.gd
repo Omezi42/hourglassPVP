@@ -38,6 +38,15 @@ const SETS: Dictionary = {
 		"card_ids": ["goad"],
 		"price": 0,
 	},
+	## お知らせのプレゼント(GameDesign.md 33章)で配る1枚。ソロモードのカードと同じく1枚ずつ別のセットにする。
+	"gift_present":
+	{
+		"id": "gift_present",
+		"display_name": "プレゼント(配布)",
+		"description": "お知らせのプレゼントで手に入る。ショップでは売らない。",
+		"card_ids": ["present"],
+		"price": 0,
+	},
 	## 基本セット以後初のショップ販売カードセット(GameDesign.md 8章)。
 	## 「総量(体力+攻撃力)がちょうど5」を条件に発動するコンボ系5枚。
 	"combo_five":
@@ -120,6 +129,7 @@ const ORDERED_IDS: Array[String] = [
 	"solo_chime",
 	"solo_ward",
 	"solo_goad",
+	"gift_present",
 	"combo_five",
 	"still_time",
 	"grave_sand",

@@ -405,6 +405,8 @@ static func draw_badge(
 			font = theme_font
 	ShapePaint.circle(target.get_canvas_item(), at, radius + 2.0, Color(0.10, 0.07, 0.05, 0.9))
 	ShapePaint.circle(target.get_canvas_item(), at, radius, BADGE_COLOR)
+	if count <= 0:
+		return
 	var text := str(count)
 	var font_size := roundi(BADGE_FONT_SIZE * badge_scale_factor)
 	var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x

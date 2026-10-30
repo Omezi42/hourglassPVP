@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="GiftData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/gift_data.gd" id="script_gift"]
+
+[resource]
+script = ExtResource("script_gift")
+id = "first_present"
+title = "はじめてのプレゼント"
+description = "砂術「プレゼント」。受け取るとすぐデッキに入れられます"
+kind = 0
+set_id = "gift_present"
+amount = 0
+expires = ""

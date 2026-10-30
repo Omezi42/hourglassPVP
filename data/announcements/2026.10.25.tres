@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="AnnouncementData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/announcement_data.gd" id="script_announcement"]
+
+[resource]
+script = ExtResource("script_announcement")
+version = "2026.10.25"
+body = "**あたらしいもの**
+- 追砂の刻に6枚目の砂時計「ヴォールト」が加わったよ。守護で攻撃を受け止めて、ダメージを受けるたびにほかの味方の砂時計1体の砂を増やしてくれるんだよ
+- 基本セットのブルーム・オベリスク・スイープ・ウォール・タワー・アンカー・ウォードの7枚に、1枚ずつちがう演出がついたよ。対戦で見てみてね
+
+**かわったもの**
+- ショップの品物やタブにカーソルを合わせたときと押したときの見た目を整えたよ
+
+-# 遊ぶ → https://unityroom.com/games/sunadokei_arena"

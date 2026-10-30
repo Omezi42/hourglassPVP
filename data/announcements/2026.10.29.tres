@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="AnnouncementData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/announcement_data.gd" id="script_announcement"]
+
+[resource]
+script = ExtResource("script_announcement")
+version = "2026.10.29"
+body = "**あたらしいもの**
+- 追砂の刻に10枚目のカード「マーチ」が入ったよ。4コストの砂時計で、出したときに相手の砂時計のほうがこっちのほかの砂時計より多かったら、モートを2体出せるんだ。先に並べられても、1枚で数を追いかけられるよ
+
+**なおしたもの**
+- 縦画面の図鑑で、2枚目以降のカードの解説が上へずれて出ていたのをなおしたよ
+
+-# 遊ぶ → https://unityroom.com/games/sunadokei_arena"

@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="AnnouncementData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/announcement_data.gd" id="script_announcement"]
+
+[resource]
+script = ExtResource("script_announcement")
+version = "2026.10.14"
+body = "**あたらしいもの**
+- 「静止の刻」のフリーズ・オアシス・スプリング・アンヴィル・巻き戻しに、出したときの専用の演出がついたよ。これで「静止の刻」の全部のカードに演出がそろったんだ。場に出して見てみてね
+- ホームのメニューに、公式のXとYouTubeへのボタンを置いたよ。Discordのボタンの横にならんでいるから、カード紹介やとどめ問題のショートもぜひのぞいてみてね
+
+-# 遊ぶ → https://unityroom.com/games/sunadokei_arena"

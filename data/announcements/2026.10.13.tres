@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="AnnouncementData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/announcement_data.gd" id="script_announcement"]
+
+[resource]
+script = ExtResource("script_announcement")
+version = "2026.10.13"
+body = "**あたらしいもの**
+- 「反響の刻」に8枚目の砂時計「カノン」が仲間入りしたよ。攻撃力が体力より高い相手を1体ひっくり返すんだ
+- クロノス・クロックタワー・砂塵嵐・時間停止・時の裁きの5枚に、そのカードだけの演出がついたよ。歯車がまわったり、鐘が鳴りひびいたり、天秤がかたむいたり……ぜひ場に出して見てみてね
+
+**かわったもの**
+- 効果音をぜんぶ作り直したよ。砂時計どうしがぶつかる音や、砂が落ちる音の手ざわりが変わってるはずだよ
+- ホーム画面の曲が、バッハの「平均律」前奏曲第1番になったよ
+
+-# 遊ぶ → https://unityroom.com/games/sunadokei_arena"

@@ -20,7 +20,8 @@ enum Emblem {
 	DISCORD,
 	X,
 	YOUTUBE,
-	BOOK
+	BOOK,
+	LETTER
 }
 
 const GRAIN_SIZE := 64
@@ -53,6 +54,7 @@ const HOURGLASS_ICON_HALF_RATIO := 0.9
 ## 開いた本(ホームのルールブック)。
 const BOOK_ICON := preload("res://assets/ui/icons/rulebook.png")
 const BOOK_ICON_HALF_RATIO := 0.9
+const LETTER_ICON := preload("res://assets/ui/icons/announcements.png")
 
 static var _grain_texture: ImageTexture
 static var _grain_rid: RID
@@ -531,6 +533,8 @@ static func draw_emblem(ci: RID, emblem: Emblem, center: Vector2, size: float) -
 			_emblem_fill(ci, center, size, _menu_bar_bottom_points, _menu_bar_bottom_highlight)
 		Emblem.BOOK:
 			draw_icon(ci, BOOK_ICON, center, size * BOOK_ICON_HALF_RATIO)
+		Emblem.LETTER:
+			draw_icon(ci, LETTER_ICON, center, size * BOOK_ICON_HALF_RATIO)
 		Emblem.DISCORD, Emblem.X, Emblem.YOUTUBE:
 			_emblem_brand(ci, _brand_textures[emblem], center, size)
 		_:

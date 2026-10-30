@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="AnnouncementData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/announcement_data.gd" id="script_announcement"]
+
+[resource]
+script = ExtResource("script_announcement")
+version = "2026.10.23"
+body = "**あたらしいもの**
+- 追砂の刻に5枚目の砂時計「ブロック」が加わったよ。守護で攻撃を受け止めて、こわれてもカードを1枚引かせてくれるんだよ
+- 基本セットからさらに7枚(ドリップ・ロック・ゲート・ポイズン・ガード・ミラー・グロウ)に、1枚ずつちがう演出がついたよ。対戦で見てみてね
+
+-# 遊ぶ → https://unityroom.com/games/sunadokei_arena"

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="AnnouncementData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/announcement_data.gd" id="script_announcement"]
+
+[resource]
+script = ExtResource("script_announcement")
+version = "2026.10.19"
+body = "**あたらしいもの**
+- カードセット「追砂の刻」に「砂つぶて」が入ったよ! 砂術1で、相手の砂時計1体に1ダメージを与えて、カードを1枚引けるんだ
+- 基本セットの7枚(サンド・ワッチャー・フォージ・テンパー・バーム・アワー・スパイク)に、1枚ずつちがう演出がついたよ。対戦で見てみてね
+- 「今日の1問」を10/26分まで用意したよ
+
+-# 遊ぶ → https://unityroom.com/games/sunadokei_arena"

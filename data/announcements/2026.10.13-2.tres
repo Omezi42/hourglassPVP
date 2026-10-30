@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="AnnouncementData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/announcement_data.gd" id="script_announcement"]
+
+[resource]
+script = ExtResource("script_announcement")
+version = "2026.10.13-2"
+body = "**なおしたもの**
+- はじめての対局で、「スキップ」ボタンが「つぎへ」に重なって押しにくくなっていたのを直したよ
+- 「スキップ」はいつでも画面の左下に出るようにしたから、説明を飛ばしたいときはそこを押してみてね
+
+-# 遊ぶ → https://unityroom.com/games/sunadokei_arena"
