@@ -788,5 +788,65 @@
 			"x",
 			"youtube"
 		]
+	},
+	{
+		"date": "2026-11-05",
+		"kind": "puzzle",
+		"id": "40",
+		"label": "とどめ問題 #40"
+	},
+	{
+		"date": "2026-11-05",
+		"kind": "card",
+		"id": "obelisk",
+		"label": "オベリスク"
+	},
+	{
+		"date": "2026-11-06",
+		"kind": "puzzle",
+		"id": "41",
+		"label": "とどめ問題 #41"
+	},
+	{
+		"date": "2026-11-06",
+		"kind": "card",
+		"id": "lock",
+		"label": "ロック"
+	},
+	{
+		"date": "2026-11-07",
+		"kind": "puzzle",
+		"id": "42",
+		"label": "とどめ問題 #42"
+	},
+	{
+		"date": "2026-11-07",
+		"kind": "card",
+		"id": "memory",
+		"label": "メモリー"
+	},
+	{
+		"date": "2026-11-08",
+		"kind": "puzzle",
+		"id": "43",
+		"label": "とどめ問題 #43"
+	},
+	{
+		"date": "2026-11-08",
+		"kind": "card",
+		"id": "flask",
+		"label": "フラスコ"
+	},
+	{
+		"date": "2026-11-09",
+		"kind": "puzzle",
+		"id": "44",
+		"label": "とどめ問題 #44"
+	},
+	{
+		"date": "2026-11-09",
+		"kind": "card",
+		"id": "shell",
+		"label": "シェル"
 	}
 ]
