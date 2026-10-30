@@ -2,6 +2,7 @@ class_name NoticeBoardPanel
 extends Control
 ## お知らせとプレゼント(GameDesign.md 33章 / Architecture.md 10.22節)。ホームへ重ねる「暗幕+中央パネル」のモーダル
 ## (`DailyMissionPanel` と同じ作り)。上に2つのタブ、お知らせは左に回の一覧・右に本文、プレゼントは `NoticeGiftList`。
+## 縦では回の一覧を本文の上の横1列(横へ送る)にする。
 ## 開いた時点でお知らせは全部読んだことにする。
 
 signal closed
@@ -22,7 +23,8 @@ const HEADING_FONT := 22
 const PORTRAIT_PANEL_SIZE := Vector2(PortraitModal.WIDTH, 880)
 const PORTRAIT_TAB_SIZE := Vector2(190, 56)
 const PORTRAIT_CLOSE_SIZE := Vector2(180, 56)
-const PORTRAIT_LIST_HEIGHT := 150.0
+const PORTRAIT_LIST_HEIGHT := 70.0
+const PORTRAIT_ENTRY_SIZE := Vector2(150, 52)
 const PORTRAIT_BODY_FONT := 17
 const PORTRAIT_HEADING_FONT := 20
 const UNREAD_MARK := "● "
@@ -33,7 +35,7 @@ var _panel: PanelContainer
 var _tabs: Array[Button] = []
 var _notices: BoxContainer
 var _list_scroll: ScrollContainer
-var _list: VBoxContainer
+var _list: BoxContainer
 var _body: RichTextLabel
 var _gifts: NoticeGiftList
 var _close: Button
@@ -101,7 +103,8 @@ func _build() -> void:
 	_list_scroll = ScrollContainer.new()
 	_list_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_notices.add_child(_list_scroll)
-	_list = VBoxContainer.new()
+	_list = BoxContainer.new()
+	_list.vertical = true
 	_list.add_theme_constant_override("separation", 6)
 	_list_scroll.add_child(_list)
 	_body = RichTextLabel.new()
@@ -131,6 +134,13 @@ func _layout() -> void:
 	size = PortraitModal.screen_size()
 	_dim.size = size
 	_notices.vertical = portrait
+	_list.vertical = not portrait
+	_list_scroll.horizontal_scroll_mode = (
+		ScrollContainer.SCROLL_MODE_AUTO if portrait else ScrollContainer.SCROLL_MODE_DISABLED
+	)
+	_list_scroll.vertical_scroll_mode = (
+		ScrollContainer.SCROLL_MODE_DISABLED if portrait else ScrollContainer.SCROLL_MODE_AUTO
+	)
 	_list_scroll.custom_minimum_size = (
 		Vector2(0, PORTRAIT_LIST_HEIGHT) if portrait else Vector2(LIST_WIDTH, 0)
 	)
@@ -170,7 +180,9 @@ func _refresh_tabs() -> void:
 
 func _make_entry(entry: AnnouncementData) -> Button:
 	var mark := UNREAD_MARK if _unread.has(entry) else ""
-	var button := CodedButton.make(mark + entry.version, ENTRY_SIZE)
+	var button := CodedButton.make(
+		mark + entry.version, PORTRAIT_ENTRY_SIZE if ScreenOrientation.is_portrait() else ENTRY_SIZE
+	)
 	if entry == _selected:
 		CodedButton.apply_styles(button, CodedButton.PRIMARY_ACTION_GROUP)
 	button.pressed.connect(

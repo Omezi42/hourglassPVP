@@ -53,7 +53,8 @@ const HOURGLASS_ICON := preload("res://assets/ui/icons/hourglass.png")
 const HOURGLASS_ICON_HALF_RATIO := 0.9
 ## 開いた本(ホームのルールブック)。
 const BOOK_ICON := preload("res://assets/ui/icons/rulebook.png")
-const BOOK_ICON_HALF_RATIO := 0.9
+## ヘッダーの正方形ボタンの額縁の内側へ収まる大きさ。
+const BOOK_ICON_HALF_RATIO := 0.68
 const LETTER_ICON := preload("res://assets/ui/icons/announcements.png")
 
 static var _grain_texture: ImageTexture

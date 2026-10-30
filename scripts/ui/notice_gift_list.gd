@@ -8,6 +8,8 @@ signal reward_claimed(from_rect: Rect2, amount: int)
 signal claimed
 
 const ROW_GAP := 10
+## 行の枠の内側の余白(左右・上下)。
+const ROW_PADDING := Vector2i(18, 12)
 const ART_SIDE := 56.0
 const CLAIM_SIZE := Vector2(150, 48)
 const PORTRAIT_CLAIM_SIZE := Vector2(150, 56)
@@ -62,9 +64,15 @@ func _make_row(gift: GiftData, online: bool) -> Control:
 	var style: StyleBox = load(ROW_STYLE)
 	if style != null:
 		panel.add_theme_stylebox_override("panel", style)
+	var margin := MarginContainer.new()
+	for side in ["left", "right"]:
+		margin.add_theme_constant_override("margin_" + side, ROW_PADDING.x)
+	for side in ["top", "bottom"]:
+		margin.add_theme_constant_override("margin_" + side, ROW_PADDING.y)
+	panel.add_child(margin)
 	var line := HBoxContainer.new()
 	line.add_theme_constant_override("separation", 14)
-	panel.add_child(line)
+	margin.add_child(line)
 	line.add_child(_make_art(gift))
 
 	var column := VBoxContainer.new()
