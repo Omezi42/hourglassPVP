@@ -12,7 +12,7 @@ GameDesign.md 27章の実装方針。**遠征の規則(道・山札・HP・束�
 | `SoloBoonData`(`scripts/data/solo_boon_data.gd`, Resource) | 恩恵1つぶんの効果。`data/solo_boons/{id}.tres`。効果の数値は既定0で、使うものだけ書く |
 | `SoloBoonLibrary`(`scripts/logic/solo_boon_library.gd`, static) | `data/solo_boons/` を id 順に返す。`SoloGateLibrary` と同じ流儀 |
 | `SoloRun`(`scripts/logic/solo_run.gd`, RefCounted) | 遠征1回ぶんの状態と規則。道の生成・行き先の選択・勝敗の反映・束/恩恵の候補生成・工房・山札への反映。`to_dict()` / `from_dict()` で保存できる。乱数は呼び出し側から受け取る |
-| `SoloProgress`(`scripts/logic/solo_progress.gd`, static) | 遠征の保存(続きから再開)と、遠征をまたいで残る記録(最多勝利数・踏破回数・到達済みの節目)。`user://solo_progress.json` へアカウントごとに持つ |
+| `SoloProgress`(`scripts/logic/solo_progress.gd`, static) | 遠征の保存(続きから再開)と、遠征をまたいで残る記録(最多勝利数・踏破回数・到達済みの節目)。`user://solo_progress.json` へアカウントごとに持ち、`players/{uid}` と同期する(10.23節) |
 | `SoloBattleRules`(`scripts/logic/solo_battle_rules.gd`, RefCounted) | 遠征の対局1つぶんに重ねる規則。自分/相手の山札(`own_deck()`/`foe_deck()`)、`apply(state, side, run, gate)`で恩恵「用意周到」の追加ドロー・HPの持ち越し・関門/主の特殊ルールと初期盤面・恩恵・特殊勝利条件の監視を画面を持たない`MatchState`へ当てる。対局画面と通し測定(`tools/balance/run_solo_expedition.gd`)が同じ規則で対局を作るため |
 | `CardMatchSolo`(`scripts/ui/card_match_solo.gd`, RefCounted) | `_screen` 参照を持つ切り出し。行き先の対局を始め、恩恵・関門の特殊ルールを当て、終局で `SoloRun` へ結果を返し、砂金・節目の報酬を渡して結果パネルを出す。「遠征の札」(`SoloMatchPlaque`)の生成・更新・後始末も持つ |
 | `SoloMatchPlaque`(`scripts/ui/solo_match_plaque.gd`, Control) | 遠征の対局中に卓の左へ常に出す「遠征の札」。段数・行き先の種類・特殊勝利条件の関門だけ持つ残りの数を表示する。`CardMatchSolo` が結果パネル・ログより背面に置く。縦の置き場所は4.7節 |

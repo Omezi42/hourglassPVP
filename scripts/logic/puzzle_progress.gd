@@ -30,7 +30,30 @@ static func mark_cleared(owner_uid: String, stage_id: String) -> bool:
 		return false
 	ids.append(stage_id)
 	_save()
+	AccountSyncService.push_puzzles(owner_uid)
 	return true
+
+
+## クリアした問題のid(アカウントへ送る値。Architecture.md 10.23節)。
+static func cleared_ids(owner_uid: String) -> Array:
+	return _list(owner_uid).duplicate()
+
+
+## アカウントにあるクリアを手元へ合わせる(和集合)。**手元にしか無いクリアがあれば true**(送り直しが要る)。
+static func merge_remote(owner_uid: String, remote: Array) -> bool:
+	var ids := _list(owner_uid)
+	var changed := false
+	for raw in remote:
+		var id := str(raw)
+		if not ids.has(id):
+			ids.append(id)
+			changed = true
+	if changed:
+		_save()
+	for id in ids:
+		if not remote.has(id):
+			return true
+	return false
 
 
 static func reset_for_test() -> void:

@@ -614,9 +614,9 @@ func _test_flip_right_cannot_be_used_off_turn_or_on_an_empty_slot() -> void:
 ## デッキの保存と読み込み。実データを壊さないよう、必ずバックアップ→上書き→復元で往復する。
 func _test_card_deck_save_round_trips() -> void:
 	var backup := ""
-	var had_file := FileAccess.file_exists(CardDeckSave.SAVE_PATH)
+	var had_file := FileAccess.file_exists(CardDeckSave.save_path)
 	if had_file:
-		backup = FileAccess.open(CardDeckSave.SAVE_PATH, FileAccess.READ).get_as_text()
+		backup = FileAccess.open(CardDeckSave.save_path, FileAccess.READ).get_as_text()
 
 	var default_deck := CardDeckSave.default_deck()
 	_assert.call(
@@ -663,9 +663,9 @@ func _test_card_deck_save_round_trips() -> void:
 	)
 
 	if had_file:
-		FileAccess.open(CardDeckSave.SAVE_PATH, FileAccess.WRITE).store_string(backup)
+		FileAccess.open(CardDeckSave.save_path, FileAccess.WRITE).store_string(backup)
 	else:
-		DirAccess.remove_absolute(ProjectSettings.globalize_path(CardDeckSave.SAVE_PATH))
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(CardDeckSave.save_path))
 
 
 ## 同じデッキと同じ種から始め、同じ手を流せば同じ盤面になること。

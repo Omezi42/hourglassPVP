@@ -69,6 +69,7 @@ static func claim(owner_uid: String, id: String) -> bool:
 	AccountService.grant(NetSession.client, owner_uid, int(entry["reward"]), false)
 	bucket["claimed"].append(id)
 	_save()
+	AccountSyncService.push_missions(owner_uid)
 	return true
 
 
@@ -102,6 +103,43 @@ static func commit(owner_uid: String, won: bool, moves: int) -> void:
 		var id: String = row["id"]
 		bucket["progress"][id] = int(bucket["progress"].get(id, 0)) + gained
 	_save()
+	AccountSyncService.push_missions(owner_uid)
+
+
+## 今日のぶん(アカウントへ送る値。Architecture.md 10.23節)。
+static func bucket_snapshot(owner_uid: String) -> Dictionary:
+	return _bucket(owner_uid).duplicate(true)
+
+
+## アカウントにある今日のぶんを手元へ合わせる(GameDesign.md 14章「食い違ったときの決め方」)。
+## 同じ日なら進捗は大きいほう・受け取り済みは和集合。**手元のほうが進んでいれば true**(送り直しが要る)。
+static func merge_remote(owner_uid: String, remote: Dictionary) -> bool:
+	var bucket := _bucket(owner_uid)
+	var remote_date := str(remote.get("date", ""))
+	if remote_date < str(bucket["date"]):
+		return true
+	if remote_date > str(bucket["date"]):
+		bucket = {"date": remote_date, "ids": [], "progress": {}, "claimed": []}
+		bucket["ids"] = remote.get("ids", []).duplicate()
+		_data[owner_uid if not owner_uid.is_empty() else "local"] = bucket
+	var ahead := false
+	var remote_progress: Dictionary = remote.get("progress", {})
+	var progress: Dictionary = bucket["progress"]
+	for id in remote_progress:
+		progress[str(id)] = maxi(int(progress.get(str(id), 0)), int(remote_progress[id]))
+	for id in progress:
+		if int(progress[id]) > int(remote_progress.get(id, 0)):
+			ahead = true
+	var remote_claimed: Array = remote.get("claimed", [])
+	var claimed: Array = bucket["claimed"]
+	for id in remote_claimed:
+		if not claimed.has(str(id)):
+			claimed.append(str(id))
+	for id in claimed:
+		if not remote_claimed.has(id):
+			ahead = true
+	_save()
+	return ahead
 
 
 static func reset_for_test() -> void:

@@ -25,6 +25,7 @@ static func reset() -> void:
 	_profile = _empty_profile()
 	_profile_cache.clear()
 	CardSkins.invalidate()
+	AccountSyncService.reset()
 
 
 static func display_name() -> String:
@@ -484,6 +485,9 @@ static func load_profile(client: FirestoreClient, uid: String) -> void:
 	# 戦績の同期(GameDesign.md 19章)。別端末で記録された分をローカルへ取り込み、
 	# まだ送れていない分(オフラインで遊んだCPU戦など)を送り直す。
 	MatchStatsService.sync_after_sign_in(client, uid, fields)
+	# デッキ・遠征・とどめ問題・デイリーミッションの同期(GameDesign.md 14章「アカウントに紐づけるもの」)。
+	# 画面が手元の控えを読む前に合わせ終えるため await する。
+	await AccountSyncService.sync_after_sign_in(client, uid, fields)
 	# 前回サインアウト中に無料付与が通らなかった分を、ここで流し直す
 	# (GameDesign.md 27章)。既に所有済みなら `unlock_free()` の先頭で何もしない。
 	for kind: ShopCatalog.Kind in [ShopCatalog.Kind.CARD_SET, ShopCatalog.Kind.ICON]:

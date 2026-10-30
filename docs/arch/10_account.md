@@ -61,6 +61,7 @@ GameDesign.md 14章(アカウント)・15章(通貨)の実装方針。認証は 
 | `owned_emotes` | Array[String] | ショップで買ったエモートのid。初期解放の4種は含めない |
 | `owned_titles` | Array[String] | 所有を絞る称号のid(「発案者」「箱庭王」)。初期の2種(「駆け出し決闘者」「称号なし」)は含めない。10.17節 |
 | `emote_slots` | Array[String] | 対局中に出す4つ。空なら初期の4種を使う |
+| `decks` / `deck_selected` / `solo_progress` / `puzzle_cleared` / `daily_missions` | — | デッキ・遠征・とどめ問題・ミッション。10.23節 |
 | `updated_at` | float | 最終更新時刻(Unix時間) |
 
 - 利用可能なアイコンと称号の定義は `UserProfileLibrary`(`scripts/data/user_profile_library.gd`)に集約する。初期解放アイコンは紋章8種(`sand`, `hour`, `crown`, `shield`, `sword`, `eye`, `halo`, `burst`)とし、マスコット(`mascot`)は将来のショップ要素として初期配布から除外する。

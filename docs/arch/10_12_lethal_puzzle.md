@@ -4,7 +4,7 @@
 |---|---|
 | `PuzzleStageData`(`scripts/data/puzzle_stage_data.gd`, Resource) | 1問の初期配置。盤面の駒は **`"id:体力:攻撃力"` の文字列**で持つ |
 | `PuzzleLibrary`(`scripts/logic/puzzle_library.gd`, static) | `data/puzzles/` を走査して `order` 順に返す。`CardLibrary` と同じ流儀(`.remap` の扱いを含む) |
-| `PuzzleProgress`(`scripts/logic/puzzle_progress.gd`, static) | クリア記録。`user://puzzle_progress.json` へアカウントごとに持つ |
+| `PuzzleProgress`(`scripts/logic/puzzle_progress.gd`, static) | クリア記録。`user://puzzle_progress.json` へアカウントごとに持ち、`players/{uid}` と同期する(10.23節) |
 | `CardMatchPuzzle`(`scripts/ui/card_match_puzzle.gd`, RefCounted) | 局面の差し替えと正誤の判定。`CardMatchOnline` と同じ `_screen` 参照の切り出し |
 | `CardChallengeResult`(`scripts/ui/card_challenge_result.gd`) | ソロモード(10.15節)と共用の結果パネル。中身は呼び出し側が `CardChallengeResult.Outcome` に詰めて渡し、パネルは並べ方とボタンの主従(GameDesign.md 24章の表)だけを持つ。高さは中身に合わせて1コマ後に決める(折り返す説明文の高さがそれまで確定しないため) |
 | `StageReward`(`scripts/logic/stage_reward.gd`) | 初回クリアで渡したもの(砂金・控えたか・カードセット・アイコン・解き直しか)。結果パネルが札にして並べるため、文ではなく中身で返す |

@@ -4,8 +4,13 @@ extends RefCounted
 ## `user://solo_progress.json` へアカウントごと(未サインインは `"local"`)に持つ。
 ##
 ## 以前の形式(ステージidの配列)を読んだときは空の記録として扱う。
+##
+## アカウントへ同期する(Architecture.md 10.23節)。1アカウントぶんの記録を丸ごと送り、
+## まだ送れていない変更があることを `SYNC_DIRTY` で控える(送る値には含めない)。
 
 const SAVE_PATH := "user://solo_progress.json"
+const SYNC_DIRTY := "sync_dirty"
+const SYNC_REVISION := "sync_revision"
 
 static var _loaded := false
 static var _muted := false
@@ -34,8 +39,7 @@ static func save_run(uid: String, run: SoloRun) -> void:
 	entry["run"] = null if run == null else run.to_dict()
 	if run != null:
 		entry["started"] = true
-	_data[_key(uid)] = entry
-	_save()
+	_commit(uid, entry)
 
 
 static func clear_run(uid: String) -> void:
@@ -47,8 +51,7 @@ static func clear_run(uid: String) -> void:
 static func save_finished(uid: String, run: SoloRun, reason: String) -> void:
 	var entry := _entry(uid)
 	entry["finished"] = {"run": run.to_dict(), "reason": reason}
-	_data[_key(uid)] = entry
-	_save()
+	_commit(uid, entry)
 
 
 ## 保存中の遠征の記録を読み、読んだら消す(次に遠征の画面を開いたとき1度だけ出すため)。
@@ -58,8 +61,7 @@ static func take_finished(uid: String) -> Dictionary:
 	if not (finished is Dictionary):
 		return {}
 	entry["finished"] = null
-	_data[_key(uid)] = entry
-	_save()
+	_commit(uid, entry)
 	return finished
 
 
@@ -111,8 +113,7 @@ static func last_depth(uid: String) -> int:
 static func set_last_depth(uid: String, depth: int) -> void:
 	var entry := _entry(uid)
 	entry["last_depth"] = depth
-	_data[_key(uid)] = entry
-	_save()
+	_commit(uid, entry)
 
 
 ## 決着のたびに呼ぶ。最多勝利数・踏破回数を更新し、初めて到達した節目を返す。
@@ -143,9 +144,35 @@ static func record(uid: String, run: SoloRun) -> Array[Dictionary]:
 		milestones.append(id)
 		reached.append(milestone)
 	entry["milestones"] = milestones
+	_commit(uid, entry)
+	return reached
+
+
+## アカウントへ送る値(同期の印を除いた1アカウントぶん)と、送れていない変更があるか。
+static func sync_snapshot(uid: String) -> Dictionary:
+	var entry := _entry(uid).duplicate(true)
+	var dirty := bool(entry.get(SYNC_DIRTY, false))
+	var revision := int(entry.get(SYNC_REVISION, 0))
+	entry.erase(SYNC_DIRTY)
+	entry.erase(SYNC_REVISION)
+	return {"entry": entry, "dirty": dirty, "revision": revision}
+
+
+## アカウントの内容で1アカウントぶんを置き換える(サインインの直後)。
+static func replace_from_account(uid: String, remote: Dictionary) -> void:
+	var entry := remote.duplicate(true)
+	entry[SYNC_REVISION] = int(_entry(uid).get(SYNC_REVISION, 0))
 	_data[_key(uid)] = entry
 	_save()
-	return reached
+
+
+## 送れた時点で呼ぶ。送っている間に変更が入っていれば印を残す。
+static func mark_synced(uid: String, revision: int) -> void:
+	var entry := _entry(uid)
+	if int(entry.get(SYNC_REVISION, 0)) != revision:
+		return
+	entry[SYNC_DIRTY] = false
+	_save()
 
 
 static func reset_for_test() -> void:
@@ -162,6 +189,15 @@ static func _entry(uid: String) -> Dictionary:
 		current = {"run": null, "best_wins": 0, "clears": 0, "milestones": []}
 		_data[key] = current
 	return current
+
+
+## 記録を変えたときの書き込み。送れていない印を付けて控え、アカウントへ送る。
+static func _commit(uid: String, entry: Dictionary) -> void:
+	entry[SYNC_DIRTY] = true
+	entry[SYNC_REVISION] = int(entry.get(SYNC_REVISION, 0)) + 1
+	_data[_key(uid)] = entry
+	_save()
+	AccountSyncService.push_solo(uid)
 
 
 static func _key(uid: String) -> String:

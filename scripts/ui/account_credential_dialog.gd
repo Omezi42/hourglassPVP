@@ -56,7 +56,7 @@ func open(p_mode: Mode, guest_currency: int) -> void:
 		_warning.text = ""
 		if guest_currency >= 0:
 			_warning.text = (
-				"いま遊んでいるゲストの記録と%sには、あとから戻れなくなります。残したい場合は、先に「IDを登録する」を使ってください。"
+				"いま遊んでいるゲストの記録・デッキ・%sには、あとから戻れなくなります。残したい場合は、先に「IDを登録する」を使ってください。"
 				% CurrencyRules.label_text(guest_currency)
 			)
 	_warning.visible = not _warning.text.is_empty()

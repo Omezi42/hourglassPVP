@@ -42,5 +42,6 @@
 | 10.20節 | 宣伝用の撮影ツール(ショート動画・とどめ問題の問題集) | [`arch/10_20_promo_capture.md`](arch/10_20_promo_capture.md) |
 | 10.21節 | 攻略サイト(GameDesign.md 32章) | [`arch/10_21_wiki.md`](arch/10_21_wiki.md) |
 | 10.22節 | お知らせとプレゼント(GameDesign.md 33章) | [`arch/10_22_announcements_gifts.md`](arch/10_22_announcements_gifts.md) |
+| 10.23節 | デッキ・遠征・とどめ問題・ミッションのアカウント同期(GameDesign.md 14章) | [`arch/10_23_account_sync.md`](arch/10_23_account_sync.md) |
 | 11章 | 開発時の落とし穴 | [`Pitfalls.md`](Pitfalls.md)(コードやシーンを触る前に読む。新しく踏んだ穴もそちらへ足す) |
 | — | 未検討事項 | [`arch/99_open_issues.md`](arch/99_open_issues.md) |

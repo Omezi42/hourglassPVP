@@ -32,6 +32,9 @@ const SoloModeTests = preload("res://tools/tests/solo_mode_tests.gd")
 const SoloStrategyTests = preload("res://tools/tests/solo_strategy_tests.gd")
 const RankTests = preload("res://tools/tests/rank_tests.gd")
 const MatchStatsSyncTests = preload("res://tools/tests/match_stats_sync_tests.gd")
+const AccountSyncTests = preload("res://tools/tests/account_sync_tests.gd")
+## デッキの控えの差し替え先(サインインの同期が `user://` の実データを書き換えないため)。
+const TEST_DECK_SAVE := "user://test_card_decks.json"
 const FunnelTests = preload("res://tools/tests/funnel_tests.gd")
 const PlayTimeTests = preload("res://tools/tests/play_time_tests.gd")
 const TutorialScriptTests = preload("res://tools/tests/tutorial_script_tests.gd")
@@ -50,6 +53,11 @@ func _init() -> void:
 
 
 func _run() -> void:
+	# アカウントの同期(Architecture.md 10.23節)が実データを書き換えないよう、先に控えを差し替える。
+	CardDeckSave.save_path = TEST_DECK_SAVE
+	SoloProgress.reset_for_test()
+	PuzzleProgress.reset_for_test()
+	DailyMissionService.reset_for_test()
 	_test_match_clock_ticks_down_and_times_out()
 	_test_match_clock_resets_only_when_the_turn_changes_sides()
 	V5RulesTests.new().run(_assert_true)
@@ -90,6 +98,7 @@ func _run() -> void:
 	var match_records := MatchRecordTests.new()
 	await match_records.run(_assert_true)
 	await MatchStatsSyncTests.new().run(_assert_true)
+	await AccountSyncTests.new().run(_assert_true)
 	await FunnelTests.new().run(_assert_true)
 	await PlayTimeTests.new().run(_assert_true)
 	var waiting_cpu := WaitingCpuTests.new()
@@ -108,6 +117,7 @@ func _run() -> void:
 	var touch_scroll := TouchScrollTests.new()
 	await touch_scroll.run(_assert_true, root)
 
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(TEST_DECK_SAVE))
 	if _failures == 0:
 		print("tests passed")
 		quit(0)

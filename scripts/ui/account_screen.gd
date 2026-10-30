@@ -121,7 +121,7 @@ func _refresh_account() -> void:
 		_note_label.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
 	else:
 		_status_label.text = "ゲストで遊んでいます"
-		_note_label.text = "ゲストの記録と砂金は、このブラウザにだけ残ります。ブラウザのデータを消すと失われます。IDを登録すると、別の端末からも続きを遊べます。"
+		_note_label.text = "ゲストの記録・デッキ・砂金は、このブラウザにだけ残ります。ブラウザのデータを消すと失われます。IDを登録すると、別の端末からも続きを遊べます。"
 		_note_label.add_theme_color_override("font_color", WARNING_COLOR)
 	_guest_row.visible = not registered
 	_member_row.visible = registered
