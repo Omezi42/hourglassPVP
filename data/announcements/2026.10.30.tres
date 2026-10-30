@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="AnnouncementData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/announcement_data.gd" id="script_announcement"]
+
+[resource]
+script = ExtResource("script_announcement")
+version = "2026.10.30"
+body = "**あたらしいもの**
+- ホーム画面の上に「お知らせ」ができたよ。ここで読んでいる更新のお知らせを、ゲームの中でも読めるんだ
+- お知らせの「プレゼント」タブから、ぼくからの贈りものを受け取れるよ。最初のプレゼントは砂術「プレゼント」。1コストでカードを1枚引いて、相手の手札にもプレゼントを1枚入れちゃうんだ。受け取ったらすぐデッキに入れてみてね
+
+**かわったもの**
+- 縦画面のホームで、アカウント画面への入口を小さな四角いボタンにして、上の並びが画面の幅に収まるようにしたよ
+
+-# 遊ぶ → https://unityroom.com/games/sunadokei_arena"

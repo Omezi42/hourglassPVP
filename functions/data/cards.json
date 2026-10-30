@@ -1231,6 +1231,17 @@
 			"is_spell": false,
 			"pool_index": 112,
 			"total_sand": 6
+		},
+		{
+			"cannot_attack": false,
+			"cost": 1,
+			"describe": "カードを1枚引く。相手の手札にプレゼントを1枚加える",
+			"display_name": "プレゼント",
+			"id": "present",
+			"initial_attack": 0,
+			"is_spell": true,
+			"pool_index": 113,
+			"total_sand": 0
 		}
 	]
 }
