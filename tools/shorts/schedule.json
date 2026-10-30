@@ -793,60 +793,100 @@
 		"date": "2026-11-05",
 		"kind": "puzzle",
 		"id": "40",
-		"label": "とどめ問題 #40"
+		"label": "とどめ問題 #40",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-11-05",
 		"kind": "card",
 		"id": "obelisk",
-		"label": "オベリスク"
+		"label": "オベリスク",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-11-06",
 		"kind": "puzzle",
 		"id": "41",
-		"label": "とどめ問題 #41"
+		"label": "とどめ問題 #41",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-11-06",
 		"kind": "card",
 		"id": "lock",
-		"label": "ロック"
+		"label": "ロック",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-11-07",
 		"kind": "puzzle",
 		"id": "42",
-		"label": "とどめ問題 #42"
+		"label": "とどめ問題 #42",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-11-07",
 		"kind": "card",
 		"id": "memory",
-		"label": "メモリー"
+		"label": "メモリー",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-11-08",
 		"kind": "puzzle",
 		"id": "43",
-		"label": "とどめ問題 #43"
+		"label": "とどめ問題 #43",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-11-08",
 		"kind": "card",
 		"id": "flask",
-		"label": "フラスコ"
+		"label": "フラスコ",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-11-09",
 		"kind": "puzzle",
 		"id": "44",
-		"label": "とどめ問題 #44"
+		"label": "とどめ問題 #44",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-11-09",
 		"kind": "card",
 		"id": "shell",
-		"label": "シェル"
+		"label": "シェル",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	}
 ]
