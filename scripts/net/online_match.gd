@@ -8,6 +8,9 @@ signal connection_changed(online: bool)
 const POLL_INTERVAL_SECONDS := 1.5
 const POLL_BACKOFF_MAX := 8.0
 const POLL_BACKOFF_FACTOR := 1.6
+## 自分の手番中に読みに行く間隔。相手から届くのはエモートと投了だけなので、
+## 相手の手を待つ間ほど急がない(Firestoreの読み取り回数を抑えるため)。
+const OWN_TURN_POLL_SECONDS := 5.0
 const SEND_RETRY_COUNT := 4
 const SEND_RETRY_DELAY := 0.5
 ## これだけ連続で失敗したら「接続できていない」とみなす。1回の失敗で警告を出すと、
@@ -17,6 +20,8 @@ const FAILURE_THRESHOLD := 2
 var client: FirestoreClient
 var match_id: String = ""
 var connected := true
+## 真を返す間は自分の手番として読み取りを間引く。対局画面が手番の判定を渡す。
+var is_own_turn := func() -> bool: return false
 var _known_action_count: int = 0
 var _polling := false
 var _sending := false
@@ -28,6 +33,7 @@ var _send_queue: Array = []
 ## (Architecture.md 6.1節)。適用そのものは MatchAction が受け持つ。
 var _inbox: Array = []
 var _poll_delay := POLL_INTERVAL_SECONDS
+var _last_fetch_msec := 0
 
 
 func _init(p_client: FirestoreClient) -> void:
@@ -109,15 +115,26 @@ func _poll_loop() -> void:
 		await get_tree().create_timer(_poll_delay).timeout
 		if not _polling:
 			return
-		# 送信中は同じドキュメントを読み書きしているため、読み取りを重ねない
-		if not _sending:
+		if _should_fetch():
 			await _fetch()
 		if not _polling:
 			return
 		_deliver_one()
 
 
+## 送信中は同じドキュメントを読み書きしているため読み取りを重ねない。配り切っていない手が
+## あるうちも読まない。間隔は毎回の待ちではなく最後に読んだ時刻で測り、手番が相手へ
+## 移ったら次の周回からすぐ元の間隔へ戻す。
+func _should_fetch() -> bool:
+	if _sending or not _inbox.is_empty():
+		return false
+	if not is_own_turn.call():
+		return true
+	return Time.get_ticks_msec() - _last_fetch_msec >= OWN_TURN_POLL_SECONDS * 1000.0
+
+
 func _fetch() -> void:
+	_last_fetch_msec = Time.get_ticks_msec()
 	var meta: Dictionary = await client.get_document_meta(_path())
 	if not meta["exists"]:
 		_note_result(false)

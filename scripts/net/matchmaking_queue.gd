@@ -19,6 +19,9 @@ signal others_waiting(uids: Array)
 const COLLECTION := "matchmaking_queue"
 const POLL_INTERVAL_SECONDS := 2.0
 const QUERY_LIMIT := 5
+## 待っている間のCPU戦の最中に待合室を見に行く間隔。掴みに行かず、知らせるだけなので
+## 急がない(Firestoreの読み取り回数を抑えるため)。
+const CPU_POLL_INTERVAL_SECONDS := 10.0
 ## 最後の更新(サーバーの`updateTime`)がこれより古い待機者は、ブラウザを閉じた等で
 ## 既に居ないものとして扱う。掴んでしまうと、相手のデッキを永久に待つ状態になるため。
 ## 端末の時計ではなくサーバーの時刻同士で比べる(端末の時計がずれていると、生きている
@@ -64,10 +67,14 @@ func join() -> void:
 		return
 
 	var last_heartbeat := Time.get_unix_time_from_system()
+	var last_check := -CPU_POLL_INTERVAL_SECONDS
 	while not _cancelled and _my_match_id == "":
-		var found: bool = await _try_claim_or_check()
-		if found or _cancelled:
-			return
+		# CPU戦の最中は間引く。間隔は最後に見た時刻で測り、CPU戦をやめたらすぐ元へ戻す
+		if not cpu_playing or _now() - last_check >= CPU_POLL_INTERVAL_SECONDS:
+			last_check = _now()
+			var found: bool = await _try_claim_or_check()
+			if found or _cancelled:
+				return
 		# ここへ来た時点で「待機側になった」ことが確定する。即座にマッチが成立した
 		# 場合は上で return しているため、条件分岐を足さずに仕様を満たせる。
 		_announce_if_due()

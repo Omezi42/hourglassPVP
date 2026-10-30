@@ -65,6 +65,7 @@ func start(
 	_screen._online = OnlineMatch.new(client)
 	_screen.add_child(_screen._online)
 	_screen._online.action_received.connect(_screen._on_action_received)
+	_screen._online.is_own_turn = _is_own_turn
 	_screen._online.start(p_match_id)
 	# 切断しても同じ対局へ戻れるようにする(GameDesign.md 11章)。
 	OnlineResume.remember(p_match_id, p_my_side, is_room, opponent_uid, time_limit, is_ranked)
@@ -151,6 +152,7 @@ func resume(client: FirestoreClient, record: Dictionary) -> bool:
 	_screen._online = OnlineMatch.new(client)
 	_screen.add_child(_screen._online)
 	_screen._online.action_received.connect(_screen._on_action_received)
+	_screen._online.is_own_turn = _is_own_turn
 	_screen._online.start(match_id, actions.size())
 	# 持ち時間はこちら側では初期値から数え直すが、**相手はこちらの残り時間を
 	# 自分の手元で減らし続けている**(GameDesign.md 11章)。したがって再読み込みで
@@ -166,3 +168,9 @@ func resume(client: FirestoreClient, record: Dictionary) -> bool:
 ## 持ち時間の時計を作って動かし始める。開始と復帰で同じ手順を踏むため1箇所へ寄せる。
 func _start_clock() -> void:
 	_screen.clocks.start()
+
+
+## マリガン中は相手の確定を待つため、自分の手番として扱わない。
+func _is_own_turn() -> bool:
+	var state: MatchState = _screen.state
+	return state != null and not state.mulligan_pending and state.current_turn == _screen.my_side
