@@ -38,10 +38,13 @@ const RULEBOOK_BUTTON_GROUP := "icon_book"
 const RULEBOOK_GAP := 12.0
 ## ルールブックの左隣に置くお知らせ(手紙の紋章。GameDesign.md 33章)。
 const NOTICE_BUTTON_GROUP := "icon_letter"
+## 縦で名札の代わりに置く、人の形の紋章の正方形ボタン(GameDesign.md 9章「縦のタイトル・ホーム」)。
+const PROFILE_BUTTON_GROUP := "icon_person"
 ## 赤い丸の中心(ボタンの右上の角から内側へ)。
 const NOTICE_BADGE_INSET := Vector2(6, 6)
 
 var _nameplate_button: AccountNameplateButton
+var _profile_button: Button
 ## 左の「ミッション」の札(GameDesign.md 9章・23章)。中身は `MissionEntryInfo` が描く。
 var _mission_tile: HomeTile
 var _mission_info: MissionEntryInfo
@@ -115,6 +118,14 @@ func _build_account_bar() -> void:
 	_nameplate_button.pressed.connect(func() -> void: account_requested.emit())
 	$AccountBar.add_child(_nameplate_button)
 	$AccountBar.move_child(_nameplate_button, 0)
+	_profile_button = CodedButton.make_in_group(
+		"", Vector2.ONE * HomeLayout.PORTRAIT_HEADER_HEIGHT, PROFILE_BUTTON_GROUP
+	)
+	_profile_button.tooltip_text = "アカウント"
+	_profile_button.visible = false
+	_profile_button.pressed.connect(func() -> void: account_requested.emit())
+	$AccountBar.add_child(_profile_button)
+	$AccountBar.move_child(_profile_button, 0)
 
 	# 残高は枠を持たない Label だったため、真鍮で組まれたヘッダーの中でそこだけ浮いていた。
 	# .tscn は書き換えず、同じ場所へチップを挿して元のラベルを隠す。
@@ -261,6 +272,9 @@ func _on_notice_reward_claimed(from_rect: Rect2, _amount: int) -> void:
 func apply_orientation(portrait: bool) -> void:
 	_portrait = portrait
 	_nameplate_button.set_portrait(portrait)
+	# 縦は名札まで載せると幅に収まらないため、人の形の紋章だけの正方形にする。
+	_nameplate_button.visible = not portrait
+	_profile_button.visible = portrait
 	_place_header()
 	_place_mission_tile()
 	_place_sunday_banner()
@@ -345,16 +359,14 @@ func _uid() -> String:
 	return ""
 
 
-## ホーム画面左上の名札ボタン(真鍮テクスチャ・アイコン・称号・名前)。
-## 縦ではヘッダーの幅に収めるため、自分のアイコンだけの正方形ボタンにする(GameDesign.md 9章)。
+## ホーム画面左上の名札ボタン(真鍮テクスチャ・アイコン・称号・名前)。横だけで使う。
 class AccountNameplateButton:
 	extends Button
 	const ICON_FRAME := 46.0
 	const ICON := 34.0
 	const TITLE_FONT := 13
 	const NAME_FONT := 21
-	const PORTRAIT_NAMEPLATE_SIZE := Vector2.ONE * HomeLayout.PORTRAIT_HEADER_HEIGHT
-	const TEXT_INSET := 16
+	const PORTRAIT_NAMEPLATE_SIZE := Vector2(290, HomeLayout.PORTRAIT_HEADER_HEIGHT)
 	const PORTRAIT_ICON_FRAME := 60.0
 	const PORTRAIT_ICON := 44.0
 	const PORTRAIT_TITLE_FONT := 20
@@ -363,8 +375,6 @@ class AccountNameplateButton:
 	var _icon_frame: PanelContainer
 	var _title_label: Label
 	var _name_label: Label
-	var _row: HBoxContainer
-	var _text_box: VBoxContainer
 
 	func _init() -> void:
 		custom_minimum_size = NAMEPLATE_SIZE
@@ -376,9 +386,8 @@ class AccountNameplateButton:
 		hbox.set_anchors_preset(Control.PRESET_FULL_RECT)
 		hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		hbox.add_theme_constant_override("separation", 12)
-		hbox.offset_left = TEXT_INSET
-		hbox.offset_right = -TEXT_INSET
-		_row = hbox
+		hbox.offset_left = 16
+		hbox.offset_right = -16
 		hbox.alignment = BoxContainer.ALIGNMENT_BEGIN
 
 		# アイコン枠
@@ -425,7 +434,6 @@ class AccountNameplateButton:
 		vbox.add_child(_name_label)
 
 		hbox.add_child(vbox)
-		_text_box = vbox
 		add_child(hbox)
 
 	## 縦では称号・名前を文字の目安(GameDesign.md 9章「縦画面」)まで大きくする。
@@ -442,11 +450,6 @@ class AccountNameplateButton:
 		_name_label.add_theme_font_size_override(
 			"font_size", PORTRAIT_NAME_FONT if portrait else NAME_FONT
 		)
-		_text_box.visible = not portrait
-		_row.alignment = BoxContainer.ALIGNMENT_CENTER if portrait else BoxContainer.ALIGNMENT_BEGIN
-		_row.offset_left = 0 if portrait else TEXT_INSET
-		_row.offset_right = 0 if portrait else -TEXT_INSET
-		tooltip_text = "アカウント" if portrait else ""
 
 	func update_profile(display_name: String, icon_id: String, title_id: String) -> void:
 		_icon_rect.texture = UserProfileLibrary.get_icon_texture(icon_id)

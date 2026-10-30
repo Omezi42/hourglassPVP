@@ -21,7 +21,8 @@ enum Emblem {
 	X,
 	YOUTUBE,
 	BOOK,
-	LETTER
+	LETTER,
+	PERSON
 }
 
 const GRAIN_SIZE := 64
@@ -56,6 +57,7 @@ const BOOK_ICON := preload("res://assets/ui/icons/rulebook.png")
 ## ヘッダーの正方形ボタンの額縁の内側へ収まる大きさ。
 const BOOK_ICON_HALF_RATIO := 0.68
 const LETTER_ICON := preload("res://assets/ui/icons/announcements.png")
+const PERSON_ICON := preload("res://assets/ui/icons/profile.png")
 
 static var _grain_texture: ImageTexture
 static var _grain_rid: RID
@@ -536,6 +538,8 @@ static func draw_emblem(ci: RID, emblem: Emblem, center: Vector2, size: float) -
 			draw_icon(ci, BOOK_ICON, center, size * BOOK_ICON_HALF_RATIO)
 		Emblem.LETTER:
 			draw_icon(ci, LETTER_ICON, center, size * BOOK_ICON_HALF_RATIO)
+		Emblem.PERSON:
+			draw_icon(ci, PERSON_ICON, center, size * BOOK_ICON_HALF_RATIO)
 		Emblem.DISCORD, Emblem.X, Emblem.YOUTUBE:
 			_emblem_brand(ci, _brand_textures[emblem], center, size)
 		_:

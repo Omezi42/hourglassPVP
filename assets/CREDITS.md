@@ -96,6 +96,7 @@ Open Goldberg Variations と Open Well-Tempered Clavier は、いずれも Kimik
 | `boon_sand_pouch.png` | 遠征の恩恵「砂袋」のメダル | 麻袋型のドル袋の無料アイコン(無地)(10273) |
 | `boon_small_army.png` | 遠征の恩恵「小さな軍勢」のメダル | ローマのレギオン(12213) |
 | `announcements.png` | ホームのお知らせ(お知らせとプレゼントの入口) | 手紙の無料アイコンその7(12532) |
+| `profile.png` | 縦のホームのアカウントの入口 | 人物アイコン(15835) |
 
 ---
 
