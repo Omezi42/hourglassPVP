@@ -8,7 +8,6 @@
 
 const {InteractionResponseType} = require("discord-interactions");
 const cardsData = require("./data/cards.json");
-const {renderDeckSheet} = require("./deck_sheet_canvas");
 
 // カード画像・実演動画はビルドのたびにリポジトリへコミットしている(10.14節)ため、
 // 常駐サーバーを持たずに配信するには、BGMと同じくjsDelivr経由でリポジトリから
@@ -326,18 +325,14 @@ async function sendDeckFollowup(interaction, db) {
   const applicationId = interaction.application_id;
   const token = interaction.token;
   const code = optionValue(interaction, "code").trim();
-  const doc = await db.collection("deckcodes").doc(code).get();
-  if (!doc.exists) {
+  // deck_share.js がこのファイルの parseDeckText を読むため、循環しないよう使う時点で読む。
+  const {readDeckCode, renderDeckCodeImage} = require("./deck_share");
+  const deck = await readDeckCode(db, code);
+  if (!deck) {
     await editOriginalResponse(applicationId, token, {content: "見つかりませんでした。"});
     return;
   }
-  const text = doc.data().cards || "";
-  const cards = parseDeckText(text);
-  if (cards.length === 0) {
-    await editOriginalResponse(applicationId, token, {content: "見つかりませんでした。"});
-    return;
-  }
-  const png = await renderDeckSheet(cards);
+  const png = await renderDeckCodeImage(deck);
   await editOriginalResponseWithImage(applicationId, token, png, "deck.png");
 }
 

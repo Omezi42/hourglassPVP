@@ -285,3 +285,21 @@ tbody tr:hover { background: rgba(51, 34, 15, 0.06); }
   th, td { padding: 7px 8px; }
   .rate__bar { width: 44px; }
 }
+
+/* 共有リンクのデッキ(GameDesign.md 32章) */
+.badge--count { background: var(--ink); color: var(--sand); }
+.deck-code { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 20px; }
+.deck-code__number { font-size: 1.6rem; font-weight: 700; letter-spacing: 0.12em; color: var(--sand); font-variant-numeric: tabular-nums; }
+.action {
+  padding: 8px 16px;
+  border: 1px solid var(--brass-light);
+  border-radius: 8px;
+  background: linear-gradient(var(--brass-light), var(--brass));
+  color: var(--bg-deep);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.action--quiet { background: transparent; color: var(--paper); border-color: var(--brass); }
+.action:disabled { opacity: 0.5; cursor: default; }
+.action-note { color: var(--paper-dim); font-size: 0.85rem; }

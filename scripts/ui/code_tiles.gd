@@ -40,7 +40,6 @@ func make_editable(prompt_title: String) -> void:
 	input = LineEdit.new()
 	input.anchor_right = 1.0
 	input.anchor_bottom = 1.0
-	input.max_length = digits
 	input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
 	input.context_menu_enabled = false
 	input.caret_blink = false
@@ -67,10 +66,12 @@ func set_editable(editable: bool) -> void:
 		queue_redraw()
 
 
-## 数字以外は落とす(コードは数字しか取りえないため)。
+## 数字以外は落とし、升の数で切る(リンクごと貼られても、先頭の番号だけが残る)。
 func _on_text_changed(text: String) -> void:
 	var kept := ""
 	for ch in text:
+		if kept.length() == digits:
+			break
 		if ch >= "0" and ch <= "9":
 			kept += ch
 	if kept != text:

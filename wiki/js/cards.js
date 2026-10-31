@@ -14,6 +14,10 @@ export function thumbUrl(card) {
   return card.has_art ? `art/${card.id}_thumb.webp` : "";
 }
 
+export function compareByCost(a, b) {
+  return a.cost - b.cost || a.pool_index - b.pool_index;
+}
+
 export function openCardDialog(card) {
   const dialog = document.getElementById("card-dialog");
   const art = document.getElementById("card-dialog-art");
@@ -40,11 +44,12 @@ function matches(card, query, kind) {
   return `${card.display_name} ${card.describe}`.toLowerCase().includes(query);
 }
 
-function tile(card) {
+export function tile(card, count = 1) {
   const nums = el("div", {class: "card-tile__nums"});
   nums.innerHTML = `<span>コスト <b>${card.cost}</b></span>` +
     (card.is_spell ? "" : `<span>総量 <b>${card.total_sand}</b></span>`);
   const name = el("p", {class: "card-tile__name", text: card.display_name});
+  if (count > 1) name.append(el("span", {class: "badge badge--count", text: `×${count}`}));
   if (card.is_spell) name.append(el("span", {class: "badge", text: "砂術"}));
   const button = el("button", {class: "card-tile", type: "button"}, [
     el("img", {src: thumbUrl(card), alt: "", loading: "lazy", width: "64", height: "84"}),
@@ -55,7 +60,7 @@ function tile(card) {
 }
 
 export async function renderCardsPage(root) {
-  const cards = (await loadCards()).slice().sort((a, b) => a.cost - b.cost || a.pool_index - b.pool_index);
+  const cards = (await loadCards()).slice().sort(compareByCost);
   const state = {query: "", kind: "all"};
   const search = el("input", {type: "search", placeholder: "名前・効果で探す(例: 守護)", "aria-label": "カードを探す"});
   const segmented = el("div", {class: "segmented", role: "group", "aria-label": "種類"});
@@ -64,7 +69,7 @@ export async function renderCardsPage(root) {
 
   const render = () => {
     const shown = cards.filter((card) => matches(card, state.query, state.kind));
-    grid.replaceChildren(...shown.map(tile));
+    grid.replaceChildren(...shown.map((card) => tile(card)));
     count.textContent = `${shown.length} / ${cards.length}枚`;
     for (const button of segmented.children) button.setAttribute("aria-pressed", button.dataset.kind === state.kind);
   };

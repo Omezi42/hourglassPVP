@@ -51,8 +51,9 @@ service cloud.firestore {
     // デッキコードの預かり先(GameDesign.md 9章)。ドキュメントIDは8桁の数字。
     // 中身は「カードのidと枚数」だけで、誰のものかは持たない。受け取った相手が
     // 読めなければ機能しないため、読み取りはサインイン済みの全員へ許す。
+    // 預けた中身は書き換えさせない(共有リンクの画像をキャッシュし続けるため。32章)。
     match /deckcodes/{code} {
-      allow read, write: if signedIn();
+      allow read, create: if signedIn();
     }
 
     // プレイヤーごとのアカウント情報(表示名・砂金の残高)。ドキュメントIDはuid。

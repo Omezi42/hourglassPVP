@@ -35,6 +35,7 @@ const {
 } = require("./discord_commands");
 const {handleLabAdmin} = require("./lab_admin");
 const {publishWikiStats} = require("./wiki_stats");
+const {handleDeckShare} = require("./deck_share");
 
 // Botトークン・公開鍵と同じ扱いで、リポジトリへは一切コミットしない。
 // `firebase functions:secrets:set DISCORD_WEBHOOK_URL` / `DISCORD_PUBLIC_KEY` で設定する。
@@ -234,3 +235,11 @@ exports.labAdmin = onRequest(
     await handleLabAdmin(req, res, admin.firestore(), admin.firestore);
   }
 );
+
+/**
+ * 共有リンク `/d/{code}` のデッキの中身と画像(GameDesign.md 32章 / Architecture.md 10.21節)。
+ * 攻略サイトの Pages Functions が中継してキャッシュするため、ここへ届くのはコードごとにほぼ1回。
+ */
+exports.deckShare = onRequest({memory: "512MiB"}, async (req, res) => {
+  await handleDeckShare(req, res, admin.firestore());
+});

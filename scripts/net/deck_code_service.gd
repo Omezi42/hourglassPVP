@@ -10,6 +10,8 @@ extends RefCounted
 
 const COLLECTION := "deckcodes"
 const CODE_LENGTH := 8
+## 共有リンク(GameDesign.md 32章)。番号を足すと攻略サイトのデッキのページになる。
+const SHARE_URL := "https://sunadokei-arena-wiki.pages.dev/d/"
 ## 番号が埋まっていたときに引き直す回数。
 const ISSUE_RETRY_COUNT := 5
 
@@ -19,7 +21,8 @@ static var _issued: Dictionary = {}
 
 
 ## デッキを預けて番号を返す。失敗したら空文字を返す。
-static func publish(client: FirestoreClient, deck: Array) -> String:
+## 名前は共有リンクの見出しに使う(同じ構築を名前だけ変えて発行し直しても、最初の番号と名前のまま)。
+static func publish(client: FirestoreClient, deck: Array, deck_name: String = "") -> String:
 	var fingerprint := CardDeckCode.fingerprint(deck)
 	if _issued.has(fingerprint):
 		return String(_issued[fingerprint])
@@ -29,7 +32,8 @@ static func publish(client: FirestoreClient, deck: Array) -> String:
 	for _attempt in range(ISSUE_RETRY_COUNT):
 		var code := random_code()
 		var created: bool = await client.create_document(
-			_doc_path(code), {"cards": text, "created_at": Time.get_unix_time_from_system()}
+			_doc_path(code),
+			{"cards": text, "name": deck_name, "created_at": Time.get_unix_time_from_system()}
 		)
 		if created:
 			_issued[fingerprint] = code
@@ -58,6 +62,11 @@ static func normalize(code: String) -> String:
 		if body[i] < "0" or body[i] > "9":
 			return ""
 	return body
+
+
+## 貼り付けや共有に使う2行(コードとリンク)。
+static func share_text(code: String) -> String:
+	return "デッキコード %s\n%s%s" % [code, SHARE_URL, code]
 
 
 static func random_code() -> String:

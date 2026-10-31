@@ -173,12 +173,8 @@ func _layout() -> void:
 	_receive_sub.position = PORTRAIT_RECEIVE_SUB_POS if portrait else RECEIVE_SUB_POS
 	_place(_input_tiles, PORTRAIT_RECEIVE_TILES_RECT if portrait else RECEIVE_TILES_RECT)
 	_place(_load_button, PORTRAIT_LOAD_BUTTON_RECT if portrait else LOAD_BUTTON_RECT)
-	_receive_message.position = (
-		PORTRAIT_RECEIVE_MESSAGE_POS if portrait else RECEIVE_MESSAGE_POS
-	)
-	_receive_message.size.x = (
-		PORTRAIT_LOAD_BUTTON_RECT.size.x if portrait else RECEIVE_TEXT_WIDTH
-	)
+	_receive_message.position = (PORTRAIT_RECEIVE_MESSAGE_POS if portrait else RECEIVE_MESSAGE_POS)
+	_receive_message.size.x = (PORTRAIT_LOAD_BUTTON_RECT.size.x if portrait else RECEIVE_TEXT_WIDTH)
 	var pad_width := _pad.get_combined_minimum_size().x
 	_pad.position = (
 		Vector2((panel_size.x - pad_width) * 0.5, PORTRAIT_PAD_TOP) if portrait else PAD_POS
@@ -262,7 +258,7 @@ func _on_code_pressed() -> void:
 	if not await NetSession.sign_in():
 		_fail(_code_message, "通信に失敗しました。接続を確認してください")
 		return
-	var code: String = await DeckCodeService.publish(NetSession.client, _deck)
+	var code: String = await DeckCodeService.publish(NetSession.client, _deck, _deck_name)
 	if code == "":
 		_fail(_code_message, "コードを発行できませんでした")
 		return
@@ -275,8 +271,8 @@ func _on_code_pressed() -> void:
 
 
 func _copy_code() -> void:
-	DisplayServer.clipboard_set(_code)
-	_code_message.text = "コピーしました。画像にも番号が載ります"
+	DisplayServer.clipboard_set(DeckCodeService.share_text(_code))
+	_code_message.text = "コードとリンクをコピーしました"
 
 
 func _on_load_pressed() -> void:
