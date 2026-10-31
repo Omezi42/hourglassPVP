@@ -1,8 +1,13 @@
 import {el} from "./dom.js";
 import {compareByCost, loadCards, tile} from "./cards.js";
+import {currentUser} from "./auth.js";
+import {authedRequest} from "./firestore.js";
+import {goToLogin} from "./login.js";
 
 // 共有リンク /d/{code} のデッキ(GameDesign.md 32章)。中身は Pages Functions の /d/{code}.json から読む。
 const COPIED_MS = 1500;
+// 受け取り箱に置ける件数(GameDesign.md 32章)。ゲームが受け取ると空く。
+const INBOX_LIMIT = 10;
 
 export const DECK_PATH = /^\/d\/(\d{8})$/;
 
@@ -28,6 +33,40 @@ function copyButton(label, text) {
   return button;
 }
 
+/** 受け取り箱へ置く。結果の1行を返す。 */
+async function sendToGame(deck) {
+  const inbox = `players/${currentUser().uid}/deck_inbox`;
+  const listed = await authedRequest(`${inbox}?pageSize=${INBOX_LIMIT}`);
+  if (!listed) return "ログインが切れました。もう一度ログインしてください";
+  if (!listed.ok) return "追加できませんでした";
+  if (((await listed.json()).documents || []).length >= INBOX_LIMIT) {
+    return "ゲームを開いて受け取ってから追加してください";
+  }
+  const created = await authedRequest(inbox, {
+    method: "POST",
+    fields: {name: deck.name, cards: deck.cards, sent_at: Math.floor(Date.now() / 1000)},
+  });
+  if (!created || !created.ok) return "追加できませんでした";
+  return "追加しました。ゲームでデッキ一覧を開くと入っています";
+}
+
+function addToGame(deck) {
+  const button = el("button", {class: "action", type: "button", text: "ゲームに追加"});
+  const note = el("span", {class: "action-note"});
+  const user = currentUser();
+  note.textContent = user ? `${user.loginId} のデッキ一覧へ` : "ログインすると追加できます";
+  button.addEventListener("click", async () => {
+    if (!currentUser()) {
+      goToLogin();
+      return;
+    }
+    button.disabled = true;
+    note.textContent = await sendToGame(deck);
+    button.disabled = false;
+  });
+  return el("div", {class: "deck-code"}, [button, note]);
+}
+
 export async function renderDeckPage(root, code) {
   const [response, cards] = await Promise.all([fetch(`/d/${code}.json`), loadCards()]);
   if (!response.ok) {
@@ -46,6 +85,7 @@ export async function renderDeckPage(root, code) {
       copyButton("コードをコピー", code),
       copyButton("リンクをコピー", location.href),
     ]),
+    addToGame(deck),
     el("div", {class: "card-grid"}, entries.map((entry) => tile(entry.card, entry.count))),
   );
   return deck;

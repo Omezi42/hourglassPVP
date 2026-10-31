@@ -53,6 +53,23 @@ func delete_document(path: String) -> bool:
 	return response_code == 200
 
 
+## コレクション直下の文書を [{"id", "fields"}] で返す。読めなければ空の配列。
+func list_documents(collection_path: String) -> Array:
+	var result: Array = await _request(HTTPClient.METHOD_GET, collection_path, {})
+	var parsed: Variant = result[1]
+	if result[0] != 200 or not (parsed is Dictionary):
+		return []
+	var docs := []
+	for doc in parsed.get("documents", []):
+		docs.append(
+			{
+				"id": String(doc.get("name", "")).get_file(),
+				"fields": FirestoreCodec.decode_fields(doc)
+			}
+		)
+	return docs
+
+
 ## 指定パスにドキュメントが存在しない場合のみ作成する(既存なら失敗する)。
 ## ルームコードの偶発的な衝突などを安全に検出するために使う。
 func create_document(path: String, data: Dictionary) -> bool:

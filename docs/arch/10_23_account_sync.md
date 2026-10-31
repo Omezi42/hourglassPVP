@@ -24,3 +24,4 @@ GameDesign.md 14章「アカウントに紐づけるもの」の実装。`Accoun
 - 送る失敗は画面に出さない(裏方の処理のため)
 - テストは `run_tests.gd` が `CardDeckSave.save_path` をテスト用へ差し替え、他の3つを `reset_for_test()` で書き込まない
   状態にしてから走らせる(サインインを通すテストが `user://` の実データを書き換えないため)
+- 攻略サイトから届いたデッキ(`players/{uid}/deck_inbox/`)は、引き終えた直後に `DeckInboxService` が末尾へ足す(10.21節)

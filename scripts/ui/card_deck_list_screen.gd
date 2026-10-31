@@ -72,6 +72,7 @@ func open_manage() -> void:
 	_mode = Mode.MANAGE
 	_reordering = false
 	_refresh()
+	_receive_from_site()
 
 
 ## 対局の開始前に使うデッキを選ぶ(GameDesign.md 9章)。
@@ -79,6 +80,19 @@ func open_pick() -> void:
 	_mode = Mode.PICK
 	_reordering = false
 	_refresh()
+	_receive_from_site()
+
+
+## 攻略サイトの「ゲームに追加」で届いたデッキを足し、1行で知らせる(GameDesign.md 32章)。
+func _receive_from_site() -> void:
+	await DeckInboxService.receive(NetSession.client, AccountSyncService.synced_uid())
+	if not is_inside_tree():
+		return
+	var announcement := DeckInboxService.take_announcement()
+	if announcement.is_empty():
+		return
+	_refresh()
+	_empty_label.text = announcement
 
 
 func _build() -> void:

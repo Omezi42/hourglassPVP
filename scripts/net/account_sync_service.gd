@@ -22,6 +22,11 @@ const RETRY := 3
 static var _synced_uid := ""
 
 
+## 引き終えたアカウントのuid。まだなら空文字。
+static func synced_uid() -> String:
+	return _synced_uid
+
+
 ## ログアウト・ログインでアカウントが変わったときに呼ぶ(`AccountService.reset()`)。
 static func reset() -> void:
 	_synced_uid = ""
@@ -42,6 +47,7 @@ static func sync_after_sign_in(client: FirestoreClient, uid: String, fields: Dic
 	):
 		await _push_missions(client, uid)
 	_synced_uid = uid
+	await DeckInboxService.receive(client, uid)
 	# 引いている間に変えた分(この間は押さずに印だけ残している)を送る。
 	if bool(CardDeckSave.sync_snapshot()["dirty"]):
 		await push_decks()

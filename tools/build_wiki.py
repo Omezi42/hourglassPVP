@@ -1,11 +1,12 @@
 """攻略サイト(GameDesign.md 32章 / Architecture.md 10.21節)を build/wiki/ へ組み立てる。
 
-wiki/ のソースを写し、functions/data/cards.json と card_art の画像(WebP へ変換)を足す。
+wiki/ のソースを写し、functions/data/cards.json と card_art の画像(WebP へ変換)、ログイン用の設定を足す。
 --sample DIR を渡すと、DIR の public_stats の JSON を sample/ へ写す(手元で ?sample を付けて確かめる用)。
 """
 
 import argparse
 import json
+import re
 import shutil
 from pathlib import Path
 
@@ -16,6 +17,8 @@ SOURCE = ROOT / "wiki"
 OUT = ROOT / "build" / "wiki"
 CARDS_JSON = ROOT / "functions" / "data" / "cards.json"
 CARD_ART = ROOT / "functions" / "data" / "card_art"
+# ゲームが pck に入れて配っている公開の Web API キー。サイトのログインが同じ認証を使う。
+FIREBASE_CONFIG = ROOT / "data" / "firebase_config.tres"
 # card_art(720x400)のうち、砂時計・砂術の絵が描かれている左の枠。
 THUMB_BOX = (28, 86, 250, 376)
 WEBP_QUALITY = 82
@@ -40,6 +43,8 @@ def build(sample_dir):
     data_dir = OUT / "data"
     data_dir.mkdir()
     (data_dir / "cards.json").write_text(json.dumps({"cards": cards}, ensure_ascii=False), encoding="utf-8")
+    api_key = re.search(r'api_key = "([^"]+)"', FIREBASE_CONFIG.read_text(encoding="utf-8")).group(1)
+    (data_dir / "config.json").write_text(json.dumps({"apiKey": api_key}), encoding="utf-8")
     if sample_dir:
         shutil.copytree(sample_dir, OUT / "sample")
     print("wiki built: %d cards -> %s" % (len(cards), OUT))

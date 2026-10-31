@@ -155,6 +155,32 @@ func _test_missions_are_merged(assert_true: Callable) -> void:
 	client.queue_free()
 
 
+func _test_site_decks_are_received(assert_true: Callable) -> void:
+	var client = _make_client()
+	DeckInboxService.reset_for_test()
+	_write_local_decks({"owner": UID, "decks": [_deck_entry("いち")], "selected": 0})
+	var inbox := "%s/%s" % [AccountService.path(UID), DeckInboxService.COLLECTION]
+	var text := CardDeckCode.to_text(CardDeckSave.default_deck())
+	client.store[inbox + "/a"] = {"fields": {"name": "届いた", "cards": text}, "update_time": "1"}
+	client.store[inbox + "/b"] = {"fields": {"name": "壊れた", "cards": "nope*1"}, "update_time": "1"}
+	await DeckInboxService.receive(client, UID)
+	var decks := CardDeckSave.list_decks()
+	assert_true.call(
+		decks.size() == 2 and decks[1]["name"] == "届いた",
+		"a deck sent from the site should be appended after the existing decks"
+	)
+	assert_true.call(
+		not client.store.has(inbox + "/a") and not client.store.has(inbox + "/b"),
+		"received and unreadable entries should both leave the inbox"
+	)
+	assert_true.call(
+		DeckInboxService.take_announcement() == "サイトから「届いた」が届きました",
+		"the received deck should be announced once"
+	)
+	assert_true.call(DeckInboxService.take_announcement() == "", "the announcement is taken once")
+	client.queue_free()
+
+
 func _write_local_decks(raw: Dictionary) -> void:
 	var file := FileAccess.open(CardDeckSave.save_path, FileAccess.WRITE)
 	file.store_string(JSON.stringify(raw))

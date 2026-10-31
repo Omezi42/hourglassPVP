@@ -1,6 +1,10 @@
-// 公開用の集計 public_stats/ を Firestore の REST で認証なしに読む(Architecture.md 10.21節)。
+// Firestore の REST。公開用の集計 public_stats/ は認証なしで、自分のアカウントの文書はログインして読み書きする
+// (Architecture.md 10.21節)。
+import {idToken} from "./auth.js";
+
 const PROJECT_ID = "hourglasspvp";
-const BASE = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/public_stats/`;
+const DOCUMENTS = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/`;
+const BASE = `${DOCUMENTS}public_stats/`;
 // URL に ?sample を付けると、build_wiki.py --sample で同梱した手元の JSON を読む。
 const USE_SAMPLE = new URLSearchParams(location.search).has("sample");
 
@@ -33,4 +37,25 @@ async function fetchDoc(docId) {
   if (!response.ok) throw new Error(`public_stats/${docId}: ${response.status}`);
   const body = await response.json();
   return USE_SAMPLE ? body : decodeFields(body.fields || {});
+}
+
+function encode(value) {
+  if (typeof value === "number" && Number.isInteger(value)) return {integerValue: String(value)};
+  if (typeof value === "number") return {doubleValue: value};
+  if (typeof value === "boolean") return {booleanValue: value};
+  return {stringValue: String(value)};
+}
+
+/** ログインしているアカウントとして読み書きする。ログインが切れていれば null を返す。 */
+export async function authedRequest(path, {method = "GET", fields = null} = {}) {
+  const token = await idToken();
+  if (!token) return null;
+  const body = fields ?
+    JSON.stringify({fields: Object.fromEntries(Object.entries(fields).map(([key, value]) => [key, encode(value)]))}) :
+    undefined;
+  return fetch(DOCUMENTS + path, {
+    method,
+    headers: {"Authorization": `Bearer ${token}`, "Content-Type": "application/json"},
+    body,
+  });
 }

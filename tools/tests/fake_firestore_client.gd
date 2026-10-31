@@ -67,6 +67,17 @@ func set_document(path: String, data: Dictionary) -> bool:
 	return result["ok"]
 
 
+func list_documents(collection_path: String) -> Array:
+	await Engine.get_main_loop().process_frame
+	var docs := []
+	for path in store.keys():
+		if String(path).get_base_dir() == collection_path:
+			docs.append(
+				{"id": String(path).get_file(), "fields": store[path]["fields"].duplicate(true)}
+			)
+	return docs
+
+
 func delete_document(path: String) -> bool:
 	await Engine.get_main_loop().process_frame
 	store.erase(path)

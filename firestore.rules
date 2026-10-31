@@ -65,6 +65,11 @@ service cloud.firestore {
       allow write: if signedIn() && request.auth.uid == uid;
     }
 
+    // 攻略サイトの「ゲームに追加」で届くデッキ(GameDesign.md 32章)。置くのも受け取るのも本人だけ。
+    match /players/{uid}/deck_inbox/{entry} {
+      allow read, create, delete: if signedIn() && request.auth.uid == uid;
+    }
+
     // 分析用の対局記録(GameDesign.md 22章)。ドキュメントIDは match_id。
     // 対局した2人が同じIDへ書きにいき、先着1件だけが通る(exists:false)。
     // 消さないため delete は許さない。読み取りをサインイン済みの全員へ許すのは、
