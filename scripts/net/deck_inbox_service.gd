@@ -1,6 +1,6 @@
 class_name DeckInboxService
 extends RefCounted
-## 攻略サイトの「ゲームに追加」で届いたデッキを受け取る(GameDesign.md 32章 / Architecture.md 10.21節)。
+## 攻略サイトとDiscordのデッキ紹介の「ゲームに追加」で届いたデッキを受け取る(GameDesign.md 32章 / Architecture.md 10.21節)。
 ## サイトはデッキ一覧(`players/{uid}.decks`)を書き換えず、`players/{uid}/deck_inbox/` へ1件ずつ置く。
 ## 手元の未送信の変更が優先されて、サイトから足したデッキが上書きで消えるため。
 
@@ -34,7 +34,7 @@ static func receive(client: FirestoreClient, uid: String) -> void:
 static func take_announcement() -> String:
 	if _unannounced.is_empty():
 		return ""
-	var text := "サイトから「%s」が届きました" % "」「".join(_unannounced)
+	var text := "「%s」が届きました" % "」「".join(_unannounced)
 	_unannounced.clear()
 	return text
 

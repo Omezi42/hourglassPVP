@@ -371,6 +371,7 @@ module.exports = {
   cardMessageForm,
   handleLinkCommand,
   handleLinkModalSubmit,
+  messageForm,
   LINK_MODAL_ID,
   handleProfileCommand,
   deferEphemeralResponse,

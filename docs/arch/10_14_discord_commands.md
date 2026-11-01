@@ -9,6 +9,8 @@
 | `tools/discord/build_effect_video.sh` | 上記で録った連番を `ffmpeg`(H.264・30fps・CRF 23)でMP4へエンコードし `functions/data/effect_videos/{id}.mp4` へ書き出す(1本およそ100〜200KB)。引数にidを並べればそのカードだけ、無ければ全カード。**Discordの紹介投稿に添える動画も同じファイルを使い、出力先を1か所にする** |
 | `functions/discord_commands.js`(Node.js) | `/card` `/deck` `/link` `/profile` と `/link` のフォーム送信のハンドラ。`discordInteractions` から呼ばれる |
 | `functions/.env` | `AUTH_WEB_API_KEY`(`data/firebase_config.tres` の `api_key` と同じ値)。`/link` がID/パスワードを確かめるのに使う。クライアントに埋め込んでいる公開の値なのでコミットしてよい。`FIREBASE_` で始まる名前は予約されていてデプロイが止まる |
+| `functions/discord_deck_intro.js`(Node.js) | デッキ紹介(26章)のボタン・選択肢・コメントのフォームと、「ゲームに追加」のハンドラ。`discordInteractions` から `custom_id` で呼ばれる |
+| `tools/discord/setup_deck_intro.py` | #デッキを紹介する を #デッキ紹介 と同じカテゴリーに作り、入口のボタンの投稿を置く(既にあれば書き換える)。チャンネルと投稿のidは `~/.hourglass_discord.json` へ残す |
 | `functions/deck_sheet_canvas.js`(Node.js) | `/deck` 用の簡易デッキ表画像を `@napi-rs/canvas` で描画する。ゲーム内の `CardDeckSheet` とは別実装であり、見た目の一致は求めない |
 | `functions/fonts/ZenKakuGothicNew-Bold.ttf` | `assets/fonts/` からコピーした同梱フォント。`firebase.json` の `functions.source` が `functions` ディレクトリだけを見るため、`functions/` の外にあるファイルはデプロイされない |
 | `functions/.gdignore` | `functions/data/card_art/*.png` をGodotのインポート対象から外す。**置き忘れると `.png.import` が大量に生成される**(実際に70個生成された)。4.1.6節の「実行時に読まないディレクトリには`.gdignore`を置く」の実例 |
@@ -48,3 +50,17 @@
   ローカル保存のため出せない**
 - **応答はすべて `flags: 64`(ephemeral)**。カードスポットライト(`announceCardSpotlight`)だけは通常のメッセージ
 - `discordInteractions` は `APPLICATION_COMMAND` を `data.name` で4コマンドへ、`MODAL_SUBMIT` を `data.custom_id` で分岐する。署名検証(`verifyKey()`)は全コマンド共通
+
+**デッキ紹介(GameDesign.md 26章)**
+
+- `custom_id` で分岐する: `deck_intro:start`(入口のボタン)/ `deck_intro:link`(連携のフォームを開く)/
+  `deck_intro:pick`(デッキの選択肢。値はデッキ一覧の添字)/ `deck_intro:comment:{添字}`(コメントのフォーム)/
+  `deck_add:{デッキコード}`(紹介の投稿の「ゲームに追加」)。**状態はボタンに持たせず、毎回Firestoreから読む**
+- デッキは `players/{uid}.decks`(`{"name", "ids"}`)から読み、`CardDeckCode.to_text()` と同じ形にして
+  `deckcodes/{コード}` へ `{cards, name, created_at}` で預ける(`DeckCodeService.publish()` と同じ。使われていない番号を `create()` で取る)
+- フォームの送信は画像の生成で3秒を越えうるため、`/card` と同じくdeferをコールバックへ先に送ってから処理する
+- #デッキ紹介 への投稿は**Botトークンで `POST /channels/{id}/messages`**(ボタンつきの投稿はアプリが持つwebhookか
+  Botからしか送れない)。トークンはシークレット `DISCORD_BOT_TOKEN`、チャンネルidは `functions/.env` の `DECK_INTRO_CHANNEL_ID`
+- 投稿は `allowed_mentions: {parse: []}`(コメントに `@everyone` が書かれても鳴らさない。紹介者のメンションも鳴らさない)
+- 「ゲームに追加」は `players/{uid}/deck_inbox/` へ攻略サイトと同じ `{name, cards, sent_at}` を置く。件数の上限(10件)も同じ
+- #デッキを紹介する は `apply_permissions.py` の読ませるだけのチャンネルに入れる

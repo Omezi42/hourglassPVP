@@ -36,6 +36,7 @@ const {
 const {handleLabAdmin} = require("./lab_admin");
 const {publishWikiStats} = require("./wiki_stats");
 const {handleDeckShare} = require("./deck_share");
+const {handleDeckIntroComponent, handleCommentSubmit, isDeckIntroModal} = require("./discord_deck_intro");
 
 // Botトークン・公開鍵と同じ扱いで、リポジトリへは一切コミットしない。
 // `firebase functions:secrets:set DISCORD_WEBHOOK_URL` / `DISCORD_PUBLIC_KEY` で設定する。
@@ -49,6 +50,10 @@ const LAB_ADMIN_SECRET = defineSecret("LAB_ADMIN_SECRET");
 // ゲームのクライアントへ埋め込んでいる公開のWeb APIキー(`functions/.env`)。
 // `/link` がID/パスワードをゲームのログインと同じ認証で確かめるのに使う。
 const AUTH_WEB_API_KEY = defineString("AUTH_WEB_API_KEY");
+// デッキ紹介(GameDesign.md 26章)を #デッキ紹介 へ流すのに使う。ボタンつきの投稿はBotからしか送れない。
+// `firebase functions:secrets:set DISCORD_BOT_TOKEN` で設定する。チャンネルidは公開してよい値なので `functions/.env`。
+const DISCORD_BOT_TOKEN = defineSecret("DISCORD_BOT_TOKEN");
+const DECK_INTRO_CHANNEL_ID = defineString("DECK_INTRO_CHANNEL_ID");
 
 const ANNOUNCE_MESSAGE =
   "☀️ 本日は日曜イベント開催中!\n" +
@@ -139,7 +144,7 @@ exports.publishWikiStats = onSchedule(
  * (Gateway接続)は持たず、DiscordのInteractions Endpoint URL(HTTPS方式)で受ける。
  */
 exports.discordInteractions = onRequest(
-  {secrets: [DISCORD_PUBLIC_KEY]},
+  {secrets: [DISCORD_PUBLIC_KEY, DISCORD_BOT_TOKEN]},
   async (req, res) => {
     const signature = req.get("X-Signature-Ed25519");
     const timestamp = req.get("X-Signature-Timestamp");
@@ -191,6 +196,24 @@ exports.discordInteractions = onRequest(
         default:
           break;
       }
+    }
+
+    if (body.type === InteractionType.MESSAGE_COMPONENT) {
+      const response = await handleDeckIntroComponent(body, admin.firestore());
+      if (response) {
+        res.json(response);
+        return;
+      }
+    }
+
+    if (body.type === InteractionType.MODAL_SUBMIT && isDeckIntroModal(body)) {
+      // deferはコールバックへ直接送る(Architecture.md 10.14節)。HTTPの応答に本文は載せない。
+      await handleCommentSubmit(body, admin.firestore(), {
+        botToken: DISCORD_BOT_TOKEN.value(),
+        channelId: DECK_INTRO_CHANNEL_ID.value(),
+      });
+      res.status(204).end();
+      return;
     }
 
     if (body.type === InteractionType.MODAL_SUBMIT && body.data.custom_id === LINK_MODAL_ID) {
