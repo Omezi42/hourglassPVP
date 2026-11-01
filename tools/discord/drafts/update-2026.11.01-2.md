@@ -1,13 +1,9 @@
-[gd_resource type="Resource" script_class="AnnouncementData" load_steps=2 format=3]
-
-[ext_resource type="Script" path="res://scripts/data/announcement_data.gd" id="script_announcement"]
-
-[resource]
-script = ExtResource("script_announcement")
-version = "2026.11.01"
-body = "**あたらしいもの**
+**あたらしいもの**
 - デッキの「コードで渡す」で、デッキコードといっしょにリンクもコピーされるようになったよ。XやDiscordにリンクを貼るだけで、使っているカードの絵が並んだ画像が表示されるんだ
 - リンクを開くと、デッキのカード30枚を攻略サイトで見られるよ。ゲームのIDとパスワードでサイトにログインして「ゲームに追加」を押すと、そのデッキがゲームのデッキ一覧に追加されるんだ
 - デッキコードの入力欄には、リンクをそのまま貼っても大丈夫だよ
 
--# 遊ぶ → https://unityroom.com/games/sunadokei_arena"
+**なおしたもの**
+- ルームのコードをコピーするボタンを押しても、コピーされないことがあったのをなおしたよ
+
+-# 遊ぶ → https://unityroom.com/games/sunadokei_arena
