@@ -34,6 +34,7 @@
 | クラス | 責務 |
 |---|---|
 | `CardDeckSheet`(`scripts/ui/card_deck_sheet.gd`) | 表そのものの組み立てと描画。大きさは `SHEET_SIZE` の固定値 |
+| `TextCopy`(`scripts/logic/text_copy.gd`, static) | 文字列をクリップボードへ置く。Web では `writeText()` を試し、断られたら `execCommand("copy")` で写し直して成否を返す |
 | `ImageShare`(`scripts/logic/image_share.gd`, static) | PNGをクリップボードへ置く / ファイルへ保存する。Web と それ以外の分岐を1箇所へ集める |
 
 - **表は `SubViewport` の中で組み、その `ViewportTexture` をそのままパネルへ映す**。
@@ -53,6 +54,8 @@
   `ImageShare` は Web では `JavaScriptBridge` から `navigator.clipboard.write()` を呼び、
   **断られたらDOMオーバーレイで画像を表示して右クリックコピーできるようにする**(併せて保存リンクも用意)。
   それ以外の環境では `user://` へ保存して保存先を1行で示す。判定は `OS.has_feature("web")` で行う
+- **文字列のコピーは `DisplayServer.clipboard_set()` を使わず `TextCopy` を通す。**Web での中身は
+  `writeText()` だけで、iframe(unityroom)の中では拒否され、失敗も返らない
 - **`JavaScriptBridge.create_callback()` の戻り値は変数へ持ち続ける。**その場で捨てると
   JS 側から呼び戻される前に解放され、結果が返らない
 - **`SubViewport` 内のフォント解決と文字化け対策。** `SubViewport` は親 Control の `theme` を

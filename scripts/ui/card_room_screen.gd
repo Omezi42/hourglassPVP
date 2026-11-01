@@ -411,7 +411,7 @@ func _set_time_limit(enabled: bool) -> void:
 ## (GameDesign.md 11章)。コード自体が大きく出ており、手入力で足りるため。
 func _on_copy_pressed() -> void:
 	if _code != "":
-		DisplayServer.clipboard_set(_code)
+		TextCopy.copy(_code)
 
 
 ## 入口で通信を待っている間は、入口の操作をまとめて止める。

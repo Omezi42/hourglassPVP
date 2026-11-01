@@ -268,6 +268,7 @@ const PATHS: Array[String] = [
 	"res://scripts/ui/number_pad.gd",
 	"res://scripts/logic/image_share.gd",
 	"res://scripts/net/deck_code_service.gd",
+	"res://scripts/logic/text_copy.gd",
 	"res://scripts/ui/card_deck_share_panel.gd",
 	"res://scripts/ui/workshop_stock_item.gd",
 	"res://scripts/ui/card_flight_fx.gd",

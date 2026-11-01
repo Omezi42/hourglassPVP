@@ -271,8 +271,15 @@ func _on_code_pressed() -> void:
 
 
 func _copy_code() -> void:
-	DisplayServer.clipboard_set(DeckCodeService.share_text(_code))
-	_code_message.text = "コードとリンクをコピーしました"
+	TextCopy.copy(DeckCodeService.share_text(_code), _on_code_copied)
+
+
+## 発行を待つ間に押した操作の効き目が切れると、ブラウザはコピーを断る。もう一度押せば通る。
+func _on_code_copied(ok: bool) -> void:
+	if ok:
+		_code_message.text = "コードとリンクをコピーしました"
+	else:
+		_code_message.text = "コピーできませんでした。もう一度押してください"
 
 
 func _on_load_pressed() -> void:

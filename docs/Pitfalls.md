@@ -128,6 +128,9 @@
   オンラインの心拍やポーリングは「止まっている間に相手側から状態を消される」前提で書き、
   戻ってきたときに自分の状態が消えていたら書き直す。端末どうしの時刻比較も時計のずれで壊れるため、
   古さの判定はFirestoreの `updateTime` / `readTime` のようなサーバー時刻同士で行う
+- **Web版で `DisplayServer.clipboard_set()` を使わない。**中身は `navigator.clipboard.writeText()` だけで、
+  iframe(unityroom)の中ではブラウザに拒否され、失敗も返らない(「コピーしました」と出て何も入っていない)。
+  `TextCopy.copy()` を通す。デスクトップやローカルのブラウザでは通るため、手元の確認では気づけない
 - **`get_document_meta()` は通信失敗でも「無いドキュメント」と同じ空の `fields` を返す。**それを土台に
   加算・追加して書くと残高や所有が空から上書きされ、`update_time` も空なので前提条件が付かず競合でも止まらない。
   read-modify-write では `AccountService.read_succeeded()`(code が200か404)を確かめてから書く
