@@ -342,6 +342,16 @@ func _on_match_back() -> void:
 		card_ranked_match_screen.reset_after_match()
 
 
+## 対戦結果画面からランクマッチへ戻る。結果パネルを閉じるだけでなく、
+## 対局画面の状態・通信を片付けてから待機画面を開く。
+func _on_matchmaking_requested() -> void:
+	_match_screen().abandon_match()
+	card_ranked_match_screen.reset_after_match()
+	_match_return_screen = home_screen
+	_show_only(card_ranked_match_screen)
+	card_ranked_match_screen.begin_match()
+
+
 func _on_account_requested(from_title: bool) -> void:
 	_account_return_to_title = from_title
 	_show_only(account_screen)
@@ -675,6 +685,7 @@ func _match_screen() -> Control:
 	add_child(card_match_screen)
 	move_child(card_match_screen, stats_screen.get_index() + 1)
 	card_match_screen.connect("back_pressed", _on_card_match_back)
+	card_match_screen.connect("matchmaking_pressed", _on_matchmaking_requested)
 	_screens.append(card_match_screen)
 	if ScreenOrientation.is_portrait():
 		card_match_screen.call("apply_orientation", true)

@@ -9,6 +9,7 @@ extends Control
 ## 結果を読む・ボタンを押すという操作そのものは一切邪魔しない。
 
 signal rematch_pressed
+signal matchmaking_pressed
 signal home_pressed
 signal log_pressed
 
@@ -46,6 +47,7 @@ var _panel_scale := 1.0
 
 var _won := false
 var _neutral := false
+var _matchmaking_mode := false
 var _reveal_elapsed := 0.0
 var _revealing := false
 var _flash := 0.0
@@ -98,12 +100,17 @@ func show_for(
 	moves: int,
 	reward: String = "",
 	can_rematch: bool = false,
-	is_tutorial: bool = false
+	is_tutorial: bool = false,
+	can_matchmaking: bool = false
 ) -> void:
-	_rematch.visible = can_rematch
-	_rematch.text = "CPUともう1局" if is_tutorial else "もう一度"
+	_matchmaking_mode = can_matchmaking
+	_rematch.visible = can_rematch or can_matchmaking
+	_rematch.text = (
+		"再度マッチング" if can_matchmaking else ("CPUともう1局" if is_tutorial else "もう一度")
+	)
 	CodedButton.apply_styles(
-		_rematch, CodedButton.PRIMARY_ACTION_GROUP if is_tutorial else CodedButton.WIDE_GROUP
+		_rematch,
+		CodedButton.PRIMARY_ACTION_GROUP if is_tutorial or can_matchmaking else CodedButton.WIDE_GROUP
 	)
 	var winner: int = state.winner
 	_won = my_side >= 0 and winner == my_side
@@ -239,8 +246,10 @@ func _build() -> void:
 	row.size = Vector2(PANEL_SIZE.x, 64.0)
 	_panel.add_child(row)
 	_button_row = row
-	# 「もう一度」は連戦の導線(GameDesign.md 9章)。当面はCPU戦にだけ出す。
-	_rematch = _make_button("もう一度", rematch_pressed)
+	# CPU戦では連戦、ランクマッチでは再度マッチングへ進む導線。
+	_rematch = CodedButton.make("もう一度", BUTTON_SIZE)
+	_rematch.pressed.connect(_on_rematch_pressed)
+	_buttons.append(_rematch)
 	row.add_child(_rematch)
 	row.add_child(_make_button("ログ", log_pressed))
 	row.add_child(_make_button("ホームへ", home_pressed))
@@ -252,6 +261,13 @@ func _draw_panel() -> void:
 	ResultPanelFrame.draw(ci, _panel_size, _won or _neutral)
 	if _flash > 0.0 and _won:
 		_draw_victory_flash(ci)
+
+
+func _on_rematch_pressed() -> void:
+	if _matchmaking_mode:
+		matchmaking_pressed.emit()
+	else:
+		rematch_pressed.emit()
 
 
 ## 勝利の瞬間だけ、タイトルの背後から光条を放射する(反転演出と同じ語彙、GameDesign.md 9章)。

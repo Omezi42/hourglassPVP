@@ -147,6 +147,7 @@ static func overlays(screen: CardMatchScreen) -> void:
 	screen._result = CardMatchResult.new()
 	screen._result.home_pressed.connect(func() -> void: screen.back_pressed.emit())
 	screen._result.rematch_pressed.connect(screen._cpu_ctl.rematch)
+	screen._result.matchmaking_pressed.connect(func() -> void: screen.matchmaking_pressed.emit())
 	screen._result.log_pressed.connect(func() -> void: screen._log.set_open(true))
 	screen.add_child(screen._result)
 	screen._log = CardMatchLog.new()

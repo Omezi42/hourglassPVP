@@ -118,7 +118,14 @@ func _show_close() -> void:
 			_screen._solo.on_match_ended()
 		_:
 			var can_rematch := _screen._match_kind == CurrencyRules.MatchKind.CPU
+			var can_matchmaking := _screen._match_kind == CurrencyRules.MatchKind.RANKED
 			var is_tutorial: bool = _screen._tutorial.ran_this_match
 			_screen._result.show_for(
-				_state, _screen.my_side, _state.turn_count, _reward, can_rematch, is_tutorial
+				_state,
+				_screen.my_side,
+				_state.turn_count,
+				_reward,
+				can_rematch,
+				is_tutorial,
+				can_matchmaking
 			)

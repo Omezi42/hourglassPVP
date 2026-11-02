@@ -7,6 +7,7 @@ extends Control
 ## 編集する値を持たないため、.tscn を作らずこの1クラスで組み立てている。
 
 signal back_pressed
+signal matchmaking_pressed
 
 const CPU_THINK_SECONDS := 0.5
 
