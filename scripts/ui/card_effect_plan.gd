@@ -24,7 +24,7 @@ const MATCH_SLOT := 4
 ## 墓地を使う効果のための砂時計。
 const GRAVE_IDS := ["sand", "grain"]
 const HAND_FILLER := ["sand", "grain"]
-const FULL_MANA := 10
+const FULL_MANA := MatchState.MAX_MANA
 ## HPを反転する効果でも決着しない値にしておく(MatchState.INITIAL_HP = 24)。
 const OWN_HP := 14
 const FOE_HP := 18
