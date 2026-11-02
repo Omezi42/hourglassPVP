@@ -80,6 +80,7 @@ func _new_totals() -> Dictionary:
 		"face_attacks": 0,
 		"comeback_chances": 0,
 		"comebacks": 0,
+		"comeback_breakdown": {},
 	}
 
 
@@ -90,7 +91,9 @@ func _play_one(deck_a: Array, deck_b: Array) -> Dictionary:
 	var state := MatchState.new()
 	var cpu_a := CardCpuStrategy.new()
 	var cpu_b := CardCpuStrategy.new()
-	var stats := {"unit_attacks": 0, "face_attacks": 0, "behind_at_midgame": -1}
+	var stats := {
+		"unit_attacks": 0, "face_attacks": 0, "behind_at_midgame": -1, "gap": 0.0, "behind_next": -1
+	}
 	state.attack_performed.connect(
 		func(_side: int, _slot: int, target_slot: int) -> void:
 			if target_slot < 0:
@@ -110,6 +113,11 @@ func _play_one(deck_a: Array, deck_b: Array) -> Dictionary:
 	while not state.is_match_over():
 		if state.turn_count == MIDGAME_TURN and stats["behind_at_midgame"] < 0:
 			stats["behind_at_midgame"] = _behind_side(state)
+			stats["gap"] = absf(
+				_side_score(state, MatchState.Side.A) - _side_score(state, MatchState.Side.B)
+			)
+		if state.turn_count == MIDGAME_TURN + 1 and stats["behind_next"] < 0:
+			stats["behind_next"] = _behind_side(state)
 		var side := state.current_turn
 		var cpu: CardCpuStrategy = cpu_a if side == MatchState.Side.A else cpu_b
 		cpu.take_turn(state, side)
@@ -121,6 +129,8 @@ func _play_one(deck_a: Array, deck_b: Array) -> Dictionary:
 		"unit_attacks": stats["unit_attacks"],
 		"face_attacks": stats["face_attacks"],
 		"behind": stats["behind_at_midgame"],
+		"gap": stats["gap"],
+		"behind_next": stats["behind_next"],
 	}
 
 
@@ -164,6 +174,24 @@ func _accumulate(totals: Dictionary, result: Dictionary) -> void:
 		totals["comeback_chances"] += 1
 		if behind == result["winner"]:
 			totals["comebacks"] += 1
+		_count_breakdown(totals, result)
+
+
+## 逆転率の内訳(診断用)。劣勢側が先手か後手か / 差の大きさ / 1手後も劣勢のままか で分ける。
+func _count_breakdown(totals: Dictionary, result: Dictionary) -> void:
+	var behind: int = result["behind"]
+	var won: bool = behind == result["winner"]
+	var gap: float = result["gap"]
+	var keys := [
+		"劣勢=先手" if behind == MatchState.Side.A else "劣勢=後手",
+		"差<5" if gap < 5.0 else ("差5-10" if gap < 10.0 else "差10+"),
+		"1手後も劣勢" if result["behind_next"] == behind else "1手後に入れ替わる/互角",
+	]
+	for key in keys:
+		var entry: Array = totals["comeback_breakdown"].get(key, [0, 0])
+		entry[0] += 1
+		entry[1] += 1 if won else 0
+		totals["comeback_breakdown"][key] = entry
 
 
 func _accumulate_cards(
@@ -216,6 +244,9 @@ func _report(totals: Dictionary, per_card: Dictionary, games: int) -> void:
 	print("  うち疲労で決着    : %s" % _pct(totals["fatigue_finish"], decisive))
 	print("ユニットへの攻撃    : %s" % _pct(totals["unit_attacks"], attacks))
 	print("逆転率              : %s" % _pct(totals["comebacks"], totals["comeback_chances"]))
+	for key in totals["comeback_breakdown"]:
+		var entry: Array = totals["comeback_breakdown"][key]
+		print("  %s : %s" % [key, _pct(entry[1], entry[0])])
 	print("引き分け            : %s" % _pct(totals["draws"], games))
 	print("")
 	print("--- カード別勝率 ---")
