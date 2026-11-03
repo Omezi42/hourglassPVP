@@ -8,6 +8,7 @@ extends SceneTree
 ##       games=100 seed=42
 ##
 ## `trial=id,id,...`(15種・各2枚)を与えると、表を変えずにその候補を8つとランダム混成へぶつける。
+## `opponent=id,id,...`(15種・各2枚)を併せて与えると、候補をその1デッキだけへぶつける(メタのカードの効き目を測る)。
 ## `levels=expert,normal` を与えると、デッキの強さではなく思考レベルどうしを比べる
 ## (左の思考レベルがデッキを持つ全組・鏡写しを含め、その勝率を出す。先後は交互)。
 
@@ -21,6 +22,8 @@ const LEVELS := {
 var _rng := RandomNumberGenerator.new()
 var _level_left: CardCpuStrategy.Difficulty = CardCpuStrategy.Difficulty.NORMAL
 var _level_right: CardCpuStrategy.Difficulty = CardCpuStrategy.Difficulty.NORMAL
+## `opponent=` で与えた、候補をぶつける相手のデッキ(空なら8つのCPUデッキとランダム混成)。
+var _opponent_ids: PackedStringArray = []
 
 
 func _init() -> void:
@@ -35,6 +38,8 @@ func _run() -> void:
 		_run_levels(str(args["levels"]).split(","), games)
 		quit()
 		return
+	if args.has("opponent"):
+		_opponent_ids = str(args["opponent"]).split(",")
 	if args.has("trial"):
 		_run_trial(str(args["trial"]).split(","), games)
 		quit()
@@ -111,6 +116,13 @@ func _run_trial(card_ids: PackedStringArray, games: int) -> void:
 	var trial := CardPresetDecks.build(counts)
 	if trial.size() != MatchState.DECK_SIZE:
 		printerr("trial deck has %d cards" % trial.size())
+		return
+	if not _opponent_ids.is_empty():
+		var opponent_counts := {}
+		for id in _opponent_ids:
+			opponent_counts[id] = COPY_LIMIT
+		var opponent := CardPresetDecks.build(opponent_counts)
+		print("候補 vs 指定のデッキ %5.1f%%" % _pct(_rate(trial, opponent, games)))
 		return
 	var total_wins := 0
 	var total_decisive := 0

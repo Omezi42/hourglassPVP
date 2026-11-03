@@ -25,4 +25,4 @@ effects = Array[Resource]([SubResource("Effect_gale_0")])
 rules_text = "設置:相手の砂時計が3体以上なら、相手の砂時計すべてに1ダメージ"
 cannot_attack = false
 is_token = false
-art_id = "sweep"
+art_id = "gate"

@@ -17,4 +17,4 @@ rules_text = "相手の砂時計1体につき、このカードのコストが1�
 cannot_attack = false
 is_token = false
 cost_down_per_enemy_unit = 1
-art_id = "tower"
+art_id = "obelisk"

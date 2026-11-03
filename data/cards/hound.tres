@@ -24,4 +24,4 @@ effects = Array[Resource]([SubResource("Effect_hound_0")])
 rules_text = "相手が手番の始め以外でカードを引くたび、体力がいちばん少ない相手の砂時計1体に1ダメージ"
 cannot_attack = false
 is_token = false
-art_id = "watcher"
+art_id = "rattle"
