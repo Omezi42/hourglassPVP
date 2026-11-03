@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_gale_0"]
+script = ExtResource("script_effect")
+trigger = 0
+target = 2
+effect_type = 1
+value = 1
+condition_scope = 8
+condition_total = 3
+
+[resource]
+script = ExtResource("script_card")
+id = "gale"
+display_name = "ゲイル"
+cost = 3
+total_sand = 4
+pool_index = 114
+set_id = "sweep_sand"
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_gale_0")])
+rules_text = "設置:相手の砂時計が3体以上なら、相手の砂時計すべてに1ダメージ"
+cannot_attack = false
+is_token = false
+art_id = "sweep"

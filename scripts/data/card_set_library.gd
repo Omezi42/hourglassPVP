@@ -123,6 +123,15 @@ const SETS: Dictionary = {
 		"price": 1000,
 		"planned_count": 10,
 	},
+	## 6番目のカードセット(GameDesign.md 8章)。軽い駒を並べて引き続けるデッキを咎める5枚。段階公開はしない。
+	"sweep_sand":
+	{
+		"id": "sweep_sand",
+		"display_name": "薙砂の刻",
+		"description": "押し寄せる砂の群れを薙ぎ払う5枚",
+		"card_ids": ["gale", "grit_rain", "bypass", "hound", "colossus"],
+		"price": 600,
+	},
 }
 
 const ORDERED_IDS: Array[String] = [
@@ -135,6 +144,7 @@ const ORDERED_IDS: Array[String] = [
 	"grave_sand",
 	"echo_time",
 	"chase_sand",
+	"sweep_sand",
 ]
 
 

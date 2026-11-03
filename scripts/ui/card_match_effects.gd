@@ -87,7 +87,7 @@ func _on_unit_played(side: int, slot: int) -> void:
 	_poisoned.erase(_drop_key(side, slot))
 	var view := _screen.view_at(side, slot)
 	var data: CardData = _screen.state.board[side][slot].data
-	_play_spend(side, data.cost)
+	_play_spend(side, _screen.state.play_cost(side, data))
 	var key := _drop_key(side, slot)
 	var entrance := SignatureLibrary.entrance(data)
 	if entrance != null:
@@ -124,7 +124,7 @@ func _play_entrance(view: CardView, data: CardData, move: SignatureMove) -> void
 
 ## 砂術を撃った(GameDesign.md 6章)。盤面へは出ないため、支払いの吸い込みだけを見せる。
 func _on_spell_cast(side: int, card: CardData) -> void:
-	_play_spend(side, card.cost)
+	_play_spend(side, _screen.state.play_cost(side, card))
 
 
 ## 支払われたぶんのマナのピップを、押した札の位置(控えていなければマナの数字付近)へ

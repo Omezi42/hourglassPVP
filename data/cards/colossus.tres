@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[resource]
+script = ExtResource("script_card")
+id = "colossus"
+display_name = "コロッサス"
+cost = 7
+total_sand = 9
+pool_index = 118
+set_id = "sweep_sand"
+keywords = Array[int]([])
+effects = Array[Resource]([])
+rules_text = "相手の砂時計1体につき、このカードのコストが1下がる"
+cannot_attack = false
+is_token = false
+cost_down_per_enemy_unit = 1
+art_id = "tower"

@@ -52,6 +52,9 @@ enum Trigger {
 	## 相手の砂時計が反転したとき(反響の刻)。ON_ALLY_DEATH と同じく語にせず「常在」と出す。
 	## 起こし方(通常の反転・反転権・効果)を問わない。
 	ON_ENEMY_FLIP,
+	## 相手がカードを引いたとき(薙砂の刻)。引けた1枚ごとに発動し、手番の始めの1枚とマリガンは数えない。
+	## ON_ALLY_DEATH と同じく語にせず「常在」と出す。
+	ON_ENEMY_DRAW,
 }
 
 ## エフェクトの対象。
@@ -136,6 +139,8 @@ enum EffectType {
 	HEAL_PLAYER_PER_ENEMY_UNIT,
 	## card_id のカードを、target が指すプレイヤーの手札へ1枚加える(プレゼント)。山札は減らない。
 	ADD_CARD_TO_HAND,
+	## このターン、target が指すプレイヤーの砂時計は守護を無視して攻撃できる(薙砂の刻)。value は使わない。
+	IGNORE_GUARD,
 }
 
 ## コンボ系カードの発動条件が確認する範囲(GameDesign.md 6章)。
@@ -162,6 +167,8 @@ enum ConditionScope {
 	TOTAL_AT_LEAST,
 	## 相手の砂時計の数が、この駒を除いた自分の砂時計の数より多いか。condition_total は使わない(追砂の刻)。
 	ENEMY_OUTNUMBERS,
+	## 相手の砂時計の数が condition_total 以上か(薙砂の刻)。発動の可否を決める条件。
+	ENEMY_COUNT_AT_LEAST,
 }
 
 ## 効果が対象へ届く演出の「型」(GameDesign.md 9章)。`MatchState.effect_struck` /
@@ -291,6 +298,6 @@ static func trigger_name(trigger: int) -> String:
 			return "落砂"
 		Trigger.ON_DAMAGED:
 			return "被弾"
-		Trigger.ON_ALLY_DEATH, Trigger.ON_ENEMY_FLIP:
+		Trigger.ON_ALLY_DEATH, Trigger.ON_ENEMY_FLIP, Trigger.ON_ENEMY_DRAW:
 			return "常在"
 	return ""

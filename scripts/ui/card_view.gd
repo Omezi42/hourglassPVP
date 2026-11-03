@@ -159,6 +159,8 @@ var ready_mark := false
 var badge := ""
 ## 手札でホバーしたときに拡大するか。対局画面の手札だけが true。
 var hover_zoom := false
+## 対局中の手札で実際に払うコスト(GameDesign.md 9章)。-1 なら札のコストのまま出す。
+var play_cost := -1
 ## ドラッグで掴めるか(GameDesign.md 9章)。手札は空き枠へ出す、場の駒は相手を攻撃する。
 var draggable := false
 ## ドラッグを受ける枠なら、放されたときに呼ぶ処理を持つ。空なら受けない。

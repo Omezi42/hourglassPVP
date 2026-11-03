@@ -85,7 +85,7 @@ func on_view_hovered(view: CardView) -> void:
 	# 手札の札にカーソルを乗せている間、支払うぶんのマナのピップを脈打たせる
 	# (GameDesign.md 9章「対局画面の手触り」)。
 	if view.mode == CardView.Mode.HAND and view.card != null:
-		s._own_bar.highlight_cost(view.card.cost)
+		s._own_bar.highlight_cost(s.state.play_cost(s.my_side, view.card))
 	var foe_slot := s._foe_slots.find(view)
 	if foe_slot >= 0:
 		set_hover_target(foe_slot)

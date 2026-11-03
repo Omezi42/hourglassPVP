@@ -64,7 +64,7 @@ func _cut_off_chain(unit: CardInstance, trigger: int) -> void:
 
 
 ## コンボ系カードの発動条件(GameDesign.md 6章)。TARGET は対象そのものの絞り込みで
-## `_single_unit()` が扱うため、ここでは SELF / ANY_ALLY / ENEMY_OUTNUMBERS だけを見る。
+## `_single_unit()` が扱うため、ここでは SELF / ANY_ALLY / ENEMY_OUTNUMBERS / ENEMY_COUNT_AT_LEAST だけを見る。
 func _condition_met(side: int, unit: CardInstance, effect: CardEffectData) -> bool:
 	match effect.condition_scope:
 		CardEnums.ConditionScope.SELF:
@@ -77,6 +77,8 @@ func _condition_met(side: int, unit: CardInstance, effect: CardEffectData) -> bo
 		CardEnums.ConditionScope.ENEMY_OUTNUMBERS:
 			var others := _state.units(side).size() - 1
 			return _state.units(MatchState.other_side(side)).size() > others
+		CardEnums.ConditionScope.ENEMY_COUNT_AT_LEAST:
+			return _state.units(MatchState.other_side(side)).size() >= effect.condition_total
 	return true
 
 
@@ -228,6 +230,11 @@ func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Diction
 					side, from_slot, side, summon_slot, CardEnums.EffectVisualStyle.DESCEND, origin
 				)
 			_summon(side, effect.card_id)
+		CardEnums.EffectType.IGNORE_GUARD:
+			# 対象を取らない効果。自分の盤面へ紋章がその場で弾ける(DRAW と同じ PULSE)。
+			var to_side := _player_side_for(side, effect.target)
+			_strike(side, from_slot, to_side, -1, CardEnums.EffectVisualStyle.PULSE, origin)
+			_state.guard_ignored[to_side] = true
 		CardEnums.EffectType.ADD_CARD_TO_HAND:
 			var gift := CardLibrary.find_by_id(effect.card_id)
 			if gift != null:
@@ -613,13 +620,14 @@ func _unit_or_player(foe_side: int, hint: Dictionary, effect: CardEffectData) ->
 func _single_unit(
 	target_side: int, hint: Dictionary, exclude_slot := -1, effect: CardEffectData = null
 ) -> Array:
+	# ランダムに選ぶ効果は指定を受けない(砂礫の雨の3回が同じ駒へ向かうため)。
+	if effect != null and effect.random_target:
+		return _random_unit(target_side, exclude_slot, effect)
 	if hint.has("slot") and hint.get("side", target_side) == target_side:
 		var slot: int = hint["slot"]
 		var hinted: CardInstance = _state.board[target_side][slot]
 		if slot != exclude_slot and hinted != null and eligible_target(hinted, effect):
 			return [{"side": target_side, "slot": slot}]
-	if effect != null and effect.random_target:
-		return _random_unit(target_side, exclude_slot, effect)
 	if effect != null and effect.lowest_health_target:
 		var weakest := lowest_health_slot(_state, target_side, effect, exclude_slot)
 		return [] if weakest < 0 else [{"side": target_side, "slot": weakest}]
@@ -648,11 +656,14 @@ func _single_unit(
 
 ## 条件を満たす中からランダムに1体(`CardEffectData.random_target`)。**対局の乱数(`MatchState._rng`)から
 ## 引く**——オンラインとリプレイは同じ種から同じ順に引くことで結果が揃う(Architecture.md 6章)。
+## 体力0の駒は外す(同じ砂術の先の1回で砕けた駒は、解決の後まで盤面に残っているため)。
 func _random_unit(target_side: int, exclude_slot: int, effect: CardEffectData) -> Array:
 	var candidates: Array = []
 	for slot in MatchState.BOARD_SIZE:
 		var candidate: CardInstance = _state.board[target_side][slot]
-		if candidate != null and slot != exclude_slot and eligible_target(candidate, effect):
+		if candidate == null or candidate.is_dead() or slot == exclude_slot:
+			continue
+		if eligible_target(candidate, effect):
 			candidates.append({"side": target_side, "slot": slot})
 	if candidates.is_empty():
 		return []

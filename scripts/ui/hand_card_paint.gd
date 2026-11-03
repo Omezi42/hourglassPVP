@@ -11,6 +11,8 @@ extends RefCounted
 ## 寸法はすべて `HAND_SIZE_PX`(118x158)を基準にした比(`CardView._hand_scale()`)で決める。
 
 const CORNER := 9.0
+## 盤面に応じてコストが下がっているときのコストの色(GameDesign.md 9章)。
+const COST_DOWN_GREEN := Color(0.45, 0.88, 0.4, 1.0)
 const FRAME_WIDTH := 3.0
 ## 絵の窓。`CardView._hand_art_box()`(絵を収める正方形)を少し広げた矩形。
 const WINDOW_INSET := 5.0
@@ -238,7 +240,9 @@ static func _gems(view: CardView, ci: RID, s: float, tint: Color) -> void:
 	var card: CardData = view.card
 	var radius := GEM_RADIUS * s
 	var inset := GEM_INSET * s
-	_gem(view, ci, Vector2(inset, inset), card.cost, CardView.MANA_BLUE, radius, tint)
+	var cost := card.cost if view.play_cost < 0 else view.play_cost
+	var cost_color := COST_DOWN_GREEN if cost < card.cost else CardView.MANA_BLUE
+	_gem(view, ci, Vector2(inset, inset), cost, cost_color, radius, tint)
 	if card.is_spell:
 		return
 	var bottom := view.size.y - inset

@@ -79,6 +79,8 @@ const MAX_MANA := 7
 const FIRST_PLAYER_HAND := 3
 const SECOND_PLAYER_HAND := 4
 const FATIGUE_DAMAGE := 1
+## 盤面に応じて下がるコストの下限(GameDesign.md 6章の最小コスト)。
+const MIN_COST := 1
 ## コイン(後手が1度だけ使える+1マナ)。GameDesign.md 2章の手番補正。
 const COIN_MANA := 1
 ## コインを配るかどうか(GameDesign.md 2章)。
@@ -119,6 +121,9 @@ var flip_right_remaining: Dictionary = {}
 ## このターン、その側の砂時計が反転した回数(Side をキーにした int)。起こし方を問わず数え、
 ## 手番の始めに両側とも0へ戻す(クレッシェンドが読む。GameDesign.md 6章)。
 var flips_this_turn: Dictionary = {}
+## このターン、その側の砂時計が守護を無視して攻撃できるか(抜け道。GameDesign.md 6章)。
+## 手番の始めに両側とも下ろす。
+var guard_ignored: Dictionary = {}
 ## 側ごとの、連続した時間切れの回数。持ち時間を短くする段(GameDesign.md 5章)と
 ## 敗北の判定の両方がこれを見る。**手として送り合うため両者で同じ値になる。**
 var turn_forfeits: Dictionary = {}
@@ -275,12 +280,13 @@ func _begin_turn() -> void:
 	turn_count += 1
 	var side := current_turn
 	flips_this_turn.clear()
+	guard_ignored.clear()
 	max_mana[side] = mini(max_mana[side] + 1, MAX_MANA)
 	mana[side] = max_mana[side]
 	mana_changed.emit(side, mana[side], max_mana[side])
 	for unit in units(side):
 		unit.begin_turn()
-	draw(side, 1)
+	draw(side, 1, false)
 	board_changed.emit(side)
 	turn_started.emit(side)
 
@@ -357,7 +363,8 @@ func use_coin(side: int) -> bool:
 # --- ドロー -------------------------------------------------------------
 
 
-func draw(side: int, amount: int) -> void:
+## counted が偽の引き(手番の始めの1枚)は、相手のドローに反応する効果(ハウンド)へ数えない。
+func draw(side: int, amount: int, counted := true) -> void:
 	var before: int = hand[side].size()
 	for i in amount:
 		_draw_one(side)
@@ -365,6 +372,20 @@ func draw(side: int, amount: int) -> void:
 	var drawn: int = hand[side].size() - before
 	if drawn > 0:
 		cards_drawn.emit(side, drawn)
+	if not counted:
+		return
+	var foe_side := other_side(side)
+	var watchers := units(foe_side).filter(
+		func(unit: CardInstance) -> bool:
+			return not unit.effects_for(CardEnums.Trigger.ON_ENEMY_DRAW).is_empty()
+	)
+	if watchers.is_empty():
+		return
+	for i in drawn:
+		for unit in watchers:
+			if not unit.is_dead():
+				_fire(foe_side, unit, CardEnums.Trigger.ON_ENEMY_DRAW, {})
+	_cleanup_dead()
 
 
 func _draw_one(side: int) -> void:
@@ -401,7 +422,13 @@ func can_play(side: int, hand_index: int) -> bool:
 		return false
 	if empty_slots(side).is_empty():
 		return false
-	return mana[side] >= card.cost
+	return mana[side] >= play_cost(side, card)
+
+
+## 実際に払うコスト(GameDesign.md 6章)。相手の砂時計の数で下がるカードだけが元のコストと違う。
+func play_cost(side: int, card: CardData) -> int:
+	var down := card.cost_down_per_enemy_unit * units(other_side(side)).size()
+	return card.cost if down <= 0 else maxi(card.cost - down, MIN_COST)
 
 
 ## 手札の1枚を場の空き枠へ出す。埋まっている枠へは出せない(上書き設置は行わない)。
@@ -414,7 +441,7 @@ func play_card(side: int, hand_index: int, slot: int, target: Dictionary = {}) -
 	if board[side][slot] != null:
 		return false
 	var card: CardData = hand[side][hand_index]
-	mana[side] -= card.cost
+	mana[side] -= play_cost(side, card)
 	hand[side].remove_at(hand_index)
 	hand_changed.emit(side)
 	mana_changed.emit(side, mana[side], max_mana[side])
@@ -441,7 +468,7 @@ func can_cast(side: int, hand_index: int) -> bool:
 	var card: CardData = hand[side][hand_index]
 	if not card.is_spell:
 		return false
-	return mana[side] >= card.cost and CardEffectResolver.castable(self, side, card)
+	return mana[side] >= play_cost(side, card) and CardEffectResolver.castable(self, side, card)
 
 
 ## 手札の砂術を1枚撃つ。盤面へは置かず、効果を解決して墓地へ積む。
@@ -450,7 +477,7 @@ func cast_spell(side: int, hand_index: int, target: Dictionary = {}) -> bool:
 	if not can_cast(side, hand_index):
 		return false
 	var card: CardData = hand[side][hand_index]
-	mana[side] -= card.cost
+	mana[side] -= play_cost(side, card)
 	hand[side].remove_at(hand_index)
 	hand_changed.emit(side)
 	mana_changed.emit(side, mana[side], max_mana[side])
@@ -541,6 +568,7 @@ func _resolve_flipped(side: int, unit: CardInstance) -> void:
 
 
 ## 守護を持つ砂時計がいる間は、その砂時計しか攻撃できない(GameDesign.md 6章)。
+## 攻撃する側が抜け道を撃ったターンは守護を数えない。
 func attackable_slots(defender_side: int) -> Array:
 	var guards: Array = []
 	var others: Array = []
@@ -551,12 +579,15 @@ func attackable_slots(defender_side: int) -> Array:
 			continue
 		if unit.has_keyword(CardEnums.Keyword.GUARD):
 			guards.append(i)
-		else:
-			others.append(i)
+		others.append(i)
+	if guard_ignored.get(other_side(defender_side), false):
+		return others
 	return guards if not guards.is_empty() else others
 
 
 func can_attack_player(side: int) -> bool:
+	if guard_ignored.get(side, false):
+		return true
 	for unit in units(other_side(side)):
 		if unit.has_keyword(CardEnums.Keyword.GUARD):
 			return false
@@ -591,58 +622,6 @@ func attack(side: int, slot: int, target_slot: int) -> bool:
 	_resolve_unit_combat(side, slot, target_slot)
 	_cleanup_dead()
 	return true
-
-
-## 攻撃した場合に双方がどうなるかを、盤面を変えずに計算する(GameDesign.md 9章)。
-## **戦闘は相打ちで、攻撃側も必ず削れる**ため、UIはこれを対象選択の間ずっと出す。
-## 判定の順序は `_resolve_unit_combat()` と同じにすること(硝子→毒砂の順)。
-func combat_preview(side: int, slot: int, target_slot: int) -> Dictionary:
-	var foe_side := other_side(side)
-	var attacker: CardInstance = board[side][slot]
-	if attacker == null:
-		return {}
-	if target_slot < 0:
-		return {
-			"attacker_health": attacker.health,
-			"attacker_dead": false,
-			"target_health": hp[foe_side] - attacker.attack,
-			"target_dead": hp[foe_side] - attacker.attack <= 0,
-			"pierce": 0,
-		}
-	var defender: CardInstance = board[foe_side][target_slot]
-	if defender == null:
-		return {}
-	var attacker_power := attacker.attack * clash_damage_multiplier
-	var defender_power := defender.attack * clash_damage_multiplier
-	if attacker.has_keyword(CardEnums.Keyword.DAMAGE_BOOST):
-		attacker_power *= 2
-	if defender.has_keyword(CardEnums.Keyword.DAMAGE_BOOST):
-		defender_power *= 2
-	var to_defender := _preview_damage(defender, attacker_power)
-	var to_attacker := _preview_damage(attacker, defender_power)
-	var defender_health := defender.health - to_defender
-	var attacker_health := attacker.health - to_attacker
-	if to_defender > 0 and attacker.has_keyword(CardEnums.Keyword.POISON):
-		defender_health = 0
-	if to_attacker > 0 and defender.has_keyword(CardEnums.Keyword.POISON):
-		attacker_health = 0
-	var pierce := 0
-	if to_defender > 0 and attacker.has_keyword(CardEnums.Keyword.PIERCE):
-		pierce = maxi(attacker_power - defender.health, 0)
-	return {
-		"attacker_health": maxi(attacker_health, 0),
-		"attacker_dead": attacker_health <= 0,
-		"target_health": maxi(defender_health, 0),
-		"target_dead": defender_health <= 0,
-		"pierce": pierce,
-	}
-
-
-## 硝子が残っていれば最初の1回は通らない(`CardInstance.take_damage()` と同じ判定)。
-func _preview_damage(unit: CardInstance, amount: int) -> int:
-	if amount <= 0:
-		return 0
-	return 0 if unit.glass_intact else amount
 
 
 func _resolve_unit_combat(side: int, slot: int, target_slot: int) -> void:

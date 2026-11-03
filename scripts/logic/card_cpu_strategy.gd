@@ -31,13 +31,14 @@ const DAMAGED_TIMES := 2.0
 const ALLY_DEATH_TIMES := 2.0
 ## 相手の反転に反応する効果(反響の刻)が働く回数の見込み。同じく下駄。
 const ENEMY_FLIP_TIMES := 2.0
+## 相手のドローに反応する効果(薙砂の刻)が働く回数の見込み。同じく下駄。
+const ENEMY_DRAW_TIMES := 2.0
+## 守護を無視して攻撃できる駒1体ぶんの価値(抜け道)。守護の駒を避けて殴れる1回を、本体の数点ぶんに見る。
+const GUARD_BYPASS_PER_ATTACKER := 2.0
 ## 墓地から1体を手札へ戻す価値。ドロー1枚(3.0)と同じに見る。
 const RECOVER_VALUE := 3.0
 ## 反転トリガーを持つ駒を1回反転できることの価値(反転の選択とリピートの値付けで共有)。
 const FLIP_TRIGGER_BONUS := 2.0
-## 反転権(GameDesign.md 2章)は対局に2〜3回しか無い希少な資源のため、
-## 通常の反転よりゲインの下限を高く取り、僅かな得のために使い切らせない。
-const FLIP_RIGHT_MIN_GAIN := 3.0
 ## 上級:本体を殴る価値に掛ける倍率。`FACE_WEIGHT` はバランス指標に合わせた値で、
 ## 勝ちに対しては盤面を取りすぎる。対中級の勝率が頭打ちになる手前の値(2.5で67%、3.5で70%、10で72%)。
 const EXPERT_FACE_WEIGHT_RATIO := 3.5
@@ -100,7 +101,7 @@ func _expert_mulligan_keep_cost(state: MatchState, side: int) -> int:
 
 
 ## この手番で次に指す1手を返す。指す手が無ければ end_turn を返す。
-## **「反転権で仕留めやすくしてから攻撃する」の連携のため、`_choose_flip_right_setup()`
+## **「反転権で仕留めやすくしてから攻撃する」の連携のため、`CardCpuFlipRight.setup()`
 ## だけは攻撃より前に見る**(GameDesign.md 2章。docs/BalanceReport_v5.md 12章)。
 func choose_action(state: MatchState, side: int) -> Dictionary:
 	if difficulty == Difficulty.BEGINNER:
@@ -111,7 +112,7 @@ func choose_action(state: MatchState, side: int) -> Dictionary:
 	if _should_use_coin(state, side):
 		return {"type": "coin", "side": side}
 	var steps: Array[Callable] = [
-		_choose_flip_right_setup, _choose_attack, _choose_flip, _choose_flip_right
+		CardCpuFlipRight.setup, _choose_attack, _choose_flip, CardCpuFlipRight.choose
 	]
 	for step in steps:
 		action = step.call(state, side)
@@ -253,7 +254,7 @@ func _should_use_coin(state: MatchState, side: int) -> bool:
 		return _expert_should_use_coin(state, side)
 	var reach: int = state.mana[side] + MatchState.COIN_MANA
 	for card in state.hand[side]:
-		if card.cost <= reach:
+		if state.play_cost(side, card) <= reach:
 			return true
 	return false
 
@@ -274,7 +275,7 @@ func _best_playable_value(state: MatchState, side: int, mana: int) -> float:
 	var best := 0.0
 	var has_empty_slot: bool = not state.empty_slots(side).is_empty()
 	for card in state.hand[side]:
-		if card.cost > mana:
+		if state.play_cost(side, card) > mana:
 			continue
 		if not card.is_spell and not has_empty_slot:
 			continue
@@ -368,7 +369,7 @@ func _best_slot(state: MatchState, side: int, card: CardData) -> Dictionary:
 func _mana_leftover_penalty(state: MatchState, side: int, card: CardData) -> float:
 	if difficulty != Difficulty.EXPERT:
 		return 0.0
-	var leftover: int = int(state.mana[side]) - card.cost
+	var leftover: int = int(state.mana[side]) - state.play_cost(side, card)
 	if leftover <= 0:
 		return 0.0
 	var cheapest := -1
@@ -377,8 +378,9 @@ func _mana_leftover_penalty(state: MatchState, side: int, card: CardData) -> flo
 		if other == card and not skipped_self:
 			skipped_self = true
 			continue
-		if cheapest < 0 or other.cost < cheapest:
-			cheapest = other.cost
+		var other_cost := state.play_cost(side, other)
+		if cheapest < 0 or other_cost < cheapest:
+			cheapest = other_cost
 	if cheapest >= 0 and leftover < cheapest:
 		return EXPERT_MANA_LEFTOVER_PENALTY
 	return 0.0
@@ -431,6 +433,8 @@ func _repeating_value(state: MatchState, side: int, card: CardData) -> float:
 		value += _on_play_value(state, side, effect) * ALLY_DEATH_TIMES
 	for effect in card.effects_for(CardEnums.Trigger.ON_ENEMY_FLIP):
 		value += _on_play_value(state, side, effect) * ENEMY_FLIP_TIMES
+	for effect in card.effects_for(CardEnums.Trigger.ON_ENEMY_DRAW):
+		value += _on_play_value(state, side, effect) * ENEMY_DRAW_TIMES
 	return value
 
 
@@ -441,6 +445,11 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 	if (
 		effect.condition_scope == CardEnums.ConditionScope.ENEMY_OUTNUMBERS
 		and state.units(foe_side).size() <= state.units(side).size()
+	):
+		return value
+	if (
+		effect.condition_scope == CardEnums.ConditionScope.ENEMY_COUNT_AT_LEAST
+		and state.units(foe_side).size() < effect.condition_total
 	):
 		return value
 	match effect.effect_type:
@@ -465,7 +474,12 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 		CardEnums.EffectType.DAMAGE_UNIT:
 			# **対象の広さを見る。**全体(ALL_ENEMY_UNITS)は並んでいるぶんだけ積み上がるが、
 			# 単体(ENEMY_UNIT)は1体ぶんしかない。区別しないと単体除去を過大評価する。
-			if effect.target == CardEnums.EffectTarget.ENEMY_UNIT:
+			if effect.target == CardEnums.EffectTarget.ENEMY_UNIT and effect.random_target:
+				# どの駒に当たるか選べないため、相手の駒の平均を見る。
+				var foes := state.units(foe_side)
+				for foe in foes:
+					value += _damage_value(foe, effect.value) / foes.size()
+			elif effect.target == CardEnums.EffectTarget.ENEMY_UNIT:
 				var slot := _strongest_enemy(state, foe_side)
 				if effect.lowest_health_target:
 					slot = CardEffectResolver.lowest_health_slot(state, foe_side, effect)
@@ -488,16 +502,16 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 				for unit in state.units(side):
 					if not CardEffectResolver.eligible_target(unit, effect):
 						continue
-					value += _lifetime_of(unit.attack, unit.health) - float(unit.lifetime_damage())
+					value += lifetime_of(unit.attack, unit.health) - float(unit.lifetime_damage())
 					if unit.data.effects_for(CardEnums.Trigger.ON_FLIP).size() > 0:
 						value += FLIP_TRIGGER_BONUS
 			elif effect.target == CardEnums.EffectTarget.ALL_ENEMY_UNITS:
 				for unit in state.units(foe_side):
-					value += _swap_value(unit)
+					value += swap_value(unit)
 			else:
 				var slot := _strongest_enemy(state, foe_side)
 				if slot >= 0:
-					value = _swap_value(state.board[foe_side][slot])
+					value = swap_value(state.board[foe_side][slot])
 		CardEnums.EffectType.RETURN_TO_HAND:
 			# 相手の駒を1体、盤面から丸ごと消す。破壊と違い撃ち直されるため、
 			# 生涯ダメージそのままではなく控えめに見る。
@@ -544,6 +558,8 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 				value = _lifetime_damage(token)
 		CardEnums.EffectType.GRANT_KEYWORD:
 			value = 2.0
+		CardEnums.EffectType.IGNORE_GUARD:
+			value = _guard_bypass_value(state, side)
 		CardEnums.EffectType.ADD_TOTAL_PER_GRAVE:
 			value = CardEffectResolver.grave_unit_count(state, side) * effect.value * 2.0
 		CardEnums.EffectType.RECOVER_FROM_GRAVE:
@@ -572,6 +588,17 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 	return value
 
 
+## 抜け道の価値。相手に守護の駒がいて、自分に攻撃できる駒がいるときだけ、その数に応じて持つ。
+func _guard_bypass_value(state: MatchState, side: int) -> float:
+	if state.can_attack_player(side):
+		return 0.0
+	var ready := 0
+	for unit in state.units(side):
+		if unit.can_attack() and unit.attack > 0:
+			ready += 1
+	return ready * GUARD_BYPASS_PER_ATTACKER
+
+
 ## 砂を落として最も得をする味方と、その得の大きさ。得をする駒がいなければ slot は -1。
 func _best_ally_drop(state: MatchState, side: int, amount: int) -> Dictionary:
 	var best := {"slot": -1, "gain": 0.0}
@@ -583,7 +610,7 @@ func _best_ally_drop(state: MatchState, side: int, amount: int) -> Dictionary:
 		# 落としきると砕けるため、得どころか駒を1体失う。
 		if health <= 0:
 			continue
-		var gain := _lifetime_of(health, unit.attack + amount) - float(unit.lifetime_damage())
+		var gain := lifetime_of(health, unit.attack + amount) - float(unit.lifetime_damage())
 		if gain > best["gain"]:
 			best = {"slot": slot, "gain": gain}
 	return best
@@ -599,7 +626,7 @@ func _best_ally_raise(state: MatchState, side: int, amount: int) -> Dictionary:
 			continue
 		var moved: int = mini(amount, unit.attack)
 		var gain := (
-			_lifetime_of(unit.health + moved, unit.attack - moved) - float(unit.lifetime_damage())
+			lifetime_of(unit.health + moved, unit.attack - moved) - float(unit.lifetime_damage())
 		)
 		if gain > best["gain"]:
 			best = {"slot": slot, "gain": gain}
@@ -613,15 +640,15 @@ func _best_ally_flip(state: MatchState, side: int) -> Dictionary:
 		var unit: CardInstance = state.board[side][slot]
 		if unit == null or not unit.flippable():
 			continue
-		var gain := _lifetime_of(unit.attack, unit.health) - float(unit.lifetime_damage())
+		var gain := lifetime_of(unit.attack, unit.health) - float(unit.lifetime_damage())
 		if gain > best["gain"]:
 			best = {"slot": slot, "gain": gain}
 	return best
 
 
 ## 反転させたときに相手の生涯ダメージがどれだけ下がるか。攻撃力の高い駒ほど大きい。
-func _swap_value(unit: CardInstance) -> float:
-	return maxf(0.0, unit.lifetime_damage() - _lifetime_of(unit.attack, unit.health))
+static func swap_value(unit: CardInstance) -> float:
+	return maxf(0.0, unit.lifetime_damage() - lifetime_of(unit.attack, unit.health))
 
 
 ## 対象を1体選ぶ設置効果のための指定。選ばない効果なら空を返す。
@@ -834,10 +861,10 @@ func _damage_value(unit: CardInstance, amount: int) -> float:
 	var health := unit.health - amount
 	if health <= 0:
 		return before
-	return before - _lifetime_of(health, unit.attack)
+	return before - lifetime_of(health, unit.attack)
 
 
-func _lifetime_of(health: int, attack: int) -> float:
+static func lifetime_of(health: int, attack: int) -> float:
 	return float(health * attack) + float(health * (health - 1)) / 2.0
 
 
@@ -874,7 +901,7 @@ func _choose_flip(state: MatchState, side: int) -> Dictionary:
 		var unit: CardInstance = state.board[side][slot]
 		if unit == null or not unit.can_flip():
 			continue
-		var gain := _lifetime_of(unit.attack, unit.health) - float(unit.lifetime_damage())
+		var gain := lifetime_of(unit.attack, unit.health) - float(unit.lifetime_damage())
 		if unit.data.effects_for(CardEnums.Trigger.ON_FLIP).size() > 0:
 			gain += FLIP_TRIGGER_BONUS
 		if gain > best_gain:
@@ -889,90 +916,3 @@ static func _after_flips(card: CardData) -> bool:
 			CardEnums.EffectType.RESET_FLIP, CardEnums.EffectType.DAMAGE_PLAYER_PLUS_FLIPS:
 				return true
 	return false
-
-
-# --- 反転権 ---------------------------------------------------------------
-
-
-## 反転権で相手の駒を弱めてから、同じ手番の攻撃で仕留める(GameDesign.md 2章)。
-## **`_choose_flip_right()` は攻撃の後にしか検討しないため、それだけでは
-## 「弱めた直後に攻撃力を渡すだけ」になってしまう(`docs/BalanceReport_v5.md` 12章)。
-## この関数だけは攻撃の前に呼び、反転権と攻撃を1つの連携として組み立てる。**
-## いま手持ちの攻撃力では仕留められない相手が、反転させれば
-## (新しい体力 = いまの攻撃力)仕留められるようになる場合だけ使う。
-func _choose_flip_right_setup(state: MatchState, side: int) -> Dictionary:
-	if int(state.flip_right_remaining.get(side, 0)) <= 0:
-		return {}
-	var foe_side := MatchState.other_side(side)
-	var best_attack := 0
-	for slot in MatchState.BOARD_SIZE:
-		var unit: CardInstance = state.board[side][slot]
-		if unit != null and unit.can_attack():
-			best_attack = maxi(best_attack, unit.attack)
-	if best_attack <= 0:
-		return {}
-	for slot in state.attackable_slots(foe_side):
-		var foe: CardInstance = state.board[foe_side][slot]
-		if foe == null:
-			continue
-		# いまの攻撃力ですでに仕留められるなら、反転権を使わずそのまま攻撃で足りる。
-		if foe.health <= best_attack:
-			continue
-		# 反転させると新しい体力は「いまの攻撃力」になる。それを自分の最大攻撃力で
-		# 仕留められて、かつ反転させないと仕留められない場合だけ価値がある。
-		if foe.attack <= 0 or foe.attack > best_attack or not foe.flippable():
-			continue
-		# **殺すのは反転そのものではなく、直後の攻撃**なので余砂の発火は他の除去と
-		# 同じ扱いになる(既存の `_choose_attack` も攻撃の一撃で殺す際に余砂を
-		# 避けていない)。ここで避けるのは反転そのもので発火する反転トリガーだけ。
-		if not foe.data.effects_for(CardEnums.Trigger.ON_FLIP).is_empty():
-			continue
-		return MatchAction.flip_right(side, foe_side, slot)
-	return {}
-
-
-## 反転権(GameDesign.md 2章)。敵味方どちらの砂時計も対象に取れるため、
-## 自分の駒を得な状態へ戻す案(通常の反転と同じ物差し)と、相手の駒を損な状態へ
-## 追い込む案(`_swap_value()`、既存のSWAP_STATSの評価をそのまま流用)を両方見て
-## いちばん得な1手を選ぶ。**希少な資源のため `FLIP_RIGHT_MIN_GAIN` 未満なら温存する**。
-func _choose_flip_right(state: MatchState, side: int) -> Dictionary:
-	if int(state.flip_right_remaining.get(side, 0)) <= 0:
-		return {}
-	var foe_side := MatchState.other_side(side)
-	var best: Dictionary = {}
-	var best_gain := FLIP_RIGHT_MIN_GAIN
-	for slot in MatchState.BOARD_SIZE:
-		var unit: CardInstance = state.board[side][slot]
-		if unit == null or not unit.flippable():
-			continue
-		var gain := _lifetime_of(unit.attack, unit.health) - float(unit.lifetime_damage())
-		if unit.data.effects_for(CardEnums.Trigger.ON_FLIP).size() > 0:
-			gain += FLIP_TRIGGER_BONUS
-		if gain > best_gain:
-			best_gain = gain
-			best = MatchAction.flip_right(side, side, slot)
-	for slot in MatchState.BOARD_SIZE:
-		var foe: CardInstance = state.board[foe_side][slot]
-		if foe == null or not foe.flippable():
-			continue
-		# **反転権は攻撃した後にしか検討しない**(出す→攻撃する→反転する→終える)ため、
-		# 敵を生かしたまま反転させると、体力の少ない側へ攻撃力の高い側を渡すだけになり、
-		# こちらは追撃できないまま相手の次の手番でその攻撃力をそのまま浴びる。
-		# **確実に破壊できる(反転後の体力が0になる)場合に限って触る。**
-		if foe.attack > 0:
-			continue
-		# **反転トリガーは持ち主を利する形で発火する**(グロウ=所有者の総量+1、
-		# ホイール/ティック=所有者の相手=自分にダメージ、ページ=所有者が1枚引く)。
-		# 誰が反転させても発動する(GameDesign.md 6章)ため、敵の反転持ちを反転権で
-		# 触ると自分を助けるどころか敵を利するか自分が被弾する。対象から外す。
-		if not foe.data.effects_for(CardEnums.Trigger.ON_FLIP).is_empty():
-			continue
-		# **破壊すると余砂(ON_DEATH)も持ち主を利する形で発火する**(ドロー・本体への
-		# ダメージ等)。無償の除去に見えて、持ち主へ無償の起動効果を与えてしまう。
-		if not foe.data.effects_for(CardEnums.Trigger.ON_DEATH).is_empty():
-			continue
-		var gain := _swap_value(foe)
-		if gain > best_gain:
-			best_gain = gain
-			best = MatchAction.flip_right(side, foe_side, slot)
-	return best

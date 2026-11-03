@@ -7,7 +7,19 @@ extends RefCounted
 ## カードを足しても台本を書き足す作業が発生しない。対象を選ぶ効果は CPU と同じ選び方を使う。
 
 enum Kind {
-	PLAY, CAST, FLIP, DEATH, TURN_END, DAMAGED, ALLY_DEATH, ENEMY_FLIP, STRIKE, DOUBLE, GUARD, RUSH
+	PLAY,
+	CAST,
+	FLIP,
+	DEATH,
+	TURN_END,
+	DAMAGED,
+	ALLY_DEATH,
+	ENEMY_FLIP,
+	STRIKE,
+	DOUBLE,
+	GUARD,
+	RUSH,
+	ENEMY_DRAW,
 }
 
 ## 実演の駒を置く枠。中央寄りに置き、両隣に味方と相手の駒が並ぶようにする。
@@ -19,6 +31,8 @@ const FOE_HEAVY := ["lock", 4, 4]
 const FOE_TARGET_SLOT := 2
 const FOE_HEAVY_SLOT := 3
 const ALLY := ["sand", 4, 1]
+## 殴られると1枚引く相手の駒(相手のドローに反応する効果の実演)。[id, 体力, 攻撃力]
+const FOE_DRAWER := ["crack", 3, 0]
 ## 条件付きの効果(コンボ系)の対象を置く枠。
 const MATCH_SLOT := 4
 ## 墓地を使う効果のための砂時計。
@@ -45,6 +59,7 @@ const TRIGGER_KINDS := {
 	CardEnums.Trigger.ON_DAMAGED: Kind.DAMAGED,
 	CardEnums.Trigger.ON_ALLY_DEATH: Kind.ALLY_DEATH,
 	CardEnums.Trigger.ON_ENEMY_FLIP: Kind.ENEMY_FLIP,
+	CardEnums.Trigger.ON_ENEMY_DRAW: Kind.ENEMY_DRAW,
 }
 
 
@@ -120,6 +135,9 @@ static func stage(state: MatchState, side: int, card: CardData, kind: int) -> Ar
 		Kind.ENEMY_FLIP:
 			state.flip_right_remaining[side] = 1
 			actions.append(MatchAction.flip_right(side, foe, FOE_TARGET_SLOT))
+		Kind.ENEMY_DRAW:
+			_place(state, foe, FOE_TARGET_SLOT, _card(FOE_DRAWER[0]), FOE_DRAWER[1], FOE_DRAWER[2])
+			actions.append(MatchAction.attack(side, ALLY_SLOT, FOE_TARGET_SLOT))
 		Kind.ALLY_DEATH:
 			state.board[side][ALLY_SLOT].health = 1
 			actions.append(MatchAction.attack(side, ALLY_SLOT, FOE_HEAVY_SLOT))

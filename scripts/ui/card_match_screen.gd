@@ -502,6 +502,7 @@ func _refresh_hand() -> void:
 			continue
 		var usable: bool = state.can_play(my_side, i) or state.can_cast(my_side, i)
 		view.skin_viewer = skin_viewer_for(my_side)
+		view.play_cost = state.play_cost(my_side, hand[i])
 		view.show_card(hand[i], _my_turn() and usable)
 		view.selected = _selection.is_hand(i)
 		view.draggable = view.enabled

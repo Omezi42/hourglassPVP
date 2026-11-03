@@ -34,6 +34,9 @@ static func side_for(card: CardData, my_side: int) -> int:
 ## 手札の1枚が出したときに対象を1体選ぶ効果。取らないなら null。
 static func targeting_effect(card: CardData) -> CardEffectData:
 	for effect in card.effects_for(CardEnums.Trigger.ON_PLAY):
+		# プレイヤーが選ばない対象(ランダム・体力最少)は対象選択に入らない。
+		if effect.random_target or effect.lowest_health_target:
+			continue
 		if (
 			effect.target
 			in [

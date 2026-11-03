@@ -57,7 +57,7 @@ func refresh() -> void:
 	for slot in state.attackable_slots(foe):
 		var view := _screen.view_at(foe, slot)
 		view.selected = true
-		var preview: Dictionary = state.combat_preview(my_side, selection.slot, slot)
+		var preview: Dictionary = MatchCombatPreview.compute(state, my_side, selection.slot, slot)
 		view.preview_health = preview["target_health"]
 		view.preview_dead = preview["target_dead"]
 	_screen.foe_bar.targetable = state.can_attack_player(my_side)
@@ -90,7 +90,7 @@ func refresh_own_preview() -> void:
 	if selection.hover_target in candidates:
 		candidates = [selection.hover_target]
 	for slot in candidates:
-		var preview: Dictionary = state.combat_preview(my_side, selection.slot, slot)
+		var preview: Dictionary = MatchCombatPreview.compute(state, my_side, selection.slot, slot)
 		var worse: bool = own.preview_health < 0 or preview["attacker_health"] < own.preview_health
 		if worse:
 			own.preview_health = preview["attacker_health"]
