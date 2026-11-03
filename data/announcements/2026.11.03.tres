@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="AnnouncementData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/announcement_data.gd" id="script_announcement"]
+
+[resource]
+script = ExtResource("script_announcement")
+version = "2026.11.03"
+body = "**かわったもの**
+- マナの上限が10から7になったよ。1戦がぎゅっと短くなるはずだよ
+- クロックタワーはコスト9・総量9から、コスト7・総量4になったよ。マナ7でも出せるから、デッキに入れてみてね
+
+-# 遊ぶ → https://unityroom.com/games/sunadokei_arena"
