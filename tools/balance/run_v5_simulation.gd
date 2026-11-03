@@ -13,7 +13,8 @@ extends SceneTree
 ## マナカーブが組めないぶん単色が構造的に不利になるため、どちらも信号にならない。
 
 const COPY_LIMIT := 2
-## 中盤の優劣を記録する手数。ここで劣勢だった側が勝った割合を逆転率とする。
+## 中盤の優劣を記録する手数。この手数と次の手数の両方で劣勢だった側が勝った割合を逆転率とする
+## (片方だけで決めると、直前に指した側が優勢に見えるだけの差を拾うため。GameDesign.md 7章)。
 const MIDGAME_TURN := 12
 
 var _rng := RandomNumberGenerator.new()
@@ -169,23 +170,21 @@ func _accumulate(totals: Dictionary, result: Dictionary) -> void:
 		totals["fatigue_finish"] += 1
 	else:
 		totals["face_finish"] += 1
-	var behind: int = result["behind"]
+	var behind: int = result["behind"] if result["behind_next"] == result["behind"] else -1
 	if behind >= 0:
 		totals["comeback_chances"] += 1
 		if behind == result["winner"]:
 			totals["comebacks"] += 1
-		_count_breakdown(totals, result)
+		_count_breakdown(totals, result, behind)
 
 
-## 逆転率の内訳(診断用)。劣勢側が先手か後手か / 差の大きさ / 1手後も劣勢のままか で分ける。
-func _count_breakdown(totals: Dictionary, result: Dictionary) -> void:
-	var behind: int = result["behind"]
+## 逆転率の内訳(診断用)。劣勢側が先手か後手か / 差の大きさ で分ける。
+func _count_breakdown(totals: Dictionary, result: Dictionary, behind: int) -> void:
 	var won: bool = behind == result["winner"]
 	var gap: float = result["gap"]
 	var keys := [
 		"劣勢=先手" if behind == MatchState.Side.A else "劣勢=後手",
 		"差<5" if gap < 5.0 else ("差5-10" if gap < 10.0 else "差10+"),
-		"1手後も劣勢" if result["behind_next"] == behind else "1手後に入れ替わる/互角",
 	]
 	for key in keys:
 		var entry: Array = totals["comeback_breakdown"].get(key, [0, 0])
