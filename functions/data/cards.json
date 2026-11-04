@@ -914,15 +914,15 @@
 			"total_sand": 11
 		},
 		{
-			"cannot_attack": false,
+			"cannot_attack": true,
 			"cost": 7,
-			"describe": "落砂:相手の砂時計すべてに1ダメージ",
+			"describe": "攻撃できない / 落砂:相手プレイヤーに、この砂時計の攻撃力ぶんのダメージ",
 			"display_name": "クロックタワー",
 			"id": "clocktower",
-			"initial_attack": 0,
+			"initial_attack": 2,
 			"is_spell": false,
 			"pool_index": 84,
-			"total_sand": 4
+			"total_sand": 7
 		},
 		{
 			"cannot_attack": false,
@@ -1242,6 +1242,61 @@
 			"is_spell": true,
 			"pool_index": 113,
 			"total_sand": 0
+		},
+		{
+			"cannot_attack": false,
+			"cost": 3,
+			"describe": "設置:相手の砂時計が3体以上なら、相手の砂時計すべてに1ダメージ",
+			"display_name": "ゲイル",
+			"id": "gale",
+			"initial_attack": 0,
+			"is_spell": false,
+			"pool_index": 114,
+			"total_sand": 4
+		},
+		{
+			"cannot_attack": false,
+			"cost": 2,
+			"describe": "ランダムな相手の砂時計に1ダメージを3回",
+			"display_name": "砂礫の雨",
+			"id": "grit_rain",
+			"initial_attack": 0,
+			"is_spell": true,
+			"pool_index": 115,
+			"total_sand": 0
+		},
+		{
+			"cannot_attack": false,
+			"cost": 2,
+			"describe": "自分の砂時計は守護を無視して攻撃できる",
+			"display_name": "抜け道",
+			"id": "bypass",
+			"initial_attack": 0,
+			"is_spell": false,
+			"pool_index": 116,
+			"total_sand": 4
+		},
+		{
+			"cannot_attack": false,
+			"cost": 2,
+			"describe": "相手が手番の始め以外でカードを引くたび、体力がいちばん少ない相手の砂時計1体に1ダメージ",
+			"display_name": "ハウンド",
+			"id": "hound",
+			"initial_attack": 0,
+			"is_spell": false,
+			"pool_index": 117,
+			"total_sand": 4
+		},
+		{
+			"cannot_attack": false,
+			"cost": 7,
+			"describe": "相手の砂時計1体につき、このカードのコストが1下がる",
+			"display_name": "コロッサス",
+			"id": "colossus",
+			"initial_attack": 0,
+			"is_spell": false,
+			"pool_index": 118,
+			"total_sand": 9
 		}
 	]
 }
