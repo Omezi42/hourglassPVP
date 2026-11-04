@@ -24,6 +24,62 @@ const SKINS: Dictionary = {
 		"price": 0,
 		"free": true,
 	},
+	"dash_wing":
+	{
+		"card_id": "dash",
+		"name": "天翼",
+		"accent": Color(0.55, 0.9, 0.98),
+		"price": PRICE_STANDARD,
+	},
+	"echo_ripple":
+	{
+		"card_id": "echo",
+		"name": "波紋",
+		"accent": Color(0.5, 0.95, 0.7),
+		"price": PRICE_STANDARD,
+	},
+	"eye_gaze":
+	{
+		"card_id": "eye",
+		"name": "千里眼",
+		"accent": Color(0.82, 0.6, 0.98),
+		"price": PRICE_STANDARD,
+	},
+	"crown_regal":
+	{
+		"card_id": "crown",
+		"name": "戴冠",
+		"accent": Color(1.0, 0.85, 0.4),
+		"price": PRICE_STANDARD,
+	},
+	"hammer_gavel":
+	{
+		"card_id": "hammer",
+		"name": "裁きの槌",
+		"accent": Color(0.95, 0.72, 0.42),
+		"price": PRICE_STANDARD,
+	},
+	"mirror_gem":
+	{
+		"card_id": "mirror",
+		"name": "宝玉",
+		"accent": Color(1.0, 0.7, 0.35),
+		"price": PRICE_STANDARD,
+	},
+	"shield_iron":
+	{
+		"card_id": "shield",
+		"name": "鉄の大盾",
+		"accent": Color(0.7, 0.8, 0.92),
+		"price": PRICE_STANDARD,
+	},
+	"wall_stone":
+	{
+		"card_id": "wall",
+		"name": "石積み",
+		"accent": Color(0.85, 0.8, 0.7),
+		"price": PRICE_STANDARD,
+	},
 }
 
 static var _textures: Dictionary = {}
