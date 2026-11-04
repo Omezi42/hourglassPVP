@@ -888,5 +888,65 @@
 			"x",
 			"youtube"
 		]
+	},
+	{
+		"date": "2026-11-10",
+		"kind": "puzzle",
+		"id": "45",
+		"label": "とどめ問題 #45",
+		"reserved": [
+			"x",
+			"youtube"
+		]
+	},
+	{
+		"date": "2026-11-10",
+		"kind": "card",
+		"id": "dust",
+		"label": "ダスト",
+		"reserved": [
+			"x",
+			"youtube"
+		]
+	},
+	{
+		"date": "2026-11-11",
+		"kind": "puzzle",
+		"id": "46",
+		"label": "とどめ問題 #46",
+		"reserved": [
+			"x",
+			"youtube"
+		]
+	},
+	{
+		"date": "2026-11-11",
+		"kind": "card",
+		"id": "glim",
+		"label": "グリム",
+		"reserved": [
+			"x",
+			"youtube"
+		]
+	},
+	{
+		"date": "2026-11-12",
+		"kind": "puzzle",
+		"id": "47",
+		"label": "とどめ問題 #47",
+		"reserved": [
+			"x",
+			"youtube"
+		]
+	},
+	{
+		"date": "2026-11-12",
+		"kind": "card",
+		"id": "sand",
+		"label": "サンド",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	}
 ]

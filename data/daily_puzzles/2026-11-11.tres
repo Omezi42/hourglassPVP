@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="PuzzleStageData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/puzzle_stage_data.gd" id="script_puzzle"]
+
+[resource]
+script = ExtResource("script_puzzle")
+id = "daily_2026-11-11"
+title = "11月11日の問題"
+hint = "このターンで相手の体力をちょうど0にしよう"
+order = 0
+foe_hp = 14
+own_hp = 24
+mana = 5
+hand_ids = Array[String](["wheel"])
+own_units = Array[String](["-", "cycle:4:1", "-", "-", "-", "reverb:2:2"])
+foe_units = Array[String](["-", "-", "-", "sand:2:1", "phase:1:3", "-"])
