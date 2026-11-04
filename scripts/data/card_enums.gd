@@ -139,8 +139,8 @@ enum EffectType {
 	HEAL_PLAYER_PER_ENEMY_UNIT,
 	## card_id のカードを、target が指すプレイヤーの手札へ1枚加える(プレゼント)。山札は減らない。
 	ADD_CARD_TO_HAND,
-	## このターン、target が指すプレイヤーの砂時計は守護を無視して攻撃できる(薙砂の刻)。value は使わない。
-	IGNORE_GUARD,
+	## 対象プレイヤーへ、発動した砂時計のいまの攻撃力ぶんのダメージ(クロックタワー)。value は使わない。
+	DAMAGE_PLAYER_BY_OWN_ATTACK,
 }
 
 ## コンボ系カードの発動条件が確認する範囲(GameDesign.md 6章)。

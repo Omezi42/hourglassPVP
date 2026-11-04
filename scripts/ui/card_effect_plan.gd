@@ -20,6 +20,7 @@ enum Kind {
 	GUARD,
 	RUSH,
 	ENEMY_DRAW,
+	BYPASS,
 }
 
 ## 実演の駒を置く枠。中央寄りに置き、両隣に味方と相手の駒が並ぶようにする。
@@ -75,6 +76,8 @@ static func kinds(card: CardData) -> Array[int]:
 			found.append(kind)
 	if card.conditional_keyword >= 0 and not found.has(Kind.STRIKE):
 		found.append(Kind.STRIKE)
+	if card.allies_ignore_guard:
+		found.append(Kind.BYPASS)
 	for effect in card.effects:
 		if effect == null:
 			continue
@@ -135,6 +138,10 @@ static func stage(state: MatchState, side: int, card: CardData, kind: int) -> Ar
 		Kind.ENEMY_FLIP:
 			state.flip_right_remaining[side] = 1
 			actions.append(MatchAction.flip_right(side, foe, FOE_TARGET_SLOT))
+		Kind.BYPASS:
+			# 相手の重い駒に守護を持たせ、その後ろの駒を殴って見せる。
+			state.board[foe][FOE_HEAVY_SLOT].grant_keyword(CardEnums.Keyword.GUARD)
+			actions.append(MatchAction.attack(side, SUBJECT_SLOT, FOE_TARGET_SLOT))
 		Kind.ENEMY_DRAW:
 			_place(state, foe, FOE_TARGET_SLOT, _card(FOE_DRAWER[0]), FOE_DRAWER[1], FOE_DRAWER[2])
 			actions.append(MatchAction.attack(side, ALLY_SLOT, FOE_TARGET_SLOT))
@@ -201,7 +208,7 @@ static func _demo_total(card: CardData) -> int:
 static func _subject_health(total: int, kind: int) -> int:
 	if kind == Kind.DEATH:
 		return 1
-	if kind in [Kind.STRIKE, Kind.DOUBLE, Kind.DAMAGED, Kind.GUARD]:
+	if kind in [Kind.STRIKE, Kind.DOUBLE, Kind.DAMAGED, Kind.GUARD, Kind.BYPASS]:
 		return mini(total, maxi(SURVIVE_HEALTH, total - FOE_TARGET[1] - 2))
 	return total
 

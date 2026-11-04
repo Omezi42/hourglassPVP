@@ -27,6 +27,8 @@ const ENTRANCES := {
 	"guard": preload("res://scripts/ui/signature/moves/guard_entrance.gd"),
 	"mirror": preload("res://scripts/ui/signature/moves/mirror_entrance.gd"),
 	"wall": preload("res://scripts/ui/signature/moves/wall_entrance.gd"),
+	"bypass": preload("res://scripts/ui/signature/moves/bypass_entrance.gd"),
+	"colossus": preload("res://scripts/ui/signature/moves/colossus_entrance.gd"),
 }
 
 ## 効果が対象へ届くまで(設置・落砂・砂術など、紋章が飛ぶ場面の代わり)。
@@ -63,6 +65,9 @@ const EFFECTS := {
 	"relief": preload("res://scripts/ui/signature/moves/relief_effect.gd"),
 	"collapse": preload("res://scripts/ui/signature/moves/collapse_effect.gd"),
 	"march": preload("res://scripts/ui/signature/moves/march_effect.gd"),
+	"gale": preload("res://scripts/ui/signature/moves/gale_effect.gd"),
+	"grit_rain": preload("res://scripts/ui/signature/moves/grit_rain_effect.gd"),
+	"hound": preload("res://scripts/ui/signature/moves/hound_effect.gd"),
 	"key": preload("res://scripts/ui/signature/moves/key_effect.gd"),
 	"cycle": preload("res://scripts/ui/signature/moves/cycle_effect.gd"),
 	"crest": preload("res://scripts/ui/signature/moves/crest_effect.gd"),

@@ -7,9 +7,9 @@
 [sub_resource type="Resource" id="Effect_clocktower_0"]
 script = ExtResource("script_effect")
 trigger = 3
-target = 2
-effect_type = 1
-value = 1
+target = 4
+effect_type = 24
+value = 0
 card_id = ""
 keyword = -1
 
@@ -18,13 +18,14 @@ script = ExtResource("script_card")
 id = "clocktower"
 display_name = "クロックタワー"
 cost = 7
-total_sand = 4
+total_sand = 7
+initial_attack = 2
 pool_index = 84
 set_id = "still_time"
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_clocktower_0")])
-rules_text = "落砂:相手の砂時計すべてに1ダメージ"
-cannot_attack = false
+rules_text = "落砂:相手プレイヤーに、この砂時計の攻撃力ぶんのダメージ"
+cannot_attack = true
 is_token = false
 art_id = "tower"
 emblem = ExtResource("emblem")

@@ -97,6 +97,11 @@ func lifetime_damage() -> int:
 	return health * attack + health * (health - 1) / 2
 
 
+## 自分の砂時計すべてに守護を無視させるか(抜け道)。効果を消されると働かない。
+func ignores_guard() -> bool:
+	return data.allies_ignore_guard and not silenced
+
+
 ## このターンに攻撃できる回数の上限。
 func max_attacks() -> int:
 	return 2 if has_keyword(CardEnums.Keyword.DOUBLE_STRIKE) else 1

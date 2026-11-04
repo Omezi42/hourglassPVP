@@ -410,6 +410,8 @@ func _card_value(state: MatchState, side: int, card: CardData) -> float:
 		value += 4.0
 	if card.has_keyword(CardEnums.Keyword.PIERCE):
 		value += 1.0
+	if card.allies_ignore_guard:
+		value += _guard_bypass_value(state, side)
 	if card.cannot_attack:
 		# 攻撃できないぶん、生涯ダメージの見積もりは成り立たない。壁としての厚みだけを見る。
 		value = float(total)
@@ -426,6 +428,11 @@ func _card_value(state: MatchState, side: int, card: CardData) -> float:
 func _repeating_value(state: MatchState, side: int, card: CardData) -> float:
 	var value := 0.0
 	for effect in card.effects_for(CardEnums.Trigger.ON_TURN_END):
+		if effect.effect_type == CardEnums.EffectType.DAMAGE_PLAYER_BY_OWN_ATTACK:
+			# 落ちる前の攻撃力で毎ターン鳴るため、本体へ入る量は生涯ダメージと同じ形になる。
+			var health := card.total_sand - card.initial_attack
+			value += lifetime_of(health, card.initial_attack) * FACE_WEIGHT
+			continue
 		value += _on_play_value(state, side, effect) * mini(card.total_sand, TURN_END_TURNS)
 	for effect in card.effects_for(CardEnums.Trigger.ON_DAMAGED):
 		value += _on_play_value(state, side, effect) * DAMAGED_TIMES
@@ -558,8 +565,6 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 				value = _lifetime_damage(token)
 		CardEnums.EffectType.GRANT_KEYWORD:
 			value = 2.0
-		CardEnums.EffectType.IGNORE_GUARD:
-			value = _guard_bypass_value(state, side)
 		CardEnums.EffectType.ADD_TOTAL_PER_GRAVE:
 			value = CardEffectResolver.grave_unit_count(state, side) * effect.value * 2.0
 		CardEnums.EffectType.RECOVER_FROM_GRAVE:
@@ -588,7 +593,8 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 	return value
 
 
-## 抜け道の価値。相手に守護の駒がいて、自分に攻撃できる駒がいるときだけ、その数に応じて持つ。
+## 抜け道の価値。相手に守護の駒がいて、自分に攻撃できる駒がいるときだけ、その数に応じて持つ
+## (出した駒自身は出したターンに殴れないため数えない)。
 func _guard_bypass_value(state: MatchState, side: int) -> float:
 	if state.can_attack_player(side):
 		return 0.0

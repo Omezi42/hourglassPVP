@@ -14,7 +14,7 @@ func run(assert_true: Callable) -> void:
 	_test_grit_rain_skips_broken_units()
 	_test_grit_rain_ignores_hint()
 	_test_bypass_lets_attack_past_guard()
-	_test_bypass_ends_with_turn()
+	_test_bypass_stops_when_silenced()
 	_test_hound_bites_on_extra_draw()
 	_test_hound_ignores_turn_start_draw()
 	_test_colossus_cost_drops_per_enemy()
@@ -113,24 +113,23 @@ func _test_bypass_lets_attack_past_guard() -> void:
 	_place(state, MatchState.Side.B, _guard(4), 0)
 	_place(state, MatchState.Side.B, _vanilla(3), 1)
 	_place(state, MatchState.Side.A, _vanilla(4), 0).drop_sand(2)
-	_assert.call(state.can_attack(MatchState.Side.A, 0, 0), "撃つ前も守護の駒は殴れる")
-	_assert.call(not state.can_attack(MatchState.Side.A, 0, 1), "撃つ前は守護の後ろを殴れない")
-	state.cast_spell(MatchState.Side.A, 0)
-	_assert.call(state.can_attack(MatchState.Side.A, 0, 1), "抜け道の後は守護を無視して駒を殴れる")
-	_assert.call(state.can_attack(MatchState.Side.A, 0, -1), "抜け道の後は守護がいても本体を殴れる")
+	_assert.call(state.can_attack(MatchState.Side.A, 0, 0), "抜け道の前も守護の駒は殴れる")
+	_assert.call(not state.can_attack(MatchState.Side.A, 0, 1), "抜け道の前は守護の後ろを殴れない")
+	state.play_card(MatchState.Side.A, 0, 1)
+	_assert.call(state.can_attack(MatchState.Side.A, 0, 1), "抜け道がいる間は守護を無視して駒を殴れる")
+	_assert.call(state.can_attack(MatchState.Side.A, 0, -1), "抜け道がいる間は守護がいても本体を殴れる")
 	_assert.call(
 		state.board[MatchState.Side.B][0].has_keyword(CardEnums.Keyword.GUARD), "守護の駒は守護を持ったまま"
 	)
 
 
-func _test_bypass_ends_with_turn() -> void:
-	var state := _new_match("bypass")
+func _test_bypass_stops_when_silenced() -> void:
+	var state := _new_match("sand")
 	_place(state, MatchState.Side.B, _guard(9), 0)
-	state.cast_spell(MatchState.Side.A, 0)
-	state.end_turn()
-	state.end_turn()
-	_place(state, MatchState.Side.A, _vanilla(4), 1)
-	_assert.call(not state.can_attack_player(MatchState.Side.A), "抜け道は撃ったターンの終わりまで")
+	var bypass := _place(state, MatchState.Side.A, CardLibrary.find_by_id("bypass"), 1)
+	_assert.call(state.can_attack_player(MatchState.Side.A), "抜け道は次の手番も働く")
+	bypass.silenced = true
+	_assert.call(not state.can_attack_player(MatchState.Side.A), "効果を消された抜け道は働かない")
 
 
 func _test_hound_bites_on_extra_draw() -> void:
@@ -179,11 +178,9 @@ func _test_cpu_values_bypass_only_against_guard() -> void:
 	_place(state, MatchState.Side.B, _vanilla(3), 0)
 	var cpu := CardCpuStrategy.new()
 	var bypass := CardLibrary.find_by_id("bypass")
-	_assert.call(
-		cpu._spell_value(state, MatchState.Side.A, bypass) == 0.0, "守護がいなければCPUは抜け道に価値を見ない"
-	)
+	var plain := cpu._card_value(state, MatchState.Side.A, bypass)
 	_place(state, MatchState.Side.B, _guard(4), 1)
-	_assert.call(cpu._spell_value(state, MatchState.Side.A, bypass) > 0.0, "守護がいればCPUは抜け道に価値を見る")
+	_assert.call(cpu._card_value(state, MatchState.Side.A, bypass) > plain, "守護がいるときだけCPUは抜け道を高く見る")
 
 
 func _test_set_is_registered() -> void:

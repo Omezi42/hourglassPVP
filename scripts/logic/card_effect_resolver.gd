@@ -113,6 +113,12 @@ func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Diction
 			var to_side := _player_side_for(side, effect.target)
 			_strike(side, from_slot, to_side, -1, CardEnums.EffectVisualStyle.STRIKE, origin)
 			_state.damage_player(to_side, flip_damage(_state, side, effect))
+		CardEnums.EffectType.DAMAGE_PLAYER_BY_OWN_ATTACK:
+			# 攻撃力0なら鳴らす鐘が無い。紋章も飛ばさない。
+			if unit.attack > 0:
+				var to_side := _player_side_for(side, effect.target)
+				_strike(side, from_slot, to_side, -1, CardEnums.EffectVisualStyle.STRIKE, origin)
+				_state.damage_player(to_side, unit.attack)
 		CardEnums.EffectType.DAMAGE_PLAYER_PER_ENEMY_UNIT:
 			_strike(side, from_slot, foe_side, -1, CardEnums.EffectVisualStyle.STRIKE, origin)
 			_state.damage_player(foe_side, _state.units(foe_side).size() * effect.value)
@@ -230,11 +236,6 @@ func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Diction
 					side, from_slot, side, summon_slot, CardEnums.EffectVisualStyle.DESCEND, origin
 				)
 			_summon(side, effect.card_id)
-		CardEnums.EffectType.IGNORE_GUARD:
-			# 対象を取らない効果。自分の盤面へ紋章がその場で弾ける(DRAW と同じ PULSE)。
-			var to_side := _player_side_for(side, effect.target)
-			_strike(side, from_slot, to_side, -1, CardEnums.EffectVisualStyle.PULSE, origin)
-			_state.guard_ignored[to_side] = true
 		CardEnums.EffectType.ADD_CARD_TO_HAND:
 			var gift := CardLibrary.find_by_id(effect.card_id)
 			if gift != null:

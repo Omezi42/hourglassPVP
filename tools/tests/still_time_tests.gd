@@ -17,6 +17,7 @@ func run(assert_true: Callable) -> void:
 	_test_raise_sand_effect_targets_an_ally()
 	_test_cannot_flip_refuses_flip_and_flip_right()
 	_test_attack_over_health_filters_the_target()
+	_test_turn_end_damage_uses_attack_before_the_sand_drops()
 	_test_set_is_registered_with_nine_cards()
 
 
@@ -189,6 +190,33 @@ func _test_attack_over_health_filters_the_target() -> void:
 
 
 # --- セットの登録 -------------------------------------------------------------
+
+# --- 自分の攻撃力ぶんの本体ダメージ(クロックタワー) -------------------------
+
+
+func _test_turn_end_damage_uses_attack_before_the_sand_drops() -> void:
+	var state := _new_match()
+	var card := _effect_card(
+		CardEnums.Trigger.ON_TURN_END,
+		CardEnums.EffectTarget.OPPONENT_PLAYER,
+		CardEnums.EffectType.DAMAGE_PLAYER_BY_OWN_ATTACK,
+		0
+	)
+	var tower := _place(state, MatchState.Side.A, card, 0)
+	tower.health = 3
+	tower.attack = 3
+	var foe_hp: int = state.hp[MatchState.Side.B]
+	state.end_turn()
+	_assert.call(
+		state.hp[MatchState.Side.B] == foe_hp - 3, "落砂 deals the attack before the sand drops"
+	)
+	_assert.call(tower.attack == 4, "the sand still drops after the bell")
+
+	var idle := _new_match()
+	_place(idle, MatchState.Side.A, card, 0)
+	var idle_hp: int = idle.hp[MatchState.Side.B]
+	idle.end_turn()
+	_assert.call(idle.hp[MatchState.Side.B] == idle_hp, "attack 0 deals no damage")
 
 
 func _test_set_is_registered_with_nine_cards() -> void:

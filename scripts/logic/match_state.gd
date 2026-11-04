@@ -121,9 +121,6 @@ var flip_right_remaining: Dictionary = {}
 ## このターン、その側の砂時計が反転した回数(Side をキーにした int)。起こし方を問わず数え、
 ## 手番の始めに両側とも0へ戻す(クレッシェンドが読む。GameDesign.md 6章)。
 var flips_this_turn: Dictionary = {}
-## このターン、その側の砂時計が守護を無視して攻撃できるか(抜け道。GameDesign.md 6章)。
-## 手番の始めに両側とも下ろす。
-var guard_ignored: Dictionary = {}
 ## 側ごとの、連続した時間切れの回数。持ち時間を短くする段(GameDesign.md 5章)と
 ## 敗北の判定の両方がこれを見る。**手として送り合うため両者で同じ値になる。**
 var turn_forfeits: Dictionary = {}
@@ -280,7 +277,6 @@ func _begin_turn() -> void:
 	turn_count += 1
 	var side := current_turn
 	flips_this_turn.clear()
-	guard_ignored.clear()
 	max_mana[side] = mini(max_mana[side] + 1, MAX_MANA)
 	mana[side] = max_mana[side]
 	mana_changed.emit(side, mana[side], max_mana[side])
@@ -568,7 +564,7 @@ func _resolve_flipped(side: int, unit: CardInstance) -> void:
 
 
 ## 守護を持つ砂時計がいる間は、その砂時計しか攻撃できない(GameDesign.md 6章)。
-## 攻撃する側が抜け道を撃ったターンは守護を数えない。
+## 攻撃する側の場に抜け道がいる間は守護を数えない。
 func attackable_slots(defender_side: int) -> Array:
 	var guards: Array = []
 	var others: Array = []
@@ -580,18 +576,22 @@ func attackable_slots(defender_side: int) -> Array:
 		if unit.has_keyword(CardEnums.Keyword.GUARD):
 			guards.append(i)
 		others.append(i)
-	if guard_ignored.get(other_side(defender_side), false):
+	if _ignores_guard(other_side(defender_side)):
 		return others
 	return guards if not guards.is_empty() else others
 
 
 func can_attack_player(side: int) -> bool:
-	if guard_ignored.get(side, false):
+	if _ignores_guard(side):
 		return true
 	for unit in units(other_side(side)):
 		if unit.has_keyword(CardEnums.Keyword.GUARD):
 			return false
 	return true
+
+
+func _ignores_guard(side: int) -> bool:
+	return units(side).any(func(unit: CardInstance) -> bool: return unit.ignores_guard())
 
 
 func can_attack(side: int, slot: int, target_slot: int) -> bool:

@@ -41,6 +41,8 @@ extends Resource
 ## 手札にある間、相手の砂時計1体につきコストがこの値だけ下がる(GameDesign.md 6章。コロッサス)。
 ## 実際に払うコストは `MatchState.play_cost()` が出す。0なら下がらない。
 @export var cost_down_per_enemy_unit: int = 0
+## 場にいる間、自分の砂時計すべてが守護を無視して攻撃できる(GameDesign.md 6章。抜け道)。語にしないためフラグで持つ。
+@export var allies_ignore_guard: bool = false
 
 ## 砂術(GameDesign.md 6章)。**盤面へ出ず、効果だけを起こして墓地へ行く。**
 ## true のとき total_sand / keywords / cannot_attack は使わない。
@@ -97,7 +99,7 @@ func category_name() -> String:
 		return "砂術"
 	if not effects.is_empty():
 		return CardEnums.trigger_name(effects[0].trigger)
-	if conditional_keyword >= 0 or cost_down_per_enemy_unit > 0:
+	if conditional_keyword >= 0 or cost_down_per_enemy_unit > 0 or allies_ignore_guard:
 		return "常在"
 	return ""
 
