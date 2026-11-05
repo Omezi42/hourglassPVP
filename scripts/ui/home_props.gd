@@ -36,37 +36,69 @@ const GLOW_RINGS := 6
 const SHADOW := Color(0, 0, 0, 0.35)
 const SHADOW_OFFSET := Vector2(3, 4)
 
+## ホバーの動き(GameDesign.md 9章)。`hover` は浮きの進み(開いたまま保つ形)、`play` は入った瞬間に1度だけ流す進み。
+## カード: 扇の開き足し / 揃え直すときに寄せる量 / 揃え直した後のぱちっとした揺れ(回数と角度)/ 前のカードの浮き。
+const CARD_SPREAD := 0.18
+const CARD_GATHER := 0.65
+const CARD_SNAPS := 3.0
+const CARD_SNAP_ANGLE := 0.07
+const CARD_RISE := 5.0
+## 本: 表紙の右端が手前へ起きる量と、下の紙の光。
+const BOOK_OPEN := Vector2(14, 5)
+const BOOK_PAGE_GLOW := 20.0
+const BOOK_GLOW_STRENGTH := 4.0
+## 宝箱: 蓋の浮き・蓋を奥へ倒して見せる縮み・光の広がりと筋。
+const CHEST_LIFT := 9.0
+const CHEST_TILT := 0.3
+const CHEST_GLOW_GROWTH := 0.2
+const CHEST_GLOW_STRENGTH := 1.2
+const CHEST_RAYS := 5
+const CHEST_RAY_SPREAD := 1.1
+const CHEST_RAY_LENGTH := 42.0
+const CHEST_RAY_WIDTH := 0.07
+const CHEST_RAY_ALPHA := 0.5
+## 贈り物の箱: 跳ねる高さと、蓋だけが余計に浮く量。
+const GIFT_HOP := 7.0
+const GIFT_LID_POP := 4.0
 
-## `rect` の中央へ、縦横比を保ったまま収まる大きさで描く。
-static func draw(kind: Kind, ci: CanvasItem, rect: Rect2) -> void:
+
+## `rect` の中央へ、縦横比を保ったまま収まる大きさで描く。`hover` / `play` はホバーの動き(0〜1)。
+static func draw(kind: Kind, ci: CanvasItem, rect: Rect2, hover := 0.0, play := 0.0) -> void:
 	var scale := minf(rect.size.x / DESIGN_SIZE.x, rect.size.y / DESIGN_SIZE.y)
 	var origin := rect.get_center() - DESIGN_SIZE * scale * 0.5
+	if kind == Kind.GIFT:
+		origin.y -= sin(PI * play) * GIFT_HOP * scale
 	ci.draw_set_transform(origin, 0.0, Vector2(scale, scale))
 	match kind:
 		Kind.CARDS:
-			_cards(ci)
+			_cards(ci, hover, play)
 		Kind.BOOK:
-			_book(ci)
+			_book(ci, hover)
 		Kind.CHEST:
-			_chest(ci)
+			_chest(ci, hover)
 		Kind.GIFT:
-			_gift(ci)
+			_gift(ci, play)
 	ci.draw_set_transform_matrix(Transform2D.IDENTITY)
 
 
-## 後光(淡い円を重ねる)。砂時計の絵の後ろにも使う。
-static func glow(ci: CanvasItem, center: Vector2, radius: float) -> void:
+## 後光(淡い円を重ねる)。砂時計の絵の後ろにも使う。`strength` で濃さを掛ける。
+static func glow(ci: CanvasItem, center: Vector2, radius: float, strength := 1.0) -> void:
 	for k in GLOW_RINGS:
 		var shrink := 1.0 - float(k) / float(GLOW_RINGS + 1)
-		ShapePaint.circle(ci.get_canvas_item(), center, radius * shrink, GLOW)
+		ShapePaint.circle(
+			ci.get_canvas_item(), center, radius * shrink, Color(GLOW, GLOW.a * strength)
+		)
 
 
-## デッキ編集: 扇に開いた3枚のカード。
-static func _cards(ci: CanvasItem) -> void:
+## デッキ編集: 扇に開いた3枚のカード。ホバーで一度寄せて揃え直し(しゃかっ)、少し広く開いて止まる(ぱちっ)。
+static func _cards(ci: CanvasItem, hover: float, play: float) -> void:
 	var c := DESIGN_SIZE * 0.5 + Vector2(0, 6)
-	_card(ci, c + Vector2(-26, 4), Vector2(48, 68), -0.38)
-	_card(ci, c + Vector2(26, 4), Vector2(48, 68), 0.38)
-	_card(ci, c, Vector2(52, 74), 0.0)
+	var spread := (1.0 + CARD_SPREAD * hover) * (1.0 - CARD_GATHER * sin(PI * play))
+	var snap := sin(PI * CARD_SNAPS * play) * (1.0 - play) * CARD_SNAP_ANGLE
+	var rise := sin(PI * play) * CARD_RISE
+	_card(ci, c + Vector2(-26 * spread, 4), Vector2(48, 68), -0.38 * spread - snap)
+	_card(ci, c + Vector2(26 * spread, 4), Vector2(48, 68), 0.38 * spread + snap)
+	_card(ci, c - Vector2(0, rise), Vector2(52, 74), snap * 0.5)
 
 
 static func _card(ci: CanvasItem, center: Vector2, card_size: Vector2, angle: float) -> void:
@@ -95,20 +127,33 @@ static func _card(ci: CanvasItem, center: Vector2, card_size: Vector2, angle: fl
 
 
 ## 砂時計図鑑: 斜め前から見た革装の本。紙の束の厚み・背の飾り・型押しの二重の枠・角金具・紋章・しおり紐。
-static func _book(ci: CanvasItem) -> void:
+## ホバーで表紙の右端が手前へ起き、下の紙が光る。
+static func _book(ci: CanvasItem, hover: float) -> void:
 	var skew := Vector2(10, -6)
 	var tl := Vector2(20, 14)
-	var tr := tl + Vector2(70, 0) + skew
+	var tr0 := tl + Vector2(70, 0) + skew
 	var bl := tl + Vector2(0, 70)
-	var br := bl + Vector2(70, 0) + skew
+	var br0 := bl + Vector2(70, 0) + skew
+	var tr := tr0 + Vector2(-BOOK_OPEN.x, -BOOK_OPEN.y) * hover
+	var br := br0 + Vector2(-BOOK_OPEN.x, BOOK_OPEN.y) * hover
 	var thick := Vector2(6, 9)
-	var block := PackedVector2Array([tr, tr + thick, br + thick, bl + thick, bl])
+	var block := PackedVector2Array([tr0, tr0 + thick, br0 + thick, bl + thick, bl])
 	_shadow(ci, block)
 	_fill(ci, block, PAGE)
 	for k in 5:
 		var t := 0.18 + 0.16 * float(k)
-		ci.draw_line(tr.lerp(br, t) + thick * 0.15, tr.lerp(br, t) + thick * 0.95, PAGE_LINE, 1.0)
-		ci.draw_line(bl.lerp(br, t) + thick * 0.15, bl.lerp(br, t) + thick * 0.95, PAGE_LINE, 1.0)
+		ci.draw_line(
+			tr0.lerp(br0, t) + thick * 0.15, tr0.lerp(br0, t) + thick * 0.95, PAGE_LINE, 1.0
+		)
+		ci.draw_line(bl.lerp(br0, t) + thick * 0.15, bl.lerp(br0, t) + thick * 0.95, PAGE_LINE, 1.0)
+	if hover > 0.0:
+		_fill(ci, PackedVector2Array([tl, tr0, br0, bl]), PAGE)
+		glow(
+			ci,
+			tr0.lerp(br0, 0.5) - Vector2(BOOK_OPEN.x, 0),
+			BOOK_PAGE_GLOW,
+			hover * BOOK_GLOW_STRENGTH
+		)
 	var cover := PackedVector2Array([tl, tr, br, bl])
 	_fill(ci, cover, LEATHER)
 	var spine := PackedVector2Array(
@@ -163,21 +208,30 @@ static func _book(ci: CanvasItem) -> void:
 
 
 ## ショップ: 蓋が少し開いた宝箱。隙間から砂金が光り、板目の蓋と胴に真鍮の帯・鋲・角金具・鍵穴の座金。
-static func _chest(ci: CanvasItem) -> void:
+## ホバーで蓋がもう少し開き(浮いて奥へ倒れる)、隙間から光の筋が漏れる。
+static func _chest(ci: CanvasItem, hover: float) -> void:
 	var rid := ci.get_canvas_item()
 	var body := Rect2(Vector2(14, 46), Vector2(92, 42))
 	var lid_h := 30.0
 	var lid_base := body.position.y - 6.0
 	var half_w := body.size.x * 0.5
 	var cx := body.get_center().x
+	var lift := CHEST_LIFT * hover
+	var squash := 1.0 - CHEST_TILT * hover
 	var lid := PackedVector2Array()
 	for k in 21:
 		var t := PI + PI * float(k) / 20.0
-		lid.append(Vector2(cx + cos(t) * half_w, lid_base + sin(t) * lid_h))
+		var y := _lid_y(lid_base + sin(t) * lid_h, lid_base, lift, squash)
+		lid.append(Vector2(cx + cos(t) * half_w, y))
 	var body_pts := UiPaint.rounded_rect_points_uniform(body, 3, 4)
 	_shadow(ci, body_pts)
-	var gap := Rect2(body.position.x + 4, lid_base - 2, body.size.x - 8, 10)
-	glow(ci, gap.get_center() + Vector2(0, -4), 46)
+	var gap := Rect2(body.position.x + 4, lid_base - 2 - lift, body.size.x - 8, 10 + lift)
+	glow(
+		ci,
+		gap.get_center() + Vector2(0, -4),
+		46 * (1.0 + CHEST_GLOW_GROWTH * hover),
+		1.0 + CHEST_GLOW_STRENGTH * hover
+	)
 	ShapePaint.colored_polygon(
 		rid, UiPaint.rounded_rect_points_uniform(gap, 3, 3), Color(0.20, 0.10, 0.03)
 	)
@@ -189,13 +243,16 @@ static func _chest(ci: CanvasItem) -> void:
 	for k in 2:
 		var y := lid_base - lid_h * (0.35 + 0.33 * float(k))
 		var half := _arc_half_width(lid_base - y, lid_h) * half_w
-		ci.draw_line(Vector2(cx - half + 2, y), Vector2(cx + half - 2, y), GRAIN, 1.2)
+		var moved := _lid_y(y, lid_base, lift, squash)
+		ci.draw_line(Vector2(cx - half + 2, moved), Vector2(cx + half - 2, moved), GRAIN, 1.2)
 	ShapePaint.polyline(rid, lid.slice(4, 14), Color(1, 0.85, 0.6, 0.35), 1.5, true)
+	if hover > 0.0:
+		_rays(ci, gap.get_center(), hover)
 	_fill(ci, body_pts, WOOD)
 	for k in 2:
 		var y := body.position.y + body.size.y * (0.36 + 0.3 * float(k))
 		ci.draw_line(Vector2(body.position.x + 2, y), Vector2(body.end.x - 2, y), GRAIN, 1.2)
-	var lip := Rect2(body.position.x - 3, lid_base - 3, body.size.x + 6, 7)
+	var lip := Rect2(body.position.x - 3, lid_base - 3 - lift, body.size.x + 6, 7)
 	_fill(ci, UiPaint.rounded_rect_points_uniform(lip, 3, 3), BRASS)
 	var rim := Rect2(body.position + Vector2(-3, -2), Vector2(body.size.x + 6, 6))
 	_fill(ci, UiPaint.rounded_rect_points_uniform(rim, 3, 3), BRASS)
@@ -209,10 +266,10 @@ static func _chest(ci: CanvasItem) -> void:
 			ci,
 			PackedVector2Array(
 				[
-					Vector2(x, lid_base - 3),
-					Vector2(x, arc_top + 3),
-					Vector2(x + 8, arc_top + 3),
-					Vector2(x + 8, lid_base - 3)
+					Vector2(x, _lid_y(lid_base - 3, lid_base, lift, squash)),
+					Vector2(x, _lid_y(arc_top + 3, lid_base, lift, squash)),
+					Vector2(x + 8, _lid_y(arc_top + 3, lid_base, lift, squash)),
+					Vector2(x + 8, _lid_y(lid_base - 3, lid_base, lift, squash))
 				]
 			),
 			BRASS
@@ -262,9 +319,13 @@ static func _chest(ci: CanvasItem) -> void:
 
 
 ## ミッション: リボンを掛けた濃紺の贈り物の箱。
-static func _gift(ci: CanvasItem) -> void:
+## ホバーで小さく跳ね、蓋だけが少し余計に浮く。
+static func _gift(ci: CanvasItem, play: float) -> void:
 	var box := Rect2(Vector2(29, 36), Vector2(62, 52))
-	var lid := Rect2(box.position + Vector2(-5, -12), Vector2(box.size.x + 10, 16))
+	var lid := Rect2(
+		box.position + Vector2(-5, -12 - sin(PI * play) * GIFT_LID_POP),
+		Vector2(box.size.x + 10, 16)
+	)
 	var box_pts := UiPaint.rounded_rect_points_uniform(box, 4, 4)
 	_shadow(ci, box_pts)
 	_fill(ci, box_pts, NAVY)
@@ -283,6 +344,27 @@ static func _gift(ci: CanvasItem) -> void:
 		_outline(ci, loop, 1.2)
 	ShapePaint.circle(ci.get_canvas_item(), Vector2(cx, lid.position.y - 6), 5, BRASS[1][1])
 	_outline(ci, box_pts, 1.5)
+
+
+## 蓋の上の点(高さ `y`)を、`lift` だけ浮かせて奥へ倒した(`squash` だけ背を縮めた)位置へ移す。
+static func _lid_y(y: float, lid_base: float, lift: float, squash: float) -> float:
+	return lid_base - lift - (lid_base - y) * squash
+
+
+## 宝箱の隙間から上へ漏れる光の筋。蓋の手前へ半透明で重ねる。
+static func _rays(ci: CanvasItem, from: Vector2, hover: float) -> void:
+	var color := Color(GOLD_LIGHT, CHEST_RAY_ALPHA * hover)
+	var clear := Color(color, 0.0)
+	for k in CHEST_RAYS:
+		var spread := lerpf(-CHEST_RAY_SPREAD, CHEST_RAY_SPREAD, float(k) / float(CHEST_RAYS - 1))
+		var angle := spread * 0.5
+		var reach := Vector2.UP.rotated(angle) * CHEST_RAY_LENGTH * hover
+		var side := Vector2.RIGHT.rotated(angle) * CHEST_RAY_LENGTH * CHEST_RAY_WIDTH
+		ShapePaint.polygon(
+			ci.get_canvas_item(),
+			PackedVector2Array([from, from + reach + side, from + reach - side]),
+			PackedColorArray([color, clear, clear])
+		)
 
 
 ## 半円の弧の、中心からの距離 `offset` における高さの比(0〜1)。

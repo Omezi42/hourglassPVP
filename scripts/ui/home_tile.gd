@@ -32,6 +32,8 @@ const BADGE_FONT_SIZE := 17
 const HOVER_RISE_PX := 3.0
 const HOVER_ALPHA_BOOST := 0.45
 const HOVER_DURATION := 0.16
+## 小物の絵がホバーに入った瞬間に1度だけ流す動き(`HomeProps.draw()` の `play`)の長さ。
+const PROP_PLAY_DURATION := 0.45
 
 ## 縦画面の文字の大きさ(GameDesign.md 9章「縦画面」: 本文24px以上)。
 const PORTRAIT_SUBTITLE_SIZE := 24
@@ -88,6 +90,9 @@ var _title_font: Font
 ## ホバー浮きの進み(0〜1)。
 var _hover := 0.0
 var _hover_tween: Tween
+## 小物の絵の1度だけの動きの進み(0〜1)。
+var _play := 0.0
+var _play_tween: Tween
 ## 副題が外部要因で変わった瞬間に立て、減衰させながら短く光らせる。
 var _subtitle_flash := 0.0
 var _flash_tween: Tween
@@ -176,6 +181,24 @@ func _on_hover_changed(hovering: bool) -> void:
 	_hover_tween = create_tween()
 	var target := 1.0 if hovering and not disabled else 0.0
 	_hover_tween.tween_method(_set_hover, _hover, target, HOVER_DURATION)
+	if target > 0.0 and (_play_tween == null or not _play_tween.is_valid()):
+		_play_tween = create_tween()
+		_play_tween.tween_method(_set_play, 0.0, 1.0, PROP_PLAY_DURATION)
+		_play_tween.finished.connect(_set_play.bind(0.0))
+
+
+## 小物の絵の動きの進み(`HomeProps.draw()` の `hover` と `play`)。札の子が描く絵(ミッションの箱)も読む。
+func prop_hover() -> float:
+	return _hover
+
+
+func prop_play() -> float:
+	return _play
+
+
+func _set_play(value: float) -> void:
+	_play = value
+	_redraw_with_children()
 
 
 ## 押せない間はホバー表現もカーソル変更もしない(GameDesign.md 9章)。`disabled` の切り替えは
@@ -205,7 +228,14 @@ func _sync_sink() -> void:
 
 func _set_hover(value: float) -> void:
 	_hover = value
+	_redraw_with_children()
+
+
+func _redraw_with_children() -> void:
 	queue_redraw()
+	for child in get_children():
+		if child is CanvasItem:
+			(child as CanvasItem).queue_redraw()
 
 
 ## 文字に使える幅。**右の紋章の透かしへ食い込ませない**(食い込むと副題が切れる)。
@@ -333,7 +363,7 @@ func _draw() -> void:
 	draw_set_transform(Vector2(0.0, _sink))
 	var dim := disabled
 	if prop >= 0:
-		HomeProps.draw(prop, self, _prop_rect())
+		HomeProps.draw(prop, self, _prop_rect(), _hover, _play)
 	# 紋章は右側の透かし。**押す先が何なのかを絵でも示す**が、文字を邪魔しない濃さに留める。
 	# ホバー中はわずかに明るく浮く(GameDesign.md 9章)。
 	if emblem != null:

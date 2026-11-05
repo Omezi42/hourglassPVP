@@ -162,7 +162,8 @@ v1.0(位相制)の画面・クラス・`data/hourglasses/*.tres` は削除済み
 - `BattleTab` の `.tscn` の縦並び(`Margin/VBox`)は使わず、`StatusLabel` だけを引き取る(`_take_over_status_label()`)。`DeckTab` も `.tscn` の `Center` を捨て、ボタンを `HomeTile` へ差し替えて直下へ置く(`_to_tile()`)。`.tscn` は書き換えない
 - **入口は `HomeTile`**(`Button` 継承。見出し・副題・紋章の透かしを自前で描く。`text` へは入れない)。**紋章の透かしは `CodedButtonStyle.inner_rect()` の中へ収め、比率で決めたうえで上限で止める**。`primary`(塗りつぶした真鍮)と `badge_count`(未受取の数)を持つ。
   `prop`(`HomeProps.Kind`)を与えると紋章の代わりに小物の絵を描き、横長の札は絵を左・文字を右、そうでなければ絵を上・文字を下に中央揃えで置く(下段の3つ)
-- **小物の絵は `HomeProps`(static)**: カード3枚・革装の本・宝箱・贈り物の箱。`DESIGN_SIZE` の座標で描き、`draw()` が `draw_set_transform()` で置き場所の大きさへ縮尺を掛ける。後光の `glow()` は「対戦する」の砂時計の絵と遠征の地図でも使う
+- **小物の絵は `HomeProps`(static)**: カード3枚・革装の本・宝箱・贈り物の箱。`DESIGN_SIZE` の座標で描き、`draw()` が `draw_set_transform()` で置き場所の大きさへ縮尺を掛ける。後光の `glow()` は「対戦する」の砂時計の絵と遠征の地図でも使う。
+  ホバーの動きは `draw()` の `hover`(浮きの進み 0〜1。開いたまま保つ形)と `play`(入った瞬間に1度だけ流す 0〜1)で受け、`HomeTile` が両方を持つ(ミッションの箱は札の子の `MissionEntryInfo` が親の値を読む)
 - 札の中身はどれも札の子でマウスを通し、札いっぱいにアンカーで追わせる。彫り文字と凹んだ枠は `EntryTilePaint`(static)
   - 「対戦する」= `RankedEntryInfo.showcase`(上に見出し・左に砂時計の絵 `assets/hourglasses/master/state_full.png`・右に段位・下端に待機の行)。
     モーダルの「ランクマッチ」は `tall`(見出しを上に中央へ縦に積む)と横長(縦画面。右に徽章・左に文字。見出しは `HomeTile`)を切り替え、`show_well` を切る

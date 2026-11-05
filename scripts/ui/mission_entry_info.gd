@@ -87,7 +87,11 @@ func _draw() -> void:
 		HomeTile.SUB_COLOR
 	)
 	var gift := Rect2(size.x - GIFT_RIGHT, GIFT_TOP, GIFT_SIDE, GIFT_SIDE)
-	HomeProps.draw(HomeProps.Kind.GIFT, self, gift)
+	var tile := get_parent() as HomeTile
+	if tile != null:
+		HomeProps.draw(HomeProps.Kind.GIFT, self, gift, tile.prop_hover(), tile.prop_play())
+	else:
+		HomeProps.draw(HomeProps.Kind.GIFT, self, gift)
 	if claimable > 0:
 		HomeTile.draw_badge(
 			self, Vector2(gift.end.x - BADGE_INSET.x, gift.position.y + BADGE_INSET.y), claimable
