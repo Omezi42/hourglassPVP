@@ -70,13 +70,18 @@ func _uid() -> String:
 
 
 func _refresh() -> void:
+	# 古い行はすぐ外す。`queue_free()` だけだとフレームの終わりまで列に残り、
+	# 新しい行がその下へ並んだ位置を登場演出が掴んで、行が欄の下へずれる。
 	for column in [_summary, _decks]:
 		for child in column.get_children():
+			column.remove_child(child)
 			child.queue_free()
 	_empty.hide_message()
 	var uid := _uid()
 	var all := MatchStats.totals(uid)
-	if int(all["games"]) == 0:
+	var empty := int(all["games"]) == 0
+	_layout_panels(empty)
+	if empty:
 		_empty.show_message("まだ対局の記録がありません", "対局を1局終えると、ここへ通算が積まれます")
 		return
 	_fill_summary(uid, all)
@@ -291,9 +296,25 @@ func _place_landscape() -> void:
 		pair[0].position = rect.position
 		pair[0].custom_minimum_size = rect.size
 		pair[0].size = rect.size
-	# 記録が無いときは、2つの欄にまたがる中央へ1つだけ出す。
 	_empty.position = SUMMARY_RECT.position
-	_empty.size = Vector2(DECKS_RECT.end.x - SUMMARY_RECT.position.x, SUMMARY_RECT.size.y)
+	_empty.size = _whole_rect().size
+
+
+## 2つの欄を合わせた範囲。
+static func _whole_rect() -> Rect2:
+	return SUMMARY_RECT.merge(DECKS_RECT)
+
+
+## 記録が無いときは欄を1枚にして、その中央へ案内を出す(2つの欄の境目に案内がまたがらないように)。
+## 縦では欄を出さず、案内だけにする。
+func _layout_panels(empty: bool) -> void:
+	_decks_panel.visible = not empty
+	_summary_panel.visible = not (empty and _portrait)
+	if _portrait:
+		return
+	var rect := _whole_rect() if empty else SUMMARY_RECT
+	_summary_panel.custom_minimum_size = rect.size
+	_summary_panel.size = rect.size
 
 
 func _make_panel(rect: Rect2) -> PanelContainer:
