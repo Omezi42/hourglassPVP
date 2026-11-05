@@ -54,7 +54,6 @@
 
 ### フレーバーテキスト(GameDesign.md 1章・9章 / Architecture.md 2.2節)
 
-- [ ] 世界観の核(コンセプト「世界」の節)をユーザーの承認を得て書く
 - [ ] 既存の全カードの文をセット単位で書き、Geminiで添削してユーザーの採否を経て `.tres` へ入れる
 
 ### 攻略サイト(GameDesign.md 32章 / Architecture.md 10.21節)
