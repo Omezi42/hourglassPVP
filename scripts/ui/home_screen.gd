@@ -65,6 +65,7 @@ var _sunday_banner: Label
 var _currency_chip: CurrencyChip
 var _currency_seen := false
 var _portrait := false
+var _book_open: HomeBookOpen
 
 @onready var background: TextureRect = $Background
 @onready var deck_tab: DeckTab = $Layout/ContentArea/DeckTab
@@ -89,7 +90,7 @@ func _ready() -> void:
 	)
 	battle_tab.room_match_requested.connect(func() -> void: room_match_requested.emit())
 	deck_tab.deck_edit_pressed.connect(func() -> void: deck_list_requested.emit())
-	deck_tab.hourglass_list_pressed.connect(func() -> void: hourglass_list_requested.emit())
+	deck_tab.hourglass_list_pressed.connect(_open_almanac)
 	deck_tab.shop_pressed.connect(func() -> void: shop_requested.emit())
 	# `.tscn` はデッキの列だけが最初から visible=true になっている。2つの列を常に出す。
 	deck_tab.visible = true
@@ -99,6 +100,9 @@ func _ready() -> void:
 	var scrim := HomeScrim.make()
 	add_child(scrim)
 	move_child(scrim, background.get_index() + 1)
+	var motes := HomeSandMotes.make()
+	add_child(motes)
+	move_child(motes, scrim.get_index() + 1)
 	_style_menu_button()
 	settings_button.pressed.connect(func() -> void: settings_panel.open())
 	_build_account_bar()
@@ -109,7 +113,18 @@ func _ready() -> void:
 	_place_header()
 	# モーダルはヘッダー・メニューより手前に出す(後から足した子ほど手前に描かれる)。
 	battle_tab.mount_pickers(self)
+	_book_open = HomeBookOpen.make()
+	_book_open.finished.connect(func() -> void: hourglass_list_requested.emit())
+	add_child(_book_open)
+	visibility_changed.connect(func() -> void: _book_open.visible = _book_open.visible and visible)
 	refresh_account()
+
+
+## 図鑑へ移る前に、札の本が開く演出を流す(GameDesign.md 9章)。
+func _open_almanac() -> void:
+	if _book_open.visible:
+		return
+	_book_open.play(deck_tab.book_rect())
 
 
 func _build_account_bar() -> void:

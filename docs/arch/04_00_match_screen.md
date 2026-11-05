@@ -164,7 +164,8 @@ v1.0(位相制)の画面・クラス・`data/hourglasses/*.tres` は削除済み
   `prop`(`HomeProps.Kind`)を与えると紋章の代わりに小物の絵を描き、横長の札は絵を左・文字を右、そうでなければ絵を上・文字を下に中央揃えで置く(下段の3つ)
 - **小物の絵は `HomeProps`(static)**: カード3枚・革装の本・宝箱・贈り物の箱。`DESIGN_SIZE` の座標で描き、`draw()` が `draw_set_transform()` で置き場所の大きさへ縮尺を掛ける。後光の `glow()` は「対戦する」の砂時計の絵と遠征の地図でも使う
 - 札の中身はどれも札の子でマウスを通し、札いっぱいにアンカーで追わせる。彫り文字と凹んだ枠は `EntryTilePaint`(static)
-  - 「対戦する」= `RankedEntryInfo.showcase`(上に見出し・左に砂時計の絵 `assets/hourglasses/master/state_full.png`・右に段位・下端に待機の行)。
+  - 「対戦する」は札を持たず、`BattleTab` が `battle_rect` の中へ上から `HomeHourglassStand`(台座の砂時計。`state_falling.png` に首から落ちる粒を重ね、押すと `rotation` を半回転)/
+    `RankedEntryInfo.plate`(段位の帯)/ `HomeTile`(`primary` + `centered`。副題に待機の行)を積む。
     モーダルの「ランクマッチ」は `tall`(見出しを上に中央へ縦に積む)と横長(縦画面。右に徽章・左に文字。見出しは `HomeTile`)を切り替え、`show_well` を切る
   - 「ソロモード」= `SoloEntryInfo`。遠征の道の小さな地図(`SoloRun.route` / `chosen` から下から上へ。遠征が無いときは `SAMPLE_COUNTS` の形を沈めた色で)と、
     遠征(`SoloProgress.load_run()`)・今日の1問(`DailyPuzzle` / `PuzzleProgress`)の凹んだ枠2つ
@@ -175,6 +176,8 @@ v1.0(位相制)の画面・クラス・`data/hourglasses/*.tres` は削除済み
 - 「つぎはここ」(`NextStepMark`)は2つ持つ。ホームの札(CPU戦なら「対戦する」、遠征・リーサルパズルなら「ソロモード」)と、モーダルの札
 - **ヘッダーの部品は `HomeScreen._place_header()` が並べる**: 名札・残高(`CurrencyChip.height_override`)・ルールブック(`icon_book`)・メニューを同じ背丈にし、左右の端を `HomeLayout.header_margin()` に揃える。
   アカウント帯(`.tscn` の幅460px)は右端まで伸ばしてルールブックの手前で止め、残高を右へ寄せる。ルールブックを押すと `LearnMenu`(暗幕 + 中央のパネル。誘導対局・遊び方・画面の見かた・キーワード辞書)
+- `HomeSandMotes`(`HomeScrim` の直後・札の背面):舞い降りる砂粒。ホームが見えている間だけ動かす
+- **図鑑へ移る前に `HomeBookOpen` を流す**(`HomeScreen` の最前面。下段の本の絵の位置から中央へ寄せて表紙・紙をめくり、終わってから `hourglass_list_requested` を出す。押せば飛ばす)
 - `HomeScrim`(`Background` の直後):上=アカウント帯 / 下=札 を別々の濃さで落とす。アカウント帯の下端に中央が濃く左右で消える真鍮の細線
 - ホームの残高だけ `CurrencyChip.scale_factor` で大きくする。`CurrencyChip` は単位を小さく数値を大きく別々に描き、紋章と文字のあいだに縦の細線
 - 副題は画面の外で変わるため、ホームを出すたびに `refresh()` で読み直す
