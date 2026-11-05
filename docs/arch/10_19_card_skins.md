@@ -74,9 +74,14 @@ getter が `HourglassArt.texture(art_key(), state)` を返す形で12箇所か�
 
 ## 取り込みと配布
 
-- 絵は `assets/hourglasses/skins/{skin_id}/` へ3状態を置き、砂時計と同じく非可逆
-  (WebP、`lossy_quality=0.85`)で取り込む。取り込みの正規化(3分割・倍率)は
-  `add-hourglass` Skill の手順をそのまま使う。`overrides/`(基本の絵の差し替え)とは
+- 絵は `tools/compose_skin_art.py` で作る。`template` が原本(上向き)のガラスの内側を緑の穴にした
+  雛形を書き、これを元に描かせた枠の絵を `compose` が穴の位置と大きさで原本へ合わせ、
+  原本の3状態のガラスと砂(領域マスクのB)の上へ同じ枠を重ねる。**キャンバスの高さは落下中の原本と同じ532**
+  (盤面の `CardView._art_reference()` は3状態で最も高いキャンバスを基準に縮めるため、513だと基本の絵より
+  3.7%大きく出る)。枠が上下に収まらないときだけ全体を一様に縮め、その割合を表示する。
+  生成した元の絵は `assets/hourglasses/incoming/{skin_id}_raw.jpg`(git管理外)に残す
+- `assets/hourglasses/skins/{skin_id}/` へ3状態を置き、砂時計と同じく非可逆
+  (WebP、`lossy_quality=0.85`)で取り込む。`overrides/`(基本の絵の差し替え)とは
   ディレクトリを分ける——役目が違い、混ぜると「どのカードが差し替え済みか」が読めなくなる
 - **1枚あたりpckが数十KB増える。**合計20枚を超えるあたりで、BGMと同じ
   「実行時にjsDelivrから取りに行く」方式(4.1.6節)へ移すかを判断する。
