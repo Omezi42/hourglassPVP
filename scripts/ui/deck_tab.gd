@@ -77,11 +77,6 @@ func refresh() -> void:
 	_apply_subtitle(shop_button as HomeTile, CurrencyRules.label_text(AccountService.currency()))
 
 
-## 図鑑の札の本の絵の矩形(画面座標)。図鑑へ移る演出の出どころ。
-func book_rect() -> Rect2:
-	return (hourglass_list_button as HomeTile).prop_global_rect()
-
-
 func _apply_subtitle(tile: HomeTile, text_line: String) -> void:
 	var changed := not tile.subtitle.is_empty() and tile.subtitle != text_line
 	tile.set_subtitle(text_line)
