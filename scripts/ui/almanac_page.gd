@@ -40,6 +40,8 @@ const TEXT_FONT := 16
 const TERM_SEPARATOR := ":"
 ## トークンの中身の注記(「※ モート … 」)。本文より一段小さく、薄いインクで添える。
 const TOKEN_FONT := 14
+const FLAVOR_FONT := 14
+const FLAVOR_GAP := 10.0
 ## ページめくり(GameDesign.md 9章)。綴じ目(左端)を軸に紙が薄くなるまで畳み、
 ## 畳みきった瞬間に中身を差し替えてから開き直す。
 const TURN_DURATION := 0.22
@@ -213,8 +215,9 @@ func _text_width() -> float:
 	return size.x - ART_WIDTH - DATA_GAP
 
 
-## 制約・キーワード・効果の文・トークンの中身の順に積む。
+## 制約・キーワード・効果の文・トークンの中身・フレーバーテキストの順に積む。
 ## **書く項目は詳細パネル(`CardDetailPanel`)と揃える**(図鑑だけ「攻撃できない」が抜ける、を起こさない)。
+## フレーバーテキストだけは図鑑にしか出さない(GameDesign.md 1章)。
 ## キーワードは効果の文と同じ「語:説明」の形で書く(トリガーの「落砂:」と見た目を揃える)。
 func _rebuild_text() -> void:
 	for child in _text.get_children():
@@ -235,6 +238,11 @@ func _rebuild_text() -> void:
 		_text.add_child(_make_line(_escape(CardDetailPanel.VANILLA_TEXT)))
 	for line in CardDetailPanel.token_lines(card):
 		_text.add_child(_make_line(_escape(line), TOKEN_FONT, INK_SOFT))
+	if not card.flavor_text.is_empty():
+		var gap := Control.new()
+		gap.custom_minimum_size.y = FLAVOR_GAP
+		_text.add_child(gap)
+		_text.add_child(_make_line(_escape(card.flavor_text), FLAVOR_FONT, INK_SOFT))
 	_place_demo()
 
 

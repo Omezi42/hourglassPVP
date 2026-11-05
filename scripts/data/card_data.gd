@@ -24,6 +24,8 @@ extends Resource
 @export var effects: Array[CardEffectData] = []
 ## 効果欄に出す一文。キーワードだけのカードは空でよい(キーワード名から自動生成する)。
 @export var rules_text: String = ""
+## フレーバーテキスト(GameDesign.md 1章)。対局の処理は読まない。出すのは図鑑だけ。
+@export_multiline var flavor_text: String = ""
 ## コンボ系カード(GameDesign.md 6章)。自分のいまの総量(体力+攻撃力)が
 ## conditional_keyword_total と一致する間だけ、このキーワードを持つ。
 ## keywords 配列には含めない(常には持たないため)。-1 は「無し」。

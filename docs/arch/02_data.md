@@ -50,6 +50,7 @@ UI側に散らさないため、語と enum の対応はここだけが持つ。
 | `keywords` | Array[Keyword] | 常在キーワード。0個でよい(バニラ) |
 | `effects` | Array[CardEffectData] | キーワードで表せない固有効果。0個でよい |
 | `rules_text` | String | 効果欄に出す一文。キーワードだけのカードは空 |
+| `flavor_text` | String | フレーバーテキスト(GameDesign.md 1章)。対局の処理は読まない。出すのは図鑑(`AlmanacPage`)だけ。空でよい。`Hourglasses.md` へは写さない(書く場所を1つにするため) |
 | `cannot_attack` | bool | 攻撃できない代わりに総量が大きい駒(GameDesign.md 6章)。守護と違い**語にしない**ため `keywords` ではなくフラグで持つ |
 | `is_token` | bool | 効果で場に出る砂時計。**`CardLibrary.all_cards()` が返さない**ため、デッキ編集にも一覧にも現れない |
 | `is_spell` | bool | 砂術(GameDesign.md 6章)。**盤面へ出ず、効果だけを起こして墓地へ行く**。true のとき `total_sand` / `keywords` / `cannot_attack` は使わない |
