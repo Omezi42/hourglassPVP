@@ -23,6 +23,7 @@ pool_index = 28
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_barb_0")])
 rules_text = "被弾:相手の砂時計1体に1ダメージ"
+flavor_text = "棘のある器には誰も触りたがらない。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

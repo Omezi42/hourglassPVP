@@ -23,6 +23,7 @@ pool_index = 42
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_halo_0")])
 rules_text = "設置:自分の他の砂時計1体に硝子を与える"
+flavor_text = "光の輪が一度だけ傷を引き受ける。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

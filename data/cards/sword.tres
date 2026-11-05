@@ -21,4 +21,5 @@ pool_index = 7
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_sword_0")])
 rules_text = "設置:相手プレイヤーに2ダメージ"
+flavor_text = "鞘を払う音は斬ったあとに聞こえた。"
 emblem = ExtResource("emblem")

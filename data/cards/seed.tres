@@ -23,6 +23,7 @@ pool_index = 52
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_seed_0")])
 rules_text = "余砂:モートを1体出す"
+flavor_text = "割れた器の底から芽が出ていた。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

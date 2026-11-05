@@ -21,6 +21,7 @@ pool_index = 67
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_refill_0")])
 rules_text = "カードを2枚引く"
+flavor_text = "袋の底にまだ少し残っていた。"
 cannot_attack = false
 is_token = false
 is_spell = true

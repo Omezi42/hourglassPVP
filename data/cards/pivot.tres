@@ -30,6 +30,7 @@ pool_index = 48
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_pivot_0"), SubResource("Effect_pivot_1")])
 rules_text = "設置:自分の他の砂時計1体の体力と攻撃力を入れ替え、総量+1"
+flavor_text = "軸を少しずらしただけで流れが変わった。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

@@ -23,6 +23,7 @@ pool_index = 54
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_glim_0")])
 rules_text = "被弾:相手プレイヤーに1ダメージ"
+flavor_text = "薄く光る砂には触れないほうがいい。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

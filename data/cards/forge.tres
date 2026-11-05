@@ -23,6 +23,7 @@ pool_index = 39
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_forge_0")])
 rules_text = "設置:自分の他の砂時計1体の総量+2"
+flavor_text = "炉から出した器は前よりも重い。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

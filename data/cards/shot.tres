@@ -21,6 +21,7 @@ pool_index = 59
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_shot_0")])
 rules_text = "相手プレイヤーに2ダメージ"
+flavor_text = "握った砂を投げつけるだけの術。"
 cannot_attack = false
 is_token = false
 is_spell = true

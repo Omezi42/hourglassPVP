@@ -23,6 +23,7 @@ pool_index = 57
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_rattle_0")])
 rules_text = "設置:自分の砂時計すべての砂が1粒落ちる"
+flavor_text = "振ると乾いた音がして砂がこぼれる。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

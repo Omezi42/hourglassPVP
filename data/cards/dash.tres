@@ -14,4 +14,5 @@ initial_attack = 2
 keywords = Array[int]([6])
 effects = Array[Resource]([])
 rules_text = ""
+flavor_text = "気づいたときにはもう向こう側にいた。"
 emblem = ExtResource("emblem")

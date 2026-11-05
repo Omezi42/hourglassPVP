@@ -13,4 +13,5 @@ pool_index = 6
 keywords = Array[int]([4])
 effects = Array[Resource]([])
 rules_text = ""
+flavor_text = "他人の砂で自分の器を満たす者。"
 emblem = ExtResource("emblem")

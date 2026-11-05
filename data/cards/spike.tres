@@ -23,6 +23,7 @@ pool_index = 26
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_spike_0")])
 rules_text = "被弾:相手プレイヤーに2ダメージ"
+flavor_text = "うかつに掴めば手のひらに穴が開く。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

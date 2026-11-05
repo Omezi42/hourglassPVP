@@ -23,6 +23,7 @@ pool_index = 36
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_pebble_0")])
 rules_text = "設置:モートを1体出す"
+flavor_text = "小石のまわりに砂が溜まりはじめた。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

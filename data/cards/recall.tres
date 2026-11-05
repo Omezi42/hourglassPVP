@@ -21,6 +21,7 @@ pool_index = 65
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_recall_0")])
 rules_text = "相手の砂時計1体を持ち主の手札へ戻す"
+flavor_text = "もう一度はじめから待ちなさい。"
 cannot_attack = false
 is_token = false
 is_spell = true

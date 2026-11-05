@@ -28,6 +28,7 @@ pool_index = 61
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_turn_0"), SubResource("Effect_turn_1")])
 rules_text = "自分の砂時計1体を反転させ、総量+1"
+flavor_text = "器を逆さにすると砂が息を吹き返す。"
 cannot_attack = false
 is_token = false
 is_spell = true

@@ -23,6 +23,7 @@ pool_index = 33
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_tower_0")])
 rules_text = "落砂:相手プレイヤーに2ダメージ"
+flavor_text = "塔の上からは敵陣がよく見える。"
 cannot_attack = true
 is_token = false
 emblem = ExtResource("emblem")

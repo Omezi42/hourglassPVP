@@ -23,6 +23,7 @@ pool_index = 27
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_balm_0")])
 rules_text = "被弾:自分のHPを2回復する"
+flavor_text = "塗れば痛みが少しだけ引く。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

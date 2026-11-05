@@ -23,6 +23,7 @@ pool_index = 43
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_blank_0")])
 rules_text = "設置:相手の砂時計1体の効果とキーワードを消す"
+flavor_text = "紋を削られた器はもう何も覚えていない。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

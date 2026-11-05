@@ -21,6 +21,7 @@ pool_index = 63
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_seal_0")])
 rules_text = "相手の砂時計1体の効果とキーワードを消す"
+flavor_text = "口を砂で塞げば何も唱えられない。"
 cannot_attack = false
 is_token = false
 is_spell = true

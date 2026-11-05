@@ -21,6 +21,7 @@ pool_index = 69
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_tempest_0")])
 rules_text = "相手の砂時計すべてに2ダメージ"
+flavor_text = "砂塵が晴れたあと立っている器は少なかった。"
 cannot_attack = false
 is_token = false
 is_spell = true

@@ -23,6 +23,7 @@ pool_index = 58
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_obelisk_0")])
 rules_text = "落砂:相手の砂時計すべてに1ダメージ"
+flavor_text = "誰が建てたのか知る者はもういない。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

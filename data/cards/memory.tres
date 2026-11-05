@@ -23,6 +23,7 @@ pool_index = 30
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_memory_0")])
 rules_text = "落砂:カードを1枚引く"
+flavor_text = "砂が落ちるたびに昔のことを思い出す。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

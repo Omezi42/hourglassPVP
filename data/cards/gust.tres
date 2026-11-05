@@ -21,6 +21,7 @@ pool_index = 62
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_gust_0")])
 rules_text = "相手の砂時計すべての砂が1粒落ちる"
+flavor_text = "風の強い日はどの器も早く老いる。"
 cannot_attack = false
 is_token = false
 is_spell = true

@@ -23,6 +23,7 @@ pool_index = 51
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_husk_0")])
 rules_text = "余砂:自分の他の砂時計1体の総量+2"
+flavor_text = "空っぽの殻にもまだ少し砂が残っている。"
 cannot_attack = true
 is_token = false
 emblem = ExtResource("emblem")

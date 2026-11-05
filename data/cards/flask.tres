@@ -23,6 +23,7 @@ pool_index = 50
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_flask_0")])
 rules_text = "余砂:自分のHPを3回復する"
+flavor_text = "割れた瓶から薬の匂いがした。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

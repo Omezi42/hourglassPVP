@@ -23,6 +23,7 @@ pool_index = 32
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_well_0")])
 rules_text = "落砂:自分の他の砂時計1体の総量+1"
+flavor_text = "毎朝わずかに水の湧く井戸。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

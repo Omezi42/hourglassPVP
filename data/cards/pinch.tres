@@ -28,6 +28,7 @@ pool_index = 60
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_pinch_0"), SubResource("Effect_pinch_1")])
 rules_text = "自分の砂時計1体の砂が2粒落ち、攻撃力+1"
+flavor_text = "指先でつまんだ砂をそっと落とす。"
 cannot_attack = false
 is_token = false
 is_spell = true

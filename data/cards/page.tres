@@ -23,6 +23,7 @@ pool_index = 45
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_page_0")])
 rules_text = "反転:カードを1枚引く"
+flavor_text = "次のページはまだ誰も読んでいない。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

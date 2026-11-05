@@ -21,4 +21,5 @@ pool_index = 9
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_eye_0")])
 rules_text = "設置:相手の砂時計1体の体力と攻撃力を入れ替える"
+flavor_text = "目が合った器は天地を取り違える。"
 emblem = ExtResource("emblem")

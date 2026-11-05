@@ -21,5 +21,6 @@ pool_index = 18
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_glow_0")])
 rules_text = "反転:この砂時計の総量+1"
+flavor_text = "ひっくり返すたびに明るさを増す灯り。"
 art_id = "judge"
 emblem = ExtResource("emblem")

@@ -21,4 +21,5 @@ pool_index = 23
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_sprout_0")])
 rules_text = "余砂:カードを1枚引く"
+flavor_text = "種を残して枯れていった。"
 emblem = ExtResource("emblem")

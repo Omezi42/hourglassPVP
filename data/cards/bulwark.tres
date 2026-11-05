@@ -29,6 +29,7 @@ pool_index = 64
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_bulwark_0"), SubResource("Effect_bulwark_1")])
 rules_text = "自分の砂時計1体に守護を与え、総量+2"
+flavor_text = "盛り上げた砂は案外硬い。"
 cannot_attack = false
 is_token = false
 is_spell = true

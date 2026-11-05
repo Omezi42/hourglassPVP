@@ -23,6 +23,7 @@ pool_index = 44
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_wheel_0")])
 rules_text = "反転:相手プレイヤーに2ダメージ"
+flavor_text = "回るたびに轍が深くなる。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

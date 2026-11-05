@@ -23,6 +23,7 @@ pool_index = 41
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_pike_0")])
 rules_text = "設置:自分の他の砂時計1体に貫通を与える"
+flavor_text = "長い柄の槍は盾の向こうまで届く。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

@@ -38,6 +38,7 @@ pool_index = 68
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_call_0"), SubResource("Effect_call_1"), SubResource("Effect_call_2")])
 rules_text = "モートを3体出す"
+flavor_text = "砂王が呼ぶと小さな器が三つ這い出してくる。"
 cannot_attack = false
 is_token = false
 is_spell = true

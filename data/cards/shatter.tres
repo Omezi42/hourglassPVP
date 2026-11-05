@@ -21,6 +21,7 @@ pool_index = 66
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_shatter_0")])
 rules_text = "相手の砂時計1体に4ダメージ"
+flavor_text = "一点を狙えば器は割れる。"
 cannot_attack = false
 is_token = false
 is_spell = true

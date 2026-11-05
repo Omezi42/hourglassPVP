@@ -23,6 +23,7 @@ pool_index = 55
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_tick_0")])
 rules_text = "反転:相手プレイヤーに1ダメージ"
+flavor_text = "返すたびに小さな音が鳴る。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

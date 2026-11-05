@@ -23,6 +23,7 @@ pool_index = 40
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_crown_0")])
 rules_text = "設置:自分の他の砂時計1体に守護を与える"
+flavor_text = "冠を載せられた器はもう逃げられない。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

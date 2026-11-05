@@ -21,6 +21,7 @@ pool_index = 70
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_reverse_0")])
 rules_text = "自分のHPを反転する(残りHPと失ったHPが入れ替わる)"
+flavor_text = "傷を負う前に戻れたら。"
 cannot_attack = false
 is_token = false
 is_spell = true
