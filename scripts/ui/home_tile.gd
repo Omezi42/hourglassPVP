@@ -61,6 +61,8 @@ var emblem: Texture2D
 var prop := -1
 ## 塗りつぶした真鍮の面にする(そのタブでいちばんやってほしいこと1つだけ)。
 var primary := false
+## 見出しと副題を左右の中央へ置く(ホーム中央の「対戦する」ボタン)。
+var centered := false
 ## 副題を琥珀で出す(まだ済ませていない「今日の」ものがあるとき。GameDesign.md 24章)。
 var subtitle_accent := false:
 	set(value):
@@ -305,6 +307,10 @@ func _emblem_rect() -> Rect2:
 ## 高くすると、文字が札の真ん中へ沈んで「余白の中に置き忘れた」ように見える
 ## (モックでそろえるタブのデッキ編集がそうなった)。
 func _title_center() -> float:
+	if centered and not subtitle.is_empty():
+		# 見出しと副題の一群を上下の中央へ置く(背の低いボタンで副題が下へはみ出さないように)。
+		var block := float(title_size) * 0.92 + float(_subtitle_font_size())
+		return size.y * 0.5 - block * 0.5 + float(title_size) * (0.8 - 0.36)
 	var centered: float = size.y * (0.48 if not subtitle.is_empty() else 0.5)
 	var lines := _subtitle_rows().size()
 	if lines > 1:
@@ -379,7 +385,7 @@ func _draw() -> void:
 	var has_sub := not subtitle.is_empty()
 	var title_y: float = _title_center() + float(title_size) * 0.36
 	var left := _text_left()
-	var align := HORIZONTAL_ALIGNMENT_LEFT
+	var align := HORIZONTAL_ALIGNMENT_CENTER if centered else HORIZONTAL_ALIGNMENT_LEFT
 	if prop >= 0 and _prop_on_top():
 		title_y = _prop_rect().end.y + float(title_size) * 1.25
 		align = HORIZONTAL_ALIGNMENT_CENTER

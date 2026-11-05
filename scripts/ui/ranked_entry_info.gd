@@ -3,7 +3,7 @@ extends Control
 ## ホームの「対戦する」と、対局の種類を選ぶモーダルの「ランクマッチ」の札に載せる中身(GameDesign.md 9章)。
 ## 段位の徽章(帯ごとの金属のメダル+★)・段位名・次の段位まで、下端の凹んだ行に
 ## 待っている人の数とシーズンの残り日数を描く。途中の対局があるときは下端の行が琥珀の知らせになる。
-## 組み方は3つ: ホームの札(`showcase`。上に見出し・左に砂時計の絵・右に段位)/ モーダルの縦長の札(`tall`。
+## 組み方は3つ: ホーム中央の段位の帯(`plate`。徽章・★・段位名 / 次の段位まで・シーズンの残り日数)/ モーダルの縦長の札(`tall`。
 ## 見出しを上に中央へ縦に積む)/ モーダルの横長の札(縦画面。右に徽章・左に文字)。
 ## 札(`HomeTile`)の子として全面に敷き、押下は札へ通す。彫り文字と凹んだ行は `EntryTilePaint` と共用する。
 
@@ -23,21 +23,19 @@ const STAR_ROW := 1.33
 const STAR_SPACING := 2.7
 const PULSE_SPEED := 3.2
 
-## ホームの札の組み方。位置は札の大きさに対する比で決める(横と縦で札の大きさが違うため)。
-const SHOW_ART := preload("res://assets/hourglasses/master/state_full.png")
-const SHOW_HEAD_Y := 0.15
-const SHOW_HEAD_SIZE := 46
-const SHOW_ART_RECT := Rect2(0.07, 0.21, 0.30, 0.58)
-## 砂時計の絵の縦横比(幅 / 高さ)の上限。札が横に広くても絵を横へ伸ばさない。
-const SHOW_ART_ASPECT := 0.76
-const SHOW_RANK_X := 0.68
-const SHOW_CAPTION_Y := 0.27
-const SHOW_MEDAL_Y := 0.42
-const SHOW_MEDAL_RATIO := 0.13
-const SHOW_TIER_Y := 0.70
-const SHOW_NEXT_Y := 0.77
-const SHOW_TIER_SIZE := 30
-const SHOW_NEXT_SIZE := 17
+## ホーム中央の段位の帯(`plate`)。大きさは帯の背丈に対する比で決める(横と縦で背丈が違うため)。
+const PLATE_FILL := Color(0.04, 0.035, 0.06, 0.78)
+const PLATE_RIM := Color(0.80, 0.62, 0.30, 0.55)
+const PLATE_TEXT := Color(0.96, 0.94, 0.89)
+const PLATE_DIM := Color(0.82, 0.76, 0.64)
+const PLATE_MEDAL_RATIO := 0.36
+const PLATE_GAP_RATIO := 0.18
+const PLATE_TIER_RATIO := 0.36
+const PLATE_LINE_RATIO := 0.25
+const PLATE_TIER_Y := 0.46
+const PLATE_LINE_Y := 0.8
+const PLATE_STAR_RATIO := 0.42
+const PLATE_CORNER_SEGMENTS := 8
 ## モーダルの縦長の札(見出しを上に置き、待機の行を持たない)。
 const TOP_HEAD_Y := 0.17
 const TOP_MEDAL_Y := 0.45
@@ -49,8 +47,8 @@ const TOP_HEAD_SIZE := 34
 const TOP_TIER_SIZE := 26
 const TOP_NEXT_SIZE := 17
 
-## ホームの札の組み方にする。
-var showcase := false
+## ホーム中央の段位の帯の組み方にする。
+var plate := false
 ## モーダルの縦長の札として中央へ積む。
 var tall := false
 ## 札の中へ彫る見出し(「対戦する」「対局へ戻る」「ランクマッチ」)。
@@ -114,8 +112,8 @@ func _notification(what: int) -> void:
 func _draw() -> void:
 	if _font == null:
 		return
-	if showcase:
-		_draw_showcase()
+	if plate:
+		_draw_plate()
 		return
 	if tall:
 		_draw_tall()
@@ -138,22 +136,47 @@ func _draw_tall() -> void:
 	_engraved_center(_next_line(), h * TOP_NEXT_Y, TOP_NEXT_SIZE, _font)
 
 
-## 札そのものがボタン(GameDesign.md 9章)。見出しで押す場所であることを示し、別のボタンは置かない。
-func _draw_showcase() -> void:
-	var w := size.x
+## 暗い帯に 徽章・段位名・★ を1行目、次の段位まで・シーズンの残り日数を2行目に置く。
+func _draw_plate() -> void:
+	var ci := get_canvas_item()
 	var h := size.y
-	_engraved_center(head_text, h * SHOW_HEAD_Y, SHOW_HEAD_SIZE, _display)
-	var art := Rect2(SHOW_ART_RECT.position * size, SHOW_ART_RECT.size * size)
-	art.size.x = minf(art.size.x, art.size.y * SHOW_ART_ASPECT)
-	HomeProps.glow(self, art.get_center(), art.size.y * 0.5)
-	draw_texture_rect(SHOW_ART, art, false)
-	var cx := w * SHOW_RANK_X
-	_engraved_center("いまの段位", h * SHOW_CAPTION_Y, EntryTilePaint.CAPTION_SIZE, _font, cx)
-	_draw_medal_column(cx, h * SHOW_MEDAL_Y, minf(h * SHOW_MEDAL_RATIO, MEDAL_MAX_RADIUS))
-	_engraved_center(_tier_label(), h * SHOW_TIER_Y, SHOW_TIER_SIZE, _display, cx)
-	_engraved_center(_next_line(), h * SHOW_NEXT_Y, SHOW_NEXT_SIZE, _font, cx)
-	if show_well:
-		_draw_well()
+	var outline := UiPaint.rounded_rect_points_uniform(
+		Rect2(Vector2.ZERO, size), h * 0.5, PLATE_CORNER_SEGMENTS
+	)
+	ShapePaint.colored_polygon(ci, outline, PLATE_FILL)
+	ShapePaint.polyline(ci, RankMedal.closed(outline), PLATE_RIM, 1.5, true)
+	var radius := h * PLATE_MEDAL_RATIO
+	# 徽章は帯の左端の丸みと同心に置く。
+	var medal := Vector2(h * 0.5, h * 0.5)
+	_draw_medal(medal, radius)
+	var left := medal.x + radius + h * PLATE_GAP_RATIO
+	var tier_size := int(h * PLATE_TIER_RATIO)
+	var tier := _tier_label()
+	draw_string(
+		_display,
+		Vector2(left, h * PLATE_TIER_Y),
+		tier,
+		HORIZONTAL_ALIGNMENT_LEFT,
+		-1,
+		tier_size,
+		PLATE_TEXT
+	)
+	if _tier != RankRules.PLATINUM_KEY:
+		var star := float(tier_size) * PLATE_STAR_RATIO
+		var need := RankRules.star_requirement(_tier)
+		var tier_w := _display.get_string_size(tier, HORIZONTAL_ALIGNMENT_LEFT, -1, tier_size).x
+		var first := left + tier_w + h * PLATE_GAP_RATIO + star
+		var center_x := first + star * STAR_SPACING * float(need - 1) * 0.5
+		_draw_stars(Vector2(center_x, h * PLATE_TIER_Y - star), star, true)
+	draw_string(
+		_font,
+		Vector2(left, h * PLATE_LINE_Y),
+		"%s ・ シーズン終了まで %d日" % [_next_line(), _days_left],
+		HORIZONTAL_ALIGNMENT_LEFT,
+		-1,
+		int(h * PLATE_LINE_RATIO),
+		PLATE_DIM
+	)
 
 
 func _draw_medal_column(center_x: float, center_y: float, radius: float) -> void:
@@ -198,7 +221,8 @@ func _draw_medal(center: Vector2, radius: float) -> void:
 
 
 ## 徽章の下に★を並べる。取った★は琥珀に光り、まだの★は真鍮へ彫った窪みにする。
-func _draw_stars(center: Vector2, radius: float) -> void:
+## `on_dark` は暗い帯の上(まだの★を彫りではなく細い輪で出す)。
+func _draw_stars(center: Vector2, radius: float, on_dark := false) -> void:
 	if _tier == RankRules.PLATINUM_KEY:
 		return
 	var need := RankRules.star_requirement(_tier)
@@ -212,6 +236,9 @@ func _draw_stars(center: Vector2, radius: float) -> void:
 			continue
 		var points := RankMedal.star_points(at, radius)
 		var closed := RankMedal.closed(points)
+		if on_dark:
+			ShapePaint.polyline(get_canvas_item(), closed, PLATE_DIM, outline, true)
+			continue
 		ShapePaint.colored_polygon(get_canvas_item(), points, STAR_EMPTY_FILL)
 		ShapePaint.polyline(
 			get_canvas_item(),

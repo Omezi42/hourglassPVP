@@ -45,6 +45,10 @@ const DAILY_DONE := "今日の1問 クリア済み"
 const EXPEDITION_NEW := "作戦を選んで出発"
 const EXPEDITION_CONTINUE := "続きから進める"
 const MAIN_FONT_SIZE := 40
+## 「対戦する」ボタンの見出しと副題(待機の行)の大きさ。
+const BATTLE_FONT := 34
+const BATTLE_SUB_FONT := 18
+const PORTRAIT_BATTLE_FONT := 40
 const PICKER_FONT_SIZE := 30
 const PORTRAIT_MARK_SCALE := 1.5
 const DISABLED_ALPHA := 0.55
@@ -57,8 +61,11 @@ var _status_base_text := ""
 var _waiting_timer: Timer
 ## 切断した対局へ戻れるか(GameDesign.md 11章)。立っている間は「対戦する」を押すと選択を挟まず復帰する。
 var _resume_pending := false
+var _stand: HomeHourglassStand
 var _battle_tile: HomeTile
 var _battle_info: RankedEntryInfo
+## 待っている人の数。負なら副題を出さない(通信できない)。
+var _waiting := -1
 var _solo_tile: HomeTile
 var _solo_info: SoloEntryInfo
 var _battle_picker: HomeModePicker
@@ -102,15 +109,18 @@ func _take_over_status_label() -> void:
 	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
 
+## 中央は札の枠を持たず、台座の砂時計・段位の帯・「対戦する」ボタンを積む(GameDesign.md 9章)。
 func _build() -> void:
-	_battle_tile = HomeTile.make("", "", "", Vector2.ZERO, MAIN_FONT_SIZE, true)
-	# 段位の徽章が札を占めるため、紋章の透かしは敷かない。
+	_stand = HomeHourglassStand.new()
+	add_child(_stand)
+	_battle_info = RankedEntryInfo.new()
+	_battle_info.plate = true
+	add_child(_battle_info)
+	_battle_tile = HomeTile.make(BATTLE_TITLE, "", "", Vector2.ZERO, BATTLE_FONT, true)
 	_battle_tile.emblem = null
+	_battle_tile.centered = true
 	_battle_tile.pressed.connect(_on_battle_pressed)
 	add_child(_battle_tile)
-	_battle_info = RankedEntryInfo.new()
-	_battle_info.showcase = true
-	_battle_tile.add_child(_battle_info)
 
 	_solo_tile = HomeTile.make("", "", "", Vector2.ZERO, MAIN_FONT_SIZE)
 	_solo_tile.emblem = null
@@ -120,7 +130,7 @@ func _build() -> void:
 	_solo_tile.add_child(_solo_info)
 	_build_battle_picker()
 	_build_solo_picker()
-	for info: Control in [_battle_info, _solo_info, _ranked_info]:
+	for info: Control in [_solo_info, _ranked_info]:
 		# 札の大きさはモーダル側・向きの切り替えで変わる。中身は札いっぱいに追わせる。
 		info.anchor_right = 1.0
 		info.anchor_bottom = 1.0
@@ -187,7 +197,13 @@ func _layout() -> void:
 	_next_mark.tag_scale = PORTRAIT_MARK_SCALE if _portrait else 1.0
 	_picker_mark.tag_scale = _next_mark.tag_scale
 	var status_rect := HomeLayout.status_rect(_portrait)
-	_place(_battle_tile, HomeLayout.battle_rect(_portrait))
+	_place(_battle_tile, HomeLayout.battle_button_rect(_portrait))
+	_place(_battle_info, HomeLayout.rank_plate_rect(_portrait))
+	_place(_stand, HomeLayout.hourglass_stand_rect(_portrait))
+	HomeTile.set_portrait_text(_battle_tile, _portrait, PORTRAIT_BATTLE_FONT, BATTLE_FONT)
+	_battle_tile.subtitle_lines = 1
+	if not _portrait:
+		_battle_tile.subtitle_size = BATTLE_SUB_FONT
 	_place(_solo_tile, HomeLayout.solo_rect(_portrait))
 	# 縦のモーダルでは「ランクマッチ」が横長になり、徽章を右・文字を左に置く組み方へ戻す。見出しは札が描く。
 	_ranked_info.tall = not _portrait
@@ -201,16 +217,25 @@ func _layout() -> void:
 	_solo_picker.apply_orientation(_portrait)
 
 
-func _place(tile: HomeTile, rect: Rect2) -> void:
+func _place(tile: Control, rect: Rect2) -> void:
 	tile.custom_minimum_size = rect.size
 	tile.position = rect.position
 	tile.size = rect.size
 
 
-## 「対戦する」の見出しは中身(`RankedEntryInfo`)が彫る。モーダルの横長の札だけは `HomeTile` が描く。
+## 「対戦する」ボタンの見出しと副題(待機の行)。モーダルの横長の札だけは見出しを `HomeTile` が描く。
 func _refresh_battle_title() -> void:
-	_battle_info.head_text = RESUME_TITLE if _resume_pending else BATTLE_TITLE
-	_battle_info.queue_redraw()
+	_battle_tile.title = RESUME_TITLE if _resume_pending else BATTLE_TITLE
+	_battle_tile.subtitle_accent = _resume_pending
+	if _resume_pending:
+		_battle_tile.set_subtitle("途中の対局が残っています")
+	elif _waiting > 0:
+		_battle_tile.set_subtitle("いま %d人が相手を待っています" % _waiting)
+	elif _waiting == 0:
+		_battle_tile.set_subtitle("待っている間はCPUと対戦できます")
+	else:
+		_battle_tile.set_subtitle("")
+	_battle_tile.queue_redraw()
 	_ranked_tile.title = RANKED_TITLE if _portrait else ""
 	_ranked_tile.queue_redraw()
 
@@ -220,10 +245,10 @@ func _refresh_waiting() -> void:
 	if not is_visible_in_tree():
 		return
 	if NetSession.client == null or not await NetSession.sign_in():
-		_battle_info.set_waiting(-1)
-		return
-	var count: int = await RankedMatchmakingQueue.count_waiting(NetSession.client, _uid())
-	_battle_info.set_waiting(count)
+		_waiting = -1
+	else:
+		_waiting = await RankedMatchmakingQueue.count_waiting(NetSession.client, _uid())
+	_refresh_battle_title()
 
 
 func _uid() -> String:
@@ -302,7 +327,6 @@ func _set_battle_disabled(disabled: bool) -> void:
 func _refresh_resume() -> void:
 	_resume_pending = not OnlineResume.pending().is_empty()
 	_refresh_battle_title()
-	_battle_info.set_resume(_resume_pending)
 
 
 func _on_battle_pressed() -> void:

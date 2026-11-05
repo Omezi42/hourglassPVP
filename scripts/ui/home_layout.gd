@@ -20,6 +20,13 @@ const STATUS_HEIGHT := 36.0
 const HEADER_TOP := 18.0
 const HEADER_HEIGHT := 72.0
 
+## 中央「対戦する」の中の3段(上から 台座の砂時計 / 段位の帯 / ボタン)。
+const BATTLE_BUTTON_SIZE := Vector2(380, 84)
+const RANK_PLATE_SIZE := Vector2(500, 64)
+const CENTER_GAP := 10.0
+const PORTRAIT_BATTLE_BUTTON_SIZE := Vector2(460, 100)
+const PORTRAIT_RANK_PLATE_SIZE := Vector2(640, 76)
+
 ## 縦画面。ヘッダーとその下の日曜の知らせの行を避ける。
 const PORTRAIT_LEFT := 24.0
 const PORTRAIT_WIDTH := 672.0
@@ -45,6 +52,26 @@ static func battle_rect(portrait: bool) -> Rect2:
 		return Rect2(PORTRAIT_LEFT, PORTRAIT_TOP, PORTRAIT_WIDTH, PORTRAIT_BATTLE_HEIGHT)
 	var center_width := WIDTH - (SIDE_WIDTH + GAP) * 2.0
 	return Rect2(LEFT + SIDE_WIDTH + GAP, TOP, center_width, UPPER_HEIGHT)
+
+
+static func battle_button_rect(portrait: bool) -> Rect2:
+	var area := battle_rect(portrait)
+	var button := PORTRAIT_BATTLE_BUTTON_SIZE if portrait else BATTLE_BUTTON_SIZE
+	return Rect2(Vector2(area.get_center().x - button.x * 0.5, area.end.y - button.y), button)
+
+
+static func rank_plate_rect(portrait: bool) -> Rect2:
+	var plate := PORTRAIT_RANK_PLATE_SIZE if portrait else RANK_PLATE_SIZE
+	var bottom := battle_button_rect(portrait).position.y - CENTER_GAP
+	return Rect2(
+		Vector2(battle_rect(portrait).get_center().x - plate.x * 0.5, bottom - plate.y), plate
+	)
+
+
+static func hourglass_stand_rect(portrait: bool) -> Rect2:
+	var area := battle_rect(portrait)
+	var bottom := rank_plate_rect(portrait).position.y - CENTER_GAP
+	return Rect2(area.position, Vector2(area.size.x, bottom - area.position.y))
 
 
 static func mission_rect(portrait: bool) -> Rect2:
