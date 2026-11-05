@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="AnnouncementData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/announcement_data.gd" id="script_announcement"]
+
+[resource]
+script = ExtResource("script_announcement")
+version = "2026.11.05"
+body = "**あたらしいもの**
+- カードスキンが8つふえたよ。天翼・波紋・千里眼・戴冠・裁きの槌・宝玉・鉄の大盾・石積み。ショップで1つ500砂金だよ
+- カードにフレーバーテキストがついたよ。基本セットの70種ぶん、図鑑の右ページで読めるから、ひらいてみてね
+
+**かわったもの**
+- 対局のはじまりの演出を盛り上げたよ。マリガンの前に先手・後手がまんなかに出て、開始の幕には両者の名前と専用の音がつくよ
+- ホームのまんなかに、台座にのった砂時計をかざったよ。まわりには砂粒が舞っていて、札にカーソルをのせると小物の絵がちょっと動くよ
+
+-# 遊ぶ → https://unityroom.com/games/sunadokei_arena"
