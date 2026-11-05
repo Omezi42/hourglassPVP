@@ -8,6 +8,8 @@ import {goToLogin} from "./login.js";
 const COPIED_MS = 1500;
 // 受け取り箱に置ける件数(GameDesign.md 32章)。ゲームが受け取ると空く。
 const INBOX_LIMIT = 10;
+// コストの棒グラフの最後の1本はこのコスト以上をまとめる(GameDesign.md 32章)。
+const CURVE_TOP_COST = 8;
 
 export const DECK_PATH = /^\/d\/(\d{8})$/;
 
@@ -21,6 +23,28 @@ function parseDeckText(text, cardsById) {
     if (card && count > 0) entries.push({card, count});
   }
   return entries.sort((a, b) => compareByCost(a.card, b.card));
+}
+
+/** コスト0〜7と8+の枚数の縦棒。0枚のコストも位置を残す。 */
+function costCurve(entries) {
+  const counts = new Array(CURVE_TOP_COST + 1).fill(0);
+  for (const entry of entries) counts[Math.min(entry.card.cost, CURVE_TOP_COST)] += entry.count;
+  const peak = Math.max(...counts, 1);
+  const bars = counts.map((count, cost) =>
+    el("div", {class: "cost-curve__col"}, [
+      el("span", {class: "cost-curve__count", text: count > 0 ? String(count) : ""}),
+      el("div", {class: "cost-curve__track"}, [
+        el("div", {class: "cost-curve__bar", style: `height: ${(count / peak) * 100}%`}),
+      ]),
+      el("span", {class: "cost-curve__gem", text: cost === CURVE_TOP_COST ? `${cost}+` : String(cost)}),
+    ])
+  );
+  return el("div", {class: "cost-curve", role: "img", "aria-label": costCurveLabel(counts)}, bars);
+}
+
+function costCurveLabel(counts) {
+  const parts = counts.map((count, cost) => `コスト${cost === CURVE_TOP_COST ? `${cost}以上` : cost} ${count}枚`);
+  return `コストごとの枚数: ${parts.join("、")}`;
 }
 
 function copyButton(label, text) {
@@ -86,6 +110,7 @@ export async function renderDeckPage(root, code) {
       copyButton("リンクをコピー", location.href),
     ]),
     addToGame(deck),
+    costCurve(entries),
     el("div", {class: "card-grid"}, entries.map((entry) => tile(entry.card, entry.count))),
   );
   return deck;

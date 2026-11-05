@@ -64,3 +64,11 @@
 - 投稿は `allowed_mentions: {parse: []}`(コメントに `@everyone` が書かれても鳴らさない。紹介者のメンションも鳴らさない)
 - 「ゲームに追加」は `players/{uid}/deck_inbox/` へ攻略サイトと同じ `{name, cards, sent_at}` を置く。件数の上限(10件)も同じ
 - #デッキを紹介する は `apply_permissions.py` の読ませるだけのチャンネルに入れる
+
+**みんなのデッキ(GameDesign.md 26章)**
+
+- 紹介のたびに(Discord・攻略サイトとも)Functions が `deck_intros/` へ `{code, name, cards, comment, author_name, uid, created_at}` を1件作る。
+  `author_name` は紹介した時点の `players/{uid}` の表示名(一覧を出すたびに人数ぶん読まないため)
+- ルール: `deck_intros/{id}` はサインイン済みなら読める、書けるのは Functions だけ
+- ゲームは `created_at` の降順・50件で読む(REST の `runQuery`)。画面は `CardDeckIntroScreen`、
+  入口はデッキ一覧(`CardDeckListScreen`)のヘッダー。「デッキに追加」はデッキ一覧の末尾へ足す既存の経路(受け取り箱の受け取りと同じ)を使う

@@ -3,7 +3,7 @@ extends Control
 ## ホームの中央「対戦する」と右「ソロモード」の札(GameDesign.md 9章)。下段は `DeckTab`、左のミッションは `HomeScreen`。
 ##
 ## **対局の入口はホームに並べず、押してから選ばせる。**「対戦する」を押すと対局の種類を選ぶ
-## モーダル(ランクマッチ / ルームマッチ / CPU戦)、「ソロモード」を押すと遠征 / リーサルパズルの
+## モーダル(ランクマッチ / ルームマッチ / CPU戦)、「ソロモード」を押すと遠征 / リーサルパズル / CPU戦の
 ## モーダルを出す(`HomeModePicker`)。モーダルはヘッダーより手前に出すため、
 ## `HomeScreen` が `mount_pickers()` で自分の子として預かる。
 ##
@@ -73,6 +73,7 @@ var _ranked_tile: HomeTile
 var _ranked_info: RankedEntryInfo
 var _room_tile: HomeTile
 var _cpu_tile: HomeTile
+var _solo_cpu_tile: HomeTile
 var _solo_picker: HomeModePicker
 var _expedition_tile: HomeTile
 var _puzzle_tile: HomeTile
@@ -154,8 +155,7 @@ func _build_battle_picker() -> void:
 	_room_tile = HomeTile.make("ルームマッチ", "合言葉で友達と", "shield", Vector2.ZERO, PICKER_FONT_SIZE)
 	_room_tile.pressed.connect(func() -> void: room_match_requested.emit())
 	_battle_picker.add_tile(_room_tile)
-	_cpu_tile = HomeTile.make("CPU戦", "好きなデッキで1局", "hour", Vector2.ZERO, PICKER_FONT_SIZE)
-	_cpu_tile.pressed.connect(func() -> void: cpu_match_requested.emit())
+	_cpu_tile = _make_cpu_tile()
 	_battle_picker.add_tile(_cpu_tile)
 	var ranking := CodedButton.make("ランキングを見る", RANKING_BUTTON_SIZE)
 	ranking.pressed.connect(func() -> void: rank_requested.emit())
@@ -176,6 +176,15 @@ func _build_solo_picker() -> void:
 	)
 	_puzzle_tile.pressed.connect(func() -> void: puzzle_requested.emit())
 	_solo_picker.add_tile(_puzzle_tile)
+	# CPU戦は「対戦する」とソロモードの両方に置く(GameDesign.md 9章)。
+	_solo_cpu_tile = _make_cpu_tile()
+	_solo_picker.add_tile(_solo_cpu_tile)
+
+
+func _make_cpu_tile() -> HomeTile:
+	var tile := HomeTile.make("CPU戦", "好きなデッキで1局", "hour", Vector2.ZERO, PICKER_FONT_SIZE)
+	tile.pressed.connect(func() -> void: cpu_match_requested.emit())
+	return tile
 
 
 ## モーダルはヘッダーより手前に出す必要があるため、ホーム画面の子として預ける。
@@ -314,9 +323,9 @@ func _next_step_tile() -> HomeTile:
 	return null
 
 
-## デッキが要る入口(「対戦する」と、モーダルのランクマッチ / ルームマッチ / CPU戦)を押せなくする。
+## デッキが要る入口(「対戦する」と、モーダルのランクマッチ / ルームマッチ / CPU戦。CPU戦は両方のモーダル)を押せなくする。
 func _set_battle_disabled(disabled: bool) -> void:
-	for tile in [_battle_tile, _ranked_tile, _room_tile, _cpu_tile]:
+	for tile in [_battle_tile, _ranked_tile, _room_tile, _cpu_tile, _solo_cpu_tile]:
 		tile.disabled = disabled
 	_battle_info.modulate.a = DISABLED_ALPHA if disabled else 1.0
 	_ranked_info.modulate.a = _battle_info.modulate.a

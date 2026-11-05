@@ -18,6 +18,13 @@
 
 ---
 
+## 0. 進めている作業
+
+- [ ] 戦績の画面を描き直す(GameDesign.md 19章「画面」・カード別をやめる)。先にGodotで描いたモックで承認を取る
+- [ ] みんなのデッキ(GameDesign.md 26章)と、攻略サイトからのデッキ紹介(32章)
+
+---
+
 ## 1. 日付が来たら行う計測
 
 数字はすべて `tools/analyze_matches.py`(通過数は `--funnel`。GameDesign.md 22章・Architecture.md 10.9節)。
