@@ -462,6 +462,28 @@ def result_lose():
     return box_body(sequence(music_box, seq, 3.0))
 
 
+## 対局開始の鐘が鳴る位置(秒)。`CardMatchStartCurtain.TITLE_IN` の文字が出る頃に合わせる。
+MATCH_START_TOLL_AT = 0.2
+
+
+def match_start():
+    """対局開始。砂が吹き上がり、文字が出るところで低い鐘と高い鈴が重なって長く響く。"""
+    d = 2.4
+    x = np.zeros(n_of(d))
+    rush = sand(0.5, 6000, 1500, 9000, lambda t: np.clip(t / 0.18, 0, 1) * np.exp(-np.clip(t - 0.18, 0, None) / 0.12))
+    at(x, rush, 0.0, 0.7)
+    at(x, strike(2.1, brass(note(45), 1.3), 0.0008, 0.3, (1500, 6000)), MATCH_START_TOLL_AT, 0.9)
+    at(x, hand_bell(79, 1.8, 0.45), MATCH_START_TOLL_AT + 0.02)
+    at(x, hand_bell(86, 1.6, 0.35), MATCH_START_TOLL_AT + 0.09)
+    at(x, sand(1.2, 40, 2500, 7500, lambda t: np.exp(-t / 0.5)), MATCH_START_TOLL_AT + 0.05, 1.5)
+    return lowpass(x, 10000)
+
+
+def turn_order():
+    """マリガン前の先手・後手の表示。真鍮の小鈴を1つ、柔らかく。"""
+    return hand_bell(74, 1.4, 0.8)
+
+
 # ---- カードの演出(登場とコスト6以上の効果だけ。打点は scripts/ui/signature/moves/ の定数に合わせる) ----
 
 ## クロノスが落ちきる位置(秒)。`CardUnitFx` の重い着地の尺に合わせる。
@@ -520,3 +542,5 @@ if __name__ == "__main__":
     finish("result_lose", result_lose, -19, 0.2)
     finish("sig_chronos", sig_chronos, -17, 0.18)
     finish("sig_clocktower", sig_clocktower, -18, 0.25)
+    finish("match_start", match_start, -18, 0.22)
+    finish("turn_order", turn_order, -24, 0.18)

@@ -74,13 +74,13 @@ func schedule(delay_scale := 1.0) -> void:
 
 
 ## 手番が回ってきた。CPUの番なら考え始める。`opening` は対局開始の幕を出した直後で、
-## 幕の長さに合わせて誘導対局の延長をかけない。
+## 幕が消えてから指し始める(GameDesign.md 9章)。誘導対局の延長はかけない。
 func on_turn_started(side: int, opening := false) -> void:
 	var s := _screen
 	if s._cpu == null or side == s.my_side or s.state.is_match_over():
 		return
 	if opening:
-		s._cpu_timer.start(CardMatchScreen.CPU_THINK_SECONDS)
+		s._cpu_timer.start(CardMatchStartCurtain.DURATION)
 	else:
 		schedule()
 

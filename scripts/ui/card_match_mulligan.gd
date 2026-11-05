@@ -38,6 +38,14 @@ const DEAL_RISE := 46.0
 const DEAL_DURATION := 0.32
 const DEAL_STAGGER := 0.05
 const DIM_FADE_DURATION := 0.3
+## 開く前に先手・後手の一文だけを中央へ大きく出し、止めてから見出しの上へ移す(GameDesign.md 9章)。
+const ORDER_INTRO_FONT := 56
+## 縦は「後手(コイン1枚)」の一文が横幅に収まる大きさに抑える。
+const PORTRAIT_ORDER_INTRO_FONT := 40
+const ORDER_INTRO_FADE := 0.2
+const ORDER_INTRO_HOLD := 0.8
+const ORDER_INTRO_MOVE := 0.4
+const LABEL_PAD := 12
 
 ## 誘導対局の間は札を選べない(GameDesign.md 18章)。「このままで開始」だけを受け付ける。
 var picking_disabled := false
@@ -60,6 +68,10 @@ var _card_gap := CARD_GAP
 var _card_size := CARD_SIZE
 var _columns := MatchState.SECOND_PLAYER_HAND
 var _button_y := 0.0
+var _turn_order_font := TURN_ORDER_FONT
+var _order_intro_font := ORDER_INTRO_FONT
+## 先手・後手の一文を見せている間は札も確定ボタンもまだ出ていないので、押させない。
+var _intro_playing := false
 
 
 func _ready() -> void:
@@ -80,9 +92,9 @@ func apply_layout(layout: CardMatchLayout) -> void:
 	_top = layout.mulligan_top
 	size = _screen_size
 	_dim.size = _screen_size
-	_turn_order.add_theme_font_size_override(
-		"font_size", PORTRAIT_TURN_ORDER_FONT if layout.portrait else TURN_ORDER_FONT
-	)
+	_turn_order_font = PORTRAIT_TURN_ORDER_FONT if layout.portrait else TURN_ORDER_FONT
+	_order_intro_font = PORTRAIT_ORDER_INTRO_FONT if layout.portrait else ORDER_INTRO_FONT
+	_turn_order.add_theme_font_size_override("font_size", _turn_order_font)
 	_hint.add_theme_font_size_override(
 		"font_size", PORTRAIT_HINT_FONT if layout.portrait else HINT_FONT
 	)
@@ -175,25 +187,74 @@ func show_hand(cards: Array, is_first: bool, has_coin: bool) -> void:
 	_place_cards()
 	_refresh(false)
 	visible = true
-	_start_entrance()
+	# 誘導対局(札を選ばせない)では省く。すなえるの指示と重なるため。
+	if picking_disabled:
+		_start_entrance()
+	else:
+		_start_order_intro()
+
+
+## 先手・後手の一文を暗幕の中央へ大きく出し、少し止めてから見出しの上の定位置へ
+## 縮めながら移す。移し終えたところで手札を配る。
+func _start_order_intro() -> void:
+	if _tween != null and _tween.is_valid():
+		_tween.kill()
+	_intro_playing = true
+	for node in [_stage, _title, _hint, _button] + _views:
+		node.modulate.a = 0.0
+	_place_turn_order(0.0)
+	_turn_order.modulate.a = 0.0
+	_dim.modulate.a = 0.0
+	SoundBank.play(SoundBank.Sfx.TURN_ORDER)
+	_tween = create_tween()
+	_tween.tween_property(_dim, "modulate:a", 1.0, DIM_FADE_DURATION)
+	_tween.parallel().tween_property(_turn_order, "modulate:a", 1.0, ORDER_INTRO_FADE)
+	_tween.tween_interval(ORDER_INTRO_HOLD)
+	(
+		_tween
+		. tween_method(_place_turn_order, 0.0, 1.0, ORDER_INTRO_MOVE)
+		. set_trans(Tween.TRANS_CUBIC)
+		. set_ease(Tween.EASE_IN_OUT)
+	)
+	_tween.tween_callback(_end_order_intro)
+
+
+## 0 は画面の中央に大きく、1 は見出しの上の定位置(`apply_layout()` と同じ位置・大きさ)。
+func _place_turn_order(progress: float) -> void:
+	var font_size := roundi(lerpf(_order_intro_font, _turn_order_font, progress))
+	var height := font_size + LABEL_PAD
+	var start_center := _screen_size.y * 0.5
+	var end_center := _top + (_turn_order_font + LABEL_PAD) * 0.5
+	_turn_order.add_theme_font_size_override("font_size", font_size)
+	_turn_order.size = Vector2(_screen_size.x, height)
+	_turn_order.position = Vector2(0, lerpf(start_center, end_center, progress) - height * 0.5)
+
+
+func _end_order_intro() -> void:
+	_intro_playing = false
+	_start_entrance(false)
 
 
 ## **手札が配られるように**下から浮き上がらせる(GameDesign.md 9章の
 ## 「場に出した砂時計は台座の少し上から落ちて着地する」と同じ思想を、
 ## 対局の入口であるマリガンにも及ぼす)。暗幕もあわせてフェードインさせ、
 ## 唐突に画面が切り替わったように見せない。
-func _start_entrance() -> void:
+## `with_dim` が false のときは、暗幕と先手・後手の一文が既に出ている(`_start_order_intro()` の続き)。
+func _start_entrance(with_dim := true) -> void:
 	if _tween != null and _tween.is_valid():
 		_tween.kill()
 	_tween = create_tween()
 	_tween.set_parallel(true)
-	_dim.modulate.a = 0.0
-	_tween.tween_property(_dim, "modulate:a", 1.0, DIM_FADE_DURATION)
+	if with_dim:
+		_dim.modulate.a = 0.0
+		_tween.tween_property(_dim, "modulate:a", 1.0, DIM_FADE_DURATION)
+		_turn_order.modulate.a = 0.0
+		_tween.tween_property(_turn_order, "modulate:a", 1.0, DIM_FADE_DURATION)
+	_button.modulate.a = 0.0
+	_tween.tween_property(_button, "modulate:a", 1.0, DIM_FADE_DURATION)
 	_stage.modulate.a = 0.0
 	_tween.tween_property(_stage, "modulate:a", 1.0, DIM_FADE_DURATION)
 	_title.modulate.a = 0.0
-	_turn_order.modulate.a = 0.0
-	_tween.tween_property(_turn_order, "modulate:a", 1.0, DIM_FADE_DURATION)
 	_hint.modulate.a = 0.0
 	_tween.tween_property(_title, "modulate:a", 1.0, DIM_FADE_DURATION)
 	_tween.tween_property(_hint, "modulate:a", 1.0, DIM_FADE_DURATION)
@@ -213,11 +274,14 @@ func _start_entrance() -> void:
 
 
 func close() -> void:
+	if _tween != null and _tween.is_valid():
+		_tween.kill()
+	_intro_playing = false
 	visible = false
 
 
 func _on_card_pressed(view: CardView) -> void:
-	if _waiting or picking_disabled:
+	if _waiting or picking_disabled or _intro_playing:
 		return
 	var index := _views.find(view)
 	if index < 0:
@@ -232,7 +296,7 @@ func confirm_rect() -> Rect2:
 
 
 func _on_confirm_pressed() -> void:
-	if _waiting:
+	if _waiting or _intro_playing:
 		return
 	var indices: Array = []
 	for i in _picked.size():

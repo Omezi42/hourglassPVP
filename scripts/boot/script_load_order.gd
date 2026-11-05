@@ -109,6 +109,7 @@ const PATHS: Array[String] = [
 	"res://scripts/ui/turn_clock_dial.gd",
 	"res://scripts/ui/card_drag_arrow.gd",
 	"res://scripts/logic/game_version.gd",
+	"res://scripts/ui/card_match_start_curtain.gd",
 	"res://scripts/net/play_time_service.gd",
 	"res://scripts/logic/daily_puzzle.gd",
 	"res://scripts/logic/endless_puzzles.gd",

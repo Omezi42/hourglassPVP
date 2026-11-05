@@ -733,7 +733,12 @@ func _on_turn_started(side: int) -> void:
 	if _match_start_pending and _interactive and not is_puzzle and not is_tutorial:
 		_match_start_pending = false
 		if not state.is_match_over():
-			_feed.announce_match_start(side == my_side)
+			var foe_name := _foe_bar.display_name
+			_feed.announce_match_start(
+				side == my_side,
+				AccountService.display_name_or_default(),
+				foe_name if not foe_name.is_empty() else "対戦相手"
+			)
 			_cpu_ctl.on_turn_started(side, true)
 			return
 	_match_start_pending = false
