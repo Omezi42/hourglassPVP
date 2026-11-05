@@ -20,6 +20,7 @@ const SAVE_PATH := "user://match_stats.json"
 ## デッキ別に覚えておく上限。多すぎると読み込みが重くなるだけで、
 ## 構築の傾向を見るには十分な件数。
 const DECK_LIMIT := 20
+const FIELDS := ["kinds", "decks"]
 
 static var _loaded := false
 ## テスト中だけ true。`user://` の実データを書き換えないための保険。
@@ -31,34 +32,23 @@ static var _data: Dictionary = {}
 static func record(owner_uid: String, kind: int, won: bool, turns: int, deck: Array) -> void:
 	_ensure_loaded()
 	var bucket := _bucket(owner_uid)
-	apply_delta(bucket, kind, won, turns, unique_card_ids(deck), deck_code_for(deck))
+	apply_delta(bucket, kind, won, turns, deck_code_for(deck))
 	_save()
 
 
-## デッキ(`Array[CardData]`)から、戦績が数える単位(重複しないid・指紋)を作る。
+## デッキ(`Array[CardData]`)から、デッキ別が数える単位(指紋)を作る。
 ## Firestoreへ送る増分も同じものを使うため、ここを唯一の作り方にする。
-static func unique_card_ids(deck: Array) -> Array[String]:
-	var seen: Dictionary = {}
-	var ids: Array[String] = []
-	for card: CardData in deck:
-		if seen.has(card.id):
-			continue
-		seen[card.id] = true
-		ids.append(card.id)
-	return ids
-
-
 static func deck_code_for(deck: Array) -> String:
 	return CardDeckCode.fingerprint(deck) if not deck.is_empty() else ""
 
 
-## 1局ぶんの増分を任意のバケット(`{"kinds":, "cards":, "decks":}`)へ適用する。
+## 1局ぶんの増分を任意のバケット(`{"kinds":, "decks":}`)へ適用する。
 ## ローカルの `record()` と `MatchStatsService` のFirestore同期が、同じ計算を
 ## 共有するための唯一の入口。
 static func apply_delta(
-	bucket: Dictionary, kind: int, won: bool, turns: int, card_ids: Array, deck_code: String
+	bucket: Dictionary, kind: int, won: bool, turns: int, deck_code: String
 ) -> void:
-	for field in ["kinds", "cards", "decks"]:
+	for field in FIELDS:
 		if not bucket.has(field):
 			bucket[field] = {}
 	var totals: Dictionary = bucket["kinds"]
@@ -68,12 +58,6 @@ static func apply_delta(
 	entry["wins"] = int(entry["wins"]) + (1 if won else 0)
 	entry["turns"] = int(entry["turns"]) + turns
 	totals[key] = entry
-	var cards: Dictionary = bucket["cards"]
-	for id: String in card_ids:
-		var c: Dictionary = cards.get(id, {"games": 0, "wins": 0})
-		c["games"] = int(c["games"]) + 1
-		c["wins"] = int(c["wins"]) + (1 if won else 0)
-		cards[id] = c
 	if deck_code.is_empty():
 		return
 	var decks: Dictionary = bucket["decks"]
@@ -87,12 +71,10 @@ static func apply_delta(
 
 ## Firestoreから読んだ値でローカルのバケットを丸ごと差し替える
 ## (`MatchStatsService` が別端末の分を取り込むときに使う)。
-static func replace_bucket(
-	owner_uid: String, kinds: Dictionary, cards: Dictionary, decks: Dictionary
-) -> void:
+static func replace_bucket(owner_uid: String, kinds: Dictionary, decks: Dictionary) -> void:
 	_ensure_loaded()
 	var key := owner_uid if not owner_uid.is_empty() else "local"
-	_data[key] = {"kinds": kinds, "cards": cards, "decks": decks}
+	_data[key] = {"kinds": kinds, "decks": decks}
 	_save()
 
 
@@ -117,12 +99,6 @@ static func totals(owner_uid: String, kind: int = -1) -> Dictionary:
 		wins += int(entry["wins"])
 		turns += int(entry["turns"])
 	return {"games": games, "wins": wins, "turns": turns}
-
-
-## カード別の成績。`{"id":, "games":, "wins":}` を採用数の多い順で返す。
-static func cards(owner_uid: String) -> Array:
-	_ensure_loaded()
-	return _sorted_rows(_bucket(owner_uid)["cards"], "id")
 
 
 ## デッキ別の成績。`{"code":, "games":, "wins":}` を対局数の多い順で返す。
@@ -156,9 +132,11 @@ static func _drop_smallest(source: Dictionary) -> void:
 static func _bucket(owner_uid: String) -> Dictionary:
 	var key := owner_uid if not owner_uid.is_empty() else "local"
 	if not _data.has(key):
-		_data[key] = {"kinds": {}, "cards": {}, "decks": {}}
+		_data[key] = {"kinds": {}, "decks": {}}
 	var bucket: Dictionary = _data[key]
-	for field in ["kinds", "cards", "decks"]:
+	# カード別は記録しない(GameDesign.md 19章)。前の版が残した分はここで落とす。
+	bucket.erase("cards")
+	for field in FIELDS:
 		if not bucket.has(field):
 			bucket[field] = {}
 	return bucket

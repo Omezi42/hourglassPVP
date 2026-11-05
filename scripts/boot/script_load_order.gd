@@ -289,6 +289,7 @@ const PATHS: Array[String] = [
 	"res://scripts/ui/keyword_popup.gd",
 	"res://scripts/ui/almanac_entry.gd",
 	"res://scripts/ui/card_list_screen.gd",
+	"res://scripts/ui/stats_graphics.gd",
 	"res://scripts/ui/card_stats_screen.gd",
 	"res://scripts/ui/card_puzzle_picker_screen.gd",
 	"res://scripts/ui/solo_ui_paint.gd",

@@ -18,21 +18,13 @@ func run(assert_true: Callable) -> void:
 
 func _test_apply_delta_accumulates(assert_true: Callable) -> void:
 	var bucket := {}
-	MatchStats.apply_delta(
-		bucket, CurrencyRules.MatchKind.CPU, true, 10, ["sand", "sword"], "code-1"
-	)
-	MatchStats.apply_delta(bucket, CurrencyRules.MatchKind.CPU, false, 20, ["sand"], "code-1")
+	MatchStats.apply_delta(bucket, CurrencyRules.MatchKind.CPU, true, 10, "code-1")
+	MatchStats.apply_delta(bucket, CurrencyRules.MatchKind.CPU, false, 20, "code-1")
 	assert_true.call(
 		int(bucket["kinds"][str(CurrencyRules.MatchKind.CPU)]["games"]) == 2,
 		"kinds should accumulate games across calls"
 	)
-	assert_true.call(
-		int(bucket["cards"]["sand"]["games"]) == 2, "a card present in both calls should accumulate"
-	)
-	assert_true.call(
-		int(bucket["cards"]["sword"]["games"]) == 1,
-		"a card present in only one call should count once"
-	)
+	assert_true.call(not bucket.has("cards"), "per-card stats should no longer be recorded")
 	assert_true.call(
 		int(bucket["decks"]["code-1"]["games"]) == 2, "the same deck code should accumulate"
 	)
@@ -42,14 +34,12 @@ func _test_replace_bucket_overwrites(assert_true: Callable) -> void:
 	var uid := "match-stats-sync-test-local"
 	var backup := MatchStats.bucket_snapshot(uid)
 	MatchStats.replace_bucket(
-		uid, {"0": {"games": 3, "wins": 1, "turns": 30}}, {"sand": {"games": 3, "wins": 1}}, {}
+		uid, {"0": {"games": 3, "wins": 1, "turns": 30}}, {"d": {"games": 3, "wins": 1}}
 	)
 	var snap := MatchStats.bucket_snapshot(uid)
 	assert_true.call(int(snap["kinds"]["0"]["games"]) == 3, "replace_bucket should overwrite kinds")
-	assert_true.call(
-		int(snap["cards"]["sand"]["games"]) == 3, "replace_bucket should overwrite cards"
-	)
-	MatchStats.replace_bucket(uid, backup["kinds"], backup["cards"], backup["decks"])
+	assert_true.call(int(snap["decks"]["d"]["games"]) == 3, "replace_bucket should overwrite decks")
+	MatchStats.replace_bucket(uid, backup["kinds"], backup["decks"])
 
 
 func _test_push_without_client_queues_pending(assert_true: Callable) -> void:
@@ -76,9 +66,7 @@ func _test_push_writes_through_fake_client(assert_true: Callable) -> void:
 		int(fields["stats_kinds"][str(CurrencyRules.MatchKind.CPU)]["games"]) == 1,
 		"pushing once should write a single game to stats_kinds"
 	)
-	assert_true.call(
-		int(fields["stats_cards"]["sand"]["games"]) == 1, "pushing should write per-card stats"
-	)
+	assert_true.call(not fields.has("stats_cards"), "pushing should not write per-card stats")
 
 	await MatchStatsService.push(client, uid, CurrencyRules.MatchKind.CPU, false, 8, deck)
 	fields = client.store[path]["fields"]
@@ -87,7 +75,7 @@ func _test_push_writes_through_fake_client(assert_true: Callable) -> void:
 		"a second push should read-modify-write on top of the first (not overwrite it)"
 	)
 	assert_true.call(
-		int(fields["stats_cards"]["sand"]["wins"]) == 1,
+		int(fields["stats_kinds"][str(CurrencyRules.MatchKind.CPU)]["wins"]) == 1,
 		"wins should only increase for the game that was actually won"
 	)
 
@@ -101,24 +89,25 @@ func _test_sync_after_sign_in_pulls_and_reapplies_pending(assert_true: Callable)
 			"won": true,
 			"turns": 5,
 			"card_ids": ["sand"],
-			"deck_code": ""
+			"deck_code": "pending-deck"
 		}
 	)
 	var remote_fields := {
 		"stats_kinds": {str(CurrencyRules.MatchKind.RANDOM): {"games": 4, "wins": 2, "turns": 90}},
 		"stats_cards": {"sword": {"games": 4, "wins": 2}},
-		"stats_decks": {},
+		"stats_decks": {"remote-deck": {"games": 4, "wins": 2}},
 	}
 	# client=null(通信できない)のまま呼んでも、pull直後のローカルへ退避分が
 	# 正しく重なって見えることだけを確かめる(送り直しは失敗してまた退避される)。
 	await MatchStatsService.sync_after_sign_in(null, uid, remote_fields)
 	var snap := MatchStats.bucket_snapshot(uid)
 	assert_true.call(
-		int(snap["cards"]["sword"]["games"]) == 4,
+		int(snap["decks"]["remote-deck"]["games"]) == 4,
 		"the remote snapshot should replace the local bucket"
 	)
+	assert_true.call(not snap.has("cards"), "old per-card stats from the server should be ignored")
 	assert_true.call(
-		int(snap["cards"].get("sand", {}).get("games", 0)) == 1,
+		int(snap["decks"].get("pending-deck", {}).get("games", 0)) == 1,
 		"a still-pending local match should be re-applied on top of the pulled snapshot"
 	)
 	assert_true.call(

@@ -945,11 +945,6 @@ func _test_match_stats_accumulate() -> void:
 	var other := MatchStats.totals("uid-b")
 	_assert.call(int(other["games"]) == 1, "accounts should not share their records")
 
-	# 同じカードを2枚積んでも1局は1局(GameDesign.md 19章)。
-	var rows := MatchStats.cards("uid-a")
-	_assert.call(not rows.is_empty(), "cards should be recorded")
-	for row: Dictionary in rows:
-		_assert.call(int(row["games"]) == 3, "a card in every deck should show three games")
 	var decks := MatchStats.decks("uid-a")
 	_assert.call(decks.size() == 1, "the same build should be one deck row")
 	_assert.call(int(decks[0]["games"]) == 3, "the build should show three games")

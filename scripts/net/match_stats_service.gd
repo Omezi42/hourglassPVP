@@ -3,7 +3,7 @@ extends RefCounted
 ## 戦績(`MatchStats`)をFirestoreへ同期し、別端末からログインしても
 ## 同じ記録を続けて見られるようにする(GameDesign.md 19章)。
 ##
-## `players/{uid}` へ `stats_kinds` / `stats_cards` / `stats_decks` の3フィールドを
+## `players/{uid}` へ `stats_kinds` / `stats_decks` の2フィールドを
 ## 持たせ、`MatchStats.apply_delta()` と同じ増分計算をそのまま流用する。
 ##
 ## **押す(push)**: 対局を終えるたびに、`AccountService.grant()` と同じ
@@ -29,7 +29,6 @@ static func push(
 		"kind": kind,
 		"won": won,
 		"turns": turns,
-		"card_ids": MatchStats.unique_card_ids(deck),
 		"deck_code": MatchStats.deck_code_for(deck),
 	}
 	await _push_entry(client, uid, entry)
@@ -40,12 +39,7 @@ static func push(
 static func sync_after_sign_in(client: FirestoreClient, uid: String, fields: Dictionary) -> void:
 	if uid.is_empty():
 		return
-	MatchStats.replace_bucket(
-		uid,
-		fields.get("stats_kinds", {}),
-		fields.get("stats_cards", {}),
-		fields.get("stats_decks", {})
-	)
+	MatchStats.replace_bucket(uid, fields.get("stats_kinds", {}), fields.get("stats_decks", {}))
 	var pending := AccountStore.get_pending_matches()
 	if pending.is_empty():
 		return
@@ -60,10 +54,9 @@ static func sync_after_sign_in(client: FirestoreClient, uid: String, fields: Dic
 			int(entry.get("kind", 0)),
 			bool(entry.get("won", false)),
 			int(entry.get("turns", 0)),
-			entry.get("card_ids", []),
 			str(entry.get("deck_code", ""))
 		)
-		MatchStats.replace_bucket(uid, bucket["kinds"], bucket["cards"], bucket["decks"])
+		MatchStats.replace_bucket(uid, bucket["kinds"], bucket["decks"])
 		await _push_entry(client, uid, entry)
 
 
@@ -79,7 +72,6 @@ static func _push_entry(client: FirestoreClient, uid: String, entry: Dictionary)
 		var fields: Dictionary = doc.get("fields", {})
 		var bucket := {
 			"kinds": fields.get("stats_kinds", {}),
-			"cards": fields.get("stats_cards", {}),
 			"decks": fields.get("stats_decks", {}),
 		}
 		MatchStats.apply_delta(
@@ -87,12 +79,10 @@ static func _push_entry(client: FirestoreClient, uid: String, entry: Dictionary)
 			int(entry.get("kind", 0)),
 			bool(entry.get("won", false)),
 			int(entry.get("turns", 0)),
-			entry.get("card_ids", []),
 			str(entry.get("deck_code", ""))
 		)
 		var data := {
 			"stats_kinds": bucket["kinds"],
-			"stats_cards": bucket["cards"],
 			"stats_decks": bucket["decks"],
 			"updated_at": Time.get_unix_time_from_system(),
 		}
