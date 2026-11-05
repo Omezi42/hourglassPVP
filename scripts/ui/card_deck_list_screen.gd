@@ -55,6 +55,9 @@ var _empty_label: Label
 var _empty_state: EmptyState
 var _create_button: Button
 var _reorder_button: Button
+var _intro_button: Button
+## みんなのデッキ(GameDesign.md 26章)。この画面の上へ重ねて開く。
+var _intro_screen: CardDeckIntroScreen
 var _confirm: ConfirmModal
 var _mode: Mode = Mode.MANAGE
 var _reordering := false
@@ -69,6 +72,7 @@ func _ready() -> void:
 
 ## 管理として開く(デッキタブから)。
 func open_manage() -> void:
+	_intro_screen.visible = false
 	_mode = Mode.MANAGE
 	_reordering = false
 	_refresh()
@@ -77,6 +81,7 @@ func open_manage() -> void:
 
 ## 対局の開始前に使うデッキを選ぶ(GameDesign.md 9章)。
 func open_pick() -> void:
+	_intro_screen.visible = false
 	_mode = Mode.PICK
 	_reordering = false
 	_refresh()
@@ -109,6 +114,9 @@ func _build() -> void:
 	_reorder_button = CodedButton.make("デッキ入れ替え", Vector2(220, 56))
 	_reorder_button.pressed.connect(_on_reorder_pressed)
 	_header.add_action(_reorder_button)
+	_intro_button = CodedButton.make("みんなのデッキ", Vector2(220, 56))
+	_intro_button.pressed.connect(func() -> void: _intro_screen.open())
+	_header.add_action(_intro_button)
 
 	_panel = PanelContainer.new()
 	_panel.position = LIST_RECT.position
@@ -151,6 +159,10 @@ func _build() -> void:
 	_confirm.confirmed.connect(_on_delete_confirmed)
 	_confirm.cancelled.connect(func() -> void: _pending_delete = -1)
 
+	_intro_screen = CardDeckIntroScreen.new()
+	add_child(_intro_screen)
+	_intro_screen.closed.connect(_refresh)
+
 
 ## 縦横が変わったときに `Main` から呼ばれる(Architecture.md 4.7節)。モードと並び替え中かどうかは保つ。
 func apply_orientation(portrait: bool) -> void:
@@ -158,6 +170,7 @@ func apply_orientation(portrait: bool) -> void:
 	if _panel == null:
 		return
 	_header.apply_orientation(portrait)
+	_intro_screen.apply_orientation(portrait)
 	_layout()
 	if is_visible_in_tree():
 		_refresh()
@@ -195,6 +208,7 @@ func _refresh() -> void:
 	_header.set_title("使うデッキを選ぶ" if picking else "デッキ")
 	_create_button.visible = not picking
 	_reorder_button.visible = not picking and decks.size() > 1
+	_intro_button.visible = not picking
 	_reorder_button.text = "並び替えを終える" if _reordering else "デッキ入れ替え"
 	_empty_label.text = _guide_text(decks.size(), picking)
 	# 縦では主アクションの行の有無で一覧の上端が変わる。

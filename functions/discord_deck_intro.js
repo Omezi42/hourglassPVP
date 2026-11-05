@@ -73,11 +73,17 @@ async function linkedUid(db, interaction) {
   return doc.exists ? doc.data().uid : "";
 }
 
-/** `players/{uid}.decks` のうち30枚そろったものを、添字つきで返す。 */
-async function completeDecks(db, uid) {
+// 名前が未設定の人の表示(ゲームの `AccountService.display_name_or_default()` と同じ)。
+const DEFAULT_AUTHOR_NAME = "ゲスト";
+
+async function readPlayer(db, uid) {
   const doc = await db.collection("players").doc(uid).get();
-  const decks = (doc.exists && doc.data().decks) || [];
-  return decks
+  return doc.exists ? doc.data() : {};
+}
+
+/** `players/{uid}.decks` のうち30枚そろったものを、添字つきで返す。 */
+function completeDecks(player) {
+  return (player.decks || [])
     .map((deck, index) => ({index, name: deck.name || DEFAULT_DECK_NAME, ids: deck.ids || []}))
     .filter((deck) => deck.ids.length === DECK_SIZE);
 }
@@ -117,7 +123,7 @@ async function publishDeckCode(db, cards, name) {
 async function handleStart(interaction, db) {
   const uid = await linkedUid(db, interaction);
   if (!uid) return notLinkedMessage();
-  const decks = (await completeDecks(db, uid)).slice(0, SELECT_OPTION_LIMIT);
+  const decks = completeDecks(await readPlayer(db, uid)).slice(0, SELECT_OPTION_LIMIT);
   if (decks.length === 0) return ephemeral("30枚そろったデッキがありません。");
   return ephemeral("紹介するデッキを選んでください。", [
     {
@@ -185,8 +191,8 @@ async function postToChannel(botToken, channelId, payload, files) {
   return response.json();
 }
 
-function introPayload(interaction, deck, code, comment) {
-  const lines = [`<@${interactionUserId(interaction)}> のデッキ紹介`];
+function introPayload(discordUserId, deck, code, comment) {
+  const lines = [`<@${discordUserId}> のデッキ紹介`];
   if (comment) lines.push("", comment);
   return {
     content: lines.join("\n"),
@@ -204,12 +210,13 @@ function introPayload(interaction, deck, code, comment) {
   };
 }
 
-/** 紹介の本体。返り値は本人へ返す1行。 */
-async function introduce(interaction, db, config) {
-  const uid = await linkedUid(db, interaction);
-  if (!uid) return "先にゲーム内アカウントと連携してください。";
-  const index = Number(interaction.data.custom_id.slice(ID_COMMENT_PREFIX.length));
-  const deck = (await completeDecks(db, uid)).find((d) => d.index === index);
+/**
+ * 紹介の本体。Discordからも攻略サイトからも、ここを通して流す(Architecture.md 10.21節)。
+ * 成功したら空文字、失敗したら本人へ返す1行を返す。
+ */
+async function postIntro(db, config, {discordUserId, uid, deckIndex, comment}) {
+  const player = await readPlayer(db, uid);
+  const deck = completeDecks(player).find((d) => d.index === deckIndex);
   if (!deck) return "デッキが見つかりませんでした。もう一度選び直してください。";
   const cards = deckText(deck.ids);
   if (parseDeckText(cards).length !== DECK_SIZE) return "このデッキは紹介できません。";
@@ -218,8 +225,8 @@ async function introduce(interaction, db, config) {
   // deck_share.js がこのファイルの読み込み元を読むため、循環しないよう使う時点で読む。
   const {renderDeckCodeImage} = require("./deck_share");
   const png = await renderDeckCodeImage({code, name: deck.name, cards});
-  const comment = modalValue(interaction, FIELD_COMMENT).trim();
-  const posted = await postToChannel(config.botToken, config.channelId, introPayload(interaction, deck, code, comment), [
+  const text = String(comment || "").trim().slice(0, COMMENT_MAX_LENGTH);
+  const posted = await postToChannel(config.botToken, config.channelId, introPayload(discordUserId, deck, code, text), [
     {buffer: png, filename: "deck.png", type: "image/png"},
   ]);
   if (!posted) return "紹介できませんでした。時間をおいてもう一度お試しください。";
@@ -230,7 +237,30 @@ async function introduce(interaction, db, config) {
     {content: code, message_reference: {message_id: posted.id}, allowed_mentions: {parse: []}},
     []
   );
-  return `<#${config.channelId}> に投稿しました。`;
+  // ゲームの「みんなのデッキ」へも残す(GameDesign.md 26章)。
+  await db.collection("deck_intros").add({
+    code,
+    name: deck.name,
+    cards,
+    comment: text,
+    author_name: String(player.display_name || "").trim() || DEFAULT_AUTHOR_NAME,
+    uid,
+    created_at: Math.floor(Date.now() / 1000),
+  });
+  return "";
+}
+
+/** Discordのフォームから。返り値は本人へ返す1行。 */
+async function introduce(interaction, db, config) {
+  const uid = await linkedUid(db, interaction);
+  if (!uid) return "先にゲーム内アカウントと連携してください。";
+  const error = await postIntro(db, config, {
+    discordUserId: interactionUserId(interaction),
+    uid,
+    deckIndex: Number(interaction.data.custom_id.slice(ID_COMMENT_PREFIX.length)),
+    comment: modalValue(interaction, FIELD_COMMENT),
+  });
+  return error || `<#${config.channelId}> に投稿しました。`;
 }
 
 /**
@@ -289,6 +319,7 @@ function isDeckIntroModal(interaction) {
 }
 
 module.exports = {
+  postIntro,
   handleDeckIntroComponent,
   handleCommentSubmit,
   isDeckIntroModal,

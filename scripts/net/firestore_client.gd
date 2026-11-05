@@ -201,14 +201,31 @@ func query_recent(collection: String, order_field: String, limit: int, fields: A
 	)
 
 
+## `query_recent()` と同じ問い合わせだが、読めなかったときは null を返す
+## (「0件」と「読めなかった」を画面で分けて出すため。GameDesign.md 26章「みんなのデッキ」)。
+func query_recent_or_null(collection: String, order_field: String, limit: int) -> Variant:
+	return await _run_structured_query_or_null(
+		{
+			"from": [{"collectionId": collection}],
+			"orderBy": [{"field": {"fieldPath": order_field}, "direction": "DESCENDING"}],
+			"limit": limit
+		}
+	)
+
+
 func _run_structured_query(structured_query: Dictionary) -> Array:
+	var docs: Variant = await _run_structured_query_or_null(structured_query)
+	return docs if docs is Array else []
+
+
+func _run_structured_query_or_null(structured_query: Dictionary) -> Variant:
 	var result: Array = await _post_raw(
 		_base_url() + ":runQuery", {"structuredQuery": structured_query}
 	)
 	var response_code: int = result[0]
 	var parsed: Variant = result[1]
 	if response_code != 200 or not (parsed is Array):
-		return []
+		return null
 	var docs := []
 	for entry in parsed:
 		if typeof(entry) != TYPE_DICTIONARY or not entry.has("document"):

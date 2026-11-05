@@ -70,5 +70,9 @@
 - 紹介のたびに(Discord・攻略サイトとも)Functions が `deck_intros/` へ `{code, name, cards, comment, author_name, uid, created_at}` を1件作る。
   `author_name` は紹介した時点の `players/{uid}` の表示名(一覧を出すたびに人数ぶん読まないため)
 - ルール: `deck_intros/{id}` はサインイン済みなら読める、書けるのは Functions だけ
-- ゲームは `created_at` の降順・50件で読む(REST の `runQuery`)。画面は `CardDeckIntroScreen`、
-  入口はデッキ一覧(`CardDeckListScreen`)のヘッダー。「デッキに追加」はデッキ一覧の末尾へ足す既存の経路(受け取り箱の受け取りと同じ)を使う
+- 紹介の本体は `discord_deck_intro.js` の `postIntro(db, config, {discordUserId, uid, deckIndex, comment})`。Discordのフォームと
+  攻略サイトの `wikiDeckIntro`(`wiki_deck_intro.js`)の両方がここを通す
+- ゲームは `DeckIntroService.fetch_recent()` で `created_at` の降順・50件を読む(`FirestoreClient.query_recent_or_null()`。
+  読めなかったときは null を返し、0件と分ける)。画面は `CardDeckIntroScreen` で、デッキ一覧(`CardDeckListScreen`)の
+  ヘッダーの「みんなのデッキ」から一覧の上へ重ねて開く(`main.tscn` の画面を増やさない)。「デッキに追加」は
+  `CardDeckSave.add_deck()`(受け取り箱の受け取りと同じ経路)

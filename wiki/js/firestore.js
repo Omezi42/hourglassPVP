@@ -59,3 +59,28 @@ export async function authedRequest(path, {method = "GET", fields = null} = {}) 
     body,
   });
 }
+
+/** ログインしているアカウントとして runQuery する。読めた文書を素の値で返す。ログイン切れ・失敗は null。 */
+export async function authedQuery(structuredQuery) {
+  const token = await idToken();
+  if (!token) return null;
+  const response = await fetch(`${DOCUMENTS.slice(0, -1)}:runQuery`, {
+    method: "POST",
+    headers: {"Authorization": `Bearer ${token}`, "Content-Type": "application/json"},
+    body: JSON.stringify({structuredQuery}),
+  }).catch(() => null);
+  if (!response || !response.ok) return null;
+  return (await response.json()).filter((entry) => entry.document).map((entry) => ({
+    id: entry.document.name.split("/").pop(),
+    ...decodeFields(entry.document.fields || {}),
+  }));
+}
+
+/** ログインしているアカウントとして1件読む。無ければ {}、読めなければ null。 */
+export async function authedDoc(path) {
+  const response = await authedRequest(path);
+  if (!response) return null;
+  if (response.status === 404) return {};
+  if (!response.ok) return null;
+  return decodeFields((await response.json()).fields || {});
+}

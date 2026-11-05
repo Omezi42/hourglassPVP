@@ -37,6 +37,7 @@ const {handleLabAdmin} = require("./lab_admin");
 const {publishWikiStats} = require("./wiki_stats");
 const {handleDeckShare} = require("./deck_share");
 const {handleDeckIntroComponent, handleCommentSubmit, isDeckIntroModal} = require("./discord_deck_intro");
+const {handleWikiDeckIntro} = require("./wiki_deck_intro");
 
 // Botトークン・公開鍵と同じ扱いで、リポジトリへは一切コミットしない。
 // `firebase functions:secrets:set DISCORD_WEBHOOK_URL` / `DISCORD_PUBLIC_KEY` で設定する。
@@ -266,3 +267,17 @@ exports.labAdmin = onRequest(
 exports.deckShare = onRequest({memory: "512MiB"}, async (req, res) => {
   await handleDeckShare(req, res, admin.firestore());
 });
+
+/**
+ * 攻略サイトの「デッキを紹介する」(GameDesign.md 32章 / Architecture.md 10.21節)。
+ * Discordから紹介したときと同じ投稿を #デッキ紹介 へ流す。画像を描くため deckShare と同じメモリを取る。
+ */
+exports.wikiDeckIntro = onRequest(
+  {memory: "512MiB", secrets: [DISCORD_BOT_TOKEN]},
+  async (req, res) => {
+    await handleWikiDeckIntro(req, res, admin.firestore(), admin.auth(), {
+      botToken: DISCORD_BOT_TOKEN.value(),
+      channelId: DECK_INTRO_CHANNEL_ID.value(),
+    });
+  }
+);

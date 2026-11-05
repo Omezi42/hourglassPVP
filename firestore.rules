@@ -203,6 +203,17 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // ゲームの「みんなのデッキ」(同26章 / Architecture.md 10.14節)。紹介のたびにFunctionsが置く。
+    match /deck_intros/{introId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    // 攻略サイトからの紹介の1分に1回の制限(同32章)。Functionsだけが読み書きする。
+    match /deck_intro_cooldowns/{uid} {
+      allow read, write: if false;
+    }
+
     // 上記以外は一切許可しない。
     match /{document=**} {
       allow read, write: if false;

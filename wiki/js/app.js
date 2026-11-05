@@ -3,11 +3,13 @@ import {renderCardsPage} from "./cards.js";
 import {renderStatsPage} from "./stats.js";
 import {DECK_PATH, renderDeckPage} from "./deck.js";
 import {renderLoginPage} from "./login.js";
+import {renderIntroducePage} from "./introduce.js";
 import {currentUser, signOut} from "./auth.js";
 
 const PAGES = {
   cards: {title: "カード辞典", render: renderCardsPage},
   stats: {title: "みんなの統計", render: renderStatsPage},
+  introduce: {title: "デッキを紹介する", render: renderIntroducePage},
   login: {title: "ログイン", render: renderLoginPage},
 };
 const DEFAULT_PAGE = "cards";
