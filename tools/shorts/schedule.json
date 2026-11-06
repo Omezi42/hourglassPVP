@@ -951,9 +951,29 @@
 	},
 	{
 		"date": "2026-11-13",
+		"kind": "puzzle",
+		"id": "48",
+		"label": "とどめ問題 #48",
+		"reserved": [
+			"x",
+			"youtube"
+		]
+	},
+	{
+		"date": "2026-11-13",
 		"kind": "card",
 		"id": "tower",
 		"label": "タワー",
+		"reserved": [
+			"x",
+			"youtube"
+		]
+	},
+	{
+		"date": "2026-11-14",
+		"kind": "puzzle",
+		"id": "49",
+		"label": "とどめ問題 #49",
 		"reserved": [
 			"x",
 			"youtube"
@@ -971,6 +991,16 @@
 	},
 	{
 		"date": "2026-11-15",
+		"kind": "puzzle",
+		"id": "50",
+		"label": "とどめ問題 #50",
+		"reserved": [
+			"x",
+			"youtube"
+		]
+	},
+	{
+		"date": "2026-11-15",
 		"kind": "card",
 		"id": "husk",
 		"label": "ハスク",
@@ -981,9 +1011,29 @@
 	},
 	{
 		"date": "2026-11-16",
+		"kind": "puzzle",
+		"id": "51",
+		"label": "とどめ問題 #51",
+		"reserved": [
+			"x",
+			"youtube"
+		]
+	},
+	{
+		"date": "2026-11-16",
 		"kind": "card",
 		"id": "crown",
 		"label": "クラウン",
+		"reserved": [
+			"x",
+			"youtube"
+		]
+	},
+	{
+		"date": "2026-11-17",
+		"kind": "puzzle",
+		"id": "52",
+		"label": "とどめ問題 #52",
 		"reserved": [
 			"x",
 			"youtube"
