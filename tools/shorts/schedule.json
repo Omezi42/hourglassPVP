@@ -948,5 +948,55 @@
 			"x",
 			"youtube"
 		]
+	},
+	{
+		"date": "2026-11-13",
+		"kind": "card",
+		"id": "tower",
+		"label": "タワー",
+		"reserved": [
+			"x",
+			"youtube"
+		]
+	},
+	{
+		"date": "2026-11-14",
+		"kind": "card",
+		"id": "phase",
+		"label": "フェイズ",
+		"reserved": [
+			"x",
+			"youtube"
+		]
+	},
+	{
+		"date": "2026-11-15",
+		"kind": "card",
+		"id": "husk",
+		"label": "ハスク",
+		"reserved": [
+			"x",
+			"youtube"
+		]
+	},
+	{
+		"date": "2026-11-16",
+		"kind": "card",
+		"id": "crown",
+		"label": "クラウン",
+		"reserved": [
+			"x",
+			"youtube"
+		]
+	},
+	{
+		"date": "2026-11-17",
+		"kind": "card",
+		"id": "blank",
+		"label": "ブランク",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	}
 ]
