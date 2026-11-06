@@ -106,7 +106,7 @@
   **コンテナの子は渡さない**(コンテナが `scale` を1へ戻す)。`CenterContainer` で中央へ置くモーダルはその箱ごと渡す
 - モーダルは画面ではないため `Main` から呼ばれない。開くたびに組み直し、開いている間の向きの変化は `PortraitModal.watch()` が受ける(状態は保つ。木から外れている間は受けない)
 - 全面に置く `CenterContainer` は `size` を代入せずアンカーで張る(代入するとその時点の最小幅で広がったまま縮まない。Pitfalls.md)
-- 対象: `ConfirmModal`・`SettingsPanel`・`LearnMenu`・`KeywordPopup`・`CardCpuDifficultyPicker`・`CardPresetPicker`・`CardDeckFilter`・`WaitingCpuPrompt`・
+- 対象: `ConfirmModal`・`SettingsPanel`・`LearnMenu`・`KeywordPopup`・`CardCpuSettingsPanel`・`CardPresetPicker`・`CardDeckFilter`・`WaitingCpuPrompt`・
   `DailyMissionPanel`・`WelcomeDaysPanel`・`CardSeasonCeremonyPanel`・`ShopSetPreview`・`CardChallengeResult`・`CardDeckSharePanel`・
   `AccountCredentialDialog`(上端を基準に拡大)。拡大しても目安に足りない文字だけ縦の大きさを持つ
 - 縦で横幅に入らない並びは組み替える: `CardDeckFilter` のチップは折り返し(`HFlowContainer`)、`WaitingCpuPrompt` の2つのボタンは上下に積む、

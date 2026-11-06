@@ -19,7 +19,8 @@ func start(
 	difficulty: int,
 	keep_deck_order: bool,
 	tutorial_script: TutorialScriptData,
-	foe_name: String = "CPU"
+	foe_name: String = "CPU",
+	settings: CpuMatchSettings = null
 ) -> void:
 	var s := _screen
 	s._reset_for_new_match()
@@ -46,8 +47,33 @@ func start(
 	rng.randomize()
 	var seed_value := rng.randi_range(1, 1 << 30)
 	s._keep_deck_order = keep_deck_order
-	s._begin_state(deck_self, deck_foe, seed_value, true)
+	if settings == null:
+		s._begin_state(deck_self, deck_foe, seed_value, true)
+	else:
+		s._cpu_settings = settings
+		s._begin_state(
+			deck_self,
+			deck_foe,
+			seed_value,
+			settings.mulligan,
+			settings.first_side(rng),
+			settings.coin
+		)
+		_apply_hp(settings)
 	begin_mulligan()
+
+
+## 遠征と同じく直に当てる(`hp_changed` は被弾と誤読されるため出さない)。
+func _apply_hp(settings: CpuMatchSettings) -> void:
+	var s := _screen
+	var foe := MatchState.other_side(s.my_side)
+	for pair in [[s.my_side, settings.own_hp], [foe, settings.foe_hp]]:
+		s.state.hp_max[pair[0]] = pair[1]
+		s.state.hp[pair[0]] = pair[1]
+	# 帯は `_begin_state()` で一度24を出している。戻してから出し直し、差を被弾の演出にしない。
+	s._own_bar.reset()
+	s._foe_bar.reset()
+	s.refresh()
 
 
 ## CPUのマリガンは先に決めておく。適用の順序は `MatchState` が A → B に固定するため、
@@ -68,6 +94,8 @@ func begin_mulligan() -> void:
 
 ## 考える間を置いてから指させる。誘導対局では帯の予告文を読める長さまで延びる。
 func schedule(delay_scale := 1.0) -> void:
+	if _screen._cpu_settings != null:
+		delay_scale *= _screen._cpu_settings.speed_scale()
 	_screen._cpu_timer.start(
 		_screen._tutorial.cpu_delay(CardMatchScreen.CPU_THINK_SECONDS * delay_scale)
 	)
@@ -112,11 +140,13 @@ func take_action() -> void:
 	s._finish_action()
 
 
-## 同じデッキでもう1局(GameDesign.md 9章)。相手のデッキは13章のとおり毎回選び直す。
+## 同じデッキ・同じ設定でもう1局(GameDesign.md 9章・13章)。相手のデッキが「ランダム」なら選び直す。
 func rematch() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
-	var deck: Dictionary = CardCpuDecks.pick(rng)
-	_screen.start_cpu_match(
-		_screen._own_deck, deck["cards"], -1, false, null, CardCpuDecks.foe_name(deck)
+	var settings := _screen._cpu_settings
+	var deck: Dictionary = (
+		settings.pick_foe_deck(rng) if settings != null else CardCpuDecks.pick(rng)
 	)
+	var foe_name: String = deck["name"] if settings != null else CardCpuDecks.foe_name(deck)
+	_screen.start_cpu_match(_screen._own_deck, deck["cards"], -1, false, null, foe_name, settings)

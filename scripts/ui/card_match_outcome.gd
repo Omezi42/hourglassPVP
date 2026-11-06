@@ -5,6 +5,8 @@ extends RefCounted
 ## `card_match_screen.gd` が1000行の上限に達したため分けている。
 ## 画面の private メンバを読むのは、既存の切り出しクラスと同じ流儀(Architecture.md 4.0節)。
 
+## 練習ルールのCPU戦(GameDesign.md 13章)の結果パネルの行。
+const PRACTICE_LINE := "練習ルールのため、報酬と戦績の対象外"
 ## 最後の手が送り終わるのを待つ上限。届かないまま待ち続けないための保険。
 const SEND_WAIT_FRAMES := 600
 
@@ -21,6 +23,10 @@ func finish(kind: int, deck: Array) -> String:
 	if state.winner < 0:
 		return ""
 	var won: bool = state.winner == _screen.my_side
+	# 練習ルールの対局は砂金・デイリー・戦績・1局の時間のどれにも数えない(GameDesign.md 13章)。
+	if _screen._cpu_settings != null and _screen._cpu_settings.is_practice():
+		FunnelService.reach(FunnelService.MATCH_END)
+		return PRACTICE_LINE
 	var uid := _uid()
 	# 誘導対局は台本どおりに指すだけで、成績ではない(GameDesign.md 19章)。
 	if not _screen._tutorial.ran_this_match:

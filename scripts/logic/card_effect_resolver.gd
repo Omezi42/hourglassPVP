@@ -375,7 +375,7 @@ func _first_empty_slot(side: int) -> int:
 ## シグナルの発行がすべてそこにあり、ここで直接書き換えると3つとも取りこぼす
 ## (満タンで撃つと自分が負ける、という肝心の挙動が働かなくなる)。
 func _invert_hp(side: int) -> void:
-	var target := MatchState.INITIAL_HP - int(_state.hp[side])
+	var target := int(_state.hp_max.get(side, MatchState.INITIAL_HP)) - int(_state.hp[side])
 	var current := int(_state.hp[side])
 	if target > current:
 		_state.heal_player(side, target - current)

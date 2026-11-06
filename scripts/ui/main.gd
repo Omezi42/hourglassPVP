@@ -37,7 +37,7 @@ var card_ranked_match_screen: CardRankedMatchScreen
 ## ランクマッチの段位・ランキング一覧(同章)。
 var card_rank_screen: CardRankScreen
 ## CPU戦の思考レベル選択モーダル(GameDesign.md 13章)。
-var card_cpu_difficulty_picker: CardCpuDifficultyPicker
+var card_cpu_settings_panel: CardCpuSettingsPanel
 ## 待っている間のCPU戦(GameDesign.md 11章)。
 var waiting_cpu: WaitingCpuMatch
 ## ランクマッチを待機したまま他の画面にいる間の帯(同章)。
@@ -192,10 +192,11 @@ func _ready() -> void:
 	add_child(wait_banner)
 	wait_banner.open_pressed.connect(func() -> void: _show_only(card_ranked_match_screen))
 	wait_banner.cancel_pressed.connect(card_ranked_match_screen.cancel_waiting)
-	# 難易度モーダルは対局へ入る前の確認なので、対局画面より手前(後の子)に置く。
-	card_cpu_difficulty_picker = CardCpuDifficultyPicker.new()
-	add_child(card_cpu_difficulty_picker)
-	card_cpu_difficulty_picker.picked.connect(_start_cpu_match)
+	# CPU戦の設定は対局へ入る前の確認なので、対局画面より手前(後の子)に置く。
+	card_cpu_settings_panel = CardCpuSettingsPanel.new()
+	add_child(card_cpu_settings_panel)
+	card_cpu_settings_panel.start_requested.connect(_start_cpu_match)
+	card_cpu_settings_panel.cancelled.connect(func() -> void: _show_only(home_screen, true))
 	# 相手が来た知らせは対局画面の上に重ねるため、同じく対局画面より手前に置く。
 	var waiting_prompt := WaitingCpuPrompt.new()
 	add_child(waiting_prompt)
@@ -363,14 +364,13 @@ func _on_account_back() -> void:
 	home_screen.refresh_account()
 
 
-## CPU戦(v5.0)。先手/後手は常にプレイヤーが先手とし、相手のデッキは作戦を持った
-## CPUデッキ(GameDesign.md 13章)から選ぶ。
-func _start_cpu_match() -> void:
+## CPU戦。先手/後手・相手のデッキなどはCPU戦の設定(GameDesign.md 13章)で決まる。
+func _start_cpu_match(settings: CpuMatchSettings) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
-	var deck: Dictionary = CardCpuDecks.pick(rng)
+	var deck := settings.pick_foe_deck(rng)
 	_match_screen().start_cpu_match(
-		CardDeckSave.selected_deck(), deck["cards"], -1, false, null, CardCpuDecks.foe_name(deck)
+		CardDeckSave.selected_deck(), deck["cards"], -1, false, null, deck["name"], settings
 	)
 	_match_return_screen = home_screen
 	_show_only(_match_screen())
@@ -428,9 +428,9 @@ func _on_room_deck_change_requested() -> void:
 	_show_only(card_deck_list_screen)
 
 
-## デッキ選択の直後に思考レベルの選択(GameDesign.md 13章)を挟んでからCPU戦を始める。
+## デッキ選択の直後にCPU戦の設定(GameDesign.md 13章)を挟んでからCPU戦を始める。
 func _on_cpu_match_deck_requested() -> void:
-	_request_battle(func() -> void: card_cpu_difficulty_picker.open())
+	_request_battle(func() -> void: card_cpu_settings_panel.open())
 
 
 ## 待機画面の「待っている間CPUと対戦する」(GameDesign.md 11章)。CPUのデッキを読む間に

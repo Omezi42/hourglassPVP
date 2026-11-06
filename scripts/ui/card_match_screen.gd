@@ -110,6 +110,8 @@ var _tutorial: CardMatchTutorial
 var _keep_deck_order := false
 var _outcome: CardMatchOutcome
 var _match_kind: CurrencyRules.MatchKind = CurrencyRules.MatchKind.NONE
+## CPU戦の設定(GameDesign.md 13章)。設定を通らない対局では null。
+var _cpu_settings: CpuMatchSettings
 var _clocks: CardMatchClock
 ## 対局を始めた時刻(1局の時間。GameDesign.md 22章)。
 var _started_msec := 0
@@ -211,15 +213,19 @@ func _reset_for_new_match() -> void:
 ## `tutorial_script` を渡すと誘導対局として始める(GameDesign.md 18章)。CPUの手を
 ## 台本から出す `TutorialCpuStrategy` に差し替え、マリガンの札の選択を塞ぐ。
 ## `foe_name` は対局中に出す相手の名前(既定「CPU」。13章「CPU ・ デッキ名」)。
+## `settings` はCPU戦の設定(13章)。省略すると従来のCPU戦(待っている間のCPU戦・誘導対局)。
 func start_cpu_match(
 	deck_self: Array,
 	deck_foe: Array,
 	difficulty: int = -1,
 	keep_deck_order: bool = false,
 	tutorial_script: TutorialScriptData = null,
-	foe_name: String = "CPU"
+	foe_name: String = "CPU",
+	settings: CpuMatchSettings = null
 ) -> void:
-	_cpu_ctl.start(deck_self, deck_foe, difficulty, keep_deck_order, tutorial_script, foe_name)
+	_cpu_ctl.start(
+		deck_self, deck_foe, difficulty, keep_deck_order, tutorial_script, foe_name, settings
+	)
 
 
 ## 待っている間のCPU戦(GameDesign.md 11章)を、勝敗・砂金・戦績・リプレイを残さずに打ち切る。
@@ -335,7 +341,12 @@ func stop_networking() -> void:
 
 ## 対局を開始する共通処理。CPU戦とオンラインで同じ経路を通す。
 func _begin_state(
-	deck_a: Array, deck_b: Array, seed_value: int, use_mulligan: bool = false
+	deck_a: Array,
+	deck_b: Array,
+	seed_value: int,
+	use_mulligan: bool = false,
+	first_side: int = MatchState.Side.A,
+	use_coin: bool = MatchState.COIN_ENABLED
 ) -> void:
 	state = MatchState.new()
 	add_child(state)
@@ -357,9 +368,7 @@ func _begin_state(
 			_flip_beam.play_flip(self, target_side, slot, actor_side)
 	)
 	_log.set_perspective(my_side)
-	state.start_match(
-		deck_a, deck_b, MatchState.Side.A, seed_value, MatchState.COIN_ENABLED, use_mulligan
-	)
+	state.start_match(deck_a, deck_b, first_side, seed_value, use_coin, use_mulligan)
 	_log.watch(state)
 	# デイリーミッションの進捗(GameDesign.md 23章)。数えるだけで、
 	# 書き込むのは終局のとき(`CardMatchOutcome`)。再生では数えない。
@@ -702,11 +711,9 @@ func view_at(side: int, slot: int) -> CardView:
 func refresh_bars() -> void:
 	if state == null:
 		return
-	_foe_bar.show_state(state, MatchState.other_side(my_side))
-	var own_max := MatchState.INITIAL_HP
-	if _solo != null and _solo.active():
-		own_max = _solo.max_hp()
-	_own_bar.show_state(state, my_side, own_max)
+	var foe := MatchState.other_side(my_side)
+	_foe_bar.show_state(state, foe, int(state.hp_max.get(foe, MatchState.INITIAL_HP)))
+	_own_bar.show_state(state, my_side, int(state.hp_max.get(my_side, MatchState.INITIAL_HP)))
 
 
 ## いま操作を受け付ける対局か(再生では実況を出さない)。

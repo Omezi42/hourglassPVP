@@ -42,11 +42,6 @@ func active() -> bool:
 	return _run != null
 
 
-## いまの遠征の最大HP(恩恵「丈夫な体」で伸びる。情報帯のHPの器・GameDesign.md 27章)。
-func max_hp() -> int:
-	return _run.max_hp if _run != null else MatchState.INITIAL_HP
-
-
 func apply_layout(layout: CardMatchLayout) -> void:
 	_plaque.apply_layout(layout)
 

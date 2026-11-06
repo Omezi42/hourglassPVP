@@ -18,9 +18,27 @@ static func make_bar(screen: CardMatchScreen, opponent: bool) -> PlayerInfoBar:
 		bar.drop_handler = screen.touch.on_face_drop
 		bar.mouse_entered.connect(screen._pointer.set_hover_target.bind(CardMatchSelection.FACE))
 		bar.mouse_exited.connect(screen._pointer.set_hover_target.bind(CardMatchSelection.NO_HOVER))
+		bar.gui_input.connect(_on_foe_bar_input.bind(screen, bar))
 	bar.graveyard_pressed.connect(screen._on_graveyard_pressed.bind(opponent))
 	screen.add_child(bar)
 	return bar
+
+
+## CPU戦の設定「相手の手札を見せる」(GameDesign.md 13章)。手札の山を押したら墓地と同じ一覧で開く。
+## 帯(`player_info_bar.gd`)は行数の上限に近いため、分岐をそちらへ足さずにここで受ける。
+static func _on_foe_bar_input(
+	event: InputEvent, screen: CardMatchScreen, bar: PlayerInfoBar
+) -> void:
+	var settings := screen._cpu_settings
+	if settings == null or not settings.reveal_hand or screen.state == null:
+		return
+	var button := event as InputEventMouseButton
+	if button == null or button.pressed or button.button_index != MOUSE_BUTTON_LEFT:
+		return
+	if not bar.hand_pile_rect().has_point(button.position):
+		return
+	var foe := MatchState.other_side(screen.my_side)
+	screen._pile.open_pile("相手の手札", screen.state.hand[foe], screen.skin_viewer_for(foe))
 
 
 ## 盤面の6枠。位置と縮尺は `CardMatchArrange` が置く。

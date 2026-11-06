@@ -101,18 +101,24 @@
   検証は常に `NORMAL` で行う(GameDesign.md 7章の指標は `NORMAL` の値のまま)
 - 誘導対局(4.1.5節)ではCPUの思考を使わず、台本の手を返す指し手を `_cpu` に差す(GameDesign.md 18章)
 
-## 8.2 CPU戦の思考レベル選択画面
+## 8.2 CPU戦の設定(GameDesign.md 13章「CPU戦の設定」)
 
 | クラス | 責務 |
 |---|---|
-| `CardCpuDifficultyPicker`(`scripts/ui/card_cpu_difficulty_picker.gd`) | 初級/中級/上級を選ぶモーダル。暗幕+`content_panel.tres`の中央パネルという既存パターン(`SettingsPanel`等)を踏襲する |
+| `CpuMatchSettings`(`scripts/logic/cpu_match_settings.gd`、`RefCounted`) | 設定の値(先手/後手・相手のデッキ・速さ・両者のHP・マリガン・コイン・手札を見せる)と `user://cpu_match_settings.json` への保存。`is_practice()`・`first_side(rng)`・`pick_foe_deck(rng)` を持つ |
+| `CardCpuSettingsPanel`(`scripts/ui/card_cpu_settings_panel.gd`) | 「◀ 値 ▶」の行を並べるモーダル。暗幕+`content_panel.tres`の中央パネルという既存パターン(`SettingsPanel`等)を踏襲する |
 
-- **CPU戦のときだけ**、デッキ選択(`CardDeckListScreen.open_pick()`)の直後にこのモーダルを挟む。
-  `Main._on_deck_picked()` の後続として `_pending_cpu_difficulty` のようなフラグを持たせず、
-  `Main._start_cpu_match()` の直前に一度だけ開く(デッキ選択とモーダルの2段を
-  `_pending_battle` の1つのCallableへ畳み込むと分岐が読みにくくなるため、
-  CPU戦の入口関数側で明示的に1段追加する)
-- **選んだ値は `CardDeckSave` と同じ「Autoloadを使わずstaticで持つ」流儀**で
-  `user://cpu_difficulty.json` へ永続化する(`CardCpuDifficultySave`)。前回選んだ値を
-  次回の初期選択にするため(GameDesign.md 13章「対局のたびに選び直せる」)
-- 誘導対局・リプレイ再生はこの画面を通らない
+- **CPU戦のときだけ**、デッキ選択(`CardDeckListScreen.open_pick()`)の直後にこのモーダルを開く。`Main._on_cpu_match_deck_requested()` が
+  `_request_battle()` の続きとして開き、「対局する」で `Main._start_cpu_match()` へ進む
+- 思考レベルは従来どおり `CardCpuDifficultySave` が持つ(`CardCpuStrategy.resolve_difficulty()` と待っている間のCPU戦が読むため)。
+  それ以外の値を `CpuMatchSettings` が持つ。どちらも `CardDeckSave` と同じ「Autoloadを使わずstaticで持つ」流儀
+- 相手のデッキは文字列のキーで持つ:空文字がランダム、CPUデッキのid、`own:N`(保存デッキの位置)。保存デッキが消えて位置が無くなったらランダムへ落とす
+- **設定は `CardMatchScreen.start_cpu_match()` の引数 `settings` で渡す。**省略(null)なら従来のCPU戦と同じ(待っている間のCPU戦・誘導対局が使う)。
+  `CardMatchCpu.start()` が先手・マリガン・コインを `_begin_state()` へ渡し、HPを `MatchState.hp_max` と `hp` へ直に当て(遠征と同じく `hp_changed` は出さない)、
+  速さ・練習・手札の公開を画面の `_cpu_settings` に控える。「もう一度」(`rematch()`)も同じ `settings` を渡す
+- **最大HPは `MatchState.hp_max`(側ごと)が持つ。**`heal_player()` の上限と砂術「HPの反転」の基準はこれを読む。
+  遠征(`SoloBattleRules.apply()`)も最大HPをここへ入れ、情報帯の器の大きさも `hp_max` から取る
+- 練習の対局は `CardMatchOutcome.finish()` が戦績・1局の時間・デイリー・砂金を飛ばし、結果パネルへ理由の1行だけを返す
+- 手札を見せる対局では、相手の情報帯の `gui_input` を `CardMatchBuild` で受け、手札の山(`PlayerInfoBar.hand_pile_rect()`)を押したら
+  `CardPileViewer.open_pile()` で一覧を開く(帯に分岐を足さない。`player_info_bar.gd` が行数の上限に近いため)
+- 誘導対局・リプレイ再生・遠征・待っている間のCPU戦はこの画面を通らない

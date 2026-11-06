@@ -46,10 +46,12 @@ func apply(state: MatchState, mine: int, run: SoloRun, gate: SoloGateData) -> vo
 	var foe := MatchState.other_side(mine)
 	for _i in run.extra_opening_draw():
 		state._draw_one(mine)
+	state.hp_max[mine] = run.max_hp
 	state.hp[mine] = run.hp
 	var foe_delta := run.foe_hp_delta() + (gate.foe_hp_bonus if gate != null else 0)
 	if foe_delta != 0:
 		state.hp[foe] = maxi(state.hp[foe] + foe_delta, 1)
+		state.hp_max[foe] = maxi(MatchState.INITIAL_HP, state.hp[foe])
 	if gate != null:
 		state.sand_drop_count = gate.sand_drop_count
 		state.flip_disabled = gate.flip_disabled

@@ -27,6 +27,7 @@ static func run(screen: CardMatchScreen) -> void:
 		screen._finale.reset()
 	screen._cpu_timer.stop()
 	screen._cpu = null
+	screen._cpu_settings = null
 	screen._cpu_followup = false
 	if screen._emote != null:
 		screen._emote.close_popup()

@@ -98,6 +98,9 @@ const MAX_TURNS := 200
 const TURN_FORFEIT_LIMIT := 3
 
 var hp: Dictionary = {}
+## 最大HP(回復の上限・HPの反転の基準)。既定は INITIAL_HP で、CPU戦の設定と遠征だけが変える。
+## 教材の盤面のように `start_match()` を通らない局面もあるため、読む側は `get(side, INITIAL_HP)` で読む。
+var hp_max: Dictionary = {}
 var mana: Dictionary = {}
 var max_mana: Dictionary = {}
 ## 山札(先頭が次に引くカード)。
@@ -177,6 +180,7 @@ func start_match(
 	current_turn = p_first_side
 	for side in [Side.A, Side.B]:
 		hp[side] = INITIAL_HP
+		hp_max[side] = INITIAL_HP
 		mana[side] = 0
 		max_mana[side] = 0
 		hand[side] = []
@@ -700,7 +704,7 @@ func damage_player(side: int, amount: int) -> void:
 func heal_player(side: int, amount: int) -> void:
 	if amount <= 0:
 		return
-	hp[side] = mini(hp[side] + amount, INITIAL_HP)
+	hp[side] = mini(hp[side] + amount, int(hp_max.get(side, INITIAL_HP)))
 	hp_changed.emit(side, hp[side])
 
 
