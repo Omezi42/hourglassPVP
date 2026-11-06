@@ -101,16 +101,20 @@
   検証は常に `NORMAL` で行う(GameDesign.md 7章の指標は `NORMAL` の値のまま)
 - 誘導対局(4.1.5節)ではCPUの思考を使わず、台本の手を返す指し手を `_cpu` に差す(GameDesign.md 18章)
 
-## 8.2 CPU戦の設定(GameDesign.md 13章「CPU戦の設定」)
+## 8.2 CPU戦の思考レベル選択画面と詳細設定(GameDesign.md 13章)
 
 | クラス | 責務 |
 |---|---|
-| `CpuMatchSettings`(`scripts/logic/cpu_match_settings.gd`、`RefCounted`) | 設定の値(先手/後手・相手のデッキ・速さ・両者のHP・マリガン・コイン・手札を見せる)と `user://cpu_match_settings.json` への保存。`is_practice()`・`first_side(rng)`・`pick_foe_deck(rng)` を持つ |
-| `CardCpuSettingsPanel`(`scripts/ui/card_cpu_settings_panel.gd`) | 「◀ 値 ▶」の行を並べるモーダル。暗幕+`content_panel.tres`の中央パネルという既存パターン(`SettingsPanel`等)を踏襲する |
+| `CardCpuDifficultyPicker`(`scripts/ui/card_cpu_difficulty_picker.gd`) | 初級/中級/上級を選ぶモーダル。押すと保存済みの詳細設定を添えて `picked(settings)` を出す。下に「詳細設定」と、変えた項目の1行(`CardCpuSettingsPanel.summary_of()`) |
+| `CardCpuSettingsPanel`(`scripts/ui/card_cpu_settings_panel.gd`) | 詳細設定の「◀ 値 ▶」の行を並べるモーダル。`CardCpuDifficultyPicker` の子として上に重ねる。「決める」で保存、「戻る」で捨て、どちらも `closed` |
+| `CpuMatchSettings`(`scripts/logic/cpu_match_settings.gd`、`RefCounted`) | 詳細設定の値(先手/後手・相手のデッキ・速さ・両者のHP・マリガン・コイン・手札を見せる)と `user://cpu_match_settings.json` への保存。`is_practice()`・`first_side(rng)`・`pick_foe_deck(rng)` を持つ |
 
-- **CPU戦のときだけ**、デッキ選択(`CardDeckListScreen.open_pick()`)の直後にこのモーダルを開く。`Main._on_cpu_match_deck_requested()` が
-  `_request_battle()` の続きとして開き、「対局する」で `Main._start_cpu_match()` へ進む
-- 思考レベルは従来どおり `CardCpuDifficultySave` が持つ(`CardCpuStrategy.resolve_difficulty()` と待っている間のCPU戦が読むため)。
+- 2つのモーダルは暗幕+`content_panel.tres`の中央パネルという既存パターン(`SettingsPanel`等)を踏襲する
+- **CPU戦のときだけ**、デッキ選択(`CardDeckListScreen.open_pick()`)の直後に `CardCpuDifficultyPicker` を開く。
+  `Main._start_cpu_match()` の直前に一度だけ開く(デッキ選択とモーダルの2段を
+  `_pending_battle` の1つのCallableへ畳み込むと分岐が読みにくくなるため、
+  CPU戦の入口関数側で明示的に1段追加する)
+- 思考レベルは `CardCpuDifficultySave`(`user://cpu_difficulty.json`)が持つ(`CardCpuStrategy.resolve_difficulty()` と待っている間のCPU戦が読むため)。
   それ以外の値を `CpuMatchSettings` が持つ。どちらも `CardDeckSave` と同じ「Autoloadを使わずstaticで持つ」流儀
 - 相手のデッキは文字列のキーで持つ:空文字がランダム、CPUデッキのid、`own:N`(保存デッキの位置)。保存デッキが消えて位置が無くなったらランダムへ落とす
 - **設定は `CardMatchScreen.start_cpu_match()` の引数 `settings` で渡す。**省略(null)なら従来のCPU戦と同じ(待っている間のCPU戦・誘導対局が使う)。

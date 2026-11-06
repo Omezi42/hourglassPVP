@@ -1,11 +1,10 @@
 class_name CardCpuSettingsPanel
 extends Control
-## CPU戦の設定のモーダル(GameDesign.md 13章「CPU戦の設定」/ Architecture.md 8.2節)。
-## デッキ選択の直後にだけ挟む。行ごとの「◀ 値 ▶」は端で先頭へ戻る。
-## 「対局する」で値を保存して `start_requested` を出す。
+## CPU戦の詳細設定のモーダル(GameDesign.md 13章「CPU戦の設定」/ Architecture.md 8.2節)。
+## 思考レベルのモーダルの「詳細設定」から重ねて開く。行ごとの「◀ 値 ▶」は端で先頭へ戻る。
+## 「決める」で値を保存し、「戻る」は変えた値を捨てる。どちらも `closed` を出す。
 
-signal start_requested(settings: CpuMatchSettings)
-signal cancelled
+signal closed
 
 const SCREEN_SIZE := Vector2(1280, 720)
 const PANEL_STYLE := "res://resources/theme/content_panel.tres"
@@ -31,15 +30,11 @@ const SPEED_NAMES := {
 	CpuMatchSettings.Speed.NORMAL: "普通",
 	CpuMatchSettings.Speed.FAST: "速い",
 }
-const DIFFICULTY_NAMES := {
-	CardCpuStrategy.Difficulty.BEGINNER: "初級",
-	CardCpuStrategy.Difficulty.NORMAL: "中級",
-	CardCpuStrategy.Difficulty.EXPERT: "上級",
-}
 const PRACTICE_NOTE := "練習ルールのため、報酬と戦績の対象外"
+const DEFAULT_SUMMARY := "標準のルール"
+const SUMMARY_SEPARATOR := " ・ "
 
 var _settings: CpuMatchSettings
-var _difficulty: CardCpuStrategy.Difficulty
 var _dim: ColorRect
 var _center: CenterContainer
 var _panel: PanelContainer
@@ -60,7 +55,6 @@ func _ready() -> void:
 
 func open() -> void:
 	_settings = CpuMatchSettings.load_saved()
-	_difficulty = CardCpuDifficultySave.get_difficulty()
 	_refresh()
 	_layout()
 	visible = true
@@ -102,7 +96,7 @@ func _build() -> void:
 	var root := VBoxContainer.new()
 	root.add_theme_constant_override("separation", 16)
 	_panel.add_child(root)
-	root.add_child(_label("CPU戦の設定", TITLE_FONT_SIZE, UiPalette.TEXT_OFFWHITE, true))
+	root.add_child(_label("詳細設定", TITLE_FONT_SIZE, UiPalette.TEXT_OFFWHITE, true))
 
 	_columns = BoxContainer.new()
 	_columns.add_theme_constant_override("separation", COLUMN_GAP)
@@ -114,7 +108,6 @@ func _build() -> void:
 	_deck_summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_deck_summary.custom_minimum_size = Vector2(COLUMN_WIDTH, 0)
 	matchup.add_child(_deck_summary)
-	_add_row(matchup, "difficulty", "思考レベル")
 	_add_row(matchup, "speed", "指す速さ")
 	var practice := _add_column("練習ルール")
 	_add_row(practice, "own_hp", "自分のHP")
@@ -131,15 +124,11 @@ func _build() -> void:
 	buttons.add_theme_constant_override("separation", 24)
 	root.add_child(buttons)
 	var back := CodedButton.make("戻る", BUTTON_SIZE)
-	back.pressed.connect(
-		func() -> void:
-			close()
-			cancelled.emit()
-	)
+	back.pressed.connect(_finish.bind(false))
 	buttons.add_child(back)
-	var start := CodedButton.make_in_group("対局する", BUTTON_SIZE, CodedButton.PRIMARY_ACTION_GROUP)
-	start.pressed.connect(_on_start_pressed)
-	buttons.add_child(start)
+	var apply := CodedButton.make_in_group("決める", BUTTON_SIZE, CodedButton.PRIMARY_ACTION_GROUP)
+	apply.pressed.connect(_finish.bind(true))
+	buttons.add_child(apply)
 
 
 func _add_column(heading: String) -> VBoxContainer:
@@ -192,8 +181,6 @@ func _step(key: String, offset: int) -> void:
 			var keys := CpuMatchSettings.foe_deck_keys()
 			var current := _settings.foe_deck if keys.has(_settings.foe_deck) else keys[0]
 			_settings.foe_deck = _cycle(keys, current, offset)
-		"difficulty":
-			_difficulty = _cycle(DIFFICULTY_NAMES.keys(), _difficulty, offset)
 		"speed":
 			_settings.speed = _cycle(SPEED_NAMES.keys(), _settings.speed, offset)
 		"own_hp":
@@ -216,8 +203,7 @@ func _cycle(values: Array, current: Variant, offset: int) -> Variant:
 
 func _refresh() -> void:
 	_set_value("first", FIRST_NAMES[_settings.first])
-	_set_value("foe_deck", _foe_deck_name())
-	_set_value("difficulty", DIFFICULTY_NAMES[_difficulty])
+	_set_value("foe_deck", _foe_deck_name(_settings))
 	_set_value("speed", SPEED_NAMES[_settings.speed])
 	_set_value("own_hp", str(_settings.own_hp))
 	_set_value("foe_hp", str(_settings.foe_hp))
@@ -234,16 +220,45 @@ func _set_value(key: String, text: String) -> void:
 	(_value_labels[key] as Label).text = text
 
 
-func _foe_deck_name() -> String:
-	var own_index := _settings.own_deck_index()
+static func _foe_deck_name(settings: CpuMatchSettings) -> String:
+	var own_index := settings.own_deck_index()
 	if own_index >= 0:
 		return "自分の『%s』" % CardDeckSave.list_decks()[own_index]["name"]
-	var cpu_name := CardCpuDecks.name_of(_settings.foe_deck)
+	var cpu_name := CardCpuDecks.name_of(settings.foe_deck)
 	return cpu_name if not cpu_name.is_empty() else "ランダム"
 
 
-func _on_start_pressed() -> void:
-	_settings.save()
-	CardCpuDifficultySave.set_difficulty(_difficulty)
+func _finish(apply: bool) -> void:
+	if apply:
+		_settings.save()
 	close()
-	start_requested.emit(_settings)
+	closed.emit()
+
+
+## 思考レベルのモーダルに出す1行。既定から変えた項目だけを並べ、練習ルールならその旨を続ける
+## (設定は覚えておくため、変えたまま忘れて遊ばないように)。
+static func summary_of(settings: CpuMatchSettings) -> String:
+	var defaults := CpuMatchSettings.new()
+	var parts: Array[String] = []
+	if settings.first != defaults.first:
+		parts.append(FIRST_NAMES[settings.first])
+	if settings.own_deck_index() >= 0 or CardCpuDecks.deck_ids().has(settings.foe_deck):
+		parts.append("相手 " + _foe_deck_name(settings))
+	if settings.speed != defaults.speed:
+		parts.append("速さ " + SPEED_NAMES[settings.speed])
+	if settings.own_hp != defaults.own_hp:
+		parts.append("自分のHP %d" % settings.own_hp)
+	if settings.foe_hp != defaults.foe_hp:
+		parts.append("相手のHP %d" % settings.foe_hp)
+	if not settings.mulligan:
+		parts.append("マリガンなし")
+	if not settings.coin:
+		parts.append("コインなし")
+	if settings.reveal_hand:
+		parts.append("手札を見せる")
+	if parts.is_empty():
+		return DEFAULT_SUMMARY
+	var line := SUMMARY_SEPARATOR.join(parts)
+	if not settings.is_practice():
+		return line
+	return "%s\n%s" % [line, PRACTICE_NOTE]

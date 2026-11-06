@@ -333,6 +333,7 @@ const PATHS: Array[String] = [
 	"res://scripts/ui/rank_board_row.gd",
 	"res://scripts/ui/card_rank_screen.gd",
 	"res://scripts/ui/card_cpu_settings_panel.gd",
+	"res://scripts/ui/card_cpu_difficulty_picker.gd",
 	"res://scripts/ui/waiting_cpu_prompt.gd",
 	"res://scripts/ui/waiting_cpu_match.gd",
 	"res://scripts/ui/bar_panel.gd",
