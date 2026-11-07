@@ -13,8 +13,15 @@ const MAX_ANGLE := 0.25
 const TILT_PER_PIXEL := 0.018
 ## 目標の角度へ近づく速さ(大きいほどすぐ追いつく=遅れが小さい)。
 const FOLLOW_SPEED := 10.0
+## 掴んだ瞬間にわずかに膨らんでから収まる(GameDesign.md 9章)。
+const GRAB_POP_SCALE := 1.12
+const GRAB_POP_DURATION := 0.22
+## 卓に落とす影(持ち上げた高さぶん右下へずらす)。
+const SHADOW_OFFSET := Vector2(10.0, 16.0)
+const SHADOW_COLOR := Color(0.0, 0.0, 0.0, 0.38)
 
 var _art: TextureRect
+var _shadow: TextureRect
 var _angle := 0.0
 var _last_mouse := Vector2.ZERO
 var _has_last := false
@@ -32,7 +39,14 @@ func setup(texture: Texture2D, art_size: Vector2) -> void:
 	# 上端をつままれてぶら下がっているものとして扱う(GameDesign.md 9章)。
 	_art.pivot_offset = Vector2(art_size.x * 0.5, 0.0)
 	_art.modulate = Color(1, 1, 1, 0.85)
+	_shadow = _art.duplicate() as TextureRect
+	_shadow.modulate = SHADOW_COLOR
+	_shadow.position += SHADOW_OFFSET
+	add_child(_shadow)
 	add_child(_art)
+	_art.scale = Vector2.ONE * GRAB_POP_SCALE
+	var pop := create_tween().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	pop.tween_property(_art, "scale", Vector2.ONE, GRAB_POP_DURATION)
 	set_process(true)
 
 
@@ -46,5 +60,6 @@ func _process(delta: float) -> void:
 		var target := clampf(-dx * TILT_PER_PIXEL, -MAX_ANGLE, MAX_ANGLE)
 		_angle = lerpf(_angle, target, clampf(FOLLOW_SPEED * delta, 0.0, 1.0))
 		_art.rotation = _angle
+		_shadow.rotation = _angle
 	_last_mouse = mouse
 	_has_last = true

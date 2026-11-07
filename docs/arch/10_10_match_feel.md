@@ -65,7 +65,9 @@
 
 | 反応 | 持つ場所 |
 |---|---|
-| 手札の並び(隣が避ける / ドローで場所を空ける / 相手手番で沈む / 掴んだ札を薄くする) | `CardMatchHandLayout`(位置は代入せず Tween。沈める量は `SUMMONED_SINK` と同じ語彙) |
+| 手札の並び(隣が避ける / ドローで場所を空ける / 相手手番で沈む / 掴んだ札を薄くする / 放した札が弾んで戻る) | `CardMatchHandLayout`(位置は代入せず Tween。同じ行き先へ向かう Tween は掛け直さない。沈める量は `SUMMONED_SINK` と同じ語彙) |
+| ホバー中の札の傾きと光の筋 | `HandHoverSheen`(ホバー中の札の子に付け替える1個のノード。札の `rotation` へ傾きを足し、光の筋は `clip_contents` の中で `TextureRect` を動かすだけで札を描き直さない) |
+| 掴んだ札の膨らみと影 | `CardDragPreview` |
 | 出せない札の首振り・足りないピップの赤 | `CardMatchHandLayout.refuse(view)` / `PlayerInfoBarFx.flash_short(cost)`。呼ぶのは `CardMatchTouch.on_hand_pressed()` |
 | ドラッグ中の傾き | `CardDragPreview`(移動の速度から傾きを決める。`CardView._get_drag_data()` はこれを作って返すだけ) |
 | 放した位置から台座へ滑る | `CardMatchTouch.on_slot_drop()` が放した座標を控え、`unit_played` を受ける既存の経路で滑らせてから `play_land()` |

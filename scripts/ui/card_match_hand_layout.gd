@@ -18,6 +18,8 @@ const AVOID_FALLOFF := 0.5
 const AVOID_MIN_PX := 1.0
 ## 掴んでいる間、手札に残る元の札の濃さ。
 const HELD_ALPHA := 0.35
+## 出さずに放した札が指の位置から手札へ弾んで戻る尺。
+const RETURN_DURATION := 0.32
 ## 出せない札の首振り(左右へ振れる量の並びと1振りの尺)。
 const REFUSE_SWINGS: Array[float] = [7.0, -6.0, 4.0, -2.0, 0.0]
 const REFUSE_STEP := 0.045
@@ -49,10 +51,18 @@ var _hovered_index := -1
 ## 引いた札の出所(画面の座標)。このフレームの `apply()` で新しく現れた札だけがここから飛ぶ。
 var _draw_origin := Vector2.INF
 var _fly_tweens: Dictionary = {}
+## 札 → いま向かわせている Tween の行き先。同じ行き先へ向かう Tween を掛け直さない
+## (`apply()` は1手ごとに全札へ呼ばれ、掛け直すと弾み・首振り・飛来の途中が素の滑りに変わる)。
+var _tween_targets: Dictionary = {}
+var _sheen := HandHoverSheen.new()
+## 掴んでいる札と、掴んだときの手札の枚数(放したときに減っていなければ出していない)。
+var _held_view: CardView
+var _held_count := -1
 
 
 func _init(screen: CardMatchScreen) -> void:
 	_screen = screen
+	_sheen.park_in(screen)
 
 
 ## 手札の位置・沈み・暗さをまとめて更新する。避けている札があれば、その分だけ
@@ -174,6 +184,7 @@ func on_hovered(view: CardView) -> void:
 		return
 	_hovered_index = index
 	_restore_avoided()
+	_sheen.attach(view)
 	_avoid_offsets[view] = Vector2(0.0, -HOVER_LIFT)
 	_slide(view, _base_positions.get(view, view.position) + _offset_of(view), AVOID_DURATION)
 	for j in views.size():
@@ -185,8 +196,36 @@ func on_hovered(view: CardView) -> void:
 
 
 ## 掴んでいる間は手札に残る元の札を薄くする(GameDesign.md 9章)。
+## 出さずに放したなら、指の位置から手札の自分の場所へ弾んで戻す。
 func hold(view: CardView, held: bool) -> void:
 	view.self_modulate.a = HELD_ALPHA if held else 1.0
+	var hand: Array = _screen.state.hand[_screen.my_side]
+	if held:
+		_sheen.detach()
+		_held_view = view
+		_held_count = hand.size()
+		return
+	if view != _held_view:
+		return
+	var kept := hand.size() == _held_count
+	_held_view = null
+	_held_count = -1
+	if kept and view.visible:
+		_return_from_pointer(view)
+
+
+func _return_from_pointer(view: CardView) -> void:
+	var card := CardView.HAND_SIZE_PX
+	var drop := _screen.get_local_mouse_position()
+	view.position = drop - Vector2(card.x * 0.5, card.y - card.y * view.base_scale * 0.5)
+	var rest: Vector2 = _base_positions.get(view, view.position) + _offset_of(view)
+	var tween: Tween = _tweens.get(view)
+	if tween != null and tween.is_valid():
+		tween.kill()
+	tween = view.create_tween().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(view, "position", rest, RETURN_DURATION)
+	_tweens[view] = tween
+	_tween_targets[view] = rest
 
 
 ## 出せない札を押した:その場で小さく首を振る(GameDesign.md 9章)。
@@ -199,10 +238,12 @@ func refuse(view: CardView) -> void:
 	for swing in REFUSE_SWINGS:
 		tween.tween_property(view, "position", rest + Vector2(swing, 0.0), REFUSE_STEP)
 	_tweens[view] = tween
+	_tween_targets[view] = rest
 
 
 func on_left() -> void:
 	_hovered_index = -1
+	_sheen.detach()
 	_restore_avoided()
 
 
@@ -212,6 +253,10 @@ func reset() -> void:
 		if tween != null and tween.is_valid():
 			tween.kill()
 	_tweens.clear()
+	_tween_targets.clear()
+	_sheen.detach()
+	_held_view = null
+	_held_count = -1
 	for view in _fly_tweens:
 		var fly: Tween = _fly_tweens[view]
 		if fly != null and fly.is_valid():
@@ -249,8 +294,11 @@ func _slide(
 ) -> void:
 	var tween: Tween = _tweens.get(view)
 	if tween != null and tween.is_valid():
+		if _tween_targets.get(view) == target:
+			return
 		tween.kill()
 	tween = view.create_tween()
 	tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	tween.tween_property(view, "position", target, duration).set_delay(delay)
 	_tweens[view] = tween
+	_tween_targets[view] = target
