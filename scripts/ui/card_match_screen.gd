@@ -766,6 +766,7 @@ func elapsed_seconds() -> float:
 ## タッチかどうかを入力ごとに控える(Architecture.md 4.7節)。
 func _input(event: InputEvent) -> void:
 	TouchInput.note(event)
+	_pointer.on_input(event)
 
 
 ## 右クリック/Escでの取り消しは `CardMatchPointer` が持つ。

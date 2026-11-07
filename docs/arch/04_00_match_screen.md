@@ -20,7 +20,7 @@
 | `MatchBackdrop` / `ActionColumnLayout` / `ActionColumnPanel` / `RoundActionButton` / `TurnClockDial` / `FlipRightGauge` | 再構築(10.10.0節)で足した下地・行動の列の並び・行動の列の地・丸ボタン・持ち時間の時計・反転権の粒の札 |
 | `PlayerInfoBar` | 片方の情報帯。板を持たず真鍮の器具(メダル / 名札 / HPの器 / マナの計器 / 山の札)を並べる。`hp_bar_rect()` 等の座標の問い合わせ、`highlight_cost()` / `spend_toward()`(ピップの光と吸い込み)、`drop_handler`(HP帯へのドロップ。`targetable` のときだけ受ける)、`show_emote()` |
 | `CardMatchSelection` | いま選んでいるもの(手札 / 自分の枠 / TARGETING / FLIP_RIGHT / 未選択)と `hover_target`(`NO_HOVER` / `FACE` / 相手の枠) |
-| `CardMatchPointer` | 駒へのホバーを詳細・手札の並び・対象の光・マナのピップ・攻撃の予測(`set_hover_target()`)へ配る受け口と、右クリック/Escでの選択の取り消し(`cancel_selection()`)。`CardMatchScreen._unhandled_input()` はここへ渡すだけ |
+| `CardMatchPointer` | 駒へのホバーを詳細・手札の並び・対象の光・マナのピップ・攻撃の予測(`set_hover_target()`)へ配る受け口と、右クリック/Escでの選択の取り消し(`cancel_selection()`)。右クリックは駒の上でも効くよう `CardMatchScreen._input()` から、Escはモーダルの「閉じる」を先に通すため `_unhandled_input()` から渡すだけ |
 | `CardMatchTouch` | 盤面と手札を押す/ドラッグする受け口。分岐だけを持ち、適用は `MatchState`、段取りは `CardMatchSpell` / `CardMatchEffectTarget` / `CardMatchFlipRight` へ渡す |
 | `CardMatchSpell` / `CardMatchEffectTarget` / `CardMatchFlipRight` | 砂術 / 設置効果の対象選択 / 反転権 の段取り。反転権のボタンは再生・観戦の「戻る」と同じ位置(両者は同時に見えない)。反転権は `_build()` の中で重ね物(マリガンの暗幕など)より先に作る(後から足すと暗幕より手前に描かれる) |
 | `CardMatchTargets` | 置ける枠・殴れる相手の強調、相打ちの予測(`refresh_own_preview()`)、反転・ターン終了の予測(4.0.2節)、身構え(`CardView.brace`) |

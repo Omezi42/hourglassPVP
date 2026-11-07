@@ -114,17 +114,25 @@ func set_hover_target(target: int) -> void:
 		s._targets.refresh_own_preview()
 
 
+## 右クリックの取り消しは GUI より先(`_input`)で受ける。画面そのものと駒が
+## `MOUSE_FILTER_STOP` でマウスを受け止めるため、`_unhandled_input` までは届かない。
+func on_input(event: InputEvent) -> void:
+	var click := event as InputEventMouseButton
+	if click != null and click.pressed and click.button_index == MOUSE_BUTTON_RIGHT:
+		_cancel()
+
+
+## Escはモーダル側の「閉じる」を先に通すため、GUI が使わなかったものだけを受ける。
+func on_unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel"):
+		_cancel()
+
+
 ## 選択は右クリックとEscでも取り消せるようにする(GameDesign.md 9章)。
 ## 「他を押す」以外に戻る手段が無いと、対象選択に入った後の抜け方が分からない。
-func on_unhandled_input(event: InputEvent) -> void:
+func _cancel() -> void:
 	var s := _screen
 	if not s._interactive:
-		return
-	var cancelled := event.is_action_pressed("ui_cancel")
-	if not cancelled and event is InputEventMouseButton:
-		var click := event as InputEventMouseButton
-		cancelled = click.pressed and click.button_index == MOUSE_BUTTON_RIGHT
-	if not cancelled:
 		return
 	# エモートの選択も同じ操作で閉じる。開いたまま盤面を隠し続ける状態を作らない。
 	if s._emote != null and s._emote.popup_open():
