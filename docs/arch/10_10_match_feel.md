@@ -65,7 +65,8 @@
 
 | 反応 | 持つ場所 |
 |---|---|
-| 手札の並び(隣が避ける / ドローで場所を空ける / 相手手番で沈む) | `CardMatchHandLayout`(位置は代入せず Tween。沈める量は `SUMMONED_SINK` と同じ語彙) |
+| 手札の並び(隣が避ける / ドローで場所を空ける / 相手手番で沈む / 掴んだ札を薄くする) | `CardMatchHandLayout`(位置は代入せず Tween。沈める量は `SUMMONED_SINK` と同じ語彙) |
+| 出せない札の首振り・足りないピップの赤 | `CardMatchHandLayout.refuse(view)` / `PlayerInfoBarFx.flash_short(cost)`。呼ぶのは `CardMatchTouch.on_hand_pressed()` |
 | ドラッグ中の傾き | `CardDragPreview`(移動の速度から傾きを決める。`CardView._get_drag_data()` はこれを作って返すだけ) |
 | 放した位置から台座へ滑る | `CardMatchTouch.on_slot_drop()` が放した座標を控え、`unit_played` を受ける既存の経路で滑らせてから `play_land()` |
 | ピップの光と吸い込み | `PlayerInfoBar.highlight_cost(n)` / `spend_toward(n, target)`。呼ぶのは `CardMatchPointer.on_view_hovered()` / `on_view_left()` と `CardMatchEffects`(`unit_played` / `spell_cast`) |

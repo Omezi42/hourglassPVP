@@ -23,6 +23,9 @@ const RIM_CORNER_SEGMENTS := 6
 const RIM_PULSE_SPEED := 4.0
 ## バッジの真鍮の外輪(半径 + 3.5)まで覆う。
 const RIM_BADGE_COVER := 3.5
+## 出せない札を押したとき、足りないぶんのピップを赤く点滅させる1回の尺と回数。
+const SHORT_BLINK := 0.16
+const SHORT_BLINKS := 2
 
 var _bar: PlayerInfoBar
 var _time := 0.0
@@ -31,6 +34,8 @@ var _glints: Array[PaintedShape] = []
 var _ring: PaintedShape
 var _rim: PaintedShape
 var _pip_glows: Array[PaintedShape] = []
+var _short_glows: Array[PaintedShape] = []
+var _short_tween: Tween
 
 
 func _init(bar: PlayerInfoBar) -> void:
@@ -78,6 +83,46 @@ func sync(
 		_pip_glows[i].visible = i < glow_centers.size()
 		if i < glow_centers.size():
 			_pip_glows[i].position = glow_centers[i]
+
+
+## 出せない札を押した(GameDesign.md 9章):いまのマナから札のコストまでの空いたピップを赤く点滅させる。
+## 最大マナを超えるぶんはピップが無いため光らせない。
+func flash_short(cost: int) -> void:
+	var from := _bar._mana
+	var to := mini(cost, _bar._max_mana)
+	while _short_glows.size() < to - from:
+		_short_glows.append(_add_shape(_paint_short_glow))
+	for i in _short_glows.size():
+		var glow := _short_glows[i]
+		glow.visible = from + i < to
+		glow.modulate.a = 0.0
+		if glow.visible:
+			var x := PlayerInfoBar.PIP_START_X + (from + i) * PlayerInfoBar.PIP_STEP
+			glow.position = _bar._right(Vector2(x, PlayerInfoBar.CENTER_Y))
+	if _short_tween != null and _short_tween.is_valid():
+		_short_tween.kill()
+	if to <= from:
+		return
+	_short_tween = create_tween()
+	for blink in SHORT_BLINKS:
+		_short_tween.tween_method(_set_short_alpha, 0.0, 1.0, SHORT_BLINK)
+		_short_tween.tween_method(_set_short_alpha, 1.0, 0.0, SHORT_BLINK)
+
+
+func _set_short_alpha(alpha: float) -> void:
+	for glow in _short_glows:
+		glow.modulate.a = alpha
+
+
+func _paint_short_glow(shape: PaintedShape) -> void:
+	UiPaint.draw_ring(
+		shape.get_canvas_item(),
+		Vector2.ZERO,
+		PlayerInfoBar.PIP_RADIUS,
+		UiPalette.WARNING_RED,
+		PIP_GLOW_WIDTH,
+		PIP_GLOW_SEGMENTS
+	)
 
 
 func _add_shape(painter: Callable) -> PaintedShape:

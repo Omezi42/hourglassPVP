@@ -140,7 +140,8 @@ func _play_spend(side: int, cost: int) -> void:
 
 func _glide_to_pedestal(view: CardView, global_origin: Vector2) -> void:
 	var target := view.position
-	view.position = global_origin - view.get_parent().global_position
+	# 駒の中心(縮尺の軸)が出所に重なるところから滑らせる。
+	view.position = global_origin - view.get_parent().global_position - view.size * 0.5
 	var tween := view.create_tween()
 	tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	tween.tween_property(view, "position", target, DROP_GLIDE_DURATION)

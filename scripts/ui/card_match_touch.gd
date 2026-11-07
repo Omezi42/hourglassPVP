@@ -18,6 +18,9 @@ func on_hand_pressed(view: CardView) -> void:
 	var index := _screen._hand_views.find(view)
 	if index < 0 or not _screen._my_turn():
 		return
+	if not view.enabled:
+		_refuse(view, index)
+		return
 	if not _screen._tutorial.gate_hand_select(index):
 		return
 	if _screen.state.can_cast(_screen.my_side, index):
@@ -27,6 +30,13 @@ func on_hand_pressed(view: CardView) -> void:
 		return
 	_screen.selection.select_hand(index)
 	_screen.refresh()
+
+
+## 出せない札を押した(GameDesign.md 9章):札が首を振り、マナが足りないなら足りないピップを赤く光らせる。
+func _refuse(view: CardView, index: int) -> void:
+	_screen._hand_layout.refuse(view)
+	var card: CardData = _screen.state.hand[_screen.my_side][index]
+	_screen._own_bar._fx.flash_short(_screen.state.play_cost(_screen.my_side, card))
 
 
 ## 手札を空き枠へドラッグして出す(GameDesign.md 9章)。押して枠を選ぶ経路と同じ
@@ -47,9 +57,8 @@ func on_slot_drop(source: CardView, slot: int) -> void:
 	# 放した座標を控えておく。台座の中心へ短く滑ってから着地する
 	# (GameDesign.md 9章「対局画面の手触り」)。クリックで枠を選んだ場合は控えないため、
 	# その場合は従来どおり滑らずに着地する。
-	_screen.effects.queue_drop_origin(_screen.my_side, slot, _screen.get_global_mouse_position())
 	_screen.selection.select_hand(index)
-	_play_selected(slot)
+	_play_selected(slot, _screen.get_global_mouse_position())
 
 
 ## 手札を掴んだ瞬間、押して選んだのと同じ状態にする(GameDesign.md 9章)。砂時計なら空き枠が、
@@ -59,6 +68,7 @@ func on_hand_drag_started(view: CardView) -> void:
 	var index := _screen._hand_views.find(view)
 	if index < 0 or not _screen._my_turn() or not _screen._tutorial.gate_hand_select(index):
 		return
+	_screen._hand_layout.hold(view, true)
 	_screen._hide_detail()
 	if _screen.state.can_cast(_screen.my_side, index):
 		var card: CardData = _screen.state.hand[_screen.my_side][index]
@@ -78,6 +88,7 @@ func on_hand_drag_started(view: CardView) -> void:
 ## 手札のドラッグが終わった。落とし先で出せなかった(選択が掴んだときのまま残っている)なら
 ## 取り消す。出した札が設置効果の対象選択へ進んだ場合(置く枠が決まっている)は残す。
 func on_hand_drag_ended(view: CardView) -> void:
+	_screen._hand_layout.hold(view, false)
 	var index := _screen._hand_views.find(view)
 	var sel := _screen.selection
 	var holding := (
@@ -263,11 +274,16 @@ func on_face_pressed() -> void:
 
 ## 相手1体・味方1体を対象に取る設置効果は、出す前に対象を選ばせる(GameDesign.md 9章)。
 ## 対象がいなければ選ばせる意味がないため、そのまま出す(`CardMatchEffectTarget` が判断する)。
-func _play_selected(slot: int) -> void:
+## 駒が台座へ滑り出す位置は、ドラッグなら放した位置、押して枠を選んだなら手札の札の中心。
+func _play_selected(slot: int, drop_at := Vector2.INF) -> void:
 	# 出す前に手札の位置を控える(GameDesign.md 9章「対局画面の手触り」)。出た瞬間には
-	# もう手札から消えているため、支払いのピップが吸い込まれる先をいまのうちに渡しておく。
+	# もう手札から消えているため、支払いのピップが吸い込まれる先と駒が滑り出す位置を
+	# いまのうちに渡しておく。
 	var hand_index := _screen.selection.hand_index
 	if hand_index >= 0 and hand_index < _screen._hand_views.size():
 		var view := _screen._hand_views[hand_index]
-		_screen.effects.queue_spend_origin(_screen.my_side, view.global_position + view.size * 0.5)
+		var center := view.get_global_transform() * (view.size * 0.5)
+		_screen.effects.queue_spend_origin(_screen.my_side, center)
+		var origin := center if drop_at == Vector2.INF else drop_at
+		_screen.effects.queue_drop_origin(_screen.my_side, slot, origin)
 	_screen._effect_target.begin(hand_index, slot)

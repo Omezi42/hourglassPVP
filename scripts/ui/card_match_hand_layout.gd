@@ -13,6 +13,14 @@ extends RefCounted
 const SLIDE_DURATION := 0.15
 ## カーソルを乗せた札の両隣を避ける量。
 const AVOID_PX := 12.0
+## 1枚離れるごとに避ける量へ掛ける割合と、これより小さい避けは動かさない下限。
+const AVOID_FALLOFF := 0.5
+const AVOID_MIN_PX := 1.0
+## 掴んでいる間、手札に残る元の札の濃さ。
+const HELD_ALPHA := 0.35
+## 出せない札の首振り(左右へ振れる量の並びと1振りの尺)。
+const REFUSE_SWINGS: Array[float] = [7.0, -6.0, 4.0, -2.0, 0.0]
+const REFUSE_STEP := 0.045
 const AVOID_DURATION := 0.12
 ## 相手の手番の間、手札全体を沈める量。`CardView.SUMMONED_SINK` と同じ語彙。
 const TURN_SINK := CardView.SUMMONED_SINK
@@ -168,10 +176,29 @@ func on_hovered(view: CardView) -> void:
 	_restore_avoided()
 	_avoid_offsets[view] = Vector2(0.0, -HOVER_LIFT)
 	_slide(view, _base_positions.get(view, view.position) + _offset_of(view), AVOID_DURATION)
-	if index > 0:
-		_avoid(views[index - 1], -AVOID_PX)
-	if index + 1 < views.size() and views[index + 1].visible:
-		_avoid(views[index + 1], AVOID_PX)
+	for j in views.size():
+		if j == index or not views[j].visible:
+			continue
+		var amount := AVOID_PX * pow(AVOID_FALLOFF, absi(j - index) - 1)
+		if amount >= AVOID_MIN_PX:
+			_avoid(views[j], amount * signf(j - index))
+
+
+## 掴んでいる間は手札に残る元の札を薄くする(GameDesign.md 9章)。
+func hold(view: CardView, held: bool) -> void:
+	view.self_modulate.a = HELD_ALPHA if held else 1.0
+
+
+## 出せない札を押した:その場で小さく首を振る(GameDesign.md 9章)。
+func refuse(view: CardView) -> void:
+	var rest: Vector2 = _base_positions.get(view, view.position) + _offset_of(view)
+	var tween: Tween = _tweens.get(view)
+	if tween != null and tween.is_valid():
+		tween.kill()
+	tween = view.create_tween().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	for swing in REFUSE_SWINGS:
+		tween.tween_property(view, "position", rest + Vector2(swing, 0.0), REFUSE_STEP)
+	_tweens[view] = tween
 
 
 func on_left() -> void:
