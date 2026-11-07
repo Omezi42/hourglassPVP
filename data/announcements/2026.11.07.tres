@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="AnnouncementData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/announcement_data.gd" id="script_announcement"]
+
+[resource]
+script = ExtResource("script_announcement")
+version = "2026.11.07"
+body = "**あたらしいもの**
+- 新しいカードセット**「詠砂(えいさ)の刻」**(全8枚・800砂金)がショップにならんだよ。砂術を使うたびに力がたまっていく、砂術が主役のセットだよ
+- 1枚目は**スクライブ**(コスト2/総量3)。自分が砂術を使うたびに、総量が1ずつ増えていくよ
+- のこりの7枚は、毎日1枚ずつ公開していくよ。先に買っておけば、あとから公開されるカードも追加の砂金なしで使えるよ
+
+-# 遊ぶ → https://unityroom.com/games/sunadokei_arena"

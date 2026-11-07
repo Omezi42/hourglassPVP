@@ -1297,6 +1297,17 @@
 			"is_spell": false,
 			"pool_index": 118,
 			"total_sand": 9
+		},
+		{
+			"cannot_attack": false,
+			"cost": 2,
+			"describe": "自分が砂術を使うたび、この砂時計の総量+1",
+			"display_name": "スクライブ",
+			"id": "scribe",
+			"initial_attack": 0,
+			"is_spell": false,
+			"pool_index": 119,
+			"total_sand": 3
 		}
 	]
 }
