@@ -5,6 +5,8 @@ extends Control
 ##
 ## どちらも同じ見た目のカード一覧を出すためで、選ぶ側だけ別の画面を作ると
 ## 片方の見た目が古くなる。件数が増えても1画面に収まるよう**横2列のグリッド**とする。
+## 札(`CardDeckCase`)を押すと管理では編集・選択ではそのデッキに決まり、中身は札の「一覧」から
+## `CardDeckPeek` で重ねて見る(札の砂時計だけではどのカードか分からないため)。
 
 signal back_pressed
 signal create_requested
@@ -19,46 +21,33 @@ const PANEL_STYLE := "res://resources/theme/content_panel.tres"
 ## 空の案内を出す矩形を、パネルの縁と上の1行から内側へ寄せる幅。
 const EMPTY_INSET := Vector2(40.0, 56.0)
 const LIST_RECT := Rect2(24, ScreenHeader.CONTENT_TOP, 1232, ScreenHeader.CONTENT_HEIGHT)
-const CARD_SIZE := Vector2(596, 112)
-## 代表として並べる紋章の数。30枚をそのまま並べるとカードに収まらない(GameDesign.md 9章)。
-const EMBLEM_COUNT := 5
-const EMBLEM_SIZE := Vector2(34, 34)
-const NAME_FONT := 26
-const SUMMARY_FONT := 15
+const CARD_SIZE := Vector2(594, 140)
+const GRID_GAP := 14
 const GUIDE_FONT := 20
-const ACTION_SIZE := Vector2(96, 44)
-const MOVE_SIZE := Vector2(48, 44)
 
-## 縦画面(GameDesign.md 9章「縦画面」)。1列にし、文字と紋章を大きく、
-## 管理のボタンは名前の下の行へ指で押せる大きさで並べる。
+## 縦画面(GameDesign.md 9章「縦画面」)。1列にし、札を中身ごと大きく描く。
 const PORTRAIT_COLUMNS := 1
-const PORTRAIT_CARD_SIZE := Vector2(624, 124)
-## 管理ではボタンの行(72px + 間隔)のぶん背を足す。
-const PORTRAIT_MANAGE_CARD_SIZE := Vector2(624, 212)
+const PORTRAIT_CARD_SIZE := Vector2(624, 176)
 ## 一覧の枠(`content_panel`)の左右の内側の余白の合計。折り返す案内の1行の幅に使う。
 const PANEL_INNER_MARGIN := 48.0
-const PORTRAIT_NAME_FONT := 32
-const PORTRAIT_SUMMARY_FONT := 24
 const PORTRAIT_GUIDE_FONT := 24
-const PORTRAIT_EMBLEM_SIZE := Vector2(44, 44)
-const PORTRAIT_ACTION_SIZE := Vector2(140, 72)
-const PORTRAIT_MOVE_SIZE := Vector2(96, 72)
-const PORTRAIT_BUTTON_FONT := 26
 ## 削除した札が縮んで消えるまでの尺(GameDesign.md 9章)。
 const DELETE_SHRINK_DURATION := 0.15
 
 var _header: ScreenHeader
 var _grid: GridContainer
-## 棚の上に常時出す1行(件数・並び替え中の案内)。
+## 一覧の上に出す1行(並び替え中・空のときの案内と、サイトから届いた知らせ)。
 var _empty_label: Label
 ## 1つも無いときだけ、棚の中央へ出す印と案内。
 var _empty_state: EmptyState
-var _create_button: Button
 var _reorder_button: Button
 var _intro_button: Button
 ## みんなのデッキ(GameDesign.md 26章)。この画面の上へ重ねて開く。
 var _intro_screen: CardDeckIntroScreen
 var _confirm: ConfirmModal
+var _peek: CardDeckPeek
+## 「一覧」で開いているデッキの添字(主の操作で編集・選択へ渡す)。
+var _peek_index := -1
 var _mode: Mode = Mode.MANAGE
 var _reordering := false
 var _pending_delete := -1
@@ -73,6 +62,7 @@ func _ready() -> void:
 ## 管理として開く(デッキタブから)。
 func open_manage() -> void:
 	_intro_screen.visible = false
+	_peek.close()
 	_mode = Mode.MANAGE
 	_reordering = false
 	_refresh()
@@ -82,6 +72,7 @@ func open_manage() -> void:
 ## 対局の開始前に使うデッキを選ぶ(GameDesign.md 9章)。
 func open_pick() -> void:
 	_intro_screen.visible = false
+	_peek.close()
 	_mode = Mode.PICK
 	_reordering = false
 	_refresh()
@@ -98,6 +89,7 @@ func _receive_from_site() -> void:
 		return
 	_refresh()
 	_empty_label.text = announcement
+	_empty_label.visible = true
 
 
 func _build() -> void:
@@ -108,10 +100,7 @@ func _build() -> void:
 	_header = load(HEADER_SCENE).instantiate()
 	add_child(_header)
 	_header.back_pressed.connect(func() -> void: back_pressed.emit())
-	_create_button = CodedButton.make("新規デッキ作成", Vector2(220, 56))
-	_create_button.pressed.connect(func() -> void: create_requested.emit())
-	_header.add_action(_create_button)
-	_reorder_button = CodedButton.make("デッキ入れ替え", Vector2(220, 56))
+	_reorder_button = CodedButton.make("並び替え", Vector2(220, 56))
 	_reorder_button.pressed.connect(_on_reorder_pressed)
 	_header.add_action(_reorder_button)
 	_intro_button = CodedButton.make("みんなのデッキ", Vector2(220, 56))
@@ -140,8 +129,8 @@ func _build() -> void:
 	column.add_child(scroll)
 	_grid = GridContainer.new()
 	_grid.columns = 2
-	_grid.add_theme_constant_override("h_separation", 12)
-	_grid.add_theme_constant_override("v_separation", 12)
+	_grid.add_theme_constant_override("h_separation", GRID_GAP)
+	_grid.add_theme_constant_override("v_separation", GRID_GAP)
 	_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(_grid)
 
@@ -154,6 +143,10 @@ func _build() -> void:
 	add_child(_empty_state)
 
 	# モーダルは最後に足す(後から足した子ほど手前に描かれるため)。
+	_peek = CardDeckPeek.new()
+	add_child(_peek)
+	_peek.primary_pressed.connect(_on_peek_primary)
+
 	_confirm = load(CONFIRM_SCENE).instantiate()
 	add_child(_confirm)
 	_confirm.confirmed.connect(_on_delete_confirmed)
@@ -171,6 +164,7 @@ func apply_orientation(portrait: bool) -> void:
 		return
 	_header.apply_orientation(portrait)
 	_intro_screen.apply_orientation(portrait)
+	_peek.apply_orientation(portrait)
 	_layout()
 	if is_visible_in_tree():
 		_refresh()
@@ -206,185 +200,98 @@ func _refresh() -> void:
 	var decks := CardDeckSave.list_decks()
 	var picking: bool = _mode == Mode.PICK
 	_header.set_title("使うデッキを選ぶ" if picking else "デッキ")
-	_create_button.visible = not picking
 	_reorder_button.visible = not picking and decks.size() > 1
 	_intro_button.visible = not picking
-	_reorder_button.text = "並び替えを終える" if _reordering else "デッキ入れ替え"
+	_reorder_button.text = "並び替えを終える" if _reordering else "並び替え"
 	_empty_label.text = _guide_text(decks.size(), picking)
+	_empty_label.visible = not _empty_label.text.is_empty()
 	# 縦では主アクションの行の有無で一覧の上端が変わる。
 	if _portrait:
 		_layout()
-	if decks.is_empty():
-		_empty_state.show_message("まだデッキがありません", _empty_hint(picking))
+	# 管理では新規作成の枠が残るため、空の案内は選ぶときだけ出す。
+	if decks.is_empty() and picking:
+		_empty_state.show_message("まだデッキがありません", "このままでもプリセットの「基本」で対局へ入れます")
 	else:
 		_empty_state.hide_message()
 	# 同じフレームで2度組み直しても(向きの切り替え)古い札が並びに残らないよう、すぐ外す。
 	for child in _grid.get_children():
 		_grid.remove_child(child)
 		child.queue_free()
+	var last_used := CardDeckSave.selected_index() if picking else -1
 	for i in decks.size():
-		_grid.add_child(_make_card(i, decks[i], decks.size()))
+		_grid.add_child(_make_card(i, decks[i], decks.size(), i == last_used))
+	if not picking and not _reordering:
+		_grid.add_child(_make_new_slot())
 	ListRevealFx.stagger(_grid.get_children())
 
 
-## 中央へ出す1行。**次にすることだけを書く**(何が無いかは見出しが言っている)。
-func _empty_hint(picking: bool) -> String:
-	if picking:
-		return "このままでもプリセットの「基本」で対局へ入れます"
-	return "右上の「新規デッキ作成」から%d枚のデッキを作れます" % MatchState.DECK_SIZE
-
-
+## 上の1行。**常時は出さない**(件数は並びを見れば分かる)。並び替え中と、空のときの次の一手だけ。
 func _guide_text(count: int, picking: bool) -> String:
-	if count == 0:
-		return ""
 	if picking:
-		return "対局で使うデッキを選んでください"
+		return ""
+	if count == 0:
+		return "「新しいデッキを作る」から%d枚のデッキを作れます" % MatchState.DECK_SIZE
 	if _reordering:
 		return "↑ ↓ で並び順を入れ替えます"
-	return "%d 個のデッキ" % count
+	return ""
 
 
-func _make_card(index: int, deck: Dictionary, total: int) -> Control:
-	var area := ClickArea.new()
-	area.custom_minimum_size = CARD_SIZE
-	if _portrait:
-		area.custom_minimum_size = (
-			PORTRAIT_MANAGE_CARD_SIZE if _mode == Mode.MANAGE else PORTRAIT_CARD_SIZE
-		)
-	if _mode == Mode.PICK:
-		area.area_pressed.connect(func() -> void: deck_picked.emit(index))
-	else:
-		# 管理では編集・削除のボタンだけを押させる。カード全体を押せるようにすると
-		# 「押したら何が起きるのか」が2通りになる。
-		area.mouse_default_cursor_shape = Control.CURSOR_ARROW
-		area.mouse_filter = Control.MOUSE_FILTER_PASS
-
-	var panel := PanelContainer.new()
-	panel.name = "VisualRoot"
-	panel.anchor_right = 1.0
-	panel.anchor_bottom = 1.0
-	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var style: StyleBox = load(PANEL_STYLE)
-	if style != null:
-		panel.add_theme_stylebox_override("panel", style)
-	area.add_child(panel)
-
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 12)
-	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	if _portrait and _mode == Mode.MANAGE:
-		var stack := VBoxContainer.new()
-		stack.add_theme_constant_override("separation", 12)
-		stack.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		panel.add_child(stack)
-		stack.add_child(row)
-	else:
-		panel.add_child(row)
-
-	var text_column := VBoxContainer.new()
-	text_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	text_column.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	text_column.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_child(text_column)
-	var name_label := Label.new()
-	name_label.text = str(deck.get("name", CardDeckSave.DEFAULT_NAME))
-	name_label.add_theme_font_size_override(
-		"font_size", PORTRAIT_NAME_FONT if _portrait else NAME_FONT
-	)
-	text_column.add_child(name_label)
-	var summary := Label.new()
-	summary.text = _summary_of(deck.get("cards", []))
-	summary.add_theme_font_size_override(
-		"font_size", PORTRAIT_SUMMARY_FONT if _portrait else SUMMARY_FONT
-	)
-	summary.add_theme_color_override("font_color", UiPalette.BRASS_HIGHLIGHT)
-	text_column.add_child(summary)
-
-	row.add_child(_make_emblems(deck.get("cards", [])))
-	if _mode == Mode.MANAGE:
-		var actions := _make_actions(index, total)
-		if _portrait:
-			# 名前と紋章の行の下へ、右寄せで置く。
-			actions.alignment = BoxContainer.ALIGNMENT_END
-			row.get_parent().add_child(actions)
-		else:
-			row.add_child(actions)
-	return area
+func _make_card(index: int, deck: Dictionary, total: int, last_used: bool) -> CardDeckCase:
+	var card := CardDeckCase.new()
+	card.portrait = _portrait
+	card.custom_minimum_size = PORTRAIT_CARD_SIZE if _portrait else CARD_SIZE
+	card.deck_name = str(deck.get("name", CardDeckSave.DEFAULT_NAME))
+	card.cards = deck.get("cards", [])
+	card.last_used = last_used
+	card.set_actions(_mode == Mode.MANAGE, _reordering, index > 0, index < total - 1)
+	card.area_pressed.connect(_on_card_pressed.bind(index))
+	card.list_pressed.connect(_on_list_pressed.bind(index))
+	card.delete_pressed.connect(_on_delete_pressed.bind(index))
+	card.move_pressed.connect(func(offset: int) -> void: _on_move_pressed(index, offset))
+	return card
 
 
-## 代表的な砂時計の紋章。**コストの高い順**に選ぶ(そのデッキの主役が並ぶため)。
-func _make_emblems(cards: Array) -> Control:
-	var box := HBoxContainer.new()
-	box.add_theme_constant_override("separation", 4)
-	box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var distinct: Array = []
-	for card in cards:
-		if not distinct.has(card):
-			distinct.append(card)
-	distinct.sort_custom(func(a: CardData, b: CardData) -> bool: return a.cost > b.cost)
-	for card in distinct.slice(0, EMBLEM_COUNT):
-		var icon := TextureRect.new()
-		icon.texture = card.emblem if card.emblem != null else card.icon_upright
-		icon.custom_minimum_size = PORTRAIT_EMBLEM_SIZE if _portrait else EMBLEM_SIZE
-		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		icon.modulate = UiPalette.BRASS_HIGHLIGHT
-		icon.tooltip_text = card.display_name
-		box.add_child(icon)
-	return box
-
-
-func _make_actions(index: int, total: int) -> HBoxContainer:
-	var box := HBoxContainer.new()
-	box.add_theme_constant_override("separation", 8)
-	box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	if _reordering:
-		var up := _action_button("↑", true)
-		up.disabled = index == 0
-		up.pressed.connect(_on_move_pressed.bind(index, -1))
-		box.add_child(up)
-		var down := _action_button("↓", true)
-		down.disabled = index >= total - 1
-		down.pressed.connect(_on_move_pressed.bind(index, 1))
-		box.add_child(down)
-		return box
-	var edit := _action_button("編集")
-	edit.pressed.connect(func() -> void: edit_requested.emit(index))
-	box.add_child(edit)
-	var remove := _action_button("削除")
-	remove.pressed.connect(_on_delete_pressed.bind(index))
-	box.add_child(remove)
-	return box
-
-
-func _action_button(label: String, is_icon := false) -> Button:
-	var button_size := ACTION_SIZE
-	if is_icon:
-		button_size = PORTRAIT_MOVE_SIZE if _portrait else MOVE_SIZE
-	elif _portrait:
-		button_size = PORTRAIT_ACTION_SIZE
-	var button := (
-		CodedButton.make_icon(label, button_size)
-		if is_icon
-		else CodedButton.make(label, button_size)
-	)
-	if _portrait:
-		button.add_theme_font_size_override("font_size", PORTRAIT_BUTTON_FONT)
-	return button
-
-
-## デッキの中身を1行で示す。枚数とコストの重心が分かれば、どの構築かを思い出せる。
-func _summary_of(cards: Array) -> String:
-	if cards.is_empty():
-		return ""
-	var total := 0
-	for card in cards:
-		total += card.cost
-	return "%d枚 ・ 平均コスト %.1f" % [cards.size(), float(total) / float(cards.size())]
+func _make_new_slot() -> CardDeckCase:
+	var slot := CardDeckCase.new()
+	slot.portrait = _portrait
+	slot.new_slot = true
+	slot.custom_minimum_size = PORTRAIT_CARD_SIZE if _portrait else CARD_SIZE
+	slot.area_pressed.connect(func() -> void: create_requested.emit())
+	return slot
 
 
 # --- 操作 ---------------------------------------------------------------
+
+
+## 札そのもの: 管理では編集、選ぶときはそのデッキに決める。並び替え中は ↑ ↓ だけを押させる。
+func _on_card_pressed(index: int) -> void:
+	if _reordering:
+		return
+	_act_on(index)
+
+
+func _act_on(index: int) -> void:
+	if _mode == Mode.PICK:
+		deck_picked.emit(index)
+	else:
+		edit_requested.emit(index)
+
+
+func _on_list_pressed(index: int) -> void:
+	var decks := CardDeckSave.list_decks()
+	if index < 0 or index >= decks.size():
+		return
+	_peek_index = index
+	_peek.open(
+		str(decks[index]["name"]),
+		decks[index]["cards"],
+		"このデッキで対局" if _mode == Mode.PICK else "編集する"
+	)
+
+
+func _on_peek_primary() -> void:
+	if _peek_index >= 0:
+		_act_on(_peek_index)
 
 
 func _on_reorder_pressed() -> void:

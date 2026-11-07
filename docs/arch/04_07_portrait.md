@@ -58,7 +58,7 @@
 - 「つぎはここ」の印は `NextStepMark.tag_scale` 1.5
 - `ScreenHeader.apply_orientation()`: 縦で文字と「戻る」を大きくし、`ActionSlot` を `Row` から外してヘッダーの下の行へ置く。
   内容の上端は `portrait_content_top()`(主アクションの行の有無で変わる)。各画面が自分の `apply_orientation()` から呼ぶ
-- `CardDeckListScreen`: 縦は1列、管理のボタンは名前の下の行。主アクションの行の有無で一覧の上端が変わるため、縦では `_refresh()` のたびに `_layout()` する
+- `CardDeckListScreen`: 縦は1列で札を大きく(`CardDeckCase.portrait`)、中身の表(`CardDeckPeek`)は6列。主アクションの行の有無で一覧の上端が変わるため、縦では `_refresh()` のたびに `_layout()` する
 
 ## デッキ編集
 
