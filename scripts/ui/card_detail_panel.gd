@@ -139,20 +139,18 @@ func clear() -> void:
 ## 盤面に出ていない語をここだけで見せると、呼び名が食い違うため(GameDesign.md 6章)。
 func _fill_body(card: CardData, rules: String) -> void:
 	_clear_body()
-	# 砂術は盤面へ出ないため、砂の進み方の説明を出さない(GameDesign.md 6章)。
-	# 代わりに、盤面の枠を使わないことをその場で読めるようにする。
+	# どのカードにも同じことしか言わない文(砂術とは何か・砂の落ち方)は出さない(GameDesign.md 9章)。
 	if card.is_spell:
-		_body.add_child(_make_line("砂術。盤面へ出ず、使うとすぐ効果が起きる"))
-		_body.add_child(_make_line("盤面の枠を使わないため、6枠が埋まっていても使える"))
 		if not rules.is_empty():
 			_body.add_child(_make_line(rules))
 		for line in token_lines(card):
 			_body.add_child(_make_line(line))
 		return
-	_body.add_child(
-		_make_line("場に出たとき  体力 %d / 攻撃力 %d" % [card.initial_health(), card.initial_attack])
-	)
-	_body.add_child(_make_line("毎ターン終了時に砂が1粒落ちて 体力-1 / 攻撃力+1"))
+	# 攻撃力0で出るカードは「体力 = 総量」で上の行と同じことしか言わないため、出すのは攻撃力を持って出るものだけ。
+	if card.initial_attack > 0:
+		_body.add_child(
+			_make_line("場に出たとき  体力 %d / 攻撃力 %d" % [card.initial_health(), card.initial_attack])
+		)
 	for line in restriction_lines(card):
 		_body.add_child(_make_line(line))
 	for keyword in card.named_keywords():
