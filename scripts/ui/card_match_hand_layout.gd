@@ -7,8 +7,8 @@ extends RefCounted
 ## 場所を空ける動きを見せる)。直前まで非表示だった札(新しく配られた札)だけは
 ## 出所の無い移動に見えないよう即座に置く。
 ##
-## ホバー中の札の両隣を外へ避け、相手の手番の間は手札全体を沈めて暗くする
-## (GameDesign.md 9章)。
+## ホバー中の札を持ち上げて両隣を外へ避け、相手の手番の間は手札全体を沈めて暗くする。
+## 引いた札は山札から小さく飛び出し、膨らみながら自分の場所へ収まる(GameDesign.md 9章)。
 
 const SLIDE_DURATION := 0.15
 ## カーソルを乗せた札の両隣を避ける量。
@@ -21,6 +21,13 @@ const INACTIVE_MODULATE := Color(0.82, 0.82, 0.85, 1.0)
 ## 縦の扇(GameDesign.md 9章「縦の対局画面」)。中央から1枚離れるごとの傾きと、離れた数の2乗に掛ける下げ幅。
 const FAN_DEGREES := 3.0
 const FAN_DROP := 4.0
+## カーソルを乗せた札を持ち上げる量(拡大は `CardView` が下端を軸に掛ける)。
+const HOVER_LIFT := 14.0
+## 引いた札が山札から手札へ飛ぶ尺・出始めの縮尺・複数枚を引いたときの間隔。
+const DRAW_FLY_DURATION := 0.36
+const DRAW_START_SCALE := 0.35
+const DRAW_STAGGER := 0.09
+const DRAW_START_TILT := -0.35
 
 var _screen: CardMatchScreen
 ## 直近の `apply()` が決めた、避け・沈みを含まない素の位置。
@@ -28,9 +35,12 @@ var _base_positions: Dictionary = {}
 ## 直前の `apply()` でその枠が表示されていたか(index基準)。
 var _was_visible: Array[bool] = []
 var _tweens: Dictionary = {}
-## いま避けている札 → その札にかけているオフセット(x)。
+## いま避けている・持ち上げている札 → その札にかけているオフセット。
 var _avoid_offsets: Dictionary = {}
 var _hovered_index := -1
+## 引いた札の出所(画面の座標)。このフレームの `apply()` で新しく現れた札だけがここから飛ぶ。
+var _draw_origin := Vector2.INF
+var _fly_tweens: Dictionary = {}
 
 
 func _init(screen: CardMatchScreen) -> void:
@@ -65,6 +75,7 @@ func apply(hand: Array, my_turn: bool) -> void:
 	var start := area.position.x + (area.size.x - width) * 0.5 - (card.x - shown.x) * 0.5
 	var top := layout.hand_top - (card.y - shown.y) + (0.0 if my_turn else TURN_SINK)
 	var tint := ACTIVE_MODULATE if my_turn else INACTIVE_MODULATE
+	var drawn := 0
 	for i in views.size():
 		var view := views[i]
 		if i >= count:
@@ -87,15 +98,64 @@ func apply(hand: Array, my_turn: bool) -> void:
 				base.y -= layout.hand_select_lift
 				view.rotation = 0.0
 		_base_positions[view] = base
-		var target: Vector2 = base + Vector2(_avoid_offsets.get(view, 0.0), 0.0)
+		var target: Vector2 = base + _offset_of(view)
 		view.visible = true
 		view.size = CardView.HAND_SIZE_PX
 		view.modulate = tint
 		if _was_visible[i]:
 			_slide(view, target)
+		elif _draw_origin != Vector2.INF:
+			_fly_in(view, target, drawn)
+			drawn += 1
 		else:
 			view.position = target
 		_was_visible[i] = true
+	_draw_origin = Vector2.INF
+
+
+## 次の `apply()` で新しく現れる札を、この座標(山札)から飛ばす。同じフレームのうちに
+## 使われなければ捨てる(手札が満杯で引けなかった等。後で別の理由で現れた札を飛ばさない)。
+func queue_draw_from(origin: Vector2) -> void:
+	_draw_origin = origin
+	_expire_draw_origin.call_deferred()
+
+
+func _expire_draw_origin() -> void:
+	_draw_origin = Vector2.INF
+
+
+## 山札の位置に小さく出し、膨らみながら手札の場所へ収める。拡大は下端の中央を軸に
+## 掛かるため、縮んだ札の見た目の中心が山札に重なる位置を逆算して置く。
+func _fly_in(view: CardView, target: Vector2, order: int) -> void:
+	var card := CardView.HAND_SIZE_PX
+	var start_scale := view.base_scale * DRAW_START_SCALE
+	view.position = _draw_origin - Vector2(card.x * 0.5, card.y - card.y * start_scale * 0.5)
+	var rest_rotation := view.rotation
+	view.rotation = DRAW_START_TILT
+	view.scale = Vector2.ONE * start_scale
+	view.self_modulate.a = 0.0
+	var delay := order * DRAW_STAGGER
+	var fly: Tween = _fly_tweens.get(view)
+	if fly != null and fly.is_valid():
+		fly.kill()
+	fly = view.create_tween().set_parallel(true)
+	fly.tween_property(view, "self_modulate:a", 1.0, DRAW_FLY_DURATION * 0.4).set_delay(delay)
+	(
+		fly
+		. tween_property(view, "scale", Vector2.ONE * view.base_scale, DRAW_FLY_DURATION)
+		. set_delay(delay)
+		. set_trans(Tween.TRANS_BACK)
+		. set_ease(Tween.EASE_OUT)
+	)
+	(
+		fly
+		. tween_property(view, "rotation", rest_rotation, DRAW_FLY_DURATION)
+		. set_delay(delay)
+		. set_trans(Tween.TRANS_CUBIC)
+		. set_ease(Tween.EASE_OUT)
+	)
+	_fly_tweens[view] = fly
+	_slide(view, target, DRAW_FLY_DURATION, delay)
 
 
 ## カーソルを乗せた札の両隣を外へ避ける(GameDesign.md 9章)。
@@ -106,6 +166,8 @@ func on_hovered(view: CardView) -> void:
 		return
 	_hovered_index = index
 	_restore_avoided()
+	_avoid_offsets[view] = Vector2(0.0, -HOVER_LIFT)
+	_slide(view, _base_positions.get(view, view.position) + _offset_of(view), AVOID_DURATION)
 	if index > 0:
 		_avoid(views[index - 1], -AVOID_PX)
 	if index + 1 < views.size() and views[index + 1].visible:
@@ -123,6 +185,15 @@ func reset() -> void:
 		if tween != null and tween.is_valid():
 			tween.kill()
 	_tweens.clear()
+	for view in _fly_tweens:
+		var fly: Tween = _fly_tweens[view]
+		if fly != null and fly.is_valid():
+			fly.kill()
+		if is_instance_valid(view):
+			view.self_modulate.a = 1.0
+			view.scale = Vector2.ONE * view.base_scale
+	_fly_tweens.clear()
+	_draw_origin = Vector2.INF
 	_base_positions.clear()
 	_avoid_offsets.clear()
 	_hovered_index = -1
@@ -130,9 +201,13 @@ func reset() -> void:
 
 
 func _avoid(view: CardView, offset_x: float) -> void:
-	_avoid_offsets[view] = offset_x
+	_avoid_offsets[view] = Vector2(offset_x, 0.0)
 	var base: Vector2 = _base_positions.get(view, view.position)
-	_slide(view, base + Vector2(offset_x, 0.0), AVOID_DURATION)
+	_slide(view, base + _offset_of(view), AVOID_DURATION)
+
+
+func _offset_of(view: CardView) -> Vector2:
+	return _avoid_offsets.get(view, Vector2.ZERO)
 
 
 func _restore_avoided() -> void:
@@ -142,11 +217,13 @@ func _restore_avoided() -> void:
 	_avoid_offsets.clear()
 
 
-func _slide(view: CardView, target: Vector2, duration: float = SLIDE_DURATION) -> void:
+func _slide(
+	view: CardView, target: Vector2, duration: float = SLIDE_DURATION, delay := 0.0
+) -> void:
 	var tween: Tween = _tweens.get(view)
 	if tween != null and tween.is_valid():
 		tween.kill()
 	tween = view.create_tween()
 	tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	tween.tween_property(view, "position", target, duration)
+	tween.tween_property(view, "position", target, duration).set_delay(delay)
 	_tweens[view] = tween

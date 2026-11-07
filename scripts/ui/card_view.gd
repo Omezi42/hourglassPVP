@@ -131,9 +131,11 @@ const STRIKE_Z_INDEX := 20
 const SPARK_RADIUS := 24.0
 ## 手札のカードは小さく効果の文が読めないため、カーソルを乗せている間だけ拡大する
 ## (GameDesign.md 9章)。位置ではなく scale だけを動かし、下端中央を軸に上へ伸ばす。
-## 画面側は毎フレーム position を置き直すため、位置を動かすと取り合いになる。
-const HAND_HOVER_SCALE := 1.14
-const HAND_HOVER_DURATION := 0.12
+## 持ち上げる位置は手札の並び(`CardMatchHandLayout`)が持つ。ここで位置を動かすと取り合いになる。
+## 乗せたときはわずかに行き過ぎてから収まり、外したときは素直に戻す。
+const HAND_HOVER_SCALE := 1.22
+const HAND_HOVER_DURATION := 0.16
+const HAND_UNHOVER_DURATION := 0.1
 ## タッチで押している間、手札の札を手札の上へ大きく浮かせる(GameDesign.md 9章「タッチでの操作」)。
 const HAND_TOUCH_SCALE := 1.5
 ## 駒の下の文字を大きくしたとき(`label_scale`)、倍率1増えるごとに名前・キーワードの行を下げる量。
@@ -505,7 +507,12 @@ func _zoom(active: bool, zoom_scale := HAND_HOVER_SCALE) -> void:
 		_zoom_tween.kill()
 	_zoom_tween = create_tween()
 	var target := Vector2.ONE * (zoom_scale if active else 1.0) * base_scale
-	_zoom_tween.tween_property(self, "scale", target, HAND_HOVER_DURATION)
+	if active:
+		_zoom_tween.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		_zoom_tween.tween_property(self, "scale", target, HAND_HOVER_DURATION)
+	else:
+		_zoom_tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		_zoom_tween.tween_property(self, "scale", target, HAND_UNHOVER_DURATION)
 
 
 func lift_for_touch(active: bool) -> void:

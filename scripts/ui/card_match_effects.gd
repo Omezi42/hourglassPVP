@@ -177,11 +177,15 @@ func _on_unit_shielded(side: int, slot: int) -> void:
 	_defer(func() -> void: _screen.view_at(side, slot).play_glass_break())
 
 
-## ドロー:山札を脈打たせ、手札へ砂の筋を流す。
+## ドロー:山札を脈打たせ、札を山札から手札へ飛ばす(GameDesign.md 9章)。相手の手札は
+## 伏せた枚数の山で表しているため、相手側は札の代わりに砂の筋を流す。
 func _on_cards_drawn(side: int, _count: int) -> void:
 	var bar := _screen.bar_for(side)
 	bar.play_deck_pulse(false)
 	var from: Vector2 = bar.position + bar.deck_pile_rect().get_center()
+	if side == _screen.my_side:
+		_screen._hand_layout.queue_draw_from(from)
+		return
 	_screen.beam.play(from, hand_center(side), CardFlipBeam.COLOR)
 
 

@@ -421,6 +421,8 @@ func _build() -> void:
 		view.visible = false
 		view.hover_zoom = true
 		view.pressed.connect(_touch.on_hand_pressed)
+		view.drag_started.connect(_touch.on_hand_drag_started)
+		view.drag_ended.connect(_touch.on_hand_drag_ended)
 		view.hovered.connect(_pointer.on_view_hovered)
 		view.mouse_exited.connect(_pointer.on_view_left)
 		add_child(view)
