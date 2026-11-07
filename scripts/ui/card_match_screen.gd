@@ -769,6 +769,11 @@ func _input(event: InputEvent) -> void:
 	_pointer.on_input(event)
 
 
+## 何もない所の押下での取り消しは `CardMatchPointer` が持つ。
+func _gui_input(event: InputEvent) -> void:
+	_pointer.on_gui_input(event)
+
+
 ## 右クリック/Escでの取り消しは `CardMatchPointer` が持つ。
 func _unhandled_input(event: InputEvent) -> void:
 	_pointer.on_unhandled_input(event)

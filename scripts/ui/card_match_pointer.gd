@@ -122,6 +122,13 @@ func on_input(event: InputEvent) -> void:
 		_cancel()
 
 
+## 盤面の何もない所を押したら取り消す(GameDesign.md 9章)。駒・ボタン・情報帯は押下を
+## 受け止めるため、ここへ届くのは卓や隙間を押したときだけ。
+func on_gui_input(event: InputEvent) -> void:
+	if ClickArea.is_primary_click(event):
+		_cancel()
+
+
 ## Escはモーダル側の「閉じる」を先に通すため、GUI が使わなかったものだけを受ける。
 func on_unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):

@@ -18,6 +18,12 @@ func on_hand_pressed(view: CardView) -> void:
 	var index := _screen._hand_views.find(view)
 	if index < 0 or not _screen._my_turn():
 		return
+	# 選んでいる札をもう一度押したら取り消す(GameDesign.md 9章)。
+	var sel := _screen.selection
+	if sel.is_hand(index) or (sel.is_targeting() and sel.slot < 0 and sel.hand_index == index):
+		_screen._pointer.cancel_selection()
+		_screen.refresh()
+		return
 	if not view.enabled:
 		_refuse(view, index)
 		return
