@@ -132,6 +132,17 @@ const SETS: Dictionary = {
 		"card_ids": ["gale", "grit_rain", "bypass", "hound", "colossus"],
 		"price": 600,
 	},
+	## 7番目のカードセット(GameDesign.md 8章)。「砂を詠むたびに力が積もる」枠で、砂術を軸にしたデッキを成立させる。
+	## 段階公開(21章)で、毎日1枚ずつ `card_ids` へ足す。
+	"chant_sand":
+	{
+		"id": "chant_sand",
+		"display_name": "詠砂の刻",
+		"description": "砂術を詠むたびに力が積もる8枚",
+		"card_ids": ["scribe"],
+		"price": 800,
+		"planned_count": 8,
+	},
 }
 
 const ORDERED_IDS: Array[String] = [
@@ -145,6 +156,7 @@ const ORDERED_IDS: Array[String] = [
 	"echo_time",
 	"chase_sand",
 	"sweep_sand",
+	"chant_sand",
 ]
 
 

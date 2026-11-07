@@ -21,6 +21,7 @@ enum Kind {
 	RUSH,
 	ENEMY_DRAW,
 	BYPASS,
+	OWN_SPELL,
 }
 
 ## 実演の駒を置く枠。中央寄りに置き、両隣に味方と相手の駒が並ぶようにする。
@@ -61,7 +62,10 @@ const TRIGGER_KINDS := {
 	CardEnums.Trigger.ON_ALLY_DEATH: Kind.ALLY_DEATH,
 	CardEnums.Trigger.ON_ENEMY_FLIP: Kind.ENEMY_FLIP,
 	CardEnums.Trigger.ON_ENEMY_DRAW: Kind.ENEMY_DRAW,
+	CardEnums.Trigger.ON_OWN_SPELL: Kind.OWN_SPELL,
 }
+## 自分の砂術に反応する効果の実演で撃つ砂術(対象を取らない)。
+const SPELL_ID := "shot"
 
 
 ## 実演の段。キーワード → 効果のトリガーの順に1段ずつ。何も持たなければ「出してターンを終える」1段。
@@ -145,6 +149,9 @@ static func stage(state: MatchState, side: int, card: CardData, kind: int) -> Ar
 		Kind.ENEMY_DRAW:
 			_place(state, foe, FOE_TARGET_SLOT, _card(FOE_DRAWER[0]), FOE_DRAWER[1], FOE_DRAWER[2])
 			actions.append(MatchAction.attack(side, ALLY_SLOT, FOE_TARGET_SLOT))
+		Kind.OWN_SPELL:
+			state.hand[side].insert(0, _card(SPELL_ID))
+			actions.append(MatchAction.cast(side, 0))
 		Kind.ALLY_DEATH:
 			state.board[side][ALLY_SLOT].health = 1
 			actions.append(MatchAction.attack(side, ALLY_SLOT, FOE_HEAVY_SLOT))

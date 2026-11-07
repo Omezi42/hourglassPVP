@@ -55,6 +55,9 @@ enum Trigger {
 	## 相手がカードを引いたとき(薙砂の刻)。引けた1枚ごとに発動し、手番の始めの1枚とマリガンは数えない。
 	## ON_ALLY_DEATH と同じく語にせず「常在」と出す。
 	ON_ENEMY_DRAW,
+	## 自分が砂術を使ったとき(詠砂の刻)。砂術の効果を解決し終えた後に、場にいる自分の駒が反応する。
+	## ON_ALLY_DEATH と同じく語にせず「常在」と出す。
+	ON_OWN_SPELL,
 }
 
 ## エフェクトの対象。
@@ -298,6 +301,6 @@ static func trigger_name(trigger: int) -> String:
 			return "落砂"
 		Trigger.ON_DAMAGED:
 			return "被弾"
-		Trigger.ON_ALLY_DEATH, Trigger.ON_ENEMY_FLIP, Trigger.ON_ENEMY_DRAW:
+		Trigger.ON_ALLY_DEATH, Trigger.ON_ENEMY_FLIP, Trigger.ON_ENEMY_DRAW, Trigger.ON_OWN_SPELL:
 			return "常在"
 	return ""

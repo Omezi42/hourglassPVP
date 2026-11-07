@@ -33,6 +33,8 @@ const ALLY_DEATH_TIMES := 2.0
 const ENEMY_FLIP_TIMES := 2.0
 ## 相手のドローに反応する効果(薙砂の刻)が働く回数の見込み。同じく下駄。
 const ENEMY_DRAW_TIMES := 2.0
+## 自分の砂術に反応する効果が働く回数の見込み(詠砂の刻)。手札・山札の砂術の数で変わるため控えめに置く。
+const OWN_SPELL_TIMES := 2.0
 ## 守護を無視して攻撃できる駒1体ぶんの価値(抜け道)。守護の駒を避けて殴れる1回を、本体の数点ぶんに見る。
 const GUARD_BYPASS_PER_ATTACKER := 2.0
 ## 墓地から1体を手札へ戻す価値。ドロー1枚(3.0)と同じに見る。
@@ -442,6 +444,8 @@ func _repeating_value(state: MatchState, side: int, card: CardData) -> float:
 		value += _on_play_value(state, side, effect) * ENEMY_FLIP_TIMES
 	for effect in card.effects_for(CardEnums.Trigger.ON_ENEMY_DRAW):
 		value += _on_play_value(state, side, effect) * ENEMY_DRAW_TIMES
+	for effect in card.effects_for(CardEnums.Trigger.ON_OWN_SPELL):
+		value += _on_play_value(state, side, effect) * OWN_SPELL_TIMES
 	return value
 
 

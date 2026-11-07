@@ -487,7 +487,16 @@ func cast_spell(side: int, hand_index: int, target: Dictionary = {}) -> bool:
 	# _slot_of() が -1 を返すため、光の筋の出どころは陣地側になる(余砂と同じ)。
 	_fire(side, CardInstance.new(card), CardEnums.Trigger.ON_PLAY, target)
 	_cleanup_dead()
+	_fire_own_spell(side)
 	return true
+
+
+## 自分の砂術に反応する駒(詠砂の刻)を、砂術を解決し終えた後に発火する。
+func _fire_own_spell(side: int) -> void:
+	for unit in units(side):
+		if not unit.is_dead() and not unit.effects_for(CardEnums.Trigger.ON_OWN_SPELL).is_empty():
+			_fire(side, unit, CardEnums.Trigger.ON_OWN_SPELL, {})
+	_cleanup_dead()
 
 
 # --- 反転 ---------------------------------------------------------------
