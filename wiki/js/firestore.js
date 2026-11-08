@@ -76,6 +76,24 @@ export async function authedQuery(structuredQuery) {
   }));
 }
 
+/** ログインしているアカウントとして複数の文書の一部のフィールドを読む。{id: 値} を返す。失敗は null。 */
+export async function authedBatchGet(collection, ids, fieldPaths) {
+  const token = await idToken();
+  if (!token) return null;
+  const root = `projects/${PROJECT_ID}/databases/(default)/documents/`;
+  const response = await fetch(`${DOCUMENTS.slice(0, -1)}:batchGet`, {
+    method: "POST",
+    headers: {"Authorization": `Bearer ${token}`, "Content-Type": "application/json"},
+    body: JSON.stringify({documents: ids.map((id) => `${root}${collection}/${id}`), mask: {fieldPaths}}),
+  }).catch(() => null);
+  if (!response || !response.ok) return null;
+  const result = {};
+  for (const entry of await response.json()) {
+    if (entry.found) result[entry.found.name.split("/").pop()] = decodeFields(entry.found.fields || {});
+  }
+  return result;
+}
+
 /** ログインしているアカウントとして1件読む。無ければ {}、読めなければ null。 */
 export async function authedDoc(path) {
   const response = await authedRequest(path);

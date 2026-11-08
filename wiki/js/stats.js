@@ -28,7 +28,7 @@ function buildLabel(build) {
   return date.toLocaleString("ja-JP", {timeZone: "Asia/Tokyo", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit"});
 }
 
-function percent(numerator, denominator) {
+export function percent(numerator, denominator) {
   return denominator > 0 ? `${(numerator / denominator * 100).toFixed(1)}%` : "—";
 }
 
@@ -48,7 +48,7 @@ function mergeKinds(doc, kinds) {
   return merged;
 }
 
-function tileNode(label, value, sub) {
+export function tileNode(label, value, sub) {
   return el("div", {class: "tile"}, [
     el("div", {class: "tile__label", text: label}),
     el("div", {class: "tile__value", text: value}),

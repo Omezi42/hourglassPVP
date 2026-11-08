@@ -276,6 +276,14 @@ tbody tr:hover { background: rgba(51, 34, 15, 0.06); }
 .rate__bar::after { content: ""; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: var(--ink-soft); }
 .few { opacity: 0.45; }
 
+/* マイページ */
+.mypage-section { margin-top: 28px; }
+.mypage-section h2 { margin: 0 0 10px; font-size: 1.15rem; color: var(--sand); }
+.mypage-section .table-wrap { max-height: 480px; overflow-y: auto; }
+td.result { font-weight: 700; }
+.result-win td.result { color: var(--win); }
+.result-lose td.result { color: var(--lose); }
+
 .updated { margin-top: 12px; font-size: 0.78rem; color: var(--paper-dim); text-align: right; }
 
 .site-footer { padding: 20px var(--gutter); text-align: center; font-size: 0.85rem; border-top: 1px solid rgba(209, 179, 115, 0.2); }
