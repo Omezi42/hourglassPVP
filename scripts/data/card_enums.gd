@@ -144,6 +144,9 @@ enum EffectType {
 	ADD_CARD_TO_HAND,
 	## 対象プレイヤーへ、発動した砂時計のいまの攻撃力ぶんのダメージ(クロックタワー)。value は使わない。
 	DAMAGE_PLAYER_BY_OWN_ATTACK,
+	## 自分の山札からランダムな砂術を value 枚、手札へ加える(砂占い。詠砂の刻)。「引く」ではないため
+	## 相手のドローに反応する効果は働かない。山札に砂術が無ければ何もしない。
+	TUTOR_SPELL,
 }
 
 ## コンボ系カードの発動条件が確認する範囲(GameDesign.md 6章)。

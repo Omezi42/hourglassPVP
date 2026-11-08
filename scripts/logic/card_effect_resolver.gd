@@ -109,6 +109,9 @@ func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Diction
 			else:
 				_strike(side, from_slot, side, -1, CardEnums.EffectVisualStyle.PULSE, origin)
 			_state.draw(side, effect.value)
+		CardEnums.EffectType.TUTOR_SPELL:
+			_strike(side, from_slot, side, -1, CardEnums.EffectVisualStyle.PULSE, origin)
+			_tutor_spell(side, effect.value)
 		CardEnums.EffectType.DAMAGE_PLAYER_PLUS_FLIPS:
 			var to_side := _player_side_for(side, effect.target)
 			_strike(side, from_slot, to_side, -1, CardEnums.EffectVisualStyle.STRIKE, origin)
@@ -721,3 +724,24 @@ func _slot_of(side: int, unit: CardInstance) -> int:
 		if _state.board[side][slot] == unit:
 			return slot
 	return -1
+
+
+## 山札からランダムな砂術を手札へ(砂占い)。乱数は対局の乱数から引く(リプレイ・オンラインで一致させるため)。
+func _tutor_spell(side: int, count: int) -> void:
+	var pile: Array = _state.deck[side]
+	var added := 0
+	for i in count:
+		var spells: Array[int] = []
+		for index in pile.size():
+			if (pile[index] as CardData).is_spell:
+				spells.append(index)
+		if spells.is_empty():
+			break
+		var picked: int = spells[_state._rng.randi_range(0, spells.size() - 1)]
+		_state.hand[side].append(pile[picked])
+		pile.remove_at(picked)
+		added += 1
+	if added == 0:
+		return
+	_state.hand_changed.emit(side)
+	_state.cards_drawn.emit(side, added)

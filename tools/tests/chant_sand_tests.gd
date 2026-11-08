@@ -13,6 +13,9 @@ func run(assert_true: Callable) -> void:
 	_test_scribe_ignores_unit_play()
 	_test_scribe_broken_by_spell_does_not_react()
 	_test_cpu_values_own_spell_trigger()
+	_test_divine_takes_spell_from_deck()
+	_test_divine_without_spells_does_nothing()
+	_test_divine_is_not_a_draw()
 	_test_set_is_registered()
 
 
@@ -85,8 +88,43 @@ func _test_cpu_values_own_spell_trigger() -> void:
 	)
 
 
+func _test_divine_takes_spell_from_deck() -> void:
+	var state := _new_match(["divine"])
+	state.deck[MatchState.Side.A][7] = CardLibrary.find_by_id("shot")
+	var deck_before: int = state.deck[MatchState.Side.A].size()
+	state.cast_spell(MatchState.Side.A, 0)
+	var hand: Array = state.hand[MatchState.Side.A]
+	_assert.call(hand.size() == 1 and hand[0].id == "shot", "砂占いは山札の砂術を手札に加える")
+	_assert.call(state.deck[MatchState.Side.A].size() == deck_before - 1, "砂占いで加えた砂術は山札から抜ける")
+
+
+func _test_divine_without_spells_does_nothing() -> void:
+	var state := _new_match(["divine"])
+	var deck_before: int = state.deck[MatchState.Side.A].size()
+	state.cast_spell(MatchState.Side.A, 0)
+	_assert.call(
+		(
+			state.hand[MatchState.Side.A].is_empty()
+			and state.deck[MatchState.Side.A].size() == deck_before
+		),
+		"山札に砂術が無ければ砂占いは何もしない"
+	)
+
+
+## 「引く」ではないため、相手のドローに反応する駒(ハウンド)は働かない。
+func _test_divine_is_not_a_draw() -> void:
+	var state := _new_match(["divine"])
+	state.deck[MatchState.Side.A][3] = CardLibrary.find_by_id("shot")
+	_place(state, MatchState.Side.B, "hound", 0)
+	var mine := _place(state, MatchState.Side.A, "sand", 0)
+	var health_before := mine.health
+	state.cast_spell(MatchState.Side.A, 0)
+	_assert.call(mine.health == health_before, "砂占いは相手のドローに反応する効果(ハウンド)を起こさない")
+
+
 func _test_set_is_registered() -> void:
 	_assert.call(CardSetLibrary.has_set(SET_ID), "詠砂の刻が登録されている")
 	_assert.call(CardSetLibrary.card_ids(SET_ID).has("scribe"), "スクライブが詠砂の刻に入っている")
+	_assert.call(CardSetLibrary.card_ids(SET_ID).has("divine"), "砂占いが詠砂の刻に入っている")
 	_assert.call(CardSetLibrary.planned_count(SET_ID) == 8, "詠砂の刻は予定8枚")
 	_assert.call(CardEnums.trigger_name(CardEnums.Trigger.ON_OWN_SPELL) == "常在", "砂術への反応は「常在」と出す")

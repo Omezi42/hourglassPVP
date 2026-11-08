@@ -472,6 +472,9 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 			value = CardEffectResolver.flip_damage(state, side, effect) * FACE_WEIGHT
 		CardEnums.EffectType.DRAW:
 			value = effect.value * 3.0
+		CardEnums.EffectType.TUTOR_SPELL:
+			if state.deck[side].any(func(card: CardData) -> bool: return card.is_spell):
+				value = effect.value * 3.0
 		CardEnums.EffectType.DESTROY_UNIT:
 			if effect.target == CardEnums.EffectTarget.ALLY_UNIT:
 				# 自分の駒を払う(砂葬)。払う駒の生涯ダメージぶんを失う。

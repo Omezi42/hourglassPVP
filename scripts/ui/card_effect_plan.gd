@@ -191,6 +191,12 @@ static func _reset(state: MatchState, side: int, card: CardData) -> void:
 		grave.append(CardLibrary.find_by_id(id))
 	state.hand[side] = hand
 	state.graveyard[side] = grave
+	# 山札から砂術を探すカード(砂占い)は、探す先の砂術を山札に1枚置く(空振りの実演にしない)。
+	if card.effects.any(
+		func(effect: CardEffectData) -> bool:
+			return effect != null and effect.effect_type == CardEnums.EffectType.TUTOR_SPELL
+	):
+		state.deck[side].push_front(_card(SPELL_ID))
 	_place(state, side, ALLY_SLOT, _card(ALLY[0]), ALLY[1], ALLY[2])
 	_place(state, foe, FOE_TARGET_SLOT, _card(FOE_TARGET[0]), FOE_TARGET[1], FOE_TARGET[2])
 	_place(state, foe, FOE_HEAVY_SLOT, _card(FOE_HEAVY[0]), FOE_HEAVY[1], FOE_HEAVY[2])
