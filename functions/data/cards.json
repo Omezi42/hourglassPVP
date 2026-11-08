@@ -1308,6 +1308,17 @@
 			"is_spell": false,
 			"pool_index": 119,
 			"total_sand": 3
+		},
+		{
+			"cannot_attack": false,
+			"cost": 1,
+			"describe": "山札からランダムな砂術1枚を手札に加える",
+			"display_name": "砂占い",
+			"id": "divine",
+			"initial_attack": 0,
+			"is_spell": true,
+			"pool_index": 120,
+			"total_sand": 0
 		}
 	]
 }
