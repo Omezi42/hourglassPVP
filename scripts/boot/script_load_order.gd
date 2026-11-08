@@ -102,6 +102,7 @@ const PATHS: Array[String] = [
 	"res://scripts/ui/card_effect_plan.gd",
 	"res://scripts/ui/keyword_entries.gd",
 	"res://scripts/ui/touch_scroll.gd",
+	"res://scripts/ui/card_match_log_block.gd",
 	"res://scripts/logic/solo_boon_effects.gd",
 	"res://scripts/logic/solo_battle_rules.gd",
 	"res://scripts/ui/round_action_button.gd",

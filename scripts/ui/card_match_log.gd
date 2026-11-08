@@ -1,42 +1,54 @@
 class_name CardMatchLog
 extends Control
 ## 対局ログ(GameDesign.md 9章)。`MatchState` のシグナルを購読して日本語の行を積み、
-## 「ログ」ボタンで中央のモーダルとして開く。
+## 「ログ」ボタンで中央のモーダルとして開く。ターンごとの区画は `CardMatchLogBlock` が組む。
 ##
 ## 記録と表示を1クラスに持たせているのは、**表示する文言と記録する文言を必ず同じにする**ため。
 ## 別々に組むと、実況に出る文と後から読み返す文がずれていく。
 ##
 ## 表示ではカード名(「」で囲んだ部分)を色分けし、カーソルを乗せると対局中と同じ詳細パネルを出す。
 ## **行ごとに登場順のカードを控えておき、「」の出現順と対応させる**(名前から引き直すと、
-## 同名の別版やトークンを取り違える)。
+## 同名の別版やトークンを取り違える)。HPの増減も文から読み取らず、数値を行に控える。
 
 ## 1行を積んだ。**画面上の実況はこれを購読して同じ文言を出す**
 ## (実況とログが食い違わないようにするため。GameDesign.md 9章)。
-## `kind` は "turn" / "play" / "cast" / "flip" / "attack" / "death" / "hp" / "end"。
+## `kind` は "turn" / "play" / "cast" / "flip" / "flip_right" / "attack" / "death" /
+## "damage" / "heal" / "time_up" / "end" / "note"。
 signal recorded(line: String, kind: String, side: int, slot: int)
 
-const PANEL_SIZE := Vector2(720, 480)
+const PANEL_SIZE := Vector2(860, 620)
 const TITLE_FONT_SIZE := 24
-const MAX_LINES := 200
-const CARD_NAME_COLOR := UiPalette.GLOW_AMBER
-const NAME_OPEN := "「"
-const NAME_CLOSE := "」"
+const HP_NAME_FONT_SIZE := 16
+const HP_VALUE_FONT_SIZE := 18
+const CLOSE_SIZE := Vector2(160, 48)
+const COLUMN_GAP := 10
+const BLOCK_GAP := 8
+const MAX_ENTRIES := 600
 
 var detail: CardMatchDetail
 
-var _lines: PackedStringArray = []
-## `_lines` と同じ並びで、その行に出るカードを「」の出現順に持つ。
-var _line_cards: Array[Array] = []
+## 1行ずつ {line, kind, side, cards(「」の出現順), turn(ターン番号。開始前は0), amount(HPの増減)}。
+var _entries: Array[Dictionary] = []
+var _turn_number := 0
 var _list: VBoxContainer
 var _scroll: ScrollContainer
 var _state: MatchState
 var _side_labels := {MatchState.Side.A: "先手", MatchState.Side.B: "後手"}
+## 手番の色。視点の無い対局は先手を琥珀にする。
+var _accents := {
+	MatchState.Side.A: CardMatchLogBlock.FIRST_COLOR,
+	MatchState.Side.B: CardMatchLogBlock.SECOND_COLOR
+}
+var _sides_in_order: Array = [MatchState.Side.A, MatchState.Side.B]
 var _last_hp := {}
 var _panel: PanelContainer
 var _dim: ColorRect
+var _column: VBoxContainer
 var _title: Label
-## 行の文字の大きさ(0ならテーマの既定)。縦では大きくする(`apply_layout()`)。
-var _line_font_size := 0
+var _hp: RichTextLabel
+var _close: Button
+## 縦では中身を大きくする(`apply_layout()`)。
+var _scale := 1.0
 ## タッチでカード名を押して出している詳細のカードと、いまの押下の時点で出ていたカード。
 var _tapped_card: CardData
 var _press_card: CardData
@@ -59,18 +71,22 @@ func apply_layout(layout: CardMatchLayout) -> void:
 	_panel.custom_minimum_size = panel_size
 	_panel.size = panel_size
 	_panel.position = (layout.screen_size - panel_size) * 0.5
-	_line_font_size = layout.log_font_size
-	if layout.log_title_font_size > 0:
-		_title.add_theme_font_size_override("font_size", layout.log_title_font_size)
-	else:
-		_title.add_theme_font_size_override("font_size", TITLE_FONT_SIZE)
+	_scale = layout.log_scale
+	_title.add_theme_font_size_override("font_size", int(TITLE_FONT_SIZE * _scale))
+	_hp.add_theme_font_size_override("normal_font_size", int(HP_VALUE_FONT_SIZE * _scale))
+	_column.add_theme_constant_override("separation", int(COLUMN_GAP * _scale))
+	_list.add_theme_constant_override("separation", int(BLOCK_GAP * _scale))
+	_close.custom_minimum_size = CLOSE_SIZE * _scale
 	if visible:
 		_rebuild()
 
 
 ## 自分が固定される対局(CPU戦・オンライン)では「あなた/相手」で書く。
 func set_perspective(my_side: int) -> void:
-	_side_labels = {my_side: "あなた", MatchState.other_side(my_side): "相手"}
+	var foe := MatchState.other_side(my_side)
+	_side_labels = {my_side: "あなた", foe: "相手"}
+	_accents = {my_side: CardMatchLogBlock.FIRST_COLOR, foe: CardMatchLogBlock.SECOND_COLOR}
+	_sides_in_order = [my_side, foe]
 
 
 func watch(state: MatchState) -> void:
@@ -94,8 +110,8 @@ func watch(state: MatchState) -> void:
 ## 前の対局の行を捨てる。対局をまたいでログが積み重なるのを防ぐ。
 ## 購読していた `MatchState` は対局のたびに作り直されるため、参照も落とす。
 func clear() -> void:
-	_lines = []
-	_line_cards = []
+	_entries = []
+	_turn_number = 0
 	_state = null
 	_last_hp = {}
 	if visible:
@@ -112,7 +128,10 @@ func set_open(open: bool) -> void:
 
 
 func lines() -> PackedStringArray:
-	return _lines
+	var out: PackedStringArray = []
+	for entry in _entries:
+		out.append(entry["line"])
+	return out
 
 
 # --- 記録 ---------------------------------------------------------------
@@ -123,12 +142,23 @@ func record(line: String) -> void:
 
 
 ## 種別と場所を添えて積む。画面上の実況が「どこで起きたか」を知るために要る。
-func _append(line: String, kind: String, side: int, slot: int, cards: Array = []) -> void:
-	_lines.append(line)
-	_line_cards.append(cards)
-	if _lines.size() > MAX_LINES:
-		_lines.remove_at(0)
-		_line_cards.remove_at(0)
+func _append(
+	line: String, kind: String, side: int, slot: int, cards: Array = [], amount := 0
+) -> void:
+	if kind == "turn":
+		_turn_number += 1
+	_entries.append(
+		{
+			"line": line,
+			"kind": kind,
+			"side": side,
+			"cards": cards,
+			"turn": _turn_number,
+			"amount": amount
+		}
+	)
+	if _entries.size() > MAX_ENTRIES:
+		_entries.remove_at(0)
 	if visible:
 		_rebuild()
 	recorded.emit(line, kind, side, slot)
@@ -228,9 +258,13 @@ func _on_hp_changed(side: int, new_hp: int) -> void:
 	_last_hp[side] = new_hp
 	var delta := previous - new_hp
 	if delta > 0:
-		record("%sに%dダメージ(残りHP%d)" % [_name_of(side), delta, new_hp])
+		_append(
+			"%sに%dダメージ(残りHP%d)" % [_name_of(side), delta, new_hp], "damage", side, -1, [], delta
+		)
 	elif delta < 0:
-		record("%sがHPを%d回復(残りHP%d)" % [_name_of(side), -delta, new_hp])
+		_append(
+			"%sがHPを%d回復(残りHP%d)" % [_name_of(side), -delta, new_hp], "heal", side, -1, [], -delta
+		)
 
 
 ## 持ち時間切れは敗北ではなく手番の強制終了(GameDesign.md 5章)。何回目かを併せて出す。
@@ -248,9 +282,9 @@ func _on_turn_forfeited(side: int, count: int) -> void:
 
 func _on_match_ended(winner: int) -> void:
 	if winner < 0:
-		record("引き分け(手数の上限に達した)")
+		_append("引き分け(手数の上限に達した)", "end", -1, -1)
 		return
-	record("%sの勝利(%s)" % [_name_of(winner), reason_text(_state, winner)])
+	_append("%sの勝利(%s)" % [_name_of(winner), reason_text(_state, winner)], "end", winner, -1)
 
 
 ## 決着の要因を1行で表す(GameDesign.md 5章)。結果パネルとログで共有する。
@@ -282,30 +316,42 @@ func _build() -> void:
 		_panel.add_theme_stylebox_override("panel", style)
 	add_child(_panel)
 
-	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 12)
-	_panel.add_child(column)
+	_column = VBoxContainer.new()
+	_column.add_theme_constant_override("separation", COLUMN_GAP)
+	_panel.add_child(_column)
 
 	# 見出しが無いと、暗幕の上に文だけが浮いていて何の一覧か分からない。
+	var head := HBoxContainer.new()
+	_column.add_child(head)
 	_title = Label.new()
 	_title.text = "対局ログ"
 	_title.add_theme_font_size_override("font_size", TITLE_FONT_SIZE)
 	_title.add_theme_color_override("font_color", UiPalette.GLOW_AMBER)
-	column.add_child(_title)
+	_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(_title)
+	_hp = RichTextLabel.new()
+	_hp.bbcode_enabled = true
+	_hp.fit_content = true
+	_hp.autowrap_mode = TextServer.AUTOWRAP_OFF
+	_hp.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_hp.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	head.add_child(_hp)
 
 	_scroll = ScrollContainer.new()
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	TouchScroll.enable(_scroll)
-	column.add_child(_scroll)
+	_column.add_child(_scroll)
 	_list = VBoxContainer.new()
 	_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_list.add_theme_constant_override("separation", BLOCK_GAP)
 	_scroll.add_child(_list)
 
 	# VBoxContainer は子を横いっぱいに広げるため、明示的に中央へ縮める。
-	var close := CodedButton.make("閉じる", Vector2(160, 48))
-	close.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	close.pressed.connect(func() -> void: set_open(false))
-	column.add_child(close)
+	_close = CodedButton.make("閉じる", CLOSE_SIZE)
+	_close.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_close.pressed.connect(func() -> void: set_open(false))
+	_column.add_child(_close)
 
 
 func _on_dim_input(event: InputEvent) -> void:
@@ -313,33 +359,67 @@ func _on_dim_input(event: InputEvent) -> void:
 		set_open(false)
 
 
-## 新しい行が上に来るように積み直す。
+## 新しいターンが上に来るように積み直す。区画の中は起きた順に上から並べる。
 func _rebuild() -> void:
 	for child in _list.get_children():
 		child.queue_free()
-	for i in range(_lines.size() - 1, -1, -1):
-		var label := RichTextLabel.new()
-		label.bbcode_enabled = true
-		label.fit_content = true
-		label.meta_underlined = false
-		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		if _line_font_size > 0:
-			label.add_theme_font_size_override("normal_font_size", _line_font_size)
-		label.text = _markup(_lines[i], _line_cards[i])
-		var cards: Array = _line_cards[i]
-		label.meta_hover_started.connect(
-			func(meta: Variant) -> void:
-				if detail != null and not TouchInput.active:
-					detail.hover_card(cards[int(meta)], true)
+	_hp.text = _hp_text()
+	var turns := _turns()
+	for i in range(turns.size() - 1, -1, -1):
+		var latest := i == turns.size() - 1
+		_list.add_child(
+			CardMatchLogBlock.build(turns[i], _side_labels, _accents, latest, _scale, _wire)
 		)
-		label.meta_hover_ended.connect(
-			func(_meta: Variant) -> void:
-				if detail != null and not TouchInput.active:
-					detail.leave()
+
+
+## 行をターンの区画へ分ける。最初の手番より前の行は番号0の区画に入れる。
+func _turns() -> Array:
+	var turns: Array = []
+	for entry in _entries:
+		if entry["kind"] == "turn":
+			turns.append({"number": entry["turn"], "side": entry["side"], "rows": []})
+			continue
+		if turns.is_empty() or turns[-1]["number"] != entry["turn"]:
+			turns.append({"number": entry["turn"], "side": -1, "rows": []})
+		turns[-1]["rows"].append(entry)
+	return turns
+
+
+func _hp_text() -> String:
+	var parts: PackedStringArray = []
+	for side in _sides_in_order:
+		if not _last_hp.has(side):
+			continue
+		var accent: Color = _accents.get(side, UiPalette.TEXT_MUTED)
+		parts.append(
+			(
+				"[font_size=%d][color=#%s]%s[/color][/font_size] [color=#%s]HP%d[/color]"
+				% [
+					int(HP_NAME_FONT_SIZE * _scale),
+					UiPalette.TEXT_MUTED.to_html(false),
+					_name_of(side),
+					accent.to_html(false),
+					_last_hp[side]
+				]
+			)
 		)
-		label.gui_input.connect(_on_line_input)
-		label.meta_clicked.connect(func(meta: Variant) -> void: _on_name_tapped(cards[int(meta)]))
-		_list.add_child(label)
+	return "    ".join(parts)
+
+
+## 区画の行のカード名へ、ホバー詳細とタップの操作をつなぐ(`CardMatchLogBlock` から呼ばれる)。
+func _wire(label: RichTextLabel, cards: Array) -> void:
+	label.meta_hover_started.connect(
+		func(meta: Variant) -> void:
+			if detail != null and not TouchInput.active:
+				detail.hover_card(cards[int(meta)], true)
+	)
+	label.meta_hover_ended.connect(
+		func(_meta: Variant) -> void:
+			if detail != null and not TouchInput.active:
+				detail.leave()
+	)
+	label.gui_input.connect(_on_line_input)
+	label.meta_clicked.connect(func(meta: Variant) -> void: _on_name_tapped(cards[int(meta)]))
 
 
 ## タッチで行を押した。名前以外なら詳細を消す(名前なら直後の `meta_clicked` が取り消す)。
@@ -372,29 +452,3 @@ func _settle_tap() -> void:
 	_tapped_card = null
 	if detail != null:
 		detail.hide_now()
-
-
-## 「」で囲んだカード名を、出現順に `cards` と対応させて色付きのリンクにする。
-## 控えより多い「」(カード以外の引用)は色を付けずにそのまま出す。
-func _markup(line: String, cards: Array) -> String:
-	var out := ""
-	var rest := line
-	var index := 0
-	while index < cards.size():
-		var open := rest.find(NAME_OPEN)
-		var close := rest.find(NAME_CLOSE, open + 1)
-		if open < 0 or close < 0:
-			break
-		var card_name := rest.substr(open, close - open + 1)
-		out += _escape(rest.left(open))
-		out += (
-			"[url=%d][color=#%s]%s[/color][/url]"
-			% [index, CARD_NAME_COLOR.to_html(false), _escape(card_name)]
-		)
-		rest = rest.substr(close + 1)
-		index += 1
-	return out + _escape(rest)
-
-
-func _escape(text: String) -> String:
-	return text.replace("[", "[lb]")

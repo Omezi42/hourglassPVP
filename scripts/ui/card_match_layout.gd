@@ -39,8 +39,7 @@ const PORTRAIT_ROW_SPREAD := 45.0
 ## 相手の列はさらに上へ寄せる(レールの右端の時計に駒の下の文字が掛からないように)。
 const PORTRAIT_FOE_ROW_SPREAD := 60.0
 const PORTRAIT_GAP := 8.0
-const PORTRAIT_LOG_FONT_SIZE := 24
-const PORTRAIT_LOG_TITLE_FONT_SIZE := 30
+const PORTRAIT_LOG_SCALE := 1.4
 
 static var _landscape: CardMatchLayout
 static var _portrait: CardMatchLayout
@@ -111,8 +110,7 @@ var mulligan_top := 0.0
 var mulligan_card_gap := 0.0
 ## ログのパネルと文字の大きさ(0ならテーマの既定)。
 var log_panel_size := Vector2.ZERO
-var log_font_size := 0
-var log_title_font_size := 0
+var log_scale := 1.0
 
 
 static func current() -> CardMatchLayout:
@@ -268,6 +266,5 @@ static func _make_portrait() -> CardMatchLayout:
 	l.mulligan_top = (l.screen_size.y - CardMatchMulligan.content_height(true)) * 0.5
 	l.mulligan_card_gap = 24.0
 	l.log_panel_size = Vector2(width - side * 2.0, l.screen_size.y - side * 10.0)
-	l.log_font_size = PORTRAIT_LOG_FONT_SIZE
-	l.log_title_font_size = PORTRAIT_LOG_TITLE_FONT_SIZE
+	l.log_scale = PORTRAIT_LOG_SCALE
 	return l

@@ -29,7 +29,7 @@
 | `CardMatchTargets` | 置ける枠・殴れる相手の強調、相打ちの予測(`refresh_own_preview()`)、反転・ターン終了の予測(4.0.2節)、身構え(`CardView.brace`) |
 | `CardMatchDetail` | 詳細パネルの出し消し。出してよい状態か(対象選択中・マリガン中・演出中でない)、消すまでの猶予(`HIDE_DELAY`)、置き場(`CardDetailPanel.place_near()` に卓の範囲を渡す)。駒を持たない所(直前の手の列・ログ)からは `hover_card(card, off_board)` で出す(ログからは `off_board = true` で出し、盤面の状態で引っ込めない)。**`CardMatchScreen` の const を const から参照しない**(読み込みが循環して起動が固まる。11章) |
 | `CardMatchMulligan` | マリガン画面。選んだ枚数を `mulligan_confirmed(indices)` で返し、適用は `MatchState`。札の列の奥の光は `MulliganStageLight`、選んだ札へ重ねる引き直しの印は `MulliganPickMark`(アイコンは `assets/ui/icons/redraw.png`)(札の子ノード。`_draw()` は子より背面のため)。開くときは先に先手・後手の一文を中央で見せてから見出しの上へ移す(`_start_order_intro()`。誘導対局の `picking_disabled` では省く) |
-| `CardMatchLog` / `CardMatchTurnFeed` | ログ(記録と表示を同じクラスに持ち、実況と読み返しの文を一致させる。行ごとに「」の出現順のカードを控え、表示では `RichTextLabel` の `[url]` で色付け・ホバー詳細にする)/ 手番バナーと相手の1手の実況(`CardMatchLog.describe()` から引く)。対局開始の幕は状態を持たない描画役 `CardMatchStartCurtain` へ経過秒を渡して描かせる(砂粒の軌跡は添字から決め、描き直しで揺れないようにする) |
+| `CardMatchLog` / `CardMatchLogBlock` / `CardMatchTurnFeed` | ログ(記録とモーダルを同じクラスに持ち、実況と読み返しの文を一致させる。行ごとに文・種別・手番・ターン番号・HPの増減・「」の出現順のカードを控える。ターンの区画・種類の札・字下げは `CardMatchLogBlock` が組み、カード名は `RichTextLabel` の `[url]` で色付け・ホバー詳細にする。HPの数値は文から読み取らず控えた値を使う)/ 手番バナーと相手の1手の実況(`CardMatchLog.describe()` から引く)。対局開始の幕は状態を持たない描画役 `CardMatchStartCurtain` へ経過秒を渡して描かせる(砂粒の軌跡は添字から決め、描き直しで揺れないようにする) |
 | `CardMatchStrike` / `CardMatchShake` | 攻撃の演出の進行役(被ダメージ・音を当たる瞬間まで持ち越す)/ 盤面の揺れ |
 | `CardMatchEffectStrike` / `EmblemStrikeFx` | 設置効果・トリガーの紋章の進行役 / 紋章が飛ぶ演出そのもの(独立したオーバーレイ) |
 | `CardMatchEffects` | 攻撃以外の演出の進行役(着地 / 崩落 / 硝子の閃光 / ドローと疲労の山札 / 砂へ還す)。`MatchState` のシグナルだけを見る |
