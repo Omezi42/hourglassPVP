@@ -19,6 +19,7 @@ static func apply(screen: CardMatchScreen) -> void:
 	screen._result.apply_layout(layout)
 	screen._log.apply_layout(layout)
 	screen._detail.apply_layout(layout)
+	screen._spell_aim.apply_layout(layout)
 	screen._feed.apply_layout(layout)
 	screen._pile.apply_layout(layout)
 	screen._emote.apply_layout(layout)

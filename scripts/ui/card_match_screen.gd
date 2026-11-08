@@ -121,6 +121,8 @@ var _pile: CardPileViewer
 var _log_button: Button
 var _flip_beam: CardFlipBeam
 var _drag_arrow: CardDragArrow
+## 対象を取る砂術を構えた札と矢印(GameDesign.md 9章「砂術」)。
+var _spell_aim: CardSpellAim
 var _strike: CardMatchStrike
 var _effect_strike: CardMatchEffectStrike
 var _shake := CardMatchShake.new()
@@ -130,6 +132,8 @@ var _effects: CardMatchEffects
 var _targets: CardMatchTargets
 ## 砂術を撃つ段取り。CardMatchTargets が対象の側を引くためにも読む。
 var _spell: CardMatchSpell
+## 砂術をドラッグして撃つ操作。
+var _spell_drag: CardMatchSpellDrag
 ## 設置効果の対象選択の段取り(GameDesign.md 9章)。
 var _effect_target: CardMatchEffectTarget
 ## 反転権(GameDesign.md 2章)の段取り。
@@ -181,6 +185,7 @@ func _ready() -> void:
 	_online_ctl = CardMatchOnline.new(self)
 	_targets = CardMatchTargets.new(self)
 	_spell = CardMatchSpell.new(self)
+	_spell_drag = CardMatchSpellDrag.new(self)
 	_effect_target = CardMatchEffectTarget.new(self)
 	_clocks = CardMatchClock.new(self)
 	_emote = CardMatchEmote.new(self)
@@ -278,6 +283,7 @@ func _process(delta: float) -> void:
 		_emote.tick(delta)
 	_shake.tick(delta)
 	_clocks.tick(delta)
+	_spell_drag.tick()
 
 
 func _on_action_received(action: Dictionary) -> void:
@@ -467,8 +473,13 @@ func refresh() -> void:
 	_refresh_buttons()
 	if _damage_assist != null:
 		_damage_assist.sync()
+	# 砂術を掴んでいる間は「押す」操作が無いため、押して選ぶ案内を出さない(GameDesign.md 9章「砂術」)。
 	_status.set_targeting(
-		_selection != null and (_selection.is_targeting() or _selection.is_flip_right())
+		(
+			_selection != null
+			and (_selection.is_targeting() or _selection.is_flip_right())
+			and not _spell_drag.active()
+		)
 	)
 	# 対象選択に入った・演出が始まったぶんは、ホバーが動かなくてもここで引っ込める。
 	if _detail != null:

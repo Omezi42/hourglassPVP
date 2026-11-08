@@ -132,6 +132,6 @@ func allowed() -> bool:
 		return false
 	if _screen.state.mulligan_pending or _screen.mulligan_open():
 		return false
-	if _screen.strike_busy():
+	if _screen.strike_busy() or _screen._spell_drag.active():
 		return false
 	return _screen.selection.is_empty()

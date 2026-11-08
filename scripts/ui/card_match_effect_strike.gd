@@ -10,8 +10,8 @@ extends RefCounted
 ##
 ## **紋章の出どころ(`CardEnums.EffectOrigin`)によって、飛ぶ絵と発射までの前置きが
 ## 変わる**(Architecture.md 4.0節)。UNITは盤面の駒の紋章がそのまま飛ぶ。SPELLは
-## 手札から撃った砂術の絵を`spell_cast`から控えて使い、自分の情報帯から浮き上がって
-## から飛ぶ。DEATHは破壊された駒の絵を墓地の末尾から引き、台座の銘板として残ってから
+## 手札から撃った砂術の絵を`spell_cast`から控えて使い、自分が撃ったものは構えた札(離した位置)から、
+## それ以外(相手・リプレイ)は卓の中央へ札を大きく出して読ませてから(`CardSpellReveal`)飛ぶ。DEATHは破壊された駒の絵を墓地の末尾から引き、台座の銘板として残ってから
 ## 飛ぶ。
 ##
 ## `card_match_screen.gd` が1000行の上限に近いため、ここへ切り出している。
@@ -54,6 +54,11 @@ var _spins: Array[Dictionary] = []
 ## 撃った直近の砂術(GameDesign.md 6章)。出どころが盤面に無いため、
 ## `spell_cast` から発動元の紋章を控えておく(side → CardData)。
 var _last_spell: Dictionary = {}
+## 自分がドラッグで撃つ直前に控えた紋章の出どころ(side → 画面のlocal座標)。
+var _noted_origin: Dictionary = {}
+## いま撃たれた砂術の紋章の出どころ(side → 画面のlocal座標)。
+var _spell_origin: Dictionary = {}
+var _reveal: CardSpellReveal
 ## 攻撃(`CardMatchStrike`)の演出中に効果が届いた場合、紋章の発射そのものを
 ## 着弾まで持ち越す(Architecture.md 4.0節)。
 var _pending: Array[Callable] = []
@@ -70,6 +75,9 @@ func _init(screen: CardMatchScreen) -> void:
 	_signature.hit.connect(_on_signature_hit)
 	_signature.impact.connect(_on_signature_impact)
 	_signature.finished.connect(_on_signature_finished)
+	_reveal = CardSpellReveal.new()
+	screen.add_child(_reveal)
+	_reveal.finished.connect(flush)
 
 
 ## `MatchState` のシグナルへまとめて接続する(`CardMatchSound`/`CardMatchEffects` と
@@ -101,8 +109,27 @@ func is_death_origin(side: int, slot: int) -> bool:
 	)
 
 
+## 自分がドラッグで撃つ直前に、紋章の出どころ(構えた札・離した位置)を控える(`CardMatchSpellDrag`)。
+func note_spell_origin(side: int, at: Vector2) -> void:
+	_noted_origin[side] = at
+
+
 func _on_spell_cast(side: int, card: CardData) -> void:
 	_last_spell[side] = card
+	if _noted_origin.has(side):
+		_spell_origin[side] = _noted_origin[side]
+		_noted_origin.erase(side)
+		return
+	var center := _screen.layout.table_rect.get_center()
+	_spell_origin[side] = center
+	var scale_factor := _screen.layout.hand_scale if _screen.layout.portrait else 1.0
+	_reveal.play(card, center, scale_factor)
+
+
+## 前の対局の札を残さない(`CardMatchReset`)。
+func reset_reveal() -> void:
+	_noted_origin.clear()
+	_reveal.stop()
 
 
 ## `MatchState.effect_struck` を受ける。効果の解決(ダメージ・破壊・反転の適用)は
@@ -291,7 +318,7 @@ func _arm(source_side: int, source_slot: int, origin: int, style: int) -> void:
 ## 攻撃(`CardMatchStrike`)の演出中は、紋章の発射そのものを着弾まで持ち越す
 ## (Architecture.md 4.0節「砕けた駒の余砂は、崩落を先に見せてから銘板が飛ぶ」)。
 func _queue(step: Callable) -> void:
-	if _screen._strike.busy():
+	if _screen._strike.busy() or _reveal.busy():
 		_pending.append(step)
 		return
 	step.call()
@@ -422,11 +449,13 @@ func _source_card(source_side: int, source_slot: int, origin: int) -> CardData:
 	return unit.data if unit != null else null
 
 
-## 紋章が飛び始める位置。UNITは駒の中心、SPELLは自分の情報帯の中心、DEATHは
+## 紋章が飛び始める位置。UNITは駒の中心、SPELLは構えた札か卓の中央(`_on_spell_cast()`)、DEATHは
 ## 砕けた台座の銘板の位置(Architecture.md 4.0節の表)。
 func _origin_position(source_side: int, source_slot: int, origin: int) -> Vector2:
 	match origin:
 		CardEnums.EffectOrigin.SPELL:
+			if _spell_origin.has(source_side):
+				return _spell_origin[source_side]
 			var bar := _screen.bar_for(source_side)
 			return bar.position + bar.size * 0.5
 		CardEnums.EffectOrigin.DEATH:

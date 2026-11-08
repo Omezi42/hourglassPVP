@@ -167,6 +167,8 @@ var play_cost := -1
 var draggable := false
 ## ドラッグを受ける枠なら、放されたときに呼ぶ処理を持つ。空なら受けない。
 var drop_handler := Callable()
+## いま指先に付いているドラッグの絵。砂術の構え(`CardMatchSpellDrag`)が光らせる。
+var drag_preview: CardDragPreview
 ## 攻撃の対象を選んでいる間だけ出す予測(GameDesign.md 9章)。
 ## 負のときは出さない。`preview_dead` なら破壊されることを示す。
 var preview_health := -1
@@ -469,9 +471,15 @@ func _notification(what: int) -> void:
 ## する。カードの枠に合わせると絵が札の中より大きく出て、掴んだ瞬間に絵が膨らんで見える。
 ## 動かす方向と逆へ遅れて傾く物理は `CardDragPreview` が持つ(GameDesign.md 9章)。
 func _make_drag_preview() -> Control:
+	var preview := CardDragPreview.new()
+	drag_preview = preview
+	# 砂術は砂時計の絵を持たないため、札の窓と同じ紋章を同じ色で運ぶ。
+	if mode == Mode.HAND and card.is_spell:
+		var side := Vector2.ONE * HandCardPaint.SPELL_EMBLEM_SIDE
+		preview.setup(card.emblem, side, SPELL_BORDER)
+		return preview
 	var texture := _icon() if mode == Mode.BOARD else _art(HourglassArt.State.UPRIGHT)
 	var art := _fit_art(texture, _hand_art_box() if mode == Mode.HAND else board_art_box()).size
-	var preview := CardDragPreview.new()
 	preview.setup(texture, art)
 	return preview
 

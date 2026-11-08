@@ -12,10 +12,9 @@ func _init(screen: CardMatchScreen) -> void:
 	_screen = screen
 
 
-## 手札の1枚を撃つ。盤面の枠を選ばせず、対象を取るものだけ対象選択へ入る。
-## **選択の `slot` を -1 のままにしておく**ことで、対象を押したときに
-## 「砂術か、置く枠まで決まった砂時計か」を1つの値で見分けられる。
-func begin(index: int) -> void:
+## 対象を1体選ばない砂術を、手札の上端より上で離して撃つ(GameDesign.md 9章「砂術」)。
+## 墓地から選ぶものはここで一覧を開く。対象を取るのに選べる対象がいないものは、対象なしで撃つ(不発)。
+func release(index: int) -> void:
 	var card: CardData = _screen.state.hand[_screen.my_side][index]
 	# 出す前に手札の位置を控える(GameDesign.md 9章「対局画面の手触り」)。撃った瞬間には
 	# もう墓地へ消えているため、支払いのピップが吸い込まれる先をいまのうちに渡しておく。
@@ -28,11 +27,6 @@ func begin(index: int) -> void:
 			_screen._perform(MatchAction.cast(_screen.my_side, index, target))
 	):
 		return
-	var side := target_side(card)
-	if side >= 0 and CardMatchEffectTarget.has_candidate(_screen.state, card, side):
-		_screen.selection.await_target(index, -1)
-		_screen.refresh()
-		return
 	# `_perform()` が `_finish_action()` の中で `refresh()` まで済ませるため、
 	# ここで重ねて呼ばない(`CardMatchEffectTarget.begin()` と同じ理由)。
 	_screen.selection.clear()
@@ -43,6 +37,8 @@ func begin(index: int) -> void:
 ## 対象選択中の砂術を、選ばれた1体へ撃つ。
 func cast_at(side: int, slot: int) -> void:
 	var index: int = _screen.selection.hand_index
+	var view := _screen._hand_views[index]
+	_screen.effects.queue_spend_origin(_screen.my_side, view.global_position + view.size * 0.5)
 	# **`_perform()` より先に選択を解除する**(`CardMatchEffectTarget.confirm()` と同じ理由。
 	# 選択を残したまま呼ぶと、`refresh()` が既に手札から消えたカードを読みに行って落ちる)。
 	_screen.selection.clear()

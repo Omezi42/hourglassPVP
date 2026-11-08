@@ -27,10 +27,10 @@ func on_hand_pressed(view: CardView) -> void:
 	if not view.enabled:
 		_refuse(view, index)
 		return
-	if not _screen._tutorial.gate_hand_select(index):
+	# 砂術はドラッグでしか撃たない(GameDesign.md 9章)。押しても何も選ばない。
+	if _screen.state.hand[_screen.my_side][index].is_spell:
 		return
-	if _screen.state.can_cast(_screen.my_side, index):
-		_screen._spell.begin(index)
+	if not _screen._tutorial.gate_hand_select(index):
 		return
 	if not _screen.state.can_play(_screen.my_side, index):
 		return
@@ -51,8 +51,8 @@ func on_slot_drop(source: CardView, slot: int) -> void:
 	var index := _screen._hand_views.find(source)
 	if index < 0 or not _screen._my_turn():
 		return
-	if _screen.state.can_cast(_screen.my_side, index):
-		_drop_spell(index, _screen.my_side, slot)
+	if _screen._spell_drag.active():
+		_screen._spell_drag.drop(_screen.my_side, slot)
 		return
 	if _screen.state.board[_screen.my_side][slot] != null:
 		return
@@ -67,9 +67,8 @@ func on_slot_drop(source: CardView, slot: int) -> void:
 	_play_selected(slot, _screen.get_global_mouse_position())
 
 
-## 手札を掴んだ瞬間、押して選んだのと同じ状態にする(GameDesign.md 9章)。砂時計なら空き枠が、
-## 対象を取る砂術なら対象が光った状態で運べる。墓地から選ぶ砂術・対象を取らない砂術は
-## 落とした時点で撃つため、ここでは何も選ばない。
+## 手札を掴んだ瞬間、押して選んだのと同じ状態にする(GameDesign.md 9章)。砂時計なら空き枠が光った
+## 状態で運べる。砂術の構えは `CardMatchSpellDrag` が受け持つ。
 func on_hand_drag_started(view: CardView) -> void:
 	var index := _screen._hand_views.find(view)
 	if index < 0 or not _screen._my_turn() or not _screen._tutorial.gate_hand_select(index):
@@ -77,14 +76,7 @@ func on_hand_drag_started(view: CardView) -> void:
 	_screen._hand_layout.hold(view, true)
 	_screen._hide_detail()
 	if _screen.state.can_cast(_screen.my_side, index):
-		var card: CardData = _screen.state.hand[_screen.my_side][index]
-		var side := _screen._spell.target_side(card)
-		if (
-			CardEffectResolver.grave_choice_effect(card) == null
-			and side >= 0
-			and CardMatchEffectTarget.has_candidate(_screen.state, card, side)
-		):
-			_screen._spell.begin(index)
+		_screen._spell_drag.begin(view, index)
 		return
 	if _screen.state.can_play(_screen.my_side, index):
 		_screen.selection.select_hand(index)
@@ -94,6 +86,8 @@ func on_hand_drag_started(view: CardView) -> void:
 ## 手札のドラッグが終わった。落とし先で出せなかった(選択が掴んだときのまま残っている)なら
 ## 取り消す。出した札が設置効果の対象選択へ進んだ場合(置く枠が決まっている)は残す。
 func on_hand_drag_ended(view: CardView) -> void:
+	# 撃ったかどうかを先に決める。撃って手札が減っていれば、札は手札へ戻らない(`hold()`)。
+	_screen._spell_drag.end()
 	_screen._hand_layout.hold(view, false)
 	var index := _screen._hand_views.find(view)
 	var sel := _screen.selection
@@ -106,30 +100,13 @@ func on_hand_drag_ended(view: CardView) -> void:
 	_screen.refresh()
 
 
-## 砂術を落とした(GameDesign.md 9章「ドラッグの落とし先は対象、取らないものは盤面のどこでも」)。
-## 掴んだときに対象選択へ入っていれば、落とした先を押したのと同じに扱う。
-func _drop_spell(index: int, side: int, slot: int) -> void:
-	var sel := _screen.selection
-	if sel.is_targeting() and sel.slot < 0 and sel.hand_index == index:
-		if slot < 0:
-			on_face_pressed()
-		elif side == _screen.my_side:
-			_handle_own_targeting(slot)
-		else:
-			_handle_foe_targeting(slot)
-		return
-	if not _screen._tutorial.gate_hand_select(index):
-		return
-	_screen._spell.begin(index)
-
-
 ## 手札の札が相手の場・相手のHP帯へ落とされた。砂術だけが意味を持つ。
 func _drop_hand_on_foe(source: CardView, slot: int) -> bool:
 	var index := _screen._hand_views.find(source)
 	if index < 0:
 		return false
-	if _screen._my_turn() and _screen.state.can_cast(_screen.my_side, index):
-		_drop_spell(index, MatchState.other_side(_screen.my_side), slot)
+	if _screen._my_turn() and _screen._spell_drag.active():
+		_screen._spell_drag.drop(MatchState.other_side(_screen.my_side), slot)
 	return true
 
 

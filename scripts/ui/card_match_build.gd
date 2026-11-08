@@ -149,6 +149,9 @@ static func overlays(screen: CardMatchScreen) -> void:
 	# 直前の手の列は結果パネル・ログの暗幕より背面(開いている間に板へ触れられないように)。
 	screen._history = CardMatchActionHistory.new(screen)
 	screen.add_child(screen._history)
+	# 構えた砂術の札は「直前の手」の列の上へ重ねる(GameDesign.md 9章「砂術」)。
+	screen._spell_aim = CardSpellAim.new()
+	screen.add_child(screen._spell_aim)
 	# 通信待ちの文言と対象選択の案内は、駒より手前へ出すため独立したノードで描く。
 	screen._status = CardMatchStatus.new()
 	screen.add_child(screen._status)

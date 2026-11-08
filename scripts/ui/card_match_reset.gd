@@ -23,6 +23,8 @@ static func run(screen: CardMatchScreen) -> void:
 		screen._hand_layout.reset()
 	screen._pile.visible = false
 	screen._selection.clear()
+	if screen._effect_strike != null:
+		screen._effect_strike.reset_reveal()
 	if screen._finale != null:
 		screen._finale.reset()
 	screen._cpu_timer.stop()

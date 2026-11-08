@@ -189,3 +189,13 @@ func begin_turn() -> void:
 	summoned_this_turn = false
 	flipped_this_turn = false
 	attacks_this_turn = 0
+
+
+## 同じ状態の別の駒。対局の複製(`MatchState.fork()`)が使う。
+func copy() -> CardInstance:
+	var twin := CardInstance.new(data)
+	for property in get_property_list():
+		if property["usage"] & PROPERTY_USAGE_SCRIPT_VARIABLE:
+			var value: Variant = get(property["name"])
+			twin.set(property["name"], value.duplicate() if value is Array else value)
+	return twin
