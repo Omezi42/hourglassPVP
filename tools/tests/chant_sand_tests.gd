@@ -16,6 +16,8 @@ func run(assert_true: Callable) -> void:
 	_test_divine_takes_spell_from_deck()
 	_test_divine_without_spells_does_nothing()
 	_test_divine_is_not_a_draw()
+	_test_chant_hits_foe_on_own_spell()
+	_test_chant_ignores_foe_spell()
 	_test_set_is_registered()
 
 
@@ -122,9 +124,29 @@ func _test_divine_is_not_a_draw() -> void:
 	_assert.call(mine.health == health_before, "砂占いは相手のドローに反応する効果(ハウンド)を起こさない")
 
 
+## 何もしない砂術(山札に砂術が無いときの砂占い)を撃てば、HPの差はチャントのぶんだけになる。
+func _test_chant_hits_foe_on_own_spell() -> void:
+	var state := _new_match(["divine", "divine"])
+	_place(state, MatchState.Side.A, "chant", 0)
+	var foe_before: int = state.hp[MatchState.Side.B]
+	state.cast_spell(MatchState.Side.A, 0)
+	state.cast_spell(MatchState.Side.A, 0)
+	_assert.call(state.hp[MatchState.Side.B] == foe_before - 2, "チャントは自分が砂術を使うたび相手に1ダメージ")
+
+
+func _test_chant_ignores_foe_spell() -> void:
+	var state := _new_match([])
+	_place(state, MatchState.Side.B, "chant", 0)
+	state.hand[MatchState.Side.A] = [CardLibrary.find_by_id("divine")]
+	var hp_before: int = state.hp[MatchState.Side.A]
+	state.cast_spell(MatchState.Side.A, 0)
+	_assert.call(state.hp[MatchState.Side.A] == hp_before, "チャントは相手の砂術に反応しない")
+
+
 func _test_set_is_registered() -> void:
 	_assert.call(CardSetLibrary.has_set(SET_ID), "詠砂の刻が登録されている")
 	_assert.call(CardSetLibrary.card_ids(SET_ID).has("scribe"), "スクライブが詠砂の刻に入っている")
 	_assert.call(CardSetLibrary.card_ids(SET_ID).has("divine"), "砂占いが詠砂の刻に入っている")
+	_assert.call(CardSetLibrary.card_ids(SET_ID).has("chant"), "チャントが詠砂の刻に入っている")
 	_assert.call(CardSetLibrary.planned_count(SET_ID) == 8, "詠砂の刻は予定8枚")
 	_assert.call(CardEnums.trigger_name(CardEnums.Trigger.ON_OWN_SPELL) == "常在", "砂術への反応は「常在」と出す")

@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/emblems/chant.png" id="emblem"]
+
+[sub_resource type="Resource" id="Effect_chant_0"]
+script = ExtResource("script_effect")
+trigger = 8
+target = 4
+effect_type = 0
+value = 1
+card_id = ""
+keyword = -1
+
+[resource]
+script = ExtResource("script_card")
+id = "chant"
+display_name = "チャント"
+cost = 3
+total_sand = 4
+pool_index = 121
+set_id = "chant_sand"
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_chant_0")])
+rules_text = "自分が砂術を使うたび、相手プレイヤーに1ダメージ"
+cannot_attack = false
+is_token = false
+art_id = "wand"
+emblem = ExtResource("emblem")
