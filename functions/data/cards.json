@@ -1319,6 +1319,17 @@
 			"is_spell": true,
 			"pool_index": 120,
 			"total_sand": 0
+		},
+		{
+			"cannot_attack": false,
+			"cost": 3,
+			"describe": "自分が砂術を使うたび、相手プレイヤーに1ダメージ",
+			"display_name": "チャント",
+			"id": "chant",
+			"initial_attack": 0,
+			"is_spell": false,
+			"pool_index": 121,
+			"total_sand": 4
 		}
 	]
 }
