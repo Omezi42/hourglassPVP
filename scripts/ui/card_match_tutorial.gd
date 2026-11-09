@@ -123,12 +123,15 @@ func _ready() -> void:
 func apply_layout(layout: CardMatchLayout) -> void:
 	size = layout.screen_size
 	_band_home = layout.tutorial_band_position
-	var band_size := layout.tutorial_band_size
+	# 文字の大きさ「大」(GameDesign.md 9章)は文字を f 倍にする。1行の字数が 1/f、行の高さが f 倍に
+	# なるため、同じ文を収めるには帯を f² 倍の高さにする。
+	var f := TextSize.factor()
+	var band_size := Vector2(layout.tutorial_band_size.x, layout.tutorial_band_size.y * f * f)
 	_band.scale = Vector2.ONE * layout.tutorial_scale
 	_band.size = band_size
 	_band_panel.custom_minimum_size = band_size
 	_band_panel.size = band_size
-	_label.add_theme_font_size_override("font_size", BAND_FONT_SIZE)
+	_label.add_theme_font_size_override("font_size", roundi(BAND_FONT_SIZE * f))
 	_next_button.position = Vector2(
 		band_size.x - NEXT_SIZE.x - BAND_INSET, (band_size.y - NEXT_SIZE.y) * 0.5
 	)

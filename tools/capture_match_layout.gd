@@ -5,7 +5,8 @@ extends "res://tools/record_pv.gd"
 ##
 ## 実行(実際の描画結果を読むため --headless は付けない):
 ##   godot --path . res://tools/capture_match_layout.tscn -- <出力先フォルダ> [モード]
-## モード: both(既定)/ landscape / portrait / overlays / panels
+## モード: both(既定)/ landscape / portrait / overlays / panels / a11y
+## a11y の後に large を付けると文字の大きさ「大」で撮る(`user://` の設定は変えない)。
 ## overlays は縦で、重ね物(遠征の札・再生の操作)を1枚ずつ撮る。
 ## panels は縦で、マリガン(先手3枚・後手4枚)と結果パネルを1枚ずつ撮る。
 
@@ -64,6 +65,10 @@ func _run() -> void:
 		await _shoot_panels()
 		get_tree().quit()
 		return
+	if _which == "a11y":
+		await _shoot_a11y()
+		get_tree().quit()
+		return
 	if _which != "portrait":
 		await _shoot(false, "match_landscape.png")
 	if _which != "landscape":
@@ -106,6 +111,58 @@ func _dress_board() -> void:
 	history._push(foe, "反転", _card("glass"))
 	history._push(my, "砂術", _card("tempest"))
 	history._appear = 1.0
+
+
+## 色覚と文字の大きさの確認用(GameDesign.md 9章)。相手の列に守護を置き、自分の駒で攻撃の対象を
+## 選んでいる盤面(選択・対象の輪と守護の輪が並ぶ)と、詳細パネルを出した盤面を横・縦で撮る。
+## 文字の大きさは呼び出し側の設定(`TextSize`)のまま撮る。
+func _shoot_a11y() -> void:
+	var args := OS.get_cmdline_user_args()
+	TextSize.set_for_test(args.size() > 2 and args[2] == "large")
+	var my := match_screen.my_side
+	var foe := MatchState.other_side(my)
+	_unit(foe, 0, "guard", 4, 2)
+	_unit(foe, 4, "shield", 3, 1)
+	for portrait in [false, true]:
+		var tag := "portrait" if portrait else "landscape"
+		match_screen._selection.clear()
+		match_screen._selection.select_board(1)
+		await _shoot(portrait, "a11y_target_%s.png" % tag)
+		match_screen._selection.clear()
+		match_screen.refresh()
+		match_screen._detail.show_fixed(_card("anchor"))
+		await _settle()
+		_save("a11y_detail_%s.png" % tag)
+		match_screen._detail.hide_now()
+		await _shoot_band(portrait, "a11y_band_%s.png" % tag)
+
+
+## 誘導対局の帯を、帯に収める最長(34字×2行)の文で出す。
+func _shoot_band(portrait: bool, file_name: String) -> void:
+	var tutorial := match_screen._tutorial
+	tutorial.apply_layout(match_screen.layout)
+	tutorial._label.text = (
+		"砂時計は手番の終わりに上の砂が1粒ずつ落ちていきます。体力が尽きると割れてしまうので、"
+		+ "反転で上下を入れ替えて長く場に残しましょう。"
+	)
+	tutorial.visible = true
+	tutorial._band.visible = true
+	await _settle()
+	_save(file_name)
+	tutorial.visible = false
+	match_screen.apply_orientation(portrait)
+
+
+func _settle() -> void:
+	await _wait(SETTLE_SECONDS)
+	for i in SETTLE_FRAMES:
+		await RenderingServer.frame_post_draw
+
+
+func _save(file_name: String) -> void:
+	var path := _out_dir.path_join(file_name)
+	_stage.get_texture().get_image().save_png(path)
+	print("SAVED=%s" % path)
 
 
 func _shoot_overlays() -> void:

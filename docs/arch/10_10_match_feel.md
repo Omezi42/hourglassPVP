@@ -97,6 +97,7 @@
 |---|---|
 | 画面遷移の横移動 | `ScreenTransitionFx`(`Main._show_only()` の中)。`_show_only()` は進む/戻るを知らないため、`back_pressed` 経由の遷移だけを `going_back = true` で逆方向にし、それ以外は「進む」で揃える |
 | Esc / 右クリックで戻る | `Main._unhandled_input()`。現在の画面が `back_pressed` を持てば発行。対局画面は自前で使うため対象外 |
+| Escでモーダルを閉じる | `EscClose.attach(host, close)`(`scripts/ui/esc_close.gd`)をモーダルの `_ready()` で付ける。`host` が見えている間だけ `_unhandled_input` でEscを受けて使い切る。手前のノードほど先に受けるため、重なったモーダルは手前から閉じ、下の画面の「戻る」や選択の取り消しへは届かない。付けないもの: 選ぶまで閉じられない札(遠征の束・恩恵・工房・`CardChallengeResult`・`WaitingCpuPrompt`)。`ConfirmModal` はキャンセルを持つときだけ、`CardDeckFilter`・`CardDeckPeek` は自前で受ける |
 | ボタンの押し込みを深く | `CodedButtonStyle` の `State.PRESSED`(ハイライトの明度をもう一段落とし影を1px増やす。全ボタン共通の定数1つ) |
 | ヘッダータイトルの着地 | `ScreenHeader` が `title_label.position.y` を -2 → 0 |
 | 絵が矩形から矩形へ飛ぶ(一覧⇄棚 / 品⇄砂金チップ / ミッション受取) | `CardFlightFx.play(texture_or_control, from_rect, to_rect, duration)` の1メソッド。画面ごとに専用クラスを作らない。**演出の完了を待たずに配列操作は即座に行い、見た目だけが追いかける** |

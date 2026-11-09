@@ -120,6 +120,35 @@ func on_input(event: InputEvent) -> void:
 	var click := event as InputEventMouseButton
 	if click != null and click.pressed and click.button_index == MOUSE_BUTTON_RIGHT:
 		_cancel()
+	var key := event as InputEventKey
+	if key != null and key.pressed and key.keycode == KEY_SPACE:
+		_on_space(key)
+
+
+## Space = ターン終了(GameDesign.md 9章「操作」)。GUIより先に受けて対局中は必ず使い切る。
+## 押したボタンが持つフォーカスへSpaceが届くと、最後に押したボタン(投了など)をもう一度押してしまうため。
+func _on_space(key: InputEventKey) -> void:
+	var s := _screen
+	if not s.is_visible_in_tree() or not s._interactive:
+		return
+	s.get_viewport().set_input_as_handled()
+	if key.echo or _overlay_open():
+		return
+	var button := s._end_turn_button
+	if button.visible and not button.disabled and not s._spell_drag.active():
+		s._on_end_turn_pressed()
+
+
+## 盤面の上に重ね物(マリガン・ログ・墓地・メニュー・エモート)が開いているか。
+func _overlay_open() -> bool:
+	var s := _screen
+	return (
+		s.mulligan_open()
+		or s._log.visible
+		or s._pile.visible
+		or s._menu._panel.visible
+		or s._emote.popup_open()
+	)
 
 
 ## 盤面の何もない所を押したら取り消す(GameDesign.md 9章)。駒・ボタン・情報帯は押下を

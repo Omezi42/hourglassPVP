@@ -16,6 +16,8 @@ const PILL_PADDING := 5.0
 const PILL_HEAD_FONT := 16
 const PILL_TAIL_FONT := 11
 ## ターン終了で割れる駒のひび。絵の枠に対する比で置く(絵は枠より細い縦長のため内側へ寄せる)。
+## 守護の二重の輪の外側の輪を、台座の縁からどれだけ外へ出すか。
+const GUARD_RING_GAP := Vector2(6.0, 3.5)
 const CRACK_BOX := Vector2(0.55, 0.75)
 const CRACK_BOX_DROP := 0.04
 const CRACK_LIGHT := Color(1.0, 0.95, 0.9, 0.7)
@@ -89,7 +91,8 @@ static func _pedestal_side_points(
 	return points
 
 
-## 台座の輪。守護は太い真鍮にする(GameDesign.md 9章)。**取り消しの戻る動き**
+## 台座の輪。守護は真鍮の二重の輪にする(GameDesign.md 9章)。選択・対象の水色の太い一重の輪と
+## 色だけでなく形でも分けるため、対象として光っている間も外側の真鍮の輪は残す。**取り消しの戻る動き**
 ## (同章「対局画面の手触り」)は、`selected` が既に false へ戻った後も
 ## `unselect_amount` が残っているあいだ、縮んで消えていく輪として描く。
 static func pedestal_ring(view: CardView) -> void:
@@ -100,15 +103,14 @@ static func pedestal_ring(view: CardView) -> void:
 	var radius := CardView.PEDESTAL_RADIUS
 	if view.selected:
 		color = CardView.SELECT_CYAN
-		width = CardView.PEDESTAL_GUARD_RING_WIDTH
+		width = CardView.PEDESTAL_SELECT_RING_WIDTH
 	elif guard:
 		color = UiPalette.BRASS_HIGHLIGHT
-		width = CardView.PEDESTAL_GUARD_RING_WIDTH
 	elif view.card == null:
 		color = Color(UiPalette.BRASS_MID, 0.6)
 	if not view.selected and view.unselect_amount > 0.01:
 		color = Color(CardView.SELECT_CYAN, view.unselect_amount)
-		width = CardView.PEDESTAL_GUARD_RING_WIDTH
+		width = CardView.PEDESTAL_SELECT_RING_WIDTH
 		radius = CardView.PEDESTAL_RADIUS.lerp(
 			CardView.PEDESTAL_RADIUS * CardView.UNSELECT_SHRINK, 1.0 - view.unselect_amount
 		)
@@ -118,6 +120,15 @@ static func pedestal_ring(view: CardView) -> void:
 		var pulse := (sin(view._brace_pulse) + 1.0) * 0.5
 		color = Color(color, lerpf(CardView.BRACE_PULSE_MIN, CardView.BRACE_PULSE_MAX, pulse))
 	UiPaint.draw_ellipse_ring(view.get_canvas_item(), center, radius, color, width, 40)
+	if guard:
+		UiPaint.draw_ellipse_ring(
+			view.get_canvas_item(),
+			center,
+			CardView.PEDESTAL_RADIUS + GUARD_RING_GAP,
+			UiPalette.BRASS_HIGHLIGHT,
+			CardView.PEDESTAL_RING_WIDTH,
+			40
+		)
 
 
 static func pedestal_glow(view: CardView, color: Color) -> void:

@@ -161,7 +161,7 @@ static func _name_band(view: CardView, ci: RID, s: float, tint: Color) -> void:
 		FRAME_WIDTH * s + 2.0 * s,
 		NAME_BAND_TOP * s,
 		view.size.x - (FRAME_WIDTH + 2.0) * 2.0 * s,
-		NAME_BAND_HEIGHT * s
+		NAME_BAND_HEIGHT * TextSize.factor() * s
 	)
 	var points := UiPaint.rounded_rect_points_uniform(rect, 3.0 * s, 3)
 	UiPaint.fill_gradient_polygon(
@@ -213,21 +213,24 @@ static func _closed(view: CardView, points: PackedVector2Array, color: Color, wi
 
 ## 名前は帯の中央、キーワードはその下の行。キーワードの行の両脇は四隅のバッジが占めるため、
 ## 文字はその内側の幅へ収める(`_centered_text` が収まらない場合だけ縮める)。
+## 文字の大きさ「大」(GameDesign.md 9章)では名前の帯ごと高くし、キーワードの行はそのぶん下げる。
 static func _labels(view: CardView, s: float, tint: Color) -> void:
 	var card: CardData = view.card
-	var name_baseline := (NAME_BAND_TOP + NAME_BAND_HEIGHT * 0.5) * s + NAME_FONT * s * 0.36
-	view._centered_text(card.display_name, roundi(NAME_FONT * s), name_baseline + 1.0, TEXT_SHADOW)
-	view._centered_text(
-		card.display_name, roundi(NAME_FONT * s), name_baseline, UiPalette.TEXT_OFFWHITE * tint
-	)
+	var f := TextSize.factor()
+	var band_height := NAME_BAND_HEIGHT * f
+	var name_font := roundi(NAME_FONT * f * s)
+	var name_baseline := (NAME_BAND_TOP + band_height * 0.5) * s + name_font * 0.36
+	view._centered_text(card.display_name, name_font, name_baseline + 1.0, TEXT_SHADOW)
+	view._centered_text(card.display_name, name_font, name_baseline, UiPalette.TEXT_OFFWHITE * tint)
 	var note: String = CardViewPaint.keyword_text(view)
 	if note.is_empty():
 		return
 	var limit := view.size.x - (GEM_INSET + GEM_RADIUS + 2.0) * 2.0 * s
+	var keyword_drop := (band_height - NAME_BAND_HEIGHT) + KEYWORD_FONT * (f - 1.0)
 	view._centered_text(
 		note,
-		roundi(KEYWORD_FONT * s),
-		KEYWORD_BASELINE * s,
+		roundi(KEYWORD_FONT * f * s),
+		(KEYWORD_BASELINE + keyword_drop) * s,
 		UiPalette.BRASS_HIGHLIGHT * tint,
 		limit
 	)

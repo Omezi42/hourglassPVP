@@ -36,6 +36,7 @@ func _ready() -> void:
 	size = SCREEN_SIZE
 	_build()
 	PortraitModal.watch(self, _layout)
+	EscClose.attach(self, func() -> void: visible = false)
 
 
 ## そのセットの全カードを、購入の有無に関わらずそのまま見せる。未公開の枠は「?」の札で示す。

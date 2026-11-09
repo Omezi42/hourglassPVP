@@ -51,6 +51,7 @@ func _ready() -> void:
 	size = SCREEN_SIZE
 	_build()
 	PortraitModal.watch(self, _layout)
+	EscClose.attach(self, _finish.bind(false))
 
 
 func open() -> void:

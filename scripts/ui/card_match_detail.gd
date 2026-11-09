@@ -61,6 +61,7 @@ func hover_card(card: CardData, off_board := false) -> void:
 	_off_board = off_board
 	_timer.stop()
 	_panel.show_card(card, "" if off_board else _live_text(card))
+	_fit_scale()
 	_panel.position = _place()
 	_panel.visible = true
 	# 履歴タイル・ログ(あとから add_child した子)より手前へ出す。
@@ -80,13 +81,26 @@ func _live_text(card: CardData) -> String:
 ## 対角へ出していたのは**パネルの中の語を押しに行く**前提があった頃の名残で、
 ## 読むだけになったいまは視線を画面の端まで往復させる理由が無い。
 func _place() -> Vector2:
+	var shown := _panel.size * _panel.scale
+	return CardDetailPanel.place_near(_screen.get_local_mouse_position(), shown, _bounds())
+
+
+func _bounds() -> Rect2:
 	var band := _screen.layout.table_rect
-	var bounds := Rect2(
+	return Rect2(
 		Vector2(MARGIN, band.position.y),
 		Vector2(_screen.layout.play_right - MARGIN * 2.0, band.size.y)
 	)
-	var shown := _panel.size * _panel.scale
-	return CardDetailPanel.place_near(_screen.get_local_mouse_position(), shown, bounds)
+
+
+## 縦の拡大(`detail_scale`)に文字の大きさの設定(GameDesign.md 9章)を掛ける。
+## 「大」で卓に収まらなくなる長い文のカードだけ、収まるところまで倍率を戻す。
+func _fit_scale() -> void:
+	var wanted := _screen.layout.detail_scale * TextSize.factor()
+	var room := _bounds().size / _panel.size
+	_panel.scale = (
+		Vector2.ONE * maxf(minf(wanted, minf(room.x, room.y)), _screen.layout.detail_scale)
+	)
 
 
 ## タッチの長押し(GameDesign.md 9章「タッチでの操作」)。指で隠れないよう、カーソルの近くではなく
@@ -97,14 +111,15 @@ func show_fixed(card: CardData) -> void:
 	_off_board = false
 	_timer.stop()
 	_panel.show_card(card, _live_text(card))
+	_fit_scale()
 	_panel.position = _screen.layout.table_rect.get_center() - _panel.size * _panel.scale * 0.5
 	_panel.visible = true
 	_panel.move_to_front()
 
 
 ## 縦では文字を読める大きさにするため、パネルごと拡大する(GameDesign.md 9章「縦画面」)。
-func apply_layout(layout: CardMatchLayout) -> void:
-	_panel.scale = Vector2.ONE * layout.detail_scale
+## 倍率は出すたびに `_fit_scale()` が決める。
+func apply_layout(_layout: CardMatchLayout) -> void:
 	hide_now()
 
 

@@ -29,6 +29,14 @@ const OFFICIAL_LINKS := [
 ]
 const LINK_BUTTON_SIZE := Vector2(88, 88)
 const LINK_ROW_SEPARATION := 22
+## 文字の大きさ「標準 / 大」(GameDesign.md 9章)。並びは `TextSize.is_large()` の false / true の順。
+const TEXT_SIZE_LABELS := ["標準", "大"]
+const TEXT_SIZE_BUTTON_SIZE := Vector2(110, 56)
+const ROW_CAPTION_FONT := 20
+const SELECTED_GROUP := CodedButton.PRIMARY_ACTION_GROUP
+const UNSELECTED_GROUP := "wide_text"
+
+var _text_size_buttons: Array[Button] = []
 
 @onready var dim: ColorRect = $Dim
 @onready var sfx_slider: HSlider = $CenterBox/Panel/Margin/VBox/SfxRow/Slider
@@ -41,12 +49,14 @@ const LINK_ROW_SEPARATION := 22
 func _ready() -> void:
 	visible = false
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	_build_text_size_row()
 	_build_link_row()
 	_sync_from_settings()
 	sfx_slider.value_changed.connect(_on_sfx_changed)
 	bgm_slider.value_changed.connect(_on_bgm_changed)
 	close_button.pressed.connect(close)
 	PortraitModal.watch(self, _fit)
+	EscClose.attach(self, close)
 
 
 ## 窓口への導線はコードで組み立てて音量の下へ挿す(.tscn のパッチは値がJSONのため
@@ -67,6 +77,40 @@ func _build_link_row() -> void:
 		row.add_child(button)
 	vbox.add_child(row)
 	vbox.move_child(row, close_button.get_index())
+
+
+## 音量の下に「文字の大きさ 標準 / 大」を挿す。窓口の列と同じくボタンの面をコードで決めるため、シーンに持たない。
+func _build_text_size_row() -> void:
+	var vbox := close_button.get_parent() as VBoxContainer
+	if vbox == null:
+		return
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", LINK_ROW_SEPARATION)
+	var caption := Label.new()
+	caption.text = "文字の大きさ"
+	caption.add_theme_font_size_override("font_size", ROW_CAPTION_FONT)
+	caption.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	row.add_child(caption)
+	for i in TEXT_SIZE_LABELS.size():
+		var button := CodedButton.make(TEXT_SIZE_LABELS[i], TEXT_SIZE_BUTTON_SIZE)
+		button.pressed.connect(_on_text_size_pressed.bind(i == 1))
+		row.add_child(button)
+		_text_size_buttons.append(button)
+	vbox.add_child(row)
+	vbox.move_child(row, close_button.get_index())
+
+
+func _on_text_size_pressed(large: bool) -> void:
+	TextSize.set_large(large)
+	_refresh_text_size_buttons()
+
+
+func _refresh_text_size_buttons() -> void:
+	for i in _text_size_buttons.size():
+		var active: bool = (i == 1) == TextSize.is_large()
+		CodedButton.apply_styles(
+			_text_size_buttons[i], SELECTED_GROUP if active else UNSELECTED_GROUP
+		)
 
 
 func open() -> void:
@@ -97,6 +141,7 @@ func _sync_from_settings() -> void:
 	sfx_slider.value = roundi(SoundBank.get_sfx_volume() * 100.0)
 	bgm_slider.value = roundi(SoundBank.get_bgm_volume() * 100.0)
 	_refresh_value_labels()
+	_refresh_text_size_buttons()
 
 
 func _refresh_value_labels() -> void:

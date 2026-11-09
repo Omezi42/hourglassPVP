@@ -28,6 +28,7 @@ func _ready() -> void:
 	cancel_button.pressed.connect(_on_cancel_pressed)
 	confirm_button.pressed.connect(_on_confirm_pressed)
 	PortraitModal.watch(self, _cover_viewport)
+	EscClose.attach(self, _on_escape)
 
 
 ## OKのみの通知として表示する。
@@ -80,6 +81,12 @@ func _set_confirm_style(text: String, color: Color) -> void:
 	confirm_button.add_theme_color_override("font_color", color)
 	confirm_button.add_theme_color_override("font_pressed_color", color)
 	confirm_button.add_theme_color_override("font_hover_color", color)
+
+
+## Escは「キャンセル」と同じ。OKだけの通知はEscで閉じない(押して読んだことにしないため)。
+func _on_escape() -> void:
+	if cancel_button.visible:
+		_on_cancel_pressed()
 
 
 func _on_cancel_pressed() -> void:

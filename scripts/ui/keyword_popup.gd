@@ -27,6 +27,7 @@ func _ready() -> void:
 	visible = false
 	_build()
 	PortraitModal.watch(self, _fit)
+	EscClose.attach(self, close)
 
 
 func open(entry: Dictionary) -> void:

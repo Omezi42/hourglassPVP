@@ -61,6 +61,7 @@ func _init(screen: CardMatchScreen) -> void:
 	_panel = MenuPanel.new()
 	_panel.visible = false
 	screen.add_child(_panel)
+	EscClose.attach(_panel, close)
 	_log_item = _add_item("ログ", func() -> void: screen._log.set_open(true))
 	_emote_item = _add_item("エモート", func() -> void: screen._emote.toggle_popup())
 	_surrender_item = _add_item("投了", screen._on_surrender_pressed)

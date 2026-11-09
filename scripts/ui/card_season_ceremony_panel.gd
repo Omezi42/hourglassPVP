@@ -42,6 +42,7 @@ func _ready() -> void:
 	size = SCREEN_SIZE
 	_build()
 	PortraitModal.watch(self, _layout)
+	EscClose.attach(self, _on_close)
 
 
 ## `result`は`RankProgress.ensure_current_season()`の戻り値をそのまま渡す。

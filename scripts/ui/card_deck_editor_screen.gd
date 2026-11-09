@@ -418,7 +418,6 @@ func apply_orientation(portrait: bool) -> void:
 	_progress.add_theme_font_size_override(
 		"font_size", PORTRAIT_PROGRESS_FONT if portrait else PROGRESS_FONT
 	)
-	_detail.scale = Vector2.ONE * (PORTRAIT_DETAIL_SCALE if portrait else 1.0)
 	_hide_detail()
 	_select_tab(_show_stock)
 
@@ -521,13 +520,19 @@ func _show_detail(card: CardData) -> void:
 	if _detail_hide_timer != null:
 		_detail_hide_timer.stop()
 	_detail.show_card(card)
+	var screen := Vector2(ScreenOrientation.base_size())
+	# 文字の大きさ「大」(GameDesign.md 9章)は縦の拡大に掛け、画面に収まるところまでに抑える。
+	var base := PORTRAIT_DETAIL_SCALE if _portrait else 1.0
+	var room := (screen if _portrait else DETAIL_BOUNDS.size) / _detail.size
+	var fitted := minf(base * TextSize.factor(), minf(room.x, room.y))
+	_detail.scale = Vector2.ONE * maxf(fitted, base)
+	var shown := _detail.size * _detail.scale
 	if _portrait:
 		# 縦は指で隠れないよう画面の中央へ固定して出す(対局画面の長押しと同じ)。
-		var screen := Vector2(ScreenOrientation.base_size())
-		_detail.position = (screen - _detail.size * _detail.scale) * 0.5
+		_detail.position = (screen - shown) * 0.5
 	else:
 		_detail.position = CardDetailPanel.place_near(
-			get_local_mouse_position(), _detail.size, DETAIL_BOUNDS
+			get_local_mouse_position(), shown, DETAIL_BOUNDS
 		)
 	_detail.visible = true
 

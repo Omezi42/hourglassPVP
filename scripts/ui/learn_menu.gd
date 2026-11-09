@@ -66,6 +66,7 @@ func _init() -> void:
 
 func _ready() -> void:
 	PortraitModal.watch(self, _fit)
+	EscClose.attach(self, close)
 
 
 ## 入口を押したら閉じてから知らせる(開いた先の画面から戻ったとき、モーダルを残さない)。

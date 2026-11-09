@@ -61,6 +61,7 @@ func _ready() -> void:
 	# **`set_anchors_preset()` は使わない**(Architecture.md 4章)。コードで生成した直後の
 	# サイズ0のノードへ使うと0のまま固定され、暗幕が盤面を覆わずクリックも止められない。
 	_build()
+	EscClose.attach(self, set_open.bind(false))
 
 
 ## 向きに合わせて置き直す(`CardMatchArrange`)。縦は画面をほぼ覆い、文字を大きくする(GameDesign.md 9章)。

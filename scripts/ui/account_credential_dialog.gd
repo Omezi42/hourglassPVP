@@ -38,6 +38,7 @@ func _ready() -> void:
 	anchor_bottom = 1.0
 	_build()
 	PortraitModal.watch(self, _layout)
+	EscClose.attach(self, _on_escape)
 
 
 ## `guest_currency` はゲストのままログインするときに失う砂金。負ならゲストではない。
@@ -176,3 +177,9 @@ func _note(color: Color) -> Label:
 	label.add_theme_font_size_override("font_size", NOTE_FONT_SIZE)
 	label.add_theme_color_override("font_color", color)
 	return label
+
+
+## Escは「やめる」と同じ。送信中(「やめる」が押せない間)は閉じない。
+func _on_escape() -> void:
+	if not _cancel.disabled:
+		visible = false

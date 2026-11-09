@@ -74,7 +74,7 @@ const PEDESTAL_CENTER_Y := 122.0
 const PEDESTAL_RADIUS := Vector2(54.0, 13.0)
 const PEDESTAL_HEIGHT := 9.0
 const PEDESTAL_RING_WIDTH := 2.0
-const PEDESTAL_GUARD_RING_WIDTH := 4.5
+const PEDESTAL_SELECT_RING_WIDTH := 4.5
 const BOARD_ART_SIDE := 112.0
 ## 出したターンの砂時計は僅かに沈んで見せる(GameDesign.md 9章)。
 const SUMMONED_SINK := 3.0
@@ -574,6 +574,7 @@ func _look() -> Array:
 		label_scale,
 		size,
 		_hovering,
+		TextSize.factor(),
 	]
 	if unit != null:
 		(
@@ -632,7 +633,7 @@ func _draw_board_unit() -> void:
 		draw_set_transform_matrix(Transform2D.IDENTITY)
 	if crack_preview:
 		CardViewPaint.crack(self)
-	# 輪は絵の後に描く。守護(太い真鍮の輪)と選択中(水色の輪)は駒が立っていても
+	# 輪は絵の後に描く。守護(真鍮の二重の輪)と選択中(水色の太い輪)は駒が立っていても
 	# 必ず見えなければならないため、絵の下へ隠してはいけない。
 	CardViewPaint.pedestal_ring(self)
 	CardViewPaint.pedestal_plaque(self, tint)
