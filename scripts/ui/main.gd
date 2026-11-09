@@ -682,6 +682,7 @@ func _match_screen() -> Control:
 	card_match_screen.anchor_right = 1.0
 	card_match_screen.anchor_bottom = 1.0
 	card_match_screen.visible = false
+	_set_screen_running(card_match_screen, false)
 	add_child(card_match_screen)
 	move_child(card_match_screen, stats_screen.get_index() + 1)
 	card_match_screen.connect("back_pressed", _on_card_match_back)
@@ -725,7 +726,9 @@ func _show_only(screen: Control, going_back: bool = false) -> void:
 		if s != previous and s != screen:
 			s.visible = false
 			s.modulate.a = 1.0
+			_set_screen_running(s, false)
 
+	_set_screen_running(screen, true)
 	if not screen.visible:
 		screen.modulate.a = 0.0
 	screen.visible = true
@@ -745,6 +748,12 @@ func _show_only(screen: Control, going_back: bool = false) -> void:
 	_refresh_wait_banner()
 
 
+## 画面はすべて木に残したまま出し入れするため、隠した画面は丸ごと止める。止めないと見えない画面の
+## `_process`・Tween・入力の処理が毎フレーム走り続ける(Architecture.md 4.0節)。
+func _set_screen_running(screen: Control, running: bool) -> void:
+	screen.process_mode = Node.PROCESS_MODE_INHERIT if running else Node.PROCESS_MODE_DISABLED
+
+
 ## 画面ごとのBGM。対局だけ専用曲、タイトルだけ専用曲、それ以外はホーム曲。
 func _track_for(screen: Control) -> MusicPlayer.Track:
 	if screen == card_match_screen:
@@ -759,6 +768,7 @@ func _on_transition_finished(screen: Control, previous: Control) -> void:
 	if previous != null and previous != screen:
 		previous.visible = false
 		previous.modulate.a = 1.0
+		_set_screen_running(previous, false)
 	ScreenTransitionFx.reset(screen, previous)
 	_transition_blocker.visible = false
 	_fade_tween = null

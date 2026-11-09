@@ -30,6 +30,8 @@ static func request(
 	# 画面上は「接続できませんでした」としか見えないため原因を追いにくい。
 	# やり取りするJSONはいずれも小さく、圧縮しなくても実害がないので常に無効にする。
 	http.accept_gzip = false
+	# 送り主の画面が隠されて止まっても(`Main._set_screen_running`)、通信は最後まで進める。
+	http.process_mode = Node.PROCESS_MODE_ALWAYS
 	host.add_child(http)
 	var send_error := http.request(url, headers, method, body)
 	if send_error != OK:
