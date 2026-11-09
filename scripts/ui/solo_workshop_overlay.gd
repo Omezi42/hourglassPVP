@@ -28,7 +28,8 @@ const GRID_ROW_GAP := 20.0
 const COUNT_BADGE_FONT_SIZE := 14
 const COUNT_BADGE_COLOR := Color(0.95, 0.8, 0.45)
 const SELECTED_RING_GAP := 6.0
-const SELECTED_RING_WIDTH := 3.0
+const SELECTED_RING_WIDTH := 4.0
+const SELECTED_RING_MIN_WIDTH := 2.0
 
 const PANEL_PADDING := 24.0
 const PANEL_EMPTY_FONT_SIZE := 18
@@ -84,6 +85,7 @@ var _duplicate_result_label: Label
 var _skip_button: Button
 var _deck_ids: Array[String] = []
 var _selected_id := ""
+var _rings := {}
 
 
 func _ready() -> void:
@@ -230,6 +232,7 @@ func _rebuild_grid() -> void:
 	for child in _grid_box.get_children():
 		_grid_box.remove_child(child)
 		child.queue_free()
+	_rings.clear()
 	var ids := _unique_ids()
 	if _grid_box.size.x <= 0.0:
 		return
@@ -258,23 +261,30 @@ func _build_card(pos: Vector2, card_size: Vector2, scale: float, card_id: String
 	view.scale = Vector2(scale, scale)
 	root.add_child(view)
 	view.show_card(card, true)
-	if _selected_id == card_id:
-		var ring := Control.new()
-		ring.position = pos - Vector2.ONE * SELECTED_RING_GAP
-		ring.size = card_size + Vector2.ONE * SELECTED_RING_GAP * 2.0
-		ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		ring.draw.connect(
-			func() -> void:
-				UiPaint.draw_bevel(
-					ring.get_canvas_item(),
-					UiPaint.rounded_rect_points_uniform(Rect2(Vector2.ZERO, ring.size), 8.0, 8),
-					UiPalette.BRASS_HIGHLIGHT,
-					UiPalette.BRASS_HIGHLIGHT,
-					SELECTED_RING_WIDTH,
-					false
-				)
-		)
-		root.add_child(ring)
+	# 輪は全ての札に持たせて出し入れだけする(選び直しで格子を作り直すとホバーの浮きが消える)。
+	# 輪の角は札の角に沿わせ、太さは札の縮尺に合わせる。
+	var gap := SELECTED_RING_GAP * scale
+	var ring_width := maxf(SELECTED_RING_WIDTH * scale, SELECTED_RING_MIN_WIDTH)
+	var ring := Control.new()
+	ring.position = pos - Vector2.ONE * gap
+	ring.size = card_size + Vector2.ONE * gap * 2.0
+	ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ring.visible = _selected_id == card_id
+	ring.draw.connect(
+		func() -> void:
+			UiPaint.draw_bevel(
+				ring.get_canvas_item(),
+				UiPaint.rounded_rect_points_uniform(
+					Rect2(Vector2.ZERO, ring.size), HandCardPaint.CORNER * scale + gap, 8
+				),
+				UiPalette.BRASS_HIGHLIGHT,
+				UiPalette.BRASS_HIGHLIGHT,
+				ring_width,
+				false
+			)
+	)
+	root.add_child(ring)
+	_rings[card_id] = ring
 	var count := _deck_ids.count(card_id)
 	if count >= 2:
 		var badge := _label(COUNT_BADGE_FONT_SIZE, COUNT_BADGE_COLOR)
@@ -292,7 +302,9 @@ func _build_card(pos: Vector2, card_size: Vector2, scale: float, card_id: String
 
 func _on_card_pressed(card_id: String) -> void:
 	_selected_id = "" if _selected_id == card_id else card_id
-	_layout()
+	for id in _rings:
+		(_rings[id] as Control).visible = id == _selected_id
+	_layout_panel_area()
 
 
 func _on_remove_pressed() -> void:
@@ -328,7 +340,11 @@ func _layout() -> void:
 	_grid_box.position = grid_rect.position
 	_grid_box.size = grid_rect.size
 	_rebuild_grid()
+	_layout_panel_area()
 
+
+## 作業台と「何もしない」を置く(札を選び直したときは格子に触れずここだけ組み直す)。
+func _layout_panel_area() -> void:
 	var panel_rect := _panel_rect()
 	_panel_canvas.position = panel_rect.position
 	_panel_canvas.size = panel_rect.size

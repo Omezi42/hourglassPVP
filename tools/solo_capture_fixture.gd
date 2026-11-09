@@ -6,7 +6,7 @@ extends CardSoloMapScreen
 ##   godot --path . res://tools/capture_screen_layout.tscn -- <出力先> <portrait|landscape> \
 ##     'SoloCaptureFixture|stage|"route"' ...
 ## 状態: departure / route / route_mid / dest_battle / dest_gate / dest_spring / dest_workshop /
-##       route_deck(縦の山札の板) / bundle / boon / workshop / workshop_pick /
+##       route_deck(縦の山札の板) / bundle / bundle_pick / boon / workshop / workshop_pick /
 ##       summary_lost / summary_cleared /
 ##       departure_hover / route_hover(最初の札・駒にカーソルが乗った見た目)
 
@@ -39,7 +39,7 @@ func stage(state: String) -> void:
 			return
 		"route_mid", "summary_lost", "summary_cleared":
 			_advance(run, MID_FLOOR, rng)
-		"bundle":
+		"bundle", "bundle_pick":
 			_advance(run, 0, rng)
 			_win_battle(run, rng)
 		"boon":
@@ -65,6 +65,8 @@ func stage(state: String) -> void:
 		_set_deck_sheet(true)
 	if state == "workshop_pick":
 		_workshop.call("_on_card_pressed", run.deck_ids[0])
+	if state == "bundle_pick":
+		_bundle.call("_on_row_pressed", 0)
 	if state.begins_with("dest_"):
 		var row := _row_of(run, _kind_of(state))
 		_route.set_selected(row)

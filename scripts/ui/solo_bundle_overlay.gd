@@ -67,6 +67,7 @@ var _offer: Array[Dictionary] = []
 var _theme_id := ""
 var _deck_ids: Array[String] = []
 var _selected_index := -1
+var _row_canvases: Array[Control] = []
 
 
 func _ready() -> void:
@@ -152,6 +153,7 @@ func _rebuild_rows() -> void:
 	for child in _rows_box.get_children():
 		_rows_box.remove_child(child)
 		child.queue_free()
+	_row_canvases.clear()
 	if _offer.is_empty():
 		return
 	var rows_w := _rows_box.size.x
@@ -167,7 +169,6 @@ func _build_row(rect: Rect2, bundle: Dictionary, index: int) -> void:
 	var root := SoloUiPaint.card_root(_rows_box.size)
 	_rows_box.add_child(root)
 	var is_own := str(bundle.get("theme", "")) == _theme_id
-	var is_selected := index == _selected_index
 	var canvas := Control.new()
 	canvas.position = rect.position
 	canvas.size = rect.size
@@ -175,10 +176,11 @@ func _build_row(rect: Rect2, bundle: Dictionary, index: int) -> void:
 	canvas.draw.connect(
 		func() -> void:
 			SoloUiPaint.paint_panel(
-				canvas.get_canvas_item(), Rect2(Vector2.ZERO, rect.size), is_selected
+				canvas.get_canvas_item(), Rect2(Vector2.ZERO, rect.size), index == _selected_index
 			)
 	)
 	root.add_child(canvas)
+	_row_canvases.append(canvas)
 
 	var theme := str(bundle.get("theme", ""))
 	var cards: Array = bundle.get("cards", [])
@@ -267,7 +269,9 @@ func _build_row(rect: Rect2, bundle: Dictionary, index: int) -> void:
 
 func _on_row_pressed(index: int) -> void:
 	_selected_index = -1 if _selected_index == index else index
-	_rebuild_rows()
+	# 行は作り直さず光らせ直すだけにする(作り直すとカーソルが乗ったままでも浮きが消える)。
+	for canvas in _row_canvases:
+		canvas.queue_redraw()
 	_refresh_deck_panel()
 
 
