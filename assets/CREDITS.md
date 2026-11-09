@@ -11,8 +11,26 @@
 
 ## 効果音(`assets/sfx/`)
 
-外部素材は使っていない。すべて `tools/build_sfx.py` がコードで合成した、このプロジェクトの自作の音。
+`tools/build_sfx.py` が書き出す。手応えの音は下の**CC0の実録音**を芯にして合成音を重ね、
+鐘・オルゴール・ホバー・毒砂などはコードの合成だけで作る。録音の原本は `tools/sfx_sources/`
+(`.gdignore` で書き出しに入らない)に置き、切り出しと音量合わせはスクリプトが行う。
 音を直すときはスクリプトを直して再実行する。
+
+Freesound の音はいずれも各ページでCC0であることを確認し、そのページのHQ試聴版(mp3)を取り込んだ。
+
+| 原本(`tools/sfx_sources/`) | 使う音 | 内容 | 作者 | 出所 | ライセンス |
+|---|---|---|---|---|---|
+| `fs454222_kyles.mp3` | `place` | グラスを木の卓へ置く | kyles | [Freesound 454222](https://freesound.org/people/kyles/sounds/454222/) | CC0 |
+| `fs625655_el_boss.mp3` | `flip` | 小さな砂時計を返す | el_boss | [Freesound 625655](https://freesound.org/people/el_boss/sounds/625655/) | CC0 |
+| `fs178178_lmr9.mp3` | `clash` | ワイングラスが当たる(低め) | lmr9 | [Freesound 178178](https://freesound.org/people/lmr9/sounds/178178/) | CC0 |
+| `fs761135_wasserbjorn.mp3` | `clash` | ワイングラスが当たる | wasserbjorn | [Freesound 761135](https://freesound.org/people/wasserbjorn/sounds/761135/) | CC0 |
+| `fs221528_unfa.mp3` | `glass_break` | 硝子が割れる | unfa | [Freesound 221528](https://freesound.org/people/unfa/sounds/221528/) | CC0 |
+| `fs320167_joshs.mp3` | `unit_break` | 小さなショットグラスが割れる | joshs | [Freesound 320167](https://freesound.org/people/joshs/sounds/320167/) | CC0 |
+| `fs249549_FngerSounds.mp3` | `vessel_shatter` | 硝子が割れる | FngerSounds | [Freesound 249549](https://freesound.org/people/FngerSounds/sounds/249549/) | CC0 |
+| `fs825859_Vrymaa.mp3` | `turn_end` | 砂時計の砂が流れて落ちきる | Vrymaa | [Freesound 825859](https://freesound.org/people/Vrymaa/sounds/825859/) | CC0 |
+| `impactPunch_heavy_000.ogg` `impactSoft_heavy_000.ogg` | `damage` | 重い打撃 | Kenney | [Impact Sounds](https://kenney.nl/assets/impact-sounds) | CC0 |
+| `impactWood_heavy_000.ogg` `impactMetal_heavy_001.ogg` | `sig_chronos` | 木の重い当たり / 金属の当たり | Kenney | [Impact Sounds](https://kenney.nl/assets/impact-sounds) | CC0 |
+| `metalLatch.ogg` | `press` | 金属の留め金 | Kenney | [RPG Audio](https://kenney.nl/assets/rpg-audio) | CC0 |
 
 ## BGM(`assets/bgm/`)
 

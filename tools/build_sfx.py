@@ -1,7 +1,8 @@
-"""効果音をすべてコードで合成し assets/sfx/ へ書き出す(GameDesign.md 9章)。
+"""効果音をコードで合成し assets/sfx/ へ書き出す(GameDesign.md 9章)。
 
-自作の音なのでライセンス管理が要らない。出力は 44.1kHz / 16bit / ステレオの WAV
-(左右の差は部屋の響きだけで、音の本体は中央に置く)。
+出す・反転・攻撃・被弾・破壊・ターン終了などの手応えの音は、CC0の実録音(tools/sfx_sources/、
+出所は assets/CREDITS.md)を芯にして合成音を重ねる。合成だけでは木や硝子の手触りが薄いため。
+出力は 44.1kHz / 16bit / ステレオの WAV(左右の差は部屋の響きだけで、音の本体は中央に置く)。
 
 音は「励振(何がどう当たったか) → 共鳴(何が鳴るか) → 部屋」の順に組む。
 正弦波を直接足すのではなく、叩いた力の形(撥の硬さ)を共鳴フィルタへ通すため、
@@ -16,6 +17,7 @@
 import os
 import sys
 import zlib
+from math import gcd
 import numpy as np
 import soundfile as sf
 from scipy import signal
@@ -23,6 +25,7 @@ from scipy import signal
 SR = 44100
 RNG = np.random.default_rng(42)
 OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__), "..", "assets", "sfx")
+SOURCES = os.path.join(os.path.dirname(__file__), "sfx_sources")
 
 # 素材ごとの倍音比。木の板は両端自由の梁、オルゴールの櫛歯は片持ち梁の理論値、
 # 硝子は薄い殻の実測に近い値、真鍮の小鈴は手鈴の部分音(短3度の tierce を含む)。
@@ -63,6 +66,34 @@ def highpass(x, fc, order=2):
 
 def bandpass(x, lo, hi, order=2):
     return signal.sosfilt(signal.butter(order, [lo, hi], btype="band", fs=SR, output="sos"), x)
+
+
+# ---- 実録音 ----
+
+def rec(file, start=0.0, dur=None, fade_in=0.003, fade_out=0.05):
+    """tools/sfx_sources/ の録音を、モノラル・44.1kHzにして [start, start+dur) を切り出す(最大振幅1)。"""
+    x, sr = sf.read(os.path.join(SOURCES, file), always_2d=True)
+    x = x.mean(axis=1)
+    if sr != SR:
+        g = gcd(sr, SR)
+        x = signal.resample_poly(x, SR // g, sr // g)
+    x = x[int(SR * start):]
+    if dur is not None:
+        x = pad(x, dur)
+    x = x.copy()
+    n_in, n_out = max(1, int(SR * fade_in)), max(1, int(SR * fade_out))
+    x[:n_in] *= np.linspace(0, 1, n_in)
+    x[-n_out:] *= np.linspace(1, 0, n_out) ** 2
+    return x / (np.abs(x).max() + 1e-9)
+
+
+def layer(base, x, rel_db, time=0.0):
+    """x を base の音量から rel_db だけ下げた(上げた)大きさで、time 秒の位置へ重ねる。"""
+    x = x * 10 ** ((loudness_db(base) + rel_db - loudness_db(x)) / 20)
+    end = int(SR * time) + len(x)
+    if end > len(base):
+        base = np.pad(base, (0, end - len(base)))
+    return at(base, x, time)
 
 
 # ---- 励振 ----
@@ -284,20 +315,20 @@ def ui_hover():
 
 
 def ui_press():
-    """真鍮の留め金が掛かる「かちっ」。押し込みの小さな当たりのあと、留め金が澄んで鳴る。"""
+    """真鍮の留め金が掛かる「かちっ」。録音の留め金に、合成の押し込みの当たりと澄んだ鳴りを重ねる。"""
     d = 0.12
     x = np.zeros(n_of(d))
     at(x, strike(0.05, wood(1700, 0.008), 0.0004, 0.4, (3000, 9000)), 0.0, 1.0)
     latch = strike(0.1, brass(1600, 0.035), 0.0002, 0.6, (3000, 10000))
     at(x, latch, 0.016)
-    return lowpass(x, 12000)
+    return lowpass(layer(rec("metalLatch.ogg", 0.025, 0.2), x, -2), 12000)
 
 
 # ---- 対局 ----
 
 def place():
-    """砂時計を木の卓へ置く「ことん」。卓の胴鳴り、硝子の小さな響き、一度だけの小さな跳ね返り、
-    中の砂が揺れて落ち着く音。"""
+    """砂時計を木の卓へ置く「ことん」。硝子の器を木の卓へ置いた録音を芯に、卓の胴鳴り、
+    一度だけの小さな跳ね返り、中の砂が揺れて落ち着く音を重ねる。"""
     d = 0.6
     x = np.zeros(n_of(d))
     table = strike(d, wood(210, 0.09), 0.003)
@@ -307,11 +338,12 @@ def place():
     at(x, 0.25 * strike(0.3, wood(230, 0.05), 0.002) + 0.12 * strike(0.3, glass(2150, 0.15), 0.0006), 0.032)
     settle = sand(0.3, 1200, 2500, 9000, lambda t: np.exp(-t / 0.07))
     at(x, settle, 0.01, 0.6)
-    return lowpass(x, 10000)
+    return lowpass(layer(rec("fs454222_kyles.mp3", 0.0, 0.39, fade_out=0.08), x, -3), 10000)
 
 
 def flip():
-    """砂時計を返す。台座の上を回る短い擦れ、着地の「こと」、砂が流れ始める音。"""
+    """砂時計を返す。小さな砂時計を返す録音(持ち替えの擦れ、着地、砂が流れ始める)を芯に、
+    合成の着地と砂を薄く重ねる。録音の着地は landing の位置に来るよう切り出す。"""
     d = 0.85
     x = np.zeros(n_of(d))
     swish_len = 0.2
@@ -323,31 +355,40 @@ def flip():
     flow = sand(0.6, 2600, 2200, 9500,
                 lambda t: np.clip(t / 0.06, 0, 1) * (0.35 + 0.65 * np.exp(-t / 0.12)) * np.clip((0.6 - t) / 0.3, 0, 1))
     at(x, flow, landing + 0.02, 0.4)
-    return lowpass(x, 11000)
+    real = rec("fs625655_el_boss.mp3", 0.62 - landing, d, fade_in=0.04, fade_out=0.3)
+    return lowpass(layer(real, x, -5), 11000)
 
 
 def clash():
-    """砂時計どうしがぶつかる「かきん」。2つの硝子が少しずれた高さで鳴ってうなり、真鍮の枠も鳴る。"""
+    """砂時計どうしがぶつかる「かきん」。2つのワイングラスが当たる録音に、合成の硝子のうなり、
+    真鍮の枠、低い胴鳴りを重ねる。"""
     d = 1.0
     a = strike(d, glass(1640, 0.42), 0.00025, 0.5, (2500, 11000))
     b = strike(d, glass(1730, 0.36), 0.00025)
     frame = strike(d, brass(780, 0.12), 0.0003)
     body = thump(d, 230, 140, 0.05)
     debris = sand(0.4, 1500, 2500, 9000, lambda t: np.exp(-t / 0.08))
-    return lowpass(a + 0.8 * b + 0.5 * frame + 0.5 * body + 0.4 * pad(debris, d), 12000)
+    synth = a + 0.8 * b + 0.5 * frame + 0.5 * body + 0.4 * pad(debris, d)
+    real = rec("fs178178_lmr9.mp3", 0.0, d, fade_out=0.3)
+    real = layer(real, rec("fs761135_wasserbjorn.mp3", 0.88, d, fade_out=0.3), -4)
+    return lowpass(layer(real, synth, -3), 12000)
 
 
 def damage():
-    """本体への重い打撃「どすっ」。低い胴鳴りに、砂の詰まった袋が潰れるような砂の噴き出し。"""
+    """本体への重い打撃「どすっ」。重い打撃の録音を芯に、低い胴鳴りと、砂の詰まった袋が潰れるような
+    砂の噴き出しを重ねる。"""
     d = 0.65
     boom = thump(d, 120, 52, 0.13, width=0.002)
     hit = strike(d, wood(140, 0.06), 0.005, 0.3, (300, 2500))
     burst = sand(0.25, 7000, 500, 5000, lambda t: np.exp(-t / 0.04))
-    return lowpass(boom + 0.6 * hit + 0.25 * pad(burst, d), 7000)
+    synth = boom + 0.6 * hit + 0.25 * pad(burst, d)
+    real = layer(rec("impactPunch_heavy_000.ogg", 0.0, d), rec("impactSoft_heavy_000.ogg", 0.0, d), -4)
+    return lowpass(layer(real, synth, -2), 7000)
 
 
 def unit_break():
-    """砂時計が割れて崩れる。鋭く割れる一撃、散って跳ねる硝子片、こぼれ出る砂、低い衝撃。"""
+    """砂時計が割れて崩れる。小さな硝子の器が割れる録音を芯に、低い衝撃、散って跳ねる硝子片、
+    こぼれ出る砂を重ねる。"""
     d = 1.2
     x = np.zeros(n_of(d))
     crack = strike(0.4, glass(1900, 0.06), 0.0001, 1.0, (2500, 12000))
@@ -356,16 +397,19 @@ def unit_break():
     at(x, thump(0.4, 110, 60, 0.07), 0.0, 0.9)
     spill = sand(0.8, 3000, 1800, 9000, lambda t: np.clip(t / 0.06, 0, 1) * np.exp(-t / 0.22))
     at(x, spill, 0.08, 0.45)
-    return lowpass(x, 12000)
+    real = rec("fs320167_joshs.mp3", 0.33, d, fade_out=0.4)
+    return lowpass(layer(real, x, -3), 12000)
 
 
 def glass_break():
-    """硝子の膜が割れる。薄い硝子が澄んで「ぱりん」と割れる高く軽い音だけ。本体は無事なので低音を持たない。"""
+    """硝子の膜が割れる。薄い硝子が「ぱりん」と割れる録音に合成の破片を重ねた、高く軽い音だけ。
+    本体は無事なので低音を持たない。"""
     d = 0.8
     x = np.zeros(n_of(d))
     at(x, strike(0.6, glass(3100, 0.2), 0.00012, 1.0, (4000, 13000)), 0.0, 0.6)
     at(x, shards(d, 26, 4200, 11000, 0.09, decay=(0.01, 0.035)), 0.004, 0.55)
-    return highpass(lowpass(x, 14000), 1200)
+    real = rec("fs221528_unfa.mp3", 0.29, d, fade_out=0.25)
+    return highpass(lowpass(layer(real, x, -5), 14000), 1200)
 
 
 def poison_melt():
@@ -384,7 +428,8 @@ VESSEL_BURST_AT = 0.32
 
 
 def vessel_shatter():
-    """HPの器が砕ける。ぴし、ぴしぴしとひびが走り、割れて破片と砂が散る。駒の破壊より重く長い。"""
+    """HPの器が砕ける。ぴし、ぴしぴしとひびが走り、割れて破片と砂が散る。駒の破壊より重く長い。
+    割れる瞬間には硝子が割れる録音を重ねる。"""
     d = 2.0
     x = np.zeros(n_of(d))
     for i, time in enumerate([0.0, 0.12, 0.2, 0.25, 0.28, 0.305]):
@@ -395,16 +440,19 @@ def vessel_shatter():
     at(x, thump(0.8, 95, 40, 0.2, width=0.002), VESSEL_BURST_AT, 1.2)
     spill = sand(1.2, 3200, 1600, 8500, lambda t: np.clip(t / 0.08, 0, 1) * np.exp(-t / 0.35))
     at(x, spill, VESSEL_BURST_AT + 0.06, 0.55)
-    return lowpass(x, 12000)
+    burst = rec("fs249549_FngerSounds.mp3", 1.04, d - VESSEL_BURST_AT, fade_out=0.4)
+    return lowpass(layer(x, burst, 0, VESSEL_BURST_AT), 12000)
 
 
 def turn_end():
-    """ターン終了。砂時計の砂がさらさらと落ち、最後の数粒で落ちきる。"""
+    """ターン終了。砂時計の砂がさらさらと落ち、最後の数粒で落ちきる。
+    砂時計の砂が落ちきるところの録音に、合成の最後の数粒を重ねる。"""
     d = 1.0
     stream = sand(d, 5000, 1800, 8500,
                   lambda t: np.clip(t / 0.12, 0, 1) * np.clip((0.75 - t) / 0.35, 0, 1) ** 1.5)
     last = sand(d, 60, 2500, 7000, lambda t: ((t > 0.6) & (t < 0.95)).astype(float))
-    return stream + 2.0 * last
+    real = rec("fs825859_Vrymaa.mp3", 15.35, d, fade_in=0.12, fade_out=0.15)
+    return layer(real, stream + 2.0 * last, -6)
 
 
 # ---- 合図とジングル ----
@@ -507,6 +555,8 @@ def sig_chronos():
         at(x, strike(0.08, brass(2300 + 40 * (i % 2), 0.02), 0.0002, 0.5, (3000, 9000)), time, 0.22)
     at(x, strike(0.7, brass(420, 0.3), 0.0004, 0.6, (2000, 8000)), CHRONOS_LOCK_AT, 0.9)
     at(x, thump(0.3, 180, 110, 0.05), CHRONOS_LOCK_AT, 0.4)
+    x = layer(x, rec("impactWood_heavy_000.ogg"), -4, CHRONOS_LAND_AT)
+    x = layer(x, rec("impactMetal_heavy_001.ogg"), -6, CHRONOS_LOCK_AT)
     return lowpass(x, 11000)
 
 
