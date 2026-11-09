@@ -58,6 +58,11 @@ const EXPERT_MULLIGAN_KEEP_COST := 2
 ## 選ばれている思考レベル。CPU戦の入口(`CardMatchScreen.start_cpu_match()`)が
 ## デッキ選択の後に選ばれた値をここへ渡す。
 var difficulty: Difficulty = Difficulty.NORMAL
+## 砂術を1手読み(`CardCpuSpellSearch`)で選ぶか。false は効果ごとの見積もりで選ぶ旧来の思考で、
+## 自己対戦で新旧を比べるためだけに残す(docs/BalanceReport_v5.md 17章)。
+var spell_lookahead := true
+var _baseline_key: Array = []
+var _baseline := 0.0
 
 var _rng := RandomNumberGenerator.new()
 
@@ -107,7 +112,7 @@ func _expert_mulligan_keep_cost(state: MatchState, side: int) -> int:
 ## だけは攻撃より前に見る**(GameDesign.md 2章。docs/BalanceReport_v5.md 12章)。
 func choose_action(state: MatchState, side: int) -> Dictionary:
 	if difficulty == Difficulty.BEGINNER:
-		return _choose_action_beginner(state, side)
+		return CardCpuBeginner.choose_action(state, side, _rng, _should_use_coin(state, side))
 	var action := _choose_play(state, side)
 	if not action.is_empty():
 		return action
@@ -126,109 +131,6 @@ func choose_action(state: MatchState, side: int) -> Dictionary:
 	if not action.is_empty():
 		return action
 	return MatchAction.end_turn(side)
-
-
-# --- 初級 -----------------------------------------------------------------
-
-
-## 初級は貪欲法(生涯ダメージの比較)を一切通らない。出せる最初の1枚を出し、
-## 攻撃はランダムに選び、反転・反転権は使わない(GameDesign.md 13章)。
-func _choose_action_beginner(state: MatchState, side: int) -> Dictionary:
-	var play := _choose_play_beginner(state, side)
-	if not play.is_empty():
-		return play
-	if _should_use_coin(state, side):
-		return {"type": "coin", "side": side}
-	var attack := _choose_attack_random(state, side)
-	if not attack.is_empty():
-		return attack
-	return MatchAction.end_turn(side)
-
-
-## 手札を先頭から見て、出せる最初の1枚をそのまま出す。組み合わせやコスト効率を見ない。
-func _choose_play_beginner(state: MatchState, side: int) -> Dictionary:
-	var hand: Array = state.hand[side]
-	for index in hand.size():
-		var card: CardData = hand[index]
-		if card.is_spell:
-			if not state.can_cast(side, index):
-				continue
-			if card.effects_for(CardEnums.Trigger.ON_PLAY).any(
-				func(e: CardEffectData) -> bool: return _needs_target(state, side, e)
-			):
-				continue
-			return MatchAction.cast(side, index, _random_target(state, side, card))
-		if not state.can_play(side, index):
-			continue
-		var empty: Array = state.empty_slots(side)
-		if empty.is_empty():
-			continue
-		return MatchAction.play(side, index, empty[0], _random_target(state, side, card))
-	return {}
-
-
-## その効果が対象を要求するのに、対象がいなければ true(無駄撃ちを避けるための最低限の判定)。
-func _needs_target(state: MatchState, side: int, effect: CardEffectData) -> bool:
-	var foe_side := MatchState.other_side(side)
-	if effect.target == CardEnums.EffectTarget.ENEMY_UNIT:
-		return state.units(foe_side).is_empty()
-	if effect.target == CardEnums.EffectTarget.ALLY_UNIT:
-		return state.units(side).is_empty()
-	return false
-
-
-## 対象を1体取る効果をランダムに選ぶ(中級以上の`_effect_target()`は最も効く1体を選ぶが、
-## 初級はそこも狙わない)。
-func _random_target(state: MatchState, side: int, card: CardData) -> Dictionary:
-	var foe_side := MatchState.other_side(side)
-	for effect in card.effects_for(CardEnums.Trigger.ON_PLAY):
-		if effect.target == CardEnums.EffectTarget.ENEMY_UNIT:
-			var slots := state.units(foe_side)
-			if not slots.is_empty():
-				return {"side": foe_side, "slot": _random_slot_of(state, foe_side)}
-		elif effect.target == CardEnums.EffectTarget.ENEMY_UNIT_OR_PLAYER:
-			# 本体(-1)も駒と同じ重みで候補に入れる。
-			var choices: Array = [-1]
-			for slot in MatchState.BOARD_SIZE:
-				if state.board[foe_side][slot] != null:
-					choices.append(slot)
-			return {"side": foe_side, "slot": choices[_rng.randi_range(0, choices.size() - 1)]}
-		elif effect.target == CardEnums.EffectTarget.ALLY_UNIT:
-			var slots := state.units(side)
-			if not slots.is_empty():
-				return {"side": side, "slot": _random_slot_of(state, side)}
-	return {}
-
-
-func _random_slot_of(state: MatchState, side: int) -> int:
-	var occupied: Array = []
-	for slot in MatchState.BOARD_SIZE:
-		if state.board[side][slot] != null:
-			occupied.append(slot)
-	if occupied.is_empty():
-		return -1
-	return occupied[_rng.randi_range(0, occupied.size() - 1)]
-
-
-## 攻撃できる駒と、狙える相手(本体を含む)をそれぞれランダムに選ぶ。
-## 守護がいれば無視できないのは `attackable_slots()` が返す集合そのものが保証する。
-func _choose_attack_random(state: MatchState, side: int) -> Dictionary:
-	var foe_side := MatchState.other_side(side)
-	var attackers: Array = []
-	for slot in MatchState.BOARD_SIZE:
-		var attacker: CardInstance = state.board[side][slot]
-		if attacker != null and attacker.can_attack():
-			attackers.append(slot)
-	if attackers.is_empty():
-		return {}
-	var slot: int = attackers[_rng.randi_range(0, attackers.size() - 1)]
-	var options: Array = state.attackable_slots(foe_side).duplicate()
-	if state.can_attack_player(side):
-		options.append(-1)
-	if options.is_empty():
-		return {}
-	var target: int = options[_rng.randi_range(0, options.size() - 1)]
-	return MatchAction.attack(side, slot, target)
 
 
 ## 手番が自分に回ってから終えるまでを一気に進める(シミュレーション・CPU戦で使う)。
@@ -276,13 +178,17 @@ func _expert_should_use_coin(state: MatchState, side: int) -> bool:
 func _best_playable_value(state: MatchState, side: int, mana: int) -> float:
 	var best := 0.0
 	var has_empty_slot: bool = not state.empty_slots(side).is_empty()
-	for card in state.hand[side]:
+	var hand: Array = state.hand[side]
+	for index in hand.size():
+		var card: CardData = hand[index]
 		if state.play_cost(side, card) > mana:
 			continue
 		if not card.is_spell and not has_empty_slot:
 			continue
-		var value := (
-			_spell_value(state, side, card) if card.is_spell else _card_value(state, side, card)
+		var value: float = (
+			_spell_cast(state, side, index)["value"]
+			if card.is_spell
+			else _card_value(state, side, card)
 		)
 		if value > best:
 			best = value
@@ -298,10 +204,24 @@ func _choose_play(state: MatchState, side: int, flip_reset_turn := false) -> Dic
 	var hand: Array = state.hand[side]
 	for index in hand.size():
 		var card: CardData = hand[index]
-		if _after_flips(card) != flip_reset_turn:
-			continue
 		# 砂術は「出す」の中で一緒に選ぶ(Architecture.md 8章)。段を増やさず、
-		# 盤面へ置くカードと同じ物差しで比べる。
+		# 盤面へ置くカードと同じ物差しで比べる。1手読みの砂術は攻撃・反転の後にも見直す。
+		var late_only := _after_flips(card)
+		if card.is_spell and spell_lookahead:
+			if late_only and not flip_reset_turn:
+				continue
+			if not state.can_cast(side, index):
+				continue
+			var cast := _spell_cast(state, side, index)
+			if cast["value"] <= best_value:
+				continue
+			if not flip_reset_turn and _defer_until_attacked(state, side, cast["target"]):
+				continue
+			best_value = cast["value"]
+			best = MatchAction.cast(side, index, cast["target"])
+			continue
+		if late_only != flip_reset_turn:
+			continue
 		if card.is_spell:
 			if not state.can_cast(side, index):
 				continue
@@ -321,7 +241,48 @@ func _choose_play(state: MatchState, side: int, flip_reset_turn := false) -> Dic
 	return best
 
 
-## 砂術の価値。盤面へ駒を残さないため展開の下駄(DEVELOP_BONUS)は付けない。
+## 砂術を写しの盤面へ撃って測る(`CardCpuSpellSearch`)。墓地から選ぶ効果の選び方は従来どおり。
+## 撃たなかった場合の評価は手札の砂術すべてで同じため、同じ盤面のあいだは1度だけ測る。
+func _spell_cast(state: MatchState, side: int, index: int) -> Dictionary:
+	var key := [
+		state, side, state.turn_count, state.hand[side].size(), state.mana[side], state.hp.values()
+	]
+	key.append_array(_board_key(state))
+	if _baseline_key != key:
+		_baseline_key = key
+		_baseline = CardCpuSpellSearch.baseline(state, side, _face_weight(), _choose_attack)
+	var card: CardData = state.hand[side][index]
+	var grave_hint := {}
+	if CardEffectResolver.grave_choice_effect(card) != null:
+		var pick := CardEffectResolver.best_grave_choice(state, side)
+		if pick >= 0:
+			grave_hint = {"grave_index": pick}
+	return CardCpuSpellSearch.best_cast(
+		state, side, index, _baseline, _face_weight(), grave_hint, _choose_attack
+	)
+
+
+## 盤面の駒の体力・攻撃力の並び。同じ盤面かどうかを見分けるためだけに使う。
+static func _board_key(state: MatchState) -> Array:
+	var key: Array = []
+	for board_side in state.board:
+		for unit: CardInstance in state.board[board_side]:
+			key.append(
+				null if unit == null else Vector3i(unit.health, unit.attack, unit.attacks_this_turn)
+			)
+	return key
+
+
+## 味方の駒を対象に取る砂術は、その駒がまだ攻撃できるなら攻撃の後へ回す。
+## 反転や砂の移動で攻撃力が下がる前に、いまの攻撃力で殴っておくため(「攻撃してから反転する」と同じ理由)。
+func _defer_until_attacked(state: MatchState, side: int, target: Dictionary) -> bool:
+	if target.get("side", -1) != side or int(target.get("slot", -1)) < 0:
+		return false
+	var unit: CardInstance = state.board[side][target["slot"]]
+	return unit != null and unit.can_attack() and unit.attack > 0
+
+
+## 旧来の砂術の価値(`spell_lookahead` が false のときだけ使う)。盤面へ駒を残さないため展開の下駄(DEVELOP_BONUS)は付けない。
 ## **対象を1体取る砂術は、対象がいなければ撃たない**(自動選択に任せると、
 ## 対象のいない除去を無駄撃ちする)。
 func _spell_value(state: MatchState, side: int, card: CardData) -> float:

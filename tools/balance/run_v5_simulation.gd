@@ -25,6 +25,8 @@ var _mulligan := true
 ## flip_right_first=0 flip_right_second=0 とすれば「反転権が無い場合」と比較できる。
 var _flip_right_first := MatchState.FLIP_RIGHT_FIRST
 var _flip_right_second := MatchState.FLIP_RIGHT_SECOND
+## spell_lookahead=0 で砂術を旧来の見積もりで選ぶCPUにする(新旧の比較用。BalanceReport 17章)。
+var _spell_lookahead := true
 
 
 func _init() -> void:
@@ -41,6 +43,7 @@ func _run() -> void:
 	_flip_right_first = int(args.get("flip_right_first", str(MatchState.FLIP_RIGHT_FIRST)))
 	_flip_right_second = int(args.get("flip_right_second", str(MatchState.FLIP_RIGHT_SECOND)))
 	_rng.seed = int(args.get("seed", "42"))
+	_spell_lookahead = args.get("spell_lookahead", "1") == "1"
 	_cards = CardLibrary.all_cards()
 	if _cards.is_empty():
 		printerr("no cards found")
@@ -92,6 +95,8 @@ func _play_one(deck_a: Array, deck_b: Array) -> Dictionary:
 	var state := MatchState.new()
 	var cpu_a := CardCpuStrategy.new()
 	var cpu_b := CardCpuStrategy.new()
+	cpu_a.spell_lookahead = _spell_lookahead
+	cpu_b.spell_lookahead = _spell_lookahead
 	var stats := {
 		"unit_attacks": 0, "face_attacks": 0, "behind_at_midgame": -1, "gap": 0.0, "behind_next": -1
 	}
