@@ -253,8 +253,11 @@ func _spell_cast(state: MatchState, side: int, index: int) -> Dictionary:
 		_baseline = CardCpuSpellSearch.baseline(state, side, _face_weight(), _choose_attack)
 	var card: CardData = state.hand[side][index]
 	var grave_hint := {}
-	if CardEffectResolver.grave_choice_effect(card) != null:
-		var pick := CardEffectResolver.best_grave_choice(state, side)
+	var grave_effect := CardEffectResolver.grave_choice_effect(card)
+	if grave_effect != null:
+		var pick := CardEffectResolver.best_grave_choice(
+			state, side, CardEffectResolver.picks_spell(grave_effect)
+		)
 		if pick >= 0:
 			grave_hint = {"grave_index": pick}
 	return CardCpuSpellSearch.best_cast(
@@ -535,8 +538,9 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 			value = 2.0
 		CardEnums.EffectType.ADD_TOTAL_PER_GRAVE:
 			value = CardEffectResolver.grave_unit_count(state, side) * effect.value * 2.0
-		CardEnums.EffectType.RECOVER_FROM_GRAVE:
-			if not CardEffectResolver.grave_choices(state, side).is_empty():
+		CardEnums.EffectType.RECOVER_FROM_GRAVE, CardEnums.EffectType.RECOVER_SPELL_FROM_GRAVE:
+			var spells := CardEffectResolver.picks_spell(effect)
+			if not CardEffectResolver.grave_choices(state, side, spells).is_empty():
 				value = RECOVER_VALUE
 		CardEnums.EffectType.REVIVE_FROM_GRAVE:
 			var pick := CardEffectResolver.best_grave_choice(state, side)
@@ -650,8 +654,11 @@ func _effect_target(state: MatchState, side: int, card: CardData) -> Dictionary:
 				slot = _best_ally_raise(state, side, effect.value)["slot"]
 			if slot >= 0:
 				return {"side": side, "slot": slot}
-	if CardEffectResolver.grave_choice_effect(card) != null:
-		var pick := CardEffectResolver.best_grave_choice(state, side)
+	var grave_effect := CardEffectResolver.grave_choice_effect(card)
+	if grave_effect != null:
+		var pick := CardEffectResolver.best_grave_choice(
+			state, side, CardEffectResolver.picks_spell(grave_effect)
+		)
 		if pick >= 0:
 			return {"grave_index": pick}
 	return {}

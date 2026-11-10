@@ -147,6 +147,8 @@ enum EffectType {
 	## 自分の山札からランダムな砂術を value 枚、手札へ加える(砂占い。詠砂の刻)。「引く」ではないため
 	## 相手のドローに反応する効果は働かない。山札に砂術が無ければ何もしない。
 	TUTOR_SPELL,
+	## 自分の墓地の砂術1枚を選んで手札へ戻す(アーカイブ。詠砂の刻)。選び方は RECOVER_FROM_GRAVE と同じ。
+	RECOVER_SPELL_FROM_GRAVE,
 }
 
 ## コンボ系カードの発動条件が確認する範囲(GameDesign.md 6章)。

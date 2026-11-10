@@ -18,6 +18,9 @@ func run(assert_true: Callable) -> void:
 	_test_divine_is_not_a_draw()
 	_test_chant_hits_foe_on_own_spell()
 	_test_chant_ignores_foe_spell()
+	_test_archive_recovers_chosen_spell()
+	_test_archive_skips_units()
+	_test_cpu_picks_spell_for_archive()
 	_test_set_is_registered()
 
 
@@ -143,10 +146,48 @@ func _test_chant_ignores_foe_spell() -> void:
 	_assert.call(state.hp[MatchState.Side.A] == hp_before, "チャントは相手の砂術に反応しない")
 
 
+func _test_archive_recovers_chosen_spell() -> void:
+	var state := _new_match(["archive"])
+	state.graveyard[MatchState.Side.A] = [
+		CardLibrary.find_by_id("shot"),
+		CardLibrary.find_by_id("sand"),
+		CardLibrary.find_by_id("divine")
+	]
+	state.play_card(MatchState.Side.A, 0, 0, {"grave_index": 0})
+	var hand: Array = state.hand[MatchState.Side.A]
+	_assert.call(hand.size() == 1 and hand[0].id == "shot", "アーカイブは選んだ墓地の砂術を手札に戻す")
+	_assert.call(state.graveyard[MatchState.Side.A].size() == 2, "戻した砂術は墓地から抜ける")
+
+
+## 砂時計を指しても選べないので、選べる砂術(コストの高いほう)へ向け直す。
+func _test_archive_skips_units() -> void:
+	var state := _new_match(["archive"])
+	state.graveyard[MatchState.Side.A] = [CardLibrary.find_by_id("sand")]
+	state.play_card(MatchState.Side.A, 0, 0, {"grave_index": 0})
+	_assert.call(state.hand[MatchState.Side.A].is_empty(), "墓地に砂術が無ければアーカイブは何も戻さない")
+	_assert.call(
+		CardEffectResolver.grave_choices(state, MatchState.Side.A, true).is_empty(),
+		"墓地の砂時計は砂術の選択肢に入らない"
+	)
+
+
+func _test_cpu_picks_spell_for_archive() -> void:
+	var state := _new_match(["archive"])
+	state.graveyard[MatchState.Side.A] = [
+		CardLibrary.find_by_id("sand"), CardLibrary.find_by_id("divine")
+	]
+	var cpu := CardCpuStrategy.new()
+	var hint: Dictionary = cpu._effect_target(
+		state, MatchState.Side.A, CardLibrary.find_by_id("archive")
+	)
+	_assert.call(int(hint.get("grave_index", -1)) == 1, "CPUはアーカイブで墓地の砂術を選ぶ")
+
+
 func _test_set_is_registered() -> void:
 	_assert.call(CardSetLibrary.has_set(SET_ID), "詠砂の刻が登録されている")
 	_assert.call(CardSetLibrary.card_ids(SET_ID).has("scribe"), "スクライブが詠砂の刻に入っている")
 	_assert.call(CardSetLibrary.card_ids(SET_ID).has("divine"), "砂占いが詠砂の刻に入っている")
 	_assert.call(CardSetLibrary.card_ids(SET_ID).has("chant"), "チャントが詠砂の刻に入っている")
+	_assert.call(CardSetLibrary.card_ids(SET_ID).has("archive"), "アーカイブが詠砂の刻に入っている")
 	_assert.call(CardSetLibrary.planned_count(SET_ID) == 8, "詠砂の刻は予定8枚")
 	_assert.call(CardEnums.trigger_name(CardEnums.Trigger.ON_OWN_SPELL) == "常在", "砂術への反応は「常在」と出す")

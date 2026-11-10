@@ -291,11 +291,11 @@ func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Diction
 					var target := _unit_at(entry)
 					if target != null:
 						target.health += amount
-		CardEnums.EffectType.RECOVER_FROM_GRAVE:
+		CardEnums.EffectType.RECOVER_FROM_GRAVE, CardEnums.EffectType.RECOVER_SPELL_FROM_GRAVE:
 			var index := (
 				_graveyard_index_of(side, unit.data)
 				if effect.target == CardEnums.EffectTarget.SELF
-				else _grave_pick(side, hint)
+				else _grave_pick(side, hint, picks_spell(effect))
 			)
 			if index >= 0:
 				# 手札が増える効果なのでドロー(DRAW)と同じ合図を使う。
@@ -402,22 +402,27 @@ func _return_to_hand(side: int, slot: int) -> void:
 
 ## 墓地から選ばれた1体の位置(GameDesign.md 6章「墓地を読む効果」)。指定が無い・選べない
 ## ものを指している場合は、選べる中で最もコストの高い1体(同じなら新しいほう)へ向け直す。
-func _grave_pick(side: int, hint: Dictionary) -> int:
-	var choices := grave_choices(_state, side)
+func _grave_pick(side: int, hint: Dictionary, spells := false) -> int:
+	var choices := grave_choices(_state, side, spells)
 	if hint.has("grave_index") and choices.has(int(hint["grave_index"])):
 		return int(hint["grave_index"])
-	return best_grave_choice(_state, side)
+	return best_grave_choice(_state, side, spells)
 
 
-## 墓地から選べる砂時計の位置(GameDesign.md 6章「墓地を読む効果」)。
-## 砂術とトークンは選べない。
-static func grave_choices(state: MatchState, side: int) -> Array[int]:
+## 墓地から選べる位置(GameDesign.md 6章「墓地を読む効果」)。`spells` が偽なら砂時計
+## (トークンは選べない)、真なら砂術だけを選べる。
+static func grave_choices(state: MatchState, side: int, spells := false) -> Array[int]:
 	var found: Array[int] = []
 	for index in state.graveyard[side].size():
 		var card: CardData = state.graveyard[side][index]
-		if not card.is_spell and not card.is_token:
+		if card.is_spell == spells and not card.is_token:
 			found.append(index)
 	return found
+
+
+## 墓地から砂術を選ぶ効果か(アーカイブ)。
+static func picks_spell(effect: CardEffectData) -> bool:
+	return effect != null and effect.effect_type == CardEnums.EffectType.RECOVER_SPELL_FROM_GRAVE
 
 
 ## 墓地にある砂時計の数(トークンを含む。砂術は含まない)。
@@ -429,9 +434,9 @@ static func grave_unit_count(state: MatchState, side: int) -> int:
 	return count
 
 
-static func best_grave_choice(state: MatchState, side: int) -> int:
+static func best_grave_choice(state: MatchState, side: int, spells := false) -> int:
 	var best := -1
-	for index in grave_choices(state, side):
+	for index in grave_choices(state, side, spells):
 		if best < 0 or state.graveyard[side][index].cost >= state.graveyard[side][best].cost:
 			best = index
 	return best
@@ -495,12 +500,13 @@ static func live_rules_text(state: MatchState, side: int, card: CardData) -> Str
 	return text
 
 
-## 出したときに墓地から1体を選ばせる効果(レリック・目覚めの砂)。無ければ null。
+## 出したときに墓地から1枚を選ばせる効果(レリック・目覚めの砂・アーカイブ)。無ければ null。
 static func grave_choice_effect(card: CardData) -> CardEffectData:
 	for effect in card.effects_for(CardEnums.Trigger.ON_PLAY):
 		var picks := (
 			effect.effect_type == CardEnums.EffectType.RECOVER_FROM_GRAVE
 			or effect.effect_type == CardEnums.EffectType.REVIVE_FROM_GRAVE
+			or effect.effect_type == CardEnums.EffectType.RECOVER_SPELL_FROM_GRAVE
 		)
 		if picks and effect.target != CardEnums.EffectTarget.SELF:
 			return effect

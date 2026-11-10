@@ -122,13 +122,15 @@ func confirm(side: int, slot: int) -> void:
 ## 選んだら `perform` へ `{"grave_index": i}` を渡す。選べるものが無ければ選ばずに出す
 ## (効果は不発)。選ぶ一覧を開いたら true。
 static func choose_from_grave(screen: CardMatchScreen, card: CardData, perform: Callable) -> bool:
-	if CardEffectResolver.grave_choice_effect(card) == null:
+	var effect := CardEffectResolver.grave_choice_effect(card)
+	if effect == null:
 		return false
-	var choices := CardEffectResolver.grave_choices(screen.state, screen.my_side)
+	var spells := CardEffectResolver.picks_spell(effect)
+	var choices := CardEffectResolver.grave_choices(screen.state, screen.my_side, spells)
 	if choices.is_empty():
 		return false
 	screen._pile.open_choice(
-		"%s:墓地の砂時計を1体選ぶ" % card.display_name,
+		"%s:墓地の%sを1%s選ぶ" % [card.display_name, "砂術" if spells else "砂時計", "枚" if spells else "体"],
 		screen.state.graveyard[screen.my_side],
 		choices,
 		func(grave_index: int) -> void:
