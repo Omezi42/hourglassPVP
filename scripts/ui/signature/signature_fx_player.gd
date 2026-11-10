@@ -18,6 +18,8 @@ var _t := 0.0
 var _reached: Array[bool] = []
 var _impacted := false
 var _tween: Tween
+## 短縮版で着弾の瞬間に鳴らす音。-1 なら鳴らさない。
+var _impact_sfx := -1
 
 
 func _ready() -> void:
@@ -35,7 +37,9 @@ func is_playing() -> bool:
 	return _move != null
 
 
-func play(move: SignatureMove, short := false) -> void:
+## 短縮版は専用の音を鳴らさず、着弾の瞬間に `short_sfx`(登場なら置く音)だけを鳴らす
+## (GameDesign.md 9章。専用の音は通常の尺の打点で作られていて、速めた絵とずれるため)。
+func play(move: SignatureMove, short := false, short_sfx := -1) -> void:
 	if _tween != null and _tween.is_valid():
 		_tween.kill()
 	_move = move
@@ -45,7 +49,9 @@ func play(move: SignatureMove, short := false) -> void:
 	_reached.resize(move.targets.size())
 	_reached.fill(false)
 	var screen := get_parent() as CardMatchScreen
-	if move.sound() >= 0 and (screen == null or not screen.silent):
+	var audible := screen == null or not screen.silent
+	_impact_sfx = short_sfx if short and audible else -1
+	if not short and move.sound() >= 0 and audible:
 		SoundBank.play(move.sound())
 	_tween = create_tween()
 	_tween.tween_method(_set_t, 0.0, move.duration(), move.duration() * rate(short))
@@ -71,6 +77,8 @@ func _on_impact() -> void:
 		if not _reached[i]:
 			_reached[i] = true
 			hit.emit(i)
+	if _impact_sfx >= 0:
+		SoundBank.play(_impact_sfx)
 	impact.emit()
 
 

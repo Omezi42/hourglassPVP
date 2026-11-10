@@ -119,7 +119,7 @@ func _play_entrance(view: CardView, data: CardData, move: SignatureMove) -> void
 			view.play_spark()
 	)
 	player.finished.connect(player.queue_free)
-	player.play(move, short)
+	player.play(move, short, SoundBank.Sfx.PLACE)
 
 
 ## 砂術を撃った(GameDesign.md 6章)。盤面へは出ないため、支払いの吸い込みだけを見せる。

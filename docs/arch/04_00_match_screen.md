@@ -107,7 +107,7 @@
 - **反転(SPIN)させる駒も被ダメージと同じく持ち越す**(`_spins`)。効果の反転は `unit_flipped` を出さないため、ここで `CardView.play_flip()` を呼ぶ。紋章なら `_gen_for()`、カードの演出ならその演出の番号を付け、順に届く演出(大合唱)は届いた駒から、それ以外は着弾でまとめて返す。反転が反転を呼ぶ連鎖(リバーブ・カノン)でも、返す駒がそれぞれの演出の着弾へ付く
 - **登場**: `CardMatchEffects._on_unit_played()` が `SignatureLibrary.entrance()` を引き、あれば `CardView.play_land(heavy_land(), rate)` と再生を同時に始める。`impact`(落ちきった瞬間)で銘板を光らせ、`heavy_land()` なら卓を最大で揺らす。重なっても切れないよう再生役は1回ごとに作って捨てる。専用の音を持つ登場では `CardMatchSound` が置く音を鳴らさない
 - **短縮版**: 一度出したカード id を `_seen`(効果)/ `_seen_entrances`(登場)に控え、`watch()`(対局の開始)で空にする
-- **専用の音**は `tools/build_sfx.py` の `sig_*` で合成し、打点の秒を演出の定数と揃える(短縮版でも音は同じものを鳴らす)
+- **専用の音**は `tools/build_sfx.py` の `sig_*` で合成し、打点の秒を演出の定数と揃える。短縮版では専用の音を鳴らさず、`play(move, short, short_sfx)` の `short_sfx`(登場は `PLACE`、効果は無し)を着弾の瞬間に鳴らす
 - 規則(実在するカード・1.2秒以内・効果の専用音はコスト6以上)は `emblem_fx_tests.gd` が見張る
 
 ## 4.0.4 カード詳細と能力の実演

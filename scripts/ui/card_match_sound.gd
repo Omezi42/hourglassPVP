@@ -60,6 +60,7 @@ func _play(sfx: SoundBank.Sfx) -> void:
 
 
 ## 専用の音を持つ登場の演出は、その音が置く音の代わりになる(GameDesign.md 9章)。
+## 短縮版の置く音は、着地に合わせて `SignatureFxPlayer` が鳴らす。
 func _on_unit_played(side: int, slot: int) -> void:
 	var entrance := SignatureLibrary.entrance(_state.board[side][slot].data)
 	if entrance != null and entrance.sound() >= 0:
