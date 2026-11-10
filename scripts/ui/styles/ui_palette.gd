@@ -1,102 +1,119 @@
 class_name UiPalette
 extends RefCounted
-## プロジェクト全体のUI色の単一情報源。BoardTable/BarPanelの既存アクセント色
-## (琥珀 Color(0.85, 0.62, 0.22))と世界観を揃え、コード描画StyleBox群(CodedButtonStyle等)
-## から参照する。定数のみを持ち、ロジックは持たない。
-##
-## BRASS_*は元画像(assets/buttons/processed/wide_text/normal.png、496x178)の左枠列(x=10)
-## および上端帯(x=248)をPillowで実測した値に基づく(彩度低め・中〜暗トーンの「褪せた真鍮」)。
-## 実測値(0-255): highlight(top peak, y=8)=(208,178,114) / light(y=17-26)≒(144,112,80) /
-## mid(y=88, 中央)=(111,80,60) / dark(y=150, 最暗)=(84,56,42) / bounce(y=159, 下端の照り返し)=(92,65,48)
+## UIの言語の単一情報源(GameDesign.md 9章「共通のレイアウト規約」)。
+## 夜の天文台に置いた真鍮の計器: 地は夜の藍、線は真鍮、光るのは砂だけ。
+## 色・文字の段・余白の刻み・動きの尺を定数で持ち、ロジックは持たない。
 
-const BRASS_HIGHLIGHT := Color(0.82, 0.7, 0.45, 1.0)
-const BRASS_LIGHT := Color(0.57, 0.44, 0.31, 1.0)
-const BRASS_MID := Color(0.44, 0.31, 0.24, 1.0)
-const BRASS_DARK := Color(0.33, 0.22, 0.16, 1.0)
-const BRASS_BOUNCE := Color(0.36, 0.25, 0.19, 1.0)
+# ---- 夜の藍(地と面)。数字が大きいほど暗い ----
+const INK_900 := Color(0.035, 0.045, 0.085)
+const INK_800 := Color(0.06, 0.075, 0.135)
+const INK_700 := Color(0.09, 0.115, 0.20)
+const INK_600 := Color(0.14, 0.175, 0.29)
+const INK_500 := Color(0.22, 0.27, 0.42)
 
-## 額縁・縁取りの面取り(`UiPaint.draw_bevel`)の明るい側。BRASS_HIGHLIGHTは1pxの照り返しや
-## 文字・紋章のための「最も明るい真鍮」であり、これを数pxの帯として上辺に敷くと、暗い革や
-## 濃紺の上で枠だけが白っぽく浮く(手札の札・情報帯で実際にそう見えた)。面取りの帯には
-## HIGHLIGHTとLIGHTのあいだのこの色を使い、フィルの上端の細い照り返しだけをHIGHLIGHTに残す。
-const BRASS_RIM_LIGHT := Color(0.66, 0.53, 0.35, 1.0)
+# ---- 真鍮(線と主の面) ----
+const GOLD_HI := Color(1.0, 0.93, 0.72)
+const GOLD := Color(0.90, 0.74, 0.42)
+const BRASS := Color(0.68, 0.50, 0.23)
+const BRASS_DEEP := Color(0.36, 0.24, 0.09)
+## 真鍮の面に彫った字と、真鍮の外の暗い縁。
+const BRASS_INK := Color(0.17, 0.10, 0.03)
+## 真鍮の面の中ほどの2つの節(上の照りから下の沈みへ折れるところ)。
+const GOLD_WARM := Color(0.98, 0.84, 0.52)
+const GOLD_FOLD := Color(0.80, 0.62, 0.31)
 
-## 押下(pressed)時の真鍮。実測(pressed.png, x=10列): mid(y=89)=(59,47,33) / dark(y=150,最暗)=(46,31,24)
-const BRASS_PRESSED_MID := Color(0.23, 0.18, 0.13, 1.0)
-const BRASS_PRESSED_DARK := Color(0.18, 0.13, 0.1, 1.0)
+# ---- 砂(進み・自分・いま) ----
+const SAND_HI := Color(1.0, 0.86, 0.52)
+const SAND := Color(0.96, 0.68, 0.24)
+const SAND_DEEP := Color(0.78, 0.45, 0.12)
 
-## 最外周の輪郭線
-const OUTLINE_DARK := Color(0.12, 0.08, 0.04, 1.0)
+# ---- 意味の色(全画面で1つ) ----
+const COST := Color(0.30, 0.60, 0.96)
+const COST_DEEP := Color(0.10, 0.25, 0.58)
+const HEALTH := Color(0.90, 0.30, 0.27)
+const HEALTH_DEEP := Color(0.52, 0.10, 0.10)
+const ATTACK := Color(0.97, 0.62, 0.18)
+const ATTACK_DEEP := Color(0.62, 0.30, 0.04)
+const GOOD := Color(0.45, 0.80, 0.52)
+const FOE := Color(0.90, 0.36, 0.33)
+const SELECT := Color(0.45, 0.82, 1.0)
+## 取り返せない操作のボタンの字(赤い縁の内側で読める明るさ)。
+const DANGER_TEXT := Color(1.0, 0.72, 0.68)
 
-## 中央パネル(通常時): スレート系の暗い青灰。上が暗く下が明るいグラデーションで凹んで見せる
-const PANEL_SLATE_TOP := Color(0.1, 0.11, 0.14, 1.0)
-const PANEL_SLATE_BOTTOM := Color(0.24, 0.26, 0.31, 1.0)
+# ---- 文字 ----
+const IVORY := Color(0.96, 0.93, 0.86)
+const MUTED := Color(0.66, 0.66, 0.70)
+const FAINT := Color(0.44, 0.46, 0.54)
 
-## 中央パネル(ホバー時): 琥珀〜橙に光る
-const PANEL_AMBER_TOP := Color(0.55, 0.26, 0.03, 1.0)
-const PANEL_AMBER_BOTTOM := Color(1.0, 0.78, 0.35, 1.0)
+# ---- 紙(カードの名前の帯と図鑑) ----
+const PAPER := Color(0.93, 0.88, 0.76)
+const PAPER_DEEP := Color(0.78, 0.70, 0.54)
+const PAPER_INK := Color(0.16, 0.11, 0.06)
 
-## 中央パネル(押下時): 実測(pressed.png中央列, y=35〜124)は(64,65,69)〜(60,61,65)程度の
-## 暗いスレートで、通常時パネルに近い明るさ。黒つぶれしない範囲に留める
-const PANEL_PRESSED_TOP := Color(0.15, 0.14, 0.15, 1.0)
-const PANEL_PRESSED_BOTTOM := Color(0.27, 0.25, 0.24, 1.0)
+# ---- 文字の段(横の基準。縦は部品の拡大で目安を満たす) ----
+const T_MICRO := 12
+const T_SMALL := 14
+const T_BODY := 16
+const T_LEAD := 20
+const T_HEAD := 26
+const T_TITLE := 34
+const T_HERO := 46
 
-## ホバー時の外周グロー・盤面装飾等で共通に使う琥珀アクセント(BoardTable/BarPanelと同値)
-const GLOW_AMBER := Color(0.85, 0.62, 0.22, 1.0)
+# ---- 余白の刻み ----
+const S1 := 4.0
+const S2 := 8.0
+const S3 := 12.0
+const S4 := 16.0
+const S5 := 24.0
+const S6 := 32.0
 
-## 文字色
-const TEXT_OFFWHITE := Color(0.96, 0.94, 0.89, 1.0)
-## 主役ではない補足の文字(状態の「いまはこちら」を強調しないために使う)。
-const TEXT_MUTED := Color(0.68, 0.65, 0.60, 1.0)
-## 錠前(`UiPaint.draw_lock()`)の地の円と真鍮の錠。
-const LOCK_PLATE := Color(0.10, 0.07, 0.05, 0.78)
-const LOCK_BRASS := Color(0.86, 0.68, 0.38)
-const WARNING_RED := Color(0.85, 0.2, 0.18, 1.0)
+# ---- UIの部品が操作へ返す動きの尺(秒) ----
+const DUR_PRESS := 0.09
+const DUR_HOVER := 0.16
+const DUR_SHOW := 0.24
 
-## 棚板(ShelfPlank)用の木材色。旧shelf_plank.pngは彩度の高い明るいオレンジだったが、
-## 真鍮(BRASS_*)・パネル(PANEL_SLATE_*)と同じ「落ち着いた」トーンへ揃えるため、
-## 既存のDeckListCard背景(bg_color = Color(0.22, 0.14, 0.08))を基準にした暗く濁った
-## 茶色でまとめる(フェーズ12 Q-4)。TOP=板の上面(最も明るい)、MID=中間・木口の上端、
-## DARK=前面木口の最暗部
+# ---- 場所の絵(壁・棚)。5つの素材の外 ----
 const WOOD_TOP := Color(0.34, 0.22, 0.13, 1.0)
 const WOOD_MID := Color(0.22, 0.14, 0.09, 1.0)
 const WOOD_DARK := Color(0.12, 0.08, 0.05, 1.0)
 
-## 名札(CodedNameplateStyle)の凹んだテキスト面。他のCodedスタイルが使う
-## PANEL_SLATE_*(青灰)ではなく、木材・真鍮と揃う暖色の焦げ茶にする
-const NAMEPLATE_PANEL_TOP := Color(0.14, 0.09, 0.05, 1.0)
-const NAMEPLATE_PANEL_BOTTOM := Color(0.26, 0.18, 0.11, 1.0)
-
-## 無効(disabled)状態: 彩度を落としたうえで暗くする(明るさ寄せのlerpだと暗い元色ほど
-## 明るくなってしまい「無効なのに目立つ」不具合になるため、必ず暗い方向のみへ寄せる)。
-## まず色自身の輝度へDISABLED_DESATURATEの割合だけ寄せて彩度を落とし、続けて
-## darkened(DISABLED_DARKEN)で暗くする(disabled.png実測値と近似することを確認済み)
+# ---- 無効の色変換(`UiPaint.disabled_tone()`) ----
 const DISABLED_DESATURATE := 0.85
 const DISABLED_DARKEN := 0.3
 
-## BoardTable(盤面テーブル)/BarPanel(対局画面の上下バー)の下地色。CodedButtonStyle等の
-## 「ボタン・パネル」系(BRASS_*/PANEL_SLATE_*)とは意匠の系統が異なる石・金属の面のため
-## 個別に持つが、琥珀の縁取り・区切り線・装飾は他のコード描画UIと共通のGLOW_AMBERを
-## 使う(フェーズ12 Q-6、元の値から変更なし)
-const BOARD_TABLE_FILL := Color(0.13, 0.11, 0.14, 0.94)
-const BAR_FILL_TOP := Color(0.17, 0.14, 0.18, 0.96)
-const BAR_FILL_BOTTOM := Color(0.08, 0.07, 0.09, 0.98)
-const BAR_EDGE_HIGHLIGHT := Color(0.96, 0.82, 0.5, 0.35)
-
-## 駒の台座光のデフォルト色(イラストからアクセントカラーをサンプリングできない場合の
-## フォールバック)。GLOW_AMBERより明るく黄味寄りの「砂」の色のため別定数として持つ
-const PEDESTAL_DEFAULT_ACCENT := Color(0.9, 0.72, 0.34, 1.0)
-
-## 対局画面の再構築(GameDesign.md 9章)。卓の面=濃紺のベルベット。上端が明るく
-## 下端がわずかに暗い。
+# ---- 古い名前。新しい色へ向けてあり、画面を入れ替えるたびに上の名前へ寄せて消す(TODO.md) ----
+const BRASS_HIGHLIGHT := GOLD
+const BRASS_LIGHT := GOLD_FOLD
+const BRASS_MID := BRASS
+const BRASS_DARK := BRASS_DEEP
+const BRASS_BOUNCE := Color(0.45, 0.31, 0.13)
+const BRASS_RIM_LIGHT := GOLD
+const BRASS_PRESSED_MID := BRASS_DEEP
+const BRASS_PRESSED_DARK := BRASS_INK
+const OUTLINE_DARK := Color(0.02, 0.025, 0.05)
+const PANEL_SLATE_TOP := INK_900
+const PANEL_SLATE_BOTTOM := INK_700
+const PANEL_AMBER_TOP := SAND_DEEP
+const PANEL_AMBER_BOTTOM := SAND_HI
+const PANEL_PRESSED_TOP := INK_900
+const PANEL_PRESSED_BOTTOM := INK_800
+const GLOW_AMBER := SAND
+const TEXT_OFFWHITE := IVORY
+const TEXT_MUTED := MUTED
+const LOCK_PLATE := Color(0.035, 0.045, 0.085, 0.78)
+const LOCK_BRASS := GOLD
+const WARNING_RED := HEALTH
+const NAMEPLATE_PANEL_TOP := INK_900
+const NAMEPLATE_PANEL_BOTTOM := INK_700
+const BOARD_TABLE_FILL := Color(0.06, 0.075, 0.135, 0.94)
+const BAR_FILL_TOP := Color(0.09, 0.115, 0.20, 0.96)
+const BAR_FILL_BOTTOM := Color(0.035, 0.045, 0.085, 0.98)
+const BAR_EDGE_HIGHLIGHT := Color(0.90, 0.74, 0.42, 0.35)
+const PEDESTAL_DEFAULT_ACCENT := SAND_HI
 const FELT_NAVY_TOP := Color(0.13, 0.16, 0.30, 1.0)
 const FELT_NAVY_BOTTOM := Color(0.07, 0.09, 0.19, 1.0)
-## 行動の列(ActionColumnPanel)・情報帯の地。FELT_NAVY_* よりわずかに暗い。
-const NAVY_PANEL_TOP := Color(0.09, 0.11, 0.21, 1.0)
-const NAVY_PANEL_BOTTOM := Color(0.05, 0.06, 0.13, 1.0)
-## 情報帯の中の小さな山札・墓地・手札の札(`PlayerInfoBar._pile`)の地。
-## `NAVY_PANEL_BOTTOM`より少し明るく、帯の地の上でも面として浮くようにする(段階2)。
-const NAVY_PANEL_PILE := Color(0.10, 0.13, 0.24, 1.0)
-## 主役の丸ボタン(ターン終了)の面。橙ではなく磨いた金真鍮として、リムと同じ材で揃える。
-const ROUND_FILLED_TOP := Color(0.95, 0.80, 0.46, 1.0)
-const ROUND_FILLED_BOTTOM := Color(0.60, 0.42, 0.18, 1.0)
+const NAVY_PANEL_TOP := INK_700
+const NAVY_PANEL_BOTTOM := INK_900
+const NAVY_PANEL_PILE := INK_600
+const ROUND_FILLED_TOP := GOLD_HI
+const ROUND_FILLED_BOTTOM := BRASS

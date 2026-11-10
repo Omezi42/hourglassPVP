@@ -7,9 +7,10 @@ extends RefCounted
 const STYLE_PATH := "res://resources/theme/buttons/img_%s_%s.tres"
 const WIDE_GROUP := "wide_text"
 const ICON_GROUP := "icon_square"
-## 塗りつぶした真鍮の面(額縁と地続き)。凹んだパネル(WIDE_GROUP)と並べて使う
-## 「もっとも頻繁に押す主要な操作」向けの第2の面。
+## 真鍮の面。その画面でいちばん押してほしい操作と、選ばれているタブ。
 const PRIMARY_ACTION_GROUP := "primary_action"
+## 硝子に赤い縁。削除・投了など取り返せない操作。
+const DANGER_GROUP := "danger_text"
 const STATES: Array[String] = ["normal", "hover", "pressed", "disabled"]
 
 
@@ -30,22 +31,40 @@ static func make_in_group(label: String, button_size: Vector2, group: String) ->
 
 ## 既に .tscn に置かれているボタンのスタイルだけを差し替える。StyleBoxはリソース参照の
 ## ため .tscn のパッチ(値がJSON)では差し替えられず、ここを通す必要がある。
-## 無効の文字は面と同じ規則(`disabled_tone`)で沈める。テーマ既定の無効色は明るい StyleBoxFlat 向けの
-## 暗い茶色で、暗く沈めた真鍮の面の上ではほぼ同じ明るさになり文字だけが消える。
+## 字の色は面の役割で決める(真鍮の面 = 彫った暗い字 / 硝子の面 = 象牙 / 赤い縁 = 明るい赤)。
+## 押せない字は沈めた灰にする(面は変えない。GameDesign.md 9章)。
 static func apply_styles(button: Button, group: String) -> void:
-	for state in STATES:
-		var style: StyleBox = load(STYLE_PATH % [group, state])
-		if style != null:
-			button.add_theme_stylebox_override(state, style)
-	button.add_theme_color_override(
-		"font_disabled_color", UiPaint.disabled_tone(UiPalette.TEXT_OFFWHITE)
-	)
+	var base: StyleBox = load(STYLE_PATH % [group, STATES[0]])
+	if base is CodedButtonStyle:
+		ButtonFeel.attach(button, base)
+		_apply_font_colors(button, base)
+	else:
+		for state in STATES:
+			var style: StyleBox = load(STYLE_PATH % [group, state])
+			if style != null:
+				button.add_theme_stylebox_override(state, style)
 	# 押せるときだけ指カーソルにする(GameDesign.md 9章「クリックできる要素は共通の挙動」)。
 	# `disabled` には変更の信号が無いため、乗った瞬間に決め直す。
 	_update_cursor(button)
 	var update := _update_cursor.bind(button)
 	if not button.mouse_entered.is_connected(update):
 		button.mouse_entered.connect(update)
+
+
+static func _apply_font_colors(button: Button, style: CodedButtonStyle) -> void:
+	var normal := UiPalette.IVORY
+	var lit := Color.WHITE
+	if style.filled:
+		normal = UiPalette.BRASS_INK
+		lit = UiPalette.BRASS_INK
+	elif style.danger:
+		normal = UiPalette.DANGER_TEXT
+	button.add_theme_color_override("font_color", normal)
+	button.add_theme_color_override("font_hover_color", lit)
+	button.add_theme_color_override("font_pressed_color", lit)
+	button.add_theme_color_override("font_hover_pressed_color", lit)
+	button.add_theme_color_override("font_focus_color", normal)
+	button.add_theme_color_override("font_disabled_color", UiPalette.FAINT)
 
 
 static func _update_cursor(button: Button) -> void:
@@ -60,7 +79,4 @@ static func _build(label: String, button_size: Vector2, group: String) -> Button
 	button.custom_minimum_size = button_size
 	button.size = button_size
 	apply_styles(button, group)
-	button.add_theme_color_override("font_color", UiPalette.TEXT_OFFWHITE)
-	button.add_theme_color_override("font_hover_color", Color(1, 1, 1, 1))
-	button.add_theme_color_override("font_pressed_color", UiPalette.BRASS_HIGHLIGHT)
 	return button

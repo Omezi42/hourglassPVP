@@ -18,6 +18,9 @@ const MITER_LIMIT := 4.0
 const CIRCLE_SEGMENTS_PER_PX := 1.5
 const CIRCLE_MIN_SEGMENTS := 12
 const CIRCLE_MAX_SEGMENTS := 64
+## `gradient_convex()` の帯の高さの下限。これより近い切れ目はまとめる。
+const BAND_MIN_HEIGHT := 0.01
+const GLOW_SEGMENTS := 32
 
 static var _tri_points := PackedVector2Array([Vector2.ZERO, Vector2.ZERO, Vector2.ZERO])
 static var _tri_colors := PackedColorArray([Color.WHITE, Color.WHITE, Color.WHITE])
@@ -51,6 +54,139 @@ static func polygon(ci: RID, points: PackedVector2Array, colors: PackedColorArra
 		RenderingServer.canvas_item_add_primitive(
 			ci, _tri_points, _tri_colors, PackedVector2Array(), RID()
 		)
+
+
+## 凸の形を1色で塗る(先頭の頂点からの扇。三角形分割を通さないぶん軽い)。
+static func convex_polygon(ci: RID, points: PackedVector2Array, color: Color) -> void:
+	if points.size() < 3:
+		return
+	_tri_colors.fill(color)
+	_tri_points[0] = points[0]
+	for i in range(1, points.size() - 1):
+		_tri_points[1] = points[i]
+		_tri_points[2] = points[i + 1]
+		RenderingServer.canvas_item_add_primitive(
+			ci, _tri_points, _tri_colors, PackedVector2Array(), RID()
+		)
+
+
+## 凸の形を縦のグラデーションで塗る。`stops` は [[位置0〜1, 色], ...](位置の昇順)。
+## 頂点の色だけで塗ると頂点の無い高さにある色の節が消えるため、頂点と節の高さで横の帯に刻む
+## (帯の中は上下の辺が直線なので、台形1枚で形も色も正しく出る)。
+static func gradient_convex(ci: RID, points: PackedVector2Array, stops: Array) -> void:
+	if points.size() < 3 or stops.is_empty():
+		return
+	var top := INF
+	var bottom := -INF
+	for point in points:
+		top = minf(top, point.y)
+		bottom = maxf(bottom, point.y)
+	var height := bottom - top
+	if height <= 0.0:
+		return
+	var cuts := PackedFloat32Array()
+	for point in points:
+		cuts.append(point.y)
+	for stop in stops:
+		cuts.append(top + height * clampf(stop[0], 0.0, 1.0))
+	cuts.sort()
+	var from_y := cuts[0]
+	var from_span := _span_at(points, from_y)
+	var from_color := _stop_color(stops, 0.0)
+	for i in range(1, cuts.size()):
+		var to_y := cuts[i]
+		if to_y - from_y < BAND_MIN_HEIGHT:
+			continue
+		var to_span := _span_at(points, to_y)
+		var to_color := _stop_color(stops, (to_y - top) / height)
+		_quad(
+			ci,
+			Vector2(from_span.x, from_y),
+			Vector2(from_span.y, from_y),
+			Vector2(to_span.y, to_y),
+			Vector2(to_span.x, to_y),
+			from_color,
+			from_color,
+			to_color,
+			to_color
+		)
+		from_y = to_y
+		from_span = to_span
+		from_color = to_color
+
+
+## 内側の輪から外側の輪へ色を渡す帯(影や光のぼかし)。2つの点列は同じ数・同じ並びで渡す。
+static func ring_strip(
+	ci: RID,
+	inner: PackedVector2Array,
+	outer: PackedVector2Array,
+	inner_color: Color,
+	outer_color: Color
+) -> void:
+	var count := mini(inner.size(), outer.size())
+	for i in count:
+		var j := (i + 1) % count
+		_quad(
+			ci,
+			inner[i],
+			inner[j],
+			outer[j],
+			outer[i],
+			inner_color,
+			inner_color,
+			outer_color,
+			outer_color
+		)
+
+
+## 中心から縁へ透けていく楕円の光。
+static func radial_glow(
+	ci: RID, center: Vector2, radii: Vector2, color: Color, segments := GLOW_SEGMENTS
+) -> void:
+	_tri_colors[0] = color
+	_tri_colors[1] = Color(color, 0.0)
+	_tri_colors[2] = Color(color, 0.0)
+	_tri_points[0] = center
+	for i in segments:
+		var from := TAU * float(i) / float(segments)
+		var to := TAU * float(i + 1) / float(segments)
+		_tri_points[1] = center + Vector2(cos(from) * radii.x, sin(from) * radii.y)
+		_tri_points[2] = center + Vector2(cos(to) * radii.x, sin(to) * radii.y)
+		RenderingServer.canvas_item_add_primitive(
+			ci, _tri_points, _tri_colors, PackedVector2Array(), RID()
+		)
+
+
+## 高さ `y` で凸の形を横に切ったときの左端と右端(x が左、y が右)。
+static func _span_at(points: PackedVector2Array, y: float) -> Vector2:
+	var left := INF
+	var right := -INF
+	var count := points.size()
+	for i in count:
+		var p := points[i]
+		var q := points[(i + 1) % count]
+		if (p.y > y and q.y > y) or (p.y < y and q.y < y):
+			continue
+		if is_equal_approx(p.y, q.y):
+			left = minf(left, minf(p.x, q.x))
+			right = maxf(right, maxf(p.x, q.x))
+			continue
+		var x := p.x + (q.x - p.x) * (y - p.y) / (q.y - p.y)
+		left = minf(left, x)
+		right = maxf(right, x)
+	return Vector2(left, right)
+
+
+static func _stop_color(stops: Array, t: float) -> Color:
+	if t <= stops[0][0]:
+		return stops[0][1]
+	for i in range(1, stops.size()):
+		if t <= stops[i][0]:
+			var from: float = stops[i - 1][0]
+			var to: float = stops[i][0]
+			var from_color: Color = stops[i - 1][1]
+			return from_color.lerp(stops[i][1], (t - from) / maxf(to - from, 0.0001))
+	return stops[stops.size() - 1][1]
 
 
 ## `draw_polyline(points, color, width, antialiased)` の代わり。

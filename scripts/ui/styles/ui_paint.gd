@@ -28,27 +28,16 @@ enum Emblem {
 const GRAIN_SIZE := 64
 const GRAIN_SEED := 20240818
 
-## 紋章の輪郭線・ハイライト線の太さ(いずれもCodedButtonStyleが渡すsize基準の絶対px)
-const EMBLEM_OUTLINE_WIDTH := 3.0
-const EMBLEM_HIGHLIGHT_WIDTH := 1.6
+## チェックの紋章の影の線が、面の線より太いぶん(px)。
+const EMBLEM_OUTLINE_WIDTH := 2.0
+## 紋章の下へ落とす影の色と、ずらす量(紋章の大きさに対する比)。
+const EMBLEM_SHADOW := Color(0, 0, 0, 0.55)
+const ICON_SHADOW_RATIO := 0.06
 const EMBLEM_CHECK_WIDTH_RATIO := 0.22
 const EMBLEM_CHECK_MIN_WIDTH := 3.0
 ## 外部サービスのマークを描く大きさ(draw_emblemのsizeに対する比率)。他の紋章が使う
 ## 単位座標の広がりと揃え、額縁の内側へ収まる値にしてある。
 const BRAND_MARK_RATIO := 0.55
-## 取り込みアイコンの縁取りの太さ(アイコンの半辺に対する比)。白いシルエットを縁の色で
-## 周囲へずらして敷いてから面の色を重ね、多角形の紋章と同じ浮き彫りに見せる。
-const ICON_OUTLINE_RATIO := 0.14
-const ICON_OUTLINE_DIRECTIONS := [
-	Vector2(1, 0),
-	Vector2(-1, 0),
-	Vector2(0, 1),
-	Vector2(0, -1),
-	Vector2(0.7, 0.7),
-	Vector2(-0.7, 0.7),
-	Vector2(0.7, -0.7),
-	Vector2(-0.7, -0.7),
-]
 ## 砂時計の紋章(icooon-mono)。半辺を`draw_emblem()`の`size`に対するこの比で描く。
 const HOURGLASS_ICON := preload("res://assets/ui/icons/hourglass.png")
 const HOURGLASS_ICON_HALF_RATIO := 0.9
@@ -77,9 +66,6 @@ static var _swap_arrow_top_points := PackedVector2Array(
 		Vector2(-0.8, -0.18),
 	]
 )
-static var _swap_arrow_top_highlight := PackedVector2Array(
-	[Vector2(-0.7, -0.42), Vector2(0.05, -0.42)]
-)
 ## 治癒(スキル):HPの回復を示す太い十字。
 static var _heal_points := PackedVector2Array(
 	[
@@ -97,7 +83,6 @@ static var _heal_points := PackedVector2Array(
 		Vector2(-0.26, -0.26),
 	]
 )
-static var _heal_highlight := PackedVector2Array([Vector2(-0.16, -0.68), Vector2(0.16, -0.68)])
 ## 一撃(スキル):相手への直接ダメージを示す、斜めに振り抜いた刃。
 static var _strike_points := PackedVector2Array(
 	[
@@ -109,7 +94,6 @@ static var _strike_points := PackedVector2Array(
 		Vector2(0.40, -0.66),
 	]
 )
-static var _strike_highlight := PackedVector2Array([Vector2(0.62, -0.56), Vector2(-0.46, 0.46)])
 ## 加速(スキル):砂を一気に落とすことを示す下向きの二重シェブロン。
 static var _advance_upper_points := PackedVector2Array(
 	[
@@ -121,9 +105,6 @@ static var _advance_upper_points := PackedVector2Array(
 		Vector2(-0.72, -0.42),
 	]
 )
-static var _advance_upper_highlight := PackedVector2Array(
-	[Vector2(-0.6, -0.6), Vector2(0.0, -0.14)]
-)
 static var _advance_lower_points := PackedVector2Array(
 	[
 		Vector2(-0.72, -0.08),
@@ -134,7 +115,6 @@ static var _advance_lower_points := PackedVector2Array(
 		Vector2(-0.72, 0.22),
 	]
 )
-static var _advance_lower_highlight := PackedVector2Array([Vector2(-0.6, 0.04), Vector2(0.0, 0.5)])
 ## 目覚め(スキル):砂時計が起き上がることを示す、上向きの光の閃光(四芒星)。
 static var _awaken_points := PackedVector2Array(
 	[
@@ -148,9 +128,6 @@ static var _awaken_points := PackedVector2Array(
 		Vector2(-0.19, -0.22),
 	]
 )
-static var _awaken_highlight := PackedVector2Array(
-	[Vector2(-0.12, -0.32), Vector2(0.0, -0.7), Vector2(0.12, -0.32)]
-)
 static var _swap_arrow_bottom_points := PackedVector2Array(
 	[
 		Vector2(0.8, 0.5),
@@ -162,9 +139,6 @@ static var _swap_arrow_bottom_points := PackedVector2Array(
 		Vector2(0.8, 0.18),
 	]
 )
-static var _swap_arrow_bottom_highlight := PackedVector2Array(
-	[Vector2(0.7, 0.42), Vector2(-0.05, 0.42)]
-)
 
 ## 「交代」= 控えから場へ出す操作を示す、脚付きベンチ(長椅子)のシルエット。
 ## 「座面板」「座面を支える内側の2本脚」「下段の桟(レール)」「レールを支える
@@ -175,9 +149,6 @@ static var _swap_arrow_bottom_highlight := PackedVector2Array(
 static var _bench_seat_points := PackedVector2Array(
 	[Vector2(-0.72, -0.85), Vector2(0.72, -0.85), Vector2(0.72, -0.58), Vector2(-0.72, -0.58)]
 )
-static var _bench_seat_highlight := PackedVector2Array(
-	[Vector2(-0.58, -0.78), Vector2(0.58, -0.78)]
-)
 static var _bench_seat_leg_left_points := PackedVector2Array(
 	[Vector2(-0.34, -0.58), Vector2(-0.14, -0.58), Vector2(-0.14, -0.02), Vector2(-0.34, -0.02)]
 )
@@ -187,7 +158,6 @@ static var _bench_seat_leg_right_points := PackedVector2Array(
 static var _bench_rail_points := PackedVector2Array(
 	[Vector2(-0.85, -0.02), Vector2(0.85, -0.02), Vector2(0.85, 0.22), Vector2(-0.85, 0.22)]
 )
-static var _bench_rail_highlight := PackedVector2Array([Vector2(-0.7, 0.05), Vector2(0.7, 0.05)])
 static var _bench_floor_leg_left_points := PackedVector2Array(
 	[Vector2(-0.68, 0.22), Vector2(-0.46, 0.22), Vector2(-0.4, 0.85), Vector2(-0.62, 0.85)]
 )
@@ -202,20 +172,11 @@ static var _bench_floor_leg_right_points := PackedVector2Array(
 static var _menu_bar_top_points := PackedVector2Array(
 	[Vector2(-0.55, -0.53), Vector2(0.55, -0.53), Vector2(0.55, -0.31), Vector2(-0.55, -0.31)]
 )
-static var _menu_bar_top_highlight := PackedVector2Array(
-	[Vector2(-0.45, -0.47), Vector2(0.45, -0.47)]
-)
 static var _menu_bar_mid_points := PackedVector2Array(
 	[Vector2(-0.55, -0.11), Vector2(0.55, -0.11), Vector2(0.55, 0.11), Vector2(-0.55, 0.11)]
 )
-static var _menu_bar_mid_highlight := PackedVector2Array(
-	[Vector2(-0.45, -0.05), Vector2(0.45, -0.05)]
-)
 static var _menu_bar_bottom_points := PackedVector2Array(
 	[Vector2(-0.55, 0.31), Vector2(0.55, 0.31), Vector2(0.55, 0.53), Vector2(-0.55, 0.53)]
-)
-static var _menu_bar_bottom_highlight := PackedVector2Array(
-	[Vector2(-0.45, 0.37), Vector2(0.45, 0.37)]
 )
 
 ## 公式の窓口への導線に添える外部サービスのマーク。**多角形で似せず、各社の公式の
@@ -503,108 +464,87 @@ static func apply_grain(ci: RID, rect: Rect2, alpha: float) -> void:
 	)
 
 
-## 紋章を1個描画する。centerを中心に、概ね半径sizeへ収まるよう正規化された図形を敷く。
-## 太い暗色輪郭+真鍮グラデーション塗り+上側ハイライト線の「浮き彫り」で統一する。
-static func draw_emblem(ci: RID, emblem: Emblem, center: Vector2, size: float) -> void:
+## 紋章を1個描く。center を中心に、概ね半径 size へ収まる図形を `tint` の1色で敷く
+## (線と面を細く保つため浮き彫りにはせず、下へ落とした暗い影だけで面から離す)。
+static func draw_emblem(
+	ci: RID, emblem: Emblem, center: Vector2, size: float, tint := UiPalette.GOLD
+) -> void:
 	match emblem:
 		Emblem.HOURGLASS:
-			draw_icon(ci, HOURGLASS_ICON, center, size * HOURGLASS_ICON_HALF_RATIO)
+			draw_icon(ci, HOURGLASS_ICON, center, size * HOURGLASS_ICON_HALF_RATIO, false, tint)
 		Emblem.SWAP_ARROWS:
-			_emblem_fill(ci, center, size, _swap_arrow_top_points, _swap_arrow_top_highlight)
-			_emblem_fill(ci, center, size, _swap_arrow_bottom_points, _swap_arrow_bottom_highlight)
+			_emblem_fill(ci, center, size, _swap_arrow_top_points, tint)
+			_emblem_fill(ci, center, size, _swap_arrow_bottom_points, tint)
 		Emblem.BENCH:
-			_emblem_fill(ci, center, size, _bench_seat_points, _bench_seat_highlight)
-			_emblem_fill(ci, center, size, _bench_seat_leg_left_points, PackedVector2Array())
-			_emblem_fill(ci, center, size, _bench_seat_leg_right_points, PackedVector2Array())
-			_emblem_fill(ci, center, size, _bench_rail_points, _bench_rail_highlight)
-			_emblem_fill(ci, center, size, _bench_floor_leg_left_points, PackedVector2Array())
-			_emblem_fill(ci, center, size, _bench_floor_leg_right_points, PackedVector2Array())
+			_emblem_fill(ci, center, size, _bench_seat_points, tint)
+			_emblem_fill(ci, center, size, _bench_seat_leg_left_points, tint)
+			_emblem_fill(ci, center, size, _bench_seat_leg_right_points, tint)
+			_emblem_fill(ci, center, size, _bench_rail_points, tint)
+			_emblem_fill(ci, center, size, _bench_floor_leg_left_points, tint)
+			_emblem_fill(ci, center, size, _bench_floor_leg_right_points, tint)
 		Emblem.CHECK:
-			_emblem_check(ci, center, size)
+			_emblem_check(ci, center, size, tint)
 		Emblem.ADVANCE:
-			_emblem_fill(ci, center, size, _advance_upper_points, _advance_upper_highlight)
-			_emblem_fill(ci, center, size, _advance_lower_points, _advance_lower_highlight)
+			_emblem_fill(ci, center, size, _advance_upper_points, tint)
+			_emblem_fill(ci, center, size, _advance_lower_points, tint)
 		Emblem.AWAKEN:
-			_emblem_fill(ci, center, size, _awaken_points, _awaken_highlight)
+			_emblem_fill(ci, center, size, _awaken_points, tint)
 		Emblem.HEAL:
-			_emblem_fill(ci, center, size, _heal_points, _heal_highlight)
+			_emblem_fill(ci, center, size, _heal_points, tint)
 		Emblem.STRIKE:
-			_emblem_fill(ci, center, size, _strike_points, _strike_highlight)
+			_emblem_fill(ci, center, size, _strike_points, tint)
 		Emblem.MENU:
-			_emblem_fill(ci, center, size, _menu_bar_top_points, _menu_bar_top_highlight)
-			_emblem_fill(ci, center, size, _menu_bar_mid_points, _menu_bar_mid_highlight)
-			_emblem_fill(ci, center, size, _menu_bar_bottom_points, _menu_bar_bottom_highlight)
+			_emblem_fill(ci, center, size, _menu_bar_top_points, tint)
+			_emblem_fill(ci, center, size, _menu_bar_mid_points, tint)
+			_emblem_fill(ci, center, size, _menu_bar_bottom_points, tint)
 		Emblem.BOOK:
-			draw_icon(ci, BOOK_ICON, center, size * BOOK_ICON_HALF_RATIO)
+			draw_icon(ci, BOOK_ICON, center, size * BOOK_ICON_HALF_RATIO, false, tint)
 		Emblem.LETTER:
-			draw_icon(ci, LETTER_ICON, center, size * BOOK_ICON_HALF_RATIO)
+			draw_icon(ci, LETTER_ICON, center, size * BOOK_ICON_HALF_RATIO, false, tint)
 		Emblem.PERSON:
-			draw_icon(ci, PERSON_ICON, center, size * BOOK_ICON_HALF_RATIO)
+			draw_icon(ci, PERSON_ICON, center, size * BOOK_ICON_HALF_RATIO, false, tint)
 		Emblem.DISCORD, Emblem.X, Emblem.YOUTUBE:
 			_emblem_brand(ci, _brand_textures[emblem], center, size)
 		_:
 			pass
 
 
-## 取り込みアイコン(`assets/ui/icons/`の白いシルエット)を、多角形の紋章と同じ
-## 「暗い縁+明るい上縁+真鍮の面」で描く。`disabled`は押せないボタンの上に置くとき。
+## 取り込みアイコン(`assets/ui/icons/`の白いシルエット)を `tint` の1色で描き、下へ暗い影を落とす。
+## `disabled` は押せないボタンの上に置くとき。
 static func draw_icon(
-	ci: RID, texture: Texture2D, center: Vector2, half_side: float, disabled := false
+	ci: RID,
+	texture: Texture2D,
+	center: Vector2,
+	half_side: float,
+	disabled := false,
+	tint := UiPalette.GOLD
 ) -> void:
 	var rect := Rect2(center - Vector2(half_side, half_side), Vector2(half_side, half_side) * 2.0)
-	var outline := UiPalette.OUTLINE_DARK
-	var highlight := UiPalette.BRASS_HIGHLIGHT
-	var face := UiPalette.BRASS_MID
-	if disabled:
-		outline = disabled_tone(outline)
-		highlight = disabled_tone(highlight)
-		face = disabled_tone(face)
+	var face := UiPalette.FAINT if disabled else tint
 	var rid := texture.get_rid()
-	var width: float = maxf(half_side * ICON_OUTLINE_RATIO, 1.0)
-	for direction in ICON_OUTLINE_DIRECTIONS:
-		var offset_rect := Rect2(rect.position + direction * width, rect.size)
-		RenderingServer.canvas_item_add_texture_rect(ci, offset_rect, rid, false, outline)
-	var highlight_rect := Rect2(rect.position + Vector2(0, -1), rect.size)
-	RenderingServer.canvas_item_add_texture_rect(ci, highlight_rect, rid, false, highlight)
+	var drop := Vector2(0, maxf(half_side * ICON_SHADOW_RATIO, 1.0))
+	RenderingServer.canvas_item_add_texture_rect(
+		ci, Rect2(rect.position + drop, rect.size), rid, false, EMBLEM_SHADOW
+	)
 	RenderingServer.canvas_item_add_texture_rect(ci, rect, rid, false, face)
 
 
-## 単位座標系の閉多角形(local_points)をcenter/sizeへ変換して塗り+輪郭+ハイライトを描く。
+## 単位座標系の閉多角形(local_points)を center / size へ移して、影と面を描く。
 static func _emblem_fill(
-	ci: RID,
-	center: Vector2,
-	size: float,
-	local_points: PackedVector2Array,
-	local_highlight: PackedVector2Array
+	ci: RID, center: Vector2, size: float, local_points: PackedVector2Array, tint: Color
 ) -> void:
 	var points := PackedVector2Array()
+	var shadow := PackedVector2Array()
+	var drop := Vector2(0, maxf(size * ICON_SHADOW_RATIO, 1.0))
 	for p in local_points:
 		points.append(center + p * size)
-	var top_y := points[0].y
-	var bottom_y := points[0].y
-	for p in points:
-		top_y = minf(top_y, p.y)
-		bottom_y = maxf(bottom_y, p.y)
-	var bounds := Rect2(center.x - size, top_y, size * 2.0, maxf(bottom_y - top_y, 0.001))
-	var fill_stops := [
-		[0.0, UiPalette.BRASS_HIGHLIGHT], [0.5, UiPalette.BRASS_MID], [1.0, UiPalette.BRASS_DARK]
-	]
-	fill_gradient_polygon(ci, points, bounds, fill_stops)
-
-	var closed := points.duplicate()
-	closed.append(points[0])
-	_draw_polyline_solid(ci, closed, UiPalette.OUTLINE_DARK, EMBLEM_OUTLINE_WIDTH)
-
-	if local_highlight.size() >= 2:
-		var highlight := PackedVector2Array()
-		for p in local_highlight:
-			highlight.append(center + p * size)
-		_draw_polyline_solid(ci, highlight, UiPalette.BRASS_HIGHLIGHT, EMBLEM_HIGHLIGHT_WIDTH)
+		shadow.append(center + p * size + drop)
+	ShapePaint.colored_polygon(ci, shadow, EMBLEM_SHADOW)
+	ShapePaint.colored_polygon(ci, points, tint)
 
 
-## チェックマークは細い形状のため塗り多角形ではなく、太さの異なる3本のポリラインを
-## 重ねて(暗色の縁取り→真鍮の芯→明色のハイライト)浮き彫りに見せる。
-static func _emblem_check(ci: RID, center: Vector2, size: float) -> void:
+## チェックマークは細い形のため、塗り多角形ではなく太い線で描く。
+static func _emblem_check(ci: RID, center: Vector2, size: float, tint: Color) -> void:
 	var path := PackedVector2Array(
 		[
 			center + Vector2(-0.62, 0.05) * size,
@@ -613,13 +553,8 @@ static func _emblem_check(ci: RID, center: Vector2, size: float) -> void:
 		]
 	)
 	var width: float = maxf(size * EMBLEM_CHECK_WIDTH_RATIO, EMBLEM_CHECK_MIN_WIDTH)
-	_draw_polyline_solid(ci, path, UiPalette.OUTLINE_DARK, width + EMBLEM_OUTLINE_WIDTH)
-	_draw_polyline_solid(ci, path, UiPalette.BRASS_MID, width)
-
-	var highlight := PackedVector2Array(
-		[center + Vector2(-0.55, -0.02) * size, center + Vector2(-0.12, 0.42) * size]
-	)
-	_draw_polyline_solid(ci, highlight, UiPalette.BRASS_HIGHLIGHT, EMBLEM_HIGHLIGHT_WIDTH)
+	_draw_polyline_solid(ci, path, EMBLEM_SHADOW, width + EMBLEM_OUTLINE_WIDTH)
+	_draw_polyline_solid(ci, path, tint, width)
 
 
 ## 外部サービスのマーク。公式のシンボルを白で敷くだけにする(塗り替えない)。

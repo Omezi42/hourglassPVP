@@ -17,17 +17,18 @@ const EMBLEM_ALPHA := 0.17
 ## 600x306px)で紋章が文字より主張する**(モックで実際に起きた)。比率で求めたうえで
 ## ここで止める。
 const EMBLEM_MAX_SIDE := 96.0
-const TITLE_COLOR := Color(0.96, 0.94, 0.89)
-const TITLE_DIM := Color(0.58, 0.55, 0.52)
-const SUB_COLOR := Color(0.96, 0.82, 0.45)
-const SUB_DIM := Color(0.52, 0.48, 0.42)
-## 塗りつぶした真鍮の面(`primary`)へ載せる副題。琥珀のままだと明るい面に沈む。
-const SUB_ON_BRASS := Color(0.30, 0.20, 0.07)
-const PADDING := 26.0
+const TITLE_COLOR := UiPalette.IVORY
+const TITLE_DIM := UiPalette.FAINT
+const SUB_COLOR := UiPalette.SAND_HI
+const SUB_DIM := UiPalette.FAINT
+## 真鍮の面(`primary`)へ載せる字。彫った暗い字にする。
+const SUB_ON_BRASS := UiPalette.BRASS_INK
+const PADDING := 24.0
 ## 未受取の印(GameDesign.md 9章)。
-const BADGE_COLOR := Color(0.86, 0.24, 0.19)
-const BADGE_RADIUS := 15.0
-const BADGE_FONT_SIZE := 17
+const BADGE_RADIUS := 12.0
+## 小物の絵の後ろへ置く淡い光(絵を面から浮かせる)。
+const PROP_GLOW := Color(1.0, 0.82, 0.5, 0.10)
+const PROP_GLOW_RATIO := 0.62
 ## ホバー浮き(GameDesign.md 9章)。紋章の透かしをわずかに明るく・上へ浮かせる。
 const HOVER_RISE_PX := 3.0
 const HOVER_ALPHA_BOOST := 0.45
@@ -98,8 +99,6 @@ var _play_tween: Tween
 ## 副題が外部要因で変わった瞬間に立て、減衰させながら短く光らせる。
 var _subtitle_flash := 0.0
 var _flash_tween: Tween
-## 押下中に中身(自前の文字・絵と子の札の中身)を面と一緒に沈めている量。
-var _sink := 0.0
 
 
 ## 縦横に合わせて文字の大きさを切り替える。横は作ったときの値へ戻す。
@@ -213,19 +212,6 @@ func _sync_disabled() -> void:
 		if _hover_tween != null and _hover_tween.is_valid():
 			_hover_tween.kill()
 		_hover = 0.0
-
-
-## 押下中は面(`CodedButtonStyle`)が沈むので、中身も同じだけ沈める。子の札の中身も一緒に動かす。
-func _sync_sink() -> void:
-	var mode := get_draw_mode()
-	var pressed_now := mode == DRAW_PRESSED or mode == DRAW_HOVER_PRESSED
-	var target := CodedButtonStyle.PANEL_PRESSED_SINK if pressed_now and not disabled else 0.0
-	if is_equal_approx(target, _sink):
-		return
-	for child in get_children():
-		if child is Control:
-			(child as Control).position.y += target - _sink
-	_sink = target
 
 
 func _set_hover(value: float) -> void:
@@ -363,13 +349,16 @@ func _fits(text_line: String) -> bool:
 
 func _draw() -> void:
 	_sync_disabled()
-	_sync_sink()
 	if _font == null:
 		return
-	draw_set_transform(Vector2(0.0, _sink))
 	var dim := disabled
 	if prop >= 0:
-		HomeProps.draw(prop, self, _prop_rect(), _hover, _play)
+		var prop_rect := _prop_rect()
+		UiKit.glow(
+			get_canvas_item(), prop_rect.get_center(), prop_rect.size * PROP_GLOW_RATIO, PROP_GLOW
+		)
+		HomeProps.draw(prop, self, prop_rect, _hover, _play)
+		draw_set_transform_matrix(Transform2D.IDENTITY)
 	# 紋章は右側の透かし。**押す先が何なのかを絵でも示す**が、文字を邪魔しない濃さに留める。
 	# ホバー中はわずかに明るく浮く(GameDesign.md 9章)。
 	if emblem != null:
@@ -397,14 +386,27 @@ func _draw() -> void:
 			+ float(_subtitle_font_size()) * SUBTITLE_LINE_HEIGHT * sub_rows
 		)
 		title_y = size.y * 0.5 - block * 0.5 + float(title_size) * PROP_TITLE_RISE
+	var title_font := _title_font if _title_font != null else _font
+	if primary and not dim:
+		# 真鍮の面の字は彫り込み(暗い字 + 下に明るい縁)。
+		draw_string(
+			title_font,
+			Vector2(left, title_y + maxf(title_size * UiKit.ENGRAVE_DROP_RATIO, 1.0)),
+			title,
+			align,
+			_text_width(),
+			title_size,
+			UiKit.ENGRAVE_LIGHT
+		)
+	var title_color := UiPalette.BRASS_INK if primary else TITLE_COLOR
 	draw_string(
-		_title_font if _title_font != null else _font,
+		title_font,
 		Vector2(left, title_y),
 		title,
 		align,
 		_text_width(),
 		title_size,
-		TITLE_DIM if dim else TITLE_COLOR
+		TITLE_DIM if dim else title_color
 	)
 	if has_sub:
 		# 副題が変わった直後は光らせる(GameDesign.md 9章)。押さなくても変化が分かるように。
@@ -429,29 +431,19 @@ func _draw() -> void:
 		draw_badge(self, Vector2(size.x - inset, inset), badge_count, badge_scale)
 
 
-## 未受取の数の印(GameDesign.md 9章)。右上の角へ赤い丸で数を打つ。
+## 未受取の数の印(GameDesign.md 9章)。赤い丸に数を打つ(0以下なら丸だけ)。
 static func draw_badge(
 	target: CanvasItem, at: Vector2, count: int, badge_scale_factor := 1.0
 ) -> void:
-	var radius := BADGE_RADIUS * badge_scale_factor
 	var font := ThemeDB.fallback_font
 	if target is Control:
 		var theme_font := (target as Control).get_theme_default_font()
 		if theme_font != null:
 			font = theme_font
-	ShapePaint.circle(target.get_canvas_item(), at, radius + 2.0, Color(0.10, 0.07, 0.05, 0.9))
-	ShapePaint.circle(target.get_canvas_item(), at, radius, BADGE_COLOR)
-	if count <= 0:
-		return
-	var text := str(count)
-	var font_size := roundi(BADGE_FONT_SIZE * badge_scale_factor)
-	var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
-	target.draw_string(
+	UiKit.badge(
+		target.get_canvas_item(),
 		font,
-		at + Vector2(-width * 0.5, float(font_size) * 0.36),
-		text,
-		HORIZONTAL_ALIGNMENT_LEFT,
-		-1,
-		font_size,
-		Color(1, 1, 1)
+		at,
+		BADGE_RADIUS * badge_scale_factor,
+		str(count) if count > 0 else ""
 	)

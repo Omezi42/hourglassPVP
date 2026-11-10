@@ -11,3 +11,4 @@ content_margin_bottom = 8.0
 corner_radius = 10.0
 frame_thickness = 4.0
 dimmed = true
+surface = 1
