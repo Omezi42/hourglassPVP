@@ -27,30 +27,43 @@ const HP_BAR_X := 206.0
 const HP_BAR_SIZE := Vector2(180, 32)
 const HP_RIM_WIDTH := 3.0
 const HP_BADGE_RADIUS := 17.0
-## 右の群は帯の右端から `RIGHT_GROUP_WIDTH` の位置を原点に置く(帯の幅が画面ごとに違っても右端に揃う)。
-const RIGHT_GROUP_WIDTH := 413.0
 ## マナの計器。コストと同じ青の丸いバッジに現在値、右の溝へ最大値ぶんの粒。
+## 溝の長さは最大マナ(`MatchState.MAX_MANA`)の粒がちょうど収まる幅から求める。
 const MANA_BADGE_CENTER := Vector2(15.0, CENTER_Y)
 const MANA_BADGE_RADIUS := 15.0
-const MANA_TROUGH_RECT := Rect2(39.0, 17.0, 168.0, 22.0)
+const MANA_TROUGH_X := 39.0
+const MANA_TROUGH_Y := 17.0
+const MANA_TROUGH_HEIGHT := 22.0
 const PIP_START_X := 51.0
-const PIP_STEP := 16.0
-const PIP_RADIUS := 6.5
+const PIP_STEP := 18.0
+const PIP_RADIUS := 7.0
+const MANA_TROUGH_WIDTH := (
+	(PIP_START_X - MANA_TROUGH_X) * 2.0 + (MatchState.MAX_MANA - 1) * PIP_STEP
+)
+const MANA_TROUGH_RECT := Rect2(MANA_TROUGH_X, MANA_TROUGH_Y, MANA_TROUGH_WIDTH, MANA_TROUGH_HEIGHT)
 ## コインはマナのバッジの肩に載せる小さな金貨。
 const COIN_CENTER := Vector2(27.0, 15.0)
 const COIN_RADIUS := 6.5
-## 山札・墓地・手札の札。帯の右端へ詰める。手札は相手側だけで、自分側はその位置を空ける。
+## 山札・墓地・手札の札。マナの溝の右に並べる。手札は相手側だけで、自分側はその位置を空ける。
 const PILE_SIZE := Vector2(62, 40)
 const PILE_TOP := 8.0
-const DECK_PILE_X := 219.0
-const GRAVE_PILE_X := 285.0
-const HAND_PILE_X := 351.0
-## 左の群の右端(HPの器のバッジ)から右の群までに最低限空ける幅。帯の最小幅を決める。
+const PILE_GAP := 4.0
+const TROUGH_PILE_GAP := 12.0
+const DECK_PILE_X := MANA_TROUGH_X + MANA_TROUGH_WIDTH + TROUGH_PILE_GAP
+const GRAVE_PILE_X := DECK_PILE_X + PILE_SIZE.x + PILE_GAP
+const HAND_PILE_X := GRAVE_PILE_X + PILE_SIZE.x + PILE_GAP
+## 右の群は帯の右端から `RIGHT_GROUP_WIDTH` の位置を原点に置く(帯の幅が画面ごとに違っても右端に揃う)。
+const RIGHT_GROUP_WIDTH := HAND_PILE_X + PILE_SIZE.x
+## 左の群の右端(HPの器のバッジ)。
+const LEFT_GROUP_WIDTH := HP_BAR_X + HP_BAR_SIZE.x + HP_BADGE_RADIUS
+## 左の群の右端から右の群までに最低限空ける幅。帯の最小幅を決める。
 const GROUP_MIN_GAP := 24.0
-const MIN_WIDTH := HP_BAR_X + HP_BAR_SIZE.x + HP_BADGE_RADIUS + GROUP_MIN_GAP + RIGHT_GROUP_WIDTH
-## 縦画面の2段(`stacked`)。左の群と右の群を左端へ揃えて上下に積む。
+const MIN_WIDTH := LEFT_GROUP_WIDTH + GROUP_MIN_GAP + RIGHT_GROUP_WIDTH
+## 縦画面の2段(`stacked`)。左の群と右の群を左端へ揃えて上下に積む。幅は広いほうの群に合わせる。
 const STACK_GAP := 2.0
-const STACKED_WIDTH := RIGHT_GROUP_WIDTH
+const STACKED_WIDTH := (
+	LEFT_GROUP_WIDTH if LEFT_GROUP_WIDTH > RIGHT_GROUP_WIDTH else RIGHT_GROUP_WIDTH
+)
 const STACKED_HEIGHT := BAR_HEIGHT * 2.0 + STACK_GAP
 const PILE_RADIUS := 6.0
 const PILE_GRAIN_ALPHA := 0.06
