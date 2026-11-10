@@ -5,6 +5,8 @@ extends RefCounted
 ## 第1引数は描き先の RID(`StyleBox._draw()` と `Control._draw()` の両方から使うため)。
 ## 枠線の太さ・角の丸み・影は部品の短辺から決め、部品の側で定数を持たない。
 
+enum Role { MAIN, SUB, DANGER }
+
 ## 枠線の太さ = 短辺のこの比(下限〜上限)。
 const LINE_RATIO := 0.014
 const LINE_MIN := 1.25
@@ -58,7 +60,7 @@ const BRASS_INNER_LIGHT := Color(1, 1, 1, 0.55)
 const BRASS_INNER_MID := Color(1, 1, 1, 0.05)
 const BRASS_INNER_DARK := Color(0.3, 0.18, 0.04, 0.5)
 ## 押せない真鍮の面は藍へこのぶん沈める(明るいままだと押せるように見えるため)。
-const BRASS_DISABLED_SINK := 0.55
+const BRASS_DISABLED_SINK := 0.72
 
 ## 砂のバー。
 const SAND_INSET := 1.5
@@ -97,8 +99,6 @@ const HAIRLINE_ALPHA := 0.35
 const ENGRAVE_LIGHT := Color(1.0, 0.95, 0.78, 0.55)
 const ENGRAVE_DROP_RATIO := 0.035
 
-enum Role { MAIN, SUB, DANGER }
-
 
 # ---- 大きさから決まるもの ---------------------------------------------------
 static func line_w(rect: Rect2) -> float:
@@ -127,7 +127,9 @@ static func rr(rect: Rect2, corner: float) -> PackedVector2Array:
 	return UiPaint.rounded_rect_points_uniform(rect, rad, _corner_segments(rad))
 
 
-static func ellipse(center: Vector2, radii: Vector2, segments := ELLIPSE_SEGMENTS) -> PackedVector2Array:
+static func ellipse(
+	center: Vector2, radii: Vector2, segments := ELLIPSE_SEGMENTS
+) -> PackedVector2Array:
 	var points := PackedVector2Array()
 	for i in segments:
 		var angle := TAU * float(i) / float(segments)
@@ -357,12 +359,7 @@ static func brass(
 
 ## 任意の凸の形へ真鍮の面を張る。
 static func brass_shape(
-	ci: RID,
-	points: PackedVector2Array,
-	rect: Rect2,
-	pressed := 0.0,
-	lit := 0.0,
-	disabled := false
+	ci: RID, points: PackedVector2Array, rect: Rect2, pressed := 0.0, lit := 0.0, disabled := false
 ) -> void:
 	var stops := brass_stops()
 	var flat := [
@@ -384,11 +381,7 @@ static func brass_shape(
 
 ## 砂のバー: 彫り込みの溝に砂が溜まる。進み具合・HP・残り時間。
 static func sand_bar(
-	ci: RID,
-	rect: Rect2,
-	ratio: float,
-	light := UiPalette.SAND_HI,
-	deep := UiPalette.SAND_DEEP
+	ci: RID, rect: Rect2, ratio: float, light := UiPalette.SAND_HI, deep := UiPalette.SAND_DEEP
 ) -> void:
 	well(ci, rect, rect.size.y * 0.5)
 	if ratio <= 0.0:
@@ -452,10 +445,7 @@ static func round_face(
 	vgrad(
 		ci,
 		ellipse(center, Vector2(face, face)),
-		[
-			[0.0, UiPalette.INK_600.lightened(lit * HOVER_FACE_LIGHTEN)],
-			[1.0, UiPalette.INK_900]
-		],
+		[[0.0, UiPalette.INK_600.lightened(lit * HOVER_FACE_LIGHTEN)], [1.0, UiPalette.INK_900]],
 		true
 	)
 	glow(

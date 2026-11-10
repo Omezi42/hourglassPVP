@@ -1,50 +1,60 @@
 class_name SoloEntryInfo
 extends Control
 ## ホームの「ソロモード」の札に載せる中身(GameDesign.md 9章)。
-## 上に遠征の道の小さな地図、その下に見出し「ソロモード」、遠征とリーサルパズルの状態を凹んだ枠で1つずつ。
+## 上に彫り込みの中の遠征の道の小さな地図、その下に見出し「ソロモード」、遠征とリーサルパズルの状態を罫線で区切って1つずつ。
 ## 札(`HomeTile`)の子として全面に敷き、押下は札へ通す。
 
 const TITLE := "ソロモード"
-const TITLE_BASELINE := 212.0
-const TITLE_SIZE := 30
-const MAP_RECT := Rect2(40, 34, 0, 126)
-const MAP_INSET := 40.0
-## 地図の地(紺の紙)を道の外へはみ出させる幅。
-const MAP_PAPER_PAD := Vector2(14, 10)
-const MAP_PAPER := [[0.0, Color(0.10, 0.12, 0.22, 0.85)], [1.0, Color(0.05, 0.06, 0.12, 0.85)]]
-const ROAD := Color(0.86, 0.66, 0.30)
-const ROAD_ALPHA := 0.35
-const ROAD_WIDTH := 2.0
-const WALKED_WIDTH := 3.0
-const ROAD_DASH := 6.0
-const NODE_RADIUS := 7.0
-const FINAL_RADIUS := 12.0
-const NODE_RIM := 2.5
-const NODE_INK := Color(0.07, 0.05, 0.03, 0.9)
-const NODE_PASSED := Color(0.45, 0.42, 0.40)
-const NODE_WALKED := Color(0.62, 0.42, 0.15)
-const NODE_CURRENT := Color(1.0, 0.86, 0.5)
-const NODE_AHEAD := Color(0.70, 0.60, 0.42)
-const CURRENT_GLOW := 22.0
-const FINAL_EMBLEM := 14.0
+## 文字と余白。横 / 縦(GameDesign.md 9章「縦画面」の目安)。
+const PAD := UiPalette.S5 - UiPalette.S1
+const PORTRAIT_PAD := UiPalette.S4 + 2.0
+const HEAD_SIZE := UiPalette.T_HEAD
+const PORTRAIT_HEAD_SIZE := 30
+const BODY_SIZE := UiPalette.T_BODY
+const PORTRAIT_BODY_SIZE := 24
+const NOTE_SIZE := UiPalette.T_SMALL
+const PORTRAIT_NOTE_SIZE := 20
+const MIN_TEXT_SIZE := UiPalette.T_MICRO
+## 地図の彫り込み。札の内側の余白から少し外へ出す。
+const MAP_OUTSET := UiPalette.S1
+const MAP_HEIGHT := 150.0
+const PORTRAIT_MAP_HEIGHT := 128.0
+const MAP_CORNER := 10.0
+## 彫り込みの縁から道までの余白(左・上・右・下)。
+const ROUTE_INSET := [14.0, 20.0, 14.0, 16.0]
+const HEAD_GAP := UiPalette.S3
+const PORTRAIT_HEAD_GAP := UiPalette.S1 + 2.0
+const HEAD_LEADING := 1.45
+const LABEL_LEADING := 1.3
+const NOTE_LEADING := 1.25
+const BOTTOM_PAD := 6.0
+
+const ROAD_AHEAD := Color(1, 1, 1, 0.16)
+const ROAD_WIDTH := 1.0
+const WALKED_WIDTH := 2.0
+const ROAD_DASH := 4.0
+const NODE_RADIUS := 6.0
+const FINAL_RADIUS := 9.0
+const NODE_RING := 1.5
+const NODE_SEGMENTS := 20
+const NODE_EDGE := Color(1, 1, 1, 0.18)
+const CURRENT_GLOW_RADIUS := 22.0
+const CURRENT_GLOW := Color(1.0, 0.82, 0.45, 0.55)
 ## 遠征が無いときに描く道の形(段ごとの行き先の数)。隣り合う行き先どうしをつなぐ。
 const SAMPLE_COUNTS := [1, 2, 3, 2, 3, 1]
 const SAMPLE_LINK_REACH := 0.4
 
-const BOX_TOP := 222.0
-const BOX_INSET := 18.0
-const BOX_HEIGHT := 88.0
-const BOX_STEP := 98.0
-const BOX_PAD := 14.0
-const BOX_HEAD_BASELINE := 28.0
-const BOX_LINE_BASELINES := [54.0, 78.0]
-const BOX_HEAD_SIZE := 18
-const LINE_SIZE := 16
-const NOTE_SIZE := 14
-const HEAD_COLOR := Color(0.96, 0.82, 0.45)
+## 遠征が無いときの記録。縦は札の幅に目安の大きさで収まる短い言い方にする。
+const RECORD := "いちばん多く勝った数 %d ・ 踏破 %d回"
+const RECORD_SHORT := "最多 %d勝 ・ 踏破 %d回"
 const PUZZLE_LINE := "1手番で仕留める"
 const DAILY_OPEN := "今日の1問 まだ解いていません"
 const DAILY_DONE := "今日の1問 クリア済み"
+
+var portrait := false:
+	set(value):
+		portrait = value
+		queue_redraw()
 
 var _run: SoloRun = null
 var _best_wins := 0
@@ -83,76 +93,94 @@ func _notification(what: int) -> void:
 func _draw() -> void:
 	if _font == null:
 		return
-	_draw_map(Rect2(MAP_RECT.position, Vector2(size.x - MAP_INSET * 2.0, MAP_RECT.size.y)))
+	var ci := get_canvas_item()
+	var pad := PORTRAIT_PAD if portrait else PAD
+	var head := PORTRAIT_HEAD_SIZE if portrait else HEAD_SIZE
+	var width := size.x - pad * 2.0
+	var map := Rect2(
+		pad - MAP_OUTSET,
+		pad - MAP_OUTSET,
+		width + MAP_OUTSET * 2.0,
+		PORTRAIT_MAP_HEIGHT if portrait else MAP_HEIGHT
+	)
+	UiKit.well(ci, map, MAP_CORNER)
+	_draw_map(
+		map.grow_individual(-ROUTE_INSET[0], -ROUTE_INSET[1], -ROUTE_INSET[2], -ROUTE_INSET[3])
+	)
+	var head_top := map.end.y + (PORTRAIT_HEAD_GAP if portrait else HEAD_GAP)
 	draw_string(
 		_display,
-		Vector2(0.0, TITLE_BASELINE),
+		Vector2(pad, head_top + _display.get_ascent(head)),
 		TITLE,
 		HORIZONTAL_ALIGNMENT_CENTER,
-		size.x,
-		TITLE_SIZE,
-		UiPalette.TEXT_OFFWHITE
+		width,
+		head,
+		UiPalette.IVORY
 	)
-	_draw_box(0, "遠征", _expedition_lines())
-	_draw_box(1, "リーサルパズル", _puzzle_lines())
+	var top := head_top + head * HEAD_LEADING
+	var row_height := (size.y - BOTTOM_PAD - top) * 0.5
+	_draw_row(Rect2(pad, top, width, row_height), "遠征", _expedition_lines())
+	_draw_row(Rect2(pad, top + row_height, width, row_height), "リーサルパズル", _puzzle_lines())
 
 
-## 1行目は主な文、2行目は沈めた補足(琥珀は今日の1問がまだのとき)。
+## 1行目は主な文、2行目は補足(砂色は今日の1問がまだのとき)。
 func _expedition_lines() -> Array:
 	if _run == null:
 		return [
-			["作戦を選んで出発", EntryTilePaint.WELL_TEXT],
-			["いちばん多く勝った数 %d ・ 踏破 %d回" % [_best_wins, _clears], EntryTilePaint.WELL_MUTED],
+			["作戦を選んで出発", UiPalette.IVORY],
+			[(RECORD_SHORT if portrait else RECORD) % [_best_wins, _clears], UiPalette.MUTED],
 		]
 	return [
-		["%s で遠征中" % CardCpuDecks.name_of(_run.theme_id), EntryTilePaint.ACCENT_TEXT],
-		["%d勝 ・ HP %d/%d" % [_run.wins, _run.hp, _run.max_hp], EntryTilePaint.WELL_MUTED],
+		["%s ・ %d勝" % [CardCpuDecks.name_of(_run.theme_id), _run.wins], UiPalette.IVORY],
+		["HP %d / %d" % [_run.hp, _run.max_hp], UiPalette.MUTED],
 	]
 
 
 func _puzzle_lines() -> Array:
-	var lines: Array = [[PUZZLE_LINE, EntryTilePaint.WELL_TEXT]]
+	var lines: Array = [[PUZZLE_LINE, UiPalette.IVORY]]
 	if _daily == 1:
-		lines.append([DAILY_OPEN, UiPalette.GLOW_AMBER])
+		lines.append([DAILY_OPEN, UiPalette.SAND_HI])
 	elif _daily == 2:
-		lines.append([DAILY_DONE, EntryTilePaint.WELL_MUTED])
+		lines.append([DAILY_DONE, UiPalette.MUTED])
 	return lines
 
 
-func _draw_box(index: int, head: String, lines: Array) -> void:
-	var rect := Rect2(
-		BOX_INSET, BOX_TOP + BOX_STEP * float(index), size.x - BOX_INSET * 2.0, BOX_HEIGHT
-	)
-	EntryTilePaint.draw_well(self, rect, false)
-	var width := rect.size.x - BOX_PAD * 2.0
-	# 「遠征」の字は見出し用の明朝体のサブセットに無い。2つの枠の見出しを揃えて本文書体で描く。
+func _draw_row(rect: Rect2, label: String, lines: Array) -> void:
+	var body := PORTRAIT_BODY_SIZE if portrait else BODY_SIZE
+	var note := PORTRAIT_NOTE_SIZE if portrait else NOTE_SIZE
+	UiKit.rule(get_canvas_item(), rect.position, Vector2(rect.end.x, rect.position.y))
+	var block := note * LABEL_LEADING + body * LABEL_LEADING + note * NOTE_LEADING
+	var at := Vector2(rect.position.x, rect.position.y + (rect.size.y - block) * 0.5)
+	# 「遠征」の字は見出し用の明朝体のサブセットに無い。2つの行の小見出しを本文書体で揃える。
+	_text(label, at, note, UiPalette.GOLD, rect.size.x)
+	at.y += note * LABEL_LEADING
+	_text(str(lines[0][0]), at, body, lines[0][1], rect.size.x)
+	if lines.size() > 1:
+		at.y += body * LABEL_LEADING
+		_text(str(lines[1][0]), at, note, lines[1][1], rect.size.x)
+
+
+## `at` は行の左上。幅へ収まらなければ下限まで縮める。
+func _text(value: String, at: Vector2, px: int, color: Color, width: float) -> void:
+	var fitted := px
+	while (
+		fitted > MIN_TEXT_SIZE
+		and _font.get_string_size(value, HORIZONTAL_ALIGNMENT_LEFT, -1, fitted).x > width
+	):
+		fitted -= 1
 	draw_string(
 		_font,
-		rect.position + Vector2(BOX_PAD, BOX_HEAD_BASELINE),
-		head,
+		at + Vector2(0, _font.get_ascent(px)),
+		value,
 		HORIZONTAL_ALIGNMENT_LEFT,
-		width,
-		BOX_HEAD_SIZE,
-		HEAD_COLOR
+		-1,
+		fitted,
+		color
 	)
-	for i in mini(lines.size(), BOX_LINE_BASELINES.size()):
-		draw_string(
-			_font,
-			rect.position + Vector2(BOX_PAD, BOX_LINE_BASELINES[i]),
-			str(lines[i][0]),
-			HORIZONTAL_ALIGNMENT_LEFT,
-			width,
-			LINE_SIZE if i == 0 else NOTE_SIZE,
-			lines[i][1]
-		)
 
 
 ## 遠征の道を下から上へ6段(GameDesign.md 27章の道を縮めたもの)。遠征が無いときは道の形だけを沈めて描く。
 func _draw_map(area: Rect2) -> void:
-	var paper := Rect2(area.position - MAP_PAPER_PAD, area.size + MAP_PAPER_PAD * 2.0)
-	UiPaint.fill_gradient_polygon(
-		get_canvas_item(), UiPaint.rounded_rect_points_uniform(paper, 8, 6), paper, MAP_PAPER
-	)
 	var counts: Array = []
 	var links: Array = []
 	if _run != null and not _run.route.is_empty():
@@ -170,40 +198,40 @@ func _draw_map(area: Rect2) -> void:
 					var dx := absf(_node_x(a, counts[col]) - _node_x(b, counts[col + 1]))
 					if dx <= SAMPLE_LINK_REACH:
 						links.append([col, a, b])
-	var rid := get_canvas_item()
+	var ci := get_canvas_item()
 	for link in links:
-		var walked := _walked(link[0], link[1]) and _walked(link[0] + 1, link[2])
-		ShapePaint.dashed_line(
-			rid,
-			_node_at(area, counts, link[0], link[1]),
-			_node_at(area, counts, link[0] + 1, link[2]),
-			Color(ROAD, 1.0 if walked else ROAD_ALPHA),
-			WALKED_WIDTH if walked else ROAD_WIDTH,
-			ROAD_DASH
-		)
+		var from := _node_at(area, counts, link[0], link[1])
+		var to := _node_at(area, counts, link[0] + 1, link[2])
+		if _walked(link[0], link[1]) and _walked(link[0] + 1, link[2]):
+			ShapePaint.polyline(
+				ci, PackedVector2Array([from, to]), UiPalette.GOLD, WALKED_WIDTH, true
+			)
+		else:
+			ShapePaint.dashed_line(ci, from, to, ROAD_AHEAD, ROAD_WIDTH, ROAD_DASH)
 	for col in counts.size():
 		for row in counts[col]:
 			_draw_node(area, counts, col, row)
 
 
+## 通った駒は真鍮、いまの駒は光らせ、最終戦の駒は一回り大きく真鍮の輪で囲う。
 func _draw_node(area: Rect2, counts: Array, col: int, row: int) -> void:
+	var ci := get_canvas_item()
 	var at := _node_at(area, counts, col, row)
 	var final := col == counts.size() - 1
-	var radius := FINAL_RADIUS if final else NODE_RADIUS
-	var fill := NODE_AHEAD
-	if _run == null:
-		fill = NODE_PASSED
-	elif col == _run.chosen.size() - 1 and _walked(col, row):
-		HomeProps.glow(self, at, CURRENT_GLOW)
-		fill = NODE_CURRENT
-	elif _walked(col, row):
-		fill = NODE_WALKED
-	elif col < _run.chosen.size():
-		fill = NODE_PASSED
-	ShapePaint.circle(get_canvas_item(), at, radius + NODE_RIM, NODE_INK)
-	ShapePaint.circle(get_canvas_item(), at, radius, fill)
-	if final:
-		UiPaint.draw_emblem(get_canvas_item(), UiPaint.Emblem.STRIKE, at, FINAL_EMBLEM)
+	var rad := FINAL_RADIUS if final else NODE_RADIUS
+	var radii := Vector2(rad, rad)
+	var walked := _walked(col, row)
+	if walked and col == _run.chosen.size() - 1:
+		UiKit.glow(ci, at, Vector2.ONE * CURRENT_GLOW_RADIUS, CURRENT_GLOW)
+	UiKit.fill(
+		ci, UiKit.ellipse(at, radii + Vector2.ONE * NODE_RING, NODE_SEGMENTS), UiPalette.INK_900
+	)
+	var points := UiKit.ellipse(at, radii, NODE_SEGMENTS)
+	if walked:
+		UiKit.vgrad(ci, points, [[0.0, UiPalette.GOLD_HI], [1.0, UiPalette.BRASS]], true)
+		return
+	UiKit.fill(ci, points, UiPalette.INK_500)
+	UiKit.stroke(ci, points, UiPalette.BRASS if final else NODE_EDGE, UiKit.LINE_MIN)
 
 
 func _walked(col: int, row: int) -> bool:

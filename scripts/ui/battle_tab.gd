@@ -31,8 +31,11 @@ const BUSY_DOTS_MAX := 3
 const BUSY_DOTS_INTERVAL := 0.5
 ## 待っている人の数を読み直す間隔(ホームが見えている間だけ)。
 const WAITING_POLL_SECONDS := 15.0
-const STATUS_FONT := 22
+const STATUS_FONT := UiPalette.T_SMALL
 const PORTRAIT_STATUS_FONT := 24
+## 文言の行は背景の絵の上へ直に載るため、暗い縁取りで読めるようにする。
+const STATUS_OUTLINE := 6
+const STATUS_OUTLINE_COLOR := Color(0, 0, 0, 0.75)
 
 const BATTLE_TITLE := "対戦する"
 const RESUME_TITLE := "対局へ戻る"
@@ -45,10 +48,9 @@ const DAILY_DONE := "今日の1問 クリア済み"
 const EXPEDITION_NEW := "作戦を選んで出発"
 const EXPEDITION_CONTINUE := "続きから進める"
 const MAIN_FONT_SIZE := 40
-## 「対戦する」ボタンの見出しと副題(待機の行)の大きさ。
-const BATTLE_FONT := 34
-const BATTLE_SUB_FONT := 18
-const PORTRAIT_BATTLE_FONT := 40
+## 「対戦する」ボタンの見出しの大きさ。
+const BATTLE_FONT := UiPalette.T_TITLE
+const PORTRAIT_BATTLE_FONT := UiPalette.T_HERO
 const PICKER_FONT_SIZE := 30
 const PORTRAIT_MARK_SCALE := 1.5
 const DISABLED_ALPHA := 0.55
@@ -58,6 +60,8 @@ var _busy := false
 var _busy_dots_timer: Timer
 var _busy_dot_count := 0
 var _status_base_text := ""
+## 「対戦する」の下の行に出す待機の文言(通信待ち・デッキ不足の文言が無いときに出す)。
+var _waiting_text := ""
 var _waiting_timer: Timer
 ## 切断した対局へ戻れるか(GameDesign.md 11章)。立っている間は「対戦する」を押すと選択を挟まず復帰する。
 var _resume_pending := false
@@ -108,6 +112,11 @@ func _take_over_status_label() -> void:
 	add_child(status_label)
 	margin.queue_free()
 	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	status_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	status_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	status_label.add_theme_color_override("font_color", UiPalette.SAND_HI)
+	status_label.add_theme_color_override("font_outline_color", STATUS_OUTLINE_COLOR)
+	status_label.add_theme_constant_override("outline_size", STATUS_OUTLINE)
 
 
 ## 中央は札の枠を持たず、台座の砂時計・段位の帯・「対戦する」ボタンを積む(GameDesign.md 9章)。
@@ -210,9 +219,7 @@ func _layout() -> void:
 	_place(_battle_info, HomeLayout.rank_plate_rect(_portrait))
 	_place(_stand, HomeLayout.hourglass_stand_rect(_portrait))
 	HomeTile.set_portrait_text(_battle_tile, _portrait, PORTRAIT_BATTLE_FONT, BATTLE_FONT)
-	_battle_tile.subtitle_lines = 1
-	if not _portrait:
-		_battle_tile.subtitle_size = BATTLE_SUB_FONT
+	_solo_info.portrait = _portrait
 	_place(_solo_tile, HomeLayout.solo_rect(_portrait))
 	# 縦のモーダルでは「ランクマッチ」が横長になり、徽章を右・文字を左に置く組み方へ戻す。見出しは札が描く。
 	_ranked_info.tall = not _portrait
@@ -232,19 +239,19 @@ func _place(tile: Control, rect: Rect2) -> void:
 	tile.size = rect.size
 
 
-## 「対戦する」ボタンの見出しと副題(待機の行)。モーダルの横長の札だけは見出しを `HomeTile` が描く。
+## 「対戦する」ボタンの見出しと、その下の待機の行。モーダルの横長の札だけは見出しを `HomeTile` が描く。
 func _refresh_battle_title() -> void:
 	_battle_tile.title = RESUME_TITLE if _resume_pending else BATTLE_TITLE
-	_battle_tile.subtitle_accent = _resume_pending
 	if _resume_pending:
-		_battle_tile.set_subtitle("途中の対局が残っています")
+		_waiting_text = "途中の対局が残っています"
 	elif _waiting > 0:
-		_battle_tile.set_subtitle("いま %d人が相手を待っています" % _waiting)
+		_waiting_text = "いま %d人が相手を待っています" % _waiting
 	elif _waiting == 0:
-		_battle_tile.set_subtitle("待っている間はCPUと対戦できます")
+		_waiting_text = "待っている間はCPUと対戦できます"
 	else:
-		_battle_tile.set_subtitle("")
+		_waiting_text = ""
 	_battle_tile.queue_redraw()
+	_refresh_status_display()
 	_ranked_tile.title = RANKED_TITLE if _portrait else ""
 	_ranked_tile.queue_redraw()
 
@@ -395,7 +402,7 @@ func _refresh_status_display() -> void:
 	var text := _status_base_text
 	if _busy:
 		text += ".".repeat(_busy_dot_count)
-	status_label.text = text
+	status_label.text = _waiting_text if text.is_empty() else text
 
 
 func _on_busy_dots_timeout() -> void:

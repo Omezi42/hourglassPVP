@@ -9,21 +9,13 @@ extends Control
 const LABEL := "つぎはここ"
 const PULSE_PERIOD := 1.6
 const GLOW_GROW := 3.0
-const GLOW_RADIUS := 12.0
 const GLOW_WIDTH := 2.5
 const HALO_WIDTH := 7.0
-const TAG_FONT_SIZE := 14
-const TAG_PADDING := Vector2(12.0, 5.0)
-const TAG_RADIUS := 5.0
+const TAG_FONT_SIZE := 13
+const TAG_PADDING := Vector2(14.0, 5.0)
 ## 小札を札の上端へ半分掛ける量と、右端からの寄せ。
 const TAG_OVERHANG := 0.5
-const TAG_RIGHT := 18.0
-const TAG_TEXT := Color(0.30, 0.20, 0.07)
-const TAG_STOPS := [
-	[0.0, Color(0.98, 0.86, 0.52)],
-	[0.5, Color(0.86, 0.66, 0.30)],
-	[1.0, Color(0.62, 0.44, 0.16)],
-]
+const TAG_RIGHT := 12.0
 
 ## 札の印の大きさの倍率(縦画面で文字の目安を満たすため。GameDesign.md 9章「縦画面」)。
 var tag_scale := 1.0
@@ -62,9 +54,8 @@ func attach_to(tile: Control) -> void:
 func _draw() -> void:
 	var ci := get_canvas_item()
 	var pulse := (sin(_time * TAU / PULSE_PERIOD) + 1.0) * 0.5
-	var ring := UiPaint.rounded_rect_points_uniform(
-		Rect2(Vector2.ZERO, size).grow(GLOW_GROW), GLOW_RADIUS, 6
-	)
+	var bounds := Rect2(Vector2.ZERO, size)
+	var ring := UiKit.rr(bounds.grow(GLOW_GROW), UiKit.radius(bounds) + GLOW_GROW)
 	ring.append(ring[0])
 	ShapePaint.polyline(
 		get_canvas_item(), ring, Color(UiPalette.GLOW_AMBER, 0.12 + 0.18 * pulse), HALO_WIDTH, true
@@ -78,28 +69,9 @@ func _draw() -> void:
 func _draw_tag(ci: RID) -> void:
 	var font_size := roundi(TAG_FONT_SIZE * tag_scale)
 	var padding := TAG_PADDING * tag_scale
-	var radius := TAG_RADIUS * tag_scale
 	var text_size := _font.get_string_size(LABEL, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
 	var tag_size := Vector2(text_size.x, float(font_size)) + padding * 2.0
 	var rect := Rect2(
 		Vector2(size.x - tag_size.x - TAG_RIGHT * tag_scale, -tag_size.y * TAG_OVERHANG), tag_size
 	)
-	var points := UiPaint.rounded_rect_points_uniform(rect, radius, 4)
-	ShapePaint.colored_polygon(
-		get_canvas_item(),
-		UiPaint.rounded_rect_points_uniform(rect.grow(1.5), radius + 1.5, 4),
-		UiPalette.OUTLINE_DARK
-	)
-	UiPaint.fill_gradient_polygon(ci, points, rect, TAG_STOPS)
-	UiPaint.draw_bevel(ci, points, UiPalette.BRASS_HIGHLIGHT, UiPalette.BRASS_DARK, 1.5, false)
-	var baseline := rect.position + Vector2(padding.x, padding.y + font_size * 0.86)
-	draw_string(
-		_font,
-		baseline + Vector2(0.0, 1.0),
-		LABEL,
-		HORIZONTAL_ALIGNMENT_LEFT,
-		-1,
-		font_size,
-		Color(1.0, 0.95, 0.8, 0.5)
-	)
-	draw_string(_font, baseline, LABEL, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, TAG_TEXT)
+	UiKit.tag(ci, _font, rect, LABEL, font_size)

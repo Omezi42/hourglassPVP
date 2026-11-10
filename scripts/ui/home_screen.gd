@@ -21,27 +21,26 @@ signal ranked_match_deck_requested
 signal room_match_requested
 signal account_requested
 
-const PORTRAIT_BANNER_RECT := Rect2(24, 108, 672, 32)
+const PORTRAIT_BANNER_RECT := Rect2(24, 102, 672, 28)
 const BANNER_FONT := 14
 const PORTRAIT_BANNER_FONT := 22
 
-## 残高のチップの拡大率。ヘッダーは面積に余裕があり、残高は押す前に分かるべきことの代表(9章)。
-const CURRENCY_CHIP_SCALE := 1.55
 ## 名札の大きさ。背丈はヘッダーの部品で揃える(`HomeLayout.header_height()`)。
-const NAMEPLATE_SIZE := Vector2(300, HomeLayout.HEADER_HEIGHT)
-const BACKGROUND := preload("res://assets/backgrounds/processed/battle/background.png")
+const NAMEPLATE_SIZE := Vector2(292, HomeLayout.HEADER_HEIGHT)
+## 夜の天文台の絵(GameDesign.md 9章)。
+const BACKGROUND := preload("res://assets/backgrounds/processed/home/background.png")
 
 ## 右上のメニュー(ハンバーガー)ボタンのスタイル。
 const MENU_BUTTON_GROUP := "icon_menu"
 ## メニューの左隣に置くルールブック(開いた本の紋章)。大きさはメニューと揃える。
 const RULEBOOK_BUTTON_GROUP := "icon_book"
-const RULEBOOK_GAP := 12.0
 ## ルールブックの左隣に置くお知らせ(手紙の紋章。GameDesign.md 33章)。
 const NOTICE_BUTTON_GROUP := "icon_letter"
 ## 縦で名札の代わりに置く、人の形の紋章の正方形ボタン(GameDesign.md 9章「縦のタイトル・ホーム」)。
 const PROFILE_BUTTON_GROUP := "icon_person"
-## 赤い丸の中心(ボタンの右上の角から内側へ)。
-const NOTICE_BADGE_INSET := Vector2(6, 6)
+## 赤い丸の中心(丸いボタンの中心から右上へ、半径に対する比)と大きさ(同)。
+const NOTICE_BADGE_OFFSET := 0.72
+const NOTICE_BADGE_RATIO := 0.36
 
 var _nameplate_button: AccountNameplateButton
 var _profile_button: Button
@@ -134,7 +133,6 @@ func _build_account_bar() -> void:
 	# .tscn は書き換えず、同じ場所へチップを挿して元のラベルを隠す。
 	currency_label.visible = false
 	_currency_chip = CurrencyChip.new()
-	_currency_chip.scale_factor = CURRENCY_CHIP_SCALE
 	$AccountBar.add_child(_currency_chip)
 	$AccountBar.move_child(_currency_chip, $AccountBar.get_children().find(currency_label) + 1)
 
@@ -181,10 +179,11 @@ func _place_mission_tile() -> void:
 func _place_header() -> void:
 	var margin := HomeLayout.header_margin(_portrait)
 	var height := HomeLayout.header_height(_portrait)
-	var top := HomeLayout.HEADER_TOP
+	var top := HomeLayout.header_top(_portrait)
+	var gap := HomeLayout.header_gap(_portrait)
 	var buttons: Array[Button] = [settings_button, _rulebook_button, _notice_button]
 	for i in buttons.size():
-		var right := margin + (height + RULEBOOK_GAP) * float(i)
+		var right := margin + (height + gap) * float(i)
 		var button := buttons[i]
 		button.custom_minimum_size = Vector2(height, height)
 		button.offset_left = -(right + height)
@@ -195,8 +194,9 @@ func _place_header() -> void:
 	bar.offset_left = margin
 	bar.offset_top = top
 	bar.offset_bottom = top + height
-	bar.offset_right = -(margin + (height + RULEBOOK_GAP) * float(buttons.size()) + RULEBOOK_GAP)
-	_currency_chip.height_override = height
+	bar.offset_right = -(margin + (height + gap) * float(buttons.size()) + UiPalette.S1)
+	_currency_chip.height_override = height - UiPalette.S1
+	_profile_button.custom_minimum_size = Vector2(height, height)
 
 
 func _build_learn_menu() -> void:
@@ -248,8 +248,15 @@ func _draw_notice_badge() -> void:
 	var gifts := GiftLibrary.unclaimed_count(DailyMissionService.today())
 	if gifts <= 0 and AnnouncementLibrary.unread_count() <= 0:
 		return
-	var at := Vector2(_notice_badge.size.x - NOTICE_BADGE_INSET.x, NOTICE_BADGE_INSET.y)
-	HomeTile.draw_badge(_notice_badge, at, gifts)
+	var rad := _notice_badge.size.x * 0.5
+	var at := Vector2(rad, rad) + Vector2(rad, -rad) * NOTICE_BADGE_OFFSET
+	UiKit.badge(
+		_notice_badge.get_canvas_item(),
+		_notice_badge.get_theme_default_font(),
+		at,
+		rad * NOTICE_BADGE_RATIO,
+		str(gifts) if gifts > 0 else ""
+	)
 
 
 func _on_notice_requested() -> void:
@@ -278,6 +285,7 @@ func apply_orientation(portrait: bool) -> void:
 	# 縦は名札まで載せると幅に収まらないため、人の形の紋章だけの正方形にする。
 	_nameplate_button.visible = not portrait
 	_profile_button.visible = portrait
+	_mission_info.portrait = portrait
 	_place_header()
 	_place_mission_tile()
 	_place_sunday_banner()
@@ -362,20 +370,20 @@ func _uid() -> String:
 	return ""
 
 
-## ホーム画面左上の名札ボタン(真鍮テクスチャ・アイコン・称号・名前)。横だけで使う。
+## ホーム画面左上の名札ボタン(硝子の面にアイコンの印・称号・名前)。横だけで使う。
 class AccountNameplateButton:
 	extends Button
-	const ICON_FRAME := 46.0
-	const ICON := 34.0
-	const TITLE_FONT := 13
-	const NAME_FONT := 21
+	const ICON_FRAME := 44.0
+	const ICON_RATIO := 0.62
+	const TITLE_FONT := UiPalette.T_MICRO
+	const NAME_FONT := UiPalette.T_LEAD
 	const PORTRAIT_NAMEPLATE_SIZE := Vector2(290, HomeLayout.PORTRAIT_HEADER_HEIGHT)
 	const PORTRAIT_ICON_FRAME := 60.0
-	const PORTRAIT_ICON := 44.0
 	const PORTRAIT_TITLE_FONT := 20
 	const PORTRAIT_NAME_FONT := 28
-	var _icon_rect: TextureRect
-	var _icon_frame: PanelContainer
+	const SIDE_PAD := 4.0
+	var _icon: Texture2D
+	var _icon_frame: Control
 	var _title_label: Label
 	var _name_label: Label
 
@@ -388,31 +396,17 @@ class AccountNameplateButton:
 		var hbox := HBoxContainer.new()
 		hbox.set_anchors_preset(Control.PRESET_FULL_RECT)
 		hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		hbox.add_theme_constant_override("separation", 12)
-		hbox.offset_left = 16
-		hbox.offset_right = -16
+		hbox.add_theme_constant_override("separation", int(UiPalette.S3))
+		hbox.offset_left = SIDE_PAD
+		hbox.offset_right = -UiPalette.S4
 		hbox.alignment = BoxContainer.ALIGNMENT_BEGIN
 
-		# アイコン枠
-		_icon_frame = PanelContainer.new()
+		# アイコンは暗い円に真鍮の細い縁の印として描く。
+		_icon_frame = Control.new()
 		_icon_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_icon_frame.custom_minimum_size = Vector2.ONE * ICON_FRAME
 		_icon_frame.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		var frame_style := StyleBoxFlat.new()
-		frame_style.bg_color = Color(0.1, 0.08, 0.06, 0.9)
-		frame_style.border_color = UiPalette.BRASS_MID
-		frame_style.set_border_width_all(1)
-		frame_style.set_corner_radius_all(int(ICON_FRAME * 0.5))
-		_icon_frame.add_theme_stylebox_override("panel", frame_style)
-
-		_icon_rect = TextureRect.new()
-		_icon_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		_icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		_icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		_icon_rect.custom_minimum_size = Vector2.ONE * ICON
-		_icon_rect.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		_icon_rect.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		_icon_frame.add_child(_icon_rect)
+		_icon_frame.draw.connect(_draw_icon)
 		hbox.add_child(_icon_frame)
 
 		# 称号と名前の縦並び
@@ -420,33 +414,41 @@ class AccountNameplateButton:
 		vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		vbox.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		vbox.add_theme_constant_override("separation", 2)
+		vbox.add_theme_constant_override("separation", -2)
 
 		_title_label = Label.new()
 		_title_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_title_label.add_theme_font_size_override("font_size", TITLE_FONT)
-		_title_label.add_theme_color_override("font_color", UiPalette.BRASS_HIGHLIGHT)
+		_title_label.add_theme_color_override("font_color", UiPalette.GOLD)
 		_title_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		vbox.add_child(_title_label)
 
 		_name_label = Label.new()
 		_name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_name_label.add_theme_font_size_override("font_size", NAME_FONT)
-		_name_label.add_theme_color_override("font_color", UiPalette.TEXT_OFFWHITE)
+		_name_label.add_theme_color_override("font_color", UiPalette.IVORY)
 		_name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		vbox.add_child(_name_label)
 
 		hbox.add_child(vbox)
 		add_child(hbox)
 
+	func _draw_icon() -> void:
+		var rad := _icon_frame.size.x * 0.5
+		var center := _icon_frame.size * 0.5
+		UiKit.seal(_icon_frame.get_canvas_item(), center, rad - UiKit.SEAL_RIM_MAX, null)
+		if _icon != null:
+			var side := rad * 2.0 * ICON_RATIO
+			_icon_frame.draw_texture_rect(
+				_icon, Rect2(center - Vector2(side, side) * 0.5, Vector2(side, side)), false
+			)
+
 	## 縦では称号・名前を文字の目安(GameDesign.md 9章「縦画面」)まで大きくする。
 	func set_portrait(portrait: bool) -> void:
 		custom_minimum_size = PORTRAIT_NAMEPLATE_SIZE if portrait else NAMEPLATE_SIZE
-		var icon_frame := PORTRAIT_ICON_FRAME if portrait else ICON_FRAME
-		_icon_frame.custom_minimum_size = Vector2.ONE * icon_frame
-		var frame_style := _icon_frame.get_theme_stylebox("panel") as StyleBoxFlat
-		frame_style.set_corner_radius_all(int(icon_frame * 0.5))
-		_icon_rect.custom_minimum_size = Vector2.ONE * (PORTRAIT_ICON if portrait else ICON)
+		_icon_frame.custom_minimum_size = (
+			Vector2.ONE * (PORTRAIT_ICON_FRAME if portrait else ICON_FRAME)
+		)
 		_title_label.add_theme_font_size_override(
 			"font_size", PORTRAIT_TITLE_FONT if portrait else TITLE_FONT
 		)
@@ -455,7 +457,8 @@ class AccountNameplateButton:
 		)
 
 	func update_profile(display_name: String, icon_id: String, title_id: String) -> void:
-		_icon_rect.texture = UserProfileLibrary.get_icon_texture(icon_id)
+		_icon = UserProfileLibrary.get_icon_texture(icon_id)
+		_icon_frame.queue_redraw()
 		var title_text := UserProfileLibrary.get_title_display(title_id)
 		_title_label.text = title_text
 		_title_label.visible = not title_text.is_empty()

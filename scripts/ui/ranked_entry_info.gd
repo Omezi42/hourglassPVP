@@ -8,6 +8,7 @@ extends Control
 ## 札(`HomeTile`)の子として全面に敷き、押下は札へ通す。彫り文字と凹んだ行は `EntryTilePaint` と共用する。
 
 ## 真鍮へ彫り込んだ文字: 本体の暗色と、彫りの下縁に返る光。
+const STAR_EMPTY_DARK := Color(0, 0, 0, 0.35)
 const STAR_EMPTY_FILL := Color(0.22, 0.13, 0.05, 0.38)
 const LIVE_DOT := Color(0.97, 0.40, 0.27)
 const RESUME_DOT := Color(1.0, 0.78, 0.34)
@@ -24,18 +25,17 @@ const STAR_SPACING := 2.7
 const PULSE_SPEED := 3.2
 
 ## ホーム中央の段位の帯(`plate`)。大きさは帯の背丈に対する比で決める(横と縦で背丈が違うため)。
-const PLATE_FILL := Color(0.04, 0.035, 0.06, 0.78)
-const PLATE_RIM := Color(0.80, 0.62, 0.30, 0.55)
-const PLATE_TEXT := Color(0.96, 0.94, 0.89)
-const PLATE_DIM := Color(0.82, 0.76, 0.64)
+const PLATE_LIFT := 0.7
+const PLATE_ALPHA := 0.80
+## これ以上の幅の帯(縦)は、シーズンの残り日数を右端へ分ける。
+const PLATE_SPLIT_WIDTH := 600.0
 const PLATE_MEDAL_RATIO := 0.36
 const PLATE_GAP_RATIO := 0.18
 const PLATE_TIER_RATIO := 0.36
-const PLATE_LINE_RATIO := 0.25
+const PLATE_LINE_RATIO := 0.235
 const PLATE_TIER_Y := 0.46
 const PLATE_LINE_Y := 0.8
 const PLATE_STAR_RATIO := 0.42
-const PLATE_CORNER_SEGMENTS := 8
 ## モーダルの縦長の札(見出しを上に置き、待機の行を持たない)。
 const TOP_HEAD_Y := 0.17
 const TOP_MEDAL_Y := 0.45
@@ -136,15 +136,12 @@ func _draw_tall() -> void:
 	_engraved_center(_next_line(), h * TOP_NEXT_Y, TOP_NEXT_SIZE, _font)
 
 
-## 暗い帯に 徽章・段位名・★ を1行目、次の段位まで・シーズンの残り日数を2行目に置く。
+## 硝子の帯に 徽章・段位名・星 を1行目、次の段位まで・シーズンの残り日数を2行目に置く。
+## 縦は幅があるので、シーズンの残り日数を2行目の右端へ分ける。
 func _draw_plate() -> void:
 	var ci := get_canvas_item()
 	var h := size.y
-	var outline := UiPaint.rounded_rect_points_uniform(
-		Rect2(Vector2.ZERO, size), h * 0.5, PLATE_CORNER_SEGMENTS
-	)
-	ShapePaint.colored_polygon(ci, outline, PLATE_FILL)
-	ShapePaint.polyline(ci, RankMedal.closed(outline), PLATE_RIM, 1.5, true)
+	UiKit.glass(ci, Rect2(Vector2.ZERO, size), h * 0.5, PLATE_LIFT, PLATE_ALPHA)
 	var radius := h * PLATE_MEDAL_RATIO
 	# 徽章は帯の左端の丸みと同心に置く。
 	var medal := Vector2(h * 0.5, h * 0.5)
@@ -159,7 +156,7 @@ func _draw_plate() -> void:
 		HORIZONTAL_ALIGNMENT_LEFT,
 		-1,
 		tier_size,
-		PLATE_TEXT
+		UiPalette.IVORY
 	)
 	if _tier != RankRules.PLATINUM_KEY:
 		var star := float(tier_size) * PLATE_STAR_RATIO
@@ -168,15 +165,28 @@ func _draw_plate() -> void:
 		var first := left + tier_w + h * PLATE_GAP_RATIO + star
 		var center_x := first + star * STAR_SPACING * float(need - 1) * 0.5
 		_draw_stars(Vector2(center_x, h * PLATE_TIER_Y - star), star, true)
+	var line_size := int(h * PLATE_LINE_RATIO)
+	var season := "シーズン終了まで %d日" % _days_left
+	var wide := size.x >= PLATE_SPLIT_WIDTH
 	draw_string(
 		_font,
 		Vector2(left, h * PLATE_LINE_Y),
-		"%s ・ シーズン終了まで %d日" % [_next_line(), _days_left],
+		_next_line() if wide else "%s ・ %s" % [_next_line(), season],
 		HORIZONTAL_ALIGNMENT_LEFT,
 		-1,
-		int(h * PLATE_LINE_RATIO),
-		PLATE_DIM
+		line_size,
+		UiPalette.MUTED
 	)
+	if wide:
+		draw_string(
+			_font,
+			Vector2(0.0, h * PLATE_LINE_Y),
+			season,
+			HORIZONTAL_ALIGNMENT_RIGHT,
+			size.x - h * 0.5,
+			line_size,
+			UiPalette.MUTED
+		)
 
 
 func _draw_medal_column(center_x: float, center_y: float, radius: float) -> void:
@@ -213,7 +223,7 @@ func _next_line() -> String:
 		return "レート %d" % _rating
 	var need := RankRules.star_requirement(_tier)
 	var next_tier: String = RankRules.advance_stars(_tier, need)["tier"]
-	return "あと★%dつで %s" % [maxi(need - _stars, 1), RankRules.display_name(next_tier)]
+	return "あと星%dつで %s" % [maxi(need - _stars, 1), RankRules.display_name(next_tier)]
 
 
 func _draw_medal(center: Vector2, radius: float) -> void:
@@ -237,7 +247,8 @@ func _draw_stars(center: Vector2, radius: float, on_dark := false) -> void:
 		var points := RankMedal.star_points(at, radius)
 		var closed := RankMedal.closed(points)
 		if on_dark:
-			ShapePaint.polyline(get_canvas_item(), closed, PLATE_DIM, outline, true)
+			ShapePaint.colored_polygon(get_canvas_item(), points, STAR_EMPTY_DARK)
+			ShapePaint.polyline(get_canvas_item(), closed, UiPalette.BRASS, outline, true)
 			continue
 		ShapePaint.colored_polygon(get_canvas_item(), points, STAR_EMPTY_FILL)
 		ShapePaint.polyline(

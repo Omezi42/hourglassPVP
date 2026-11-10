@@ -29,7 +29,5 @@ func _notification(what: int) -> void:
 
 
 func _draw() -> void:
-	var full := PackedVector2Array(
-		[Vector2.ZERO, Vector2(size.x, 0.0), size, Vector2(0.0, size.y)]
-	)
+	var full := PackedVector2Array([Vector2.ZERO, Vector2(size.x, 0.0), size, Vector2(0.0, size.y)])
 	ShapePaint.gradient_convex(get_canvas_item(), full, STOPS)
