@@ -1,6 +1,6 @@
 # 10.10 対局中演出・QOL(GameDesign.md 9章)
 
-対局の緊張感・操作性・状況把握を支援する演出・UI群。既存のコード描画(UiPalette/真鍮・琥珀スタイル)に完全準拠する。
+対局の緊張感・操作性・状況把握を支援する演出・UI群。コード描画は共通の言語(`UiPalette` / `UiKit`。4.0節)に従う。
 
 | クラス | 責務 |
 |---|---|
@@ -21,12 +21,12 @@
 
 | クラス | 責務 |
 |---|---|
-| `MatchBackdrop`(`scripts/ui/match_backdrop.gd`) | 対局画面専用の下地。石の広間(`RoomPaint` の部品を薄く)/ 吊りランプ(子の `SwingingLamp`。鎖の上端を支点に `rotation` だけで揺らす減衰振り子。上の情報帯がイベントを取るため、触れた判定は毎フレームのポインタ位置で行う)/ 卓の中心の光だまり(放射グラデーションの `GradientTexture2D` を1枚。同心の楕円を重ねると段が見える)/ 卓・情報帯・手札・行動の列への落ち影 / 四辺のビネット。`ScreenBackdrop.PLAIN` の代わりに `_build()` の先頭で足す |
+| `MatchBackdrop`(`scripts/ui/match_backdrop.gd`) | 対局画面専用の下地。夜の藍の広間(`RoomPaint` の部品を藍へ寄せて薄く)/ 吊りランプ(子の `SwingingLamp`。鎖の上端を支点に `rotation` だけで揺らす減衰振り子。上の情報帯がイベントを取るため、触れた判定は毎フレームのポインタ位置で行う)/ 卓の中心の光だまり(放射グラデーションの `GradientTexture2D` を1枚。同心の楕円を重ねると段が見える)/ 卓・情報帯・手札・行動の列への落ち影 / 四辺のビネット。`ScreenBackdrop.PLAIN` の代わりに `_build()` の先頭で足す |
 | `ActionColumnLayout`(`scripts/ui/action_column_layout.gd`) | 行動の列の縦の並び(3つの群の中心y・区切り線のy)。間隔は `GAP_TIGHT` / `GAP_GROUP` の2つから積み上げて求める。ボタンは `CardMatchBuild.action_column()`、反転権は `CardMatchFlipRight`、エモートは `CardMatchEmote`、時計は `make_clock_dial()` がこれを読んで置く |
-| `ActionColumnPanel`(`scripts/ui/action_column_panel.gd`) | 右端の行動の列の地。卓の脇に立てた**真鍮枠の操作盤**(濃紺の板 + 真鍮の額 + 上下の紋章入り飾り板 + ターン終了の周りの彫り込みの輪 + 群の区切り線)。ボタンより先に `add_child()` して背面へ置く |
-| `RoundActionButton`(`scripts/ui/round_action_button.gd`, `extends Button`) | 行動の列の丸ボタン。**`CodedButton` / `CodedButtonStyle` は使わない**——文字の幅で矩形が伸びる仕組みのため、丸のつもりが楕円のピルになる。`text` は空にして `label` を自前で描き、`_get_minimum_size()` を直径で固定する。`filled`(ターン終了の金真鍮の面)/ `badge`(反転権の残り回数・エモートの残り秒)を持つ。ホバー・押下・`disabled` は `Button` のものをそのまま使い、`queue_redraw()` だけつなぐ |
-| `TurnClockDial`(`scripts/ui/turn_clock_dial.gd`) | 行動の列の持ち時間の時計(GameDesign.md 9章)。いま手番の側の残り時間を1つだけ出し、時計を持たない対局は「∞」。書き込むのは `CardMatchClock.refresh_bars()` / `clear()` だけで、`CardMatchScreen._clock_dial` を直に触る(画面側の公開メソッドを増やさないため)。位置は `TurnClockDial.COLUMN_CENTER_Y` を `CardMatchBuild.make_clock_dial()` が読む |
-| `FlipRightGauge`(`scripts/ui/flip_right_gauge.gd`) | 反転権ボタンの下の真鍮の札。自分と相手の残り回数を総回数ぶんの粒で並べる(GameDesign.md 9章)。`CardMatchFlipRight` が持ち、`refresh()` のたびに `state.flip_right_remaining` と `first_side` から総回数を引いて渡す。再生・観戦でも出す(見る側にも両者の残りが分かる) |
+| `ActionColumnPanel`(`scripts/ui/action_column_panel.gd`) | 右端の行動の列の地。卓の脇に立てた**1枚の硝子の面**(`UiKit.glass()` + 群の区切りの罫線)。ボタンより先に `add_child()` して背面へ置く |
+| `RoundActionButton`(`scripts/ui/round_action_button.gd`, `extends Button`) | 行動の列の丸い計器のボタン(ターン終了 = 真鍮の面、反転権 = 硝子の計器。ログ・エモート・投了は横長の `CodedButton`)。**`CodedButton` / `CodedButtonStyle` は使わない**——文字の幅で矩形が伸びる仕組みのため、丸のつもりが楕円のピルになる。`text` は空にして `label` を自前で描き、`_get_minimum_size()` を直径で固定する。`filled`(ターン終了の金真鍮の面)/ `badge`(反転権の残り回数・エモートの残り秒)を持つ。ホバー・押下・`disabled` は `Button` のものをそのまま使い、`queue_redraw()` だけつなぐ |
+| `TurnClockDial`(`scripts/ui/turn_clock_dial.gd`) | 行動の列の持ち時間の計器(GameDesign.md 9章)。いま手番の側の残り時間を縁の砂の輪と中の数字で1つだけ出し、時計を持たない対局は「∞」。縦では出さず、`RoundActionButton` のターン終了が同じ輪と数字を自分の縁へ描く。書き込むのは `CardMatchClock.refresh_bars()` / `clear()` だけで、`CardMatchScreen._clock_dial` を直に触る(画面側の公開メソッドを増やさないため)。位置は `TurnClockDial.COLUMN_CENTER_Y` を `CardMatchBuild.make_clock_dial()` が読む |
+| `FlipRightGauge`(`scripts/ui/flip_right_gauge.gd`) | 反転権ボタンの下の彫り込みの札。自分と相手の残り回数を総回数ぶんの粒で並べる(GameDesign.md 9章)。`CardMatchFlipRight` が持ち、`refresh()` のたびに `state.flip_right_remaining` と `first_side` から総回数を引いて渡す。再生・観戦でも出す(見る側にも両者の残りが分かる) |
 
 - **卓の奥行きは `BoardTable` が額と面を台形で描く**ことで出す(`PERSPECTIVE_INSET`:奥の辺を
   左右それぞれ何px狭めるか)。**額は最前面の層(`_rail_layer`)にリング状のポリゴンとして描き、
@@ -43,7 +43,7 @@
   輪(`pedestal_ring()`)は上面の縁に掛ける。接地の影は器の足元へ移す
 - **情報帯(`PlayerInfoBar`)は板を持たず、器具を並べる**(GameDesign.md 9章「情報帯」)。
   肖像のメダルとバッジの真鍮の輪は `_brass_ring()`(外周と内周を1つのポリゴンにして縦グラデーション)、
-  濃紺の板は `_plate()`、丸いバッジは `_badge()` が描く。**右の群(マナ・山の札)は帯の右端から `RIGHT_GROUP_WIDTH` の位置を原点に置く**(`_right_x()`)ため、帯の幅が違う画面(ルール画面の図)でも右端に揃う。帯の最小幅は `MIN_WIDTH`。持ち時間は情報帯には持たず、
+  彫り込みの札は `_plate()`、丸いバッジは `_badge()` が描く。**右の群(マナ・山の札)は帯の右端から `RIGHT_GROUP_WIDTH` の位置を原点に置く**(`_right_x()`)ため、帯の幅が違う画面(ルール画面の図)でも右端に揃う。帯の最小幅は `MIN_WIDTH`。持ち時間は情報帯には持たず、
   行動の列の `TurnClockDial` が出す。要素の並び・シグナルの受け口は変えない
 - **情報帯の本体は値が変わったときだけ描き直す。**絶えず動く光(HPの砂粒のきらめき・手番の輪・的の赤い縁・
   支払うピップの脈打ち)は子の `PlayerInfoBarFx` が持つ。本体は影・板・真鍮の輪を重ねる重い絵で、

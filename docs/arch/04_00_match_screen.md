@@ -194,23 +194,27 @@ v1.0(位相制)の画面・クラス・`data/hourglasses/*.tres` は削除済み
 - `CodedButton`:ボタン生成の集約(画面ごとに `theme_override` を並べない)
 - `NumberPad`(`GridContainer`):数字だけの欄へ添える3×4の数字パッド(GameDesign.md 9章)。押した数字を対象の `LineEdit` へ足して `text_changed` を流す(欄の絞り込みをキーボード入力と同じ経路で通す)。キーは `FOCUS_NONE`(欄のフォーカスを奪わない)。「決定」は `with_confirm` のときだけ置き `confirmed` を流す
 - `resources/theme/content_panel.tres`:一覧・詳細・モーダルの汎用パネル
-- **UIクロームはコード描画、3層に分ける**: `UiPalette`(色の単一情報源)/ `UiPaint`(static。**第1引数は `ci: RID`** で `RenderingServer.canvas_item_add_*` 系。`StyleBox._draw()` からは `CanvasItem.draw_*` を呼べないため)/ 各 `StyleBox` 派生と `Control._draw()` 側
-  - 質感の要件: **金属の反射カーブは最低5ストップ**(上端のハイライト・中央で落とし・**下端に照り返し**)/ **グレインを alpha 0.05〜0.10 で重ねる**(`static var` で1度生成してtile)/ **枠は上が明るい凸、中央パネルは上が暗い凹**で向きを逆に
+- **UIクロームはコード描画、4層に分ける**(GameDesign.md 9章「共通のレイアウト規約」の言語): `UiPalette`(色・文字の段・余白の刻み・動きの尺の単一情報源)/ `ShapePaint`(面・線を三角形の primitive で描く。縦グラデーションは `gradient_convex()` が頂点と色の節のyで帯に刻む。頂点色だけでは途中の節が消えるため)/ `UiKit`(static。**面の素材と部品**: `glass()` / `well()` / `brass()` / `sand_bar()` / `paper()` / `gem()` / `seal()` / `round_face()` / `badge()` / `tag()` / `shadow()` / `hairline()` / `rule()`。**第1引数は `ci: RID`**。`StyleBox._draw()` からは `CanvasItem.draw_*` を呼べないため)/ 各 `StyleBox` 派生と `Control._draw()` 側。`UiPaint` は点列(角丸・五角形・円)と紋章を持つ
+  - **枠線の太さ・角の丸み・影は `UiKit.line_w(rect)` / `UiKit.radius(rect)` が短辺から決める。**部品の側で太さの定数を持たない
+  - **細い線は「芯 = 太さ − ぼかし1px」で引く**(`UiKit.stroke()`)。`ShapePaint` は芯の両側へ1pxのぼかしを足すため、太さをそのまま渡すと1.25pxの線が倍の太さに見える
   - **意味を持たない小物の装飾(四隅のネジ・渦巻き)は付けない**。機能を示す形と紋章は積極的に付ける
-  - **グループの個性は「外形」と「紋章」だけ。材質は全グループ共通**
-- `CodedButtonStyle`(`extends StyleBox`):`State`(NORMAL/HOVER/PRESSED/DISABLED。`Variant` は組み込み型と衝突する)/ `Shape`(ROUNDED_RECT/CIRCLE/PILL/CHEVRON_LEFT)/ `Emblem` / `EmblemPlacement`(CENTER/UPPER/RIGHT_INSET/TOP_BADGE)。**枠・輪郭・面取りの太さは要素の大きさに合わせて細くする**(`_frame_thickness()` は「高さ56pxで12px / 34pxで5px」を通る直線。単純な短辺比例では小さい側が細くならない)。紋章とテキストの余白は `_get_content_margin()` が `shape` と `emblem_placement` から決める。`.tres` の1行目は `[gd_resource type="StyleBox" script_class="CodedButtonStyle" format=3]`
+  - **グループの個性は「外形」と「紋章」と「役割(主・副・取り返せない)」だけ。素材は全グループ共通**
+- `CodedButtonStyle`(`extends StyleBox`):`State`(NORMAL/HOVER/PRESSED/DISABLED。`Variant` は組み込み型と衝突する)/ `Shape`(ROUNDED_RECT/CIRCLE/PILL/CHEVRON_LEFT)/ `Emblem` / `EmblemPlacement`。**面は役割で決まる**: `filled` = 真鍮の面(主)/ 既定 = 硝子の面(副)/ `danger` = 硝子に赤い縁。押せない状態は面を変えず、字と縁だけを沈める。高さ `UiKit.PILL_MAX_HEIGHT` 以下の ROUNDED_RECT は両端を丸める。**乗る・押すの動きは `hover_amount` / `press_amount`(0〜1)で描き分け、`ButtonFeel` がボタンごとの複製へ尺(`UiPalette.DUR_HOVER` / `DUR_PRESS`)でトゥイーンする**(StyleBox の状態の差し替えだけでは一瞬で切り替わり、尺を持てないため)。`.tres` の1行目は `[gd_resource type="StyleBox" script_class="CodedButtonStyle" format=3]`
+- `ButtonFeel`(`scripts/ui/button_feel.gd`, static):`CodedButton.apply_styles()` が呼ぶ。ボタンへ自分専用の `CodedButtonStyle` を1つ持たせ(normal/hover/pressed の3状態に同じものを当てる)、`mouse_entered` / `mouse_exited` / `button_down` / `button_up` で量を動かす。無効の見た目は共有の `.tres` のまま
+- `CodedPanelStyle`:`surface`(GLASS = 硝子の面 / WELL = 彫り込み)で面を選ぶ。入力欄(`coded_line_edit_*.tres`)は WELL、`content_panel.tres` は GLASS。`highlighted` は縁を照りの色へ、`dimmed` は沈める
 
 | グループ | Shape | Emblem | 使う場所 |
 |---|---|---|---|
 | `back_nav` | CHEVRON_LEFT | NONE | 共通ヘッダーの戻る |
 | `wide_text` | ROUNDED_RECT | NONE | 既定の横長ボタン |
-| `icon_square` | ROUNDED_RECT | NONE | 小さな正方形 |
-| `primary_action` | ROUNDED_RECT | NONE | 塗りつぶした真鍮の面(`filled`) |
-| `icon_menu` | ROUNDED_RECT | MENU(CENTER) | ホームのハンバーガー |
-| `icon_book` | ROUNDED_RECT | BOOK(CENTER。`rulebook.png`) | ホームのルールブック(遊び方の入口) |
-| `icon_discord` | ROUNDED_RECT | DISCORD(CENTER) | 設定メニューのDiscord導線 |
-| `icon_x` | ROUNDED_RECT | X(CENTER) | 設定メニューのX導線 |
-| `icon_youtube` | ROUNDED_RECT | YOUTUBE(CENTER) | 設定メニューのYouTube導線 |
+| `icon_square` | ROUNDED_RECT | NONE | 小さな正方形(字を載せるもの) |
+| `primary_action` | ROUNDED_RECT | NONE | 真鍮の面(`filled`)。画面の主の操作 |
+| `danger_text` | ROUNDED_RECT | NONE | 硝子に赤い縁(`danger`)。削除・投了など取り返せない操作 |
+| `icon_menu` | CIRCLE | MENU(CENTER) | ホームのハンバーガー |
+| `icon_book` | CIRCLE | BOOK(CENTER。`rulebook.png`) | ホームのルールブック(遊び方の入口) |
+| `icon_discord` | CIRCLE | DISCORD(CENTER) | 設定メニューのDiscord導線 |
+| `icon_x` | CIRCLE | X(CENTER) | 設定メニューのX導線 |
+| `icon_youtube` | CIRCLE | YOUTUBE(CENTER) | 設定メニューのYouTube導線 |
 
   - **`.tres` を増やすときは、それを読む `CodedButton` のグループ定数を必ず同時に足す**(読まれない `.tres` は使っているか判定できなくなる)
   - `UiPaint.Emblem.HOURGLASS` は多角形ではなく取り込みアイコン(`assets/ui/icons/hourglass.png`)を `UiPaint.draw_icon()` で描く(タイトル・通貨・行動の列・空の案内などすべてがこの1か所を通る)。反転権のボタンも同じ `draw_icon()` を使う
