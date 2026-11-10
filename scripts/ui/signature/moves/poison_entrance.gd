@@ -21,6 +21,10 @@ func duration() -> float:
 	return impact_at() + LAG * float(SPOTS.size() - 1) + RISE + POP + FADE * 0.5
 
 
+func sound() -> int:
+	return SoundBank.Sfx.SIG_POISON
+
+
 func draw(item: CanvasItem, t: float) -> void:
 	if t < impact_at():
 		return

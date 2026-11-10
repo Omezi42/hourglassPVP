@@ -574,6 +574,311 @@ def sig_clocktower():
     return lowpass(x, 8000)
 
 
+# ---- 登場の演出の音(打点は各 `*_entrance.gd` の定数に合わせる) ----
+# 登場の音は置く音の代わりに鳴る(card_match_sound.gd)ため、どれも着地に置く音を持ち、その上へ
+# カードごとの動きの音を重ねる。重ねる音の大きさは着地の音からの dB で書く。
+
+## 駒が台座へ落ちきる位置(秒)。`CardUnitFx.LAND_DURATION` / `HEAVY_LAND_DURATION`。
+LAND_AT = 0.26
+HEAVY_LAND_AT = CHRONOS_LAND_AT
+## 風切りの録音(13本入り)の各1本の頭(秒)。
+WHOOSH_STARTS = [0.22, 1.27, 2.27, 3.42]
+
+
+def pitch(x, ratio):
+    """高さを ratio 倍にする(長さは 1/ratio 倍になる)。"""
+    if ratio == 1.0:
+        return x
+    return signal.resample_poly(x, 100, int(round(100 * ratio)))
+
+
+def whoosh(i=0, ratio=1.0):
+    """短い風切り。"""
+    return pitch(rec("fs427979_Kinoton.mp3", WHOOSH_STARTS[i], 0.45, fade_out=0.15), ratio)
+
+
+def grind(ratio=1.0):
+    """石が擦れてせり上がる「ごり」。"""
+    return pitch(rec("fs743262_qubodup.mp3", 0.0, 0.39, fade_in=0.03, fade_out=0.1), ratio)
+
+
+def tink(f, decay=0.4, dur=1.0):
+    """硝子の小さな「ちん」。"""
+    return strike(dur, glass(f, decay), 0.0002)
+
+
+def chime(freqs, step, decay=0.35):
+    """硝子の粒を step 秒おきに順に鳴らす(きらめき・光が走る)。"""
+    x = np.zeros(n_of(step * len(freqs) + 1.0))
+    for i, f in enumerate(freqs):
+        at(x, tink(f, decay), step * i, 1.0 - 0.4 * i / max(1, len(freqs) - 1))
+    return x
+
+
+def landing(d, heavy=False):
+    """登場の土台:着地の位置に置く音。重い登場は、木の重い当たりと低い地鳴りを足す。"""
+    x = np.zeros(n_of(d))
+    t = HEAVY_LAND_AT if heavy else LAND_AT
+    at(x, place(), t)
+    if heavy:
+        x = layer(x, rec("impactWood_heavy_000.ogg"), -2, t)
+        x = layer(x, thump(0.9, 90, 38, 0.25, width=0.002), -1, t)
+    return x
+
+
+def sig_freeze():
+    """フリーズ:氷が駒を這い上がる「ぴしぴし」、頭の上で結晶がきらめく。"""
+    climb = 0.28
+    x = landing(1.3)
+    x = layer(x, rec("fs206156_ahill86.mp3", 0.25, climb + 0.05, fade_out=0.06), -5, LAND_AT + 0.01)
+    return layer(x, chime([3300, 4400, 5200], 0.06, 0.5), -7, LAND_AT + climb)
+
+
+def sig_relic():
+    """レリック:石の箱がせり上がり、蓋がきしんで開き、光の粒が抜けていく。"""
+    rise, lid = 0.24, 0.2
+    x = landing(1.4)
+    x = layer(x, grind(1.1), -6, LAND_AT)
+    x = layer(x, rec("creak3.ogg", 0.0, 0.34), -9, LAND_AT + rise - 0.06)
+    mote = sequence(music_box, [(0.0, 84, .7, 1.0), (0.07, 88, .6, 1.0), (0.14, 91, .5, 1.2)], 1.4)
+    return layer(x, mote, -11, LAND_AT + rise + lid)
+
+
+def sig_middle():
+    """ミドル:台座の縁に紫の粒が5つ灯り、渦を巻いて吸い込まれ、駒が一度低く脈打つ。"""
+    light, swirl = 0.22, 0.42
+    x = landing(1.5)
+    x = layer(x, chime([2400, 2700, 3000, 3300, 3600], light / 5, 0.25), -12, LAND_AT)
+    x = layer(x, whoosh(1, 0.7), -10, LAND_AT + light)
+    pulse = thump(0.5, 140, 70, 0.12, width=0.01) + 0.3 * pad(bubbles(0.5, 12, 300, 900, 0.05), 0.5)
+    return layer(x, pulse, -5, LAND_AT + light + swirl)
+
+
+def sig_phase():
+    """フェイズ:左右から刃が2枚走り、頭上で×に交差して「しゃきん」と閃く。"""
+    slash = 0.3
+    x = landing(1.2)
+    x = layer(x, rec("drawKnife1.ogg"), -7, LAND_AT)
+    x = layer(x, rec("drawKnife2.ogg"), -8, LAND_AT + 0.05)
+    flash = strike(0.8, brass(2400, 0.4), 0.0002, 0.6, (4000, 11000))
+    return layer(x, flash, -5, LAND_AT + slash)
+
+
+def sig_grain():
+    """グレイン:砂粒が3粒ぽつぽつと落ち、台座で小さく跳ねる。"""
+    gap, fall = 0.14, 0.2
+    x = landing(1.2)
+    for i in range(3):
+        puff = sand(0.12, 900, 2500, 8000, lambda t: np.exp(-t / 0.03))
+        tick = strike(0.2, wood(2200 + 250 * i, 0.02), 0.0003) + 0.4 * pad(puff, 0.2)
+        x = layer(x, tick, -9, LAND_AT + gap * i + fall)
+    return x
+
+
+def sig_dash():
+    """ダッシュ:着地の直前に風が走り抜け、足元から砂埃が後ろへ流れる。"""
+    dust = 0.42
+    x = landing(1.2)
+    x = layer(x, whoosh(2, 1.15), -2, LAND_AT - 0.17)
+    skid = sand(dust, 3500, 1500, 8000, lambda t: np.clip(t / 0.03, 0, 1) * np.exp(-t / 0.13))
+    return layer(x, skid, -8, LAND_AT + 0.02)
+
+
+def sig_shield():
+    """シールド:盾がせり上がり、縁を光が一周して真鍮の盾が澄んで鳴る。"""
+    rise = 0.24
+    x = landing(1.6)
+    x = layer(x, whoosh(3, 1.3), -11, LAND_AT)
+    ring = strike(1.2, brass(880, 0.7), 0.0004, 0.3, (3000, 9000))
+    return layer(x, ring, -4, LAND_AT + rise)
+
+
+def sig_sand():
+    """サンド:着地と同時に砂の波紋が広がり、縁から砂がさらさらとこぼれる。"""
+    spill = 0.4
+    x = landing(1.1)
+    flow = rec("fs825859_Vrymaa.mp3", 5.0, spill + 0.1, fade_in=0.02, fade_out=0.15)
+    return layer(x, flow, -3, LAND_AT + 0.01)
+
+
+def sig_watcher():
+    """ワッチャー:目の紋が低い響きとともに開き、左右を見渡してから閉じる。"""
+    opening, look = 0.2, 0.44
+    x = landing(1.6)
+    x = layer(x, strike(1.2, brass(note(50), 1.0), 0.003), -8, LAND_AT)
+    x = layer(x, whoosh(0, 0.6), -13, LAND_AT + opening)
+    x = layer(x, whoosh(1, 0.6), -13, LAND_AT + opening + look / 2)
+    return layer(x, strike(0.2, wood(900, 0.03), 0.002), -12, LAND_AT + opening + look)
+
+
+def sig_glass():
+    """グラス:駒の表面を光の筋が走り、肩で星が「きらん」と瞬く。"""
+    sweep = 0.3
+    x = landing(1.3)
+    x = layer(x, chime([2600, 3100, 3700, 4400], sweep / 4, 0.2), -10, LAND_AT)
+    return layer(x, tink(5200, 0.6), -3, LAND_AT + sweep)
+
+
+def sig_vamp():
+    """ヴァンプ:コウモリが2匹、羽ばたきながら左右へ飛び去る。"""
+    fly, flaps, lag = 0.62, 4, 0.08
+    x = landing(1.3)
+    flap = rec("cloth4.ogg", 0.04, 0.12, fade_out=0.04)
+    for bat in range(2):
+        for k in range(flaps):
+            x = layer(x, flap, -6 - 2.5 * k - 2 * bat, LAND_AT + lag * bat + fly / flaps * k)
+    return x
+
+
+def sig_drill():
+    """ドリル:錐が唸りを上げて回り、真下へ突き下ろされて石くずが散る。"""
+    hover, plunge = 0.14, 0.18
+    x = landing(1.4)
+    d = hover + plunge
+    t = t_axis(d)
+    f = 180 + 520 * (t / d) ** 2
+    buzz = signal.sawtooth(2 * np.pi * np.cumsum(f) / SR)
+    whir = buzz * (0.6 + 0.4 * np.sin(2 * np.pi * 38 * t)) * np.clip(t / 0.04, 0, 1)
+    x = layer(x, bandpass(whir, 300, 3000), -10, LAND_AT)
+    return layer(x, rec("impactMining_000.ogg", 0.0, 0.7), -2, LAND_AT + d)
+
+
+def sig_lance():
+    """ランス:長い槍が一直線に突き抜ける「ひゅっ」と、穂先の金属の擦れ。"""
+    x = landing(1.0)
+    x = layer(x, whoosh(3, 1.25), 0, LAND_AT - 0.03)
+    return layer(x, rec("drawKnife3.ogg", 0.05, 0.4), -9, LAND_AT + 0.02)
+
+
+def sig_twin():
+    """ツイン:左右に同じ音の残像が2つ鳴り、寄り合って1つに重なる。"""
+    split, merge = 0.16, 0.36
+    f = note(84)
+    x = landing(1.4)
+    x = layer(x, tink(f, 0.3) + tink(f * 1.03, 0.3), -9, LAND_AT)
+    x = layer(x, whoosh(2, 1.4), -13, LAND_AT + split)
+    return layer(x, tink(f, 0.8) + tink(f * 1.002, 0.8), -5, LAND_AT + split + merge)
+
+
+def sig_lock():
+    """ロック:南京錠が現れ、掛け金が「かちり」と閉まる。"""
+    appear, snap = 0.14, 0.1
+    x = landing(1.1)
+    x = layer(x, strike(0.3, brass(2600, 0.06), 0.0002), -12, LAND_AT)
+    x = layer(x, rec("metalLatch.ogg", 0.025, 0.2), 0, LAND_AT + appear + snap - 0.01)
+    return layer(x, tink(4200, 0.4), -12, LAND_AT + appear + snap + 0.03)
+
+
+def sig_gate():
+    """ゲート:石の門柱がせり上がり、横木が「ごとん」と渡って、また沈む。"""
+    rise, lintel, hold = 0.22, 0.12, 0.16
+    x = landing(1.5)
+    x = layer(x, grind(1.0), -5, LAND_AT)
+    x = layer(x, rec("impactMining_000.ogg", 0.0, 0.5), -4, LAND_AT + rise + lintel)
+    return layer(x, grind(0.8), -9, LAND_AT + rise + lintel + hold)
+
+
+def sig_poison():
+    """ポイズン:紫の泡が3つぶくぶくと立ちのぼり、順にはじける。"""
+    rise, lag = 0.34, 0.1
+    x = landing(1.3)
+    x = layer(x, bubbles(0.6, 30, 250, 900, 0.2), -7, LAND_AT)
+    for i in range(3):
+        pop = bubbles(0.15, 4, 700 + 200 * i, 1500 + 200 * i, 0.01) + 0.4 * pad(scrape(0.03, 2000, 7000), 0.15)
+        x = layer(x, pop, -7, LAND_AT + lag * i + rise)
+    return x
+
+
+def sig_guard():
+    """ガード:大きな盾が降りて卓に「どすん」と突き立ち、縁がきらりと光る。"""
+    drop = 0.2
+    x = landing(1.3)
+    x = layer(x, whoosh(1, 0.9), -8, LAND_AT - 0.04)
+    x = layer(x, rec("impactMetal_heavy_001.ogg"), 0, LAND_AT + drop)
+    x = layer(x, rec("impactWood_heavy_000.ogg"), -4, LAND_AT + drop)
+    return layer(x, tink(3000, 0.5), -13, LAND_AT + drop + 0.08)
+
+
+def sig_mirror():
+    """ミラー:鏡が立ち、鏡面を光がよぎって、反射光が高く「きん」と跳ね返る。"""
+    appear, sweep = 0.14, 0.22
+    x = landing(1.4)
+    x = layer(x, tink(2000, 0.3), -11, LAND_AT)
+    x = layer(x, chime([3000, 3500, 4000], sweep / 3, 0.2), -11, LAND_AT + appear)
+    x = layer(x, tink(4800, 0.6), -3, LAND_AT + appear + sweep)
+    return layer(x, tink(4800 * 1.5, 0.4), -12, LAND_AT + appear + sweep + 0.08)
+
+
+def sig_wall():
+    """ウォール:重く落ちて、足元の石畳に「ばりばり」とひびが走る。"""
+    crack = 0.3
+    x = landing(1.3, heavy=True)
+    cracks = np.zeros(n_of(crack + 0.2))
+    for _ in range(14):
+        piece = strike(0.1, wood(RNG.uniform(900, 1700), 0.012), 0.0001, 0.8, (2000, 7000))
+        at(cracks, piece, crack * RNG.uniform(0.0, 1.0) ** 1.4, RNG.uniform(0.4, 1.0))
+    x = layer(x, cracks, -6, HEAVY_LAND_AT + 0.02)
+    return layer(x, grind(0.7), -12, HEAVY_LAND_AT + 0.02)
+
+
+def sig_bypass():
+    """抜け道:光る小道がうねりながら伸びていく上り音階と、先に灯る矢じりの「ちん」。"""
+    grow = 0.42
+    x = landing(1.4)
+    steps = [72, 74, 76, 79, 81, 84]
+    run = sequence(music_box, [(grow / len(steps) * i, m, .6, 0.8) for i, m in enumerate(steps)], 1.3)
+    x = layer(x, run, -11, LAND_AT)
+    return layer(x, tink(3600, 0.5), -5, LAND_AT + grow)
+
+
+def sig_colossus():
+    """コロッサス:重く落ちて地響きが2度うねり、砕けた石の欠片が跳ねる。"""
+    quake = 0.5
+    x = landing(1.5, heavy=True)
+    x = layer(x, thump(1.0, 70, 32, 0.35, width=0.01), -7, HEAVY_LAND_AT + 0.02)
+    x = layer(x, thump(0.8, 60, 30, 0.3, width=0.02), -10, HEAVY_LAND_AT + quake * 0.2)
+    chips = np.zeros(n_of(quake + 0.3))
+    for _ in range(10):
+        piece = strike(0.1, wood(RNG.uniform(1500, 2600), 0.015), 0.0002)
+        at(chips, piece, RNG.uniform(0.05, quake), RNG.uniform(0.3, 1.0))
+    return layer(x, chips, -9, HEAVY_LAND_AT)
+
+
+# ---- コスト6以上の効果の演出の音(結果の音は進行役が着弾で鳴らすため、届くまでだけを鳴らす) ----
+
+def sig_obelisk():
+    """オベリスク:石の尖塔がせり上がり、先端から光線が「きゅん」と放たれる。"""
+    rise = 0.22
+    x = pad(grind(1.0), 1.2)
+    beam = layer(whoosh(0, 1.6), chime([3500, 4200, 5000], 0.04, 0.2), -6)
+    return layer(x, beam, 0, rise)
+
+
+def sig_tower():
+    """タワー:投石機の腕がきしんで振り上がり、「がこん」と石を放って、石が風を切って飛ぶ。"""
+    appear, fling = 0.12, 0.14
+    x = pad(rec("creak1.ogg", 0.12, 0.3), 1.2)
+    x = layer(x, pitch(rec("impactWood_heavy_000.ogg"), 1.4), 2, appear + fling)
+    return layer(x, whoosh(2, 0.7), -4, appear + fling + 0.02)
+
+
+def sig_anchor():
+    """アンカー:錨が鎖を鳴らして沈み、「がん」と食い込んで、金色の響きが味方へ広がる。"""
+    sink = 0.26
+    x = pad(rec("fs637356_kyles.mp3", 0.55, sink + 0.05, fade_out=0.05), 1.4)
+    x = layer(x, rec("impactMetal_heavy_001.ogg"), 3, sink)
+    x = layer(x, thump(0.5, 110, 55, 0.12), 0, sink)
+    return layer(x, hand_bell(74, 1.0, 1.0), -4, sink + 0.04)
+
+
+SIGNATURES = [
+    sig_freeze, sig_relic, sig_middle, sig_phase, sig_grain, sig_dash, sig_shield, sig_sand,
+    sig_watcher, sig_glass, sig_vamp, sig_drill, sig_lance, sig_twin, sig_lock, sig_gate,
+    sig_poison, sig_guard, sig_mirror, sig_wall, sig_bypass, sig_colossus,
+    sig_obelisk, sig_tower, sig_anchor,
+]
+
+
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     finish("hover", ui_hover, -34, 0.0)
@@ -594,3 +899,5 @@ if __name__ == "__main__":
     finish("sig_clocktower", sig_clocktower, -18, 0.25)
     finish("match_start", match_start, -18, 0.22)
     finish("turn_order", turn_order, -24, 0.18)
+    for make in SIGNATURES:
+        finish(make.__name__, make, -18, 0.18)

@@ -24,6 +24,10 @@ func duration() -> float:
 	return impact_at() + DUST + FADE
 
 
+func sound() -> int:
+	return SoundBank.Sfx.SIG_DASH
+
+
 func draw(item: CanvasItem, t: float) -> void:
 	var ci := item.get_canvas_item()
 	var alpha := fade_alpha(t)

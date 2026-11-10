@@ -28,6 +28,10 @@ func heavy_land() -> bool:
 	return true
 
 
+func sound() -> int:
+	return SoundBank.Sfx.SIG_COLOSSUS
+
+
 func draw(item: CanvasItem, t: float) -> void:
 	if t < impact_at():
 		return

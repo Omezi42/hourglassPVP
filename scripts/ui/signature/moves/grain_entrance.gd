@@ -23,6 +23,10 @@ func duration() -> float:
 	return impact_at() + GAP * float(GRAINS - 1) + FALL + BOUNCE + FADE
 
 
+func sound() -> int:
+	return SoundBank.Sfx.SIG_GRAIN
+
+
 func draw(item: CanvasItem, t: float) -> void:
 	if t < impact_at():
 		return

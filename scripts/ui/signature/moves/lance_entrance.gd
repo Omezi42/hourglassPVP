@@ -24,6 +24,10 @@ func duration() -> float:
 	return impact_at() + THRUST + TRAIL
 
 
+func sound() -> int:
+	return SoundBank.Sfx.SIG_LANCE
+
+
 func draw(item: CanvasItem, t: float) -> void:
 	if t < impact_at():
 		return

@@ -38,6 +38,10 @@ func _rank(index: int) -> int:
 	return rank
 
 
+func sound() -> int:
+	return SoundBank.Sfx.SIG_OBELISK
+
+
 func draw(item: CanvasItem, t: float) -> void:
 	if targets.is_empty():
 		return

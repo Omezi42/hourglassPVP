@@ -24,6 +24,10 @@ func duration() -> float:
 	return impact_at() + DROP + maxf(DUST, SHINE) + FADE
 
 
+func sound() -> int:
+	return SoundBank.Sfx.SIG_GUARD
+
+
 func draw(item: CanvasItem, t: float) -> void:
 	if t < impact_at():
 		return

@@ -21,6 +21,10 @@ func impact_at() -> float:
 	return APPEAR + FLING + FLIGHT
 
 
+func sound() -> int:
+	return SoundBank.Sfx.SIG_TOWER
+
+
 func draw(item: CanvasItem, t: float) -> void:
 	if targets.is_empty():
 		return

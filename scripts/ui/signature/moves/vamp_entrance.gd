@@ -23,6 +23,10 @@ func duration() -> float:
 	return impact_at() + FLY + LAG + FADE * 0.5
 
 
+func sound() -> int:
+	return SoundBank.Sfx.SIG_VAMP
+
+
 func draw(item: CanvasItem, t: float) -> void:
 	if t < impact_at():
 		return

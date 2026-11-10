@@ -33,6 +33,10 @@ func _radius(t: float) -> float:
 	return (reach + 1.0) * ease(phase(t, SINK, RIPPLE), 0.7)
 
 
+func sound() -> int:
+	return SoundBank.Sfx.SIG_ANCHOR
+
+
 func draw(item: CanvasItem, t: float) -> void:
 	if targets.is_empty():
 		return

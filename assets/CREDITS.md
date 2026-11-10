@@ -20,17 +20,25 @@ Freesound の音はいずれも各ページでCC0であることを確認し、�
 
 | 原本(`tools/sfx_sources/`) | 使う音 | 内容 | 作者 | 出所 | ライセンス |
 |---|---|---|---|---|---|
-| `fs454222_kyles.mp3` | `place` | グラスを木の卓へ置く | kyles | [Freesound 454222](https://freesound.org/people/kyles/sounds/454222/) | CC0 |
+| `fs454222_kyles.mp3` | `place`(登場の音の着地も) | グラスを木の卓へ置く | kyles | [Freesound 454222](https://freesound.org/people/kyles/sounds/454222/) | CC0 |
 | `fs625655_el_boss.mp3` | `flip` | 小さな砂時計を返す | el_boss | [Freesound 625655](https://freesound.org/people/el_boss/sounds/625655/) | CC0 |
 | `fs178178_lmr9.mp3` | `clash` | ワイングラスが当たる(低め) | lmr9 | [Freesound 178178](https://freesound.org/people/lmr9/sounds/178178/) | CC0 |
 | `fs761135_wasserbjorn.mp3` | `clash` | ワイングラスが当たる | wasserbjorn | [Freesound 761135](https://freesound.org/people/wasserbjorn/sounds/761135/) | CC0 |
 | `fs221528_unfa.mp3` | `glass_break` | 硝子が割れる | unfa | [Freesound 221528](https://freesound.org/people/unfa/sounds/221528/) | CC0 |
 | `fs320167_joshs.mp3` | `unit_break` | 小さなショットグラスが割れる | joshs | [Freesound 320167](https://freesound.org/people/joshs/sounds/320167/) | CC0 |
 | `fs249549_FngerSounds.mp3` | `vessel_shatter` | 硝子が割れる | FngerSounds | [Freesound 249549](https://freesound.org/people/FngerSounds/sounds/249549/) | CC0 |
-| `fs825859_Vrymaa.mp3` | `turn_end` | 砂時計の砂が流れて落ちきる | Vrymaa | [Freesound 825859](https://freesound.org/people/Vrymaa/sounds/825859/) | CC0 |
+| `fs825859_Vrymaa.mp3` | `turn_end` `sig_sand` | 砂時計の砂が流れて落ちきる | Vrymaa | [Freesound 825859](https://freesound.org/people/Vrymaa/sounds/825859/) | CC0 |
 | `impactPunch_heavy_000.ogg` `impactSoft_heavy_000.ogg` | `damage` | 重い打撃 | Kenney | [Impact Sounds](https://kenney.nl/assets/impact-sounds) | CC0 |
-| `impactWood_heavy_000.ogg` `impactMetal_heavy_001.ogg` | `sig_chronos` | 木の重い当たり / 金属の当たり | Kenney | [Impact Sounds](https://kenney.nl/assets/impact-sounds) | CC0 |
-| `metalLatch.ogg` | `press` | 金属の留め金 | Kenney | [RPG Audio](https://kenney.nl/assets/rpg-audio) | CC0 |
+| `impactWood_heavy_000.ogg` `impactMetal_heavy_001.ogg` | `sig_chronos` ほか重い登場・`sig_guard` `sig_tower` `sig_anchor` | 木の重い当たり / 金属の当たり | Kenney | [Impact Sounds](https://kenney.nl/assets/impact-sounds) | CC0 |
+| `metalLatch.ogg` | `press` `sig_lock` | 金属の留め金 | Kenney | [RPG Audio](https://kenney.nl/assets/rpg-audio) | CC0 |
+| `fs427979_Kinoton.mp3` | `sig_*`(風切り) | 短い風切り13本 | Kinoton | [Freesound 427979](https://freesound.org/people/Kinoton/sounds/427979/) | CC0 |
+| `fs743262_qubodup.mp3` | `sig_relic` `sig_gate` `sig_wall` `sig_obelisk` | 石が擦れる | qubodup | [Freesound 743262](https://freesound.org/people/qubodup/sounds/743262/) | CC0 |
+| `fs637356_kyles.mp3` | `sig_anchor` | 鎖が鳴る | kyles | [Freesound 637356](https://freesound.org/people/kyles/sounds/637356/) | CC0 |
+| `fs206156_ahill86.mp3` | `sig_freeze` | 氷がひび割れる | ahill86 | [Freesound 206156](https://freesound.org/people/ahill86/sounds/206156/) | CC0 |
+| `cloth4.ogg` | `sig_vamp` | 布がはためく | Kenney | [RPG Audio](https://kenney.nl/assets/rpg-audio) | CC0 |
+| `drawKnife1.ogg` `drawKnife2.ogg` `drawKnife3.ogg` | `sig_phase` `sig_lance` | 刃を抜く | Kenney | [RPG Audio](https://kenney.nl/assets/rpg-audio) | CC0 |
+| `creak1.ogg` `creak3.ogg` | `sig_tower` `sig_relic` | 木がきしむ | Kenney | [RPG Audio](https://kenney.nl/assets/rpg-audio) | CC0 |
+| `impactMining_000.ogg` | `sig_drill` `sig_gate` | 石を打つ | Kenney | [Impact Sounds](https://kenney.nl/assets/impact-sounds) | CC0 |
 
 ## BGM(`assets/bgm/`)
 

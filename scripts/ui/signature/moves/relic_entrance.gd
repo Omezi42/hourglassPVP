@@ -28,6 +28,10 @@ func duration() -> float:
 	return impact_at() + RISE + OPEN + MOTE
 
 
+func sound() -> int:
+	return SoundBank.Sfx.SIG_RELIC
+
+
 func draw(item: CanvasItem, t: float) -> void:
 	if t < impact_at():
 		return

@@ -8,7 +8,7 @@ extends RefCounted
 ## BGMの再生自体はMusicPlayerが担当し、こちらは音量の単一情報源としてのみ関わる
 ## (設定の読み書きを2クラスへ分散させると、同じJSONファイルを互いに上書きし合うため)。
 
-## 音源はすべて `tools/build_sfx.py` がコードで合成した自作の音(GameDesign.md 9章)。
+## 音源はすべて `tools/build_sfx.py` が書き出す(CC0の録音+合成。GameDesign.md 9章)。
 ## **出来事ごとに専用の音を持ち、音量は音源の側で揃えてある**ため、再生時に高さや
 ## 音量比をいじらない。ユーザーの音量はバス(SFX / BGM)の音量で効かせる。
 ## 並びは保存データではないが、テストの `play_log` と突き合わせるため末尾へ足す。
@@ -31,6 +31,31 @@ enum Sfx {
 	SIG_CLOCKTOWER,
 	MATCH_START,
 	TURN_ORDER,
+	SIG_FREEZE,
+	SIG_RELIC,
+	SIG_MIDDLE,
+	SIG_PHASE,
+	SIG_GRAIN,
+	SIG_DASH,
+	SIG_SHIELD,
+	SIG_SAND,
+	SIG_WATCHER,
+	SIG_GLASS,
+	SIG_VAMP,
+	SIG_DRILL,
+	SIG_LANCE,
+	SIG_TWIN,
+	SIG_LOCK,
+	SIG_GATE,
+	SIG_POISON,
+	SIG_GUARD,
+	SIG_MIRROR,
+	SIG_WALL,
+	SIG_BYPASS,
+	SIG_COLOSSUS,
+	SIG_OBELISK,
+	SIG_TOWER,
+	SIG_ANCHOR,
 }
 
 const SETTINGS_PATH := "user://sound_settings.json"
@@ -64,6 +89,31 @@ const SFX_PATHS := {
 	Sfx.SIG_CLOCKTOWER: "res://assets/sfx/sig_clocktower.wav",
 	Sfx.MATCH_START: "res://assets/sfx/match_start.wav",
 	Sfx.TURN_ORDER: "res://assets/sfx/turn_order.wav",
+	Sfx.SIG_FREEZE: "res://assets/sfx/sig_freeze.wav",
+	Sfx.SIG_RELIC: "res://assets/sfx/sig_relic.wav",
+	Sfx.SIG_MIDDLE: "res://assets/sfx/sig_middle.wav",
+	Sfx.SIG_PHASE: "res://assets/sfx/sig_phase.wav",
+	Sfx.SIG_GRAIN: "res://assets/sfx/sig_grain.wav",
+	Sfx.SIG_DASH: "res://assets/sfx/sig_dash.wav",
+	Sfx.SIG_SHIELD: "res://assets/sfx/sig_shield.wav",
+	Sfx.SIG_SAND: "res://assets/sfx/sig_sand.wav",
+	Sfx.SIG_WATCHER: "res://assets/sfx/sig_watcher.wav",
+	Sfx.SIG_GLASS: "res://assets/sfx/sig_glass.wav",
+	Sfx.SIG_VAMP: "res://assets/sfx/sig_vamp.wav",
+	Sfx.SIG_DRILL: "res://assets/sfx/sig_drill.wav",
+	Sfx.SIG_LANCE: "res://assets/sfx/sig_lance.wav",
+	Sfx.SIG_TWIN: "res://assets/sfx/sig_twin.wav",
+	Sfx.SIG_LOCK: "res://assets/sfx/sig_lock.wav",
+	Sfx.SIG_GATE: "res://assets/sfx/sig_gate.wav",
+	Sfx.SIG_POISON: "res://assets/sfx/sig_poison.wav",
+	Sfx.SIG_GUARD: "res://assets/sfx/sig_guard.wav",
+	Sfx.SIG_MIRROR: "res://assets/sfx/sig_mirror.wav",
+	Sfx.SIG_WALL: "res://assets/sfx/sig_wall.wav",
+	Sfx.SIG_BYPASS: "res://assets/sfx/sig_bypass.wav",
+	Sfx.SIG_COLOSSUS: "res://assets/sfx/sig_colossus.wav",
+	Sfx.SIG_OBELISK: "res://assets/sfx/sig_obelisk.wav",
+	Sfx.SIG_TOWER: "res://assets/sfx/sig_tower.wav",
+	Sfx.SIG_ANCHOR: "res://assets/sfx/sig_anchor.wav",
 }
 
 static var _players: Array[AudioStreamPlayer] = []

@@ -21,6 +21,10 @@ func duration() -> float:
 	return impact_at() + LIGHT + SWIRL + PULSE
 
 
+func sound() -> int:
+	return SoundBank.Sfx.SIG_MIDDLE
+
+
 func draw(item: CanvasItem, t: float) -> void:
 	if t < impact_at():
 		return
