@@ -8,9 +8,9 @@ extends RefCounted
 enum Role { MAIN, SUB, DANGER }
 
 ## 枠線の太さ = 短辺のこの比(下限〜上限)。
-const LINE_RATIO := 0.014
-const LINE_MIN := 1.25
-const LINE_MAX := 3.5
+const LINE_RATIO := 0.022
+const LINE_MIN := 2.0
+const LINE_MAX := 4.5
 ## 角の丸み = 短辺のこの比(下限〜上限)。
 const RADIUS_RATIO := 0.14
 const RADIUS_MIN := 6.0

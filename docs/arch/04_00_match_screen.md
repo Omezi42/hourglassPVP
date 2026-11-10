@@ -196,7 +196,7 @@ v1.0(位相制)の画面・クラス・`data/hourglasses/*.tres` は削除済み
 - `resources/theme/content_panel.tres`:一覧・詳細・モーダルの汎用パネル
 - **UIクロームはコード描画、4層に分ける**(GameDesign.md 9章「共通のレイアウト規約」の言語): `UiPalette`(色・文字の段・余白の刻み・動きの尺の単一情報源)/ `ShapePaint`(面・線を三角形の primitive で描く。縦グラデーションは `gradient_convex()` が頂点と色の節のyで帯に刻む。頂点色だけでは途中の節が消えるため)/ `UiKit`(static。**面の素材と部品**: `glass()` / `well()` / `brass()` / `sand_bar()` / `paper()` / `gem()` / `seal()` / `round_face()` / `badge()` / `tag()` / `shadow()` / `hairline()` / `rule()`。**第1引数は `ci: RID`**。`StyleBox._draw()` からは `CanvasItem.draw_*` を呼べないため)/ 各 `StyleBox` 派生と `Control._draw()` 側。`UiPaint` は点列(角丸・五角形・円)と紋章を持つ
   - **枠線の太さ・角の丸み・影は `UiKit.line_w(rect)` / `UiKit.radius(rect)` が短辺から決める。**部品の側で太さの定数を持たない
-  - **細い線は「芯 = 太さ − ぼかし1px」で引く**(`UiKit.stroke()`)。`ShapePaint` は芯の両側へ1pxのぼかしを足すため、太さをそのまま渡すと1.25pxの線が倍の太さに見える
+  - **細い線は「芯 = 太さ − ぼかし1px」で引く**(`UiKit.stroke()`)。`ShapePaint` は芯の両側へ1pxのぼかしを足すため、太さをそのまま渡すと細い線が倍近い太さに見える
   - **意味を持たない小物の装飾(四隅のネジ・渦巻き)は付けない**。機能を示す形と紋章は積極的に付ける
   - **グループの個性は「外形」と「紋章」と「役割(主・副・取り返せない)」だけ。素材は全グループ共通**
 - `CodedButtonStyle`(`extends StyleBox`):`State`(NORMAL/HOVER/PRESSED/DISABLED。`Variant` は組み込み型と衝突する)/ `Shape`(ROUNDED_RECT/CIRCLE/PILL/CHEVRON_LEFT)/ `Emblem` / `EmblemPlacement`。**面は役割で決まる**: `filled` = 真鍮の面(主)/ 既定 = 硝子の面(副)/ `danger` = 硝子に赤い縁。押せない状態は面を変えず、字と縁だけを沈める。高さ `UiKit.PILL_MAX_HEIGHT` 以下の ROUNDED_RECT は両端を丸める。**乗る・押すの動きは `hover_amount` / `press_amount`(0〜1)で描き分け、`ButtonFeel` がボタンごとの複製へ尺(`UiPalette.DUR_HOVER` / `DUR_PRESS`)でトゥイーンする**(StyleBox の状態の差し替えだけでは一瞬で切り替わり、尺を持てないため)。`.tres` の1行目は `[gd_resource type="StyleBox" script_class="CodedButtonStyle" format=3]`
