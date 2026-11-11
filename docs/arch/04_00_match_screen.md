@@ -195,6 +195,7 @@ v1.0(位相制)の画面・クラス・`data/hourglasses/*.tres` は削除済み
 - `PressTracker`:押下→離した位置が要素内かで確定/取消(`CardView` / `ClickArea` が共用)
 - `EmptyState`:空の一覧・待機の見せ方(印・見出し・1行)を1箇所へ
 - `CodedButton`:ボタン生成の集約(画面ごとに `theme_override` を並べない)
+  - 真鍮の面(`filled`)のボタンは字の縁取りを外す(暗い字と暗い縁取りが重なって潰れるため)
 - `NumberPad`(`GridContainer`):数字だけの欄へ添える3×4の数字パッド(GameDesign.md 9章)。押した数字を対象の `LineEdit` へ足して `text_changed` を流す(欄の絞り込みをキーボード入力と同じ経路で通す)。キーは `FOCUS_NONE`(欄のフォーカスを奪わない)。「決定」は `with_confirm` のときだけ置き `confirmed` を流す
 - `resources/theme/content_panel.tres`:一覧・詳細・モーダルの汎用パネル
 - **UIクロームはコード描画、4層に分ける**(GameDesign.md 9章「共通のレイアウト規約」の言語): `UiPalette`(色・文字の段・余白の刻み・動きの尺の単一情報源)/ `ShapePaint`(面・線を三角形の primitive で描く。縦グラデーションは `gradient_convex()` が頂点と色の節のyで帯に刻む。頂点色だけでは途中の節が消えるため)/ `UiKit`(static。**面の素材と部品**: `glass()` / `well()` / `brass()` / `sand_bar()` / `paper()` / `gem()` / `seal()` / `round_face()` / `badge()` / `tag()` / `shadow()` / `hairline()` / `rule()`。**第1引数は `ci: RID`**。`StyleBox._draw()` からは `CanvasItem.draw_*` を呼べないため)/ 各 `StyleBox` 派生と `Control._draw()` 側。`UiPaint` は点列(角丸・五角形・円)と紋章を持つ

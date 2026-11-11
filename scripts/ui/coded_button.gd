@@ -11,6 +11,8 @@ const ICON_GROUP := "icon_square"
 const PRIMARY_ACTION_GROUP := "primary_action"
 ## 硝子に赤い縁。削除・投了など取り返せない操作。
 const DANGER_GROUP := "danger_text"
+## 硝子の面のボタンの字の縁取り(テーマ既定と同じ太さ)。
+const BUTTON_OUTLINE := 3
 const STATES: Array[String] = ["normal", "hover", "pressed", "disabled"]
 
 
@@ -54,6 +56,8 @@ static func apply_styles(button: Button, group: String) -> void:
 static func _apply_font_colors(button: Button, style: CodedButtonStyle) -> void:
 	var normal := UiPalette.IVORY
 	var lit := Color.WHITE
+	# テーマ既定の暗い縁取りは、真鍮の面の暗い字に重なると字が潰れて見えるため外す。
+	button.add_theme_constant_override("outline_size", 0 if style.filled else BUTTON_OUTLINE)
 	if style.filled:
 		normal = UiPalette.BRASS_INK
 		lit = UiPalette.BRASS_INK
