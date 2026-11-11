@@ -7,24 +7,23 @@ signal buy_requested(kind: ShopCatalog.Kind, id: String)
 signal set_preview_requested(set_id: String)
 
 const KIND_BASELINE := 16.0
-const KIND_FONT_SIZE := 14
+const KIND_FONT_SIZE := UiPalette.T_SMALL
 const NAME_BASELINE := 46.0
-const NAME_FONT_SIZE := 24
+const NAME_FONT_SIZE := UiPalette.T_HEAD
 const PREVIEW_TOP := 64.0
 const PREVIEW_HEIGHT := 196.0
-const PREVIEW_FRAME_WIDTH := 1.5
 const PREVIEW_PAD := 8.0
 const CAPTION_GAP := 20.0
-const CAPTION_FONT_SIZE := 13
+const CAPTION_FONT_SIZE := UiPalette.T_SMALL
 const DESC_GAP := 26.0
-const DESC_FONT_SIZE := 15
+const DESC_FONT_SIZE := UiPalette.T_BODY
 const DESC_MAX_LINES := 3
 const BUY_HEIGHT := 56.0
-const BUY_FONT_SIZE := 20
+const BUY_FONT_SIZE := UiPalette.T_LEAD
 const SUB_BUTTON_HEIGHT := 46.0
 const BUTTON_GAP := 10.0
 const STATUS_GAP := 18.0
-const STATUS_FONT_SIZE := 16
+const STATUS_FONT_SIZE := UiPalette.T_BODY
 
 var _kind: ShopCatalog.Kind = ShopCatalog.Kind.ICON
 var _id := ""
@@ -45,10 +44,6 @@ func _ready() -> void:
 		"購入する", Vector2(0, BUY_HEIGHT), CodedButton.PRIMARY_ACTION_GROUP
 	)
 	_buy.add_theme_font_size_override("font_size", BUY_FONT_SIZE)
-	_buy.add_theme_color_override("font_color", UiPalette.OUTLINE_DARK)
-	_buy.add_theme_color_override("font_hover_color", UiPalette.OUTLINE_DARK)
-	# 押した後はフォーカスが残り、上書きしないと真鍮の面の上で文字だけ白く抜ける。
-	_buy.add_theme_color_override("font_focus_color", UiPalette.OUTLINE_DARK)
 	_buy.pressed.connect(func() -> void: buy_requested.emit(_kind, _id))
 	add_child(_buy)
 	resized.connect(_layout)
@@ -122,7 +117,7 @@ func _draw() -> void:
 		HORIZONTAL_ALIGNMENT_LEFT,
 		size.x,
 		KIND_FONT_SIZE,
-		UiPalette.TEXT_MUTED
+		UiPalette.GOLD
 	)
 	draw_string(
 		_font,
@@ -131,17 +126,16 @@ func _draw() -> void:
 		HORIZONTAL_ALIGNMENT_LEFT,
 		size.x,
 		NAME_FONT_SIZE,
-		UiPalette.TEXT_OFFWHITE
+		UiPalette.IVORY
 	)
 	var preview := _preview_rect()
 	if not _table.visible:
-		draw_rect(preview, UiPalette.BOARD_TABLE_FILL)
+		UiKit.well(get_canvas_item(), preview)
 		var inner := preview.grow(-PREVIEW_PAD)
 		if _kind == ShopCatalog.Kind.SKIN:
 			ShopItemArt.skin_states(self, inner, _id)
 		elif _kind == ShopCatalog.Kind.CARD_SET:
 			ShopItemArt.card_set_grid(self, inner, _id, _font)
-		draw_rect(preview, UiPalette.BRASS_DARK, false, PREVIEW_FRAME_WIDTH)
 	var y := preview.end.y + CAPTION_GAP
 	var caption := _caption()
 	if not caption.is_empty():
@@ -152,7 +146,7 @@ func _draw() -> void:
 			HORIZONTAL_ALIGNMENT_LEFT,
 			size.x,
 			CAPTION_FONT_SIZE,
-			UiPalette.TEXT_MUTED
+			UiPalette.MUTED
 		)
 	draw_multiline_string(
 		_font,
@@ -162,7 +156,7 @@ func _draw() -> void:
 		size.x,
 		DESC_FONT_SIZE,
 		DESC_MAX_LINES,
-		UiPalette.TEXT_OFFWHITE
+		UiPalette.IVORY
 	)
 	_draw_status()
 
@@ -192,7 +186,7 @@ func _draw_status() -> void:
 	var cost := ShopCatalog.price(_kind, _id)
 	var balance := AccountService.currency()
 	var text := ""
-	var color := UiPalette.TEXT_MUTED
+	var color := UiPalette.MUTED
 	var y := _bottom_top() - STATUS_GAP
 	if owned:
 		text = ("デッキ編成で使えます" if _kind == ShopCatalog.Kind.CARD_SET else "アカウント画面で設定できます")
@@ -207,7 +201,7 @@ func _draw_status() -> void:
 			"%s → 購入後の残高 %s"
 			% [CurrencyRules.label_text(cost), CurrencyRules.amount_text(balance - cost)]
 		)
-		color = UiPalette.BRASS_HIGHLIGHT
+		color = UiPalette.SAND_HI
 	if _look.visible and not owned:
 		y -= SUB_BUTTON_HEIGHT + BUTTON_GAP
 	draw_string(

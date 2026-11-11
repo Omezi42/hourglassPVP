@@ -21,9 +21,13 @@ const COLUMNS := 10
 const RACK_TOP := 138.0
 ## 3段ぶん。**駒の高さは幅で決まる**(1208 / 10 列)ため、そこから逆算した値。
 const RACK_HEIGHT := 510.0
-const TITLE_FONT_SIZE := 38
-const SUB_FONT_SIZE := 22
-const FOOTER_FONT_SIZE := 18
+const TITLE_FONT_SIZE := UiPalette.T_TITLE
+const SUB_FONT_SIZE := UiPalette.T_LEAD
+const FOOTER_FONT_SIZE := UiPalette.T_BODY
+## 書き出す絵の外枠(真鍮の細い縁)。
+const FRAME_INSET := 10.0
+const FRAME_RADIUS := 14.0
+const FRAME_WIDTH := 3.0
 const TITLE_NAME := "砂時計アリーナ"
 const THEME_PATH := "res://resources/theme/main_theme.tres"
 
@@ -71,16 +75,9 @@ func show_deck(deck: Array, deck_name: String, code: String) -> void:
 func _draw() -> void:
 	var ci := get_canvas_item()
 	var rect := Rect2(Vector2.ZERO, size)
-	UiPaint.fill_gradient_polygon(
-		ci,
-		PackedVector2Array(
-			[rect.position, Vector2(rect.end.x, 0.0), rect.end, Vector2(0.0, rect.end.y)]
-		),
-		rect,
-		ScreenBackdrop.STOPS
-	)
-	UiPaint.apply_grain(ci, rect, ScreenBackdrop.GRAIN_ALPHA)
-	draw_rect(rect.grow(-10.0), UiPalette.GLOW_AMBER, false, 2.0)
+	UiKit.vgrad(ci, UiKit.rr(rect, 0.0), [[0.0, UiPalette.INK_700], [1.0, UiPalette.INK_900]])
+	var frame := rect.grow(-FRAME_INSET)
+	UiKit.stroke_grad(ci, UiKit.rr(frame, FRAME_RADIUS), UiKit.rim_brass(), FRAME_WIDTH)
 	_draw_header()
 	_draw_footer()
 
@@ -93,7 +90,7 @@ func _draw_header() -> void:
 		HORIZONTAL_ALIGNMENT_LEFT,
 		(SHEET_SIZE.x - MARGIN * 2.0) * 0.62,
 		TITLE_FONT_SIZE,
-		UiPalette.TEXT_OFFWHITE
+		UiPalette.IVORY
 	)
 	draw_string(
 		_font,
@@ -102,7 +99,7 @@ func _draw_header() -> void:
 		HORIZONTAL_ALIGNMENT_LEFT,
 		240.0,
 		SUB_FONT_SIZE,
-		UiPalette.GLOW_AMBER
+		UiPalette.SAND
 	)
 	if _code == "":
 		return
@@ -114,7 +111,7 @@ func _draw_header() -> void:
 		HORIZONTAL_ALIGNMENT_RIGHT,
 		360.0,
 		SUB_FONT_SIZE + 6,
-		UiPalette.TEXT_OFFWHITE
+		UiPalette.IVORY
 	)
 	draw_string(
 		_font,
@@ -123,7 +120,7 @@ func _draw_header() -> void:
 		HORIZONTAL_ALIGNMENT_RIGHT,
 		360.0,
 		FOOTER_FONT_SIZE,
-		UiPalette.TEXT_MUTED
+		UiPalette.MUTED
 	)
 
 
@@ -138,7 +135,7 @@ func _draw_footer() -> void:
 		HORIZONTAL_ALIGNMENT_LEFT,
 		400.0,
 		FOOTER_FONT_SIZE,
-		UiPalette.TEXT_MUTED
+		UiPalette.MUTED
 	)
 	draw_string(
 		_font,
@@ -147,5 +144,5 @@ func _draw_footer() -> void:
 		HORIZONTAL_ALIGNMENT_RIGHT,
 		320.0,
 		FOOTER_FONT_SIZE,
-		UiPalette.TEXT_MUTED
+		UiPalette.MUTED
 	)

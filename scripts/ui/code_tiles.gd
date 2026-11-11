@@ -8,14 +8,10 @@ extends Control
 signal submitted
 
 const TILE_GAP_RATIO := 0.2
-const TILE_RADIUS_RATIO := 0.1
 const DIGIT_SIZE_RATIO := 0.62
 const DIGIT_BASELINE_RATIO := 0.24
 const CURSOR_HALF_RATIO := 0.18
 const CURSOR_INSET_RATIO := 0.16
-const TILE_TOP := Color(0.04, 0.035, 0.04)
-const TILE_BOTTOM := Color(0.11, 0.10, 0.12)
-const RIM_SHADE := Color(0, 0, 0, 0.6)
 const CURSOR_ALPHA := 0.85
 
 ## 升の数。組み立てた直後(`make_editable()` より前)に決める。
@@ -85,14 +81,10 @@ func _draw() -> void:
 	var count := digits
 	var tile_w := size.x / (count + (count - 1) * TILE_GAP_RATIO)
 	var tile := Vector2(tile_w, size.y)
-	var radius := tile_w * TILE_RADIUS_RATIO
 	var show_cursor := input != null and input.editable and input.has_focus()
 	for i in count:
 		var rect := Rect2(Vector2((tile_w * (1.0 + TILE_GAP_RATIO)) * i, 0), tile)
-		var points := UiPaint.rounded_rect_points_uniform(rect, radius, 6)
-		UiPaint.fill_gradient_polygon(rid, points, rect, [[0.0, TILE_TOP], [1.0, TILE_BOTTOM]])
-		UiPaint.draw_inner_shadow(rid, rect, radius, 6, 6, Color.BLACK, 0.8)
-		UiPaint.draw_bevel(rid, points, RIM_SHADE, UiPalette.BRASS_RIM_LIGHT, 2.0, false)
+		UiKit.well(rid, rect)
 		if i < code.length():
 			draw_string(
 				_font,
@@ -101,7 +93,7 @@ func _draw() -> void:
 				HORIZONTAL_ALIGNMENT_CENTER,
 				rect.size.x,
 				int(tile.y * DIGIT_SIZE_RATIO),
-				UiPalette.BRASS_HIGHLIGHT
+				UiPalette.IVORY
 			)
 		elif i == code.length() and show_cursor:
 			var y := rect.end.y - tile.y * CURSOR_INSET_RATIO
@@ -109,6 +101,6 @@ func _draw() -> void:
 			draw_line(
 				Vector2(rect.get_center().x - half, y),
 				Vector2(rect.get_center().x + half, y),
-				Color(UiPalette.GLOW_AMBER, CURSOR_ALPHA),
+				Color(UiPalette.SAND, CURSOR_ALPHA),
 				3.0
 			)

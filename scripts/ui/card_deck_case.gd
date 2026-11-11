@@ -30,8 +30,8 @@ const EDGE := 18.0
 const TEXT_GAP := 22.0
 const NAME_FONT := UiPalette.T_HEAD
 const SUMMARY_FONT := UiPalette.T_SMALL
-const NAME_RISE := 18.0
-const SUMMARY_DROP := 10.0
+const NAME_RISE := 26.0
+const SUMMARY_DROP := 0.0
 ## 縦は文字を24px以上にし、名前と要約を札の上半分へ置いて下の右にボタンを空ける。
 const PORTRAIT_NAME_FONT := 32
 const PORTRAIT_SUMMARY_FONT := 24

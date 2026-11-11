@@ -35,12 +35,19 @@ const BADGE_MAX := 13.0
 ## 絵の縦横比(砂時計の絵は 1 : 1.30)。
 const ART_RATIO := 1.30
 
-const COST_TOP := Color(0.46, 0.70, 0.98)
-const COST_BOTTOM := Color(0.11, 0.24, 0.52)
-const NAME_COLOR := Color(0.88, 0.82, 0.70)
-const SOCKET_DARK := Color(0.045, 0.030, 0.020)
-const BACK_TOP := Color(0.10, 0.068, 0.048)
-const BACK_BOTTOM := Color(0.16, 0.105, 0.072)
+const NAME_COLOR := UiPalette.IVORY
+## 棚板は藍の天板と真鍮の帯の2層(札の棚板と同じ作り)。帯の取り分は板の厚みの比。
+const LEDGE_BRASS_RATIO := 0.43
+const LEDGE_SHADOW_LINES := 5
+const LEDGE_SHADOW_ALPHA := 0.26
+## 空いている枠の受け皿と砂時計の影。
+const SOCKET_COLOR := Color(0, 0, 0, 0.5)
+const SOCKET_RING_ALPHA := 0.35
+const SOCKET_OUTLINE_ALPHA := 0.2
+## 詰める文字の下限・案内の札の大きさ。
+const HINT_FONT := UiPalette.T_BODY
+const HINT_SIZE := Vector2(380.0, 44.0)
+const SPELL_PLATE_INSET := 0.07
 ## 30枚に達した瞬間だけ棚全体へ重ねる淡い光の、強さと消えるまでの尺(GameDesign.md 9章)。
 const GLOW_DURATION := 0.6
 const GLOW_ALPHA := 0.35
@@ -107,7 +114,8 @@ func _rebuild() -> void:
 	_slots.sort_custom(CardLibrary.compare_by_cost)
 	_hover_index = -1
 	var full: bool = _slots.size() == _slot_count()
-	if full and not _was_full:
+	# 読むだけの棚(共有用のデッキ表)は光らせない。書き出す絵が光の途中で撮れてしまうため。
+	if full and not _was_full and not readonly:
 		_start_glow()
 	_was_full = full
 	queue_redraw()
@@ -150,13 +158,7 @@ func _rows() -> int:
 func _draw() -> void:
 	_hits.clear()
 	var rect := Rect2(Vector2.ZERO, size)
-	UiPaint.fill_gradient_polygon(
-		get_canvas_item(),
-		UiPaint.rounded_rect_points_uniform(rect, 8.0, 6),
-		rect,
-		[[0.0, BACK_TOP], [1.0, BACK_BOTTOM]]
-	)
-	UiPaint.draw_inner_shadow(get_canvas_item(), rect, 8.0, 8, 7, Color(0, 0, 0), 0.7)
+	UiKit.well(get_canvas_item(), rect)
 
 	var rows := _rows()
 	var cell := Vector2(size.x / float(columns), size.y / float(rows))
@@ -171,7 +173,7 @@ func _draw() -> void:
 	if _slots.is_empty():
 		_draw_hint()
 	if _glow_amount > 0.0:
-		var glow := UiPalette.GLOW_AMBER
+		var glow := UiPalette.SAND
 		glow.a = _glow_amount * GLOW_ALPHA
 		draw_rect(rect, glow, true)
 
@@ -185,24 +187,20 @@ func _name_band() -> float:
 func _draw_ledge(row: int, cell: Vector2) -> void:
 	var y: float = (row + 1) * cell.y - _name_band() - LEDGE_HEIGHT
 	var ledge := Rect2(6.0, y, size.x - 12.0, LEDGE_HEIGHT)
-	(
-		UiPaint
-		. fill_gradient_polygon(
-			get_canvas_item(),
-			UiPaint.rounded_rect_points_uniform(ledge, 2.0, 3),
-			ledge,
-			[
-				[0.0, UiPalette.BRASS_HIGHLIGHT],
-				[0.45, UiPalette.BRASS_MID],
-				[1.0, Color(0.16, 0.10, 0.06)],
-			]
-		)
+	var ci := get_canvas_item()
+	var top := Rect2(
+		ledge.position, Vector2(ledge.size.x, ledge.size.y * (1.0 - LEDGE_BRASS_RATIO))
 	)
-	for i in 5:
+	var trim := Rect2(
+		Vector2(ledge.position.x, top.end.y), Vector2(ledge.size.x, ledge.end.y - top.end.y)
+	)
+	UiKit.vgrad(ci, UiKit.rr(top, 0.0), [[0.0, UiPalette.INK_500], [1.0, UiPalette.INK_700]])
+	UiKit.vgrad(ci, UiKit.rr(trim, 0.0), [[0.0, UiPalette.GOLD], [1.0, UiPalette.BRASS_DEEP]])
+	for i in LEDGE_SHADOW_LINES:
 		draw_line(
 			Vector2(ledge.position.x, ledge.end.y + i),
 			Vector2(ledge.end.x, ledge.end.y + i),
-			Color(0, 0, 0, 0.26 * (1.0 - float(i) / 5.0)),
+			Color(0, 0, 0, LEDGE_SHADOW_ALPHA * (1.0 - float(i) / LEDGE_SHADOW_LINES)),
 			1.0
 		)
 
@@ -230,9 +228,7 @@ func _draw_slot(index: int, cell: Vector2, art: Vector2) -> void:
 	var card: CardData = _slots[index]
 	if index == _hover_index:
 		_draw_hover_glow(base, art.x)
-	UiPaint.fill_ellipse(
-		get_canvas_item(), base, Vector2(art.x * 0.40, 5.0), Color(0, 0, 0, 0.5), 20
-	)
+	UiPaint.fill_ellipse(get_canvas_item(), base, Vector2(art.x * 0.40, 5.0), SOCKET_COLOR, 20)
 	var art_rect := Rect2(base - Vector2(art.x * 0.5, art.y - 2.0), art)
 	if card.is_spell:
 		_draw_spell_plate(art_rect, card)
@@ -246,7 +242,7 @@ func _draw_slot(index: int, cell: Vector2, art: Vector2) -> void:
 	var right := art_rect.end.x - badge_r * 0.4
 	var top := art_rect.position.y + badge_r
 	var bottom := art_rect.end.y - badge_r
-	_draw_diamond(Vector2(left, top), card.cost, badge_r)
+	CardStatBadge.cost_diamond(self, _font, Vector2(left, top), card.cost, badge_r)
 	EmblemSeal.brass(self, Vector2(right, top), card.emblem, badge_r * 0.86)
 	CardStatBadge.pair(self, _font, Vector2(left, bottom), Vector2(right, bottom), card, badge_r)
 	draw_string(
@@ -263,9 +259,14 @@ func _draw_slot(index: int, cell: Vector2, art: Vector2) -> void:
 ## 空いている枠。**棚に彫った受け皿**として描き、そこへ薄い砂時計の影を落とす。
 ## 何枚足りないかは、この空きの数がそのまま示す。
 func _draw_socket(base: Vector2, art_w: float) -> void:
-	UiPaint.fill_ellipse(get_canvas_item(), base, Vector2(art_w * 0.34, 5.5), SOCKET_DARK, 22)
+	UiPaint.fill_ellipse(get_canvas_item(), base, Vector2(art_w * 0.34, 5.5), SOCKET_COLOR, 22)
 	UiPaint.draw_ellipse_ring(
-		get_canvas_item(), base, Vector2(art_w * 0.34, 5.5), Color(0.52, 0.42, 0.26, 0.35), 1.4, 22
+		get_canvas_item(),
+		base,
+		Vector2(art_w * 0.34, 5.5),
+		Color(UiPalette.BRASS, SOCKET_RING_ALPHA),
+		1.4,
+		22
 	)
 	var h: float = art_w * 0.80
 	var half: float = art_w * 0.24
@@ -283,84 +284,43 @@ func _draw_socket(base: Vector2, art_w: float) -> void:
 			Vector2(base.x - half, top),
 		]
 	)
-	ShapePaint.polyline(get_canvas_item(), outline, Color(0.48, 0.38, 0.24, 0.20), 1.6)
+	ShapePaint.polyline(
+		get_canvas_item(), outline, Color(UiPalette.BRASS, SOCKET_OUTLINE_ALPHA), 1.6
+	)
 
 
 ## デッキが1枚も無いときだけ、棚の中ほどへ1行を置く。**受け皿の上へ文字を直に
 ## 重ねない**——空の枠と同じ薄さで並ぶと、どちらも読み取りにくくなる。木札として置く。
 func _draw_hint() -> void:
-	var plate := Rect2(size.x * 0.5 - 190.0, size.y * 0.5 - 22.0, 380.0, 44.0)
-	var points := UiPaint.rounded_rect_points_uniform(plate, 8.0, 6)
-	UiPaint.fill_gradient_polygon(
-		get_canvas_item(),
-		points,
-		plate,
-		[[0.0, Color(0.26, 0.175, 0.10)], [1.0, Color(0.13, 0.085, 0.05)]]
-	)
-	var closed := points.duplicate()
-	closed.append(points[0])
-	ShapePaint.polyline(get_canvas_item(), closed, Color(0.58, 0.46, 0.30), 1.8)
-	draw_string(
-		_font,
-		Vector2(plate.position.x, plate.get_center().y + 6.0),
-		"左の在庫棚から選ぶと、ここへ収まります",
-		HORIZONTAL_ALIGNMENT_CENTER,
-		plate.size.x,
-		16,
-		Color(0.90, 0.82, 0.66)
-	)
-
-
-func _draw_diamond(center: Vector2, value: int, r: float) -> void:
-	var points := PackedVector2Array(
-		[
-			center + Vector2(0, -r),
-			center + Vector2(r, 0),
-			center + Vector2(0, r),
-			center + Vector2(-r, 0),
-		]
-	)
-	UiPaint.fill_gradient_polygon(
-		get_canvas_item(),
-		points,
-		Rect2(center - Vector2(r, r), Vector2(r, r) * 2.0),
-		[[0.0, COST_TOP], [1.0, COST_BOTTOM]]
-	)
-	var closed := points.duplicate()
-	closed.append(points[0])
-	ShapePaint.polyline(get_canvas_item(), closed, Color(0.03, 0.06, 0.14), 2.0)
-	draw_string(
-		_font,
-		center - Vector2(20, -5),
-		str(value),
-		HORIZONTAL_ALIGNMENT_CENTER,
-		40,
-		int(r + 2),
-		Color.WHITE
+	var plate := Rect2(size * 0.5 - HINT_SIZE * 0.5, HINT_SIZE)
+	UiKit.glass(get_canvas_item(), plate)
+	UiKit.text_in(
+		get_canvas_item(), _font, "左の在庫棚から選ぶと、ここへ収まります", plate, HINT_FONT, UiPalette.IVORY
 	)
 
 
 ## 砂術の札。**砂時計の絵を持たない**ため、紋章を中央へ大きく置く(GameDesign.md 9章)。
 func _draw_spell_plate(p_rect: Rect2, card: CardData) -> void:
 	# 札は矩形なので、砂時計の絵(周りに余白がある)と同じ寸法だと大きく見える。
-	var rect := Rect2(p_rect.position + p_rect.size * 0.07, p_rect.size * 0.86)
-	var points := UiPaint.rounded_rect_points_uniform(rect, 5.0, 6)
-	UiPaint.fill_gradient_polygon(
-		get_canvas_item(),
-		points,
-		rect,
-		[[0.0, Color(0.20, 0.26, 0.40)], [1.0, Color(0.08, 0.11, 0.20)]]
+	var rect := Rect2(
+		p_rect.position + p_rect.size * SPELL_PLATE_INSET,
+		p_rect.size * (1.0 - SPELL_PLATE_INSET * 2.0)
 	)
-	var closed := points.duplicate()
-	closed.append(points[0])
-	ShapePaint.polyline(get_canvas_item(), closed, CardView.SPELL_BORDER, 2.2)
+	UiKit.glass(
+		get_canvas_item(),
+		rect,
+		-1.0,
+		0.0,
+		UiKit.GLASS_ALPHA,
+		UiKit.rim_color(CardView.SPELL_BORDER)
+	)
 	if card.emblem != null:
 		var side: float = rect.size.x * 0.62
 		draw_texture_rect(
 			card.emblem,
 			Rect2(rect.get_center() - Vector2(side, side) * 0.5, Vector2(side, side)),
 			false,
-			Color(0.82, 0.90, 1.0)
+			UiPalette.IVORY
 		)
 
 
@@ -369,7 +329,7 @@ func _draw_hover_glow(base: Vector2, art_w: float) -> void:
 	for i in 3:
 		var r := Vector2(art_w * (0.52 + 0.09 * i), art_w * (0.15 + 0.025 * i))
 		UiPaint.draw_ellipse_ring(
-			get_canvas_item(), base, r, Color(1.0, 0.88, 0.52, 0.55 - 0.15 * i), 2.0, 26
+			get_canvas_item(), base, r, Color(UiPalette.GOLD, 0.55 - 0.15 * i), 2.0, 26
 		)
 
 

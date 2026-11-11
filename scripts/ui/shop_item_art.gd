@@ -7,19 +7,16 @@ extends RefCounted
 ## 砂時計の絵に対する紋章の位置(絵の左下。手札の紋章の印と同じ置き場)と大きさ。
 const SEAL_ANCHOR := Vector2(0.2, 0.83)
 const SEAL_RADIUS_RATIO := 0.15
-const NAME_FONT_SIZE := 11
+const NAME_FONT_SIZE := UiPalette.T_MICRO
 const NAME_HEIGHT := 18.0
 const CELL_PAD := 4.0
 const GRID_COLUMNS := 5
 const BUBBLE_CORNER := 10.0
-const BUBBLE_FONT_SIZE := 16
-const BUBBLE_TOP := Color(0.16, 0.13, 0.1, 0.95)
-const BUBBLE_BOTTOM := Color(0.08, 0.06, 0.05, 0.95)
-const BUBBLE_OUTLINE_WIDTH := 1.2
+const BUBBLE_FONT_SIZE := UiPalette.T_BODY
 ## 段階公開でまだ出していない枠(GameDesign.md 21章)。公開済みの絵を影にして「?」を重ねる。
-const HIDDEN_TINT := Color(0.55, 0.47, 0.36, 0.30)
+const HIDDEN_TINT := Color(UiPalette.INK_500, 0.6)
 const HIDDEN_MARK_RATIO := 0.32
-const HIDDEN_MARK_COLOR := Color(0.78, 0.68, 0.52, 0.85)
+const HIDDEN_MARK_COLOR := Color(UiPalette.MUTED, 0.85)
 const HIDDEN_NAME := "近日公開"
 
 
@@ -67,7 +64,7 @@ static func card_set_grid(ci: CanvasItem, rect: Rect2, set_id: String, font: Fon
 				HORIZONTAL_ALIGNMENT_CENTER,
 				cell.x,
 				NAME_FONT_SIZE,
-				UiPalette.TEXT_OFFWHITE if i < ids.size() else UiPalette.TEXT_MUTED
+				UiPalette.IVORY if i < ids.size() else UiPalette.MUTED
 			)
 
 
@@ -129,16 +126,9 @@ static func skin_states(ci: CanvasItem, rect: Rect2, skin_id: String) -> void:
 		ci.draw_texture_rect(texture, Rect2(at, art), false)
 
 
-## エモートの文言を、対局中の吹き出し(`EmoteBubble`)と同じ質感の真鍮枠に収める。
+## エモートの文言を、面(タイル・詳細)の中へ沈めた区画に収める。
 static func emote_bubble(ci: CanvasItem, rect: Rect2, emote_id: String, font: Font) -> void:
-	var rid := ci.get_canvas_item()
-	var points := UiPaint.rounded_rect_points_uniform(rect, BUBBLE_CORNER, 5)
-	UiPaint.fill_gradient_polygon(rid, points, rect, [[0.0, BUBBLE_TOP], [1.0, BUBBLE_BOTTOM]])
-	var outline := points.duplicate()
-	outline.append(points[0])
-	ShapePaint.polyline(
-		ci.get_canvas_item(), outline, UiPalette.BRASS_LIGHT, BUBBLE_OUTLINE_WIDTH, true
-	)
+	UiKit.well(ci.get_canvas_item(), rect, BUBBLE_CORNER)
 	if font == null:
 		return
 	ci.draw_string(
@@ -148,5 +138,5 @@ static func emote_bubble(ci: CanvasItem, rect: Rect2, emote_id: String, font: Fo
 		HORIZONTAL_ALIGNMENT_CENTER,
 		rect.size.x,
 		BUBBLE_FONT_SIZE,
-		UiPalette.TEXT_OFFWHITE
+		UiPalette.IVORY
 	)

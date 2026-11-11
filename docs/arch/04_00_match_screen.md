@@ -124,6 +124,9 @@
 - **`CardDeckShelf` は1つの `Control` が30枠を `_draw()` で描き、当たり判定を矩形の表として持つ**(30個のノードだと1枚動かすたびに生成と破棄が走る)。枠の数は `MatchState.DECK_SIZE` から実行時に読む(横 `COLUMNS`=6)。空き枠も枠として描き当たり判定にも積む。バッジ半径は `clampf(art_w * 0.20, 8, 13)`。**共有のデッキ表(`CardDeckSheet`)も同じ棚**(`columns=10` / `readonly=true`)
 - **`CardDeckList` は同じ場所へ出すリスト表示**(1種類1行・1列・行の高さ固定。`ScrollContainer` の中に置き、種類数から `custom_minimum_size.y` を決める。行は `PressTracker` で離したときに確定し、指のスクロールで戻さない)。シグナルと `global_rect_for_card()` は `CardDeckShelf` と同じ形で、画面は見えている方を `_deck_rect()` で選ぶ。どちらを出すかは `UiState.deck_as_list()` に保存
 - **カードを並べる画面(`CardDeckShelf` / `CardDeckList` / `WorkshopStockItem` / `AlmanacEntry`)の攻撃力・体力の丸は `CardStatBadge.pair()` が描く**(場に出た時点の値。砂術は体力の位置へ「術」だけ)。紋章(`EmblemSeal`)は右上、手札の札(`HandCardPaint`)と同じ四隅
+- **工房の面は夜の藍の幕を掛けた板壁の上の硝子の面**(在庫棚・組立台。`WorkshopBackdrop` が描き、小見出しは金の字 + `UiKit.hairline`)。組立台の中の棚・リストの行・名前欄は面の中へ沈めた区画(`UiKit.well`)、棚板は藍の天板と真鍮の帯。硝子の面の中へ硝子の面を入れないため(`CardStatBadge.cost_diamond()` がコストの菱形を描く)
+- デッキ一覧の札(`CardDeckCase`)は名前と要約を札の上半分へ寄せ、要約と下のボタンのあいだに8px以上空ける
+- ショップの一覧(`CardShopScreen` の中央)は品のタイル(硝子)を場所の壁の上へ直に並べ、パネルの面を持たない(面の中へ面を入れないため)。選んだ品の枠は水色の線
 - 詳細は `interactive = false` で幅400px、`CardDetailPanel.place_near()` で置く(`MOUSE_FILTER_IGNORE` でホバーを奪わない)
 - 一覧のカードは `CardView.badge` で「2/2」。保存は30枚ちょうどのときだけ。編集画面は必ず一覧から `open(index)`(-1は新規)。デッキ名の入力欄は編成中の欄の上端
 - **ボタンの既定の文字色はテーマ側でオフホワイト**(`main_theme.tres`。指定を書き忘れた画面だけ黒い文字になる状態を無くすため。`font_hover_color` だけ暗いまま)

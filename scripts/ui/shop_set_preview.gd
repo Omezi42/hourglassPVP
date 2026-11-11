@@ -14,9 +14,8 @@ const PANEL_STYLE := "res://resources/theme/content_panel.tres"
 const SCROLL_SIZE := Vector2(1140, 470)
 const ROW_GAP := 16.0
 ## 段階公開でまだ出していない札(GameDesign.md 21章)。公開済みの札と同じ大きさで並べる。
-const HIDDEN_FRAME_WIDTH := 1.5
 const HIDDEN_MARK_SIZE := 96
-const HIDDEN_NAME_SIZE := 18
+const HIDDEN_NAME_SIZE := UiPalette.T_LEAD
 const HIDDEN_NAME_GAP := 48.0
 ## 縦(GameDesign.md 9章「縦画面」)。`PortraitModal` の論理幅で組み、中身ごと拡大する(横スクロールのまま)。
 const PORTRAIT_SCROLL_SIZE := Vector2(PortraitModal.WIDTH - 48.0, 470)
@@ -77,8 +76,7 @@ func _hidden_slot() -> Control:
 		func() -> void:
 			var font := slot.get_theme_default_font()
 			var rect := Rect2(Vector2.ZERO, slot.size)
-			slot.draw_rect(rect, UiPalette.BOARD_TABLE_FILL)
-			slot.draw_rect(rect, UiPalette.BRASS_DARK, false, HIDDEN_FRAME_WIDTH)
+			UiKit.well(slot.get_canvas_item(), rect, UiKit.radius(rect))
 			var mid := rect.get_center().y
 			slot.draw_string(
 				font,
@@ -96,7 +94,7 @@ func _hidden_slot() -> Control:
 				HORIZONTAL_ALIGNMENT_CENTER,
 				rect.size.x,
 				HIDDEN_NAME_SIZE,
-				UiPalette.TEXT_MUTED
+				UiPalette.MUTED
 			)
 	)
 	return slot
@@ -130,8 +128,8 @@ func _build() -> void:
 	column.add_theme_constant_override("separation", 14)
 	panel.add_child(column)
 	_title = Label.new()
-	_title.add_theme_font_size_override("font_size", 22)
-	_title.add_theme_color_override("font_color", UiPalette.TEXT_OFFWHITE)
+	_title.add_theme_font_size_override("font_size", UiPalette.T_HEAD)
+	_title.add_theme_color_override("font_color", UiPalette.IVORY)
 	column.add_child(_title)
 
 	_scroll = ScrollContainer.new()

@@ -23,7 +23,7 @@ const TAB_GAP := 10
 const GRID_SEPARATION := 12
 ## 中央の一覧の下に残す、購入の結果を1行で出す欄の高さ。
 const MESSAGE_HEIGHT := 34.0
-const MESSAGE_FONT_SIZE := 16
+const MESSAGE_FONT_SIZE := UiPalette.T_BODY
 
 ## 縦画面(GameDesign.md 9章「縦画面」)。品種のタブを上に3列で並べ、その下の一覧と詳細を切り替えて1つずつ出す
 ## (3つを並べる幅が無いため)。一覧と詳細はパネルごと拡大して置く。
@@ -327,7 +327,8 @@ func _build() -> void:
 	_rail.add_theme_constant_override("v_separation", TAB_GAP)
 	add_child(_rail)
 
-	var grid_panel := _panel(_grid_rect())
+	# 品のタイルは硝子の札なので、一覧のパネルは面を持たない(面の中へ面を入れない)。
+	var grid_panel := _panel(_grid_rect(), false)
 	_grid_panel = grid_panel
 	add_child(grid_panel)
 	_scroll = ScrollContainer.new()
@@ -343,7 +344,7 @@ func _build() -> void:
 	_message.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_message.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_message.add_theme_font_size_override("font_size", MESSAGE_FONT_SIZE)
-	_message.add_theme_color_override("font_color", UiPalette.TEXT_OFFWHITE)
+	_message.add_theme_color_override("font_color", UiPalette.IVORY)
 	add_child(_message)
 
 	var detail_panel := _panel(_detail_rect())
@@ -416,12 +417,18 @@ func _select_view(detail: bool) -> void:
 	_detail_panel.visible = detail or not _portrait
 
 
-func _panel(rect: Rect2) -> PanelContainer:
+## `face` が false なら面を描かず、余白だけ硝子の面と同じにする(中身の寸法を変えないため)。
+func _panel(rect: Rect2, face := true) -> PanelContainer:
 	var panel := PanelContainer.new()
 	panel.position = rect.position
 	panel.custom_minimum_size = rect.size
 	panel.size = rect.size
 	var style: StyleBox = load(PANEL_STYLE)
+	if style != null and not face:
+		var bare := StyleBoxEmpty.new()
+		for side in [SIDE_LEFT, SIDE_TOP, SIDE_RIGHT, SIDE_BOTTOM]:
+			bare.set_content_margin(side, style.get_margin(side))
+		style = bare
 	if style != null:
 		panel.add_theme_stylebox_override("panel", style)
 	return panel

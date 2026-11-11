@@ -34,7 +34,7 @@ const GRID_GAP := 6
 const BACK_GROUP := "back_nav"
 ## 縦の切り替えのうち、選んでいない側の見た目。
 const TAB_GROUP := "wide_text"
-const NAME_FONT := 18
+const NAME_FONT := UiPalette.T_BODY
 const BACK_RECT := Rect2(24, 30, 92, 42)
 const ACTION_SIZE := Vector2(126, 42)
 const ACTION_GAP := 10.0
@@ -47,18 +47,18 @@ const DETAIL_BOUNDS := Rect2(16, 16, SCREEN_WIDTH - 32, 688)
 const DETAIL_HIDE_DELAY := 0.15
 ## 一覧⇄棚の飛翔演出の尺(GameDesign.md 9章「手触り」)。
 const FLIGHT_DURATION := 0.32
-const COUNT_FONT := 16
+const COUNT_FONT := UiPalette.T_BODY
 const FILTER_SIZE := Vector2(130, 36)
 const NAME_SIZE := Vector2(228, 36)
-const PROGRESS_FONT := 20
+const PROGRESS_FONT := UiPalette.T_LEAD
 ## 編成中のデッキの「棚 / リスト」の切り替え(GameDesign.md 9章)。
 const VIEW_LABELS := ["棚", "リスト"]
 const VIEW_SIZE := Vector2(72, 36)
-const VIEW_FONT := 16
+const VIEW_FONT := UiPalette.T_BODY
 
 ## 縦画面(GameDesign.md 9章「縦画面」)。在庫棚と組立台を同じ木箱で切り替え、
 ## 中身は文字の目安(本文24px以上)を満たす大きさにする。
-const PORTRAIT_BACK_RECT := Rect2(24, 22, 140, 64)
+const PORTRAIT_BACK_RECT := Rect2(24, 22, 140, 72)
 const PORTRAIT_ACTION_SIZE := Vector2(170, 72)
 const PORTRAIT_ACTION_TOP := 112.0
 const PORTRAIT_TAB_RECT := Rect2(24, 196, 672, 72)
@@ -81,9 +81,9 @@ const PORTRAIT_STOCK_ZOOM := 1.6
 const PORTRAIT_SHELF_TEXT := 1.7
 const PORTRAIT_BUTTON_FONT := 26
 const PORTRAIT_COUNT_FONT := 24
-const PORTRAIT_FILTER_SIZE := Vector2(190, 64)
-const PORTRAIT_NAME_SIZE := Vector2(280, 64)
-const PORTRAIT_VIEW_SIZE := Vector2(92, 64)
+const PORTRAIT_FILTER_SIZE := Vector2(190, 72)
+const PORTRAIT_NAME_SIZE := Vector2(280, 72)
+const PORTRAIT_VIEW_SIZE := Vector2(92, 72)
 const PORTRAIT_VIEW_FONT := 24
 const PORTRAIT_PROGRESS_FONT := 28
 const PORTRAIT_DETAIL_SCALE := 1.6
@@ -195,7 +195,11 @@ func _build_header() -> void:
 		func() -> void: _share_panel.open(_deck, _name_input.text),
 	]
 	for i in labels.size():
-		var button := CodedButton.make(labels[i], ACTION_SIZE)
+		var button := CodedButton.make_in_group(
+			labels[i],
+			ACTION_SIZE,
+			CodedButton.PRIMARY_ACTION_GROUP if i == 0 else CodedButton.WIDE_GROUP
+		)
 		var from_right := labels.size() - i
 		button.position = Vector2(
 			SCREEN_WIDTH - 24.0 - from_right * (ACTION_SIZE.x + ACTION_GAP) + ACTION_GAP,
@@ -235,7 +239,7 @@ func _build_grid() -> void:
 	_count_label = Label.new()
 	_count_label.text = ""
 	_count_label.add_theme_font_size_override("font_size", COUNT_FONT)
-	_count_label.add_theme_color_override("font_color", UiPalette.BRASS_HIGHLIGHT)
+	_count_label.add_theme_color_override("font_color", UiPalette.MUTED)
 	_count_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_count_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	toolbar.add_child(_count_label)
@@ -289,6 +293,7 @@ func _build_side() -> void:
 	top_row.add_child(_name_input)
 	_progress = Label.new()
 	_progress.add_theme_font_size_override("font_size", PROGRESS_FONT)
+	_progress.add_theme_color_override("font_color", UiPalette.SAND_HI)
 	_progress.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_progress.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_progress.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -491,8 +496,8 @@ func _apply_filter() -> void:
 	var active := _filter.active_filter_count()
 	if active > 0:
 		_filter_button.text = "絞り込み (%d)" % active
-		_filter_button.add_theme_color_override("font_color", UiPalette.GLOW_AMBER)
-		_filter_button.add_theme_color_override("font_hover_color", UiPalette.GLOW_AMBER)
+		_filter_button.add_theme_color_override("font_color", UiPalette.SAND)
+		_filter_button.add_theme_color_override("font_hover_color", UiPalette.SAND)
 		_count_label.text = "%d / %d 種" % [visible_count, _pool.size()]
 	else:
 		_filter_button.text = "絞り込み"

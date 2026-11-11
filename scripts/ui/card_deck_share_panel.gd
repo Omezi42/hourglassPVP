@@ -69,11 +69,11 @@ const PORTRAIT_LOAD_BUTTON_RECT := Rect2(54, 316, 372, 60)
 const PORTRAIT_RECEIVE_MESSAGE_POS := Vector2(54, 388)
 const PORTRAIT_PAD_TOP := 440.0
 
-const TITLE_FONT_SIZE := 28
-const CARD_TITLE_FONT_SIZE := 22
-const RECEIVE_TITLE_FONT_SIZE := 28
-const SUB_FONT_SIZE := 16
-const MESSAGE_FONT_SIZE := 17
+const TITLE_FONT_SIZE := UiPalette.T_HEAD
+const CARD_TITLE_FONT_SIZE := UiPalette.T_LEAD
+const RECEIVE_TITLE_FONT_SIZE := UiPalette.T_HEAD
+const SUB_FONT_SIZE := UiPalette.T_BODY
+const MESSAGE_FONT_SIZE := UiPalette.T_BODY
 
 const ISSUE_LABEL := "コードを発行してコピー"
 const COPY_LABEL := "コードをコピー"
@@ -342,7 +342,7 @@ func _build() -> void:
 
 	var panel := _make_panel(self, PANEL_RECT)
 	_panel = panel
-	_title = _place_label(panel, "デッキを共有", TITLE_POS, TITLE_FONT_SIZE, UiPalette.TEXT_OFFWHITE)
+	_title = _place_label(panel, "デッキを共有", TITLE_POS, TITLE_FONT_SIZE, UiPalette.IVORY)
 	var faces := ["渡す", "受け取る"]
 	for i in faces.size():
 		var tab := CodedButton.make(faces[i], TAB_SIZE)
@@ -387,15 +387,15 @@ func _build_preview() -> void:
 	_preview.size = PREVIEW_RECT.size
 	_send_view.add_child(_preview)
 	_preview_note = _place_label(
-		_send_view, "この画像がそのまま書き出されます", PREVIEW_NOTE_POS, SUB_FONT_SIZE, UiPalette.TEXT_MUTED
+		_send_view, "この画像がそのまま書き出されます", PREVIEW_NOTE_POS, SUB_FONT_SIZE, UiPalette.MUTED
 	)
 
 
 func _build_image_card() -> void:
-	var card := _make_panel(_send_view, IMAGE_CARD_RECT)
+	var card := _make_panel(_send_view, IMAGE_CARD_RECT, true)
 	_image_card = card
-	_place_label(card, "画像で渡す", CARD_TITLE_POS, CARD_TITLE_FONT_SIZE, UiPalette.TEXT_OFFWHITE)
-	_place_label(card, "XやDiscordへそのまま貼れます", CARD_SUB_POS, SUB_FONT_SIZE, UiPalette.TEXT_MUTED)
+	_place_label(card, "画像で渡す", CARD_TITLE_POS, CARD_TITLE_FONT_SIZE, UiPalette.GOLD)
+	_place_label(card, "XやDiscordへそのまま貼れます", CARD_SUB_POS, SUB_FONT_SIZE, UiPalette.MUTED)
 	# ブラウザ以外では画像をクリップボードへ置けない(Architecture.md 10.6.1節)。
 	# 押せないボタンを見せず、保存を主の操作として幅いっぱいに出す。
 	var can_copy := ImageShare.can_copy()
@@ -416,15 +416,15 @@ func _build_image_card() -> void:
 
 
 func _build_code_card() -> void:
-	var card := _make_panel(_send_view, CODE_CARD_RECT)
+	var card := _make_panel(_send_view, CODE_CARD_RECT, true)
 	_code_card = card
-	_place_label(card, "コードで渡す", CARD_TITLE_POS, CARD_TITLE_FONT_SIZE, UiPalette.TEXT_OFFWHITE)
+	_place_label(card, "コードで渡す", CARD_TITLE_POS, CARD_TITLE_FONT_SIZE, UiPalette.GOLD)
 	_place_label(
 		card,
 		"%d桁の番号を送ると、相手が読み込めます" % DeckCodeService.CODE_LENGTH,
 		CARD_SUB_POS,
 		SUB_FONT_SIZE,
-		UiPalette.TEXT_MUTED
+		UiPalette.MUTED
 	)
 	_own_tiles = _make_tiles(card, CODE_TILES_RECT)
 	_code_button = _make_button(card, ISSUE_LABEL, CODE_BUTTON_RECT, true)
@@ -434,18 +434,14 @@ func _build_code_card() -> void:
 
 func _build_receive() -> void:
 	_receive_title = _place_label(
-		_receive_view,
-		"受け取ったコードを読み込む",
-		RECEIVE_TITLE_POS,
-		RECEIVE_TITLE_FONT_SIZE,
-		UiPalette.TEXT_OFFWHITE
+		_receive_view, "受け取ったコードを読み込む", RECEIVE_TITLE_POS, RECEIVE_TITLE_FONT_SIZE, UiPalette.IVORY
 	)
 	_receive_sub = _place_label(
 		_receive_view,
 		"%d桁の番号を入力します。貼り付けもできます" % DeckCodeService.CODE_LENGTH,
 		RECEIVE_SUB_POS,
 		SUB_FONT_SIZE,
-		UiPalette.TEXT_MUTED
+		UiPalette.MUTED
 	)
 	_input_tiles = _make_tiles(_receive_view, RECEIVE_TILES_RECT)
 	_input_tiles.make_editable("デッキコード")
@@ -467,11 +463,16 @@ func _make_layer(parent: Control) -> Control:
 	return layer
 
 
-func _make_panel(parent: Control, rect: Rect2) -> Panel:
+## `sunken` は面(外側のパネル)の中の区画。硝子の面の中へ硝子の面を入れず、沈めて描く。
+func _make_panel(parent: Control, rect: Rect2, sunken := false) -> Panel:
 	var panel := Panel.new()
 	panel.position = rect.position
 	panel.size = rect.size
 	var style: StyleBox = load(PANEL_STYLE)
+	if sunken:
+		var well := CodedPanelStyle.new()
+		well.surface = CodedPanelStyle.Surface.WELL
+		style = well
 	if style != null:
 		panel.add_theme_stylebox_override("panel", style)
 	parent.add_child(panel)
@@ -497,7 +498,7 @@ func _make_button(parent: Control, text: String, rect: Rect2, primary: bool) -> 
 
 
 func _make_message(parent: Control, at: Vector2, width: float) -> Label:
-	var label := _place_label(parent, "", at, MESSAGE_FONT_SIZE, UiPalette.TEXT_OFFWHITE)
+	var label := _place_label(parent, "", at, MESSAGE_FONT_SIZE, UiPalette.IVORY)
 	# 折り返しは size より先に立てる(Pitfalls.md)。
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.size = Vector2(width, 0)

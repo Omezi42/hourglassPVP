@@ -3,7 +3,7 @@ extends Button
 ## ショップ中央のタイル1件(GameDesign.md 21章)。「品の絵 / 名前 / 価格または『✓ 所持』」。
 ## **押すと選ぶだけで、買わない**——買う入口は詳細(`ShopDetailPane`)の「購入する」1本に絞る。
 ##
-## 地の面は `CodedButtonStyle`(真鍮の額縁+暗く凹んだ中央パネル)を流用する(`HomeTile` と同じ流儀)。
+## 地の面は `CodedButtonStyle`(硝子の面)を流用する(`HomeTile` と同じ流儀)。
 
 ## 品種ごとの列数とタイルの高さ。絵の形(紋章=正方形、マット・スキン=横長、文言=1行)に合わせる。
 ## `stacked` は名前と価格を横に並べる幅が無いタイル(紋章)で、2行に積んで中央に寄せる。
@@ -22,18 +22,16 @@ const FOOTER_BASELINE_INSET := 13.0
 const STACKED_FOOTER_HEIGHT := 50.0
 const STACKED_LINE_STEP := 19.0
 const TEXT_PAD := 10.0
-const NAME_FONT_SIZE := 15
-const PRICE_FONT_SIZE := 15
+const NAME_FONT_SIZE := UiPalette.T_BODY
+const PRICE_FONT_SIZE := UiPalette.T_BODY
 const PRICE_WIDTH := 92.0
 const PRICE_EMBLEM_SIZE := 13.0
 const PRICE_EMBLEM_GAP := 4.0
 ## チェックの印は砂時計の印より横へ張り出すため、同じ枠に収まるよう小さく描く。
 const OWNED_CHECK_SIZE := 9.0
 const ICON_SEAL_RATIO := 0.4
-## 選択枠。角はタイル自身の角丸に、太さは額縁の太さに合わせる(小さなタイルで枠だけ太く見せない)。
+## 選択枠(水色の線)。角はタイル自身の角丸に、太さは面の縁に合わせる(小さなタイルで枠だけ太く見せない)。
 const SELECT_INSET := 2.0
-const SELECT_WIDTH_RATIO := 0.25
-const SELECT_WIDTH_MIN := 1.5
 ## 残高が足りない品の暗さ(GameDesign.md 21章「買えないことは品を暗くすることで示す」)。
 const UNAFFORDABLE_TONE := Color(0.62, 0.6, 0.58, 1.0)
 
@@ -139,19 +137,13 @@ func _draw() -> void:
 func _draw_select_ring() -> void:
 	var bounds := Rect2(Vector2.ZERO, size)
 	var ring := bounds.grow(-SELECT_INSET)
-	var corner := maxf(CodedButtonStyle.corner_radius(bounds) - SELECT_INSET, 0.0)
-	var width := maxf(
-		CodedButtonStyle.frame_thickness(bounds) * SELECT_WIDTH_RATIO, SELECT_WIDTH_MIN
+	var corner := maxf(UiKit.button_radius(bounds) - SELECT_INSET, 0.0)
+	UiKit.stroke_grad(
+		get_canvas_item(),
+		UiKit.rr(ring, corner),
+		UiKit.rim_color(UiPalette.SELECT),
+		UiKit.line_w(bounds)
 	)
-	var points := UiPaint.rounded_rect_points_uniform(ring, corner, 5)
-	points.append(points[0])
-	ShapePaint.polyline(get_canvas_item(), points, UiPalette.GLOW_AMBER, width, true)
-
-
-## ホバー中は面が琥珀に明るくなるため、文字を暗い色へ替えて読めるようにする
-## (残高が足りない品はホバーで光らないので替えない)。押している間は面が暗く沈むので替えない。
-func _lit() -> bool:
-	return get_draw_mode() == DRAW_HOVER and (owned or affordable)
 
 
 func _name_font_size() -> int:
@@ -164,12 +156,10 @@ func _price_font_size() -> int:
 
 func _draw_footer() -> void:
 	var inner := _inner_rect()
-	var lit := _lit()
 	var baseline := inner.end.y - FOOTER_BASELINE_INSET
 	var name := ShopCatalog.item_name(kind, id)
 	if kind == ShopCatalog.Kind.CARD_SET:
 		name += "(%s)" % CardSetLibrary.count_text(id)
-	var name_color := UiPalette.OUTLINE_DARK if lit else UiPalette.TEXT_OFFWHITE
 	var text_left := inner.position.x + TEXT_PAD
 	var text_width := inner.size.x - TEXT_PAD * 2.0
 	if _stacked():
@@ -180,7 +170,7 @@ func _draw_footer() -> void:
 			HORIZONTAL_ALIGNMENT_CENTER,
 			text_width,
 			_name_font_size(),
-			name_color
+			UiPalette.IVORY
 		)
 	else:
 		draw_string(
@@ -190,14 +180,14 @@ func _draw_footer() -> void:
 			HORIZONTAL_ALIGNMENT_LEFT,
 			text_width - PRICE_WIDTH * text_scale,
 			_name_font_size(),
-			name_color
+			UiPalette.IVORY
 		)
-	_draw_price(baseline, lit)
+	_draw_price(baseline)
 
 
 ## 価格(所持済みなら「✓ 所持」)。積むタイルは中央へ、並べるタイルは右端へ寄せる。
 ## ✓ は同梱フォントに字形が無い(豆腐になる)ため、文字ではなく印として描く。
-func _draw_price(baseline: float, lit: bool) -> void:
+func _draw_price(baseline: float) -> void:
 	var inner := _inner_rect()
 	var label := "所持" if owned else CurrencyRules.amount_text(ShopCatalog.price(kind, id))
 	var label_width := (
@@ -208,7 +198,7 @@ func _draw_price(baseline: float, lit: bool) -> void:
 		var block_width := label_width + PRICE_EMBLEM_SIZE + PRICE_EMBLEM_GAP
 		price_right = inner.get_center().x + block_width * 0.5
 	# 価格は赤で書かない(GameDesign.md 21章)。単位は残高チップと同じ砂時計の印で示す。
-	var color := UiPalette.TEXT_MUTED if owned else UiPalette.BRASS_HIGHLIGHT
+	var color := UiPalette.MUTED if owned else UiPalette.SAND_HI
 	draw_string(
 		_font,
 		Vector2(price_right - label_width, baseline),
@@ -216,7 +206,7 @@ func _draw_price(baseline: float, lit: bool) -> void:
 		HORIZONTAL_ALIGNMENT_LEFT,
 		-1,
 		_price_font_size(),
-		UiPalette.BRASS_PRESSED_DARK if lit else color
+		color
 	)
 	var emblem_center := Vector2(
 		price_right - label_width - PRICE_EMBLEM_GAP - PRICE_EMBLEM_SIZE * 0.5,

@@ -83,7 +83,7 @@ func _build() -> void:
 	var title := Label.new()
 	title.text = "プリセットデッキを読み込む"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 28)
+	title.add_theme_font_size_override("font_size", UiPalette.T_HEAD)
 	column.add_child(title)
 
 	for preset in CardPresetDecks.PRESETS:
@@ -114,7 +114,7 @@ func _make_row(preset: Dictionary) -> HBoxContainer:
 	summary.custom_minimum_size = Vector2(SUMMARY_WIDTH, 0)
 	summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	summary.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	summary.add_theme_color_override("font_color", UiPalette.TEXT_OFFWHITE)
+	summary.add_theme_color_override("font_color", UiPalette.IVORY)
 	row.add_child(summary)
 	_summaries.append(summary)
 	return row

@@ -1,10 +1,10 @@
 class_name ShopKindTab
 extends Button
 ## ショップ左の品種タブ1つ(GameDesign.md 21章)。品種名と「所持 n / m」を出す。
-## 選択中は塗りつぶした真鍮の面、それ以外は暗く凹んだパネル(9章の入口の強弱)。
+## 選択中は真鍮の面、それ以外は硝子の面(9章の入口の強弱)。
 
-const LABEL_FONT_SIZE := 19
-const SUB_FONT_SIZE := 13
+const LABEL_FONT_SIZE := UiPalette.T_LEAD
+const SUB_FONT_SIZE := UiPalette.T_SMALL
 const TEXT_LEFT := 22.0
 const LABEL_BASELINE_RATIO := 0.47
 const SUB_BASELINE_RATIO := 0.78
@@ -38,10 +38,9 @@ func _ready() -> void:
 func _draw() -> void:
 	if _font == null:
 		return
-	# 凹んだパネルはホバーで琥珀に明るくなるため、真鍮の面と同じ暗い文字へ替える(`ShopItemTile` と同じ)。
-	var dark_text := active or get_draw_mode() == DRAW_HOVER
-	var main_color := UiPalette.OUTLINE_DARK if dark_text else UiPalette.TEXT_OFFWHITE
-	var sub_color := UiPalette.BRASS_PRESSED_DARK if dark_text else UiPalette.TEXT_MUTED
+	# 真鍮の面(選択中)の上は彫った暗い字、硝子の面の上は象牙と補足の灰。
+	var main_color := UiPalette.BRASS_INK if active else UiPalette.IVORY
+	var sub_color := UiPalette.BRASS_INK if active else UiPalette.MUTED
 	var left := PORTRAIT_TEXT_LEFT if portrait else TEXT_LEFT
 	draw_string(
 		_font,

@@ -150,7 +150,7 @@ func _build() -> void:
 	column.add_child(header_row)
 	var title := Label.new()
 	title.text = "カードの絞り込みと検索"
-	title.add_theme_font_size_override("font_size", 22)
+	title.add_theme_font_size_override("font_size", UiPalette.T_LEAD)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header_row.add_child(title)
 	# **記号は同梱フォントが字形を持つものだけを使う**(Architecture.md 11章)。
@@ -163,8 +163,8 @@ func _build() -> void:
 	# 種類選択(砂時計 / 砂術。GameDesign.md 6章)
 	var kind_label := Label.new()
 	kind_label.text = "種類"
-	kind_label.add_theme_font_size_override("font_size", 16)
-	kind_label.add_theme_color_override("font_color", UiPalette.BRASS_HIGHLIGHT)
+	kind_label.add_theme_font_size_override("font_size", UiPalette.T_BODY)
+	kind_label.add_theme_color_override("font_color", UiPalette.GOLD)
 	column.add_child(kind_label)
 
 	var kind_row := _chip_row()
@@ -176,8 +176,8 @@ func _build() -> void:
 	# コスト選択
 	var cost_label := Label.new()
 	cost_label.text = "コスト"
-	cost_label.add_theme_font_size_override("font_size", 16)
-	cost_label.add_theme_color_override("font_color", UiPalette.BRASS_HIGHLIGHT)
+	cost_label.add_theme_font_size_override("font_size", UiPalette.T_BODY)
+	cost_label.add_theme_color_override("font_color", UiPalette.GOLD)
 	column.add_child(cost_label)
 
 	var cost_row := _chip_row()
@@ -189,8 +189,8 @@ func _build() -> void:
 	# キーワード選択
 	var keyword_label := Label.new()
 	keyword_label.text = "キーワード"
-	keyword_label.add_theme_font_size_override("font_size", 16)
-	keyword_label.add_theme_color_override("font_color", UiPalette.BRASS_HIGHLIGHT)
+	keyword_label.add_theme_font_size_override("font_size", UiPalette.T_BODY)
+	keyword_label.add_theme_color_override("font_color", UiPalette.GOLD)
 	column.add_child(keyword_label)
 
 	var keyword_row := _chip_row()
@@ -207,8 +207,8 @@ func _build() -> void:
 	# 名前検索
 	var name_label := Label.new()
 	name_label.text = "名前検索"
-	name_label.add_theme_font_size_override("font_size", 16)
-	name_label.add_theme_color_override("font_color", UiPalette.BRASS_HIGHLIGHT)
+	name_label.add_theme_font_size_override("font_size", UiPalette.T_BODY)
+	name_label.add_theme_color_override("font_color", UiPalette.GOLD)
 	column.add_child(name_label)
 
 	_search_input = LineEdit.new()
@@ -295,7 +295,7 @@ func _mark_selected(buttons: Dictionary, selected: int) -> void:
 		# 押されている間は `font_pressed_color` が使われるため、両方を差し替える。
 		for slot in ["font_color", "font_pressed_color", "font_hover_pressed_color"]:
 			if key == selected:
-				button.add_theme_color_override(slot, UiPalette.GLOW_AMBER)
+				button.add_theme_color_override(slot, UiPalette.SAND)
 			else:
 				button.remove_theme_color_override(slot)
 
