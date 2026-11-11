@@ -33,17 +33,31 @@ const PORTRAIT_CONTENT_TOP := 56.0
 const PORTRAIT_MARGIN := 24.0
 const PORTRAIT_TEXT_FONT_SIZE := 24
 const PORTRAIT_NOTE_FONT_SIZE := 22
-const PORTRAIT_HEADER_GAP := 64.0
-const PORTRAIT_NAME_GAP := 40.0
+const PORTRAIT_HEADER_GAP := 56.0
+const PORTRAIT_NAME_GAP := 36.0
 const PORTRAIT_STATS_HEIGHT := 64.0
-const PORTRAIT_STATS_GAP := 72.0
+const PORTRAIT_STATS_GAP := 64.0
 const PORTRAIT_NOTE_GAP := 38.0
-const PORTRAIT_ROUTE_HEIGHT := 660.0
-const PORTRAIT_PANEL_GAP := 16.0
-const PORTRAIT_DECK_LABEL_HEIGHT := 32.0
-const PORTRAIT_DECK_LIST_ZOOM := 1.4
+const PORTRAIT_ROUTE_LABEL_DESCENT := 6.0
+const PORTRAIT_ROUTE_STEP_MARGIN := 8.0
+## 段の間隔 = 上の駒の半径 + 名札2行 + 下の駒の半径 + 余白(最終戦が最上段で最も広い)。
+const PORTRAIT_ROUTE_STEP := (
+	SoloRouteView.FINAL_RADIUS
+	+ SoloRouteView.VERTICAL_LABEL_GAP_2
+	+ PORTRAIT_ROUTE_LABEL_DESCENT
+	+ SoloRouteView.NODE_RADIUS
+	+ PORTRAIT_ROUTE_STEP_MARGIN
+)
+const PORTRAIT_ROUTE_MIN_HEIGHT := (
+	PORTRAIT_ROUTE_STEP * (SoloRouteView.PATH_COLUMNS - 1)
+	+ SoloRouteView.VERTICAL_TOP_MARGIN
+	+ SoloRouteView.VERTICAL_BOTTOM_MARGIN
+)
+const PORTRAIT_PANEL_GAP := 12.0
+## 山札の板は遠征の地図(`CardSoloMapScreen`)と同じ大きさ・暗幕・「閉じる」を使う。
+const PORTRAIT_DECK_BUTTON_FONT_SIZE := 24
 const PORTRAIT_BUTTON_SIZE := Vector2(280, 72)
-const PORTRAIT_BOTTOM_MARGIN := 32.0
+const PORTRAIT_BOTTOM_MARGIN := 24.0
 
 var portrait := false
 
@@ -56,6 +70,10 @@ var _route: SoloRouteView
 var _deck_panel_canvas: Control
 var _deck_label: Label
 var _deck_list: SoloDeckList
+var _deck_button: Button
+var _sheet_shade: ColorRect
+var _sheet: SoloStatusPanel
+var _sheet_close: Button
 var _button: Button
 
 
@@ -103,6 +121,28 @@ func _ready() -> void:
 			departure_pressed.emit()
 	)
 	add_child(_button)
+	_deck_button = CodedButton.make("", PORTRAIT_BUTTON_SIZE)
+	_deck_button.add_theme_font_size_override("font_size", PORTRAIT_DECK_BUTTON_FONT_SIZE)
+	_deck_button.pressed.connect(_set_sheet.bind(true))
+	add_child(_deck_button)
+	_sheet_shade = ColorRect.new()
+	_sheet_shade.color = CardSoloMapScreen.SHEET_SHADE_COLOR
+	_sheet_shade.visible = false
+	_sheet_shade.gui_input.connect(
+		func(event: InputEvent) -> void:
+			if event is InputEventMouseButton and event.pressed:
+				_set_sheet(false)
+	)
+	add_child(_sheet_shade)
+	_sheet = SoloStatusPanel.new()
+	_sheet.abandon_enabled = false
+	_sheet.visible = false
+	add_child(_sheet)
+	_sheet_close = CodedButton.make("閉じる", CardSoloMapScreen.SHEET_CLOSE_SIZE)
+	_sheet_close.add_theme_font_size_override("font_size", CardSoloMapScreen.SHEET_CLOSE_FONT_SIZE)
+	_sheet_close.visible = false
+	_sheet_close.pressed.connect(_set_sheet.bind(false))
+	add_child(_sheet_close)
 	resized.connect(_layout)
 	_layout()
 
@@ -131,6 +171,9 @@ func open(finished: Dictionary) -> void:
 	)
 	_deck_label.text = "最後の山札 %d枚" % run.deck_ids.size()
 	_deck_list.show_data(run.deck_ids)
+	_deck_button.text = "最後の山札 %d枚 ▸" % run.deck_ids.size()
+	_sheet.show_data(run.theme_id, run.hp, run.max_hp, run.wins, run.deck_ids, run.boons, run.depth)
+	_set_sheet(false)
 	_note_label.visible = reason == "abandoned_mid_battle"
 	if _note_label.visible:
 		_note_label.text = "対局の途中で抜けたため、遠征は終わりました"
@@ -153,6 +196,11 @@ func _layout() -> void:
 	if _dim == null:
 		return
 	_dim.size = size
+	_sheet_shade.size = size
+	_deck_button.visible = portrait
+	_deck_label.visible = not portrait
+	_deck_panel_canvas.visible = not portrait
+	_deck_list.visible = not portrait
 	if portrait:
 		_layout_portrait()
 	else:
@@ -193,7 +241,6 @@ func _layout_landscape() -> void:
 ## 縦: 見出し / 作戦と勝ち数 / HPと恩恵 / 道 / 最後の山札 / 「出発へ」の順に上から積む。
 func _layout_portrait() -> void:
 	_apply_font_sizes()
-	_deck_list.scale = Vector2.ONE * PORTRAIT_DECK_LIST_ZOOM
 	_set_button_size(PORTRAIT_BUTTON_SIZE)
 	var content_w := size.x - PORTRAIT_MARGIN * 2.0
 	var top := PORTRAIT_CONTENT_TOP
@@ -210,15 +257,31 @@ func _layout_portrait() -> void:
 		_note_label.position = Vector2(PORTRAIT_MARGIN, top)
 		_note_label.size = Vector2(content_w, 30.0)
 		top += PORTRAIT_NOTE_GAP
-	_route.position = Vector2(PORTRAIT_MARGIN, top)
-	_route.size = Vector2(content_w, PORTRAIT_ROUTE_HEIGHT)
 	var button_top := size.y - PORTRAIT_BOTTOM_MARGIN - PORTRAIT_BUTTON_SIZE.y
-	var deck_top := top + PORTRAIT_ROUTE_HEIGHT + PORTRAIT_PANEL_GAP
-	_place_deck_panel(
-		Rect2(PORTRAIT_MARGIN, deck_top, content_w, button_top - PORTRAIT_PANEL_GAP - deck_top),
-		PORTRAIT_DECK_LABEL_HEIGHT
-	)
+	var deck_button_top := button_top - PORTRAIT_PANEL_GAP - PORTRAIT_BUTTON_SIZE.y
+	var route_h := deck_button_top - PORTRAIT_PANEL_GAP - top
+	_route.position = Vector2(PORTRAIT_MARGIN, top)
+	_route.size = Vector2(content_w, maxf(route_h, PORTRAIT_ROUTE_MIN_HEIGHT))
+	_deck_button.custom_minimum_size = Vector2(content_w, PORTRAIT_BUTTON_SIZE.y)
+	_deck_button.size = _deck_button.custom_minimum_size
+	_deck_button.position = Vector2(PORTRAIT_MARGIN, deck_button_top)
 	_button.position = Vector2((size.x - PORTRAIT_BUTTON_SIZE.x) * 0.5, button_top)
+	var zoom := CardSoloMapScreen.PORTRAIT_SHEET_ZOOM
+	var sheet_h := size.y * CardSoloMapScreen.DECK_SHEET_RATIO
+	_sheet.scale = Vector2.ONE * zoom
+	_sheet.position = Vector2(PORTRAIT_MARGIN, size.y - sheet_h)
+	_sheet.size = Vector2(content_w, sheet_h) / zoom
+	_sheet_close.position = Vector2(
+		size.x - PORTRAIT_MARGIN - CardSoloMapScreen.SHEET_CLOSE_SIZE.x,
+		_sheet.position.y - CardSoloMapScreen.PORTRAIT_GAP - CardSoloMapScreen.SHEET_CLOSE_SIZE.y
+	)
+
+
+func _set_sheet(open_sheet: bool) -> void:
+	var shown := open_sheet and portrait
+	_sheet_shade.visible = shown
+	_sheet.visible = shown
+	_sheet_close.visible = shown
 
 
 ## 山札の欄。一覧は `_deck_list.scale` を掛けたあとの見た目の大きさで欄へ収める。

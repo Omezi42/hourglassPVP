@@ -25,7 +25,7 @@ GameDesign.md 27章の実装方針。**遠征の規則(道・山札・HP・束�
 | `SoloBundleOverlay`(`scripts/ui/solo_bundle_overlay.gd`, Control) | 束のオーバーレイ。道を暗幕で覆い、束(作戦ごとの3枚を横長の札で縦に並べる)から1つ選んで`bundle_chosen`/`skip_pressed`を出す。右端に`SoloDeckList`でいまの山札を出す |
 | `SoloBoonOverlay`(`scripts/ui/solo_boon_overlay.gd`, Control) | 恩恵のオーバーレイ。関門に勝った直後に出す。恩恵の札(コード描画のメダル+名前+効果)を3枚並べ、押すと`boon_chosen`を出す(見送りは無い) |
 | `SoloWorkshopOverlay`(`scripts/ui/solo_workshop_overlay.gd`, Control) | 工房のオーバーレイ。山札の種類ごとに1枚(2枚あるものは`×2`)並べ、押して選ぶと「抜く」「複製する」を出す。`card_removed`/`card_duplicated`/`skip_pressed`を出す |
-| `SoloRunSummary`(`scripts/ui/solo_run_summary.gd`, Control) | 遠征の記録。`open()`で終わった遠征を1度だけ出す。押せない`SoloRouteView`(`show_record()`)・持っている恩恵・`SoloDeckList`・「出発へ」を持つ |
+| `SoloRunSummary`(`scripts/ui/solo_run_summary.gd`, Control) | 遠征の記録。`open()`で終わった遠征を1度だけ出す。押せない`SoloRouteView`(`show_record()`)・持っている恩恵・`SoloDeckList`・「出発へ」を持つ。縦では山札の欄の代わりに「最後の山札 N枚 ▸」のボタンを置き、`SoloStatusPanel`(`abandon_enabled = false`)・暗幕・「閉じる」を`CardSoloMapScreen`の板の定数(拡大率・高さの割合)で出す。道の高さはボタンを引いた残りを使い、段の間隔は駒・2行の名札から計算した値以上を保つ |
 | `SoloDeckList`(`scripts/ui/solo_deck_list.gd`, Control) | 山札の一覧(コスト順・スクロール)。状態パネル・束/工房のオーバーレイ・遠征の記録が共用する |
 | `SoloUiPaint`(`scripts/ui/solo_ui_paint.gd`, static) | 出発の札・状態パネル・行き先の詳細・束/恩恵の札・山札欄が共用する硝子の面のパネル(選べる札は縁を砂色にする)の描画と、札の絵に重ねる当たり判定のボタン。`choice_button(visual, pivot)`は札の部品をまとめた`card_root()`をホバーで浮かせ押下で縮め(9章の共通の挙動)、`hit_button()`は指カーソルだけを持たせる(道の駒は`SoloRouteView`がホバー・押下を自分で描く) |
 | `CardChallengeResult` / `StageRewardTokens` | 結果パネルと報酬の絵。リーサルパズル(10.12節)と共用。`StageReward`は複数の節目(カードセット・アイコン)が同時に届いたときのため`card_set_ids`/`icon_ids`の配列も持つ |
