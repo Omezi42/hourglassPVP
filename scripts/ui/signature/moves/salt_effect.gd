@@ -66,14 +66,14 @@ func _shaker(item: CanvasItem, center: Vector2, angle: float, alpha: float) -> V
 	ShapePaint.colored_polygon(ci, body, Color(GLASS, alpha * 0.9))
 	var closed := body.duplicate()
 	closed.append(body[0])
-	ShapePaint.polyline(ci, closed, Color(UiPalette.OUTLINE_DARK, alpha * 0.7), 1.2, true)
+	ShapePaint.polyline(ci, closed, Color(UiPalette.INK_950, alpha * 0.7), 1.2, true)
 	var fill := _box(center + up * -BODY.y * 0.35, Vector2(BODY.x - 2.0, BODY.y * 0.6), angle)
 	ShapePaint.colored_polygon(ci, fill, Color(1, 1, 1, alpha))
 	var cap := _box(center + up * (BODY.y + CAP.y), CAP, angle)
 	ShapePaint.colored_polygon(ci, cap, Color(METAL, alpha))
 	var cap_closed := cap.duplicate()
 	cap_closed.append(cap[0])
-	ShapePaint.polyline(ci, cap_closed, Color(UiPalette.OUTLINE_DARK, alpha * 0.7), 1.0, true)
+	ShapePaint.polyline(ci, cap_closed, Color(UiPalette.INK_950, alpha * 0.7), 1.0, true)
 	return mouth
 
 

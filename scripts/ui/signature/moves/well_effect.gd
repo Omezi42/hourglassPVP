@@ -56,10 +56,7 @@ func draw(item: CanvasItem, t: float) -> void:
 	var raise := ease(phase(t, APPEAR, RAISE), 0.7)
 	var bucket := Vector2(base.x, lerpf(base.y - WALL, bar_y + BUCKET.y + 4.0, raise))
 	item.draw_line(
-		Vector2(base.x, bar_y),
-		bucket - Vector2(0.0, BUCKET.y),
-		Color(UiPalette.OUTLINE_DARK, a),
-		1.0
+		Vector2(base.x, bar_y), bucket - Vector2(0.0, BUCKET.y), Color(UiPalette.INK_950, a), 1.0
 	)
 	var pail := PackedVector2Array(
 		[

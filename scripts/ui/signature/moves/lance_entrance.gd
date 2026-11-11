@@ -49,9 +49,7 @@ func draw(item: CanvasItem, t: float) -> void:
 		return
 	var a := alpha * (1.0 - phase(thrust, 0.8, 0.2))
 	var neck := Vector2(tip_x - HEAD, y)
-	item.draw_line(
-		neck - Vector2(SHAFT, 0.0), neck, Color(UiPalette.OUTLINE_DARK, a * 0.8), 5.0, true
-	)
+	item.draw_line(neck - Vector2(SHAFT, 0.0), neck, Color(UiPalette.INK_950, a * 0.8), 5.0, true)
 	item.draw_line(
 		neck - Vector2(SHAFT, 0.0), neck, Color(UiPalette.WOOD_TOP.lightened(0.25), a), 3.2, true
 	)
@@ -61,4 +59,4 @@ func draw(item: CanvasItem, t: float) -> void:
 	ShapePaint.colored_polygon(ci, head, Color(STEEL, a))
 	var closed := head.duplicate()
 	closed.append(head[0])
-	ShapePaint.polyline(ci, closed, Color(UiPalette.OUTLINE_DARK, a * 0.8), 1.2, true)
+	ShapePaint.polyline(ci, closed, Color(UiPalette.INK_950, a * 0.8), 1.2, true)

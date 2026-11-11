@@ -47,11 +47,11 @@ func _crown(item: CanvasItem, base: Vector2, lit: int, alpha: float) -> void:
 		if i > 0:
 			var mid := left + BAND.x * (float(i) - 0.5) / float(POINTS)
 			outline.append(Vector2(mid, top - SPIKE))
-	ShapePaint.colored_polygon(item.get_canvas_item(), outline, Color(UiPalette.BRASS_MID, alpha))
+	ShapePaint.colored_polygon(item.get_canvas_item(), outline, Color(UiPalette.BRASS, alpha))
 	var closed := outline.duplicate()
 	closed.append(outline[0])
 	ShapePaint.polyline(
-		item.get_canvas_item(), closed, Color(UiPalette.OUTLINE_DARK, alpha * 0.8), 1.4, true
+		item.get_canvas_item(), closed, Color(UiPalette.INK_950, alpha * 0.8), 1.4, true
 	)
 	for i in range(POINTS):
 		var mid := left + BAND.x * (float(i) + 0.5) / float(POINTS)
@@ -64,6 +64,6 @@ func _crown(item: CanvasItem, base: Vector2, lit: int, alpha: float) -> void:
 	item.draw_line(
 		Vector2(left, base.y - BAND.y * 0.5),
 		Vector2(left + BAND.x, base.y - BAND.y * 0.5),
-		Color(UiPalette.BRASS_HIGHLIGHT, alpha),
+		Color(UiPalette.GOLD, alpha),
 		1.6
 	)

@@ -50,12 +50,12 @@ func draw(item: CanvasItem, t: float) -> void:
 	)
 	var closed := body.duplicate()
 	closed.append(body[0])
-	ShapePaint.polyline(ci, closed, Color(UiPalette.OUTLINE_DARK, a * 0.8), 1.2, true)
+	ShapePaint.polyline(ci, closed, Color(UiPalette.INK_950, a * 0.8), 1.2, true)
 	var swing := back_out(phase(t, APPEAR, SWING))
 	var pivot := base - Vector2(0.0, 5.0)
 	var tip := pivot + Vector2.UP.rotated(lerpf(FROM_ANGLE, TO_ANGLE, swing)) * NEEDLE
-	item.draw_line(pivot, tip, Color(UiPalette.BRASS_HIGHLIGHT, a), 2.0, true)
-	UiPaint.fill_ellipse(ci, pivot.lerp(tip, 0.7), WEIGHT, Color(UiPalette.BRASS_LIGHT, a), 12)
+	item.draw_line(pivot, tip, Color(UiPalette.GOLD, a), 2.0, true)
+	UiPaint.fill_ellipse(ci, pivot.lerp(tip, 0.7), WEIGHT, Color(UiPalette.GOLD_FOLD, a), 12)
 	var flight := phase(t, APPEAR + SWING, FLIGHT)
 	if flight <= 0.0 or t >= impact_at():
 		return

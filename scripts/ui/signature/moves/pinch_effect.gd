@@ -52,7 +52,7 @@ func draw(item: CanvasItem, t: float) -> void:
 func _finger(item: CanvasItem, root: Vector2, tip: Vector2, alpha: float) -> void:
 	if alpha <= 0.0:
 		return
-	var dark := Color(UiPalette.OUTLINE_DARK, alpha * 0.7)
+	var dark := Color(UiPalette.INK_950, alpha * 0.7)
 	item.draw_line(root, tip, dark, THICK + 2.0, true)
 	ShapePaint.circle(item.get_canvas_item(), tip, (THICK + 2.0) * 0.5, dark)
 	item.draw_line(root, tip, Color(FINGER_COLOR, alpha), THICK, true)

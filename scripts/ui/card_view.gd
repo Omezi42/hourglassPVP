@@ -638,7 +638,7 @@ func _draw_board_unit() -> void:
 	CardViewPaint.pedestal_ring(self)
 	CardViewPaint.pedestal_plaque(self, tint)
 	if ready_mark and not selected:
-		CardViewPaint.pedestal_glow(self, Color(UiPalette.GLOW_AMBER, 0.18))
+		CardViewPaint.pedestal_glow(self, Color(UiPalette.SAND, 0.18))
 	if _hovering and enabled:
 		CardViewPaint.pedestal_glow(self, Color(1, 1, 1, 0.1))
 	_draw_board_stats()
@@ -689,7 +689,7 @@ func _draw_flip_landing() -> void:
 		get_canvas_item(),
 		Vector2(size.x * 0.5, PEDESTAL_CENTER_Y),
 		radius,
-		Color(UiPalette.PEDESTAL_DEFAULT_ACCENT, 0.7 * (1.0 - ratio)),
+		Color(UiPalette.SAND_HI, 0.7 * (1.0 - ratio)),
 		3.0,
 		40
 	)
@@ -719,13 +719,11 @@ func _draw_board_labels(tint: Color) -> void:
 	var grow := label_scale - 1.0
 	var name_size := roundi(14 * label_scale)
 	var name_baseline := size.y - 18.0 + grow * LABEL_NAME_DROP
-	_centered_text(card.display_name, name_size, name_baseline, UiPalette.TEXT_OFFWHITE * tint)
+	_centered_text(card.display_name, name_size, name_baseline, UiPalette.IVORY * tint)
 	var note := CardViewPaint.keyword_text(self)
 	if not note.is_empty():
 		var note_baseline := size.y - 3.0 + grow * LABEL_NOTE_DROP
-		_centered_text(
-			note, roundi(12 * label_scale), note_baseline, UiPalette.BRASS_HIGHLIGHT * tint
-		)
+		_centered_text(note, roundi(12 * label_scale), note_baseline, UiPalette.GOLD * tint)
 
 
 # --- 手札のカード -------------------------------------------------------

@@ -57,8 +57,8 @@ func _center(intro: float) -> Vector2:
 func _crown(item: CanvasItem, center: Vector2, alpha: float) -> void:
 	var top := center - Vector2(0.0, RADIUS + CROWN.y)
 	var rect := Rect2(top - Vector2(CROWN.x * 0.5, 0.0), CROWN + Vector2(0.0, 2.0))
-	item.draw_rect(rect.grow(1.2), Color(UiPalette.OUTLINE_DARK, alpha * 0.8))
-	item.draw_rect(rect, Color(UiPalette.BRASS_HIGHLIGHT, alpha))
+	item.draw_rect(rect.grow(1.2), Color(UiPalette.INK_950, alpha * 0.8))
+	item.draw_rect(rect, Color(UiPalette.GOLD, alpha))
 
 
 func _arc(start: Vector2, end: Vector2, k: float) -> Vector2:

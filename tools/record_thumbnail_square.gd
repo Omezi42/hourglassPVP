@@ -194,8 +194,8 @@ func _draw_background() -> void:
 			Color(0.85, 0.62, 0.22, 0.05),
 			48
 		)
-	draw_rect(Rect2(0.0, 0.0, VIEW.x, 5.0), UiPalette.GLOW_AMBER)
-	draw_rect(Rect2(0.0, VIEW.y - 5.0, VIEW.x, 5.0), UiPalette.GLOW_AMBER)
+	draw_rect(Rect2(0.0, 0.0, VIEW.x, 5.0), UiPalette.SAND)
+	draw_rect(Rect2(0.0, VIEW.y - 5.0, VIEW.x, 5.0), UiPalette.SAND)
 
 
 ## 背景の絵の中央を正方形に切り出し、小さく縮めたもの。
@@ -336,7 +336,7 @@ func _draw_number(at: Vector2, value: String, scale_by: float) -> void:
 		HORIZONTAL_ALIGNMENT_CENTER,
 		80.0,
 		font_size,
-		UiPalette.TEXT_OFFWHITE
+		UiPalette.IVORY
 	)
 
 

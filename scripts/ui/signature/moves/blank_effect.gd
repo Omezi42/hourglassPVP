@@ -44,7 +44,7 @@ func draw(item: CanvasItem, t: float) -> void:
 	ShapePaint.colored_polygon(ci, shape, Color(CLOTH_COLOR, a))
 	var closed := shape.duplicate()
 	closed.append(shape[0])
-	ShapePaint.polyline(ci, closed, Color(UiPalette.OUTLINE_DARK, a * 0.7), 1.2, true)
+	ShapePaint.polyline(ci, closed, Color(UiPalette.INK_950, a * 0.7), 1.2, true)
 	for k in range(2):
 		var y := (float(k) - 0.5) * CLOTH.y * 0.7
 		var fold_a := at + Vector2(-CLOTH.x * 0.6, y).rotated(TILT)

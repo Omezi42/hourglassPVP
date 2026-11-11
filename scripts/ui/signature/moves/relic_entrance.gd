@@ -56,7 +56,7 @@ func draw(item: CanvasItem, t: float) -> void:
 		rect,
 		[[0.0, Color(STONE_LIGHT, alpha * rise)], [1.0, Color(STONE_DARK, alpha * rise)]]
 	)
-	item.draw_rect(rect, Color(UiPalette.OUTLINE_DARK, alpha * rise * 0.8), false, 1.2)
+	item.draw_rect(rect, Color(UiPalette.INK_950, alpha * rise * 0.8), false, 1.2)
 	# 箱の正面に刻んだ古い紋の線。
 	item.draw_line(
 		rect.get_center() - Vector2(BOX.x * 0.25, 0.0),
@@ -81,7 +81,7 @@ func draw(item: CanvasItem, t: float) -> void:
 	var closed := lid_shape.duplicate()
 	closed.append(lid_shape[0])
 	ShapePaint.polyline(
-		item.get_canvas_item(), closed, Color(UiPalette.OUTLINE_DARK, alpha * rise * 0.8), 1.2, true
+		item.get_canvas_item(), closed, Color(UiPalette.INK_950, alpha * rise * 0.8), 1.2, true
 	)
 	var mote := phase(t, impact_at() + RISE + OPEN * 0.6, MOTE)
 	if mote > 0.0 and mote < 1.0:

@@ -48,7 +48,7 @@ func _hammer(item: CanvasItem, pivot: Vector2, angle: float, alpha: float) -> vo
 	var dir := Vector2.from_angle(angle)
 	var across := dir.orthogonal()
 	var head := pivot + dir * HANDLE
-	item.draw_line(pivot, head, Color(UiPalette.OUTLINE_DARK, alpha * 0.8), 6.4, true)
+	item.draw_line(pivot, head, Color(UiPalette.INK_950, alpha * 0.8), 6.4, true)
 	item.draw_line(pivot, head, Color(UiPalette.WOOD_TOP.lightened(0.25), alpha), 4.2, true)
 	var half_long := across * HEAD.x * 0.5
 	var half_short := dir * HEAD.y * 0.5
@@ -68,13 +68,7 @@ func _hammer(item: CanvasItem, pivot: Vector2, angle: float, alpha: float) -> vo
 	)
 	var closed := shape.duplicate()
 	closed.append(shape[0])
-	ShapePaint.polyline(
-		item.get_canvas_item(), closed, Color(UiPalette.OUTLINE_DARK, alpha), 1.6, true
-	)
+	ShapePaint.polyline(item.get_canvas_item(), closed, Color(UiPalette.INK_950, alpha), 1.6, true)
 	item.draw_line(
-		head - half_long * 0.8,
-		head + half_long * 0.8,
-		Color(UiPalette.BRASS_LIGHT, alpha),
-		2.0,
-		true
+		head - half_long * 0.8, head + half_long * 0.8, Color(UiPalette.GOLD_FOLD, alpha), 2.0, true
 	)

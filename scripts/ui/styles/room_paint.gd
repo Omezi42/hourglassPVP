@@ -10,6 +10,7 @@ extends RefCounted
 ## `UiPaint` と違い**第1引数に `CanvasItem` を取る**(`PlaymatPaint` と同じ流儀)。
 ## `draw_line()` などのインスタンス側の描画と、`UiPaint` の RID 側の描画の両方を使うため。
 
+const BOUNCE_BRASS := Color(0.45, 0.31, 0.13)
 const WALL_LIGHT := Color(0.20, 0.140, 0.098)
 const WALL_DARK := Color(0.095, 0.062, 0.043)
 const SEAM := Color(0.045, 0.028, 0.018, 0.9)
@@ -143,15 +144,15 @@ static func sign(ci: CanvasItem, rect: Rect2, font: Font, label: String, font_si
 			points,
 			rect,
 			[
-				[0.0, UiPalette.BRASS_HIGHLIGHT],
-				[0.22, UiPalette.BRASS_LIGHT],
-				[0.62, UiPalette.BRASS_MID],
-				[0.88, UiPalette.BRASS_DARK],
-				[1.0, UiPalette.BRASS_BOUNCE],
+				[0.0, UiPalette.GOLD],
+				[0.22, UiPalette.GOLD_FOLD],
+				[0.62, UiPalette.BRASS],
+				[0.88, UiPalette.BRASS_DEEP],
+				[1.0, BOUNCE_BRASS],
 			]
 		)
 	)
-	UiPaint.draw_bevel(rid, points, UiPalette.BRASS_HIGHLIGHT, UiPalette.OUTLINE_DARK, 2.4, false)
+	UiPaint.draw_bevel(rid, points, UiPalette.GOLD, UiPalette.INK_950, 2.4, false)
 	UiPaint.apply_grain(rid, rect, 0.07)
 	# 彫り込んだ文字に見せるため、暗い影を1pxずらして先に敷く。
 	var baseline := rect.get_center().y + float(font_size) * 0.4

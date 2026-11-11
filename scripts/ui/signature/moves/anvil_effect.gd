@@ -74,7 +74,7 @@ func _anvil(item: CanvasItem, top: Vector2, heat: float, alpha: float) -> void:
 	var closed := shape.duplicate()
 	closed.append(shape[0])
 	ShapePaint.polyline(
-		item.get_canvas_item(), closed, Color(UiPalette.OUTLINE_DARK, alpha * 0.85), 1.4, true
+		item.get_canvas_item(), closed, Color(UiPalette.INK_950, alpha * 0.85), 1.4, true
 	)
 	# 打たれた上面だけが赤く焼け、火花が冷めるのに合わせて鉄の色へ戻る。
 	var glow := Color(IRON_TOP.lightened(0.3).lerp(HOT, heat), alpha)

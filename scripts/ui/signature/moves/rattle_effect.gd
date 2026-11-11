@@ -38,9 +38,9 @@ func draw(item: CanvasItem, t: float) -> void:
 	var grip := from + GRIP
 	var head := grip + Vector2.UP.rotated(angle) * HANDLE
 	var a := alpha * appear
-	item.draw_line(grip, head, Color(UiPalette.OUTLINE_DARK, a * 0.8), 4.6, true)
+	item.draw_line(grip, head, Color(UiPalette.INK_950, a * 0.8), 4.6, true)
 	item.draw_line(grip, head, Color(UiPalette.WOOD_TOP.lightened(0.3), a), 3.0, true)
-	ShapePaint.circle(ci, head, HEAD + 1.4, Color(UiPalette.OUTLINE_DARK, a * 0.8))
+	ShapePaint.circle(ci, head, HEAD + 1.4, Color(UiPalette.INK_950, a * 0.8))
 	ShapePaint.circle(ci, head, HEAD, Color(HEAD_COLOR, a))
 	var across := Vector2.RIGHT.rotated(angle)
 	item.draw_line(head - across * HEAD, head + across * HEAD, Color(BAND_COLOR, a), 3.0, true)

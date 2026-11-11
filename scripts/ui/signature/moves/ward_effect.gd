@@ -51,7 +51,7 @@ func _tag(
 	ShapePaint.colored_polygon(ci, shape, Color(PAPER, alpha))
 	var closed := shape.duplicate()
 	closed.append(shape[0])
-	ShapePaint.polyline(ci, closed, Color(UiPalette.OUTLINE_DARK, alpha * 0.7), 1.2, true)
+	ShapePaint.polyline(ci, closed, Color(UiPalette.INK_950, alpha * 0.7), 1.2, true)
 	if glow > 0.0:
 		ShapePaint.circle(ci, at, half.x * 1.4, Color(SignaturePaint.BOON, alpha * 0.4 * glow))
 	ShapePaint.arc(ci, at, half.x * 0.55, 0.0, TAU, 16, Color(INK, alpha), 1.6, true)

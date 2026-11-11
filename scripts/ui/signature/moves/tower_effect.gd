@@ -33,14 +33,14 @@ func draw(item: CanvasItem, t: float) -> void:
 	var a := alpha * ease(phase(t, 0.0, APPEAR), 0.5)
 	var base := from - Vector2(0.0, LIFT)
 	var deck := Rect2(base - Vector2(BASE.x * 0.5, 0.0), BASE)
-	item.draw_rect(deck.grow(1.2), Color(UiPalette.OUTLINE_DARK, a * 0.8))
+	item.draw_rect(deck.grow(1.2), Color(UiPalette.INK_950, a * 0.8))
 	item.draw_rect(deck, Color(WOOD, a))
 	var pivot := base + Vector2(0.0, -2.0)
 	var fling := ease(phase(t, APPEAR, FLING), 2.2)
 	var arm := Vector2.from_angle(lerpf(COCKED, RELEASED, fling)) * ARM
-	item.draw_line(pivot, pivot + arm, Color(UiPalette.OUTLINE_DARK, a * 0.8), 5.0, true)
+	item.draw_line(pivot, pivot + arm, Color(UiPalette.INK_950, a * 0.8), 5.0, true)
 	item.draw_line(pivot, pivot + arm, Color(WOOD.lightened(0.2), a), 3.2, true)
-	ShapePaint.circle(ci, pivot, 3.0, Color(UiPalette.BRASS_HIGHLIGHT, a))
+	ShapePaint.circle(ci, pivot, 3.0, Color(UiPalette.GOLD, a))
 	var release := pivot + Vector2.from_angle(RELEASED) * ARM
 	var flight := phase(t, APPEAR + FLING, FLIGHT)
 	var stone := pivot + arm
@@ -49,5 +49,5 @@ func draw(item: CanvasItem, t: float) -> void:
 			return
 		var s := ease(flight, 1.2)
 		stone = release.lerp(targets[0], s) - Vector2(0.0, ARC * sin(s * PI))
-	ShapePaint.circle(ci, stone, STONE + 1.2, Color(UiPalette.OUTLINE_DARK, a))
+	ShapePaint.circle(ci, stone, STONE + 1.2, Color(UiPalette.INK_950, a))
 	ShapePaint.circle(ci, stone, STONE, Color(STONE_COLOR, a))

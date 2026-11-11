@@ -148,7 +148,7 @@ func _build_account_bar() -> void:
 
 	_sunday_banner = Label.new()
 	_sunday_banner.add_theme_font_size_override("font_size", BANNER_FONT)
-	_sunday_banner.add_theme_color_override("font_color", UiPalette.GLOW_AMBER)
+	_sunday_banner.add_theme_color_override("font_color", UiPalette.SAND)
 	_sunday_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_sunday_banner.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	$AccountBar.add_child(_sunday_banner)

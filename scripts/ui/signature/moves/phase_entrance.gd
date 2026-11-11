@@ -75,7 +75,7 @@ func _crescent(item: CanvasItem, center: Vector2, facing: float, alpha: float) -
 	var closed := shape.duplicate()
 	closed.append(shape[0])
 	ShapePaint.polyline(
-		item.get_canvas_item(), closed, Color(UiPalette.OUTLINE_DARK, alpha * 0.7), 1.2, true
+		item.get_canvas_item(), closed, Color(UiPalette.INK_950, alpha * 0.7), 1.2, true
 	)
 	ShapePaint.arc(
 		item.get_canvas_item(),

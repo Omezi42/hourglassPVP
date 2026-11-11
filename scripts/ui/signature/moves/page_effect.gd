@@ -85,5 +85,5 @@ func _page(item: CanvasItem, spine: Vector2, reach: float, color: Color) -> void
 	var closed := page.duplicate()
 	closed.append(page[0])
 	ShapePaint.polyline(
-		item.get_canvas_item(), closed, Color(UiPalette.OUTLINE_DARK, color.a * 0.6), 1.0, true
+		item.get_canvas_item(), closed, Color(UiPalette.INK_950, color.a * 0.6), 1.0, true
 	)

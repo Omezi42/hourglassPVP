@@ -98,12 +98,10 @@ func _horn(item: CanvasItem, center: Vector2, alpha: float) -> Vector2:
 		return bell
 	lower.reverse()
 	var shape := upper + lower
-	ShapePaint.colored_polygon(
-		item.get_canvas_item(), shape, Color(UiPalette.BRASS_HIGHLIGHT, alpha)
-	)
+	ShapePaint.colored_polygon(item.get_canvas_item(), shape, Color(UiPalette.GOLD, alpha))
 	var closed := shape.duplicate()
 	closed.append(shape[0])
 	ShapePaint.polyline(
-		item.get_canvas_item(), closed, Color(UiPalette.OUTLINE_DARK, alpha * 0.8), 1.2, true
+		item.get_canvas_item(), closed, Color(UiPalette.INK_950, alpha * 0.8), 1.2, true
 	)
 	return bell

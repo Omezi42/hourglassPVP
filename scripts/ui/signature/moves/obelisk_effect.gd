@@ -72,7 +72,7 @@ func draw(item: CanvasItem, t: float) -> void:
 	ShapePaint.colored_polygon(ci, shade, Color(STONE_DARK, a * 0.6))
 	var closed := body.duplicate()
 	closed.append(body[0])
-	ShapePaint.polyline(ci, closed, Color(UiPalette.OUTLINE_DARK, a * 0.8), 1.2, true)
+	ShapePaint.polyline(ci, closed, Color(UiPalette.INK_950, a * 0.8), 1.2, true)
 	var tip := top - Vector2(0.0, CAP)
 	for i in range(targets.size()):
 		var start := RISE + LAG * float(_rank(i))

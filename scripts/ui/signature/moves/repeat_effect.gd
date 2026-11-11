@@ -30,7 +30,7 @@ func draw(item: CanvasItem, t: float) -> void:
 ## レコード盤。`spin` は回った角度、`groove` は溝を走る光の進み(0→1でひと回り)。
 func _record(item: CanvasItem, at: Vector2, spin: float, groove: float, alpha: float) -> void:
 	var ci := item.get_canvas_item()
-	UiPaint.fill_circle(ci, at, RADIUS + 1.4, Color(UiPalette.OUTLINE_DARK, alpha * 0.8), 28)
+	UiPaint.fill_circle(ci, at, RADIUS + 1.4, Color(UiPalette.INK_950, alpha * 0.8), 28)
 	UiPaint.fill_circle(ci, at, RADIUS, Color(0.1, 0.08, 0.07, alpha * 0.95), 28)
 	for r in [RADIUS * 0.82, RADIUS * 0.66]:
 		ShapePaint.arc(
@@ -39,7 +39,7 @@ func _record(item: CanvasItem, at: Vector2, spin: float, groove: float, alpha: f
 	var shine := Color(1, 1, 1, alpha * 0.3)
 	ShapePaint.arc(item.get_canvas_item(), at, RADIUS * 0.74, spin, spin + 0.8, 8, shine, 1.6, true)
 	UiPaint.fill_circle(ci, at, RADIUS * 0.36, Color(SignaturePaint.BOON, alpha), 16)
-	UiPaint.fill_circle(ci, at, RADIUS * 0.08, Color(UiPalette.OUTLINE_DARK, alpha), 8)
+	UiPaint.fill_circle(ci, at, RADIUS * 0.08, Color(UiPalette.INK_950, alpha), 8)
 	if groove > 0.0 and groove < 1.0:
 		var head := spin - PI * 0.5 + TAU * groove
 		var glow := Color(SignaturePaint.BOON, alpha * (1.0 - groove * 0.4))

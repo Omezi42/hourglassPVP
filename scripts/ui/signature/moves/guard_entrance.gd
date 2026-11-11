@@ -45,17 +45,17 @@ func draw(item: CanvasItem, t: float) -> void:
 	)
 	var closed := shape.duplicate()
 	closed.append(shape[0])
-	ShapePaint.polyline(ci, closed, Color(UiPalette.OUTLINE_DARK, a), 4.0, true)
-	ShapePaint.polyline(ci, closed, Color(UiPalette.BRASS_HIGHLIGHT, a), 2.2, true)
+	ShapePaint.polyline(ci, closed, Color(UiPalette.INK_950, a), 4.0, true)
+	ShapePaint.polyline(ci, closed, Color(UiPalette.GOLD, a), 2.2, true)
 	var cross_top := tip - Vector2(0.0, HEIGHT * 0.9)
 	item.draw_line(
-		cross_top, tip - Vector2(0.0, HEIGHT * 0.2), Color(UiPalette.BRASS_LIGHT, a), 3.0, true
+		cross_top, tip - Vector2(0.0, HEIGHT * 0.2), Color(UiPalette.GOLD_FOLD, a), 3.0, true
 	)
 	var bar := tip - Vector2(0.0, HEIGHT * 0.62)
 	item.draw_line(
 		bar - Vector2(HALF * 0.7, 0.0),
 		bar + Vector2(HALF * 0.7, 0.0),
-		Color(UiPalette.BRASS_LIGHT, a),
+		Color(UiPalette.GOLD_FOLD, a),
 		3.0,
 		true
 	)

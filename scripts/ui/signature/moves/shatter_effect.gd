@@ -39,7 +39,7 @@ func draw(item: CanvasItem, t: float) -> void:
 			var bend := angle + (SignaturePaint.jitter(i * BENDS + k, 13) - 0.5) * 1.0
 			line.append(line[k - 1] + Vector2.from_angle(bend) * reach / float(BENDS))
 		ShapePaint.polyline(
-			item.get_canvas_item(), line, Color(UiPalette.OUTLINE_DARK, alpha * 0.8), 2.6, true
+			item.get_canvas_item(), line, Color(UiPalette.INK_950, alpha * 0.8), 2.6, true
 		)
 		ShapePaint.polyline(
 			item.get_canvas_item(), line, Color(SignaturePaint.SPARK_HOT, alpha), 1.2, true
@@ -63,5 +63,5 @@ func _wedge(item: CanvasItem, tip: Vector2, alpha: float) -> void:
 	var closed := shape.duplicate()
 	closed.append(shape[0])
 	ShapePaint.polyline(
-		item.get_canvas_item(), closed, Color(UiPalette.OUTLINE_DARK, alpha * 0.8), 1.4, true
+		item.get_canvas_item(), closed, Color(UiPalette.INK_950, alpha * 0.8), 1.4, true
 	)

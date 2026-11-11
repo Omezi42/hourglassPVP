@@ -70,9 +70,7 @@ func _arc(a: Vector2, b: Vector2, s: float) -> Vector2:
 func _wheel(item: CanvasItem, center: Vector2, spin: float, alpha: float) -> void:
 	var ci := item.get_canvas_item()
 	var color := Color(SignaturePaint.BOON, alpha)
-	UiPaint.draw_ellipse_ring(
-		ci, center, WHEEL, Color(UiPalette.OUTLINE_DARK, alpha * 0.6), 3.6, 40
-	)
+	UiPaint.draw_ellipse_ring(ci, center, WHEEL, Color(UiPalette.INK_950, alpha * 0.6), 3.6, 40)
 	UiPaint.draw_ellipse_ring(ci, center, WHEEL, color, 2.0, 40)
 	for i in range(ARROWS):
 		var angle := TAU * (spin + float(i) / float(ARROWS))

@@ -34,7 +34,7 @@ func draw(item: CanvasItem, t: float) -> void:
 	var swing := back_out(phase(t, APPEAR, SWING))
 	var grip := from + GRIP
 	var tip := grip + Vector2.UP.rotated(lerpf(RAISED, SWUNG, swing)) * LENGTH
-	item.draw_line(grip, tip, Color(UiPalette.OUTLINE_DARK, alpha * appear * 0.8), 4.4, true)
+	item.draw_line(grip, tip, Color(UiPalette.INK_950, alpha * appear * 0.8), 4.4, true)
 	item.draw_line(grip, tip, Color(WAND_COLOR, alpha * appear), 2.8, true)
 	var flight := phase(t, APPEAR + SWING, FLIGHT)
 	if flight <= 0.0:

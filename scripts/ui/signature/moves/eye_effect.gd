@@ -49,6 +49,6 @@ func draw(item: CanvasItem, t: float) -> void:
 			spiral.append(center + Vector2.from_angle(turn + s * TAU * TURNS) * size * s)
 		ShapePaint.polyline(ci, spiral, Color(WHITE, alpha), 1.6, true)
 	var lid := Color(SignaturePaint.SPIN, alpha)
-	ShapePaint.polyline(ci, upper, Color(UiPalette.OUTLINE_DARK, alpha * 0.6), 4.0, true)
+	ShapePaint.polyline(ci, upper, Color(UiPalette.INK_950, alpha * 0.6), 4.0, true)
 	ShapePaint.polyline(ci, upper, lid, 2.4, true)
 	ShapePaint.polyline(ci, lower, lid, 1.6, true)

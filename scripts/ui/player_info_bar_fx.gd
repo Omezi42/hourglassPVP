@@ -119,7 +119,7 @@ func _paint_short_glow(shape: PaintedShape) -> void:
 		shape.get_canvas_item(),
 		Vector2.ZERO,
 		PlayerInfoBar.PIP_RADIUS,
-		UiPalette.WARNING_RED,
+		UiPalette.HEALTH,
 		PIP_GLOW_WIDTH,
 		PIP_GLOW_SEGMENTS
 	)
@@ -164,7 +164,7 @@ func _paint_ring(shape: PaintedShape) -> void:
 		shape.get_canvas_item(),
 		Vector2.ZERO,
 		PlayerInfoBar.PORTRAIT_RADIUS + RING_GAP,
-		Color(UiPalette.GLOW_AMBER, 1.0),
+		Color(UiPalette.SAND, 1.0),
 		RING_WIDTH,
 		RING_SEGMENTS
 	)
@@ -186,7 +186,7 @@ func _paint_pip_glow(shape: PaintedShape) -> void:
 func _paint_rim(shape: PaintedShape) -> void:
 	if _hp_rect.size == Vector2.ZERO:
 		return
-	var color := Color(UiPalette.WARNING_RED, 1.0)
+	var color := Color(UiPalette.HEALTH, 1.0)
 	var ring := UiPaint.rounded_rect_points_uniform(
 		_hp_rect.grow(RIM_GAP), PlayerInfoBar.HP_BAR_RADIUS + RIM_GAP, RIM_CORNER_SEGMENTS
 	)

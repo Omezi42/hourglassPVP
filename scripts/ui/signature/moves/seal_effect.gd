@@ -35,7 +35,7 @@ func draw(item: CanvasItem, t: float) -> void:
 	var closed := shape.duplicate()
 	closed.append(shape[0])
 	ShapePaint.polyline(
-		item.get_canvas_item(), closed, Color(UiPalette.OUTLINE_DARK, alpha * 0.8), 1.4, true
+		item.get_canvas_item(), closed, Color(UiPalette.INK_950, alpha * 0.8), 1.4, true
 	)
 	ShapePaint.arc(
 		item.get_canvas_item(),
@@ -51,6 +51,6 @@ func draw(item: CanvasItem, t: float) -> void:
 	var mark := phase(t, DESCEND + PRESS, SET)
 	if mark > 0.0:
 		var reach := MARK * ease(mark, 0.5)
-		var dark := Color(UiPalette.OUTLINE_DARK, alpha)
+		var dark := Color(UiPalette.INK_950, alpha)
 		item.draw_line(at - Vector2(reach, reach), at + Vector2(reach, reach), dark, 2.6, true)
 		item.draw_line(at - Vector2(reach, -reach), at + Vector2(reach, -reach), dark, 2.6, true)

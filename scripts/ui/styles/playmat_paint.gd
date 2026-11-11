@@ -7,6 +7,9 @@ extends RefCounted
 ##
 ## `UiPaint` と違い**第1引数に `CanvasItem` を取る**(`RoomPaint` と同じ流儀)。
 
+## フェルトの色(上端・下端)。
+const FELT_TOP := Color(0.13, 0.16, 0.30, 1.0)
+const FELT_BOTTOM := Color(0.07, 0.09, 0.19, 1.0)
 ## 縁飾りを内側へ入れる量。
 const INSET := 9.0
 ## 模様の濃さ。**ここを上げると駒と数値のコントラストが落ちる**ため、
@@ -60,12 +63,12 @@ static func _trapezoid_points(
 
 
 ## 織り(`_draw_weave`)は矩形のまま描くため、台形の外へはみ出した左右2つの帯が残る。
-## この帯を、上端・下端でフェルトの色(`FELT_NAVY_*`)へ滑らかに変わる四角形として
+## この帯を、上端・下端でフェルトの色(`FELT_TOP`/`FELT_BOTTOM`)へ滑らかに変わる四角形として
 ## 塗りつぶし、台形の外側であることを隠す(2枚 × 上下の三角形で計4つぶん)。
 static func _mask_outside_trapezoid(
 	ci: RID, rect: Rect2, top_inset: float, bottom_inset: float
 ) -> void:
-	var stops := [[0.0, UiPalette.FELT_NAVY_TOP], [1.0, UiPalette.FELT_NAVY_BOTTOM]]
+	var stops := [[0.0, FELT_TOP], [1.0, FELT_BOTTOM]]
 	var left := PackedVector2Array(
 		[
 			rect.position,

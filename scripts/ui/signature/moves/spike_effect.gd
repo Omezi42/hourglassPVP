@@ -44,7 +44,7 @@ func _spike(item: CanvasItem, root: Vector2, dir: Vector2, length: float, alpha:
 	var tip := root + dir * length
 	var ci := item.get_canvas_item()
 	var outline := PackedVector2Array([root - across * 1.3, tip + dir * 1.5, root + across * 1.3])
-	ShapePaint.colored_polygon(ci, outline, Color(UiPalette.OUTLINE_DARK, alpha * 0.8))
+	ShapePaint.colored_polygon(ci, outline, Color(UiPalette.INK_950, alpha * 0.8))
 	ShapePaint.colored_polygon(
 		ci, PackedVector2Array([root - across, tip, root]), Color(STEEL, alpha)
 	)

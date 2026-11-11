@@ -200,7 +200,7 @@ var _hp_tween: Tween
 var _initialized := false
 ## 山札の脈打ちの強さと色。疲労だけ赤にして、ドローと区別する。
 var _deck_pulse := 0.0
-var _deck_pulse_color := UiPalette.GLOW_AMBER
+var _deck_pulse_color := UiPalette.SAND
 var _deck_tween: Tween
 ## ホバー中の札のコスト。左からこの数だけピップを脈打たせる(0で消す)。
 var _highlight_cost := 0
@@ -541,7 +541,7 @@ func play_shatter() -> void:
 
 ## 山札を脈打たせる。`danger` は疲労(GameDesign.md 9章)。
 func play_deck_pulse(danger: bool) -> void:
-	_deck_pulse_color = UiPalette.WARNING_RED if danger else UiPalette.GLOW_AMBER
+	_deck_pulse_color = UiPalette.HEALTH if danger else UiPalette.SAND
 	_deck_pulse_shape.repaint()
 	if _deck_tween != null and _deck_tween.is_valid():
 		_deck_tween.kill()
@@ -739,11 +739,7 @@ func _pile(rect: Rect2, label: String, count: int) -> void:
 
 
 func _text(
-	item: CanvasItem,
-	pos: Vector2,
-	value: String,
-	font_size: int,
-	color: Color = UiPalette.TEXT_OFFWHITE
+	item: CanvasItem, pos: Vector2, value: String, font_size: int, color: Color = UiPalette.IVORY
 ) -> void:
 	item.draw_string(_font, pos, value, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color)
 
@@ -799,7 +795,7 @@ func _paint_float(item: PaintedShape) -> void:
 		return
 	var rect := hp_bar_rect()
 	var ratio := _float_left / FLOAT_DURATION
-	var color := UiPalette.GLOW_AMBER if _float_amount > 0 else CardView.HEALTH_RED
+	var color := UiPalette.SAND if _float_amount > 0 else CardView.HEALTH_RED
 	var text := "+%d" % _float_amount if _float_amount > 0 else str(_float_amount)
 	var weight := 0.0
 	if _float_amount < 0:

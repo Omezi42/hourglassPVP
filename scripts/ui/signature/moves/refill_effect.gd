@@ -26,9 +26,7 @@ func draw(item: CanvasItem, t: float) -> void:
 	# 注ぐ間は口を手札の側へ傾ける。
 	var tilt := 0.5 * sin(phase(t, APPEAR, POUR * POURS) * PI)
 	var mouth := sack + Vector2(0.0, -SACK.y - NECK.y).rotated(PI * _toward_hand() * tilt)
-	UiPaint.fill_ellipse(
-		ci, sack, SACK * appear + Vector2.ONE, Color(UiPalette.OUTLINE_DARK, alpha), 20
-	)
+	UiPaint.fill_ellipse(ci, sack, SACK * appear + Vector2.ONE, Color(UiPalette.INK_950, alpha), 20)
 	UiPaint.fill_ellipse(ci, sack, SACK * appear, Color(SignaturePaint.SAND_DARK, alpha), 20)
 	if appear >= 1.0:
 		item.draw_line(sack, mouth, Color(SignaturePaint.SAND_DARK, alpha), NECK.x * 1.6)

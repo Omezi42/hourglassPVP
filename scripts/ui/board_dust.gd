@@ -58,7 +58,7 @@ func _process(delta: float) -> void:
 
 
 func _paint_mote(shape: PaintedShape, radius: float) -> void:
-	var glow := UiPalette.GLOW_AMBER
+	var glow := UiPalette.SAND
 	UiPaint.fill_gradient_polygon(
 		shape.get_canvas_item(),
 		UiPaint.circle_points(Vector2.ZERO, radius, 8),

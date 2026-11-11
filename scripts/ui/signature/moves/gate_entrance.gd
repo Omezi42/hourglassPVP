@@ -49,7 +49,7 @@ func draw(item: CanvasItem, t: float) -> void:
 
 ## 縁取りと陰を付けた石の角材。
 func _block(item: CanvasItem, rect: Rect2, alpha: float) -> void:
-	item.draw_rect(rect.grow(1.2), Color(UiPalette.OUTLINE_DARK, alpha * 0.8))
+	item.draw_rect(rect.grow(1.2), Color(UiPalette.INK_950, alpha * 0.8))
 	item.draw_rect(rect, Color(STONE, alpha))
 	var shade := Rect2(
 		rect.position + Vector2(rect.size.x * 0.65, 0.0), Vector2(rect.size.x * 0.35, rect.size.y)

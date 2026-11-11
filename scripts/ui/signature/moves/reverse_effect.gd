@@ -54,7 +54,7 @@ func draw(item: CanvasItem, t: float) -> void:
 	for p in glass:
 		outline.append(center + p.rotated(turn))
 	ShapePaint.polyline(
-		item.get_canvas_item(), outline, Color(UiPalette.OUTLINE_DARK, alpha * 0.7), 3.6, true
+		item.get_canvas_item(), outline, Color(UiPalette.INK_950, alpha * 0.7), 3.6, true
 	)
 	ShapePaint.polyline(
 		item.get_canvas_item(), outline, Color(SignaturePaint.SPIN, alpha), 1.8, true
@@ -62,7 +62,7 @@ func draw(item: CanvasItem, t: float) -> void:
 	for y: float in [-HALF.y, HALF.y]:
 		var a := center + Vector2(-HALF.x - 3.0, y).rotated(turn)
 		var b := center + Vector2(HALF.x + 3.0, y).rotated(turn)
-		item.draw_line(a, b, Color(UiPalette.BRASS_HIGHLIGHT, alpha), 3.0)
+		item.draw_line(a, b, Color(UiPalette.GOLD, alpha), 3.0)
 
 
 ## 下の部屋の底から `amount`(0→1)まで溜まった砂の形(砂時計の中心から見た座標)。

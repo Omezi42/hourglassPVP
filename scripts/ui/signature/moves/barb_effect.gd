@@ -39,7 +39,7 @@ func draw(item: CanvasItem, t: float) -> void:
 	for k in range(9):
 		var a := PI * float(k) / 8.0
 		hook.append(head + dir * sin(a) * HOOK - dir.orthogonal() * (1.0 - cos(a)) * HOOK * 0.5)
-	ShapePaint.polyline(ci, hook, Color(UiPalette.OUTLINE_DARK, alpha), 4.0, true)
+	ShapePaint.polyline(ci, hook, Color(UiPalette.INK_950, alpha), 4.0, true)
 	ShapePaint.polyline(ci, hook, Color(STEEL, alpha), 2.4, true)
 
 

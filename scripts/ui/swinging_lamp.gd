@@ -102,13 +102,13 @@ func _draw_lantern(ci: RID, bottom_center: Vector2) -> void:
 		ci,
 		UiPaint.rounded_rect_points_uniform(cap, 2.0, 4),
 		cap,
-		[[0.0, UiPalette.BRASS_LIGHT], [1.0, UiPalette.BRASS_DARK]]
+		[[0.0, UiPalette.GOLD_FOLD], [1.0, UiPalette.BRASS_DEEP]]
 	)
 	var points := UiPaint.rounded_rect_points_uniform(rect, 4.0, 6)
 	UiPaint.fill_gradient_polygon(
-		ci, points, rect, [[0.0, UiPalette.BRASS_MID], [1.0, UiPalette.BRASS_DARK]]
+		ci, points, rect, [[0.0, UiPalette.BRASS], [1.0, UiPalette.BRASS_DEEP]]
 	)
-	UiPaint.draw_bevel(ci, points, UiPalette.BRASS_HIGHLIGHT, UiPalette.OUTLINE_DARK, 1.2, false)
+	UiPaint.draw_bevel(ci, points, UiPalette.GOLD, UiPalette.INK_950, 1.2, false)
 	var inner := rect.grow(-4.0)
 	UiPaint.fill_gradient_polygon(
 		ci,

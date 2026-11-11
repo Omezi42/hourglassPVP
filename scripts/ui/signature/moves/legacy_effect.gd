@@ -41,7 +41,7 @@ func draw(item: CanvasItem, t: float) -> void:
 		item.draw_line(
 			Vector2(center.x - w, y),
 			Vector2(center.x + w, y),
-			Color(UiPalette.BRASS_DARK, a * 0.6),
+			Color(UiPalette.BRASS_DEEP, a * 0.6),
 			1.0
 		)
 	for side: float in [-1.0, 1.0]:

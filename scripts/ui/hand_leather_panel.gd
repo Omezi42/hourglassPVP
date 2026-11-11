@@ -74,7 +74,7 @@ func _draw() -> void:
 	draw_line(
 		Vector2(rect.position.x + CORNER_RADIUS, rect.position.y),
 		Vector2(rect.end.x - CORNER_RADIUS, rect.position.y),
-		UiPalette.BRASS_MID,
+		UiPalette.BRASS,
 		TOP_BRASS_WIDTH
 	)
 

@@ -40,7 +40,7 @@ func draw(item: CanvasItem, t: float) -> void:
 	var butt := butt_start.lerp(butt_end, fly) - Vector2(0.0, ARC * sin(fly * PI))
 	var dir := Vector2.from_angle(lerpf(HELD, PLANTED, fly))
 	var neck := butt + dir * SHAFT
-	item.draw_line(butt, neck, Color(UiPalette.OUTLINE_DARK, a * 0.8), 5.0, true)
+	item.draw_line(butt, neck, Color(UiPalette.INK_950, a * 0.8), 5.0, true)
 	item.draw_line(butt, neck, Color(UiPalette.WOOD_TOP.lightened(0.25), a), 3.2, true)
 	var across := dir.orthogonal()
 	var tip := neck + dir * HEAD
@@ -48,7 +48,7 @@ func draw(item: CanvasItem, t: float) -> void:
 	ShapePaint.colored_polygon(ci, head, Color(STEEL, a))
 	var closed := head.duplicate()
 	closed.append(head[0])
-	ShapePaint.polyline(ci, closed, Color(UiPalette.OUTLINE_DARK, a * 0.8), 1.2, true)
+	ShapePaint.polyline(ci, closed, Color(UiPalette.INK_950, a * 0.8), 1.2, true)
 	item.draw_line(neck, neck - across * HEAD_HALF * 2.2 - dir * 4.0, Color(STEEL, a), 2.0, true)
 	var glint := phase(t, APPEAR + FLY, GLINT)
 	if glint > 0.0 and glint < 1.0:

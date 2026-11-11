@@ -106,8 +106,8 @@ func _draw_background() -> void:
 			Color(0.9, 0.6, 0.2, 0.045),
 			64
 		)
-	draw_rect(Rect2(0.0, 0.0, VIEW.x, 8.0), UiPalette.GLOW_AMBER)
-	draw_rect(Rect2(0.0, VIEW.y - 8.0, VIEW.x, 8.0), UiPalette.GLOW_AMBER)
+	draw_rect(Rect2(0.0, 0.0, VIEW.x, 8.0), UiPalette.SAND)
+	draw_rect(Rect2(0.0, VIEW.y - 8.0, VIEW.x, 8.0), UiPalette.SAND)
 
 
 ## 反転の軌跡。駒の周りを弧を描いて回る金の砂粒。
@@ -195,9 +195,7 @@ func _draw_damage() -> void:
 
 func _draw_copy() -> void:
 	var left := Vector2(COPY_LEFT, 0.0)
-	_draw_outlined(
-		left + Vector2(0.0, 440.0), COPY_LINE1, COPY_WIDTH, 72, 16, UiPalette.TEXT_OFFWHITE
-	)
+	_draw_outlined(left + Vector2(0.0, 440.0), COPY_LINE1, COPY_WIDTH, 72, 16, UiPalette.IVORY)
 	_draw_outlined(left + Vector2(0.0, 590.0), COPY_LINE2, COPY_WIDTH, 124, 22, GOLD)
 
 
@@ -235,12 +233,7 @@ func _draw_badge(at: Vector2, value: String, color: Color, scale_by: float) -> v
 	UiPaint.draw_ellipse_ring(ci, at, Vector2(radius + 2.5, radius + 2.5), GOLD, 3.0, 32)
 	var font_size := int(34.0 * scale_by)
 	_draw_outlined(
-		Vector2(at.x - 60.0, at.y + font_size * 0.36),
-		value,
-		120.0,
-		font_size,
-		8,
-		UiPalette.TEXT_OFFWHITE
+		Vector2(at.x - 60.0, at.y + font_size * 0.36), value, 120.0, font_size, 8, UiPalette.IVORY
 	)
 
 

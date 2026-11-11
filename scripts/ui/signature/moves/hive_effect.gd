@@ -83,7 +83,7 @@ func _bee(item: CanvasItem, at: Vector2, t: float, facing: float, alpha: float) 
 	UiPaint.fill_ellipse(
 		ci, at + Vector2(-facing * 1.0, -BODY.y - wing.y * 0.5), wing, Color(WING_COLOR, alpha), 12
 	)
-	UiPaint.fill_ellipse(ci, at, BODY + Vector2.ONE, Color(UiPalette.OUTLINE_DARK, alpha), 14)
+	UiPaint.fill_ellipse(ci, at, BODY + Vector2.ONE, Color(UiPalette.INK_950, alpha), 14)
 	UiPaint.fill_ellipse(ci, at, BODY, Color(SignaturePaint.SAND, alpha), 14)
 	for x: float in [-1.6, 1.0]:
 		var stripe := at + Vector2(x * facing, 0.0)

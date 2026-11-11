@@ -27,11 +27,9 @@ func draw(item: CanvasItem, t: float) -> void:
 	var lamp := from - Vector2(0.0, LIFT)
 	var appear := ease(phase(t, 0.0, KINDLE * 0.5), 0.5)
 	UiPaint.fill_ellipse(
-		ci, lamp + Vector2(0.0, 3.0), HOLDER, Color(UiPalette.BRASS_DARK, alpha * appear), 16
+		ci, lamp + Vector2(0.0, 3.0), HOLDER, Color(UiPalette.BRASS_DEEP, alpha * appear), 16
 	)
-	UiPaint.fill_ellipse(
-		ci, lamp, HOLDER * 0.8, Color(UiPalette.BRASS_HIGHLIGHT, alpha * appear), 16
-	)
+	UiPaint.fill_ellipse(ci, lamp, HOLDER * 0.8, Color(UiPalette.GOLD, alpha * appear), 16)
 	var kindle := phase(t, KINDLE * 0.3, KINDLE * 0.7)
 	var flight := phase(t, KINDLE, FLIGHT)
 	if flight <= 0.0:

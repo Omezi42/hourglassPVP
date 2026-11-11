@@ -34,14 +34,12 @@ func draw(item: CanvasItem, t: float) -> void:
 	var center := from - Vector2(0.0, LIFT - CLIMB * (1.0 - rise))
 	var a := alpha * minf(rise * 2.0, 1.0)
 	ShapePaint.circle(ci, center, RADIUS, Color(FACE, a * 0.22))
+	ShapePaint.arc(ci, center, RADIUS, 0.0, TAU, 48, Color(UiPalette.INK_950, a * 0.6), 4.4, true)
+	ShapePaint.arc(ci, center, RADIUS, 0.0, TAU, 48, Color(UiPalette.GOLD, a), 2.6, true)
 	ShapePaint.arc(
-		ci, center, RADIUS, 0.0, TAU, 48, Color(UiPalette.OUTLINE_DARK, a * 0.6), 4.4, true
+		ci, center, RADIUS * 0.62, 0.0, TAU, 36, Color(UiPalette.GOLD_FOLD, a * 0.6), 1.4, true
 	)
-	ShapePaint.arc(ci, center, RADIUS, 0.0, TAU, 48, Color(UiPalette.BRASS_HIGHLIGHT, a), 2.6, true)
-	ShapePaint.arc(
-		ci, center, RADIUS * 0.62, 0.0, TAU, 36, Color(UiPalette.BRASS_LIGHT, a * 0.6), 1.4, true
-	)
-	ShapePaint.circle(ci, center, BOSS, Color(UiPalette.BRASS_HIGHLIGHT, a))
+	ShapePaint.circle(ci, center, BOSS, Color(UiPalette.GOLD, a))
 	var orbit := phase(t, impact_at() + RISE, ORBIT)
 	if orbit <= 0.0 or orbit >= 1.0:
 		return

@@ -64,7 +64,7 @@ func setup(texture: Texture2D, art_size: Vector2, tint := Color(1, 1, 1, 0.85)) 
 	_glow = _art.duplicate() as TextureRect
 	_glow.pivot_offset = art_size * 0.5
 	_glow.scale = Vector2.ONE * ARMED_GLOW_SCALE
-	_glow.modulate = Color(UiPalette.GLOW_AMBER, 0.0)
+	_glow.modulate = Color(UiPalette.SAND, 0.0)
 	add_child(_shadow)
 	add_child(_glow)
 	add_child(_art)

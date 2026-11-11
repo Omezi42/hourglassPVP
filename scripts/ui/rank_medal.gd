@@ -182,10 +182,7 @@ static func draw_filled_star(item: CanvasItem, at: Vector2, radius: float) -> vo
 	var points := star_points(at, radius)
 	var rect := Rect2(at - Vector2.ONE * radius, Vector2.ONE * radius * 2.0)
 	UiPaint.fill_gradient_polygon(
-		item.get_canvas_item(),
-		points,
-		rect,
-		[[0.0, UiPalette.ROUND_FILLED_TOP], [1.0, UiPalette.ROUND_FILLED_BOTTOM]]
+		item.get_canvas_item(), points, rect, [[0.0, UiPalette.GOLD_HI], [1.0, UiPalette.BRASS]]
 	)
 	ShapePaint.polyline(
 		item.get_canvas_item(), closed(points), Color(SHADOW_COLOR, 0.8), star_outline(radius), true

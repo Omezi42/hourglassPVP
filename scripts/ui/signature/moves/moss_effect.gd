@@ -37,7 +37,7 @@ func draw(item: CanvasItem, t: float) -> void:
 	for i in range(count + 1):
 		points.append(_vine(root, climb * float(i) / float(count)))
 	ShapePaint.polyline(
-		item.get_canvas_item(), points, Color(UiPalette.OUTLINE_DARK, alpha * 0.6), 4.2, true
+		item.get_canvas_item(), points, Color(UiPalette.INK_950, alpha * 0.6), 4.2, true
 	)
 	ShapePaint.polyline(item.get_canvas_item(), points, Color(STEM, alpha), 2.6, true)
 	var unfurl := back_out(phase(t, CLIMB, UNFURL))

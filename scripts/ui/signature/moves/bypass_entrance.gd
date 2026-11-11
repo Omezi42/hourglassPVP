@@ -36,7 +36,7 @@ func draw(item: CanvasItem, t: float) -> void:
 	for i in range(count + 1):
 		var s := float(i) / float(STEPS)
 		path.append(from + Vector2(sin(s * TAU * TURNS) * WAVE, -LENGTH * s))
-	ShapePaint.polyline(ci, path, Color(UiPalette.OUTLINE_DARK, alpha * 0.5), 5.0, true)
+	ShapePaint.polyline(ci, path, Color(UiPalette.INK_950, alpha * 0.5), 5.0, true)
 	ShapePaint.polyline(ci, path, Color(PATH_COLOR, alpha), 2.4, true)
 	var tip := path[path.size() - 1]
 	var dir := (tip - path[path.size() - 2]).normalized()

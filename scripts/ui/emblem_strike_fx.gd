@@ -229,7 +229,7 @@ func _draw_spell_rise(from: Vector2) -> void:
 func _draw_death_linger(at: Vector2) -> void:
 	var ci := get_canvas_item()
 	UiPaint.fill_circle(ci, at, CardView.EMBLEM_PLAQUE_RADIUS, Color(0.08, 0.06, 0.05, 0.85), 24)
-	UiPaint.fill_circle(ci, at, CardView.EMBLEM_PLAQUE_RADIUS - 1.5, UiPalette.BRASS_MID, 24)
+	UiPaint.fill_circle(ci, at, CardView.EMBLEM_PLAQUE_RADIUS - 1.5, UiPalette.BRASS, 24)
 	var half := Vector2(CardView.EMBLEM_PLAQUE_SIDE, CardView.EMBLEM_PLAQUE_SIDE) * 0.5
 	draw_texture_rect(
 		_emblem,
@@ -237,10 +237,8 @@ func _draw_death_linger(at: Vector2) -> void:
 		false,
 		Color(0.08, 0.06, 0.04, 0.7)
 	)
-	draw_texture_rect(
-		_emblem, Rect2(at - half, half * 2.0), false, Color(UiPalette.BRASS_HIGHLIGHT, 0.95)
-	)
-	UiPaint.draw_ring(ci, at, CardView.EMBLEM_PLAQUE_RADIUS, UiPalette.BRASS_HIGHLIGHT, 1.0, 24)
+	draw_texture_rect(_emblem, Rect2(at - half, half * 2.0), false, Color(UiPalette.GOLD, 0.95))
+	UiPaint.draw_ring(ci, at, CardView.EMBLEM_PLAQUE_RADIUS, UiPalette.GOLD, 1.0, 24)
 
 
 func _draw_flight(from: Vector2, to: Vector2) -> void:

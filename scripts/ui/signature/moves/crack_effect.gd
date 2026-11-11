@@ -38,7 +38,7 @@ func draw(item: CanvasItem, t: float) -> void:
 			var side := dir.orthogonal() * (SignaturePaint.jitter(i * 5 + k, 162) - 0.5) * JAG
 			points.append(root + dir * REACH * crack * s + side)
 		ShapePaint.polyline(ci, points, Color(LIGHT, alpha * 0.4), 4.0, true)
-		ShapePaint.polyline(ci, points, Color(UiPalette.OUTLINE_DARK, alpha * 0.9), 1.4, true)
+		ShapePaint.polyline(ci, points, Color(UiPalette.INK_950, alpha * 0.9), 1.4, true)
 	var emerge := ease(phase(t, CRACK, EMERGE), 0.6)
 	var fly := phase(t, CRACK + EMERGE, FLY)
 	if emerge > 0.0 and fly < 1.0:

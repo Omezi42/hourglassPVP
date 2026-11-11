@@ -204,7 +204,7 @@ func _draw_tile(rect: Rect2, item: Dictionary, alpha: float) -> void:
 		Vector2(text_x, rect.position.y + NAME_BASELINE),
 		card.display_name,
 		NAME_FONT_SIZE,
-		Color(UiPalette.TEXT_OFFWHITE, alpha),
+		Color(UiPalette.IVORY, alpha),
 		max_width
 	)
 

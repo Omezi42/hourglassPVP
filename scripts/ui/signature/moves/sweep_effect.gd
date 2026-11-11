@@ -35,7 +35,7 @@ func draw(item: CanvasItem, t: float) -> void:
 	var swing := sin(phase(t, 0.0, SWEEP) * PI * 3.0) * 0.12
 	var up := Vector2.UP.rotated(LEAN + swing)
 	var top := foot + up * HANDLE
-	item.draw_line(foot, top, Color(UiPalette.OUTLINE_DARK, alpha * 0.8), 6.0, true)
+	item.draw_line(foot, top, Color(UiPalette.INK_950, alpha * 0.8), 6.0, true)
 	item.draw_line(foot, top, Color(HANDLE_COLOR, alpha), 4.0, true)
 	var across := up.orthogonal()
 	var bristle := PackedVector2Array(

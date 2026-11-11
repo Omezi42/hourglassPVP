@@ -45,11 +45,9 @@ func draw(item: CanvasItem, t: float) -> void:
 
 func _wheel(item: CanvasItem, at: Vector2, turn: float, alpha: float) -> void:
 	var ci := item.get_canvas_item()
-	ShapePaint.arc(
-		ci, at, RADIUS, 0.0, TAU, 32, Color(UiPalette.OUTLINE_DARK, alpha * 0.8), 5.6, true
-	)
+	ShapePaint.arc(ci, at, RADIUS, 0.0, TAU, 32, Color(UiPalette.INK_950, alpha * 0.8), 5.6, true)
 	ShapePaint.arc(ci, at, RADIUS, 0.0, TAU, 32, Color(WOOD, alpha), 3.6, true)
 	for i in range(SPOKES):
 		var dir := Vector2.from_angle(turn + TAU * float(i) / float(SPOKES))
 		item.draw_line(at, at + dir * RADIUS, Color(WOOD.lightened(0.15), alpha), 2.0, true)
-	ShapePaint.circle(ci, at, 3.6, Color(UiPalette.BRASS_HIGHLIGHT, alpha))
+	ShapePaint.circle(ci, at, 3.6, Color(UiPalette.GOLD, alpha))

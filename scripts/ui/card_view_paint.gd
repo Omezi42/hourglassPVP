@@ -102,16 +102,16 @@ static func _pedestal_side_points(
 static func pedestal_ring(view: CardView) -> void:
 	var center := Vector2(view.size.x * 0.5, CardView.PEDESTAL_CENTER_Y)
 	var guard: bool = view._has_live_keyword(CardEnums.Keyword.GUARD)
-	var color := UiPalette.BRASS_MID
+	var color := UiPalette.BRASS
 	var width := CardView.PEDESTAL_RING_WIDTH
 	var radius := CardView.PEDESTAL_RADIUS
 	if view.selected:
 		color = CardView.SELECT_CYAN
 		width = CardView.PEDESTAL_SELECT_RING_WIDTH
 	elif guard:
-		color = UiPalette.BRASS_HIGHLIGHT
+		color = UiPalette.GOLD
 	elif view.card == null:
-		color = Color(UiPalette.BRASS_MID, 0.6)
+		color = Color(UiPalette.BRASS, 0.6)
 	if not view.selected and view.unselect_amount > 0.01:
 		color = Color(CardView.SELECT_CYAN, view.unselect_amount)
 		width = CardView.PEDESTAL_SELECT_RING_WIDTH
@@ -129,7 +129,7 @@ static func pedestal_ring(view: CardView) -> void:
 			view.get_canvas_item(),
 			center,
 			CardView.PEDESTAL_RADIUS + GUARD_RING_GAP,
-			UiPalette.BRASS_HIGHLIGHT,
+			UiPalette.GOLD,
 			CardView.PEDESTAL_RING_WIDTH,
 			40
 		)

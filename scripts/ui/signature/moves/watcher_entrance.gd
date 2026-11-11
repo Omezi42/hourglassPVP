@@ -43,7 +43,7 @@ func draw(item: CanvasItem, t: float) -> void:
 		var bulge := sin(s * PI)
 		upper.append(center + Vector2(x, -HALF.y * open * bulge))
 		lower.append(center + Vector2(x, HALF.y * open * bulge * 0.8))
-	var lid := Color(UiPalette.BRASS_HIGHLIGHT, alpha)
+	var lid := Color(UiPalette.GOLD, alpha)
 	if open > 0.08:
 		var shape := upper.duplicate()
 		var back := lower.duplicate()
@@ -54,7 +54,7 @@ func draw(item: CanvasItem, t: float) -> void:
 		var iris := center + Vector2(sin(look * TAU) * GLANCE, 0.0)
 		var size := IRIS * minf(open * 1.4, 1.0)
 		ShapePaint.circle(ci, iris, size, Color(IRIS_COLOR, alpha))
-		ShapePaint.circle(ci, iris, size * 0.45, Color(UiPalette.OUTLINE_DARK, alpha))
+		ShapePaint.circle(ci, iris, size * 0.45, Color(UiPalette.INK_950, alpha))
 		ShapePaint.polyline(ci, lower, lid, 1.6, true)
-	ShapePaint.polyline(ci, upper, Color(UiPalette.OUTLINE_DARK, alpha * 0.6), 4.0, true)
+	ShapePaint.polyline(ci, upper, Color(UiPalette.INK_950, alpha * 0.6), 4.0, true)
 	ShapePaint.polyline(ci, upper, lid, 2.4, true)

@@ -33,7 +33,7 @@ func draw(item: CanvasItem, t: float) -> void:
 			break
 		var side := STRIDE if i % 2 == 0 else -STRIDE
 		var at := from.lerp(target, s) + across * side
-		ShapePaint.circle(ci, at, PRINT, Color(UiPalette.OUTLINE_DARK, alpha))
+		ShapePaint.circle(ci, at, PRINT, Color(UiPalette.INK_950, alpha))
 	if t < RUN:
 		return
 	var open := GAP * (1.0 - ease(phase(t, RUN, BITE), 0.5))
@@ -53,4 +53,4 @@ func _jaw(ci: RID, base: Vector2, facing: float, alpha: float) -> void:
 		ShapePaint.colored_polygon(ci, tooth, Color(FANG_COLOR, alpha))
 		var outline := tooth.duplicate()
 		outline.append(left)
-		ShapePaint.polyline(ci, outline, Color(UiPalette.OUTLINE_DARK, alpha), 1.2, true)
+		ShapePaint.polyline(ci, outline, Color(UiPalette.INK_950, alpha), 1.2, true)

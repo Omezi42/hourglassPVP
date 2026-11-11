@@ -25,6 +25,8 @@ enum Emblem {
 	PERSON
 }
 
+## 錠の円盤の地(夜の藍の半透明)。
+const LOCK_PLATE := Color(0.035, 0.045, 0.085, 0.78)
 const GRAIN_SIZE := 64
 const GRAIN_SEED := 20240818
 
@@ -568,9 +570,7 @@ static func _emblem_brand(ci: RID, texture: Texture2D, center: Vector2, size: fl
 ## デッキ編集の未所有セット・ホームの未解放の入口が共通に使う。
 static func draw_lock(item: CanvasItem, center: Vector2, radius: float) -> void:
 	var r := radius
-	ShapePaint.colored_polygon(
-		item.get_canvas_item(), circle_points(center, r, 24), UiPalette.LOCK_PLATE
-	)
+	ShapePaint.colored_polygon(item.get_canvas_item(), circle_points(center, r, 24), LOCK_PLATE)
 	ShapePaint.arc(
 		item.get_canvas_item(),
 		center + Vector2(0, -r * 0.12),
@@ -578,14 +578,14 @@ static func draw_lock(item: CanvasItem, center: Vector2, radius: float) -> void:
 		PI,
 		TAU,
 		12,
-		UiPalette.LOCK_BRASS,
+		UiPalette.GOLD,
 		r * 0.12
 	)
 	var body := Rect2(center + Vector2(-r * 0.45, -r * 0.12), Vector2(r * 0.9, r * 0.62))
 	ShapePaint.colored_polygon(
-		item.get_canvas_item(), rounded_rect_points_uniform(body, r * 0.1, 3), UiPalette.LOCK_BRASS
+		item.get_canvas_item(), rounded_rect_points_uniform(body, r * 0.1, 3), UiPalette.GOLD
 	)
-	ShapePaint.circle(item.get_canvas_item(), body.get_center(), r * 0.09, UiPalette.LOCK_PLATE)
+	ShapePaint.circle(item.get_canvas_item(), body.get_center(), r * 0.09, LOCK_PLATE)
 
 
 ## 無効/後退(disabled・読み取り専用等)状態の色変換。色自身の輝度へ寄せて彩度を落とした

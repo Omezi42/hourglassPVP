@@ -72,5 +72,5 @@ func _half(item: CanvasItem, center: Vector2, side: float, open: float, alpha: f
 	var closed := shape.duplicate()
 	closed.append(shape[0])
 	ShapePaint.polyline(
-		item.get_canvas_item(), closed, Color(UiPalette.OUTLINE_DARK, alpha * 0.8), 1.2, true
+		item.get_canvas_item(), closed, Color(UiPalette.INK_950, alpha * 0.8), 1.2, true
 	)

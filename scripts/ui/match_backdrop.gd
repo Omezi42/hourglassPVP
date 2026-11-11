@@ -131,7 +131,7 @@ static func _glow_texture() -> GradientTexture2D:
 	if _glow_cache != null:
 		return _glow_cache
 	var gradient := Gradient.new()
-	var amber := UiPalette.GLOW_AMBER
+	var amber := UiPalette.SAND
 	gradient.set_color(0, Color(amber.r, amber.g, amber.b, GLOW_PEAK_ALPHA))
 	gradient.set_color(1, Color(amber.r, amber.g, amber.b, 0.0))
 	gradient.add_point(0.45, Color(amber.r, amber.g, amber.b, GLOW_PEAK_ALPHA * 0.45))

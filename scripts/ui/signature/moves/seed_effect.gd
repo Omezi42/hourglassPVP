@@ -34,7 +34,7 @@ func draw(item: CanvasItem, t: float) -> void:
 	if flight < 1.0:
 		var s := ease(flight, 0.9)
 		var at := from.lerp(floor_at, s) - Vector2(0.0, ARC * sin(s * PI))
-		UiPaint.fill_ellipse(ci, at, SEED + Vector2.ONE, Color(UiPalette.OUTLINE_DARK, alpha), 14)
+		UiPaint.fill_ellipse(ci, at, SEED + Vector2.ONE, Color(UiPalette.INK_950, alpha), 14)
 		UiPaint.fill_ellipse(ci, at, SEED, Color(SEED_COLOR, alpha), 14)
 		return
 	var sprout := phase(t, FLIGHT, SPROUT)

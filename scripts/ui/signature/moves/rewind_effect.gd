@@ -38,6 +38,6 @@ func draw(item: CanvasItem, t: float) -> void:
 		var k := float(i) / float(GHOSTS)
 		var tip := center + Vector2.UP.rotated(hand + trail * k) * radius * 0.72
 		item.draw_line(
-			center, tip, Color(UiPalette.BRASS_DARK, alpha * 0.35 * (1.0 - k)), 1.6, true
+			center, tip, Color(UiPalette.BRASS_DEEP, alpha * 0.35 * (1.0 - k)), 1.6, true
 		)
 	SignaturePaint.boon_ring(item, targets[0], phase(t, impact_at(), RING), alpha)

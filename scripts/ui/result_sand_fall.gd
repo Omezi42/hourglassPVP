@@ -69,6 +69,6 @@ func _process(delta: float) -> void:
 
 func _draw() -> void:
 	var ci := get_canvas_item()
-	var color := Color(UiPalette.GLOW_AMBER, SAND_ALPHA) if _bright else ASH_COLOR
+	var color := Color(UiPalette.SAND, SAND_ALPHA) if _bright else ASH_COLOR
 	for p in _particles:
 		UiPaint.fill_circle(ci, p["pos"], p["size"], color, 8)

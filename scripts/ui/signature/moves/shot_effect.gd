@@ -50,7 +50,7 @@ func draw(item: CanvasItem, t: float) -> void:
 			ShapePaint.circle(item.get_canvas_item(), muzzle.lerp(targets[0], q), size, color)
 		var head := muzzle.lerp(targets[0], flight)
 		ShapePaint.circle(
-			item.get_canvas_item(), head, BULLET + 1.2, Color(UiPalette.OUTLINE_DARK, alpha * 0.7)
+			item.get_canvas_item(), head, BULLET + 1.2, Color(UiPalette.INK_950, alpha * 0.7)
 		)
 		ShapePaint.circle(item.get_canvas_item(), head, BULLET, Color(SignaturePaint.SAND, alpha))
 		return

@@ -65,8 +65,8 @@ func _flask(item: CanvasItem, bulb: Vector2, alpha: float) -> void:
 		return
 	var ci := item.get_canvas_item()
 	var neck := Rect2(bulb - Vector2(NECK.x, BULB + NECK.y), Vector2(NECK.x * 2.0, NECK.y + 2.0))
-	ShapePaint.circle(ci, bulb, BULB + 1.4, Color(UiPalette.OUTLINE_DARK, alpha * 0.7))
-	item.draw_rect(neck.grow(1.4), Color(UiPalette.OUTLINE_DARK, alpha * 0.7))
+	ShapePaint.circle(ci, bulb, BULB + 1.4, Color(UiPalette.INK_950, alpha * 0.7))
+	item.draw_rect(neck.grow(1.4), Color(UiPalette.INK_950, alpha * 0.7))
 	ShapePaint.circle(ci, bulb, BULB, Color(GLASS, alpha * 0.85))
 	item.draw_rect(neck, Color(GLASS, alpha * 0.85))
 	ShapePaint.circle(ci, bulb + Vector2(0.0, BULB * 0.25), BULB * 0.72, Color(LIQUID, alpha))

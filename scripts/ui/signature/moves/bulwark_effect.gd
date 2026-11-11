@@ -49,7 +49,7 @@ func draw(item: CanvasItem, t: float) -> void:
 			)
 		)
 		_mortar(item, rect, alpha)
-		item.draw_rect(rect, Color(UiPalette.OUTLINE_DARK, alpha * 0.8), false, 1.4)
+		item.draw_rect(rect, Color(UiPalette.INK_950, alpha * 0.8), false, 1.4)
 		var glow := sin(phase(t, RISE * 0.7, RING) * PI)
 		if glow > 0.0:
 			item.draw_line(

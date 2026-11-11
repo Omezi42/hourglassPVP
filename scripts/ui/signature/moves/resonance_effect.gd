@@ -54,8 +54,8 @@ func draw(item: CanvasItem, t: float) -> void:
 
 func _fork(item: CanvasItem, base: Vector2, wobble: float, alpha: float) -> void:
 	var ci := item.get_canvas_item()
-	var outline := Color(UiPalette.OUTLINE_DARK, alpha * 0.8)
-	var brass := Color(UiPalette.BRASS_HIGHLIGHT, alpha)
+	var outline := Color(UiPalette.INK_950, alpha * 0.8)
+	var brass := Color(UiPalette.GOLD, alpha)
 	for side in [-1.0, 1.0]:
 		var x: float = side * (PRONG.x + wobble)
 		var foot := base + Vector2(x, 0.0)

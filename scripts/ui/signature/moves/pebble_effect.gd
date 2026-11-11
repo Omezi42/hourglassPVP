@@ -43,9 +43,7 @@ func draw(item: CanvasItem, t: float) -> void:
 		if flight >= done and flight < done + leg:
 			at = a.lerp(b, q) - Vector2(0.0, HEIGHTS[i] * sin(q * PI))
 		done += leg
-	UiPaint.fill_ellipse(
-		ci, at, STONE + Vector2.ONE, Color(UiPalette.OUTLINE_DARK, alpha * 0.8), 14
-	)
+	UiPaint.fill_ellipse(ci, at, STONE + Vector2.ONE, Color(UiPalette.INK_950, alpha * 0.8), 14)
 	UiPaint.fill_ellipse(ci, at, STONE, Color(STONE_DARK, alpha), 14)
 	UiPaint.fill_ellipse(
 		ci,

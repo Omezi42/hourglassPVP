@@ -63,14 +63,14 @@ func _crown(item: CanvasItem, at: Vector2, alpha: float) -> void:
 			shape,
 			Rect2(at - Vector2(HALF, HEIGHT * 1.2), Vector2(HALF * 2.0, HEIGHT * 1.2 + 3.0)),
 			[
-				[0.0, Color(UiPalette.BRASS_HIGHLIGHT, alpha)],
-				[1.0, Color(UiPalette.BRASS_DARK, alpha)],
+				[0.0, Color(UiPalette.GOLD, alpha)],
+				[1.0, Color(UiPalette.BRASS_DEEP, alpha)],
 			]
 		)
 	)
 	var closed := shape.duplicate()
 	closed.append(shape[0])
-	ShapePaint.polyline(ci, closed, Color(UiPalette.OUTLINE_DARK, alpha * 0.8), 1.2, true)
+	ShapePaint.polyline(ci, closed, Color(UiPalette.INK_950, alpha * 0.8), 1.2, true)
 	for x: float in [-HALF, 0.0, HALF]:
 		var tip_y := -HEIGHT * (1.2 if x == 0.0 else 1.0)
 		ShapePaint.circle(ci, at + Vector2(x, tip_y), 2.2, Color(SignaturePaint.BOON, alpha))

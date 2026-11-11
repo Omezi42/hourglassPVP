@@ -65,10 +65,10 @@ func _overflow(item: CanvasItem, hole: Vector2, t: float) -> void:
 ## 真鍮の座金に開いた鍵穴。
 func _keyhole(item: CanvasItem, at: Vector2, alpha: float) -> void:
 	var ci := item.get_canvas_item()
-	UiPaint.fill_circle(ci, at, HOLE * 2.6, Color(UiPalette.OUTLINE_DARK, alpha * 0.8), 20)
-	UiPaint.fill_circle(ci, at, HOLE * 2.3, Color(UiPalette.BRASS_HIGHLIGHT, alpha), 20)
+	UiPaint.fill_circle(ci, at, HOLE * 2.6, Color(UiPalette.INK_950, alpha * 0.8), 20)
+	UiPaint.fill_circle(ci, at, HOLE * 2.3, Color(UiPalette.GOLD, alpha), 20)
 	UiPaint.fill_circle(
-		ci, at - Vector2(0.0, HOLE * 0.3), HOLE * 0.6, Color(UiPalette.OUTLINE_DARK, alpha), 10
+		ci, at - Vector2(0.0, HOLE * 0.3), HOLE * 0.6, Color(UiPalette.INK_950, alpha), 10
 	)
 	var slot := PackedVector2Array(
 		[
@@ -78,15 +78,15 @@ func _keyhole(item: CanvasItem, at: Vector2, alpha: float) -> void:
 			at + Vector2(-HOLE * 0.45, HOLE * 1.1)
 		]
 	)
-	ShapePaint.colored_polygon(item.get_canvas_item(), slot, Color(UiPalette.OUTLINE_DARK, alpha))
+	ShapePaint.colored_polygon(item.get_canvas_item(), slot, Color(UiPalette.INK_950, alpha))
 
 
 ## 上から差し込む鍵。`tip` は軸の先、`width` は回して奥行き方向へ倒れた見かけの幅(1→0)。
 func _key(item: CanvasItem, tip: Vector2, width: float, alpha: float) -> void:
 	var ci := item.get_canvas_item()
 	var bow := tip - Vector2(0.0, SHAFT + BOW)
-	var brass := Color(UiPalette.BRASS_HIGHLIGHT, alpha)
-	var dark := Color(UiPalette.OUTLINE_DARK, alpha * 0.8)
+	var brass := Color(UiPalette.GOLD, alpha)
+	var dark := Color(UiPalette.INK_950, alpha * 0.8)
 	item.draw_line(bow, tip, dark, 5.0)
 	item.draw_line(bow, tip, brass, 3.0)
 	var bit_w := BIT.x * maxf(absf(width), 0.15)
@@ -96,4 +96,4 @@ func _key(item: CanvasItem, tip: Vector2, width: float, alpha: float) -> void:
 	var ring := Vector2(BOW * maxf(absf(width), 0.35), BOW)
 	UiPaint.fill_ellipse(ci, bow, ring + Vector2.ONE * 1.5, dark, 20)
 	UiPaint.fill_ellipse(ci, bow, ring, brass, 20)
-	UiPaint.fill_ellipse(ci, bow, ring * 0.45, Color(UiPalette.BRASS_DARK, alpha), 14)
+	UiPaint.fill_ellipse(ci, bow, ring * 0.45, Color(UiPalette.BRASS_DEEP, alpha), 14)

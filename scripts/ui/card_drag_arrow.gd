@@ -9,7 +9,7 @@ extends Control
 ## (`Control._draw()` は自分の子より背面に描かれるため、画面側で描くと駒に隠れる)。
 
 const SCREEN_SIZE := Vector2(1280, 720)
-const COLOR := Color(UiPalette.BRASS_HIGHLIGHT, 0.85)
+const COLOR := Color(UiPalette.GOLD, 0.85)
 const LINE_WIDTH := 3.0
 const HEAD_LENGTH := 16.0
 const HEAD_WIDTH := 9.0

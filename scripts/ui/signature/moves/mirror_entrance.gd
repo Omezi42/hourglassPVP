@@ -38,9 +38,9 @@ func draw(item: CanvasItem, t: float) -> void:
 		return
 	var a := alpha * minf(phase(t, impact_at(), APPEAR) * 3.0, 1.0)
 	UiPaint.fill_ellipse(ci, center, radius, Color(FACE, a * 0.75), 32)
-	UiPaint.draw_ellipse_ring(ci, center, radius, Color(UiPalette.OUTLINE_DARK, a), 5.0, 32)
-	UiPaint.draw_ellipse_ring(ci, center, radius, Color(UiPalette.BRASS_HIGHLIGHT, a), 3.0, 32)
-	item.draw_line(center + Vector2(0.0, radius.y), from, Color(UiPalette.BRASS_DARK, a), 3.0, true)
+	UiPaint.draw_ellipse_ring(ci, center, radius, Color(UiPalette.INK_950, a), 5.0, 32)
+	UiPaint.draw_ellipse_ring(ci, center, radius, Color(UiPalette.GOLD, a), 3.0, 32)
+	item.draw_line(center + Vector2(0.0, radius.y), from, Color(UiPalette.BRASS_DEEP, a), 3.0, true)
 	var sweep := phase(t, impact_at() + APPEAR, SWEEP)
 	if sweep > 0.0 and sweep < 1.0:
 		var x := lerpf(-0.8, 0.8, ease(sweep, -1.4))

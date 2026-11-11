@@ -37,15 +37,7 @@ func draw(item: CanvasItem, t: float) -> void:
 	var lift := OPEN_LIFT * (1.0 - snap)
 	var hinge := top - Vector2(0.0, lift)
 	ShapePaint.arc(
-		ci,
-		hinge,
-		SHACKLE,
-		PI,
-		TAU,
-		16,
-		Color(UiPalette.OUTLINE_DARK, alpha),
-		SHACKLE_WIDTH + 2.0,
-		true
+		ci, hinge, SHACKLE, PI, TAU, 16, Color(UiPalette.INK_950, alpha), SHACKLE_WIDTH + 2.0, true
 	)
 	ShapePaint.arc(
 		ci, hinge, SHACKLE, PI, TAU, 16, Color(0.78, 0.8, 0.84, alpha), SHACKLE_WIDTH, true
@@ -60,7 +52,7 @@ func draw(item: CanvasItem, t: float) -> void:
 			true
 		)
 	var body := Rect2(core - BODY * 0.5, BODY)
-	item.draw_rect(body.grow(1.4), Color(UiPalette.OUTLINE_DARK, alpha * 0.8))
+	item.draw_rect(body.grow(1.4), Color(UiPalette.INK_950, alpha * 0.8))
 	UiPaint.fill_gradient_polygon(
 		ci,
 		PackedVector2Array(
@@ -72,10 +64,10 @@ func draw(item: CanvasItem, t: float) -> void:
 			]
 		),
 		body,
-		[[0.0, Color(UiPalette.BRASS_HIGHLIGHT, alpha)], [1.0, Color(UiPalette.BRASS_DARK, alpha)]]
+		[[0.0, Color(UiPalette.GOLD, alpha)], [1.0, Color(UiPalette.BRASS_DEEP, alpha)]]
 	)
-	ShapePaint.circle(ci, core - Vector2(0.0, 2.0), 3.0, Color(UiPalette.OUTLINE_DARK, alpha))
-	item.draw_line(core, core + Vector2(0.0, 6.0), Color(UiPalette.OUTLINE_DARK, alpha), 2.0)
+	ShapePaint.circle(ci, core - Vector2(0.0, 2.0), 3.0, Color(UiPalette.INK_950, alpha))
+	item.draw_line(core, core + Vector2(0.0, 6.0), Color(UiPalette.INK_950, alpha), 2.0)
 	var flash := phase(t, impact_at() + APPEAR + SNAP, HOLD * 0.6)
 	if flash > 0.0 and flash < 1.0:
 		ShapePaint.arc(

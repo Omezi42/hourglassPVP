@@ -44,7 +44,7 @@ func draw(item: CanvasItem, t: float) -> void:
 ## 平たい石1つ。上面を明るく、下を暗くして積んだ厚みを見せる。
 func _stone(item: CanvasItem, at: Vector2, size: Vector2, alpha: float) -> void:
 	var ci := item.get_canvas_item()
-	UiPaint.fill_ellipse(ci, at, size + Vector2.ONE, Color(UiPalette.OUTLINE_DARK, alpha * 0.7), 20)
+	UiPaint.fill_ellipse(ci, at, size + Vector2.ONE, Color(UiPalette.INK_950, alpha * 0.7), 20)
 	UiPaint.fill_ellipse(ci, at, size, Color(STONE_DARK, alpha), 20)
 	UiPaint.fill_ellipse(
 		ci, at - Vector2(0.0, size.y * 0.3), size * Vector2(0.9, 0.6), Color(STONE_LIGHT, alpha), 20

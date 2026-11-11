@@ -58,10 +58,10 @@ func _draw() -> void:
 	var ring := UiKit.rr(bounds.grow(GLOW_GROW), UiKit.radius(bounds) + GLOW_GROW)
 	ring.append(ring[0])
 	ShapePaint.polyline(
-		get_canvas_item(), ring, Color(UiPalette.GLOW_AMBER, 0.12 + 0.18 * pulse), HALO_WIDTH, true
+		get_canvas_item(), ring, Color(UiPalette.SAND, 0.12 + 0.18 * pulse), HALO_WIDTH, true
 	)
 	ShapePaint.polyline(
-		get_canvas_item(), ring, Color(UiPalette.GLOW_AMBER, 0.45 + 0.5 * pulse), GLOW_WIDTH, true
+		get_canvas_item(), ring, Color(UiPalette.SAND, 0.45 + 0.5 * pulse), GLOW_WIDTH, true
 	)
 	_draw_tag(ci)
 

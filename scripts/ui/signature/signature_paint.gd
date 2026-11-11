@@ -58,22 +58,22 @@ static func bell(item: CanvasItem, pivot: Vector2, swing: float, alpha: float) -
 			shape,
 			rect,
 			[
-				[0.0, Color(UiPalette.BRASS_HIGHLIGHT, alpha)],
-				[0.6, Color(UiPalette.BRASS_LIGHT, alpha)],
-				[1.0, Color(UiPalette.BRASS_DARK, alpha)],
+				[0.0, Color(UiPalette.GOLD, alpha)],
+				[0.6, Color(UiPalette.GOLD_FOLD, alpha)],
+				[1.0, Color(UiPalette.BRASS_DEEP, alpha)],
 			]
 		)
 	)
 	var closed := shape.duplicate()
 	closed.append(shape[0])
 	ShapePaint.polyline(
-		item.get_canvas_item(), closed, Color(UiPalette.OUTLINE_DARK, alpha * 0.8), 1.2, true
+		item.get_canvas_item(), closed, Color(UiPalette.INK_950, alpha * 0.8), 1.2, true
 	)
 	# 鐘は支点から逆に振れる舌を持つ。遅れて振れる分だけ鐘の内側で揺れて見える。
 	var clapper := pivot + Vector2(0.0, 6.0) + Vector2(0.0, h * 0.92).rotated(swing * 0.4)
-	UiPaint.fill_circle(ci, clapper, 3.4, Color(UiPalette.BRASS_DARK, alpha), 12)
-	item.draw_line(pivot, pivot + Vector2(0.0, 6.0), Color(UiPalette.BRASS_DARK, alpha), 2.0)
-	UiPaint.fill_circle(ci, pivot, 3.0, Color(UiPalette.BRASS_HIGHLIGHT, alpha), 10)
+	UiPaint.fill_circle(ci, clapper, 3.4, Color(UiPalette.BRASS_DEEP, alpha), 12)
+	item.draw_line(pivot, pivot + Vector2(0.0, 6.0), Color(UiPalette.BRASS_DEEP, alpha), 2.0)
+	UiPaint.fill_circle(ci, pivot, 3.0, Color(UiPalette.GOLD, alpha), 10)
 
 
 ## 鐘の音の波紋。間を空けた3重の輪が、外側ほど濃く広がる。
@@ -111,8 +111,8 @@ static func balance(item: CanvasItem, base: Vector2, tilt: float, alpha: float) 
 	if alpha <= 0.0:
 		return
 	var ci := item.get_canvas_item()
-	var brass := Color(UiPalette.BRASS_HIGHLIGHT, alpha)
-	var dark := Color(UiPalette.OUTLINE_DARK, alpha * 0.8)
+	var brass := Color(UiPalette.GOLD, alpha)
+	var dark := Color(UiPalette.INK_950, alpha * 0.8)
 	var top := base - Vector2(0.0, SCALE_POST)
 	item.draw_line(base, top, dark, 4.0)
 	item.draw_line(base, top, brass, 2.4)
@@ -137,8 +137,8 @@ static func gear_ring(
 	if alpha <= 0.0:
 		return
 	var ci := item.get_canvas_item()
-	var brass := Color(UiPalette.BRASS_HIGHLIGHT, alpha)
-	UiPaint.draw_ellipse_ring(ci, center, radius, Color(UiPalette.OUTLINE_DARK, alpha), 4.0, 56)
+	var brass := Color(UiPalette.GOLD, alpha)
+	UiPaint.draw_ellipse_ring(ci, center, radius, Color(UiPalette.INK_950, alpha), 4.0, 56)
 	UiPaint.draw_ellipse_ring(ci, center, radius, brass, 2.4, 56)
 	var squash := radius.y / radius.x
 	for i in range(GEAR_TEETH):
@@ -292,7 +292,7 @@ static func coil(
 			a + axis * s + dir * cos(angle) * radius * LEAN + normal * sin(angle) * radius
 		)
 	for front: bool in [false, true]:
-		var color := UiPalette.BRASS_HIGHLIGHT if front else UiPalette.BRASS_DARK
+		var color := UiPalette.GOLD if front else UiPalette.BRASS_DEEP
 		for i in range(steps):
 			var angle := TAU * float(turns) * (float(i) + 0.5) / float(steps)
 			if (cos(angle) > 0.0) != front:
@@ -309,7 +309,7 @@ static func hammer(item: CanvasItem, pivot: Vector2, angle: float, alpha: float)
 	var dir := Vector2.from_angle(angle)
 	var across := dir.orthogonal()
 	var head := pivot + dir * HAMMER_HANDLE
-	item.draw_line(pivot, head, Color(UiPalette.OUTLINE_DARK, alpha * 0.8), 4.6)
+	item.draw_line(pivot, head, Color(UiPalette.INK_950, alpha * 0.8), 4.6)
 	item.draw_line(pivot, head, Color(UiPalette.WOOD_TOP.lightened(0.3), alpha), 3.0)
 	var half_long := across * HAMMER_HEAD.x * 0.5
 	var half_short := dir * HAMMER_HEAD.y * 0.5
@@ -331,7 +331,7 @@ static func hammer(item: CanvasItem, pivot: Vector2, angle: float, alpha: float)
 	var closed := shape.duplicate()
 	closed.append(shape[0])
 	ShapePaint.polyline(
-		item.get_canvas_item(), closed, Color(UiPalette.OUTLINE_DARK, alpha * 0.8), 1.2, true
+		item.get_canvas_item(), closed, Color(UiPalette.INK_950, alpha * 0.8), 1.2, true
 	)
 
 
@@ -360,8 +360,8 @@ static func clock_dial(
 	if alpha <= 0.0 or radius <= 1.0:
 		return
 	var ci := item.get_canvas_item()
-	UiPaint.fill_circle(ci, center, radius + 1.6, Color(UiPalette.OUTLINE_DARK, alpha * 0.8), 40)
-	UiPaint.fill_circle(ci, center, radius, Color(UiPalette.BRASS_HIGHLIGHT, alpha), 40)
+	UiPaint.fill_circle(ci, center, radius + 1.6, Color(UiPalette.INK_950, alpha * 0.8), 40)
+	UiPaint.fill_circle(ci, center, radius, Color(UiPalette.GOLD, alpha), 40)
 	UiPaint.fill_circle(ci, center, radius * 0.84, Color(DIAL_FACE, alpha * 0.94), 40)
 	for i in range(12):
 		var dir := Vector2.UP.rotated(TAU * float(i) / 12.0)
@@ -370,13 +370,13 @@ static func clock_dial(
 		item.draw_line(
 			center + dir * inner,
 			center + dir * radius * 0.8,
-			Color(UiPalette.BRASS_DARK, alpha),
+			Color(UiPalette.BRASS_DEEP, alpha),
 			1.8 if major else 1.0,
 			true
 		)
 	_dial_hand(item, center, HOUR_START + hand / 12.0, radius * 0.45, 2.8, alpha)
 	_dial_hand(item, center, hand, radius * 0.72, 1.8, alpha)
-	UiPaint.fill_circle(ci, center, radius * 0.1, Color(UiPalette.BRASS_DARK, alpha), 10)
+	UiPaint.fill_circle(ci, center, radius * 0.1, Color(UiPalette.BRASS_DEEP, alpha), 10)
 
 
 ## 八分音符。`at` は玉の中心、`size` は玉の横の半径。
@@ -385,7 +385,7 @@ static func note(item: CanvasItem, at: Vector2, size: float, color: Color, alpha
 		return
 	var ci := item.get_canvas_item()
 	var head := Vector2(size, size * 0.72)
-	UiPaint.fill_ellipse(ci, at, head + Vector2.ONE, Color(UiPalette.OUTLINE_DARK, alpha * 0.7), 16)
+	UiPaint.fill_ellipse(ci, at, head + Vector2.ONE, Color(UiPalette.INK_950, alpha * 0.7), 16)
 	UiPaint.fill_ellipse(ci, at, head, Color(color, alpha), 16)
 	var foot := at + Vector2(head.x * 0.85, 0.0)
 	var top := foot - Vector2(0.0, size * 3.2)
@@ -421,7 +421,7 @@ static func _dial_hand(
 	item: CanvasItem, center: Vector2, angle: float, length: float, width: float, alpha: float
 ) -> void:
 	var tip := center + Vector2.UP.rotated(angle) * length
-	item.draw_line(center, tip, Color(UiPalette.OUTLINE_DARK, alpha), width, true)
+	item.draw_line(center, tip, Color(UiPalette.INK_950, alpha), width, true)
 
 
 static func _ballistic(origin: Vector2, velocity: Vector2, gravity: float, t: float) -> Vector2:

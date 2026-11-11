@@ -27,8 +27,8 @@ func draw(item: CanvasItem, t: float) -> void:
 	UiPaint.draw_ellipse_ring(
 		ci, foot, ORBIT * 0.3, Color(SignaturePaint.SPIN, alpha * pin * 0.7), 1.4, 20
 	)
-	item.draw_line(foot, top, Color(UiPalette.OUTLINE_DARK, alpha * pin * 0.8), 3.6, true)
-	item.draw_line(foot, top, Color(UiPalette.BRASS_HIGHLIGHT, alpha * pin), 2.0, true)
+	item.draw_line(foot, top, Color(UiPalette.INK_950, alpha * pin * 0.8), 3.6, true)
+	item.draw_line(foot, top, Color(UiPalette.GOLD, alpha * pin), 2.0, true)
 	if pin > 0.2:
 		ShapePaint.circle(ci, top, PIN_HEAD * pin, Color(SignaturePaint.SPIN, alpha))
 	var turn := phase(t, PIN, TURN)

@@ -52,7 +52,7 @@ func draw(item: CanvasItem, t: float) -> void:
 	ShapePaint.colored_polygon(ci, cup, Color(hot, a))
 	var closed := cup.duplicate()
 	closed.append(cup[0])
-	ShapePaint.polyline(ci, closed, Color(UiPalette.OUTLINE_DARK, a * 0.8), 1.4, true)
+	ShapePaint.polyline(ci, closed, Color(UiPalette.INK_950, a * 0.8), 1.4, true)
 	var rim := center + Vector2(0.0, -DEPTH * 0.5).rotated(angle)
 	UiPaint.fill_ellipse(ci, rim, Vector2(MOUTH_HALF - 2.0, 3.0), Color(MOLTEN, a * heat), 16)
 	var lip := center + Vector2(side * MOUTH_HALF, -DEPTH * 0.5).rotated(angle)

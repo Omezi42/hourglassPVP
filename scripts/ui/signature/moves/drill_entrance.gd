@@ -68,7 +68,7 @@ func _drill(item: CanvasItem, tip: Vector2, turn: float, alpha: float) -> void:
 	ShapePaint.colored_polygon(ci, cone, Color(STEEL, alpha))
 	var closed := cone.duplicate()
 	closed.append(cone[0])
-	ShapePaint.polyline(ci, closed, Color(UiPalette.OUTLINE_DARK, alpha * 0.8), 1.2, true)
+	ShapePaint.polyline(ci, closed, Color(UiPalette.INK_950, alpha * 0.8), 1.2, true)
 	for k in range(BANDS):
 		var s := fposmod(float(k) / float(BANDS) + turn * 0.1, 1.0)
 		var y := lerpf(0.0, LENGTH, s)
@@ -78,5 +78,5 @@ func _drill(item: CanvasItem, tip: Vector2, turn: float, alpha: float) -> void:
 		item.draw_line(left, right, Color(STEEL_DARK, alpha), 1.4, true)
 	item.draw_rect(
 		Rect2(top - Vector2(HALF * 0.5, 8.0), Vector2(HALF, 8.0)),
-		Color(UiPalette.BRASS_DARK, alpha)
+		Color(UiPalette.BRASS_DEEP, alpha)
 	)

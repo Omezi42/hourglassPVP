@@ -58,7 +58,7 @@ func _shell(item: CanvasItem, at: Vector2, turn: float, alpha: float) -> void:
 	if alpha <= 0.0:
 		return
 	var ci := item.get_canvas_item()
-	ShapePaint.circle(ci, at, RADIUS + 1.2, Color(UiPalette.OUTLINE_DARK, alpha * 0.8))
+	ShapePaint.circle(ci, at, RADIUS + 1.2, Color(UiPalette.INK_950, alpha * 0.8))
 	ShapePaint.circle(ci, at, RADIUS, Color(SHELL_LIGHT, alpha))
 	var whorl := PackedVector2Array()
 	for i in range(WHORL_POINTS + 1):

@@ -367,7 +367,7 @@ func _draw() -> void:
 			_emblem_rect(),
 			false,
 			Color(
-				UiPalette.BRASS_HIGHLIGHT,
+				UiPalette.GOLD,
 				EMBLEM_ALPHA * (0.4 if dim else 1.0) * (1.0 + HOVER_ALPHA_BOOST * _hover)
 			)
 		)
@@ -412,7 +412,7 @@ func _draw() -> void:
 		# 副題が変わった直後は光らせる(GameDesign.md 9章)。押さなくても変化が分かるように。
 		var sub_color := SUB_ON_BRASS if primary else SUB_COLOR
 		if subtitle_accent:
-			sub_color = UiPalette.GLOW_AMBER
+			sub_color = UiPalette.SAND
 		sub_color = sub_color.lerp(Color(1, 1, 1), _subtitle_flash * 0.7)
 		var sub_at := Vector2(left, title_y + float(title_size) * 0.92 + _sub_gap())
 		for row in _subtitle_rows():

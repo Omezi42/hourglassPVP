@@ -97,12 +97,6 @@ Discordにある機能をゲームの中だけで完結させていく。1つ目
 
 - [ ] 縦画面UIが完成したら、その版を Discord #お知らせ で告知する(アプリ版をスマホで縦持ちのまま遊べるようになったことを伝える)
 
-### UIの言語の入れ替え(GameDesign.md 9章「共通のレイアウト規約」 / Architecture.md 4.0節)
-
-全画面を「夜の藍・真鍮の線・砂」の言語へ入れ替える。1画面ごとに縦横の前後のスクリーンショットで判定を取る。
-
-- [ ] 古い色の名前(`UiPalette.BRASS_*` / `PANEL_SLATE_*` など)を使う箇所を新しい名前へ寄せ、古い名前を消す
-
 ### 技術的負債
 
 - [ ] 起動の裏読み込み(Architecture.md 4.0.6節)で、タイトルを止める1本の最長はWeb版で約0.3秒の `card_instance.gd`(`CardInstance`・`MatchState`・`CardLibrary`・`AccountService` など15本の参照の輪)。次いで `card_view_*` の7本の輪(各0.1〜0.2秒)。輪を切れるか判断

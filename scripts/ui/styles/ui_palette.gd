@@ -5,6 +5,8 @@ extends RefCounted
 ## 色・文字の段・余白の刻み・動きの尺を定数で持ち、ロジックは持たない。
 
 # ---- 夜の藍(地と面)。数字が大きいほど暗い ----
+## 輪郭と影の最も暗い藍。
+const INK_950 := Color(0.02, 0.025, 0.05)
 const INK_900 := Color(0.035, 0.045, 0.085)
 const INK_800 := Color(0.06, 0.075, 0.135)
 const INK_700 := Color(0.09, 0.115, 0.20)
@@ -80,40 +82,3 @@ const WOOD_DARK := Color(0.12, 0.08, 0.05, 1.0)
 # ---- 無効の色変換(`UiPaint.disabled_tone()`) ----
 const DISABLED_DESATURATE := 0.85
 const DISABLED_DARKEN := 0.3
-
-# ---- 古い名前。新しい色へ向けてあり、画面を入れ替えるたびに上の名前へ寄せて消す(TODO.md) ----
-const BRASS_HIGHLIGHT := GOLD
-const BRASS_LIGHT := GOLD_FOLD
-const BRASS_MID := BRASS
-const BRASS_DARK := BRASS_DEEP
-const BRASS_BOUNCE := Color(0.45, 0.31, 0.13)
-const BRASS_RIM_LIGHT := GOLD
-const BRASS_PRESSED_MID := BRASS_DEEP
-const BRASS_PRESSED_DARK := BRASS_INK
-const OUTLINE_DARK := Color(0.02, 0.025, 0.05)
-const PANEL_SLATE_TOP := INK_900
-const PANEL_SLATE_BOTTOM := INK_700
-const PANEL_AMBER_TOP := SAND_DEEP
-const PANEL_AMBER_BOTTOM := SAND_HI
-const PANEL_PRESSED_TOP := INK_900
-const PANEL_PRESSED_BOTTOM := INK_800
-const GLOW_AMBER := SAND
-const TEXT_OFFWHITE := IVORY
-const TEXT_MUTED := MUTED
-const LOCK_PLATE := Color(0.035, 0.045, 0.085, 0.78)
-const LOCK_BRASS := GOLD
-const WARNING_RED := HEALTH
-const NAMEPLATE_PANEL_TOP := INK_900
-const NAMEPLATE_PANEL_BOTTOM := INK_700
-const BOARD_TABLE_FILL := Color(0.06, 0.075, 0.135, 0.94)
-const BAR_FILL_TOP := Color(0.09, 0.115, 0.20, 0.96)
-const BAR_FILL_BOTTOM := Color(0.035, 0.045, 0.085, 0.98)
-const BAR_EDGE_HIGHLIGHT := Color(0.90, 0.74, 0.42, 0.35)
-const PEDESTAL_DEFAULT_ACCENT := SAND_HI
-const FELT_NAVY_TOP := Color(0.13, 0.16, 0.30, 1.0)
-const FELT_NAVY_BOTTOM := Color(0.07, 0.09, 0.19, 1.0)
-const NAVY_PANEL_TOP := INK_700
-const NAVY_PANEL_BOTTOM := INK_900
-const NAVY_PANEL_PILE := INK_600
-const ROUND_FILLED_TOP := GOLD_HI
-const ROUND_FILLED_BOTTOM := BRASS

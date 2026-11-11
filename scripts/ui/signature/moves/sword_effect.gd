@@ -48,23 +48,15 @@ func _sword(item: CanvasItem, hilt: Vector2, dir: Vector2, alpha: float) -> void
 	var outline := PackedVector2Array()
 	for p in blade:
 		outline.append(p + (p - hilt.lerp(tip, 0.5)).normalized() * 1.2)
-	ShapePaint.colored_polygon(ci, outline, Color(UiPalette.OUTLINE_DARK, alpha * 0.8))
+	ShapePaint.colored_polygon(ci, outline, Color(UiPalette.INK_950, alpha * 0.8))
 	ShapePaint.colored_polygon(ci, blade, Color(STEEL, alpha))
 	item.draw_line(hilt, tip - dir * 4.0, Color(STEEL_DARK, alpha), 1.0, true)
 	item.draw_line(
-		hilt - across * GUARD,
-		hilt + across * GUARD,
-		Color(UiPalette.OUTLINE_DARK, alpha),
-		4.6,
-		true
+		hilt - across * GUARD, hilt + across * GUARD, Color(UiPalette.INK_950, alpha), 4.6, true
 	)
 	item.draw_line(
-		hilt - across * GUARD,
-		hilt + across * GUARD,
-		Color(UiPalette.BRASS_HIGHLIGHT, alpha),
-		3.0,
-		true
+		hilt - across * GUARD, hilt + across * GUARD, Color(UiPalette.GOLD, alpha), 3.0, true
 	)
 	var pommel := hilt - dir * GRIP
 	item.draw_line(hilt, pommel, Color(UiPalette.WOOD_TOP.lightened(0.2), alpha), 3.4, true)
-	ShapePaint.circle(ci, pommel, 3.0, Color(UiPalette.BRASS_HIGHLIGHT, alpha))
+	ShapePaint.circle(ci, pommel, 3.0, Color(UiPalette.GOLD, alpha))
