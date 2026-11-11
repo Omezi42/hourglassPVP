@@ -2,7 +2,7 @@ class_name MulliganStageLight
 extends Control
 ## マリガンの暗幕の上で、初期手札の列の後ろにだけ敷く淡い光だまり(GameDesign.md 9章)。
 ## 一様な暗幕の上へ札を直に並べると、札が暗がりに浮いたまま沈んで見えるため、
-## 卓の背後の光(`BoardGlow`)と同じ砂色で列の奥を照らす。
+## 卓の背後の光と同じ砂色で列の奥を照らす。
 
 ## 外側の楕円ほど薄く重ねて、縁のない光として見せる。
 const LAYER_COUNT := 7

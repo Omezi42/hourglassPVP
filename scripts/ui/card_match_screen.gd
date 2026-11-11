@@ -159,7 +159,6 @@ var _pointer: CardMatchPointer
 ## 向きが変わったときに置き直す下地・卓まわり(`CardMatchArrange`)。
 var _backdrop: MatchBackdrop
 var _action_panel: ActionColumnPanel
-var _table_glow: BoardGlow
 var _table_dust: BoardDust
 var _hand_panel: HandLeatherPanel
 ## 縦画面のメニュー(ログ・エモート・投了)。
@@ -401,10 +400,6 @@ func _build() -> void:
 	# 行動の列の地。ボタンより先に足して背面へ置く(GameDesign.md 9章「対局画面の再構築」)。
 	_action_panel = ActionColumnPanel.new()
 	add_child(_action_panel)
-	# 卓の後ろにだけ淡い光を置いて浮かせる(GameDesign.md 9章)。BoardTableより先に
-	# 足すことで、卓の額の外周からわずかににじむだけの光として見える。
-	_table_glow = BoardGlow.new()
-	add_child(_table_glow)
 	_table = BoardTable.new()
 	add_child(_table)
 	# 卓の上に薄く漂う砂埃(GameDesign.md 9章「空気感」)。カードより先に足し、

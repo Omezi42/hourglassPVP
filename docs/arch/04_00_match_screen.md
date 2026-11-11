@@ -222,7 +222,7 @@ v1.0(位相制)の画面・クラス・`data/hourglasses/*.tres` は削除済み
   - `EmblemPlacement.CENTER` の紋章は単位座標 ±0.55 程度に留める(±0.85 まで描くと額縁へ載り上がる)
   - 既存の `.tscn` が参照する `resources/theme/buttons/img_{グループ}_{state}.tres` はパスを維持したまま中身だけコードStyleBoxへ差し替えてある
 - **見出しの書体は `UiFonts.display_font(fallback)`**(Zen Old Mincho のサブセット、約100KB)。タイトルロゴ・共通ヘッダー・`HomeFrame`・`primary` の `HomeTile` にだけ当てる。**返すフォントへ `fallbacks` を設定する**ため、サブセットに無い文字は静かに本文用へ戻る(豆腐にならない)。サブセットの更新手順は `assets/fonts/LICENSE_ZenOldMincho.txt` 末尾
-- **背景イラストを持たない画面は `ScreenBackdrop`**(多段グラデーション + グレイン + 左右の落ち込み)。`Room`(無地 / 書庫 / 記録室 / 控えの間 / 帳場)を1行入れるだけ。部品は `RoomPaint`(static、第1引数 `CanvasItem`)。`WorkshopBackdrop` も同じ部品から組む。場所ごとの違いは壁の色味と造作だけ
+- **背景イラストを持たない画面は `ScreenBackdrop`**(場所の壁の上へ夜の藍の幕を掛ける。上下が濃く中ほどが薄い縦のグラデーション + グレイン + 左右の落ち込み)。`Room`(無地 / 書庫 / 記録室 / 控えの間 / 帳場)を1行入れるだけ。部品は `RoomPaint`(static、第1引数 `CanvasItem`)。`WorkshopBackdrop` も同じ部品から組む。場所ごとの違いは壁の色味と造作だけ
 - **UIに出す記号は共通フォントが字形を持つものだけ**。使える: `● ○ ◆ ■ ▲ ▼ → ← ↑ ↓ ★ ※ ×(U+00D7) −(U+2212) ＋`。使えない: `▸ ▶ ▷ ► ◀ ✓ ✔ ✕ ▪ ⌛`。エディタ実行では代替されて気づけないため、**`python tools/check_font_glyphs.py` を記号を足したら回す**
 - **共通テーマはボタン3px・ラベル2pxの暗い縁取りを掛けている**。明るい面(紙)へ置く `Control` には `outline_size` を0にする(テーマ側の既定は変えない)
 - **画像アセットを使う場合は原寸のアスペクト比を保った倍率だけで大きさを決め、`StyleBoxTexture` の `texture_margin_*`(9-slice)は使わない**(角だけ元ピクセルのまま残り縁が太くなる)。コード描画のStyleBoxにはこの制約は無い

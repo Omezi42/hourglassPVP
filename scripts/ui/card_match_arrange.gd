@@ -45,7 +45,7 @@ static func place_history(screen: CardMatchScreen, layout: CardMatchLayout) -> v
 
 
 static func _place_backdrop(screen: CardMatchScreen, layout: CardMatchLayout) -> void:
-	for control: Control in [screen._table_glow, screen._table, screen._table_dust]:
+	for control: Control in [screen._table, screen._table_dust]:
 		control.position = layout.table_rect.position
 		control.size = layout.table_rect.size
 	screen._hand_panel.position = layout.hand_area.position

@@ -115,8 +115,7 @@ func _fade_with_floor(rect: Rect2, full_height: float) -> void:
 	draw_rect(rect, Color(color.r, color.g, color.b, WALL_FADE_ALPHA))
 
 
-## 卓の後ろに広がる淡い光。`BoardGlow`(卓の額の外周だけを光らせる)とは別に、
-## より広い範囲の空気そのものを暖色で持ち上げる。**吊りランプの真下にあたるよう、
+## 卓の後ろに広がる淡い光。空気そのものを暖色でわずかに持ち上げる。**吊りランプの真下にあたるよう、
 ## 中心を卓の中心より40px上へずらす**(GameDesign.md 9章「対局画面の再構築」)。
 func _draw_glow_pool(_ci: RID) -> void:
 	var table := CardMatchLayout.current().table_rect

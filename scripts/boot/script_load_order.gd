@@ -258,7 +258,6 @@ const PATHS: Array[String] = [
 	"res://scripts/ui/hand_hover_sheen.gd",
 	"res://scripts/ui/styles/room_paint.gd",
 	"res://scripts/ui/action_column_panel.gd",
-	"res://scripts/ui/board_glow.gd",
 	"res://scripts/ui/board_dust.gd",
 	"res://scripts/ui/hand_leather_panel.gd",
 	"res://scripts/ui/card_match_fast_forward.gd",

@@ -202,7 +202,11 @@ func _paint() -> void:
 	_paint_glow(shelf, k, heroes)
 	_paint_plank(shelf)
 	_paint_heroes(shelf, k, heroes)
-	var text_x := shelf.end.x + TEXT_GAP * k
+	# 字は棚と砂時計の並びのどちらか右の端から始める(砂時計が棚からはみ出しても重ならないように)。
+	var right := shelf.end.x
+	for box: Rect2 in _hero_boxes(shelf, k, heroes):
+		right = maxf(right, box.end.x)
+	var text_x := right + TEXT_GAP * k
 	var text_w := size.x - text_x - EDGE * k
 	var name_w := text_w
 	var tag_rect := Rect2()
@@ -262,23 +266,33 @@ func _hero_inset(i: int, k: float) -> float:
 
 
 func _paint_heroes(shelf: Rect2, k: float, heroes: Array) -> void:
+	var feet := shelf.position.y + SHELF_FEET_DROP
+	for box: Rect2 in _hero_boxes(shelf, k, heroes):
+		UiPaint.fill_ellipse(
+			_visual.get_canvas_item(),
+			Vector2(box.get_center().x, feet),
+			Vector2(box.size.x * SHADOW_SPREAD, SHADOW_HEIGHT),
+			SHADOW_COLOR,
+			18
+		)
+	for i in heroes.size():
+		var tex: Texture2D = heroes[i].icon_upright
+		if tex != null:
+			_visual.draw_texture_rect(tex, _hero_boxes(shelf, k, heroes)[i], false)
+
+
+## 砂時計を立てる矩形(棚の左から、先頭を大きく並べる)。絵の無いものは幅0。
+func _hero_boxes(shelf: Rect2, k: float, heroes: Array) -> Array[Rect2]:
+	var boxes: Array[Rect2] = []
 	var x := shelf.position.x + EDGE * 0.5 * k
 	var feet := shelf.position.y + SHELF_FEET_DROP
 	for i in heroes.size():
 		var tex: Texture2D = heroes[i].icon_upright
-		if tex == null:
-			continue
 		var h := size.y - _hero_inset(i, k)
-		var w := h * float(tex.get_width()) / float(tex.get_height())
-		UiPaint.fill_ellipse(
-			_visual.get_canvas_item(),
-			Vector2(x + w * 0.5, feet),
-			Vector2(w * SHADOW_SPREAD, SHADOW_HEIGHT),
-			SHADOW_COLOR,
-			18
-		)
-		_visual.draw_texture_rect(tex, Rect2(x, feet - h, w, h), false)
+		var w := 0.0 if tex == null else h * float(tex.get_width()) / float(tex.get_height())
+		boxes.append(Rect2(x, feet - h, w, h))
 		x += w * (HERO_STEP if i == 0 else SIDE_STEP)
+	return boxes
 
 
 ## 棚板は `ShelfPlank` と同じ3層(天板・真鍮の縁・木口)を、藍の板と真鍮の帯で札の中へ小さく描く。

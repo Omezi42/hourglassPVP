@@ -42,10 +42,13 @@ const WALL_TINTS := {
 	Room.HALL: Color(1.10, 1.00, 0.86),
 	Room.SHOP: Color(1.14, 0.94, 0.74),
 }
-## 中身を置く帯を落とす濃さ。**濃くしすぎると板目ごと消えて元の暗がりに戻る**ため、
-## 「板目が見えていて、その上の文字も読める」ところで止める。
-const HAZE_ALPHA := 0.26
-const HAZE_TOP := 88.0
+## 壁へ掛ける夜の藍の幕(GameDesign.md 9章「壁は夜の藍へ寄せて暗く落とす」)。上端(ヘッダー)と
+## 下端を濃く、中ほどを薄くして、板目が面の後ろで読める程度に留める。
+const VEIL_STOPS := [
+	[0.0, Color(0.035, 0.045, 0.085, 0.72)],
+	[0.3, Color(0.035, 0.045, 0.085, 0.50)],
+	[1.0, Color(0.035, 0.045, 0.085, 0.80)],
+]
 
 ## どの場所として描くか。`add_child()` の前後どちらで変えてもよい。
 var room: Room = Room.PLAIN:
@@ -73,9 +76,8 @@ func _draw() -> void:
 		return
 	RoomPaint.wall(self, rect, 913, WALL_TINTS.get(room, Color.WHITE))
 	_draw_furniture(rect)
-	# **中身を置く帯を暗く落とす。**壁をそのまま下地にすると、文字や一覧のカードが
-	# 板目の上へ乗って読みにくい。壁は「奥にある」ものとして扱う。
-	_draw_haze(rect)
+	# 壁は「奥にある」ものとして夜の藍の幕を掛ける(文字や札が板目の上で読みにくくならないように)。
+	_draw_veil(rect)
 	_draw_vignette()
 
 
@@ -102,14 +104,11 @@ func _draw_furniture(rect: Rect2) -> void:
 			pass
 
 
-## 中身の乗る中央を落として、板目が文字の背後で暴れないようにする。
-## **上端は落とさない**——ヘッダーの手前は壁がいちばんよく見える帯であり、
-## そこまで沈めると場所そのものが見えなくなる。
-func _draw_haze(rect: Rect2) -> void:
-	draw_rect(
-		Rect2(rect.position.x, rect.position.y + HAZE_TOP, rect.size.x, rect.size.y - HAZE_TOP),
-		Color(0.03, 0.024, 0.030, HAZE_ALPHA)
+func _draw_veil(rect: Rect2) -> void:
+	var points := PackedVector2Array(
+		[rect.position, Vector2(rect.end.x, 0.0), rect.end, Vector2(0.0, rect.end.y)]
 	)
+	ShapePaint.gradient_convex(get_canvas_item(), points, VEIL_STOPS)
 
 
 ## 端の落ち込み。半透明の細い帯を重ねて段階的に暗くする(1枚の矩形だと境目が線に見える)。
