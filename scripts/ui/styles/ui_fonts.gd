@@ -37,3 +37,17 @@ static func display_font(fallback: Font) -> Font:
 		var chain: Array[Font] = [fallback]
 		_display_font.fallbacks = chain
 	return _display_font
+
+
+## `text` の字がすべて見出し用のサブセットにあるときだけ明朝体を返す。1字でも無ければ本文用を返す
+## (無い字だけが本文用へ落ちると、1語の中で明朝とゴシックが混ざるため。Pitfalls.md)。
+static func display_font_for(text: String, fallback: Font) -> Font:
+	var font := display_font(fallback)
+	if font == fallback or _display_font == null:
+		return fallback
+	var own: RID = _display_font.get_rids()[0]
+	var server := TextServerManager.get_primary_interface()
+	for i in text.length():
+		if not server.font_has_char(own, text.unicode_at(i)):
+			return fallback
+	return font

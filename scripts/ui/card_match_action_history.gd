@@ -10,22 +10,21 @@ extends Control
 const TILE_SIZE := Vector2(156, 50)
 const TILE_GAP := 8.0
 const MAX_TILES := 4
-const TILE_RADIUS := 7.0
-const SIDE_STRIPE_WIDTH := 4.0
-const EMBLEM_RADIUS := 15.0
+const TILE_RADIUS := 8.0
+const SIDE_STRIPE_WIDTH := 3.0
+const EMBLEM_RADIUS := 14.0
 const EMBLEM_X := 26.0
 const TEXT_X := 48.0
 const VERB_BASELINE := 20.0
 const NAME_BASELINE := 39.0
 const VERB_FONT_SIZE := 11
 const NAME_FONT_SIZE := 14
-const RIM_WIDTH := 1.5
-const GRAIN_ALPHA := 0.06
+const TILE_LIFT := 0.5
+const TILE_ALPHA := 0.80
+const STRIPE_INSET := 4.0
 ## 新しい1件が左から滑り込む量と時間。古い件は1段ぶん下へ滑る。
 const APPEAR_SHIFT := 24.0
 const APPEAR_DURATION := 0.22
-## 相手の手は板をわずかに赤へ寄せる(左端の帯と合わせて誰の手かを二重に示す)。
-const FOE_TINT := Color(0.30, 0.08, 0.08, 0.35)
 
 var _screen: CardMatchScreen
 var _font: Font
@@ -174,44 +173,22 @@ func _draw() -> void:
 func _draw_tile(rect: Rect2, item: Dictionary, alpha: float) -> void:
 	var ci := get_canvas_item()
 	var own: bool = item["side"] == _screen.my_side
-	var points := UiPaint.rounded_rect_points_uniform(rect, TILE_RADIUS, 5)
-	UiPaint.fill_gradient_polygon(
-		ci,
-		points,
-		rect,
-		[
-			[0.0, Color(UiPalette.NAVY_PANEL_TOP, alpha)],
-			[1.0, Color(UiPalette.NAVY_PANEL_BOTTOM, alpha)]
-		]
-	)
-	if not own:
-		var tint := Color(FOE_TINT, FOE_TINT.a * alpha)
-		UiPaint.fill_gradient_polygon(ci, points, rect, [[0.0, tint], [1.0, tint]])
-	UiPaint.apply_grain(ci, rect, GRAIN_ALPHA * alpha)
-	var outline := points.duplicate()
-	outline.append(points[0])
-	ShapePaint.polyline(get_canvas_item(), outline, Color(UiPalette.OUTLINE_DARK, alpha), 1.0, true)
-	UiPaint.draw_bevel(
-		ci,
-		points,
-		Color(UiPalette.BRASS_RIM_LIGHT, alpha),
-		Color(UiPalette.BRASS_DARK, alpha),
-		RIM_WIDTH,
-		false
-	)
-	var stripe_color := UiPalette.GLOW_AMBER if own else UiPalette.WARNING_RED
+	draw_set_transform_matrix(Transform2D.IDENTITY)
+	# 滑り込みの間の薄さは、面ごとまとめて掛ける(硝子の面は不透明度を引数に持たないため)。
+	var stripe_color := UiPalette.SAND if own else UiPalette.FOE
+	UiKit.glass(ci, rect, TILE_RADIUS, TILE_LIFT * alpha, TILE_ALPHA * alpha, _faded_rim(alpha))
 	var stripe := Rect2(
-		rect.position + Vector2(RIM_WIDTH + 1.0, TILE_RADIUS),
+		rect.position + Vector2(STRIPE_INSET, TILE_RADIUS),
 		Vector2(SIDE_STRIPE_WIDTH, rect.size.y - TILE_RADIUS * 2.0)
 	)
-	draw_rect(stripe, Color(stripe_color, alpha))
+	UiKit.fill(ci, UiKit.rr(stripe, SIDE_STRIPE_WIDTH * 0.5), Color(stripe_color, alpha))
 	var card: CardData = item["card"]
 	var emblem_center := rect.position + Vector2(EMBLEM_X, rect.size.y * 0.5)
-	EmblemSeal.brass(self, emblem_center, card.emblem, EMBLEM_RADIUS)
+	UiKit.seal(ci, emblem_center, EMBLEM_RADIUS, card.emblem, Color(UiPalette.GOLD, alpha))
 	var who := "自分" if own else "相手"
-	var who_color := UiPalette.GLOW_AMBER if own else UiPalette.WARNING_RED
+	var who_color := stripe_color
 	var text_x := rect.position.x + TEXT_X
-	var max_width := rect.end.x - text_x - RIM_WIDTH * 3.0
+	var max_width := rect.end.x - text_x - UiPalette.S2
 	var verb_pos := Vector2(text_x, rect.position.y + VERB_BASELINE)
 	_text(verb_pos, who, VERB_FONT_SIZE, Color(who_color, alpha), max_width)
 	var who_width := _font.get_string_size(who, HORIZONTAL_ALIGNMENT_LEFT, -1, VERB_FONT_SIZE).x
@@ -220,7 +197,7 @@ func _draw_tile(rect: Rect2, item: Dictionary, alpha: float) -> void:
 		verb_pos + Vector2(verb_x, 0.0),
 		String(item["verb"]),
 		VERB_FONT_SIZE,
-		Color(UiPalette.BRASS_HIGHLIGHT, alpha),
+		Color(UiPalette.MUTED, alpha),
 		max_width - verb_x
 	)
 	_text(
@@ -250,3 +227,11 @@ func _text(pos: Vector2, value: String, font_size: int, color: Color, max_width:
 		PlayerInfoBar.TEXT_SHADOW
 	)
 	draw_string(_font, pos, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color)
+
+
+static func _faded_rim(alpha: float) -> Array:
+	var stops := UiKit.rim_brass()
+	for stop in stops:
+		var color: Color = stop[1]
+		stop[1] = Color(color, alpha)
+	return stops

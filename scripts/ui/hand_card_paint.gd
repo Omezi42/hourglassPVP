@@ -11,36 +11,38 @@ extends RefCounted
 ## 寸法はすべて `HAND_SIZE_PX`(118x158)を基準にした比(`CardView._hand_scale()`)で決める。
 
 const CORNER := 9.0
-## 盤面に応じてコストが下がっているときのコストの色(GameDesign.md 9章)。
-const COST_DOWN_GREEN := Color(0.45, 0.88, 0.4, 1.0)
-const FRAME_WIDTH := 3.0
+## 盤面に応じてコストが下がっているときのコストの石の色(GameDesign.md 9章)。
+const COST_DOWN_GREEN := UiPalette.GOOD
+const COST_DOWN_DEEP := Color(0.12, 0.38, 0.18)
+const FRAME_WIDTH := 2.0
+const SELECT_WIDTH := 3.0
+const SELECT_GROW := 2.0
 ## 絵の窓。`CardView._hand_art_box()`(絵を収める正方形)を少し広げた矩形。
 const WINDOW_INSET := 5.0
-const WINDOW_CORNER := 6.0
+const WINDOW_CORNER := 5.5
+const WINDOW_TOP_DARKEN := 0.78
+const WINDOW_BOTTOM_DARKEN := 0.55
+const WINDOW_EDGE := Color(0, 0, 0, 0.5)
 ## 光だまりの濃さ(中心)と広がり(窓の幅に対する直径の比)。
 const GLOW_ALPHA := 0.55
 const GLOW_SPREAD := 1.35
-## 名前の帯と、その下のキーワードの行。
-const NAME_BAND_TOP := 102.0
-const NAME_BAND_HEIGHT := 18.0
+## 名前の帯(紙)と、その下のキーワードの行。
+const NAME_BAND_TOP := 101.0
+const NAME_BAND_HEIGHT := 20.0
+const NAME_BAND_SIDE := 3.0
 const NAME_FONT := 13
-const KEYWORD_BASELINE := 133.0
+const KEYWORD_BASELINE := 134.0
 const KEYWORD_FONT := 11
-## 四隅の丸いバッジ(コスト・攻撃力・体力)と封蝋。
-const GEM_RADIUS := 14.0
-const GEM_INSET := 16.0
-const SEAL_RADIUS := 12.0
-const SEAL_EMBLEM_SIDE := 15.0
-## 砂術の窓に置く紋章の大きさ。
+const SPELL_KEYWORD := Color(0.72, 0.86, 1.0)
+## 四隅の数値の宝石(コスト・攻撃力・体力)と紋章の印。
+const GEM_RADIUS := 13.5
+const GEM_INSET := 15.0
+const SEAL_RADIUS := 10.5
+## 砂術の窓に置く紋章の大きさと色。
 const SPELL_EMBLEM_SIDE := 58.0
-
-const PAPER_TOP := Color(0.40, 0.33, 0.24, 1.0)
-const PAPER_BOTTOM := Color(0.24, 0.19, 0.14, 1.0)
-const WINDOW_TOP := Color(0.06, 0.07, 0.12, 1.0)
-const WINDOW_BOTTOM := Color(0.10, 0.11, 0.18, 1.0)
-const SPELL_WINDOW_TOP := Color(0.08, 0.08, 0.18, 1.0)
-const SPELL_WINDOW_BOTTOM := Color(0.14, 0.13, 0.28, 1.0)
-const TEXT_SHADOW := Color(0.05, 0.03, 0.02, 0.85)
+const SPELL_EMBLEM := Color(0.82, 0.90, 1.0)
+const SPELL_EDGE_LIGHT := Color(0.75, 0.88, 1.0)
+const HOVER_FILM := Color(1, 1, 1, 0.06)
 
 ## 光だまりの放射グラデーション(白)。色は描くときに乗せるため、全カードで1枚を共有する。
 static var _glow_cache: GradientTexture2D
@@ -51,13 +53,9 @@ static func draw(view: CardView) -> void:
 	var s: float = view._hand_scale()
 	var rect := Rect2(Vector2.ZERO, view.size)
 	var tint: Color = view._tint()
-	var card: CardData = view.card
-	var points := UiPaint.rounded_rect_points_uniform(rect, CORNER * s, 6)
-	# 紙の札の地。
-	UiPaint.fill_gradient_polygon(
-		ci, points, rect, [[0.0, PAPER_TOP * tint], [1.0, PAPER_BOTTOM * tint]]
-	)
-	UiPaint.apply_grain(ci, rect, 0.07)
+	var points := UiKit.rr(rect, CORNER * s)
+	# 札の地は夜の藍。紙は名前の帯だけ(暗い卓の上で名前がいちばん読めるように。GameDesign.md 9章)。
+	UiKit.vgrad(ci, points, [[0.0, UiPalette.INK_600 * tint], [1.0, UiPalette.INK_900 * tint]])
 	_window(view, ci, s, tint)
 	_name_band(view, ci, s, tint)
 	_frame(view, ci, rect, points, s, tint)
@@ -67,24 +65,26 @@ static func draw(view: CardView) -> void:
 	if not view.badge.is_empty():
 		CardViewPaint.badge(view, rect)
 	if view._hovering and view.enabled:
-		UiPaint.fill_gradient_polygon(
-			ci, points, rect, [[0.0, Color(1, 1, 1, 0.07)], [1.0, Color(1, 1, 1, 0.03)]]
-		)
+		UiKit.fill(ci, points, HOVER_FILM)
 
 
-## 絵の窓。彫り込んだ暗い面の奥へカードの色の光だまりを敷き、その上に砂時計を立てる。
+## 絵の窓。カードの砂の色で染めた暗い面の奥へ光だまりを敷き、その上に砂時計を立てる。
 static func _window(view: CardView, ci: RID, s: float, tint: Color) -> void:
 	var card: CardData = view.card
 	var box: Rect2 = view._hand_art_box()
 	var rect := box.grow(WINDOW_INSET * s)
-	rect.position.y = maxf(rect.position.y, FRAME_WIDTH * s + 3.0 * s)
-	var radius := WINDOW_CORNER * s
-	var points := UiPaint.rounded_rect_points_uniform(rect, radius, 5)
-	var top := SPELL_WINDOW_TOP if card.is_spell else WINDOW_TOP
-	var bottom := SPELL_WINDOW_BOTTOM if card.is_spell else WINDOW_BOTTOM
-	UiPaint.fill_gradient_polygon(ci, points, rect, [[0.0, top * tint], [1.0, bottom * tint]])
+	rect.position.y = maxf(rect.position.y, (FRAME_WIDTH + 3.0) * s)
+	var points := UiKit.rr(rect, WINDOW_CORNER * s)
 	var accent := (
-		CardView.SPELL_BORDER if card.is_spell else CardSkins.accent_color(card, view.skin_viewer)
+		UiPalette.COST if card.is_spell else CardSkins.accent_color(card, view.skin_viewer)
+	)
+	UiKit.vgrad(
+		ci,
+		points,
+		[
+			[0.0, accent.darkened(WINDOW_TOP_DARKEN) * tint],
+			[1.0, accent.darkened(WINDOW_BOTTOM_DARKEN) * tint]
+		]
 	)
 	_glow(view, rect, accent * tint)
 	if card.is_spell:
@@ -93,12 +93,7 @@ static func _window(view: CardView, ci: RID, s: float, tint: Color) -> void:
 		var texture: Texture2D = view._icon()
 		if texture != null:
 			view.draw_texture_rect(texture, view._fit_art(texture, box), false, tint)
-	UiPaint.draw_inner_shadow(ci, rect, radius, 5, 3, Color(0, 0, 0, 1), 0.5)
-	var closed := points.duplicate()
-	closed.append(points[0])
-	ShapePaint.polyline(
-		view.get_canvas_item(), closed, Color(UiPalette.BRASS_MID, 0.9) * tint, 1.0, true
-	)
+	UiKit.stroke(ci, points, WINDOW_EDGE, UiKit.LINE_MIN)
 
 
 ## 光だまり。窓の中央やや下(砂時計の胴のあたり)を中心に、放射状に色を落とす。
@@ -148,70 +143,65 @@ static func _spell_emblem(view: CardView, box: Rect2, s: float, tint: Color) -> 
 		card.emblem,
 		Rect2(center - half + Vector2(0.0, 2.0 * s), half * 2.0),
 		false,
-		Color(0.04, 0.03, 0.08, 0.7)
+		UiPaint.EMBLEM_SHADOW
 	)
 	view.draw_texture_rect(
-		card.emblem, Rect2(center - half, half * 2.0), false, CardView.SPELL_BORDER * tint
+		card.emblem, Rect2(center - half, half * 2.0), false, SPELL_EMBLEM * tint
 	)
 
 
-## 名前を載せる帯。上下に真鍮の細線を通し、額に彫った銘板のように読ませる。
+## 名前を載せる紙の帯。
 static func _name_band(view: CardView, ci: RID, s: float, tint: Color) -> void:
 	var rect := Rect2(
-		FRAME_WIDTH * s + 2.0 * s,
+		NAME_BAND_SIDE * s,
 		NAME_BAND_TOP * s,
-		view.size.x - (FRAME_WIDTH + 2.0) * 2.0 * s,
+		view.size.x - NAME_BAND_SIDE * 2.0 * s,
 		NAME_BAND_HEIGHT * TextSize.factor() * s
 	)
-	var points := UiPaint.rounded_rect_points_uniform(rect, 3.0 * s, 3)
-	UiPaint.fill_gradient_polygon(
+	UiKit.vgrad(
 		ci,
-		points,
-		rect,
-		[[0.0, Color(0.09, 0.07, 0.06, 0.85) * tint], [1.0, Color(0.16, 0.13, 0.10, 0.85) * tint]]
-	)
-	var line := Color(UiPalette.BRASS_MID, 0.8) * tint
-	view.draw_line(rect.position, Vector2(rect.end.x, rect.position.y), line, 1.0)
-	view.draw_line(
-		Vector2(rect.position.x, rect.end.y), rect.end, Color(UiPalette.BRASS_DARK, 0.9) * tint, 1.0
+		UiKit.rr(rect, NAME_BAND_SIDE * s),
+		[[0.0, UiPalette.PAPER * tint], [1.0, UiPalette.PAPER_DEEP * tint]],
+		true
 	)
 
 
-## 札の額。外側に暗い輪郭、真鍮の面取り、内側に淡い明線。砂術は面取りの色を変える
-## (「置くカードではない」と手札の時点で分かるようにする。GameDesign.md 9章)。
-## 選択中は水色の太い輪郭で上書きする(守護の真鍮と取り違えないよう別系統の色)。
+## 札の縁。真鍮の細い縁(砂術は青。「置くカードではない」と手札の時点で分かるように)。
+## 選択中は水色の太い輪郭を外へ足す(守護の真鍮と取り違えないよう別系統の色)。
 static func _frame(
 	view: CardView, ci: RID, rect: Rect2, points: PackedVector2Array, s: float, tint: Color
 ) -> void:
-	var outer := UiPaint.rounded_rect_points_uniform(rect.grow(1.0), CORNER * s + 1.0, 6)
-	_closed(view, outer, UiPalette.OUTLINE_DARK, 1.0)
-	var light := UiPalette.BRASS_RIM_LIGHT
-	var dark := UiPalette.BRASS_DARK
+	var stops := [
+		[0.0, UiPalette.GOLD_HI * tint],
+		[0.5, UiPalette.BRASS * tint],
+		[1.0, UiPalette.BRASS_DEEP * tint]
+	]
 	if view.card.is_spell:
-		light = CardView.SPELL_BORDER
-		dark = CardView.SPELL_BORDER.darkened(0.45)
-	UiPaint.draw_bevel(ci, points, light * tint, dark * tint, FRAME_WIDTH * s, false)
-	var inner := UiPaint.rounded_rect_points_uniform(
-		rect.grow(-FRAME_WIDTH * s), maxf(CORNER * s - FRAME_WIDTH * s, 1.0), 6
-	)
-	_closed(view, inner, Color(light, 0.35) * tint, 1.0)
+		stops = [
+			[0.0, SPELL_EDGE_LIGHT * tint],
+			[0.5, UiPalette.COST * tint],
+			[1.0, UiPalette.COST_DEEP * tint]
+		]
+	UiKit.stroke(ci, points, Color(0, 0, 0, UiKit.GLASS_OUTER_ALPHA), (FRAME_WIDTH + 2.0) * s)
+	UiKit.stroke_grad(ci, points, stops, FRAME_WIDTH * s)
 	if view.selected:
-		_closed(view, points, CardView.SELECT_CYAN, CardView.GUARD_BORDER)
+		UiKit.stroke(
+			ci,
+			UiKit.rr(rect.grow(SELECT_GROW), CORNER * s + SELECT_GROW),
+			CardView.SELECT_CYAN,
+			SELECT_WIDTH * s
+		)
 	elif view.unselect_amount > 0.01:
 		var inset: float = CardView.UNSELECT_INSET * (1.0 - view.unselect_amount)
-		var shrink := UiPaint.rounded_rect_points_uniform(rect.grow(-inset), CORNER * s, 6)
-		_closed(
-			view, shrink, Color(CardView.SELECT_CYAN, view.unselect_amount), CardView.GUARD_BORDER
+		UiKit.stroke(
+			ci,
+			UiKit.rr(rect.grow(-inset), CORNER * s),
+			Color(CardView.SELECT_CYAN, view.unselect_amount),
+			SELECT_WIDTH * s
 		)
 
 
-static func _closed(view: CardView, points: PackedVector2Array, color: Color, width: float) -> void:
-	var closed := points.duplicate()
-	closed.append(points[0])
-	ShapePaint.polyline(view.get_canvas_item(), closed, color, width, true)
-
-
-## 名前は帯の中央、キーワードはその下の行。キーワードの行の両脇は四隅のバッジが占めるため、
+## 名前は紙の帯の中央、キーワードはその下の行。キーワードの行の両脇は四隅の宝石が占めるため、
 ## 文字はその内側の幅へ収める(`_centered_text` が収まらない場合だけ縮める)。
 ## 文字の大きさ「大」(GameDesign.md 9章)では名前の帯ごと高くし、キーワードの行はそのぶん下げる。
 static func _labels(view: CardView, s: float, tint: Color) -> void:
@@ -220,8 +210,7 @@ static func _labels(view: CardView, s: float, tint: Color) -> void:
 	var band_height := NAME_BAND_HEIGHT * f
 	var name_font := roundi(NAME_FONT * f * s)
 	var name_baseline := (NAME_BAND_TOP + band_height * 0.5) * s + name_font * 0.36
-	view._centered_text(card.display_name, name_font, name_baseline + 1.0, TEXT_SHADOW)
-	view._centered_text(card.display_name, name_font, name_baseline, UiPalette.TEXT_OFFWHITE * tint)
+	view._centered_text(card.display_name, name_font, name_baseline, UiPalette.PAPER_INK)
 	var note: String = CardViewPaint.keyword_text(view)
 	if note.is_empty():
 		return
@@ -231,94 +220,67 @@ static func _labels(view: CardView, s: float, tint: Color) -> void:
 		note,
 		roundi(KEYWORD_FONT * f * s),
 		(KEYWORD_BASELINE + keyword_drop) * s,
-		UiPalette.BRASS_HIGHLIGHT * tint,
+		(SPELL_KEYWORD if card.is_spell else UiPalette.SAND_HI) * tint,
 		limit
 	)
 
 
 ## コスト=左上 / 攻撃力=左下 / 体力=右下(GameDesign.md 9章)。数値は場に出た時点のもの。
-## 場の駒のバッジと同じ「暗い地 + 色の輪 + 数字」を、真鍮の縁で額へ嵌め込んだ宝石として描く。
+## 真鍮の縁で嵌めた宝石として描く。下がったコストは緑の石にする。
 ## **砂術は攻撃力・体力を持たないため下の2つを出さない**。
 static func _gems(view: CardView, ci: RID, s: float, tint: Color) -> void:
 	var card: CardData = view.card
 	var radius := GEM_RADIUS * s
 	var inset := GEM_INSET * s
 	var cost := card.cost if view.play_cost < 0 else view.play_cost
-	var cost_color := COST_DOWN_GREEN if cost < card.cost else CardView.MANA_BLUE
-	_gem(view, ci, Vector2(inset, inset), cost, cost_color, radius, tint)
+	var cost_at := Vector2(inset, inset)
+	if cost < card.cost:
+		_gem(view, ci, cost_at, cost, COST_DOWN_GREEN, COST_DOWN_DEEP, radius, tint)
+	else:
+		_gem(view, ci, cost_at, cost, UiPalette.COST, UiPalette.COST_DEEP, radius, tint)
 	if card.is_spell:
 		return
 	var bottom := view.size.y - inset
 	_gem(
-		view, ci, Vector2(inset, bottom), card.initial_attack, CardView.ATTACK_ORANGE, radius, tint
+		view,
+		ci,
+		Vector2(inset, bottom),
+		card.initial_attack,
+		UiPalette.ATTACK,
+		UiPalette.ATTACK_DEEP,
+		radius,
+		tint
 	)
 	_gem(
 		view,
 		ci,
 		Vector2(view.size.x - inset, bottom),
 		card.initial_health(),
-		CardView.HEALTH_RED,
+		UiPalette.HEALTH,
+		UiPalette.HEALTH_DEEP,
 		radius,
 		tint
 	)
 
 
 static func _gem(
-	view: CardView, ci: RID, center: Vector2, value: int, color: Color, radius: float, tint: Color
+	view: CardView,
+	ci: RID,
+	center: Vector2,
+	value: int,
+	light: Color,
+	deep: Color,
+	radius: float,
+	tint: Color
 ) -> void:
-	UiPaint.fill_circle(ci, center + Vector2(0, 1.5), radius + 2.5, Color(0, 0, 0, 0.45), 28)
-	UiPaint.draw_ring(ci, center, radius + 2.0, UiPalette.BRASS_LIGHT * tint, 2.5, 28)
-	UiPaint.draw_ring(
-		ci, center, radius + 1.0, Color(UiPalette.BRASS_HIGHLIGHT, 0.7) * tint, 1.0, 28
-	)
-	UiPaint.draw_ring(ci, center, radius + 3.5, Color(UiPalette.OUTLINE_DARK, 0.8), 1.0, 28)
-	UiPaint.fill_circle(ci, center, radius, Color(0.08, 0.07, 0.06, 1.0), 28)
-	UiPaint.draw_ring(ci, center, radius - 1.0, color * tint, 2.5 * radius / GEM_RADIUS, 28)
-	var font_size := maxi(CardView.MIN_FONT_SIZE, roundi(18.0 * radius / GEM_RADIUS))
-	var text := str(value)
-	var width: float = view._font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
-	var at := center + Vector2(-width * 0.5, font_size * 0.36)
-	view.draw_string(
-		view._font, at + Vector2.ONE, text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, TEXT_SHADOW
-	)
-	view.draw_string(view._font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color * tint)
+	UiKit.gem(ci, center, radius, light, deep, tint)
+	UiKit.gem_text(ci, view._font, center, radius, str(value), Color.WHITE * tint)
 
 
-## 右上の封蝋(左下は攻撃力が使う)。紙の札に押した印として、縁を溶けた蝋のように少し不揃いに、面は真鍮で描く。
+## 右上の紋章の印(左下は攻撃力が使う)。
 static func _seal(view: CardView, ci: RID, s: float, tint: Color) -> void:
 	var card: CardData = view.card
 	if card.emblem == null or card.is_spell:
 		return
-	var radius := SEAL_RADIUS * s
 	var center := Vector2(view.size.x - GEM_INSET * s, GEM_INSET * s)
-	var wax := PackedVector2Array()
-	for i in 20:
-		var angle := TAU * float(i) / 20.0
-		var wobble := 1.0 + 0.07 * sin(angle * 5.0 + 1.3)
-		wax.append(center + Vector2(cos(angle), sin(angle)) * radius * wobble)
-	var box := Rect2(center - Vector2.ONE * radius * 1.1, Vector2.ONE * radius * 2.2)
-	UiPaint.fill_gradient_polygon(
-		ci, wax, box, [[0.0, Color(0, 0, 0, 0.5)], [1.0, Color(0, 0, 0, 0.5)]]
-	)
-	var lifted := PackedVector2Array()
-	for p in wax:
-		lifted.append(p - Vector2(0.0, 1.5))
-	UiPaint.fill_gradient_polygon(
-		ci, lifted, box, [[0.0, UiPalette.BRASS_LIGHT * tint], [1.0, UiPalette.BRASS_DARK * tint]]
-	)
-	UiPaint.draw_ring(
-		ci,
-		center - Vector2(0.0, 1.5),
-		radius * 0.78,
-		Color(UiPalette.BRASS_DARK, 0.6) * tint,
-		1.0,
-		20
-	)
-	var half := Vector2.ONE * SEAL_EMBLEM_SIDE * 0.5 * s
-	var at := center - half - Vector2(0.0, 1.5)
-	view.draw_texture_rect(
-		card.emblem, Rect2(at + Vector2(0.0, 1.0), half * 2.0), false, Color(0.08, 0.05, 0.03, 0.7)
-	)
-	view.draw_texture_rect(
-		card.emblem, Rect2(at, half * 2.0), false, UiPalette.BRASS_HIGHLIGHT * tint
-	)
+	UiKit.seal(ci, center, SEAL_RADIUS * s, card.emblem, UiPalette.GOLD * tint)

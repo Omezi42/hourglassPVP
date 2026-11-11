@@ -4,6 +4,7 @@ extends RefCounted
 ## 横(1280x720)と縦(720x1280)の2組を持ち、`CardMatchArrange` がいまの組で部品を置き直す。
 ## 対局画面への参照を持たない描画部品(下地・吊りランプ・行動の列の地・固有演出)は `current()` を読む。
 
+const OFFSCREEN := Vector2(-1000.0, -1000.0)
 const CARD_GAP := 12.0
 const HAND_GAP := 8.0
 ## 相手の場6枠だけをわずかに縮小して奥行きを出す。
@@ -93,9 +94,11 @@ var turn_end_center := Vector2.ZERO
 var back_center := Vector2.ZERO
 ## 横だけ: 行動の列の板・ログ・エモート・投了。縦だけ: メニューのボタン。
 var action_panel_rect := Rect2()
-var log_center := Vector2.ZERO
-var emote_center := Vector2.ZERO
-var surrender_center := Vector2.ZERO
+## 縦ではログ・エモート・投了をメニューの中へまとめ、元のボタンは画面の外へ置く
+## (出す・押せるかはメニューが元のボタンから写すため、隠さずに外へ出す)。
+var log_center := OFFSCREEN
+var emote_center := OFFSCREEN
+var surrender_center := OFFSCREEN
 var menu_center := Vector2.ZERO
 ## 縦だけ: 再生の操作の中心(行動の列の代わり)。
 var replay_center := Vector2.ZERO

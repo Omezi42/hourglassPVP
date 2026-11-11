@@ -7,8 +7,6 @@ signal face_pressed
 signal graveyard_pressed
 
 const BAR_HEIGHT := 56.0
-const MANA_BLUE := Color(0.35, 0.6, 0.95, 1.0)
-const MANA_EMPTY := Color(0.2, 0.22, 0.28, 1.0)
 const DANGER_RATIO := 0.4
 ## 帯は1枚の板で囲わず、卓の台座・ターン終了ボタンと同じ語彙の「真鍮の器具」を
 ## 横に並べる(GameDesign.md 9章「対局画面の見た目」)。**左の群(肖像のメダル / 名札 / HPの器)と
@@ -17,26 +15,41 @@ const DANGER_RATIO := 0.4
 const CENTER_Y := BAR_HEIGHT * 0.5
 ## 肖像のメダル。真鍮の太い輪の中にアイコンを嵌める。
 const PORTRAIT_CENTER := Vector2(30.0, CENTER_Y)
-const PORTRAIT_RADIUS := 26.0
-const PORTRAIT_RING_WIDTH := 4.0
+const PORTRAIT_RADIUS := 25.0
+const PORTRAIT_RING_WIDTH := 3.5
 ## 名札。メダルの右から伸びる濃紺の板。
 const NAME_PLATE_RECT := Rect2(44.0, 9.0, 152.0, 38.0)
-const NAME_TEXT_X := 64.0
+const NAME_TEXT_X := 66.0
+const TITLE_FONT := UiPalette.T_MICRO
+const NAME_FONT := UiPalette.T_LEAD
+## 称号と表示名の2行を、帯の上下の中央からそれぞれ上・下へずらす量。
+const NAME_LINE_OFFSET := 13.0
+const TITLE_LINE_OFFSET := 7.0
 ## HPの器。真鍮の縁 + ガラス越しの砂。右端に体力の丸いバッジ(場の駒と同じ語彙)を嵌める。
 const HP_BAR_X := 206.0
-const HP_BAR_SIZE := Vector2(180, 32)
-const HP_RIM_WIDTH := 3.0
-const HP_BADGE_RADIUS := 17.0
+const HP_BAR_SIZE := Vector2(180, 26)
+const HP_RIM_WIDTH := 2.5
+const HP_BADGE_RADIUS := 18.0
+const HP_CAP_FONT := UiPalette.T_SMALL
+const HP_CAP_GAP := 8.0
+const HP_DANGER_LIGHT := Color(1.0, 0.50, 0.42)
+const HP_SHEEN := Color(1, 1, 1, 0.10)
+const HP_SHEEN_INSET := Vector2(6.0, 2.5)
+const HP_SHEEN_RATIO := 0.3
 ## マナの計器。コストと同じ青の丸いバッジに現在値、右の溝へ最大値ぶんの粒。
 ## 溝の長さは最大マナ(`MatchState.MAX_MANA`)の粒がちょうど収まる幅から求める。
 const MANA_BADGE_CENTER := Vector2(15.0, CENTER_Y)
-const MANA_BADGE_RADIUS := 15.0
+const MANA_BADGE_RADIUS := 16.0
 const MANA_TROUGH_X := 39.0
 const MANA_TROUGH_Y := 17.0
 const MANA_TROUGH_HEIGHT := 22.0
 const PIP_START_X := 51.0
 const PIP_STEP := 18.0
 const PIP_RADIUS := 7.0
+const PIP_SEGMENTS := 20
+const PIP_LIGHT := Color(0.70, 0.88, 1.0)
+const PIP_GLOW := Color(0.4, 0.7, 1.0, 0.35)
+const PIP_EMPTY := Color(1, 1, 1, 0.10)
 const MANA_TROUGH_WIDTH := (
 	(PIP_START_X - MANA_TROUGH_X) * 2.0 + (MatchState.MAX_MANA - 1) * PIP_STEP
 )
@@ -45,8 +58,11 @@ const MANA_TROUGH_RECT := Rect2(MANA_TROUGH_X, MANA_TROUGH_Y, MANA_TROUGH_WIDTH,
 const COIN_CENTER := Vector2(27.0, 15.0)
 const COIN_RADIUS := 6.5
 ## 山札・墓地・手札の札。マナの溝の右に並べる。手札は相手側だけで、自分側はその位置を空ける。
-const PILE_SIZE := Vector2(62, 40)
-const PILE_TOP := 8.0
+const PILE_SIZE := Vector2(62, 32)
+const PILE_TOP := 12.0
+const PILE_PAD := 7.0
+const PILE_LABEL_FONT := UiPalette.T_MICRO
+const PILE_COUNT_FONT := UiPalette.T_BODY
 const PILE_GAP := 4.0
 const TROUGH_PILE_GAP := 12.0
 const DECK_PILE_X := MANA_TROUGH_X + MANA_TROUGH_WIDTH + TROUGH_PILE_GAP
@@ -65,23 +81,13 @@ const STACKED_WIDTH := (
 	LEFT_GROUP_WIDTH if LEFT_GROUP_WIDTH > RIGHT_GROUP_WIDTH else RIGHT_GROUP_WIDTH
 )
 const STACKED_HEIGHT := BAR_HEIGHT * 2.0 + STACK_GAP
-const PILE_RADIUS := 6.0
-const PILE_GRAIN_ALPHA := 0.06
-const HP_BAR_RADIUS := 8.0
+const PILE_RADIUS := 9.0
+const HP_BAR_RADIUS := HP_BAR_SIZE.y * 0.5
 ## 器具ごとの落ち影。板で囲わないぶん、1つずつが卓の上に置かれた物として影を持つ。
-const SHADOW_OFFSET := Vector2(0.0, 3.0)
-const SHADOW_LAYERS := 3
-const SHADOW_ALPHA := 0.32
-## 細い真鍮の縁(名札・山の札)。
-const RIM_WIDTH := 2.0
+const SHADOW_BLUR := 8.0
+const SHADOW_ALPHA := 0.5
 ## 文字の下へ1pxずらして敷く暗い影(GameDesign.md 9章「数字は必ず読める」)。
 const TEXT_SHADOW := Color(0.05, 0.03, 0.02, 0.85)
-## マナのピップ(_draw_mana)の質感。小さい円のため、面取りではなく
-## 「縁を暗く・内側に小さなハイライト」の2色使いで浮き彫りに見せる。
-const PIP_RIM_DARKEN := 0.25
-const PIP_CORE_RATIO := 0.88
-const PIP_HIGHLIGHT_RATIO := 0.32
-const PIP_HIGHLIGHT_OFFSET := 0.34
 ## 被弾の演出(GameDesign.md 9章)。バーは補間して減らし、光らせ、増減を数字で浮かせる。
 const HP_SLIDE_DURATION := 0.35
 const FLASH_DURATION := 0.4
@@ -458,79 +464,41 @@ func _draw_closed(item: CanvasItem, points: PackedVector2Array, color: Color, wi
 	ShapePaint.polyline(item.get_canvas_item(), closed, color, width, true)
 
 
-## 器具1つぶんの落ち影。大きく薄い層から小さく濃い層へ重ねる(`MatchBackdrop` と同じ形)。
+## 器具1つぶんの落ち影。
 func _shadow(ci: RID, rect: Rect2, radius: float) -> void:
-	for i in SHADOW_LAYERS:
-		var grow := float(SHADOW_LAYERS - i) * 1.5
-		var alpha := SHADOW_ALPHA * float(i + 1) / float(SHADOW_LAYERS)
-		var layer := Rect2(rect.position + SHADOW_OFFSET, rect.size).grow(grow)
-		var points := UiPaint.rounded_rect_points_uniform(layer, radius + grow, 6)
-		var color := Color(0, 0, 0, alpha)
-		UiPaint.fill_gradient_polygon(ci, points, layer, [[0.0, color], [1.0, color]])
+	UiKit.shadow(ci, rect, radius, SHADOW_BLUR, SHADOW_ALPHA)
 
 
 func _shadow_circle(ci: RID, center: Vector2, radius: float) -> void:
-	for i in SHADOW_LAYERS:
-		var grow := float(SHADOW_LAYERS - i) * 1.5
-		var alpha := SHADOW_ALPHA * float(i + 1) / float(SHADOW_LAYERS)
-		UiPaint.fill_circle(ci, center + SHADOW_OFFSET, radius + grow, Color(0, 0, 0, alpha), 28)
+	var box := Rect2(center - Vector2.ONE * radius, Vector2.ONE * radius * 2.0)
+	UiKit.shadow(ci, box, radius, SHADOW_BLUR, SHADOW_ALPHA)
 
 
-## 真鍮の輪(明→暗の縦グラデーション + 外の暗い輪郭 + 内の明線)。メダル・バッジが共用する。
+## 真鍮の輪(上が照り、下が影)。肖像のメダルが使う。
 func _brass_ring(ci: RID, center: Vector2, radius: float, width: float) -> void:
-	UiPaint.draw_ring(ci, center, radius + 0.5, UiPalette.OUTLINE_DARK, 1.0, 32)
-	var outer := UiPaint.circle_points(center, radius, 32)
-	var inner := UiPaint.circle_points(center, radius - width, 32)
-	var ring := PackedVector2Array()
-	ring.append_array(outer)
-	ring.append(outer[0])
-	ring.append(inner[0])
-	var reversed := inner.duplicate()
-	reversed.reverse()
-	ring.append_array(reversed)
-	var rect := Rect2(center - Vector2.ONE * radius, Vector2.ONE * radius * 2.0)
-	UiPaint.fill_gradient_polygon(
+	var mid := radius - width * 0.5
+	UiKit.stroke(
+		ci, UiKit.ellipse(center, Vector2(mid, mid)), UiPalette.BRASS_INK, width + UiKit.LINE_MIN
+	)
+	UiKit.stroke_grad(
 		ci,
-		ring,
-		rect,
-		[
-			[0.0, UiPalette.BRASS_HIGHLIGHT],
-			[0.45, UiPalette.BRASS_MID],
-			[0.8, UiPalette.BRASS_DARK],
-			[1.0, UiPalette.BRASS_LIGHT]
-		]
+		UiKit.ellipse(center, Vector2(mid, mid)),
+		[[0.0, UiPalette.GOLD_HI], [0.5, UiPalette.BRASS], [1.0, UiPalette.BRASS_DEEP]],
+		width
 	)
-	UiPaint.draw_ring(ci, center, radius - width, Color(UiPalette.BRASS_RIM_LIGHT, 0.6), 1.0, 32)
 
 
-## 濃紺の板(名札・山の札)。面取りの真鍮の細い縁を持つ。
-func _plate(ci: RID, rect: Rect2, radius: float) -> PackedVector2Array:
-	_shadow(ci, rect, radius)
-	var points := UiPaint.rounded_rect_points_uniform(rect, radius, 5)
-	UiPaint.fill_gradient_polygon(
-		ci, points, rect, [[0.0, UiPalette.NAVY_PANEL_TOP], [1.0, UiPalette.NAVY_PANEL_BOTTOM]]
-	)
-	UiPaint.apply_grain(ci, rect, PILE_GRAIN_ALPHA)
-	UiPaint.draw_inner_shadow(ci, rect, radius, 5, 3, Color(0, 0, 0), 0.35)
-	_draw_closed(
-		self,
-		UiPaint.rounded_rect_points_uniform(rect.grow(1.0), radius + 1.0, 5),
-		UiPalette.OUTLINE_DARK,
-		1.0
-	)
-	UiPaint.draw_bevel(
-		ci, points, UiPalette.BRASS_RIM_LIGHT, UiPalette.BRASS_DARK, RIM_WIDTH, false
-	)
-	return points
-
-
-## 肖像のメダル。名札の左端へ重ね、真鍮の太い輪でアイコンを囲む。
+## 肖像のメダル。真鍮の輪でアイコンを囲む。
 ## 手番の側はこの輪の外へ琥珀の光の輪を足す(GameDesign.md 9章)。
 func _draw_portrait(ci: RID) -> void:
 	var center := portrait_center()
 	_shadow_circle(ci, center, PORTRAIT_RADIUS)
 	var inner_radius := PORTRAIT_RADIUS - PORTRAIT_RING_WIDTH
-	UiPaint.fill_circle(ci, center, inner_radius, Color(0.05, 0.04, 0.03, 1.0), 32)
+	UiKit.vgrad(
+		ci,
+		UiKit.ellipse(center, Vector2(inner_radius, inner_radius)),
+		[[0.0, UiPalette.INK_600], [1.0, UiPalette.INK_900]]
+	)
 	var icon_tex := UserProfileLibrary.get_icon_texture(icon_id)
 	if icon_tex != null:
 		var r := inner_radius - 2.0
@@ -538,24 +506,21 @@ func _draw_portrait(ci: RID) -> void:
 	_brass_ring(ci, center, PORTRAIT_RADIUS, PORTRAIT_RING_WIDTH)
 
 
-## 名札。メダルの右から伸びる濃紺の板に、称号(小)と表示名(大)を載せる
+## 名札。板を持たず、メダルの右へ称号(小)と表示名(大)を字だけで置く
 ## (GameDesign.md 9章・14章)。
 func _draw_name_plate() -> void:
-	var ci := get_canvas_item()
 	var label := display_name
 	if label.is_empty():
 		label = "相手" if is_opponent else "あなた"
-	var plate := Rect2(_left(NAME_PLATE_RECT.position), NAME_PLATE_RECT.size)
-	var points := _plate(ci, plate, 7.0)
-	if active:
-		_draw_closed(self, points, Color(UiPalette.GLOW_AMBER, 0.85), 1.5)
 	var title_text := UserProfileLibrary.get_title_display(title_id)
-	var top := plate.position.y
-	if not title_text.is_empty():
-		_text(self, Vector2(NAME_TEXT_X, top + 15), title_text, 11, UiPalette.BRASS_HIGHLIGHT)
-		_text_shadowed(self, Vector2(NAME_TEXT_X, top + 32), label, 16)
-	else:
-		_text_shadowed(self, Vector2(NAME_TEXT_X, top + 26), label, 18)
+	var mid := _left(Vector2(NAME_TEXT_X, CENTER_Y))
+	if title_text.is_empty():
+		_text_mid(self, mid, label, NAME_FONT, UiPalette.IVORY, true)
+		return
+	_text_mid(
+		self, mid + Vector2(0, -NAME_LINE_OFFSET), title_text, TITLE_FONT, UiPalette.GOLD, true
+	)
+	_text_mid(self, mid + Vector2(0, TITLE_LINE_OFFSET), label, NAME_FONT, UiPalette.IVORY, true)
 
 
 ## 山札の山。ドロー・疲労の演出の出どころとして画面側からも引く。
@@ -612,133 +577,101 @@ func hp_bar_rect() -> Rect2:
 func _draw_hp() -> void:
 	var ci := get_canvas_item()
 	var rect := hp_bar_rect()
-	_shadow(ci, rect, HP_BAR_RADIUS)
-	var track := UiPaint.rounded_rect_points_uniform(rect, HP_BAR_RADIUS, 6)
-	UiPaint.fill_gradient_polygon(
-		ci, track, rect, [[0.0, Color(0.05, 0.04, 0.04, 1.0)], [1.0, Color(0.12, 0.09, 0.08, 1.0)]]
+	var radius := rect.size.y * 0.5
+	_shadow(ci, rect, radius)
+	# 真鍮の管(暗い外縁 + 金の縁)。中は彫り込みの溝で、砂は別の層が描く。
+	var rim := rect.grow(HP_RIM_WIDTH * 0.5)
+	UiKit.fill(ci, UiKit.rr(rect.grow(HP_RIM_WIDTH), radius + HP_RIM_WIDTH), UiPalette.BRASS_INK)
+	UiKit.vgrad(
+		ci,
+		UiKit.rr(rim, radius + HP_RIM_WIDTH * 0.5),
+		[[0.0, UiPalette.GOLD], [1.0, UiPalette.BRASS_DEEP]],
+		true
 	)
+	UiKit.fill(ci, UiKit.rr(rect, radius), UiPalette.INK_900)
+	UiKit.well(ci, rect, radius)
 
 
-## 器の中身から上(砂・ガラス・縁・バッジ)。被弾の補間で毎フレーム変わるため、
+## 器の中身から上(砂・ガラス・宝石)。被弾の補間で毎フレーム変わるため、
 ## 本体とは別の層(`_hp_layer`)へ描き、本体の重い絵を巻き込まない。
 func _paint_hp(item: PaintedShape) -> void:
 	var ci := item.get_canvas_item()
 	var rect := hp_bar_rect()
-	var track := UiPaint.rounded_rect_points_uniform(rect, HP_BAR_RADIUS, 6)
+	var radius := rect.size.y * 0.5
 	var ratio := clampf(_shown_hp / float(maxi(_max_hp, 1)), 0.0, 1.0)
-	var inner := rect.grow(-HP_RIM_WIDTH)
+	var inner := rect.grow(-UiKit.SAND_INSET)
 	if ratio > 0.0:
-		var fill_rect := Rect2(inner.position, Vector2(inner.size.x * ratio, inner.size.y))
-		var color := UiPalette.GLOW_AMBER if ratio > DANGER_RATIO else UiPalette.WARNING_RED
-		var fill := UiPaint.rounded_rect_points_uniform(
-			fill_rect, minf(HP_BAR_RADIUS - HP_RIM_WIDTH, fill_rect.size.x * 0.5), 5
+		# 角丸の半径より細い残量は角が潰れて塗れないため、幅の下限を高さにする(docs/Pitfalls.md)。
+		var fill_rect := Rect2(
+			inner.position, Vector2(maxf(inner.size.x * ratio, inner.size.y), inner.size.y)
 		)
-		UiPaint.fill_gradient_polygon(
+		var light := UiPalette.SAND_HI if ratio > DANGER_RATIO else HP_DANGER_LIGHT
+		var deep := UiPalette.SAND_DEEP if ratio > DANGER_RATIO else UiPalette.HEALTH_DEEP
+		UiKit.vgrad(
 			ci,
-			fill,
-			fill_rect,
-			[[0.0, color.lightened(0.3)], [0.55, color], [1.0, color.darkened(0.3)]]
+			UiKit.rr(fill_rect, fill_rect.size.y * 0.5),
+			[[0.0, light], [UiKit.SAND_FOLD, light.lerp(deep, UiKit.SAND_FOLD)], [1.0, deep]],
+			true
 		)
-		UiPaint.apply_grain(ci, fill_rect, 0.12)
-	# ガラス越しに見せる。上側3分の1へ白い反射の帯を薄く敷き、砂も器の地も同じ膜の下に置く。
-	var glass := Rect2(
-		inner.position + Vector2(4.0, 2.0), Vector2(inner.size.x - 8.0, inner.size.y * 0.32)
+	# ガラス越しに見せる。上側へ白い反射の帯を薄く敷く。
+	var sheen := Rect2(
+		rect.position + HP_SHEEN_INSET,
+		Vector2(rect.size.x - HP_SHEEN_INSET.x * 2.0, rect.size.y * HP_SHEEN_RATIO)
 	)
-	UiPaint.fill_gradient_polygon(
-		ci,
-		UiPaint.rounded_rect_points_uniform(glass, glass.size.y * 0.5, 4),
-		glass,
-		[[0.0, Color(1, 1, 1, 0.22)], [1.0, Color(1, 1, 1, 0.02)]]
-	)
-	UiPaint.draw_inner_shadow(ci, rect, HP_BAR_RADIUS, 6, 3, Color(0, 0, 0, 1), 0.55)
-	# 真鍮の縁。攻撃の的になっている間は赤く光る(GameDesign.md 9章)。
-	_draw_closed(
-		item,
-		UiPaint.rounded_rect_points_uniform(rect.grow(1.0), HP_BAR_RADIUS + 1.0, 6),
-		UiPalette.OUTLINE_DARK,
-		1.0
-	)
-	UiPaint.draw_bevel(
-		ci, track, UiPalette.BRASS_RIM_LIGHT, UiPalette.BRASS_DARK, HP_RIM_WIDTH, false
-	)
+	UiKit.fill(ci, UiKit.rr(sheen, sheen.size.y * 0.5), HP_SHEEN)
 	if _flash > 0.0:
-		UiPaint.fill_gradient_polygon(
-			ci,
-			track,
-			rect,
-			[[0.0, Color(1, 1, 1, 0.5 * _flash)], [1.0, Color(1, 0.9, 0.7, 0.2 * _flash)]]
-		)
-	# 上限は器の中に小さく、現在値は右端の丸いバッジに(場の駒の体力バッジと同じ語彙)。
-	_text_shadowed(
+		UiKit.fill(ci, UiKit.rr(rect, radius), Color(1, 0.95, 0.8, 0.4 * _flash))
+	# 上限は器の中に小さく、現在値は右端の赤い宝石に(場の駒の体力と同じ語彙)。
+	var cap_text := "/ %d" % _max_hp
+	var cap_width := _font.get_string_size(cap_text, HORIZONTAL_ALIGNMENT_LEFT, -1, HP_CAP_FONT).x
+	_text_mid(
 		item,
-		Vector2(rect.end.x - HP_BADGE_RADIUS - 44.0, rect.position.y + 21),
-		"/ %d" % _max_hp,
-		13,
-		Color(UiPalette.TEXT_OFFWHITE, 0.85)
+		Vector2(rect.end.x - HP_BADGE_RADIUS - HP_CAP_GAP - cap_width, rect.get_center().y),
+		cap_text,
+		HP_CAP_FONT,
+		UiPalette.MUTED,
+		true
 	)
 	_badge(
 		item,
 		Vector2(rect.end.x, rect.get_center().y),
 		_hp,
-		CardView.HEALTH_RED,
-		HP_BADGE_RADIUS,
-		20
+		UiPalette.HEALTH,
+		UiPalette.HEALTH_DEEP,
+		HP_BADGE_RADIUS
 	)
 
 
-## 丸いバッジ。場の駒の体力・攻撃力・手札のコストと同じ語彙(暗い地 + 色の輪 + 数字)を、
-## 真鍮の縁で器へ嵌め込んだ形にする。
+## 数値の宝石。場の駒の体力・攻撃力・手札のコストと同じ語彙(真鍮で嵌めた色の石 + 白い数字)。
 func _badge(
-	item: CanvasItem, center: Vector2, value: int, color: Color, radius: float, font_size: int
+	item: CanvasItem, center: Vector2, value: int, light: Color, deep: Color, radius: float
 ) -> void:
 	var ci := item.get_canvas_item()
-	_shadow_circle(ci, center, radius)
-	UiPaint.draw_ring(ci, center, radius + 2.0, UiPalette.BRASS_MID, 2.0, 32)
-	UiPaint.draw_ring(ci, center, radius + 3.5, UiPalette.OUTLINE_DARK, 1.0, 32)
-	UiPaint.fill_circle(ci, center, radius, Color(0.08, 0.07, 0.06, 1.0), 32)
-	UiPaint.draw_ring(ci, center, radius - 1.0, color, 2.5, 32)
-	var text := str(value)
-	var width := _font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
-	var at := center + Vector2(-width * 0.5, font_size * 0.36)
-	_text(item, at + Vector2.ONE, text, font_size, TEXT_SHADOW)
-	_text(item, at, text, font_size, color)
+	UiKit.gem(ci, center, radius, light, deep)
+	UiKit.gem_text(ci, _font, center, radius, str(value))
 
 
-## マナは青のバッジに現在値、右の溝に最大値ぶんの粒(GameDesign.md 9章「数字とピップの併記」)。
+## マナは青い宝石に現在値、右の溝に最大値ぶんの粒(GameDesign.md 9章「数字とピップの併記」)。
 func _draw_mana() -> void:
 	var ci := get_canvas_item()
 	var trough_rect := Rect2(_right(MANA_TROUGH_RECT.position), MANA_TROUGH_RECT.size)
-	var trough_radius := trough_rect.size.y * 0.5
-	_shadow(ci, trough_rect, trough_radius)
-	var trough := UiPaint.rounded_rect_points_uniform(trough_rect, trough_radius, 6)
-	UiPaint.fill_gradient_polygon(
-		ci,
-		trough,
-		trough_rect,
-		[[0.0, Color(0.03, 0.04, 0.09, 1.0)], [1.0, Color(0.08, 0.10, 0.19, 1.0)]]
-	)
-	UiPaint.draw_inner_shadow(ci, trough_rect, trough_radius, 6, 3, Color(0, 0, 0, 1), 0.5)
-	UiPaint.draw_bevel(ci, trough, UiPalette.BRASS_RIM_LIGHT, UiPalette.BRASS_DARK, 1.5, false)
+	UiKit.well(ci, trough_rect, trough_rect.size.y * 0.5)
 	for i in _max_mana:
 		var center := _right(Vector2(PIP_START_X + i * PIP_STEP, CENTER_Y))
-		var filled: bool = i < _mana
-		var base_color := MANA_BLUE if filled else MANA_EMPTY
-		# 縁を暗く落としてから内側をひとまわり小さく塗り、面取り相当の立体感を出す。
-		ShapePaint.circle(
-			get_canvas_item(), center, PIP_RADIUS, base_color.darkened(PIP_RIM_DARKEN)
-		)
-		ShapePaint.circle(get_canvas_item(), center, PIP_RADIUS * PIP_CORE_RATIO, base_color)
-		var highlight_center := center + Vector2(-1, -1) * PIP_RADIUS * PIP_HIGHLIGHT_OFFSET
-		var highlight_alpha := 0.4 if filled else 0.14
-		ShapePaint.circle(
-			get_canvas_item(),
-			highlight_center,
-			PIP_RADIUS * PIP_HIGHLIGHT_RATIO,
-			Color(1, 1, 1, highlight_alpha)
-		)
-		var arc_color := Color(0.75, 0.85, 1.0, 0.6) if filled else Color(0.4, 0.42, 0.48, 0.5)
-		ShapePaint.arc(get_canvas_item(), center, PIP_RADIUS, 0.0, TAU, 16, arc_color, 1.5)
-	_badge(self, _right(MANA_BADGE_CENTER), _mana, MANA_BLUE, MANA_BADGE_RADIUS, 18)
+		var pip := UiKit.ellipse(center, Vector2(PIP_RADIUS, PIP_RADIUS), PIP_SEGMENTS)
+		if i < _mana:
+			UiKit.glow(ci, center, Vector2.ONE * PIP_RADIUS * 2.0, PIP_GLOW)
+			UiKit.vgrad(ci, pip, [[0.0, PIP_LIGHT], [1.0, UiPalette.COST]], true)
+		else:
+			UiKit.fill(ci, pip, PIP_EMPTY)
+	_badge(
+		self,
+		_right(MANA_BADGE_CENTER),
+		_mana,
+		UiPalette.COST,
+		UiPalette.COST_DEEP,
+		MANA_BADGE_RADIUS
+	)
 
 
 ## 支払いで消えるピップが、出した札(または撃った砂術)の方向へ吸われて消える
@@ -769,36 +702,40 @@ func _paint_spend_pip(shape: PaintedShape) -> void:
 ## 山札の脈打ちの光(縁 + 薄い面)。形は山札の札に合わせて1度だけ描き、強さは不透明度で出す。
 func _paint_deck_pulse(shape: PaintedShape) -> void:
 	var rect := deck_pile_rect()
-	var points := UiPaint.rounded_rect_points_uniform(rect, PILE_RADIUS, 5)
+	var points := UiKit.rr(rect, PILE_RADIUS)
+	UiKit.fill(shape.get_canvas_item(), points, Color(_deck_pulse_color, DECK_PULSE_FILL_ALPHA))
 	_draw_closed(shape, points, Color(_deck_pulse_color, 1.0), 3.0)
-	shape.draw_rect(rect.grow(2.0), Color(_deck_pulse_color, DECK_PULSE_FILL_ALPHA))
 
 
-## コインを持っている間だけ、マナのバッジの肩に金貨を載せる。
+## コインを持っている間だけ、マナの宝石の肩に金貨を載せる。
 func _draw_coin() -> void:
 	var ci := get_canvas_item()
 	var coin := _right(COIN_CENTER)
-	_shadow_circle(ci, coin, COIN_RADIUS)
-	UiPaint.fill_gradient_polygon(
+	UiKit.fill(
 		ci,
-		UiPaint.circle_points(coin, COIN_RADIUS, 20),
-		Rect2(coin - Vector2.ONE * COIN_RADIUS, Vector2.ONE * COIN_RADIUS * 2.0),
-		[[0.0, Color(1.0, 0.9, 0.55)], [1.0, UiPalette.GLOW_AMBER.darkened(0.2)]]
+		UiKit.ellipse(coin, Vector2.ONE * (COIN_RADIUS + UiKit.BADGE_RING), PIP_SEGMENTS),
+		UiPalette.BRASS_INK
 	)
-	UiPaint.draw_ring(ci, coin, COIN_RADIUS, UiPalette.BRASS_HIGHLIGHT, 1.5, 20)
-	UiPaint.draw_ring(ci, coin, COIN_RADIUS * 0.55, Color(UiPalette.BRASS_DARK, 0.7), 1.0, 16)
+	UiKit.vgrad(
+		ci,
+		UiKit.ellipse(coin, Vector2.ONE * COIN_RADIUS, PIP_SEGMENTS),
+		[[0.0, UiPalette.GOLD_HI], [1.0, UiPalette.SAND_DEEP]],
+		true
+	)
 
 
-## 山札・墓地・手札の枚数。濃紺の小さな札に、見出しを小さく上へ、枚数を大きく右下へ。
+## 山札・墓地・手札の枚数。彫り込みの小さな札に「見出し 数字」を横1行で置く。
 func _pile(rect: Rect2, label: String, count: int) -> void:
-	var ci := get_canvas_item()
-	_plate(ci, rect, PILE_RADIUS)
-	_text(self, rect.position + Vector2(7, 15), label, 11, UiPalette.BRASS_HIGHLIGHT)
+	UiKit.well(get_canvas_item(), rect, PILE_RADIUS)
+	var mid := rect.get_center().y
+	_text_mid(
+		self, Vector2(rect.position.x + PILE_PAD, mid), label, PILE_LABEL_FONT, UiPalette.MUTED
+	)
 	var text := str(count)
-	var width := _font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 21).x
-	var at := Vector2(rect.end.x - 8.0 - width, rect.position.y + 34)
-	_text(self, at + Vector2.ONE, text, 21, TEXT_SHADOW)
-	_text(self, at, text, 21, UiPalette.GLOW_AMBER)
+	var width := _font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, PILE_COUNT_FONT).x
+	_text_mid(
+		self, Vector2(rect.end.x - PILE_PAD - width, mid), text, PILE_COUNT_FONT, UiPalette.IVORY
+	)
 
 
 func _text(
@@ -811,20 +748,18 @@ func _text(
 	item.draw_string(_font, pos, value, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color)
 
 
-## 数値は砂の上でも地の上でも同じ色で読めるよう、暗い影を1pxずらして敷く(GameDesign.md 9章)。
-func _text_shadowed(
-	item: CanvasItem,
-	pos: Vector2,
-	value: String,
-	font_size: int,
-	color: Color = UiPalette.TEXT_OFFWHITE
+## 行の上下の中央が `at.y` に来るように置く。`shadowed` は地の上へ直に置く字(暗い影を敷く)。
+func _text_mid(
+	item: CanvasItem, at: Vector2, value: String, font_size: int, color: Color, shadowed := false
 ) -> void:
-	_text(item, pos + Vector2.ONE, value, font_size, TEXT_SHADOW)
-	_text(item, pos, value, font_size, color)
+	var base := Vector2(
+		at.x, at.y + (_font.get_ascent(font_size) - _font.get_descent(font_size)) * 0.5
+	)
+	if shadowed:
+		_text(item, base + Vector2.ONE, value, font_size, TEXT_SHADOW)
+	_text(item, base, value, font_size, color)
 
 
-## HPが動いた。**瞬時に差し替えず補間し、バーを光らせ、増減を数字で浮かせる**
-## (GameDesign.md 9章)。数字が入れ替わるだけでは、何点入ったのかが分からない。
 func _animate_hp(previous: int) -> void:
 	_float_amount = _hp - previous
 	_float_left = FLOAT_DURATION

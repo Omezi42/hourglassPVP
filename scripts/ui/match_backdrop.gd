@@ -11,14 +11,14 @@ extends Control
 
 ## 床の縦グラデーション。`ScreenBackdrop.STOPS` よりやや暖色寄り・やや暗め。
 const FLOOR_STOPS := [
-	[0.0, Color(0.11, 0.09, 0.10, 1.0)],
-	[0.45, Color(0.19, 0.15, 0.15, 1.0)],
-	[1.0, Color(0.07, 0.05, 0.06, 1.0)],
+	[0.0, Color(0.05, 0.055, 0.085, 1.0)],
+	[0.5, Color(0.075, 0.08, 0.12, 1.0)],
+	[1.0, Color(0.03, 0.035, 0.06, 1.0)],
 ]
 const FLOOR_GRAIN_ALPHA := 0.05
 
 ## 卓の中心に置く光だまり。同心の楕円を外へ向かって透明にしながら重ねる。
-const GLOW_PEAK_ALPHA := 0.20
+const GLOW_PEAK_ALPHA := 0.12
 const GLOW_WIDTH_RATIO := 1.8
 const GLOW_HEIGHT_RATIO := 1.5
 
@@ -32,7 +32,7 @@ const VIGNETTE_ALPHA := 0.45
 ## 床のグラデーションで上から被せて「見えるか見えないか」に落とす。
 const WALL_TOP_HEIGHT := 120.0
 const WALL_SIDE_WIDTH := 150.0
-const WALL_TINT := Color(0.55, 0.62, 0.78)
+const WALL_TINT := Color(0.30, 0.36, 0.55)
 const WALL_FADE_ALPHA := 0.55
 const WALL_SEED_TOP := 7
 const WALL_SEED_LEFT := 11

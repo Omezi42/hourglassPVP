@@ -111,11 +111,12 @@ static func action_column(screen: CardMatchScreen) -> void:
 				screen._targets.show_turn_end_forecast()
 	)
 	screen._end_turn_button.button_up.connect(func() -> void: screen._targets.clear_forecast())
-	screen._log_button = add_round_button(screen, "ログ", ActionColumnLayout.SMALL_DIAMETER, false)
+	screen._log_button = add_round_button(screen, "ログ", ActionColumnLayout.PILL_SIZE.y, false)
+	screen._log_button.width = ActionColumnLayout.PILL_SIZE.x
 	screen._log_button.pressed.connect(func() -> void: screen._log.set_open(true))
-	screen._surrender_button = add_round_button(
-		screen, "投了", ActionColumnLayout.SMALL_DIAMETER, false
-	)
+	screen._surrender_button = add_round_button(screen, "投了", ActionColumnLayout.PILL_SIZE.y, false)
+	screen._surrender_button.width = ActionColumnLayout.PILL_SIZE.x
+	screen._surrender_button.danger = true
 	screen._surrender_button.pressed.connect(screen._on_surrender_pressed)
 	# リプレイの戻る導線。反転権と同じ位置(両者は同時に見えない)。
 	screen._back_button = add_round_button(

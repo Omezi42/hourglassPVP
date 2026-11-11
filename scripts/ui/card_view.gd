@@ -33,11 +33,11 @@ enum Mode {
 
 const BOARD_SIZE_PX := Vector2(128, 168)
 const HAND_SIZE_PX := Vector2(118, 158)
-const MANA_BLUE := Color(0.35, 0.6, 0.95, 1.0)
-const ATTACK_ORANGE := Color(0.95, 0.62, 0.2, 1.0)
-const HEALTH_RED := Color(0.9, 0.3, 0.26, 1.0)
+const MANA_BLUE := UiPalette.COST
+const ATTACK_ORANGE := UiPalette.ATTACK
+const HEALTH_RED := UiPalette.HEALTH
 ## 選択中の枠。守護の真鍮色と取り違えないよう、別系統の色にする。
-const SELECT_CYAN := Color(0.55, 0.9, 1.0, 1.0)
+const SELECT_CYAN := UiPalette.SELECT
 const SAND_AMBER := Color(0.93, 0.78, 0.42, 1.0)
 ## 文字を描くときに空ける左右の余白と、縮められる下限のフォントサイズ。
 const TEXT_MARGIN := 5.0

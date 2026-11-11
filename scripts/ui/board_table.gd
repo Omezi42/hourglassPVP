@@ -18,18 +18,36 @@ extends Control
 ## `CanvasItem` の `draw_*` を直接呼べるため、RID を取る `UiPaint` へは
 ## `self.get_canvas_item()` を渡す。
 
-## 木の額の太さ。
-const FRAME_WIDTH := 20.0
+## 額の太さ。細い暗い縁と真鍮の線だけにする(太い額は駒より目立つため。GameDesign.md 9章)。
+const FRAME_WIDTH := 13.0
 const DIVIDER_RATIO := 0.5
-const RAIL_HEIGHT := 10.0
-const MEDALLION_OUTER_RADIUS := 26.0
-const MEDALLION_INNER_RADIUS := 15.0
+const RAIL_WIDTH := 2.4
+const RAIL_SHADOW := Color(0, 0, 0, 0.5)
+const RAIL_INSET := 6.0
+const MEDALLION_OUTER_RADIUS := 19.0
+const MEDALLION_INNER_RADIUS := 14.0
+const MEDALLION_SPOKES := 4
+const FRAME_STOPS := [[0.0, Color(0.30, 0.20, 0.13)], [1.0, Color(0.13, 0.08, 0.05)]]
+const FRAME_EDGE_WIDTH := 2.0
+const FELT_LINE_WIDTH := 2.0
+const FELT_STOPS := [
+	[0.0, Color(0.07, 0.09, 0.19)], [0.5, Color(0.10, 0.13, 0.27)], [1.0, Color(0.12, 0.16, 0.33)]
+]
+## 卓の中央へ落ちる光(吊りランプ)。大きさは卓の大きさに対する比。
+const FELT_COOL_GLOW := Color(0.55, 0.65, 1.0, 0.10)
+const FELT_COOL_RATIO := 0.46
+const FELT_WARM_GLOW := Color(1.0, 0.85, 0.6, 0.07)
+const FELT_WARM_RATIO := 0.3
+## 四隅の金の唐草(フェルトの隅の小さな弧と点)。
+const CORNER_ARC_RADIUS := 20.0
+const CORNER_ARC_INSET := 10.0
+const CORNER_DOT_RADIUS := 2.2
+const CORNER_ALPHA := 0.5
 
 ## 奥行き(GameDesign.md 9章「対局画面の再構築」)。奥(上)の辺を左右それぞれこの
 ## 分だけ狭め、卓を「手前が広く奥が狭い」台形として描く。
 const PERSPECTIVE_INSET := 22.0
 const FRAME_CORNER_RADIUS := 10.0
-const CORNER_SCROLL_SIZE := 40.0
 
 ## 上半分(相手)と下半分(自分)へ敷くマット。既定は「なし」(何も敷かない)。
 var foe_mat := PlaymatLibrary.DEFAULT_ID:
@@ -90,18 +108,9 @@ func _layout_layers() -> void:
 	if _foe_layer == null:
 		return
 	var inner := Rect2(Vector2.ZERO, size).grow(-FRAME_WIDTH)
-	var half := inner.size.y * DIVIDER_RATIO
-	_foe_layer.position = inner.position
-	_foe_layer.size = Vector2(inner.size.x, half)
-	# 額の斜辺は上(奥)へ向かって狭まる(PERSPECTIVE_INSET)。相手側は下端(レール寄り)
-	# でも半分だけ狭め、自分側の上端(レール寄り)と合わせて連続した奥行きにする
-	# (GameDesign.md 9章「対局画面の再構築」)。
-	_foe_layer.top_inset = PERSPECTIVE_INSET
-	_foe_layer.bottom_inset = PERSPECTIVE_INSET * 0.5
-	_own_layer.position = Vector2(inner.position.x, inner.position.y + half)
-	_own_layer.size = Vector2(inner.size.x, half)
-	_own_layer.top_inset = PERSPECTIVE_INSET * 0.5
-	_own_layer.bottom_inset = 0.0
+	var mid := inner.position.y + inner.size.y * DIVIDER_RATIO
+	_place_mat(_foe_layer, inner.position.y, mid)
+	_place_mat(_own_layer, mid, inner.end.y)
 	_foe_layer.queue_redraw()
 	_own_layer.queue_redraw()
 	_rail_layer.position = Vector2.ZERO
@@ -147,16 +156,13 @@ func _draw() -> void:
 
 func _draw_rail_layer() -> void:
 	var ci := _rail_layer.get_canvas_item()
-	var inner := Rect2(Vector2.ZERO, size).grow(-FRAME_WIDTH)
 	_draw_frame_ring(ci)
-	UiPaint.draw_inner_shadow(ci, inner, 6.0, 6, 9, Color(0, 0, 0), 0.85)
 	_draw_rail(ci)
 
 
-## 木の額。**外側の台形−内側の台形のリング**として、マットより手前(`_rail_layer`)へ
-## 描く(GameDesign.md 9章「対局画面の再構築」)。矩形のままのマットの隅がリングの
-## 内側の縁より外へはみ出さないため、上から覆い隠せる。外周と内周の点列を
-## 同じ分割数で作り、対応する点どうしを結んで四角形の帯を1周ぶん敷き詰める。
+## 額。**外側の台形−内側の台形のリング**として、マットより手前(`_rail_layer`)へ
+## 描く。矩形のままのマットの隅がリングの内側の縁より外へはみ出さないため、上から覆い隠せる。
+## 外周と内周の点列を同じ分割数で作り、対応する点どうしを結んで四角形の帯を1周ぶん敷き詰める。
 func _draw_frame_ring(ci: RID) -> void:
 	var outer_rect := Rect2(Vector2.ZERO, size)
 	var inner_rect := outer_rect.grow(-FRAME_WIDTH)
@@ -164,41 +170,51 @@ func _draw_frame_ring(ci: RID) -> void:
 	var inner_points := _trapezoid_points(
 		inner_rect, PERSPECTIVE_INSET, FRAME_CORNER_RADIUS * 0.5, 6
 	)
-	var stops := [
-		[0.0, RoomPaint.WOOD_TOP.lightened(0.22)],
-		[0.5, RoomPaint.WOOD_TOP],
-		[1.0, RoomPaint.WOOD_MID],
-	]
 	var count := mini(outer_points.size(), inner_points.size())
 	for i in count:
 		var j := (i + 1) % count
 		var quad := PackedVector2Array(
 			[outer_points[i], outer_points[j], inner_points[j], inner_points[i]]
 		)
-		UiPaint.fill_gradient_polygon(ci, quad, outer_rect, stops)
-	# グレインは額の帯だけへ(felt/マットの中心まで洗わないよう、四辺の帯に留める)。
-	var band := FRAME_WIDTH + PERSPECTIVE_INSET
-	UiPaint.apply_grain(ci, Rect2(0.0, 0.0, size.x, band), 0.07)
-	UiPaint.apply_grain(ci, Rect2(0.0, size.y - band, size.x, band), 0.07)
-	UiPaint.apply_grain(ci, Rect2(0.0, 0.0, band, size.y), 0.07)
-	UiPaint.apply_grain(ci, Rect2(size.x - band, 0.0, band, size.y), 0.07)
-	UiPaint.draw_bevel(
-		ci, outer_points, Color(0.60, 0.47, 0.28), Color(0.05, 0.03, 0.02), 3.0, false
+		UiPaint.fill_gradient_polygon(ci, quad, outer_rect, FRAME_STOPS)
+	UiKit.stroke(ci, outer_points, UiPalette.BRASS_INK, FRAME_EDGE_WIDTH)
+	# フェルトの縁の真鍮の線(奥が沈み、手前が明るい)。
+	UiKit.stroke_grad(
+		ci, inner_points, [[0.0, UiPalette.BRASS], [1.0, UiPalette.GOLD]], FELT_LINE_WIDTH
 	)
-	_draw_corner_scrolls(ci, outer_rect)
+	_draw_corner_scrolls(ci, inner_rect)
 
 
-## 額の内側を濃紺のフェルトとして描く(GameDesign.md 9章「対局画面の再構築」)。
-## 上端が明るく下端がわずかに暗いのはこのグラデーション自体が持つ
-## (以前の `_draw_ambient_light()` はここへ統合した)。マット「なし」のときは
-## このフェルトがそのまま見える。
+## 額の内側を濃紺のフェルトとして描く。奥(相手の側)を沈め、吊りランプの光を卓の中央へ落とす。
+## マット「なし」のときはこのフェルトがそのまま見える。
 func _draw_felt(ci: RID) -> void:
 	var inner := Rect2(Vector2.ZERO, size).grow(-FRAME_WIDTH)
 	var points := _trapezoid_points(inner, PERSPECTIVE_INSET, FRAME_CORNER_RADIUS * 0.5, 6)
-	UiPaint.fill_gradient_polygon(
-		ci, points, inner, [[0.0, UiPalette.FELT_NAVY_TOP], [1.0, UiPalette.FELT_NAVY_BOTTOM]]
-	)
-	UiPaint.apply_grain(ci, inner, 0.06)
+	UiPaint.fill_gradient_polygon(ci, points, inner, FELT_STOPS)
+	var mid := Vector2(size.x * 0.5, size.y * DIVIDER_RATIO)
+	UiKit.glow(ci, mid, size * FELT_COOL_RATIO, FELT_COOL_GLOW)
+	UiKit.glow(ci, mid - Vector2(0, size.y * 0.1), size * FELT_WARM_RATIO, FELT_WARM_GLOW)
+
+
+## マットの層を、卓の上端からの高さ `top`〜`bottom` の帯へ置く。**層の左右の端は、その帯の上端での
+## 額の外側の斜辺に合わせる**(額は細いため、内側の矩形いっぱいに敷くと隅が額の外へはみ出す)。
+## 模様の縁は額の内側の斜辺に沿わせる(`top_inset` / `bottom_inset`)。
+func _place_mat(layer: MatLayer, top: float, bottom: float) -> void:
+	var left := _outer_edge_x(top)
+	layer.position = Vector2(left, top)
+	layer.size = Vector2(size.x - left * 2.0, bottom - top)
+	layer.top_inset = _inner_edge_x(top) - left
+	layer.bottom_inset = _inner_edge_x(bottom) - left
+
+
+## 額の外側・内側の斜辺の、高さ `y` での左端のx(右端は左右対称)。
+func _outer_edge_x(y: float) -> float:
+	return PERSPECTIVE_INSET * (1.0 - y / maxf(size.y, 1.0))
+
+
+func _inner_edge_x(y: float) -> float:
+	var span := maxf(size.y - FRAME_WIDTH * 2.0, 1.0)
+	return FRAME_WIDTH + PERSPECTIVE_INSET * (1.0 - (y - FRAME_WIDTH) / span)
 
 
 ## 台形の外周点列。奥(上)の辺を `inset` ぶん左右へ狭め、4隅を半径 `radius` の
@@ -232,92 +248,65 @@ func _trapezoid_points(
 	return UiPaint.dedupe_ring(points)
 
 
-## 四隅に添える金の唐草。額(木の面)の上へ小さな渦として重ねる。
+## 四隅に添える金の唐草。フェルトの隅へ小さな弧と点を置く。
 func _draw_corner_scrolls(ci: RID, rect: Rect2) -> void:
-	var color := Color(UiPalette.BRASS_HIGHLIGHT, 0.35)
+	var color := Color(UiPalette.GOLD, CORNER_ALPHA)
+	var inset := PERSPECTIVE_INSET
+	var pad := CORNER_ARC_INSET
 	var corners := [
-		[Vector2(rect.position.x + PERSPECTIVE_INSET, rect.position.y), Vector2(1, 1)],
-		[Vector2(rect.end.x - PERSPECTIVE_INSET, rect.position.y), Vector2(-1, 1)],
-		[rect.end, Vector2(-1, -1)],
-		[Vector2(rect.position.x, rect.end.y), Vector2(1, -1)],
+		[Vector2(rect.position.x + inset + pad, rect.position.y + pad), 0.0],
+		[Vector2(rect.end.x - inset - pad, rect.position.y + pad), PI * 0.5],
+		[Vector2(rect.end.x - pad, rect.end.y - pad), PI],
+		[Vector2(rect.position.x + pad, rect.end.y - pad), PI * 1.5],
 	]
 	for corner in corners:
-		var origin: Vector2 = corner[0]
-		var dir: Vector2 = corner[1]
-		var base := origin + dir * (CORNER_SCROLL_SIZE * 0.42)
-		UiPaint.draw_ring(ci, base, CORNER_SCROLL_SIZE * 0.22, color, 1.6, 16)
-		UiPaint.draw_ring(
-			ci, base + dir * CORNER_SCROLL_SIZE * 0.24, CORNER_SCROLL_SIZE * 0.11, color, 1.3, 12
+		var at: Vector2 = corner[0]
+		var angle: float = corner[1]
+		var center := (
+			at + Vector2(cos(angle + PI * 0.25), sin(angle + PI * 0.25)) * CORNER_ARC_RADIUS
 		)
-		var curve := PackedVector2Array()
-		for i in 9:
-			var t: float = float(i) / 8.0
-			var angle: float = lerpf(PI, PI * 1.85, t)
-			curve.append(
-				base + Vector2(cos(angle) * dir.x, sin(angle) * dir.y) * CORNER_SCROLL_SIZE * 0.3
-			)
-		# `ci` は呼び出し元のレイヤーの canvas item のため、`ShapePaint.polyline(get_canvas_item(), )` ではなく
-		# `RenderingServer` 経由で描く(`_draw_frame_ring()` からは前面のレイヤーを渡すため)。
-		var curve_colors := PackedColorArray()
-		curve_colors.resize(curve.size())
-		curve_colors.fill(color)
-		ShapePaint.polyline_colors(ci, curve, curve_colors, 1.3, true)
+		ShapePaint.arc(
+			ci, center, CORNER_ARC_RADIUS, angle + PI, angle + PI * 1.5, 12, color, 1.2, true
+		)
+		ShapePaint.circle(ci, at, CORNER_DOT_RADIUS, UiPalette.GOLD)
 
 
-## 中央のレールと紋章。**陣地の境目**を真鍮の物体として通し、盤面が対面していることを示す。
+## 中央のレールと紋章。**陣地の境目**を真鍮の細い線として通し、盤面が対面していることを示す。
+## 紋章の印は押すと歯車が回る(GameDesign.md 9章「QOL」)。
 func _draw_rail(ci: RID) -> void:
 	var y := size.y * DIVIDER_RATIO
-	var rail := Rect2(
-		FRAME_WIDTH + 6.0, y - RAIL_HEIGHT * 0.5, size.x - (FRAME_WIDTH + 6.0) * 2.0, RAIL_HEIGHT
-	)
-	(
-		UiPaint
-		. fill_gradient_polygon(
-			ci,
-			UiPaint.rounded_rect_points_uniform(rail, RAIL_HEIGHT * 0.5, 4),
-			rail,
-			[
-				[0.0, UiPalette.BRASS_HIGHLIGHT],
-				[0.45, UiPalette.BRASS_MID],
-				[1.0, UiPalette.BRASS_DARK],
-			]
-		)
-	)
+	var side := FRAME_WIDTH + PERSPECTIVE_INSET * (1.0 - DIVIDER_RATIO) + RAIL_INSET
+	var left := Vector2(side, y)
+	var right := Vector2(size.x - side, y)
 	var center := Vector2(size.x * 0.5, y)
-	var glow: float = _medallion_glow
-	(
-		UiPaint
-		. fill_gradient_polygon(
-			ci,
-			UiPaint.circle_points(center, MEDALLION_OUTER_RADIUS, 26),
-			Rect2(
-				center - Vector2(MEDALLION_OUTER_RADIUS, MEDALLION_OUTER_RADIUS),
-				Vector2(MEDALLION_OUTER_RADIUS, MEDALLION_OUTER_RADIUS) * 2.0
-			),
-			[
-				[0.0, UiPalette.BRASS_LIGHT.lerp(UiPalette.BRASS_HIGHLIGHT, glow)],
-				[1.0, UiPalette.BRASS_DARK],
-			]
-		)
+	var drop := Vector2(0, RAIL_WIDTH * 0.8)
+	ShapePaint.polyline(
+		ci, PackedVector2Array([left + drop, right + drop]), RAIL_SHADOW, RAIL_WIDTH, true
 	)
-	UiPaint.draw_ring(ci, center, MEDALLION_OUTER_RADIUS, Color(0.05, 0.035, 0.02), 2.4, 26)
-	var emblem := UserProfileLibrary.get_icon_texture(UserProfileLibrary.DEFAULT_ICON_ID)
-	if emblem != null:
-		_rail_layer.draw_texture_rect(
-			emblem,
-			Rect2(center - Vector2(17, 17), Vector2(34, 34)),
-			false,
-			Color(0.16, 0.10, 0.04).lerp(Color(0.42, 0.28, 0.10), glow)
-		)
-	# 歯車の意匠(押すと回る)。
-	for i in 4:
-		var rad := _medallion_angle + i * (PI * 0.5)
+	ShapePaint.polyline_colors(
+		ci,
+		PackedVector2Array([left, center, right]),
+		PackedColorArray([UiPalette.BRASS, UiPalette.GOLD_HI, UiPalette.BRASS]),
+		RAIL_WIDTH,
+		true
+	)
+	var glow: float = _medallion_glow
+	UiKit.seal(
+		ci,
+		center,
+		MEDALLION_OUTER_RADIUS,
+		UiPaint.HOURGLASS_ICON,
+		UiPalette.GOLD.lerp(UiPalette.GOLD_HI, glow)
+	)
+	# 歯車の意匠(押すと回る)。印の縁へ短い刻みを打つ。
+	for i in MEDALLION_SPOKES:
+		var rad := _medallion_angle + i * (TAU / float(MEDALLION_SPOKES))
 		var dir := Vector2(cos(rad), sin(rad))
 		_rail_layer.draw_line(
 			center + dir * MEDALLION_INNER_RADIUS,
 			center + dir * MEDALLION_OUTER_RADIUS,
-			Color(0.10, 0.065, 0.03, 0.75 + glow * 0.25),
-			2.0
+			Color(UiPalette.GOLD, 0.45 + glow * 0.4),
+			1.5
 		)
 
 

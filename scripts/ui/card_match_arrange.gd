@@ -93,6 +93,6 @@ static func _place_buttons(screen: CardMatchScreen, layout: CardMatchLayout) -> 
 	screen._flip_right.place(layout.flip_right_center, layout.flip_gauge_position, button_scale)
 	CardMatchBuild.center_on(screen._log_button, layout.log_center)
 	CardMatchBuild.center_on(screen._surrender_button, layout.surrender_center)
-	var emote_half := Vector2.ONE * ActionColumnLayout.SMALL_DIAMETER * 0.5
-	screen._emote.set_position(layout.emote_center - emote_half)
+	screen._emote.set_position(layout.emote_center - ActionColumnLayout.PILL_SIZE * 0.5)
+	screen._clock_dial.mirror = screen._end_turn_button if layout.portrait else null
 	screen._menu.apply(layout)

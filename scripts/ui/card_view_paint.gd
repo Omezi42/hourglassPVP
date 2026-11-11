@@ -18,6 +18,11 @@ const PILL_TAIL_FONT := 11
 ## ターン終了で割れる駒のひび。絵の枠に対する比で置く(絵は枠より細い縦長のため内側へ寄せる)。
 ## 守護の二重の輪の外側の輪を、台座の縁からどれだけ外へ出すか。
 const GUARD_RING_GAP := Vector2(6.0, 3.5)
+const PEDESTAL_SEGMENTS := 32
+const PEDESTAL_DIMPLE := 0.6
+const PEDESTAL_DIMPLE_COLOR := Color(0.12, 0.07, 0.02, 0.45)
+## 宝石の下半分の色は、石の色をこのぶん暗くして作る。
+const STAT_DEEP_DARKEN := 0.55
 const CRACK_BOX := Vector2(0.55, 0.75)
 const CRACK_BOX_DROP := 0.04
 const CRACK_LIGHT := Color(1.0, 0.95, 0.9, 0.7)
@@ -49,22 +54,17 @@ static func pedestal_base(view: CardView) -> void:
 		ci,
 		side_points,
 		side_rect,
-		[[0.0, UiPalette.BRASS_DARK], [1.0, UiPalette.BRASS_PRESSED_DARK]]
+		[[0.0, UiPalette.BRASS], [0.45, UiPalette.BRASS_DEEP], [1.0, UiPalette.BRASS_INK]]
 	)
-	# 上面: 地の色 → 中央へ明るい楕円 → 暗い落ち込み。
-	UiPaint.fill_ellipse(ci, top_center, radius, UiPalette.BRASS_MID, 32)
-	UiPaint.fill_ellipse(ci, top_center, radius * 0.7, UiPalette.BRASS_LIGHT, 32)
-	UiPaint.fill_ellipse(
-		ci, top_center, radius * 0.46, Color(UiPalette.PEDESTAL_DEFAULT_ACCENT, 0.14), 32
+	# 上面: 奥が暗く手前が明るい真鍮の面に、砂時計の足が載る暗い窪み。
+	var face := UiKit.ellipse(top_center, radius, PEDESTAL_SEGMENTS)
+	UiKit.vgrad(
+		ci, face, [[0.0, UiPalette.BRASS_DEEP.lerp(UiPalette.BRASS, 0.5)], [1.0, UiPalette.GOLD]]
 	)
-	# 上端側の縁(奥の弧)に光の当たりを1本引く。
-	var highlight := PackedVector2Array()
-	for i in 11:
-		var t: float = float(i) / 10.0
-		var angle: float = lerpf(-PI * 0.82, -PI * 0.18, t)
-		highlight.append(top_center + Vector2(cos(angle) * radius.x, sin(angle) * radius.y))
-	ShapePaint.polyline(
-		view.get_canvas_item(), highlight, Color(UiPalette.BRASS_HIGHLIGHT, 0.5), 1.5, true
+	UiKit.fill(
+		ci,
+		UiKit.ellipse(top_center, radius * PEDESTAL_DIMPLE, PEDESTAL_SEGMENTS),
+		PEDESTAL_DIMPLE_COLOR
 	)
 	# 駒が立っているときだけ、足元の影をもう一段濃く重ねる(既存の踏み込み表現)。
 	if view.card != null:
@@ -149,29 +149,7 @@ static func pedestal_plaque(view: CardView, tint: Color) -> void:
 	var ci := view.get_canvas_item()
 	# 相打ちの反撃中は counter_offset ぶんだけ攻撃側へ突き出す(GameDesign.md 9章)。
 	var center := Vector2(view.size.x * 0.5, CardView.PEDESTAL_CENTER_Y - 4.0) + view.counter_offset
-	UiPaint.fill_circle(
-		ci, center, CardView.EMBLEM_PLAQUE_RADIUS, Color(0.08, 0.06, 0.05, 0.85), 24
-	)
-	UiPaint.fill_circle(
-		ci, center, CardView.EMBLEM_PLAQUE_RADIUS - 1.5, UiPalette.BRASS_MID * tint, 24
-	)
-	var half := Vector2(CardView.EMBLEM_PLAQUE_SIDE, CardView.EMBLEM_PLAQUE_SIDE) * 0.5
-	# 影を1pxずらして重ね、真鍮へ彫り込まれたように見せる。
-	view.draw_texture_rect(
-		view.card.emblem,
-		Rect2(center - half + Vector2(0.0, 1.0), half * 2.0),
-		false,
-		Color(0.08, 0.06, 0.04, 0.7)
-	)
-	view.draw_texture_rect(
-		view.card.emblem,
-		Rect2(center - half, half * 2.0),
-		false,
-		Color(UiPalette.BRASS_HIGHLIGHT, 0.95) * tint
-	)
-	UiPaint.draw_ring(
-		ci, center, CardView.EMBLEM_PLAQUE_RADIUS, UiPalette.BRASS_HIGHLIGHT * tint, 1.0, 24
-	)
+	UiKit.seal(ci, center, CardView.EMBLEM_PLAQUE_RADIUS, view.card.emblem, UiPalette.GOLD * tint)
 	if view.spark_amount > 0.01:
 		var radius := (
 			CardView.EMBLEM_PLAQUE_RADIUS + CardView.SPARK_RADIUS * (1.0 - view.spark_amount)
@@ -198,34 +176,13 @@ static func badge(view: CardView, rect: Rect2) -> void:
 	)
 
 
-## コスト/総量/攻撃力/体力のバッジ。**バッジの跳ね**(GameDesign.md 9章「対局画面の
+## 攻撃力・体力の宝石(真鍮の縁で嵌めた色の石 + 白い数字)。**数値の跳ね**(GameDesign.md 9章「対局画面の
 ## 手触り」)は `radius` に呼び出し側が `stat_punch` ぶんの拡縮を掛けて渡す形にし、
-## ここでは大きさをそのまま使うだけにする(円の太さ・文字のサイズも半径に連動するため、
-## 自然に一緒に跳ねる)。
+## ここでは大きさをそのまま使うだけにする(石も数字も半径に連動するため、一緒に跳ねる)。
 static func stat(view: CardView, center: Vector2, value: int, color: Color, radius: float) -> void:
-	ShapePaint.circle(view.get_canvas_item(), center, radius, Color(0.08, 0.07, 0.06, 0.95))
-	ShapePaint.arc(
-		view.get_canvas_item(),
-		center,
-		radius,
-		0.0,
-		TAU,
-		24,
-		color,
-		2.5 * radius / CardView.STAT_RADIUS
-	)
-	var text := str(value)
-	var font_size := maxi(CardView.MIN_FONT_SIZE, roundi(20.0 * radius / CardView.STAT_RADIUS))
-	var width := view._font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
-	view.draw_string(
-		view._font,
-		center + Vector2(-width * 0.5, font_size * 0.35),
-		text,
-		HORIZONTAL_ALIGNMENT_LEFT,
-		-1,
-		font_size,
-		color
-	)
+	var ci := view.get_canvas_item()
+	UiKit.gem(ci, center, radius, color, color.darkened(STAT_DEEP_DARKEN))
+	UiKit.gem_text(ci, view._font, center, radius, str(value))
 
 
 ## 「この攻撃の後どうなるか」を体力バッジの真下へ出す。相打ちのため攻撃側にも出る。

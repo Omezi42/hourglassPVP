@@ -464,7 +464,9 @@ static func round_face(
 
 
 ## 数値の宝石の面(コスト = 青 / 攻撃力 = 橙 / 体力 = 赤)。数字は `gem_text()` で載せる。
-static func gem(ci: RID, center: Vector2, rad: float, light: Color, deep: Color) -> void:
+static func gem(
+	ci: RID, center: Vector2, rad: float, light: Color, deep: Color, tint := Color.WHITE
+) -> void:
 	var rim := clampf(rad * GEM_RIM_RATIO, GEM_RIM_MIN, GEM_RIM_MAX)
 	fill(
 		ci,
@@ -474,16 +476,29 @@ static func gem(ci: RID, center: Vector2, rad: float, light: Color, deep: Color)
 	vgrad(
 		ci,
 		ellipse(center, Vector2(rad + rim * 0.5, rad + rim * 0.5)),
-		[[0.0, UiPalette.GOLD_HI], [0.5, UiPalette.BRASS], [1.0, UiPalette.BRASS_DEEP]],
+		[
+			[0.0, UiPalette.GOLD_HI * tint],
+			[0.5, UiPalette.BRASS * tint],
+			[1.0, UiPalette.BRASS_DEEP * tint]
+		],
 		true
 	)
 	vgrad(
 		ci,
 		ellipse(center, Vector2(rad - rim * 0.6, rad - rim * 0.6)),
-		[[0.0, light.lerp(Color.WHITE, 0.12)], [0.55, light.lerp(deep, 0.6)], [1.0, deep]],
+		[
+			[0.0, light.lerp(Color.WHITE, 0.12) * tint],
+			[0.55, light.lerp(deep, 0.6) * tint],
+			[1.0, deep * tint]
+		],
 		true
 	)
-	glow(ci, center - Vector2(rad * 0.25, rad * 0.38), Vector2(rad * 0.6, rad * 0.42), GEM_SHINE)
+	glow(
+		ci,
+		center - Vector2(rad * 0.25, rad * 0.38),
+		Vector2(rad * 0.6, rad * 0.42),
+		Color(GEM_SHINE, GEM_SHINE.a * tint.v)
+	)
 
 
 static func gem_text(
