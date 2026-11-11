@@ -31,6 +31,8 @@ const BLINK_MIN_ALPHA := 0.28
 const LAUNCH_DURATION := 0.42
 const LAUNCH_SCALE := 1.06
 ## 読み込みを終える前に押されたときの文言(GameDesign.md 9章「タイトル」)。
+## 開始の文言の縁取り(背景の絵の上でも読めるように夜の藍で縁取る)。
+const START_OUTLINE_SIZE := 8
 const LOADING_TEXT := "読み込み中… %d%%"
 
 ## 縦画面(GameDesign.md 9章「縦画面」)。ロゴは同じ大きさのまま画面の中央へ寄せ、
@@ -38,9 +40,9 @@ const LOADING_TEXT := "読み込み中… %d%%"
 const PORTRAIT_LOGO_CENTER := Vector2(360, 470)
 const PORTRAIT_START_TOP := 860.0
 const PORTRAIT_START_HEIGHT := 56.0
-const PORTRAIT_START_FONT := 34
+const PORTRAIT_START_FONT := UiPalette.T_TITLE
 const PORTRAIT_ACCOUNT_SIZE := Vector2(260, 80)
-const PORTRAIT_ACCOUNT_FONT := 28
+const PORTRAIT_ACCOUNT_FONT := UiPalette.T_HEAD
 const PORTRAIT_MARGIN := 24.0
 
 var _started := false
@@ -63,6 +65,12 @@ var _landscape_account_font := 0
 
 
 func _ready() -> void:
+	start_label.add_theme_color_override("font_color", UiPalette.IVORY)
+	start_label.add_theme_color_override("font_outline_color", UiPalette.INK_900)
+	start_label.add_theme_constant_override("outline_size", START_OUTLINE_SIZE)
+	start_label.add_theme_font_size_override("font_size", UiPalette.T_HEAD)
+	CodedButton.apply_styles(account_button, CodedButton.WIDE_GROUP)
+	account_button.add_theme_font_size_override("font_size", UiPalette.T_LEAD)
 	background.texture = _load_texture(BACKGROUND_PATH, FALLBACK_BACKGROUND_PATH)
 	var logo := _load_texture(LOGO_PATH, "")
 	logo_image.texture = logo

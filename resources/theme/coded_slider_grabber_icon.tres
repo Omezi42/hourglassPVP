@@ -1,14 +1,11 @@
 [gd_resource type="GradientTexture2D" format=3 uid="uid://dyalthe88avu3"]
 
-; HSliderのつまみ。画像アセットを追加せず、Godot標準のGradientTexture2D(放射状グラデーション)
-; だけで真鍮色の丸いつまみを表現する(フェーズ12 Q-5)。色はUiPalette.BRASS_HIGHLIGHT/
-; BRASS_MID/OUTLINE_DARKの実値を使う(StyleBox外のTexture2DリソースのためGDScript定数は
-; 参照できず、値をそのまま埋め込む)。中心=明るい真鍮ハイライト→真鍮の中間色→暗い輪郭線→
-; 透明、の順で外側へ抜けさせ円形に見せる。
+; HSliderのつまみ。画像アセットを追加せず、放射状のGradientTexture2Dだけで真鍮の丸いつまみを表現する。
+; 色は `UiPalette` の実値(StyleBox外のため定数を参照できない): 中心 = GOLD_HI → GOLD → 暗い縁 = BRASS_INK → 透明。
 
 [sub_resource type="Gradient" id="Gradient_grabber"]
 offsets = PackedFloat32Array(0, 0.55, 0.62, 0.66, 1)
-colors = PackedColorArray(0.82, 0.7, 0.45, 1, 0.44, 0.31, 0.24, 1, 0.12, 0.08, 0.04, 1, 0.12, 0.08, 0.04, 0, 0.12, 0.08, 0.04, 0)
+colors = PackedColorArray(1, 0.93, 0.72, 1, 0.9, 0.74, 0.42, 1, 0.17, 0.1, 0.03, 1, 0.17, 0.1, 0.03, 0, 0.17, 0.1, 0.03, 0)
 
 [resource]
 gradient = SubResource("Gradient_grabber")

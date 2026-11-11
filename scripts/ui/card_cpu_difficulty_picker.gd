@@ -14,8 +14,9 @@ const SUMMARY_WIDTH := 380.0
 ## 縦(GameDesign.md 9章「縦画面」)。パネルは `PortraitModal` の論理幅で組み、中身ごと拡大する。
 const PORTRAIT_ROW_BUTTON_SIZE := Vector2(120, 56)
 const PORTRAIT_SUMMARY_WIDTH := 292.0
+const PORTRAIT_SETTINGS_SUMMARY_WIDTH := 252.0
 const SETTINGS_BUTTON_SIZE := Vector2(160, 48)
-const SETTINGS_FONT_SIZE := 15
+const SETTINGS_FONT_SIZE := UiPalette.T_BODY
 
 const ROWS := [
 	{
@@ -69,7 +70,9 @@ func _layout() -> void:
 		button.custom_minimum_size = PORTRAIT_ROW_BUTTON_SIZE if portrait else ROW_BUTTON_SIZE
 	for summary in _summaries:
 		summary.custom_minimum_size.x = PORTRAIT_SUMMARY_WIDTH if portrait else SUMMARY_WIDTH
-	_settings_summary.custom_minimum_size.x = _summaries[0].custom_minimum_size.x
+	_settings_summary.custom_minimum_size.x = (
+		PORTRAIT_SETTINGS_SUMMARY_WIDTH if portrait else _summaries[0].custom_minimum_size.x
+	)
 	PortraitModal.fit(_center)
 
 
@@ -79,7 +82,7 @@ func close() -> void:
 
 func _build() -> void:
 	_dim = ColorRect.new()
-	_dim.color = Color(0, 0, 0, 0.72)
+	_dim.color = Color(UiPalette.INK_900, 0.72)
 	_dim.size = SCREEN_SIZE
 	_dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_dim)
@@ -106,7 +109,7 @@ func _build() -> void:
 	var title := Label.new()
 	title.text = "CPUの思考レベルを選ぶ"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 28)
+	title.add_theme_font_size_override("font_size", UiPalette.T_HEAD)
 	column.add_child(title)
 
 	var current := CardCpuDifficultySave.get_difficulty()
@@ -132,7 +135,7 @@ func _make_settings_row() -> HBoxContainer:
 	_settings_summary.custom_minimum_size = Vector2(SUMMARY_WIDTH, 0)
 	_settings_summary.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_settings_summary.add_theme_font_size_override("font_size", SETTINGS_FONT_SIZE)
-	_settings_summary.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
+	_settings_summary.add_theme_color_override("font_color", UiPalette.MUTED)
 	box.add_child(_settings_summary)
 	return box
 
@@ -163,7 +166,7 @@ func _make_row(row: Dictionary, current: CardCpuStrategy.Difficulty) -> HBoxCont
 	summary.custom_minimum_size = Vector2(SUMMARY_WIDTH, 0)
 	summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	summary.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	summary.add_theme_color_override("font_color", UiPalette.TEXT_OFFWHITE)
+	summary.add_theme_color_override("font_color", UiPalette.IVORY)
 	box.add_child(summary)
 	_summaries.append(summary)
 	return box

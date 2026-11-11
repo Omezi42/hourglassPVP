@@ -14,7 +14,7 @@ const ROW_HEIGHT := 32
 const ROW_FONT_SIZE := UiPalette.T_BODY
 const CAPTION_FONT_SIZE := UiPalette.T_SMALL
 ## 縦画面では2列のまま論理幅(480)へ収める(アカウント画面がパネルごと拡大する)。
-const PORTRAIT_SLOT_SIZE := Vector2(220, 52)
+const PORTRAIT_SLOT_SIZE := Vector2(210, 52)
 
 var _slots: Array[String] = []
 ## いま差し替えようとしている枠。

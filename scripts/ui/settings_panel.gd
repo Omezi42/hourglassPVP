@@ -32,7 +32,8 @@ const LINK_ROW_SEPARATION := 22
 ## 文字の大きさ「標準 / 大」(GameDesign.md 9章)。並びは `TextSize.is_large()` の false / true の順。
 const TEXT_SIZE_LABELS := ["標準", "大"]
 const TEXT_SIZE_BUTTON_SIZE := Vector2(110, 56)
-const ROW_CAPTION_FONT := 20
+const ROW_CAPTION_FONT := UiPalette.T_LEAD
+const DIM_ALPHA := 0.6
 const SELECTED_GROUP := CodedButton.PRIMARY_ACTION_GROUP
 const UNSELECTED_GROUP := "wide_text"
 
@@ -44,10 +45,14 @@ var _text_size_buttons: Array[Button] = []
 @onready var bgm_slider: HSlider = $CenterBox/Panel/Margin/VBox/BgmRow/Slider
 @onready var bgm_value_label: Label = $CenterBox/Panel/Margin/VBox/BgmRow/ValueLabel
 @onready var close_button: Button = $CenterBox/Panel/Margin/VBox/CloseButton
+@onready var title_label: Label = $CenterBox/Panel/Margin/VBox/TitleLabel
 
 
 func _ready() -> void:
 	visible = false
+	dim.color = Color(UiPalette.INK_900, DIM_ALPHA)
+	title_label.add_theme_color_override("font_color", UiPalette.GOLD)
+	title_label.add_theme_font_size_override("font_size", UiPalette.T_HEAD)
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	_build_text_size_row()
 	_build_link_row()

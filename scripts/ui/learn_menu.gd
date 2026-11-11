@@ -10,12 +10,12 @@ signal screen_guide_requested
 signal keyword_dict_requested
 
 const PANEL_STYLE := preload("res://resources/theme/content_panel.tres")
-const DIM_COLOR := Color(0, 0, 0, 0.6)
+const DIM_COLOR := Color(UiPalette.INK_900, 0.6)
 const PANEL_WIDTH := 440.0
 const MARGIN := 32
 const SEPARATION := 18
-const TITLE_SIZE := 30
-const TITLE_COLOR := Color(0.85, 0.62, 0.22)
+const TITLE_SIZE := UiPalette.T_HEAD
+const TITLE_COLOR := UiPalette.GOLD
 const BUTTON_SIZE := Vector2(376, 64)
 const CLOSE_SIZE := Vector2(200, 56)
 

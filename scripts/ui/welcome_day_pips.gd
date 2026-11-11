@@ -5,15 +5,15 @@ extends Control
 
 const HEIGHT := 80.0
 const RADIUS := 20.0
-const RIM_WIDTH := 2.0
 const PULSE_SPEED := 2.6
 const PULSE_GLOW := 7.0
-const LABEL_SIZE := 15
-const REWARD_SIZE := 13
+const PULSE_ALPHA := 0.35
+const LABEL_SIZE := UiPalette.T_BODY
+const REWARD_SIZE := UiPalette.T_SMALL
 const REWARD_BASELINE := 66.0
 ## 縦(パネルごと1.4倍)で小さな見出しの目安(20px)以上にする大きさ。
-const PORTRAIT_LABEL_SIZE := 17
-const PORTRAIT_REWARD_SIZE := 15
+const PORTRAIT_LABEL_SIZE := UiPalette.T_LEAD
+const PORTRAIT_REWARD_SIZE := UiPalette.T_BODY
 
 ## 受け取った日数。次の日(claimed + 1)が「今日」。
 var claimed := 0
@@ -36,25 +36,24 @@ func _draw() -> void:
 	for i in WelcomeDays.DAYS:
 		var center := Vector2(step * (i + 0.5), RADIUS + 2.0)
 		var day := i + 1
-		var fill := UiPalette.PANEL_PRESSED_TOP
-		var rim := UiPalette.BRASS_DARK
-		var text_color := UiPalette.TEXT_MUTED
+		var text_color := UiPalette.MUTED
+		var ci := get_canvas_item()
 		if day <= claimed:
-			fill = UiPalette.BRASS_LIGHT
-			rim = UiPalette.BRASS_HIGHLIGHT
-			text_color = UiPalette.TEXT_OFFWHITE
+			UiKit.round_face(ci, center, RADIUS, UiKit.Role.MAIN)
+			text_color = UiPalette.BRASS_INK
 		elif day == claimed + 1:
 			var pulse := 0.5 + 0.5 * sin(_time * PULSE_SPEED)
-			var glow := UiPalette.GLOW_AMBER
-			glow.a = 0.35 * pulse
-			ShapePaint.circle(
-				get_canvas_item(), center, RADIUS + PULSE_GLOW * pulse, glow, true, -1.0, true
+			var glow_radius := RADIUS + PULSE_GLOW * pulse
+			UiKit.glow(
+				ci,
+				center,
+				Vector2(glow_radius, glow_radius),
+				Color(UiPalette.SAND, PULSE_ALPHA * pulse)
 			)
-			fill = UiPalette.PANEL_AMBER_TOP
-			rim = UiPalette.GLOW_AMBER
-			text_color = UiPalette.TEXT_OFFWHITE
-		ShapePaint.circle(get_canvas_item(), center, RADIUS, fill, true, -1.0, true)
-		ShapePaint.circle(get_canvas_item(), center, RADIUS, rim, false, RIM_WIDTH, true)
+			UiKit.gem(ci, center, RADIUS, UiPalette.SAND_HI, UiPalette.SAND_DEEP)
+			text_color = UiPalette.BRASS_INK
+		else:
+			UiKit.round_face(ci, center, RADIUS)
 		if font == null:
 			continue
 		var label := str(day)
@@ -75,5 +74,5 @@ func _draw() -> void:
 			HORIZONTAL_ALIGNMENT_CENTER,
 			step,
 			reward_size,
-			UiPalette.BRASS_HIGHLIGHT if day > claimed else UiPalette.TEXT_MUTED
+			UiPalette.GOLD if day > claimed else UiPalette.MUTED
 		)

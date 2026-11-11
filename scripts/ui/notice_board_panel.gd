@@ -17,16 +17,16 @@ const TAB_SIZE := Vector2(200, 48)
 const CLOSE_SIZE := Vector2(180, 48)
 const LIST_WIDTH := 210.0
 const ENTRY_SIZE := Vector2(190, 44)
-const BODY_FONT := 18
-const HEADING_FONT := 22
+const BODY_FONT := UiPalette.T_LEAD
+const HEADING_FONT := UiPalette.T_HEAD
 ## 縦(GameDesign.md 9章「縦画面」)。`PortraitModal` の論理幅で組み、回の一覧は本文の上へ積む。
 const PORTRAIT_PANEL_SIZE := Vector2(PortraitModal.WIDTH, 880)
 const PORTRAIT_TAB_SIZE := Vector2(190, 56)
 const PORTRAIT_CLOSE_SIZE := Vector2(180, 56)
 const PORTRAIT_LIST_HEIGHT := 70.0
 const PORTRAIT_ENTRY_SIZE := Vector2(150, 52)
-const PORTRAIT_BODY_FONT := 17
-const PORTRAIT_HEADING_FONT := 20
+const PORTRAIT_BODY_FONT := UiPalette.T_LEAD
+const PORTRAIT_HEADING_FONT := UiPalette.T_LEAD
 const UNREAD_MARK := "● "
 const EMPTY_TEXT := "まだお知らせはありません"
 
@@ -72,7 +72,7 @@ func open() -> void:
 
 func _build() -> void:
 	_dim = ColorRect.new()
-	_dim.color = Color(0, 0, 0, 0.7)
+	_dim.color = Color(UiPalette.INK_900, 0.7)
 	_dim.size = SCREEN_SIZE
 	_dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	_dim.gui_input.connect(_on_dim_input)
@@ -112,7 +112,7 @@ func _build() -> void:
 	_body.bbcode_enabled = true
 	_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_body.add_theme_color_override("default_color", UiPalette.TEXT_OFFWHITE)
+	_body.add_theme_color_override("default_color", UiPalette.IVORY)
 	_notices.add_child(_body)
 
 	_gifts = NoticeGiftList.new()
@@ -199,7 +199,7 @@ func _show_body() -> void:
 		_body.text = EMPTY_TEXT
 		return
 	var heading := PORTRAIT_HEADING_FONT if ScreenOrientation.is_portrait() else HEADING_FONT
-	_body.text = AnnouncementText.to_bbcode(_selected.body, heading, UiPalette.BRASS_HIGHLIGHT)
+	_body.text = AnnouncementText.to_bbcode(_selected.body, heading, UiPalette.GOLD)
 	_body.scroll_to_line(0)
 
 

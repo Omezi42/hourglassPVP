@@ -29,7 +29,7 @@ const ACCOUNT_BUTTON_SIZE := Vector2(220, 50)
 ## パネルごと拡大する。上の見本と登録は中身の高さで、下の見た目は残りの高さで出す。
 const PORTRAIT_GAP := 16.0
 const PORTRAIT_SMALL_FONT_SIZE := 16
-const PORTRAIT_BUTTON_SIZE := Vector2(220, 52)
+const PORTRAIT_BUTTON_SIZE := Vector2(208, 52)
 ## 選んでから保存するまでの待ち。続けて選び直したときに書き込みを重ねない。
 const SAVE_DELAY := 0.5
 

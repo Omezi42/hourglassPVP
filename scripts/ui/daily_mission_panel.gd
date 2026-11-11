@@ -21,9 +21,9 @@ const NOTE_INSET := 60.0
 const PORTRAIT_PANEL_SIZE := Vector2(PortraitModal.WIDTH, 470)
 const PORTRAIT_CLAIM_SIZE := Vector2(120, 52)
 const PORTRAIT_CLOSE_SIZE := Vector2(180, 56)
-const SMALL_FONT := 15
+const SMALL_FONT := UiPalette.T_BODY
 ## 縦(パネルごと1.4倍)で本文の目安(24px)にする進み具合・注記の大きさ。
-const PORTRAIT_SMALL_FONT := 17
+const PORTRAIT_SMALL_FONT := UiPalette.T_LEAD
 
 var _rows: VBoxContainer
 var _note: Label
@@ -63,7 +63,7 @@ func _layout() -> void:
 
 func _build() -> void:
 	_dim = ColorRect.new()
-	_dim.color = Color(0, 0, 0, 0.7)
+	_dim.color = Color(UiPalette.INK_900, 0.7)
 	_dim.size = SCREEN_SIZE
 	_dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_dim)
@@ -83,7 +83,7 @@ func _build() -> void:
 	var title := Label.new()
 	title.text = "デイリーミッション"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 28)
+	title.add_theme_font_size_override("font_size", UiPalette.T_HEAD)
 	box.add_child(title)
 
 	_rows = VBoxContainer.new()
@@ -95,7 +95,7 @@ func _build() -> void:
 	_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_note.custom_minimum_size.x = PANEL_SIZE.x - NOTE_INSET
 	_note.add_theme_font_size_override("font_size", SMALL_FONT)
-	_note.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
+	_note.add_theme_color_override("font_color", UiPalette.MUTED)
 	box.add_child(_note)
 
 	_close = CodedButton.make("閉じる", CLOSE_SIZE)
@@ -131,12 +131,12 @@ func _make_row(uid: String, row: Dictionary) -> Control:
 	line.add_child(column)
 	var text := Label.new()
 	text.text = row["text"]
-	text.add_theme_font_size_override("font_size", 19)
+	text.add_theme_font_size_override("font_size", UiPalette.T_LEAD)
 	column.add_child(text)
 	var progress := Label.new()
 	progress.text = "%d / %d   報酬 %d 砂金" % [row["progress"], row["goal"], row["reward"]]
 	progress.add_theme_font_size_override("font_size", _small_font())
-	progress.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
+	progress.add_theme_color_override("font_color", UiPalette.MUTED)
 	column.add_child(progress)
 
 	if bool(row["claimed"]):

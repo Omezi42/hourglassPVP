@@ -12,7 +12,7 @@ extends Control
 
 const DIAMETER := 22.0
 const MARK := "!"
-const MARK_FONT_SIZE := 16
+const MARK_FONT_SIZE := UiPalette.T_BODY
 ## 円の中で「!」が上寄りに見えるため、視覚的な中心へ寄せる下駄。
 const MARK_BASELINE_RATIO := 0.72
 
@@ -46,9 +46,9 @@ func _on_hover_changed(hovered: bool) -> void:
 func _draw() -> void:
 	var center := size * 0.5
 	var radius := DIAMETER * 0.5
-	var fill := UiPalette.GLOW_AMBER if _hovered else UiPalette.BRASS_HIGHLIGHT
-	ShapePaint.circle(get_canvas_item(), center, radius, UiPalette.OUTLINE_DARK)
-	ShapePaint.circle(get_canvas_item(), center, radius - 2.0, fill)
+	UiKit.round_face(
+		get_canvas_item(), center, radius, UiKit.Role.SUB, 0.0, 1.0 if _hovered else 0.0
+	)
 	var font := get_theme_default_font()
 	if font == null:
 		return
@@ -56,6 +56,4 @@ func _draw() -> void:
 	var origin := Vector2(
 		center.x - mark_size.x * 0.5, DIAMETER * MARK_BASELINE_RATIO + radius * 0.28
 	)
-	draw_string(
-		font, origin, MARK, HORIZONTAL_ALIGNMENT_LEFT, -1, MARK_FONT_SIZE, UiPalette.OUTLINE_DARK
-	)
+	draw_string(font, origin, MARK, HORIZONTAL_ALIGNMENT_LEFT, -1, MARK_FONT_SIZE, UiPalette.GOLD)

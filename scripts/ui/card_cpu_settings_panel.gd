@@ -15,10 +15,10 @@ const NAME_WIDTH := 150.0
 const VALUE_WIDTH := 190.0
 const ARROW_SIZE := Vector2(44, 44)
 const BUTTON_SIZE := Vector2(200, 60)
-const TITLE_FONT_SIZE := 28
-const HEADING_FONT_SIZE := 20
-const ROW_FONT_SIZE := 18
-const NOTE_FONT_SIZE := 15
+const TITLE_FONT_SIZE := UiPalette.T_HEAD
+const HEADING_FONT_SIZE := UiPalette.T_LEAD
+const ROW_FONT_SIZE := UiPalette.T_LEAD
+const NOTE_FONT_SIZE := UiPalette.T_BODY
 
 const FIRST_NAMES := {
 	CpuMatchSettings.First.PLAYER: "先手",
@@ -75,7 +75,7 @@ func _layout() -> void:
 
 func _build() -> void:
 	_dim = ColorRect.new()
-	_dim.color = Color(0, 0, 0, 0.72)
+	_dim.color = Color(UiPalette.INK_900, 0.72)
 	_dim.size = SCREEN_SIZE
 	_dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_dim)
@@ -97,7 +97,7 @@ func _build() -> void:
 	var root := VBoxContainer.new()
 	root.add_theme_constant_override("separation", 16)
 	_panel.add_child(root)
-	root.add_child(_label("詳細設定", TITLE_FONT_SIZE, UiPalette.TEXT_OFFWHITE, true))
+	root.add_child(_label("詳細設定", TITLE_FONT_SIZE, UiPalette.IVORY, true))
 
 	_columns = BoxContainer.new()
 	_columns.add_theme_constant_override("separation", COLUMN_GAP)
@@ -105,7 +105,7 @@ func _build() -> void:
 	var matchup := _add_column("対局の組み合わせ")
 	_add_row(matchup, "first", "先手 / 後手")
 	_add_row(matchup, "foe_deck", "相手のデッキ")
-	_deck_summary = _label("", NOTE_FONT_SIZE, UiPalette.TEXT_MUTED, false)
+	_deck_summary = _label("", NOTE_FONT_SIZE, UiPalette.MUTED, false)
 	_deck_summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_deck_summary.custom_minimum_size = Vector2(COLUMN_WIDTH, 0)
 	matchup.add_child(_deck_summary)
@@ -117,7 +117,7 @@ func _build() -> void:
 	_add_row(practice, "coin", "後手のコイン")
 	_add_row(practice, "reveal_hand", "相手の手札")
 
-	_practice_note = _label(PRACTICE_NOTE, NOTE_FONT_SIZE, UiPalette.TEXT_MUTED, true)
+	_practice_note = _label(PRACTICE_NOTE, NOTE_FONT_SIZE, UiPalette.MUTED, true)
 	root.add_child(_practice_note)
 
 	var buttons := HBoxContainer.new()
@@ -136,7 +136,7 @@ func _add_column(heading: String) -> VBoxContainer:
 	var column := VBoxContainer.new()
 	column.custom_minimum_size = Vector2(COLUMN_WIDTH, 0)
 	column.add_theme_constant_override("separation", ROW_GAP)
-	column.add_child(_label(heading, HEADING_FONT_SIZE, UiPalette.TEXT_MUTED, false))
+	column.add_child(_label(heading, HEADING_FONT_SIZE, UiPalette.MUTED, false))
 	_columns.add_child(column)
 	return column
 
@@ -144,14 +144,14 @@ func _add_column(heading: String) -> VBoxContainer:
 func _add_row(column: VBoxContainer, key: String, title: String) -> void:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
-	var name_label := _label(title, ROW_FONT_SIZE, UiPalette.TEXT_OFFWHITE, false)
+	var name_label := _label(title, ROW_FONT_SIZE, UiPalette.IVORY, false)
 	name_label.custom_minimum_size = Vector2(NAME_WIDTH, 0)
 	name_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(name_label)
 	var left := CodedButton.make_icon("◀", ARROW_SIZE)
 	left.pressed.connect(_step.bind(key, -1))
 	row.add_child(left)
-	var value := _label("", ROW_FONT_SIZE, UiPalette.TEXT_OFFWHITE, true)
+	var value := _label("", ROW_FONT_SIZE, UiPalette.IVORY, true)
 	value.custom_minimum_size = Vector2(VALUE_WIDTH, 0)
 	value.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	value.clip_text = true

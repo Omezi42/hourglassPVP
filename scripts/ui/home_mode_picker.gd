@@ -10,8 +10,8 @@ extends Control
 
 signal closed
 
-const DIM_COLOR := Color(0, 0, 0, 0.62)
-const TITLE_SIZE := 32
+const DIM_COLOR := Color(UiPalette.INK_900, 0.62)
+const TITLE_SIZE := UiPalette.T_TITLE
 const TITLE_TOP := 112.0
 const TITLE_HEIGHT := 52.0
 const TILE_SIZE := Vector2(340, 380)
@@ -22,7 +22,7 @@ const BUTTON_GAP := 18.0
 const CLOSE_WIDTH := 200.0
 
 ## 縦では札を画面の幅いっぱいにして上から積む(9章「縦画面」)。
-const PORTRAIT_TITLE_SIZE := 40
+const PORTRAIT_TITLE_SIZE := UiPalette.T_HERO
 const PORTRAIT_TITLE_TOP := 150.0
 const PORTRAIT_TILE_TOP := 230.0
 const PORTRAIT_TILE_WIDTH := 672.0
@@ -61,7 +61,7 @@ func _build(title_text: String) -> void:
 	_title.text = title_text
 	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_title.add_theme_color_override("font_color", UiPalette.TEXT_OFFWHITE)
+	_title.add_theme_color_override("font_color", UiPalette.IVORY)
 	_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_title)
 	_close = CodedButton.make("とじる", Vector2(CLOSE_WIDTH, BUTTON_HEIGHT))

@@ -11,11 +11,14 @@ const ROW_GAP := 10
 ## 行の枠の内側の余白(左右・上下)。
 const ROW_PADDING := Vector2i(18, 12)
 const ART_SIDE := 56.0
+const DETAIL_MIN_WIDTH := ART_SIDE * 3.0
+## 縦は論理幅(480)の中で並ぶよう、説明の最小幅と受け取るボタンを詰める。
+const PORTRAIT_DETAIL_MIN_WIDTH := ART_SIDE * 2.0
 const CLAIM_SIZE := Vector2(150, 48)
-const PORTRAIT_CLAIM_SIZE := Vector2(150, 56)
-const TITLE_FONT := 20
-const SMALL_FONT := 15
-const PORTRAIT_SMALL_FONT := 17
+const PORTRAIT_CLAIM_SIZE := Vector2(110, 56)
+const TITLE_FONT := UiPalette.T_LEAD
+const SMALL_FONT := UiPalette.T_BODY
+const PORTRAIT_SMALL_FONT := UiPalette.T_LEAD
 const ROW_STYLE := "res://resources/theme/buttons/img_wide_text_disabled.tres"
 const OFFLINE_TEXT := "通信できるときに受け取れます"
 const FAILED_TEXT := "いま受け取れませんでした。接続を確かめてください"
@@ -38,7 +41,7 @@ func _ready() -> void:
 	box.add_child(_rows)
 	_note = Label.new()
 	_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_note.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
+	_note.add_theme_color_override("font_color", UiPalette.MUTED)
 	box.add_child(_note)
 
 
@@ -79,16 +82,21 @@ func _make_row(gift: GiftData, online: bool) -> Control:
 	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	column.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	line.add_child(column)
+	var detail_min := (
+		PORTRAIT_DETAIL_MIN_WIDTH if ScreenOrientation.is_portrait() else DETAIL_MIN_WIDTH
+	)
 	var title := Label.new()
 	title.text = gift.title
+	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	title.custom_minimum_size.x = detail_min
 	title.add_theme_font_size_override("font_size", TITLE_FONT)
 	column.add_child(title)
 	var detail := Label.new()
 	detail.text = _detail_text(gift)
 	detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	detail.custom_minimum_size.x = ART_SIDE * 3.0
+	detail.custom_minimum_size.x = detail_min
 	detail.add_theme_font_size_override("font_size", _small_font())
-	detail.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
+	detail.add_theme_color_override("font_color", UiPalette.MUTED)
 	column.add_child(detail)
 
 	if done:
@@ -96,7 +104,7 @@ func _make_row(gift: GiftData, online: bool) -> Control:
 		var mark := Label.new()
 		mark.text = "受け取り済み"
 		mark.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		mark.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
+		mark.add_theme_color_override("font_color", UiPalette.MUTED)
 		line.add_child(mark)
 		return panel
 	var button := CodedButton.make(
@@ -120,7 +128,7 @@ func _make_art(gift: GiftData) -> Control:
 	art.custom_minimum_size = Vector2(ART_SIDE, ART_SIDE)
 	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	art.modulate = UiPalette.BRASS_HIGHLIGHT
+	art.modulate = UiPalette.GOLD
 	var ids := CardSetLibrary.card_ids(gift.set_id)
 	var card := CardLibrary.find_by_id(ids[0]) if not ids.is_empty() else null
 	if card != null:

@@ -16,8 +16,8 @@ const DOTS_INTERVAL := 0.5
 const EMBLEM_SIZE := 32.0
 const EMBLEM_VISUAL_RATIO := 1.7
 const EMBLEM_GAP := 28.0
-const TITLE_FONT_SIZE := 21
-const HINT_FONT_SIZE := 16
+const TITLE_FONT_SIZE := UiPalette.T_LEAD
+const HINT_FONT_SIZE := UiPalette.T_BODY
 const HINT_GAP := 30.0
 ## 縦画面では中身ごと拡大して描く(案内の1行が本文24pxに届くように。GameDesign.md 9章「縦画面」)。
 const PORTRAIT_ZOOM := 1.5
@@ -86,7 +86,7 @@ func _draw() -> void:
 	var baseline := top + emblem_height + EMBLEM_GAP
 	# **巡回ドットは見出しの位置を動かさない**。中央揃えのまま末尾へ足すと、
 	# 待っている間ずっと文が左右へ揺れる(バトルタブの印の置き方と同じ考え方)。
-	var left := _line(_title, TITLE_FONT_SIZE, baseline, UiPalette.TEXT_OFFWHITE, area.x)
+	var left := _line(_title, TITLE_FONT_SIZE, baseline, UiPalette.IVORY, area.x)
 	if _waiting and _dots > 0:
 		var width := _font.get_string_size(_title, HORIZONTAL_ALIGNMENT_LEFT, -1, TITLE_FONT_SIZE).x
 		draw_string(
@@ -96,10 +96,10 @@ func _draw() -> void:
 			HORIZONTAL_ALIGNMENT_LEFT,
 			-1,
 			TITLE_FONT_SIZE,
-			UiPalette.TEXT_OFFWHITE
+			UiPalette.IVORY
 		)
 	if not _hint.is_empty():
-		_line(_hint, HINT_FONT_SIZE, baseline + HINT_GAP, UiPalette.TEXT_MUTED, area.x)
+		_line(_hint, HINT_FONT_SIZE, baseline + HINT_GAP, UiPalette.MUTED, area.x)
 
 
 ## 中央へ1行描き、その左端のx座標を返す(巡回ドットを右へ足すために使う)。

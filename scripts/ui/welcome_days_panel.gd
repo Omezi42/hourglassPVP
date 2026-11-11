@@ -25,8 +25,8 @@ const PORTRAIT_SET_PANEL_SIZE := Vector2(PortraitModal.WIDTH, 860)
 const PORTRAIT_SET_COLUMNS := 1
 const PORTRAIT_SET_ROWS_VISIBLE := 3
 const PORTRAIT_BUTTON_SIZE := Vector2(196, 56)
-const NOTE_FONT := 15
-const PORTRAIT_NOTE_FONT := 17
+const NOTE_FONT := UiPalette.T_BODY
+const PORTRAIT_NOTE_FONT := UiPalette.T_LEAD
 ## セットの札の名前・価格(15px)を、パネルごと1.4倍したうえで本文の目安(24px)へ届かせる倍率。
 const PORTRAIT_TILE_TEXT_SCALE := 24.0 / (ShopItemTile.NAME_FONT_SIZE * PortraitModal.SCALE)
 const FAILED_TEXT := "通信に失敗しました。次にホームを開いたときに受け取れます"
@@ -162,7 +162,7 @@ func _apply_orientation() -> void:
 
 func _build() -> void:
 	_dim = ColorRect.new()
-	_dim.color = Color(0, 0, 0, 0.7)
+	_dim.color = Color(UiPalette.INK_900, 0.7)
 	_dim.size = SCREEN_SIZE
 	_dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_dim)
@@ -181,7 +181,7 @@ func _build() -> void:
 	var title := Label.new()
 	title.text = "はじめの7日"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 28)
+	title.add_theme_font_size_override("font_size", UiPalette.T_HEAD)
 	box.add_child(title)
 
 	_pips = WelcomeDayPips.new()
@@ -191,8 +191,8 @@ func _build() -> void:
 
 	_reward_label = Label.new()
 	_reward_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_reward_label.add_theme_font_size_override("font_size", 22)
-	_reward_label.add_theme_color_override("font_color", UiPalette.BRASS_HIGHLIGHT)
+	_reward_label.add_theme_font_size_override("font_size", UiPalette.T_LEAD)
+	_reward_label.add_theme_color_override("font_color", UiPalette.SAND_HI)
 	box.add_child(_reward_label)
 
 	_sets_scroll = ScrollContainer.new()
@@ -218,7 +218,7 @@ func _build() -> void:
 	_note.custom_minimum_size.x = PANEL_SIZE.x - CONTENT_INSET
 	_note.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_note.add_theme_font_size_override("font_size", NOTE_FONT)
-	_note.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
+	_note.add_theme_color_override("font_color", UiPalette.MUTED)
 	box.add_child(_note)
 
 	var buttons := HBoxContainer.new()

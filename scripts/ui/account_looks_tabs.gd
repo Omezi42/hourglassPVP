@@ -18,10 +18,12 @@ const MAT_COLUMNS := 3
 const GRID_GAP := 14
 const TITLE_GAP := 8
 ## 縦画面(GameDesign.md 9章「縦画面」)。アカウント画面がパネルごと拡大して置くため、論理幅(480)に収める。
-const PORTRAIT_TAB_SIZE := Vector2(110, 52)
+const PORTRAIT_TAB_SIZE := Vector2(96, 52)
+const PORTRAIT_TAB_GAP := 6
 const PORTRAIT_ICON_COLUMNS := 4
 const PORTRAIT_MAT_COLUMNS := 2
 
+var _tab_row: HBoxContainer
 var _tab_buttons: Array[Button] = []
 var _pages: Array[Control] = []
 var _icon_grid: GridContainer
@@ -32,14 +34,14 @@ var _emote_page: EmoteSlotPage
 
 func _ready() -> void:
 	add_theme_constant_override("separation", GRID_GAP)
-	var tab_row := HBoxContainer.new()
-	tab_row.add_theme_constant_override("separation", TAB_GAP)
-	add_child(tab_row)
+	_tab_row = HBoxContainer.new()
+	_tab_row.add_theme_constant_override("separation", TAB_GAP)
+	add_child(_tab_row)
 	for i in TAB_LABELS.size():
 		var button := CodedButton.make(TAB_LABELS[i], TAB_SIZE)
 		button.toggle_mode = true
 		button.pressed.connect(func() -> void: select_tab(i))
-		tab_row.add_child(button)
+		_tab_row.add_child(button)
 		_tab_buttons.append(button)
 
 	var body := Control.new()
@@ -61,6 +63,7 @@ func _ready() -> void:
 
 
 func set_portrait(portrait: bool) -> void:
+	_tab_row.add_theme_constant_override("separation", PORTRAIT_TAB_GAP if portrait else TAB_GAP)
 	for button in _tab_buttons:
 		button.custom_minimum_size = PORTRAIT_TAB_SIZE if portrait else TAB_SIZE
 	_icon_grid.columns = PORTRAIT_ICON_COLUMNS if portrait else ICON_COLUMNS

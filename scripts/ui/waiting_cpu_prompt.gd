@@ -10,8 +10,8 @@ const SCREEN_SIZE := Vector2(1280, 720)
 const PANEL_WIDTH := 560.0
 const PANEL_STYLE := "res://resources/theme/content_panel.tres"
 const BUTTON_SIZE := Vector2(240, 64)
-const TITLE_FONT_SIZE := 28
-const BODY_FONT_SIZE := 18
+const TITLE_FONT_SIZE := UiPalette.T_HEAD
+const BODY_FONT_SIZE := UiPalette.T_LEAD
 const DIM_ALPHA := 0.6
 ## 縦(GameDesign.md 9章「縦画面」)。`PortraitModal` の論理幅で組み、2つのボタンは上下に積む。
 const PORTRAIT_BUTTON_SIZE := Vector2(320, 56)
@@ -57,7 +57,7 @@ func close() -> void:
 
 func _build() -> void:
 	_dim = ColorRect.new()
-	_dim.color = Color(0, 0, 0, DIM_ALPHA)
+	_dim.color = Color(UiPalette.INK_900, DIM_ALPHA)
 	_dim.size = SCREEN_SIZE
 	_dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_dim)
@@ -95,7 +95,7 @@ func _build() -> void:
 	body.text = "ほかのプレイヤーがマッチングを待っています。\nマッチングすると、いまのCPU戦は記録に残さず終わります。"
 	body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	body.add_theme_font_size_override("font_size", BODY_FONT_SIZE)
-	body.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
+	body.add_theme_color_override("font_color", UiPalette.MUTED)
 	column.add_child(body)
 
 	var row := BoxContainer.new()

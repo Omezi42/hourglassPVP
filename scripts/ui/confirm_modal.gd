@@ -7,8 +7,7 @@ extends Control
 signal confirmed
 signal cancelled
 
-const DEFAULT_CONFIRM_COLOR := Color(0.96, 0.94, 0.89, 1)
-const DANGER_CONFIRM_COLOR := Color(1, 0.45, 0.4, 1)
+const DIM_ALPHA := 0.6
 ## 縦(パネルごと拡大)で2つのボタンが画面の幅に収まる大きさ。
 const PORTRAIT_BUTTON_SIZE := Vector2(168, 60)
 
@@ -23,6 +22,10 @@ var _button_size := Vector2.ZERO
 
 func _ready() -> void:
 	visible = false
+	dim.color = Color(UiPalette.INK_900, DIM_ALPHA)
+	title_label.add_theme_color_override("font_color", UiPalette.GOLD)
+	title_label.add_theme_font_size_override("font_size", UiPalette.T_HEAD)
+	detail_label.add_theme_font_size_override("font_size", UiPalette.T_LEAD)
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	_button_size = confirm_button.custom_minimum_size
 	cancel_button.pressed.connect(_on_cancel_pressed)
@@ -36,7 +39,7 @@ func open_notice(title: String, message: String, ok_text: String = "OK") -> void
 	title_label.text = title
 	detail_label.text = message
 	cancel_button.visible = false
-	_set_confirm_style(ok_text, DEFAULT_CONFIRM_COLOR)
+	_set_confirm_style(ok_text, false)
 	_cover_viewport()
 	visible = true
 
@@ -53,7 +56,7 @@ func open_confirm(
 	detail_label.text = message
 	cancel_button.visible = true
 	cancel_button.text = cancel_text
-	_set_confirm_style(confirm_text, DANGER_CONFIRM_COLOR if danger else DEFAULT_CONFIRM_COLOR)
+	_set_confirm_style(confirm_text, danger)
 	_cover_viewport()
 	visible = true
 
@@ -76,11 +79,12 @@ func close() -> void:
 	visible = false
 
 
-func _set_confirm_style(text: String, color: Color) -> void:
+## 取り返せない操作(danger)は硝子に赤い縁のボタンにする。
+func _set_confirm_style(text: String, danger: bool) -> void:
 	confirm_button.text = text
-	confirm_button.add_theme_color_override("font_color", color)
-	confirm_button.add_theme_color_override("font_pressed_color", color)
-	confirm_button.add_theme_color_override("font_hover_color", color)
+	CodedButton.apply_styles(
+		confirm_button, CodedButton.DANGER_GROUP if danger else CodedButton.WIDE_GROUP
+	)
 
 
 ## Escは「キャンセル」と同じ。OKだけの通知はEscで閉じない(押して読んだことにしないため)。
