@@ -1341,6 +1341,17 @@
 			"is_spell": false,
 			"pool_index": 122,
 			"total_sand": 4
+		},
+		{
+			"cannot_attack": false,
+			"cost": 3,
+			"describe": "守護 / 自分が砂術を使うたび、この砂時計の砂が1粒上へ戻る",
+			"display_name": "ウォーデン",
+			"id": "warden",
+			"initial_attack": 0,
+			"is_spell": false,
+			"pool_index": 123,
+			"total_sand": 5
 		}
 	]
 }

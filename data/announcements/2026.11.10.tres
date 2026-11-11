@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="AnnouncementData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/announcement_data.gd" id="script_announcement"]
+
+[resource]
+script = ExtResource("script_announcement")
+version = "2026.11.10"
+body = "**あたらしいもの**
+- 「詠砂(えいさ)の刻」の5枚目として、**ウォーデン**(コスト3・総量5)が追加されたよ。守護を持っていて、自分が砂術を使うたびに砂が1粒上へ戻るよ
+
+-# 遊ぶ → https://unityroom.com/games/sunadokei_arena"
