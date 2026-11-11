@@ -142,8 +142,7 @@ func _shoot_band(portrait: bool, file_name: String) -> void:
 	var tutorial := match_screen._tutorial
 	tutorial.apply_layout(match_screen.layout)
 	tutorial._label.text = (
-		"砂時計は手番の終わりに上の砂が1粒ずつ落ちていきます。体力が尽きると割れてしまうので、"
-		+ "反転で上下を入れ替えて長く場に残しましょう。"
+		"砂時計は手番の終わりに上の砂が1粒ずつ落ちていきます。体力が尽きると割れてしまうので、" + "反転で上下を入れ替えて長く場に残しましょう。"
 	)
 	tutorial.visible = true
 	tutorial._band.visible = true
