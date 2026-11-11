@@ -220,7 +220,7 @@ var brace: bool = false:
 			return
 		brace = value
 		_animate_brace(value)
-		set_process(value)
+		_sync_process()
 		if not value:
 			_brace_pulse = 0.0
 			queue_redraw()
@@ -248,6 +248,8 @@ var _brace_pulse := 0.0
 var _brace_tween: Tween
 var _drawn_look: Array = []
 var _redraw_check_pending := false
+## 動くスキンの絵を出している間は true。`SkinRenderer` は引かれ続けた絵だけを描くため、毎フレーム引き直す。
+var _live := false
 
 
 func _ready() -> void:
@@ -300,12 +302,18 @@ func _animate_brace(active: bool) -> void:
 	_brace_tween.tween_property(self, "scale", target, BRACE_SCALE_DURATION)
 
 
-## 脈打つ輪郭のための継続的な再描画。`brace` の間だけ動く(`set_process()` で制御)。
+## 脈打つ輪郭のための継続的な再描画と、動くスキンの絵を引き続ける処理。`brace` か `_live` の間だけ動く
+## (`_sync_process()` で制御)。**動く絵は描き直さない**(絵が自分で動くため、駒ごと描き直すと重い)。
 func _process(delta: float) -> void:
-	if not brace:
-		return
-	_brace_pulse += delta * BRACE_PULSE_SPEED
-	queue_redraw()
+	if brace:
+		_brace_pulse += delta * BRACE_PULSE_SPEED
+		queue_redraw()
+	if _live and card != null and is_visible_in_tree():
+		CardSkins.live_texture(card, _icon_state(), skin_viewer)
+
+
+func _sync_process() -> void:
+	set_process(brace or _live)
 
 
 ## 取り消しの戻る動き(GameDesign.md 9章)。光っていた枠を短く縮めて消す。
@@ -598,6 +606,8 @@ func _look() -> Array:
 
 func _draw() -> void:
 	_drawn_look = _look()
+	if mode != Mode.BOARD or card == null:
+		_set_live(false)
 	if mode == Mode.BOARD:
 		_draw_board_unit()
 	elif card == null:
@@ -646,15 +656,17 @@ func _draw_board_unit() -> void:
 
 
 func _draw_board_art(tint: Color, sink: float) -> void:
-	var texture := _icon()
-	if texture == null:
+	var still := _icon()
+	if still == null:
 		return
 	var lift := _fx.land_offset()
 	var box := board_art_box().grow_individual(0, sink, 0, sink)
-	var rect := _fit_art(texture, box)
+	# 大きさと位置は止めた絵で決める。動く絵は同じ縦横比で、解像度だけが違う。
+	var rect := _fit_art(still, box)
 	rect.position.y += lift
+	var texture := _shown(still)
 	if _flip_progress >= 0.0:
-		_draw_flipping_art(texture, rect, tint)
+		CardViewPaint.flipping_art(self, texture, rect, tint)
 	else:
 		draw_texture_rect(texture, rect, false, tint)
 	# 硝子は枠ではなくガラスそのものへ膜を掛ける(GameDesign.md 9章)。
@@ -664,35 +676,17 @@ func _draw_board_art(tint: Color, sink: float) -> void:
 		)
 
 
-## 反転中の絵。持ち上げながら縦に潰していき、真横を向いた瞬間(進捗0.5)に
-## 厚みだけの線になり、そこから裏返って戻る。同時にガラスと砂の反射を重ねる。
-func _draw_flipping_art(texture: Texture2D, rect: Rect2, tint: Color) -> void:
-	var turn := absf(cos(PI * _flip_progress))
-	var lift := sin(PI * _flip_progress) * FLIP_LIFT
-	var center := rect.get_center() - Vector2(0.0, lift)
-	var half := Vector2(rect.size.x * 0.5, rect.size.y * 0.5 * maxf(turn, 0.02))
-	draw_texture_rect(texture, Rect2(center - half, half * 2.0), false, tint)
-	var sheen := sin(PI * _flip_progress)
-	UiPaint.fill_ellipse(
-		get_canvas_item(), center, half * 0.9, Color(1.0, 0.94, 0.78, 0.3 * sheen), 28
-	)
-	if _flip_progress >= FLIP_LAND_AT:
-		_draw_flip_landing()
+## 場に出す絵。スキンが動くなら動く絵(31章)。
+func _shown(still: Texture2D) -> Texture2D:
+	var live := CardSkins.is_live(card, skin_viewer)
+	_set_live(live)
+	return CardSkins.live_texture(card, _icon_state(), skin_viewer) if live else still
 
 
-## 着地の衝撃波。台座と同じ扁平な楕円を外へ広げる。
-func _draw_flip_landing() -> void:
-	# 行き過ぎ(1.0超)のぶんで衝撃波が広がり続けないよう、進捗は1.0で頭打ちにする。
-	var ratio := clampf((_flip_progress - FLIP_LAND_AT) / (1.0 - FLIP_LAND_AT), 0.0, 1.0)
-	var radius := PEDESTAL_RADIUS * (1.0 + 0.5 * ratio)
-	UiPaint.draw_ellipse_ring(
-		get_canvas_item(),
-		Vector2(size.x * 0.5, PEDESTAL_CENTER_Y),
-		radius,
-		Color(UiPalette.SAND_HI, 0.7 * (1.0 - ratio)),
-		3.0,
-		40
-	)
+func _set_live(live: bool) -> void:
+	if live != _live:
+		_live = live
+		_sync_process()
 
 
 ## 攻撃力=左下 / 体力=右下。台座の高さに合わせて左右へ振り分ける。**値が変わった側だけ
@@ -785,13 +779,17 @@ func _art_reference() -> float:
 
 ## 体力と攻撃力の比で3枚を切り替える(GameDesign.md 9章)。手札は常に上向き。
 func _icon() -> Texture2D:
+	return _art(_icon_state())
+
+
+func _icon_state() -> int:
 	if unit == null:
-		return _art(HourglassArt.State.UPRIGHT)
+		return HourglassArt.State.UPRIGHT
 	if unit.attack > unit.health:
-		return _art(HourglassArt.State.FALLEN)
+		return HourglassArt.State.FALLEN
 	if unit.attack >= unit.health - 1:
-		return _art(HourglassArt.State.FALLING)
-	return _art(HourglassArt.State.UPRIGHT)
+		return HourglassArt.State.FALLING
+	return HourglassArt.State.UPRIGHT
 
 
 func _art(state: int) -> Texture2D:

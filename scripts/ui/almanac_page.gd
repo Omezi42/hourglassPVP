@@ -73,6 +73,7 @@ var _page_scale := 1.0
 
 
 func _ready() -> void:
+	_sync_live()
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_font = get_theme_default_font()
 	if _font == null:
@@ -170,9 +171,25 @@ func _apply_card(new_card: CardData) -> void:
 	_set_tilt(0.0)
 	_rebuild_text()
 	_sync_skin_toggle()
+	_sync_live()
 	if _preview != null:
 		_preview.show_card(card)
 	queue_redraw()
+
+
+## スキンが動く絵なら、見えている間は引き続ける(31章。右のページの絵だけが動く)。
+func _sync_live() -> void:
+	set_process(card != null and not card.is_spell and CardSkins.is_live(card))
+
+
+func _process(_delta: float) -> void:
+	if is_visible_in_tree():
+		CardSkins.live_texture(card, _art_state())
+
+
+## 標本の絵の状態。押すとひっくり返るため、落ちきりの絵と入れ替える。
+func _art_state() -> int:
+	return HourglassArt.State.FALLEN if _flipped else HourglassArt.State.UPRIGHT
 
 
 ## **そのカードのスキンを持っているときだけ出す**(GameDesign.md 31章)。図鑑はショップを兼ねない。
@@ -202,6 +219,7 @@ func _on_skin_toggle_pressed() -> void:
 		NetSession.client, _uid(), skin_id, not AccountService.skin_enabled(skin_id)
 	)
 	_sync_skin_toggle()
+	_sync_live()
 	queue_redraw()
 
 
@@ -370,7 +388,7 @@ func _draw() -> void:
 		_draw_spell_plate(_art_rect)
 	else:
 		# 標本の絵。**押すとひっくり返る**ため、落ちきりの絵と入れ替える。
-		var icon: Texture2D = card.icon_fallen if _flipped else card.icon_upright
+		var icon := CardSkins.live_texture(card, _art_state())
 		if icon != null:
 			if _tilt_radians != 0.0:
 				draw_set_transform(_art_rect.get_center(), _tilt_radians, Vector2.ONE)

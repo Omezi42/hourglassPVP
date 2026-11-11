@@ -112,18 +112,25 @@ static func _hourglass(ci: CanvasItem, cell: Rect2, card_id: String) -> void:
 
 
 ## カードスキンの3状態の絵を横に並べる(GameDesign.md 31章)。見た目が品そのもののため、
-## 所有・ON/OFFに関わらずスキンの絵を直に読む(`CardSkins` は通さない)。
+## 所有・ON/OFFに関わらずスキンの絵を直に読む(`CardSkins` は通さない)。**動く絵**のため、
+## 呼ぶ側は見えている間 `keep_skin_live()` を毎フレーム呼ぶ(描き直しは要らない。絵が自分で動く)。
 static func skin_states(ci: CanvasItem, rect: Rect2, skin_id: String) -> void:
 	var count := SkinLibrary.STATE_FILES.size()
 	var cell := Vector2(rect.size.x / float(count), rect.size.y)
 	for state in count:
-		var texture := SkinLibrary.texture(skin_id, state)
+		var texture := SkinLibrary.live_texture(skin_id, state)
 		if texture == null:
 			continue
 		var scale: float = minf(cell.x / texture.get_size().x, cell.y / texture.get_size().y)
 		var art := texture.get_size() * scale
 		var at := rect.position + Vector2(cell.x * state + (cell.x - art.x) * 0.5, cell.y - art.y)
 		ci.draw_texture_rect(texture, Rect2(at, art), false)
+
+
+## スキンの動く絵を引き続ける(`SkinRenderer` は引かれ続けた絵だけを描く)。
+static func keep_skin_live(skin_id: String) -> void:
+	for state in SkinLibrary.STATE_FILES.size():
+		SkinLibrary.live_texture(skin_id, state)
 
 
 ## エモートの文言を、面(タイル・詳細)の中へ沈めた区画に収める。

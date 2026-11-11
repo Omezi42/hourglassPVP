@@ -19,6 +19,7 @@ const PATHS: Array[String] = [
 	"res://scripts/data/card_effect_data.gd",
 	"res://scripts/data/hourglass_tint_table.gd",
 	"res://scripts/logic/hourglass_art.gd",
+	"res://scripts/logic/skin_renderer.gd",
 	"res://scripts/data/skin_library.gd",
 	"res://scripts/net/firebase_config.gd",
 	"res://scripts/logic/account_store.gd",
