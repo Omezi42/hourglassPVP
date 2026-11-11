@@ -8,8 +8,8 @@ getter が `HourglassArt.texture(art_key(), state)` を返す形で12箇所か�
 
 | クラス | 責務 |
 |---|---|
-| `SkinLibrary`(`scripts/data/skin_library.gd`, staticのみ) | スキンの定義(id・対象カードid・表示名・手札の窓の光だまりの色・価格)。`PlaymatLibrary` と同じ流儀。絵は `assets/hourglasses/skins/{skin_id}/state_{upright,falling,fallen}.png` を読む。**`all()` は3状態の絵が揃ったものだけを返す**(定義だけ先に入ったスキンを空の見本で売らないため) |
-| `CardSkins`(`scripts/logic/card_skins.gd`, staticのみ) | 「いま誰の視点で、どのカードにどのスキンが効いているか」を答える。`texture(card, state, viewer)` / `accent_color(card, viewer)` の2つが入口。自分の解決結果は控えておき、所有・ON/OFFが変わったら `AccountService` が `invalidate()` する(毎フレームの描画から引かれ、所有の読み口はローカルのファイルまで見に行くため) |
+| `SkinLibrary`(`scripts/data/skin_library.gd`, staticのみ) | スキンの定義(id・対象カードid・表示名・手札の窓の光だまりの色・価格)。`PlaymatLibrary` と同じ流儀。見た目は `resources/shaders/skins/{skin_id}.gdshader`(下の「見た目のシェーダー」)。**`all()` は見た目のあるものだけを返す**(定義だけ先に入ったスキンを空の見本で売らないため) |
+| `CardSkins`(`scripts/logic/card_skins.gd`, staticのみ) | 「いま誰の視点で、どのカードにどのスキンが効いているか」を答える。`texture(card, state, viewer)` / `live_texture(card, state, viewer)`(動く絵。スキンが効いていなければ `texture()` と同じ)/ `accent_color(card, viewer)` が入口。自分の解決結果は控えておき、所有・ON/OFFが変わったら `AccountService` が `invalidate()` する(毎フレームの描画から引かれ、所有の読み口はローカルのファイルまで見に行くため) |
 
 ## 視点(`CardSkins.Viewer`)
 
@@ -65,25 +65,52 @@ getter が `HourglassArt.texture(art_key(), state)` を返す形で12箇所か�
 ## 画面
 
 - **図鑑(`AlmanacPage`)**:`SkinLibrary.skin_for_card(card.id)` が存在し、かつ所有して
-  いるときだけ、絵の下に「スキン ON / OFF」の切り替えを出す。絵は `CardData.icon_*`
-  経由で既にスキン込みになるため、裏返し(`_flipped`)の描画は変えない
+  いるときだけ、絵の下に「スキン ON / OFF」の切り替えを出す。右のページの絵は `CardSkins.live_texture()` で引き
+  (動く絵)、裏返し(`_flipped`)の描画は変えない
 - **ショップ(`ShopItemCard`)**:`Kind.SKIN` の品目は3状態の絵を横に並べて出す
-  (`SkinLibrary.texture(skin_id, state)` を直に読む。所有・ON/OFFに関わらず品を見せる
+  (`SkinLibrary.live_texture(skin_id, state)` を直に読む。所有・ON/OFFに関わらず品を見せる
   ため `CardSkins` は通さない)。対象カード名とスキン名を添える
 - **アカウント画面は触らない**(31章のとおり設定場所は図鑑)
 
-## 取り込みと配布
+## 見た目のシェーダー(GameDesign.md 31章「見た目の作り方」)
 
-- 絵は `tools/compose_skin_art.py` で作る。`template` が原本(上向き)のガラスの内側を緑の穴にした
-  雛形を書き、これを元に描かせた枠の絵を `compose` が穴の位置と大きさで原本へ合わせ、
-  原本の3状態のガラスと砂(領域マスクのB)の上へ同じ枠を重ねる。**キャンバスの高さは落下中の原本と同じ532**
-  (盤面の `CardView._art_reference()` は3状態で最も高いキャンバスを基準に縮めるため、513だと基本の絵より
-  3.7%大きく出る)。枠が上下に収まらないときだけ全体を一様に縮め、その割合を表示する。
-  生成した元の絵は `assets/hourglasses/incoming/{skin_id}_raw.jpg`(git管理外)に残す
-- `assets/hourglasses/skins/{skin_id}/` へ3状態を置き、砂時計と同じく非可逆
-  (WebP、`lossy_quality=0.85`)で取り込む。`overrides/`(基本の絵の差し替え)とは
-  ディレクトリを分ける——役目が違い、混ぜると「どのカードが差し替え済みか」が読めなくなる
-- **1枚あたりpckが数十KB増える。**合計20枚を超えるあたりで、BGMと同じ
-  「実行時にjsDelivrから取りに行く」方式(4.1.6節)へ移すかを判断する。
-  その場合 `SkinLibrary` が絵の出どころを1箇所で切り替えられるよう、
-  読む口は最初から `SkinLibrary.texture()` に閉じておく
+**1種=シェーダー1本。スキンを足すときは `resources/shaders/skins/{skin_id}.gdshader` を1本置き、
+`SkinLibrary.SKINS` へ1行足すだけにする**(描画側も共通の部品も変えない)。
+
+| ファイル(`resources/shaders/hourglass/`) | 中身 |
+|---|---|
+| `hourglass_lib.gdshaderinc` | uniform・定数・道具(距離関数・陰影・輪郭・砂の質感・`Px`) |
+| `hourglass_glass.gdshaderinc` | ガラス玉と砂(`draw_glass()`)。スキンは `HOOK_CAVITY`(砂の後ろ)/ `HOOK_FRONT`(砂の手前)を定義してガラスの中へ描き足せる |
+| `skin_parts.gdshaderinc` | 枠の部品(柱・輪・玉・板・受け金・目・板への象嵌・キャンバスの端で消える窓)と共通の色 |
+| `skin_main.gdshaderinc` | `fragment()`。`skin_back()` → `draw_glass()` → `skin_frame()` の順に重ねる |
+
+- スキンのシェーダーは `SKIN_SAND_COLOR` / `SKIN_SAND_KIND` を `#define` してから `hourglass_lib` を読み、
+  `skin_back()` / `skin_frame()`(と使うなら `hook_cavity()`)を書き、最後に `hourglass_glass` と `skin_main` を読む。
+  **砂の色と質感をシェーダー側に置くのは、スキンの追加で `skin_library.gd` の表の行以外を触らずに済ませるため**
+- 400x532 の矩形へ貼る(基本の絵の落下中と同じ高さ。`CardView._art_reference()` が3状態で最も高いキャンバスを
+  基準に縮めるため)。座標は本体と同じで、上へ19px広いぶんを天板の上の飾りに使える
+- 外から渡すのは `sand_top` / `sand_bottom` / `flow`(3状態。上向き=0.85/0/0、落下中=0.45/0.40/1、落ちきり=0/0.85/0)、
+  `clock`(秒)、`look`(視線。-1〜1)だけ
+
+## 止めた絵と動く絵
+
+| 入口 | 返すもの | 使う場所 |
+|---|---|---|
+| `SkinLibrary.texture(skin_id, state)` | シェーダーを3状態ぶん `SubViewport` で焼いた `ImageTexture`(`clock` 固定) | 手札・一覧・棚・墓地・デッキ表・Discord用の画像など、`CardSkins.texture()` を通るすべて |
+| `SkinLibrary.live_texture(skin_id, state)` | スキン×状態ごとに1つの `SubViewport` が描き続ける `ViewportTexture` | 場の駒(`CardView` の場の表示)・ショップの見本・図鑑の右のページ |
+
+- **焼き方は `HourglassArt` と同じ**(焼き上がる前は空の器を配り、焼けた時点で `set_image()` で中身を差し替える。
+  Web版は半分の解像度)。止めた絵も `Texture2D` のため、`CardSkins.texture()` を通る呼び出しは変えない
+- **動く絵は1体ごとに描かず、同じスキン・同じ状態の駒で1枚を共有する**(場に何体並んでも描く枚数が増えない)。
+  `clock` は経過時間、`look` は画面中央からマウスの位置への向きを全スキン共通で渡す
+- **直前のフレームで引かれなかった動く絵は描き直さない**(`render_target_update_mode` を止める)。解像度は場の駒の
+  表示の2倍(Web版は1倍)
+- `ViewportTexture` も `Texture2D` のため、`CardView` の場の表示は `_icon()` で引く口を `live_texture()` へ替えるだけで、
+  反転・攻撃・砕ける演出はそのまま動く
+- 重さの目安(内蔵GPU・デスクトップ版で実測):場の駒の大きさで1体あたり約0.06ms(基本の絵は約0.008ms)
+
+## 画像のスキンからの置き換え
+
+シェーダーが無いスキンは `assets/hourglasses/skins/{skin_id}/state_{upright,falling,fallen}.png` を読む
+(画像で作った9種をコード描画へ置き換え終えるまでの経路)。置き換え終えたら画像と `tools/compose_skin_art.py` を消し、
+この経路も消す。

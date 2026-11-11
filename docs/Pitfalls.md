@@ -141,6 +141,11 @@
   加算・追加して書くと残高や所有が空から上書きされ、`update_time` も空なので前提条件が付かず競合でも止まらない。
   read-modify-write では `AccountService.read_succeeded()`(code が200か404)を確かめてから書く
 
+- **シェーダーの関数に `light` / `fragment` / `vertex` の名前を付けない。**組み込みの処理関数と見なされ、
+  「Function 'light' expects no arguments」でシェーダーごとコンパイルに失敗し、その絵が黙って描かれなくなる
+- **`#include` したファイルの中の `#ifdef` は、その include より前に `#define` したものだけを見る。**
+  スキンのシェーダーの差し込み口(`hook_cavity()` と `#define HOOK_CAVITY`)は、ガラスの部品を include する行より上に置く
+
 - **見出し用の明朝体(`UiFonts.display_font()`)を、プレイヤーの入力や運営が後から決める文字列へ使わない。**
   決まった見出しの文字だけに削ったサブセットのため、収録外の文字だけが本文用のゴシックへ落ち、
   1語の中で明朝とゴシックが混ざる(豆腐にはならないので気づきにくい)。カード案の名前・お題のような
