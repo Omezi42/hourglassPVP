@@ -17,7 +17,7 @@ const PANEL_STYLE := "res://resources/theme/content_panel.tres"
 const LIST_RECT := Rect2(24, ScreenHeader.CONTENT_TOP, 244, 512)
 const LIST_BUTTON_HEIGHT := 48.0
 const LIST_GAP := 8.0
-const LIST_FONT_SIZE := 19
+const LIST_FONT_SIZE := UiPalette.T_LEAD
 ## いま見ている項目のボタンに掛ける色。
 const SELECTED_TINT := Color(1.3, 1.12, 0.82)
 
@@ -26,11 +26,11 @@ const BODY_WIDTH := 1280.0 - BODY_LEFT - ScreenHeader.OUTER_MARGIN
 const STAGE_RECT := Rect2(BODY_LEFT, ScreenHeader.CONTENT_TOP, BODY_WIDTH, 412)
 const BODY_RECT := Rect2(BODY_LEFT, 564, BODY_WIDTH, 132)
 const BODY_PADDING := 18.0
-const BODY_FONT_SIZE := 18
-const TITLE_FONT_SIZE := 22
+const BODY_FONT_SIZE := UiPalette.T_BODY
+const TITLE_FONT_SIZE := UiPalette.T_LEAD
 
 ## 光らせる枠。脈打たせるのは、静止した枠だと盤面の罫線と見分けがつかないため。
-const HIGHLIGHT_COLOR := Color(0.55, 0.9, 1.0)
+const HIGHLIGHT_COLOR := UiPalette.SELECT
 const HIGHLIGHT_PERIOD := 1.1
 const HIGHLIGHT_GROW := 6.0
 const HIGHLIGHT_WIDTH := 2.5
@@ -39,12 +39,12 @@ const HIGHLIGHT_RINGS := [0, 1, 2]
 
 ## 縦画面(GameDesign.md 9章「縦画面」)。上から「盤面 / 説明 / 項目のボタン(2列)」と積む。
 const PORTRAIT_STAGE_HEIGHT := 440.0
-const PORTRAIT_BODY_HEIGHT := 250.0
+const PORTRAIT_BODY_HEIGHT := 220.0
 const PORTRAIT_GAP := 12.0
 const PORTRAIT_COLUMNS := 2
-const PORTRAIT_BUTTON_HEIGHT := 64.0
+const PORTRAIT_BUTTON_HEIGHT := 72.0
 const PORTRAIT_BUTTON_FONT := 24
-const PORTRAIT_TITLE_FONT := 30
+const PORTRAIT_TITLE_FONT := UiPalette.T_HEAD
 const PORTRAIT_BODY_FONT := 24
 
 var _index := 0
@@ -146,7 +146,7 @@ func _build_body() -> void:
 	_title.position = BODY_RECT.position + Vector2(BODY_PADDING, BODY_PADDING * 0.6)
 	_title.size = Vector2(BODY_RECT.size.x - BODY_PADDING * 2.0, 30)
 	_title.add_theme_font_size_override("font_size", TITLE_FONT_SIZE)
-	_title.add_theme_color_override("font_color", UiPalette.GLOW_AMBER)
+	_title.add_theme_color_override("font_color", UiPalette.GOLD)
 	_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_title)
 
@@ -158,7 +158,7 @@ func _build_body() -> void:
 		BODY_RECT.size.x - BODY_PADDING * 2.0, BODY_RECT.size.y - BODY_PADDING - 34
 	)
 	_body.add_theme_font_size_override("font_size", BODY_FONT_SIZE)
-	_body.add_theme_color_override("font_color", UiPalette.TEXT_OFFWHITE)
+	_body.add_theme_color_override("font_color", UiPalette.IVORY)
 	_body.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_body)
 

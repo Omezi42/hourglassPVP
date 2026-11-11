@@ -19,23 +19,23 @@ const BODY_LEFT := 272.0
 const BODY_WIDTH := 1280.0 - BODY_LEFT - ScreenHeader.OUTER_MARGIN
 
 const HEADING_RECT := Rect2(BODY_LEFT, ScreenHeader.CONTENT_TOP, BODY_WIDTH, 40)
-const HEADING_FONT_SIZE := 27
+const HEADING_FONT_SIZE := UiPalette.T_HEAD
 const BODY_RECT := Rect2(BODY_LEFT, 182, BODY_WIDTH, 84)
-const BODY_FONT_SIZE := 18
+const BODY_FONT_SIZE := UiPalette.T_BODY
 const STAGE_RECT := Rect2(BODY_LEFT, 274, BODY_WIDTH, 350)
 
 const CONTROLS_Y := 636.0
 const NAV_BUTTON_SIZE := Vector2(150, 52)
 const REPLAY_BUTTON_SIZE := Vector2(200, 52)
 const COUNTER_SIZE := Vector2(120, 52)
-const COUNTER_FONT_SIZE := 20
+const COUNTER_FONT_SIZE := UiPalette.T_LEAD
 
 ## 縦画面(GameDesign.md 9章「縦画面」)。上から「章のボタン(2列)/ 見出し / 本文 / 盤面 / ページ送り」と積む。
 const PORTRAIT_TOC_COLUMNS := 2
-const PORTRAIT_TOC_BUTTON_HEIGHT := 64.0
+const PORTRAIT_TOC_BUTTON_HEIGHT := 72.0
 const PORTRAIT_GAP := 12.0
 const PORTRAIT_HEADING_HEIGHT := 48.0
-const PORTRAIT_HEADING_FONT := 32
+const PORTRAIT_HEADING_FONT := UiPalette.T_TITLE
 const PORTRAIT_BODY_HEIGHT := 190.0
 const PORTRAIT_BODY_FONT := 24
 const PORTRAIT_BUTTON_FONT := 24
@@ -97,8 +97,8 @@ func _build() -> void:
 
 	_build_toc()
 
-	_heading = _make_label(HEADING_RECT, HEADING_FONT_SIZE, UiPalette.GLOW_AMBER)
-	_body = _make_label(BODY_RECT, BODY_FONT_SIZE, UiPalette.TEXT_OFFWHITE)
+	_heading = _make_label(HEADING_RECT, HEADING_FONT_SIZE, UiPalette.GOLD)
+	_body = _make_label(BODY_RECT, BODY_FONT_SIZE, UiPalette.IVORY)
 	_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_body.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 
@@ -146,7 +146,7 @@ func _build_controls() -> void:
 	_counter = _make_label(
 		Rect2(BODY_LEFT + NAV_BUTTON_SIZE.x + 12.0, CONTROLS_Y, COUNTER_SIZE.x, COUNTER_SIZE.y),
 		COUNTER_FONT_SIZE,
-		UiPalette.TEXT_OFFWHITE
+		UiPalette.IVORY
 	)
 	_counter.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_counter.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -288,7 +288,7 @@ func _place_label(label: Label, rect: Rect2, font: int) -> void:
 ## いま読んでいる章のボタンだけ文字色を琥珀にする。目次は現在地の表示も兼ねる。
 func _highlight_chapter(chapter_index: int) -> void:
 	for i in _chapter_buttons.size():
-		var color: Color = UiPalette.GLOW_AMBER if i == chapter_index else UiPalette.TEXT_OFFWHITE
+		var color: Color = UiPalette.SAND_HI if i == chapter_index else UiPalette.IVORY
 		_chapter_buttons[i].add_theme_color_override("font_color", color)
 
 

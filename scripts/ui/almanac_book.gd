@@ -17,11 +17,11 @@ const RIGHT_PAGE := Rect2(642, 114, 568, 568)
 const PORTRAIT_BOOK := Rect2(16, 196, 688, 1068)
 const PORTRAIT_PAGE := Rect2(32, 212, 650, 1036)
 
-const DESK_TOP := Color(0.16, 0.11, 0.075)
-const DESK_BOTTOM := Color(0.065, 0.045, 0.032)
-const COVER_TOP := Color(0.30, 0.065, 0.075)
-const COVER_BOTTOM := Color(0.135, 0.022, 0.030)
-const GOLD_DIM := Color(0.52, 0.40, 0.18, 1.0)
+const DESK_TOP := UiPalette.INK_800
+const DESK_BOTTOM := UiPalette.INK_900
+const COVER_TOP := UiPalette.INK_600
+const COVER_BOTTOM := UiPalette.INK_900
+const GOLD_DIM := UiPalette.GOLD
 const PAPER_TOP := Color(0.90, 0.845, 0.70)
 const PAPER_BOTTOM := Color(0.775, 0.695, 0.535)
 
@@ -67,7 +67,7 @@ func _draw_desk() -> void:
 		)
 	for i in ceili(screen.y / 82.0):
 		var y := 30.0 + i * 82.0
-		draw_line(Vector2(0, y), Vector2(screen.x, y), Color(0, 0, 0, 0.22), 2.0)
+		draw_line(Vector2(0, y), Vector2(screen.x, y), Color(0, 0, 0, 0.18), 2.0)
 	UiPaint.apply_grain(get_canvas_item(), Rect2(Vector2.ZERO, screen), 0.07)
 	# 本が机へ落とす影。
 	var shade := _book().grow(18)
@@ -87,12 +87,15 @@ func _draw_cover() -> void:
 	UiPaint.fill_gradient_polygon(
 		get_canvas_item(), points, book, [[0.0, COVER_TOP], [1.0, COVER_BOTTOM]]
 	)
-	UiPaint.apply_grain(get_canvas_item(), book, 0.10)
-	UiPaint.draw_bevel(
-		get_canvas_item(), points, Color(0.52, 0.16, 0.16), Color(0.05, 0.01, 0.01), 2.5, false
-	)
+	UiPaint.apply_grain(get_canvas_item(), book, 0.06)
+	UiKit.stroke(get_canvas_item(), points, UiPalette.BRASS_INK, UiKit.LINE_MIN * 2.0)
 	var inner := book.grow(-9)
-	_outline(UiPaint.rounded_rect_points_uniform(inner, 8.0, 6), GOLD_DIM, 2.0)
+	UiKit.stroke_grad(
+		get_canvas_item(),
+		UiPaint.rounded_rect_points_uniform(inner, 8.0, 6),
+		UiKit.rim_brass(),
+		UiKit.line_w(inner)
+	)
 	_outline(
 		UiPaint.rounded_rect_points_uniform(inner.grow(-5), 6.0, 6), Color(GOLD_DIM, 0.55), 1.0
 	)

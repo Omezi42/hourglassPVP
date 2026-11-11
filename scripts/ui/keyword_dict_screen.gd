@@ -26,8 +26,8 @@ const PORTRAIT_ITEM_GAP := 8.0
 const PORTRAIT_BUTTON_FONT := 24
 const PORTRAIT_SECTION_GAP := 16.0
 const PORTRAIT_BODY_FONT := 24
-const PORTRAIT_CAPTION_FONT := 20
-const PORTRAIT_TITLE_FONT := 36
+const PORTRAIT_CAPTION_FONT := UiPalette.T_LEAD
+const PORTRAIT_TITLE_FONT := UiPalette.T_TITLE
 
 var _entry_view: KeywordEntryView
 var _buttons: Array[Button] = []
@@ -158,7 +158,7 @@ func _select(index: int) -> void:
 		var selected: bool = i == index
 		_buttons[i].text = _item_label(_entries[i], selected)
 		_buttons[i].add_theme_color_override(
-			"font_color", UiPalette.GLOW_AMBER if selected else UiPalette.TEXT_OFFWHITE
+			"font_color", UiPalette.SAND_HI if selected else UiPalette.IVORY
 		)
 	_entry_view.show_entry(_entries[index])
 

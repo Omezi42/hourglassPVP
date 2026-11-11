@@ -430,7 +430,7 @@ static func _uid() -> String:
 
 
 func _draw_rule(at: Vector2, width: float) -> void:
-	draw_line(at + Vector2(8, 0), at + Vector2(width - 8, 0), Color(0.45, 0.33, 0.18, 0.6), 1.4)
+	draw_line(at + Vector2(8, 0), at + Vector2(width - 8, 0), Color(UiPalette.BRASS_DEEP, 0.6), 1.4)
 	for x in [at.x + 2.0, at.x + width - 2.0]:
 		var c := Vector2(x, at.y)
 		ShapePaint.colored_polygon(
@@ -438,5 +438,5 @@ func _draw_rule(at: Vector2, width: float) -> void:
 			PackedVector2Array(
 				[c + Vector2(0, -4), c + Vector2(4, 0), c + Vector2(0, 4), c + Vector2(-4, 0)]
 			),
-			Color(0.45, 0.33, 0.18, 0.8)
+			Color(UiPalette.BRASS_DEEP, 0.8)
 		)

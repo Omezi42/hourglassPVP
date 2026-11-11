@@ -9,6 +9,7 @@ extends Control
 
 const PANEL_STYLE := "res://resources/theme/content_panel.tres"
 const PANEL_SIZE := Vector2(600, 520)
+const DIM_ALPHA := 0.7
 const MARGIN := 20
 const CLOSE_BUTTON_SIZE := Vector2(160, 52)
 ## 縦はモーダルと同じく論理幅 `PortraitModal.WIDTH` で組んで拡大する。説明文は拡大後に本文24pxへ届く大きさ。
@@ -57,7 +58,7 @@ func _build() -> void:
 	var dim := ColorRect.new()
 	dim.anchor_right = 1.0
 	dim.anchor_bottom = 1.0
-	dim.color = Color(0.02, 0.02, 0.03, 0.7)
+	dim.color = Color(UiPalette.INK_900, DIM_ALPHA)
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	dim.gui_input.connect(_on_dim_input)
 	add_child(dim)

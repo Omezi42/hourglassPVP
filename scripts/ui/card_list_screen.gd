@@ -30,10 +30,11 @@ const PAGE_RECT := Rect2(
 ## 本の外に置く操作。**紙面へ操作を載せない**(GameDesign.md 9章)。
 ## 戻るボタンの見た目。共通ヘッダー(`ScreenHeader`)と同じ左向きの五角形にする。
 const BACK_GROUP := "back_nav"
+const ORDER_WIDTH := 212.0
 const BACK_RECT := Rect2(24, 28, 96, 42)
-const ORDER_RECT := Rect2(SCREEN_SIZE.x - 24 - 168, 28, 168, 42)
-const HEADING_FONT := 25
-const COUNT_FONT := 16
+const ORDER_RECT := Rect2(SCREEN_SIZE.x - 24 - ORDER_WIDTH, 28, ORDER_WIDTH, 42)
+const HEADING_FONT := UiPalette.T_HEAD
+const COUNT_FONT := UiPalette.T_BODY
 
 ## 縦画面(GameDesign.md 9章「縦画面」)。1ページの本へ一覧と解説を切り替えて載せる(デッキ編集の在庫棚と同じ)。
 ## 一覧の札は2列・1.6倍、解説のページは細く組んで1.4倍にする。
@@ -262,7 +263,7 @@ func _draw_heading() -> void:
 ## 飾り罫。両端へ菱形を置いた1本線。
 func _draw_rule(at: Vector2, width: float) -> void:
 	_heading.draw_line(
-		at + Vector2(8, 0), at + Vector2(width - 8, 0), Color(0.45, 0.33, 0.18, 0.6), 1.4
+		at + Vector2(8, 0), at + Vector2(width - 8, 0), Color(UiPalette.BRASS_DEEP, 0.6), 1.4
 	)
 	for x in [at.x + 2.0, at.x + width - 2.0]:
 		var c := Vector2(x, at.y)
@@ -271,7 +272,7 @@ func _draw_rule(at: Vector2, width: float) -> void:
 			PackedVector2Array(
 				[c + Vector2(0, -4), c + Vector2(4, 0), c + Vector2(0, 4), c + Vector2(-4, 0)]
 			),
-			Color(0.45, 0.33, 0.18, 0.8)
+			Color(UiPalette.BRASS_DEEP, 0.8)
 		)
 
 

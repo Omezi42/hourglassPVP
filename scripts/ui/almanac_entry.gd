@@ -17,10 +17,9 @@ const ART_TOP := 15.0
 const INK := Color(0.20, 0.135, 0.075)
 const INK_SOFT := Color(0.40, 0.30, 0.19)
 const LOCKED_INK := Color(0.46, 0.37, 0.25)
-const STAMP_RED := Color(0.63, 0.13, 0.11)
-const COST_TOP := Color(0.46, 0.70, 0.98)
-const COST_BOTTOM := Color(0.11, 0.24, 0.52)
 ## 並び替え後のスライド(GameDesign.md 9章)にかける尺。
+## 丁付け。選択の枠の内側へ収める。
+const NUMBER_POS := Vector2(10, 20)
 const SLIDE_DURATION := 0.16
 
 ## 並び替えのたびに一覧側(`CardListScreen`)が全件を作り直すため、インスタンス
@@ -98,7 +97,13 @@ func _draw() -> void:
 	if selected:
 		_draw_selection()
 	draw_string(
-		_font, Vector2(6, 16), "No.%03d" % number, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, INK_SOFT
+		_font,
+		NUMBER_POS,
+		"No.%03d" % number,
+		HORIZONTAL_ALIGNMENT_LEFT,
+		-1,
+		UiPalette.T_MICRO,
+		INK_SOFT
 	)
 	var art := _art_rect()
 	if locked:
@@ -112,7 +117,9 @@ func _draw() -> void:
 		# **紋章は絵の右上へ印として押す**(GameDesign.md 9章)。全種が同じ絵の色違いで
 		# ある以上、一覧で見分けているのは実際にはこの紋章のほう。
 		# ここではコストと同じく**絵の外の隅**へ置く(絵の中へ入れると台に重なる)。
-		EmblemSeal.brass(self, Vector2(art.end.x + 2.0, art.position.y + 10.0), card.emblem, 12.0)
+		UiKit.seal(
+			get_canvas_item(), Vector2(art.end.x + 2.0, art.position.y + 10.0), 11.0, card.emblem
+		)
 	draw_string(
 		_font,
 		Vector2(0, _base_size().y - 6),
@@ -127,7 +134,9 @@ func _draw() -> void:
 	# **コスト・攻撃力・体力は一覧の時点で読めるようにする**(現行の一覧と同じ情報量を保つ)。
 	# **採取済みの印は置かない**——未収集をシルエットで示す以上、
 	# 収集済みの側にも印を打つと同じことを2度言うことになる(GameDesign.md 9章)。
-	_draw_diamond(Vector2(art.position.x - 2, art.position.y + 10), card.cost, 12.0)
+	CardStatBadge.cost_diamond(
+		self, _font, Vector2(art.position.x - 2, art.position.y + 10), card.cost, 12.0
+	)
 	var bottom := art.end.y - 10.0
 	CardStatBadge.pair(
 		self, _font, Vector2(art.position.x - 2, bottom), Vector2(art.end.x + 2, bottom), card, 11.0
@@ -147,21 +156,12 @@ func _base_size() -> Vector2:
 	return size / zoom
 
 
-## いま開いている項目。紙へ引いた朱の下線と薄い当たりで示す。
+## いま開いている項目。選択の水色の当たりと、紙の上で読める濃い青の細い枠で示す。
 func _draw_selection() -> void:
 	var rect := Rect2(Vector2(2, 2), _base_size() - Vector2(4, 4))
-	UiPaint.fill_gradient_polygon(
-		get_canvas_item(),
-		UiPaint.rounded_rect_points_uniform(rect, 6.0, 5),
-		rect,
-		[[0.0, Color(STAMP_RED, 0.10)], [1.0, Color(STAMP_RED, 0.03)]]
-	)
-	draw_line(
-		Vector2(rect.position.x + 8, rect.end.y),
-		Vector2(rect.end.x - 8, rect.end.y),
-		Color(STAMP_RED, 0.75),
-		2.0
-	)
+	var points := UiKit.rr(rect, UiKit.radius(rect))
+	UiKit.fill(get_canvas_item(), points, Color(UiPalette.SELECT, 0.10))
+	UiKit.stroke(get_canvas_item(), points, Color(UiPalette.COST_DEEP, 0.85), UiKit.LINE_MIN)
 
 
 ## 未収集。**輪郭だけを見せ、砂時計と砂術で形を分ける**(何が埋まるのか想像できるように)。
@@ -212,32 +212,3 @@ func _draw_spell_plate(art: Rect2) -> void:
 			false,
 			Color(0.92, 0.95, 1.0)
 		)
-
-
-func _draw_diamond(center: Vector2, value: int, r: float) -> void:
-	var points := PackedVector2Array(
-		[
-			center + Vector2(0, -r),
-			center + Vector2(r, 0),
-			center + Vector2(0, r),
-			center + Vector2(-r, 0),
-		]
-	)
-	UiPaint.fill_gradient_polygon(
-		get_canvas_item(),
-		points,
-		Rect2(center - Vector2(r, r), Vector2(r, r) * 2.0),
-		[[0.0, COST_TOP], [1.0, COST_BOTTOM]]
-	)
-	var closed := points.duplicate()
-	closed.append(points[0])
-	ShapePaint.polyline(get_canvas_item(), closed, Color(0.03, 0.06, 0.14), 2.0)
-	draw_string(
-		_font,
-		center - Vector2(20, -5),
-		str(value),
-		HORIZONTAL_ALIGNMENT_CENTER,
-		40,
-		int(r + 2),
-		Color.WHITE
-	)

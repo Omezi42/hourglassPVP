@@ -7,9 +7,9 @@ extends VBoxContainer
 ## 同じ語を2箇所で別々に組み立てると、片方だけ内容が古くなるため。
 
 const SPACING := 12
-const TITLE_FONT_SIZE := 28
-const BODY_FONT_SIZE := 16
-const CAPTION_FONT_SIZE := 15
+const TITLE_FONT_SIZE := UiPalette.T_HEAD
+const BODY_FONT_SIZE := UiPalette.T_BODY
+const CAPTION_FONT_SIZE := UiPalette.T_BODY
 const PREVIEW_HEIGHT := 186.0
 ## 実演の幅。横いっぱいに伸ばすと駒が広い枠の中央へ小さく浮いて読みにくい。
 const PREVIEW_WIDTH := 520.0
@@ -80,20 +80,20 @@ func _build() -> void:
 
 	_title = Label.new()
 	_title.add_theme_font_size_override("font_size", TITLE_FONT_SIZE)
-	_title.add_theme_color_override("font_color", UiPalette.TEXT_OFFWHITE)
+	_title.add_theme_color_override("font_color", UiPalette.IVORY)
 	_title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	title_row.add_child(_title)
 
 	_category = Label.new()
 	_category.add_theme_font_size_override("font_size", CAPTION_FONT_SIZE)
-	_category.add_theme_color_override("font_color", UiPalette.GLOW_AMBER)
+	_category.add_theme_color_override("font_color", UiPalette.GOLD)
 	_category.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	title_row.add_child(_category)
 
 	_body = Label.new()
 	_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_body.add_theme_font_size_override("font_size", BODY_FONT_SIZE)
-	_body.add_theme_color_override("font_color", UiPalette.TEXT_OFFWHITE)
+	_body.add_theme_color_override("font_color", UiPalette.IVORY)
 	add_child(_body)
 
 	_preview = CardEffectPreview.new()
@@ -103,7 +103,7 @@ func _build() -> void:
 
 	_cards_caption = Label.new()
 	_cards_caption.add_theme_font_size_override("font_size", CAPTION_FONT_SIZE)
-	_cards_caption.add_theme_color_override("font_color", UiPalette.GLOW_AMBER)
+	_cards_caption.add_theme_color_override("font_color", UiPalette.GOLD)
 	add_child(_cards_caption)
 
 	var scroll := ScrollContainer.new()

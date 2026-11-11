@@ -20,10 +20,10 @@ const STEP_INTERVAL := 0.75
 const CARD_GAP := 40.0
 const HAND_GAP := 24.0
 const CAPTION_HEIGHT := 30.0
-const CAPTION_FONT_SIZE := 17
+const CAPTION_FONT_SIZE := UiPalette.T_BODY
 ## 「場に出す」の手札と場のあいだに置く矢印。
 const ARROW_WIDTH := 76.0
-const ARROW_FONT_SIZE := 34
+const ARROW_FONT_SIZE := UiPalette.T_TITLE
 
 ## 第7章で見せる盤面の組み立て。情報帯を上下に挟むため、卓より広い幅が要る。
 const BOARD_TABLE_SIZE := Vector2(880, 380)
@@ -190,7 +190,7 @@ func _build_summon(cards: Array) -> Vector2:
 	var arrow := Label.new()
 	arrow.text = "→"
 	arrow.add_theme_font_size_override("font_size", ARROW_FONT_SIZE)
-	arrow.add_theme_color_override("font_color", UiPalette.GLOW_AMBER)
+	arrow.add_theme_color_override("font_color", UiPalette.SAND_HI)
 	arrow.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	arrow.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	arrow.position = Vector2(arrow_x, 0.0)
@@ -346,7 +346,7 @@ func _add_caption(text: String, rect: Rect2) -> void:
 	var label := Label.new()
 	label.text = text
 	label.add_theme_font_size_override("font_size", CAPTION_FONT_SIZE)
-	label.add_theme_color_override("font_color", UiPalette.TEXT_OFFWHITE)
+	label.add_theme_color_override("font_color", UiPalette.IVORY)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.position = rect.position
