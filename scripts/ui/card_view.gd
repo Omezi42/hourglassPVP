@@ -61,8 +61,8 @@ const BRACE_PULSE_SPEED := 3.4
 const BRACE_PULSE_MIN := 0.35
 const BRACE_PULSE_MAX := 0.85
 ## 攻撃の予測。体力のバッジの真下へ、結果だけを小さく出す。
-const PREVIEW_RADIUS := 14.0
-const PREVIEW_GAP := 15.0
+const PREVIEW_RADIUS := 17.0
+const PREVIEW_GAP := 17.0
 const PREVIEW_ALIVE := Color(0.55, 0.85, 1.0)
 const PREVIEW_DEAD := Color(1.0, 0.42, 0.36)
 const GUARD_BORDER := 4.0

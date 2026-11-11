@@ -11,7 +11,7 @@ signal skip_pressed
 
 const TITLE_FONT_SIZE := UiPalette.T_HEAD
 const SUBTITLE_FONT_SIZE := UiPalette.T_BODY
-const DIM_COLOR := Color(0, 0, 0, 0.72)
+const DIM_COLOR := Color(UiPalette.INK_900, 0.96)
 const TITLE_TOP := 28.0
 const SUBTITLE_TOP := 70.0
 const ROWS_TOP := 104.0
@@ -30,6 +30,8 @@ const CARD_GAP := 16.0
 ## 右端の「足したあとの山札」欄(GameDesign.md 27章「画面」)。束の並びはこれを除いた
 ## 残りの幅で組む。
 const DECK_PANEL_WIDTH := 300.0
+## 横画面で左の束の列・右の山札欄を画面の左右の端から離す余白。
+const SIDE_MARGIN := 24.0
 const DECK_PANEL_MARGIN := 32.0
 const DECK_PANEL_PADDING := 20.0
 const DECK_LABEL_FONT_SIZE := UiPalette.T_BODY
@@ -295,18 +297,18 @@ func _layout() -> void:
 	_set_button_size(_add_button, ADD_BUTTON_SIZE)
 	_set_button_size(_skip_button, SKIP_BUTTON_SIZE)
 	_deck_label.add_theme_font_size_override("font_size", DECK_LABEL_FONT_SIZE)
-	var rows_w := area.x - DECK_PANEL_WIDTH - DECK_PANEL_MARGIN
-	_title.position = Vector2(0, TITLE_TOP)
+	var rows_w := area.x - SIDE_MARGIN * 2.0 - DECK_PANEL_WIDTH - DECK_PANEL_MARGIN
+	_title.position = Vector2(SIDE_MARGIN, TITLE_TOP)
 	_title.size = Vector2(rows_w, 40.0)
-	_subtitle.position = Vector2(0, SUBTITLE_TOP)
+	_subtitle.position = Vector2(SIDE_MARGIN, SUBTITLE_TOP)
 	_subtitle.size = Vector2(rows_w, 24.0)
-	_rows_box.position = Vector2(0, ROWS_TOP)
+	_rows_box.position = Vector2(SIDE_MARGIN, ROWS_TOP)
 	_rows_box.size = Vector2(rows_w, area.y - ROWS_TOP - ROWS_BOTTOM_MARGIN)
 	_rebuild_rows()
 
 	var buttons_h := ADD_BUTTON_SIZE.y + BUTTON_GAP + SKIP_BUTTON_SIZE.y
 	var deck_rect := Rect2(
-		area.x - DECK_PANEL_WIDTH,
+		area.x - SIDE_MARGIN - DECK_PANEL_WIDTH,
 		ROWS_TOP,
 		DECK_PANEL_WIDTH,
 		area.y - ROWS_TOP - ROWS_BOTTOM_MARGIN - buttons_h - BUTTON_GAP

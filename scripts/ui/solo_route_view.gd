@@ -22,6 +22,10 @@ const FINAL_RING_WIDTH := 3.0
 const LOSS_MARK_WIDTH := 5.0
 const GLYPH_WIDTH := 3.0
 const NODE_RADIUS := 34.0
+## 名札の字の後ろに敷く地(道の線が字を貫かないように)。字の矩形から広げる幅と、角の丸み(高さに対する比)。
+const LABEL_PLATE_PAD := Vector2(6.0, 2.0)
+const LABEL_PLATE_CORNER := 0.3
+const LABEL_PLATE_COLOR := Color(UiPalette.INK_900, 0.92)
 const FINAL_RADIUS := 44.0
 const ROW_GAP := 132.0
 const LABEL_FONT_SIZE_1 := UiPalette.T_SMALL
@@ -476,6 +480,19 @@ func _draw_label(at: Vector2, text: String, font_size: int, color: Color) -> voi
 	if font == null:
 		return
 	var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	if not text.is_empty():
+		var text_rect := Rect2(
+			at - Vector2(width * 0.5, font.get_ascent(font_size)),
+			Vector2(width, font.get_height(font_size))
+		)
+		var plate := text_rect.grow_individual(
+			LABEL_PLATE_PAD.x, LABEL_PLATE_PAD.y, LABEL_PLATE_PAD.x, LABEL_PLATE_PAD.y
+		)
+		UiKit.fill(
+			_canvas.get_canvas_item(),
+			UiKit.rr(plate, plate.size.y * LABEL_PLATE_CORNER),
+			LABEL_PLATE_COLOR
+		)
 	_canvas.draw_string(
 		font, at - Vector2(width * 0.5, 0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color
 	)

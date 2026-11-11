@@ -8,7 +8,7 @@ extends Control
 signal primary_pressed
 
 const PANEL_STYLE := "res://resources/theme/content_panel.tres"
-const DIM_COLOR := Color(0, 0, 0, 0.62)
+const DIM_COLOR := Color(UiPalette.INK_900, 0.62)
 ## 横の棚は共有のデッキ表(1208×510)と同じ縦横比。
 const SHELF_SIZE := Vector2(1108, 468)
 const PORTRAIT_SHELF_SIZE := Vector2(624, 730)

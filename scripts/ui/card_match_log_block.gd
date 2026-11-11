@@ -14,17 +14,18 @@ const NAME_CLOSE := "」"
 
 ## 原因の行の下へ字下げして続ける種別。
 const CONSEQUENCES := ["death", "damage", "heal"]
-## 種別 → [札の字, 札の色]。ダメージと回復は数値を札にする。
+## 種別 → [札の字, 石の明, 石の暗]。ダメージと回復は数値を札にする。色の意味は全画面でそろえる
+## (出=真鍮 / 術・反=コストの青 / 攻=敵の赤 / 時=砂 / 決=明るい真鍮 / 砕・注記=藍の灰)。
 const BADGES := {
-	"play": ["出", Color(0.44, 0.31, 0.24)],
-	"cast": ["術", Color(0.36, 0.3, 0.55)],
-	"flip": ["反", Color(0.25, 0.42, 0.45)],
-	"flip_right": ["反", Color(0.25, 0.42, 0.45)],
-	"attack": ["攻", Color(0.55, 0.28, 0.2)],
-	"death": ["砕", Color(0.3, 0.27, 0.27)],
-	"time_up": ["時", Color(0.35, 0.35, 0.38)],
-	"end": ["決", Color(0.55, 0.4, 0.12)],
-	"note": ["・", Color(0.3, 0.3, 0.32)],
+	"play": ["出", UiPalette.GOLD, UiPalette.BRASS_DEEP],
+	"cast": ["術", UiPalette.COST, UiPalette.COST_DEEP],
+	"flip": ["反", UiPalette.SELECT, UiPalette.COST_DEEP],
+	"flip_right": ["反", UiPalette.SELECT, UiPalette.COST_DEEP],
+	"attack": ["攻", UiPalette.FOE, UiPalette.HEALTH_DEEP],
+	"death": ["砕", UiPalette.INK_500, UiPalette.INK_900],
+	"time_up": ["時", UiPalette.SAND, UiPalette.SAND_DEEP],
+	"end": ["決", UiPalette.GOLD_HI, UiPalette.BRASS],
+	"note": ["・", UiPalette.INK_500, UiPalette.INK_900],
 }
 
 const HEADER_FONT := UiPalette.T_SMALL
@@ -149,32 +150,36 @@ static func _row(entry: Dictionary, scale: float, wire: Callable) -> Control:
 static func _badge(entry: Dictionary, scale: float) -> Control:
 	var kind: String = entry["kind"]
 	var glyph: String
-	var fill: Color
+	var light: Color
+	var deep: Color
 	match kind:
 		"damage":
 			glyph = "−%d" % int(entry["amount"])
-			fill = UiPalette.HEALTH_DEEP
+			deep = UiPalette.HEALTH_DEEP
+			light = deep.lightened(BADGE_LIGHTEN)
 		"heal":
 			glyph = "+%d" % int(entry["amount"])
-			fill = UiPalette.GOOD.darkened(0.45)
+			deep = UiPalette.GOOD.darkened(0.45)
+			light = deep.lightened(BADGE_LIGHTEN)
 		_:
 			var badge: Array = BADGES.get(kind, BADGES["note"])
 			glyph = badge[0]
-			fill = badge[1]
+			light = badge[1]
+			deep = badge[2]
 	var plate := Control.new()
 	plate.custom_minimum_size = BADGE_SIZE * scale
 	plate.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	plate.draw.connect(func() -> void: _draw_badge(plate, glyph, fill))
+	plate.draw.connect(func() -> void: _draw_badge(plate, glyph, light, deep))
 	return plate
 
 
 ## 種類の札: 数値の宝石の面に字を載せる(行の先頭の目印)。
-static func _draw_badge(plate: Control, glyph: String, fill: Color) -> void:
+static func _draw_badge(plate: Control, glyph: String, light: Color, deep: Color) -> void:
 	var ci := plate.get_canvas_item()
 	var rad := minf(plate.size.x, plate.size.y) * 0.5
 	var center := plate.size * 0.5
-	UiKit.gem(ci, center, rad, fill.lightened(BADGE_LIGHTEN), fill)
+	UiKit.gem(ci, center, rad, light, deep)
 	UiKit.gem_text(ci, plate.get_theme_default_font(), center, rad, glyph, UiPalette.IVORY)
 
 

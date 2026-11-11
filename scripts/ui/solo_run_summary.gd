@@ -9,7 +9,7 @@ extends Control
 signal departure_pressed
 
 const SCREEN_SIZE := Vector2(1280, 720)
-const DIM_COLOR := Color(0, 0, 0, 0.82)
+const DIM_COLOR := Color(UiPalette.INK_900, 0.96)
 const CONTENT_TOP := 96.0
 const CONTENT_MARGIN := 64.0
 const ROUTE_RATIO := 0.62

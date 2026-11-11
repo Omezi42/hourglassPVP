@@ -129,7 +129,7 @@
 - ショップの一覧(`CardShopScreen` の中央)は品のタイル(硝子)を場所の壁の上へ直に並べ、パネルの面を持たない(面の中へ面を入れないため)。選んだ品の枠は水色の線
 - 詳細は `interactive = false` で幅400px、`CardDetailPanel.place_near()` で置く(`MOUSE_FILTER_IGNORE` でホバーを奪わない)
 - 一覧のカードは `CardView.badge` で「2/2」。保存は30枚ちょうどのときだけ。編集画面は必ず一覧から `open(index)`(-1は新規)。デッキ名の入力欄は編成中の欄の上端
-- **ボタンの既定の文字色はテーマ側でオフホワイト**(`main_theme.tres`。指定を書き忘れた画面だけ黒い文字になる状態を無くすため。`font_hover_color` だけ暗いまま)
+- **テーマ既定の見た目も硝子の言語**(`main_theme.tres`。`CodedButton` / `CodedPanel` を通さない素の `Button` は `img_wide_text_*`、`Panel` / `PanelContainer` は `content_panel.tres`、字は全状態でオフホワイト。素の部品が出ても古い見た目にならないため。TabBar / TabContainer は除く)
 - デッキ一覧・対局前の選択は `CardDeckListScreen` 1つが `Mode`(MANAGE / PICK)で兼ねる(4.5節)
 
 ## 4.0.6 シーン構成

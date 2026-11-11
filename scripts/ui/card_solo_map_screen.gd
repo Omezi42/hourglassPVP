@@ -167,8 +167,12 @@ func _build() -> void:
 	add_child(_workshop)
 
 	# `departure_pressed`は接続しない。押すと自分で隠れ、`open()`が既に出している
-	# 出発の画面(`_departure`)がその下に見えているだけで足りるため。
+	# 出発の画面(`_departure`)がその下に見えているだけで足りるため。記録を出している間だけ
+	# 出発の画面を隠す(暗幕を透けて記録の見出しと二重に見えないように)。
 	_summary = SoloRunSummary.new()
+	_summary.visibility_changed.connect(
+		func() -> void: _departure.visible = _run == null and not _summary.visible
+	)
 	_summary.position = Vector2.ZERO
 	_summary.size = SCREEN_SIZE
 	add_child(_summary)

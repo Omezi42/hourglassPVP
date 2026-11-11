@@ -15,10 +15,13 @@ extends RefCounted
 const GROUND_ALPHA := 0.95
 const BADGE_CORNER := 4.0
 const BADGE_LINE := 1.0
-const PILL_HEIGHT := 26.0
+## 攻撃の予測の円の中の字(「破壊」と数字)。
+const PREVIEW_DEAD_FONT := 14
+const PREVIEW_HEALTH_FONT := 16
+const PILL_HEIGHT := 30.0
 const PILL_PADDING := 5.0
-const PILL_HEAD_FONT := 16
-const PILL_TAIL_FONT := 11
+const PILL_HEAD_FONT := 20
+const PILL_TAIL_FONT := 16
 ## ターン終了で割れる駒のひび。絵の枠に対する比で置く(絵は枠より細い縦長のため内側へ寄せる)。
 ## 守護の二重の輪の外側の輪を、台座の縁からどれだけ外へ出すか。
 const GUARD_RING_GAP := Vector2(6.0, 3.5)
@@ -206,7 +209,7 @@ static func preview(view: CardView, anchor: Vector2) -> void:
 		view.get_canvas_item(), center, CardView.PREVIEW_RADIUS, 0.0, TAU, 20, color, UiKit.LINE_MIN
 	)
 	var text := "破壊" if view.preview_dead else str(view.preview_health)
-	var font_size := 12 if view.preview_dead else 15
+	var font_size := PREVIEW_DEAD_FONT if view.preview_dead else PREVIEW_HEALTH_FONT
 	var text_size := view._font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
 	view.draw_string(
 		view._font,

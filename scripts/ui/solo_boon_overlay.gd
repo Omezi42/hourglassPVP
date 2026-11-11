@@ -9,7 +9,7 @@ signal boon_chosen(boon_id: String)
 
 const TITLE_FONT_SIZE := UiPalette.T_HEAD
 const SUBTITLE_FONT_SIZE := UiPalette.T_BODY
-const DIM_COLOR := Color(0, 0, 0, 0.74)
+const DIM_COLOR := Color(UiPalette.INK_900, 0.96)
 const TITLE_TOP := 70.0
 const SUBTITLE_TOP := 118.0
 const CARDS_TOP := 150.0
