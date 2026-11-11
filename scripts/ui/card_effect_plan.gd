@@ -46,6 +46,8 @@ const OWN_HP := 14
 const FOE_HP := 18
 ## 殴り合う実演で、実演の駒が反撃で倒れずに残る体力。
 const SURVIVE_HEALTH := 3
+## 自分の砂を上へ戻す効果の実演で、あらかじめ落としておく砂(戻る様子が見えるように)。
+const FALLEN_FOR_RAISE := 2
 
 const STRIKE_KEYWORDS := [
 	CardEnums.Keyword.GLASS,
@@ -122,6 +124,8 @@ static func stage(state: MatchState, side: int, card: CardData, kind: int) -> Ar
 	if not kind in [Kind.PLAY, Kind.CAST, Kind.RUSH]:
 		var total := _demo_total(card)
 		var health := _subject_health(total, kind)
+		if health == total and _raises_own_sand(card):
+			health = maxi(total - FALLEN_FOR_RAISE, 1)
 		subject = _place(state, side, SUBJECT_SLOT, card, health, total - health)
 	_place_condition_match(state, side, card, subject)
 	var actions: Array[Dictionary] = []
@@ -226,6 +230,17 @@ static func _subject_health(total: int, kind: int) -> int:
 	if kind in [Kind.STRIKE, Kind.DOUBLE, Kind.DAMAGED, Kind.GUARD, Kind.BYPASS]:
 		return mini(total, maxi(SURVIVE_HEALTH, total - FOE_TARGET[1] - 2))
 	return total
+
+
+static func _raises_own_sand(card: CardData) -> bool:
+	for effect in card.effects:
+		if (
+			effect != null
+			and effect.effect_type == CardEnums.EffectType.RAISE_SAND
+			and effect.target == CardEnums.EffectTarget.SELF
+		):
+			return true
+	return false
 
 
 ## 条件付きの効果が働くよう、条件どおりの駒を置く(コンボ系。GameDesign.md 6章)。
