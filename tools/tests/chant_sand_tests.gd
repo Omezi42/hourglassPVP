@@ -183,6 +183,16 @@ func _test_cpu_picks_spell_for_archive() -> void:
 	_assert.call(int(hint.get("grave_index", -1)) == 1, "CPUはアーカイブで墓地の砂術を選ぶ")
 
 
+func _test_warden_raises_sand_on_own_spell() -> void:
+	var state := _new_match(["shot"])
+	var warden := _place(state, MatchState.Side.A, "warden", 0)
+	warden.health = 3
+	warden.attack = 2
+	state.cast_spell(MatchState.Side.A, 0)
+	_assert.call(warden.health == 4 and warden.attack == 1, "ウォーデンは自分が砂術を使うたび砂が1粒上へ戻る")
+	_assert.call(warden.has_keyword(CardEnums.Keyword.GUARD), "ウォーデンは守護を持つ")
+
+
 func _test_set_is_registered() -> void:
 	_assert.call(CardSetLibrary.has_set(SET_ID), "詠砂の刻が登録されている")
 	_assert.call(CardSetLibrary.card_ids(SET_ID).has("scribe"), "スクライブが詠砂の刻に入っている")
