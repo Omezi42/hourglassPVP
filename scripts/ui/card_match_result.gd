@@ -93,7 +93,7 @@ func apply_layout(layout: CardMatchLayout) -> void:
 
 ## 勝敗を表示する。my_side が負なら「先手/後手の勝利」と第三者視点で書く。
 ## 誘導対局だけ主/副を入れ替える(GameDesign.md 18章)。「CPUともう1局」を真鍮の主要ボタンへ
-## 昇格させ、「ホームへ」は既定の凹んだパネルのまま残す。
+## 昇格させ、「ホームへ」は既定の硝子のまま残す。
 func show_for(
 	state: MatchState,
 	my_side: int,
@@ -105,19 +105,21 @@ func show_for(
 ) -> void:
 	_matchmaking_mode = can_matchmaking
 	_rematch.visible = can_rematch or can_matchmaking
-	_rematch.text = (
-		"再度マッチング" if can_matchmaking else ("CPUともう1局" if is_tutorial else "もう一度")
-	)
+	_rematch.text = ("再度マッチング" if can_matchmaking else ("CPUともう1局" if is_tutorial else "もう一度"))
 	CodedButton.apply_styles(
 		_rematch,
-		CodedButton.PRIMARY_ACTION_GROUP if is_tutorial or can_matchmaking else CodedButton.WIDE_GROUP
+		(
+			CodedButton.PRIMARY_ACTION_GROUP
+			if is_tutorial or can_matchmaking
+			else CodedButton.WIDE_GROUP
+		)
 	)
 	var winner: int = state.winner
 	_won = my_side >= 0 and winner == my_side
 	_neutral = my_side < 0 or winner < 0
 	_title.text = _title_text(winner, my_side)
 	_title.add_theme_color_override(
-		"font_color", UiPalette.GLOW_AMBER if (_won or _neutral) else UiPalette.TEXT_MUTED
+		"font_color", UiPalette.SAND_HI if (_won or _neutral) else UiPalette.MUTED
 	)
 
 	var own_hp: int = state.hp[my_side if my_side >= 0 else MatchState.Side.A]
@@ -225,7 +227,7 @@ func _build() -> void:
 	_title.position = Vector2(0, 40)
 	_title.size = Vector2(PANEL_SIZE.x, 52)
 	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_title.add_theme_font_size_override("font_size", 40)
+	_title.add_theme_font_size_override("font_size", UiPalette.T_TITLE)
 	_panel.add_child(_title)
 
 	for i in LINE_COUNT:
@@ -234,7 +236,7 @@ func _build() -> void:
 		label.size = Vector2(PANEL_SIZE.x, 26)
 		label.add_theme_font_size_override("font_size", LINE_FONT)
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		label.add_theme_color_override("font_color", UiPalette.TEXT_OFFWHITE)
+		label.add_theme_color_override("font_color", UiPalette.IVORY)
 		label.visible = false
 		_panel.add_child(label)
 		_lines.append(label)
@@ -282,7 +284,7 @@ func _draw_victory_flash(ci: RID) -> void:
 		var length: float = 60.0 + 40.0 * _flash
 		var from := center + Vector2(cos(angle), sin(angle)) * 18.0
 		var to := center + Vector2(cos(angle), sin(angle)) * length
-		RenderingServer.canvas_item_add_line(ci, from, to, Color(UiPalette.GLOW_AMBER, alpha), 2.0)
+		RenderingServer.canvas_item_add_line(ci, from, to, Color(UiPalette.SAND, alpha), 2.0)
 
 
 func _make_button(label: String, target: Signal) -> Button:

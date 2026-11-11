@@ -12,9 +12,9 @@ const AREA_SIZE := Vector2(150, PlayerInfoBar.BAR_HEIGHT)
 const HP_GAP := 14.0
 const LABEL_BASELINE := 22.0
 const VALUE_BASELINE := 46.0
-const LABEL_FONT_SIZE := 11
-const VALUE_FONT_SIZE := 21
-const NOTE_FONT_SIZE := 13
+const LABEL_FONT_SIZE := UiPalette.T_MICRO
+const VALUE_FONT_SIZE := UiPalette.T_LEAD
+const NOTE_FONT_SIZE := UiPalette.T_SMALL
 const NOTE_GAP := 8.0
 const LETHAL_PULSE_SPEED := 0.01
 ## 「決着可能」に変わった瞬間の光(GameDesign.md 9章)。脈打ちだけでは変わった瞬間に気づきにくい。
@@ -102,18 +102,18 @@ func _draw() -> void:
 	if not visible:
 		return
 	var label := "総打点" if _has_guard else "直接打点"
-	_text(Vector2(0, LABEL_BASELINE), label, LABEL_FONT_SIZE, UiPalette.BRASS_HIGHLIGHT)
+	_text(Vector2(0, LABEL_BASELINE), label, LABEL_FONT_SIZE, UiPalette.GOLD)
 	var value := str(_total_attack)
-	var value_color := UiPalette.GLOW_AMBER
+	var value_color := UiPalette.SAND_HI
 	if _has_guard:
-		value_color = UiPalette.TEXT_MUTED
+		value_color = UiPalette.MUTED
 	_text(Vector2(0, VALUE_BASELINE), value, VALUE_FONT_SIZE, value_color)
 	var note_x := (
 		_font.get_string_size(value, HORIZONTAL_ALIGNMENT_LEFT, -1, VALUE_FONT_SIZE).x + NOTE_GAP
 	)
 	if _is_lethal:
 		var pulse := (sin(Time.get_ticks_msec() * LETHAL_PULSE_SPEED) + 1.0) * 0.5
-		var color := UiPalette.GLOW_AMBER.lerp(UiPalette.BRASS_HIGHLIGHT, pulse)
+		var color := UiPalette.SAND.lerp(UiPalette.GOLD_HI, pulse)
 		var font_size := NOTE_FONT_SIZE + roundi(LETHAL_FLASH_GROW * _lethal_flash)
 		if _lethal_flash > 0.0:
 			var note_width := (
@@ -123,13 +123,13 @@ func _draw() -> void:
 				get_canvas_item(),
 				Vector2(note_x + note_width * 0.5, VALUE_BASELINE - 7.0),
 				LETHAL_FLASH_RADII * (0.6 + 0.4 * _lethal_flash),
-				Color(UiPalette.GLOW_AMBER, 0.45 * _lethal_flash),
+				Color(UiPalette.SAND, 0.45 * _lethal_flash),
 				24
 			)
 			color = color.lerp(Color.WHITE, _lethal_flash)
 		_text(Vector2(note_x, VALUE_BASELINE - 2.0), "決着可能", font_size, color)
 	elif _has_guard:
-		_text(Vector2(note_x, VALUE_BASELINE - 2.0), "守護あり", NOTE_FONT_SIZE, UiPalette.TEXT_MUTED)
+		_text(Vector2(note_x, VALUE_BASELINE - 2.0), "守護あり", NOTE_FONT_SIZE, UiPalette.MUTED)
 
 
 func _play_lethal_flash() -> void:

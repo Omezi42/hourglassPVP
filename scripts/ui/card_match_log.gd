@@ -34,7 +34,7 @@ var _list: VBoxContainer
 var _scroll: ScrollContainer
 var _state: MatchState
 var _side_labels := {MatchState.Side.A: "先手", MatchState.Side.B: "後手"}
-## 手番の色。視点の無い対局は先手を琥珀にする。
+## 手番の色。視点の無い対局は先手を砂色にする。
 var _accents := {
 	MatchState.Side.A: CardMatchLogBlock.FIRST_COLOR,
 	MatchState.Side.B: CardMatchLogBlock.SECOND_COLOR
@@ -327,7 +327,7 @@ func _build() -> void:
 	_title = Label.new()
 	_title.text = "対局ログ"
 	_title.add_theme_font_size_override("font_size", TITLE_FONT_SIZE)
-	_title.add_theme_color_override("font_color", UiPalette.GLOW_AMBER)
+	_title.add_theme_color_override("font_color", UiPalette.GOLD)
 	_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(_title)
 	_hp = RichTextLabel.new()
@@ -391,13 +391,13 @@ func _hp_text() -> String:
 	for side in _sides_in_order:
 		if not _last_hp.has(side):
 			continue
-		var accent: Color = _accents.get(side, UiPalette.TEXT_MUTED)
+		var accent: Color = _accents.get(side, UiPalette.MUTED)
 		parts.append(
 			(
 				"[font_size=%d][color=#%s]%s[/color][/font_size] [color=#%s]HP%d[/color]"
 				% [
 					int(HP_NAME_FONT_SIZE * _scale),
-					UiPalette.TEXT_MUTED.to_html(false),
+					UiPalette.MUTED.to_html(false),
 					_name_of(side),
 					accent.to_html(false),
 					_last_hp[side]

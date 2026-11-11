@@ -14,9 +14,9 @@ const PANEL_WIDTH := 880.0
 const MAX_ROWS := 3
 const COLUMNS := 6
 const ROW_GAP := 10.0
-const TITLE_FONT_SIZE := 24
-const EMPTY_FONT_SIZE := 18
-const CLOSE_FONT_SIZE := 20
+const TITLE_FONT_SIZE := UiPalette.T_HEAD
+const EMPTY_FONT_SIZE := UiPalette.T_LEAD
+const CLOSE_FONT_SIZE := UiPalette.T_LEAD
 const CLOSE_SIZE := Vector2(160, 48)
 ## パネルの枠の内側の余白(`content_panel.tres` の左右)。
 const PANEL_PAD := 24.0

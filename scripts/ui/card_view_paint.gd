@@ -1,6 +1,6 @@
 class_name CardViewPaint
 extends RefCounted
-## `CardView._draw()` から台座・封蝋・バッジ・予測の描画を移す受け皿
+## `CardView._draw()` から台座・紋章の印・バッジ・予測の描画を移す受け皿
 ## (Architecture.md 10.10.1節)。`card_view.gd` が1000行の上限に達したため切り出した
 ## (Architecture.md 11章)。
 ##
@@ -11,6 +11,10 @@ extends RefCounted
 ## `CardView` に残し、ここは描画だけを持つ。**
 
 ## 反転の予測の札(GameDesign.md 9章)。大きい数字=反転後 / 小さい数字=終了後。
+## 予測・添え字の札の地(`INK_900`)の濃さと、角・縁の太さ。
+const GROUND_ALPHA := 0.95
+const BADGE_CORNER := 4.0
+const BADGE_LINE := 1.0
 const PILL_HEIGHT := 26.0
 const PILL_PADDING := 5.0
 const PILL_HEAD_FONT := 16
@@ -163,8 +167,9 @@ static func pedestal_plaque(view: CardView, tint: Color) -> void:
 static func badge(view: CardView, rect: Rect2) -> void:
 	var width := view._font.get_string_size(view.badge, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x + 12.0
 	var chip := Rect2(rect.size.x - width - 5, 5, width, 22)
-	view.draw_rect(chip, Color(0.08, 0.07, 0.06, 0.92))
-	view.draw_rect(chip, UiPalette.BRASS_HIGHLIGHT, false, 1.0)
+	var ci := view.get_canvas_item()
+	UiKit.fill(ci, UiKit.rr(chip, BADGE_CORNER), Color(UiPalette.INK_900, GROUND_ALPHA))
+	UiKit.stroke(ci, UiKit.rr(chip, BADGE_CORNER), UiPalette.GOLD, BADGE_LINE)
 	view.draw_string(
 		view._font,
 		chip.position + Vector2(6, 17),
@@ -172,7 +177,7 @@ static func badge(view: CardView, rect: Rect2) -> void:
 		HORIZONTAL_ALIGNMENT_LEFT,
 		-1,
 		15,
-		UiPalette.BRASS_HIGHLIGHT
+		UiPalette.GOLD
 	)
 
 
@@ -192,10 +197,13 @@ static func preview(view: CardView, anchor: Vector2) -> void:
 	var color := CardView.PREVIEW_DEAD if view.preview_dead else CardView.PREVIEW_ALIVE
 	var center := anchor + Vector2(0, CardView.STAT_RADIUS + CardView.PREVIEW_GAP)
 	ShapePaint.circle(
-		view.get_canvas_item(), center, CardView.PREVIEW_RADIUS, Color(0.08, 0.07, 0.06, 0.95)
+		view.get_canvas_item(),
+		center,
+		CardView.PREVIEW_RADIUS,
+		Color(UiPalette.INK_900, GROUND_ALPHA)
 	)
 	ShapePaint.arc(
-		view.get_canvas_item(), center, CardView.PREVIEW_RADIUS, 0.0, TAU, 20, color, 2.0
+		view.get_canvas_item(), center, CardView.PREVIEW_RADIUS, 0.0, TAU, 20, color, UiKit.LINE_MIN
 	)
 	var text := "破壊" if view.preview_dead else str(view.preview_health)
 	var font_size := 12 if view.preview_dead else 15
@@ -233,8 +241,9 @@ static func _forecast_pill(
 	var width := head_size.x + tail_width + PILL_PADDING * 2.0
 	var center := anchor + Vector2(0, CardView.STAT_RADIUS + CardView.PREVIEW_GAP)
 	var rect := Rect2(center - Vector2(width, PILL_HEIGHT) * 0.5, Vector2(width, PILL_HEIGHT))
-	view.draw_rect(rect, Color(0.08, 0.07, 0.06, 0.95))
-	view.draw_rect(rect, CardView.PREVIEW_ALIVE, false, 2.0)
+	var ci := view.get_canvas_item()
+	UiKit.fill(ci, UiKit.rr(rect, BADGE_CORNER), Color(UiPalette.INK_900, GROUND_ALPHA))
+	UiKit.stroke(ci, UiKit.rr(rect, BADGE_CORNER), CardView.PREVIEW_ALIVE, UiKit.LINE_MIN)
 	var baseline := center.y + head_size.y * 0.32
 	var x := rect.position.x + PILL_PADDING
 	view.draw_string(

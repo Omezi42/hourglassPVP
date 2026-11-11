@@ -17,7 +17,7 @@ const CENTER_Y := BAR_HEIGHT * 0.5
 const PORTRAIT_CENTER := Vector2(30.0, CENTER_Y)
 const PORTRAIT_RADIUS := 25.0
 const PORTRAIT_RING_WIDTH := 3.5
-## 名札。メダルの右から伸びる濃紺の板。
+## 名札。メダルの右から伸びる硝子の面。
 const NAME_PLATE_RECT := Rect2(44.0, 9.0, 152.0, 38.0)
 const NAME_TEXT_X := 66.0
 const TITLE_FONT := UiPalette.T_MICRO

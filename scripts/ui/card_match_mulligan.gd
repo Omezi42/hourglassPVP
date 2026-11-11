@@ -26,7 +26,7 @@ const HINT_Y := 90.0
 const CARD_ROW_Y := 152.0
 const BUTTON_SIZE := Vector2(280, 60)
 const BUTTON_Y := 410.0
-const TURN_ORDER_FONT := 22
+const TURN_ORDER_FONT := UiPalette.T_LEAD
 const HINT_FONT := 20
 ## 札の列の後ろの光だまりが、列の左右と上下へはみ出す量。
 const STAGE_MARGIN := Vector2(150, 70)
@@ -358,10 +358,10 @@ func _build() -> void:
 	add_child(_stage)
 
 	_turn_order = _make_label(TURN_ORDER_FONT)
-	_turn_order.add_theme_color_override("font_color", UiPalette.GLOW_AMBER)
+	_turn_order.add_theme_color_override("font_color", UiPalette.SAND_HI)
 	_title = _make_label(40)
 	_hint = _make_label(HINT_FONT)
-	_hint.add_theme_color_override("font_color", UiPalette.BRASS_HIGHLIGHT)
+	_hint.add_theme_color_override("font_color", UiPalette.GOLD)
 
 	_button = CodedButton.make("このままで開始", BUTTON_SIZE)
 	_button.pressed.connect(_on_confirm_pressed)

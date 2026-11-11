@@ -34,7 +34,7 @@ const PREVIEW_HEIGHT := 176.0
 const COMPACT_PADDING := 56.0
 ## 効果欄の語のボタン。「2回攻撃」の4文字が収まる幅にしてある。
 const TERM_BUTTON_SIZE := Vector2(98, 34)
-const TERM_FONT_SIZE := 15
+const TERM_FONT_SIZE := UiPalette.T_SMALL
 ## ホバーで出すときに、カーソルからどれだけずらすか。指しているものを自分で
 ## 隠さない程度に離し、視線を動かさずに済む程度に近づける。
 const CURSOR_OFFSET := Vector2(22, 18)
@@ -234,7 +234,7 @@ func _make_line(text: String) -> Label:
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.custom_minimum_size = Vector2(_body_width, 0)
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	label.add_theme_font_size_override("font_size", 15)
+	label.add_theme_font_size_override("font_size", UiPalette.T_SMALL)
 	return label
 
 
@@ -333,12 +333,12 @@ func _make_title_row(centered: bool) -> HBoxContainer:
 	_emblem.custom_minimum_size = EMBLEM_SIZE
 	_emblem.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_emblem.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	_emblem.modulate = UiPalette.BRASS_HIGHLIGHT
+	_emblem.modulate = UiPalette.GOLD
 	title_row.add_child(_emblem)
 
 	_name = Label.new()
 	_name.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_name.add_theme_font_size_override("font_size", 26)
+	_name.add_theme_font_size_override("font_size", UiPalette.T_HEAD)
 	title_row.add_child(_name)
 	return title_row
 
@@ -346,7 +346,7 @@ func _make_title_row(centered: bool) -> HBoxContainer:
 func _make_stats() -> Label:
 	var stats := Label.new()
 	stats.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	stats.add_theme_color_override("font_color", UiPalette.GLOW_AMBER)
+	stats.add_theme_color_override("font_color", UiPalette.SAND_HI)
 	return stats
 
 

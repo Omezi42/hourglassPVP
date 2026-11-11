@@ -56,8 +56,8 @@ func _setup_ui() -> void:
 	var header := Label.new()
 	header.text = "エモート"
 	header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	header.add_theme_font_size_override("font_size", 12)
-	header.add_theme_color_override("font_color", UiPalette.BRASS_HIGHLIGHT)
+	header.add_theme_font_size_override("font_size", UiPalette.T_MICRO)
+	header.add_theme_color_override("font_color", UiPalette.GOLD)
 	vbox.add_child(header)
 	vbox.add_child(_hairline())
 
@@ -73,7 +73,7 @@ func _setup_ui() -> void:
 	_mute_btn = Button.new()
 	_mute_btn.flat = true
 	_mute_btn.custom_minimum_size = Vector2(0.0, 26.0)
-	_mute_btn.add_theme_font_size_override("font_size", 12)
+	_mute_btn.add_theme_font_size_override("font_size", UiPalette.T_MICRO)
 	_mute_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	_mute_btn.pressed.connect(_toggle_mute)
 	_update_mute_button_text()
@@ -81,10 +81,9 @@ func _setup_ui() -> void:
 
 
 ## 区切りは `HSeparator`(テーマ既定の白い線)ではなく真鍮の細線にする。
-## 対局画面の他の区切りと同じ色でないと、ここだけ別のUIから来たように見える。
 func _hairline() -> Control:
 	var line := ColorRect.new()
-	line.color = Color(UiPalette.BRASS_MID, 0.7)
+	line.color = Color(UiPalette.GOLD, UiKit.HAIRLINE_ALPHA)
 	line.custom_minimum_size = Vector2(0.0, 1.0)
 	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return line
@@ -210,10 +209,10 @@ func _update_mute_button_text() -> void:
 	if _mute_btn != null:
 		if mute_opponent:
 			_mute_btn.text = "○ 相手のエモート:切"
-			_mute_btn.add_theme_color_override("font_color", UiPalette.GLOW_AMBER)
+			_mute_btn.add_theme_color_override("font_color", UiPalette.SAND_HI)
 		else:
 			_mute_btn.text = "● 相手のエモート:入"
-			_mute_btn.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
+			_mute_btn.add_theme_color_override("font_color", UiPalette.MUTED)
 
 
 func close_popup() -> void:
@@ -271,8 +270,7 @@ func _maybe_cpu_reply() -> void:
 		)
 
 
-## ポップアップの下地。対局画面の他のパネルと同じ質感(多段グラデーション + グレイン +
-## 落ち込み影 + 真鍮の枠)で描く。テーマ既定の `PanelContainer` のままだと、
+## ポップアップの下地(硝子の面)。テーマ既定の `PanelContainer` のままだと、
 ## 盤面の上でここだけ平坦なダイアログに見える。
 class EmotePopupPanel:
 	extends PanelContainer
@@ -288,25 +286,7 @@ class EmotePopupPanel:
 		add_theme_stylebox_override("panel", empty)
 
 	func _draw() -> void:
-		var ci := get_canvas_item()
-		var rect := Rect2(Vector2.ZERO, size)
-		var points := UiPaint.rounded_rect_points_uniform(rect, 8.0, 6)
-		UiPaint.fill_gradient_polygon(
-			ci,
-			points,
-			rect,
-			[
-				[0.0, Color(0.17, 0.14, 0.11, 0.98)],
-				[0.5, Color(0.10, 0.08, 0.07, 0.98)],
-				[1.0, Color(0.07, 0.055, 0.05, 0.98)]
-			]
-		)
-		UiPaint.apply_grain(ci, rect, 0.07)
-		UiPaint.draw_inner_shadow(ci, rect, 8.0, 6, 4, UiPalette.OUTLINE_DARK, 0.5)
-		var outline := points.duplicate()
-		outline.append(points[0])
-		ShapePaint.polyline(get_canvas_item(), outline, UiPalette.OUTLINE_DARK, 3.0, true)
-		ShapePaint.polyline(get_canvas_item(), outline, UiPalette.BRASS_LIGHT, 1.4, true)
+		UiKit.glass(get_canvas_item(), Rect2(Vector2.ZERO, size))
 
 
 ## エモート選択用カスタムボタン
@@ -328,22 +308,10 @@ class EmoteItemButton:
 
 	func _draw() -> void:
 		var rect := Rect2(Vector2.ZERO, size)
-		var points := UiPaint.rounded_rect_points_uniform(rect, 5.0, 4)
 		var hovered := is_hovered()
 		var ci := get_canvas_item()
-		var top := Color(0.26, 0.20, 0.14, 0.98) if hovered else Color(0.14, 0.115, 0.095, 0.9)
-		var bottom := Color(0.16, 0.12, 0.09, 0.98) if hovered else Color(0.08, 0.065, 0.055, 0.9)
-		UiPaint.fill_gradient_polygon(ci, points, rect, [[0.0, top], [1.0, bottom]])
-
-		var outline := points.duplicate()
-		outline.append(points[0])
-		ShapePaint.polyline(
-			get_canvas_item(),
-			outline,
-			UiPalette.GLOW_AMBER if hovered else UiPalette.BRASS_MID,
-			1.2,
-			true
-		)
+		if hovered:
+			UiKit.well(ci, rect, UiKit.radius(rect) * 0.5)
 
 		# 行頭の菱形。選べる行であることを、文字ではなく形で示す。
 		var mark := Vector2(13.0, size.y * 0.5)
@@ -356,20 +324,27 @@ class EmoteItemButton:
 				mark + Vector2(-r, 0.0)
 			]
 		)
-		var mark_color := UiPalette.GLOW_AMBER if hovered else UiPalette.BRASS_MID
+		var mark_color := UiPalette.SAND if hovered else UiPalette.BRASS
 		ShapePaint.colored_polygon(get_canvas_item(), diamond, mark_color)
 
 		if _font == null:
 			return
 		var text := EmoteLibrary.get_emote_text(emote_id)
-		var text_color := UiPalette.BRASS_HIGHLIGHT if hovered else UiPalette.TEXT_OFFWHITE
-		var baseline := (size.y + float(_font.get_ascent(13)) - float(_font.get_descent(13))) * 0.5
+		var text_color := UiPalette.SAND_HI if hovered else UiPalette.IVORY
+		var baseline := (
+			(
+				size.y
+				+ float(_font.get_ascent(UiPalette.T_SMALL))
+				- float(_font.get_descent(UiPalette.T_SMALL))
+			)
+			* 0.5
+		)
 		draw_string(
 			_font,
 			Vector2(24.0, baseline),
 			text,
 			HORIZONTAL_ALIGNMENT_LEFT,
 			size.x - 32.0,
-			13,
+			UiPalette.T_SMALL,
 			text_color
 		)

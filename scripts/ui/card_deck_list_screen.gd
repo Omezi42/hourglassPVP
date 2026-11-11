@@ -17,19 +17,20 @@ enum Mode { MANAGE, PICK }
 
 const HEADER_SCENE := "res://scenes/screen_header.tscn"
 const CONFIRM_SCENE := "res://scenes/confirm_modal.tscn"
-const PANEL_STYLE := "res://resources/theme/content_panel.tres"
 ## 空の案内を出す矩形を、パネルの縁と上の1行から内側へ寄せる幅。
 const EMPTY_INSET := Vector2(40.0, 56.0)
 const LIST_RECT := Rect2(24, ScreenHeader.CONTENT_TOP, 1232, ScreenHeader.CONTENT_HEIGHT)
-const CARD_SIZE := Vector2(594, 140)
-const GRID_GAP := 14
+## 札の幅は一覧の幅を2列で割る(左右24px・札の間16px)。
+const GRID_GAP := 16
+const CARD_SIZE := Vector2((LIST_RECT.size.x - GRID_GAP) / 2.0, 140)
 const GUIDE_FONT := 20
 
 ## 縦画面(GameDesign.md 9章「縦画面」)。1列にし、札を中身ごと大きく描く。
 const PORTRAIT_COLUMNS := 1
-const PORTRAIT_CARD_SIZE := Vector2(624, 176)
-## 一覧の枠(`content_panel`)の左右の内側の余白の合計。折り返す案内の1行の幅に使う。
-const PANEL_INNER_MARGIN := 48.0
+## 縦の札は左右24pxを引いた幅いっぱい。下の右に72px以上のボタンを置くぶん背を高くする。
+const PORTRAIT_CARD_SIZE := Vector2(
+	ScreenOrientation.PORTRAIT_SIZE.x - ScreenHeader.OUTER_MARGIN * 2.0, 236
+)
 const PORTRAIT_GUIDE_FONT := 24
 ## 削除した札が縮んで消えるまでの尺(GameDesign.md 9章)。
 const DELETE_SHRINK_DURATION := 0.15
@@ -51,7 +52,7 @@ var _peek_index := -1
 var _mode: Mode = Mode.MANAGE
 var _reordering := false
 var _pending_delete := -1
-var _panel: PanelContainer
+var _room: VBoxContainer
 var _portrait := false
 
 
@@ -107,17 +108,12 @@ func _build() -> void:
 	_intro_button.pressed.connect(func() -> void: _intro_screen.open())
 	_header.add_action(_intro_button)
 
-	_panel = PanelContainer.new()
-	_panel.position = LIST_RECT.position
-	_panel.size = LIST_RECT.size
-	_panel.custom_minimum_size = LIST_RECT.size
-	var style: StyleBox = load(PANEL_STYLE)
-	if style != null:
-		_panel.add_theme_stylebox_override("panel", style)
-	add_child(_panel)
-
-	var column := VBoxContainer.new()
-	_panel.add_child(column)
+	# 札は囲うパネルを持たず、部屋へ直接並べる。
+	_room = VBoxContainer.new()
+	_room.position = LIST_RECT.position
+	_room.size = LIST_RECT.size
+	add_child(_room)
+	var column := _room
 	_empty_label = Label.new()
 	_empty_label.add_theme_font_size_override("font_size", GUIDE_FONT)
 	_empty_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -160,7 +156,7 @@ func _build() -> void:
 ## 縦横が変わったときに `Main` から呼ばれる(Architecture.md 4.7節)。モードと並び替え中かどうかは保つ。
 func apply_orientation(portrait: bool) -> void:
 	_portrait = portrait
-	if _panel == null:
+	if _room == null:
 		return
 	_header.apply_orientation(portrait)
 	_intro_screen.apply_orientation(portrait)
@@ -180,16 +176,16 @@ func _layout() -> void:
 			ScreenOrientation.PORTRAIT_SIZE.x - ScreenHeader.OUTER_MARGIN * 2.0,
 			ScreenHeader.PORTRAIT_CONTENT_BOTTOM - top
 		)
-	_panel.position = rect.position
-	_panel.custom_minimum_size = rect.size
-	_panel.size = rect.size
+	_room.position = rect.position
+	_room.custom_minimum_size = rect.size
+	_room.size = rect.size
 	_empty_state.position = rect.position + EMPTY_INSET
 	_empty_state.size = rect.size - EMPTY_INSET * 2.0
 	_empty_label.add_theme_font_size_override(
 		"font_size", PORTRAIT_GUIDE_FONT if _portrait else GUIDE_FONT
 	)
 	# 折り返す行には幅を与える(幅が決まる前の1文字ずつの高さが残るため。Pitfalls.md)。
-	_empty_label.custom_minimum_size.x = rect.size.x - PANEL_INNER_MARGIN if _portrait else 0.0
+	_empty_label.custom_minimum_size.x = rect.size.x if _portrait else 0.0
 	_grid.columns = PORTRAIT_COLUMNS if _portrait else 2
 
 

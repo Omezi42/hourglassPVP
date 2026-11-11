@@ -8,7 +8,7 @@ const ICON := preload("res://assets/ui/icons/redraw.png")
 const RADIUS := 30.0
 const ICON_SIDE := 36.0
 ## 真鍮の面へ彫り込んだように、面より暗い色で乗せる。
-const ICON_COLOR := Color(0.2, 0.13, 0.08, 0.92)
+const ICON_COLOR := Color(UiPalette.BRASS_INK, 0.92)
 const POP_SCALE := 1.25
 const POP_DURATION := 0.16
 
@@ -44,16 +44,7 @@ func set_shown(shown: bool) -> void:
 func _draw() -> void:
 	var ci := get_canvas_item()
 	var center := size * 0.5
-	var face := Rect2(Vector2.ZERO, size)
-	UiPaint.fill_circle(ci, center + Vector2(0, 3), RADIUS, Color(0, 0, 0, 0.45), 28)
-	UiPaint.fill_gradient_polygon(
-		ci,
-		UiPaint.circle_points(center, RADIUS, 28),
-		face,
-		[[0.0, UiPalette.BRASS_LIGHT], [0.55, UiPalette.BRASS_MID], [1.0, UiPalette.BRASS_DARK]]
-	)
-	UiPaint.draw_ring(ci, center, RADIUS - 1.0, UiPalette.BRASS_HIGHLIGHT, 2.0, 28)
-	UiPaint.draw_ring(ci, center, RADIUS - 5.0, UiPalette.BRASS_DARK, 1.0, 28)
+	UiKit.round_face(ci, center, RADIUS, UiKit.Role.MAIN)
 	var icon_rect := Rect2(
 		center - Vector2(ICON_SIDE, ICON_SIDE) * 0.5, Vector2(ICON_SIDE, ICON_SIDE)
 	)

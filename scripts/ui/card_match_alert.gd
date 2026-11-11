@@ -37,7 +37,7 @@ func _draw() -> void:
 	var pulse := (sin(time) + 1.0) * 0.5
 	var alpha := _alert_alpha * (0.18 + 0.12 * pulse)
 
-	var glow_color := UiPalette.WARNING_RED.lerp(UiPalette.GLOW_AMBER, pulse * 0.4)
+	var glow_color := UiPalette.HEALTH.lerp(UiPalette.SAND, pulse * 0.4)
 	glow_color.a = alpha
 
 	# 画面外周の警戒ラインとグラデーション帯

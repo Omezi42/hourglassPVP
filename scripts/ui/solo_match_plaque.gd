@@ -2,7 +2,7 @@ class_name SoloMatchPlaque
 extends Control
 ## 遠征の対局中に出す「遠征の札」(GameDesign.md 27章「画面」節「遠征の札」)。
 ## 直前の手の列(`CardMatchActionHistory`)の下に、1件と同じ幅・同じ語彙
-## (濃紺の板に真鍮の縁)で常に置く。生成・更新・後始末は `CardMatchSolo` が持つ
+## (硝子の面に真鍮の縁)で常に置く。生成・更新・後始末は `CardMatchSolo` が持つ
 ## (Architecture.md 10.15節)。遠征以外の対局では作らない。
 ##
 ## 「段目」の行き先の説明はホバーで出す(対局・最終戦は説明を持たないため出さない)。
@@ -11,22 +11,19 @@ extends Control
 ## (`content_panel.tres`)で文字だけを出す小さいパネルをここに持つ。
 
 const HEIGHT := 74.0
-const TILE_RADIUS := 7.0
-const RIM_WIDTH := 1.5
-const GRAIN_ALPHA := 0.06
 const MARGIN_X := 12.0
 const FLOOR_BASELINE := 18.0
 const KIND_BASELINE := 40.0
 const GOAL_BASELINE := 62.0
-const FLOOR_FONT_SIZE := 11
-const KIND_FONT_SIZE := 15
-const GOAL_FONT_SIZE := 12
+const FLOOR_FONT_SIZE := UiPalette.T_MICRO
+const KIND_FONT_SIZE := UiPalette.T_BODY
+const GOAL_FONT_SIZE := UiPalette.T_MICRO
 ## 縦: 直前の手の1件と同じ大きさ・同じ縮尺へ詰め、種別と目標(目標の無い対局は段目)の2行にする。
 ## 縮尺を掛けて本文20px以上になる大きさ(GameDesign.md 9章「縦画面」)。
 const COMPACT_TOP_BASELINE := 21.0
 const COMPACT_BOTTOM_BASELINE := 42.0
-const COMPACT_KIND_FONT_SIZE := 16
-const COMPACT_SUB_FONT_SIZE := 15
+const COMPACT_KIND_FONT_SIZE := UiPalette.T_BODY
+const COMPACT_SUB_FONT_SIZE := UiPalette.T_SMALL
 
 ## 残りの数が変わった瞬間の跳ね(`WorkshopStockItem`の「2/2」バッジと同じ流儀)。
 const PUNCH_DURATION := 0.25
@@ -165,35 +162,15 @@ func _draw() -> void:
 		return
 	var rect := Rect2(Vector2.ZERO, size)
 	var ci := get_canvas_item()
-	var points := UiPaint.rounded_rect_points_uniform(rect, TILE_RADIUS, 5)
-	UiPaint.fill_gradient_polygon(
-		ci, points, rect, [[0.0, UiPalette.NAVY_PANEL_TOP], [1.0, UiPalette.NAVY_PANEL_BOTTOM]]
-	)
-	UiPaint.apply_grain(ci, rect, GRAIN_ALPHA)
-	var outline := points.duplicate()
-	outline.append(points[0])
-	ShapePaint.polyline(get_canvas_item(), outline, UiPalette.OUTLINE_DARK, 1.0, true)
-	UiPaint.draw_bevel(
-		ci, points, UiPalette.BRASS_RIM_LIGHT, UiPalette.BRASS_DARK, RIM_WIDTH, false
-	)
+	UiKit.glass(ci, rect)
 	var max_width := size.x - MARGIN_X * 2.0
 	if _compact:
 		_draw_compact(max_width)
 		return
 	_text(
-		Vector2(MARGIN_X, FLOOR_BASELINE),
-		_floor_text,
-		FLOOR_FONT_SIZE,
-		UiPalette.TEXT_MUTED,
-		max_width
+		Vector2(MARGIN_X, FLOOR_BASELINE), _floor_text, FLOOR_FONT_SIZE, UiPalette.MUTED, max_width
 	)
-	_text(
-		Vector2(MARGIN_X, KIND_BASELINE),
-		_kind_text,
-		KIND_FONT_SIZE,
-		UiPalette.TEXT_OFFWHITE,
-		max_width
-	)
+	_text(Vector2(MARGIN_X, KIND_BASELINE), _kind_text, KIND_FONT_SIZE, UiPalette.IVORY, max_width)
 	if _goal_value >= 0:
 		_draw_goal(Vector2(MARGIN_X, GOAL_BASELINE), max_width)
 
@@ -203,21 +180,21 @@ func _draw_compact(max_width: float) -> void:
 		Vector2(MARGIN_X, COMPACT_TOP_BASELINE),
 		_kind_text,
 		COMPACT_KIND_FONT_SIZE,
-		UiPalette.TEXT_OFFWHITE,
+		UiPalette.IVORY,
 		max_width
 	)
 	var bottom := Vector2(MARGIN_X, COMPACT_BOTTOM_BASELINE)
 	if _goal_value >= 0:
 		_draw_goal(bottom, max_width, COMPACT_SUB_FONT_SIZE)
 	else:
-		_text(bottom, _floor_text, COMPACT_SUB_FONT_SIZE, UiPalette.TEXT_MUTED, max_width)
+		_text(bottom, _floor_text, COMPACT_SUB_FONT_SIZE, UiPalette.MUTED, max_width)
 
 
 func _draw_goal(pos: Vector2, max_width: float, font_size: int = GOAL_FONT_SIZE) -> void:
 	var text := "%s %d %s" % [_goal_lead, _goal_value, _goal_tail]
 	var boost := 1.0 + _goal_punch * PUNCH_SCALE
 	draw_set_transform(pos, 0.0, Vector2.ONE * boost)
-	_text(Vector2.ZERO, text, font_size, UiPalette.GLOW_AMBER, max_width / boost)
+	_text(Vector2.ZERO, text, font_size, UiPalette.SAND_HI, max_width / boost)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
@@ -277,7 +254,7 @@ func _build_hover_panel() -> void:
 	_hover_label = Label.new()
 	_hover_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_hover_label.custom_minimum_size = Vector2(HOVER_WIDTH - HOVER_MARGIN * 2.0, 0)
-	_hover_label.add_theme_font_size_override("font_size", 15)
-	_hover_label.add_theme_color_override("font_color", UiPalette.TEXT_OFFWHITE)
+	_hover_label.add_theme_font_size_override("font_size", UiPalette.T_SMALL)
+	_hover_label.add_theme_color_override("font_color", UiPalette.IVORY)
 	margin.add_child(_hover_label)
 	add_child(_hover_panel)

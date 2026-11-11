@@ -5,8 +5,8 @@ extends RefCounted
 
 const DURATION := 2.0
 const TITLE := "対局開始"
-const TITLE_FONT_SIZE := 58
-const NAME_FONT_SIZE := 26
+const TITLE_FONT_SIZE := UiPalette.T_HERO
+const NAME_FONT_SIZE := UiPalette.T_HEAD
 const FADE_IN := 0.15
 const FADE_OUT := 0.35
 const DIM_ALPHA := 0.5
@@ -14,6 +14,7 @@ const DIM_ALPHA := 0.5
 const BAND_GROW := Vector2(0.06, 0.4)
 const BAND_HEIGHT := 96.0
 const BAND_NOTCH := 40.0
+const BAND_OPACITY := 0.92
 ## 帯の幅は卓の幅に対する比。
 const BAND_WIDTH_RATIO := 0.86
 ## 文字は大きめに出てから定位置の大きさへ縮む。
@@ -32,7 +33,7 @@ const GRAIN_LIFE := 1.3
 const GRAIN_SPEED := Vector2(140.0, 420.0)
 const GRAIN_GRAVITY := 300.0
 const GRAIN_SIZE := Vector2(2.0, 4.5)
-const SAND_COLOR := Color(0.95, 0.8, 0.5)
+const SAND_COLOR := UiPalette.SAND_HI
 
 
 static func draw(
@@ -81,23 +82,11 @@ static func _band_rect(center: Vector2, table: Rect2, t: float) -> Rect2:
 
 static func _draw_band(item: CanvasItem, band: Rect2, alpha: float) -> void:
 	var ci := item.get_canvas_item()
-	var points := UiPaint.banner_points(band, BAND_NOTCH)
-	(
-		UiPaint
-		. fill_gradient_polygon(
-			ci,
-			points,
-			band,
-			[
-				[0.0, Color(UiPalette.NAMEPLATE_PANEL_TOP, alpha * 0.92)],
-				[0.5, Color(UiPalette.NAMEPLATE_PANEL_BOTTOM, alpha * 0.92)],
-				[1.0, Color(UiPalette.NAMEPLATE_PANEL_TOP, alpha * 0.92)],
-			]
-		)
-	)
-	var outline := points.duplicate()
-	outline.append(points[0])
-	ShapePaint.polyline(ci, outline, Color(UiPalette.BRASS_HIGHLIGHT, alpha), 2.0, true)
+	var rim := UiKit.rim_brass()
+	for stop in rim:
+		var color: Color = stop[1]
+		stop[1] = Color(color, alpha)
+	UiKit.glass_shape(ci, UiPaint.banner_points(band, BAND_NOTCH), band, alpha * BAND_OPACITY, rim)
 
 
 static func _draw_title(
@@ -116,7 +105,7 @@ static func _draw_title(
 		HORIZONTAL_ALIGNMENT_LEFT,
 		-1,
 		TITLE_FONT_SIZE,
-		Color(UiPalette.GLOW_AMBER, alpha * minf(p * 3.0, 1.0))
+		Color(UiPalette.SAND_HI, alpha * minf(p * 3.0, 1.0))
 	)
 	item.draw_set_transform(Vector2.ZERO)
 
@@ -139,13 +128,7 @@ static func _draw_name(
 		Color(0, 0, 0, alpha * 0.8)
 	)
 	item.draw_string(
-		font,
-		at,
-		text,
-		HORIZONTAL_ALIGNMENT_LEFT,
-		-1,
-		NAME_FONT_SIZE,
-		Color(UiPalette.TEXT_OFFWHITE, alpha)
+		font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, NAME_FONT_SIZE, Color(UiPalette.IVORY, alpha)
 	)
 
 
@@ -159,7 +142,7 @@ static func _draw_rays(item: CanvasItem, center: Vector2, t: float, alpha: float
 		item.draw_line(
 			center + dir * RAY_REACH.x * 0.6,
 			center + dir * length,
-			Color(UiPalette.GLOW_AMBER, alpha * 0.35),
+			Color(UiPalette.SAND, alpha * 0.35),
 			RAY_WIDTH
 		)
 

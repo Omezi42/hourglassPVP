@@ -62,7 +62,7 @@ func _ready() -> void:
 	_title = Label.new()
 	body.add_child(_title)
 	_sub = Label.new()
-	_sub.add_theme_color_override("font_color", UiPalette.BRASS_HIGHLIGHT)
+	_sub.add_theme_color_override("font_color", UiPalette.MUTED)
 	body.add_child(_sub)
 	_shelf = CardDeckShelf.new()
 	_shelf.readonly = true

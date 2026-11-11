@@ -67,7 +67,7 @@ func _draw() -> void:
 		HORIZONTAL_ALIGNMENT_LEFT,
 		-1,
 		VERSION_FONT_SIZE,
-		Color(UiPalette.TEXT_OFFWHITE, 0.45)
+		Color(UiPalette.IVORY, 0.45)
 	)
 	if targeting:
 		_draw_target_prompt()
@@ -76,11 +76,8 @@ func _draw() -> void:
 	_draw_waiting_panel()
 
 
-## 通信待ちの文言を、他の演出の無い時期(対局の開始前・切断からの復帰)
-## にも「壊れていない」と分かる形で見せる。以前は素の文字を盤面へ
-## 直に浮かせていたため、前の対局の駒が消えないまま重なると
-## 「対局が壊れている」ようにしか見えなかった(盤面側は`_reset_for_new_match()`で
-## 先に片付けてあるが、それでも文字だけが宙に浮くのは分かりにくい)。
+## 通信待ちの文言を、他の演出の無い時期(対局の開始前・切断からの復帰)にも
+## 「壊れていない」と分かる硝子の札に載せて見せる。
 func _draw_waiting_panel() -> void:
 	var font := get_theme_default_font()
 	var text := waiting_text + ".".repeat(_dot_count)
@@ -88,16 +85,7 @@ func _draw_waiting_panel() -> void:
 	var width := maxf(WAITING_PANEL_MIN_WIDTH, text_size.x + WAITING_PANEL_PAD_X)
 	var panel_size := Vector2(width, WAITING_PANEL_HEIGHT)
 	var rect := Rect2(CardMatchLayout.current().waiting_center - panel_size * 0.5, panel_size)
-	var points := UiPaint.rounded_rect_points_uniform(rect, 14.0, 6)
-	UiPaint.fill_gradient_polygon(
-		get_canvas_item(),
-		points,
-		rect,
-		[[0.0, Color(0.05, 0.07, 0.09, 0.92)], [1.0, Color(0.02, 0.03, 0.04, 0.92)]]
-	)
-	var outline := points.duplicate()
-	outline.append(points[0])
-	ShapePaint.polyline(get_canvas_item(), outline, Color(UiPalette.BRASS_MID, 0.9), 2.0, true)
+	UiKit.glass(get_canvas_item(), rect)
 	draw_string(
 		font,
 		rect.get_center() + Vector2(-text_size.x * 0.5, text_size.y * 0.32),
@@ -105,7 +93,7 @@ func _draw_waiting_panel() -> void:
 		HORIZONTAL_ALIGNMENT_LEFT,
 		-1,
 		WAITING_FONT_SIZE,
-		UiPalette.TEXT_OFFWHITE
+		UiPalette.IVORY
 	)
 
 
@@ -116,16 +104,17 @@ func _draw_target_prompt() -> void:
 	var zoom := CardMatchLayout.current().text_scale
 	draw_set_transform(shown.position, 0.0, Vector2.ONE * zoom)
 	var prompt := Rect2(Vector2.ZERO, shown.size / zoom)
-	draw_rect(prompt, Color(0.08, 0.12, 0.14, 0.95))
-	draw_rect(prompt, CardView.SELECT_CYAN, false, 2.0)
+	UiKit.glass(
+		get_canvas_item(), prompt, -1.0, 1.0, UiKit.GLASS_ALPHA, UiKit.rim_color(UiPalette.SELECT)
+	)
 	draw_string(
 		font,
 		prompt.position + Vector2(12, 24),
 		"対象を選ぶ",
 		HORIZONTAL_ALIGNMENT_LEFT,
 		-1,
-		20,
-		CardView.SELECT_CYAN
+		UiPalette.T_LEAD,
+		UiPalette.SELECT
 	)
 	draw_string(
 		font,
@@ -133,7 +122,7 @@ func _draw_target_prompt() -> void:
 		"他を押すと取消",
 		HORIZONTAL_ALIGNMENT_LEFT,
 		-1,
-		14,
-		UiPalette.TEXT_OFFWHITE
+		UiPalette.T_SMALL,
+		UiPalette.IVORY
 	)
 	draw_set_transform_matrix(Transform2D.IDENTITY)

@@ -147,7 +147,7 @@ func _draw_banner() -> void:
 		HORIZONTAL_ALIGNMENT_LEFT,
 		-1,
 		font_size,
-		Color(UiPalette.GLOW_AMBER, alpha)
+		Color(UiPalette.SAND_HI, alpha)
 	)
 
 
@@ -178,22 +178,16 @@ func _draw_caption() -> void:
 		HORIZONTAL_ALIGNMENT_LEFT,
 		-1,
 		font_size,
-		Color(UiPalette.TEXT_OFFWHITE, alpha)
+		Color(UiPalette.IVORY, alpha)
 	)
 
 
 func _draw_plate(rect: Rect2, alpha: float) -> void:
-	var ci := get_canvas_item()
-	var points := UiPaint.rounded_rect_points_uniform(rect, 8.0, 5)
-	UiPaint.fill_gradient_polygon(
-		ci,
-		points,
-		rect,
-		[[0.0, Color(0.05, 0.05, 0.07, alpha)], [1.0, Color(0.13, 0.11, 0.13, alpha)]]
-	)
-	var outline := points.duplicate()
-	outline.append(points[0])
-	ShapePaint.polyline(get_canvas_item(), outline, Color(UiPalette.BRASS_MID, alpha), 1.5, true)
+	var rim := UiKit.rim_brass()
+	for stop in rim:
+		var color: Color = stop[1]
+		stop[1] = Color(color, alpha)
+	UiKit.glass(get_canvas_item(), rect, -1.0, 0.0, alpha, rim)
 
 
 ## 対局ログを購読して、**相手の手だけ**を同じ文言で実況する(GameDesign.md 9章)。

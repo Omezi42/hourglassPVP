@@ -22,7 +22,7 @@ const BUTTON_SIZE := Vector2(168, 52)
 const BUTTON_GAP := 14
 const LOG_BUTTON_SIZE := Vector2(72, 34)
 const LOG_BUTTON_MARGIN := 16.0
-const LOG_FONT_SIZE := 14
+const LOG_FONT_SIZE := UiPalette.T_SMALL
 const DIM_COLOR := Color(0, 0, 0, 0.72)
 const ENTRANCE_DURATION := 0.42
 const ENTRANCE_SCALE := 0.86
@@ -32,32 +32,28 @@ const PORTRAIT_PADDING := Vector2(28, 26)
 const PORTRAIT_PRIMARY_SIZE := Vector2(144, 56)
 const PORTRAIT_BUTTON_SIZE := Vector2(124, 56)
 
-const EYEBROW_FONT_SIZE := 14
-const TITLE_FONT_SIZE := 40
-const NAME_FONT_SIZE := 20
-const SUMMARY_FONT_SIZE := 18
-const SUMMARY_VALUE_FONT_SIZE := 30
-const NOTE_FONT_SIZE := 14
-const FAIL_TITLE_COLOR := Color(0.78, 0.76, 0.72)
-const STONE_RULE_COLOR := Color(0.45, 0.45, 0.48)
+const EYEBROW_FONT_SIZE := UiPalette.T_SMALL
+const TITLE_FONT_SIZE := UiPalette.T_TITLE
+const NAME_FONT_SIZE := UiPalette.T_LEAD
+const SUMMARY_FONT_SIZE := UiPalette.T_LEAD
+const SUMMARY_VALUE_FONT_SIZE := UiPalette.T_HEAD
+const NOTE_FONT_SIZE := UiPalette.T_SMALL
+const FAIL_TITLE_COLOR := UiPalette.MUTED
+const STONE_RULE_COLOR := UiPalette.FAINT
 const RULE_HEIGHT := 8.0
 const RULE_SPAN := 0.32
 const RULE_DIAMOND := 4.0
 
-## 受け皿(凹んだ面)
+## 受け皿(彫り込み)
 const TRAY_RADIUS := 12.0
 const TRAY_PADDING := Vector2(20, 12)
-const TRAY_TEXT_FONT_SIZE := 16
-const TRAY_HEAD_FONT_SIZE := 13
-const TRAY_TOP := Color(0.03, 0.025, 0.02, 0.72)
-const TRAY_BOTTOM := Color(0.1, 0.08, 0.06, 0.6)
-const TRAY_RIM_DARK := Color(0, 0, 0, 0.6)
-const TRAY_RIM_LIGHT := Color(1, 0.9, 0.7, 0.12)
+const TRAY_TEXT_FONT_SIZE := UiPalette.T_BODY
+const TRAY_HEAD_FONT_SIZE := UiPalette.T_SMALL
 
 ## 報酬の札
 const REWARD_GAP := 28
 const REWARD_ROW_GAP := 14
-const REWARD_AMOUNT_FONT_SIZE := 30
+const REWARD_AMOUNT_FONT_SIZE := UiPalette.T_HEAD
 const REWARD_NAME_FONT_SIZE := 20
 const REWARD_SUB_FONT_SIZE := 13
 
@@ -111,16 +107,16 @@ func show_for(outcome: Outcome) -> void:
 		_box.remove_child(child)
 		child.queue_free()
 	var inner_width := _panel_width() - _padding().x * 2.0
-	_box.add_child(_label(outcome.eyebrow, EYEBROW_FONT_SIZE, UiPalette.TEXT_MUTED))
+	_box.add_child(_label(outcome.eyebrow, EYEBROW_FONT_SIZE, UiPalette.MUTED))
 	_box.add_child(
 		_label(
 			"クリア!" if _cleared else "とどかなかった",
 			TITLE_FONT_SIZE,
-			UiPalette.GLOW_AMBER if _cleared else FAIL_TITLE_COLOR
+			UiPalette.SAND_HI if _cleared else FAIL_TITLE_COLOR
 		)
 	)
 	if not outcome.stage_name.is_empty():
-		_box.add_child(_label(outcome.stage_name, NAME_FONT_SIZE, UiPalette.TEXT_OFFWHITE))
+		_box.add_child(_label(outcome.stage_name, NAME_FONT_SIZE, UiPalette.IVORY))
 	_box.add_child(_gap(10))
 	_box.add_child(_rule(inner_width))
 	_box.add_child(_gap(10))
@@ -142,10 +138,10 @@ func _add_tray(outcome: Outcome, width: float) -> void:
 		_box.add_child(_reward_tray(reward, width))
 		if reward.gold_pending:
 			_box.add_child(_gap(6))
-			_box.add_child(_label("砂金は次に接続できたときに反映", NOTE_FONT_SIZE, UiPalette.TEXT_MUTED))
+			_box.add_child(_label("砂金は次に接続できたときに反映", NOTE_FONT_SIZE, UiPalette.MUTED))
 		return
 	if _cleared and reward != null and reward.already_cleared:
-		_box.add_child(_label("クリア済み(報酬は初回のみ)", NOTE_FONT_SIZE, UiPalette.TEXT_MUTED))
+		_box.add_child(_label("クリア済み(報酬は初回のみ)", NOTE_FONT_SIZE, UiPalette.MUTED))
 		return
 	if not _cleared and not outcome.tray_text.is_empty():
 		_box.add_child(_text_tray(outcome.tray_title, outcome.tray_text, width))
@@ -268,7 +264,7 @@ func _gap(height: float) -> Control:
 func _rule(width: float) -> Control:
 	var line := Control.new()
 	line.custom_minimum_size = Vector2(width, RULE_HEIGHT)
-	var tone := UiPalette.BRASS_HIGHLIGHT if _cleared else STONE_RULE_COLOR
+	var tone := UiPalette.GOLD if _cleared else STONE_RULE_COLOR
 	line.draw.connect(
 		func() -> void:
 			var mid := Vector2(width * 0.5, RULE_HEIGHT * 0.5)
@@ -299,15 +295,13 @@ func _summary(outcome: Outcome) -> HBoxContainer:
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 6)
-	var lead := _label(outcome.summary_lead, SUMMARY_FONT_SIZE, UiPalette.TEXT_OFFWHITE)
-	var tail := _label(outcome.summary_tail, SUMMARY_FONT_SIZE, UiPalette.TEXT_OFFWHITE)
+	var lead := _label(outcome.summary_lead, SUMMARY_FONT_SIZE, UiPalette.IVORY)
+	var tail := _label(outcome.summary_tail, SUMMARY_FONT_SIZE, UiPalette.IVORY)
 	for label in [lead, tail]:
 		label.size_flags_vertical = Control.SIZE_SHRINK_END
 	row.add_child(lead)
 	if outcome.summary_value >= 0:
-		var value := _label(
-			str(outcome.summary_value), SUMMARY_VALUE_FONT_SIZE, UiPalette.GLOW_AMBER
-		)
+		var value := _label(str(outcome.summary_value), SUMMARY_VALUE_FONT_SIZE, UiPalette.SAND_HI)
 		row.add_child(value)
 	row.add_child(tail)
 	return row
@@ -349,10 +343,10 @@ func _reward_item(visual: Control, head: String, sub: String, is_amount: bool) -
 	var head_label := _label(
 		head,
 		REWARD_AMOUNT_FONT_SIZE if is_amount else REWARD_NAME_FONT_SIZE,
-		UiPalette.GLOW_AMBER if is_amount else UiPalette.TEXT_OFFWHITE
+		UiPalette.SAND_HI if is_amount else UiPalette.IVORY
 	)
 	head_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	var sub_label := _label(sub, REWARD_SUB_FONT_SIZE, UiPalette.TEXT_MUTED)
+	var sub_label := _label(sub, REWARD_SUB_FONT_SIZE, UiPalette.MUTED)
 	sub_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	text.add_child(head_label)
 	text.add_child(sub_label)
@@ -364,7 +358,7 @@ func _reward_item(visual: Control, head: String, sub: String, is_amount: bool) -
 func _text_tray(heading: String, body: String, width: float) -> Control:
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 4)
-	var head := _label(heading, TRAY_HEAD_FONT_SIZE, UiPalette.BRASS_HIGHLIGHT)
+	var head := _label(heading, TRAY_HEAD_FONT_SIZE, UiPalette.GOLD)
 	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	box.add_child(head)
 	var text := Label.new()
@@ -373,12 +367,12 @@ func _text_tray(heading: String, body: String, width: float) -> Control:
 	text.custom_minimum_size.x = width - TRAY_PADDING.x * 2.0
 	text.text = body
 	text.add_theme_font_size_override("font_size", TRAY_TEXT_FONT_SIZE)
-	text.add_theme_color_override("font_color", UiPalette.TEXT_OFFWHITE)
+	text.add_theme_color_override("font_color", UiPalette.IVORY)
 	box.add_child(text)
 	return _recessed(box, width)
 
 
-## 凹んだ面。中身の大きさに合わせて伸びる。
+## 彫り込みの受け皿。中身の大きさに合わせて伸びる。
 func _recessed(content: Control, width: float) -> MarginContainer:
 	var tray := MarginContainer.new()
 	tray.custom_minimum_size.x = width
@@ -393,10 +387,7 @@ func _recessed(content: Control, width: float) -> MarginContainer:
 				return
 			var ci := tray.get_canvas_item()
 			var rect := Rect2(Vector2.ZERO, tray.size)
-			var points := UiPaint.rounded_rect_points_uniform(rect, TRAY_RADIUS, 6)
-			UiPaint.fill_gradient_polygon(ci, points, rect, [[0.0, TRAY_TOP], [1.0, TRAY_BOTTOM]])
-			UiPaint.draw_inner_shadow(ci, rect, TRAY_RADIUS, 10, 3, Color(0, 0, 0), 0.4)
-			UiPaint.draw_bevel(ci, points, TRAY_RIM_DARK, TRAY_RIM_LIGHT, 1.5, false)
+			UiKit.well(ci, rect, TRAY_RADIUS)
 	)
 	return tray
 

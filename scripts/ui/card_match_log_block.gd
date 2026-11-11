@@ -4,10 +4,11 @@ extends RefCounted
 ## 見出し(ターン番号・誰の番・減ったHP)、種類の札つきの行、原因の下へ字下げした結果の行。
 ## 行のカード名のホバー・タップは `CardMatchLog` が `wire` で受け持つ。
 
-const FIRST_COLOR := UiPalette.GLOW_AMBER
-const SECOND_COLOR := Color(0.5, 0.66, 0.9)
-const DAMAGE_COLOR := Color(0.95, 0.42, 0.36)
-const CARD_NAME_COLOR := UiPalette.GLOW_AMBER
+## 手番の色: 自分 = 砂 / 相手 = 朱(青はコスト・マナの色。9章)。
+const FIRST_COLOR := UiPalette.SAND
+const SECOND_COLOR := UiPalette.FOE
+const DAMAGE_COLOR := UiPalette.HEALTH
+const CARD_NAME_COLOR := UiPalette.GOLD
 const NAME_OPEN := "「"
 const NAME_CLOSE := "」"
 
@@ -25,22 +26,22 @@ const BADGES := {
 	"end": ["決", Color(0.55, 0.4, 0.12)],
 	"note": ["・", Color(0.3, 0.3, 0.32)],
 }
-const DAMAGE_BADGE := Color(0.5, 0.14, 0.12)
-const HEAL_BADGE := Color(0.2, 0.42, 0.22)
 
-const HEADER_FONT := 15
-const WHO_FONT := 17
-const ACTION_FONT := 17
-const RESULT_FONT := 15
-const BADGE_FONT := 14
+const HEADER_FONT := UiPalette.T_SMALL
+const WHO_FONT := UiPalette.T_BODY
+const ACTION_FONT := UiPalette.T_BODY
+const RESULT_FONT := UiPalette.T_SMALL
 const BADGE_SIZE := Vector2(30, 26)
 const INDENT := 36.0
-const ACCENT_WIDTH := 4
-const CORNER := 6
+const ACCENT_WIDTH := 4.0
 const ROW_GAP := 4
-const LATEST_FILL := Color(1, 1, 1, 0.07)
-const PAST_FILL := Color(1, 1, 1, 0.035)
-const BADGE_EDGE := Color(1, 1, 1, 0.18)
+## 区画の内側の余白(左, 右, 上, 下)。
+const PAD_LEFT := 14.0
+const PAD_RIGHT := 12.0
+const PAD_TOP := 8.0
+const PAD_BOTTOM := 10.0
+## 数値の宝石の色の明るい側へ寄せる量。
+const BADGE_LIGHTEN := 0.25
 
 
 ## `turn` は {number, side, rows}。`names` は手番 → 「あなた」等、`accents` は手番 → 色。
@@ -54,44 +55,51 @@ static func build(
 	wire: Callable
 ) -> Control:
 	var side: int = turn["side"]
-	var accent: Color = accents.get(side, UiPalette.TEXT_MUTED)
-	var box := PanelContainer.new()
-	box.add_theme_stylebox_override("panel", _block_style(accent, latest, scale))
+	var accent: Color = accents.get(side, UiPalette.MUTED)
+	var box := MarginContainer.new()
+	box.add_theme_constant_override("margin_left", int(PAD_LEFT * scale))
+	box.add_theme_constant_override("margin_right", int(PAD_RIGHT * scale))
+	box.add_theme_constant_override("margin_top", int(PAD_TOP * scale))
+	box.add_theme_constant_override("margin_bottom", int(PAD_BOTTOM * scale))
+	box.draw.connect(func() -> void: _draw_block(box, accent, latest, scale))
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", int(ROW_GAP * scale))
 	box.add_child(column)
 	column.add_child(_header(turn, names, accent, scale))
 	var rows: Array = turn["rows"]
 	if rows.is_empty() and latest:
-		column.add_child(_label("まだ行動していない", RESULT_FONT * scale, UiPalette.TEXT_MUTED))
+		column.add_child(_label("まだ行動していない", RESULT_FONT * scale, UiPalette.MUTED))
 	for entry in rows:
 		column.add_child(_row(entry, scale, wire))
 	return box
 
 
-static func _block_style(accent: Color, latest: bool, scale: float) -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = LATEST_FILL if latest else PAST_FILL
-	style.border_color = accent
-	style.border_width_left = int(ACCENT_WIDTH * scale)
-	style.set_corner_radius_all(int(CORNER * scale))
-	style.content_margin_left = 14 * scale
-	style.content_margin_right = 12 * scale
-	style.content_margin_top = 8 * scale
-	style.content_margin_bottom = 10 * scale
-	return style
+## 区画の背面。いまのターンは彫り込みに沈め、過去のターンは下の罫線だけで区切る。
+## 左の縦の帯は手番の色(自分 = 砂 / 相手 = 朱)。
+static func _draw_block(box: Control, accent: Color, latest: bool, scale: float) -> void:
+	var ci := box.get_canvas_item()
+	var rect := Rect2(Vector2.ZERO, box.size)
+	if latest:
+		UiKit.well(ci, rect, UiKit.radius(rect) * 0.5)
+	else:
+		UiKit.rule(ci, Vector2(0.0, rect.size.y), rect.size)
+	var bar := Rect2(
+		rect.position + Vector2(0.0, PAD_TOP * scale * 0.5),
+		Vector2(ACCENT_WIDTH * scale, rect.size.y - PAD_TOP * scale)
+	)
+	UiKit.fill(ci, UiKit.rr(bar, bar.size.x * 0.5), accent)
 
 
 static func _header(turn: Dictionary, names: Dictionary, accent: Color, scale: float) -> Control:
 	var head := HBoxContainer.new()
 	var number: int = turn["number"]
 	if number > 0:
-		head.add_child(_label("ターン%d  " % number, HEADER_FONT * scale, UiPalette.TEXT_MUTED))
+		head.add_child(_label("ターン%d  " % number, HEADER_FONT * scale, UiPalette.MUTED))
 		var who := _label("%sの番" % names.get(turn["side"], "?"), WHO_FONT * scale, accent)
 		who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		head.add_child(who)
 	else:
-		var start := _label("対局開始", WHO_FONT * scale, UiPalette.TEXT_MUTED)
+		var start := _label("対局開始", WHO_FONT * scale, UiPalette.MUTED)
 		start.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		head.add_child(start)
 	var losses := {}
@@ -118,7 +126,7 @@ static func _row(entry: Dictionary, scale: float, wire: Callable) -> Control:
 		var spacer := Control.new()
 		spacer.custom_minimum_size = Vector2(INDENT * scale, 0)
 		row.add_child(spacer)
-		row.add_child(_label("└", RESULT_FONT * scale, UiPalette.TEXT_MUTED))
+		row.add_child(_label("└", RESULT_FONT * scale, UiPalette.MUTED))
 	row.add_child(_badge(entry, scale))
 	var text := RichTextLabel.new()
 	text.bbcode_enabled = true
@@ -129,7 +137,7 @@ static func _row(entry: Dictionary, scale: float, wire: Callable) -> Control:
 	text.add_theme_font_size_override(
 		"normal_font_size", int((RESULT_FONT if result else ACTION_FONT) * scale)
 	)
-	var color := UiPalette.TEXT_MUTED if result else UiPalette.TEXT_OFFWHITE
+	var color := UiPalette.MUTED if result else UiPalette.IVORY
 	text.text = (
 		"[color=#%s]%s[/color]" % [color.to_html(false), markup(entry["line"], entry["cards"])]
 	)
@@ -145,27 +153,29 @@ static func _badge(entry: Dictionary, scale: float) -> Control:
 	match kind:
 		"damage":
 			glyph = "−%d" % int(entry["amount"])
-			fill = DAMAGE_BADGE
+			fill = UiPalette.HEALTH_DEEP
 		"heal":
 			glyph = "+%d" % int(entry["amount"])
-			fill = HEAL_BADGE
+			fill = UiPalette.GOOD.darkened(0.45)
 		_:
 			var badge: Array = BADGES.get(kind, BADGES["note"])
 			glyph = badge[0]
 			fill = badge[1]
-	var plate := PanelContainer.new()
-	var style := StyleBoxFlat.new()
-	style.bg_color = fill
-	style.border_color = BADGE_EDGE
-	style.set_border_width_all(1)
-	style.set_corner_radius_all(int(5 * scale))
-	plate.add_theme_stylebox_override("panel", style)
+	var plate := Control.new()
 	plate.custom_minimum_size = BADGE_SIZE * scale
 	plate.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	var label := _label(glyph, BADGE_FONT * scale, UiPalette.TEXT_OFFWHITE)
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	plate.add_child(label)
+	plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	plate.draw.connect(func() -> void: _draw_badge(plate, glyph, fill))
 	return plate
+
+
+## 種類の札: 数値の宝石の面に字を載せる(行の先頭の目印)。
+static func _draw_badge(plate: Control, glyph: String, fill: Color) -> void:
+	var ci := plate.get_canvas_item()
+	var rad := minf(plate.size.x, plate.size.y) * 0.5
+	var center := plate.size * 0.5
+	UiKit.gem(ci, center, rad, fill.lightened(BADGE_LIGHTEN), fill)
+	UiKit.gem_text(ci, plate.get_theme_default_font(), center, rad, glyph, UiPalette.IVORY)
 
 
 static func _label(text: String, font_size: float, color: Color) -> Label:

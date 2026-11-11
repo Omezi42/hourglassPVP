@@ -8,8 +8,6 @@ extends RefCounted
 const PANEL_PADDING := 14.0
 const ITEM_GAP := 12.0
 const PANEL_GAP := 8.0
-const CORNER_RADIUS := 12.0
-const FRAME_WIDTH := 3.0
 const ITEM_SIZE := Vector2(260, 68)
 const ITEM_FONT_SIZE := 28
 
@@ -29,16 +27,7 @@ class MenuPanel:
 	extends Control
 
 	func _draw() -> void:
-		var ci := get_canvas_item()
-		var rect := Rect2(Vector2.ZERO, size)
-		var points := UiPaint.rounded_rect_points_uniform(rect, CORNER_RADIUS, 5)
-		UiPaint.fill_gradient_polygon(
-			ci, points, rect, [[0.0, UiPalette.NAVY_PANEL_TOP], [1.0, UiPalette.NAVY_PANEL_BOTTOM]]
-		)
-		UiPaint.apply_grain(ci, rect, 0.06)
-		UiPaint.draw_bevel(
-			ci, points, UiPalette.BRASS_RIM_LIGHT, UiPalette.BRASS_DARK, FRAME_WIDTH, false
-		)
+		UiKit.glass(get_canvas_item(), Rect2(Vector2.ZERO, size))
 
 
 func _init(screen: CardMatchScreen) -> void:

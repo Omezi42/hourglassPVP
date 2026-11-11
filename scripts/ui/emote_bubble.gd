@@ -8,7 +8,7 @@ const FADE_IN_DURATION := 0.3
 const DISPLAY_DURATION := 3.0
 const FADE_OUT_DURATION := 0.5
 const FLOAT_OFFSET := 8.0
-const FONT_SIZE := 15
+const FONT_SIZE := UiPalette.T_SMALL
 
 var text := ""
 var is_opponent := false
@@ -64,17 +64,7 @@ func _draw() -> void:
 		return
 	var bubble_size := size
 	var rect := Rect2(Vector2.ZERO, bubble_size)
-	var points := UiPaint.rounded_rect_points_uniform(rect, 8.0, 5)
-	var ci := get_canvas_item()
-	UiPaint.fill_gradient_polygon(
-		ci,
-		points,
-		rect,
-		[[0.0, Color(0.16, 0.13, 0.1, 0.95)], [1.0, Color(0.08, 0.06, 0.05, 0.95)]]
-	)
-	var outline := points.duplicate()
-	outline.append(points[0])
-	ShapePaint.polyline(get_canvas_item(), outline, UiPalette.BRASS_LIGHT, 1.5, true)
+	UiKit.glass(get_canvas_item(), rect)
 
 	draw_string(
 		_font,
@@ -83,5 +73,5 @@ func _draw() -> void:
 		HORIZONTAL_ALIGNMENT_LEFT,
 		-1,
 		FONT_SIZE,
-		UiPalette.TEXT_OFFWHITE
+		UiPalette.IVORY
 	)

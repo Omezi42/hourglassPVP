@@ -42,14 +42,14 @@ const DOTS_WIDTH := 60.0
 const DOT_RADIUS := 4.0
 const DOT_STEP := 12.0
 ## いま触るものを囲む枠(GameDesign.md 18章)。手は塞がず、視線だけを誘導する。
-const FOCUS_COLOR := Color(0.55, 0.9, 1.0)
+const FOCUS_COLOR := UiPalette.SELECT
 const FOCUS_PERIOD := 1.2
 const FOCUS_GROW := 5.0
 const FOCUS_WIDTH := 2.5
 const FOCUS_RINGS := [0, 1]
 ## 説明を読んでいる間に光らせる数字(GameDesign.md 18章「数字の光」)。操作を求める
 ## 輪郭とは色を分け、押す場所と読む場所を取り違えさせない。
-const NUMBER_GLOW_COLOR := Color(1.0, 0.82, 0.35)
+const NUMBER_GLOW_COLOR := UiPalette.SAND_HI
 const NEXT_SIZE := Vector2(88, 36)
 ## CPUが指す前に帯の文を読み切れるだけ待つ(GameDesign.md 18章)。文の長さに比例させる。
 const READ_SECONDS_BASE := 0.3
@@ -644,7 +644,7 @@ func _build() -> void:
 	_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_label.add_theme_font_size_override("font_size", BAND_FONT_SIZE)
-	_label.add_theme_color_override("font_color", UiPalette.TEXT_OFFWHITE)
+	_label.add_theme_color_override("font_color", UiPalette.IVORY)
 	_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var margin := MarginContainer.new()
@@ -738,11 +738,9 @@ func _draw_dots() -> void:
 	for i in STAGE_COUNT:
 		var at := Vector2(left + DOT_STEP * i, y)
 		if i < current_stage:
-			ShapePaint.circle(_dots.get_canvas_item(), at, DOT_RADIUS, UiPalette.GLOW_AMBER)
+			ShapePaint.circle(_dots.get_canvas_item(), at, DOT_RADIUS, UiPalette.SAND)
 		else:
-			ShapePaint.circle(
-				_dots.get_canvas_item(), at, DOT_RADIUS, Color(UiPalette.GLOW_AMBER, 0.22)
-			)
+			ShapePaint.circle(_dots.get_canvas_item(), at, DOT_RADIUS, Color(UiPalette.SAND, 0.22))
 			ShapePaint.arc(
 				_dots.get_canvas_item(),
 				at,
@@ -750,7 +748,7 @@ func _draw_dots() -> void:
 				0.0,
 				TAU,
 				16,
-				Color(UiPalette.GLOW_AMBER, 0.7),
+				Color(UiPalette.SAND, 0.7),
 				1.2
 			)
 
