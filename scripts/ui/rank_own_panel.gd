@@ -5,26 +5,26 @@ extends Control
 
 const PAD := Vector2(24, 20)
 const HEAD_BASELINE := 44.0
-const HEAD_SIZE := 16
-const DAYS_SIZE := 15
+const HEAD_SIZE := UiPalette.T_BODY
+const DAYS_SIZE := UiPalette.T_SMALL
 const MEDAL_CENTER_Y := 128.0
 const MEDAL_RADIUS := 60.0
 const STAR_Y := 214.0
 const STAR_RADIUS := 10.0
 const STAR_SPACING := 26.0
 const TIER_BASELINE := 272.0
-const TIER_SIZE := 40
+const TIER_SIZE := UiPalette.T_HERO
 const NEXT_BASELINE := 306.0
-const NEXT_SIZE := 20
-const RATING_SIZE := 26
+const NEXT_SIZE := UiPalette.T_LEAD
+const RATING_SIZE := UiPalette.T_HEAD
 const STREAK_TOP := 322.0
 const STREAK_HEIGHT := 30.0
 const STREAK_PAD := 36.0
-const STREAK_SIZE := 16
+const STREAK_SIZE := UiPalette.T_BODY
 const RULE_Y := 372.0
 const REWARD_HEAD_BASELINE := RULE_Y + 30.0
-const REWARD_HEAD_SIZE := 17
-const REWARD_NOTE_SIZE := 13
+const REWARD_HEAD_SIZE := UiPalette.T_BODY
+const REWARD_NOTE_SIZE := UiPalette.T_SMALL
 const REWARD_SLOT_TOP := RULE_Y + 46.0
 const REWARD_SLOT_HEIGHT := 100.0
 const REWARD_SLOT_GAP := 8.0
@@ -33,8 +33,7 @@ const REWARD_MEDAL_Y := RULE_Y + 80.0
 const REWARD_MEDAL_RADIUS := 20.0
 const REWARD_NAME_BASELINE := RULE_Y + 118.0
 const REWARD_AMOUNT_BASELINE := RULE_Y + 137.0
-const REWARD_TEXT_SIZE := 13
-const CORNER_SEGMENTS := 8
+const REWARD_TEXT_SIZE := UiPalette.T_SMALL
 ## 月末報酬の段に並べる帯(刻印を打たない帯そのもののメダル)。
 const REWARD_TIERS: Array[String] = ["bronze1", "silver1", "gold1", "platinum"]
 const TEXT_SHADOW := Color(0, 0, 0, 0.6)
@@ -86,13 +85,13 @@ func _draw() -> void:
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE * zoom)
 	var inner := Rect2(PAD, size / zoom - PAD * 2.0)
 	var platinum := _tier == RankRules.PLATINUM_KEY
-	_text(_font, Vector2(inner.position.x, HEAD_BASELINE), "いまの段位", HEAD_SIZE, UiPalette.TEXT_MUTED)
+	_text(_font, Vector2(inner.position.x, HEAD_BASELINE), "いまの段位", HEAD_SIZE, UiPalette.MUTED)
 	_text(
 		_font,
 		Vector2(inner.position.x, HEAD_BASELINE),
 		"シーズン終了まで %d日" % _days_left,
 		DAYS_SIZE,
-		UiPalette.TEXT_MUTED,
+		UiPalette.MUTED,
 		HORIZONTAL_ALIGNMENT_RIGHT,
 		inner.size.x
 	)
@@ -105,7 +104,7 @@ func _draw() -> void:
 		Vector2(inner.position.x, TIER_BASELINE),
 		_tier_label(),
 		TIER_SIZE,
-		UiPalette.TEXT_OFFWHITE,
+		UiPalette.IVORY,
 		HORIZONTAL_ALIGNMENT_CENTER,
 		inner.size.x
 	)
@@ -114,7 +113,7 @@ func _draw() -> void:
 		Vector2(inner.position.x, NEXT_BASELINE),
 		_next_line(),
 		RATING_SIZE if platinum else NEXT_SIZE,
-		UiPalette.BRASS_HIGHLIGHT,
+		UiPalette.GOLD,
 		HORIZONTAL_ALIGNMENT_CENTER,
 		inner.size.x
 	)
@@ -136,11 +135,7 @@ func _draw_stars(center_x: float) -> void:
 		var points := RankMedal.star_points(at, STAR_RADIUS)
 		ShapePaint.colored_polygon(get_canvas_item(), points, Color(0, 0, 0, 0.35))
 		ShapePaint.polyline(
-			get_canvas_item(),
-			RankMedal.closed(points),
-			Color(UiPalette.BRASS_HIGHLIGHT, 0.45),
-			outline,
-			true
+			get_canvas_item(), RankMedal.closed(points), Color(UiPalette.GOLD, 0.45), outline, true
 		)
 
 
@@ -171,23 +166,21 @@ func _draw_streak(center_x: float) -> void:
 		_font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, STREAK_SIZE).x + STREAK_PAD
 	)
 	var pill := Rect2(center_x - width * 0.5, STREAK_TOP, width, STREAK_HEIGHT)
-	var stops := (
-		[[0.0, UiPalette.PANEL_AMBER_TOP], [1.0, UiPalette.PANEL_AMBER_BOTTOM.darkened(0.25)]]
-		if bonus
-		else [[0.0, UiPalette.PANEL_PRESSED_TOP], [1.0, UiPalette.PANEL_PRESSED_BOTTOM]]
-	)
-	UiPaint.fill_gradient_polygon(
-		get_canvas_item(),
-		UiPaint.rounded_rect_points_uniform(pill, STREAK_HEIGHT * 0.5, CORNER_SEGMENTS),
-		pill,
-		stops
-	)
+	if bonus:
+		UiKit.vgrad(
+			get_canvas_item(),
+			UiKit.rr(pill, STREAK_HEIGHT * 0.5),
+			[[0.0, UiPalette.SAND_HI], [1.0, UiPalette.SAND_DEEP]],
+			true
+		)
+	else:
+		UiKit.well(get_canvas_item(), pill, STREAK_HEIGHT * 0.5)
 	_text(
 		_font,
 		Vector2(pill.position.x, pill.position.y + STREAK_HEIGHT * 0.7),
 		text,
 		STREAK_SIZE,
-		UiPalette.TEXT_OFFWHITE,
+		UiPalette.BRASS_INK if bonus else UiPalette.IVORY,
 		HORIZONTAL_ALIGNMENT_CENTER,
 		pill.size.x
 	)
@@ -195,25 +188,20 @@ func _draw_streak(center_x: float) -> void:
 
 ## 月末報酬の段。今シーズンの最高段位の帯だけを光らせる(報酬はその帯の1つだけのため)。
 func _draw_rewards(inner: Rect2) -> void:
-	draw_line(
-		Vector2(inner.position.x, RULE_Y),
-		Vector2(inner.end.x, RULE_Y),
-		Color(UiPalette.GLOW_AMBER, 0.3),
-		1.0
-	)
+	UiKit.rule(get_canvas_item(), Vector2(inner.position.x, RULE_Y), Vector2(inner.end.x, RULE_Y))
 	_text(
 		_font,
 		Vector2(inner.position.x, REWARD_HEAD_BASELINE),
 		"月末報酬",
 		REWARD_HEAD_SIZE,
-		UiPalette.TEXT_OFFWHITE
+		UiPalette.IVORY
 	)
 	_text(
 		_font,
 		Vector2(inner.position.x, REWARD_HEAD_BASELINE),
 		"今シーズンの最高段位で決まります",
 		REWARD_NOTE_SIZE,
-		UiPalette.TEXT_MUTED,
+		UiPalette.MUTED,
 		HORIZONTAL_ALIGNMENT_RIGHT,
 		inner.size.x
 	)
@@ -230,16 +218,12 @@ func _draw_rewards(inner: Rect2) -> void:
 			REWARD_SLOT_HEIGHT
 		)
 		if reached:
-			var points := UiPaint.rounded_rect_points_uniform(
-				rect, REWARD_SLOT_RADIUS, CORNER_SEGMENTS
-			)
-			ShapePaint.colored_polygon(get_canvas_item(), points, Color(UiPalette.GLOW_AMBER, 0.14))
-			ShapePaint.polyline(
+			UiKit.well(get_canvas_item(), rect, REWARD_SLOT_RADIUS)
+			UiKit.stroke(
 				get_canvas_item(),
-				RankMedal.closed(points),
-				Color(UiPalette.GLOW_AMBER, 0.8),
-				1.5,
-				true
+				UiKit.rr(rect, REWARD_SLOT_RADIUS),
+				Color(UiPalette.SAND, 0.8),
+				UiKit.LINE_MIN
 			)
 		RankMedal.draw_medal(
 			self,
@@ -260,7 +244,7 @@ func _draw_rewards(inner: Rect2) -> void:
 			Vector2(rect.position.x, REWARD_NAME_BASELINE),
 			name,
 			REWARD_TEXT_SIZE,
-			UiPalette.TEXT_OFFWHITE if reached else UiPalette.TEXT_MUTED,
+			UiPalette.IVORY if reached else UiPalette.MUTED,
 			HORIZONTAL_ALIGNMENT_CENTER,
 			rect.size.x
 		)
@@ -269,7 +253,7 @@ func _draw_rewards(inner: Rect2) -> void:
 			Vector2(rect.position.x, REWARD_AMOUNT_BASELINE),
 			CurrencyRules.label_text(int(RankProgress.SEASON_REWARDS[bracket])),
 			REWARD_TEXT_SIZE,
-			UiPalette.BRASS_HIGHLIGHT if reached else Color(UiPalette.TEXT_MUTED, 0.7),
+			UiPalette.GOLD if reached else Color(UiPalette.MUTED, 0.7),
 			HORIZONTAL_ALIGNMENT_CENTER,
 			rect.size.x
 		)

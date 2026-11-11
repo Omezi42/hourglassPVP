@@ -87,6 +87,6 @@ func _layout() -> void:
 
 func _draw() -> void:
 	var rect := Rect2(Vector2.ZERO, size)
-	draw_rect(rect, UiPalette.BOARD_TABLE_FILL)
+	draw_rect(rect, UiPalette.INK_800)
 	PlaymatPaint.draw_mat(self, rect.grow(-FRAME_INSET), mat_id)
-	draw_rect(rect, UiPalette.BRASS_DARK, false, FRAME_WIDTH)
+	draw_rect(rect, UiPalette.BRASS_DEEP, false, FRAME_WIDTH)

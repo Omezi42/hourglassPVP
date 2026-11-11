@@ -20,6 +20,8 @@ const MESSAGE_FONT_SIZE := 24
 const CREATE_BUTTON_Y := 262.0
 const ENTRY_TILES_RECT := Rect2(24, 120, 290, 78)
 const PAD_POS := Vector2(330, 120)
+## 縦で数字パッドへ重ならない「参加する」の幅。
+const JOIN_BUTTON_WIDTH := 280.0
 const DECK_BUTTON_RIGHT := 32.0
 
 const CODE_HEIGHT := 200.0
@@ -102,6 +104,7 @@ static func _entrance_portrait(screen: CardRoomScreen) -> void:
 	screen._create_button.position = Vector2((WIDTH - create.size.x) * 0.5, CREATE_BUTTON_Y)
 	_place(screen._join_tiles, ENTRY_TILES_RECT)
 	screen._join_pad.position = PAD_POS
+	_resize(screen._join_button, Vector2(JOIN_BUTTON_WIDTH, CardRoomScreen.JOIN_BUTTON_RECT.size.y))
 	var deck := CardRoomScreen.DECK_BUTTON_RECT
 	screen._deck_button.position = Vector2(WIDTH - DECK_BUTTON_RIGHT - deck.size.x, deck.position.y)
 
@@ -115,6 +118,7 @@ static func _entrance_landscape(screen: CardRoomScreen) -> void:
 	screen._create_button.position = CardRoomScreen.CREATE_BUTTON_RECT.position
 	_place(screen._join_tiles, CardRoomScreen.ENTRY_TILES_RECT)
 	screen._join_pad.position = CardRoomScreen.PAD_POS
+	_resize(screen._join_button, CardRoomScreen.JOIN_BUTTON_RECT.size)
 	screen._deck_button.position = CardRoomScreen.DECK_BUTTON_RECT.position
 
 
@@ -162,6 +166,11 @@ static func _place(node: Control, rect: Rect2) -> void:
 
 
 ## 0 は上書きを外す(テーマ・作ったときの大きさへ戻す)。
+static func _resize(node: Control, node_size: Vector2) -> void:
+	node.custom_minimum_size = node_size
+	node.size = node_size
+
+
 static func _set_font(node: Control, font_size: int) -> void:
 	if font_size <= 0:
 		node.remove_theme_font_size_override("font_size")

@@ -17,10 +17,10 @@ const PORTRAIT_CARD_SIZE := Vector2(624, 172)
 const EMBLEM_COUNT := 5
 const EMBLEM_SIZE := Vector2(34, 34)
 const PORTRAIT_EMBLEM_SIZE := Vector2(44, 44)
-const NAME_FONT := 24
-const META_FONT := 15
-const COMMENT_FONT := 15
-const GUIDE_FONT := 20
+const NAME_FONT := UiPalette.T_HEAD
+const META_FONT := UiPalette.T_SMALL
+const COMMENT_FONT := UiPalette.T_SMALL
+const GUIDE_FONT := UiPalette.T_LEAD
 const PORTRAIT_NAME_FONT := 30
 const PORTRAIT_META_FONT := 22
 const PORTRAIT_COMMENT_FONT := 22
@@ -32,7 +32,7 @@ const PANEL_INNER_MARGIN := 48.0
 ## 詳細: 左に棚、右にコメントと「デッキに追加」。
 const SHELF_SIZE := Vector2(720, 500)
 const SIDE_WIDTH := 440.0
-const DETAIL_FONT := 18
+const DETAIL_FONT := UiPalette.T_BODY
 const ADD_BUTTON_SIZE := Vector2(260, 60)
 ## 縦の詳細は棚を上、コメントを下へ積む。
 const PORTRAIT_SHELF_HEIGHT := 600.0
@@ -157,7 +157,7 @@ func _build() -> void:
 	side.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_detail_view.add_child(side)
 	_detail_meta = Label.new()
-	_detail_meta.add_theme_color_override("font_color", UiPalette.BRASS_HIGHLIGHT)
+	_detail_meta.add_theme_color_override("font_color", UiPalette.GOLD)
 	side.add_child(_detail_meta)
 	_detail_comment = Label.new()
 	_detail_comment.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -268,7 +268,7 @@ func _make_card(index: int, intro: Dictionary) -> Control:
 		_label(String(intro["name"]), PORTRAIT_NAME_FONT if _portrait else NAME_FONT)
 	)
 	var meta := _label(_meta_text(intro), PORTRAIT_META_FONT if _portrait else META_FONT)
-	meta.add_theme_color_override("font_color", UiPalette.BRASS_HIGHLIGHT)
+	meta.add_theme_color_override("font_color", UiPalette.GOLD)
 	text_column.add_child(meta)
 	var comment_text := String(intro["comment"])
 	if not comment_text.is_empty():
@@ -312,7 +312,7 @@ func _make_emblems(cards: Array) -> Control:
 		icon.custom_minimum_size = PORTRAIT_EMBLEM_SIZE if _portrait else EMBLEM_SIZE
 		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		icon.modulate = UiPalette.BRASS_HIGHLIGHT
+		icon.modulate = UiPalette.GOLD
 		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		box.add_child(icon)
 	return box

@@ -72,7 +72,7 @@ func select_tab(index: int) -> void:
 	for i in _tab_buttons.size():
 		var active := i == index
 		_tab_buttons[i].set_pressed_no_signal(active)
-		var color := UiPalette.GLOW_AMBER if active else UiPalette.TEXT_OFFWHITE
+		var color := UiPalette.SAND if active else UiPalette.IVORY
 		for slot in ["font_color", "font_pressed_color", "font_hover_pressed_color"]:
 			_tab_buttons[i].add_theme_color_override(slot, color)
 		_pages[i].visible = active
@@ -156,7 +156,7 @@ class IconTile:
 	const RING_WIDTH := 2.0
 	const SELECTED_RING_WIDTH := 3.0
 	const HALO_GAP := 3.0
-	const HALO_COLOR := Color(1.0, 0.84, 0.4, 0.4)
+	const HALO_COLOR := Color(UiPalette.SAND_HI, 0.4)
 	const SEGMENTS := 40
 
 	var icon_id: String
@@ -173,19 +173,31 @@ class IconTile:
 		var ci := get_canvas_item()
 		var center := size * 0.5
 		var radius := minf(size.x, size.y) * 0.5 - RING_INSET
-		UiPaint.fill_circle(ci, center, radius, Color(0.05, 0.04, 0.03, 1.0), SEGMENTS)
+		UiKit.fill(ci, UiKit.ellipse(center, Vector2.ONE * radius, SEGMENTS), UiPalette.INK_900)
 		var tex := UserProfileLibrary.get_icon_texture(icon_id)
 		if tex != null:
 			var r := radius - ICON_INSET
 			draw_texture_rect(tex, Rect2(center - Vector2.ONE * r, Vector2.ONE * r * 2.0), false)
 		if is_selected:
-			UiPaint.draw_ring(
-				ci, center, radius, UiPalette.GLOW_AMBER, SELECTED_RING_WIDTH, SEGMENTS
+			UiKit.stroke(
+				ci,
+				UiKit.ellipse(center, Vector2.ONE * radius, SEGMENTS),
+				UiPalette.SAND,
+				SELECTED_RING_WIDTH
 			)
-			UiPaint.draw_ring(ci, center, radius + HALO_GAP, HALO_COLOR, 1.2, SEGMENTS)
+			UiKit.stroke(
+				ci,
+				UiKit.ellipse(center, Vector2.ONE * (radius + HALO_GAP), SEGMENTS),
+				HALO_COLOR,
+				UiKit.LINE_MIN
+			)
 		else:
-			var ring := UiPalette.BRASS_LIGHT if is_hovered() else UiPalette.BRASS_MID
-			UiPaint.draw_ring(ci, center, radius, ring, RING_WIDTH, SEGMENTS)
+			UiKit.stroke_grad(
+				ci,
+				UiKit.ellipse(center, Vector2.ONE * radius, SEGMENTS),
+				UiKit.rim_brass(1.0 if is_hovered() else 0.0),
+				RING_WIDTH
+			)
 
 
 ## 称号1行。
@@ -193,9 +205,8 @@ class TitleRow:
 	extends Button
 
 	const HEIGHT := 46
-	const RADIUS := 5.0
 	const TEXT_X := 18.0
-	const FONT_SIZE := 17
+	const FONT_SIZE := UiPalette.T_BODY
 	const BASELINE_OFFSET := 6.0
 
 	var title_id: String
@@ -210,21 +221,24 @@ class TitleRow:
 
 	func _draw() -> void:
 		var rect := Rect2(Vector2.ZERO, size)
-		var points := UiPaint.rounded_rect_points_uniform(rect, RADIUS, 4)
-		var top := Color(0.18, 0.15, 0.12, 0.92) if is_selected else Color(0.1, 0.08, 0.07, 0.8)
-		var bottom := Color(0.12, 0.1, 0.08, 0.92) if is_selected else Color(0.06, 0.05, 0.04, 0.8)
-		UiPaint.fill_gradient_polygon(get_canvas_item(), points, rect, [[0.0, top], [1.0, bottom]])
-		var outline := points.duplicate()
-		outline.append(points[0])
-		var border := UiPalette.BRASS_DARK
+		UiKit.well(get_canvas_item(), rect)
 		if is_selected:
-			border = UiPalette.GLOW_AMBER
+			UiKit.stroke_grad(
+				get_canvas_item(),
+				UiKit.rr(rect, minf(rect.size.y * 0.5, UiKit.WELL_RADIUS_MAX)),
+				UiKit.rim_color(UiPalette.SAND),
+				UiKit.LINE_MIN
+			)
 		elif is_hovered():
-			border = UiPalette.BRASS_LIGHT
-		ShapePaint.polyline(get_canvas_item(), outline, border, 1.5 if is_selected else 1.0, true)
+			UiKit.stroke_grad(
+				get_canvas_item(),
+				UiKit.rr(rect, minf(rect.size.y * 0.5, UiKit.WELL_RADIUS_MAX)),
+				UiKit.rim_brass(1.0),
+				UiKit.LINE_MIN
+			)
 		var font := get_theme_default_font()
 		var text := ("◆ " if is_selected else "    ") + UserProfileLibrary.get_title_name(title_id)
-		var color := UiPalette.GLOW_AMBER if is_selected else UiPalette.TEXT_OFFWHITE
+		var color := UiPalette.SAND if is_selected else UiPalette.IVORY
 		draw_string(
 			font,
 			Vector2(TEXT_X, size.y * 0.5 + BASELINE_OFFSET),
@@ -259,15 +273,15 @@ class MatTile:
 
 	func _draw() -> void:
 		var swatch := Rect2(0, 0, size.x, size.y - LABEL_HEIGHT)
-		draw_rect(swatch, UiPalette.BOARD_TABLE_FILL)
+		draw_rect(swatch, UiPalette.INK_800)
 		PlaymatPaint.draw_mat(self, swatch.grow(-SWATCH_INSET), mat_id)
-		var border := UiPalette.BRASS_DARK
+		var border := UiPalette.BRASS_DEEP
 		if is_selected:
-			border = UiPalette.GLOW_AMBER
+			border = UiPalette.SAND
 		elif is_hovered():
-			border = UiPalette.BRASS_LIGHT
+			border = UiPalette.GOLD
 		draw_rect(swatch, border, false, 3.0 if is_selected else 1.4)
-		var color := UiPalette.GLOW_AMBER if is_selected else UiPalette.TEXT_OFFWHITE
+		var color := UiPalette.SAND if is_selected else UiPalette.IVORY
 		draw_string(
 			get_theme_default_font(),
 			Vector2(0, size.y - LABEL_BASELINE),

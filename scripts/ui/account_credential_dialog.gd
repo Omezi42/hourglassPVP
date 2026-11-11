@@ -12,11 +12,11 @@ const PANEL_WIDTH := 500.0
 const PANEL_TOP := 140.0
 const DIM := Color(0, 0, 0, 0.6)
 const CAPTION_WIDTH := 96
-const TITLE_FONT_SIZE := 22
-const NOTE_FONT_SIZE := 14
+const TITLE_FONT_SIZE := UiPalette.T_LEAD
+const NOTE_FONT_SIZE := UiPalette.T_SMALL
 const BUTTON_SIZE := Vector2(170, 48)
-const WARNING_COLOR := Color(1, 0.72, 0.45, 1)
-const ERROR_COLOR := Color(1, 0.55, 0.5, 1)
+const WARNING_COLOR := UiPalette.SAND_HI
+const ERROR_COLOR := UiPalette.FOE
 ## 縦(GameDesign.md 9章「縦画面」)。`PortraitModal` の論理幅で組み、中身ごと拡大する。
 const PORTRAIT_PANEL_TOP := 200.0
 const PORTRAIT_BUTTON_SIZE := Vector2(170, 56)
@@ -91,7 +91,7 @@ func finish(error: String) -> void:
 func _on_submit() -> void:
 	_set_busy(true)
 	_message.text = "登録しています…" if mode == Mode.REGISTER else "ログインしています…"
-	_message.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
+	_message.add_theme_color_override("font_color", UiPalette.MUTED)
 	submitted.emit(mode, _id_input.text, _password_input.text)
 
 

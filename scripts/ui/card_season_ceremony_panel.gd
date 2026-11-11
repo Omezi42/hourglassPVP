@@ -23,7 +23,7 @@ const CLOSE_SIZE := Vector2(180, 48)
 ## 縦(GameDesign.md 9章「縦画面」)。`PortraitModal` の論理幅で組み、中身ごと拡大する。
 const PORTRAIT_PANEL_SIZE := Vector2(PortraitModal.WIDTH, 400)
 const PORTRAIT_CLOSE_SIZE := Vector2(180, 56)
-const NOTE_FONT := 15
+const NOTE_FONT := UiPalette.T_SMALL
 ## 拡大しても本文の目安(24px)に届かない注記だけ縦の大きさを持つ。
 const PORTRAIT_NOTE_FONT := 17
 
@@ -102,26 +102,26 @@ func _build() -> void:
 	emblem.custom_minimum_size = Vector2(EMBLEM_SIZE, EMBLEM_SIZE)
 	emblem.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
 	emblem.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	emblem.modulate = UiPalette.GLOW_AMBER
+	emblem.modulate = UiPalette.SAND
 	box.add_child(emblem)
 
 	var title := Label.new()
 	title.text = "シーズン表彰式"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 30)
-	title.add_theme_color_override("font_color", UiPalette.GLOW_AMBER)
+	title.add_theme_font_size_override("font_size", UiPalette.T_TITLE)
+	title.add_theme_color_override("font_color", UiPalette.SAND_HI)
 	box.add_child(title)
 
 	_tier_label = Label.new()
 	_tier_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_tier_label.add_theme_font_size_override("font_size", 24)
-	_tier_label.add_theme_color_override("font_color", UiPalette.TEXT_OFFWHITE)
+	_tier_label.add_theme_font_size_override("font_size", UiPalette.T_HEAD)
+	_tier_label.add_theme_color_override("font_color", UiPalette.IVORY)
 	box.add_child(_tier_label)
 
 	_reward_label = Label.new()
 	_reward_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_reward_label.add_theme_font_size_override("font_size", 20)
-	_reward_label.add_theme_color_override("font_color", UiPalette.GLOW_AMBER)
+	_reward_label.add_theme_font_size_override("font_size", UiPalette.T_LEAD)
+	_reward_label.add_theme_color_override("font_color", UiPalette.SAND)
 	box.add_child(_reward_label)
 
 	_note = Label.new()
@@ -130,7 +130,7 @@ func _build() -> void:
 	_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_note.custom_minimum_size.x = PANEL_SIZE.x - NOTE_INSET
 	_note.add_theme_font_size_override("font_size", NOTE_FONT)
-	_note.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
+	_note.add_theme_color_override("font_color", UiPalette.MUTED)
 	box.add_child(_note)
 
 	_close = CodedButton.make("閉じる", CLOSE_SIZE)

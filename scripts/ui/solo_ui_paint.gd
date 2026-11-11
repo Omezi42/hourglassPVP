@@ -1,44 +1,23 @@
 class_name SoloUiPaint
 extends RefCounted
 ## 遠征(ソロモード)の画面で共有する描画・部品(GameDesign.md 27章「画面」)。
-## 額縁つきの凹んだパネル(真鍮の縁+濃紺の面+落ち込み影+グレイン)を、出発の札・
-## 道の状態パネルの両方で使うため、ここへ集める。
-
-const PANEL_RADIUS := 20.0
-const PANEL_INNER_RADIUS := 15.0
-const PANEL_SEGMENTS := 14
-const PANEL_INSET := 6.0
-const PANEL_GRAIN := 0.05
-const GLOW_INSET := 4.0
-const GLOW_RADIUS := 22.0
-const GLOW_WIDTH := 3.0
+## 硝子の面のパネルを、出発の札・道の状態パネルなどの両方で使うため、ここへ集める。
 
 ## ホバー・押下で動かす見た目のノードを、当たり判定のボタンに持たせる名前(`choice_button()`)。
 const HOVER_VISUAL_META := &"hover_visual"
 const TRANSPARENT_BUTTON_STATES: Array[String] = ["normal", "hover", "pressed", "focus", "disabled"]
 
 
-## 選ばれる前提の札を同じ強さで並べ、選べる状態(または選ばれた状態)だけを光らせる。
+## 硝子の面。選べる状態(または選ばれた状態)だけ縁を砂色にして、同じ強さで並べた札から区別する。
 static func paint_panel(ci: RID, rect: Rect2, highlighted: bool) -> void:
-	var outer := UiPaint.rounded_rect_points_uniform(rect, PANEL_RADIUS, PANEL_SEGMENTS)
-	UiPaint.fill_gradient_polygon(
-		ci, outer, rect, [[0.0, UiPalette.BRASS_HIGHLIGHT], [1.0, UiPalette.BRASS_DARK]]
+	UiKit.glass(
+		ci,
+		rect,
+		-1.0,
+		1.0,
+		UiKit.GLASS_ALPHA,
+		UiKit.rim_color(UiPalette.SAND) if highlighted else []
 	)
-	var inner_rect := rect.grow(-PANEL_INSET)
-	var inner := UiPaint.rounded_rect_points_uniform(inner_rect, PANEL_INNER_RADIUS, PANEL_SEGMENTS)
-	UiPaint.fill_gradient_polygon(
-		ci, inner, inner_rect, [[0.0, UiPalette.NAVY_PANEL_TOP], [1.0, UiPalette.FELT_NAVY_TOP]]
-	)
-	UiPaint.draw_bevel(ci, inner, UiPalette.BRASS_RIM_LIGHT, Color(0, 0, 0, 0.5), 2.0, false)
-	UiPaint.draw_inner_shadow(
-		ci, inner_rect, PANEL_INNER_RADIUS, PANEL_SEGMENTS, 5, Color(0, 0, 0, 1), 0.28
-	)
-	UiPaint.apply_grain(ci, inner_rect, PANEL_GRAIN)
-	if highlighted:
-		var glow := UiPaint.rounded_rect_points_uniform(
-			rect.grow(GLOW_INSET), GLOW_RADIUS, PANEL_SEGMENTS
-		)
-		UiPaint.draw_bevel(ci, glow, UiPalette.GLOW_AMBER, UiPalette.GLOW_AMBER, GLOW_WIDTH, false)
 
 
 static func fill_colors(points: PackedVector2Array, color: Color) -> PackedColorArray:

@@ -11,10 +11,10 @@ signal stats_requested
 signal profile_changed
 
 const PANEL_STYLE := "res://resources/theme/content_panel.tres"
-const OK_COLOR := Color(0.62, 0.86, 0.6, 1)
+const OK_COLOR := UiPalette.GOOD
 const STATS_BUTTON_SIZE := Vector2(160, 56)
-const ERROR_COLOR := Color(1, 0.55, 0.5, 1)
-const WARNING_COLOR := Color(1, 0.72, 0.45, 1)
+const ERROR_COLOR := UiPalette.FOE
+const WARNING_COLOR := UiPalette.SAND_HI
 ## パネルの横位置は画面中央からの距離で持つ(左520px・右696px、間16px)。
 const LEFT_PANEL_X := Vector2(-616, -96)
 const RIGHT_PANEL_X := Vector2(-80, 616)
@@ -22,8 +22,8 @@ const PANEL_TOP := 128.0
 const PANEL_BOTTOM_MARGIN := 24.0
 const PREVIEW_HEIGHT := 150
 const NAME_CAPTION_WIDTH := 70
-const STATUS_FONT_SIZE := 19
-const SMALL_FONT_SIZE := 14
+const STATUS_FONT_SIZE := UiPalette.T_LEAD
+const SMALL_FONT_SIZE := UiPalette.T_SMALL
 const ACCOUNT_BUTTON_SIZE := Vector2(220, 50)
 ## 縦画面(GameDesign.md 9章「縦画面」)。2つのパネルを上下に積み、`PortraitModal` と同じ論理幅で組んで
 ## パネルごと拡大する。上の見本と登録は中身の高さで、下の見た目は残りの高さで出す。
@@ -90,14 +90,14 @@ func _ready() -> void:
 ## 画面を開くたびにMainが呼ぶ。サインインが済んでいなければここで済ませる。
 func refresh() -> void:
 	_set_busy(true)
-	_set_message("接続しています…", UiPalette.TEXT_MUTED)
+	_set_message("接続しています…", UiPalette.MUTED)
 	_save_label.text = ""
 	var ok: bool = await NetSession.sign_in()
 	_set_busy(false)
 	if not ok:
 		_set_message("接続できませんでした(%s)。オフラインのままでも遊べます。" % NetSession.last_error, ERROR_COLOR)
 	else:
-		_set_message("", UiPalette.TEXT_MUTED)
+		_set_message("", UiPalette.MUTED)
 	_load_from_account()
 
 
@@ -118,7 +118,7 @@ func _refresh_account() -> void:
 	if registered:
 		_status_label.text = "ID: %s でログイン中" % NetSession.auth.login_id
 		_note_label.text = "別の端末やブラウザからも、このIDとパスワードで続きを遊べます。"
-		_note_label.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
+		_note_label.add_theme_color_override("font_color", UiPalette.MUTED)
 	else:
 		_status_label.text = "ゲストで遊んでいます"
 		_note_label.text = "ゲストの記録・デッキ・砂金は、このブラウザにだけ残ります。ブラウザのデータを消すと失われます。IDを登録すると、別の端末からも続きを遊べます。"
@@ -254,7 +254,7 @@ func _on_logout_pressed() -> void:
 	if _busy:
 		return
 	_set_busy(true)
-	_set_message("ログアウトしています…", UiPalette.TEXT_MUTED)
+	_set_message("ログアウトしています…", UiPalette.MUTED)
 	await NetSession.log_out()
 	_set_busy(false)
 	_set_message("ログアウトしました。ゲストとして遊べます。", OK_COLOR)
@@ -350,7 +350,7 @@ func _panel(x_range: Vector2) -> VBoxContainer:
 
 
 func _build_left(column: VBoxContainer) -> void:
-	column.add_child(_label("対局ではこう見えます", SMALL_FONT_SIZE, UiPalette.TEXT_MUTED))
+	column.add_child(_label("対局ではこう見えます", SMALL_FONT_SIZE, UiPalette.MUTED))
 	_preview = AccountTablePreview.new()
 	_preview.custom_minimum_size = Vector2(0, PREVIEW_HEIGHT)
 	column.add_child(_preview)
@@ -358,7 +358,7 @@ func _build_left(column: VBoxContainer) -> void:
 	var name_row := HBoxContainer.new()
 	name_row.add_theme_constant_override("separation", 12)
 	column.add_child(name_row)
-	var caption := _label("表示名", 16, UiPalette.TEXT_OFFWHITE)
+	var caption := _label("表示名", UiPalette.T_BODY, UiPalette.IVORY)
 	caption.custom_minimum_size = Vector2(NAME_CAPTION_WIDTH, 0)
 	name_row.add_child(caption)
 	_name_input = LineEdit.new()
@@ -374,10 +374,10 @@ func _build_left(column: VBoxContainer) -> void:
 	column.add_child(HSeparator.new())
 	var status_row := HBoxContainer.new()
 	column.add_child(status_row)
-	_status_label = _label("", STATUS_FONT_SIZE, UiPalette.TEXT_OFFWHITE)
+	_status_label = _label("", STATUS_FONT_SIZE, UiPalette.IVORY)
 	_status_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	status_row.add_child(_status_label)
-	_currency_label = _label("", STATUS_FONT_SIZE, UiPalette.BRASS_HIGHLIGHT)
+	_currency_label = _label("", STATUS_FONT_SIZE, UiPalette.GOLD)
 	status_row.add_child(_currency_label)
 	_note_label = _wrapping_label(SMALL_FONT_SIZE)
 	column.add_child(_note_label)
@@ -400,7 +400,7 @@ func _build_left(column: VBoxContainer) -> void:
 	_add_account_button(_guest_row, login)
 
 	_member_row = _button_row(column)
-	var logout := CodedButton.make("ログアウト", ACCOUNT_BUTTON_SIZE)
+	var logout := CodedButton.make_in_group("ログアウト", ACCOUNT_BUTTON_SIZE, CodedButton.DANGER_GROUP)
 	logout.pressed.connect(_on_logout_pressed)
 	_add_account_button(_member_row, logout)
 
@@ -418,7 +418,7 @@ func _build_right(column: VBoxContainer) -> void:
 	_save_label = _label("", SMALL_FONT_SIZE, OK_COLOR)
 	_save_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	foot.add_child(_save_label)
-	foot.add_child(_label("選ぶとすぐに反映され、保存されます", SMALL_FONT_SIZE, UiPalette.TEXT_MUTED))
+	foot.add_child(_label("選ぶとすぐに反映され、保存されます", SMALL_FONT_SIZE, UiPalette.MUTED))
 
 
 func _button_row(parent: Container) -> HBoxContainer:

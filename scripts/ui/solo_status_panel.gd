@@ -7,15 +7,17 @@ extends Control
 signal abandon_requested
 
 const PADDING := 22.0
-const THEME_FONT_SIZE := 20
-const BOONS_FONT_SIZE := 16
-const WINS_FONT_SIZE := 16
-const DECK_LABEL_FONT_SIZE := 16
+const THEME_FONT_SIZE := UiPalette.T_LEAD
+const BOONS_FONT_SIZE := UiPalette.T_BODY
+const WINS_FONT_SIZE := UiPalette.T_BODY
+const DECK_LABEL_FONT_SIZE := UiPalette.T_BODY
 const HP_BAR_HEIGHT := 26.0
 const HP_TOP_GAP := 66.0
 ## 作戦名の行の下から恩恵の行までの間(作戦名の字の高さぶん)。
 const BOONS_TOP_GAP := 30.0
-const HP_FONT_SIZE := 14
+const HP_FONT_SIZE := UiPalette.T_SMALL
+## HPの数字の縁取り(砂の上でも読めるように)。
+const HP_TEXT_OUTLINE := 3
 const WINS_GAP := 8.0
 const LIST_GAP := 44.0
 const LIST_LABEL_HEIGHT := 22.0
@@ -44,10 +46,10 @@ func _ready() -> void:
 	)
 	add_child(_panel_canvas)
 
-	_theme_label = _make_label(THEME_FONT_SIZE, UiPalette.BRASS_HIGHLIGHT)
+	_theme_label = _make_label(THEME_FONT_SIZE, UiPalette.GOLD)
 	add_child(_theme_label)
 
-	_boons_label = _make_label(BOONS_FONT_SIZE, UiPalette.TEXT_MUTED)
+	_boons_label = _make_label(BOONS_FONT_SIZE, UiPalette.MUTED)
 	add_child(_boons_label)
 
 	_hp_canvas = Control.new()
@@ -55,16 +57,16 @@ func _ready() -> void:
 	_hp_canvas.draw.connect(_draw_hp_bar)
 	add_child(_hp_canvas)
 
-	_wins_label = _make_label(WINS_FONT_SIZE, UiPalette.TEXT_OFFWHITE)
+	_wins_label = _make_label(WINS_FONT_SIZE, UiPalette.IVORY)
 	add_child(_wins_label)
 
-	_list_label = _make_label(DECK_LABEL_FONT_SIZE, UiPalette.TEXT_MUTED)
+	_list_label = _make_label(DECK_LABEL_FONT_SIZE, UiPalette.MUTED)
 	add_child(_list_label)
 
 	_deck_list = SoloDeckList.new()
 	add_child(_deck_list)
 
-	_abandon_button = CodedButton.make("遠征をやめる", BUTTON_SIZE)
+	_abandon_button = CodedButton.make_in_group("遠征をやめる", BUTTON_SIZE, CodedButton.DANGER_GROUP)
 	_abandon_button.pressed.connect(func() -> void: abandon_requested.emit())
 	add_child(_abandon_button)
 
@@ -115,34 +117,13 @@ func _draw_hp_bar() -> void:
 static func paint_hp_bar(canvas: Control, hp: int, max_hp: int, font_size: int) -> void:
 	var ci := canvas.get_canvas_item()
 	var local := Rect2(Vector2.ZERO, canvas.size)
-	var track := UiPaint.rounded_rect_points_uniform(local, 8.0, 8)
-	UiPaint.fill_gradient_polygon(
-		ci, track, local, [[0.0, Color(0.05, 0.04, 0.04, 1.0)], [1.0, Color(0.12, 0.09, 0.08, 1.0)]]
-	)
 	var ratio := clampf(float(hp) / float(maxi(max_hp, 1)), 0.0, 1.0)
-	var inner := local.grow(-3.0)
-	var fill_rect := Rect2(inner.position, Vector2(inner.size.x * ratio, inner.size.y))
-	if fill_rect.size.x > 0.0:
-		var fill := UiPaint.rounded_rect_points_uniform(fill_rect, 5.0, 6)
-		UiPaint.fill_gradient_polygon(
-			ci, fill, fill_rect, [[0.0, UiPalette.GLOW_AMBER], [1.0, UiPalette.BRASS_DARK]]
-		)
+	UiKit.sand_bar(ci, local, ratio)
 	var font := canvas.get_theme_default_font()
 	if font == null:
 		return
-	var text := "%d / %d" % [hp, max_hp]
-	var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
-	canvas.draw_string(
-		font,
-		Vector2(
-			local.get_center().x - w * 0.5,
-			local.get_center().y + (font.get_ascent(font_size) - font.get_descent(font_size)) * 0.5
-		),
-		text,
-		HORIZONTAL_ALIGNMENT_LEFT,
-		-1,
-		font_size,
-		Color.WHITE
+	UiKit.text_in(
+		ci, font, "%d / %d" % [hp, max_hp], local, font_size, UiPalette.IVORY, HP_TEXT_OUTLINE
 	)
 
 

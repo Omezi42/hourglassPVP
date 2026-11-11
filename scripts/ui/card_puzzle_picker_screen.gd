@@ -21,8 +21,8 @@ const CARD_SIZE := Vector2(596, 132)
 ## ヒントの折り返し幅を決めるため、「挑戦」と余白を引いた値を見出しへ渡す。
 const ACTION_SIZE := Vector2(132, 52)
 const ROW_SEPARATION := 12
-const TITLE_FONT := 22
-const HINT_FONT := 15
+const TITLE_FONT := UiPalette.T_LEAD
+const HINT_FONT := UiPalette.T_SMALL
 ## 縦画面(GameDesign.md 9章「縦画面」)。1列にし、札の幅を画面いっぱいに、文字とボタンを目安まで大きくする。
 const PORTRAIT_CARD_HEIGHT := 168.0
 const PORTRAIT_ACTION_SIZE := Vector2(150, 72)
@@ -163,7 +163,7 @@ func _make_entry_card(title_text: String, hint_text: String, on_pressed: Callabl
 	# グリッドの行が縦に伸びて2行目以降が画面の外へ押し出される。
 	hint.custom_minimum_size.x = inner_width - action_size.x - ROW_SEPARATION
 	hint.add_theme_font_size_override("font_size", PORTRAIT_HINT_FONT if _portrait else HINT_FONT)
-	hint.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
+	hint.add_theme_color_override("font_color", UiPalette.MUTED)
 	column.add_child(hint)
 
 	var button := CodedButton.make("挑戦", action_size)

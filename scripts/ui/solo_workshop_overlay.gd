@@ -10,8 +10,8 @@ signal card_removed(card_id: String)
 signal card_duplicated(card_id: String)
 signal skip_pressed
 
-const TITLE_FONT_SIZE := 30
-const SUBTITLE_FONT_SIZE := 16
+const TITLE_FONT_SIZE := UiPalette.T_HEAD
+const SUBTITLE_FONT_SIZE := UiPalette.T_BODY
 const DIM_COLOR := Color(0, 0, 0, 0.74)
 const TITLE_TOP := 70.0
 const SUBTITLE_TOP := 118.0
@@ -25,21 +25,21 @@ const GRID_RATIO := 0.6
 const GRID_COLUMNS := 6
 const GRID_CARD_GAP := 14.0
 const GRID_ROW_GAP := 20.0
-const COUNT_BADGE_FONT_SIZE := 14
-const COUNT_BADGE_COLOR := Color(0.95, 0.8, 0.45)
+const COUNT_BADGE_FONT_SIZE := UiPalette.T_SMALL
+const COUNT_BADGE_COLOR := UiPalette.SAND_HI
 const SELECTED_RING_GAP := 6.0
 const SELECTED_RING_WIDTH := 4.0
 const SELECTED_RING_MIN_WIDTH := 2.0
 
 const PANEL_PADDING := 24.0
-const PANEL_EMPTY_FONT_SIZE := 18
-const PANEL_COUNT_FONT_SIZE := 15
+const PANEL_EMPTY_FONT_SIZE := UiPalette.T_LEAD
+const PANEL_COUNT_FONT_SIZE := UiPalette.T_SMALL
 const PANEL_CARD_SCALE := 1.6
 const PANEL_CARD_TOP_GAP := 8.0
 const PANEL_DECK_LABEL_GAP := 18.0
 const ACTION_BUTTON_SIZE := Vector2(140, 48)
 const ACTION_ROW_GAP := 14.0
-const ACTION_RESULT_FONT_SIZE := 14
+const ACTION_RESULT_FONT_SIZE := UiPalette.T_SMALL
 const ACTION_RESULT_GAP := 16.0
 
 const SKIP_BUTTON_SIZE := Vector2(200, 44)
@@ -97,10 +97,10 @@ func _ready() -> void:
 	_body = Control.new()
 	_body.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_body)
-	_title = _label(TITLE_FONT_SIZE, UiPalette.TEXT_OFFWHITE, true)
+	_title = _label(TITLE_FONT_SIZE, UiPalette.IVORY, true)
 	_title.text = "工房"
 	_body.add_child(_title)
-	_subtitle = _label(SUBTITLE_FONT_SIZE, UiPalette.TEXT_MUTED)
+	_subtitle = _label(SUBTITLE_FONT_SIZE, UiPalette.MUTED)
 	_subtitle.text = "山札から1枚を抜くか、1枚を複製する(同名は2枚まで)"
 	_subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_body.add_child(_subtitle)
@@ -118,23 +118,23 @@ func _ready() -> void:
 	)
 	_body.add_child(_panel_canvas)
 
-	_panel_empty_label = _label(PANEL_EMPTY_FONT_SIZE, UiPalette.TEXT_OFFWHITE, true)
+	_panel_empty_label = _label(PANEL_EMPTY_FONT_SIZE, UiPalette.IVORY, true)
 	_panel_empty_label.text = "カードを1枚選ぶ"
 	_body.add_child(_panel_empty_label)
-	_panel_deck_count_label = _label(PANEL_COUNT_FONT_SIZE, UiPalette.TEXT_MUTED)
+	_panel_deck_count_label = _label(PANEL_COUNT_FONT_SIZE, UiPalette.MUTED)
 	_body.add_child(_panel_deck_count_label)
 
 	_panel_card = CardView.new()
 	_panel_card.mode = CardView.Mode.HAND
 	_panel_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_body.add_child(_panel_card)
-	_panel_in_deck_label = _label(PANEL_COUNT_FONT_SIZE, UiPalette.TEXT_MUTED)
+	_panel_in_deck_label = _label(PANEL_COUNT_FONT_SIZE, UiPalette.MUTED)
 	_body.add_child(_panel_in_deck_label)
 
 	_remove_button = CodedButton.make("抜く", ACTION_BUTTON_SIZE)
 	_remove_button.pressed.connect(_on_remove_pressed)
 	_body.add_child(_remove_button)
-	_remove_result_label = _label(ACTION_RESULT_FONT_SIZE, UiPalette.TEXT_MUTED)
+	_remove_result_label = _label(ACTION_RESULT_FONT_SIZE, UiPalette.MUTED)
 	_remove_result_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	_body.add_child(_remove_result_label)
 
@@ -143,7 +143,7 @@ func _ready() -> void:
 	)
 	_duplicate_button.pressed.connect(_on_duplicate_pressed)
 	_body.add_child(_duplicate_button)
-	_duplicate_result_label = _label(ACTION_RESULT_FONT_SIZE, UiPalette.TEXT_MUTED)
+	_duplicate_result_label = _label(ACTION_RESULT_FONT_SIZE, UiPalette.MUTED)
 	_duplicate_result_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	_body.add_child(_duplicate_result_label)
 
@@ -272,15 +272,11 @@ func _build_card(pos: Vector2, card_size: Vector2, scale: float, card_id: String
 	ring.visible = _selected_id == card_id
 	ring.draw.connect(
 		func() -> void:
-			UiPaint.draw_bevel(
+			UiKit.stroke(
 				ring.get_canvas_item(),
-				UiPaint.rounded_rect_points_uniform(
-					Rect2(Vector2.ZERO, ring.size), HandCardPaint.CORNER * scale + gap, 8
-				),
-				UiPalette.BRASS_HIGHLIGHT,
-				UiPalette.BRASS_HIGHLIGHT,
-				ring_width,
-				false
+				UiKit.rr(Rect2(Vector2.ZERO, ring.size), HandCardPaint.CORNER * scale + gap),
+				UiPalette.SELECT,
+				ring_width
 			)
 	)
 	root.add_child(ring)

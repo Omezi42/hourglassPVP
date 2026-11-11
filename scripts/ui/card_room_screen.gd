@@ -44,8 +44,7 @@ const MINE_RECT := Rect2(24, 288, 540, 272)
 const FOE_RECT := Rect2(716, 288, 540, 272)
 const VS_CENTER := Vector2(640, 424)
 const VS_RADIUS := 42.0
-const VS_RING := 4.0
-const VS_FONT_SIZE := 32
+const VS_FONT_SIZE := UiPalette.T_TITLE
 const TIME_INFO_POS := Vector2(40, 606)
 const STATUS_POS := Vector2(40, 640)
 const STATUS_WIDTH := 720.0
@@ -53,12 +52,12 @@ const LEAVE_RECT := Rect2(772, 612, 220, 72)
 const LEAVE_ALONE_RECT := Rect2(1036, 612, 220, 72)
 const START_RECT := Rect2(1012, 612, 244, 72)
 
-const TITLE_FONT_SIZE := 28
-const SUB_FONT_SIZE := 17
-const BODY_FONT_SIZE := 20
-const NOTE_FONT_SIZE := 16
-const DECK_NAME_FONT_SIZE := 28
-const STATUS_FONT_SIZE := 18
+const TITLE_FONT_SIZE := UiPalette.T_HEAD
+const SUB_FONT_SIZE := UiPalette.T_BODY
+const BODY_FONT_SIZE := UiPalette.T_LEAD
+const NOTE_FONT_SIZE := UiPalette.T_BODY
+const DECK_NAME_FONT_SIZE := UiPalette.T_HEAD
+const STATUS_FONT_SIZE := UiPalette.T_LEAD
 
 const TIME_ON_NOTE := "1手番につき60秒。手番が移るたびに戻ります"
 const TIME_OFF_NOTE := "持ち時間なし。放置した相手を時間切れで倒せなくなります"
@@ -147,7 +146,7 @@ func _build() -> void:
 	_entrance = _make_layer()
 	_build_create_card()
 	_build_join_card()
-	_message_label = _make_label(_entrance, "", BODY_FONT_SIZE, UiPalette.TEXT_OFFWHITE)
+	_message_label = _make_label(_entrance, "", BODY_FONT_SIZE, UiPalette.IVORY)
 	_message_label.position = MESSAGE_RECT.position
 	_message_label.size = MESSAGE_RECT.size
 	_message_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -219,14 +218,14 @@ func _make_button(parent: Control, text: String, rect: Rect2, primary: bool) -> 
 func _build_create_card() -> void:
 	var card := _make_panel(_entrance, CREATE_RECT)
 	_create_card = card
-	_place_label(card, "部屋を作る", CARD_TITLE_POS, TITLE_FONT_SIZE, UiPalette.TEXT_OFFWHITE)
-	_place_label(card, "コードを発行して、友達を呼びます", CARD_SUB_POS, SUB_FONT_SIZE, UiPalette.TEXT_MUTED)
-	_place_label(card, "持ち時間", TIME_LABEL_POS, BODY_FONT_SIZE, UiPalette.TEXT_OFFWHITE)
+	_place_label(card, "部屋を作る", CARD_TITLE_POS, TITLE_FONT_SIZE, UiPalette.IVORY)
+	_place_label(card, "コードを発行して、友達を呼びます", CARD_SUB_POS, SUB_FONT_SIZE, UiPalette.MUTED)
+	_place_label(card, "持ち時間", TIME_LABEL_POS, BODY_FONT_SIZE, UiPalette.IVORY)
 	_time_on_button = _make_button(card, "あり", TIME_ON_RECT, true)
 	_time_on_button.pressed.connect(_set_time_limit.bind(true))
 	_time_off_button = _make_button(card, "なし", TIME_OFF_RECT, false)
 	_time_off_button.pressed.connect(_set_time_limit.bind(false))
-	_time_note = _place_label(card, "", TIME_NOTE_POS, NOTE_FONT_SIZE, UiPalette.TEXT_MUTED)
+	_time_note = _place_label(card, "", TIME_NOTE_POS, NOTE_FONT_SIZE, UiPalette.MUTED)
 	_create_button = _make_button(card, "部屋を作る", CREATE_BUTTON_RECT, true)
 	_create_button.pressed.connect(_on_create_pressed)
 
@@ -234,13 +233,13 @@ func _build_create_card() -> void:
 func _build_join_card() -> void:
 	var card := _make_panel(_entrance, JOIN_RECT)
 	_join_card = card
-	_place_label(card, "コードで参加する", CARD_TITLE_POS, TITLE_FONT_SIZE, UiPalette.TEXT_OFFWHITE)
+	_place_label(card, "コードで参加する", CARD_TITLE_POS, TITLE_FONT_SIZE, UiPalette.IVORY)
 	_place_label(
 		card,
 		"友達から受け取った%d桁のコードを入力します" % RoomMatch.CODE_LENGTH,
 		CARD_SUB_POS,
 		SUB_FONT_SIZE,
-		UiPalette.TEXT_MUTED
+		UiPalette.MUTED
 	)
 	_join_tiles = CodeTiles.new()
 	_join_tiles.position = ENTRY_TILES_RECT.position
@@ -258,10 +257,8 @@ func _build_join_card() -> void:
 func _build_deck_strip() -> void:
 	var strip := _make_panel(_entrance, DECK_RECT)
 	_deck_strip = strip
-	_place_label(strip, "使用デッキ", DECK_CAPTION_POS, NOTE_FONT_SIZE, UiPalette.TEXT_MUTED)
-	_deck_name_label = _place_label(
-		strip, "", DECK_NAME_POS, DECK_NAME_FONT_SIZE, UiPalette.TEXT_OFFWHITE
-	)
+	_place_label(strip, "使用デッキ", DECK_CAPTION_POS, NOTE_FONT_SIZE, UiPalette.MUTED)
+	_deck_name_label = _place_label(strip, "", DECK_NAME_POS, DECK_NAME_FONT_SIZE, UiPalette.IVORY)
 	_deck_button = _make_button(strip, "デッキを変更", DECK_BUTTON_RECT, false)
 	_deck_button.pressed.connect(func() -> void: deck_change_requested.emit())
 
@@ -269,10 +266,8 @@ func _build_deck_strip() -> void:
 func _build_code_plate() -> void:
 	var plate := _make_panel(_room_view, CODE_RECT)
 	_code_plate = plate
-	_code_caption = _place_label(
-		plate, "", CODE_CAPTION_POS, STATUS_FONT_SIZE, UiPalette.TEXT_MUTED
-	)
-	_code_hint = _place_label(plate, "", CODE_HINT_POS, NOTE_FONT_SIZE, UiPalette.TEXT_MUTED)
+	_code_caption = _place_label(plate, "", CODE_CAPTION_POS, STATUS_FONT_SIZE, UiPalette.MUTED)
+	_code_hint = _place_label(plate, "", CODE_HINT_POS, NOTE_FONT_SIZE, UiPalette.MUTED)
 	_room_tiles = CodeTiles.new()
 	_room_tiles.position = ROOM_TILES_RECT.position
 	_room_tiles.size = ROOM_TILES_RECT.size
@@ -303,8 +298,7 @@ func _build_seats() -> void:
 func _draw_vs() -> void:
 	var rid := _vs_mark.get_canvas_item()
 	var center := CardRoomArrange.vs_center()
-	UiPaint.fill_circle(rid, center, VS_RADIUS, UiPalette.OUTLINE_DARK, 32)
-	UiPaint.draw_ring(rid, center, VS_RADIUS, UiPalette.BRASS_LIGHT, VS_RING, 32)
+	UiKit.round_face(rid, center, VS_RADIUS)
 	_vs_mark.draw_string(
 		get_theme_default_font(),
 		center + Vector2(-VS_RADIUS, VS_FONT_SIZE * 0.36),
@@ -312,15 +306,13 @@ func _draw_vs() -> void:
 		HORIZONTAL_ALIGNMENT_CENTER,
 		VS_RADIUS * 2.0,
 		VS_FONT_SIZE,
-		UiPalette.BRASS_HIGHLIGHT
+		UiPalette.GOLD
 	)
 
 
 func _build_footer() -> void:
-	_time_info = _place_label(_room_view, "", TIME_INFO_POS, STATUS_FONT_SIZE, UiPalette.TEXT_MUTED)
-	_status_label = _place_label(
-		_room_view, "", STATUS_POS, STATUS_FONT_SIZE, UiPalette.TEXT_OFFWHITE
-	)
+	_time_info = _place_label(_room_view, "", TIME_INFO_POS, STATUS_FONT_SIZE, UiPalette.MUTED)
+	_status_label = _place_label(_room_view, "", STATUS_POS, STATUS_FONT_SIZE, UiPalette.IVORY)
 	_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_status_label.size = Vector2(STATUS_WIDTH, 0)
 	_leave_button = _make_button(_room_view, "", LEAVE_RECT, false)

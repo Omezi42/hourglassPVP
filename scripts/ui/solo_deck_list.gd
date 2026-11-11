@@ -8,10 +8,10 @@ extends Control
 
 const ROW_HEIGHT := 30.0
 const ROW_INNER_GAP := 4.0
-const CARD_NAME_FONT_SIZE := 15
-const CARD_COST_FONT_SIZE := 14
-const HIGHLIGHT_COLOR := Color(0.95, 0.8, 0.45)
-const HIGHLIGHT_BG := Color(0.95, 0.8, 0.45, 0.18)
+const CARD_NAME_FONT_SIZE := UiPalette.T_BODY
+const GEM_RATIO := 0.85
+const HIGHLIGHT_COLOR := UiPalette.SAND_HI
+const HIGHLIGHT_BG := Color(UiPalette.SAND_HI, 0.18)
 
 var _scroll: ScrollContainer
 var _list_box: VBoxContainer
@@ -77,26 +77,11 @@ func _deck_row(card: CardData, count: int, highlighted: bool) -> Control:
 				)
 			var gem_radius := (ROW_HEIGHT - ROW_INNER_GAP) * 0.5
 			var gem_center := Vector2(gem_radius, gem_radius)
-			UiPaint.fill_circle(ci, gem_center, gem_radius * 0.85, UiPalette.OUTLINE_DARK, 20)
-			UiPaint.fill_circle(ci, gem_center, gem_radius * 0.72, CardView.MANA_BLUE, 20)
 			var font := row.get_theme_default_font()
 			if font == null:
 				return
-			var cost_text := str(card.cost)
-			var cw := (
-				font
-				. get_string_size(cost_text, HORIZONTAL_ALIGNMENT_LEFT, -1, CARD_COST_FONT_SIZE)
-				. x
-			)
-			row.draw_string(
-				font,
-				gem_center - Vector2(cw * 0.5, -5.0),
-				cost_text,
-				HORIZONTAL_ALIGNMENT_LEFT,
-				-1,
-				CARD_COST_FONT_SIZE,
-				Color.WHITE
-			)
+			UiKit.gem(ci, gem_center, gem_radius * GEM_RATIO, UiPalette.COST, UiPalette.COST_DEEP)
+			UiKit.gem_text(ci, font, gem_center, gem_radius * GEM_RATIO, str(card.cost))
 			row.draw_string(
 				font,
 				Vector2(gem_radius * 2.0 + 10.0, (ROW_HEIGHT - ROW_INNER_GAP) * 0.72),
@@ -104,7 +89,7 @@ func _deck_row(card: CardData, count: int, highlighted: bool) -> Control:
 				HORIZONTAL_ALIGNMENT_LEFT,
 				row.size.x - gem_radius * 2.0 - 10.0,
 				CARD_NAME_FONT_SIZE,
-				HIGHLIGHT_COLOR if highlighted else UiPalette.TEXT_OFFWHITE
+				HIGHLIGHT_COLOR if highlighted else UiPalette.IVORY
 			)
 	)
 	return row

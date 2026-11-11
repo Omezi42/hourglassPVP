@@ -8,13 +8,13 @@ signal challenge_pressed
 signal back_pressed
 
 const PADDING := 22.0
-const HEADING_FONT_SIZE := 20
-const FOE_FONT_SIZE := 17
-const SUMMARY_FONT_SIZE := 14
-const DIFFICULTY_FONT_SIZE := 14
-const GATE_NAME_FONT_SIZE := 16
-const GATE_DESC_FONT_SIZE := 13
-const HP_FONT_SIZE := 22
+const HEADING_FONT_SIZE := UiPalette.T_LEAD
+const FOE_FONT_SIZE := UiPalette.T_BODY
+const SUMMARY_FONT_SIZE := UiPalette.T_SMALL
+const DIFFICULTY_FONT_SIZE := UiPalette.T_SMALL
+const GATE_NAME_FONT_SIZE := UiPalette.T_BODY
+const GATE_DESC_FONT_SIZE := UiPalette.T_SMALL
+const HP_FONT_SIZE := UiPalette.T_LEAD
 const BUTTON_SIZE := Vector2(180, 44)
 const BACK_BUTTON_SIZE := Vector2(120, 44)
 const ICON_COLUMNS := 8
@@ -23,6 +23,8 @@ const ICON_ROW_GAP := 12.0
 const ICON_TOP_GAP := 14.0
 ## 相手の作戦の絵の数(15種)。自分の山札の写しを使う相手も、この数までを並べる。
 const ICON_COUNT := 15
+## 砂時計の絵の足もとの影。
+const ICON_SHADOW := Color(0, 0, 0, 0.35)
 const GATE_DESC_MIN_HEIGHT := 34.0
 ## 中身の下端からボタンの行までの間(縦の板の高さを中身ぶんにするときに使う)。
 const BUTTON_TOP_GAP := 16.0
@@ -55,26 +57,26 @@ func _ready() -> void:
 	)
 	add_child(_panel_canvas)
 
-	_heading_label = _make_label(HEADING_FONT_SIZE, UiPalette.BRASS_HIGHLIGHT)
+	_heading_label = _make_label(HEADING_FONT_SIZE, UiPalette.GOLD)
 	add_child(_heading_label)
-	_foe_label = _make_label(FOE_FONT_SIZE, UiPalette.TEXT_OFFWHITE)
+	_foe_label = _make_label(FOE_FONT_SIZE, UiPalette.IVORY)
 	add_child(_foe_label)
-	_summary_label = _make_label(SUMMARY_FONT_SIZE, UiPalette.TEXT_MUTED)
+	_summary_label = _make_label(SUMMARY_FONT_SIZE, UiPalette.MUTED)
 	_summary_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	add_child(_summary_label)
-	_difficulty_label = _make_label(DIFFICULTY_FONT_SIZE, UiPalette.TEXT_OFFWHITE)
+	_difficulty_label = _make_label(DIFFICULTY_FONT_SIZE, UiPalette.IVORY)
 	add_child(_difficulty_label)
 	_icon_grid = Control.new()
 	_icon_grid.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_icon_grid)
-	_gate_name_label = _make_label(GATE_NAME_FONT_SIZE, UiPalette.BRASS_HIGHLIGHT)
+	_gate_name_label = _make_label(GATE_NAME_FONT_SIZE, UiPalette.GOLD)
 	add_child(_gate_name_label)
-	_gate_desc_label = _make_label(GATE_DESC_FONT_SIZE, UiPalette.TEXT_OFFWHITE)
+	_gate_desc_label = _make_label(GATE_DESC_FONT_SIZE, UiPalette.IVORY)
 	_gate_desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	add_child(_gate_desc_label)
-	_gate_note_label = _make_label(GATE_DESC_FONT_SIZE, UiPalette.TEXT_MUTED)
+	_gate_note_label = _make_label(GATE_DESC_FONT_SIZE, UiPalette.MUTED)
 	add_child(_gate_note_label)
-	_hp_label = _make_label(HP_FONT_SIZE, UiPalette.TEXT_OFFWHITE)
+	_hp_label = _make_label(HP_FONT_SIZE, UiPalette.IVORY)
 	add_child(_hp_label)
 
 	_challenge_button = CodedButton.make_in_group(
@@ -198,8 +200,8 @@ func _build_icon(rect: Rect2, card_id: String) -> void:
 		func() -> void:
 			var ci := box.get_canvas_item()
 			var foot := Vector2(rect.size.x * 0.5, rect.size.y)
-			UiPaint.fill_ellipse(
-				ci, foot, Vector2(rect.size.x * 0.4, rect.size.y * 0.09), Color(0, 0, 0, 0.35), 16
+			UiKit.fill(
+				ci, UiKit.ellipse(foot, Vector2(rect.size.x * 0.4, rect.size.y * 0.09)), ICON_SHADOW
 			)
 			if texture == null:
 				return

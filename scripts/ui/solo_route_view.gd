@@ -12,11 +12,20 @@ const SELECTED_RING_GAP := 6.0
 const SELECTED_RING_WIDTH := 4.0
 
 const PATH_COLUMNS := SoloRun.FLOOR_COUNT
+## 駒の絵の分割数と、まだの駒の細い線・足もとの影。
+const NODE_SEGMENTS := 40
+const NODE_SHADOW := Color(0, 0, 0, 0.4)
+const NODE_SHADOW_DROP := 6.0
+const NODE_SHADOW_SQUASH := 0.85
+const FINAL_RING_GAP := 1.5
+const FINAL_RING_WIDTH := 3.0
+const LOSS_MARK_WIDTH := 5.0
+const GLYPH_WIDTH := 3.0
 const NODE_RADIUS := 34.0
 const FINAL_RADIUS := 44.0
 const ROW_GAP := 132.0
-const LABEL_FONT_SIZE_1 := 14
-const LABEL_FONT_SIZE_2 := 13
+const LABEL_FONT_SIZE_1 := UiPalette.T_SMALL
+const LABEL_FONT_SIZE_2 := UiPalette.T_SMALL
 const LABEL_GAP_1 := 20.0
 const LABEL_GAP_2 := 39.0
 const CURRENT_GLOW_ALPHA := 0.14
@@ -247,15 +256,15 @@ func _is_live_road(col: int, row: int, next_row: int) -> bool:
 func _draw_road(ci: RID, a: Vector2, b: Vector2, walked: bool, live: bool, preview: bool) -> void:
 	var points := PackedVector2Array([a, b])
 	var alpha := 1.0 if live else CUT_ROAD_ALPHA
-	var edge := Color(0.05, 0.04, 0.03, 0.75 * alpha)
-	var bed := Color(0.27, 0.21, 0.15, alpha)
-	var sand := Color(0.93, 0.72, 0.36, 1.0)
+	var edge := Color(UiPalette.INK_900, 0.75 * alpha)
+	var bed := Color(UiPalette.INK_500, alpha)
+	var sand := UiPalette.GOLD
 	ShapePaint.polyline_colors(ci, points, SoloUiPaint.fill_colors(points, edge), 20.0, true)
 	ShapePaint.polyline_colors(ci, points, SoloUiPaint.fill_colors(points, bed), 13.0, true)
 	if walked:
 		ShapePaint.polyline_colors(ci, points, SoloUiPaint.fill_colors(points, sand), 7.0, true)
 	elif preview:
-		var glow := Color(UiPalette.GLOW_AMBER, PREVIEW_ROAD_ALPHA)
+		var glow := Color(UiPalette.SAND, PREVIEW_ROAD_ALPHA)
 		ShapePaint.polyline_colors(
 			ci, points, SoloUiPaint.fill_colors(points, glow), PREVIEW_ROAD_WIDTH, true
 		)
@@ -271,47 +280,39 @@ func _draw_node(
 		center += ClickArea.HOVER_LIFT
 	if state == "current" and row == _pressed:
 		radius *= ClickArea.PRESS_SCALE.x
+	var unit := Vector2.ONE
 	if state == "current":
 		var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.004)
 		var glow_radius := radius * (CURRENT_GLOW_SCALE + pulse * CURRENT_GLOW_PULSE)
 		var glow_alpha := HOVER_GLOW_ALPHA if hovered else CURRENT_GLOW_ALPHA
-		UiPaint.fill_circle(ci, center, glow_radius, Color(UiPalette.GLOW_AMBER, glow_alpha), 32)
-	UiPaint.fill_ellipse(
-		ci, center + Vector2(0, 6), Vector2(radius, radius * 0.85), Color(0, 0, 0, 0.4), 28
-	)
-	var rim := UiPalette.BRASS_HIGHLIGHT
-	var face_stops: Array
+		UiKit.glow(ci, center, unit * glow_radius, Color(UiPalette.SAND, glow_alpha))
 	match state:
 		"past_chosen":
-			face_stops = [[0.0, UiPalette.BRASS_HIGHLIGHT], [1.0, UiPalette.BRASS_MID]]
+			UiKit.round_face(ci, center, radius, UiKit.Role.MAIN)
 		"current":
-			face_stops = [[0.0, UiPalette.NAVY_PANEL_TOP], [1.0, UiPalette.FELT_NAVY_TOP]]
-		"past_unchosen":
-			face_stops = [[0.0, UiPalette.PANEL_SLATE_TOP], [1.0, UiPalette.PANEL_SLATE_BOTTOM]]
-			rim = UiPalette.BRASS_DARK
+			UiKit.round_face(ci, center, radius, UiKit.Role.SUB, 0.0, 1.0 if hovered else 0.0)
 		_:
-			face_stops = [[0.0, UiPalette.PANEL_SLATE_TOP], [1.0, UiPalette.PANEL_PRESSED_BOTTOM]]
-			rim = UiPalette.BRASS_DARK
-	UiPaint.fill_circle(ci, center, radius, UiPalette.OUTLINE_DARK, 40)
-	UiPaint.fill_circle(ci, center, radius - 1.5, rim, 40)
-	UiPaint.fill_gradient_polygon(
-		ci,
-		UiPaint.circle_points(center, radius - 4.0, 40),
-		Rect2(center - Vector2.ONE * radius, Vector2.ONE * radius * 2.0),
-		face_stops
-	)
+			_draw_unlit_face(ci, center, radius, state == "past_unchosen")
+	if is_final and state != "past_chosen" and state != "current":
+		UiKit.stroke_grad(
+			ci,
+			UiKit.ellipse(center, unit * (radius + FINAL_RING_GAP), NODE_SEGMENTS),
+			UiKit.rim_brass(),
+			FINAL_RING_WIDTH
+		)
 	if state == "current":
-		UiPaint.draw_ring(
-			ci, center, radius + CURRENT_RING_GAP, UiPalette.GLOW_AMBER, CURRENT_RING_WIDTH, 40
+		UiKit.stroke(
+			ci,
+			UiKit.ellipse(center, unit * (radius + CURRENT_RING_GAP), NODE_SEGMENTS),
+			UiPalette.SAND,
+			CURRENT_RING_WIDTH
 		)
 	if not _record_mode and col == _floor and row == _selected:
-		UiPaint.draw_ring(
+		UiKit.stroke_grad(
 			ci,
-			center,
-			radius + SELECTED_RING_GAP,
-			UiPalette.BRASS_HIGHLIGHT,
-			SELECTED_RING_WIDTH,
-			40
+			UiKit.ellipse(center, unit * (radius + SELECTED_RING_GAP), NODE_SEGMENTS),
+			UiKit.rim_brass(1.0),
+			SELECTED_RING_WIDTH
 		)
 	_draw_kind_glyph(
 		ci, center, radius, int(node.get("kind", SoloRun.Kind.BATTLE)), state, is_final
@@ -319,10 +320,10 @@ func _draw_node(
 	if _record_mode and col == _record_lost and row == _chosen_index(col):
 		_draw_loss_mark(ci, center, radius)
 	if state == "cut":
-		UiPaint.fill_circle(ci, center, radius + 1.0, CUT_NODE_SHADE, 40)
-	var label_color := (
-		UiPalette.TEXT_MUTED if state == "locked" or state == "cut" else UiPalette.TEXT_OFFWHITE
-	)
+		UiKit.fill(
+			ci, UiKit.ellipse(center, Vector2.ONE * (radius + 1.0), NODE_SEGMENTS), CUT_NODE_SHADE
+		)
+	var label_color := UiPalette.MUTED if state == "locked" or state == "cut" else UiPalette.IVORY
 	_draw_label(
 		center + Vector2(0, radius + _label_gap(true)),
 		_kind_label(int(node.get("kind", SoloRun.Kind.BATTLE)), is_final, col),
@@ -337,28 +338,50 @@ func _draw_node(
 	)
 
 
+## まだ行けない駒と通らなかった駒。沈んだ藍の面に細い線だけで、光らせない。
+func _draw_unlit_face(ci: RID, center: Vector2, radius: float, passed: bool) -> void:
+	var radii := Vector2.ONE * radius
+	UiKit.fill(
+		ci,
+		UiKit.ellipse(
+			center + Vector2(0, NODE_SHADOW_DROP),
+			Vector2(radius, radius * NODE_SHADOW_SQUASH),
+			NODE_SEGMENTS
+		),
+		NODE_SHADOW
+	)
+	var top := UiPalette.INK_600 if passed else UiPalette.INK_700
+	var bottom := UiPalette.INK_800 if passed else UiPalette.INK_900
+	UiKit.vgrad(ci, UiKit.ellipse(center, radii, NODE_SEGMENTS), [[0.0, top], [1.0, bottom]], true)
+	UiKit.stroke(ci, UiKit.ellipse(center, radii, NODE_SEGMENTS), UiPalette.INK_500, UiKit.LINE_MIN)
+
+
 ## 遠征の記録で負けた駒に重ねる×(GameDesign.md 27章「画面」)。
 func _draw_loss_mark(ci: RID, center: Vector2, radius: float) -> void:
 	var s := radius * 0.5
-	var color := Color(0.75, 0.15, 0.12, 0.9)
+	var color := Color(UiPalette.FOE, 0.9)
 	for offset in [Vector2(-s, -s), Vector2(-s, s)]:
 		var points := PackedVector2Array([center + offset, center - offset])
-		ShapePaint.polyline_colors(ci, points, SoloUiPaint.fill_colors(points, color), 5.0, true)
+		ShapePaint.polyline_colors(
+			ci, points, SoloUiPaint.fill_colors(points, color), LOSS_MARK_WIDTH, true
+		)
 
 
 func _draw_kind_glyph(
 	ci: RID, center: Vector2, radius: float, kind: int, state: String, is_final: bool
 ) -> void:
-	var color := (
-		UiPalette.TEXT_MUTED if state == "locked" or state == "cut" else UiPalette.TEXT_OFFWHITE
-	)
+	var color := UiPalette.IVORY
+	if state == "past_chosen":
+		color = UiPalette.BRASS_INK
+	elif state == "locked" or state == "cut":
+		color = UiPalette.MUTED
 	var s := radius * 0.42
 	if is_final:
-		UiPaint.draw_emblem(ci, UiPaint.Emblem.CHECK, center, s)
+		UiPaint.draw_emblem(ci, UiPaint.Emblem.CHECK, center, s, color)
 		return
 	match kind:
 		SoloRun.Kind.BATTLE:
-			UiPaint.draw_ring(ci, center, s, color, 3.0, 20)
+			UiKit.stroke(ci, UiKit.ellipse(center, Vector2.ONE * s, 20), color, GLYPH_WIDTH)
 		SoloRun.Kind.GATE:
 			var pts := PackedVector2Array(
 				[
@@ -369,20 +392,22 @@ func _draw_kind_glyph(
 					center + Vector2(s, s),
 				]
 			)
-			ShapePaint.polyline_colors(ci, pts, SoloUiPaint.fill_colors(pts, color), 3.0, true)
+			ShapePaint.polyline_colors(
+				ci, pts, SoloUiPaint.fill_colors(pts, color), GLYPH_WIDTH, true
+			)
 		SoloRun.Kind.SPRING:
-			UiPaint.fill_ellipse(ci, center, Vector2(s, s * 0.6), Color(color, 0.85), 20)
+			UiKit.fill(ci, UiKit.ellipse(center, Vector2(s, s * 0.6), 20), Color(color, 0.85))
 		SoloRun.Kind.WORKSHOP:
 			var half := s * 0.6
 			RenderingServer.canvas_item_add_line(
-				ci, center + Vector2(-half, half), center + Vector2(half, -half), color, 3.0
+				ci, center + Vector2(-half, half), center + Vector2(half, -half), color, GLYPH_WIDTH
 			)
 			RenderingServer.canvas_item_add_line(
 				ci,
 				center + Vector2(-half * 0.3, half * 0.7),
 				center + Vector2(half * 0.7, -half * 0.3),
 				color,
-				3.0
+				GLYPH_WIDTH
 			)
 
 

@@ -16,7 +16,7 @@ const RIGHT_RECT := Rect2(480, ScreenHeader.CONTENT_TOP, 776, ScreenHeader.CONTE
 ## 右パネルの内側の余白(`content_panel.tres` の content_margin と同じ)。
 const RIGHT_PAD := Vector2(24, 20)
 const TITLE_SIZE := 20
-const NOTE_SIZE := 15
+const NOTE_SIZE := UiPalette.T_SMALL
 const TITLE_HEIGHT := 32.0
 const LIST_TOP := 62.0
 const ROW_GAP := 4.0
@@ -98,9 +98,9 @@ func _build() -> void:
 	add_child(_own)
 
 	_board_back = _add_panel()
-	_title = _make_label("今シーズンのランキング", TITLE_SIZE, UiPalette.TEXT_OFFWHITE)
+	_title = _make_label("今シーズンのランキング", TITLE_SIZE, UiPalette.IVORY)
 	add_child(_title)
-	_season_label = _make_label("", NOTE_SIZE, UiPalette.TEXT_MUTED)
+	_season_label = _make_label("", NOTE_SIZE, UiPalette.MUTED)
 	add_child(_season_label)
 
 	_pinned = RankBoardRow.new()
@@ -108,7 +108,7 @@ func _build() -> void:
 	_pinned.visible = false
 	add_child(_pinned)
 	_pinned_rule = ColorRect.new()
-	_pinned_rule.color = Color(UiPalette.GLOW_AMBER, 0.45)
+	_pinned_rule.color = Color(UiPalette.SAND, 0.45)
 	_pinned_rule.visible = false
 	add_child(_pinned_rule)
 

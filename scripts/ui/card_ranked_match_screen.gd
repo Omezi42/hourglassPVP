@@ -22,7 +22,7 @@ const ANNOUNCE_NOTE := "公式Discordサーバーへ「対戦相手をさがし�
 const ANNOUNCE_BADGE_GAP := 10.0
 const CANCEL_SIZE := Vector2(220, 64)
 const CANCEL_GAP := 40.0
-const TIER_FONT_SIZE := 18
+const TIER_FONT_SIZE := UiPalette.T_LEAD
 ## 縦画面(GameDesign.md 9章「縦画面」)。中央の待機の文言は `EmptyState` が拡大して描くため、印とボタンもそれに合わせる。
 const PORTRAIT_CANCEL_SIZE := Vector2(300, 76)
 const PORTRAIT_TIER_FONT_SIZE := 26
@@ -78,7 +78,7 @@ func _build() -> void:
 	_content_rect = _landscape_content_rect()
 	_tier_label = Label.new()
 	_tier_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_tier_label.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
+	_tier_label.add_theme_color_override("font_color", UiPalette.MUTED)
 	_tier_label.add_theme_font_size_override("font_size", TIER_FONT_SIZE)
 	add_child(_tier_label)
 

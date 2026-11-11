@@ -9,10 +9,10 @@ signal saved(ok: bool)
 const SLOT_COLUMNS := 2
 const SLOT_SIZE := Vector2(300, 46)
 const SLOT_GAP := 12
-const SLOT_FONT_SIZE := 15
+const SLOT_FONT_SIZE := UiPalette.T_BODY
 const ROW_HEIGHT := 32
-const ROW_FONT_SIZE := 15
-const CAPTION_FONT_SIZE := 14
+const ROW_FONT_SIZE := UiPalette.T_BODY
+const CAPTION_FONT_SIZE := UiPalette.T_SMALL
 ## 縦画面では2列のまま論理幅(480)へ収める(アカウント画面がパネルごと拡大する)。
 const PORTRAIT_SLOT_SIZE := Vector2(220, 52)
 
@@ -70,7 +70,7 @@ func _refresh() -> void:
 		var id: String = _slots[i] if i < _slots.size() else ""
 		var button := _slot_buttons[i]
 		button.text = "%d. %s" % [i + 1, EmoteLibrary.get_emote_text(id)]
-		var color := UiPalette.GLOW_AMBER if i == _active_slot else UiPalette.TEXT_OFFWHITE
+		var color := UiPalette.SAND if i == _active_slot else UiPalette.IVORY
 		for slot in ["font_color", "font_hover_color"]:
 			button.add_theme_color_override(slot, color)
 	for child in _list.get_children():
@@ -82,9 +82,7 @@ func _refresh() -> void:
 		row.custom_minimum_size = Vector2(0, ROW_HEIGHT)
 		row.text = "%s%s" % ["● " if used else "○ ", EmoteLibrary.get_emote_text(id)]
 		row.add_theme_font_size_override("font_size", ROW_FONT_SIZE)
-		row.add_theme_color_override(
-			"font_color", UiPalette.TEXT_MUTED if used else UiPalette.TEXT_OFFWHITE
-		)
+		row.add_theme_color_override("font_color", UiPalette.MUTED if used else UiPalette.IVORY)
 		row.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		row.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 		row.pressed.connect(func() -> void: _assign(id))
@@ -113,5 +111,5 @@ func _caption(text: String) -> Label:
 	var label := Label.new()
 	label.text = text
 	label.add_theme_font_size_override("font_size", CAPTION_FONT_SIZE)
-	label.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
+	label.add_theme_color_override("font_color", UiPalette.MUTED)
 	return label

@@ -18,28 +18,30 @@ const ICON_ASPECT := 1.32
 const ICON_GAP := 6.0
 const ICON_ROW_GAP := 10.0
 const ICON_GRID_TOP_OFFSET := 96.0
-const HEADING_FONT_SIZE := 26
-const NAME_FONT_SIZE := 26
-const SUMMARY_FONT_SIZE := 16
-const RECORD_FONT_SIZE := 16
+const HEADING_FONT_SIZE := UiPalette.T_HEAD
+const NAME_FONT_SIZE := UiPalette.T_HEAD
+const SUMMARY_FONT_SIZE := UiPalette.T_BODY
+const RECORD_FONT_SIZE := UiPalette.T_BODY
 
 const DEPTH_ROW_TOP_OFFSET := 44.0
 const DEPTH_ARROW_SIZE := Vector2(44, 44)
 const DEPTH_LABEL_WIDTH := 200.0
 const DEPTH_LABEL_GAP := 8.0
-const DEPTH_LABEL_FONT_SIZE := 18
-const CONDITION_FONT_SIZE := 16
+const DEPTH_LABEL_FONT_SIZE := UiPalette.T_LEAD
+const CONDITION_FONT_SIZE := UiPalette.T_BODY
 const CONDITION_LINE_HEIGHT := 22.0
 const CONDITION_SEPARATOR := " ・ "
 const CONDITIONS_TOP_GAP := 8.0
 const CARDS_TOP_GAP := 18.0
-const BOSS_FONT_SIZE := 16
+const BOSS_FONT_SIZE := UiPalette.T_BODY
 const BOSS_LINE_HEIGHT := 22.0
 const BOSS_TOP_GAP := 6.0
 
 const SEAL_RADIUS := 18.0
 const SEAL_MARGIN := 14.0
-const SEAL_FONT_SIZE := 15
+## 砂時計の絵の足もとの影。
+const ICON_SHADOW := Color(0, 0, 0, 0.35)
+const SEAL_FONT_SIZE := UiPalette.T_SMALL
 
 ## 作戦の札を上下に積むか(縦画面)。次の表示から効く。
 var stacked := false
@@ -71,7 +73,7 @@ func show_data(
 		Rect2(MARGIN, 0.0, width - MARGIN * 2.0, 34.0),
 		"作戦を選んで出発",
 		HEADING_FONT_SIZE,
-		UiPalette.TEXT_OFFWHITE,
+		UiPalette.IVORY,
 		HORIZONTAL_ALIGNMENT_CENTER,
 		true
 	)
@@ -84,7 +86,7 @@ func show_data(
 		Rect2(MARGIN, conditions_top, width - MARGIN * 2.0, CONDITION_LINE_HEIGHT),
 		"条件なし" if conditions.is_empty() else CONDITION_SEPARATOR.join(conditions),
 		CONDITION_FONT_SIZE,
-		UiPalette.TEXT_MUTED,
+		UiPalette.MUTED,
 		HORIZONTAL_ALIGNMENT_CENTER
 	)
 	conditions_top += CONDITION_LINE_HEIGHT
@@ -97,7 +99,7 @@ func show_data(
 			Rect2(MARGIN, conditions_top, width - MARGIN * 2.0, BOSS_LINE_HEIGHT),
 			"最終戦の主 ・ %s ─ %s" % [boss.display_name, boss.description],
 			BOSS_FONT_SIZE,
-			UiPalette.BRASS_HIGHLIGHT,
+			UiPalette.GOLD,
 			HORIZONTAL_ALIGNMENT_CENTER
 		)
 		conditions_top += BOSS_LINE_HEIGHT
@@ -123,7 +125,7 @@ func show_data(
 			% [best_wins, clears, cleared_theme_count, theme_count]
 		),
 		RECORD_FONT_SIZE,
-		UiPalette.TEXT_MUTED,
+		UiPalette.MUTED,
 		HORIZONTAL_ALIGNMENT_CENTER
 	)
 
@@ -150,7 +152,7 @@ func _build_depth_row(width: float, top: float, depth: int, max_depth: int) -> f
 		Rect2(center_x - DEPTH_LABEL_WIDTH * 0.5, top, DEPTH_LABEL_WIDTH, arrow.y),
 		"砂の深さ %d" % depth,
 		DEPTH_LABEL_FONT_SIZE,
-		UiPalette.TEXT_OFFWHITE,
+		UiPalette.IVORY,
 		HORIZONTAL_ALIGNMENT_CENTER,
 		true
 	)
@@ -174,7 +176,7 @@ func _build_card(rect: Rect2, theme_id: String, best_depth: int) -> void:
 		Rect2(rect.position.x, rect.position.y + CARD_PADDING, rect.size.x, 34.0),
 		CardCpuDecks.name_of(theme_id),
 		NAME_FONT_SIZE,
-		UiPalette.TEXT_OFFWHITE,
+		UiPalette.IVORY,
 		HORIZONTAL_ALIGNMENT_CENTER,
 		true
 	)
@@ -188,7 +190,7 @@ func _build_card(rect: Rect2, theme_id: String, best_depth: int) -> void:
 		),
 		CardCpuDecks.summary_of(theme_id),
 		SUMMARY_FONT_SIZE,
-		UiPalette.TEXT_MUTED,
+		UiPalette.MUTED,
 		HORIZONTAL_ALIGNMENT_CENTER
 	)
 	_build_icons(card, rect, CardCpuDecks.card_ids_of(theme_id))
@@ -214,31 +216,16 @@ func _build_seal(parent: Control, rect: Rect2, depth: int) -> void:
 	seal.draw.connect(
 		func() -> void:
 			var c := Vector2.ONE * SEAL_RADIUS
-			ShapePaint.circle(seal.get_canvas_item(), c, SEAL_RADIUS, UiPalette.BRASS_DARK)
-			ShapePaint.circle(seal.get_canvas_item(), c, SEAL_RADIUS - 3.0, UiPalette.BRASS_MID)
-			ShapePaint.arc(
-				seal.get_canvas_item(),
-				c,
-				SEAL_RADIUS - 5.0,
-				0,
-				TAU,
-				32,
-				UiPalette.BRASS_HIGHLIGHT,
-				1.5
-			)
+			UiKit.round_face(seal.get_canvas_item(), c, SEAL_RADIUS, UiKit.Role.MAIN)
 			var font := seal.get_theme_default_font()
 			if font == null:
 				return
-			var text := str(depth)
-			var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, SEAL_FONT_SIZE).x
-			seal.draw_string(
+			UiKit.engraved(
+				seal.get_canvas_item(),
 				font,
-				Vector2(c.x - w * 0.5, c.y + 5.0),
-				text,
-				HORIZONTAL_ALIGNMENT_LEFT,
-				-1,
-				SEAL_FONT_SIZE,
-				UiPalette.NAVY_PANEL_TOP
+				str(depth),
+				Rect2(c - Vector2.ONE * SEAL_RADIUS, Vector2.ONE * SEAL_RADIUS * 2.0),
+				SEAL_FONT_SIZE
 			)
 	)
 	parent.add_child(seal)
@@ -284,8 +271,8 @@ func _build_icon(parent: Control, rect: Rect2, card_id: String) -> void:
 		func() -> void:
 			var ci := box.get_canvas_item()
 			var foot := Vector2(rect.size.x * 0.5, rect.size.y)
-			UiPaint.fill_ellipse(
-				ci, foot, Vector2(rect.size.x * 0.4, rect.size.y * 0.09), Color(0, 0, 0, 0.35), 16
+			UiKit.fill(
+				ci, UiKit.ellipse(foot, Vector2(rect.size.x * 0.4, rect.size.y * 0.09)), ICON_SHADOW
 			)
 			if texture == null:
 				return

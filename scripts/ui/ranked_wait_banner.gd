@@ -49,7 +49,7 @@ func _ready() -> void:
 	_label = Label.new()
 	_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_label.add_theme_color_override("font_color", UiPalette.TEXT_OFFWHITE)
+	_label.add_theme_color_override("font_color", UiPalette.IVORY)
 	_row.add_child(_label)
 	_open_button = CodedButton.make("待機画面へ", Vector2.ZERO)
 	_open_button.pressed.connect(func() -> void: open_pressed.emit())

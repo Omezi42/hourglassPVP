@@ -14,11 +14,11 @@ const CONTENT_TOP := 96.0
 const CONTENT_MARGIN := 64.0
 const ROUTE_RATIO := 0.62
 const PANEL_GAP := 32.0
-const TITLE_FONT_SIZE := 34
-const NAME_FONT_SIZE := 18
+const TITLE_FONT_SIZE := UiPalette.T_TITLE
+const NAME_FONT_SIZE := UiPalette.T_LEAD
 const STATS_FONT_SIZE := 16
-const NOTE_FONT_SIZE := 15
-const DECK_LABEL_FONT_SIZE := 15
+const NOTE_FONT_SIZE := UiPalette.T_SMALL
+const DECK_LABEL_FONT_SIZE := UiPalette.T_BODY
 const DECK_PANEL_PADDING := 20.0
 const BUTTON_SIZE := Vector2(200, 52)
 const HEADER_GAP := 74.0
@@ -68,14 +68,14 @@ func _ready() -> void:
 	_dim.size = SCREEN_SIZE
 	_dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_dim)
-	_title = _label(TITLE_FONT_SIZE, UiPalette.TEXT_OFFWHITE, true)
+	_title = _label(TITLE_FONT_SIZE, UiPalette.IVORY, true)
 	add_child(_title)
-	_name_label = _label(NAME_FONT_SIZE, UiPalette.BRASS_HIGHLIGHT)
+	_name_label = _label(NAME_FONT_SIZE, UiPalette.GOLD)
 	add_child(_name_label)
-	_stats_label = _label(STATS_FONT_SIZE, UiPalette.TEXT_MUTED)
+	_stats_label = _label(STATS_FONT_SIZE, UiPalette.MUTED)
 	_stats_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	add_child(_stats_label)
-	_note_label = _label(NOTE_FONT_SIZE, UiPalette.TEXT_MUTED)
+	_note_label = _label(NOTE_FONT_SIZE, UiPalette.MUTED)
 	_note_label.visible = false
 	add_child(_note_label)
 	_route = SoloRouteView.new()
@@ -91,7 +91,7 @@ func _ready() -> void:
 			)
 	)
 	add_child(_deck_panel_canvas)
-	_deck_label = _label(DECK_LABEL_FONT_SIZE, UiPalette.TEXT_MUTED)
+	_deck_label = _label(DECK_LABEL_FONT_SIZE, UiPalette.MUTED)
 	_deck_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	add_child(_deck_label)
 	_deck_list = SoloDeckList.new()

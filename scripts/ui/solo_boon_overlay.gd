@@ -7,8 +7,8 @@ extends Control
 
 signal boon_chosen(boon_id: String)
 
-const TITLE_FONT_SIZE := 30
-const SUBTITLE_FONT_SIZE := 16
+const TITLE_FONT_SIZE := UiPalette.T_HEAD
+const SUBTITLE_FONT_SIZE := UiPalette.T_BODY
 const DIM_COLOR := Color(0, 0, 0, 0.74)
 const TITLE_TOP := 70.0
 const SUBTITLE_TOP := 118.0
@@ -17,11 +17,9 @@ const CARD_SIZE := Vector2(300, 330)
 const CARD_GAP := 36.0
 const MEDAL_RADIUS := 46.0
 const MEDAL_TOP_OFFSET := 36.0
-## メダルの内側の円に対する絵の大きさ。
-const MEDAL_ICON_RATIO := 1.1
-const NAME_FONT_SIZE := 24
-const DESC_FONT_SIZE := 15
-const OWNED_FONT_SIZE := 14
+const NAME_FONT_SIZE := UiPalette.T_LEAD
+const DESC_FONT_SIZE := UiPalette.T_BODY
+const OWNED_FONT_SIZE := UiPalette.T_SMALL
 const OWNED_TOP_MARGIN := 40.0
 
 ## 縦画面の配置(座標は `PORTRAIT_ZOOM` で割った論理の大きさ)。
@@ -36,7 +34,7 @@ const PORTRAIT_ROW_GAP := 16.0
 const PORTRAIT_ROW_PADDING := 20.0
 const PORTRAIT_NAME_TOP := 22.0
 const PORTRAIT_DESC_TOP := 60.0
-const PORTRAIT_OWNED_FONT_SIZE := 15
+const PORTRAIT_OWNED_FONT_SIZE := UiPalette.T_BODY
 
 var portrait := false
 
@@ -58,15 +56,15 @@ func _ready() -> void:
 	_body = Control.new()
 	_body.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_body)
-	_title = _label(TITLE_FONT_SIZE, UiPalette.TEXT_OFFWHITE, true)
+	_title = _label(TITLE_FONT_SIZE, UiPalette.IVORY, true)
 	_body.add_child(_title)
-	_subtitle = _label(SUBTITLE_FONT_SIZE, UiPalette.TEXT_MUTED)
+	_subtitle = _label(SUBTITLE_FONT_SIZE, UiPalette.MUTED)
 	_subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_body.add_child(_subtitle)
 	_cards_box = Control.new()
 	_cards_box.mouse_filter = Control.MOUSE_FILTER_PASS
 	_body.add_child(_cards_box)
-	_owned_label = _label(OWNED_FONT_SIZE, UiPalette.TEXT_MUTED)
+	_owned_label = _label(OWNED_FONT_SIZE, UiPalette.MUTED)
 	_owned_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_body.add_child(_owned_label)
 
@@ -156,28 +154,19 @@ func _build_card(rect: Rect2, boon: SoloBoonData) -> void:
 	medal.draw.connect(
 		func() -> void:
 			var center := Vector2(MEDAL_RADIUS, MEDAL_RADIUS)
-			var inner := MEDAL_RADIUS - 6.0
-			ShapePaint.circle(medal.get_canvas_item(), center, MEDAL_RADIUS, UiPalette.BRASS_MID)
-			ShapePaint.circle(medal.get_canvas_item(), center, inner, UiPalette.NAVY_PANEL_TOP)
-			ShapePaint.arc(
-				medal.get_canvas_item(), center, inner, 0, TAU, 48, UiPalette.GLOW_AMBER, 2.0
-			)
-			if icon != null:
-				var side := inner * MEDAL_ICON_RATIO
-				var icon_rect := Rect2(center - Vector2.ONE * side * 0.5, Vector2.ONE * side)
-				medal.draw_texture_rect(icon, icon_rect, false, UiPalette.GLOW_AMBER)
+			UiKit.seal(medal.get_canvas_item(), center, MEDAL_RADIUS, icon, UiPalette.SAND)
 	)
 	root.add_child(medal)
 
 	var align := HORIZONTAL_ALIGNMENT_LEFT if portrait else HORIZONTAL_ALIGNMENT_CENTER
-	var name_label := _label(NAME_FONT_SIZE, UiPalette.TEXT_OFFWHITE)
+	var name_label := _label(NAME_FONT_SIZE, UiPalette.IVORY)
 	name_label.horizontal_alignment = align
 	name_label.position = rect.position + name_rect.position
 	name_label.size = name_rect.size
 	name_label.text = boon.display_name
 	root.add_child(name_label)
 
-	var desc_label := _label(DESC_FONT_SIZE, UiPalette.TEXT_MUTED)
+	var desc_label := _label(DESC_FONT_SIZE, UiPalette.MUTED)
 	desc_label.horizontal_alignment = align
 	desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	desc_label.position = rect.position + desc_rect.position

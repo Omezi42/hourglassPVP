@@ -41,16 +41,16 @@ func _ready() -> void:
 			)
 	)
 	add_child(_panel_canvas)
-	_theme_label = _make_label(THEME_FONT_SIZE, UiPalette.BRASS_HIGHLIGHT)
+	_theme_label = _make_label(THEME_FONT_SIZE, UiPalette.GOLD)
 	add_child(_theme_label)
 	_hp_canvas = Control.new()
 	_hp_canvas.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_hp_canvas.draw.connect(_draw_hp_bar)
 	add_child(_hp_canvas)
-	_wins_label = _make_label(WINS_FONT_SIZE, UiPalette.TEXT_OFFWHITE)
+	_wins_label = _make_label(WINS_FONT_SIZE, UiPalette.IVORY)
 	_wins_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	add_child(_wins_label)
-	_boons_label = _make_label(BOONS_FONT_SIZE, UiPalette.TEXT_MUTED)
+	_boons_label = _make_label(BOONS_FONT_SIZE, UiPalette.MUTED)
 	# 恩恵が多いと1行に収まらない。全部は山札の板(状態のパネル)で読める。
 	_boons_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	add_child(_boons_label)

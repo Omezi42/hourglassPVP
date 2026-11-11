@@ -9,8 +9,8 @@ extends Control
 signal bundle_chosen(index: int)
 signal skip_pressed
 
-const TITLE_FONT_SIZE := 30
-const SUBTITLE_FONT_SIZE := 16
+const TITLE_FONT_SIZE := UiPalette.T_HEAD
+const SUBTITLE_FONT_SIZE := UiPalette.T_BODY
 const DIM_COLOR := Color(0, 0, 0, 0.72)
 const TITLE_TOP := 28.0
 const SUBTITLE_TOP := 70.0
@@ -21,18 +21,18 @@ const ROW_NAME_WIDTH := 260.0
 ## 束が3つのとき、行の高さから縦の余白を引くとちょうど`CardView.HAND_SIZE_PX.y`(158)に
 ## 一致するよう選んだ値(GameDesign.md 27章「画面」で「手札と同じ大きさで欠けずに」)。
 const ROW_PADDING := 15.0
-const NAME_FONT_SIZE := 22
-const SUMMARY_FONT_SIZE := 13
-const TAG_FONT_SIZE := 13
+const NAME_FONT_SIZE := UiPalette.T_LEAD
+const SUMMARY_FONT_SIZE := UiPalette.T_SMALL
+const TAG_FONT_SIZE := UiPalette.T_SMALL
 const TAG_TEXT := "◆ 作戦"
-const TAG_COLOR := Color(0.9, 0.75, 0.4)
+const TAG_COLOR := UiPalette.SAND_HI
 const CARD_GAP := 16.0
 ## 右端の「足したあとの山札」欄(GameDesign.md 27章「画面」)。束の並びはこれを除いた
 ## 残りの幅で組む。
 const DECK_PANEL_WIDTH := 300.0
 const DECK_PANEL_MARGIN := 32.0
 const DECK_PANEL_PADDING := 20.0
-const DECK_LABEL_FONT_SIZE := 15
+const DECK_LABEL_FONT_SIZE := UiPalette.T_BODY
 const ADD_BUTTON_SIZE := Vector2(240, 48)
 const SKIP_BUTTON_SIZE := Vector2(200, 44)
 const BUTTON_GAP := 12.0
@@ -79,10 +79,10 @@ func _ready() -> void:
 	_body = Control.new()
 	_body.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_body)
-	_title = _label(TITLE_FONT_SIZE, UiPalette.TEXT_OFFWHITE, true)
+	_title = _label(TITLE_FONT_SIZE, UiPalette.IVORY, true)
 	_title.text = "束を1つ選んで山札に足す"
 	_body.add_child(_title)
-	_subtitle = _label(SUBTITLE_FONT_SIZE, UiPalette.TEXT_MUTED)
+	_subtitle = _label(SUBTITLE_FONT_SIZE, UiPalette.MUTED)
 	_body.add_child(_subtitle)
 	_rows_box = Control.new()
 	_rows_box.mouse_filter = Control.MOUSE_FILTER_PASS
@@ -99,7 +99,7 @@ func _ready() -> void:
 			)
 	)
 	_body.add_child(_deck_panel_canvas)
-	_deck_label = _label(DECK_LABEL_FONT_SIZE, UiPalette.TEXT_MUTED)
+	_deck_label = _label(DECK_LABEL_FONT_SIZE, UiPalette.MUTED)
 	_deck_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	_body.add_child(_deck_label)
 	_deck_list = SoloDeckList.new()
@@ -202,7 +202,7 @@ func _build_row(rect: Rect2, bundle: Dictionary, index: int) -> void:
 			rect.size.y - pad * 2.0 - PORTRAIT_NAME_HEIGHT
 		)
 
-	var name_label := _label(NAME_FONT_SIZE, UiPalette.TEXT_OFFWHITE)
+	var name_label := _label(NAME_FONT_SIZE, UiPalette.IVORY)
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	name_label.position = rect.position + name_rect.position
 	name_label.size = name_rect.size
@@ -249,7 +249,7 @@ func _build_row(rect: Rect2, bundle: Dictionary, index: int) -> void:
 			summary_left, cards_rect.position.y, rect.size.x - pad - summary_left, cards_rect.size.y
 		)
 	var summary_label := _label(
-		PORTRAIT_SUMMARY_FONT_SIZE if portrait else SUMMARY_FONT_SIZE, UiPalette.TEXT_MUTED
+		PORTRAIT_SUMMARY_FONT_SIZE if portrait else SUMMARY_FONT_SIZE, UiPalette.MUTED
 	)
 	summary_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	summary_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

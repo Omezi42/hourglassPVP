@@ -5,10 +5,9 @@ extends Control
 
 const HEIGHT := 42.0
 const RADIUS := 8.0
-const CORNER_SEGMENTS := 8
 const RANK_CENTER_X := 30.0
-const RANK_SIZE := 19
-const OUTSIDE_SIZE := 14
+const RANK_SIZE := UiPalette.T_LEAD
+const OUTSIDE_SIZE := UiPalette.T_SMALL
 const PODIUM_RADIUS := 14.0
 const PODIUM_TEXT_WIDTH := 40.0
 const PORTRAIT_X := 82.0
@@ -16,21 +15,22 @@ const PORTRAIT_RADIUS := 17.0
 const PORTRAIT_ICON := 14.0
 const PORTRAIT_RING := 2.5
 const NAME_X := 110.0
-const NAME_SIZE := 18
-const NAME_WITH_TITLE_SIZE := 17
-const TITLE_SIZE := 11
+const NAME_SIZE := UiPalette.T_BODY
+const NAME_WITH_TITLE_SIZE := UiPalette.T_BODY
+const TITLE_SIZE := UiPalette.T_MICRO
 const RIGHT_PAD := 14.0
 const STAR_RADIUS := 7.5
 const STAR_STEP := 20.0
-const RATING_SIZE := 21
+const RATING_SIZE := UiPalette.T_LEAD
 const RATING_WIDTH := 90.0
-const TIER_SIZE := 15
+const TIER_SIZE := UiPalette.T_BODY
 const TIER_RIGHT := 110.0
 const TIER_WIDTH := 110.0
 const MEDAL_RIGHT := 238.0
 const MEDAL_RADIUS := 15.0
 const ZEBRA := Color(1, 1, 1, 0.035)
-const PORTRAIT_BACK := Color(0.05, 0.04, 0.03)
+const MINE_FILL := Color(UiPalette.SAND, 0.16)
+const PODIUM_SHADOW := Color(0, 0, 0, 0.4)
 const EMPTY_STAR_FILL := Color(0, 0, 0, 0.35)
 const TEXT_SHADOW := Color(0, 0, 0, 0.6)
 const TEXT_SHADOW_OFFSET := Vector2(0, 1.5)
@@ -39,7 +39,7 @@ const TEXT_SHADOW_OFFSET := Vector2(0, 1.5)
 const STACKED_HEIGHT := 78.0
 const STACKED_NAME_Y := 24.0
 const STACKED_STANDING_Y := 58.0
-const STACKED_TITLE_SIZE := 14
+const STACKED_TITLE_SIZE := UiPalette.T_SMALL
 const STACKED_TIER_GAP := 10.0
 
 ## 順位。0以下は上位の一覧に入っていない(「圏外」)。
@@ -93,26 +93,13 @@ func _draw() -> void:
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE * zoom)
 	var area := size / zoom
 	var rect := Rect2(Vector2.ZERO, area)
-	var points := UiPaint.rounded_rect_points_uniform(rect, RADIUS, CORNER_SEGMENTS)
+	var points := UiKit.rr(rect, RADIUS)
 	if mine:
-		UiPaint.fill_gradient_polygon(
-			get_canvas_item(),
-			points,
-			rect,
-			[
-				[0.0, Color(UiPalette.PANEL_AMBER_TOP, 0.55)],
-				[1.0, Color(UiPalette.PANEL_AMBER_TOP.lightened(0.1), 0.35)]
-			]
-		)
-		ShapePaint.polyline(
-			get_canvas_item(),
-			RankMedal.closed(points),
-			Color(UiPalette.GLOW_AMBER, 0.85),
-			1.5,
-			true
-		)
+		UiKit.well(get_canvas_item(), rect, RADIUS)
+		UiKit.fill(get_canvas_item(), points, MINE_FILL)
+		UiKit.stroke(get_canvas_item(), points, Color(UiPalette.SAND, 0.85), UiKit.LINE_MIN)
 	elif zebra:
-		ShapePaint.colored_polygon(get_canvas_item(), points, ZEBRA)
+		UiKit.fill(get_canvas_item(), points, ZEBRA)
 	var center_y := area.y * 0.5
 	_draw_rank(center_y)
 	_draw_portrait(Vector2(PORTRAIT_X, center_y))
@@ -130,12 +117,10 @@ func _draw_rank(center_y: float) -> void:
 	var center := Vector2(RANK_CENTER_X, center_y)
 	if rank >= 1 and rank <= RankMedal.PODIUM_BRACKETS.size():
 		var colors := RankMedal.metal(RankMedal.PODIUM_BRACKETS[rank - 1])
-		UiPaint.fill_circle(
+		UiKit.fill(
 			get_canvas_item(),
-			center + Vector2(0, 1.5),
-			PODIUM_RADIUS + 1.0,
-			Color(0, 0, 0, 0.4),
-			RankMedal.SEGMENTS
+			UiKit.ellipse(center + Vector2(0, 1.5), Vector2.ONE * (PODIUM_RADIUS + 1.0)),
+			PODIUM_SHADOW
 		)
 		RankMedal.fill_gradient_circle(
 			self, center, PODIUM_RADIUS, [[0.0, colors[0]], [0.5, colors[1]], [1.0, colors[2]]]
@@ -149,15 +134,15 @@ func _draw_rank(center_y: float) -> void:
 		label,
 		Vector2(RANK_CENTER_X - PODIUM_TEXT_WIDTH * 0.5, center_y + 7.0),
 		RANK_SIZE if rank > 0 else OUTSIDE_SIZE,
-		UiPalette.TEXT_OFFWHITE if rank > 0 else UiPalette.TEXT_MUTED,
+		UiPalette.IVORY if rank > 0 else UiPalette.MUTED,
 		HORIZONTAL_ALIGNMENT_CENTER,
 		PODIUM_TEXT_WIDTH
 	)
 
 
 func _draw_portrait(center: Vector2) -> void:
-	UiPaint.fill_circle(
-		get_canvas_item(), center, PORTRAIT_RADIUS, PORTRAIT_BACK, RankMedal.SEGMENTS
+	UiKit.fill(
+		get_canvas_item(), UiKit.ellipse(center, Vector2.ONE * PORTRAIT_RADIUS), UiPalette.INK_900
 	)
 	var texture := UserProfileLibrary.get_icon_texture(icon_id)
 	if texture != null:
@@ -173,7 +158,7 @@ func _draw_portrait(center: Vector2) -> void:
 		0.0,
 		TAU,
 		RankMedal.SEGMENTS,
-		UiPalette.BRASS_RIM_LIGHT,
+		UiPalette.GOLD,
 		PORTRAIT_RING,
 		true
 	)
@@ -187,7 +172,7 @@ func _draw_name(center_y: float, name_width: float) -> void:
 			display_name,
 			Vector2(NAME_X, center_y + 7.0),
 			NAME_SIZE,
-			UiPalette.TEXT_OFFWHITE,
+			UiPalette.IVORY,
 			HORIZONTAL_ALIGNMENT_LEFT,
 			name_width
 		)
@@ -199,13 +184,13 @@ func _draw_name(center_y: float, name_width: float) -> void:
 		HORIZONTAL_ALIGNMENT_LEFT,
 		name_width,
 		STACKED_TITLE_SIZE if stacked else TITLE_SIZE,
-		UiPalette.BRASS_HIGHLIGHT
+		UiPalette.GOLD
 	)
 	_text(
 		display_name,
 		Vector2(NAME_X, center_y + 14.0),
 		NAME_WITH_TITLE_SIZE,
-		UiPalette.TEXT_OFFWHITE,
+		UiPalette.IVORY,
 		HORIZONTAL_ALIGNMENT_LEFT,
 		name_width
 	)
@@ -217,7 +202,7 @@ func _draw_standing(center_y: float, right: float) -> void:
 			str(rating),
 			Vector2(right - RATING_WIDTH, center_y + 8.0),
 			RATING_SIZE,
-			UiPalette.TEXT_OFFWHITE,
+			UiPalette.IVORY,
 			HORIZONTAL_ALIGNMENT_RIGHT,
 			RATING_WIDTH
 		)
@@ -227,7 +212,7 @@ func _draw_standing(center_y: float, right: float) -> void:
 		RankRules.display_name(tier),
 		Vector2(right - TIER_RIGHT - TIER_WIDTH, center_y + 6.0),
 		TIER_SIZE,
-		UiPalette.TEXT_OFFWHITE,
+		UiPalette.IVORY,
 		HORIZONTAL_ALIGNMENT_RIGHT,
 		TIER_WIDTH
 	)
@@ -243,7 +228,7 @@ func _draw_stacked_standing(center_y: float, right: float) -> void:
 		RankRules.display_name(tier),
 		Vector2(tier_left, center_y + 6.0),
 		TIER_SIZE,
-		UiPalette.TEXT_OFFWHITE,
+		UiPalette.IVORY,
 		HORIZONTAL_ALIGNMENT_LEFT,
 		right - tier_left
 	)
@@ -252,7 +237,7 @@ func _draw_stacked_standing(center_y: float, right: float) -> void:
 			str(rating),
 			Vector2(right - RATING_WIDTH, center_y + 8.0),
 			RATING_SIZE,
-			UiPalette.TEXT_OFFWHITE,
+			UiPalette.IVORY,
 			HORIZONTAL_ALIGNMENT_RIGHT,
 			RATING_WIDTH
 		)
@@ -271,11 +256,7 @@ func _draw_stars(right: float, center_y: float) -> void:
 		var points := RankMedal.star_points(at, STAR_RADIUS)
 		ShapePaint.colored_polygon(get_canvas_item(), points, EMPTY_STAR_FILL)
 		ShapePaint.polyline(
-			get_canvas_item(),
-			RankMedal.closed(points),
-			Color(UiPalette.BRASS_HIGHLIGHT, 0.45),
-			outline,
-			true
+			get_canvas_item(), RankMedal.closed(points), Color(UiPalette.GOLD, 0.45), outline, true
 		)
 
 
