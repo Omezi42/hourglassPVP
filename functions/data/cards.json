@@ -1352,6 +1352,17 @@
 			"is_spell": false,
 			"pool_index": 123,
 			"total_sand": 5
+		},
+		{
+			"cannot_attack": false,
+			"cost": 2,
+			"describe": "自分の墓地でいちばん新しい砂術(写し詠みを除く)を、コストを払わずにもう一度撃つ",
+			"display_name": "写し詠み",
+			"id": "recite",
+			"initial_attack": 0,
+			"is_spell": true,
+			"pool_index": 124,
+			"total_sand": 0
 		}
 	]
 }
