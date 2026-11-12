@@ -328,18 +328,19 @@ func _draw_node(
 			ci, UiKit.ellipse(center, Vector2.ONE * (radius + 1.0), NODE_SEGMENTS), CUT_NODE_SHADE
 		)
 	var label_color := UiPalette.MUTED if state == "locked" or state == "cut" else UiPalette.IVORY
-	_draw_label(
-		center + Vector2(0, radius + _label_gap(true)),
-		_kind_label(int(node.get("kind", SoloRun.Kind.BATTLE)), is_final, col),
-		_label_size(true),
-		label_color
-	)
-	_draw_label(
-		center + Vector2(0, radius + _label_gap(false)),
-		_detail_label(node),
-		_label_size(false),
-		label_color
-	)
+	var lines := [
+		[
+			center + Vector2(0, radius + _label_gap(true)),
+			_kind_label(int(node.get("kind", SoloRun.Kind.BATTLE)), is_final, col),
+			_label_size(true)
+		],
+		[center + Vector2(0, radius + _label_gap(false)), _detail_label(node), _label_size(false)],
+	]
+	# 地を2行ぶん先に敷いてから字を書く(2行目の地が1行目の字の下端を覆わないように)。
+	for line in lines:
+		_draw_label_plate(line[0], line[1], line[2])
+	for line in lines:
+		_draw_label(line[0], line[1], line[2], label_color)
 
 
 ## まだ行けない駒と通らなかった駒。沈んだ藍の面に細い線だけで、光らせない。
@@ -480,21 +481,28 @@ func _draw_label(at: Vector2, text: String, font_size: int, color: Color) -> voi
 	if font == null:
 		return
 	var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
-	if not text.is_empty():
-		var text_rect := Rect2(
-			at - Vector2(width * 0.5, font.get_ascent(font_size)),
-			Vector2(width, font.get_height(font_size))
-		)
-		var plate := text_rect.grow_individual(
-			LABEL_PLATE_PAD.x, LABEL_PLATE_PAD.y, LABEL_PLATE_PAD.x, LABEL_PLATE_PAD.y
-		)
-		UiKit.fill(
-			_canvas.get_canvas_item(),
-			UiKit.rr(plate, plate.size.y * LABEL_PLATE_CORNER),
-			LABEL_PLATE_COLOR
-		)
 	_canvas.draw_string(
 		font, at - Vector2(width * 0.5, 0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color
+	)
+
+
+## 名札の字の後ろの暗い地(道の線が字を貫かないように)。
+func _draw_label_plate(at: Vector2, text: String, font_size: int) -> void:
+	var font := _canvas.get_theme_default_font()
+	if font == null or text.is_empty():
+		return
+	var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	var text_rect := Rect2(
+		at - Vector2(width * 0.5, font.get_ascent(font_size)),
+		Vector2(width, font.get_height(font_size))
+	)
+	var plate := text_rect.grow_individual(
+		LABEL_PLATE_PAD.x, LABEL_PLATE_PAD.y, LABEL_PLATE_PAD.x, LABEL_PLATE_PAD.y
+	)
+	UiKit.fill(
+		_canvas.get_canvas_item(),
+		UiKit.rr(plate, plate.size.y * LABEL_PLATE_CORNER),
+		LABEL_PLATE_COLOR
 	)
 
 

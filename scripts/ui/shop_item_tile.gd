@@ -81,6 +81,13 @@ func _ready() -> void:
 	mouse_exited.connect(queue_redraw)
 	resized.connect(_layout_layers)
 	_layout_layers()
+	# スキンの見本は動く絵のため、見えている間は引き続ける(31章)。
+	set_process(kind == ShopCatalog.Kind.SKIN)
+
+
+func _process(_delta: float) -> void:
+	if is_visible_in_tree():
+		ShopItemArt.keep_skin_live(id)
 
 
 func _layout_layers() -> void:

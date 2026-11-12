@@ -45,6 +45,12 @@ func _check_skin(assert_true: Callable, skin_id: String) -> void:
 	var base_art := HourglassArt.texture(card.art_key(), state)
 	var free := SkinLibrary.is_free(skin_id)
 	assert_true.call(skin_art != null and skin_art != base_art, "%s の絵が読める" % skin_id)
+	var shaded := ResourceLoader.exists(SkinLibrary.shader_path(skin_id))
+	assert_true.call(SkinLibrary.is_live(skin_id) == shaded, "%s: シェーダーがあれば動く絵を持つ" % skin_id)
+	if shaded:
+		assert_true.call(
+			skin_art.get_size() == Vector2(SkinRenderer.CANVAS), "%s: 止めた絵はキャンバスの大きさ" % skin_id
+		)
 	assert_true.call(
 		ShopCatalog.sells(ShopCatalog.Kind.SKIN, skin_id) != free,
 		"%s は売り物ならショップに並び、配布なら並ばない" % skin_id
@@ -63,10 +69,26 @@ func _check_skin(assert_true: Callable, skin_id: String) -> void:
 		assert_true.call(
 			CardSkins.texture(card, state, viewer) == base_art, "%s: 効いていなければ元の絵" % skin_id
 		)
+		assert_true.call(
+			(
+				CardSkins.live_texture(card, state, viewer) == base_art
+				and not CardSkins.is_live(card, viewer)
+			),
+			"%s: 効いていなければ動く絵も元の絵" % skin_id
+		)
 
 	AccountService.apply_local_fields(on)
 	CardSkins.invalidate()
 	assert_true.call(card.icon_upright == skin_art, "%s: ONなら自分の絵はスキンになる" % skin_id)
+	assert_true.call(
+		CardSkins.is_live(card) == SkinLibrary.is_live(skin_id), "%s: 動く絵を持つスキンだけ動く" % skin_id
+	)
+	assert_true.call(
+		CardSkins.live_texture(card, state) != null, "%s: ONなら動く絵(準備前は止めた絵)が引ける" % skin_id
+	)
+	assert_true.call(
+		not CardSkins.is_live(card, CardSkins.Viewer.NONE), "%s: 教材・再生は動かさない" % skin_id
+	)
 	assert_true.call(
 		CardSkins.texture(card, state, CardSkins.Viewer.NONE) == base_art,
 		"%s: 教材・再生は元の絵のまま" % skin_id

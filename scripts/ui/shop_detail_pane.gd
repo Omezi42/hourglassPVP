@@ -34,6 +34,7 @@ var _look: Button
 
 
 func _ready() -> void:
+	set_process(false)
 	_font = get_theme_default_font()
 	_table = AccountTablePreview.new()
 	add_child(_table)
@@ -54,6 +55,7 @@ func _ready() -> void:
 func show_item(kind: ShopCatalog.Kind, id: String, bump := false) -> void:
 	_kind = kind
 	_id = id
+	set_process(kind == ShopCatalog.Kind.SKIN)
 	var uses_table := (
 		kind in [ShopCatalog.Kind.ICON, ShopCatalog.Kind.PLAYMAT, ShopCatalog.Kind.EMOTE]
 	)
@@ -78,6 +80,12 @@ func show_item(kind: ShopCatalog.Kind, id: String, bump := false) -> void:
 	)
 	_layout()
 	queue_redraw()
+
+
+## スキンの見本は動く絵のため、見えている間は引き続ける(31章)。
+func _process(_delta: float) -> void:
+	if is_visible_in_tree():
+		ShopItemArt.keep_skin_live(_id)
 
 
 ## 購入が確定した瞬間、品の絵を砂金チップへ飛ばす起点(9章)。

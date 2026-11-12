@@ -8,7 +8,8 @@ getter が `HourglassArt.texture(art_key(), state)` を返す形で12箇所か�
 
 | クラス | 責務 |
 |---|---|
-| `SkinLibrary`(`scripts/data/skin_library.gd`, staticのみ) | スキンの定義(id・対象カードid・表示名・手札の窓の光だまりの色・価格)。`PlaymatLibrary` と同じ流儀。見た目は `resources/shaders/skins/{skin_id}.gdshader`(下の「見た目のシェーダー」)。**`all()` は見た目のあるものだけを返す**(定義だけ先に入ったスキンを空の見本で売らないため) |
+| `SkinLibrary`(`scripts/data/skin_library.gd`, staticのみ) | スキンの定義(id・対象カードid・表示名・手札の窓の光だまりの色・価格)と、絵を引く口(`texture()` / `live_texture()`)。`PlaymatLibrary` と同じ流儀。見た目は `resources/shaders/skins/{skin_id}.gdshader`(下の「見た目のシェーダー」)。**`all()` は見た目のあるものだけを返す**(定義だけ先に入ったスキンを空の見本で売らないため) |
+| `SkinRenderer`(`scripts/logic/skin_renderer.gd`, staticのみ) | シェーダーを絵にする実体(焼き付け・動く絵の `SubViewport`・時計と視線)。`SkinLibrary` が呼ぶだけで、外からは直に触らない。`Main._ready()` が `SkinLibrary.ensure_ready()` で起動時に1度だけ準備する(`HourglassArt.ensure_ready()` と同じ。準備前は止めた絵の器だけが返る) |
 | `CardSkins`(`scripts/logic/card_skins.gd`, staticのみ) | 「いま誰の視点で、どのカードにどのスキンが効いているか」を答える。`texture(card, state, viewer)` / `live_texture(card, state, viewer)`(動く絵。スキンが効いていなければ `texture()` と同じ)/ `accent_color(card, viewer)` が入口。自分の解決結果は控えておき、所有・ON/OFFが変わったら `AccountService` が `invalidate()` する(毎フレームの描画から引かれ、所有の読み口はローカルのファイルまで見に行くため) |
 
 ## 視点(`CardSkins.Viewer`)
@@ -100,14 +101,22 @@ getter が `HourglassArt.texture(art_key(), state)` を返す形で12箇所か�
 | `SkinLibrary.live_texture(skin_id, state)` | スキン×状態ごとに1つの `SubViewport` が描き続ける `ViewportTexture` | 場の駒(`CardView` の場の表示)・ショップの見本・図鑑の右のページ |
 
 - **焼き方は `HourglassArt` と同じ**(焼き上がる前は空の器を配り、焼けた時点で `set_image()` で中身を差し替える。
-  Web版は半分の解像度)。止めた絵も `Texture2D` のため、`CardSkins.texture()` を通る呼び出しは変えない
+  器は焼き上がりと同じ大きさ。Web版は半分の解像度)。止めた絵も `Texture2D` のため、`CardSkins.texture()` を通る呼び出しは変えない。
+  焼く時刻は `clock` = 0、視線は中央
 - **動く絵は1体ごとに描かず、同じスキン・同じ状態の駒で1枚を共有する**(場に何体並んでも描く枚数が増えない)。
-  `clock` は経過時間、`look` は画面中央からマウスの位置への向きを全スキン共通で渡す
-- **直前のフレームで引かれなかった動く絵は描き直さない**(`render_target_update_mode` を止める)。解像度は場の駒の
-  表示の2倍(Web版は1倍)
-- `ViewportTexture` も `Texture2D` のため、`CardView` の場の表示は `_icon()` で引く口を `live_texture()` へ替えるだけで、
-  反転・攻撃・砕ける演出はそのまま動く
-- 重さの目安(内蔵GPU・デスクトップ版で実測):場の駒の大きさで1体あたり約0.06ms(基本の絵は約0.008ms)
+  `clock` は経過時間、`look` は画面中央からマウスの位置への向き(各軸 -1〜1、上が正)を全スキン共通で渡す。
+  時計と視線は `SkinRenderer` が `Main` の子に置く `Host` ノードの `_process` で毎フレーム進める
+- **直前のフレームで引かれなかった動く絵は描き直さない**(`render_target_update_mode` を止める)。引く側は
+  見えている間 `live_texture()` を**毎フレーム呼ぶ**(戻り値は捨ててよい)。**駒・タイル・ページを描き直す必要は無い**:
+  `ViewportTexture` は1度描いてあれば中身が自分で更新される。毎フレーム描き直すと、台座・バッジ・文字を含む `CardView` の
+  `_draw()` が駒の数だけ走って重い
+- 解像度は場の駒の表示(`CardView.BOARD_ART_SIDE` = 112)の2倍の高さ(Web版は1倍)。縦横比はキャンバスと同じ
+- `CardView` の場の表示は、**大きさと位置を止めた絵(`_icon()`)で決め**、同じ矩形へ動く絵を貼る
+  (`_art_reference()` などの寸法の計算が止めた絵のままで済む)。反転・攻撃・砕ける演出はそのまま動く
+- 動く絵を引くのは `CardView` の場の表示(`_process()`)・`ShopItemTile` / `ShopDetailPane`(`ShopItemArt.keep_skin_live()`)・
+  `AlmanacPage`(`_process()`)の3箇所。いずれも動く絵のスキンが効いている間だけ `set_process()` を立てる
+- 重さ(内蔵GPU・デスクトップ版の開発用の実行で実測。vsyncなし):場の12体を全部スキンにして動く絵が6枚描かれても、
+  フレーム時間は基準(スキンなし)と同程度(基準 11〜12ms / 12体 9〜14ms)。画面を離れると動く絵は0枚になる
 
 ## 画像のスキンからの置き換え
 

@@ -4,9 +4,11 @@ extends RefCounted
 ## Autoload を使わず static のみで持つ。
 ##
 ## スキンは**そのカード1枚だけの固有の絵**であり、色違いでは作らない(31章)。
-## 絵は `ART_DIR/{skin_id}/` に3状態を置き、**読む口はこの `texture()` だけに閉じる**——
-## 枚数が増えて実行時に取りに行く方式へ移すとき、出どころを1箇所で切り替えられるようにするため。
+## 見た目は `SHADER_DIR/{skin_id}.gdshader`(コード描画。`SkinRenderer` が止めた絵と動く絵にする)。
+## シェーダーが無いスキンだけ、`ART_DIR/{skin_id}/` の3状態の画像を読む(置き換え終えるまでの経路)。
+## **絵を読む口はこの `texture()` / `live_texture()` だけに閉じる**——出どころを1箇所で切り替えられるようにするため。
 
+const SHADER_DIR := "res://resources/shaders/skins"
 const ART_DIR := "res://assets/hourglasses/skins"
 ## `HourglassArt.State` の並びに対応するファイル名。
 const STATE_FILES: Array[String] = ["state_upright", "state_falling", "state_fallen"]
@@ -87,7 +89,7 @@ static var _available: Array[String] = []
 static var _available_ready := false
 
 
-## 売り物として並ぶスキン。**3状態の絵が揃っているものだけ**——定義だけ先に入って絵が
+## 売り物として並ぶスキン。**見た目があるものだけ**——定義だけ先に入って見た目が
 ## まだ届いていないスキンを、空の見本のまま売らないため。配布物の中身は起動中に変わらないので1度だけ調べる。
 static func all() -> Array[String]:
 	if not _available_ready:
@@ -148,15 +150,34 @@ static func skin_for_card(p_card_id: String) -> String:
 	return ""
 
 
+## 見た目があるか。シェーダーか、3状態の画像のどちらか。
 static func has_art(skin_id: String) -> bool:
+	if SkinRenderer.has_shader(skin_id):
+		return true
 	for state in STATE_FILES.size():
 		if not ResourceLoader.exists(_path(skin_id, state)):
 			return false
 	return true
 
 
-## スキンの絵の1状態。**所有・ON/OFFを見ない**(ショップの見本はここを直に読む)。
+## 動く絵を持つか(シェーダーのスキン)。持つスキンは場の駒・ショップ・図鑑の右のページが毎フレーム引き直す。
+static func is_live(skin_id: String) -> bool:
+	return SkinRenderer.has_shader(skin_id)
+
+
+static func shader_path(skin_id: String) -> String:
+	return "%s/%s.gdshader" % [SHADER_DIR, skin_id]
+
+
+## 起動時に1度だけ呼ぶ(`Main._ready()`)。シェーダーのスキンの止めた絵を焼き始める。
+static func ensure_ready(parent: Node) -> void:
+	SkinRenderer.ensure_ready(parent)
+
+
+## スキンの絵の1状態(止めた絵)。**所有・ON/OFFを見ない**(ショップの見本はここを直に読む)。
 static func texture(skin_id: String, state: int) -> Texture2D:
+	if SkinRenderer.has_shader(skin_id):
+		return SkinRenderer.still(skin_id, state)
 	var key := "%s|%d" % [skin_id, state]
 	if _textures.has(key):
 		return _textures[key]
@@ -164,6 +185,14 @@ static func texture(skin_id: String, state: int) -> Texture2D:
 	var found: Texture2D = load(path) if ResourceLoader.exists(path) else null
 	_textures[key] = found
 	return found
+
+
+## スキンの絵の1状態(動く絵)。呼ばれ続けている間だけ描き続けるため、使う側は毎フレーム引き直す。
+## シェーダーが無いスキンは止めた絵と同じ。
+static func live_texture(skin_id: String, state: int) -> Texture2D:
+	if SkinRenderer.has_shader(skin_id):
+		return SkinRenderer.live(skin_id, state)
+	return texture(skin_id, state)
 
 
 static func _path(skin_id: String, state: int) -> String:

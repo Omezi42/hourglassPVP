@@ -241,6 +241,7 @@ func _ready() -> void:
 	NetSession.ensure_ready(self)
 	FunnelService.on_launch()
 	HourglassArt.ensure_ready(self)
+	SkinLibrary.ensure_ready(self)
 	SoundBank.ensure_ready(self)
 	SoundBank.wire_tree(self)
 	MusicPlayer.ensure_ready(self)

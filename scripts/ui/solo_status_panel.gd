@@ -23,6 +23,12 @@ const LIST_GAP := 44.0
 const LIST_LABEL_HEIGHT := 22.0
 const BUTTON_SIZE := Vector2(180, 44)
 
+## false なら「遠征をやめる」を出さず、一覧を下まで伸ばす(遠征の記録の板が使う)。
+var abandon_enabled := true:
+	set(value):
+		abandon_enabled = value
+		_layout()
+
 var _panel_canvas: Control
 var _theme_label: Label
 var _boons_label: Label
@@ -144,14 +150,13 @@ func _layout() -> void:
 	_list_label.position = Vector2(PADDING, list_top)
 	_list_label.size = Vector2(size.x - PADDING * 2.0, LIST_LABEL_HEIGHT)
 	var list_top_y := list_top + LIST_LABEL_HEIGHT + 4.0
+	var button_room := BUTTON_SIZE.y + 12.0 if abandon_enabled else 0.0
 	var list_rect := Rect2(
-		PADDING,
-		list_top_y,
-		size.x - PADDING * 2.0,
-		size.y - PADDING - BUTTON_SIZE.y - 12.0 - list_top_y
+		PADDING, list_top_y, size.x - PADDING * 2.0, size.y - PADDING - button_room - list_top_y
 	)
 	_deck_list.position = list_rect.position
 	_deck_list.size = list_rect.size
+	_abandon_button.visible = abandon_enabled
 	_abandon_button.position = Vector2(
 		size.x - PADDING - BUTTON_SIZE.x, size.y - PADDING - BUTTON_SIZE.y
 	)
