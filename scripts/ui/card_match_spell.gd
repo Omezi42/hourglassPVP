@@ -22,7 +22,7 @@ func release(index: int) -> void:
 	_screen.effects.queue_spend_origin(_screen.my_side, view.global_position + view.size * 0.5)
 	if CardMatchEffectTarget.choose_from_grave(
 		_screen,
-		card,
+		CardEffectResolver.acting_card(_screen.state, _screen.my_side, card),
 		func(target: Dictionary) -> void:
 			_screen._perform(MatchAction.cast(_screen.my_side, index, target))
 	):

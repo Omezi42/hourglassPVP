@@ -9,7 +9,7 @@ extends RefCounted
 ## 撃つと体力が変わる駒の一覧。[{"side", "slot", "health", "dead"}]。
 ## ランダムな効果を含む砂術は結果が定まらないため、空を返す。
 static func compute(state: MatchState, side: int, hand_index: int, target := {}) -> Array:
-	var card: CardData = state.hand[side][hand_index]
+	var card := CardEffectResolver.acting_card(state, side, state.hand[side][hand_index])
 	if is_random(card):
 		return []
 	var after := fork(state)

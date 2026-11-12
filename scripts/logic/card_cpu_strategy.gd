@@ -251,7 +251,7 @@ func _spell_cast(state: MatchState, side: int, index: int) -> Dictionary:
 	if _baseline_key != key:
 		_baseline_key = key
 		_baseline = CardCpuSpellSearch.baseline(state, side, _face_weight(), _choose_attack)
-	var card: CardData = state.hand[side][index]
+	var card := CardEffectResolver.acting_card(state, side, state.hand[side][index])
 	var grave_hint := {}
 	var grave_effect := CardEffectResolver.grave_choice_effect(card)
 	if grave_effect != null:
@@ -288,7 +288,8 @@ func _defer_until_attacked(state: MatchState, side: int, target: Dictionary) -> 
 ## 旧来の砂術の価値(`spell_lookahead` が false のときだけ使う)。盤面へ駒を残さないため展開の下駄(DEVELOP_BONUS)は付けない。
 ## **対象を1体取る砂術は、対象がいなければ撃たない**(自動選択に任せると、
 ## 対象のいない除去を無駄撃ちする)。
-func _spell_value(state: MatchState, side: int, card: CardData) -> float:
+func _spell_value(state: MatchState, side: int, hand_card: CardData) -> float:
+	var card := CardEffectResolver.acting_card(state, side, hand_card)
 	var value := 0.0
 	for effect in card.effects_for(CardEnums.Trigger.ON_PLAY):
 		if effect.target == CardEnums.EffectTarget.ENEMY_UNIT:
@@ -630,7 +631,8 @@ static func swap_value(unit: CardInstance) -> float:
 
 
 ## 対象を1体選ぶ設置効果のための指定。選ばない効果なら空を返す。
-func _effect_target(state: MatchState, side: int, card: CardData) -> Dictionary:
+func _effect_target(state: MatchState, side: int, hand_card: CardData) -> Dictionary:
+	var card := CardEffectResolver.acting_card(state, side, hand_card)
 	var foe_side := MatchState.other_side(side)
 	for effect in card.effects_for(CardEnums.Trigger.ON_PLAY):
 		if effect.target == CardEnums.EffectTarget.ENEMY_UNIT:

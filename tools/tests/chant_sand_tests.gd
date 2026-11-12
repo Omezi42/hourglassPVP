@@ -21,6 +21,13 @@ func run(assert_true: Callable) -> void:
 	_test_archive_recovers_chosen_spell()
 	_test_archive_skips_units()
 	_test_cpu_picks_spell_for_archive()
+	_test_warden_raises_sand_on_own_spell()
+	_test_recite_recasts_newest_spell()
+	_test_recite_uses_target()
+	_test_recite_needs_castable_source()
+	_test_recite_counts_as_one_spell()
+	_test_recite_rules_text_names_source()
+	_test_cpu_aims_recite_like_source()
 	_test_set_is_registered()
 
 
@@ -193,11 +200,78 @@ func _test_warden_raises_sand_on_own_spell() -> void:
 	_assert.call(warden.has_keyword(CardEnums.Keyword.GUARD), "ウォーデンは守護を持つ")
 
 
+func _test_recite_recasts_newest_spell() -> void:
+	var state := _new_match(["recite"])
+	state.graveyard[MatchState.Side.A] = [
+		CardLibrary.find_by_id("shot"),
+		CardLibrary.find_by_id("divine"),
+		CardLibrary.find_by_id("sand")
+	]
+	state.deck[MatchState.Side.A].append(CardLibrary.find_by_id("pelt"))
+	var mana_before: int = state.mana[MatchState.Side.A]
+	_assert.call(state.cast_spell(MatchState.Side.A, 0), "写し詠みは墓地に砂術があれば撃てる")
+	var hand: Array = state.hand[MatchState.Side.A]
+	_assert.call(hand.size() == 1 and hand[0].id == "pelt", "写し詠みは墓地でいちばん新しい砂術(砂占い)を撃ち直す")
+	_assert.call(state.mana[MatchState.Side.A] == mana_before - 2, "撃ち直す砂術のコストは払わない")
+	var grave: Array = state.graveyard[MatchState.Side.A]
+	_assert.call(grave.size() == 4 and grave[1].id == "divine", "撃ち直した砂術は墓地に残ったまま")
+
+
+func _test_recite_uses_target() -> void:
+	var state := _new_match(["recite", "recite"])
+	state.graveyard[MatchState.Side.A] = [CardLibrary.find_by_id("shatter")]
+	var foe := _place(state, MatchState.Side.B, "sand", 1)
+	var before := foe.health
+	state.cast_spell(MatchState.Side.A, 0, {"side": MatchState.Side.B, "slot": 1})
+	_assert.call(foe.health == before - 4 or foe.is_dead(), "写し詠みは選んだ対象へ撃ち直す")
+	_assert.call(state.can_cast(MatchState.Side.A, 0), "墓地の写し詠みは飛ばして、その前の砂術を撃ち直せる")
+
+
+func _test_recite_needs_castable_source() -> void:
+	var state := _new_match(["recite"])
+	state.graveyard[MatchState.Side.A] = [CardLibrary.find_by_id("sand")]
+	_assert.call(not state.can_cast(MatchState.Side.A, 0), "墓地に砂術が無ければ写し詠みは撃てない")
+	state.graveyard[MatchState.Side.A] = [CardLibrary.find_by_id("burial")]
+	_assert.call(not state.can_cast(MatchState.Side.A, 0), "撃ち直す砂術の撃つ条件を満たさなければ写し詠みは撃てない")
+	_place(state, MatchState.Side.A, "sand", 0)
+	_assert.call(state.can_cast(MatchState.Side.A, 0), "撃ち直す砂術の条件を満たせば撃てる")
+
+
+func _test_recite_counts_as_one_spell() -> void:
+	var state := _new_match(["recite"])
+	state.graveyard[MatchState.Side.A] = [CardLibrary.find_by_id("divine")]
+	_place(state, MatchState.Side.A, "chant", 0)
+	var foe_before: int = state.hp[MatchState.Side.B]
+	state.cast_spell(MatchState.Side.A, 0)
+	_assert.call(state.hp[MatchState.Side.B] == foe_before - 1, "撃ち直しは「砂術を使う」に数えない")
+
+
+func _test_recite_rules_text_names_source() -> void:
+	var state := _new_match(["recite"])
+	state.graveyard[MatchState.Side.A] = [CardLibrary.find_by_id("shot")]
+	var text := CardEffectResolver.live_rules_text(
+		state, MatchState.Side.A, CardLibrary.find_by_id("recite")
+	)
+	_assert.call(text.ends_with("(いま撃ち直すのはサンドショット)"), "写し詠みの文はいま撃ち直す砂術を添える")
+
+
+func _test_cpu_aims_recite_like_source() -> void:
+	var state := _new_match(["recite"])
+	state.graveyard[MatchState.Side.A] = [CardLibrary.find_by_id("shatter")]
+	_place(state, MatchState.Side.B, "sand", 2)
+	var cpu := CardCpuStrategy.new()
+	var hint: Dictionary = cpu._effect_target(
+		state, MatchState.Side.A, CardLibrary.find_by_id("recite")
+	)
+	_assert.call(int(hint.get("slot", -1)) == 2, "CPUは写し詠みを撃ち直す砂術と同じく狙う")
+
+
 func _test_set_is_registered() -> void:
 	_assert.call(CardSetLibrary.has_set(SET_ID), "詠砂の刻が登録されている")
 	_assert.call(CardSetLibrary.card_ids(SET_ID).has("scribe"), "スクライブが詠砂の刻に入っている")
 	_assert.call(CardSetLibrary.card_ids(SET_ID).has("divine"), "砂占いが詠砂の刻に入っている")
 	_assert.call(CardSetLibrary.card_ids(SET_ID).has("chant"), "チャントが詠砂の刻に入っている")
 	_assert.call(CardSetLibrary.card_ids(SET_ID).has("archive"), "アーカイブが詠砂の刻に入っている")
+	_assert.call(CardSetLibrary.card_ids(SET_ID).has("recite"), "写し詠みが詠砂の刻に入っている")
 	_assert.call(CardSetLibrary.planned_count(SET_ID) == 8, "詠砂の刻は予定8枚")
 	_assert.call(CardEnums.trigger_name(CardEnums.Trigger.ON_OWN_SPELL) == "常在", "砂術への反応は「常在」と出す")

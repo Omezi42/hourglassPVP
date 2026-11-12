@@ -28,11 +28,12 @@ static func _choose_play(state: MatchState, side: int, rng: RandomNumberGenerato
 		if card.is_spell:
 			if not state.can_cast(side, index):
 				continue
-			if card.effects_for(CardEnums.Trigger.ON_PLAY).any(
+			var acting := CardEffectResolver.acting_card(state, side, card)
+			if acting.effects_for(CardEnums.Trigger.ON_PLAY).any(
 				func(e: CardEffectData) -> bool: return _needs_target(state, side, e)
 			):
 				continue
-			return MatchAction.cast(side, index, _random_target(state, side, card, rng))
+			return MatchAction.cast(side, index, _random_target(state, side, acting, rng))
 		if not state.can_play(side, index):
 			continue
 		var empty: Array = state.empty_slots(side)

@@ -12,6 +12,8 @@ var _screen: CardMatchScreen
 var _view: CardView
 var _index := -1
 var _card: CardData
+## 対象の選び方を決める札。写し詠みなら撃ち直す砂術(GameDesign.md 6章)、それ以外は `_card`。
+var _aim_card: CardData
 ## 対象を1体選ぶか。墓地から選ぶもの・選べる対象がいないものは、取らないものと同じに扱う。
 var _targeted := false
 var _above := false
@@ -34,14 +36,15 @@ func begin(view: CardView, index: int) -> void:
 	_view = view
 	_index = index
 	_card = _screen.state.hand[_screen.my_side][index]
+	_aim_card = CardEffectResolver.acting_card(_screen.state, _screen.my_side, _card)
 	_done = false
 	_above = false
 	_pointed = {}
-	var side := _screen._spell.target_side(_card)
+	var side := _screen._spell.target_side(_aim_card)
 	_targeted = (
-		CardEffectResolver.grave_choice_effect(_card) == null
+		CardEffectResolver.grave_choice_effect(_aim_card) == null
 		and side >= 0
-		and CardMatchEffectTarget.has_candidate(_screen.state, _card, side)
+		and CardMatchEffectTarget.has_candidate(_screen.state, _aim_card, side)
 	)
 	if _targeted:
 		_screen.selection.await_target(index, -1)
@@ -156,9 +159,9 @@ func _can_target(side: int, slot: int) -> bool:
 	if slot < 0:
 		return (
 			side == MatchState.other_side(_screen.my_side)
-			and CardMatchEffectTarget.can_target_face(_card)
+			and CardMatchEffectTarget.can_target_face(_aim_card)
 		)
-	return CardMatchEffectTarget.can_target(_screen.state, _card, side, slot)
+	return CardMatchEffectTarget.can_target(_screen.state, _aim_card, side, slot)
 
 
 func _show_forecast(target: Dictionary) -> void:

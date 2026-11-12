@@ -10,6 +10,8 @@ extends RefCounted
 const MAX_CHAIN_DEPTH := 160
 ## 1つの起点から連なる解決の回数の上限。深さだけでは、1段ごとに枝分かれする連鎖の総量を抑えられないため。
 const MAX_CHAIN_STEPS := 4096
+## 対局中の写し詠みの札の文に添える、いま撃ち直す砂術(GameDesign.md 6章)。
+const RECAST_NOTE := "(いま撃ち直すのは%s)"
 
 ## この対局で達した最も深い入れ子・最も長い連鎖と、上限で打ち切った連鎖の数(網羅テストが見る)。
 var peak_depth := 0
@@ -304,6 +306,10 @@ func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Diction
 				else:
 					_strike(side, from_slot, side, -1, CardEnums.EffectVisualStyle.PULSE, origin)
 				_recover(side, index)
+		CardEnums.EffectType.RECAST_SPELL:
+			var source := recast_source(_state, side)
+			if source != null:
+				resolve(side, CardInstance.new(source), CardEnums.Trigger.ON_PLAY, hint)
 		CardEnums.EffectType.REVIVE_FROM_GRAVE:
 			var revive_slot := _first_empty_slot(side)
 			var pick := _grave_pick(side, hint)
@@ -467,10 +473,14 @@ func _revive(side: int, index: int, slot: int) -> void:
 
 
 ## 撃てる砂術か(GameDesign.md 6章「撃つ条件のある砂術」)。自分の駒を払う砂術は払う駒が、
-## 蘇生の砂術は選べる砂時計と空き枠がいるときだけ撃てる。
+## 蘇生の砂術は選べる砂時計と空き枠がいるときだけ撃てる。写し詠みは撃ち直す砂術が撃てるときだけ撃てる。
 static func castable(state: MatchState, side: int, card: CardData) -> bool:
 	for effect in card.effects_for(CardEnums.Trigger.ON_PLAY):
 		match effect.effect_type:
+			CardEnums.EffectType.RECAST_SPELL:
+				var source := recast_source(state, side)
+				if source == null or not castable(state, side, source):
+					return false
 			CardEnums.EffectType.DESTROY_UNIT:
 				if (
 					effect.target == CardEnums.EffectTarget.ALLY_UNIT
@@ -489,15 +499,46 @@ static func flip_damage(state: MatchState, side: int, effect: CardEffectData) ->
 
 
 ## 対局中に見せる札の文。反転の回数で伸びるダメージは、札の「%dダメージ」をいまの値へ置き換える
-## (数えながら遊ばせないため。GameDesign.md 6章)。
+## (数えながら遊ばせないため。GameDesign.md 6章)。写し詠みには、いま撃ち直す砂術を添える。
 static func live_rules_text(state: MatchState, side: int, card: CardData) -> String:
 	var text := card.rules_text
+	if _recasts(card):
+		var source := recast_source(state, side)
+		if source != null:
+			text += RECAST_NOTE % source.display_name
 	for effect in card.effects_for(CardEnums.Trigger.ON_PLAY):
 		if effect.effect_type == CardEnums.EffectType.DAMAGE_PLAYER_PLUS_FLIPS:
 			text = text.replace(
 				"%dダメージ" % effect.value, "%dダメージ" % flip_damage(state, side, effect)
 			)
 	return text
+
+
+## 撃ち直す砂術(GameDesign.md 6章「墓地の砂術を撃ち直す効果」)。墓地でいちばん新しい砂術のうち、
+## 撃ち直す効果を持たないもの。無ければ null。
+static func recast_source(state: MatchState, side: int) -> CardData:
+	var pile: Array = state.graveyard[side]
+	for index in range(pile.size() - 1, -1, -1):
+		var card: CardData = pile[index]
+		if card.is_spell and not _recasts(card):
+			return card
+	return null
+
+
+static func _recasts(card: CardData) -> bool:
+	return card.effects_for(CardEnums.Trigger.ON_PLAY).any(
+		func(effect: CardEffectData) -> bool:
+			return effect.effect_type == CardEnums.EffectType.RECAST_SPELL
+	)
+
+
+## 撃ったときに実際に効果を起こす札。写し詠みなら撃ち直す砂術、それ以外はその札自身。
+## 対象の選び方・墓地からの選び方は、この札の効果で決める。
+static func acting_card(state: MatchState, side: int, card: CardData) -> CardData:
+	if card == null or not _recasts(card):
+		return card
+	var source := recast_source(state, side)
+	return source if source != null else card
 
 
 ## 出したときに墓地から1枚を選ばせる効果(レリック・目覚めの砂・アーカイブ)。無ければ null。

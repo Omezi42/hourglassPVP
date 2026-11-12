@@ -149,6 +149,9 @@ enum EffectType {
 	TUTOR_SPELL,
 	## 自分の墓地の砂術1枚を選んで手札へ戻す(アーカイブ。詠砂の刻)。選び方は RECOVER_FROM_GRAVE と同じ。
 	RECOVER_SPELL_FROM_GRAVE,
+	## 自分の墓地でいちばん新しい砂術(この効果を持つものを除く)を、コストを払わずにもう一度撃つ
+	## (写し詠み。詠砂の刻)。撃ち直しは「砂術を使う」に数えない。
+	RECAST_SPELL,
 }
 
 ## コンボ系カードの発動条件が確認する範囲(GameDesign.md 6章)。

@@ -51,7 +51,7 @@ static func best_cast(
 	grave_hint: Dictionary,
 	attack: Callable
 ) -> Dictionary:
-	var card: CardData = state.hand[side][hand_index]
+	var card := CardEffectResolver.acting_card(state, side, state.hand[side][hand_index])
 	var best := {"value": 0.0, "target": {}}
 	var targets := candidate_targets(state, side, card)
 	if targets.is_empty():
