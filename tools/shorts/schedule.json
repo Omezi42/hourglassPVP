@@ -1048,5 +1048,365 @@
 			"x",
 			"youtube"
 		]
+	},
+	{
+		"date": "2026-11-18",
+		"kind": "puzzle",
+		"id": "53",
+		"label": "とどめ問題 #53"
+	},
+	{
+		"date": "2026-11-18",
+		"kind": "card",
+		"id": "rattle",
+		"label": "ラトル"
+	},
+	{
+		"date": "2026-11-19",
+		"kind": "puzzle",
+		"id": "54",
+		"label": "とどめ問題 #54"
+	},
+	{
+		"date": "2026-11-19",
+		"kind": "card",
+		"id": "sweep",
+		"label": "スイープ"
+	},
+	{
+		"date": "2026-11-20",
+		"kind": "puzzle",
+		"id": "55",
+		"label": "とどめ問題 #55"
+	},
+	{
+		"date": "2026-11-20",
+		"kind": "card",
+		"id": "anchor",
+		"label": "アンカー"
+	},
+	{
+		"date": "2026-11-21",
+		"kind": "puzzle",
+		"id": "56",
+		"label": "とどめ問題 #56"
+	},
+	{
+		"date": "2026-11-21",
+		"kind": "card",
+		"id": "hammer",
+		"label": "ハンマー"
+	},
+	{
+		"date": "2026-11-22",
+		"kind": "puzzle",
+		"id": "57",
+		"label": "とどめ問題 #57"
+	},
+	{
+		"date": "2026-11-22",
+		"kind": "card",
+		"id": "reverse",
+		"label": "時の逆流"
+	},
+	{
+		"date": "2026-11-23",
+		"kind": "puzzle",
+		"id": "58",
+		"label": "とどめ問題 #58"
+	},
+	{
+		"date": "2026-11-23",
+		"kind": "card",
+		"id": "middle",
+		"label": "ミドル"
+	},
+	{
+		"date": "2026-11-24",
+		"kind": "puzzle",
+		"id": "59",
+		"label": "とどめ問題 #59"
+	},
+	{
+		"date": "2026-11-24",
+		"kind": "card",
+		"id": "mirror",
+		"label": "ミラー"
+	},
+	{
+		"date": "2026-11-25",
+		"kind": "puzzle",
+		"id": "60",
+		"label": "とどめ問題 #60"
+	},
+	{
+		"date": "2026-11-25",
+		"kind": "card",
+		"id": "glass",
+		"label": "グラス"
+	},
+	{
+		"date": "2026-11-26",
+		"kind": "puzzle",
+		"id": "61",
+		"label": "とどめ問題 #61"
+	},
+	{
+		"date": "2026-11-26",
+		"kind": "card",
+		"id": "glow",
+		"label": "グロウ"
+	},
+	{
+		"date": "2026-11-27",
+		"kind": "puzzle",
+		"id": "62",
+		"label": "とどめ問題 #62"
+	},
+	{
+		"date": "2026-11-27",
+		"kind": "card",
+		"id": "sword",
+		"label": "ソード"
+	},
+	{
+		"date": "2026-11-28",
+		"kind": "puzzle",
+		"id": "63",
+		"label": "とどめ問題 #63"
+	},
+	{
+		"date": "2026-11-28",
+		"kind": "card",
+		"id": "ward",
+		"label": "ウォード"
+	},
+	{
+		"date": "2026-11-29",
+		"kind": "puzzle",
+		"id": "64",
+		"label": "とどめ問題 #64"
+	},
+	{
+		"date": "2026-11-29",
+		"kind": "card",
+		"id": "swarm",
+		"label": "スウォーム"
+	},
+	{
+		"date": "2026-11-30",
+		"kind": "puzzle",
+		"id": "65",
+		"label": "とどめ問題 #65"
+	},
+	{
+		"date": "2026-11-30",
+		"kind": "card",
+		"id": "chime",
+		"label": "チャイム"
+	},
+	{
+		"date": "2026-12-01",
+		"kind": "puzzle",
+		"id": "66",
+		"label": "とどめ問題 #66"
+	},
+	{
+		"date": "2026-12-01",
+		"kind": "card",
+		"id": "eye",
+		"label": "アイ"
+	},
+	{
+		"date": "2026-12-02",
+		"kind": "puzzle",
+		"id": "67",
+		"label": "とどめ問題 #67"
+	},
+	{
+		"date": "2026-12-02",
+		"kind": "card",
+		"id": "echo",
+		"label": "エコー"
+	},
+	{
+		"date": "2026-12-03",
+		"kind": "puzzle",
+		"id": "68",
+		"label": "とどめ問題 #68"
+	},
+	{
+		"date": "2026-12-03",
+		"kind": "card",
+		"id": "cycle",
+		"label": "サイクル"
+	},
+	{
+		"date": "2026-12-04",
+		"kind": "puzzle",
+		"id": "69",
+		"label": "とどめ問題 #69"
+	},
+	{
+		"date": "2026-12-04",
+		"kind": "card",
+		"id": "dash",
+		"label": "ダッシュ"
+	},
+	{
+		"date": "2026-12-05",
+		"kind": "puzzle",
+		"id": "70",
+		"label": "とどめ問題 #70"
+	},
+	{
+		"date": "2026-12-05",
+		"kind": "card",
+		"id": "seal",
+		"label": "封砂"
+	},
+	{
+		"date": "2026-12-06",
+		"kind": "puzzle",
+		"id": "71",
+		"label": "とどめ問題 #71"
+	},
+	{
+		"date": "2026-12-06",
+		"kind": "card",
+		"id": "grain",
+		"label": "グレイン"
+	},
+	{
+		"date": "2026-12-07",
+		"kind": "puzzle",
+		"id": "72",
+		"label": "とどめ問題 #72"
+	},
+	{
+		"date": "2026-12-07",
+		"kind": "card",
+		"id": "stasis",
+		"label": "時間停止"
+	},
+	{
+		"date": "2026-12-08",
+		"kind": "puzzle",
+		"id": "73",
+		"label": "とどめ問題 #73"
+	},
+	{
+		"date": "2026-12-08",
+		"kind": "card",
+		"id": "legacy",
+		"label": "レガシー"
+	},
+	{
+		"date": "2026-12-09",
+		"kind": "puzzle",
+		"id": "74",
+		"label": "とどめ問題 #74"
+	},
+	{
+		"date": "2026-12-09",
+		"kind": "card",
+		"id": "bloom",
+		"label": "ブルーム"
+	},
+	{
+		"date": "2026-12-10",
+		"kind": "puzzle",
+		"id": "75",
+		"label": "とどめ問題 #75"
+	},
+	{
+		"date": "2026-12-10",
+		"kind": "card",
+		"id": "seed",
+		"label": "シード"
+	},
+	{
+		"date": "2026-12-11",
+		"kind": "puzzle",
+		"id": "76",
+		"label": "とどめ問題 #76"
+	},
+	{
+		"date": "2026-12-11",
+		"kind": "card",
+		"id": "rewind",
+		"label": "巻き戻し"
+	},
+	{
+		"date": "2026-12-12",
+		"kind": "puzzle",
+		"id": "77",
+		"label": "とどめ問題 #77"
+	},
+	{
+		"date": "2026-12-12",
+		"kind": "card",
+		"id": "goad",
+		"label": "揺さぶりの一手"
+	},
+	{
+		"date": "2026-12-13",
+		"kind": "puzzle",
+		"id": "78",
+		"label": "とどめ問題 #78"
+	},
+	{
+		"date": "2026-12-13",
+		"kind": "card",
+		"id": "pinch",
+		"label": "ひとつまみ"
+	},
+	{
+		"date": "2026-12-14",
+		"kind": "puzzle",
+		"id": "79",
+		"label": "とどめ問題 #79"
+	},
+	{
+		"date": "2026-12-14",
+		"kind": "card",
+		"id": "pebble",
+		"label": "ペブル"
+	},
+	{
+		"date": "2026-12-15",
+		"kind": "puzzle",
+		"id": "80",
+		"label": "とどめ問題 #80"
+	},
+	{
+		"date": "2026-12-15",
+		"kind": "card",
+		"id": "shatter",
+		"label": "砕砂"
+	},
+	{
+		"date": "2026-12-16",
+		"kind": "puzzle",
+		"id": "81",
+		"label": "とどめ問題 #81"
+	},
+	{
+		"date": "2026-12-16",
+		"kind": "card",
+		"id": "salt",
+		"label": "ソルト"
+	},
+	{
+		"date": "2026-12-17",
+		"kind": "puzzle",
+		"id": "82",
+		"label": "とどめ問題 #82"
+	},
+	{
+		"date": "2026-12-17",
+		"kind": "card",
+		"id": "anvil",
+		"label": "アンヴィル"
 	}
 ]

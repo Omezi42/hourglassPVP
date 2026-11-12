@@ -80,10 +80,10 @@ Fableには判断だけを任せる。1項目を次の順に回す(手順の詳�
 1本ずつは `tools/shorts/make_short.py card <id>` / `make_short.py puzzle <番号>`、問題集は `make_short.py forge <問数>` で増やす。
 投稿日への割り振りと投稿文は `tools/shorts/schedule.py`(Architecture.md 10.20節)。予約は `post-shorts` Skill。
 
-- [ ] 11/3頃: `post-shorts` で翌7日ぶんを予約する(予約済みは11/4まで。割り振りは11/9まで出ている)
-- [ ] 11/6頃: 割り振りが11/9で尽きるため `python tools/shorts/schedule.py <日数>` で次を出す。
-      とどめ問題は47問中 #44 まで割り振り済み(残り3問)。#40〜#47 の動画は未書き出しのため、11/5ぶんの予約の前に
-      `make_short.py puzzle all` で撮る。問題が尽きるとゲームから今日の1問が消えるため `make_short.py forge <問数>` で足す
+- [ ] 11/16頃: `post-shorts` で翌7日ぶんを予約する(予約済みは11/17まで。割り振りと動画は12/17まで揃っている)
+- [ ] 12/10頃: 割り振りが12/17で尽きる。とどめ問題は82問すべて割り振り済みのため `make_short.py forge <問数>` で足してから
+      `schedule.py <日数>` を回す(尽きるとゲームから今日の1問が消える)。台本のあるカードは残り4枚のため、
+      台本の無い36枚(第2弾以降のセット)の `card_lines.json` を先に書く
 
 ---
 
