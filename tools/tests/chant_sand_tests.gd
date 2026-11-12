@@ -28,6 +28,10 @@ func run(assert_true: Callable) -> void:
 	_test_recite_counts_as_one_spell()
 	_test_recite_rules_text_names_source()
 	_test_cpu_aims_recite_like_source()
+	_test_sage_lowers_spell_cost()
+	_test_sage_stacks_and_floors_at_min()
+	_test_sage_ignores_units_and_foe()
+	_test_sage_silenced_stops()
 	_test_set_is_registered()
 
 
@@ -266,6 +270,43 @@ func _test_cpu_aims_recite_like_source() -> void:
 	_assert.call(int(hint.get("slot", -1)) == 2, "CPUは写し詠みを撃ち直す砂術と同じく狙う")
 
 
+func _test_sage_lowers_spell_cost() -> void:
+	var state := _new_match(["grit_rain"])
+	var spell: CardData = CardLibrary.find_by_id("grit_rain")
+	_place(state, MatchState.Side.A, "sage", 0)
+	_assert.call(state.play_cost(MatchState.Side.A, spell) == spell.cost - 1, "セージがいると砂術のコストが1下がる")
+	state.mana[MatchState.Side.A] = spell.cost - 1
+	_assert.call(state.cast_spell(MatchState.Side.A, 0), "下がったコストのマナで撃てる")
+	_assert.call(state.mana[MatchState.Side.A] == 0, "払うのは下がった後のコスト")
+
+
+func _test_sage_stacks_and_floors_at_min() -> void:
+	var state := _new_match([])
+	_place(state, MatchState.Side.A, "sage", 0)
+	_place(state, MatchState.Side.A, "sage", 1)
+	var tempest: CardData = CardLibrary.find_by_id("tempest")
+	_assert.call(state.play_cost(MatchState.Side.A, tempest) == tempest.cost - 2, "セージ2体なら2下がる")
+	var shot: CardData = CardLibrary.find_by_id("shot")
+	_assert.call(state.play_cost(MatchState.Side.A, shot) == MatchState.MIN_COST, "1未満にはならない")
+
+
+func _test_sage_ignores_units_and_foe() -> void:
+	var state := _new_match([])
+	_place(state, MatchState.Side.A, "sage", 0)
+	var unit: CardData = CardLibrary.find_by_id("sand")
+	_assert.call(state.play_cost(MatchState.Side.A, unit) == unit.cost, "砂時計のコストは下がらない")
+	var spell: CardData = CardLibrary.find_by_id("grit_rain")
+	_assert.call(state.play_cost(MatchState.Side.B, spell) == spell.cost, "相手の砂術のコストは下がらない")
+
+
+func _test_sage_silenced_stops() -> void:
+	var state := _new_match([])
+	var sage := _place(state, MatchState.Side.A, "sage", 0)
+	sage.silenced = true
+	var spell: CardData = CardLibrary.find_by_id("grit_rain")
+	_assert.call(state.play_cost(MatchState.Side.A, spell) == spell.cost, "効果を消されたセージは働かない")
+
+
 func _test_set_is_registered() -> void:
 	_assert.call(CardSetLibrary.has_set(SET_ID), "詠砂の刻が登録されている")
 	_assert.call(CardSetLibrary.card_ids(SET_ID).has("scribe"), "スクライブが詠砂の刻に入っている")
@@ -273,5 +314,6 @@ func _test_set_is_registered() -> void:
 	_assert.call(CardSetLibrary.card_ids(SET_ID).has("chant"), "チャントが詠砂の刻に入っている")
 	_assert.call(CardSetLibrary.card_ids(SET_ID).has("archive"), "アーカイブが詠砂の刻に入っている")
 	_assert.call(CardSetLibrary.card_ids(SET_ID).has("recite"), "写し詠みが詠砂の刻に入っている")
+	_assert.call(CardSetLibrary.card_ids(SET_ID).has("sage"), "セージが詠砂の刻に入っている")
 	_assert.call(CardSetLibrary.planned_count(SET_ID) == 8, "詠砂の刻は予定8枚")
 	_assert.call(CardEnums.trigger_name(CardEnums.Trigger.ON_OWN_SPELL) == "常在", "砂術への反応は「常在」と出す")

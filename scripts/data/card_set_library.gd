@@ -139,7 +139,7 @@ const SETS: Dictionary = {
 		"id": "chant_sand",
 		"display_name": "詠砂の刻",
 		"description": "砂術を詠むたびに力が積もる8枚",
-		"card_ids": ["scribe", "divine", "chant", "archive", "warden", "recite"],
+		"card_ids": ["scribe", "divine", "chant", "archive", "warden", "recite", "sage"],
 		"price": 800,
 		"planned_count": 8,
 	},

@@ -22,6 +22,7 @@ enum Kind {
 	ENEMY_DRAW,
 	BYPASS,
 	OWN_SPELL,
+	SPELL_DISCOUNT,
 }
 
 ## 実演の駒を置く枠。中央寄りに置き、両隣に味方と相手の駒が並ぶようにする。
@@ -66,6 +67,8 @@ const TRIGGER_KINDS := {
 	CardEnums.Trigger.ON_ENEMY_DRAW: Kind.ENEMY_DRAW,
 	CardEnums.Trigger.ON_OWN_SPELL: Kind.OWN_SPELL,
 }
+## 砂術のコストを下げる効果の実演で撃つ砂術(コスト2・対象を取らない)。
+const DISCOUNT_SPELL_ID := "grit_rain"
 ## 自分の砂術に反応する効果の実演で撃つ砂術(対象を取らない)。
 const SPELL_ID := "shot"
 
@@ -84,6 +87,8 @@ static func kinds(card: CardData) -> Array[int]:
 		found.append(Kind.STRIKE)
 	if card.allies_ignore_guard:
 		found.append(Kind.BYPASS)
+	if card.ally_spell_cost_down > 0:
+		found.append(Kind.SPELL_DISCOUNT)
 	for effect in card.effects:
 		if effect == null:
 			continue
@@ -155,6 +160,12 @@ static func stage(state: MatchState, side: int, card: CardData, kind: int) -> Ar
 			actions.append(MatchAction.attack(side, ALLY_SLOT, FOE_TARGET_SLOT))
 		Kind.OWN_SPELL:
 			state.hand[side].insert(0, _card(SPELL_ID))
+			actions.append(MatchAction.cast(side, 0))
+		Kind.SPELL_DISCOUNT:
+			# 下がった後のコストちょうどのマナにして、下がったから撃てる様子を見せる。
+			var spell := _card(DISCOUNT_SPELL_ID)
+			state.hand[side].insert(0, spell)
+			state.mana[side] = state.play_cost(side, spell)
 			actions.append(MatchAction.cast(side, 0))
 		Kind.ALLY_DEATH:
 			state.board[side][ALLY_SLOT].health = 1

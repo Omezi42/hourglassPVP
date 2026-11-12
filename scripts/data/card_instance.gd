@@ -102,6 +102,11 @@ func ignores_guard() -> bool:
 	return data.allies_ignore_guard and not silenced
 
 
+## 自分の砂術のコストを下げる量(セージ)。効果を消されると働かない。
+func spell_cost_down() -> int:
+	return 0 if silenced else data.ally_spell_cost_down
+
+
 ## このターンに攻撃できる回数の上限。
 func max_attacks() -> int:
 	return 2 if has_keyword(CardEnums.Keyword.DOUBLE_STRIKE) else 1

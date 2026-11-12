@@ -425,9 +425,13 @@ func can_play(side: int, hand_index: int) -> bool:
 	return mana[side] >= play_cost(side, card)
 
 
-## 実際に払うコスト(GameDesign.md 6章)。相手の砂時計の数で下がるカードだけが元のコストと違う。
+## 実際に払うコスト(GameDesign.md 6章)。相手の砂時計の数で下がるカードと、自分の場に
+## 砂術のコストを下げる駒がいるときの砂術だけが元のコストと違う。
 func play_cost(side: int, card: CardData) -> int:
 	var down := card.cost_down_per_enemy_unit * units(other_side(side)).size()
+	if card.is_spell:
+		for unit in units(side):
+			down += unit.spell_cost_down()
 	return card.cost if down <= 0 else maxi(card.cost - down, MIN_COST)
 
 

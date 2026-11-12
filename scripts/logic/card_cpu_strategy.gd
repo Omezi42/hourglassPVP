@@ -37,6 +37,8 @@ const ENEMY_DRAW_TIMES := 2.0
 const OWN_SPELL_TIMES := 2.0
 ## 守護を無視して攻撃できる駒1体ぶんの価値(抜け道)。守護の駒を避けて殴れる1回を、本体の数点ぶんに見る。
 const GUARD_BYPASS_PER_ATTACKER := 2.0
+## セージが手札の砂術1枚のコストを1下げることの価値。
+const SPELL_DISCOUNT_PER_CARD := 1.0
 ## 墓地から1体を手札へ戻す価値。ドロー1枚(3.0)と同じに見る。
 const RECOVER_VALUE := 3.0
 ## 反転トリガーを持つ駒を1回反転できることの価値(反転の選択とリピートの値付けで共有)。
@@ -379,6 +381,8 @@ func _card_value(state: MatchState, side: int, card: CardData) -> float:
 		value += 1.0
 	if card.allies_ignore_guard:
 		value += _guard_bypass_value(state, side)
+	if card.ally_spell_cost_down > 0:
+		value += _spell_discount_value(state, side, card.ally_spell_cost_down)
 	if card.cannot_attack:
 		# 攻撃できないぶん、生涯ダメージの見積もりは成り立たない。壁としての厚みだけを見る。
 		value = float(total)
@@ -576,6 +580,15 @@ func _guard_bypass_value(state: MatchState, side: int) -> float:
 		if unit.can_attack() and unit.attack > 0:
 			ready += 1
 	return ready * GUARD_BYPASS_PER_ATTACKER
+
+
+## セージの価値。手札の砂術のうち、まだ下げられる(最小コストより上の)ぶんだけ持つ。
+func _spell_discount_value(state: MatchState, side: int, down: int) -> float:
+	var saved := 0
+	for card: CardData in state.hand[side]:
+		if card.is_spell:
+			saved += mini(down, maxi(state.play_cost(side, card) - MatchState.MIN_COST, 0))
+	return saved * SPELL_DISCOUNT_PER_CARD
 
 
 ## 砂を落として最も得をする味方と、その得の大きさ。得をする駒がいなければ slot は -1。
