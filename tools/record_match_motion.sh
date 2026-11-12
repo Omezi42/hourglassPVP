@@ -48,8 +48,7 @@ make_sheet() {
           seen[f]=1
           print f, (o[k]==0 ? name[i] : name[i] "+" o[k])
         }
-      }' "$work/events.txt" | tr -d '
-' | sort -n)
+      }' "$work/events.txt" | tr -d '\r' | sort -n)
     [ "$(echo "$list" | wc -l)" -le "$SHEET_MAX_FRAMES" ] && break
   done
   if [ "$orient" = "portrait" ]; then
