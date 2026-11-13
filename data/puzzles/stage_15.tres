@@ -6,7 +6,7 @@
 script = ExtResource("script_puzzle")
 id = "stage_15"
 title = "第15問 返して、落として、また返す"
-hint = "リピートが効くのは、出す前に返した駒だけ。砂術と攻撃の順番まで含めて組み立てる"
+hint = "リピートは先に返した駒だけに効く。砂術と攻撃の順まで組み立てる"
 order = 15
 foe_hp = 18
 own_hp = 30
