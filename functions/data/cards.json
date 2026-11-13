@@ -1363,6 +1363,17 @@
 			"is_spell": true,
 			"pool_index": 124,
 			"total_sand": 0
+		},
+		{
+			"cannot_attack": false,
+			"cost": 4,
+			"describe": "自分の砂術のコストが1下がる(1未満にはならない)",
+			"display_name": "セージ",
+			"id": "sage",
+			"initial_attack": 0,
+			"is_spell": false,
+			"pool_index": 125,
+			"total_sand": 5
 		}
 	]
 }
