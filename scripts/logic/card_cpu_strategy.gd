@@ -437,6 +437,8 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 			value = effect.value * FACE_WEIGHT
 		CardEnums.EffectType.DAMAGE_PLAYER_PER_ENEMY_UNIT:
 			value = state.units(foe_side).size() * effect.value * FACE_WEIGHT
+		CardEnums.EffectType.DAMAGE_PLAYER_PER_GRAVE_SPELL:
+			value = CardEffectResolver.grave_spell_count(state, side) * effect.value * FACE_WEIGHT
 		CardEnums.EffectType.DAMAGE_PLAYER_PLUS_FLIPS:
 			value = CardEffectResolver.flip_damage(state, side, effect) * FACE_WEIGHT
 		CardEnums.EffectType.DRAW:

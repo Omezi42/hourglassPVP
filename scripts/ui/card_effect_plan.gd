@@ -40,6 +40,8 @@ const FOE_DRAWER := ["crack", 3, 0]
 const MATCH_SLOT := 4
 ## 墓地を使う効果のための砂時計。
 const GRAVE_IDS := ["sand", "grain"]
+## 墓地に積む撃ち終えた砂術の枚数。数える効果(グリモア)が1点で終わらない実演にする。
+const GRAVE_SPELLS := 3
 const HAND_FILLER := ["sand", "grain"]
 const FULL_MANA := MatchState.MAX_MANA
 ## HPを反転する効果でも決着しない値にしておく(MatchState.INITIAL_HP = 24)。
@@ -204,8 +206,9 @@ static func _reset(state: MatchState, side: int, card: CardData) -> void:
 		hand.append(CardLibrary.find_by_id(id))
 	for id in GRAVE_IDS:
 		grave.append(CardLibrary.find_by_id(id))
-	# 墓地の砂術を戻すカード(アーカイブ)のため、撃ち終えた砂術も1枚積んでおく。
-	grave.append(_card(SPELL_ID))
+	# 墓地の砂術を戻す・数えるカード(アーカイブ・グリモア)のため、撃ち終えた砂術も積んでおく。
+	for _i in GRAVE_SPELLS:
+		grave.append(_card(SPELL_ID))
 	state.hand[side] = hand
 	state.graveyard[side] = grave
 	# 山札から砂術を探すカード(砂占い)は、探す先の砂術を山札に1枚置く(空振りの実演にしない)。

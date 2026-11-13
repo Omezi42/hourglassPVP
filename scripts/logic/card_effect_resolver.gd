@@ -127,6 +127,13 @@ func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Diction
 		CardEnums.EffectType.DAMAGE_PLAYER_PER_ENEMY_UNIT:
 			_strike(side, from_slot, foe_side, -1, CardEnums.EffectVisualStyle.STRIKE, origin)
 			_state.damage_player(foe_side, _state.units(foe_side).size() * effect.value)
+		CardEnums.EffectType.DAMAGE_PLAYER_PER_GRAVE_SPELL:
+			# 墓地に砂術が無ければ0点。届くものが無いため紋章も飛ばさない。
+			var spell_damage := grave_spell_count(_state, side) * effect.value
+			if spell_damage > 0:
+				var spell_side := _player_side_for(side, effect.target)
+				_strike(side, from_slot, spell_side, -1, CardEnums.EffectVisualStyle.STRIKE, origin)
+				_state.damage_player(spell_side, spell_damage)
 		CardEnums.EffectType.HEAL_PLAYER_PER_ENEMY_UNIT:
 			# 相手の場が空なら回復は0。届くものが無いため紋章も飛ばさない。
 			var foes := _state.units(foe_side).size()
@@ -438,6 +445,11 @@ static func grave_unit_count(state: MatchState, side: int) -> int:
 		if not (card as CardData).is_spell:
 			count += 1
 	return count
+
+
+## 墓地にある砂術の数(GameDesign.md 6章「墓地を読む効果」)。
+static func grave_spell_count(state: MatchState, side: int) -> int:
+	return state.graveyard[side].size() - grave_unit_count(state, side)
 
 
 static func best_grave_choice(state: MatchState, side: int, spells := false) -> int:
