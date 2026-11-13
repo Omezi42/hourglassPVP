@@ -283,6 +283,7 @@ func _process(delta: float) -> void:
 	_shake.tick(delta)
 	_clocks.tick(delta)
 	_spell_drag.tick()
+	_touch.tick_attack_drag()
 
 
 func _on_action_received(action: Dictionary) -> void:
@@ -496,6 +497,7 @@ func _refresh_row(views: Array[CardView], side: int) -> void:
 		views[i].crack_preview = false
 		# 攻撃できる自分の駒はドラッグでも運べる(GameDesign.md 9章)。
 		views[i].draggable = side == my_side and _my_turn() and unit != null and unit.can_attack()
+		views[i].operable = side == my_side and _my_turn() and unit != null
 
 
 ## どちらの側の駒をどのスキンで描くか(GameDesign.md 31章)。**再生は元の絵**。
@@ -559,7 +561,7 @@ func _flip_button_position(slot: int) -> Vector2:
 	var view: CardView = _own_slots[slot]
 	var button_size := CardMatchLayout.FLIP_BUTTON_SIZE * _flip_button.scale
 	var x: float = view.position.x + (view.size.x - button_size.x) * 0.5
-	var bottom := view.position.y + view.size.y * (1.0 + view.scale.y) * 0.5
+	var bottom := view.position.y + view.size.y * (1.0 + view.base_scale) * 0.5
 	return Vector2(x, bottom - CardMatchLayout.FLIP_BUTTON_OVERLAP)
 
 

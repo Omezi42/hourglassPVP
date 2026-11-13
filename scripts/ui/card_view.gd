@@ -55,11 +55,22 @@ const STAT_PUNCH_DURATION := 0.25
 const STAT_PUNCH_SCALE := 0.3
 ## 身構え(GameDesign.md 9章「対局画面の手触り」)。狙える相手にカーソルを乗せたら
 ## わずかに縮み、輪郭(既存の選択の輪郭色)がゆっくり脈打つ。
-const BRACE_SCALE := 0.96
-const BRACE_SCALE_DURATION := 0.12
-const BRACE_PULSE_SPEED := 3.4
-const BRACE_PULSE_MIN := 0.35
-const BRACE_PULSE_MAX := 0.85
+const BRACE_SCALE := 0.92
+const BRACE_PULSE_SPEED := 7.0
+const BRACE_PULSE_MIN := 0.6
+const BRACE_PULSE_MAX := 1.0
+## 乗せた1コマ目が一番明るくなるよう、脈の位相を sin の山から始める。
+const BRACE_PULSE_START := PI * 0.5
+## 自分の駒の拡縮(`CardViewPose`。GameDesign.md 9章)。台座の上の物体なので札のような傾きや光の筋は持たず、
+## 台座から少し立ち上がり、押すと沈む。大きくなる向きは行き過ぎて収まり、小さくなる向きは素直に戻る。
+const BOARD_READY_SCALE := 1.06
+const BOARD_PRESS_SCALE := 0.97
+const BOARD_GRAB_POP_SCALE := 1.12
+const BOARD_RISE_DURATION := 0.14
+const BOARD_SINK_DURATION := 0.08
+## 台座のホバー光の不透明度。操作できる自分の駒だけ強める。
+const HOVER_GLOW_ALPHA := 0.1
+const HOVER_GLOW_ALPHA_OPERABLE := 0.22
 ## 攻撃の予測。体力のバッジの真下へ、結果だけを小さく出す。
 const PREVIEW_RADIUS := 17.0
 const PREVIEW_GAP := 17.0
@@ -151,7 +162,25 @@ var skin_viewer: CardSkins.Viewer = CardSkins.Viewer.SELF
 ## 出せる/選べる状態か。false なら暗く表示する。
 var enabled := true
 ## 選択中(枠・台座の輪を強調する)。
-var selected := false
+var selected := false:
+	set(value):
+		selected = value
+		_pose.request()
+## 自分の駒で、いま操作できる(自分の手番で空き枠ではない)。ホバー・押下・選択の拡縮はこのときだけ動く。
+var operable := false:
+	set(value):
+		operable = value
+		_pose.request()
+## 左ボタンを押している間(確定の判定は `PressTracker` が持つ)。
+var pressed_down := false:
+	set(value):
+		pressed_down = value
+		_pose.request()
+## 攻撃ドラッグの元の駒。ドラッグの間は絵を指に付けず、元の駒が台座で構える。
+var drag_source := false:
+	set(value):
+		drag_source = value
+		_pose.request()
 ## このターンに行動を終えている(彩度を落とす)。
 var exhausted := false
 ## まだ攻撃できる自分の駒(GameDesign.md 9章)。攻撃済みを彩度で落とすだけでは
@@ -179,7 +208,11 @@ var flip_preview: Dictionary = {}
 var crack_preview := false
 ## 攻撃の演出の状態(GameDesign.md 9章)。**段取りは CardViewStrike が書き換える**ため
 ## 公開している。絵だけをこのぶんずらし、上端を支点にこの角度だけ回す。
-var striking := false
+var striking := false:
+	set(value):
+		striking = value
+		if not value:
+			_pose.request()
 var strike_offset := Vector2.ZERO
 var strike_angle := 0.0
 var strike_flash := 0.0
@@ -210,7 +243,8 @@ var label_scale := 1.0:
 var base_scale := 1.0:
 	set(value):
 		base_scale = value
-		scale = Vector2.ONE * (BRACE_SCALE if brace else 1.0) * value
+		scale = Vector2.ONE * value * _pose.factor()
+		_pose.resync()
 ## 身構え(GameDesign.md 9章「対局画面の手触り」)。`CardMatchTargets` が、狙える
 ## (=`selected`)相手へカーソルが乗ったときだけ true にする。対象選択が終わったら
 ## (`refresh()` で光りが消えるとき)必ず false へ戻す。
@@ -219,10 +253,10 @@ var brace: bool = false:
 		if brace == value:
 			return
 		brace = value
-		_animate_brace(value)
+		_pose.request()
 		_sync_process()
+		_brace_pulse = BRACE_PULSE_START if value else 0.0
 		if not value:
-			_brace_pulse = 0.0
 			queue_redraw()
 
 var _font: Font
@@ -245,7 +279,7 @@ var _prev_health := -1
 var _prev_attack := -1
 ## 身構えの脈打ち(GameDesign.md 9章)。`brace` の間だけ `_process` で進める。
 var _brace_pulse := 0.0
-var _brace_tween: Tween
+var _pose := CardViewPose.new(self)
 var _drawn_look: Array = []
 var _redraw_check_pending := false
 ## 動くスキンの絵を出している間は true。`SkinRenderer` は引かれ続けた絵だけを描くため、毎フレーム引き直す。
@@ -289,17 +323,6 @@ func show_unit(p_unit: CardInstance) -> void:
 	_prev_attack = -1 if p_unit == null else p_unit.attack
 	custom_minimum_size = BOARD_SIZE_PX
 	_redraw_if_changed()
-
-
-## 身構えのわずかな縮み(GameDesign.md 9章)。ノード全体の `scale` を使う
-## (手札のホバー拡大 `_zoom()` と同じ語彙)。中心から縮むよう軸を合わせる。
-func _animate_brace(active: bool) -> void:
-	pivot_offset = size * 0.5
-	if _brace_tween != null and _brace_tween.is_valid():
-		_brace_tween.kill()
-	_brace_tween = create_tween()
-	var target := Vector2.ONE * (BRACE_SCALE if active else 1.0) * base_scale
-	_brace_tween.tween_property(self, "scale", target, BRACE_SCALE_DURATION)
 
 
 ## 脈打つ輪郭のための継続的な再描画と、動くスキンの絵を引き続ける処理。`brace` か `_live` の間だけ動く
@@ -453,7 +476,12 @@ func is_empty() -> bool:
 func _get_drag_data(_at_position: Vector2) -> Variant:
 	if not draggable or card == null or not enabled:
 		return null
-	set_drag_preview(_make_drag_preview())
+	if mode == Mode.BOARD:
+		pressed_down = false
+		drag_source = true
+		_pose.pop()
+	else:
+		set_drag_preview(_make_drag_preview())
 	drag_started.emit(self)
 	return {"card_view": self}
 
@@ -472,6 +500,8 @@ func _drop_data(_at_position: Vector2, data: Variant) -> void:
 ## (`CardDragArrow`)を消す合図として使う(GameDesign.md 9章「対局画面の手触り」)。
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_DRAG_END:
+		if drag_source:
+			drag_source = false
 		drag_ended.emit(self)
 
 
@@ -494,6 +524,7 @@ func _make_drag_preview() -> Control:
 
 func _on_mouse_entered() -> void:
 	_hovering = true
+	_pose.request()
 	if enabled:
 		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 		# ホバー音(GameDesign.md 9章)。**空き枠では鳴らさない**。押しても何も
@@ -508,6 +539,8 @@ func _on_mouse_entered() -> void:
 
 func _on_mouse_exited() -> void:
 	_hovering = false
+	pressed_down = false
+	_pose.request()
 	_zoom(false)
 	queue_redraw()
 
@@ -542,6 +575,10 @@ func _gui_input(event: InputEvent) -> void:
 	if card == null and mode == Mode.HAND:
 		return
 	var result := _tracker.feed(event, size)
+	if result == PressTracker.Result.PRESSED:
+		pressed_down = true
+	elif result != PressTracker.Result.NONE:
+		pressed_down = false
 	if result == PressTracker.Result.CONFIRMED:
 		pressed.emit(self)
 
@@ -656,7 +693,8 @@ func _draw_board_unit() -> void:
 	if ready_mark and not selected:
 		CardViewPaint.pedestal_glow(self, Color(UiPalette.SAND, 0.18))
 	if _hovering and enabled:
-		CardViewPaint.pedestal_glow(self, Color(1, 1, 1, 0.1))
+		var alpha := HOVER_GLOW_ALPHA_OPERABLE if operable else HOVER_GLOW_ALPHA
+		CardViewPaint.pedestal_glow(self, Color(1, 1, 1, alpha))
 	_draw_board_stats()
 	_draw_board_labels(tint)
 

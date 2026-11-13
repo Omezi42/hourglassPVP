@@ -8,6 +8,8 @@ extends RefCounted
 ## `CardMatchFlipRight` へ渡す。
 
 var _screen: CardMatchScreen
+## 攻撃ドラッグの指が指している相手(`CardMatchSelection.NO_HOVER` / `FACE` / 相手の枠)。
+var _aim_target := CardMatchSelection.NO_HOVER
 
 
 func _init(screen: CardMatchScreen) -> void:
@@ -186,9 +188,49 @@ func on_own_slot_drag_started(view: CardView) -> void:
 	_screen.drag_arrow.begin(CardFlipBeam.unit_center(view))
 
 
-## ドラッグを放した/取り消した(GameDesign.md 9章「対局画面の手触り」)。矢印を消す。
+## ドラッグを放した/取り消した(GameDesign.md 9章「対局画面の手触り」)。矢印を消し、狙いを戻す。
 func on_own_slot_drag_ended(_view: CardView) -> void:
 	_screen.drag_arrow.end()
+	_aim_at(CardMatchSelection.NO_HOVER)
+
+
+## 毎フレーム(`CardMatchScreen._process()`)。Godot はドラッグ中に `mouse_entered` を配らないため、
+## 攻撃ドラッグの指が狙える相手の上にあるかを自分で見て、押して選ぶ経路と同じ身構え・予測・矢印の
+## 吸着に合流させる(`CardMatchSpellDrag.tick()` と同じ流儀)。
+func tick_attack_drag() -> void:
+	if not _screen.drag_arrow.is_active():
+		return
+	_aim_at(_attack_target_under(_screen.get_global_mouse_position()))
+
+
+## 指の下にある、狙える相手。相手の駒は光っている(`selected`)ものだけ、HP帯は狙えるときだけ。
+func _attack_target_under(point: Vector2) -> int:
+	for slot in MatchState.BOARD_SIZE:
+		var view := _screen.view_at(MatchState.other_side(_screen.my_side), slot)
+		if view.visible and view.selected and view.card != null and _holds(view, point):
+			return slot
+	if _screen.foe_bar.targetable and _holds(_screen.foe_bar, point):
+		return CardMatchSelection.FACE
+	return CardMatchSelection.NO_HOVER
+
+
+func _holds(control: Control, point: Vector2) -> bool:
+	var local := control.get_global_transform().affine_inverse() * point
+	return Rect2(Vector2.ZERO, control.size).has_point(local)
+
+
+func _aim_at(target: int) -> void:
+	if target == _aim_target:
+		return
+	_aim_target = target
+	_screen._targets.on_left()
+	_screen._pointer.set_hover_target(target)
+	if target >= 0:
+		var view := _screen.view_at(MatchState.other_side(_screen.my_side), target)
+		_screen._targets.on_hovered(view)
+		_screen.drag_arrow.set_aim(true, CardFlipBeam.unit_center(view))
+	else:
+		_screen.drag_arrow.set_aim(target == CardMatchSelection.FACE)
 
 
 ## 自分の駒を相手の駒へ落として攻撃する。押して選ぶ経路と同じ `_attack()` へ合流させる。
@@ -212,6 +254,7 @@ func _attack(slot: int, target_slot: int) -> void:
 		return
 	if not _screen._tutorial.gate_attack_target(target_slot):
 		return
+	_screen.drag_arrow.end(true)
 	# **ここで `_screen.refresh()` を呼んではいけない。**攻撃は `_perform()` の中で
 	# `CardMatchStrike` が演出を組み、盤面の再同期(`refresh()`)は演出が当たって
 	# 台座へ戻りきった `on_strike_finished()` まで自然に遅延される。ここで

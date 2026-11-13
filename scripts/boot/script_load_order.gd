@@ -82,6 +82,7 @@ const PATHS: Array[String] = [
 	"res://scripts/ui/touch_input.gd",
 	"res://scripts/ui/card_view_paint.gd",
 	"res://scripts/ui/hand_card_paint.gd",
+	"res://scripts/ui/card_view_pose.gd",
 	"res://scripts/ui/card_view_flourish.gd",
 	"res://scripts/ui/card_view_strike.gd",
 	"res://scripts/ui/card_unit_fx.gd",
