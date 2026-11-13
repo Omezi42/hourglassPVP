@@ -37,7 +37,7 @@ const SAND_FADE_OUT := 0.25
 
 ## 待っている間、印を返す間隔(秒)。0なら返さない。返すのは待機画面だけの例外のため、既定は返さない。
 var flip_interval := 0.0
-## 印の大きさの倍率(砂も同じ倍率で描く)。既定は等倍。
+## 印の大きさの倍率(砂も同じ倍率で描く)。印の下端を軸に広げ、見出しとの間を詰めない。既定は等倍。
 var emblem_scale := 1.0
 
 var _title := ""
@@ -153,13 +153,18 @@ static func _ease_flip(t: float) -> float:
 	return t * t * (3.0 - 2.0 * t)
 
 
-## 印の中心を軸に、角度と倍率をかけて描く(全体の拡大 `zoom` は外側にかかる)。
+## 印の中心を軸に角度を、下端を軸に倍率をかけて描く(全体の拡大 `zoom` は外側にかかる)。
 func _set_emblem_transform(zoom: float, center: Vector2, angle: float) -> void:
-	var local := (
-		Transform2D(0.0, center)
-		* Transform2D(angle, Vector2.ZERO).scaled_local(Vector2.ONE * emblem_scale)
-		* Transform2D(0.0, -center)
+	var bottom := center + Vector2(0.0, EMBLEM_SIZE * EMBLEM_VISUAL_RATIO * 0.5)
+	var rotate := (
+		Transform2D(0.0, center) * Transform2D(angle, Vector2.ZERO) * Transform2D(0.0, -center)
 	)
+	var grow := (
+		Transform2D(0.0, bottom)
+		* Transform2D.IDENTITY.scaled(Vector2.ONE * emblem_scale)
+		* Transform2D(0.0, -bottom)
+	)
+	var local := grow * rotate
 	draw_set_transform_matrix(Transform2D.IDENTITY.scaled(Vector2.ONE * zoom) * local)
 
 

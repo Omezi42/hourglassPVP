@@ -25,6 +25,8 @@ const CANCEL_SIZE := Vector2(220, 64)
 const CANCEL_GAP := 40.0
 ## 待機中、印を返す間隔(GameDesign.md 11章)。
 const EMBLEM_FLIP_SECONDS := 6.0
+## 待機画面の印の倍率(砂も同じ倍率で描く)。`EmptyState` の既定は等倍のまま。
+const WAITING_EMBLEM_SCALE := 1.5
 const TIER_FONT_SIZE := UiPalette.T_LEAD
 ## 縦画面(GameDesign.md 9章「縦画面」)。中央の待機の文言は `EmptyState` が拡大して描くため、印とボタンもそれに合わせる。
 const PORTRAIT_CANCEL_SIZE := Vector2(300, 76)
@@ -108,6 +110,7 @@ func _build() -> void:
 	_empty_state.position = _content_rect.position
 	_empty_state.size = _content_rect.size
 	_empty_state.flip_interval = EMBLEM_FLIP_SECONDS
+	_empty_state.emblem_scale = WAITING_EMBLEM_SCALE
 	add_child(_empty_state)
 
 	_poll_timer = Timer.new()
