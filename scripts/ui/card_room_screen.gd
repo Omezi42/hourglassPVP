@@ -66,6 +66,9 @@ const WAIT_FOE_HINT := "コードを入力すると、ここに座ります"
 const LOADING_FOE_NAME := "読み込み中"
 ## 表示名を付けていない相手。自分の名札の既定(`AccountService.display_name_or_default()`)と揃える。
 const FOE_FALLBACK_NAME := "ゲスト"
+## 「対局を開始」が押せるようになった瞬間に1回だけ膨らむ倍率(尺は `UiPalette.DUR_HOVER` → `DUR_SHOW`)。
+const START_PULSE_SCALE := 1.04
+const META_FADE_TWEEN := "room_fade_tween"
 
 var _room: RoomMatch
 var _role := Role.NONE
@@ -547,15 +550,49 @@ func _on_room_ready(_match_id: String, opponent_uid: String, is_host: bool) -> v
 	_in_lobby = true
 	_start_button.disabled = false
 	_set_status("相手が入室しました。準備ができたら開始してください" if is_host else "ホストの開始を待っています", not is_host)
+	_fade_in(_status_label)
 	_fill_foe_seat(opponent_uid)
 	_refresh_settings()
+	if is_host:
+		_pulse_start_button()
+
+
+## 透明から `UiPalette.DUR_SHOW` で現れる。大きさ・位置は動かさない。
+func _fade_in(node: CanvasItem) -> void:
+	if node.has_meta(META_FADE_TWEEN):
+		var running: Tween = node.get_meta(META_FADE_TWEEN)
+		if running != null and running.is_valid():
+			running.kill()
+	node.modulate.a = 0.0
+	var tween := node.create_tween().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	tween.tween_property(node, "modulate:a", 1.0, UiPalette.DUR_SHOW)
+	node.set_meta(META_FADE_TWEEN, tween)
+
+
+## 押せるようになったことを1回だけ知らせる(繰り返さない)。
+func _pulse_start_button() -> void:
+	_start_button.pivot_offset = _start_button.size * 0.5
+	var tween := _start_button.create_tween()
+	(
+		tween
+		. tween_property(
+			_start_button, "scale", Vector2.ONE * START_PULSE_SCALE, UiPalette.DUR_HOVER
+		)
+		. set_ease(Tween.EASE_OUT)
+	)
+	tween.tween_property(_start_button, "scale", Vector2.ONE, UiPalette.DUR_SHOW).set_ease(
+		Tween.EASE_IN_OUT
+	)
 
 
 ## 相手の席をプロフィールで埋める。読み終える前に部屋を出ていたら描かない
 ## (古い応答で次の部屋の席を上書きしないため)。
 func _fill_foe_seat(opponent_uid: String) -> void:
 	var room := _room
+	var was_empty := _foe_seat.empty
 	_foe_seat.show_player("相手", LOADING_FOE_NAME, UserProfileLibrary.DEFAULT_TITLE_ID, "", "")
+	if was_empty:
+		_fade_in(_foe_seat)
 	var profile: Dictionary = await AccountService.fetch_profile(NetSession.client, opponent_uid)
 	if room != _room or not _in_lobby:
 		return

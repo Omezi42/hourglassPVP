@@ -29,6 +29,11 @@ const PORTRAIT_TIER_FONT_SIZE := 26
 ## 待機の一群を縦の中央より上へ寄せる(下にCPU戦の入口と予告が続くため)。
 const PORTRAIT_CONTENT_HEIGHT := 760.0
 const BROWSE_SIZE := Vector2(220, 56)
+## 見出しと「次にすることの1行」の2段(GameDesign.md 9章の空状態)。
+const FAILED_TITLE := "通信に失敗しました"
+const FAILED_HINT := "もう一度お試しください"
+const NEWER_VERSION_TITLE := "新しい版が公開されています"
+const NEWER_VERSION_HINT := "再読み込みしてください"
 
 ## 待っている間のCPU戦のキュー。`WaitingCpuMatch` がCPU戦の印を立て、相手の知らせを受ける。
 var queue: MatchmakingQueue:
@@ -45,6 +50,7 @@ var _cpu_offer: WaitingCpuOffer
 var _wait_funnel := RankedWaitFunnel.new(self)
 var _busy := false
 var _status_base_text := ""
+var _status_hint := ""
 var _content_rect: Rect2
 var _empty_state: EmptyState
 var _tier_label: Label
@@ -93,9 +99,7 @@ func _build() -> void:
 	_cancel_button = CodedButton.make("キャンセル", CANCEL_SIZE)
 	_cancel_button.pressed.connect(_on_cancel_pressed)
 	add_child(_cancel_button)
-	_cancel_button.position = Vector2(
-		_content_rect.get_center().x - CANCEL_SIZE.x * 0.5, _cancel_button_top()
-	)
+	_place_cancel_button(CANCEL_SIZE)
 	_cpu_offer = WaitingCpuOffer.new(self, _cancel_button)
 	_cpu_offer.requested.connect(
 		func() -> void:
@@ -140,9 +144,7 @@ func apply_orientation(portrait: bool) -> void:
 		_cancel_button.add_theme_font_size_override("font_size", ScreenHeader.PORTRAIT_BUTTON_FONT)
 	else:
 		_cancel_button.remove_theme_font_size_override("font_size")
-	_cancel_button.position = Vector2(
-		_content_rect.get_center().x - cancel_size.x * 0.5, _cancel_button_top()
-	)
+	_place_cancel_button(cancel_size)
 	_cpu_offer.place(_cancel_button, portrait)
 	if not _tier_label.text.is_empty():
 		_refresh_tier_label()
@@ -235,12 +237,17 @@ func _set_busy(busy: bool) -> void:
 		_discard_session()
 
 
-func _set_status(text: String) -> void:
+## `hint` は見出しの下へ出す「次にすることの1行」。呼ぶたびに前の状態の1行を引き継がない。
+func _set_status(text: String, hint := "") -> void:
 	_status_base_text = text
+	_status_hint = hint
 	if _announce_badge != null:
 		_announce_badge.clear_note()
-	_empty_state.show_message(_status_base_text, "", _busy)
+	_empty_state.show_message(_status_base_text, _status_hint, _busy)
 	_place_announce_badge()
+	if _cancel_button != null and _cpu_offer != null:
+		_place_cancel_button(_cancel_button.size)
+		_cpu_offer.place(_cancel_button, _portrait)
 
 
 ## `EmptyState` は押せるものを持たないため、印は外側から同じ中央寄せを計算し直して重ねる。
@@ -270,26 +277,36 @@ func _zoom() -> float:
 func _title_baseline_y() -> float:
 	var emblem_height := EmptyState.EMBLEM_SIZE * EmptyState.EMBLEM_VISUAL_RATIO
 	var block := emblem_height + EmptyState.EMBLEM_GAP + EmptyState.TITLE_FONT_SIZE
+	if not _status_hint.is_empty():
+		block += EmptyState.HINT_GAP
 	var top := (_content_rect.size.y / _zoom() - block) * 0.5
 	return _content_rect.position.y + (top + emblem_height + EmptyState.EMBLEM_GAP) * _zoom()
 
 
+## 1行があるときは、その下端からキャンセルまで `CANCEL_GAP` を保つ。
 func _cancel_button_top() -> float:
-	return _title_baseline_y() + CANCEL_GAP * _zoom()
+	var hint_gap := EmptyState.HINT_GAP if not _status_hint.is_empty() else 0.0
+	return _title_baseline_y() + (CANCEL_GAP + hint_gap) * _zoom()
+
+
+func _place_cancel_button(cancel_size: Vector2) -> void:
+	_cancel_button.position = Vector2(
+		_content_rect.get_center().x - cancel_size.x * 0.5, _cancel_button_top()
+	)
 
 
 func _sign_in_or_fail() -> bool:
 	var ok: bool = await NetSession.sign_in()
 	if not ok:
-		_fail("通信に失敗しました。もう一度お試しください")
+		_fail(FAILED_TITLE, FAILED_HINT)
 	return ok
 
 
-func _fail(message: String) -> void:
+func _fail(message: String, hint := "") -> void:
 	_wait_funnel.end()
 	_set_busy(false)
-	_set_status(message)
-	waiting_ended.emit(message)
+	_set_status(message, hint)
+	waiting_ended.emit(message if hint.is_empty() else "%s。%s" % [message, hint])
 
 
 func _on_back_pressed() -> void:
@@ -313,7 +330,7 @@ func _on_cancel_pressed() -> void:
 
 func _on_version_mismatch(newer_exists: bool) -> void:
 	if newer_exists:
-		_set_status("新しい版が公開されています。再読み込みしてください")
+		_set_status(NEWER_VERSION_TITLE, NEWER_VERSION_HINT)
 	else:
 		_set_status("古い版の相手が待っています。マッチング中")
 

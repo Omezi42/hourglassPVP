@@ -19,6 +19,8 @@ var button: Button
 var _host: Control
 ## 予約を取り消すための番号。待つ間に隠されたら、時間が来ても出さない。
 var _serial := 0
+## 出るときの透明度の tween。位置・大きさは `ButtonFeel` が動かすため、透明度だけを替える。
+var _fade: Tween
 
 
 func _init(host: Control, below: Button) -> void:
@@ -55,11 +57,18 @@ func arm(delay: float) -> void:
 		await _host.get_tree().create_timer(delay).timeout
 	if serial == _serial:
 		button.disabled = false
+		button.modulate.a = 0.0
 		button.visible = true
+		_fade = button.create_tween().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+		_fade.tween_property(button, "modulate:a", 1.0, UiPalette.DUR_SHOW)
 
 
 func hide() -> void:
 	_serial += 1
+	if _fade != null:
+		_fade.kill()
+		_fade = null
+	button.modulate.a = 1.0
 	button.visible = false
 
 
