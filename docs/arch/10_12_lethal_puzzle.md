@@ -9,7 +9,7 @@
 | `CardChallengeResult`(`scripts/ui/card_challenge_result.gd`) | ソロモード(10.15節)と共用の結果パネル。中身は呼び出し側が `CardChallengeResult.Outcome` に詰めて渡し、パネルは並べ方とボタンの主従(GameDesign.md 24章の表)だけを持つ。高さは中身に合わせて1コマ後に決める(折り返す説明文の高さがそれまで確定しないため) |
 | `StageReward`(`scripts/logic/stage_reward.gd`) | 初回クリアで渡したもの(砂金・控えたか・カードセット・アイコン・解き直しか)。結果パネルが札にして並べるため、文ではなく中身で返す |
 | `ResultPanelFrame` / `ResultSandFall`(`scripts/ui/`) | 結果パネルの質感と舞い落ちる砂。`CardMatchResult` と `CardChallengeResult` が共有する |
-| `CardPuzzlePickerScreen`(`scripts/ui/card_puzzle_picker_screen.gd`) | ステージ選択。共通ヘッダー + 横2列のグリッド |
+| `CardPuzzlePickerScreen`(`scripts/ui/card_puzzle_picker_screen.gd`) | ステージ選択。共通ヘッダー(右に固定の問題の進み具合)+ 横2列のグリッド。札は全面が押せる当たりで、解いた札は右上に星の印を描く(文字の★は使わない) |
 
 **専用の対局画面(`CardPuzzleScreen`)は作らない。**盤面・手札・演出・ログはすべて
 `CardMatchScreen` のものをそのまま使い、パズル側は「固定の局面を作る」「解けたかを見る」
