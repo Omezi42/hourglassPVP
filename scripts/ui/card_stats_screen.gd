@@ -27,7 +27,11 @@ const ROW_FONT_SIZE := UiPalette.T_LEAD
 const SECTION_FONT_SIZE := UiPalette.T_HEAD
 const RING_DIAMETER := 150.0
 const DECK_ICON_HEIGHT := 40.0
-const DECK_BAR_WIDTH := 170.0
+const DECK_BAR_WIDTH := 130.0
+## 2段の行では棒を行の残りいっぱいに伸ばす。その最小幅。
+const DECK_BAR_MIN_WIDTH := 120.0
+const DECK_ICON_GAP := 12
+const DECK_STACK_TEXT_GAP := 4
 const ROW_GAP := 10
 const SECTION_GAP := 10.0
 ## これより少ない対局数の構築は、横棒と勝率を薄くする(数局の勝率は揺れが大きいため)。
@@ -38,6 +42,9 @@ const FEW_GAMES_ALPHA := 0.4
 const PORTRAIT_TEXT_SCALE := 24.0 / ROW_FONT_SIZE
 const PORTRAIT_COLUMN_SCALE := 1.25
 const PORTRAIT_PANEL_GAP := 16
+## 文字サイズ「大」のとき、25pxの文字が収まるよう列の幅へ重ねる倍率(名前・戦数。勝率・手数は据え置き)。
+const LARGE_NAME_SCALE := 1.17
+const LARGE_COUNT_SCALE := 1.125
 
 ## 記録が無いときに、2つの欄へ重ねて中央へ出す案内。
 var _empty: EmptyState
@@ -90,8 +97,18 @@ func _refresh() -> void:
 	ListRevealFx.stagger(_decks.get_children())
 
 
-func _text_scale() -> float:
+## 向きだけの文字の拡大(札の大きさと数字はこれで決まり、文字サイズ「大」では変えない)。
+func _orientation_scale() -> float:
 	return PORTRAIT_TEXT_SCALE if _portrait else 1.0
+
+
+func _text_scale() -> float:
+	return _orientation_scale() * TextSize.factor()
+
+
+## 行の文字が大きくなる(文字サイズ「大」)か縦のとき、デッキ別の行を名前と棒の2段に組む。
+func _deck_rows_stacked() -> bool:
+	return _portrait or TextSize.factor() > 1.0
 
 
 func _font(base: int) -> int:
@@ -108,7 +125,7 @@ func _fill_summary(uid: String, all: Dictionary) -> void:
 	_summary.add_child(top)
 	var column_scale := PORTRAIT_COLUMN_SCALE if _portrait else 1.0
 	top.add_child(StatsGraphics.ring(_rate(wins, games), RING_DIAMETER * column_scale))
-	var scale := _text_scale()
+	var scale := _orientation_scale()
 	top.add_child(StatsGraphics.tile("対局", "%d" % games, "戦", scale))
 	top.add_child(StatsGraphics.tile("勝ち", "%d" % wins, "勝", scale))
 	top.add_child(StatsGraphics.tile("平均", "%.1f" % _average(all), "手", scale))
@@ -124,10 +141,10 @@ func _fill_summary(uid: String, all: Dictionary) -> void:
 			continue
 		var row := _row()
 		var name := StatsGraphics.label(_kind_name(kind), _font(ROW_FONT_SIZE))
-		name.custom_minimum_size.x = KIND_NAME_WIDTH * scale
+		name.custom_minimum_size.x = _kind_name_width()
 		row.add_child(name)
 		row.add_child(StatsGraphics.split_bar(_rate(int(totals["wins"]), kind_games)))
-		row.add_child(_cell("%d戦" % kind_games, COL_COUNT))
+		row.add_child(_cell("%d戦" % kind_games, _count_width()))
 		row.add_child(_cell(_percent(int(totals["wins"]), kind_games), COL_RATE))
 		row.add_child(_cell("%.1f手" % _average(totals), COL_TURNS))
 		_summary.add_child(row)
@@ -135,28 +152,47 @@ func _fill_summary(uid: String, all: Dictionary) -> void:
 
 func _fill_decks(uid: String) -> void:
 	_decks.add_child(StatsGraphics.label("デッキ別", _font(SECTION_FONT_SIZE)))
+	var stacked := _deck_rows_stacked()
+	_decks.add_theme_constant_override("separation", int(UiPalette.S4) if stacked else ROW_GAP)
 	var known := _known_decks()
 	var column_scale := PORTRAIT_COLUMN_SCALE if _portrait else 1.0
 	for entry: Dictionary in MatchStats.decks(uid):
 		var games := int(entry["games"])
 		var wins := int(entry["wins"])
 		var deck: Dictionary = known.get(entry["code"], {})
-		var row := _row()
-		row.add_child(
-			StatsGraphics.deck_icon(deck.get("cards", []), DECK_ICON_HEIGHT * column_scale)
-		)
+		var icon := StatsGraphics.deck_icon(deck.get("cards", []), DECK_ICON_HEIGHT * column_scale)
 		var name := StatsGraphics.label(
 			str(deck.get("name", UNKNOWN_DECK_NAME)), _font(ROW_FONT_SIZE)
 		)
 		name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		name.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		name.clip_text = true
-		row.add_child(name)
 		var bar := StatsGraphics.rate_bar(_rate(wins, games), DECK_BAR_WIDTH * column_scale)
-		row.add_child(bar)
-		row.add_child(_cell("%d戦" % games, COL_COUNT))
+		var count := _cell("%d戦" % games, _count_width())
 		var rate := _cell(_percent(wins, games), COL_RATE)
-		row.add_child(rate)
+		var row := _row()
+		if stacked:
+			bar.custom_minimum_size.x = DECK_BAR_MIN_WIDTH
+			bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			row.add_theme_constant_override("separation", DECK_ICON_GAP)
+			row.add_child(icon)
+			var body := VBoxContainer.new()
+			body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			body.add_theme_constant_override("separation", DECK_STACK_TEXT_GAP)
+			row.add_child(body)
+			body.add_child(name)
+			var line := _row()
+			line.add_child(bar)
+			line.add_child(count)
+			line.add_child(rate)
+			body.add_child(line)
+		else:
+			row.add_child(icon)
+			row.add_child(name)
+			row.add_child(bar)
+			row.add_child(count)
+			row.add_child(rate)
 		if games < FEW_GAMES:
 			bar.modulate.a = FEW_GAMES_ALPHA
 			rate.modulate.a = FEW_GAMES_ALPHA
@@ -212,6 +248,22 @@ func _row() -> HBoxContainer:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", ROW_GAP)
 	return row
+
+
+func _is_large() -> bool:
+	return TextSize.factor() > 1.0
+
+
+## 種類名の列。「大」の縦は列の幅(1.25倍)にも重ねる(「ランダムマッチ」が25pxで収まる幅)。
+func _kind_name_width() -> float:
+	if not _is_large():
+		return KIND_NAME_WIDTH * _orientation_scale()
+	var column_scale := PORTRAIT_COLUMN_SCALE if _portrait else 1.0
+	return KIND_NAME_WIDTH * column_scale * LARGE_NAME_SCALE
+
+
+func _count_width() -> float:
+	return COL_COUNT * (LARGE_COUNT_SCALE if _is_large() else 1.0)
 
 
 ## 「n戦」「n.n%」のように、単位まで含めて1つの右揃えの列へ収める。

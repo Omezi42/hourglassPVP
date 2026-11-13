@@ -3,11 +3,10 @@ extends RefCounted
 ## 戦績の画面(GameDesign.md 19章「画面」)の絵の部品。数字の表に添える輪・札・横棒・砂時計の絵。
 ## どれも開いたときに1回描くだけにする(Web版は描き直すたびにGLの番号を消費するため。Pitfalls.md)。
 
-## 勝ちの割合は緑の砂、負けの割合は朱(色の意味は全画面で1つ)。輪の溝は彫り込みと同じ沈め方。
-const WIN_LIGHT := UiPalette.GOOD
-const WIN_DEEP := Color(0.22, 0.48, 0.30)
-const LOSS_LIGHT := UiPalette.FOE
-const LOSS_DEEP := Color(0.55, 0.16, 0.15)
+## 勝ちの割合は琥珀の砂(色の意味は全画面で1つ。砂色 = 自分・進み)。負けは色を敷かず、溝の沈んだ石のまま。
+## 輪の溝は彫り込みと同じ沈め方。
+const WIN_LIGHT := UiPalette.SAND_HI
+const WIN_DEEP := UiPalette.SAND_DEEP
 const TRACK := UiKit.WELL_TOP
 ## 勝率の横棒の50%の目盛り。
 const TICK := Color(0.96, 0.94, 0.89, 0.55)
@@ -60,7 +59,9 @@ static func ring(rate: float, diameter: float) -> Control:
 	value.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(value)
 	var caption := label(
-		"勝率", roundi(RING_CAPTION_SIZE * diameter / RING_BASE_DIAMETER), UiPalette.MUTED
+		"勝率",
+		roundi(RING_CAPTION_SIZE * diameter / RING_BASE_DIAMETER * TextSize.factor()),
+		UiPalette.MUTED
 	)
 	caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(caption)
@@ -78,7 +79,9 @@ static func tile(caption: String, value: String, unit: String, text_scale: float
 			UiKit.well(ci, Rect2(Vector2.ZERO, box.size), TILE_RADIUS)
 	)
 	var column := _centered_column(box)
-	var head := label(caption, roundi(TILE_CAPTION_SIZE * text_scale), UiPalette.MUTED)
+	var head := label(
+		caption, roundi(TILE_CAPTION_SIZE * text_scale * TextSize.factor()), UiPalette.MUTED
+	)
 	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(head)
 	var line := HBoxContainer.new()
@@ -93,16 +96,16 @@ static func tile(caption: String, value: String, unit: String, text_scale: float
 	return box
 
 
-## 勝ちと負けの数の比を示す横棒。幅は行の残りいっぱい(全行で同じになる)。
+## 勝率の横棒(目盛り無し)。幅は行の残りいっぱい(全行で同じになる)。
 static func split_bar(rate: float) -> Control:
-	var bar := _bar(rate, false, true)
+	var bar := _bar(rate, false)
 	bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	return bar
 
 
 ## 勝率の横棒。0〜100%を同じ幅で、50%の位置に細い目盛り。
 static func rate_bar(rate: float, width: float) -> Control:
-	var bar := _bar(rate, true, false)
+	var bar := _bar(rate, true)
 	bar.custom_minimum_size.x = width
 	return bar
 
@@ -152,7 +155,7 @@ static func label(text: String, font_size: int, color := UiPalette.IVORY) -> Lab
 	return line
 
 
-static func _bar(rate: float, tick: bool, split: bool) -> Control:
+static func _bar(rate: float, tick: bool) -> Control:
 	var bar := Control.new()
 	bar.custom_minimum_size.y = BAR_HEIGHT
 	bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -161,10 +164,7 @@ static func _bar(rate: float, tick: bool, split: bool) -> Control:
 		func() -> void:
 			var ci := bar.get_canvas_item()
 			var rect := Rect2(Vector2.ZERO, bar.size)
-			if split:
-				_draw_split(ci, rect, rate)
-			else:
-				UiKit.sand_bar(ci, rect, rate, WIN_LIGHT, WIN_DEEP)
+			UiKit.sand_bar(ci, rect, rate, WIN_LIGHT, WIN_DEEP)
 			if tick:
 				var w := bar.size.x
 				bar.draw_line(
@@ -175,18 +175,6 @@ static func _bar(rate: float, tick: bool, split: bool) -> Control:
 				)
 	)
 	return bar
-
-
-## 溝の中に、負けの朱の砂を全幅に敷き、その上へ勝ちの緑の砂を割合だけ溜める。
-static func _draw_split(ci: RID, rect: Rect2, rate: float) -> void:
-	UiKit.well(ci, rect, rect.size.y * 0.5)
-	var inner := rect.grow(-UiKit.SAND_INSET)
-	var radius := inner.size.y * 0.5
-	UiKit.vgrad(ci, UiKit.rr(inner, radius), [[0.0, LOSS_LIGHT], [1.0, LOSS_DEEP]], true)
-	if rate <= 0.0:
-		return
-	inner.size.x = maxf(inner.size.x * clampf(rate, 0.0, 1.0), inner.size.y)
-	UiKit.vgrad(ci, UiKit.rr(inner, radius), [[0.0, WIN_LIGHT], [1.0, WIN_DEEP]], true)
 
 
 static func _centered_column(parent: Control) -> VBoxContainer:
