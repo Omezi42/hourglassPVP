@@ -103,6 +103,8 @@ const FLOAT_HEAVY_RISE := 26.0
 const FLOAT_BASELINE := 18.0
 const FLOAT_HEAVY_WIDTH := 120.0
 const FLOAT_HEAVY_LIFT := 6.0
+## 浮き上がり切った数字の上端と、画面の上端とのあき。
+const FLOAT_SCREEN_MARGIN := 8.0
 ## 大ダメージほど赤から橙へ寄せる。赤のまま大きくするより、危険の度合いが読みやすい。
 const FLOAT_HEAVY_COLOR := Color(1.0, 0.45, 0.15)
 ## 山札の脈打ち(GameDesign.md 9章)。ドローと疲労の発生源を山札そのもので示す。
@@ -812,4 +814,8 @@ func _paint_float(item: PaintedShape) -> void:
 		at = Vector2(rect.end.x - FLOAT_HEAVY_WIDTH, rect.position.y - FLOAT_HEAVY_LIFT - rise)
 		align = HORIZONTAL_ALIGNMENT_RIGHT
 		width = FLOAT_HEAVY_WIDTH
+	# 画面の上端にある器でも、浮き上がり切った数字の上端が画面の中に収まるよう下へずらす。
+	var full_rise := lerpf(FLOAT_RISE, FLOAT_HEAVY_RISE, weight)
+	var top_limit := FLOAT_SCREEN_MARGIN - get_global_transform_with_canvas().origin.y
+	at.y = maxf(at.y, top_limit + _font.get_ascent(size) + full_rise - rise)
 	item.draw_string(_font, at, text, align, width, size, Color(color, minf(ratio * 2.0, 1.0)))

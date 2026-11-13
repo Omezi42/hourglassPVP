@@ -21,10 +21,28 @@ const BEAT_SECOND_AT := 0.2
 const BEAT_SHARPNESS := 90.0
 const HALO_REACH := 7.0
 const SHARDS := 12
-const SHARD_SPEED := 120.0
+## 破片(三角形の一辺・飛距離・回転量・消え始める進み)。
+const SHARD_SIDE_MIN := 6.0
+const SHARD_SIDE_MAX := 11.0
+const SHARD_REACH_MIN := 34.0
+const SHARD_REACH_MAX := 64.0
+const SHARD_SPIN := 1.2
+const SHARD_FADE_AT := 0.6
+const SHARD_COLOR := Color(0.86, 0.92, 1.0)
 const SAND_GRAINS := 22
-const SAND_FALL := 46.0
-const GRAVITY := 260.0
+## こぼれる赤い砂(粒の半径・落下・横の流れ・消え始める進み)。
+const SAND_RADIUS_MIN := 2.0
+const SAND_RADIUS_MAX := 3.5
+const SAND_FALL_MIN := 70.0
+const SAND_FALL_MAX := 130.0
+const SAND_DRIFT := 18.0
+const SAND_FADE_AT := 0.75
+const SAND_BRIGHT_EVERY := 3
+const SPILL_RED := Color(0.95, 0.24, 0.18)
+const SAND_BRIGHT := Color(1.0, 0.56, 0.42)
+## 破裂の瞬間に器へ重ねる白い面。
+const BURST_FLASH_ALPHA := 0.5
+const BURST_FLASH_SECONDS := 0.12
 const CRACK_DARK := Color(0.06, 0.03, 0.03, 0.9)
 const CRACK_LIGHT := Color(1.0, 0.95, 0.9, 0.45)
 const SAND_RED := Color(0.86, 0.24, 0.19, 1.0)
@@ -107,6 +125,7 @@ func _draw() -> void:
 		)
 		return
 	var burst := (_shatter - BURST_AT) / (1.0 - BURST_AT)
+	_draw_burst_flash(burst)
 	_draw_shards(burst)
 	_draw_spill(burst)
 
@@ -168,28 +187,40 @@ func _draw_heartbeat() -> void:
 	UiPaint.fill_circle(ci, badge_center, badge_radius, Color(SAND_RED, 0.28 * beat), 32)
 
 
-## 割れた器の破片。**砂より速く外へ飛び、先に消える**(駒の破壊と同じ語彙)。
+## 割れた器の破片。器の中心から外へ飛びながら回り、終わりへ向けて消える(駒の破壊と同じ語彙)。
 func _draw_shards(t: float) -> void:
-	var fade := 1.0 - t
-	var seconds := t * SHATTER_DURATION * (1.0 - BURST_AT)
+	var alpha := 1.0 - smoothstep(SHARD_FADE_AT, 1.0, t)
+	var travel := 1.0 - (1.0 - t) * (1.0 - t)
+	var center := vessel_rect.get_center()
 	for i in SHARDS:
-		var along := (float(i) + 0.5) / float(SHARDS)
-		var origin := (
-			vessel_rect.position + Vector2(vessel_rect.size.x * along, vessel_rect.size.y * 0.5)
+		var seed_size := fmod(float(i) * 0.618, 1.0)
+		var seed_reach := fmod(float(i) * 0.377 + 0.2, 1.0)
+		var seed_spin := fmod(float(i) * 0.731 + 0.1, 1.0)
+		var angle := TAU * (float(i) + 0.5) / float(SHARDS)
+		var at := (
+			center
+			+ (
+				Vector2.from_angle(angle)
+				* lerpf(SHARD_REACH_MIN, SHARD_REACH_MAX, seed_reach)
+				* travel
+			)
 		)
-		var angle := -PI * (0.15 + 0.7 * fmod(float(i) * 0.618, 1.0))
-		var velocity := (
-			Vector2(cos(angle), sin(angle)) * SHARD_SPEED * (0.6 + 0.4 * absf(sin(i * 2.3)))
-		)
-		var at := origin + velocity * seconds + Vector2(0.0, 0.5 * GRAVITY * seconds * seconds)
-		var dir := velocity.normalized()
-		var tip := dir * (4.0 + 2.0 * fade)
-		var side := Vector2(-dir.y, dir.x) * 1.8
-		ShapePaint.colored_polygon(
-			get_canvas_item(),
-			PackedVector2Array([at + tip, at - tip + side, at - tip - side]),
-			Color(GLASS, 0.9 * fade)
-		)
+		var turn := angle + lerpf(-SHARD_SPIN, SHARD_SPIN, seed_spin) * t
+		var radius := lerpf(SHARD_SIDE_MIN, SHARD_SIDE_MAX, seed_size) / sqrt(3.0)
+		var points := PackedVector2Array()
+		for corner in 3:
+			points.append(at + Vector2.from_angle(turn + TAU * float(corner) / 3.0) * radius)
+		ShapePaint.colored_polygon(get_canvas_item(), points, Color(SHARD_COLOR, alpha))
+
+
+## 破裂の瞬間、器が白く光って引く。
+func _draw_burst_flash(t: float) -> void:
+	var seconds := t * SHATTER_DURATION * (1.0 - BURST_AT)
+	var alpha := BURST_FLASH_ALPHA * (1.0 - clampf(seconds / BURST_FLASH_SECONDS, 0.0, 1.0))
+	if alpha <= 0.0:
+		return
+	var radius := vessel_rect.size.y * 0.5
+	UiKit.fill(get_canvas_item(), UiKit.rr(vessel_rect, radius), Color(1.0, 1.0, 1.0, alpha))
 
 
 ## こぼれ落ちる赤い砂。器の底から粒をずらしながら落とし、下で消える。
@@ -199,12 +230,17 @@ func _draw_spill(t: float) -> void:
 		var local := clampf((t - delay) / (1.0 - delay), 0.0, 1.0)
 		if local <= 0.0:
 			continue
+		var seed_fall := fmod(float(i) * 0.618, 1.0)
+		var seed_drift := fmod(float(i) * 0.377 + 0.2, 1.0)
+		var seed_size := fmod(float(i) * 0.731 + 0.1, 1.0)
 		var x := vessel_rect.position.x + vessel_rect.size.x * (float(i) + 0.5) / float(SAND_GRAINS)
-		var drift := sin(float(i) * 1.7) * 6.0 * local
-		var y := vessel_rect.end.y - 2.0 + SAND_FALL * local * local
+		var fall := lerpf(SAND_FALL_MIN, SAND_FALL_MAX, seed_fall) * local * local
+		var drift := lerpf(-SAND_DRIFT, SAND_DRIFT, seed_drift) * local
+		var alpha := 1.0 - smoothstep(SAND_FADE_AT, 1.0, local)
+		var color := SAND_BRIGHT if i % SAND_BRIGHT_EVERY == 0 else SPILL_RED
 		ShapePaint.circle(
 			get_canvas_item(),
-			Vector2(x + drift, y),
-			1.8 * (1.0 - 0.4 * local),
-			Color(SAND_RED, 1.0 - local)
+			Vector2(x + drift, vessel_rect.end.y - 2.0 + fall),
+			lerpf(SAND_RADIUS_MIN, SAND_RADIUS_MAX, seed_size),
+			Color(color, alpha)
 		)

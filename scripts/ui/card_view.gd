@@ -614,7 +614,13 @@ func _draw() -> void:
 		_draw_empty()
 	else:
 		HandCardPaint.draw(self)
+	# 攻撃で出かけている駒の被弾の面は、席ではなく動いている絵に付ける。
+	var follows_art := mode == Mode.BOARD and striking
+	if follows_art:
+		draw_set_transform_matrix(_strike_transform())
 	_sand.draw()
+	if follows_art:
+		draw_set_transform_matrix(Transform2D.IDENTITY)
 
 
 func _tint() -> Color:
