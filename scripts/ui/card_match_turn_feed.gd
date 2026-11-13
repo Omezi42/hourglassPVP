@@ -170,7 +170,8 @@ func _draw_caption() -> void:
 		at - Vector2(CAPTION_PAD.x, font_size + CAPTION_PAD.y * 0.5),
 		Vector2(width + CAPTION_PAD.x * 2.0, font_size + CAPTION_PAD.y * 2.0)
 	)
-	_draw_plate(plate, alpha * 0.88)
+	# 板は文字より速く消す(線形に消すと、文字が薄れた後も暗い板だけが空の枠のように残る)。
+	_draw_plate(plate, alpha * alpha * 0.88)
 	draw_string(
 		_font,
 		at,

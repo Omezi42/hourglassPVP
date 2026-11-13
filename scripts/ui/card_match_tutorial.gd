@@ -155,9 +155,10 @@ func apply_layout(layout: CardMatchLayout) -> void:
 		_band_style.opaque = layout.portrait
 	_apply_text_margins(layout.portrait)
 	_band.scale = Vector2.ONE * layout.tutorial_scale
-	# 文字の大きさ「大」(GameDesign.md 9章)は文字を f 倍にする。1行の字数が 1/f、行の高さが f 倍に
-	# なる。横は同じ文を収めるため帯を f² 倍の高さにし、縦は行数を数えて高さを決める。
-	var f := TextSize.factor()
+	# 文字の大きさ「大」(GameDesign.md 9章)は横の帯だけ文字を f 倍にする。1行の字数が 1/f、行の高さが
+	# f 倍になるため、同じ文を収めるため帯を f² 倍の高さにする。縦は既に24pxで、拡大すると相手の列へ
+	# かかるため標準のまま(行数で高さを決める)。
+	var f := 1.0 if layout.portrait else TextSize.factor()
 	_label.add_theme_font_size_override("font_size", roundi(BAND_FONT_SIZE * f))
 	if layout.portrait:
 		_fit_portrait_band()
