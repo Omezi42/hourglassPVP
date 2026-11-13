@@ -3,7 +3,7 @@
 | クラス | 責務 |
 |---|---|
 | `MatchStats`(`scripts/logic/match_stats.gd`, static) | `user://match_stats.json` へ積み上げる。アカウント(uid)ごとに「種別別の通算 / デッキ別」を持つ |
-| `CardStatsScreen`(`scripts/ui/card_stats_screen.gd`) | 横は左に通算(勝率の輪+数字の札)と種類別、右にデッキ別。縦は1本のスクロールに積む。共通の `ScreenHeader` を使う。アカウント画面のヘッダーの「戦績」から開き、戻るとアカウント画面へ帰る |
+| `CardStatsScreen`(`scripts/ui/card_stats_screen.gd`) | 横は左に通算(勝率の輪+数字の札)と種類別、右にデッキ別。縦は1本のスクロールに積む。共通の `ScreenHeader` を使う。デッキ別は名前を引けない構築を画面側で1行に合算する(保存の形は指紋ごとのまま)。アカウント画面のヘッダーの「戦績」から開き、戻るとアカウント画面へ帰る |
 | `StatsGraphics`(`scripts/ui/stats_graphics.gd`, static) | 戦績の絵の部品(勝率の輪・彫り込みの数字の札・横棒(勝ちは緑・負けは朱の砂)・デッキの代表の砂時計)。描くのは開いたときの1回だけ(Web版で描き直すたびにGLの番号を消費するため。Pitfalls.md) |
 | `CardMatchOutcome`(`scripts/ui/card_match_outcome.gd`) | 終局後の後始末(リプレイの保存・砂金の付与・戦績の記録)。`card_match_screen.gd` が1000行の上限に達したため切り出した |
 
