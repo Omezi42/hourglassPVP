@@ -286,6 +286,11 @@ func _wait_line() -> String:
 	return RankedWaitLine.line(RankedWaitLine.elapsed_seconds(started_msec), _others_waiting)
 
 
+## 見つかった後の1行。待機人数を添えず、経過時間だけを止めた値で出す。
+func _found_line() -> String:
+	return RankedWaitLine.line(RankedWaitLine.elapsed_seconds(started_msec), 0)
+
+
 ## 待機人数を読む。待機画面が見えている間だけ読み、CPU戦などで隠れている間は読まない。
 func _refresh_others_waiting() -> void:
 	if not is_waiting() or not is_visible_in_tree():
@@ -411,8 +416,8 @@ func _on_matched(match_id: String, opponent_uid: String) -> void:
 	else:
 		_fail("対戦相手との同期に失敗しました。もう一度お試しください")
 		return
-	# 経過時間の行は止めたまま残し、見出しだけ替える(行が消えて見出しが動かないように)。
-	_set_status("対戦相手が見つかりました!", _status_hint)
+	# 行は消さず、経過時間だけを止めた値で残す(消すと中央寄せで見出しが動く。「ほかに待っています」は見つかった後に合わない)。
+	_set_status("対戦相手が見つかりました!", _found_line())
 	# 他の画面にいる間は帯が同じ間を取る(`Main`)ため、ここでは待たない。
 	if is_visible_in_tree():
 		await get_tree().create_timer(RankedWaitBanner.FOUND_NOTICE_SECONDS).timeout
