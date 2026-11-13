@@ -17,11 +17,12 @@ const PORTRAIT_OPEN_BUTTON_WIDTH := 190.0
 const PORTRAIT_CANCEL_BUTTON_WIDTH := 120.0
 const FONT_SIZE := 20
 const PORTRAIT_FONT_SIZE := 26
-const WAITING_TEXT := "ランクマッチ待機中  %d:%02d"
+const WAITING_TEXT := "ランクマッチ待機中  %s"
 const FOUND_TEXT := "相手が見つかりました"
 const FLASH_SECONDS := 2.0
+## 他の画面にいる間に相手が見つかったとき、帯で知らせてから対局へ移るまでの間。待機画面の「とどまる」もこの値。
+const FOUND_NOTICE_SECONDS := 1.0
 const ENDED_SECONDS := 3.0
-const SECONDS_PER_MINUTE := 60
 const MSEC_PER_SECOND := 1000
 
 var _started_msec := 0
@@ -150,7 +151,6 @@ func _process(_delta: float) -> void:
 
 
 func _refresh_elapsed() -> void:
-	var seconds := (Time.get_ticks_msec() - _started_msec) / MSEC_PER_SECOND
-	var text := WAITING_TEXT % [seconds / SECONDS_PER_MINUTE, seconds % SECONDS_PER_MINUTE]
+	var text := WAITING_TEXT % RankedWaitLine.clock(RankedWaitLine.elapsed_seconds(_started_msec))
 	if _label.text != text:
 		_label.text = text

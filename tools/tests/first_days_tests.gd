@@ -115,9 +115,7 @@ func _test_waiting_cpu_never_auto_starts() -> void:
 	var tree := Engine.get_main_loop() as SceneTree
 	var host := Control.new()
 	tree.root.add_child(host)
-	var below := Button.new()
-	host.add_child(below)
-	var offer := WaitingCpuOffer.new(host, below)
+	var offer := WaitingCpuOffer.new(host)
 	var requested := [0]
 	offer.requested.connect(func() -> void: requested[0] += 1)
 

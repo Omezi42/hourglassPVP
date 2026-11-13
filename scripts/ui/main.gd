@@ -10,7 +10,7 @@ const TITLE_NODE := "TitleScreen"
 ## パスで読んで初めて要るときに作る(Architecture.md 4.0.6節)。
 const CARD_MATCH_SCREEN_SCRIPT := "res://scripts/ui/card_match_screen.gd"
 ## 他の画面にいる間に相手が見つかったとき、帯で知らせてから対局へ移るまでの間(GameDesign.md 11章)。
-const FOUND_NOTICE_SECONDS := 1.0
+const FOUND_NOTICE_SECONDS := RankedWaitBanner.FOUND_NOTICE_SECONDS
 const WAIT_BLOCKED_TEXT := "ランクマッチの待機をやめてから遊べます"
 
 ## 対局画面(`CardMatchScreen`)。`_match_screen()` が初めて呼ばれたときに作る。

@@ -5,6 +5,8 @@ extends MatchmakingQueue
 ## `ranked_queue` にする。段位は考慮せず「早い者勝ち」でマッチさせる。
 
 const RANKED_COLLECTION := "ranked_queue"
+## 待っている人の数を読み直す間隔(ホームと待機画面が、見えている間だけ読む)。
+const WAITING_POLL_SECONDS := 15.0
 
 
 func _init(p_client: FirestoreClient, p_auth: FirebaseAuth) -> void:

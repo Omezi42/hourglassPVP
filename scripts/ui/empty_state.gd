@@ -35,6 +35,11 @@ const SAND_SWAY_RATIO := 0.035
 const SAND_FADE_IN := 0.15
 const SAND_FADE_OUT := 0.25
 
+## 待っている間、印を返す間隔(秒)。0なら返さない。返すのは待機画面だけの例外のため、既定は返さない。
+var flip_interval := 0.0
+## 印の大きさの倍率(砂も同じ倍率で描く)。既定は等倍。
+var emblem_scale := 1.0
+
 var _title := ""
 var _hint := ""
 var _waiting := false
@@ -60,6 +65,14 @@ func show_message(title: String, hint := "", waiting := false) -> void:
 	_sand_time = 0.0
 	visible = true
 	set_process(waiting)
+	queue_redraw()
+
+
+## 見出しも状態も変えず、見出しの下の1行だけを差し替える(経過時間のように毎秒変わる行のため)。
+func set_hint(hint: String) -> void:
+	if hint == _hint:
+		return
+	_hint = hint
 	queue_redraw()
 
 
@@ -95,18 +108,16 @@ func _draw() -> void:
 
 	# 印は砂時計1つだけにする。**空であることを責める画面にしない**ため、
 	# 「!」のような警告の記号は使わない。
-	UiPaint.draw_emblem(
-		get_canvas_item(),
-		UiPaint.Emblem.HOURGLASS,
-		Vector2(center_x, top + emblem_height * 0.5),
-		EMBLEM_SIZE
-	)
-	if _waiting:
+	var emblem_center := Vector2(center_x, top + emblem_height * 0.5)
+	var flip := _flip_progress()
+	_set_emblem_transform(zoom, emblem_center, PI * _ease_flip(flip) if flip >= 0.0 else 0.0)
+	UiPaint.draw_emblem(get_canvas_item(), UiPaint.Emblem.HOURGLASS, emblem_center, EMBLEM_SIZE)
+	if _waiting and flip < 0.0:
 		var emblem_rect := Rect2(
-			Vector2(center_x, top + emblem_height * 0.5) - Vector2.ONE * emblem_height * 0.5,
-			Vector2.ONE * emblem_height
+			emblem_center - Vector2.ONE * emblem_height * 0.5, Vector2.ONE * emblem_height
 		)
 		_draw_falling_sand(emblem_rect, UiPalette.GOLD)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE * zoom)
 	var baseline := top + emblem_height + EMBLEM_GAP
 	# **巡回ドットは見出しの位置を動かさない**。中央揃えのまま末尾へ足すと、
 	# 待っている間ずっと文が左右へ揺れる(バトルタブの印の置き方と同じ考え方)。
@@ -124,6 +135,32 @@ func _draw() -> void:
 		)
 	if not _hint.is_empty():
 		_line(_hint, HINT_FONT_SIZE, baseline + HINT_GAP, UiPalette.MUTED, area.x)
+
+
+## 印を返している間の進み(0〜1)。返していないときは負。砂時計は180度返しても同じ形のため、
+## 返し終えたら角度0へ戻して描き、砂は返っている間だけ止めて、返ったあとは上から落ち始める。
+func _flip_progress() -> float:
+	if not _waiting or flip_interval <= 0.0:
+		return -1.0
+	var cycles := int(_sand_time / flip_interval)
+	var into_cycle := fposmod(_sand_time, flip_interval)
+	if cycles < 1 or into_cycle >= UiPalette.DUR_SHOW:
+		return -1.0
+	return into_cycle / UiPalette.DUR_SHOW
+
+
+static func _ease_flip(t: float) -> float:
+	return t * t * (3.0 - 2.0 * t)
+
+
+## 印の中心を軸に、角度と倍率をかけて描く(全体の拡大 `zoom` は外側にかかる)。
+func _set_emblem_transform(zoom: float, center: Vector2, angle: float) -> void:
+	var local := (
+		Transform2D(0.0, center)
+		* Transform2D(angle, Vector2.ZERO).scaled_local(Vector2.ONE * emblem_scale)
+		* Transform2D(0.0, -center)
+	)
+	draw_set_transform_matrix(Transform2D.IDENTITY.scaled(Vector2.ONE * zoom) * local)
 
 
 ## くびれから底へ向かって砂の粒を重力で加速させながら落とす。

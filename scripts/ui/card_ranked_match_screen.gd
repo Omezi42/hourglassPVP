@@ -21,7 +21,10 @@ const ANNOUNCE_NOTE := "公式Discordサーバーへ「対戦相手をさがし�
 ## 印は待機中の文言のすぐ右へ置く(GameDesign.md 11章)。
 const ANNOUNCE_BADGE_GAP := 10.0
 const CANCEL_SIZE := Vector2(220, 64)
+## 見出しの下の1行(なければ見出し)から、すぐ下のCPUボタンまでの間隔。
 const CANCEL_GAP := 40.0
+## 待機中、印を返す間隔(GameDesign.md 11章)。
+const EMBLEM_FLIP_SECONDS := 6.0
 const TIER_FONT_SIZE := UiPalette.T_LEAD
 ## 縦画面(GameDesign.md 9章「縦画面」)。中央の待機の文言は `EmptyState` が拡大して描くため、印とボタンもそれに合わせる。
 const PORTRAIT_CANCEL_SIZE := Vector2(300, 76)
@@ -49,6 +52,12 @@ var _queue: RankedMatchmakingQueue
 var _cpu_offer: WaitingCpuOffer
 var _wait_funnel := RankedWaitFunnel.new(self)
 var _busy := false
+## 見つかって見出しを替え、対局へ移るまでとどまっている間(押すものは出さない)。
+var _found_hold := false
+## 見出しの下の1行が経過時間(と待機人数)のとき真。
+var _clock_hint := false
+## 自分を除く待機人数。読めていないときは負。
+var _others_waiting := -1
 var _status_base_text := ""
 var _status_hint := ""
 var _content_rect: Rect2
@@ -60,10 +69,17 @@ var _browse_button: Button
 var _ceremony: CardSeasonCeremonyPanel
 var _header: ScreenHeader
 var _portrait := false
+var _poll_timer: Timer
 
 
 func _ready() -> void:
 	_build()
+	visibility_changed.connect(_on_visibility_changed)
+
+
+func _process(_delta: float) -> void:
+	if _clock_hint and is_visible_in_tree():
+		_empty_state.set_hint(_wait_line())
 
 
 func _build() -> void:
@@ -91,7 +107,13 @@ func _build() -> void:
 	_empty_state = EmptyState.new()
 	_empty_state.position = _content_rect.position
 	_empty_state.size = _content_rect.size
+	_empty_state.flip_interval = EMBLEM_FLIP_SECONDS
 	add_child(_empty_state)
+
+	_poll_timer = Timer.new()
+	_poll_timer.wait_time = RankedMatchmakingQueue.WAITING_POLL_SECONDS
+	_poll_timer.timeout.connect(_refresh_others_waiting)
+	add_child(_poll_timer)
 
 	_announce_badge = StatusBadge.new()
 	add_child(_announce_badge)
@@ -99,8 +121,8 @@ func _build() -> void:
 	_cancel_button = CodedButton.make("キャンセル", CANCEL_SIZE)
 	_cancel_button.pressed.connect(_on_cancel_pressed)
 	add_child(_cancel_button)
-	_place_cancel_button(CANCEL_SIZE)
-	_cpu_offer = WaitingCpuOffer.new(self, _cancel_button)
+	_cpu_offer = WaitingCpuOffer.new(self)
+	_place_action_buttons()
 	_cpu_offer.requested.connect(
 		func() -> void:
 			_wait_funnel.switched_to_cpu()
@@ -144,8 +166,7 @@ func apply_orientation(portrait: bool) -> void:
 		_cancel_button.add_theme_font_size_override("font_size", ScreenHeader.PORTRAIT_BUTTON_FONT)
 	else:
 		_cancel_button.remove_theme_font_size_override("font_size")
-	_place_cancel_button(cancel_size)
-	_cpu_offer.place(_cancel_button, portrait)
+	_place_action_buttons()
 	if not _tier_label.text.is_empty():
 		_refresh_tier_label()
 	_place_announce_badge()
@@ -156,9 +177,10 @@ func begin_match() -> void:
 	if _busy:
 		return
 	_set_busy(true)
-	_set_status("マッチング中")
-	deck = CardDeckSave.selected_deck().duplicate()
 	started_msec = Time.get_ticks_msec()
+	_others_waiting = -1
+	_set_status("マッチング中", "", true)
+	deck = CardDeckSave.selected_deck().duplicate()
 	if not await _sign_in_or_fail():
 		return
 	var season_result := await RankProgress.ensure_current_season(
@@ -174,6 +196,8 @@ func begin_match() -> void:
 	_queue.version_mismatch.connect(_on_version_mismatch)
 	_queue.announce_result.connect(_on_announce_result)
 	_queue.join()
+	_poll_timer.start()
+	_refresh_others_waiting()
 	_wait_funnel.begin()
 	_browse_button.disabled = false
 	# 表彰式を読んでいる間にボタンが出ないよう、閉じてから数え始める
@@ -230,6 +254,9 @@ func _discard_session() -> void:
 
 func _set_busy(busy: bool) -> void:
 	_busy = busy
+	_found_hold = false
+	if not busy:
+		_poll_timer.stop()
 	_cancel_button.visible = busy
 	_browse_button.disabled = true
 	_cpu_offer.hide()
@@ -238,16 +265,39 @@ func _set_busy(busy: bool) -> void:
 
 
 ## `hint` は見出しの下へ出す「次にすることの1行」。呼ぶたびに前の状態の1行を引き継がない。
-func _set_status(text: String, hint := "") -> void:
+## `clock` が真のときは、1行を経過時間(と待機人数)にして毎秒差し替える。
+func _set_status(text: String, hint := "", clock := false) -> void:
 	_status_base_text = text
-	_status_hint = hint
+	_clock_hint = clock
+	_status_hint = _wait_line() if clock else hint
 	if _announce_badge != null:
 		_announce_badge.clear_note()
 	_empty_state.show_message(_status_base_text, _status_hint, _busy)
 	_place_announce_badge()
 	if _cancel_button != null and _cpu_offer != null:
-		_place_cancel_button(_cancel_button.size)
-		_cpu_offer.place(_cancel_button, _portrait)
+		_place_action_buttons()
+
+
+## 見出しの下の1行(「0:42」「0:42 ・ ほかに 2人が待っています」)。
+func _wait_line() -> String:
+	return RankedWaitLine.line(RankedWaitLine.elapsed_seconds(started_msec), _others_waiting)
+
+
+## 待機人数を読む。待機画面が見えている間だけ読み、CPU戦などで隠れている間は読まない。
+func _refresh_others_waiting() -> void:
+	if not is_waiting() or not is_visible_in_tree():
+		return
+	var count := await RankedMatchmakingQueue.count_waiting(NetSession.client, NetSession.auth.uid)
+	if not is_waiting():
+		return
+	_others_waiting = count
+	if _clock_hint:
+		_empty_state.set_hint(_wait_line())
+
+
+func _on_visibility_changed() -> void:
+	if is_visible_in_tree():
+		_refresh_others_waiting()
 
 
 ## `EmptyState` は押せるものを持たないため、印は外側から同じ中央寄せを計算し直して重ねる。
@@ -283,16 +333,18 @@ func _title_baseline_y() -> float:
 	return _content_rect.position.y + (top + emblem_height + EmptyState.EMBLEM_GAP) * _zoom()
 
 
-## 1行があるときは、その下端からキャンセルまで `CANCEL_GAP` を保つ。
-func _cancel_button_top() -> float:
+## 1行があるときは、その下端からCPUボタンまで `CANCEL_GAP` を保つ。
+func _action_buttons_top() -> float:
 	var hint_gap := EmptyState.HINT_GAP if not _status_hint.is_empty() else 0.0
 	return _title_baseline_y() + (CANCEL_GAP + hint_gap) * _zoom()
 
 
-func _place_cancel_button(cancel_size: Vector2) -> void:
-	_cancel_button.position = Vector2(
-		_content_rect.get_center().x - cancel_size.x * 0.5, _cancel_button_top()
-	)
+## 文言のすぐ下にCPUボタン、その下にキャンセル(GameDesign.md 11章)。CPUボタンが出る前も場所を空けておき、
+## 出たときにキャンセルが動いて押し間違えさせない。
+func _place_action_buttons() -> void:
+	var center_x := _content_rect.get_center().x
+	var cancel_top := _cpu_offer.place(center_x, _action_buttons_top(), _portrait)
+	_cancel_button.position = Vector2(center_x - _cancel_button.size.x * 0.5, cancel_top)
 
 
 func _sign_in_or_fail() -> bool:
@@ -310,6 +362,8 @@ func _fail(message: String, hint := "") -> void:
 
 
 func _on_back_pressed() -> void:
+	if _found_hold:
+		return
 	if _busy:
 		_on_cancel_pressed()
 	back_pressed.emit()
@@ -332,7 +386,7 @@ func _on_version_mismatch(newer_exists: bool) -> void:
 	if newer_exists:
 		_set_status(NEWER_VERSION_TITLE, NEWER_VERSION_HINT)
 	else:
-		_set_status("古い版の相手が待っています。マッチング中")
+		_set_status("古い版の相手が待っています。マッチング中", "", true)
 
 
 ## 自分のuidがplayer_a/player_bのどちらとも一致しない場合はやり直させる
@@ -340,6 +394,8 @@ func _on_version_mismatch(newer_exists: bool) -> void:
 func _on_matched(match_id: String, opponent_uid: String) -> void:
 	_wait_funnel.end(FunnelService.RANKED_MATCHED)
 	_busy = false
+	_found_hold = true
+	_poll_timer.stop()
 	_cancel_button.visible = false
 	_browse_button.disabled = true
 	_cpu_offer.hide()
@@ -352,5 +408,9 @@ func _on_matched(match_id: String, opponent_uid: String) -> void:
 	else:
 		_fail("対戦相手との同期に失敗しました。もう一度お試しください")
 		return
-	_set_status("対戦相手が見つかりました!")
+	# 経過時間の行は止めたまま残し、見出しだけ替える(行が消えて見出しが動かないように)。
+	_set_status("対戦相手が見つかりました!", _status_hint)
+	# 他の画面にいる間は帯が同じ間を取る(`Main`)ため、ここでは待たない。
+	if is_visible_in_tree():
+		await get_tree().create_timer(RankedWaitBanner.FOUND_NOTICE_SECONDS).timeout
 	matched.emit(match_id, my_side, opponent_uid)

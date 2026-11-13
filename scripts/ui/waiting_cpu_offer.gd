@@ -9,7 +9,7 @@ signal requested
 ## 同時に待っている人どうしが先に出会えるようにする。
 const FIRST_DELAY_SECONDS := 5.0
 const BUTTON_SIZE := Vector2(360, 64)
-## キャンセルボタンとの間隔。
+## 下に続くキャンセルボタンとの間隔。
 const GAP := 16.0
 ## 縦画面(GameDesign.md 9章「縦画面」)。ボタンを指で押せる背丈にする。
 const PORTRAIT_BUTTON_SIZE := Vector2(480, 80)
@@ -23,30 +23,27 @@ var _serial := 0
 var _fade: Tween
 
 
-func _init(host: Control, below: Button) -> void:
+func _init(host: Control) -> void:
 	_host = host
 	button = CodedButton.make_in_group(
 		"待っている間CPUと対戦する", BUTTON_SIZE, CodedButton.PRIMARY_ACTION_GROUP
 	)
 	button.pressed.connect(_on_pressed)
 	host.add_child(button)
-	place(below, false)
 	hide()
 
 
-## `below`(キャンセル)の真下へ置く。向きが変わったときにも呼ぶ。
-func place(below: Button, portrait: bool) -> void:
+## 中心の x と上端の y へ置き、すぐ下に続くキャンセルボタンの上端を返す。向きが変わったときにも呼ぶ。
+func place(center_x: float, top: float, portrait: bool) -> float:
 	var button_size := PORTRAIT_BUTTON_SIZE if portrait else BUTTON_SIZE
 	button.custom_minimum_size = button_size
 	button.size = button_size
-	button.position = Vector2(
-		below.position.x + (below.size.x - button_size.x) * 0.5,
-		below.position.y + below.size.y + GAP
-	)
+	button.position = Vector2(center_x - button_size.x * 0.5, top)
 	if portrait:
 		button.add_theme_font_size_override("font_size", PORTRAIT_FONT_SIZE)
 	else:
 		button.remove_theme_font_size_override("font_size")
+	return top + button_size.y + GAP
 
 
 ## `delay` 秒たっても隠されなければボタンを出す。

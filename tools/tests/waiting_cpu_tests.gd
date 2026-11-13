@@ -15,6 +15,7 @@ func run(assert_true: Callable) -> void:
 	_test_playable_decks()
 	_test_ranked_queue_collection()
 	await _test_count_waiting()
+	_test_wait_line()
 
 
 func _test_does_not_claim_cpu_player() -> void:
@@ -83,6 +84,15 @@ func _test_count_waiting() -> void:
 	var count: int = await RankedMatchmakingQueue.count_waiting(client, "uid-me")
 	_assert.call(count == 1, "自分・違う版・成立済みを除いて数えること")
 	_free_queue(queue)
+
+
+## 待機画面の1行は帯と同じ時計で、他に待つ人がいるときだけ人数を添える(GameDesign.md 11章)。
+func _test_wait_line() -> void:
+	_assert.call(RankedWaitLine.clock(42) == "0:42", "秒は分:秒で出すこと")
+	_assert.call(RankedWaitLine.clock(75) == "1:15", "60秒を超えたら分へ繰り上げること")
+	_assert.call(RankedWaitLine.line(42, 0) == "0:42", "0人なら時間だけにすること")
+	_assert.call(RankedWaitLine.line(42, -1) == "0:42", "人数が読めていなければ時間だけにすること")
+	_assert.call(RankedWaitLine.line(42, 3) == "0:42 ・ ほかに 3人が待っています", "待つ人がいれば人数を添えること")
 
 
 func _add_waiter(queue: MatchmakingQueue, uid: String, cpu: bool) -> void:

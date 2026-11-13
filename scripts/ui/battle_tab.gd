@@ -29,8 +29,7 @@ signal rank_requested
 ## 通信待ち中の「...」演出。3個目まで打ってから空に戻る(対局画面の待機表現と統一)。
 const BUSY_DOTS_MAX := 3
 const BUSY_DOTS_INTERVAL := 0.5
-## 待っている人の数を読み直す間隔(ホームが見えている間だけ)。
-const WAITING_POLL_SECONDS := 15.0
+const WAITING_POLL_SECONDS := RankedMatchmakingQueue.WAITING_POLL_SECONDS
 const STATUS_FONT := UiPalette.T_SMALL
 const PORTRAIT_STATUS_FONT := 24
 ## 文言の行は背景の絵の上へ直に載るため、暗い縁取りで読めるようにする。
