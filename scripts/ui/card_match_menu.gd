@@ -8,7 +8,7 @@ extends RefCounted
 const PANEL_PADDING := 14.0
 const ITEM_GAP := 12.0
 const PANEL_GAP := 8.0
-const ITEM_SIZE := Vector2(260, 68)
+const ITEM_SIZE := Vector2(260, 72)
 const ITEM_FONT_SIZE := 28
 
 var _screen: CardMatchScreen

@@ -90,7 +90,7 @@ func _attack_rects(step: Dictionary) -> Array[Rect2]:
 	var chosen: CardMatchSelection = _screen.selection
 	if chosen.is_board_selection() and chosen.slot == actor_slot:
 		if str(step.get("target_kind", "")) == "face":
-			found.append(_screen._geometry.hp_bar_global_rect(foe_side))
+			found.append(_screen._geometry.hp_target_global_rect(foe_side))
 		else:
 			var target_slot: int = _slot_of.call(foe_side, str(step.get("target_ref", "")))
 			if target_slot >= 0:

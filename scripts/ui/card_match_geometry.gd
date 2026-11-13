@@ -4,6 +4,9 @@ extends RefCounted
 ## `card_match_screen.gd`が1000行の上限に近いため切り出した(Architecture.md 4.0節)。
 ## `_screen`参照を持つ切り出しという既存の流儀に従う。
 
+## 縦の指で押す高さの下限(GameDesign.md 9章「縦画面」)。
+const TOUCH_MIN_HEIGHT := 72.0
+
 var _screen: CardMatchScreen
 
 
@@ -65,6 +68,27 @@ func unit_stat_rects(side: int, slot: int) -> Array[Rect2]:
 func hp_bar_global_rect(side: int) -> Rect2:
 	var bar: PlayerInfoBar = _screen._own_bar if side == _screen.my_side else _screen._foe_bar
 	return _to_screen(bar, bar.hp_bar_rect())
+
+
+## 本体を殴る的の矩形(誘導対局の輪)。縦は「HPの器+右端の体力の丸」をまとめ、高さを指の下限まで広げる。
+## 反応する範囲は情報帯の全面なので、輪はその内側に収まる。横は器そのまま。
+func hp_target_global_rect(side: int) -> Rect2:
+	var rect := hp_bar_global_rect(side)
+	if not _screen.layout.portrait:
+		return rect
+	var bar: PlayerInfoBar = _screen._own_bar if side == _screen.my_side else _screen._foe_bar
+	var badge := PlayerInfoBar.HP_BADGE_RADIUS
+	var local := bar.hp_bar_rect()
+	local = local.merge(
+		Rect2(Vector2(local.end.x - badge, local.get_center().y - badge), Vector2.ONE * badge * 2.0)
+	)
+	rect = _to_screen(bar, local)
+	return rect.grow_individual(
+		0.0,
+		maxf(TOUCH_MIN_HEIGHT - rect.size.y, 0.0) * 0.5,
+		0.0,
+		maxf(TOUCH_MIN_HEIGHT - rect.size.y, 0.0) * 0.5
+	)
 
 
 ## 反転権の残り回数を示す粒(GameDesign.md 18章「数字の光」)。話題が「反転権の残り」の

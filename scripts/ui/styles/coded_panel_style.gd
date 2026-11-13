@@ -21,6 +21,8 @@ const BADGE_INSET_RATIO := 0.55
 @export var has_header_emblem: bool = false
 @export var highlighted: bool = false
 @export var dimmed: bool = false
+## 下の絵を透かさない(縦の誘導対局の帯。下に相手のマナと直前の手が重なるため)。
+@export var opaque: bool = false
 @export var surface: Surface = Surface.GLASS
 
 
@@ -28,7 +30,7 @@ func _draw(to_canvas_item: RID, rect: Rect2) -> void:
 	if surface == Surface.WELL:
 		_draw_well(to_canvas_item, rect)
 	else:
-		var alpha := UiKit.GLASS_ALPHA * (DIMMED_ALPHA if dimmed else 1.0)
+		var alpha := 1.0 if opaque else UiKit.GLASS_ALPHA * (DIMMED_ALPHA if dimmed else 1.0)
 		var lit := 1.0 if highlighted else 0.0
 		UiKit.glass(to_canvas_item, rect, -1.0, 1.0, alpha, [], lit)
 	if has_header_emblem:

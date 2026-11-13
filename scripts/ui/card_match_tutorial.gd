@@ -25,6 +25,8 @@ const SCREEN_SIZE := Vector2(1280, 720)
 const BAND_RECT := Rect2(206, 74, 824, 64)
 ## **マリガンの間だけ帯を確定ボタンの下へ下げる**(この間隔で)。通常の位置(y=74)ではマリガン画面の見出しへ重なる。
 const MULLIGAN_BAND_GAP := 12.0
+## 縦のマリガンは帯を画面の上端へ置く(確定ボタンの下は画面の下端を越える)。
+const MULLIGAN_BAND_TOP_PORTRAIT := 4.0
 ## 帯の枠は大きなパネル用(枠8px・角丸16)より細くする。高さ64の帯に太い枠を使うと、
 ## 文の入る高さが足りずパネルが帯より縦へ伸び、絵とボタンが枠からはみ出して見える。
 const BAND_FRAME := 4.0
@@ -51,6 +53,16 @@ const FOCUS_RINGS := [0, 1]
 ## 輪郭とは色を分け、押す場所と読む場所を取り違えさせない。
 const NUMBER_GLOW_COLOR := UiPalette.SAND_HI
 const NEXT_SIZE := Vector2(88, 36)
+## 縦の帯は「つぎへ」と進み具合の点を文の下の1段へ置き、文の幅を広く取る。
+const PORTRAIT_NEXT_SIZE := Vector2(88, 26)
+## 26単位の札へ収まる字(既定の20では最小の高さが30になる)。
+const PORTRAIT_NEXT_FONT_SIZE := 16
+const PORTRAIT_ROW_GAP := 4.0
+const PORTRAIT_DOTS_GAP := 8.0
+const PORTRAIT_TEXT_MARGIN_RIGHT := 8.0
+## 縦の文の行送りは文字の大きさの倍率。最短でも3行ぶんの高さを取り、4行目からは帯が下へ伸びる。
+const PORTRAIT_LINE_PITCH_RATIO := 1.375
+const PORTRAIT_MIN_LINES := 3
 ## CPUが指す前に帯の文を読み切れるだけ待つ(GameDesign.md 18章)。文の長さに比例させる。
 const READ_SECONDS_BASE := 0.3
 const READ_SECONDS_PER_CHAR := 0.03
@@ -102,6 +114,14 @@ var _skip: TutorialSkip
 ## 帯の通常の位置と、帯の枠(向きで大きさが変わる)。
 var _band_home := BAND_RECT.position
 var _band_panel: PanelContainer
+var _band_style: CodedPanelStyle
+var _text_margin: MarginContainer
+var _band_tracker := PressTracker.new()
+## 縦の配置か。縦は帯の面を不透明にし、「つぎへ」の間は帯の全面で進められる。
+var _portrait_layout := false
+var _band_width := BAND_RECT.size.x
+var _band_min_height := BAND_RECT.size.y
+var _next_size := NEXT_SIZE
 ## 光らせる場所の計算。対局が始まる(`watch()`)まで無い。
 var _focus: TutorialFocus
 
@@ -122,24 +142,98 @@ func _ready() -> void:
 ## スキップはメニューの中へ移す(帯の下の盤面を塞がないため。GameDesign.md 18章)。
 func apply_layout(layout: CardMatchLayout) -> void:
 	size = layout.screen_size
+	_portrait_layout = layout.portrait
 	_band_home = layout.tutorial_band_position
-	# 文字の大きさ「大」(GameDesign.md 9章)は文字を f 倍にする。1行の字数が 1/f、行の高さが f 倍に
-	# なるため、同じ文を収めるには帯を f² 倍の高さにする。
-	var f := TextSize.factor()
-	var band_size := Vector2(layout.tutorial_band_size.x, layout.tutorial_band_size.y * f * f)
+	_band_width = layout.tutorial_band_size.x
+	_band_min_height = layout.tutorial_band_size.y
+	_next_size = PORTRAIT_NEXT_SIZE if layout.portrait else NEXT_SIZE
+	if layout.portrait:
+		_next_button.add_theme_font_size_override("font_size", PORTRAIT_NEXT_FONT_SIZE)
+	else:
+		_next_button.remove_theme_font_size_override("font_size")
+	if _band_style != null:
+		_band_style.opaque = layout.portrait
+	_apply_text_margins(layout.portrait)
 	_band.scale = Vector2.ONE * layout.tutorial_scale
+	# 文字の大きさ「大」(GameDesign.md 9章)は文字を f 倍にする。1行の字数が 1/f、行の高さが f 倍に
+	# なる。横は同じ文を収めるため帯を f² 倍の高さにし、縦は行数を数えて高さを決める。
+	var f := TextSize.factor()
+	_label.add_theme_font_size_override("font_size", roundi(BAND_FONT_SIZE * f))
+	if layout.portrait:
+		_fit_portrait_band()
+	else:
+		_label.remove_theme_constant_override("line_spacing")
+		_set_band_size(Vector2(_band_width, _band_min_height * f * f))
+		var band_size := _band.size
+		_next_button.custom_minimum_size = _next_size
+		_next_button.size = _next_size
+		_next_button.position = Vector2(
+			band_size.x - NEXT_SIZE.x - BAND_INSET, (band_size.y - NEXT_SIZE.y) * 0.5
+		)
+		_dots.position = Vector2(band_size.x - NEXT_SIZE.x - BAND_INSET - DOTS_WIDTH, 0.0)
+		_dots.size = Vector2(DOTS_WIDTH, band_size.y)
+		_portrait.position = Vector2(BAND_INSET, band_size.y - BAND_FRAME - PORTRAIT_SIZE.y)
+	_skip.visible = not layout.portrait
+	_sync_band_touch()
+	_place_band(_screen.state != null and _screen.state.mulligan_pending)
+
+
+func _set_band_size(band_size: Vector2) -> void:
 	_band.size = band_size
 	_band_panel.custom_minimum_size = band_size
 	_band_panel.size = band_size
-	_label.add_theme_font_size_override("font_size", roundi(BAND_FONT_SIZE * f))
-	_next_button.position = Vector2(
-		band_size.x - NEXT_SIZE.x - BAND_INSET, (band_size.y - NEXT_SIZE.y) * 0.5
+
+
+## 文の左右の余白。左はすなえるの絵ぶん。右は横なら「つぎへ」と点ぶん、縦は文を広く取るため最小。
+func _apply_text_margins(portrait: bool) -> void:
+	var right := PORTRAIT_TEXT_MARGIN_RIGHT if portrait else NEXT_SIZE.x + BAND_INSET + DOTS_WIDTH
+	_text_margin.add_theme_constant_override("margin_right", int(right))
+	var bottom := PORTRAIT_ROW_GAP + PORTRAIT_NEXT_SIZE.y if portrait else 0.0
+	_text_margin.add_theme_constant_override("margin_bottom", int(bottom))
+
+
+## 縦の帯は文の行数で高さを決める(3行まで固定、4行目から下へ伸びる)。文の下の1段へ「つぎへ」と点を置く。
+func _fit_portrait_band() -> void:
+	var font_size := _label.get_theme_font_size("font_size")
+	var font := _label.get_theme_font("font")
+	var font_height := font.get_height(font_size)
+	var spacing := roundi(font_size * PORTRAIT_LINE_PITCH_RATIO - font_height)
+	_label.add_theme_constant_override("line_spacing", spacing)
+	var margin_left := BAND_INSET + PORTRAIT_SIZE.x + PORTRAIT_TEXT_GAP
+	_label.size.x = _band_width - margin_left - PORTRAIT_TEXT_MARGIN_RIGHT
+	var lines := maxi(_label.get_line_count(), PORTRAIT_MIN_LINES)
+	var text_height := lines * (font_height + spacing)
+	var band_height := maxf(
+		_band_min_height, BAND_INSET * 2.0 + text_height + PORTRAIT_ROW_GAP + PORTRAIT_NEXT_SIZE.y
 	)
-	_dots.position = Vector2(band_size.x - NEXT_SIZE.x - BAND_INSET - DOTS_WIDTH, 0.0)
-	_dots.size = Vector2(DOTS_WIDTH, band_size.y)
-	_portrait.position = Vector2(BAND_INSET, band_size.y - BAND_FRAME - PORTRAIT_SIZE.y)
-	_skip.visible = not layout.portrait
-	_place_band(_screen.state != null and _screen.state.mulligan_pending)
+	_set_band_size(Vector2(_band_width, band_height))
+	var row_top := band_height - BAND_INSET - PORTRAIT_NEXT_SIZE.y
+	_next_button.custom_minimum_size = _next_size
+	_next_button.size = _next_size
+	_next_button.position = Vector2(_band_width - BAND_INSET - PORTRAIT_NEXT_SIZE.x, row_top)
+	_dots.position = Vector2(_next_button.position.x - PORTRAIT_DOTS_GAP - DOTS_WIDTH, row_top)
+	_dots.size = Vector2(DOTS_WIDTH, PORTRAIT_NEXT_SIZE.y)
+	_portrait.position = Vector2(BAND_INSET, band_height - BAND_FRAME - PORTRAIT_SIZE.y)
+
+
+## 縦は「つぎへ」が出ている間、帯の全面を押して進める(札は目印として残す)。
+func _sync_band_touch() -> void:
+	_band_panel.mouse_filter = (
+		Control.MOUSE_FILTER_STOP
+		if _portrait_layout and _next_button.visible
+		else Control.MOUSE_FILTER_IGNORE
+	)
+
+
+func _set_next_visible(value: bool) -> void:
+	_next_button.visible = value
+	_sync_band_touch()
+
+
+func _on_band_input(event: InputEvent) -> void:
+	if _band_tracker.feed(event, _band_panel.size) == PressTracker.Result.CONFIRMED:
+		if _next_button.visible:
+			_on_next_pressed()
 
 
 ## メニューの「スキップ」から(縦)。横の「スキップ」と同じく確かめてから抜ける。
@@ -370,14 +464,14 @@ func _hand_index_of(state: MatchState, side: int, card_id: String) -> int:
 
 
 func _place_band(during_mulligan: bool) -> void:
-	_band.position = Vector2(
-		_band_home.x,
-		(
-			_screen._mulligan.confirm_rect().end.y + MULLIGAN_BAND_GAP
-			if during_mulligan
-			else _band_home.y
+	var top := _band_home.y
+	if during_mulligan:
+		top = (
+			MULLIGAN_BAND_TOP_PORTRAIT
+			if _portrait_layout
+			else _screen._mulligan.confirm_rect().end.y + MULLIGAN_BAND_GAP
 		)
-	)
+	_band.position = Vector2(_band_home.x, top)
 
 
 ## 台本の1手が実際に起きた。CPU/マリガンの手はそのまま次へ、プレイヤーの手は
@@ -441,7 +535,9 @@ func _finish() -> void:
 	_callout_active = ""
 	_showing_done = false
 	_label.text = closing
-	_next_button.visible = false
+	_set_next_visible(false)
+	if _portrait_layout:
+		_fit_portrait_band()
 	_portrait.cheer()
 	get_parent().move_child(self, -1)
 	_dots.queue_redraw()
@@ -638,6 +734,8 @@ func _build() -> void:
 		style.content_margin_top = BAND_INSET
 		style.content_margin_bottom = BAND_INSET
 		panel.add_theme_stylebox_override("panel", style)
+		_band_style = style
+	panel.gui_input.connect(_on_band_input)
 	_band.add_child(panel)
 
 	_label = Label.new()
@@ -648,7 +746,8 @@ func _build() -> void:
 	_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var margin := MarginContainer.new()
-	# 文が「つぎへ」の下へ潜らないよう、ボタンぶんの余白を右へ空ける。
+	_text_margin = margin
+	# 文が「つぎへ」の下へ潜らないよう、ボタンぶんの余白を右へ空ける(縦は下の段へ置くため `apply_layout()` が替える)。
 	margin.add_theme_constant_override("margin_right", int(NEXT_SIZE.x + BAND_INSET + DOTS_WIDTH))
 	# 左はすなえるの立ち絵ぶん。文と絵を重ねない。
 	margin.add_theme_constant_override(
@@ -692,8 +791,16 @@ func _process(delta: float) -> void:
 
 
 func _refresh() -> void:
+	_refresh_text()
+	if _portrait_layout:
+		_fit_portrait_band()
+	_sync_band_touch()
+
+
+func _refresh_text() -> void:
 	# ボタンは一度広がると自分では縮まない。組み立て時に広がったまま帯の枠へかかるため、毎回戻す。
-	_next_button.size = NEXT_SIZE
+	_next_button.custom_minimum_size = _next_size
+	_next_button.size = _next_size
 	if not _callout_active.is_empty():
 		_label.text = _callout_active
 		_next_button.text = "つぎへ"

@@ -36,8 +36,12 @@ const PORTRAIT_BUTTON_SCALE := 1.4
 const PORTRAIT_TEXT_SCALE := 1.5
 ## 選んだ手札の札を飛び出させる量。
 const PORTRAIT_HAND_SELECT_LIFT := 40.0
-const PORTRAIT_TUTORIAL_SCALE := 1.4
-const PORTRAIT_TUTORIAL_BAND_HEIGHT := 100.0
+## 誘導対局の帯: 相手のHPの行の下(相手のマナの行と直前の手の列)へ重ね、右端は「メニュー」の丸の手前で止める。
+const PORTRAIT_TUTORIAL_SCALE := 1.5
+const PORTRAIT_TUTORIAL_BAND_TOP := 98.0
+const PORTRAIT_TUTORIAL_BAND_LEFT := 8.0
+const PORTRAIT_TUTORIAL_BAND_HEIGHT := 112.0
+const PORTRAIT_TUTORIAL_MENU_GAP := 6.0
 ## 駒の列を各陣地の中央からレールと反対側へ寄せる量。レールの右端の時計とターン終了に駒のバッジが掛からないように。
 const PORTRAIT_ROW_SPREAD := 45.0
 ## 相手の列はさらに上へ寄せる(レールの右端の時計に駒の下の文字が掛からないように)。
@@ -235,8 +239,13 @@ static func _make_portrait() -> CardMatchLayout:
 	l.text_scale = PORTRAIT_TEXT_SCALE
 	l.hand_select_lift = PORTRAIT_HAND_SELECT_LIFT
 	l.tutorial_scale = PORTRAIT_TUTORIAL_SCALE
-	l.tutorial_band_position = Vector2(side, l.table_rect.position.y)
-	l.tutorial_band_size = Vector2(width / PORTRAIT_TUTORIAL_SCALE, PORTRAIT_TUTORIAL_BAND_HEIGHT)
+	var menu_left := l.menu_center.x - menu_radius * PORTRAIT_BUTTON_SCALE
+	var band_right := menu_left - PORTRAIT_TUTORIAL_MENU_GAP
+	l.tutorial_band_position = Vector2(PORTRAIT_TUTORIAL_BAND_LEFT, PORTRAIT_TUTORIAL_BAND_TOP)
+	l.tutorial_band_size = Vector2(
+		(band_right - PORTRAIT_TUTORIAL_BAND_LEFT) / PORTRAIT_TUTORIAL_SCALE,
+		PORTRAIT_TUTORIAL_BAND_HEIGHT
+	)
 	l.slot_pitch = (width - side * 2.0) / float(MatchState.BOARD_SIZE)
 	var half_piece := CardView.BOARD_SIZE_PX * 0.5
 	l.slot_left = side * 2.0 + l.slot_pitch * 0.5 - half_piece.x
