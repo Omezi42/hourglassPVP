@@ -23,6 +23,8 @@ const HEADING_FONT_SIZE := UiPalette.T_HEAD
 const BODY_RECT := Rect2(BODY_LEFT, 182, BODY_WIDTH, 84)
 const BODY_FONT_SIZE := UiPalette.T_BODY
 const STAGE_RECT := Rect2(BODY_LEFT, 274, BODY_WIDTH, 350)
+## 盤面の中身を枠線から離す(縦で手札の端の札が金線に重なるため)。
+const STAGE_SIDE_INSET := 12.0
 
 const CONTROLS_Y := 636.0
 const NAV_BUTTON_SIZE := Vector2(150, 52)
@@ -44,6 +46,10 @@ const PORTRAIT_NAV_WIDTH := 170.0
 const PORTRAIT_REPLAY_WIDTH := 220.0
 const PORTRAIT_COUNTER_FONT := 26
 
+## ページが替わるときの入り(GameDesign.md 9章「操作への反応」)。進む向きへ横から入る。
+const PAGE_SHIFT := 16.0
+const BASE_X_META := &"base_x"
+
 var _pages: Array = []
 var _index := 0
 var _chapter_buttons: Array[Button] = []
@@ -56,6 +62,11 @@ var _next_button: Button
 var _replay_button: Button
 var _header: ScreenHeader
 var _stage_panel: PanelContainer
+var _chapter_mark: Label
+var _mark_chapter := -1
+var _shown_index := -1
+var _page_tween: Tween
+var _mark_tween: Tween
 
 
 func _ready() -> void:
@@ -66,13 +77,17 @@ func _ready() -> void:
 
 ## 章の先頭から開き直す。ホーム画面から入るたびに先頭へ戻す(進捗は保存しない)。
 func restart() -> void:
-	show_page(0)
+	show_page(0, false)
 
 
-func show_page(index: int) -> void:
+## `animate` が偽、または前と同じ番号なら動かさず最終値を置く(縦横の組み替え・初回表示)。
+func show_page(index: int, animate := true) -> void:
 	if _pages.is_empty():
 		return
 	_index = clampi(index, 0, _pages.size() - 1)
+	var move := animate and _shown_index >= 0 and _shown_index != _index
+	var direction := 1.0 if _index > _shown_index else -1.0
+	_shown_index = _index
 	var page: Dictionary = _pages[_index]
 	_heading.text = str(page.get("heading", ""))
 	_body.text = str(page.get("body", ""))
@@ -81,7 +96,10 @@ func show_page(index: int) -> void:
 	_next_button.disabled = _index == _pages.size() - 1
 	_stage.show_page(page)
 	_replay_button.visible = _stage.has_animation()
-	_highlight_chapter(int(page.get("chapter", 0)))
+	_highlight_chapter(int(page.get("chapter", 0)), move)
+	_reset_page_motion()
+	if move:
+		_play_page_in(direction)
 
 
 func _build() -> void:
@@ -116,9 +134,8 @@ func _build() -> void:
 	_stage_panel = stage_panel
 
 	_stage = RuleStage.new()
-	_stage.position = STAGE_RECT.position
-	_stage.size = STAGE_RECT.size
 	add_child(_stage)
+	_place_stage(STAGE_RECT)
 
 	_build_controls()
 
@@ -135,6 +152,13 @@ func _build_toc() -> void:
 		button.pressed.connect(func() -> void: show_page(RulePages.first_page_of(i)))
 		add_child(button)
 		_chapter_buttons.append(button)
+	_chapter_mark = Label.new()
+	_chapter_mark.text = KeywordDictScreen.SELECTED_MARK
+	_chapter_mark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_chapter_mark.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_chapter_mark.add_theme_color_override("font_color", UiPalette.SAND_HI)
+	_chapter_mark.visible = false
+	add_child(_chapter_mark)
 
 
 func _build_controls() -> void:
@@ -174,7 +198,7 @@ func apply_orientation(portrait: bool) -> void:
 	else:
 		_layout_landscape()
 	# 盤面は枠の大きさに合わせて組み直す(`RuleStage._fit()`)。
-	show_page(_index)
+	show_page(_index, false)
 
 
 func _layout_landscape() -> void:
@@ -263,8 +287,8 @@ func _place_stage(rect: Rect2) -> void:
 	_stage_panel.position = rect.position
 	_stage_panel.custom_minimum_size = rect.size
 	_stage_panel.size = rect.size
-	_stage.position = rect.position
-	_stage.size = rect.size
+	_stage.position = rect.position + Vector2(STAGE_SIDE_INSET, 0.0)
+	_stage.size = rect.size - Vector2(STAGE_SIDE_INSET * 2.0, 0.0)
 
 
 ## ボタンを置き直す。`font` が0なら文字の大きさは作ったとき(テーマ)のまま。
@@ -282,14 +306,59 @@ func _place_label(label: Label, rect: Rect2, font: int) -> void:
 	label.custom_minimum_size = rect.size
 	label.size = rect.size
 	label.position = rect.position
+	label.set_meta(BASE_X_META, rect.position.x)
 	label.add_theme_font_size_override("font_size", font)
 
 
-## いま読んでいる章のボタンだけ文字色を琥珀にする。目次は現在地の表示も兼ねる。
-func _highlight_chapter(chapter_index: int) -> void:
+## いま読んでいる章のボタンだけ文字色を琥珀にし、砂色の印をそのボタンへ置く。目次は現在地の表示も兼ねる。
+## 章が替わったときだけ印を次のボタンへ滑らせる(同じ章のページ送りでは動かさない)。
+func _highlight_chapter(chapter_index: int, animate: bool) -> void:
 	for i in _chapter_buttons.size():
 		var color: Color = UiPalette.SAND_HI if i == chapter_index else UiPalette.IVORY
 		_chapter_buttons[i].add_theme_color_override("font_color", color)
+	var button := _chapter_buttons[chapter_index]
+	var portrait := ScreenOrientation.is_portrait()
+	var font := KeywordDictScreen.PORTRAIT_MARK_FONT if portrait else KeywordDictScreen.MARK_FONT
+	var left := KeywordDictScreen.PORTRAIT_MARK_LEFT if portrait else KeywordDictScreen.MARK_LEFT
+	var target := button.position + Vector2(left, 0.0)
+	var moving := animate and _chapter_mark.visible and chapter_index != _mark_chapter
+	if not animate and _mark_tween != null and _mark_tween.is_valid():
+		_mark_tween.kill()
+	_chapter_mark.add_theme_font_size_override("font_size", font)
+	_chapter_mark.size = Vector2(font * 2.0, button.size.y)
+	_chapter_mark.visible = true
+	_mark_chapter = chapter_index
+	if moving:
+		if _mark_tween != null and _mark_tween.is_valid():
+			_mark_tween.kill()
+		_mark_tween = create_tween().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+		_mark_tween.tween_property(_chapter_mark, "position", target, UiPalette.DUR_HOVER)
+	elif _mark_tween == null or not _mark_tween.is_valid():
+		_chapter_mark.position = target
+
+
+## 連打で途中の入りを殺すときは、位置と透明度を最終値へ戻してから次を始める。
+func _reset_page_motion() -> void:
+	if _page_tween != null and _page_tween.is_valid():
+		_page_tween.kill()
+	for label: Label in [_heading, _body]:
+		label.modulate.a = 1.0
+		label.position.x = float(label.get_meta(BASE_X_META, label.position.x))
+	_stage.modulate.a = 1.0
+
+
+## 中身は即時に差し替え済み。新しい中身が進む向きの横から入る。盤面は枠を動かさず透明度だけ。
+func _play_page_in(direction: float) -> void:
+	_page_tween = create_tween().set_parallel(true)
+	_page_tween.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	for label: Label in [_heading, _body]:
+		var base_x := float(label.get_meta(BASE_X_META, label.position.x))
+		label.modulate.a = 0.0
+		label.position.x = base_x + PAGE_SHIFT * direction
+		_page_tween.tween_property(label, "modulate:a", 1.0, UiPalette.DUR_HOVER)
+		_page_tween.tween_property(label, "position:x", base_x, UiPalette.DUR_HOVER)
+	_stage.modulate.a = 0.0
+	_page_tween.tween_property(_stage, "modulate:a", 1.0, UiPalette.DUR_HOVER)
 
 
 func _make_label(rect: Rect2, font_size: int, color: Color) -> Label:
@@ -297,6 +366,7 @@ func _make_label(rect: Rect2, font_size: int, color: Color) -> Label:
 	label.position = rect.position
 	label.size = rect.size
 	label.custom_minimum_size = rect.size
+	label.set_meta(BASE_X_META, rect.position.x)
 	label.add_theme_font_size_override("font_size", font_size)
 	label.add_theme_color_override("font_color", color)
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
