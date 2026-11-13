@@ -156,7 +156,7 @@ func _fill_decks(uid: String) -> void:
 	_decks.add_theme_constant_override("separation", int(UiPalette.S4) if stacked else ROW_GAP)
 	var known := _known_decks()
 	var column_scale := PORTRAIT_COLUMN_SCALE if _portrait else 1.0
-	for entry: Dictionary in MatchStats.decks(uid):
+	for entry: Dictionary in merge_unknown_decks(MatchStats.decks(uid), known):
 		var games := int(entry["games"])
 		var wins := int(entry["wins"])
 		var deck: Dictionary = known.get(entry["code"], {})
@@ -197,6 +197,25 @@ func _fill_decks(uid: String) -> void:
 			bar.modulate.a = FEW_GAMES_ALPHA
 			rate.modulate.a = FEW_GAMES_ALPHA
 		_decks.add_child(row)
+
+
+## 名前を引けない構築(`known` に無い指紋)を1行へ合算し、対局数の多い順に並べ直す。
+## 保存の形(指紋ごとの記録)は変えず、画面側だけでまとめる。
+static func merge_unknown_decks(rows: Array, known: Dictionary) -> Array:
+	var merged: Array = []
+	var unknown := {"code": "", "games": 0, "wins": 0}
+	var has_unknown := false
+	for entry: Dictionary in rows:
+		if known.has(entry["code"]):
+			merged.append(entry)
+			continue
+		has_unknown = true
+		unknown["games"] = int(unknown["games"]) + int(entry["games"])
+		unknown["wins"] = int(unknown["wins"]) + int(entry["wins"])
+	if has_unknown:
+		merged.append(unknown)
+	merged.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a["games"] > b["games"])
+	return merged
 
 
 static func _rate(wins: int, games: int) -> float:

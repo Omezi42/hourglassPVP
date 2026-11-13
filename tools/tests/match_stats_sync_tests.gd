@@ -11,6 +11,7 @@ const FakeClient = preload("res://tools/tests/fake_firestore_client.gd")
 func run(assert_true: Callable) -> void:
 	_test_apply_delta_accumulates(assert_true)
 	_test_replace_bucket_overwrites(assert_true)
+	_test_unknown_decks_merge_into_one_row(assert_true)
 	await _test_push_without_client_queues_pending(assert_true)
 	await _test_push_writes_through_fake_client(assert_true)
 	await _test_sync_after_sign_in_pulls_and_reapplies_pending(assert_true)
@@ -27,6 +28,26 @@ func _test_apply_delta_accumulates(assert_true: Callable) -> void:
 	assert_true.call(not bucket.has("cards"), "per-card stats should no longer be recorded")
 	assert_true.call(
 		int(bucket["decks"]["code-1"]["games"]) == 2, "the same deck code should accumulate"
+	)
+
+
+func _test_unknown_decks_merge_into_one_row(assert_true: Callable) -> void:
+	var rows := [
+		{"code": "a", "games": 9, "wins": 6},
+		{"code": "x", "games": 5, "wins": 2},
+		{"code": "y", "games": 4, "wins": 4},
+		{"code": "b", "games": 3, "wins": 1},
+		{"code": "z", "games": 1, "wins": 0},
+	]
+	var merged := CardStatsScreen.merge_unknown_decks(rows, {"a": {}, "b": {}})
+	assert_true.call(merged.size() == 3, "unknown decks should become a single row")
+	assert_true.call(
+		merged[0]["code"] == "" and int(merged[0]["games"]) == 10 and int(merged[0]["wins"]) == 6,
+		"merged row should sum games and wins"
+	)
+	assert_true.call(
+		merged[1]["code"] == "a" and merged[2]["code"] == "b",
+		"merged row should be ordered among the rest by games"
 	)
 
 
