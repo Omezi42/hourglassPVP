@@ -2,7 +2,7 @@
 # 対局の動き(攻撃・決着・反転権)を縦横で撮り、GIF・MP4・要所の静止画にする。
 #   tools/record_match_motion.sh <出力先>                     # 3場面 x 縦横
 #   tools/record_match_motion.sh <出力先> finale portrait     # 場面と向きを絞る
-#   場面: attack finale flip_right select_hover drag_attack cancel hand_hover(後ろ4つは合成マウスで撮る)
+#   場面: attack finale flip_right select_hover drag_attack cancel hand_hover mulligan result_win result_loss(後ろ7つは合成マウスで撮る)
 # 出力先/<場面>_<向き>.gif / .mp4 と、出力先/stills/<場面>_<向き>_<イベント>.png ができる。
 # 撮影そのものは tools/record_match_motion.gd(実際に描画するため --headless では動かない)。
 # 出力先/<場面>_<向き>_sheet.png は、出来事のコマを時系列で格子に並べたコマ割り(コマ番号と出来事名を焼き込む)。
@@ -31,7 +31,7 @@ SHEET_COLUMNS_LANDSCAPE=4
 SHEET_COLUMNS_PORTRAIT=6
 SHEET_POINTSIZE=20
 # 静止画に取るイベント(events.txt の名前)。「名前+N」はそのNコマ後。無いものは飛ばす。
-STILL_EVENTS="hover_own select_own hover_foe_1 hover_foe_3 hover_face hover_flip leave press_own drag_started drag_mid over_target release hover_foe_before_cancel cancel_right_click cancel_empty_click cancel_escape hover_hand_0 hover_hand_2 hover_hand_4 select_own press_target press_face press_flip_right impact impact+4 impact+10 strike_settled vessel_shatter_started vessel_shatter_started+10 vessel_shatter_started+20 result_shown remaining_decreased remaining_decreased+10 flip_landed flip_settled"
+STILL_EVENTS="hover_own select_own hover_foe_1 hover_foe_3 hover_face hover_flip leave press_own drag_started drag_mid over_target release hover_foe_before_cancel cancel_right_click cancel_empty_click cancel_escape hover_hand_0 hover_hand_2 hover_hand_4 order_intro_started+6 order_intro_started+14 order_intro_ended deal_settled hover_card_0 press_card_0 pick_card_0 pick_card_0+4 pick_card_2 hover_picked_card_0 press_picked_card_0 unpick_card_0 hover_confirm press_confirm confirmed_waiting mulligan_closed mulligan_closed+8 result_shown+4 result_shown+10 result_settled hover_rematch press_rematch release_outside select_own press_target press_face press_flip_right impact impact+4 impact+10 strike_settled vessel_shatter_started vessel_shatter_started+10 vessel_shatter_started+20 result_shown remaining_decreased remaining_decreased+10 flip_landed flip_settled"
 
 # make_sheet <作業フォルダ> <出力png> <向き>
 make_sheet() {

@@ -8,8 +8,10 @@ extends "res://tools/record_pv.gd"
 ## 実行(固定デルタで書き出すため --write-movie と --fixed-fps を付ける。--headless は付けない):
 ##   godot --path . --write-movie scratchpad/motion/_movie.avi --fixed-fps 30
 ##     res://tools/record_match_motion.tscn -- <出力先> <場面> <portrait|landscape>
-## 場面: attack / finale / flip_right は押下のシグナルを直接出す。select_hover / drag_attack / cancel /
-## hand_hover は合成のマウスイベントを SubViewport へ流し(ホバー・ドラッグ・右クリック・Esc が本物の経路を通る)、
+## 場面: attack / finale / flip_right は押下のシグナルを直接出す。mulligan(札を押して印が付く → 確定 → 手札へ)と
+## result_win / result_loss(結果パネルが出る → ボタンのホバー・押下)は、マリガンと結果パネルを直接開いて合成のマウスで操作する。
+## select_hover / drag_attack / cancel / hand_hover は合成のマウスイベントを SubViewport へ流し
+## (ホバー・ドラッグ・右クリック・Esc が本物の経路を通る)、
 ## カーソルの位置を白い矢印で焼き込む(押している間は金の輪を足す)。
 ## 出力先/frames/00000.png ... と 出力先/events.txt(「名前 コマ番号」を1行ずつ)ができる。
 ## GIF・MP4・静止画への変換まで通すなら tools/record_match_motion.sh を使う。
@@ -17,7 +19,16 @@ extends "res://tools/record_pv.gd"
 ## 撮る前に Godot プロセスが残っていないか `tasklist` で確認する(Pitfalls.md)。
 
 const SCENES := [
-	"attack", "finale", "flip_right", "select_hover", "drag_attack", "cancel", "hand_hover"
+	"attack",
+	"finale",
+	"flip_right",
+	"select_hover",
+	"drag_attack",
+	"cancel",
+	"hand_hover",
+	"mulligan",
+	"result_win",
+	"result_loss"
 ]
 ## 盤面が落ち着くまで撮らずに待つコマ数と、撮り始めの静止のコマ数。
 const SETTLE_FRAMES := 40
@@ -67,6 +78,11 @@ const FLIP_RIGHT_FOE := 2
 const FLIP_TARGET_ID := "drill"
 const FLIP_TARGET_HEALTH := 5
 const FLIP_TARGET_ATTACK := 2
+## マリガンの場面: 後手(コイン1枚)の初期手札の枚数、配り終わりの待ち、結果パネルの場面の決着手数。
+const MULLIGAN_HAND_SIZE := 4
+const MULLIGAN_DEAL_FRAMES := 30
+const RESULT_MOVES := 23
+const RESULT_REWARD := "+30 砂金" + "\n" + "明日来ると 60砂金 ・ はじめの7日 3/7"
 
 var _stage: SubViewport
 var _out_dir := ""
@@ -190,6 +206,12 @@ func _run() -> void:
 			await _scene_cancel()
 		"hand_hover":
 			await _scene_hand_hover()
+		"mulligan":
+			await _scene_mulligan()
+		"result_win":
+			await _scene_result(true)
+		"result_loss":
+			await _scene_result(false)
 	await _frames(POST_HOLD_FRAMES)
 	_recording = false
 	await _frames(2)
@@ -476,6 +498,80 @@ func _scene_hand_hover() -> void:
 	await _glide(_rest_point)
 	_mark("leave")
 	await _frames(HOVER_HOLD_FRAMES / 2)
+
+
+## マリガン: 先手後手の一文 → 配る → 札を2枚押して印を付ける → 1枚を押して外す → 確定 → 相手待ち → 手札へ入る。
+## 手札へ入るところは、相手の確定を待たずに画面を閉じて盤面を描き直して代用する。
+func _scene_mulligan() -> void:
+	var mulligan := match_screen._mulligan
+	var cards: Array = []
+	for id in HAND_IDS.slice(0, MULLIGAN_HAND_SIZE):
+		cards.append(_card(id))
+	mulligan.show_hand(cards, false, true)
+	_mark("order_intro_started")
+	await _until(func(): return not mulligan._intro_playing)
+	_mark("order_intro_ended")
+	await _frames(MULLIGAN_DEAL_FRAMES)
+	_mark("deal_settled")
+	for index in [0, 2]:
+		var view: Control = mulligan._views[index]
+		await _glide(_view_center(view))
+		_mark("hover_card_%d" % index)
+		await _frames(HOVER_HOLD_FRAMES / 2)
+		_button(MOUSE_BUTTON_LEFT, true)
+		_mark("press_card_%d" % index)
+		await _frames(PRESS_HOLD_FRAMES)
+		_button(MOUSE_BUTTON_LEFT, false)
+		_mark("pick_card_%d" % index)
+		await _frames(STEP_PAUSE_FRAMES)
+	await _glide(_view_center(mulligan._views[0]))
+	_mark("hover_picked_card_0")
+	await _frames(HOVER_HOLD_FRAMES / 2)
+	_button(MOUSE_BUTTON_LEFT, true)
+	_mark("press_picked_card_0")
+	await _frames(PRESS_HOLD_FRAMES)
+	_button(MOUSE_BUTTON_LEFT, false)
+	_mark("unpick_card_0")
+	await _frames(STEP_PAUSE_FRAMES)
+	await _glide(_view_center(mulligan._button))
+	_mark("hover_confirm")
+	await _frames(HOVER_HOLD_FRAMES / 2)
+	_button(MOUSE_BUTTON_LEFT, true)
+	_mark("press_confirm")
+	await _frames(PRESS_HOLD_FRAMES)
+	_button(MOUSE_BUTTON_LEFT, false)
+	_mark("confirmed_waiting")
+	await _frames(MULLIGAN_DEAL_FRAMES)
+	mulligan.close()
+	match_screen.refresh()
+	_mark("mulligan_closed")
+	await _frames(STEP_PAUSE_FRAMES)
+
+
+## 結果パネルが出て、「もう一度」へカーソルを乗せて押す(放す前に外へ出して確定させない)。
+func _scene_result(won: bool) -> void:
+	var my := match_screen.my_side
+	var foe := MatchState.other_side(my)
+	var state := match_screen.state
+	state.winner = my if won else foe
+	state.end_reason = MatchState.EndReason.HP_DEPLETED
+	state.hp[my] = 12 if won else 0
+	state.hp[foe] = 0 if won else 9
+	match_screen._result.show_for(state, my, RESULT_MOVES, RESULT_REWARD, true)
+	_mark("result_shown")
+	await _frames(MAX_WAIT_FRAMES / 4)
+	_mark("result_settled")
+	var rematch: Control = match_screen._result._buttons[0]
+	await _glide(_view_center(rematch))
+	_mark("hover_rematch")
+	await _frames(HOVER_HOLD_FRAMES / 2)
+	_button(MOUSE_BUTTON_LEFT, true)
+	_mark("press_rematch")
+	await _frames(PRESS_HOLD_FRAMES * 3)
+	await _glide(_rest_point)
+	_button(MOUSE_BUTTON_LEFT, false)
+	_mark("release_outside")
+	await _frames(STEP_PAUSE_FRAMES)
 
 
 func _capture_loop() -> void:
