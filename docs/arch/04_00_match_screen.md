@@ -14,7 +14,7 @@
 | `CardView` / `CardViewPaint` / `HandCardPaint` | 駒・札1枚の表示。`Mode.HAND`(枠あり・コスト左上/紋章の印右上/攻撃力左下/体力右下)と `Mode.BOARD`(枠なし・台座の上の砂時計・攻撃力左下/体力右下)。**砂術は `Mode.HAND` の中の分岐**(`is_spell` で絵の代わりに紋章・攻撃力と体力のバッジなし・枠色変更。`Mode.SPELL` は作らない——場での見た目が存在せず、`BOARD` との組み合わせという有り得ない状態を表現できてしまう)。守護の輪は `guard_frame`(場だけ true)。状態(`health_punch`/`attack_punch`/`unselect_amount`/`counter_offset`/`spark_amount`/strikeの offset・angle・flash)は `CardView` が持ち、描画は `CardViewPaint`(台座・紋章の印・バッジ・予測)と `HandCardPaint`(手札の面)が担う。いずれも第1引数に `CardView` を取る |
 | `CardViewStrike` / `CardViewFlourish` / `CardViewSandFx` | 攻撃の4段の段取り / 相打ちの反撃(`play_counter()`)とドローの合図(`play_spark()`)の Tween / 砂の動き(`play_shatter()` 消える・`play_drop()` 落ちる・`play_raise()` 戻る)の Tween と描画。`CardView` に同名の薄い委譲を残す。`CardViewSandFx` は絵の上へ重ねるため `CardView._draw()` の最後から `draw()` を呼ぶ |
 | `CardUnitFx` | `CardView` の子として重ねる演出のうち盤面の状態を参照しないもの(着地 / 崩落 / 毒砂の溶解 `play_melt()` / 硝子の閃光 / `play_recall()`)。崩落は `CardData` を受け取り絵と矩形をその時点で控える(次の同期で `card` が null になるため) |
-| `CardDragPreview` / `CardDragArrow` | ドラッグ中に指へ付いてくる絵(速度から傾き。砂術は紋章を運び、離せば撃つ間は琥珀色に光って縮む)/ 攻撃ドラッグの駒→指先の矢印(自分の場の駒のときだけ) |
+| `CardDragPreview` / `CardDragArrow` | ドラッグ中に指へ付いてくる絵(手札と砂術だけ。場の駒の攻撃ドラッグでは作らない。速度から傾き。砂術は紋章を運び、離せば撃つ間は琥珀色に光って縮む)/ 攻撃ドラッグの駒→指先の矢印(自分の場の駒のときだけ。狙える相手の上では太くなり先端が駒へ吸い付く) |
 | `CardMatchHandLayout` | 手札の並べ方。**位置は代入せず Tween で滑らせる**。ホバー中の両隣を避け、相手の手番で沈める |
 | `BoardTable` / `PlaymatLibrary` / `PlaymatPaint` | 卓(木の額 / マット2枚 / レール)。マットは `clip_contents` の子層(`MatLayer`)として敷く(模様が卓の外へ漏れる)。**卓とショップの見本で同じ描画関数を通す**。既定は `NONE_ID`(何も敷かない) |
 | `MatchBackdrop` / `ActionColumnLayout` / `ActionColumnPanel` / `RoundActionButton` / `TurnClockDial` / `FlipRightGauge` | 再構築(10.10.0節)で足した下地・行動の列の並び・行動の列の地・丸ボタン・持ち時間の時計・反転権の粒の札 |
