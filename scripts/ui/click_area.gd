@@ -7,10 +7,10 @@ extends Control
 signal area_pressed
 
 const HOVER_MODULATE := Color(1.08, 1.08, 1.08, 1.0)
-const HOVER_LIFT := Vector2(0.0, -3.0)
-const HOVER_TWEEN_DURATION := 0.1
-const PRESS_SCALE := Vector2(0.96, 0.96)
-const PRESS_TWEEN_DURATION := 0.1
+const HOVER_LIFT := Vector2(0.0, -2.0)
+const HOVER_TWEEN_DURATION := UiPalette.DUR_HOVER
+const PRESS_SCALE := Vector2(0.97, 0.97)
+const PRESS_TWEEN_DURATION := UiPalette.DUR_PRESS
 
 var _press_tracker := PressTracker.new()
 var _hovering := false

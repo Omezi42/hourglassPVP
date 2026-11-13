@@ -25,6 +25,12 @@ const BULGE_DURATION := 0.22
 const BULGE_MIN_SCALE := 0.12
 const CHIP_GAP := 6
 const SEARCH_INSET := 48.0
+## 区画の縦の間隔(余白の刻み)。
+const SECTION_GAP := 16
+## 拡大後のパネルを画面の上下から離す量。収まらないときはチップの区画だけをスクロールにする。
+const SCREEN_MARGIN := 24.0
+## チップの折り返しとパネルの大きさが決まるまで待つフレーム数。
+const FIT_WAIT_FRAMES := 2
 
 ## 0 は「すべて」。それ以外はそのコストだけを通す。
 var _cost := 0
@@ -40,6 +46,8 @@ var _kind_buttons: Dictionary = {}
 var _dim: ColorRect
 var _center: CenterContainer
 var _panel: PanelContainer
+var _body_scroll: ScrollContainer
+var _body: VBoxContainer
 var _bulge_tween: Tween
 
 
@@ -48,7 +56,12 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	size = SCREEN_SIZE
 	_build()
-	PortraitModal.watch(self, _layout)
+	PortraitModal.watch(
+		self,
+		func() -> void:
+			_layout()
+			_fit_body_height()
+	)
 
 
 ## `from_rect` を渡すと、そのグローバル矩形(押したボタン)の位置から膨らんで開く
@@ -57,8 +70,15 @@ func _ready() -> void:
 func open(from_rect: Rect2 = Rect2()) -> void:
 	_layout()
 	visible = true
-	if from_rect.size != Vector2.ZERO:
-		_bulge_from.call_deferred(from_rect)
+	if from_rect.size == Vector2.ZERO:
+		_fit_body_height()
+		return
+	# 高さが決まる前の位置から膨らませると、決まった後の中央からずれる。
+	# 決まるまでは透かして待ち、決まってから膨らませる。
+	_panel.modulate.a = 0.0
+	await _fit_body_height()
+	if visible:
+		_bulge_from(from_rect)
 
 
 ## 縦(GameDesign.md 9章「縦画面」)は `PortraitModal` の論理幅で組み、中身ごと拡大する。
@@ -72,8 +92,25 @@ func _layout() -> void:
 	PortraitModal.fit(_center)
 
 
+## 拡大後のパネルが 画面の高さ − 上下の余白 に収まらないときは、見出しと下のボタン行を残して
+## チップの区画だけを縦スクロールにする。チップの折り返しが決まってから測る。
+func _fit_body_height() -> void:
+	for i in FIT_WAIT_FRAMES:
+		await get_tree().process_frame
+	if _body_scroll == null or not visible:
+		return
+	var scale := PortraitModal.SCALE if ScreenOrientation.is_portrait() else 1.0
+	var limit := (PortraitModal.screen_size().y - SCREEN_MARGIN * 2.0) / scale
+	var chrome := _panel.get_combined_minimum_size().y - _body_scroll.get_combined_minimum_size().y
+	var body_height := _body.get_combined_minimum_size().y
+	_body_scroll.custom_minimum_size.y = minf(body_height, maxf(limit - chrome, 0.0))
+	for i in FIT_WAIT_FRAMES:
+		await get_tree().process_frame
+
+
 func close() -> void:
 	visible = false
+	_panel.modulate.a = 1.0
 
 
 func matches(card: CardData) -> bool:
@@ -142,7 +179,7 @@ func _build() -> void:
 	_panel = panel
 
 	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 14)
+	column.add_theme_constant_override("separation", SECTION_GAP)
 	panel.add_child(column)
 
 	# ヘッダー(タイトル + 閉じるボタン)
@@ -160,15 +197,25 @@ func _build() -> void:
 	close_icon.pressed.connect(close)
 	header_row.add_child(close_icon)
 
+	# 見出しと下のボタン行は動かさず、条件の区画だけをスクロールにできるようにする。
+	_body_scroll = ScrollContainer.new()
+	_body_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	TouchScroll.enable(_body_scroll)
+	column.add_child(_body_scroll)
+	_body = VBoxContainer.new()
+	_body.add_theme_constant_override("separation", SECTION_GAP)
+	_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_body_scroll.add_child(_body)
+
 	# 種類選択(砂時計 / 砂術。GameDesign.md 6章)
 	var kind_label := Label.new()
 	kind_label.text = "種類"
 	kind_label.add_theme_font_size_override("font_size", UiPalette.T_BODY)
 	kind_label.add_theme_color_override("font_color", UiPalette.GOLD)
-	column.add_child(kind_label)
+	_body.add_child(kind_label)
 
 	var kind_row := _chip_row()
-	column.add_child(kind_row)
+	_body.add_child(kind_row)
 	_add_kind_chip(kind_row, "すべて", KIND_ALL)
 	_add_kind_chip(kind_row, "砂時計", KIND_UNIT)
 	_add_kind_chip(kind_row, "砂術", KIND_SPELL)
@@ -178,10 +225,10 @@ func _build() -> void:
 	cost_label.text = "コスト"
 	cost_label.add_theme_font_size_override("font_size", UiPalette.T_BODY)
 	cost_label.add_theme_color_override("font_color", UiPalette.GOLD)
-	column.add_child(cost_label)
+	_body.add_child(cost_label)
 
 	var cost_row := _chip_row()
-	column.add_child(cost_row)
+	_body.add_child(cost_row)
 	_add_cost_chip(cost_row, "すべて", 0, ALL_CHIP_WIDTH)
 	for cost in _pool_costs():
 		_add_cost_chip(cost_row, str(cost), cost, COST_CHIP_WIDTH)
@@ -191,10 +238,10 @@ func _build() -> void:
 	keyword_label.text = "キーワード"
 	keyword_label.add_theme_font_size_override("font_size", UiPalette.T_BODY)
 	keyword_label.add_theme_color_override("font_color", UiPalette.GOLD)
-	column.add_child(keyword_label)
+	_body.add_child(keyword_label)
 
 	var keyword_row := _chip_row()
-	column.add_child(keyword_row)
+	_body.add_child(keyword_row)
 	for keyword in CardEnums.NAMED:
 		var button := CodedButton.make(
 			CardEnums.keyword_name(keyword), Vector2(KEYWORD_CHIP_WIDTH, CHIP_HEIGHT)
@@ -209,14 +256,14 @@ func _build() -> void:
 	name_label.text = "名前検索"
 	name_label.add_theme_font_size_override("font_size", UiPalette.T_BODY)
 	name_label.add_theme_color_override("font_color", UiPalette.GOLD)
-	column.add_child(name_label)
+	_body.add_child(name_label)
 
 	_search_input = LineEdit.new()
 	_search_input.placeholder_text = "名前で探す"
 	_search_input.custom_minimum_size = Vector2(PANEL_WIDTH - 48, 40)
 	_search_input.text_changed.connect(_on_query_changed)
 	MobileTextInput.wire(_search_input, "名前で探す")
-	column.add_child(_search_input)
+	_body.add_child(_search_input)
 
 	# フッターボタン
 	var footer_row := HBoxContainer.new()
@@ -309,15 +356,19 @@ func _on_query_changed(text: String) -> void:
 ## Tweenで戻す(GameDesign.md 9章「絞り込みモーダルは、押したボタンの位置から膨らんで開く」)。
 ## 座標は `_center` の局所へ直す(縦では `_center` ごと拡大しているため、その倍率も割り戻す)。
 func _bulge_from(button_global_rect: Rect2) -> void:
-	if _panel == null or _panel.size == Vector2.ZERO:
+	if _panel == null:
 		return
-	var pivot := _panel.size * 0.5
+	_panel.modulate.a = 1.0
+	# **終わりの位置は、中央へ置いたパネルの位置から求める**(コンテナの並べ直しの前に
+	# `_panel.position` を読むと、中央から外れた値を拾って上へずれる)。
+	var panel_size := _panel.get_combined_minimum_size()
+	var pivot := panel_size * 0.5
 	_panel.pivot_offset = pivot
-	var target_position := _panel.position
+	var target_position := (_center.size - panel_size) * 0.5
 	var to_center := _center.get_global_transform()
 	var button_center: Vector2 = to_center.affine_inverse() * button_global_rect.get_center()
 	var button_size := button_global_rect.size / to_center.get_scale()
-	var start_scale := (button_size / _panel.size).clamp(
+	var start_scale := (button_size / panel_size).clamp(
 		Vector2(BULGE_MIN_SCALE, BULGE_MIN_SCALE), Vector2.ONE
 	)
 	_panel.scale = start_scale

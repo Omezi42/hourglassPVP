@@ -12,13 +12,19 @@ const PANEL_STYLE := "res://resources/theme/content_panel.tres"
 const ROW_BUTTON_SIZE := Vector2(200, 64)
 const SUMMARY_WIDTH := 420.0
 ## 縦(GameDesign.md 9章「縦画面」)。パネルは `PortraitModal` の論理幅で組み、中身ごと拡大する。
-const PORTRAIT_ROW_BUTTON_SIZE := Vector2(120, 56)
-const PORTRAIT_SUMMARY_WIDTH := 292.0
+const PORTRAIT_ROW_BUTTON_SIZE := Vector2(168, 72)
+const PORTRAIT_SUMMARY_WIDTH := 240.0
+const ROW_SEPARATION := 20
+const PORTRAIT_ROW_SEPARATION := 24
+const CLOSE_SIZE := Vector2(180, 56)
+const PORTRAIT_CLOSE_SIZE := Vector2(180, 72)
 
 var _dim: ColorRect
 var _center: CenterContainer
 var _panel: PanelContainer
 var _row_buttons: Array[Button] = []
+var _rows: Array[HBoxContainer] = []
+var _close_button: Button
 var _summaries: Array[Label] = []
 
 
@@ -44,6 +50,11 @@ func _layout() -> void:
 	_panel.custom_minimum_size.x = PortraitModal.WIDTH if portrait else PANEL_WIDTH
 	for button in _row_buttons:
 		button.custom_minimum_size = PORTRAIT_ROW_BUTTON_SIZE if portrait else ROW_BUTTON_SIZE
+	for row in _rows:
+		row.add_theme_constant_override(
+			"separation", PORTRAIT_ROW_SEPARATION if portrait else ROW_SEPARATION
+		)
+	_close_button.custom_minimum_size = PORTRAIT_CLOSE_SIZE if portrait else CLOSE_SIZE
 	for summary in _summaries:
 		summary.custom_minimum_size.x = PORTRAIT_SUMMARY_WIDTH if portrait else SUMMARY_WIDTH
 	PortraitModal.fit(_center)
@@ -89,15 +100,16 @@ func _build() -> void:
 	for preset in CardPresetDecks.PRESETS:
 		column.add_child(_make_row(preset))
 
-	var close_button := CodedButton.make("閉じる", Vector2(180, 56))
-	close_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	close_button.pressed.connect(close)
-	column.add_child(close_button)
+	_close_button = CodedButton.make("閉じる", CLOSE_SIZE)
+	_close_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_close_button.pressed.connect(close)
+	column.add_child(_close_button)
 
 
 func _make_row(preset: Dictionary) -> HBoxContainer:
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 20)
+	row.add_theme_constant_override("separation", ROW_SEPARATION)
+	_rows.append(row)
 
 	var button := CodedButton.make(preset["name"], ROW_BUTTON_SIZE)
 	var preset_id: String = preset["id"]

@@ -78,7 +78,8 @@ const PORTRAIT_SIDE_RECT := Rect2(
 )
 const PORTRAIT_GRID_COLUMNS := 3
 const PORTRAIT_STOCK_ZOOM := 1.6
-const PORTRAIT_SHELF_TEXT := 1.7
+const PORTRAIT_SHELF_TEXT := 1.5
+const PORTRAIT_LIST_TEXT := 1.7
 const PORTRAIT_BUTTON_FONT := 26
 const PORTRAIT_COUNT_FONT := 24
 const PORTRAIT_FILTER_SIZE := Vector2(190, 72)
@@ -406,7 +407,7 @@ func apply_orientation(portrait: bool) -> void:
 		view.zoom = PORTRAIT_STOCK_ZOOM if portrait else 1.0
 	_shelf.text_scale = PORTRAIT_SHELF_TEXT if portrait else 1.0
 	_shelf.custom_minimum_size.x = PORTRAIT_SIDE_RECT.size.x if portrait else SIDE_INNER_WIDTH
-	_deck_list.text_scale = PORTRAIT_SHELF_TEXT if portrait else 1.0
+	_deck_list.text_scale = PORTRAIT_LIST_TEXT if portrait else 1.0
 	for view_button in _view_buttons:
 		_place(view_button, Rect2(Vector2.ZERO, PORTRAIT_VIEW_SIZE if portrait else VIEW_SIZE), 0)
 		view_button.add_theme_font_size_override(

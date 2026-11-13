@@ -34,6 +34,13 @@ const NAME_FONT := 12
 const BADGE_MAX := 13.0
 ## 絵の縦横比(砂時計の絵は 1 : 1.30)。
 const ART_RATIO := 1.30
+## 丸のあいだに残す最小のすき間(余白の刻みの最小)。
+const BADGE_MIN_GAP := 4.0
+## 名前の左右に残す余白と、長い名前を横へ縮める下限(長体)。
+const NAME_SIDE_PAD := 2.0
+const NAME_SQUEEZE_MIN := 0.75
+## 名前の基線を、枠の下端から上げる量(`text_scale` 倍)。
+const NAME_BASELINE_LIFT := 4.0
 
 const NAME_COLOR := UiPalette.IVORY
 ## 棚板は藍の天板と真鍮の帯の2層(札の棚板と同じ作り)。帯の取り分は板の厚みの比。
@@ -104,6 +111,7 @@ func _notification(what: int) -> void:
 		return
 	if what == NOTIFICATION_MOUSE_EXIT and _hover_index >= 0:
 		_hover_index = -1
+		mouse_default_cursor_shape = Control.CURSOR_ARROW
 		hover_left.emit()
 		queue_redraw()
 
@@ -113,6 +121,7 @@ func _rebuild() -> void:
 	_slots = deck.duplicate()
 	_slots.sort_custom(CardLibrary.compare_by_cost)
 	_hover_index = -1
+	mouse_default_cursor_shape = Control.CURSOR_ARROW
 	var full: bool = _slots.size() == _slot_count()
 	# 読むだけの棚(共有用のデッキ表)は光らせない。書き出す絵が光の途中で撮れてしまうため。
 	if full and not _was_full and not readonly:
@@ -237,23 +246,45 @@ func _draw_slot(index: int, cell: Vector2, art: Vector2) -> void:
 		if icon != null:
 			draw_texture_rect(icon, art_rect, false)
 	var badge_r: float = clampf(art.x * 0.20, 8.0, BADGE_MAX * text_scale)
-	# 四隅は手札の札と同じ(GameDesign.md 9章)。
-	var left := art_rect.position.x + badge_r * 0.4
-	var right := art_rect.end.x - badge_r * 0.4
+	# 攻撃力と体力の丸のあいだに最小のすき間が残らない細い枠では、丸と中の数字を縮める。
+	badge_r = minf(badge_r, (hit.size.x - BADGE_MIN_GAP) / 4.0)
+	var emblem_r := badge_r * 0.86
+	# 四隅は手札の札と同じ(GameDesign.md 9章)。**丸は枠の矩形の内側へ収める**
+	# (隣の枠の丸と重なって「20」「30」のように読めてしまうため)。
+	var left := clampf(
+		art_rect.position.x + badge_r * 0.4, hit.position.x + badge_r, hit.end.x - badge_r
+	)
+	var right := clampf(
+		art_rect.end.x - badge_r * 0.4, hit.position.x + badge_r, hit.end.x - badge_r
+	)
+	var emblem_x := clampf(
+		art_rect.end.x - badge_r * 0.4, hit.position.x + emblem_r, hit.end.x - emblem_r
+	)
 	var top := art_rect.position.y + badge_r
 	var bottom := art_rect.end.y - badge_r
 	CardStatBadge.cost_diamond(self, _font, Vector2(left, top), card.cost, badge_r)
-	EmblemSeal.brass(self, Vector2(right, top), card.emblem, badge_r * 0.86)
+	EmblemSeal.brass(self, Vector2(emblem_x, top), card.emblem, emblem_r)
 	CardStatBadge.pair(self, _font, Vector2(left, bottom), Vector2(right, bottom), card, badge_r)
-	draw_string(
-		_font,
-		Vector2(col * cell.x, (row + 1) * cell.y - 4.0 * text_scale),
-		card.display_name,
-		HORIZONTAL_ALIGNMENT_CENTER,
-		cell.x,
-		roundi(NAME_FONT * text_scale),
-		NAME_COLOR
+	_draw_name(card.display_name, hit)
+
+
+## 名前。長いものは横へ縮めて(長体)枠へ収め、文字の高さと基線は枠ごとにそろえる。
+func _draw_name(card_name: String, slot: Rect2) -> void:
+	var name_size := roundi(NAME_FONT * text_scale)
+	var max_w := slot.size.x - NAME_SIDE_PAD * 2.0
+	var w := _font.get_string_size(card_name, HORIZONTAL_ALIGNMENT_LEFT, -1, name_size).x
+	var squeeze := clampf(max_w / w, NAME_SQUEEZE_MIN, 1.0)
+	# 下限まで縮めても入らないときだけ、今までどおり枠で切る。
+	var shown_w := minf(w * squeeze, max_w)
+	var clip_w := shown_w / squeeze if w * squeeze > max_w else -1.0
+	var baseline := Vector2(
+		slot.get_center().x - shown_w * 0.5, slot.end.y - NAME_BASELINE_LIFT * text_scale
 	)
+	draw_set_transform(baseline, 0.0, Vector2(squeeze, 1.0))
+	draw_string(
+		_font, Vector2.ZERO, card_name, HORIZONTAL_ALIGNMENT_LEFT, clip_w, name_size, NAME_COLOR
+	)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 ## 空いている枠。**棚に彫った受け皿**として描き、そこへ薄い砂時計の影を落とす。
@@ -355,6 +386,10 @@ func _update_hover(at: Vector2) -> void:
 	if index == _hover_index:
 		return
 	_hover_index = index
+	# カードの入っている枠の上だけ指カーソル(押すと1枚戻る)。空き枠と枠の外は矢印。
+	mouse_default_cursor_shape = (
+		Control.CURSOR_POINTING_HAND if index >= 0 else Control.CURSOR_ARROW
+	)
 	if index < 0:
 		hover_left.emit()
 	else:

@@ -46,6 +46,12 @@ var _press := PressTracker.new()
 var _has_shown := false
 var _count_punch := 0.0
 var _punch_tween: Tween
+var _hovering := false
+## 乗った量・押した量(0〜1)。`_draw()` が浮きと縮みへ、`self_modulate` が明るさへ変える。
+var _hover_amount := 0.0
+var _press_amount := 0.0
+var _hover_tween: Tween
+var _press_tween: Tween
 
 
 func _ready() -> void:
@@ -54,6 +60,9 @@ func _ready() -> void:
 	_font = get_theme_default_font()
 	if _font == null:
 		_font = ThemeDB.fallback_font
+	mouse_entered.connect(_on_mouse_entered)
+	mouse_exited.connect(_on_mouse_exited)
+	visibility_changed.connect(_on_visibility_changed)
 
 
 func show_card(
@@ -70,6 +79,72 @@ func show_card(
 	_has_shown = true
 	if count_changed:
 		_start_punch()
+	_sync_feel()
+	queue_redraw()
+
+
+## 入れられる札か(所持・枚数が上限未満・デッキが30枚未満)。押せる札だけ指カーソルと乗る・押す反応を持つ。
+func is_addable() -> bool:
+	return card != null and enabled and not locked and count < limit
+
+
+## 押せるかどうかが変わるたびに、カーソルと乗った量を合わせる(乗ったまま押せなくなる場合がある)。
+func _sync_feel() -> void:
+	mouse_default_cursor_shape = CURSOR_POINTING_HAND if is_addable() else CURSOR_ARROW
+	if _hovering and not is_addable():
+		_animate_amount("_hover_amount", 0.0, UiPalette.DUR_HOVER)
+		_animate_amount("_press_amount", 0.0, UiPalette.DUR_HOVER)
+	elif _hovering:
+		_animate_amount("_hover_amount", 1.0, UiPalette.DUR_HOVER)
+
+
+func _on_mouse_entered() -> void:
+	_hovering = true
+	if is_addable():
+		_animate_amount("_hover_amount", 1.0, UiPalette.DUR_HOVER)
+
+
+func _on_mouse_exited() -> void:
+	_hovering = false
+	_animate_amount("_hover_amount", 0.0, UiPalette.DUR_HOVER)
+	_animate_amount("_press_amount", 0.0, UiPalette.DUR_HOVER)
+
+
+## 絞り込みで隠れたときは `mouse_exited` が届かないことがある。量を戻しておく。
+func _on_visibility_changed() -> void:
+	if is_visible_in_tree():
+		return
+	_hovering = false
+	_press.cancel()
+	for property in ["_hover_amount", "_press_amount"]:
+		_kill_tween(property)
+		set(property, 0.0)
+	self_modulate = Color.WHITE
+
+
+func _kill_tween(property: String) -> void:
+	var tween := _hover_tween if property == "_hover_amount" else _press_tween
+	if tween != null and tween.is_valid():
+		tween.kill()
+
+
+func _animate_amount(property: String, target: float, seconds: float) -> void:
+	_kill_tween(property)
+	var tween := create_tween()
+	tween.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	tween.tween_method(_set_amount.bind(property), float(get(property)), target, seconds)
+	if property == "_hover_amount":
+		_hover_tween = tween
+	else:
+		_press_tween = tween
+
+
+func _set_amount(value: float, property: String) -> void:
+	set(property, value)
+	# 明るさは押している間は1.0へ戻す(押し込みで光の膜が消える)。
+	self_modulate = Color.WHITE.lerp(
+		ClickArea.HOVER_MODULATE, _hover_amount * (1.0 - _press_amount)
+	)
 	queue_redraw()
 
 
@@ -87,8 +162,24 @@ func _set_count_punch(value: float) -> void:
 
 
 func _gui_input(event: InputEvent) -> void:
-	if _press.feed(event, size) == PressTracker.Result.CONFIRMED:
-		pressed.emit(card)
+	match _press.feed(event, size):
+		PressTracker.Result.PRESSED:
+			if is_addable():
+				_animate_amount("_press_amount", 1.0, UiPalette.DUR_PRESS)
+			elif count >= limit and not locked:
+				# 2/2の札は入らない。印を跳ねさせて返事にする。
+				_start_punch()
+		PressTracker.Result.CONFIRMED:
+			_animate_amount("_press_amount", 0.0, UiPalette.DUR_PRESS)
+			pressed.emit(card)
+		PressTracker.Result.CANCELED:
+			_animate_amount("_press_amount", 0.0, UiPalette.DUR_HOVER)
+
+
+## 押したまま指で一覧をスクロールし始めた(`TouchScroll`)。押し込みを解く。
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_SCROLL_BEGIN and _press.cancel():
+		_animate_amount("_press_amount", 0.0, UiPalette.DUR_HOVER)
 
 
 ## デッキ編集の棚(`CardDeckShelf`)へドラッグして加えられるようにする(GameDesign.md 9章)。
@@ -100,6 +191,9 @@ func _get_drag_data(at_position: Vector2) -> Variant:
 	var moved := get_local_mouse_position() - at_position
 	if TouchScroll.is_touching() and absf(moved.y) > absf(moved.x):
 		return null
+	# 棚へ運び始めたら押し込みを解く。
+	_press.cancel()
+	_animate_amount("_press_amount", 0.0, UiPalette.DUR_HOVER)
 	set_drag_preview(_make_drag_preview())
 	return {"stock_card": card}
 
@@ -114,7 +208,10 @@ func _make_drag_preview() -> Control:
 func _draw() -> void:
 	if card == null:
 		return
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE * zoom)
+	# 乗ると浮き、押すと中心を基準に縮む(子を持たない札なので描く側で変形する)。
+	var press_scale := lerpf(1.0, ClickArea.PRESS_SCALE.x, _press_amount)
+	var offset := size * 0.5 * (1.0 - press_scale) + ClickArea.HOVER_LIFT * _hover_amount
+	draw_set_transform(offset, 0.0, Vector2.ONE * zoom * press_scale)
 	var base := _base_size()
 	var maxed: bool = count >= limit
 	var tint := Color.WHITE if enabled else DIM_TINT

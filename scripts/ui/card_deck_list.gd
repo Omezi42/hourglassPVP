@@ -23,6 +23,9 @@ const ROW_RADIUS := 8.0
 const HINT_PLATE_RADIUS := 12.0
 const EMPTY_HINT := "左の在庫棚から選ぶと、ここへ並びます"
 const HINT_FONT := 16
+## 押している行の面を暗くする量と、中身を下げる量(px)。
+const PRESS_DARKEN := 0.14
+const PRESS_SINK := 1.0
 
 var deck: Array = []:
 	set(value):
@@ -60,9 +63,11 @@ func _notification(what: int) -> void:
 		return
 	if what == NOTIFICATION_SCROLL_BEGIN:
 		_press.cancel()
+		_set_pressed_index(-1)
 		return
 	if what == NOTIFICATION_MOUSE_EXIT and _hover_index >= 0:
 		_hover_index = -1
+		mouse_default_cursor_shape = Control.CURSOR_ARROW
 		hover_left.emit()
 		queue_redraw()
 
@@ -77,6 +82,7 @@ func _rebuild() -> void:
 		else:
 			_entries.append({"card": card, "count": 1})
 	_hover_index = -1
+	mouse_default_cursor_shape = Control.CURSOR_ARROW
 	var full: bool = deck.size() == MatchState.DECK_SIZE
 	if full and not _was_full:
 		_start_glow()
@@ -154,12 +160,17 @@ func _draw_row(index: int) -> void:
 	var card: CardData = _entries[index]["card"]
 	var count: int = _entries[index]["count"]
 	var hovered := index == _hover_index
+	# 押している間(押した行の上にいるあいだ)だけ、面を暗くして中身を1px沈める。
+	var pressed := hovered and index == _pressed_index
 	# 行は面(組立台)へ沈めた区画。乗ったときだけ縁を照りへ寄せる。
 	UiKit.well(get_canvas_item(), row, ROW_RADIUS)
+	if pressed:
+		UiKit.fill(get_canvas_item(), UiKit.rr(row, ROW_RADIUS), Color(0, 0, 0, PRESS_DARKEN))
 	if hovered:
 		UiKit.stroke_grad(
 			get_canvas_item(), UiKit.rr(row, ROW_RADIUS), UiKit.rim_brass(1.0), UiKit.line_w(row)
 		)
+	draw_set_transform(Vector2(0.0, PRESS_SINK) if pressed else Vector2.ZERO)
 
 	var h := row.size.y
 	var r: float = h * BADGE_RATIO
@@ -212,6 +223,7 @@ func _draw_row(index: int) -> void:
 		name_size,
 		UiPalette.IVORY
 	)
+	draw_set_transform(Vector2.ZERO)
 
 
 ## デッキが空のときだけ、中ほどへ沈めた札を置く。
@@ -236,14 +248,22 @@ func _gui_input(event: InputEvent) -> void:
 	# **行を押して離すとその1枚が在庫へ戻る**(棚の枠と同じ)。2枚の行は1枚ずつ減る。
 	match _press.feed(event, size):
 		PressTracker.Result.PRESSED:
-			_pressed_index = _index_at(_event_position(event))
+			_set_pressed_index(_index_at(_event_position(event)))
 		PressTracker.Result.CONFIRMED:
 			var index := _index_at(_event_position(event))
-			if index >= 0 and index == _pressed_index:
+			var was_pressed := _pressed_index
+			_set_pressed_index(-1)
+			if index >= 0 and index == was_pressed:
 				card_removed.emit(_entries[index]["card"])
-			_pressed_index = -1
 		PressTracker.Result.CANCELED:
-			_pressed_index = -1
+			_set_pressed_index(-1)
+
+
+func _set_pressed_index(index: int) -> void:
+	if index == _pressed_index:
+		return
+	_pressed_index = index
+	queue_redraw()
 
 
 func _event_position(event: InputEvent) -> Vector2:
@@ -259,6 +279,9 @@ func _update_hover(at: Vector2) -> void:
 	if index == _hover_index:
 		return
 	_hover_index = index
+	mouse_default_cursor_shape = (
+		Control.CURSOR_POINTING_HAND if index >= 0 else Control.CURSOR_ARROW
+	)
 	if index < 0:
 		hover_left.emit()
 	else:
