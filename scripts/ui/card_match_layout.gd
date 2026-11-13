@@ -5,6 +5,9 @@ extends RefCounted
 ## 対局画面への参照を持たない描画部品(下地・吊りランプ・行動の列の地・固有演出)は `current()` を読む。
 
 const OFFSCREEN := Vector2(-1000.0, -1000.0)
+## 盤面を覆う暗幕(マリガン・結果パネル)の濃さと、現れる時間。2画面で同じ値にそろえる。
+const OVERLAY_DIM_ALPHA := 0.78
+const OVERLAY_DIM_FADE := 0.3
 const CARD_GAP := 12.0
 const HAND_GAP := 8.0
 ## 相手の場6枠だけをわずかに縮小して奥行きを出す。

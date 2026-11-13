@@ -62,7 +62,7 @@ static func run(screen: CardMatchScreen) -> void:
 	screen._status.set_waiting("")
 	screen._match_start_pending = true
 	if screen._mulligan != null:
-		screen._mulligan.close()
+		screen._mulligan.close(true)
 		screen._mulligan.picking_disabled = false
 	if screen._tutorial != null:
 		screen._tutorial.reset_for_new_match()

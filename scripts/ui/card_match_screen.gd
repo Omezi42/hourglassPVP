@@ -733,7 +733,7 @@ func is_interactive() -> bool:
 
 ## マリガン画面が開いているか。詳細をホバーで出してよいかの判断に使う。
 func mulligan_open() -> bool:
-	return _mulligan != null and _mulligan.visible
+	return _mulligan != null and _mulligan.is_open()
 
 
 ## 反転した。行った側の情報帯から対象の駒へ光の筋を伸ばし、届いた瞬間に駒を裏返す。

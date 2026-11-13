@@ -206,7 +206,7 @@ func _shoot_panels() -> void:
 		mulligan._refresh(false)
 		mulligan._place_cards()
 		await _shoot(true, "mulligan_%d.png" % ids.size())
-	mulligan.close()
+	mulligan.close(true)
 	match_screen.state.winner = match_screen.my_side
 	var reward := "砂金 +30\nはじめの7日 3日目を受け取りました"
 	match_screen._result.show_for(match_screen.state, match_screen.my_side, 23, reward, true)

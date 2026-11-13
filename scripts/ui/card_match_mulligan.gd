@@ -6,6 +6,9 @@ extends Control
 
 signal confirmed(indices: Array)
 
+## 札の姿勢が変わる理由。尺と補間が理由ごとに違う。
+enum PoseKind { HOVER, PRESS, SETTLE, PICK }
+
 ## 初期手札は対局の手札より大きく並べ、効果の文まで読めるようにする(詳細パネルはマリガン中に出さない)。
 const CARD_SCALE := 1.35
 const CARD_SIZE := CardView.HAND_SIZE_PX * CARD_SCALE
@@ -33,6 +36,32 @@ const STAGE_MARGIN := Vector2(150, 70)
 ## 引き直すカードは沈めて、押したことが手札の並びの中で分かるようにする。
 const PICKED_SINK := 18.0
 const PICK_DURATION := 0.14
+## 札の姿勢(`_pose()`)。乗せると浮いて少し膨らみ、押している間は沈む(駒と同じ0.08秒)。
+## 拡大の軸は札の中心。札の間隔が狭いため、手札の1.22倍にはしない。
+const HOVER_LIFT := 8.0
+const PORTRAIT_HOVER_LIFT := 10.0
+const HOVER_SCALE := 1.04
+const PRESS_SCALE := 0.97
+const HOVER_DURATION := 0.10
+const PRESS_DURATION := 0.08
+const SETTLE_DURATION := 0.16
+## 確定ボタンの文言が変わったとき、ボタンが小さく脈打つ。
+const BUTTON_PULSE_SCALE := 1.05
+const BUTTON_PULSE_UP := 0.06
+const BUTTON_PULSE_DOWN := 0.10
+## 確定した瞬間: 見出しとヒントの差し替え、札が「もう触れない」色へ落ちる。
+const TEXT_SWAP_OUT := 0.10
+const TEXT_SWAP_IN := 0.14
+const LOCK_DURATION := 0.2
+const LOCK_TINT := Color(0.82, 0.82, 0.86)
+## 相手を待つ間、見出しだけがゆっくり明滅する。
+const WAIT_PULSE_LOW := 0.55
+const WAIT_PULSE_PERIOD := 1.6
+## 閉じるとき: 札を手札の方向へ下げながら薄れさせ、暗幕ごと畳む。
+const CLOSE_CARD_DROP := 40.0
+const CLOSE_CARD_DURATION := 0.18
+const CLOSE_CARD_STAGGER := 0.03
+const CLOSE_TEXT_FADE := 0.12
 ## 開いた瞬間、手札が配られるように下から浮き上がってくる距離と間隔。
 const DEAL_RISE := 46.0
 const DEAL_DURATION := 0.32
@@ -61,7 +90,19 @@ var _waiting := false
 var _dim: ColorRect
 var _stage: MulliganStageLight
 var _tween: Tween
-var _pick_tweens: Dictionary = {}
+var _pose_tweens: Dictionary = {}
+var _swap_tween: Tween
+var _wait_tween: Tween
+var _lock_tween: Tween
+var _button_tween: Tween
+var _close_tween: Tween
+var _hovered := -1
+var _pressed := -1
+var _portrait := false
+## 閉じる演出の間は下の盤面を操作でき、この画面はもう何も受け付けない。
+var _closing := false
+var _saved_filters: Dictionary = {}
+var _button_text_set := false
 var _screen_size := Vector2(ScreenOrientation.LANDSCAPE_SIZE)
 var _top := 0.0
 var _card_gap := CARD_GAP
@@ -90,6 +131,7 @@ func apply_layout(layout: CardMatchLayout) -> void:
 	_columns = PORTRAIT_COLUMNS if layout.portrait else MatchState.SECOND_PLAYER_HAND
 	_button_y = button_offset(layout.portrait)
 	_top = layout.mulligan_top
+	_portrait = layout.portrait
 	size = _screen_size
 	_dim.size = _screen_size
 	_turn_order_font = PORTRAIT_TURN_ORDER_FONT if layout.portrait else TURN_ORDER_FONT
@@ -106,8 +148,10 @@ func apply_layout(layout: CardMatchLayout) -> void:
 	_button.custom_minimum_size = button_size
 	_button.size = button_size
 	_button.position = Vector2((_screen_size.x - button_size.x) * 0.5, _top + _button_y)
+	_reset_poses()
 	for i in _views.size():
 		_views[i].size = _card_size
+		_views[i].pivot_offset = _card_size * 0.5
 		_marks[i].position = _views[i]._hand_art_box().get_center() - _marks[i].size * 0.5
 	_place_cards()
 
@@ -159,6 +203,9 @@ func _row_y(index: int) -> float:
 
 ## 初期手札を並べて開く。`has_coin` は後手がコインを持って始めるか(2章)。
 func show_hand(cards: Array, is_first: bool, has_coin: bool) -> void:
+	# 閉じている途中に開き直されても、前の演出を残さない。
+	_stop_tweens()
+	_finish_close()
 	if is_first:
 		_turn_order.text = "あなたは先手です"
 	else:
@@ -169,14 +216,21 @@ func show_hand(cards: Array, is_first: bool, has_coin: bool) -> void:
 		view.queue_free()
 	_views.clear()
 	_marks.clear()
-	_pick_tweens.clear()
+	_pose_tweens.clear()
+	_hovered = -1
+	_pressed = -1
+	_button_text_set = false
 	for i in cards.size():
 		var view := CardView.new()
 		view.mode = CardView.Mode.HAND
 		view.pressed.connect(_on_card_pressed)
 		add_child(view)
+		view.mouse_entered.connect(_on_card_entered.bind(view))
+		view.mouse_exited.connect(_on_card_exited.bind(view))
+		view.gui_input.connect(_on_card_input.bind(view))
 		view.show_card(cards[i], true)
 		view.size = _card_size
+		view.pivot_offset = _card_size * 0.5
 		# 裏返した印は絵の窓の中央へ重ねる。
 		var mark := MulliganPickMark.new()
 		view.add_child(mark)
@@ -207,7 +261,7 @@ func _start_order_intro() -> void:
 	_dim.modulate.a = 0.0
 	SoundBank.play(SoundBank.Sfx.TURN_ORDER)
 	_tween = create_tween()
-	_tween.tween_property(_dim, "modulate:a", 1.0, DIM_FADE_DURATION)
+	_tween.tween_property(_dim, "modulate:a", 1.0, CardMatchLayout.OVERLAY_DIM_FADE)
 	_tween.parallel().tween_property(_turn_order, "modulate:a", 1.0, ORDER_INTRO_FADE)
 	_tween.tween_interval(ORDER_INTRO_HOLD)
 	(
@@ -247,7 +301,7 @@ func _start_entrance(with_dim := true) -> void:
 	_tween.set_parallel(true)
 	if with_dim:
 		_dim.modulate.a = 0.0
-		_tween.tween_property(_dim, "modulate:a", 1.0, DIM_FADE_DURATION)
+		_tween.tween_property(_dim, "modulate:a", 1.0, CardMatchLayout.OVERLAY_DIM_FADE)
 		_turn_order.modulate.a = 0.0
 		_tween.tween_property(_turn_order, "modulate:a", 1.0, DIM_FADE_DURATION)
 	_button.modulate.a = 0.0
@@ -273,21 +327,155 @@ func _start_entrance(with_dim := true) -> void:
 		_tween.tween_property(view, "modulate:a", 1.0, DEAL_DURATION).set_delay(i * DEAL_STAGGER)
 
 
-func close() -> void:
-	if _tween != null and _tween.is_valid():
-		_tween.kill()
-	_intro_playing = false
+## 見えているときだけ畳む。`immediate` は演出なしで即座に閉じる(対局のやり直し・撮影の後始末)。
+func close(immediate := false) -> void:
+	if not visible:
+		return
+	if immediate:
+		_stop_tweens()
+		_finish_close()
+		return
+	if _closing:
+		return
+	_start_close()
+
+
+## 開いているか。閉じる演出の間は盤面を操作できるため、開いているとは数えない。
+func is_open() -> bool:
+	return visible and not _closing
+
+
+func _start_close() -> void:
+	_stop_tweens()
+	_closing = true
+	_hovered = -1
+	_pressed = -1
+	_saved_filters.clear()
+	for child in get_children():
+		var control := child as Control
+		if control != null:
+			_saved_filters[control] = control.mouse_filter
+			control.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_close_tween = create_tween()
+	_close_tween.set_parallel(true)
+	for i in _views.size():
+		var view: CardView = _views[i]
+		var delay := i * CLOSE_CARD_STAGGER
+		(
+			_close_tween
+			. tween_property(
+				view, "position:y", view.position.y + CLOSE_CARD_DROP, CLOSE_CARD_DURATION
+			)
+			. set_trans(Tween.TRANS_CUBIC)
+			. set_ease(Tween.EASE_IN)
+			. set_delay(delay)
+		)
+		(
+			_close_tween
+			. tween_property(view, "modulate:a", 0.0, CLOSE_CARD_DURATION)
+			. set_trans(Tween.TRANS_CUBIC)
+			. set_ease(Tween.EASE_IN)
+			. set_delay(delay)
+		)
+	for node in [_turn_order, _title, _hint, _button]:
+		_close_tween.tween_property(node, "modulate:a", 0.0, CLOSE_TEXT_FADE)
+	for node in [_dim, _stage]:
+		_close_tween.tween_property(node, "modulate:a", 0.0, CardMatchLayout.OVERLAY_DIM_FADE)
+	_close_tween.chain().tween_callback(_finish_close)
+
+
+## 閉じる演出で動かしたものを初期値へ戻し、非表示にする。
+func _finish_close() -> void:
+	_closing = false
 	visible = false
+	mouse_filter = Control.MOUSE_FILTER_STOP
+	for control in _saved_filters:
+		if is_instance_valid(control):
+			control.mouse_filter = _saved_filters[control]
+	_saved_filters.clear()
+	for node in [_dim, _stage, _turn_order, _title, _hint, _button]:
+		node.modulate.a = 1.0
+	_button.scale = Vector2.ONE
+	for view in _views:
+		view.modulate.a = 1.0
+		view.self_modulate = Color.WHITE
+		view.scale = Vector2.ONE
+	_hovered = -1
+	_pressed = -1
+	_place_cards()
+
+
+func _stop_tweens() -> void:
+	for tween in [_tween, _swap_tween, _wait_tween, _lock_tween, _button_tween, _close_tween]:
+		_kill(tween)
+	for tween in _pose_tweens.values():
+		_kill(tween)
+	_pose_tweens.clear()
+	_intro_playing = false
+
+
+static func _kill(tween: Tween) -> void:
+	if tween != null and tween.is_valid():
+		tween.kill()
+
+
+## 札が乗せた・押した・選んだ・外した、に返事をする状態か。確定後(相手待ち)と誘導対局では何も反応させない。
+func _reactive() -> bool:
+	return not (_waiting or picking_disabled or _closing)
+
+
+## 配りの途中は札の位置を配りの動きが決めているため、姿勢を動かさない。
+func _posable() -> bool:
+	var dealing := _tween != null and _tween.is_valid() and _tween.is_running()
+	return _reactive() and not _intro_playing and not dealing
+
+
+func _on_card_entered(view: CardView) -> void:
+	var index := _views.find(view)
+	if index < 0 or not _posable():
+		return
+	_hovered = index
+	# 選んだ札は `enabled=false` で、札自身はホバー音を鳴らさない。未選択の札と同じ音をここで出す。
+	if _picked[index]:
+		SoundBank.play(SoundBank.Sfx.HOVER)
+	_pose(index, PoseKind.HOVER)
+
+
+func _on_card_exited(view: CardView) -> void:
+	var index := _views.find(view)
+	if index < 0 or (_hovered != index and _pressed != index):
+		return
+	_hovered = -1
+	_pressed = -1
+	_pose(index, PoseKind.SETTLE)
+
+
+func _on_card_input(event: InputEvent, view: CardView) -> void:
+	var button := event as InputEventMouseButton
+	if button == null or button.button_index != MOUSE_BUTTON_LEFT:
+		return
+	var index := _views.find(view)
+	if index < 0:
+		return
+	if button.pressed:
+		if _posable():
+			_pressed = index
+			_pose(index, PoseKind.PRESS)
+	elif _pressed == index:
+		_pressed = -1
+		_pose(index, PoseKind.HOVER if _hovered == index else PoseKind.SETTLE)
 
 
 func _on_card_pressed(view: CardView) -> void:
-	if _waiting or picking_disabled or _intro_playing:
+	if _waiting or picking_disabled or _intro_playing or _closing:
 		return
 	var index := _views.find(view)
 	if index < 0:
 		return
 	_picked[index] = not _picked[index]
 	_refresh()
+	_pose(index, PoseKind.PICK if _picked[index] else PoseKind.SETTLE)
 
 
 ## 確定ボタンの位置。誘導対局が押す場所として囲む(GameDesign.md 18章)。
@@ -296,7 +484,7 @@ func confirm_rect() -> Rect2:
 
 
 func _on_confirm_pressed() -> void:
-	if _waiting or _intro_playing:
+	if _waiting or _intro_playing or _closing:
 		return
 	var indices: Array = []
 	for i in _picked.size():
@@ -305,12 +493,70 @@ func _on_confirm_pressed() -> void:
 	# 相手の確定を待つ間も画面は出したままにする(何を選んだかを見返せるようにするため)。
 	_waiting = true
 	_refresh()
+	_lock_in()
 	confirmed.emit(indices)
 
 
-## `animate` が false のときは沈み具合を即座に合わせる(開いた直後は配る演出が位置を動かすため)。
+## 確定した瞬間、札を通常の姿勢へ戻し、選んだ/選ばないにかかわらず全体を少し落として「もう触れない」ことを伝える。
+## 印は札の子だが `self_modulate` は子へ及ばないため、そのまま残る。
+func _lock_in() -> void:
+	_hovered = -1
+	_pressed = -1
+	_kill(_lock_tween)
+	_lock_tween = create_tween()
+	_lock_tween.set_parallel(true)
+	for i in _views.size():
+		_pose(i, PoseKind.SETTLE)
+		_lock_tween.tween_property(_views[i], "self_modulate", LOCK_TINT, LOCK_DURATION)
+
+
+## 札の姿勢を1つに決める: 沈み(選んだ)・ホバーの持ち上げ・押下の縮み。位置と拡大を1本の tween で動かす。
+func _pose(index: int, kind: PoseKind) -> void:
+	var view: CardView = _views[index]
+	var y := _row_y(index)
+	if _hovered == index:
+		y -= PORTRAIT_HOVER_LIFT if _portrait else HOVER_LIFT
+	var factor := 1.0
+	if _pressed == index:
+		factor = PRESS_SCALE
+	elif _hovered == index:
+		factor = HOVER_SCALE
+	var duration := SETTLE_DURATION
+	var trans := Tween.TRANS_BACK
+	match kind:
+		PoseKind.HOVER:
+			duration = HOVER_DURATION
+			trans = Tween.TRANS_CUBIC
+		PoseKind.PRESS:
+			duration = PRESS_DURATION
+			trans = Tween.TRANS_SINE
+		PoseKind.PICK:
+			duration = PICK_DURATION
+			trans = Tween.TRANS_SINE
+	_kill(_pose_tweens.get(view))
+	var tween := create_tween()
+	tween.set_parallel(true)
+	tween.set_trans(trans).set_ease(Tween.EASE_OUT)
+	tween.tween_property(view, "position:y", y, duration)
+	tween.tween_property(view, "scale", Vector2.ONE * factor, duration)
+	_pose_tweens[view] = tween
+
+
+## 向きを変えたときは、動いている姿勢を止めて素の大きさへ戻す。
+func _reset_poses() -> void:
+	for tween in _pose_tweens.values():
+		_kill(tween)
+	_pose_tweens.clear()
+	_hovered = -1
+	_pressed = -1
+	for view in _views:
+		view.scale = Vector2.ONE
+
+
+## `animate` が false のときは見出しの差し替えを即座に行う(開いた直後は配る演出が動かしているため)。
 func _refresh(animate: bool = true) -> void:
 	var count := 0
+	var reactive := _reactive()
 	for i in _views.size():
 		var view: CardView = _views[i]
 		var picked: bool = _picked[i]
@@ -318,40 +564,86 @@ func _refresh(animate: bool = true) -> void:
 			count += 1
 		view.enabled = not picked
 		view.badge = "戻す" if picked else ""
+		# 選んだ札も押せる(外せる)ので指のカーソルを出す。操作できない間は札へのホバーそのものを止める。
+		view.mouse_filter = Control.MOUSE_FILTER_STOP if reactive else Control.MOUSE_FILTER_IGNORE
+		view.mouse_default_cursor_shape = (
+			Control.CURSOR_POINTING_HAND if reactive else Control.CURSOR_ARROW
+		)
 		_marks[i].set_shown(picked)
-		if animate:
-			_sink(view, _row_y(i))
 		view.queue_redraw()
 	if _waiting:
-		_title.text = "相手を待っています"
-		_hint.text = "両者が確定すると対局が始まります"
+		_set_texts("相手を待っています", "両者が確定すると対局が始まります", animate)
 		_button.disabled = true
-		_button.text = "確定しました"
+		_set_button_text("確定しました")
 		return
-	_title.text = "引き直すカードを選んでください"
-	_hint.text = ("すなえるの指示に従って、そのまま開始してください" if picking_disabled else "選んだカードは山札へ戻し、同じ枚数を引き直します")
+	var hint := "すなえるの指示に従って、そのまま開始してください" if picking_disabled else "選んだカードは山札へ戻し、同じ枚数を引き直します"
+	_set_texts("引き直すカードを選んでください", hint, animate)
 	_button.disabled = false
-	_button.text = "このままで開始" if count == 0 else "%d枚を引き直す" % count
+	_set_button_text("このままで開始" if count == 0 else "%d枚を引き直す" % count)
 
 
-## 選んだ札を沈める / 戻す。押した瞬間に位置が飛ぶと、どの札が動いたのか目で追えない。
-func _sink(view: CardView, target_y: float) -> void:
-	var running: Tween = _pick_tweens.get(view)
-	if running != null and running.is_valid():
-		running.kill()
-	var tween := create_tween()
-	(
-		tween
-		. tween_property(view, "position:y", target_y, PICK_DURATION)
-		. set_trans(Tween.TRANS_SINE)
-		. set_ease(Tween.EASE_OUT)
+func _set_texts(title: String, hint: String, animate: bool) -> void:
+	if _title.text == title and _hint.text == hint:
+		return
+	_kill(_swap_tween)
+	_kill(_wait_tween)
+	if not animate:
+		_title.text = title
+		_hint.text = hint
+		return
+	_swap_tween = create_tween()
+	_swap_tween.tween_property(_title, "modulate:a", 0.0, TEXT_SWAP_OUT)
+	_swap_tween.parallel().tween_property(_hint, "modulate:a", 0.0, TEXT_SWAP_OUT)
+	_swap_tween.tween_callback(
+		func() -> void:
+			_title.text = title
+			_hint.text = hint
 	)
-	_pick_tweens[view] = tween
+	_swap_tween.tween_property(_title, "modulate:a", 1.0, TEXT_SWAP_IN)
+	_swap_tween.parallel().tween_property(_hint, "modulate:a", 1.0, TEXT_SWAP_IN)
+	_swap_tween.tween_callback(_start_wait_pulse)
+
+
+## 相手を待つ間、見出しだけを往復させる。他は動かさない。
+func _start_wait_pulse() -> void:
+	if not _waiting or _closing:
+		return
+	_kill(_wait_tween)
+	_wait_tween = create_tween().set_loops()
+	var half := WAIT_PULSE_PERIOD * 0.5
+	_wait_tween.tween_property(_title, "modulate:a", WAIT_PULSE_LOW, half).set_trans(
+		Tween.TRANS_SINE
+	)
+	_wait_tween.tween_property(_title, "modulate:a", 1.0, half).set_trans(Tween.TRANS_SINE)
+
+
+## 文言が実際に変わったときだけ脈打たせる。開いた直後の初回の設定では鳴らさない。
+func _set_button_text(text: String) -> void:
+	var changed := _button.text != text
+	_button.text = text
+	if changed and _button_text_set:
+		_pulse_button()
+	_button_text_set = true
+
+
+func _pulse_button() -> void:
+	_kill(_button_tween)
+	_button.pivot_offset = _button.size * 0.5
+	_button.scale = Vector2.ONE
+	_button_tween = create_tween()
+	(
+		_button_tween
+		. tween_property(_button, "scale", Vector2.ONE * BUTTON_PULSE_SCALE, BUTTON_PULSE_UP)
+		. set_trans(Tween.TRANS_SINE)
+	)
+	_button_tween.tween_property(_button, "scale", Vector2.ONE, BUTTON_PULSE_DOWN).set_trans(
+		Tween.TRANS_SINE
+	)
 
 
 func _build() -> void:
 	_dim = ColorRect.new()
-	_dim.color = Color(0, 0, 0, 0.78)
+	_dim.color = Color(0, 0, 0, CardMatchLayout.OVERLAY_DIM_ALPHA)
 	_dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_dim)
 	_stage = MulliganStageLight.new()

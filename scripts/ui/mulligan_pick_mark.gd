@@ -9,10 +9,18 @@ const RADIUS := 30.0
 const ICON_SIDE := 36.0
 ## 真鍮の面へ彫り込んだように、面より暗い色で乗せる。
 const ICON_COLOR := Color(UiPalette.BRASS_INK, 0.92)
+## 付くとき: 大きめから収まり、不透明になりながら、やり直しの矢印が回って止まる。
 const POP_SCALE := 1.25
 const POP_DURATION := 0.16
+const POP_FADE_DURATION := 0.08
+const POP_START_ROTATION := -PI * 0.5
+## 外すとき: 縮み、薄れ、逆へ少し回って消える。
+const HIDE_SCALE := 0.6
+const HIDE_DURATION := 0.12
+const HIDE_ROTATION := -PI / 3.0
 
 var _tween: Tween
+var _shown := false
 
 
 func _ready() -> void:
@@ -22,23 +30,58 @@ func _ready() -> void:
 	visible = false
 
 
-## 印を出す / 消す。出すときだけ小さく跳ねさせ、押したことへの手応えにする。
+## 印を出す / 消す。途中で反対の操作が来ても、今の値から続ける。
 func set_shown(shown: bool) -> void:
-	if shown == visible:
+	if shown == _shown:
 		return
-	visible = shown
-	if not shown:
-		return
+	_shown = shown
 	if _tween != null and _tween.is_valid():
 		_tween.kill()
-	scale = Vector2.ONE * POP_SCALE
 	_tween = create_tween()
+	_tween.set_parallel(true)
+	if shown:
+		if not visible:
+			visible = true
+			scale = Vector2.ONE * POP_SCALE
+			modulate.a = 0.0
+			rotation = POP_START_ROTATION
+		(
+			_tween
+			. tween_property(self, "scale", Vector2.ONE, POP_DURATION)
+			. set_trans(Tween.TRANS_BACK)
+			. set_ease(Tween.EASE_OUT)
+		)
+		_tween.tween_property(self, "modulate:a", 1.0, POP_FADE_DURATION)
+		(
+			_tween
+			. tween_property(self, "rotation", 0.0, POP_DURATION)
+			. set_trans(Tween.TRANS_CUBIC)
+			. set_ease(Tween.EASE_OUT)
+		)
+		return
 	(
 		_tween
-		. tween_property(self, "scale", Vector2.ONE, POP_DURATION)
-		. set_trans(Tween.TRANS_BACK)
-		. set_ease(Tween.EASE_OUT)
+		. tween_property(self, "scale", Vector2.ONE * HIDE_SCALE, HIDE_DURATION)
+		. set_trans(Tween.TRANS_CUBIC)
+		. set_ease(Tween.EASE_IN)
 	)
+	(
+		_tween
+		. tween_property(self, "modulate:a", 0.0, HIDE_DURATION)
+		. set_trans(Tween.TRANS_CUBIC)
+		. set_ease(Tween.EASE_IN)
+	)
+	(
+		_tween
+		. tween_property(self, "rotation", HIDE_ROTATION, HIDE_DURATION)
+		. set_trans(Tween.TRANS_CUBIC)
+		. set_ease(Tween.EASE_IN)
+	)
+	_tween.chain().tween_callback(_hide_done)
+
+
+func _hide_done() -> void:
+	visible = false
 
 
 func _draw() -> void:

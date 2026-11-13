@@ -13,19 +13,44 @@ signal matchmaking_pressed
 signal home_pressed
 signal log_pressed
 
-## ボタン3つ(「CPUともう1局」が最長)を枠の内側へ収める幅にする。
-const PANEL_SIZE := Vector2(640, 370)
+## 内訳の行の役割。文字の大きさ(横 / 縦)・色・行の送り・縮めてよい下限を役割ごとに持つ。
+enum Role { HP, MOVES, REASON, GOLD, WELCOME }
+
+## ボタン3つ(「CPUともう1局」が最長)を枠の内側へ収める幅にする。高さは内訳の行数で決まる(`_arrange_lines()`)。
+const PANEL_WIDTH := 640.0
 ## 内訳の行の数(HP・手数・決め手・砂金・はじめの7日)。
 const LINE_COUNT := 5
+## 行の組み方。最後の行の下端から、ボタン列とその下の余白までがパネルの高さ。
+const LINE_START_Y := 112.0
+const REWARD_GAP := 10.0
+const LINES_TO_BUTTONS := 26.0
+const BUTTON_ROW_HEIGHT := 64.0
+const BUTTON_ROW_BOTTOM := 22.0
+const MIN_PANEL_HEIGHT := 300.0
+## 長い行が収まらないとき、左右にこれだけ余白を残して文字を1pxずつ下げる。
+const LINE_SIDE_MARGIN := 40.0
 const BUTTON_SIZE := Vector2(176, 56)
 const BUTTON_GAP := 16
 ## 縦はモーダルと同じく論理幅 `PortraitModal.WIDTH` で組み、中身ごと拡大する(GameDesign.md 9章「縦画面」)。
 ## 内訳の行は拡大後に本文24pxへ届く大きさにする。
-const PORTRAIT_PANEL_SIZE := Vector2(PortraitModal.WIDTH, 370)
+const PORTRAIT_PANEL_WIDTH := PortraitModal.WIDTH
 const PORTRAIT_BUTTON_SIZE := Vector2(148, 56)
 const PORTRAIT_BUTTON_GAP := 8
-const PORTRAIT_LINE_FONT := 18
-const LINE_FONT := 16
+const LINE_FONT := {
+	Role.HP: Vector2i(20, 22),
+	Role.MOVES: Vector2i(15, 16),
+	Role.REASON: Vector2i(15, 16),
+	Role.GOLD: Vector2i(18, 20),
+	Role.WELCOME: Vector2i(14, 15),
+}
+const LINE_PITCH := {
+	Role.HP: 30.0,
+	Role.MOVES: 26.0,
+	Role.REASON: 26.0,
+	Role.GOLD: 30.0,
+	Role.WELCOME: 24.0,
+}
+const LINE_MIN_FONT := {Role.GOLD: 15, Role.WELCOME: 13}
 const ENTRANCE_START_SCALE := 0.82
 const ENTRANCE_DURATION := 0.42
 ## 行が現れる間隔。ここで区切ることで「勝敗 → 内訳 → 決め手」の順に読める。
@@ -42,8 +67,13 @@ var _rematch: Button
 var _buttons: Array[Button] = []
 var _button_row: HBoxContainer
 var _tween: Tween
-var _panel_size := PANEL_SIZE
+var _panel_size := Vector2(PANEL_WIDTH, MIN_PANEL_HEIGHT)
 var _panel_scale := 1.0
+var _portrait := false
+var _screen_size := Vector2(ScreenOrientation.LANDSCAPE_SIZE)
+## いま出している行の役割・本文・縦位置(`_arrange_lines()` が決める)。
+var _roles: Array[int] = []
+var _line_y: Array[float] = []
 
 var _won := false
 var _neutral := false
@@ -67,28 +97,18 @@ func apply_layout(layout: CardMatchLayout) -> void:
 	size = layout.screen_size
 	_sand.size = layout.screen_size
 	_dim.size = layout.screen_size
-	_panel_size = PORTRAIT_PANEL_SIZE if layout.portrait else PANEL_SIZE
+	_screen_size = layout.screen_size
+	_portrait = layout.portrait
 	_panel_scale = PortraitModal.SCALE if layout.portrait else 1.0
-	_panel.custom_minimum_size = _panel_size
-	_panel.size = _panel_size
-	_panel.pivot_offset = _panel_size * 0.5
-	_panel.position = (layout.screen_size - _panel_size) * 0.5
 	if not (_tween != null and _tween.is_running()):
 		_panel.scale = Vector2.ONE * _panel_scale
-	_title.size.x = _panel_size.x
-	var line_font := PORTRAIT_LINE_FONT if layout.portrait else LINE_FONT
-	for label in _lines:
-		label.size.x = _panel_size.x
-		label.add_theme_font_size_override("font_size", line_font)
 	var button_size := PORTRAIT_BUTTON_SIZE if layout.portrait else BUTTON_SIZE
 	for button in _buttons:
 		button.custom_minimum_size = button_size
 	_button_row.add_theme_constant_override(
 		"separation", PORTRAIT_BUTTON_GAP if layout.portrait else BUTTON_GAP
 	)
-	_button_row.position = Vector2(0, _panel_size.y - 84.0)
-	_button_row.size = Vector2(_panel_size.x, 64.0)
-	_panel.queue_redraw()
+	_arrange_lines()
 
 
 ## 勝敗を表示する。my_side が負なら「先手/後手の勝利」と第三者視点で書く。
@@ -125,12 +145,20 @@ func show_for(
 	var own_hp: int = state.hp[my_side if my_side >= 0 else MatchState.Side.A]
 	var foe_side: int = MatchState.other_side(my_side if my_side >= 0 else MatchState.Side.A)
 	var texts: PackedStringArray = []
+	_roles.clear()
 	texts.append("自分 %d / 相手 %d" % [own_hp, state.hp[foe_side]])
+	_roles.append(Role.HP)
 	texts.append("%d手で決着" % moves)
+	_roles.append(Role.MOVES)
 	if winner >= 0:
 		texts.append("決め手: %s" % CardMatchLog.reason_text(state, winner))
+		_roles.append(Role.REASON)
 	if not reward.is_empty():
-		texts.append_array(reward.split("\n"))
+		# 砂金の行のあとに、CPU戦だけ「はじめの7日」の行が続く。
+		var reward_lines := reward.split("\n")
+		for i in reward_lines.size():
+			texts.append(reward_lines[i])
+			_roles.append(Role.GOLD if i == 0 else Role.WELCOME)
 	for i in _lines.size():
 		var label: Label = _lines[i]
 		if i < texts.size():
@@ -139,6 +167,7 @@ func show_for(
 			label.modulate.a = 0.0
 		else:
 			label.visible = false
+	_arrange_lines()
 
 	_sand.start(_won or _neutral)
 	_flash = 1.0 if _won else 0.0
@@ -162,7 +191,7 @@ func _start_entrance() -> void:
 	_panel.scale = Vector2.ONE * (ENTRANCE_START_SCALE * _panel_scale)
 	_tween = create_tween()
 	_tween.set_parallel(true)
-	_tween.tween_property(_dim, "modulate:a", 1.0, ENTRANCE_DURATION * 0.7)
+	_tween.tween_property(_dim, "modulate:a", 1.0, CardMatchLayout.OVERLAY_DIM_FADE)
 	_tween.tween_property(_panel, "modulate:a", 1.0, ENTRANCE_DURATION).set_trans(Tween.TRANS_SINE)
 	(
 		_tween
@@ -188,7 +217,7 @@ func _process(delta: float) -> void:
 			var start: float = ENTRANCE_DURATION * 0.55 + float(i) * LINE_STAGGER
 			var t: float = clampf((_reveal_elapsed - start) / LINE_FADE, 0.0, 1.0)
 			label.modulate.a = t
-			label.position.y = _line_base_y(i) + (1.0 - t) * 10.0
+			label.position.y = _line_y[i] + (1.0 - t) * 10.0
 			last_needed = maxf(last_needed, start + LINE_FADE)
 		if _reveal_elapsed < last_needed:
 			active = true
@@ -202,8 +231,62 @@ func _process(delta: float) -> void:
 		set_process(false)
 
 
-func _line_base_y(index: int) -> float:
-	return 116.0 + float(index) * 30.0
+## 行の大きさ・色・縦位置と、それに合わせたパネルの高さ・位置を決める。
+## 高さは最後の行の下端から決まるため、行が少ない(投了など)ときは短いパネルになる。
+## 画面の向きが変わったときも同じ式を通す。
+func _arrange_lines() -> void:
+	var font_index := 1 if _portrait else 0
+	var width := PORTRAIT_PANEL_WIDTH if _portrait else PANEL_WIDTH
+	var fit_width := width - LINE_SIDE_MARGIN * 2.0
+	var y := LINE_START_Y
+	_line_y.clear()
+	for i in _lines.size():
+		var label: Label = _lines[i]
+		if not label.visible or i >= _roles.size():
+			_line_y.append(y)
+			continue
+		var role: int = _roles[i]
+		if role == Role.GOLD:
+			y += REWARD_GAP
+		var pitch: float = LINE_PITCH[role]
+		var font_size: int = LINE_FONT[role][font_index]
+		var min_font: int = LINE_MIN_FONT.get(role, font_size)
+		var font := label.get_theme_font("font", "Label")
+		while (
+			font_size > min_font
+			and (
+				font.get_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+				> fit_width
+			)
+		):
+			font_size -= 1
+		label.add_theme_font_size_override("font_size", font_size)
+		label.add_theme_color_override("font_color", _line_color(role))
+		label.size = Vector2(width, pitch)
+		_line_y.append(y)
+		label.position = Vector2(0, y)
+		y += pitch
+	_panel_size = Vector2(
+		width, maxf(y + LINES_TO_BUTTONS + BUTTON_ROW_HEIGHT + BUTTON_ROW_BOTTOM, MIN_PANEL_HEIGHT)
+	)
+	_panel.custom_minimum_size = _panel_size
+	_panel.size = _panel_size
+	_panel.pivot_offset = _panel_size * 0.5
+	_panel.position = (_screen_size - _panel_size) * 0.5
+	_title.size.x = width
+	_button_row.position = Vector2(0, _panel_size.y - BUTTON_ROW_HEIGHT - BUTTON_ROW_BOTTOM)
+	_button_row.size = Vector2(width, BUTTON_ROW_HEIGHT)
+	_panel.queue_redraw()
+
+
+## 勝敗と中身の重みで色を分ける。砂金は勝ちタイトルと同じ金(負けの局でも金)。
+static func _line_color(role: int) -> Color:
+	match role:
+		Role.HP:
+			return UiPalette.IVORY
+		Role.GOLD:
+			return UiPalette.SAND_HI
+	return UiPalette.MUTED
 
 
 func _build() -> void:
@@ -211,32 +294,30 @@ func _build() -> void:
 	_sand = ResultSandFall.new()
 	add_child(_sand)
 	_dim = ColorRect.new()
-	_dim.color = Color(0, 0, 0, 0.72)
+	_dim.color = Color(0, 0, 0, CardMatchLayout.OVERLAY_DIM_ALPHA)
 	_dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_dim)
 
 	_panel = Control.new()
-	_panel.custom_minimum_size = PANEL_SIZE
-	_panel.size = PANEL_SIZE
-	_panel.pivot_offset = PANEL_SIZE * 0.5
+	_panel.custom_minimum_size = _panel_size
+	_panel.size = _panel_size
+	_panel.pivot_offset = _panel_size * 0.5
 	_panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	_panel.draw.connect(_draw_panel)
 	add_child(_panel)
 
 	_title = Label.new()
 	_title.position = Vector2(0, 40)
-	_title.size = Vector2(PANEL_SIZE.x, 52)
+	_title.size = Vector2(PANEL_WIDTH, 52)
 	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_title.add_theme_font_size_override("font_size", UiPalette.T_TITLE)
 	_panel.add_child(_title)
 
 	for i in LINE_COUNT:
 		var label := Label.new()
-		label.position = Vector2(0, _line_base_y(i))
-		label.size = Vector2(PANEL_SIZE.x, 26)
-		label.add_theme_font_size_override("font_size", LINE_FONT)
+		label.size = Vector2(PANEL_WIDTH, LINE_PITCH[Role.HP])
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		label.add_theme_color_override("font_color", UiPalette.IVORY)
+		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		label.visible = false
 		_panel.add_child(label)
 		_lines.append(label)
@@ -244,8 +325,7 @@ func _build() -> void:
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", BUTTON_GAP)
-	row.position = Vector2(0, PANEL_SIZE.y - 84.0)
-	row.size = Vector2(PANEL_SIZE.x, 64.0)
+	row.size = Vector2(PANEL_WIDTH, BUTTON_ROW_HEIGHT)
 	_panel.add_child(row)
 	_button_row = row
 	# CPU戦では連戦、ランクマッチでは再度マッチングへ進む導線。
