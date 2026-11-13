@@ -298,6 +298,12 @@ HTTPRequest をぶら下げると送信の途中で巻き添えに消える。�
 中央寄せの結果)を、`EMBLEM_SIZE` 等の公開定数から再計算して合わせる**ことで、
 「待機中の文言の右へ丸い印を添える」(GameDesign.md 11章)という配置をここでも守る。
 
+**待機中の1行(`EmptyState` のヒント)は経過時間と待機人数**で、経過時間は `RankedWaitBanner` と同じ待機開始の時刻から、
+人数は `RankedMatchmakingQueue.count_waiting()`(自分を除く)を待機画面が見えている間だけ一定間隔で読む。
+砂が落ちる動きは `EmptyState` が巡回ドットと同じ条件で持ち、印が返る動きは待機画面だけが `EmptyState` へ指示する
+(返すのはこの画面だけの例外のため、`EmptyState` の既定にしない)。CPUボタンはヒントの直下、キャンセルはその下に置く。
+成立したら見出しを替えて1秒(帯の `FOUND_NOTICE_SECONDS` と同じ値)待ってから `matched` を発行する。
+
 マッチが成立したら `matched(match_id, my_side, opponent_uid)` を発行し、`Main` は
 これを `_on_ranked_match_found()` へそのままつなぐ(`CardRoomScreen.matched` が
 `_on_room_match_found()` へつながるのと同じ形)。
