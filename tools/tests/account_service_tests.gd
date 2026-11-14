@@ -38,6 +38,7 @@ func run(assert_true: Callable) -> void:
 
 
 func _reset_state() -> void:
+	AccountStore.invalidate()
 	if FileAccess.file_exists(AccountStore.SAVE_PATH):
 		DirAccess.remove_absolute(AccountStore.SAVE_PATH)
 	AccountService.reset()
@@ -132,6 +133,7 @@ func _backup() -> Variant:
 
 
 func _restore(backup: Variant) -> void:
+	AccountStore.invalidate()
 	if backup == null:
 		if FileAccess.file_exists(AccountStore.SAVE_PATH):
 			DirAccess.remove_absolute(AccountStore.SAVE_PATH)

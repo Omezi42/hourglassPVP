@@ -29,6 +29,7 @@
 | クラス | 責務 |
 |---|---|
 | `WelcomeDays`(`scripts/net/welcome_days.gd`, static) | 日ごとの受け取るもの(`reward_text(day)` / `gold_for(day)`。2日目のセットは `offers_set(day)` / `set_choices()`)・今日受け取れるか(`can_claim_today()`)・受取(`claim()`)。受け取った日数と最後に受け取った日(日本時間)は `players/{uid}` の `welcome_days` / `welcome_last_date` に持つ |
+| `WelcomeDayPips`(`scripts/ui/welcome_day_pips.gd`) | 札の中の7つの日の粒。止まっている粒と報酬の字は `claimed` が変わったときだけ描き(報酬の文字列もそこで作る)、毎コマ脈打つ「今日」の粒だけを子の `_PulseLayer` が描く。粒ぜんぶを毎コマ描き直すと約6000個の primitive を作り直し、ホームが約8ms重くなるため |
 | `WelcomeDaysPanel`(`scripts/ui/welcome_days_panel.gd`) | ホームに重ねる受取の札。`Main` がホームを出したときに `WelcomeDays.can_claim_today()` を見て開く。セットの日は `ShopItemTile` を並べて選ばせ、`ShopSetPreview` で中身を見せる |
 
 **受取は `players/{uid}` への1回の `commit()`(`updateTime` の前提条件付き)で、日数・日付・砂金(セットの日は `owned_card_sets`)をまとめて書く。**

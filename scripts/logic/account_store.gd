@@ -9,6 +9,11 @@ extends RefCounted
 
 const SAVE_PATH := "user://account.json"
 
+## ファイルの中身を1度だけ読んで持つ。所有の判定は描画・一覧の組み立てから何百回も呼ばれるため、
+## 呼ぶたびにファイルを開いてJSONを解析しない。書くのは `_store()` だけで、そこで更新する。
+static var _cache: Dictionary = {}
+static var _cache_ready := false
+
 
 ## 起動時の自動ログインに使う情報を保存する。refresh_tokenが空なら保存自体を行わず、
 ## 既存の保存も消す(ログアウトと同じ扱い)。
@@ -167,7 +172,21 @@ static func load_local_customization() -> Dictionary:
 	}
 
 
+## ファイルを外から書き換えた(テストの控え・戻しなど)あとに呼び、次の読み込みでファイルを読み直させる。
+static func invalidate() -> void:
+	_cache = {}
+	_cache_ready = false
+
+
+## 呼び出し側が配列を書き換えても持っている中身へ響かないよう、複製を返す。
 static func _load() -> Dictionary:
+	if not _cache_ready:
+		_cache = _read_file()
+		_cache_ready = true
+	return _cache.duplicate(true)
+
+
+static func _read_file() -> Dictionary:
 	if not FileAccess.file_exists(SAVE_PATH):
 		return {}
 	var file := FileAccess.open(SAVE_PATH, FileAccess.READ)
@@ -184,3 +203,5 @@ static func _store(data: Dictionary) -> void:
 	if file == null:
 		return
 	file.store_string(JSON.stringify(data))
+	_cache = data.duplicate(true)
+	_cache_ready = true
