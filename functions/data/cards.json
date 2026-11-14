@@ -1374,6 +1374,17 @@
 			"is_spell": false,
 			"pool_index": 125,
 			"total_sand": 5
+		},
+		{
+			"cannot_attack": false,
+			"cost": 6,
+			"describe": "設置:自分の墓地の砂術1枚につき、相手プレイヤーに1ダメージ",
+			"display_name": "グリモア",
+			"id": "grimoire",
+			"initial_attack": 0,
+			"is_spell": false,
+			"pool_index": 126,
+			"total_sand": 5
 		}
 	]
 }
