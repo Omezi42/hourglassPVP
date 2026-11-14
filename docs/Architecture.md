@@ -38,7 +38,7 @@
 | 10.16節 | ランクマッチ(GameDesign.md 28章) | [`arch/10_16_ranked.md`](arch/10_16_ranked.md) |
 | 10.17節 | (欠番) | — |
 | 10.18節 | 公式大会「箱庭杯」(GameDesign.md 30章) | [`arch/10_18_tournament.md`](arch/10_18_tournament.md) |
-| 10.19節 | カードスキン(GameDesign.md 31章) | [`arch/10_19_card_skins.md`](arch/10_19_card_skins.md) |
+| 10.19節 | 砂時計の絵のコード描画(GameDesign.md 9章) | [`arch/10_19_hourglass_shader_art.md`](arch/10_19_hourglass_shader_art.md) |
 | 10.20節 | 宣伝用の撮影ツール(ショート動画・とどめ問題の問題集) | [`arch/10_20_promo_capture.md`](arch/10_20_promo_capture.md) |
 | 10.21節 | 攻略サイト(GameDesign.md 32章) | [`arch/10_21_wiki.md`](arch/10_21_wiki.md) |
 | 10.22節 | お知らせとプレゼント(GameDesign.md 33章) | [`arch/10_22_announcements_gifts.md`](arch/10_22_announcements_gifts.md) |

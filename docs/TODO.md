@@ -20,10 +20,18 @@
 
 ## 0. 進めている作業
 
-### カードスキンのコード描画(GameDesign.md 31章 / Architecture.md 10.19節)
+### 全砂時計のコード描画(GameDesign.md 9章・21章 / Architecture.md 10.19節)
 
-- [ ] 残り6種(天翼・戴冠・裁きの槌・宝玉・鉄の大盾・石積み)をコード描画で作り直す。1種ずつ、いまの絵と並べたスクリーンショットで判定をもらう
-- [ ] 9種を置き換え終えたら、画像(`assets/hourglasses/skins/`)・`tools/compose_skin_art.py`・画像を読む経路を消し、#お知らせでスキンの見た目が新しくなったことを伝える
+- [ ] **判断待ち**: 動く絵をどの環境で出すか(初回コンパイルで止まる。デスクトップ約0.7秒/本、Web版のChromeで数秒/本)。
+  止めた絵だけにする / デスクトップ版だけ動かす / シェーダーを軽くしてから決める
+- [ ] 仕組みの付け替え(Sonnet): スキンの9本を `resources/shaders/hourglasses/{カードid}.gdshader` へ移し(`skin_*` の部品と関数を `frame_parts` / `art_main` / `art_back` / `art_frame` へ改名)、
+  砂の色と質感を uniform にして色違いの表から渡す。`tools/bake_hourglass_art.gd` で `overrides/` へ焼き、焼き忘れを `check.sh` で止める。WebPの画質を pck の増え方で決めて4.1節へ書く
+- [ ] スキンの撤去(Sonnet): `CardSkins`・`SkinLibrary`・`SkinRenderer`(動く絵は `HourglassLive` へ移す)・視点(`skin_viewer`)・相手の設定の受け渡し・図鑑の切り替え・ショップの品・
+  `AccountService` / `AccountStore` のスキンの読み書き・`assets/hourglasses/skins/`・`tools/compose_skin_art.py` を消し、`CardData.icon_*` は `HourglassArt.texture()` を直に返す
+- [ ] 返金(Sonnet): `AccountService.refund_retired_skins()`(10.19節)。#お知らせでスキンの廃止と返金を案内する
+- [ ] `add-hourglass` Skill と CLAUDE.md の「新カードのイラストは既存の絵の色違い」を「シェーダーを1本書いて焼く」へ改める
+- [ ] 残り90種を5種ずつ描く(Fable が描き、Sonnet がいまの絵と並べたスクショを束ねる)。1束ずつ判定をもらう。よく使われるカード・看板のカードから
+- [ ] 全種を描き終えたら、色違いの仕組み(色変換のシェーダー・原本・`tools/tint_hourglass_icons.gd` ほか)を消し、紋章が要るかを見直す
 
 ### 見た目の弱点の磨き込み(Fable)
 

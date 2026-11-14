@@ -9,7 +9,7 @@ Web配信ではpckのサイズがそのままロード時間に直結するた�
 | `assets/hourglasses/master/state_*.png` | **実行時に読む唯一の砂時計の絵**(サンドの3状態)。幅400px基準 | インポートする |
 | `assets/hourglasses/master/region_*.png` | 原本の領域マスク(R=砂 / G=枠 / B=ガラスの内側)。質感と枠の素材に使う | インポートする(ロスレス) |
 | `assets/hourglasses/processed/{id}/` | 色違いを焼いた参考用の絵。**実行時には読まない** | `.gdignore` で無視 |
-| `assets/hourglasses/overrides/{id}/state_*.png` | そのカードだけの固有の絵(あれば色変換より優先) | インポートする |
+| `assets/hourglasses/overrides/{id}/state_*.png` | そのカードだけの固有の絵(あれば色変換より優先)。コード描画のシェーダーからビルド前に焼いたもの(10.19節) | インポートする |
 | `assets/hourglasses/sources/{id}/` | 生成元(`source.png`)と縮小前の原寸`state_*.png` | `.gdignore` で無視 |
 | `assets/hourglasses/processed_backup/` | 正規化前の絵(現行とは内容が異なる) | `.gdignore` で無視 |
 | `assets/hourglasses/incoming/` | 取り込み待ちの生成画像 | `.gdignore` で無視 |
