@@ -871,11 +871,38 @@ def sig_anchor():
     return layer(x, hand_bell(74, 1.0, 1.0), -4, sink + 0.04)
 
 
+def sig_sage():
+    """セージ:帽子が布の柔らかさでふわりと載り、札から抜けた玉が高く「ちん」と昇る。"""
+    settle = 0.4
+    x = landing(1.3)
+    hat = lowpass(rec("cloth4.ogg", 0.04, 0.2, fade_in=0.04, fade_out=0.08), 2500)
+    x = layer(x, hat, -8, LAND_AT + 0.08)
+    x = layer(x, whoosh(3, 1.1), -14, LAND_AT + 0.02)
+    x = layer(x, chime([3000, 3600], 0.05, 0.3), -9, LAND_AT + settle + 0.04)
+    return layer(x, tink(4800, 0.5), -5, LAND_AT + settle + 0.12)
+
+
+def sig_grimoire():
+    """グリモア:厚い紙が続けてめくれ、低い声のうなりが重なっていき、重い打点で落ちる。"""
+    flips, open_at, read, gather, fall = 4, 0.2, 0.5, 0.1, 0.15
+    hit = open_at + read + gather + fall
+    x = np.zeros(n_of(hit + 0.5))
+    for i in range(flips):
+        page = scrape(0.1, 2500, 9000) + 0.6 * lowpass(rec("cloth4.ogg", 0.05, 0.1, fade_out=0.05), 4000)
+        x = layer(x, page, -3 - 1.5 * (i % 2), open_at + read / flips * i)
+    t = t_axis(gather + fall + 0.1)
+    swell = np.sin(np.clip(t / (gather + fall), 0, 1) * np.pi / 2) ** 2
+    hum = sum(np.sin(2 * np.pi * f * t + k) for k, f in enumerate([98, 98.7, 147, 196, 197.2]))
+    x = layer(x, lowpass(hum, 600) * swell, -9, open_at + read)
+    x = layer(x, thump(1.0, 95, 40, 0.3, width=0.004), -1, hit)
+    return layer(x, rec("impactWood_heavy_000.ogg"), -5, hit)
+
+
 SIGNATURES = [
     sig_freeze, sig_relic, sig_middle, sig_phase, sig_grain, sig_dash, sig_shield, sig_sand,
     sig_watcher, sig_glass, sig_vamp, sig_drill, sig_lance, sig_twin, sig_lock, sig_gate,
     sig_poison, sig_guard, sig_mirror, sig_wall, sig_bypass, sig_colossus,
-    sig_obelisk, sig_tower, sig_anchor,
+    sig_obelisk, sig_tower, sig_anchor, sig_sage, sig_grimoire,
 ]
 
 

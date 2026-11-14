@@ -56,6 +56,8 @@ enum Sfx {
 	SIG_OBELISK,
 	SIG_TOWER,
 	SIG_ANCHOR,
+	SIG_SAGE,
+	SIG_GRIMOIRE,
 }
 
 const SETTINGS_PATH := "user://sound_settings.json"
@@ -114,6 +116,8 @@ const SFX_PATHS := {
 	Sfx.SIG_OBELISK: "res://assets/sfx/sig_obelisk.wav",
 	Sfx.SIG_TOWER: "res://assets/sfx/sig_tower.wav",
 	Sfx.SIG_ANCHOR: "res://assets/sfx/sig_anchor.wav",
+	Sfx.SIG_SAGE: "res://assets/sfx/sig_sage.wav",
+	Sfx.SIG_GRIMOIRE: "res://assets/sfx/sig_grimoire.wav",
 }
 
 static var _players: Array[AudioStreamPlayer] = []

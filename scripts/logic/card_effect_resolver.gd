@@ -316,6 +316,7 @@ func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Diction
 		CardEnums.EffectType.RECAST_SPELL:
 			var source := recast_source(_state, side)
 			if source != null:
+				_strike(side, from_slot, side, -1, CardEnums.EffectVisualStyle.PULSE, origin)
 				resolve(side, CardInstance.new(source), CardEnums.Trigger.ON_PLAY, hint)
 		CardEnums.EffectType.REVIVE_FROM_GRAVE:
 			var revive_slot := _first_empty_slot(side)

@@ -29,6 +29,7 @@ const ENTRANCES := {
 	"wall": preload("res://scripts/ui/signature/moves/wall_entrance.gd"),
 	"bypass": preload("res://scripts/ui/signature/moves/bypass_entrance.gd"),
 	"colossus": preload("res://scripts/ui/signature/moves/colossus_entrance.gd"),
+	"sage": preload("res://scripts/ui/signature/moves/sage_entrance.gd"),
 }
 
 ## 効果が対象へ届くまで(設置・落砂・砂術など、紋章が飛ぶ場面の代わり)。
@@ -128,6 +129,13 @@ const EFFECTS := {
 	"page": preload("res://scripts/ui/signature/moves/page_effect.gd"),
 	"chime": preload("res://scripts/ui/signature/moves/chime_effect.gd"),
 	"present": preload("res://scripts/ui/signature/moves/present_effect.gd"),
+	"scribe": preload("res://scripts/ui/signature/moves/scribe_effect.gd"),
+	"divine": preload("res://scripts/ui/signature/moves/divine_effect.gd"),
+	"chant": preload("res://scripts/ui/signature/moves/chant_effect.gd"),
+	"archive": preload("res://scripts/ui/signature/moves/archive_effect.gd"),
+	"warden": preload("res://scripts/ui/signature/moves/warden_effect.gd"),
+	"recite": preload("res://scripts/ui/signature/moves/recite_effect.gd"),
+	"grimoire": preload("res://scripts/ui/signature/moves/grimoire_effect.gd"),
 }
 
 

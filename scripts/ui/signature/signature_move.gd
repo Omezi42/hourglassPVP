@@ -19,6 +19,9 @@ var targets: Array[Vector2] = []
 ## 効果を起こした側から見た相手の駒の中心。相手の駒の数で量が決まる効果(リリーフ)が
 ## 1体ずつから届く様子を描くのに使う。登場では空。
 var foes: Array[Vector2] = []
+## 出どころの側の墓地にある砂術の枚数。墓地の砂術の数で量が決まる効果(グリモア)が、
+## 数だけ文字を立ちのぼらせるのに使う。登場では使わない。
+var grave_spells := 0
 ## 効果を呼んだ型(`CardEnums.EffectVisualStyle`)。型の違う効果を2つ持つカード(砂葬の
 ## 破壊とドロー)が描き分けに使う。登場では使わない。
 var style := CardEnums.EffectVisualStyle.STRIKE

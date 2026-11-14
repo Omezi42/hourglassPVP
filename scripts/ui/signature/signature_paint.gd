@@ -21,9 +21,30 @@ const BOON := Color(1.0, 0.92, 0.62, 1.0)
 const SPIN := Color(0.78, 0.92, 1.0, 1.0)
 const ICE := Color(0.80, 0.93, 1.0, 1.0)
 const WATER := Color(0.60, 0.87, 1.0, 1.0)
+## 詠砂の刻の「詠み文字」の色。白にごく薄く藤色をのせた光(毒砂の濃い紫と明度・彩度で離す)。
+const RECITE := Color(0.90, 0.86, 1.0, 1.0)
+## 本・札の紙の色(生成り)。
+const PAPER := Color(0.97, 0.94, 0.84, 1.0)
+## 静止(PULSE)の光の輪の色(`EmblemStrikeFx` と同じ)。
+const PULSE := Color(1.0, 0.86, 0.42, 1.0)
 const SPARK_HOT := Color(1.0, 0.97, 0.80, 1.0)
 const SPARK_COOL := Color(1.0, 0.62, 0.20, 1.0)
 const DIAL_FACE := Color(0.96, 0.92, 0.82, 1.0)
+## 詠み文字の字形(4種)。-0.5〜0.5 の箱へ収めた折れ線で、y は下向き。
+const RUNES := [
+	[Vector2(-0.4, -0.5), Vector2(0.4, -0.5), Vector2(-0.4, 0.5), Vector2(0.4, 0.5)],
+	[Vector2(-0.4, 0.5), Vector2(-0.4, -0.5), Vector2(0.4, 0.5), Vector2(0.4, -0.5)],
+	[Vector2(0.0, -0.5), Vector2(0.0, 0.5), Vector2(0.4, 0.0), Vector2(-0.4, 0.0)],
+	[
+		Vector2(-0.4, -0.4),
+		Vector2(0.4, -0.4),
+		Vector2(0.0, 0.0),
+		Vector2(0.4, 0.5),
+		Vector2(-0.4, 0.5)
+	],
+]
+const RUNE_OUTLINE := 4.0
+const RUNE_STROKE := 2.2
 const HAMMER_HANDLE := 30.0
 const HAMMER_HEAD := Vector2(18.0, 10.0)
 
@@ -415,6 +436,71 @@ static func card_glint(
 	var closed := shape.duplicate()
 	closed.append(shape[0])
 	ShapePaint.polyline(ci, closed, Color(BOON, alpha), 1.4, true)
+
+
+## 詠み文字(3〜4画の読めない短い文字)。`size` は文字の高さ、`shape` は字形の番号、
+## `written` は書き進みの割合(0→1)。暗い縁を敷いて、盤面の上でも画が潰れないようにする。
+static func rune(
+	item: CanvasItem,
+	at: Vector2,
+	size: float,
+	shape: int,
+	written: float,
+	alpha: float,
+	color := RECITE
+) -> void:
+	if alpha <= 0.0 or written <= 0.0 or size <= 1.0:
+		return
+	var path := _rune_path(at, size, shape, written)
+	var ci := item.get_canvas_item()
+	var width := maxf(size * 0.14, RUNE_STROKE)
+	ShapePaint.polyline(
+		ci, path, Color(UiPalette.INK_950, alpha * 0.55), width + RUNE_OUTLINE * 0.5, true
+	)
+	ShapePaint.polyline(ci, path, Color(color, alpha), width, true)
+
+
+## 詠み文字を `written` まで書いたときの筆先の位置。
+static func rune_tip(at: Vector2, size: float, shape: int, written: float) -> Vector2:
+	var path := _rune_path(at, size, shape, written)
+	return path[path.size() - 1]
+
+
+## 静止(PULSE)の光の輪。`progress` は0→1で広がりながら薄れる。
+static func pulse_ring(item: CanvasItem, center: Vector2, progress: float, alpha: float) -> void:
+	const REACH := 36.0
+	if alpha <= 0.0 or progress <= 0.0 or progress >= 1.0:
+		return
+	ShapePaint.arc(
+		item.get_canvas_item(),
+		center,
+		REACH * ease(progress, 0.4),
+		0.0,
+		TAU,
+		40,
+		Color(PULSE, alpha * 0.65 * (1.0 - progress)),
+		2.2,
+		true
+	)
+
+
+static func _rune_path(at: Vector2, size: float, shape: int, written: float) -> PackedVector2Array:
+	var points: Array = RUNES[shape % RUNES.size()]
+	var total := 0.0
+	for i in range(points.size() - 1):
+		total += (points[i + 1] as Vector2).distance_to(points[i])
+	var reach := total * clampf(written, 0.0, 1.0)
+	var path := PackedVector2Array([at + (points[0] as Vector2) * size])
+	for i in range(points.size() - 1):
+		var a: Vector2 = points[i]
+		var b: Vector2 = points[i + 1]
+		var length := a.distance_to(b)
+		if reach <= length:
+			path.append(at + a.lerp(b, reach / length) * size)
+			return path
+		reach -= length
+		path.append(at + b * size)
+	return path
 
 
 static func _dial_hand(

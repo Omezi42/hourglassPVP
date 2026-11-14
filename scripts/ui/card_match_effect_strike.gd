@@ -202,6 +202,7 @@ func _play_signature(card: CardData, from: Vector2, targets: Array) -> bool:
 	var entries: Array[Dictionary] = []
 	move.from = from
 	move.style = _style
+	move.grave_spells = CardEffectResolver.grave_spell_count(_screen.state, _origin_side)
 	var foe_side := MatchState.other_side(_origin_side)
 	for slot in MatchState.BOARD_SIZE:
 		if _screen.state.board[foe_side][slot] != null:
