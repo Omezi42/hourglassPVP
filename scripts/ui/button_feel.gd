@@ -20,6 +20,7 @@ static func attach(button: BaseButton, base: CodedButtonStyle) -> void:
 	if previous != null:
 		style.hover_amount = previous.hover_amount
 		style.press_amount = previous.press_amount
+		style.sync_content_offset()
 	for state in STATES:
 		button.add_theme_stylebox_override(state, style)
 	button.set_meta(META_STYLE, style)
@@ -54,6 +55,7 @@ static func _apply(value: float, button: BaseButton, property: String) -> void:
 	if style == null:
 		return
 	style.set(property, value)
+	style.sync_content_offset()
 	button.queue_redraw()
 
 
@@ -66,6 +68,7 @@ static func _reset(button: BaseButton) -> void:
 		return
 	style.hover_amount = 0.0
 	style.press_amount = 0.0
+	style.sync_content_offset()
 
 
 ## `get_meta()` は既定値に null を渡しても、無いキーではエラーを出す。

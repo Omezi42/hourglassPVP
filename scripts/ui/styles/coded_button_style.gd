@@ -14,8 +14,10 @@ enum Shape { ROUNDED_RECT, CIRCLE, PILL, CHEVRON_LEFT }
 ## 紋章の配置。値は `.tres` が整数で保存する。いま描き分けるのは CENTER と RIGHT_INSET。
 enum EmblemPlacement { CENTER, UPPER, RIGHT_INSET, TOP_BADGE }
 
-## 乗ったとき面が浮く量(px)と、押したとき面が縮む倍率。
+## 乗ったとき面が浮く量(px)、押したとき面が沈む量(px)と縮む倍率。
+## 字・アイコンは面と同じだけ動かす(content margin の上下を振り分けて動かすため、最小サイズは変わらない)。
 const LIFT := 2.0
+const PRESS_SINK := 1.0
 const PRESS_SCALE := 0.97
 ## 押したとき上の光の膜が消える(硝子の面の `film`)。
 const PRESSED_FILM := 0.0
@@ -50,11 +52,35 @@ var hover_amount := 0.0
 var press_amount := 0.0
 
 var _button: WeakRef
+var _base_top := 0.0
+var _base_bottom := 0.0
 
 
 ## このスタイルを持つボタン。押せない・選ばれているを描くたびに読む(`ButtonFeel`)。
 func bind_button(button: BaseButton) -> void:
 	_button = weakref(button)
+	_base_top = maxf(content_margin_top, 0.0)
+	_base_bottom = maxf(content_margin_bottom, 0.0)
+	sync_content_offset()
+
+
+## 面の縦のずれ。乗ると浮き、押すと沈む。
+static func face_offset_y(hover: float, press: float) -> float:
+	return -LIFT * hover * (1.0 - press) + PRESS_SINK * press
+
+
+## 字・アイコンを面のずれへ合わせる。`hover_amount` / `press_amount` を変えたら呼ぶ。
+func sync_content_offset() -> void:
+	var button: BaseButton = _button.get_ref() if _button != null else null
+	var dy := 0.0
+	if button != null and not button.disabled:
+		dy = face_offset_y(hover_amount, press_amount)
+	var top := _base_top + LIFT + dy
+	var bottom := _base_bottom + LIFT - dy
+	if not is_equal_approx(content_margin_top, top):
+		content_margin_top = top
+	if not is_equal_approx(content_margin_bottom, bottom):
+		content_margin_bottom = bottom
 
 
 func _draw(to_canvas_item: RID, rect: Rect2) -> void:
@@ -74,7 +100,7 @@ func _draw(to_canvas_item: RID, rect: Rect2) -> void:
 		press = 0.0
 
 	var face := rect
-	face.position.y -= LIFT * hover * (1.0 - press)
+	face.position.y += face_offset_y(hover, press)
 	var scaled := face.size * lerpf(1.0, PRESS_SCALE, press)
 	face = Rect2(face.get_center() - scaled * 0.5, scaled)
 
