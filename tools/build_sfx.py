@@ -2,14 +2,14 @@
 
 出す・反転・攻撃・被弾・破壊・ターン終了などの手応えの音は、CC0の実録音(tools/sfx_sources/、
 出所は assets/CREDITS.md)を芯にして合成音を重ねる。合成だけでは木や硝子の手触りが薄いため。
-出力は 44.1kHz / 16bit / ステレオの WAV(左右の差は部屋の響きだけで、音の本体は中央に置く)。
+出力は 44.1kHz / 16bit / モノラルの WAV(部屋の響きも1本にして、乾いた音へ足す)。
 
 音は「励振(何がどう当たったか) → 共鳴(何が鳴るか) → 部屋」の順に組む。
 正弦波を直接足すのではなく、叩いた力の形(撥の硬さ)を共鳴フィルタへ通すため、
 硬く当たれば高い響きまで鳴り、柔らかく当たれば丸くなるという差が自然に出る。
 素材(木の卓・硝子・真鍮・オルゴールの櫛歯)は、それぞれ物理的な倍音比を持たせる。
 
-音量は種類ごとの目標ラウドネス(finish() の第3引数)へ揃える。乱数の種は音の名前から
+音量は種類ごとの目標ラウドネス(finish() の第3引数)へ、モノラルにした後の音で揃える。乱数の種は音の名前から
 決めるため、何度実行しても同じ音になり、1つを直しても他の音は変わらない。
 
     python tools/build_sfx.py [出力先]
@@ -234,36 +234,32 @@ ROOM_SEED = 7
 
 
 def room_ir(rt60, dur):
-    """小さな書斎ほどの部屋の響き(左右別の減衰する雑音)。高域ほど早く消える。"""
+    """小さな書斎ほどの部屋の響き(減衰する雑音1本)。高域ほど早く消える。"""
     rng = np.random.default_rng(ROOM_SEED)
     t = t_axis(dur)
     decay = np.exp(-6.91 * t / rt60)
-    ir = []
-    for _ in range(2):
-        bright = rng.standard_normal(len(t)) * np.exp(-6.91 * t / (rt60 * 0.45))
-        dark = lowpass(rng.standard_normal(len(t)), 2500) * decay
-        ch = 0.5 * bright + dark
-        for delay, g in [(0.011, 0.5), (0.017, 0.35), (0.023, 0.3), (0.031, 0.22)]:
-            ch[int(SR * delay * rng.uniform(0.85, 1.15))] += g * 6
-        ch[: int(SR * 0.006)] = 0
-        ir.append(highpass(ch, 180) / np.sqrt((ch ** 2).sum()))
-    return ir
+    bright = rng.standard_normal(len(t)) * np.exp(-6.91 * t / (rt60 * 0.45))
+    dark = lowpass(rng.standard_normal(len(t)), 2500) * decay
+    ir = 0.5 * bright + dark
+    for delay, g in [(0.011, 0.5), (0.017, 0.35), (0.023, 0.3), (0.031, 0.22)]:
+        ir[int(SR * delay * rng.uniform(0.85, 1.15))] += g * 6
+    ir[: int(SR * 0.006)] = 0
+    return highpass(ir, 180) / np.sqrt((ir ** 2).sum())
 
 
 ROOM = None
 
 
 def roomify(x, wet):
-    """中央の乾いた音に、左右へ広がる部屋の響きを wet の量だけ足してステレオにする。"""
+    """乾いた音に部屋の響きを wet の量だけ足す。"""
     global ROOM
     if ROOM is None:
         ROOM = room_ir(0.45, 0.7)
     tail = n_of(0.5) if wet > 0 else 0
     dry = np.pad(x, (0, tail))
     if wet <= 0:
-        return np.stack([dry, dry])
-    chans = [dry + wet * signal.fftconvolve(dry, ir)[: len(dry)] * 3.0 for ir in ROOM]
-    return np.stack(chans)
+        return dry
+    return dry + wet * signal.fftconvolve(dry, ROOM)[: len(dry)] * 3.0
 
 
 # ---- 仕上げ ----
@@ -276,15 +272,15 @@ def fade_tail(x, ms=40):
 
 
 def trim_silence(x, floor_db=-70):
-    level = np.abs(x).max(axis=0)
+    level = np.abs(x)
     above = np.nonzero(level > 10 ** (floor_db / 20) * level.max())[0]
-    end = min(x.shape[1], above[-1] + n_of(0.03)) if len(above) else x.shape[1]
-    return x[:, :end]
+    end = min(len(x), above[-1] + n_of(0.03)) if len(above) else len(x)
+    return x[:end]
 
 
 def loudness_db(x):
     """短時間(50ms)の最大RMS。低域の聞こえにくさを粗く補うため150Hzの高域通過を掛けて測る。"""
-    y = highpass(x.mean(axis=0) if x.ndim == 2 else x, 150)
+    y = highpass(x, 150)
     w = int(SR * 0.05)
     if len(y) <= w:
         return 20 * np.log10(np.sqrt((y ** 2).mean()) + 1e-12)
@@ -302,8 +298,8 @@ def finish(name, make, target_db, wet):
     peak = np.abs(x).max()
     if peak > 0.89:  # -1dBFS を越えたら、音量より歪まないことを優先する
         x *= 0.89 / peak
-    sf.write(os.path.join(OUT, name + ".wav"), x.T.astype(np.float32), SR, subtype="PCM_16")
-    print(f"{name:14s} {x.shape[1]/SR:5.2f}s  loud={loudness_db(x):6.1f}dB  peak={20*np.log10(np.abs(x).max()):5.1f}dB")
+    sf.write(os.path.join(OUT, name + ".wav"), x.astype(np.float32), SR, subtype="PCM_16")
+    print(f"{name:14s} {len(x)/SR:5.2f}s  loud={loudness_db(x):6.1f}dB  peak={20*np.log10(np.abs(x).max()):5.1f}dB")
 
 
 # ---- UI ----

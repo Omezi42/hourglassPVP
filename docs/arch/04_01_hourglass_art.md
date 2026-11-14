@@ -147,6 +147,11 @@ BGM3曲は合計8.6MBあり、上の3点を守ってもなおpckの7割を占め
   **人が確認する運用では防げないため、`tools/export_web.sh` が書き出しの直前に
   `tools/ensure_export_filters.py` でフィルタと `export_path` を揃え直し、
   書き出した後に `tools/verify_web_pck.gd` でpckの中身を名指しで検査する**)
+- **本番のpckからは `tools/` を丸ごと外す**(実行時に `res://tools/` を読むコードが無く、テスト・撮影・生データで約0.7MBあるため)。
+  ただしテストのスクリプトはpckの中に要るため、`tools/` を残した検査用プリセット `WebCheck`(`build/web_check/index.pck`)も
+  書き出し、`run_tests.gd` と `matchmaking_live_test.gd` はそちらへ回す。本番のpckは `tools/verify_web_pck.gd` を
+  **ディスクのパスで渡して**中身を調べ、`res://tools/` や BGM が1つでも入っていれば落とす
+  (検査用と本番は `tools/` の有無だけが違う。`.remap` の差異は検査用で拾える)
 - **エディタの書き出し先も `build/web/index.html` へ揃える。**unityroomへ上げるのは
   `index.pck` 1つだけなので、別名のpckが並んでどちらを上げるのか迷う状態を作らない
 - **Discordのお知らせ用に作る画像・GIFは `assets/` の下へ出さない**

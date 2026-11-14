@@ -1,12 +1,13 @@
 extends SceneTree
 
 ## 書き出したpckに、入っていてはいけないものが混ざっていないか確かめる。
-## 使い方: godot --headless --main-pack build/web/index.pck --script res://tools/verify_web_pck.gd
+## 使い方: godot --headless --main-pack build/web/index.pck --script tools/verify_web_pck.gd
+## (本番のpckには tools/ が無いため、このスクリプトはディスクのパスで渡す)
 ##
 ## エディタから書き出すと export_presets.cfg のフィルタが空へ戻る(実際に起きた)。
 ## 中身を見ずにサイズだけ眺めても気づけないため、名指しで確かめる。
 
-const FORBIDDEN := ["res://assets/bgm/", "res://tools/balance/out/", "tools/discord/out/"]
+const FORBIDDEN := ["res://assets/bgm/", "res://tools/"]
 const REQUIRED := ["res://data/discord_webhook.txt", "res://data/unityroom_hmac_key.txt"]
 
 

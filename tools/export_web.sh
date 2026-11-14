@@ -23,11 +23,18 @@ echo "build_id = $BUILD_ID"
 # functions/data/cards.json へ書き出す(GameDesign.md 26章・Architecture.md 10.14節)。
 "$GODOT" --headless --path "$ROOT" --script "$ROOT/tools/export_card_data_json.gd"
 
+# 検査用(WebCheck): 本番と同じ中身に tools/ を残したpck。テストのスクリプトがpckの中に要るため、
+# 本番(tools/ を外す)とは別に書き出して、こちらへテストを回す(Architecture.md 4.1.6節)。
+CHECK="$ROOT/build/web_check"
+mkdir -p "$CHECK"
+"$GODOT" --headless --path "$ROOT" --export-release "WebCheck" "$CHECK/index.html" > "$ROOT/logs/export_web_check.log" 2>&1
+"$GODOT" --headless --main-pack "$CHECK/index.pck" --script res://tools/tests/run_tests.gd 2>&1 | grep -E "tests passed|FAILED" || true
+# 検査用pckのまま本物のFirebaseで2人をマッチングさせ、デッキと種の交換まで通す
+"$GODOT" --headless --main-pack "$CHECK/index.pck" --script res://tools/tests/matchmaking_live_test.gd 2>&1 | grep -E "matchmaking live|NG:" || true
+
 "$GODOT" --headless --path "$ROOT" --export-release "Web" "$OUT/index.html" > "$ROOT/logs/export_web.log" 2>&1
-"$GODOT" --headless --main-pack "$OUT/index.pck" --script res://tools/tests/run_tests.gd 2>&1 | grep -E "tests passed|FAILED" || true
-# 書き出したpckのまま本物のFirebaseで2人をマッチングさせ、デッキと種の交換まで通す
-"$GODOT" --headless --main-pack "$OUT/index.pck" --script res://tools/tests/matchmaking_live_test.gd 2>&1 | grep -E "matchmaking live|NG:" || true
-"$GODOT" --headless --main-pack "$OUT/index.pck" --script res://tools/verify_web_pck.gd 2>&1 | grep -E "pck check" || true
+# 本番のpckには tools/ が無いため、検査のスクリプトはディスクから渡してpckの中身を調べる
+"$GODOT" --headless --main-pack "$OUT/index.pck" --script "$ROOT/tools/verify_web_pck.gd" 2>&1 | grep -E "pck check" || true
 
 # itch.io・PLiCy 向け(Architecture.md 4.6節)。起動部 build/portal.zip は Godot を上げたときだけ手で上げ直す。
 ENGINE_VERSION="$("$GODOT" --version | cut -d. -f1-3 | tr -dc 0-9.)"

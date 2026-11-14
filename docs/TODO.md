@@ -125,6 +125,13 @@ Discordにある機能をゲームの中だけで完結させていく。1つ目
 
 - [ ] 縦画面UIが完成したら、その版を Discord #お知らせ で告知する(アプリ版をスマホで縦持ちのまま遊べるようになったことを伝える)
 
+### 軽量化・負荷(`tools/perf_probe.gd` で測る。ウィンドウ付きで `godot --path . --script res://tools/perf_probe.gd`)
+
+- [ ] ホーム画面が平均21.7msで、他の画面の4〜7倍。原因の切り分け
+- [ ] `welcome_day_pips.gd` の `_draw` が `AccountStore.load_local_unlocks` 経由で毎回ファイルを読む
+- [ ] 対局・デッキ編集のオブジェクト数が4万超。内訳の計測
+- [ ] カードを出す演出とターン終了で、最大70〜98msの引っかかり
+
 ### 技術的負債
 
 - [ ] 起動の裏読み込み(Architecture.md 4.0.6節)で、タイトルを止める1本の最長はWeb版で約0.3秒の `card_instance.gd`(`CardInstance`・`MatchState`・`CardLibrary`・`AccountService` など15本の参照の輪)。次いで `card_view_*` の7本の輪(各0.1〜0.2秒)。輪を切れるか判断

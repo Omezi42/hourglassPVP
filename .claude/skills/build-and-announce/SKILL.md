@@ -66,18 +66,19 @@ bash tools/export_web.sh
 
 - ビルドIDが `project.godot` へ刻まれる(`application/config/build_id`)。
   **この変更はそのままコミットする**(GameDesign.md 11章 = `docs/design/11_online.md`・Architecture.md 6.4節 = `docs/arch/06_online.md`)
-- **`matchmaking live passed` が出ないビルドは上げない。**書き出したpckのまま本物のFirebaseへ
+- **`matchmaking live passed` が出ないビルドは上げない。**検査用pck(`build/web_check/`。本番と `tools/` の有無だけが違う)のまま本物のFirebaseへ
   匿名アカウント2つでつなぎ、ランクマッチの待合室で組んでデッキと種の交換まで通す
   (`tools/tests/matchmaking_live_test.gd`)。差し替え用クライアントのテストでは本物の応答の形の
   食い違いを拾えないため
 - 末尾に `tests passed` が出ること、`build/web/index.pck` のサイズが
-  直前のビルドから跳ねていないことを確認する
+  直前のビルドから跳ねていないことを確認する(目安は約8.0MB。`tools/` を外してあるため、
+  `tools/` が混ざると約0.7MB増える)
 - **フィルタの確認は自動化してある。**`export_presets.cfg` はエディタで書き出すたびに
   `include_filter` / `exclude_filter` が空へ戻る(実際に2度起きた)。空のまま書き出すと
   BGMとシミュレーションの生データが混ざってpckが3倍に膨らみ、逆に
   `data/discord_webhook.txt` が落ちて募集通知が飛ばなくなる。
   `tools/export_web.sh` が書き出し前に `tools/ensure_export_filters.py` で揃え直し、
-  書き出し後に `tools/verify_web_pck.gd` でpckの中身を検査する。
+  書き出し後に `tools/verify_web_pck.gd` で本番pckの中身(`tools/` やBGMが入っていないか)を検査する。
   **`pck check passed` が出ないビルドは上げない**
 - **itch.io・PLiCy 向けの pck も同じスクリプトが Cloudflare Pages へ上げる**(`tools/deploy_pages.sh`。
   Architecture.md 4.6節)。`!!! Cloudflare Pages へのデプロイに失敗` が出たら、ユーザーに

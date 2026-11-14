@@ -128,7 +128,7 @@
   - 検証は2段で持つ。`matchmaking_flow_tests.gd` が差し替え用クライアントの上で複数人の
     `join()` を実際に回し(後から入る・同時に入る・3人目・掃除の後・CPU戦から戻る・キャンセル)、
     `matchmaking_live_test.gd` が本物のFirebaseで2人を組ませてデッキと種の交換まで通す
-    (`tools/export_web.sh` が書き出したpckに対して回す)
+    (`tools/export_web.sh` が書き出した検査用pck(`WebCheck`。4.1.6節)に対して回す)
 - **手の送信を確実にする**。`OnlineMatch`は`actions`配列をread-modify-writeで書くが、
   `set_document()`の成否を見ずに進めると、失敗しても盤面だけ進んで相手と食い違う。
   `updateTime`を前提条件にした`commit()`で書き、競合・失敗時はドキュメントを
