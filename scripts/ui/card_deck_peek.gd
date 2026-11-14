@@ -8,7 +8,6 @@ extends Control
 signal primary_pressed
 
 const PANEL_STYLE := "res://resources/theme/content_panel.tres"
-const DIM_COLOR := Color(UiPalette.INK_900, 0.62)
 ## 横の棚は共有のデッキ表(1208×510)と同じ縦横比。
 const SHELF_SIZE := Vector2(1108, 468)
 const PORTRAIT_SHELF_SIZE := Vector2(624, 730)
@@ -32,6 +31,7 @@ var _shelf: CardDeckShelf
 var _close: Button
 var _primary: Button
 var _portrait := false
+var _center: CenterContainer
 
 
 func _ready() -> void:
@@ -39,19 +39,19 @@ func _ready() -> void:
 	anchor_right = 1.0
 	anchor_bottom = 1.0
 	var dim := ColorRect.new()
-	dim.color = DIM_COLOR
+	dim.color = UiPalette.MODAL_DIM
 	dim.anchor_right = 1.0
 	dim.anchor_bottom = 1.0
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(dim)
-	var center := CenterContainer.new()
-	center.anchor_right = 1.0
-	center.anchor_bottom = 1.0
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(center)
+	_center = CenterContainer.new()
+	_center.anchor_right = 1.0
+	_center.anchor_bottom = 1.0
+	_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_center)
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", ROW_GAP * 1.5)
-	center.add_child(column)
+	_center.add_child(column)
 
 	_panel = PanelContainer.new()
 	_panel.add_theme_stylebox_override("panel", load(PANEL_STYLE))
@@ -91,11 +91,11 @@ func open(deck_name: String, cards: Array, primary_label: String) -> void:
 	_sub.text = "%d枚  ・  %s" % [cards.size(), CardDeckCase.summary_of(cards)]
 	_shelf.deck = cards.duplicate()
 	_primary.text = primary_label
-	visible = true
+	ModalMotion.show(self, _center)
 
 
 func close() -> void:
-	visible = false
+	ModalMotion.hide(self, _center)
 
 
 func apply_orientation(portrait: bool) -> void:

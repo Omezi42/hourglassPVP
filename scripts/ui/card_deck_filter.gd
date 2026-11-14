@@ -21,7 +21,6 @@ const KIND_ALL := 0
 const KIND_UNIT := 1
 const KIND_SPELL := 2
 ## 押したボタンの位置から膨らんで開く尺(GameDesign.md 9章「手触り」)。
-const BULGE_DURATION := 0.22
 const BULGE_MIN_SCALE := 0.12
 const CHIP_GAP := 6
 const SEARCH_INSET := 48.0
@@ -69,10 +68,11 @@ func _ready() -> void:
 ## 膨らみは遅らせて始める(組み直した直後はパネルの位置がまだ決まっていないため)。
 func open(from_rect: Rect2 = Rect2()) -> void:
 	_layout()
-	visible = true
 	if from_rect.size == Vector2.ZERO:
+		ModalMotion.show(self, _center)
 		_fit_body_height()
 		return
+	ModalMotion.show(self, null)
 	# 高さが決まる前の位置から膨らませると、決まった後の中央からずれる。
 	# 決まるまでは透かして待ち、決まってから膨らませる。
 	_panel.modulate.a = 0.0
@@ -109,8 +109,9 @@ func _fit_body_height() -> void:
 
 
 func close() -> void:
-	visible = false
-	_panel.modulate.a = 1.0
+	if _bulge_tween != null and _bulge_tween.is_valid():
+		_bulge_tween.kill()
+	ModalMotion.hide(self, _center, func() -> void: _panel.modulate.a = 1.0)
 
 
 func matches(card: CardData) -> bool:
@@ -156,7 +157,7 @@ func reset_filters() -> void:
 
 func _build() -> void:
 	_dim = ColorRect.new()
-	_dim.color = Color(0, 0, 0, 0.65)
+	_dim.color = UiPalette.MODAL_DIM
 	_dim.size = SCREEN_SIZE
 	_dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	_dim.gui_input.connect(_on_dim_input)
@@ -379,13 +380,13 @@ func _bulge_from(button_global_rect: Rect2) -> void:
 	_bulge_tween.set_parallel(true)
 	(
 		_bulge_tween
-		. tween_property(_panel, "scale", Vector2.ONE, BULGE_DURATION)
+		. tween_property(_panel, "scale", Vector2.ONE, UiPalette.DUR_SHOW)
 		. set_trans(Tween.TRANS_BACK)
 		. set_ease(Tween.EASE_OUT)
 	)
 	(
 		_bulge_tween
-		. tween_property(_panel, "position", target_position, BULGE_DURATION)
+		. tween_property(_panel, "position", target_position, UiPalette.DUR_SHOW)
 		. set_trans(Tween.TRANS_SINE)
 		. set_ease(Tween.EASE_OUT)
 	)

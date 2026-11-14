@@ -12,10 +12,13 @@ const PANEL_STYLE := "res://resources/theme/content_panel.tres"
 const ROW_BUTTON_SIZE := Vector2(200, 64)
 const SUMMARY_WIDTH := 420.0
 ## 縦(GameDesign.md 9章「縦画面」)。パネルは `PortraitModal` の論理幅で組み、中身ごと拡大する。
-const PORTRAIT_ROW_BUTTON_SIZE := Vector2(168, 72)
-const PORTRAIT_SUMMARY_WIDTH := 240.0
+const PORTRAIT_ROW_BUTTON_SIZE := Vector2(152, 72)
+const PORTRAIT_PANEL_INNER := PortraitModal.WIDTH - 48.0
 const ROW_SEPARATION := 20
-const PORTRAIT_ROW_SEPARATION := 24
+const PORTRAIT_ROW_SEPARATION := 16
+const PORTRAIT_SUMMARY_WIDTH := (
+	PORTRAIT_PANEL_INNER - PORTRAIT_ROW_BUTTON_SIZE.x - PORTRAIT_ROW_SEPARATION
+)
 const CLOSE_SIZE := Vector2(180, 56)
 const PORTRAIT_CLOSE_SIZE := Vector2(180, 72)
 
@@ -40,7 +43,7 @@ func _ready() -> void:
 
 func open() -> void:
 	_layout()
-	visible = true
+	ModalMotion.show(self, _center)
 
 
 func _layout() -> void:
@@ -61,12 +64,12 @@ func _layout() -> void:
 
 
 func close() -> void:
-	visible = false
+	ModalMotion.hide(self, _center)
 
 
 func _build() -> void:
 	_dim = ColorRect.new()
-	_dim.color = Color(0, 0, 0, 0.72)
+	_dim.color = UiPalette.MODAL_DIM
 	_dim.size = SCREEN_SIZE
 	_dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_dim)

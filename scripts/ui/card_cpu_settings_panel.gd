@@ -75,7 +75,7 @@ func _layout() -> void:
 
 func _build() -> void:
 	_dim = ColorRect.new()
-	_dim.color = Color(UiPalette.INK_900, 0.72)
+	_dim.color = UiPalette.MODAL_DIM
 	_dim.size = SCREEN_SIZE
 	_dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_dim)

@@ -88,6 +88,8 @@ const PORTRAIT_VIEW_SIZE := Vector2(92, 72)
 const PORTRAIT_VIEW_FONT := 24
 const PORTRAIT_PROGRESS_FONT := 28
 const PORTRAIT_DETAIL_SCALE := 1.6
+## 縦の飛翔の着地先(タブのボタン)へ置く札の縦横比(砂時計の絵は 1 : 1.30)。
+const FLIGHT_CARD_RATIO := 1.0 / CardDeckShelf.ART_RATIO
 
 var _save_button: Button
 var _filter: CardDeckFilter
@@ -124,6 +126,8 @@ var _tab_buttons: Array[Button] = []
 var _portrait := false
 ## 縦で在庫棚を出しているか(false なら組立台)。
 var _show_stock := true
+var _fade_tween: Tween
+var _count_tween: Tween
 
 
 func _ready() -> void:
@@ -339,9 +343,12 @@ func _build_side() -> void:
 
 ## 編成中のデッキを棚とリストのどちらで見せるか。
 func _select_deck_view(as_list: bool) -> void:
+	var changed := UiState.deck_as_list() != as_list
 	UiState.set_deck_as_list(as_list)
 	_shelf.visible = not as_list
 	_deck_list_scroll.visible = as_list
+	if changed:
+		_fade_in(_deck_list_scroll if as_list else _shelf)
 	_hide_detail()
 	for i in _view_buttons.size():
 		var active: bool = (i == 1) == as_list
@@ -352,9 +359,19 @@ func _select_deck_view(as_list: bool) -> void:
 
 ## いま出している方(棚かリスト)で、そのカードが収まっている矩形。飛翔演出の端点。
 func _deck_rect(card: CardData) -> Rect2:
+	if not _side_box.is_visible_in_tree():
+		return _tab_landing_rect(1)
 	if _deck_list_scroll.visible:
 		return _deck_list.global_rect_for_card(card)
 	return _shelf.global_rect_for_card(card)
+
+
+## 組立台が見えていない(縦で在庫棚を出している)間の着地先。切り替えのタブのボタンの中央へ、
+## ボタンの背丈の札の矩形を置く(GameDesign.md 9章「札は切り替えの『デッキ』へ飛んで入る」)。
+func _tab_landing_rect(tab: int) -> Rect2:
+	var button := _tab_buttons[tab]
+	var card_size := Vector2(button.size.y * FLIGHT_CARD_RATIO, button.size.y)
+	return Rect2(button.get_global_rect().get_center() - card_size * 0.5, card_size)
 
 
 func _build_detail() -> void:
@@ -430,9 +447,12 @@ func apply_orientation(portrait: bool) -> void:
 
 ## 縦で在庫棚と組立台を切り替える。横では両方を出す。
 func _select_tab(stock: bool) -> void:
+	var changed := _show_stock != stock
 	_show_stock = stock
 	_grid_box.visible = stock or not _portrait
 	_side_box.visible = not stock or not _portrait
+	if changed and _portrait:
+		_fade_in(_grid_box if stock else _side_box)
 	_backdrop.show_shelf = stock
 	for i in _tab_buttons.size():
 		var active: bool = (i == 0) == stock
@@ -440,6 +460,33 @@ func _select_tab(stock: bool) -> void:
 			_tab_buttons[i], CodedButton.PRIMARY_ACTION_GROUP if active else TAB_GROUP
 		)
 	_refresh_tab_labels()
+
+
+## 入ってくる側だけ `DUR_HOVER` で透かし上げる(消える側は即時。キーワード辞書・ルールの切替と同じ)。
+func _fade_in(target: Control) -> void:
+	if _fade_tween != null and _fade_tween.is_valid():
+		_fade_tween.kill()
+	for control: Control in [_shelf, _deck_list_scroll, _grid_box, _side_box]:
+		control.modulate.a = 1.0
+	target.modulate.a = 0.0
+	_fade_tween = create_tween().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	_fade_tween.tween_property(target, "modulate:a", 1.0, UiPalette.DUR_HOVER)
+
+
+## デッキの枚数表示(縦はタブ・横は棚の上)を跳ねさせる。`WorkshopStockItem` の「2/2」と同じ値。
+func _bump_count() -> void:
+	var target: Control = _tab_buttons[1] if _portrait else _progress
+	if _count_tween != null and _count_tween.is_valid():
+		_count_tween.kill()
+	target.pivot_offset = target.size * 0.5
+	_count_tween = create_tween()
+	_count_tween.tween_method(
+		func(punch: float) -> void:
+			target.scale = Vector2.ONE * (1.0 + punch * WorkshopStockItem.PUNCH_SCALE),
+		1.0,
+		0.0,
+		WorkshopStockItem.PUNCH_DURATION
+	)
 
 
 func _refresh_tab_labels() -> void:
@@ -603,19 +650,32 @@ func _offer_shop(set_id: String) -> void:
 
 
 func _add_card(card: CardData) -> void:
+	# 入らない札は、札の首振りと理由を示す数字の跳ねで返す(文字・音は足さない)。
+	# 2/2 と錠の印は札自身(`WorkshopStockItem`)が押した瞬間に跳ねさせる。
 	if _deck.size() >= MatchState.DECK_SIZE:
+		_refuse(card)
+		_bump_count()
 		return
 	if _count_of(card) >= CardDeckSave.COPY_LIMIT:
+		_refuse(card)
 		return
 	# 未所有のカードセット(GameDesign.md 8章)に属するカードは追加できない。
 	# 一覧側は暗く表示して押させない想定だが、ここでも弾いておく。
 	if not AccountService.owns_card_set(card.set_id):
+		_refuse(card)
 		return
 	# **飛翔の出発点は配列操作の前に控える**(押された一覧のカードの位置)。
 	var from_rect := _view_rect(card)
 	_deck.append(card)
 	_refresh()
 	_fly_card(card, from_rect, _deck_rect(card))
+
+
+## ドラッグで棚へ落とした札(一覧の押下を通らない)も首を振らせる。押した札は既に振っているため重ねない。
+func _refuse(card: CardData) -> void:
+	var index := _pool.find(card)
+	if index >= 0 and not _card_views[index].is_shaking():
+		_card_views[index].refuse()
 
 
 func _on_band_remove(card: CardData) -> void:
@@ -635,7 +695,12 @@ func _fly_card(card: CardData, from_rect: Rect2, to_rect: Rect2) -> void:
 	if from_rect.size == Vector2.ZERO or to_rect.size == Vector2.ZERO:
 		return
 	var texture: Texture2D = card.emblem if card.is_spell else card.icon_upright
-	CardFlightFx.fly(self, from_rect, to_rect, FLIGHT_DURATION, texture)
+	# 縦で組立台が見えていないときはタブへ飛ぶ。着いた瞬間にタブの枚数が跳ねる。
+	var to_tab := not _side_box.is_visible_in_tree()
+	var land_fade := UiPalette.DUR_PRESS if to_tab else 0.0
+	await CardFlightFx.fly(self, from_rect, to_rect, FLIGHT_DURATION, texture, land_fade)
+	if to_tab and is_inside_tree():
+		_bump_count()
 
 
 ## 一覧側でそのカードが表示されている矩形(グローバル座標)。見つからなければ `Rect2()`。
@@ -643,6 +708,8 @@ func _view_rect(card: CardData) -> Rect2:
 	var index := _pool.find(card)
 	if index < 0:
 		return Rect2()
+	if not _grid_box.is_visible_in_tree():
+		return _tab_landing_rect(0)
 	return _card_views[index].get_global_rect()
 
 

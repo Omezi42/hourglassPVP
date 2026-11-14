@@ -105,6 +105,7 @@
 - `PortraitModal`(static のみ): 縦ではパネルを論理幅 `WIDTH`(480)で組み、`fit()` で `SCALE`(1.4)倍に中心から拡大する。
   **コンテナの子は渡さない**(コンテナが `scale` を1へ戻す)。`CenterContainer` で中央へ置くモーダルはその箱ごと渡す
 - **縦のパネルの中身は最小幅が論理幅(480)からパネルの余白を引いた幅に収める。**収まらないと `size` は最小幅へ広がり、拡大後に画面の右端を越える(コンテナの外のパネルは縮まない)。横幅を持つ行(ボタン・タブ・説明の最小幅)は縦で幅を詰め、折り返す文には最小幅を与える
+- `ModalMotion`(`scripts/ui/modal_motion.gd`、static のみ): モーダルの出入りの共通部品。`show(root, panel)` / `hide(root, panel, on_done)` が `root` を透かして出し入れし、`panel` の倍率を「基準の倍率(縦の `fit()` の1.4)× 0.96→1」で毎フレーム書く。閉じ始めに `mouse_behavior_recursive` を切って下の画面を押せるようにする。`ConfirmModal`・`CardDeckPeek`・`CardPresetPicker`・`CardDeckSharePanel`・`CardDeckFilter`(閉じるだけ。開きはボタンからの膨らみ)がつなぐ。暗幕の色は `UiPalette.MODAL_DIM`
 - モーダルは画面ではないため `Main` から呼ばれない。開くたびに組み直し、開いている間の向きの変化は `PortraitModal.watch()` が受ける(状態は保つ。木から外れている間は受けない)
 - 全面に置く `CenterContainer` は `size` を代入せずアンカーで張る(代入するとその時点の最小幅で広がったまま縮まない。Pitfalls.md)
 - 対象: `ConfirmModal`・`SettingsPanel`・`LearnMenu`・`KeywordPopup`・`CardCpuDifficultyPicker`・`CardCpuSettingsPanel`・`CardPresetPicker`・`CardDeckFilter`・`WaitingCpuPrompt`・

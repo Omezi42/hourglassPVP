@@ -22,7 +22,6 @@ const BADGE_RATIO := 0.36
 const ROW_RADIUS := 8.0
 const HINT_PLATE_RADIUS := 12.0
 const EMPTY_HINT := "左の在庫棚から選ぶと、ここへ並びます"
-const HINT_FONT := 16
 ## 押している行の面を暗くする量と、中身を下げる量(px)。
 const PRESS_DARKEN := 0.14
 const PRESS_SINK := 1.0
@@ -228,7 +227,7 @@ func _draw_row(index: int) -> void:
 
 ## デッキが空のときだけ、中ほどへ沈めた札を置く。
 func _draw_hint() -> void:
-	var font_size: int = roundi(HINT_FONT * text_scale)
+	var font_size: int = roundi(CardDeckShelf.HINT_FONT * CardDeckShelf.hint_scale(text_scale))
 	var plate_w: float = minf(size.x - PAD * 4.0, font_size * 26.0)
 	var plate_h: float = font_size * 2.8
 	# 空のときは見えている範囲の中ほど(自分の高さは余白だけになっている)。

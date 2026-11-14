@@ -34,8 +34,9 @@ const NAME_FONT := 12
 const BADGE_MAX := 13.0
 ## 絵の縦横比(砂時計の絵は 1 : 1.30)。
 const ART_RATIO := 1.30
-## 丸のあいだに残す最小のすき間(余白の刻みの最小)。
-const BADGE_MIN_GAP := 4.0
+## 枠の中の2つの丸のすき間の下限と、隣の枠の丸とのすき間(「枠間 > 枠内」で丸が枠ごとの組に読める)。
+const BADGE_MIN_GAP := 12.0
+const BADGE_CELL_GAP := 24.0
 ## 名前の左右に残す余白と、長い名前を横へ縮める下限(長体)。
 const NAME_SIDE_PAD := 2.0
 const NAME_SQUEEZE_MIN := 0.75
@@ -51,9 +52,14 @@ const LEDGE_SHADOW_ALPHA := 0.26
 const SOCKET_COLOR := Color(0, 0, 0, 0.5)
 const SOCKET_RING_ALPHA := 0.35
 const SOCKET_OUTLINE_ALPHA := 0.2
+## 受け皿の影絵の高さ(絵の幅に対する比)。
+const SOCKET_HEIGHT_RATIO := 0.80
 ## 詰める文字の下限・案内の札の大きさ。
 const HINT_FONT := UiPalette.T_BODY
 const HINT_SIZE := Vector2(380.0, 44.0)
+## 空の案内(棚の札・リストの区画)の倍率の上限と、札を段の空き帯へ置くときに上下へ残す余白。
+const HINT_SCALE_MAX := 1.5
+const HINT_BAND_PAD := 8.0
 const SPELL_PLATE_INSET := 0.07
 ## 30枚に達した瞬間だけ棚全体へ重ねる淡い光の、強さと消えるまでの尺(GameDesign.md 9章)。
 const GLOW_DURATION := 0.6
@@ -180,7 +186,7 @@ func _draw() -> void:
 	for index in _slot_count():
 		_draw_slot(index, cell, Vector2(art_w, art_h))
 	if _slots.is_empty():
-		_draw_hint()
+		_draw_hint(cell, Vector2(art_w, art_h))
 	if _glow_amount > 0.0:
 		var glow := UiPalette.SAND
 		glow.a = _glow_amount * GLOW_ALPHA
@@ -246,24 +252,24 @@ func _draw_slot(index: int, cell: Vector2, art: Vector2) -> void:
 		if icon != null:
 			draw_texture_rect(icon, art_rect, false)
 	var badge_r: float = clampf(art.x * 0.20, 8.0, BADGE_MAX * text_scale)
-	# 攻撃力と体力の丸のあいだに最小のすき間が残らない細い枠では、丸と中の数字を縮める。
-	badge_r = minf(badge_r, (hit.size.x - BADGE_MIN_GAP) / 4.0)
+	# 枠の中の丸どうしと、隣の枠の丸とのすき間が残らない細い枠では、丸と中の数字を縮める。
+	badge_r = minf(badge_r, (hit.size.x - BADGE_CELL_GAP - BADGE_MIN_GAP) / 4.0)
 	var emblem_r := badge_r * 0.86
-	# 四隅は手札の札と同じ(GameDesign.md 9章)。**丸は枠の矩形の内側へ収める**
-	# (隣の枠の丸と重なって「20」「30」のように読めてしまうため)。
-	var left := clampf(
-		art_rect.position.x + badge_r * 0.4, hit.position.x + badge_r, hit.end.x - badge_r
+	# 四隅は手札の札と同じ(GameDesign.md 9章)。**丸は枠の左右へ半分のすき間を残して収める**
+	# (隣の枠の丸と接して「20」「30」のように読めてしまうため)。広い枠では今の寄せを保つ。
+	var edge := BADGE_CELL_GAP * 0.5
+	var left := maxf(
+		clampf(art_rect.position.x + badge_r * 0.4, hit.position.x + badge_r, hit.end.x - badge_r),
+		hit.position.x + edge + badge_r
 	)
-	var right := clampf(
-		art_rect.end.x - badge_r * 0.4, hit.position.x + badge_r, hit.end.x - badge_r
-	)
-	var emblem_x := clampf(
-		art_rect.end.x - badge_r * 0.4, hit.position.x + emblem_r, hit.end.x - emblem_r
+	var right := minf(
+		clampf(art_rect.end.x - badge_r * 0.4, hit.position.x + badge_r, hit.end.x - badge_r),
+		hit.end.x - edge - badge_r
 	)
 	var top := art_rect.position.y + badge_r
 	var bottom := art_rect.end.y - badge_r
 	CardStatBadge.cost_diamond(self, _font, Vector2(left, top), card.cost, badge_r)
-	EmblemSeal.brass(self, Vector2(emblem_x, top), card.emblem, emblem_r)
+	EmblemSeal.brass(self, Vector2(right, top), card.emblem, emblem_r)
 	CardStatBadge.pair(self, _font, Vector2(left, bottom), Vector2(right, bottom), card, badge_r)
 	_draw_name(card.display_name, hit)
 
@@ -299,7 +305,7 @@ func _draw_socket(base: Vector2, art_w: float) -> void:
 		1.4,
 		22
 	)
-	var h: float = art_w * 0.80
+	var h: float = art_w * SOCKET_HEIGHT_RATIO
 	var half: float = art_w * 0.24
 	var neck: float = art_w * 0.045
 	var top: float = base.y - h
@@ -322,12 +328,34 @@ func _draw_socket(base: Vector2, art_w: float) -> void:
 
 ## デッキが1枚も無いときだけ、棚の中ほどへ1行を置く。**受け皿の上へ文字を直に
 ## 重ねない**——空の枠と同じ薄さで並ぶと、どちらも読み取りにくくなる。木札として置く。
-func _draw_hint() -> void:
-	var plate := Rect2(size * 0.5 - HINT_SIZE * 0.5, HINT_SIZE)
+func _draw_hint(cell: Vector2, art: Vector2) -> void:
+	var k := hint_scale(text_scale)
+	var plate_size := HINT_SIZE * k
+	var center := size * 0.5
+	# 3段目の「1つ上の棚板の下〜受け皿の影絵の上端」の空き帯の縦中央へ置き、影絵(あと何枚)を隠さない。
+	# 帯が札と余白に足りない向き(横)は、棚の中ほどのまま。
+	var row := _rows() / 2
+	var band_top := row * cell.y - _name_band()
+	var silhouette_top := (
+		(row + 1) * cell.y - _name_band() - LEDGE_HEIGHT - art.x * SOCKET_HEIGHT_RATIO
+	)
+	if silhouette_top - band_top >= plate_size.y + HINT_BAND_PAD * 2.0:
+		center.y = (band_top + silhouette_top) * 0.5
+	var plate := Rect2(center - plate_size * 0.5, plate_size)
 	UiKit.glass(get_canvas_item(), plate)
 	UiKit.text_in(
-		get_canvas_item(), _font, "左の在庫棚から選ぶと、ここへ収まります", plate, HINT_FONT, UiPalette.IVORY
+		get_canvas_item(),
+		_font,
+		"左の在庫棚から選ぶと、ここへ収まります",
+		plate,
+		roundi(HINT_FONT * k),
+		UiPalette.IVORY
 	)
+
+
+## 空の案内の倍率。縦の1.5倍(24px)を上限に、棚とリストの案内の大きさをそろえる。
+static func hint_scale(p_text_scale: float) -> float:
+	return minf(p_text_scale, HINT_SCALE_MAX)
 
 
 ## 砂術の札。**砂時計の絵を持たない**ため、紋章を中央へ大きく置く(GameDesign.md 9章)。

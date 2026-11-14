@@ -46,6 +46,14 @@ var _press := PressTracker.new()
 var _has_shown := false
 var _count_punch := 0.0
 var _punch_tween: Tween
+## 錠の印の跳ね(未所有の札を押した返事)と、入らない札の首振り(横へのずれ)。
+var _lock_punch := 0.0
+var _lock_tween: Tween
+var _shake_x := 0.0:
+	set(value):
+		_shake_x = value
+		queue_redraw()
+var _shake_tween: Tween
 var _hovering := false
 ## 乗った量・押した量(0〜1)。`_draw()` が浮きと縮みへ、`self_modulate` が明るさへ変える。
 var _hover_amount := 0.0
@@ -161,19 +169,49 @@ func _set_count_punch(value: float) -> void:
 	queue_redraw()
 
 
+func _set_lock_punch(value: float) -> void:
+	_lock_punch = value
+	queue_redraw()
+
+
+## 入らない札を押した返事。対局の手札の「出せない」と同じ振れ幅と尺で首を振る。
+func refuse() -> void:
+	if _shake_tween != null and _shake_tween.is_valid():
+		_shake_tween.kill()
+	_shake_tween = create_tween().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	for swing in CardMatchHandLayout.REFUSE_SWINGS:
+		_shake_tween.tween_property(self, "_shake_x", swing, CardMatchHandLayout.REFUSE_STEP)
+
+
 func _gui_input(event: InputEvent) -> void:
 	match _press.feed(event, size):
 		PressTracker.Result.PRESSED:
 			if is_addable():
 				_animate_amount("_press_amount", 1.0, UiPalette.DUR_PRESS)
-			elif count >= limit and not locked:
-				# 2/2の札は入らない。印を跳ねさせて返事にする。
-				_start_punch()
+			else:
+				_answer_refusal()
 		PressTracker.Result.CONFIRMED:
 			_animate_amount("_press_amount", 0.0, UiPalette.DUR_PRESS)
 			pressed.emit(card)
 		PressTracker.Result.CANCELED:
 			_animate_amount("_press_amount", 0.0, UiPalette.DUR_HOVER)
+
+
+func is_shaking() -> bool:
+	return _shake_tween != null and _shake_tween.is_running()
+
+
+## 入らない札(2/2・30枚・未所有)を押した返事。札を首振りさせ、理由を示す印(2/2・錠)を跳ねさせる。
+func _answer_refusal() -> void:
+	refuse()
+	if locked:
+		_lock_punch = 1.0
+		if _lock_tween != null and _lock_tween.is_valid():
+			_lock_tween.kill()
+		_lock_tween = create_tween()
+		_lock_tween.tween_method(_set_lock_punch, 1.0, 0.0, PUNCH_DURATION)
+	elif count >= limit:
+		_start_punch()
 
 
 ## 押したまま指で一覧をスクロールし始めた(`TouchScroll`)。押し込みを解く。
@@ -210,7 +248,11 @@ func _draw() -> void:
 		return
 	# 乗ると浮き、押すと中心を基準に縮む(子を持たない札なので描く側で変形する)。
 	var press_scale := lerpf(1.0, ClickArea.PRESS_SCALE.x, _press_amount)
-	var offset := size * 0.5 * (1.0 - press_scale) + ClickArea.HOVER_LIFT * _hover_amount
+	var offset := (
+		size * 0.5 * (1.0 - press_scale)
+		+ ClickArea.HOVER_LIFT * _hover_amount
+		+ Vector2(_shake_x, 0.0)
+	)
 	draw_set_transform(offset, 0.0, Vector2.ONE * zoom * press_scale)
 	var base := _base_size()
 	var maxed: bool = count >= limit
@@ -248,7 +290,9 @@ func _draw() -> void:
 	if maxed:
 		_draw_maxed()
 	if locked:
-		UiPaint.draw_lock(self, art.get_center(), LOCK_PLATE_RADIUS)
+		UiPaint.draw_lock(
+			self, art.get_center(), LOCK_PLATE_RADIUS * (1.0 + _lock_punch * PUNCH_SCALE)
+		)
 
 
 ## 2枚入れ終えた印。**上端の中央へ置く**——コストとの総量のあいだが唯一空いている

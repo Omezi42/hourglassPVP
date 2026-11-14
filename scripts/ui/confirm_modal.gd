@@ -7,7 +7,6 @@ extends Control
 signal confirmed
 signal cancelled
 
-const DIM_ALPHA := 0.6
 ## 縦(パネルごと拡大)で2つのボタンが画面の幅に収まる大きさ。
 const PORTRAIT_BUTTON_SIZE := Vector2(168, 60)
 
@@ -22,7 +21,7 @@ var _button_size := Vector2.ZERO
 
 func _ready() -> void:
 	visible = false
-	dim.color = Color(UiPalette.INK_900, DIM_ALPHA)
+	dim.color = UiPalette.MODAL_DIM
 	title_label.add_theme_color_override("font_color", UiPalette.GOLD)
 	title_label.add_theme_font_size_override("font_size", UiPalette.T_HEAD)
 	detail_label.add_theme_font_size_override("font_size", UiPalette.T_LEAD)
@@ -41,7 +40,7 @@ func open_notice(title: String, message: String, ok_text: String = "OK") -> void
 	cancel_button.visible = false
 	_set_confirm_style(ok_text, false)
 	_cover_viewport()
-	visible = true
+	ModalMotion.show(self, $CenterBox)
 
 
 ## はい/いいえの確認として表示する。danger=trueで確定ボタンを警告色にする。
@@ -58,7 +57,7 @@ func open_confirm(
 	cancel_button.text = cancel_text
 	_set_confirm_style(confirm_text, danger)
 	_cover_viewport()
-	visible = true
+	ModalMotion.show(self, $CenterBox)
 
 
 ## 暗幕を**画面全体**へ広げる。このモーダルは画面より小さい親の中に置かれることがあり、
@@ -76,7 +75,7 @@ func _cover_viewport() -> void:
 
 
 func close() -> void:
-	visible = false
+	ModalMotion.hide(self, $CenterBox)
 
 
 ## 取り返せない操作(danger)は硝子に赤い縁のボタンにする。

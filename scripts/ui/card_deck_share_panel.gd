@@ -141,12 +141,12 @@ func open(deck: Array, deck_name: String) -> void:
 	_set_busy(false)
 	_layout()
 	_show_face(Face.SEND)
-	visible = true
+	ModalMotion.show(self, _panel)
 	_refresh_sheet()
 
 
 func close() -> void:
-	visible = false
+	ModalMotion.hide(self, _panel)
 
 
 ## 横は `PANEL_RECT` の座標のまま、縦は `PORTRAIT_*` の1列へ置き直して拡大する。
@@ -335,7 +335,7 @@ func _set_busy(busy: bool) -> void:
 
 func _build() -> void:
 	_dim = ColorRect.new()
-	_dim.color = Color(0, 0, 0, 0.72)
+	_dim.color = UiPalette.MODAL_DIM
 	_dim.size = SCREEN_SIZE
 	_dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_dim)

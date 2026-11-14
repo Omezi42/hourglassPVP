@@ -17,12 +17,14 @@ var _emblem: UiPaint.Emblem = UiPaint.Emblem.HOURGLASS
 ## `add_child()` された画面・モーダルそのものを渡す)。`from_rect` / `to_rect` は
 ## `get_global_rect()` で得たグローバル座標でよい(内部で `root` のローカル座標へ
 ## 変換する)。`texture` を渡さなければ砂金の紋章(真鍮の砂時計)を描く。
+## `land_fade` が正なら、着地の最後のその秒数だけで消える(既定は途中から薄くなる)。
 static func fly(
 	root: Control,
 	from_rect: Rect2,
 	to_rect: Rect2,
 	duration: float = DEFAULT_DURATION,
-	texture: Texture2D = null
+	texture: Texture2D = null,
+	land_fade := 0.0
 ) -> void:
 	var fx := CardFlightFx.new()
 	fx._texture = texture
@@ -43,7 +45,11 @@ static func fly(
 		. set_ease(Tween.EASE_IN)
 	)
 	tween.tween_property(fx, "scale", Vector2.ONE * SHRINK_TO, duration)
-	tween.tween_property(fx, "modulate:a", 0.25, duration * 0.6).set_delay(duration * 0.4)
+	if land_fade > 0.0:
+		# 着地の最後だけ消える(着いた先の反応へ引き継ぐ)。
+		tween.tween_property(fx, "modulate:a", 0.0, land_fade).set_delay(duration - land_fade)
+	else:
+		tween.tween_property(fx, "modulate:a", 0.25, duration * 0.6).set_delay(duration * 0.4)
 	await tween.finished
 	fx.queue_free()
 

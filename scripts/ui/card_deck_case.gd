@@ -13,9 +13,7 @@ signal move_pressed(offset: int)
 const HERO_COUNT := 4
 ## 縦は文字を大きくするぶん、本数を減らして名前と要約の幅を空ける。
 const PORTRAIT_HERO_COUNT := 3
-## 棚の幅と、札の背丈から引いて砂時計の背丈を決める量(大きい1本 / 残り)。
-const SHOWCASE_WIDTH := 236.0
-const PORTRAIT_SHOWCASE_WIDTH := 210.0
+## 札の背丈から引いて砂時計の背丈を決める量(大きい1本 / 残り)。
 const HERO_INSET := 34.0
 const SIDE_INSET := 56.0
 ## 縦は札が高いぶん、3本が狭い棚へ収まるよう大きく引く。
@@ -27,6 +25,8 @@ const SIDE_STEP := 0.78
 const PLANK_HEIGHT := 16.0
 const FLOOR_MARGIN := 18.0
 const EDGE := 18.0
+## 棚板が並びの両端から張り出す量(`k` 倍)。板は載せた砂時計より長い。
+const SHELF_OVERHANG := EDGE * 0.5
 const TEXT_GAP := 22.0
 const NAME_FONT := UiPalette.T_HEAD
 const SUMMARY_FONT := UiPalette.T_SMALL
@@ -194,19 +194,13 @@ func _paint() -> void:
 	var k := _zoom()
 	var ci := _visual.get_canvas_item()
 	UiKit.glass(ci, Rect2(Vector2.ONE * FACE_INSET, size - Vector2.ONE * FACE_INSET * 2.0))
-	var shelf_width := PORTRAIT_SHOWCASE_WIDTH if portrait else SHOWCASE_WIDTH
-	var shelf := Rect2(
-		EDGE * k, size.y - FLOOR_MARGIN * k - PLANK_HEIGHT * k * 0.4, shelf_width, PLANK_HEIGHT * k
-	)
 	var heroes := heroes_of(cards).slice(0, PORTRAIT_HERO_COUNT if portrait else HERO_COUNT)
+	var shelf := _shelf_rect(k, heroes)
 	_paint_glow(shelf, k, heroes)
 	_paint_plank(shelf)
 	_paint_heroes(shelf, k, heroes)
-	# 字は棚と砂時計の並びのどちらか右の端から始める(砂時計が棚からはみ出しても重ならないように)。
-	var right := shelf.end.x
-	for box: Rect2 in _hero_boxes(shelf, k, heroes):
-		right = maxf(right, box.end.x)
-	var text_x := right + TEXT_GAP * k
+	# 字は満数の並びの右端から始める(デッキの本数が欠けても字の位置は変えない)。
+	var text_x := _row_end(shelf, k, heroes) + TEXT_GAP * k
 	var text_w := size.x - text_x - EDGE * k
 	var name_w := text_w
 	var tag_rect := Rect2()
@@ -248,7 +242,8 @@ func _paint_glow(shelf: Rect2, k: float, heroes: Array) -> void:
 	var h := size.y - _hero_inset(0, k)
 	var w := h * float(tex.get_width()) / float(tex.get_height())
 	var center := Vector2(
-		shelf.position.x + EDGE * 0.5 * k + w * 0.5, shelf.position.y + SHELF_FEET_DROP - h * 0.5
+		shelf.position.x + SHELF_OVERHANG * k + w * 0.5,
+		shelf.position.y + SHELF_FEET_DROP - h * 0.5
 	)
 	UiKit.glow(
 		_visual.get_canvas_item(),
@@ -281,10 +276,37 @@ func _paint_heroes(shelf: Rect2, k: float, heroes: Array) -> void:
 			_visual.draw_texture_rect(tex, _hero_boxes(shelf, k, heroes)[i], false)
 
 
+## 棚板。右端は満数の並びの右端 + 張り出し(左の張り出しと同じ量)。
+func _shelf_rect(k: float, heroes: Array) -> Rect2:
+	var left := EDGE * k
+	var plank := Rect2(
+		left, size.y - FLOOR_MARGIN * k - PLANK_HEIGHT * k * 0.4, 0.0, PLANK_HEIGHT * k
+	)
+	plank.size.x = _row_end(plank, k, heroes) + SHELF_OVERHANG * k - left
+	return plank
+
+
+## 満数(縦3本・横4本)で並べたときの、最後の砂時計の右端。本数が欠けた分は直前の絵の縦横比で数える。
+func _row_end(shelf: Rect2, k: float, heroes: Array) -> float:
+	var x := shelf.position.x + SHELF_OVERHANG * k
+	var end := x
+	var aspect := 1.0 / CardDeckShelf.ART_RATIO
+	var count := PORTRAIT_HERO_COUNT if portrait else HERO_COUNT
+	for i in count:
+		if i < heroes.size():
+			var tex: Texture2D = heroes[i].icon_upright
+			if tex != null:
+				aspect = float(tex.get_width()) / float(tex.get_height())
+		var w := (size.y - _hero_inset(i, k)) * aspect
+		end = x + w
+		x += w * (HERO_STEP if i == 0 else SIDE_STEP)
+	return end
+
+
 ## 砂時計を立てる矩形(棚の左から、先頭を大きく並べる)。絵の無いものは幅0。
 func _hero_boxes(shelf: Rect2, k: float, heroes: Array) -> Array[Rect2]:
 	var boxes: Array[Rect2] = []
-	var x := shelf.position.x + EDGE * 0.5 * k
+	var x := shelf.position.x + SHELF_OVERHANG * k
 	var feet := shelf.position.y + SHELF_FEET_DROP
 	for i in heroes.size():
 		var tex: Texture2D = heroes[i].icon_upright

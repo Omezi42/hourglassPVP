@@ -12,6 +12,8 @@ const INK_800 := Color(0.06, 0.075, 0.135)
 const INK_700 := Color(0.09, 0.115, 0.20)
 const INK_600 := Color(0.14, 0.175, 0.29)
 const INK_500 := Color(0.22, 0.27, 0.42)
+## メニューのモーダルの暗幕(対局の重ねは `CardMatchLayout.OVERLAY_DIM_ALPHA` で一段濃い)。
+const MODAL_DIM := Color(INK_900, 0.72)
 
 # ---- 真鍮(線と主の面) ----
 const GOLD_HI := Color(1.0, 0.93, 0.72)
