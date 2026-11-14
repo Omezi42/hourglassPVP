@@ -223,6 +223,9 @@ def existing_finishes():
                 v = re.search(r'"%s": "(\w+)"' % field, m.group(2))
                 if v:
                     finishes.setdefault(m.group(1), {})[field] = v.group(1)
+            sand = re.search(r'"sand": (\[[^\]]*\])', m.group(2))
+            if sand:
+                finishes.setdefault(m.group(1), {})["sand"] = sand.group(1)
     return finishes
 
 
@@ -240,6 +243,8 @@ def write_table(table):
         for field in FINISH_FIELDS:
             if field in finishes.get(art_id, {}):
                 parts.append('"%s": "%s"' % (field, finishes[art_id][field]))
+        if "sand" in finishes.get(art_id, {}):
+            parts.append('"sand": %s' % finishes[art_id]["sand"])
         lines.append('"%s": {%s}' % (art_id, ", ".join(parts)))
     header = [
         '[gd_resource type="Resource" script_class="HourglassTintTable" load_steps=2 format=3]',

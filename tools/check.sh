@@ -50,6 +50,10 @@ else
   echo "ok"
 fi
 
+# コード描画の砂時計の焼き忘れ(Architecture.md 10.19節)。
+echo "== hourglass art bake"
+python tools/check_hourglass_bake.py || status=1
+
 echo "== headless tests"
 timeout "$GODOT_TIMEOUT" "$GODOT" --headless --path . --script res://tools/tests/run_tests.gd > logs/check_tests.log 2>&1
 grep -E "tests passed|FAILED|SCRIPT ERROR|Parse Error" logs/check_tests.log | head -20

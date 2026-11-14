@@ -1,4 +1,4 @@
-// 砂時計のコード描画のガラス玉と砂(Architecture.md 10.19節)。スキンは HOOK_CAVITY / HOOK_FRONT を定義して、ガラスの中と手前へ描き足せる。
+// 砂時計のコード描画のガラス玉と砂(Architecture.md 10.19節)。カードごとの処理は入れない(ガラスがカードごとのシェーダーに戻るため)。
 
 void draw_glass(inout vec4 acc, Px f) {
 	vec2 p = f.p;
@@ -149,10 +149,6 @@ void draw_glass(inout vec4 acc, Px f) {
 		cav = mix(cav, s_lit, halo * 0.55 * glow_k + glow_k * 0.10 * float(sand_kind == KIND_GLOW));
 		cav_a = mix(cav_a, 1.0, halo * 0.4 * glow_k);
 
-#ifdef HOOK_CAVITY
-		hook_cavity(cav, cav_a, f, u);
-#endif
-
 		// 底の楕円(ガラス越しに見える奥の縁)
 		float floor_arc = abs(p.y - (yf + 0.012 + TILT * sqrt(max(rf * rf - p.x * p.x, 0.0))));
 		float floor_line = (1.0 - smoothstep(0.0, max(0.008, px), floor_arc)) * step(p.y, 0.0);
@@ -165,10 +161,6 @@ void draw_glass(inout vec4 acc, Px f) {
 		cav_a = mix(cav_a, 1.0, m_top_all);
 		cav = mix(cav, pile_col, m_pile);
 		cav_a = mix(cav_a, 1.0, m_pile);
-
-#ifdef HOOK_FRONT
-		hook_front(cav, cav_a, f, u);
-#endif
 
 		// ---- 手前の面の映り込み ----
 		float refl = 0.0;

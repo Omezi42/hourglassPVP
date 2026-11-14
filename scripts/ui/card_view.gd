@@ -282,7 +282,7 @@ var _brace_pulse := 0.0
 var _pose := CardViewPose.new(self)
 var _drawn_look: Array = []
 var _redraw_check_pending := false
-## 動くスキンの絵を出している間は true。`SkinRenderer` は引かれ続けた絵だけを描くため、毎フレーム引き直す。
+## 動くスキンの絵を出している間は true。`HourglassLive` は引かれ続けた絵だけを描くため、毎フレーム引き直す。
 var _live := false
 
 

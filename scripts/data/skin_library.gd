@@ -4,11 +4,11 @@ extends RefCounted
 ## Autoload を使わず static のみで持つ。
 ##
 ## スキンは**そのカード1枚だけの固有の絵**であり、色違いでは作らない(31章)。
-## 見た目は `SHADER_DIR/{skin_id}.gdshader`(コード描画。`SkinRenderer` が止めた絵と動く絵にする)。
+## 見た目は対象カードのコード描画(`resources/shaders/hourglasses/{card_id}.gdshader`。
+## 止めた絵は `HourglassArt`、動く絵は `HourglassLive`)。
 ## シェーダーが無いスキンだけ、`ART_DIR/{skin_id}/` の3状態の画像を読む(置き換え終えるまでの経路)。
 ## **絵を読む口はこの `texture()` / `live_texture()` だけに閉じる**——出どころを1箇所で切り替えられるようにするため。
 
-const SHADER_DIR := "res://resources/shaders/skins"
 const ART_DIR := "res://assets/hourglasses/skins"
 ## `HourglassArt.State` の並びに対応するファイル名。
 const STATE_FILES: Array[String] = ["state_upright", "state_falling", "state_fallen"]
@@ -152,7 +152,7 @@ static func skin_for_card(p_card_id: String) -> String:
 
 ## 見た目があるか。シェーダーか、3状態の画像のどちらか。
 static func has_art(skin_id: String) -> bool:
-	if SkinRenderer.has_shader(skin_id):
+	if HourglassLive.has_shader(card_id(skin_id)):
 		return true
 	for state in STATE_FILES.size():
 		if not ResourceLoader.exists(_path(skin_id, state)):
@@ -162,22 +162,18 @@ static func has_art(skin_id: String) -> bool:
 
 ## 動く絵を持つか(シェーダーのスキン)。持つスキンは場の駒・ショップ・図鑑の右のページが毎フレーム引き直す。
 static func is_live(skin_id: String) -> bool:
-	return SkinRenderer.has_shader(skin_id)
+	return HourglassLive.has_shader(card_id(skin_id))
 
 
-static func shader_path(skin_id: String) -> String:
-	return "%s/%s.gdshader" % [SHADER_DIR, skin_id]
-
-
-## 起動時に1度だけ呼ぶ(`Main._ready()`)。シェーダーのスキンの止めた絵を焼き始める。
+## 起動時に1度だけ呼ぶ(`Main._ready()`)。動く絵の準備。
 static func ensure_ready(parent: Node) -> void:
-	SkinRenderer.ensure_ready(parent)
+	HourglassLive.ensure_ready(parent)
 
 
 ## スキンの絵の1状態(止めた絵)。**所有・ON/OFFを見ない**(ショップの見本はここを直に読む)。
 static func texture(skin_id: String, state: int) -> Texture2D:
-	if SkinRenderer.has_shader(skin_id):
-		return SkinRenderer.still(skin_id, state)
+	if HourglassLive.has_shader(card_id(skin_id)):
+		return HourglassArt.texture(card_id(skin_id), state)
 	var key := "%s|%d" % [skin_id, state]
 	if _textures.has(key):
 		return _textures[key]
@@ -190,8 +186,8 @@ static func texture(skin_id: String, state: int) -> Texture2D:
 ## スキンの絵の1状態(動く絵)。呼ばれ続けている間だけ描き続けるため、使う側は毎フレーム引き直す。
 ## シェーダーが無いスキンは止めた絵と同じ。
 static func live_texture(skin_id: String, state: int) -> Texture2D:
-	if SkinRenderer.has_shader(skin_id):
-		return SkinRenderer.live(skin_id, state)
+	if HourglassLive.has_shader(card_id(skin_id)):
+		return HourglassLive.live_texture(card_id(skin_id), state)
 	return texture(skin_id, state)
 
 

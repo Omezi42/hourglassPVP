@@ -127,7 +127,7 @@ static func skin_states(ci: CanvasItem, rect: Rect2, skin_id: String) -> void:
 		ci.draw_texture_rect(texture, Rect2(at, art), false)
 
 
-## スキンの動く絵を引き続ける(`SkinRenderer` は引かれ続けた絵だけを描く)。
+## スキンの動く絵を引き続ける(`HourglassLive` は引かれ続けた絵だけを描く)。
 static func keep_skin_live(skin_id: String) -> void:
 	for state in SkinLibrary.STATE_FILES.size():
 		SkinLibrary.live_texture(skin_id, state)

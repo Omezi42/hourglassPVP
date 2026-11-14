@@ -112,7 +112,9 @@ static func accent_color(art_id: String) -> Color:
 		return _accents[art_id]
 	_load_table()
 	var color := MASTER_SAND
-	if _table != null:
+	if _table != null and _table.has_sand(art_id):
+		color = _table.sand_of(art_id)
+	elif _table != null:
 		for step in _table.chain(art_id):
 			var h := fmod(color.h + float(step.get("hue", 0.0)), 1.0)
 			var sat := clampf(
@@ -131,6 +133,14 @@ static func accent_color(art_id: String) -> Color:
 			color = Color.from_hsv(h, sat, v)
 	_accents[art_id] = color
 	return color
+
+
+## その絵の砂の質感の名前(表の `texture`。無ければ空文字=さらさら)。コード描画の共通のガラスを選ぶ。
+static func texture_name(art_id: String) -> String:
+	_load_table()
+	if _table == null or not _table.has(art_id):
+		return ""
+	return String((_table.entries[art_id] as Dictionary).get("texture", ""))
 
 
 ## 固有の絵(色違いでは足りないカード)。あればそれをそのまま使う。

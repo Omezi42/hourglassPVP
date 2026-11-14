@@ -6,7 +6,8 @@ extends Resource
 ## 数値は tools/fit_hourglass_tints.py が現行の絵から逆算したもので、
 ## カードを足すときは同じ道具で1行足す。
 
-## 絵のid → { source, hue, sat, sat_bias, floor, value, value_bias, threshold }
+## 絵のid → { source, hue, sat, sat_bias, floor, value, value_bias, threshold,
+## [texture, frame, sand] }
 @export var entries: Dictionary = {}
 
 
@@ -29,6 +30,16 @@ func source_of(art_id: String) -> String:
 	if not entries.has(art_id):
 		return ""
 	return String((entries[art_id] as Dictionary).get("source", ""))
+
+
+## 色変換の連鎖ではなく砂の色そのものを持つ行(コード描画のカード。`sand` = [r, g, b])。
+func has_sand(art_id: String) -> bool:
+	return entries.has(art_id) and (entries[art_id] as Dictionary).has("sand")
+
+
+func sand_of(art_id: String) -> Color:
+	var rgb: Array = (entries[art_id] as Dictionary)["sand"]
+	return Color(float(rgb[0]), float(rgb[1]), float(rgb[2]))
 
 
 func has(art_id: String) -> bool:

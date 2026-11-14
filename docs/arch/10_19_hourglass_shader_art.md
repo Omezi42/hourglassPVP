@@ -28,12 +28,12 @@
 | `resources/shaders/hourglasses/{art_key}.gdshader` | そのカードの絵。**カードを足すときはこれを1本置き、焼き直すだけ**(表もコードも変えない) |
 | `resources/shaders/hourglass/hourglass_lib.gdshaderinc` | uniform・定数・道具(距離関数・陰影・輪郭・砂の質感・光の重ね方・`Px`) |
 | `resources/shaders/hourglass/hourglass_glass.gdshaderinc` | ガラス玉と砂(`draw_glass()`) |
-| `resources/shaders/hourglass/glass_{kind}.gdshader` | 全カード共通のガラスと砂。砂の質感6種ごとに1本(`SKIN_SAND_KIND` を `#define` して上を読むだけ) |
+| `resources/shaders/hourglass/glass_{kind}.gdshader` | 全カード共通のガラスと砂。砂の質感6種(sand/grain/liquid/crystal/glow/stardust)ごとに1本(`SAND_KIND` を `#define` して上を読むだけ) |
 | `resources/shaders/hourglass/frame_parts.gdshaderinc` | 枠の部品(柱・輪・玉・板・受け金・目・象嵌)と共通の色。**止めた部分だけが使う** |
 | `resources/shaders/hourglass/art_main.gdshaderinc` | `fragment()`。`ART_STATIC` があれば止めた部分(`layer` で後ろ/枠)を、無ければ動き(`under_tex` + `motion_*()`)を描く |
 | `assets/hourglasses/overrides/{art_key}/state_{full,falling,empty}.png` | 焼いた止めた絵(手札・一覧などに出す完成形。生成物だがcommitする) |
 | `assets/hourglasses/overrides/{art_key}/{back,frame}_{full,falling,empty}.png` | 焼いた層(動く絵の下地。後ろが空のカードは back を持たない) |
-| `tools/bake_hourglass_art.gd` | 全シェーダーを焼いて上へ書き出す。ウィンドウありで回す(headlessは描画しない) |
+| `tools/bake_hourglass_art.gd` | 全シェーダーを焼いて上へ書き出す。ウィンドウありで回す(headlessは描画しない)。`-- {art_key}` で1枚だけ |
 
 カードのシェーダーは次の形に書く。
 
@@ -53,9 +53,12 @@ void motion_front(inout vec4 acc, Px f) { ... }
 
 - **実行時はこのファイルをそのまま読む**(`ART_STATIC` が無いので動きだけがコンパイルされる)。焼く道具だけが
   コードの先頭へ `#define ART_STATIC` を足した `Shader` を作って使う
-- **動きの関数では陰影(`shade_mat()` など)と枠の部品を使わない。**形の距離関数・`over()`・`add_light()`・`star4()` などの軽い道具だけで描く。
-  使うと動きのシェーダーが重くなり、層に分けた意味が無くなる
-- **砂の色は uniform `sand_color` で外から渡し、値は色違いの表(`HourglassTintTable`)のそのカードの行から取る。**
+- **動きの関数では枠の部品(`frame_parts`)を使わない。**形の距離関数・`over()`・`add_light()`・`star4()` などの軽い道具で描く。
+  陰影(`shade_mat()`)は、動く部品自身の色が止めた状態と同じ見た目でなければならない所(砂が落ちている間だけ動く柱・槌、傾く天秤、揺れる鈴・蔦、羽根)にだけ最小限使う。
+  枠・板・柱の陰影を動きへ持ち込むと動きのシェーダーが重くなり、層に分けた意味が無い。
+  **動く部品が止めた部品の上に重なる順(柱の下の翼・帯の下のねじり柱など)なら、動く側を後ろの層へ置く。砂が落ちている間だけ動く部品は、`flow` で止めた側と動き側を排他にする**(止めた側は `flow < 0.5`、動き側は `flow >= 0.5`)
+  **後ろの下へ敷く光(結界など)は、焼いた絵の濃い所を `(1.0 - acc.a)` で弱めて「下に敷いた」ように見せる**
+- **砂の色は uniform `sand_color` で外から渡し、値は色違いの表(`HourglassTintTable`)のそのカードの行から取る**(コード描画のカードの行は色変換の連鎖ではなく `sand` = [r, g, b] で持ち、質感は `texture`)。
   手札の光だまり(`HourglassArt.accent_color()`)・色違いの絵・シェーダーの絵が同じ1行を見るため、色の出どころが1つに保てる(9章「いまの色を引き継ぐ」)
 - **砂の質感は uniform にしない。**6種の分岐が全部コンパイルされ、1.3〜1.5倍重くなるため。表の質感で `glass_{kind}` を選ぶ
 - 400x532 の矩形へ描く(基本の絵の落下中と同じ高さ)。座標は基本の絵と同じで、上へ19px広いぶんを天板の上の飾りに使う
@@ -67,7 +70,8 @@ void motion_front(inout vec4 acc, Px f) { ... }
 - `tools/bake_hourglass_art.gd` が3状態ごとに、層(後ろ・枠)と、`clock` = 0・視線は中央で全層を重ねた完成形を焼く。
   焼き直しは、シェーダーか共通の部品か表の色・質感を変えたとき
 - **焼き忘れを `tools/check.sh` が止める**:シェーダーがあるのにPNGが揃っていない、またはシェーダー・共通の部品より古いPNGがあれば失敗にする
-- 取り込みは非可逆のWebP(画質は pck の増え方を見て決め、4.1節に書く)。可逆で持つと数十MBになるため
+- 取り込みは非可逆のWebP(画質0.85。4.1節)。取り込み設定は焼く道具が置く
+- **焼き忘れの検査は `tools/check_hourglass_bake.py`**(`check.sh` が回す)。焼いた元(共通の部品・そのカードのシェーダー・共通のガラス・表のそのカードの行)のハッシュを `tools/hourglass_bake_manifest.json` に控え、PNGが揃っていないか控えと違えば失敗にする。更新は `bake_hourglass_art.gd` が行う
 - Web版の半分の解像度の扱いは `HourglassArt` の固有の絵と同じ(4.1節)
 
 ## 動く絵

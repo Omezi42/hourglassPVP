@@ -44,12 +44,13 @@ func _check_skin(assert_true: Callable, skin_id: String) -> void:
 	var skin_art := SkinLibrary.texture(skin_id, state)
 	var base_art := HourglassArt.texture(card.art_key(), state)
 	var free := SkinLibrary.is_free(skin_id)
-	assert_true.call(skin_art != null and skin_art != base_art, "%s の絵が読める" % skin_id)
-	var shaded := ResourceLoader.exists(SkinLibrary.shader_path(skin_id))
+	assert_true.call(skin_art != null, "%s の絵が読める" % skin_id)
+	var shaded := HourglassLive.has_shader(card.art_key())
 	assert_true.call(SkinLibrary.is_live(skin_id) == shaded, "%s: シェーダーがあれば動く絵を持つ" % skin_id)
 	if shaded:
+		assert_true.call(skin_art == base_art, "%s: コード描画の絵は基本の絵と同じ" % skin_id)
 		assert_true.call(
-			skin_art.get_size() == Vector2(SkinRenderer.CANVAS), "%s: 止めた絵はキャンバスの大きさ" % skin_id
+			skin_art.get_size() == Vector2(HourglassLive.CANVAS), "%s: 止めた絵はキャンバスの大きさ" % skin_id
 		)
 	assert_true.call(
 		ShopCatalog.sells(ShopCatalog.Kind.SKIN, skin_id) != free,

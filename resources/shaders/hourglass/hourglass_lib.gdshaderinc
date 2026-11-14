@@ -1,16 +1,13 @@
 // 砂時計のコード描画の共通部: uniform・定数・道具(Architecture.md 10.19節)。
-// スキンは SKIN_SAND_COLOR / SKIN_SAND_KIND を #define してから読むと、砂の色と質感が定数になる。
+// 砂の質感は共通のガラス(glass_{kind})だけが SAND_KIND を #define してから読んで定数にする。カードごとの絵は定義しない。
 const int KIND_GRAIN = 1;
 const int KIND_LIQUID = 2;
 const int KIND_CRYSTAL = 3;
 const int KIND_GLOW = 4;
 const int KIND_STARDUST = 5;
 
-#ifdef SKIN_SAND_COLOR
-const vec3 sand_color = SKIN_SAND_COLOR;
-#else
+// 砂の色。色違いの表(HourglassTintTable)のそのカードの行から渡す。
 uniform vec3 sand_color : source_color = vec3(0.93, 0.66, 0.24);
-#endif
 uniform vec3 frame_color : source_color = vec3(0.75, 0.47, 0.24);
 uniform vec3 trim_color : source_color = vec3(0.86, 0.66, 0.30);
 // 0=塗りの木 / 1=金属
@@ -28,10 +25,10 @@ uniform float glow : hint_range(0.0, 1.0) = 0.6;
 // ガラスの面の濃さ(0=ほぼ透明 / 1=不透明)
 uniform float glass_body : hint_range(0.0, 1.0) = 0.3;
 // 砂の質感(0=さらさら / 1=粒 / 2=液体 / 3=結晶 / 4=光 / 5=星屑)
-#ifdef SKIN_SAND_KIND
-const int sand_kind = SKIN_SAND_KIND;
+#ifdef SAND_KIND
+const int sand_kind = SAND_KIND;
 #else
-uniform int sand_kind = 0;
+const int sand_kind = 0;
 #endif
 
 // 動きの時計(秒)。本体へ入れるときは TIME か、演出の進み具合を渡す。
@@ -40,6 +37,9 @@ uniform float clock = 0.0;
 uniform vec2 look = vec2(0.0);
 // 1体ごとの模様の違い
 uniform float seed = 0.0;
+
+const vec3 GOLD = vec3(0.93, 0.73, 0.33);
+const vec3 SILVER = vec3(0.80, 0.83, 0.89);
 
 const vec2 HALF = vec2(1.0136, 1.3);
 const float GLASS_H = 0.93;
@@ -142,6 +142,13 @@ vec3 shade_mat(vec3 base, vec3 n, float metal, float gloss, float ao) {
 	metal_col += pow(max(dot(n, HALF_VEC), 0.0), 70.0) * 0.6;
 
 	return mix(wood, metal_col, metal) * ao;
+}
+
+// 動く部品用の軽い陰影(shade_mat の簡易版)。法線が画素ごとに変わる所へ使う(動きのシェーダーを重くしないため)。
+// 法線が定数の呼び出しは、コンパイラが畳むので shade_mat のままでよい。
+vec3 shade_lite(vec3 base, vec3 n) {
+	float ndl = clamp(dot(n, LIGHT_DIR), 0.0, 1.0);
+	return mix(base * 0.58, min(base * 1.22, vec3(1.0)), smoothstep(0.08, 0.80, ndl));
 }
 
 vec3 shade_solid(vec3 base, vec3 n, float metal, float ao) {
@@ -314,4 +321,25 @@ void add_light(inout vec4 acc, vec3 c, float a) {
 	float na = a + acc.a * (1.0 - a);
 	acc.rgb = mix(c, acc.rgb, acc.a / max(na, 0.0001));
 	acc.a = na;
+}
+
+// キャンバスの端へ向けて 0 になる窓(後ろへ敷く光が矩形で切れて見えないように)
+float canvas_window(vec2 p) {
+	float wx = 1.0 - smoothstep(0.80, 1.0, abs(p.x));
+	float wy = (1.0 - smoothstep(1.16, 1.38, p.y)) * smoothstep(-1.28, -1.10, p.y);
+	return wx * wy;
+}
+
+void draw_ball(inout vec4 acc, Px f, vec2 c, float r, vec3 col, float metal) {
+	vec2 q = f.p - c;
+	if (length(q) > r + f.pad) {
+		return;
+	}
+	vec3 n = normalize(vec3(q, sqrt(max(r * r - dot(q, q), 0.0)) + 0.004));
+	part(acc, length(q) - r, ink_of(col), shade_mat(col, n, metal, 1.0, 1.0), f.ow, f.px);
+}
+
+// 板の中だけに塗る(縁の面取りと輪郭を残す)
+void inlay(inout vec4 acc, float slab_d, vec3 col, float a, Px f) {
+	over(acc, col, a * cov(slab_d + f.ow * 0.6, f.px));
 }

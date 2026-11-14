@@ -28,8 +28,7 @@ static func texture(card: CardData, state: int, viewer: Viewer = Viewer.SELF) ->
 	return HourglassArt.texture(card.art_key(), state)
 
 
-## 動く絵。場の駒・ショップの見本・図鑑の右のページだけが引く(31章)。
-## スキンが効いていなければ `texture()` と同じ。引く側は毎フレーム引き直す(引かれ続けている間だけ描かれる)。
+## 動く絵。場の駒・ショップの見本・図鑑の右のページだけが引く(31章)。スキンが効いていなければ `texture()` と同じ。引く側は毎フレーム引き直す(引かれ続けている間だけ描かれる)。
 static func live_texture(card: CardData, state: int, viewer: Viewer = Viewer.SELF) -> Texture2D:
 	var skin_id := active_skin(card, viewer)
 	if not skin_id.is_empty():

@@ -58,6 +58,12 @@ v' = clamp(v * value + value_bias, 0, 1)
 - **固有の絵(`overrides/{id}/`)があればそれをそのまま配り、色変換を行わない**
   (GameDesign.md 9章)
 
+## コード描画の絵の取り込み(10.19節)
+
+`overrides/{id}/` の焼いた絵(state・frame・back)は非可逆のWebP・画質0.85で取り込む(焼く道具が `.import` を置く)。
+実測(9種・59枚): 可逆 3.9MB / 0.95 = 2.3MB / **0.85 = 1.6MB** / 0.70 = 1.3MB。0.85の画素の平均誤差は0.5%(最大0.9%)で、
+他の砂時計と同じ画質。1種あたり約0.18MB(完成形3枚で約0.11MB・層で約0.07MB)なので、**全99種を描くと約16MB増える**(要・見直し)。
+
 ## 砂の質感と枠の素材(GameDesign.md 9章)
 
 表の1件は `texture`(grain / liquid / crystal / glow / stardust)と `frame`(wood / iron / brass /
