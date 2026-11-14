@@ -5,13 +5,13 @@ extends SignatureMove
 const CIRCLE := 0.12
 const FLIGHT := 0.33
 ## 魔方陣の大きさ(横の半径と、卓の奥行きに合わせて潰す比)と足元の位置、星の頂点数。
-const SPAN := 38.0
+const SPAN := 62.0
 const SQUASH := 0.32
 const STAR := 5
 ## 文字の大きさ(飛び立つとき→届くとき)と、弧の高さ、尾に引く残像の数。
-const GLYPH_FROM := 10.0
-const GLYPH_TO := 17.0
-const ARC := 70.0
+const GLYPH_FROM := 24.0
+const GLYPH_TO := 34.0
+const ARC := 90.0
 const GHOSTS := 3
 const GHOST_LAG := 0.05
 const SHAPE := 1

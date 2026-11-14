@@ -7,9 +7,9 @@ const SHOW := 0.12
 const COPY := 0.28
 ## 行の置き場所(離した位置から上へ)、文字の大きさと間隔、2行の間隔。
 const LIFT := 8.0
-const GLYPH := 12.0
-const PITCH := 31.0
-const LINE_GAP := 20.0
+const GLYPH := 28.0
+const PITCH := 46.0
+const LINE_GAP := 40.0
 const SHAPES := [0, 2, 3, 1]
 
 

@@ -9,19 +9,19 @@ const FALL := 0.15
 ## 文字の数の上限。墓地の砂術がこれ以上あっても6つのまま。
 const MAX_RUNES := 6
 ## 本の置き場所(駒の中心から上へ)、片側のページの幅・高さ・背の反り、ページ送りの回数。
-const LIFT := 44.0
-const WIDTH := 28.0
-const HEIGHT := 20.0
-const SLANT := 6.0
+const LIFT := 40.0
+const WIDTH := 42.0
+const HEIGHT := 30.0
+const SLANT := 9.0
 const FLIPS := 4
 const COVER := Color(0.45, 0.24, 0.18, 1.0)
 ## 文字が立ちのぼる高さ(本から上へ)、横の広がり、塊になる点(本から上へ)、文字の大きさ。
-const RUN_RISE := 52.0
-const SPREAD := 22.0
-const CLUSTER_RISE := 78.0
-const GLYPH := 11.0
-const GLYPH_FALL := 16.0
-const ARC := 60.0
+const RUN_RISE := 56.0
+const SPREAD := 32.0
+const CLUSTER_RISE := 76.0
+const GLYPH := 26.0
+const GLYPH_FALL := 36.0
+const ARC := 90.0
 
 
 func impact_at() -> float:
@@ -64,7 +64,7 @@ func draw(item: CanvasItem, t: float) -> void:
 	if burst > 0.0:
 		for i in range(count + 3):
 			var angle := TAU * float(i) / float(count + 3) + SignaturePaint.jitter(i, 41)
-			var reach := 26.0 * ease(burst, 0.5)
+			var reach := 40.0 * ease(burst, 0.5)
 			var at := targets[0] + Vector2.from_angle(angle) * reach
 			SignaturePaint.rune(
 				item, at, GLYPH * (1.0 - burst * 0.6), i, 1.0, alpha * (1.0 - burst)

@@ -5,15 +5,15 @@ extends SignatureMove
 const WRITE := 0.25
 const DISSOLVE := 0.17
 ## 文字の置き場所(駒の中心から上へ)と大きさ、字形の番号。ほどけて落ちる砂粒の数。
-const LIFT := 66.0
-const GLYPH := 14.0
+const LIFT := 62.0
+const GLYPH := 30.0
 const SHAPE := 3
-const GRAINS := 9
-const GRAIN := 1.8
+const GRAINS := 12
+const GRAIN := 3.0
 ## 羽根ペンの軸の長さと傾き、羽根の幅。
-const QUILL := 24.0
+const QUILL := 44.0
 const QUILL_LEAN := -0.9
-const VANE := 4.5
+const VANE := 8.0
 
 
 func impact_at() -> float:

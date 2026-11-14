@@ -30,21 +30,12 @@ const PULSE := Color(1.0, 0.86, 0.42, 1.0)
 const SPARK_HOT := Color(1.0, 0.97, 0.80, 1.0)
 const SPARK_COOL := Color(1.0, 0.62, 0.20, 1.0)
 const DIAL_FACE := Color(0.96, 0.92, 0.82, 1.0)
-## 詠み文字の字形(4種)。-0.5〜0.5 の箱へ収めた折れ線で、y は下向き。
-const RUNES := [
-	[Vector2(-0.4, -0.5), Vector2(0.4, -0.5), Vector2(-0.4, 0.5), Vector2(0.4, 0.5)],
-	[Vector2(-0.4, 0.5), Vector2(-0.4, -0.5), Vector2(0.4, 0.5), Vector2(0.4, -0.5)],
-	[Vector2(0.0, -0.5), Vector2(0.0, 0.5), Vector2(0.4, 0.0), Vector2(-0.4, 0.0)],
-	[
-		Vector2(-0.4, -0.4),
-		Vector2(0.4, -0.4),
-		Vector2(0.0, 0.0),
-		Vector2(0.4, 0.5),
-		Vector2(-0.4, 0.5)
-	],
-]
 const RUNE_OUTLINE := 4.0
 const RUNE_STROKE := 2.2
+## 点の画が書き進みの長さに占める割合。
+const RUNE_DOT_WEIGHT := 0.12
+const RUNE_ARC_STEPS := 14
+const RUNE_SHAPES := 4
 const HAMMER_HANDLE := 30.0
 const HAMMER_HEAD := Vector2(18.0, 10.0)
 
@@ -438,8 +429,9 @@ static func card_glint(
 	ShapePaint.polyline(ci, closed, Color(BOON, alpha), 1.4, true)
 
 
-## 詠み文字(3〜4画の読めない短い文字)。`size` は文字の高さ、`shape` は字形の番号、
-## `written` は書き進みの割合(0→1)。暗い縁を敷いて、盤面の上でも画が潰れないようにする。
+## 詠み文字(弧・鉤・点を組み合わせた読めない短い文字)。`size` は文字の高さ、`shape` は字形の番号
+## (渦+点 / 目 / 三つ葉 / 三日月+星)、`written` は書き進みの割合(0→1)。暗い縁を敷いて、
+## 盤面の上でも画が潰れないようにする。
 static func rune(
 	item: CanvasItem,
 	at: Vector2,
@@ -451,19 +443,22 @@ static func rune(
 ) -> void:
 	if alpha <= 0.0 or written <= 0.0 or size <= 1.0:
 		return
-	var path := _rune_path(at, size, shape, written)
+	var drawn := _rune_drawn(at, size, shape, written)
 	var ci := item.get_canvas_item()
-	var width := maxf(size * 0.14, RUNE_STROKE)
-	ShapePaint.polyline(
-		ci, path, Color(UiPalette.INK_950, alpha * 0.55), width + RUNE_OUTLINE * 0.5, true
-	)
-	ShapePaint.polyline(ci, path, Color(color, alpha), width, true)
+	var width := maxf(size * 0.1, RUNE_STROKE)
+	for line: PackedVector2Array in drawn["lines"]:
+		ShapePaint.polyline(
+			ci, line, Color(UiPalette.INK_950, alpha * 0.55), width + RUNE_OUTLINE * 0.5, true
+		)
+		ShapePaint.polyline(ci, line, Color(color, alpha), width, true)
+	for dot: Vector2 in drawn["dots"]:
+		ShapePaint.circle(ci, dot, width * 1.1 + 1.0, Color(UiPalette.INK_950, alpha * 0.55))
+		ShapePaint.circle(ci, dot, width * 1.1, Color(color, alpha))
 
 
 ## 詠み文字を `written` まで書いたときの筆先の位置。
 static func rune_tip(at: Vector2, size: float, shape: int, written: float) -> Vector2:
-	var path := _rune_path(at, size, shape, written)
-	return path[path.size() - 1]
+	return _rune_drawn(at, size, shape, written)["tip"]
 
 
 ## 静止(PULSE)の光の輪。`progress` は0→1で広がりながら薄れる。
@@ -484,23 +479,100 @@ static func pulse_ring(item: CanvasItem, center: Vector2, progress: float, alpha
 	)
 
 
-static func _rune_path(at: Vector2, size: float, shape: int, written: float) -> PackedVector2Array:
-	var points: Array = RUNES[shape % RUNES.size()]
+## 字形の画(-0.5〜0.5の箱、y は下向き)。点は1点だけの画。アルファベット・数字・仮名に見えないよう、
+## 直線の折れ線は使わず弧と渦と点だけで組む。
+static func _rune_strokes(shape: int) -> Array:
+	match shape % RUNE_SHAPES:
+		0:
+			var spiral := PackedVector2Array()
+			for i in range(RUNE_ARC_STEPS * 2 + 1):
+				var t := float(i) / float(RUNE_ARC_STEPS * 2)
+				spiral.append(
+					(
+						Vector2.from_angle(TAU * 1.4 * t - PI * 0.5) * (0.05 + 0.33 * t)
+						+ Vector2(0.0, -0.06)
+					)
+				)
+			return [spiral, PackedVector2Array([Vector2(0.0, 0.44)])]
+		1:
+			var lids := PackedVector2Array()
+			for i in range(RUNE_ARC_STEPS + 1):
+				var x := lerpf(-0.46, 0.46, float(i) / float(RUNE_ARC_STEPS))
+				lids.append(Vector2(x, -0.3 * (1.0 - pow(x / 0.46, 2.0)) * 1.0 - 0.05))
+			for i in range(RUNE_ARC_STEPS + 1):
+				var x := lerpf(0.46, -0.46, float(i) / float(RUNE_ARC_STEPS))
+				lids.append(Vector2(x, 0.3 * (1.0 - pow(x / 0.46, 2.0)) - 0.05))
+			return [
+				lids,
+				_arc(Vector2(0.0, -0.05), 0.1, 0.0, TAU),
+				_arc(Vector2(0.0, 0.5), 0.13, PI * 1.15, PI * 1.85)
+			]
+		2:
+			var leaves: Array = []
+			for k in range(3):
+				var mid := -PI * 0.5 + TAU * float(k) / 3.0
+				leaves.append(_arc(Vector2(0.0, 0.02), 0.36, mid - 0.9, mid + 0.9))
+			leaves.append(PackedVector2Array([Vector2(0.0, 0.02)]))
+			return leaves
+	var moon := _arc(Vector2(0.0, 0.0), 0.42, PI * 0.35, PI * 1.65)
+	moon.append_array(_arc(Vector2(0.17, 0.0), 0.33, PI * 1.6, PI * 0.4))
+	return [
+		moon,
+		PackedVector2Array([Vector2(0.3, -0.34)]),
+		_arc(Vector2(0.0, 0.52), 0.1, PI * 1.1, PI * 1.9)
+	]
+
+
+static func _arc(
+	center: Vector2, radius: float, from_angle: float, to_angle: float
+) -> PackedVector2Array:
+	var points := PackedVector2Array()
+	for i in range(RUNE_ARC_STEPS + 1):
+		var a := lerpf(from_angle, to_angle, float(i) / float(RUNE_ARC_STEPS))
+		points.append(center + Vector2.from_angle(a) * radius)
+	return points
+
+
+## `written` まで書いた画。`lines` は途中までの線、`dots` は書き終えた点、`tip` は筆先。
+static func _rune_drawn(at: Vector2, size: float, shape: int, written: float) -> Dictionary:
+	var strokes := _rune_strokes(shape)
 	var total := 0.0
-	for i in range(points.size() - 1):
-		total += (points[i + 1] as Vector2).distance_to(points[i])
+	for stroke: PackedVector2Array in strokes:
+		total += _stroke_length(stroke)
 	var reach := total * clampf(written, 0.0, 1.0)
-	var path := PackedVector2Array([at + (points[0] as Vector2) * size])
-	for i in range(points.size() - 1):
-		var a: Vector2 = points[i]
-		var b: Vector2 = points[i + 1]
-		var length := a.distance_to(b)
-		if reach <= length:
-			path.append(at + a.lerp(b, reach / length) * size)
-			return path
-		reach -= length
-		path.append(at + b * size)
-	return path
+	var lines: Array[PackedVector2Array] = []
+	var dots: Array[Vector2] = []
+	var tip := at + (strokes[0] as PackedVector2Array)[0] * size
+	for stroke: PackedVector2Array in strokes:
+		if reach <= 0.0:
+			break
+		if stroke.size() == 1:
+			dots.append(at + stroke[0] * size)
+			tip = at + stroke[0] * size
+			reach -= RUNE_DOT_WEIGHT
+			continue
+		var line := PackedVector2Array([at + stroke[0] * size])
+		for i in range(stroke.size() - 1):
+			var length := stroke[i].distance_to(stroke[i + 1])
+			if reach <= length:
+				var end := stroke[i].lerp(stroke[i + 1], reach / maxf(length, 0.0001))
+				line.append(at + end * size)
+				reach = 0.0
+				break
+			reach -= length
+			line.append(at + stroke[i + 1] * size)
+		tip = line[line.size() - 1]
+		lines.append(line)
+	return {"lines": lines, "dots": dots, "tip": tip}
+
+
+static func _stroke_length(stroke: PackedVector2Array) -> float:
+	if stroke.size() == 1:
+		return RUNE_DOT_WEIGHT
+	var length := 0.0
+	for i in range(stroke.size() - 1):
+		length += stroke[i].distance_to(stroke[i + 1])
+	return length
 
 
 static func _dial_hand(

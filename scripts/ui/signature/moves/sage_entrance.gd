@@ -5,19 +5,19 @@ extends SignatureMove
 const SETTLE := 0.4
 const SLIP := 0.34
 ## 帽子が止まる高さ(台座の上面から上へ)と、降りてくる前の高さの差、傾き(ラジアン)。
-const LIFT := 148.0
-const DROP := 34.0
+const LIFT := 104.0
+const DROP := 50.0
 const TILT := 0.22
 ## 帽子の高さ・つばの半幅と、帯の高さ。
-const CONE := 24.0
-const BRIM := 17.0
-const BAND := 5.0
+const CONE := 44.0
+const BRIM := 28.0
+const BAND := 8.0
 const FELT := Color(0.20, 0.17, 0.34, 1.0)
 ## 光の札の置き場所(帽子の中心から)と大きさ、玉の大きさと昇る高さ。
-const CARD_AT := Vector2(26.0, 18.0)
-const CARD := 6.0
-const ORB := 4.6
-const ORB_RISE := 38.0
+const CARD_AT := Vector2(44.0, 24.0)
+const CARD := 11.0
+const ORB := 8.0
+const ORB_RISE := 60.0
 
 
 func impact_at() -> float:

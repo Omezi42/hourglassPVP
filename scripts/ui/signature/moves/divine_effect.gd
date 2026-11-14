@@ -6,11 +6,11 @@ const APPEAR := 0.12
 const SWIRL := 0.40
 const CLEAR := 0.15
 ## 玉の大きさと、浮かぶ高さ(離した位置から上へ)。渦の粒の数と巻き数。
-const RADIUS := 22.0
-const LIFT := 26.0
+const RADIUS := 34.0
+const LIFT := 44.0
 const GRAINS := 14
 const TURNS := 2.2
-const GRAIN := 1.9
+const GRAIN := 3.0
 const GLASS := Color(0.86, 0.95, 1.0, 1.0)
 
 

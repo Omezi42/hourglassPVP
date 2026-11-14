@@ -5,11 +5,11 @@ extends SignatureMove
 const LIGHT := 0.12
 const RISE := 0.28
 ## 狭間の置き場所(駒の中心から上へ)、凸1つの大きさと間隔、粒の大きさ。
-const LIFT := 66.0
-const MERLON := Vector2(9.0, 8.0)
-const PITCH := 17.0
-const BASE_WIDTH := 44.0
-const GRAIN := 2.6
+const LIFT := 76.0
+const MERLON := Vector2(14.0, 13.0)
+const PITCH := 26.0
+const BASE_WIDTH := 68.0
+const GRAIN := 4.0
 ## 粒が昇り始める足元(駒の中心から下へ)と、収まる隙間(左から数えた番号)。
 const FOOT := 50.0
 const GAP_INDEX := 1
