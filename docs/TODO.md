@@ -22,10 +22,10 @@
 
 ### 全砂時計のコード描画(GameDesign.md 9章・21章 / Architecture.md 10.19節)
 
-- [ ] **判断待ち**: 動く絵をどの環境で出すか(初回コンパイルで止まる。デスクトップ約0.7秒/本、Web版のChromeで数秒/本)。
-  止めた絵だけにする / デスクトップ版だけ動かす / シェーダーを軽くしてから決める
-- [ ] 仕組みの付け替え(Sonnet): スキンの9本を `resources/shaders/hourglasses/{カードid}.gdshader` へ移し(`skin_*` の部品と関数を `frame_parts` / `art_main` / `art_back` / `art_frame` へ改名)、
-  砂の色と質感を uniform にして色違いの表から渡す。`tools/bake_hourglass_art.gd` で `overrides/` へ焼き、焼き忘れを `check.sh` で止める。WebPの画質を pck の増え方で決めて4.1節へ書く
+- [ ] 仕組みの付け替え(Sonnet): スキンの9本を10.19節の形(止めた部分 `ART_STATIC` / 後ろの動き / 手前の動き)に分けて `resources/shaders/hourglasses/{カードid}.gdshader` へ移す
+  (試作は聖剣。`skin_*` の部品と関数は `frame_parts` / `art_main` / `art_back` / `art_frame` へ改名、`HOOK_CAVITY` / `HOOK_FRONT` を消し、Pitfalls の該当項も消す)。
+  共通のガラス `glass_{kind}` を置き、砂の色は色違いの表から渡す。`tools/bake_hourglass_art.gd` で `overrides/` へ焼き、焼き忘れを `check.sh` で止める。
+  WebPの画質を pck の増え方で決めて4.1節へ書く。9本とも、いまの絵と並べたスクショで見た目が変わっていないことを確かめる
 - [ ] スキンの撤去(Sonnet): `CardSkins`・`SkinLibrary`・`SkinRenderer`(動く絵は `HourglassLive` へ移す)・視点(`skin_viewer`)・相手の設定の受け渡し・図鑑の切り替え・ショップの品・
   `AccountService` / `AccountStore` のスキンの読み書き・`assets/hourglasses/skins/`・`tools/compose_skin_art.py` を消し、`CardData.icon_*` は `HourglassArt.texture()` を直に返す
 - [ ] 返金(Sonnet): `AccountService.refund_retired_skins()`(10.19節)。#お知らせでスキンの廃止と返金を案内する
