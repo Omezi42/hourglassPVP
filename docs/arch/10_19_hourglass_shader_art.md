@@ -88,10 +88,7 @@ void motion_front(inout vec4 acc, Px f) { ... }
   **共通のガラスは、対局画面を開くときに自分のデッキの質感のぶんだけ先に1回描いてコンパイルを済ませる**(初めて駒を出す瞬間に重ねて止めないため)
 - 重さ(実測。内蔵GPU・デスクトップ・vsyncなし):異なる12本を高さ224で描き続けて平均3〜4ms(基準0.6〜0.9ms)
 
-## 廃止したカードスキンの返金(GameDesign.md 21章)
+## 廃止したカードスキン(GameDesign.md 21章)
 
-- `players/{uid}` の `owned_skins` に残っているidの数 × 500砂金を、`AccountService.refund_retired_skins()` がサインイン後のプロフィール読み込みの直後に返す。
-  **残高の加算と `owned_skins` / `disabled_skins` / `enabled_skins` を空にする書き込みを1回の `commit()`(`updateTime` 前提)で行う**
-  (二重に返さないため)。読み込みは `read_succeeded()` を確かめてから(Pitfalls)。競合は `grant()` と同じく数回やり直す
-- 返したことは画面に出さない(残高が増えるだけ。#お知らせで案内する)
+- 買った人への補償はプレゼント「スキン廃止のおわび」で配る(10.22節)。そのため `players/{uid}` の `owned_skins` は読み書きを止めたまま、補償を受け取るまでサーバーに残す
 - `ShopCatalog.Kind.SKIN` は欠番として残す(enum は末尾にだけ足す。11章)

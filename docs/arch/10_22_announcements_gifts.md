@@ -6,7 +6,7 @@
 | `data/announcements/{version}.tres` | 直近20回ぶん。**手で書かない**。`tools/discord/sync_announcements.py` が `tools/discord/drafts/update-*.md` から作り直す(古い回は消す) |
 | `AnnouncementLibrary`(`scripts/data/announcement_library.gd`, static) | 回の一覧(新しい順)・読んでいない回の数・既読の記録(`user://announcements.json` に最後に開いた版だけ) |
 | `AnnouncementText`(`scripts/data/announcement_text.gd`, static) | Discordの書き方を `RichTextLabel` のBBCodeへ変える。`**見出し**` の行は見出し、`- ` は行頭の点、`-# ` の行(リンク)は落とす。`[` は `[lb]` に逃がす |
-| `GiftData`(`scripts/data/gift_data.gd`) | プレゼント1件。`id`・`title`・`description`・`kind`(`CARD_SET` / `CURRENCY`)・`set_id`・`amount`・`expires`(日本時間の「YYYY-MM-DD」。その日まで受け取れる。空なら期限なし) |
+| `GiftData`(`scripts/data/gift_data.gd`) | プレゼント1件。`id`・`title`・`description`・`kind`(`CARD_SET` / `CURRENCY`)・`set_id`・`amount`・`expires`(日本時間の「YYYY-MM-DD」。その日まで受け取れる。空なら期限なし)・`audience`(`EVERYONE` / `SKIN_BUYERS`) |
 | `data/gifts/{id}.tres` | 配っているプレゼント。1件足すのは `.tres` を1個置くだけ |
 | `GiftLibrary`(`scripts/data/gift_library.gd`, static) | プレゼントの一覧(期限内のもの)と、受け取っていない件数 |
 | `GiftService`(`scripts/net/gift_service.gd`, static) | 受け取り。`players/{uid}.claimed_gifts`(Array[String])への追加と品の付与を**1回の `commit()`**で書く |
@@ -22,6 +22,10 @@
   - 読み取りが失敗したら書かない(`AccountService.read_succeeded()`。Pitfalls.md)
   - 既に `owned_card_sets` にあるセット(別の経路で手に入れた)は、印だけ付けて受け取り済みにする
   - **未サインイン・通信失敗のときは退避しない**(`purchase()` と同じ。押せなくしておけば失うものが無い)
+- **届く人を絞ったプレゼント(`audience`)**: `SKIN_BUYERS` は `players/{uid}.owned_skins` に1件以上あるアカウントだけに出す。
+  砂金は `amount` × その件数(`amount` は1枚あたり)。件数は `AccountService` がプロフィールの読み込みで控える(`retired_skin_count()`)。
+  受け取りでは、砂金の加算・`claimed_gifts` への追加・`owned_skins` / `disabled_skins` / `enabled_skins` を空にする書き込みを同じ1回の `commit()` で行う。
+  件数は受け取りの読み直しで数え直す(控えた値で書くと、別の端末で受け取った後に二重に足すため)。件数が0なら印だけ付ける
 - カードセットのプレゼントは `CardSetLibrary` の価格0のセットを指す(10.8.1節。ショップに並ばず、CPUのデッキにも入らない)
 - `CardSetLibrary.purchasable_ids()` は価格0を含まないため、はじめの7日の「セットを1つ選ぶ」にプレゼントのセットは出ない
 - ヘッダーの「お知らせ」は `HomeScreen` が置く(ルールブックの左。紋章は `UiPaint.Emblem.LETTER`)。赤い丸は `HomeTile.draw_badge()`
