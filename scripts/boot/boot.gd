@@ -65,7 +65,10 @@ func _hand_over() -> void:
 	tree.current_scene = main
 	if _gesture_seen:
 		main.call("note_user_gesture")
+	main.call("warm_up")
 	if not _pending.is_empty():
+		# 押された後の演出を止めないよう、重い初回処理は読み込み中の表示のまま済ませる。
+		await Signal(main, "warmed")
 		_title.show_loading(1.0)
 		_title.emit_signal(_pending)
 	queue_free()

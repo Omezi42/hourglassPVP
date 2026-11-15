@@ -1,6 +1,11 @@
 class_name Main
 extends Control
 
+## 押されてから砂の下で行う重い初回処理を、タイトルの裏で済ませ終えた(`warm_up()`)。
+signal warmed
+
+enum Warm { COLD, WARMING, WARM }
+
 ## 画面切り替え時のクロスフェード時間。
 const SCREEN_FADE_DURATION := 0.18
 const TITLE_SCENE := "res://scenes/title_screen.tscn"
@@ -9,6 +14,8 @@ const TITLE_NODE := "TitleScreen"
 ## (Web版で約0.6秒)。型を書くと起動の裏読み込みに入りタイトルの動きを止めるため、
 ## パスで読んで初めて要るときに作る(Architecture.md 4.0.6節)。
 const CARD_MATCH_SCREEN_SCRIPT := "res://scripts/ui/card_match_screen.gd"
+## ホームをタイトルの裏で描かせておくコマ数(初回の描画でテクスチャ・シェーダーの準備が走るため)。
+const WARM_DRAW_FRAMES := 2
 ## 他の画面にいる間に相手が見つかったとき、帯で知らせてから対局へ移るまでの間(GameDesign.md 11章)。
 const FOUND_NOTICE_SECONDS := RankedWaitBanner.FOUND_NOTICE_SECONDS
 const WAIT_BLOCKED_TEXT := "ランクマッチの待機をやめてから遊べます"
@@ -55,6 +62,7 @@ var _account_return_to_title := false
 var _shop_from_editor := false
 
 var _screens: Array[Control] = []
+var _warm := Warm.COLD
 ## タイトルからホームへ移るときだけ使う砂のトランジション(GameDesign.md 9章)。
 ## 他の画面遷移はクロスフェード(_show_only)のまま変えていない。
 var _sand_transition: SandTransition
@@ -312,10 +320,7 @@ func _on_title_start_requested() -> void:
 		FunnelService.reach(FunnelService.TUTORIAL_START)
 	await title_screen.play_launch()
 	await _sand_transition.cover()
-	# 対局画面の読み込みで止まる1フレームを、砂が覆っている間に済ませる。
-	# 長くなったフレームの経過時間で砂の抜けが飛ばないよう、1フレーム待ってから進める。
-	_match_screen()
-	await get_tree().process_frame
+	await warm_up()
 	if first_visit:
 		_match_screen().start_tutorial_match()
 		_match_return_screen = home_screen
@@ -323,6 +328,27 @@ func _on_title_start_requested() -> void:
 	else:
 		_show_only(home_screen)
 	await _sand_transition.reveal()
+
+
+## タイトルを押した後に止まらないよう、対局画面の生成とホームの初回描画をタイトルの裏で先に済ませる。
+## `Boot` が引き渡した直後に呼ぶ。済む前に押されたときは、砂が覆いきった時点で終わりを待つ。
+func warm_up() -> void:
+	if _warm == Warm.WARM:
+		return
+	if _warm == Warm.WARMING:
+		await warmed
+		return
+	_warm = Warm.WARMING
+	_match_screen()
+	# 不透明なタイトルが前にあるため、ホームを出しても映らない。止めたまま描かせるだけ。
+	var home_was_visible := home_screen.visible
+	home_screen.visible = true
+	for i in WARM_DRAW_FRAMES:
+		await get_tree().process_frame
+	if _active_screen != home_screen:
+		home_screen.visible = home_was_visible
+	_warm = Warm.WARM
+	warmed.emit()
 
 
 func _on_match_back() -> void:
