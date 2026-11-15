@@ -122,7 +122,10 @@ func _make_art(gift: GiftData) -> Control:
 	if gift.kind == GiftData.Kind.CURRENCY:
 		var chip := CurrencyChip.new()
 		chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		chip.set_amount(maxi(GiftLibrary.payout(gift), gift.amount), false)
+		var payout := GiftLibrary.payout(gift)
+		chip.set_amount(payout, false)
+		# 受け取って枚数が0になった補償は額を読めないため、行の高さを保ったままチップを見せない。
+		chip.modulate.a = 1.0 if payout > 0 else 0.0
 		return chip
 	var art := TextureRect.new()
 	art.custom_minimum_size = Vector2(ART_SIDE, ART_SIDE)
