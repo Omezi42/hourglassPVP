@@ -33,6 +33,29 @@ static func attach(button: BaseButton, base: CodedButtonStyle) -> void:
 	button.visibility_changed.connect(_reset.bind(button))
 
 
+## テーマ既定の面のまま置かれたボタン(`.tscn` や `apply_styles()` を通さない生成)にも同じ動きを持たせる。
+## 状態ごとの `.tres` の差し替えは一瞬で切り替わり、字も面と一緒に動かないため。何度呼んでもよい。
+static func watch_tree(tree: SceneTree) -> void:
+	if not tree.node_added.is_connected(_on_node_added):
+		tree.node_added.connect(_on_node_added)
+	_attach_below(tree.root)
+
+
+static func _attach_below(node: Node) -> void:
+	_on_node_added(node)
+	for child in node.get_children():
+		_attach_below(child)
+
+
+static func _on_node_added(node: Node) -> void:
+	var button := node as Button
+	if button == null or button.flat or button.has_meta(META_STYLE):
+		return
+	var style := button.get_theme_stylebox("normal") as CodedButtonStyle
+	if style != null:
+		attach(button, style)
+
+
 static func _animate(button: BaseButton, property: String, target: float, seconds: float) -> void:
 	var style := _style(button)
 	if style == null or not button.is_inside_tree():

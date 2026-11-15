@@ -26,7 +26,6 @@ const EMBLEM_LABEL_DROP := 0.30
 const PILL_FONT_RATIO := 0.40
 ## 押したとき面が縮む倍率と、乗ったとき浮く量(`CodedButtonStyle` と同じ)。
 const PRESS_SCALE := CodedButtonStyle.PRESS_SCALE
-const LIFT := CodedButtonStyle.LIFT
 const DISABLED_ALPHA := 0.5
 ## 縁の砂の輪(縦のターン終了の持ち時間)。面の外へ出す量と太さ。
 const RING_GAP := 4.5
@@ -167,7 +166,9 @@ func _draw() -> void:
 
 func _draw_round(hover: float, press: float) -> void:
 	var ci := get_canvas_item()
-	var center := Vector2(diameter, diameter) * 0.5 - Vector2(0, LIFT * hover * (1.0 - press))
+	var center := (
+		Vector2(diameter, diameter) * 0.5 + Vector2(0, CodedButtonStyle.face_offset_y(hover, press))
+	)
 	var rim := clampf(
 		diameter * 0.5 * UiKit.ROUND_RIM_RATIO, UiKit.ROUND_RIM_MIN, UiKit.ROUND_RIM_MAX
 	)
@@ -205,7 +206,7 @@ func _draw_round(hover: float, press: float) -> void:
 
 func _draw_pill(hover: float, press: float) -> void:
 	var ci := get_canvas_item()
-	var face := Rect2(Vector2(0, -LIFT * hover * (1.0 - press)), size)
+	var face := Rect2(Vector2(0, CodedButtonStyle.face_offset_y(hover, press)), size)
 	var scaled := face.size * lerpf(1.0, PRESS_SCALE, press)
 	face = Rect2(face.get_center() - scaled * 0.5, scaled)
 	var rim: Array = []

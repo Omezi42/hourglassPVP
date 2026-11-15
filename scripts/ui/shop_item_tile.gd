@@ -113,6 +113,7 @@ func _footer_height() -> float:
 func _draw() -> void:
 	if _font == null:
 		return
+	draw_set_transform(CodedButtonStyle.content_offset(self))
 	var art := _art_rect()
 	match kind:
 		ShopCatalog.Kind.ICON:

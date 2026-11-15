@@ -19,6 +19,7 @@ enum EmblemPlacement { CENTER, UPPER, RIGHT_INSET, TOP_BADGE }
 const LIFT := 2.0
 const PRESS_SINK := 1.0
 const PRESS_SCALE := 0.97
+const META_CHILD_SHIFT := "coded_button_child_shift"
 ## 押したとき上の光の膜が消える(硝子の面の `film`)。
 const PRESSED_FILM := 0.0
 ## 押せないボタンの縁の濃さ。
@@ -81,6 +82,31 @@ func sync_content_offset() -> void:
 		content_margin_top = top
 	if not is_equal_approx(content_margin_bottom, bottom):
 		content_margin_bottom = bottom
+	if button != null:
+		_shift_children(button, dy)
+
+
+## 子として載せた中身(名札の字・アイコンなど)も同じだけ動かす。前回ずらした量との差だけを足す。
+static func _shift_children(button: BaseButton, dy: float) -> void:
+	var applied: float = button.get_meta(META_CHILD_SHIFT, 0.0)
+	var delta := dy - applied
+	if is_zero_approx(delta):
+		return
+	for child in button.get_children():
+		var control := child as Control
+		if control == null:
+			continue
+		control.offset_top += delta
+		control.offset_bottom += delta
+	button.set_meta(META_CHILD_SHIFT, dy)
+
+
+## 自分で中身を `_draw()` するボタンが、面と同じだけ中身をずらすのに使う。
+static func content_offset(button: BaseButton) -> Vector2:
+	if button.disabled or not button.has_meta(ButtonFeel.META_STYLE):
+		return Vector2.ZERO
+	var style: CodedButtonStyle = button.get_meta(ButtonFeel.META_STYLE)
+	return Vector2(0.0, face_offset_y(style.hover_amount, style.press_amount))
 
 
 func _draw(to_canvas_item: RID, rect: Rect2) -> void:

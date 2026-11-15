@@ -79,6 +79,7 @@ var _transition_blocker: ColorRect
 
 
 func _ready() -> void:
+	ButtonFeel.watch_tree(get_tree())
 	# 起動シーンを経ずに生成された(テストなど)ときは自分でタイトルを作る。
 	if title_screen == null:
 		adopt_title((load(TITLE_SCENE) as PackedScene).instantiate())

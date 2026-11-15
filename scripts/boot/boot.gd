@@ -21,6 +21,7 @@ var _on_account := _on_title_pressed.bind("account_requested")
 
 
 func _ready() -> void:
+	ButtonFeel.watch_tree(get_tree())
 	_title = (load(TITLE_SCENE) as PackedScene).instantiate()
 	add_child(_title)
 	_title.start_requested.connect(_on_start)
