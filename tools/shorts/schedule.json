@@ -1053,61 +1053,101 @@
 		"date": "2026-11-18",
 		"kind": "puzzle",
 		"id": "53",
-		"label": "とどめ問題 #53"
+		"label": "とどめ問題 #53",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-11-18",
 		"kind": "card",
 		"id": "rattle",
-		"label": "ラトル"
+		"label": "ラトル",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-11-19",
 		"kind": "puzzle",
 		"id": "54",
-		"label": "とどめ問題 #54"
+		"label": "とどめ問題 #54",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-11-19",
 		"kind": "card",
 		"id": "sweep",
-		"label": "スイープ"
+		"label": "スイープ",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-11-20",
 		"kind": "puzzle",
 		"id": "55",
-		"label": "とどめ問題 #55"
+		"label": "とどめ問題 #55",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-11-20",
 		"kind": "card",
 		"id": "anchor",
-		"label": "アンカー"
+		"label": "アンカー",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-11-21",
 		"kind": "puzzle",
 		"id": "56",
-		"label": "とどめ問題 #56"
+		"label": "とどめ問題 #56",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-11-21",
 		"kind": "card",
 		"id": "hammer",
-		"label": "ハンマー"
+		"label": "ハンマー",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-11-22",
 		"kind": "puzzle",
 		"id": "57",
-		"label": "とどめ問題 #57"
+		"label": "とどめ問題 #57",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-11-22",
 		"kind": "card",
 		"id": "reverse",
-		"label": "時の逆流"
+		"label": "時の逆流",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-11-23",
