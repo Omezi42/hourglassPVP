@@ -1,69 +1,84 @@
 extends Control
 ## unityroomのゲームアイコン用の正方形GIF(512x512・512KB以下)の素材フレームを書き出す。
-## 一覧で小さく表示されても伝わるよう、登場させるのは味方と相手の砂時計2つだけにする。
-## 「上の砂が体力・下の砂が攻撃力」「ひっくり返すと入れ替わる」「入れ替えて殴る」の
-## 3つを、大きな数字と動きで一巡させてループする。
+## 一覧では100px前後まで縮むため、登場させるのは砂時計1つと、攻撃力・体力の丸2つだけにする。
+## 「砂が落ちると体力が攻撃力へ移る」「ひっくり返すと入れ替わる」(GameDesign.md 1章)を
+## 1つの砂時計で一巡させる。反転し終えた姿が最初の姿と同じなので、継ぎ目なくループする。
 ##
-## 台本: 味方(体力5・攻撃1)が反転して体力1・攻撃5になる → 相手(体力4・攻撃0)を殴って
-## 砕く → 新しい相手が落ちてくる → 味方が反転して戻る → 最初の絵へ戻る。
-## 相手は出たばかりで攻撃力0のため相打ちは起きない(GameDesign.md 1章・4章)。
+## 台本: 攻撃1・体力3 → 砂が落ちて 2・2 → もう1粒で 3・1(体力の丸が脈打つ)
+## → 反転して 1・3 へ戻る。
 ##
 ## 実行(固定デルタで書き出すため --write-movie と --fixed-fps を必ず付ける):
 ##   godot --path . --write-movie scratchpad/sq/f.png
 ##     --fixed-fps 12 res://tools/record_thumbnail_square.tscn
 ## 絵の焼き付けを待つ間も空のコマが書き出されるため、使うのは末尾の END_TIME×12 コマだけ。
 ##
-## GIFへの変換(1280x720で書き出されるため中央を切り抜く。全コマ共通の色表で量子化し、
-## 静止している背景をコマ間の差分に含めない):
-##   magick scratchpad/sq/f0*.png -crop 512x512+384+104 +repage +append -colors 96
+## GIFへの変換(1280x720で書き出されるため中央を切り抜く。全コマ共通の色表で量子化する):
+##   magick <末尾のコマ> -crop 512x512+384+104 +repage +append -colors 128
 ##     -unique-colors scratchpad/sq/palette.png
-##   magick -delay 8 -loop 0 scratchpad/sq/f0*.png -crop 512x512+384+104 +repage
-##     -dither None -remap scratchpad/sq/palette.png -layers OptimizeFrame
+##   magick -delay 8 -loop 0 <末尾のコマ> -crop 512x512+384+104 +repage
+##     -dither None -remap scratchpad/sq/palette.png -fuzz 3% -layers OptimizeFrame
 ##     -layers OptimizeTransparency icon512.gif
 ##
-## 512KB以下に収めるため、背景は完全に静止させる。GIFはコマ間の差分を持つ形式で、
-## 画面の広い範囲がわずかでも動くとそのコマを丸ごと持つことになる。
+## 512KB以下に収めるため、背景は完全に静止させる(GIFはコマ間の差分を持つ形式で、
+## 広い範囲がわずかでも動くとそのコマを丸ごと持つことになる)。
 
 const VIEW := Vector2(512.0, 512.0)
-const BACKGROUND := preload("res://assets/backgrounds/processed/battle/background.png")
-const FLOOR_Y := 452.0
-const HERO_X := 150.0
-const ENEMY_X := 382.0
-const HERO_HEIGHT := 236.0
-const ENEMY_HEIGHT := 196.0
+const WINDOW := Vector2(1280.0, 720.0)
 const HERO_ID := "sand"
-const ENEMY_ID := "poison"
-const LOGO_SCALE := 0.56
-## 背景をこの大きさまで縮めてから引き伸ばし、ぼかす。駒が浮き立ち、GIFの差分も軽くなる
-## (細かい模様の上を駒が動くと、動いた範囲の圧縮が効かず容量が膨らむ)。
-const BACKGROUND_BLUR_SIZE := 48
 
-const ATTACK_COLOR := Color(0.88, 0.34, 0.2, 1.0)
-const HEALTH_COLOR := Color(0.3, 0.58, 0.9, 1.0)
-const GOLD := Color(1.0, 0.84, 0.42, 1.0)
-const INK := Color(0.06, 0.09, 0.19, 1.0)
+const CENTER_X := 256.0
+const FLOOR_Y := 440.0
+const GLASS_HEIGHT := 392.0
+## 砂の落ち口(くびれ)の高さ。絵の高さに対する比。
+const NECK_RATIO := 0.5
+const STREAM_DROP_RATIO := 0.3
+
+const GEM_RADIUS := 58.0
+const GEM_Y := 424.0
+const GEM_INSET := 84.0
+const GEM_POP := 0.26
+const GEM_POP_SPAN := 0.28
 
 ## 台本の時刻(秒)。
-const FLIP_START := 0.4
-const FLIP_SPAN := 0.55
-const STRIKE_START := 1.35
-const STRIKE_SPAN := 0.7
-const SHATTER_SPAN := 0.6
-const DROP_START := 2.85
-const DROP_SPAN := 0.4
-const FLIP_BACK_START := 3.55
-const FLIP_BACK_SPAN := 0.45
-const END_TIME := 4.4
+const TICK_STARTS: Array[float] = [0.5, 1.5]
+const TICK_SPAN := 0.45
+## 砂の絵を差し替える区間(砂が落ちる動きの中での割合)。短くして、広い面が変わるコマを減らす。
+const BLEND_FROM := 0.3
+const BLEND_TO := 0.75
+const FLIP_START := 2.55
+const FLIP_SPAN := 0.5
+const LAND_SPAN := 0.5
+const END_TIME := 3.8
 
-const HERO_BEFORE := Vector2i(5, 1)
-const HERO_AFTER := Vector2i(1, 5)
-const ENEMY_STATS := Vector2i(4, 0)
+## 砂が落ちるごとの (攻撃力, 体力)。
+const STEPS: Array[Vector2i] = [Vector2i(1, 3), Vector2i(2, 2), Vector2i(3, 1)]
+
+const FLIP_LIFT := 18.0
+const FLIP_SHRINK := 0.12
+const LAND_SQUASH := 0.08
+## 沈むのは着地の直後だけ(砂時計の全面が変わるコマを増やさない)。
+const SQUASH_SPAN := 0.17
+const SWOOSH_RADIUS := 232.0
+const SWOOSH_LENGTH := 1.1
+const SWOOSH_WIDTH := 7.0
+const NUMBER_ARC := 96.0
+const DANGER_HZ := 2.5
+
+const RAY_COUNT := 20
+const RAY_REACH := 420.0
+const RAY_COLOR := Color(0.96, 0.68, 0.24, 0.06)
+## 砂時計の後ろの光。段のはっきりした円を重ねる(なだらかな光はGIFの色数で縞になる)。
+const HALO_RADII: Array[float] = [236.0, 178.0, 120.0]
+const HALO_COLOR := Color(0.96, 0.68, 0.24, 0.07)
+const DAIS_RADIUS := Vector2(196.0, 36.0)
+const DAIS_RIM := 7.0
+const BURST_GRAINS := 18
+const STREAM_GRAINS := 6
 
 var _t := 0.0
-## id -> [state_full, state_falling, state_empty]
-var _art: Dictionary = {}
-var _display_font: Font
-var _background: Texture2D
+## [state_full, state_falling, state_empty]
+var _art: Array[Texture2D] = []
+var _font: Font
 
 
 func _ready() -> void:
@@ -73,24 +88,14 @@ func _ready() -> void:
 	anchor_right = 0.0
 	anchor_bottom = 0.0
 	size = VIEW
-	position = ((Vector2(1280.0, 720.0) - VIEW) * 0.5).floor()
+	position = ((WINDOW - VIEW) * 0.5).floor()
 	clip_contents = true
-	_display_font = UiFonts.display_font(_font())
-	_background = _blurred_background()
-	var logo := TitleLogo.new()
-	logo.size = Vector2(VIEW.x / LOGO_SCALE, 290.0)
-	logo.scale = Vector2(LOGO_SCALE, LOGO_SCALE)
-	logo.position = Vector2(0.0, -2.0)
-	add_child(logo)
+	var label_font := get_theme_font("font", "Label")
+	_font = label_font if label_font != null else ThemeDB.fallback_font
 	# 色違いの絵は起動後に焼き付けるため、焼き上がるまで台本を進めない。
 	await HourglassArt.ensure_ready_and_wait(self)
-	for id in [HERO_ID, ENEMY_ID]:
-		var frames: Array[Texture2D] = []
-		for state in HourglassArt.State.values():
-			frames.append(HourglassArt.texture(id, state))
-		_art[id] = frames
-	# 焼き付けを待つ間に書き出されたコマは、変換時にこの番号より前を捨てる。
-	print("FIRST_FRAME=%d" % Engine.get_frames_drawn())
+	for state in HourglassArt.State.values():
+		_art.append(HourglassArt.texture(HERO_ID, state))
 
 
 func _process(delta: float) -> void:
@@ -111,47 +116,51 @@ func _phase(start: float, span: float) -> float:
 	return clampf((_t - start) / span, 0.0, 1.0)
 
 
-func _hit_time() -> float:
-	return STRIKE_START + STRIKE_SPAN * 0.45
+func _flip_phase() -> float:
+	return _phase(FLIP_START, FLIP_SPAN)
 
 
-func _hero_stats() -> Vector2i:
-	if _t >= FLIP_BACK_START + FLIP_BACK_SPAN * 0.5:
-		return HERO_BEFORE
-	if _t >= FLIP_START + FLIP_SPAN * 0.5:
-		return HERO_AFTER
-	return HERO_BEFORE
+func _flipping() -> bool:
+	var k := _flip_phase()
+	return k > 0.0 and k < 1.0
 
 
-## 砕けている間とまだ落ちてきていない間は相手がいない。
-func _enemy_present() -> bool:
-	return _t < _hit_time() or _t >= DROP_START
+func _landed_at() -> float:
+	return FLIP_START + FLIP_SPAN
 
 
-func _enemy_stats() -> Vector2i:
-	if _t >= _hit_time() and _t < DROP_START:
-		return Vector2i(0, ENEMY_STATS.y)
-	return ENEMY_STATS
+## 数字が変わる時刻。砂が落ちる動きの半ばで変える。
+func _tick_change_time(index: int) -> float:
+	return TICK_STARTS[index] + TICK_SPAN * 0.5
 
 
-## 体力と攻撃力の比から、砂の溜まり方の絵を選ぶ。
-func _texture(id: String, stats: Vector2i) -> Texture2D:
-	var frames: Array = _art[id]
-	if stats.y > stats.x:
-		return frames[2]
-	if stats.y == stats.x:
-		return frames[1]
-	return frames[0]
+func _stats() -> Vector2i:
+	if _t >= _landed_at():
+		return STEPS[0]
+	var step := 0
+	for i in TICK_STARTS.size():
+		if _t >= _tick_change_time(i):
+			step = i + 1
+	return STEPS[step]
 
 
-## 反転の回転角(0〜PI)と浮き上がり。回り終わった瞬間に絵を正位置の反対側の状態へ差し替える。
-func _hero_flip() -> Vector2:
-	for span in [[FLIP_START, FLIP_SPAN], [FLIP_BACK_START, FLIP_BACK_SPAN]]:
-		var k := _phase(span[0], span[1])
-		if k > 0.0 and k < 1.0:
-			var eased := smoothstep(0.0, 1.0, k)
-			return Vector2(eased * PI, sin(k * PI) * 46.0)
-	return Vector2.ZERO
+## 直近に数字が変わってからの秒数。変わっていなければ大きな値。
+func _since_change() -> float:
+	var best := INF
+	var moments: Array[float] = [_landed_at()]
+	for i in TICK_STARTS.size():
+		moments.append(_tick_change_time(i))
+	for moment in moments:
+		if _t >= moment:
+			best = minf(best, _t - moment)
+	return best
+
+
+func _pop() -> float:
+	var since := _since_change()
+	if since >= GEM_POP_SPAN:
+		return 1.0
+	return 1.0 + sin(since / GEM_POP_SPAN * PI) * GEM_POP
 
 
 # --- 描画 -----------------------------------------------------------------
@@ -161,300 +170,199 @@ func _draw() -> void:
 	if _art.is_empty():
 		return
 	_draw_background()
-	_draw_enemy()
-	_draw_hero()
-	_draw_impact()
-	_draw_flip_word()
-	_draw_damage_number()
+	_draw_dais()
+	_draw_landing()
+	_draw_glass()
+	_draw_stream()
+	_draw_swoosh()
+	_draw_gems()
+
+
+func _glass_center() -> Vector2:
+	return Vector2(CENTER_X, FLOOR_Y - GLASS_HEIGHT * 0.5)
 
 
 func _draw_background() -> void:
 	var ci := get_canvas_item()
-	draw_texture_rect(_background, Rect2(Vector2.ZERO, VIEW), false)
-	# 絵の上へ暗い幕を掛け、駒と数字を浮かせる。上端はロゴのためにさらに沈める。
-	var shade := [
-		[0.0, Color(0.02, 0.02, 0.05, 0.86)],
-		[0.34, Color(0.03, 0.03, 0.06, 0.55)],
-		[1.0, Color(0.03, 0.02, 0.04, 0.7)],
-	]
 	var full := Rect2(Vector2.ZERO, VIEW)
 	UiPaint.fill_gradient_polygon(
 		ci,
 		PackedVector2Array([Vector2.ZERO, Vector2(VIEW.x, 0.0), VIEW, Vector2(0.0, VIEW.y)]),
 		full,
-		shade
+		[[0.0, UiPalette.INK_700], [1.0, UiPalette.INK_700]]
 	)
-	# 駒の足元を照らす琥珀の光だまり。
-	for i in range(5, 0, -1):
-		var t := float(i) / 5.0
-		UiPaint.fill_ellipse(
-			ci,
-			Vector2(VIEW.x * 0.5, FLOOR_Y - 10.0),
-			Vector2(260.0 * t, 60.0 * t),
-			Color(0.85, 0.62, 0.22, 0.05),
-			48
+	var center := _glass_center()
+	for i in RAY_COUNT:
+		if i % 2 == 1:
+			continue
+		var from := TAU * float(i) / float(RAY_COUNT)
+		var to := TAU * float(i + 1) / float(RAY_COUNT)
+		draw_colored_polygon(
+			PackedVector2Array(
+				[
+					center,
+					center + Vector2(cos(from), sin(from)) * RAY_REACH,
+					center + Vector2(cos(to), sin(to)) * RAY_REACH,
+				]
+			),
+			RAY_COLOR
 		)
-	draw_rect(Rect2(0.0, 0.0, VIEW.x, 5.0), UiPalette.SAND)
-	draw_rect(Rect2(0.0, VIEW.y - 5.0, VIEW.x, 5.0), UiPalette.SAND)
+	for radius in HALO_RADII:
+		UiKit.fill(ci, UiKit.ellipse(center, Vector2(radius, radius)), HALO_COLOR)
 
 
-## 背景の絵の中央を正方形に切り出し、小さく縮めたもの。
-func _blurred_background() -> Texture2D:
-	var image := BACKGROUND.get_image()
-	var side := mini(image.get_width(), image.get_height())
-	image = image.get_region(
-		Rect2i((image.get_width() - side) / 2, (image.get_height() - side) / 2, side, side)
-	)
-	image.resize(BACKGROUND_BLUR_SIZE, BACKGROUND_BLUR_SIZE, Image.INTERPOLATE_LANCZOS)
-	return ImageTexture.create_from_image(image)
-
-
-func _draw_hero() -> void:
-	var base := Vector2(HERO_X, FLOOR_Y)
-	var offset := Vector2.ZERO
-	var flip := _hero_flip()
-	offset.y -= flip.y
-	var strike := _phase(STRIKE_START, STRIKE_SPAN)
-	if strike > 0.0 and strike < 1.0:
-		var reach: float = smoothstep(0.0, 0.45, strike) - smoothstep(0.5, 1.0, strike)
-		offset += (Vector2(ENEMY_X - 96.0, FLOOR_Y - 20.0) - base) * reach
-		offset.y -= sin(reach * PI) * 30.0
-
-	var stats := _hero_stats()
-	var texture := _texture(HERO_ID, stats)
-	if flip.x > 0.0:
-		# 回転中は回り始める前の絵を回す。180度で差し替え先の絵とほぼ重なる。
-		var before := HERO_AFTER if _t >= FLIP_BACK_START else HERO_BEFORE
-		texture = _texture(HERO_ID, before)
-	var width := HERO_HEIGHT * float(texture.get_width()) / float(texture.get_height())
-	_draw_shadow(base + Vector2(offset.x, 0.0), width, clampf(-offset.y / 60.0, 0.0, 1.0))
-	var center := base + offset - Vector2(0.0, HERO_HEIGHT * 0.5)
-	draw_set_transform(center, flip.x, Vector2.ONE)
-	draw_texture_rect(
-		texture, Rect2(-Vector2(width, HERO_HEIGHT) * 0.5, Vector2(width, HERO_HEIGHT)), false
-	)
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-	_draw_hero_badges(base + offset, width)
-
-
-func _draw_enemy() -> void:
-	if not _enemy_present():
-		_draw_shatter()
-		return
-	var base := Vector2(ENEMY_X, FLOOR_Y)
-	var offset := Vector2.ZERO
-	if _t >= DROP_START:
-		var k := _phase(DROP_START, DROP_SPAN)
-		# 落ちてきて1度だけ弾む。
-		var fall := 1.0 - k * k if k < 0.75 else absf(sin((k - 0.75) / 0.25 * PI)) * 0.08
-		offset.y -= fall * 240.0
-	elif _t < _hit_time() and _t > _hit_time() - 0.05:
-		offset.x += 4.0
-	var texture := _texture(ENEMY_ID, ENEMY_STATS)
-	var width := ENEMY_HEIGHT * float(texture.get_width()) / float(texture.get_height())
-	_draw_shadow(base, width, clampf(-offset.y / 200.0, 0.0, 1.0))
-	var top_left := base + offset - Vector2(width * 0.5, ENEMY_HEIGHT)
-	draw_texture_rect(texture, Rect2(top_left, Vector2(width, ENEMY_HEIGHT)), false)
-	var stats := _enemy_stats()
-	var y := base.y + offset.y - ENEMY_HEIGHT * 0.07
-	_draw_badge(Vector2(base.x - width * 0.38, y), str(stats.y), ATTACK_COLOR, 1.0)
-	_draw_badge(Vector2(base.x + width * 0.38, y), str(stats.x), HEALTH_COLOR, 1.0)
-
-
-func _draw_shadow(at: Vector2, width: float, lift: float) -> void:
-	UiPaint.fill_ellipse(
-		get_canvas_item(),
-		at,
-		Vector2(width * 0.42 * (1.0 - lift * 0.4), 13.0),
-		Color(0.0, 0.0, 0.0, 0.5 - lift * 0.25),
-		32
-	)
-
-
-## 味方の攻撃力(左・赤)と体力(右・青)。反転の間は数字が弧を描いて左右を入れ替わる。
-func _draw_hero_badges(base: Vector2, width: float) -> void:
-	var y := base.y - HERO_HEIGHT * 0.07
-	var left := Vector2(base.x - width * 0.38, y)
-	var right := Vector2(base.x + width * 0.38, y)
-	var swap := 0.0
-	var from := HERO_BEFORE
-	for span in [[FLIP_START, FLIP_SPAN], [FLIP_BACK_START, FLIP_BACK_SPAN]]:
-		var k := _phase(span[0], span[1])
-		if k > 0.0 and k < 1.0:
-			swap = smoothstep(0.1, 0.9, k)
-			from = HERO_AFTER if span[0] == FLIP_BACK_START else HERO_BEFORE
-	if swap <= 0.0:
-		var stats := _hero_stats()
-		var pop := _pop_scale()
-		_draw_badge(left, str(stats.y), ATTACK_COLOR, pop)
-		_draw_badge(right, str(stats.x), HEALTH_COLOR, pop)
-		return
-	_draw_badge(left, "", ATTACK_COLOR, 1.0)
-	_draw_badge(right, "", HEALTH_COLOR, 1.0)
-	var lift := Vector2(0.0, -sin(swap * PI) * 70.0)
-	_draw_number(left.lerp(right, swap) + lift, str(from.y), 1.0 + sin(swap * PI) * 0.5)
-	_draw_number(right.lerp(left, swap) - lift * 0.6, str(from.x), 1.0 + sin(swap * PI) * 0.5)
-
-
-## 反転し終えた直後に数字をひと跳ねさせる。
-func _pop_scale() -> float:
-	var best := 1.0
-	for moment in [FLIP_START + FLIP_SPAN, FLIP_BACK_START + FLIP_BACK_SPAN]:
-		var since := _t - float(moment)
-		if since >= 0.0 and since < 0.3:
-			best = maxf(best, 1.0 + sin(since / 0.3 * PI) * 0.35)
-	return best
-
-
-func _draw_badge(at: Vector2, value: String, color: Color, pop: float) -> void:
+## 砂時計を載せる台座(場の砂時計は台座の上の物体として置く)。
+func _draw_dais() -> void:
 	var ci := get_canvas_item()
-	var radius := 25.0 * pop
-	UiPaint.fill_ellipse(ci, at, Vector2(radius + 4.0, radius + 4.0), INK, 28)
-	UiPaint.fill_ellipse(ci, at, Vector2(radius, radius), color, 28)
-	UiPaint.fill_ellipse(
+	var at := Vector2(CENTER_X, FLOOR_Y + 6.0)
+	UiKit.fill(ci, UiKit.ellipse(at + Vector2(0.0, 12.0), DAIS_RADIUS * 1.06), Color(0, 0, 0, 0.5))
+	UiKit.vgrad(
 		ci,
-		at - Vector2(0.0, radius * 0.35),
-		Vector2(radius * 0.7, radius * 0.45),
-		Color(1.0, 1.0, 1.0, 0.18),
-		20
+		UiKit.ellipse(at + Vector2(0.0, DAIS_RIM), DAIS_RADIUS),
+		[[0.0, UiPalette.BRASS], [1.0, UiPalette.BRASS_DEEP]],
+		true
 	)
-	UiPaint.draw_ellipse_ring(ci, at, Vector2(radius + 2.0, radius + 2.0), GOLD, 2.5, 28)
-	if value != "":
-		_draw_number(at, value, pop)
-
-
-func _draw_number(at: Vector2, value: String, scale_by: float) -> void:
-	var font_size := int(34.0 * scale_by)
-	var baseline := Vector2(at.x - 40.0, at.y + font_size * 0.36)
-	draw_string_outline(
-		_display_font, baseline, value, HORIZONTAL_ALIGNMENT_CENTER, 80.0, font_size, 7, INK
+	UiKit.vgrad(
+		ci, UiKit.ellipse(at, DAIS_RADIUS), [[0.0, UiPalette.GOLD], [1.0, UiPalette.BRASS]], true
 	)
-	draw_string(
-		_display_font,
-		baseline,
-		value,
-		HORIZONTAL_ALIGNMENT_CENTER,
-		80.0,
-		font_size,
-		UiPalette.IVORY
+	UiKit.vgrad(
+		ci,
+		UiKit.ellipse(at, DAIS_RADIUS - Vector2(DAIS_RIM, DAIS_RIM * 0.5)),
+		[[0.0, UiPalette.INK_800], [1.0, UiPalette.INK_600]],
+		true
+	)
+	var lift := sin(_flip_phase() * PI)
+	UiKit.fill(
+		ci,
+		UiKit.ellipse(at, Vector2(132.0, 20.0) * (1.0 - lift * 0.25)),
+		Color(0, 0, 0, 0.4 - lift * 0.15)
 	)
 
 
-## 「反転!」の文字。一覧の小さな表示でも読めるよう、大きく縁取って味方の頭上へ出す。
-func _draw_flip_word() -> void:
-	var since := _t - FLIP_START
-	if since < 0.0 or since > 1.0:
+## 絵を底辺の中央で揃える矩形。`bottom` は原点から底辺までの距離。
+## 3つの状態の絵は画素数が違っても縦横比が同じなので、同じ矩形へ描けば枠が重なる。
+func _glass_rect(bottom: float) -> Rect2:
+	var width := GLASS_HEIGHT * float(_art[0].get_width()) / float(_art[0].get_height())
+	return Rect2(Vector2(-width * 0.5, bottom - GLASS_HEIGHT), Vector2(width, GLASS_HEIGHT))
+
+
+func _draw_glass() -> void:
+	if _flipping():
+		var k := _flip_phase()
+		var eased := k * k * (3.0 - 2.0 * k)
+		var arc := sin(k * PI)
+		var center := _glass_center() - Vector2(0.0, arc * FLIP_LIFT)
+		var shrink := 1.0 - arc * FLIP_SHRINK
+		draw_set_transform(center, eased * PI, Vector2(shrink, shrink))
+		draw_texture_rect(_art[2], _glass_rect(GLASS_HEIGHT * 0.5), false)
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 		return
-	var grow := minf(since / 0.15, 1.0)
-	var font_size := int(lerpf(30.0, 64.0, grow) + sin(minf(since / 0.3, 1.0) * PI) * 10.0)
-	var alpha := 1.0 - _phase(FLIP_START + 0.75, 0.25)
-	var baseline := Vector2(VIEW.x * 0.5 - 120.0, 226.0)
-	var text := "反転!"
-	draw_string_outline(
-		_display_font,
-		baseline + Vector2(0.0, 4.0),
-		text,
-		HORIZONTAL_ALIGNMENT_CENTER,
-		240.0,
-		font_size,
-		16,
-		Color(0.0, 0.0, 0.0, 0.5 * alpha)
-	)
-	draw_string_outline(
-		_display_font,
-		baseline,
-		text,
-		HORIZONTAL_ALIGNMENT_CENTER,
-		240.0,
-		font_size,
-		12,
-		Color(INK, alpha)
-	)
-	draw_string(
-		_display_font,
-		baseline,
-		text,
-		HORIZONTAL_ALIGNMENT_CENTER,
-		240.0,
-		font_size,
-		Color(GOLD, alpha)
-	)
+	# 着地の直後だけ、底辺を支点に一度沈ませる。
+	var land := _t - _landed_at()
+	var squash := 0.0
+	if land >= 0.0 and land < SQUASH_SPAN:
+		squash = sin(land / SQUASH_SPAN * PI) * LAND_SQUASH
+	draw_set_transform(Vector2(CENTER_X, FLOOR_Y), 0.0, Vector2(1.0 + squash * 0.6, 1.0 - squash))
+	var from := 0
+	var blend := 0.0
+	if _t < _landed_at():
+		for i in TICK_STARTS.size():
+			var k := _phase(TICK_STARTS[i], TICK_SPAN)
+			if k > 0.0:
+				from = i
+				blend = smoothstep(BLEND_FROM, BLEND_TO, k)
+	draw_texture_rect(_art[from], _glass_rect(0.0), false)
+	if blend > 0.0:
+		draw_texture_rect(_art[from + 1], _glass_rect(0.0), false, Color(1, 1, 1, blend))
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
-## 与えたダメージ。相手のいた場所から浮き上がって消える。
-func _draw_damage_number() -> void:
-	var since := _t - _hit_time()
-	if since < 0.0 or since > 1.0:
-		return
-	var font_size := int(72.0 + sin(minf(since / 0.2, 1.0) * PI) * 18.0)
-	var alpha := 1.0 - _phase(_hit_time() + 0.7, 0.3)
-	var baseline := Vector2(ENEMY_X - 110.0, 250.0 - since * 40.0)
-	var text := "-%d" % HERO_AFTER.y
-	draw_string_outline(
-		_display_font,
-		baseline,
-		text,
-		HORIZONTAL_ALIGNMENT_CENTER,
-		220.0,
-		font_size,
-		12,
-		Color(INK, alpha)
-	)
-	draw_string(
-		_display_font,
-		baseline,
-		text,
-		HORIZONTAL_ALIGNMENT_CENTER,
-		220.0,
-		font_size,
-		Color(1.0, 0.42, 0.3, alpha)
-	)
-
-
-## 着弾の閃光と衝撃の輪。
-func _draw_impact() -> void:
-	var hit := _hit_time()
-	if _t < hit or _t > hit + 0.5:
-		return
-	var k := (_t - hit) / 0.5
-	var fade := 1.0 - k
+## くびれから落ちる砂粒。
+func _draw_stream() -> void:
 	var ci := get_canvas_item()
-	var at := Vector2(ENEMY_X - 20.0, FLOOR_Y - 110.0)
-	UiPaint.fill_ellipse(
-		ci, at, Vector2(70.0, 62.0) * (0.4 + k * 1.4), Color(1.0, 0.96, 0.82, fade), 32
-	)
-	for i in range(3):
-		var ring := k * (1.0 + float(i) * 0.5)
-		UiPaint.draw_ellipse_ring(
-			ci,
+	var neck := Vector2(CENTER_X, FLOOR_Y - GLASS_HEIGHT * NECK_RATIO)
+	for start in TICK_STARTS:
+		var k := _phase(start, TICK_SPAN)
+		if k <= 0.0 or k >= 1.0:
+			continue
+		var alpha := sin(k * PI)
+		for i in STREAM_GRAINS:
+			var fall := fposmod(k * 1.6 + float(i) / float(STREAM_GRAINS), 1.0)
+			var at := neck + Vector2(0.0, fall * fall * GLASS_HEIGHT * STREAM_DROP_RATIO)
+			at.x += (float(i % 3) - 1.0) * 3.0
+			UiKit.fill(ci, UiKit.ellipse(at, Vector2(4.5, 5.5)), Color(UiPalette.SAND_HI, alpha))
+
+
+## 反転の間、回る向きへ流れる2本の光の弧。
+func _draw_swoosh() -> void:
+	if not _flipping():
+		return
+	var k := _flip_phase()
+	var arc := sin(k * PI)
+	var head := k * k * (3.0 - 2.0 * k) * PI - PI * 0.5
+	var color := Color(UiPalette.GOLD_HI, arc * 0.85)
+	for side in 2:
+		var at := head + PI * float(side)
+		draw_arc(
+			_glass_center(),
+			SWOOSH_RADIUS,
+			at - SWOOSH_LENGTH * arc,
 			at,
-			Vector2(50.0, 44.0) * (0.4 + ring * 2.6),
-			Color(1.0, 0.82, 0.46, fade * 0.9),
-			5.0 - float(i),
-			32
+			24,
+			color,
+			SWOOSH_WIDTH * arc,
+			true
 		)
 
 
-## 砕けた相手の砂が飛び散って床へ落ちる。
-func _draw_shatter() -> void:
-	var since := _t - _hit_time()
-	if since < 0.0 or since > SHATTER_SPAN:
+## 着地の光と、台座から跳ねる砂。
+func _draw_landing() -> void:
+	var since := _t - _landed_at()
+	if since < 0.0 or since >= LAND_SPAN:
 		return
-	var k := since / SHATTER_SPAN
+	var k := since / LAND_SPAN
 	var fade := 1.0 - k
 	var ci := get_canvas_item()
-	var at := Vector2(ENEMY_X, FLOOR_Y - ENEMY_HEIGHT * 0.5)
-	for i in range(28):
-		var angle := TAU * float(i) / 28.0 + 0.3
-		var reach := 10.0 + k * (90.0 + fmod(float(i) * 37.0, 70.0))
-		var point := at + Vector2(cos(angle), sin(angle) * 0.9) * reach
-		point.y += k * k * 120.0
-		var grain := 5.0 + fmod(float(i) * 13.0, 3.0)
-		UiPaint.fill_ellipse(
-			ci, point, Vector2(grain, grain) * (1.0 - k * 0.5), Color(0.99, 0.75, 0.36, fade), 8
-		)
+	var base := Vector2(CENTER_X, FLOOR_Y + 6.0)
+	UiPaint.draw_ellipse_ring(
+		ci,
+		base,
+		DAIS_RADIUS * (0.7 + k * 0.75),
+		Color(UiPalette.GOLD_HI, fade),
+		2.0 + fade * 6.0,
+		48
+	)
+	for i in BURST_GRAINS:
+		var side := -1.0 if i % 2 == 0 else 1.0
+		var spread := 0.35 + fposmod(float(i) * 0.37, 0.65)
+		var at := base + Vector2(side * (90.0 + k * 150.0 * spread), 0.0)
+		at.y -= sin(k * PI) * (30.0 + 90.0 * fposmod(float(i) * 0.61, 1.0))
+		var grain := 8.0 - k * 4.0
+		UiKit.fill(ci, UiKit.ellipse(at, Vector2(grain, grain)), Color(UiPalette.SAND_HI, fade))
 
 
-func _font() -> Font:
-	var font := get_theme_font("font", "Label")
-	return font if font != null else ThemeDB.fallback_font
+## 攻撃力(左・橙)と体力(右・赤)。反転の間は数字が弧を描いて左右を入れ替わる。
+func _draw_gems() -> void:
+	var ci := get_canvas_item()
+	var left := Vector2(GEM_INSET, GEM_Y)
+	var right := Vector2(VIEW.x - GEM_INSET, GEM_Y)
+	var stats := _stats()
+	if stats.y == 1 and not _flipping():
+		var pulse := 0.5 + 0.5 * sin(_t * TAU * DANGER_HZ)
+		var reach := GEM_RADIUS * (1.5 + pulse * 0.3)
+		UiKit.glow(ci, right, Vector2(reach, reach), Color(UiPalette.HEALTH, 0.45 + pulse * 0.5))
+	var pop := _pop()
+	var radius := GEM_RADIUS * pop
+	UiKit.gem(ci, left, radius, UiPalette.ATTACK, UiPalette.ATTACK_DEEP)
+	UiKit.gem(ci, right, radius, UiPalette.HEALTH, UiPalette.HEALTH_DEEP)
+	if not _flipping():
+		UiKit.gem_text(ci, _font, left, radius, str(stats.x))
+		UiKit.gem_text(ci, _font, right, radius, str(stats.y))
+		return
+	var k := _flip_phase()
+	var swap := smoothstep(0.1, 0.9, k)
+	var arc := sin(swap * PI)
+	var lift := Vector2(0.0, -arc * NUMBER_ARC)
+	var grown := GEM_RADIUS * (1.0 + arc * 0.35)
+	UiKit.gem_text(ci, _font, left.lerp(right, swap) + lift, grown, str(stats.x))
+	UiKit.gem_text(ci, _font, right.lerp(left, swap) + lift * 0.45, grown, str(stats.y))
