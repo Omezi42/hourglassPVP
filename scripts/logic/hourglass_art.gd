@@ -209,7 +209,9 @@ static func _ordered_ids() -> Array[String]:
 
 
 static func _bake(art_id: String, state: int) -> void:
-	if _override(art_id, state) != null:
+	# 固有の絵を持つidでも、子の入力になる色違いは焼いて控える(子は親の色違いから作るため)。
+	var overridden := _override(art_id, state) != null
+	if overridden and not _is_parent(art_id):
 		return
 	var source_id := _table.source_of(art_id)
 	var source: Image = _baked.get("%s|%d" % [source_id, state], null)
@@ -232,6 +234,8 @@ static func _bake(art_id: String, state: int) -> void:
 	# 子を持たない絵の生画像まで控えると、焼き終えるまで全カードぶんが積み上がる。
 	if _is_parent(art_id):
 		_baked["%s|%d" % [art_id, state]] = baked
+	if overridden:
+		return
 	if has_finish(art_id):
 		baked = await _finish(art_id, state, baked)
 	var key := "%s|%d" % [art_id, state]

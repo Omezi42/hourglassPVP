@@ -24,5 +24,4 @@ effects = Array[Resource]([SubResource("Effect_vault_0")])
 rules_text = "被弾:自分の他の砂時計1体の総量+1"
 cannot_attack = false
 is_token = false
-art_id = "wall"
 emblem = ExtResource("emblem")

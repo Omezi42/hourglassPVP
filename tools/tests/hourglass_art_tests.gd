@@ -45,3 +45,7 @@ func run(assert_true: Callable) -> void:
 		var key := card.art_key()
 		assert_true.call(not key.is_empty(), "%s に絵のidがある" % card.id)
 		assert_true.call(table.has(key), "%s の色が表にある(%s)" % [card.id, key])
+		# 固有の絵はそのカード1枚のもの。借りると別のカードまで同じ固有の絵になる。
+		var unique := "%s/%s/%s.png" % [HourglassArt.OVERRIDE_DIR, key, HourglassArt.STATE_FILES[0]]
+		if ResourceLoader.exists(unique):
+			assert_true.call(key == card.id, "%s が他のカードの固有の絵を借りていない(%s)" % [card.id, key])

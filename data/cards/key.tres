@@ -39,5 +39,4 @@ effects = Array[Resource]([SubResource("Effect_key_0"), SubResource("Effect_key_
 rules_text = "設置:総量が5の自分の砂時計1体を反転させ、総量+3"
 cannot_attack = false
 is_token = false
-art_id = "eye"
 emblem = ExtResource("emblem")

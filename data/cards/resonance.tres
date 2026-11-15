@@ -29,5 +29,4 @@ effects = Array[Resource]([SubResource("Effect_resonance_0")])
 rules_text = "相手の砂時計が反転するたび、自分の他の砂時計のうち、攻撃力が体力より多いランダムな1体を反転させる"
 cannot_attack = false
 is_token = false
-art_id = "mirror"
 emblem = ExtResource("emblem")
