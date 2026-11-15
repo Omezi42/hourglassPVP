@@ -42,7 +42,7 @@ static func listed(today: String) -> Array[GiftData]:
 	for gift in all():
 		if is_claimed(gift):
 			claimed.append(gift)
-		elif not gift.expired(today):
+		elif not gift.expired(today) and _reaches_player(gift):
 			open.append(gift)
 	return open + claimed
 
@@ -53,3 +53,27 @@ static func unclaimed_count(today: String) -> int:
 		if not is_claimed(gift):
 			count += 1
 	return count
+
+
+## 件数をかける相手(`SKIN_BUYERS` は廃止したスキンの枚数、それ以外は1)。
+static func multiplier(gift: GiftData) -> int:
+	if gift.audience == GiftData.Audience.SKIN_BUYERS:
+		return AccountService.retired_skin_count()
+	return 1
+
+
+## 受け取る砂金の額。
+static func payout(gift: GiftData) -> int:
+	return gift.amount * multiplier(gift)
+
+
+## 枚数を差し込んだ説明。受け取った後(0枚)は枚数の部分を省く。
+static func description_for(gift: GiftData) -> String:
+	var count := multiplier(gift)
+	if count > 0:
+		return gift.description.replace("{count}", str(count))
+	return gift.description.replace("{count}枚ぶん", "").replace("{count}", "")
+
+
+static func _reaches_player(gift: GiftData) -> bool:
+	return gift.audience == GiftData.Audience.EVERYONE or AccountService.retired_skin_count() > 0

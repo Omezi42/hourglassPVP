@@ -17,6 +17,7 @@ func run(assert_true: Callable) -> void:
 	_test_announcement_unread()
 	_test_gift_listing()
 	await _test_gift_claim()
+	await _test_skin_apology()
 
 
 func _test_present_draws_and_gives_itself() -> void:
@@ -140,5 +141,65 @@ func _test_gift_claim() -> void:
 func _first_present() -> GiftData:
 	for gift in GiftLibrary.all():
 		if gift.id == "first_present":
+			return gift
+	return null
+
+
+func _test_skin_apology() -> void:
+	AccountService.reset()
+	var apology := _gift_by_id("skin_apology")
+	_assert.call(apology != null, "スキン廃止のおわびが同梱されている")
+	if apology == null:
+		return
+	var today := DailyMissionService.today()
+	_assert.call(not GiftLibrary.listed(today).has(apology), "スキンを持たない人には出ない")
+	var tree := Engine.get_main_loop() as SceneTree
+	var auth := FirebaseAuth.new(null)
+	auth.uid = UID
+	var client = FakeClient.new(auth)
+	tree.root.add_child(client)
+	var path := AccountService.path(UID)
+	client.store[path] = {
+		"fields":
+		{
+			"currency": 10,
+			"owned_skins": ["a", "b", "c"],
+			"disabled_skins": ["a"],
+			"enabled_skins": ["b"],
+		},
+		"update_time": "t0"
+	}
+	await AccountService.load_profile(client, UID)
+	_assert.call(AccountService.retired_skin_count() == 3, "プロフィールの読み込みでスキンの枚数を控える")
+	_assert.call(GiftLibrary.listed(today).has(apology), "スキンを持つ人には出る")
+	_assert.call(GiftLibrary.payout(apology) == 1500, "額は1枚あたり × 枚数")
+	_assert.call(GiftLibrary.description_for(apology).contains("3枚"), "説明に枚数を添える")
+	_assert.call(await GiftService.claim(client, UID, apology), "受け取れる")
+	var fields: Dictionary = client.store[path]["fields"]
+	_assert.call(int(fields["currency"]) == 1510, "枚数ぶんの砂金が足される")
+	_assert.call((fields["claimed_gifts"] as Array).has("skin_apology"), "受け取りの印が書かれる")
+	for key in ["owned_skins", "disabled_skins", "enabled_skins"]:
+		_assert.call((fields[key] as Array).is_empty(), "%s が空になる" % key)
+	_assert.call(AccountService.retired_skin_count() == 0, "控えた枚数も0になる")
+	_assert.call(GiftLibrary.listed(today).has(apology), "受け取り済みの行は残る")
+	_assert.call(GiftLibrary.is_claimed(apology), "受け取り済みになる")
+	_assert.call(not await GiftService.claim(client, UID, apology), "2回は受け取れない")
+	_assert.call(int(fields["currency"]) == 1510, "2回目は足されない")
+
+	var other := GiftData.new()
+	other.id = "test_zero"
+	other.kind = GiftData.Kind.CURRENCY
+	other.amount = 500
+	other.audience = GiftData.Audience.SKIN_BUYERS
+	_assert.call(await GiftService.claim(client, UID, other), "件数0でも印は付く")
+	_assert.call(int(fields["currency"]) == 1510, "件数0なら砂金は足されない")
+
+	client.queue_free()
+	AccountService.reset()
+
+
+func _gift_by_id(id: String) -> GiftData:
+	for gift in GiftLibrary.all():
+		if gift.id == id:
 			return gift
 	return null

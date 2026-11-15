@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="GiftData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/gift_data.gd" id="script_gift"]
+
+[resource]
+script = ExtResource("script_gift")
+id = "skin_apology"
+title = "スキン廃止のおわび"
+description = "カードスキン{count}枚ぶんの補償です"
+kind = 1
+set_id = ""
+amount = 500
+expires = ""
+audience = 1

@@ -5,6 +5,18 @@ extends RefCounted
 ## 未サインイン・通信失敗のときは退避しない(押せなくしておけば失うものが無いため)。
 
 const OWNED_SETS := "owned_card_sets"
+const SKIN_FIELDS: Array[String] = ["owned_skins", "disabled_skins", "enabled_skins"]
+
+
+## 読み直したドキュメントの `owned_skins` の件数ぶんを払い、スキンの所持記録を空にする(同じ書き込みの中で)。
+## 件数0なら砂金は足さず、印だけ付ける。
+static func _add_skin_apology(data: Dictionary, fields: Dictionary, gift: GiftData) -> void:
+	var owned: Array = fields.get(AccountService.OWNED_SKINS, [])
+	if owned.is_empty():
+		return
+	data["currency"] = int(fields.get("currency", 0)) + gift.amount * owned.size()
+	for key in SKIN_FIELDS:
+		data[key] = []
 
 
 ## 受け取れたら true。既に受け取っていた(別のタブで受け取った)ときは、印を読み直して false を返す。
@@ -35,7 +47,10 @@ static func claim(client: FirestoreClient, uid: String, gift: GiftData) -> bool:
 					next_owned.append(gift.set_id)
 					data[OWNED_SETS] = next_owned
 			GiftData.Kind.CURRENCY:
-				data["currency"] = int(fields.get("currency", 0)) + gift.amount
+				if gift.audience == GiftData.Audience.EVERYONE:
+					data["currency"] = int(fields.get("currency", 0)) + gift.amount
+		if gift.audience == GiftData.Audience.SKIN_BUYERS:
+			_add_skin_apology(data, fields, gift)
 		var precondition := {}
 		if bool(doc.get("exists", false)) and str(doc.get("update_time", "")) != "":
 			precondition = {"updateTime": doc["update_time"]}

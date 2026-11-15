@@ -13,18 +13,26 @@ const DISPLAY_NAME_MAX_LENGTH := 10
 ## `get_document_meta()` の応答コードのうち、書き込みの土台にしてよいもの(無い=まだ作られていない)。
 const READ_OK := 200
 const READ_MISSING := 404
+const OWNED_SKINS := "owned_skins"
 
 ## 直近に読み込んだプロフィール。キーは `players/{uid}` のフィールドと同じ。
 static var _profile: Dictionary = _empty_profile()
 ## 他プレイヤーのプロフィールキャッシュ(uid -> {display_name, icon_id, title_id})。
 static var _profile_cache: Dictionary = {}
+## 廃止したカードスキンの所持枚数(`owned_skins` の件数。プレゼント「スキン廃止のおわび」の対象)。
+static var _retired_skin_count := 0
 
 
 ## ログアウト・ログインでアカウントが変わったときに呼ぶ。
 static func reset() -> void:
 	_profile = _empty_profile()
 	_profile_cache.clear()
+	_retired_skin_count = 0
 	AccountSyncService.reset()
+
+
+static func retired_skin_count() -> int:
+	return _retired_skin_count
 
 
 static func display_name() -> String:
@@ -395,6 +403,7 @@ static func load_profile(client: FirestoreClient, uid: String) -> void:
 	_profile = _empty_profile()
 	for key in fields:
 		_profile[key] = fields[key]
+	_retired_skin_count = _skin_count(fields)
 	if _profile.get("icon_id", "") != "" or _profile.get("title_id", "") != "":
 		AccountStore.save_local_customization(icon_id(), title_id())
 	if (
@@ -594,6 +603,13 @@ static func path(uid: String) -> String:
 static func apply_local_fields(data: Dictionary) -> void:
 	for key in data:
 		_profile[key] = data[key]
+	if data.has(OWNED_SKINS):
+		_retired_skin_count = _skin_count(data)
+
+
+static func _skin_count(fields: Dictionary) -> int:
+	var skins: Variant = fields.get(OWNED_SKINS, [])
+	return (skins as Array).size() if skins is Array else 0
 
 
 static func _today() -> String:

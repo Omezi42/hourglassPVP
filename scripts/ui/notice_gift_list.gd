@@ -122,7 +122,7 @@ func _make_art(gift: GiftData) -> Control:
 	if gift.kind == GiftData.Kind.CURRENCY:
 		var chip := CurrencyChip.new()
 		chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		chip.set_amount(gift.amount, false)
+		chip.set_amount(maxi(GiftLibrary.payout(gift), gift.amount), false)
 		return chip
 	var art := TextureRect.new()
 	art.custom_minimum_size = Vector2(ART_SIDE, ART_SIDE)
@@ -137,10 +137,11 @@ func _make_art(gift: GiftData) -> Control:
 
 
 func _detail_text(gift: GiftData) -> String:
+	var description := GiftLibrary.description_for(gift)
 	if gift.expires.is_empty():
-		return gift.description
+		return description
 	var parts := gift.expires.split("-")
-	return "%s(%d月%d日まで)" % [gift.description, int(parts[1]), int(parts[2])]
+	return "%s(%d月%d日まで)" % [description, int(parts[1]), int(parts[2])]
 
 
 func _on_claim(gift: GiftData, button: Button) -> void:
@@ -149,6 +150,7 @@ func _on_claim(gift: GiftData, button: Button) -> void:
 	_busy = true
 	button.disabled = true
 	var rect := button.get_global_rect()
+	var payout := GiftLibrary.payout(gift)
 	var ok: bool = await GiftService.claim(NetSession.client, _uid(), gift)
 	_busy = false
 	refresh()
@@ -156,7 +158,8 @@ func _on_claim(gift: GiftData, button: Button) -> void:
 		_note.text = FAILED_TEXT if not GiftLibrary.is_claimed(gift) else ""
 		return
 	if gift.kind == GiftData.Kind.CURRENCY:
-		reward_claimed.emit(rect, gift.amount)
+		if payout > 0:
+			reward_claimed.emit(rect, payout)
 	else:
 		_note.text = CLAIMED_SET_TEXT
 	claimed.emit()
