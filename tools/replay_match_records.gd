@@ -1,6 +1,7 @@
 extends SceneTree
 ## オンライン対戦の記録(match_records)を棋譜から再生し、終局の局面を書き出す(GameDesign.md 22章)。
 ## 棋譜は「手札の何枚目を出したか」しか持たないため、HP・盤面・出したカードはエンジンで並べ直して作る。
+## 出した手ごとに、出す直前のHPと駒の数も残す(`plays`)。
 ## `tools/analyze_matches.py --surrenders` が呼ぶ。
 ##
 ## 使い方:
@@ -57,11 +58,14 @@ func _replay(record: Dictionary) -> Dictionary:
 	var rejected := 0
 	for action in actions:
 		var played := _played_card(state, action)
+		var before := _hp_and_units(state, int(action.get("side", 0)))
 		if not MatchAction.apply(state, action):
 			rejected += 1
 			continue
 		if played != "":
-			plays.append({"turn": state.turn_count, "side": int(action["side"]), "card": played})
+			var play := {"turn": state.turn_count, "side": int(action["side"]), "card": played}
+			play.merge(before)
+			plays.append(play)
 	result["replayed"] = true
 	result["rejected"] = rejected
 	result["matches"] = (
@@ -75,6 +79,7 @@ func _replay(record: Dictionary) -> Dictionary:
 	result["sides"] = [
 		_side_snapshot(state, MatchState.Side.A), _side_snapshot(state, MatchState.Side.B)
 	]
+	result["plays"] = plays
 	result["recent_plays"] = plays.filter(
 		func(play: Dictionary) -> bool: return play["turn"] > state.turn_count - RECENT_TURNS
 	)
@@ -91,6 +96,17 @@ func _played_card(state: MatchState, action: Dictionary) -> String:
 	if index < 0 or index >= hand.size():
 		return ""
 	return hand[index].display_name
+
+
+## 出す直前の、出した側から見たHPと駒の数(逆転用の札がどんな局面で使われたかを見るため)。
+func _hp_and_units(state: MatchState, side: int) -> Dictionary:
+	var foe := MatchState.other_side(side)
+	return {
+		"hp_own": state.hp[side],
+		"hp_foe": state.hp[foe],
+		"units_own": state.units(side).size(),
+		"units_foe": state.units(foe).size(),
+	}
 
 
 func _side_snapshot(state: MatchState, side: int) -> Dictionary:
