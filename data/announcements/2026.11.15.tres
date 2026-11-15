@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="AnnouncementData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/announcement_data.gd" id="script_announcement"]
+
+[resource]
+script = ExtResource("script_announcement")
+version = "2026.11.15"
+body = "**かわったもの**
+- ホームの画面が軽くなって、動きがなめらかになったよ。タイトルを押したあとの引っかかりも減らしたよ
+- ボタンにカーソルを乗せると文字とアイコンがふわっと浮いて、押すとちょっと沈むようになったよ
+- 砂時計の絵の描き方を整えたよ。見た目はそのままで、読み込みが少し軽くなったよ
+
+-# 遊ぶ → https://unityroom.com/games/sunadokei_arena"
