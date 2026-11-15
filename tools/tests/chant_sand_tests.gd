@@ -33,6 +33,8 @@ func run(assert_true: Callable) -> void:
 	_test_sage_ignores_units_and_foe()
 	_test_sage_silenced_stops()
 	_test_set_is_registered()
+	_test_burst_review_board()
+	_test_burst_burn_hand()
 
 
 func _new_match(hand_ids: Array) -> MatchState:
@@ -317,3 +319,41 @@ func _test_set_is_registered() -> void:
 	_assert.call(CardSetLibrary.card_ids(SET_ID).has("sage"), "セージが詠砂の刻に入っている")
 	_assert.call(CardSetLibrary.planned_count(SET_ID) == 8, "詠砂の刻は予定8枚")
 	_assert.call(CardEnums.trigger_name(CardEnums.Trigger.ON_OWN_SPELL) == "常在", "砂術への反応は「常在」と出す")
+
+
+## 1手番の本体ダメージの上限を固定する(値が動いたら値付けを見直す合図)。
+## 盤面はチャント2体+セージ、マナは最大。
+func _burst(board_ids: Array, grave_ids: Array, hand_ids: Array) -> int:
+	var state := _new_match(hand_ids)
+	for i in board_ids.size():
+		_place(state, MatchState.Side.A, board_ids[i], i)
+	var grave: Array = []
+	for id in grave_ids:
+		grave.append(CardLibrary.find_by_id(id))
+	state.graveyard[MatchState.Side.A] = grave
+	var foe_before: int = state.hp[MatchState.Side.B]
+	for i in hand_ids.size():
+		var card: CardData = state.hand[MatchState.Side.A][0]
+		if card.is_spell:
+			state.cast_spell(MatchState.Side.A, 0)
+		else:
+			state.play_card(MatchState.Side.A, 0, board_ids.size())
+	return foe_before - state.hp[MatchState.Side.B]
+
+
+func _test_burst_review_board() -> void:
+	var dealt := _burst(
+		["chant", "chant", "sage"],
+		["divine", "divine", "shot", "shot", "grit_rain"],
+		["recite", "grimoire"]
+	)
+	_assert.call(dealt == 8, "チャント2体+セージ+墓地の砂術5枚で写し詠み→グリモアは8点(実測 %d)" % dealt)
+
+
+func _test_burst_burn_hand() -> void:
+	var dealt := _burst(
+		["chant", "chant", "sage"],
+		[],
+		["shot", "shot", "recite", "recite", "crescendo", "crescendo"]
+	)
+	_assert.call(dealt == MatchState.INITIAL_HP, "チャント2体+セージで本体に撃つ砂術6枚は初期HPちょうど(実測 %d)" % dealt)

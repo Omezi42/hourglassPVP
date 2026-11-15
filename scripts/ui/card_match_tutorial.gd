@@ -395,9 +395,12 @@ func gate_flip_right_begin() -> bool:
 	if not _active:
 		return true
 	var step := _current_step()
-	return (
+	var allowed: bool = (
 		not step.is_empty() and step.get("side", "") == "a" and step.get("kind", "") == "flip_right"
 	)
+	if allowed:
+		FunnelService.reach(FunnelService.tutorial_armed(_index))
+	return allowed
 
 
 func gate_flip_right_target(target_side: int, slot: int) -> bool:
@@ -498,6 +501,7 @@ func _complete_current_step() -> void:
 		_index += 1
 		_enter_step()
 		return
+	FunnelService.reach(FunnelService.tutorial_done(_index))
 	_fact = TutorialFacts.for_step(step, _refs)
 	_showing_done = true
 	if kind == "attack":

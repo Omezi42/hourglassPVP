@@ -36,6 +36,7 @@ func run(assert_true: Callable) -> void:
 	await _test_own_action_is_not_delivered_back(assert_true, client, online, tree)
 	await _test_opponent_actions_are_delivered_one_at_a_time(assert_true, client, online, tree)
 	await _test_send_retries_until_the_write_lands(assert_true, client, online, tree)
+	await _test_final_action_lands_before_record_reads(assert_true, client, online, tree)
 	_test_repeated_failures_report_a_lost_connection(assert_true, client)
 	await _test_setup_wait_can_be_aborted(assert_true, client, tree)
 
@@ -112,6 +113,30 @@ func _test_send_retries_until_the_write_lands(
 
 
 ## 連続した失敗は「接続できません」としてUIへ伝わる(GameDesign.md 11章)。
+## 決着の手(投了)を積んでから終局させ、`CardMatchOutcome` と同じく送信待ちを抜けてから記録を読む。
+## 記録の棋譜は決着の手で終わる(以前は送信より先に終局が走り、投了・時間切れの手が欠けていた)。
+func _test_final_action_lands_before_record_reads(
+	assert_true: Callable, client, online: OnlineMatch, tree: SceneTree
+) -> void:
+	var fields: Dictionary = client.store[MATCH_PATH]["fields"]
+	fields["deck_a"] = []
+	fields["deck_b"] = []
+	online.send({"type": "surrender", "side": 0})
+	assert_true.call(online.is_busy(), "the final action should be queued before the match ends")
+	var state := MatchState.new()
+	state.winner = MatchState.Side.B
+	state.end_reason = MatchState.EndReason.SURRENDER
+	await _wait_until(tree, func() -> bool: return not online.is_busy(), 2.0)
+	await MatchRecordService.submit(client, "m_test", CurrencyRules.MatchKind.RANDOM, state)
+	var record: Dictionary = client.store.get("%s/m_test" % MatchRecordService.COLLECTION, {})
+	var actions: Array = record.get("fields", {}).get("actions", [])
+	assert_true.call(
+		not actions.is_empty() and actions[-1].get("type", "") == "surrender",
+		"the match record should end with the final action"
+	)
+	state.free()
+
+
 func _test_repeated_failures_report_a_lost_connection(assert_true: Callable, _client) -> void:
 	var lonely := OnlineMatch.new(null)
 	var states: Array = []

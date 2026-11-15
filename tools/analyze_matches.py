@@ -92,6 +92,9 @@ FUNNEL_STEPS = [
 TUTORIAL_SCRIPT = ROOT / "resources" / "tutorial" / "tutorial_script.tres"
 TUTORIAL_STEP_KEY = "tutorial_%02d"
 TUTORIAL_SKIP_KEY = "tutorial_skip_%02d"
+# 手順の中の通過(funnel_service.gd の TUTORIAL_ARMED_FORMAT / TUTORIAL_DONE_FORMAT と同じ)。
+TUTORIAL_ARMED_KEY = "tutorial_%02d_armed"
+TUTORIAL_DONE_KEY = "tutorial_%02d_done"
 TUTORIAL_TEXT_CHARS = 18
 TUTORIAL_SIDES = {"a": "あなた", "b": "CPU", "info": "説明"}
 # ランクマッチの最初の待機(funnel_service.gd の RANKED_* と同じ)。割合は待機を始めた人に対して出す。
@@ -247,13 +250,18 @@ def ratio_table(totals, steps, base_key, base_label):
 
 def tutorial_table(totals):
     """手順ごとに、入った人数(始めた人に対する割合)と、その手順で飛ばした人数を出す。"""
-    lines = ["| 段階 | 人数 | 始めた人に対して | スキップ |", "|---|---|---|---|"]
+    lines = [
+        "| 段階 | 人数 | 始めた人に対して | 反転権を押した | 指して説明が出た | スキップ |",
+        "|---|---|---|---|---|---|",
+    ]
     base = totals.get("tutorial_start", 0)
     for index, (key, label) in enumerate(tutorial_steps()):
         count = totals.get(key, 0)
         ratio = "%.0f%%" % (100.0 * count / base) if base else "—"
+        armed = totals.get(TUTORIAL_ARMED_KEY % index, "—")
+        done = totals.get(TUTORIAL_DONE_KEY % index, "—")
         skipped = totals.get(TUTORIAL_SKIP_KEY % index, 0)
-        lines.append("| %s | %d | %s | %d |" % (label, count, ratio, skipped))
+        lines.append("| %s | %d | %s | %s | %s | %d |" % (label, count, ratio, armed, done, skipped))
     return lines
 
 
@@ -307,7 +315,7 @@ def play_time_report(fields, within_days):
     lines = [
         "## 1局の時間(CPU戦・遠征、%s・%d日分)" % (span, day_count),
         "",
-        "CPUの手は人より速いため、人どうしの対局の長さそのものではない(目標 10〜15分)。",
+        "CPUの手は人より速いため、人どうしの対局の長さそのものではない(目標 10分以内)。",
         "",
         "| 種別 | 局数 | " + " | ".join(label for _, label in PLAY_TIME_BANDS) + " | 平均手数 | 勝率 |",
         "|---|---|" + "---|" * len(PLAY_TIME_BANDS) + "---|---|",
@@ -381,7 +389,7 @@ def duration_line(records):
     )
     if not minutes:
         return "- 1局の時間: 開始時刻を持つ記録がまだ無い"
-    return "- 1局の時間: 平均 **%.1f分** / 中央値 %.1f分(目標 10〜15分、%d戦)" % (
+    return "- 1局の時間: 平均 **%.1f分** / 中央値 %.1f分(目標 10分以内、%d戦)" % (
         sum(minutes) / len(minutes),
         minutes[len(minutes) // 2],
         len(minutes),
@@ -404,7 +412,7 @@ def overview_lines(records):
         "",
         "- 対局数: **%d**" % total,
         "- 先手勝率: **%.1f%%**(目標 45〜55%%)" % (100.0 * first_wins / total),
-        "- 決着手数: **%.1f手**(目標 20〜30手)" % (float(turns) / total),
+        "- 決着手数: **%.1f手**(目標 18〜28手)" % (float(turns) / total),
         duration_line(records),
         "- 種別: " + " / ".join("%s %d戦" % (k, v) for k, v in kinds.most_common()),
         "- 決着の要因: " + reason_text,

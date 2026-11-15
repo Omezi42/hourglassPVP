@@ -33,6 +33,9 @@ const SOLO_B1_LOSE := "solo_b1_lose"
 const SOLO_B1_QUIT := "solo_b1_quit"
 ## 誘導対局の手順(`tutorial_step()` で番号を付ける)。
 const TUTORIAL_STEP_FORMAT := "tutorial_%02d"
+## 手順の中の通過(反転権のボタンを押した / 指示どおりに指して説明が出た)。手順の中のどこで抜けるかを見る。
+const TUTORIAL_ARMED_FORMAT := "tutorial_%02d_armed"
+const TUTORIAL_DONE_FORMAT := "tutorial_%02d_done"
 ## 誘導対局を飛ばした手順(`reach_tutorial_skip()` で番号を付ける)。
 const TUTORIAL_SKIP_STEP_FORMAT := "tutorial_skip_%02d"
 ## ランクマッチの最初の待機(`RankedWaitFunnel`)。
@@ -168,6 +171,14 @@ static func _bump(days: Dictionary, day: String, step: String) -> void:
 
 static func tutorial_step(index: int) -> String:
 	return TUTORIAL_STEP_FORMAT % index
+
+
+static func tutorial_armed(index: int) -> String:
+	return TUTORIAL_ARMED_FORMAT % index
+
+
+static func tutorial_done(index: int) -> String:
+	return TUTORIAL_DONE_FORMAT % index
 
 
 static func tutorial_skip_at(index: int) -> String:

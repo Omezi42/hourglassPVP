@@ -71,6 +71,7 @@
 | `match_end` / `online_end` | `CardMatchOutcome.finish()`(種別がCPUか、それ以外か) |
 | `online_try` | `Main` のランダム・ランク・ルームの入口 |
 | `tutorial_NN` | `CardMatchTutorial._enter_step()`(NN は台本の手順の番号、2桁) |
+| `tutorial_NN_armed` / `tutorial_NN_done` | `CardMatchTutorial` が立てる。armed は `gate_flip_right_begin()` が反転権の手順で押下を通したとき、done は `_complete_current_step()` が説明(`done`)を出すとき |
 | `tutorial_skip_NN` | `tutorial_skip` と同時に `FunnelService.reach_tutorial_skip(index)` で立てる(NN は飛ばしたときの手順。端末で最初のスキップだけ数え、合計を `tutorial_skip` と揃える) |
 | `ranked_*` | `RankedWaitFunnel`(下記) |
 | `daily_puzzle` | `Main._on_puzzle_stage_selected()`(今日の1問を選んだとき) |

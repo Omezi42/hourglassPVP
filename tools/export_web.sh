@@ -36,6 +36,18 @@ mkdir -p "$CHECK"
 # 本番のpckには tools/ が無いため、検査のスクリプトはディスクから渡してpckの中身を調べる
 "$GODOT" --headless --main-pack "$OUT/index.pck" --script "$ROOT/tools/verify_web_pck.gd" 2>&1 | grep -E "pck check" || true
 
+# pckの急増で止める(Architecture.md 4.1.6節)。前回通した大きさは tools/last_pck_size.txt に控えてコミットする。
+# 増えるのが分かっている回は PCK_GROWTH_OK=1 を付けて回す。
+PCK_SIZE_FILE="$ROOT/tools/last_pck_size.txt"
+PCK_GROWTH_LIMIT=1048576
+PCK_SIZE="$(wc -c < "$OUT/index.pck" | tr -d ' ')"
+LAST_PCK_SIZE="$(cat "$PCK_SIZE_FILE" 2>/dev/null || echo "$PCK_SIZE")"
+if [ $((PCK_SIZE - LAST_PCK_SIZE)) -gt "$PCK_GROWTH_LIMIT" ] && [ "${PCK_GROWTH_OK:-0}" != "1" ]; then
+	echo "!!! index.pck が前回より1MB以上増えた($LAST_PCK_SIZE -> $PCK_SIZE)。意図した増加なら PCK_GROWTH_OK=1 で回し直す"
+	exit 1
+fi
+echo "$PCK_SIZE" > "$PCK_SIZE_FILE"
+
 # itch.io・PLiCy 向け(Architecture.md 4.6節)。起動部 build/portal.zip は Godot を上げたときだけ手で上げ直す。
 ENGINE_VERSION="$("$GODOT" --version | cut -d. -f1-3 | tr -dc 0-9.)"
 python "$ROOT/tools/make_portal.py" "$OUT" "$BUILD_ID" "$ENGINE_VERSION"

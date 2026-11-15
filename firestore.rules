@@ -12,9 +12,9 @@ rules_version = '2';
 //
 // 意図的に検証していないこと(将来の不正対策で見直す範囲):
 //   - 手(actions)の正当性。合法手かどうか、手番かどうかは見ない
-//   - 対局者以外がmatches/{id}を読み書きできること。観戦(ルームマッチ・ランクマッチ。
+//   - 対局者以外がmatches/{id}を読めること。観戦(ルームマッチ・ランクマッチ。
 //     GameDesign.md 12章)が第三者による読み取りと一覧のクエリを前提としているため、
-//     読み取りを対局者に限定していない
+//     読み取りを対局者に限定していない(書き込みは対局者の2人に限る)
 //   - キューやルームのドキュメントを他人が削除できること。切断して残ったキューを
 //     他のプレイヤーが掃除する実装(MatchmakingQueue)がこれに依存している
 //   - players/{uid}のcurrency(砂金)の増え方。本人しか書けないことだけを守り、
@@ -44,8 +44,15 @@ service cloud.firestore {
     }
 
     // 対局そのもの(デッキ・配置・手順・結果)。リプレイと観戦もこれを読む。
+    // 書けるのは player_a / player_b の2人だけ(作成は同じcommitで両者のuidを書く。MatchSides)。
+    // 他人が手・手番を書き換えられないようにするため。保存件数の上限で消すのも対局者自身。
     match /matches/{matchId} {
-      allow read, write: if signedIn();
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.auth.uid in [request.resource.data.get('player_a', ''),
+                                request.resource.data.get('player_b', '')];
+      allow update, delete: if signedIn()
+        && request.auth.uid in [resource.data.get('player_a', ''), resource.data.get('player_b', '')];
     }
 
     // デッキコードの預かり先(GameDesign.md 9章)。ドキュメントIDは8桁の数字。
