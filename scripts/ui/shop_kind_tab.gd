@@ -38,7 +38,7 @@ func _ready() -> void:
 func _draw() -> void:
 	if _font == null:
 		return
-	draw_set_transform(CodedButtonStyle.content_offset(self))
+	draw_set_transform_matrix(CodedButtonStyle.content_transform(self))
 	# 真鍮の面(選択中)の上は彫った暗い字、硝子の面の上は象牙と補足の灰。
 	var main_color := UiPalette.BRASS_INK if active else UiPalette.IVORY
 	var sub_color := UiPalette.BRASS_INK if active else UiPalette.MUTED

@@ -20,6 +20,7 @@ const LIFT := 2.0
 const PRESS_SINK := 1.0
 const PRESS_SCALE := 0.97
 const META_CHILD_SHIFT := "coded_button_child_shift"
+const META_CHILD_SCALED := "coded_button_child_scaled"
 ## 押したとき上の光の膜が消える(硝子の面の `film`)。
 const PRESSED_FILM := 0.0
 ## 押せないボタンの縁の濃さ。
@@ -83,14 +84,23 @@ func sync_content_offset() -> void:
 	if not is_equal_approx(content_margin_bottom, bottom):
 		content_margin_bottom = bottom
 	if button != null:
-		_shift_children(button, dy)
+		var press := 0.0 if button.disabled else press_amount
+		_fit_children(button, dy, press_scale(press))
 
 
-## 子として載せた中身(名札の字・アイコンなど)も同じだけ動かす。前回ずらした量との差だけを足す。
-static func _shift_children(button: BaseButton, dy: float) -> void:
+## 押したときの面の倍率。
+static func press_scale(press: float) -> float:
+	return lerpf(1.0, PRESS_SCALE, press)
+
+
+## 子として載せた中身(名札の字・アイコンなど)も面と同じだけ動かし、同じ倍率で縮める
+## (縮めないと端に寄せた中身が縮んだ面の縁へかぶる)。ずらしは前回との差だけを足す。
+static func _fit_children(button: BaseButton, dy: float, scale: float) -> void:
 	var applied: float = button.get_meta(META_CHILD_SHIFT, 0.0)
 	var delta := dy - applied
-	if is_zero_approx(delta):
+	button.set_meta(META_CHILD_SHIFT, dy)
+	var scaled: bool = button.get_meta(META_CHILD_SCALED, false)
+	if is_zero_approx(delta) and not scaled and is_equal_approx(scale, 1.0):
 		return
 	for child in button.get_children():
 		var control := child as Control
@@ -98,15 +108,20 @@ static func _shift_children(button: BaseButton, dy: float) -> void:
 			continue
 		control.offset_top += delta
 		control.offset_bottom += delta
-	button.set_meta(META_CHILD_SHIFT, dy)
+		control.pivot_offset = button.size * 0.5 - control.position
+		control.scale = Vector2.ONE * scale
+	button.set_meta(META_CHILD_SCALED, not is_equal_approx(scale, 1.0))
 
 
-## 自分で中身を `_draw()` するボタンが、面と同じだけ中身をずらすのに使う。
-static func content_offset(button: BaseButton) -> Vector2:
+## 自分で中身を `_draw()` するボタンが、面と同じだけ中身をずらし縮めるのに使う(`draw_set_transform_matrix`)。
+static func content_transform(button: BaseButton) -> Transform2D:
 	if button.disabled or not button.has_meta(ButtonFeel.META_STYLE):
-		return Vector2.ZERO
+		return Transform2D.IDENTITY
 	var style: CodedButtonStyle = button.get_meta(ButtonFeel.META_STYLE)
-	return Vector2(0.0, face_offset_y(style.hover_amount, style.press_amount))
+	var scale := press_scale(style.press_amount)
+	var center := button.size * 0.5
+	var origin := center + Vector2(0.0, face_offset_y(style.hover_amount, style.press_amount))
+	return Transform2D(0.0, Vector2.ONE * scale, 0.0, origin - center * scale)
 
 
 func _draw(to_canvas_item: RID, rect: Rect2) -> void:
@@ -127,7 +142,7 @@ func _draw(to_canvas_item: RID, rect: Rect2) -> void:
 
 	var face := rect
 	face.position.y += face_offset_y(hover, press)
-	var scaled := face.size * lerpf(1.0, PRESS_SCALE, press)
+	var scaled := face.size * press_scale(press)
 	face = Rect2(face.get_center() - scaled * 0.5, scaled)
 
 	if filled:
