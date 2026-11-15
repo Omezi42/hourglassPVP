@@ -5,11 +5,10 @@ extends Button
 ##
 ## 地の面は `CodedButtonStyle`(硝子の面)を流用する(`HomeTile` と同じ流儀)。
 
-## 品種ごとの列数とタイルの高さ。絵の形(紋章=正方形、マット・スキン=横長、文言=1行)に合わせる。
+## 品種ごとの列数とタイルの高さ。絵の形(紋章=正方形、マット=横長、文言=1行)に合わせる。
 ## `stacked` は名前と価格を横に並べる幅が無いタイル(紋章)で、2行に積んで中央に寄せる。
 const LAYOUT := {
 	ShopCatalog.Kind.CARD_SET: {"columns": 1, "height": 150.0, "stacked": false},
-	ShopCatalog.Kind.SKIN: {"columns": 2, "height": 190.0, "stacked": false},
 	ShopCatalog.Kind.PLAYMAT: {"columns": 2, "height": 170.0, "stacked": false},
 	ShopCatalog.Kind.EMOTE: {"columns": 2, "height": 96.0, "stacked": false},
 	ShopCatalog.Kind.ICON: {"columns": 5, "height": 140.0, "stacked": true},
@@ -81,13 +80,6 @@ func _ready() -> void:
 	mouse_exited.connect(queue_redraw)
 	resized.connect(_layout_layers)
 	_layout_layers()
-	# スキンの見本は動く絵のため、見えている間は引き続ける(31章)。
-	set_process(kind == ShopCatalog.Kind.SKIN)
-
-
-func _process(_delta: float) -> void:
-	if is_visible_in_tree():
-		ShopItemArt.keep_skin_live(id)
 
 
 func _layout_layers() -> void:
@@ -132,8 +124,6 @@ func _draw() -> void:
 			)
 		ShopCatalog.Kind.EMOTE:
 			ShopItemArt.emote_bubble(self, art, id, _font)
-		ShopCatalog.Kind.SKIN:
-			ShopItemArt.skin_states(self, art, id)
 		ShopCatalog.Kind.CARD_SET:
 			ShopItemArt.card_set_row(self, art, id, _font)
 	_draw_footer()

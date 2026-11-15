@@ -42,7 +42,6 @@ const PORTRAIT_CHIP_SCALE := 1.4
 ## タブの並び(対局への効き目が大きい順。GameDesign.md 21章)。
 const KINDS: Array[Dictionary] = [
 	{"kind": ShopCatalog.Kind.CARD_SET, "heading": "カードセット"},
-	{"kind": ShopCatalog.Kind.SKIN, "heading": "カードスキン"},
 	{"kind": ShopCatalog.Kind.PLAYMAT, "heading": "プレイマット"},
 	{"kind": ShopCatalog.Kind.EMOTE, "heading": "エモート"},
 	{"kind": ShopCatalog.Kind.ICON, "heading": "アイコン"},

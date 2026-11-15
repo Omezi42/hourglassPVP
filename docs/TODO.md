@@ -26,9 +26,11 @@
   (試作は聖剣。`skin_*` の部品と関数は `frame_parts` / `art_main` / `art_back` / `art_frame` へ改名、`HOOK_CAVITY` / `HOOK_FRONT` を消し、Pitfalls の該当項も消す)。
   共通のガラス `glass_{kind}` を置き、砂の色は色違いの表から渡す。`tools/bake_hourglass_art.gd` で `overrides/` へ焼き、焼き忘れを `check.sh` で止める。
   WebPの画質を pck の増え方で決めて4.1節へ書く。9本とも、いまの絵と並べたスクショで見た目が変わっていないことを確かめる
-- [ ] スキンの撤去(Sonnet): `CardSkins`・`SkinLibrary`・視点(`skin_viewer`)・相手の設定の受け渡し・図鑑の切り替え・ショップの品・
+- [x] スキンの撤去(Sonnet): `CardSkins`・`SkinLibrary`・視点(`skin_viewer`)・相手の設定の受け渡し・図鑑の切り替え・ショップの品・
   `AccountService` / `AccountStore` のスキンの読み書き・`assets/hourglasses/skins/`・`tools/compose_skin_art.py` を消し、`CardData.icon_*` は `HourglassArt.texture()` を直に返す
-- [ ] 焼いた絵のpckの増え方の見直し: 約0.18MB/種で全99種なら約16MB増える(4.1節)。完成形をWeb版は半分の解像度にする・層から完成形を実行時に組む等を決める
+- [ ] 焼いた絵のpckの増え方の見直し(**残りを描く前の判断点**): 9種の実測で取り込み後178KB/種、全99種で約17MB(いまのpck 9.7MB)。
+  WebP 0.85 の見積もりは原寸157KB/種(99種15.2MB)・0.75倍134KB(13.0MB)・半分84KB(8.2MB)。色違いの絵はWeb版で既に半分の解像度で焼いている(`HourglassArt.WEB_BAKE_SCALE`)。
+  半分で焼いた9種を原寸と並べたスクショで人が判定し、解像度を決めてから残りを描く。層から完成形を実行時に組む案も同じ回に比べる
 - [ ] 返金(Sonnet): `AccountService.refund_retired_skins()`(10.19節)。#お知らせでスキンの廃止と返金を案内する
 - [ ] `add-hourglass` Skill と CLAUDE.md の「新カードのイラストは既存の絵の色違い」を「シェーダーを1本書いて焼く」へ改める
 - [ ] 残り90種を5種ずつ描く(Fable が描き、Sonnet がいまの絵と並べたスクショを束ねる)。1束ずつ判定をもらう。よく使われるカード・看板のカードから

@@ -157,8 +157,6 @@ var mode: int = Mode.BOARD
 ## 表示するカード。手札はこれだけ、盤面は unit も併せて持つ。
 var card: CardData
 var unit: CardInstance
-## 誰のカードとして絵を引くか(GameDesign.md 31章)。相手の駒・CPU・再生・教材では変える。
-var skin_viewer: CardSkins.Viewer = CardSkins.Viewer.SELF
 ## 出せる/選べる状態か。false なら暗く表示する。
 var enabled := true
 ## 選択中(枠・台座の輪を強調する)。
@@ -282,8 +280,6 @@ var _brace_pulse := 0.0
 var _pose := CardViewPose.new(self)
 var _drawn_look: Array = []
 var _redraw_check_pending := false
-## 動くスキンの絵を出している間は true。`HourglassLive` は引かれ続けた絵だけを描くため、毎フレーム引き直す。
-var _live := false
 
 
 func _ready() -> void:
@@ -325,18 +321,15 @@ func show_unit(p_unit: CardInstance) -> void:
 	_redraw_if_changed()
 
 
-## 脈打つ輪郭のための継続的な再描画と、動くスキンの絵を引き続ける処理。`brace` か `_live` の間だけ動く
-## (`_sync_process()` で制御)。**動く絵は描き直さない**(絵が自分で動くため、駒ごと描き直すと重い)。
+## 脈打つ輪郭のための継続的な再描画。`brace` の間だけ動く(`_sync_process()` で制御)。
 func _process(delta: float) -> void:
 	if brace:
 		_brace_pulse += delta * BRACE_PULSE_SPEED
 		queue_redraw()
-	if _live and card != null and is_visible_in_tree():
-		CardSkins.live_texture(card, _icon_state(), skin_viewer)
 
 
 func _sync_process() -> void:
-	set_process(brace or _live)
+	set_process(brace)
 
 
 ## 取り消しの戻る動き(GameDesign.md 9章)。光っていた枠を短く縮めて消す。
@@ -605,7 +598,6 @@ func _look() -> Array:
 		mode,
 		card,
 		unit,
-		skin_viewer,
 		enabled,
 		selected,
 		exhausted,
@@ -643,8 +635,6 @@ func _look() -> Array:
 
 func _draw() -> void:
 	_drawn_look = _look()
-	if mode != Mode.BOARD or card == null:
-		_set_live(false)
 	if mode == Mode.BOARD:
 		_draw_board_unit()
 	elif card == null:
@@ -708,7 +698,7 @@ func _draw_board_art(tint: Color, sink: float) -> void:
 	# 大きさと位置は止めた絵で決める。動く絵は同じ縦横比で、解像度だけが違う。
 	var rect := _fit_art(still, box)
 	rect.position.y += lift
-	var texture := _shown(still)
+	var texture := still
 	if _flip_progress >= 0.0:
 		CardViewPaint.flipping_art(self, texture, rect, tint)
 	else:
@@ -718,19 +708,6 @@ func _draw_board_art(tint: Color, sink: float) -> void:
 		UiPaint.fill_ellipse(
 			get_canvas_item(), rect.get_center(), rect.size * 0.42, Color(0.6, 0.85, 1.0, 0.16), 28
 		)
-
-
-## 場に出す絵。スキンが動くなら動く絵(31章)。
-func _shown(still: Texture2D) -> Texture2D:
-	var live := CardSkins.is_live(card, skin_viewer)
-	_set_live(live)
-	return CardSkins.live_texture(card, _icon_state(), skin_viewer) if live else still
-
-
-func _set_live(live: bool) -> void:
-	if live != _live:
-		_live = live
-		_sync_process()
 
 
 ## 攻撃力=左下 / 体力=右下。台座の高さに合わせて左右へ振り分ける。**値が変わった側だけ
@@ -841,7 +818,7 @@ func _art(state: int) -> Texture2D:
 
 
 func _art_of(of: CardData, state: int) -> Texture2D:
-	return CardSkins.texture(of, state, skin_viewer) if of != null else null
+	return HourglassArt.texture(of.art_key(), state) if of != null else null
 
 
 ## 場の絵を収める枠。下端が台座の高さに来る正方形。

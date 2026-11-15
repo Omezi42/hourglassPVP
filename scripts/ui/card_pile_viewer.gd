@@ -72,9 +72,7 @@ func apply_layout(layout: CardMatchLayout) -> void:
 
 
 ## 同じカードは1枚にまとめ、枚数をバッジで出す。30枚が並ぶと読み取れないため。
-func open_pile(
-	title: String, cards: Array, skin_viewer: CardSkins.Viewer = CardSkins.Viewer.SELF
-) -> void:
+func open_pile(title: String, cards: Array) -> void:
 	_on_pick = Callable()
 	_on_cancel = Callable()
 	_close.text = "閉じる"
@@ -92,7 +90,6 @@ func open_pile(
 		var view := CardView.new()
 		view.mode = CardView.Mode.HAND
 		view.badge = "×%d" % counts[card]
-		view.skin_viewer = skin_viewer
 		_grid.add_child(view)
 		view.show_card(card, true)
 		# `show_card()` が札の大きさを既定へ戻すため、その後に合わせる。

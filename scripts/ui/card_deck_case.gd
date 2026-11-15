@@ -249,7 +249,7 @@ func _paint_glow(shelf: Rect2, k: float, heroes: Array) -> void:
 		_visual.get_canvas_item(),
 		center,
 		Vector2(w, h) * GLOW_RADII_RATIO,
-		Color(CardSkins.accent_color(hero), GLOW_ALPHA)
+		Color(HourglassArt.accent_color(hero.art_key()), GLOW_ALPHA)
 	)
 
 

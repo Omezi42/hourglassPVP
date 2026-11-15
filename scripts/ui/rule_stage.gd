@@ -156,7 +156,6 @@ func _build_hand(cards: Array) -> Vector2:
 		if data == null:
 			continue
 		var view := CardView.new()
-		view.skin_viewer = CardSkins.Viewer.NONE
 		view.mode = CardView.Mode.HAND
 		view.position = Vector2(x, 0.0)
 		_content.add_child(view)
@@ -178,7 +177,6 @@ func _build_summon(cards: Array) -> Vector2:
 	var height: float = maxf(CardView.HAND_SIZE_PX.y, CardView.BOARD_SIZE_PX.y)
 
 	var hand_view := CardView.new()
-	hand_view.skin_viewer = CardSkins.Viewer.NONE
 	hand_view.mode = CardView.Mode.HAND
 	_content.add_child(hand_view)
 	hand_view.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -201,7 +199,6 @@ func _build_summon(cards: Array) -> Vector2:
 	var unit := CardInstance.new(data)
 	_units.append(unit)
 	var board_view := CardView.new()
-	board_view.skin_viewer = CardSkins.Viewer.NONE
 	board_view.position = Vector2(arrow_x + ARROW_WIDTH + HAND_GAP, 0.0)
 	_content.add_child(board_view)
 	board_view.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -253,7 +250,6 @@ func _compose_board(self_specs: Array, foe_specs: Array) -> Dictionary:
 		var placed: Array[CardView] = []
 		for i in MatchState.BOARD_SIZE:
 			var view := CardView.new()
-			view.skin_viewer = CardSkins.Viewer.NONE
 			view.position = Vector2(row_x + slot_pitch * float(i), y)
 			_content.add_child(view)
 			view.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -333,7 +329,6 @@ func _make_unit_view(spec: Dictionary) -> CardView:
 		return null
 	_units.append(unit)
 	var view := CardView.new()
-	view.skin_viewer = CardSkins.Viewer.NONE
 	_content.add_child(view)
 	view.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	view.size = CardView.BOARD_SIZE_PX

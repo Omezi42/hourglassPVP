@@ -126,7 +126,6 @@ func _add_hand(natural: Vector2) -> void:
 		if data == null:
 			continue
 		var view := CardView.new()
-		view.skin_viewer = CardSkins.Viewer.NONE
 		view.mode = CardView.Mode.HAND
 		_content.add_child(view)
 		view.mouse_filter = Control.MOUSE_FILTER_IGNORE

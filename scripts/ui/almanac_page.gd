@@ -16,19 +16,14 @@ const TERM_COLOR := Color(0.45, 0.20, 0.10)
 const ART_WIDTH := 128.0
 const ART_TOP := 58.0
 const ART_HEIGHT_RATIO := 1.30
-## スキンのON/OFF(GameDesign.md 31章)。絵のすぐ下に置く。
-const SKIN_TOGGLE_GAP := 6.0
-const SKIN_TOGGLE_HEIGHT := 28.0
 ## 絵と実演のあいだに置くデータ欄の左端(絵の右)。
 const DATA_GAP := 28.0
 ## 実演は絵と文の下に続けて置く(ページの下端へ寄せると、縦の背の高いページで文とのあいだが大きく空く)。
 ## 横の見開きで切り抜きの横幅がページ幅に収まる高さにする。
 const DEMO_HEIGHT := 240.0
 const DEMO_GAP := 12.0
-## 絵とスキンの切り替えが占める下端。実演はこれより下へ置く。
-const ART_BLOCK_BOTTOM := (
-	ART_TOP + ART_WIDTH * ART_HEIGHT_RATIO + SKIN_TOGGLE_GAP + SKIN_TOGGLE_HEIGHT
-)
+## 絵が占める下端。実演はこれより下へ置く。
+const ART_BLOCK_BOTTOM := ART_TOP + ART_WIDTH * ART_HEIGHT_RATIO
 ## キーワードと効果の文を書き出す高さ。**データ欄の値の下から始める。**
 ## 値は26pxで y=102 まで伸びるため、そこへ掛からない位置に取る。
 const TEXT_TOP := 114.0
@@ -67,13 +62,11 @@ var _turn_tween: Tween
 var _hovering_art := false
 var _tilt_radians := 0.0
 var _tilt_tween: Tween
-var _skin_toggle: Button
 ## 縦画面では細く組んだページを中身ごと拡大する(`set_page()`)。めくる動きはこの倍率へ戻す。
 var _page_scale := 1.0
 
 
 func _ready() -> void:
-	_sync_live()
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_font = get_theme_default_font()
 	if _font == null:
@@ -100,20 +93,6 @@ func _build() -> void:
 	_text.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_text.minimum_size_changed.connect(_place_demo)
 	add_child(_text)
-	_skin_toggle = Button.new()
-	_skin_toggle.flat = true
-	_skin_toggle.position = Vector2(4, ART_TOP + ART_WIDTH * ART_HEIGHT_RATIO + SKIN_TOGGLE_GAP)
-	_skin_toggle.custom_minimum_size = Vector2(ART_WIDTH, SKIN_TOGGLE_HEIGHT)
-	_skin_toggle.size = _skin_toggle.custom_minimum_size
-	_skin_toggle.add_theme_color_override("font_color", TERM_COLOR)
-	_skin_toggle.add_theme_color_override("font_hover_color", Color(0.72, 0.30, 0.14))
-	_skin_toggle.add_theme_color_override("font_disabled_color", INK_SOFT)
-	_skin_toggle.add_theme_font_size_override("font_size", 16)
-	_skin_toggle.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	_flatten_ink(_skin_toggle)
-	_skin_toggle.visible = false
-	_skin_toggle.pressed.connect(_on_skin_toggle_pressed)
-	add_child(_skin_toggle)
 
 
 ## ページの大きさ(拡大する前)と倍率を決め直す。幅で折り返す行を組み直す。
@@ -170,57 +149,14 @@ func _apply_card(new_card: CardData) -> void:
 	_hovering_art = false
 	_set_tilt(0.0)
 	_rebuild_text()
-	_sync_skin_toggle()
-	_sync_live()
 	if _preview != null:
 		_preview.show_card(card)
 	queue_redraw()
 
 
-## スキンが動く絵なら、見えている間は引き続ける(31章。右のページの絵だけが動く)。
-func _sync_live() -> void:
-	set_process(card != null and not card.is_spell and CardSkins.is_live(card))
-
-
-func _process(_delta: float) -> void:
-	if is_visible_in_tree():
-		CardSkins.live_texture(card, _art_state())
-
-
 ## 標本の絵の状態。押すとひっくり返るため、落ちきりの絵と入れ替える。
 func _art_state() -> int:
 	return HourglassArt.State.FALLEN if _flipped else HourglassArt.State.UPRIGHT
-
-
-## **そのカードのスキンを持っているときだけ出す**(GameDesign.md 31章)。図鑑はショップを兼ねない。
-func _sync_skin_toggle() -> void:
-	var skin_id := _owned_skin()
-	_skin_toggle.visible = not skin_id.is_empty()
-	_skin_toggle.disabled = false
-	if skin_id.is_empty():
-		return
-	var enabled := AccountService.skin_enabled(skin_id)
-	_skin_toggle.text = "スキン:ON" if enabled else "スキン:OFF"
-
-
-func _owned_skin() -> String:
-	if card == null:
-		return ""
-	var skin_id := SkinLibrary.skin_for_card(card.id)
-	return skin_id if AccountService.owned_skin_ids().has(skin_id) else ""
-
-
-func _on_skin_toggle_pressed() -> void:
-	var skin_id := _owned_skin()
-	if skin_id.is_empty():
-		return
-	_skin_toggle.disabled = true
-	await AccountService.set_skin_enabled(
-		NetSession.client, _uid(), skin_id, not AccountService.skin_enabled(skin_id)
-	)
-	_sync_skin_toggle()
-	_sync_live()
-	queue_redraw()
 
 
 ## 文の実際の高さが決まるたびに呼ぶ。ページからはみ出す場合だけ下端へ寄せる。
@@ -388,7 +324,7 @@ func _draw() -> void:
 		_draw_spell_plate(_art_rect)
 	else:
 		# 標本の絵。**押すとひっくり返る**ため、落ちきりの絵と入れ替える。
-		var icon := CardSkins.live_texture(card, _art_state())
+		var icon := HourglassArt.texture(card.art_key(), _art_state())
 		if icon != null:
 			if _tilt_radians != 0.0:
 				draw_set_transform(_art_rect.get_center(), _tilt_radians, Vector2.ONE)
@@ -438,13 +374,6 @@ func _draw_field(at: Vector2, label: String, value: String) -> void:
 	draw_string(
 		_font, at + Vector2(0, 44), value, HORIZONTAL_ALIGNMENT_LEFT, -1, FIELD_VALUE_FONT, INK
 	)
-
-
-## スキンの切り替えを書き込むアカウント。サインインしていなければ空。
-static func _uid() -> String:
-	if NetSession.client == null or NetSession.client.auth == null:
-		return ""
-	return NetSession.client.auth.uid
 
 
 func _draw_rule(at: Vector2, width: float) -> void:

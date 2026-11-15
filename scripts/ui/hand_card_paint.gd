@@ -75,9 +75,7 @@ static func _window(view: CardView, ci: RID, s: float, tint: Color) -> void:
 	var rect := box.grow(WINDOW_INSET * s)
 	rect.position.y = maxf(rect.position.y, (FRAME_WIDTH + 3.0) * s)
 	var points := UiKit.rr(rect, WINDOW_CORNER * s)
-	var accent := (
-		UiPalette.COST if card.is_spell else CardSkins.accent_color(card, view.skin_viewer)
-	)
+	var accent := UiPalette.COST if card.is_spell else HourglassArt.accent_color(card.art_key())
 	UiKit.vgrad(
 		ci,
 		points,

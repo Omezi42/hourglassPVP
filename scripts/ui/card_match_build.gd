@@ -38,7 +38,7 @@ static func _on_foe_bar_input(
 	if not bar.hand_pile_rect().has_point(button.position):
 		return
 	var foe := MatchState.other_side(screen.my_side)
-	screen._pile.open_pile("相手の手札", screen.state.hand[foe], screen.skin_viewer_for(foe))
+	screen._pile.open_pile("相手の手札", screen.state.hand[foe])
 
 
 ## 盤面の6枠。位置と縮尺は `CardMatchArrange` が置く。

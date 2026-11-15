@@ -485,7 +485,6 @@ func refresh() -> void:
 func _refresh_row(views: Array[CardView], side: int) -> void:
 	for i in MatchState.BOARD_SIZE:
 		var unit: CardInstance = state.board[side][i]
-		views[i].skin_viewer = skin_viewer_for(side)
 		views[i].show_unit(unit)
 		views[i].exhausted = unit != null and side == my_side and not unit.can_attack()
 		views[i].ready_mark = unit != null and side == my_side and unit.can_attack()
@@ -500,14 +499,6 @@ func _refresh_row(views: Array[CardView], side: int) -> void:
 		views[i].operable = side == my_side and _my_turn() and unit != null
 
 
-## どちらの側の駒をどのスキンで描くか(GameDesign.md 31章)。**再生は元の絵**。
-## CPU戦の相手は `CardSkins` に相手の設定が無いため、`OPPONENT` のままで元の絵になる。
-func skin_viewer_for(side: int) -> CardSkins.Viewer:
-	if not _interactive:
-		return CardSkins.Viewer.NONE
-	return CardSkins.Viewer.SELF if side == my_side else CardSkins.Viewer.OPPONENT
-
-
 func _refresh_hand() -> void:
 	var hand: Array = state.hand[my_side]
 	# 位置・沈み・暗さは `CardMatchHandLayout` が持つ(GameDesign.md 9章「対局画面の手触り」)。
@@ -520,7 +511,6 @@ func _refresh_hand() -> void:
 		if i >= count:
 			continue
 		var usable: bool = state.can_play(my_side, i) or state.can_cast(my_side, i)
-		view.skin_viewer = skin_viewer_for(my_side)
 		view.play_cost = state.play_cost(my_side, hand[i])
 		view.show_card(hand[i], _my_turn() and usable)
 		view.selected = _selection.is_hand(i)
@@ -646,7 +636,7 @@ func _on_graveyard_pressed(opponent: bool) -> void:
 	if state == null:
 		return
 	var side: int = MatchState.other_side(my_side) if opponent else my_side
-	_pile.open_pile("相手の墓地" if opponent else "あなたの墓地", state.graveyard[side], skin_viewer_for(side))
+	_pile.open_pile("相手の墓地" if opponent else "あなたの墓地", state.graveyard[side])
 
 
 func _on_mulligan_confirmed(indices: Array) -> void:
@@ -661,20 +651,19 @@ func _perform(action: Dictionary) -> void:
 	if _emote != null and action.get("type", "") != "emote":
 		_emote.close_popup()
 	_strike.capture(action)
+	# 送信は適用より先に積む。決着の手は適用の中で記録の送信待ち(`CardMatchOutcome`)を起こすため、
+	# 後から積むと待ちが空振りし、棋譜の末尾(投了・時間切れ・とどめ)が欠ける。
+	if _online != null:
+		var payload := action.duplicate(true)
+		# 持ち時間は各手に添えて送る(GameDesign.md 11章)。通信の遅延ぶん相手の時計を
+		# 手元で減らし続けると、実際より早く時間切れと判定してしまうため。
+		if _clocks.active():
+			payload["clock"] = _clocks.remaining(my_side)
+		_online.send(payload)
 	MatchAction.apply(state, action)
 	if _puzzle != null and _puzzle.active():
 		_puzzle.after_action(action)
-	if _online == null:
-		_clocks.start_turn()
-		_finish_action()
-		return
-	var payload := action.duplicate(true)
-	# 持ち時間は各手に添えて送る(GameDesign.md 11章)。通信の遅延ぶん相手の時計を
-	# 手元で減らし続けると、実際より早く時間切れと判定してしまうため。
-	if _clocks.active():
-		payload["clock"] = _clocks.remaining(my_side)
-		_clocks.start_turn()
-	_online.send(payload)
+	_clocks.start_turn()
 	_finish_action()
 
 

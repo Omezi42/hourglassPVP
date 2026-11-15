@@ -55,7 +55,6 @@ func _ready() -> void:
 func show_item(kind: ShopCatalog.Kind, id: String, bump := false) -> void:
 	_kind = kind
 	_id = id
-	set_process(kind == ShopCatalog.Kind.SKIN)
 	var uses_table := (
 		kind in [ShopCatalog.Kind.ICON, ShopCatalog.Kind.PLAYMAT, ShopCatalog.Kind.EMOTE]
 	)
@@ -80,12 +79,6 @@ func show_item(kind: ShopCatalog.Kind, id: String, bump := false) -> void:
 	)
 	_layout()
 	queue_redraw()
-
-
-## スキンの見本は動く絵のため、見えている間は引き続ける(31章)。
-func _process(_delta: float) -> void:
-	if is_visible_in_tree():
-		ShopItemArt.keep_skin_live(_id)
 
 
 ## 購入が確定した瞬間、品の絵を砂金チップへ飛ばす起点(9章)。
@@ -140,9 +133,7 @@ func _draw() -> void:
 	if not _table.visible:
 		UiKit.well(get_canvas_item(), preview)
 		var inner := preview.grow(-PREVIEW_PAD)
-		if _kind == ShopCatalog.Kind.SKIN:
-			ShopItemArt.skin_states(self, inner, _id)
-		elif _kind == ShopCatalog.Kind.CARD_SET:
+		if _kind == ShopCatalog.Kind.CARD_SET:
 			ShopItemArt.card_set_grid(self, inner, _id, _font)
 	var y := preview.end.y + CAPTION_GAP
 	var caption := _caption()
@@ -173,8 +164,6 @@ func _caption() -> String:
 	match _kind:
 		ShopCatalog.Kind.ICON, ShopCatalog.Kind.PLAYMAT, ShopCatalog.Kind.EMOTE:
 			return "対局ではこう見えます"
-		ShopCatalog.Kind.SKIN:
-			return "砂が落ちるにつれて絵が変わります"
 		_:
 			return ""
 

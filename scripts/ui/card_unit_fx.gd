@@ -126,7 +126,7 @@ func play_recall(card: CardData, toward: Vector2) -> void:
 	var view := get_parent() as CardView
 	if card == null or view == null:
 		return
-	var texture := CardSkins.texture(card, HourglassArt.State.UPRIGHT, view.skin_viewer)
+	var texture := HourglassArt.texture(card.art_key(), HourglassArt.State.UPRIGHT)
 	if texture == null:
 		return
 	size = view.size

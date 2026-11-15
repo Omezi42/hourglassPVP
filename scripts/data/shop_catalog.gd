@@ -9,6 +9,7 @@ extends RefCounted
 ## 並べ忘れた品と、初期解放でも購入品でもないどこにも出ないidが生まれる。
 
 ## **新しい品種は末尾へ足す**(保存済みの値とずれないように)。
+## SKIN は廃止した品種の欠番。enum は末尾にだけ足すため値を残す。
 enum Kind { ICON, EMOTE, PLAYMAT, CARD_SET, SKIN }
 
 ## ランクマッチの勝利(30)を1勝として、アイコンは3勝ぶん・エモートは5勝ぶん。
@@ -36,8 +37,6 @@ static func items() -> Array[Dictionary]:
 	# ステージクリアのような買い切り以外の経路でしか所有できないため。
 	for set_id in CardSetLibrary.purchasable_ids():
 		list.append({"kind": Kind.CARD_SET, "id": set_id})
-	for skin_id in SkinLibrary.purchasable_ids():
-		list.append({"kind": Kind.SKIN, "id": skin_id})
 	return list
 
 
@@ -51,8 +50,6 @@ static func price(kind: Kind, id := "") -> int:
 			return PlaymatLibrary.price(id)
 		Kind.CARD_SET:
 			return CardSetLibrary.price(id)
-		Kind.SKIN:
-			return SkinLibrary.price(id)
 		_:
 			return ICON_PRICE
 
@@ -66,8 +63,6 @@ static func item_name(kind: Kind, id: String) -> String:
 			return PlaymatLibrary.display_name(id)
 		Kind.CARD_SET:
 			return CardSetLibrary.display_name(id)
-		Kind.SKIN:
-			return SkinLibrary.display_name(id)
 		_:
 			return UserProfileLibrary.get_icon_name(id)
 
@@ -84,9 +79,6 @@ static func item_detail(kind: Kind, id: String) -> String:
 			# 中身のカードそのものは砂時計一覧・デッキ編集で確認できるため、
 			# ここでは狙いの1行と枚数だけを添える(GameDesign.md 21章)。
 			return "%s(%s)" % [CardSetLibrary.description(id), CardSetLibrary.count_text(id)]
-		Kind.SKIN:
-			var card := CardLibrary.find_by_id(SkinLibrary.card_id(id))
-			return "「%s」の絵が変わる" % (card.display_name if card != null else "")
 		_:
 			return "アイコン"
 
@@ -99,8 +91,6 @@ static func kind_name(kind: Kind) -> String:
 			return "プレイマット"
 		Kind.CARD_SET:
 			return "カードセット"
-		Kind.SKIN:
-			return "カードスキン"
 		_:
 			return "アイコン"
 

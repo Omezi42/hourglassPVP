@@ -110,14 +110,6 @@ static func clear_pending_matches() -> void:
 	_store(data)
 
 
-## カードスキンのON/OFF(GameDesign.md 31章)。起動直後の描画が通信を待たずに済むよう控える。
-static func save_local_skin_choices(disabled_skins: Array, enabled_skins: Array) -> void:
-	var data := _load()
-	data["disabled_skins"] = disabled_skins
-	data["enabled_skins"] = enabled_skins
-	_store(data)
-
-
 ## ローカルにアイコンと称号を保存する(オフライン復帰用)。
 static func save_local_customization(icon_id: String, title_id: String, playmat_id := "") -> void:
 	var data := _load()
@@ -136,8 +128,7 @@ static func save_local_unlocks(
 	owned_emotes: Array,
 	emote_slots: Array,
 	owned_playmats := [],
-	owned_card_sets := [],
-	owned_skins := []
+	owned_card_sets := []
 ) -> void:
 	var data := _load()
 	data["owned_icons"] = owned_icons
@@ -145,7 +136,6 @@ static func save_local_unlocks(
 	data["emote_slots"] = emote_slots
 	data["owned_playmats"] = owned_playmats
 	data["owned_card_sets"] = owned_card_sets
-	data["owned_skins"] = owned_skins
 	_store(data)
 
 
@@ -157,7 +147,6 @@ static func load_local_unlocks() -> Dictionary:
 		"emote_slots": data.get("emote_slots", []),
 		"owned_playmats": data.get("owned_playmats", []),
 		"owned_card_sets": data.get("owned_card_sets", []),
-		"owned_skins": data.get("owned_skins", []),
 	}
 
 
@@ -167,8 +156,6 @@ static func load_local_customization() -> Dictionary:
 		"icon_id": str(data.get("icon_id", "")),
 		"title_id": str(data.get("title_id", "")),
 		"playmat_id": str(data.get("playmat_id", "")),
-		"disabled_skins": data.get("disabled_skins", []),
-		"enabled_skins": data.get("enabled_skins", []),
 	}
 
 

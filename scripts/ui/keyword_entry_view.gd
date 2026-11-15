@@ -75,7 +75,6 @@ func show_entry(entry: Dictionary, reveal := false) -> void:
 		child.queue_free()
 	for card in cards:
 		var view := CardView.new()
-		view.skin_viewer = CardSkins.Viewer.NONE
 		view.mode = CardView.Mode.HAND
 		view.show_card(card, true)
 		view.custom_minimum_size = CARD_SIZE
