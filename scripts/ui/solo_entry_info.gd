@@ -49,7 +49,6 @@ const RECORD := "いちばん多く勝った数 %d ・ 踏破 %d回"
 const RECORD_SHORT := "最多 %d勝 ・ 踏破 %d回"
 const PUZZLE_LINE := "1手番で仕留める"
 const DAILY_OPEN := "今日の1問 まだ解いていません"
-const DAILY_DONE := "今日の1問 クリア済み"
 
 var portrait := false:
 	set(value):
@@ -141,7 +140,7 @@ func _puzzle_lines() -> Array:
 	if _daily == 1:
 		lines.append([DAILY_OPEN, UiPalette.SAND_HI])
 	elif _daily == 2:
-		lines.append([DAILY_DONE, UiPalette.MUTED])
+		lines.append([DailyPuzzle.done_line(), UiPalette.MUTED])
 	return lines
 
 

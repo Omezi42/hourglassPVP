@@ -5,9 +5,6 @@ extends RefCounted
 
 signal requested
 
-## キューの確認(`MatchmakingQueue.POLL_INTERVAL_SECONDS`)2回ぶんより後に出し、
-## 同時に待っている人どうしが先に出会えるようにする。
-const FIRST_DELAY_SECONDS := 5.0
 const BUTTON_SIZE := Vector2(360, 64)
 ## 下に続くキャンセルボタンとの間隔。
 const GAP := 16.0

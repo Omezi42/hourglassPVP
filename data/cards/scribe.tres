@@ -24,6 +24,7 @@ set_id = "chant_sand"
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_scribe_0")])
 rules_text = "自分が砂術を使うたび、この砂時計の総量+1"
+flavor_text = "書き損じた頁も捨てずに綴じておく。"
 cannot_attack = false
 is_token = false
 art_id = "page"

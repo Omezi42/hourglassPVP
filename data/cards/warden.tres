@@ -24,6 +24,7 @@ set_id = "chant_sand"
 keywords = Array[int]([0])
 effects = Array[Resource]([SubResource("Effect_warden_0")])
 rules_text = "自分が砂術を使うたび、この砂時計の砂が1粒上へ戻る"
+flavor_text = "詠唱が続くかぎり砦の砂は落ちない。"
 cannot_attack = false
 is_token = false
 art_id = "watcher"

@@ -203,12 +203,12 @@ func begin_match() -> void:
 	_refresh_others_waiting()
 	_wait_funnel.begin()
 	_browse_button.disabled = false
-	# 表彰式を読んでいる間にボタンが出ないよう、閉じてから数え始める
+	# 表彰式を読んでいる間にボタンが出ないよう、閉じてから出す
 	if _ceremony.visible:
 		await _ceremony.closed
 		if not _busy or queue == null:
 			return
-	_cpu_offer.arm(WaitingCpuOffer.FIRST_DELAY_SECONDS)
+	_cpu_offer.arm(0.0)
 
 
 func _refresh_tier_label() -> void:

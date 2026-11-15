@@ -43,7 +43,6 @@ const EXPEDITION_TITLE := "遠征"
 const PUZZLE_TITLE := "リーサルパズル"
 const PUZZLE_SUBTITLE := "1手番で仕留める"
 const DAILY_OPEN := "今日の1問 まだ解いていません"
-const DAILY_DONE := "今日の1問 クリア済み"
 const EXPEDITION_NEW := "作戦を選んで出発"
 const EXPEDITION_CONTINUE := "続きから進める"
 const MAIN_FONT_SIZE := 40
@@ -300,7 +299,7 @@ func _refresh_solo_picker(uid: String) -> void:
 		_puzzle_tile.subtitle_accent = false
 		return
 	var cleared := PuzzleProgress.is_cleared(uid, daily.id)
-	_puzzle_tile.set_subtitle(DAILY_DONE if cleared else DAILY_OPEN)
+	_puzzle_tile.set_subtitle(DailyPuzzle.done_line() if cleared else DAILY_OPEN)
 	_puzzle_tile.subtitle_accent = not cleared
 
 

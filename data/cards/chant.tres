@@ -24,6 +24,7 @@ set_id = "chant_sand"
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_chant_0")])
 rules_text = "自分が砂術を使うたび、相手プレイヤーに1ダメージ"
+flavor_text = "同じ節を百回唱えると喉に砂が残る。"
 cannot_attack = false
 is_token = false
 art_id = "wand"

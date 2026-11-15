@@ -24,6 +24,7 @@ set_id = "chant_sand"
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_recite_0")])
 rules_text = "自分の墓地でいちばん新しい砂術(写し詠みを除く)を、コストを払わずにもう一度撃つ"
+flavor_text = "師の声をそのまま真似ただけで火が灯った。"
 cannot_attack = false
 is_token = false
 is_spell = true

@@ -16,6 +16,7 @@ var _assert: Callable
 func run(assert_true: Callable) -> void:
 	_assert = assert_true
 	_test_date_switches_at_jst_midnight()
+	_test_tomorrow_only_when_bundled()
 	_test_every_daily_is_solvable()
 	_test_every_book_puzzle_is_solvable()
 
@@ -23,6 +24,24 @@ func run(assert_true: Callable) -> void:
 func _test_date_switches_at_jst_midnight() -> void:
 	_assert.call(DailyPuzzle.date_key(JST_MIDNIGHT - 1) == "2026-09-27", "before JST midnight")
 	_assert.call(DailyPuzzle.date_key(JST_MIDNIGHT) == "2026-09-28", "at JST midnight")
+
+
+## 「次は0:00」は明日の問題が同梱されているときだけ約束する(GameDesign.md 24章)。
+func _test_tomorrow_only_when_bundled() -> void:
+	var last_day := 0
+	for entry in _read(LEDGER_PATH):
+		if String(entry["kind"]) == "puzzle":
+			last_day = maxi(
+				last_day, Time.get_unix_time_from_datetime_string(String(entry["date"]))
+			)
+	var noon := last_day + 3 * 3600
+	_assert.call(
+		DailyPuzzle.has_tomorrow(noon - DailyPuzzle.DAY_SECONDS),
+		"the day before the last should see tomorrow"
+	)
+	_assert.call(
+		not DailyPuzzle.has_tomorrow(noon), "the last bundled day should not promise tomorrow"
+	)
 
 
 func _test_every_daily_is_solvable() -> void:

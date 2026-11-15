@@ -88,6 +88,8 @@ class Outcome:
 	## ソロモード(GameDesign.md 27章)の「道へ戻る」「遠征を終える」で使う。
 	var single_action_label := ""
 	var show_log := false
+	## 正解のときだけ受け皿の下へ沈めた色で出す1行(今日の1問の「次の問題は明日0:00」)。
+	var cleared_note := ""
 
 
 func _ready() -> void:
@@ -123,6 +125,9 @@ func show_for(outcome: Outcome) -> void:
 	_box.add_child(_summary(outcome))
 	_box.add_child(_gap(14))
 	_add_tray(outcome, inner_width)
+	if _cleared and not outcome.cleared_note.is_empty():
+		_box.add_child(_gap(6))
+		_box.add_child(_label(outcome.cleared_note, NOTE_FONT_SIZE, UiPalette.MUTED))
 	_box.add_child(_gap(20))
 	_box.add_child(_buttons(outcome))
 	_log_button.visible = outcome.show_log

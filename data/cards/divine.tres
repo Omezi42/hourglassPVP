@@ -24,6 +24,7 @@ set_id = "chant_sand"
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_divine_0")])
 rules_text = "山札からランダムな砂術1枚を手札に加える"
+flavor_text = "水晶の底に沈む砂は明日の形をしている。"
 cannot_attack = false
 is_token = false
 is_spell = true

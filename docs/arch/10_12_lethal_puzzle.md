@@ -66,7 +66,7 @@ JSONを通ると整数が小数になるため、`PuzzleStageData.from_dict()` �
 
 | クラス / ファイル | 責務 |
 |---|---|
-| `DailyPuzzle`(`scripts/logic/daily_puzzle.gd`, static) | 日本時間の今日の日付を決め、`data/daily_puzzles/<YYYY-MM-DD>.tres` を引く。無ければ null |
+| `DailyPuzzle`(`scripts/logic/daily_puzzle.gd`, static) | 日本時間の今日の日付を決め、`data/daily_puzzles/<YYYY-MM-DD>.tres` を引く。無ければ null。`has_tomorrow()` / `done_line()` で、明日の問題が同梱されているときだけ「次は0:00」を添える(ホームの `BattleTab` / `SoloEntryInfo`、結果パネルの `Outcome.cleared_note`) |
 | `data/daily_puzzles/*.tres` | 1日1問の `PuzzleStageData`。**`tools/shorts/schedule.py` が投稿の割り振りから書き出す**(手で作らない) |
 
 **問題は固定の問題と同じ `PuzzleStageData` で持ち、解く経路も同じ**(`CardMatchPuzzle.start(stage)`)。
