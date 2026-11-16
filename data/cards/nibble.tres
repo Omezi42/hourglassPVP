@@ -25,5 +25,4 @@ effects = Array[Resource]([SubResource("Effect_nibble_0")])
 rules_text = "落砂:体力がいちばん少ない相手の砂時計1体に1ダメージ"
 cannot_attack = false
 is_token = false
-art_id = "drip"
 emblem = ExtResource("emblem")

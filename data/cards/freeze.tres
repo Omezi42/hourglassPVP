@@ -16,5 +16,4 @@ effects = Array[Resource]([])
 rules_text = ""
 cannot_attack = false
 is_token = false
-art_id = "halo"
 emblem = ExtResource("emblem")

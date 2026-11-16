@@ -17,5 +17,4 @@ rules_text = "自分の砂時計は守護を無視して攻撃できる"
 cannot_attack = false
 is_token = false
 allies_ignore_guard = true
-art_id = "anchor"
 emblem = ExtResource("emblem")
