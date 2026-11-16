@@ -27,5 +27,4 @@ rules_text = "設置:自分の墓地の砂術1枚につき、相手プレイヤ�
 flavor_text = "綴じた呪文が多いほど表紙は重くなる。"
 cannot_attack = false
 is_token = false
-art_id = "flask"
 emblem = ExtResource("emblem")
