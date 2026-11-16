@@ -27,5 +27,4 @@ rules_text = "自分が砂術を使うたび、この砂時計の砂が1粒上�
 flavor_text = "詠唱が続くかぎり砦の砂は落ちない。"
 cannot_attack = false
 is_token = false
-art_id = "watcher"
 emblem = ExtResource("emblem")

@@ -24,5 +24,4 @@ effects = Array[Resource]([SubResource("Effect_block_0")])
 rules_text = "余砂:カードを1枚引く"
 cannot_attack = false
 is_token = false
-art_id = "sweep"
 emblem = ExtResource("emblem")

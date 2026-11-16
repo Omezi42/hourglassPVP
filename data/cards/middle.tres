@@ -16,7 +16,6 @@ effects = Array[Resource]([])
 rules_text = "総量が5の間、毒砂を持つ(ダメージを与えた相手を破壊する)"
 cannot_attack = false
 is_token = false
-art_id = "poison"
 emblem = ExtResource("emblem")
 conditional_keyword = 3
 conditional_keyword_total = 5
