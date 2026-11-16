@@ -18,6 +18,9 @@ const COMMON_SOURCES: Array[String] = [
 	"res://resources/shaders/hourglass/frame_parts.gdshaderinc",
 	"res://resources/shaders/hourglass/art_main.gdshaderinc",
 ]
+## 書き出す大きさ(キャンバスに対する倍率)。キャンバスの原寸で描いてから縮める。
+## 場の駒・図鑑の動く絵は高さ224で描くため、半分(266)でも見分けが付かず、pckは半分になる(Architecture.md 4.1節)。
+const BAKE_SCALE := 0.5
 ## 焼いた絵の取り込み設定。非可逆のWebP(0.85)。可逆で持つと3倍近くになる(Architecture.md 4.1節)。
 const IMPORT_SETTINGS := (
 	'[remap]\n\nimporter="texture"\ntype="CompressedTexture2D"\n\n'
@@ -61,9 +64,12 @@ static func art_keys() -> Array[String]:
 	return keys
 
 
-## 書いたPNGが可逆のまま取り込まれないよう、取り込み設定が無ければ非可逆の設定を置く。
+## 書き出す大きさへ縮めて保存する。可逆のまま取り込まれないよう、取り込み設定が無ければ非可逆の設定を置く。
 func _save(image: Image, path: String) -> void:
-	image.save_png(path)
+	var out := image.duplicate() as Image
+	var size := (Vector2(image.get_size()) * BAKE_SCALE).round()
+	out.resize(int(size.x), int(size.y), Image.INTERPOLATE_LANCZOS)
+	out.save_png(path)
 	var import_path := path + ".import"
 	if not FileAccess.file_exists(import_path):
 		var file := FileAccess.open(import_path, FileAccess.WRITE)

@@ -57,9 +57,8 @@ void art_frame(inout vec4 acc, Px f) { ... }
 
 - `tools/bake_hourglass_art.gd` が3状態ごとに、層(後ろ・枠)と、`clock` = 0 で全層を重ねた完成形を焼く。
   焼き直しは、シェーダーか共通の部品か表の色・質感を変えたとき
-- 取り込みは非可逆のWebP(画質0.85。4.1節)。取り込み設定は焼く道具が置く
+- キャンバスの原寸で描いてから半分(200x266)へ縮めて書き出す(`BAKE_SCALE`。4.1節)。取り込みは非可逆のWebP(画質0.85)。取り込み設定は焼く道具が置く
 - **焼き忘れの検査は `tools/check_hourglass_bake.py`**(`check.sh` が回す)。焼いた元(共通の部品・そのカードのシェーダー・共通のガラス・表のそのカードの行)のハッシュを `tools/hourglass_bake_manifest.json` に控え、PNGが揃っていないか控えと違えば失敗にする。更新は `bake_hourglass_art.gd` が行う
-- Web版の半分の解像度の扱いは `HourglassArt` の固有の絵と同じ(4.1節)
 
 ## 動く絵
 
