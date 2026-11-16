@@ -26,5 +26,4 @@ effects = Array[Resource]([SubResource("Effect_drift_0")])
 rules_text = "余砂:このカードを手札に戻す"
 cannot_attack = false
 is_token = false
-art_id = "seed"
 emblem = ExtResource("emblem")

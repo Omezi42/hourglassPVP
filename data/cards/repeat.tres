@@ -29,5 +29,4 @@ effects = Array[Resource]([SubResource("Effect_repeat_0")])
 rules_text = "設置:このターンすでに反転した自分の砂時計すべてを、もう一度反転できるようにする"
 cannot_attack = false
 is_token = false
-art_id = "chime"
 emblem = ExtResource("emblem")
