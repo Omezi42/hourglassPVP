@@ -1,4 +1,4 @@
-// 砂時計の枠の部品(Architecture.md 10.19節)。hourglass_lib の後に読む。**止めた部分(ART_STATIC)だけが使う**。
+// 砂時計の枠の部品(Architecture.md 10.19節)。hourglass_lib の後に読む。
 
 // 縦の円柱
 void draw_column(inout vec4 acc, Px f, float cx, float r, float y0, float y1, vec3 col, float metal) {

@@ -2,6 +2,7 @@ shader_type canvas_item;
 // 鉄の大盾(シールド)。GameDesign.md 9章 / Architecture.md 10.19節。
 
 #include "res://resources/shaders/hourglass/hourglass_lib.gdshaderinc"
+#include "res://resources/shaders/hourglass/frame_parts.gdshaderinc"
 
 const vec3 STEEL = vec3(0.28, 0.38, 0.54);
 const vec3 STEEL_RIM = vec3(0.42, 0.50, 0.63);
@@ -78,8 +79,6 @@ float hex_net(vec2 p) {
 	return smoothstep(0.40, 0.48, max(abs(hl.x), abs(hl.y) * 0.9 + abs(hl.x) * 0.3));
 }
 
-#ifdef ART_STATIC
-#include "res://resources/shaders/hourglass/frame_parts.gdshaderinc"
 
 void draw_shield(inout vec4 acc, Px f) {
 	vec2 p = f.p;
@@ -119,11 +118,11 @@ void draw_shield(inout vec4 acc, Px f) {
 	}
 }
 
-void art_back(inout vec4 acc, Px f) {
+void base_back(inout vec4 acc, Px f) {
 	draw_shield(acc, f);
 }
 
-void art_frame(inout vec4 acc, Px f) {
+void base_frame(inout vec4 acc, Px f) {
 	for (int i = 0; i < 2; i++) {
 		float cx = i == 0 ? -IRON_POST_X : IRON_POST_X;
 		draw_column(acc, f, cx, 0.050, -1.02, 1.02, STEEL * 0.85, 1.0);
@@ -150,7 +149,6 @@ void art_frame(inout vec4 acc, Px f) {
 		over(acc, STEEL, cov(max(abs(mq.x) - mw * 0.55, max(mq.y - 0.028, -0.048 - mq.y)), f.px));
 	}
 }
-#endif
 
 // 地の色を割合 a だけ c へ寄せる(下の絵の透明度は変えない)
 void recolor(inout vec4 acc, vec3 c, float a) {
@@ -158,7 +156,7 @@ void recolor(inout vec4 acc, vec3 c, float a) {
 }
 
 // 結界の脈・鋼を滑る照りの帯・結界の波・鋲を渡る光
-void motion_back(inout vec4 acc, Px f) {
+void over_back(inout vec4 acc, Px f) {
 	vec2 p = f.p;
 	if (abs(p.x) > SHIELD_HALF_W + f.pad * 4.0 + 0.08 || p.y > SHIELD_TOP + 0.10 || p.y < SHIELD_TIP_Y - 0.08) {
 		return;
@@ -186,7 +184,17 @@ void motion_back(inout vec4 acc, Px f) {
 	recolor(acc, vec3(1.0), 0.7 * glint / 0.75 * cov(dr - RIVET_R, f.px));
 }
 
-void motion_front(inout vec4 acc, Px f) {
+void over_front(inout vec4 acc, Px f) {
+}
+
+void art_back(inout vec4 acc, Px f) {
+	base_back(acc, f);
+	over_back(acc, f);
+}
+
+void art_frame(inout vec4 acc, Px f) {
+	base_frame(acc, f);
+	over_front(acc, f);
 }
 
 #include "res://resources/shaders/hourglass/art_main.gdshaderinc"

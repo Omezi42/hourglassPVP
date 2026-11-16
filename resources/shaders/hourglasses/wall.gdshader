@@ -2,6 +2,7 @@ shader_type canvas_item;
 // 石積み(ウォール)。GameDesign.md 9章 / Architecture.md 10.19節。
 
 #include "res://resources/shaders/hourglass/hourglass_lib.gdshaderinc"
+#include "res://resources/shaders/hourglass/frame_parts.gdshaderinc"
 
 const vec3 STONE = vec3(0.72, 0.69, 0.62);
 const vec3 MORTAR = vec3(0.30, 0.29, 0.27);
@@ -30,8 +31,6 @@ float slit_d(vec2 q, int k) {
 	return sd_round_box(q - vec2(-0.008, sy), vec2(0.018, 0.080), 0.014);
 }
 
-#ifdef ART_STATIC
-#include "res://resources/shaders/hourglass/frame_parts.gdshaderinc"
 
 // 石積みの模様。x=目地までの距離、y=石ごとの乱数、zw=石の中の位置
 vec4 masonry(vec2 p, vec2 cell) {
@@ -106,10 +105,10 @@ float gate_d(vec2 p) {
 	return max(d_arch, -0.060 - q.y);
 }
 
-void art_back(inout vec4 acc, Px f) {
+void base_back(inout vec4 acc, Px f) {
 }
 
-void art_frame(inout vec4 acc, Px f) {
+void base_frame(inout vec4 acc, Px f) {
 	draw_tower(acc, f, -TOWER_X);
 	draw_tower(acc, f, TOWER_X);
 	for (int i = 0; i < 2; i++) {
@@ -134,7 +133,6 @@ void art_frame(inout vec4 acc, Px f) {
 		}
 	}
 }
-#endif
 
 // 塔を垂れる蔦。ゆっくり揺れる。
 void draw_ivy(inout vec4 acc, Px f, float cx, float y0, float y1, float phase) {
@@ -187,11 +185,11 @@ void draw_flag(inout vec4 acc, Px f) {
 	part(acc, d_flag, ink_of(BANNER), BANNER * shade, f.ow * 0.8, f.px);
 }
 
-void motion_back(inout vec4 acc, Px f) {
+void over_back(inout vec4 acc, Px f) {
 }
 
 // 狭間と門の灯の揺らぎ・蔦の揺れ・旗のはためき
-void motion_front(inout vec4 acc, Px f) {
+void over_front(inout vec4 acc, Px f) {
 	for (int i = 0; i < 2; i++) {
 		float cx = i == 0 ? -TOWER_X : TOWER_X;
 		vec2 q = vec2(f.p.x - cx, f.p.y);
@@ -226,6 +224,16 @@ void motion_front(inout vec4 acc, Px f) {
 			inlay(acc, slab_d, inner, cov(d_arch, f.px), f);
 		}
 	}
+}
+
+void art_back(inout vec4 acc, Px f) {
+	base_back(acc, f);
+	over_back(acc, f);
+}
+
+void art_frame(inout vec4 acc, Px f) {
+	base_frame(acc, f);
+	over_front(acc, f);
 }
 
 #include "res://resources/shaders/hourglass/art_main.gdshaderinc"

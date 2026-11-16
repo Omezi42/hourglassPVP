@@ -2,6 +2,7 @@ shader_type canvas_item;
 // 波紋(エコー)。GameDesign.md 9章 / Architecture.md 10.19節。
 
 #include "res://resources/shaders/hourglass/hourglass_lib.gdshaderinc"
+#include "res://resources/shaders/hourglass/frame_parts.gdshaderinc"
 
 const vec3 JADE = vec3(0.30, 0.66, 0.54);
 const vec3 JADE_GLOW = vec3(0.55, 1.0, 0.85);
@@ -10,13 +11,11 @@ const float RIPPLE_POST_R = 0.05;
 const float BELL_X = 0.86;
 const vec2 SLAB_HALF = vec2(0.86, 0.078);
 
-#ifdef ART_STATIC
-#include "res://resources/shaders/hourglass/frame_parts.gdshaderinc"
 
-void art_back(inout vec4 acc, Px f) {
+void base_back(inout vec4 acc, Px f) {
 }
 
-void art_frame(inout vec4 acc, Px f) {
+void base_frame(inout vec4 acc, Px f) {
 	for (int i = 0; i < 2; i++) {
 		float cx = i == 0 ? -RIPPLE_POST_X : RIPPLE_POST_X;
 		draw_column(acc, f, cx, RIPPLE_POST_R, -1.02, 1.02, JADE, 0.0);
@@ -36,7 +35,6 @@ void art_frame(inout vec4 acc, Px f) {
 		part(acc, length(q) - 0.066, ink_of(GOLD), shade_mat(GOLD, n, 1.0, 1.0, 1.0), f.ow, f.px);
 	}
 }
-#endif
 
 void draw_bell(inout vec4 acc, Px f, float cx, float phase) {
 	vec2 pivot = vec2(cx, 1.020);
@@ -60,7 +58,7 @@ void draw_bell(inout vec4 acc, Px f, float cx, float phase) {
 }
 
 // 板から広がる光の輪(ガラスの後ろ)
-void motion_back(inout vec4 acc, Px f) {
+void over_back(inout vec4 acc, Px f) {
 	float r = length(f.p * vec2(1.0, 0.86));
 	float a = 0.0;
 	for (int k = 0; k < 3; k++) {
@@ -74,7 +72,7 @@ void motion_back(inout vec4 acc, Px f) {
 	add_light(acc, JADE_GLOW, a * (0.45 + 0.50 * flow) * canvas_window(f.p));
 }
 
-void motion_front(inout vec4 acc, Px f) {
+void over_front(inout vec4 acc, Px f) {
 	vec2 q = vec2(f.p.x, f.p.y - f.side * 1.098);
 	float d = sd_round_box(q, SLAB_HALF, 0.03);
 	// 板の金の波線は流れ続ける
@@ -89,6 +87,16 @@ void motion_front(inout vec4 acc, Px f) {
 		draw_bell(acc, f, -BELL_X, 0.0);
 		draw_bell(acc, f, BELL_X, 1.3);
 	}
+}
+
+void art_back(inout vec4 acc, Px f) {
+	base_back(acc, f);
+	over_back(acc, f);
+}
+
+void art_frame(inout vec4 acc, Px f) {
+	base_frame(acc, f);
+	over_front(acc, f);
 }
 
 #include "res://resources/shaders/hourglass/art_main.gdshaderinc"

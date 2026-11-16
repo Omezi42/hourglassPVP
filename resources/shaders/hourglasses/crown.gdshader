@@ -2,6 +2,7 @@ shader_type canvas_item;
 // 戴冠(クラウン)。GameDesign.md 9章 / Architecture.md 10.19節。
 
 #include "res://resources/shaders/hourglass/hourglass_lib.gdshaderinc"
+#include "res://resources/shaders/hourglass/frame_parts.gdshaderinc"
 
 const vec3 VELVET = vec3(0.52, 0.07, 0.14);
 const vec3 RUBY = vec3(0.92, 0.16, 0.24);
@@ -55,8 +56,6 @@ Px crown_px(Px fs) {
 	return f;
 }
 
-#ifdef ART_STATIC
-#include "res://resources/shaders/hourglass/frame_parts.gdshaderinc"
 
 void jewel(inout vec4 acc, Px f, vec2 c, vec2 r, vec3 col) {
 	vec2 q = f.p - c;
@@ -109,14 +108,14 @@ void draw_crown(inout vec4 acc, Px fs) {
 }
 
 // ねじり柱は砂が落ちている間だけ動く。止まっている状態は焼いた柱をそのまま使う。
-void art_back(inout vec4 acc, Px f) {
+void base_back(inout vec4 acc, Px f) {
 	if (flow < 0.5) {
 		draw_rope_column(acc, f, -ROPE_POST_X);
 		draw_rope_column(acc, f, ROPE_POST_X);
 	}
 }
 
-void art_frame(inout vec4 acc, Px f) {
+void base_frame(inout vec4 acc, Px f) {
 	for (int i = 0; i < 2; i++) {
 		float cx = i == 0 ? -ROPE_POST_X : ROPE_POST_X;
 		draw_band(acc, f, vec2(cx, f.side * 0.955), vec2(0.088, 0.034), GOLD, 1.0);
@@ -155,7 +154,6 @@ void art_frame(inout vec4 acc, Px f) {
 		jewel(acc, f, vec2(0.0, -1.098), vec2(0.050, 0.036), RUBY);
 	}
 }
-#endif
 
 // 宝石のきらめき(宝石の矩形の中だけ)
 void jewel_spark(inout vec4 acc, Px f, vec2 c, vec2 r, float sparkle) {
@@ -167,14 +165,14 @@ void jewel_spark(inout vec4 acc, Px f, vec2 c, vec2 r, float sparkle) {
 }
 
 // 砂が落ちている間のねじり柱
-void motion_back(inout vec4 acc, Px f) {
+void over_back(inout vec4 acc, Px f) {
 	if (flow >= 0.5) {
 		draw_rope_column(acc, f, -ROPE_POST_X);
 		draw_rope_column(acc, f, ROPE_POST_X);
 	}
 }
 
-void motion_front(inout vec4 acc, Px f) {
+void over_front(inout vec4 acc, Px f) {
 	vec2 q = vec2(f.p.x, f.p.y - f.side * 1.098);
 	// 板の金の縁を照りが滑る
 	float rim_band = smoothstep(0.050, 0.056, abs(q.y));
@@ -203,6 +201,16 @@ void motion_front(inout vec4 acc, Px f) {
 	} else {
 		jewel_spark(acc, f, vec2(0.0, -1.098), vec2(0.050, 0.036), jewel_twinkle(3.0, 5.0));
 	}
+}
+
+void art_back(inout vec4 acc, Px f) {
+	base_back(acc, f);
+	over_back(acc, f);
+}
+
+void art_frame(inout vec4 acc, Px f) {
+	base_frame(acc, f);
+	over_front(acc, f);
 }
 
 #include "res://resources/shaders/hourglass/art_main.gdshaderinc"

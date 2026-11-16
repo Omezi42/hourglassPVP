@@ -31,10 +31,8 @@ const int sand_kind = SAND_KIND;
 const int sand_kind = 0;
 #endif
 
-// 動きの時計(秒)。本体へ入れるときは TIME か、演出の進み具合を渡す。
+// 砂の動きの時計(秒)。共通のガラスだけが使う(カードの絵は焼くので使わない)。
 uniform float clock = 0.0;
-// 視線の向き(-1〜1)。カーソルや狙っている相手の方向を渡す。
-uniform vec2 look = vec2(0.0);
 // 1体ごとの模様の違い
 uniform float seed = 0.0;
 

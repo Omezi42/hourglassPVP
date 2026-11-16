@@ -2,6 +2,7 @@ shader_type canvas_item;
 // 天翼(ダッシュ)。GameDesign.md 9章 / Architecture.md 10.19節。
 
 #include "res://resources/shaders/hourglass/hourglass_lib.gdshaderinc"
+#include "res://resources/shaders/hourglass/frame_parts.gdshaderinc"
 
 const vec3 SKY = vec3(0.34, 0.76, 0.84);
 const vec3 PLUME = vec3(0.97, 0.98, 1.0);
@@ -108,13 +109,11 @@ void draw_wing(inout vec4 acc, Px f, float side_x) {
 	over(acc, shade_mat(GOLD, normalize(vec3(0.0, 0.6, 0.8)), 1.0, 1.0, 1.0), edge * cov(d_arm, f.px));
 }
 
-#ifdef ART_STATIC
-#include "res://resources/shaders/hourglass/frame_parts.gdshaderinc"
 
-void art_back(inout vec4 acc, Px f) {
+void base_back(inout vec4 acc, Px f) {
 }
 
-void art_frame(inout vec4 acc, Px f) {
+void base_frame(inout vec4 acc, Px f) {
 	for (int i = 0; i < 2; i++) {
 		float cx = i == 0 ? -WING_POST_X : WING_POST_X;
 		draw_column(acc, f, cx, 0.046, -1.02, 1.02, SKY, 0.35);
@@ -129,7 +128,6 @@ void art_frame(inout vec4 acc, Px f) {
 	float rim = 1.0 - smoothstep(0.0, max(0.008, f.px * 0.7), abs(abs(q.y) - 0.050) - 0.005);
 	inlay(acc, d, GOLD, rim * step(abs(q.x), 0.70), f);
 }
-#endif
 
 // 金の小さな翼に挟まれた宝石(板の中央と天板の上)
 void winged_gem(inout vec4 acc, Px f, vec2 c, float k) {
@@ -159,17 +157,27 @@ void winged_gem(inout vec4 acc, Px f, vec2 c, float k) {
 }
 
 // 翼はガラスの後ろ(ガラスと柱の間からも羽根が見える)
-void motion_back(inout vec4 acc, Px f) {
+void over_back(inout vec4 acc, Px f) {
 	draw_wing(acc, f, 1.0);
 	draw_wing(acc, f, -1.0);
 }
 
-void motion_front(inout vec4 acc, Px f) {
+void over_front(inout vec4 acc, Px f) {
 	if (f.p.y < 0.0) {
 		winged_gem(acc, f, vec2(0.0, -1.098), 0.42);
 	} else {
 		winged_gem(acc, f, vec2(0.0, 1.255), 0.62);
 	}
+}
+
+void art_back(inout vec4 acc, Px f) {
+	base_back(acc, f);
+	over_back(acc, f);
+}
+
+void art_frame(inout vec4 acc, Px f) {
+	base_frame(acc, f);
+	over_front(acc, f);
 }
 
 #include "res://resources/shaders/hourglass/art_main.gdshaderinc"

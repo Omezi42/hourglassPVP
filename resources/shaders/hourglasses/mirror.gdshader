@@ -2,6 +2,7 @@ shader_type canvas_item;
 // 宝玉(ミラー)。GameDesign.md 9章 / Architecture.md 10.19節。
 
 #include "res://resources/shaders/hourglass/hourglass_lib.gdshaderinc"
+#include "res://resources/shaders/hourglass/frame_parts.gdshaderinc"
 
 const vec3 ROSE_GOLD = vec3(1.0, 0.70, 0.58);
 const float GEM_POST_X = 0.68;
@@ -10,7 +11,7 @@ const vec2 SLAB_HALF = vec2(0.82, 0.078);
 
 // 宝石の照りの向き。鏡のように、カーソルのある側の面が光る。
 vec3 mirror_light() {
-	vec2 l = look;
+	vec2 l = vec2(0.0);
 	if (length(l) > 1.0) {
 		l = normalize(l);
 	}
@@ -53,8 +54,6 @@ void gem_glint(inout vec4 acc, Px f, vec2 q, vec2 hs) {
 	add_light(acc, vec3(1.0, 0.97, 0.99), star4(q - at, min(hs.x, hs.y) * 1.3) * 0.9);
 }
 
-#ifdef ART_STATIC
-#include "res://resources/shaders/hourglass/frame_parts.gdshaderinc"
 
 // 銀の台座: 宝石を囲む菱形の枠と、柱に沿って上下へ伸びる尖り(宝石は動きが重ねる)
 void post_mount(inout vec4 acc, Px f, vec2 c) {
@@ -70,10 +69,10 @@ void post_mount(inout vec4 acc, Px f, vec2 c) {
 	part(acc, d_mount, ink_of(SILVER), shade_mat(ROSE_GOLD, n, 1.0, 1.0, 1.0), f.ow, f.px);
 }
 
-void art_back(inout vec4 acc, Px f) {
+void base_back(inout vec4 acc, Px f) {
 }
 
-void art_frame(inout vec4 acc, Px f) {
+void base_frame(inout vec4 acc, Px f) {
 	for (int i = 0; i < 2; i++) {
 		float cx = i == 0 ? -GEM_POST_X : GEM_POST_X;
 		draw_column(acc, f, cx, 0.046, -1.02, 1.02, ROSE_GOLD, 0.55);
@@ -94,7 +93,6 @@ void art_frame(inout vec4 acc, Px f) {
 		part(acc, d_m, ink_of(SILVER), shade_mat(SILVER, normalize(vec3(mq / vec2(0.105, 0.07) * 0.6, 0.8)), 1.0, 1.0, 1.0), f.ow, f.px);
 	}
 }
-#endif
 
 // 天板の上の水晶の房。中央が高く、左右は外へ傾く。
 void crystal(inout vec4 acc, Px f, vec2 base, float w, float h, float lean) {
@@ -117,11 +115,11 @@ void crystal(inout vec4 acc, Px f, vec2 base, float w, float h, float lean) {
 	part(acc, d, ink_of(sand_color) * 0.6, c, f.ow, f.px);
 }
 
-void motion_back(inout vec4 acc, Px f) {
+void over_back(inout vec4 acc, Px f) {
 }
 
 // 宝石はカーソルのある側の面が光り、虹の帯が渡る(すべて動くもの)
-void motion_front(inout vec4 acc, Px f) {
+void over_front(inout vec4 acc, Px f) {
 	for (int i = 0; i < 2; i++) {
 		vec2 q = f.p - vec2(i == 0 ? -GEM_POST_X : GEM_POST_X, 0.0);
 		if (abs(q.x) > POST_GEM_HALF.x + 0.05 + f.pad || abs(q.y) > POST_GEM_HALF.y + 0.13 + f.pad) {
@@ -155,6 +153,16 @@ void motion_front(inout vec4 acc, Px f) {
 	// 照りの強い瞬間に、宝石の先がきらめく
 	float tw = pow(clamp(dot(vec3(0.0, 0.6, 0.8), mirror_light()), 0.0, 1.0), 6.0);
 	add_light(acc, vec3(1.0, 0.95, 0.98), star4(f.p - vec2(0.0, 1.372), 0.10) * (0.35 + 0.65 * tw) * (0.6 + 0.4 * sin(clock * 2.3)));
+}
+
+void art_back(inout vec4 acc, Px f) {
+	base_back(acc, f);
+	over_back(acc, f);
+}
+
+void art_frame(inout vec4 acc, Px f) {
+	base_frame(acc, f);
+	over_front(acc, f);
 }
 
 #include "res://resources/shaders/hourglass/art_main.gdshaderinc"

@@ -2,6 +2,7 @@ shader_type canvas_item;
 // 聖剣(ソード)。GameDesign.md 9章 / Architecture.md 10.19節。
 
 #include "res://resources/shaders/hourglass/hourglass_lib.gdshaderinc"
+#include "res://resources/shaders/hourglass/frame_parts.gdshaderinc"
 
 const vec3 HOLY = vec3(1.0, 0.93, 0.72);
 const float SWORD_X = 0.70;
@@ -29,8 +30,6 @@ float glint_y(float cx) {
 	return fract(clock * 0.16 + (cx > 0.0 ? 0.43 : 0.0)) * 3.4 - 1.0;
 }
 
-#ifdef ART_STATIC
-#include "res://resources/shaders/hourglass/frame_parts.gdshaderinc"
 
 void draw_sword(inout vec4 acc, Px f, float cx) {
 	vec2 q = vec2(f.p.x - cx, f.p.y);
@@ -96,10 +95,10 @@ void draw_sword(inout vec4 acc, Px f, float cx) {
 	draw_ball(acc, f, vec2(cx, POMMEL_Y), 0.046, GOLD, 1.0);
 }
 
-void art_back(inout vec4 acc, Px f) {
+void base_back(inout vec4 acc, Px f) {
 }
 
-void art_frame(inout vec4 acc, Px f) {
+void base_frame(inout vec4 acc, Px f) {
 	draw_sword(acc, f, -SWORD_X);
 	draw_sword(acc, f, SWORD_X);
 	draw_collars(acc, f, SILVER, 1.0);
@@ -112,10 +111,9 @@ void art_frame(inout vec4 acc, Px f) {
 	vec3 gem = mix(sand_color, vec3(1.0), 0.45 * step(q.x + q.y, 0.0));
 	inlay(acc, d, gem, cov(sd_rhombus(q, vec2(0.044, 0.030)), f.px), f);
 }
-#endif
 
 // 後光の光線と、ガラスの中を昇る光の粒
-void motion_back(inout vec4 acc, Px f) {
+void over_back(inout vec4 acc, Px f) {
 	vec2 q = f.p - vec2(0.0, 0.05);
 	float r = length(q * vec2(1.0, 0.80));
 	float ang = atan(q.y, q.x);
@@ -135,7 +133,7 @@ void motion_back(inout vec4 acc, Px f) {
 }
 
 // 刃を昇る光と、切っ先のきらめき
-void motion_front(inout vec4 acc, Px f) {
+void over_front(inout vec4 acc, Px f) {
 	for (int i = 0; i < 2; i++) {
 		float cx = i == 0 ? -SWORD_X : SWORD_X;
 		vec2 q = vec2(f.p.x - cx, f.p.y);
@@ -145,6 +143,16 @@ void motion_front(inout vec4 acc, Px f) {
 		float k = exp(-pow((gy - SWORD_TIP + 0.06) / 0.10, 2.0));
 		add_light(acc, vec3(1.0, 0.97, 0.88), star4(f.p - vec2(cx, SWORD_TIP - 0.04), 0.13) * k);
 	}
+}
+
+void art_back(inout vec4 acc, Px f) {
+	base_back(acc, f);
+	over_back(acc, f);
+}
+
+void art_frame(inout vec4 acc, Px f) {
+	base_frame(acc, f);
+	over_front(acc, f);
 }
 
 #include "res://resources/shaders/hourglass/art_main.gdshaderinc"

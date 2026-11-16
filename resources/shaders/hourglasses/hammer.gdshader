@@ -2,6 +2,7 @@ shader_type canvas_item;
 // 裁きの槌(ハンマー)。GameDesign.md 9章 / Architecture.md 10.19節。
 
 #include "res://resources/shaders/hourglass/hourglass_lib.gdshaderinc"
+#include "res://resources/shaders/hourglass/frame_parts.gdshaderinc"
 
 const vec3 WALNUT = vec3(0.44, 0.26, 0.15);
 const vec3 WALNUT_DARK = vec3(0.30, 0.17, 0.10);
@@ -85,8 +86,6 @@ void draw_gavel(inout vec4 acc, Px f) {
 	}
 }
 
-#ifdef ART_STATIC
-#include "res://resources/shaders/hourglass/frame_parts.gdshaderinc"
 
 // ろくろで挽いた木の柱(中ほどと上下に膨らみ)
 void draw_turned_post(inout vec4 acc, Px f, float cx) {
@@ -105,10 +104,10 @@ void draw_turned_post(inout vec4 acc, Px f, float cx) {
 	part(acc, d, ink_of(WALNUT_DARK), c, f.ow, f.px);
 }
 
-void art_back(inout vec4 acc, Px f) {
+void base_back(inout vec4 acc, Px f) {
 }
 
-void art_frame(inout vec4 acc, Px f) {
+void base_frame(inout vec4 acc, Px f) {
 	for (int i = 0; i < 2; i++) {
 		float cx = i == 0 ? -TURNED_POST_X : TURNED_POST_X;
 		draw_turned_post(acc, f, cx);
@@ -146,7 +145,6 @@ void art_frame(inout vec4 acc, Px f) {
 		draw_gavel(acc, f);
 	}
 }
-#endif
 
 void draw_scales(inout vec4 acc, Px f) {
 	vec2 q = f.p - SCALE_PIVOT;
@@ -194,11 +192,11 @@ void strike_flash(inout vec4 acc, Px f) {
 	add_light(acc, vec3(1.0, 0.86, 0.55), ring * fade * 0.8 * flow * canvas_window(f.p));
 }
 
-void motion_back(inout vec4 acc, Px f) {
+void over_back(inout vec4 acc, Px f) {
 }
 
 // 傾く天秤・打つ瞬間の光の輪・持ち上がる槌
-void motion_front(inout vec4 acc, Px f) {
+void over_front(inout vec4 acc, Px f) {
 	if (f.p.y > 0.0) {
 		draw_scales(acc, f);
 	} else {
@@ -207,6 +205,16 @@ void motion_front(inout vec4 acc, Px f) {
 	if (flow >= 0.5) {
 		draw_gavel(acc, f);
 	}
+}
+
+void art_back(inout vec4 acc, Px f) {
+	base_back(acc, f);
+	over_back(acc, f);
+}
+
+void art_frame(inout vec4 acc, Px f) {
+	base_frame(acc, f);
+	over_front(acc, f);
 }
 
 #include "res://resources/shaders/hourglass/art_main.gdshaderinc"

@@ -93,27 +93,16 @@ func bake(art_key: String) -> void:
 	print("baked ", art_key)
 
 
-## 止めた層(0=後ろ / 1=枠)。シェーダーの先頭へ `#define ART_STATIC` を足して読む。
+## 層(0=後ろ / 1=枠)。
 func _render_static(art_key: String, state: int, layer: int) -> Image:
-	var source := (load(HourglassLive.art_shader_path(art_key)) as Shader).code
-	var cut := source.find("\n") + 1
-	var shader := Shader.new()
-	shader.code = source.substr(0, cut) + "#define ART_STATIC\n" + source.substr(cut)
-	var material := ShaderMaterial.new()
-	material.shader = shader
-	var sand := HourglassLive.STATE_SAND[state]
-	material.set_shader_parameter("sand_top", sand.x)
-	material.set_shader_parameter("sand_bottom", sand.y)
-	material.set_shader_parameter("flow", sand.z)
-	material.set_shader_parameter("clock", 0.0)
-	material.set_shader_parameter("look", Vector2.ZERO)
-	material.set_shader_parameter("sand_color", HourglassArt.accent_color(art_key))
+	var material := HourglassLive.sand_material(art_key, state)
+	material.shader = load(HourglassLive.art_shader_path(art_key))
 	material.set_shader_parameter("layer", layer)
 	_rect.material = material
 	return await _draw()
 
 
-## 3層を重ねた完成形(clock = 0・視線は中央)を1枚撮る。動く絵と同じ組み立て。
+## 3層を重ねた完成形(clock = 0)を1枚撮る。動く絵と同じ組み立て。
 func _render_stack(art_key: String, state: int, back_tex: Texture2D, frame_tex: Texture2D) -> Image:
 	var stack := HourglassLive.make_stack(art_key, state, back_tex, frame_tex, HourglassLive.CANVAS)
 	stack.viewport.render_target_update_mode = SubViewport.UPDATE_ONCE

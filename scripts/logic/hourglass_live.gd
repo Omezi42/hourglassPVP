@@ -2,8 +2,8 @@ class_name HourglassLive
 extends RefCounted
 ## コード描画の砂時計の動く絵(Architecture.md 10.19節)。窓口は `live_texture()`。
 ##
-## カード×状態ごとに1つの `SubViewport` へ、後ろ(動きのシェーダー + backのPNG)・ガラス(`glass_{kind}`)・
-## 枠(動きのシェーダー + frameのPNG)の3枚を重ねる。**同じカード・同じ状態の駒で1枚を共有し**、
+## カード×状態ごとに1つの `SubViewport` へ、後ろ(backのPNG)・ガラスと砂(`glass_{kind}`。ここだけが動く)・
+## 枠(frameのPNG)の3枚を重ねる。**同じカード・同じ状態の駒で1枚を共有し**、
 ## 直前のフレームで引かれなかったものは描き直さない。止めた絵は焼いた `HourglassArt.texture()`。
 
 ## シェーダーのキャンバス。基本の絵の落下中と同じ高さ。
@@ -29,28 +29,22 @@ const STATE_SAND: Array[Vector3] = [
 static var _host: Host = null
 static var _shaders: Dictionary = {}
 static var _lives: Dictionary = {}
-static var _empty: ImageTexture = null
 static var _clock := 0.0
-static var _look := Vector2.ZERO
 
 
 ## 動く絵1枚ぶん。3枚を重ねた `SubViewport` とその絵。
 class Stack:
 	extends RefCounted
 	var viewport: SubViewport
-	var back: ShaderMaterial
 	var glass: ShaderMaterial
-	var front: ShaderMaterial
 	var texture: Texture2D
 	var used_at := -100
 
-	func set_time(clock: float, look: Vector2) -> void:
-		for material in [back, glass, front]:
-			material.set_shader_parameter("clock", clock)
-			material.set_shader_parameter("look", look)
+	func set_time(clock: float) -> void:
+		glass.set_shader_parameter("clock", clock)
 
 
-## 動く絵の時計と視線を毎フレーム進める。
+## 砂の時計を毎フレーム進める。
 class Host:
 	extends Node
 
@@ -97,7 +91,7 @@ static func live_texture(art_key: String, state: int) -> Texture2D:
 			load_layer(art_key, state, LAYER_BACK),
 			load_layer(art_key, state, LAYER_FRAME)
 		)
-		entry.set_time(_clock, _look)
+		entry.set_time(_clock)
 		_host.add_child(entry.viewport)
 		_lives[key] = entry
 	entry.used_at = Engine.get_process_frames()
@@ -140,22 +134,33 @@ static func make_stack(
 	size: Vector2i = Vector2i.ZERO
 ) -> Stack:
 	var stack := Stack.new()
-	stack.back = _art_material(art_key, state, 0, back_tex)
 	stack.glass = _glass_material(art_key, state)
-	stack.front = _art_material(art_key, state, 1, frame_tex)
 	stack.viewport = SubViewport.new()
 	stack.viewport.size = size if size != Vector2i.ZERO else _live_size()
 	stack.viewport.transparent_bg = true
 	stack.viewport.disable_3d = true
 	stack.viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
-	for material in [stack.back, stack.glass, stack.front]:
-		var rect := ColorRect.new()
-		rect.anchor_right = 1.0
-		rect.anchor_bottom = 1.0
-		rect.material = material
-		stack.viewport.add_child(rect)
+	if back_tex != null:
+		stack.viewport.add_child(_layer_rect(back_tex))
+	var glass := ColorRect.new()
+	glass.anchor_right = 1.0
+	glass.anchor_bottom = 1.0
+	glass.material = stack.glass
+	stack.viewport.add_child(glass)
+	if frame_tex != null:
+		stack.viewport.add_child(_layer_rect(frame_tex))
 	stack.texture = stack.viewport.get_texture()
 	return stack
+
+
+static func _layer_rect(texture: Texture2D) -> TextureRect:
+	var rect := TextureRect.new()
+	rect.anchor_right = 1.0
+	rect.anchor_bottom = 1.0
+	rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	rect.stretch_mode = TextureRect.STRETCH_SCALE
+	rect.texture = texture
+	return rect
 
 
 ## 焼いた層の画像。無ければ null(後ろが空のカードは back を持たない)。
@@ -168,10 +173,9 @@ static func layer_path(art_key: String, state: int, layer: String) -> String:
 	return "%s/%s/%s_%s.png" % [HourglassArt.OVERRIDE_DIR, art_key, layer, LAYER_STATES[state]]
 
 
-## `Host._process()` から毎フレーム。時計と視線を渡し、引かれていない絵を止める。
+## `Host._process()` から毎フレーム。時計を渡し、引かれていない絵を止める。
 static func tick(delta: float) -> void:
 	_clock += delta
-	_look = _mouse_look()
 	var now := Engine.get_process_frames()
 	for entry: Stack in _lives.values():
 		var active := now - entry.used_at <= GRACE_FRAMES
@@ -179,49 +183,25 @@ static func tick(delta: float) -> void:
 		if entry.viewport.render_target_update_mode != mode:
 			entry.viewport.render_target_update_mode = mode
 		if active:
-			entry.set_time(_clock, _look)
-
-
-static func _art_material(
-	art_key: String, state: int, layer: int, under: Texture2D
-) -> ShaderMaterial:
-	var material := _material(art_key, state, art_shader_path(art_key))
-	material.set_shader_parameter("layer", layer)
-	material.set_shader_parameter("under_tex", under if under != null else _empty_texture())
-	return material
+			entry.set_time(_clock)
 
 
 static func _glass_material(art_key: String, state: int) -> ShaderMaterial:
-	return _material(art_key, state, glass_shader_path(art_key))
+	var material := sand_material(art_key, state)
+	material.shader = load(glass_shader_path(art_key))
+	return material
 
 
-static func _material(art_key: String, state: int, shader_path: String) -> ShaderMaterial:
+## 3状態の砂と砂の色を入れたマテリアル(シェーダーは呼ぶ側が入れる。焼く道具も使う)。
+static func sand_material(art_key: String, state: int) -> ShaderMaterial:
 	var material := ShaderMaterial.new()
-	material.shader = load(shader_path)
 	var sand := STATE_SAND[state]
 	material.set_shader_parameter("sand_top", sand.x)
 	material.set_shader_parameter("sand_bottom", sand.y)
 	material.set_shader_parameter("flow", sand.z)
 	material.set_shader_parameter("clock", 0.0)
-	material.set_shader_parameter("look", Vector2.ZERO)
 	material.set_shader_parameter("sand_color", HourglassArt.accent_color(art_key))
 	return material
-
-
-static func _empty_texture() -> ImageTexture:
-	if _empty == null:
-		_empty = ImageTexture.create_from_image(Image.create_empty(1, 1, false, Image.FORMAT_RGBA8))
-	return _empty
-
-
-## 画面中央からマウスへの向き。各軸 -1〜1(上が正。シェーダーの座標に合わせる)。
-static func _mouse_look() -> Vector2:
-	var viewport := _host.get_viewport()
-	var half := viewport.get_visible_rect().size * 0.5
-	if half.x <= 0.0 or half.y <= 0.0:
-		return Vector2.ZERO
-	var offset := viewport.get_mouse_position() - half
-	return Vector2(clampf(offset.x / half.x, -1.0, 1.0), clampf(-offset.y / half.y, -1.0, 1.0))
 
 
 static func _live_size() -> Vector2i:

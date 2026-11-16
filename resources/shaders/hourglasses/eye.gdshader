@@ -2,6 +2,7 @@ shader_type canvas_item;
 // 千里眼(アイ)。GameDesign.md 9章 / Architecture.md 10.19節。
 
 #include "res://resources/shaders/hourglass/hourglass_lib.gdshaderinc"
+#include "res://resources/shaders/hourglass/frame_parts.gdshaderinc"
 
 const vec3 VIOLET = vec3(0.40, 0.24, 0.62);
 const vec3 VIOLET_DEEP = vec3(0.20, 0.11, 0.34);
@@ -21,13 +22,11 @@ vec3 iris_color() {
 	return mix(sand_color, vec3(1.0, 0.75, 0.35), 0.35);
 }
 
-#ifdef ART_STATIC
-#include "res://resources/shaders/hourglass/frame_parts.gdshaderinc"
 
-void art_back(inout vec4 acc, Px f) {
+void base_back(inout vec4 acc, Px f) {
 }
 
-void art_frame(inout vec4 acc, Px f) {
+void base_frame(inout vec4 acc, Px f) {
 	for (int i = 0; i < 2; i++) {
 		float cx = i == 0 ? -EYE_POST_X : EYE_POST_X;
 		draw_column(acc, f, cx, EYE_POST_R, -1.02, 1.02, VIOLET, 0.0);
@@ -62,9 +61,8 @@ void art_frame(inout vec4 acc, Px f) {
 		part(acc, d_moon, ink_of(GOLD), shade_mat(GOLD, n, 1.0, 1.0, 1.0), f.ow, f.px);
 	}
 }
-#endif
 
-// 目。open は開き具合(0〜1)、look は視線(-1〜1)。
+// 目。open は開き具合(0〜1)。
 void draw_eye(inout vec4 acc, Px f, vec2 c, float hw, float hh, float open, vec3 iris_col) {
 	vec2 q = f.p - c;
 	if (abs(q.x) > hw + f.pad || abs(q.y) > hh + f.pad) {
@@ -73,7 +71,7 @@ void draw_eye(inout vec4 acc, Px f, vec2 c, float hw, float hh, float open, vec3
 	float t = clamp(q.x / hw, -1.0, 1.0);
 	float lid = hh * max(open, 0.04) * (1.0 - t * t);
 	float d_eye = max(abs(q.y) - lid, abs(q.x) - hw);
-	vec2 gaze = look;
+	vec2 gaze = vec2(0.0);
 	if (length(gaze) > 1.0) {
 		gaze = normalize(gaze);
 	}
@@ -117,11 +115,11 @@ void runes(inout vec4 acc, Px f, float slab_d, vec2 q) {
 	inlay(acc, slab_d, iris_color(), lit * 0.25 * exp(-d / 0.02), f);
 }
 
-void motion_back(inout vec4 acc, Px f) {
+void over_back(inout vec4 acc, Px f) {
 }
 
 // 文字の列・目・星(動くもの)
-void motion_front(inout vec4 acc, Px f) {
+void over_front(inout vec4 acc, Px f) {
 	vec2 q = vec2(f.p.x, f.p.y - f.side * 1.098);
 	runes(acc, f, sd_round_box(q, SLAB_HALF, 0.03), q);
 	for (int i = 0; i < 2; i++) {
@@ -139,6 +137,16 @@ void motion_front(inout vec4 acc, Px f) {
 		float tw = pow(0.5 + 0.5 * sin(clock * 2.1 + float(k) * 2.3), 3.0);
 		add_light(acc, vec3(1.0, 0.92, 0.70), star4(f.p - sc, 0.045) * tw);
 	}
+}
+
+void art_back(inout vec4 acc, Px f) {
+	base_back(acc, f);
+	over_back(acc, f);
+}
+
+void art_frame(inout vec4 acc, Px f) {
+	base_frame(acc, f);
+	over_front(acc, f);
 }
 
 #include "res://resources/shaders/hourglass/art_main.gdshaderinc"
