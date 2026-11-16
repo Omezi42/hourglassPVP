@@ -27,5 +27,4 @@ rules_text = "自分が砂術を使うたび、相手プレイヤーに1ダメ�
 flavor_text = "同じ節を百回唱えると喉に砂が残る。"
 cannot_attack = false
 is_token = false
-art_id = "wand"
 emblem = ExtResource("emblem")
