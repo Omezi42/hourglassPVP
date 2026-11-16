@@ -27,5 +27,4 @@ rules_text = "相手の砂時計すべての砂が2粒上へ戻る"
 cannot_attack = false
 is_token = false
 is_spell = true
-art_id = "blank"
 emblem = ExtResource("emblem")

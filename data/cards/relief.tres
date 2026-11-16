@@ -26,5 +26,4 @@ effects = Array[Resource]([SubResource("Effect_relief_0")])
 rules_text = "設置:相手の砂時計1体につき、自分のHPを1回復する"
 cannot_attack = false
 is_token = false
-art_id = "balm"
 emblem = ExtResource("emblem")
