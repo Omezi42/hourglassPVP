@@ -39,5 +39,4 @@ rules_text = "攻撃力が体力より多い自分の砂時計すべての総量
 cannot_attack = false
 is_token = false
 is_spell = true
-art_id = "wheel"
 emblem = ExtResource("emblem")

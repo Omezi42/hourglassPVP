@@ -28,5 +28,4 @@ effects = Array[Resource]([SubResource("Effect_cycle_0")])
 rules_text = "反転:この砂時計の総量が5なら、自分の砂時計すべての攻撃力+1"
 cannot_attack = false
 is_token = false
-art_id = "wheel"
 emblem = ExtResource("emblem")

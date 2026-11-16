@@ -35,5 +35,4 @@ effects = Array[Resource]([SubResource("Effect_march_0"), SubResource("Effect_ma
 rules_text = "設置:相手の砂時計が自分の他の砂時計より多ければ、モートを2体出す"
 cannot_attack = false
 is_token = false
-art_id = "swarm"
 emblem = ExtResource("emblem")

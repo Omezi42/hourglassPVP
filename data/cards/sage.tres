@@ -18,5 +18,4 @@ flavor_text = "長い呪文ほど短く言い換えるのがうまい。"
 cannot_attack = false
 is_token = false
 ally_spell_cost_down = 1
-art_id = "pike"
 emblem = ExtResource("emblem")

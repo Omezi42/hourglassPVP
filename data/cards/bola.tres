@@ -26,5 +26,4 @@ effects = Array[Resource]([SubResource("Effect_bola_0")])
 rules_text = "設置:体力が2以下の相手の砂時計1体を破壊する"
 cannot_attack = false
 is_token = false
-art_id = "lance"
 emblem = ExtResource("emblem")
