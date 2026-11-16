@@ -26,5 +26,4 @@ effects = Array[Resource]([SubResource("Effect_anvil_0")])
 rules_text = "被弾:この砂時計の砂が1粒上へ戻る"
 cannot_attack = false
 is_token = false
-art_id = "lock"
 emblem = ExtResource("emblem")

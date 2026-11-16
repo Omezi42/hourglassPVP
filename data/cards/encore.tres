@@ -29,5 +29,4 @@ effects = Array[Resource]([SubResource("Effect_encore_0")])
 rules_text = "設置:反転権を1回得る"
 cannot_attack = false
 is_token = false
-art_id = "glim"
 emblem = ExtResource("emblem")

@@ -29,5 +29,4 @@ effects = Array[Resource]([SubResource("Effect_canon_0")])
 rules_text = "反転:相手の砂時計のうち、攻撃力が体力より多いランダムな1体を反転させる"
 cannot_attack = false
 is_token = false
-art_id = "twin"
 emblem = ExtResource("emblem")

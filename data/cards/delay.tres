@@ -29,5 +29,4 @@ effects = Array[Resource]([SubResource("Effect_delay_0")])
 rules_text = "落砂:自分の他の砂時計のうち、攻撃力が体力より多いランダムな1体を反転させる"
 cannot_attack = false
 is_token = false
-art_id = "tick"
 emblem = ExtResource("emblem")
