@@ -26,5 +26,4 @@ effects = Array[Resource]([SubResource("Effect_moss_0")])
 rules_text = "自分の他の砂時計が破壊されるたび、この砂時計の総量+1"
 cannot_attack = false
 is_token = false
-art_id = "sprout"
 emblem = ExtResource("emblem")

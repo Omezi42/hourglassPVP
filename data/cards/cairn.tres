@@ -26,5 +26,4 @@ effects = Array[Resource]([SubResource("Effect_cairn_0")])
 rules_text = "設置:自分の墓地の砂時計1体につき、この砂時計の総量+1"
 cannot_attack = false
 is_token = false
-art_id = "shell"
 emblem = ExtResource("emblem")

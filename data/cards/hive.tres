@@ -26,5 +26,4 @@ effects = Array[Resource]([SubResource("Effect_hive_0")])
 rules_text = "被弾:モートを1体出す"
 cannot_attack = false
 is_token = false
-art_id = "shell"
 emblem = ExtResource("emblem")

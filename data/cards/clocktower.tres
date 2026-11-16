@@ -27,5 +27,4 @@ effects = Array[Resource]([SubResource("Effect_clocktower_0")])
 rules_text = "落砂:相手プレイヤーに、この砂時計の攻撃力ぶんのダメージ"
 cannot_attack = true
 is_token = false
-art_id = "tower"
 emblem = ExtResource("emblem")

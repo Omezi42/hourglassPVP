@@ -26,5 +26,4 @@ effects = Array[Resource]([SubResource("Effect_spring_0")])
 rules_text = "落砂:自分の他の砂時計1体の砂が1粒上へ戻る"
 cannot_attack = false
 is_token = false
-art_id = "sprout"
 emblem = ExtResource("emblem")

@@ -14,5 +14,4 @@ keywords = Array[int]([0])
 effects = Array[Resource]([])
 rules_text = ""
 flavor_text = "名もない衛兵が持ち場を守っている。"
-art_id = "king"
 emblem = ExtResource("emblem")
