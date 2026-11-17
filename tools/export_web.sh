@@ -26,7 +26,7 @@ echo "build_id = $BUILD_ID"
 # 検査用(WebCheck): 本番と同じ中身に tools/ を残したpck。テストのスクリプトがpckの中に要るため、
 # 本番(tools/ を外す)とは別に書き出して、こちらへテストを回す(Architecture.md 4.1.6節)。
 CHECK="$ROOT/build/web_check"
-mkdir -p "$CHECK"
+mkdir -p "$CHECK" "$OUT"
 "$GODOT" --headless --path "$ROOT" --export-release "WebCheck" "$CHECK/index.html" > "$ROOT/logs/export_web_check.log" 2>&1
 "$GODOT" --headless --main-pack "$CHECK/index.pck" --script res://tools/tests/run_tests.gd 2>&1 | grep -E "tests passed|FAILED" || true
 # 検査用pckのまま本物のFirebaseで2人をマッチングさせ、デッキと種の交換まで通す

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="AnnouncementData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/announcement_data.gd" id="script_announcement"]
+
+[resource]
+script = ExtResource("script_announcement")
+version = "2026.11.17"
+body = "**あたらしいもの**
+- さらに10枚の砂時計が、それぞれ専用の見た目になったよ。バーム、キー、フォージ、レゾナンス、スパイクたちだよ。図鑑でながめてみてね
+
+**なおしたもの**
+- スマホのブラウザで、対戦が始まるときや砂時計を場に出すときにカクついていたのを軽くしたよ
+
+-# 遊ぶ → https://unityroom.com/games/sunadokei_arena"
