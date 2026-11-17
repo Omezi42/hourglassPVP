@@ -16,7 +16,6 @@ effects = Array[Resource]([])
 rules_text = "総量が5の間、戦闘で与えるダメージが2倍になる"
 cannot_attack = false
 is_token = false
-art_id = "spike"
 emblem = ExtResource("emblem")
 conditional_keyword = 7
 conditional_keyword_total = 5

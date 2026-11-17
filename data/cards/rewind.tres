@@ -34,5 +34,4 @@ rules_text = "自分の砂時計1体の砂が2粒上へ戻り、総量+1"
 cannot_attack = false
 is_token = false
 is_spell = true
-art_id = "pivot"
 emblem = ExtResource("emblem")

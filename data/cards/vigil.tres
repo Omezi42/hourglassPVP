@@ -26,5 +26,4 @@ effects = Array[Resource]([SubResource("Effect_vigil_0")])
 rules_text = "自分の他の砂時計が破壊されるたび、相手プレイヤーに1ダメージ"
 cannot_attack = false
 is_token = false
-art_id = "hour"
 emblem = ExtResource("emblem")
