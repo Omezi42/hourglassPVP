@@ -18,7 +18,7 @@ const PATHS: Array[String] = [
 	"res://scripts/ui/title_screen.gd",
 	"res://scripts/data/card_enums.gd",
 	"res://scripts/data/card_effect_data.gd",
-	"res://scripts/data/hourglass_tint_table.gd",
+	"res://scripts/data/hourglass_sand_table.gd",
 	"res://scripts/logic/hourglass_art.gd",
 	"res://scripts/data/card_data.gd",
 	"res://scripts/data/card_instance.gd",

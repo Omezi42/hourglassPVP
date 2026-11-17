@@ -15,7 +15,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SHADERS = os.path.join(ROOT, "resources", "shaders")
 OVERRIDES = os.path.join(ROOT, "assets", "hourglasses", "overrides")
 MANIFEST = os.path.join(ROOT, "tools", "hourglass_bake_manifest.json")
-TABLE = os.path.join(ROOT, "data", "hourglass_tints.tres")
+TABLE = os.path.join(ROOT, "data", "hourglass_sands.tres")
 COMMON = ["hourglass_lib.gdshaderinc", "hourglass_glass.gdshaderinc", "frame_parts.gdshaderinc", "art_main.gdshaderinc"]
 STATES = ["full", "falling", "empty"]
 

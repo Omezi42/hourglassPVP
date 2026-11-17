@@ -114,8 +114,8 @@ func _draw() -> void:
 		var icon := card.icon_upright
 		if icon != null:
 			draw_texture_rect(icon, art, false)
-		# **紋章は絵の右上へ印として押す**(GameDesign.md 9章)。全種が同じ絵の色違いで
-		# ある以上、一覧で見分けているのは実際にはこの紋章のほう。
+		# **紋章は絵の右上へ印として押す**(GameDesign.md 9章)。一覧の小さな絵では飾りまで
+		# 読めないため、見分けるのはこの紋章のほう。
 		# ここではコストと同じく**絵の外の隅**へ置く(絵の中へ入れると台に重なる)。
 		UiKit.seal(
 			get_canvas_item(), Vector2(art.end.x + 2.0, art.position.y + 10.0), 11.0, card.emblem

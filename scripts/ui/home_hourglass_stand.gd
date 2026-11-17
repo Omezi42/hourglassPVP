@@ -6,7 +6,7 @@ extends Control
 
 ## 砂時計はコード描画のサンド(落下中)。場の駒と同じ部品を、この台の大きさで1枚ぶん持つ
 ## (共有の動く絵は駒の大きさで描くため、ここへ引き伸ばすとぼやける)。
-const ART_KEY := HourglassArt.MASTER_ID
+const ART_KEY := "sand"
 const ART_STATE := HourglassArt.State.FALLING
 ## 台座は真鍮の円盤1枚(上面の楕円と側面の帯)。半径は砂時計の絵の高さに対する比で、
 ## 上面のつぶれと側面の厚みは半径に対する比。円盤の下に落ちる影のぶんだけ下を空ける。

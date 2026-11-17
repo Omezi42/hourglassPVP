@@ -1,106 +1,38 @@
 # 4.1 砂時計イラストの解像度と配置
 
-砂時計のイラストは、実行時に使うものと、それを作るための元データを明確に分ける。unityroom向けの
-Web配信ではpckのサイズがそのままロード時間に直結するため、**実行時に読まないファイルは
+砂時計の絵は**カードごとに1本のシェーダーで描き、ビルド前にPNGへ焼いて配る**(10.19節)。
+unityroom向けのWeb配信ではpckのサイズがそのままロード時間に直結するため、**実行時に読まないファイルは
 `.gdignore` を置いてGodotの管理外へ出す**(インポートもエクスポートもされなくなる)。
 
 | ディレクトリ | 内容 | Godotの扱い |
 |---|---|---|
-| `assets/hourglasses/master/state_*.png` | **実行時に読む唯一の砂時計の絵**(サンドの3状態)。幅400px基準 | インポートする |
-| `assets/hourglasses/master/region_*.png` | 原本の領域マスク(R=砂 / G=枠 / B=ガラスの内側)。質感と枠の素材に使う | インポートする(ロスレス) |
-| `assets/hourglasses/processed/{id}/` | 色違いを焼いた参考用の絵。**実行時には読まない** | `.gdignore` で無視 |
-| `assets/hourglasses/overrides/{id}/state_*.png` | そのカードだけの固有の絵(あれば色変換より優先)。コード描画のシェーダーからビルド前に焼いたもの(10.19節) | インポートする |
-| `assets/hourglasses/sources/{id}/` | 生成元(`source.png`)と縮小前の原寸`state_*.png` | `.gdignore` で無視 |
-| `assets/hourglasses/processed_backup/` | 正規化前の絵(現行とは内容が異なる) | `.gdignore` で無視 |
-| `assets/hourglasses/incoming/` | 取り込み待ちの生成画像 | `.gdignore` で無視 |
+| `assets/hourglasses/overrides/{id}/state_*.png` | **実行時に読む砂時計の絵**(3状態)。`resources/shaders/hourglasses/{id}.gdshader` から焼いたもの。動く絵の層(`frame_*` / `back_*`)も同じ場所 | インポートする |
 | `assets/hourglasses/emblems/{id}.png` | **カード固有の紋章**。白のシルエット192px | インポートする |
 | `assets/hourglasses/emblems/sources/` | 紋章の取り込み元SVG(icooon-mono) | `.gdignore` + `.gitignore` |
+| `assets/hourglasses/processed/{id}/` | 画像の絵だった頃の参考用の絵。Discord用の画像とすなえるの絵の土台に使う。**実行時には読まない** | `.gdignore` で無視 |
+| `assets/hourglasses/sources/` `processed_backup/` `incoming/` | 画像の絵だった頃の生成元 | `.gdignore` で無視 |
 
 紋章のPNGは `tools/build_emblem_icons.gd` がSVGから焼き直す。カードを追加したら、
 モチーフのSVGを `sources/{id}.svg` へ置いてこれを1度回す。
 
-## 絵は1組だけ持ち、色は実行時に付ける(GameDesign.md 9章)
-
-**全58種はサンドの絵1枚の色違いであり、輪郭は完全に一致する。**色違いを焼いた画像を
-種類の数だけ配ると、pckの7割(6.7MB)を同じ絵が占め、**カードを1種足すたびに約115KBずつ
-積み上がる**。そこで実行時に持つのは1組だけにし、色は数値として持つ。
-
 | クラス | 責務 |
 |---|---|
-| `HourglassTintTable`(`scripts/data/hourglass_tint_table.gd` + `data/hourglass_tints.tres`) | 絵のid → 「親のid + 色変換1段」の表。**親をたどると必ずサンドへ着く** |
-| `HourglassArt`(`scripts/logic/hourglass_art.gd`, staticのみ) | 表に従って絵を焼き、`Texture2D` として配る。`SoundBank` と同じ「Autoloadを使わずstaticで持つ」流儀 |
+| `HourglassSandTable`(`scripts/data/hourglass_sand_table.gd` + `data/hourglass_sands.tres`) | 絵のid → 砂の色(`sand`)と砂の質感(`texture`、任意)。シェーダー・手札の光だまり・共通のガラスが同じ1行を見る |
+| `HourglassArt`(`scripts/logic/hourglass_art.gd`, staticのみ) | 焼いた絵を読んで `Texture2D` として配る。焼いた絵が無いid(砂術)は null。`SoundBank` と同じ「Autoloadを使わずstaticで持つ」流儀 |
 
-色変換1段の定義は次のとおりで、`tools/tint_hourglass_icons.gd` の `_tint()` と同じもの
-(明度と彩度の下駄を足してある)。**1画素の色だけで決まる**ため、そのままシェーダになる。
-
-```
-s < threshold の画素は触らない   … 無彩色のガラスと輪郭を色付けしないため
-h' = h + hue
-s' = clamp(max(s * sat + sat_bias, floor), 0, 1)
-v' = clamp(v * value + value_bias, 0, 1)
-```
-
-- **焼くのは `SubViewport` + シェーダで、結果を `ImageTexture` として持つ。**描画側は
-  今までどおり `Texture2D` を受け取るだけで、`CardView` / `CardDetailPanel` /
-  `CardDeckShelf` / `CardDeckListScreen` のいずれも変更しない。
-  **描画のたびにシェーダを掛ける方式は採らない**。カードの絵は5つの画面がそれぞれ別の
-  描き方(`draw_texture_rect` と `TextureRect`)で出しており、5箇所へシェーダを配ると
-  1箇所書き漏らしただけで色が違うカードが出る
-- **`CardData.icon_upright` などはプロパティの getter へ変え、`.tres` からは絵への参照を外す。**
-  `.tres` が持つのは絵のidだけになる(既定はカードのid。ガード=`king` / グロウ=`judge` のように
-  別の絵を指す場合だけ `art_id` を書く)
-- **親から順に焼く。**深さは最大2段(サンド → 元絵9種 → その色違い)。親の焼き上がりを
-  次の段の入力にするため、シェーダは1段ぶんだけを知っていればよい
-- **焼き上がる前に配る `ImageTexture` は、サンドの絵で初期化しておき、焼けた時点で
-  `set_image()` で中身を差し替える。**同じオブジェクトを配り続けるので、受け取った側は
-  何も知らなくてよい。焼きは `Main._ready()` から始めて58フレーム(約1秒)で終わり、
-  その間はタイトル画面が出ているため、砂時計の絵は1枚も画面に無い
-- **固有の絵(`overrides/{id}/`)があればそれをそのまま配り、色変換を行わない**
-  (GameDesign.md 9章)
+- **`CardData.icon_upright` などはプロパティの getter で、`.tres` は絵への参照を持たない。**
+  絵のidはカードのidそのもの(`art_id` で別の絵を借りるのは砂術だけ。借りると2枚が同じ姿になるため)
+- **砂の質感は文字列で持つ**(grain / liquid / crystal / glow / stardust。無ければさらさら)。
+  `.tres` へ整数で残る enum の並び替え事故(Pitfalls.md)を避けるため
 
 ## コード描画の絵の取り込み(10.19節)
 
 `overrides/{id}/` の焼いた絵(state・frame・back)は**キャンバス(400x532)の半分の 200x266 で焼き**、非可逆のWebP・画質0.85で取り込む(焼く道具が `.import` を置く)。
 場の駒・図鑑の動く絵は高さ224で描き、手札・詳細はそれより小さいため、半分でも原寸と見分けが付かない。
-取り込み後は1種あたり約0.1MBで、全99種で約10MB。
-
-## 砂の質感と枠の素材(GameDesign.md 9章)
-
-表の1件は `texture`(grain / liquid / crystal / glow / stardust)と `frame`(wood / iron / brass /
-stone / ebony / porcelain)を任意で持つ。**無ければ既定(さらさら・染め)で、色変換だけの今までの絵と同じ。**
-値を文字列で持つのは、`.tres` へ整数で残る enum の並び替え事故(Pitfalls.md)を避けるため。
-
-- **原本の砂と木枠はほぼ同じ色(色相0.08・彩度0.6〜0.7)で、色では分けられない。**そこで原本3状態ごとに
-  領域マスク `region_*.png` を持つ。`tools/build_hourglass_regions.gd` が、ガラスの中央から暗い輪郭で止まる
-  塗りつぶしで「ガラスの内側」を求め、内側の有彩色を砂・外側の有彩色を枠とする。**原本を差し替えたら回し直す**
-- **仕上げは色変換の後の別の1回**(`resources/shaders/hourglass_finish.gdshader`)。入力は色変換後の絵・
-  同じ状態の原本・マスクの3枚。枠の素材は原本の明度から描くため、色変換で枠が何色に染まっていても同じ素材になる
-- **子の絵へ仕上げは継がない。**親を焼いた結果のうち、子の入力にするのは仕上げ前の絵(`_baked`)で、
-  配るのは仕上げ後の絵(`_published`)。質感は1枚ずつの見分けのためのものであり、親子で揃える理由がない
-- 模様は場の駒の大きさ(原本の約0.25倍)で潰れないよう、原本の画素で7〜30pxの単位で刻む
-- `tools/fit_hourglass_tints.py --write` は表を書き直すときに既存の `texture` / `frame` を引き継ぐ
-- 仕上げのあるidは参考用の絵(`processed/`)と一致しないため、`verify_hourglass_art.gd` は比べずに飛ばす
-
-**色の数値は `tools/fit_hourglass_tints.py` が現行の絵から逆算した。**既知の変換を持つ
-40種は完全に一致し(誤差1/255はPNGの丸め)、変換の記録が無い9種とその子8種は
-平均1.4〜4.3/255の近似になる。**この差は輪郭のコントラストがわずかに緩む形で出る**ため、
-数値を作り直したら現行の絵と並べて目で確かめること。
-
-解像度を幅400pxとしたのは、プロジェクト内で最大の表示サイズが`DeckEditorScreen`の
-カード(132x168)であり、基準解像度1280x720を4K全画面へ拡大した場合でも実効336px程度に
-収まるため。生成された1038x1330のまま使うと実行時に読む30枚だけで23MBを占める(縮小後は4.4MB)。
-2倍表示でも輪郭はぼけない。
-
-**Web版は色違いを原本の半分(幅200px)で焼く**(`HourglassArt.WEB_BAKE_SCALE`)。全カード×3状態の絵がGPUに常駐し、
-原寸では約150MBになってスマホのブラウザのメモリ上限に届くため(半分で約40MB)。焼き上がる前の器も同じ大きさで作る
-(`CardView` は絵の高さを1度だけ測って控えるため、途中で大きさが変わると絵が縮む)。質感の模様は原寸の画素で刻む。
-Discord用の画像を撮るデスクトップ版は原寸のまま焼く。
-
-縮小の際は、**一律のピクセルサイズへ揃えるのではなく、全画像へ同じ倍率を掛ける**。
-`state_falling`のみキャンバスが1077x1380で他の状態(1038x1330)と数%異なっており、
-同一サイズへ揃えると状態を切り替えたときに絵柄の大きさが跳ねてしまうため。
-
-新しい駒を追加する際の手順は `.claude/skills/add-hourglass/SKILL.md` に反映済み。
+取り込み後は1種あたり約0.1MBで、全101種で約10MB。半分にするのは、全カード×3状態の絵がGPUに常駐し、
+原寸ではスマホのブラウザのメモリ上限に届くため。
+焼いた絵が描き手(シェーダー・共通の部品・表の行)と食い違っていないかは、`tools/check_hourglass_bake.py` が
+`tools/hourglass_bake_manifest.json` のハッシュで確かめる(check.sh)。
 
 同じ理由から、**砂時計以外の取り込み元(`incoming/`)もすべて `.gdignore` で管理外に置く**。
 下記はいずれも実行時に参照されておらず(`assets/ui/`・`assets/buttons/` に残る記述は
@@ -132,9 +64,7 @@ unityroomはpckとwasmを**全部読み終えてから**ゲームが始まるた
   `lossy_quality=0.85`、背景は0.75。ロスレスのままだと砂時計63枚で7.6MB・
   背景2枚で5.2MBを占める。非可逆にすると合わせて1.7MBになり、
   実際にレンダリングして輪郭の劣化が見えないことを確認済み
-- **同じ絵の色違いを画像として配らない**(4.1節)。砂時計の絵は58種ぶんで6.7MBあり、
-  **pckの69%を1枚の絵の色違いが占めていた**。1組だけ配って色を実行時に付ける形にすると
-  0.12MBになり、**カードを増やしてもここは増えない**
+- **砂時計の絵は半分の大きさで焼く**(4.1節)。1種あたり約0.1MBで、カードを1種足すごとにここが増える
 - **背景は1920x1080を覆う最小サイズまで縮める**。基準解像度は1280x720であり、
   2752x1290のような原寸をそのまま持つ理由がない
 - **`tools/export_web.sh` は index.pck が前回より1MB以上増えたら止める**(前回の大きさは `tools/last_pck_size.txt`)。

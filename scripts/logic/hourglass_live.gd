@@ -186,7 +186,7 @@ static func load_layer(art_key: String, state: int, layer: String) -> Texture2D:
 
 
 static func layer_path(art_key: String, state: int, layer: String) -> String:
-	return "%s/%s/%s_%s.png" % [HourglassArt.OVERRIDE_DIR, art_key, layer, LAYER_STATES[state]]
+	return "%s/%s/%s_%s.png" % [HourglassArt.ART_DIR, art_key, layer, LAYER_STATES[state]]
 
 
 ## `Host._process()` から毎フレーム。時計を渡し、引かれていない絵を止める。

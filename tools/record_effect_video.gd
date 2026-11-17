@@ -28,8 +28,6 @@ func _ready() -> void:
 		get_tree().quit(1)
 		return
 	var info_path: String = args[1] if args.size() > 1 else ""
-	# 色変換の焼き付けを待ってから組む(Pitfalls.md / HourglassArt 冒頭のコメント)。
-	await HourglassArt.ensure_ready_and_wait(self)
 	SoundBank.ensure_ready(self)
 
 	_preview = CardEffectPreview.new()

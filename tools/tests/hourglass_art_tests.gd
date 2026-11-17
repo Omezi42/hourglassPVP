@@ -1,51 +1,32 @@
 extends RefCounted
-## 砂時計の絵を色の数値から作る仕組みの検証(Architecture.md 4.1節)。
-## 焼き付けそのものは描画器が要るため `tools/tests/verify_hourglass_art.gd` で確かめる。
-## ここでは表とカードの結びつきだけを見る(カードを足したときに色を書き忘れると落ちる)。
+## 砂時計の絵の表とカードの結びつきの検証(Architecture.md 4.1節)。
+## カードを足したときに、シェーダー・焼いた絵・表の行のどれかを書き忘れると落ちる。
+## 焼いた絵が描き手のシェーダーと食い違っていないかは `tools/check_hourglass_bake.py` が見る。
+
+const SHADER_DIR := "res://resources/shaders/hourglasses"
 
 
 func run(assert_true: Callable) -> void:
-	var table: HourglassTintTable = load(HourglassArt.TABLE_PATH)
-	assert_true.call(table != null, "色の表が読める")
-	assert_true.call(table.has(HourglassArt.MASTER_ID), "原本が表にある")
-	assert_true.call(table.source_of(HourglassArt.MASTER_ID).is_empty(), "原本に親はいない")
-
-	for state in HourglassArt.STATE_FILES.size():
-		var path := "%s/%s.png" % [HourglassArt.MASTER_DIR, HourglassArt.STATE_FILES[state]]
-		assert_true.call(ResourceLoader.exists(path), "原本の絵がある: " + path)
-
-	for state in HourglassArt.STATE_FILES.size():
-		var path := (
-			HourglassArt.REGION_FILE % [HourglassArt.MASTER_DIR, HourglassArt.STATE_FILES[state]]
-		)
-		assert_true.call(ResourceLoader.exists(path), "原本の領域マスクがある: " + path)
+	var table: HourglassSandTable = load(HourglassArt.TABLE_PATH)
+	assert_true.call(table != null, "砂の色の表が読める")
 
 	for art_id in table.entries.keys():
-		var entry: Dictionary = table.entries[art_id]
-		if entry.has("texture"):
-			var texture := String(entry["texture"])
-			assert_true.call(
-				HourglassArt.TEXTURES.has(texture), "%s の砂の質感が既知(%s)" % [art_id, texture]
-			)
-		if entry.has("frame"):
-			var frame := String(entry["frame"])
-			assert_true.call(HourglassArt.FRAMES.has(frame), "%s の枠の素材が既知(%s)" % [art_id, frame])
-		var chain := table.chain(String(art_id))
-		var depth := chain.size()
-		assert_true.call(depth <= 2, "%s の変換は2段まで" % art_id)
-		if String(art_id) != HourglassArt.MASTER_ID:
-			assert_true.call(depth >= 1, "%s は原本から作られる" % art_id)
+		var texture := table.texture_of(String(art_id))
+		assert_true.call(HourglassArt.TEXTURES.has(texture), "%s の砂の質感が既知(%s)" % [art_id, texture])
 
 	var cards := CardLibrary.all_cards()
 	assert_true.call(cards.size() > 0, "カードが読める")
 	for card in cards:
-		# 砂術は砂時計の絵を持たない(GameDesign.md 6章)。色の表にも載らない。
+		# 砂術は砂時計の絵を持たない(GameDesign.md 6章)。
 		if card.is_spell:
 			continue
 		var key := card.art_key()
-		assert_true.call(not key.is_empty(), "%s に絵のidがある" % card.id)
-		assert_true.call(table.has(key), "%s の色が表にある(%s)" % [card.id, key])
-		# 固有の絵はそのカード1枚のもの。借りると別のカードまで同じ固有の絵になる。
-		var unique := "%s/%s/%s.png" % [HourglassArt.OVERRIDE_DIR, key, HourglassArt.STATE_FILES[0]]
-		if ResourceLoader.exists(unique):
-			assert_true.call(key == card.id, "%s が他のカードの固有の絵を借りていない(%s)" % [card.id, key])
+		assert_true.call(key == card.id, "%s が他のカードの絵を借りていない(%s)" % [card.id, key])
+		assert_true.call(table.has(key), "%s の砂の色が表にある" % card.id)
+		var shader := "%s/%s.gdshader" % [SHADER_DIR, key]
+		assert_true.call(ResourceLoader.exists(shader), "%s を描くシェーダーがある" % card.id)
+		for state in HourglassArt.STATE_FILES.size():
+			assert_true.call(
+				HourglassArt.texture(key, state) != null,
+				"%s の焼いた絵がある(%s)" % [card.id, HourglassArt.STATE_FILES[state]]
+			)

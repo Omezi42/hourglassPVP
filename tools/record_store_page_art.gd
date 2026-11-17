@@ -30,7 +30,6 @@ func _ready() -> void:
 	var args := OS.get_cmdline_user_args()
 	_out_dir = args[0] if not args.is_empty() else "user://store_page_art"
 	DirAccess.make_dir_recursive_absolute(_out_dir)
-	await HourglassArt.ensure_ready_and_wait(self)
 	await _banner()
 	await _cover()
 	await _embed_bg()

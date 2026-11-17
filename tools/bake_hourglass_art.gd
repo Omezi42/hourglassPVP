@@ -148,7 +148,7 @@ static func source_hash(art_key: String) -> String:
 	return context.finish().hex_encode()
 
 
-## 表(`data/hourglass_tints.tres`)のそのカードの行。
+## 表(`data/hourglass_sands.tres`)のそのカードの行。
 static func table_row(art_key: String) -> String:
 	var prefix := '"%s": {' % art_key
 	for line in FileAccess.get_file_as_string(HourglassArt.TABLE_PATH).split("\n"):

@@ -46,8 +46,8 @@ void art_frame(inout vec4 acc, Px f) { ... }
 ```
 
 - **`clock` と時間で動く式を使わない**(焼くときは0で評価され、実行時には使われないため)
-- **砂の色は uniform `sand_color` で外から渡し、値は色違いの表(`HourglassTintTable`)のそのカードの行から取る**(コード描画のカードの行は色変換の連鎖ではなく `sand` = [r, g, b] で持ち、質感は `texture`)。
-  手札の光だまり(`HourglassArt.accent_color()`)・色違いの絵・シェーダーの絵が同じ1行を見るため、色の出どころが1つに保てる(9章「いまの色を引き継ぐ」)
+- **砂の色は uniform `sand_color` で外から渡し、値は表(`HourglassSandTable`・`data/hourglass_sands.tres`)のそのカードの行から取る**(`sand` = [r, g, b]、質感は `texture`)。
+  手札の光だまり(`HourglassArt.accent_color()`)・共通のガラス・シェーダーの絵が同じ1行を見るため、色の出どころが1つに保てる(9章「いまの色を引き継ぐ」)
 - **砂の質感は uniform にしない。**6種の分岐が全部コンパイルされ、1.3〜1.5倍重くなるため。表の質感で `glass_{kind}` を選ぶ
 - 400x532 の矩形へ描く(基本の絵の落下中と同じ高さ)。座標は基本の絵と同じで、上へ19px広いぶんを天板の上の飾りに使う
 - 外から渡すのは `sand_color` と `sand_top` / `sand_bottom` / `flow`(上向き=0.85/0/0、落下中=0.45/0.40/1、落ちきり=0/0.85/0)、

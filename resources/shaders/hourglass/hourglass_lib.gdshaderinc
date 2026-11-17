@@ -6,7 +6,7 @@ const int KIND_CRYSTAL = 3;
 const int KIND_GLOW = 4;
 const int KIND_STARDUST = 5;
 
-// 砂の色。色違いの表(HourglassTintTable)のそのカードの行から渡す。
+// 砂の色。表(HourglassSandTable)のそのカードの行から渡す。
 uniform vec3 sand_color : source_color = vec3(0.93, 0.66, 0.24);
 uniform vec3 frame_color : source_color = vec3(0.75, 0.47, 0.24);
 uniform vec3 trim_color : source_color = vec3(0.86, 0.66, 0.30);

@@ -92,8 +92,6 @@ func _ready() -> void:
 	clip_contents = true
 	var label_font := get_theme_font("font", "Label")
 	_font = label_font if label_font != null else ThemeDB.fallback_font
-	# 色違いの絵は起動後に焼き付けるため、焼き上がるまで台本を進めない。
-	await HourglassArt.ensure_ready_and_wait(self)
 	for state in HourglassArt.State.values():
 		_art.append(HourglassArt.texture(HERO_ID, state))
 

@@ -87,10 +87,9 @@ docs直下に置くのはこの9ファイル(+ `design/` `arch/` の本文)だ�
 
 # アセット
 
-- **UIクローム(ボタン・パネル・枠)はコード描画**。砂時計のイラストと背景だけを画像として扱う
-- **新カードのイラストは既存の絵の色違い**が既定(`tools/tint_hourglass_icons.gd` の表へ1行足す)。
-  固有の絵が要るときはユーザーが `docs/AssetPromptTemplate.md` で生成・透過し、Claude Codeは取り込みだけを行う。
-  画像生成そのものを代行しない。プロンプト文を1枚ずつ組み立てて提示しない
+- **UIクローム(ボタン・パネル・枠)はコード描画**。背景だけを画像として扱う
+- **砂時計のイラストはカードごとにシェーダーを1本書き、PNGへ焼く**(`resources/shaders/hourglasses/{id}.gdshader`、
+  砂の色は `data/hourglass_sands.tres` へ1行。Architecture.md 10.19節)。画像生成は使わない
 - 手順は `.claude/skills/add-hourglass/SKILL.md`(「新しい砂時計を追加して」で起動)
 
 # ビルドと更新のお知らせ

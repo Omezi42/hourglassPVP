@@ -30,9 +30,8 @@
   `AccountService` / `AccountStore` のスキンの読み書き・`assets/hourglasses/skins/`・`tools/compose_skin_art.py` を消し、`CardData.icon_*` は `HourglassArt.texture()` を直に返す
 - [x] 飾りの動きをやめる: 9種の動きを止めた絵(後ろ・枠の層)へ移し、動く絵は焼いたPNG+共通のガラスだけにした(動くのは砂だけ)
 - [ ] #お知らせでのスキン廃止と補償(プレゼント「スキン廃止のおわび」)の案内は、次のビルドのお知らせで
-- [ ] `add-hourglass` Skill と CLAUDE.md の「新カードのイラストは既存の絵の色違い」を「シェーダーを1本書いて焼く」へ改める
 - [x] 全種(101種)の砂時計をシェーダーで描き、半分の大きさで焼いた
-- [ ] 全種を描き終えたら、色違いの仕組み(色変換のシェーダー・原本・`tools/tint_hourglass_icons.gd` ほか)を消し、紋章が要るかを見直す
+- [x] 色違いの仕組み(色変換・仕上げのシェーダー・原本・`tools/tint_hourglass_icons.gd` ほか)を消し、表は砂の色と質感だけの `data/hourglass_sands.tres` にした。紋章は小さな表示・砂術・演出で使うため残す
 
 ### 見た目の弱点の磨き込み(Fable)
 

@@ -1,292 +1,50 @@
 class_name HourglassArt
 extends RefCounted
-## 砂時計の絵を、原本1組(サンドの3状態)から色変換で作って配る(Architecture.md 4.1節)。
+## 砂時計の絵を配る(Architecture.md 4.1節)。
 ##
-## 全58種は同じ絵の色違いであり、色違いを焼いた画像を配ると pck の7割を1枚の絵が占める。
-## ここが1組だけを持つことで、**カードを何種増やしても配布物は大きくならない**。
-##
+## 絵はカードごとに1本のシェーダー(`resources/shaders/hourglasses/{id}.gdshader`)で描き、
+## `tools/bake_hourglass_art.gd` が3状態を半分の大きさのPNGへ焼いておく。ここはそれを読んで返すだけ。
 ## `SoundBank` と同じ「Autoloadを使わずstaticで持つ」流儀。
-## 配るのは `ImageTexture` で、焼き上がるまでは原本の中身を入れておき、
-## 焼けた時点で同じオブジェクトの中身を差し替える(受け取った側は何も知らなくてよい)。
 
 enum State { UPRIGHT, FALLING, FALLEN }
 
 const STATE_FILES: Array[String] = ["state_full", "state_falling", "state_empty"]
-const MASTER_ID := "sand"
-const MASTER_DIR := "res://assets/hourglasses/master"
-const OVERRIDE_DIR := "res://assets/hourglasses/overrides"
-const TABLE_PATH := "res://data/hourglass_tints.tres"
-const SHADER_PATH := "res://resources/shaders/hourglass_tint.gdshader"
-const FINISH_SHADER_PATH := "res://resources/shaders/hourglass_finish.gdshader"
-## 原本の領域マスク(R=砂 / G=枠 / B=ガラスの内側)。tools/build_hourglass_regions.gd が焼く。
-const REGION_FILE := "%s/region_%s.png"
-## 表の `texture` / `frame` の値。並びはシェーダの定数と対応する(先頭の空文字が既定)。
+const ART_DIR := "res://assets/hourglasses/overrides"
+const TABLE_PATH := "res://data/hourglass_sands.tres"
+## 表の `texture` の値(先頭の空文字が既定のさらさら)。共通のガラスのシェーダーを選ぶ。
 const TEXTURES: Array[String] = ["", "grain", "liquid", "crystal", "glow", "stardust"]
-const FRAMES: Array[String] = ["", "wood", "iron", "brass", "stone", "ebony", "porcelain"]
-## 原本(サンド)の砂の色。ここへ表の色変換を順に当てると、その絵の砂の色になる。
-const MASTER_SAND := Color(0.93, 0.66, 0.24, 1.0)
-## Web版は色違いを原本の半分の解像度で焼く。全カード×3状態の絵がGPUに常駐するため、
-## 原寸のままだとスマホのブラウザのメモリ上限に届く。撮影ツールのあるデスクトップは原寸。
-const WEB_BAKE_SCALE := 0.5
+## 表に無いid(砂術など)の砂の色。看板のカード(サンド)と同じ。
+const DEFAULT_SAND := Color(0.93, 0.66, 0.24, 1.0)
 
-static var _table: HourglassTintTable = null
-static var _published: Dictionary = {}
-static var _baked: Dictionary = {}
-static var _overrides: Dictionary = {}
-static var _viewport: SubViewport = null
-static var _rect: ColorRect = null
-static var _tint_material: ShaderMaterial = null
-static var _finish_material: ShaderMaterial = null
-static var _baking := false
-## そのカードの砂の色(手札の窓の光だまりなどに使う)。絵のidごとに1度求めて控える。
-static var _accents: Dictionary = {}
+static var _table: HourglassSandTable = null
+static var _textures: Dictionary = {}
 
 
-## 起動時に1度だけ呼ぶ(Main._ready())。焼き付けはフレームをまたぐため、
-## 呼んだ側は待たなくてよい。タイトル画面には砂時計の絵が1枚も無い。
-static func ensure_ready(parent: Node) -> void:
-	if not _prepare(parent):
-		return
-	_bake_all()
-
-
-## `ensure_ready()` と同じ準備を行うが、**全カードの色変換が終わるまで待つ**。
-## 対局画面のように非同期のままでよい場面では使わない。撮影ツール
-## (`tools/export_discord_card_art.gd`)のように、焼き上がる前の絵(=サンドの
-## プレースホルダー)を読んでしまうと全カードが同じ色になる場面でだけ使う
-## (実際にDiscordの`/card`用画像がこれで全部サンド色になった)。
-static func ensure_ready_and_wait(parent: Node) -> void:
-	if not _prepare(parent):
-		return
-	await _bake_all()
-
-
-## `_viewport` の初期化。既に済んでいれば false を返す。
-static func _prepare(parent: Node) -> bool:
-	if _viewport != null:
-		return false
-	_load_table()
-	_viewport = SubViewport.new()
-	_viewport.transparent_bg = true
-	_viewport.disable_3d = true
-	_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
-	_rect = ColorRect.new()
-	_rect.anchor_right = 1.0
-	_rect.anchor_bottom = 1.0
-	_tint_material = ShaderMaterial.new()
-	_tint_material.shader = load(SHADER_PATH)
-	_finish_material = ShaderMaterial.new()
-	_finish_material.shader = load(FINISH_SHADER_PATH)
-	_rect.material = _tint_material
-	_viewport.add_child(_rect)
-	parent.add_child(_viewport)
-	return true
-
-
-## その絵の1状態を返す。焼き上がっていなければ原本の中身が入った器を返し、
-## 焼けた時点で中身だけが入れ替わる。
+## その絵の1状態。焼いた絵が無いid(砂術)は null。
 static func texture(art_id: String, state: int) -> Texture2D:
-	var override := _override(art_id, state)
-	if override != null:
-		return override
 	var key := "%s|%d" % [art_id, state]
-	if _published.has(key):
-		return _published[key]
-	var image := _master_image(state)
-	var made: ImageTexture = null
-	if image != null:
-		# 焼き上がりと同じ大きさにしておく(カード側は絵の大きさを1度だけ測って控える)。
-		var size := _bake_size(state)
-		if image.get_size() != size:
-			image = image.duplicate()
-			image.resize(size.x, size.y, Image.INTERPOLATE_LANCZOS)
-		made = ImageTexture.create_from_image(image)
-	_published[key] = made
-	return made
+	if _textures.has(key):
+		return _textures[key]
+	var path := "%s/%s/%s.png" % [ART_DIR, art_id, STATE_FILES[state]]
+	var found: Texture2D = load(path) if ResourceLoader.exists(path) else null
+	_textures[key] = found
+	return found
 
 
-## その絵の砂の色。原本の砂の色へ表の色変換(色相の回転・彩度・明度)を順に当てて求める。
-## 画像を読まないため焼き上がりを待たずに引ける。固有の絵を持つカードや表に無いidは原本の色。
+## その絵の砂の色(手札の窓の光だまりなどに使う)。
 static func accent_color(art_id: String) -> Color:
-	if _accents.has(art_id):
-		return _accents[art_id]
 	_load_table()
-	var color := MASTER_SAND
-	if _table != null and _table.has_sand(art_id):
-		color = _table.sand_of(art_id)
-	elif _table != null:
-		for step in _table.chain(art_id):
-			var h := fmod(color.h + float(step.get("hue", 0.0)), 1.0)
-			var sat := clampf(
-				maxf(
-					color.s * float(step.get("sat", 1.0)) + float(step.get("sat_bias", 0.0)),
-					float(step.get("floor", 0.0))
-				),
-				0.0,
-				1.0
-			)
-			var v := clampf(
-				color.v * float(step.get("value", 1.0)) + float(step.get("value_bias", 0.0)),
-				0.0,
-				1.0
-			)
-			color = Color.from_hsv(h, sat, v)
-	_accents[art_id] = color
-	return color
+	if _table != null and _table.has(art_id):
+		return _table.sand_of(art_id)
+	return DEFAULT_SAND
 
 
-## その絵の砂の質感の名前(表の `texture`。無ければ空文字=さらさら)。コード描画の共通のガラスを選ぶ。
+## その絵の砂の質感の名前(無ければ空文字=さらさら)。コード描画の共通のガラスを選ぶ。
 static func texture_name(art_id: String) -> String:
 	_load_table()
-	if _table == null or not _table.has(art_id):
-		return ""
-	return String((_table.entries[art_id] as Dictionary).get("texture", ""))
-
-
-## 固有の絵(色違いでは足りないカード)。あればそれをそのまま使う。
-static func _override(art_id: String, state: int) -> Texture2D:
-	var key := "%s|%d" % [art_id, state]
-	if _overrides.has(key):
-		return _overrides[key]
-	var path := "%s/%s/%s.png" % [OVERRIDE_DIR, art_id, STATE_FILES[state]]
-	var found: Texture2D = load(path) if ResourceLoader.exists(path) else null
-	_overrides[key] = found
-	return found
+	return _table.texture_of(art_id) if _table != null else ""
 
 
 static func _load_table() -> void:
 	if _table == null:
 		_table = load(TABLE_PATH)
-
-
-static func _master_image(state: int) -> Image:
-	var key := "%s|%d" % [MASTER_ID, state]
-	if _baked.has(key):
-		return _baked[key]
-	var path := "%s/%s.png" % [MASTER_DIR, STATE_FILES[state]]
-	var texture: Texture2D = load(path) if ResourceLoader.exists(path) else null
-	if texture == null:
-		push_error("砂時計の原本が見つかりません: " + path)
-		return null
-	var image := texture.get_image()
-	_baked[key] = image
-	return image
-
-
-## 親が先に焼き上がるよう、原本からの段数の浅い順に並べて焼く。
-static func _bake_all() -> void:
-	if _table == null or _baking:
-		return
-	_baking = true
-	var ordered := _ordered_ids()
-	for art_id in ordered:
-		for state in STATE_FILES.size():
-			await _bake(art_id, state)
-	_baking = false
-	# 焼き終えたCPU側の生画像(全カード×3状態ぶん)は、以後 texture() が
-	# 読まない(published済みのGPUテクスチャだけを返す)。持ち続けるとカードが
-	# 増えるほど際限なく積み上がる永続メモリになるため、ここで手放す
-	# (Webでのモバイルブラウザのメモリ上限対策)。
-	_free_baked_images()
-
-
-## `_baked`(生のImage)を手放す。焼き付け完了後は`texture()`が参照しない。
-static func _free_baked_images() -> void:
-	_baked.clear()
-
-
-static func _ordered_ids() -> Array[String]:
-	var ranked: Array = []
-	for art_id in _table.entries.keys():
-		if String(art_id) == MASTER_ID:
-			continue
-		ranked.append([_table.chain(String(art_id)).size(), String(art_id)])
-	ranked.sort_custom(func(a, b): return a[0] < b[0])
-	var ids: Array[String] = []
-	for row in ranked:
-		ids.append(row[1])
-	return ids
-
-
-static func _bake(art_id: String, state: int) -> void:
-	# 固有の絵を持つidでも、子の入力になる色違いは焼いて控える(子は親の色違いから作るため)。
-	var overridden := _override(art_id, state) != null
-	if overridden and not _is_parent(art_id):
-		return
-	var source_id := _table.source_of(art_id)
-	var source: Image = _baked.get("%s|%d" % [source_id, state], null)
-	if source == null:
-		source = _master_image(state)
-	if source == null:
-		return
-	var step: Dictionary = _table.entries[art_id]
-	var tint := _tint_material
-	tint.set_shader_parameter("hue_shift", float(step.get("hue", 0.0)))
-	tint.set_shader_parameter("saturation", float(step.get("sat", 1.0)))
-	tint.set_shader_parameter("saturation_bias", float(step.get("sat_bias", 0.0)))
-	tint.set_shader_parameter("saturation_floor", float(step.get("floor", 0.0)))
-	tint.set_shader_parameter("value_scale", float(step.get("value", 1.0)))
-	tint.set_shader_parameter("value_bias", float(step.get("value_bias", 0.0)))
-	tint.set_shader_parameter("threshold", float(step.get("threshold", 0.0)))
-	tint.set_shader_parameter("source_art", ImageTexture.create_from_image(source))
-	var baked := await _render(_tint_material, _bake_size(state))
-	# 子の入力にするのは仕上げ前の絵(質感と枠は1枚ずつのもので、親子で継がない)。
-	# 子を持たない絵の生画像まで控えると、焼き終えるまで全カードぶんが積み上がる。
-	if _is_parent(art_id):
-		_baked["%s|%d" % [art_id, state]] = baked
-	if overridden:
-		return
-	if has_finish(art_id):
-		baked = await _finish(art_id, state, baked)
-	var key := "%s|%d" % [art_id, state]
-	if _published.has(key) and _published[key] != null:
-		(_published[key] as ImageTexture).set_image(baked)
-	else:
-		_published[key] = ImageTexture.create_from_image(baked)
-
-
-static func _is_parent(art_id: String) -> bool:
-	for entry in _table.entries.values():
-		if String((entry as Dictionary).get("source", "")) == art_id:
-			return true
-	return false
-
-
-## その絵が砂の質感か枠の素材を持つか(GameDesign.md 9章)。
-static func has_finish(art_id: String) -> bool:
-	_load_table()
-	if _table == null or not _table.has(art_id):
-		return false
-	var entry: Dictionary = _table.entries[art_id]
-	return entry.has("texture") or entry.has("frame")
-
-
-static func _finish(art_id: String, state: int, tinted: Image) -> Image:
-	var entry: Dictionary = _table.entries[art_id]
-	var region_path := REGION_FILE % [MASTER_DIR, STATE_FILES[state]]
-	var master_path := "%s/%s.png" % [MASTER_DIR, STATE_FILES[state]]
-	var material := _finish_material
-	material.set_shader_parameter("source_art", ImageTexture.create_from_image(tinted))
-	material.set_shader_parameter("master_art", load(master_path))
-	material.set_shader_parameter("region", load(region_path))
-	# 質感の模様は原寸の画素で刻む(縮めて焼いても粒の大きさを変えない)。
-	material.set_shader_parameter("px_size", Vector2(_master_image(state).get_size()))
-	material.set_shader_parameter("texture_kind", maxi(TEXTURES.find(entry.get("texture", "")), 0))
-	material.set_shader_parameter("frame_kind", maxi(FRAMES.find(entry.get("frame", "")), 0))
-	material.set_shader_parameter("sand_color", accent_color(art_id))
-	return await _render(material, tinted.get_size())
-
-
-static func _bake_size(state: int) -> Vector2i:
-	var size := _master_image(state).get_size()
-	if not OS.has_feature("web"):
-		return size
-	return Vector2i((Vector2(size) * WEB_BAKE_SCALE).round())
-
-
-static func _render(material: ShaderMaterial, size: Vector2i) -> Image:
-	_rect.material = material
-	_viewport.size = size
-	_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
-	await RenderingServer.frame_post_draw
-	return _viewport.get_texture().get_image()

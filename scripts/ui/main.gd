@@ -250,7 +250,6 @@ func _ready() -> void:
 	home_screen.room_match_requested.connect(_unless_ranked_wait.bind(_on_room_match_requested))
 	NetSession.ensure_ready(self)
 	FunnelService.on_launch()
-	HourglassArt.ensure_ready(self)
 	HourglassLive.ensure_ready(self)
 	SoundBank.ensure_ready(self)
 	SoundBank.wire_tree(self)

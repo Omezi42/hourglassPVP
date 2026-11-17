@@ -93,9 +93,6 @@ var _caption_sub: Label
 func _ready() -> void:
 	anchor_right = 1.0
 	anchor_bottom = 1.0
-	# 色変換の焼き付けを待ってから画面を組む(Pitfalls.md/HourglassArt冒頭のコメント)。
-	# 待つ間は何も足していない黒地のままなので、頭に余計なコマが入っても幕は要らない。
-	await HourglassArt.ensure_ready_and_wait(self)
 	_start_audio()
 	var host := _screen_host()
 	title_screen = load("res://scenes/title_screen.tscn").instantiate()

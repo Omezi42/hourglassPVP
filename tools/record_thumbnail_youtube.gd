@@ -40,7 +40,6 @@ var _display_font: Font
 func _ready() -> void:
 	theme = load("res://resources/theme/main_theme.tres")
 	_display_font = UiFonts.display_font(_font())
-	await HourglassArt.ensure_ready_and_wait(self)
 	for id in [HERO_ID, ENEMY_ID]:
 		var frames: Array[Texture2D] = []
 		for state in HourglassArt.State.values():

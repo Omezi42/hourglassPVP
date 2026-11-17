@@ -13,7 +13,7 @@ from PIL import Image, ImageChops, ImageDraw, ImageFilter
 
 SIZE = 512
 BACKGROUND = Path("assets/backgrounds/processed/home/background.png")
-HOURGLASS = Path("assets/hourglasses/master/state_falling.png")
+HOURGLASS = Path("assets/hourglasses/processed/sand/state_falling.png")
 OUT = Path("tools/discord/out/server_icon.png")
 
 SLATE_TOP = (26, 28, 36)
