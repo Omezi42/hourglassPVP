@@ -1153,61 +1153,101 @@
 		"date": "2026-11-23",
 		"kind": "puzzle",
 		"id": "58",
-		"label": "とどめ問題 #58"
+		"label": "とどめ問題 #58",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-11-23",
 		"kind": "card",
 		"id": "middle",
-		"label": "ミドル"
+		"label": "ミドル",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-11-24",
 		"kind": "puzzle",
 		"id": "59",
-		"label": "とどめ問題 #59"
+		"label": "とどめ問題 #59",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-11-24",
 		"kind": "card",
 		"id": "mirror",
-		"label": "ミラー"
+		"label": "ミラー",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-11-25",
 		"kind": "puzzle",
 		"id": "60",
-		"label": "とどめ問題 #60"
+		"label": "とどめ問題 #60",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-11-25",
 		"kind": "card",
 		"id": "glass",
-		"label": "グラス"
+		"label": "グラス",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-11-26",
 		"kind": "puzzle",
 		"id": "61",
-		"label": "とどめ問題 #61"
+		"label": "とどめ問題 #61",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-11-26",
 		"kind": "card",
 		"id": "glow",
-		"label": "グロウ"
+		"label": "グロウ",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-11-27",
 		"kind": "puzzle",
 		"id": "62",
-		"label": "とどめ問題 #62"
+		"label": "とどめ問題 #62",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-11-27",
 		"kind": "card",
 		"id": "sword",
-		"label": "ソード"
+		"label": "ソード",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-11-28",
