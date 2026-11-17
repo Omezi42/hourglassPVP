@@ -26,5 +26,4 @@ effects = Array[Resource]([SubResource("Effect_relic_0")])
 rules_text = "設置:自分の墓地の砂時計1体を選び、手札に戻す"
 cannot_attack = false
 is_token = false
-art_id = "legacy"
 emblem = ExtResource("emblem")
