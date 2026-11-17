@@ -2,13 +2,12 @@ class_name HomeHourglassStand
 extends Control
 ## ホーム中央の台座に載った砂時計(GameDesign.md 9章)。首から下の部屋へ砂が細く落ち続け、押すと上下に半回転する。
 ## 触って遊ぶためのもので、押しても何も起きない(対局の入口は下の「対戦する」ボタン)。
-## 砂の流れは見た目だけで、上の部屋の砂は減らない。
+## 砂の流れは絵のシェーダーが描く見た目だけで、上の部屋の砂は減らない。
 
-const ART := preload("res://assets/hourglasses/master/state_falling.png")
-## 絵の中の首と、下の部屋の砂山の頂(絵の高さに対する比)。流れの粒はこの間を落ちる。
-const NECK_Y := 0.49
-const PILE_Y := 0.69
-const STREAM_X := 0.5
+## 砂時計はコード描画のサンド(落下中)。場の駒と同じ部品を、この台の大きさで1枚ぶん持つ
+## (共有の動く絵は駒の大きさで描くため、ここへ引き伸ばすとぼやける)。
+const ART_KEY := HourglassArt.MASTER_ID
+const ART_STATE := HourglassArt.State.FALLING
 ## 台座は真鍮の円盤1枚(上面の楕円と側面の帯)。半径は砂時計の絵の高さに対する比で、
 ## 上面のつぶれと側面の厚みは半径に対する比。円盤の下に落ちる影のぶんだけ下を空ける。
 const PEDESTAL_RADIUS := 0.40
@@ -29,22 +28,13 @@ const GLOW_WIDE := Color(1.0, 0.80, 0.45, 0.30)
 const GLOW_WIDE_RADII := Vector2(1.25, 1.0)
 const GLOW_CORE := Color(1.0, 0.90, 0.65, 0.22)
 const GLOW_CORE_RADII := Vector2(0.6, 0.62)
-## 首から砂山まで細く見える砂の糸(粒の後ろ)。
-const THREAD_WIDTH := 1.6
-const THREAD_COLOR := Color(1.0, 0.80, 0.45, 0.35)
-
-const GRAIN_COUNT := 7
-## 粒が首から砂山まで落ちきる秒数。
-const FALL_SECONDS := 0.55
-const GRAIN_SIZE := 2.4
-const GRAIN_COLOR := Color(1.0, 0.82, 0.48, 0.95)
-## 粒の横の揺れ(絵の幅に対する比)。
-const GRAIN_JITTER := 0.012
-
 const FLIP_SECONDS := 0.55
 const FLIP_HOP := 14.0
 
 var _clock := 0.0
+var _stack: HourglassLive.Stack = null
+## 砂時計の絵(動く絵が作れないときは焼いた止め絵)。
+var _art: Texture2D = null
 ## 半回転の進み(0〜1)。回っている間は流れを止める。
 var _flip := 0.0
 var _flip_tween: Tween
@@ -55,11 +45,45 @@ func _init() -> void:
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 
 
+func _ready() -> void:
+	_art = HourglassArt.texture(ART_KEY, ART_STATE)
+	resized.connect(_rebuild_stack)
+	_rebuild_stack()
+
+
 func _process(delta: float) -> void:
-	if not is_visible_in_tree():
+	if not is_visible_in_tree() or _stack == null:
 		return
-	_clock = fmod(_clock + delta, FALL_SECONDS * float(GRAIN_COUNT))
+	_clock += delta
+	_stack.set_time(_clock)
 	queue_redraw()
+
+
+## 台の大きさに合わせて動く絵を作り直す。キャンバスの原寸より大きくはしない。
+func _rebuild_stack() -> void:
+	if not HourglassLive.has_shader(ART_KEY) or size.y <= 0.0:
+		return
+	var canvas := Vector2(HourglassLive.CANVAS)
+	var height := minf(_art_height(), canvas.y)
+	var pixels := Vector2i(roundi(height * canvas.x / canvas.y), roundi(height))
+	if _stack != null and _stack.viewport.size == pixels:
+		return
+	if _stack != null:
+		_stack.viewport.queue_free()
+	_stack = HourglassLive.make_stack(
+		ART_KEY,
+		ART_STATE,
+		HourglassLive.load_layer(ART_KEY, ART_STATE, HourglassLive.LAYER_BACK),
+		HourglassLive.load_layer(ART_KEY, ART_STATE, HourglassLive.LAYER_FRAME),
+		pixels
+	)
+	_stack.set_time(_clock)
+	add_child(_stack.viewport)
+	_art = _stack.texture
+
+
+func _art_height() -> float:
+	return size.y / (1.0 + PEDESTAL_RESERVE)
 
 
 func _gui_input(event: InputEvent) -> void:
@@ -95,41 +119,22 @@ func _set_flip(value: float) -> void:
 
 func _draw() -> void:
 	var ci := get_canvas_item()
-	var art_h := size.y / (1.0 + PEDESTAL_RESERVE)
-	var art_w := art_h * float(ART.get_width()) / float(ART.get_height())
+	if _art == null:
+		return
+	var art_h := _art_height()
+	var art_w := art_h * float(_art.get_width()) / float(_art.get_height())
 	var art := Rect2(Vector2((size.x - art_w) * 0.5, 0.0), Vector2(art_w, art_h))
 	var feet := Vector2(size.x * 0.5, art_h)
 	UiKit.glow(ci, feet - Vector2(0, art_h * 0.55), GLOW_WIDE_RADII * art_h, GLOW_WIDE)
 	UiKit.glow(ci, feet - Vector2(0, art_h * 0.5), GLOW_CORE_RADII * art_h, GLOW_CORE)
 	_draw_pedestal(feet + Vector2(0, FEET_LIFT), art_h * PEDESTAL_RADIUS)
 	var center := art.get_center()
-	var turning := _flip > 0.0
 	# 枠は上下対称のため、回りきったら元の向きの絵へ戻す(砂が下へ落ちた後の姿になる)。
 	var angle := PI * _flip
 	var hop := sin(PI * _flip) * FLIP_HOP
 	draw_set_transform(center + Vector2(0.0, -hop), angle, Vector2.ONE)
-	draw_texture_rect(ART, Rect2(-art.size * 0.5, art.size), false)
+	draw_texture_rect(_art, Rect2(-art.size * 0.5, art.size), false)
 	draw_set_transform_matrix(Transform2D.IDENTITY)
-	if not turning:
-		_draw_stream(art)
-
-
-## 首から砂山へ落ちる粒。
-func _draw_stream(art: Rect2) -> void:
-	var neck := art.position.y + art.size.y * NECK_Y
-	var pile := art.position.y + art.size.y * PILE_Y
-	var x := art.position.x + art.size.x * STREAM_X
-	draw_line(Vector2(x, neck), Vector2(x, pile), THREAD_COLOR, THREAD_WIDTH, true)
-	for k in GRAIN_COUNT:
-		var t := fmod(_clock / FALL_SECONDS + float(k) / float(GRAIN_COUNT), 1.0)
-		var y := lerpf(neck, pile, t * t)
-		var wobble := sin((_clock + float(k)) * 23.0) * art.size.x * GRAIN_JITTER * t
-		draw_rect(
-			Rect2(
-				Vector2(x + wobble, y) - Vector2.ONE * GRAIN_SIZE * 0.5, Vector2.ONE * GRAIN_SIZE
-			),
-			Color(GRAIN_COLOR, GRAIN_COLOR.a * (1.0 - t * 0.4))
-		)
 
 
 ## 真鍮の円盤。`top` は上面の中心。床の影 → 側面の帯 → 上面 → 砂時計の足元の窪み の順に重ねる。
