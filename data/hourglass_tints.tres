@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("script_table")
 entries = {
-"anchor": {"source": "sand", "hue": 0.857000, "sat": 0.550000, "sat_bias": 0.000000, "floor": 0.000000, "value": 1.000000, "value_bias": 0.000000, "threshold": 0.180000},
+"anchor": {"source": "sand", "hue": 0.857000, "sat": 0.550000, "sat_bias": 0.000000, "floor": 0.000000, "value": 1.000000, "value_bias": 0.000000, "threshold": 0.180000, "sand": [0.930, 0.551, 0.645]},
 "anvil": {"source": "wall", "hue": 0.120000, "sat": 0.900000, "sat_bias": 0.000000, "floor": 0.280000, "value": 1.000000, "value_bias": 0.000000, "threshold": 0.040000, "sand": [0.670, 0.787, 0.567]},
 "archive": {"source": "sand", "hue": 0.154000, "sat": 1.050000, "sat_bias": 0.000000, "floor": 0.000000, "value": 1.000000, "value_bias": 0.000000, "threshold": 0.180000, "sand": [0.54, 0.93, 0.21]},
 "balm": {"source": "sand", "hue": 0.043000, "sat": 0.550000, "sat_bias": 0.000000, "floor": 0.000000, "value": 1.000000, "value_bias": 0.000000, "threshold": 0.180000, "sand": [0.93, 0.88, 0.55]},
@@ -21,8 +21,8 @@ entries = {
 "chant": {"source": "echo", "hue": 0.450000, "sat": 1.050000, "sat_bias": 0.000000, "floor": 0.000000, "value": 1.000000, "value_bias": 0.000000, "threshold": 0.180000, "sand": [0.93, 0.49, 0.77]},
 "chime": {"source": "page", "hue": 0.120000, "sat": 1.000000, "sat_bias": 0.000000, "floor": 0.000000, "value": 1.000000, "value_bias": 0.000000, "threshold": 0.180000, "sand": [0.93, 0.55, 0.71]},
 "chorus": {"source": "sand", "hue": 0.672000, "sat": 1.050000, "sat_bias": 0.000000, "floor": 0.000000, "value": 1.000000, "value_bias": 0.000000, "threshold": 0.180000},
-"chronos": {"source": "sand", "hue": 0.117000, "sat": 0.550000, "sat_bias": 0.000000, "floor": 0.000000, "value": 1.000000, "value_bias": 0.000000, "threshold": 0.180000},
-"clocktower": {"source": "sand", "hue": 0.265000, "sat": 0.550000, "sat_bias": 0.000000, "floor": 0.000000, "value": 1.000000, "value_bias": 0.000000, "threshold": 0.180000},
+"chronos": {"source": "sand", "hue": 0.117000, "sat": 0.550000, "sat_bias": 0.000000, "floor": 0.000000, "value": 1.000000, "value_bias": 0.000000, "threshold": 0.180000, "sand": [0.812, 0.930, 0.551]},
+"clocktower": {"source": "sand", "hue": 0.265000, "sat": 0.550000, "sat_bias": 0.000000, "floor": 0.000000, "value": 1.000000, "value_bias": 0.000000, "threshold": 0.180000, "sand": [0.551, 0.930, 0.626]},
 "crack": {"source": "sand", "hue": 0.932000, "sat": 1.050000, "sat_bias": 0.000000, "floor": 0.000000, "value": 1.000000, "value_bias": 0.000000, "threshold": 0.180000, "sand": [0.93, 0.35, 0.21], "texture": "glow"},
 "crest": {"source": "crown", "hue": 0.000000, "sat": 1.000000, "sat_bias": 0.000000, "floor": 0.000000, "value": 1.000000, "value_bias": 0.000000, "threshold": 0.000000, "sand": [0.205, 0.385, 0.930]},
 "crown": {"source": "sand", "hue": 0.524000, "sat": 1.050000, "sat_bias": 0.000000, "floor": 0.000000, "value": 1.000000, "value_bias": 0.000000, "threshold": 0.180000, "sand": [1.0, 0.8, 0.26], "texture": "grain"},
@@ -45,7 +45,7 @@ entries = {
 "glim": {"source": "shield", "hue": 0.700000, "sat": 1.000000, "sat_bias": 0.000000, "floor": 0.000000, "value": 1.000000, "value_bias": 0.000000, "threshold": 0.180000, "sand": [0.66, 0.93, 0.55], "texture": "glow"},
 "glow": {"source": "sand", "hue": 0.005039, "sat": 1.006836, "sat_bias": -0.072656, "floor": 0.000000, "value": 0.836523, "value_bias": 0.003809, "threshold": 0.020000, "sand": [0.78, 0.59, 0.25], "texture": "glow"},
 "grain": {"source": "sand", "hue": 0.280000, "sat": 1.050000, "sat_bias": 0.000000, "floor": 0.000000, "value": 1.000000, "value_bias": 0.000000, "threshold": 0.180000, "sand": [0.21, 0.93, 0.41], "texture": "grain"},
-"grimoire": {"source": "sand", "hue": 0.894000, "sat": 1.050000, "sat_bias": 0.000000, "floor": 0.000000, "value": 1.000000, "value_bias": 0.000000, "threshold": 0.180000},
+"grimoire": {"source": "sand", "hue": 0.894000, "sat": 1.050000, "sat_bias": 0.000000, "floor": 0.000000, "value": 1.000000, "value_bias": 0.000000, "threshold": 0.180000, "sand": [0.930, 0.205, 0.225]},
 "guard": {"source": "sand", "hue": 0.053854, "sat": 1.209961, "sat_bias": -0.042187, "floor": 0.003516, "value": 1.046875, "value_bias": 0.000000, "threshold": 0.020000, "sand": [0.97, 0.92, 0.14]},
 "halo": {"source": "sand", "hue": 0.598000, "sat": 1.050000, "sat_bias": 0.000000, "floor": 0.000000, "value": 1.000000, "value_bias": 0.000000, "threshold": 0.180000, "sand": [0.348, 0.205, 0.930]},
 "hammer": {"source": "king", "hue": 0.700000, "sat": 0.950000, "sat_bias": 0.000000, "floor": 0.000000, "value": 1.000000, "value_bias": 0.000000, "threshold": 0.180000, "sand": [0.88, 0.25, 0.25]},
@@ -68,7 +68,7 @@ entries = {
 "nibble": {"source": "sand", "hue": 0.191000, "sat": 0.550000, "sat_bias": 0.000000, "floor": 0.000000, "value": 1.000000, "value_bias": 0.000000, "threshold": 0.180000, "sand": [0.64, 0.93, 0.55]},
 "oasis": {"source": "sand", "hue": 0.450000, "sat": 1.050000, "sat_bias": 0.000000, "floor": 0.000000, "value": 1.000000, "value_bias": 0.000000, "threshold": 0.180000, "sand": [0.205, 0.706, 0.930]},
 "obelisk": {"source": "king", "hue": 0.620000, "sat": 0.950000, "sat_bias": 0.000000, "floor": 0.000000, "value": 1.000000, "value_bias": 0.000000, "threshold": 0.180000},
-"page": {"source": "sand", "hue": 0.709000, "sat": 0.550000, "sat_bias": 0.000000, "floor": 0.000000, "value": 1.000000, "value_bias": 0.000000, "threshold": 0.180000},
+"page": {"source": "sand", "hue": 0.709000, "sat": 0.550000, "sat_bias": 0.000000, "floor": 0.000000, "value": 1.000000, "value_bias": 0.000000, "threshold": 0.180000, "sand": [0.878, 0.551, 0.930]},
 "pebble": {"source": "sand", "hue": 0.376000, "sat": 1.050000, "sat_bias": 0.000000, "floor": 0.000000, "value": 1.000000, "value_bias": 0.000000, "threshold": 0.180000, "sand": [0.21, 0.93, 0.83]},
 "phase": {"source": "sand", "hue": 0.006000, "sat": 1.050000, "sat_bias": 0.000000, "floor": 0.000000, "value": 1.000000, "value_bias": 0.000000, "threshold": 0.180000, "sand": [0.930, 0.673, 0.205]},
 "pike": {"source": "sand", "hue": 0.561000, "sat": 0.550000, "sat_bias": 0.000000, "floor": 0.000000, "value": 1.000000, "value_bias": 0.000000, "threshold": 0.180000, "sand": [0.55, 0.56, 0.93]},
