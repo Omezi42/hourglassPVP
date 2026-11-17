@@ -16,6 +16,7 @@ const TITLE_NODE := "TitleScreen"
 const CARD_MATCH_SCREEN_SCRIPT := "res://scripts/ui/card_match_screen.gd"
 ## ホームをタイトルの裏で描かせておくコマ数(初回の描画でテクスチャ・シェーダーの準備が走るため)。
 const WARM_DRAW_FRAMES := 2
+const WARM_REDRAWS := 2
 ## 他の画面にいる間に相手が見つかったとき、帯で知らせてから対局へ移るまでの間(GameDesign.md 11章)。
 const FOUND_NOTICE_SECONDS := RankedWaitBanner.FOUND_NOTICE_SECONDS
 const WAIT_BLOCKED_TEXT := "ランクマッチの待機をやめてから遊べます"
@@ -350,8 +351,34 @@ func warm_up() -> void:
 		await get_tree().process_frame
 	if _active_screen != home_screen:
 		home_screen.visible = home_was_visible
+	# カードを並べる重い画面は、初めて開いたコマで札の飾り・文字を一度に描いて止まる。ここで2回描いておき、
+	# 形の控え(`ShapeCache` は2回目に控える)と文字の下ごしらえを済ませる。
+	card_deck_editor_screen.open(-1)
+	card_list_screen.open()
+	for screen: Control in [card_deck_editor_screen, card_list_screen]:
+		await _draw_behind_title(screen)
 	_warm = Warm.WARM
 	warmed.emit()
+
+
+## 不透明なタイトルの裏で画面を `WARM_REDRAWS` 回描かせる(映らない)。
+func _draw_behind_title(screen: Control) -> void:
+	var was_visible := screen.visible
+	screen.visible = true
+	for i in WARM_REDRAWS:
+		_redraw_tree(screen)
+		# 描いたコマを越えるまで待つ(ヘッドレスでは `frame_post_draw` が来ないため process_frame で数える)。
+		await get_tree().process_frame
+		await get_tree().process_frame
+	if _active_screen != screen:
+		screen.visible = was_visible
+
+
+func _redraw_tree(node: Node) -> void:
+	if node is CanvasItem:
+		(node as CanvasItem).queue_redraw()
+	for child in node.get_children():
+		_redraw_tree(child)
 
 
 func _on_match_back() -> void:

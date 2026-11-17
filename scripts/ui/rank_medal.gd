@@ -45,6 +45,26 @@ static func draw_medal(
 		mid = mid.darkened(DIM_DARKEN)
 		dark = dark.darkened(DIM_DARKEN)
 	var ci := item.get_canvas_item()
+	ShapeCache.draw(
+		ci,
+		[&"medal", radius, light, mid, dark],
+		center,
+		func(at: Vector2) -> void: _draw_body(ci, at, radius, light, mid, dark)
+	)
+	if marked:
+		_draw_mark(item, center, radius, tier, font, light, dark)
+	ShapeCache.draw(
+		ci,
+		[&"medal_shine", radius, dim],
+		center,
+		func(at: Vector2) -> void: _draw_shine(ci, at, radius, dim)
+	)
+
+
+## 影・縁・沈んだ面(刻印より下の層)。
+static func _draw_body(
+	ci: RID, center: Vector2, radius: float, light: Color, mid: Color, dark: Color
+) -> void:
 	var edge: float = maxf(1.0, radius * 0.035)
 	# 下へ落ちる影(下へずらして2段で柔らかく)。
 	UiPaint.fill_circle(
@@ -53,21 +73,11 @@ static func draw_medal(
 	UiPaint.fill_circle(
 		ci, center + Vector2(0.0, radius * 0.06), radius * 1.01, Color(SHADOW_COLOR, 0.3), SEGMENTS
 	)
-	fill_gradient_circle(item, center, radius, [[0.0, light], [0.45, mid], [1.0, dark]])
-	ShapePaint.arc(
-		item.get_canvas_item(),
-		center,
-		radius,
-		0.0,
-		TAU,
-		SEGMENTS,
-		Color(SHADOW_COLOR, 0.75),
-		edge,
-		true
-	)
+	_gradient_circle(ci, center, radius, [[0.0, light], [0.45, mid], [1.0, dark]])
+	ShapePaint.arc(ci, center, radius, 0.0, TAU, SEGMENTS, Color(SHADOW_COLOR, 0.75), edge, true)
 	# 縁と面の境の溝。
 	ShapePaint.arc(
-		item.get_canvas_item(),
+		ci,
 		center,
 		radius * 0.82,
 		0.0,
@@ -78,22 +88,12 @@ static func draw_medal(
 		true
 	)
 	var field := radius * 0.8
-	fill_gradient_circle(
-		item, center, field, [[0.0, dark.lerp(mid, 0.35)], [0.6, mid], [1.0, light.lerp(mid, 0.3)]]
+	_gradient_circle(
+		ci, center, field, [[0.0, dark.lerp(mid, 0.35)], [0.6, mid], [1.0, light.lerp(mid, 0.3)]]
 	)
+	ShapePaint.arc(ci, center, radius * 0.66, 0.0, TAU, SEGMENTS, Color(dark, 0.45), edge, true)
 	ShapePaint.arc(
-		item.get_canvas_item(),
-		center,
-		radius * 0.66,
-		0.0,
-		TAU,
-		SEGMENTS,
-		Color(dark, 0.45),
-		edge,
-		true
-	)
-	ShapePaint.arc(
-		item.get_canvas_item(),
+		ci,
 		center + Vector2(0.0, edge),
 		radius * 0.66,
 		0.0,
@@ -103,23 +103,17 @@ static func draw_medal(
 		edge,
 		true
 	)
-	if marked:
-		_draw_mark(item, center, radius, tier, font, light, dark)
-	# 左上の照り返し。
+
+
+## 左上の照り返し(刻印より上の層)。
+static func _draw_shine(ci: RID, center: Vector2, radius: float, dim: bool) -> void:
+	var field := radius * 0.8
 	var specular := Color(SPECULAR_COLOR, SPECULAR_COLOR.a * (0.4 if dim else 1.0))
 	ShapePaint.arc(
-		item.get_canvas_item(),
-		center,
-		radius * 0.92,
-		PI * 1.08,
-		PI * 1.55,
-		ARC_SEGMENTS,
-		specular,
-		radius * 0.05,
-		true
+		ci, center, radius * 0.92, PI * 1.08, PI * 1.55, ARC_SEGMENTS, specular, radius * 0.05, true
 	)
 	ShapePaint.arc(
-		item.get_canvas_item(),
+		ci,
 		center,
 		field * 0.9,
 		PI * 1.12,
@@ -215,3 +209,8 @@ static func fill_gradient_circle(
 	UiPaint.fill_gradient_polygon(
 		item.get_canvas_item(), UiPaint.circle_points(center, radius, SEGMENTS), rect, stops
 	)
+
+
+static func _gradient_circle(ci: RID, center: Vector2, radius: float, stops: Array) -> void:
+	var rect := Rect2(center - Vector2.ONE * radius, Vector2.ONE * radius * 2.0)
+	UiPaint.fill_gradient_polygon(ci, UiPaint.circle_points(center, radius, SEGMENTS), rect, stops)

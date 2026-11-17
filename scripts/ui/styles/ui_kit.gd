@@ -20,6 +20,8 @@ const PILL_MAX_HEIGHT := 56.0
 const CORNER_SEGMENTS_PER_PX := 0.7
 const CORNER_SEGMENTS_MIN := 3
 const CORNER_SEGMENTS_MAX := 12
+## 楕円の分割数の上限。省いたときは半径から決める(`ShapePaint.circle()` と同じ割合)。
+## 小さな宝石まで48分割すると、面・グラデーション・縁で数百の三角形になり、並べる画面が止まるため。
 const ELLIPSE_SEGMENTS := 48
 
 ## 影: 面の高さのこの比だけぼかす(上限あり)。芯は面より少し内側、落ちる向きは真下。
@@ -99,6 +101,8 @@ const HAIRLINE_ALPHA := 0.35
 const ENGRAVE_LIGHT := Color(1.0, 0.95, 0.78, 0.55)
 const ENGRAVE_DROP_RATIO := 0.035
 
+static var _unit_circles: Dictionary = {}
+
 
 # ---- 大きさから決まるもの ---------------------------------------------------
 static func line_w(rect: Rect2) -> float:
@@ -127,14 +131,25 @@ static func rr(rect: Rect2, corner: float) -> PackedVector2Array:
 	return UiPaint.rounded_rect_points_uniform(rect, rad, _corner_segments(rad))
 
 
-static func ellipse(
-	center: Vector2, radii: Vector2, segments := ELLIPSE_SEGMENTS
-) -> PackedVector2Array:
-	var points := PackedVector2Array()
-	for i in segments:
-		var angle := TAU * float(i) / float(segments)
-		points.append(center + Vector2(cos(angle) * radii.x, sin(angle) * radii.y))
-	return points
+static func ellipse(center: Vector2, radii: Vector2, segments := 0) -> PackedVector2Array:
+	if segments <= 0:
+		segments = clampi(
+			int(maxf(radii.x, radii.y) * ShapePaint.CIRCLE_SEGMENTS_PER_PX),
+			ShapePaint.CIRCLE_MIN_SEGMENTS,
+			ELLIPSE_SEGMENTS
+		)
+	return Transform2D(0.0, radii, 0.0, center) * _unit_circle(segments)
+
+
+## 半径1の円の点列(分割数ごとに1度だけ作る)。楕円は拡大と移動だけで作れるため、毎回 cos/sin を引かない。
+static func _unit_circle(segments: int) -> PackedVector2Array:
+	if not _unit_circles.has(segments):
+		var points := PackedVector2Array()
+		for i in segments:
+			var angle := TAU * float(i) / float(segments)
+			points.append(Vector2(cos(angle), sin(angle)))
+		_unit_circles[segments] = points
+	return _unit_circles[segments]
 
 
 static func _corner_segments(rad: float) -> int:
@@ -275,6 +290,25 @@ static func glass(
 	lit := 0.0,
 	film := 1.0
 ) -> void:
+	ShapeCache.draw(
+		ci,
+		[&"glass", rect.size, corner, lift, alpha, rim, lit, film],
+		rect.position,
+		func(at: Vector2) -> void:
+			_glass(ci, Rect2(at, rect.size), corner, lift, alpha, rim, lit, film)
+	)
+
+
+static func _glass(
+	ci: RID,
+	rect: Rect2,
+	corner: float,
+	lift: float,
+	alpha: float,
+	rim: Array,
+	lit: float,
+	film: float
+) -> void:
 	var rad := radius(rect) if corner < 0.0 else corner
 	if lift > 0.0:
 		shadow(ci, rect, rad, shadow_blur(rect) * lift, SHADOW_ALPHA)
@@ -321,6 +355,15 @@ static func glass_shape(
 
 ## 彫り込み: 面より暗く沈んだ溝。バー・升・入力欄・地図。
 static func well(ci: RID, rect: Rect2, corner := -1.0) -> void:
+	ShapeCache.draw(
+		ci,
+		[&"well", rect.size, corner],
+		rect.position,
+		func(at: Vector2) -> void: _well(ci, Rect2(at, rect.size), corner)
+	)
+
+
+static func _well(ci: RID, rect: Rect2, corner: float) -> void:
 	var rad := minf(rect.size.y * 0.5, WELL_RADIUS_MAX) if corner < 0.0 else corner
 	var points := rr(rect, rad)
 	ShapePaint.gradient_convex(ci, points, [[0.0, WELL_TOP], [1.0, WELL_BOTTOM]])
@@ -330,6 +373,17 @@ static func well(ci: RID, rect: Rect2, corner := -1.0) -> void:
 ## 真鍮の面: 画面に1つだけの主の操作。`pressed` 0〜1 で照りが沈み、`lit` で明るくなる。
 static func brass(
 	ci: RID, rect: Rect2, corner := -1.0, pressed := 0.0, lit := 0.0, disabled := false
+) -> void:
+	ShapeCache.draw(
+		ci,
+		[&"brass", rect.size, corner, pressed, lit, disabled],
+		rect.position,
+		func(at: Vector2) -> void: _brass(ci, Rect2(at, rect.size), corner, pressed, lit, disabled)
+	)
+
+
+static func _brass(
+	ci: RID, rect: Rect2, corner: float, pressed: float, lit: float, disabled: bool
 ) -> void:
 	var rad := radius(rect) if corner < 0.0 else corner
 	shadow(
@@ -467,6 +521,17 @@ static func round_face(
 static func gem(
 	ci: RID, center: Vector2, rad: float, light: Color, deep: Color, tint := Color.WHITE
 ) -> void:
+	ShapeCache.draw(
+		ci,
+		[&"gem", rad, light, deep, tint],
+		center,
+		func(at: Vector2) -> void: _gem_shape(ci, at, rad, light, deep, tint)
+	)
+
+
+static func _gem_shape(
+	ci: RID, center: Vector2, rad: float, light: Color, deep: Color, tint: Color
+) -> void:
 	var rim := clampf(rad * GEM_RIM_RATIO, GEM_RIM_MIN, GEM_RIM_MAX)
 	fill(
 		ci,
@@ -520,6 +585,19 @@ static func gem_text(
 static func seal(
 	ci: RID, center: Vector2, rad: float, texture: Texture2D, tint := UiPalette.GOLD
 ) -> void:
+	ShapeCache.draw(ci, [&"seal", rad], center, func(at: Vector2) -> void: _seal_shape(ci, at, rad))
+	if texture != null:
+		var side := rad * SEAL_ICON_RATIO
+		RenderingServer.canvas_item_add_texture_rect(
+			ci,
+			Rect2(center - Vector2(side, side) * 0.5, Vector2(side, side)),
+			texture.get_rid(),
+			false,
+			tint
+		)
+
+
+static func _seal_shape(ci: RID, center: Vector2, rad: float) -> void:
 	var rim := clampf(rad * SEAL_RIM_RATIO, SEAL_RIM_MIN, SEAL_RIM_MAX)
 	fill(ci, ellipse(center, Vector2(rad + rim, rad + rim)), UiPalette.BRASS_INK)
 	vgrad(
@@ -534,15 +612,6 @@ static func seal(
 		[[0.0, UiPalette.INK_700], [1.0, UiPalette.INK_900]],
 		true
 	)
-	if texture != null:
-		var side := rad * SEAL_ICON_RATIO
-		RenderingServer.canvas_item_add_texture_rect(
-			ci,
-			Rect2(center - Vector2(side, side) * 0.5, Vector2(side, side)),
-			texture.get_rid(),
-			false,
-			tint
-		)
 
 
 ## 赤い丸の知らせ(受け取れるものの数)。`value` が空なら丸だけ。

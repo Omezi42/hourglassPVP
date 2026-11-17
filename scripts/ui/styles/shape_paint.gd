@@ -21,6 +21,9 @@ const CIRCLE_MAX_SEGMENTS := 64
 ## `gradient_convex()` の帯の高さの下限。これより近い切れ目はまとめる。
 const BAND_MIN_HEIGHT := 0.01
 const GLOW_SEGMENTS := 32
+## 記録するときの頂点の並び。四角形は primitive と同じく 0-1-2 と 0-2-3 の2枚に分ける。
+const TRI_ORDER: Array[int] = [0, 1, 2]
+const QUAD_ORDER: Array[int] = [0, 1, 2, 0, 2, 3]
 
 static var _tri_points := PackedVector2Array([Vector2.ZERO, Vector2.ZERO, Vector2.ZERO])
 static var _tri_colors := PackedColorArray([Color.WHITE, Color.WHITE, Color.WHITE])
@@ -28,6 +31,27 @@ static var _quad_points := PackedVector2Array(
 	[Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO]
 )
 static var _quad_colors := PackedColorArray([Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE])
+## 記録中(`ShapeCache`)は描かずに三角形を溜める。線は三角形にできないため、記録を失敗にする。
+static var _recording := false
+static var _record_failed := false
+static var _record_points := PackedVector2Array()
+static var _record_colors := PackedColorArray()
+
+
+## ここから `end_record()` までに描いた形を、描かずに三角形の列として溜める。
+static func begin_record() -> void:
+	_recording = true
+	_record_failed = false
+	_record_points = PackedVector2Array()
+	_record_colors = PackedColorArray()
+
+
+## 溜めた三角形 `{"points", "colors"}`。三角形にできない描画が混じったときは空の辞書。
+static func end_record() -> Dictionary:
+	_recording = false
+	if _record_failed:
+		return {}
+	return {"points": _record_points, "colors": _record_colors}
 
 
 ## `draw_colored_polygon(points, color)` の代わり。
@@ -51,9 +75,7 @@ static func polygon(ci: RID, points: PackedVector2Array, colors: PackedColorArra
 		_tri_colors[0] = colors[0] if single else colors[a]
 		_tri_colors[1] = colors[0] if single else colors[b]
 		_tri_colors[2] = colors[0] if single else colors[c]
-		RenderingServer.canvas_item_add_primitive(
-			ci, _tri_points, _tri_colors, PackedVector2Array(), RID()
-		)
+		_emit(ci, _tri_points, _tri_colors)
 
 
 ## 凸の形を1色で塗る(先頭の頂点からの扇。三角形分割を通さないぶん軽い)。
@@ -65,9 +87,7 @@ static func convex_polygon(ci: RID, points: PackedVector2Array, color: Color) ->
 	for i in range(1, points.size() - 1):
 		_tri_points[1] = points[i]
 		_tri_points[2] = points[i + 1]
-		RenderingServer.canvas_item_add_primitive(
-			ci, _tri_points, _tri_colors, PackedVector2Array(), RID()
-		)
+		_emit(ci, _tri_points, _tri_colors)
 
 
 ## 凸の形を縦のグラデーションで塗る。`stops` は [[位置0〜1, 色], ...](位置の昇順)。
@@ -90,14 +110,16 @@ static func gradient_convex(ci: RID, points: PackedVector2Array, stops: Array) -
 	for stop in stops:
 		cuts.append(top + height * clampf(stop[0], 0.0, 1.0))
 	cuts.sort()
+	var chains := _monotone_chains(points)
+	var walk := [0, 0]
 	var from_y := cuts[0]
-	var from_span := _span_at(points, from_y)
+	var from_span := _chains_span(chains, walk, from_y)
 	var from_color := _stop_color(stops, 0.0)
 	for i in range(1, cuts.size()):
 		var to_y := cuts[i]
 		if to_y - from_y < BAND_MIN_HEIGHT:
 			continue
-		var to_span := _span_at(points, to_y)
+		var to_span := _chains_span(chains, walk, to_y)
 		var to_color := _stop_color(stops, (to_y - top) / height)
 		_quad(
 			ci,
@@ -113,6 +135,57 @@ static func gradient_convex(ci: RID, points: PackedVector2Array, stops: Array) -
 		from_y = to_y
 		from_span = to_span
 		from_color = to_color
+
+
+## 凸の形を、最も上の頂点から最も下の頂点へ向かう2本の鎖(どちらも y が増えていく)に分ける。
+## 横に切った幅を、高さの昇順に1度ずつ歩くだけで求めるため(辺を毎回すべて調べると、頂点の数の2乗かかる)。
+static func _monotone_chains(points: PackedVector2Array) -> Array:
+	var count := points.size()
+	var top_index := 0
+	var bottom_index := 0
+	for i in count:
+		if points[i].y < points[top_index].y:
+			top_index = i
+		if points[i].y > points[bottom_index].y:
+			bottom_index = i
+	var forward := PackedVector2Array()
+	var backward := PackedVector2Array()
+	var i := top_index
+	while true:
+		forward.append(points[i])
+		if i == bottom_index:
+			break
+		i = (i + 1) % count
+	i = top_index
+	while true:
+		backward.append(points[i])
+		if i == bottom_index:
+			break
+		i = (i - 1 + count) % count
+	return [forward, backward]
+
+
+## 高さ `y` での左端と右端(x が左、y が右)。`walk` は鎖ごとの現在位置で、`y` は呼ぶたびに増えていく前提。
+static func _chains_span(chains: Array, walk: Array, y: float) -> Vector2:
+	var a := _chain_x(chains[0], walk, 0, y)
+	var b := _chain_x(chains[1], walk, 1, y)
+	return Vector2(minf(a.x, b.x), maxf(a.y, b.y))
+
+
+static func _chain_x(chain: PackedVector2Array, walk: Array, side: int, y: float) -> Vector2:
+	var last := chain.size() - 1
+	if last <= 0:
+		return Vector2(chain[0].x, chain[0].x)
+	var index: int = walk[side]
+	while index < last - 1 and chain[index + 1].y <= y:
+		index += 1
+	walk[side] = index
+	var p := chain[index]
+	var q := chain[index + 1]
+	if is_equal_approx(p.y, q.y):
+		return Vector2(minf(p.x, q.x), maxf(p.x, q.x))
+	var x := p.x + (q.x - p.x) * clampf((y - p.y) / (q.y - p.y), 0.0, 1.0)
+	return Vector2(x, x)
 
 
 ## 内側の輪から外側の輪へ色を渡す帯(影や光のぼかし)。2つの点列は同じ数・同じ並びで渡す。
@@ -152,29 +225,7 @@ static func radial_glow(
 		var to := TAU * float(i + 1) / float(segments)
 		_tri_points[1] = center + Vector2(cos(from) * radii.x, sin(from) * radii.y)
 		_tri_points[2] = center + Vector2(cos(to) * radii.x, sin(to) * radii.y)
-		RenderingServer.canvas_item_add_primitive(
-			ci, _tri_points, _tri_colors, PackedVector2Array(), RID()
-		)
-
-
-## 高さ `y` で凸の形を横に切ったときの左端と右端(x が左、y が右)。
-static func _span_at(points: PackedVector2Array, y: float) -> Vector2:
-	var left := INF
-	var right := -INF
-	var count := points.size()
-	for i in count:
-		var p := points[i]
-		var q := points[(i + 1) % count]
-		if (p.y > y and q.y > y) or (p.y < y and q.y < y):
-			continue
-		if is_equal_approx(p.y, q.y):
-			left = minf(left, minf(p.x, q.x))
-			right = maxf(right, maxf(p.x, q.x))
-			continue
-		var x := p.x + (q.x - p.x) * (y - p.y) / (q.y - p.y)
-		left = minf(left, x)
-		right = maxf(right, x)
-	return Vector2(left, right)
+		_emit(ci, _tri_points, _tri_colors)
 
 
 static func _stop_color(stops: Array, t: float) -> Color:
@@ -211,7 +262,7 @@ static func polyline_colors(
 	if width <= 0.0:
 		for i in points.size() - 1:
 			var color := colors[0] if single else colors[i]
-			RenderingServer.canvas_item_add_line(ci, points[i], points[i + 1], color, -1.0)
+			_emit_line(ci, points[i], points[i + 1], color, -1.0)
 		return
 	var path := points
 	var tint := colors
@@ -309,7 +360,7 @@ static func dashed_line(
 	var at := 0.0
 	while at < length:
 		var end := minf(at + dash, length)
-		RenderingServer.canvas_item_add_line(ci, from + step * at, from + step * end, color, width)
+		_emit_line(ci, from + step * at, from + step * end, color, width)
 		at += dash * 2.0
 
 
@@ -320,9 +371,7 @@ static func _fan(ci: RID, center: Vector2, rim: PackedVector2Array, color: Color
 	for i in rim.size() - 1:
 		_tri_points[1] = rim[i]
 		_tri_points[2] = rim[i + 1]
-		RenderingServer.canvas_item_add_primitive(
-			ci, _tri_points, _tri_colors, PackedVector2Array(), RID()
-		)
+		_emit(ci, _tri_points, _tri_colors)
 
 
 static func _quad(
@@ -344,9 +393,7 @@ static func _quad(
 	_quad_colors[1] = cb
 	_quad_colors[2] = cc
 	_quad_colors[3] = cd
-	RenderingServer.canvas_item_add_primitive(
-		ci, _quad_points, _quad_colors, PackedVector2Array(), RID()
-	)
+	_emit(ci, _quad_points, _quad_colors)
 
 
 ## 各頂点で線の左側へ向かう向き(継ぎ目は角の二等分線、長さは線幅を保つ倍率込み)。
@@ -379,3 +426,20 @@ static func _miter_offsets(path: PackedVector2Array, closed: bool) -> PackedVect
 static func _normal(from: Vector2, to: Vector2) -> Vector2:
 	var direction := (to - from).normalized()
 	return Vector2(-direction.y, direction.x)
+
+
+## 三角形(3点)か四角形(4点。0-1-2 と 0-2-3)を1つ描く。記録中は溜めるだけ。
+static func _emit(ci: RID, points: PackedVector2Array, colors: PackedColorArray) -> void:
+	if not _recording:
+		RenderingServer.canvas_item_add_primitive(ci, points, colors, PackedVector2Array(), RID())
+		return
+	for i in TRI_ORDER if points.size() == 3 else QUAD_ORDER:
+		_record_points.append(points[i])
+		_record_colors.append(colors[i])
+
+
+static func _emit_line(ci: RID, from: Vector2, to: Vector2, color: Color, width: float) -> void:
+	if _recording:
+		_record_failed = true
+		return
+	RenderingServer.canvas_item_add_line(ci, from, to, color, width)

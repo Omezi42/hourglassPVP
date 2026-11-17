@@ -375,6 +375,14 @@ func _begin_state(
 	)
 	_log.set_perspective(my_side)
 	state.start_match(deck_a, deck_b, first_side, seed_value, use_coin, use_mulligan)
+	# 駒を初めて出す瞬間に絵を読んで止まらないよう、マリガンの間に両者のデッキの絵を読んでおく。
+	var own_first := [deck_a, deck_b] if my_side == MatchState.Side.A else [deck_b, deck_a]
+	var art_keys := []
+	for deck: Array in own_first:
+		for entry in deck:
+			if entry is CardData and not entry.is_spell:
+				art_keys.append(entry.art_key())
+	HourglassPreload.request(art_keys)
 	_log.watch(state)
 	# デイリーミッションの進捗(GameDesign.md 23章)。数えるだけで、
 	# 書き込むのは終局のとき(`CardMatchOutcome`)。再生では数えない。

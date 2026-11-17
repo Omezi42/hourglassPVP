@@ -33,6 +33,16 @@ static func cost_diamond(
 	ci: CanvasItem, font: Font, center: Vector2, value: int, r: float, tint := Color.WHITE
 ) -> void:
 	var rid := ci.get_canvas_item()
+	ShapeCache.draw(
+		rid,
+		[&"cost_diamond", r, tint],
+		center,
+		func(at: Vector2) -> void: _diamond(rid, at, r, tint)
+	)
+	UiKit.gem_text(rid, font, center, r * DIAMOND_TEXT_RATIO, str(value), Color.WHITE * tint)
+
+
+static func _diamond(rid: RID, center: Vector2, r: float, tint: Color) -> void:
 	var points := PackedVector2Array(
 		[
 			center + Vector2(0, -r),
@@ -45,4 +55,3 @@ static func cost_diamond(
 		rid, points, [[0.0, UiPalette.COST * tint], [1.0, UiPalette.COST_DEEP * tint]], true
 	)
 	UiKit.stroke(rid, points, UiPalette.INK_900, DIAMOND_OUTLINE)
-	UiKit.gem_text(rid, font, center, r * DIAMOND_TEXT_RATIO, str(value), Color.WHITE * tint)
