@@ -152,7 +152,7 @@ Main
 
 v1.0(位相制)の画面・クラス・`data/hourglasses/*.tres` は削除済み。
 
-- `Boot`(`scenes/boot.tscn`、起動シーン):`TitleScreen` だけを出し、`scripts/boot/script_load_order.gd` の順に1フレーム12msずつスクリプトを `load()` してから `main.tscn` を生成し、`Main.adopt_title()` でタイトルを渡す(Godot は class_name を参照するたびに参照先を解析するため、一度に読むと何も映らないまま十秒近く止まる)。読み終える前に押された開始・アカウントは預かり、`show_loading()` で進み具合を出して、引き渡した後 `warm_up()` を待ってからシグナルを出し直す。`Main.warm_up()` は対局画面の生成とホームの初回描画(不透明なタイトルの裏で数コマ見せる)を済ませ、押した後の演出が止まらないようにする。`Boot` は `Main` の型を書かない(書くとその時点で全画面がコンパイルされる)
+- `Boot`(`scenes/boot.tscn`、起動シーン):`TitleScreen` だけを出し、`scripts/boot/script_load_order.gd` の順に1フレーム12msずつスクリプトを `load()` してから `main.tscn` を生成し、`Main.adopt_title()` でタイトルを渡す(Godot は class_name を参照するたびに参照先を解析するため、一度に読むと何も映らないまま十秒近く止まる)。読み終える前に押された開始・アカウントは預かり、`show_loading()` で進み具合を出して、引き渡した後 `warm_up()` を待ってからシグナルを出し直す。`Main.warm_up()` は対局画面の生成・場の砂時計のガラスのコンパイル(10.19節)・ホームの初回描画(不透明なタイトルの裏で数コマ見せる)を済ませ、押した後の演出が止まらないようにする。`Boot` は `Main` の型を書かない(書くとその時点で全画面がコンパイルされる)
 - `script_load_order.gd` は生成物(`tools/gen_script_load_order.gd`。`main.tscn` から辿れるスクリプトを参照される側から順に並べる)。`check.sh` が毎回作り直す。漏れがあっても `main.tscn` を読むときにまとめてコンパイルされるだけで壊れない
 - **`CardMatchScreen` は裏読み込みに入れない。**部品(`CardMatch*` など約40本)と互いを参照する輪で、どれか1本を読むと輪ごと一度にコンパイルされ、Web版で1フレームが約0.6秒(生成まで含めて約1.1秒)止まる。`Main` は型を書かずパスで読み(`_match_screen()`、初めて要るときに生成して統計画面の直後へ差し込む)、`Boot` の引き渡し直後に `Main.warm_up()` で作る。生成器は `DEFERRED` を含む輪だけを並べない(輪の外の参照先は並べる)。**起動経路のスクリプトに `CardMatchScreen` やその部品の型を書かない**(書くと輪ごと裏読み込みへ戻る)
 - `Main` を単体で生成したとき(テスト)は自分で `TitleScreen` を作る

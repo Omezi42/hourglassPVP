@@ -345,15 +345,6 @@ func stop_networking() -> void:
 # --- 組み立て -----------------------------------------------------------
 
 
-## 共通のガラスを先にコンパイルするための、自分のデッキの絵のキー(Architecture.md 10.19節)。
-static func _art_keys(deck: Array) -> Array:
-	var keys := []
-	for entry in deck:
-		if entry is CardData and not entry.is_spell:
-			keys.append(entry.art_key())
-	return keys
-
-
 ## 対局を開始する共通処理。CPU戦とオンラインで同じ経路を通す。
 func _begin_state(
 	deck_a: Array,
@@ -384,7 +375,6 @@ func _begin_state(
 	)
 	_log.set_perspective(my_side)
 	state.start_match(deck_a, deck_b, first_side, seed_value, use_coin, use_mulligan)
-	HourglassLive.warm_glass(_art_keys(deck_a if my_side == MatchState.Side.A else deck_b))
 	_log.watch(state)
 	# デイリーミッションの進捗(GameDesign.md 23章)。数えるだけで、
 	# 書き込むのは終局のとき(`CardMatchOutcome`)。再生では数えない。

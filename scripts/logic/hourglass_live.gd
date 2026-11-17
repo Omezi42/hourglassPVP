@@ -15,6 +15,8 @@ const LIVE_HEIGHT := 224
 const WEB_LIVE_SCALE := 0.5
 ## 引かれなくなってから描き続ける猶予(フレーム)。呼ぶ側の再描画と1フレームずれても途切れないように。
 const GRACE_FRAMES := 1
+## コンパイルを済ませるためだけに描く大きさ。
+const WARM_SIZE := Vector2i(8, 8)
 ## 焼いた層のファイル名(`HourglassArt.STATE_FILES` の並びに対応する状態名)。
 const LAYER_STATES: Array[String] = ["full", "falling", "empty"]
 const LAYER_BACK := "back"
@@ -28,6 +30,8 @@ const STATE_SAND: Array[Vector3] = [
 
 static var _host: Host = null
 static var _shaders: Dictionary = {}
+## 読んだ共通のガラス。手放すとコンパイル結果も捨てられ、次に描くときにコンパイルし直すため持ち続ける。
+static var _glass_shaders: Dictionary = {}
 static var _lives: Dictionary = {}
 static var _clock := 0.0
 
@@ -73,8 +77,17 @@ static func art_shader_path(art_key: String) -> String:
 
 ## そのカードの砂の質感の共通のガラス。質感が無ければ「さらさら」。
 static func glass_shader_path(art_key: String) -> String:
-	var kind := HourglassArt.texture_name(art_key)
+	return _glass_path_of(HourglassArt.texture_name(art_key))
+
+
+static func _glass_path_of(kind: String) -> String:
 	return "%s/glass_%s.gdshader" % [GLASS_SHADER_DIR, kind if not kind.is_empty() else "sand"]
+
+
+static func _glass_shader(path: String) -> Shader:
+	if not _glass_shaders.has(path):
+		_glass_shaders[path] = load(path)
+	return _glass_shaders[path]
 
 
 ## 動く絵の1状態。呼ばれたフレームを控え、呼ばれ続けている間だけ描き続ける。
@@ -100,28 +113,31 @@ static func live_texture(art_key: String, state: int) -> Texture2D:
 	return entry.texture
 
 
-## 共通のガラスを1度だけ描いてコンパイルを済ませる。対局画面を開くときに、自分のデッキの質感のぶんだけ呼ぶ。
-static func warm_glass(art_keys: Array) -> void:
-	if _host == null or not is_instance_valid(_host):
+## 共通のガラス(砂の質感の全種)を1種ずつ描いてコンパイルを済ませる。`Main.warm_up()` がタイトルの裏で呼ぶ。
+## コンパイル結果はシェーダーの寿命と同じため、読んだシェーダーは `_glass_shaders` が持ち続ける。
+## ヘッドレスでは描かれず `frame_post_draw` が来ないため何もしない。
+static func warm_glass() -> void:
+	if _host == null or not is_instance_valid(_host) or DisplayServer.get_name() == "headless":
 		return
-	var done: Dictionary = {}
-	for art_key in art_keys:
-		var path := glass_shader_path(String(art_key))
-		if done.has(path) or not ResourceLoader.exists(path):
+	for kind in HourglassArt.TEXTURES:
+		var path := _glass_path_of(kind)
+		if _glass_shaders.has(path) or not ResourceLoader.exists(path):
 			continue
-		done[path] = true
-		var warm := make_stack(
-			String(art_key), HourglassArt.State.UPRIGHT, null, null, Vector2i(8, 8)
-		)
-		warm.viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
-		_host.add_child(warm.viewport)
-		_free_after_draw(warm.viewport)
-
-
-static func _free_after_draw(viewport: SubViewport) -> void:
-	await RenderingServer.frame_post_draw
-	if is_instance_valid(viewport):
-		viewport.queue_free()
+		var material := ShaderMaterial.new()
+		material.shader = _glass_shader(path)
+		var warm := SubViewport.new()
+		warm.size = WARM_SIZE
+		warm.transparent_bg = true
+		warm.disable_3d = true
+		warm.render_target_update_mode = SubViewport.UPDATE_ONCE
+		var rect := ColorRect.new()
+		rect.anchor_right = 1.0
+		rect.anchor_bottom = 1.0
+		rect.material = material
+		warm.add_child(rect)
+		_host.add_child(warm)
+		await RenderingServer.frame_post_draw
+		warm.queue_free()
 
 
 ## 後ろ・ガラス・枠を重ねた `SubViewport` を作る(焼き付けの完成形も同じ組み立てを使う)。
@@ -188,7 +204,7 @@ static func tick(delta: float) -> void:
 
 static func _glass_material(art_key: String, state: int) -> ShaderMaterial:
 	var material := sand_material(art_key, state)
-	material.shader = load(glass_shader_path(art_key))
+	material.shader = _glass_shader(glass_shader_path(art_key))
 	return material
 
 

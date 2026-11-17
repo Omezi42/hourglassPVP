@@ -331,7 +331,7 @@ func _on_title_start_requested() -> void:
 	await _sand_transition.reveal()
 
 
-## タイトルを押した後に止まらないよう、対局画面の生成とホームの初回描画をタイトルの裏で先に済ませる。
+## タイトルを押した後に止まらないよう、対局画面の生成・場の砂時計のガラスのコンパイル・ホームの初回描画をタイトルの裏で先に済ませる。
 ## `Boot` が引き渡した直後に呼ぶ。済む前に押されたときは、砂が覆いきった時点で終わりを待つ。
 func warm_up() -> void:
 	if _warm == Warm.WARM:
@@ -341,6 +341,8 @@ func warm_up() -> void:
 		return
 	_warm = Warm.WARMING
 	_match_screen()
+	# 場の砂時計のガラスは初回のコンパイルが重い(Web版で1種あたり0.5秒超。スマホではさらに重い)。対局の最中に止めないよう、ここで全種を済ませる。
+	await HourglassLive.warm_glass()
 	# 不透明なタイトルが前にあるため、ホームを出しても映らない。止めたまま描かせるだけ。
 	var home_was_visible := home_screen.visible
 	home_screen.visible = true
