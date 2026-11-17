@@ -27,5 +27,4 @@ rules_text = "設置:自分の墓地の砂術1枚を選び、手札に戻す"
 flavor_text = "読み終えた呪文は三段目の棚に戻すこと。"
 cannot_attack = false
 is_token = false
-art_id = "memory"
 emblem = ExtResource("emblem")
