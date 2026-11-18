@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="AnnouncementData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/announcement_data.gd" id="script_announcement"]
+
+[resource]
+script = ExtResource("script_announcement")
+version = "2026.11.18"
+body = "**あたらしいもの**
+- ぜんぶの砂時計が、それぞれ専用の見た目になったよ。さいごはオベリスクとコロッサスで、全種そろったんだ。図鑑でじっくりながめてみてね
+- ホームのまんなかにある台座の砂時計が、さらさら動くようになったよ
+
+**なおしたもの**
+- 対戦中や画面を開くときのカクつきを減らしたよ
+
+-# 遊ぶ → https://unityroom.com/games/sunadokei_arena"
