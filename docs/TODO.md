@@ -20,19 +20,6 @@
 
 ## 0. 進めている作業
 
-### 全砂時計のコード描画(GameDesign.md 9章・21章 / Architecture.md 10.19節)
-
-- [x] 仕組みの付け替え(Sonnet): スキンの9本を10.19節の形(止めた部分 `ART_STATIC` / 後ろの動き / 手前の動き)に分けて `resources/shaders/hourglasses/{カードid}.gdshader` へ移す
-  (試作は聖剣。`skin_*` の部品と関数は `frame_parts` / `art_main` / `art_back` / `art_frame` へ改名、`HOOK_CAVITY` / `HOOK_FRONT` を消し、Pitfalls の該当項も消す)。
-  共通のガラス `glass_{kind}` を置き、砂の色は色違いの表から渡す。`tools/bake_hourglass_art.gd` で `overrides/` へ焼き、焼き忘れを `check.sh` で止める。
-  WebPの画質を pck の増え方で決めて4.1節へ書く。9本とも、いまの絵と並べたスクショで見た目が変わっていないことを確かめる
-- [x] スキンの撤去(Sonnet): `CardSkins`・`SkinLibrary`・視点(`skin_viewer`)・相手の設定の受け渡し・図鑑の切り替え・ショップの品・
-  `AccountService` / `AccountStore` のスキンの読み書き・`assets/hourglasses/skins/`・`tools/compose_skin_art.py` を消し、`CardData.icon_*` は `HourglassArt.texture()` を直に返す
-- [x] 飾りの動きをやめる: 9種の動きを止めた絵(後ろ・枠の層)へ移し、動く絵は焼いたPNG+共通のガラスだけにした(動くのは砂だけ)
-- [ ] #お知らせでのスキン廃止と補償(プレゼント「スキン廃止のおわび」)の案内は、次のビルドのお知らせで
-- [x] 全種(101種)の砂時計をシェーダーで描き、半分の大きさで焼いた
-- [x] 色違いの仕組み(色変換・仕上げのシェーダー・原本・`tools/tint_hourglass_icons.gd` ほか)を消し、表は砂の色と質感だけの `data/hourglass_sands.tres` にした。紋章は小さな表示・砂術・演出で使うため残す
-
 ### 見た目の弱点の磨き込み(Fable)
 
 Fableには判断だけを任せる。1項目を次の順に回す(手順の詳細は `ui-polish-loop` の「Fableへ渡す形」)。
@@ -86,7 +73,7 @@ Fableには判断だけを任せる。1項目を次の順に回す(手順の詳�
 1本ずつは `tools/shorts/make_short.py card <id>` / `make_short.py puzzle <番号>`、問題集は `make_short.py forge <問数>` で増やす。
 投稿日への割り振りと投稿文は `tools/shorts/schedule.py`(Architecture.md 10.20節)。予約は `post-shorts` Skill。
 
-- [ ] 11/16頃: `post-shorts` で翌7日ぶんを予約する(予約済みは11/17まで。割り振りと動画は12/17まで揃っている)
+- [ ] 11/26頃: `post-shorts` で翌7日ぶんを予約する(予約済みは11/27まで。割り振りと動画は12/17まで揃っている)
 - [ ] 12/10頃: 割り振りが12/17で尽きる。とどめ問題は82問すべて割り振り済みのため `make_short.py forge <問数>` で足してから
       `schedule.py <日数>` を回す(尽きるとゲームから今日の1問が消える)。台本のあるカードは残り4枚のため、
       台本の無い36枚(第2弾以降のセット)の `card_lines.json` を先に書く
@@ -131,10 +118,11 @@ Discordにある機能をゲームの中だけで完結させていく。1つ目
 
 ### 軽量化・負荷(`tools/perf_probe.gd` で測る。ウィンドウ付きで `godot --path . --script res://tools/perf_probe.gd`)
 
-- [ ] 攻撃の演出中、`CardView` が毎コマ全体(約3800個の primitive、1枚約5ms)を描き直す(`CardViewStrike` が絵の変換を `_draw` の中で掛けるため)。攻撃中は約20コマ、31〜45msが続く。絵だけを別の子ノードへ分ければ駒の描き直しが要らなくなる見込み(`card_view.gd` が906行のため先に切り出す)
-- [ ] カードを出した次のコマと、ターン終了の次のコマに40〜120msの引っかかり(誘導対局で毎回出る。初回だけではない。初回は+30〜60msほど上乗せ)。スクリプト側の処理が支配的(描画は5〜20ms)で、`signature_fx_player` の演出の開始と `card_unit_fx` が怪しいが、関数単位の計測はまだ無い(エディタのプロファイラで見る)
-- [ ] ホームは平均7.3ms(他の画面は2〜6ms)。残りは `DeckTab` / `BattleTab` のタイル(約1.5万 primitive、約3.5ms)。タイルを描き直すのはホバー時だけ
-- [ ] 描画の primitive は対局で約4.2万(手札の1枚=約3800、ボタン1つ=約1000、デッキ編集の砂時計1つ=約1900)。ドローコールは約400にまとまるため、減らしても効果は小さい(40k→3ms程度)
+11/18の測り直し(デスクトップ): ホーム平均4.3ms・対局の手番待ち5.1ms、描画 primitive は対局で約2.1万。
+砂時計の絵は `HourglassPreload` が対局の始めに読むため、出す・ターン終了の次のコマは14〜47ms(初めて出す1手が最大)。
+
+- [ ] 出す・ターン終了の次のコマの残り(10〜25ms)は `round_action_button`・`painted_shape`・`signature_fx_player`・`Label` の描き直しに分散している。Web版で目立つようなら、ターン終了で全部を描き直している所から絞る
+- [ ] 攻撃の演出中、`CardView` が毎コマ駒全体を描き直す(`CardViewStrike` が絵の変換を `_draw` の中で掛けるため)。今は1コマ+3ms程度。絵だけを子ノードへ分けるなら `card_view.gd`(903行)を先に切り出す
 
 ### 技術的負債
 

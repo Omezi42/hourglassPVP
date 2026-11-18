@@ -2,6 +2,7 @@
 """公開向けの日本語文章(お知らせの下書き等)をGemini APIで添削する。
 
     python tools/discord/proofread.py tools/discord/drafts/update-2026.09.21.md
+    python tools/discord/proofread.py --shorts <台本の一覧.md>   # ショートの台本(ずんだもんの口調)
 
 APIキーは ~/.hourglass_gemini.json の "api_key" から読む(リポジトリの外に置く)。
 ブラウザでGeminiを開く運用をやめ、こちらで済ませる。
@@ -29,6 +30,18 @@ PROMPT = """あなたは日本語の校正者です。次の文章はブラウ�
 ---
 """
 
+SHORTS_PROMPT = """あなたは日本語の校正者です。次の文章はブラウザゲーム「砂時計アリーナ」のカード紹介ショート動画の
+台本で、ナレーターの「ずんだもん」(語尾「〜のだ」)の口調で書かれています。行中の `|` は画面上の改行、
+`[...]` は強調の印なので残してください。各カードの「効果」の原文と台本が食い違っていないかも確かめ、
+口調と記号は変えずに、誤字脱字・不自然な言い回し・効果の誤り・意味の取りにくい箇所だけを直してください。
+
+出力は次の2つだけにしてください。
+1. 「## 指摘」の見出しの下に、直した箇所とその理由を箇条書きで(無ければ「なし」)
+2. 「## 修正後」の見出しの下に、修正後の全文をそのまま
+
+---
+"""
+
 
 def load_key() -> str:
     try:
@@ -38,11 +51,13 @@ def load_key() -> str:
 
 
 def main() -> None:
-    if len(sys.argv) < 2:
+    args = [a for a in sys.argv[1:] if a != "--shorts"]
+    if not args:
         sys.exit(__doc__)
-    text = Path(sys.argv[1]).read_text(encoding="utf-8")
+    prompt = SHORTS_PROMPT if "--shorts" in sys.argv else PROMPT
+    text = Path(args[0]).read_text(encoding="utf-8")
     body = json.dumps(
-        {"contents": [{"parts": [{"text": PROMPT + text}]}]}
+        {"contents": [{"parts": [{"text": prompt + text}]}]}
     ).encode("utf-8")
     key = load_key()
     data = None
