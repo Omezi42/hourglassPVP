@@ -71,7 +71,7 @@ bash tools/export_web.sh
   (`tools/tests/matchmaking_live_test.gd`)。差し替え用クライアントのテストでは本物の応答の形の
   食い違いを拾えないため
 - 末尾に `tests passed` が出ること、`build/web/index.pck` のサイズが
-  直前のビルドから跳ねていないことを確認する(目安は約8.0MB。`tools/` を外してあるため、
+  直前のビルドから跳ねていないことを確認する(目安は約15.6MB。`tools/` を外してあるため、
   `tools/` が混ざると約0.7MB増える)
 - **フィルタの確認は自動化してある。**`export_presets.cfg` はエディタで書き出すたびに
   `include_filter` / `exclude_filter` が空へ戻る(実際に2度起きた)。空のまま書き出すと
