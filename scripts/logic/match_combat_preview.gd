@@ -53,3 +53,14 @@ static func _preview_damage(unit: CardInstance, amount: int) -> int:
 	if amount <= 0:
 		return 0
 	return 0 if unit.glass_intact else amount
+
+
+## `side` が本体へ `damage` を受けたとき、新しく越える刻み線の数(2章)。
+## 相手に反転権を渡す損(CPUの評価)と、器の刻み目の予測(UI)の両方が読む。
+static func new_tick_lines(state: MatchState, side: int, damage: int) -> int:
+	var lost: int = int(state.hp_lost.get(side, 0)) + mini(damage, int(state.hp[side]))
+	var reached := 0
+	for line in state.hp_tick_lines:
+		if lost >= line:
+			reached += 1
+	return reached - int(state.tick_lines_fired.get(side, 0))

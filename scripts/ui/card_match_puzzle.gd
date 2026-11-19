@@ -191,6 +191,7 @@ func _apply(target: PuzzleStageData) -> void:
 	state.max_mana[mine] = target.mana
 	state.mana[mine] = target.mana
 	state.coin_available[mine] = false
+	state.flip_right_remaining[mine] = PuzzleStageData.FLIP_RIGHTS
 	state.hand[mine] = _hand(target.hand_ids)
 	state.hand[foe] = []
 	_place(state, mine, target.own_units)

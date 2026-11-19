@@ -4,6 +4,8 @@ extends Node
 ## 旧ルール(位相制)の GameState とは別物であり、混ぜて使わない。
 
 signal hp_changed(side: int, new_hp: int)
+## 失ったHPが刻み線(`line` はその線の位置)に届いて、その側の反転権が1つ増えた。
+signal tick_line_reached(side: int, line: int)
 signal mana_changed(side: int, current: int, maximum: int)
 signal hand_changed(side: int)
 signal board_changed(side: int)
@@ -87,10 +89,12 @@ const COIN_MANA := 1
 const COIN_ENABLED := true
 ## 反転権(GameDesign.md 2章):場の砂時計を敵味方問わず反転できる特殊な行動回数。
 ## 通常の反転(1体1ターン1回・出したターンは不可)を無視し、マナも不要。
-## 後手を多くすることで手番差を補正する。**値は要検証の仮置きで、
-## 7章の5指標を見て確定させる**(docs/BalanceReport_v5.md に測定結果を追記する)。
-const FLIP_RIGHT_FIRST := 2
-const FLIP_RIGHT_SECOND := 3
+## 後手を多くすることで手番差を補正する。刻み線(下)が劣勢の側へ足す分と合わせて先手勝率を保つ。
+const FLIP_RIGHT_FIRST := 1
+const FLIP_RIGHT_SECOND := 2
+## 刻み線(GameDesign.md 2章):失ったHPがこの値に初めて届いたとき、その側の反転権が1つ増える。
+## 固定の配給の一部を、実際に劣勢になった側への配給へ移すための線で、位置が逆転率を決める。
+const HP_TICK_LINES: Array[int] = [8, 16]
 ## 引き分けを避けるための保険。両者が延々とパスし続けた場合に打ち切る。
 const MAX_TURNS := 200
 ## 連続してこの回数だけ手番を時間切れで渡したら敗北(GameDesign.md 5章)。
@@ -98,6 +102,16 @@ const MAX_TURNS := 200
 const TURN_FORFEIT_LIMIT := 3
 
 var hp: Dictionary = {}
+## 刻み線の位置。既定は `HP_TICK_LINES` で、バランス計測だけが差し替える。
+var hp_tick_lines: Array[int] = HP_TICK_LINES.duplicate()
+## 対局中に失ったHP(Side → int)。回復で戻ったぶんは引く。刻み線はこの値が届いたかで決まる。
+var hp_lost: Dictionary = {}
+## 刻み線で発動済みの線の数(Side → int)。回復で戻っても減らず、各線は1対局に1度だけ働く。
+var tick_lines_fired: Dictionary = {}
+## 使った反転権の回数(Side → int。計測用)。
+var flip_right_spent: Dictionary = {}
+## 落砂で体力が0になって壊れた駒の数(計測用)。
+var unit_deaths_by_tick := 0
 ## 最大HP(回復の上限・HPの反転の基準)。既定は INITIAL_HP で、CPU戦の設定と遠征だけが変える。
 ## 教材の盤面のように `start_match()` を通らない局面もあるため、読む側は `get(side, INITIAL_HP)` で読む。
 var hp_max: Dictionary = {}
@@ -176,11 +190,15 @@ func start_match(
 	end_reason = EndReason.HP_DEPLETED
 	turn_count = 0
 	finished_by_fatigue = false
+	unit_deaths_by_tick = 0
 	first_side = p_first_side
 	current_turn = p_first_side
 	for side in [Side.A, Side.B]:
 		hp[side] = INITIAL_HP
 		hp_max[side] = INITIAL_HP
+		hp_lost[side] = 0
+		tick_lines_fired[side] = 0
+		flip_right_spent[side] = 0
 		mana[side] = 0
 		max_mana[side] = 0
 		hand[side] = []
@@ -310,6 +328,7 @@ func end_turn() -> void:
 		if unit.tick(sand_drop_count) > 0:
 			unit_ticked.emit(side, slot)
 		if unit.is_dead():
+			unit_deaths_by_tick += 1
 			_destroy_unit(side, slot)
 	board_changed.emit(side)
 	if _deck_exhausted[side]:
@@ -552,6 +571,7 @@ func use_flip_right(side: int, target_side: int, slot: int) -> bool:
 	if not _can_use_flip_right(side, target_side, slot):
 		return false
 	flip_right_remaining[side] = int(flip_right_remaining[side]) - 1
+	flip_right_spent[side] = int(flip_right_spent.get(side, 0)) + 1
 	var unit: CardInstance = board[target_side][slot]
 	unit.flip()
 	flip_right_used.emit(side, target_side, slot)
@@ -708,16 +728,36 @@ func _lifesteal(side: int, unit: CardInstance, amount: int) -> void:
 func damage_player(side: int, amount: int) -> void:
 	if amount <= 0 or _match_over:
 		return
-	hp[side] = maxi(hp[side] - amount, 0)
+	var lost := mini(amount, int(hp[side]))
+	hp[side] = int(hp[side]) - lost
+	hp_lost[side] = int(hp_lost.get(side, 0)) + lost
 	hp_changed.emit(side, hp[side])
+	_fire_tick_lines(side)
 	if hp[side] <= 0:
 		_finish(other_side(side), EndReason.HP_DEPLETED)
+
+
+## 失ったHPが届いた刻み線のうち、まだ働いていないものすべてについて反転権を渡す。
+## 一度に複数の線を越えたら越えた線すべてが働く(時の逆流など)。
+func _fire_tick_lines(side: int) -> void:
+	var lost: int = hp_lost.get(side, 0)
+	var fired: int = tick_lines_fired.get(side, 0)
+	var reached := 0
+	for line in hp_tick_lines:
+		if lost >= line:
+			reached += 1
+	for index in range(fired, reached):
+		flip_right_remaining[side] = int(flip_right_remaining.get(side, 0)) + 1
+		tick_line_reached.emit(side, hp_tick_lines[index])
+	tick_lines_fired[side] = maxi(fired, reached)
 
 
 func heal_player(side: int, amount: int) -> void:
 	if amount <= 0:
 		return
-	hp[side] = mini(hp[side] + amount, int(hp_max.get(side, INITIAL_HP)))
+	var before: int = hp[side]
+	hp[side] = mini(before + amount, int(hp_max.get(side, INITIAL_HP)))
+	hp_lost[side] = maxi(int(hp_lost.get(side, 0)) - maxi(int(hp[side]) - before, 0), 0)
 	hp_changed.emit(side, hp[side])
 
 

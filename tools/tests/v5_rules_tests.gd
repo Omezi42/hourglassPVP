@@ -542,6 +542,7 @@ func _test_flip_right_ignores_the_normal_flip_limit() -> void:
 	mine.drop_sand(1)
 	var foe: CardInstance = _force_play(state, MatchState.Side.B, "sand", 0)
 	foe.drop_sand(1)
+	state.flip_right_remaining[MatchState.Side.A] = 2
 	_assert.call(not mine.can_flip(), "a unit played this turn cannot use the normal flip")
 	_assert.call(
 		state.use_flip_right(MatchState.Side.A, MatchState.Side.A, 0),
