@@ -50,6 +50,18 @@ else
   echo "ok"
 fi
 
+# 画面の色の直書き(数字・#で書いた Color)は UiPalette へ寄せる。数は減らすだけにし、増えたら落とす。
+# 意図して減らしたら tools/color_literal_limit.txt の数を下げる。
+echo "== color literal guard"
+COLOR_LIMIT=$(cat tools/color_literal_limit.txt)
+COLOR_COUNT=$(grep -rnoE "\bColor\((\s*[0-9.]|\"#)" scripts/ui --include=*.gd | grep -v "scripts/ui/styles/ui_palette.gd" | wc -l)
+if [ "$COLOR_COUNT" -gt "$COLOR_LIMIT" ]; then
+  echo "scripts/ui の色の直書きが $COLOR_COUNT 件(上限 $COLOR_LIMIT)。UiPalette の名前を使う"
+  status=1
+else
+  echo "ok ($COLOR_COUNT / $COLOR_LIMIT)"
+fi
+
 # コード描画の砂時計の焼き忘れ(Architecture.md 10.19節)。
 echo "== hourglass art bake"
 python tools/check_hourglass_bake.py || status=1

@@ -396,6 +396,28 @@ def duration_line(records):
     )
 
 
+# 手数の段(上限の手数, 見出し)。短い局で先手が勝ちすぎていないかを見る(育てた砂時計が活きる前に終わる局)。
+TURN_BANDS = ((10, "10手以下"), (15, "11〜15手"), (None, "16手以上"))
+
+
+def turn_band_line(records):
+    parts = []
+    lower = 0
+    for upper, label in TURN_BANDS:
+        band = [
+            r
+            for r in records
+            if int(r.get("turns", 0)) > lower and (upper is None or int(r.get("turns", 0)) <= upper)
+        ]
+        lower = upper or lower
+        if not band:
+            parts.append("%s 0戦" % label)
+            continue
+        first = sum(1 for r in band if r.get("winner") == "a")
+        parts.append("%s %d戦(先手 %.0f%%)" % (label, len(band), 100.0 * first / len(band)))
+    return "- 手数の分布: " + " / ".join(parts)
+
+
 def overview_lines(records):
     total = len(records)
     first_wins = sum(1 for r in records if r.get("winner") == "a")
@@ -413,6 +435,7 @@ def overview_lines(records):
         "- 対局数: **%d**" % total,
         "- 先手勝率: **%.1f%%**(目標 45〜55%%)" % (100.0 * first_wins / total),
         "- 決着手数: **%.1f手**(目標 18〜28手)" % (float(turns) / total),
+        turn_band_line(records),
         duration_line(records),
         "- 種別: " + " / ".join("%s %d戦" % (k, v) for k, v in kinds.most_common()),
         "- 決着の要因: " + reason_text,
