@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="AnnouncementData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/announcement_data.gd" id="script_announcement"]
+
+[resource]
+script = ExtResource("script_announcement")
+version = "2026.11.18-2"
+body = "**なおしたもの**
+- 砂術をドラッグしている途中でEscキーを押すと、そのまま発動してしまうことがあったのをなおしたよ。いまはちゃんと手札に戻るから、安心して構えてみてね
+
+-# 遊ぶ → https://unityroom.com/games/sunadokei_arena"
