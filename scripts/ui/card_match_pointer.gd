@@ -123,6 +123,17 @@ func on_input(event: InputEvent) -> void:
 	var key := event as InputEventKey
 	if key != null and key.pressed and key.keycode == KEY_SPACE:
 		_on_space(key)
+	if event.is_action_pressed("ui_cancel") and _screen._spell_drag.active():
+		_cancel_spell_drag()
+
+
+## 構えた砂術はEscで撃たずに手札へ戻す。GUIへ届くとドラッグの終わりとして扱われ、
+## 光っている取らない砂術は離したのと同じく撃たれてしまうため、GUIより先に受ける。
+func _cancel_spell_drag() -> void:
+	var viewport := _screen.get_viewport()
+	viewport.set_input_as_handled()
+	_screen._spell_drag.cancel()
+	viewport.gui_cancel_drag()
 
 
 ## Space = ターン終了(GameDesign.md 9章「操作」)。GUIより先に受けて対局中は必ず使い切る。

@@ -92,6 +92,12 @@ func end() -> void:
 	_finish()
 
 
+## 撃たずにやめる(Escの取り消し。GameDesign.md 9章「操作」)。続くドラッグの終わり(`end()`)では何もしない。
+func cancel() -> void:
+	if not _done:
+		_finish()
+
+
 func _release() -> void:
 	var from := _screen.get_local_mouse_position()
 	_finish()
