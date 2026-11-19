@@ -19,6 +19,7 @@ func refresh() -> void:
 	var my_side := _screen.my_side
 	var foe := MatchState.other_side(my_side)
 	_screen.foe_bar.targetable = false
+	_screen.foe_bar.notch_preview = 0
 	# 対象選択が終わったら(=ここで光りが組み直されるとき)身構えも必ず戻す
 	# (GameDesign.md 9章「対局画面の手触り」)。
 	_clear_brace()
@@ -79,6 +80,7 @@ func refresh_own_preview() -> void:
 	own.preview_health = -1
 	own.preview_dead = false
 	own.queue_redraw()
+	_screen.foe_bar.notch_preview = 0
 	if not selection.is_board_selection():
 		return
 	var attacker: CardInstance = state.board[my_side][selection.slot]
@@ -89,6 +91,10 @@ func refresh_own_preview() -> void:
 		candidates.append(CardMatchSelection.FACE)
 	if selection.hover_target in candidates:
 		candidates = [selection.hover_target]
+	if selection.hover_target == CardMatchSelection.FACE and state.can_attack_player(my_side):
+		_screen.foe_bar.notch_preview = MatchCombatPreview.new_tick_lines(
+			state, MatchState.other_side(my_side), attacker.attack
+		)
 	for slot in candidates:
 		var preview: Dictionary = MatchCombatPreview.compute(state, my_side, selection.slot, slot)
 		var worse: bool = own.preview_health < 0 or preview["attacker_health"] < own.preview_health

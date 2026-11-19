@@ -12,6 +12,7 @@ const ICON := preload("res://assets/ui/icons/flip_right.png")
 var _screen: CardMatchScreen
 var _button: RoundActionButton
 var _gauge: FlipRightGauge
+var _spark: NotchSparkFx
 
 
 func _init(screen: CardMatchScreen) -> void:
@@ -30,6 +31,11 @@ func _init(screen: CardMatchScreen) -> void:
 	_gauge = FlipRightGauge.new()
 	_gauge.visible = false
 	screen.add_child(_gauge)
+	# 刻み線に届いたHPの器の光が、この札の粒へ飛ぶ(GameDesign.md 9章)。
+	_spark = NotchSparkFx.new()
+	screen.add_child(_spark)
+	screen._own_bar.notch_lit.connect(_on_notch_lit.bind(true))
+	screen._foe_bar.notch_lit.connect(_on_notch_lit.bind(false))
 
 
 ## ボタンの中心と、残り回数の粒の左上へ置く(`CardMatchArrange`)。縦では両方を拡大する。
@@ -68,6 +74,21 @@ func use_at(target_side: int, slot: int) -> void:
 	_screen.refresh()
 
 
+## 刻み目がともった。光を粒へ飛ばし、着いたところで粒を1つ増やす。
+## 札が見えないとき(対局が始まる前)は飛ばさず、数だけが合う。
+func _on_notch_lit(from_global: Vector2, delay: float, is_own: bool) -> void:
+	if not _gauge.visible:
+		return
+	var to_global := _gauge.expect_gain(is_own)
+	_spark.launch(from_global, to_global, delay, _on_notch_landed.bind(is_own))
+
+
+func _on_notch_landed(is_own: bool) -> void:
+	_gauge.land(is_own)
+	if is_own and not _screen.silent:
+		SoundBank.play(SoundBank.Sfx.TURN_START)
+
+
 func _ready_to_use() -> bool:
 	var state: MatchState = _screen.state
 	if state == null or state.is_match_over() or state.current_turn != _screen.my_side:
@@ -80,6 +101,7 @@ func refresh() -> void:
 	if state == null:
 		_button.visible = false
 		_gauge.visible = false
+		_gauge.reset()
 		return
 	# 札(自分・相手の残り回数)は再生でも見る側の情報として出す
 	# (scratchpad/match_rebuild_phase4.md)。対局が始まる前(state == null)だけ隠す。

@@ -26,7 +26,9 @@
 | `ActionColumnPanel`(`scripts/ui/action_column_panel.gd`) | 右端の行動の列の地。卓の脇に立てた**1枚の硝子の面**(`UiKit.glass()` + 群の区切りの罫線)。ボタンより先に `add_child()` して背面へ置く |
 | `RoundActionButton`(`scripts/ui/round_action_button.gd`, `extends Button`) | 行動の列のボタン。形は2つ:丸い計器(ターン終了 = 真鍮の面、反転権 = 硝子の計器)と、`width` を入れた横長の硝子のボタン(ログ・エモート・投了)。`danger` で赤い縁。**`CodedButton` / `CodedButtonStyle` は使わない**——文字の幅で矩形が伸びる仕組みのため、丸のつもりが楕円のピルになる。`text` は空にして `label` を自前で描き、`_get_minimum_size()` を直径(または `width`)で固定する。`filled`(ターン終了の金真鍮の面)/ `badge`(反転権の残り回数・エモートの残り秒)/ `ring_ratio` + `sub_label`(縁の砂の輪と残り時間)を持つ。乗る・押すは `Button` の状態を見て自前のトゥイーンで動かし(`UiPalette.DUR_HOVER` / `DUR_PRESS`)、`disabled` は `Button` のものをそのまま使う |
 | `TurnClockDial`(`scripts/ui/turn_clock_dial.gd`) | 行動の列の持ち時間の計器(GameDesign.md 9章)。いま手番の側の残り時間を縁の砂の輪と中の数字で1つだけ出し、時計を持たない対局は「∞」。`mirror` に縦のターン終了ボタンを渡すと計器を隠し、輪と数字(`ring_ratio` / `sub_label`)をそちらの縁へ映す。輪の描画は static の `draw_ring()`。書き込むのは `CardMatchClock.refresh_bars()` / `clear()` だけで、`CardMatchScreen._clock_dial` を直に触る(画面側の公開メソッドを増やさないため)。位置は `TurnClockDial.COLUMN_CENTER_Y` を `CardMatchBuild.make_clock_dial()` が読む |
-| `FlipRightGauge`(`scripts/ui/flip_right_gauge.gd`) | 反転権ボタンの下の札。自分と相手の残り回数を総回数ぶんの粒で並べる(GameDesign.md 9章)。`CardMatchFlipRight` が持ち、`refresh()` のたびに `state.flip_right_remaining` と `first_side` から総回数を引いて渡す。再生・観戦でも出す(見る側にも両者の残りが分かる) |
+| `FlipRightGauge`(`scripts/ui/flip_right_gauge.gd`) | 反転権ボタンの下の札。自分と相手の残り回数を総回数ぶんの粒で並べる(GameDesign.md 9章)。`CardMatchFlipRight` が持ち、`refresh()` のたびに `state.flip_right_remaining` と `first_side` から総回数を引いて渡す。再生・観戦でも出す(見る側にも両者の残りが分かる)。**刻み線で増えた粒は見せる数(`_shown`)と状態の数(`_real`)を分けて持ち、`expect_gain()` で光を迎えてから `land()` が着くまで見せない**(光が先に着いたぶんは `_credit` に残し、状態の更新が後から来ても二重に隠さない)。着いた粒の周りへ輪を広げる |
+| `HpNotches`(`scripts/ui/hp_notches.gd`, static) | HPの器の刻み目の描画。位置は `最大HP - 線` の所の管の内側、太さと光の半径は器の高さへの比。ともった数・届いた瞬間の閃き・予測の本数を `PlayerInfoBar` が辞書で渡す |
+| `NotchSparkFx`(`scripts/ui/notch_spark_fx.gd`) | 刻み目から反転権の札の粒へ飛ぶ光の粒(画面へ全面で重ねる。`FlipRightGauge` も帯も自分の `_draw()` の外へは描けないため)。`launch(from, to, delay, on_land)` が弧を描く3粒を飛ばし、着いたら `on_land` を呼ぶ |
 | `HandCardPaint`(`scripts/ui/hand_card_paint.gd`) | 手札の札の面。地は藍で、名前の帯だけ紙。コスト・攻撃力・体力は `UiKit.gem()` の宝石、右上は `UiKit.seal()` の紋章 |
 | `UiFonts.display_font_for()`(`scripts/ui/styles/ui_fonts.gd`) | 語の字がすべて見出し用のサブセットにあるときだけ明朝を返し、1字でも無ければ本文用を返す(1語の中で書体が混ざらないため) |
 
@@ -87,6 +89,7 @@
 
 | 仕組み | 持つ場所 |
 |---|---|
+| 刻み目がともる・予測(GameDesign.md 9章) | `PlayerInfoBar.show_state()` が `tick_lines_fired` の増えたぶん(最初の1回を除く)を `_light_notch()` でともし、`notch_lit(from_global, delay)` を出す。`CardMatchFlipRight` が自分・相手の帯の信号を受け、`FlipRightGauge.expect_gain()` が返す次の粒の位置へ `NotchSparkFx` を飛ばして、着いたら `land()` と鈴の音(`SoundBank.Sfx.TURN_START`。自分の側だけ。再生では鳴らさない)。予測は `CardMatchTargets.refresh_own_preview()` が相手の帯の `notch_preview`(越える線の数)へ渡す(相手のHP帯を指している間だけ) |
 | 終局の受け口 | `CardMatchFinale.on_match_ended()`。`MatchState.match_ended` は手の適用中に出るため、ここでは後始末(`CardMatchOutcome.finish()`)だけを即座に済ませ、見せる側は `_pending` に積む。`CardMatchScreen.on_strike_finished()` と、演出の無い経路のための `call_deferred` の両方から `_try_start()` を呼び、**攻撃・紋章の演出が終わっていればそこで始める**(1度だけ) |
 | 決着の一撃の時間の流れ | `CardMatchFinale.on_impact()`。`CardMatchStrike` / `CardMatchEffectStrike` の当たった瞬間から呼び、終局していてHP0の側があれば `Engine.time_scale` を下げ、`ignore_time_scale` のタイマーで戻す。`CardMatchReset` と画面を離れる経路でも1.0へ戻す |
 | 器の砕け・ひび・鼓動 | `HpVesselFx`(`PlayerInfoBar` の子のオーバーレイ)。ひびの本数はHPから毎回決め(状態を持たない)、砕けは `play_shatter()` の進捗だけを持つ。砕けた後は空の器とひびを残し、`PlayerInfoBar.reset()` で消す |
