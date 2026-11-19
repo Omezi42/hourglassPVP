@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="PuzzleStageData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/puzzle_stage_data.gd" id="script_puzzle"]
+
+[resource]
+script = ExtResource("script_puzzle")
+id = "daily_2027-01-07"
+title = "1月7日の問題"
+hint = "このターンで相手の体力をちょうど0にしよう"
+order = 0
+foe_hp = 5
+own_hp = 24
+mana = 3
+hand_ids = Array[String](["tick"])
+own_units = Array[String](["-", "sweep:2:3", "guard:3:4", "-", "-", "-"])
+foe_units = Array[String](["gate:4:3", "-", "-", "-", "-", "-"])

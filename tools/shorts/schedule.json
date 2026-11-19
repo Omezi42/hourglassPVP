@@ -1488,5 +1488,365 @@
 		"kind": "card",
 		"id": "anvil",
 		"label": "アンヴィル"
+	},
+	{
+		"date": "2026-12-18",
+		"kind": "puzzle",
+		"id": "83",
+		"label": "とどめ問題 #83"
+	},
+	{
+		"date": "2026-12-18",
+		"kind": "card",
+		"id": "burial",
+		"label": "砂葬"
+	},
+	{
+		"date": "2026-12-19",
+		"kind": "puzzle",
+		"id": "84",
+		"label": "とどめ問題 #84"
+	},
+	{
+		"date": "2026-12-19",
+		"kind": "card",
+		"id": "verdict",
+		"label": "時の裁き"
+	},
+	{
+		"date": "2026-12-20",
+		"kind": "puzzle",
+		"id": "85",
+		"label": "とどめ問題 #85"
+	},
+	{
+		"date": "2026-12-20",
+		"kind": "card",
+		"id": "awaken",
+		"label": "目覚めの砂"
+	},
+	{
+		"date": "2026-12-21",
+		"kind": "puzzle",
+		"id": "86",
+		"label": "とどめ問題 #86"
+	},
+	{
+		"date": "2026-12-21",
+		"kind": "card",
+		"id": "relief",
+		"label": "リリーフ"
+	},
+	{
+		"date": "2026-12-22",
+		"kind": "puzzle",
+		"id": "87",
+		"label": "とどめ問題 #87"
+	},
+	{
+		"date": "2026-12-22",
+		"kind": "card",
+		"id": "archive",
+		"label": "アーカイブ"
+	},
+	{
+		"date": "2026-12-23",
+		"kind": "puzzle",
+		"id": "88",
+		"label": "とどめ問題 #88"
+	},
+	{
+		"date": "2026-12-23",
+		"kind": "card",
+		"id": "canon",
+		"label": "カノン"
+	},
+	{
+		"date": "2026-12-24",
+		"kind": "puzzle",
+		"id": "89",
+		"label": "とどめ問題 #89"
+	},
+	{
+		"date": "2026-12-24",
+		"kind": "card",
+		"id": "grimoire",
+		"label": "グリモア"
+	},
+	{
+		"date": "2026-12-25",
+		"kind": "puzzle",
+		"id": "90",
+		"label": "とどめ問題 #90"
+	},
+	{
+		"date": "2026-12-25",
+		"kind": "card",
+		"id": "hive",
+		"label": "ハイヴ"
+	},
+	{
+		"date": "2026-12-26",
+		"kind": "puzzle",
+		"id": "91",
+		"label": "とどめ問題 #91"
+	},
+	{
+		"date": "2026-12-26",
+		"kind": "card",
+		"id": "drift",
+		"label": "ドリフト"
+	},
+	{
+		"date": "2026-12-27",
+		"kind": "puzzle",
+		"id": "92",
+		"label": "とどめ問題 #92"
+	},
+	{
+		"date": "2026-12-27",
+		"kind": "card",
+		"id": "hound",
+		"label": "ハウンド"
+	},
+	{
+		"date": "2026-12-28",
+		"kind": "puzzle",
+		"id": "93",
+		"label": "とどめ問題 #93"
+	},
+	{
+		"date": "2026-12-28",
+		"kind": "card",
+		"id": "nibble",
+		"label": "ニブル"
+	},
+	{
+		"date": "2026-12-29",
+		"kind": "puzzle",
+		"id": "94",
+		"label": "とどめ問題 #94"
+	},
+	{
+		"date": "2026-12-29",
+		"kind": "card",
+		"id": "reverb",
+		"label": "リバーブ"
+	},
+	{
+		"date": "2026-12-30",
+		"kind": "puzzle",
+		"id": "95",
+		"label": "とどめ問題 #95"
+	},
+	{
+		"date": "2026-12-30",
+		"kind": "card",
+		"id": "present",
+		"label": "プレゼント"
+	},
+	{
+		"date": "2026-12-31",
+		"kind": "puzzle",
+		"id": "96",
+		"label": "とどめ問題 #96"
+	},
+	{
+		"date": "2026-12-31",
+		"kind": "card",
+		"id": "bola",
+		"label": "ボーラ"
+	},
+	{
+		"date": "2027-01-01",
+		"kind": "puzzle",
+		"id": "97",
+		"label": "とどめ問題 #97"
+	},
+	{
+		"date": "2027-01-01",
+		"kind": "card",
+		"id": "delay",
+		"label": "ディレイ"
+	},
+	{
+		"date": "2027-01-02",
+		"kind": "puzzle",
+		"id": "98",
+		"label": "とどめ問題 #98"
+	},
+	{
+		"date": "2027-01-02",
+		"kind": "card",
+		"id": "vault",
+		"label": "ヴォールト"
+	},
+	{
+		"date": "2027-01-03",
+		"kind": "puzzle",
+		"id": "99",
+		"label": "とどめ問題 #99"
+	},
+	{
+		"date": "2027-01-03",
+		"kind": "card",
+		"id": "divine",
+		"label": "砂占い"
+	},
+	{
+		"date": "2027-01-04",
+		"kind": "puzzle",
+		"id": "100",
+		"label": "とどめ問題 #100"
+	},
+	{
+		"date": "2027-01-04",
+		"kind": "card",
+		"id": "chant",
+		"label": "チャント"
+	},
+	{
+		"date": "2027-01-05",
+		"kind": "puzzle",
+		"id": "101",
+		"label": "とどめ問題 #101"
+	},
+	{
+		"date": "2027-01-05",
+		"kind": "card",
+		"id": "bypass",
+		"label": "抜け道"
+	},
+	{
+		"date": "2027-01-06",
+		"kind": "puzzle",
+		"id": "102",
+		"label": "とどめ問題 #102"
+	},
+	{
+		"date": "2027-01-06",
+		"kind": "card",
+		"id": "repeat",
+		"label": "リピート"
+	},
+	{
+		"date": "2027-01-07",
+		"kind": "puzzle",
+		"id": "103",
+		"label": "とどめ問題 #103"
+	},
+	{
+		"date": "2027-01-07",
+		"kind": "card",
+		"id": "block",
+		"label": "ブロック"
+	},
+	{
+		"date": "2027-01-08",
+		"kind": "puzzle",
+		"id": "104",
+		"label": "とどめ問題 #104"
+	},
+	{
+		"date": "2027-01-08",
+		"kind": "card",
+		"id": "pelt",
+		"label": "砂つぶて"
+	},
+	{
+		"date": "2027-01-09",
+		"kind": "puzzle",
+		"id": "105",
+		"label": "とどめ問題 #105"
+	},
+	{
+		"date": "2027-01-09",
+		"kind": "card",
+		"id": "march",
+		"label": "マーチ"
+	},
+	{
+		"date": "2027-01-10",
+		"kind": "puzzle",
+		"id": "106",
+		"label": "とどめ問題 #106"
+	},
+	{
+		"date": "2027-01-10",
+		"kind": "card",
+		"id": "warden",
+		"label": "ウォーデン"
+	},
+	{
+		"date": "2027-01-11",
+		"kind": "puzzle",
+		"id": "107",
+		"label": "とどめ問題 #107"
+	},
+	{
+		"date": "2027-01-11",
+		"kind": "card",
+		"id": "gale",
+		"label": "ゲイル"
+	},
+	{
+		"date": "2027-01-12",
+		"kind": "puzzle",
+		"id": "108",
+		"label": "とどめ問題 #108"
+	},
+	{
+		"date": "2027-01-12",
+		"kind": "card",
+		"id": "sling",
+		"label": "スリング"
+	},
+	{
+		"date": "2027-01-13",
+		"kind": "puzzle",
+		"id": "109",
+		"label": "とどめ問題 #109"
+	},
+	{
+		"date": "2027-01-13",
+		"kind": "card",
+		"id": "chorus",
+		"label": "大合唱"
+	},
+	{
+		"date": "2027-01-14",
+		"kind": "puzzle",
+		"id": "110",
+		"label": "とどめ問題 #110"
+	},
+	{
+		"date": "2027-01-14",
+		"kind": "card",
+		"id": "sage",
+		"label": "セージ"
+	},
+	{
+		"date": "2027-01-15",
+		"kind": "puzzle",
+		"id": "111",
+		"label": "とどめ問題 #111"
+	},
+	{
+		"date": "2027-01-15",
+		"kind": "card",
+		"id": "scribe",
+		"label": "スクライブ"
+	},
+	{
+		"date": "2027-01-16",
+		"kind": "puzzle",
+		"id": "112",
+		"label": "とどめ問題 #112"
+	},
+	{
+		"date": "2027-01-16",
+		"kind": "card",
+		"id": "grit_rain",
+		"label": "砂礫の雨"
 	}
 ]
