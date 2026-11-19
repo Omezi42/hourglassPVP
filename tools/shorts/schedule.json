@@ -1253,61 +1253,101 @@
 		"date": "2026-11-28",
 		"kind": "puzzle",
 		"id": "63",
-		"label": "とどめ問題 #63"
+		"label": "とどめ問題 #63",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-11-28",
 		"kind": "card",
 		"id": "ward",
-		"label": "ウォード"
+		"label": "ウォード",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-11-29",
 		"kind": "puzzle",
 		"id": "64",
-		"label": "とどめ問題 #64"
+		"label": "とどめ問題 #64",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-11-29",
 		"kind": "card",
 		"id": "swarm",
-		"label": "スウォーム"
+		"label": "スウォーム",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-11-30",
 		"kind": "puzzle",
 		"id": "65",
-		"label": "とどめ問題 #65"
+		"label": "とどめ問題 #65",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-11-30",
 		"kind": "card",
 		"id": "chime",
-		"label": "チャイム"
+		"label": "チャイム",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-12-01",
 		"kind": "puzzle",
 		"id": "66",
-		"label": "とどめ問題 #66"
+		"label": "とどめ問題 #66",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-12-01",
 		"kind": "card",
 		"id": "eye",
-		"label": "アイ"
+		"label": "アイ",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-12-02",
 		"kind": "puzzle",
 		"id": "67",
-		"label": "とどめ問題 #67"
+		"label": "とどめ問題 #67",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-12-02",
 		"kind": "card",
 		"id": "echo",
-		"label": "エコー"
+		"label": "エコー",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-12-03",
