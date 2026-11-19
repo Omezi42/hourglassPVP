@@ -24,9 +24,6 @@
   - 撃たない場合の評価は手札の砂術すべてで同じため、同じ盤面のあいだは1度だけ測る(`_baseline`)
   - `spell_lookahead = false` で旧来の効果ごとの見積もり(`_spell_value()`)へ戻る。**新旧を自己対戦で比べるためだけに残す**
     (`tools/balance/run_cpu_spell_ab.gd`。`run_v5_simulation.gd spell_lookahead=0`)
-- **相手に刻み線(GameDesign.md 2章)を越えさせる損を評価へ入れる**(初級を除く)。`_choose_attack()` は本体を殴る価値から
-  `MatchCombatPreview.new_tick_lines()` × `CardCpuSpellSearch.FLIP_RIGHT_VALUE` を引く。砂術の盤面評価 `CardCpuSpellSearch.evaluate()` は
-  相手の `tick_lines_fired` × `FLIP_RIGHT_VALUE` を引く(撃つ前後の差で、撃って新たに越えさせた線が損になる)
 - **反転権(GameDesign.md 2章)は2箇所に分けて検討する。**片方だけでは
   「体力を残したまま弱めて、攻撃力を相手へ渡すだけ」になり実質使われない置物になると
   実測で分かったため(`docs/BalanceReport_v5.md` 12.2節)、攻撃とセットの1手を別に持つ。

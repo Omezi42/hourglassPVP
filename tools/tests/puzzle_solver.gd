@@ -18,7 +18,6 @@ static func build(stage: PuzzleStageData) -> MatchState:
 	state.hp[foe] = stage.foe_hp
 	state.max_mana[mine] = stage.mana
 	state.mana[mine] = stage.mana
-	state.flip_right_remaining[mine] = PuzzleStageData.FLIP_RIGHTS
 	state.hand[mine] = []
 	for id in stage.hand_ids:
 		state.hand[mine].append(CardLibrary.find_by_id(id))

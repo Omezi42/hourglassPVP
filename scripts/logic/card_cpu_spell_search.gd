@@ -138,7 +138,6 @@ static func evaluate(state: MatchState, side: int, face_weight: float) -> float:
 	value += float(int(state.hp[side]) - int(state.hp[foe_side])) * face_weight
 	value += float(state.hand[side].size()) * HAND_CARD_VALUE
 	value += float(state.flip_right_remaining.get(side, 0)) * FLIP_RIGHT_VALUE
-	value -= float(state.tick_lines_fired.get(foe_side, 0)) * FLIP_RIGHT_VALUE
 	return value
 
 

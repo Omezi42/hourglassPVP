@@ -44,15 +44,6 @@ func _test_script_is_legal_and_player_wins() -> void:
 
 	_assert.call(_state.is_match_over(), "the scripted match should finish")
 	_assert.call(_state.winner == SIDE_A, "the player should win the scripted tutorial match")
-	# 台本はどちらのHPも刻み線(GameDesign.md 2章)へ届かず、自分の反転権(初期1回)を1回使い切る(18章)。
-	for side in [SIDE_A, SIDE_B]:
-		_assert.call(
-			int(_state.tick_lines_fired[side]) == 0, "the script should not cross a tick line"
-		)
-	_assert.call(
-		int(_state.flip_right_remaining[SIDE_A]) == 0,
-		"the scripted flip right should use the player's only charge"
-	)
 
 
 func _apply_step(step: Dictionary, index: int) -> void:

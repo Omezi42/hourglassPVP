@@ -3,7 +3,7 @@ extends RefCounted
 ## CPUの反転権の使い方(GameDesign.md 2章・13章)。`CardCpuStrategy` の行数を抑えるため切り出した。
 ## 難易度に依らないため static だけで持つ。
 
-## 反転権は初期には1〜2回しか持てない希少な資源のため、
+## 反転権は対局に2〜3回しか無い希少な資源のため、
 ## 通常の反転よりゲインの下限を高く取り、僅かな得のために使い切らせない。
 const FLIP_RIGHT_MIN_GAIN := 3.0
 

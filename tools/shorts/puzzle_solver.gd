@@ -166,7 +166,6 @@ static func build(stage: PuzzleStageData) -> MatchState:
 	state.max_mana[MINE] = stage.mana
 	state.mana[MINE] = stage.mana
 	state.coin_available[MINE] = false
-	state.flip_right_remaining[MINE] = PuzzleStageData.FLIP_RIGHTS
 	state.hand[MINE] = []
 	for id in stage.hand_ids:
 		var card := CardLibrary.find_by_id(id)

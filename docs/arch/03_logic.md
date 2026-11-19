@@ -121,7 +121,7 @@ UIに依存しない、対局ルールそのものを扱う層。
 ## 3.1.2 反転権(GameDesign.md 2章)
 
 **新しいクラスを作らず、`MatchState` へ `flip()` と対になるメソッドを1組足すだけにする。**
-先手・後手で初期の回数(`FLIP_RIGHT_FIRST` / `FLIP_RIGHT_SECOND`)が
+先手・後手で総回数(`FLIP_RIGHT_FIRST` / `FLIP_RIGHT_SECOND`。**値は要検証の仮置き**)が
 違う点以外は、通常の反転と同じ「体力と攻撃力を入れ替え、`ON_FLIP` を解決する」処理を再利用する。
 
 - `flip_right_remaining: Dictionary`(Side → 残り回数)を `start_match()` で先手・後手それぞれ
@@ -146,25 +146,6 @@ UIに依存しない、対局ルールそのものを扱う層。
   `SWAP_STATS` は `flippable()` でない駒を飛ばし、`eligible_target()` も候補から外す
 - `MatchAction.flip_right(side, target_side, slot)` / `apply()` の `"flip_right"` 分岐を足す。
   棋譜・オンライン送信・リプレイはすべて既存の `MatchAction` の経路をそのまま通る
-
-## 3.1.3 刻み線(GameDesign.md 2章)
-
-**HPの増減はすべて `damage_player()` / `heal_player()` を通るため、刻み線もそこだけに置く**(時の逆流もここを通る)。
-
-- 定数 `HP_TICK_LINES`(8・16)と、差し替え用の `hp_tick_lines`(既定は定数の写し。バランス計測だけが書き換える)
-- `hp_lost: Dictionary`(Side → 対局中に失ったHP)は `damage_player()` が実際に減った量を足し、`heal_player()` が戻った量を引く
-  (0未満にしない)。**`hp` を直接書き換える経路(誘導対局・パズル・ソロの開始局面)は数えない**ため、開始局面のHPが最大HPより
-  低くても線は働かない。`hp_max - hp` を使わないのはこのため
-- `tick_lines_fired`(Side → 働いた線の数)。`_fire_tick_lines(side)` が `hp_lost` の届いた線の数まで、増えたぶんだけ
-  `flip_right_remaining` へ1ずつ足し、線ごとに `tick_line_reached(side, line)` を出す。数は減らさない(各線は1対局に1度)
-- CPUとUIが読む「この攻撃で新たに越える線の数」は `MatchCombatPreview.new_tick_lines(state, side, damage)`
-  (`MatchState` は公開メソッドの上限に達しているため)
-- 計測用に `flip_right_spent`(使った回数)と `unit_deaths_by_tick`(落砂で壊れた駒の数)を持つ
-- **オンライン・リプレイは `MatchAction` を同じ種・同じ版の `MatchState` へ流し込んで状態を作る**ため、反転権の増加は
-  手と同じ経路で再現され、通信に載せるものは増えない。**版が違う記録(刻み線の前に残したリプレイ)は反転権の回数が食い違い、
-  途中で手が通らなくなりうる**(オンラインは `GameVersion.matches_build()` で同じ版だけを組ませる)
-- リーサルパズルの自分の反転権は `PuzzleStageData.FLIP_RIGHTS`(2)で固定する。問題はこの回数を前提に作ってあり、
-  対局の初期の回数(1)に依らせないため
 
 ## 3.2 `CardEffectResolver`(`scripts/logic/card_effect_resolver.gd`, RefCounted)
 

@@ -801,10 +801,6 @@ func _choose_attack(state: MatchState, side: int) -> Dictionary:
 			return MatchAction.attack(side, slot, -1)
 		if state.can_attack_player(side):
 			var face_value := attacker.attack * _face_weight()
-			face_value -= (
-				MatchCombatPreview.new_tick_lines(state, foe_side, attacker.attack)
-				* CardCpuSpellSearch.FLIP_RIGHT_VALUE
-			)
 			if face_value > best_value:
 				best_value = face_value
 				best = MatchAction.attack(side, slot, -1)
