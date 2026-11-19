@@ -5,8 +5,6 @@ extends Control
 
 signal face_pressed
 signal graveyard_pressed
-## HPが刻み線に届いて刻み目がともった。`from_global` はその刻み目の位置、`delay` は同時に届いた線の間隔。
-signal notch_lit(from_global: Vector2, delay: float)
 
 const BAR_HEIGHT := 56.0
 const DANGER_RATIO := 0.4
@@ -93,9 +91,6 @@ const TEXT_SHADOW := Color(0.05, 0.03, 0.02, 0.85)
 ## 被弾の演出(GameDesign.md 9章)。バーは補間して減らし、光らせ、増減を数字で浮かせる。
 const HP_SLIDE_DURATION := 0.35
 const FLASH_DURATION := 0.4
-## 刻み目がともる閃きの尺と、同時に複数の線へ届いたときの飛び立ちの間隔。
-const NOTCH_FLASH_DURATION := 0.6
-const NOTCH_LIGHT_STAGGER := 0.18
 const FLOAT_DURATION := 0.9
 const FLOAT_RISE := 16.0
 ## ダメージの大きさで数字を強める(GameDesign.md 9章)。ここに達したところで最大。
@@ -169,14 +164,6 @@ var targetable := false:
 			return
 		targetable = value
 		queue_redraw()
-## 攻撃の予測が越える刻み線の数(次にともる線から数える。操作結果の予測で、推奨ではない)。
-var notch_preview := 0:
-	set(value):
-		if notch_preview == value:
-			return
-		notch_preview = value
-		if _hp_layer != null:
-			_hp_layer.repaint()
 ## 自分の駒をこの帯へドラッグして放したときに呼ぶ処理(GameDesign.md 9章)。空なら受けない。
 var drop_handler := Callable()
 ## いまこの側の手番か。手番の側だけ明るくして、どちらが指す番かを示す
@@ -207,12 +194,6 @@ var _tracker := PressTracker.new()
 ## 被弾の演出。HPは瞬時に減らさず、この値から実際の値へ補間する。
 var _shown_hp := float(MatchState.INITIAL_HP)
 var _flash := 0.0
-## 刻み目(2章の刻み線)。位置は対局の `hp_tick_lines`、ともった数は `tick_lines_fired`。
-var _tick_lines: Array[int] = []
-var _notches_lit := 0
-var _notch_flash := 0.0
-var _notch_flash_index := -1
-var _notch_tween: Tween
 ## 浮かせている増減の量と残り時間。
 var _float_amount := 0
 var _float_left := 0.0
@@ -273,10 +254,8 @@ func _sync_vessel() -> void:
 func show_state(state: MatchState, side: int, max_hp: int = MatchState.INITIAL_HP) -> void:
 	var before := _shown_values()
 	var previous := _hp
-	var seen := _initialized
 	_hp = state.hp[side]
 	_max_hp = max_hp
-	_show_notches(state, side, seen)
 	if _vessel != null:
 		_vessel.hp = _hp
 	# **最初の1回は演出しない。**教材の盤面(ルール画面・画面の見かた)は初期値30から
@@ -298,40 +277,7 @@ func show_state(state: MatchState, side: int, max_hp: int = MatchState.INITIAL_H
 
 
 func _shown_values() -> Array:
-	return [
-		_hp, _max_hp, _shown_hp, _mana, _max_mana, _deck, _graveyard, _hand, _has_coin, _notches_lit
-	]
-
-
-## 刻み線の位置とともった数を取り込む。増えたぶんは、最初の1回(`seen` が偽)でなければともす。
-func _show_notches(state: MatchState, side: int, seen: bool) -> void:
-	_tick_lines = state.hp_tick_lines
-	var lit: int = state.tick_lines_fired.get(side, 0)
-	if seen and lit > _notches_lit:
-		for i in range(_notches_lit, lit):
-			_light_notch(i, float(i - _notches_lit) * NOTCH_LIGHT_STAGGER)
-	_notches_lit = lit
-
-
-## 刻み目が琥珀にともり、その光を反転権の粒へ送り出す(受け取るのは `CardMatchFlipRight`)。
-func _light_notch(index: int, delay: float) -> void:
-	var inner := hp_bar_rect().grow(-UiKit.SAND_INSET)
-	var x := HpNotches.x_at(_tick_lines[index], _max_hp, inner)
-	if x < 0.0:
-		return
-	_notch_flash_index = index
-	if _notch_tween != null and _notch_tween.is_valid():
-		_notch_tween.kill()
-	_notch_tween = create_tween()
-	_notch_tween.tween_interval(delay)
-	_notch_tween.tween_method(_set_notch_flash, 1.0, 0.0, NOTCH_FLASH_DURATION)
-	notch_lit.emit(get_global_transform() * Vector2(x, inner.get_center().y), delay)
-
-
-func _set_notch_flash(value: float) -> void:
-	_notch_flash = value
-	if _hp_layer != null:
-		_hp_layer.repaint()
+	return [_hp, _max_hp, _shown_hp, _mana, _max_mana, _deck, _graveyard, _hand, _has_coin]
 
 
 func _redraw_all() -> void:
@@ -364,13 +310,6 @@ func reset() -> void:
 	if _vessel != null:
 		_vessel.reset()
 	_flash = 0.0
-	if _notch_tween != null and _notch_tween.is_valid():
-		_notch_tween.kill()
-	_notch_flash = 0.0
-	_notch_flash_index = -1
-	_notches_lit = 0
-	_tick_lines = []
-	notch_preview = 0
 	_float_left = 0.0
 	_deck_pulse = 0.0
 	_highlight_cost = 0
@@ -676,23 +615,6 @@ func _paint_hp(item: PaintedShape) -> void:
 			[[0.0, light], [UiKit.SAND_FOLD, light.lerp(deep, UiKit.SAND_FOLD)], [1.0, deep]],
 			true
 		)
-	(
-		HpNotches
-		. paint(
-			item,
-			rect,
-			inner,
-			_tick_lines,
-			_max_hp,
-			{
-				"lit": _notches_lit,
-				"flash_index": _notch_flash_index,
-				"flash": _notch_flash,
-				"preview_from": _notches_lit,
-				"preview_count": notch_preview,
-			}
-		)
-	)
 	# ガラス越しに見せる。上側へ白い反射の帯を薄く敷く。
 	var sheen := Rect2(
 		rect.position + HP_SHEEN_INSET,
