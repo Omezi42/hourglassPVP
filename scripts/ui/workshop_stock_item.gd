@@ -179,8 +179,8 @@ func refuse() -> void:
 	if _shake_tween != null and _shake_tween.is_valid():
 		_shake_tween.kill()
 	_shake_tween = create_tween().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	for swing in CardMatchHandLayout.REFUSE_SWINGS:
-		_shake_tween.tween_property(self, "_shake_x", swing, CardMatchHandLayout.REFUSE_STEP)
+	for swing in RefuseShake.SWINGS:
+		_shake_tween.tween_property(self, "_shake_x", swing, RefuseShake.STEP)
 
 
 func _gui_input(event: InputEvent) -> void:

@@ -170,7 +170,31 @@ func on_foe_slot_pressed(view: CardView) -> void:
 		_handle_foe_targeting(slot)
 		return
 	if _screen.selection.is_board_selection():
-		_attack(_screen.selection.slot, slot)
+		if not _refuse_target(_screen.selection.slot, slot):
+			_attack(_screen.selection.slot, slot)
+
+
+## 守護がいて狙えない駒を押した(GameDesign.md 9章): その駒が首を振り、守護の駒の輪が明滅する。
+## 返事をしたら true。攻撃できない理由が守護でないとき(攻撃済みなど)は何も返さない。
+func _refuse_target(slot: int, target_slot: int) -> bool:
+	var state := _screen.state
+	var my_side := _screen.my_side
+	var attacker: CardInstance = state.board[my_side][slot]
+	if (
+		attacker == null
+		or not attacker.can_attack()
+		or state.can_attack(my_side, slot, target_slot)
+	):
+		return false
+	var foe := MatchState.other_side(my_side)
+	if state.board[foe][target_slot] == null:
+		return false
+	RefuseShake.play_in_place(_screen.view_at(foe, target_slot))
+	for guard_slot in MatchState.BOARD_SIZE:
+		var unit: CardInstance = state.board[foe][guard_slot]
+		if unit != null and unit.has_keyword(CardEnums.Keyword.GUARD):
+			_screen.view_at(foe, guard_slot).blink_guard()
+	return true
 
 
 ## 自分の駒をドラッグで掴んだ瞬間、押して選んだのと同じ状態にする(GameDesign.md 9章)。
@@ -230,7 +254,10 @@ func _aim_at(target: int) -> void:
 		_screen._targets.on_hovered(view)
 		_screen.drag_arrow.set_aim(true, CardFlipBeam.unit_center(view))
 	else:
-		_screen.drag_arrow.set_aim(target == CardMatchSelection.FACE)
+		var on_face := target == CardMatchSelection.FACE
+		_screen.drag_arrow.set_aim(
+			on_face, _screen.foe_bar.hp_badge_global_center() if on_face else Vector2.INF
+		)
 
 
 ## 自分の駒を相手の駒へ落として攻撃する。押して選ぶ経路と同じ `_attack()` へ合流させる。

@@ -110,6 +110,7 @@ func set_hover_target(target: int) -> void:
 	if s._selection == null or s._selection.hover_target == target:
 		return
 	s._selection.hover(target)
+	s.foe_bar.aimed = target == CardMatchSelection.FACE
 	if s.state != null and s._selection.is_board_selection():
 		s._targets.refresh_own_preview()
 

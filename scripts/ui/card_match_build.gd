@@ -160,6 +160,9 @@ static func overlays(screen: CardMatchScreen) -> void:
 	screen.add_child(screen._feed)
 	screen._mulligan = CardMatchMulligan.new()
 	screen._mulligan.confirmed.connect(screen._on_mulligan_confirmed)
+	screen._mulligan.fan_requested.connect(
+		func(shown: bool, duration: float) -> void: screen._hand_layout.fade_fan(shown, duration)
+	)
 	screen.add_child(screen._mulligan)
 	# **誘導対局の帯はマリガンより後に足す**(GameDesign.md 18章)。マリガンの暗幕の下へ
 	# 敷くと、いちばん案内が要る最初の画面ですなえるが読めなくなる。

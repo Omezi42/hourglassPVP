@@ -21,11 +21,22 @@ const RIM_GAP := 2.5
 const RIM_WIDTH := 2.5
 const RIM_CORNER_SEGMENTS := 6
 const RIM_PULSE_SPEED := 4.0
+## 狙う指が乗っている間の縁の太さ。脈の速さと明るさの幅は駒の身構え(`CardView.BRACE_*`)と同じ。
+const RIM_AIM_WIDTH := 4.0
 ## バッジの真鍮の外輪(半径 + 3.5)まで覆う。
 const RIM_BADGE_COVER := 3.5
 ## 出せない札を押したとき、足りないぶんのピップを赤く点滅させる1回の尺と回数。
 const SHORT_BLINK := 0.16
 const SHORT_BLINKS := 2
+
+## 狙う指が帯の上にいる(`PlayerInfoBar.aimed`)。変わった瞬間に縁を描き直す。
+var aimed := false:
+	set(value):
+		if aimed == value:
+			return
+		aimed = value
+		if _rim != null:
+			_rim.repaint()
 
 var _bar: PlayerInfoBar
 var _time := 0.0
@@ -59,7 +70,8 @@ func _process(delta: float) -> void:
 		var pulse := _pulse(PlayerInfoBar.SAND_GLINT_SPEED, float(i) * GLINT_PHASE_STEP)
 		_glints[i].modulate.a = 0.15 + pulse * 0.45
 	_ring.modulate.a = 0.55 + 0.35 * _pulse(RING_PULSE_SPEED)
-	_rim.modulate.a = 0.6 + 0.4 * _pulse(RIM_PULSE_SPEED)
+	var rim_speed := CardView.BRACE_PULSE_SPEED if aimed else RIM_PULSE_SPEED
+	_rim.modulate.a = lerpf(CardView.BRACE_PULSE_MIN, CardView.BRACE_PULSE_MAX, _pulse(rim_speed))
 	var pip_pulse := _pulse(PlayerInfoBar.PIP_GLOW_SPEED)
 	var pip_scale := 1.0 + PlayerInfoBar.PIP_GLOW_EXTRA * pip_pulse / PlayerInfoBar.PIP_RADIUS
 	for glow in _pip_glows:
@@ -187,6 +199,7 @@ func _paint_rim(shape: PaintedShape) -> void:
 	if _hp_rect.size == Vector2.ZERO:
 		return
 	var color := Color(UiPalette.HEALTH, 1.0)
+	var rim_width := RIM_AIM_WIDTH if aimed else RIM_WIDTH
 	var ring := UiPaint.rounded_rect_points_uniform(
 		_hp_rect.grow(RIM_GAP), PlayerInfoBar.HP_BAR_RADIUS + RIM_GAP, RIM_CORNER_SEGMENTS
 	)
@@ -199,16 +212,16 @@ func _paint_rim(shape: PaintedShape) -> void:
 			break
 	if start < 0:
 		ring.append(ring[0])
-		ShapePaint.polyline(shape.get_canvas_item(), ring, color, RIM_WIDTH, true)
+		ShapePaint.polyline(shape.get_canvas_item(), ring, color, rim_width, true)
 		return
 	var run := PackedVector2Array()
 	for k in ring.size() + 1:
 		var p := ring[(start + k) % ring.size()]
 		if p.distance_to(badge_center) < hidden_radius:
 			if run.size() >= 2:
-				ShapePaint.polyline(shape.get_canvas_item(), run, color, RIM_WIDTH, true)
+				ShapePaint.polyline(shape.get_canvas_item(), run, color, rim_width, true)
 			run = PackedVector2Array()
 		else:
 			run.append(p)
 	if run.size() >= 2:
-		ShapePaint.polyline(shape.get_canvas_item(), run, color, RIM_WIDTH, true)
+		ShapePaint.polyline(shape.get_canvas_item(), run, color, rim_width, true)

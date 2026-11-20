@@ -28,7 +28,9 @@ const SCENES := [
 	"hand_hover",
 	"mulligan",
 	"result_win",
-	"result_loss"
+	"result_loss",
+	"guard_refuse",
+	"aim_face"
 ]
 ## 盤面が落ち着くまで撮らずに待つコマ数と、撮り始めの静止のコマ数。
 const SETTLE_FRAMES := 40
@@ -69,6 +71,8 @@ const DEFENDER_HEALTH := 6
 const DEFENDER_ATTACK := 2
 const BYSTANDER_MY := {"slot": 3, "id": "wall", "health": 6, "attack": 1}
 const BYSTANDER_FOE := {"slot": 3, "id": "poison", "health": 5, "attack": 2}
+## 守護の相手(guard_refuse)。相手の駒1を押すと、守護がいて狙えない。
+const GUARD_FOE := {"slot": 3, "id": "guard", "health": 5, "attack": 2}
 ## 決着: 相手のHPと、それを倒しきる攻撃力。
 const FINALE_FOE_HP := 4
 const FINALE_ATTACK := 6
@@ -79,6 +83,9 @@ const FLIP_TARGET_ID := "drill"
 const FLIP_TARGET_HEALTH := 5
 const FLIP_TARGET_ATTACK := 2
 ## マリガンの場面: 後手(コイン1枚)の初期手札の枚数、配り終わりの待ち、結果パネルの場面の決着手数。
+## 動きの途中を撮るため、取り消し・選択・拒否の直後はこの倍率へ落とし、このコマ数だけ続ける。
+const SLOW_SCALE := 0.2
+const SLOW_FRAMES := 24
 const MULLIGAN_HAND_SIZE := 4
 const MULLIGAN_DEAL_FRAMES := 30
 const RESULT_MOVES := 23
@@ -212,6 +219,10 @@ func _run() -> void:
 			await _scene_result(true)
 		"result_loss":
 			await _scene_result(false)
+		"guard_refuse":
+			await _scene_guard_refuse()
+		"aim_face":
+			await _scene_aim_face()
 	await _frames(POST_HOLD_FRAMES)
 	_recording = false
 	await _frames(2)
@@ -232,7 +243,7 @@ func _build_board() -> void:
 		match_screen.state.flip_right_remaining[foe] = FLIP_RIGHT_FOE
 	else:
 		_unit(foe, 1, DEFENDER_ID, DEFENDER_HEALTH, DEFENDER_ATTACK)
-	_place(foe, BYSTANDER_FOE)
+	_place(foe, GUARD_FOE if _scene_name == "guard_refuse" else BYSTANDER_FOE)
 	if _scene_name == "finale":
 		match_screen.state.hp[foe] = FINALE_FOE_HP
 	match_screen.state.current_turn = my
@@ -398,6 +409,7 @@ func _select_own(mark_name := "select_own") -> void:
 	await _glide(_view_center(match_screen.own_slot_view(1)))
 	await _click()
 	_mark(mark_name)
+	await _slow(SLOW_FRAMES)
 	await _frames(STEP_PAUSE_FRAMES)
 
 
@@ -470,6 +482,7 @@ func _scene_cancel() -> void:
 	await _frames(HOVER_HOLD_FRAMES / 2)
 	_click_now(MOUSE_BUTTON_RIGHT)
 	_mark("cancel_right_click")
+	await _slow(SLOW_FRAMES)
 	await _frames(HOVER_HOLD_FRAMES)
 	await _glide(_rest_point)
 	await _select_own("select_own_b")
@@ -477,13 +490,49 @@ func _scene_cancel() -> void:
 	await _frames(STEP_PAUSE_FRAMES / 2)
 	await _click()
 	_mark("cancel_empty_click")
+	await _slow(SLOW_FRAMES)
 	await _frames(HOVER_HOLD_FRAMES)
 	await _glide(_rest_point)
 	await _select_own("select_own_c")
 	await _glide(_rest_point)
 	_key(KEY_ESCAPE)
 	_mark("cancel_escape")
+	await _slow(SLOW_FRAMES)
 	await _frames(HOVER_HOLD_FRAMES)
+
+
+## 守護がいる盤面で、自分の駒を選び、狙えない相手の駒を押す(首振りと守護の輪の明滅)。
+func _scene_guard_refuse() -> void:
+	await _select_own()
+	await _glide(_view_center(match_screen.foe_slot_view(1)))
+	_mark("hover_blocked")
+	await _frames(HOVER_HOLD_FRAMES / 2)
+	await _click()
+	_mark("press_blocked")
+	await _slow(SLOW_FRAMES)
+	await _frames(HOVER_HOLD_FRAMES)
+
+
+## 駒を掴んで相手のHP帯へ引く。帯へ入った直後を遅くして、縁の太りと矢印の吸着を撮る。
+func _scene_aim_face() -> void:
+	var start := _view_center(match_screen.own_slot_view(1))
+	var goal := _foe_hp_point()
+	await _glide(start)
+	await _frames(HOVER_HOLD_FRAMES / 2)
+	_button(MOUSE_BUTTON_LEFT, true)
+	_mark("press_own")
+	await _frames(PRESS_HOLD_FRAMES)
+	await _glide(start.lerp(goal, 0.6))
+	_mark("drag_mid")
+	await _frames(HOVER_HOLD_FRAMES / 2)
+	await _glide(goal)
+	_mark("over_face")
+	await _slow(SLOW_FRAMES)
+	await _frames(HOVER_HOLD_FRAMES)
+	await _glide(_rest_point)
+	_button(MOUSE_BUTTON_LEFT, false)
+	_mark("release_outside")
+	await _frames(STEP_PAUSE_FRAMES)
 
 
 ## 比べる基準: 手札の札に順にカーソルを乗せる(磨き込み済みのホバー)。
@@ -582,6 +631,13 @@ func _capture_loop() -> void:
 		var path := _out_dir.path_join(FRAME_DIR).path_join("%05d.png" % _frame)
 		_stage.get_texture().get_image().save_png(path)
 		_frame += 1
+
+
+## 動きの途中を撮るため、時間を落として数コマ進める。
+func _slow(count: int) -> void:
+	Engine.time_scale = SLOW_SCALE
+	await _frames(count)
+	Engine.time_scale = 1.0
 
 
 func _frames(count: int) -> void:

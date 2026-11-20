@@ -80,6 +80,11 @@
 | バッジの跳ね | `CardView` が `unit` の前回値を控えて差分で `stat_punch` を1.0にし Tween で戻す。描画は `1 + stat_punch * 0.3` の拡縮 |
 | 身構え | `CardMatchTargets` が光っている相手の駒へカーソルが乗ったら `CardView.brace = true` |
 | 取り消しの「戻る」 | `CardMatchSelection.clear()` を受けた画面側が `CardView.play_unselect()`(0.1秒で縮めて消す) |
+| 取り消しで予測の丸・「反転」ボタンを畳む | `CardViewPreviewFade`(`CardView.preview_health` のセッターが 0以上→-1 を見て、最後に描いた値を残して係数 1→0・倍率 1→`UNSELECT_SHRINK` を `UNSELECT_DURATION` で動かす。描くのは `CardViewPaint.preview()`)/ `ButtonFold`(`_refresh_buttons()` が `_flip_button` へ `set_shown()`。消すときは `modulate:a` を落としてから非表示にし、畳んでいる間は `mouse_filter` を無視) |
+| 選択の輪が締まって出る | `CardViewRing`(`selected` の false→true をフレーム末に1度だけ見て `play_select()`。`CardView.select_amount` を 0→1、`CardViewPaint.pedestal_ring()` が `SELECT_RING_START_SCALE` / `SELECT_RING_START_ALPHA` から補間。取り消しの `play_unselect()` と守護の明滅 `blink_guard()` も同じ補助が持つ) |
+| HP帯を狙う返事 | `PlayerInfoBar.aimed`(`CardMatchPointer.set_hover_target()` が `FACE` のとき立てる。ホバーもドラッグも同じ経路)が `PlayerInfoBarFx.aimed` へ渡り、縁の太さ(`RIM_AIM_WIDTH`)と脈の速さ(`CardView.BRACE_PULSE_SPEED`)を変える。矢印の先端は `PlayerInfoBar.hp_badge_global_center()`(右端のHPの器の中心)へ吸着(`CardMatchTouch._aim_at()`) |
+| マリガン中の手札の扇・結果のボタンの出 | `CardMatchMulligan.fan_requested` を `CardMatchHandLayout.fade_fan()` が受ける(扇の `modulate.a` を `OVERLAY_DIM_FADE` で動かす)/ `CardMatchResult._set_buttons_shown()` が `_process` の行の出と同じ時計で、最後の行の後に `BUTTON_FADE` で出す |
+| 守護で狙えない駒の「だめ」 | `CardMatchTouch._refuse_target()` が `RefuseShake.play_in_place(view)`(手札の `refuse()` と同じ `RefuseShake.SWINGS` / `STEP`)と、守護の駒の `CardView.blink_guard()` を呼ぶ。音は無い |
 | 攻撃ドラッグの矢印 | `CardDragArrow` |
 | ホバー音 | `SoundBank.Sfx.HOVER`(ホバー専用の `hover.wav`。詳細は9章)。`wire_buttons()` が `mouse_entered` にもつなぎ(無効のボタンを除く)、対局中の駒・手札は `CardView` が直接鳴らす(カーソルの出来事であり盤面の状態ではないため `CardMatchSound` を経由しない) |
 
@@ -109,7 +114,7 @@
 | ホームのタブの横滑り | `_select_tab()` のフェードへ、タブの並び順で符号を決めた横移動を足す |
 | `HomeTile` のホバー浮き / 副題の光り | `HomeTile` 自身(`mouse_entered`/`mouse_exited`)/ `refresh()` の呼び出し側が前回の文字列と比較して `flash_subtitle()` |
 | 砂金チップの着地 | `DailyMissionPanel` が `CardFlightFx` で飛ばしてから `CurrencyChip.bump()` |
-| デッキ編集の入らない札の返事 / 縦の飛翔の着地 / タブ・棚リストの切替 | `WorkshopStockItem.refuse()`(首振りは `CardMatchHandLayout.REFUSE_SWINGS` と同じ値)・`CardDeckEditorScreen._bump_count()`(縦はタブ・横は枚数表示の跳ね)/ `_tab_landing_rect()`(組立台が見えないとき着地先をタブのボタンにする)/ `_fade_in()` |
+| デッキ編集の入らない札の返事 / 縦の飛翔の着地 / タブ・棚リストの切替 | `WorkshopStockItem.refuse()`(首振りは `RefuseShake` と同じ値)・`CardDeckEditorScreen._bump_count()`(縦はタブ・横は枚数表示の跳ね)/ `_tab_landing_rect()`(組立台が見えないとき着地先をタブのボタンにする)/ `_fade_in()` |
 | デッキ編集の「2/2」の跳ね / 30枚の光り / 絞り込みモーダルの膨らみ | `WorkshopStockItem.count_punch` / `CardDeckShelf.glow_amount`(`rebuild()` で30に達した回だけ)/ `CardDeckFilterModal` の開始スケールをボタン矩形に合わせる |
 | 図鑑のページめくり / ホバー傾き / 並び替えのスライド | `AlmanacPage.turn_to(card)` / `_gui_input()` 近くの tilt Tween / 左ページの一覧も「位置は Tween で滑らせる」方式 |
 | ショップ・アカウント | 購入は `CardFlightFx` で品→チップ → 残高更新 / 見本(`AccountTablePreview`)の `bump()` / 買えない品は `enabled=false` の間 `MOUSE_FILTER_IGNORE` |

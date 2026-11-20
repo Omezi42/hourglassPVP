@@ -57,6 +57,9 @@ const ENTRANCE_DURATION := 0.42
 const LINE_STAGGER := 0.14
 const LINE_FADE := 0.22
 const FLASH_DECAY := 1.1
+## ボタンは最後の行が出きってから、この尺で薄れから現れ、この量だけ上から定位置へ降りる。
+const BUTTON_FADE := 0.16
+const BUTTON_FLOAT := 6.0
 
 var _dim: ColorRect
 var _sand: ResultSandFall
@@ -81,6 +84,7 @@ var _matchmaking_mode := false
 var _reveal_elapsed := 0.0
 var _revealing := false
 var _flash := 0.0
+var _button_rest_y := 0.0
 
 
 func _ready() -> void:
@@ -201,6 +205,7 @@ func _start_entrance() -> void:
 	)
 	_reveal_elapsed = 0.0
 	_revealing = true
+	_set_buttons_shown(0.0)
 	set_process(true)
 	queue_redraw()
 
@@ -219,7 +224,9 @@ func _process(delta: float) -> void:
 			label.modulate.a = t
 			label.position.y = _line_y[i] + (1.0 - t) * 10.0
 			last_needed = maxf(last_needed, start + LINE_FADE)
-		if _reveal_elapsed < last_needed:
+		var button_t := clampf((_reveal_elapsed - last_needed) / BUTTON_FADE, 0.0, 1.0)
+		_set_buttons_shown(button_t)
+		if button_t < 1.0:
 			active = true
 		else:
 			_revealing = false
@@ -229,6 +236,16 @@ func _process(delta: float) -> void:
 	_panel.queue_redraw()
 	if not active:
 		set_process(false)
+
+
+## ボタンの行の出(0で隠れて上へ浮き、1で定位置)。出きるまでは押せない。
+func _set_buttons_shown(progress: float) -> void:
+	var eased := 1.0 - (1.0 - progress) * (1.0 - progress)
+	_button_row.modulate.a = eased
+	_button_row.position.y = _button_rest_y - BUTTON_FLOAT * (1.0 - eased)
+	var filter := Control.MOUSE_FILTER_STOP if progress >= 1.0 else Control.MOUSE_FILTER_IGNORE
+	for button in _buttons:
+		button.mouse_filter = filter
 
 
 ## 行の大きさ・色・縦位置と、それに合わせたパネルの高さ・位置を決める。
@@ -274,7 +291,8 @@ func _arrange_lines() -> void:
 	_panel.pivot_offset = _panel_size * 0.5
 	_panel.position = (_screen_size - _panel_size) * 0.5
 	_title.size.x = width
-	_button_row.position = Vector2(0, _panel_size.y - BUTTON_ROW_HEIGHT - BUTTON_ROW_BOTTOM)
+	_button_rest_y = _panel_size.y - BUTTON_ROW_HEIGHT - BUTTON_ROW_BOTTOM
+	_button_row.position = Vector2(0, _button_rest_y)
 	_button_row.size = Vector2(width, BUTTON_ROW_HEIGHT)
 	_panel.queue_redraw()
 

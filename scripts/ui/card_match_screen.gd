@@ -90,6 +90,7 @@ var _foe_slots: Array[CardView] = []
 var _own_slots: Array[CardView] = []
 var _hand_views: Array[CardView] = []
 var _flip_button: Button
+var _flip_fold: ButtonFold
 var _coin_button: Button
 var _end_turn_button: Button
 var _selection := CardMatchSelection.new()
@@ -444,6 +445,7 @@ func _build() -> void:
 	# 反転だけは選んだ駒のすぐ下へ出す。位置は `_refresh_buttons()` が毎回決める。
 	_flip_button = CardMatchBuild.add_button(self, "反転", CardMatchLayout.FLIP_BUTTON_SIZE)
 	_flip_button.visible = false
+	_flip_fold = ButtonFold.new(_flip_button)
 	_flip_button.pressed.connect(_on_flip_pressed)
 	# `_targets` は `_build()` の後に作るため、乗った時点で引く。
 	_flip_button.mouse_entered.connect(func() -> void: _targets.show_flip_forecast())
@@ -540,7 +542,7 @@ func _refresh_buttons() -> void:
 	var show_flip := (
 		_selection.is_board_selection() and _my_turn() and state.can_flip(my_side, _selection.slot)
 	)
-	_flip_button.visible = show_flip
+	_flip_fold.set_shown(show_flip)
 	# ボタンはキーワードの行の席へ出るため、出ているあいだその駒のキーワードは隠す。
 	for i in _own_slots.size():
 		_own_slots[i].keywords_hidden = show_flip and i == _selection.slot

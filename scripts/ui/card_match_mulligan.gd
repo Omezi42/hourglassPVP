@@ -5,6 +5,8 @@ extends Control
 ## 実際の引き直しは `MatchState.mulligan()` が行う。
 
 signal confirmed(indices: Array)
+## 盤面の手札の扇を隠す/戻す合図。`duration` が0なら即時。
+signal fan_requested(shown: bool, duration: float)
 
 ## 札の姿勢が変わる理由。尺と補間が理由ごとに違う。
 enum PoseKind { HOVER, PRESS, SETTLE, PICK }
@@ -241,6 +243,7 @@ func show_hand(cards: Array, is_first: bool, has_coin: bool) -> void:
 	_place_cards()
 	_refresh(false)
 	visible = true
+	fan_requested.emit(false, CardMatchLayout.OVERLAY_DIM_FADE)
 	# 誘導対局(札を選ばせない)では省く。すなえるの指示と重なるため。
 	if picking_disabled:
 		_start_entrance()
@@ -262,7 +265,7 @@ func _start_order_intro() -> void:
 	SoundBank.play(SoundBank.Sfx.TURN_ORDER)
 	_tween = create_tween()
 	_tween.tween_property(_dim, "modulate:a", 1.0, CardMatchLayout.OVERLAY_DIM_FADE)
-	_tween.parallel().tween_property(_turn_order, "modulate:a", 1.0, ORDER_INTRO_FADE)
+	_tween.tween_property(_turn_order, "modulate:a", 1.0, ORDER_INTRO_FADE)
 	_tween.tween_interval(ORDER_INTRO_HOLD)
 	(
 		_tween
@@ -334,6 +337,7 @@ func close(immediate := false) -> void:
 	if immediate:
 		_stop_tweens()
 		_finish_close()
+		fan_requested.emit(true, 0.0)
 		return
 	if _closing:
 		return
@@ -348,6 +352,7 @@ func is_open() -> bool:
 func _start_close() -> void:
 	_stop_tweens()
 	_closing = true
+	fan_requested.emit(true, CardMatchLayout.OVERLAY_DIM_FADE)
 	_hovered = -1
 	_pressed = -1
 	_saved_filters.clear()
@@ -473,6 +478,7 @@ func _on_card_pressed(view: CardView) -> void:
 	var index := _views.find(view)
 	if index < 0:
 		return
+	SoundBank.play(SoundBank.Sfx.BUTTON)
 	_picked[index] = not _picked[index]
 	_refresh()
 	_pose(index, PoseKind.PICK if _picked[index] else PoseKind.SETTLE)

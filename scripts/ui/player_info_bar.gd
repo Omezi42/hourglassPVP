@@ -172,6 +172,12 @@ var targetable := false:
 		queue_redraw()
 ## 自分の駒をこの帯へドラッグして放したときに呼ぶ処理(GameDesign.md 9章)。空なら受けない。
 var drop_handler := Callable()
+## 狙う指(ホバー・ドラッグ)が帯の上にいる。的の縁が太く速く脈打つ(`PlayerInfoBarFx`)。
+var aimed := false:
+	set(value):
+		aimed = value
+		if _fx != null:
+			_fx.aimed = value
 ## いまこの側の手番か。手番の側だけ明るくして、どちらが指す番かを示す
 ## (GameDesign.md 9章)。
 var active := false:
@@ -577,6 +583,12 @@ func mana_rect() -> Rect2:
 		Vector2.ONE * MANA_BADGE_RADIUS * 2.0
 	)
 	return badge.merge(Rect2(_right(MANA_TROUGH_RECT.position), MANA_TROUGH_RECT.size))
+
+
+## 右端のHPの器(赤い数字の丸)の中心。攻撃ドラッグの矢印の先端が吸い付く先(全体座標)。
+func hp_badge_global_center() -> Vector2:
+	var rect := hp_bar_rect()
+	return get_global_transform() * Vector2(rect.end.x, rect.get_center().y)
 
 
 func hp_bar_rect() -> Rect2:

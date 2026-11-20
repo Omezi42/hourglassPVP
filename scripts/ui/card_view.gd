@@ -169,6 +169,7 @@ var selected := false:
 	set(value):
 		selected = value
 		_pose.request()
+		_ring.request()
 ## 自分の駒で、いま操作できる(自分の手番で空き枠ではない)。ホバー・押下・選択の拡縮はこのときだけ動く。
 var operable := false:
 	set(value):
@@ -203,7 +204,10 @@ var drop_handler := Callable()
 var drag_preview: CardDragPreview
 ## 攻撃の対象を選んでいる間だけ出す予測(GameDesign.md 9章)。
 ## 負のときは出さない。`preview_dead` なら破壊されることを示す。
-var preview_health := -1
+var preview_health := -1:
+	set(value):
+		preview_fade.observe(preview_health, value)
+		preview_health = value
 var preview_dead := false
 ## 「反転」ボタンにカーソルがある間の予測(`TurnForecast.flip()` の戻り値)。空なら出さない。
 var flip_preview: Dictionary = {}
@@ -228,6 +232,11 @@ var spark_amount := 0.0
 ## 取り消しの戻る動き(GameDesign.md 9章「対局画面の手触り」)。`play_unselect()` が
 ## 1.0にして0へ戻す。0の間は何も描かない。
 var unselect_amount := 0.0
+## 選んだ輪の出(0で出始め、1で満値)と、守護の輪の明滅の係数(`CardViewRing`)。
+var select_amount := 1.0
+var guard_blink := 1.0
+## 取り消しで予測の丸を畳む動き(`CardViewPreviewFade`)。
+var preview_fade := CardViewPreviewFade.new(self)
 ## バッジの跳ね(GameDesign.md 9章)。体力・攻撃力のどちらが変わったかで別々に持つ
 ## (変わった側のバッジだけ跳ねるため)。
 var health_punch := 0.0
@@ -282,13 +291,13 @@ var _zoom_tween: Tween
 var _fx: CardUnitFx
 var _strike: CardViewStrike
 var _flourish: CardViewFlourish
-var _unselect_tween: Tween
 ## バッジの跳ねの判定用。前回 `show_unit()` に渡された体力・攻撃力(GameDesign.md 9章)。
 var _prev_health := -1
 var _prev_attack := -1
 ## 身構えの脈打ち(GameDesign.md 9章)。`brace` の間だけ `_process` で進める。
 var _brace_pulse := 0.0
 var _pose := CardViewPose.new(self)
+var _ring := CardViewRing.new(self)
 var _drawn_look: Array = []
 var _redraw_check_pending := false
 ## 場でコード描画の動く絵を出している間は true。`HourglassLive` は引かれ続けた絵だけを描くため、毎フレーム引き直す。
@@ -350,17 +359,12 @@ func _sync_process() -> void:
 
 ## 取り消しの戻る動き(GameDesign.md 9章)。光っていた枠を短く縮めて消す。
 func play_unselect() -> void:
-	if _unselect_tween != null and _unselect_tween.is_valid():
-		_unselect_tween.kill()
-	unselect_amount = 1.0
-	_unselect_tween = create_tween()
-	_unselect_tween.set_ease(Tween.EASE_OUT)
-	_unselect_tween.tween_method(_set_unselect_amount, 1.0, 0.0, UNSELECT_DURATION)
+	_ring.play_unselect()
 
 
-func _set_unselect_amount(value: float) -> void:
-	unselect_amount = value
-	queue_redraw()
+## 狙えない相手を押したとき、守護の輪を明滅させる。
+func blink_guard() -> void:
+	_ring.blink_guard()
 
 
 ## 手札のカードとして表示する。

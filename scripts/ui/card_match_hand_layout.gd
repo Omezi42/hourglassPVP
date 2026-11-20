@@ -20,9 +20,6 @@ const AVOID_MIN_PX := 1.0
 const HELD_ALPHA := 0.35
 ## 出さずに放した札が指の位置から手札へ弾んで戻る尺。
 const RETURN_DURATION := 0.32
-## 出せない札の首振り(左右へ振れる量の並びと1振りの尺)。
-const REFUSE_SWINGS: Array[float] = [7.0, -6.0, 4.0, -2.0, 0.0]
-const REFUSE_STEP := 0.045
 const AVOID_DURATION := 0.12
 ## 相手の手番の間、手札全体を沈める量。`CardView.SUMMONED_SINK` と同じ語彙。
 const TURN_SINK := CardView.SUMMONED_SINK
@@ -48,6 +45,9 @@ var _tweens: Dictionary = {}
 ## いま避けている・持ち上げている札 → その札にかけているオフセット。
 var _avoid_offsets: Dictionary = {}
 var _hovered_index := -1
+## マリガンが開いている間は扇を隠す(`fade_fan()`)。1で見える、0で隠れる。
+var _fan_alpha := 1.0
+var _fan_tween: Tween
 ## 引いた札の出所(画面の座標)。このフレームの `apply()` で新しく現れた札だけがここから飛ぶ。
 var _draw_origin := Vector2.INF
 var _fly_tweens: Dictionary = {}
@@ -119,7 +119,7 @@ func apply(hand: Array, my_turn: bool) -> void:
 		var target: Vector2 = base + _offset_of(view)
 		view.visible = true
 		view.size = CardView.HAND_SIZE_PX
-		view.modulate = tint
+		view.modulate = Color(tint, tint.a * _fan_alpha)
 		if _was_visible[i]:
 			_slide(view, target)
 		elif _draw_origin != Vector2.INF:
@@ -228,15 +228,31 @@ func _return_from_pointer(view: CardView) -> void:
 	_tween_targets[view] = rest
 
 
+## 盤面の手札の扇を隠す/戻す(マリガンの暗幕の下に同じ手札が二重に見えないため)。
+func fade_fan(shown: bool, duration: float) -> void:
+	if _fan_tween != null and _fan_tween.is_valid():
+		_fan_tween.kill()
+	var goal := 1.0 if shown else 0.0
+	if duration <= 0.0:
+		_set_fan_alpha(goal)
+		return
+	_fan_tween = _screen.create_tween()
+	_fan_tween.tween_method(_set_fan_alpha, _fan_alpha, goal, duration)
+
+
+func _set_fan_alpha(value: float) -> void:
+	_fan_alpha = value
+	for view in _screen._hand_views:
+		view.modulate.a = ACTIVE_MODULATE.a * value
+
+
 ## 出せない札を押した:その場で小さく首を振る(GameDesign.md 9章)。
 func refuse(view: CardView) -> void:
 	var rest: Vector2 = _base_positions.get(view, view.position) + _offset_of(view)
 	var tween: Tween = _tweens.get(view)
 	if tween != null and tween.is_valid():
 		tween.kill()
-	tween = view.create_tween().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	for swing in REFUSE_SWINGS:
-		tween.tween_property(view, "position", rest + Vector2(swing, 0.0), REFUSE_STEP)
+	tween = RefuseShake.play(view, rest)
 	_tweens[view] = tween
 	_tween_targets[view] = rest
 

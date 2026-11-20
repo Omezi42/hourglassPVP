@@ -145,6 +145,9 @@ static func pedestal_ring(view: CardView) -> void:
 	if view.selected:
 		color = CardView.SELECT_CYAN
 		width = CardView.PEDESTAL_SELECT_RING_WIDTH
+		if view.select_amount < 1.0:
+			color.a = lerpf(CardViewRing.SELECT_START_ALPHA, 1.0, view.select_amount)
+			radius = radius * lerpf(CardViewRing.SELECT_START_SCALE, 1.0, view.select_amount)
 	elif guard:
 		color = UiPalette.GOLD
 	elif view.card == null:
@@ -160,13 +163,15 @@ static func pedestal_ring(view: CardView) -> void:
 	if view.brace:
 		var pulse := (sin(view._brace_pulse) + 1.0) * 0.5
 		color = Color(color, lerpf(CardView.BRACE_PULSE_MIN, CardView.BRACE_PULSE_MAX, pulse))
+	if guard:
+		color.a *= view.guard_blink
 	UiPaint.draw_ellipse_ring(view.get_canvas_item(), center, radius, color, width, 40)
 	if guard:
 		UiPaint.draw_ellipse_ring(
 			view.get_canvas_item(),
 			center,
 			CardView.PEDESTAL_RADIUS + GUARD_RING_GAP,
-			UiPalette.GOLD,
+			Color(UiPalette.GOLD, view.guard_blink),
 			CardView.PEDESTAL_RING_WIDTH,
 			40
 		)
@@ -230,22 +235,29 @@ static func stat(view: CardView, center: Vector2, value: int, color: Color, radi
 ## 「この攻撃の後どうなるか」を体力バッジの上へ出す。相打ちのため攻撃側にも出る。
 ## バッジの上は絵だけで文字が無く、名前とキーワードの行に掛からない。大きさは体力バッジの倍率に合わせる。
 static func preview(view: CardView, anchor: Vector2) -> void:
-	if view.preview_health < 0:
-		return
-	var zoom := view.stat_scale
-	var color := CardView.PREVIEW_DEAD if view.preview_dead else CardView.PREVIEW_ALIVE
-	var center := preview_center(anchor, zoom)
+	var health := view.preview_health
+	var dead := view.preview_dead
+	var fade := 1.0
+	if health < 0:
+		var closing := view.preview_fade
+		if not closing.active:
+			return
+		health = closing.value
+		dead = closing.dead
+		fade = closing.amount
+	var zoom := view.stat_scale * lerpf(CardView.UNSELECT_SHRINK, 1.0, fade)
+	var color := CardView.PREVIEW_DEAD if dead else CardView.PREVIEW_ALIVE
+	color.a *= fade
+	var center := preview_center(anchor, view.stat_scale)
 	var radius := CardView.PREVIEW_RADIUS * zoom
 	ShapePaint.circle(
-		view.get_canvas_item(), center, radius, Color(UiPalette.INK_900, GROUND_ALPHA)
+		view.get_canvas_item(), center, radius, Color(UiPalette.INK_900, GROUND_ALPHA * fade)
 	)
 	ShapePaint.arc(
 		view.get_canvas_item(), center, radius, 0.0, TAU, 20, color, UiKit.LINE_MIN * zoom
 	)
-	var text := "破壊" if view.preview_dead else str(view.preview_health)
-	var font_size := roundi(
-		(PREVIEW_DEAD_FONT if view.preview_dead else PREVIEW_HEALTH_FONT) * zoom
-	)
+	var text := "破壊" if dead else str(health)
+	var font_size := roundi((PREVIEW_DEAD_FONT if dead else PREVIEW_HEALTH_FONT) * zoom)
 	var text_size := view._font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
 	view.draw_string(
 		view._font,
