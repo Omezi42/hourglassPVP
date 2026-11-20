@@ -284,7 +284,8 @@ static func _make_portrait() -> CardMatchLayout:
 	var gauge_right := l.flip_gauge_position.x + FlipRightGauge.GAUGE_SIZE.x * PORTRAIT_BUTTON_SCALE
 	l.replay_center = Vector2((gauge_right + l.turn_end_center.x - end_radius) * 0.5, rail)
 	var prompt_size := Vector2(148, 52) * PORTRAIT_TEXT_SCALE
-	l.prompt_rect = Rect2(Vector2(l.screen_size.x * 0.5, rail) - prompt_size * 0.5, prompt_size)
+	# 粒の札とターン終了のあいだの空きへ(卓の中央に置くと粒の札へ重なる)。
+	l.prompt_rect = Rect2(l.replay_center - prompt_size * 0.5, prompt_size)
 	l.waiting_center = l.table_rect.get_center()
 	l.version_position = Vector2(side + 6.0, l.screen_size.y - 6.0)
 	# 縦は一群を画面のちょうど中央へ。札は2列に折り返す。
