@@ -32,8 +32,8 @@ const DECK_BAR_WIDTH := 130.0
 const DECK_BAR_MIN_WIDTH := 120.0
 const DECK_ICON_GAP := 12
 const DECK_STACK_TEXT_GAP := 4
-const ROW_GAP := 10
-const SECTION_GAP := 10.0
+const ROW_GAP := int(UiPalette.S3)
+const SECTION_GAP := UiPalette.S4
 ## これより少ない対局数の構築は、横棒と勝率を薄くする(数局の勝率は揺れが大きいため)。
 const FEW_GAMES := 5
 const FEW_GAMES_ALPHA := 0.4
@@ -56,6 +56,8 @@ var _summary_panel: PanelContainer
 var _decks_panel: PanelContainer
 ## デッキ別は横では欄の中だけをスクロールする(構築は最大20件まで覚えるため)。
 var _decks_scroll: ScrollContainer
+## 横のデッキ別の列とバーの間にあける隙間(右の余白)。
+var _decks_pad: MarginContainer
 ## 縦で2つの欄を積む箱。横では使わない。
 var _stack_scroll: ScrollContainer
 var _stack: VBoxContainer
@@ -67,7 +69,7 @@ func _ready() -> void:
 
 
 func open() -> void:
-	_refresh()
+	_refresh(true)
 
 
 func _uid() -> String:
@@ -76,7 +78,8 @@ func _uid() -> String:
 	return NetSession.client.auth.uid
 
 
-func _refresh() -> void:
+## animate: 画面を開いたときだけ行を順に登場させる(向きの切替で組み直すときは付けない)。
+func _refresh(animate := false) -> void:
 	# 古い行はすぐ外す。`queue_free()` だけだとフレームの終わりまで列に残り、
 	# 新しい行がその下へ並んだ位置を登場演出が掴んで、行が欄の下へずれる。
 	for column in [_summary, _decks]:
@@ -93,13 +96,19 @@ func _refresh() -> void:
 		return
 	_fill_summary(uid, all)
 	_fill_decks(uid)
-	ListRevealFx.stagger(_summary.get_children())
-	ListRevealFx.stagger(_decks.get_children())
+	if animate:
+		ListRevealFx.stagger(_summary.get_children())
+		ListRevealFx.stagger(_decks.get_children())
 
 
 ## 向きだけの文字の拡大(札の大きさと数字はこれで決まり、文字サイズ「大」では変えない)。
 func _orientation_scale() -> float:
 	return PORTRAIT_TEXT_SCALE if _portrait else 1.0
+
+
+## 数値の列・絵・棒の高さの倍率(縦だけ広げる)。
+func _column_scale() -> float:
+	return PORTRAIT_COLUMN_SCALE if _portrait else 1.0
 
 
 func _text_scale() -> float:
@@ -121,9 +130,9 @@ func _fill_summary(uid: String, all: Dictionary) -> void:
 	_summary.add_child(StatsGraphics.label("通算", _font(SECTION_FONT_SIZE)))
 	var top := HBoxContainer.new()
 	top.alignment = BoxContainer.ALIGNMENT_CENTER
-	top.add_theme_constant_override("separation", ROW_GAP + 6)
+	top.add_theme_constant_override("separation", int(UiPalette.S4))
 	_summary.add_child(top)
-	var column_scale := PORTRAIT_COLUMN_SCALE if _portrait else 1.0
+	var column_scale := _column_scale()
 	top.add_child(StatsGraphics.ring(_rate(wins, games), RING_DIAMETER * column_scale))
 	var scale := _orientation_scale()
 	top.add_child(StatsGraphics.tile("対局", "%d" % games, "戦", scale))
@@ -143,7 +152,9 @@ func _fill_summary(uid: String, all: Dictionary) -> void:
 		var name := StatsGraphics.label(_kind_name(kind), _font(ROW_FONT_SIZE))
 		name.custom_minimum_size.x = _kind_name_width()
 		row.add_child(name)
-		row.add_child(StatsGraphics.split_bar(_rate(int(totals["wins"]), kind_games)))
+		row.add_child(
+			StatsGraphics.split_bar(_rate(int(totals["wins"]), kind_games), _column_scale())
+		)
 		row.add_child(_cell("%d戦" % kind_games, _count_width()))
 		row.add_child(_cell(_percent(int(totals["wins"]), kind_games), COL_RATE))
 		row.add_child(_cell("%.1f手" % _average(totals), COL_TURNS))
@@ -155,7 +166,7 @@ func _fill_decks(uid: String) -> void:
 	var stacked := _deck_rows_stacked()
 	_decks.add_theme_constant_override("separation", int(UiPalette.S4) if stacked else ROW_GAP)
 	var known := _known_decks()
-	var column_scale := PORTRAIT_COLUMN_SCALE if _portrait else 1.0
+	var column_scale := _column_scale()
 	for entry: Dictionary in merge_unknown_decks(MatchStats.decks(uid), known):
 		var games := int(entry["games"])
 		var wins := int(entry["wins"])
@@ -167,7 +178,9 @@ func _fill_decks(uid: String) -> void:
 		name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		name.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		name.clip_text = true
-		var bar := StatsGraphics.rate_bar(_rate(wins, games), DECK_BAR_WIDTH * column_scale)
+		var bar := StatsGraphics.rate_bar(
+			_rate(wins, games), DECK_BAR_WIDTH * column_scale, column_scale
+		)
 		var count := _cell("%d戦" % games, _count_width())
 		var rate := _cell(_percent(wins, games), COL_RATE)
 		var row := _row()
@@ -277,7 +290,7 @@ func _is_large() -> bool:
 func _kind_name_width() -> float:
 	if not _is_large():
 		return KIND_NAME_WIDTH * _orientation_scale()
-	var column_scale := PORTRAIT_COLUMN_SCALE if _portrait else 1.0
+	var column_scale := _column_scale()
 	return KIND_NAME_WIDTH * column_scale * LARGE_NAME_SCALE
 
 
@@ -287,7 +300,7 @@ func _count_width() -> float:
 
 ## 「n戦」「n.n%」のように、単位まで含めて1つの右揃えの列へ収める。
 func _cell(text: String, width: float) -> Label:
-	var column_scale := PORTRAIT_COLUMN_SCALE if _portrait else 1.0
+	var column_scale := _column_scale()
 	var cell := StatsGraphics.label(text, _font(ROW_FONT_SIZE))
 	cell.custom_minimum_size.x = width * column_scale
 	cell.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -305,6 +318,7 @@ func _build() -> void:
 	header.back_pressed.connect(func() -> void: back_pressed.emit())
 	_stack_scroll = ScrollContainer.new()
 	_stack_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_stack_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_RESERVE
 	_stack_scroll.visible = false
 	TouchScroll.enable(_stack_scroll)
 	add_child(_stack_scroll)
@@ -318,14 +332,19 @@ func _build() -> void:
 	_decks_panel = _make_panel(DECKS_RECT)
 	_decks_scroll = ScrollContainer.new()
 	_decks_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_decks_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_RESERVE
 	TouchScroll.enable(_decks_scroll)
 	_decks_panel.add_child(_decks_scroll)
+	_decks_pad = MarginContainer.new()
+	_decks_pad.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_decks_scroll.add_child(_decks_pad)
 	_decks = _make_column()
 	_decks.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_decks_scroll.add_child(_decks)
+	_decks_pad.add_child(_decks)
 	_empty = EmptyState.new()
 	_empty.visible = false
 	add_child(_empty)
+	_fit_decks_panel_margin(false)
 	_place_landscape()
 
 
@@ -339,8 +358,9 @@ func apply_orientation(portrait: bool) -> void:
 	_stack_scroll.visible = portrait
 	# 縦は外側の1本だけでスクロールする。デッキ別の欄は中身の高さまで伸ばす。
 	_decks_scroll.vertical_scroll_mode = (
-		ScrollContainer.SCROLL_MODE_DISABLED if portrait else ScrollContainer.SCROLL_MODE_AUTO
+		ScrollContainer.SCROLL_MODE_DISABLED if portrait else ScrollContainer.SCROLL_MODE_RESERVE
 	)
+	_fit_decks_panel_margin(portrait)
 	for panel: PanelContainer in [_summary_panel, _decks_panel]:
 		panel.get_parent().remove_child(panel)
 		if portrait:
@@ -351,7 +371,7 @@ func apply_orientation(portrait: bool) -> void:
 	if portrait:
 		var rect := _header.portrait_content_rect()
 		_stack_scroll.position = rect.position
-		_stack_scroll.size = rect.size
+		_stack_scroll.size = rect.size + Vector2(_scrollbar_width(), 0.0)
 		_empty.position = rect.position
 		_empty.size = rect.size
 	else:
@@ -369,6 +389,23 @@ func _place_landscape() -> void:
 		pair[0].size = rect.size
 	_empty.position = SUMMARY_RECT.position
 	_empty.size = _whole_rect().size
+
+
+## スクロールバーの幅。バーは常に場所を確保し、確保したぶんを欄の外へ張り出させて、
+## 中身の幅と左右の余白を溢れの有無に関わらず同じにする。
+func _scrollbar_width() -> float:
+	return _stack_scroll.get_v_scroll_bar().get_combined_minimum_size().x
+
+
+## 横のデッキ別は、バーを右パネルの内側余白へ食い込ませる(列とバーの間は S4 あける)。
+## 縦は外側の1本のスクロールがバーを持つため、パネルの余白は他の画面と同じに戻す。
+func _fit_decks_panel_margin(portrait: bool) -> void:
+	var style: StyleBox = load(PANEL_STYLE)
+	if style != null and not portrait:
+		style = style.duplicate() as StyleBox
+		style.content_margin_right = maxf(style.content_margin_right - _scrollbar_width(), 0.0)
+	_decks_panel.add_theme_stylebox_override("panel", style)
+	_decks_pad.add_theme_constant_override("margin_right", 0 if portrait else int(UiPalette.S4))
 
 
 ## 2つの欄を合わせた範囲。

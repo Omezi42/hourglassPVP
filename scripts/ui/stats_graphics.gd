@@ -13,20 +13,22 @@ const TICK := Color(0.96, 0.94, 0.89, 0.55)
 const TICK_WIDTH := 2.0
 const TICK_OVERHANG := 3.0
 const BAR_HEIGHT := 14.0
-const RING_WIDTH := 16.0
-const RING_INSET := 10.0
+## 輪の太さと縁からの引っ込みは直径に比例させる(横150 → 16 / 10。縦は大きくなったぶん太くなる)。
+const RING_WIDTH_RATIO := 16.0 / 150.0
+const RING_INSET_RATIO := 10.0 / 150.0
 const RING_SEGMENTS := 96
 ## 輪の中の勝率の文字は直径に比例させる。
 const RING_TEXT_RATIO := 0.2
 const RING_CAPTION_SIZE := UiPalette.T_SMALL
 const RING_BASE_DIAMETER := 150.0
 const TILE_SIZE := Vector2(100, 112)
-const TILE_RADIUS := 10.0
 const TILE_VALUE_SIZE := UiPalette.T_TITLE
 const TILE_CAPTION_SIZE := UiPalette.T_SMALL
 const TILE_UNIT_SIZE := UiPalette.T_BODY
 ## 砂時計の絵の縦横比(幅 / 高さ)。
 const ICON_ASPECT := 0.8
+## 名前を引けない構築の絵の空きへ置く浅い升の、箱からの内側の余白。
+const ICON_WELL_INSET := UiPalette.S1
 
 
 ## 勝率の輪。輪の上を勝ちの割合だけ砂で塗り、中に勝率を大きく出す。
@@ -37,10 +39,11 @@ static func ring(rate: float, diameter: float) -> Control:
 	box.draw.connect(
 		func() -> void:
 			var center := box.size * 0.5
-			var radius := diameter * 0.5 - RING_INSET
+			var ring_width := diameter * RING_WIDTH_RATIO
+			var radius := diameter * 0.5 - diameter * RING_INSET_RATIO
 			var start := -PI * 0.5
 			var ci := box.get_canvas_item()
-			ShapePaint.arc(ci, center, radius, 0.0, TAU, RING_SEGMENTS, TRACK, RING_WIDTH, true)
+			ShapePaint.arc(ci, center, radius, 0.0, TAU, RING_SEGMENTS, TRACK, ring_width, true)
 			if rate > 0.0:
 				ShapePaint.arc(
 					ci,
@@ -50,7 +53,7 @@ static func ring(rate: float, diameter: float) -> Control:
 					start + TAU * rate,
 					RING_SEGMENTS,
 					WIN_LIGHT,
-					RING_WIDTH,
+					ring_width,
 					true
 				)
 	)
@@ -76,7 +79,8 @@ static func tile(caption: String, value: String, unit: String, text_scale: float
 	box.draw.connect(
 		func() -> void:
 			var ci := box.get_canvas_item()
-			UiKit.well(ci, Rect2(Vector2.ZERO, box.size), TILE_RADIUS)
+			var rect := Rect2(Vector2.ZERO, box.size)
+			UiKit.well(ci, rect, UiKit.radius(rect))
 	)
 	var column := _centered_column(box)
 	var head := label(
@@ -86,7 +90,7 @@ static func tile(caption: String, value: String, unit: String, text_scale: float
 	column.add_child(head)
 	var line := HBoxContainer.new()
 	line.alignment = BoxContainer.ALIGNMENT_CENTER
-	line.add_theme_constant_override("separation", 2)
+	line.add_theme_constant_override("separation", int(UiPalette.S1))
 	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(line)
 	line.add_child(label(value, roundi(TILE_VALUE_SIZE * text_scale)))
@@ -97,30 +101,40 @@ static func tile(caption: String, value: String, unit: String, text_scale: float
 
 
 ## 勝率の横棒(目盛り無し)。幅は行の残りいっぱい(全行で同じになる)。
-static func split_bar(rate: float) -> Control:
-	var bar := _bar(rate, false)
+static func split_bar(rate: float, height_scale := 1.0) -> Control:
+	var bar := _bar(rate, false, height_scale)
 	bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	return bar
 
 
 ## 勝率の横棒。0〜100%を同じ幅で、50%の位置に細い目盛り。
-static func rate_bar(rate: float, width: float) -> Control:
-	var bar := _bar(rate, true)
+static func rate_bar(rate: float, width: float, height_scale := 1.0) -> Control:
+	var bar := _bar(rate, true, height_scale)
 	bar.custom_minimum_size.x = width
 	return bar
 
 
 ## 構築の代表の砂時計の絵。いちばんコストの高い砂時計(同じコストなら図鑑の並びで先)。
-## 構築を引けないときは同じ幅の空きにする(行の名前の位置をそろえるため)。
+## 構築を引けないときは同じ大きさの箱に浅い升を描く(行の名前の位置をそろえ、空きが抜けて見えないように)。
 static func deck_icon(cards: Array, height: float) -> Control:
 	var box := Control.new()
 	box.custom_minimum_size = Vector2(height * ICON_ASPECT, height)
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var card := top_card(cards)
-	if card == null:
-		return box
-	var texture := HourglassArt.texture(card.art_key(), HourglassArt.State.UPRIGHT)
+	var texture: Texture2D = null
+	if card != null:
+		texture = HourglassArt.texture(card.art_key(), HourglassArt.State.UPRIGHT)
 	if texture == null:
+		box.draw.connect(
+			func() -> void:
+				var rect := Rect2(Vector2.ZERO, box.size).grow(-ICON_WELL_INSET)
+				UiKit.vgrad(
+					box.get_canvas_item(),
+					UiKit.rr(rect, UiKit.radius(rect)),
+					[[0.0, UiKit.WELL_TOP], [1.0, UiKit.WELL_BOTTOM]],
+					true
+				)
+		)
 		return box
 	box.draw.connect(
 		func() -> void:
@@ -155,9 +169,9 @@ static func label(text: String, font_size: int, color := UiPalette.IVORY) -> Lab
 	return line
 
 
-static func _bar(rate: float, tick: bool) -> Control:
+static func _bar(rate: float, tick: bool, height_scale: float) -> Control:
 	var bar := Control.new()
-	bar.custom_minimum_size.y = BAR_HEIGHT
+	bar.custom_minimum_size.y = BAR_HEIGHT * height_scale
 	bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	bar.draw.connect(

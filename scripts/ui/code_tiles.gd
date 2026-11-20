@@ -6,6 +6,8 @@ extends Control
 ## `LineEdit` 自身の文字・枠・カーソルは見せない。
 
 signal submitted
+## 数字を入れた・消した・全部消したなど、コードが変わるたびに出る。
+signal code_changed(code: String)
 
 const TILE_GAP_RATIO := 0.2
 const DIGIT_SIZE_RATIO := 0.62
@@ -19,8 +21,11 @@ var digits := RoomMatch.CODE_LENGTH
 
 var code := "":
 	set(value):
+		if code == value:
+			return
 		code = value
 		queue_redraw()
+		code_changed.emit(code)
 
 var input: LineEdit
 var _font: Font

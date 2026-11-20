@@ -61,6 +61,11 @@ const STATUS_FONT_SIZE := UiPalette.T_LEAD
 
 const TIME_ON_NOTE := "1手番につき60秒。手番が移るたびに戻ります"
 const TIME_OFF_NOTE := "持ち時間なし。放置した相手を時間切れで倒せなくなります"
+## 入口で通信を待つあいだ、押したボタンの文字をこれへ替える(末尾へ巡回ドットが付く)。
+const CREATE_PENDING_TEXT := "作成中"
+const JOIN_PENDING_TEXT := "参加中"
+const CREATE_TEXT := "部屋を作る"
+const JOIN_TEXT := "参加する"
 const WAIT_FOE_TEXT := "相手の参加を待っています"
 const WAIT_FOE_HINT := "コードを入力すると、ここに座ります"
 const LOADING_FOE_NAME := "読み込み中"
@@ -82,6 +87,8 @@ var _status_base_text := ""
 var _status_waiting := false
 var _busy_dot_count := 0
 var _busy_dots_timer: Timer
+## 入口で通信を待っているあいだ、文字を巡回ドット付きの「作成中」「参加中」へ替えているボタン。
+var _pending_button: Button
 
 var _entrance: Control
 var _time_on_button: Button
@@ -229,7 +236,7 @@ func _build_create_card() -> void:
 	_time_off_button = _make_button(card, "なし", TIME_OFF_RECT, false)
 	_time_off_button.pressed.connect(_set_time_limit.bind(false))
 	_time_note = _place_label(card, "", TIME_NOTE_POS, NOTE_FONT_SIZE, UiPalette.MUTED)
-	_create_button = _make_button(card, "部屋を作る", CREATE_BUTTON_RECT, true)
+	_create_button = _make_button(card, CREATE_TEXT, CREATE_BUTTON_RECT, true)
 	_create_button.pressed.connect(_on_create_pressed)
 
 
@@ -250,10 +257,11 @@ func _build_join_card() -> void:
 	card.add_child(_join_tiles)
 	_join_tiles.make_editable("ルームコード")
 	_join_tiles.submitted.connect(_on_join_pressed)
+	_join_tiles.code_changed.connect(func(_entered: String) -> void: _refresh_entrance_buttons())
 	_join_pad = NumberPad.make(_join_tiles.input, PAD_KEY_SIZE, false)
 	_join_pad.position = PAD_POS
 	card.add_child(_join_pad)
-	_join_button = _make_button(card, "参加する", JOIN_BUTTON_RECT, true)
+	_join_button = _make_button(card, JOIN_TEXT, JOIN_BUTTON_RECT, true)
 	_join_button.pressed.connect(_on_join_pressed)
 
 
@@ -412,11 +420,33 @@ func _on_copy_pressed() -> void:
 ## 入口で通信を待っている間は、入口の操作をまとめて止める。
 func _set_busy(busy: bool) -> void:
 	_busy = busy
-	_create_button.disabled = busy
-	_join_button.disabled = busy
+	if not busy:
+		_end_pending()
 	_join_tiles.set_editable(not busy)
 	_join_pad.set_disabled(busy)
+	_refresh_entrance_buttons()
 	_refresh_settings()
+
+
+## 入口の2つの主ボタンの押せる・押せないを1か所で決める。
+## 「参加する」はコードが4桁そろうまで押せない(真鍮の面が入口に1つだけ残る)。
+func _refresh_entrance_buttons() -> void:
+	_create_button.disabled = _busy
+	_join_button.disabled = _busy or _join_tiles.code.length() != RoomMatch.CODE_LENGTH
+
+
+## 作る・参加の通信を待つあいだ、押したボタンの中へ「作成中」「参加中」を出す(札の外には出さない)。
+func _begin_pending(create: bool) -> void:
+	_set_busy(true)
+	_pending_button = _create_button if create else _join_button
+	_message_label.text = ""
+	_set_status(CREATE_PENDING_TEXT if create else JOIN_PENDING_TEXT, true)
+
+
+func _end_pending() -> void:
+	_pending_button = null
+	_create_button.text = CREATE_TEXT
+	_join_button.text = JOIN_TEXT
 
 
 ## 部屋のノードを片付ける。参照を外すだけだと、待機のたびに子が積み上がる。
@@ -428,6 +458,8 @@ func _discard_session() -> void:
 
 ## waiting: 通信を待っている状態。末尾へ巡回ドットが付く。
 func _set_status(text: String, waiting := false) -> void:
+	if not waiting:
+		_end_pending()
 	_status_base_text = text
 	_status_waiting = waiting
 	_busy_dot_count = 0
@@ -440,7 +472,9 @@ func _set_status(text: String, waiting := false) -> void:
 
 func _refresh_status_display() -> void:
 	var dots := ".".repeat(_busy_dot_count) if _status_waiting else ""
-	if _entrance.visible:
+	if _pending_button != null and _status_waiting:
+		_pending_button.text = _status_base_text + dots
+	elif _entrance.visible:
 		_message_label.text = _status_base_text + dots
 	else:
 		_status_label.text = _status_base_text + dots
@@ -488,8 +522,7 @@ func _on_back_pressed() -> void:
 func _on_create_pressed() -> void:
 	if _busy:
 		return
-	_set_busy(true)
-	_set_status("部屋を作成中", true)
+	_begin_pending(true)
 	if not await _sign_in_or_fail():
 		return
 	var room := _new_room()
@@ -508,8 +541,7 @@ func _on_join_pressed() -> void:
 	if code == "":
 		_message_label.text = "ルームコードは%d桁の数字です" % RoomMatch.CODE_LENGTH
 		return
-	_set_busy(true)
-	_set_status("参加中", true)
+	_begin_pending(false)
 	if not await _sign_in_or_fail():
 		return
 	_code = code

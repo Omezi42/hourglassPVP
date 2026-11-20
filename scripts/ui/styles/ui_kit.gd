@@ -65,6 +65,8 @@ const BRASS_INNER_DARK := Color(0.3, 0.18, 0.04, 0.5)
 const BRASS_DISABLED_SINK := 0.72
 
 ## 砂のバー。
+## 砂の最小幅。低い割合も比例して細く描き、0より大きければ見えるだけは残す。
+const SAND_MIN_WIDTH := UiPalette.S1
 const SAND_INSET := 1.5
 const SAND_GRAIN_AREA := 36.0
 const SAND_GRAIN_BAND := 0.36
@@ -441,10 +443,10 @@ static func sand_bar(
 	if ratio <= 0.0:
 		return
 	var inner := rect.grow(-SAND_INSET)
-	inner.size.x = maxf(inner.size.x * clampf(ratio, 0.0, 1.0), inner.size.y)
+	inner.size.x = maxf(inner.size.x * clampf(ratio, 0.0, 1.0), SAND_MIN_WIDTH)
 	vgrad(
 		ci,
-		rr(inner, inner.size.y * 0.5),
+		rr(inner, minf(inner.size.x, inner.size.y) * 0.5),
 		[[0.0, light], [SAND_FOLD, light.lerp(deep, SAND_FOLD)], [1.0, deep]],
 		true
 	)

@@ -264,8 +264,8 @@ HTTPRequest をぶら下げると送信の途中で巻き添えに消える。�
 
 | クラス | 責務 |
 |---|---|
-| `CardRoomScreen`(`scripts/ui/card_room_screen.gd`) | ルームマッチの状態(入口 / 部屋の中)と `RoomMatch` の操作・待機・失敗の文言。入口と部屋の中の2つの段を組み立て、表示を切り替える |
-| `CodeTiles`(`scripts/ui/code_tiles.gd`) | 数字だけのコード(桁数は `digits`)を1桁ずつの升に描く。`editable` のときは透明な `LineEdit` を重ねて入力を受け、数字以外を落とす(モバイルの `MobileTextInput` もこの `LineEdit` へ掛ける)。入口では `CardRoomScreen` がこの `input` を対象に `NumberPad` を升の右へ置く |
+| `CardRoomScreen`(`scripts/ui/card_room_screen.gd`) | ルームマッチの状態(入口 / 部屋の中)と `RoomMatch` の操作・待機・失敗の文言。入口と部屋の中の2つの段を組み立て、表示を切り替える。入口の通信待ちは押したボタンの文字を巡回ドット付きの「作成中」「参加中」へ替える(`_begin_pending()`)。「参加する」は `_refresh_entrance_buttons()` が処理中・4桁未満で押せなくする |
+| `CodeTiles`(`scripts/ui/code_tiles.gd`) | 数字だけのコード(桁数は `digits`)を1桁ずつの升に描く。`editable` のときは透明な `LineEdit` を重ねて入力を受け、数字以外を落とす(モバイルの `MobileTextInput` もこの `LineEdit` へ掛ける)。入口では `CardRoomScreen` がこの `input` を対象に `NumberPad` を升の右へ置く。コードが変わるたびに `code_changed(code)` を出し、入口はこれで「参加する」の押せる・押せないを決める |
 | `RoomSeat`(`scripts/ui/room_seat.gd`) | 部屋の中の1席。アイコン・称号・表示名・(自分の席なら)使用デッキを描く。空席は点線の枠と巡回ドット付きの文言で描く |
 
 **`RoomMatch` を持つのはこの画面**であり、`BattleTab` は参加・部屋作成の

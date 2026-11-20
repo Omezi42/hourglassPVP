@@ -10,6 +10,8 @@ const RANK_SIZE := UiPalette.T_LEAD
 const OUTSIDE_SIZE := UiPalette.T_SMALL
 const PODIUM_RADIUS := 14.0
 const PODIUM_TEXT_WIDTH := 40.0
+## 4位以降の数字は右揃えで一の位を揃える。右端は2桁の数字(幅20)を中心30へ置いたときの右端。
+const RANK_RIGHT_X := RANK_CENTER_X + 10.0
 const PORTRAIT_X := 82.0
 const PORTRAIT_RADIUS := 17.0
 const PORTRAIT_ICON := 14.0
@@ -132,10 +134,10 @@ func _draw_rank(center_y: float) -> void:
 	var label := str(rank) if rank > 0 else "圏外"
 	_text(
 		label,
-		Vector2(RANK_CENTER_X - PODIUM_TEXT_WIDTH * 0.5, center_y + 7.0),
+		Vector2(RANK_RIGHT_X - PODIUM_TEXT_WIDTH, center_y + 7.0),
 		RANK_SIZE if rank > 0 else OUTSIDE_SIZE,
 		UiPalette.IVORY if rank > 0 else UiPalette.MUTED,
-		HORIZONTAL_ALIGNMENT_CENTER,
+		HORIZONTAL_ALIGNMENT_RIGHT,
 		PODIUM_TEXT_WIDTH
 	)
 

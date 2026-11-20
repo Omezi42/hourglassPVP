@@ -31,6 +31,7 @@ var _note_until_msec := 0
 ## 知らせを消したあと帯ごと隠す(待機が終わった)。
 var _hide_after_note := false
 var _label: Label
+var _label_fade: Tween
 var _open_button: Button
 var _cancel_button: Button
 var _row: HBoxContainer
@@ -95,6 +96,7 @@ func begin(started_msec: int) -> void:
 	_note_until_msec = 0
 	_hide_after_note = false
 	_set_buttons_visible(true)
+	_apply_label_style(false)
 	_refresh_elapsed()
 
 
@@ -107,12 +109,15 @@ func set_shown(shown: bool) -> void:
 
 
 func flash(text: String) -> void:
+	_apply_label_style(false)
 	_show_note(text, FLASH_SECONDS)
 
 
+## 相手が見つかった知らせ。ボタンが消えて空いた帯の中央へ、琥珀の文字で出す。
 func show_found() -> void:
 	_set_buttons_visible(false)
 	_show_note(FOUND_TEXT, FLASH_SECONDS)
+	_apply_label_style(true)
 
 
 ## 待機が終わった。いま出ていれば文言を少し見せてから消える。
@@ -122,7 +127,23 @@ func show_ended(text: String) -> void:
 		return
 	_set_buttons_visible(false)
 	_hide_after_note = true
+	_apply_label_style(false)
 	_show_note(text, ENDED_SECONDS)
+
+
+## 文言の揃えと色を1か所で決める。見つかった知らせだけ中央・琥珀で、0.24秒かけて現れる。
+func _apply_label_style(found: bool) -> void:
+	if _label_fade != null:
+		_label_fade.kill()
+	_label.horizontal_alignment = (
+		HORIZONTAL_ALIGNMENT_CENTER if found else HORIZONTAL_ALIGNMENT_LEFT
+	)
+	_label.add_theme_color_override("font_color", UiPalette.SAND_HI if found else UiPalette.IVORY)
+	_label.modulate.a = 1.0
+	if found:
+		_label.modulate.a = 0.0
+		_label_fade = create_tween()
+		_label_fade.tween_property(_label, "modulate:a", 1.0, UiPalette.DUR_SHOW)
 
 
 func _show_note(text: String, seconds: float) -> void:
