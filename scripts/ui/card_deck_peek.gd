@@ -3,7 +3,8 @@ extends Control
 ## デッキ一覧の「一覧」(GameDesign.md 9章「デッキ一覧」)。暗幕の上へ、30枚を共有のデッキ表と同じ棚
 ## (`CardDeckShelf`、横10×縦3。縦画面は6×5)で出す。
 ## `CardDeckSheet` をそのまま使わないのは、書き出し用の隅の作品名とバージョンを画面に出さないため。
-## 下の「閉じる」と主の操作(管理=編集する / 対局前=このデッキで対局)だけを持ち、駒は押せない。
+## パネルの下端に「閉じる」と主の操作(管理=編集する / 対局前=このデッキで対局)だけを持ち、駒は押せない。
+## ボタンはパネルの内側へ置く(外へ出すと、縦で暗幕に浮いた別の部品に見えるため)。
 
 signal primary_pressed
 
@@ -49,13 +50,9 @@ func _ready() -> void:
 	_center.anchor_bottom = 1.0
 	_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_center)
-	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", ROW_GAP * 1.5)
-	_center.add_child(column)
-
 	_panel = PanelContainer.new()
 	_panel.add_theme_stylebox_override("panel", load(PANEL_STYLE))
-	column.add_child(_panel)
+	_center.add_child(_panel)
 	var body := VBoxContainer.new()
 	body.add_theme_constant_override("separation", ROW_GAP)
 	_panel.add_child(body)
@@ -72,7 +69,7 @@ func _ready() -> void:
 	var buttons := HBoxContainer.new()
 	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
 	buttons.add_theme_constant_override("separation", ROW_GAP)
-	column.add_child(buttons)
+	body.add_child(buttons)
 	_close = CodedButton.make("閉じる", CLOSE_SIZE)
 	_close.pressed.connect(close)
 	buttons.add_child(_close)

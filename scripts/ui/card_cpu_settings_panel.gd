@@ -58,11 +58,11 @@ func open() -> void:
 	_settings = CpuMatchSettings.load_saved()
 	_refresh()
 	_layout()
-	visible = true
+	ModalMotion.show(self, _center)
 
 
 func close() -> void:
-	visible = false
+	ModalMotion.hide(self, _center)
 
 
 func _layout() -> void:

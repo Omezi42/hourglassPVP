@@ -58,7 +58,7 @@ func _ready() -> void:
 func open() -> void:
 	_refresh_settings_summary()
 	_layout()
-	visible = true
+	ModalMotion.show(self, _center)
 
 
 func _layout() -> void:
@@ -77,7 +77,7 @@ func _layout() -> void:
 
 
 func close() -> void:
-	visible = false
+	ModalMotion.hide(self, _center)
 
 
 func _build() -> void:

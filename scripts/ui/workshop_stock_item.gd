@@ -19,7 +19,7 @@ const MAXED_SIZE := Vector2(50.0, 24.0)
 const MAXED_INSET_TOP := 5.0
 const MAXED_FONT := UiPalette.T_SMALL
 ## 「2/2」バッジの跳ね(GameDesign.md 9章)。枚数が変わった瞬間に1.0へ立てTweenで戻す。
-const PUNCH_DURATION := 0.25
+const PUNCH_DURATION := 0.24
 const PUNCH_SCALE := 0.3
 ## 未所有のカードセットの錠前(GameDesign.md 21章)。暗転だけでは「30枚に達した」と区別できない。
 const LOCK_PLATE_RADIUS := 20.0
@@ -94,6 +94,12 @@ func show_card(
 ## 入れられる札か(所持・枚数が上限未満・デッキが30枚未満)。押せる札だけ指カーソルと乗る・押す反応を持つ。
 func is_addable() -> bool:
 	return card != null and enabled and not locked and count < limit
+
+
+## 明るく描くか。**暗くするのは2/2と未所有だけ**——デッキが30枚に達しただけで在庫棚が
+## 全部暗くなると、何が起きたのか読めない(30枚は押したときの首振りと枚数の跳ねで返す)。
+func _is_lit() -> bool:
+	return card != null and not locked and count < limit
 
 
 ## 押せるかどうかが変わるたびに、カーソルと乗った量を合わせる(乗ったまま押せなくなる場合がある)。
@@ -256,7 +262,7 @@ func _draw() -> void:
 	draw_set_transform(offset, 0.0, Vector2.ONE * zoom * press_scale)
 	var base := _base_size()
 	var maxed: bool = count >= limit
-	var tint := Color.WHITE if enabled else DIM_TINT
+	var tint := Color.WHITE if _is_lit() else DIM_TINT
 	var art := _art_rect()
 	# 棚板へ落ちる影。駒が板の上に立って見えるようにする。
 	UiPaint.fill_ellipse(
@@ -279,7 +285,7 @@ func _draw() -> void:
 		HORIZONTAL_ALIGNMENT_CENTER,
 		base.x,
 		NAME_FONT,
-		UiPalette.IVORY if enabled else UiPalette.FAINT
+		UiPalette.IVORY if _is_lit() else UiPalette.FAINT
 	)
 	# 四隅は手札の札と同じ(GameDesign.md 9章)。紋章は色相だけでは見分けられないため必ず添える。
 	CardStatBadge.cost_diamond(self, _font, Vector2(16, 18), card.cost, 14.0, tint)

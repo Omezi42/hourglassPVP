@@ -441,6 +441,11 @@ func apply_orientation(portrait: bool) -> void:
 	_progress.add_theme_font_size_override(
 		"font_size", PORTRAIT_PROGRESS_FONT if portrait else PROGRESS_FONT
 	)
+	# 縦はデッキのタブが同じ枚数を出しているため棚の上には重ねず、空いた幅はデッキ名へ回す。
+	_progress.visible = not portrait
+	_name_input.size_flags_horizontal = (
+		Control.SIZE_EXPAND_FILL if portrait else Control.SIZE_FILL
+	)
 	_hide_detail()
 	_select_tab(_show_stock)
 

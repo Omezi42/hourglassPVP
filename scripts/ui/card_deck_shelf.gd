@@ -60,6 +60,9 @@ const HINT_SIZE := Vector2(380.0, 44.0)
 ## 空の案内(棚の札・リストの区画)の倍率の上限と、札を段の空き帯へ置くときに上下へ残す余白。
 const HINT_SCALE_MAX := 1.5
 const HINT_BAND_PAD := 8.0
+## 帯が狭い向き(横)で、札を帯の高さまで詰めるときの上下の余白と、札の高さの下限(文字の何倍か)。
+const HINT_BAND_PAD_MIN := 3.0
+const HINT_MIN_LINE := 2.2
 const SPELL_PLATE_INSET := 0.07
 ## 30枚に達した瞬間だけ棚全体へ重ねる淡い光の、強さと消えるまでの尺(GameDesign.md 9章)。
 const GLOW_DURATION := 0.6
@@ -333,23 +336,21 @@ func _draw_hint(cell: Vector2, art: Vector2) -> void:
 	var plate_size := HINT_SIZE * k
 	var center := size * 0.5
 	# 3段目の「1つ上の棚板の下〜受け皿の影絵の上端」の空き帯の縦中央へ置き、影絵(あと何枚)を隠さない。
-	# 帯が札と余白に足りない向き(横)は、棚の中ほどのまま。
+	# 帯が狭い向き(横)は札の高さを帯まで詰める。それでも文字が入らないときだけ棚の中ほどのまま。
 	var row := _rows() / 2
 	var band_top := row * cell.y - _name_band()
 	var silhouette_top := (
 		(row + 1) * cell.y - _name_band() - LEDGE_HEIGHT - art.x * SOCKET_HEIGHT_RATIO
 	)
-	if silhouette_top - band_top >= plate_size.y + HINT_BAND_PAD * 2.0:
+	var band := silhouette_top - band_top
+	var fitted := minf(plate_size.y, band - HINT_BAND_PAD_MIN * 2.0)
+	if band >= plate_size.y + HINT_BAND_PAD * 2.0 or fitted >= HINT_FONT * k * HINT_MIN_LINE:
+		plate_size.y = fitted
 		center.y = (band_top + silhouette_top) * 0.5
 	var plate := Rect2(center - plate_size * 0.5, plate_size)
 	UiKit.glass(get_canvas_item(), plate)
 	UiKit.text_in(
-		get_canvas_item(),
-		_font,
-		"左の在庫棚から選ぶと、ここへ収まります",
-		plate,
-		roundi(HINT_FONT * k),
-		UiPalette.IVORY
+		get_canvas_item(), _font, "在庫棚から選ぶと、ここへ収まります", plate, roundi(HINT_FONT * k), UiPalette.IVORY
 	)
 
 

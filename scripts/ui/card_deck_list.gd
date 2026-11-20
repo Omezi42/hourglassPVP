@@ -21,7 +21,7 @@ const FONT_RATIO := 0.42
 const BADGE_RATIO := 0.36
 const ROW_RADIUS := 8.0
 const HINT_PLATE_RADIUS := 12.0
-const EMPTY_HINT := "左の在庫棚から選ぶと、ここへ並びます"
+const EMPTY_HINT := "在庫棚から選ぶと、ここへ並びます"
 ## 押している行の面を暗くする量と、中身を下げる量(px)。
 const PRESS_DARKEN := 0.14
 const PRESS_SINK := 1.0
