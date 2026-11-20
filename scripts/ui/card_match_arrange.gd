@@ -86,6 +86,8 @@ static func _place_buttons(screen: CardMatchScreen, layout: CardMatchLayout) -> 
 	var button_scale := Vector2.ONE * layout.button_scale
 	screen._coin_button.scale = button_scale
 	screen._flip_button.scale = Vector2.ONE * layout.text_scale
+	screen._flip_button.custom_minimum_size = layout.flip_button_size / layout.text_scale
+	screen._flip_button.size = screen._flip_button.custom_minimum_size
 	CardMatchBuild.center_on(screen._coin_button, layout.coin_center)
 	CardMatchBuild.center_on(screen._end_turn_button, layout.turn_end_center)
 	CardMatchBuild.center_on(screen._clock_dial, layout.clock_center)

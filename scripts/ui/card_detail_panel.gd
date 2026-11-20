@@ -38,6 +38,8 @@ const TERM_FONT_SIZE := UiPalette.T_SMALL
 ## ホバーで出すときに、カーソルからどれだけずらすか。指しているものを自分で
 ## 隠さない程度に離し、視線を動かさずに済む程度に近づける。
 const CURSOR_OFFSET := Vector2(22, 18)
+## 指している駒を避けるときの、駒とパネルのあき。
+const DETAIL_AVOID_GAP := 8.0
 
 ## 横並びの詰めた表示にするか。`add_child()` より前に設定する。
 var compact := false
@@ -74,16 +76,35 @@ func _ready() -> void:
 ## 前提があった頃の名残であり、読むだけになったいまは視線とカーソルを画面の端まで
 ## 往復させる理由が無い。カーソルの右下を既定とし、`bounds` からはみ出すときだけ
 ## 反対側へ折り返す。**置き場の規則はここ1箇所が持つ**(画面ごとに決めない)。
-static func place_near(cursor: Vector2, panel: Vector2, bounds: Rect2) -> Vector2:
+##
+## `avoid` は指している駒そのものの矩形。重なるときだけ、駒の右・左・上・下の順に逃がす
+## (隣を覆うのは慣習の範囲だが、指している駒自身は覆わない)。
+static func place_near(cursor: Vector2, panel: Vector2, bounds: Rect2, avoid := Rect2()) -> Vector2:
 	var at := cursor + CURSOR_OFFSET
 	if at.x + panel.x > bounds.end.x:
 		at.x = cursor.x - CURSOR_OFFSET.x - panel.x
 	if at.y + panel.y > bounds.end.y:
 		at.y = cursor.y - CURSOR_OFFSET.y - panel.y
+	if avoid.has_area() and Rect2(at, panel).intersects(avoid):
+		at = _escape(at, panel, bounds, avoid)
 	return Vector2(
 		clampf(at.x, bounds.position.x, maxf(bounds.end.x - panel.x, bounds.position.x)),
 		clampf(at.y, bounds.position.y, maxf(bounds.end.y - panel.y, bounds.position.y))
 	)
+
+
+## 避ける矩形の横へ、入らなければ縦へずらす。
+static func _escape(at: Vector2, panel: Vector2, bounds: Rect2, avoid: Rect2) -> Vector2:
+	var right := avoid.end.x + DETAIL_AVOID_GAP
+	var left := avoid.position.x - DETAIL_AVOID_GAP - panel.x
+	if right + panel.x <= bounds.end.x:
+		return Vector2(right, at.y)
+	if left >= bounds.position.x:
+		return Vector2(left, at.y)
+	var above := avoid.position.y - DETAIL_AVOID_GAP - panel.y
+	if above >= bounds.position.y:
+		return Vector2(at.x, above)
+	return Vector2(at.x, avoid.end.y + DETAIL_AVOID_GAP)
 
 
 ## `rules_text` は対局中にいまの値へ置き換えた札の文(空なら札のまま)。

@@ -48,13 +48,16 @@ func _init(screen: CardMatchScreen) -> void:
 
 ## カードへカーソルが乗った。出してよい状態でなければ何も出さない。
 func hover(view: CardView) -> void:
-	hover_card(view.card if view != null else null)
+	var avoid := Rect2()
+	if view != null and view.mode == CardView.Mode.BOARD:
+		avoid = view.get_transform() * Rect2(Vector2.ZERO, view.size)
+	hover_card(view.card if view != null else null, false, avoid)
 
 
 ## 駒を持たない所(直前の手の列・ログ)からも同じパネルを出す。
 ## `off_board` はログのモーダルから読むとき。出さない間の規則は「盤面の上へ重なる」前提の
 ## ものであり、盤面を覆ったモーダルの上では当たらないため掛けない。
-func hover_card(card: CardData, off_board := false) -> void:
+func hover_card(card: CardData, off_board := false, avoid := Rect2()) -> void:
 	if card == null or (not off_board and not allowed()):
 		hide_now()
 		return
@@ -62,7 +65,7 @@ func hover_card(card: CardData, off_board := false) -> void:
 	_timer.stop()
 	_panel.show_card(card, "" if off_board else _live_text(card))
 	_fit_scale()
-	_panel.position = _place()
+	_panel.position = _place(avoid)
 	_panel.visible = true
 	# 履歴タイル・ログ(あとから add_child した子)より手前へ出す。
 	_panel.move_to_front()
@@ -80,9 +83,9 @@ func _live_text(card: CardData) -> String:
 ##
 ## 対角へ出していたのは**パネルの中の語を押しに行く**前提があった頃の名残で、
 ## 読むだけになったいまは視線を画面の端まで往復させる理由が無い。
-func _place() -> Vector2:
+func _place(avoid := Rect2()) -> Vector2:
 	var shown := _panel.size * _panel.scale
-	return CardDetailPanel.place_near(_screen.get_local_mouse_position(), shown, _bounds())
+	return CardDetailPanel.place_near(_screen.get_local_mouse_position(), shown, _bounds(), avoid)
 
 
 func _bounds() -> Rect2:

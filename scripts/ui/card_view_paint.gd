@@ -227,23 +227,25 @@ static func stat(view: CardView, center: Vector2, value: int, color: Color, radi
 	UiKit.gem_text(ci, view._font, center, radius, str(value))
 
 
-## 「この攻撃の後どうなるか」を体力バッジの真下へ出す。相打ちのため攻撃側にも出る。
+## 「この攻撃の後どうなるか」を体力バッジの上へ出す。相打ちのため攻撃側にも出る。
+## バッジの上は絵だけで文字が無く、名前とキーワードの行に掛からない。大きさは体力バッジの倍率に合わせる。
 static func preview(view: CardView, anchor: Vector2) -> void:
 	if view.preview_health < 0:
 		return
+	var zoom := view.stat_scale
 	var color := CardView.PREVIEW_DEAD if view.preview_dead else CardView.PREVIEW_ALIVE
-	var center := anchor + Vector2(0, CardView.STAT_RADIUS + CardView.PREVIEW_GAP)
+	var center := preview_center(anchor, zoom)
+	var radius := CardView.PREVIEW_RADIUS * zoom
 	ShapePaint.circle(
-		view.get_canvas_item(),
-		center,
-		CardView.PREVIEW_RADIUS,
-		Color(UiPalette.INK_900, GROUND_ALPHA)
+		view.get_canvas_item(), center, radius, Color(UiPalette.INK_900, GROUND_ALPHA)
 	)
 	ShapePaint.arc(
-		view.get_canvas_item(), center, CardView.PREVIEW_RADIUS, 0.0, TAU, 20, color, UiKit.LINE_MIN
+		view.get_canvas_item(), center, radius, 0.0, TAU, 20, color, UiKit.LINE_MIN * zoom
 	)
 	var text := "破壊" if view.preview_dead else str(view.preview_health)
-	var font_size := PREVIEW_DEAD_FONT if view.preview_dead else PREVIEW_HEALTH_FONT
+	var font_size := roundi(
+		(PREVIEW_DEAD_FONT if view.preview_dead else PREVIEW_HEALTH_FONT) * zoom
+	)
 	var text_size := view._font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
 	view.draw_string(
 		view._font,
@@ -254,6 +256,11 @@ static func preview(view: CardView, anchor: Vector2) -> void:
 		font_size,
 		color
 	)
+
+
+## 予測の丸・札の中心。体力バッジの上へ、バッジに `PREVIEW_TUCK` だけ食い込ませて置く。
+static func preview_center(anchor: Vector2, zoom: float) -> Vector2:
+	return anchor - Vector2(0, CardView.PREVIEW_RISE * zoom)
 
 
 ## 「反転」ボタンにカーソルがある間、攻撃力・体力のバッジの真下へ1枚ずつ札を出す
@@ -276,7 +283,7 @@ static func _forecast_pill(
 		view._font.get_string_size(tail, HORIZONTAL_ALIGNMENT_LEFT, -1, PILL_TAIL_FONT).x
 	)
 	var width := head_size.x + tail_width + PILL_PADDING * 2.0
-	var center := anchor + Vector2(0, CardView.STAT_RADIUS + CardView.PREVIEW_GAP)
+	var center := preview_center(anchor, view.stat_scale)
 	var rect := Rect2(center - Vector2(width, PILL_HEIGHT) * 0.5, Vector2(width, PILL_HEIGHT))
 	var ci := view.get_canvas_item()
 	UiKit.fill(ci, UiKit.rr(rect, BADGE_CORNER), Color(UiPalette.INK_900, GROUND_ALPHA))

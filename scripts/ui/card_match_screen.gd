@@ -541,6 +541,9 @@ func _refresh_buttons() -> void:
 		_selection.is_board_selection() and _my_turn() and state.can_flip(my_side, _selection.slot)
 	)
 	_flip_button.visible = show_flip
+	# ボタンはキーワードの行の席へ出るため、出ているあいだその駒のキーワードは隠す。
+	for i in _own_slots.size():
+		_own_slots[i].keywords_hidden = show_flip and i == _selection.slot
 	if show_flip:
 		_flip_button.position = _flip_button_position(_selection.slot)
 		# タッチにはホバーが無いため、反転の予測はボタンを出した時点で出す(GameDesign.md 9章)。
@@ -554,13 +557,13 @@ func _refresh_buttons() -> void:
 		_menu.refresh()
 
 
-## 選んだ駒の真下。駒の中心へ横を揃え、下端へわずかに重ねて置く。
+## 選んだ駒の名前の行の下(キーワードの行の席)。駒の中心へ横を揃え、名前の行の下端へわずかに重ねて置く。
 func _flip_button_position(slot: int) -> Vector2:
 	var view: CardView = _own_slots[slot]
-	var button_size := CardMatchLayout.FLIP_BUTTON_SIZE * _flip_button.scale
-	var x: float = view.position.x + (view.size.x - button_size.x) * 0.5
-	var bottom := view.position.y + view.size.y * (1.0 + view.base_scale) * 0.5
-	return Vector2(x, bottom - CardMatchLayout.FLIP_BUTTON_OVERLAP)
+	var x: float = view.position.x + (view.size.x - layout.flip_button_size.x) * 0.5
+	var center_y: float = view.position.y + view.size.y * 0.5
+	var name_bottom := center_y + (view.name_row_bottom() - view.size.y * 0.5) * view.base_scale
+	return Vector2(x, name_bottom - CardMatchLayout.FLIP_BUTTON_NAME_TUCK)
 
 
 func _my_turn() -> bool:

@@ -12,9 +12,12 @@ const CARD_GAP := 12.0
 const HAND_GAP := 8.0
 ## 相手の場6枠だけをわずかに縮小して奥行きを出す。
 const FOE_ROW_SCALE := 0.92
-## 反転ボタンは選んだ駒のすぐ下へ出す(GameDesign.md 9章)。
+## 反転ボタンは選んだ駒の名前の行の下へ、キーワードの行の席へ出す(GameDesign.md 9章)。
+## 大きさは画面上の寸法。縦は幅を駒(119)以下にして隣の駒の文字へ掛けない。
 const FLIP_BUTTON_SIZE := Vector2(104, 34)
-const FLIP_BUTTON_OVERLAP := 3.0
+const FLIP_BUTTON_SIZE_PORTRAIT := Vector2(112, 50)
+## ボタンの上端を、名前の行の下端より食い込ませる量。
+const FLIP_BUTTON_NAME_TUCK := 3.0
 
 const PORTRAIT_SIDE := 10.0
 ## 縦の文字は720幅の基準で本文24px・小さい見出し20pxを目安にする(GameDesign.md 9章「縦画面」)。
@@ -46,6 +49,8 @@ const PORTRAIT_TUTORIAL_MENU_GAP := 6.0
 const PORTRAIT_ROW_SPREAD := 45.0
 ## 相手の列はさらに上へ寄せる(レールの右端の時計に駒の下の文字が掛からないように)。
 const PORTRAIT_FOE_ROW_SPREAD := 60.0
+## 自分の列は上へ上げる。駒の下の文字(縦は1.65倍で矩形の外へ伸びる)を卓の下端と情報帯の内側へ収める。
+const PORTRAIT_OWN_ROW_RAISE := 28.0
 const PORTRAIT_GAP := 8.0
 const PORTRAIT_LOG_SCALE := 1.4
 
@@ -77,6 +82,8 @@ var own_row_top := 0.0
 var piece_scale := 1.0
 var stat_scale := 1.0
 var label_scale := 1.0
+## 反転ボタンの画面上の大きさ。
+var flip_button_size := FLIP_BUTTON_SIZE
 ## 手札の札と詳細パネルの縮尺。
 var hand_scale := 1.0
 var detail_scale := 1.0
@@ -251,7 +258,10 @@ static func _make_portrait() -> CardMatchLayout:
 	l.slot_left = side * 2.0 + l.slot_pitch * 0.5 - half_piece.x
 	var quarter := l.table_rect.size.y * 0.25
 	l.foe_row_top = l.table_rect.position.y + quarter - PORTRAIT_FOE_ROW_SPREAD - half_piece.y
-	l.own_row_top = l.table_rect.end.y - quarter + PORTRAIT_ROW_SPREAD - half_piece.y
+	l.own_row_top = (
+		l.table_rect.end.y - quarter + PORTRAIT_ROW_SPREAD - PORTRAIT_OWN_ROW_RAISE - half_piece.y
+	)
+	l.flip_button_size = FLIP_BUTTON_SIZE_PORTRAIT
 	var rail := l.rail_y()
 	var end_radius := ActionColumnLayout.TURN_END_DIAMETER * 0.5
 	l.turn_end_center = Vector2(l.screen_size.x - 2.0 - end_radius, rail)

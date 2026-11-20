@@ -42,6 +42,9 @@ const SAND_AMBER := Color(0.93, 0.78, 0.42, 1.0)
 ## 文字を描くときに空ける左右の余白と、縮められる下限のフォントサイズ。
 const TEXT_MARGIN := 5.0
 const MIN_FONT_SIZE := 9
+## キーワードが1行で字の下限を割るときの2段折り(段の字の大きさ・段の送りの倍率)。
+const FOLD_FONT_SIZE := 10
+const FOLD_LINE_PITCH := 1.15
 
 const STAT_RADIUS := 15.0
 ## 取り消しの戻る動き(GameDesign.md 9章「対局画面の手触り」)。フッと消すのではなく
@@ -71,9 +74,11 @@ const BOARD_SINK_DURATION := 0.08
 ## 台座のホバー光の不透明度。操作できる自分の駒だけ強める。
 const HOVER_GLOW_ALPHA := 0.1
 const HOVER_GLOW_ALPHA_OPERABLE := 0.22
-## 攻撃の予測。体力のバッジの真下へ、結果だけを小さく出す。
+## 攻撃の予測。体力のバッジの上へ、結果だけを小さく出す。
 const PREVIEW_RADIUS := 17.0
-const PREVIEW_GAP := 17.0
+## 予測の丸を体力バッジの上へ置く量(丸の中心からバッジの中心まで)。バッジへ食い込ませて「この体力の結果」と読ませる。
+const PREVIEW_TUCK := 4.0
+const PREVIEW_RISE := STAT_RADIUS + PREVIEW_RADIUS - PREVIEW_TUCK
 const PREVIEW_ALIVE := Color(0.55, 0.85, 1.0)
 const PREVIEW_DEAD := Color(1.0, 0.42, 0.36)
 const GUARD_BORDER := 4.0
@@ -237,6 +242,12 @@ var label_scale := 1.0:
 	set(value):
 		label_scale = value
 		queue_redraw()
+## 反転ボタンがキーワードの行の席へ出ているあいだ、その行を描かない。
+var keywords_hidden := false:
+	set(value):
+		if keywords_hidden != value:
+			keywords_hidden = value
+			queue_redraw()
 ## 置き場所が決める縮尺(相手の列・縦画面の駒と手札)。身構えの縮み・手札の拡大はこれに掛ける。
 var base_scale := 1.0:
 	set(value):
@@ -753,12 +764,44 @@ func _draw_board_labels(tint: Color) -> void:
 	# 文字を大きくしたぶんは駒の下へはみ出させる(上へ寄せると攻撃力・体力のバッジに重なる)。
 	var grow := label_scale - 1.0
 	var name_size := roundi(14 * label_scale)
-	var name_baseline := size.y - 18.0 + grow * LABEL_NAME_DROP
-	_centered_text(card.display_name, name_size, name_baseline, UiPalette.IVORY * tint)
+	_centered_text(card.display_name, name_size, _name_baseline(), UiPalette.IVORY * tint)
 	var note := CardViewPaint.keyword_text(self)
-	if not note.is_empty():
-		var note_baseline := size.y - 3.0 + grow * LABEL_NOTE_DROP
-		_centered_text(note, roundi(12 * label_scale), note_baseline, UiPalette.GOLD * tint)
+	if not note.is_empty() and not keywords_hidden:
+		_draw_note(note, size.y - 3.0 + grow * LABEL_NOTE_DROP, UiPalette.GOLD * tint)
+
+
+func _name_baseline() -> float:
+	return size.y - 18.0 + (label_scale - 1.0) * LABEL_NAME_DROP
+
+
+## 名前の行の下端(駒ローカル)。反転ボタンがここへ食い込んで出る。
+func name_row_bottom() -> float:
+	return _name_baseline() + _font.get_descent(roundi(14 * label_scale))
+
+
+## キーワードの行。字の下限(縦は倍率を掛ける)を割るときは、語の境目で2段に折る。
+func _draw_note(note: String, baseline: float, color: Color) -> void:
+	var start := roundi(12 * label_scale)
+	var lowest := roundi(MIN_FONT_SIZE * label_scale)
+	var words := note.split(" ")
+	if words.size() < 2 or _fitted_size(note, start, lowest) > 0:
+		_centered_text(note, start, baseline, color)
+		return
+	var half := ceili(words.size() * 0.5)
+	var fold_size := roundi(FOLD_FONT_SIZE * label_scale)
+	_centered_text(" ".join(words.slice(0, half)), fold_size, baseline, color)
+	var pitch := fold_size * FOLD_LINE_PITCH
+	_centered_text(" ".join(words.slice(half)), fold_size, baseline + pitch, color)
+
+
+## 幅に収まる最大の字の大きさ。`lowest` まで下げても収まらなければ 0。
+func _fitted_size(text: String, font_size: int, lowest: int) -> int:
+	var limit := size.x - TEXT_MARGIN * 2.0
+	while font_size >= lowest:
+		if _font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x <= limit:
+			return font_size
+		font_size -= 1
+	return 0
 
 
 # --- 手札のカード -------------------------------------------------------

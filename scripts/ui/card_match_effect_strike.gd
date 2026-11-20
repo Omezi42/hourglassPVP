@@ -200,7 +200,10 @@ func _play_signature(card: CardData, from: Vector2, targets: Array) -> bool:
 	if _merges_into_open_job(card, targets):
 		return true
 	var entries: Array[Dictionary] = []
-	move.from = from
+	var zoom := 1.0
+	if _origin_slot >= 0 and _origin != CardEnums.EffectOrigin.SPELL:
+		zoom = _screen.view_at(_origin_side, _origin_slot).base_scale
+	move.place(from, zoom, _screen.layout.table_rect.position.y)
 	move.style = _style
 	move.grave_spells = CardEffectResolver.grave_spell_count(_screen.state, _origin_side)
 	var foe_side := MatchState.other_side(_origin_side)

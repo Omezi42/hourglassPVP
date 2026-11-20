@@ -99,10 +99,16 @@ const FLOAT_HEAVY_DAMAGE := 8.0
 const FLOAT_FONT_SIZE := 22
 const FLOAT_HEAVY_FONT_SIZE := 40
 const FLOAT_HEAVY_RISE := 26.0
-## 小さい数字はバーの右隣へ、大きい数字はバーの真上へ右揃えで出す。
+## 数字はHPの丸の手前(バーの右端から丸の半径と `FLOAT_ORB_GAP` を引いた所)へ右揃えで出す。
+## 小さい数字はバーの高さに、大きい数字はバーの真上へ浮かせる。
 const FLOAT_BASELINE := 18.0
 const FLOAT_HEAVY_WIDTH := 120.0
 const FLOAT_HEAVY_LIFT := 6.0
+const FLOAT_ORB_GAP := 6.0
+## 赤い数字が赤いバーの塗りと残りHPの上に乗るため、字の大きさに比例した縁取りを付ける。
+const FLOAT_OUTLINE_RATIO := 0.14
+## 攻撃してきた駒(`CardView.STRIKE_Z_INDEX`)より手前へ描く。
+const FLOAT_Z_INDEX := 21
 ## 浮き上がり切った数字の上端と、画面の上端とのあき。
 const FLOAT_SCREEN_MARGIN := 8.0
 ## 大ダメージほど赤から橙へ寄せる。赤のまま大きくするより、危険の度合いが読みやすい。
@@ -232,6 +238,7 @@ func _ready() -> void:
 	_deck_pulse_shape.modulate.a = 0.0
 	add_child(_deck_pulse_shape)
 	_float_layer = PaintedShape.new(_paint_float)
+	_float_layer.z_index = FLOAT_Z_INDEX
 	add_child(_float_layer)
 	_fx = PlayerInfoBarFx.new(self)
 	add_child(_fx)
@@ -806,16 +813,21 @@ func _paint_float(item: PaintedShape) -> void:
 	var size := int(round(lerpf(FLOAT_FONT_SIZE, FLOAT_HEAVY_FONT_SIZE, weight)))
 	var rise := (1.0 - ratio) * lerpf(FLOAT_RISE, FLOAT_HEAVY_RISE, weight)
 	# **大きい数字はバーの真上へ逃がす。**バーの右隣にはマナの数字とピップが並んでおり、
-	# 文字を大きくしたぶんだけそこへ食い込む(実際に描画して重なりを確認した)。
-	var at := Vector2(rect.end.x + HP_BADGE_RADIUS + 8.0, rect.position.y + FLOAT_BASELINE - rise)
-	var align := HORIZONTAL_ALIGNMENT_LEFT
-	var width := -1.0
+	# 文字を大きくしたぶんだけそこへ食い込む。右端はHPの丸の手前にそろえ、丸と重ねない。
+	var right := rect.end.x - HP_BADGE_RADIUS - FLOAT_ORB_GAP
+	var at := Vector2(right - FLOAT_HEAVY_WIDTH, rect.position.y + FLOAT_BASELINE - rise)
 	if weight > 0.0:
-		at = Vector2(rect.end.x - FLOAT_HEAVY_WIDTH, rect.position.y - FLOAT_HEAVY_LIFT - rise)
-		align = HORIZONTAL_ALIGNMENT_RIGHT
-		width = FLOAT_HEAVY_WIDTH
+		at.y = rect.position.y - FLOAT_HEAVY_LIFT - rise
 	# 画面の上端にある器でも、浮き上がり切った数字の上端が画面の中に収まるよう下へずらす。
 	var full_rise := lerpf(FLOAT_RISE, FLOAT_HEAVY_RISE, weight)
 	var top_limit := FLOAT_SCREEN_MARGIN - get_global_transform_with_canvas().origin.y
 	at.y = maxf(at.y, top_limit + _font.get_ascent(size) + full_rise - rise)
-	item.draw_string(_font, at, text, align, width, size, Color(color, minf(ratio * 2.0, 1.0)))
+	var alpha := minf(ratio * 2.0, 1.0)
+	var outline := roundi(size * FLOAT_OUTLINE_RATIO)
+	var ink := Color(UiPalette.INK_900, alpha)
+	item.draw_string_outline(
+		_font, at, text, HORIZONTAL_ALIGNMENT_RIGHT, FLOAT_HEAVY_WIDTH, size, outline, ink
+	)
+	item.draw_string(
+		_font, at, text, HORIZONTAL_ALIGNMENT_RIGHT, FLOAT_HEAVY_WIDTH, size, Color(color, alpha)
+	)

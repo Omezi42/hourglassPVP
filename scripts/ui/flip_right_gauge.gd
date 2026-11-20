@@ -9,7 +9,10 @@ const PIP_RADIUS := 5.0
 const PIP_STEP := 13.5
 const PIP_START_X := 42.0
 const PIP_SEGMENTS := 16
-const PIP_EMPTY := Color(1, 1, 1, 0.10)
+## 空きの粒は、くぼんだ受け皿(暗い塗り + 金の細い輪)で見せ、総回数を数えられるようにする。
+const PIP_EMPTY_FILL := Color(0, 0, 0, 0.40)
+const PIP_EMPTY_RIM := Color(UiPalette.GOLD_HI, 0.40)
+const PIP_RIM_WIDTH := 1.25
 const ROW_Y := [13.0, 35.0]
 const LABEL_X := 8.0
 const LABEL_FONT_SIZE := UiPalette.T_MICRO
@@ -42,7 +45,10 @@ func set_counts(own_remaining: int, own_total: int, foe_remaining: int, foe_tota
 
 
 func _draw() -> void:
-	UiKit.well(get_canvas_item(), Rect2(Vector2.ZERO, size), CORNER_RADIUS)
+	var face := Rect2(Vector2.ZERO, size)
+	# 縦では卓のレールの金線がこの札を横切るため、不透明の下地を敷いて隠す。
+	UiKit.fill(get_canvas_item(), UiKit.rr(face, CORNER_RADIUS), UiPalette.INK_900)
+	UiKit.well(get_canvas_item(), face, CORNER_RADIUS)
 	_draw_row(ROW_Y[0], "自分", _own_remaining, _own_total)
 	_draw_row(ROW_Y[1], "相手", _foe_remaining, _foe_total)
 
@@ -72,4 +78,9 @@ func _draw_row(y: float, label_text: String, remaining: int, total: int) -> void
 		if i < remaining:
 			UiKit.vgrad(ci, pip, [[0.0, UiPalette.GOLD_HI], [1.0, UiPalette.SAND_DEEP]], true)
 		else:
-			UiKit.fill(ci, pip, PIP_EMPTY)
+			UiKit.fill(ci, pip, PIP_EMPTY_FILL)
+			var center := Vector2(PIP_START_X + i * PIP_STEP, y)
+			var rim_radius := PIP_RADIUS - PIP_RIM_WIDTH * 0.5
+			ShapePaint.arc(
+				ci, center, rim_radius, 0.0, TAU, PIP_SEGMENTS, PIP_EMPTY_RIM, PIP_RIM_WIDTH
+			)

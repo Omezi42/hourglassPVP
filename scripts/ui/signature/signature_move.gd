@@ -11,9 +11,13 @@ extends RefCounted
 ## 上限(GameDesign.md 9章)。`signature_tests.gd` が見張る。
 const MAX_DURATION := 1.2
 const FADE := 0.22
+## 演出の最上端と、卓の矩形の上端とのあき。これより上へ出る演出は、出たぶんだけ全体を下へ寄せる。
+const FX_TABLE_MARGIN := 8.0
 
 ## 効果:出どころ(駒の中心・情報帯など)/ 登場:台座の上面の中心。画面の座標。
 var from := Vector2.ZERO
+## 出どころの駒の拡大(縦画面・相手の列では1未満)。駒に合わせて大きさを持つ演出が掛ける。
+var zoom := 1.0
 ## 効果の対象の中心。登場では空。
 var targets: Array[Vector2] = []
 ## 効果を起こした側から見た相手の駒の中心。相手の駒の数で量が決まる効果(リリーフ)が
@@ -25,6 +29,20 @@ var grave_spells := 0
 ## 効果を呼んだ型(`CardEnums.EffectVisualStyle`)。型の違う効果を2つ持つカード(砂葬の
 ## 破壊とドロー)が描き分けに使う。登場では使わない。
 var style := CardEnums.EffectVisualStyle.STRIKE
+
+
+## 出どころと駒の拡大を決める。演出の最上端が卓の上端(`table_top`)から `FX_TABLE_MARGIN` を
+## 割るときは、割ったぶんだけ全体を下へ寄せる。
+func place(origin: Vector2, origin_zoom: float, table_top: float) -> void:
+	from = origin
+	zoom = origin_zoom
+	if top_extent() > 0.0:
+		from.y = maxf(from.y, table_top + FX_TABLE_MARGIN + top_extent())
+
+
+## 出どころ `from` から演出の最上端までの高さ(画面px)。卓の上端からはみ出す演出だけが返す。
+func top_extent() -> float:
+	return 0.0
 
 
 ## 着弾の瞬間(秒)。登場では駒が台座へ落ちきった瞬間。
