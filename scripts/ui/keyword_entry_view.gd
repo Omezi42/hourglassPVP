@@ -14,6 +14,12 @@ const PREVIEW_PAD_TOP := 4
 const PREVIEW_PAD_BOTTOM := 8
 ## 札の行の下の、横スクロールの帯のぶんの余白。
 const CARDS_SCROLL_PAD := 8.0
+## 札の行の端で、続きがあることを示す薄れの幅・色(パネルの面の中ほどの藍)・出入りの尺。
+const CARDS_FADE_WIDTH := 32.0
+const CARDS_FADE_COLOR := UiPalette.INK_800
+const CARDS_FADE_DURATION := UiPalette.DUR_PRESS
+## 端まで届いたとみなす余り(スクロール位置は小数になる)。
+const CARDS_FADE_EPSILON := 0.5
 const TITLE_FONT_SIZE := UiPalette.T_HEAD
 const BODY_FONT_SIZE := UiPalette.T_BODY
 const CAPTION_FONT_SIZE := UiPalette.T_BODY
@@ -33,6 +39,9 @@ var _preview: CardEffectPreview
 var _preview_box: MarginContainer
 var _cards_caption: Label
 var _cards_row: HBoxContainer
+var _cards_scroll: ScrollContainer
+var _fade_left: EdgeFade
+var _fade_right: EdgeFade
 
 
 func _ready() -> void:
@@ -79,7 +88,9 @@ func show_entry(entry: Dictionary, reveal := false) -> void:
 		view.show_card(card, true)
 		view.custom_minimum_size = CARD_SIZE
 		# 辞書の中でカードを選ぶ導線は持たないため、押しても何も起きない。
+		# 押せそうに見える反応(ホバーの膜・指のカーソル・音)も出さない。
 		_cards_row.add_child(view)
+		view.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if reveal:
 		ListRevealFx.stagger(_cards_row.get_children())
 
@@ -118,14 +129,76 @@ func _build() -> void:
 
 	_cards_caption = Label.new()
 	_cards_caption.add_theme_font_size_override("font_size", CAPTION_FONT_SIZE)
-	_cards_caption.add_theme_color_override("font_color", UiPalette.GOLD)
+	_cards_caption.add_theme_color_override("font_color", UiPalette.MUTED)
 	add_child(_cards_caption)
 
-	var scroll := ScrollContainer.new()
-	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	scroll.custom_minimum_size = Vector2(0, CARD_SIZE.y + CARDS_SCROLL_PAD)
-	TouchScroll.enable(scroll)
-	add_child(scroll)
+	var holder := Control.new()
+	holder.custom_minimum_size = Vector2(0, CARD_SIZE.y + CARDS_SCROLL_PAD)
+	add_child(holder)
+	_cards_scroll = ScrollContainer.new()
+	_cards_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_cards_scroll.anchor_right = 1.0
+	_cards_scroll.anchor_bottom = 1.0
+	TouchScroll.enable(_cards_scroll)
+	holder.add_child(_cards_scroll)
 	_cards_row = HBoxContainer.new()
 	_cards_row.add_theme_constant_override("separation", 10)
-	scroll.add_child(_cards_row)
+	_cards_scroll.add_child(_cards_row)
+
+	_fade_left = EdgeFade.new(true)
+	_fade_right = EdgeFade.new(false)
+	for fade in [_fade_left, _fade_right]:
+		holder.add_child(fade)
+	var bar := _cards_scroll.get_h_scroll_bar()
+	bar.value_changed.connect(func(_value: float) -> void: _update_fades())
+	bar.changed.connect(_update_fades)
+
+
+## 行が左右へはみ出している間だけ、はみ出す側の端を薄くして続きを示す。
+func _update_fades() -> void:
+	var bar := _cards_scroll.get_h_scroll_bar()
+	var offset := float(_cards_scroll.scroll_horizontal)
+	var last := bar.max_value - bar.page
+	_fade_left.set_shown(offset > CARDS_FADE_EPSILON)
+	_fade_right.set_shown(offset < last - CARDS_FADE_EPSILON)
+
+
+## 札の行の端のグラデーション。入力は受けない。
+class EdgeFade:
+	extends Control
+
+	var _left: bool
+	var _shown := false
+	var _tween: Tween
+
+	func _init(left: bool) -> void:
+		_left = left
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		modulate.a = 0.0
+		anchor_top = 0.0
+		anchor_bottom = 1.0
+		anchor_left = 0.0 if left else 1.0
+		anchor_right = 0.0 if left else 1.0
+		offset_left = 0.0 if left else -CARDS_FADE_WIDTH
+		offset_right = CARDS_FADE_WIDTH if left else 0.0
+		offset_bottom = -CARDS_SCROLL_PAD
+
+	func set_shown(shown: bool) -> void:
+		if shown == _shown:
+			return
+		_shown = shown
+		if _tween != null and _tween.is_valid():
+			_tween.kill()
+		_tween = create_tween()
+		_tween.tween_property(self, "modulate:a", 1.0 if shown else 0.0, CARDS_FADE_DURATION)
+
+	func _draw() -> void:
+		var clear := Color(CARDS_FADE_COLOR, 0.0)
+		var at_left := CARDS_FADE_COLOR if _left else clear
+		var at_right := clear if _left else CARDS_FADE_COLOR
+		var points := PackedVector2Array(
+			[Vector2.ZERO, Vector2(size.x, 0.0), size, Vector2(0.0, size.y)]
+		)
+		ShapePaint.polygon(
+			get_canvas_item(), points, PackedColorArray([at_left, at_right, at_right, at_left])
+		)

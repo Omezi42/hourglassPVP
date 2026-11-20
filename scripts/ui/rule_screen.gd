@@ -20,8 +20,12 @@ const BODY_WIDTH := 1280.0 - BODY_LEFT - ScreenHeader.OUTER_MARGIN
 
 const HEADING_RECT := Rect2(BODY_LEFT, ScreenHeader.CONTENT_TOP, BODY_WIDTH, 40)
 const HEADING_FONT_SIZE := UiPalette.T_HEAD
+## 本文枠の高さは「全ページの本文のうち最も高いもの + BODY_BOTTOM_PAD」。ここで決めた高さは上限。
 const BODY_RECT := Rect2(BODY_LEFT, 182, BODY_WIDTH, 84)
 const BODY_FONT_SIZE := UiPalette.T_BODY
+const BODY_BOTTOM_PAD := 8.0
+## 本文枠の下端と盤面枠の上端のあいだ(横)。盤面枠の下端は動かさず、本文が縮んだぶん盤面が高くなる。
+const BODY_STAGE_GAP := 8.0
 const STAGE_RECT := Rect2(BODY_LEFT, 274, BODY_WIDTH, 350)
 ## 盤面の中身を枠線から離す(縦で手札の端の札が金線に重なるため)。
 const STAGE_SIDE_INSET := 12.0
@@ -31,6 +35,8 @@ const NAV_BUTTON_SIZE := Vector2(150, 52)
 const REPLAY_BUTTON_SIZE := Vector2(200, 52)
 const COUNTER_SIZE := Vector2(120, 52)
 const COUNTER_FONT_SIZE := UiPalette.T_LEAD
+## 横の下段のボタンどうしのすき間。
+const CONTROL_GAP := 12.0
 
 ## 縦画面(GameDesign.md 9章「縦画面」)。上から「章のボタン(2列)/ 見出し / 本文 / 盤面 / ページ送り」と積む。
 const PORTRAIT_TOC_COLUMNS := 2
@@ -138,6 +144,7 @@ func _build() -> void:
 	_place_stage(STAGE_RECT)
 
 	_build_controls()
+	_layout_landscape()
 
 
 func _build_toc() -> void:
@@ -158,7 +165,7 @@ func _build_toc() -> void:
 	_chapter_mark.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_chapter_mark.add_theme_color_override("font_color", UiPalette.SAND_HI)
 	_chapter_mark.visible = false
-	add_child(_chapter_mark)
+	_chapter_buttons[0].add_child(_chapter_mark)
 
 
 func _build_controls() -> void:
@@ -167,18 +174,12 @@ func _build_controls() -> void:
 	_prev_button.pressed.connect(func() -> void: show_page(_index - 1))
 	add_child(_prev_button)
 
-	_counter = _make_label(
-		Rect2(BODY_LEFT + NAV_BUTTON_SIZE.x + 12.0, CONTROLS_Y, COUNTER_SIZE.x, COUNTER_SIZE.y),
-		COUNTER_FONT_SIZE,
-		UiPalette.IVORY
-	)
+	_counter = _make_label(_counter_rect(), COUNTER_FONT_SIZE, UiPalette.IVORY)
 	_counter.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_counter.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 
 	_replay_button = CodedButton.make("もう一度見る", REPLAY_BUTTON_SIZE)
-	_replay_button.position = Vector2(
-		BODY_LEFT + (BODY_WIDTH - REPLAY_BUTTON_SIZE.x) * 0.5, CONTROLS_Y
-	)
+	_replay_button.position = _replay_rect().position
 	_replay_button.pressed.connect(func() -> void: _stage.play())
 	add_child(_replay_button)
 
@@ -208,22 +209,14 @@ func _layout_landscape() -> void:
 		)
 		_place(_chapter_buttons[i], Rect2(at, Vector2(TOC_RECT.size.x, TOC_BUTTON_HEIGHT)), 0)
 	_place_label(_heading, HEADING_RECT, HEADING_FONT_SIZE)
-	_place_label(_body, BODY_RECT, BODY_FONT_SIZE)
-	_place_stage(STAGE_RECT)
+	var body_height := _fit_body(BODY_RECT, BODY_FONT_SIZE)
+	var stage_top := BODY_RECT.position.y + body_height + BODY_STAGE_GAP
+	_place_stage(
+		Rect2(STAGE_RECT.position.x, stage_top, STAGE_RECT.size.x, STAGE_RECT.end.y - stage_top)
+	)
 	_place(_prev_button, Rect2(Vector2(BODY_LEFT, CONTROLS_Y), NAV_BUTTON_SIZE), 0)
-	_place_label(
-		_counter,
-		Rect2(BODY_LEFT + NAV_BUTTON_SIZE.x + 12.0, CONTROLS_Y, COUNTER_SIZE.x, COUNTER_SIZE.y),
-		COUNTER_FONT_SIZE
-	)
-	_place(
-		_replay_button,
-		Rect2(
-			Vector2(BODY_LEFT + (BODY_WIDTH - REPLAY_BUTTON_SIZE.x) * 0.5, CONTROLS_Y),
-			REPLAY_BUTTON_SIZE
-		),
-		0
-	)
+	_place_label(_counter, _counter_rect(), COUNTER_FONT_SIZE)
+	_place(_replay_button, _replay_rect(), 0)
 	_place(
 		_next_button,
 		Rect2(Vector2(BODY_LEFT + BODY_WIDTH - NAV_BUTTON_SIZE.x, CONTROLS_Y), NAV_BUTTON_SIZE),
@@ -250,8 +243,8 @@ func _layout_portrait() -> void:
 	var y := content.position.y + rows * (PORTRAIT_TOC_BUTTON_HEIGHT + PORTRAIT_GAP) + PORTRAIT_GAP
 	_place_label(_heading, Rect2(left, y, width, PORTRAIT_HEADING_HEIGHT), PORTRAIT_HEADING_FONT)
 	y += PORTRAIT_HEADING_HEIGHT + PORTRAIT_GAP
-	_place_label(_body, Rect2(left, y, width, PORTRAIT_BODY_HEIGHT), PORTRAIT_BODY_FONT)
-	y += PORTRAIT_BODY_HEIGHT + PORTRAIT_GAP
+	var body_height := _fit_body(Rect2(left, y, width, PORTRAIT_BODY_HEIGHT), PORTRAIT_BODY_FONT)
+	y += body_height + PORTRAIT_GAP
 	var controls_y := content.end.y - PORTRAIT_CONTROL_HEIGHT
 	_place_stage(Rect2(left, y, width, controls_y - PORTRAIT_GAP - y))
 	var nav := Vector2(PORTRAIT_NAV_WIDTH, PORTRAIT_CONTROL_HEIGHT)
@@ -281,6 +274,34 @@ func _layout_portrait() -> void:
 		),
 		PORTRAIT_COUNTER_FONT
 	)
+
+
+## 横の下段。ページ数は本文幅の中央(ページで位置が動かない)、「もう一度見る」は「次へ」の左。
+func _counter_rect() -> Rect2:
+	var left := BODY_LEFT + (BODY_WIDTH - COUNTER_SIZE.x) * 0.5
+	return Rect2(Vector2(left, CONTROLS_Y), COUNTER_SIZE)
+
+
+func _replay_rect() -> Rect2:
+	var next_left := BODY_LEFT + BODY_WIDTH - NAV_BUTTON_SIZE.x
+	var left := next_left - CONTROL_GAP - REPLAY_BUTTON_SIZE.x
+	return Rect2(Vector2(left, CONTROLS_Y), REPLAY_BUTTON_SIZE)
+
+
+## 本文枠を置き、高さを返す。高さは全ページの本文のうち最も高いものに合わせる(ページごとに伸縮させると盤面が跳ねる)。
+## `rect.size.y` は上限(文が長くなっても、今より盤面が狭くならない)。
+func _fit_body(rect: Rect2, font: int) -> float:
+	_place_label(_body, rect, font)
+	_body.custom_minimum_size.y = 0.0
+	var shown := _body.text
+	var tallest := 0.0
+	for page: Dictionary in _pages:
+		_body.text = str(page.get("body", ""))
+		tallest = maxf(tallest, _body.get_combined_minimum_size().y)
+	_body.text = shown
+	var height := minf(tallest + BODY_BOTTOM_PAD, rect.size.y)
+	_place_label(_body, Rect2(rect.position, Vector2(rect.size.x, height)), font)
+	return height
 
 
 func _place_stage(rect: Rect2) -> void:
@@ -320,10 +341,16 @@ func _highlight_chapter(chapter_index: int, animate: bool) -> void:
 	var portrait := ScreenOrientation.is_portrait()
 	var font := KeywordDictScreen.PORTRAIT_MARK_FONT if portrait else KeywordDictScreen.MARK_FONT
 	var left := KeywordDictScreen.PORTRAIT_MARK_LEFT if portrait else KeywordDictScreen.MARK_LEFT
-	var target := button.position + Vector2(left, 0.0)
+	# 印はボタンの子にして、押した面と一緒に沈み縮むようにする(辞書の印と同じ)。
+	# ボタンが既に面をずらしている(乗っている)ぶんは、付け替えた子へも足す。
+	var shift: float = button.get_meta(CodedButtonStyle.META_CHILD_SHIFT, 0.0)
+	var target := Vector2(left, shift)
 	var moving := animate and _chapter_mark.visible and chapter_index != _mark_chapter
 	if not animate and _mark_tween != null and _mark_tween.is_valid():
 		_mark_tween.kill()
+	var from := _chapter_mark.global_position
+	if _chapter_mark.get_parent() != button:
+		_chapter_mark.reparent(button, false)
 	_chapter_mark.add_theme_font_size_override("font_size", font)
 	_chapter_mark.size = Vector2(font * 2.0, button.size.y)
 	_chapter_mark.visible = true
@@ -331,6 +358,7 @@ func _highlight_chapter(chapter_index: int, animate: bool) -> void:
 	if moving:
 		if _mark_tween != null and _mark_tween.is_valid():
 			_mark_tween.kill()
+		_chapter_mark.global_position = from
 		_mark_tween = create_tween().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 		_mark_tween.tween_property(_chapter_mark, "position", target, UiPalette.DUR_HOVER)
 	elif _mark_tween == null or not _mark_tween.is_valid():

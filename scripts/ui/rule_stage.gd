@@ -23,7 +23,11 @@ const CAPTION_HEIGHT := 30.0
 const CAPTION_FONT_SIZE := UiPalette.T_BODY
 ## 「場に出す」の手札と場のあいだに置く矢印。
 const ARROW_WIDTH := 76.0
-const ARROW_FONT_SIZE := UiPalette.T_TITLE
+## 矢印の軸の太さ・矢じりの長さと幅は、矢印の幅への比。影は下へこのぶん落とす。
+const ARROW_SHAFT_RATIO := 0.08
+const ARROW_HEAD_LENGTH_RATIO := 0.30
+const ARROW_HEAD_WIDTH_RATIO := 0.34
+const ARROW_SHADOW_DROP := 2.0
 
 ## 第7章で見せる盤面の組み立て。情報帯を上下に挟むため、卓より広い幅が要る。
 const BOARD_TABLE_SIZE := Vector2(880, 380)
@@ -185,15 +189,9 @@ func _build_summon(cards: Array) -> Vector2:
 	hand_view.position = Vector2(0.0, (height - CardView.HAND_SIZE_PX.y) * 0.5)
 
 	var arrow_x: float = CardView.HAND_SIZE_PX.x + HAND_GAP
-	var arrow := Label.new()
-	arrow.text = "→"
-	arrow.add_theme_font_size_override("font_size", ARROW_FONT_SIZE)
-	arrow.add_theme_color_override("font_color", UiPalette.SAND_HI)
-	arrow.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	arrow.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	var arrow := SummonArrow.new()
 	arrow.position = Vector2(arrow_x, 0.0)
 	arrow.size = Vector2(ARROW_WIDTH, height)
-	arrow.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_content.add_child(arrow)
 
 	var unit := CardInstance.new(data)
@@ -460,3 +458,43 @@ func _summon_step() -> void:
 		return
 	_views[0].show_unit(_units[0])
 	_views[0].play_drop()
+
+
+## 「場に出す」の手札と場のあいだの矢印。文字の「→」は明朝に無いため、軸と矢じりを描く。
+class SummonArrow:
+	extends Control
+
+	func _init() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func _draw() -> void:
+		var shaft := size.x * ARROW_SHAFT_RATIO
+		var head_length := size.x * ARROW_HEAD_LENGTH_RATIO
+		var head_half := size.x * ARROW_HEAD_WIDTH_RATIO * 0.5
+		var middle := size.y * 0.5
+		var base := size.x - head_length
+		var drop := Vector2(0.0, ARROW_SHADOW_DROP)
+		for pass_index in 2:
+			var shift := drop if pass_index == 0 else Vector2.ZERO
+			var color := UiPaint.EMBLEM_SHADOW if pass_index == 0 else UiPalette.SAND_HI
+			var bar := PackedVector2Array(
+				[
+					Vector2(0.0, middle - shaft * 0.5),
+					Vector2(base, middle - shaft * 0.5),
+					Vector2(base, middle + shaft * 0.5),
+					Vector2(0.0, middle + shaft * 0.5),
+				]
+			)
+			var head := PackedVector2Array(
+				[
+					Vector2(base, middle - head_half),
+					Vector2(size.x, middle),
+					Vector2(base, middle + head_half),
+				]
+			)
+			for i in bar.size():
+				bar[i] += shift
+			for i in head.size():
+				head[i] += shift
+			ShapePaint.convex_polygon(get_canvas_item(), bar, color)
+			ShapePaint.convex_polygon(get_canvas_item(), head, color)
