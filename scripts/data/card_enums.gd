@@ -82,6 +82,8 @@ enum EffectTarget {
 	ALLY_UNIT,
 	## 相手プレイヤーか相手の砂時計1体(選択。追砂の刻)。DAMAGE_UNIT と組み、本体を選べば本体へ与える。
 	ENEMY_UNIT_OR_PLAYER,
+	## この効果を持つ駒以外の、敵味方すべての砂時計(アイオーン)。自分の駒を左から、次に相手の駒を左から並べる。
+	ALL_OTHER_UNITS,
 }
 
 ## エフェクトの種類。
@@ -154,6 +156,16 @@ enum EffectType {
 	RECAST_SPELL,
 	## 自分の墓地の砂術1枚につき、対象プレイヤーへ value ダメージ(グリモア。詠砂の刻)。
 	DAMAGE_PLAYER_PER_GRAVE_SPELL,
+	## 相手の砂時計が自分(この駒を含む)より多ければ、その差の数だけ相手の砂時計をランダムに破壊する(イコライザー)。
+	DESTROY_RANDOM_BY_EXCESS,
+	## 対象の総量を value にする(クインテット)。差は体力で埋め、体力が1未満になるぶんは攻撃力から引く。
+	SET_TOTAL,
+	## 対象の砂を体力が1になるまで落とす(ハリケーン)。ダメージではない。value は使わない。
+	DROP_SAND_TO_ONE,
+	## 対象の砂を残らず上へ戻す(ゼロアワー)。攻撃力が0になる。value は使わない。
+	RAISE_ALL_SAND,
+	## 空いている枠すべてに、自分の墓地からランダムな砂時計を出す(ネクロポリス)。設置効果は解決しない。
+	REVIVE_RANDOM_ALL,
 }
 
 ## コンボ系カードの発動条件が確認する範囲(GameDesign.md 6章)。

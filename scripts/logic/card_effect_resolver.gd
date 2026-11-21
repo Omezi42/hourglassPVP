@@ -22,10 +22,13 @@ var _state: MatchState
 var _depth := 0
 var _steps := 0
 var _cut_off := false
+## 第1弾のレジェンドの固有効果(GameDesign.md 6章)。この表が1000行の上限に近いため切り出している。
+var _legend: CardLegendEffects
 
 
 func _init(p_state: MatchState) -> void:
 	_state = p_state
+	_legend = CardLegendEffects.new(p_state, self)
 
 
 ## unit が持つ trigger の効果をすべて適用する。
@@ -94,6 +97,9 @@ func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Diction
 	# いずれかを、この効果1件ぶんの解決の入口で決める。
 	var origin := _origin_of(from, hint)
 	var from_slot := from if origin == CardEnums.EffectOrigin.UNIT else _origin_slot(hint, origin)
+	if CardLegendEffects.handles(effect.effect_type):
+		_legend.apply(side, unit, effect, from_slot, origin)
+		return
 	match effect.effect_type:
 		CardEnums.EffectType.DAMAGE_PLAYER:
 			var to_side := _player_side_for(side, effect.target)
@@ -628,6 +634,7 @@ func _is_single_unit_target(target: int) -> bool:
 	return (
 		target != CardEnums.EffectTarget.ALL_ENEMY_UNITS
 		and target != CardEnums.EffectTarget.ALL_ALLY_UNITS
+		and target != CardEnums.EffectTarget.ALL_OTHER_UNITS
 	)
 
 
@@ -660,6 +667,12 @@ func _targets(side: int, unit: CardInstance, effect: CardEffectData, hint: Dicti
 			found = _single_unit(foe_side, hint, -1, effect)
 		CardEnums.EffectTarget.ENEMY_UNIT_OR_PLAYER:
 			found = _unit_or_player(foe_side, hint, effect)
+		CardEnums.EffectTarget.ALL_OTHER_UNITS:
+			var own_slot := _slot_of(side, unit)
+			for entry in _all_slots(side, effect):
+				if entry["slot"] != own_slot:
+					found.append(entry)
+			found.append_array(_all_slots(foe_side, effect))
 		CardEnums.EffectTarget.ALLY_UNIT:
 			# **自分自身は選べない**(GameDesign.md 6章)。効果を持つ駒が自分を強化すると
 			# 「他の駒を助ける」というカードの読みが崩れ、対象を選ぶ意味も無くなるため。

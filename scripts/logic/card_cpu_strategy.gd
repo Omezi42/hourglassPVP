@@ -436,6 +436,8 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 		and state.units(foe_side).size() < effect.condition_total
 	):
 		return value
+	if CardLegendEffects.handles(effect.effect_type):
+		return CardLegendEffects.cpu_value(state, side, effect)
 	match effect.effect_type:
 		CardEnums.EffectType.DAMAGE_PLAYER:
 			value = effect.value * FACE_WEIGHT
@@ -497,6 +499,16 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 			elif effect.target == CardEnums.EffectTarget.ALL_ENEMY_UNITS:
 				for unit in state.units(foe_side):
 					value += swap_value(unit)
+			elif effect.target == CardEnums.EffectTarget.ALL_OTHER_UNITS:
+				# 敵味方まとめて返す(アイオーン)。味方は寿命の増減、相手は返す価値をそのまま足す。
+				for unit in state.units(side):
+					if unit.flippable():
+						value += (
+							lifetime_of(unit.attack, unit.health) - float(unit.lifetime_damage())
+						)
+				for unit in state.units(foe_side):
+					if unit.flippable():
+						value += swap_value(unit)
 			else:
 				var slot := _strongest_enemy(state, foe_side)
 				if slot >= 0:
