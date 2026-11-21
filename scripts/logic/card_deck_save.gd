@@ -18,8 +18,10 @@ const DEFAULT_NAME := "デッキ"
 static var save_path := SAVE_PATH
 
 
-## 保存済みのデッキ一覧。1件は {"name": String, "cards": Array[CardData]}。
+## 保存済みのデッキ一覧。1件は {"name": String, "cards": Array[CardData], "within_limit": bool}。
 ## 壊れている・カードが揃わない件は落とす(30枚に満たないデッキで対局へ入れないため)。
+## **所持数の上限(`AccountService.deck_limit()`)を超えるデッキは落とさず、`within_limit` を false にして返す。**
+## 落とすと、次の保存で持ち主のデッキが消える(読み込みが済む前や通信できない間は所持数が少なく見える)。
 static func list_decks() -> Array:
 	var decks: Array = []
 	for entry in _load_raw().get("decks", []):
@@ -31,10 +33,27 @@ static func list_decks() -> Array:
 		var cards := CardLibrary.deck_from_ids(ids)
 		if cards.size() != MatchState.DECK_SIZE:
 			continue
-		decks.append(
-			{"name": _sanitize_name(str((entry as Dictionary).get("name", ""))), "cards": cards}
+		(
+			decks
+			. append(
+				{
+					"name": _sanitize_name(str((entry as Dictionary).get("name", ""))),
+					"cards": cards,
+					"within_limit": within_limit(cards),
+				}
+			)
 		)
 	return decks
+
+
+## `cards` が所持数の範囲(同名は `min(2(レジェンドは1), 所持数)` 枚まで)に収まっているか。
+static func within_limit(cards: Array) -> bool:
+	var seen := {}
+	for card: CardData in cards:
+		seen[card.id] = int(seen.get(card.id, 0)) + 1
+		if int(seen[card.id]) > AccountService.deck_limit(card):
+			return false
+	return true
 
 
 static func save_decks(decks: Array) -> void:

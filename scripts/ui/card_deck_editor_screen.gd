@@ -532,9 +532,9 @@ func _refresh() -> void:
 		# **枚数は実数を出し、暗転だけを「入れられるか」で決める。**30枚に達した
 		# だけで全部が「2/2」になると、どれを2枚積んだのか読めなくなる。
 		var copies := _count_of(card)
-		var owned := AccountService.owns_card_set(card.set_id)
-		var can_add: bool = not full and copies < CardDeckSave.COPY_LIMIT and owned
-		_card_views[i].show_card(card, copies, CardDeckSave.COPY_LIMIT, can_add, not owned)
+		var limit := AccountService.deck_limit(card)
+		var can_add: bool = not full and copies < limit
+		_card_views[i].show_card(card, copies, CardOwnership.cap(card), can_add, limit == 0)
 	_save_button.disabled = not full
 	_refresh_tab_labels()
 
@@ -619,7 +619,7 @@ func _on_shelf_hovered(card: CardData) -> void:
 
 
 func _on_card_pressed(card: CardData) -> void:
-	if not AccountService.owns_card_set(card.set_id):
+	if AccountService.card_count(card.id) == 0:
 		_offer_shop(card.set_id)
 		return
 	_add_card(card)
@@ -661,12 +661,9 @@ func _add_card(card: CardData) -> void:
 		_refuse(card)
 		_bump_count()
 		return
-	if _count_of(card) >= CardDeckSave.COPY_LIMIT:
-		_refuse(card)
-		return
-	# 未所有のカードセット(GameDesign.md 8章)に属するカードは追加できない。
+	# 上限は min(2(レジェンドは1), 所持数)。所持0枚のカードもここで弾く(GameDesign.md 8章)。
 	# 一覧側は暗く表示して押させない想定だが、ここでも弾いておく。
-	if not AccountService.owns_card_set(card.set_id):
+	if _count_of(card) >= AccountService.deck_limit(card):
 		_refuse(card)
 		return
 	# **飛翔の出発点は配列操作の前に控える**(押された一覧のカードの位置)。
