@@ -10,7 +10,7 @@ const BULK_COUNT := 10
 
 
 ## パックを開ける。`free` は1日1回の無料パック(砂金を引かず `free_pack_date` を更新する)。
-## 戻り値: {"ok", "message", "packs": [{"cards": Array[String], "overflow": Array[bool]}], "dust_gained"}
+## 戻り値: {"ok", "message", "packs": [{"cards": ids, "overflow": [bool]}], "dust_gained"}
 static func open_packs(
 	client: FirestoreClient,
 	uid: String,
@@ -43,9 +43,7 @@ static func open_packs(
 		var balance := int(fields.get("currency", 0))
 		if balance < cost:
 			AccountService.apply_local_fields({"currency": balance})
-			return _fail(
-				"%sが足りません(あと%d)。" % [CurrencyRules.CURRENCY_NAME, cost - balance]
-			)
+			return _fail("%sが足りません(あと%d)。" % [CurrencyRules.CURRENCY_NAME, cost - balance])
 		var counts: Dictionary = (fields.get("card_counts", {}) as Dictionary).duplicate()
 		var pity_map: Dictionary = (fields.get("pack_pity", {}) as Dictionary).duplicate()
 		var pity := int(pity_map.get(pack_id, 0))
@@ -128,7 +126,9 @@ static func _published(card: CardData) -> bool:
 	return false
 
 
-static func _commit(client: FirestoreClient, uid: String, doc: Dictionary, data: Dictionary) -> bool:
+static func _commit(
+	client: FirestoreClient, uid: String, doc: Dictionary, data: Dictionary
+) -> bool:
 	var precondition := {}
 	if bool(doc.get("exists", false)) and str(doc.get("update_time", "")) != "":
 		precondition = {"updateTime": doc["update_time"]}
