@@ -62,6 +62,7 @@ const ANNOUNCE_MESSAGE =
 
 // カードスポットライトで、同じカードを続けて紹介しないための間隔(GameDesign.md 26章)。
 const SPOTLIGHT_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
+const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
 /**
  * 毎週日曜0:00(JST)に1度だけ、Discordの#お知らせへ日曜イベント開始を告知する
@@ -111,11 +112,17 @@ exports.announceCardSpotlight = onSchedule(
       const lastShown = doc.data().last_shown || 0;
       if (now - lastShown < SPOTLIGHT_COOLDOWN_MS) recentlyShown.add(doc.id);
     });
-    let candidates = cardsData.cards.filter((c) => !recentlyShown.has(c.id));
-    if (candidates.length === 0) candidates = cardsData.cards;
+    // 同じ1枚をゲームのホームの台座にも載せるため、砂時計の絵を持たない砂術は選ばない(GameDesign.md 26章)。
+    const hourglasses = cardsData.cards.filter((c) => !c.is_spell);
+    let candidates = hourglasses.filter((c) => !recentlyShown.has(c.id));
+    if (candidates.length === 0) candidates = hourglasses;
 
     const card = candidates[Math.floor(Math.random() * candidates.length)];
     await db.collection("bot_spotlight_history").doc(card.id).set({last_shown: now});
+    await db.collection("public_stats").doc("card_spotlight").set({
+      card_id: card.id,
+      date: new Date(now + JST_OFFSET_MS).toISOString().slice(0, 10),
+    });
 
     const embeds = buildCardEmbeds(card);
     embeds[0].title = `【今日のカード】${embeds[0].title}`;

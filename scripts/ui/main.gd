@@ -240,6 +240,7 @@ func _ready() -> void:
 	home_screen.solo_requested.connect(_unless_ranked_wait.bind(_on_solo_requested))
 	home_screen.deck_list_requested.connect(_on_deck_list_requested)
 	home_screen.hourglass_list_requested.connect(_on_hourglass_list_requested)
+	home_screen.spotlight_requested.connect(_on_spotlight_requested)
 	home_screen.shop_requested.connect(_on_shop_requested)
 	home_screen.tutorial_requested.connect(_unless_ranked_wait.bind(_on_tutorial_requested))
 	home_screen.rules_requested.connect(_on_rules_requested)
@@ -581,6 +582,12 @@ func _on_shop_back() -> void:
 func _on_hourglass_list_requested() -> void:
 	card_list_screen.open()
 	_show_only(card_list_screen)
+
+
+## ホームの「今日のカード」(GameDesign.md 9章)。図鑑をそのカードを選んだ状態で開く。
+func _on_spotlight_requested(card: CardData) -> void:
+	_on_hourglass_list_requested()
+	card_list_screen.show_card(card)
 
 
 ## ルール(遊び方)。進捗は保存せず、開くたび先頭のページから始める。

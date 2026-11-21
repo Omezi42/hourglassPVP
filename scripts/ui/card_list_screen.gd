@@ -282,6 +282,11 @@ static func _h_separation(width: float, columns: int, zoom: float) -> int:
 	return maxi(int(usable / float(columns - 1)), 0)
 
 
+## 外から1枚を選んで開く(ホームの「今日のカード」)。縦では解説のページへめくる。
+func show_card(card: CardData) -> void:
+	_select(card)
+
+
 func _select(card: CardData) -> void:
 	# 縦では一覧の札を押したら解説のページへめくる(開いたときに先頭を選んでおく分では切り替えない)。
 	if _portrait and _selected != null and _show_index:

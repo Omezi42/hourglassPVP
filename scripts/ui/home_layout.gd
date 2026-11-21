@@ -30,6 +30,9 @@ const CENTER_GAP := 12.0
 const PORTRAIT_BATTLE_BUTTON_SIZE := Vector2(528, 104)
 const PORTRAIT_RANK_PLATE_SIZE := Vector2(640, 84)
 const PORTRAIT_CENTER_GAP := 16.0
+## 台座の下の「今日のカード」の1行(9章)。
+const SPOTLIGHT_LINE_HEIGHT := 28.0
+const PORTRAIT_SPOTLIGHT_LINE_HEIGHT := 40.0
 
 ## 縦画面。ヘッダーとその下の日曜の知らせの行を避ける。
 const PORTRAIT_LEFT := 24.0
@@ -85,8 +88,15 @@ static func rank_plate_rect(portrait: bool) -> Rect2:
 
 static func hourglass_stand_rect(portrait: bool) -> Rect2:
 	var area := battle_rect(portrait)
-	var bottom := rank_plate_rect(portrait).position.y - _center_gap(portrait)
+	var bottom := spotlight_line_rect(portrait).position.y
 	return Rect2(area.position, Vector2(area.size.x, bottom - area.position.y))
+
+
+static func spotlight_line_rect(portrait: bool) -> Rect2:
+	var area := battle_rect(portrait)
+	var height := PORTRAIT_SPOTLIGHT_LINE_HEIGHT if portrait else SPOTLIGHT_LINE_HEIGHT
+	var bottom := rank_plate_rect(portrait).position.y - _center_gap(portrait)
+	return Rect2(area.position.x, bottom - height, area.size.x, height)
 
 
 static func mission_rect(portrait: bool) -> Rect2:

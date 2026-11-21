@@ -392,6 +392,7 @@ const PATHS: Array[String] = [
 	"res://scripts/ui/solo_entry_info.gd",
 	"res://scripts/ui/home_mode_picker.gd",
 	"res://scripts/ui/next_step_mark.gd",
+	"res://scripts/net/card_spotlight.gd",
 	"res://scripts/ui/battle_tab.gd",
 	"res://scripts/ui/settings_panel.gd",
 	"res://scripts/ui/home_scrim.gd",

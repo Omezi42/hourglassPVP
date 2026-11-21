@@ -173,7 +173,7 @@ v1.0(位相制)の画面・クラス・`data/hourglasses/*.tres` は削除済み
 - **小物の絵は `HomeProps`(static)**: カード3枚・革装の本・宝箱・贈り物の箱。`DESIGN_SIZE` の座標で描き、`draw()` が `draw_set_transform()` で置き場所の大きさへ縮尺を掛ける。後光の `glow()` は「対戦する」の砂時計の絵と遠征の地図でも使う。
   ホバーの動きは `draw()` の `hover`(浮きの進み 0〜1。開いたまま保つ形)と `play`(入った瞬間に1度だけ流す 0〜1)で受け、`HomeTile` が両方を持つ(ミッションの箱は札の子の `MissionEntryInfo` が親の値を読む)
 - 札の中身はどれも札の子でマウスを通し、札いっぱいにアンカーで追わせる。彫り文字と凹んだ枠は `EntryTilePaint`(static)
-  - 「対戦する」は札を持たず、`BattleTab` が `battle_rect` の中へ上から `HomeHourglassStand`(台座の砂時計。`state_falling.png` に首から落ちる粒を重ね、押すと `rotation` を半回転)/
+  - 「対戦する」は札を持たず、`BattleTab` が `battle_rect` の中へ上から `HomeHourglassStand`(台座の砂時計。`state_falling.png` に首から落ちる粒を重ね、押すと `rotation` を半回転。`set_card()` でその日のスポットライトの絵へ差し替え、既定はサンド)と、その下の「今日のカード」の1行(`HomeLayout.spotlight_line_rect()`。押すと `spotlight_requested(card)` → `Main` が `CardListScreen.show_card()`。`BattleTab.refresh()` がスポットライトの日(JSTの正午区切り)が変わったときだけ `CardSpotlight.fetch()` で読み直す)/
     `RankedEntryInfo.plate`(段位の帯)/ `HomeTile`(`primary` + `centered`。副題に待機の行)を積む。
     モーダルの「ランクマッチ」は `tall`(見出しを上に中央へ縦に積む)と横長(縦画面。右に徽章・左に文字。見出しは `HomeTile`)を切り替え、`show_well` を切る
   - 「ソロモード」= `SoloEntryInfo`。遠征の道の小さな地図(`SoloRun.route` / `chosen` から下から上へ。遠征が無いときは `SAMPLE_COUNTS` の形を沈めた色で)と、

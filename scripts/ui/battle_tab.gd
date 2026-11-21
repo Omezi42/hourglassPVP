@@ -25,6 +25,8 @@ signal puzzle_requested
 signal solo_requested
 ## ランク画面(ランキング)。対局の種類を選ぶモーダルの「ランキングを見る」から開く(28章)。
 signal rank_requested
+## 台座の下の「今日のカード」の1行。図鑑のそのカードの詳細を開く(GameDesign.md 9章)。
+signal spotlight_requested(card: CardData)
 
 ## 通信待ち中の「...」演出。3個目まで打ってから空に戻る(対局画面の待機表現と統一)。
 const BUSY_DOTS_MAX := 3
@@ -53,6 +55,9 @@ const PICKER_FONT_SIZE := 30
 const PORTRAIT_MARK_SCALE := 1.5
 const DISABLED_ALPHA := 0.55
 const RANKING_BUTTON_SIZE := Vector2(340, 56)
+const SPOTLIGHT_FORMAT := "今日のカード  %s"
+const SPOTLIGHT_FONT := UiPalette.T_BODY
+const PORTRAIT_SPOTLIGHT_FONT := 24
 
 var _busy := false
 var _busy_dots_timer: Timer
@@ -64,6 +69,10 @@ var _waiting_timer: Timer
 ## 切断した対局へ戻れるか(GameDesign.md 11章)。立っている間は「対戦する」を押すと選択を挟まず復帰する。
 var _resume_pending := false
 var _stand: HomeHourglassStand
+var _spotlight_line: Button
+var _spotlight_card: CardData
+## 読み終えたスポットライトの日(`CardSpotlight.day_key()`)。変わったときだけ読み直す。
+var _spotlight_day := ""
 var _battle_tile: HomeTile
 var _battle_info: RankedEntryInfo
 ## 待っている人の数。負なら副題を出さない(通信できない)。
@@ -121,6 +130,7 @@ func _take_over_status_label() -> void:
 func _build() -> void:
 	_stand = HomeHourglassStand.new()
 	add_child(_stand)
+	_build_spotlight_line()
 	_battle_info = RankedEntryInfo.new()
 	_battle_info.plate = true
 	add_child(_battle_info)
@@ -144,6 +154,26 @@ func _build() -> void:
 		info.anchor_bottom = 1.0
 	move_child(status_label, get_child_count() - 1)
 	_layout()
+
+
+## 文字だけの1行(入口の強弱の3段目)。背景の絵へ直に載るため、待機の行と同じ縁取りを付ける。
+func _build_spotlight_line() -> void:
+	_spotlight_line = Button.new()
+	_spotlight_line.flat = true
+	_spotlight_line.visible = false
+	_spotlight_line.focus_mode = Control.FOCUS_NONE
+	_spotlight_line.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	_spotlight_line.add_theme_color_override("font_color", UiPalette.SAND_HI)
+	for state in ["font_hover_color", "font_pressed_color", "font_hover_pressed_color"]:
+		_spotlight_line.add_theme_color_override(state, UiPalette.GOLD_HI)
+	_spotlight_line.add_theme_color_override("font_outline_color", STATUS_OUTLINE_COLOR)
+	_spotlight_line.add_theme_constant_override("outline_size", STATUS_OUTLINE)
+	_spotlight_line.pressed.connect(
+		func() -> void:
+			if _spotlight_card != null:
+				spotlight_requested.emit(_spotlight_card)
+	)
+	add_child(_spotlight_line)
 
 
 ## 「対戦する」を押したあとに選ぶ3つ(9章)。ランクマッチは段位を、残りは副題を持つ。
@@ -216,6 +246,7 @@ func _layout() -> void:
 	_place(_battle_tile, HomeLayout.battle_button_rect(_portrait))
 	_place(_battle_info, HomeLayout.rank_plate_rect(_portrait))
 	_place(_stand, HomeLayout.hourglass_stand_rect(_portrait))
+	_place_spotlight_line()
 	HomeTile.set_portrait_text(_battle_tile, _portrait, PORTRAIT_BATTLE_FONT, BATTLE_FONT)
 	_solo_info.portrait = _portrait
 	_place(_solo_tile, HomeLayout.solo_rect(_portrait))
@@ -229,6 +260,18 @@ func _layout() -> void:
 	status_label.size = status_rect.size
 	_battle_picker.apply_orientation(_portrait)
 	_solo_picker.apply_orientation(_portrait)
+
+
+## 押せる範囲は文字の幅だけにし、行の中央へ置く。
+func _place_spotlight_line() -> void:
+	_spotlight_line.add_theme_font_size_override(
+		"font_size", PORTRAIT_SPOTLIGHT_FONT if _portrait else SPOTLIGHT_FONT
+	)
+	var rect := HomeLayout.spotlight_line_rect(_portrait)
+	_spotlight_line.size = Vector2.ZERO
+	var fit := _spotlight_line.get_combined_minimum_size()
+	_spotlight_line.size = Vector2(fit.x, rect.size.y)
+	_spotlight_line.position = Vector2(rect.get_center().x - fit.x * 0.5, rect.position.y)
 
 
 func _place(tile: Control, rect: Rect2) -> void:
@@ -258,11 +301,33 @@ func _refresh_battle_title() -> void:
 func _refresh_waiting() -> void:
 	if not is_visible_in_tree():
 		return
+	_refresh_spotlight()
 	if NetSession.client == null or not await NetSession.sign_in():
 		_waiting = -1
 	else:
 		_waiting = await RankedMatchmakingQueue.count_waiting(NetSession.client, _uid())
 	_refresh_battle_title()
+
+
+## 正午をまたいだときと、まだ読めていないときだけ読む。読めなければ前の1枚(無ければサンド)のまま。
+func _refresh_spotlight() -> void:
+	var day := CardSpotlight.day_key()
+	if day == _spotlight_day:
+		return
+	_spotlight_day = day
+	var card := await CardSpotlight.fetch(NetSession.client)
+	if card == null:
+		_spotlight_day = ""
+		return
+	_show_spotlight(card)
+
+
+func _show_spotlight(card: CardData) -> void:
+	_spotlight_card = card
+	_stand.set_card(card)
+	_spotlight_line.text = SPOTLIGHT_FORMAT % card.display_name
+	_spotlight_line.visible = true
+	_place_spotlight_line()
 
 
 func _uid() -> String:

@@ -10,6 +10,7 @@ signal rank_requested
 signal puzzle_requested
 signal deck_list_requested
 signal hourglass_list_requested
+signal spotlight_requested(card: CardData)
 signal shop_requested
 signal cpu_match_requested
 signal solo_requested
@@ -80,6 +81,9 @@ func _ready() -> void:
 	battle_tab.puzzle_requested.connect(func() -> void: puzzle_requested.emit())
 	battle_tab.solo_requested.connect(func() -> void: solo_requested.emit())
 	battle_tab.rank_requested.connect(func() -> void: rank_requested.emit())
+	battle_tab.spotlight_requested.connect(
+		func(card: CardData) -> void: spotlight_requested.emit(card)
+	)
 	battle_tab.resume_requested.connect(
 		func(record: Dictionary) -> void: online_resume_requested.emit(record)
 	)

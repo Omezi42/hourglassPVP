@@ -4,9 +4,9 @@ extends Control
 ## 触って遊ぶためのもので、押しても何も起きない(対局の入口は下の「対戦する」ボタン)。
 ## 砂の流れは絵のシェーダーが描く見た目だけで、上の部屋の砂は減らない。
 
-## 砂時計はコード描画のサンド(落下中)。場の駒と同じ部品を、この台の大きさで1枚ぶん持つ
-## (共有の動く絵は駒の大きさで描くため、ここへ引き伸ばすとぼやける)。
-const ART_KEY := "sand"
+## 載せるのはその日のカードスポットライトの1枚(`set_card()`)で、読めないうちはサンド。落下中の姿を、
+## 場の駒と同じ部品でこの台の大きさに1枚ぶん持つ(共有の動く絵は駒の大きさで描くため、ここへ引き伸ばすとぼやける)。
+const DEFAULT_ART_KEY := "sand"
 const ART_STATE := HourglassArt.State.FALLING
 ## 台座は真鍮の円盤1枚(上面の楕円と側面の帯)。半径は砂時計の絵の高さに対する比で、
 ## 上面のつぶれと側面の厚みは半径に対する比。円盤の下に落ちる影のぶんだけ下を空ける。
@@ -32,6 +32,7 @@ const FLIP_SECONDS := 0.55
 const FLIP_HOP := 14.0
 
 var _clock := 0.0
+var _art_key := DEFAULT_ART_KEY
 var _stack: HourglassLive.Stack = null
 ## 砂時計の絵(動く絵が作れないときは焼いた止め絵)。
 var _art: Texture2D = null
@@ -46,9 +47,26 @@ func _init() -> void:
 
 
 func _ready() -> void:
-	_art = HourglassArt.texture(ART_KEY, ART_STATE)
 	resized.connect(_rebuild_stack)
+	_load_art()
+
+
+## 載せる砂時計を替える(null ならサンドへ戻す)。
+func set_card(card: CardData) -> void:
+	var key := card.art_key() if card != null else DEFAULT_ART_KEY
+	if key == _art_key:
+		return
+	_art_key = key
+	_load_art()
+
+
+func _load_art() -> void:
+	if _stack != null:
+		_stack.viewport.queue_free()
+		_stack = null
+	_art = HourglassArt.texture(_art_key, ART_STATE)
 	_rebuild_stack()
+	queue_redraw()
 
 
 func _process(delta: float) -> void:
@@ -61,7 +79,7 @@ func _process(delta: float) -> void:
 
 ## 台の大きさに合わせて動く絵を作り直す。キャンバスの原寸より大きくはしない。
 func _rebuild_stack() -> void:
-	if not HourglassLive.has_shader(ART_KEY) or size.y <= 0.0:
+	if not HourglassLive.has_shader(_art_key) or size.y <= 0.0:
 		return
 	var canvas := Vector2(HourglassLive.CANVAS)
 	var height := minf(_art_height(), canvas.y)
@@ -71,10 +89,10 @@ func _rebuild_stack() -> void:
 	if _stack != null:
 		_stack.viewport.queue_free()
 	_stack = HourglassLive.make_stack(
-		ART_KEY,
+		_art_key,
 		ART_STATE,
-		HourglassLive.load_layer(ART_KEY, ART_STATE, HourglassLive.LAYER_BACK),
-		HourglassLive.load_layer(ART_KEY, ART_STATE, HourglassLive.LAYER_FRAME),
+		HourglassLive.load_layer(_art_key, ART_STATE, HourglassLive.LAYER_BACK),
+		HourglassLive.load_layer(_art_key, ART_STATE, HourglassLive.LAYER_FRAME),
 		pixels
 	)
 	_stack.set_time(_clock)
