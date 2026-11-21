@@ -173,7 +173,7 @@ GameDesign.md 27章の実装方針。**遠征の規則(道・山札・HP・束�
   `last_depth(uid)` / `set_last_depth(uid, depth)` — 砂の深さの到達記録と前回選んだ深さ(GameDesign.md 27章「砂の深さ」)
 - `save_finished(uid, run, reason)` / `take_finished(uid) -> Dictionary` — 遠征が終わったとき(負け・踏破・対局途中の中断)の`SoloRun.to_dict()`と理由(`"abandoned_mid_battle"`か空)を`{"run", "reason"}`で持つ。`take_finished`は読んだら消し、`CardSoloMapScreen.open()`が`SoloRunSummary`を1度だけ出すのに使う。**「遠征をやめる」では呼ばない**(自分で終えたため記録は出さない)
 
-**節目**は `SoloRun.MILESTONES` の表で持つ(`{"id", "wins" or "cleared", "card_set", "icon"}`)。
+**節目**は `SoloRun.MILESTONES` の表で持つ(`{"id", "wins" or "cleared", "card_set", "icon"}`。`card_set` はそのカードを2枚持たせるセットid)。
 解放は `AccountService.unlock_card_set()` / `unlock_icon()`(`unlock_free` の委譲。通信できないときは
 `AccountStore.add_pending_unlock()` へ積み、次のサインインで流し直す)。
 
@@ -203,9 +203,10 @@ GameDesign.md 27章の実装方針。**遠征の規則(道・山札・HP・束�
 
 ## ソロモード限定カードの所有
 
-**10.8.1節のカードセットの仕組みをそのまま使う。**3枚は `set_id` = `solo_chime` / `solo_ward` / `solo_goad` の
-1枚セット(`price = 0` はショップに並べない印)。デッキ編集・図鑑は未所有のカードを弾く(10.8.1節)。
-**`price == 0` のセットのカードは、CPUデッキにも遠征の束にも入れない**(束は各作戦の`CardCpuDecks`の15種だけから
+**10.8.1節の所持数の仕組みをそのまま使う。**3枚は `set_id` = `solo_chime` / `solo_ward` / `solo_goad` の
+1枚セットで、どの `PackDefinition` にも含めない(ガチャに入らず、ショップに並ばない)。到達で `unlock_card_set()` を呼ぶと2枚を持つ扱いになる。
+デッキ編集・図鑑は所持0枚のカードを弾く(10.8.1節)。
+**パックに含まれないセットのカードは、CPUデッキにも遠征の束にも入れない**(束は各作戦の`CardCpuDecks`の15種だけから
 選ぶため、構造上そもそも混ざらない。`tools/tests/cpu_deck_tests.gd` / `solo_mode_tests.gd` が確かめる)。
 
 ## 画面の監査

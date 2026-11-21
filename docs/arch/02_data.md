@@ -46,7 +46,8 @@ UI側に散らさないため、語と enum の対応はここだけが持つ。
 | `total_sand` | int | 総量(体力+攻撃力)。場に出た時点で 体力=総量-`initial_attack` |
 | `initial_attack` | int | 場に出た時点の攻撃力(既定0)。総量未満に限る(GameDesign.md 7章。`v5_rules_tests` が見張る。コスト5以上は目安で縛らない) |
 | `pool_index` | int | プールへ加えられた順の通し番号。砂時計一覧の「追加順」がこれを読む |
-| `set_id` | String | 所属するカードセットのid。空文字は基本セット(常に所有済み)。GameDesign.md 8章・21章 |
+| `set_id` | String | 所属する弾のテーマ(カードセット)のid。空文字は基本セット(常に2枚持つ扱い)。GameDesign.md 8章・21章 |
+| `rarity` | enum | レアリティ(コモン/レア/エピック/レジェンド)。弾のカードだけが持ち、基本セットは未使用。確率・レートは `PackDefinition` / `RarityTable`(10.8.1節)が持ち、カードには書かない。GameDesign.md 8章 |
 | `keywords` | Array[Keyword] | 常在キーワード。0個でよい(バニラ) |
 | `effects` | Array[CardEffectData] | キーワードで表せない固有効果。0個でよい |
 | `rules_text` | String | 効果欄に出す一文。キーワードだけのカードは空 |

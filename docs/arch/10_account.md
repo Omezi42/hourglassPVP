@@ -42,7 +42,7 @@ GameDesign.md 14章(アカウント)・15章(通貨)の実装方針。認証は 
   行う。これが無いと起動のたびに別の uid が発行され、オンライン対戦のリプレイが
   一覧から消える
 - **`AccountStore` は `account.json` の中身を1度だけ読んで持ち、書くのは `_store()` だけでそこで更新する。**
-  所有の判定(`AccountService.owns_card_set()` など)は一覧の組み立て・描画から何百回も呼ばれるため、
+  所有の判定(`AccountService.card_count()` など)は一覧の組み立て・描画から何百回も呼ばれるため、
   呼ぶたびにファイルを開いてJSONを解析しない。ファイルを外から書き換えたとき(テストの控え・戻し)は
   `AccountStore.invalidate()` を呼ぶ
 - `NetSession.sign_in()` の「進行中のサインインがあればその完了を待つ」挙動は変えない。
@@ -63,6 +63,7 @@ GameDesign.md 14章(アカウント)・15章(通貨)の実装方針。認証は 
 | `bonus_win_count` | int | その日付にボーナスを得た勝ち数(上限 `CurrencyRules.BONUS_WIN_LIMIT`) |
 | `owned_icons` | Array[String] | ショップで買ったアイコンのid。初期解放の8種は含めない |
 | `owned_emotes` | Array[String] | ショップで買ったエモートのid。初期解放の4種は含めない |
+| `card_counts` / `sand_dust` / `pack_pity` / `free_pack_date` | — | 弾のカードの所持数・砂粒・天井のパック数・無料パックの日。10.8.1節 |
 | `owned_titles` | Array[String] | 所有を絞る称号のid(「発案者」「箱庭王」)。初期の2種(「駆け出し決闘者」「称号なし」)は含めない。10.17節 |
 | `emote_slots` | Array[String] | 対局中に出す4つ。空なら初期の4種を使う |
 | `decks` / `deck_selected` / `solo_progress` / `puzzle_cleared` / `daily_missions` | — | デッキ・遠征・とどめ問題・ミッション。10.23節 |

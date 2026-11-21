@@ -27,7 +27,7 @@
 | 10.5節 | UI | [`arch/10_05_ui.md`](arch/10_05_ui.md) |
 | 10.6節 | デッキコード(GameDesign.md 9章) | [`arch/10_06_deck_code.md`](arch/10_06_deck_code.md) |
 | 10.7節 | 戦績(GameDesign.md 19章) | [`arch/10_07_stats.md`](arch/10_07_stats.md) |
-| 10.8節 | ショップと所有(GameDesign.md 21章) | [`arch/10_08_shop.md`](arch/10_08_shop.md) |
+| 10.8節 | ショップと所有・弾とパック(GameDesign.md 8章・21章) | [`arch/10_08_shop.md`](arch/10_08_shop.md) |
 | 10.9節 | 対局の記録と分析(GameDesign.md 22章) | [`arch/10_09_match_records.md`](arch/10_09_match_records.md) |
 | 10.10節 | 対局中演出・QOL(GameDesign.md 9章) | [`arch/10_10_match_feel.md`](arch/10_10_match_feel.md) |
 | 10.11節 | デイリーミッション(GameDesign.md 23章) | [`arch/10_11_daily_missions.md`](arch/10_11_daily_missions.md) |
