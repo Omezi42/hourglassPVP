@@ -28,7 +28,7 @@
   件数は受け取りの読み直しで数え直す(控えた値で書くと、別の端末で受け取った後に二重に足すため)。件数が0なら印だけ付ける
 - カードセットのプレゼントは `CardSetLibrary` の価格0のセットを指す(10.8.1節。ショップに並ばず、CPUのデッキにも入らない)
 - `CardSetLibrary.purchasable_ids()` は価格0を含まないため、はじめの7日の「セットを1つ選ぶ」にプレゼントのセットは出ない
-- ヘッダーの「お知らせ」は `HomeScreen` が置く(ルールブックの左。紋章は `UiPaint.Emblem.LETTER`)。赤い丸は `HomeTile.draw_badge()`
+- ヘッダーの「お知らせ」は `HomeScreen` が置く(ルールブックの左。紋章は `UiPaint.Emblem.LETTER`)。赤い丸は `UiKit.badge()`
   (件数0なら数を描かない)。ホームを出すたび(`refresh_account()`)とモーダルを閉じたときに描き直す
 
 ## 更新のお知らせの流れ(build-and-announce Skill)

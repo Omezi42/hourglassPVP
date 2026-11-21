@@ -24,8 +24,6 @@ const SUB_DIM := UiPalette.FAINT
 ## 真鍮の面(`primary`)へ載せる字。彫った暗い字にする。
 const SUB_ON_BRASS := UiPalette.BRASS_INK
 const PADDING := 24.0
-## 未受取の印(GameDesign.md 9章)。
-const BADGE_RADIUS := 12.0
 ## 小物の絵の後ろへ置く淡い光(絵を面から浮かせる)。
 const PROP_GLOW := Color(1.0, 0.82, 0.5, 0.10)
 const PROP_GLOW_RATIO := 0.62
@@ -41,7 +39,6 @@ const PORTRAIT_SUBTITLE_SIZE := 24
 const PORTRAIT_SUBTITLE_LINES := 2
 const PORTRAIT_PADDING := 20.0
 const PORTRAIT_EMBLEM_SIDE := 64.0
-const PORTRAIT_BADGE_SCALE := 1.4
 ## 副題を折り返したときの行の送り(文字の大きさに対する比)。
 const SUBTITLE_LINE_HEIGHT := 1.2
 ## 上寄せの見出しの基準線(1.5)から副題の基準線(+0.92)までの、見出しの大きさに対する比。
@@ -76,14 +73,8 @@ var subtitle_size := 0
 ## 副題を折り返してよい行数。
 var subtitle_lines := 1
 var emblem_max_side := EMBLEM_MAX_SIDE
-var badge_scale := 1.0
 ## 0 より大きいとき、紋章のぶん文字から空ける幅(既定は札の高さから求める)。
 var emblem_reserve := 0.0
-## 0 より大きいとき、右上へ数の印を打つ。
-var badge_count := 0:
-	set(value):
-		badge_count = value
-		queue_redraw()
 
 var _font: Font
 ## 見出しの書体。**主役の面(`primary`)と小物の絵を添えた札だけ**明朝体(`UiFonts.display_font()`)にする。
@@ -111,7 +102,6 @@ static func set_portrait_text(
 	tile.padding = PORTRAIT_PADDING if portrait else PADDING
 	tile.emblem_max_side = PORTRAIT_EMBLEM_SIDE if portrait else EMBLEM_MAX_SIDE
 	tile.emblem_reserve = PORTRAIT_EMBLEM_SIDE if portrait else 0.0
-	tile.badge_scale = PORTRAIT_BADGE_SCALE if portrait else 1.0
 	tile.queue_redraw()
 
 
@@ -426,24 +416,3 @@ func _draw() -> void:
 				SUB_DIM if dim else sub_color
 			)
 			sub_at.y += float(_subtitle_font_size()) * SUBTITLE_LINE_HEIGHT
-	if badge_count > 0:
-		var inset := BADGE_RADIUS * badge_scale + 4.0
-		draw_badge(self, Vector2(size.x - inset, inset), badge_count, badge_scale)
-
-
-## 未受取の数の印(GameDesign.md 9章)。赤い丸に数を打つ(0以下なら丸だけ)。
-static func draw_badge(
-	target: CanvasItem, at: Vector2, count: int, badge_scale_factor := 1.0
-) -> void:
-	var font := ThemeDB.fallback_font
-	if target is Control:
-		var theme_font := (target as Control).get_theme_default_font()
-		if theme_font != null:
-			font = theme_font
-	UiKit.badge(
-		target.get_canvas_item(),
-		font,
-		at,
-		BADGE_RADIUS * badge_scale_factor,
-		str(count) if count > 0 else ""
-	)

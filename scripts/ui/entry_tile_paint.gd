@@ -14,7 +14,7 @@ const WELL_BOTTOM := Color(0.22, 0.15, 0.08, 0.94)
 const WELL_ACCENT_TOP := Color(0.36, 0.18, 0.03, 0.96)
 const WELL_ACCENT_BOTTOM := Color(0.55, 0.31, 0.07, 0.96)
 const WELL_EDGE_LIGHT := Color(1.0, 0.9, 0.66, 0.4)
-const WELL_TEXT := Color(0.96, 0.94, 0.89)
+const WELL_TEXT := UiPalette.IVORY
 const WELL_MUTED := Color(0.78, 0.71, 0.58)
 const ACCENT_TEXT := Color(1.0, 0.9, 0.64)
 

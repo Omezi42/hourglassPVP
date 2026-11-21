@@ -168,7 +168,7 @@ v1.0(位相制)の画面・クラス・`data/hourglasses/*.tres` は削除済み
   **`.tscn` を持つ2つはクラス名を変えない**(`home_screen.tscn` が instance しているため。画面に出る名前との食い違いは許容)
 - **札の位置とヘッダーの端・背丈は `HomeLayout`(static)1か所で決める**(`battle_rect` / `mission_rect` / `solo_rect` / `collect_rect` / `status_rect` / `header_margin` / `header_height`。どれも縦横を引数で受ける)。別々に持つと幅や端が食い違う
 - `BattleTab` の `.tscn` の縦並び(`Margin/VBox`)は使わず、`StatusLabel` だけを引き取る(`_take_over_status_label()`)。`DeckTab` も `.tscn` の `Center` を捨て、ボタンを `HomeTile` へ差し替えて直下へ置く(`_to_tile()`)。`.tscn` は書き換えない
-- **入口は `HomeTile`**(`Button` 継承。見出し・副題・紋章の透かしを自前で描く。`text` へは入れない)。**紋章の透かしは `CodedButtonStyle.inner_rect()` の中へ収め、比率で決めたうえで上限で止める**。`primary`(塗りつぶした真鍮)と `badge_count`(未受取の数)を持つ。
+- **入口は `HomeTile`**(`Button` 継承。見出し・副題・紋章の透かしを自前で描く。`text` へは入れない)。**紋章の透かしは `CodedButtonStyle.inner_rect()` の中へ収め、比率で決めたうえで上限で止める**。`primary`(塗りつぶした真鍮)を持つ。未受取の赤い丸は札が描かず、中身の部品(`MissionEntryInfo` など)が `UiKit.badge()` で打つ。
   `prop`(`HomeProps.Kind`)を与えると紋章の代わりに小物の絵を描き、横長の札は絵を左・文字を右、そうでなければ絵を上・文字を下に中央揃えで置く(下段の3つ)
 - **小物の絵は `HomeProps`(static)**: カード3枚・革装の本・宝箱・贈り物の箱。`DESIGN_SIZE` の座標で描き、`draw()` が `draw_set_transform()` で置き場所の大きさへ縮尺を掛ける。後光の `glow()` は「対戦する」の砂時計の絵と遠征の地図でも使う。
   ホバーの動きは `draw()` の `hover`(浮きの進み 0〜1。開いたまま保つ形)と `play`(入った瞬間に1度だけ流す 0〜1)で受け、`HomeTile` が両方を持つ(ミッションの箱は札の子の `MissionEntryInfo` が親の値を読む)
