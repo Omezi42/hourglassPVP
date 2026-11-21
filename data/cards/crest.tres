@@ -23,6 +23,7 @@ cost = 5
 total_sand = 6
 pool_index = 78
 set_id = "combo_five"
+rarity = 2
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_crest_0")])
 rules_text = "設置:総量が5の自分の砂時計がいれば、相手の砂時計1体を破壊する"

@@ -21,6 +21,7 @@ cost = 2
 total_sand = 0
 pool_index = 124
 set_id = "chant_sand"
+rarity = 2
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_recite_0")])
 rules_text = "自分の墓地でいちばん新しい砂術(写し詠みを除く)を、コストを払わずにもう一度撃つ"

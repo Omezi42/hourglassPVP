@@ -21,6 +21,7 @@ cost = 6
 total_sand = 5
 pool_index = 126
 set_id = "chant_sand"
+rarity = 1
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_grimoire_0")])
 rules_text = "設置:自分の墓地の砂術1枚につき、相手プレイヤーに1ダメージ"

@@ -21,6 +21,7 @@ cost = 3
 total_sand = 4
 pool_index = 90
 set_id = "grave_sand"
+rarity = 1
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_vigil_0")])
 rules_text = "自分の他の砂時計が破壊されるたび、相手プレイヤーに1ダメージ"

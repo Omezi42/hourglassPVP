@@ -24,6 +24,7 @@ cost = 2
 total_sand = 0
 pool_index = 101
 set_id = "echo_time"
+rarity = 2
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_crescendo_0")])
 rules_text = "相手プレイヤーに2ダメージ。このターン自分の砂時計が反転するたび、このダメージ+1"

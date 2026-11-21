@@ -222,6 +222,14 @@ enum EffectOrigin {
 	DEATH,
 }
 
+## 弾のカードのレアリティ(GameDesign.md 8章)。`.tres` へ整数で保存するため、**新しい値は必ず末尾へ足す**。
+enum Rarity {
+	COMMON,
+	RARE,
+	EPIC,
+	LEGENDARY,
+}
+
 ## 語として見せるキーワード。**複数のカードに載っているものだけ**をここへ入れる。
 ## カードを追加してある能力が2枚目に載ったら、ここへ足して語へ昇格させる。
 const NAMED: Array[Keyword] = [

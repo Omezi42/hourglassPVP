@@ -34,6 +34,7 @@ cost = 3
 total_sand = 5
 pool_index = 76
 set_id = "combo_five"
+rarity = 1
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_key_0"), SubResource("Effect_key_1")])
 rules_text = "設置:総量が5の自分の砂時計1体を反転させ、総量+3"

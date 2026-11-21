@@ -30,6 +30,7 @@ cost = 4
 total_sand = 6
 pool_index = 112
 set_id = "chase_sand"
+rarity = 2
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_march_0"), SubResource("Effect_march_1")])
 rules_text = "設置:相手の砂時計が自分の他の砂時計より多ければ、モートを2体出す"

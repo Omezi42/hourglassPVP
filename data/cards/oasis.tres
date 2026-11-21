@@ -21,6 +21,7 @@ cost = 4
 total_sand = 7
 pool_index = 80
 set_id = "still_time"
+rarity = 0
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_oasis_0")])
 rules_text = "落砂:自分のHPを1回復する"

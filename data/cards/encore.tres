@@ -24,6 +24,7 @@ cost = 4
 total_sand = 5
 pool_index = 99
 set_id = "echo_time"
+rarity = 1
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_encore_0")])
 rules_text = "設置:反転権を1回得る"

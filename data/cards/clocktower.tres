@@ -22,6 +22,7 @@ total_sand = 7
 initial_attack = 2
 pool_index = 84
 set_id = "still_time"
+rarity = 2
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_clocktower_0")])
 rules_text = "落砂:相手プレイヤーに、この砂時計の攻撃力ぶんのダメージ"

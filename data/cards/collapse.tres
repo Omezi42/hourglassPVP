@@ -21,6 +21,7 @@ cost = 3
 total_sand = 0
 pool_index = 111
 set_id = "chase_sand"
+rarity = 1
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_collapse_0")])
 rules_text = "総量が7以上の相手の砂時計1体を破壊する"

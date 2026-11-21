@@ -36,6 +36,7 @@ cost = 2
 total_sand = 0
 pool_index = 115
 set_id = "sweep_sand"
+rarity = 0
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_grit_rain_0"), SubResource("Effect_grit_rain_1"), SubResource("Effect_grit_rain_2")])
 rules_text = "ランダムな相手の砂時計に1ダメージを3回"

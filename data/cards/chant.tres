@@ -21,6 +21,7 @@ cost = 3
 total_sand = 4
 pool_index = 121
 set_id = "chant_sand"
+rarity = 0
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_chant_0")])
 rules_text = "自分が砂術を使うたび、相手プレイヤーに1ダメージ"

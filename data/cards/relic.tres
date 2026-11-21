@@ -21,6 +21,7 @@ cost = 3
 total_sand = 4
 pool_index = 91
 set_id = "grave_sand"
+rarity = 0
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_relic_0")])
 rules_text = "設置:自分の墓地の砂時計1体を選び、手札に戻す"

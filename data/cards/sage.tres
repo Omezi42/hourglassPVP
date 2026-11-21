@@ -11,6 +11,7 @@ cost = 4
 total_sand = 5
 pool_index = 125
 set_id = "chant_sand"
+rarity = 2
 keywords = Array[int]([])
 effects = Array[Resource]([])
 rules_text = "自分の砂術のコストが1下がる(1未満にはならない)"

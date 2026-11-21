@@ -21,6 +21,7 @@ cost = 3
 total_sand = 4
 pool_index = 114
 set_id = "sweep_sand"
+rarity = 1
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_gale_0")])
 rules_text = "設置:相手の砂時計が3体以上なら、相手の砂時計すべてに1ダメージ"

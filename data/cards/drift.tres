@@ -21,6 +21,7 @@ cost = 2
 total_sand = 3
 pool_index = 88
 set_id = "grave_sand"
+rarity = 0
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_drift_0")])
 rules_text = "余砂:このカードを手札に戻す"

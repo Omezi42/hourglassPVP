@@ -18,6 +18,8 @@ extends Resource
 ## (常に所有済み)。空でなければ `players/{uid}.owned_card_sets` に含まれるまで
 ## デッキへ入れられない(Architecture.md 10.8.1節)。
 @export var set_id: String = ""
+## レアリティ(GameDesign.md 8章)。弾のカードだけが読む。基本セットは使わない(常に2枚持つ)。
+@export var rarity: CardEnums.Rarity = CardEnums.Rarity.COMMON
 ## 常在キーワード(GameDesign.md 6章)。0個でよい(バニラ)。
 @export var keywords: Array[CardEnums.Keyword] = []
 ## キーワードで表せない固有効果。0個でよい。

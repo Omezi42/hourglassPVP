@@ -24,6 +24,7 @@ cost = 3
 total_sand = 6
 pool_index = 98
 set_id = "echo_time"
+rarity = 0
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_resonance_0")])
 rules_text = "相手の砂時計が反転するたび、自分の他の砂時計のうち、攻撃力が体力より多いランダムな1体を反転させる"

@@ -33,6 +33,7 @@ cost = 3
 total_sand = 0
 pool_index = 100
 set_id = "echo_time"
+rarity = 1
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_chorus_grow"), SubResource("Effect_chorus_0")])
 rules_text = "攻撃力が体力より多い自分の砂時計すべての総量+1し、反転させる"

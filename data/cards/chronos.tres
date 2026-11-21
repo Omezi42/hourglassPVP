@@ -11,6 +11,7 @@ cost = 7
 total_sand = 11
 pool_index = 83
 set_id = "still_time"
+rarity = 2
 keywords = Array[int]([0])
 effects = Array[Resource]([])
 rules_text = ""

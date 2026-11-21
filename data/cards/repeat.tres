@@ -24,6 +24,7 @@ cost = 2
 total_sand = 4
 pool_index = 97
 set_id = "echo_time"
+rarity = 2
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_repeat_0")])
 rules_text = "設置:このターンすでに反転した自分の砂時計すべてを、もう一度反転できるようにする"

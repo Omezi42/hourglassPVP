@@ -21,6 +21,7 @@ cost = 3
 total_sand = 5
 pool_index = 123
 set_id = "chant_sand"
+rarity = 0
 keywords = Array[int]([0])
 effects = Array[Resource]([SubResource("Effect_warden_0")])
 rules_text = "自分が砂術を使うたび、この砂時計の砂が1粒上へ戻る"

@@ -20,6 +20,7 @@ cost = 2
 total_sand = 4
 pool_index = 117
 set_id = "sweep_sand"
+rarity = 1
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_hound_0")])
 rules_text = "相手が手番の始め以外でカードを引くたび、体力がいちばん少ない相手の砂時計1体に1ダメージ"

@@ -23,6 +23,7 @@ cost = 3
 total_sand = 0
 pool_index = 87
 set_id = "still_time"
+rarity = 1
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_verdict_0")])
 rules_text = "攻撃力が体力より多い相手の砂時計1体を破壊する"

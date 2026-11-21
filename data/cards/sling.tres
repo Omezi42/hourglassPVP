@@ -24,6 +24,7 @@ cost = 1
 total_sand = 2
 pool_index = 103
 set_id = "chase_sand"
+rarity = 0
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_sling_0")])
 rules_text = "設置:相手プレイヤーか相手の砂時計1体に1ダメージ"

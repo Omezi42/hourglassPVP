@@ -21,6 +21,7 @@ cost = 1
 total_sand = 0
 pool_index = 120
 set_id = "chant_sand"
+rarity = 0
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_divine_0")])
 rules_text = "山札からランダムな砂術1枚を手札に加える"

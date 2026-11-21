@@ -26,6 +26,7 @@ cost = 1
 total_sand = 0
 pool_index = 104
 set_id = "chase_sand"
+rarity = 0
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_pelt_0"), SubResource("Effect_pelt_1")])
 rules_text = "相手の砂時計1体に1ダメージ。カードを1枚引く"

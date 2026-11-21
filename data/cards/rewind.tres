@@ -28,6 +28,7 @@ cost = 1
 total_sand = 0
 pool_index = 85
 set_id = "still_time"
+rarity = 0
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_rewind_0"), SubResource("Effect_rewind_1")])
 rules_text = "自分の砂時計1体の砂が2粒上へ戻り、総量+1"

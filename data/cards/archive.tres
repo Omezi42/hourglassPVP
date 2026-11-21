@@ -21,6 +21,7 @@ cost = 3
 total_sand = 4
 pool_index = 122
 set_id = "chant_sand"
+rarity = 1
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_archive_0")])
 rules_text = "設置:自分の墓地の砂術1枚を選び、手札に戻す"

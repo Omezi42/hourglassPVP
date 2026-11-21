@@ -30,6 +30,7 @@ cost = 2
 total_sand = 0
 pool_index = 93
 set_id = "grave_sand"
+rarity = 1
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_burial_0"), SubResource("Effect_burial_1")])
 rules_text = "自分の砂時計1体を破壊し、カードを2枚引く"

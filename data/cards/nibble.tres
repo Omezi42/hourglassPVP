@@ -20,6 +20,7 @@ cost = 2
 total_sand = 2
 pool_index = 106
 set_id = "chase_sand"
+rarity = 0
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_nibble_0")])
 rules_text = "落砂:体力がいちばん少ない相手の砂時計1体に1ダメージ"
