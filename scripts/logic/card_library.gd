@@ -4,7 +4,14 @@ extends RefCounted
 
 const CARDS_DIR := "res://data/cards"
 
+## `load_step()` に予算を区切らせないときの値(一度に全部読む)。
+const LOAD_ALL_AT_ONCE := 1 << 30
+
 static var _cache: Array[CardData] = []
+static var _files := PackedStringArray()
+static var _scanned := false
+## `load_step()` が読み終えるまで溜めておく(読み終えてから `_cache` へ移す)。
+static var _loaded: Array[Resource] = []
 
 
 ## 集められるカード。id順に並ぶ。**トークンは含まない**(GameDesign.md 6章)。
@@ -20,22 +27,44 @@ static func all_cards() -> Array[CardData]:
 ## トークンを含む定義のすべて。**効果から id で引くときだけ使う**
 ## (SUMMON の出す先はトークンであり、all_cards() には出てこない)。
 static func _load_all() -> Array[CardData]:
+	if _cache.is_empty():
+		load_step(LOAD_ALL_AT_ONCE)
+	return _cache
+
+
+## カードを1コマ `budget_msec` ずつ読み、読み終えたら true を返す。全種を一度に読むと1コマが
+## 約0.6秒止まるため、起動の裏読み込み(`Boot`)がスクリプトの後に呼ぶ(Architecture.md 4.0.6節)。
+static func load_step(budget_msec: int) -> bool:
 	if not _cache.is_empty():
-		return _cache
+		return true
+	if not _scanned:
+		_files = _card_files()
+		_scanned = true
+	var started := Time.get_ticks_msec()
+	while _loaded.size() < _files.size() and Time.get_ticks_msec() - started < budget_msec:
+		_loaded.append(load(CARDS_DIR + "/" + _files[_loaded.size()]))
+	if _loaded.size() < _files.size():
+		return false
+	for card: CardData in _loaded:
+		if card != null:
+			_cache.append(card)
+	_loaded.clear()
+	return true
+
+
+static func _card_files() -> PackedStringArray:
+	var files := PackedStringArray()
 	var dir := DirAccess.open(CARDS_DIR)
 	if dir == null:
-		return _cache
+		return files
 	var names := dir.get_files()
 	names.sort()
 	for name in names:
 		# エクスポート後は "<name>.tres.remap" として格納されるため、除いた名前で判定する。
 		var base := name.trim_suffix(".remap")
-		if not base.ends_with(".tres"):
-			continue
-		var card: CardData = load(CARDS_DIR + "/" + base)
-		if card != null:
-			_cache.append(card)
-	return _cache
+		if base.ends_with(".tres"):
+			files.append(base)
+	return files
 
 
 ## コスト順の比較(GameDesign.md 9章)。**カードを並べる画面はすべてこれを使う。**

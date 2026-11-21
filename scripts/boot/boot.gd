@@ -8,6 +8,7 @@ extends Control
 const LOAD_ORDER := preload("res://scripts/boot/script_load_order.gd")
 const TITLE_SCENE := "res://scenes/title_screen.tscn"
 const MAIN_SCENE := "res://scenes/main.tscn"
+const CARD_LIBRARY_SCRIPT := "res://scripts/logic/card_library.gd"
 ## 攻略サイトからの再生(`ReplayLaunch`)で `_pending` に入れる印。タイトルのシグナルではない。
 const REPLAY_PENDING := "replay"
 ## 1フレームで読み込みに使う時間。超えたら次のフレームへ回す(タイトルの動きを止めないため)。
@@ -43,9 +44,15 @@ func _process(_delta: float) -> void:
 	if not _pending.is_empty():
 		# 最後の1段(`main.tscn` の読み込みと組み立て)のぶん、100%には届かせない。
 		_title.show_loading(float(_next) / float(paths.size() + 1))
-	if _next >= paths.size():
-		set_process(false)
-		_hand_over()
+	if _next < paths.size():
+		return
+	# カード全種の定義もここで読む(ホームの初回の組み立てで一度に読むと1コマ止まるため)。
+	# 型を書くとこのスクリプトを読んだ時点で `CardLibrary` と依存先のコンパイルが走るため、パスで呼ぶ。
+	var budget := FRAME_BUDGET_MSEC - (Time.get_ticks_msec() - started)
+	if not load(CARD_LIBRARY_SCRIPT).call("load_step", budget):
+		return
+	set_process(false)
+	_hand_over()
 
 
 ## ブラウザの音声は最初の操作まで鳴らせない。引き渡す前の操作も `Main` へ伝える。

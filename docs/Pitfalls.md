@@ -107,6 +107,9 @@
 - **パスで読んでいても、起動直後に実行される `load()` は1コマに固まる。**能力の実演(`CardEffectPreview`)は `show_card()` の後の `call_deferred` で対局画面を作っていたため、
   キーワード辞書が隠れたまま最初の項目を渡した時点で、`warm_up()` が分けて読む前に対局画面まわりが1コマで全部コンパイルされた(生成器では見つからない)。
   `tools/boot_stall_probe.gd` の warm_up のコマ数が数十に落ちたら疑う
+- **`Main` の初めて触れたときに作る画面(`card_room_screen` など)は、比べるだけ・呼ぶだけでも作られる。**
+  `_match_return_screen == puzzle_picker_screen` や対局後の `card_room_screen.reset_after_match()` が、
+  開いてもいない画面を毎回組み立てる。作ったかどうかを見るときは裏の変数(`_puzzle_picker_screen`)を読む
 - **角丸の外周点列は、重複した頂点を残したまま塗ってはいけない。**半径が辺の半分に達すると
   隣り合う2つの角が同じ中心を共有し、境目の頂点が重なる。この点列を
   `canvas_item_add_polygon()` へ渡すと、浮動小数点誤差しだいで

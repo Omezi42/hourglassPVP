@@ -25,34 +25,127 @@ const WAIT_BLOCKED_TEXT := "ランクマッチの待機をやめてから遊べ�
 
 ## 対局画面(`CardMatchScreen`)。`_match_screen()` が初めて呼ばれたときに作る。
 var card_match_screen: Control
-var rule_screen: RuleScreen
-var screen_guide_screen: ScreenGuideScreen
-var keyword_dict_screen: KeywordDictScreen
-## v5.0のデッキ編集画面(同上)。
-var card_deck_editor_screen: CardDeckEditorScreen
-## デッキ一覧(同上)。管理と、対局前のデッキ選択の両方をこの1画面が兼ねる。
-var card_deck_list_screen: CardDeckListScreen
-## v5.0のカード一覧画面(同上)。
-var card_list_screen: CardListScreen
-var stats_screen: CardStatsScreen
-var puzzle_picker_screen: CardPuzzlePickerScreen
-## ソロモードのステージ一覧(GameDesign.md 27章)。
-var solo_map_screen: CardSoloMapScreen
-## ショップ(GameDesign.md 21章)。同上。
-var shop_screen: CardShopScreen
+var rule_screen: RuleScreen:
+	get:
+		if _rule_screen == null:
+			_rule_screen = _add_screen(RuleScreen.new())
+			_rule_screen.back_pressed.connect(_show_home_back)
+		return _rule_screen
+var screen_guide_screen: ScreenGuideScreen:
+	get:
+		if _screen_guide_screen == null:
+			_screen_guide_screen = _add_screen(ScreenGuideScreen.new())
+			_screen_guide_screen.back_pressed.connect(_show_home_back)
+		return _screen_guide_screen
+var keyword_dict_screen: KeywordDictScreen:
+	get:
+		if _keyword_dict_screen == null:
+			_keyword_dict_screen = _add_screen(KeywordDictScreen.new())
+			_keyword_dict_screen.back_pressed.connect(_show_home_back)
+		return _keyword_dict_screen
+## v5.0のデッキ編集画面。
+var card_deck_editor_screen: CardDeckEditorScreen:
+	get:
+		if _card_deck_editor_screen == null:
+			_card_deck_editor_screen = _add_screen(CardDeckEditorScreen.new())
+			_card_deck_editor_screen.back_pressed.connect(_on_deck_editor_closed)
+			_card_deck_editor_screen.shop_requested.connect(_on_editor_shop_requested)
+		return _card_deck_editor_screen
+## デッキ一覧。管理と、対局前のデッキ選択の両方をこの1画面が兼ねる。
+var card_deck_list_screen: CardDeckListScreen:
+	get:
+		if _card_deck_list_screen == null:
+			_card_deck_list_screen = _add_screen(CardDeckListScreen.new())
+			_card_deck_list_screen.back_pressed.connect(_on_deck_list_back)
+			_card_deck_list_screen.create_requested.connect(_on_deck_create_requested)
+			_card_deck_list_screen.edit_requested.connect(_on_deck_edit_requested)
+			_card_deck_list_screen.deck_picked.connect(_on_deck_picked)
+		return _card_deck_list_screen
+## v5.0のカード一覧画面(砂時計図鑑)。
+var card_list_screen: CardListScreen:
+	get:
+		if _card_list_screen == null:
+			_card_list_screen = _add_screen(CardListScreen.new())
+			_card_list_screen.back_pressed.connect(_show_home_back)
+		return _card_list_screen
+## 戦績。アカウント画面から開き、戻る先もアカウント画面(GameDesign.md 9章・19章)。
+var stats_screen: CardStatsScreen:
+	get:
+		if _stats_screen == null:
+			_stats_screen = _add_screen(CardStatsScreen.new())
+			_stats_screen.back_pressed.connect(func() -> void: _show_only(account_screen, true))
+		return _stats_screen
+## リーサルパズルの一覧。戻るときに今日の1問の結果をホームの札へ映す(GameDesign.md 24章)。
+var puzzle_picker_screen: CardPuzzlePickerScreen:
+	get:
+		if _puzzle_picker_screen == null:
+			_puzzle_picker_screen = _add_screen(CardPuzzlePickerScreen.new())
+			_puzzle_picker_screen.back_pressed.connect(_show_home_refreshing_battle)
+			_puzzle_picker_screen.stage_selected.connect(_on_puzzle_stage_selected)
+			_puzzle_picker_screen.endless_selected.connect(_on_puzzle_endless_selected)
+		return _puzzle_picker_screen
+## ソロモードのステージ一覧(GameDesign.md 27章)。戻るときに遠征の進み具合をホームの札へ映す。
+var solo_map_screen: CardSoloMapScreen:
+	get:
+		if _solo_map_screen == null:
+			_solo_map_screen = _add_screen(CardSoloMapScreen.new())
+			_solo_map_screen.back_pressed.connect(_show_home_refreshing_battle)
+			_solo_map_screen.battle_requested.connect(_on_solo_battle_requested)
+		return _solo_map_screen
+## ショップ(GameDesign.md 21章)。買ったものはホームのヘッダー(残高・アイコン)へすぐ効かせる。
+var shop_screen: CardShopScreen:
+	get:
+		if _shop_screen == null:
+			_shop_screen = _add_screen(CardShopScreen.new())
+			_shop_screen.back_pressed.connect(_on_shop_back)
+			_shop_screen.purchased.connect(func() -> void: home_screen.refresh_account())
+		return _shop_screen
 ## ルームマッチの専用画面(GameDesign.md 11章)。
-var card_room_screen: CardRoomScreen
-## ランクマッチの専用画面(GameDesign.md 28章)。
+var card_room_screen: CardRoomScreen:
+	get:
+		if _card_room_screen == null:
+			_card_room_screen = _add_screen(CardRoomScreen.new())
+			_card_room_screen.back_pressed.connect(_show_home_back)
+			_card_room_screen.deck_change_requested.connect(_on_room_deck_change_requested)
+			_card_room_screen.matched.connect(_on_room_match_found)
+		return _card_room_screen
+## ランクマッチの専用画面(GameDesign.md 28章)。待機の帯・待っている間のCPU戦とつながるため最初から作る。
 var card_ranked_match_screen: CardRankedMatchScreen
 ## ランクマッチの段位・ランキング一覧(同章)。
-var card_rank_screen: CardRankScreen
-## CPU戦の思考レベル選択モーダル(GameDesign.md 13章)。
-var card_cpu_difficulty_picker: CardCpuDifficultyPicker
+var card_rank_screen: CardRankScreen:
+	get:
+		if _card_rank_screen == null:
+			_card_rank_screen = _add_screen(CardRankScreen.new())
+			_card_rank_screen.back_pressed.connect(_show_home_back)
+		return _card_rank_screen
+## CPU戦の思考レベル選択モーダル(GameDesign.md 13章)。対局へ入る前の確認なので、画面と待機の帯より手前に置く。
+var card_cpu_difficulty_picker: CardCpuDifficultyPicker:
+	get:
+		if _card_cpu_difficulty_picker == null:
+			_card_cpu_difficulty_picker = CardCpuDifficultyPicker.new()
+			add_child(_card_cpu_difficulty_picker)
+			move_child(_card_cpu_difficulty_picker, wait_banner.get_index() + 1)
+			_card_cpu_difficulty_picker.picked.connect(_start_cpu_match)
+		return _card_cpu_difficulty_picker
 ## 待っている間のCPU戦(GameDesign.md 11章)。
 var waiting_cpu: WaitingCpuMatch
 ## ランクマッチを待機したまま他の画面にいる間の帯(同章)。
 var wait_banner: RankedWaitBanner
 
+## 初めて触れたときに作る画面の実体(上の各プロパティ)。作ったかどうかを見るときはこちらを読む。
+var _rule_screen: RuleScreen
+var _screen_guide_screen: ScreenGuideScreen
+var _keyword_dict_screen: KeywordDictScreen
+var _card_deck_editor_screen: CardDeckEditorScreen
+var _card_deck_list_screen: CardDeckListScreen
+var _card_list_screen: CardListScreen
+var _stats_screen: CardStatsScreen
+var _puzzle_picker_screen: CardPuzzlePickerScreen
+var _solo_map_screen: CardSoloMapScreen
+var _shop_screen: CardShopScreen
+var _card_room_screen: CardRoomScreen
+var _card_rank_screen: CardRankScreen
+var _card_cpu_difficulty_picker: CardCpuDifficultyPicker
 ## `warm_up()` が読んだ対局画面まわりのスクリプト(キャッシュから消えないよう持つ)。
 var _match_screen_scripts: Array[Resource] = []
 var _match_return_screen: Control
@@ -94,73 +187,7 @@ func _ready() -> void:
 		home_screen,
 		account_screen,
 	]
-	# v5.0の対局画面は子がすべてコード描画のControlで .tscn を持たないため、
-	# ここで生成して画面一覧へ加える(Architecture.md 4.0節)。
-	stats_screen = CardStatsScreen.new()
-	stats_screen.anchor_right = 1.0
-	stats_screen.anchor_bottom = 1.0
-	stats_screen.visible = false
-	# 戦績はアカウント画面から開く(GameDesign.md 9章・19章)。戻る先もアカウント画面。
-	stats_screen.back_pressed.connect(func() -> void: _show_only(account_screen, true))
-	add_child(stats_screen)
-	_screens.append(stats_screen)
-	card_deck_editor_screen = CardDeckEditorScreen.new()
-	card_deck_editor_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
-	card_deck_editor_screen.visible = false
-	add_child(card_deck_editor_screen)
-	card_deck_editor_screen.back_pressed.connect(_on_deck_editor_closed)
-	card_deck_editor_screen.shop_requested.connect(_on_editor_shop_requested)
-	_screens.append(card_deck_editor_screen)
-	card_deck_list_screen = CardDeckListScreen.new()
-	card_deck_list_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
-	card_deck_list_screen.visible = false
-	add_child(card_deck_list_screen)
-	card_deck_list_screen.back_pressed.connect(_on_deck_list_back)
-	card_deck_list_screen.create_requested.connect(_on_deck_create_requested)
-	card_deck_list_screen.edit_requested.connect(_on_deck_edit_requested)
-	card_deck_list_screen.deck_picked.connect(_on_deck_picked)
-	_screens.append(card_deck_list_screen)
-	card_list_screen = CardListScreen.new()
-	card_list_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
-	card_list_screen.visible = false
-	add_child(card_list_screen)
-	card_list_screen.back_pressed.connect(func() -> void: _show_only(home_screen, true))
-	_screens.append(card_list_screen)
-	rule_screen = RuleScreen.new()
-	rule_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
-	rule_screen.visible = false
-	add_child(rule_screen)
-	rule_screen.back_pressed.connect(func() -> void: _show_only(home_screen, true))
-	_screens.append(rule_screen)
-	screen_guide_screen = ScreenGuideScreen.new()
-	screen_guide_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
-	screen_guide_screen.visible = false
-	add_child(screen_guide_screen)
-	screen_guide_screen.back_pressed.connect(func() -> void: _show_only(home_screen, true))
-	_screens.append(screen_guide_screen)
-	keyword_dict_screen = KeywordDictScreen.new()
-	keyword_dict_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
-	keyword_dict_screen.visible = false
-	add_child(keyword_dict_screen)
-	keyword_dict_screen.back_pressed.connect(func() -> void: _show_only(home_screen, true))
-	_screens.append(keyword_dict_screen)
-	shop_screen = CardShopScreen.new()
-	shop_screen.anchor_right = 1.0
-	shop_screen.anchor_bottom = 1.0
-	shop_screen.visible = false
-	shop_screen.back_pressed.connect(_on_shop_back)
-	# 買ったものはホームのヘッダー(残高・アイコン)へすぐ効かせる。
-	shop_screen.purchased.connect(func() -> void: home_screen.refresh_account())
-	add_child(shop_screen)
-	_screens.append(shop_screen)
-	card_room_screen = CardRoomScreen.new()
-	card_room_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
-	card_room_screen.visible = false
-	add_child(card_room_screen)
-	card_room_screen.back_pressed.connect(func() -> void: _show_only(home_screen, true))
-	card_room_screen.deck_change_requested.connect(_on_room_deck_change_requested)
-	card_room_screen.matched.connect(_on_room_match_found)
-	_screens.append(card_room_screen)
+	# コードで組む画面の多くは、初めて触れたときに作る(下の各プロパティ。Architecture.md 4.0.6節)。
 	card_ranked_match_screen = CardRankedMatchScreen.new()
 	card_ranked_match_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
 	card_ranked_match_screen.visible = false
@@ -170,46 +197,11 @@ func _ready() -> void:
 	card_ranked_match_screen.browse_requested.connect(func() -> void: _show_only(home_screen, true))
 	card_ranked_match_screen.waiting_ended.connect(_on_ranked_waiting_ended)
 	_screens.append(card_ranked_match_screen)
-	card_rank_screen = CardRankScreen.new()
-	card_rank_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
-	card_rank_screen.visible = false
-	add_child(card_rank_screen)
-	card_rank_screen.back_pressed.connect(func() -> void: _show_only(home_screen, true))
-	_screens.append(card_rank_screen)
-	puzzle_picker_screen = CardPuzzlePickerScreen.new()
-	puzzle_picker_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
-	puzzle_picker_screen.visible = false
-	puzzle_picker_screen.back_pressed.connect(
-		func() -> void:
-			# 今日の1問を解いたかどうかを、ホームの「ソロモード」の札へ映す(GameDesign.md 24章)。
-			home_screen.refresh_battle_tab()
-			_show_only(home_screen, true)
-	)
-	puzzle_picker_screen.stage_selected.connect(_on_puzzle_stage_selected)
-	puzzle_picker_screen.endless_selected.connect(_on_puzzle_endless_selected)
-	add_child(puzzle_picker_screen)
-	_screens.append(puzzle_picker_screen)
-	solo_map_screen = CardSoloMapScreen.new()
-	solo_map_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
-	solo_map_screen.visible = false
-	solo_map_screen.back_pressed.connect(
-		func() -> void:
-			# 遠征の進み具合を、ホームの「ソロモード」の札へ映す(GameDesign.md 9章)。
-			home_screen.refresh_battle_tab()
-			_show_only(home_screen, true)
-	)
-	solo_map_screen.battle_requested.connect(_on_solo_battle_requested)
-	add_child(solo_map_screen)
-	_screens.append(solo_map_screen)
 	# 帯は画面の上に重ね、モーダルよりは奥に置く。
 	wait_banner = RankedWaitBanner.new()
 	add_child(wait_banner)
 	wait_banner.open_pressed.connect(func() -> void: _show_only(card_ranked_match_screen))
 	wait_banner.cancel_pressed.connect(card_ranked_match_screen.cancel_waiting)
-	# 思考レベルのモーダルは対局へ入る前の確認なので、対局画面より手前(後の子)に置く。
-	card_cpu_difficulty_picker = CardCpuDifficultyPicker.new()
-	add_child(card_cpu_difficulty_picker)
-	card_cpu_difficulty_picker.picked.connect(_start_cpu_match)
 	# 相手が来た知らせは対局画面の上に重ねるため、同じく対局画面より手前に置く。
 	var waiting_prompt := WaitingCpuPrompt.new()
 	add_child(waiting_prompt)
@@ -360,10 +352,15 @@ func warm_up() -> void:
 		home_screen.visible = home_was_visible
 	# カードを並べる重い画面は、初めて開いたコマで札の飾り・文字を一度に描いて止まる。ここで2回描いておき、
 	# 形の控え(`ShapeCache` は2回目に控える)と文字の下ごしらえを済ませる。
-	card_deck_editor_screen.open(-1)
-	card_list_screen.open()
-	for screen: Control in [card_deck_editor_screen, card_list_screen]:
-		await _draw_behind_title(screen)
+	# 画面を作る(初めて触れたとき)・開く・描くは、それぞれ別のコマに分ける。
+	var editor := card_deck_editor_screen
+	await get_tree().process_frame
+	editor.open(-1)
+	await _draw_behind_title(editor)
+	var almanac := card_list_screen
+	await get_tree().process_frame
+	almanac.open()
+	await _draw_behind_title(almanac)
 	_warm = Warm.WARM
 	warmed.emit()
 
@@ -406,15 +403,16 @@ func _redraw_tree(node: Node) -> void:
 
 func _on_match_back() -> void:
 	# パズル・ソロモードから戻ったときは、クリアの印を付け直すために一覧を組み直す。
-	if _match_return_screen == puzzle_picker_screen:
+	if _match_return_screen != null and _match_return_screen == _puzzle_picker_screen:
 		puzzle_picker_screen.open()
-	elif _match_return_screen == solo_map_screen:
+	elif _match_return_screen != null and _match_return_screen == _solo_map_screen:
 		solo_map_screen.open()
 	_show_only(_match_return_screen, true)
 	home_screen.refresh_account()
 	# 対局は待機状態(ボタンの無効化)を残したまま始まるため、戻った時点で解く。
 	home_screen.reset_battle_tab()
-	card_room_screen.reset_after_match()
+	if _card_room_screen != null:
+		_card_room_screen.reset_after_match()
 	# 待っている間のCPU戦から戻ったときだけ、キューを残して待機を続ける(GameDesign.md 11章)。
 	if waiting_cpu.finish() == card_ranked_match_screen:
 		card_ranked_match_screen.resume_waiting()
@@ -770,21 +768,37 @@ func _refresh_wait_banner() -> void:
 func _match_screen() -> Control:
 	if card_match_screen != null:
 		return card_match_screen
-	card_match_screen = (load(CARD_MATCH_SCREEN_SCRIPT) as GDScript).new()
-	# アンカーは直接代入する。`set_anchors_preset()` は今の矩形を保つように offset を
-	# 計算し直すため、生成直後(サイズ0)のノードへ使うと0のまま固定される。
-	card_match_screen.anchor_right = 1.0
-	card_match_screen.anchor_bottom = 1.0
-	card_match_screen.visible = false
-	_set_screen_running(card_match_screen, false)
-	add_child(card_match_screen)
-	move_child(card_match_screen, stats_screen.get_index() + 1)
+	card_match_screen = _add_screen((load(CARD_MATCH_SCREEN_SCRIPT) as GDScript).new())
 	card_match_screen.connect("back_pressed", _on_card_match_back)
 	card_match_screen.connect("matchmaking_pressed", _on_matchmaking_requested)
-	_screens.append(card_match_screen)
-	if ScreenOrientation.is_portrait():
-		card_match_screen.call("apply_orientation", true)
 	return card_match_screen
+
+
+## 後から作った画面を、隠して止めたまま画面一覧へ加える。待機の帯・モーダル・砂より奥(帯の直前)へ
+## 差し込む(後から足した子ほど手前に描かれるため)。
+func _add_screen(screen: Control) -> Control:
+	# アンカーは直接代入する。`set_anchors_preset()` は今の矩形を保つように offset を
+	# 計算し直すため、生成直後(サイズ0)のノードへ使うと0のまま固定される。
+	screen.anchor_right = 1.0
+	screen.anchor_bottom = 1.0
+	screen.visible = false
+	_set_screen_running(screen, false)
+	add_child(screen)
+	move_child(screen, wait_banner.get_index())
+	_screens.append(screen)
+	if ScreenOrientation.is_portrait() and screen.has_method("apply_orientation"):
+		screen.call("apply_orientation", true)
+	return screen
+
+
+func _show_home_back() -> void:
+	_show_only(home_screen, true)
+
+
+## ソロモードの一覧から戻る。今日の1問・遠征の進み具合を、ホームの「ソロモード」の札へ映す。
+func _show_home_refreshing_battle() -> void:
+	home_screen.refresh_battle_tab()
+	_show_only(home_screen, true)
 
 
 func _make_transition_blocker() -> ColorRect:
