@@ -184,6 +184,25 @@ func query_ranked_leaderboard(collection: String, season: String, limit: int) ->
 	)
 
 
+## 週替わりの遠征の順位表(`weekly_expedition/{week}/entries`)を、勝った数の降順 →
+## 残りHPの降順 → 記録した時刻の昇順にlimit件クエリする(GameDesign.md 27章「週替わりの遠征」)。
+## 並べ替えが3つあるため、`firestore.indexes.json` の複合インデックスを使う。読めなければ null。
+func query_weekly_board(collection: String, week: String, limit: int) -> Variant:
+	return await _run_structured_query_or_null(
+		{
+			"from": [{"collectionId": "entries"}],
+			"orderBy":
+			[
+				{"field": {"fieldPath": "wins"}, "direction": "DESCENDING"},
+				{"field": {"fieldPath": "hp"}, "direction": "DESCENDING"},
+				{"field": {"fieldPath": "updated_at"}, "direction": "ASCENDING"}
+			],
+			"limit": limit
+		},
+		"%s/%s" % [collection, week]
+	)
+
+
 ## order_field の新しい順に limit 件を、fields のフィールドだけ取ってくる
 ## (待っている間のCPU戦のデッキを対局の記録から選ぶ。Architecture.md 6.7節)。
 ## 単一フィールドの並べ替えだけなので複合インデックスを要求しない。
@@ -218,10 +237,10 @@ func _run_structured_query(structured_query: Dictionary) -> Array:
 	return docs if docs is Array else []
 
 
-func _run_structured_query_or_null(structured_query: Dictionary) -> Variant:
-	var result: Array = await _post_raw(
-		_base_url() + ":runQuery", {"structuredQuery": structured_query}
-	)
+## `parent` を渡すと、そのドキュメントの下のサブコレクションへ問い合わせる。
+func _run_structured_query_or_null(structured_query: Dictionary, parent := "") -> Variant:
+	var url := _base_url() + ("" if parent.is_empty() else "/" + parent) + ":runQuery"
+	var result: Array = await _post_raw(url, {"structuredQuery": structured_query})
 	var response_code: int = result[0]
 	var parsed: Variant = result[1]
 	if response_code != 200 or not (parsed is Array):

@@ -73,6 +73,8 @@ var theme_id := ""
 ## 最終戦の主(`data/solo_bosses/`のid。GameDesign.md 27章「主」)。出発の画面で決まる。
 ## 主が無かった頃の保存データは空で、最終戦は通常の対局になる。
 var boss_id := ""
+## 週替わりの遠征の週id(GameDesign.md 27章「週替わりの遠征」)。いつもの遠征は空。
+var weekly_id := ""
 var deck_ids: Array[String] = []
 ## 砂の深さ(難度。0〜`DEPTH_MAX`)。踏破したあとも条件を重ねて挑み直せる
 ## (GameDesign.md 27章「砂の深さ」)。遠征の間は変わらない。
@@ -318,7 +320,7 @@ func finish_battle(won: bool, hp_left: int, rng: RandomNumberGenerator) -> void:
 
 ## 恩恵の候補から1つ得る。丈夫な体は即座にHPも回復する。束の候補はこのあとに作る
 ## (GameDesign.md 27章「恩恵」)。
-func take_boon(id: String) -> void:
+func take_boon(id: String, rng: RandomNumberGenerator = null) -> void:
 	if not boon_offer.has(id):
 		return
 	boons.append(id)
@@ -327,8 +329,9 @@ func take_boon(id: String) -> void:
 	if boon != null and boon.max_hp_bonus != 0:
 		max_hp = maxi(max_hp + boon.max_hp_bonus, 1)
 		hp = clampi(hp + maxi(boon.max_hp_bonus, 0), 1, max_hp)
-	var rng := RandomNumberGenerator.new()
-	rng.randomize()
+	if rng == null:
+		rng = RandomNumberGenerator.new()
+		rng.randomize()
 	offer = _build_bundle_offer(rng)
 
 
@@ -459,6 +462,7 @@ func to_dict() -> Dictionary:
 	return {
 		"theme_id": theme_id,
 		"boss_id": boss_id,
+		"weekly_id": weekly_id,
 		"deck_ids": deck_ids,
 		"depth": depth,
 		"hp": hp,
@@ -482,6 +486,7 @@ static func from_dict(data: Dictionary) -> SoloRun:
 	var run := SoloRun.new()
 	run.theme_id = str(data.get("theme_id", ""))
 	run.boss_id = str(data.get("boss_id", ""))
+	run.weekly_id = str(data.get("weekly_id", ""))
 	for id in data.get("deck_ids", []):
 		run.deck_ids.append(str(id))
 	# 旧データ(深さ無し)は深さ0として読む(Pitfalls.md「データとコードの境目」)。

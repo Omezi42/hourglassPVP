@@ -11,6 +11,10 @@ extends RefCounted
 const SAVE_PATH := "user://solo_progress.json"
 const SYNC_DIRTY := "sync_dirty"
 const SYNC_REVISION := "sync_revision"
+## 週替わりの遠征の別枠(GameDesign.md 27章「週替わりの遠征」)。
+## `{"week": id, "run": {...}?, "result": {"wins", "hp"}?, "finished": {...}?}`(?は無いとき null)。
+const WEEKLY_KEY := "weekly"
+const ABANDONED_MID_BATTLE := "abandoned_mid_battle"
 
 static var _loaded := false
 static var _muted := false
@@ -29,12 +33,18 @@ static func load_run(uid: String) -> SoloRun:
 	FunnelService.reach_first_solo_battle(FunnelService.SOLO_B1_QUIT, run.floor)
 	run.finish_battle(false, 0, RandomNumberGenerator.new())
 	record(uid, run)
-	save_finished(uid, run, "abandoned_mid_battle")
+	save_finished(uid, run, ABANDONED_MID_BATTLE)
 	clear_run(uid)
 	return null
 
 
+## 遠征を保存する。週替わりの遠征(`weekly_id` あり)は別枠へ入れる。
 static func save_run(uid: String, run: SoloRun) -> void:
+	if run != null and not run.weekly_id.is_empty():
+		var weekly_entry := _entry(uid)
+		_weekly_slot(uid, run.weekly_id)["run"] = run.to_dict()
+		_commit(uid, weekly_entry)
+		return
 	var entry := _entry(uid)
 	entry["run"] = null if run == null else run.to_dict()
 	if run != null:
@@ -116,12 +126,73 @@ static func set_last_depth(uid: String, depth: int) -> void:
 	_commit(uid, entry)
 
 
+## 週替わりの遠征の保存中の遠征。週が変わっていれば、残っていた遠征をその時点の勝った数で
+## 締めて送り、枠を空にする。`in_battle` のまま残っていたら負けとして終える(27章「中断と再開」)。
+static func weekly_run(uid: String, week: String) -> SoloRun:
+	var raw: Variant = _weekly_slot(uid, week).get("run", null)
+	if not (raw is Dictionary):
+		return null
+	var run := SoloRun.from_dict(raw)
+	if not run.in_battle:
+		return run
+	run.finish_battle(false, 0, RandomNumberGenerator.new())
+	record(uid, run)
+	end_weekly_run(uid, run, ABANDONED_MID_BATTLE)
+	report_weekly(uid, run)
+	return null
+
+
+## その週の結果 `{"wins", "hp"}`。まだ終えていなければ空。
+static func weekly_result(uid: String, week: String) -> Dictionary:
+	var result: Variant = _weekly_slot(uid, week).get("result", null)
+	return result if result is Dictionary else {}
+
+
+## 週替わりの遠征を終える(負け・踏破・やめた)。その週はもう出発できない。
+## `show_record` なら、次に画面を開いたとき1度だけ遠征の記録を出す。
+static func end_weekly_run(uid: String, run: SoloRun, reason: String, show_record := true) -> void:
+	var entry := _entry(uid)
+	var slot := _weekly_slot(uid, run.weekly_id)
+	slot["run"] = null
+	slot["result"] = {"wins": run.wins, "hp": run.hp}
+	slot["finished"] = {"run": run.to_dict(), "reason": reason} if show_record else null
+	_commit(uid, entry)
+
+
+## 週替わりの遠征の記録を読み、読んだら消す(`take_finished()` と同じ)。
+static func take_weekly_finished(uid: String, week: String) -> Dictionary:
+	var entry := _entry(uid)
+	var slot := _weekly_slot(uid, week)
+	var finished: Variant = slot.get("finished", null)
+	if not (finished is Dictionary):
+		return {}
+	slot["finished"] = null
+	_commit(uid, entry)
+	return finished
+
+
+## 週替わりの遠征の勝った数と残りHPを順位表へ送る(決着のたび)。
+static func report_weekly(uid: String, run: SoloRun) -> void:
+	WeeklyBoard.submit(uid, run.weekly_id, run.wins, run.hp)
+
+
+## 遠征を終える。いつもの遠征は記録を残して保存を消し、週替わりの遠征は別枠に結果を残す。
+static func end_run(uid: String, run: SoloRun, reason: String) -> void:
+	if run.weekly_id.is_empty():
+		save_finished(uid, run, reason)
+		clear_run(uid)
+		return
+	end_weekly_run(uid, run, reason)
+
+
 ## 決着のたびに呼ぶ。最多勝利数・踏破回数を更新し、初めて到達した節目を返す。
+## 週替わりの遠征は、選べる深さ・作戦ごとの踏破の深さを更新しない(段階的な解放を飛ばさせないため)。
 static func record(uid: String, run: SoloRun) -> Array[Dictionary]:
 	var entry := _entry(uid)
 	entry["best_wins"] = maxi(int(entry.get("best_wins", 0)), run.wins)
 	if run.cleared:
 		entry["clears"] = int(entry.get("clears", 0)) + 1
+	if run.cleared and run.weekly_id.is_empty():
 		entry["unlocked_depth"] = maxi(
 			int(entry.get("unlocked_depth", 0)), mini(run.depth + 1, SoloRun.DEPTH_MAX)
 		)
@@ -179,6 +250,30 @@ static func reset_for_test() -> void:
 	_muted = true
 	_loaded = true
 	_data = {}
+
+
+## 週替わりの枠。保存されている枠が別の週のものなら、残っていた遠征を締めて空の枠へ替える。
+## 読むだけでは書き込まない(呼び出し側が変えたときに `_commit()` する)。
+static func _weekly_slot(uid: String, week: String) -> Dictionary:
+	var entry := _entry(uid)
+	var slot: Variant = entry.get(WEEKLY_KEY, null)
+	if slot is Dictionary and str((slot as Dictionary).get("week", "")) == week:
+		return slot
+	if slot is Dictionary:
+		_close_stale_weekly(uid, slot)
+	var fresh := {"week": week, "run": null, "result": null, "finished": null}
+	entry[WEEKLY_KEY] = fresh
+	if slot != null:
+		_commit(uid, entry)
+	return fresh
+
+
+## 週が変わったとき、終わっていなかった遠征をその時点の勝った数で締めて順位表へ送る。
+static func _close_stale_weekly(uid: String, slot: Dictionary) -> void:
+	var raw: Variant = slot.get("run", null)
+	if raw is Dictionary:
+		var run := SoloRun.from_dict(raw)
+		WeeklyBoard.submit(uid, str(slot.get("week", "")), run.wins, run.hp)
 
 
 static func _entry(uid: String) -> Dictionary:

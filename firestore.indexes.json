@@ -7,6 +7,15 @@
         { "fieldPath": "rank_season", "order": "ASCENDING" },
         { "fieldPath": "rank_progress_score", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "entries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "wins", "order": "DESCENDING" },
+        { "fieldPath": "hp", "order": "DESCENDING" },
+        { "fieldPath": "updated_at", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

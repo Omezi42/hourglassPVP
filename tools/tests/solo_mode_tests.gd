@@ -40,6 +40,7 @@ func run(assert_true: Callable) -> void:
 	_test_solo_run_starting_max_hp_and_clear_gold_scale_with_depth()
 	_test_solo_run_loads_legacy_save_without_depth()
 	_test_solo_progress_unlocked_depth_and_theme_best_depth()
+	WeeklyExpeditionTests.new().run(assert_true)
 
 
 func _card(id: String) -> CardData:
