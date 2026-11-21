@@ -10,6 +10,11 @@ extends RefCounted
 const COPY_LIMIT := 2
 const FOCUS_COPIES := 2
 
+## 直前の `measure()` で、注目カードを初めて出した瞬間にHPで負けていた局の数と、そのうち勝った数
+## (逆転用の札の値付け。NextCardSet.md・BalanceReport_v5.md)。
+var behind_games := 0
+var behind_wins := 0
+
 var _rng := RandomNumberGenerator.new()
 var _cards: Array[CardData] = []
 
@@ -22,23 +27,40 @@ func _init() -> void:
 func measure(focus: CardData, games: int, seed_value: int) -> float:
 	_rng.seed = seed_value
 	var wins := 0
+	behind_games = 0
+	behind_wins = 0
 	for game in games:
 		var focus_first: bool = game % 2 == 0
 		var focus_deck := _deck_with(focus)
 		var plain_deck := _deck_without(focus)
 		var deck_a: Array = focus_deck if focus_first else plain_deck
 		var deck_b: Array = plain_deck if focus_first else focus_deck
-		var winner := _play_one(deck_a, deck_b)
 		var focus_side: int = MatchState.Side.A if focus_first else MatchState.Side.B
+		var played := {}
+		var winner := _play_one(deck_a, deck_b, focus, focus_side, played)
 		if winner == focus_side:
 			wins += 1
+		if played.get("behind", false):
+			behind_games += 1
+			if winner == focus_side:
+				behind_wins += 1
 	return float(wins) / float(games)
 
 
-func _play_one(deck_a: Array, deck_b: Array) -> int:
+## `played` へ、注目カードを初めて出した瞬間に出した側がHPで負けていたか("behind")を書く。
+func _play_one(
+	deck_a: Array, deck_b: Array, focus: CardData, focus_side: int, played: Dictionary
+) -> int:
 	var state := MatchState.new()
 	var cpu_a := CardCpuStrategy.new()
 	var cpu_b := CardCpuStrategy.new()
+	var note := func(side: int, card: CardData) -> void:
+		if side == focus_side and card == focus and not played.has("behind"):
+			played["behind"] = state.hp[side] < state.hp[MatchState.other_side(side)]
+	state.unit_played.connect(
+		func(side: int, slot: int) -> void: note.call(side, state.board[side][slot].data)
+	)
+	state.spell_cast.connect(note)
 	state.start_match(deck_a, deck_b, MatchState.Side.A, _rng.randi_range(1, 1 << 30))
 	while not state.is_match_over():
 		var side := state.current_turn

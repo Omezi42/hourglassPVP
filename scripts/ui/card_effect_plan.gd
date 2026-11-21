@@ -39,6 +39,8 @@ const ALLY := ["sand", 4, 1]
 const FOE_DRAWER := ["crack", 3, 0]
 ## 反転トリガーを2回にする効果の実演で返す味方(反転:相手プレイヤーに2ダメージ)。[id, 体力, 攻撃力]
 const FLIP_ALLY := ["wheel", 2, 4]
+## レジェンドの実演で相手の駒を足す枠。
+const EXTRA_FOE_SLOTS := [0, 4]
 ## 条件付きの効果(コンボ系)の対象を置く枠。
 const MATCH_SLOT := 4
 ## 墓地を使う効果のための砂時計。
@@ -289,6 +291,20 @@ static func _place_condition_match(
 			_:
 				_place(state, foe, MATCH_SLOT, _card(FOE_TARGET[0]), need, 0)
 				_place(state, side, MATCH_SLOT, _card(ALLY[0]), need, 0)
+	_stage_legend(state, side, card)
+
+
+## レジェンドの固有効果(GameDesign.md 6章)が働いて見える盤面にする。相手の駒を増やす・老いさせる。
+static func _stage_legend(state: MatchState, side: int, card: CardData) -> void:
+	var foe := MatchState.other_side(side)
+	for effect in card.effects:
+		if effect == null:
+			continue
+		match effect.effect_type:
+			CardEnums.EffectType.DESTROY_RANDOM_BY_EXCESS:
+				# 相手4体・自分2体(実演の駒を含む)にして、2体壊れて数がそろうところを見せる。
+				for slot in EXTRA_FOE_SLOTS:
+					_place(state, foe, slot, _card(FOE_TARGET[0]), FOE_TARGET[1], FOE_TARGET[2])
 
 
 ## 対象を選ぶ効果の指定。CPU と同じ選び方を使う(実演だけの選び方を持たない)。

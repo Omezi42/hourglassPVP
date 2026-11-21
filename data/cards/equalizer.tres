@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/emblems/equalizer.png" id="emblem"]
+
+[sub_resource type="Resource" id="Effect_equalizer_0"]
+script = ExtResource("script_effect")
+trigger = 0
+target = 2
+effect_type = 29
+value = 0
+card_id = ""
+keyword = -1
+condition_scope = 0
+condition_total = -1
+random_target = false
+
+[resource]
+script = ExtResource("script_card")
+id = "equalizer"
+display_name = "イコライザー"
+cost = 4
+total_sand = 4
+pool_index = 128
+set_id = "chase_sand"
+rarity = 3
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_equalizer_0")])
+rules_text = "設置:相手の砂時計が自分より多ければ、その差の数だけ相手の砂時計をランダムに破壊する"
+flavor_text = "出すぎた音から、順に絞っていく。"
+cannot_attack = false
+is_token = false
+emblem = ExtResource("emblem")

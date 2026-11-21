@@ -138,6 +138,8 @@ const EFFECTS := {
 	"recite": preload("res://scripts/ui/signature/moves/recite_effect.gd"),
 	"grimoire": preload("res://scripts/ui/signature/moves/grimoire_effect.gd"),
 	"maestro": preload("res://scripts/ui/signature/moves/maestro_effect.gd"),
+	"equalizer": preload("res://scripts/ui/signature/moves/equalizer_effect.gd"),
+	"oracle": preload("res://scripts/ui/signature/moves/oracle_effect.gd"),
 }
 
 

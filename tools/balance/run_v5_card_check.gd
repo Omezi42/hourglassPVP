@@ -75,6 +75,16 @@ func _run() -> void:
 					label += " / 効果%d の値 %d" % [effect_index, value]
 				var rate := _probe.measure(focus, games, base_seed)
 				print("  %s -> 勝率 %.1f%%" % [label, rate * 100.0])
+				if _probe.behind_games > 0:
+					print(
+						(
+							"    HPで負けているときに出した局: %d局で勝率 %.1f%%"
+							% [
+								_probe.behind_games,
+								100.0 * _probe.behind_wins / _probe.behind_games,
+							]
+						)
+					)
 	quit()
 
 
