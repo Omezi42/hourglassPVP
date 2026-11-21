@@ -30,6 +30,7 @@ const ENTRANCES := {
 	"bypass": preload("res://scripts/ui/signature/moves/bypass_entrance.gd"),
 	"colossus": preload("res://scripts/ui/signature/moves/colossus_entrance.gd"),
 	"sage": preload("res://scripts/ui/signature/moves/sage_entrance.gd"),
+	"maestro": preload("res://scripts/ui/signature/moves/maestro_entrance.gd"),
 }
 
 ## 効果が対象へ届くまで(設置・落砂・砂術など、紋章が飛ぶ場面の代わり)。
@@ -136,6 +137,7 @@ const EFFECTS := {
 	"warden": preload("res://scripts/ui/signature/moves/warden_effect.gd"),
 	"recite": preload("res://scripts/ui/signature/moves/recite_effect.gd"),
 	"grimoire": preload("res://scripts/ui/signature/moves/grimoire_effect.gd"),
+	"maestro": preload("res://scripts/ui/signature/moves/maestro_effect.gd"),
 }
 
 

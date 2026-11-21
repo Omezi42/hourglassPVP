@@ -39,6 +39,8 @@ const OWN_SPELL_TIMES := 2.0
 const GUARD_BYPASS_PER_ATTACKER := 2.0
 ## セージが手札の砂術1枚のコストを1下げることの価値。
 const SPELL_DISCOUNT_PER_CARD := 1.0
+## マエストロの価値。場にいる反転トリガー持ち1体につき足す。
+const FLIP_ECHO_PER_UNIT := 2.0
 ## 墓地から1体を手札へ戻す価値。ドロー1枚(3.0)と同じに見る。
 const RECOVER_VALUE := 3.0
 ## 反転トリガーを持つ駒を1回反転できることの価値(反転の選択とリピートの値付けで共有)。
@@ -383,6 +385,8 @@ func _card_value(state: MatchState, side: int, card: CardData) -> float:
 		value += _guard_bypass_value(state, side)
 	if card.ally_spell_cost_down > 0:
 		value += _spell_discount_value(state, side, card.ally_spell_cost_down)
+	if card.ally_flip_triggers_twice:
+		value += _flip_echo_value(state, side)
 	if card.cannot_attack:
 		# 攻撃できないぶん、生涯ダメージの見積もりは成り立たない。壁としての厚みだけを見る。
 		value = float(total)
@@ -591,6 +595,15 @@ func _spell_discount_value(state: MatchState, side: int, down: int) -> float:
 		if card.is_spell:
 			saved += mini(down, maxi(state.play_cost(side, card) - MatchState.MIN_COST, 0))
 	return saved * SPELL_DISCOUNT_PER_CARD
+
+
+## マエストロの価値。反転トリガーを持つ味方の数だけ持つ。
+func _flip_echo_value(state: MatchState, side: int) -> float:
+	var echoed := 0
+	for unit: CardInstance in state.units(side):
+		if not unit.effects_for(CardEnums.Trigger.ON_FLIP).is_empty():
+			echoed += 1
+	return echoed * FLIP_ECHO_PER_UNIT
 
 
 ## 砂を落として最も得をする味方と、その得の大きさ。得をする駒がいなければ slot は -1。

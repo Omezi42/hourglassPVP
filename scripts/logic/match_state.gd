@@ -27,6 +27,9 @@ signal unit_flipped(side: int, slot: int)
 ## 反転させた駒。敵味方どちらの駒も対象に取れるため、`unit_flipped` とは別の信号にする
 ## (演出の光の筋が「誰が手を出したか」を示すには actor_side が要る)。
 signal flip_right_used(actor_side: int, target_side: int, slot: int)
+## 反転トリガーの2回目を起こす直前(マエストロ。GameDesign.md 6章)。`maestro_slot` が起こした駒、
+## `unit_slot` が返った駒(どちらも `side` の側)。演出の合図を2回目の効果より前へ挟むために出す。
+signal flip_trigger_echoed(side: int, maestro_slot: int, unit_slot: int)
 ## ターン終了時に砂が1粒落ちたとき。**ダメージ(砂が消える)とは別のシグナルにする**。
 ## UI側でこの2つを別の演出として描き分けるため(GameDesign.md 9章)。
 signal unit_ticked(side: int, slot: int)
@@ -569,6 +572,10 @@ func use_flip_right(side: int, target_side: int, slot: int) -> bool:
 func _resolve_flipped(side: int, unit: CardInstance) -> void:
 	flips_this_turn[side] = int(flips_this_turn.get(side, 0)) + 1
 	_fire(side, unit, CardEnums.Trigger.ON_FLIP, {})
+	var maestro := _flip_echoer(side)
+	if maestro != null and not unit.effects_for(CardEnums.Trigger.ON_FLIP).is_empty():
+		flip_trigger_echoed.emit(side, board[side].find(maestro), board[side].find(unit))
+		_fire(side, unit, CardEnums.Trigger.ON_FLIP, {})
 	# 相手の反転への反応(レゾナンス)。返した駒がさらに相手側を反応させるため、
 	# 効果側は「攻撃力が体力より多い」駒だけを返す(返すと条件から外れ、連鎖が必ず止まる)。
 	var foe_side := other_side(side)
@@ -605,6 +612,14 @@ func can_attack_player(side: int) -> bool:
 		if unit.has_keyword(CardEnums.Keyword.GUARD):
 			return false
 	return true
+
+
+## 自分の砂時計の反転トリガーを2回にする駒(マエストロ)。いなければ null。
+func _flip_echoer(side: int) -> CardInstance:
+	for unit: CardInstance in units(side):
+		if unit.doubles_flip_triggers() and not unit.is_dead():
+			return unit
+	return null
 
 
 func _ignores_guard(side: int) -> bool:

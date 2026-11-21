@@ -90,6 +90,7 @@ func watch(state: MatchState) -> void:
 	state.effect_struck_many.connect(on_effect_struck_many)
 	state.spell_cast.connect(_on_spell_cast)
 	state.unit_raised.connect(on_unit_raised)
+	state.flip_trigger_echoed.connect(_on_flip_trigger_echoed)
 
 
 ## 演出中かどうか。攻撃と同じく盤面の再同期を遅らせるのに使う
@@ -190,6 +191,22 @@ func on_effect_struck_many(
 		tos.append(_target_position(entry["side"], entry["slot"]))
 	var emblem := card.emblem
 	_queue(func() -> void: _fx.play_many(emblem, from, tos, style, origin))
+
+
+## 反転トリガーの2回目の直前(マエストロ。GameDesign.md 9章)。合図の演出を効果の列へ挟む。
+## 先に開いている演出はまとめの対象から外す——同じ駒から同じ効果が同じフレームに2回届くと、
+## 2回目が1回目へまとめられて見えなくなるため。
+func _on_flip_trigger_echoed(side: int, maestro_slot: int, unit_slot: int) -> void:
+	for job: Dictionary in _open_jobs:
+		job["frame"] = -1
+	var unit := CardEnums.EffectOrigin.UNIT
+	var card := _source_card(side, maestro_slot, unit)
+	if card == null or SignatureLibrary.effect(card) == null:
+		return
+	_arm(side, maestro_slot, unit, CardEnums.EffectVisualStyle.PULSE)
+	_play_signature(
+		card, _origin_position(side, maestro_slot, unit), [{"side": side, "slot": unit_slot}]
+	)
 
 
 ## カードの演出を持っていれば紋章の代わりに再生して true を返す。

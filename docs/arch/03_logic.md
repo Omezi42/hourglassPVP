@@ -143,6 +143,11 @@ UIに依存しない、対局ルールそのものを扱う層。
   反転である」)。`flip()`・`use_flip_right()`・`CardEffectResolver` の `SWAP_STATS` がすべてこれを呼び、持ち主の側で
   `ON_FLIP` を解決する。**`flipped_this_turn` を立てるのは `flip()` だけ**(1体1ターン1回は通常の反転の制限のため)。
   体力0の駒は呼び出し側の `_cleanup_dead()` で砕く——逆さ砂のように反転の後へ総量を足す効果を途中で切らないため。
+- **反転トリガーの2回目(マエストロ)も `_resolve_flipped()` が起こす。**持ち主の場に `doubles_flip_triggers()` の駒がいて、
+  返った駒が `ON_FLIP` を持てば、1回目を解決し終えてから `flip_trigger_echoed(side, maestro_slot, unit_slot)` を出し、
+  もう一度 `_fire()` する。何体いても2回まで。`flips_this_turn` は1回だけ数える。UIは `CardMatchEffectStrike` が受け、
+  マエストロの演出(合図)を効果の列へ挟む。挟む前に開いている演出をまとめの対象から外す(同じフレームに同じ駒から
+  同じ効果が2回届くと、1回目の演出へまとめられて2回目が見えなくなるため)
   `SWAP_STATS` は `flippable()` でない駒を飛ばし、`eligible_target()` も候補から外す
 - `MatchAction.flip_right(side, target_side, slot)` / `apply()` の `"flip_right"` 分岐を足す。
   棋譜・オンライン送信・リプレイはすべて既存の `MatchAction` の経路をそのまま通る

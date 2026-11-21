@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/emblems/maestro.png" id="emblem"]
+
+[resource]
+script = ExtResource("script_card")
+id = "maestro"
+display_name = "マエストロ"
+cost = 3
+total_sand = 4
+pool_index = 127
+set_id = "echo_time"
+rarity = 3
+keywords = Array[int]([])
+effects = Array[Resource]([])
+rules_text = "自分の砂時計の反転トリガーは2回発動する"
+flavor_text = "同じ小節を、二度目はもっと大きく振る。"
+cannot_attack = false
+is_token = false
+ally_flip_triggers_twice = true
+emblem = ExtResource("emblem")

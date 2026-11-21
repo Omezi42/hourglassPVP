@@ -102,6 +102,11 @@ func ignores_guard() -> bool:
 	return data.allies_ignore_guard and not silenced
 
 
+## 自分の砂時計の反転トリガーを2回発動させるか(マエストロ)。効果を消されると働かない。
+func doubles_flip_triggers() -> bool:
+	return data.ally_flip_triggers_twice and not silenced
+
+
 ## 自分の砂術のコストを下げる量(セージ)。効果を消されると働かない。
 func spell_cost_down() -> int:
 	return 0 if silenced else data.ally_spell_cost_down

@@ -36,6 +36,11 @@ const RUNE_STROKE := 2.2
 const RUNE_DOT_WEIGHT := 0.12
 const RUNE_ARC_STEPS := 14
 const RUNE_SHAPES := 4
+## マエストロの指揮棒の長さ・握りの大きさと、軌跡・五線の色(マエストロの砂の色)。
+const BATON_LENGTH := 54.0
+const BATON_GRIP := Vector2(6.5, 4.0)
+const BATON_SHAFT := Color(0.14, 0.12, 0.15, 1.0)
+const MAESTRO := Color(1.0, 0.52, 1.0, 1.0)
 const HAMMER_HANDLE := 30.0
 const HAMMER_HEAD := Vector2(18.0, 10.0)
 
@@ -392,6 +397,29 @@ static func clock_dial(
 
 
 ## 八分音符。`at` は玉の中心、`size` は玉の横の半径。
+## 指揮棒。`grip` は握りの中心、`angle` は先の向き(ラジアン。0で右)、`size` は拡大。先にきらめきを灯す。
+static func baton(item: CanvasItem, grip: Vector2, angle: float, size: float, alpha: float) -> void:
+	if alpha <= 0.0:
+		return
+	var ci := item.get_canvas_item()
+	var dir := Vector2.RIGHT.rotated(angle)
+	var tip := grip + dir * BATON_LENGTH * size
+	item.draw_line(grip, tip, Color(UiPalette.INK_950, alpha * 0.7), 4.2 * size, true)
+	item.draw_line(grip, tip, Color(BATON_SHAFT, alpha), 2.6 * size, true)
+	item.draw_line(grip.lerp(tip, 0.2), tip, Color(DIAL_FACE, alpha * 0.45), 0.9 * size, true)
+	var grip_shape := PackedVector2Array()
+	for i in range(16):
+		var a := TAU * float(i) / 16.0
+		var local := Vector2(cos(a) * BATON_GRIP.x, sin(a) * BATON_GRIP.y) * size
+		grip_shape.append(grip + local.rotated(angle))
+	ShapePaint.colored_polygon(ci, grip_shape, Color(PAPER, alpha))
+	var ring := grip_shape.duplicate()
+	ring.append(grip_shape[0])
+	ShapePaint.polyline(ci, ring, Color(UiPalette.INK_950, alpha * 0.8), 1.2, true)
+	ShapePaint.circle(ci, tip, 5.0 * size, Color(MAESTRO, alpha * 0.35))
+	ShapePaint.circle(ci, tip, 2.0 * size, Color(SPARK_HOT, alpha))
+
+
 static func note(item: CanvasItem, at: Vector2, size: float, color: Color, alpha: float) -> void:
 	if alpha <= 0.0 or size <= 0.5:
 		return

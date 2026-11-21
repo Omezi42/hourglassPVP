@@ -29,6 +29,11 @@ func run(assert_true: Callable) -> void:
 	_test_chorus_does_not_reflip_chained_unit()
 	_test_crescendo_without_flips_deals_base()
 	_test_crescendo_counts_own_flips_this_turn()
+	_test_maestro_doubles_flip_trigger()
+	_test_maestro_does_not_stack()
+	_test_maestro_silenced_does_nothing()
+	_test_maestro_keeps_enemy_flip_reaction_once()
+	_test_maestro_signals_only_for_flip_triggers()
 	_test_set_is_staged()
 
 
@@ -349,3 +354,61 @@ func _test_set_is_staged() -> void:
 	_assert.call(
 		CardSetLibrary.card_ids(SET_ID)[6] == "crescendo", "echo_time seventh card is crescendo"
 	)
+
+
+func _test_maestro_doubles_flip_trigger() -> void:
+	var state := _new_match()
+	_place(state, MatchState.Side.A, CardLibrary.find_by_id("maestro"), 1)
+	var glow := _aged(state, MatchState.Side.A, "glow", 0)
+	var before := glow.total_sand()
+	_assert.call(state.flip(MatchState.Side.A, 0), "反転できる")
+	_assert.call(glow.total_sand() == before + 2, "マエストロがいると反転トリガーが2回発動する")
+	_assert.call(int(state.flips_this_turn.get(MatchState.Side.A, 0)) == 1, "反転した回数は1回のまま")
+
+
+func _test_maestro_does_not_stack() -> void:
+	var state := _new_match()
+	_place(state, MatchState.Side.A, CardLibrary.find_by_id("maestro"), 1)
+	_place(state, MatchState.Side.A, CardLibrary.find_by_id("maestro"), 2)
+	var glow := _aged(state, MatchState.Side.A, "glow", 0)
+	var before := glow.total_sand()
+	state.flip(MatchState.Side.A, 0)
+	_assert.call(glow.total_sand() == before + 2, "マエストロが2体いても2回まで")
+
+
+func _test_maestro_silenced_does_nothing() -> void:
+	var state := _new_match()
+	var maestro := _place(state, MatchState.Side.A, CardLibrary.find_by_id("maestro"), 1)
+	maestro.silence()
+	var glow := _aged(state, MatchState.Side.A, "glow", 0)
+	var before := glow.total_sand()
+	state.flip(MatchState.Side.A, 0)
+	_assert.call(glow.total_sand() == before + 1, "効果を消されたマエストロは働かない")
+
+
+func _test_maestro_keeps_enemy_flip_reaction_once() -> void:
+	var state := _new_match()
+	_aged(state, MatchState.Side.A, "sand", 0)
+	_place(state, MatchState.Side.B, CardLibrary.find_by_id("maestro"), 0)
+	_aged(state, MatchState.Side.B, "resonance", 1)
+	var first := _aged(state, MatchState.Side.B, "sand", 2)
+	var second := _aged(state, MatchState.Side.B, "sand", 3)
+	state.flip(MatchState.Side.A, 0)
+	var returned := int(first.health > first.attack) + int(second.health > second.attack)
+	_assert.call(returned == 1, "相手の反転への反応(レゾナンス)は2回にならない")
+
+
+func _test_maestro_signals_only_for_flip_triggers() -> void:
+	var state := _new_match()
+	_place(state, MatchState.Side.A, CardLibrary.find_by_id("maestro"), 3)
+	_aged(state, MatchState.Side.A, "glow", 0)
+	_aged(state, MatchState.Side.A, "sand", 1)
+	var echoes: Array = []
+	state.flip_trigger_echoed.connect(
+		func(side: int, maestro_slot: int, unit_slot: int) -> void:
+			echoes.append([side, maestro_slot, unit_slot])
+	)
+	state.flip(MatchState.Side.A, 1)
+	_assert.call(echoes.is_empty(), "反転トリガーを持たない駒では合図を出さない")
+	state.flip(MatchState.Side.A, 0)
+	_assert.call(echoes == [[MatchState.Side.A, 3, 0]], "2回目の直前に、マエストロと返った駒の枠で合図を出す")

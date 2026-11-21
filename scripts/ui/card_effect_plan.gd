@@ -23,6 +23,7 @@ enum Kind {
 	BYPASS,
 	OWN_SPELL,
 	SPELL_DISCOUNT,
+	FLIP_ECHO,
 }
 
 ## 実演の駒を置く枠。中央寄りに置き、両隣に味方と相手の駒が並ぶようにする。
@@ -36,6 +37,8 @@ const FOE_HEAVY_SLOT := 3
 const ALLY := ["sand", 4, 1]
 ## 殴られると1枚引く相手の駒(相手のドローに反応する効果の実演)。[id, 体力, 攻撃力]
 const FOE_DRAWER := ["crack", 3, 0]
+## 反転トリガーを2回にする効果の実演で返す味方(反転:相手プレイヤーに2ダメージ)。[id, 体力, 攻撃力]
+const FLIP_ALLY := ["wheel", 2, 4]
 ## 条件付きの効果(コンボ系)の対象を置く枠。
 const MATCH_SLOT := 4
 ## 墓地を使う効果のための砂時計。
@@ -91,6 +94,8 @@ static func kinds(card: CardData) -> Array[int]:
 		found.append(Kind.BYPASS)
 	if card.ally_spell_cost_down > 0:
 		found.append(Kind.SPELL_DISCOUNT)
+	if card.ally_flip_triggers_twice:
+		found.append(Kind.FLIP_ECHO)
 	for effect in card.effects:
 		if effect == null:
 			continue
@@ -169,6 +174,9 @@ static func stage(state: MatchState, side: int, card: CardData, kind: int) -> Ar
 			state.hand[side].insert(0, spell)
 			state.mana[side] = state.play_cost(side, spell)
 			actions.append(MatchAction.cast(side, 0))
+		Kind.FLIP_ECHO:
+			_place(state, side, ALLY_SLOT, _card(FLIP_ALLY[0]), FLIP_ALLY[1], FLIP_ALLY[2])
+			actions.append(MatchAction.flip(side, ALLY_SLOT))
 		Kind.ALLY_DEATH:
 			state.board[side][ALLY_SLOT].health = 1
 			actions.append(MatchAction.attack(side, ALLY_SLOT, FOE_HEAVY_SLOT))

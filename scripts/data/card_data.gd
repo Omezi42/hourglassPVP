@@ -39,6 +39,9 @@ extends Resource
 ## 反転できない駒(GameDesign.md 6章。「攻撃できない」の鏡像)。**反転権でも反転できない**。
 ## 放置すると攻撃力が総量-1まで伸びる時限爆弾として働く。語にしないためフラグで持つ。
 @export var cannot_flip: bool = false
+## 場にいる間、自分の砂時計の反転トリガーが2回発動する(GameDesign.md 6章。マエストロ)。語にしないためフラグで持つ。
+## 何体いても2回まで。
+@export var ally_flip_triggers_twice: bool = false
 ## 効果で場に出る砂時計(トークン)。CardLibrary.all_cards() が返さないため、
 ## デッキ編集にも砂時計一覧にも現れない。
 @export var is_token: bool = false

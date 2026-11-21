@@ -53,6 +53,7 @@ UI側に散らさないため、語と enum の対応はここだけが持つ。
 | `rules_text` | String | 効果欄に出す一文。キーワードだけのカードは空 |
 | `flavor_text` | String | フレーバーテキスト(GameDesign.md 1章)。対局の処理は読まない。出すのは図鑑(`AlmanacPage`)だけ。空でよい。`Hourglasses.md` へは写さない(書く場所を1つにするため) |
 | `cannot_attack` | bool | 攻撃できない代わりに総量が大きい駒(GameDesign.md 6章)。守護と違い**語にしない**ため `keywords` ではなくフラグで持つ |
+| `ally_flip_triggers_twice` | bool | 場にいる間、自分の砂時計の `ON_FLIP` を2回解決させる(マエストロ。GameDesign.md 6章)。語にしないためフラグで持つ。`CardInstance.doubles_flip_triggers()`(効果を消されると偽)で読む |
 | `is_token` | bool | 効果で場に出る砂時計。**`CardLibrary.all_cards()` が返さない**ため、デッキ編集にも一覧にも現れない |
 | `is_spell` | bool | 砂術(GameDesign.md 6章)。**盤面へ出ず、効果だけを起こして墓地へ行く**。true のとき `total_sand` / `keywords` / `cannot_attack` は使わない |
 | `icon_upright` / `icon_falling` / `icon_fallen` | Texture2D | 体力が多い/半々/攻撃力に偏った状態のイラスト |

@@ -894,11 +894,21 @@ def sig_grimoire():
     return layer(x, rec("impactWood_heavy_000.ogg"), -5, hit)
 
 
+def sig_maestro():
+    """マエストロ:指揮棒が空を切って振り下ろされ、打点で明るい和音がきらめいて広がる。"""
+    swing = 0.3
+    x = landing(1.2)
+    x = layer(x, whoosh(2, 1.2), -12, LAND_AT + 0.06)
+    x = layer(x, chime([1047, 1319, 1568, 2093], 0.035, 0.5), -8, LAND_AT + swing)
+    return layer(x, tink(4200, 0.4), -10, LAND_AT + swing + 0.02)
+
+
 SIGNATURES = [
     sig_freeze, sig_relic, sig_middle, sig_phase, sig_grain, sig_dash, sig_shield, sig_sand,
     sig_watcher, sig_glass, sig_vamp, sig_drill, sig_lance, sig_twin, sig_lock, sig_gate,
     sig_poison, sig_guard, sig_mirror, sig_wall, sig_bypass, sig_colossus,
     sig_obelisk, sig_tower, sig_anchor, sig_sage, sig_grimoire,
+    sig_maestro,
 ]
 
 

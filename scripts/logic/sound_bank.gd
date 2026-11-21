@@ -58,6 +58,7 @@ enum Sfx {
 	SIG_ANCHOR,
 	SIG_SAGE,
 	SIG_GRIMOIRE,
+	SIG_MAESTRO,
 }
 
 const SETTINGS_PATH := "user://sound_settings.json"
@@ -118,6 +119,7 @@ const SFX_PATHS := {
 	Sfx.SIG_ANCHOR: "res://assets/sfx/sig_anchor.wav",
 	Sfx.SIG_SAGE: "res://assets/sfx/sig_sage.wav",
 	Sfx.SIG_GRIMOIRE: "res://assets/sfx/sig_grimoire.wav",
+	Sfx.SIG_MAESTRO: "res://assets/sfx/sig_maestro.wav",
 }
 
 static var _players: Array[AudioStreamPlayer] = []
