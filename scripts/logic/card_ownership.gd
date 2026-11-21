@@ -24,8 +24,12 @@ static func count_in(fields: Dictionary, card: CardData) -> int:
 	var counts: Variant = fields.get("card_counts", {})
 	var stored := int((counts as Dictionary).get(card.id, 0)) if counts is Dictionary else 0
 	var sets: Variant = fields.get("owned_card_sets", [])
+	# 移行の対象は旧セットにあった52枚。後から足すレジェンドは、旧セットを買った人にも渡さない。
+	var migratable := card.rarity != CardEnums.Rarity.LEGENDARY
 	var migrated := (
-		CardDeckSave.COPY_LIMIT if sets is Array and (sets as Array).has(card.set_id) else 0
+		CardDeckSave.COPY_LIMIT
+		if migratable and sets is Array and (sets as Array).has(card.set_id)
+		else 0
 	)
 	return maxi(stored, migrated)
 

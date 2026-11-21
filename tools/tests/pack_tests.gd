@@ -164,6 +164,10 @@ func _test_ownership() -> void:
 	_assert.call(
 		CardOwnership.count_in({"card_counts": {"middle": 1}}, middle) == 1, "stored count"
 	)
+	_assert.call(
+		CardOwnership.count_in({"owned_card_sets": ["combo_five"]}, _synthetic_legend()) == 0,
+		"a bought set does not hand out its later legendary"
+	)
 	var fields := {"card_counts": {SYNTHETIC_LEGENDARY_ID: 2}}
 	_assert.call(
 		CardOwnership.deck_limit_in(fields, _synthetic_legend()) == 1,
