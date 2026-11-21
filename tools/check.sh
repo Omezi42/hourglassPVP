@@ -18,10 +18,17 @@ else
 fi
 
 # 起動時に裏で読み込むスクリプトの順番(Architecture.md 4.0.6節)。古くても壊れはしないが、毎回書き直す。
-"$GODOT" --headless --path . --script res://tools/gen_script_load_order.gd > logs/check_load_order.log 2>&1
+# 対局画面の輪が型・preload で起動経路へ漏れていたら失敗する。
+load_order_status=0
+"$GODOT" --headless --path . --script res://tools/gen_script_load_order.gd > logs/check_load_order.log 2>&1 || load_order_status=1
 FILES=$( (echo "$FILES"; git status --porcelain scripts/boot/script_load_order.gd | awk '{print $2}') | grep . | sort -u)
 
 status=0
+if [ $load_order_status -ne 0 ]; then
+  echo "== script load order: NG"
+  grep -A20 "leaks" logs/check_load_order.log
+  status=1
+fi
 if [ -n "$FILES" ]; then
   echo "== gdformat/gdlint ($(echo "$FILES" | wc -l) files)"
   "$PY_SCRIPTS/gdformat.exe" $FILES >/dev/null 2>&1 || true

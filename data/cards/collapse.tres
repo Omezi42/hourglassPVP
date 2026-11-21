@@ -24,6 +24,7 @@ set_id = "chase_sand"
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_collapse_0")])
 rules_text = "総量が7以上の相手の砂時計1体を破壊する"
+flavor_text = "大きな器ほど足元から崩れる。"
 cannot_attack = false
 is_token = false
 is_spell = true

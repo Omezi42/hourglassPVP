@@ -26,6 +26,7 @@ set_id = "combo_five"
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_cycle_0")])
 rules_text = "反転:この砂時計の総量が5なら、自分の砂時計すべての攻撃力+1"
+flavor_text = "五つ数えたら返す。それを何度でも。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

@@ -24,6 +24,7 @@ set_id = "chase_sand"
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_hive_0")])
 rules_text = "被弾:モートを1体出す"
+flavor_text = "巣をつつくと羽音がどんどん増えていく。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

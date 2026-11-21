@@ -14,6 +14,7 @@ set_id = "sweep_sand"
 keywords = Array[int]([])
 effects = Array[Resource]([])
 rules_text = "自分の砂時計は守護を無視して攻撃できる"
+flavor_text = "門番の知らない道を子どもたちは知っている。"
 cannot_attack = false
 is_token = false
 allies_ignore_guard = true

@@ -31,6 +31,7 @@ set_id = "still_time"
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_rewind_0"), SubResource("Effect_rewind_1")])
 rules_text = "自分の砂時計1体の砂が2粒上へ戻り、総量+1"
+flavor_text = "こぼれた砂粒がひとつずつ口へ帰っていく。"
 cannot_attack = false
 is_token = false
 is_spell = true

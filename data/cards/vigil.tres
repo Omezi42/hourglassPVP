@@ -24,6 +24,7 @@ set_id = "grave_sand"
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_vigil_0")])
 rules_text = "自分の他の砂時計が破壊されるたび、相手プレイヤーに1ダメージ"
+flavor_text = "弔いの灯は朝まで消さずにおく。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

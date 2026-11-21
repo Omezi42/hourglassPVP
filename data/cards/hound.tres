@@ -23,6 +23,7 @@ set_id = "sweep_sand"
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_hound_0")])
 rules_text = "相手が手番の始め以外でカードを引くたび、体力がいちばん少ない相手の砂時計1体に1ダメージ"
+flavor_text = "頁をめくる音にも猟犬は耳を立てる。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

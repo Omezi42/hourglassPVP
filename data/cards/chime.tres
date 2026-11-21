@@ -24,6 +24,7 @@ set_id = "solo_chime"
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_chime_0")])
 rules_text = "反転:カードを1枚引く"
+flavor_text = "鐘の音を合図に戸口へ手紙が届く。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

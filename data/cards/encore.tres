@@ -27,6 +27,7 @@ set_id = "echo_time"
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_encore_0")])
 rules_text = "設置:反転権を1回得る"
+flavor_text = "拍手が止まないので幕はもう一度上がる。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

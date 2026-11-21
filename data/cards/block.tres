@@ -22,6 +22,7 @@ set_id = "chase_sand"
 keywords = Array[int]([0])
 effects = Array[Resource]([SubResource("Effect_block_0")])
 rules_text = "余砂:カードを1枚引く"
+flavor_text = "受け止めるたびに相手の隙が見えてくる。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

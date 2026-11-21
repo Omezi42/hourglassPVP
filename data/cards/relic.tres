@@ -24,6 +24,7 @@ set_id = "grave_sand"
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_relic_0")])
 rules_text = "設置:自分の墓地の砂時計1体を選び、手札に戻す"
+flavor_text = "砕けた器の欠片を拾って懐にしまう。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

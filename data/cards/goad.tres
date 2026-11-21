@@ -22,6 +22,7 @@ set_id = "solo_goad"
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_goad_0")])
 rules_text = "相手の砂時計1体を反転させる"
+flavor_text = "ほら、足元がお留守だよ。"
 cannot_attack = false
 is_token = false
 is_spell = true
