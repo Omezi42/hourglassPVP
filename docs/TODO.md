@@ -75,10 +75,6 @@ Fableには判断だけを任せる。1項目を次の順に回す(手順の詳�
 
 ## 3. Claudeが進められる作業
 
-### 攻略サイト(GameDesign.md 32章 / Architecture.md 10.21節)
-
-- [ ] 2段階目の残り: ランキング(ログイン不要で読むため `public_stats` へ書き出す。更新の頻度は仕様に無いため決めてから)
-
 ### カードセットの段階公開(GameDesign.md 21章 / Architecture.md 10.8.1節)
 
 仕組みは実装済み(`CardSetLibrary` の `planned_count`)。

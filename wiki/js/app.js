@@ -1,6 +1,7 @@
 // ページの切り替え(URL の # で選ぶ。共有リンク /d/{code}・/r/{id} だけはパスで選ぶ)。
 import {renderCardsPage} from "./cards.js";
 import {renderStatsPage} from "./stats.js";
+import {renderRankingPage} from "./ranking.js";
 import {DECK_PATH, renderDeckPage} from "./deck.js";
 import {renderLoginPage} from "./login.js";
 import {renderIntroducePage} from "./introduce.js";
@@ -11,6 +12,7 @@ import {currentUser, signOut} from "./auth.js";
 const PAGES = {
   cards: {title: "カード辞典", render: renderCardsPage},
   stats: {title: "みんなの統計", render: renderStatsPage},
+  ranking: {title: "ランキング", render: renderRankingPage},
   introduce: {title: "デッキを紹介する", render: renderIntroducePage},
   mypage: {title: "マイページ", render: renderMypagePage},
   login: {title: "ログイン", render: renderLoginPage},

@@ -19,8 +19,10 @@ CARDS_JSON = ROOT / "functions" / "data" / "cards.json"
 CARD_ART = ROOT / "functions" / "data" / "card_art"
 # ゲームが pck に入れて配っている公開の Web API キー。サイトのログインが同じ認証を使う。
 FIREBASE_CONFIG = ROOT / "data" / "firebase_config.tres"
-# プレイヤーのアイコン(id → res:// のパス)。共有リプレイの埋め込み画像が icons/{id}.webp を読む。
+# プレイヤーのアイコン(id → res:// のパス)と称号の表示名。共有リプレイの埋め込み画像が icons/{id}.webp を、
+# ランキングのページがアイコンと data/profile.json の称号を読む。
 PROFILE_LIBRARY = ROOT / "scripts" / "data" / "user_profile_library.gd"
+TITLE_ENTRY = re.compile(r'"(\w+)":\s*\{\s*"name":\s*"[^"]*",\s*"display":\s*"([^"]*)"')
 ICON_ENTRY = re.compile(r'"(\w+)":\s*\{\s*"name":\s*"[^"]*",\s*"path":\s*"res://([^"]+)"')
 # card_art(720x400)のうち、砂時計・砂術の絵が描かれている左の枠。
 THUMB_BOX = (28, 86, 250, 376)
@@ -48,6 +50,8 @@ def build(sample_dir):
     data_dir.mkdir()
     (data_dir / "cards.json").write_text(json.dumps({"cards": cards}, ensure_ascii=False), encoding="utf-8")
     api_key = re.search(r'api_key = "([^"]+)"', FIREBASE_CONFIG.read_text(encoding="utf-8")).group(1)
+    titles = dict(TITLE_ENTRY.findall(PROFILE_LIBRARY.read_text(encoding="utf-8")))
+    (data_dir / "profile.json").write_text(json.dumps({"titles": titles}, ensure_ascii=False), encoding="utf-8")
     (data_dir / "config.json").write_text(json.dumps({"apiKey": api_key}), encoding="utf-8")
     if sample_dir:
         shutil.copytree(sample_dir, OUT / "sample")

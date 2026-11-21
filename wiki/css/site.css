@@ -344,3 +344,23 @@ td.result { font-weight: 700; }
 @media (max-width: 600px) {
   .replay-player__screen { aspect-ratio: 9 / 16; max-height: 80vh; }
 }
+
+/* ランキング(GameDesign.md 32章)。1〜3位は金銀銅の丸(ゲーム内と同じ) */
+.ranking__rank { display: inline-block; min-width: 1.8em; text-align: right; font-weight: 700; }
+.ranking__rank--1, .ranking__rank--2, .ranking__rank--3 { width: 1.8em; height: 1.8em; line-height: 1.8em; border-radius: 50%; text-align: center; color: var(--bg-deep); }
+.ranking__rank--1 { background: #e2b83c; }
+.ranking__rank--2 { background: #b9bec6; }
+.ranking__rank--3 { background: #b9773f; }
+.ranking__player { display: flex; align-items: center; gap: 10px; }
+.ranking__player img { width: 32px; height: 32px; border-radius: 50%; background: var(--ink); }
+.ranking__player > span { display: grid; }
+.ranking__title { font-size: 0.72rem; color: var(--ink-soft); }
+.ranking__name { font-weight: 700; color: var(--ink); }
+.ranking__tier { font-weight: 700; }
+.ranking__tier--bronze { color: #8a5a2b; }
+.ranking__tier--silver { color: #6b7380; }
+.ranking__tier--gold { color: #a3781c; }
+.ranking__tier--platinum { color: #3f7d8c; }
+.ranking__stars { letter-spacing: 0.1em; }
+.ranking__star-on { color: #d9a441; }
+.ranking__star-off { color: var(--line); }
