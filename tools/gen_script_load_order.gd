@@ -14,6 +14,8 @@ const SCAN_DIRS := ["res://scripts", "res://scenes"]
 const SKIP := ["res://scripts/boot/boot.gd", OUTPUT]
 ## `Main` がパスで読み、初めて要るときに作るもの。これを含む参照の輪は並べない(読むと輪ごと
 ## 一度にコンパイルされ、タイトルの動きが止まるため)。輪の外の参照先は並べる。
+## パスの文字列での参照(`load()` で読む道)は辺に数えない。並べたスクリプトが型・preload でこの輪を
+## 参照していたら、輪ごと裏読み込みへ漏れるため失敗で終える(`check.sh` が落ちる)。
 const DEFERRED := ["res://scripts/ui/card_match_screen.gd"]
 
 var _class_paths := {}
@@ -24,6 +26,7 @@ var _stack: Array[String] = []
 var _on_stack := {}
 var _counter := 0
 var _order: Array[String] = []
+var _deferred_members := {}
 
 
 func _initialize() -> void:
@@ -38,6 +41,14 @@ func _initialize() -> void:
 	for f in files:
 		_edges[f] = _references(f)
 	_visit(ROOT_SCENE)
+	for d in DEFERRED:
+		if not _index.has(d):
+			_visit(d)
+	var leaks := _leaks()
+	if not leaks.is_empty():
+		printerr("deferred cycle leaks into the boot load order:\n  " + "\n  ".join(leaks))
+		quit(1)
+		return
 	var lines: Array[String] = [
 		"## 生成物(`tools/gen_script_load_order.gd`)。手で編集しない。",
 		"## 起動時に `Boot` が裏で読み込むスクリプトの順番(参照される側が先。Architecture.md 4.0.6節)。",
@@ -73,7 +84,7 @@ func _references(path: String) -> Array[String]:
 	var refs: Array[String] = []
 	for m in RegEx.create_from_string('"(res://[^"]+\\.(?:gd|tscn))"').search_all(text):
 		var target := m.get_string(1)
-		if target != path and FileAccess.file_exists(target):
+		if target != path and FileAccess.file_exists(target) and not DEFERRED.has(target):
 			refs.append(target)
 	if path.ends_with(".gd"):
 		var code := RegEx.create_from_string("#[^\\n]*").sub(text, "", true)
@@ -110,5 +121,18 @@ func _visit(v: String) -> void:
 			component.append(w)
 			if w == v:
 				break
-		if not component.any(func(f: String) -> bool: return DEFERRED.has(f)):
+		if component.any(func(f: String) -> bool: return DEFERRED.has(f)):
+			for f in component:
+				_deferred_members[f] = true
+		else:
 			_order.append_array(component)
+
+
+## 並べたスクリプトから、並べない輪への参照。
+func _leaks() -> Array[String]:
+	var out: Array[String] = []
+	for f in _order:
+		for w in _edges.get(f, []):
+			if _deferred_members.has(w):
+				out.append("%s -> %s" % [f, w])
+	return out

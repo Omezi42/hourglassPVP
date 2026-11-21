@@ -19,9 +19,13 @@ const HOLD_SECONDS := 1.3
 const SETTLE_LIMIT_SECONDS := 6.0
 ## 切り抜く盤面のまわりに残す余白。
 const CROP_MARGIN := 8.0
+## 対局画面はパスで読み、型を書かない。書くと対局画面の輪(約50本)がこのスクリプトと一緒に
+## 起動の裏読み込みでコンパイルされ、タイトルが止まる(Architecture.md 4.0.6節)。
+const MATCH_SCREEN_SCRIPT := "res://scripts/ui/card_match_screen.gd"
 
 var _viewport: SubViewport
-var _screen: CardMatchScreen
+## `CardMatchScreen`。
+var _screen: Control
 var _view: TextureRect
 var _card: CardData
 ## 見せる段を1つに絞る(キーワード辞書)。-1 ならそのカードの段をすべて見せる。
@@ -41,9 +45,9 @@ func _ready() -> void:
 	_viewport.size_2d_override_stretch = true
 	_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	add_child(_viewport)
-	_screen = CardMatchScreen.new()
-	_screen.silent = true
-	_screen.size = CardMatchLayout.current().screen_size
+	_screen = (load(MATCH_SCREEN_SCRIPT) as GDScript).new()
+	_screen.set("silent", true)
+	_screen.size = _layout().screen_size
 	_viewport.add_child(_screen)
 	_view = TextureRect.new()
 	_view.texture = _viewport.get_texture()
@@ -74,12 +78,17 @@ func clear() -> void:
 
 ## 盤面と両者の情報帯を囲む矩形(縦横どちらの配置でも同じ問い合わせで取れる)。
 func _crop() -> Rect2:
-	var layout := CardMatchLayout.current()
-	var bar := Vector2(layout.bar_size) * layout.bar_scale
-	var rect := layout.table_rect
+	var layout: Variant = _layout()
+	var bar: Vector2 = Vector2(layout.bar_size) * layout.bar_scale
+	var rect: Rect2 = layout.table_rect
 	rect = rect.merge(Rect2(layout.foe_bar_position, bar))
 	rect = rect.merge(Rect2(layout.own_bar_position, bar))
 	return rect.grow(CROP_MARGIN).intersection(Rect2(Vector2.ZERO, layout.screen_size))
+
+
+## `CardMatchLayout`。
+func _layout() -> Variant:
+	return _screen.get("layout")
 
 
 func _fit() -> void:

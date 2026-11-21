@@ -11,6 +11,7 @@
 | `functions/.env` | `AUTH_WEB_API_KEY`(`data/firebase_config.tres` の `api_key` と同じ値)。`/link` がID/パスワードを確かめるのに使う。クライアントに埋め込んでいる公開の値なのでコミットしてよい。`FIREBASE_` で始まる名前は予約されていてデプロイが止まる |
 | `functions/discord_deck_intro.js`(Node.js) | デッキ紹介(26章)のボタン・選択肢・コメントのフォームと、「ゲームに追加」のハンドラ。`discordInteractions` から `custom_id` で呼ばれる |
 | `tools/discord/setup_deck_intro.py` | #デッキを紹介する を #デッキ紹介 と同じカテゴリーに作り、入口のボタンの投稿を置く(既にあれば書き換える)。チャンネルと投稿のidは `~/.hourglass_discord.json` へ残す |
+| `functions/test/discord_deck_intro.test.js` | デッキ紹介の流れ(入口・選択肢・フォーム・2件の投稿・`deck_intros`・ゲームに追加)を偽のFirestoreと偽の `fetch` で確かめる。`node --test "functions/test/*.test.js"`(`functions/node_modules` が要る。worktreeでは `NODE_PATH` を本体の `functions/node_modules` へ向ける)。`firebase.json` の `functions.ignore` でデプロイから外す |
 | `functions/deck_sheet_canvas.js`(Node.js) | `/deck` 用の簡易デッキ表画像を `@napi-rs/canvas` で描画する。ゲーム内の `CardDeckSheet` とは別実装であり、見た目の一致は求めない |
 | `functions/fonts/ZenKakuGothicNew-Bold.ttf` | `assets/fonts/` からコピーした同梱フォント。`firebase.json` の `functions.source` が `functions` ディレクトリだけを見るため、`functions/` の外にあるファイルはデプロイされない |
 | `functions/.gdignore` | `functions/data/card_art/*.png` をGodotのインポート対象から外す。**置き忘れると `.png.import` が大量に生成される**(実際に70個生成された)。4.1.6節の「実行時に読まないディレクトリには`.gdignore`を置く」の実例 |
