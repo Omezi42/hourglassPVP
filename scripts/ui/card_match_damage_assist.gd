@@ -49,6 +49,17 @@ func place() -> void:
 	var hp := bar.hp_bar_rect()
 	var local := Vector2(hp.end.x + PlayerInfoBar.HP_BADGE_RADIUS + HP_GAP, hp.get_center().y)
 	position = bar.position + local * bar.scale - Vector2(0.0, AREA_SIZE.y * 0.5)
+	# 縦画面では帯の右端が画面端に近いため、最も長い表示が画面の余白の内側へ収まるまで左へ寄せる。
+	var right_limit := CardMatchLayout.current().screen_size.x - CardMatchLayout.PORTRAIT_SIDE
+	position.x = minf(position.x, right_limit - _widest_text())
+
+
+## 数字と「決着可能」を並べたときの幅(数字は2桁を見込む)。
+func _widest_text() -> float:
+	var font := _font if _font != null else TextGlyphs.ui_font()
+	var value_width := font.get_string_size("00", HORIZONTAL_ALIGNMENT_LEFT, -1, VALUE_FONT_SIZE).x
+	var note_width := font.get_string_size("決着可能", HORIZONTAL_ALIGNMENT_LEFT, -1, NOTE_FONT_SIZE).x
+	return value_width + NOTE_GAP + note_width
 
 
 func _process(_delta: float) -> void:

@@ -197,7 +197,7 @@ func _shoot_panels() -> void:
 		HAND_IDS.slice(0, MatchState.FIRST_PLAYER_HAND),
 		HAND_IDS.slice(0, MatchState.SECOND_PLAYER_HAND)
 	]
-	for ids in hands:
+	for ids: Array in hands:
 		var cards: Array = []
 		for id in ids:
 			cards.append(_card(id))

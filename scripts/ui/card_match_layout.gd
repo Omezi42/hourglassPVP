@@ -224,7 +224,7 @@ static func _make_portrait() -> CardMatchLayout:
 	l.history_tiles = PORTRAIT_HISTORY_TILES
 	l.history_position = Vector2(side + 2.0, l.foe_bar_position.y + bar_height + 6.0)
 	var history_height := CardMatchActionHistory.TILE_SIZE.y * PORTRAIT_HISTORY_SCALE
-	var menu_radius := ActionColumnLayout.SMALL_DIAMETER * 0.5
+	var menu_radius := ActionColumnLayout.SMALL_DIAMETER * 0.5 * PORTRAIT_BUTTON_SCALE
 	l.menu_center = Vector2(
 		l.screen_size.x - side - menu_radius, l.history_position.y + history_height * 0.5
 	)
