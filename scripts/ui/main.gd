@@ -249,7 +249,9 @@ func _ready() -> void:
 	home_screen.ranked_match_deck_requested.connect(_on_ranked_match_deck_requested)
 	home_screen.room_match_requested.connect(_unless_ranked_wait.bind(_on_room_match_requested))
 	NetSession.ensure_ready(self)
-	FunnelService.on_launch()
+	# 攻略サイトから開いた再生は来訪として数えない(GameDesign.md 22章の通過数は遊びに来た人のため)。
+	if not ReplayLaunch.requested():
+		FunnelService.on_launch()
 	HourglassLive.ensure_ready(self)
 	SoundBank.ensure_ready(self)
 	SoundBank.wire_tree(self)
@@ -696,7 +698,15 @@ func _on_online_resume_requested(record: Dictionary) -> void:
 
 
 ## 対局画面から戻るときは、必ずポーリングを止めてから離れる(Architecture.md 6.1節)。
+## 攻略サイトから開いた再生(GameDesign.md 32章)。タイトル・ホームを経ずに再生画面だけを出し、戻る先を持たない。
+func start_launch_replay() -> void:
+	_match_screen().start_replay(ReplayLaunch.record())
+	_show_only(_match_screen())
+
+
 func _on_card_match_back() -> void:
+	if ReplayLaunch.requested():
+		return
 	await card_match_screen.stop_networking()
 	_on_match_back()
 

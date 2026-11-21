@@ -38,6 +38,7 @@ const {publishWikiStats} = require("./wiki_stats");
 const {handleDeckShare} = require("./deck_share");
 const {handleDeckIntroComponent, handleCommentSubmit, isDeckIntroModal} = require("./discord_deck_intro");
 const {handleWikiDeckIntro} = require("./wiki_deck_intro");
+const {handleWikiReplayShare, handleReplayShare} = require("./replay_share");
 
 // Botトークン・公開鍵と同じ扱いで、リポジトリへは一切コミットしない。
 // `firebase functions:secrets:set DISCORD_WEBHOOK_URL` / `DISCORD_PUBLIC_KEY` で設定する。
@@ -281,3 +282,17 @@ exports.wikiDeckIntro = onRequest(
     });
   }
 );
+
+/**
+ * 攻略サイトのリプレイの共有(GameDesign.md 32章 / Architecture.md 10.21節)。共有の状態を見る・発行する・取り消す。
+ */
+exports.wikiReplayShare = onRequest(async (req, res) => {
+  await handleWikiReplayShare(req, res, admin.firestore(), admin.auth());
+});
+
+/**
+ * 共有リンク `/r/{id}` の1局の中身と埋め込みの画像。攻略サイトの Pages Functions が中継する。
+ */
+exports.replayShare = onRequest({memory: "512MiB"}, async (req, res) => {
+  await handleReplayShare(req, res, admin.firestore());
+});

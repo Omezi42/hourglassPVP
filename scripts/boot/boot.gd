@@ -8,6 +8,8 @@ extends Control
 const LOAD_ORDER := preload("res://scripts/boot/script_load_order.gd")
 const TITLE_SCENE := "res://scenes/title_screen.tscn"
 const MAIN_SCENE := "res://scenes/main.tscn"
+## 攻略サイトからの再生(`ReplayLaunch`)で `_pending` に入れる印。タイトルのシグナルではない。
+const REPLAY_PENDING := "replay"
 ## 1フレームで読み込みに使う時間。超えたら次のフレームへ回す(タイトルの動きを止めないため)。
 const FRAME_BUDGET_MSEC := 12
 
@@ -26,6 +28,10 @@ func _ready() -> void:
 	add_child(_title)
 	_title.start_requested.connect(_on_start)
 	_title.account_requested.connect(_on_account)
+	# 攻略サイトからの再生は押されるのを待たず、読み終えたらそのまま再生画面へ入る。
+	if ReplayLaunch.requested():
+		_pending = REPLAY_PENDING
+		_title.show_loading(0.0)
 
 
 func _process(_delta: float) -> void:
@@ -66,6 +72,10 @@ func _hand_over() -> void:
 	tree.current_scene = main
 	if _gesture_seen:
 		main.call("note_user_gesture")
+	if _pending == REPLAY_PENDING:
+		main.call("start_launch_replay")
+		queue_free()
+		return
 	main.call("warm_up")
 	if not _pending.is_empty():
 		# 押された後の演出を止めないよう、重い初回処理は読み込み中の表示のまま済ませる。

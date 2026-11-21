@@ -224,4 +224,7 @@ function roundedRect(ctx, x, y, width, height, radius) {
   ctx.closePath();
 }
 
-module.exports = {renderDeckSheet, WIDTH, HEIGHT};
+module.exports = {
+  renderDeckSheet, WIDTH, HEIGHT, FONT_FAMILY, COLOR, ART_RATIO, TITLE,
+  drawBackground, drawBadge, fitText, roundedRect, loadArtSafely,
+};

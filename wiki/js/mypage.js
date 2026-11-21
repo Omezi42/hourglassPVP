@@ -116,8 +116,9 @@ function gameList(games, names) {
     el("td", {text: names[game.opponentUid] || DEFAULT_NAME}),
     el("td", {class: "result", text: RESULT_LABELS[game.result]}),
     el("td", {class: "num", text: String(game.turns)}),
+    el("td", {}, [el("a", {href: `#replay/${game.id}`, text: "再生"})]),
   ]));
-  return table([["日時", false], ["種別", false], ["先後", false], ["相手", false], ["勝敗", false], ["手数", true]], rows);
+  return table([["日時", false], ["種別", false], ["先後", false], ["相手", false], ["勝敗", false], ["手数", true], ["", false]], rows);
 }
 
 export async function renderMypagePage(root) {

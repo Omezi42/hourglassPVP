@@ -276,6 +276,7 @@ const PATHS: Array[String] = [
 	"res://scripts/ui/hand_leather_panel.gd",
 	"res://scripts/ui/card_match_fast_forward.gd",
 	"res://scripts/logic/hourglass_preload.gd",
+	"res://scripts/net/replay_launch.gd",
 	"res://scripts/ui/bar_panel.gd",
 	"res://scripts/ui/ranked_wait_line.gd",
 	"res://scripts/ui/ranked_wait_banner.gd",
