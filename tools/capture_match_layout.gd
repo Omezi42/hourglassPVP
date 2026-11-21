@@ -137,19 +137,30 @@ func _shoot_a11y() -> void:
 		await _shoot_band(portrait, "a11y_band_%s.png" % tag)
 
 
-## 誘導対局の帯を、帯に収める最長(34字×2行)の文で出す。
+## 誘導対局の帯を、台本の中で最も長い指示の文で出す。
 func _shoot_band(portrait: bool, file_name: String) -> void:
 	var tutorial := match_screen._tutorial
 	tutorial.apply_layout(match_screen.layout)
-	tutorial._label.text = (
-		"砂時計は手番の終わりに上の砂が1粒ずつ落ちていきます。体力が尽きると割れてしまうので、" + "反転で上下を入れ替えて長く場に残しましょう。"
-	)
+	tutorial._label.text = _longest_tutorial_text()
+	# 縦は文の行数で帯の高さが決まる。ゲームが文を替えたときと同じ合わせ方を通す。
+	if portrait:
+		tutorial._fit_portrait_band()
 	tutorial.visible = true
 	tutorial._band.visible = true
 	await _settle()
 	_save(file_name)
 	tutorial.visible = false
 	match_screen.apply_orientation(portrait)
+
+
+func _longest_tutorial_text() -> String:
+	var data: TutorialScriptData = load("res://resources/tutorial/tutorial_script.tres")
+	var longest := ""
+	for step: Dictionary in data.steps:
+		var text := str(step.get("text", ""))
+		if text.length() > longest.length():
+			longest = text
+	return longest
 
 
 func _settle() -> void:
