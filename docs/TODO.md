@@ -90,7 +90,6 @@ Fableには判断だけを任せる。1項目を次の順に回す(手順の詳�
 
 Discordにある機能をゲームの中だけで完結させていく。1つ目としてお知らせとプレゼントを入れた。
 
-- [ ] カードスポットライトをホームの台座へ載せる(GameDesign.md 9章・26章 / Architecture.md 10.14節)。`announceCardSpotlight` の変更は `firebase deploy --only functions:announceCardSpotlight` まで
 
 ### アプリ版(PWA)(GameDesign.md 10章 / Architecture.md 4.6節)
 

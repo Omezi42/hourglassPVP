@@ -14,7 +14,7 @@
 | 5章 | 勝利条件 | [`design/05_victory.md`](design/05_victory.md) |
 | 6章 | キーワード | [`design/06_keywords.md`](design/06_keywords.md) |
 | 7章 | バランスの目標値 | [`design/07_balance_targets.md`](design/07_balance_targets.md) |
-| 8章 | 基本セット(現行のカード一覧) | [`design/08_base_set.md`](design/08_base_set.md) |
+| 8章 | 基本セットと弾(現行のカード一覧) | [`design/08_base_set.md`](design/08_base_set.md) |
 | 9章 | UI設計メモ | [`design/09_ui.md`](design/09_ui.md) |
 | 10章 | 技術設計方針(毎日アプデ運用のための骨格) | [`design/10_tech_policy.md`](design/10_tech_policy.md) |
 | 11章 | オンライン対戦 | [`design/11_online.md`](design/11_online.md) |
