@@ -168,7 +168,11 @@
 - **Firestoreのセキュリティルール**は`firestore.rules`にリポジトリ同梱で置く。
   適用はFirebaseコンソール側の操作であり、このファイルは「何を許可する前提で
   実装しているか」の記録として持つ。`matches/{id}` の作成・更新・削除は `player_a` / `player_b` の
-  2人だけに許す(読み取りは観戦のため全員)。対局ドキュメントを書くコードは対局者自身だけにする
+  2人だけに許す(読み取りは観戦のため全員)。対局ドキュメントを書くコードは対局者自身だけにする。
+  `match_records/{id}` は create だけを、書き手が記録の `player_a` / `player_b` のどちらかで、かつ
+  `matches/{id}` の対局者と一致するときに許す(update は不可。先着1件の `exists:false` は create として評価される)。
+  `players/{uid}` は本人の書き込みでも `owned_titles` を変えられず(付与は `lab_admin.js` の Admin SDK)、
+  `login_id` は `login_id + "@" + FirebaseAuth.SYNTHETIC_EMAIL_DOMAIN` が認証トークンのメールと一致するときだけ書ける
 
 ---
 
