@@ -10,10 +10,10 @@ const PRACTICE_LINE := "練習ルールのため、報酬と戦績の対象外"
 ## 最後の手が送り終わるのを待つ上限。届かないまま待ち続けないための保険。
 const SEND_WAIT_FRAMES := 600
 
-var _screen: CardMatchScreen
+var _screen: Control
 
 
-func _init(screen: CardMatchScreen) -> void:
+func _init(screen: Control) -> void:
 	_screen = screen
 
 

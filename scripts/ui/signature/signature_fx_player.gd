@@ -48,8 +48,8 @@ func play(move: SignatureMove, short := false, short_sfx := -1) -> void:
 	_reached.clear()
 	_reached.resize(move.targets.size())
 	_reached.fill(false)
-	var screen := get_parent() as CardMatchScreen
-	var audible := screen == null or not screen.silent
+	# 対局画面の `silent`(能力の実演)。型は書かない(対局画面の輪を作らないため。Architecture.md 4.0.6節)。
+	var audible := not bool(get_parent().get("silent"))
 	_impact_sfx = short_sfx if short and audible else -1
 	if not short and move.sound() >= 0 and audible:
 		SoundBank.play(move.sound())

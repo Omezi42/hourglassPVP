@@ -16,7 +16,7 @@ extends RefCounted
 ##
 ## `card_match_screen.gd` が1000行の上限に近いため、ここへ切り出している。
 
-var _screen: CardMatchScreen
+var _screen: Control
 var _fx: EmblemStrikeFx
 ## カードの演出(GameDesign.md 9章)。紋章の代わりに再生する。
 var _signature: SignatureFxPlayer
@@ -64,7 +64,7 @@ var _reveal: CardSpellReveal
 var _pending: Array[Callable] = []
 
 
-func _init(screen: CardMatchScreen) -> void:
+func _init(screen: Control) -> void:
 	_screen = screen
 	_fx = EmblemStrikeFx.new()
 	screen.add_child(_fx)
@@ -121,9 +121,9 @@ func _on_spell_cast(side: int, card: CardData) -> void:
 		_spell_origin[side] = _noted_origin[side]
 		_noted_origin.erase(side)
 		return
-	var center := _screen.layout.table_rect.get_center()
+	var center: Vector2 = _screen.layout.table_rect.get_center()
 	_spell_origin[side] = center
-	var scale_factor := _screen.layout.hand_scale if _screen.layout.portrait else 1.0
+	var scale_factor: float = _screen.layout.hand_scale if _screen.layout.portrait else 1.0
 	_reveal.play(card, center, scale_factor)
 
 
@@ -477,10 +477,10 @@ func _origin_position(source_side: int, source_slot: int, origin: int) -> Vector
 		CardEnums.EffectOrigin.SPELL:
 			if _spell_origin.has(source_side):
 				return _spell_origin[source_side]
-			var bar := _screen.bar_for(source_side)
+			var bar: PlayerInfoBar = _screen.bar_for(source_side)
 			return bar.position + bar.size * 0.5
 		CardEnums.EffectOrigin.DEATH:
-			var view := _screen.view_at(source_side, source_slot)
+			var view: CardView = _screen.view_at(source_side, source_slot)
 			return view.position + Vector2(view.size.x * 0.5, CardView.PEDESTAL_CENTER_Y - 4.0)
 	return CardFlipBeam.unit_center(_screen.view_at(source_side, source_slot))
 

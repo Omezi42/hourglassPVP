@@ -8,7 +8,7 @@ extends RefCounted
 ##
 ## `card_match_screen.gd` が1000行の上限に近いため、ここへ切り出している。
 
-var _screen: CardMatchScreen
+var _screen: Control
 var _view: CardView
 var _index := -1
 var _card: CardData
@@ -23,7 +23,7 @@ var _pointed: Dictionary = {}
 var _forecast_views: Array[CardView] = []
 
 
-func _init(screen: CardMatchScreen) -> void:
+func _init(screen: Control) -> void:
 	_screen = screen
 
 
@@ -40,7 +40,7 @@ func begin(view: CardView, index: int) -> void:
 	_done = false
 	_above = false
 	_pointed = {}
-	var side := _screen._spell.target_side(_aim_card)
+	var side: int = _screen._spell.target_side(_aim_card)
 	_targeted = (
 		CardEffectResolver.grave_choice_effect(_aim_card) == null
 		and side >= 0
@@ -57,7 +57,7 @@ func tick() -> void:
 		return
 	_screen._own_bar.highlight_cost(_screen.state.play_cost(_screen.my_side, _card))
 	var mouse := _screen.get_local_mouse_position()
-	var layout := _screen.layout
+	var layout: CardMatchLayout = _screen.layout
 	var above := mouse.y < layout.hand_area.position.y and mouse.x < layout.play_right
 	if above != _above:
 		_above = above
@@ -76,7 +76,7 @@ func drop(side: int, slot: int) -> void:
 		return
 	if not _above or not _can_target(side, slot):
 		return
-	var from := _screen._spell_aim.card_center()
+	var from: Vector2 = _screen._spell_aim.card_center()
 	_finish()
 	_screen._effect_strike.note_spell_origin(_screen.my_side, from)
 	_screen._spell.cast_at(side, slot)
@@ -153,7 +153,7 @@ func _target_under(point: Vector2) -> Dictionary:
 	var foe := MatchState.other_side(_screen.my_side)
 	for side in [foe, _screen.my_side]:
 		for slot in MatchState.BOARD_SIZE:
-			var view := _screen.view_at(side, slot)
+			var view: CardView = _screen.view_at(side, slot)
 			if view.visible and view.get_global_rect().has_point(point):
 				return {"side": side, "slot": slot} if _can_target(side, slot) else {}
 	if _screen.foe_bar.get_global_rect().has_point(point) and _can_target(foe, -1):
@@ -174,7 +174,7 @@ func _show_forecast(target: Dictionary) -> void:
 	_clear_forecast()
 	var changes := SpellForecast.compute(_screen.state, _screen.my_side, _index, target)
 	for change in changes:
-		var view := _screen.view_at(change["side"], change["slot"])
+		var view: CardView = _screen.view_at(change["side"], change["slot"])
 		view.preview_health = change["health"]
 		view.preview_dead = change["dead"]
 		view.queue_redraw()

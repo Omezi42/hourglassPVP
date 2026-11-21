@@ -36,7 +36,7 @@ const HOVER_MARGIN := 14.0
 ## 札の右へ余白ぶんずらして出す(札は左端に固定されており、右側は卓の余白のため)。
 const HOVER_OFFSET := Vector2(10.0, 0.0)
 
-var _screen: CardMatchScreen
+var _screen: Control
 var _solo: CardMatchSolo
 var _font: Font
 var _run: SoloRun
@@ -54,7 +54,7 @@ var _hover_label: Label
 var _compact := false
 
 
-func _init(screen: CardMatchScreen, solo: CardMatchSolo) -> void:
+func _init(screen: Control, solo: CardMatchSolo) -> void:
 	_screen = screen
 	_solo = solo
 	mouse_filter = Control.MOUSE_FILTER_STOP

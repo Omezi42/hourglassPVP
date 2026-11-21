@@ -32,6 +32,7 @@ func _ready() -> void:
 
 	_preview = CardEffectPreview.new()
 	add_child(_preview)
+	_preview._ensure_screen()
 	var crop := _preview._crop()
 	var preview_size := Vector2(PREVIEW_WIDTH, PREVIEW_WIDTH * crop.size.y / crop.size.x).floor()
 	_preview.custom_minimum_size = preview_size

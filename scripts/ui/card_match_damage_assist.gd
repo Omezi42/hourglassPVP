@@ -22,7 +22,7 @@ const LETHAL_FLASH_DURATION := 0.7
 const LETHAL_FLASH_GROW := 6
 const LETHAL_FLASH_RADII := Vector2(46.0, 16.0)
 
-var _screen: CardMatchScreen
+var _screen: Control
 var _font: Font
 var _total_attack := 0
 var _has_guard := false
@@ -32,7 +32,7 @@ var _lethal_flash := 0.0
 var _flash_tween: Tween
 
 
-func _init(screen: CardMatchScreen) -> void:
+func _init(screen: Control) -> void:
 	_screen = screen
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
@@ -45,7 +45,7 @@ func _ready() -> void:
 
 ## 相手の情報帯のHPの器の右隣(帯の縮尺・段を通した画面座標)。`CardMatchArrange` が呼ぶ。
 func place() -> void:
-	var bar := _screen.foe_bar
+	var bar: PlayerInfoBar = _screen.foe_bar
 	var hp := bar.hp_bar_rect()
 	var local := Vector2(hp.end.x + PlayerInfoBar.HP_BADGE_RADIUS + HP_GAP, hp.get_center().y)
 	position = bar.position + local * bar.scale - Vector2(0.0, AREA_SIZE.y * 0.5)
@@ -68,7 +68,7 @@ func _process(_delta: float) -> void:
 
 
 func sync() -> void:
-	var state := _screen.state
+	var state: MatchState = _screen.state
 	if state == null or state.is_match_over() or not _screen.is_interactive():
 		visible = false
 		_is_lethal = false
@@ -81,7 +81,7 @@ func sync() -> void:
 
 	_total_attack = 0
 	_ready_count = 0
-	var my_side := _screen.my_side
+	var my_side: int = _screen.my_side
 	var foe_side := MatchState.other_side(my_side)
 
 	for i in MatchState.BOARD_SIZE:

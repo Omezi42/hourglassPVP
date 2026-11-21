@@ -16,14 +16,14 @@ const CONFIRM_SCENE := "res://scenes/confirm_modal.tscn"
 const TITLE := "誘導対局を飛ばしますか?"
 const BODY := "おぼえるタブからいつでも遊べます"
 
-var _screen: CardMatchScreen
+var _screen: Control
 ## 今の手順の番号を返す(通過数へ飛ばした手順を残すため)。
 var _step_index: Callable
 var _confirm: ConfirmModal
 var _button: Button
 
 
-func _init(screen: CardMatchScreen, screen_size: Vector2, step_index: Callable) -> void:
+func _init(screen: Control, screen_size: Vector2, step_index: Callable) -> void:
 	_screen = screen
 	_step_index = step_index
 	mouse_filter = Control.MOUSE_FILTER_IGNORE

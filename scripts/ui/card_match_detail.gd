@@ -20,14 +20,14 @@ const MARGIN := 12.0
 ## **`CardMatchScreen` の const をここの const から参照しない。**互いを参照する
 ## 定数になり、読み込みが循環して固まる(実際にそうなった)。値は実行時に読む。
 
-var _screen: CardMatchScreen
+var _screen: Control
 var _panel: CardDetailPanel
 var _timer: Timer
 ## 盤面の外(ログのモーダル)から出したか。その間は盤面の状態で引っ込めない。
 var _off_board := false
 
 
-func _init(screen: CardMatchScreen) -> void:
+func _init(screen: Control) -> void:
 	_screen = screen
 	_panel = CardDetailPanel.new()
 	_panel.interactive = false
@@ -89,7 +89,7 @@ func _place(avoid := Rect2()) -> Vector2:
 
 
 func _bounds() -> Rect2:
-	var band := _screen.layout.table_rect
+	var band: Rect2 = _screen.layout.table_rect
 	return Rect2(
 		Vector2(MARGIN, band.position.y),
 		Vector2(_screen.layout.play_right - MARGIN * 2.0, band.size.y)
@@ -99,7 +99,7 @@ func _bounds() -> Rect2:
 ## 縦の拡大(`detail_scale`)に文字の大きさの設定(GameDesign.md 9章)を掛ける。
 ## 「大」で卓に収まらなくなる長い文のカードだけ、収まるところまで倍率を戻す。
 func _fit_scale() -> void:
-	var wanted := _screen.layout.detail_scale * TextSize.factor()
+	var wanted: float = _screen.layout.detail_scale * TextSize.factor()
 	var room := _bounds().size / _panel.size
 	_panel.scale = (
 		Vector2.ONE * maxf(minf(wanted, minf(room.x, room.y)), _screen.layout.detail_scale)

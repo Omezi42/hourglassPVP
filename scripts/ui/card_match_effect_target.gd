@@ -6,10 +6,10 @@ extends RefCounted
 ## `CardMatchSpell` と同じく、対局画面の状態を読んで `MatchAction.play()` を
 ## 投げるだけで、自分では何も持たない。
 
-var _screen: CardMatchScreen
+var _screen: Control
 
 
-func _init(screen: CardMatchScreen) -> void:
+func _init(screen: Control) -> void:
 	_screen = screen
 
 
@@ -99,7 +99,7 @@ func begin(index: int, slot: int) -> void:
 
 ## 対象選択中の砂時計を、選ばれた1体を対象にして出す。
 func confirm(side: int, slot: int) -> void:
-	var selection := _screen.selection
+	var selection: CardMatchSelection = _screen.selection
 	var hand_index := selection.hand_index
 	var play_slot := selection.slot
 	var target := {"side": side, "slot": slot}
@@ -121,7 +121,7 @@ func confirm(side: int, slot: int) -> void:
 ## 墓地から1体を選ぶ効果(GameDesign.md 6章・9章)なら、墓地の一覧を開いて選ばせ、
 ## 選んだら `perform` へ `{"grave_index": i}` を渡す。選べるものが無ければ選ばずに出す
 ## (効果は不発)。選ぶ一覧を開いたら true。
-static func choose_from_grave(screen: CardMatchScreen, card: CardData, perform: Callable) -> bool:
+static func choose_from_grave(screen: Control, card: CardData, perform: Callable) -> bool:
 	var effect := CardEffectResolver.grave_choice_effect(card)
 	if effect == null:
 		return false

@@ -12,10 +12,11 @@ const OUTPUT := "res://scripts/boot/script_load_order.gd"
 const SCAN_DIRS := ["res://scripts", "res://scenes"]
 ## 起動シーンそのものと、この順番のファイルは並べない(並べる前に読み込み済み)。
 const SKIP := ["res://scripts/boot/boot.gd", OUTPUT]
-## `Main` がパスで読み、初めて要るときに作るもの。これを含む参照の輪は並べない(読むと輪ごと
-## 一度にコンパイルされ、タイトルの動きが止まるため)。輪の外の参照先は並べる。
-## パスの文字列での参照(`load()` で読む道)は辺に数えない。並べたスクリプトが型・preload でこの輪を
-## 参照していたら、輪ごと裏読み込みへ漏れるため失敗で終える(`check.sh` が落ちる)。
+## `Main` がパスで読み、引き渡しの後に `Main.warm_up()` が1本ずつ読むもの(対局画面)。ここから辿れて
+## 起動の順番に入らなかったスクリプトを `MATCH_PATHS` へ並べる。部品が `CardMatchScreen` を型・preload で
+## 持って輪ができると、輪ごと1コマでコンパイルされるため失敗で終える(`check.sh` が落ちる)。
+## パスの文字列での参照(`load()` で読む道)は辺に数えない。並べた起動のスクリプトがここへ型で届くと、
+## 対局画面が起動の裏読み込みへ漏れるため、これも失敗で終える。
 const DEFERRED := ["res://scripts/ui/card_match_screen.gd"]
 
 var _class_paths := {}
@@ -26,7 +27,9 @@ var _stack: Array[String] = []
 var _on_stack := {}
 var _counter := 0
 var _order: Array[String] = []
-var _deferred_members := {}
+var _deferred_order: Array[String] = []
+var _second_pass := false
+var _cycles: Array[String] = []
 
 
 func _initialize() -> void:
@@ -39,14 +42,19 @@ func _initialize() -> void:
 			if m != null:
 				_class_paths[m.get_string(1)] = f
 	for f in files:
-		_edges[f] = _references(f)
+		# この順番のファイルはパスを並べているだけで、読んでも並べた先は読まない。
+		_edges[f] = [] if f == OUTPUT else _references(f)
 	_visit(ROOT_SCENE)
-	for d in DEFERRED:
-		if not _index.has(d):
-			_visit(d)
-	var leaks := _leaks()
+	var leaks := DEFERRED.filter(func(d: String) -> bool: return _order.has(d))
 	if not leaks.is_empty():
-		printerr("deferred cycle leaks into the boot load order:\n  " + "\n  ".join(leaks))
+		printerr("deferred script leaks into the boot load order:\n  " + "\n  ".join(leaks))
+		quit(1)
+		return
+	_second_pass = true
+	for d in DEFERRED:
+		_visit(d)
+	if not _cycles.is_empty():
+		printerr("deferred script is in a reference cycle:\n  " + "\n  ".join(_cycles))
 		quit(1)
 		return
 	var lines: Array[String] = [
@@ -55,15 +63,24 @@ func _initialize() -> void:
 		"",
 		"const PATHS: Array[String] = [",
 	]
-	for f in _order:
-		if f.ends_with(".gd") and not SKIP.has(f):
-			lines.append('\t"%s",' % f)
+	_append_paths(lines, _order)
+	lines.append("]")
+	lines.append("")
+	lines.append("## 引き渡しの後に `Main.warm_up()` が1本ずつ読む対局画面まわり(参照される側が先)。")
+	lines.append("const MATCH_PATHS: Array[String] = [")
+	_append_paths(lines, _deferred_order)
 	lines.append("]")
 	var out := FileAccess.open(OUTPUT, FileAccess.WRITE)
 	out.store_string("\n".join(lines) + "\n")
 	out.close()
-	print("script load order: %d scripts" % (lines.size() - 5))
+	print("script load order: %d + %d scripts" % [_order.size(), _deferred_order.size()])
 	quit()
+
+
+func _append_paths(lines: Array[String], paths: Array[String]) -> void:
+	for f in paths:
+		if f.ends_with(".gd") and not SKIP.has(f):
+			lines.append('\t"%s",' % f)
 
 
 func _collect(dir: String, out: Array[String]) -> void:
@@ -121,18 +138,9 @@ func _visit(v: String) -> void:
 			component.append(w)
 			if w == v:
 				break
-		if component.any(func(f: String) -> bool: return DEFERRED.has(f)):
-			for f in component:
-				_deferred_members[f] = true
-		else:
+		if not _second_pass:
 			_order.append_array(component)
-
-
-## 並べたスクリプトから、並べない輪への参照。
-func _leaks() -> Array[String]:
-	var out: Array[String] = []
-	for f in _order:
-		for w in _edges.get(f, []):
-			if _deferred_members.has(w):
-				out.append("%s -> %s" % [f, w])
-	return out
+			return
+		if component.size() > 1 and component.any(func(f: String) -> bool: return DEFERRED.has(f)):
+			_cycles.append_array(component)
+		_deferred_order.append_array(component)

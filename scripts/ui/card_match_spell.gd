@@ -5,10 +5,10 @@ extends RefCounted
 ## `card_match_screen.gd` が1000行の上限に達しているため切り出した。
 ## 対局画面の状態を読んで `MatchAction.cast()` を投げるだけで、自分では何も持たない。
 
-var _screen: CardMatchScreen
+var _screen: Control
 
 
-func _init(screen: CardMatchScreen) -> void:
+func _init(screen: Control) -> void:
 	_screen = screen
 
 
@@ -18,7 +18,7 @@ func release(index: int) -> void:
 	var card: CardData = _screen.state.hand[_screen.my_side][index]
 	# 出す前に手札の位置を控える(GameDesign.md 9章「対局画面の手触り」)。撃った瞬間には
 	# もう墓地へ消えているため、支払いのピップが吸い込まれる先をいまのうちに渡しておく。
-	var view := _screen._hand_views[index]
+	var view: CardView = _screen._hand_views[index]
 	_screen.effects.queue_spend_origin(_screen.my_side, view.global_position + view.size * 0.5)
 	if CardMatchEffectTarget.choose_from_grave(
 		_screen,
@@ -37,7 +37,7 @@ func release(index: int) -> void:
 ## 対象選択中の砂術を、選ばれた1体へ撃つ。
 func cast_at(side: int, slot: int) -> void:
 	var index: int = _screen.selection.hand_index
-	var view := _screen._hand_views[index]
+	var view: CardView = _screen._hand_views[index]
 	_screen.effects.queue_spend_origin(_screen.my_side, view.global_position + view.size * 0.5)
 	# **`_perform()` より先に選択を解除する**(`CardMatchEffectTarget.confirm()` と同じ理由。
 	# 選択を残したまま呼ぶと、`refresh()` が既に手札から消えたカードを読みに行って落ちる)。

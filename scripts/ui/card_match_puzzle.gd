@@ -11,7 +11,7 @@ extends RefCounted
 
 signal finished(cleared: bool)
 
-var _screen: CardMatchScreen
+var _screen: Control
 var _stage: PuzzleStageData = null
 var _panel: CardChallengeResult
 var _settled := false
@@ -20,7 +20,7 @@ var _settled := false
 var _endless := false
 
 
-func _init(screen: CardMatchScreen) -> void:
+func _init(screen: Control) -> void:
 	_screen = screen
 	_panel = CardChallengeResult.new()
 	_panel.retry_pressed.connect(func() -> void: start(_stage, _endless))

@@ -6,17 +6,17 @@ extends RefCounted
 ## `card_match_screen.gd` が1000行の上限に達しているため切り出した。
 ## 対局画面の状態(選択・盤面の表示)を読むだけで、自分では何も持たない。
 
-var _screen: CardMatchScreen
+var _screen: Control
 
 
-func _init(screen: CardMatchScreen) -> void:
+func _init(screen: Control) -> void:
 	_screen = screen
 
 
 func refresh() -> void:
-	var state := _screen.state
-	var selection := _screen.selection
-	var my_side := _screen.my_side
+	var state: MatchState = _screen.state
+	var selection: CardMatchSelection = _screen.selection
+	var my_side: int = _screen.my_side
 	var foe := MatchState.other_side(my_side)
 	_screen.foe_bar.targetable = false
 	# 対象選択が終わったら(=ここで光りが組み直されるとき)身構えも必ず戻す
@@ -55,7 +55,7 @@ func refresh() -> void:
 	if attacker == null or not attacker.can_attack():
 		return
 	for slot in state.attackable_slots(foe):
-		var view := _screen.view_at(foe, slot)
+		var view: CardView = _screen.view_at(foe, slot)
 		view.selected = true
 		var preview: Dictionary = MatchCombatPreview.compute(state, my_side, selection.slot, slot)
 		view.preview_health = preview["target_health"]
@@ -72,9 +72,9 @@ func refresh() -> void:
 ## 1つに定まらないため**最も自分が削られる組**(最悪の場合)を出す(GameDesign.md 9章)。
 ## 安全に見えて実は死ぬ、という取り違えを避けるため。
 func refresh_own_preview() -> void:
-	var state := _screen.state
-	var selection := _screen.selection
-	var my_side := _screen.my_side
+	var state: MatchState = _screen.state
+	var selection: CardMatchSelection = _screen.selection
+	var my_side: int = _screen.my_side
 	var own: CardView = _screen.view_at(my_side, selection.slot)
 	own.preview_health = -1
 	own.preview_dead = false
@@ -100,7 +100,7 @@ func refresh_own_preview() -> void:
 ## 「反転」ボタンにカーソルが乗った。選んでいる駒の反転後と、この手番の終わりの値を出す
 ## (GameDesign.md 9章)。
 func show_flip_forecast() -> void:
-	var selection := _screen.selection
+	var selection: CardMatchSelection = _screen.selection
 	if not _screen._my_turn() or not selection.is_board_selection():
 		return
 	var view: CardView = _screen.view_at(_screen.my_side, selection.slot)

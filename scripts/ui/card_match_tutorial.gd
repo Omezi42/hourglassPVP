@@ -78,7 +78,7 @@ var ran_this_match := false
 
 var _state: MatchState
 var _my_side := MatchState.Side.A
-var _screen: CardMatchScreen
+var _screen: Control
 var _steps: Array = []
 var _index := 0
 ## 台本の「置いた駒」を後の手から参照するための表(参照名 → CardInstance)。
@@ -127,7 +127,7 @@ var _focus: TutorialFocus
 
 
 ## `watch()` より前に対局画面の参照が要る(`_build()` が帯へ「スキップ」を足すため)。
-func _init(screen: CardMatchScreen) -> void:
+func _init(screen: Control) -> void:
 	_screen = screen
 
 
@@ -253,7 +253,7 @@ func load_script(script: TutorialScriptData) -> void:
 
 
 ## 対局が始まったところから見張り始める。
-func watch(screen: CardMatchScreen, state: MatchState, my_side: int) -> void:
+func watch(screen: Control, state: MatchState, my_side: int) -> void:
 	_screen = screen
 	_state = state
 	_my_side = my_side

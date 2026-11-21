@@ -17,7 +17,7 @@ const DROP_GLIDE_DURATION := 0.12
 ## この対局で一度出した登場の演出(カード id)。2回目以降は短縮版にする(GameDesign.md 9章)。
 var _seen_entrances: Dictionary = {}
 
-var _screen: CardMatchScreen
+var _screen: Control
 ## 攻撃の演出中に預かった演出。当たった瞬間にまとめて出す。
 var _held: Array[Callable] = []
 ## ドラッグで放した座標。`"側:枠"` をキーに持ち、`unit_played` が届いた瞬間だけ読む
@@ -32,7 +32,7 @@ var _spend_origin: Dictionary = {}
 var _poisoned: Dictionary = {}
 
 
-func _init(screen: CardMatchScreen) -> void:
+func _init(screen: Control) -> void:
 	_screen = screen
 
 
@@ -85,7 +85,7 @@ func queue_spend_origin(side: int, global_pos: Vector2) -> void:
 ## (GameDesign.md 9章「通常の反転と設置の着地」)。
 func _on_unit_played(side: int, slot: int) -> void:
 	_poisoned.erase(_drop_key(side, slot))
-	var view := _screen.view_at(side, slot)
+	var view: CardView = _screen.view_at(side, slot)
 	var data: CardData = _screen.state.board[side][slot].data
 	_play_spend(side, _screen.state.play_cost(side, data))
 	var key := _drop_key(side, slot)
@@ -132,7 +132,7 @@ func _on_spell_cast(side: int, card: CardData) -> void:
 func _play_spend(side: int, cost: int) -> void:
 	if cost <= 0:
 		return
-	var bar := _screen.bar_for(side)
+	var bar: PlayerInfoBar = _screen.bar_for(side)
 	var origin: Vector2 = _spend_origin.get(side, bar.mana_label_global())
 	_spend_origin.erase(side)
 	bar.spend_toward(cost, origin)
@@ -158,7 +158,7 @@ func _on_unit_destroyed(side: int, slot: int, card: CardData) -> void:
 	var melted := _poisoned.has(_drop_key(side, slot))
 	_poisoned.erase(_drop_key(side, slot))
 	var fall := func() -> void:
-		var view := _screen.view_at(side, slot)
+		var view: CardView = _screen.view_at(side, slot)
 		if melted:
 			view.play_melt(card)
 		else:
@@ -181,7 +181,7 @@ func _on_unit_shielded(side: int, slot: int) -> void:
 ## ドロー:山札を脈打たせ、札を山札から手札へ飛ばす(GameDesign.md 9章)。相手の手札は
 ## 伏せた枚数の山で表しているため、相手側は札の代わりに砂の筋を流す。
 func _on_cards_drawn(side: int, _count: int) -> void:
-	var bar := _screen.bar_for(side)
+	var bar: PlayerInfoBar = _screen.bar_for(side)
 	bar.play_deck_pulse(false)
 	var from: Vector2 = bar.position + bar.deck_pile_rect().get_center()
 	if side == _screen.my_side:
@@ -217,5 +217,5 @@ func _on_unit_returned(side: int, slot: int, card: CardData) -> void:
 func hand_center(side: int) -> Vector2:
 	if side == _screen.my_side:
 		return _screen.layout.hand_area.get_center()
-	var bar := _screen.bar_for(side)
+	var bar: PlayerInfoBar = _screen.bar_for(side)
 	return bar.position + bar.hand_pile_rect().get_center()

@@ -7,10 +7,10 @@ extends RefCounted
 ## 縦の指で押す高さの下限(GameDesign.md 9章「縦画面」)。
 const TOUCH_MIN_HEIGHT := 72.0
 
-var _screen: CardMatchScreen
+var _screen: Control
 
 
-func _init(screen: CardMatchScreen) -> void:
+func _init(screen: Control) -> void:
 	_screen = screen
 
 
@@ -24,7 +24,7 @@ func hp_bar_center(side: int) -> Vector2:
 func slot_center(side: int, slot: int) -> Vector2:
 	if slot < 0:
 		return Vector2(_screen.size.x * 0.5, _screen.layout.foe_row_top)
-	var view := _screen.view_at(side, slot)
+	var view: CardView = _screen.view_at(side, slot)
 	return view.position + Vector2(view.size.x * 0.5, CardView.PEDESTAL_CENTER_Y)
 
 
@@ -56,7 +56,7 @@ func mana_badge_rect(side: int) -> Rect2:
 ## 盤面の1体の体力・攻撃力のバッジ(GameDesign.md 18章「数字の光」)。
 ## 話題が「駒の体力と攻撃力」の段(読むだけ)でだけ使う。
 func unit_stat_rects(side: int, slot: int) -> Array[Rect2]:
-	var view := _screen.view_at(side, slot)
+	var view: CardView = _screen.view_at(side, slot)
 	var y := CardView.PEDESTAL_CENTER_Y + 6.0
 	var r := CardView.STAT_RADIUS * view.stat_scale
 	var attack := _badge_rect(Vector2(r + 2.0, y), r)

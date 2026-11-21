@@ -19,7 +19,7 @@ const IMPACT_SHAKE_POWER := 99
 ## 器が砕けきってから結果パネルを出すまでの一呼吸。
 const BREATH_SECONDS := 0.4
 
-var _screen: CardMatchScreen
+var _screen: Control
 ## 手の演出が終わるのを待っている終局。新しい対局へ移ったら見せない。
 var _state: MatchState
 var _pending := false
@@ -29,7 +29,7 @@ var _reward := ""
 var _slowed_state: MatchState
 
 
-func _init(screen: CardMatchScreen) -> void:
+func _init(screen: Control) -> void:
 	_screen = screen
 
 
@@ -62,7 +62,7 @@ func on_actions_settled() -> void:
 
 ## 攻撃・紋章が当たった瞬間。決着の一撃なら時間を落とし、盤面を上限いっぱいに揺らす。
 func on_impact() -> void:
-	var state := _screen.state
+	var state: MatchState = _screen.state
 	if state == null or not state.is_match_over() or not _screen.is_interactive():
 		return
 	if _slowed_state == state or _broken_sides().is_empty():
@@ -102,7 +102,7 @@ func _try_start() -> void:
 ## HPが0になった側。投了や時間切れの連続で決まった対局では空になる。
 func _broken_sides() -> Array[int]:
 	var sides: Array[int] = []
-	var state := _screen.state
+	var state: MatchState = _screen.state
 	for side in [MatchState.Side.A, MatchState.Side.B]:
 		if state.hp[side] <= 0:
 			sides.append(side)
@@ -117,8 +117,8 @@ func _show_close() -> void:
 		Close.SOLO:
 			_screen._solo.on_match_ended()
 		_:
-			var can_rematch := _screen._match_kind == CurrencyRules.MatchKind.CPU
-			var can_matchmaking := _screen._match_kind == CurrencyRules.MatchKind.RANKED
+			var can_rematch: bool = _screen._match_kind == CurrencyRules.MatchKind.CPU
+			var can_matchmaking: bool = _screen._match_kind == CurrencyRules.MatchKind.RANKED
 			var is_tutorial: bool = _screen._tutorial.ran_this_match
 			_screen._result.show_for(
 				_state,

@@ -7,21 +7,21 @@ extends RefCounted
 ## `MatchState` へ、対象選択の段取りは `CardMatchSpell` / `CardMatchEffectTarget` /
 ## `CardMatchFlipRight` へ渡す。
 
-var _screen: CardMatchScreen
+var _screen: Control
 ## 攻撃ドラッグの指が指している相手(`CardMatchSelection.NO_HOVER` / `FACE` / 相手の枠)。
 var _aim_target := CardMatchSelection.NO_HOVER
 
 
-func _init(screen: CardMatchScreen) -> void:
+func _init(screen: Control) -> void:
 	_screen = screen
 
 
 func on_hand_pressed(view: CardView) -> void:
-	var index := _screen._hand_views.find(view)
+	var index: int = _screen._hand_views.find(view)
 	if index < 0 or not _screen._my_turn():
 		return
 	# 選んでいる札をもう一度押したら取り消す(GameDesign.md 9章)。
-	var sel := _screen.selection
+	var sel: CardMatchSelection = _screen.selection
 	if sel.is_hand(index) or (sel.is_targeting() and sel.slot < 0 and sel.hand_index == index):
 		_screen._pointer.cancel_selection()
 		_screen.refresh()
@@ -50,7 +50,7 @@ func _refuse(view: CardView, index: int) -> void:
 ## 手札を空き枠へドラッグして出す(GameDesign.md 9章)。押して枠を選ぶ経路と同じ
 ## `_play_selected()` へ合流させ、設置効果の対象選択も同じように働くようにする。
 func on_slot_drop(source: CardView, slot: int) -> void:
-	var index := _screen._hand_views.find(source)
+	var index: int = _screen._hand_views.find(source)
 	if index < 0 or not _screen._my_turn():
 		return
 	if _screen._spell_drag.active():
@@ -72,7 +72,7 @@ func on_slot_drop(source: CardView, slot: int) -> void:
 ## 手札を掴んだ瞬間、押して選んだのと同じ状態にする(GameDesign.md 9章)。砂時計なら空き枠が光った
 ## 状態で運べる。砂術の構えは `CardMatchSpellDrag` が受け持つ。
 func on_hand_drag_started(view: CardView) -> void:
-	var index := _screen._hand_views.find(view)
+	var index: int = _screen._hand_views.find(view)
 	if index < 0 or not _screen._my_turn() or not _screen._tutorial.gate_hand_select(index):
 		return
 	_screen._hand_layout.hold(view, true)
@@ -91,9 +91,9 @@ func on_hand_drag_ended(view: CardView) -> void:
 	# 撃ったかどうかを先に決める。撃って手札が減っていれば、札は手札へ戻らない(`hold()`)。
 	_screen._spell_drag.end()
 	_screen._hand_layout.hold(view, false)
-	var index := _screen._hand_views.find(view)
-	var sel := _screen.selection
-	var holding := (
+	var index: int = _screen._hand_views.find(view)
+	var sel: CardMatchSelection = _screen.selection
+	var holding: bool = (
 		sel.is_hand(index) or (sel.is_targeting() and sel.slot < 0 and sel.hand_index == index)
 	)
 	if index < 0 or not holding:
@@ -104,7 +104,7 @@ func on_hand_drag_ended(view: CardView) -> void:
 
 ## 手札の札が相手の場・相手のHP帯へ落とされた。砂術だけが意味を持つ。
 func _drop_hand_on_foe(source: CardView, slot: int) -> bool:
-	var index := _screen._hand_views.find(source)
+	var index: int = _screen._hand_views.find(source)
 	if index < 0:
 		return false
 	if _screen._my_turn() and _screen._spell_drag.active():
@@ -113,7 +113,7 @@ func _drop_hand_on_foe(source: CardView, slot: int) -> bool:
 
 
 func on_own_slot_pressed(view: CardView) -> void:
-	var slot := _screen._own_slots.find(view)
+	var slot: int = _screen._own_slots.find(view)
 	if slot < 0 or not _screen._my_turn():
 		return
 	if _screen.selection.is_flip_right():
@@ -158,7 +158,7 @@ func _handle_own_targeting(slot: int) -> void:
 
 
 func on_foe_slot_pressed(view: CardView) -> void:
-	var slot := _screen._foe_slots.find(view)
+	var slot: int = _screen._foe_slots.find(view)
 	if slot < 0 or not _screen._my_turn():
 		return
 	if _screen.selection.is_flip_right():
@@ -177,8 +177,8 @@ func on_foe_slot_pressed(view: CardView) -> void:
 ## 守護がいて狙えない駒を押した(GameDesign.md 9章): その駒が首を振り、守護の駒の輪が明滅する。
 ## 返事をしたら true。攻撃できない理由が守護でないとき(攻撃済みなど)は何も返さない。
 func _refuse_target(slot: int, target_slot: int) -> bool:
-	var state := _screen.state
-	var my_side := _screen.my_side
+	var state: MatchState = _screen.state
+	var my_side: int = _screen.my_side
 	var attacker: CardInstance = state.board[my_side][slot]
 	if (
 		attacker == null
@@ -201,7 +201,7 @@ func _refuse_target(slot: int, target_slot: int) -> bool:
 ## 狙える相手が光り、相打ちの予測が出た状態で運べる。**駒の中心から指先へ矢印を引く**
 ## (同章「対局画面の手触り」)。
 func on_own_slot_drag_started(view: CardView) -> void:
-	var slot := _screen._own_slots.find(view)
+	var slot: int = _screen._own_slots.find(view)
 	if slot < 0 or not _screen._my_turn() or _screen.state.board[_screen.my_side][slot] == null:
 		return
 	if not _screen._tutorial.gate_board_select(slot):
@@ -230,7 +230,7 @@ func tick_attack_drag() -> void:
 ## 指の下にある、狙える相手。相手の駒は光っている(`selected`)ものだけ、HP帯は狙えるときだけ。
 func _attack_target_under(point: Vector2) -> int:
 	for slot in MatchState.BOARD_SIZE:
-		var view := _screen.view_at(MatchState.other_side(_screen.my_side), slot)
+		var view: CardView = _screen.view_at(MatchState.other_side(_screen.my_side), slot)
 		if view.visible and view.selected and view.card != null and _holds(view, point):
 			return slot
 	if _screen.foe_bar.targetable and _holds(_screen.foe_bar, point):
@@ -250,7 +250,7 @@ func _aim_at(target: int) -> void:
 	_screen._targets.on_left()
 	_screen._pointer.set_hover_target(target)
 	if target >= 0:
-		var view := _screen.view_at(MatchState.other_side(_screen.my_side), target)
+		var view: CardView = _screen.view_at(MatchState.other_side(_screen.my_side), target)
 		_screen._targets.on_hovered(view)
 		_screen.drag_arrow.set_aim(true, CardFlipBeam.unit_center(view))
 	else:
@@ -332,9 +332,9 @@ func _play_selected(slot: int, drop_at := Vector2.INF) -> void:
 	# 出す前に手札の位置を控える(GameDesign.md 9章「対局画面の手触り」)。出た瞬間には
 	# もう手札から消えているため、支払いのピップが吸い込まれる先と駒が滑り出す位置を
 	# いまのうちに渡しておく。
-	var hand_index := _screen.selection.hand_index
+	var hand_index: int = _screen.selection.hand_index
 	if hand_index >= 0 and hand_index < _screen._hand_views.size():
-		var view := _screen._hand_views[hand_index]
+		var view: CardView = _screen._hand_views[hand_index]
 		var center := view.get_global_transform() * (view.size * 0.5)
 		_screen.effects.queue_spend_origin(_screen.my_side, center)
 		var origin := center if drop_at == Vector2.INF else drop_at

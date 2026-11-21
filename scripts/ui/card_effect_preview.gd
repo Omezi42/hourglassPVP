@@ -45,10 +45,6 @@ func _ready() -> void:
 	_viewport.size_2d_override_stretch = true
 	_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	add_child(_viewport)
-	_screen = (load(MATCH_SCREEN_SCRIPT) as GDScript).new()
-	_screen.set("silent", true)
-	_screen.size = _layout().screen_size
-	_viewport.add_child(_screen)
 	_view = TextureRect.new()
 	_view.texture = _viewport.get_texture()
 	_view.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -86,13 +82,25 @@ func _crop() -> Rect2:
 	return rect.grow(CROP_MARGIN).intersection(Rect2(Vector2.ZERO, layout.screen_size))
 
 
+## 対局画面は初めて見えている間に実演するときに作る。図鑑・詳細パネルを組み立てた時点で作ると、
+## `Main.warm_up()` が分けて読む前に対局画面まわりのコンパイルが1コマに集まる(Architecture.md 4.0.6節)。
+func _ensure_screen() -> void:
+	if _screen != null:
+		return
+	_screen = (load(MATCH_SCREEN_SCRIPT) as GDScript).new()
+	_screen.set("silent", true)
+	_screen.size = _layout().screen_size
+	_viewport.add_child(_screen)
+	_fit()
+
+
 ## `CardMatchLayout`。
 func _layout() -> Variant:
 	return _screen.get("layout")
 
 
 func _fit() -> void:
-	if _viewport == null:
+	if _screen == null:
 		return
 	var crop := _crop()
 	_view.size = size
@@ -120,6 +128,7 @@ func _run(generation: int) -> void:
 		if not is_visible_in_tree():
 			await _wait(HOLD_SECONDS)
 			continue
+		_ensure_screen()
 		var kinds := CardEffectPlan.kinds(_card)
 		if _only_kind >= 0:
 			kinds = [_only_kind]

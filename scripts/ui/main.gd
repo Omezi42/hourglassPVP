@@ -10,10 +10,12 @@ enum Warm { COLD, WARMING, WARM }
 const SCREEN_FADE_DURATION := 0.18
 const TITLE_SCENE := "res://scenes/title_screen.tscn"
 const TITLE_NODE := "TitleScreen"
-## 対局画面とその部品(約40本)は互いを参照する輪で、読むと一度にまとめてコンパイルされる
-## (Web版で約0.6秒)。型を書くと起動の裏読み込みに入りタイトルの動きを止めるため、
-## パスで読んで初めて要るときに作る(Architecture.md 4.0.6節)。
+## 対局画面とその部品(約200本)は、型を書くと起動の裏読み込みに入りタイトルを待たせるため、
+## パスで読み、引き渡しの後に `warm_up()` が1コマに収まるぶんずつ読む(Architecture.md 4.0.6節)。
 const CARD_MATCH_SCREEN_SCRIPT := "res://scripts/ui/card_match_screen.gd"
+const LOAD_ORDER := preload("res://scripts/boot/script_load_order.gd")
+## 対局画面まわりを読むのに1コマで使う時間。超えたら次のコマへ回す(`Boot` と同じ)。
+const WARM_COMPILE_BUDGET_MSEC := 12
 ## ホームをタイトルの裏で描かせておくコマ数(初回の描画でテクスチャ・シェーダーの準備が走るため)。
 const WARM_DRAW_FRAMES := 2
 const WARM_REDRAWS := 2
@@ -51,6 +53,8 @@ var waiting_cpu: WaitingCpuMatch
 ## ランクマッチを待機したまま他の画面にいる間の帯(同章)。
 var wait_banner: RankedWaitBanner
 
+## `warm_up()` が読んだ対局画面まわりのスクリプト(キャッシュから消えないよう持つ)。
+var _match_screen_scripts: Array[Resource] = []
 var _match_return_screen: Control
 ## デッキ選択画面で確定するまで待たせている対局の導線(ランダム/CPU)。
 var _pending_battle := Callable()
@@ -343,6 +347,7 @@ func warm_up() -> void:
 		await warmed
 		return
 	_warm = Warm.WARMING
+	await _compile_match_scripts()
 	_match_screen()
 	# 場の砂時計のガラスは初回のコンパイルが重い(Web版で1種あたり0.5秒超。スマホではさらに重い)。対局の最中に止めないよう、ここで全種を済ませる。
 	await HourglassLive.warm_glass()
@@ -361,6 +366,22 @@ func warm_up() -> void:
 		await _draw_behind_title(screen)
 	_warm = Warm.WARM
 	warmed.emit()
+
+
+## 対局画面まわりのスクリプトを、参照される側から1コマ `WARM_COMPILE_BUDGET_MSEC` ずつ読む。
+## 部品は `CardMatchScreen` を型で持たないため、1本ずつ別のコマでコンパイルできる。
+func _compile_match_scripts() -> void:
+	var paths: Array[String] = LOAD_ORDER.MATCH_PATHS
+	# 読んだものを持っておく(誰も参照していないスクリプトは手放すとキャッシュから消える)。
+	var loaded: Array[Resource] = []
+	var next := 0
+	while next < paths.size():
+		var started := Time.get_ticks_msec()
+		while next < paths.size() and Time.get_ticks_msec() - started < WARM_COMPILE_BUDGET_MSEC:
+			loaded.append(load(paths[next]))
+			next += 1
+		await get_tree().process_frame
+	_match_screen_scripts = loaded
 
 
 ## 不透明なタイトルの裏で画面を `WARM_REDRAWS` 回描かせる(映らない)。

@@ -23,7 +23,7 @@ const CAPTION_GAP := 44.0
 ## 実況に出す種別。ダメージ(hp)はHPバーの演出が示すため重ねない。
 const NARRATED := ["play", "cast", "flip", "attack", "time_up"]
 
-var _screen: CardMatchScreen
+var _screen: Control
 var _font: Font
 var _banner_text := ""
 var _banner_left := 0.0
@@ -194,7 +194,7 @@ func _draw_plate(rect: Rect2, alpha: float) -> void:
 ## 対局ログを購読して、**相手の手だけ**を同じ文言で実況する(GameDesign.md 9章)。
 ## 自分の手は自分で指しているので出さない。配線をここへ置くことで、
 ## 対局画面は生成して `watch()` を呼ぶだけで済む。
-func watch(screen: CardMatchScreen, log: CardMatchLog) -> void:
+func watch(screen: Control, log: CardMatchLog) -> void:
 	_screen = screen
 	if not log.recorded.is_connected(_on_recorded):
 		log.recorded.connect(_on_recorded)

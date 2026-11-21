@@ -10,7 +10,7 @@ extends RefCounted
 
 
 ## 情報帯。位置と大きさは `CardMatchArrange` が置く。
-static func make_bar(screen: CardMatchScreen, opponent: bool) -> PlayerInfoBar:
+static func make_bar(screen: Control, opponent: bool) -> PlayerInfoBar:
 	var bar := PlayerInfoBar.new()
 	bar.is_opponent = opponent
 	if opponent:
@@ -26,10 +26,8 @@ static func make_bar(screen: CardMatchScreen, opponent: bool) -> PlayerInfoBar:
 
 ## CPU戦の設定「相手の手札を見せる」(GameDesign.md 13章)。手札の山を押したら墓地と同じ一覧で開く。
 ## 帯(`player_info_bar.gd`)は行数の上限に近いため、分岐をそちらへ足さずにここで受ける。
-static func _on_foe_bar_input(
-	event: InputEvent, screen: CardMatchScreen, bar: PlayerInfoBar
-) -> void:
-	var settings := screen._cpu_settings
+static func _on_foe_bar_input(event: InputEvent, screen: Control, bar: PlayerInfoBar) -> void:
+	var settings: CpuMatchSettings = screen._cpu_settings
 	if settings == null or not settings.reveal_hand or screen.state == null:
 		return
 	var button := event as InputEventMouseButton
@@ -42,7 +40,7 @@ static func _on_foe_bar_input(
 
 
 ## 盤面の6枠。位置と縮尺は `CardMatchArrange` が置く。
-static func make_row(screen: CardMatchScreen, opponent: bool) -> Array[CardView]:
+static func make_row(screen: Control, opponent: bool) -> Array[CardView]:
 	var views: Array[CardView] = []
 	for i in MatchState.BOARD_SIZE:
 		var view := CardView.new()
@@ -70,10 +68,7 @@ static func make_row(screen: CardMatchScreen, opponent: bool) -> Array[CardView]
 ## groupを省略すると従来どおり凹んだパネル(wide_text)。ターン終了のように
 ## 「対局中もっとも頻繁に押す主要な操作」は塗りつぶした真鍮(primary_action)を渡す。
 static func add_button(
-	screen: CardMatchScreen,
-	label: String,
-	button_size: Vector2,
-	group: String = CodedButton.WIDE_GROUP
+	screen: Control, label: String, button_size: Vector2, group: String = CodedButton.WIDE_GROUP
 ) -> Button:
 	var button := CodedButton.make_in_group(label, button_size, group)
 	screen.add_child(button)
@@ -82,7 +77,7 @@ static func add_button(
 
 ## 行動の列(GameDesign.md 9章「対局画面の再構築」)の丸いボタン。
 static func add_round_button(
-	screen: CardMatchScreen, label: String, diameter: float, filled: bool
+	screen: Control, label: String, diameter: float, filled: bool
 ) -> RoundActionButton:
 	var button := RoundActionButton.new(label, diameter, filled)
 	screen.add_child(button)
@@ -91,7 +86,7 @@ static func add_round_button(
 
 ## 行動の丸ボタン(GameDesign.md 9章)。位置は `CardMatchArrange` が置く。
 ## 反転権は `CardMatchFlipRight`、エモートは `CardMatchEmote`、時計は `make_clock_dial()` が作る。
-static func action_column(screen: CardMatchScreen) -> void:
+static func action_column(screen: Control) -> void:
 	screen._coin_button = add_round_button(screen, "コイン", ActionColumnLayout.COIN_DIAMETER, false)
 	screen._coin_button.pressed.connect(screen._on_coin_pressed)
 	screen._end_turn_button = add_round_button(
@@ -131,7 +126,7 @@ static func center_on(control: Control, center: Vector2) -> void:
 
 
 ## 行動の列の持ち時間の時計(GameDesign.md 9章)。
-static func make_clock_dial(screen: CardMatchScreen) -> TurnClockDial:
+static func make_clock_dial(screen: Control) -> TurnClockDial:
 	var dial := TurnClockDial.new()
 	screen.add_child(dial)
 	return dial
@@ -140,7 +135,7 @@ static func make_clock_dial(screen: CardMatchScreen) -> TurnClockDial:
 ## 盤面へ重ねるもの。**足す順がそのまま重なる順**になる(後の子ほど手前)。
 ## 光の筋は駒より手前・ログより背面、ログは結果パネルより手前(GameDesign.md 9章)。
 ## 終局後は結果パネルが盤面全体を塞ぐため、その上からログを開けないと読み返せない。
-static func overlays(screen: CardMatchScreen) -> void:
+static func overlays(screen: Control) -> void:
 	screen._flip_beam = CardFlipBeam.new()
 	screen.add_child(screen._flip_beam)
 	# 攻撃ドラッグの矢印も駒より手前(GameDesign.md 9章「対局画面の手触り」)。
@@ -200,7 +195,7 @@ static func overlays(screen: CardMatchScreen) -> void:
 
 ## 誘導対局を始める(GameDesign.md 18章)。台本(`TutorialScriptData`、Architecture.md
 ## 4.1.5節)の山札を切らずに使い、プレイヤーが先手、CPUの手も台本どおりに指す。
-static func start_tutorial(screen: CardMatchScreen) -> void:
+static func start_tutorial(screen: Control) -> void:
 	var script: TutorialScriptData = load(TutorialScriptData.RESOURCE_PATH)
 	screen.start_cpu_match(script.deck_a(), script.deck_b(), -1, true, script)
 	# 相手(CPU)の開始HPだけ台本の値へ差し替える(GameDesign.md 18章「相手のHPは4から」)。
@@ -211,6 +206,6 @@ static func start_tutorial(screen: CardMatchScreen) -> void:
 
 ## `start_cpu_match()` が誘導対局用に一度だけ立てたフラグを対局へ渡し、すぐ戻す
 ## (GameDesign.md 18章)。`card_match_screen.gd` が1000行の上限に達しているための切り出し。
-static func apply_keep_deck_order(screen: CardMatchScreen, state: MatchState) -> void:
+static func apply_keep_deck_order(screen: Control, state: MatchState) -> void:
 	state.keep_deck_order = screen._keep_deck_order
 	screen._keep_deck_order = false

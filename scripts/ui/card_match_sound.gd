@@ -11,7 +11,7 @@ extends RefCounted
 ## 持ち越すのと同じ理由)。解決と同時に鳴らすと、駒がまだ渡っている最中に
 ## 衝突音だけが先に鳴り、因果が逆に聞こえる。
 
-var _screen: CardMatchScreen
+var _screen: Control
 ## 攻撃の演出中に預かった音。当たった瞬間にまとめて鳴らす。
 var _held: Array[SoundBank.Sfx] = []
 ## 直前のHP。`hp_changed` は新しい値しか渡さないため、減ったかどうかをここで見る。
@@ -21,7 +21,7 @@ var _state: MatchState
 var _poisoned: Dictionary = {}
 
 
-func _init(screen: CardMatchScreen) -> void:
+func _init(screen: Control) -> void:
 	_screen = screen
 
 

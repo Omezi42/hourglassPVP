@@ -11,11 +11,11 @@ const OPPONENT_TIMEOUT_GRACE := 20.0
 
 var clock: MatchClock = null
 
-var _screen: CardMatchScreen
+var _screen: Control
 var _opponent_wait := 0.0
 
 
-func _init(screen: CardMatchScreen) -> void:
+func _init(screen: Control) -> void:
 	_screen = screen
 
 
@@ -48,7 +48,7 @@ func overwrite_foe(seconds: float) -> void:
 
 
 func tick(delta: float) -> void:
-	var state := _screen.state
+	var state: MatchState = _screen.state
 	if clock == null or state == null or state.is_match_over():
 		return
 	clock.tick(delta)
@@ -58,7 +58,7 @@ func tick(delta: float) -> void:
 
 ## 手番の始まりに与える持ち時間。**時間切れを重ねても短くならない**(GameDesign.md 5章)。
 func start_turn() -> void:
-	var state := _screen.state
+	var state: MatchState = _screen.state
 	if clock == null or state == null or state.is_match_over():
 		return
 	clock.start_turn(state.current_turn)
@@ -74,14 +74,14 @@ func turn_seconds() -> float:
 func refresh_bars() -> void:
 	if clock == null:
 		return
-	var state := _screen.state
-	var is_my_turn := state != null and state.current_turn == _screen.my_side
+	var state: MatchState = _screen.state
+	var is_my_turn: bool = state != null and state.current_turn == _screen.my_side
 	var own_rem := clock.get_remaining(_screen.my_side)
 	var active_side: int = state.current_turn if state != null else _screen.my_side
-	var dial := _screen._clock_dial
+	var dial: TurnClockDial = _screen._clock_dial
 	if dial != null:
 		dial.set_time(clock.get_remaining(active_side), turn_seconds(), is_my_turn)
-	var alert := _screen.alert
+	var alert: CardMatchAlert = _screen.alert
 	if alert != null:
 		alert.remaining_seconds = own_rem
 		alert.is_my_turn = is_my_turn

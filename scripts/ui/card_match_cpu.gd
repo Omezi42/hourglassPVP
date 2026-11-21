@@ -5,10 +5,13 @@ extends RefCounted
 ## 切り出した他の進行役と同じく、画面の私設メンバ(`_cpu` / `_cpu_timer` /
 ## `_cpu_followup`)を直に触る。
 
-var _screen: CardMatchScreen
+const CPU_THINK_SECONDS := 0.5
+
+## 対局画面(`CardMatchScreen`)。型は `Control` に留める(Architecture.md 4.0.6節)。
+var _screen: Control
 
 
-func _init(screen: CardMatchScreen) -> void:
+func _init(screen: Control) -> void:
 	_screen = screen
 
 
@@ -96,9 +99,7 @@ func begin_mulligan() -> void:
 func schedule(delay_scale := 1.0) -> void:
 	if _screen._cpu_settings != null:
 		delay_scale *= _screen._cpu_settings.speed_scale()
-	_screen._cpu_timer.start(
-		_screen._tutorial.cpu_delay(CardMatchScreen.CPU_THINK_SECONDS * delay_scale)
-	)
+	_screen._cpu_timer.start(_screen._tutorial.cpu_delay(CPU_THINK_SECONDS * delay_scale))
 
 
 ## 手番が回ってきた。CPUの番なら考え始める。`opening` は対局開始の幕を出した直後で、
@@ -127,10 +128,10 @@ func take_action() -> void:
 	var s := _screen
 	if s._cpu == null or s.state.is_match_over():
 		return
-	var side := s.state.current_turn
+	var side: int = s.state.current_turn
 	if side == s.my_side:
 		return
-	var action := s._cpu.choose_action(s.state, side)
+	var action: Dictionary = s._cpu.choose_action(s.state, side)
 	if action.is_empty():
 		return
 	s._strike.capture(action)
@@ -144,7 +145,7 @@ func take_action() -> void:
 func rematch() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
-	var settings := _screen._cpu_settings
+	var settings: CpuMatchSettings = _screen._cpu_settings
 	var deck: Dictionary = (
 		settings.pick_foe_deck(rng) if settings != null else CardCpuDecks.pick(rng)
 	)

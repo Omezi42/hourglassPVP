@@ -5,8 +5,8 @@ extends RefCounted
 ## `CardMatchBuild` と同じく対局画面の private メンバを直に触る(1000行の上限のための切り出し)。
 
 
-static func apply(screen: CardMatchScreen) -> void:
-	var layout := screen.layout
+static func apply(screen: Control) -> void:
+	var layout: CardMatchLayout = screen.layout
 	_place_backdrop(screen, layout)
 	_place_bars(screen, layout)
 	_place_rows(screen, layout)
@@ -37,14 +37,14 @@ static func apply(screen: CardMatchScreen) -> void:
 
 ## 直前の手の列と遠征の札。縦の遠征では列の3件目の場所を札に譲る(GameDesign.md 9章「縦の対局画面」)。
 ## 遠征の対局を始めた・終えたときにも呼ぶ。
-static func place_history(screen: CardMatchScreen, layout: CardMatchLayout) -> void:
-	var solo := screen._solo != null and screen._solo.active()
+static func place_history(screen: Control, layout: CardMatchLayout) -> void:
+	var solo: bool = screen._solo != null and screen._solo.active()
 	screen._history.set_layout(layout, 1 if solo and layout.portrait else 0)
 	if screen._solo != null:
 		screen._solo.apply_layout(layout)
 
 
-static func _place_backdrop(screen: CardMatchScreen, layout: CardMatchLayout) -> void:
+static func _place_backdrop(screen: Control, layout: CardMatchLayout) -> void:
 	for control: Control in [screen._table, screen._table_dust]:
 		control.position = layout.table_rect.position
 		control.size = layout.table_rect.size
@@ -57,7 +57,7 @@ static func _place_backdrop(screen: CardMatchScreen, layout: CardMatchLayout) ->
 	screen._backdrop.redraw_layout(layout)
 
 
-static func _place_bars(screen: CardMatchScreen, layout: CardMatchLayout) -> void:
+static func _place_bars(screen: Control, layout: CardMatchLayout) -> void:
 	for bar: PlayerInfoBar in [screen._foe_bar, screen._own_bar]:
 		bar.size = layout.bar_size
 		bar.scale = Vector2.ONE * layout.bar_scale
@@ -66,14 +66,14 @@ static func _place_bars(screen: CardMatchScreen, layout: CardMatchLayout) -> voi
 	screen._own_bar.position = layout.own_bar_position
 
 
-static func _place_rows(screen: CardMatchScreen, layout: CardMatchLayout) -> void:
+static func _place_rows(screen: Control, layout: CardMatchLayout) -> void:
 	for i in MatchState.BOARD_SIZE:
-		var foe := screen._foe_slots[i]
+		var foe: CardView = screen._foe_slots[i]
 		foe.position = layout.slot_position(true, i)
 		foe.base_scale = layout.piece_scale * CardMatchLayout.FOE_ROW_SCALE
 		foe.stat_scale = layout.stat_scale
 		foe.label_scale = layout.label_scale
-		var own := screen._own_slots[i]
+		var own: CardView = screen._own_slots[i]
 		own.position = layout.slot_position(false, i)
 		own.base_scale = layout.piece_scale
 		own.stat_scale = layout.stat_scale
@@ -82,7 +82,7 @@ static func _place_rows(screen: CardMatchScreen, layout: CardMatchLayout) -> voi
 		view.base_scale = layout.hand_scale
 
 
-static func _place_buttons(screen: CardMatchScreen, layout: CardMatchLayout) -> void:
+static func _place_buttons(screen: Control, layout: CardMatchLayout) -> void:
 	var button_scale := Vector2.ONE * layout.button_scale
 	screen._coin_button.scale = button_scale
 	screen._flip_button.scale = Vector2.ONE * layout.text_scale

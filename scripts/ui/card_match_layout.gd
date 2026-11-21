@@ -246,7 +246,7 @@ static func _make_portrait() -> CardMatchLayout:
 	l.text_scale = PORTRAIT_TEXT_SCALE
 	l.hand_select_lift = PORTRAIT_HAND_SELECT_LIFT
 	l.tutorial_scale = PORTRAIT_TUTORIAL_SCALE
-	var menu_left := l.menu_center.x - menu_radius * PORTRAIT_BUTTON_SCALE
+	var menu_left := l.menu_center.x - menu_radius
 	var band_right := menu_left - PORTRAIT_TUTORIAL_MENU_GAP
 	l.tutorial_band_position = Vector2(PORTRAIT_TUTORIAL_BAND_LEFT, PORTRAIT_TUTORIAL_BAND_TOP)
 	l.tutorial_band_size = Vector2(

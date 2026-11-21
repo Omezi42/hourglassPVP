@@ -9,12 +9,12 @@ extends RefCounted
 
 const ICON := preload("res://assets/ui/icons/flip_right.png")
 
-var _screen: CardMatchScreen
+var _screen: Control
 var _button: RoundActionButton
 var _gauge: FlipRightGauge
 
 
-func _init(screen: CardMatchScreen) -> void:
+func _init(screen: Control) -> void:
 	_screen = screen
 	# 「戻る」ボタンと同じ位置に置く。**両者は同時に見えない**——戻るボタンは
 	# 再生(_interactive == false)だけに出て、反転権は対局中(_interactive == true)

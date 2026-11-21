@@ -9,7 +9,7 @@ extends RefCounted
 
 signal finished
 
-var _screen: CardMatchScreen
+var _screen: Control
 var _panel: CardChallengeResult
 var _plaque: SoloMatchPlaque
 var _run: SoloRun = null
@@ -18,7 +18,7 @@ var _rules: SoloBattleRules = null
 var _settled := false
 
 
-func _init(screen: CardMatchScreen) -> void:
+func _init(screen: Control) -> void:
 	_screen = screen
 	_panel = CardChallengeResult.new()
 	_panel.quit_pressed.connect(func() -> void: finished.emit())
@@ -32,7 +32,7 @@ func _init(screen: CardMatchScreen) -> void:
 
 ## 結果パネルを対局画面へ置く。**ログより奥に差し込む**——結果パネルの「ログ」で開いたログが
 ## パネルの下へ隠れないように(閉じると結果パネルへ戻る。GameDesign.md 27章)。
-static func add_result_panel(screen: CardMatchScreen, panel: CardChallengeResult) -> void:
+static func add_result_panel(screen: Control, panel: CardChallengeResult) -> void:
 	screen.add_child(panel)
 	screen.move_child(panel, screen._log.get_index())
 

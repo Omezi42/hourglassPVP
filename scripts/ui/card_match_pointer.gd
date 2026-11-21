@@ -8,14 +8,14 @@ extends RefCounted
 ## 押したまま指を動かさずにこれだけ経ったら詳細を出す(GameDesign.md 9章「タッチでの操作」)。
 const LONG_PRESS_SECONDS := 0.45
 
-var _screen: CardMatchScreen
+var _screen: Control
 var _long_timer: Timer
 var _press_view: CardView
 var _press_at := Vector2.ZERO
 var _long_pressed := false
 
 
-func _init(screen: CardMatchScreen) -> void:
+func _init(screen: Control) -> void:
 	_screen = screen
 	_long_timer = Timer.new()
 	_long_timer.one_shot = true
@@ -86,7 +86,7 @@ func on_view_hovered(view: CardView) -> void:
 	# (GameDesign.md 9章「対局画面の手触り」)。
 	if view.mode == CardView.Mode.HAND and view.card != null:
 		s._own_bar.highlight_cost(s.state.play_cost(s.my_side, view.card))
-	var foe_slot := s._foe_slots.find(view)
+	var foe_slot: int = s._foe_slots.find(view)
 	if foe_slot >= 0:
 		set_hover_target(foe_slot)
 
@@ -146,7 +146,7 @@ func _on_space(key: InputEventKey) -> void:
 	s.get_viewport().set_input_as_handled()
 	if key.echo or _overlay_open():
 		return
-	var button := s._end_turn_button
+	var button: Button = s._end_turn_button
 	if button.visible and not button.disabled and not s._spell_drag.active():
 		s._on_end_turn_pressed()
 

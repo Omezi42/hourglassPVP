@@ -4,14 +4,14 @@ extends RefCounted
 ## いま話題にしている数字(色違いの光)を、台本の1手から対局画面の座標へ写す。
 ## いつ光らせるか(説明を読んでいる間か)は `CardMatchTutorial` が決め、ここは場所だけを答える。
 
-var _screen: CardMatchScreen
+var _screen: Control
 var _state: MatchState
 var _my_side: int
 ## 台本の参照名 → 盤面の枠(`CardMatchTutorial._slot_of()`)。
 var _slot_of: Callable
 
 
-func _init(screen: CardMatchScreen, state: MatchState, my_side: int, slot_of: Callable) -> void:
+func _init(screen: Control, state: MatchState, my_side: int, slot_of: Callable) -> void:
 	_screen = screen
 	_state = state
 	_my_side = my_side

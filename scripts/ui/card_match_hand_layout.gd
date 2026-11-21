@@ -36,7 +36,7 @@ const DRAW_START_SCALE := 0.35
 const DRAW_STAGGER := 0.09
 const DRAW_START_TILT := -0.35
 
-var _screen: CardMatchScreen
+var _screen: Control
 ## 直近の `apply()` が決めた、避け・沈みを含まない素の位置。
 var _base_positions: Dictionary = {}
 ## 直前の `apply()` でその枠が表示されていたか(index基準)。
@@ -60,7 +60,7 @@ var _held_view: CardView
 var _held_count := -1
 
 
-func _init(screen: CardMatchScreen) -> void:
+func _init(screen: Control) -> void:
 	_screen = screen
 	_sheen.park_in(screen)
 
@@ -68,7 +68,7 @@ func _init(screen: CardMatchScreen) -> void:
 ## 手札の位置・沈み・暗さをまとめて更新する。避けている札があれば、その分だけ
 ## 素の位置からずらして置く(でなければ `apply()` のたびに避けが解けてしまう)。
 func apply(hand: Array, my_turn: bool) -> void:
-	var views := _screen._hand_views
+	var views: Array[CardView] = _screen._hand_views
 	if _was_visible.size() != views.size():
 		_was_visible.resize(views.size())
 		_was_visible.fill(false)
@@ -76,7 +76,7 @@ func apply(hand: Array, my_turn: bool) -> void:
 	if _hovered_index >= count:
 		_hovered_index = -1
 		_avoid_offsets.clear()
-	var layout := _screen.layout
+	var layout: CardMatchLayout = _screen.layout
 	var area := layout.hand_area
 	# 札は下端の中央を軸に縮尺を掛けるため、見た目の幅と上端から置く位置を逆算する。
 	var card := CardView.HAND_SIZE_PX
@@ -110,7 +110,7 @@ func apply(hand: Array, my_turn: bool) -> void:
 			view.rotation = deg_to_rad(from_middle * FAN_DEGREES)
 		# 縦では選んだ札を上へ飛び出させ、重なった扇の最前面へ出す(GameDesign.md 9章)。
 		if layout.hand_select_lift > 0.0:
-			var picked := _screen.selection.is_hand(i)
+			var picked: bool = _screen.selection.is_hand(i)
 			view.z_index = 1 if picked else 0
 			if picked:
 				base.y -= layout.hand_select_lift
@@ -178,7 +178,7 @@ func _fly_in(view: CardView, target: Vector2, order: int) -> void:
 
 ## カーソルを乗せた札の両隣を外へ避ける(GameDesign.md 9章)。
 func on_hovered(view: CardView) -> void:
-	var views := _screen._hand_views
+	var views: Array[CardView] = _screen._hand_views
 	var index := views.find(view)
 	if index < 0 or index == _hovered_index:
 		return

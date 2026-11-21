@@ -17,7 +17,7 @@ const QUICK_AFTER := 1
 ## 本体を狙うとき、HPバーの中心からどれだけ盤面側へ寄せるか。
 const FACE_EDGE := 26.0
 
-var _screen: CardMatchScreen
+var _screen: Control
 ## 演出を組む対象。空なら攻撃ではない手だった。
 var _armed := false
 var _attacker: CardView
@@ -39,7 +39,7 @@ var _defender: CardView
 var _defender_dir := 1.0
 
 
-func _init(screen: CardMatchScreen) -> void:
+func _init(screen: Control) -> void:
 	_screen = screen
 
 
@@ -132,7 +132,7 @@ func _pierce_center(side: int, slot: int, target: int) -> Vector2:
 ## 駒は112pxあってバーは24pxしかないため、中心を的にすると当たった瞬間に
 ## 残りHPの数字が駒で隠れる。数字が変わるのはまさにその瞬間なので、読めなくなる。
 func _face_target(side: int) -> Vector2:
-	var at := _screen._geometry.hp_bar_center(side)
+	var at: Vector2 = _screen._geometry.hp_bar_center(side)
 	var toward_board: float = FACE_EDGE if at.y < _screen.size.y * 0.5 else -FACE_EDGE
 	return at + Vector2(0.0, toward_board)
 

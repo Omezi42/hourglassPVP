@@ -44,9 +44,9 @@ func _ready() -> void:
 ## 筋の出どころ(`actor_side`)は駒の持ち主(`side`)と一致する。
 ## **反転権(GameDesign.md 2章)は敵味方どちらの駒も対象に取れる**ため、
 ## 手を出した側(`actor_side`)と駒の持ち主(`side`)を別々に受け取れるようにしている。
-func play_flip(screen: CardMatchScreen, side: int, slot: int, actor_side: int = side) -> void:
-	var view := screen.view_at(side, slot)
-	var bar := screen.bar_for(actor_side)
+func play_flip(screen: Control, side: int, slot: int, actor_side: int = side) -> void:
+	var view: CardView = screen.view_at(side, slot)
+	var bar: PlayerInfoBar = screen.bar_for(actor_side)
 	var from := Vector2(screen.size.x * 0.5, bar.position.y + bar.size.y * bar.scale.y * 0.5)
 	# 反転だけは砂粒と光条を伴う(GameDesign.md 9章)。設置効果と同じ筋を使う以上、
 	# 色を変えるだけでは「ゲームの中心となる行動」に見えないため。

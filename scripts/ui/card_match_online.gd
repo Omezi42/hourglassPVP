@@ -5,10 +5,10 @@ extends RefCounted
 ## `card_match_screen.gd` が1000行の上限に達したため分けている。
 ## 画面の private メンバを読むのは、既存の切り出しクラスと同じ流儀(Architecture.md 4.0節)。
 
-var _screen: CardMatchScreen
+var _screen: Control
 
 
-func _init(screen: CardMatchScreen) -> void:
+func _init(screen: Control) -> void:
 	_screen = screen
 
 

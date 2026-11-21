@@ -8,7 +8,7 @@ extends RefCounted
 ## 切り出した他の進行役と同じく、画面の私設メンバを直に触る。
 
 
-static func run(screen: CardMatchScreen) -> void:
+static func run(screen: Control) -> void:
 	# **リプレイは既定のマット**(棋譜はマットを記録しない。GameDesign.md 9章)。
 	# 対局へ入る側がこの後で敷き替える。
 	screen._set_playmats(PlaymatLibrary.DEFAULT_ID, PlaymatLibrary.DEFAULT_ID)

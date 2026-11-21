@@ -26,7 +26,7 @@ const STRIPE_INSET := 4.0
 const APPEAR_SHIFT := 24.0
 const APPEAR_DURATION := 0.22
 
-var _screen: CardMatchScreen
+var _screen: Control
 var _font: Font
 var _items: Array[Dictionary] = []
 var _state: MatchState
@@ -39,7 +39,7 @@ var _horizontal := false
 var _tiles := MAX_TILES
 
 
-func _init(screen: CardMatchScreen) -> void:
+func _init(screen: Control) -> void:
 	_screen = screen
 	# 板の上だけでカーソルを受ける(`_has_point`)。板の無い所で奥の卓を塞がないため。
 	mouse_filter = Control.MOUSE_FILTER_STOP

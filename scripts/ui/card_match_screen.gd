@@ -9,8 +9,6 @@ extends Control
 signal back_pressed
 signal matchmaking_pressed
 
-const CPU_THINK_SECONDS := 0.5
-
 var state: MatchState
 ## 自分の側。CPU戦・オンラインでは固定する。
 var my_side: int = MatchState.Side.A

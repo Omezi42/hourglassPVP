@@ -20,7 +20,7 @@ var button: RoundActionButton:
 	get:
 		return _button
 
-var _screen: CardMatchScreen
+var _screen: Control
 var _button: RoundActionButton
 var _popup: EmotePopupPanel
 var _mute_btn: Button
@@ -32,7 +32,7 @@ var _popup_beside := false
 var _cooldown := 0.0
 
 
-func _init(screen: CardMatchScreen) -> void:
+func _init(screen: Control) -> void:
 	_screen = screen
 	_setup_ui()
 
@@ -235,7 +235,7 @@ func _on_emote_selected(emote_id: String) -> void:
 
 func handle_emote(action: Dictionary) -> void:
 	var side: int = int(action.get("side", -1))
-	var is_foe := side != _screen.my_side
+	var is_foe: bool = side != _screen.my_side
 	if is_foe and mute_opponent:
 		return
 

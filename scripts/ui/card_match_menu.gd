@@ -11,7 +11,7 @@ const PANEL_GAP := 8.0
 const ITEM_SIZE := Vector2(260, 72)
 const ITEM_FONT_SIZE := 28
 
-var _screen: CardMatchScreen
+var _screen: Control
 var _button: RoundActionButton
 ## パネルの外を押したら閉じるための透明な幕。
 var _blocker: Control
@@ -30,7 +30,7 @@ class MenuPanel:
 		UiKit.glass(get_canvas_item(), Rect2(Vector2.ZERO, size))
 
 
-func _init(screen: CardMatchScreen) -> void:
+func _init(screen: Control) -> void:
 	_screen = screen
 	_button = CardMatchBuild.add_round_button(
 		screen, "メニュー", ActionColumnLayout.SMALL_DIAMETER, false
@@ -82,7 +82,7 @@ func apply(layout: CardMatchLayout) -> void:
 
 ## 縦の対局中だけ出す(マリガンと決着の後は、上に重なる幕やパネルが自分の操作を持つ)。
 func refresh() -> void:
-	var state := _screen.state
+	var state: MatchState = _screen.state
 	var live := state != null and not state.is_match_over() and not state.mulligan_pending
 	_button.visible = _portrait and _screen.interactive and live
 	if not _button.visible:
@@ -100,7 +100,7 @@ func toggle() -> void:
 
 ## 出す項目と押せるかを元のボタンから写し、出す項目だけを詰めて並べる。
 func _sync_items() -> void:
-	var emote := _screen._emote.button
+	var emote: RoundActionButton = _screen._emote.button
 	_log_item.visible = _screen._log_button.visible
 	_emote_item.visible = emote.visible
 	_emote_item.disabled = emote.disabled
