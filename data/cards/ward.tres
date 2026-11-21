@@ -24,6 +24,7 @@ set_id = "solo_ward"
 keywords = Array[int]([0])
 effects = Array[Resource]([SubResource("Effect_ward_0")])
 rules_text = "設置:自分の他の砂時計1体の総量+1"
+flavor_text = "守りの札を一枚、隣の器に貼っておく。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

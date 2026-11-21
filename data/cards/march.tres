@@ -33,6 +33,7 @@ set_id = "chase_sand"
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_march_0"), SubResource("Effect_march_1")])
 rules_text = "設置:相手の砂時計が自分の他の砂時計より多ければ、モートを2体出す"
+flavor_text = "数で負けているときほど太鼓は大きく鳴らす。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

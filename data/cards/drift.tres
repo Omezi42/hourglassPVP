@@ -24,6 +24,7 @@ set_id = "grave_sand"
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_drift_0")])
 rules_text = "余砂:このカードを手札に戻す"
+flavor_text = "流れ着いた砂はまたどこかへ流れていく。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

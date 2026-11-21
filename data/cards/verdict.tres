@@ -26,6 +26,7 @@ set_id = "still_time"
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_verdict_0")])
 rules_text = "攻撃力が体力より多い相手の砂時計1体を破壊する"
+flavor_text = "老いた器から順に呼ばれていく。"
 cannot_attack = false
 is_token = false
 is_spell = true

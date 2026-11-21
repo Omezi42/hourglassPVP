@@ -33,6 +33,7 @@ set_id = "grave_sand"
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_burial_0"), SubResource("Effect_burial_1")])
 rules_text = "自分の砂時計1体を破壊し、カードを2枚引く"
+flavor_text = "眠れ。おまえの砂は無駄にしない。"
 cannot_attack = false
 is_token = false
 is_spell = true

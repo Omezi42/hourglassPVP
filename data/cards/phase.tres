@@ -14,6 +14,7 @@ set_id = "combo_five"
 keywords = Array[int]([])
 effects = Array[Resource]([])
 rules_text = "総量が5の間、戦闘で与えるダメージが2倍になる"
+flavor_text = "月が半分のときだけ光が強くなる。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

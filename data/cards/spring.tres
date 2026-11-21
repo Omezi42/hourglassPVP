@@ -24,6 +24,7 @@ set_id = "still_time"
 keywords = Array[int]([8])
 effects = Array[Resource]([SubResource("Effect_spring_0")])
 rules_text = "落砂:自分の他の砂時計1体の砂が1粒上へ戻る"
+flavor_text = "押されたぶんだけ押し返す。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

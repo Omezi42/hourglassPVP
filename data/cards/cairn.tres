@@ -24,6 +24,7 @@ set_id = "grave_sand"
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_cairn_0")])
 rules_text = "設置:自分の墓地の砂時計1体につき、この砂時計の総量+1"
+flavor_text = "通る者がひとつずつ石を積んでいった。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

@@ -22,6 +22,7 @@ set_id = "chase_sand"
 keywords = Array[int]([0])
 effects = Array[Resource]([SubResource("Effect_vault_0")])
 rules_text = "被弾:自分の他の砂時計1体の総量+1"
+flavor_text = "分厚い扉の奥に仲間の砂を預けておく。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

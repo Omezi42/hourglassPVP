@@ -24,6 +24,7 @@ set_id = "chase_sand"
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_bola_0")])
 rules_text = "設置:体力が2以下の相手の砂時計1体を破壊する"
+flavor_text = "絡みついた紐が小さな器の足を払う。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

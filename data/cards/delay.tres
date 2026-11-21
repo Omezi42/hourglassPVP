@@ -27,6 +27,7 @@ set_id = "echo_time"
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_delay_0")])
 rules_text = "落砂:自分の他の砂時計のうち、攻撃力が体力より多いランダムな1体を反転させる"
+flavor_text = "少し遅れて同じ音がもう一度届く。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

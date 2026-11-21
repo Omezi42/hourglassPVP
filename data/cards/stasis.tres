@@ -24,6 +24,7 @@ set_id = "still_time"
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_stasis_0")])
 rules_text = "相手の砂時計すべての砂が2粒上へ戻る"
+flavor_text = "空中で止まったままの砂塵。"
 cannot_attack = false
 is_token = false
 is_spell = true

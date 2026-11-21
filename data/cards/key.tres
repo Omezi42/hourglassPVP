@@ -37,6 +37,7 @@ set_id = "combo_five"
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_key_0"), SubResource("Effect_key_1")])
 rules_text = "設置:総量が5の自分の砂時計1体を反転させ、総量+3"
+flavor_text = "五つ目の刻みに合う鍵がひとつだけある。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

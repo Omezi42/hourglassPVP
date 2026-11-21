@@ -27,6 +27,7 @@ set_id = "chase_sand"
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_sling_0")])
 rules_text = "設置:相手プレイヤーか相手の砂時計1体に1ダメージ"
+flavor_text = "小石ひとつで足は止まる。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

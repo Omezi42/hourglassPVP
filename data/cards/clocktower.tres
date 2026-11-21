@@ -25,6 +25,7 @@ set_id = "still_time"
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_clocktower_0")])
 rules_text = "落砂:相手プレイヤーに、この砂時計の攻撃力ぶんのダメージ"
+flavor_text = "時計塔の針がひとつ進むと遠くで城壁が崩れる。"
 cannot_attack = true
 is_token = false
 emblem = ExtResource("emblem")

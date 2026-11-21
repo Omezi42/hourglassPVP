@@ -27,6 +27,7 @@ set_id = "echo_time"
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_resonance_0")])
 rules_text = "相手の砂時計が反転するたび、自分の他の砂時計のうち、攻撃力が体力より多いランダムな1体を反転させる"
+flavor_text = "隣で鳴った音にこちらの硝子が震えた。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

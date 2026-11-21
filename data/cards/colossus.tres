@@ -15,6 +15,7 @@ set_id = "sweep_sand"
 keywords = Array[int]([])
 effects = Array[Resource]([])
 rules_text = "相手の砂時計1体につき、このカードのコストが1下がる"
+flavor_text = "敵の数を数えながら巨人は目を覚ます。"
 cannot_attack = false
 is_token = false
 cost_down_per_enemy_unit = 1
