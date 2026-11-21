@@ -27,6 +27,7 @@ set_id = "echo_time"
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_repeat_0")])
 rules_text = "設置:このターンすでに反転した自分の砂時計すべてを、もう一度反転できるようにする"
+flavor_text = "同じ小節を飽きるまで繰り返す。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

@@ -29,6 +29,7 @@ set_id = "chase_sand"
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_pelt_0"), SubResource("Effect_pelt_1")])
 rules_text = "相手の砂時計1体に1ダメージ。カードを1枚引く"
+flavor_text = "目に入った砂はしばらく取れない。"
 cannot_attack = false
 is_token = false
 is_spell = true

@@ -221,6 +221,11 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // リプレイの共有(同32章)。共有IDは推測されてはならないため一覧も読ませず、Functionsだけが読み書きする。
+    match /replay_shares/{shareId} {
+      allow read, write: if false;
+    }
+
     // 上記以外は一切許可しない。
     match /{document=**} {
       allow read, write: if false;

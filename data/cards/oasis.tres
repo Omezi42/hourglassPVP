@@ -24,6 +24,7 @@ set_id = "still_time"
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_oasis_0")])
 rules_text = "落砂:自分のHPを1回復する"
+flavor_text = "砂の海のまんなかにひとつだけ湧く泉。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

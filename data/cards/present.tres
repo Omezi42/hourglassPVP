@@ -33,6 +33,7 @@ set_id = "gift_present"
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_present_0"), SubResource("Effect_present_1")])
 rules_text = "カードを1枚引く。相手の手札にプレゼントを1枚加える"
+flavor_text = "包みを開けたら相手にも同じ包みが届いていた。"
 cannot_attack = false
 is_token = false
 is_spell = true

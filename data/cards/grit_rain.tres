@@ -39,6 +39,7 @@ set_id = "sweep_sand"
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_grit_rain_0"), SubResource("Effect_grit_rain_1"), SubResource("Effect_grit_rain_2")])
 rules_text = "ランダムな相手の砂時計に1ダメージを3回"
+flavor_text = "屋根を叩く小石の音がやまない。"
 cannot_attack = false
 is_token = false
 is_spell = true

@@ -4,6 +4,8 @@
 set -e
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PROJECT="sunadokei-arena"
+# 攻略サイトのリプレイが読む過去の版の pck を足す(デプロイはサイト全体を置き換えるため毎回)
+python "$ROOT/tools/sync_pck_archive.py" "$ROOT/build/pages"
 # リポジトリ直下の functions/(Cloud Functions)を Pages Functions と誤認させないため、build/pages の中から実行する
 cd "$ROOT/build/pages"
 npx wrangler pages deploy . --project-name "$PROJECT" --branch main --commit-dirty=true

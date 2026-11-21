@@ -26,6 +26,7 @@ set_id = "combo_five"
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_crest_0")])
 rules_text = "設置:総量が5の自分の砂時計がいれば、相手の砂時計1体を破壊する"
+flavor_text = "五粒の砂を紋章に刻んだ家がある。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

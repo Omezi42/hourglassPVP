@@ -35,9 +35,11 @@ const {
 } = require("./discord_commands");
 const {handleLabAdmin} = require("./lab_admin");
 const {publishWikiStats} = require("./wiki_stats");
+const {publishWikiRanking} = require("./wiki_ranking");
 const {handleDeckShare} = require("./deck_share");
 const {handleDeckIntroComponent, handleCommentSubmit, isDeckIntroModal} = require("./discord_deck_intro");
 const {handleWikiDeckIntro} = require("./wiki_deck_intro");
+const {handleWikiReplayShare, handleReplayShare} = require("./replay_share");
 
 // Botトークン・公開鍵と同じ扱いで、リポジトリへは一切コミットしない。
 // `firebase functions:secrets:set DISCORD_WEBHOOK_URL` / `DISCORD_PUBLIC_KEY` で設定する。
@@ -137,13 +139,15 @@ exports.announceCardSpotlight = onSchedule(
 );
 
 /**
- * 攻略サイトの「みんなの統計」を毎日1回作り直す(GameDesign.md 32章 / Architecture.md 10.21節)。
+ * 攻略サイトの「みんなの統計」とランキングを毎日1回作り直す(GameDesign.md 32章 / Architecture.md 10.21節)。
  */
 exports.publishWikiStats = onSchedule(
   {schedule: "0 5 * * *", timeZone: "Asia/Tokyo"},
   async () => {
     const index = await publishWikiStats(admin.firestore());
     logger.info(`wiki stats published: ${index.games} games, ${index.builds.length} builds`);
+    const ranked = await publishWikiRanking(admin.firestore(), index.updated_at);
+    logger.info(`wiki ranking published: ${ranked} players`);
   }
 );
 
@@ -288,3 +292,17 @@ exports.wikiDeckIntro = onRequest(
     });
   }
 );
+
+/**
+ * 攻略サイトのリプレイの共有(GameDesign.md 32章 / Architecture.md 10.21節)。共有の状態を見る・発行する・取り消す。
+ */
+exports.wikiReplayShare = onRequest(async (req, res) => {
+  await handleWikiReplayShare(req, res, admin.firestore(), admin.auth());
+});
+
+/**
+ * 共有リンク `/r/{id}` の1局の中身と埋め込みの画像。攻略サイトの Pages Functions が中継する。
+ */
+exports.replayShare = onRequest({memory: "512MiB"}, async (req, res) => {
+  await handleReplayShare(req, res, admin.firestore());
+});

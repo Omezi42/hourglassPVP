@@ -24,6 +24,7 @@ set_id = "grave_sand"
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_moss_0")])
 rules_text = "自分の他の砂時計が破壊されるたび、この砂時計の総量+1"
+flavor_text = "崩れた器のそばほど苔はよく育つ。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

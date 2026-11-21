@@ -310,7 +310,16 @@ func start_replay(record: Dictionary) -> bool:
 	_cpu = null
 	_online = null
 	_interactive = false
-	my_side = MatchState.Side.A
+	# 自分の対局・共有した人の対局は、その人を手前に置く(GameDesign.md 32章)。
+	my_side = MatchState.Side.B if str(record.get("view", "a")) == "b" else MatchState.Side.A
+	_log.set_perspective(my_side)
+	var players: Dictionary = record.get("players", {})
+	for key: String in ["a", "b"]:
+		var bar := bar_for(MatchState.Side.A if key == "a" else MatchState.Side.B)
+		var player: Dictionary = players.get(key, {})
+		bar.display_name = str(player.get("name", ""))
+		bar.icon_id = str(player.get("icon", UserProfileLibrary.DEFAULT_ICON_ID))
+		bar.title_id = str(player.get("title", UserProfileLibrary.DEFAULT_TITLE_ID))
 	if _replay == null:
 		_replay = CardMatchReplay.new()
 		_replay.state_rebuilt.connect(_on_replay_state)
@@ -536,7 +545,8 @@ func _refresh_buttons() -> void:
 	# 誘導対局はスキップと役目が重なるため投了を出さない(GameDesign.md 18章)。
 	var is_tutorial := _tutorial != null and _tutorial.visible
 	_surrender_button.visible = _interactive and not over and not is_tutorial
-	_back_button.visible = not _interactive
+	# 攻略サイトから開いた再生には戻る先が無い(GameDesign.md 32章)。
+	_back_button.visible = not _interactive and not ReplayLaunch.requested()
 	_coin_button.visible = _interactive and state.coin_available.get(my_side, false)
 	_coin_button.disabled = not _my_turn()
 	var show_flip := (

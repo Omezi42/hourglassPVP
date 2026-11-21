@@ -27,6 +27,7 @@ set_id = "echo_time"
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_crescendo_0")])
 rules_text = "相手プレイヤーに2ダメージ。このターン自分の砂時計が反転するたび、このダメージ+1"
+flavor_text = "最後の一音は耳をふさいでも聞こえた。"
 cannot_attack = false
 is_token = false
 is_spell = true

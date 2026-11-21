@@ -24,6 +24,7 @@ set_id = "chase_sand"
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_relief_0")])
 rules_text = "設置:相手の砂時計1体につき、自分のHPを1回復する"
+flavor_text = "囲まれた砦に救いの荷車がたどり着いた。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

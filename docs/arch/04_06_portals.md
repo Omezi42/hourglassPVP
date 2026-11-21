@@ -14,7 +14,7 @@ itch.io と PLiCy には**起動部だけ**を置き、pck は Cloudflare Pages(
 | 出力 | 中身 | 行き先 |
 |---|---|---|
 | `build/web/index.pck` | ゲーム本体 | unityroom(従来どおり) |
-| `build/pages/` | `index-{build_id}.pck`・`latest.json`・`_headers` | `npx wrangler pages deploy`(毎ビルド) |
+| `build/pages/` | `index-{build_id}.pck`・`latest.json`・`builds.json`・`_headers`(+過去の版の pck) | `npx wrangler pages deploy`(毎ビルド) |
 | `build/portal.zip` | `tools/make_portal.py` が作る起動部(pck を含まない) | itch.io / PLiCy(Godot 更新時だけ手で上げる) |
 
 - `latest.json` は `{"build": ..., "pck": "index-{build_id}.pck", "size": ..., "engine": "4.6.2"}`。起動部はこれを `cache: "no-store"` で読み、
@@ -22,7 +22,18 @@ itch.io と PLiCy には**起動部だけ**を置き、pck は Cloudflare Pages(
 - **pck のファイル名に build_id を入れる**。中身が変わったら名前も変わるため、pck 自体は長くキャッシュさせてよく(`_headers` で immutable)、
   同じ版の2回目以降の起動はブラウザのキャッシュから読む
 - 起動部の `engine` が `latest.json` と食い違ったら起動しない(wasm と pck の Godot の版が違うと読めない)。案内文を出して止める
-- Pages は1回のデプロイでサイト全体を置き換えるため、古い pck は残らない。起動中の人は読み終わっているので困らない
+- Pages は1回のデプロイでサイト全体を置き換える。攻略サイトのリプレイ(10.21節)が対局と同じ版で再生するため、
+  `deploy_pages.sh` は `tools/sync_pck_archive.py` で過去の版の pck を毎回一緒に上げる
+
+## 版ごとの pck(GameDesign.md 32章「リプレイ」)
+
+- `builds.json` = `{"engine": "4.6.2", "builds": {build_id: {"pck", "size"}}}`。`make_portal.py` が今の版の1件を書き、
+  `sync_pck_archive.py` が公開中の `builds.json` と合わせる
+- 手元の控えは `build/pck_archive/`。控えに無い版は公開中の Pages から取り戻す(控えを失っても続けられるように)。
+  公開中の `builds.json` を読めなかったら止める(過去の版を一覧から落として消さないため)
+- **今の Godot 本体と版が違うものは一覧から外し、控えからも消す**(wasm と pck の Godot の版が違うと読めないため)
+- 載るのは再生の入口(`ReplayLaunch`)を持つ版を書き出してから後の版だけ。それより前の pck は `?replay` を知らない
+- 起動部は `?replay` が付いていると `latest.json` ではなく `builds.json` の `build` の版を読む(10.21節)。無ければ「この版の対局は再生できません」
 
 ## 配信先の判定
 

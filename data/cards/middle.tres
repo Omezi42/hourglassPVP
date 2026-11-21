@@ -14,6 +14,7 @@ set_id = "combo_five"
 keywords = Array[int]([])
 effects = Array[Resource]([])
 rules_text = "総量が5の間、毒砂を持つ(ダメージを与えた相手を破壊する)"
+flavor_text = "多くも少なくもない砂がいちばん鋭い。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")

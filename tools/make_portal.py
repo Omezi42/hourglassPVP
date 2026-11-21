@@ -3,7 +3,8 @@
 使い方: python tools/make_portal.py <build/web> <build_id> <engine_version>
 出力:   build/portal/ と build/portal.zip(起動部・pck を含まない)
         build/app/    (アプリ版。GitHub Pages の sunadokei-arena-app へ上げる起動部)
-        build/pages/(index-{build_id}.pck・latest.json・_headers)
+        build/pages/(index-{build_id}.pck・latest.json・builds.json・_headers)
+        過去の版の pck は tools/sync_pck_archive.py がデプロイの前に足す。
 アイコン(tools/app/icon-*.png)は icon.svg から次で書き出したものを置いてある:
         magick -background none -density 1200 icon.svg -resize 192x192 tools/app/icon-192.png
 """
@@ -17,10 +18,16 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 APP_SRC = ROOT / "tools" / "app"
 PAGES_ORIGIN = os.environ.get("PORTAL_PAGES_ORIGIN", "https://sunadokei-arena.pages.dev/")
+# リプレイの記録を postMessage で渡してよい親ページ(攻略サイト。Architecture.md 10.21節)。
+WIKI_HOST = "sunadokei-arena-wiki.pages.dev"
 PORTAL_EXCLUDE = {"index.pck", "index.html"}
 APP_ICONS = ("icon-192.png", "icon-512.png")
 
 HEADERS = """/latest.json
+  Access-Control-Allow-Origin: *
+  Cache-Control: no-store
+
+/builds.json
   Access-Control-Allow-Origin: *
   Cache-Control: no-store
 
@@ -41,6 +48,35 @@ function portalLatest() {
 		.catch(() => Promise.reject(new Error(PORTAL_MSG_FAILED)))
 		.then((latest) => (latest.engine === PORTAL_ENGINE ? latest : Promise.reject(new Error(PORTAL_MSG_OUTDATED))));
 }
+// 攻略サイトからの再生(?replay=1&build={版})。その版の pck を読み、記録が届くのを待ってから起動する。
+const PORTAL_PARAMS = new URLSearchParams(window.location.search);
+const PORTAL_WIKI_HOST = %(wiki)s;
+const PORTAL_MSG_NO_BUILD = %(no_build)s;
+function portalWikiOrigin(origin) {
+	const host = new URL(origin).hostname;
+	return host === PORTAL_WIKI_HOST || host.endsWith('.' + PORTAL_WIKI_HOST) || host === 'localhost' || host === '127.0.0.1';
+}
+function portalReplayRecord() {
+	return new Promise((resolve) => {
+		window.addEventListener('message', (event) => {
+			if (!portalWikiOrigin(event.origin) || !event.data || event.data.type !== 'hourglass-replay') return;
+			window.hourglassReplay = JSON.stringify(event.data.record);
+			resolve();
+		});
+		if (window.parent !== window) window.parent.postMessage({ type: 'hourglass-replay-ready' }, '*');
+	});
+}
+function portalReplayPack() {
+	const build = PORTAL_PARAMS.get('build') || '';
+	const pack = fetch(PORTAL_ORIGIN + 'builds.json', { cache: 'no-store' })
+		.then((r) => (r.ok ? r.json() : Promise.reject(new Error())))
+		.catch(() => Promise.reject(new Error(PORTAL_MSG_FAILED)))
+		.then((list) => (list.engine === PORTAL_ENGINE && list.builds[build] ? list.builds[build] : Promise.reject(new Error(PORTAL_MSG_NO_BUILD))));
+	return Promise.all([pack, portalReplayRecord()]).then(([entry]) => entry);
+}
+function portalPack() {
+	return PORTAL_PARAMS.has('replay') ? portalReplayPack() : portalLatest();
+}
 %(extra)s"""
 
 PORTAL_MESSAGES = {
@@ -51,6 +87,7 @@ APP_MESSAGES = {
     "failed": "通信できません。\n通信できる場所で、開き直してください。",
     "outdated": "アプリを開き直してください。",
 }
+NO_BUILD_MESSAGE = "この版の対局は再生できません。"
 APP_EXTRA = "if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');\n"
 APP_HEAD = """<link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -59,7 +96,7 @@ APP_HEAD = """<link rel="manifest" href="manifest.webmanifest">
 </head>"""
 
 START_OLD = "\t\tengine.startGame({\n"
-START_NEW = """\t\tportalLatest().then((latest) => engine.startGame({
+START_NEW = """\t\tportalPack().then((latest) => engine.startGame({
 \t\t\t'mainPack': PORTAL_ORIGIN + latest.pck,
 \t\t\t'fileSizes': Object.assign({}, GODOT_CONFIG['fileSizes'], { [PORTAL_ORIGIN + latest.pck]: latest.size }),
 """
@@ -80,6 +117,8 @@ def make_loader(html: str, engine: str, messages: dict, extra: str = "") -> str:
         "engine": json.dumps(engine),
         "failed": json.dumps(messages["failed"], ensure_ascii=False),
         "outdated": json.dumps(messages["outdated"], ensure_ascii=False),
+        "wiki": json.dumps(WIKI_HOST),
+        "no_build": json.dumps(NO_BUILD_MESSAGE, ensure_ascii=False),
         "extra": extra,
     }
     html = replace_once(html, CONFIG_ANCHOR, loader + CONFIG_ANCHOR)
@@ -128,6 +167,8 @@ def make_pages(web: Path, root: Path, build_id: str, engine: str) -> None:
     shutil.copy2(web / "index.pck", pages / pck_name)
     latest = {"build": build_id, "pck": pck_name, "size": (web / "index.pck").stat().st_size, "engine": engine}
     (pages / "latest.json").write_text(json.dumps(latest), encoding="utf-8")
+    builds = {"engine": engine, "builds": {build_id: {"pck": pck_name, "size": latest["size"]}}}
+    (pages / "builds.json").write_text(json.dumps(builds), encoding="utf-8")
     (pages / "_headers").write_text(HEADERS, encoding="utf-8", newline="\n")
     print(f"portal: {root / 'portal.zip'} / app: {root / 'app'} / pages: {pck_name}")
 

@@ -23,6 +23,7 @@ set_id = "chase_sand"
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_nibble_0")])
 rules_text = "落砂:体力がいちばん少ない相手の砂時計1体に1ダメージ"
+flavor_text = "いちばん弱った器から少しずつかじられる。"
 cannot_attack = false
 is_token = false
 emblem = ExtResource("emblem")
