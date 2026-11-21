@@ -182,6 +182,43 @@ static func collected_card_counts() -> Vector2i:
 	return Vector2i(owned, cards.size())
 
 
+## 弾のカードの所持数(GameDesign.md 8章)。保存された値と「そのセットを買っていれば2」の大きいほう。
+## 基本セットは常に2枚持つ。未知のidは0。
+static func card_count(card_id: String) -> int:
+	var card := CardLibrary.find_by_id(card_id)
+	return 0 if card == null else CardOwnership.count_in(_ownership_fields(), card)
+
+
+## デッキへ入れられる枚数 = min(2(レジェンドは1), 所持数)。
+static func deck_limit(card: CardData) -> int:
+	return CardOwnership.deck_limit_in(_ownership_fields(), card)
+
+
+## 保存された `card_counts`(card_id → 枚数)。移行ぶんの2枚扱いは含まない(`card_count()` が足す)。
+static func card_counts() -> Dictionary:
+	var counts: Variant = _profile.get("card_counts", {})
+	return (counts as Dictionary).duplicate() if counts is Dictionary else {}
+
+
+static func sand_dust() -> int:
+	return int(_profile.get("sand_dust", 0))
+
+
+## その弾でレジェンドが出ないまま開けたパック数。
+static func pack_pity(pack_id: String) -> int:
+	var pity: Variant = _profile.get("pack_pity", {})
+	return int((pity as Dictionary).get(pack_id, 0)) if pity is Dictionary else 0
+
+
+## 今日(日本時間)の無料パックをまだ開けていないか。
+static func free_pack_available() -> bool:
+	return str(_profile.get("free_pack_date", "")) != DailyMissionService.today()
+
+
+static func _ownership_fields() -> Dictionary:
+	return {"card_counts": _profile.get("card_counts", {}), "owned_card_sets": owned_card_set_ids()}
+
+
 static func owns(kind: ShopCatalog.Kind, id: String) -> bool:
 	match kind:
 		ShopCatalog.Kind.EMOTE:
@@ -631,6 +668,10 @@ static func _empty_profile() -> Dictionary:
 		"owned_emotes": [],
 		"owned_playmats": [],
 		"owned_card_sets": [],
+		"card_counts": {},
+		"sand_dust": 0,
+		"pack_pity": {},
+		"free_pack_date": "",
 		"owned_titles": [],
 		"emote_slots": [],
 		"playmat_id": "",

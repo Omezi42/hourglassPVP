@@ -4,6 +4,8 @@ extends Resource
 ## 確率・天井・価格はここだけに置き、コードへ書かない。
 
 const DIR := "res://data/packs/"
+## 売り出している弾のid(`data/packs/{id}.tres`)。弾を足すときはここへ1行足す。
+const PACK_IDS: Array[String] = ["first"]
 
 ## 通常の枠(1〜`cards_per_pack - 1` 枚目)の確率。`CardEnums.Rarity` の並び(コモン→レジェンド)。合計1。
 @export var slot_rates: Array[float] = []

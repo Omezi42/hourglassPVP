@@ -67,9 +67,29 @@ service cloud.firestore {
     // 読み取りをサインイン済みの全員へ許すのは、対局中とリプレイ一覧で相手の
     // 表示名を出すため。書き込みは本人のみに限る(残高を他人に書き換えられると、
     // クライアントを信頼する方針の中でも被害が本人の記録に留まらないため)。
+    // 例外として(11章・14章)、運営が付与する称号は変えられず、ログインIDは認証に使ったIDと
+    // 同じ値しか書けない(ラボへ参加できるかの判定に使うため)。クライアントの書き込みは
+    // すべて updateMask 付きの部分更新なので、触らない項目は前の値のまま評価される。
+    function previous(field) {
+      return resource == null ? null : resource.data.get(field, null);
+    }
+
+    function titlesKept() {
+      return request.resource.data.get('owned_titles', null) == previous('owned_titles');
+    }
+
+    function loginIdTruthful() {
+      let id = request.resource.data.get('login_id', null);
+      return id == previous('login_id')
+        || id == ''
+        || (id is string && request.auth.token.email == id + '@hourglass-arena.local');
+    }
+
     match /players/{uid} {
       allow read: if signedIn();
-      allow write: if signedIn() && request.auth.uid == uid;
+      allow create, update: if signedIn() && request.auth.uid == uid
+        && titlesKept() && loginIdTruthful();
+      allow delete: if signedIn() && request.auth.uid == uid;
     }
 
     // 攻略サイトの「ゲームに追加」で届くデッキ(GameDesign.md 32章)。置くのも受け取るのも本人だけ。
@@ -79,11 +99,22 @@ service cloud.firestore {
 
     // 分析用の対局記録(GameDesign.md 22章)。ドキュメントIDは match_id。
     // 対局した2人が同じIDへ書きにいき、先着1件だけが通る(exists:false)。
-    // 消さないため delete は許さない。読み取りをサインイン済みの全員へ許すのは、
+    // 書けるのはその対局をした2人だけで、書いた記録は書き換えも削除もさせない(攻略サイトの
+    // 勝率と共有リプレイがこの記録から作られるため。11章の例外)。`exists:false` 付きの書き込みは
+    // create として評価される。読み取りをサインイン済みの全員へ許すのは、
     // 記録を読んで集計する道具(tools/analyze_matches.py)も同じ経路を使うため。
     match /match_records/{matchId} {
-      allow read, create, update: if signedIn();
-      allow delete: if false;
+      allow read: if signedIn();
+      allow create: if signedIn() && recordedByPlayer(matchId);
+      allow update, delete: if false;
+    }
+
+    function recordedByPlayer(matchId) {
+      let record = request.resource.data;
+      let game = get(/databases/$(database)/documents/matches/$(matchId)).data;
+      return request.auth.uid in [record.player_a, record.player_b]
+        && record.player_a == game.player_a
+        && record.player_b == game.player_b;
     }
 
     // みんなの戦績の集計(同22章)。記録を書けた側だけが増分で更新する。
