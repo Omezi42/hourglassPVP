@@ -188,6 +188,11 @@ func _test_ownership() -> void:
 	_assert.call(AccountService.card_count("crest") == 0, "AccountService: unowned is zero")
 	_assert.call(AccountService.card_count("__nothing") == 0, "AccountService: unknown id is zero")
 	_assert.call(not CardDeckSave.within_limit([middle]), "an unheld card is over the limit")
+	var phase := CardLibrary.find_by_id("phase")
+	_assert.call(
+		CardDeckSave.shortage([phase, phase, middle]) == 2,
+		"shortage counts every card over the limit"
+	)
 	var freeze := CardLibrary.find_by_id("freeze")
 	_assert.call(CardDeckSave.within_limit([freeze, freeze]), "bought set cards go in twice")
 	_assert.call(

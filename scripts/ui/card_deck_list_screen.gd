@@ -52,6 +52,8 @@ var _peek_index := -1
 var _mode: Mode = Mode.MANAGE
 var _reordering := false
 var _pending_delete := -1
+## 選ぶモードで押した、不足のあるデッキ(確認でデッキ編集へ渡す)。
+var _pending_fix := -1
 var _room: VBoxContainer
 var _portrait := false
 
@@ -145,8 +147,8 @@ func _build() -> void:
 
 	_confirm = load(CONFIRM_SCENE).instantiate()
 	add_child(_confirm)
-	_confirm.confirmed.connect(_on_delete_confirmed)
-	_confirm.cancelled.connect(func() -> void: _pending_delete = -1)
+	_confirm.confirmed.connect(_on_confirmed)
+	_confirm.cancelled.connect(_on_confirm_cancelled)
 
 	_intro_screen = CardDeckIntroScreen.new()
 	add_child(_intro_screen)
@@ -238,6 +240,8 @@ func _make_card(index: int, deck: Dictionary, total: int, last_used: bool) -> Ca
 	card.custom_minimum_size = PORTRAIT_CARD_SIZE if _portrait else CARD_SIZE
 	card.deck_name = str(deck.get("name", CardDeckSave.DEFAULT_NAME))
 	card.cards = deck.get("cards", [])
+	card.shortage = int(deck.get("shortage", 0))
+	card.unavailable = _mode == Mode.PICK and card.shortage > 0
 	card.last_used = last_used
 	card.set_actions(_mode == Mode.MANAGE, _reordering, index > 0, index < total - 1)
 	card.area_pressed.connect(_on_card_pressed.bind(index))
@@ -268,6 +272,10 @@ func _on_card_pressed(index: int) -> void:
 
 func _act_on(index: int) -> void:
 	if _mode == Mode.PICK:
+		var decks := CardDeckSave.list_decks()
+		if index < decks.size() and int(decks[index].get("shortage", 0)) > 0:
+			_ask_fix(index, decks[index])
+			return
 		deck_picked.emit(index)
 	else:
 		edit_requested.emit(index)
@@ -310,7 +318,29 @@ func _on_delete_pressed(index: int) -> void:
 	)
 
 
-func _on_delete_confirmed() -> void:
+## 不足のあるデッキでは対局へ入れない(GameDesign.md 21章)。直しに行くかを選ばせる。
+func _ask_fix(index: int, deck: Dictionary) -> void:
+	_peek.close()
+	_pending_fix = index
+	_confirm.open_confirm(
+		"カードが足りません",
+		"「%s」には持っていないカードが%d枚入っています" % [deck["name"], int(deck["shortage"])],
+		"編集する",
+		"やめる"
+	)
+
+
+func _on_confirm_cancelled() -> void:
+	_pending_delete = -1
+	_pending_fix = -1
+
+
+func _on_confirmed() -> void:
+	if _pending_fix >= 0:
+		var fix := _pending_fix
+		_pending_fix = -1
+		edit_requested.emit(fix)
+		return
 	var index := _pending_delete
 	_pending_delete = -1
 	if index < 0:

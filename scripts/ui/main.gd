@@ -558,7 +558,10 @@ func _on_deck_create_requested() -> void:
 	_show_only(card_deck_editor_screen)
 
 
+## 選ぶ途中で不足のあるデッキを直しに行った場合は、待たせていた導線を捨てる(GameDesign.md 21章)。
 func _on_deck_edit_requested(index: int) -> void:
+	_pending_battle = Callable()
+	_deck_pick_return = home_screen
 	card_deck_editor_screen.open(index)
 	_show_only(card_deck_editor_screen)
 

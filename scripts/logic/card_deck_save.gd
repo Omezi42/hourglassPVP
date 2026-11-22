@@ -18,7 +18,7 @@ const DEFAULT_NAME := "デッキ"
 static var save_path := SAVE_PATH
 
 
-## 保存済みのデッキ一覧。1件は {"name": String, "cards": Array[CardData], "within_limit": bool}。
+## 保存済みのデッキ一覧。1件は {"name": String, "cards": Array[CardData], "within_limit": bool, "shortage": int}。
 ## 壊れている・カードが揃わない件は落とす(30枚に満たないデッキで対局へ入れないため)。
 ## **所持数の上限(`AccountService.deck_limit()`)を超えるデッキは落とさず、`within_limit` を false にして返す。**
 ## 落とすと、次の保存で持ち主のデッキが消える(読み込みが済む前や通信できない間は所持数が少なく見える)。
@@ -33,13 +33,15 @@ static func list_decks() -> Array:
 		var cards := CardLibrary.deck_from_ids(ids)
 		if cards.size() != MatchState.DECK_SIZE:
 			continue
+		var missing := shortage(cards)
 		(
 			decks
 			. append(
 				{
 					"name": _sanitize_name(str((entry as Dictionary).get("name", ""))),
 					"cards": cards,
-					"within_limit": within_limit(cards),
+					"within_limit": missing == 0,
+					"shortage": missing,
 				}
 			)
 		)
@@ -48,12 +50,18 @@ static func list_decks() -> Array:
 
 ## `cards` が所持数の範囲(同名は `min(2(レジェンドは1), 所持数)` 枚まで)に収まっているか。
 static func within_limit(cards: Array) -> bool:
+	return shortage(cards) == 0
+
+
+## 所持数の範囲を超えて入っている枚数の合計(GameDesign.md 21章「n枚不足」)。
+static func shortage(cards: Array) -> int:
 	var seen := {}
+	var missing := 0
 	for card: CardData in cards:
 		seen[card.id] = int(seen.get(card.id, 0)) + 1
 		if int(seen[card.id]) > AccountService.deck_limit(card):
-			return false
-	return true
+			missing += 1
+	return missing
 
 
 static func save_decks(decks: Array) -> void:

@@ -81,10 +81,22 @@ const PLUS_TEXT_SHIFT := 6.0
 const PLUS_TEXT_DROP := 8.0
 ## 縦画面では中身ごと大きく描く(GameDesign.md 9章「縦画面」)。
 const PORTRAIT_ZOOM := 1.25
+## 所持数を超えたデッキ(GameDesign.md 21章)。要約の行を錠前と「n枚不足」に替える。
+## 錠前の半径は要約の字の大きさに対する比。
+const LOCK_RADIUS_RATIO := 0.8
+const LOCK_TEXT_GAP := 8.0
+## 字の下端から錠前の中心までの高さ(字の大きさに対する比)。
+const LOCK_RISE_RATIO := 0.4
+## 選ぶモードで使えない札へ重ねる暗さ。
+const UNAVAILABLE_SHADE := Color(UiPalette.INK_900, 0.55)
 
 var deck_name := ""
 var cards: Array = []
 var last_used := false
+## 所持数の範囲を超えて入っている枚数。
+var shortage := 0
+## 選ぶモードで、不足があって対局に使えない札。暗くする。
+var unavailable := false
 var new_slot := false
 var portrait := false
 
@@ -218,17 +230,42 @@ func _paint() -> void:
 		PORTRAIT_NAME_FONT if portrait else NAME_FONT,
 		UiPalette.IVORY
 	)
-	_visual.draw_string(
-		_font,
-		Vector2(text_x, summary_y),
-		summary_of(cards),
-		HORIZONTAL_ALIGNMENT_LEFT,
-		text_w,
-		PORTRAIT_SUMMARY_FONT if portrait else SUMMARY_FONT,
-		UiPalette.MUTED
-	)
+	if unavailable:
+		var face := Rect2(Vector2.ONE * FACE_INSET, size - Vector2.ONE * FACE_INSET * 2.0)
+		ShapePaint.colored_polygon(
+			ci, UiPaint.rounded_rect_points_uniform(face, SLOT_RADIUS, 6), UNAVAILABLE_SHADE
+		)
+	if shortage > 0:
+		_paint_shortage(Vector2(text_x, summary_y), text_w)
+	else:
+		_visual.draw_string(
+			_font,
+			Vector2(text_x, summary_y),
+			summary_of(cards),
+			HORIZONTAL_ALIGNMENT_LEFT,
+			text_w,
+			PORTRAIT_SUMMARY_FONT if portrait else SUMMARY_FONT,
+			UiPalette.MUTED
+		)
 	if last_used:
 		UiKit.tag(ci, _font, tag_rect, "前回", PORTRAIT_TAG_FONT if portrait else TAG_FONT)
+
+
+## 錠前 +「n枚不足」(GameDesign.md 21章)。`baseline` は要約の行の左端の字の下端。
+func _paint_shortage(baseline: Vector2, width: float) -> void:
+	var font_size := PORTRAIT_SUMMARY_FONT if portrait else SUMMARY_FONT
+	var radius := font_size * LOCK_RADIUS_RATIO
+	UiPaint.draw_lock(_visual, baseline + Vector2(radius, -font_size * LOCK_RISE_RATIO), radius)
+	var shift := radius * 2.0 + LOCK_TEXT_GAP
+	_visual.draw_string(
+		_font,
+		baseline + Vector2(shift, 0),
+		"%d枚不足" % shortage,
+		HORIZONTAL_ALIGNMENT_LEFT,
+		width - shift,
+		font_size,
+		UiPalette.DANGER_TEXT
+	)
 
 
 ## 先頭の1本の砂の色の光を、その砂時計の後ろへ淡く敷く(デッキごとの色で見分けるため)。
