@@ -54,7 +54,7 @@ const SETS: Dictionary = {
 		"id": "combo_five",
 		"display_name": "五砂の刻",
 		"description": "総量がちょうど5になった一瞬に懸けるコンボ系5枚",
-		"card_ids": ["middle", "phase", "key", "cycle", "crest"],
+		"card_ids": ["middle", "phase", "key", "cycle", "crest", "quintet"],
 		"price": 500,
 	},
 	## 2番目のカードセット(GameDesign.md 8章)。「時を止める・巻き戻す」枠で、
@@ -75,6 +75,7 @@ const SETS: Dictionary = {
 			"rewind",
 			"stasis",
 			"verdict",
+			"zero_hour",
 		],
 		"price": 900,
 	},
@@ -85,7 +86,7 @@ const SETS: Dictionary = {
 		"id": "grave_sand",
 		"display_name": "遺砂の刻",
 		"description": "砕けた砂を墓地から呼び戻し、駒の死を力に変える7枚",
-		"card_ids": ["drift", "moss", "vigil", "relic", "cairn", "burial", "awaken"],
+		"card_ids": ["drift", "moss", "vigil", "relic", "cairn", "burial", "awaken", "necropolis"],
 		"price": 700,
 	},
 	## 4番目のカードセット(GameDesign.md 8章)。「1つの反転が次の反転を呼ぶ」枠で、反転を軸にした
@@ -96,9 +97,18 @@ const SETS: Dictionary = {
 		"display_name": "反響の刻",
 		"description": "1つの反転が次の反転を呼ぶ、返しの連鎖の8枚",
 		"card_ids":
-		["reverb", "delay", "repeat", "resonance", "encore", "chorus", "crescendo", "canon"],
+		[
+			"reverb",
+			"delay",
+			"repeat",
+			"resonance",
+			"encore",
+			"chorus",
+			"crescendo",
+			"canon",
+			"maestro",
+		],
 		"price": 800,
-		"planned_count": 8,
 	},
 	## 5番目のカードセット(GameDesign.md 8章)。後手が勝ちにくい理由を1つずつ見つけて補う枠。
 	## 段階公開(21章)で、毎日1枚ずつ `card_ids` へ足す。
@@ -118,10 +128,10 @@ const SETS: Dictionary = {
 			"hive",
 			"relief",
 			"collapse",
-			"march"
+			"march",
+			"equalizer",
 		],
 		"price": 1000,
-		"planned_count": 10,
 	},
 	## 6番目のカードセット(GameDesign.md 8章)。軽い駒を並べて引き続けるデッキを咎める5枚。段階公開はしない。
 	"sweep_sand":
@@ -129,7 +139,7 @@ const SETS: Dictionary = {
 		"id": "sweep_sand",
 		"display_name": "薙砂の刻",
 		"description": "押し寄せる砂の群れを薙ぎ払う5枚",
-		"card_ids": ["gale", "grit_rain", "bypass", "hound", "colossus"],
+		"card_ids": ["gale", "grit_rain", "bypass", "hound", "colossus", "hurricane"],
 		"price": 600,
 	},
 	## 7番目のカードセット(GameDesign.md 8章)。「砂を詠むたびに力が積もる」枠で、砂術を軸にしたデッキを成立させる。
@@ -140,9 +150,27 @@ const SETS: Dictionary = {
 		"display_name": "詠砂の刻",
 		"description": "砂術を詠むたびに力が積もる8枚",
 		"card_ids":
-		["scribe", "divine", "chant", "archive", "warden", "recite", "sage", "grimoire"],
+		[
+			"scribe",
+			"divine",
+			"chant",
+			"archive",
+			"warden",
+			"recite",
+			"sage",
+			"grimoire",
+			"oracle",
+		],
 		"price": 800,
-		"planned_count": 8,
+	},
+	## 第1弾のどのテーマにも属さないレジェンド(GameDesign.md 8章)。パックからだけ出る。
+	"first_extra":
+	{
+		"id": "first_extra",
+		"display_name": "テーマ外",
+		"description": "第1弾のどのテーマにも属さないレジェンド",
+		"card_ids": ["aeon"],
+		"price": 0,
 	},
 }
 
@@ -158,6 +186,7 @@ const ORDERED_IDS: Array[String] = [
 	"chase_sand",
 	"sweep_sand",
 	"chant_sand",
+	"first_extra",
 ]
 
 

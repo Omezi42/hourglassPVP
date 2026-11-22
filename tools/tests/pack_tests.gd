@@ -97,7 +97,7 @@ func _test_draw() -> void:
 	var published := 0
 	for rarity in pools:
 		published += (pools[rarity] as Array).size()
-	_assert.call(published == 52, "pool holds the 52 published cards")
+	_assert.call(published == 60, "pool holds all 60 cards of the first pack")
 	var first_slots := {}
 	for _i in DRAWS:
 		var result := PackDraw.draw_pack(_pack, pools, 0, rng)
@@ -109,14 +109,31 @@ func _test_draw() -> void:
 		for slot in 4:
 			var r: CardEnums.Rarity = (cards[slot] as CardData).rarity
 			first_slots[r] = int(first_slots.get(r, 0)) + 1
-		_assert.call(int(result["pity"]) == 1, "pity grows without a legendary")
+		_assert.call(
+			int(result["pity"]) == (0 if _has_legendary(cards) else 1),
+			"pity grows without a legendary and resets with one"
+		)
 	var common_share: float = first_slots[CardEnums.Rarity.COMMON] / float(DRAWS * 4)
 	_assert.call(
 		absf(common_share - 0.76 / 0.995) < 0.03, "commons dominate slots 1-4 (%f)" % common_share
 	)
-	_assert.call(
-		not first_slots.has(CardEnums.Rarity.LEGENDARY), "unpublished legendaries never come out"
-	)
+	var legend_share: float = first_slots.get(CardEnums.Rarity.LEGENDARY, 0) / float(DRAWS * 4)
+	_assert.call(legend_share < 0.02, "legendaries are rare in slots 1-4 (%f)" % legend_share)
+
+
+func _has_legendary(cards: Array) -> bool:
+	return cards.any(func(card: CardData) -> bool: return card.rarity == CardEnums.Rarity.LEGENDARY)
+
+
+## `start` から開けた `result` のあとの天井カウンタ。
+func _pity_after(start: int, result: Dictionary) -> int:
+	var pity := start
+	for pack: Dictionary in result["packs"]:
+		var cards: Array = []
+		for id in pack["cards"]:
+			cards.append(CardLibrary.find_by_id(str(id)))
+		pity = 0 if _has_legendary(cards) else pity + 1
+	return pity
 
 
 func _synthetic_pools() -> Dictionary:
@@ -231,7 +248,8 @@ func _test_open_packs() -> void:
 	var dust := int(result["dust_gained"])
 	_assert.call(held + _overflow_cards(result) == 5, "five cards were drawn")
 	_assert.call(dust >= 0, "dust never goes negative")
-	_assert.call(int(_fields()["pack_pity"][PACK_ID]) == 1, "pity advanced")
+	var pity_after_one := _pity_after(0, result)
+	_assert.call(int(_fields()["pack_pity"][PACK_ID]) == pity_after_one, "pity advanced")
 	_assert.call(AccountService.currency() == BALANCE - 100, "the cache follows the write")
 
 	_client.commit_count = 0
@@ -239,7 +257,10 @@ func _test_open_packs() -> void:
 	_assert.call(bulk["ok"] and (bulk["packs"] as Array).size() == 10, "ten packs open")
 	_assert.call(_client.commit_count == 1, "ten packs are still one commit")
 	_assert.call(int(_fields()["currency"]) == BALANCE - 1100, "ten packs cost 1000")
-	_assert.call(int(_fields()["pack_pity"][PACK_ID]) == 11, "pity counts every pack")
+	_assert.call(
+		int(_fields()["pack_pity"][PACK_ID]) == _pity_after(pity_after_one, bulk),
+		"pity counts every pack"
+	)
 
 	_reset({"currency": 99})
 	var poor: Dictionary = await PackService.open_packs(_client, UID, PACK_ID, 1, false, rng)

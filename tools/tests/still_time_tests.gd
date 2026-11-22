@@ -224,7 +224,7 @@ func _test_set_is_registered_with_nine_cards() -> void:
 	_assert.call(CardSetLibrary.price(SET_ID) == 900, "still_time costs 900")
 	_assert.call(CardSetLibrary.purchasable_ids().has(SET_ID), "still_time is sold in the shop")
 	var ids := CardSetLibrary.card_ids(SET_ID)
-	_assert.call(ids.size() == 9, "still_time has 9 cards")
+	_assert.call(ids.size() == 10, "still_time has 10 cards")
 	for id in ids:
 		var card := CardLibrary.find_by_id(id)
 		_assert.call(card != null, "card %s should exist" % id)

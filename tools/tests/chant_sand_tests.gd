@@ -317,7 +317,7 @@ func _test_set_is_registered() -> void:
 	_assert.call(CardSetLibrary.card_ids(SET_ID).has("archive"), "アーカイブが詠砂の刻に入っている")
 	_assert.call(CardSetLibrary.card_ids(SET_ID).has("recite"), "写し詠みが詠砂の刻に入っている")
 	_assert.call(CardSetLibrary.card_ids(SET_ID).has("sage"), "セージが詠砂の刻に入っている")
-	_assert.call(CardSetLibrary.planned_count(SET_ID) == 8, "詠砂の刻は予定8枚")
+	_assert.call(CardSetLibrary.planned_count(SET_ID) == 9, "詠砂の刻は9枚")
 	_assert.call(CardEnums.trigger_name(CardEnums.Trigger.ON_OWN_SPELL) == "常在", "砂術への反応は「常在」と出す")
 
 

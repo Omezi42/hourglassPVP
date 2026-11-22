@@ -269,7 +269,7 @@ func _test_march_fizzles_when_even() -> void:
 func _test_set_is_staged() -> void:
 	_assert.call(CardSetLibrary.has_set(SET_ID), "chase_sand is registered")
 	_assert.call(CardSetLibrary.price(SET_ID) == 1000, "chase_sand costs 1000")
-	_assert.call(CardSetLibrary.planned_count(SET_ID) == 10, "chase_sand plans 10 cards")
+	_assert.call(CardSetLibrary.planned_count(SET_ID) == 11, "chase_sand has 11 cards")
 	_assert.call(CardSetLibrary.card_ids(SET_ID)[0] == "sling", "chase_sand opens with sling")
 	_assert.call(CardSetLibrary.card_ids(SET_ID)[1] == "pelt", "chase_sand's second card is pelt")
 	_assert.call(CardSetLibrary.card_ids(SET_ID)[2] == "bola", "chase_sand's third card is bola")

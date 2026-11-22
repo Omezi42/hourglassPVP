@@ -75,10 +75,6 @@ Fableには判断だけを任せる。1項目を次の順に回す(手順の詳�
 
 ## 3. Claudeが進められる作業
 
-### 弾とガチャ(GameDesign.md 8章・15章・21章 / Architecture.md 10.8節)
-
-1. [ ] 第1弾の公開(レジェンドは1日1枚ずつ。8枚とも `CardSetLibrary` の各テーマの `card_ids` にまだ入っておらず、アイオーンの `first_extra` はパックの `set_ids` にも無い)
-
 ### 週替わりの遠征(GameDesign.md 27章「週替わりの遠征」/ Architecture.md 10.15節)
 
 - [ ] 公開から4週後: 週ごとの挑戦者数と「別の日に来た ÷ ホーム」を公開前4週と比べる

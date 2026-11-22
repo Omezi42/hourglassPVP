@@ -11,4 +11,4 @@ display_name = "第1弾"
 price = 100
 cards_per_pack = 5
 pity_packs = 40
-set_ids = Array[String](["combo_five", "still_time", "grave_sand", "echo_time", "chase_sand", "sweep_sand", "chant_sand"])
+set_ids = Array[String](["combo_five", "still_time", "grave_sand", "echo_time", "chase_sand", "sweep_sand", "chant_sand", "first_extra"])

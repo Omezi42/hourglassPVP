@@ -342,7 +342,7 @@ func _test_crescendo_counts_own_flips_this_turn() -> void:
 func _test_set_is_staged() -> void:
 	_assert.call(CardSetLibrary.has_set(SET_ID), "echo_time is registered")
 	_assert.call(CardSetLibrary.price(SET_ID) == 800, "echo_time costs 800")
-	_assert.call(CardSetLibrary.planned_count(SET_ID) == 8, "echo_time plans 8 cards")
+	_assert.call(CardSetLibrary.planned_count(SET_ID) == 9, "echo_time has 9 cards")
 	_assert.call(CardSetLibrary.card_ids(SET_ID)[0] == "reverb", "echo_time opens with reverb")
 	_assert.call(CardSetLibrary.card_ids(SET_ID)[1] == "delay", "echo_time second card is delay")
 	_assert.call(CardSetLibrary.card_ids(SET_ID)[2] == "repeat", "echo_time third card is repeat")
