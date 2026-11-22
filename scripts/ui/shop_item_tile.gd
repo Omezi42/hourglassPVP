@@ -38,6 +38,8 @@ var kind: ShopCatalog.Kind
 var id := ""
 var owned := false
 var affordable := true
+## 0より大きければ、価格の代わりに受け取る枚数を出す(はじめの7日のテーマ。GameDesign.md 23章)。
+var gift_count := 0
 ## 名前と価格の文字の倍率。縦で中身ごと拡大しても目安(本文24px)に届かない置き場所が使う。
 var text_scale := 1.0
 var selected := false:
@@ -156,7 +158,7 @@ func _draw_footer() -> void:
 	var inner := _inner_rect()
 	var baseline := inner.end.y - FOOTER_BASELINE_INSET
 	var name := ShopCatalog.item_name(kind, id)
-	if kind == ShopCatalog.Kind.CARD_SET:
+	if kind == ShopCatalog.Kind.CARD_SET and gift_count <= 0:
 		name += "(%s)" % CardSetLibrary.count_text(id)
 	var text_left := inner.position.x + TEXT_PAD
 	var text_width := inner.size.x - TEXT_PAD * 2.0
@@ -187,6 +189,21 @@ func _draw_footer() -> void:
 ## ✓ は同梱フォントに字形が無い(豆腐になる)ため、文字ではなく印として描く。
 func _draw_price(baseline: float) -> void:
 	var inner := _inner_rect()
+	if gift_count > 0:
+		var gift := "%d枚" % gift_count
+		var gift_width := (
+			_font.get_string_size(gift, HORIZONTAL_ALIGNMENT_LEFT, -1, _price_font_size()).x
+		)
+		draw_string(
+			_font,
+			Vector2(inner.end.x - TEXT_PAD - gift_width, baseline),
+			gift,
+			HORIZONTAL_ALIGNMENT_LEFT,
+			-1,
+			_price_font_size(),
+			UiPalette.SAND_HI
+		)
+		return
 	var label := "所持" if owned else CurrencyRules.amount_text(ShopCatalog.price(kind, id))
 	var label_width := (
 		_font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, _price_font_size()).x

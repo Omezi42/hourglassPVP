@@ -74,7 +74,7 @@ func _test_welcome_days() -> void:
 	_assert.call(int(fields["currency"]) == 150, "day 1 should add 100 to the balance")
 	_assert.call(not WelcomeDays.can_claim_today(), "day 1 cannot be claimed twice")
 	_assert.call(
-		WelcomeDays.tomorrow_line() == "明日来ると カードセットを1つ選べる ・ はじめの7日 2/7",
+		WelcomeDays.tomorrow_line() == "明日来ると テーマを1つ選べる ・ はじめの7日 2/7",
 		"tomorrow line after day 1: " + WelcomeDays.tomorrow_line()
 	)
 	_assert.call(await WelcomeDays.claim(client, UID) == 0, "a second claim on the same day")
@@ -82,22 +82,35 @@ func _test_welcome_days() -> void:
 
 	fields[WelcomeDays.FIELD_DATE] = OLD_DATE
 	AccountService.apply_local_fields({WelcomeDays.FIELD_DATE: OLD_DATE})
-	var choices := WelcomeDays.set_choices()
-	_assert.call(not choices.is_empty(), "day 2 offers the card sets the player lacks")
-	_assert.call(WelcomeDays.offers_set(WelcomeDays.SET_DAY), "day 2 is the set day")
-	_assert.call(await WelcomeDays.claim(client, UID, choices[0]) == 2, "another day is day 2")
-	_assert.call(int(fields["currency"]) == 150, "the set day gives the set instead of gold")
+	var choices := WelcomeDays.theme_choices()
+	_assert.call(not choices.is_empty(), "day 2 offers the first-pack themes")
+	_assert.call(WelcomeDays.offers_theme(WelcomeDays.THEME_DAY), "day 2 is the theme day")
+	var theme := choices[0]
+	var non_legend := 0
+	for card_id in CardSetLibrary.card_ids(theme):
+		if CardLibrary.find_by_id(card_id).rarity != CardEnums.Rarity.LEGENDARY:
+			non_legend += 1
 	_assert.call(
-		(fields.get(WelcomeDays.OWNED_SETS, []) as Array).has(choices[0]),
-		"the chosen set is written in the same commit"
+		WelcomeDays.gift_card_total(theme) == non_legend * CardDeckSave.COPY_LIMIT,
+		"the tile shows two of every non-legendary card"
 	)
-	_assert.call(AccountService.owns_card_set(choices[0]), "the chosen set is usable at once")
+	_assert.call(await WelcomeDays.claim(client, UID, theme) == 2, "another day is day 2")
+	_assert.call(int(fields["currency"]) == 150, "the theme day gives cards instead of gold")
+	var given: Dictionary = fields.get(WelcomeDays.FIELD_COUNTS, {})
+	_assert.call(given.size() == non_legend, "every non-legendary card of the theme is given")
+	for card_id in given:
+		_assert.call(int(given[card_id]) == CardDeckSave.COPY_LIMIT, "two of %s" % card_id)
+		_assert.call(
+			AccountService.deck_limit(CardLibrary.find_by_id(card_id)) == 2,
+			"%s is usable at once" % card_id
+		)
+	_assert.call(not WelcomeDays.theme_choices().has(theme), "a full theme is no longer offered")
 
-	# 別のタブで同じセットを先に手に入れていたら、ふつうの日の砂金に替える。
+	# 別のタブで同じテーマを先にそろえていたら、ふつうの日の砂金に替える。
 	fields[WelcomeDays.FIELD_DAYS] = 1
 	fields[WelcomeDays.FIELD_DATE] = OLD_DATE
-	_assert.call(await WelcomeDays.claim(client, UID, choices[0]) == 2, "day 2 again")
-	_assert.call(int(fields["currency"]) == 250, "an owned set falls back to 100 gold")
+	_assert.call(await WelcomeDays.claim(client, UID, theme) == 2, "day 2 again")
+	_assert.call(int(fields["currency"]) == 250, "a full theme falls back to 100 gold")
 
 	fields[WelcomeDays.FIELD_DAYS] = WelcomeDays.DAYS
 	fields[WelcomeDays.FIELD_DATE] = OLD_DATE

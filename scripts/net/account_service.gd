@@ -215,6 +215,11 @@ static func free_pack_available() -> bool:
 	return str(_profile.get("free_pack_date", "")) != DailyMissionService.today()
 
 
+## 所持数を数えるときに渡すフィールド(`CardOwnership` の物差しへそのまま渡す)。
+static func ownership_fields() -> Dictionary:
+	return _ownership_fields()
+
+
 static func _ownership_fields() -> Dictionary:
 	return {"card_counts": _profile.get("card_counts", {}), "owned_card_sets": owned_card_set_ids()}
 

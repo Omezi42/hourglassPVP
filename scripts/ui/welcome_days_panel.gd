@@ -2,7 +2,7 @@ class_name WelcomeDaysPanel
 extends Control
 ## はじめの7日の受取(GameDesign.md 23章)。ホームへ重ねる「暗幕+中央パネル」のモーダル
 ## (`DailyMissionPanel` と同じ作り)。`HomeScreen.offer_welcome_days()` が開く。
-## セットの日は、持っていないカードセットをショップと同じタイルで並べ、1つ選んで受け取る。
+## テーマの日は、受け取れるカードが残っている第1弾のテーマをショップと同じタイルで並べ、1つ選んで受け取る。
 
 signal closed
 ## 受け取った瞬間、押したボタンの位置と獲得額を運ぶ(ヘッダーの砂金へ飛ばす演出は `HomeScreen` が持つ)。
@@ -31,7 +31,7 @@ const PORTRAIT_NOTE_FONT := UiPalette.T_LEAD
 const PORTRAIT_TILE_TEXT_SCALE := 24.0 / (ShopItemTile.NAME_FONT_SIZE * PortraitModal.SCALE)
 const FAILED_TEXT := "通信に失敗しました。次にホームを開いたときに受け取れます"
 const NOTE_TEXT := "来た日の数で進みます。続けて来なくても大丈夫です"
-const SET_NOTE_TEXT := "選んだセットは、受け取ったらすぐデッキ編成に使えます"
+const SET_NOTE_TEXT := "受け取ったらすぐデッキに入れられます"
 
 var _panel: PanelContainer
 var _pips: WelcomeDayPips
@@ -68,7 +68,7 @@ func open_day(day: int) -> void:
 	_pips.claimed = day - 1
 	_pips.queue_redraw()
 	_reward_label.text = "%d日目 ・ %s" % [day, WelcomeDays.reward_text(day)]
-	var picking := WelcomeDays.offers_set(day)
+	var picking := WelcomeDays.offers_theme(day)
 	_apply_orientation()
 	_sets_scroll.visible = picking
 	_look_button.visible = picking
@@ -85,7 +85,7 @@ func open_day(day: int) -> void:
 ## 開いたまま向きが変わったとき。選んだセットは保つ。
 func _relayout() -> void:
 	_apply_orientation()
-	var picking := WelcomeDays.offers_set(_day)
+	var picking := WelcomeDays.offers_theme(_day)
 	if picking:
 		var chosen := _chosen_set
 		_fill_sets()
@@ -102,8 +102,9 @@ func _fill_sets() -> void:
 	var tile_width := (
 		(_set_panel_size().x - CONTENT_INSET - SET_GAP * (columns - 1)) / float(columns)
 	)
-	for set_id in WelcomeDays.set_choices():
+	for set_id in WelcomeDays.theme_choices():
 		var tile := ShopItemTile.new(ShopCatalog.Kind.CARD_SET, set_id)
+		tile.gift_count = WelcomeDays.gift_card_total(set_id)
 		tile.custom_minimum_size = Vector2(
 			tile_width, ShopItemTile.height(ShopCatalog.Kind.CARD_SET)
 		)
@@ -121,7 +122,7 @@ func _choose(set_id: String) -> void:
 
 
 func _refresh_buttons() -> void:
-	var waiting := WelcomeDays.offers_set(_day) and _chosen_set.is_empty()
+	var waiting := WelcomeDays.offers_theme(_day) and _chosen_set.is_empty()
 	_claim_button.disabled = waiting
 	_look_button.disabled = _chosen_set.is_empty()
 
@@ -256,7 +257,7 @@ func _on_claim_pressed() -> void:
 		return
 	_pips.claimed = day
 	_pips.queue_redraw()
-	# 選んだセットを既に持っていた日は砂金になるため、実際に増えた額で見る。
+	# 選んだテーマのカードを既に持っていた日は砂金になるため、実際に増えた額で見る。
 	var gold := int(AccountService.profile_value("currency", 0)) - before
 	if gold > 0:
 		reward_claimed.emit(_claim_button.get_global_rect(), gold)
