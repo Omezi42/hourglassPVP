@@ -1385,6 +1385,94 @@
 			"is_spell": false,
 			"pool_index": 126,
 			"total_sand": 5
+		},
+		{
+			"cannot_attack": false,
+			"cost": 3,
+			"describe": "自分の砂時計の反転トリガーは2回発動する",
+			"display_name": "マエストロ",
+			"id": "maestro",
+			"initial_attack": 0,
+			"is_spell": false,
+			"pool_index": 127,
+			"total_sand": 4
+		},
+		{
+			"cannot_attack": false,
+			"cost": 3,
+			"describe": "設置:相手の砂時計が自分より多ければ、その差の数だけ相手の砂時計をランダムに破壊する",
+			"display_name": "イコライザー",
+			"id": "equalizer",
+			"initial_attack": 0,
+			"is_spell": false,
+			"pool_index": 128,
+			"total_sand": 4
+		},
+		{
+			"cannot_attack": false,
+			"cost": 4,
+			"describe": "自分が砂術を使うたび、相手の砂時計すべての砂が1粒上へ戻る",
+			"display_name": "オラクル",
+			"id": "oracle",
+			"initial_attack": 0,
+			"is_spell": false,
+			"pool_index": 129,
+			"total_sand": 5
+		},
+		{
+			"cannot_attack": false,
+			"cost": 5,
+			"describe": "設置:自分の他の砂時計すべての総量を5にする",
+			"display_name": "クインテット",
+			"id": "quintet",
+			"initial_attack": 0,
+			"is_spell": false,
+			"pool_index": 130,
+			"total_sand": 5
+		},
+		{
+			"cannot_attack": false,
+			"cost": 3,
+			"describe": "設置:相手の砂時計すべての砂を落とし、体力を1にする",
+			"display_name": "ハリケーン",
+			"id": "hurricane",
+			"initial_attack": 0,
+			"is_spell": false,
+			"pool_index": 131,
+			"total_sand": 5
+		},
+		{
+			"cannot_attack": false,
+			"cost": 6,
+			"describe": "静止 / 設置:相手の砂時計すべての砂を、残らず上へ戻す",
+			"display_name": "ゼロアワー",
+			"id": "zero_hour",
+			"initial_attack": 0,
+			"is_spell": false,
+			"pool_index": 132,
+			"total_sand": 6
+		},
+		{
+			"cannot_attack": false,
+			"cost": 7,
+			"describe": "設置:空いている枠すべてに、自分の墓地からランダムな砂時計を出す",
+			"display_name": "ネクロポリス",
+			"id": "necropolis",
+			"initial_attack": 0,
+			"is_spell": false,
+			"pool_index": 133,
+			"total_sand": 2
+		},
+		{
+			"cannot_attack": false,
+			"cost": 2,
+			"describe": "設置:他のすべての砂時計(敵味方とも)を反転させる",
+			"display_name": "アイオーン",
+			"id": "aeon",
+			"initial_attack": 0,
+			"is_spell": false,
+			"pool_index": 134,
+			"total_sand": 3
 		}
 	]
 }
