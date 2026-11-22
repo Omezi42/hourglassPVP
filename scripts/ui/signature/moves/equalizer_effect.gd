@@ -37,7 +37,7 @@ func draw(item: CanvasItem, t: float) -> void:
 		)
 		item.draw_rect(rect.grow(1.0), Color(UiPalette.INK_950, alpha * 0.6))
 		item.draw_rect(rect, Color(COLOR, alpha))
-		item.draw_rect(Rect2(rect.position, Vector2(rect.size.x, 2.0)), Color(1, 1, 1, alpha))
+		item.draw_rect(Rect2(rect.position, Vector2(rect.size.x, 2.0)), Color(Color.WHITE, alpha))
 	var drop := phase(t, BOUNCE, DROP)
 	if drop <= 0.0:
 		return
@@ -46,7 +46,7 @@ func draw(item: CanvasItem, t: float) -> void:
 		var tail := tip - Vector2(0.0, PILLAR * zoom)
 		item.draw_line(tail, tip, Color(COLOR, alpha * 0.35), PILLAR_WIDTH * zoom * 2.0, true)
 		item.draw_line(tail, tip, Color(COLOR, alpha), PILLAR_WIDTH * zoom, true)
-		item.draw_line(tail, tip, Color(1, 1, 1, alpha), PILLAR_WIDTH * zoom * 0.35, true)
+		item.draw_line(tail, tip, Color(Color.WHITE, alpha), PILLAR_WIDTH * zoom * 0.35, true)
 	var landed := phase(t, impact_at(), FADE)
 	if landed > 0.0:
 		for target in targets:

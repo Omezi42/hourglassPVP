@@ -41,6 +41,9 @@ const FOE_DRAWER := ["crack", 3, 0]
 const FLIP_ALLY := ["wheel", 2, 4]
 ## レジェンドの実演で相手の駒を足す枠。
 const EXTRA_FOE_SLOTS := [0, 4]
+## レジェンドの実演で総量の違う味方を置く枠。
+const SMALL_ALLY_SLOT := 0
+const BIG_ALLY_SLOT := 4
 ## 条件付きの効果(コンボ系)の対象を置く枠。
 const MATCH_SLOT := 4
 ## 墓地を使う効果のための砂時計。
@@ -305,6 +308,10 @@ static func _stage_legend(state: MatchState, side: int, card: CardData) -> void:
 				# 相手4体・自分2体(実演の駒を含む)にして、2体壊れて数がそろうところを見せる。
 				for slot in EXTRA_FOE_SLOTS:
 					_place(state, foe, slot, _card(FOE_TARGET[0]), FOE_TARGET[1], FOE_TARGET[2])
+			CardEnums.EffectType.SET_TOTAL:
+				# 総量の小さい味方と大きい味方を並べ、両方が5にそろうところを見せる。
+				_place(state, side, SMALL_ALLY_SLOT, _card(FOE_TARGET[0]), 1, 1)
+				_place(state, side, BIG_ALLY_SLOT, _card(FOE_HEAVY[0]), 3, 5)
 
 
 ## 対象を選ぶ効果の指定。CPU と同じ選び方を使う(実演だけの選び方を持たない)。

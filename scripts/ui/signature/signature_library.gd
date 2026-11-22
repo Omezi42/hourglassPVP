@@ -140,6 +140,8 @@ const EFFECTS := {
 	"maestro": preload("res://scripts/ui/signature/moves/maestro_effect.gd"),
 	"equalizer": preload("res://scripts/ui/signature/moves/equalizer_effect.gd"),
 	"oracle": preload("res://scripts/ui/signature/moves/oracle_effect.gd"),
+	"quintet": preload("res://scripts/ui/signature/moves/quintet_effect.gd"),
+	"hurricane": preload("res://scripts/ui/signature/moves/hurricane_effect.gd"),
 }
 
 

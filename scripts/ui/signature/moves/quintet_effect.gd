@@ -6,8 +6,8 @@ const CIRCLE := 0.36
 const FLY := 0.3
 ## 玉の数・大きさと、回る輪の半径・高さ(駒の中心から上へ)・回る量(周)。
 const ORBS := 5
-const ORB := 6.0
-const RADIUS := 30.0
+const ORB := 8.0
+const RADIUS := 38.0
 const LIFT := 60.0
 const TURNS := 0.6
 const COLOR := Color(1.0, 0.45, 0.2, 1.0)
@@ -34,7 +34,7 @@ func draw(item: CanvasItem, t: float) -> void:
 		var at := ring.lerp(targets[i % targets.size()], fly)
 		ShapePaint.circle(ci, at, ORB * zoom * 1.8, Color(COLOR, alpha * 0.3))
 		ShapePaint.circle(ci, at, ORB * zoom, Color(COLOR, alpha))
-		ShapePaint.circle(ci, at, ORB * zoom * 0.4, Color(1, 1, 1, alpha))
+		ShapePaint.circle(ci, at, ORB * zoom * 0.4, Color(Color.WHITE, alpha))
 	if fly <= 0.0:
 		corners.append(corners[0])
 		ShapePaint.polyline(ci, corners, Color(COLOR, alpha * 0.5 * circle), 1.6, true)

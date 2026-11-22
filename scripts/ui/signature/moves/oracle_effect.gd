@@ -25,7 +25,7 @@ func draw(item: CanvasItem, t: float) -> void:
 	ShapePaint.circle(ci, orb, r + 1.0, Color(UiPalette.INK_950, alpha * 0.7))
 	ShapePaint.circle(ci, orb, r, Color(COLOR.darkened(0.45), alpha))
 	ShapePaint.circle(ci, orb, r * 0.75 * glow, Color(COLOR, alpha))
-	ShapePaint.circle(ci, orb - Vector2(r * 0.35, r * 0.35), r * 0.22, Color(1, 1, 1, alpha))
+	ShapePaint.circle(ci, orb - Vector2(r * 0.35, r * 0.35), r * 0.22, Color(Color.WHITE, alpha))
 	var reach := phase(t, GLOW, REACH)
 	if reach <= 0.0:
 		return
