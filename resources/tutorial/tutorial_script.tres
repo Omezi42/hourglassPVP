@@ -120,7 +120,7 @@ steps = Array[Dictionary]([{
 "stage": 4,
 "target_ref": "shield1",
 "target_side": "foe",
-"text": "「守護」の子がいる間は本体を殴れないよ。「反転権」を使って、相手の「シールド」を弱めてみよう！",
+"text": "「守護」の子がいると本体は殴れないよ。\n「反転権」で相手の「シールド」を弱めてみよう！",
 "topic": "flip_right"
 }, {
 "actor_ref": "as1",
