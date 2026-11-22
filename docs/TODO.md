@@ -77,8 +77,7 @@ Fableには判断だけを任せる。1項目を次の順に回す(手順の詳�
 
 ### 弾とガチャ(GameDesign.md 8章・15章・21章 / Architecture.md 10.8節)
 
-1. [ ] 実装: ショップのパック → 開封 → 生成(見た目は GameDesign.md 9章「レアリティ」・21章「パック」「開封」)。土台(レアリティ・`PackDefinition` / `RarityTable`・所有と購入と生成の `PackService`・デッキの枚数上限)は済み。所持数による錠前・シルエット・CPUデッキの枚数の検査・はじめの7日の2日目(テーマのレジェンド以外を2枚ずつ)も済み
-2. [ ] 第1弾の公開(レジェンドは1日1枚ずつ。8枚とも `CardSetLibrary` の各テーマの `card_ids` にまだ入っておらず、アイオーンの `first_extra` はパックの `set_ids` にも無い)
+1. [ ] 第1弾の公開(レジェンドは1日1枚ずつ。8枚とも `CardSetLibrary` の各テーマの `card_ids` にまだ入っておらず、アイオーンの `first_extra` はパックの `set_ids` にも無い)
 
 ### 週替わりの遠征(GameDesign.md 27章「週替わりの遠征」/ Architecture.md 10.15節)
 

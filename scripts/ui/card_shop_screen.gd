@@ -1,7 +1,7 @@
 class_name CardShopScreen
 extends Control
 ## ショップ(GameDesign.md 21章、Architecture.md 10.8)。砂金を使う唯一の場所で、
-## 売るのはアイコン・エモート・プレイマット・カードセット・カードスキン。共通のレイアウト規約
+## 売るのはパック・プレイマット・エモート・アイコン。共通のレイアウト規約
 ## (GameDesign.md 9章)に従い、`ScreenHeader` を使う。
 ##
 ## **左に品種のタブ、中央に品のタイル、右に選んだ品の詳細**。品が増えても1本のスクロールへ
@@ -41,13 +41,16 @@ const PORTRAIT_CHIP_SCALE := 1.4
 
 ## タブの並び(対局への効き目が大きい順。GameDesign.md 21章)。
 const KINDS: Array[Dictionary] = [
-	{"kind": ShopCatalog.Kind.CARD_SET, "heading": "カードセット"},
+	{"kind": ShopCatalog.Kind.PACK, "heading": "パック"},
 	{"kind": ShopCatalog.Kind.PLAYMAT, "heading": "プレイマット"},
 	{"kind": ShopCatalog.Kind.EMOTE, "heading": "エモート"},
 	{"kind": ShopCatalog.Kind.ICON, "heading": "アイコン"},
 ]
 
 var _balance: CurrencyChip
+## 砂粒の残高(GameDesign.md 15章。開封で上限を超えたぶんが増える)。
+var _dust: CurrencyChip
+var _opening: PackOpeningOverlay
 ## 開いた直後は脈を出さない。買って減ったときも同じで、脈は増えたときだけ出る。
 var _balance_seen := false
 var _message: Label
@@ -56,7 +59,7 @@ var _scroll: ScrollContainer
 var _grid: GridContainer
 var _detail: ShopDetailPane
 var _preview: ShopSetPreview
-var _kind: ShopCatalog.Kind = ShopCatalog.Kind.CARD_SET
+var _kind: ShopCatalog.Kind = ShopCatalog.Kind.PACK
 var _selected_id := ""
 var _tiles: Array[ShopItemTile] = []
 var _busy := false
@@ -73,16 +76,16 @@ func _ready() -> void:
 
 
 ## 画面を開くたびにMainが呼ぶ。残高は購入で必ず動くため、開くたびに描き直す。
-## focus_set_id を渡すと、カードセットのタブでそのセットを選んで開く(デッキ編集からの導線)。
+## focus_set_id を渡すと、そのテーマを含む弾のパックを選んで開く(デッキ編集の錠前からの導線)。
 ## 渡さなければ先頭のタブの先頭の品を選ぶ(詳細が空の画面を見せない)。
 func open(focus_set_id := "") -> void:
 	_set_message("")
 	var by_kind := _ids_by_kind()
-	var sets: Array = by_kind.get(ShopCatalog.Kind.CARD_SET, [])
+	var focus_pack := ShopCatalog.pack_of_set(focus_set_id) if focus_set_id != "" else ""
 	_selected_id = ""
-	if focus_set_id != "" and sets.has(focus_set_id):
-		_kind = ShopCatalog.Kind.CARD_SET
-		_selected_id = focus_set_id
+	if focus_pack != "":
+		_kind = ShopCatalog.Kind.PACK
+		_selected_id = focus_pack
 	else:
 		for entry in KINDS:
 			var ids: Array = by_kind.get(entry["kind"], [])
@@ -106,6 +109,7 @@ func _ids_by_kind() -> Dictionary:
 
 func _refresh() -> void:
 	_balance.set_amount(AccountService.currency(), _balance_seen)
+	_dust.set_amount(AccountService.sand_dust(), _balance_seen)
 	_balance_seen = true
 	var by_kind := _ids_by_kind()
 	_build_tabs(by_kind)
@@ -132,6 +136,8 @@ func _build_tabs(by_kind: Dictionary) -> void:
 		for id in ids:
 			if AccountService.owns(kind, str(id)):
 				tab.owned_count += 1
+		if kind == ShopCatalog.Kind.PACK:
+			_count_pack_cards(tab, ids)
 		tab.active = kind == _kind
 		tab.portrait = _portrait
 		tab.custom_minimum_size = _kind_tab_size()
@@ -152,11 +158,24 @@ func _build_tiles(ids: Array) -> void:
 		var tile := ShopItemTile.new(_kind, str(id))
 		tile.owned = AccountService.owns(_kind, str(id))
 		tile.affordable = AccountService.currency() >= ShopCatalog.price(_kind, str(id))
+		tile.free_today = (_kind == ShopCatalog.Kind.PACK and AccountService.free_pack_available())
 		tile.selected = str(id) == _selected_id
 		tile.custom_minimum_size = Vector2(tile_width, ShopItemTile.height(_kind))
 		tile.pressed.connect(func() -> void: _select_item(str(id)))
 		_grid.add_child(tile)
 		_tiles.append(tile)
+
+
+## パックのタブの「所持 n / m」は、弾のカードのうち1枚以上持っている種類の数 / 弾の予定枚数。
+func _count_pack_cards(tab: ShopKindTab, pack_ids: Array) -> void:
+	tab.owned_count = 0
+	tab.total_count = 0
+	for pack_id in pack_ids:
+		var pack := PackDefinition.load_pack(str(pack_id))
+		tab.total_count += ShopCatalog.planned_cards(str(pack_id))
+		for card_id in ShopCatalog.pack_card_ids(pack):
+			if AccountService.card_count(card_id) > 0:
+				tab.owned_count += 1
 
 
 ## 一覧の内側の幅(パネルの余白とスクロールバーのぶんを除く)。
@@ -230,6 +249,42 @@ func _on_buy_requested(kind: ShopCatalog.Kind, id: String) -> void:
 	_refresh()
 	if bought:
 		purchased.emit()
+
+
+## パックを開ける(GameDesign.md 21章)。抽選と保存を済ませてから開封の画面で結果を見せる。
+func _on_pack_requested(pack_id: String, count: int, free: bool) -> void:
+	if _busy:
+		return
+	if (
+		not free
+		and AccountService.currency() < ShopCatalog.price(ShopCatalog.Kind.PACK, pack_id) * count
+	):
+		return
+	_busy = true
+	_set_message("開けています…")
+	var pack := PackDefinition.load_pack(pack_id)
+	var counts_before := {}
+	for card_id in ShopCatalog.pack_card_ids(pack):
+		counts_before[card_id] = AccountService.card_count(card_id)
+	var dust_before := AccountService.sand_dust()
+	var ok: bool = await NetSession.sign_in()
+	var result: Dictionary
+	if ok:
+		var uid := NetSession.auth.uid if NetSession.auth != null else ""
+		var rng := RandomNumberGenerator.new()
+		rng.randomize()
+		result = await PackService.open_packs(NetSession.client, uid, pack_id, count, free, rng)
+	else:
+		result = {"ok": false, "message": "接続できないため開けられません。"}
+	_busy = false
+	if not bool(result.get("ok", false)):
+		_set_message(str(result.get("message", "")))
+		_refresh()
+		return
+	_set_message("")
+	_refresh()
+	_opening.open(pack_id, result.get("packs", []), counts_before, dust_before)
+	purchased.emit()
 
 
 func _selected_tile_rect() -> Rect2:
@@ -316,6 +371,10 @@ func _build() -> void:
 	)
 	# 残高はここでの購入で必ず動くため、ヘッダーの主アクションの位置へ常時出す
 	# (GameDesign.md 21章)。押すものではないのでボタンにはしない。
+	_dust = CurrencyChip.new()
+	_dust.dust = true
+	_dust.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	header.add_action(_dust)
 	_balance = CurrencyChip.new()
 	_balance.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	header.add_action(_balance)
@@ -351,12 +410,23 @@ func _build() -> void:
 	add_child(detail_panel)
 	_detail = ShopDetailPane.new()
 	_detail.buy_requested.connect(_on_buy_requested)
-	_detail.set_preview_requested.connect(func(set_id: String) -> void: _preview.open_set(set_id))
+	_detail.set_preview_requested.connect(_open_preview)
+	_detail.pack_requested.connect(_on_pack_requested)
 	detail_panel.add_child(_detail)
 
 	_preview = ShopSetPreview.new()
 	add_child(_preview)
+	_opening = PackOpeningOverlay.new()
+	_opening.closed.connect(_refresh)
+	add_child(_opening)
 	_layout()
+
+
+func _open_preview(id: String) -> void:
+	if _kind == ShopCatalog.Kind.PACK:
+		_preview.open_pack(id)
+	else:
+		_preview.open_set(id)
 
 
 func _list_zoom() -> float:
@@ -375,8 +445,9 @@ func apply_orientation(portrait: bool) -> void:
 		return
 	PortraitTabs.mark(_switch, int(_show_detail), portrait)
 	_header.apply_orientation(portrait)
-	_balance.scale_factor = PORTRAIT_CHIP_SCALE if portrait else 1.0
-	_balance.height_override = ScreenHeader.PORTRAIT_ACTION_HEIGHT if portrait else 0.0
+	for chip in [_balance, _dust]:
+		chip.scale_factor = PORTRAIT_CHIP_SCALE if portrait else 1.0
+		chip.height_override = ScreenHeader.PORTRAIT_ACTION_HEIGHT if portrait else 0.0
 	_layout()
 	_refresh()
 

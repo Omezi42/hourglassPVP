@@ -8,6 +8,8 @@ extends Control
 signal pressed(card: CardData)
 
 const CELL_SIZE := Vector2(168, 122)
+## レアリティの宝石の半対角(GameDesign.md 9章「レアリティ」)。
+const RARITY_GEM := 7.0
 ## 絵と名前を重ねないため、標本の欄は上・名札は下と決めて高さを配る。
 ## **絵は矩形いっぱいに描かれる**(周りの余白は絵の中に含まれない)ため、
 ## 名札のぶんはここで確実に空ける。34pxでは名前が砂時計の台へ乗っていた。
@@ -137,6 +139,13 @@ func _draw() -> void:
 	CardStatBadge.cost_diamond(
 		self, _font, Vector2(art.position.x - 2, art.position.y + 10), card.cost, 12.0
 	)
+	if RarityPaint.marked(card):
+		RarityPaint.gem(
+			get_canvas_item(),
+			Vector2(art.get_center().x, art.position.y + 2.0),
+			RARITY_GEM,
+			card.rarity
+		)
 	var bottom := art.end.y - 10.0
 	CardStatBadge.pair(
 		self, _font, Vector2(art.position.x - 2, bottom), Vector2(art.end.x + 2, bottom), card, 11.0

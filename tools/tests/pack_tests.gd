@@ -30,6 +30,7 @@ func run(assert_true: Callable) -> void:
 	_test_draw()
 	_test_pity()
 	_test_ownership()
+	_test_shop_catalog()
 	var auth := FirebaseAuth.new(null)
 	auth.uid = UID
 	_client = FakeClient.new(auth)
@@ -320,3 +321,30 @@ func _test_craft() -> void:
 	_assert.call(not unreleased["ok"], "cards outside the pack cannot be crafted")
 	var missing: Dictionary = await PackService.craft(_client, UID, "__none")
 	_assert.call(not missing["ok"], "unknown cards cannot be crafted")
+
+
+## ショップは弾をパックとして並べ、テーマを丸ごとは売らない(GameDesign.md 21章)。
+func _test_shop_catalog() -> void:
+	var packs := 0
+	for item in ShopCatalog.items():
+		_assert.call(
+			item["kind"] != ShopCatalog.Kind.CARD_SET, "the shop no longer sells whole themes"
+		)
+		if item["kind"] == ShopCatalog.Kind.PACK:
+			packs += 1
+	_assert.call(packs == 1 and ShopCatalog.pack_ids() == [PACK_ID], "the first pack is on sale")
+	_assert.call(
+		ShopCatalog.price(ShopCatalog.Kind.PACK, PACK_ID) == _pack.price,
+		"pack price comes from the .tres"
+	)
+	_assert.call(ShopCatalog.pack_of_set("still_time") == PACK_ID, "a theme leads to its pack")
+	_assert.call(ShopCatalog.pack_of_set("") == "", "the base set has no pack")
+	_assert.call(not AccountService.owns(ShopCatalog.Kind.PACK, PACK_ID), "a pack is never owned")
+	_assert.call(ShopPackInfo.percent_text(0.035) == "3.5%", "rates keep one decimal")
+	_assert.call(ShopPackInfo.percent_text(0.2) == "20%", "whole rates drop the decimal")
+	var base := CardLibrary.find_by_id(CardLibrary.sorted_by_cost()[0].id)
+	_assert.call(
+		base.set_id != "" or not CraftModal.craftable(base), "base cards cannot be crafted"
+	)
+	var themed := CardLibrary.find_by_id(CardSetLibrary.card_ids("still_time")[0])
+	_assert.call(CraftModal.craftable(themed), "a published pack card can be crafted")

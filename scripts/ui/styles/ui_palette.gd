@@ -44,6 +44,18 @@ const SELECT := Color(0.45, 0.82, 1.0)
 ## 取り返せない操作のボタンの字(赤い縁の内側で読める明るさ)。
 const DANGER_TEXT := Color(1.0, 0.72, 0.68)
 
+# ---- レアリティ(GameDesign.md 9章「レアリティ」。白銀・青・紫・橙金) ----
+const RARITY_COMMON := Color(0.86, 0.88, 0.92)
+const RARITY_RARE := Color(0.38, 0.64, 1.0)
+const RARITY_EPIC := Color(0.72, 0.44, 1.0)
+const RARITY_LEGEND := Color(1.0, 0.62, 0.18)
+## 開封の裏の地(藍)と、レジェンドの静止で敷く薄い青の膜。
+const CARD_BACK_TOP := Color(0.12, 0.15, 0.30)
+const CARD_BACK_BOTTOM := Color(0.06, 0.07, 0.16)
+const STILL_FILM := Color(0.80, 0.90, 1.0)
+const GLASS_TINT := Color(0.55, 0.66, 0.88)
+const SEAL_WAX := Color(0.62, 0.12, 0.12)
+
 # ---- 文字 ----
 const IVORY := Color(0.96, 0.93, 0.86)
 const MUTED := Color(0.66, 0.66, 0.70)

@@ -8,6 +8,8 @@ extends Control
 signal pressed(card: CardData)
 
 const CELL_SIZE := Vector2(122, 168)
+## レアリティの宝石の半対角(GameDesign.md 9章「レアリティ」)。
+const RARITY_GEM := 7.0
 ## 名前と棚板に使う下側の取り分。
 const NAME_BAND := 44.0
 const NAME_FONT := UiPalette.T_SMALL
@@ -293,6 +295,10 @@ func _draw() -> void:
 		EmblemSeal.brass(self, Vector2(base.x - 16, 18), card.emblem, 14.0)
 	var bottom := art.end.y - 12.0
 	CardStatBadge.pair(self, _font, Vector2(16, bottom), Vector2(base.x - 16, bottom), card, 13.0)
+	if RarityPaint.marked(card):
+		RarityPaint.gem(
+			get_canvas_item(), Vector2(base.x * 0.5, art.end.y - 4.0), RARITY_GEM, card.rarity, tint
+		)
 	if maxed:
 		_draw_maxed()
 	if locked:

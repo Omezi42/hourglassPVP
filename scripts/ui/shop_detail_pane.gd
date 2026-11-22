@@ -5,6 +5,8 @@ extends Control
 
 signal buy_requested(kind: ShopCatalog.Kind, id: String)
 signal set_preview_requested(set_id: String)
+## パックを開ける(`count` は1か10、`free` は今日の無料パック)。
+signal pack_requested(pack_id: String, count: int, free: bool)
 
 const KIND_BASELINE := 16.0
 const KIND_FONT_SIZE := UiPalette.T_SMALL
@@ -24,6 +26,9 @@ const SUB_BUTTON_HEIGHT := 46.0
 const BUTTON_GAP := 10.0
 const STATUS_GAP := 18.0
 const STATUS_FONT_SIZE := UiPalette.T_BODY
+## パックの「1パック」「10パック」の2つ並びのボタンの高さ。
+const PACK_BUTTON_HEIGHT := 50.0
+const PACK_INFO_TOP := 64.0
 
 var _kind: ShopCatalog.Kind = ShopCatalog.Kind.ICON
 var _id := ""
@@ -31,6 +36,9 @@ var _font: Font
 var _table: AccountTablePreview
 var _buy: Button
 var _look: Button
+var _buy_one: Button
+var _buy_bulk: Button
+var _free: Button
 
 
 func _ready() -> void:
@@ -47,6 +55,20 @@ func _ready() -> void:
 	_buy.add_theme_font_size_override("font_size", BUY_FONT_SIZE)
 	_buy.pressed.connect(func() -> void: buy_requested.emit(_kind, _id))
 	add_child(_buy)
+	_buy_one = CodedButton.make("", Vector2(0, PACK_BUTTON_HEIGHT))
+	_buy_one.pressed.connect(func() -> void: pack_requested.emit(_id, 1, false))
+	add_child(_buy_one)
+	_buy_bulk = CodedButton.make("", Vector2(0, PACK_BUTTON_HEIGHT))
+	_buy_bulk.pressed.connect(
+		func() -> void: pack_requested.emit(_id, PackService.BULK_COUNT, false)
+	)
+	add_child(_buy_bulk)
+	_free = CodedButton.make_in_group(
+		"今日の無料パックを開ける", Vector2(0, BUY_HEIGHT), CodedButton.PRIMARY_ACTION_GROUP
+	)
+	_free.add_theme_font_size_override("font_size", BUY_FONT_SIZE)
+	_free.pressed.connect(func() -> void: pack_requested.emit(_id, 1, true))
+	add_child(_free)
 	resized.connect(_layout)
 	_layout()
 
@@ -71,14 +93,31 @@ func show_item(kind: ShopCatalog.Kind, id: String, bump := false) -> void:
 		if bump:
 			_table.bump()
 	var owned := AccountService.owns(kind, id)
-	_look.visible = kind == ShopCatalog.Kind.CARD_SET
-	_buy.visible = not owned
-	_buy.disabled = AccountService.currency() < ShopCatalog.price(kind, id)
-	_buy.mouse_default_cursor_shape = (
-		Control.CURSOR_ARROW if _buy.disabled else Control.CURSOR_POINTING_HAND
-	)
+	var pack := kind == ShopCatalog.Kind.PACK
+	_look.visible = kind == ShopCatalog.Kind.CARD_SET or pack
+	_buy.visible = not owned and not pack
+	_set_enabled(_buy, AccountService.currency() >= ShopCatalog.price(kind, id))
+	_buy_one.visible = pack
+	_buy_bulk.visible = pack
+	_free.visible = pack and AccountService.free_pack_available()
+	if pack:
+		var price := ShopCatalog.price(kind, id)
+		_buy_one.text = "1パック  %s" % CurrencyRules.amount_text(price)
+		_buy_bulk.text = (
+			"%dパック  %s"
+			% [PackService.BULK_COUNT, CurrencyRules.amount_text(price * PackService.BULK_COUNT)]
+		)
+		_set_enabled(_buy_one, AccountService.currency() >= price)
+		_set_enabled(_buy_bulk, AccountService.currency() >= price * PackService.BULK_COUNT)
 	_layout()
 	queue_redraw()
+
+
+func _set_enabled(button: Button, enabled: bool) -> void:
+	button.disabled = not enabled
+	button.mouse_default_cursor_shape = (
+		Control.CURSOR_POINTING_HAND if enabled else Control.CURSOR_ARROW
+	)
 
 
 ## 購入が確定した瞬間、品の絵を砂金チップへ飛ばす起点(9章)。
@@ -101,6 +140,25 @@ func _layout() -> void:
 	_buy.size = Vector2(size.x, BUY_HEIGHT)
 	_look.size = Vector2(size.x, SUB_BUTTON_HEIGHT)
 	_look.position = Vector2(0.0, _bottom_top() - SUB_BUTTON_HEIGHT - BUTTON_GAP)
+	if _kind != ShopCatalog.Kind.PACK:
+		return
+	var bottom := size.y
+	if _free.visible:
+		_free.position = Vector2(0.0, size.y - BUY_HEIGHT)
+		_free.size = Vector2(size.x, BUY_HEIGHT)
+		bottom -= BUY_HEIGHT + BUTTON_GAP
+	var half := (size.x - BUTTON_GAP) * 0.5
+	for i in 2:
+		var button := _buy_one if i == 0 else _buy_bulk
+		button.position = Vector2((half + BUTTON_GAP) * i, bottom - PACK_BUTTON_HEIGHT)
+		button.size = Vector2(half, PACK_BUTTON_HEIGHT)
+	_look.position = Vector2(
+		0.0, _pack_buttons_top() - STATUS_GAP * 2.0 - SUB_BUTTON_HEIGHT - BUTTON_GAP
+	)
+
+
+func _pack_buttons_top() -> float:
+	return _buy_one.position.y
 
 
 ## 購入ボタン(所持済みなら同じ場所の案内文)の上端。
@@ -129,6 +187,10 @@ func _draw() -> void:
 		NAME_FONT_SIZE,
 		UiPalette.IVORY
 	)
+	if _kind == ShopCatalog.Kind.PACK:
+		ShopPackInfo.draw(self, _font, PACK_INFO_TOP, size.x, _id)
+		_draw_pack_status()
+		return
 	var preview := _preview_rect()
 	if not _table.visible:
 		UiKit.well(get_canvas_item(), preview)
@@ -209,4 +271,28 @@ func _draw_status() -> void:
 		size.x,
 		STATUS_FONT_SIZE,
 		color
+	)
+
+
+## パックの購入後の残高(「砂金 1240 → 1パックで 1140」)。足りなければ「あと n 足りません」。
+func _draw_pack_status() -> void:
+	var cost := ShopCatalog.price(_kind, _id)
+	var balance := AccountService.currency()
+	var text := (
+		"%s → 1パックで %s"
+		% [CurrencyRules.label_text(balance), CurrencyRules.amount_text(balance - cost)]
+	)
+	if balance < cost:
+		text = (
+			"%s ・ あと %s 足りません"
+			% [CurrencyRules.label_text(cost), CurrencyRules.amount_text(cost - balance)]
+		)
+	draw_string(
+		_font,
+		Vector2(0.0, _pack_buttons_top() - STATUS_GAP),
+		text,
+		HORIZONTAL_ALIGNMENT_LEFT,
+		size.x,
+		UiPalette.T_SMALL,
+		UiPalette.MUTED
 	)

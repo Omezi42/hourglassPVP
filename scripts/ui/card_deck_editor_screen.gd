@@ -106,6 +106,7 @@ var _detail_hide_timer: Timer
 var _preset_picker: CardPresetPicker
 var _share_panel: CardDeckSharePanel
 var _shop_confirm: ConfirmModal
+var _craft: CraftModal
 ## ショップへの導線を出している最中のカードセット。
 var _pending_set := ""
 ## 一覧に並べるカード。**コスト順**で固定する(GameDesign.md 9章の既定と揃える)。
@@ -180,6 +181,10 @@ func _build() -> void:
 			if not _pending_set.is_empty():
 				shop_requested.emit(_pending_set)
 	)
+	_craft = CraftModal.new()
+	_craft.crafted.connect(func(_card: CardData) -> void: _refresh())
+	_craft.shop_requested.connect(func(set_id: String) -> void: shop_requested.emit(set_id))
+	add_child(_craft)
 
 
 ## 画面名は吊り看板が示す(下地が描く)ため、ここは操作だけを置く。
@@ -622,7 +627,7 @@ func _on_shelf_hovered(card: CardData) -> void:
 
 func _on_card_pressed(card: CardData) -> void:
 	if AccountService.card_count(card.id) == 0:
-		_offer_shop(card.set_id)
+		_offer_shop(card)
 		return
 	_add_card(card)
 
@@ -633,10 +638,15 @@ func refresh_ownership() -> void:
 	_refresh()
 
 
-func _offer_shop(set_id: String) -> void:
+## 持っていないカード。弾のカードは生成とパックへの導線を出す(GameDesign.md 15章・21章)。
+func _offer_shop(card: CardData) -> void:
 	_hide_detail()
-	# ショップで売らないセット(ソロモード・プレゼント)は、手に入れ方だけを伝える。
-	if CardSetLibrary.price(set_id) <= 0:
+	var set_id := card.set_id
+	if CraftModal.craftable(card):
+		_craft.open(card, true)
+		return
+	# パックに入らないテーマ(ソロモード・プレゼント)は、手に入れ方だけを伝える。
+	if ShopCatalog.pack_of_set(set_id).is_empty():
 		_pending_set = ""
 		_shop_confirm.open_notice(
 			"まだ持っていないカード",
@@ -650,7 +660,7 @@ func _offer_shop(set_id: String) -> void:
 	_pending_set = set_id
 	_shop_confirm.open_confirm(
 		"まだ持っていないカード",
-		"カードセット「%s」のカードです。ショップで購入するとデッキに入れられます。" % CardSetLibrary.display_name(set_id),
+		"「%s」のカードです。ショップのパックから出ます。" % CardSetLibrary.display_name(set_id),
 		"ショップへ",
 		"閉じる"
 	)

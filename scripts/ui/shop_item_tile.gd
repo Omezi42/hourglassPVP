@@ -8,6 +8,7 @@ extends Button
 ## 品種ごとの列数とタイルの高さ。絵の形(紋章=正方形、マット=横長、文言=1行)に合わせる。
 ## `stacked` は名前と価格を横に並べる幅が無いタイル(紋章)で、2行に積んで中央に寄せる。
 const LAYOUT := {
+	ShopCatalog.Kind.PACK: {"columns": 1, "height": 260.0, "stacked": false},
 	ShopCatalog.Kind.CARD_SET: {"columns": 1, "height": 150.0, "stacked": false},
 	ShopCatalog.Kind.PLAYMAT: {"columns": 2, "height": 170.0, "stacked": false},
 	ShopCatalog.Kind.EMOTE: {"columns": 2, "height": 96.0, "stacked": false},
@@ -31,6 +32,10 @@ const OWNED_CHECK_SIZE := 9.0
 const ICON_SEAL_RATIO := 0.4
 ## 選択枠(水色の線)。角はタイル自身の角丸に、太さは面の縁に合わせる(小さなタイルで枠だけ太く見せない)。
 const SELECT_INSET := 2.0
+## 「今日の無料 1パック」の札(右上)。
+const FREE_TAG_TEXT := "今日の無料 1パック"
+const FREE_TAG_SIZE := Vector2(150, 28)
+const FREE_TAG_FONT := UiPalette.T_SMALL
 ## 残高が足りない品の暗さ(GameDesign.md 21章「買えないことは品を暗くすることで示す」)。
 const UNAFFORDABLE_TONE := Color(0.62, 0.6, 0.58, 1.0)
 
@@ -40,6 +45,8 @@ var owned := false
 var affordable := true
 ## 0より大きければ、価格の代わりに受け取る枚数を出す(はじめの7日のテーマ。GameDesign.md 23章)。
 var gift_count := 0
+## 今日の無料パックが残っている(パックのタイルだけが使う)。
+var free_today := false
 ## 名前と価格の文字の倍率。縦で中身ごと拡大しても目安(本文24px)に届かない置き場所が使う。
 var text_scale := 1.0
 var selected := false:
@@ -69,7 +76,7 @@ func _ready() -> void:
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	# 買えない品も選んで見本を見られる。**暗くするのは `modulate`**(子のマット見本ごと
 	# 一括で暗くなる)、ホバーの発光だけを止める(手札のマナ不足と同じ。9章)。
-	if not owned and not affordable:
+	if not owned and not affordable and not free_today:
 		modulate = UNAFFORDABLE_TONE
 		add_theme_stylebox_override("hover", get_theme_stylebox("normal"))
 	if kind == ShopCatalog.Kind.PLAYMAT:
@@ -129,6 +136,10 @@ func _draw() -> void:
 			ShopItemArt.emote_bubble(self, art, id, _font)
 		ShopCatalog.Kind.CARD_SET:
 			ShopItemArt.card_set_row(self, art, id, _font)
+		ShopCatalog.Kind.PACK:
+			ShopItemArt.pack_summary(self, art, id, _font)
+			if free_today:
+				_draw_free_tag()
 	_draw_footer()
 	if selected:
 		_draw_select_ring()
@@ -157,6 +168,9 @@ func _price_font_size() -> int:
 func _draw_footer() -> void:
 	var inner := _inner_rect()
 	var baseline := inner.end.y - FOOTER_BASELINE_INSET
+	if kind == ShopCatalog.Kind.PACK:
+		_draw_price(baseline)
+		return
 	var name := ShopCatalog.item_name(kind, id)
 	if kind == ShopCatalog.Kind.CARD_SET and gift_count <= 0:
 		name += "(%s)" % CardSetLibrary.count_text(id)
@@ -233,3 +247,12 @@ func _draw_price(baseline: float) -> void:
 		emblem_center,
 		OWNED_CHECK_SIZE if owned else PRICE_EMBLEM_SIZE
 	)
+
+
+func _draw_free_tag() -> void:
+	var inner := _inner_rect()
+	var rect := Rect2(
+		Vector2(inner.end.x - FREE_TAG_SIZE.x - TEXT_PAD, inner.position.y + TEXT_PAD),
+		FREE_TAG_SIZE
+	)
+	UiKit.tag(get_canvas_item(), _font, rect, FREE_TAG_TEXT, FREE_TAG_FONT)

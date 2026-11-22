@@ -40,12 +40,33 @@ func _ready() -> void:
 
 ## そのセットの全カードを、購入の有無に関わらずそのまま見せる。未公開の枠は「?」の札で示す。
 func open_set(set_id: String) -> void:
-	_title.text = (
-		"%s — 内容(%s)" % [CardSetLibrary.display_name(set_id), CardSetLibrary.count_text(set_id)]
+	_fill(
+		"%s — 内容(%s)" % [CardSetLibrary.display_name(set_id), CardSetLibrary.count_text(set_id)],
+		CardSetLibrary.card_ids(set_id),
+		CardSetLibrary.hidden_count(set_id)
 	)
+
+
+## 弾の収録カード(テーマの並び順)を見せる(ショップのパックの「収録カードを見る」)。
+func open_pack(pack_id: String) -> void:
+	var pack := PackDefinition.load_pack(pack_id)
+	if pack == null:
+		return
+	var ids := ShopCatalog.pack_card_ids(pack)
+	var planned := ShopCatalog.planned_cards(pack_id)
+	_fill(
+		"%s — 収録カード(%d / %d 枚公開中)" % [pack.display_name, ids.size(), planned],
+		ids,
+		planned - ids.size()
+	)
+
+
+func _fill(title: String, ids: Array[String], hidden: int) -> void:
+	_title.text = title
 	for child in _row.get_children():
+		_row.remove_child(child)
 		child.queue_free()
-	for card_id in CardSetLibrary.card_ids(set_id):
+	for card_id in ids:
 		var card := CardLibrary.find_by_id(card_id)
 		if card == null:
 			continue
@@ -53,7 +74,7 @@ func open_set(set_id: String) -> void:
 		panel.interactive = false
 		_row.add_child(panel)
 		panel.show_card(card)
-	for i in CardSetLibrary.hidden_count(set_id):
+	for i in hidden:
 		_row.add_child(_hidden_slot())
 	_layout()
 	_scroll.scroll_horizontal = 0

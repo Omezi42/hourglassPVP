@@ -232,6 +232,9 @@ static func owns(kind: ShopCatalog.Kind, id: String) -> bool:
 			return owned_playmat_ids().has(id)
 		ShopCatalog.Kind.CARD_SET:
 			return owned_card_set_ids().has(id)
+		ShopCatalog.Kind.PACK:
+			# パックは何度でも開けられる(所持済みにならない)。
+			return false
 		_:
 			return owned_icon_ids().has(id)
 

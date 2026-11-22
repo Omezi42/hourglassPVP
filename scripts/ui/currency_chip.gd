@@ -25,6 +25,18 @@ const VALUE_GAP_RATIO := 0.30
 const RIGHT_PAD_RATIO := 0.38
 const LIFT := 0.6
 const PULSE_GLOW := Color(1.0, 0.82, 0.45, 0.35)
+## 砂粒の札(GameDesign.md 15章)の単位と、印の3粒の配置(半径に対する比)。
+const DUST_NAME := "砂粒"
+const DUST_GRAINS: Array[Vector2] = [Vector2(-0.32, 0.22), Vector2(0.3, 0.26), Vector2(0.0, -0.3)]
+const DUST_GRAIN_RATIO := 0.24
+
+## 砂金ではなく砂粒の残高を出す(ショップのヘッダー・開封・生成)。
+var dust := false:
+	set(value):
+		dust = value
+		if _font != null:
+			_relayout()
+		queue_redraw()
 
 ## 大きさの倍率(`height_override` が無いときの高さへ掛ける)。
 var scale_factor := 1.0:
@@ -103,7 +115,7 @@ func _relayout() -> void:
 	custom_minimum_size.y = height
 	custom_minimum_size.x = (
 		height * (1.0 + COIN_GAP_RATIO + VALUE_GAP_RATIO + RIGHT_PAD_RATIO)
-		+ _text_width(CurrencyRules.CURRENCY_NAME, _unit_font_size())
+		+ _text_width(_unit_name(), _unit_font_size())
 		+ _text_width(_value_text(), _font_size())
 	)
 	size.x = custom_minimum_size.x
@@ -128,18 +140,28 @@ func _draw() -> void:
 		true
 	)
 	var icon := height * COIN_ICON_RATIO
-	draw_texture_rect(
-		UiPaint.HOURGLASS_ICON,
-		Rect2(coin - Vector2(icon, icon), Vector2(icon, icon) * 2.0),
-		false,
-		UiPalette.BRASS_INK
-	)
+	if dust:
+		for grain in DUST_GRAINS:
+			UiKit.fill(
+				ci,
+				UiKit.ellipse(
+					coin + grain * coin_radius, Vector2.ONE * coin_radius * DUST_GRAIN_RATIO
+				),
+				UiPalette.BRASS_INK
+			)
+	else:
+		draw_texture_rect(
+			UiPaint.HOURGLASS_ICON,
+			Rect2(coin - Vector2(icon, icon), Vector2(icon, icon) * 2.0),
+			false,
+			UiPalette.BRASS_INK
+		)
 	var unit_size := _unit_font_size()
 	var unit_x := rect.position.x + height * (1.0 + COIN_GAP_RATIO)
 	draw_string(
 		_font,
 		Vector2(unit_x, _baseline(mid, unit_size)),
-		CurrencyRules.CURRENCY_NAME,
+		_unit_name(),
 		HORIZONTAL_ALIGNMENT_LEFT,
 		-1,
 		unit_size,
@@ -181,3 +203,7 @@ func _text_width(text: String, font_size: int) -> float:
 ## 面の高さ。`height_override` が優先で、無ければ倍率から求める。
 func _height() -> float:
 	return height_override if height_override > 0.0 else HEIGHT * scale_factor
+
+
+func _unit_name() -> String:
+	return DUST_NAME if dust else CurrencyRules.CURRENCY_NAME

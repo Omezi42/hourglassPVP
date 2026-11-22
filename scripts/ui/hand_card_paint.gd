@@ -53,11 +53,13 @@ static func draw(view: CardView) -> void:
 	var rect := Rect2(Vector2.ZERO, view.size)
 	var tint: Color = view._tint()
 	var points := UiKit.rr(rect, CORNER * s)
+	RarityPaint.halo(ci, rect, view.card, tint)
 	# 札の地は夜の藍。紙は名前の帯だけ(暗い卓の上で名前がいちばん読めるように。GameDesign.md 9章)。
 	UiKit.vgrad(ci, points, [[0.0, UiPalette.INK_600 * tint], [1.0, UiPalette.INK_900 * tint]])
 	_window(view, ci, s, tint)
 	_name_band(view, ci, s, tint)
 	_frame(view, ci, rect, points, s, tint)
+	RarityPaint.card_marks(ci, rect, CORNER * s, view.card, tint)
 	_labels(view, s, tint)
 	_gems(view, ci, s, tint)
 	_seal(view, ci, s, tint)

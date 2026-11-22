@@ -33,6 +33,9 @@ const BACK_GROUP := "back_nav"
 const ORDER_WIDTH := 212.0
 const BACK_RECT := Rect2(24, 28, 96, 42)
 const ORDER_RECT := Rect2(SCREEN_SIZE.x - 24 - ORDER_WIDTH, 28, ORDER_WIDTH, 42)
+## 「生成する」(GameDesign.md 15章)。本の外、並び替えの左に置く(縦は解説を出している間だけ並び替えの位置へ)。
+const CRAFT_WIDTH := 160.0
+const CRAFT_RECT := Rect2(ORDER_RECT.position.x - 12 - CRAFT_WIDTH, 28, CRAFT_WIDTH, 42)
 const HEADING_FONT := UiPalette.T_HEAD
 const COUNT_FONT := UiPalette.T_BODY
 
@@ -59,6 +62,8 @@ var _views: Array[AlmanacEntry] = []
 var _grid: GridContainer
 var _selected: CardData
 var _order_button: Button
+var _craft_button: Button
+var _craft: CraftModal
 var _order: Order = Order.COST
 var _collected: Vector2i = Vector2i.ZERO
 var _font: Font
@@ -109,6 +114,10 @@ func _build() -> void:
 	_order_button.position = ORDER_RECT.position
 	_order_button.pressed.connect(_on_order_pressed)
 	add_child(_order_button)
+	_craft_button = CodedButton.make("生成する", CRAFT_RECT.size)
+	_craft_button.position = CRAFT_RECT.position
+	_craft_button.pressed.connect(func() -> void: _craft.open(_selected))
+	add_child(_craft_button)
 
 	var heading := Control.new()
 	heading.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -144,6 +153,9 @@ func _build() -> void:
 	_keyword_popup = KeywordPopup.new()
 	add_child(_keyword_popup)
 	_page.keyword_pressed.connect(func(entry: Dictionary) -> void: _keyword_popup.open(entry))
+	_craft = CraftModal.new()
+	_craft.crafted.connect(_on_crafted)
+	add_child(_craft)
 
 	for label in ["一覧", "解説"]:
 		var tab := CodedButton.make_in_group(label, Vector2(160, 64), TAB_GROUP)
@@ -165,6 +177,7 @@ func apply_orientation(portrait: bool) -> void:
 	var font := PORTRAIT_BUTTON_FONT if portrait else 0
 	_place(_back, PORTRAIT_BACK_RECT if portrait else BACK_RECT, font)
 	_place(_order_button, PORTRAIT_ORDER_RECT if portrait else ORDER_RECT, font)
+	_place(_craft_button, PORTRAIT_ORDER_RECT if portrait else CRAFT_RECT, font)
 	var tab_w := (PORTRAIT_TAB_RECT.size.x - PORTRAIT_TAB_GAP) * 0.5
 	for i in _tab_buttons.size():
 		var at := PORTRAIT_TAB_RECT.position + Vector2((tab_w + PORTRAIT_TAB_GAP) * i, 0.0)
@@ -200,6 +213,7 @@ func _select_tab(index: bool) -> void:
 	_heading.visible = index or not _portrait
 	_page.visible = not index or not _portrait
 	_order_button.visible = index or not _portrait
+	_update_craft_button()
 	for i in _tab_buttons.size():
 		_tab_buttons[i].visible = _portrait
 		var active: bool = (i == 0) == index
@@ -296,6 +310,23 @@ func _select(card: CardData) -> void:
 		view.selected = view.card == card
 		view.queue_redraw()
 	_page.show_card(card)
+	_update_craft_button()
+
+
+## 生成できるカード(公開済みの弾のカードで、上限まで持っていない)を選んでいるときだけ出す。
+func _update_craft_button() -> void:
+	if _craft_button == null:
+		return
+	var can := (
+		CraftModal.craftable(_selected)
+		and AccountService.card_count(_selected.id) < CardOwnership.cap(_selected)
+	)
+	_craft_button.visible = can and (not _show_index or not _portrait)
+
+
+func _on_crafted(card: CardData) -> void:
+	open()
+	_select(card)
 
 
 ## いま選んでいる並び順でカードを並べ直す。選択中のカードは並びが変わっても保つ。
