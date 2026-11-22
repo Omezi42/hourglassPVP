@@ -25,19 +25,16 @@ static func submit(uid: String, week: String, wins: int, hp: int) -> void:
 	if client == null or client.auth == null or client.auth.uid != uid:
 		return
 	_cache.erase(week)
-	await (
-		client
-		. set_document(
-			entry_path(week, uid),
-			{
-				"wins": wins,
-				"hp": hp,
-				"name": AccountService.display_name(),
-				"icon": AccountService.icon_id(),
-				"updated_at": int(Time.get_unix_time_from_system()),
-			}
-		)
-	)
+	var data := {
+		"wins": wins,
+		"hp": hp,
+		"name": AccountService.display_name(),
+		"icon": AccountService.icon_id(),
+		"updated_at": int(Time.get_unix_time_from_system()),
+	}
+	await client.set_document(entry_path(week, uid), data)
+	# 書き終えた後に読まれた控えは、書く前の順位のままかもしれない。
+	_cache.erase(week)
 
 
 ## 上位20人 `[{"uid", "name", "icon", "wins", "hp"}]`。読めなかったときは null(0人とは分ける)。
@@ -82,6 +79,11 @@ static func rank_in(rows: Array, uid: String) -> int:
 		if str((rows[i] as Dictionary).get("uid", "")) == uid:
 			return i + 1
 	return 0
+
+
+## 撮影・検査用。通信せずに順位表の中身を与える。
+static func set_cache_for_test(week: String, rows: Array) -> void:
+	_cache[week] = rows
 
 
 static func has_cache(week: String) -> bool:

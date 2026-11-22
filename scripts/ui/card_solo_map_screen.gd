@@ -32,6 +32,11 @@ const ABANDON_CONFIRM_TEXT := "やめる"
 const ABANDON_CANCEL_TEXT := "キャンセル"
 ## 通過数「遠征の3段目に着いた」の段(0始まり。GameDesign.md 22章)。
 const FUNNEL_FLOOR_INDEX := 2
+## 週替わりの遠征(GameDesign.md 27章「週替わりの遠征」)。出発の画面は左に札、右に順位表を置く。
+## 縦は上に札、下に順位表を積む。
+const WEEKLY_LEFT_RATIO := 0.5
+const WEEKLY_PORTRAIT_DEPARTURE_RATIO := 0.5
+const WEEKLY_ABANDON_MESSAGE := "ここでやめると、今週の遠征は終わり、もう挑めません。"
 
 var _run: SoloRun = null
 var _departure: SoloDepartureView
@@ -60,20 +65,42 @@ var _sheet_shade: ColorRect
 var _sheet_close: Button
 var _deck_sheet_open := false
 var _route_tween: Tween
+## 週替わりの遠征を開いているか。`open()` はそのとき開いていた種類のまま開き直す
+## (対局から戻ったとき、続きの遠征を同じ種類で出すため)。
+var _weekly := false
+var _week := ""
+var _weekly_board: SoloWeeklyBoard
 
 
 func _ready() -> void:
 	_build()
 
 
+## いつもの遠征か週替わりの遠征かを決めて開く(ソロモードの選択モーダルから)。
+func open_in(weekly: bool) -> void:
+	_weekly = weekly
+	open()
+
+
 func open() -> void:
-	_run = SoloProgress.load_run(_uid())
+	_week = WeeklyExpedition.current_week()
 	_selected_index = -1
+	if _weekly:
+		_run = SoloProgress.weekly_run(_uid(), _week)
+	else:
+		_run = SoloProgress.load_run(_uid())
+	_layout_departure()
 	_refresh()
-	if _run == null:
-		var finished := SoloProgress.take_finished(_uid())
-		if not finished.is_empty():
-			_summary.open(finished)
+	if _run != null:
+		return
+	var finished: Dictionary
+	if _weekly:
+		finished = SoloProgress.take_weekly_finished(_uid(), _week)
+		_open_weekly_board()
+	else:
+		finished = SoloProgress.take_finished(_uid())
+	if not finished.is_empty():
+		_summary.open(finished)
 
 
 func _build() -> void:
@@ -92,6 +119,9 @@ func _build() -> void:
 	_departure.theme_chosen.connect(_on_theme_chosen)
 	_departure.depth_changed.connect(_on_departure_depth_changed)
 	add_child(_departure)
+	_weekly_board = SoloWeeklyBoard.new()
+	_weekly_board.visible = false
+	add_child(_weekly_board)
 
 	var route_w := CONTENT_RECT.size.x * ROUTE_RATIO - STATUS_GAP * 0.5
 	var side_w := CONTENT_RECT.size.x * (1.0 - ROUTE_RATIO) - STATUS_GAP * 0.5
@@ -170,9 +200,7 @@ func _build() -> void:
 	# 出発の画面(`_departure`)がその下に見えているだけで足りるため。記録を出している間だけ
 	# 出発の画面を隠す(暗幕を透けて記録の見出しと二重に見えないように)。
 	_summary = SoloRunSummary.new()
-	_summary.visibility_changed.connect(
-		func() -> void: _departure.visible = _run == null and not _summary.visible
-	)
+	_summary.visibility_changed.connect(_sync_departure_visible)
 	_summary.position = Vector2.ZERO
 	_summary.size = SCREEN_SIZE
 	add_child(_summary)
@@ -196,11 +224,7 @@ func apply_orientation(portrait: bool) -> void:
 	_portrait = portrait
 	_sheet_shade.size = screen
 	var content := _header.portrait_content_rect() if portrait else CONTENT_RECT
-	var zoom := PORTRAIT_DEPARTURE_ZOOM if portrait else 1.0
-	_departure.stacked = portrait
-	_departure.position = content.position
-	_departure.size = content.size / zoom
-	_departure.scale = Vector2.ONE * zoom
+	_layout_departure()
 	if portrait:
 		_strip.position = Vector2(content.position.x, content.end.y - SoloStatusStrip.HEIGHT)
 		_strip.size = Vector2(content.size.x, SoloStatusStrip.HEIGHT)
@@ -240,6 +264,44 @@ func apply_orientation(portrait: bool) -> void:
 		_refresh()
 
 
+## 出発の画面の置き場所。週替わりの遠征は左に札、右に順位表(縦は上と下)。
+func _layout_departure() -> void:
+	if _header == null:
+		return
+	var content := _header.portrait_content_rect() if _portrait else CONTENT_RECT
+	var zoom := PORTRAIT_DEPARTURE_ZOOM if _portrait else 1.0
+	_departure.stacked = _portrait
+	_departure.position = content.position
+	_departure.scale = Vector2.ONE * zoom
+	_weekly_board.set_portrait(_portrait)
+	if not _weekly:
+		_departure.size = content.size / zoom
+		return
+	if _portrait:
+		var top_h := content.size.y * WEEKLY_PORTRAIT_DEPARTURE_RATIO
+		_departure.size = Vector2(content.size.x, top_h) / zoom
+		_weekly_board.position = content.position + Vector2(0.0, top_h + PORTRAIT_GAP)
+		_weekly_board.size = Vector2(content.size.x, content.size.y - top_h - PORTRAIT_GAP)
+		return
+	var left_w := content.size.x * WEEKLY_LEFT_RATIO - STATUS_GAP * 0.5
+	_departure.size = Vector2(left_w, content.size.y)
+	_weekly_board.position = content.position + Vector2(left_w + STATUS_GAP, 0.0)
+	_weekly_board.size = Vector2(content.size.x - left_w - STATUS_GAP, content.size.y)
+
+
+func _sync_departure_visible() -> void:
+	_departure.visible = _run == null and not _summary.visible
+	_weekly_board.visible = _departure.visible and _weekly
+
+
+## 順位表を読み直す。自分の行は、遠征中・終了後の自分の勝った数と残りHPから出す。
+func _open_weekly_board() -> void:
+	var own := SoloProgress.weekly_result(_uid(), _week)
+	if own.is_empty() and _run != null:
+		own = {"wins": _run.wins, "hp": _run.hp}
+	_weekly_board.open(_week, own)
+
+
 func _refresh() -> void:
 	_selected_index = -1
 	var has_run := _run != null
@@ -248,6 +310,7 @@ func _refresh() -> void:
 	var workshop_open := has_run and not boon_open and not bundle_open and _run.workshop_open
 	var route_open := has_run and not boon_open and not bundle_open and not workshop_open
 	_departure.visible = not has_run
+	_weekly_board.visible = not has_run and _weekly and not _summary.visible
 	_route.visible = route_open
 	_deck_sheet_open = false
 	_strip.visible = route_open and _portrait
@@ -256,6 +319,16 @@ func _refresh() -> void:
 	_boon.visible = boon_open
 	_bundle.visible = bundle_open
 	_workshop.visible = workshop_open
+	if not has_run and _weekly:
+		_departure.show_weekly(
+			WeeklyExpedition.theme_of(_week),
+			WeeklyExpedition.boss_of(_week),
+			WeeklyExpedition.DEPTH,
+			SoloProgress.weekly_result(_uid(), _week)
+		)
+		_status.visible = false
+		_destination.visible = false
+		return
 	if not has_run:
 		var uid := _uid()
 		if _departure_themes.is_empty():
@@ -392,6 +465,11 @@ func _on_destination_challenge_pressed() -> void:
 
 
 func _on_theme_chosen(theme_id: String) -> void:
+	if _weekly:
+		_run = WeeklyExpedition.create_run(_week)
+		SoloProgress.save_run(_uid(), _run)
+		_refresh()
+		return
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
 	_run = SoloRun.create(theme_id, _departure_depth, rng, _departure_boss)
@@ -414,9 +492,8 @@ func _on_departure_depth_changed(delta: int) -> void:
 
 ## 行き先を選ぶ。対局・関門なら対局へ進み、泉・工房ならここで結果を反映して道へ戻る。
 func _on_destination_chosen(index: int) -> void:
-	var rng := RandomNumberGenerator.new()
-	rng.randomize()
-	if _run.floor >= FUNNEL_FLOOR_INDEX:
+	var rng := WeeklyExpedition.rng_for_run(_run, "choose:%d" % _run.floor)
+	if _run.floor >= FUNNEL_FLOOR_INDEX and not _weekly:
 		FunnelService.reach(FunnelService.SOLO_FLOOR3)
 	_run.choose(index, rng)
 	# `in_battle`を立てたまま保存しておく。対局の途中で抜けたら負けにする(27章「中断と再開」)ため。
@@ -438,7 +515,7 @@ func _on_bundle_skip() -> void:
 
 
 func _on_boon_chosen(boon_id: String) -> void:
-	_run.take_boon(boon_id)
+	_run.take_boon(boon_id, WeeklyExpedition.rng_for_run(_run, "bundle:%d" % _run.floor))
 	_after_offer_choice()
 
 
@@ -459,8 +536,7 @@ func _on_workshop_skip() -> void:
 
 func _after_offer_choice() -> void:
 	if _run.over:
-		SoloProgress.clear_run(_uid())
-		_run = null
+		_end_run_without_record()
 	else:
 		SoloProgress.save_run(_uid(), _run)
 	_refresh()
@@ -468,14 +544,29 @@ func _after_offer_choice() -> void:
 
 func _on_abandon_requested() -> void:
 	_confirm.open_confirm(
-		ABANDON_TITLE, ABANDON_MESSAGE, ABANDON_CONFIRM_TEXT, ABANDON_CANCEL_TEXT, true
+		ABANDON_TITLE,
+		WEEKLY_ABANDON_MESSAGE if _weekly else ABANDON_MESSAGE,
+		ABANDON_CONFIRM_TEXT,
+		ABANDON_CANCEL_TEXT,
+		true
 	)
 
 
 func _on_abandon_confirmed() -> void:
-	SoloProgress.clear_run(_uid())
-	_run = null
+	_end_run_without_record()
 	_refresh()
+	if _weekly:
+		_open_weekly_board()
+
+
+## 記録を出さずに遠征を終える。週替わりの遠征はその時点の勝った数で結果を残し(もう挑めない)、順位表へ送る。
+func _end_run_without_record() -> void:
+	if _weekly:
+		SoloProgress.end_weekly_run(_uid(), _run, "", false)
+		SoloProgress.report_weekly(_uid(), _run)
+	else:
+		SoloProgress.clear_run(_uid())
+	_run = null
 
 
 func _uid() -> String:

@@ -84,7 +84,6 @@ Fableには判断だけを任せる。1項目を次の順に回す(手順の詳�
 
 ### 週替わりの遠征(GameDesign.md 27章「週替わりの遠征」/ Architecture.md 10.15節)
 
-- [ ] 実装: `WeeklyExpedition`・`SoloRun.weekly_id`・`SoloProgress` の別枠 → 出発の画面と順位表 → `WeeklyBoard` とFirestoreのルール・インデックス → ソロモードの選択モーダルとホームの札
 - [ ] 公開から4週後: 週ごとの挑戦者数と「別の日に来た ÷ ホーム」を公開前4週と比べる
 
 ### お知らせとプレゼント(GameDesign.md 33章 / Architecture.md 10.22節)

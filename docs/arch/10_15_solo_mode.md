@@ -233,8 +233,14 @@ GameDesign.md 27章の実装方針。**遠征の規則(道・山札・HP・束�
   `CardSoloMapScreen` と `CardMatchSolo` は、今週の遠征のときだけ `rng.randomize()` の代わりに `rng_for(week, "<用途>:<floor>")` を渡す
   (束・恩恵・工房・対局の山札の並び。同じ選び方をした人に同じ候補を出すため、塩には段と用途を入れる)
 - `SoloRun` に `weekly_id: String`(いつもの遠征は空)を持たせ、`to_dict()` / `from_dict()` で保存する。無い保存データは空として読む
-- `SoloProgress` は今週の遠征を `"weekly": {"week": id, "run": {...} or null, "result": {"wins", "hp"} or null}` に別枠で持つ。
+- `SoloProgress` は今週の遠征を `"weekly": {"week": id, "run": {...} or null, "result": {"wins", "hp"} or null, "finished": {...} or null}`(`finished` は終えた遠征の記録を1度だけ出すため。`take_weekly_finished()`) に別枠で持つ。
   `record()` は `weekly_id` があるとき `unlocked_depth` / `theme_depths` を更新しない(砂金・最多勝利数・踏破回数・節目は更新する)。
   読み込み時に週が変わっていれば、残っていた遠征をその時点の勝った数で締めて送り、枠を空にする
 - 記録 `{wins:int, hp:int, name, icon, updated_at}`。並びは `wins` 降順 → `hp` 降順 → `updated_at` 昇順(複合インデックスを `firestore.indexes.json` へ)。
   Firestoreのルールは本人のuidにだけ書け、`wins` は0〜6の整数、`hp` は0以上の整数に限る(値の正しさは検証しない。15章と同じ線引き)
+- **入口の分け方**: `CardSoloMapScreen.open_in(weekly)` で種類を決め、`open()` はそのとき開いていた種類のまま開き直す(対局から戻ったとき)。
+  `SoloProgress.save_run()` は `weekly_id` で別枠へ振り、終わらせるのは `end_run()`(いつもの遠征は記録+保存を消す / 週替わりは結果と記録を枠へ)。
+  乱数は `WeeklyExpedition.rng_for_run(run, salt)`(週替わりは種付き、いつもの遠征は毎回ばらばら)。「遠征をやめる」は週替わりでは
+  その時点の勝った数で終える(もう挑めない)
+- 出発の画面は `SoloDepartureView.show_weekly()`(左)と `SoloWeeklyBoard`(右。縦は上下)。行は `RankBoardRow` の `weekly` 表示(勝った数・残りHP。称号は出さない)
+- 札の1行(`BattleTab`)の順位は、読み込み済みの上位(`WeeklyBoard` の控え)から出す。読めていなければ「N勝で終了」まで

@@ -23,6 +23,8 @@ signal room_match_requested
 signal cpu_match_requested
 signal puzzle_requested
 signal solo_requested
+## 週替わりの遠征(GameDesign.md 27章「週替わりの遠征」)。
+signal weekly_solo_requested
 ## ランク画面(ランキング)。対局の種類を選ぶモーダルの「ランキングを見る」から開く(28章)。
 signal rank_requested
 ## 台座の下の「今日のカード」の1行。図鑑のそのカードの詳細を開く(GameDesign.md 9章)。
@@ -47,6 +49,11 @@ const PUZZLE_SUBTITLE := "1手番で仕留める"
 const DAILY_OPEN := "今日の1問 まだ解いていません"
 const EXPEDITION_NEW := "作戦を選んで出発"
 const EXPEDITION_CONTINUE := "続きから進める"
+const WEEKLY_NEW := "未挑戦 ・ %s"
+const WEEKLY_RUNNING := "%d段目 ・ HP %d"
+const WEEKLY_DONE := "%d勝で終了"
+const WEEKLY_DONE_RANK := "%d勝で終了 ・ %d位"
+const WEEKLY_DONE_OUTSIDE := "%d勝で終了 ・ 圏外"
 const MAIN_FONT_SIZE := 40
 ## 「対戦する」ボタンの見出しの大きさ。
 const BATTLE_FONT := UiPalette.T_TITLE
@@ -87,6 +94,8 @@ var _cpu_tile: HomeTile
 var _solo_cpu_tile: HomeTile
 var _solo_picker: HomeModePicker
 var _expedition_tile: HomeTile
+var _weekly_tile: HomeTile
+var _weekly_rank_fetching := false
 var _puzzle_tile: HomeTile
 ## 次にやってほしい入口に掛ける印(GameDesign.md 18章)。ホームの札と、開いたモーダルの札に1つずつ。
 var _next_mark := NextStepMark.new()
@@ -208,6 +217,10 @@ func _build_solo_picker() -> void:
 	_expedition_tile.emblem = null
 	_expedition_tile.pressed.connect(func() -> void: solo_requested.emit())
 	_solo_picker.add_tile(_expedition_tile)
+	_weekly_tile = HomeTile.make(SoloRun.WEEKLY_NAME, "", "", Vector2.ZERO, PICKER_FONT_SIZE, true)
+	_weekly_tile.emblem = null
+	_weekly_tile.pressed.connect(func() -> void: weekly_solo_requested.emit())
+	_solo_picker.add_tile(_weekly_tile)
 	_puzzle_tile = HomeTile.make(
 		PUZZLE_TITLE, PUZZLE_SUBTITLE, "sword", Vector2.ZERO, PICKER_FONT_SIZE
 	)
@@ -358,6 +371,7 @@ func _refresh_solo_picker(uid: String) -> void:
 	_expedition_tile.set_subtitle(
 		EXPEDITION_NEW if SoloProgress.load_run(uid) == null else EXPEDITION_CONTINUE
 	)
+	_refresh_weekly_tile(uid)
 	var daily := DailyPuzzle.today()
 	if daily == null:
 		_puzzle_tile.set_subtitle(PUZZLE_SUBTITLE)
@@ -366,6 +380,45 @@ func _refresh_solo_picker(uid: String) -> void:
 	var cleared := PuzzleProgress.is_cleared(uid, daily.id)
 	_puzzle_tile.set_subtitle(DailyPuzzle.done_line() if cleared else DAILY_OPEN)
 	_puzzle_tile.subtitle_accent = not cleared
+
+
+## 今週の遠征の札の1行。未挑戦 / 遠征中の段とHP / 終えた勝った数と順位(順位は読み込めたときだけ)。
+func _refresh_weekly_tile(uid: String) -> void:
+	var week := WeeklyExpedition.current_week()
+	var result := SoloProgress.weekly_result(uid, week)
+	if not result.is_empty():
+		var wins := int(result.get("wins", 0))
+		_weekly_tile.set_subtitle(_weekly_done_line(week, uid, wins))
+		_fetch_weekly_rank(week, uid)
+		return
+	var run := SoloProgress.weekly_run(uid, week)
+	if run == null:
+		_weekly_tile.set_subtitle(WEEKLY_NEW % WeeklyExpedition.DEADLINE_TEXT)
+		return
+	_weekly_tile.set_subtitle(WEEKLY_RUNNING % [run.floor + 1, run.hp])
+
+
+func _weekly_done_line(week: String, uid: String, wins: int) -> String:
+	if not WeeklyBoard.has_cache(week):
+		return WEEKLY_DONE % wins
+	var rank := WeeklyBoard.cached_rank(week, uid)
+	if rank <= 0:
+		return WEEKLY_DONE_OUTSIDE % wins
+	return WEEKLY_DONE_RANK % [wins, rank]
+
+
+## 順位は通信で読むため、読み込めたら札の1行だけ差し替える(読めなければ勝った数だけのまま)。
+func _fetch_weekly_rank(week: String, uid: String) -> void:
+	if uid.is_empty() or WeeklyBoard.has_cache(week) or _weekly_rank_fetching:
+		return
+	_weekly_rank_fetching = true
+	await WeeklyBoard.load_top(week)
+	_weekly_rank_fetching = false
+	if not WeeklyBoard.has_cache(week) or not is_inside_tree():
+		return
+	var result := SoloProgress.weekly_result(uid, week)
+	if not result.is_empty():
+		_weekly_tile.set_subtitle(_weekly_done_line(week, uid, int(result.get("wins", 0))))
 
 
 ## 1局も終えていなければCPU戦、遠征を始めていなければ遠征、今日の1問を解いていなければ

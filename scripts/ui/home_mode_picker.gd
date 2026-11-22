@@ -17,6 +17,10 @@ const TITLE_HEIGHT := 52.0
 const TILE_SIZE := Vector2(340, 380)
 const TILE_TOP := 184.0
 const GAP := 20.0
+## 札が多いときは、画面の左右にこの余白を残して幅を詰める(ソロモードは4枚)。
+const SIDE_MARGIN := 24.0
+const NARROW_SUBTITLE_LINES := 2
+const NARROW_EMBLEM_RESERVE := 1.0
 const BUTTON_HEIGHT := 56.0
 const BUTTON_GAP := 18.0
 const CLOSE_WIDTH := 200.0
@@ -30,6 +34,8 @@ const PORTRAIT_TILE_HEIGHT := 250.0
 const PORTRAIT_GAP := 16.0
 const PORTRAIT_BUTTON_HEIGHT := 76.0
 const PORTRAIT_FONT := 28
+## 縦で札が多いとき、閉じるボタンの下に残す余白。
+const PORTRAIT_BOTTOM_MARGIN := 40.0
 const LANDSCAPE_TITLE_META := "landscape_title"
 
 var _dim: ColorRect
@@ -122,13 +128,15 @@ func _layout() -> void:
 	_title.position = Vector2(0.0, TITLE_TOP)
 	_title.size = Vector2(screen.x, TITLE_HEIGHT)
 	var count := maxi(_tiles.size(), 1)
-	var total := TILE_SIZE.x * float(count) + GAP * float(count - 1)
+	var tile_w := minf(TILE_SIZE.x, (screen.x - SIDE_MARGIN * 2.0 - GAP * float(count - 1)) / count)
+	var total := tile_w * float(count) + GAP * float(count - 1)
 	var left := (screen.x - total) * 0.5
 	for i in _tiles.size():
-		_place(
-			_tiles[i],
-			Rect2(left + (TILE_SIZE.x + GAP) * float(i), TILE_TOP, TILE_SIZE.x, TILE_SIZE.y)
-		)
+		_place(_tiles[i], Rect2(left + (tile_w + GAP) * float(i), TILE_TOP, tile_w, TILE_SIZE.y))
+		# 幅を詰めた札は、副題を2行まで折り返して収める(透かしの紋章のために文字の幅を空けない)。
+		if tile_w < TILE_SIZE.x:
+			_tiles[i].subtitle_lines = NARROW_SUBTITLE_LINES
+			_tiles[i].emblem_reserve = NARROW_EMBLEM_RESERVE
 	var below := TILE_TOP + TILE_SIZE.y + BUTTON_GAP
 	if _extra != null:
 		_place(_extra, Rect2(left, below, TILE_SIZE.x, BUTTON_HEIGHT))
@@ -142,9 +150,19 @@ func _layout_portrait(screen: Vector2) -> void:
 	_title.size = Vector2(screen.x, TITLE_HEIGHT)
 	var left := (screen.x - PORTRAIT_TILE_WIDTH) * 0.5
 	var top := PORTRAIT_TILE_TOP
+	var count := maxi(_tiles.size(), 1)
+	var extra_height := (PORTRAIT_BUTTON_HEIGHT + PORTRAIT_GAP) if _extra != null else 0.0
+	var room := (
+		screen.y
+		- PORTRAIT_TILE_TOP
+		- extra_height
+		- PORTRAIT_BUTTON_HEIGHT
+		- PORTRAIT_BOTTOM_MARGIN
+	)
+	var tile_h := minf(PORTRAIT_TILE_HEIGHT, room / count - PORTRAIT_GAP)
 	for i in _tiles.size():
-		_place(_tiles[i], Rect2(left, top, PORTRAIT_TILE_WIDTH, PORTRAIT_TILE_HEIGHT))
-		top += PORTRAIT_TILE_HEIGHT + PORTRAIT_GAP
+		_place(_tiles[i], Rect2(left, top, PORTRAIT_TILE_WIDTH, tile_h))
+		top += tile_h + PORTRAIT_GAP
 		if i == 0 and _extra != null:
 			_place(_extra, Rect2(left, top, PORTRAIT_TILE_WIDTH, PORTRAIT_BUTTON_HEIGHT))
 			top += PORTRAIT_BUTTON_HEIGHT + PORTRAIT_GAP

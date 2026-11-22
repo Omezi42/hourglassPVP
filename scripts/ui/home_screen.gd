@@ -14,6 +14,7 @@ signal spotlight_requested(card: CardData)
 signal shop_requested
 signal cpu_match_requested
 signal solo_requested
+signal weekly_solo_requested
 signal tutorial_requested
 signal rules_requested
 signal screen_guide_requested
@@ -80,6 +81,7 @@ func _ready() -> void:
 	battle_tab.cpu_match_requested.connect(func() -> void: cpu_match_requested.emit())
 	battle_tab.puzzle_requested.connect(func() -> void: puzzle_requested.emit())
 	battle_tab.solo_requested.connect(func() -> void: solo_requested.emit())
+	battle_tab.weekly_solo_requested.connect(func() -> void: weekly_solo_requested.emit())
 	battle_tab.rank_requested.connect(func() -> void: rank_requested.emit())
 	battle_tab.spotlight_requested.connect(
 		func(card: CardData) -> void: spotlight_requested.emit(card)

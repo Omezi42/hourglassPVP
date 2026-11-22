@@ -2,6 +2,7 @@ class_name RankBoardRow
 extends Control
 ## ランキングの1行(GameDesign.md 28章「ランク画面」)。一覧の行と、最下段に固定する自分の行で共用する。
 ## 左から 順位 / アイコン / 称号・表示名 / 段位のメダル・帯と階級・★(プラチナはレート)。
+## `weekly` のときは週替わりの遠征の順位表の行になり、段位の代わりに勝った数と残りHPを出す(27章)。
 
 const HEIGHT := 42.0
 const RADIUS := 8.0
@@ -43,6 +44,14 @@ const STACKED_NAME_Y := 24.0
 const STACKED_STANDING_Y := 58.0
 const STACKED_TITLE_SIZE := UiPalette.T_SMALL
 const STACKED_TIER_GAP := 10.0
+## 週替わりの遠征の行(`weekly`)の右端の列。勝った数を右端に、残りHPをその左へ。
+const WINS_SIZE := UiPalette.T_LEAD
+const WINS_WIDTH := 70.0
+const HP_SIZE := UiPalette.T_BODY
+const HP_WIDTH := 100.0
+const WEEKLY_STANDING_WIDTH := WINS_WIDTH + HP_WIDTH + 24.0
+const WINS_TEXT := "%d勝"
+const HP_TEXT := "HP %d"
 
 ## 順位。0以下は上位の一覧に入っていない(「圏外」)。
 var rank := 0
@@ -54,6 +63,10 @@ var stars := 0
 var rating := 0
 var mine := false
 var zebra := false
+## 週替わりの遠征の順位表の行か。勝った数と残りHPを出す。
+var weekly := false
+var wins := 0
+var hp_left := 0
 ## 描く倍率と、2段に積むか(縦)。`set_portrait()` で決める。
 var zoom := 1.0
 var stacked := false
@@ -76,8 +89,9 @@ func row_height() -> float:
 	return (STACKED_HEIGHT if stacked else HEIGHT) * zoom
 
 
+## 週替わりの行は列が少ないため、縦でも2段に積まず1行のまま拡大する。
 func set_portrait(portrait: bool, portrait_zoom: float) -> void:
-	stacked = portrait
+	stacked = portrait and not weekly
 	zoom = portrait_zoom if portrait else 1.0
 	custom_minimum_size.y = row_height()
 	queue_redraw()
@@ -108,7 +122,14 @@ func _draw() -> void:
 	var right := area.x - RIGHT_PAD
 	if stacked:
 		_draw_name(STACKED_NAME_Y, right - NAME_X)
-		_draw_stacked_standing(STACKED_STANDING_Y, right)
+		if weekly:
+			_draw_weekly_standing(STACKED_STANDING_Y, right)
+		else:
+			_draw_stacked_standing(STACKED_STANDING_Y, right)
+		return
+	if weekly:
+		_draw_name(center_y, right - WEEKLY_STANDING_WIDTH - NAME_X)
+		_draw_weekly_standing(center_y, right)
 		return
 	_draw_name(center_y, right - MEDAL_RIGHT - MEDAL_RADIUS - NAME_X)
 	_draw_standing(center_y, right)
@@ -168,7 +189,7 @@ func _draw_portrait(center: Vector2) -> void:
 
 ## 称号(小)と表示名(大)。対局の名札(`PlayerInfoBar`)と同じ並び。
 func _draw_name(center_y: float, name_width: float) -> void:
-	var title := UserProfileLibrary.get_title_display(title_id)
+	var title := "" if weekly else UserProfileLibrary.get_title_display(title_id)
 	if title.is_empty():
 		_text(
 			display_name,
@@ -219,6 +240,26 @@ func _draw_standing(center_y: float, right: float) -> void:
 		TIER_WIDTH
 	)
 	RankMedal.draw_medal(self, Vector2(right - MEDAL_RIGHT, center_y), MEDAL_RADIUS, tier, _display)
+
+
+## 週替わりの遠征: 勝った数(大)を右端に、残りHPをその左に。
+func _draw_weekly_standing(center_y: float, right: float) -> void:
+	_text(
+		WINS_TEXT % wins,
+		Vector2(right - WINS_WIDTH, center_y + 8.0),
+		WINS_SIZE,
+		UiPalette.IVORY,
+		HORIZONTAL_ALIGNMENT_RIGHT,
+		WINS_WIDTH
+	)
+	_text(
+		HP_TEXT % hp_left,
+		Vector2(right - WINS_WIDTH - HP_WIDTH, center_y + 6.0),
+		HP_SIZE,
+		UiPalette.MUTED,
+		HORIZONTAL_ALIGNMENT_RIGHT,
+		HP_WIDTH
+	)
 
 
 ## 2段に積むときの下の段。メダルと帯・階級を名前の列の左端から、★(レート)を右端へ。

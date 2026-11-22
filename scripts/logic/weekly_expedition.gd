@@ -40,6 +40,15 @@ static func rng_for(week: String, salt: String) -> RandomNumberGenerator:
 	return rng
 
 
+## 遠征の乱数。週替わりの遠征は週の種から(塩に段・用途を入れる)、いつもの遠征は毎回ばらばらに。
+static func rng_for_run(run: SoloRun, salt: String) -> RandomNumberGenerator:
+	if not run.weekly_id.is_empty():
+		return rng_for(run.weekly_id, salt)
+	var rng := RandomNumberGenerator.new()
+	rng.randomize()
+	return rng
+
+
 ## 今週の作戦(1つに決める)。
 static func theme_of(week: String) -> String:
 	var ids := CardCpuDecks.deck_ids()

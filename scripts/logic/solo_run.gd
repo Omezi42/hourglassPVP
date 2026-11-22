@@ -9,6 +9,8 @@ extends RefCounted
 enum Kind { BATTLE, GATE, SPRING, WORKSHOP }
 
 const FLOOR_COUNT := 6
+## 週替わりの遠征の呼び名(対局中の遠征の札・結果パネルの所属に出す)。
+const WEEKLY_NAME := "今週の遠征"
 const SPRING_HEAL := 8
 const THEME_CHOICES := 3
 ## 1つの行き先から次の段へ出る道の最大数(GameDesign.md 27章「道」)。

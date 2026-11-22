@@ -8,12 +8,25 @@ extends CardSoloMapScreen
 ## 状態: departure / route / route_mid / dest_battle / dest_gate / dest_spring / dest_workshop /
 ##       route_deck(縦の山札の板) / bundle / bundle_pick / boon / workshop / workshop_pick /
 ##       summary_lost / summary_cleared /
-##       departure_hover / route_hover(最初の札・駒にカーソルが乗った見た目)
+##       departure_hover / route_hover(最初の札・駒にカーソルが乗った見た目) /
+##       weekly_departure / weekly_done(週替わりの遠征の出発の画面。順位表は固定の見本)
 
 const SEED := 20261028
 const THEME := "rush"
 const MID_FLOOR := 3
 const SEED_TRIES := 200
+## 週替わりの順位表の見本(通信しないで撮る・測るため)。
+const SAMPLE_BOARD: Array = [
+	{"uid": "a", "name": "ゆうや", "icon": "", "wins": 6, "hp": 18},
+	{"uid": "b", "name": "すなえる", "icon": "", "wins": 6, "hp": 9},
+	{"uid": "c", "name": "アリア", "icon": "", "wins": 5, "hp": 21},
+	{"uid": "d", "name": "ひろし", "icon": "", "wins": 5, "hp": 4},
+	{"uid": "e", "name": "ミナ", "icon": "", "wins": 4, "hp": 12},
+	{"uid": "f", "name": "ななし", "icon": "", "wins": 3, "hp": 16},
+	{"uid": "g", "name": "ハルカ", "icon": "", "wins": 3, "hp": 7},
+	{"uid": "h", "name": "こうた", "icon": "", "wins": 2, "hp": 20},
+	{"uid": "i", "name": "リン", "icon": "", "wins": 1, "hp": 24},
+]
 
 
 func open() -> void:
@@ -30,6 +43,9 @@ func stage(state: String) -> void:
 		run = SoloRun.create(THEME, 0, rng, SoloRun.boss_choice(rng))
 		if _has_all_kinds(run):
 			break
+	if state.begins_with("weekly"):
+		_stage_weekly(state)
+		return
 	match state:
 		"departure", "departure_hover":
 			_run = null
@@ -74,6 +90,26 @@ func stage(state: String) -> void:
 		# 道をずらす動きを終えた形で撮る・測る。
 		if _route_tween != null:
 			_route_tween.custom_step(ROUTE_SHIFT_SECONDS)
+
+
+## 週替わりの遠征の出発の画面。`weekly_done` は挑戦を終えた週(自分の結果が札の場所に出る)。
+func _stage_weekly(state: String) -> void:
+	_weekly = true
+	_week = WeeklyExpedition.current_week()
+	var rows: Array = SAMPLE_BOARD.duplicate(true)
+	for row: Dictionary in rows:
+		row["icon"] = UserProfileLibrary.DEFAULT_ICON_ID
+	WeeklyBoard.set_cache_for_test(_week, rows)
+	_run = null
+	if state == "weekly_done":
+		var run := WeeklyExpedition.create_run(_week)
+		run.wins = 3
+		run.hp = 11
+		run.over = true
+		SoloProgress.end_weekly_run(_uid(), run, "", false)
+	_layout_departure()
+	_refresh()
+	_open_weekly_board()
 
 
 ## カーソルが乗った見た目を撮るため、最初の札・駒のボタンへ乗ったことにする。

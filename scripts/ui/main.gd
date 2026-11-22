@@ -234,6 +234,7 @@ func _ready() -> void:
 	home_screen.rank_requested.connect(_on_rank_screen_requested)
 	home_screen.puzzle_requested.connect(_unless_ranked_wait.bind(_on_puzzle_requested))
 	home_screen.solo_requested.connect(_unless_ranked_wait.bind(_on_solo_requested))
+	home_screen.weekly_solo_requested.connect(_unless_ranked_wait.bind(_on_weekly_solo_requested))
 	home_screen.deck_list_requested.connect(_on_deck_list_requested)
 	home_screen.hourglass_list_requested.connect(_on_hourglass_list_requested)
 	home_screen.spotlight_requested.connect(_on_spotlight_requested)
@@ -699,7 +700,13 @@ func _on_puzzle_endless_selected() -> void:
 
 ## ソロモード(GameDesign.md 27章)。一覧で選んだステージを種類ごとに振り分ける。
 func _on_solo_requested() -> void:
-	solo_map_screen.open()
+	solo_map_screen.open_in(false)
+	_show_only(solo_map_screen)
+
+
+## 週替わりの遠征(GameDesign.md 27章「週替わりの遠征」)。
+func _on_weekly_solo_requested() -> void:
+	solo_map_screen.open_in(true)
 	_show_only(solo_map_screen)
 
 

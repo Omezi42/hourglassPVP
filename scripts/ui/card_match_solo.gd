@@ -57,7 +57,8 @@ func start(run: SoloRun) -> void:
 	_begin_battle()
 	_plaque.start(_run, _gate)
 	CardMatchArrange.place_history(_screen, _screen.layout)
-	FunnelService.reach_first_solo_battle(FunnelService.SOLO_B1_START, _run.floor)
+	if _run.weekly_id.is_empty():
+		FunnelService.reach_first_solo_battle(FunnelService.SOLO_B1_START, _run.floor)
 
 
 func close() -> void:
@@ -102,8 +103,7 @@ func _begin_battle() -> void:
 	_screen.foe_bar.icon_id = UserProfileLibrary.CPU_ICON_ID
 	_screen.foe_bar.title_id = UserProfileLibrary.CPU_TITLE_ID
 	_screen._set_playmats(AccountService.playmat_id(), PlaymatLibrary.CPU_ID)
-	var rng := RandomNumberGenerator.new()
-	rng.randomize()
+	var rng := WeeklyExpedition.rng_for_run(_run, "match:%d" % _run.floor)
 	_screen._begin_state(
 		SoloBattleRules.own_deck(_run),
 		SoloBattleRules.foe_deck(_run, dest, _gate),
@@ -132,23 +132,25 @@ func _settle(won: bool) -> void:
 	var foe_name := SoloRun.foe_name_of(_run.active_destination())
 	var gate := _gate
 	var uid := StageReward.current_uid()
-	var rng := RandomNumberGenerator.new()
-	rng.randomize()
-	FunnelService.reach_first_solo_battle(_first_battle_step(won, state), floor_played)
+	var weekly := not _run.weekly_id.is_empty()
+	var rng := WeeklyExpedition.rng_for_run(_run, "offer:%d" % floor_played)
+	if not weekly:
+		FunnelService.reach_first_solo_battle(_first_battle_step(won, state), floor_played)
 	_run.finish_battle(won, hp_left, rng)
 	PlayTimeService.record(
 		PlayTimeService.KIND_SOLO, _screen.elapsed_seconds(), state.turn_count, won
 	)
-	if won:
+	if won and not weekly:
 		FunnelService.reach(FunnelService.SOLO_WIN)
-	if _run.cleared:
+	if _run.cleared and not weekly:
 		FunnelService.reach(FunnelService.SOLO_CLEAR)
 	var reached := SoloProgress.record(uid, _run)
 	if _run.over:
-		SoloProgress.save_finished(uid, _run, "")
-		SoloProgress.clear_run(uid)
+		SoloProgress.end_run(uid, _run, "")
 	else:
 		SoloProgress.save_run(uid, _run)
+	if weekly:
+		SoloProgress.report_weekly(uid, _run)
 	var reward := _grant_rewards(uid, won, reached)
 	_panel.show_for(
 		_outcome(won, floor_played, gate, foe_name, hp_left, foe_hp_left, state, reward)
@@ -201,7 +203,8 @@ func _outcome(
 	elif gate != null:
 		kind_label = "関門"
 	var depth_lead := "深さ%d ・ " % _run.depth if _run.depth > 0 else ""
-	outcome.eyebrow = "ソロモード ・ %s%d段目 ・ %s" % [depth_lead, floor_played + 1, kind_label]
+	var belong := "ソロモード" if _run.weekly_id.is_empty() else SoloRun.WEEKLY_NAME
+	outcome.eyebrow = "%s ・ %s%d段目 ・ %s" % [belong, depth_lead, floor_played + 1, kind_label]
 	outcome.stage_name = ("%s ・ " % gate.display_name) + foe_name if gate != null else foe_name
 	outcome.single_action_label = "遠征を終える" if _run.over else "道へ戻る"
 	if won:

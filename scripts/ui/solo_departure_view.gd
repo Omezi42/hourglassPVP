@@ -1,7 +1,8 @@
 class_name SoloDepartureView
 extends Control
 ## 遠征(ソロモード)の出発の画面(GameDesign.md 27章「画面」)。砂の深さの選択と、
-## 作戦の札を3枚横に並べ、押すと出発する。
+## 作戦の札を3枚横に並べ、押すと出発する。`show_weekly()` は週替わりの遠征の出発の画面
+## (作戦の札が1枚・深さは固定。27章「週替わりの遠征」)。順位表は呼び出し側が右へ置く。
 
 signal theme_chosen(theme_id: String)
 ## 砂の深さの矢印を押した(-1/+1)。選べる範囲の判定・保存は呼び出し側が持つ。
@@ -36,6 +37,19 @@ const CARDS_TOP_GAP := 18.0
 const BOSS_FONT_SIZE := UiPalette.T_BODY
 const BOSS_LINE_HEIGHT := 22.0
 const BOSS_TOP_GAP := 6.0
+
+## 週替わりの遠征(`show_weekly()`)。
+## 折り返した1行の背丈(文字の行の送りを含む)。
+const WEEKLY_LINE_HEIGHT := 28.0
+const WEEKLY_TITLE := "今週の遠征"
+const WEEKLY_DEADLINE_GAP := 6.0
+const WEEKLY_CARD_TOP_GAP := 14.0
+const WEEKLY_LINES_GAP := 10.0
+const WEEKLY_DEPTH_LINE := "砂の深さ %d ・ %s"
+const WEEKLY_DONE_TITLE := "今週の挑戦は終わりました"
+const WEEKLY_DONE_RESULT := "%d勝 ・ 残りHP %d"
+const WEEKLY_DONE_RESULT_SIZE := UiPalette.T_HEAD
+const WEEKLY_DONE_GAP := 12.0
 
 const SEAL_RADIUS := 18.0
 const SEAL_MARGIN := 14.0
@@ -128,6 +142,104 @@ func show_data(
 		UiPalette.MUTED,
 		HORIZONTAL_ALIGNMENT_CENTER
 	)
+
+
+## 週替わりの遠征の出発の画面。見出しと締切、作戦の札を1枚大きく(押すと出発)、その下に主と
+## 砂の深さの条件を1行ずつ。挑戦を終えた週は札の場所に「今週の挑戦は終わりました」と結果を出す
+## (`result` は `{"wins", "hp"}`。空なら未挑戦)。
+func show_weekly(theme_id: String, boss_id: String, depth: int, result: Dictionary) -> void:
+	for child in get_children():
+		remove_child(child)
+		child.queue_free()
+	var width := size.x
+	_add_label(
+		self,
+		Rect2(MARGIN, 0.0, width - MARGIN * 2.0, 34.0),
+		WEEKLY_TITLE,
+		HEADING_FONT_SIZE,
+		UiPalette.IVORY,
+		HORIZONTAL_ALIGNMENT_CENTER,
+		true
+	)
+	var deadline_top := 34.0 + WEEKLY_DEADLINE_GAP
+	_add_label(
+		self,
+		Rect2(MARGIN, deadline_top, width - MARGIN * 2.0, CONDITION_LINE_HEIGHT),
+		WeeklyExpedition.DEADLINE_TEXT,
+		CONDITION_FONT_SIZE,
+		UiPalette.MUTED,
+		HORIZONTAL_ALIGNMENT_CENTER
+	)
+	# 主の説明と条件は長く、どちらも2行へ折り返すことがある。
+	var lines_height := WEEKLY_LINE_HEIGHT * 4.0
+	var card_top := deadline_top + CONDITION_LINE_HEIGHT + WEEKLY_CARD_TOP_GAP
+	var card_bottom := size.y - lines_height - WEEKLY_LINES_GAP
+	var rect := Rect2(MARGIN, card_top, width - MARGIN * 2.0, card_bottom - card_top)
+	if result.is_empty():
+		_build_card(rect, theme_id, -1)
+	else:
+		_build_weekly_done(rect, result)
+	var lines_top := card_bottom + WEEKLY_LINES_GAP
+	var boss := SoloGateLibrary.find_by_id(boss_id)
+	if boss != null:
+		_add_label(
+			self,
+			Rect2(MARGIN, lines_top, width - MARGIN * 2.0, WEEKLY_LINE_HEIGHT * 2.0),
+			"最終戦の主 ・ %s ─ %s" % [boss.display_name, boss.description],
+			BOSS_FONT_SIZE,
+			UiPalette.GOLD,
+			HORIZONTAL_ALIGNMENT_CENTER
+		)
+	var conditions := SoloRun.depth_condition_lines(depth)
+	_add_label(
+		self,
+		Rect2(
+			MARGIN,
+			lines_top + WEEKLY_LINE_HEIGHT * 2.0,
+			width - MARGIN * 2.0,
+			WEEKLY_LINE_HEIGHT * 2.0
+		),
+		WEEKLY_DEPTH_LINE % [depth, CONDITION_SEPARATOR.join(conditions)],
+		CONDITION_FONT_SIZE,
+		UiPalette.MUTED,
+		HORIZONTAL_ALIGNMENT_CENTER
+	)
+
+
+## 挑戦を終えた週。押せない硝子の面に、終わったことと自分の結果を出す。
+func _build_weekly_done(rect: Rect2, result: Dictionary) -> void:
+	var canvas := Control.new()
+	canvas.size = size
+	canvas.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	canvas.draw.connect(
+		func() -> void: SoloUiPaint.paint_panel(canvas.get_canvas_item(), rect, false)
+	)
+	add_child(canvas)
+	var title_height := 40.0
+	var result_height := 36.0
+	var top := (
+		rect.position.y + (rect.size.y - title_height - result_height - WEEKLY_DONE_GAP) * 0.5
+	)
+	var title := _add_label(
+		self,
+		Rect2(rect.position.x, top, rect.size.x, title_height),
+		WEEKLY_DONE_TITLE,
+		NAME_FONT_SIZE,
+		UiPalette.IVORY,
+		HORIZONTAL_ALIGNMENT_CENTER,
+		true
+	)
+	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	var summary := _add_label(
+		self,
+		Rect2(rect.position.x, top + title_height + WEEKLY_DONE_GAP, rect.size.x, result_height),
+		WEEKLY_DONE_RESULT % [int(result.get("wins", 0)), int(result.get("hp", 0))],
+		WEEKLY_DONE_RESULT_SIZE,
+		UiPalette.GOLD,
+		HORIZONTAL_ALIGNMENT_CENTER,
+		true
+	)
+	summary.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 
 
 ## 「◀ 砂の深さ N ▶」。選べない側の矢印は沈める(disabled)。矢印は面の画像が決める最小の

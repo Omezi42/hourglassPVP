@@ -93,10 +93,11 @@ func apply_layout(layout: CardMatchLayout) -> void:
 func start(run: SoloRun, gate: SoloGateData) -> void:
 	_run = run
 	_gate = gate
+	var lead := "遠征" if run.weekly_id.is_empty() else SoloRun.WEEKLY_NAME
 	if run.depth > 0:
-		_floor_text = "遠征 ・ 深さ%d ・ %d段目" % [run.depth, run.floor + 1]
+		_floor_text = "%s ・ 深さ%d ・ %d段目" % [lead, run.depth, run.floor + 1]
 	else:
-		_floor_text = "遠征 ・ %d段目" % (run.floor + 1)
+		_floor_text = "%s ・ %d段目" % [lead, run.floor + 1]
 	if run.floor == SoloRun.FLOOR_COUNT - 1:
 		_kind_text = "主『%s』" % gate.display_name if gate != null else "最終戦"
 	elif gate != null:

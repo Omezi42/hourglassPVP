@@ -22,6 +22,8 @@ const STATES: Array[String] = [
 	"workshop_pick",
 	"summary_lost",
 	"summary_cleared",
+	"weekly_departure",
+	"weekly_done",
 ]
 const MIN_TAP_LANDSCAPE := 40.0
 const MIN_TAP_PORTRAIT := 72.0
