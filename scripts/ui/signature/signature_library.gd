@@ -142,6 +142,9 @@ const EFFECTS := {
 	"oracle": preload("res://scripts/ui/signature/moves/oracle_effect.gd"),
 	"quintet": preload("res://scripts/ui/signature/moves/quintet_effect.gd"),
 	"hurricane": preload("res://scripts/ui/signature/moves/hurricane_effect.gd"),
+	"zero_hour": preload("res://scripts/ui/signature/moves/zero_hour_effect.gd"),
+	"necropolis": preload("res://scripts/ui/signature/moves/necropolis_effect.gd"),
+	"aeon": preload("res://scripts/ui/signature/moves/aeon_effect.gd"),
 }
 
 

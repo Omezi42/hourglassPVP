@@ -15,6 +15,10 @@ const FOCUS_COPIES := 2
 var behind_games := 0
 var behind_wins := 0
 
+## 注目デッキへ一緒に2枚ずつ入れる相方(組み合わせの強さを測る。アイオーンとゼロアワーなど)。
+## 相方はどちらのデッキのランダムな残りにも入れない。
+var partners: Array[CardData] = []
+
 var _rng := RandomNumberGenerator.new()
 var _cards: Array[CardData] = []
 
@@ -71,9 +75,10 @@ func _play_one(
 
 func _deck_with(focus: CardData) -> Array:
 	var deck: Array = []
-	for i in FOCUS_COPIES:
-		deck.append(focus)
-	deck.append_array(_random_pool(focus).slice(0, MatchState.DECK_SIZE - FOCUS_COPIES))
+	for card in [focus] + partners:
+		for i in FOCUS_COPIES:
+			deck.append(card)
+	deck.append_array(_random_pool(focus).slice(0, MatchState.DECK_SIZE - deck.size()))
 	return deck
 
 
@@ -84,7 +89,7 @@ func _deck_without(focus: CardData) -> Array:
 func _random_pool(exclude: CardData) -> Array:
 	var pool: Array = []
 	for card in _cards:
-		if card == exclude:
+		if card == exclude or partners.has(card):
 			continue
 		for i in COPY_LIMIT:
 			pool.append(card)

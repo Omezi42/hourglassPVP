@@ -15,6 +15,7 @@ extends SceneTree
 ## cost / total を与えると、その値へ**メモリ上だけ**書き換えて測る(.tres は変えない)。
 ## `sweep=cost1,cost2,...` を与えると、その各コストで測って一覧にする。
 ## `effect=0 values=2,3,4` を与えると、効果0番の value をその各値にして測る。
+## `with=id1,id2` を与えると、注目デッキへその相方も2枚ずつ入れて組み合わせを測る(相方はランダムな残りから外す)。
 
 var _probe: CardWinRateProbe
 
@@ -29,6 +30,9 @@ func _run() -> void:
 	var games: int = int(args.get("games", "600"))
 	var base_seed: int = int(args.get("seed", "42"))
 	_probe = CardWinRateProbe.new()
+	if args.has("with"):
+		for id in str(args["with"]).split(","):
+			_probe.partners.append(CardLibrary.find_by_id(id))
 	var focus := CardLibrary.find_by_id(focus_id)
 	if focus == null:
 		printerr("unknown card id: ", focus_id)

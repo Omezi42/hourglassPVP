@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/emblems/necropolis.png" id="emblem"]
+
+[sub_resource type="Resource" id="Effect_necropolis_0"]
+script = ExtResource("script_effect")
+trigger = 0
+target = 0
+effect_type = 33
+value = 0
+card_id = ""
+keyword = -1
+condition_scope = 0
+condition_total = -1
+random_target = false
+
+[resource]
+script = ExtResource("script_card")
+id = "necropolis"
+display_name = "ネクロポリス"
+cost = 7
+total_sand = 2
+pool_index = 133
+set_id = "grave_sand"
+rarity = 3
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_necropolis_0")])
+rules_text = "設置:空いている枠すべてに、自分の墓地からランダムな砂時計を出す"
+flavor_text = "門をくぐった者は、みな同じ砂へ帰ってくる。"
+cannot_attack = false
+is_token = false
+emblem = ExtResource("emblem")

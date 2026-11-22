@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/emblems/zero_hour.png" id="emblem"]
+
+[sub_resource type="Resource" id="Effect_zero_hour_0"]
+script = ExtResource("script_effect")
+trigger = 0
+target = 2
+effect_type = 32
+value = 0
+card_id = ""
+keyword = -1
+condition_scope = 0
+condition_total = -1
+random_target = false
+
+[resource]
+script = ExtResource("script_card")
+id = "zero_hour"
+display_name = "ゼロアワー"
+cost = 6
+total_sand = 6
+pool_index = 132
+set_id = "still_time"
+rarity = 3
+keywords = Array[int]([8])
+effects = Array[Resource]([SubResource("Effect_zero_hour_0")])
+rules_text = "設置:相手の砂時計すべての砂を、残らず上へ戻す"
+flavor_text = "針が重なる一瞬だけ、すべてが生まれたてに戻る。"
+cannot_attack = false
+is_token = false
+emblem = ExtResource("emblem")

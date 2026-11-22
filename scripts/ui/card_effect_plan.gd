@@ -312,6 +312,10 @@ static func _stage_legend(state: MatchState, side: int, card: CardData) -> void:
 				# 総量の小さい味方と大きい味方を並べ、両方が5にそろうところを見せる。
 				_place(state, side, SMALL_ALLY_SLOT, _card(FOE_TARGET[0]), 1, 1)
 				_place(state, side, BIG_ALLY_SLOT, _card(FOE_HEAVY[0]), 3, 5)
+			CardEnums.EffectType.SWAP_STATS:
+				# 自分以外をすべて返す(アイオーン)。攻撃力0の相手の駒が砕けるところも見せる。
+				if effect.target == CardEnums.EffectTarget.ALL_OTHER_UNITS:
+					_place(state, foe, EXTRA_FOE_SLOTS[0], _card(FOE_TARGET[0]), 2, 0)
 
 
 ## 対象を選ぶ効果の指定。CPU と同じ選び方を使う(実演だけの選び方を持たない)。

@@ -903,12 +903,36 @@ def sig_maestro():
     return layer(x, tink(4200, 0.4), -10, LAND_AT + swing + 0.02)
 
 
+def sig_zero_hour():
+    """ゼロアワー:時計の秒針が速まりながら刻み、針が重なる打点で低い鐘と澄んだ和音が重なって鳴る。"""
+    appear, turn = 0.18, 0.62
+    hit = appear + turn
+    x = np.zeros(n_of(hit + 1.6))
+    for i in range(7):
+        k = i / 7
+        x = layer(x, tink(2400, 0.06, 0.15), -14 + 4 * k, appear + turn * (1 - (1 - k) ** 1.6))
+    bell = strike(1.6, brass(note(45), 1.2), 0.0008, 0.3, (1500, 6000))
+    x = layer(x, bell, -4, hit)
+    return layer(x, chime([1047, 1319, 1568], 0.03, 0.6), -9, hit + 0.02)
+
+
+def sig_necropolis():
+    """ネクロポリス:墓石が石をこすってせり上がり、ひびの走る音のあと、低い打点で砂が噴き出す。"""
+    rise, crack = 0.34, 0.18
+    hit = rise + crack
+    x = np.zeros(n_of(hit + 1.0))
+    x = layer(x, lowpass(scrape(rise, 200, 1800), 2500), -8, 0.0)
+    x = layer(x, rec("impactMining_000.ogg"), -10, rise)
+    x = layer(x, thump(0.6, 90, 40, 0.25), -2, hit)
+    return layer(x, whoosh(1, 0.8), -12, hit + 0.02)
+
+
 SIGNATURES = [
     sig_freeze, sig_relic, sig_middle, sig_phase, sig_grain, sig_dash, sig_shield, sig_sand,
     sig_watcher, sig_glass, sig_vamp, sig_drill, sig_lance, sig_twin, sig_lock, sig_gate,
     sig_poison, sig_guard, sig_mirror, sig_wall, sig_bypass, sig_colossus,
     sig_obelisk, sig_tower, sig_anchor, sig_sage, sig_grimoire,
-    sig_maestro,
+    sig_maestro, sig_zero_hour, sig_necropolis,
 ]
 
 

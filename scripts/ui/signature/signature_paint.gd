@@ -41,6 +41,8 @@ const BATON_LENGTH := 54.0
 const BATON_GRIP := Vector2(6.5, 4.0)
 const BATON_SHAFT := Color(0.14, 0.12, 0.15, 1.0)
 const MAESTRO := Color(1.0, 0.52, 1.0, 1.0)
+## 人魂・蛇の鱗の緑(ネクロポリス・アイオーン)。
+const SPECTRAL := Color(0.38, 0.74, 0.54, 1.0)
 const HAMMER_HANDLE := 30.0
 const HAMMER_HEAD := Vector2(18.0, 10.0)
 

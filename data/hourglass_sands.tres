@@ -5,6 +5,7 @@
 [resource]
 script = ExtResource("script_table")
 entries = {
+"aeon": {"sand": [1.0, 0.82, 0.95], "texture": "glow"},
 "anchor": {"sand": [0.930, 0.551, 0.645]},
 "anvil": {"sand": [0.670, 0.787, 0.567]},
 "archive": {"sand": [0.54, 0.93, 0.21]},
@@ -65,6 +66,7 @@ entries = {
 "mirror": {"sand": [0.98, 0.4, 0.66], "texture": "crystal"},
 "moss": {"sand": [0.26, 0.93, 0.21]},
 "mote": {"sand": [0.21, 0.93, 0.41]},
+"necropolis": {"sand": [0.4, 0.8, 0.55], "texture": "glow"},
 "nibble": {"sand": [0.64, 0.93, 0.55]},
 "oasis": {"sand": [0.205, 0.706, 0.930]},
 "obelisk": {"sand": [0.698, 0.182, 0.974]},
@@ -110,5 +112,6 @@ entries = {
 "warden": {"sand": [0.55, 0.93, 0.79], "texture": "glow"},
 "watcher": {"sand": [0.55, 0.93, 0.79]},
 "well": {"sand": [0.222, 0.930, 0.205]},
-"wheel": {"sand": [0.67, 0.21, 0.93]}
+"wheel": {"sand": [0.67, 0.21, 0.93]},
+"zero_hour": {"sand": [0.98, 0.98, 0.75], "texture": "crystal"}
 }
