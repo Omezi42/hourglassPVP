@@ -312,7 +312,7 @@ func _fill_grid() -> void:
 		view.zoom = PORTRAIT_ENTRY_ZOOM if _portrait else 1.0
 		_grid.add_child(view)
 		view.show_card(cards[i], i + 1)
-		view.locked = not AccountService.owns_card_set(cards[i].set_id)
+		view.locked = AccountService.card_count(cards[i].id) == 0
 		view.selected = cards[i] == _selected
 		view.pressed.connect(_select)
 		_views.append(view)

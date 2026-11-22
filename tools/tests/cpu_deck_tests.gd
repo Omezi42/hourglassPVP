@@ -42,13 +42,12 @@ func _test_no_card_exceeds_the_copy_limit() -> void:
 		var counts := {}
 		for card: CardData in deck:
 			counts[card.id] = int(counts.get(card.id, 0)) + 1
+		# レジェンドは同名1枚まで(GameDesign.md 13章)。所持数の上限と同じ物差しで測る。
 		for id: String in counts:
+			var cap := CardOwnership.cap(CardLibrary.find_by_id(id))
 			_assert.call(
-				int(counts[id]) <= CardDeckSave.COPY_LIMIT,
-				(
-					"%s: '%s' appears %d times (limit %d)"
-					% [row["id"], id, counts[id], CardDeckSave.COPY_LIMIT]
-				)
+				int(counts[id]) <= cap,
+				"%s: '%s' appears %d times (limit %d)" % [row["id"], id, counts[id], cap]
 			)
 
 

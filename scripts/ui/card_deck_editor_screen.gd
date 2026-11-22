@@ -531,10 +531,12 @@ func _refresh() -> void:
 		var card: CardData = _pool[i]
 		# **枚数は実数を出し、暗転だけを「入れられるか」で決める。**30枚に達した
 		# だけで全部が「2/2」になると、どれを2枚積んだのか読めなくなる。
+		# 所持数が上限より少ない札は、所持数を分母にする(1枚だけ持つ札は「1 / 1」で暗くなる)。
 		var copies := _count_of(card)
 		var limit := AccountService.deck_limit(card)
 		var can_add: bool = not full and copies < limit
-		_card_views[i].show_card(card, copies, CardOwnership.cap(card), can_add, limit == 0)
+		var shown_limit := limit if limit > 0 else CardOwnership.cap(card)
+		_card_views[i].show_card(card, copies, shown_limit, can_add, limit == 0)
 	_save_button.disabled = not full
 	_refresh_tab_labels()
 

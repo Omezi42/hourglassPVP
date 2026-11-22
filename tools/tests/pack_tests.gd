@@ -187,6 +187,17 @@ func _test_ownership() -> void:
 	_assert.call(AccountService.card_count("phase") == 1, "AccountService reads card_counts")
 	_assert.call(AccountService.card_count("crest") == 0, "AccountService: unowned is zero")
 	_assert.call(AccountService.card_count("__nothing") == 0, "AccountService: unknown id is zero")
+	var collected_before := AccountService.collected_card_counts().x
+	AccountService.apply_local_fields(
+		{"owned_card_sets": ["still_time"], "card_counts": {"phase": 1, "crest": 1}}
+	)
+	_assert.call(
+		AccountService.collected_card_counts().x == collected_before + 1,
+		"a single pulled card counts as collected without owning its set"
+	)
+	AccountService.apply_local_fields(
+		{"owned_card_sets": ["still_time"], "card_counts": {"phase": 1}}
+	)
 	_assert.call(not CardDeckSave.within_limit([middle]), "an unheld card is over the limit")
 	var phase := CardLibrary.find_by_id("phase")
 	_assert.call(
