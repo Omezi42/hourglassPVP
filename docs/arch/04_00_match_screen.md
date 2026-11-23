@@ -77,6 +77,7 @@
 - **攻撃**は `CardView.play_strike()`(1本の `Tween`、絵の層 `CardArtLayer` が上端を支点に `rotation` で振れる。駒本体の `pivot_offset` は拡縮に使うため触らない)。防御側は当たった瞬間に `play_shatter()` + 小さな揺れ + **攻撃力が1以上なら `play_counter()`**(台座正面の紋章を攻撃側へ突き出す。向きは `CardViewStrike` の `side_x` と同じ符号)。`CardMatchStrike.capture()` が**適用前に**防御側のユニットと攻撃力を控える(適用後は消えている可能性がある)
 - **揺れ(`CardMatchShake`)**: `bind()` した卓と場の駒だけ。基準位置を控えて `base + offset` を書く(毎フレーム足すと累積する)ため、毎ターン並べ替わる手札は対象にできない。強さは攻撃力から、上書きは大きいほう
 - **反転**は `CardFlipBeam.play_flip(self, target_side, slot, actor_side)`。通常の反転は持ち主=手を出した側だが、反転権(`flip_right_used(actor_side, target_side, slot)`)では別々の値になりうるため第4引数で向きを渡す。届いたら `view.play_flip()` + 銘板の `play_spark()`
+- **反転の数字は回り切るまで据え置く**: 状態は手を打った瞬間に入れ替わるため、`CardFlipBeam.play_flip()` と `CardMatchEffectStrike._hold_spins()` が `CardView.hold_stats()` を呼び、回転の進捗が `FLIP_SWAP_AT`(真横)に達したら新しい値を描く(筋が飛ぶ間に数字だけ先に変わらないように)
 - **光の筋(`CardFlipBeam`)は `_beams` の配列**で同時に何本でも出せる。進捗は Dictionary の要素に置く(ラムダは外側のローカル変数を値でキャプチャする。11章)。**残っているのは通常の反転とドローの山札→手札だけ**
 - **`CardMatchEffects` は `MatchState` のシグナル(`unit_played` / `unit_destroyed` / `unit_shielded` / `cards_drawn` / `fatigue_damage` / `effect_drawn` / `unit_returned`)だけを見る**。攻撃の演出中のぶんは `_defer()` で当たる瞬間まで持ち越し、`CardMatchStrike._on_impact()` が `effects.flush()` / `sound.flush()` / `effect_strike.flush()` を呼ぶ
 - 破壊は「絵を縦に3つへ割って左右へ落とす」。硝子の割れは `MatchState` が受ける前の `glass_intact` を控えて消えたときだけ `unit_shielded` を出す(与ダメージ0では判別できない)

@@ -47,6 +47,8 @@ func _ready() -> void:
 func play_flip(screen: Control, side: int, slot: int, actor_side: int = side) -> void:
 	var view: CardView = screen.view_at(side, slot)
 	var bar: PlayerInfoBar = screen.bar_for(actor_side)
+	# 状態は手を打った瞬間に入れ替わっているが、数字は駒が回り切るまで据え置く。
+	view.hold_stats(screen.state.board[side][slot])
 	var from := Vector2(screen.size.x * 0.5, bar.position.y + bar.size.y * bar.scale.y * 0.5)
 	# 反転だけは砂粒と光条を伴う(GameDesign.md 9章)。設置効果と同じ筋を使う以上、
 	# 色を変えるだけでは「ゲームの中心となる行動」に見えないため。

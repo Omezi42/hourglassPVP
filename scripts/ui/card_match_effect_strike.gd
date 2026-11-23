@@ -276,6 +276,8 @@ func _hold_spins(entries: Array, gen: int) -> void:
 	for entry: Dictionary in entries:
 		if entry["slot"] < 0:
 			continue
+		var board_unit: CardInstance = _screen.state.board[entry["side"]][entry["slot"]]
+		_screen.view_at(entry["side"], entry["slot"]).hold_stats(board_unit)
 		var tag := gen if gen >= 0 else _gen_for(entry["side"], entry["slot"])
 		_spins.append({"side": entry["side"], "slot": entry["slot"], "gen": tag})
 
