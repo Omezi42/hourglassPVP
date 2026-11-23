@@ -116,7 +116,7 @@ func _draw() -> void:
 		var emblem_rect := Rect2(
 			emblem_center - Vector2.ONE * emblem_height * 0.5, Vector2.ONE * emblem_height
 		)
-		_draw_falling_sand(emblem_rect, UiPalette.GOLD)
+		draw_falling_sand(get_canvas_item(), emblem_rect, UiPalette.GOLD, _sand_time)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE * zoom)
 	var baseline := top + emblem_height + EMBLEM_GAP
 	# **巡回ドットは見出しの位置を動かさない**。中央揃えのまま末尾へ足すと、
@@ -168,19 +168,17 @@ func _set_emblem_transform(zoom: float, center: Vector2, angle: float) -> void:
 	draw_set_transform_matrix(Transform2D.IDENTITY.scaled(Vector2.ONE * zoom) * local)
 
 
-## くびれから底へ向かって砂の粒を重力で加速させながら落とす。
-func _draw_falling_sand(emblem_rect: Rect2, color: Color) -> void:
+## くびれから底へ向かって砂の粒を重力で加速させながら落とす。ルームの空席(`FallingSand`)も同じ砂を描く。
+static func draw_falling_sand(ci: RID, emblem_rect: Rect2, color: Color, time: float) -> void:
 	var neck := emblem_rect.get_center()
 	var drop := emblem_rect.size.y * SAND_DROP_RATIO
 	var radius := maxf(emblem_rect.size.x * SAND_RADIUS_RATIO, SAND_MIN_RADIUS)
 	for i in SAND_GRAINS:
-		var t := fposmod(_sand_time / SAND_PERIOD + float(i) / SAND_GRAINS, 1.0)
+		var t := fposmod(time / SAND_PERIOD + float(i) / SAND_GRAINS, 1.0)
 		var sway := (i - 1) * emblem_rect.size.x * SAND_SWAY_RATIO
 		var pos := neck + Vector2(sway, drop * t * t)
 		var alpha := minf(t / SAND_FADE_IN, (1.0 - t) / SAND_FADE_OUT)
-		ShapePaint.circle(
-			get_canvas_item(), pos, radius, Color(color, color.a * clampf(alpha, 0.0, 1.0))
-		)
+		ShapePaint.circle(ci, pos, radius, Color(color, color.a * clampf(alpha, 0.0, 1.0)))
 
 
 ## 中央へ1行描き、その左端のx座標を返す(巡回ドットを右へ足すために使う)。

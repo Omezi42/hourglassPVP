@@ -201,6 +201,7 @@ const PATHS: Array[String] = [
 	"res://scripts/ui/shop_kind_tab.gd",
 	"res://scripts/ui/portrait_tabs.gd",
 	"res://scripts/ui/card_shop_screen.gd",
+	"res://scripts/ui/falling_sand.gd",
 	"res://scripts/ui/room_seat.gd",
 	"res://scripts/ui/card_room_arrange.gd",
 	"res://scripts/ui/card_room_screen.gd",

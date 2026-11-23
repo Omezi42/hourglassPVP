@@ -215,7 +215,7 @@ HTTPRequest をぶら下げると送信の途中で巻き添えに消える。�
 結果は `notify_waiting()` の `on_done`(Callable)で返し、`MatchmakingQueue` が
 `announce_result` として画面へ流す。**文言としては出さない**(GameDesign.md 11章)。
 `CardRankedMatchScreen`(6.6節)は届いたときだけ待機中の文言の右へ `StatusBadge`(丸い印)を出し、
-説明はカーソルを乗せたときのツールチップに預ける。タッチ端末では印に触れると同じ説明を印の下へ出し、ほかの場所に触れたら消す(`StatusBadge` が受け持つ)。**受け口を Callable
+説明はカーソルを乗せたときのツールチップに預ける。タッチ端末では印に触れると(`TouchInput` で入力ごとに判定)ツールチップと同じ見た目の説明を印の下へ出し、ほかの場所に触れたら消す(`StatusBadge` が受け持つ。判定は円の外へ `TOUCH_SLOP` 広げる)。**受け口を Callable
 にしているのは、待っている
 うちにキューが解放されることがあるため**で、`Callable.is_valid()` が偽になった時点で
 呼ばない(解放済みのオブジェクトで再開すると "Resumed function on a freed object" になる)。
@@ -270,7 +270,8 @@ HTTPRequest をぶら下げると送信の途中で巻き添えに消える。�
 |---|---|
 | `CardRoomScreen`(`scripts/ui/card_room_screen.gd`) | ルームマッチの状態(入口 / 部屋の中)と `RoomMatch` の操作・待機・失敗の文言。入口と部屋の中の2つの段を組み立て、表示を切り替える。入口の通信待ちは押したボタンの文字を巡回ドット付きの「作成中」「参加中」へ替える(`_begin_pending()`)。「参加する」は `_refresh_entrance_buttons()` が処理中・4桁未満で押せなくする |
 | `CodeTiles`(`scripts/ui/code_tiles.gd`) | 数字だけのコード(桁数は `digits`)を1桁ずつの升に描く。`editable` のときは透明な `LineEdit` を重ねて入力を受け、数字以外を落とす(モバイルの `MobileTextInput` もこの `LineEdit` へ掛ける)。入口では `CardRoomScreen` がこの `input` を対象に `NumberPad` を升の右へ置く。コードが変わるたびに `code_changed(code)` を出し、入口はこれで「参加する」の押せる・押せないを決める |
-| `RoomSeat`(`scripts/ui/room_seat.gd`) | 部屋の中の1席。アイコン・称号・表示名・(自分の席なら)使用デッキを描く。空席は点線の枠と巡回ドット付きの文言で描く |
+| `RoomSeat`(`scripts/ui/room_seat.gd`) | 部屋の中の1席。アイコン・称号・表示名・(自分の席なら)使用デッキを描く。空席は点線の枠・砂時計の印・巡回ドット付きの文言で描き、印の砂は子の `FallingSand` が毎コマ描く |
+| `FallingSand`(`scripts/ui/falling_sand.gd`) | 与えられた印の矩形へ砂の粒だけを毎コマ描く子ノード(描き方は `EmptyState.draw_falling_sand()` と共有)。席の枠を毎コマ描き直さないために分ける |
 
 **`RoomMatch` を持つのはこの画面**であり、`BattleTab` は参加・部屋作成の
 コードを持たない(ランクマッチも6.6節の専用画面へ入るため、`BattleTab` は入口だけを持つ)。

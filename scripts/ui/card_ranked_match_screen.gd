@@ -27,10 +27,11 @@ const CANCEL_GAP := 40.0
 const EMBLEM_FLIP_SECONDS := 6.0
 ## 待機画面の印の倍率(砂も同じ倍率で描く)。`EmptyState` の既定は等倍のまま。
 const WAITING_EMBLEM_SCALE := 1.5
-const TIER_FONT_SIZE := UiPalette.T_LEAD
+const TIER_FONT_SIZE := UiPalette.T_BODY
+## 段位の文字の下端から、印の上端(拡大後の見た目)までの間。縦は拡大に合わせる。
+const TIER_GAP := 24.0
 ## 縦画面(GameDesign.md 9章「縦画面」)。中央の待機の文言は `EmptyState` が拡大して描くため、印とボタンもそれに合わせる。
 const PORTRAIT_CANCEL_SIZE := Vector2(300, 76)
-const PORTRAIT_TIER_FONT_SIZE := 26
 ## 待機の一群を縦の中央より上へ寄せる(下にCPU戦の入口と予告が続くため)。
 const PORTRAIT_CONTENT_HEIGHT := 760.0
 const BROWSE_SIZE := Vector2(220, 56)
@@ -102,7 +103,7 @@ func _build() -> void:
 	_content_rect = _landscape_content_rect()
 	_tier_label = Label.new()
 	_tier_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_tier_label.add_theme_color_override("font_color", UiPalette.MUTED)
+	_tier_label.add_theme_color_override("font_color", UiPalette.SAND)
 	_tier_label.add_theme_font_size_override("font_size", TIER_FONT_SIZE)
 	add_child(_tier_label)
 
@@ -160,7 +161,7 @@ func apply_orientation(portrait: bool) -> void:
 	_empty_state.position = _content_rect.position
 	_empty_state.size = _content_rect.size
 	_tier_label.add_theme_font_size_override(
-		"font_size", PORTRAIT_TIER_FONT_SIZE if portrait else TIER_FONT_SIZE
+		"font_size", int(TIER_FONT_SIZE * EmptyState.PORTRAIT_ZOOM) if portrait else TIER_FONT_SIZE
 	)
 	var cancel_size := PORTRAIT_CANCEL_SIZE if portrait else CANCEL_SIZE
 	_cancel_button.custom_minimum_size = cancel_size
@@ -213,13 +214,10 @@ func begin_match() -> void:
 
 func _refresh_tier_label() -> void:
 	_tier_label.text = "いまの段位: %s" % RankRules.display_name(AccountService.rank_tier())
-	var font_size := _tier_label.get_theme_font_size("font_size")
-	var half_width := (
-		_tier_label.get_theme_default_font().get_string_size(_tier_label.text, 0, -1, font_size).x
-		* 0.5
-	)
+	var label_size := _tier_label.get_combined_minimum_size()
 	_tier_label.position = Vector2(
-		_content_rect.get_center().x - half_width, _content_rect.position.y - 6.0
+		_content_rect.get_center().x - label_size.x * 0.5,
+		_emblem_top_y() - TIER_GAP * _zoom() - label_size.y
 	)
 
 
@@ -277,6 +275,8 @@ func _set_status(text: String, hint := "", clock := false) -> void:
 		_announce_badge.clear_note()
 	_empty_state.show_message(_status_base_text, _status_hint, _busy)
 	_place_announce_badge()
+	if not _tier_label.text.is_empty():
+		_refresh_tier_label()
 	if _cancel_button != null and _cpu_offer != null:
 		_place_action_buttons()
 
@@ -310,6 +310,8 @@ func _on_visibility_changed() -> void:
 
 ## `EmptyState` は押せるものを持たないため、印は外側から同じ中央寄せを計算し直して重ねる。
 func _place_announce_badge() -> void:
+	if _announce_badge != null:
+		_announce_badge.hide_touch_note()
 	var font := get_theme_default_font()
 	if _announce_badge == null or font == null:
 		return
@@ -330,6 +332,14 @@ func _on_announce_result(ok: bool) -> void:
 ## `EmptyState` の描く倍率(縦は中身ごと拡大する)。
 func _zoom() -> float:
 	return EmptyState.PORTRAIT_ZOOM if _portrait else 1.0
+
+
+## 拡大後の印の見た目の上端(印は下端を軸に `emblem_scale` 倍へ広がる)。
+func _emblem_top_y() -> float:
+	var emblem_height := (
+		EmptyState.EMBLEM_SIZE * EmptyState.EMBLEM_VISUAL_RATIO * _empty_state.emblem_scale
+	)
+	return _title_baseline_y() - (EmptyState.EMBLEM_GAP + emblem_height) * _zoom()
 
 
 func _title_baseline_y() -> float:

@@ -33,7 +33,6 @@ const DASH := 9.0
 const DASH_ALPHA := 0.5
 const EMPTY_RING_ALPHA := 0.45
 const EMPTY_MARK_ALPHA := 0.6
-const EMPTY_MARK_FONT_SIZE := UiPalette.T_TITLE
 ## 席の右下へ置く「変更」ボタンの位置(`CardRoomScreen` が子として置く)。
 const DECK_BUTTON_RECT := Rect2(396, 196, 120, 52)
 const HIDDEN_DECK_NOTE := "デッキは対局が始まるまで伏せられます"
@@ -52,12 +51,21 @@ var _font: Font
 var _panel_style: StyleBox
 var _dots := 0
 var _elapsed := 0.0
+var _sand: FallingSand
 
 
 func _ready() -> void:
 	_font = get_theme_default_font()
 	_panel_style = load(PANEL_STYLE)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_sand = FallingSand.new()
+	var emblem_height := EmptyState.EMBLEM_SIZE * EmptyState.EMBLEM_VISUAL_RATIO
+	_sand.emblem_rect = Rect2(
+		PORTRAIT_CENTER - Vector2.ONE * emblem_height * 0.5, Vector2.ONE * emblem_height
+	)
+	_sand.color = Color(UiPalette.GOLD, EMPTY_MARK_ALPHA)
+	add_child(_sand)
+	_sand.stop()
 
 
 func show_player(
@@ -69,6 +77,7 @@ func show_player(
 	icon_id = p_icon
 	deck_name = p_deck
 	empty = false
+	_sand.stop()
 	set_process(false)
 	queue_redraw()
 
@@ -79,6 +88,7 @@ func show_empty(text: String, hint: String) -> void:
 	waiting_hint = hint
 	_dots = 0
 	_elapsed = 0.0
+	_sand.start()
 	set_process(true)
 	queue_redraw()
 
@@ -156,14 +166,12 @@ func _draw_empty() -> void:
 		Color(UiPalette.GOLD, EMPTY_RING_ALPHA),
 		UiKit.LINE_MIN
 	)
-	draw_string(
-		_font,
-		PORTRAIT_CENTER + Vector2(-PORTRAIT_RADIUS, EMPTY_MARK_FONT_SIZE * 0.35),
-		"?",
-		HORIZONTAL_ALIGNMENT_CENTER,
-		PORTRAIT_RADIUS * 2.0,
-		EMPTY_MARK_FONT_SIZE,
-		Color(UiPalette.MUTED, EMPTY_MARK_ALPHA)
+	UiPaint.draw_emblem(
+		rid,
+		UiPaint.Emblem.HOURGLASS,
+		PORTRAIT_CENTER,
+		EmptyState.EMBLEM_SIZE,
+		Color(UiPalette.GOLD, EMPTY_MARK_ALPHA)
 	)
 	_text(
 		Vector2(TEXT_LEFT, WAIT_Y),
