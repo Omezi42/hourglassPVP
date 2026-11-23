@@ -215,7 +215,7 @@ HTTPRequest をぶら下げると送信の途中で巻き添えに消える。�
 結果は `notify_waiting()` の `on_done`(Callable)で返し、`MatchmakingQueue` が
 `announce_result` として画面へ流す。**文言としては出さない**(GameDesign.md 11章)。
 `CardRankedMatchScreen`(6.6節)は届いたときだけ待機中の文言の右へ `StatusBadge`(丸い印)を出し、
-説明はカーソルを乗せたときのツールチップに預ける。**受け口を Callable
+説明はカーソルを乗せたときのツールチップに預ける。タッチ端末では印に触れると同じ説明を印の下へ出し、ほかの場所に触れたら消す(`StatusBadge` が受け持つ)。**受け口を Callable
 にしているのは、待っている
 うちにキューが解放されることがあるため**で、`Callable.is_valid()` が偽になった時点で
 呼ばない(解放済みのオブジェクトで再開すると "Resumed function on a freed object" になる)。
