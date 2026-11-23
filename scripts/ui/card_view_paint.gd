@@ -42,30 +42,32 @@ const CRACK_PATHS := [
 
 ## 反転中の絵。持ち上げながら縦に潰していき、真横を向いた瞬間(進捗0.5)に
 ## 厚みだけの線になり、そこから裏返って戻る。同時にガラスと砂の反射を重ねる。
-static func flipping_art(view: CardView, texture: Texture2D, rect: Rect2, tint: Color) -> void:
+static func flipping_art(
+	view: CardView, canvas: CanvasItem, texture: Texture2D, rect: Rect2, tint: Color
+) -> void:
 	var progress: float = view._flip_progress
 	var turn := absf(cos(PI * progress))
 	var lift := sin(PI * progress) * CardView.FLIP_LIFT
 	var center := rect.get_center() - Vector2(0.0, lift)
 	var half := Vector2(rect.size.x * 0.5, rect.size.y * 0.5 * maxf(turn, 0.02))
-	view.draw_texture_rect(texture, Rect2(center - half, half * 2.0), false, tint)
+	canvas.draw_texture_rect(texture, Rect2(center - half, half * 2.0), false, tint)
 	var sheen := sin(PI * progress)
 	UiPaint.fill_ellipse(
-		view.get_canvas_item(), center, half * 0.9, Color(1.0, 0.94, 0.78, 0.3 * sheen), 28
+		canvas.get_canvas_item(), center, half * 0.9, Color(1.0, 0.94, 0.78, 0.3 * sheen), 28
 	)
 	if progress >= CardView.FLIP_LAND_AT:
-		_flip_landing(view, progress)
+		_flip_landing(view, canvas, progress)
 
 
 ## 着地の衝撃波。台座と同じ扁平な楕円を外へ広げる。
-static func _flip_landing(view: CardView, progress: float) -> void:
+static func _flip_landing(view: CardView, canvas: CanvasItem, progress: float) -> void:
 	# 行き過ぎ(1.0超)のぶんで衝撃波が広がり続けないよう、進捗は1.0で頭打ちにする。
 	var ratio := clampf(
 		(progress - CardView.FLIP_LAND_AT) / (1.0 - CardView.FLIP_LAND_AT), 0.0, 1.0
 	)
 	var radius := CardView.PEDESTAL_RADIUS * (1.0 + 0.5 * ratio)
 	UiPaint.draw_ellipse_ring(
-		view.get_canvas_item(),
+		canvas.get_canvas_item(),
 		Vector2(view.size.x * 0.5, CardView.PEDESTAL_CENTER_Y),
 		radius,
 		Color(UiPalette.SAND_HI, 0.7 * (1.0 - ratio)),
@@ -78,8 +80,8 @@ static func _flip_landing(view: CardView, progress: float) -> void:
 ## **上面の楕円+側面の帯を持つ、高さのある真鍮の器**として描く
 ## (GameDesign.md 9章「対局画面の再構築」)。光は上から受けるため、上面が明るく
 ## 側面は暗い。
-static func pedestal_base(view: CardView) -> void:
-	var ci := view.get_canvas_item()
+static func pedestal_base(view: CardView, canvas: CanvasItem) -> void:
+	var ci := canvas.get_canvas_item()
 	var top_center := Vector2(view.size.x * 0.5, CardView.PEDESTAL_CENTER_Y)
 	var bottom_center := top_center + Vector2(0.0, CardView.PEDESTAL_HEIGHT)
 	var radius := CardView.PEDESTAL_RADIUS

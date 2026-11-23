@@ -13,7 +13,8 @@
 | `CardMatchGeometry` | 座標系の問い合わせ(`hp_bar_center()` / `slot_center()` / `playable_hand_rects()` / `end_turn_button_rect()`)。`CardMatchScreen` の座標定数を読むだけ |
 | `CardView` / `CardViewPaint` / `HandCardPaint` | 駒・札1枚の表示。`Mode.HAND`(枠あり・コスト左上/紋章の印右上/攻撃力左下/体力右下)と `Mode.BOARD`(枠なし・台座の上の砂時計・攻撃力左下/体力右下)。**砂術は `Mode.HAND` の中の分岐**(`is_spell` で絵の代わりに紋章・攻撃力と体力のバッジなし・枠色変更。`Mode.SPELL` は作らない——場での見た目が存在せず、`BOARD` との組み合わせという有り得ない状態を表現できてしまう)。守護の輪は `guard_frame`(場だけ true)。状態(`health_punch`/`attack_punch`/`unselect_amount`/`counter_offset`/`spark_amount`/strikeの offset・angle・flash)は `CardView` が持ち、描画は `CardViewPaint`(台座・紋章の印・バッジ・予測)と `HandCardPaint`(手札の面)が担う。いずれも第1引数に `CardView` を取る |
 | `CardViewPose` | 場の駒の拡縮。倍率は `target_factor()` が1つに決める(押下0.97 > 身構え0.92 > 選択・ホバー・ドラッグ元1.06)。1本の Tween で動かし、倍率の入力が変わるたびフレームの終わりに1度だけ評価する。支点は台座の中心を軸にしたのと同じ見た目になるよう `pivot_offset` を逆算する(盤の配置は駒の中心軸の縮尺 `base_scale` を前提にしているため `position` は触らない)。攻撃の演出中は動かさない。`CardView.operable`(自分の手番の自分の駒)のときだけホバー・押下・選択で動く |
-| `CardViewStrike` / `CardViewFlourish` / `CardViewSandFx` | 攻撃の4段の段取り / 相打ちの反撃(`play_counter()`)とドローの合図(`play_spark()`)の Tween / 砂の動き(`play_shatter()` 消える・`play_drop()` 落ちる・`play_raise()` 戻る)の Tween と描画。`CardView` に同名の薄い委譲を残す。`CardViewSandFx` は絵の上へ重ねるため `CardView._draw()` の最後から `draw()` を呼ぶ |
+| `CardViewStrike` / `CardViewFlourish` / `CardViewSandFx` | 攻撃の4段の段取り / 相打ちの反撃(`play_counter()`)とドローの合図(`play_spark()`)の Tween / 砂の動き(`play_shatter()` 消える・`play_drop()` 落ちる・`play_raise()` 戻る)の Tween と描画。`CardView` に同名の薄い委譲を残す。`CardViewSandFx` は絵の上へ重ねるため、場の駒は `CardArtLayer` が、手札は `CardView._draw()` が `draw()` を呼ぶ |
+| `CardArtLayer` | 場の駒の背面へ敷く2枚の子ノード(台座の面 / 砂時計の絵+閃光+砂の演出。`show_behind_parent` で親の輪・銘板・数字の下)。攻撃の演出は絵の層の `position` / `rotation`(支点 `pivot_offset`)だけを動かし、`CardView` 全体は描き直さない。親が描き直すたびに2枚へ `queue_redraw()` を渡す。`CardViewSandFx.draw(canvas)` は場の駒では絵の層から呼ぶ |
 | `CardUnitFx` | `CardView` の子として重ねる演出のうち盤面の状態を参照しないもの(着地 / 崩落 / 毒砂の溶解 `play_melt()` / 硝子の閃光 / `play_recall()`)。崩落は `CardData` を受け取り絵と矩形をその時点で控える(次の同期で `card` が null になるため) |
 | `CardDragPreview` / `CardDragArrow` | ドラッグ中に指へ付いてくる絵(手札と砂術だけ。場の駒の攻撃ドラッグでは作らない。速度から傾き。砂術は紋章を運び、離せば撃つ間は琥珀色に光って縮む)/ 攻撃ドラッグの駒→指先の矢印(自分の場の駒のときだけ。狙える相手の上では太くなり先端が駒へ吸い付く)。指の下の相手は `CardMatchTouch.tick_attack_drag()` が毎フレーム判定して身構え・予測・吸着へ流す(ドラッグ中は `mouse_entered` が来ない)。成立せず放したときだけ0.1秒で落とす |
 | `CardMatchHandLayout` | 手札の並べ方。**位置は代入せず Tween で滑らせる**。ホバー中の両隣を避け、相手の手番で沈める |
@@ -73,7 +74,7 @@
 **ロジックは演出を待たない。**`MatchState` は即座に解決し、演出は結果を後から見せる(演出の完了へ依存させると再生・観戦・CPUの連続着手が尺に縛られる)。
 
 - **砂の演出は2種類のシグナルで受ける**: 被ダメージ `unit_damaged` → `play_shatter()`(砕けて散る・赤)、ターン終了 `unit_ticked` → `play_drop()`(下へ流れる・琥珀)。相乗りさせない
-- **攻撃**は `CardView.play_strike()`(1本の `Tween`、駒は上端を支点に振れる `_strike_pivot`。`pivot_offset` は回転と拡縮の両方に効くため描画側で変換)。防御側は当たった瞬間に `play_shatter()` + 小さな揺れ + **攻撃力が1以上なら `play_counter()`**(台座正面の紋章を攻撃側へ突き出す。向きは `CardViewStrike` の `side_x` と同じ符号)。`CardMatchStrike.capture()` が**適用前に**防御側のユニットと攻撃力を控える(適用後は消えている可能性がある)
+- **攻撃**は `CardView.play_strike()`(1本の `Tween`、絵の層 `CardArtLayer` が上端を支点に `rotation` で振れる。駒本体の `pivot_offset` は拡縮に使うため触らない)。防御側は当たった瞬間に `play_shatter()` + 小さな揺れ + **攻撃力が1以上なら `play_counter()`**(台座正面の紋章を攻撃側へ突き出す。向きは `CardViewStrike` の `side_x` と同じ符号)。`CardMatchStrike.capture()` が**適用前に**防御側のユニットと攻撃力を控える(適用後は消えている可能性がある)
 - **揺れ(`CardMatchShake`)**: `bind()` した卓と場の駒だけ。基準位置を控えて `base + offset` を書く(毎フレーム足すと累積する)ため、毎ターン並べ替わる手札は対象にできない。強さは攻撃力から、上書きは大きいほう
 - **反転**は `CardFlipBeam.play_flip(self, target_side, slot, actor_side)`。通常の反転は持ち主=手を出した側だが、反転権(`flip_right_used(actor_side, target_side, slot)`)では別々の値になりうるため第4引数で向きを渡す。届いたら `view.play_flip()` + 銘板の `play_spark()`
 - **光の筋(`CardFlipBeam`)は `_beams` の配列**で同時に何本でも出せる。進捗は Dictionary の要素に置く(ラムダは外側のローカル変数を値でキャプチャする。11章)。**残っているのは通常の反転とドローの山札→手札だけ**

@@ -112,6 +112,8 @@ const FLIP_LAND_AT := 0.82
 ## 持ち上げ量(`sin`)が負になるため、行き過ぎと同時に着地の沈み込みも出る。
 const FLIP_OVERSHOOT := 1.07
 const FLIP_SETTLE := 0.12
+## 数字と絵の傾きが新しい値へ入れ替わる進捗。真横を向いて絵が見えなくなる瞬間。
+const FLIP_SWAP_AT := 0.5
 
 ## 手札の絵を収める正方形の一辺。札の面の作りは `HandCardPaint` が持つ。
 const HAND_ART_SIDE := 92.0
@@ -214,14 +216,12 @@ var flip_preview: Dictionary = {}
 ## 「ターン終了」にカーソルがある間、砂が落ちて割れる駒へひびを出す(GameDesign.md 9章)。
 var crack_preview := false
 ## 攻撃の演出の状態(GameDesign.md 9章)。**段取りは CardViewStrike が書き換える**ため
-## 公開している。絵だけをこのぶんずらし、上端を支点にこの角度だけ回す。
+## 公開している。絵(`_art_layer`)だけをずらし、上端を支点に回す。
 var striking := false:
 	set(value):
 		striking = value
 		if not value:
 			_pose.request()
-var strike_offset := Vector2.ZERO
-var strike_angle := 0.0
 var strike_flash := 0.0
 var strike_tween: Tween
 ## 相打ちの反撃(GameDesign.md 9章)。紋章の描画位置へこのぶんだけ足す。
@@ -290,10 +290,16 @@ var _zoom_tween: Tween
 ## 設置の着地・破壊の崩落・硝子の割れる閃光。駒の上へ重ねて描く子ノード。
 var _fx: CardUnitFx
 var _strike: CardViewStrike
+## 場の駒の台座の面と絵。親の背面に敷き、攻撃では絵の層だけを動かす(`CardArtLayer`)。
+var _pedestal: CardArtLayer
+var _art_layer: CardArtLayer
 var _flourish: CardViewFlourish
 ## バッジの跳ねの判定用。前回 `show_unit()` に渡された体力・攻撃力(GameDesign.md 9章)。
 var _prev_health := -1
 var _prev_attack := -1
+## 反転の演出が真横を向くまで、数字と絵の傾きを `_prev_*`(直前に描いた値)のまま据え置く。
+## 状態は反転の手を打った瞬間に入れ替わるが、見せるのは回り切る瞬間(`FLIP_SWAP_AT`)。
+var _stats_held := false
 ## 身構えの脈打ち(GameDesign.md 9章)。`brace` の間だけ `_process` で進める。
 var _brace_pulse := 0.0
 var _pose := CardViewPose.new(self)
@@ -315,6 +321,11 @@ func _ready() -> void:
 	mouse_entered.connect(_on_mouse_entered)
 	mouse_exited.connect(_on_mouse_exited)
 	_sand = CardViewSandFx.new(self)
+	_pedestal = CardArtLayer.new(self, CardArtLayer.Part.PEDESTAL)
+	_art_layer = CardArtLayer.new(self, CardArtLayer.Part.ART)
+	add_child(_pedestal)
+	add_child(_art_layer)
+	_sync_layers()
 	_fx = CardUnitFx.new()
 	_fx.size = size
 	add_child(_fx)
@@ -328,6 +339,11 @@ func _ready() -> void:
 ## 破壊された)ときは前回値が無関係になるため跳ねない。
 func show_unit(p_unit: CardInstance) -> void:
 	mode = Mode.BOARD
+	if p_unit != unit:
+		_stats_held = false
+	if _stats_held:
+		_redraw_if_changed()
+		return
 	if p_unit != null and unit == p_unit:
 		if p_unit.health != _prev_health:
 			_ensure_flourish()
@@ -403,6 +419,32 @@ func _ensure_flourish() -> void:
 		_flourish = CardViewFlourish.new(self)
 
 
+## 反転の手で変わった数字を、演出が回り切るまで直前の値のまま見せる。
+## 状態の変更から表示の更新までのあいだ(`show_unit()` が呼ばれる前)に呼ぶ。
+func hold_stats(of: CardInstance) -> void:
+	if of == null or of != unit or _prev_health < 0:
+		return
+	_stats_held = true
+
+
+## 画面に出している攻撃力・体力。反転の演出中は据え置いた値(`hold_stats()`)。
+func shown_attack() -> int:
+	return _prev_attack if _stats_held else unit.attack
+
+
+func shown_health() -> int:
+	return _prev_health if _stats_held else unit.health
+
+
+func _release_stats() -> void:
+	if not _stats_held:
+		return
+	_stats_held = false
+	if unit != null:
+		show_unit(unit)
+	queue_redraw()
+
+
 func play_flip() -> void:
 	if _flip_tween != null and _flip_tween.is_valid():
 		_flip_tween.kill()
@@ -420,11 +462,14 @@ func play_flip() -> void:
 
 func _set_flip_progress(value: float) -> void:
 	_flip_progress = value
+	if value >= FLIP_SWAP_AT:
+		_release_stats()
 	queue_redraw()
 
 
 func _on_flip_finished() -> void:
 	_flip_progress = -1.0
+	_release_stats()
 	queue_redraw()
 
 
@@ -475,6 +520,7 @@ func play_raise() -> void:
 
 
 func clear() -> void:
+	_stats_held = false
 	card = null
 	unit = null
 	_prev_health = -1
@@ -512,6 +558,8 @@ func _drop_data(_at_position: Vector2, data: Variant) -> void:
 ## ドラッグが終わった(枠に落とした/取り消した、いずれも)。攻撃ドラッグの矢印
 ## (`CardDragArrow`)を消す合図として使う(GameDesign.md 9章「対局画面の手触り」)。
 func _notification(what: int) -> void:
+	if what == NOTIFICATION_RESIZED and _art_layer != null:
+		_sync_layers()
 	if what == NOTIFICATION_DRAG_END:
 		if drag_source:
 			drag_source = false
@@ -639,8 +687,8 @@ func _look() -> Array:
 			. append_array(
 				[
 					unit.data,
-					unit.health,
-					unit.attack,
+					shown_health(),
+					shown_attack(),
 					unit.summoned_this_turn,
 					unit.flipped_this_turn,
 					unit.attacks_this_turn,
@@ -663,13 +711,10 @@ func _draw() -> void:
 		_draw_empty()
 	else:
 		HandCardPaint.draw(self)
-	# 攻撃で出かけている駒の被弾の面は、席ではなく動いている絵に付ける。
-	var follows_art := mode == Mode.BOARD and striking
-	if follows_art:
-		draw_set_transform_matrix(_strike_transform())
-	_sand.draw()
-	if follows_art:
-		draw_set_transform_matrix(Transform2D.IDENTITY)
+		_sand.draw(self)
+	# 台座の面と絵は背面の子が描く。親が描き直したときに合わせて描き直す。
+	_pedestal.queue_redraw()
+	_art_layer.queue_redraw()
 
 
 func _tint() -> Color:
@@ -682,20 +727,10 @@ func _tint() -> Color:
 
 
 func _draw_board_unit() -> void:
-	CardViewPaint.pedestal_base(self)
 	if card == null:
 		CardViewPaint.pedestal_ring(self)
 		return
 	var tint := _tint()
-	var sink := SUMMONED_SINK if unit != null and unit.summoned_this_turn else 0.0
-	# 攻撃の演出で動かすのは絵だけ。台座は盤面の設備であって駒の一部ではないため、
-	# 一緒に動くと枠ごと飛んでいくように見える。
-	if striking:
-		draw_set_transform_matrix(_strike_transform())
-	_draw_board_art(tint, sink)
-	if striking:
-		_drawstrike_flash()
-		draw_set_transform_matrix(Transform2D.IDENTITY)
 	if crack_preview:
 		CardViewPaint.crack(self)
 	# 輪は絵の後に描く。守護(真鍮の二重の輪)と選択中(水色の太い輪)は駒が立っていても
@@ -709,27 +744,6 @@ func _draw_board_unit() -> void:
 		CardViewPaint.pedestal_glow(self, Color(1, 1, 1, alpha))
 	_draw_board_stats()
 	_draw_board_labels(tint)
-
-
-func _draw_board_art(tint: Color, sink: float) -> void:
-	var still := _icon()
-	if still == null:
-		return
-	var lift := _fx.land_offset()
-	var box := board_art_box().grow_individual(0, sink, 0, sink)
-	# 大きさと位置は止めた絵で決める。動く絵は同じ縦横比で、解像度だけが違う。
-	var rect := _fit_art(still, box)
-	rect.position.y += lift
-	var texture := _shown(still)
-	if _flip_progress >= 0.0:
-		CardViewPaint.flipping_art(self, texture, rect, tint)
-	else:
-		draw_texture_rect(texture, rect, false, tint)
-	# 硝子は枠ではなくガラスそのものへ膜を掛ける(GameDesign.md 9章)。
-	if unit != null and unit.glass_intact:
-		UiPaint.fill_ellipse(
-			get_canvas_item(), rect.get_center(), rect.size * 0.42, Color(0.6, 0.85, 1.0, 0.16), 28
-		)
 
 
 ## 場に出す絵。コード描画のカードは動く絵(GameDesign.md 9章)。
@@ -756,8 +770,8 @@ func _draw_board_stats() -> void:
 	var health_radius := radius * (1.0 + health_punch * STAT_PUNCH_SCALE)
 	var attack_at := Vector2(radius + 2.0, y)
 	var health_at := Vector2(size.x - radius - 2.0, y)
-	CardViewPaint.stat(self, attack_at, unit.attack, ATTACK_ORANGE, attack_radius)
-	CardViewPaint.stat(self, health_at, unit.health, HEALTH_RED, health_radius)
+	CardViewPaint.stat(self, attack_at, shown_attack(), ATTACK_ORANGE, attack_radius)
+	CardViewPaint.stat(self, health_at, shown_health(), HEALTH_RED, health_radius)
 	if flip_preview.is_empty():
 		CardViewPaint.preview(self, health_at)
 	else:
@@ -873,9 +887,9 @@ func _icon() -> Texture2D:
 func _icon_state() -> int:
 	if unit == null:
 		return HourglassArt.State.UPRIGHT
-	if unit.attack > unit.health:
+	if shown_attack() > shown_health():
 		return HourglassArt.State.FALLEN
-	if unit.attack >= unit.health - 1:
+	if shown_attack() >= shown_health() - 1:
 		return HourglassArt.State.FALLING
 	return HourglassArt.State.UPRIGHT
 
@@ -931,20 +945,17 @@ func play_strike(target_center: Vector2, quick := false, follow_center := Vector
 	_strike.play(target_center, quick, follow_center)
 
 
-## 当たった瞬間の閃光。絵の下端(当たった側)へ出す。
-func _drawstrike_flash() -> void:
-	if strike_flash <= 0.01:
-		return
-	var box := board_art_box()
-	var at := Vector2(box.get_center().x, box.end.y - 8.0)
-	var radius := 10.0 + 14.0 * (1.0 - strike_flash)
-	UiPaint.fill_circle(
-		get_canvas_item(), at, radius, Color(1.0, 0.94, 0.72, 0.55 * strike_flash), 20
-	)
+## 攻撃の演出で絵の層を動かす。台座・輪・数字は置いていく(`CardArtLayer`)。
+func set_strike_pose(offset: Vector2, angle: float) -> void:
+	_art_layer.position = offset
+	_art_layer.rotation = angle
 
 
-## 絵に掛ける変換。上端を支点に回し、そのぶんずらす。
-func _strike_transform() -> Transform2D:
-	var pivot := Vector2(size.x * 0.5, board_art_box().position.y + STRIKE_PIVOT_Y)
-	var placed := Transform2D(strike_angle, Vector2.ONE, 0.0, pivot + strike_offset)
-	return placed * Transform2D(0.0, Vector2.ONE, 0.0, -pivot)
+func redraw_art() -> void:
+	_art_layer.queue_redraw()
+
+
+func _sync_layers() -> void:
+	for layer in [_pedestal, _art_layer]:
+		layer.size = size
+	_art_layer.set_strike_pivot(Vector2(size.x * 0.5, board_art_box().position.y + STRIKE_PIVOT_Y))

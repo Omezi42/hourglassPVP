@@ -5,10 +5,11 @@ extends RefCounted
 ##
 ## **CardView から切り出したのは、1ファイル1000行の上限に達したため**
 ## (Architecture.md 11章)。分ける線は「駒の見た目」と「殴りに行く段取り」に引いた。
-## 状態(offset / angle / flash)と描画は CardView 側に残っている。駒の絵に掛ける変換は
-## 描画のたびに要るもので、演出が終わってからも参照されるため。
+## 絵の変換は `CardArtLayer` の `position` / `rotation` へ入れる(駒全体を描き直さない)。
 
 var _view: CardView
+var _offset := Vector2.ZERO
+var _angle := 0.0
 
 
 func _init(p_view: CardView) -> void:
@@ -18,8 +19,8 @@ func _init(p_view: CardView) -> void:
 ## 攻撃:駒が対象の斜め上まで渡っていき、反動をつけて当てる(GameDesign.md 9章)。
 ##
 ## **動かすのは絵だけで、台座は置いていく**。台座は盤面の設備であって駒の一部ではなく、
-## 一緒に動くと枠ごと飛んでいくように見えるため。絵は `draw_set_transform_matrix()` で
-## 上端を支点に回し、`Control` 自身の `position` / `rotation` は触らない
+## 一緒に動くと枠ごと飛んでいくように見えるため。絵は子ノード `CardArtLayer` の
+## `position` / `rotation` で上端を支点に回し、`Control` 自身の `position` / `rotation` は触らない
 ## (触ると台座も動き、盤面の当たり判定もずれる)。
 ##
 ## `target_center` はこのビューの**親の座標系**で渡す(`position` と同じ空間)。
@@ -162,18 +163,18 @@ func _stop_inside_screen(at: Vector2) -> Vector2:
 
 
 func _setstrike_offset(value: Vector2) -> void:
-	_view.strike_offset = value
-	_view.queue_redraw()
+	_offset = value
+	_view.set_strike_pose(_offset, _angle)
 
 
 func _setstrike_angle(value: float) -> void:
-	_view.strike_angle = value
-	_view.queue_redraw()
+	_angle = value
+	_view.set_strike_pose(_offset, _angle)
 
 
 func _setstrike_flash(value: float) -> void:
 	_view.strike_flash = value
-	_view.queue_redraw()
+	_view.redraw_art()
 
 
 func _on_impact() -> void:
@@ -182,9 +183,10 @@ func _on_impact() -> void:
 
 func _on_finished() -> void:
 	_view.striking = false
-	_view.strike_offset = Vector2.ZERO
-	_view.strike_angle = 0.0
+	_offset = Vector2.ZERO
+	_angle = 0.0
+	_view.set_strike_pose(_offset, _angle)
 	_view.strike_flash = 0.0
 	_view.z_index = 0
-	_view.queue_redraw()
+	_view.redraw_art()
 	_view.strike_finished.emit()

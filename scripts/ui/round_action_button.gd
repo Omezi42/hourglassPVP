@@ -38,6 +38,8 @@ const SUB_LABEL_DROP := 0.17
 ## ボタンの語。
 var label: String = "":
 	set(value):
+		if label == value:
+			return
 		label = value
 		queue_redraw()
 ## 丸の直径(横長のときは高さ)。
@@ -53,37 +55,51 @@ var width: float = 0.0:
 ## 真鍮の面(その画面の主の操作)か。
 var filled: bool = false:
 	set(value):
+		if filled == value:
+			return
 		filled = value
 		queue_redraw()
 ## 取り返せない操作(投了)。硝子に赤い縁。
 var danger: bool = false:
 	set(value):
+		if danger == value:
+			return
 		danger = value
 		queue_redraw()
 ## 語の後ろへ添える小さな数字(エモートの残り秒)。空なら出さない。
 var badge: String = "":
 	set(value):
+		if badge == value:
+			return
 		badge = value
 		queue_redraw()
 ## 面の中央(文言があれば少し上)に描く紋章。
 var emblem: UiPaint.Emblem = UiPaint.Emblem.NONE:
 	set(value):
+		if emblem == value:
+			return
 		emblem = value
 		queue_redraw()
 ## `emblem` の代わりに描く取り込みアイコン(`assets/ui/icons/` の白いシルエット)。
 var emblem_texture: Texture2D:
 	set(value):
+		if emblem_texture == value:
+			return
 		emblem_texture = value
 		queue_redraw()
 ## 0以上のとき、面の縁へ残りの割合ぶんの砂の輪を描く(縦のターン終了の持ち時間)。
 var ring_ratio := -1.0:
 	set(value):
+		if ring_ratio == value:
+			return
 		ring_ratio = value
 		queue_redraw()
 var ring_color := UiPalette.SAND_HI
 ## 見出しの下へ小さく出す字(残り時間)。空なら出さない。
 var sub_label := "":
 	set(value):
+		if sub_label == value:
+			return
 		sub_label = value
 		queue_redraw()
 
