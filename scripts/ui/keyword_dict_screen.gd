@@ -10,9 +10,16 @@ const PANEL_STYLE := "res://resources/theme/content_panel.tres"
 const CONTENT_HEIGHT := ScreenHeader.CONTENT_HEIGHT
 const LIST_RECT := Rect2(24, ScreenHeader.CONTENT_TOP, 236, CONTENT_HEIGHT)
 const DETAIL_RECT := Rect2(284, ScreenHeader.CONTENT_TOP, 972, CONTENT_HEIGHT)
-## 13項目(13 x 39 + 12 x 4 = 555px)がスクロールなしでコンテンツ領域(560px)へ収まる高さ。
-const ITEM_SIZE := Vector2(212, 39)
+## 13項目+小見出し2本+分類の間の空き(13 x 34 + 2 x 22 + 8 + 15 x 4 = 554px)が
+## スクロールなしでコンテンツ領域(560px)へ収まる高さ。
+const ITEM_SIZE := Vector2(212, 34)
 const LIST_SEPARATION := 4
+const LIST_HEADER_HEIGHT := 22.0
+const LIST_SECTION_GAP := 8.0
+## 小見出し(分類名+右へ伸びる罫線)。罫線の色はパネル枠の金。
+const SECTION_RULE_THICKNESS := 1
+const SECTION_RULE_ALPHA := 0.35
+const SECTION_RULE_GAP := 8
 ## 選択中の印。色だけだと真鍮のボタンの上では差が読み取りにくかったため、形でも示す。
 ## 記号はフォント(Zen Kaku Gothic New)が持つものだけを使う(▸ は字形が無く豆腐になる)。
 const SELECTED_MARK := "◆"
@@ -25,15 +32,20 @@ const MARK_SLIDE := 6.0
 ## 詳細パネルの余白。パネルの面が持つ内側の余白は外し、ここだけで決める。
 const DETAIL_MARGIN_X := 24
 const DETAIL_MARGIN_Y := 16
-## 詳細の中身の幅。実演(520px)と説明文が収まる値で、パネルの中央へ置く。
+## 詳細の中身の幅。実演と説明文が収まる値で、パネルの中央へ置く。
 const ENTRY_WIDTH := 640.0
+## 横の実演の幅(高さは比で決まる)。横の詳細は高さに余裕が無く、これ以上は大きくしない。
+const LANDSCAPE_PREVIEW_WIDTH := 468.0
 
-## 縦画面(GameDesign.md 9章「縦画面」)。語のボタンを上に2列で並べ、その下に詳細を画面の幅で出す。
-const PORTRAIT_COLUMNS := 2
-const PORTRAIT_ITEM_HEIGHT := 72.0
+## 縦画面(GameDesign.md 9章「縦画面」)。語のボタンを分類ごとに上へ3列で並べ、その下に詳細を画面の幅で出す。
+const PORTRAIT_COLUMNS := 3
+const PORTRAIT_ITEM_HEIGHT := 64.0
 const PORTRAIT_ITEM_GAP := 8.0
 const PORTRAIT_BUTTON_FONT := 24
 const PORTRAIT_SECTION_GAP := 16.0
+const PORTRAIT_HEADER_HEIGHT := 28.0
+const PORTRAIT_HEADER_FONT := UiPalette.T_LEAD
+const PORTRAIT_HEADER_GAP := 8.0
 const PORTRAIT_BODY_FONT := 24
 const PORTRAIT_CAPTION_FONT := UiPalette.T_LEAD
 const PORTRAIT_TITLE_FONT := UiPalette.T_TITLE
@@ -45,7 +57,14 @@ var _entries: Array[Dictionary] = []
 var _header: ScreenHeader
 var _scroll: ScrollContainer
 var _column: VBoxContainer
-var _grid: GridContainer
+var _portrait_column: VBoxContainer
+var _grids: Array[GridContainer] = []
+var _section_headers: Array[HBoxContainer] = []
+var _section_labels: Array[Label] = []
+var _section_counts: Array[int] = []
+var _section_of: Array[int] = []
+var _list_gap: Control
+var _portrait_gaps: Array[Control] = []
 var _panel: PanelContainer
 var _detail_scroll: ScrollContainer
 var _selected := -1
@@ -91,22 +110,37 @@ func _build() -> void:
 	column.add_theme_constant_override("separation", LIST_SEPARATION)
 	scroll.add_child(column)
 	_column = column
-	# 縦では語のボタンをこのグリッドへ移して2列に並べる(VBoxは向きを変えられないため)。
-	_grid = GridContainer.new()
-	_grid.columns = PORTRAIT_COLUMNS
-	_grid.add_theme_constant_override("h_separation", int(PORTRAIT_ITEM_GAP))
-	_grid.add_theme_constant_override("v_separation", int(PORTRAIT_ITEM_GAP))
-	_grid.visible = false
-	add_child(_grid)
+	# 縦では語のボタンを分類ごとのグリッドへ移して3列に並べる(VBoxは向きを変えられないため)。
+	_portrait_column = VBoxContainer.new()
+	_portrait_column.add_theme_constant_override("separation", 0)
+	_portrait_column.visible = false
+	add_child(_portrait_column)
 
 	_entries = KeywordEntries.all_entries()
+	var previous_kind := -1
 	for i in _entries.size():
 		var entry := _entries[i]
+		var kind := int(entry["kind"])
+		if kind != previous_kind:
+			previous_kind = kind
+			_section_headers.append(_make_section_header(kind))
+			_section_counts.append(0)
+			var grid := GridContainer.new()
+			grid.columns = PORTRAIT_COLUMNS
+			grid.add_theme_constant_override("h_separation", int(PORTRAIT_ITEM_GAP))
+			grid.add_theme_constant_override("v_separation", int(PORTRAIT_ITEM_GAP))
+			_grids.append(grid)
+		_section_counts[_section_counts.size() - 1] += 1
+		_section_of.append(_section_counts.size() - 1)
 		var button := CodedButton.make(_item_label(entry), ITEM_SIZE)
 		button.pressed.connect(_select.bind(i))
-		column.add_child(button)
 		_buttons.append(button)
 		_marks.append(_make_mark(button))
+	_list_gap = _spacer(LIST_SECTION_GAP)
+	for i in _section_headers.size():
+		_portrait_gaps.append(_spacer(PORTRAIT_HEADER_GAP))
+		_portrait_gaps.append(_spacer(PORTRAIT_SECTION_GAP))
+	_arrange_list(false)
 
 	var panel := PanelContainer.new()
 	panel.position = DETAIL_RECT.position
@@ -155,29 +189,38 @@ func apply_orientation(portrait: bool) -> void:
 		return
 	_header.apply_orientation(portrait)
 	var factor := TextSize.factor()
-	var holder: Container = _grid if portrait else _column
 	var content := _header.portrait_content_rect()
-	var item_w := (content.size.x - PORTRAIT_ITEM_GAP) / PORTRAIT_COLUMNS
+	var gap_w := PORTRAIT_ITEM_GAP * (PORTRAIT_COLUMNS - 1)
+	var item_w := (content.size.x - gap_w) / PORTRAIT_COLUMNS
 	var item_size := Vector2(item_w, PORTRAIT_ITEM_HEIGHT) if portrait else ITEM_SIZE
+	if _buttons[0].get_parent() != (_grids[0] if portrait else _column):
+		_arrange_list(portrait)
 	for i in _buttons.size():
 		var button := _buttons[i]
-		if button.get_parent() != holder:
-			button.get_parent().remove_child(button)
-			holder.add_child(button)
 		button.custom_minimum_size = item_size
 		if portrait:
 			button.add_theme_font_size_override("font_size", _scaled(PORTRAIT_BUTTON_FONT, factor))
 		else:
 			button.remove_theme_font_size_override("font_size")
 		_fit_mark(_marks[i], item_size.y, portrait)
-	_grid.visible = portrait
+	var header_h := _scaled(int(PORTRAIT_HEADER_HEIGHT), factor)
+	for i in _section_headers.size():
+		_section_headers[i].custom_minimum_size.y = header_h if portrait else LIST_HEADER_HEIGHT
+		_section_labels[i].add_theme_font_size_override(
+			"font_size", _scaled(PORTRAIT_HEADER_FONT, factor) if portrait else UiPalette.T_BODY
+		)
+	_portrait_column.visible = portrait
 	_scroll.visible = not portrait
 	var detail := DETAIL_RECT
 	if portrait:
-		var rows := ceili(float(_buttons.size()) / PORTRAIT_COLUMNS)
-		var list_h := rows * PORTRAIT_ITEM_HEIGHT + (rows - 1) * PORTRAIT_ITEM_GAP
-		_grid.position = content.position
-		_grid.size = Vector2(content.size.x, list_h)
+		var list_h := 0.0
+		for count in _section_counts:
+			var rows := ceili(float(count) / PORTRAIT_COLUMNS)
+			list_h += header_h + PORTRAIT_HEADER_GAP
+			list_h += rows * PORTRAIT_ITEM_HEIGHT + (rows - 1) * PORTRAIT_ITEM_GAP
+		list_h += PORTRAIT_SECTION_GAP * (_section_counts.size() - 1)
+		_portrait_column.position = content.position
+		_portrait_column.size = Vector2(content.size.x, list_h)
 		var top := content.position.y + list_h + PORTRAIT_SECTION_GAP
 		detail = Rect2(content.position.x, top, content.size.x, content.end.y - top)
 	# 中身の最小幅を先に決める。パネルの最小幅が大きいうちに size を代入すると、
@@ -187,13 +230,40 @@ func apply_orientation(portrait: bool) -> void:
 	var bar := _detail_scroll.get_v_scroll_bar().get_combined_minimum_size().x
 	_entry_view.custom_minimum_size.x = inner - bar if portrait else ENTRY_WIDTH
 	_entry_view.set_layout(
-		KeywordEntryView.PREVIEW_WIDTH,
+		_entry_view.custom_minimum_size.x if portrait else LANDSCAPE_PREVIEW_WIDTH,
 		_scaled(PORTRAIT_BODY_FONT if portrait else KeywordEntryView.BODY_FONT_SIZE, factor),
 		_scaled(PORTRAIT_CAPTION_FONT if portrait else KeywordEntryView.CAPTION_FONT_SIZE, factor),
 		_scaled(PORTRAIT_TITLE_FONT if portrait else KeywordEntryView.TITLE_FONT_SIZE, factor)
 	)
 	_panel.position = detail.position
 	_panel.size = detail.size
+
+
+## 語のボタンと小見出しを向きに合わせて並べ直す。付け替えは先に `remove_child()` する
+## (`ListRevealFx` が位置を掴むため。Pitfalls.md)。
+func _arrange_list(portrait: bool) -> void:
+	var movers: Array[Node] = [_list_gap]
+	movers.append_array(_section_headers)
+	movers.append_array(_grids)
+	movers.append_array(_portrait_gaps)
+	movers.append_array(_buttons)
+	for node in movers:
+		if node.get_parent() != null:
+			node.get_parent().remove_child(node)
+	for i in _section_headers.size():
+		if portrait:
+			if i > 0:
+				_portrait_column.add_child(_portrait_gaps[i * 2 + 1])
+			_portrait_column.add_child(_section_headers[i])
+			_portrait_column.add_child(_portrait_gaps[i * 2])
+			_portrait_column.add_child(_grids[i])
+		else:
+			if i > 0:
+				_column.add_child(_list_gap)
+			_column.add_child(_section_headers[i])
+		for j in _buttons.size():
+			if _section_of[j] == i:
+				(_grids[i] if portrait else _column).add_child(_buttons[j])
 
 
 func _select(index: int, animate := true) -> void:
@@ -264,4 +334,35 @@ static func _scaled(base: int, factor: float) -> int:
 
 
 static func _item_label(entry: Dictionary) -> String:
-	return "%s(%s)" % [KeywordEntries.title(entry), KeywordEntries.category(entry)]
+	return KeywordEntries.title(entry)
+
+
+static func _spacer(height: float) -> Control:
+	var spacer := Control.new()
+	spacer.custom_minimum_size = Vector2(0, height)
+	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return spacer
+
+
+## 一覧の小見出し。分類名の右へ細い罫線を引く。押せない。
+func _make_section_header(kind: int) -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", SECTION_RULE_GAP)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var label := Label.new()
+	label.text = str(KeywordEntries.CATEGORY_NAMES.get(kind, ""))
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.add_theme_font_size_override("font_size", UiPalette.T_BODY)
+	label.add_theme_color_override("font_color", UiPalette.MUTED)
+	row.add_child(label)
+	var rule := ColorRect.new()
+	rule.color = Color(UiPalette.GOLD, SECTION_RULE_ALPHA)
+	rule.custom_minimum_size = Vector2(0, SECTION_RULE_THICKNESS)
+	rule.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	rule.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(rule)
+	_section_labels.append(label)
+	return row

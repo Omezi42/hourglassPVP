@@ -23,9 +23,11 @@ const CARDS_FADE_EPSILON := 0.5
 const TITLE_FONT_SIZE := UiPalette.T_HEAD
 const BODY_FONT_SIZE := UiPalette.T_BODY
 const CAPTION_FONT_SIZE := UiPalette.T_BODY
-const PREVIEW_HEIGHT := 186.0
-## 実演の幅。横いっぱいに伸ばすと駒が広い枠の中央へ小さく浮いて読みにくい。
-const PREVIEW_WIDTH := 520.0
+## 実演の絵(盤面と両者の情報帯の切り抜き、`CardEffectPreview._crop()`)の幅/高さ。
+## 幅を決めれば高さが決まる(枠の高さだけを決めると絵は枠より小さく収まり、文字が読めない)。
+const PREVIEW_ASPECT := 2.08
+## 実演の既定の幅。横いっぱいに伸ばすと駒が広い枠の中央へ小さく浮いて読みにくい。
+const PREVIEW_WIDTH := 388.0
 ## 手札のカードは**基準の大きさのまま並べる**。小さくすると名前とキーワードの行が
 ## コストと総量のバッジへ寄って読めなくなる(実際に「攻撃不可 守護」が総量へ潜っていた)。
 ## 幅が足りないぶんは、この列がもともと持っている横スクロールで受ける。
@@ -57,11 +59,15 @@ func set_layout(
 	caption_font := CAPTION_FONT_SIZE,
 	title_font := TITLE_FONT_SIZE
 ) -> void:
-	_preview.custom_minimum_size.x = preview_width
+	_preview.custom_minimum_size = _preview_size(preview_width)
 	_body.add_theme_font_size_override("font_size", body_font)
 	_title.add_theme_font_size_override("font_size", title_font)
 	for label in [_category, _cards_caption]:
 		label.add_theme_font_size_override("font_size", caption_font)
+
+
+static func _preview_size(width: float) -> Vector2:
+	return Vector2(width, roundf(width / PREVIEW_ASPECT))
 
 
 ## `reveal` が真のときは、札の行を左から順に出す(辞書画面で語を選んだとき)。
@@ -123,7 +129,7 @@ func _build() -> void:
 	_preview_box.add_theme_constant_override("margin_bottom", PREVIEW_PAD_BOTTOM)
 	add_child(_preview_box)
 	_preview = CardEffectPreview.new()
-	_preview.custom_minimum_size = Vector2(PREVIEW_WIDTH, PREVIEW_HEIGHT)
+	_preview.custom_minimum_size = _preview_size(PREVIEW_WIDTH)
 	_preview.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_preview_box.add_child(_preview)
 
