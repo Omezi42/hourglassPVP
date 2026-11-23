@@ -486,14 +486,7 @@ func refresh() -> void:
 	_refresh_buttons()
 	if _damage_assist != null:
 		_damage_assist.sync()
-	# 砂術を掴んでいる間は「押す」操作が無いため、押して選ぶ案内を出さない(GameDesign.md 9章「砂術」)。
-	_status.set_targeting(
-		(
-			_selection != null
-			and (_selection.is_targeting() or _selection.is_flip_right())
-			and not _spell_drag.active()
-		)
-	)
+	_status.set_targeting(_target_prompt_shown())
 	# 対象選択に入った・演出が始まったぶんは、ホバーが動かなくてもここで引っ込める。
 	if _detail != null:
 		_detail.sync()
@@ -534,6 +527,15 @@ func _refresh_hand() -> void:
 		view.draggable = view.enabled
 
 
+## 「対象を選ぶ」の案内を出す間か。砂術を掴んでいる間は「押す」操作が無いため出さない(GameDesign.md 9章「砂術」)。
+func _target_prompt_shown() -> bool:
+	return (
+		_selection != null
+		and (_selection.is_targeting() or _selection.is_flip_right())
+		and not _spell_drag.active()
+	)
+
+
 func _refresh_buttons() -> void:
 	var over: bool = state.is_match_over()
 	_end_turn_button.visible = _interactive
@@ -545,7 +547,11 @@ func _refresh_buttons() -> void:
 	_surrender_button.visible = _interactive and not over and not is_tutorial
 	# 攻略サイトから開いた再生には戻る先が無い(GameDesign.md 32章)。
 	_back_button.visible = not _interactive and not ReplayLaunch.requested()
-	_coin_button.visible = _interactive and state.coin_available.get(my_side, false)
+	# 横は「対象を選ぶ」の札がコインの席の下へ入るため、札が出ている間はコインを退ける(GameDesign.md 9章)。
+	var coin_in_the_way: bool = not layout.portrait and _target_prompt_shown()
+	_coin_button.visible = (
+		_interactive and state.coin_available.get(my_side, false) and not coin_in_the_way
+	)
 	_coin_button.disabled = not _my_turn()
 	var show_flip := (
 		_selection.is_board_selection() and _my_turn() and state.can_flip(my_side, _selection.slot)

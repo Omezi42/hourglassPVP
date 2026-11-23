@@ -58,7 +58,9 @@ func _on_long_press() -> void:
 		return
 	_long_pressed = true
 	_press_view._tracker.cancel()
-	_screen._detail.show_fixed(_press_view.card)
+	_screen._detail.show_fixed(
+		_press_view.card, _press_view.get_transform() * Rect2(Vector2.ZERO, _press_view.size)
+	)
 
 
 func _end_press() -> void:

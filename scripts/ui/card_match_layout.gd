@@ -114,6 +114,8 @@ var log_center := OFFSCREEN
 var emote_center := OFFSCREEN
 var surrender_center := OFFSCREEN
 var menu_center := Vector2.ZERO
+## 縦だけ: レールのボタン(反転権・粒の札・コイン・時計・ターン終了)の外接矩形。
+var rail_band := Rect2()
 ## 縦だけ: 再生の操作の中心(行動の列の代わり)。
 var replay_center := Vector2.ZERO
 ## 詳細パネルを収める範囲の右端(行動の列の手前)。
@@ -198,13 +200,44 @@ static func _make_landscape() -> CardMatchLayout:
 	l.surrender_center = Vector2(column_center, ActionColumnLayout.SURRENDER_Y)
 	l.action_panel_rect = Rect2(column_x + 6.0, 10.0, l.screen_size.x - column_x - 22.0, 700.0)
 	l.play_right = column_x
-	l.prompt_rect = Rect2(column_x, 240, 148, 52)
+	var prompt_width := l.action_panel_rect.size.x - ActionColumnLayout.PROMPT_SIDE_INSET * 2.0
+	l.prompt_rect = Rect2(
+		l.action_panel_rect.get_center().x - prompt_width * 0.5,
+		ActionColumnLayout.prompt_center_y() - ActionColumnLayout.PROMPT_HEIGHT * 0.5,
+		prompt_width,
+		ActionColumnLayout.PROMPT_HEIGHT
+	)
 	l.waiting_center = Vector2(640, 260)
 	l.version_position = Vector2(24, 700)
 	l.mulligan_top = 110.0
 	l.mulligan_card_gap = CardMatchMulligan.CARD_GAP
 	l.log_panel_size = CardMatchLog.PANEL_SIZE
 	return l
+
+
+static func _rail_band(
+	l: CardMatchLayout,
+	flip_radius: float,
+	gauge_height: float,
+	coin_radius: float,
+	end_radius: float
+) -> Rect2:
+	var clock_radius := ActionColumnLayout.CLOCK_DIAMETER * 0.5
+	var gauge := Rect2(
+		l.flip_gauge_position,
+		Vector2(FlipRightGauge.GAUGE_SIZE.x * PORTRAIT_BUTTON_SCALE, gauge_height)
+	)
+	var band := gauge
+	for round_button: Array in [
+		[l.flip_right_center, flip_radius],
+		[l.coin_center, coin_radius],
+		[l.clock_center, clock_radius],
+		[l.turn_end_center, end_radius],
+	]:
+		var center: Vector2 = round_button[0]
+		var radius: float = round_button[1]
+		band = band.merge(Rect2(center - Vector2.ONE * radius, Vector2.ONE * radius * 2.0))
+	return band
 
 
 ## 上から 相手の情報帯(2段)/ 直前の手(横1列)+メニュー / 卓 / 自分の情報帯(2段)/ 手札(扇)。
@@ -281,9 +314,10 @@ static func _make_portrait() -> CardMatchLayout:
 		rail - gauge_height * 0.5 - PORTRAIT_GAP - coin_radius
 	)
 	l.play_right = l.screen_size.x
+	l.rail_band = _rail_band(l, flip_radius, gauge_height, coin_radius, end_radius)
 	var gauge_right := l.flip_gauge_position.x + FlipRightGauge.GAUGE_SIZE.x * PORTRAIT_BUTTON_SCALE
 	l.replay_center = Vector2((gauge_right + l.turn_end_center.x - end_radius) * 0.5, rail)
-	var prompt_size := Vector2(148, 52) * PORTRAIT_TEXT_SCALE
+	var prompt_size := Vector2(148, ActionColumnLayout.PROMPT_HEIGHT) * PORTRAIT_TEXT_SCALE
 	# 粒の札とターン終了のあいだの空きへ(卓の中央に置くと粒の札へ重なる)。
 	l.prompt_rect = Rect2(l.replay_center - prompt_size * 0.5, prompt_size)
 	l.waiting_center = l.table_rect.get_center()

@@ -35,3 +35,11 @@ const EMOTE_Y := LOG_Y + PILL_SIZE.y + GAP_TIGHT
 const SURRENDER_Y := 672.0
 ## 群の間の区切り線(群の間の余白の中央)。
 const DIVIDER_YS := [TURN_GROUP_TOP - GAP_GROUP * 0.5, META_GROUP_TOP - GAP_GROUP * 0.5]
+
+## 「対象を選ぶ」の札。粒の札の下端と最初の仕切りのあいだの空き(コインの席)の中央へ、板の左右へ余白を残して置く。
+const PROMPT_HEIGHT := 52.0
+const PROMPT_SIDE_INSET := 6.0
+
+
+static func prompt_center_y() -> float:
+	return (FLIP_GAUGE_TOP + FLIP_GAUGE_HEIGHT + TURN_GROUP_TOP - GAP_GROUP * 0.5) * 0.5
