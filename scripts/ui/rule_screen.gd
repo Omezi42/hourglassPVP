@@ -22,7 +22,7 @@ const HEADING_RECT := Rect2(BODY_LEFT, ScreenHeader.CONTENT_TOP, BODY_WIDTH, 40)
 const HEADING_FONT_SIZE := UiPalette.T_HEAD
 ## 本文枠の高さは「全ページの本文のうち最も高いもの + BODY_BOTTOM_PAD」。ここで決めた高さは上限。
 const BODY_RECT := Rect2(BODY_LEFT, 182, BODY_WIDTH, 84)
-const BODY_FONT_SIZE := UiPalette.T_BODY
+const BODY_FONT_SIZE := UiPalette.T_LEAD
 const BODY_BOTTOM_PAD := 8.0
 ## 本文枠の下端と盤面枠の上端のあいだ(横)。盤面枠の下端は動かさず、本文が縮んだぶん盤面が高くなる。
 const BODY_STAGE_GAP := 8.0
@@ -102,6 +102,8 @@ func show_page(index: int, animate := true) -> void:
 	_next_button.disabled = _index == _pages.size() - 1
 	_stage.show_page(page)
 	_replay_button.visible = _stage.has_animation()
+	if _header != null and ScreenOrientation.is_portrait():
+		_place_portrait_counter()
 	_highlight_chapter(int(page.get("chapter", 0)), move)
 	_reset_page_motion()
 	if move:
@@ -229,11 +231,20 @@ func _layout_portrait() -> void:
 	var left := content.position.x
 	var width := content.size.x
 	var column_w := (width - PORTRAIT_GAP) / PORTRAIT_TOC_COLUMNS
-	for i in _chapter_buttons.size():
+	var count := _chapter_buttons.size()
+	var last_row_count := (
+		count - (ceili(float(count) / PORTRAIT_TOC_COLUMNS) - 1) * PORTRAIT_TOC_COLUMNS
+	)
+	var last_row_start := count - last_row_count
+	# 端数の最後の行は、ボタンの幅を保ったまま目次の幅の中央へ寄せる。
+	var last_row_shift := (PORTRAIT_TOC_COLUMNS - last_row_count) * (column_w + PORTRAIT_GAP) * 0.5
+	for i in count:
 		var at := Vector2(
 			left + (column_w + PORTRAIT_GAP) * (i % PORTRAIT_TOC_COLUMNS),
 			content.position.y + (PORTRAIT_TOC_BUTTON_HEIGHT + PORTRAIT_GAP) * floorf(i / 2.0)
 		)
+		if i >= last_row_start:
+			at.x += last_row_shift
 		_place(
 			_chapter_buttons[i],
 			Rect2(at, Vector2(column_w, PORTRAIT_TOC_BUTTON_HEIGHT)),
@@ -264,15 +275,20 @@ func _layout_portrait() -> void:
 		),
 		PORTRAIT_BUTTON_FONT
 	)
+	_place_portrait_counter()
+
+
+## 縦の下段のページ数。「もう一度見る」があるページはその右、無いページは前へ・次への間の中央。
+func _place_portrait_counter() -> void:
+	var content := _header.portrait_content_rect()
+	var controls_y := content.end.y - PORTRAIT_CONTROL_HEIGHT
+	var left := content.position.x + PORTRAIT_NAV_WIDTH + PORTRAIT_GAP
+	var width := content.size.x - (PORTRAIT_NAV_WIDTH + PORTRAIT_GAP) * 2.0
+	if _replay_button.visible:
+		left += PORTRAIT_REPLAY_WIDTH
+		width -= PORTRAIT_REPLAY_WIDTH
 	_place_label(
-		_counter,
-		Rect2(
-			middle.position.x + PORTRAIT_REPLAY_WIDTH,
-			controls_y,
-			middle.size.x - PORTRAIT_REPLAY_WIDTH,
-			nav.y
-		),
-		PORTRAIT_COUNTER_FONT
+		_counter, Rect2(left, controls_y, width, PORTRAIT_CONTROL_HEIGHT), PORTRAIT_COUNTER_FONT
 	)
 
 
