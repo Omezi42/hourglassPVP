@@ -30,9 +30,10 @@ const BOTTOM_PAD := 6.0
 const GIFT_SIZE := Vector2(72, 56)
 const PORTRAIT_GIFT_SCALE := 1.15
 const GIFT_NUDGE := Vector2(6, -6)
-const BADGE_RADIUS := 9.0
-const PORTRAIT_BADGE_RADIUS := 11.0
-const BADGE_INSET := Vector2(6, 8)
+## 受け取れる数の赤い丸。箱の高さに対する半径(お知らせの丸と同じ比)と、
+## 中心を置く蓋の右上の角(箱の矩形に対する比)。
+const BADGE_RADIUS_RATIO := 0.18
+const BADGE_ANCHOR := Vector2(0.8, 0.27)
 ## 受け取れる行の左端に立てる砂色の印。
 const READY_MARK := Rect2(5, 12, 3, 0)
 const COUNT_GAP := UiPalette.S3
@@ -105,8 +106,8 @@ func _draw() -> void:
 		UiKit.badge(
 			ci,
 			_font,
-			Vector2(gift.end.x - BADGE_INSET.x, gift.position.y + BADGE_INSET.y),
-			PORTRAIT_BADGE_RADIUS if portrait else BADGE_RADIUS,
+			gift.position + gift.size * BADGE_ANCHOR,
+			gift.size.y * BADGE_RADIUS_RATIO,
 			str(claimable)
 		)
 	if _rows.is_empty():
