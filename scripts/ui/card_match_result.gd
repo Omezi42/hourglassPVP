@@ -57,6 +57,17 @@ const ENTRANCE_DURATION := 0.42
 const LINE_STAGGER := 0.14
 const LINE_FADE := 0.22
 const FLASH_DECAY := 1.1
+## 勝ちの光条: タイトルの背後から先細りの楔を放射する。外端は入場の瞬間に最も遠く、縮みながら消える。
+const FLASH_RAY_COUNT := 12
+const FLASH_CENTER_Y := 66.0
+const FLASH_INNER_RADIUS := 20.0
+const FLASH_OUTER_BASE := 64.0
+const FLASH_OUTER_GROW := 56.0
+## 根元の半幅を角度で持つ(rad)。
+const FLASH_RAY_HALF_ANGLE := 0.07
+const FLASH_PEAK_ALPHA := 0.55
+## 消えるあいだに回る量(rad)。
+const FLASH_SPIN := 0.12
 ## ボタンは最後の行が出きってから、この尺で薄れから現れ、この量だけ上から定位置へ降りる。
 const BUTTON_FADE := 0.16
 const BUTTON_FLOAT := 6.0
@@ -374,15 +385,22 @@ func _on_rematch_pressed() -> void:
 ## `_panel` の canvas item(ci)へ描く。`self`(ルート)の `draw_line()` を呼ぶと
 ## パネルではなくルート側の座標系へ描いてしまい、位置がずれるため。
 func _draw_victory_flash(ci: RID) -> void:
-	var center := Vector2(_panel_size.x * 0.5, 66.0)
-	var alpha := _flash * 0.5
-	var count := 14
-	for i in count:
-		var angle: float = TAU * float(i) / float(count)
-		var length: float = 60.0 + 40.0 * _flash
-		var from := center + Vector2(cos(angle), sin(angle)) * 18.0
-		var to := center + Vector2(cos(angle), sin(angle)) * length
-		RenderingServer.canvas_item_add_line(ci, from, to, Color(UiPalette.SAND, alpha), 2.0)
+	var center := Vector2(_panel_size.x * 0.5, FLASH_CENTER_Y)
+	var outer: float = FLASH_OUTER_BASE + FLASH_OUTER_GROW * _flash
+	var root_color := Color(UiPalette.SAND, FLASH_PEAK_ALPHA * _flash)
+	var tip_color := Color(UiPalette.SAND, 0.0)
+	var colors := PackedColorArray([root_color, root_color, tip_color])
+	var spin: float = FLASH_SPIN * (1.0 - _flash)
+	for i in FLASH_RAY_COUNT:
+		var angle: float = TAU * float(i) / float(FLASH_RAY_COUNT) + spin
+		var points := PackedVector2Array(
+			[
+				center + Vector2.from_angle(angle - FLASH_RAY_HALF_ANGLE) * FLASH_INNER_RADIUS,
+				center + Vector2.from_angle(angle + FLASH_RAY_HALF_ANGLE) * FLASH_INNER_RADIUS,
+				center + Vector2.from_angle(angle) * outer,
+			]
+		)
+		ShapePaint.polygon(ci, points, colors)
 
 
 func _make_button(label: String, target: Signal) -> Button:

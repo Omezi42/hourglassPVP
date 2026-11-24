@@ -66,7 +66,7 @@ const CLOSE_CARD_STAGGER := 0.03
 const CLOSE_TEXT_FADE := 0.12
 ## 開いた瞬間、手札が配られるように下から浮き上がってくる距離と間隔。
 const DEAL_RISE := 46.0
-const DEAL_DURATION := 0.32
+const DEAL_DURATION := 0.36
 const DEAL_STAGGER := 0.05
 const DIM_FADE_DURATION := 0.3
 ## 開く前に先手・後手の一文だけを中央へ大きく出し、止めてから見出しの上へ移す(GameDesign.md 9章)。
@@ -323,7 +323,7 @@ func _start_entrance(with_dim := true) -> void:
 		(
 			_tween
 			. tween_property(view, "position:y", target_y, DEAL_DURATION)
-			. set_trans(Tween.TRANS_SINE)
+			. set_trans(Tween.TRANS_BACK)
 			. set_ease(Tween.EASE_OUT)
 			. set_delay(i * DEAL_STAGGER)
 		)
