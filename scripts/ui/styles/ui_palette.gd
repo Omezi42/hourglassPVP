@@ -55,6 +55,21 @@ const CARD_BACK_BOTTOM := Color(0.06, 0.07, 0.16)
 const STILL_FILM := Color(0.80, 0.90, 1.0)
 const GLASS_TINT := Color(0.55, 0.66, 0.88)
 const SEAL_WAX := Color(0.62, 0.12, 0.12)
+## 背水の刻の演出(GameDesign.md 9章)。共通の燠火(赤橙の火の粉・灼けた縁)と、各札の道具の素材。
+const EMBER := Color(1.0, 0.46, 0.16)
+const EMBER_DEEP := Color(0.78, 0.14, 0.06)
+const STEEL := Color(0.80, 0.84, 0.90)
+const SMOKE := Color(0.80, 0.78, 0.82)
+const WAX := Color(0.97, 0.91, 0.78)
+const HORN := Color(0.90, 0.82, 0.66)
+const SHIELD_PAINT := Color(0.30, 0.56, 0.32)
+const BASALT := Color(0.36, 0.36, 0.40)
+const BRONZE := Color(0.82, 0.58, 0.32)
+const TIDE := Color(0.20, 0.40, 0.58)
+const FOAM := Color(0.86, 0.94, 1.0)
+## 払拭の型(`EmblemStrikeFx` の DRAIN)のくすんだ輪と、そこへ向かう筋の色。
+const DRAIN_INK := Color(0.2, 0.18, 0.22)
+const DRAIN_TRAIL := Color(0.58, 0.56, 0.62)
 
 # ---- 文字 ----
 const IVORY := Color(0.96, 0.93, 0.86)

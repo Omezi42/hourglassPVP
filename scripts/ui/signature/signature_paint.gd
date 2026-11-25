@@ -625,6 +625,46 @@ static func _rotated(
 	return out
 
 
+## 立ちのぼる火の粉(背水の刻の共通の部品)。`progress` は0→1で、揺れながら昇って冷める。
+## `spread` は横の広がり、`rise` は昇る高さ。
+static func ember_motes(
+	item: CanvasItem, center: Vector2, progress: float, alpha: float, spread := 40.0, rise := 60.0
+) -> void:
+	const COUNT := 9
+	const MOTE := 1.8
+	if alpha <= 0.0 or progress <= 0.0 or progress >= 1.0:
+		return
+	var ci := item.get_canvas_item()
+	for i in range(COUNT):
+		var start := _hash(i, 21) * 0.45
+		var local := clampf((progress - start) / (1.0 - start), 0.0, 1.0)
+		if local <= 0.0 or local >= 1.0:
+			continue
+		var x := center.x + (_hash(i, 22) - 0.5) * spread + sin(local * 6.0 + float(i)) * 4.0
+		var y := center.y - local * rise * (0.6 + 0.4 * _hash(i, 23))
+		var a := alpha * (1.0 - local)
+		ShapePaint.circle(ci, Vector2(x, y), MOTE * 2.2, Color(UiPalette.EMBER, a * 0.3))
+		ShapePaint.circle(ci, Vector2(x, y), MOTE, Color(SPARK_HOT.lerp(UiPalette.EMBER, local), a))
+
+
+## 払拭の型のくすんだ輪。`progress` は0→1で、外から内へ縮みながら消える。
+static func drain_ring(item: CanvasItem, center: Vector2, progress: float, alpha: float) -> void:
+	const REACH := 36.0
+	if alpha <= 0.0 or progress <= 0.0 or progress >= 1.0:
+		return
+	ShapePaint.arc(
+		item.get_canvas_item(),
+		center,
+		REACH * (1.0 - ease(progress, 0.6)),
+		0.0,
+		TAU,
+		32,
+		Color(UiPalette.DRAIN_INK, alpha * 0.75 * (1.0 - progress)),
+		2.4,
+		true
+	)
+
+
 ## 粒ごとに決まった0〜1の揺らぎ。`moves/` の側で砂粒を散らすときに使う。
 static func jitter(i: int, salt: int) -> float:
 	return _hash(i, salt)

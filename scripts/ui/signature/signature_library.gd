@@ -31,6 +31,8 @@ const ENTRANCES := {
 	"colossus": preload("res://scripts/ui/signature/moves/colossus_entrance.gd"),
 	"sage": preload("res://scripts/ui/signature/moves/sage_entrance.gd"),
 	"maestro": preload("res://scripts/ui/signature/moves/maestro_entrance.gd"),
+	"hold": preload("res://scripts/ui/signature/moves/hold_entrance.gd"),
+	"bastion": preload("res://scripts/ui/signature/moves/bastion_entrance.gd"),
 }
 
 ## 効果が対象へ届くまで(設置・落砂・砂術など、紋章が飛ぶ場面の代わり)。
@@ -145,6 +147,13 @@ const EFFECTS := {
 	"zero_hour": preload("res://scripts/ui/signature/moves/zero_hour_effect.gd"),
 	"necropolis": preload("res://scripts/ui/signature/moves/necropolis_effect.gd"),
 	"aeon": preload("res://scripts/ui/signature/moves/aeon_effect.gd"),
+	"parry": preload("res://scripts/ui/signature/moves/parry_effect.gd"),
+	"wick": preload("res://scripts/ui/signature/moves/wick_effect.gd"),
+	"rage": preload("res://scripts/ui/signature/moves/rage_effect.gd"),
+	"backwater": preload("res://scripts/ui/signature/moves/backwater_effect.gd"),
+	"ember": preload("res://scripts/ui/signature/moves/ember_effect.gd"),
+	"libra": preload("res://scripts/ui/signature/moves/libra_effect.gd"),
+	"last_hour": preload("res://scripts/ui/signature/moves/last_hour_effect.gd"),
 }
 
 

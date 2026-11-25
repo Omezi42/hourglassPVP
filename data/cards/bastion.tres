@@ -1,7 +1,8 @@
-[gd_resource type="Resource" script_class="CardData" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
 [ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/emblems/bastion.png" id="emblem"]
 
 [resource]
 script = ExtResource("script_card")
@@ -20,3 +21,4 @@ cannot_attack = false
 is_token = false
 cost_down_low_hp = 3
 cost_down_hp_threshold = 12
+emblem = ExtResource("emblem")

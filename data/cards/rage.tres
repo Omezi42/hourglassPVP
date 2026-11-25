@@ -1,7 +1,8 @@
-[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+[gd_resource type="Resource" script_class="CardData" load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
 [ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/emblems/rage.png" id="emblem"]
 
 [sub_resource type="Resource" id="Effect_rage_0"]
 script = ExtResource("script_effect")
@@ -27,3 +28,4 @@ rules_text = "落砂:自分のHPが12以下なら、この砂時計の砂がも�
 flavor_text = "「まだ立ってる。だから怖いんだ」"
 cannot_attack = false
 is_token = false
+emblem = ExtResource("emblem")
