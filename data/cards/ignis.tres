@@ -25,3 +25,4 @@ rules_text = "自分がHPを失うたび、この砂時計の総量+1"
 flavor_text = "火は燃やしたものの数だけ大きくなる"
 cannot_attack = false
 is_token = false
+initial_attack = 2

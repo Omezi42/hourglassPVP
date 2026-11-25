@@ -8,7 +8,7 @@ script = ExtResource("script_effect")
 trigger = 0
 target = 5
 effect_type = 0
-value = 4
+value = 3
 
 [sub_resource type="Resource" id="Effect_stampede_1"]
 script = ExtResource("script_effect")
@@ -23,14 +23,14 @@ condition_total = 2
 script = ExtResource("script_card")
 id = "stampede"
 display_name = "スタンピード"
-cost = 5
-total_sand = 6
+cost = 4
+total_sand = 5
 pool_index = 151
 set_id = "blaze_sand"
 rarity = 2
 keywords = Array[int]([])
 effects = Array[Resource]([SubResource("Effect_stampede_0"), SubResource("Effect_stampede_1")])
-rules_text = "設置:自分のHPを4失い、手札からランダムなコスト2以下の砂時計を2体まで場に出して疾走を与える"
+rules_text = "設置:自分のHPを3失い、手札からランダムなコスト2以下の砂時計を2体まで場に出して疾走を与える"
 flavor_text = "地平線ごと迫ってくる"
 cannot_attack = false
 is_token = false

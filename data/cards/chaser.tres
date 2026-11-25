@@ -17,4 +17,5 @@ rules_text = "相手のHPが12以下のあいだ、疾走を持つ"
 flavor_text = "弱った獲物の足音はよく聞こえる"
 cannot_attack = false
 is_token = false
+initial_attack = 2
 quick_while_foe_hp_at_most = 12
