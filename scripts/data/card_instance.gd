@@ -25,6 +25,9 @@ var silenced: bool = false
 ## いま静止を持っているか(`CardData.still_while_outnumbered`。ホールド)。盤面の数で決まるため、
 ## `MatchState` が盤面の変わるたびに書く。効果で与えた `granted_keywords` とは別に持つ。
 var held_still: bool = false
+## いま疾走を持っているか(`CardData.quick_while_foe_hp_at_most`。チェイサー)。相手のHPで決まるため、
+## `MatchState` が盤面とHPの変わるたびに書く。
+var held_quick: bool = false
 
 
 func _init(p_data: CardData) -> void:
@@ -51,6 +54,8 @@ func has_keyword(keyword: int) -> bool:
 		return true
 	if keyword == CardEnums.Keyword.STILL and held_still:
 		return true
+	if keyword == CardEnums.Keyword.QUICK and held_quick:
+		return true
 	if data.conditional_keyword < 0 or data.conditional_keyword != keyword:
 		return false
 	return total_sand() == data.conditional_keyword_total
@@ -71,6 +76,8 @@ func keywords() -> Array:
 		found.append(conditional)
 	if held_still and not found.has(CardEnums.Keyword.STILL):
 		found.append(CardEnums.Keyword.STILL)
+	if held_quick and not found.has(CardEnums.Keyword.QUICK):
+		found.append(CardEnums.Keyword.QUICK)
 	return found
 
 
@@ -127,13 +134,18 @@ func max_attacks() -> int:
 func can_attack() -> bool:
 	if data.cannot_attack:
 		return false
-	return not summoned_this_turn and attack > 0 and attacks_this_turn < max_attacks()
+	return not is_fresh() and attack > 0 and attacks_this_turn < max_attacks()
+
+
+## 出したターンで、まだ動けないか。疾走を持つ駒(あとから与えられた・条件を満たしている間の駒を含む)は動ける。
+func is_fresh() -> bool:
+	return summoned_this_turn and not has_keyword(CardEnums.Keyword.QUICK)
 
 
 ## 反転できない駒(`CardData.cannot_flip`)は通常の反転も反転権も受け付けない
 ## (GameDesign.md 6章)。反転権の判定 `MatchState._can_use_flip_right()` も `flippable()` を見る。
 func can_flip() -> bool:
-	return flippable() and not summoned_this_turn and not flipped_this_turn
+	return flippable() and not is_fresh() and not flipped_this_turn
 
 
 func flippable() -> bool:

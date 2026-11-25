@@ -24,6 +24,7 @@ enum Kind {
 	OWN_SPELL,
 	SPELL_DISCOUNT,
 	FLIP_ECHO,
+	HP_LOST,
 }
 
 ## 実演の駒を置く枠。中央寄りに置き、両隣に味方と相手の駒が並ぶようにする。
@@ -76,6 +77,8 @@ const TRIGGER_KINDS := {
 	CardEnums.Trigger.ON_ENEMY_FLIP: Kind.ENEMY_FLIP,
 	CardEnums.Trigger.ON_ENEMY_DRAW: Kind.ENEMY_DRAW,
 	CardEnums.Trigger.ON_OWN_SPELL: Kind.OWN_SPELL,
+	CardEnums.Trigger.ON_ATTACK: Kind.STRIKE,
+	CardEnums.Trigger.ON_OWN_HP_LOST: Kind.HP_LOST,
 }
 ## 砂術のコストを下げる効果の実演で撃つ砂術(コスト2・対象を取らない)。
 const DISCOUNT_SPELL_ID := "grit_rain"
@@ -101,6 +104,8 @@ static func kinds(card: CardData) -> Array[int]:
 		found.append(Kind.SPELL_DISCOUNT)
 	if card.ally_flip_triggers_twice:
 		found.append(Kind.FLIP_ECHO)
+	if card.quick_while_foe_hp_at_most >= 0 and not found.has(Kind.RUSH):
+		found.append(Kind.RUSH)
 	for effect in card.effects:
 		if effect == null:
 			continue
@@ -155,7 +160,11 @@ static func stage(state: MatchState, side: int, card: CardData, kind: int) -> Ar
 				actions.append(MatchAction.end_turn(side))
 		Kind.RUSH:
 			actions.append(MatchAction.play(side, 0, SUBJECT_SLOT, _target(state, side, card)))
-			actions.append(MatchAction.attack(side, SUBJECT_SLOT, FOE_TARGET_SLOT))
+			# 初期攻撃力が無い駒は出してもまだ殴れない(砂が落ちて初めて殴れる)。
+			if card.initial_attack > 0:
+				actions.append(MatchAction.attack(side, SUBJECT_SLOT, FOE_TARGET_SLOT))
+			else:
+				actions.append(MatchAction.end_turn(side))
 		Kind.FLIP:
 			actions.append(MatchAction.flip(side, SUBJECT_SLOT))
 		Kind.TURN_END:
@@ -182,6 +191,10 @@ static func stage(state: MatchState, side: int, card: CardData, kind: int) -> Ar
 		Kind.FLIP_ECHO:
 			_place(state, side, ALLY_SLOT, _card(FLIP_ALLY[0]), FLIP_ALLY[1], FLIP_ALLY[2])
 			actions.append(MatchAction.flip(side, ALLY_SLOT))
+		Kind.HP_LOST:
+			# 相手の駒に本体を殴らせて、自分のHPが減る様子を見せる。
+			actions.append(MatchAction.end_turn(side))
+			actions.append(MatchAction.attack(foe, FOE_TARGET_SLOT, -1))
 		Kind.ALLY_DEATH:
 			state.board[side][ALLY_SLOT].health = 1
 			actions.append(MatchAction.attack(side, ALLY_SLOT, FOE_HEAVY_SLOT))
@@ -275,6 +288,8 @@ static func _place_condition_match(
 	state: MatchState, side: int, card: CardData, subject: CardInstance
 ) -> void:
 	var foe := MatchState.other_side(side)
+	if card.quick_while_foe_hp_at_most >= 0:
+		state.hp[foe] = card.quick_while_foe_hp_at_most
 	for effect in card.effects:
 		if effect == null or effect.condition_scope == CardEnums.ConditionScope.NONE:
 			continue

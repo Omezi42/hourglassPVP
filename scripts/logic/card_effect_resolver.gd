@@ -26,12 +26,15 @@ var _cut_off := false
 var _legend: CardLegendEffects
 ## 第2弾「背水の刻」の固有効果(GameDesign.md 6章)。
 var _back_water: CardBackWaterEffects
+## 第2弾「烈砂の刻」の固有効果(GameDesign.md 6章)。
+var _blaze_sand: CardBlazeSandEffects
 
 
 func _init(p_state: MatchState) -> void:
 	_state = p_state
 	_legend = CardLegendEffects.new(p_state, self)
 	_back_water = CardBackWaterEffects.new(p_state, self)
+	_blaze_sand = CardBlazeSandEffects.new(p_state, self)
 
 
 ## unit が持つ trigger の効果をすべて適用する。
@@ -107,6 +110,9 @@ func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Diction
 		return
 	if CardBackWaterEffects.handles(effect.effect_type):
 		_back_water.apply(side, effect, from_slot, origin)
+		return
+	if CardBlazeSandEffects.handles(effect.effect_type):
+		_blaze_sand.apply(side, effect, from_slot, origin)
 		return
 	match effect.effect_type:
 		CardEnums.EffectType.DAMAGE_PLAYER:
@@ -643,6 +649,7 @@ func _is_single_unit_target(target: int) -> bool:
 		target != CardEnums.EffectTarget.ALL_ENEMY_UNITS
 		and target != CardEnums.EffectTarget.ALL_ALLY_UNITS
 		and target != CardEnums.EffectTarget.ALL_OTHER_UNITS
+		and target != CardEnums.EffectTarget.OTHER_ALLY_UNITS
 	)
 
 
@@ -678,6 +685,11 @@ func _targets(side: int, unit: CardInstance, effect: CardEffectData, hint: Dicti
 			found = _unit_or_player(foe_side, hint, effect)
 		CardEnums.EffectTarget.DAMAGING_FOE:
 			found = _damaging_foe(foe_side, hint)
+		CardEnums.EffectTarget.OTHER_ALLY_UNITS:
+			var self_slot := _slot_of(side, unit)
+			for entry in _all_slots(side, effect):
+				if entry["slot"] != self_slot:
+					found.append(entry)
 		CardEnums.EffectTarget.ALL_OTHER_UNITS:
 			var own_slot := _slot_of(side, unit)
 			for entry in _all_slots(side, effect):

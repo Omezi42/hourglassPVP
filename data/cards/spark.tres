@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_spark_0"]
+script = ExtResource("script_effect")
+trigger = 9
+target = 0
+effect_type = 5
+value = 1
+
+[resource]
+script = ExtResource("script_card")
+id = "spark"
+display_name = "スパーク"
+cost = 2
+total_sand = 4
+pool_index = 147
+set_id = "blaze_sand"
+rarity = 0
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_spark_0")])
+rules_text = "攻撃するたび、この砂時計の砂が1粒落ちる"
+flavor_text = "打ち合うたびに火花が散る"
+cannot_attack = false
+is_token = false

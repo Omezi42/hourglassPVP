@@ -193,6 +193,26 @@ const SETS: Dictionary = {
 		],
 		"price": 0,
 	},
+	## 第2弾「前借りの弾」の2つ目のテーマ(GameDesign.md 8章)。燃え尽きる前に駆ける枠で、アグロを更新する。
+	"blaze_sand":
+	{
+		"id": "blaze_sand",
+		"display_name": "烈砂の刻",
+		"description": "燃え尽きる前に駆ける9枚",
+		"card_ids":
+		[
+			"torch",
+			"tailwind",
+			"blaze",
+			"spark",
+			"warcry",
+			"flare",
+			"chaser",
+			"stampede",
+			"ignis",
+		],
+		"price": 0,
+	},
 }
 
 const ORDERED_IDS: Array[String] = [
@@ -209,6 +229,7 @@ const ORDERED_IDS: Array[String] = [
 	"chant_sand",
 	"first_extra",
 	"back_water",
+	"blaze_sand",
 ]
 
 

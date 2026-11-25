@@ -35,6 +35,11 @@ const ENEMY_FLIP_TIMES := 2.0
 const ENEMY_DRAW_TIMES := 2.0
 ## 自分の砂術に反応する効果が働く回数の見込み(詠砂の刻)。手札・山札の砂術の数で変わるため控えめに置く。
 const OWN_SPELL_TIMES := 2.0
+## 攻撃したとき・HPを失ったときの効果が、場に残る間に起きると見込む回数(烈砂の刻)。
+const ATTACK_TIMES := 2.0
+const HP_LOST_TIMES := 2.0
+## 自分のHPを払うと負ける手へ付ける減点(出さないための十分大きな値)。
+const SELF_KILL_PENALTY := 100.0
 ## 守護を無視して攻撃できる駒1体ぶんの価値(抜け道)。守護の駒を避けて殴れる1回を、本体の数点ぶんに見る。
 const GUARD_BYPASS_PER_ATTACKER := 2.0
 ## セージが手札の砂術1枚のコストを1下げることの価値。
@@ -419,32 +424,41 @@ func _repeating_value(state: MatchState, side: int, card: CardData) -> float:
 		value += _on_play_value(state, side, effect) * ENEMY_DRAW_TIMES
 	for effect in card.effects_for(CardEnums.Trigger.ON_OWN_SPELL):
 		value += _on_play_value(state, side, effect) * OWN_SPELL_TIMES
+	for effect in card.effects_for(CardEnums.Trigger.ON_ATTACK):
+		value += _on_play_value(state, side, effect) * ATTACK_TIMES
+	for effect in card.effects_for(CardEnums.Trigger.ON_OWN_HP_LOST):
+		value += _on_play_value(state, side, effect) * HP_LOST_TIMES
 	return value
 
 
 func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> float:
 	var foe_side := MatchState.other_side(side)
 	var value := 0.0
-	# 置く前の盤面で数える(この駒自身は数に入らない)。
+	# 置く前の盤面で数える(この駒自身は数に入らない)。条件を満たさない効果は見積もらない。
 	if (
-		effect.condition_scope == CardEnums.ConditionScope.ENEMY_OUTNUMBERS
-		and state.units(foe_side).size() <= state.units(side).size()
+		(
+			effect.condition_scope == CardEnums.ConditionScope.ENEMY_OUTNUMBERS
+			and state.units(foe_side).size() <= state.units(side).size()
+		)
+		or (
+			effect.condition_scope == CardEnums.ConditionScope.ENEMY_COUNT_AT_LEAST
+			and state.units(foe_side).size() < effect.condition_total
+		)
+		or not CardBackWaterEffects.hp_condition_met(state, side, effect)
 	):
-		return value
-	if (
-		effect.condition_scope == CardEnums.ConditionScope.ENEMY_COUNT_AT_LEAST
-		and state.units(foe_side).size() < effect.condition_total
-	):
-		return value
-	if not CardBackWaterEffects.hp_condition_met(state, side, effect):
 		return value
 	if CardLegendEffects.handles(effect.effect_type):
 		return CardLegendEffects.cpu_value(state, side, effect)
 	if CardBackWaterEffects.handles(effect.effect_type):
 		return CardBackWaterEffects.cpu_value(state, side, effect)
+	if CardBlazeSandEffects.handles(effect.effect_type):
+		return CardBlazeSandEffects.cpu_value(state, side, effect)
 	match effect.effect_type:
 		CardEnums.EffectType.DAMAGE_PLAYER:
 			value = effect.value * FACE_WEIGHT
+			if effect.target == CardEnums.EffectTarget.OWN_PLAYER:
+				# HPを払う効果(烈砂の刻)。払えば負けるときは出さない。
+				value = -value if state.hp[side] > effect.value else -SELF_KILL_PENALTY
 		CardEnums.EffectType.DAMAGE_PLAYER_PER_ENEMY_UNIT:
 			value = state.units(foe_side).size() * effect.value * FACE_WEIGHT
 		CardEnums.EffectType.DAMAGE_PLAYER_PER_GRAVE_SPELL:
@@ -566,6 +580,8 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 				value = _lifetime_damage(token)
 		CardEnums.EffectType.GRANT_KEYWORD:
 			value = 2.0
+			if effect.keyword == CardEnums.Keyword.QUICK:
+				value = CardBlazeSandEffects.quick_grant_value(state, side, effect)
 		CardEnums.EffectType.ADD_TOTAL_PER_GRAVE:
 			value = CardEffectResolver.grave_unit_count(state, side) * effect.value * 2.0
 		CardEnums.EffectType.RECOVER_FROM_GRAVE, CardEnums.EffectType.RECOVER_SPELL_FROM_GRAVE:

@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+
+[resource]
+script = ExtResource("script_card")
+id = "chaser"
+display_name = "チェイサー"
+cost = 3
+total_sand = 5
+pool_index = 150
+set_id = "blaze_sand"
+rarity = 1
+keywords = Array[int]([])
+effects = Array[Resource]([])
+rules_text = "相手のHPが12以下のあいだ、疾走を持つ"
+flavor_text = "弱った獲物の足音はよく聞こえる"
+cannot_attack = false
+is_token = false
+quick_while_foe_hp_at_most = 12

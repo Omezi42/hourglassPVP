@@ -305,7 +305,7 @@ func end_turn() -> void:
 	_resolve_turn_end_effects(side)
 	if _match_over:
 		return
-	_refresh_held_still()
+	_refresh_held_keywords()
 	for slot in BOARD_SIZE:
 		var unit: CardInstance = board[side][slot]
 		if unit == null:
@@ -653,10 +653,22 @@ func attack(side: int, slot: int, target_slot: int) -> bool:
 			power *= 2
 		damage_player(other_side(side), power)
 		_lifesteal(side, attacker, power)
+		_fire_attacked(side, attacker)
 		return true
 	_resolve_unit_combat(side, slot, target_slot)
 	_cleanup_dead()
+	_fire_attacked(side, attacker)
 	return true
+
+
+## 攻撃したときに働く効果(スパーク。GameDesign.md 6章)。戦闘を解決し終えた後、攻撃した駒が砕けていなければ働く。
+func _fire_attacked(side: int, attacker: CardInstance) -> void:
+	if _match_over or attacker.is_dead() or not board[side].has(attacker):
+		return
+	if attacker.effects_for(CardEnums.Trigger.ON_ATTACK).is_empty():
+		return
+	_fire(side, attacker, CardEnums.Trigger.ON_ATTACK, {})
+	_cleanup_dead()
 
 
 func _resolve_unit_combat(side: int, slot: int, target_slot: int) -> void:
@@ -731,6 +743,16 @@ func damage_player(side: int, amount: int) -> void:
 	hp_changed.emit(side, hp[side])
 	if hp[side] <= 0:
 		_finish(other_side(side), EndReason.HP_DEPLETED)
+		return
+	_refresh_held_keywords()
+	_fire_hp_lost(side)
+
+
+## 自分がHPを失ったときに働く効果(イグニス。GameDesign.md 6章)。ダメージでも代償でも、1回の減少ごとに1回。
+func _fire_hp_lost(side: int) -> void:
+	for unit: CardInstance in units(side):
+		if not unit.is_dead() and not unit.effects_for(CardEnums.Trigger.ON_OWN_HP_LOST).is_empty():
+			_fire(side, unit, CardEnums.Trigger.ON_OWN_HP_LOST, {})
 
 
 func heal_player(side: int, amount: int) -> void:
@@ -738,6 +760,7 @@ func heal_player(side: int, amount: int) -> void:
 		return
 	hp[side] = mini(hp[side] + amount, int(hp_max.get(side, INITIAL_HP)))
 	hp_changed.emit(side, hp[side])
+	_refresh_held_keywords()
 
 
 ## 落砂(GameDesign.md 6章):砂を1粒落とす**直前**に発動する。
@@ -816,19 +839,23 @@ func _cleanup_dead() -> void:
 			if unit != null and unit.is_dead():
 				_destroy_unit(side, slot)
 	# 両側の砕けた駒を片づけてから数える(片側ずつだと、相手の砕けた駒を数に入れたままになる)。
-	_refresh_held_still()
+	_refresh_held_keywords()
 	for side in [Side.A, Side.B]:
 		board_changed.emit(side)
 
 
-## 条件付きの静止(ホールド)を、いまの盤面の数で決め直す。相手の砂時計が自分の砂時計
-## (その駒を含む)より多いあいだだけ静止する。盤面が変わる処理はどれも `_cleanup_dead()` を通る。
-func _refresh_held_still() -> void:
+## 盤面やHPで決まる条件付きのキーワードを、いまの状態で決め直す。ホールドの静止は、相手の砂時計が自分の砂時計
+## (その駒を含む)より多いあいだだけ、チェイサーの疾走は、相手のHPが上限以下のあいだだけ持つ。
+## 盤面が変わる処理はどれも `_cleanup_dead()` を、HPが変わる処理は `damage_player()` / `heal_player()` を通る。
+func _refresh_held_keywords() -> void:
 	for side in [Side.A, Side.B]:
 		var foes := units(other_side(side)).size()
 		var own := units(side).size()
+		var foe_hp := int(hp.get(other_side(side), INITIAL_HP))
 		for unit: CardInstance in units(side):
 			unit.held_still = unit.data.still_while_outnumbered and foes > own
+			var quick_hp := unit.data.quick_while_foe_hp_at_most
+			unit.held_quick = quick_hp >= 0 and foe_hp <= quick_hp
 
 
 func _finish(p_winner: int, reason: int) -> void:

@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_stampede_0"]
+script = ExtResource("script_effect")
+trigger = 0
+target = 5
+effect_type = 0
+value = 4
+
+[sub_resource type="Resource" id="Effect_stampede_1"]
+script = ExtResource("script_effect")
+trigger = 0
+target = 0
+effect_type = 36
+value = 2
+keyword = 6
+condition_total = 2
+
+[resource]
+script = ExtResource("script_card")
+id = "stampede"
+display_name = "スタンピード"
+cost = 5
+total_sand = 6
+pool_index = 151
+set_id = "blaze_sand"
+rarity = 2
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_stampede_0"), SubResource("Effect_stampede_1")])
+rules_text = "設置:自分のHPを4失い、手札からランダムなコスト2以下の砂時計を2体まで場に出して疾走を与える"
+flavor_text = "地平線ごと迫ってくる"
+cannot_attack = false
+is_token = false

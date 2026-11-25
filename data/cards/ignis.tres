@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_ignis_0"]
+script = ExtResource("script_effect")
+trigger = 10
+target = 0
+effect_type = 4
+value = 1
+
+[resource]
+script = ExtResource("script_card")
+id = "ignis"
+display_name = "イグニス"
+cost = 3
+total_sand = 4
+pool_index = 152
+set_id = "blaze_sand"
+rarity = 3
+keywords = Array[int]([6])
+effects = Array[Resource]([SubResource("Effect_ignis_0")])
+rules_text = "自分がHPを失うたび、この砂時計の総量+1"
+flavor_text = "火は燃やしたものの数だけ大きくなる"
+cannot_attack = false
+is_token = false

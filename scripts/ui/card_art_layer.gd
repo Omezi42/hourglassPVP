@@ -34,9 +34,7 @@ func _draw() -> void:
 	if _view.card == null:
 		return
 	var tint := _view._tint()
-	var sink := (
-		CardView.SUMMONED_SINK if _view.unit != null and _view.unit.summoned_this_turn else 0.0
-	)
+	var sink := CardView.SUMMONED_SINK if _view.unit != null and _view.unit.is_fresh() else 0.0
 	_draw_art(tint, sink)
 	if _view.striking:
 		_draw_strike_flash()

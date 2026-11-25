@@ -690,6 +690,7 @@ func _look() -> Array:
 					shown_health(),
 					shown_attack(),
 					unit.summoned_this_turn,
+					unit.held_quick,
 					unit.flipped_this_turn,
 					unit.attacks_this_turn,
 					unit.glass_intact,

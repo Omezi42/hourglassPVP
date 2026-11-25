@@ -58,6 +58,12 @@ enum Trigger {
 	## 自分が砂術を使ったとき(詠砂の刻)。砂術の効果を解決し終えた後に、場にいる自分の駒が反応する。
 	## ON_ALLY_DEATH と同じく語にせず「常在」と出す。
 	ON_OWN_SPELL,
+	## この駒が攻撃したとき(スパーク。烈砂の刻)。戦闘を解決し終えた後、この駒が砕けていなければ働く。
+	## 相手プレイヤーへの攻撃でも働く。ON_ALLY_DEATH と同じく語にせず「常在」と出す。
+	ON_ATTACK,
+	## 自分がHPを失ったとき(イグニス。烈砂の刻)。ダメージでも代償でも、1回の減少ごとに1回働く(減った量は問わない)。
+	## ON_ALLY_DEATH と同じく語にせず「常在」と出す。
+	ON_OWN_HP_LOST,
 }
 
 ## エフェクトの対象。
@@ -87,6 +93,8 @@ enum EffectTarget {
 	## 被弾で、戦闘でダメージを与えてきた相手の砂時計(パリィ)。砂術・設置などの効果によるダメージでは
 	## 誰も指さず、攻撃した駒が既に砕けていれば不発。
 	DAMAGING_FOE,
+	## この効果を持つ駒以外の、自分の砂時計すべて(フレア)。左の枠から並べる。
+	OTHER_ALLY_UNITS,
 }
 
 ## エフェクトの種類。
@@ -174,6 +182,9 @@ enum EffectType {
 	## 自分のHPが相手より少ないぶんだけ、場にいる相手の砂時計をランダムに選んで1点ずつダメージを与える(ラストアワー)。
 	## 同じ駒が続けて選ばれてよい。砕けた駒は選ばず、相手の砂時計がいなくなったら残りは捨てる。value は使わない。
 	DAMAGE_RANDOM_UNITS_BY_HP_GAP,
+	## 自分の手札からランダムなコスト condition_total 以下の砂時計を value 体まで、コストを払わず空き枠へ出し、
+	## keyword を与える(スタンピード)。設置効果は解決する。条件に合う砂時計か空き枠が足りなければ出せる数だけ出す。
+	PLAY_RANDOM_FROM_HAND,
 }
 
 ## コンボ系カードの発動条件が確認する範囲(GameDesign.md 6章)。
@@ -345,5 +356,7 @@ static func trigger_name(trigger: int) -> String:
 		Trigger.ON_DAMAGED:
 			return "被弾"
 		Trigger.ON_ALLY_DEATH, Trigger.ON_ENEMY_FLIP, Trigger.ON_ENEMY_DRAW, Trigger.ON_OWN_SPELL:
+			return "常在"
+		Trigger.ON_ATTACK, Trigger.ON_OWN_HP_LOST:
 			return "常在"
 	return ""
