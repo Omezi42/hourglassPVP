@@ -92,12 +92,16 @@ func _draw() -> void:
 	if dir.length() < CardDragArrow.HEAD_LENGTH:
 		return
 	var color := CardDragArrow.COLOR if _valid else INVALID_COLOR
-	var normal := dir.normalized()
-	var shaft_end := to - normal * CardDragArrow.HEAD_LENGTH
-	draw_line(from, shaft_end, color, CardDragArrow.LINE_WIDTH)
-	var side := Vector2(-normal.y, normal.x) * CardDragArrow.HEAD_WIDTH * 0.5
+	var arc := CardDragArrow.arc_path(
+		from, to, CardDragArrow.HEAD_LENGTH, get_viewport_rect().size.x * 0.5
+	)
+	var shaft: PackedVector2Array = arc.shaft
+	var tangent: Vector2 = arc.tangent
+	ShapePaint.polyline(get_canvas_item(), shaft, color, CardDragArrow.LINE_WIDTH)
+	var base := shaft[shaft.size() - 1]
+	var side := Vector2(-tangent.y, tangent.x) * CardDragArrow.HEAD_WIDTH * 0.5
 	ShapePaint.colored_polygon(
-		get_canvas_item(), PackedVector2Array([to, shaft_end + side, shaft_end - side]), color
+		get_canvas_item(), PackedVector2Array([to, base + side, base - side]), color
 	)
 
 

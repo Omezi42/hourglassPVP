@@ -23,6 +23,11 @@ const LOCKED_HEAD_LENGTH := 22.0
 const LOCKED_HEAD_WIDTH := 13.0
 ## 成立せずに放したときだけ、矢印を短く落としてから消す。
 const CANCEL_FADE := 0.1
+## 矢印はゆるい弧(二次ベジェ)。膨らみは長さの比で、上限を超えない。進行方向がほぼ縦のときは画面の横の中央へ膨らむ。
+const ARC_BULGE_RATIO := 0.12
+const ARC_BULGE_MAX := 48.0
+const ARC_VERTICAL_EPS := 0.2
+const ARC_SEGMENTS := 16
 
 var _from := Vector2.ZERO
 var _active := false
@@ -119,29 +124,49 @@ func _draw() -> void:
 	var dir := to - _from
 	if dir.length() < head_length:
 		return
-	var normal := dir.normalized()
-	var shaft_end := to - normal * head_length
-	_draw_arrow(
-		to,
-		shaft_end,
-		normal,
-		line_width + UNDERLAY_GROW,
-		head_width + UNDERLAY_GROW,
-		UNDERLAY_COLOR
-	)
-	_draw_arrow(to, shaft_end, normal, line_width, head_width, color)
+	var arc := arc_path(_from, to, head_length, get_viewport_rect().size.x * 0.5)
+	_draw_arrow(to, arc, line_width + UNDERLAY_GROW, head_width + UNDERLAY_GROW, UNDERLAY_COLOR)
+	_draw_arrow(to, arc, line_width, head_width, color)
 
 
 func _draw_arrow(
-	to: Vector2,
-	shaft_end: Vector2,
-	normal: Vector2,
-	line_width: float,
-	head_width: float,
-	color: Color
+	to: Vector2, arc: Dictionary, line_width: float, head_width: float, color: Color
 ) -> void:
-	draw_line(_from, shaft_end, color, line_width)
-	var side := Vector2(-normal.y, normal.x) * head_width * 0.5
+	var shaft: PackedVector2Array = arc.shaft
+	var tangent: Vector2 = arc.tangent
+	ShapePaint.polyline(get_canvas_item(), shaft, color, line_width)
+	var base := shaft[shaft.size() - 1]
+	var side := Vector2(-tangent.y, tangent.x) * head_width * 0.5
 	ShapePaint.colored_polygon(
-		get_canvas_item(), PackedVector2Array([to, shaft_end + side, shaft_end - side]), color
+		get_canvas_item(), PackedVector2Array([to, base + side, base - side]), color
 	)
+
+
+## 攻撃の矢印と呪文の狙いが同じ弧になる。`shaft` は始点から矢尻の付け根までの点列、
+## `tangent` は終点での進む向き(矢尻の向き)。`center_x` は画面の横の中央(縦持ちと横持ちで違う)。
+static func arc_path(from: Vector2, to: Vector2, head_length: float, center_x: float) -> Dictionary:
+	var dir := to - from
+	var length := dir.length()
+	var forward := dir / length if length > 0.0 else Vector2.RIGHT
+	var normal := Vector2(-forward.y, forward.x)
+	if absf(normal.y) < ARC_VERTICAL_EPS:
+		var middle := (from + to) * 0.5
+		var toward_center := center_x - middle.x
+		if (toward_center > 0.0) != (normal.x > 0.0) or is_zero_approx(toward_center):
+			normal = -normal
+		if is_zero_approx(toward_center):
+			normal = Vector2.LEFT
+	elif normal.y > 0.0:
+		normal = -normal
+	var bulge := minf(length * ARC_BULGE_RATIO, ARC_BULGE_MAX)
+	var control := (from + to) * 0.5 + normal * bulge
+	var tangent := (to - control).normalized()
+	var base := to - tangent * head_length
+	var shaft := PackedVector2Array()
+	for i in ARC_SEGMENTS:
+		var t := float(i) / ARC_SEGMENTS
+		var point := from.lerp(control, t).lerp(control.lerp(to, t), t)
+		if point.distance_to(to) > head_length:
+			shaft.append(point)
+	shaft.append(base)
+	return {"shaft": shaft, "tangent": tangent}
