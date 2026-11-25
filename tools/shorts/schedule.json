@@ -1353,61 +1353,101 @@
 		"date": "2026-12-03",
 		"kind": "puzzle",
 		"id": "68",
-		"label": "とどめ問題 #68"
+		"label": "とどめ問題 #68",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-12-03",
 		"kind": "card",
 		"id": "cycle",
-		"label": "サイクル"
+		"label": "サイクル",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-12-04",
 		"kind": "puzzle",
 		"id": "69",
-		"label": "とどめ問題 #69"
+		"label": "とどめ問題 #69",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-12-04",
 		"kind": "card",
 		"id": "dash",
-		"label": "ダッシュ"
+		"label": "ダッシュ",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-12-05",
 		"kind": "puzzle",
 		"id": "70",
-		"label": "とどめ問題 #70"
+		"label": "とどめ問題 #70",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-12-05",
 		"kind": "card",
 		"id": "seal",
-		"label": "封砂"
+		"label": "封砂",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-12-06",
 		"kind": "puzzle",
 		"id": "71",
-		"label": "とどめ問題 #71"
+		"label": "とどめ問題 #71",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-12-06",
 		"kind": "card",
 		"id": "grain",
-		"label": "グレイン"
+		"label": "グレイン",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-12-07",
 		"kind": "puzzle",
 		"id": "72",
-		"label": "とどめ問題 #72"
+		"label": "とどめ問題 #72",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-12-07",
 		"kind": "card",
 		"id": "stasis",
-		"label": "時間停止"
+		"label": "時間停止",
+		"reserved": [
+			"x",
+			"youtube"
+		]
 	},
 	{
 		"date": "2026-12-08",
