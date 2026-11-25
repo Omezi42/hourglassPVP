@@ -436,8 +436,12 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 		and state.units(foe_side).size() < effect.condition_total
 	):
 		return value
+	if not CardBackWaterEffects.hp_condition_met(state, side, effect):
+		return value
 	if CardLegendEffects.handles(effect.effect_type):
 		return CardLegendEffects.cpu_value(state, side, effect)
+	if CardBackWaterEffects.handles(effect.effect_type):
+		return CardBackWaterEffects.cpu_value(state, side, effect)
 	match effect.effect_type:
 		CardEnums.EffectType.DAMAGE_PLAYER:
 			value = effect.value * FACE_WEIGHT
@@ -547,6 +551,9 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 				if slot >= 0:
 					var foe: CardInstance = state.board[foe_side][slot]
 					value = float(mini(foe.attack, effect.value)) * FACE_WEIGHT
+			elif effect.target == CardEnums.EffectTarget.DAMAGING_FOE:
+				# 殴ってきた駒の攻撃力を抜く(パリィ)。誰が殴るかは見えないため、抜ける量の見込みだけを見る。
+				value = float(effect.value) * FACE_WEIGHT
 		CardEnums.EffectType.INVERT_PLAYER_HP:
 			# 残りHPと失ったHPを入れ替える。**劣勢のときだけ得になる**(満タンで撃つと負ける)。
 			var own: int = state.hp[side]

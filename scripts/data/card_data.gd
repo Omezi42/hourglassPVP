@@ -48,6 +48,14 @@ extends Resource
 ## 手札にある間、相手の砂時計1体につきコストがこの値だけ下がる(GameDesign.md 6章。コロッサス)。
 ## 実際に払うコストは `MatchState.play_cost()` が出す。0なら下がらない。
 @export var cost_down_per_enemy_unit: int = 0
+## 手札にある間、自分のHPが cost_down_hp_threshold 以下ならコストがこの値だけ下がる(GameDesign.md 6章。バスティオン)。
+## 実際に払うコストは `MatchState.play_cost()` が出す。0なら下がらない。
+@export var cost_down_low_hp: int = 0
+## cost_down_low_hp が効く自分のHPの上限(初期HPの半分)。
+@export var cost_down_hp_threshold: int = 0
+## 相手の砂時計が自分の砂時計(この駒を含む)より多いあいだ、静止を持つ(GameDesign.md 6章。ホールド)。
+## 常には持たないため keywords へは入れない。判定は `MatchState` が盤面の変わるたびに `CardInstance.held_still` へ書く。
+@export var still_while_outnumbered: bool = false
 ## 場にいる間、自分の砂時計すべてが守護を無視して攻撃できる(GameDesign.md 6章。抜け道)。語にしないためフラグで持つ。
 @export var allies_ignore_guard: bool = false
 ## 場にいる間、自分の砂術のコストがこの値だけ下がる(GameDesign.md 6章。セージ)。複数体なら足し合わせる。
@@ -108,6 +116,8 @@ func category_name() -> String:
 	if (
 		conditional_keyword >= 0
 		or cost_down_per_enemy_unit > 0
+		or cost_down_low_hp > 0
+		or still_while_outnumbered
 		or allies_ignore_guard
 		or ally_spell_cost_down > 0
 	):

@@ -288,6 +288,10 @@ static func _place_condition_match(
 				state.board[side][ALLY_SLOT].attack = 0
 			CardEnums.ConditionScope.ENEMY_OUTNUMBERS:
 				pass  # 基本の盤面で相手の駒が味方より多い。
+			CardEnums.ConditionScope.OWN_HP_BELOW_FOE:
+				pass  # 基本の盤面で自分のHPは相手より少ない。
+			CardEnums.ConditionScope.OWN_HP_AT_MOST:
+				state.hp[side] = need
 			CardEnums.ConditionScope.ATTACK_OVER_HEALTH:
 				_place(state, foe, MATCH_SLOT, _card(FOE_TARGET[0]), 1, 2)
 				_place(state, side, MATCH_SLOT, _card(ALLY[0]), 1, 2)

@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_rage_0"]
+script = ExtResource("script_effect")
+trigger = 3
+target = 0
+effect_type = 5
+value = 1
+condition_scope = 10
+condition_total = 12
+
+[resource]
+script = ExtResource("script_card")
+id = "rage"
+display_name = "レイジ"
+cost = 2
+total_sand = 5
+pool_index = 137
+set_id = "back_water"
+rarity = 0
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_rage_0")])
+rules_text = "落砂:自分のHPが12以下なら、この砂時計の砂がもう1粒落ちる"
+flavor_text = "「まだ立ってる。だから怖いんだ」"
+cannot_attack = false
+is_token = false

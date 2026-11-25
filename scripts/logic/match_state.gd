@@ -305,6 +305,7 @@ func end_turn() -> void:
 	_resolve_turn_end_effects(side)
 	if _match_over:
 		return
+	_refresh_held_still()
 	for slot in BOARD_SIZE:
 		var unit: CardInstance = board[side][slot]
 		if unit == null:
@@ -428,10 +429,12 @@ func can_play(side: int, hand_index: int) -> bool:
 	return mana[side] >= play_cost(side, card)
 
 
-## 実際に払うコスト(GameDesign.md 6章)。相手の砂時計の数で下がるカードと、自分の場に
-## 砂術のコストを下げる駒がいるときの砂術だけが元のコストと違う。
+## 実際に払うコスト(GameDesign.md 6章)。相手の砂時計の数で下がるカード・自分のHPが低いと下がるカードと、
+## 自分の場に砂術のコストを下げる駒がいるときの砂術だけが元のコストと違う。
 func play_cost(side: int, card: CardData) -> int:
 	var down := card.cost_down_per_enemy_unit * units(other_side(side)).size()
+	if card.cost_down_low_hp > 0 and int(hp[side]) <= card.cost_down_hp_threshold:
+		down += card.cost_down_low_hp
 	if card.is_spell:
 		for unit in units(side):
 			down += unit.spell_cost_down()
@@ -696,8 +699,9 @@ func _resolve_unit_combat(side: int, slot: int, target_slot: int) -> void:
 		attacker.health = 0
 		unit_poisoned.emit(side, slot)
 	# 被弾は毒砂まで解決してから。ここで生きている駒だけが発動できる。
-	_resolve_damaged(foe_side, defender, dealt_to_defender)
-	_resolve_damaged(side, attacker, dealt_to_attacker)
+	# 戦闘のダメージだけが、与えてきた相手の駒を運ぶ(パリィ。効果によるダメージは運ばない)。
+	_resolve_damaged(foe_side, defender, dealt_to_defender, {"damager": attacker})
+	_resolve_damaged(side, attacker, dealt_to_attacker, {"damager": defender})
 
 
 ## 貫通:砂時計の体力を超えた分が相手プレイヤーへ抜ける。
@@ -758,10 +762,11 @@ func _resolve_turn_end_effects(side: int) -> void:
 
 ## 被弾(GameDesign.md 6章):実際に砂を削れたときだけ発動する。
 ## 硝子が吸った場合(dealt == 0)は発動せず、砕けた駒は余砂が受け持つ。
-func _resolve_damaged(side: int, unit: CardInstance, dealt: int) -> void:
+## hint の "damager" は戦闘でダメージを与えてきた駒(`EffectTarget.DAMAGING_FOE` が読む)。
+func _resolve_damaged(side: int, unit: CardInstance, dealt: int, hint := {}) -> void:
 	if dealt <= 0 or unit.is_dead():
 		return
-	_fire(side, unit, CardEnums.Trigger.ON_DAMAGED, {})
+	_fire(side, unit, CardEnums.Trigger.ON_DAMAGED, hint)
 
 
 ## 砂時計へダメージを与える(設置効果などから使う)。
@@ -810,7 +815,20 @@ func _cleanup_dead() -> void:
 			var unit: CardInstance = board[side][slot]
 			if unit != null and unit.is_dead():
 				_destroy_unit(side, slot)
+	# 両側の砕けた駒を片づけてから数える(片側ずつだと、相手の砕けた駒を数に入れたままになる)。
+	_refresh_held_still()
+	for side in [Side.A, Side.B]:
 		board_changed.emit(side)
+
+
+## 条件付きの静止(ホールド)を、いまの盤面の数で決め直す。相手の砂時計が自分の砂時計
+## (その駒を含む)より多いあいだだけ静止する。盤面が変わる処理はどれも `_cleanup_dead()` を通る。
+func _refresh_held_still() -> void:
+	for side in [Side.A, Side.B]:
+		var foes := units(other_side(side)).size()
+		var own := units(side).size()
+		for unit: CardInstance in units(side):
+			unit.held_still = unit.data.still_while_outnumbered and foes > own
 
 
 func _finish(p_winner: int, reason: int) -> void:

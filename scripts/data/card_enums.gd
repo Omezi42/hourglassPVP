@@ -84,6 +84,9 @@ enum EffectTarget {
 	ENEMY_UNIT_OR_PLAYER,
 	## この効果を持つ駒以外の、敵味方すべての砂時計(アイオーン)。自分の駒を左から、次に相手の駒を左から並べる。
 	ALL_OTHER_UNITS,
+	## 被弾で、戦闘でダメージを与えてきた相手の砂時計(パリィ)。砂術・設置などの効果によるダメージでは
+	## 誰も指さず、攻撃した駒が既に砕けていれば不発。
+	DAMAGING_FOE,
 }
 
 ## エフェクトの種類。
@@ -166,6 +169,11 @@ enum EffectType {
 	RAISE_ALL_SAND,
 	## 空いている枠すべてに、自分の墓地からランダムな砂時計を出す(ネクロポリス)。設置効果は解決しない。
 	REVIVE_RANDOM_ALL,
+	## 自分のHPが相手より少ないとき、その差の半分(切り上げ)だけ対象プレイヤーのHPを回復する(リブラ)。value は使わない。
+	HEAL_PLAYER_HALF_HP_GAP,
+	## 自分のHPが相手より少ないぶんだけ、場にいる相手の砂時計をランダムに選んで1点ずつダメージを与える(ラストアワー)。
+	## 同じ駒が続けて選ばれてよい。砕けた駒は選ばず、相手の砂時計がいなくなったら残りは捨てる。value は使わない。
+	DAMAGE_RANDOM_UNITS_BY_HP_GAP,
 }
 
 ## コンボ系カードの発動条件が確認する範囲(GameDesign.md 6章)。
@@ -194,6 +202,11 @@ enum ConditionScope {
 	ENEMY_OUTNUMBERS,
 	## 相手の砂時計の数が condition_total 以上か(薙砂の刻)。発動の可否を決める条件。
 	ENEMY_COUNT_AT_LEAST,
+	## 自分のHPが相手のHPより少ないか(背水の刻)。同じなら満たさない。発動の可否を決める条件で、
+	## condition_total は使わない。
+	OWN_HP_BELOW_FOE,
+	## 自分のHPが condition_total 以下か(背水の刻。12は初期HPの半分)。発動の可否を決める条件。
+	OWN_HP_AT_MOST,
 }
 
 ## 効果が対象へ届く演出の「型」(GameDesign.md 9章)。`MatchState.effect_struck` /

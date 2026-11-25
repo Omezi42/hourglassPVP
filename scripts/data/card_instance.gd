@@ -22,6 +22,9 @@ var glass_intact: bool = false
 var granted_keywords: Array[int] = []
 ## 効果を消されたか。true の間はキーワードも効果も持たないものとして扱う。
 var silenced: bool = false
+## いま静止を持っているか(`CardData.still_while_outnumbered`。ホールド)。盤面の数で決まるため、
+## `MatchState` が盤面の変わるたびに書く。効果で与えた `granted_keywords` とは別に持つ。
+var held_still: bool = false
 
 
 func _init(p_data: CardData) -> void:
@@ -46,6 +49,8 @@ func has_keyword(keyword: int) -> bool:
 		return false
 	if data.has_keyword(keyword) or granted_keywords.has(keyword):
 		return true
+	if keyword == CardEnums.Keyword.STILL and held_still:
+		return true
 	if data.conditional_keyword < 0 or data.conditional_keyword != keyword:
 		return false
 	return total_sand() == data.conditional_keyword_total
@@ -64,6 +69,8 @@ func keywords() -> Array:
 	var conditional := data.conditional_keyword
 	if conditional >= 0 and not found.has(conditional) and has_keyword(conditional):
 		found.append(conditional)
+	if held_still and not found.has(CardEnums.Keyword.STILL):
+		found.append(CardEnums.Keyword.STILL)
 	return found
 
 

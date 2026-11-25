@@ -172,6 +172,27 @@ const SETS: Dictionary = {
 		"card_ids": ["aeon"],
 		"price": 0,
 	},
+	## 第2弾「前借りの弾」の最初のテーマ(GameDesign.md 8章)。追い詰められた器ほど強く鳴る枠で、劣勢から盤面を返すデッキを成立させる。
+	## 第2弾のパックができるまではパック・ショップへ並べない。
+	"back_water":
+	{
+		"id": "back_water",
+		"display_name": "背水の刻",
+		"description": "追い詰められた器ほど強く鳴る9枚",
+		"card_ids":
+		[
+			"parry",
+			"wick",
+			"rage",
+			"hold",
+			"backwater",
+			"ember",
+			"bastion",
+			"libra",
+			"last_hour",
+		],
+		"price": 0,
+	},
 }
 
 const ORDERED_IDS: Array[String] = [
@@ -187,6 +208,7 @@ const ORDERED_IDS: Array[String] = [
 	"sweep_sand",
 	"chant_sand",
 	"first_extra",
+	"back_water",
 ]
 
 

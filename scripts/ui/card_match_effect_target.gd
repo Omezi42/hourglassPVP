@@ -67,6 +67,16 @@ static func can_target_face(card: CardData) -> bool:
 static func has_candidate(state: MatchState, card: CardData, side: int) -> bool:
 	if can_target_face(card):
 		return true
+	# HPの条件(エンバー)を満たさないと効果は不発のため、対象を選ばせずにそのまま出す。
+	var effect := targeting_effect(card)
+	if effect != null:
+		var mine := (
+			side
+			if effect.target == CardEnums.EffectTarget.ALLY_UNIT
+			else MatchState.other_side(side)
+		)
+		if not CardBackWaterEffects.hp_condition_met(state, mine, effect):
+			return false
 	for slot in MatchState.BOARD_SIZE:
 		if can_target(state, card, side, slot):
 			return true

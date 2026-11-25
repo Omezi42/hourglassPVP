@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_wick_0"]
+script = ExtResource("script_effect")
+trigger = 2
+target = 3
+effect_type = 15
+value = 1
+
+[resource]
+script = ExtResource("script_card")
+id = "wick"
+display_name = "ウィック"
+cost = 1
+total_sand = 3
+pool_index = 136
+set_id = "back_water"
+rarity = 0
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_wick_0")])
+rules_text = "余砂:自分の砂時計すべての砂が1粒上へ戻る"
+flavor_text = "燃え尽きた芯の匂いだけが朝まで残った"
+cannot_attack = false
+is_token = false

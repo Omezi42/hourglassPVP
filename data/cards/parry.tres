@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_parry_0"]
+script = ExtResource("script_effect")
+trigger = 4
+target = 9
+effect_type = 15
+value = 1
+
+[resource]
+script = ExtResource("script_card")
+id = "parry"
+display_name = "パリィ"
+cost = 2
+total_sand = 4
+pool_index = 135
+set_id = "back_water"
+rarity = 0
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_parry_0")])
+rules_text = "被弾:ダメージを与えた相手の砂時計の砂が1粒上へ戻る"
+flavor_text = "受け流した砂は持ち主の器へ帰っていく"
+cannot_attack = false
+is_token = false

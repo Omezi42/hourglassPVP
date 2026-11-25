@@ -24,11 +24,14 @@ var _steps := 0
 var _cut_off := false
 ## 第1弾のレジェンドの固有効果(GameDesign.md 6章)。この表が1000行の上限に近いため切り出している。
 var _legend: CardLegendEffects
+## 第2弾「背水の刻」の固有効果(GameDesign.md 6章)。
+var _back_water: CardBackWaterEffects
 
 
 func _init(p_state: MatchState) -> void:
 	_state = p_state
 	_legend = CardLegendEffects.new(p_state, self)
+	_back_water = CardBackWaterEffects.new(p_state, self)
 
 
 ## unit が持つ trigger の効果をすべて適用する。
@@ -69,21 +72,23 @@ func _cut_off_chain(unit: CardInstance, trigger: int) -> void:
 
 
 ## コンボ系カードの発動条件(GameDesign.md 6章)。TARGET は対象そのものの絞り込みで
-## `_single_unit()` が扱うため、ここでは SELF / ANY_ALLY / ENEMY_OUTNUMBERS / ENEMY_COUNT_AT_LEAST だけを見る。
+## `_single_unit()` が扱うため、ここでは SELF / ANY_ALLY / ENEMY_OUTNUMBERS / ENEMY_COUNT_AT_LEAST /
+## OWN_HP_BELOW_FOE / OWN_HP_AT_MOST だけを見る。
 func _condition_met(side: int, unit: CardInstance, effect: CardEffectData) -> bool:
 	match effect.condition_scope:
 		CardEnums.ConditionScope.SELF:
 			return unit.total_sand() == effect.condition_total
 		CardEnums.ConditionScope.ANY_ALLY:
-			for ally in _state.units(side):
-				if ally.total_sand() == effect.condition_total:
-					return true
-			return false
+			return _state.units(side).any(
+				func(ally: CardInstance) -> bool: return ally.total_sand() == effect.condition_total
+			)
 		CardEnums.ConditionScope.ENEMY_OUTNUMBERS:
 			var others := _state.units(side).size() - 1
 			return _state.units(MatchState.other_side(side)).size() > others
 		CardEnums.ConditionScope.ENEMY_COUNT_AT_LEAST:
 			return _state.units(MatchState.other_side(side)).size() >= effect.condition_total
+		CardEnums.ConditionScope.OWN_HP_BELOW_FOE, CardEnums.ConditionScope.OWN_HP_AT_MOST:
+			return CardBackWaterEffects.hp_condition_met(_state, side, effect)
 	return true
 
 
@@ -99,6 +104,9 @@ func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Diction
 	var from_slot := from if origin == CardEnums.EffectOrigin.UNIT else _origin_slot(hint, origin)
 	if CardLegendEffects.handles(effect.effect_type):
 		_legend.apply(side, unit, effect, from_slot, origin)
+		return
+	if CardBackWaterEffects.handles(effect.effect_type):
+		_back_water.apply(side, effect, from_slot, origin)
 		return
 	match effect.effect_type:
 		CardEnums.EffectType.DAMAGE_PLAYER:
@@ -643,6 +651,7 @@ func _is_enemy_target(target: int) -> bool:
 		target == CardEnums.EffectTarget.ENEMY_UNIT
 		or target == CardEnums.EffectTarget.ALL_ENEMY_UNITS
 		or target == CardEnums.EffectTarget.ENEMY_UNIT_OR_PLAYER
+		or target == CardEnums.EffectTarget.DAMAGING_FOE
 	)
 
 
@@ -667,6 +676,8 @@ func _targets(side: int, unit: CardInstance, effect: CardEffectData, hint: Dicti
 			found = _single_unit(foe_side, hint, -1, effect)
 		CardEnums.EffectTarget.ENEMY_UNIT_OR_PLAYER:
 			found = _unit_or_player(foe_side, hint, effect)
+		CardEnums.EffectTarget.DAMAGING_FOE:
+			found = _damaging_foe(foe_side, hint)
 		CardEnums.EffectTarget.ALL_OTHER_UNITS:
 			var own_slot := _slot_of(side, unit)
 			for entry in _all_slots(side, effect):
@@ -678,6 +689,16 @@ func _targets(side: int, unit: CardInstance, effect: CardEffectData, hint: Dicti
 			# 「他の駒を助ける」というカードの読みが崩れ、対象を選ぶ意味も無くなるため。
 			found = _single_unit(side, hint, _slot_of(side, unit), effect)
 	return found
+
+
+## 戦闘でダメージを与えてきた相手の駒(パリィ)。hint の "damager" を運ぶのは戦闘だけで、
+## 効果によるダメージでは空のまま。駒が既に砕けている・盤面にいないときは不発。
+func _damaging_foe(foe_side: int, hint: Dictionary) -> Array:
+	var damager: CardInstance = hint.get("damager")
+	if damager == null or damager.is_dead():
+		return []
+	var slot: int = _state.board[foe_side].find(damager)
+	return [] if slot < 0 else [{"side": foe_side, "slot": slot}]
 
 
 ## 相手プレイヤーか相手の砂時計1体(追砂の刻)。本体は枠 -1 で表す(攻撃の target_slot と同じ)。
