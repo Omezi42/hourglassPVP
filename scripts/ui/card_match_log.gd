@@ -304,6 +304,8 @@ static func reason_text(state: MatchState, winner: int) -> String:
 			return "持ち時間切れ"
 		MatchState.EndReason.HP_DEPLETED:
 			return "疲労でHPが0" if state.finished_by_fatigue else "HPが0"
+		MatchState.EndReason.SPECIAL_WIN:
+			return "特殊勝利"
 	return "引き分け" if loser == winner else ""
 
 

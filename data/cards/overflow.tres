@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_overflow_0"]
+script = ExtResource("script_effect")
+trigger = 0
+target = 2
+effect_type = 53
+value = 1
+random_target = true
+
+[resource]
+script = ExtResource("script_card")
+id = "overflow"
+display_name = "溢れ砂"
+cost = 1
+total_sand = 0
+pool_index = 185
+set_id = "pour_sand"
+rarity = 1
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_overflow_0")])
+rules_text = "残りのマナをすべて使い、1につきランダムな相手の砂時計に1ダメージ"
+flavor_text = "縁を越えた砂は戻らない"
+cannot_attack = false
+is_token = false
+is_spell = true

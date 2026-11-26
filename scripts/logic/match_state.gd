@@ -77,7 +77,7 @@ signal trigger_fired(side: int, trigger: int)
 
 enum Side { A, B }
 ## 決着の要因(GameDesign.md 5章)。
-enum EndReason { HP_DEPLETED, SURRENDER, TIMEOUT, DRAW }
+enum EndReason { HP_DEPLETED, SURRENDER, TIMEOUT, DRAW, SPECIAL_WIN }
 
 const INITIAL_HP := 24
 const BOARD_SIZE := 6
@@ -481,6 +481,7 @@ func play_card(side: int, hand_index: int, slot: int, target: Dictionary = {}) -
 	unit_played.emit(side, slot)
 	board_changed.emit(side)
 	_fire(side, unit, CardEnums.Trigger.ON_PLAY, target)
+	CardPourSandEffects.fire_entered(self, side, slot)
 	_cleanup_dead()
 	return true
 

@@ -38,6 +38,19 @@ const OWN_SPELL_TIMES := 2.0
 ## 攻撃したとき・HPを失ったときの効果が、場に残る間に起きると見込む回数(烈砂の刻)。
 const ATTACK_TIMES := 2.0
 const HP_LOST_TIMES := 2.0
+## 自分が砂時計を出したときの効果(ファウンテン)が起きると見込む回数。同じく下駄。
+const ALLY_ENTER_TIMES := 3.0
+## 繰り返し働くトリガーごとの見込み回数(`_repeating_value()`。落砂は総量に比例するため別)。
+const REPEAT_TIMES := {
+	CardEnums.Trigger.ON_DAMAGED: DAMAGED_TIMES,
+	CardEnums.Trigger.ON_ALLY_DEATH: ALLY_DEATH_TIMES,
+	CardEnums.Trigger.ON_ENEMY_FLIP: ENEMY_FLIP_TIMES,
+	CardEnums.Trigger.ON_ENEMY_DRAW: ENEMY_DRAW_TIMES,
+	CardEnums.Trigger.ON_OWN_SPELL: OWN_SPELL_TIMES,
+	CardEnums.Trigger.ON_ATTACK: ATTACK_TIMES,
+	CardEnums.Trigger.ON_OWN_HP_LOST: HP_LOST_TIMES,
+	CardEnums.Trigger.ON_ALLY_ENTER: ALLY_ENTER_TIMES,
+}
 ## 自分のHPを払うと負ける手へ付ける減点(出さないための十分大きな値)。
 const SELF_KILL_PENALTY := 100.0
 ## 守護を無視して攻撃できる駒1体ぶんの価値(抜け道)。守護の駒を避けて殴れる1回を、本体の数点ぶんに見る。
@@ -399,8 +412,13 @@ func _card_value(state: MatchState, side: int, card: CardData) -> float:
 	if card.cannot_attack:
 		# 攻撃できないぶん、生涯ダメージの見積もりは成り立たない。壁としての厚みだけを見る。
 		value = float(total)
+	var spare := CardPourSandEffects.spare_mana(state, side, card)
 	for effect in card.effects_for(CardEnums.Trigger.ON_PLAY):
-		value += _on_play_value(state, side, effect)
+		if CardPourSandEffects.handles_effect(effect):
+			value += CardPourSandEffects.cpu_play_value(state, side, effect, spare)
+		else:
+			value += _on_play_value(state, side, effect)
+	value += CardPourSandEffects.cpu_death_value(card)
 	# 繰り返し働くトリガーは、場に残る見込みのターン数ぶん価値が積み上がる
 	# (GameDesign.md 6章)。落砂は毎ターン1回、被弾は殴り合うたびに起きる。
 	value += _repeating_value(state, side, card)
@@ -418,20 +436,9 @@ func _repeating_value(state: MatchState, side: int, card: CardData) -> float:
 			value += lifetime_of(health, card.initial_attack) * FACE_WEIGHT
 			continue
 		value += _on_play_value(state, side, effect) * mini(card.total_sand, TURN_END_TURNS)
-	for effect in card.effects_for(CardEnums.Trigger.ON_DAMAGED):
-		value += _on_play_value(state, side, effect) * DAMAGED_TIMES
-	for effect in card.effects_for(CardEnums.Trigger.ON_ALLY_DEATH):
-		value += _on_play_value(state, side, effect) * ALLY_DEATH_TIMES
-	for effect in card.effects_for(CardEnums.Trigger.ON_ENEMY_FLIP):
-		value += _on_play_value(state, side, effect) * ENEMY_FLIP_TIMES
-	for effect in card.effects_for(CardEnums.Trigger.ON_ENEMY_DRAW):
-		value += _on_play_value(state, side, effect) * ENEMY_DRAW_TIMES
-	for effect in card.effects_for(CardEnums.Trigger.ON_OWN_SPELL):
-		value += _on_play_value(state, side, effect) * OWN_SPELL_TIMES
-	for effect in card.effects_for(CardEnums.Trigger.ON_ATTACK):
-		value += _on_play_value(state, side, effect) * ATTACK_TIMES
-	for effect in card.effects_for(CardEnums.Trigger.ON_OWN_HP_LOST):
-		value += _on_play_value(state, side, effect) * HP_LOST_TIMES
+	for trigger: int in REPEAT_TIMES:
+		for effect in card.effects_for(trigger):
+			value += _on_play_value(state, side, effect) * float(REPEAT_TIMES[trigger])
 	return value
 
 
@@ -445,6 +452,7 @@ func _themed_value(state: MatchState, side: int, effect: CardEffectData) -> Vari
 		CardEarlyBellEffects,
 		CardFuseSandEffects,
 		CardForesightEffects,
+		CardPourSandEffects,
 	]
 	for theme in themes:
 		if theme.handles(effect.effect_type):
@@ -736,6 +744,8 @@ func _effect_target(state: MatchState, side: int, hand_card: CardData) -> Dictio
 				slot = _best_ally_drop(state, side, effect.value)["slot"]
 			elif effect.effect_type == CardEnums.EffectType.RAISE_SAND:
 				slot = _best_ally_raise(state, side, effect.value)["slot"]
+			elif effect.effect_type == CardEnums.EffectType.TRANSFER_TOTAL_TO_SELF:
+				slot = CardPourSandEffects.cpu_transfer_slot(state, side, effect.value)
 			if slot >= 0:
 				return {"side": side, "slot": slot}
 	var grave_effect := CardEffectResolver.grave_choice_effect(card)

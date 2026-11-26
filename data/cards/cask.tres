@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_cask_0"]
+script = ExtResource("script_effect")
+trigger = 0
+target = 0
+effect_type = 52
+value = 1
+
+[resource]
+script = ExtResource("script_card")
+id = "cask"
+display_name = "キャスク"
+cost = 2
+total_sand = 2
+pool_index = 180
+set_id = "pour_sand"
+rarity = 0
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_cask_0")])
+rules_text = "設置:残りのマナをすべて使い、1につきこの砂時計の総量+1"
+flavor_text = "樽は注がれたぶんだけ重くなる"
+cannot_attack = false
+is_token = false

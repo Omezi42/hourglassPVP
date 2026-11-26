@@ -58,6 +58,7 @@ func _play_from_hand(side: int, effect: CardEffectData, from_slot: int, origin: 
 		_state.hand_changed.emit(side)
 		_state.board_changed.emit(side)
 		_state._fire(side, played, CardEnums.Trigger.ON_PLAY, {})
+		CardPourSandEffects.fire_entered(_state, side, slot)
 
 
 ## CPUの見積もり(`CardCpuStrategy._on_play_value()`)。出せる砂時計の平均の生涯ダメージを、出せる数だけ。

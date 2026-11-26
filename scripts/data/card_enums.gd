@@ -64,6 +64,9 @@ enum Trigger {
 	## 自分がHPを失ったとき(イグニス。烈砂の刻)。ダメージでも代償でも、1回の減少ごとに1回働く(減った量は問わない)。
 	## ON_ALLY_DEATH と同じく語にせず「常在」と出す。
 	ON_OWN_HP_LOST,
+	## 自分が砂時計を出したとき(ファウンテン。注砂の刻)。手から出したときも効果で出したときも働き、その砂時計自身が出たときは働かない。
+	## hint の entered_slot が出た砂時計の枠(EffectTarget.ENTERING_UNIT が読む)。ON_ALLY_DEATH と同じく語にせず「常在」と出す。
+	ON_ALLY_ENTER,
 }
 
 ## エフェクトの対象。
@@ -95,6 +98,8 @@ enum EffectTarget {
 	DAMAGING_FOE,
 	## この効果を持つ駒以外の、自分の砂時計すべて(フレア)。左の枠から並べる。
 	OTHER_ALLY_UNITS,
+	## 自分の砂時計が出たときの、出た砂時計(ファウンテン)。ON_ALLY_ENTER の hint の entered_slot が指す駒で、いなければ不発。
+	ENTERING_UNIT,
 }
 
 ## エフェクトの種類。
@@ -218,6 +223,21 @@ enum EffectType {
 	MILL_SPELL_DAMAGE,
 	## 自分の山札の一番上を、コストを払わずに使う(予言)。砂時計なら空き枠へ出し、砂術なら撃つ。山札が0枚か使えないなら何もしない。
 	PLAY_DECK_TOP,
+	## 残りのマナ(コストを払った後)をすべて0にし、1につき対象の砂時計の総量を value 足す(キャスク・デリュージ。注砂の刻)。
+	## 残りが0なら何も起きない。
+	SPEND_MANA_ADD_TOTAL,
+	## 残りのマナをすべて0にし、1につきランダムな相手の砂時計1体へ value ダメージ(溢れ砂)。
+	## その時点で場にいる相手の砂時計から1点ずつ選び、相手の砂時計がいなくなったら残りは捨てる。
+	SPEND_MANA_DAMAGE_RANDOM,
+	## このターン使わずに残したマナ1につき、対象の砂時計1体の総量を value 足す(リザーバー。マナは使わない)。
+	ADD_TOTAL_PER_UNUSED_MANA,
+	## 対象の自分の砂時計1体の総量を value 減らし(ダメージではない。体力から引き、体力1未満のぶんは攻撃力から引く)、
+	## 効果を持つ砂時計の総量を value 増やす(デカンタ)。対象がいなければ何も起きない。
+	TRANSFER_TOTAL_TO_SELF,
+	## 効果を持つ砂時計(砕けた時の)の攻撃力の数だけ、自分の他の砂時計へ左から順に1ずつ総量を足す(アンフォラ)。一周したら左から。
+	DISTRIBUTE_TOTAL_BY_OWN_ATTACK,
+	## 自分の山札が0枚なら、対局に勝つ(テルミヌス)。勝つのは効果を解決したその時点で、相手のHPは問わない。
+	WIN_IF_DECK_EMPTY,
 }
 
 ## コンボ系カードの発動条件が確認する範囲(GameDesign.md 6章)。
@@ -254,6 +274,8 @@ enum ConditionScope {
 	## 自分の最大マナが上限(`MatchState.MAX_MANA`)に届いているか(アラーム。早鐘の刻)。発動の可否を決める条件で、
 	## condition_total は使わない。
 	MAX_MANA_FULL,
+	## 残りのマナ(コストを払った後)が condition_total 以上か(ラドル。注砂の刻)。発動の可否を決める条件。
+	OWN_MANA_AT_LEAST,
 }
 
 ## 効果が対象へ届く演出の「型」(GameDesign.md 9章)。`MatchState.effect_struck` /
@@ -393,6 +415,6 @@ static func trigger_name(trigger: int) -> String:
 			return "被弾"
 		Trigger.ON_ALLY_DEATH, Trigger.ON_ENEMY_FLIP, Trigger.ON_ENEMY_DRAW, Trigger.ON_OWN_SPELL:
 			return "常在"
-		Trigger.ON_ATTACK, Trigger.ON_OWN_HP_LOST:
+		Trigger.ON_ATTACK, Trigger.ON_OWN_HP_LOST, Trigger.ON_ALLY_ENTER:
 			return "常在"
 	return ""

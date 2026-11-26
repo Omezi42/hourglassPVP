@@ -273,6 +273,35 @@ const SETS: Dictionary = {
 		],
 		"price": 0,
 	},
+	## 第2弾「前借りの弾」の6つ目のテーマ(GameDesign.md 8章)。残った砂を全部注ぐ枠で、マナを余らせない中速デッキを成立させる。
+	"pour_sand":
+	{
+		"id": "pour_sand",
+		"display_name": "注砂の刻",
+		"description": "残った砂を全部注ぐ9枚",
+		"card_ids":
+		[
+			"cask",
+			"pour",
+			"decanter",
+			"ladle",
+			"fountain",
+			"overflow",
+			"reservoir",
+			"amphora",
+			"deluge",
+		],
+		"price": 0,
+	},
+	## 第2弾のどのテーマにも属さないレジェンド(GameDesign.md 8章)。パックからだけ出る。
+	"second_extra":
+	{
+		"id": "second_extra",
+		"display_name": "テーマ外",
+		"description": "第2弾のどのテーマにも属さないレジェンド",
+		"card_ids": ["terminus", "promise"],
+		"price": 0,
+	},
 }
 
 const ORDERED_IDS: Array[String] = [
@@ -293,6 +322,8 @@ const ORDERED_IDS: Array[String] = [
 	"early_bell",
 	"fuse_sand",
 	"foresight_sand",
+	"pour_sand",
+	"second_extra",
 ]
 
 

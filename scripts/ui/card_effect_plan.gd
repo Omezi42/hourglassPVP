@@ -307,6 +307,8 @@ static func _place_condition_match(
 				pass  # 基本の盤面で自分のHPは相手より少ない。
 			CardEnums.ConditionScope.OWN_HP_AT_MOST:
 				state.hp[side] = need
+			CardEnums.ConditionScope.OWN_MANA_AT_LEAST:
+				pass  # 実演のマナは満タンで、残りは条件を満たす。
 			CardEnums.ConditionScope.ATTACK_OVER_HEALTH:
 				_place(state, foe, MATCH_SLOT, _card(FOE_TARGET[0]), 1, 2)
 				_place(state, side, MATCH_SLOT, _card(ALLY[0]), 1, 2)

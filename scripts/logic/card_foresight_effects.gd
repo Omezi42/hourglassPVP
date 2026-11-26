@@ -235,6 +235,7 @@ func _enter_board(
 	_state.board[side][slot] = played
 	_state.board_changed.emit(side)
 	_state._fire(side, played, CardEnums.Trigger.ON_PLAY, hint)
+	CardPourSandEffects.fire_entered(_state, side, slot)
 
 
 ## CPUの見積もり(設置・落砂の効果)。砂術は `CardCpuSpellSearch` が撃って測る。

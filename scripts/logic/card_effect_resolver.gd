@@ -36,6 +36,8 @@ var _early_bell: CardEarlyBellEffects
 var _fuse_sand: CardFuseSandEffects
 ## 第2弾「先触の刻」の固有効果(GameDesign.md 6章)。
 var _foresight: CardForesightEffects
+## 第2弾「注砂の刻」とテルミヌスの固有効果(GameDesign.md 6章)。
+var _pour_sand: CardPourSandEffects
 
 
 func _init(p_state: MatchState) -> void:
@@ -46,6 +48,7 @@ func _init(p_state: MatchState) -> void:
 	_early_bell = CardEarlyBellEffects.new(p_state, self)
 	_fuse_sand = CardFuseSandEffects.new(p_state, self)
 	_foresight = CardForesightEffects.new(p_state, self)
+	_pour_sand = CardPourSandEffects.new(p_state, self)
 
 
 ## unit が持つ trigger の効果をすべて適用する。
@@ -101,10 +104,11 @@ func _condition_met(side: int, unit: CardInstance, effect: CardEffectData) -> bo
 			return _state.units(MatchState.other_side(side)).size() > others
 		CardEnums.ConditionScope.ENEMY_COUNT_AT_LEAST:
 			return _state.units(MatchState.other_side(side)).size() >= effect.condition_total
-		_SCOPE.OWN_HP_BELOW_FOE, _SCOPE.OWN_HP_AT_MOST, _SCOPE.MAX_MANA_FULL:
+		_SCOPE.OWN_HP_BELOW_FOE, _SCOPE.OWN_HP_AT_MOST, _SCOPE.MAX_MANA_FULL, _SCOPE.OWN_MANA_AT_LEAST:
 			return (
 				CardBackWaterEffects.hp_condition_met(_state, side, effect)
 				and CardEarlyBellEffects.mana_condition_met(_state, side, effect)
+				and CardPourSandEffects.mana_condition_met(_state, side, effect)
 			)
 	return true
 
@@ -131,12 +135,16 @@ func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Diction
 	if CardEarlyBellEffects.handles(effect.effect_type):
 		_early_bell.apply(side, effect, from_slot, origin)
 		return
-	if CardFuseSandEffects.handles(effect.effect_type):
-		_fuse_sand.apply(side, unit, effect, hint, from_slot, origin)
-		return
-	if CardForesightEffects.handles(effect.effect_type):
-		_foresight.apply(side, unit, effect, hint, from_slot, origin)
-		return
+	# 対象の指定(hint)を受け取るテーマは同じ形の apply() を持つ。定数にせず関数の中で並べる(Pitfalls.md)。
+	var hinted := [
+		[CardFuseSandEffects, _fuse_sand],
+		[CardForesightEffects, _foresight],
+		[CardPourSandEffects, _pour_sand],
+	]
+	for theme: Array in hinted:
+		if theme[0].handles(effect.effect_type):
+			theme[1].apply(side, unit, effect, hint, from_slot, origin)
+			return
 	match effect.effect_type:
 		CardEnums.EffectType.DAMAGE_PLAYER:
 			var to_side := _player_side_for(side, effect.target)
@@ -419,6 +427,7 @@ func _summon(side: int, card_id: String) -> void:
 		return
 	_state.board[side][slot] = CardInstance.new(card)
 	_state.board_changed.emit(side)
+	CardPourSandEffects.fire_entered(_state, side, slot)
 
 
 func _first_empty_slot(side: int) -> int:
@@ -526,6 +535,7 @@ func _revive(side: int, index: int, slot: int) -> void:
 	_state.graveyard[side].remove_at(index)
 	_state.board[side][slot] = CardInstance.new(card)
 	_state.board_changed.emit(side)
+	CardPourSandEffects.fire_entered(_state, side, slot)
 
 
 ## 撃てる砂術か(GameDesign.md 6章「撃つ条件のある砂術」)。自分の駒を払う砂術は払う駒が、
@@ -565,6 +575,7 @@ static func live_rules_text(state: MatchState, side: int, card: CardData) -> Str
 		var source := recast_source(state, side)
 		if source != null:
 			text += RECAST_NOTE % source.display_name
+	text += CardPourSandEffects.live_note(state, side, card)
 	for effect in card.effects_for(CardEnums.Trigger.ON_PLAY):
 		if effect.effect_type == CardEnums.EffectType.DAMAGE_PLAYER_PLUS_FLIPS:
 			text = text.replace(
@@ -722,6 +733,10 @@ func _targets(side: int, unit: CardInstance, effect: CardEffectData, hint: Dicti
 				if entry["slot"] != own_slot:
 					found.append(entry)
 			found.append_array(_all_slots(foe_side, effect))
+		CardEnums.EffectTarget.ENTERING_UNIT:
+			var entered_slot: int = hint.get("entered_slot", -1)
+			if entered_slot >= 0 and _state.board[side][entered_slot] != null:
+				found = [{"side": side, "slot": entered_slot}]
 		CardEnums.EffectTarget.ALLY_UNIT:
 			# **自分自身は選べない**(GameDesign.md 6章)。効果を持つ駒が自分を強化すると
 			# 「他の駒を助ける」というカードの読みが崩れ、対象を選ぶ意味も無くなるため。

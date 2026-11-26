@@ -38,7 +38,7 @@ func apply(
 		CardEnums.EffectType.DROP_SAND_TO_ONE:
 			_drop_to_one(side, unit, effect, from_slot, origin, hint)
 		CardEnums.EffectType.RAISE_ALL_SAND:
-			_raise_all(side, unit, effect, from_slot, origin)
+			_raise_all(side, unit, effect, from_slot, origin, hint)
 		CardEnums.EffectType.REVIVE_RANDOM_ALL:
 			_revive_all(side, from_slot, origin)
 
@@ -108,10 +108,10 @@ func _drop_to_one(
 
 
 func _raise_all(
-	side: int, unit: CardInstance, effect: CardEffectData, from_slot: int, origin: int
+	side: int, unit: CardInstance, effect: CardEffectData, from_slot: int, origin: int, hint := {}
 ) -> void:
 	var entries: Array = []
-	for entry: Dictionary in _resolver._targets(side, unit, effect, {}):
+	for entry: Dictionary in _resolver._targets(side, unit, effect, hint):
 		if _resolver._unit_at(entry).attack > 0:
 			entries.append(entry)
 	_resolver._strike_many(side, from_slot, entries, CardEnums.EffectVisualStyle.DRAIN, origin)

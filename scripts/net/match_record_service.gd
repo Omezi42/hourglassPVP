@@ -43,6 +43,8 @@ static func end_reason_key(reason: int) -> String:
 			return "timeout"
 		MatchState.EndReason.DRAW:
 			return "draw"
+		MatchState.EndReason.SPECIAL_WIN:
+			return "special"
 	return "hp"
 
 

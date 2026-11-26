@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_reservoir_0"]
+script = ExtResource("script_effect")
+trigger = 3
+target = 6
+effect_type = 54
+value = 1
+random_target = true
+
+[resource]
+script = ExtResource("script_card")
+id = "reservoir"
+display_name = "リザーバー"
+cost = 3
+total_sand = 5
+pool_index = 186
+set_id = "pour_sand"
+rarity = 1
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_reservoir_0")])
+rules_text = "落砂:このターン使わずに残したマナ1につき、ランダムな自分の他の砂時計1体の総量+1"
+flavor_text = "使わなかった分は溜まっていく"
+cannot_attack = false
+is_token = false
