@@ -64,6 +64,8 @@ enum Sfx {
 	SIG_HOLD,
 	SIG_BASTION,
 	SIG_CHASER,
+	SIG_CARILLON,
+	SIG_CLOCKWORK,
 }
 
 const SETTINGS_PATH := "user://sound_settings.json"
@@ -130,6 +132,8 @@ const SFX_PATHS := {
 	Sfx.SIG_HOLD: "res://assets/sfx/sig_hold.wav",
 	Sfx.SIG_BASTION: "res://assets/sfx/sig_bastion.wav",
 	Sfx.SIG_CHASER: "res://assets/sfx/sig_chaser.wav",
+	Sfx.SIG_CARILLON: "res://assets/sfx/sig_carillon.wav",
+	Sfx.SIG_CLOCKWORK: "res://assets/sfx/sig_clockwork.wav",
 }
 
 static var _players: Array[AudioStreamPlayer] = []

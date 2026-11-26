@@ -34,6 +34,8 @@ const ENTRANCES := {
 	"hold": preload("res://scripts/ui/signature/moves/hold_entrance.gd"),
 	"bastion": preload("res://scripts/ui/signature/moves/bastion_entrance.gd"),
 	"chaser": preload("res://scripts/ui/signature/moves/chaser_entrance.gd"),
+	"carillon": preload("res://scripts/ui/signature/moves/carillon_entrance.gd"),
+	"clockwork": preload("res://scripts/ui/signature/moves/clockwork_entrance.gd"),
 }
 
 ## 効果が対象へ届くまで(設置・落砂・砂術など、紋章が飛ぶ場面の代わり)。
@@ -163,6 +165,14 @@ const EFFECTS := {
 	"flare": preload("res://scripts/ui/signature/moves/flare_effect.gd"),
 	"stampede": preload("res://scripts/ui/signature/moves/stampede_effect.gd"),
 	"ignis": preload("res://scripts/ui/signature/moves/ignis_effect.gd"),
+	"bell": preload("res://scripts/ui/signature/moves/bell_effect.gd"),
+	"gong": preload("res://scripts/ui/signature/moves/gong_effect.gd"),
+	"boiler": preload("res://scripts/ui/signature/moves/boiler_effect.gd"),
+	"fastforward": preload("res://scripts/ui/signature/moves/fastforward_effect.gd"),
+	"borrow": preload("res://scripts/ui/signature/moves/borrow_effect.gd"),
+	"alarm": preload("res://scripts/ui/signature/moves/alarm_effect.gd"),
+	"sunrise": preload("res://scripts/ui/signature/moves/sunrise_effect.gd"),
+	"dawn": preload("res://scripts/ui/signature/moves/dawn_effect.gd"),
 }
 
 

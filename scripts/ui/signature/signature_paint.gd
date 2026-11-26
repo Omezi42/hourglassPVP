@@ -733,6 +733,70 @@ static func flame_tongue(
 		)
 
 
+## 音の輪(早鐘の刻の共通の部品)。`center` から `dir` の向きへ開いた3重の弧で、真鍮の縁に朝空の芯を通す。
+## `dir` が ZERO なら全周の輪。`radius` はいちばん外の弧の半径。`ink` を渡すと縁の色を差し替える(払拭のくすんだ色)。
+static func toll_arcs(
+	item: CanvasItem,
+	center: Vector2,
+	dir: Vector2,
+	radius: float,
+	alpha: float,
+	ink := UiPalette.TOLL_BRASS
+) -> void:
+	const RINGS := 3
+	const GAP := 0.3
+	const SPAN := 0.8
+	if alpha <= 0.0 or radius <= 1.0:
+		return
+	var ci := item.get_canvas_item()
+	var mid := 0.0 if dir == Vector2.ZERO else dir.angle()
+	var half := PI if dir == Vector2.ZERO else SPAN
+	var width := clampf(radius * 0.12, 2.0, 4.5)
+	for i in range(RINGS):
+		var r := radius * (1.0 - GAP * float(i))
+		var a := alpha * (1.0 - 0.28 * float(i))
+		ShapePaint.arc(
+			ci,
+			center,
+			r,
+			mid - half,
+			mid + half,
+			28,
+			Color(UiPalette.INK_950, a * 0.5),
+			width + 2.2,
+			true
+		)
+		ShapePaint.arc(ci, center, r, mid - half, mid + half, 28, Color(ink, a), width, true)
+		ShapePaint.arc(
+			ci,
+			center,
+			r,
+			mid - half,
+			mid + half,
+			28,
+			Color(UiPalette.MORNING_SKY, a),
+			width * 0.4,
+			true
+		)
+
+
+## 音の輪が `from` から `to` へ飛ぶ途中の姿。`progress` は0→1。頭の弧が進む向きへ開く。
+static func toll_flight(
+	item: CanvasItem,
+	from: Vector2,
+	to: Vector2,
+	progress: float,
+	radius: float,
+	alpha: float,
+	ink := UiPalette.TOLL_BRASS
+) -> void:
+	if progress <= 0.0 or progress >= 1.0:
+		return
+	var dir := (to - from).normalized()
+	var head := from.lerp(to, ease(progress, 0.7))
+	toll_arcs(item, head - dir * radius, dir, radius, alpha * minf(progress * 4.0, 1.0), ink)
+
+
 ## 粒ごとに決まった0〜1の揺らぎ。`moves/` の側で砂粒を散らすときに使う。
 static func jitter(i: int, salt: int) -> float:
 	return _hash(i, salt)

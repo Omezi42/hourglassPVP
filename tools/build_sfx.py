@@ -966,13 +966,42 @@ def sig_chaser():
     return layer(x, trail, -13, LAND_AT + 0.02)
 
 
+## カリヨンの鐘が順に鳴る間隔と、最初の鐘の打点(`carillon_entrance.gd` の APPEAR・STEP)。
+CARILLON_FIRST = HEAVY_LAND_AT + 0.1 + 0.02
+CARILLON_STEP = 0.06
+
+
+def sig_carillon():
+    """カリヨン:重く落ち、梁の七つの鐘が大きな鐘から小さな鐘へ順に鳴って、音階を一息に駆け上がる。"""
+    x = landing(2.2, heavy=True)
+    for i, midi in enumerate([72, 74, 76, 77, 79, 81, 84]):
+        x = layer(x, hand_bell(midi, 1.4, 1.0 - 0.06 * i), -6, CARILLON_FIRST + CARILLON_STEP * i)
+    return x
+
+
+## クロックワークの歯車が回り始める位置と、小さな歯車が一つ早く回って止まる位置(`clockwork_entrance.gd`)。
+CLOCKWORK_TURN_AT = LAND_AT + 0.12
+CLOCKWORK_CLICK_AT = CLOCKWORK_TURN_AT + 0.42 + 0.02
+
+
+def sig_clockwork():
+    """クロックワーク:着地し、真鍮の歯車がかたかたと噛み合って回り、最後に「かちり」と一つ進んで小さく鳴る。"""
+    x = landing(1.4)
+    ticks = 7
+    for i in range(ticks):
+        time = CLOCKWORK_TURN_AT + (CLOCKWORK_CLICK_AT - CLOCKWORK_TURN_AT - 0.06) * i / (ticks - 1)
+        x = layer(x, strike(0.08, brass(2300 + 60 * (i % 2), 0.02), 0.0002, 0.5, (3000, 9000)), -10, time)
+    x = layer(x, strike(0.3, brass(1500, 0.08), 0.0002, 0.7, (3000, 9000)), -3, CLOCKWORK_CLICK_AT)
+    return layer(x, hand_bell(88, 1.0, 0.8), -9, CLOCKWORK_CLICK_AT + 0.05)
+
+
 SIGNATURES = [
     sig_freeze, sig_relic, sig_middle, sig_phase, sig_grain, sig_dash, sig_shield, sig_sand,
     sig_watcher, sig_glass, sig_vamp, sig_drill, sig_lance, sig_twin, sig_lock, sig_gate,
     sig_poison, sig_guard, sig_mirror, sig_wall, sig_bypass, sig_colossus,
     sig_obelisk, sig_tower, sig_anchor, sig_sage, sig_grimoire,
     sig_maestro, sig_zero_hour, sig_necropolis,
-    sig_hold, sig_bastion, sig_chaser,
+    sig_hold, sig_bastion, sig_chaser, sig_carillon, sig_clockwork,
 ]
 
 
