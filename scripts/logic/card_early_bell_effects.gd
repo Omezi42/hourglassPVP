@@ -13,6 +13,10 @@ const TYPES := [
 ## CPUの見積もり。マナ1つ・最大マナ1つ・次の手番のマナ1つの値打ち。
 const MAX_MANA_VALUE := 4.0
 const DELAY_VALUE := 1.5
+## 場にいる間のコスト下げ(クロックワーク)で、手札1枚のコストが1下がることの値打ち。
+const COST_DOWN_VALUE_PER_CARD := 1.0
+## 余ったマナを次の手番へ持ち越すこと(スルース)の値打ち。持ち越せるマナの見込みは1ほど。
+const CARRY_MANA_VALUE := 2.0
 ## 払えば負ける・払ってHPが尽きる手を選ばないための罰。
 const SELF_KILL_PENALTY := 1000.0
 
@@ -132,3 +136,34 @@ static func spell_bonus(state: MatchState, side: int, card: CardData) -> float:
 		if handles(effect.effect_type):
 			total += cpu_value(state, side, effect, spent)
 	return total
+
+
+## 最大マナが上限のとき、場の駒が自分のカードのコストを下げる量の合計(クロックワーク)。効果を消された駒は数えない。
+static func full_mana_cost_down(state: MatchState, side: int) -> int:
+	if int(state.max_mana.get(side, 0)) < MatchState.MAX_MANA:
+		return 0
+	var down := 0
+	for unit: CardInstance in state.units(side):
+		if not unit.silenced:
+			down += unit.data.ally_cost_down_at_full_mana
+	return down
+
+
+## 場の駒が、手番の終わりに残したマナを持ち越させるか(スルース)。効果を消された駒は数えない。
+static func carries_mana(state: MatchState, side: int) -> bool:
+	return state.units(side).any(
+		func(unit: CardInstance) -> bool: return unit.data.carries_mana and not unit.silenced
+	)
+
+
+## 場にいる間の常在(クロックワークのコスト下げ・スルースの持ち越し)の、CPUの見積もり。
+## コスト下げは最大マナが上限のときだけ働くため、上限に届いているときに下がる手札の枚数ぶんだけ見る。
+static func cpu_standing_value(state: MatchState, side: int, card: CardData) -> float:
+	var value := 0.0
+	if card.ally_cost_down_at_full_mana > 0 and int(state.max_mana[side]) >= MatchState.MAX_MANA:
+		for hand_card: CardData in state.hand[side]:
+			if state.play_cost(side, hand_card) > MatchState.MIN_COST:
+				value += float(card.ally_cost_down_at_full_mana) * COST_DOWN_VALUE_PER_CARD
+	if card.carries_mana:
+		value += CARRY_MANA_VALUE
+	return value

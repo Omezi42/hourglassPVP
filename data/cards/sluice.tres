@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+
+[resource]
+script = ExtResource("script_card")
+id = "sluice"
+display_name = "スルース"
+cost = 3
+total_sand = 5
+pool_index = 194
+set_id = "pour_sand"
+rarity = 2
+keywords = Array[int]([])
+effects = Array[Resource]([])
+rules_text = "常在:自分の手番の終わりに残したマナを、次の手番へ持ち越す(上限7)"
+flavor_text = "堰を切るのは明日"
+cannot_attack = false
+is_token = false
+carries_mana = true

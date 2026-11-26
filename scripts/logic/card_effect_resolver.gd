@@ -110,7 +110,7 @@ func _condition_met(side: int, unit: CardInstance, effect: CardEffectData) -> bo
 				and CardEarlyBellEffects.mana_condition_met(_state, side, effect)
 				and CardPourSandEffects.mana_condition_met(_state, side, effect)
 			)
-	return true
+	return CardForesightEffects.grave_condition_met(_state, side, effect)
 
 
 func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Dictionary) -> void:
@@ -559,6 +559,11 @@ static func castable(state: MatchState, side: int, card: CardData) -> bool:
 			CardEnums.EffectType.PLAY_DECK_TOP:
 				if state.deck[side].is_empty():
 					return false
+			CardEnums.EffectType.DESTROY_AND_REPEAT_DEATH:
+				if not state.units(side).any(
+					func(unit: CardInstance) -> bool: return eligible_target(unit, effect)
+				):
+					return false
 	return true
 
 
@@ -853,6 +858,8 @@ static func eligible_target(unit: CardInstance, effect: CardEffectData) -> bool:
 			return unit.health <= effect.condition_total
 		CardEnums.ConditionScope.TOTAL_AT_LEAST:
 			return unit.total_sand() >= effect.condition_total
+		CardEnums.ConditionScope.TARGET_HAS_DEATH_EFFECT:
+			return not unit.effects_for(CardEnums.Trigger.ON_DEATH).is_empty()
 	return true
 
 

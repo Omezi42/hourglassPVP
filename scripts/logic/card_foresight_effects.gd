@@ -40,6 +40,13 @@ static func handles(effect_type: int) -> bool:
 
 
 ## 出したときに山札の上を見て選ばせる効果(スコープ・予兆)。無ければ null。
+## 「自分の墓地のカードが n 枚以上なら」(OWN_GRAVE_AT_LEAST)。ほかの条件は見ない。砂時計・砂術・トークンをすべて数える。
+static func grave_condition_met(state: MatchState, side: int, effect: CardEffectData) -> bool:
+	if effect.condition_scope == CardEnums.ConditionScope.OWN_GRAVE_AT_LEAST:
+		return state.graveyard[side].size() >= effect.condition_total
+	return true
+
+
 static func peek_choice_effect(card: CardData) -> CardEffectData:
 	for effect in card.effects_for(CardEnums.Trigger.ON_PLAY):
 		if (

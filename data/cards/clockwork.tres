@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+
+[resource]
+script = ExtResource("script_card")
+id = "clockwork"
+display_name = "クロックワーク"
+cost = 5
+total_sand = 6
+pool_index = 191
+set_id = "early_bell"
+rarity = 2
+keywords = Array[int]([])
+effects = Array[Resource]([])
+rules_text = "常在:自分の最大マナが7のあいだ、自分のカードのコストが1下がる(1未満にはならない)"
+flavor_text = "歯車が噛み合うと一つ早く回る"
+cannot_attack = false
+is_token = false
+ally_cost_down_at_full_mana = 1

@@ -55,7 +55,7 @@ func _place(state: MatchState, side: int, id: String, slot: int) -> CardInstance
 
 func _test_set_is_registered() -> void:
 	_assert.call(CardSetLibrary.has_set(SET_ID), "導火の刻が登録されている")
-	_assert.call(CardSetLibrary.card_ids(SET_ID).size() == 9, "導火の刻は9枚")
+	_assert.call(CardSetLibrary.card_ids(SET_ID).size() == 10, "導火の刻は10枚")
 	for id in CardSetLibrary.card_ids(SET_ID):
 		var card := CardLibrary.find_by_id(id)
 		_assert.call(card != null and card.set_id == SET_ID, "%s が導火の刻のカードとして読める" % id)

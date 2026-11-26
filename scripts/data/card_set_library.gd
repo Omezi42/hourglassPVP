@@ -218,7 +218,7 @@ const SETS: Dictionary = {
 	{
 		"id": "early_bell",
 		"display_name": "早鐘の刻",
-		"description": "鐘を早く鳴らして刻を進める9枚",
+		"description": "鐘を早く鳴らして刻を進める10枚",
 		"card_ids":
 		[
 			"bell",
@@ -230,6 +230,7 @@ const SETS: Dictionary = {
 			"alarm",
 			"sunrise",
 			"dawn",
+			"clockwork",
 		],
 		"price": 0,
 	},
@@ -238,7 +239,7 @@ const SETS: Dictionary = {
 	{
 		"id": "fuse_sand",
 		"display_name": "導火の刻",
-		"description": "落ちきる時が決まった器の9枚",
+		"description": "落ちきる時が決まった器の10枚",
 		"card_ids":
 		[
 			"fuse",
@@ -250,6 +251,7 @@ const SETS: Dictionary = {
 			"fuseline",
 			"nova",
 			"countdown",
+			"epicenter",
 		],
 		"price": 0,
 	},
@@ -258,7 +260,7 @@ const SETS: Dictionary = {
 	{
 		"id": "foresight_sand",
 		"display_name": "先触の刻",
-		"description": "まだ来ない刻を先に見る9枚",
+		"description": "まだ来ない刻を先に見る10枚",
 		"card_ids":
 		[
 			"shaft",
@@ -270,6 +272,7 @@ const SETS: Dictionary = {
 			"horoscope",
 			"prophecy",
 			"sibyl",
+			"vision",
 		],
 		"price": 0,
 	},
@@ -278,7 +281,7 @@ const SETS: Dictionary = {
 	{
 		"id": "pour_sand",
 		"display_name": "注砂の刻",
-		"description": "残った砂を全部注ぐ9枚",
+		"description": "残った砂を全部注ぐ10枚",
 		"card_ids":
 		[
 			"cask",
@@ -290,6 +293,7 @@ const SETS: Dictionary = {
 			"reservoir",
 			"amphora",
 			"deluge",
+			"sluice",
 		],
 		"price": 0,
 	},

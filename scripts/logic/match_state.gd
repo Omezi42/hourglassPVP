@@ -113,6 +113,8 @@ var max_mana: Dictionary = {}
 ## 次の手番のマナが少なく始まる量(Side をキーにした int。早鐘の刻)。その側の手番の始め、回復の後に引いて0へ戻す。
 ## 重なれば足す。画面は「次 −n」と出す。
 var mana_debt: Dictionary = {}
+## 次の手番へ持ち越すマナ(Side をキーにした int。スルース)。手番の終わりに残したマナを書き、次の手番の回復に足して0へ戻す。
+var mana_carry: Dictionary = {}
 ## 山札(先頭が次に引くカード)。
 var deck: Dictionary = {}
 var hand: Dictionary = {}
@@ -194,6 +196,7 @@ func start_match(
 		mana[side] = 0
 		max_mana[side] = 0
 		mana_debt[side] = 0
+		mana_carry[side] = 0
 		hand[side] = []
 		graveyard[side] = []
 		_deck_exhausted[side] = false
@@ -293,8 +296,11 @@ func _begin_turn() -> void:
 	var side := current_turn
 	flips_this_turn.clear()
 	max_mana[side] = mini(max_mana[side] + 1, MAX_MANA)
-	mana[side] = maxi(max_mana[side] - int(mana_debt.get(side, 0)), 0)
+	# 持ち越しは回復に足してから、「次 −n」を引く(GameDesign.md 6章)。
+	var refilled := mini(max_mana[side] + int(mana_carry.get(side, 0)), MAX_MANA)
+	mana[side] = maxi(refilled - int(mana_debt.get(side, 0)), 0)
 	mana_debt[side] = 0
+	mana_carry[side] = 0
 	mana_changed.emit(side, mana[side], max_mana[side])
 	for unit in units(side):
 		unit.begin_turn()
@@ -314,6 +320,7 @@ func end_turn() -> void:
 	_resolve_turn_end_effects(side)
 	if _match_over:
 		return
+	_store_mana_carry(side)
 	_refresh_held_keywords()
 	for slot in BOARD_SIZE:
 		var unit: CardInstance = board[side][slot]
@@ -336,6 +343,12 @@ func end_turn() -> void:
 		return
 	current_turn = other_side(side)
 	_begin_turn()
+
+
+## 手番の終わりに残したマナを、持ち越す駒がいれば次の手番へ預ける。持ち越すのは1回ぶん(2体いても足さない)。
+func _store_mana_carry(side: int) -> void:
+	if CardEarlyBellEffects.carries_mana(self, side):
+		mana_carry[side] = maxi(int(mana[side]), 0)
 
 
 ## 持ち時間が尽きた。**敗北ではなく、その手番を強制的に終えて相手へ渡す**
@@ -448,7 +461,7 @@ func can_play(side: int, hand_index: int) -> bool:
 
 
 ## 実際に払うコスト(GameDesign.md 6章)。相手の砂時計の数で下がるカード・自分のHPが低いと下がるカード・最大マナが上限だと下がるカードと、
-## 自分の場に砂術のコストを下げる駒がいるときの砂術だけが元のコストと違う。
+## 自分の場に砂術のコストを下げる駒がいるときの砂術・最大マナが上限のときに全体のコストを下げる駒がいるときの全カードだけが元のコストと違う。
 func play_cost(side: int, card: CardData) -> int:
 	var down := card.cost_down_per_enemy_unit * units(other_side(side)).size()
 	if card.cost_down_low_hp > 0 and int(hp[side]) <= card.cost_down_hp_threshold:
@@ -458,6 +471,7 @@ func play_cost(side: int, card: CardData) -> int:
 	if card.is_spell:
 		for unit in units(side):
 			down += unit.spell_cost_down()
+	down += CardEarlyBellEffects.full_mana_cost_down(self, side)
 	return card.cost if down <= 0 else maxi(card.cost - down, MIN_COST)
 
 

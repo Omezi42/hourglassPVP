@@ -72,7 +72,7 @@ func _place(state: MatchState, side: int, id: String, slot: int) -> CardInstance
 
 
 func _test_sets_are_registered() -> void:
-	_assert.call(CardSetLibrary.card_ids(SET_ID).size() == 9, "注砂の刻は9枚")
+	_assert.call(CardSetLibrary.card_ids(SET_ID).size() == 10, "注砂の刻は10枚")
 	_assert.call(CardSetLibrary.card_ids(EXTRA_ID) == ["terminus", "promise"], "第2弾のテーマ外は2枚")
 	for set_id in [SET_ID, EXTRA_ID]:
 		_assert.call(CardSetLibrary.has_set(set_id), "%s が登録されている" % set_id)
@@ -132,7 +132,7 @@ func _test_pour_raises_all_sand() -> void:
 	young.drop_sand(2)
 	var total := aged.total_sand()
 	_assert.call(state.cast_spell(A, 0, {"side": A, "slot": 0}), "注ぎ砂を撃てる")
-	_assert.call(aged.attack == 0 and aged.health == total, "選んだ駒の砂が残らず上へ戻る")
+	_assert.call(aged.attack == 0 and aged.health == total + 1, "選んだ駒の砂が残らず上へ戻り、総量+1")
 	_assert.call(young.attack == 2, "選ばなかった駒は変わらない")
 
 

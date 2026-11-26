@@ -53,12 +53,6 @@ const REPEAT_TIMES := {
 }
 ## 自分のHPを払うと負ける手へ付ける減点(出さないための十分大きな値)。
 const SELF_KILL_PENALTY := 100.0
-## 守護を無視して攻撃できる駒1体ぶんの価値(抜け道)。守護の駒を避けて殴れる1回を、本体の数点ぶんに見る。
-const GUARD_BYPASS_PER_ATTACKER := 2.0
-## セージが手札の砂術1枚のコストを1下げることの価値。
-const SPELL_DISCOUNT_PER_CARD := 1.0
-## マエストロの価値。場にいる反転トリガー持ち1体につき足す。
-const FLIP_ECHO_PER_UNIT := 2.0
 ## 墓地から1体を手札へ戻す価値。ドロー1枚(3.0)と同じに見る。
 const RECOVER_VALUE := 3.0
 ## 反転トリガーを持つ駒を1回反転できることの価値(反転の選択とリピートの値付けで共有)。
@@ -325,17 +319,17 @@ func _spell_value(state: MatchState, side: int, hand_card: CardData) -> float:
 				return 0.0
 			if (
 				effect.effect_type == CardEnums.EffectType.SWAP_STATS
-				and _best_ally_flip(state, side)["slot"] < 0
+				and CardCpuAllyValue.best_flip(state, side)["slot"] < 0
 			):
 				return 0.0
 			if (
 				effect.effect_type == CardEnums.EffectType.DROP_SAND
-				and _best_ally_drop(state, side, effect.value)["slot"] < 0
+				and CardCpuAllyValue.best_drop(state, side, effect.value)["slot"] < 0
 			):
 				return 0.0
 			if (
 				effect.effect_type == CardEnums.EffectType.RAISE_SAND
-				and _best_ally_raise(state, side, effect.value)["slot"] < 0
+				and CardCpuAllyValue.best_raise(state, side, effect.value)["slot"] < 0
 			):
 				return 0.0
 		value += _on_play_value(state, side, effect)
@@ -402,13 +396,14 @@ func _card_value(state: MatchState, side: int, card: CardData) -> float:
 	if card.has_keyword(CardEnums.Keyword.PIERCE):
 		value += 1.0
 	if card.allies_ignore_guard:
-		value += _guard_bypass_value(state, side)
+		value += CardCpuAllyValue.guard_bypass(state, side)
 	if card.ally_spell_cost_down > 0:
-		value += _spell_discount_value(state, side, card.ally_spell_cost_down)
+		value += CardCpuAllyValue.spell_discount(state, side, card.ally_spell_cost_down)
 	if card.ally_flip_triggers_twice:
-		value += _flip_echo_value(state, side)
+		value += CardCpuAllyValue.flip_echo(state, side)
 	if card.plays_deck_top:
 		value += CardForesightEffects.CARD_VALUE
+	value += CardEarlyBellEffects.cpu_standing_value(state, side, card)
 	if card.cannot_attack:
 		# 攻撃できないぶん、生涯ダメージの見積もりは成り立たない。壁としての厚みだけを見る。
 		value = float(total)
@@ -475,6 +470,7 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 		)
 		or not CardBackWaterEffects.hp_condition_met(state, side, effect)
 		or not CardEarlyBellEffects.mana_condition_met(state, side, effect)
+		or not CardForesightEffects.grave_condition_met(state, side, effect)
 	):
 		return value
 	var themed: Variant = _themed_value(state, side, effect)
@@ -503,6 +499,10 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 				var paid := _sacrifice_slot(state, side)
 				if paid >= 0:
 					value = -float(state.board[side][paid].lifetime_damage())
+			elif effect.target == CardEnums.EffectTarget.ALL_ENEMY_UNITS:
+				# 全体除去(ヴィジョン)。並んでいる駒の生涯ダメージがそのまま積み上がる。
+				for unit in state.units(foe_side):
+					value += float(unit.lifetime_damage())
 			else:
 				var target := _strongest_enemy(state, foe_side, effect)
 				if target >= 0:
@@ -530,7 +530,7 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 			# **味方を反転させる効果は、相手を反転させるのと価値の向きが逆**。
 			# 攻撃力が体力を上回った駒を戻すと寿命が伸びる(GameDesign.md 1章)。
 			if effect.target == CardEnums.EffectTarget.ALLY_UNIT:
-				value = float(_best_ally_flip(state, side)["gain"])
+				value = float(CardCpuAllyValue.best_flip(state, side)["gain"])
 			elif effect.target == CardEnums.EffectTarget.ALL_ALLY_UNITS:
 				# 自分の盤面をまとめて反転するのは**得とは限らない**。損になる駒も
 				# あるため、増減をそのまま足し合わせる(負の値になりうる)。
@@ -578,12 +578,12 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 			elif effect.target == CardEnums.EffectTarget.ALLY_UNIT:
 				# 味方の砂を落とすのは「体力を攻撃力へ換える」取引であり、
 				# 得な駒とそうでない駒がある。いちばん得をする駒の増分を見る。
-				value = float(_best_ally_drop(state, side, effect.value)["gain"])
+				value = float(CardCpuAllyValue.best_drop(state, side, effect.value)["gain"])
 		CardEnums.EffectType.RAISE_SAND:
 			# 砂を上へ戻す(GameDesign.md 6章)。味方なら寿命が伸びるぶんの増分、
 			# 相手なら抜ける攻撃力ぶん(こちらの本体・駒がその手番に受けずに済む量)を見る。
 			if effect.target == CardEnums.EffectTarget.ALLY_UNIT:
-				value = float(_best_ally_raise(state, side, effect.value)["gain"])
+				value = float(CardCpuAllyValue.best_raise(state, side, effect.value)["gain"])
 			elif effect.target == CardEnums.EffectTarget.ALL_ENEMY_UNITS:
 				for unit in state.units(foe_side):
 					value += float(mini(unit.attack, effect.value)) * FACE_WEIGHT
@@ -638,83 +638,6 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 	return value
 
 
-## 抜け道の価値。相手に守護の駒がいて、自分に攻撃できる駒がいるときだけ、その数に応じて持つ
-## (出した駒自身は出したターンに殴れないため数えない)。
-func _guard_bypass_value(state: MatchState, side: int) -> float:
-	if state.can_attack_player(side):
-		return 0.0
-	var ready := 0
-	for unit in state.units(side):
-		if unit.can_attack() and unit.attack > 0:
-			ready += 1
-	return ready * GUARD_BYPASS_PER_ATTACKER
-
-
-## セージの価値。手札の砂術のうち、まだ下げられる(最小コストより上の)ぶんだけ持つ。
-func _spell_discount_value(state: MatchState, side: int, down: int) -> float:
-	var saved := 0
-	for card: CardData in state.hand[side]:
-		if card.is_spell:
-			saved += mini(down, maxi(state.play_cost(side, card) - MatchState.MIN_COST, 0))
-	return saved * SPELL_DISCOUNT_PER_CARD
-
-
-## マエストロの価値。反転トリガーを持つ味方の数だけ持つ。
-func _flip_echo_value(state: MatchState, side: int) -> float:
-	var echoed := 0
-	for unit: CardInstance in state.units(side):
-		if not unit.effects_for(CardEnums.Trigger.ON_FLIP).is_empty():
-			echoed += 1
-	return echoed * FLIP_ECHO_PER_UNIT
-
-
-## 砂を落として最も得をする味方と、その得の大きさ。得をする駒がいなければ slot は -1。
-func _best_ally_drop(state: MatchState, side: int, amount: int) -> Dictionary:
-	var best := {"slot": -1, "gain": 0.0}
-	for slot in MatchState.BOARD_SIZE:
-		var unit: CardInstance = state.board[side][slot]
-		if unit == null:
-			continue
-		var health := unit.health - amount
-		# 落としきると砕けるため、得どころか駒を1体失う。
-		if health <= 0:
-			continue
-		var gain := lifetime_of(health, unit.attack + amount) - float(unit.lifetime_damage())
-		if gain > best["gain"]:
-			best = {"slot": slot, "gain": gain}
-	return best
-
-
-## 砂を上へ戻して最も得をする味方と、その得の大きさ。攻撃力0の駒には効かないため、
-## 戻せる砂が無い駒は候補にしない。得をする駒がいなければ slot は -1。
-func _best_ally_raise(state: MatchState, side: int, amount: int) -> Dictionary:
-	var best := {"slot": -1, "gain": 0.0}
-	for slot in MatchState.BOARD_SIZE:
-		var unit: CardInstance = state.board[side][slot]
-		if unit == null or unit.attack <= 0:
-			continue
-		var moved: int = mini(amount, unit.attack)
-		var gain := (
-			lifetime_of(unit.health + moved, unit.attack - moved) - float(unit.lifetime_damage())
-		)
-		if gain > best["gain"]:
-			best = {"slot": slot, "gain": gain}
-	return best
-
-
-## 反転させて最も得をする味方と、その得の大きさ。得をする駒がいなければ slot は -1。
-func _best_ally_flip(state: MatchState, side: int) -> Dictionary:
-	var best := {"slot": -1, "gain": 0.0}
-	for slot in MatchState.BOARD_SIZE:
-		var unit: CardInstance = state.board[side][slot]
-		if unit == null or not unit.flippable():
-			continue
-		var gain := lifetime_of(unit.attack, unit.health) - float(unit.lifetime_damage())
-		if gain > best["gain"]:
-			best = {"slot": slot, "gain": gain}
-	return best
-
-
 ## 反転させたときに相手の生涯ダメージがどれだけ下がるか。攻撃力の高い駒ほど大きい。
 static func swap_value(unit: CardInstance) -> float:
 	return maxf(0.0, unit.lifetime_damage() - lifetime_of(unit.attack, unit.health))
@@ -739,11 +662,11 @@ func _effect_target(state: MatchState, side: int, hand_card: CardData) -> Dictio
 			if effect.effect_type == CardEnums.EffectType.DESTROY_UNIT:
 				slot = _sacrifice_slot(state, side)
 			elif effect.effect_type == CardEnums.EffectType.SWAP_STATS:
-				slot = _best_ally_flip(state, side)["slot"]
+				slot = CardCpuAllyValue.best_flip(state, side)["slot"]
 			elif effect.effect_type == CardEnums.EffectType.DROP_SAND:
-				slot = _best_ally_drop(state, side, effect.value)["slot"]
+				slot = CardCpuAllyValue.best_drop(state, side, effect.value)["slot"]
 			elif effect.effect_type == CardEnums.EffectType.RAISE_SAND:
-				slot = _best_ally_raise(state, side, effect.value)["slot"]
+				slot = CardCpuAllyValue.best_raise(state, side, effect.value)["slot"]
 			elif effect.effect_type == CardEnums.EffectType.TRANSFER_TOTAL_TO_SELF:
 				slot = CardPourSandEffects.cpu_transfer_slot(state, side, effect.value)
 			if slot >= 0:

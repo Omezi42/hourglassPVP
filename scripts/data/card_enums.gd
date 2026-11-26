@@ -238,6 +238,9 @@ enum EffectType {
 	DISTRIBUTE_TOTAL_BY_OWN_ATTACK,
 	## 自分の山札が0枚なら、対局に勝つ(テルミヌス)。勝つのは効果を解決したその時点で、相手のHPは問わない。
 	WIN_IF_DECK_EMPTY,
+	## 対象の自分の砂時計1体を破壊し、その余砂(ON_DEATH。導火線で与えた余砂も含む)をもう一度発動する(爆心。導火の刻)。
+	## 破壊で1回、もう一度で1回。余砂を持たない駒は選べない(ConditionScope.TARGET_HAS_DEATH_EFFECT)。
+	DESTROY_AND_REPEAT_DEATH,
 }
 
 ## コンボ系カードの発動条件が確認する範囲(GameDesign.md 6章)。
@@ -276,6 +279,10 @@ enum ConditionScope {
 	MAX_MANA_FULL,
 	## 残りのマナ(コストを払った後)が condition_total 以上か(ラドル。注砂の刻)。発動の可否を決める条件。
 	OWN_MANA_AT_LEAST,
+	## 自分の墓地のカード(砂時計・砂術・トークンすべて)が condition_total 枚以上か(ヴィジョン。先触の刻)。発動の可否を決める条件。
+	OWN_GRAVE_AT_LEAST,
+	## 選んだ対象が余砂(ON_DEATH の効果。導火線で与えたものも含む)を持つか(爆心。導火の刻)。TARGET と同じく対象の絞り込みとして働く。
+	TARGET_HAS_DEATH_EFFECT,
 }
 
 ## 効果が対象へ届く演出の「型」(GameDesign.md 9章)。`MatchState.effect_struck` /

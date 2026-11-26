@@ -68,6 +68,11 @@ extends Resource
 ## 場にいる間、自分の山札の一番上が公開され、手札と同じように使える(GameDesign.md 6章「山札の上を扱う効果」。シビル)。
 ## 語にしないためフラグで持つ。消された駒は持たない。
 @export var plays_deck_top: bool = false
+## 場にいる間、自分の最大マナが上限に届いているなら、自分のカードのコストがこの値だけ下がる(GameDesign.md 6章。クロックワーク)。
+## 複数体なら足し合わせる。実際に払うコストは `MatchState.play_cost()` が出す。
+@export var ally_cost_down_at_full_mana: int = 0
+## 場にいる間、自分の手番の終わりに残したマナを次の手番へ持ち越す(GameDesign.md 6章。スルース)。語にしないためフラグで持つ。
+@export var carries_mana: bool = false
 
 ## 砂術(GameDesign.md 6章)。**盤面へ出ず、効果だけを起こして墓地へ行く。**
 ## true のとき total_sand / keywords / cannot_attack は使わない。
@@ -131,6 +136,8 @@ func category_name() -> String:
 		or allies_ignore_guard
 		or ally_spell_cost_down > 0
 		or plays_deck_top
+		or ally_cost_down_at_full_mana > 0
+		or carries_mana
 	):
 		return "常在"
 	return ""

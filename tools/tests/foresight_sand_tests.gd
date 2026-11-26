@@ -75,7 +75,7 @@ func _grave_ids(state: MatchState, side: int) -> Array:
 
 func _test_set_is_registered() -> void:
 	_assert.call(CardSetLibrary.has_set(SET_ID), "先触の刻が登録されている")
-	_assert.call(CardSetLibrary.card_ids(SET_ID).size() == 9, "先触の刻は9枚")
+	_assert.call(CardSetLibrary.card_ids(SET_ID).size() == 10, "先触の刻は10枚")
 	for id in CardSetLibrary.card_ids(SET_ID):
 		var card := CardLibrary.find_by_id(id)
 		_assert.call(card != null and card.set_id == SET_ID, "%s が先触の刻のカードとして読める" % id)

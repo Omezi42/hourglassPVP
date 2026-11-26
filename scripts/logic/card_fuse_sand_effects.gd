@@ -8,6 +8,7 @@ const TYPES := [
 	CardEnums.EffectType.GRANT_EFFECT,
 	CardEnums.EffectType.LIFT_SUMMON_LIMIT,
 	CardEnums.EffectType.DAMAGE_UNIT_BY_OWN_ATTACK,
+	CardEnums.EffectType.DESTROY_AND_REPEAT_DEATH,
 ]
 ## CPUの見積もり。与えた効果(導火線)を持つ駒が場にいる間に、その効果が働く見込みの回数。
 const GRANT_FIRES := 1.0
@@ -52,6 +53,8 @@ func apply(
 			)
 			for entry: Dictionary in fresh:
 				_resolver._unit_at(entry).summoned_this_turn = false
+		CardEnums.EffectType.DESTROY_AND_REPEAT_DEATH:
+			_destroy_and_repeat(side, entries, from_slot, origin)
 		CardEnums.EffectType.DAMAGE_UNIT_BY_OWN_ATTACK:
 			# 攻撃力0なら鳴らす鐘が無い。紋章も飛ばさない。
 			if unit.attack <= 0:
@@ -61,6 +64,26 @@ func apply(
 			)
 			for entry: Dictionary in entries:
 				_state.damage_unit(entry["side"], entry["slot"], unit.attack)
+
+
+## 対象を破壊し(余砂が1回働く)、その余砂をもう一度発動する(爆心)。余砂を持たない駒には何もしない。
+func _destroy_and_repeat(side: int, entries: Array, from_slot: int, origin: int) -> void:
+	if entries.is_empty():
+		return
+	var target := _resolver._unit_at(entries[0])
+	if target == null or target.effects_for(CardEnums.Trigger.ON_DEATH).is_empty():
+		return
+	var slot: int = entries[0]["slot"]
+	_resolver._strike_for_targets(
+		side,
+		from_slot,
+		CardEnums.EffectTarget.ALLY_UNIT,
+		entries,
+		CardEnums.EffectVisualStyle.STRIKE,
+		origin
+	)
+	_state.destroy_unit(side, slot)
+	_state._fire(side, target, CardEnums.Trigger.ON_DEATH, {"death_slot": slot})
 
 
 ## CPUの見積もり。`unit` は効果を持つ駒(設置の見積もりでは置く前なので null)。

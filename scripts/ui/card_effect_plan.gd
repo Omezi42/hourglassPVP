@@ -36,6 +36,8 @@ const FOE_HEAVY := ["lock", 4, 4]
 const FOE_TARGET_SLOT := 2
 const FOE_HEAVY_SLOT := 3
 const ALLY := ["sand", 4, 1]
+## 余砂を持つ味方(余砂をもう一度発動する効果の実演)。[id, 体力, 攻撃力]
+const DEATH_ALLY := ["amphora", 4, 1]
 ## 殴られると1枚引く相手の駒(相手のドローに反応する効果の実演)。[id, 体力, 攻撃力]
 const FOE_DRAWER := ["crack", 3, 0]
 ## 反転トリガーを2回にする効果の実演で返す味方(反転:相手プレイヤーに2ダメージ)。[id, 体力, 攻撃力]
@@ -309,6 +311,11 @@ static func _place_condition_match(
 				state.hp[side] = need
 			CardEnums.ConditionScope.OWN_MANA_AT_LEAST:
 				pass  # 実演のマナは満タンで、残りは条件を満たす。
+			CardEnums.ConditionScope.OWN_GRAVE_AT_LEAST:
+				for i in need:
+					state.graveyard[side].append(_card(ALLY[0]))
+			CardEnums.ConditionScope.TARGET_HAS_DEATH_EFFECT:
+				_place(state, side, ALLY_SLOT, _card(DEATH_ALLY[0]), DEATH_ALLY[1], DEATH_ALLY[2])
 			CardEnums.ConditionScope.ATTACK_OVER_HEALTH:
 				_place(state, foe, MATCH_SLOT, _card(FOE_TARGET[0]), 1, 2)
 				_place(state, side, MATCH_SLOT, _card(ALLY[0]), 1, 2)
