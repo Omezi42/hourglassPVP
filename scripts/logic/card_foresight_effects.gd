@@ -165,7 +165,7 @@ func _reveal_raise_sand(
 		var target := _resolver._unit_at(entry)
 		var moved := target.raise_sand(top.cost) if target != null else 0
 		if moved > 0:
-			_state.unit_raised.emit(entry["side"], entry["slot"], moved)
+			CardDrawSandEffects.note_sand_raised(_state, entry["side"], entry["slot"], moved)
 
 
 ## 山札の一番上を公開する。コスト value 以下の砂時計なら場に出し(設置効果は働く)、出せなければ・それ以外は手札へ。

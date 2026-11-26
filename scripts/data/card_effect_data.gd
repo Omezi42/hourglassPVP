@@ -31,3 +31,6 @@ extends Resource
 @export var granted_effect: CardEffectData
 ## 与えた効果を札の文の末尾へ足して見せる一文(導火線。GameDesign.md 6章「効果を与える効果」)。granted_effect の側へ書く。
 @export var shown_text: String = ""
+## 対象を1体取る効果で、攻撃力がいちばん高い駒を選ぶ(同点なら左の枠。ポンプ。汲砂の刻)。
+## プレイヤーは選ばず、札には「攻撃力がいちばん高い」と書く(GameDesign.md 6章)。
+@export var highest_attack_target: bool = false

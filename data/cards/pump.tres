@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_pump_0"]
+script = ExtResource("script_effect")
+trigger = 3
+target = 1
+effect_type = 15
+value = 1
+highest_attack_target = true
+
+[resource]
+script = ExtResource("script_card")
+id = "pump"
+display_name = "ポンプ"
+cost = 3
+total_sand = 5
+pool_index = 197
+set_id = "draw_sand"
+rarity = 0
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_pump_0")])
+rules_text = "落砂:攻撃力がいちばん高い相手の砂時計1体の砂が1粒上へ戻る"
+flavor_text = "一番深いところから汲む"
+cannot_attack = false
+is_token = false

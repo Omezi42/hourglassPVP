@@ -118,7 +118,7 @@ func _raise_all(
 	for entry: Dictionary in entries:
 		var target := _resolver._unit_at(entry)
 		var moved := target.raise_sand(target.attack)
-		_state.unit_raised.emit(entry["side"], entry["slot"], moved)
+		CardDrawSandEffects.note_sand_raised(_state, entry["side"], entry["slot"], moved)
 
 
 ## 空き枠を左から埋める。出す砂時計は墓地の選べるもの(目覚めの砂と同じ)からランダムに選ぶ。

@@ -67,6 +67,12 @@ enum Trigger {
 	## 自分が砂時計を出したとき(ファウンテン。注砂の刻)。手から出したときも効果で出したときも働き、その砂時計自身が出たときは働かない。
 	## hint の entered_slot が出た砂時計の枠(EffectTarget.ENTERING_UNIT が読む)。ON_ALLY_DEATH と同じく語にせず「常在」と出す。
 	ON_ALLY_ENTER,
+	## この駒が戦闘で相手の砂時計へダメージを与えたとき(リーチ。汲砂の刻)。与えた量が hint の dealt に入る。
+	## 攻撃したときも反撃したときも働く。ON_ALLY_DEATH と同じく語にせず「常在」と出す。
+	ON_DEAL_DAMAGE,
+	## 相手の砂時計の砂が上へ戻ったとき(アクイファー。汲砂の刻)。戻った駒1体ごとに1回働く(戻った量は問わない)。
+	## ON_ALLY_DEATH と同じく語にせず「常在」と出す。
+	ON_FOE_SAND_RAISED,
 }
 
 ## エフェクトの対象。
@@ -241,6 +247,19 @@ enum EffectType {
 	## 対象の自分の砂時計1体を破壊し、その余砂(ON_DEATH。導火線で与えた余砂も含む)をもう一度発動する(爆心。導火の刻)。
 	## 破壊で1回、もう一度で1回。余砂を持たない駒は選べない(ConditionScope.TARGET_HAS_DEATH_EFFECT)。
 	DESTROY_AND_REPEAT_DEATH,
+	## 対象の相手の砂時計の攻撃力を value 抜き(0未満にはならない)、抜けた数だけ自分の砂時計1体の体力を増やす(汲み上げ。汲砂の刻)。
+	## 増やす駒は自分の駒から自動で選ぶ(`CardDrawSandEffects.ally_for_gain`)。
+	DRAIN_ATTACK_TO_ALLY,
+	## 対象の相手の砂時計の攻撃力をすべて抜き、抜けた数だけ自分のHPを回復する(砂盗み)。value は使わない。
+	DRAIN_ATTACK_TO_HP,
+	## 対象の相手の砂時計それぞれの攻撃力を value ずつ抜き、抜けた数の合計だけこの砂時計の体力を増やす(メイルストロム)。
+	DRAIN_ATTACK_TO_SELF,
+	## 対象の相手の砂時計の総量を value 減らし(ダメージではない。総量0で破壊)、減った数だけ自分の砂時計1体の総量を増やす(サイフォン・ドレイン)。
+	TRANSFER_TOTAL_FROM_FOE,
+	## 対象の相手の砂時計と自分の砂時計1体の総量を入れ替える(バーター)。体力と攻撃力の比は保ち、端数は体力へ。value は使わない。
+	SWAP_TOTAL_WITH_ALLY,
+	## この砂時計の砂を、戦闘で与えたダメージ(hint の dealt)の数だけ上へ戻す(リーチ)。value は使わない。
+	RAISE_SAND_BY_DEALT,
 }
 
 ## コンボ系カードの発動条件が確認する範囲(GameDesign.md 6章)。
@@ -423,5 +442,7 @@ static func trigger_name(trigger: int) -> String:
 		Trigger.ON_ALLY_DEATH, Trigger.ON_ENEMY_FLIP, Trigger.ON_ENEMY_DRAW, Trigger.ON_OWN_SPELL:
 			return "常在"
 		Trigger.ON_ATTACK, Trigger.ON_OWN_HP_LOST, Trigger.ON_ALLY_ENTER:
+			return "常在"
+		Trigger.ON_DEAL_DAMAGE, Trigger.ON_FOE_SAND_RAISED:
 			return "常在"
 	return ""

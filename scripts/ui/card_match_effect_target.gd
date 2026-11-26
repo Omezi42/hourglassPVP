@@ -35,7 +35,7 @@ static func side_for(card: CardData, my_side: int) -> int:
 static func targeting_effect(card: CardData) -> CardEffectData:
 	for effect in card.effects_for(CardEnums.Trigger.ON_PLAY):
 		# プレイヤーが選ばない対象(ランダム・体力最少)は対象選択に入らない。
-		if effect.random_target or effect.lowest_health_target:
+		if effect.random_target or effect.lowest_health_target or effect.highest_attack_target:
 			continue
 		if (
 			effect.target

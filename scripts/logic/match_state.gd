@@ -745,6 +745,8 @@ func _resolve_unit_combat(side: int, slot: int, target_slot: int) -> void:
 	# 戦闘のダメージだけが、与えてきた相手の駒を運ぶ(パリィ。効果によるダメージは運ばない)。
 	_resolve_damaged(foe_side, defender, dealt_to_defender, {"damager": attacker})
 	_resolve_damaged(side, attacker, dealt_to_attacker, {"damager": defender})
+	_fire_dealt(side, attacker, dealt_to_defender)
+	_fire_dealt(foe_side, defender, dealt_to_attacker)
 
 
 ## 貫通:砂時計の体力を超えた分が相手プレイヤーへ抜ける。
@@ -792,6 +794,14 @@ func heal_player(side: int, amount: int) -> void:
 	hp[side] = mini(hp[side] + amount, int(hp_max.get(side, INITIAL_HP)))
 	hp_changed.emit(side, hp[side])
 	_refresh_held_keywords()
+
+
+## 戦闘で相手の砂時計へダメージを与えたときに働く効果(リーチ。汲砂の刻)。生きている駒だけが働く。
+func _fire_dealt(side: int, unit: CardInstance, dealt: int) -> void:
+	if dealt <= 0 or unit.is_dead():
+		return
+	if not unit.effects_for(CardEnums.Trigger.ON_DEAL_DAMAGE).is_empty():
+		_fire(side, unit, CardEnums.Trigger.ON_DEAL_DAMAGE, {"dealt": dealt})
 
 
 ## 落砂(GameDesign.md 6章):砂を1粒落とす**直前**に発動する。

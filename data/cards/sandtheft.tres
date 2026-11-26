@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_sandtheft_0"]
+script = ExtResource("script_effect")
+trigger = 0
+target = 1
+effect_type = 60
+value = 0
+
+[resource]
+script = ExtResource("script_card")
+id = "sandtheft"
+display_name = "砂盗み"
+cost = 3
+total_sand = 0
+pool_index = 201
+set_id = "draw_sand"
+rarity = 1
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_sandtheft_0")])
+rules_text = "相手の砂時計1体の攻撃力をすべて抜き、抜けた数だけ自分のHPを回復する"
+flavor_text = "振り上げた腕から力だけが抜けた"
+cannot_attack = false
+is_token = false
+is_spell = true

@@ -35,6 +35,7 @@ const PATHS: Array[String] = [
 	"res://scripts/logic/card_back_water_effects.gd",
 	"res://scripts/logic/card_cpu_ally_value.gd",
 	"res://scripts/logic/card_pour_sand_effects.gd",
+	"res://scripts/logic/card_draw_sand_effects.gd",
 	"res://scripts/logic/card_foresight_effects.gd",
 	"res://scripts/logic/spell_forecast.gd",
 	"res://scripts/logic/card_early_bell_effects.gd",

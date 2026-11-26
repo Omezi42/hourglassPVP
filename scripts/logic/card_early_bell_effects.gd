@@ -156,6 +156,15 @@ static func carries_mana(state: MatchState, side: int) -> bool:
 	)
 
 
+## 次の手番のマナの増減の見込み(持ち越し − 「次 −n」。画面の札が出す。GameDesign.md 6章)。
+## 持ち越しは手番の終わりに決まるため、自分の手番の間は「いま終えたら」持ち越す数で数える。
+static func next_mana_shift(state: MatchState, side: int) -> int:
+	var carry := int(state.mana_carry.get(side, 0))
+	if state.current_turn == side and carries_mana(state, side):
+		carry = maxi(int(state.mana[side]), 0)
+	return carry - int(state.mana_debt.get(side, 0))
+
+
 ## 場にいる間の常在(クロックワークのコスト下げ・スルースの持ち越し)の、CPUの見積もり。
 ## コスト下げは最大マナが上限のときだけ働くため、上限に届いているときに下がる手札の枚数ぶんだけ見る。
 static func cpu_standing_value(state: MatchState, side: int, card: CardData) -> float:

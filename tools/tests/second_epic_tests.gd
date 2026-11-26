@@ -17,6 +17,7 @@ func run(assert_true: Callable) -> void:
 	_test_sluice_carries_unspent_mana()
 	_test_sluice_caps_and_debt()
 	_test_sluice_carries_once_and_silence()
+	_test_next_mana_shift()
 	_test_vision_needs_ten_in_grave()
 	_test_epicenter_fires_death_twice()
 	_test_epicenter_needs_death_effect()
@@ -144,6 +145,25 @@ func _test_sluice_carries_once_and_silence() -> void:
 	_place(quiet, A, "sluice", 0).silenced = true
 	_end_and_begin(quiet)
 	_assert.call(int(quiet.mana[A]) == 3, "効果を消されると持ち越さない")
+
+
+func _test_next_mana_shift() -> void:
+	var state := _new_match([], 3)
+	_assert.call(CardEarlyBellEffects.next_mana_shift(state, A) == 0, "持ち越しも減りも無ければ0(札は出ない)")
+	state.mana_debt[A] = 2
+	_assert.call(CardEarlyBellEffects.next_mana_shift(state, A) == -2, "減りだけなら「次 −n」")
+	_place(state, A, "sluice", 0)
+	_assert.call(
+		CardEarlyBellEffects.next_mana_shift(state, A) == 3 - 2, "自分の手番の間は、いま終えたら持ち越す数との差し引き"
+	)
+	state.mana[A] = 1
+	_assert.call(CardEarlyBellEffects.next_mana_shift(state, A) == -1, "差し引きが負なら「次 −n」")
+	state.mana[A] = 2
+	_assert.call(CardEarlyBellEffects.next_mana_shift(state, A) == 0, "差し引きが0なら札は出ない")
+	state.end_turn()
+	_assert.call(CardEarlyBellEffects.next_mana_shift(state, A) == 2 - 2, "手番の終わりに預けた持ち越しを読む")
+	state.mana_debt[A] = 0
+	_assert.call(CardEarlyBellEffects.next_mana_shift(state, A) == 2, "相手の手番の間は預けた数を「次 +n」と出す")
 
 
 func _test_vision_needs_ten_in_grave() -> void:

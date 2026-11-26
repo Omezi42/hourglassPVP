@@ -38,6 +38,8 @@ var _fuse_sand: CardFuseSandEffects
 var _foresight: CardForesightEffects
 ## 第2弾「注砂の刻」とテルミヌスの固有効果(GameDesign.md 6章)。
 var _pour_sand: CardPourSandEffects
+## 第3弾「汲砂の刻」の固有効果(GameDesign.md 6章)。
+var _draw_sand: CardDrawSandEffects
 
 
 func _init(p_state: MatchState) -> void:
@@ -49,6 +51,7 @@ func _init(p_state: MatchState) -> void:
 	_fuse_sand = CardFuseSandEffects.new(p_state, self)
 	_foresight = CardForesightEffects.new(p_state, self)
 	_pour_sand = CardPourSandEffects.new(p_state, self)
+	_draw_sand = CardDrawSandEffects.new(p_state, self)
 
 
 ## unit が持つ trigger の効果をすべて適用する。
@@ -140,6 +143,7 @@ func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Diction
 		[CardFuseSandEffects, _fuse_sand],
 		[CardForesightEffects, _foresight],
 		[CardPourSandEffects, _pour_sand],
+		[CardDrawSandEffects, _draw_sand],
 	]
 	for theme: Array in hinted:
 		if theme[0].handles(effect.effect_type):
@@ -291,7 +295,9 @@ func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Diction
 					continue
 				var moved := target.raise_sand(effect.value)
 				if moved > 0:
-					_state.unit_raised.emit(entry["side"], entry["slot"], moved)
+					CardDrawSandEffects.note_sand_raised(
+						_state, entry["side"], entry["slot"], moved
+					)
 		CardEnums.EffectType.SUMMON:
 			var summon_slot := _first_empty_slot(side)
 			if summon_slot >= 0:
@@ -779,6 +785,9 @@ func _single_unit(
 	# ランダムに選ぶ効果は指定を受けない(砂礫の雨の3回が同じ駒へ向かうため)。
 	if effect != null and effect.random_target:
 		return _random_unit(target_side, exclude_slot, effect)
+	if effect != null and effect.highest_attack_target:
+		var strongest := highest_attack_slot(_state, target_side, effect, exclude_slot)
+		return [] if strongest < 0 else [{"side": target_side, "slot": strongest}]
 	if hint.has("slot") and hint.get("side", target_side) == target_side:
 		var slot: int = hint["slot"]
 		var hinted: CardInstance = _state.board[target_side][slot]
@@ -837,6 +846,20 @@ static func lowest_health_slot(
 		if candidate == null or slot == exclude_slot or not eligible_target(candidate, effect):
 			continue
 		if best < 0 or candidate.health < state.board[target_side][best].health:
+			best = slot
+	return best
+
+
+## 条件を満たす中で攻撃力がいちばん高い駒の枠(`CardEffectData.highest_attack_target`)。同点なら左の枠。駒がいなければ -1。
+static func highest_attack_slot(
+	state: MatchState, target_side: int, effect: CardEffectData, exclude_slot := -1
+) -> int:
+	var best := -1
+	for slot in MatchState.BOARD_SIZE:
+		var candidate: CardInstance = state.board[target_side][slot]
+		if candidate == null or slot == exclude_slot or not eligible_target(candidate, effect):
+			continue
+		if best < 0 or candidate.attack > state.board[target_side][best].attack:
 			best = slot
 	return best
 

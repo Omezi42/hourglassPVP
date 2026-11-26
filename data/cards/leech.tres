@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_leech_0"]
+script = ExtResource("script_effect")
+trigger = 12
+target = 0
+effect_type = 64
+value = 0
+
+[resource]
+script = ExtResource("script_card")
+id = "leech"
+display_name = "リーチ"
+cost = 2
+total_sand = 4
+pool_index = 196
+set_id = "draw_sand"
+rarity = 0
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_leech_0")])
+rules_text = "常在:戦闘で相手の砂時計にダメージを与えるたび、そのぶんこの砂時計の砂が上へ戻る"
+flavor_text = "噛みついたまま離さない"
+cannot_attack = false
+is_token = false

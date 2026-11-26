@@ -40,6 +40,9 @@ const ATTACK_TIMES := 2.0
 const HP_LOST_TIMES := 2.0
 ## 自分が砂時計を出したときの効果(ファウンテン)が起きると見込む回数。同じく下駄。
 const ALLY_ENTER_TIMES := 3.0
+## 戦闘で与えたとき・相手の砂が上へ戻ったときの効果(汲砂の刻)が、場に残る間に起きると見込む回数。
+const DEAL_DAMAGE_TIMES := 2.0
+const FOE_SAND_RAISED_TIMES := 2.0
 ## 繰り返し働くトリガーごとの見込み回数(`_repeating_value()`。落砂は総量に比例するため別)。
 const REPEAT_TIMES := {
 	CardEnums.Trigger.ON_DAMAGED: DAMAGED_TIMES,
@@ -50,6 +53,8 @@ const REPEAT_TIMES := {
 	CardEnums.Trigger.ON_ATTACK: ATTACK_TIMES,
 	CardEnums.Trigger.ON_OWN_HP_LOST: HP_LOST_TIMES,
 	CardEnums.Trigger.ON_ALLY_ENTER: ALLY_ENTER_TIMES,
+	CardEnums.Trigger.ON_DEAL_DAMAGE: DEAL_DAMAGE_TIMES,
+	CardEnums.Trigger.ON_FOE_SAND_RAISED: FOE_SAND_RAISED_TIMES,
 }
 ## 自分のHPを払うと負ける手へ付ける減点(出さないための十分大きな値)。
 const SELF_KILL_PENALTY := 100.0
@@ -448,6 +453,7 @@ func _themed_value(state: MatchState, side: int, effect: CardEffectData) -> Vari
 		CardFuseSandEffects,
 		CardForesightEffects,
 		CardPourSandEffects,
+		CardDrawSandEffects,
 	]
 	for theme in themes:
 		if theme.handles(effect.effect_type):

@@ -306,6 +306,27 @@ const SETS: Dictionary = {
 		"card_ids": ["terminus", "promise"],
 		"price": 0,
 	},
+	## 第3弾「奪砂の弾」の最初のテーマ(GameDesign.md 8章)。相手の器から砂を抜く枠で、相手を削りながら自分を育てる中速デッキを成立させる。
+	"draw_sand":
+	{
+		"id": "draw_sand",
+		"display_name": "汲砂の刻",
+		"description": "相手の器から砂を抜く10枚",
+		"card_ids":
+		[
+			"drawup",
+			"leech",
+			"pump",
+			"bucket",
+			"siphon",
+			"drain",
+			"sandtheft",
+			"barter",
+			"aquifer",
+			"maelstrom",
+		],
+		"price": 0,
+	},
 }
 
 const ORDERED_IDS: Array[String] = [
@@ -328,6 +349,7 @@ const ORDERED_IDS: Array[String] = [
 	"foresight_sand",
 	"pour_sand",
 	"second_extra",
+	"draw_sand",
 ]
 
 

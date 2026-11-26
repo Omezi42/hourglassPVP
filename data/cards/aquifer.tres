@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_aquifer_0"]
+script = ExtResource("script_effect")
+trigger = 13
+target = 0
+effect_type = 4
+value = 1
+
+[resource]
+script = ExtResource("script_card")
+id = "aquifer"
+display_name = "アクイファー"
+cost = 4
+total_sand = 6
+pool_index = 203
+set_id = "draw_sand"
+rarity = 2
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_aquifer_0")])
+rules_text = "常在:相手の砂時計の砂が上へ戻るたび、この砂時計の総量+1"
+flavor_text = "地の下ではすべての井戸がつながっている"
+cannot_attack = false
+is_token = false
