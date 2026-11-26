@@ -34,6 +34,8 @@ var _close: Button
 ## 選ぶモードのときの受け手。押した墓地の位置を渡す。見るだけのときは空。
 var _on_pick := Callable()
 var _on_cancel := Callable()
+## 取りやめられない選び(予兆)。閉じるボタンを出さず、Esc・暗幕でも閉じない。
+var _forced := false
 var _dim: ColorRect
 var _center: CenterContainer
 var _panel: PanelContainer
@@ -75,6 +77,8 @@ func apply_layout(layout: CardMatchLayout) -> void:
 func open_pile(title: String, cards: Array) -> void:
 	_on_pick = Callable()
 	_on_cancel = Callable()
+	_forced = false
+	_close.visible = true
 	_close.text = "閉じる"
 	_title.text = "%s(%d枚)" % [title, cards.size()]
 	_clear_grid()
@@ -105,10 +109,13 @@ func open_choice(
 	indices: Array[int],
 	on_pick: Callable,
 	on_cancel: Callable,
-	close_text := "やめる"
+	close_text := "やめる",
+	forced := false
 ) -> void:
 	_on_pick = on_pick
 	_on_cancel = on_cancel
+	_forced = forced
+	_close.visible = not forced
 	_close.text = close_text
 	_title.text = title
 	_clear_grid()
@@ -145,6 +152,8 @@ func _pick(index: int) -> void:
 
 
 func _dismiss() -> void:
+	if _forced and _on_pick.is_valid():
+		return
 	var on_cancel := _on_cancel
 	_on_pick = Callable()
 	_on_cancel = Callable()

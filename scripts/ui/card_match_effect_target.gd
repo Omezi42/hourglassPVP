@@ -188,6 +188,7 @@ static func choose_from_peek(screen: Control, card: CardData, perform: Callable)
 				return
 			screen.selection.clear()
 			screen.refresh(),
-		"そのままにする" if optional else "やめる"
+		"そのままにする",
+		not optional
 	)
 	return true
