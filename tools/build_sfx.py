@@ -927,12 +927,52 @@ def sig_necropolis():
     return layer(x, whoosh(1, 0.8), -12, hit + 0.02)
 
 
+def sig_hold():
+    """ホールド:丸盾が3枚寄って木の音で重なり、縁を燠火が回る間ぱちぱちと爆ぜて、真鍮の縁が鳴る。"""
+    center, sides, rim = 0.14, 0.21, 0.3
+    x = landing(1.5)
+    x = layer(x, strike(0.3, wood(380, 0.07), 0.0008, 0.5, (1500, 5000)), -4, LAND_AT + center)
+    x = layer(x, strike(0.3, wood(450, 0.06), 0.0008, 0.5, (1500, 5000)), -7, LAND_AT + sides)
+    x = layer(x, strike(0.3, wood(470, 0.06), 0.0008, 0.5, (1500, 5000)), -8, LAND_AT + sides + 0.025)
+    crackle = sand(rim, 160, 1500, 7000, lambda t: np.sin(np.clip(t / rim, 0, 1) * np.pi))
+    x = layer(x, crackle, -12, LAND_AT + rim)
+    return layer(x, strike(1.0, brass(660, 0.6), 0.0004, 0.3, (3000, 9000)), -10, LAND_AT + rim + 0.04)
+
+
+def sig_bastion():
+    """バスティオン:重く落ち、石の控え壁が擦れてせり上がり、ひびが爆ぜて、鉄のかすがいが「がん」と打ち込まれる。"""
+    raise_, crack, cramp = 0.24, 0.14, 0.14
+    x = landing(1.7, heavy=True)
+    x = layer(x, grind(0.8), -8, HEAVY_LAND_AT + 0.02)
+    cracks = np.zeros(n_of(crack + 0.2))
+    for _ in range(8):
+        piece = strike(0.1, wood(RNG.uniform(1200, 2200), 0.012), 0.0001, 0.8, (2000, 7000))
+        at(cracks, piece, crack * RNG.uniform(0.0, 1.0), RNG.uniform(0.4, 1.0))
+    x = layer(x, cracks, -9, HEAVY_LAND_AT + raise_)
+    hit = HEAVY_LAND_AT + raise_ + crack + cramp
+    x = layer(x, rec("impactMetal_heavy_001.ogg"), -1, hit)
+    return layer(x, strike(0.9, brass(1180, 0.5), 0.0003, 0.4, (3000, 9000)), -9, hit + 0.01)
+
+
+def sig_chaser():
+    """チェイサー:着地の直前に火矢が風を切って駆け抜け、炎がごうと唸って、足元に火の筋が残ってはぜる。"""
+    fly = 0.3
+    start = LAND_AT - fly * 0.6
+    x = landing(1.2)
+    x = layer(x, whoosh(2, 1.3), -3, start)
+    roar = sand(fly, 900, 300, 2500, lambda t: np.sin(np.clip(t / fly, 0, 1) * np.pi))
+    x = layer(x, roar, -10, start + 0.04)
+    trail = sand(0.36, 180, 1500, 7000, lambda t: np.exp(-t / 0.15))
+    return layer(x, trail, -13, LAND_AT + 0.02)
+
+
 SIGNATURES = [
     sig_freeze, sig_relic, sig_middle, sig_phase, sig_grain, sig_dash, sig_shield, sig_sand,
     sig_watcher, sig_glass, sig_vamp, sig_drill, sig_lance, sig_twin, sig_lock, sig_gate,
     sig_poison, sig_guard, sig_mirror, sig_wall, sig_bypass, sig_colossus,
     sig_obelisk, sig_tower, sig_anchor, sig_sage, sig_grimoire,
     sig_maestro, sig_zero_hour, sig_necropolis,
+    sig_hold, sig_bastion, sig_chaser,
 ]
 
 

@@ -61,6 +61,9 @@ enum Sfx {
 	SIG_MAESTRO,
 	SIG_ZERO_HOUR,
 	SIG_NECROPOLIS,
+	SIG_HOLD,
+	SIG_BASTION,
+	SIG_CHASER,
 }
 
 const SETTINGS_PATH := "user://sound_settings.json"
@@ -124,6 +127,9 @@ const SFX_PATHS := {
 	Sfx.SIG_MAESTRO: "res://assets/sfx/sig_maestro.wav",
 	Sfx.SIG_ZERO_HOUR: "res://assets/sfx/sig_zero_hour.wav",
 	Sfx.SIG_NECROPOLIS: "res://assets/sfx/sig_necropolis.wav",
+	Sfx.SIG_HOLD: "res://assets/sfx/sig_hold.wav",
+	Sfx.SIG_BASTION: "res://assets/sfx/sig_bastion.wav",
+	Sfx.SIG_CHASER: "res://assets/sfx/sig_chaser.wav",
 }
 
 static var _players: Array[AudioStreamPlayer] = []

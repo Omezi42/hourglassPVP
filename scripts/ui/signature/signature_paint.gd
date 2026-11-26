@@ -665,6 +665,74 @@ static func drain_ring(item: CanvasItem, center: Vector2, progress: float, alpha
 	)
 
 
+## 駆ける火の筋(烈砂の刻の共通の部品)。尾から `head` へ太り、頭は白く灼ける。`dir` は駆ける向き。
+static func blaze_comet(
+	item: CanvasItem, head: Vector2, dir: Vector2, length: float, width: float, alpha: float
+) -> void:
+	const STEPS := 8
+	if alpha <= 0.0 or length <= 0.0 or dir == Vector2.ZERO:
+		return
+	var ci := item.get_canvas_item()
+	var d := dir.normalized()
+	var n := d.orthogonal()
+	var left := PackedVector2Array()
+	var right := PackedVector2Array()
+	var colors := PackedColorArray()
+	for i in range(STEPS + 1):
+		var s := float(i) / float(STEPS)
+		var at := head - d * length * (1.0 - s)
+		var half := width * 0.5 * s * s
+		left.append(at + n * half)
+		right.append(at - n * half)
+		colors.append(
+			Color(UiPalette.FLAME_RED.lerp(UiPalette.FLAME, s), alpha * minf(s * 2.0, 1.0))
+		)
+	right.reverse()
+	var back := colors.duplicate()
+	back.reverse()
+	ShapePaint.polygon(ci, left + right, colors + back)
+	ShapePaint.circle(ci, head, width * 0.9, Color(UiPalette.FLAME, alpha * 0.3))
+	ShapePaint.circle(ci, head, width * 0.5, Color(UiPalette.FLAME, alpha))
+	ShapePaint.circle(ci, head, width * 0.3, Color(SPARK_HOT, alpha))
+
+
+## 立ちのぼる炎の舌1枚。`lean` は先の横へのずれ(駆ける向きの後ろへなびかせる)。
+static func flame_tongue(
+	item: CanvasItem, base: Vector2, height: float, width: float, lean: float, alpha: float
+) -> void:
+	if alpha <= 0.0 or height <= 0.0:
+		return
+	var ci := item.get_canvas_item()
+	for layer in range(2):
+		var k := 1.0 - 0.45 * float(layer)
+		var w := width * k
+		var h := height * k
+		var shape := PackedVector2Array(
+			[
+				base + Vector2(-w * 0.5, 0.0),
+				base + Vector2(lean * 0.35 - w * 0.48, -h * 0.45),
+				base + Vector2(lean, -h),
+				base + Vector2(lean * 0.35 + w * 0.48, -h * 0.45),
+				base + Vector2(w * 0.5, 0.0),
+			]
+		)
+		var low := UiPalette.FLAME_RED if layer == 0 else UiPalette.FLAME
+		var high := UiPalette.FLAME if layer == 0 else SPARK_HOT
+		ShapePaint.polygon(
+			ci,
+			shape,
+			PackedColorArray(
+				[
+					Color(low, alpha),
+					Color(high, alpha),
+					Color(low, alpha),
+					Color(high, alpha),
+					Color(low, alpha)
+				]
+			)
+		)
+
+
 ## 粒ごとに決まった0〜1の揺らぎ。`moves/` の側で砂粒を散らすときに使う。
 static func jitter(i: int, salt: int) -> float:
 	return _hash(i, salt)

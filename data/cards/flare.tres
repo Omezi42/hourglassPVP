@@ -1,7 +1,8 @@
-[gd_resource type="Resource" script_class="CardData" load_steps=5 format=3]
+[gd_resource type="Resource" script_class="CardData" load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
 [ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/emblems/flare.png" id="emblem"]
 
 [sub_resource type="Resource" id="Effect_flare_0"]
 script = ExtResource("script_effect")
@@ -33,3 +34,4 @@ rules_text = "設置:自分のHPを2失い、自分の他の砂時計すべて�
 flavor_text = "空が白んだのを合図に全員が駆け出した"
 cannot_attack = false
 is_token = false
+emblem = ExtResource("emblem")

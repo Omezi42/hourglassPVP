@@ -1,7 +1,8 @@
-[gd_resource type="Resource" script_class="CardData" load_steps=5 format=3]
+[gd_resource type="Resource" script_class="CardData" load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
 [ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/emblems/tailwind.png" id="emblem"]
 
 [sub_resource type="Resource" id="Effect_tailwind_0"]
 script = ExtResource("script_effect")
@@ -34,3 +35,4 @@ flavor_text = "背中を押したのは砂まじりの風だった"
 cannot_attack = false
 is_token = false
 is_spell = true
+emblem = ExtResource("emblem")

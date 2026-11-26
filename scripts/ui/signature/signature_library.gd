@@ -33,6 +33,7 @@ const ENTRANCES := {
 	"maestro": preload("res://scripts/ui/signature/moves/maestro_entrance.gd"),
 	"hold": preload("res://scripts/ui/signature/moves/hold_entrance.gd"),
 	"bastion": preload("res://scripts/ui/signature/moves/bastion_entrance.gd"),
+	"chaser": preload("res://scripts/ui/signature/moves/chaser_entrance.gd"),
 }
 
 ## 効果が対象へ届くまで(設置・落砂・砂術など、紋章が飛ぶ場面の代わり)。
@@ -154,6 +155,14 @@ const EFFECTS := {
 	"ember": preload("res://scripts/ui/signature/moves/ember_effect.gd"),
 	"libra": preload("res://scripts/ui/signature/moves/libra_effect.gd"),
 	"last_hour": preload("res://scripts/ui/signature/moves/last_hour_effect.gd"),
+	"torch": preload("res://scripts/ui/signature/moves/torch_effect.gd"),
+	"tailwind": preload("res://scripts/ui/signature/moves/tailwind_effect.gd"),
+	"blaze": preload("res://scripts/ui/signature/moves/blaze_effect.gd"),
+	"spark": preload("res://scripts/ui/signature/moves/spark_effect.gd"),
+	"warcry": preload("res://scripts/ui/signature/moves/warcry_effect.gd"),
+	"flare": preload("res://scripts/ui/signature/moves/flare_effect.gd"),
+	"stampede": preload("res://scripts/ui/signature/moves/stampede_effect.gd"),
+	"ignis": preload("res://scripts/ui/signature/moves/ignis_effect.gd"),
 }
 
 

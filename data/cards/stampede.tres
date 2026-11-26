@@ -1,7 +1,8 @@
-[gd_resource type="Resource" script_class="CardData" load_steps=5 format=3]
+[gd_resource type="Resource" script_class="CardData" load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
 [ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/emblems/stampede.png" id="emblem"]
 
 [sub_resource type="Resource" id="Effect_stampede_0"]
 script = ExtResource("script_effect")
@@ -34,3 +35,4 @@ rules_text = "設置:自分のHPを3失い、手札からランダムなコス�
 flavor_text = "地平線ごと迫ってくる"
 cannot_attack = false
 is_token = false
+emblem = ExtResource("emblem")
