@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_scope_0"]
+script = ExtResource("script_effect")
+trigger = 0
+target = 5
+effect_type = 45
+value = 0
+
+[resource]
+script = ExtResource("script_card")
+id = "scope"
+display_name = "スコープ"
+cost = 3
+total_sand = 5
+pool_index = 172
+set_id = "foresight_sand"
+rarity = 0
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_scope_0")])
+rules_text = "設置:山札の一番上を見て、そのままにするか墓地へ置く"
+flavor_text = "遠くの砂粒まで数えられる"
+cannot_attack = false
+is_token = false

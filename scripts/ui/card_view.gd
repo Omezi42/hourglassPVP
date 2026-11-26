@@ -192,6 +192,8 @@ var exhausted := false
 ## まだ攻撃できる自分の駒(GameDesign.md 9章)。攻撃済みを彩度で落とすだけでは
 ## その逆が示せず、6枠が並ぶと押し忘れるため、控えめな印を出す。
 var ready_mark := false
+## 山札の一番上から並べた札(シビル。GameDesign.md 9章)。手札の右端に琥珀色の縁を付ける。
+var deck_top := false
 ## 右上へ出す小さな添え字(デッキ編集の「2/2」など)。空なら出さない。
 var badge := ""
 ## 手札でホバーしたときに拡大するか。対局画面の手札だけが true。
@@ -668,6 +670,7 @@ func _look() -> Array:
 		unit,
 		enabled,
 		selected,
+		deck_top,
 		exhausted,
 		ready_mark,
 		badge,

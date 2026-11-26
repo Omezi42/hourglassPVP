@@ -43,6 +43,10 @@ signal mulligan_finished
 signal turn_started(side: int)
 ## 山札から手札へ引いた枚数。ドローの動きを見せるために持つ。
 signal cards_drawn(side: int, count: int)
+## 山札の一番上を相手にも見せた(ルーン・未来視。GameDesign.md 6章「山札の上を扱う効果」)。
+signal deck_revealed(side: int, card: CardData)
+## 山札の上から count 枚を墓地へ置いた(シャフト・ディガー・ホロスコープ・スコープ・予兆)。
+signal deck_milled(side: int, count: int)
 ## 山札が尽きた側が受ける疲労ダメージ。**発生源が駒ではなく山札にある**ため、
 ## 通常の被ダメージとは別の経路で知らせる(GameDesign.md 9章)。
 signal fatigue_damage(side: int, amount: int)
@@ -407,6 +411,15 @@ func _draw_one(side: int) -> void:
 		_deck_exhausted[side] = true
 
 
+## `MatchDeckTop.playable_hand()` の位置の札を取り出す。山札の一番上なら山札から抜く(空になれば疲労の印を立てる)。
+func _take_card(side: int, index: int) -> void:
+	if index < hand[side].size():
+		hand[side].remove_at(index)
+	else:
+		MatchDeckTop.take_top(self, side)
+	hand_changed.emit(side)
+
+
 func _shuffled(cards: Array) -> Array:
 	var copy := cards.duplicate()
 	for i in range(copy.size() - 1, 0, -1):
@@ -423,9 +436,9 @@ func _shuffled(cards: Array) -> Array:
 func can_play(side: int, hand_index: int) -> bool:
 	if _match_over or current_turn != side:
 		return false
-	if hand_index < 0 or hand_index >= hand[side].size():
+	var card := MatchDeckTop.card_at(self, side, hand_index)
+	if card == null:
 		return false
-	var card: CardData = hand[side][hand_index]
 	# 砂術は盤面へ出ない(GameDesign.md 6章)。撃つのは cast_spell() の役目。
 	if card.is_spell:
 		return false
@@ -457,10 +470,9 @@ func play_card(side: int, hand_index: int, slot: int, target: Dictionary = {}) -
 		return false
 	if board[side][slot] != null:
 		return false
-	var card: CardData = hand[side][hand_index]
+	var card := MatchDeckTop.card_at(self, side, hand_index)
 	mana[side] -= play_cost(side, card)
-	hand[side].remove_at(hand_index)
-	hand_changed.emit(side)
+	_take_card(side, hand_index)
 	mana_changed.emit(side, mana[side], max_mana[side])
 	var unit := CardInstance.new(card)
 	if unit.has_keyword(CardEnums.Keyword.QUICK):
@@ -480,10 +492,8 @@ func play_card(side: int, hand_index: int, slot: int, target: Dictionary = {}) -
 func can_cast(side: int, hand_index: int) -> bool:
 	if _match_over or current_turn != side:
 		return false
-	if hand_index < 0 or hand_index >= hand[side].size():
-		return false
-	var card: CardData = hand[side][hand_index]
-	if not card.is_spell:
+	var card := MatchDeckTop.card_at(self, side, hand_index)
+	if card == null or not card.is_spell:
 		return false
 	return mana[side] >= play_cost(side, card) and CardEffectResolver.castable(self, side, card)
 
@@ -493,10 +503,9 @@ func can_cast(side: int, hand_index: int) -> bool:
 func cast_spell(side: int, hand_index: int, target: Dictionary = {}) -> bool:
 	if not can_cast(side, hand_index):
 		return false
-	var card: CardData = hand[side][hand_index]
+	var card := MatchDeckTop.card_at(self, side, hand_index)
 	mana[side] -= play_cost(side, card)
-	hand[side].remove_at(hand_index)
-	hand_changed.emit(side)
+	_take_card(side, hand_index)
 	mana_changed.emit(side, mana[side], max_mana[side])
 	graveyard[side].append(card)
 	spell_cast.emit(side, card)

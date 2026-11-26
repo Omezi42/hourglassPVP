@@ -4,7 +4,7 @@ extends Control
 ## 対局中に「何が落ちたか」を数え直せないと、残っている脅威を読めないため用意する。
 ##
 ## 墓地から1体を選ぶ効果(6章「墓地を読む効果」)では、同じ形で選べる砂時計だけを
-## 1枚ずつ並べて押させる(`open_choice()`)。
+## 1枚ずつ並べて押させる(`open_choice()`)。山札の上を見て選ぶ効果(スコープ・予兆。9章)も同じ形で、見た札だけを並べる。
 
 const PANEL_STYLE := "res://resources/theme/content_panel.tres"
 ## パネルは幅だけ決め、高さは中身(何行並ぶか)に合わせて伸ばす。固定にすると
@@ -100,11 +100,16 @@ func open_pile(title: String, cards: Array) -> void:
 ## 墓地から1体を選ばせる。`indices` は選べるものの墓地での位置で、同じカードでも
 ## 1枚ずつ並べる(どの1枚を選んだかを位置で返すため)。やめると `on_cancel` を呼ぶ。
 func open_choice(
-	title: String, pile: Array, indices: Array[int], on_pick: Callable, on_cancel: Callable
+	title: String,
+	pile: Array,
+	indices: Array[int],
+	on_pick: Callable,
+	on_cancel: Callable,
+	close_text := "やめる"
 ) -> void:
 	_on_pick = on_pick
 	_on_cancel = on_cancel
-	_close.text = "やめる"
+	_close.text = close_text
 	_title.text = title
 	_clear_grid()
 	for index in indices:

@@ -15,7 +15,7 @@ func _init(screen: Control) -> void:
 ## 対象を1体選ばない砂術を、手札の上端より上で離して撃つ(GameDesign.md 9章「砂術」)。
 ## 墓地から選ぶものはここで一覧を開く。対象を取るのに選べる対象がいないものは、対象なしで撃つ(不発)。
 func release(index: int) -> void:
-	var card: CardData = _screen.state.hand[_screen.my_side][index]
+	var card: CardData = MatchDeckTop.card_at(_screen.state, _screen.my_side, index)
 	# 出す前に手札の位置を控える(GameDesign.md 9章「対局画面の手触り」)。撃った瞬間には
 	# もう墓地へ消えているため、支払いのピップが吸い込まれる先をいまのうちに渡しておく。
 	var view: CardView = _screen._hand_views[index]

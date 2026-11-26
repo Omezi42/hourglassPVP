@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_foresight_0"]
+script = ExtResource("script_effect")
+trigger = 0
+target = 5
+effect_type = 48
+value = 3
+
+[resource]
+script = ExtResource("script_card")
+id = "foresight"
+display_name = "未来視"
+cost = 2
+total_sand = 0
+pool_index = 175
+set_id = "foresight_sand"
+rarity = 1
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_foresight_0")])
+rules_text = "山札の一番上を公開する。コスト3以下の砂時計なら場に出し、それ以外なら手札に加える"
+flavor_text = "見えたものがそのまま歩いてきた"
+cannot_attack = false
+is_token = false
+is_spell = true

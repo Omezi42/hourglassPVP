@@ -253,6 +253,26 @@ const SETS: Dictionary = {
 		],
 		"price": 0,
 	},
+	## 第2弾「前借りの弾」の5つ目のテーマ(GameDesign.md 8章)。まだ来ない刻(山札)を先に見る枠で、墓地を加速するデッキと山札の一番上を使うデッキを成立させる。
+	"foresight_sand":
+	{
+		"id": "foresight_sand",
+		"display_name": "先触の刻",
+		"description": "まだ来ない刻を先に見る9枚",
+		"card_ids":
+		[
+			"shaft",
+			"scope",
+			"omen",
+			"rune",
+			"foresight",
+			"digger",
+			"horoscope",
+			"prophecy",
+			"sibyl",
+		],
+		"price": 0,
+	},
 }
 
 const ORDERED_IDS: Array[String] = [
@@ -272,6 +292,7 @@ const ORDERED_IDS: Array[String] = [
 	"blaze_sand",
 	"early_bell",
 	"fuse_sand",
+	"foresight_sand",
 ]
 
 

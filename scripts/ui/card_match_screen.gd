@@ -433,7 +433,8 @@ func _build() -> void:
 	# 先に足して背面へ回す(札が宙に浮いて見えないようにするための下敷き)。
 	_hand_panel = HandLeatherPanel.new()
 	add_child(_hand_panel)
-	for i in MatchState.DECK_SIZE:
+	# 手札の最大枚数に、シビルが並べる山札の一番上の1枚を足す。
+	for i in MatchState.DECK_SIZE + 1:
 		var view := CardView.new()
 		view.mode = CardView.Mode.HAND
 		view.visible = false
@@ -510,7 +511,7 @@ func _refresh_row(views: Array[CardView], side: int) -> void:
 
 
 func _refresh_hand() -> void:
-	var hand: Array = state.hand[my_side]
+	var hand: Array = MatchDeckTop.playable_hand(state, my_side)
 	# 位置・沈み・暗さは `CardMatchHandLayout` が持つ(GameDesign.md 9章「対局画面の手触り」)。
 	# 手札は最大10枚を超えうるため、収まらなくなったら重ねてでも領域内に留める
 	# (はみ出すと「ログ」「投了」のボタンへ潜り込んでしまう)。
@@ -524,6 +525,7 @@ func _refresh_hand() -> void:
 		view.play_cost = state.play_cost(my_side, hand[i])
 		view.show_card(hand[i], _my_turn() and usable)
 		view.selected = _selection.is_hand(i)
+		view.deck_top = i >= state.hand[my_side].size()
 		view.draggable = view.enabled
 
 

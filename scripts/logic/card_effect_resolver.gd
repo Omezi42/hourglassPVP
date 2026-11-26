@@ -34,6 +34,8 @@ var _blaze_sand: CardBlazeSandEffects
 var _early_bell: CardEarlyBellEffects
 ## 第2弾「導火の刻」の固有効果(GameDesign.md 6章)。
 var _fuse_sand: CardFuseSandEffects
+## 第2弾「先触の刻」の固有効果(GameDesign.md 6章)。
+var _foresight: CardForesightEffects
 
 
 func _init(p_state: MatchState) -> void:
@@ -43,6 +45,7 @@ func _init(p_state: MatchState) -> void:
 	_blaze_sand = CardBlazeSandEffects.new(p_state, self)
 	_early_bell = CardEarlyBellEffects.new(p_state, self)
 	_fuse_sand = CardFuseSandEffects.new(p_state, self)
+	_foresight = CardForesightEffects.new(p_state, self)
 
 
 ## unit が持つ trigger の効果をすべて適用する。
@@ -130,6 +133,9 @@ func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Diction
 		return
 	if CardFuseSandEffects.handles(effect.effect_type):
 		_fuse_sand.apply(side, unit, effect, hint, from_slot, origin)
+		return
+	if CardForesightEffects.handles(effect.effect_type):
+		_foresight.apply(side, unit, effect, hint, from_slot, origin)
 		return
 	match effect.effect_type:
 		CardEnums.EffectType.DAMAGE_PLAYER:
@@ -539,6 +545,9 @@ static func castable(state: MatchState, side: int, card: CardData) -> bool:
 					return false
 			CardEnums.EffectType.REVIVE_FROM_GRAVE:
 				if grave_choices(state, side).is_empty() or state.empty_slots(side).is_empty():
+					return false
+			CardEnums.EffectType.PLAY_DECK_TOP:
+				if state.deck[side].is_empty():
 					return false
 	return true
 

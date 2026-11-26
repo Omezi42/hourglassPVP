@@ -85,7 +85,7 @@ static func has_candidate(state: MatchState, card: CardData, side: int) -> bool:
 
 ## 手札の1枚を出す。対象を取り、かつ選べる相手がいるときだけ対象選択へ入る。
 func begin(index: int, slot: int) -> void:
-	var card: CardData = _screen.state.hand[_screen.my_side][index]
+	var card: CardData = MatchDeckTop.card_at(_screen.state, _screen.my_side, index)
 	if choose_from_grave(
 		_screen,
 		card,
@@ -132,6 +132,8 @@ func confirm(side: int, slot: int) -> void:
 ## 選んだら `perform` へ `{"grave_index": i}` を渡す。選べるものが無ければ選ばずに出す
 ## (効果は不発)。選ぶ一覧を開いたら true。
 static func choose_from_grave(screen: Control, card: CardData, perform: Callable) -> bool:
+	if CardForesightEffects.peek_choice_effect(card) != null:
+		return choose_from_peek(screen, card, perform)
 	var effect := CardEffectResolver.grave_choice_effect(card)
 	if effect == null:
 		return false
@@ -150,5 +152,42 @@ static func choose_from_grave(screen: Control, card: CardData, perform: Callable
 		func() -> void:
 			screen.selection.clear()
 			screen.refresh()
+	)
+	return true
+
+
+## 山札の上を見て選ぶ効果(スコープ・予兆。GameDesign.md 6章・9章)なら、見た札だけを墓地の一覧と同じ部品で並べて選ばせ、
+## 選んだら `perform` へ `{"peek_index": i}`(見た札の位置)を渡す。スコープは「そのままにする」で選ばずに進む(選びの指定なし)。
+## 山札が空なら選ばずに出す(効果は不発)。選ぶ一覧を開いたら true。
+static func choose_from_peek(screen: Control, card: CardData, perform: Callable) -> bool:
+	var effect := CardForesightEffects.peek_choice_effect(card)
+	var seen := CardForesightEffects.peeked(screen.state, screen.my_side, effect)
+	if seen.is_empty():
+		return false
+	var indices: Array[int] = []
+	for i in seen.size():
+		indices.append(i)
+	var optional := effect.effect_type == CardEnums.EffectType.PEEK_KEEP_OR_MILL
+	var title := (
+		"%s:墓地へ置くなら札を選ぶ" % card.display_name if optional else "%s:手札に加える1枚を選ぶ" % card.display_name
+	)
+	var done := func() -> void:
+		screen.selection.clear()
+		screen._hide_detail()
+	screen._pile.open_choice(
+		title,
+		screen.state.deck[screen.my_side],
+		indices,
+		func(peek_index: int) -> void:
+			done.call()
+			perform.call({CardForesightEffects.PEEK_KEY: peek_index}),
+		func() -> void:
+			if optional:
+				done.call()
+				perform.call({})
+				return
+			screen.selection.clear()
+			screen.refresh(),
+		"そのままにする" if optional else "やめる"
 	)
 	return true

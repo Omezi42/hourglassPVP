@@ -22,7 +22,7 @@ static func choose_action(
 
 ## 手札を先頭から見て、出せる最初の1枚をそのまま出す。組み合わせやコスト効率を見ない。
 static func _choose_play(state: MatchState, side: int, rng: RandomNumberGenerator) -> Dictionary:
-	var hand: Array = state.hand[side]
+	var hand: Array = MatchDeckTop.playable_hand(state, side)
 	for index in hand.size():
 		var card: CardData = hand[index]
 		if card.is_spell:

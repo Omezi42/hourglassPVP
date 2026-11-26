@@ -183,6 +183,13 @@ static func _frame(
 		]
 	UiKit.stroke(ci, points, Color(0, 0, 0, UiKit.GLASS_OUTER_ALPHA), (FRAME_WIDTH + 2.0) * s)
 	UiKit.stroke_grad(ci, points, stops, FRAME_WIDTH * s)
+	if view.deck_top:
+		UiKit.stroke(
+			ci,
+			UiKit.rr(rect.grow(SELECT_GROW), CORNER * s + SELECT_GROW),
+			UiPalette.SAND,
+			SELECT_WIDTH * s
+		)
 	if view.selected:
 		UiKit.stroke(
 			ci,

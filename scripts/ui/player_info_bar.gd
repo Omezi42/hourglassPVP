@@ -203,6 +203,8 @@ var _max_mana := 0
 ## 次の手番のマナが少なく始まる量(`MatchState.mana_debt`)。0なら札を出さない。
 var _mana_debt := 0
 var _deck := 0
+## 山札の一番上が公開されている(シビルが場にいる)。山札の山に琥珀色の縁を付ける。
+var _deck_top_open := false
 var _graveyard := 0
 var _hand := 0
 var _has_coin := false
@@ -291,6 +293,7 @@ func show_state(state: MatchState, side: int, max_hp: int = MatchState.INITIAL_H
 	_max_mana = state.max_mana[side]
 	_mana_debt = int(state.mana_debt.get(side, 0))
 	_deck = state.deck[side].size()
+	_deck_top_open = MatchDeckTop.top_playable(state, side)
 	_graveyard = state.graveyard[side].size()
 	_hand = state.hand[side].size()
 	_has_coin = state.coin_available.get(side, false)
@@ -301,7 +304,17 @@ func show_state(state: MatchState, side: int, max_hp: int = MatchState.INITIAL_H
 
 func _shown_values() -> Array:
 	return [
-		_hp, _max_hp, _shown_hp, _mana, _max_mana, _mana_debt, _deck, _graveyard, _hand, _has_coin
+		_hp,
+		_max_hp,
+		_shown_hp,
+		_mana,
+		_max_mana,
+		_mana_debt,
+		_deck,
+		_graveyard,
+		_hand,
+		_has_coin,
+		_deck_top_open
 	]
 
 
@@ -438,6 +451,10 @@ func _draw() -> void:
 	_draw_hp()
 	_draw_mana()
 	_pile(deck_pile_rect(), "山札", _deck)
+	if _deck_top_open:
+		UiKit.stroke(
+			get_canvas_item(), UiKit.rr(deck_pile_rect(), PILE_RADIUS), UiPalette.SAND, 2.0
+		)
 	_pile(_graveyard_rect(), "墓地", _graveyard)
 	if is_opponent:
 		_pile(hand_pile_rect(), "手札", _hand)
@@ -549,6 +566,11 @@ func _draw_name_plate() -> void:
 		self, mid + Vector2(0, -NAME_LINE_OFFSET), title_text, TITLE_FONT, UiPalette.GOLD, true
 	)
 	_text_mid(self, mid + Vector2(0, TITLE_LINE_OFFSET), label, NAME_FONT, UiPalette.IVORY, true)
+
+
+## 山札の一番上が公開されているか(シビル)。押すと表向きの札を見られる。
+func deck_top_open() -> bool:
+	return _deck_top_open
 
 
 ## 山札の山。ドロー・疲労の演出の出どころとして画面側からも引く。

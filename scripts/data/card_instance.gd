@@ -141,6 +141,11 @@ func spell_cost_down() -> int:
 	return 0 if silenced else data.ally_spell_cost_down
 
 
+## 自分の山札の一番上を手札のように使わせるか(シビル)。効果を消されると働かない。
+func plays_deck_top() -> bool:
+	return data.plays_deck_top and not silenced
+
+
 ## このターンに攻撃できる回数の上限。
 func max_attacks() -> int:
 	return 2 if has_keyword(CardEnums.Keyword.DOUBLE_STRIKE) else 1

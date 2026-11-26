@@ -30,7 +30,7 @@ func on_hand_pressed(view: CardView) -> void:
 		_refuse(view, index)
 		return
 	# 砂術はドラッグでしか撃たない(GameDesign.md 9章)。押しても何も選ばない。
-	if _screen.state.hand[_screen.my_side][index].is_spell:
+	if MatchDeckTop.card_at(_screen.state, _screen.my_side, index).is_spell:
 		return
 	if not _screen._tutorial.gate_hand_select(index):
 		return
@@ -43,7 +43,7 @@ func on_hand_pressed(view: CardView) -> void:
 ## 出せない札を押した(GameDesign.md 9章):札が首を振り、マナが足りないなら足りないピップを赤く光らせる。
 func _refuse(view: CardView, index: int) -> void:
 	_screen._hand_layout.refuse(view)
-	var card: CardData = _screen.state.hand[_screen.my_side][index]
+	var card: CardData = MatchDeckTop.card_at(_screen.state, _screen.my_side, index)
 	_screen._own_bar._fx.flash_short(_screen.state.play_cost(_screen.my_side, card))
 
 
@@ -141,7 +141,9 @@ func _handle_own_targeting(slot: int) -> void:
 		_screen._pointer.cancel_selection()
 		_screen.refresh()
 		return
-	var card: CardData = _screen.state.hand[_screen.my_side][_screen.selection.hand_index]
+	var card: CardData = MatchDeckTop.card_at(
+		_screen.state, _screen.my_side, _screen.selection.hand_index
+	)
 	if _screen._effect_target.target_side(card) == _screen.my_side:
 		# 条件を満たさない駒は光らせておらず、押しても何も起きない(選択は保つ)。
 		if not CardMatchEffectTarget.can_target(_screen.state, card, _screen.my_side, slot):
@@ -296,7 +298,9 @@ func _attack(slot: int, target_slot: int) -> void:
 ## 対象選択中に相手の場を押したとき(砂術の相手対象 / 設置効果の相手対象)。
 func _handle_foe_targeting(slot: int) -> void:
 	var foe := MatchState.other_side(_screen.my_side)
-	var card: CardData = _screen.state.hand[_screen.my_side][_screen.selection.hand_index]
+	var card: CardData = MatchDeckTop.card_at(
+		_screen.state, _screen.my_side, _screen.selection.hand_index
+	)
 	if not CardMatchEffectTarget.can_target(_screen.state, card, foe, slot):
 		return
 	# slot が -1 のままなら砂術(置く枠を持たない)。
@@ -312,7 +316,9 @@ func _handle_foe_targeting(slot: int) -> void:
 
 func on_face_pressed() -> void:
 	if _screen.selection.is_targeting():
-		var card: CardData = _screen.state.hand[_screen.my_side][_screen.selection.hand_index]
+		var card: CardData = MatchDeckTop.card_at(
+			_screen.state, _screen.my_side, _screen.selection.hand_index
+		)
 		if not CardMatchEffectTarget.can_target_face(card):
 			return
 		var foe := MatchState.other_side(_screen.my_side)

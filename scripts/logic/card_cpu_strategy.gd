@@ -210,7 +210,7 @@ func _best_playable_value(state: MatchState, side: int, mana: int) -> float:
 func _choose_play(state: MatchState, side: int, flip_reset_turn := false) -> Dictionary:
 	var best: Dictionary = {}
 	var best_value := 0.0
-	var hand: Array = state.hand[side]
+	var hand: Array = MatchDeckTop.playable_hand(state, side)
 	for index in hand.size():
 		var card: CardData = hand[index]
 		# 砂術は「出す」の中で一緒に選ぶ(Architecture.md 8章)。段を増やさず、
@@ -260,8 +260,10 @@ func _spell_cast(state: MatchState, side: int, index: int) -> Dictionary:
 	if _baseline_key != key:
 		_baseline_key = key
 		_baseline = CardCpuSpellSearch.baseline(state, side, _face_weight(), _choose_attack)
-	var card := CardEffectResolver.acting_card(state, side, state.hand[side][index])
-	var grave_hint := {}
+	var card := CardEffectResolver.acting_card(
+		state, side, MatchDeckTop.card_at(state, side, index)
+	)
+	var grave_hint := CardForesightEffects.cpu_peek_hint(state, side, card, _peek_value)
 	var grave_effect := CardEffectResolver.grave_choice_effect(card)
 	if grave_effect != null:
 		var pick := CardEffectResolver.best_grave_choice(
@@ -392,6 +394,8 @@ func _card_value(state: MatchState, side: int, card: CardData) -> float:
 		value += _spell_discount_value(state, side, card.ally_spell_cost_down)
 	if card.ally_flip_triggers_twice:
 		value += _flip_echo_value(state, side)
+	if card.plays_deck_top:
+		value += CardForesightEffects.CARD_VALUE
 	if card.cannot_attack:
 		# 攻撃できないぶん、生涯ダメージの見積もりは成り立たない。壁としての厚みだけを見る。
 		value = float(total)
@@ -433,17 +437,18 @@ func _repeating_value(state: MatchState, side: int, card: CardData) -> float:
 
 ## テーマごとの固有効果(`Card*Effects`)の見積もり。どれにも当たらなければ null。
 func _themed_value(state: MatchState, side: int, effect: CardEffectData) -> Variant:
-	var type := effect.effect_type
-	if CardLegendEffects.handles(type):
-		return CardLegendEffects.cpu_value(state, side, effect)
-	if CardBackWaterEffects.handles(type):
-		return CardBackWaterEffects.cpu_value(state, side, effect)
-	if CardBlazeSandEffects.handles(type):
-		return CardBlazeSandEffects.cpu_value(state, side, effect)
-	if CardEarlyBellEffects.handles(type):
-		return CardEarlyBellEffects.cpu_value(state, side, effect)
-	if CardFuseSandEffects.handles(type):
-		return CardFuseSandEffects.cpu_value(state, side, effect)
+	# 定数にせず関数の中で並べる(const から互いのクラスを読むと読み込みが循環する。Pitfalls.md)。
+	var themes: Array[GDScript] = [
+		CardLegendEffects,
+		CardBackWaterEffects,
+		CardBlazeSandEffects,
+		CardEarlyBellEffects,
+		CardFuseSandEffects,
+		CardForesightEffects,
+	]
+	for theme in themes:
+		if theme.handles(effect.effect_type):
+			return theme.cpu_value(state, side, effect)
 	return null
 
 
@@ -740,7 +745,14 @@ func _effect_target(state: MatchState, side: int, hand_card: CardData) -> Dictio
 		)
 		if pick >= 0:
 			return {"grave_index": pick}
-	return {}
+	return CardForesightEffects.cpu_peek_hint(state, side, card, _peek_value)
+
+
+## 見た札1枚の値打ち。砂時計は出したときの見込み、砂術は撃つ意味のあるときの値(撃てなければ0)。
+func _peek_value(state: MatchState, side: int, seen_card: CardData) -> float:
+	if seen_card.is_spell:
+		return _spell_value(state, side, seen_card)
+	return _card_value(state, side, seen_card)
 
 
 ## 相手プレイヤーか相手の砂時計1体へダメージを与える効果(追砂の刻)の狙い先。

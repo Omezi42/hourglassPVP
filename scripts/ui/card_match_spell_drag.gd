@@ -35,7 +35,7 @@ func active() -> bool:
 func begin(view: CardView, index: int) -> void:
 	_view = view
 	_index = index
-	_card = _screen.state.hand[_screen.my_side][index]
+	_card = MatchDeckTop.card_at(_screen.state, _screen.my_side, index)
 	_aim_card = CardEffectResolver.acting_card(_screen.state, _screen.my_side, _card)
 	_done = false
 	_above = false

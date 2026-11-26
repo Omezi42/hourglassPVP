@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_rune_0"]
+script = ExtResource("script_effect")
+trigger = 0
+target = 1
+effect_type = 47
+value = 0
+
+[resource]
+script = ExtResource("script_card")
+id = "rune"
+display_name = "ルーン"
+cost = 2
+total_sand = 5
+pool_index = 174
+set_id = "foresight_sand"
+rarity = 0
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_rune_0")])
+rules_text = "設置:山札の一番上を公開し、そのコストの数だけ相手の砂時計1体の砂を上へ戻す"
+flavor_text = "刻んだ文字は先に起こることを知っていた"
+cannot_attack = false
+is_token = false

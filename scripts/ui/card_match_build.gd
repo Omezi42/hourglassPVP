@@ -28,14 +28,23 @@ static func make_bar(screen: Control, opponent: bool) -> PlayerInfoBar:
 ## 帯(`player_info_bar.gd`)は行数の上限に近いため、分岐をそちらへ足さずにここで受ける。
 static func _on_foe_bar_input(event: InputEvent, screen: Control, bar: PlayerInfoBar) -> void:
 	var settings: CpuMatchSettings = screen._cpu_settings
-	if settings == null or not settings.reveal_hand or screen.state == null:
-		return
 	var button := event as InputEventMouseButton
-	if button == null or button.pressed or button.button_index != MOUSE_BUTTON_LEFT:
+	if (
+		screen.state == null
+		or button == null
+		or button.pressed
+		or button.button_index != MOUSE_BUTTON_LEFT
+	):
+		return
+	var foe := MatchState.other_side(screen.my_side)
+	# 相手のシビルが場にいる間、山札の一番上は表向き。山の縁が琥珀色になり、押すと見られる(GameDesign.md 9章)。
+	if bar.deck_top_open() and bar.deck_pile_rect().has_point(button.position):
+		screen._pile.open_pile("相手の山札の一番上", [screen.state.deck[foe][0]])
+		return
+	if settings == null or not settings.reveal_hand:
 		return
 	if not bar.hand_pile_rect().has_point(button.position):
 		return
-	var foe := MatchState.other_side(screen.my_side)
 	screen._pile.open_pile("相手の手札", screen.state.hand[foe])
 
 

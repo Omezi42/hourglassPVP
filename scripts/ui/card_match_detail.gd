@@ -101,7 +101,10 @@ func _live_text(card: CardData, unit: CardInstance = null) -> String:
 		for effect in unit.granted_effects:
 			text += "\n" + effect.shown_text
 		return text
-	if _screen.state == null or not _screen.state.hand[_screen.my_side].has(card):
+	if (
+		_screen.state == null
+		or not MatchDeckTop.playable_hand(_screen.state, _screen.my_side).has(card)
+	):
 		return ""
 	return CardEffectResolver.live_rules_text(_screen.state, _screen.my_side, card)
 

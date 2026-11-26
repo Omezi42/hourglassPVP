@@ -199,19 +199,23 @@ func on_hovered(view: CardView) -> void:
 ## 出さずに放したなら、指の位置から手札の自分の場所へ弾んで戻す。
 func hold(view: CardView, held: bool) -> void:
 	view.self_modulate.a = HELD_ALPHA if held else 1.0
-	var hand: Array = _screen.state.hand[_screen.my_side]
 	if held:
 		_sheen.detach()
 		_held_view = view
-		_held_count = hand.size()
+		_held_count = _held_total()
 		return
 	if view != _held_view:
 		return
-	var kept := hand.size() == _held_count
+	var kept := _held_total() == _held_count
 	_held_view = null
 	_held_count = -1
 	if kept and view.visible:
 		_return_from_pointer(view)
+
+
+## 手札と山札の合計。手札からも、シビルの山札の一番上からも、出せば減る。
+func _held_total() -> int:
+	return _screen.state.hand[_screen.my_side].size() + _screen.state.deck[_screen.my_side].size()
 
 
 func _return_from_pointer(view: CardView) -> void:

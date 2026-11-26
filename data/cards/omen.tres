@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_omen_0"]
+script = ExtResource("script_effect")
+trigger = 0
+target = 5
+effect_type = 46
+value = 2
+
+[resource]
+script = ExtResource("script_card")
+id = "omen"
+display_name = "予兆"
+cost = 2
+total_sand = 0
+pool_index = 173
+set_id = "foresight_sand"
+rarity = 0
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_omen_0")])
+rules_text = "山札の上から2枚を見て、1枚を手札に加え、もう1枚を墓地へ置く"
+flavor_text = "二つの明日のうち一つを選んだ"
+cannot_attack = false
+is_token = false
+is_spell = true

@@ -99,6 +99,7 @@ func watch(state: MatchState) -> void:
 	state.turn_started.connect(_on_turn_started)
 	state.unit_played.connect(_on_unit_played)
 	state.spell_cast.connect(_on_spell_cast)
+	state.deck_revealed.connect(_on_deck_revealed)
 	state.unit_flipped.connect(_on_unit_flipped)
 	state.flip_right_used.connect(_on_flip_right_used)
 	state.attack_performed.connect(_on_attack)
@@ -198,6 +199,11 @@ func _on_unit_played(side: int, slot: int) -> void:
 ## 先が無いので slot は -1 にする。
 func _on_spell_cast(side: int, card: CardData) -> void:
 	_append("%sが「%s」を使った" % [_name_of(side), card.display_name], "cast", side, -1, [card])
+
+
+## 山札の一番上の公開(ルーン・未来視。GameDesign.md 6章)。相手にも見えるよう、公開した札の名前を残す。
+func _on_deck_revealed(side: int, card: CardData) -> void:
+	_append("%sが山札の一番上を公開(「%s」)" % [_name_of(side), card.display_name], "note", side, -1, [card])
 
 
 func _on_unit_flipped(side: int, slot: int) -> void:
