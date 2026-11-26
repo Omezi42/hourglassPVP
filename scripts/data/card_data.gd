@@ -53,6 +53,8 @@ extends Resource
 @export var cost_down_low_hp: int = 0
 ## cost_down_low_hp が効く自分のHPの上限(初期HPの半分)。
 @export var cost_down_hp_threshold: int = 0
+## 手札にある間、自分の最大マナが上限に届いているならコストがこの値だけ下がる(GameDesign.md 6章。カリヨン)。0なら下がらない。
+@export var cost_down_full_mana: int = 0
 ## 相手の砂時計が自分の砂時計(この駒を含む)より多いあいだ、静止を持つ(GameDesign.md 6章。ホールド)。
 ## 常には持たないため keywords へは入れない。判定は `MatchState` が盤面の変わるたびに `CardInstance.held_still` へ書く。
 @export var still_while_outnumbered: bool = false
@@ -120,6 +122,7 @@ func category_name() -> String:
 		conditional_keyword >= 0
 		or cost_down_per_enemy_unit > 0
 		or cost_down_low_hp > 0
+		or cost_down_full_mana > 0
 		or still_while_outnumbered
 		or quick_while_foe_hp_at_most >= 0
 		or allies_ignore_guard

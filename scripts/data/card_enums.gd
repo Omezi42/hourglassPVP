@@ -185,6 +185,15 @@ enum EffectType {
 	## 自分の手札からランダムなコスト condition_total 以下の砂時計を value 体まで、コストを払わず空き枠へ出し、
 	## keyword を与える(スタンピード)。設置効果は解決する。条件に合う砂時計か空き枠が足りなければ出せる数だけ出す。
 	PLAY_RANDOM_FROM_HAND,
+	## 対象プレイヤーの最大マナを value 増やす(ベル。早鐘の刻)。上限(`MatchState.MAX_MANA`)を超えない。今の手番のマナは増えない。
+	GAIN_MAX_MANA,
+	## 対象プレイヤーの最大マナを上限まで上げ、上がったマナ1につき value だけ自分のHPを失う(ドーン)。今の手番のマナは増えない。
+	RAISE_MAX_MANA_TO_CAP,
+	## 対象プレイヤーの今の手番のマナを value 増やす(早回し・前借り)。コインと同じく今の手番だけで、上限を超えるぶんは捨てる。
+	GAIN_MANA,
+	## 対象プレイヤーの次の手番のマナを value 少なく始まるようにする(ボイラー・前借り・サンライズ)。
+	## 重なれば足し、回復の後に引く。0未満にはならない。
+	DELAY_MANA,
 }
 
 ## コンボ系カードの発動条件が確認する範囲(GameDesign.md 6章)。
@@ -218,6 +227,9 @@ enum ConditionScope {
 	OWN_HP_BELOW_FOE,
 	## 自分のHPが condition_total 以下か(背水の刻。12は初期HPの半分)。発動の可否を決める条件。
 	OWN_HP_AT_MOST,
+	## 自分の最大マナが上限(`MatchState.MAX_MANA`)に届いているか(アラーム。早鐘の刻)。発動の可否を決める条件で、
+	## condition_total は使わない。
+	MAX_MANA_FULL,
 }
 
 ## 効果が対象へ届く演出の「型」(GameDesign.md 9章)。`MatchState.effect_struck` /

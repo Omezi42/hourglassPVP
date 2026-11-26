@@ -445,6 +445,7 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 			and state.units(foe_side).size() < effect.condition_total
 		)
 		or not CardBackWaterEffects.hp_condition_met(state, side, effect)
+		or not CardEarlyBellEffects.mana_condition_met(state, side, effect)
 	):
 		return value
 	if CardLegendEffects.handles(effect.effect_type):
@@ -453,6 +454,8 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 		return CardBackWaterEffects.cpu_value(state, side, effect)
 	if CardBlazeSandEffects.handles(effect.effect_type):
 		return CardBlazeSandEffects.cpu_value(state, side, effect)
+	if CardEarlyBellEffects.handles(effect.effect_type):
+		return CardEarlyBellEffects.cpu_value(state, side, effect)
 	match effect.effect_type:
 		CardEnums.EffectType.DAMAGE_PLAYER:
 			value = effect.value * FACE_WEIGHT

@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[resource]
+script = ExtResource("script_card")
+id = "carillon"
+display_name = "カリヨン"
+cost = 6
+total_sand = 9
+pool_index = 158
+set_id = "early_bell"
+rarity = 1
+keywords = Array[int]([])
+effects = Array[Resource]([])
+rules_text = "自分の最大マナが7なら、このカードのコストが2下がる"
+flavor_text = "鐘が七つそろってから鳴らす曲がある"
+cannot_attack = false
+is_token = false
+cost_down_full_mana = 2

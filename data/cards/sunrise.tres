@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_sunrise_0"]
+script = ExtResource("script_effect")
+trigger = 0
+target = 4
+effect_type = 40
+value = 1
+
+[resource]
+script = ExtResource("script_card")
+id = "sunrise"
+display_name = "サンライズ"
+cost = 4
+total_sand = 6
+pool_index = 160
+set_id = "early_bell"
+rarity = 2
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_sunrise_0")])
+rules_text = "設置:相手の次の手番、相手のマナは1少なく始まる"
+flavor_text = "相手の朝はまだ来ない"
+cannot_attack = false
+is_token = false

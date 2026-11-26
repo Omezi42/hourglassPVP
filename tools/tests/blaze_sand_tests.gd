@@ -193,7 +193,7 @@ func _test_flare_grants_quick_to_other_allies_only() -> void:
 	ally.health = 4
 	state.play_card(A, 0, 1)
 	var flare: CardInstance = state.board[A][1]
-	_assert.call(state.hp[A] == MatchState.INITIAL_HP - 3, "フレアは自分のHPを3失う")
+	_assert.call(state.hp[A] == MatchState.INITIAL_HP - 2, "フレアは自分のHPを2失う")
 	_assert.call(ally.has_keyword(CardEnums.Keyword.QUICK), "他の砂時計に疾走を与える")
 	_assert.call(ally.can_attack(), "同じ手番に出した駒が殴れる")
 	_assert.call(not flare.has_keyword(CardEnums.Keyword.QUICK), "フレア自身には与えない")
@@ -250,10 +250,10 @@ func _test_stampede_plays_two_cheap_units() -> void:
 	var state := _new_match(["stampede", "grain", "grain", "grain"])
 	var mana_before := int(state.mana[A])
 	state.play_card(A, 0, 0)
-	_assert.call(state.hp[A] == MatchState.INITIAL_HP - 4, "スタンピードは自分のHPを4失う")
+	_assert.call(state.hp[A] == MatchState.INITIAL_HP - 3, "スタンピードは自分のHPを3失う")
 	_assert.call(state.units(A).size() == 3, "スタンピード自身と手札から2体で3体になる")
 	_assert.call(state.hand[A].size() == 1, "手札から2枚が減る")
-	_assert.call(int(state.mana[A]) == mana_before - 5, "場に出した駒のコストは払わない")
+	_assert.call(int(state.mana[A]) == mana_before - 4, "場に出した駒のコストは払わない")
 	for slot in [1, 2]:
 		var unit: CardInstance = state.board[A][slot]
 		_assert.call(unit != null and unit.has_keyword(CardEnums.Keyword.QUICK), "出した駒は疾走を得る")
@@ -289,7 +289,7 @@ func _test_stampede_resolves_play_effects() -> void:
 	var state := _new_match(["stampede", "torch"])
 	state.play_card(A, 0, 0)
 	_assert.call(state.units(A).size() == 2, "トーチが場に出る")
-	_assert.call(state.hp[A] == MatchState.INITIAL_HP - 6, "出した駒の設置効果(トーチのHP2)も解決する")
+	_assert.call(state.hp[A] == MatchState.INITIAL_HP - 5, "出した駒の設置効果(トーチのHP2)も解決する")
 
 
 func _stampede_ids(seed_value: int) -> Array[String]:

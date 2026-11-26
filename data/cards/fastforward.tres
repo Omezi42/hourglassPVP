@@ -1,0 +1,35 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_fastforward_0"]
+script = ExtResource("script_effect")
+trigger = 0
+target = 6
+effect_type = 5
+value = 2
+
+[sub_resource type="Resource" id="Effect_fastforward_1"]
+script = ExtResource("script_effect")
+trigger = 0
+target = 5
+effect_type = 39
+value = 1
+
+[resource]
+script = ExtResource("script_card")
+id = "fastforward"
+display_name = "早回し"
+cost = 1
+total_sand = 0
+pool_index = 156
+set_id = "early_bell"
+rarity = 0
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_fastforward_0"), SubResource("Effect_fastforward_1")])
+rules_text = "自分の砂時計1体の砂を2粒落とし、このターンのマナ+1"
+flavor_text = "針を指で押す"
+cannot_attack = false
+is_token = false
+is_spell = true

@@ -106,6 +106,9 @@ var hp: Dictionary = {}
 var hp_max: Dictionary = {}
 var mana: Dictionary = {}
 var max_mana: Dictionary = {}
+## 次の手番のマナが少なく始まる量(Side をキーにした int。早鐘の刻)。その側の手番の始め、回復の後に引いて0へ戻す。
+## 重なれば足す。画面は「次 −n」と出す。
+var mana_debt: Dictionary = {}
 ## 山札(先頭が次に引くカード)。
 var deck: Dictionary = {}
 var hand: Dictionary = {}
@@ -186,6 +189,7 @@ func start_match(
 		hp_max[side] = INITIAL_HP
 		mana[side] = 0
 		max_mana[side] = 0
+		mana_debt[side] = 0
 		hand[side] = []
 		graveyard[side] = []
 		_deck_exhausted[side] = false
@@ -285,7 +289,8 @@ func _begin_turn() -> void:
 	var side := current_turn
 	flips_this_turn.clear()
 	max_mana[side] = mini(max_mana[side] + 1, MAX_MANA)
-	mana[side] = max_mana[side]
+	mana[side] = maxi(max_mana[side] - int(mana_debt.get(side, 0)), 0)
+	mana_debt[side] = 0
 	mana_changed.emit(side, mana[side], max_mana[side])
 	for unit in units(side):
 		unit.begin_turn()
@@ -429,12 +434,14 @@ func can_play(side: int, hand_index: int) -> bool:
 	return mana[side] >= play_cost(side, card)
 
 
-## 実際に払うコスト(GameDesign.md 6章)。相手の砂時計の数で下がるカード・自分のHPが低いと下がるカードと、
+## 実際に払うコスト(GameDesign.md 6章)。相手の砂時計の数で下がるカード・自分のHPが低いと下がるカード・最大マナが上限だと下がるカードと、
 ## 自分の場に砂術のコストを下げる駒がいるときの砂術だけが元のコストと違う。
 func play_cost(side: int, card: CardData) -> int:
 	var down := card.cost_down_per_enemy_unit * units(other_side(side)).size()
 	if card.cost_down_low_hp > 0 and int(hp[side]) <= card.cost_down_hp_threshold:
 		down += card.cost_down_low_hp
+	if card.cost_down_full_mana > 0 and int(max_mana[side]) >= MAX_MANA:
+		down += card.cost_down_full_mana
 	if card.is_spell:
 		for unit in units(side):
 			down += unit.spell_cost_down()

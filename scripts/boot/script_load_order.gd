@@ -33,6 +33,7 @@ const PATHS: Array[String] = [
 	"res://scripts/logic/card_blaze_sand_effects.gd",
 	"res://scripts/logic/card_back_water_effects.gd",
 	"res://scripts/logic/spell_forecast.gd",
+	"res://scripts/logic/card_early_bell_effects.gd",
 	"res://scripts/logic/card_cpu_spell_search.gd",
 	"res://scripts/logic/card_cpu_flip_right.gd",
 	"res://scripts/logic/match_action.gd",

@@ -57,6 +57,13 @@ const MANA_TROUGH_RECT := Rect2(MANA_TROUGH_X, MANA_TROUGH_Y, MANA_TROUGH_WIDTH,
 ## コインはマナのバッジの肩に載せる小さな金貨。
 const COIN_CENTER := Vector2(27.0, 15.0)
 const COIN_RADIUS := 6.5
+## 次の手番のマナの減り(「次 −n」。早鐘の刻)。マナの溝の上の隙間へ、溝の右端に揃えて小さな札を置く。
+const DEBT_TAG_HEIGHT := 14.0
+const DEBT_TAG_WIDTH := 46.0
+const DEBT_TAG_Y := 2.0
+const DEBT_TAG_FONT := UiPalette.T_MICRO
+const DEBT_TAG_TEXT := UiPalette.DANGER_TEXT
+const DEBT_TAG_RADIUS := 6.0
 ## 山札・墓地・手札の札。マナの溝の右に並べる。手札は相手側だけで、自分側はその位置を空ける。
 const PILE_SIZE := Vector2(62, 32)
 const PILE_TOP := 12.0
@@ -193,6 +200,8 @@ var _hp := MatchState.INITIAL_HP
 var _max_hp := MatchState.INITIAL_HP
 var _mana := 0
 var _max_mana := 0
+## 次の手番のマナが少なく始まる量(`MatchState.mana_debt`)。0なら札を出さない。
+var _mana_debt := 0
 var _deck := 0
 var _graveyard := 0
 var _hand := 0
@@ -280,6 +289,7 @@ func show_state(state: MatchState, side: int, max_hp: int = MatchState.INITIAL_H
 		_animate_hp(previous)
 	_mana = state.mana[side]
 	_max_mana = state.max_mana[side]
+	_mana_debt = int(state.mana_debt.get(side, 0))
 	_deck = state.deck[side].size()
 	_graveyard = state.graveyard[side].size()
 	_hand = state.hand[side].size()
@@ -290,7 +300,9 @@ func show_state(state: MatchState, side: int, max_hp: int = MatchState.INITIAL_H
 
 
 func _shown_values() -> Array:
-	return [_hp, _max_hp, _shown_hp, _mana, _max_mana, _deck, _graveyard, _hand, _has_coin]
+	return [
+		_hp, _max_hp, _shown_hp, _mana, _max_mana, _mana_debt, _deck, _graveyard, _hand, _has_coin
+	]
 
 
 func _redraw_all() -> void:
@@ -315,6 +327,7 @@ func reset() -> void:
 	_shown_hp = float(_hp)
 	_mana = 0
 	_max_mana = 0
+	_mana_debt = 0
 	_deck = 0
 	_graveyard = 0
 	_hand = 0
@@ -692,6 +705,27 @@ func _draw_mana() -> void:
 		UiPalette.COST,
 		UiPalette.COST_DEEP,
 		MANA_BADGE_RADIUS
+	)
+	if _mana_debt > 0:
+		_draw_mana_debt(trough_rect)
+
+
+## 次の手番のマナの減り。溝の右上に「次 −n」と出す(次の手番に効くことを、効く前に読めるようにする)。
+func _draw_mana_debt(trough_rect: Rect2) -> void:
+	var rect := Rect2(
+		Vector2(trough_rect.end.x - DEBT_TAG_WIDTH, _right(Vector2(0.0, DEBT_TAG_Y)).y),
+		Vector2(DEBT_TAG_WIDTH, DEBT_TAG_HEIGHT)
+	)
+	UiKit.well(get_canvas_item(), rect, DEBT_TAG_RADIUS)
+	var text := "次 −%d" % _mana_debt
+	var width := _font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, DEBT_TAG_FONT).x
+	_text_mid(
+		self,
+		Vector2(rect.get_center().x - width * 0.5, rect.get_center().y),
+		text,
+		DEBT_TAG_FONT,
+		DEBT_TAG_TEXT,
+		true
 	)
 
 

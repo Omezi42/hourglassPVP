@@ -12,6 +12,8 @@ const MAX_CHAIN_DEPTH := 160
 const MAX_CHAIN_STEPS := 4096
 ## 対局中の写し詠みの札の文に添える、いま撃ち直す砂術(GameDesign.md 6章)。
 const RECAST_NOTE := "(いま撃ち直すのは%s)"
+## 条件の分岐を1行へ収めるための略称。
+const _SCOPE := CardEnums.ConditionScope
 
 ## この対局で達した最も深い入れ子・最も長い連鎖と、上限で打ち切った連鎖の数(網羅テストが見る)。
 var peak_depth := 0
@@ -28,6 +30,8 @@ var _legend: CardLegendEffects
 var _back_water: CardBackWaterEffects
 ## 第2弾「烈砂の刻」の固有効果(GameDesign.md 6章)。
 var _blaze_sand: CardBlazeSandEffects
+## 第2弾「早鐘の刻」の固有効果(GameDesign.md 6章)。
+var _early_bell: CardEarlyBellEffects
 
 
 func _init(p_state: MatchState) -> void:
@@ -35,6 +39,7 @@ func _init(p_state: MatchState) -> void:
 	_legend = CardLegendEffects.new(p_state, self)
 	_back_water = CardBackWaterEffects.new(p_state, self)
 	_blaze_sand = CardBlazeSandEffects.new(p_state, self)
+	_early_bell = CardEarlyBellEffects.new(p_state, self)
 
 
 ## unit が持つ trigger の効果をすべて適用する。
@@ -76,7 +81,7 @@ func _cut_off_chain(unit: CardInstance, trigger: int) -> void:
 
 ## コンボ系カードの発動条件(GameDesign.md 6章)。TARGET は対象そのものの絞り込みで
 ## `_single_unit()` が扱うため、ここでは SELF / ANY_ALLY / ENEMY_OUTNUMBERS / ENEMY_COUNT_AT_LEAST /
-## OWN_HP_BELOW_FOE / OWN_HP_AT_MOST だけを見る。
+## OWN_HP_BELOW_FOE / OWN_HP_AT_MOST / MAX_MANA_FULL だけを見る。
 func _condition_met(side: int, unit: CardInstance, effect: CardEffectData) -> bool:
 	match effect.condition_scope:
 		CardEnums.ConditionScope.SELF:
@@ -90,8 +95,11 @@ func _condition_met(side: int, unit: CardInstance, effect: CardEffectData) -> bo
 			return _state.units(MatchState.other_side(side)).size() > others
 		CardEnums.ConditionScope.ENEMY_COUNT_AT_LEAST:
 			return _state.units(MatchState.other_side(side)).size() >= effect.condition_total
-		CardEnums.ConditionScope.OWN_HP_BELOW_FOE, CardEnums.ConditionScope.OWN_HP_AT_MOST:
-			return CardBackWaterEffects.hp_condition_met(_state, side, effect)
+		_SCOPE.OWN_HP_BELOW_FOE, _SCOPE.OWN_HP_AT_MOST, _SCOPE.MAX_MANA_FULL:
+			return (
+				CardBackWaterEffects.hp_condition_met(_state, side, effect)
+				and CardEarlyBellEffects.mana_condition_met(_state, side, effect)
+			)
 	return true
 
 
@@ -113,6 +121,9 @@ func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Diction
 		return
 	if CardBlazeSandEffects.handles(effect.effect_type):
 		_blaze_sand.apply(side, effect, from_slot, origin)
+		return
+	if CardEarlyBellEffects.handles(effect.effect_type):
+		_early_bell.apply(side, effect, from_slot, origin)
 		return
 	match effect.effect_type:
 		CardEnums.EffectType.DAMAGE_PLAYER:

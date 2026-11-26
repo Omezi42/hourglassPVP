@@ -213,6 +213,26 @@ const SETS: Dictionary = {
 		],
 		"price": 0,
 	},
+	## 第2弾「前借りの弾」の3つ目のテーマ(GameDesign.md 8章)。鐘を早く鳴らして刻を進める枠で、マナ加速を成立させる。
+	"early_bell":
+	{
+		"id": "early_bell",
+		"display_name": "早鐘の刻",
+		"description": "鐘を早く鳴らして刻を進める9枚",
+		"card_ids":
+		[
+			"bell",
+			"gong",
+			"boiler",
+			"fastforward",
+			"borrow",
+			"carillon",
+			"alarm",
+			"sunrise",
+			"dawn",
+		],
+		"price": 0,
+	},
 }
 
 const ORDERED_IDS: Array[String] = [
@@ -230,6 +250,7 @@ const ORDERED_IDS: Array[String] = [
 	"first_extra",
 	"back_water",
 	"blaze_sand",
+	"early_bell",
 ]
 
 

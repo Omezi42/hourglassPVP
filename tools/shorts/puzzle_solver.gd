@@ -246,6 +246,7 @@ static func key_of(state: MatchState) -> String:
 		str(state.hp[MINE]),
 		str(state.hp[FOE]),
 		str(state.mana[MINE]),
+		str(state.mana_debt.get(MINE, 0)),
 		str(state.flip_right_remaining.get(MINE, 0)),
 	]
 	var hand_ids: PackedStringArray = []

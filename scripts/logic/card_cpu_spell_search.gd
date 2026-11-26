@@ -58,6 +58,7 @@ static func best_cast(
 	var targets := candidate_targets(state, side, card)
 	if targets.is_empty():
 		return best
+	var mana_bonus := CardEarlyBellEffects.spell_bonus(state, side, card)
 	var samples := RANDOM_SAMPLES if SpellForecast.is_random(card) else 1
 	var first := true
 	for target: Dictionary in targets:
@@ -72,7 +73,7 @@ static func best_cast(
 			_attack_out(after, side, attack)
 			total += evaluate(after, side, face_weight)
 		# 撃った砂術が手札から減るぶんは、出す駒と同じくカード1枚の代価として数えない。
-		var gain := total / samples - before + HAND_CARD_VALUE
+		var gain := total / samples - before + HAND_CARD_VALUE + mana_bonus
 		if first or gain > best["value"]:
 			best = {"value": gain, "target": target}
 			first = false
