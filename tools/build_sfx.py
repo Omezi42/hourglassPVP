@@ -995,13 +995,32 @@ def sig_clockwork():
     return layer(x, hand_bell(88, 1.0, 0.8), -9, CLOCKWORK_CLICK_AT + 0.05)
 
 
+
+## ミーティアの岩が空を落ちてくる長さ(`meteor_entrance.gd` の FALL。着地は重い着地の打点)。
+METEOR_FALL = 0.3
+
+
+def sig_meteor():
+    """ミーティア:燃える岩が風を裂いてごうと唸りながら落ち、重く着地して、足元で火薬のようにばちばちと爆ぜる。"""
+    start = HEAVY_LAND_AT - METEOR_FALL
+    x = landing(1.6, heavy=True)
+    x = layer(x, whoosh(3, 0.8), -4, start)
+    roar = sand(METEOR_FALL, 700, 150, 1800, lambda t: np.clip(t / METEOR_FALL, 0, 1) ** 2)
+    x = layer(x, roar, -8, start)
+    x = layer(x, thump(1.0, 70, 30, 0.35, width=0.003), -2, HEAVY_LAND_AT)
+    crackle = np.zeros(n_of(0.5))
+    for _ in range(14):
+        piece = strike(0.08, wood(RNG.uniform(1500, 3200), 0.01), 0.0001, 0.9, (2500, 9000))
+        at(crackle, piece, 0.4 * RNG.uniform(0.0, 1.0) ** 1.6, RNG.uniform(0.3, 1.0))
+    return layer(x, crackle, -9, HEAVY_LAND_AT + 0.02)
+
 SIGNATURES = [
     sig_freeze, sig_relic, sig_middle, sig_phase, sig_grain, sig_dash, sig_shield, sig_sand,
     sig_watcher, sig_glass, sig_vamp, sig_drill, sig_lance, sig_twin, sig_lock, sig_gate,
     sig_poison, sig_guard, sig_mirror, sig_wall, sig_bypass, sig_colossus,
     sig_obelisk, sig_tower, sig_anchor, sig_sage, sig_grimoire,
     sig_maestro, sig_zero_hour, sig_necropolis,
-    sig_hold, sig_bastion, sig_chaser, sig_carillon, sig_clockwork,
+    sig_hold, sig_bastion, sig_chaser, sig_carillon, sig_clockwork, sig_meteor,
 ]
 
 

@@ -1,7 +1,7 @@
 class_name SignaturePaint
 extends RefCounted
 ## カードの演出(GameDesign.md 9章)で使う絵の部品。鐘・天秤・歯車の輪・砂の帯・昇る砂粒・
-## 雪の結晶・水滴・ばね・槌・火花・時計の文字盤・恵与の輪をコードで描く。
+## 雪の結晶・水滴・ばね・槌・火花・時計の文字盤・恵与の輪・導火線をコードで描く。
 ## 進行(いつ何をどれだけ描くか)は `moves/` の各カードが持ち、
 ## ここは「この形をこの状態で描く」だけを受け持つ。
 
@@ -795,6 +795,103 @@ static func toll_flight(
 	var dir := (to - from).normalized()
 	var head := from.lerp(to, ease(progress, 0.7))
 	toll_arcs(item, head - dir * radius, dir, radius, alpha * minf(progress * 4.0, 1.0), ink)
+
+
+## 導火線(導火の刻の共通の部品)。`from` から `to` へ波打つ麻の縄で、`laid` まで繰り出され、`burnt` まで燃えて灰になる。
+## 燃えている所には火の点(`fuse_spark`)がはぜる。`sway` は波の振れ幅。
+static func fuse_cord(
+	item: CanvasItem,
+	from: Vector2,
+	to: Vector2,
+	laid: float,
+	burnt: float,
+	alpha: float,
+	sway := 6.0
+) -> void:
+	const STEPS := 18
+	const WAVES := 2.5
+	const WIDTH := 3.0
+	if alpha <= 0.0 or laid <= 0.0 or from == to:
+		return
+	var ci := item.get_canvas_item()
+	var normal := (to - from).normalized().orthogonal()
+	var ash := PackedVector2Array()
+	var hemp := PackedVector2Array()
+	for i in range(STEPS + 1):
+		var s := laid * float(i) / float(STEPS)
+		var at := from.lerp(to, s) + normal * sin(s * TAU * WAVES) * sway * sin(s * PI)
+		if s <= burnt:
+			ash.append(at)
+		if s >= burnt:
+			if hemp.is_empty() and not ash.is_empty():
+				hemp.append(ash[ash.size() - 1])
+			hemp.append(at)
+	if ash.size() >= 2:
+		ShapePaint.polyline(ci, ash, Color(UiPalette.FUSE_ASH, alpha * 0.7), WIDTH * 0.6, true)
+	if hemp.size() >= 2:
+		ShapePaint.polyline(ci, hemp, Color(UiPalette.INK_950, alpha * 0.8), WIDTH + 2.0, true)
+		ShapePaint.polyline(ci, hemp, Color(UiPalette.FUSE_HEMP, alpha), WIDTH, true)
+	if burnt > 0.0 and burnt < laid:
+		var spark_at := hemp[0] if not hemp.is_empty() else from
+		fuse_spark(item, spark_at, 1.0, alpha, burnt * 9.0)
+
+
+## 火の点。白い芯と黄の光に、短い火の筋が6本はぜる。`flicker` を進めると筋の向きと長さが揺れる。
+static func fuse_spark(
+	item: CanvasItem, at: Vector2, size: float, alpha: float, flicker: float
+) -> void:
+	const CORE := 3.2
+	const GLOW := 9.0
+	const RAYS := 6
+	const RAY := 9.0
+	if alpha <= 0.0:
+		return
+	var ci := item.get_canvas_item()
+	ShapePaint.circle(ci, at, GLOW * size, Color(UiPalette.FUSE_SPARK, alpha * 0.3))
+	for i in range(RAYS):
+		var dir := Vector2.from_angle(TAU * float(i) / float(RAYS) + flicker + _hash(i, 41))
+		var reach := RAY * size * (0.55 + 0.45 * absf(sin(flicker * 3.0 + float(i) * 1.7)))
+		item.draw_line(
+			at + dir * CORE * size,
+			at + dir * reach,
+			Color(SPARK_HOT.lerp(UiPalette.FUSE_SPARK, 0.4), alpha),
+			1.6,
+			true
+		)
+	ShapePaint.circle(ci, at, CORE * size, Color(SPARK_HOT, alpha))
+
+
+## 黒色火薬の爆ぜ(導火の刻の共通の部品)。白い閃光がぎざぎざに開いて橙へ冷め、外へ煤の煙の輪が広がる。
+## `progress` は0→1、`radius` は煙の輪がいちばん外まで広がる半径。
+static func powder_burst(
+	item: CanvasItem, center: Vector2, progress: float, radius: float, alpha: float
+) -> void:
+	const POINTS := 10
+	const PUFFS := 9
+	if alpha <= 0.0 or progress <= 0.0 or progress >= 1.0:
+		return
+	var ci := item.get_canvas_item()
+	var flash := clampf(1.0 - progress * 2.2, 0.0, 1.0)
+	var spread := ease(progress, 0.35)
+	for i in range(PUFFS):
+		var dir := Vector2.from_angle(TAU * (float(i) + _hash(i, 43) * 0.6) / float(PUFFS))
+		var r := radius * (0.28 + 0.18 * _hash(i, 44)) * (0.5 + 0.5 * spread)
+		ShapePaint.circle(
+			ci,
+			center + dir * radius * 0.62 * spread,
+			r,
+			Color(UiPalette.POWDER_SOOT, alpha * 0.55 * (1.0 - progress))
+		)
+	if flash <= 0.0:
+		return
+	var star := PackedVector2Array()
+	var reach := radius * (0.45 + 0.4 * spread)
+	for i in range(POINTS * 2):
+		var a := TAU * float(i) / float(POINTS * 2)
+		var r := reach * (1.0 if i % 2 == 0 else 0.48) * (0.85 + 0.3 * _hash(i, 45))
+		star.append(center + Vector2.from_angle(a) * r)
+	ShapePaint.colored_polygon(ci, star, Color(UiPalette.FLAME, alpha * flash))
+	ShapePaint.circle(ci, center, reach * 0.42, Color(SPARK_HOT, alpha * flash))
 
 
 ## 粒ごとに決まった0〜1の揺らぎ。`moves/` の側で砂粒を散らすときに使う。

@@ -36,6 +36,7 @@ const ENTRANCES := {
 	"chaser": preload("res://scripts/ui/signature/moves/chaser_entrance.gd"),
 	"carillon": preload("res://scripts/ui/signature/moves/carillon_entrance.gd"),
 	"clockwork": preload("res://scripts/ui/signature/moves/clockwork_entrance.gd"),
+	"meteor": preload("res://scripts/ui/signature/moves/meteor_entrance.gd"),
 }
 
 ## 効果が対象へ届くまで(設置・落砂・砂術など、紋章が飛ぶ場面の代わり)。
@@ -173,6 +174,15 @@ const EFFECTS := {
 	"alarm": preload("res://scripts/ui/signature/moves/alarm_effect.gd"),
 	"sunrise": preload("res://scripts/ui/signature/moves/sunrise_effect.gd"),
 	"dawn": preload("res://scripts/ui/signature/moves/dawn_effect.gd"),
+	"fuse": preload("res://scripts/ui/signature/moves/fuse_effect.gd"),
+	"candle": preload("res://scripts/ui/signature/moves/candle_effect.gd"),
+	"wire": preload("res://scripts/ui/signature/moves/wire_effect.gd"),
+	"timebomb": preload("res://scripts/ui/signature/moves/timebomb_effect.gd"),
+	"nova": preload("res://scripts/ui/signature/moves/nova_effect.gd"),
+	"countdown": preload("res://scripts/ui/signature/moves/countdown_effect.gd"),
+	"deadline": preload("res://scripts/ui/signature/moves/deadline_effect.gd"),
+	"fuseline": preload("res://scripts/ui/signature/moves/fuseline_effect.gd"),
+	"epicenter": preload("res://scripts/ui/signature/moves/epicenter_effect.gd"),
 }
 
 

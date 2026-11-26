@@ -66,6 +66,7 @@ enum Sfx {
 	SIG_CHASER,
 	SIG_CARILLON,
 	SIG_CLOCKWORK,
+	SIG_METEOR,
 }
 
 const SETTINGS_PATH := "user://sound_settings.json"
@@ -134,6 +135,7 @@ const SFX_PATHS := {
 	Sfx.SIG_CHASER: "res://assets/sfx/sig_chaser.wav",
 	Sfx.SIG_CARILLON: "res://assets/sfx/sig_carillon.wav",
 	Sfx.SIG_CLOCKWORK: "res://assets/sfx/sig_clockwork.wav",
+	Sfx.SIG_METEOR: "res://assets/sfx/sig_meteor.wav",
 }
 
 static var _players: Array[AudioStreamPlayer] = []
