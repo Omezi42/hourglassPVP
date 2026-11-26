@@ -55,6 +55,8 @@ const GRAVE_IDS := ["sand", "grain"]
 const GRAVE_SPELLS := 3
 const HAND_FILLER := ["sand", "grain"]
 const FULL_MANA := MatchState.MAX_MANA
+## ドーンの実演で出す前の最大マナ(上限未満)。
+const DAWN_START_MAX_MANA := 3
 ## HPを反転する効果でも決着しない値にしておく(MatchState.INITIAL_HP = 24)。
 const OWN_HP := 14
 const FOE_HP := 18
@@ -337,6 +339,9 @@ static func _stage_legend(state: MatchState, side: int, card: CardData) -> void:
 				# 相手4体・自分2体(実演の駒を含む)にして、2体壊れて数がそろうところを見せる。
 				for slot in EXTRA_FOE_SLOTS:
 					_place(state, foe, slot, _card(FOE_TARGET[0]), FOE_TARGET[1], FOE_TARGET[2])
+			CardEnums.EffectType.RAISE_MAX_MANA_TO_CAP:
+				# 最大マナが上限だと効果が出ないため、上限より低くして出す(ドーン)。
+				state.max_mana[side] = DAWN_START_MAX_MANA
 			CardEnums.EffectType.SET_TOTAL:
 				# 総量の小さい味方と大きい味方を並べ、両方が5にそろうところを見せる。
 				_place(state, side, SMALL_ALLY_SLOT, _card(FOE_TARGET[0]), 1, 1)

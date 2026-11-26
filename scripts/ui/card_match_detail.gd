@@ -10,6 +10,9 @@ extends RefCounted
 ##
 ## `card_match_screen.gd` が1000行の上限に近いため、ここへ切り出している。
 
+## 奪った駒に添える1行(元の持ち主の側から見た呼び方)。
+const SEIZED_NOTE := "相手の砂時計(奪った)"
+const LENT_NOTE := "自分の砂時計(奪われた)"
 ## 外れてから消すまでの猶予。隣の駒へ移る途中で点滅させないため。
 const HIDE_DELAY := 0.15
 ## 盤面へ重ねる以上、幅は狭いほどよい。効果の文が読める下限として340pxを採った。
@@ -96,6 +99,30 @@ func hover_card(
 ## 自分の手札の札は、反転の回数で伸びる数字をいまの値で見せる(GameDesign.md 6章)。
 ## 場の駒は、与えられた効果(導火線)を札の文の末尾へ足して見せる(GameDesign.md 6章「効果を与える効果」)。
 func _live_text(card: CardData, unit: CardInstance = null) -> String:
+	var body := _live_body(card, unit)
+	var note := _seized_note(unit)
+	if note.is_empty():
+		return body
+	return (card.rules_text if body.is_empty() else body) + "\n" + note
+
+
+## 奪った駒(寝返りの刻)の持ち主を1行で添える(GameDesign.md 9章)。奪われていなければ空。
+func _seized_note(unit: CardInstance) -> String:
+	if unit == null or _screen.state == null:
+		return ""
+	var state: MatchState = _screen.state
+	if (
+		state.board[_screen.my_side].has(unit)
+		and CardTurncoatEffects.is_seized(unit, _screen.my_side)
+	):
+		return SEIZED_NOTE
+	var foe := MatchState.other_side(_screen.my_side)
+	if state.board[foe].has(unit) and CardTurncoatEffects.is_seized(unit, foe):
+		return LENT_NOTE
+	return ""
+
+
+func _live_body(card: CardData, unit: CardInstance = null) -> String:
 	if unit != null and not unit.silenced and not unit.granted_effects.is_empty():
 		var text := card.rules_text
 		for effect in unit.granted_effects:

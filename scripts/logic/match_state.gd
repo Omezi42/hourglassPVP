@@ -331,6 +331,7 @@ func end_turn() -> void:
 			unit_ticked.emit(side, slot)
 		if unit.is_dead():
 			_destroy_unit(side, slot)
+	CardTurncoatEffects.return_loaned(self, side)
 	board_changed.emit(side)
 	if _deck_exhausted[side]:
 		fatigue_damage.emit(side, FATIGUE_DAMAGE)
@@ -495,7 +496,9 @@ func play_card(side: int, hand_index: int, slot: int, target: Dictionary = {}) -
 	unit_played.emit(side, slot)
 	board_changed.emit(side)
 	_fire(side, unit, CardEnums.Trigger.ON_PLAY, target)
-	CardPourSandEffects.fire_entered(self, side, slot)
+	# 持ち場を入れ替えて去った駒(トレイター)は、出たことにならない。
+	if board[side][slot] == unit:
+		CardPourSandEffects.fire_entered(self, side, slot)
 	_cleanup_dead()
 	return true
 
@@ -702,8 +705,10 @@ func _fire_attacked(side: int, attacker: CardInstance) -> void:
 	_cleanup_dead()
 
 
-func _resolve_unit_combat(side: int, slot: int, target_slot: int) -> void:
-	var foe_side := other_side(side)
+## 通常は攻撃側の相手の駒と戦う。`foe_side` を渡すと、その側の駒と戦う(相手の駒どうしを戦わせる同士討ち)。
+func _resolve_unit_combat(side: int, slot: int, target_slot: int, foe_side := -1) -> void:
+	if foe_side < 0:
+		foe_side = other_side(side)
 	var attacker: CardInstance = board[side][slot]
 	var defender: CardInstance = board[foe_side][target_slot]
 	# **双方に同じ倍率がかかるため、相打ちの対称性は崩れない**(GameDesign.md 27章)。
@@ -860,7 +865,7 @@ func _destroy_unit(side: int, slot: int) -> void:
 	if unit == null:
 		return
 	board[side][slot] = null
-	graveyard[side].append(unit.data)
+	graveyard[CardTurncoatEffects.card_owner(unit, side)].append(unit.data)
 	# 紋章の出どころ(DEATH)を紐づけるため、砕けた枠を hint で運ぶ
 	# (Architecture.md 4.0節)。対象の絞り込み(hint.has("slot"))とは
 	# 別のキーのため、通常の対象選択には影響しない。

@@ -454,6 +454,7 @@ func _themed_value(state: MatchState, side: int, effect: CardEffectData) -> Vari
 		CardForesightEffects,
 		CardPourSandEffects,
 		CardDrawSandEffects,
+		CardTurncoatEffects,
 	]
 	for theme in themes:
 		if theme.handles(effect.effect_type):
@@ -477,6 +478,7 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 		or not CardBackWaterEffects.hp_condition_met(state, side, effect)
 		or not CardEarlyBellEffects.mana_condition_met(state, side, effect)
 		or not CardForesightEffects.grave_condition_met(state, side, effect)
+		or not CardTurncoatEffects.leads_met(state, side, effect, false)
 	):
 		return value
 	var themed: Variant = _themed_value(state, side, effect)

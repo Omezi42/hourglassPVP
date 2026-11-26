@@ -192,6 +192,8 @@ var exhausted := false
 ## まだ攻撃できる自分の駒(GameDesign.md 9章)。攻撃済みを彩度で落とすだけでは
 ## その逆が示せず、6枠が並ぶと押し忘れるため、控えめな印を出す。
 var ready_mark := false
+## 奪った駒の台座の縁に出す帯の色(元の持ち主の側の色。GameDesign.md 9章)。透明なら出さない。
+var seized_band := Color.TRANSPARENT
 ## 山札の一番上から並べた札(シビル。GameDesign.md 9章)。手札の右端に琥珀色の縁を付ける。
 var deck_top := false
 ## 右上へ出す小さな添え字(デッキ編集の「2/2」など)。空なら出さない。
@@ -673,6 +675,7 @@ func _look() -> Array:
 		deck_top,
 		exhausted,
 		ready_mark,
+		seized_band,
 		badge,
 		preview_health,
 		preview_dead,

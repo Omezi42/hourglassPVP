@@ -327,6 +327,26 @@ const SETS: Dictionary = {
 		],
 		"price": 0,
 	},
+	## 第3弾「奪砂の弾」の2つ目のテーマ(GameDesign.md 8章)。相手の駒を奪い、自分の戦力に変える。
+	"turncoat":
+	{
+		"id": "turncoat",
+		"display_name": "寝返りの刻",
+		"description": "相手の駒を連れ去る9枚",
+		"card_ids":
+		[
+			"infight",
+			"charm",
+			"whistle",
+			"defect",
+			"lure_sand",
+			"lure",
+			"marionette",
+			"traitor",
+			"piper",
+		],
+		"price": 0,
+	},
 }
 
 const ORDERED_IDS: Array[String] = [
@@ -350,6 +370,7 @@ const ORDERED_IDS: Array[String] = [
 	"pour_sand",
 	"second_extra",
 	"draw_sand",
+	"turncoat",
 ]
 
 

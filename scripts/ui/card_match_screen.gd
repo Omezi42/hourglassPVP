@@ -499,6 +499,7 @@ func _refresh_row(views: Array[CardView], side: int) -> void:
 		views[i].show_unit(unit)
 		views[i].exhausted = unit != null and side == my_side and not unit.can_attack()
 		views[i].ready_mark = unit != null and side == my_side and unit.can_attack()
+		views[i].seized_band = _seized_band(unit, side)
 		views[i].selected = false
 		views[i].enabled = true
 		views[i].preview_health = -1
@@ -508,6 +509,13 @@ func _refresh_row(views: Array[CardView], side: int) -> void:
 		# 攻撃できる自分の駒はドラッグでも運べる(GameDesign.md 9章)。
 		views[i].draggable = side == my_side and _my_turn() and unit != null and unit.can_attack()
 		views[i].operable = side == my_side and _my_turn() and unit != null
+
+
+## 奪った駒の台座の縁の帯の色。元の持ち主の側が自分なら自分の色、相手なら相手の色。奪われていなければ透明。
+func _seized_band(unit: CardInstance, board_side: int) -> Color:
+	if unit == null or not CardTurncoatEffects.is_seized(unit, board_side):
+		return Color.TRANSPARENT
+	return UiPalette.GOOD if unit.owner_side == my_side else UiPalette.FOE
 
 
 func _refresh_hand() -> void:

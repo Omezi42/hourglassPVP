@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_defect_0"]
+script = ExtResource("script_effect")
+trigger = 0
+target = 1
+effect_type = 65
+value = 0
+condition_scope = 17
+condition_total = 2
+random_target = true
+
+[resource]
+script = ExtResource("script_card")
+id = "defect"
+display_name = "ディフェクト"
+cost = 3
+total_sand = 3
+pool_index = 208
+set_id = "turncoat"
+rarity = 0
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_defect_0")])
+rules_text = "設置:相手の砂時計が自分の砂時計より2体以上多ければ、ランダムな相手の砂時計1体を奪う"
+flavor_text = "負けている側へ行くのは勇気か計算か"
+cannot_attack = false
+is_token = false

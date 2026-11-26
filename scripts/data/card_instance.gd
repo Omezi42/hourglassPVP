@@ -31,6 +31,11 @@ var held_still: bool = false
 ## いま疾走を持っているか(`CardData.quick_while_foe_hp_at_most`。チェイサー)。相手のHPで決まるため、
 ## `MatchState` が盤面とHPの変わるたびに書く。
 var held_quick: bool = false
+## 奪われた駒の、カードの元の持ち主(Side の値。寝返りの刻)。-1 なら場の側が持ち主。
+## 砕けたら元の持ち主の墓地へ、手札へ戻すなら元の持ち主の手札へ行き、場の側(いまの持ち主)とは別に持つ。
+var owner_side: int = -1
+## このターンだけ奪われた駒か(誘い砂)。手番の終わりに元の持ち主へ返る。
+var loaned: bool = false
 
 
 func _init(p_data: CardData) -> void:

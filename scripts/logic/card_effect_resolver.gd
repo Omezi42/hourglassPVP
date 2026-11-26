@@ -40,6 +40,8 @@ var _foresight: CardForesightEffects
 var _pour_sand: CardPourSandEffects
 ## 第3弾「汲砂の刻」の固有効果(GameDesign.md 6章)。
 var _draw_sand: CardDrawSandEffects
+## 第3弾「寝返りの刻」の固有効果(GameDesign.md 6章)。
+var _turncoat: CardTurncoatEffects
 
 
 func _init(p_state: MatchState) -> void:
@@ -52,6 +54,7 @@ func _init(p_state: MatchState) -> void:
 	_foresight = CardForesightEffects.new(p_state, self)
 	_pour_sand = CardPourSandEffects.new(p_state, self)
 	_draw_sand = CardDrawSandEffects.new(p_state, self)
+	_turncoat = CardTurncoatEffects.new(p_state, self)
 
 
 ## unit が持つ trigger の効果をすべて適用する。
@@ -113,7 +116,10 @@ func _condition_met(side: int, unit: CardInstance, effect: CardEffectData) -> bo
 				and CardEarlyBellEffects.mana_condition_met(_state, side, effect)
 				and CardPourSandEffects.mana_condition_met(_state, side, effect)
 			)
-	return CardForesightEffects.grave_condition_met(_state, side, effect)
+	return (
+		CardForesightEffects.grave_condition_met(_state, side, effect)
+		and CardTurncoatEffects.leads_met(_state, side, effect)
+	)
 
 
 func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Dictionary) -> void:
@@ -144,6 +150,7 @@ func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Diction
 		[CardForesightEffects, _foresight],
 		[CardPourSandEffects, _pour_sand],
 		[CardDrawSandEffects, _draw_sand],
+		[CardTurncoatEffects, _turncoat],
 	]
 	for theme: Array in hinted:
 		if theme[0].handles(effect.effect_type):
@@ -272,7 +279,7 @@ func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Diction
 			# 恵与の型で見せる(GameDesign.md 9章)。
 			var drop_style := (
 				CardEnums.EffectVisualStyle.STRIKE
-				if effect.target == CardEnums.EffectTarget.ALL_ENEMY_UNITS
+				if _is_enemy_target(effect.target)
 				else CardEnums.EffectVisualStyle.DESCEND
 			)
 			_strike_for_targets(side, from_slot, effect.target, drop_entries, drop_style, origin)
@@ -466,9 +473,11 @@ func _return_to_hand(side: int, slot: int) -> void:
 	if unit == null:
 		return
 	_state.board[side][slot] = null
-	_state.hand[side].append(unit.data)
+	# 奪われた駒は、カードの持ち主の手札へ戻る(寝返りの刻)。
+	var hand_side := CardTurncoatEffects.card_owner(unit, side)
+	_state.hand[hand_side].append(unit.data)
 	_state.unit_returned.emit(side, slot, unit.data)
-	_state.hand_changed.emit(side)
+	_state.hand_changed.emit(hand_side)
 	_state.board_changed.emit(side)
 
 
@@ -548,6 +557,8 @@ func _revive(side: int, index: int, slot: int) -> void:
 ## 蘇生の砂術は選べる砂時計と空き枠がいるときだけ撃てる。写し詠みは撃ち直す砂術が撃てるときだけ撃てる。
 static func castable(state: MatchState, side: int, card: CardData) -> bool:
 	for effect in card.effects_for(CardEnums.Trigger.ON_PLAY):
+		if not CardTurncoatEffects.castable(state, side, effect):
+			return false
 		match effect.effect_type:
 			CardEnums.EffectType.RECAST_SPELL:
 				var source := recast_source(state, side)
@@ -883,6 +894,10 @@ static func eligible_target(unit: CardInstance, effect: CardEffectData) -> bool:
 			return unit.total_sand() >= effect.condition_total
 		CardEnums.ConditionScope.TARGET_HAS_DEATH_EFFECT:
 			return not unit.effects_for(CardEnums.Trigger.ON_DEATH).is_empty()
+		CardEnums.ConditionScope.ATTACK_AT_MOST:
+			return unit.attack <= effect.condition_total
+		CardEnums.ConditionScope.TOTAL_AT_MOST:
+			return unit.total_sand() <= effect.condition_total
 	return true
 
 

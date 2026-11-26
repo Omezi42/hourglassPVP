@@ -260,6 +260,16 @@ enum EffectType {
 	SWAP_TOTAL_WITH_ALLY,
 	## この砂時計の砂を、戦闘で与えたダメージ(hint の dealt)の数だけ上へ戻す(リーチ)。value は使わない。
 	RAISE_SAND_BY_DEALT,
+	## 対象の相手の砂時計を自分の空き枠の左へ奪う(チャーム・ディフェクト・ルアー・パイパー。寝返りの刻)。
+	## 全体(ALL_ENEMY_UNITS)なら空き枠の数まで攻撃力の高い順に奪う。空き枠が無ければ不発。value は使わない。
+	SEIZE_UNIT,
+	## 対象の相手の砂時計をこのターンだけ奪い、攻撃・反転できるようにする(誘い砂)。手番の終わりに元の持ち主へ返る。value は使わない。
+	SEIZE_UNIT_FOR_TURN,
+	## 対象の相手の砂時計に、相手の別の砂時計を攻撃させる(同士討ち・マリオネット)。value は使わない。
+	## random_target なら攻撃させる駒もランダム(攻撃力1以上から)、そうでなければ攻撃力がいちばん高い別の駒。
+	FORCE_FOE_ATTACK,
+	## 対象の相手の砂時計と、この砂時計の持ち場を入れ替える(トレイター)。value は使わない。
+	SWAP_SIDE_WITH_FOE,
 }
 
 ## コンボ系カードの発動条件が確認する範囲(GameDesign.md 6章)。
@@ -302,6 +312,12 @@ enum ConditionScope {
 	OWN_GRAVE_AT_LEAST,
 	## 選んだ対象が余砂(ON_DEATH の効果。導火線で与えたものも含む)を持つか(爆心。導火の刻)。TARGET と同じく対象の絞り込みとして働く。
 	TARGET_HAS_DEATH_EFFECT,
+	## 選んだ対象の攻撃力が condition_total 以下か(チャーム。寝返りの刻)。TARGET と同じく対象の絞り込みとして働く。
+	ATTACK_AT_MOST,
+	## 選んだ対象の総量が condition_total 以下か(ルアー。寝返りの刻)。TARGET と同じく対象の絞り込みとして働く。
+	TOTAL_AT_MOST,
+	## 相手の砂時計の数が、この駒を含む自分の砂時計の数より condition_total 以上多いか(ディフェクト)。発動の可否を決める条件。
+	ENEMY_LEADS_BY,
 }
 
 ## 効果が対象へ届く演出の「型」(GameDesign.md 9章)。`MatchState.effect_struck` /

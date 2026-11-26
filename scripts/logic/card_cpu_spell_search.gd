@@ -139,10 +139,11 @@ static func evaluate(state: MatchState, side: int, face_weight: float) -> float:
 			return WIN_VALUE
 		return -WIN_VALUE if state.winner == foe_side else 0.0
 	var value := 0.0
-	for unit in state.units(side):
-		value += unit_value(unit)
-	for unit in state.units(foe_side):
-		value -= unit_value(unit)
+	# このターンだけ借りた駒(誘い砂)は、手番の終わりにカードの持ち主へ返る。
+	for board_side in [side, foe_side]:
+		for unit in state.units(board_side):
+			var holder: int = unit.owner_side if unit.loaned else board_side
+			value += unit_value(unit) * (1.0 if holder == side else -1.0)
 	value += float(int(state.hp[side]) - int(state.hp[foe_side])) * face_weight
 	value += float(state.hand[side].size()) * HAND_CARD_VALUE
 	value += float(state.flip_right_remaining.get(side, 0)) * FLIP_RIGHT_VALUE

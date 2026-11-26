@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_marionette_0"]
+script = ExtResource("script_effect")
+trigger = 3
+target = 1
+effect_type = 67
+value = 0
+random_target = true
+
+[resource]
+script = ExtResource("script_card")
+id = "marionette"
+display_name = "マリオネット"
+cost = 4
+total_sand = 4
+pool_index = 211
+set_id = "turncoat"
+rarity = 1
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_marionette_0")])
+rules_text = "落砂:ランダムな相手の砂時計1体に、相手の別のランダムな砂時計を攻撃させる"
+flavor_text = "糸の先で誰かが踊っている"
+cannot_attack = false
+is_token = false

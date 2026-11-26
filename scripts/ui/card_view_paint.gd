@@ -28,6 +28,9 @@ const GUARD_RING_GAP := Vector2(6.0, 3.5)
 const PEDESTAL_SEGMENTS := 32
 const PEDESTAL_DIMPLE := 0.6
 const PEDESTAL_DIMPLE_COLOR := Color(0.12, 0.07, 0.02, 0.45)
+## 奪った駒の縁の帯。台座の半径に対する太さの比と、弧の分割数。
+const SEIZED_RIM_RATIO := Vector2(0.05, 0.42)
+const SEIZED_RIM_SEGMENTS := 20
 ## 宝石の下半分の色は、石の色をこのぶん暗くして作る。
 const STAT_DEEP_DARKEN := 0.55
 const CRACK_BOX := Vector2(0.55, 0.75)
@@ -109,12 +112,29 @@ static func pedestal_base(view: CardView, canvas: CanvasItem) -> void:
 		UiKit.ellipse(top_center, radius * PEDESTAL_DIMPLE, PEDESTAL_SEGMENTS),
 		PEDESTAL_DIMPLE_COLOR
 	)
+	if view.seized_band.a > 0.0:
+		_seized_rim(ci, top_center, radius, view.seized_band)
 	# 駒が立っているときだけ、足元の影をもう一段濃く重ねる(既存の踏み込み表現)。
 	if view.card != null:
 		var shadow_base := radius * 0.85
 		UiPaint.fill_ellipse(ci, bottom_center, shadow_base * 0.85, Color(0.0, 0.0, 0.0, 0.12), 24)
 		UiPaint.fill_ellipse(ci, bottom_center, shadow_base * 0.65, Color(0.0, 0.0, 0.0, 0.16), 24)
 		UiPaint.fill_ellipse(ci, bottom_center, shadow_base * 0.45, Color(0.0, 0.0, 0.0, 0.20), 24)
+
+
+## 奪った駒の台座の縁(上面の楕円の手前の弧)に、元の持ち主の側の色の細い帯を巻く(GameDesign.md 9章)。
+## 太さは台座の大きさに比例させる。
+static func _seized_rim(ci: RID, center: Vector2, radius: Vector2, color: Color) -> void:
+	var inner := radius * (Vector2.ONE - SEIZED_RIM_RATIO)
+	var points := PackedVector2Array()
+	for i in range(SEIZED_RIM_SEGMENTS + 1):
+		var angle := PI * float(i) / float(SEIZED_RIM_SEGMENTS)
+		points.append(center + Vector2(cos(angle) * radius.x, sin(angle) * radius.y))
+	for i in range(SEIZED_RIM_SEGMENTS, -1, -1):
+		var angle := PI * float(i) / float(SEIZED_RIM_SEGMENTS)
+		points.append(center + Vector2(cos(angle) * inner.x, sin(angle) * inner.y))
+	var rect := Rect2(center - radius, radius * 2.0)
+	UiPaint.fill_gradient_polygon(ci, points, rect, [[0.0, color], [1.0, color]])
 
 
 ## 台座の側面の帯の点列(GameDesign.md 9章「対局画面の再構築」)。「下の楕円の

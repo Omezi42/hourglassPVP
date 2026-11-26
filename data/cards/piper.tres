@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_piper_0"]
+script = ExtResource("script_effect")
+trigger = 0
+target = 2
+effect_type = 65
+value = 0
+condition_scope = 4
+
+[resource]
+script = ExtResource("script_card")
+id = "piper"
+display_name = "パイパー"
+cost = 6
+total_sand = 4
+pool_index = 213
+set_id = "turncoat"
+rarity = 3
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_piper_0")])
+rules_text = "設置:攻撃力が体力より多い相手の砂時計をすべて奪う(空き枠の数まで、攻撃力の高い順)"
+flavor_text = "笛の音についていくのは年寄りばかりだった"
+cannot_attack = false
+is_token = false

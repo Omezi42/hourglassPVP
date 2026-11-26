@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_whistle_0"]
+script = ExtResource("script_effect")
+trigger = 0
+target = 1
+effect_type = 5
+value = 2
+
+[resource]
+script = ExtResource("script_card")
+id = "whistle"
+display_name = "ホイッスル"
+cost = 1
+total_sand = 2
+pool_index = 207
+set_id = "turncoat"
+rarity = 0
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_whistle_0")])
+rules_text = "設置:相手の砂時計1体の砂が2粒落ちる"
+flavor_text = "笛の音を聞くと砂は急いで落ちる"
+cannot_attack = false
+is_token = false
