@@ -175,7 +175,7 @@ func _test_siphon_moves_total() -> void:
 	var ally := _place(state, A, "sand", 0, 3, 1)
 	state.play_card(A, 0, 1, {"side": B, "slot": 0})
 	_assert.call(foe.total_sand() == 4 and foe.health == 2 and foe.attack == 2, "相手の総量が体力から2減る")
-	_assert.call(ally.total_sand() == 6, "自分の他の砂時計の総量が2増える")
+	_assert.call(ally.total_sand() == 5, "自分の他の砂時計の総量は1増える(半分はこぼれる)")
 	_assert.call(state.board[A][1].total_sand() == 5, "この砂時計自身は増えない")
 
 

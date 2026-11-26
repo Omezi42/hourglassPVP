@@ -81,6 +81,16 @@ static func fire_entered(state: MatchState, side: int, slot: int) -> void:
 			continue
 		if not unit.effects_for(CardEnums.Trigger.ON_ALLY_ENTER).is_empty():
 			state._fire(side, unit, CardEnums.Trigger.ON_ALLY_ENTER, {"entered_slot": slot})
+	# 相手が出したときに働く効果(ドッペル。写し身の刻)。
+	var foe_side := MatchState.other_side(side)
+	for unit: CardInstance in state.units(foe_side):
+		if not unit.is_dead() and not unit.effects_for(CardEnums.Trigger.ON_FOE_ENTER).is_empty():
+			state._fire(
+				foe_side,
+				unit,
+				CardEnums.Trigger.ON_FOE_ENTER,
+				{"entered_side": side, "entered_slot": slot}
+			)
 
 
 ## 総量を amount 減らす。体力から引き、体力が1未満になるぶんは攻撃力から引く。総量が1になるまでしか減らさない。

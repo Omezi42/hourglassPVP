@@ -207,7 +207,7 @@ func _transfer_from_foe(
 	var ally := ally_for_gain(_state, side, unit)
 	if moved > 0 and ally != null:
 		_strike_ally(side, from_slot, ally, origin)
-		ally.health += moved
+		ally.health += moved if effect.transfer_gain < 0 else effect.transfer_gain
 
 
 func _swap_total(
@@ -278,7 +278,11 @@ static func cpu_value(state: MatchState, side: int, effect: CardEffectData) -> f
 		CardEnums.EffectType.TRANSFER_TOTAL_FROM_FOE:
 			if state.units(foe_side).is_empty():
 				return 0.0
-			return float(effect.value) * (FOE_TOTAL_VALUE + (HEALTH_VALUE if has_ally else 0.0))
+			var gain := effect.value if effect.transfer_gain < 0 else effect.transfer_gain
+			return (
+				float(effect.value) * FOE_TOTAL_VALUE
+				+ (float(gain) * HEALTH_VALUE if has_ally else 0.0)
+			)
 		CardEnums.EffectType.SWAP_TOTAL_WITH_ALLY:
 			var ally := ally_for_swap(state, side, null)
 			if ally == null or state.units(foe_side).is_empty():

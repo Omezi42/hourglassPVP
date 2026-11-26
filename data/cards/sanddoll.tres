@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_sanddoll_0"]
+script = ExtResource("script_effect")
+trigger = 0
+target = 1
+effect_type = 73
+value = 1
+card_id = "mote"
+
+[resource]
+script = ExtResource("script_card")
+id = "sanddoll"
+display_name = "砂人形"
+cost = 3
+total_sand = 0
+pool_index = 219
+set_id = "mirror_sand"
+rarity = 1
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_sanddoll_0")])
+rules_text = "相手の砂時計1体をモート(総量1)に変える(余砂は働かない)"
+flavor_text = "「その姿のほうがよく似合う」"
+cannot_attack = false
+is_token = false
+is_spell = true

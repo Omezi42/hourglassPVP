@@ -39,6 +39,7 @@ const REPEATING_TRIGGERS := [
 	CardEnums.Trigger.ON_ALLY_ENTER,
 	CardEnums.Trigger.ON_DEAL_DAMAGE,
 	CardEnums.Trigger.ON_FOE_SAND_RAISED,
+	CardEnums.Trigger.ON_FOE_ENTER,
 	CardEnums.Trigger.ON_FLIP,
 ]
 

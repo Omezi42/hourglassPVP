@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_mask_0"]
+script = ExtResource("script_effect")
+trigger = 0
+target = 1
+effect_type = 72
+value = 0
+
+[resource]
+script = ExtResource("script_card")
+id = "mask"
+display_name = "マスク"
+cost = 2
+total_sand = 4
+pool_index = 215
+set_id = "mirror_sand"
+rarity = 0
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_mask_0")])
+rules_text = "設置:相手の砂時計1体の語と効果を写し取り、自分も持つ"
+flavor_text = "顔だけでなく癖まで写す"
+cannot_attack = false
+is_token = false

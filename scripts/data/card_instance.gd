@@ -36,6 +36,14 @@ var held_quick: bool = false
 var owner_side: int = -1
 ## このターンだけ奪われた駒か(誘い砂)。手番の終わりに元の持ち主へ返る。
 var loaned: bool = false
+## 写しの元のカード(写し身の刻)。写しは `data` に総量だけ違うトークンを持ち、ここが写し元(トークンではない本物)を指す。写しでなければ null。
+var copy_of: CardData = null
+## ドッペルが出した写しか。ドッペルは、ドッペルが出した写しが出たときには働かない。
+var doppel_made: bool = false
+## 他のカードに化けた駒(ミミック)の、本当のカード。`data` は化けた先を指し、墓地・手札へ行くのはこちら。化けていなければ null。
+var origin_card: CardData = null
+## 戦闘でこの駒を砕いた相手の駒のカード(写しなら写し元。シェードが写す)。効果で砕けた・砕けていなければ null。
+var slain_by: CardData = null
 
 
 func _init(p_data: CardData) -> void:

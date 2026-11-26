@@ -746,6 +746,7 @@ func _resolve_unit_combat(side: int, slot: int, target_slot: int, foe_side := -1
 	if dealt_to_attacker > 0 and defender.has_keyword(CardEnums.Keyword.POISON):
 		attacker.health = 0
 		unit_poisoned.emit(side, slot)
+	CardMirrorEffects.note_slayers(attacker, defender)
 	# 被弾は毒砂まで解決してから。ここで生きている駒だけが発動できる。
 	# 戦闘のダメージだけが、与えてきた相手の駒を運ぶ(パリィ。効果によるダメージは運ばない)。
 	_resolve_damaged(foe_side, defender, dealt_to_defender, {"damager": attacker})
@@ -865,7 +866,7 @@ func _destroy_unit(side: int, slot: int) -> void:
 	if unit == null:
 		return
 	board[side][slot] = null
-	graveyard[CardTurncoatEffects.card_owner(unit, side)].append(unit.data)
+	graveyard[CardTurncoatEffects.card_owner(unit, side)].append(CardMirrorEffects.card_of(unit))
 	# 紋章の出どころ(DEATH)を紐づけるため、砕けた枠を hint で運ぶ
 	# (Architecture.md 4.0節)。対象の絞り込み(hint.has("slot"))とは
 	# 別のキーのため、通常の対象選択には影響しない。

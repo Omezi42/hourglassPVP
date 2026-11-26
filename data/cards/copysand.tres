@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_copysand_0"]
+script = ExtResource("script_effect")
+trigger = 0
+target = 6
+effect_type = 70
+value = 0
+
+[resource]
+script = ExtResource("script_card")
+id = "copysand"
+display_name = "写し砂"
+cost = 2
+total_sand = 0
+pool_index = 214
+set_id = "mirror_sand"
+rarity = 0
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_copysand_0")])
+rules_text = "自分の砂時計1体の写しを出す。写しの総量は元のカードの総量の半分(切り上げ)"
+flavor_text = "同じ形の器には同じ刻が落ちるとは限らない"
+cannot_attack = false
+is_token = false
+is_spell = true

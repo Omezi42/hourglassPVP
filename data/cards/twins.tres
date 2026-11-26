@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_twins_0"]
+script = ExtResource("script_effect")
+trigger = 0
+target = 0
+effect_type = 69
+value = 0
+
+[resource]
+script = ExtResource("script_card")
+id = "twins"
+display_name = "ツインズ"
+cost = 4
+total_sand = 4
+pool_index = 220
+set_id = "mirror_sand"
+rarity = 1
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_twins_0")])
+rules_text = "設置:この砂時計の写しを出す"
+flavor_text = "どちらが先に生まれたかは誰も覚えていない"
+cannot_attack = false
+is_token = false

@@ -34,3 +34,5 @@ extends Resource
 ## 対象を1体取る効果で、攻撃力がいちばん高い駒を選ぶ(同点なら左の枠。ポンプ。汲砂の刻)。
 ## プレイヤーは選ばず、札には「攻撃力がいちばん高い」と書く(GameDesign.md 6章)。
 @export var highest_attack_target: bool = false
+## TRANSFER_TOTAL_FROM_FOE で自分の砂時計へ足す総量(サイフォン)。-1 なら実際に減らした数と同じだけ足す(ドレイン)。
+@export var transfer_gain: int = -1

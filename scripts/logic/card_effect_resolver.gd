@@ -42,6 +42,8 @@ var _pour_sand: CardPourSandEffects
 var _draw_sand: CardDrawSandEffects
 ## 第3弾「寝返りの刻」の固有効果(GameDesign.md 6章)。
 var _turncoat: CardTurncoatEffects
+## 第3弾「写し身の刻」の固有効果(GameDesign.md 6章)。
+var _mirror: CardMirrorEffects
 
 
 func _init(p_state: MatchState) -> void:
@@ -55,6 +57,7 @@ func _init(p_state: MatchState) -> void:
 	_pour_sand = CardPourSandEffects.new(p_state, self)
 	_draw_sand = CardDrawSandEffects.new(p_state, self)
 	_turncoat = CardTurncoatEffects.new(p_state, self)
+	_mirror = CardMirrorEffects.new(p_state, self)
 
 
 ## unit が持つ trigger の効果をすべて適用する。
@@ -151,6 +154,7 @@ func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Diction
 		[CardPourSandEffects, _pour_sand],
 		[CardDrawSandEffects, _draw_sand],
 		[CardTurncoatEffects, _turncoat],
+		[CardMirrorEffects, _mirror],
 	]
 	for theme: Array in hinted:
 		if theme[0].handles(effect.effect_type):
@@ -474,8 +478,10 @@ func _return_to_hand(side: int, slot: int) -> void:
 		return
 	_state.board[side][slot] = null
 	# 奪われた駒は、カードの持ち主の手札へ戻る(寝返りの刻)。
+	# 写しはトークンで、手札へ戻すと消える(写し身の刻)。
 	var hand_side := CardTurncoatEffects.card_owner(unit, side)
-	_state.hand[hand_side].append(unit.data)
+	if unit.copy_of == null:
+		_state.hand[hand_side].append(CardMirrorEffects.card_of(unit))
 	_state.unit_returned.emit(side, slot, unit.data)
 	_state.hand_changed.emit(hand_side)
 	_state.board_changed.emit(side)
@@ -557,7 +563,10 @@ func _revive(side: int, index: int, slot: int) -> void:
 ## 蘇生の砂術は選べる砂時計と空き枠がいるときだけ撃てる。写し詠みは撃ち直す砂術が撃てるときだけ撃てる。
 static func castable(state: MatchState, side: int, card: CardData) -> bool:
 	for effect in card.effects_for(CardEnums.Trigger.ON_PLAY):
-		if not CardTurncoatEffects.castable(state, side, effect):
+		if (
+			not CardTurncoatEffects.castable(state, side, effect)
+			or not CardMirrorEffects.castable(state, side, effect)
+		):
 			return false
 		match effect.effect_type:
 			CardEnums.EffectType.RECAST_SPELL:

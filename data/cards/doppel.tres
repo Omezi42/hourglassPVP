@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_doppel_0"]
+script = ExtResource("script_effect")
+trigger = 14
+target = 13
+effect_type = 69
+value = 1
+
+[resource]
+script = ExtResource("script_card")
+id = "doppel"
+display_name = "ドッペル"
+cost = 4
+total_sand = 5
+pool_index = 223
+set_id = "mirror_sand"
+rarity = 3
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_doppel_0")])
+rules_text = "常在:相手が砂時計を出すたび、その写し(総量1)を自分の場に出す"
+flavor_text = "振り向くと自分が先に立っていた"
+cannot_attack = false
+is_token = false

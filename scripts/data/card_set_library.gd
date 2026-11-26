@@ -347,6 +347,27 @@ const SETS: Dictionary = {
 		],
 		"price": 0,
 	},
+	## 第3弾「奪砂の弾」の3つ目のテーマ(GameDesign.md 8章)。相手の駒の形や効果を写して戦う。
+	"mirror_sand":
+	{
+		"id": "mirror_sand",
+		"display_name": "写し身の刻",
+		"description": "器の形を写す10枚",
+		"card_ids":
+		[
+			"copysand",
+			"mask",
+			"portrait",
+			"doll",
+			"mimic",
+			"sanddoll",
+			"twins",
+			"parallel",
+			"shade",
+			"doppel",
+		],
+		"price": 0,
+	},
 }
 
 const ORDERED_IDS: Array[String] = [
@@ -371,6 +392,7 @@ const ORDERED_IDS: Array[String] = [
 	"second_extra",
 	"draw_sand",
 	"turncoat",
+	"mirror_sand",
 ]
 
 

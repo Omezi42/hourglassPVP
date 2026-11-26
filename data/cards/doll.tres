@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_doll_0"]
+script = ExtResource("script_effect")
+trigger = 2
+target = 1
+effect_type = 69
+value = 1
+random_target = true
+
+[resource]
+script = ExtResource("script_card")
+id = "doll"
+display_name = "ドール"
+cost = 1
+total_sand = 2
+pool_index = 217
+set_id = "mirror_sand"
+rarity = 0
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_doll_0")])
+rules_text = "余砂:相手の砂時計1体の写し(総量1)を自分の場に出す"
+flavor_text = "抱いていた人形は持ち主に似てくる"
+cannot_attack = false
+is_token = false

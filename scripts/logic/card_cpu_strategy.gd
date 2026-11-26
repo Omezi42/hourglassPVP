@@ -43,6 +43,8 @@ const ALLY_ENTER_TIMES := 3.0
 ## 戦闘で与えたとき・相手の砂が上へ戻ったときの効果(汲砂の刻)が、場に残る間に起きると見込む回数。
 const DEAL_DAMAGE_TIMES := 2.0
 const FOE_SAND_RAISED_TIMES := 2.0
+## 相手が砂時計を出したときの効果(ドッペル。写し身の刻)が、場に残る間に起きると見込む回数。
+const FOE_ENTER_TIMES := 3.0
 ## 繰り返し働くトリガーごとの見込み回数(`_repeating_value()`。落砂は総量に比例するため別)。
 const REPEAT_TIMES := {
 	CardEnums.Trigger.ON_DAMAGED: DAMAGED_TIMES,
@@ -55,6 +57,7 @@ const REPEAT_TIMES := {
 	CardEnums.Trigger.ON_ALLY_ENTER: ALLY_ENTER_TIMES,
 	CardEnums.Trigger.ON_DEAL_DAMAGE: DEAL_DAMAGE_TIMES,
 	CardEnums.Trigger.ON_FOE_SAND_RAISED: FOE_SAND_RAISED_TIMES,
+	CardEnums.Trigger.ON_FOE_ENTER: FOE_ENTER_TIMES,
 }
 ## 自分のHPを払うと負ける手へ付ける減点(出さないための十分大きな値)。
 const SELF_KILL_PENALTY := 100.0
@@ -419,6 +422,7 @@ func _card_value(state: MatchState, side: int, card: CardData) -> float:
 		else:
 			value += _on_play_value(state, side, effect)
 	value += CardPourSandEffects.cpu_death_value(card)
+	value += CardMirrorEffects.cpu_card_value(state, side, card)
 	# 繰り返し働くトリガーは、場に残る見込みのターン数ぶん価値が積み上がる
 	# (GameDesign.md 6章)。落砂は毎ターン1回、被弾は殴り合うたびに起きる。
 	value += _repeating_value(state, side, card)
@@ -455,6 +459,7 @@ func _themed_value(state: MatchState, side: int, effect: CardEffectData) -> Vari
 		CardPourSandEffects,
 		CardDrawSandEffects,
 		CardTurncoatEffects,
+		CardMirrorEffects,
 	]
 	for theme in themes:
 		if theme.handles(effect.effect_type):

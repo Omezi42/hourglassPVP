@@ -126,7 +126,8 @@ func _live_body(card: CardData, unit: CardInstance = null) -> String:
 	if unit != null and not unit.silenced and not unit.granted_effects.is_empty():
 		var text := card.rules_text
 		for effect in unit.granted_effects:
-			text += "\n" + effect.shown_text
+			if not effect.shown_text.is_empty():
+				text += "\n" + effect.shown_text
 		return text
 	if (
 		_screen.state == null

@@ -83,10 +83,10 @@ func _test_set_is_registered() -> void:
 
 func _test_charm_seizes_young_unit() -> void:
 	var state := _new_match(["charm"])
-	var foe := _place(state, B, "sand", 2, 3, 1)
+	var foe := _place(state, B, "sand", 2, 1, 1)
 	_assert.call(state.play_card(A, 0, 3, {"side": B, "slot": 2}), "チャームを出せる")
 	_assert.call(state.board[B][2] == null and state.board[A][0] == foe, "相手の駒が自分の空き枠の左へ移る")
-	_assert.call(foe.health == 3 and foe.attack == 1, "砂はそのまま持ってくる")
+	_assert.call(foe.health == 1 and foe.attack == 1, "砂はそのまま持ってくる")
 	_assert.call(
 		CardTurncoatEffects.is_seized(foe, A) and CardTurncoatEffects.card_owner(foe, A) == B,
 		"カードの持ち主は相手のまま"
@@ -95,23 +95,23 @@ func _test_charm_seizes_young_unit() -> void:
 
 func _test_charm_ignores_old_unit() -> void:
 	var state := _new_match(["charm"])
-	var foe := _place(state, B, "sand", 0, 3, 2)
+	var foe := _place(state, B, "sand", 0, 2, 1)
 	state.play_card(A, 0, 3, {"side": B, "slot": 0})
-	_assert.call(state.board[B][0] == foe, "攻撃力2の駒は奪えない")
+	_assert.call(state.board[B][0] == foe, "総量3の駒は奪えない")
 
 
 func _test_seize_needs_empty_slot() -> void:
 	var state := _new_match(["charm"])
 	for slot in 5:
 		_place(state, A, "sand", slot)
-	var foe := _place(state, B, "sand", 0, 3, 1)
+	var foe := _place(state, B, "sand", 0, 1, 1)
 	state.play_card(A, 0, 5, {"side": B, "slot": 0})
 	_assert.call(state.board[B][0] == foe, "空き枠が無ければ奪えない(不発)")
 
 
 func _test_seized_unit_is_fresh() -> void:
 	var state := _new_match(["charm"])
-	var foe := _place(state, B, "sand", 0, 3, 1)
+	var foe := _place(state, B, "sand", 0, 1, 1)
 	state.play_card(A, 0, 3, {"side": B, "slot": 0})
 	_assert.call(not foe.can_attack() and not foe.can_flip(), "奪った手番は攻撃も反転もできない")
 	foe.begin_turn()
@@ -120,7 +120,7 @@ func _test_seized_unit_is_fresh() -> void:
 
 func _test_seized_unit_dies_to_owner_grave() -> void:
 	var state := _new_match(["charm"])
-	var foe := _place(state, B, "sand", 0, 3, 1)
+	var foe := _place(state, B, "sand", 0, 1, 1)
 	state.play_card(A, 0, 3, {"side": B, "slot": 0})
 	var grave_a: int = state.graveyard[A].size()
 	var grave_b: int = state.graveyard[B].size()
@@ -132,7 +132,7 @@ func _test_seized_unit_dies_to_owner_grave() -> void:
 
 func _test_seized_unit_returns_to_owner_hand() -> void:
 	var state := _new_match(["charm"])
-	_place(state, B, "sand", 0, 3, 1)
+	_place(state, B, "sand", 0, 1, 1)
 	state.play_card(A, 0, 3, {"side": B, "slot": 0})
 	state.current_turn = B
 	state.hand[B] = [CardLibrary.find_by_id("recall")]
@@ -221,7 +221,7 @@ func _test_lure_sand_kept_when_returned_home() -> void:
 
 func _test_traitor_swaps_places() -> void:
 	var state := _new_match(["traitor"])
-	var foe := _place(state, B, "sand", 2, 6, 2)
+	var foe := _place(state, B, "sand", 2, 4, 2)
 	state.play_card(A, 0, 4, {"side": B, "slot": 2})
 	var traitor: CardInstance = state.board[B][2]
 	_assert.call(
@@ -302,7 +302,7 @@ func _test_whistle_drops_sand() -> void:
 
 func _test_fork_keeps_owner() -> void:
 	var state := _new_match(["charm"])
-	_place(state, B, "sand", 0, 3, 1)
+	_place(state, B, "sand", 0, 1, 1)
 	state.play_card(A, 0, 3, {"side": B, "slot": 0})
 	var twin := SpellForecast.fork(state)
 	var copy: CardInstance = twin.board[A][0]
@@ -315,7 +315,7 @@ func _test_fork_keeps_owner() -> void:
 func _test_cpu_plays_seize_cards() -> void:
 	var cpu := CardCpuStrategy.new()
 	var state := _new_match(["charm"])
-	_place(state, B, "sand", 0, 4, 1)
+	_place(state, B, "sand", 0, 1, 1)
 	_assert.call(cpu.choose_action(state, A).get("type", "") == "play", "CPUは奪える駒がいればチャームを出す")
 	var none := CardTurncoatEffects.cpu_value(
 		_new_match([]), A, CardLibrary.find_by_id("charm").effects[0]
