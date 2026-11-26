@@ -1,0 +1,37 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_fuseline_g"]
+script = ExtResource("script_effect")
+trigger = 2
+target = 2
+effect_type = 1
+value = 1
+shown_text = "余砂:相手の砂時計すべてに1ダメージ"
+
+[sub_resource type="Resource" id="Effect_fuseline_0"]
+script = ExtResource("script_effect")
+trigger = 0
+target = 6
+effect_type = 41
+value = 0
+granted_effect = SubResource("Effect_fuseline_g")
+
+[resource]
+script = ExtResource("script_card")
+id = "fuseline"
+display_name = "導火線"
+cost = 2
+total_sand = 0
+pool_index = 168
+set_id = "fuse_sand"
+rarity = 1
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_fuseline_0")])
+rules_text = "自分の砂時計1体に「余砂:相手の砂時計すべてに1ダメージ」を与える"
+flavor_text = "誰の足元まで伸びているのか"
+cannot_attack = false
+is_token = false
+is_spell = true

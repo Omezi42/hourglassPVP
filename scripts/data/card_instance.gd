@@ -20,6 +20,9 @@ var glass_intact: bool = false
 ## .tres は load() が同じインスタンスを返すため、書き換えるとその版の全対局
 ## (リプレイ・シミュレーションを含む)へ残ってしまう。
 var granted_keywords: Array[int] = []
+## 効果で後から与えられた効果(導火線。GameDesign.md 6章「効果を与える効果」)。`CardData.effects` は書き換えず、ここへ持つ。
+## 対局の写し(`copy()`)へ乗り、手札へ戻ると失われる(戻るのは CardData だけ)。
+var granted_effects: Array[CardEffectData] = []
 ## 効果を消されたか。true の間はキーワードも効果も持たないものとして扱う。
 var silenced: bool = false
 ## いま静止を持っているか(`CardData.still_while_outnumbered`。ホールド)。盤面の数で決まるため、
@@ -83,10 +86,21 @@ func keywords() -> Array:
 
 ## trigger で発動する効果。消されている砂時計は何も返さない。
 func effects_for(trigger: int) -> Array[CardEffectData]:
-	var none: Array[CardEffectData] = []
+	var found: Array[CardEffectData] = []
 	if silenced:
-		return none
-	return data.effects_for(trigger)
+		return found
+	found.append_array(data.effects_for(trigger))
+	for effect in granted_effects:
+		if effect.trigger == trigger:
+			found.append(effect)
+	return found
+
+
+## 効果を1つ与える。同じものを2回与えれば2回働く。消された駒には与えられない。
+func grant_effect(effect: CardEffectData) -> void:
+	if silenced or effect == null:
+		return
+	granted_effects.append(effect)
 
 
 ## キーワードを1つ与える。既に持っているものは重ねない。
@@ -102,6 +116,7 @@ func grant_keyword(keyword: int) -> void:
 func silence() -> void:
 	silenced = true
 	granted_keywords.clear()
+	granted_effects.clear()
 	glass_intact = false
 
 

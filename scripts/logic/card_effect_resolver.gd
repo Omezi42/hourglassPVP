@@ -32,6 +32,8 @@ var _back_water: CardBackWaterEffects
 var _blaze_sand: CardBlazeSandEffects
 ## 第2弾「早鐘の刻」の固有効果(GameDesign.md 6章)。
 var _early_bell: CardEarlyBellEffects
+## 第2弾「導火の刻」の固有効果(GameDesign.md 6章)。
+var _fuse_sand: CardFuseSandEffects
 
 
 func _init(p_state: MatchState) -> void:
@@ -40,6 +42,7 @@ func _init(p_state: MatchState) -> void:
 	_back_water = CardBackWaterEffects.new(p_state, self)
 	_blaze_sand = CardBlazeSandEffects.new(p_state, self)
 	_early_bell = CardEarlyBellEffects.new(p_state, self)
+	_fuse_sand = CardFuseSandEffects.new(p_state, self)
 
 
 ## unit が持つ trigger の効果をすべて適用する。
@@ -114,7 +117,7 @@ func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Diction
 	var origin := _origin_of(from, hint)
 	var from_slot := from if origin == CardEnums.EffectOrigin.UNIT else _origin_slot(hint, origin)
 	if CardLegendEffects.handles(effect.effect_type):
-		_legend.apply(side, unit, effect, from_slot, origin)
+		_legend.apply(side, unit, effect, from_slot, origin, hint)
 		return
 	if CardBackWaterEffects.handles(effect.effect_type):
 		_back_water.apply(side, effect, from_slot, origin)
@@ -124,6 +127,9 @@ func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Diction
 		return
 	if CardEarlyBellEffects.handles(effect.effect_type):
 		_early_bell.apply(side, effect, from_slot, origin)
+		return
+	if CardFuseSandEffects.handles(effect.effect_type):
+		_fuse_sand.apply(side, unit, effect, hint, from_slot, origin)
 		return
 	match effect.effect_type:
 		CardEnums.EffectType.DAMAGE_PLAYER:

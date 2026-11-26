@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_nova_0"]
+script = ExtResource("script_effect")
+trigger = 2
+target = 2
+effect_type = 43
+value = 0
+
+[resource]
+script = ExtResource("script_card")
+id = "nova"
+display_name = "ノヴァ"
+cost = 4
+total_sand = 5
+pool_index = 169
+set_id = "fuse_sand"
+rarity = 2
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_nova_0")])
+rules_text = "余砂:相手の砂時計すべてに、この砂時計の攻撃力ぶんのダメージ"
+flavor_text = "長く燃えた星ほど大きく散る"
+cannot_attack = false
+is_token = false

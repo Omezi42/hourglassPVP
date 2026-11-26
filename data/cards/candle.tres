@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_candle_0"]
+script = ExtResource("script_effect")
+trigger = 2
+target = 6
+effect_type = 15
+value = 2
+
+[resource]
+script = ExtResource("script_card")
+id = "candle"
+display_name = "キャンドル"
+cost = 2
+total_sand = 5
+initial_attack = 3
+pool_index = 164
+set_id = "fuse_sand"
+rarity = 0
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_candle_0")])
+rules_text = "余砂:自分の他の砂時計1体の砂が2粒上へ戻る"
+flavor_text = "溶けた蝋が隣の芯を守った"
+cannot_attack = false
+is_token = false

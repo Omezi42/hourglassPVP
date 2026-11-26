@@ -27,3 +27,7 @@ extends Resource
 ## 対象を1体取る効果で、条件を満たす中から体力がいちばん少ない駒を選ぶ(同点なら左の枠。追砂の刻)。
 ## プレイヤーは選ばず、札には「体力がいちばん少ない」と書く(GameDesign.md 6章)。
 @export var lowest_health_target: bool = false
+## GRANT_EFFECT で対象へ与える効果(導火線)。他の効果では使わない。
+@export var granted_effect: CardEffectData
+## 与えた効果を札の文の末尾へ足して見せる一文(導火線。GameDesign.md 6章「効果を与える効果」)。granted_effect の側へ書く。
+@export var shown_text: String = ""

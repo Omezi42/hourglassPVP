@@ -233,6 +233,26 @@ const SETS: Dictionary = {
 		],
 		"price": 0,
 	},
+	## 第2弾「前借りの弾」の4つ目のテーマ(GameDesign.md 8章)。落ちきる時が決まった器の枠で、砕けること自体を武器にする大型の時限デッキを成立させる。
+	"fuse_sand":
+	{
+		"id": "fuse_sand",
+		"display_name": "導火の刻",
+		"description": "落ちきる時が決まった器の9枚",
+		"card_ids":
+		[
+			"fuse",
+			"deadline",
+			"candle",
+			"wire",
+			"timebomb",
+			"meteor",
+			"fuseline",
+			"nova",
+			"countdown",
+		],
+		"price": 0,
+	},
 }
 
 const ORDERED_IDS: Array[String] = [
@@ -251,6 +271,7 @@ const ORDERED_IDS: Array[String] = [
 	"back_water",
 	"blaze_sand",
 	"early_bell",
+	"fuse_sand",
 ]
 
 

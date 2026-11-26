@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_fuse_0"]
+script = ExtResource("script_effect")
+trigger = 2
+target = 1
+effect_type = 1
+value = 2
+
+[resource]
+script = ExtResource("script_card")
+id = "fuse"
+display_name = "フューズ"
+cost = 3
+total_sand = 6
+initial_attack = 4
+pool_index = 162
+set_id = "fuse_sand"
+rarity = 0
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_fuse_0")])
+rules_text = "余砂:相手の砂時計1体に2ダメージ"
+flavor_text = "火が見えたらもう遅い"
+cannot_attack = false
+is_token = false

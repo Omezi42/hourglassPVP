@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[resource]
+script = ExtResource("script_card")
+id = "meteor"
+display_name = "ミーティア"
+cost = 6
+total_sand = 8
+initial_attack = 6
+pool_index = 167
+set_id = "fuse_sand"
+rarity = 1
+keywords = Array[int]([])
+effects = Array[Resource]([])
+rules_text = ""
+flavor_text = "空から落ちてくる砂は止まらない"
+cannot_attack = false
+is_token = false

@@ -264,7 +264,7 @@ static func key_of(state: MatchState) -> String:
 				parts
 				. append(
 					(
-						"%s:%d:%d:%d%d%d%d%d:%s"
+						"%s:%d:%d:%d%d%d%d%d:%s:%d"
 						% [
 							u.data.id,
 							u.health,
@@ -275,6 +275,7 @@ static func key_of(state: MatchState) -> String:
 							int(u.glass_intact),
 							int(u.silenced),
 							str(u.granted_keywords),
+							u.granted_effects.size(),
 						]
 					)
 				)

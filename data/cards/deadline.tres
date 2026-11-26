@@ -1,0 +1,35 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_deadline_0"]
+script = ExtResource("script_effect")
+trigger = 0
+target = 6
+effect_type = 31
+value = 0
+
+[sub_resource type="Resource" id="Effect_deadline_1"]
+script = ExtResource("script_effect")
+trigger = 0
+target = 6
+effect_type = 42
+value = 0
+
+[resource]
+script = ExtResource("script_card")
+id = "deadline"
+display_name = "刻限"
+cost = 2
+total_sand = 0
+pool_index = 163
+set_id = "fuse_sand"
+rarity = 0
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_deadline_0"), SubResource("Effect_deadline_1")])
+rules_text = "自分の砂時計1体の砂を体力が1になるまで落とし、このターン攻撃できるようにする"
+flavor_text = "残りの砂をいま全部使う"
+cannot_attack = false
+is_token = false
+is_spell = true

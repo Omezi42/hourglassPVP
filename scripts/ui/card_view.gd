@@ -695,6 +695,7 @@ func _look() -> Array:
 					unit.attacks_this_turn,
 					unit.glass_intact,
 					unit.granted_keywords.duplicate(),
+					unit.granted_effects.size(),
 					unit.silenced,
 				]
 			)

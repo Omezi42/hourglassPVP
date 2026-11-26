@@ -28,7 +28,7 @@ static func handles(effect_type: int) -> bool:
 
 
 func apply(
-	side: int, unit: CardInstance, effect: CardEffectData, from_slot: int, origin: int
+	side: int, unit: CardInstance, effect: CardEffectData, from_slot: int, origin: int, hint := {}
 ) -> void:
 	match effect.effect_type:
 		CardEnums.EffectType.DESTROY_RANDOM_BY_EXCESS:
@@ -36,7 +36,7 @@ func apply(
 		CardEnums.EffectType.SET_TOTAL:
 			_set_total(side, unit, effect, from_slot, origin)
 		CardEnums.EffectType.DROP_SAND_TO_ONE:
-			_drop_to_one(side, unit, effect, from_slot, origin)
+			_drop_to_one(side, unit, effect, from_slot, origin, hint)
 		CardEnums.EffectType.RAISE_ALL_SAND:
 			_raise_all(side, unit, effect, from_slot, origin)
 		CardEnums.EffectType.REVIVE_RANDOM_ALL:
@@ -90,10 +90,15 @@ static func set_total(unit: CardInstance, total: int) -> void:
 
 
 func _drop_to_one(
-	side: int, unit: CardInstance, effect: CardEffectData, from_slot: int, origin: int
+	side: int,
+	unit: CardInstance,
+	effect: CardEffectData,
+	from_slot: int,
+	origin: int,
+	hint: Dictionary
 ) -> void:
 	var entries: Array = []
-	for entry: Dictionary in _resolver._targets(side, unit, effect, {}):
+	for entry: Dictionary in _resolver._targets(side, unit, effect, hint):
 		if _resolver._unit_at(entry).health > MIN_HEALTH:
 			entries.append(entry)
 	_resolver._strike_many(side, from_slot, entries, CardEnums.EffectVisualStyle.STRIKE, origin)

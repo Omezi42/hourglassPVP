@@ -431,6 +431,22 @@ func _repeating_value(state: MatchState, side: int, card: CardData) -> float:
 	return value
 
 
+## テーマごとの固有効果(`Card*Effects`)の見積もり。どれにも当たらなければ null。
+func _themed_value(state: MatchState, side: int, effect: CardEffectData) -> Variant:
+	var type := effect.effect_type
+	if CardLegendEffects.handles(type):
+		return CardLegendEffects.cpu_value(state, side, effect)
+	if CardBackWaterEffects.handles(type):
+		return CardBackWaterEffects.cpu_value(state, side, effect)
+	if CardBlazeSandEffects.handles(type):
+		return CardBlazeSandEffects.cpu_value(state, side, effect)
+	if CardEarlyBellEffects.handles(type):
+		return CardEarlyBellEffects.cpu_value(state, side, effect)
+	if CardFuseSandEffects.handles(type):
+		return CardFuseSandEffects.cpu_value(state, side, effect)
+	return null
+
+
 func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> float:
 	var foe_side := MatchState.other_side(side)
 	var value := 0.0
@@ -448,14 +464,9 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 		or not CardEarlyBellEffects.mana_condition_met(state, side, effect)
 	):
 		return value
-	if CardLegendEffects.handles(effect.effect_type):
-		return CardLegendEffects.cpu_value(state, side, effect)
-	if CardBackWaterEffects.handles(effect.effect_type):
-		return CardBackWaterEffects.cpu_value(state, side, effect)
-	if CardBlazeSandEffects.handles(effect.effect_type):
-		return CardBlazeSandEffects.cpu_value(state, side, effect)
-	if CardEarlyBellEffects.handles(effect.effect_type):
-		return CardEarlyBellEffects.cpu_value(state, side, effect)
+	var themed: Variant = _themed_value(state, side, effect)
+	if themed != null:
+		return float(themed)
 	match effect.effect_type:
 		CardEnums.EffectType.DAMAGE_PLAYER:
 			value = effect.value * FACE_WEIGHT

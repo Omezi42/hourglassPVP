@@ -60,20 +60,32 @@ func hover(view: CardView) -> void:
 		anchor = view.get_transform() * Rect2(Vector2.ZERO, view.size)
 		if view.mode == CardView.Mode.BOARD:
 			avoid = anchor
-	hover_card(view.card if view != null else null, false, avoid, anchor)
+	hover_card(
+		view.card if view != null else null,
+		false,
+		avoid,
+		anchor,
+		view.unit if view != null else null
+	)
 
 
 ## 駒を持たない所(直前の手の列・ログ)からも同じパネルを出す。
 ## `off_board` はログのモーダルから読むとき。出さない間の規則は「盤面の上へ重なる」前提の
 ## ものであり、盤面を覆ったモーダルの上では当たらないため掛けない。
-func hover_card(card: CardData, off_board := false, avoid := Rect2(), anchor := Rect2()) -> void:
+func hover_card(
+	card: CardData,
+	off_board := false,
+	avoid := Rect2(),
+	anchor := Rect2(),
+	unit: CardInstance = null
+) -> void:
 	if card == null or (not off_board and not allowed()):
 		hide_now()
 		return
 	_off_board = off_board
 	_anchor = anchor
 	_timer.stop()
-	_panel.show_card(card, "" if off_board else _live_text(card))
+	_panel.show_card(card, "" if off_board else _live_text(card, unit))
 	_fit_scale()
 	_panel.position = _place(avoid)
 	_panel.visible = true
@@ -82,7 +94,13 @@ func hover_card(card: CardData, off_board := false, avoid := Rect2(), anchor := 
 
 
 ## 自分の手札の札は、反転の回数で伸びる数字をいまの値で見せる(GameDesign.md 6章)。
-func _live_text(card: CardData) -> String:
+## 場の駒は、与えられた効果(導火線)を札の文の末尾へ足して見せる(GameDesign.md 6章「効果を与える効果」)。
+func _live_text(card: CardData, unit: CardInstance = null) -> String:
+	if unit != null and not unit.silenced and not unit.granted_effects.is_empty():
+		var text := card.rules_text
+		for effect in unit.granted_effects:
+			text += "\n" + effect.shown_text
+		return text
 	if _screen.state == null or not _screen.state.hand[_screen.my_side].has(card):
 		return ""
 	return CardEffectResolver.live_rules_text(_screen.state, _screen.my_side, card)
