@@ -1014,6 +1014,20 @@ def sig_meteor():
         at(crackle, piece, 0.4 * RNG.uniform(0.0, 1.0) ** 1.6, RNG.uniform(0.3, 1.0))
     return layer(x, crackle, -9, HEAVY_LAND_AT + 0.02)
 
+## シビルの霊気が立ちのぼる長さと、星図が5つの星を結ぶ長さ(`sibyl_entrance.gd` の RISE・CHART)。
+SIBYL_RISE = 0.24
+SIBYL_CHART = 0.24
+
+
+def sig_sibyl():
+    """シビル:着地し、霊気がすうっと立ちのぼり、頭上で星が一つずつ灯るたびに硝子の粒が高く鳴って、最後の星がきらりと瞬く。"""
+    x = landing(1.8)
+    x = layer(x, whoosh(1, 1.4), -14, LAND_AT)
+    star_at = LAND_AT + SIBYL_RISE
+    x = layer(x, chime([2093, 2349, 2637, 3136, 3520], SIBYL_CHART / 4, 0.55), -9, star_at)
+    return layer(x, tink(5274, 0.9), -5, star_at + SIBYL_CHART)
+
+
 SIGNATURES = [
     sig_freeze, sig_relic, sig_middle, sig_phase, sig_grain, sig_dash, sig_shield, sig_sand,
     sig_watcher, sig_glass, sig_vamp, sig_drill, sig_lance, sig_twin, sig_lock, sig_gate,
@@ -1021,6 +1035,7 @@ SIGNATURES = [
     sig_obelisk, sig_tower, sig_anchor, sig_sage, sig_grimoire,
     sig_maestro, sig_zero_hour, sig_necropolis,
     sig_hold, sig_bastion, sig_chaser, sig_carillon, sig_clockwork, sig_meteor,
+    sig_sibyl,
 ]
 
 

@@ -37,6 +37,7 @@ const ENTRANCES := {
 	"carillon": preload("res://scripts/ui/signature/moves/carillon_entrance.gd"),
 	"clockwork": preload("res://scripts/ui/signature/moves/clockwork_entrance.gd"),
 	"meteor": preload("res://scripts/ui/signature/moves/meteor_entrance.gd"),
+	"sibyl": preload("res://scripts/ui/signature/moves/sibyl_entrance.gd"),
 }
 
 ## 効果が対象へ届くまで(設置・落砂・砂術など、紋章が飛ぶ場面の代わり)。
@@ -183,6 +184,15 @@ const EFFECTS := {
 	"deadline": preload("res://scripts/ui/signature/moves/deadline_effect.gd"),
 	"fuseline": preload("res://scripts/ui/signature/moves/fuseline_effect.gd"),
 	"epicenter": preload("res://scripts/ui/signature/moves/epicenter_effect.gd"),
+	"shaft": preload("res://scripts/ui/signature/moves/shaft_effect.gd"),
+	"scope": preload("res://scripts/ui/signature/moves/scope_effect.gd"),
+	"omen": preload("res://scripts/ui/signature/moves/omen_effect.gd"),
+	"rune": preload("res://scripts/ui/signature/moves/rune_effect.gd"),
+	"foresight": preload("res://scripts/ui/signature/moves/foresight_effect.gd"),
+	"digger": preload("res://scripts/ui/signature/moves/digger_effect.gd"),
+	"horoscope": preload("res://scripts/ui/signature/moves/horoscope_effect.gd"),
+	"prophecy": preload("res://scripts/ui/signature/moves/prophecy_effect.gd"),
+	"vision": preload("res://scripts/ui/signature/moves/vision_effect.gd"),
 }
 
 
