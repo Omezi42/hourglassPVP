@@ -25,7 +25,7 @@ func run(assert_true: Callable) -> void:
 	_test_dreameater_sends_hand_card_to_deck_bottom()
 	_test_phantom_copies_picked_card()
 	_test_mirage_swaps_all_units()
-	_test_mirage_needs_two_fewer()
+	_test_mirage_needs_three_fewer()
 	_test_mirage_leaves_overflow_in_place()
 	_test_janus_swaps_hp()
 	_test_fork_keeps_gossip()
@@ -121,9 +121,9 @@ func _test_effects_bind_to_enums() -> void:
 	_assert.call(
 		(
 			mirage.condition_scope == CardEnums.ConditionScope.ENEMY_LEADS_BY
-			and mirage.condition_total == 1
+			and mirage.condition_total == 2
 		),
-		"ミラージュの条件(自分の駒を含めて相手が1体以上多い=ミラージュを除いて2体以上)"
+		"ミラージュの条件(自分の駒を含めて相手が2体以上多い=ミラージュを除いて3体以上)"
 	)
 	_assert.call(CardLibrary.find_by_id("scout").sees_foe_deck_top, "スカウトは相手の山札の一番上が見える印を持つ")
 	_assert.call(CardLibrary.find_by_id("scout").category_name() == "常在", "スカウトの分類は常在")
@@ -336,11 +336,17 @@ func _test_mirage_swaps_all_units() -> void:
 	var foe_a := _place(state, B, "sand", 0, 3, 2)
 	var foe_b := _place(state, B, "lock", 3, 5, 0)
 	var foe_c := _place(state, B, "sand", 4, 2, 2)
+	var foe_d := _place(state, B, "sand", 5, 2, 2)
 	_assert.call(state.play_card(A, 0, 5), "ミラージュを出せる")
 	var mirage: CardInstance = state.board[A][5]
 	_assert.call(mirage != null and mirage.data.id == "mirage", "ミラージュ自身は動かない")
 	_assert.call(
-		state.board[A][0] == foe_a and state.board[A][1] == foe_b and state.board[A][2] == foe_c,
+		(
+			state.board[A][0] == foe_a
+			and state.board[A][1] == foe_b
+			and state.board[A][2] == foe_c
+			and state.board[A][3] == foe_d
+		),
 		"相手の駒が自分の場へ左から入る"
 	)
 	_assert.call(state.board[B][0] == mine, "自分の駒が相手の場へ移る")
@@ -360,7 +366,7 @@ func _test_mirage_swaps_all_units() -> void:
 	_assert.call(state.graveyard[B].size() == 1, "入れ替わった駒が砕けると元の持ち主の墓地へ行く")
 
 
-func _test_mirage_needs_two_fewer() -> void:
+func _test_mirage_needs_three_fewer() -> void:
 	var state := _new_match(["mirage"])
 	var mine := _place(state, A, "sand", 0, 4, 1)
 	var foe_a := _place(state, B, "sand", 0, 3, 2)
@@ -382,7 +388,13 @@ func _test_mirage_needs_two_fewer() -> void:
 	_place(exact, B, "sand", 1, 3, 2)
 	_place(exact, B, "sand", 2, 3, 2)
 	exact.play_card(A, 0, 5)
-	_assert.call(exact.board[B][0] == lone, "ミラージュを除いて2体少なければ入れ替わる")
+	_assert.call(exact.board[A][0] == lone, "ミラージュを除いて2体少ないだけでは入れ替わらない")
+	var three := _new_match(["mirage"])
+	var alone := _place(three, A, "sand", 0, 4, 1)
+	for slot in 4:
+		_place(three, B, "sand", slot, 3, 2)
+	three.play_card(A, 0, 5)
+	_assert.call(three.board[B][0] == alone, "ミラージュを除いて3体少なければ入れ替わる")
 
 
 func _test_mirage_leaves_overflow_in_place() -> void:
