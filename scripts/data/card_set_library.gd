@@ -368,6 +368,27 @@ const SETS: Dictionary = {
 		],
 		"price": 0,
 	},
+	## 第3弾「奪砂の弾」の4つ目のテーマ(GameDesign.md 8章)。砂の流れを止め、重い相手に答える。
+	"seal_sand":
+	{
+		"id": "seal_sand",
+		"display_name": "封じの刻",
+		"description": "砂の流れを止める10枚",
+		"card_ids":
+		[
+			"stasis_hold",
+			"chain",
+			"frost",
+			"seal_flip",
+			"toll",
+			"cage",
+			"amber",
+			"timelock",
+			"shatter_still",
+			"jailer",
+		],
+		"price": 0,
+	},
 }
 
 const ORDERED_IDS: Array[String] = [
@@ -393,6 +414,7 @@ const ORDERED_IDS: Array[String] = [
 	"draw_sand",
 	"turncoat",
 	"mirror_sand",
+	"seal_sand",
 ]
 
 

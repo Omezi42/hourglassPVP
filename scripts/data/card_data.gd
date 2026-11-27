@@ -73,6 +73,9 @@ extends Resource
 @export var ally_cost_down_at_full_mana: int = 0
 ## 場にいる間、自分の手番の終わりに残したマナを次の手番へ持ち越す(GameDesign.md 6章。スルース)。語にしないためフラグで持つ。
 @export var carries_mana: bool = false
+## 場にいる間、相手が出す・使うカードのコストがこの値だけ上がる(GameDesign.md 6章「封じる効果」。トール)。複数体なら足し合わせる。
+## 実際に払うコストは `MatchState.play_cost()` が出す。消された駒は持たない。
+@export var foe_cost_up: int = 0
 
 ## 砂術(GameDesign.md 6章)。**盤面へ出ず、効果だけを起こして墓地へ行く。**
 ## true のとき total_sand / keywords / cannot_attack は使わない。
@@ -138,6 +141,7 @@ func category_name() -> String:
 		or plays_deck_top
 		or ally_cost_down_at_full_mana > 0
 		or carries_mana
+		or foe_cost_up > 0
 	):
 		return "常在"
 	return ""

@@ -423,6 +423,7 @@ func _card_value(state: MatchState, side: int, card: CardData) -> float:
 			value += _on_play_value(state, side, effect)
 	value += CardPourSandEffects.cpu_death_value(card)
 	value += CardMirrorEffects.cpu_card_value(state, side, card)
+	value += CardSealEffects.cpu_standing_value(state, side, card)
 	# 繰り返し働くトリガーは、場に残る見込みのターン数ぶん価値が積み上がる
 	# (GameDesign.md 6章)。落砂は毎ターン1回、被弾は殴り合うたびに起きる。
 	value += _repeating_value(state, side, card)
@@ -460,6 +461,7 @@ func _themed_value(state: MatchState, side: int, effect: CardEffectData) -> Vari
 		CardDrawSandEffects,
 		CardTurncoatEffects,
 		CardMirrorEffects,
+		CardSealEffects,
 	]
 	for theme in themes:
 		if theme.handles(effect.effect_type):
@@ -515,7 +517,8 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 			elif effect.target == CardEnums.EffectTarget.ALL_ENEMY_UNITS:
 				# 全体除去(ヴィジョン)。並んでいる駒の生涯ダメージがそのまま積み上がる。
 				for unit in state.units(foe_side):
-					value += float(unit.lifetime_damage())
+					if CardEffectResolver.eligible_target(unit, effect):
+						value += float(unit.lifetime_damage())
 			else:
 				var target := _strongest_enemy(state, foe_side, effect)
 				if target >= 0:
@@ -622,6 +625,8 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 			value = 2.0
 			if effect.keyword == CardEnums.Keyword.QUICK:
 				value = CardBlazeSandEffects.quick_grant_value(state, side, effect)
+			elif effect.keyword == CardEnums.Keyword.STILL:
+				value = CardSealEffects.still_value(state, side, effect)
 		CardEnums.EffectType.ADD_TOTAL_PER_GRAVE:
 			value = CardEffectResolver.grave_unit_count(state, side) * effect.value * 2.0
 		CardEnums.EffectType.RECOVER_FROM_GRAVE, CardEnums.EffectType.RECOVER_SPELL_FROM_GRAVE:

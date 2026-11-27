@@ -15,7 +15,10 @@ const FLIP_RIGHT_MIN_GAIN := 3.0
 ## いま手持ちの攻撃力では仕留められない相手が、反転させれば
 ## (新しい体力 = いまの攻撃力)仕留められるようになる場合だけ使う。
 static func setup(state: MatchState, side: int) -> Dictionary:
-	if int(state.flip_right_remaining.get(side, 0)) <= 0:
+	if (
+		int(state.flip_right_remaining.get(side, 0)) <= 0
+		or CardSealEffects.flip_locked(state, side)
+	):
 		return {}
 	var foe_side := MatchState.other_side(side)
 	var best_attack := 0
@@ -50,7 +53,10 @@ static func setup(state: MatchState, side: int) -> Dictionary:
 ## 追い込む案(`CardCpuStrategy.swap_value()`、既存のSWAP_STATSの評価をそのまま流用)を両方見て
 ## いちばん得な1手を選ぶ。**希少な資源のため `FLIP_RIGHT_MIN_GAIN` 未満なら温存する**。
 static func choose(state: MatchState, side: int) -> Dictionary:
-	if int(state.flip_right_remaining.get(side, 0)) <= 0:
+	if (
+		int(state.flip_right_remaining.get(side, 0)) <= 0
+		or CardSealEffects.flip_locked(state, side)
+	):
 		return {}
 	var foe_side := MatchState.other_side(side)
 	var best: Dictionary = {}

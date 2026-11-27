@@ -248,6 +248,7 @@ static func key_of(state: MatchState) -> String:
 		str(state.mana[MINE]),
 		str(state.mana_debt.get(MINE, 0)),
 		str(state.flip_right_remaining.get(MINE, 0)),
+		str(int(CardSealEffects.flip_locked(state, MINE))),
 	]
 	var hand_ids: PackedStringArray = []
 	for card in state.hand[MINE]:
@@ -264,7 +265,7 @@ static func key_of(state: MatchState) -> String:
 				parts
 				. append(
 					(
-						"%s:%d:%d:%d%d%d%d%d:%s:%d"
+						"%s:%d:%d:%d%d%d%d%d%d%d:%s:%d:%d"
 						% [
 							u.data.id,
 							u.health,
@@ -274,8 +275,11 @@ static func key_of(state: MatchState) -> String:
 							u.attacks_this_turn,
 							int(u.glass_intact),
 							int(u.silenced),
+							int(u.attack_locked),
+							int(u.flip_sealed),
 							str(u.granted_keywords),
 							u.granted_effects.size(),
+							u.caged_by,
 						]
 					)
 				)

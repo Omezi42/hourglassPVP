@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_jailer_0"]
+script = ExtResource("script_effect")
+trigger = 0
+target = 4
+effect_type = 77
+value = 0
+
+[resource]
+script = ExtResource("script_card")
+id = "jailer"
+display_name = "ジェイラー"
+cost = 4
+total_sand = 6
+pool_index = 233
+set_id = "seal_sand"
+rarity = 3
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_jailer_0")])
+rules_text = "設置:次の相手の手番、相手は反転も反転権も使えない"
+flavor_text = "「今夜は誰も向きを変えるな」"
+cannot_attack = false
+is_token = false

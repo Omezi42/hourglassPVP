@@ -122,6 +122,19 @@ static func pedestal_base(view: CardView, canvas: CanvasItem) -> void:
 		UiPaint.fill_ellipse(ci, bottom_center, shadow_base * 0.45, Color(0.0, 0.0, 0.0, 0.20), 24)
 
 
+## 封じの印(封じの刻)。台座の上面の左、攻撃力の石と紋章の印のあいだへ、絵・石より手前に描く。
+static func lock_mark(view: CardView, canvas: CanvasItem) -> void:
+	if view.lock_mark == CardSealEffects.Mark.NONE:
+		return
+	var top_center := Vector2(view.size.x * 0.5, CardView.PEDESTAL_CENTER_Y)
+	SealMarkPaint.draw(
+		canvas.get_canvas_item(),
+		view.lock_mark == CardSealEffects.Mark.CAGE,
+		top_center,
+		CardView.PEDESTAL_RADIUS
+	)
+
+
 ## 奪った駒の台座の縁(上面の楕円の手前の弧)に、元の持ち主の側の色の細い帯を巻く(GameDesign.md 9章)。
 ## 太さは台座の大きさに比例させる。
 static func _seized_rim(ci: RID, center: Vector2, radius: Vector2, color: Color) -> void:

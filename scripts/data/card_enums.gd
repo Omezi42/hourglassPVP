@@ -288,6 +288,14 @@ enum EffectType {
 	COPY_FOE_TRAITS,
 	## 対象の相手の砂時計を、card_id のカードの総量 value のトークンに置き換える(砂人形)。破壊ではないため余砂は働かない。
 	REPLACE_WITH_TOKEN,
+	## 対象の相手の砂時計は、次の相手の手番に攻撃できない(チェイン・タイムロック。封じの刻)。相手の手番の終わりに解ける。value は使わない。
+	LOCK_ATTACK,
+	## 対象の相手の砂時計は、この砂時計が場にいるあいだ攻撃できない(ケージ)。この砂時計が場を離れたら解ける。value は使わない。
+	LOCK_ATTACK_WHILE_ALIVE,
+	## 対象の相手の砂時計は反転できなくなる(シール)。反転権でも返せず、沈黙で解ける。value は使わない。
+	SEAL_FLIP,
+	## 次の相手の手番、対象のプレイヤーは反転も反転権も使えない(ジェイラー)。相手の手番の終わりに解ける。value は使わない。
+	LOCK_FLIP,
 }
 
 ## コンボ系カードの発動条件が確認する範囲(GameDesign.md 6章)。
@@ -336,6 +344,10 @@ enum ConditionScope {
 	TOTAL_AT_MOST,
 	## 相手の砂時計の数が、この駒を含む自分の砂時計の数より condition_total 以上多いか(ディフェクト)。発動の可否を決める条件。
 	ENEMY_LEADS_BY,
+	## この効果を持つ砂時計が写しでないか(ポートレイト。写し身の刻)。発動の可否を決める条件で、condition_total は使わない。
+	SELF_NOT_COPY,
+	## 選んだ対象が静止を持つか(シャッター。封じの刻)。TARGET と同じく対象の絞り込みとして働き、condition_total は使わない。
+	TARGET_IS_STILL,
 }
 
 ## 効果が対象へ届く演出の「型」(GameDesign.md 9章)。`MatchState.effect_struck` /

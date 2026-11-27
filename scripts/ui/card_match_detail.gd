@@ -13,6 +13,9 @@ extends RefCounted
 ## 奪った駒に添える1行(元の持ち主の側から見た呼び方)。
 const SEIZED_NOTE := "相手の砂時計(奪った)"
 const LENT_NOTE := "自分の砂時計(奪われた)"
+const CHAINED_NOTE := "次の手番は攻撃できない"
+const CAGED_NOTE := "檻に封じられている(攻撃できない)"
+const SEALED_NOTE := "反転できない(封じられた)"
 ## 外れてから消すまでの猶予。隣の駒へ移る途中で点滅させないため。
 const HIDE_DELAY := 0.15
 ## 盤面へ重ねる以上、幅は狭いほどよい。効果の文が読める下限として340pxを採った。
@@ -100,10 +103,25 @@ func hover_card(
 ## 場の駒は、与えられた効果(導火線)を札の文の末尾へ足して見せる(GameDesign.md 6章「効果を与える効果」)。
 func _live_text(card: CardData, unit: CardInstance = null) -> String:
 	var body := _live_body(card, unit)
-	var note := _seized_note(unit)
-	if note.is_empty():
+	var notes := PackedStringArray()
+	for note: String in [_seized_note(unit), _lock_note(unit)]:
+		if not note.is_empty():
+			notes.append(note)
+	if notes.is_empty():
 		return body
-	return (card.rules_text if body.is_empty() else body) + "\n" + note
+	return (card.rules_text if body.is_empty() else body) + "\n" + "\n".join(notes)
+
+
+## 封じられた駒(封じの刻)の状態を1行で添える(GameDesign.md 9章)。封じられていなければ空。
+func _lock_note(unit: CardInstance) -> String:
+	if unit == null:
+		return ""
+	match CardSealEffects.mark_of(unit):
+		CardSealEffects.Mark.CAGE:
+			return CAGED_NOTE
+		CardSealEffects.Mark.CHAIN:
+			return CHAINED_NOTE
+	return SEALED_NOTE if unit.flip_sealed else ""
 
 
 ## 奪った駒(寝返りの刻)の持ち主を1行で添える(GameDesign.md 9章)。奪われていなければ空。

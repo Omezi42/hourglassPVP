@@ -44,6 +44,16 @@ var doppel_made: bool = false
 var origin_card: CardData = null
 ## 戦闘でこの駒を砕いた相手の駒のカード(写しなら写し元。シェードが写す)。効果で砕けた・砕けていなければ null。
 var slain_by: CardData = null
+## 次の相手の手番に攻撃できない(チェイン・タイムロック。封じの刻)。持ち主の手番の終わりに解ける。
+var attack_locked: bool = false
+## 反転できなくされたか(シール)。反転権でも返せず、沈黙で解ける。
+var flip_sealed: bool = false
+## この駒がケージなら、封じに付けた印(0なら持たない)。封じた駒の `caged_by` と同じ値で結ぶ(参照ではなく数で持つため、対局の写しでも保たれる)。
+var cage_key: int = 0
+## この駒を封じているケージの印(0なら封じられていない)。
+var caged_by: int = 0
+## いま檻に封じられているか(封じているケージが場にいるあいだ)。`MatchState` が盤面の変わるたびに書く。
+var held_caged: bool = false
 
 
 func _init(p_data: CardData) -> void:
@@ -131,6 +141,7 @@ func silence() -> void:
 	granted_keywords.clear()
 	granted_effects.clear()
 	glass_intact = false
+	flip_sealed = false
 
 
 ## 反転せずに寿命を全うするまでに与える総ダメージ(GameDesign.md 1章)。
@@ -167,6 +178,8 @@ func max_attacks() -> int:
 func can_attack() -> bool:
 	if data.cannot_attack:
 		return false
+	if attack_locked or held_caged:
+		return false
 	return not is_fresh() and attack > 0 and attacks_this_turn < max_attacks()
 
 
@@ -182,7 +195,7 @@ func can_flip() -> bool:
 
 
 func flippable() -> bool:
-	return not data.cannot_flip
+	return not data.cannot_flip and not flip_sealed
 
 
 ## 反転:体力と攻撃力を入れ替える。

@@ -24,6 +24,8 @@ const VERSION_FONT_SIZE := 12
 
 var waiting_text := ""
 var targeting := false
+## 反転を封じられている間(ジェイラー。GameDesign.md 9章)。押せない理由を、対象選択の案内と同じ席へ出す。
+var jailed := false
 var _dot_count := 0
 var _dots_timer: Timer
 
@@ -59,6 +61,13 @@ func set_targeting(value: bool) -> void:
 	queue_redraw()
 
 
+func set_jailed(value: bool) -> void:
+	if jailed == value:
+		return
+	jailed = value
+	queue_redraw()
+
+
 func _draw() -> void:
 	draw_string(
 		get_theme_default_font(),
@@ -71,6 +80,8 @@ func _draw() -> void:
 	)
 	if targeting:
 		_draw_target_prompt()
+	elif jailed:
+		_draw_jail_note()
 	if waiting_text.is_empty():
 		return
 	_draw_waiting_panel()
@@ -97,29 +108,36 @@ func _draw_waiting_panel() -> void:
 	)
 
 
+## 反転できない理由。対象選択の案内と同じ札の形で、左の見出しと下の補足の2行。
+func _draw_jail_note() -> void:
+	_draw_note("反転できない", "ジェイラーの封じ", UiPalette.FOE)
+
+
 func _draw_target_prompt() -> void:
+	_draw_note("対象を選ぶ", "他を押すと取消", UiPalette.SELECT)
+
+
+func _draw_note(head: String, sub: String, accent: Color) -> void:
 	var font := get_theme_default_font()
 	# 縦では案内ごと拡大する(`prompt_rect` は拡大後の大きさ)。中身は横の大きさで描いて縮尺を掛ける。
 	var shown := CardMatchLayout.current().prompt_rect
 	var zoom := CardMatchLayout.current().text_scale
 	draw_set_transform(shown.position, 0.0, Vector2.ONE * zoom)
 	var prompt := Rect2(Vector2.ZERO, shown.size / zoom)
-	UiKit.glass(
-		get_canvas_item(), prompt, -1.0, 1.0, UiKit.GLASS_ALPHA, UiKit.rim_color(UiPalette.SELECT)
-	)
+	UiKit.glass(get_canvas_item(), prompt, -1.0, 1.0, UiKit.GLASS_ALPHA, UiKit.rim_color(accent))
 	draw_string(
 		font,
 		prompt.position + Vector2(12, 24),
-		"対象を選ぶ",
+		head,
 		HORIZONTAL_ALIGNMENT_LEFT,
 		-1,
 		UiPalette.T_LEAD,
-		UiPalette.SELECT
+		accent
 	)
 	draw_string(
 		font,
 		prompt.position + Vector2(12, 44),
-		"他を押すと取消",
+		sub,
 		HORIZONTAL_ALIGNMENT_LEFT,
 		-1,
 		UiPalette.T_SMALL,

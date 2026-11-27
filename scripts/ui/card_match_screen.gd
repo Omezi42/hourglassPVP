@@ -488,6 +488,9 @@ func refresh() -> void:
 	if _damage_assist != null:
 		_damage_assist.sync()
 	_status.set_targeting(_target_prompt_shown())
+	_status.set_jailed(
+		live and state.current_turn == my_side and CardSealEffects.flip_locked(state, my_side)
+	)
 	# 対象選択に入った・演出が始まったぶんは、ホバーが動かなくてもここで引っ込める。
 	if _detail != null:
 		_detail.sync()
@@ -500,6 +503,7 @@ func _refresh_row(views: Array[CardView], side: int) -> void:
 		views[i].exhausted = unit != null and side == my_side and not unit.can_attack()
 		views[i].ready_mark = unit != null and side == my_side and unit.can_attack()
 		views[i].seized_band = _seized_band(unit, side)
+		views[i].lock_mark = CardSealEffects.mark_of(unit)
 		views[i].selected = false
 		views[i].enabled = true
 		views[i].preview_health = -1

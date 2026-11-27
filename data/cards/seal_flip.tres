@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_seal_flip_0"]
+script = ExtResource("script_effect")
+trigger = 0
+target = 1
+effect_type = 76
+value = 0
+
+[resource]
+script = ExtResource("script_card")
+id = "seal_flip"
+display_name = "シール"
+cost = 2
+total_sand = 4
+pool_index = 227
+set_id = "seal_sand"
+rarity = 0
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_seal_flip_0")])
+rules_text = "設置:相手の砂時計1体は反転できなくなる(反転権でも返せない)"
+flavor_text = "封蝋の向こうは誰も覗けない"
+cannot_attack = false
+is_token = false

@@ -162,4 +162,4 @@ static func unit_value(unit: CardInstance) -> float:
 		value += GLASS_VALUE
 	for trigger: int in REPEATING_TRIGGERS:
 		value += unit.effects_for(trigger).size() * TRIGGER_VALUE
-	return value
+	return CardSealEffects.adjusted_unit_value(unit, value)

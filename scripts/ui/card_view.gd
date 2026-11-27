@@ -194,6 +194,8 @@ var exhausted := false
 var ready_mark := false
 ## 奪った駒の台座の縁に出す帯の色(元の持ち主の側の色。GameDesign.md 9章)。透明なら出さない。
 var seized_band := Color.TRANSPARENT
+## 台座に出す封じの印(`CardSealEffects.Mark`。GameDesign.md 9章)。NONE なら出さない。
+var lock_mark := CardSealEffects.Mark.NONE
 ## 山札の一番上から並べた札(シビル。GameDesign.md 9章)。手札の右端に琥珀色の縁を付ける。
 var deck_top := false
 ## 右上へ出す小さな添え字(デッキ編集の「2/2」など)。空なら出さない。
@@ -676,6 +678,8 @@ func _look() -> Array:
 		exhausted,
 		ready_mark,
 		seized_band,
+		lock_mark,
+		play_cost,
 		badge,
 		preview_health,
 		preview_dead,
@@ -745,6 +749,7 @@ func _draw_board_unit() -> void:
 	# 必ず見えなければならないため、絵の下へ隠してはいけない。
 	CardViewPaint.pedestal_ring(self)
 	CardViewPaint.pedestal_plaque(self, tint)
+	CardViewPaint.lock_mark(self, self)
 	if ready_mark and not selected:
 		CardViewPaint.pedestal_glow(self, Color(UiPalette.SAND, 0.18))
 	if _hovering and enabled:

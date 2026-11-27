@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[resource]
+script = ExtResource("script_card")
+id = "toll"
+display_name = "トール"
+cost = 3
+total_sand = 5
+pool_index = 228
+set_id = "seal_sand"
+rarity = 1
+keywords = Array[int]([])
+effects = Array[Resource]([])
+rules_text = "常在:相手が出す・使うカードのコストが1上がる"
+flavor_text = "通るなら一粒置いていけ"
+cannot_attack = false
+is_token = false
+foe_cost_up = 1

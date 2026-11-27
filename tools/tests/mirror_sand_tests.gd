@@ -171,6 +171,8 @@ func _test_portrait_leaves_copy() -> void:
 	_assert.call(copy != null and copy.copy_of.id == "portrait", "砕けるとポートレイトの写しが出る")
 	_assert.call(copy.total_sand() == 2 and copy.attack == 0, "写しの総量は2")
 	_assert.call(portrait.is_dead(), "元は砕けている")
+	state.destroy_unit(A, 0)
+	_assert.call(state.board[A][0] == null and state.units(A).is_empty(), "写しが砕けても写しは出ない")
 
 
 func _test_doll_copies_foe() -> void:
@@ -271,6 +273,7 @@ func _test_parallel_copies_all_up_to_room() -> void:
 		"左の駒から順に写す"
 	)
 	_assert.call(state.board[A][4].total_sand() == 1, "写しの総量は1")
+	_assert.call(CardLibrary.find_by_id("parallel").cost == 3, "パラレルはコスト3")
 
 
 func _test_shade_copies_combat_slayer() -> void:
@@ -348,7 +351,7 @@ func _test_fork_keeps_copy() -> void:
 func _test_charm_traitor_siphon_numbers() -> void:
 	var charm := CardLibrary.find_by_id("charm")
 	_assert.call(
-		charm.total_sand == 3 and charm.effects[0].condition_total == 2, "チャームは総量3・総量2以下を奪う"
+		charm.total_sand == 3 and charm.effects[0].condition_total == 3, "チャームは総量3・総量3以下を奪う"
 	)
 	var traitor := CardLibrary.find_by_id("traitor")
 	_assert.call(

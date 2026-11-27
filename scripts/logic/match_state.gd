@@ -115,6 +115,8 @@ var max_mana: Dictionary = {}
 var mana_debt: Dictionary = {}
 ## 次の手番へ持ち越すマナ(Side をキーにした int。スルース)。手番の終わりに残したマナを書き、次の手番の回復に足して0へ戻す。
 var mana_carry: Dictionary = {}
+## 次の相手の手番に反転も反転権も使えない側(Side をキーにした bool。ジェイラー)。その側の手番の終わりに解ける。
+var flip_lock: Dictionary = {}
 ## 山札(先頭が次に引くカード)。
 var deck: Dictionary = {}
 var hand: Dictionary = {}
@@ -197,6 +199,7 @@ func start_match(
 		max_mana[side] = 0
 		mana_debt[side] = 0
 		mana_carry[side] = 0
+		flip_lock[side] = false
 		hand[side] = []
 		graveyard[side] = []
 		_deck_exhausted[side] = false
@@ -318,6 +321,7 @@ func end_turn() -> void:
 	# **`time_up()` はこの後でカウントを書き戻す**ため、ここで消えても矛盾しない。
 	turn_forfeits[side] = 0
 	_resolve_turn_end_effects(side)
+	CardSealEffects.release_turn_locks(self, side)
 	if _match_over:
 		return
 	_store_mana_carry(side)
@@ -462,7 +466,8 @@ func can_play(side: int, hand_index: int) -> bool:
 
 
 ## 実際に払うコスト(GameDesign.md 6章)。相手の砂時計の数で下がるカード・自分のHPが低いと下がるカード・最大マナが上限だと下がるカードと、
-## 自分の場に砂術のコストを下げる駒がいるときの砂術・最大マナが上限のときに全体のコストを下げる駒がいるときの全カードだけが元のコストと違う。
+## 自分の場に砂術のコストを下げる駒がいるときの砂術・最大マナが上限のときに全体のコストを下げる駒がいるときの全カード、
+## 相手の場にコストを上げる駒(トール)がいるときの全カードだけが元のコストと違う。上がるぶんは下がるぶんと足し引きし、下がったなら `MIN_COST` を下回らない。
 func play_cost(side: int, card: CardData) -> int:
 	var down := card.cost_down_per_enemy_unit * units(other_side(side)).size()
 	if card.cost_down_low_hp > 0 and int(hp[side]) <= card.cost_down_hp_threshold:
@@ -473,7 +478,8 @@ func play_cost(side: int, card: CardData) -> int:
 		for unit in units(side):
 			down += unit.spell_cost_down()
 	down += CardEarlyBellEffects.full_mana_cost_down(self, side)
-	return card.cost if down <= 0 else maxi(card.cost - down, MIN_COST)
+	var up := CardSealEffects.toll(self, side)
+	return card.cost + up if down <= 0 else maxi(card.cost - down + up, MIN_COST)
 
 
 ## 手札の1枚を場の空き枠へ出す。埋まっている枠へは出せない(上書き設置は行わない)。
@@ -549,6 +555,8 @@ func _fire_own_spell(side: int) -> void:
 func can_flip(side: int, slot: int) -> bool:
 	if _match_over or current_turn != side or flip_disabled:
 		return false
+	if CardSealEffects.flip_locked(self, side):
+		return false
 	var unit: CardInstance = board[side][slot]
 	return unit != null and unit.can_flip()
 
@@ -576,7 +584,7 @@ func flip(side: int, slot: int) -> bool:
 ## `use_flip_right()` の戻り値だけで「使えたか」を判断させる。UI側で対象を
 ## 選ぶ前の判定(押した枠に駒がいるか)は盤面を直接読めば足りる。
 func _can_use_flip_right(side: int, target_side: int, slot: int) -> bool:
-	if _match_over or current_turn != side:
+	if _match_over or current_turn != side or CardSealEffects.flip_locked(self, side):
 		return false
 	if int(flip_right_remaining.get(side, 0)) <= 0:
 		return false
@@ -866,6 +874,7 @@ func _destroy_unit(side: int, slot: int) -> void:
 	if unit == null:
 		return
 	board[side][slot] = null
+	CardSealEffects.refresh_cages(self)
 	graveyard[CardTurncoatEffects.card_owner(unit, side)].append(CardMirrorEffects.card_of(unit))
 	# 紋章の出どころ(DEATH)を紐づけるため、砕けた枠を hint で運ぶ
 	# (Architecture.md 4.0節)。対象の絞り込み(hint.has("slot"))とは
@@ -903,6 +912,7 @@ func _refresh_held_keywords() -> void:
 			unit.held_still = unit.data.still_while_outnumbered and foes > own
 			var quick_hp := unit.data.quick_while_foe_hp_at_most
 			unit.held_quick = quick_hp >= 0 and foe_hp <= quick_hp
+	CardSealEffects.refresh_cages(self)
 
 
 func _finish(p_winner: int, reason: int) -> void:

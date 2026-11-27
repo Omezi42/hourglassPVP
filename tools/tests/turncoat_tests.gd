@@ -95,9 +95,9 @@ func _test_charm_seizes_young_unit() -> void:
 
 func _test_charm_ignores_old_unit() -> void:
 	var state := _new_match(["charm"])
-	var foe := _place(state, B, "sand", 0, 2, 1)
+	var foe := _place(state, B, "sand", 0, 3, 1)
 	state.play_card(A, 0, 3, {"side": B, "slot": 0})
-	_assert.call(state.board[B][0] == foe, "総量3の駒は奪えない")
+	_assert.call(state.board[B][0] == foe, "総量4の駒は奪えない")
 
 
 func _test_seize_needs_empty_slot() -> void:

@@ -72,6 +72,8 @@ func _ready_to_use() -> bool:
 	var state: MatchState = _screen.state
 	if state == null or state.is_match_over() or state.current_turn != _screen.my_side:
 		return false
+	if CardSealEffects.flip_locked(state, _screen.my_side):
+		return false
 	return int(state.flip_right_remaining.get(_screen.my_side, 0)) > 0
 
 

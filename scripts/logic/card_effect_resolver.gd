@@ -44,6 +44,8 @@ var _draw_sand: CardDrawSandEffects
 var _turncoat: CardTurncoatEffects
 ## 第3弾「写し身の刻」の固有効果(GameDesign.md 6章)。
 var _mirror: CardMirrorEffects
+## 第3弾「封じの刻」の固有効果(GameDesign.md 6章)。
+var _seal: CardSealEffects
 
 
 func _init(p_state: MatchState) -> void:
@@ -58,6 +60,7 @@ func _init(p_state: MatchState) -> void:
 	_draw_sand = CardDrawSandEffects.new(p_state, self)
 	_turncoat = CardTurncoatEffects.new(p_state, self)
 	_mirror = CardMirrorEffects.new(p_state, self)
+	_seal = CardSealEffects.new(p_state, self)
 
 
 ## unit が持つ trigger の効果をすべて適用する。
@@ -122,6 +125,7 @@ func _condition_met(side: int, unit: CardInstance, effect: CardEffectData) -> bo
 	return (
 		CardForesightEffects.grave_condition_met(_state, side, effect)
 		and CardTurncoatEffects.leads_met(_state, side, effect)
+		and (effect.condition_scope != _SCOPE.SELF_NOT_COPY or unit.copy_of == null)
 	)
 
 
@@ -155,6 +159,7 @@ func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Diction
 		[CardDrawSandEffects, _draw_sand],
 		[CardTurncoatEffects, _turncoat],
 		[CardMirrorEffects, _mirror],
+		[CardSealEffects, _seal],
 	]
 	for theme: Array in hinted:
 		if theme[0].handles(effect.effect_type):
@@ -482,6 +487,7 @@ func _return_to_hand(side: int, slot: int) -> void:
 	var hand_side := CardTurncoatEffects.card_owner(unit, side)
 	if unit.copy_of == null:
 		_state.hand[hand_side].append(CardMirrorEffects.card_of(unit))
+	_state._refresh_held_keywords()
 	_state.unit_returned.emit(side, slot, unit.data)
 	_state.hand_changed.emit(hand_side)
 	_state.board_changed.emit(side)
@@ -907,6 +913,8 @@ static func eligible_target(unit: CardInstance, effect: CardEffectData) -> bool:
 			return unit.attack <= effect.condition_total
 		CardEnums.ConditionScope.TOTAL_AT_MOST:
 			return unit.total_sand() <= effect.condition_total
+		CardEnums.ConditionScope.TARGET_IS_STILL:
+			return unit.has_keyword(CardEnums.Keyword.STILL)
 	return true
 
 

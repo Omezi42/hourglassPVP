@@ -13,6 +13,9 @@ const CORNER := 9.0
 ## 盤面に応じてコストが下がっているときのコストの石の色(GameDesign.md 9章)。
 const COST_DOWN_GREEN := UiPalette.GOOD
 const COST_DOWN_DEEP := Color(0.12, 0.38, 0.18)
+## 上がったコスト(トール)の石は、相手の色の赤。深い側は色を暗くして作る。
+const COST_UP_RED := UiPalette.FOE
+const COST_UP_DARKEN := 0.55
 const FRAME_WIDTH := 2.0
 const SELECT_WIDTH := 3.0
 const SELECT_GROW := 2.0
@@ -242,6 +245,10 @@ static func _gems(view: CardView, ci: RID, s: float, tint: Color) -> void:
 	var cost_at := Vector2(inset, inset)
 	if cost < card.cost:
 		_gem(view, ci, cost_at, cost, COST_DOWN_GREEN, COST_DOWN_DEEP, radius, tint)
+	elif cost > card.cost:
+		_gem(
+			view, ci, cost_at, cost, COST_UP_RED, COST_UP_RED.darkened(COST_UP_DARKEN), radius, tint
+		)
 	else:
 		_gem(view, ci, cost_at, cost, UiPalette.COST, UiPalette.COST_DEEP, radius, tint)
 	if card.is_spell:
