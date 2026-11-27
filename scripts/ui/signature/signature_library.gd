@@ -39,6 +39,7 @@ const ENTRANCES := {
 	"meteor": preload("res://scripts/ui/signature/moves/meteor_entrance.gd"),
 	"sibyl": preload("res://scripts/ui/signature/moves/sibyl_entrance.gd"),
 	"sluice": preload("res://scripts/ui/signature/moves/sluice_entrance.gd"),
+	"leech": preload("res://scripts/ui/signature/moves/leech_entrance.gd"),
 }
 
 ## 効果が対象へ届くまで(設置・落砂・砂術など、紋章が飛ぶ場面の代わり)。
@@ -205,6 +206,15 @@ const EFFECTS := {
 	"deluge": preload("res://scripts/ui/signature/moves/deluge_effect.gd"),
 	"terminus": preload("res://scripts/ui/signature/moves/terminus_effect.gd"),
 	"promise": preload("res://scripts/ui/signature/moves/promise_effect.gd"),
+	"drawup": preload("res://scripts/ui/signature/moves/drawup_effect.gd"),
+	"pump": preload("res://scripts/ui/signature/moves/pump_effect.gd"),
+	"bucket": preload("res://scripts/ui/signature/moves/bucket_effect.gd"),
+	"siphon": preload("res://scripts/ui/signature/moves/siphon_effect.gd"),
+	"drain": preload("res://scripts/ui/signature/moves/drain_effect.gd"),
+	"sandtheft": preload("res://scripts/ui/signature/moves/sandtheft_effect.gd"),
+	"barter": preload("res://scripts/ui/signature/moves/barter_effect.gd"),
+	"aquifer": preload("res://scripts/ui/signature/moves/aquifer_effect.gd"),
+	"maelstrom": preload("res://scripts/ui/signature/moves/maelstrom_effect.gd"),
 }
 
 

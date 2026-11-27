@@ -69,6 +69,8 @@ enum Sfx {
 	SIG_METEOR,
 	SIG_SIBYL,
 	SIG_SLUICE,
+	SIG_LEECH,
+	SIG_MAELSTROM,
 }
 
 const SETTINGS_PATH := "user://sound_settings.json"
@@ -140,6 +142,8 @@ const SFX_PATHS := {
 	Sfx.SIG_METEOR: "res://assets/sfx/sig_meteor.wav",
 	Sfx.SIG_SIBYL: "res://assets/sfx/sig_sibyl.wav",
 	Sfx.SIG_SLUICE: "res://assets/sfx/sig_sluice.wav",
+	Sfx.SIG_LEECH: "res://assets/sfx/sig_leech.wav",
+	Sfx.SIG_MAELSTROM: "res://assets/sfx/sig_maelstrom.wav",
 }
 
 static var _players: Array[AudioStreamPlayer] = []

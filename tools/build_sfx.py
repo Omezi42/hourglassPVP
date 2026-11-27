@@ -1044,6 +1044,40 @@ def sig_sluice():
     return layer(x, bubbles(0.12, 1, 1100, 1200, 0.02), -9, shut + SLUICE_FILL)
 
 
+
+## リーチの這い出す長さと噛みつく長さ(`leech_entrance.gd` の CRAWL・BITE)。
+LEECH_CRAWL = 0.3
+LEECH_BITE = 0.16
+
+
+def sig_leech():
+    """リーチ:着地し、ぬめった体が台座の上をくちゅくちゅと這い、吸盤が「ちゅぷ」と吸いついて、赤い滴が一つ「ぽつ」と落ちる。"""
+    x = landing(1.5)
+    x = layer(x, lowpass(bubbles(LEECH_CRAWL, 7, 180, 420, LEECH_CRAWL * 0.5), 1200), -14, LAND_AT)
+    bite = LAND_AT + LEECH_CRAWL
+    x = layer(x, thump(0.18, 260, 120, 0.05, width=0.003), -8, bite)
+    x = layer(x, bubbles(0.1, 1, 500, 560, 0.01), -10, bite + 0.01)
+    return layer(x, bubbles(0.12, 1, 1100, 1200, 0.02), -12, bite + LEECH_BITE * 0.5 + 0.12)
+
+
+## メイルストロムの渦が巻き起こる長さ・管が伸びる長さ・吸う長さ(`maelstrom_effect.gd` の FORM・REACH・DRINK)。
+MAELSTROM_FORM = 0.2
+MAELSTROM_REACH = 0.2
+MAELSTROM_DRINK = 0.24
+
+
+def sig_maelstrom():
+    """メイルストロム:低い唸りとともに渦が巻き起こり、管を伝って水がごぼごぼと吸われ、最後に渦の目が低く「どぅん」と呑み込む。"""
+    drink = MAELSTROM_FORM + MAELSTROM_REACH
+    hit = drink + MAELSTROM_DRINK + 0.24
+    x = np.zeros(n_of(hit + 1.4))
+    x = layer(x, pitch(whoosh(1, 0.6), 0.7), -8, 0.0)
+    x = layer(x, lowpass(scrape(hit, 60, 400), 700), -10, 0.0)
+    x = layer(x, bubbles(hit - drink, 16, 150, 500, (hit - drink) * 0.5), -10, drink)
+    x = layer(x, thump(1.0, 70, 32, 0.4, width=0.004), -9, hit)
+    x = layer(x, bubbles(0.35, 8, 400, 1400, 0.04), -4, hit)
+    return layer(x, whoosh(2, 0.7), -12, hit - 0.08)
+
 SIGNATURES = [
     sig_freeze, sig_relic, sig_middle, sig_phase, sig_grain, sig_dash, sig_shield, sig_sand,
     sig_watcher, sig_glass, sig_vamp, sig_drill, sig_lance, sig_twin, sig_lock, sig_gate,
@@ -1051,7 +1085,7 @@ SIGNATURES = [
     sig_obelisk, sig_tower, sig_anchor, sig_sage, sig_grimoire,
     sig_maestro, sig_zero_hour, sig_necropolis,
     sig_hold, sig_bastion, sig_chaser, sig_carillon, sig_clockwork, sig_meteor,
-    sig_sibyl, sig_sluice,
+    sig_sibyl, sig_sluice, sig_leech, sig_maelstrom,
 ]
 
 
