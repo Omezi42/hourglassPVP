@@ -117,6 +117,8 @@ var mana_debt: Dictionary = {}
 var mana_carry: Dictionary = {}
 ## 次の相手の手番に反転も反転権も使えない側(Side をキーにした bool。ジェイラー)。その側の手番の終わりに解ける。
 var flip_lock: Dictionary = {}
+## 相手の手札を見られる手番の番号(Side をキーにした int。ゴシップ)。`turn_count` と一致するあいだだけ見える。見ていなければ -1。
+var foe_hand_seen_on: Dictionary = {}
 ## 山札(先頭が次に引くカード)。
 var deck: Dictionary = {}
 var hand: Dictionary = {}
@@ -200,6 +202,7 @@ func start_match(
 		mana_debt[side] = 0
 		mana_carry[side] = 0
 		flip_lock[side] = false
+		foe_hand_seen_on[side] = -1
 		hand[side] = []
 		graveyard[side] = []
 		_deck_exhausted[side] = false
@@ -538,6 +541,7 @@ func cast_spell(side: int, hand_index: int, target: Dictionary = {}) -> bool:
 	_fire(side, CardInstance.new(card), CardEnums.Trigger.ON_PLAY, target)
 	_cleanup_dead()
 	_fire_own_spell(side)
+	CardPeekEffects.fire_foe_spell(self, side, card)
 	return true
 
 

@@ -134,6 +134,8 @@ func confirm(side: int, slot: int) -> void:
 static func choose_from_grave(screen: Control, card: CardData, perform: Callable) -> bool:
 	if CardForesightEffects.peek_choice_effect(card) != null:
 		return choose_from_peek(screen, card, perform)
+	if CardPeekEffects.choice_effect(card) != null:
+		return choose_from_foe(screen, card, perform)
 	var effect := CardEffectResolver.grave_choice_effect(card)
 	if effect == null:
 		return false
@@ -181,6 +183,48 @@ static func choose_from_peek(screen: Control, card: CardData, perform: Callable)
 		func(peek_index: int) -> void:
 			done.call()
 			perform.call({CardForesightEffects.PEEK_KEY: peek_index}),
+		func() -> void:
+			if optional:
+				done.call()
+				perform.call({})
+				return
+			screen.selection.clear()
+			screen.refresh(),
+		"そのままにする",
+		not optional
+	)
+	return true
+
+
+## 相手のカードを見て選ぶ効果(スパイ・ファントム。GameDesign.md 6章・9章)なら、見た札だけを墓地の一覧と同じ部品で並べて選ばせ、
+## 選んだら `perform` へ `{"peek_index": i}`(見た札の位置)を渡す。スパイは「そのままにする」で選ばずに進み(選びの指定なし)、
+## ファントムは取りやめる道が無い。見る札が無ければ選ばずに出す(効果は不発)。選ぶ一覧を開いたら true。
+static func choose_from_foe(screen: Control, card: CardData, perform: Callable) -> bool:
+	var effect := CardPeekEffects.choice_effect(card)
+	var foe_side := MatchState.other_side(screen.my_side)
+	var seen := CardPeekEffects.seen_cards(screen.state, screen.my_side, effect)
+	if seen.is_empty():
+		return false
+	var optional := effect.effect_type == CardEnums.EffectType.PEEK_FOE_TOP_KEEP_OR_MILL
+	var pile: Array = screen.state.deck[foe_side] if optional else screen.state.hand[foe_side]
+	var indices: Array[int] = []
+	for i in seen.size():
+		indices.append(i)
+	var title := (
+		"%s:相手の山札の一番上。墓地へ置くなら札を選ぶ" % card.display_name
+		if optional
+		else "%s:相手の手札から写す1枚を選ぶ" % card.display_name
+	)
+	var done := func() -> void:
+		screen.selection.clear()
+		screen._hide_detail()
+	screen._pile.open_choice(
+		title,
+		pile,
+		indices,
+		func(peek_index: int) -> void:
+			done.call()
+			perform.call({CardPeekEffects.PEEK_KEY: peek_index}),
 		func() -> void:
 			if optional:
 				done.call()

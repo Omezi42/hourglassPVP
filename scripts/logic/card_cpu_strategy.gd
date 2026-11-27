@@ -48,6 +48,10 @@ const FOE_ENTER_TIMES := 3.0
 ## 攻撃で相手の砂時計を砕いたとき・戦闘を生き残ったときの効果(決闘の刻)が、場に残る間に起きると見込む回数。
 const ATTACK_KILL_TIMES := 1.0
 const COMBAT_SURVIVE_TIMES := 2.0
+## 相手が砂術を使ったときの効果(フォージャー。盗み見の刻)が、場に残る間に起きると見込む回数。
+const FOE_SPELL_TIMES := 1.5
+## 相手が出した駒の砂を落とす1粒の値打ち(ウォッチマン)。相手の駒の寿命を縮める。
+const FOE_ENTER_DROP_VALUE := 0.8
 ## 繰り返し働くトリガーごとの見込み回数(`_repeating_value()`。落砂は総量に比例するため別)。
 const REPEAT_TIMES := {
 	CardEnums.Trigger.ON_DAMAGED: DAMAGED_TIMES,
@@ -63,6 +67,7 @@ const REPEAT_TIMES := {
 	CardEnums.Trigger.ON_FOE_ENTER: FOE_ENTER_TIMES,
 	CardEnums.Trigger.ON_ATTACK_KILL: ATTACK_KILL_TIMES,
 	CardEnums.Trigger.ON_COMBAT_SURVIVE: COMBAT_SURVIVE_TIMES,
+	CardEnums.Trigger.ON_FOE_SPELL: FOE_SPELL_TIMES,
 }
 ## 自分のHPを払うと負ける手へ付ける減点(出さないための十分大きな値)。
 const SELF_KILL_PENALTY := 100.0
@@ -428,6 +433,7 @@ func _card_value(state: MatchState, side: int, card: CardData) -> float:
 			value += _on_play_value(state, side, effect)
 	value += CardPourSandEffects.cpu_death_value(card)
 	value += CardMirrorEffects.cpu_card_value(state, side, card)
+	value += CardPeekEffects.cpu_card_value(state, side, card)
 	value += CardSealEffects.cpu_standing_value(state, side, card)
 	# 繰り返し働くトリガーは、場に残る見込みのターン数ぶん価値が積み上がる
 	# (GameDesign.md 6章)。落砂は毎ターン1回、被弾は殴り合うたびに起きる。
@@ -468,6 +474,8 @@ func _themed_value(state: MatchState, side: int, effect: CardEffectData) -> Vari
 		CardMirrorEffects,
 		CardSealEffects,
 		CardDuelEffects,
+		CardPeekEffects,
+		CardExchangeEffects,
 	]
 	for theme in themes:
 		if theme.handles(effect.effect_type):
@@ -597,6 +605,8 @@ func _on_play_value(state: MatchState, side: int, effect: CardEffectData) -> flo
 			# 寿命を縮めるぶんだけを見る。
 			if effect.target == CardEnums.EffectTarget.ALL_ENEMY_UNITS:
 				value = state.units(foe_side).size() * effect.value * 0.8
+			elif effect.target == CardEnums.EffectTarget.ENTERING_FOE_UNIT:
+				value = effect.value * FOE_ENTER_DROP_VALUE
 			elif effect.target == CardEnums.EffectTarget.ALLY_UNIT:
 				# 味方の砂を落とすのは「体力を攻撃力へ換える」取引であり、
 				# 得な駒とそうでない駒がある。いちばん得をする駒の増分を見る。
@@ -702,7 +712,12 @@ func _effect_target(state: MatchState, side: int, hand_card: CardData) -> Dictio
 		)
 		if pick >= 0:
 			return {"grave_index": pick}
-	return CardForesightEffects.cpu_peek_hint(state, side, card, _peek_value)
+	var peek := CardForesightEffects.cpu_peek_hint(state, side, card, _peek_value)
+	return (
+		peek
+		if not peek.is_empty()
+		else CardPeekEffects.cpu_peek_hint(state, side, card, _peek_value)
+	)
 
 
 ## 見た札1枚の値打ち。砂時計は出したときの見込み、砂術は撃つ意味のあるときの値(撃てなければ0)。

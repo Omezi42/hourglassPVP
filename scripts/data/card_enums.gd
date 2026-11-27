@@ -81,6 +81,9 @@ enum Trigger {
 	ON_ATTACK_KILL,
 	## この駒が戦闘の後に砕けていなかったとき(ベテラン。決闘の刻)。攻撃した・された・戦わされた、のどれでも働く。ON_ALLY_DEATH と同じく語にせず「常在」と出す。
 	ON_COMBAT_SURVIVE,
+	## 相手が砂術を使ったとき(フォージャー。盗み見の刻)。砂術の効果を解決し終えた後に働き、hint の spell が使われた砂術のカード。
+	## ON_ALLY_DEATH と同じく語にせず「常在」と出す。
+	ON_FOE_SPELL,
 }
 
 ## エフェクトの対象。
@@ -312,6 +315,25 @@ enum EffectType {
 	BAR_FACE_ATTACK,
 	## この砂時計は、もう一度攻撃できる(チャンピオン)。このターンの攻撃回数を1回ぶん戻す。value は使わない。
 	REFRESH_ATTACK,
+	## 相手の山札の一番上の写しを自分の手札に加える(ピックポケット。盗み見の刻)。相手の山札は変わらず、「引く」ではない。山札が0枚なら何も起きない。value は使わない。
+	COPY_FOE_TOP_TO_HAND,
+	## 相手の手札のランダムな1枚の写しを自分の手札に加える(シーフ)。相手の手札は変わらない。相手の手札が0枚なら何も起きない。value は使わない。
+	COPY_FOE_HAND_RANDOM_TO_HAND,
+	## 相手の山札の一番上を見て、そのままにするか相手の墓地へ置く(スパイ)。選びは hint の peek_index(0なら墓地へ。無ければそのまま)。value は使わない。
+	PEEK_FOE_TOP_KEEP_OR_MILL,
+	## この手番のあいだ、相手の手札を見る(ゴシップ)。value は使わない。
+	REVEAL_FOE_HAND,
+	## 相手が使った砂術の写しを自分の手札に加える(フォージャー)。ON_FOE_SPELL の hint の spell が写す砂術。value は使わない。
+	COPY_FOE_SPELL_TO_HAND,
+	## 相手の手札からランダムな1枚を、相手の山札の一番下へ戻す(ドリームイーター)。捨てさせはしない。相手の手札が0枚なら何も起きない。value は使わない。
+	FOE_HAND_RANDOM_TO_DECK_BOTTOM,
+	## 相手の手札を見て1枚選び、その写しを自分の手札に加える(ファントム)。選びは hint の peek_index(相手の手札の位置。無ければコストがいちばん高い札)。value は使わない。
+	COPY_FOE_HAND_PICK_TO_HAND,
+	## この砂時計を除く、場の砂時計を敵味方すべて入れ替える(ミラージュ)。持ち主は変わらず、入れ替わった駒はその手番は攻撃も反転もできない。
+	## 枠が足りないぶんは左から順に入る数だけ動き、残りはその場に残る。value は使わない。
+	SWAP_ALL_UNITS,
+	## 自分と相手のHPを入れ替える(ヤヌス)。回復でもダメージでもない。value は使わない。
+	SWAP_PLAYER_HP,
 }
 
 ## コンボ系カードの発動条件が確認する範囲(GameDesign.md 6章)。
@@ -507,6 +529,6 @@ static func trigger_name(trigger: int) -> String:
 			return "常在"
 		Trigger.ON_DEAL_DAMAGE, Trigger.ON_FOE_SAND_RAISED:
 			return "常在"
-		Trigger.ON_ATTACK_KILL, Trigger.ON_COMBAT_SURVIVE:
+		Trigger.ON_ATTACK_KILL, Trigger.ON_COMBAT_SURVIVE, Trigger.ON_FOE_SPELL:
 			return "常在"
 	return ""

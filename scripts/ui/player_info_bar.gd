@@ -206,6 +206,8 @@ var _mana_shift := 0
 var _deck := 0
 ## 山札の一番上が公開されている(シビルが場にいる)。山札の山に琥珀色の縁を付ける。
 var _deck_top_open := false
+## 相手の手札が自分に見えている(ゴシップ)。相手側の手札の山に琥珀色の縁を付ける。
+var _hand_open := false
 var _graveyard := 0
 var _hand := 0
 var _has_coin := false
@@ -294,7 +296,13 @@ func show_state(state: MatchState, side: int, max_hp: int = MatchState.INITIAL_H
 	_max_mana = state.max_mana[side]
 	_mana_shift = CardEarlyBellEffects.next_mana_shift(state, side)
 	_deck = state.deck[side].size()
-	_deck_top_open = MatchDeckTop.top_playable(state, side)
+	# 相手側の帯は、相手のシビルが場にいるとき・自分のスカウトが場にいるとき、山札の一番上が見える。
+	var foe_of_viewer := MatchState.other_side(side)
+	_deck_top_open = (
+		MatchDeckTop.top_playable(state, side)
+		or (is_opponent and CardPeekEffects.deck_top_seen(state, foe_of_viewer))
+	)
+	_hand_open = is_opponent and CardPeekEffects.hand_seen(state, foe_of_viewer)
 	_graveyard = state.graveyard[side].size()
 	_hand = state.hand[side].size()
 	_has_coin = state.coin_available.get(side, false)
@@ -315,7 +323,8 @@ func _shown_values() -> Array:
 		_graveyard,
 		_hand,
 		_has_coin,
-		_deck_top_open
+		_deck_top_open,
+		_hand_open
 	]
 
 
@@ -459,6 +468,8 @@ func _draw() -> void:
 	_pile(_graveyard_rect(), "墓地", _graveyard)
 	if is_opponent:
 		_pile(hand_pile_rect(), "手札", _hand)
+		if _hand_open:
+			UiKit.stroke(ci, UiKit.rr(hand_pile_rect(), PILE_RADIUS), UiPalette.SAND, 2.0)
 	if _has_coin:
 		_draw_coin()
 	_sync_fx()
@@ -572,6 +583,11 @@ func _draw_name_plate() -> void:
 ## 山札の一番上が公開されているか(シビル)。押すと表向きの札を見られる。
 func deck_top_open() -> bool:
 	return _deck_top_open
+
+
+## 相手の手札が見えているか(ゴシップ)。押すと表向きの札を見られる。
+func hand_open() -> bool:
+	return _hand_open
 
 
 ## 山札の山。ドロー・疲労の演出の出どころとして画面側からも引く。

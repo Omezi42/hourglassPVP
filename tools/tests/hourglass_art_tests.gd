@@ -5,7 +5,9 @@ extends RefCounted
 
 const SHADER_DIR := "res://resources/shaders/hourglasses"
 ## 絵(シェーダー・焼いた絵・砂の色)を別の回で足すセット。絵が揃ったらここから外す。
-const ART_PENDING_SETS: Array[String] = ["turncoat", "mirror_sand", "seal_sand", "duel_sand"]
+const ART_PENDING_SETS: Array[String] = [
+	"turncoat", "mirror_sand", "seal_sand", "duel_sand", "peek_sand", "third_extra"
+]
 
 
 func run(assert_true: Callable) -> void:

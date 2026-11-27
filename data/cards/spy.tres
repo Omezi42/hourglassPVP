@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_spy_0"]
+script = ExtResource("script_effect")
+trigger = 0
+target = 5
+effect_type = 85
+value = 0
+
+[resource]
+script = ExtResource("script_card")
+id = "spy"
+display_name = "スパイ"
+cost = 2
+total_sand = 3
+pool_index = 246
+set_id = "peek_sand"
+rarity = 0
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_spy_0")])
+rules_text = "設置:相手の山札の一番上を見て、そのままにするか相手の墓地へ置く"
+flavor_text = "明日の手紙を今日のうちに開ける"
+cannot_attack = false
+is_token = false

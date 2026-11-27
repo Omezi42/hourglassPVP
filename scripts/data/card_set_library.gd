@@ -410,6 +410,35 @@ const SETS: Dictionary = {
 		],
 		"price": 0,
 	},
+	## 第3弾「奪砂の弾」の6つ目のテーマ(GameDesign.md 8章)。相手の未来を覗く枠で、相手のカードを使って戦うデッキを成立させる。
+	"peek_sand":
+	{
+		"id": "peek_sand",
+		"display_name": "盗み見の刻",
+		"description": "相手の未来を覗く9枚",
+		"card_ids":
+		[
+			"pickpocket",
+			"watchman",
+			"spy",
+			"gossip",
+			"thief",
+			"forger",
+			"scout",
+			"dreameater",
+			"phantom",
+		],
+		"price": 0,
+	},
+	## 第3弾のどのテーマにも属さないレジェンド(GameDesign.md 8章)。パックからだけ出る。
+	"third_extra":
+	{
+		"id": "third_extra",
+		"display_name": "テーマ外",
+		"description": "第3弾のどのテーマにも属さないレジェンド",
+		"card_ids": ["mirage", "janus"],
+		"price": 0,
+	},
 }
 
 const ORDERED_IDS: Array[String] = [
@@ -437,6 +466,8 @@ const ORDERED_IDS: Array[String] = [
 	"mirror_sand",
 	"seal_sand",
 	"duel_sand",
+	"peek_sand",
+	"third_extra",
 ]
 
 

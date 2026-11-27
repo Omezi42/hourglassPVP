@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_dreameater_0"]
+script = ExtResource("script_effect")
+trigger = 0
+target = 4
+effect_type = 88
+value = 0
+
+[resource]
+script = ExtResource("script_card")
+id = "dreameater"
+display_name = "ドリームイーター"
+cost = 4
+total_sand = 5
+pool_index = 251
+set_id = "peek_sand"
+rarity = 2
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_dreameater_0")])
+rules_text = "設置:相手の手札からランダムな1枚を、相手の山札の一番下へ戻す"
+flavor_text = "見るはずだった夢を食べてしまう"
+cannot_attack = false
+is_token = false

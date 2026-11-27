@@ -79,6 +79,9 @@ extends Resource
 ## 自分が攻撃したときに相手から受ける反撃のダメージが、この値だけ少ない(0未満にはならない。GameDesign.md 6章「戦わせる効果」。フェンサー)。
 ## 攻撃されたとき・戦わされたときは減らない。
 @export var attack_recoil_cut: int = 0
+## 場にいる間、相手の山札の一番上が自分にだけ表向きで見える(GameDesign.md 6章「相手のカードを見る・写す効果」。スカウト)。語にしないためフラグで持つ。
+## 消された駒は持たない。
+@export var sees_foe_deck_top: bool = false
 
 ## 砂術(GameDesign.md 6章)。**盤面へ出ず、効果だけを起こして墓地へ行く。**
 ## true のとき total_sand / keywords / cannot_attack は使わない。
@@ -146,6 +149,7 @@ func category_name() -> String:
 		or carries_mana
 		or foe_cost_up > 0
 		or attack_recoil_cut > 0
+		or sees_foe_deck_top
 	):
 		return "常在"
 	return ""

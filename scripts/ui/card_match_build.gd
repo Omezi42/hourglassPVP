@@ -41,7 +41,8 @@ static func _on_foe_bar_input(event: InputEvent, screen: Control, bar: PlayerInf
 	if bar.deck_top_open() and bar.deck_pile_rect().has_point(button.position):
 		screen._pile.open_pile("相手の山札の一番上", [screen.state.deck[foe][0]])
 		return
-	if settings == null or not settings.reveal_hand:
+	# 相手の手札が見えているとき(ゴシップ)・CPU戦の設定で見せるときは、手札の山を押すと開く。
+	if not bar.hand_open() and (settings == null or not settings.reveal_hand):
 		return
 	if not bar.hand_pile_rect().has_point(button.position):
 		return

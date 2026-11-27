@@ -78,12 +78,12 @@ static func seize(
 		return -1
 	state.board[from_side][from_slot] = null
 	state.board[to_side][empty[0]] = unit
-	_mark_moved(unit, from_side, to_side, for_turn)
+	mark_moved(unit, from_side, to_side, for_turn)
 	return empty[0]
 
 
 ## 場の側が変わった駒の印を直す。元の持ち主へ戻ったなら印は消える。
-static func _mark_moved(unit: CardInstance, from_side: int, to_side: int, for_turn: bool) -> void:
+static func mark_moved(unit: CardInstance, from_side: int, to_side: int, for_turn: bool) -> void:
 	if unit.owner_side < 0:
 		unit.owner_side = from_side
 	if unit.owner_side == to_side:
@@ -234,8 +234,8 @@ func _swap_side(
 	_resolver._strike(side, from_slot, foe_side, foe_slot, CardEnums.EffectVisualStyle.SPIN, origin)
 	_state.board[side][own_slot] = foe
 	_state.board[foe_side][foe_slot] = unit
-	_mark_moved(foe, foe_side, side, false)
-	_mark_moved(unit, side, foe_side, false)
+	mark_moved(foe, foe_side, side, false)
+	mark_moved(unit, side, foe_side, false)
 	_state.board_changed.emit(side)
 	_state.board_changed.emit(foe_side)
 

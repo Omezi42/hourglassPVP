@@ -48,6 +48,10 @@ var _mirror: CardMirrorEffects
 var _seal: CardSealEffects
 ## 第3弾「決闘の刻」の固有効果(GameDesign.md 6章)。
 var _duel: CardDuelEffects
+## 第3弾「盗み見の刻」の固有効果(GameDesign.md 6章)。
+var _peek: CardPeekEffects
+## 第3弾テーマ外のレジェンド(ミラージュ・ヤヌス)の固有効果(GameDesign.md 6章)。
+var _exchange: CardExchangeEffects
 
 
 func _init(p_state: MatchState) -> void:
@@ -64,6 +68,8 @@ func _init(p_state: MatchState) -> void:
 	_mirror = CardMirrorEffects.new(p_state, self)
 	_seal = CardSealEffects.new(p_state, self)
 	_duel = CardDuelEffects.new(p_state, self)
+	_peek = CardPeekEffects.new(p_state, self)
+	_exchange = CardExchangeEffects.new(p_state, self)
 
 
 ## unit が持つ trigger の効果をすべて適用する。
@@ -164,6 +170,8 @@ func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Diction
 		[CardMirrorEffects, _mirror],
 		[CardSealEffects, _seal],
 		[CardDuelEffects, _duel],
+		[CardPeekEffects, _peek],
+		[CardExchangeEffects, _exchange],
 	]
 	for theme: Array in hinted:
 		if theme[0].handles(effect.effect_type):
@@ -738,6 +746,7 @@ func _is_enemy_target(target: int) -> bool:
 		or target == CardEnums.EffectTarget.ALL_ENEMY_UNITS
 		or target == CardEnums.EffectTarget.ENEMY_UNIT_OR_PLAYER
 		or target == CardEnums.EffectTarget.DAMAGING_FOE
+		or target == CardEnums.EffectTarget.ENTERING_FOE_UNIT
 	)
 
 
@@ -779,6 +788,10 @@ func _targets(side: int, unit: CardInstance, effect: CardEffectData, hint: Dicti
 			var entered_slot: int = hint.get("entered_slot", -1)
 			if entered_slot >= 0 and _state.board[side][entered_slot] != null:
 				found = [{"side": side, "slot": entered_slot}]
+		CardEnums.EffectTarget.ENTERING_FOE_UNIT:
+			var foe_slot: int = hint.get("entered_slot", -1)
+			if foe_slot >= 0 and _state.board[foe_side][foe_slot] != null:
+				found = [{"side": foe_side, "slot": foe_slot}]
 		CardEnums.EffectTarget.ALLY_UNIT:
 			# **自分自身は選べない**(GameDesign.md 6章)。効果を持つ駒が自分を強化すると
 			# 「他の駒を助ける」というカードの読みが崩れ、対象を選ぶ意味も無くなるため。

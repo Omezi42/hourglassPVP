@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_forger_0"]
+script = ExtResource("script_effect")
+trigger = 17
+target = 5
+effect_type = 87
+value = 0
+
+[resource]
+script = ExtResource("script_card")
+id = "forger"
+display_name = "フォージャー"
+cost = 3
+total_sand = 5
+pool_index = 249
+set_id = "peek_sand"
+rarity = 1
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_forger_0")])
+rules_text = "常在:相手が砂術を使うたび、その写しを手札に加える"
+flavor_text = "筆跡まで同じなら本物と何が違う"
+cannot_attack = false
+is_token = false
