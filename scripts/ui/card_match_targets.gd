@@ -60,7 +60,7 @@ func refresh() -> void:
 		var preview: Dictionary = MatchCombatPreview.compute(state, my_side, selection.slot, slot)
 		view.preview_health = preview["target_health"]
 		view.preview_dead = preview["target_dead"]
-	_screen.foe_bar.targetable = state.can_attack_player(my_side)
+	_screen.foe_bar.targetable = state.can_attack_player(my_side, attacker)
 	refresh_own_preview()
 
 
@@ -85,7 +85,7 @@ func refresh_own_preview() -> void:
 	if attacker == null or not attacker.can_attack():
 		return
 	var candidates: Array = state.attackable_slots(MatchState.other_side(my_side))
-	if state.can_attack_player(my_side):
+	if state.can_attack_player(my_side, attacker):
 		candidates.append(CardMatchSelection.FACE)
 	if selection.hover_target in candidates:
 		candidates = [selection.hover_target]

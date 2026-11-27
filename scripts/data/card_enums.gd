@@ -76,6 +76,11 @@ enum Trigger {
 	## 相手が砂時計を出したとき(ドッペル。写し身の刻)。手から出したときも効果で出したときも働き、hint の entered_side / entered_slot が出た駒を指す。
 	## ドッペルが出した写しが出たときは働かない。ON_ALLY_DEATH と同じく語にせず「常在」と出す。
 	ON_FOE_ENTER,
+	## この駒が攻撃で相手の砂時計を砕いたとき(デュエリスト・ナイト・チャンピオン。決闘の刻)。攻撃した側として戦闘で砕いたときだけ働く
+	## (反撃で砕いたとき・戦わせる効果で砕いたときは働かない)。戦闘の後、この駒が砕けていなければ働く。ON_ALLY_DEATH と同じく語にせず「常在」と出す。
+	ON_ATTACK_KILL,
+	## この駒が戦闘の後に砕けていなかったとき(ベテラン。決闘の刻)。攻撃した・された・戦わされた、のどれでも働く。ON_ALLY_DEATH と同じく語にせず「常在」と出す。
+	ON_COMBAT_SURVIVE,
 }
 
 ## エフェクトの対象。
@@ -296,6 +301,17 @@ enum EffectType {
 	SEAL_FLIP,
 	## 次の相手の手番、対象のプレイヤーは反転も反転権も使えない(ジェイラー)。相手の手番の終わりに解ける。value は使わない。
 	LOCK_FLIP,
+	## 自分の砂時計1体と相手の砂時計1体を戦わせる(果たし合い。決闘の刻)。相打ちで、攻撃の回数も出したターンの制限も守護も見ない。
+	## 相手は target(ENEMY_UNIT)で選び、自分の駒は hint の own_slot(無ければ自動で選ぶ)。value は使わない。
+	FIGHT_FOE,
+	## FIGHT_FOE を、どちらかが砕けるまで繰り返す(デスマッチ)。どちらも攻撃力0なら1回で止める。
+	FIGHT_FOE_TO_DEATH,
+	## 対象の自分の砂時計は、このターン出したターンでも攻撃できる。ただし相手プレイヤーは攻撃できない(スクワイア)。value は使わない。
+	RUSH_FOE_ONLY,
+	## 対象の自分の砂時計は、このターン相手プレイヤーを攻撃できない(籠手)。value は使わない。
+	BAR_FACE_ATTACK,
+	## この砂時計は、もう一度攻撃できる(チャンピオン)。このターンの攻撃回数を1回ぶん戻す。value は使わない。
+	REFRESH_ATTACK,
 }
 
 ## コンボ系カードの発動条件が確認する範囲(GameDesign.md 6章)。
@@ -490,5 +506,7 @@ static func trigger_name(trigger: int) -> String:
 		Trigger.ON_ATTACK, Trigger.ON_OWN_HP_LOST, Trigger.ON_ALLY_ENTER:
 			return "常在"
 		Trigger.ON_DEAL_DAMAGE, Trigger.ON_FOE_SAND_RAISED:
+			return "常在"
+		Trigger.ON_ATTACK_KILL, Trigger.ON_COMBAT_SURVIVE:
 			return "常在"
 	return ""

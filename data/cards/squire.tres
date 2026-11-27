@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_squire_0"]
+script = ExtResource("script_effect")
+trigger = 0
+target = 6
+effect_type = 80
+value = 0
+
+[resource]
+script = ExtResource("script_card")
+id = "squire"
+display_name = "スクワイア"
+cost = 1
+total_sand = 3
+pool_index = 237
+set_id = "duel_sand"
+rarity = 0
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_squire_0")])
+rules_text = "設置:自分の他の砂時計1体は、このターン相手の砂時計にだけ攻撃できる(出したターンでも)"
+flavor_text = "主の剣を持って先に走る"
+cannot_attack = false
+is_token = false

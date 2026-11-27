@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_veteran_0"]
+script = ExtResource("script_effect")
+trigger = 16
+target = 0
+effect_type = 4
+value = 2
+
+[resource]
+script = ExtResource("script_card")
+id = "veteran"
+display_name = "ベテラン"
+cost = 4
+total_sand = 5
+pool_index = 242
+set_id = "duel_sand"
+rarity = 2
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_veteran_0")])
+rules_text = "戦闘で砕けずに生き残るたび、この砂時計の総量+2"
+flavor_text = "古傷の数だけ器が厚い"
+cannot_attack = false
+is_token = false

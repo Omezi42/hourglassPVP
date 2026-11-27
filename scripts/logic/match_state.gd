@@ -650,7 +650,10 @@ func attackable_slots(defender_side: int) -> Array:
 	return guards if not guards.is_empty() else others
 
 
-func can_attack_player(side: int) -> bool:
+## `attacker` を渡すと、その駒がこのターン相手プレイヤーを攻撃できない(スクワイア・籠手)ことも見る。
+func can_attack_player(side: int, attacker: CardInstance = null) -> bool:
+	if attacker != null and attacker.face_barred:
+		return false
 	if _ignores_guard(side):
 		return true
 	for unit in units(other_side(side)):
@@ -678,7 +681,7 @@ func can_attack(side: int, slot: int, target_slot: int) -> bool:
 	if unit == null or not unit.can_attack():
 		return false
 	if target_slot < 0:
-		return can_attack_player(side)
+		return can_attack_player(side, unit)
 	return attackable_slots(other_side(side)).has(target_slot)
 
 
@@ -697,8 +700,10 @@ func attack(side: int, slot: int, target_slot: int) -> bool:
 		_lifesteal(side, attacker, power)
 		_fire_attacked(side, attacker)
 		return true
-	_resolve_unit_combat(side, slot, target_slot)
+	var defender: CardInstance = board[other_side(side)][target_slot]
+	_resolve_unit_combat(side, slot, target_slot, -1, true)
 	_cleanup_dead()
+	CardDuelEffects.fire_attack_kill(self, side, attacker, defender)
 	_fire_attacked(side, attacker)
 	return true
 
@@ -714,7 +719,10 @@ func _fire_attacked(side: int, attacker: CardInstance) -> void:
 
 
 ## 通常は攻撃側の相手の駒と戦う。`foe_side` を渡すと、その側の駒と戦う(相手の駒どうしを戦わせる同士討ち)。
-func _resolve_unit_combat(side: int, slot: int, target_slot: int, foe_side := -1) -> void:
+## `real_attack` は自分の攻撃として戦うとき(攻撃を和らげるフェンサーが働く)。戦わせる効果・同士討ちでは偽。
+func _resolve_unit_combat(
+	side: int, slot: int, target_slot: int, foe_side := -1, real_attack := false
+) -> void:
 	if foe_side < 0:
 		foe_side = other_side(side)
 	var attacker: CardInstance = board[side][slot]
@@ -728,6 +736,8 @@ func _resolve_unit_combat(side: int, slot: int, target_slot: int, foe_side := -1
 		attacker_power *= 2
 	if defender.has_keyword(CardEnums.Keyword.DAMAGE_BOOST):
 		defender_power *= 2
+	if real_attack:
+		defender_power = CardDuelEffects.after_recoil_cut(attacker, defender_power)
 	var defender_health := defender.health
 	var attacker_health := attacker.health
 	# 硝子が割れたかどうかは、削られたかどうかでは分からない(どちらも与ダメージ0)。
@@ -761,6 +771,8 @@ func _resolve_unit_combat(side: int, slot: int, target_slot: int, foe_side := -1
 	_resolve_damaged(side, attacker, dealt_to_attacker, {"damager": defender})
 	_fire_dealt(side, attacker, dealt_to_defender)
 	_fire_dealt(foe_side, defender, dealt_to_attacker)
+	CardDuelEffects.fire_survived(self, side, attacker)
+	CardDuelEffects.fire_survived(self, foe_side, defender)
 
 
 ## 貫通:砂時計の体力を超えた分が相手プレイヤーへ抜ける。

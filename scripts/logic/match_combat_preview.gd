@@ -28,6 +28,7 @@ static func compute(state: MatchState, side: int, slot: int, target_slot: int) -
 		attacker_power *= 2
 	if defender.has_keyword(CardEnums.Keyword.DAMAGE_BOOST):
 		defender_power *= 2
+	defender_power = CardDuelEffects.after_recoil_cut(attacker, defender_power)
 	var to_defender := _preview_damage(defender, attacker_power)
 	var to_attacker := _preview_damage(attacker, defender_power)
 	var defender_health := defender.health - to_defender

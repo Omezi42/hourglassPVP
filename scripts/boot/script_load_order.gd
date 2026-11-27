@@ -49,6 +49,7 @@ const PATHS: Array[String] = [
 	"res://scripts/logic/card_effect_resolver.gd",
 	"res://scripts/logic/match_state.gd",
 	"res://scripts/logic/card_seal_effects.gd",
+	"res://scripts/logic/card_duel_effects.gd",
 	"res://scripts/ui/card_drag_preview.gd",
 	"res://scripts/ui/click_area.gd",
 	"res://scripts/ui/press_tracker.gd",

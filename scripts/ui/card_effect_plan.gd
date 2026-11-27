@@ -84,6 +84,8 @@ const TRIGGER_KINDS := {
 	CardEnums.Trigger.ON_ATTACK: Kind.STRIKE,
 	CardEnums.Trigger.ON_OWN_HP_LOST: Kind.HP_LOST,
 	CardEnums.Trigger.ON_DEAL_DAMAGE: Kind.STRIKE,
+	CardEnums.Trigger.ON_ATTACK_KILL: Kind.STRIKE,
+	CardEnums.Trigger.ON_COMBAT_SURVIVE: Kind.STRIKE,
 }
 ## 砂術のコストを下げる効果の実演で撃つ砂術(コスト2・対象を取らない)。
 const DISCOUNT_SPELL_ID := "grit_rain"

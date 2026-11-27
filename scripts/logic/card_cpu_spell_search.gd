@@ -41,6 +41,8 @@ const REPEATING_TRIGGERS := [
 	CardEnums.Trigger.ON_FOE_SAND_RAISED,
 	CardEnums.Trigger.ON_FOE_ENTER,
 	CardEnums.Trigger.ON_FLIP,
+	CardEnums.Trigger.ON_ATTACK_KILL,
+	CardEnums.Trigger.ON_COMBAT_SURVIVE,
 ]
 
 
@@ -110,6 +112,8 @@ static func candidate_targets(state: MatchState, side: int, card: CardData) -> A
 	for effect in card.effects_for(CardEnums.Trigger.ON_PLAY):
 		if effect.random_target:
 			continue
+		if CardDuelEffects.is_fight(effect.effect_type):
+			return CardDuelEffects.candidate_pairs(state, side)
 		match effect.target:
 			CardEnums.EffectTarget.ENEMY_UNIT:
 				return _unit_targets(state, foe_side, effect)

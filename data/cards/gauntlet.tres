@@ -1,0 +1,35 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_gauntlet_0"]
+script = ExtResource("script_effect")
+trigger = 0
+target = 6
+effect_type = 9
+value = 2
+
+[sub_resource type="Resource" id="Effect_gauntlet_1"]
+script = ExtResource("script_effect")
+trigger = 0
+target = 6
+effect_type = 81
+value = 0
+
+[resource]
+script = ExtResource("script_card")
+id = "gauntlet"
+display_name = "籠手"
+cost = 1
+total_sand = 0
+pool_index = 240
+set_id = "duel_sand"
+rarity = 1
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_gauntlet_0"), SubResource("Effect_gauntlet_1")])
+rules_text = "自分の砂時計1体の攻撃力+2。このターン、その砂時計は相手プレイヤーを攻撃できない"
+flavor_text = "拳を握るのは一度でいい"
+cannot_attack = false
+is_token = false
+is_spell = true

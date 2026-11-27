@@ -45,6 +45,9 @@ const DEAL_DAMAGE_TIMES := 2.0
 const FOE_SAND_RAISED_TIMES := 2.0
 ## 相手が砂時計を出したときの効果(ドッペル。写し身の刻)が、場に残る間に起きると見込む回数。
 const FOE_ENTER_TIMES := 3.0
+## 攻撃で相手の砂時計を砕いたとき・戦闘を生き残ったときの効果(決闘の刻)が、場に残る間に起きると見込む回数。
+const ATTACK_KILL_TIMES := 1.0
+const COMBAT_SURVIVE_TIMES := 2.0
 ## 繰り返し働くトリガーごとの見込み回数(`_repeating_value()`。落砂は総量に比例するため別)。
 const REPEAT_TIMES := {
 	CardEnums.Trigger.ON_DAMAGED: DAMAGED_TIMES,
@@ -58,6 +61,8 @@ const REPEAT_TIMES := {
 	CardEnums.Trigger.ON_DEAL_DAMAGE: DEAL_DAMAGE_TIMES,
 	CardEnums.Trigger.ON_FOE_SAND_RAISED: FOE_SAND_RAISED_TIMES,
 	CardEnums.Trigger.ON_FOE_ENTER: FOE_ENTER_TIMES,
+	CardEnums.Trigger.ON_ATTACK_KILL: ATTACK_KILL_TIMES,
+	CardEnums.Trigger.ON_COMBAT_SURVIVE: COMBAT_SURVIVE_TIMES,
 }
 ## 自分のHPを払うと負ける手へ付ける減点(出さないための十分大きな値)。
 const SELF_KILL_PENALTY := 100.0
@@ -462,6 +467,7 @@ func _themed_value(state: MatchState, side: int, effect: CardEffectData) -> Vari
 		CardTurncoatEffects,
 		CardMirrorEffects,
 		CardSealEffects,
+		CardDuelEffects,
 	]
 	for theme in themes:
 		if theme.handles(effect.effect_type):
@@ -797,7 +803,7 @@ func _expert_lethal_attack(state: MatchState, side: int) -> Dictionary:
 	var first := -1
 	for slot in MatchState.BOARD_SIZE:
 		var unit: CardInstance = state.board[side][slot]
-		if unit == null or not unit.can_attack() or unit.attack <= 0:
+		if unit == null or not unit.can_attack() or unit.attack <= 0 or unit.face_barred:
 			continue
 		var power := unit.attack
 		if unit.has_keyword(CardEnums.Keyword.DAMAGE_BOOST):
@@ -822,9 +828,9 @@ func _choose_attack(state: MatchState, side: int) -> Dictionary:
 		if attacker == null or not attacker.can_attack():
 			continue
 		# 本体を削りきれるなら、盤面を無視してそこで終わる。
-		if state.can_attack_player(side) and attacker.attack >= state.hp[foe_side]:
+		if state.can_attack_player(side, attacker) and attacker.attack >= state.hp[foe_side]:
 			return MatchAction.attack(side, slot, -1)
-		if state.can_attack_player(side):
+		if state.can_attack_player(side, attacker):
 			var face_value := attacker.attack * _face_weight()
 			if face_value > best_value:
 				best_value = face_value

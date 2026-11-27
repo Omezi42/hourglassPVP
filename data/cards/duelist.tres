@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_duelist_0"]
+script = ExtResource("script_effect")
+trigger = 15
+target = 0
+effect_type = 15
+value = 2
+
+[resource]
+script = ExtResource("script_card")
+id = "duelist"
+display_name = "デュエリスト"
+cost = 3
+total_sand = 6
+pool_index = 235
+set_id = "duel_sand"
+rarity = 0
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_duelist_0")])
+rules_text = "攻撃で相手の砂時計を破壊するたび、この砂時計の砂が2粒上へ戻る"
+flavor_text = "勝った夜だけ砂が戻る"
+cannot_attack = false
+is_token = false

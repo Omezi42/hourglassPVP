@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_knight_0"]
+script = ExtResource("script_effect")
+trigger = 15
+target = 5
+effect_type = 7
+value = 2
+
+[resource]
+script = ExtResource("script_card")
+id = "knight"
+display_name = "ナイト"
+cost = 3
+total_sand = 5
+pool_index = 239
+set_id = "duel_sand"
+rarity = 1
+keywords = Array[int]([0])
+effects = Array[Resource]([SubResource("Effect_knight_0")])
+rules_text = "攻撃で相手の砂時計を破壊するたび、自分のHPを2回復する"
+flavor_text = "盾の内側で傷が閉じていく"
+cannot_attack = false
+is_token = false

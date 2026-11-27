@@ -101,7 +101,7 @@ static func _choose_attack(state: MatchState, side: int, rng: RandomNumberGenera
 		return {}
 	var slot: int = attackers[rng.randi_range(0, attackers.size() - 1)]
 	var options: Array = state.attackable_slots(foe_side).duplicate()
-	if state.can_attack_player(side):
+	if state.can_attack_player(side, state.board[side][slot]):
 		options.append(-1)
 	if options.is_empty():
 		return {}

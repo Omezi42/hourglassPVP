@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[sub_resource type="Resource" id="Effect_champion_0"]
+script = ExtResource("script_effect")
+trigger = 15
+target = 0
+effect_type = 82
+value = 1
+
+[resource]
+script = ExtResource("script_card")
+id = "champion"
+display_name = "チャンピオン"
+cost = 5
+total_sand = 8
+pool_index = 243
+set_id = "duel_sand"
+rarity = 3
+keywords = Array[int]([])
+effects = Array[Resource]([SubResource("Effect_champion_0")])
+rules_text = "攻撃で相手の砂時計を破壊するたび、もう一度攻撃できる"
+flavor_text = "次の挑戦者はまだか"
+cannot_attack = false
+is_token = false

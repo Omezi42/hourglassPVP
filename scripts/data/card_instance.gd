@@ -54,6 +54,10 @@ var cage_key: int = 0
 var caged_by: int = 0
 ## いま檻に封じられているか(封じているケージが場にいるあいだ)。`MatchState` が盤面の変わるたびに書く。
 var held_caged: bool = false
+## このターン、出したターンでも攻撃できる(スクワイア。決闘の刻)。手番が回ると解ける。
+var rushed: bool = false
+## このターン、相手プレイヤーを攻撃できない(スクワイア・籠手。決闘の刻)。手番が回ると解ける。
+var face_barred: bool = false
 
 
 func _init(p_data: CardData) -> void:
@@ -180,7 +184,7 @@ func can_attack() -> bool:
 		return false
 	if attack_locked or held_caged:
 		return false
-	return not is_fresh() and attack > 0 and attacks_this_turn < max_attacks()
+	return (not is_fresh() or rushed) and attack > 0 and attacks_this_turn < max_attacks()
 
 
 ## 出したターンで、まだ動けないか。疾走を持つ駒(あとから与えられた・条件を満たしている間の駒を含む)は動ける。
@@ -264,6 +268,8 @@ func begin_turn() -> void:
 	summoned_this_turn = false
 	flipped_this_turn = false
 	attacks_this_turn = 0
+	rushed = false
+	face_barred = false
 
 
 ## 同じ状態の別の駒。対局の複製(`MatchState.fork()`)が使う。

@@ -76,6 +76,9 @@ extends Resource
 ## 場にいる間、相手が出す・使うカードのコストがこの値だけ上がる(GameDesign.md 6章「封じる効果」。トール)。複数体なら足し合わせる。
 ## 実際に払うコストは `MatchState.play_cost()` が出す。消された駒は持たない。
 @export var foe_cost_up: int = 0
+## 自分が攻撃したときに相手から受ける反撃のダメージが、この値だけ少ない(0未満にはならない。GameDesign.md 6章「戦わせる効果」。フェンサー)。
+## 攻撃されたとき・戦わされたときは減らない。
+@export var attack_recoil_cut: int = 0
 
 ## 砂術(GameDesign.md 6章)。**盤面へ出ず、効果だけを起こして墓地へ行く。**
 ## true のとき total_sand / keywords / cannot_attack は使わない。
@@ -142,6 +145,7 @@ func category_name() -> String:
 		or ally_cost_down_at_full_mana > 0
 		or carries_mana
 		or foe_cost_up > 0
+		or attack_recoil_cut > 0
 	):
 		return "常在"
 	return ""

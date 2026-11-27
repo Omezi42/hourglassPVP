@@ -46,6 +46,8 @@ var _turncoat: CardTurncoatEffects
 var _mirror: CardMirrorEffects
 ## 第3弾「封じの刻」の固有効果(GameDesign.md 6章)。
 var _seal: CardSealEffects
+## 第3弾「決闘の刻」の固有効果(GameDesign.md 6章)。
+var _duel: CardDuelEffects
 
 
 func _init(p_state: MatchState) -> void:
@@ -61,6 +63,7 @@ func _init(p_state: MatchState) -> void:
 	_turncoat = CardTurncoatEffects.new(p_state, self)
 	_mirror = CardMirrorEffects.new(p_state, self)
 	_seal = CardSealEffects.new(p_state, self)
+	_duel = CardDuelEffects.new(p_state, self)
 
 
 ## unit が持つ trigger の効果をすべて適用する。
@@ -160,6 +163,7 @@ func _apply(side: int, unit: CardInstance, effect: CardEffectData, hint: Diction
 		[CardTurncoatEffects, _turncoat],
 		[CardMirrorEffects, _mirror],
 		[CardSealEffects, _seal],
+		[CardDuelEffects, _duel],
 	]
 	for theme: Array in hinted:
 		if theme[0].handles(effect.effect_type):
@@ -572,6 +576,7 @@ static func castable(state: MatchState, side: int, card: CardData) -> bool:
 		if (
 			not CardTurncoatEffects.castable(state, side, effect)
 			or not CardMirrorEffects.castable(state, side, effect)
+			or not CardDuelEffects.castable(state, side, effect)
 		):
 			return false
 		match effect.effect_type:

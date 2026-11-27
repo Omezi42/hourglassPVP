@@ -389,6 +389,27 @@ const SETS: Dictionary = {
 		],
 		"price": 0,
 	},
+	## 第3弾「奪砂の弾」の5つ目のテーマ(GameDesign.md 8章)。一対一で器を割る。
+	"duel_sand":
+	{
+		"id": "duel_sand",
+		"display_name": "決闘の刻",
+		"description": "一対一で器を割る10枚",
+		"card_ids":
+		[
+			"duel",
+			"duelist",
+			"fencer",
+			"squire",
+			"gladiator",
+			"knight",
+			"gauntlet",
+			"deathmatch",
+			"veteran",
+			"champion",
+		],
+		"price": 0,
+	},
 }
 
 const ORDERED_IDS: Array[String] = [
@@ -415,6 +436,7 @@ const ORDERED_IDS: Array[String] = [
 	"turncoat",
 	"mirror_sand",
 	"seal_sand",
+	"duel_sand",
 ]
 
 

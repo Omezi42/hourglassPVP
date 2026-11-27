@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+
+[resource]
+script = ExtResource("script_card")
+id = "fencer"
+display_name = "フェンサー"
+cost = 2
+total_sand = 3
+pool_index = 236
+set_id = "duel_sand"
+rarity = 0
+keywords = Array[int]([])
+effects = Array[Resource]([])
+rules_text = "攻撃したとき、相手から受ける反撃のダメージが1少ない"
+flavor_text = "切っ先は受けるためにもある"
+cannot_attack = false
+is_token = false
+attack_recoil_cut = 1
