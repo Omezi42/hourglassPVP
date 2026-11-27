@@ -62,6 +62,8 @@ var _reveal: CardSpellReveal
 ## 攻撃(`CardMatchStrike`)の演出中に効果が届いた場合、紋章の発射そのものを
 ## 着弾まで持ち越す(Architecture.md 4.0節)。
 var _pending: Array[Callable] = []
+## カードの演出の前の溜めを見せている間。次の演出はその後へ並べる。
+var _winding := false
 
 
 func _init(screen: Control) -> void:
@@ -85,6 +87,7 @@ func _init(screen: Control) -> void:
 func watch(state: MatchState) -> void:
 	_seen.clear()
 	_signature_queue.clear()
+	_winding = false
 	_open_jobs.clear()
 	state.effect_struck.connect(on_effect_struck)
 	state.effect_struck_many.connect(on_effect_struck_many)
@@ -154,7 +157,7 @@ func on_effect_struck(
 		else _target_position(target_side, target_slot)
 	)
 	var emblem := card.emblem
-	_queue(func() -> void: _fx.play(emblem, from, to, style, origin))
+	_queue(_after_windup(func() -> void: _fx.play(emblem, from, to, style, origin)))
 
 
 ## 盤面の駒から起きたドロー(`MatchState.effect_drawn`。GameDesign.md 9章)。カードの演出を
@@ -190,7 +193,7 @@ func on_effect_struck_many(
 	for entry in targets:
 		tos.append(_target_position(entry["side"], entry["slot"]))
 	var emblem := card.emblem
-	_queue(func() -> void: _fx.play_many(emblem, from, tos, style, origin))
+	_queue(_after_windup(func() -> void: _fx.play_many(emblem, from, tos, style, origin)))
 
 
 ## 反転トリガーの2回目の直前(マエストロ。GameDesign.md 9章)。合図の演出を効果の列へ挟む。
@@ -239,6 +242,7 @@ func _play_signature(card: CardData, from: Vector2, targets: Array) -> bool:
 		"gen": _issued,
 		"card": card.id,
 		"frame": Engine.get_process_frames(),
+		"source": _origin_view(),
 	}
 	_seen[card.id] = true
 	_open_jobs.append(job)
@@ -283,12 +287,31 @@ func _hold_spins(entries: Array, gen: int) -> void:
 
 
 func _start_signature(job: Dictionary) -> void:
-	if _signature.is_playing():
+	if _signature.is_playing() or _winding:
 		_signature_queue.append(job)
 		return
+	if job["source"] != null and not job.get("wound", false):
+		job["wound"] = true
+		var wait := UnitWindupFx.play(job["source"], SignatureFxPlayer.rate(job["short"]))
+		if wait > 0.0:
+			_winding = true
+			_screen.get_tree().create_timer(wait).timeout.connect(_end_windup.bind(job))
+			return
 	_signature_job = job
 	_signature_targets = job["entries"]
 	_signature.play(job["move"], job["short"])
+
+
+func _end_windup(job: Dictionary) -> void:
+	_winding = false
+	_start_signature(job)
+
+
+## 効果の出どころが場の駒なら、その駒(溜めを見せる相手)。
+func _origin_view() -> CardView:
+	if _origin != CardEnums.EffectOrigin.UNIT or _origin_slot < 0:
+		return null
+	return _screen.view_at(_origin_side, _origin_slot)
 
 
 func _on_signature_impact() -> void:
@@ -341,10 +364,24 @@ func _arm(source_side: int, source_slot: int, origin: int, style: int) -> void:
 ## 攻撃(`CardMatchStrike`)の演出中は、紋章の発射そのものを着弾まで持ち越す
 ## (Architecture.md 4.0節「砕けた駒の余砂は、崩落を先に見せてから銘板が飛ぶ」)。
 func _queue(step: Callable) -> void:
-	if _screen._strike.busy() or _reveal.busy():
+	if _screen._strike.busy() or _reveal.busy() or _screen.effects.placing():
 		_pending.append(step)
 		return
 	step.call()
+
+
+## 駒から出る効果なら、溜め(`UnitWindupFx`)を見せてから `step` を始める(GameDesign.md 9章)。
+func _after_windup(step: Callable) -> Callable:
+	if _origin != CardEnums.EffectOrigin.UNIT or _origin_slot < 0:
+		return step
+	var side := _origin_side
+	var slot := _origin_slot
+	return func() -> void:
+		var wait := UnitWindupFx.play(_screen.view_at(side, slot))
+		if wait <= 0.0:
+			step.call()
+			return
+		_screen.get_tree().create_timer(wait).timeout.connect(step)
 
 
 ## 持ち越していた紋章の発射をまとめて始める。`CardMatchStrike._on_impact()` が

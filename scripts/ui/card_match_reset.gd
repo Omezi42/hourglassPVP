@@ -24,6 +24,8 @@ static func run(screen: Control) -> void:
 	screen._selection.clear()
 	if screen._effect_strike != null:
 		screen._effect_strike.reset_reveal()
+	if screen.effects != null:
+		screen.effects.stop_placing()
 	if screen._finale != null:
 		screen._finale.reset()
 	screen._cpu_timer.stop()

@@ -10,12 +10,21 @@ extends Control
 ## 一切持たないため**である。体力・攻撃力・キーワードのように毎フレーム参照する値と違い、
 ## いずれも起きた瞬間に渡された引数だけで完結する。
 
+## 着地の重さ(GameDesign.md 9章「着地の重さはコストで3段」)。
+enum Weight { LIGHT, MID, HEAVY }
+
 ## 設置:台座の少し上から落ちて着地する。
 const LAND_DURATION := 0.26
 const LAND_HEIGHT := 34.0
 ## カードの演出の重い着地(GameDesign.md 9章)。高くから、少し長く落ちる。
 const HEAVY_LAND_DURATION := 0.38
 const HEAVY_LAND_HEIGHT := 96.0
+## コストの軽いカードの着地。低く小さく跳ねる。
+const LIGHT_LAND_DURATION := 0.18
+const LIGHT_LAND_HEIGHT := 14.0
+## 着地の重さの段の境目(コスト)。
+const LIGHT_MAX_COST := 2
+const HEAVY_MIN_COST := 6
 ## 着地の砂ぼこりを出し始める進捗。
 const LAND_DUST_AT := 0.66
 ## 破壊:ガラスが割れ、残っていた砂が台座へこぼれてから消える。
@@ -92,6 +101,31 @@ func play_land(heavy := false, time_rate := 1.0) -> void:
 	_land_height = HEAVY_LAND_HEIGHT if heavy else LAND_HEIGHT
 	var duration := HEAVY_LAND_DURATION if heavy else LAND_DURATION
 	_land_tween = _restart(_land_tween, _set_land, duration * time_rate)
+
+
+static func weight_for_cost(cost: int) -> int:
+	if cost <= LIGHT_MAX_COST:
+		return Weight.LIGHT
+	if cost >= HEAVY_MIN_COST:
+		return Weight.HEAVY
+	return Weight.MID
+
+
+static func land_duration(weight: int) -> float:
+	match weight:
+		Weight.LIGHT:
+			return LIGHT_LAND_DURATION
+		Weight.HEAVY:
+			return HEAVY_LAND_DURATION
+	return LAND_DURATION
+
+
+func play_land_weighted(weight: int, time_rate := 1.0) -> void:
+	if weight != Weight.LIGHT:
+		play_land(weight == Weight.HEAVY, time_rate)
+		return
+	_land_height = LIGHT_LAND_HEIGHT
+	_land_tween = _restart(_land_tween, _set_land, LIGHT_LAND_DURATION * time_rate)
 
 
 ## 破壊された。**枠が空になった後も描き続ける**ため、絵と位置をここで受け取る。

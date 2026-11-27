@@ -85,6 +85,9 @@
 | HP帯を狙う返事 | `PlayerInfoBar.aimed`(`CardMatchPointer.set_hover_target()` が `FACE` のとき立てる。ホバーもドラッグも同じ経路)が `PlayerInfoBarFx.aimed` へ渡り、縁の太さ(`RIM_AIM_WIDTH`)と脈の速さ(`CardView.BRACE_PULSE_SPEED`)を変える。矢印の先端は `PlayerInfoBar.hp_badge_global_center()`(右端のHPの器の中心)へ吸着(`CardMatchTouch._aim_at()`) |
 | マリガン中の手札の扇・結果のボタンの出 | `CardMatchMulligan.fan_requested` を `CardMatchHandLayout.fade_fan()` が受ける(扇の `modulate.a` を `OVERLAY_DIM_FADE` で動かす)/ `CardMatchResult._set_buttons_shown()` が `_process` の行の出と同じ時計で、最後の行の後に `BUTTON_FADE` で出す |
 | 守護で狙えない駒の「だめ」 | `CardMatchTouch._refuse_target()` が `RefuseShake.play_in_place(view)`(手札の `refuse()` と同じ `RefuseShake.SWINGS` / `STEP`)と、守護の駒の `CardView.blink_guard()` を呼ぶ。音は無い |
+| 札がほどけて器になる / 相手の札を見せる | `CardPlaceFx`(`scripts/ui/card_place_fx.gd`。画面の子のオーバーレイ)。`CardMatchEffects._on_unit_played()` が `play(view, card, from, reveal, face_scale, center, land)` を呼ぶ。手元で出した札は `queue_drop_origin()` の控えから、控えが無い手(相手・リプレイ・観戦)は手札の山から卓の中央で開いてから台座へ。1枚ずつ順に見せ、見せている間は `CardMatchEffects.placing()` が真で `CardMatchEffectStrike._queue()` が紋章を持ち越し、`finished` で `flush()` する。盤面の描き直しは設置効果の演出が終わるまで待たされるため、出た駒だけ `show_unit()` で先に映す |
+| 着地の重さ | `CardUnitFx.weight_for_cost(cost)` → `play_land_weighted(weight, time_rate)`(軽い=低く短く / 通常 / 重い)。重いものの揺れは `CardMatchEffects._land()`。固有の登場は `heavy_land()` を優先 |
+| 発動の溜め | `UnitWindupFx.play(view, time_rate)`(駒の子に止め絵を砂の色で重ね、焼いた枠の層を加算で光らせ、輪を縮める。終わる秒を返し、自分で消える)。紋章は `CardMatchEffectStrike._after_windup()`、カードの演出は `_start_signature()` が溜めの後に始める(溜めの間は `_winding` で次の演出を並べる) |
 | 攻撃ドラッグの矢印 | `CardDragArrow`(`arc_path()` が二次ベジェの点列と矢尻の向きを返す。`CardSpellAim` も同じ関数で弧にする) |
 | ホバー音 | `SoundBank.Sfx.HOVER`(ホバー専用の `hover.wav`。詳細は9章)。`wire_buttons()` が `mouse_entered` にもつなぎ(無効のボタンを除く)、対局中の駒・手札は `CardView` が直接鳴らす(カーソルの出来事であり盤面の状態ではないため `CardMatchSound` を経由しない) |
 
