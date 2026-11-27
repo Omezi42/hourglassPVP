@@ -38,6 +38,7 @@ const ENTRANCES := {
 	"clockwork": preload("res://scripts/ui/signature/moves/clockwork_entrance.gd"),
 	"meteor": preload("res://scripts/ui/signature/moves/meteor_entrance.gd"),
 	"sibyl": preload("res://scripts/ui/signature/moves/sibyl_entrance.gd"),
+	"sluice": preload("res://scripts/ui/signature/moves/sluice_entrance.gd"),
 }
 
 ## 効果が対象へ届くまで(設置・落砂・砂術など、紋章が飛ぶ場面の代わり)。
@@ -193,6 +194,17 @@ const EFFECTS := {
 	"horoscope": preload("res://scripts/ui/signature/moves/horoscope_effect.gd"),
 	"prophecy": preload("res://scripts/ui/signature/moves/prophecy_effect.gd"),
 	"vision": preload("res://scripts/ui/signature/moves/vision_effect.gd"),
+	"cask": preload("res://scripts/ui/signature/moves/cask_effect.gd"),
+	"pour": preload("res://scripts/ui/signature/moves/pour_effect.gd"),
+	"decanter": preload("res://scripts/ui/signature/moves/decanter_effect.gd"),
+	"ladle": preload("res://scripts/ui/signature/moves/ladle_effect.gd"),
+	"fountain": preload("res://scripts/ui/signature/moves/fountain_effect.gd"),
+	"overflow": preload("res://scripts/ui/signature/moves/overflow_effect.gd"),
+	"reservoir": preload("res://scripts/ui/signature/moves/reservoir_effect.gd"),
+	"amphora": preload("res://scripts/ui/signature/moves/amphora_effect.gd"),
+	"deluge": preload("res://scripts/ui/signature/moves/deluge_effect.gd"),
+	"terminus": preload("res://scripts/ui/signature/moves/terminus_effect.gd"),
+	"promise": preload("res://scripts/ui/signature/moves/promise_effect.gd"),
 }
 
 

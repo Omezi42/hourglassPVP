@@ -1,7 +1,8 @@
-[gd_resource type="Resource" script_class="CardData" load_steps=5 format=3]
+[gd_resource type="Resource" script_class="CardData" load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
 [ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/emblems/promise.png" id="emblem"]
 
 [sub_resource type="Resource" id="Effect_promise_0"]
 script = ExtResource("script_effect")
@@ -32,3 +33,4 @@ rules_text = "設置:カードを3枚引く。余砂:自分のHPを6失う"
 flavor_text = "返す日は砕けた日"
 cannot_attack = false
 is_token = false
+emblem = ExtResource("emblem")

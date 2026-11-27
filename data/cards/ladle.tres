@@ -1,7 +1,8 @@
-[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+[gd_resource type="Resource" script_class="CardData" load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
 [ext_resource type="Script" path="res://scripts/data/card_effect_data.gd" id="script_effect"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/emblems/ladle.png" id="emblem"]
 
 [sub_resource type="Resource" id="Effect_ladle_0"]
 script = ExtResource("script_effect")
@@ -27,3 +28,4 @@ rules_text = "設置:残りのマナが3以上なら、自分の砂時計すべ�
 flavor_text = "ひと掬いずつ配って回る"
 cannot_attack = false
 is_token = false
+emblem = ExtResource("emblem")

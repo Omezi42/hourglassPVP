@@ -1,6 +1,7 @@
-[gd_resource type="Resource" script_class="CardData" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/card_data.gd" id="script_card"]
+[ext_resource type="Texture2D" path="res://assets/hourglasses/emblems/sluice.png" id="emblem"]
 
 [resource]
 script = ExtResource("script_card")
@@ -18,3 +19,4 @@ flavor_text = "堰を切るのは明日"
 cannot_attack = false
 is_token = false
 carries_mana = true
+emblem = ExtResource("emblem")

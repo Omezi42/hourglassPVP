@@ -1028,6 +1028,22 @@ def sig_sibyl():
     return layer(x, tink(5274, 0.9), -5, star_at + SIBYL_CHART)
 
 
+## スルースの橋脚がせり上がる長さ・門扉が落ちる長さ・水が溜まる長さ(`sluice_entrance.gd` の RAISE・DROP・FILL)。
+SLUICE_RAISE = 0.16
+SLUICE_DROP = 0.12
+SLUICE_FILL = 0.26
+
+
+def sig_sluice():
+    """スルース:着地し、石の橋脚が「ごり」とせり上がり、板の門扉が「ごとん」と落ちて閉じ、扉の向こうに水がこぽこぽと溜まって、最後に一滴だけ「ぽつ」と落ちる。"""
+    x = landing(1.6)
+    x = layer(x, grind(0.9), -12, LAND_AT)
+    shut = LAND_AT + SLUICE_RAISE + SLUICE_DROP
+    x = layer(x, strike(0.4, wood(170, 0.12), 0.003, 0.4, (800, 3000)), -6, shut)
+    x = layer(x, bubbles(SLUICE_FILL + 0.1, 14, 300, 900, SLUICE_FILL * 0.6), -14, shut)
+    return layer(x, bubbles(0.12, 1, 1100, 1200, 0.02), -9, shut + SLUICE_FILL)
+
+
 SIGNATURES = [
     sig_freeze, sig_relic, sig_middle, sig_phase, sig_grain, sig_dash, sig_shield, sig_sand,
     sig_watcher, sig_glass, sig_vamp, sig_drill, sig_lance, sig_twin, sig_lock, sig_gate,
@@ -1035,7 +1051,7 @@ SIGNATURES = [
     sig_obelisk, sig_tower, sig_anchor, sig_sage, sig_grimoire,
     sig_maestro, sig_zero_hour, sig_necropolis,
     sig_hold, sig_bastion, sig_chaser, sig_carillon, sig_clockwork, sig_meteor,
-    sig_sibyl,
+    sig_sibyl, sig_sluice,
 ]
 
 
